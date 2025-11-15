@@ -2,8 +2,8 @@ import { inject, Injectable } from '@angular/core';
 import { mergeDeepRight } from 'ramda';
 import { BehaviorSubject } from 'rxjs';
 import { UI_CONFIG } from './config.constant';
-import { Scheme, UiConfig, scheme } from './config.types';
 import { ConfigStore } from './config.store';
+import { Scheme, scheme, UiConfig } from './config.types';
 
 @Injectable({ providedIn: 'root' })
 export class ConfigService {
@@ -16,8 +16,8 @@ export class ConfigService {
 
   public set config(value: Partial<UiConfig>) {
     const config = mergeDeepRight(this.config$.getValue(), value);
-    this.store.value = config;
-    this.config$.next(config);
+    this.store.value = config as Required<UiConfig>;
+    this.config$.next(config as Required<UiConfig>);
   }
 
   public get is() {

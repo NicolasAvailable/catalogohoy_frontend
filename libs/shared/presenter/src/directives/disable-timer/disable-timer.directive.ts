@@ -1,4 +1,12 @@
-import { Directive, ElementRef, HostListener, input, OnDestroy, Renderer2, signal } from '@angular/core';
+import {
+  Directive,
+  ElementRef,
+  HostListener,
+  input,
+  OnDestroy,
+  Renderer2,
+  signal,
+} from '@angular/core';
 
 @Directive({ selector: '[appDisableTimer]', exportAs: 'appDisableTimer' })
 export class DisableTimerDirective implements OnDestroy {
@@ -9,13 +17,16 @@ export class DisableTimerDirective implements OnDestroy {
 
   private intervalId: unknown | undefined;
 
-  constructor(private readonly el: ElementRef, private readonly renderer: Renderer2) {}
+  constructor(
+    private readonly el: ElementRef,
+    private readonly renderer: Renderer2
+  ) {}
 
   public isDisabled() {
     return this.el.nativeElement.classList.contains('disabled-directive');
   }
 
-  @HostListener('click', ['$event'])
+  @HostListener('click')
   onClick() {
     if (this.isDisabled()) return;
 

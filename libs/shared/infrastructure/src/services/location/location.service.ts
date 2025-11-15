@@ -1,6 +1,4 @@
 import { Injectable, signal } from '@angular/core';
-import { euCountries } from '@ui';
-
 @Injectable({ providedIn: 'root' })
 export class LocationService {
   public readonly location = signal<Location | undefined>(undefined);
@@ -11,10 +9,6 @@ export class LocationService {
 
   public get countryCode() {
     return this.values?.countryCode ?? '';
-  }
-
-  public get isEu(): boolean {
-    return euCountries.includes(this.values.country);
   }
 
   public async init() {

@@ -1,7 +1,7 @@
-import { aws, E, BaseUploaderOutput, $fetch } from '@shared/domain';
-import { environment } from '@socialgest/env';
-import { register } from './register.service';
+import { environment } from '@catalogohoy/env';
+import { $fetch, aws, BaseUploaderOutput, E } from '@shared/domain';
 import { createFilePartService, FilePartService } from './file-part.service';
+import { register } from './register.service';
 
 export class FileUploaderService {
   public from(file: File): BaseUploaderOutput {
@@ -14,9 +14,15 @@ export class FileUploaderService {
     };
   }
 
-  private async upload(file: File, filePartService: FilePartService): Promise<E.Either<Error, string>> {
+  private async upload(
+    file: File,
+    filePartService: FilePartService
+  ): Promise<E.Either<Error, string>> {
     const output = await register(file);
-    const parts = await filePartService.uploadFileMultipart(file, output.uploadURL);
+    const parts = await filePartService.uploadFileMultipart(
+      file,
+      output.uploadURL
+    );
     try {
       const completeOutput = await this.complete(file, { parts, ...output });
       return E.right(aws.parse(completeOutput.data.Location));
@@ -26,7 +32,11 @@ export class FileUploaderService {
   }
 
   private async complete(file: File, output: object) {
-    return $fetch.post('checkupload_temp', { type: file.type, ...output }, { baseUrl: environment.apiUrlV1 });
+    return $fetch.post(
+      'checkupload_temp',
+      { type: file.type, ...output },
+      { baseUrl: environment.apiUrl }
+    );
   }
 }
 

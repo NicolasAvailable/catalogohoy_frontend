@@ -1,9 +1,9 @@
-import * as _ from '@angular/core';
 import { CommonModule } from '@angular/common';
+import * as _ from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TabsModule } from 'primeng/tabs';
 import { when } from '@shared/domain';
 import { TranslatePipe } from '@shared/presenter';
+import { TabsModule } from 'primeng/tabs';
 import { InputSearchComponent } from '../input';
 
 export type TabHeader = { ref: string; label: string; isDisabled?: boolean };
@@ -54,21 +54,28 @@ export class TabsComponent {
   public readonly headers = _.input<TabHeader[]>([]);
   public readonly navigation = _.input<boolean>(false);
   public readonly searchable = _.input<boolean>(false);
-  public readonly activeTab = _.model<string | number>('');
+  public readonly activeTab = _.model<string | number | undefined>('');
   public readonly headerStyleClass = _.input<string>('');
   public readonly styleClass = _.input<string>('');
 
-  public readonly valueChange = _.output<string | number>();
+  public readonly valueChange = _.output<string | number | undefined>();
   public readonly searchChange = _.output<string>();
 
   public readonly templateMap = new Map<string, _.TemplateRef<any>>();
-  @_.ContentChildren(TabPanelDirective, { read: _.TemplateRef }) tabTemplates!: _.QueryList<_.TemplateRef<any>>;
-  @_.ContentChildren(TabPanelDirective) tabPanels!: _.QueryList<TabPanelDirective>;
+  @_.ContentChildren(TabPanelDirective, { read: _.TemplateRef })
+  tabTemplates!: _.QueryList<_.TemplateRef<any>>;
+  @_.ContentChildren(TabPanelDirective)
+  tabPanels!: _.QueryList<TabPanelDirective>;
   public readonly templateHeaderIcon =
-    _.contentChild<_.TemplateRef<{ $implicit: TabHeader; last: boolean }>>('headerIcon');
-  public readonly inputSearch = _.viewChild<InputSearchComponent>('inputSearch');
+    _.contentChild<_.TemplateRef<{ $implicit: TabHeader; last: boolean }>>(
+      'headerIcon'
+    );
+  public readonly inputSearch =
+    _.viewChild<InputSearchComponent>('inputSearch');
 
-  public defaultTab = _.computed(() => this.activeTab() ?? this.headers()[0]?.ref);
+  public defaultTab = _.computed(
+    () => this.activeTab() ?? this.headers()[0]?.ref
+  );
 
   constructor() {
     const activeRoute = _.inject(ActivatedRoute);
@@ -101,7 +108,9 @@ export class TabsComponent {
     }
   }
 
-  public change(activeTab: string | number) {
-    when(this.activeTab.set(activeTab)).map(() => this.valueChange.emit(this.activeTab()));
+  public change(activeTab: string | number | undefined) {
+    when(this.activeTab.set(activeTab)).map(() =>
+      this.valueChange.emit(this.activeTab())
+    );
   }
 }
