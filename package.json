@@ -4,9 +4,9 @@
   "license": "MIT",
   "scripts": {
     "serve:catalogohoy": "nx serve catalogohoy",
-    "test:catalogohoy": "nx test catalogohoy",
-    "lint:catalogohoy": "nx lint catalogohoy",
-    "build:catalogohoy": "nx build catalogohoy"
+    "serve:authentication": "nx serve authentication",
+    "build:catalogohoy": "nx build catalogohoy",
+    "build:authentication": "nx build authentication"
   },
   "private": true,
   "dependencies": {

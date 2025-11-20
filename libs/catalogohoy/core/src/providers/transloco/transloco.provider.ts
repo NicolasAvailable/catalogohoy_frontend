@@ -1,9 +1,17 @@
-import { inject, isDevMode, Provider, provideAppInitializer, EnvironmentProviders } from '@angular/core';
+import {
+  EnvironmentProviders,
+  inject,
+  isDevMode,
+  provideAppInitializer,
+  Provider,
+} from '@angular/core';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { TranslocoHttpLoader } from './transloco.http-loader';
 
-export const provideTranslation = (): Array<Provider | EnvironmentProviders> => {
+export const provideTranslation = (): Array<
+  Provider | EnvironmentProviders
+> => {
   const providers: Array<Provider | EnvironmentProviders> = [
     provideTransloco({
       config: {
@@ -20,7 +28,10 @@ export const provideTranslation = (): Array<Provider | EnvironmentProviders> => 
         const translocoService = inject(TranslocoService);
         const defaultLang = translocoService.getDefaultLang();
         translocoService.setActiveLang(defaultLang);
-        return () => firstValueFrom(translocoService.load(defaultLang));
+        return () =>
+          firstValueFrom(translocoService.load(defaultLang), {
+            defaultValue: {},
+          });
       })();
       return initializerFn();
     }),

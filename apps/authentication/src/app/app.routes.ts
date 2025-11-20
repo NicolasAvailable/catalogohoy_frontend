@@ -1,3 +1,19 @@
 import { Route } from '@angular/router';
 
-export const appRoutes: Route[] = [];
+export const appRoutes: Route[] = [
+  {
+    path: '',
+    loadComponent: () => import('./layouts/layout'),
+    children: [
+      {
+        path: '',
+        redirectTo: 'login',
+        pathMatch: 'full',
+      },
+      {
+        path: 'login',
+        loadComponent: () => import('@catalogohoy/auth').then((m) => m.Login),
+      },
+    ],
+  },
+];
