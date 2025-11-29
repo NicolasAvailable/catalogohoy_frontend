@@ -1,0 +1,26 @@
+.p-iconfield .p-inputicon:first-child {
+  inset-inline-start: 0.75rem !important;
+}
+
+.p-iconfield .p-inputtext:not(:first-child) {
+  padding-inline-start: 2.25rem !important;
+}
+
+.p-iconfield .p-inputtext:not(:last-child) {
+  padding-inline-end: 2.063rem !important;
+}
+
+.p-iconfield-left .p-inputicon {
+  top: 45% !important;
+}
+
+.p-listbox-filter-container .p-iconfield .p-inputicon {
+  top: 50% !important;
+  right: 0.75rem !important;
+}
+
+@media (max-width: 768px) {
+  .p-iconfield-left .p-inputicon {
+    top: 42% !important;
+  }
+}

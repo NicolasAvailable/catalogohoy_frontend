@@ -1,0 +1,49 @@
+.product-accordion .p-accordionpanel,
+.product-accordion .p-accordionpanel .p-accordionheader,
+.product-accordion
+  .p-accordionpanel
+  .p-accordioncontent
+  .p-accordioncontent-content {
+  border-color: transparent !important;
+  background-color: transparent !important;
+}
+
+.product-accordion .p-accordionpanel .p-accordionheader {
+  @apply font-bold text-lg px-2 pb-2 pt-3;
+}
+
+.product-accordion .p-accordionpanel .p-accordionheader .p-iconwrapper {
+  background-color: var(--color-primary);
+  @apply p-2 rounded-full;
+}
+
+.product-accordion .p-accordionpanel .p-accordionheader .p-iconwrapper svg {
+  color: var(--color-white);
+  @apply w-2 h-2;
+}
+
+.product-accordion .p-accordionpanel .p-accordioncontent {
+  border-bottom: 0.0625rem solid var(--color-gray-light);
+}
+
+.product-accordion
+  .p-accordionpanel
+  .p-accordioncontent
+  .p-accordioncontent-content
+  p {
+  @apply text-base;
+}
+
+@media (max-width: 768px) {
+  .product-accordion .p-accordionpanel .p-accordionheader {
+    @apply text-xl;
+  }
+
+  .product-accordion
+    .p-accordionpanel
+    .p-accordioncontent
+    .p-accordioncontent-content
+    p {
+    @apply text-lg;
+  }
+}

@@ -1,0 +1,37 @@
+.p-datatable-header {
+  background-color: transparent !important;
+  padding: 0rem !important;
+  border-width: 0rem !important;
+}
+
+.p-datatable-thead > tr > th,
+.p-paginator,
+.p-datatable-tbody > tr {
+  background-color: transparent !important;
+}
+
+.p-paginator-page.p-paginator-page-selected {
+  background-color: var(--color-primary) !important;
+  color: var(--color-white) !important;
+}
+
+.p-datatable-tbody > tr > td {
+  border-color: var(--color-gray-600) !important;
+}
+
+.p-datatable-scrollable
+  > .p-datatable-table-container
+  > .p-datatable-table
+  > .p-datatable-tfoot {
+  position: relative !important;
+  display: flex;
+  width: 100%;
+  background-color: transparent !important;
+}
+
+.p-datatable-scrollable
+  > .p-datatable-table-container
+  > .p-datatable-table
+  > .p-datatable-thead {
+  background-color: var(--color-gray-500) !important;
+}

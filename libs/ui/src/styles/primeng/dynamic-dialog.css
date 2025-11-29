@@ -1,0 +1,26 @@
+.p-dialog-header {
+  justify-content: center !important;
+  border-bottom: 0.0625rem solid var(--color-gray-light);
+}
+
+.p-dialog-header span {
+  font-size: 1.5rem !important;
+  font-weight: bold !important;
+  color: var(--color-primary) !important;
+}
+
+.p-dialog-header:has(.p-dialog-title:empty) {
+  padding: 1rem !important;
+}
+
+.p-dialog-header-actions p-button .p-button {
+  height: 3rem !important;
+  width: 3rem !important;
+  position: absolute !important;
+  top: 0.5rem !important;
+  right: 0.5rem !important;
+}
+
+p-dynamicdialog .p-dialog-content {
+  padding: 0 !important;
+}

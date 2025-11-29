@@ -40,6 +40,7 @@ export default [
     rules: {
       '@angular-eslint/component-selector': 'off',
       '@angular-eslint/directive-selector': 'off',
+      '@angular-eslint/prefer-inject': 'off',
     },
   },
 ];

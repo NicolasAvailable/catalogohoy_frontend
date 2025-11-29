@@ -1,0 +1,7 @@
+@media (max-width: 768px) {
+  .p-button.mobile-icon-only:has(ui-icon) {
+    span {
+      display: none;
+    }
+  }
+}

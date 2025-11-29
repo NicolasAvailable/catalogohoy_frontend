@@ -1,4 +1,11 @@
-import { Component, forwardRef, Injector, input, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  forwardRef,
+  Injector,
+  input,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { FormsModule, NG_VALUE_ACCESSOR, NgControl } from '@angular/forms';
 import { TranslatePipe } from '@shared/presenter';
 import { DividerModule } from 'primeng/divider';
@@ -36,23 +43,13 @@ export const passwordPattern =
       [strongLabel]="'UI.INPUT.PASSWORD.STRONG_LABEL' | translate"
       [fluid]="true"
       [styleClass]="styleClass()"
-      [inputStyleClass]="control?.invalid && (control?.dirty || control?.touched) ? 'ng-invalid ng-dirty' : ''"
+      [inputStyleClass]="
+        control?.invalid && (control?.dirty || control?.touched)
+          ? 'ng-invalid ng-dirty'
+          : ''
+      "
       appendTo="body"
-    >
-      <ng-template #header>
-        <div class="font-bold mb-4">{{ 'UI.INPUT.PASSWORD.CONFIRM_PASSWORD' | translate }}</div>
-      </ng-template>
-      <ng-template #footer>
-        <p-divider />
-        <ul class="pl-2 ml-2 my-0 leading-normal font-semibold font-sans text-grey-100">
-          <li>{{ 'UI.INPUT.PASSWORD.AT_LEAST_ONE_LOWERCASE' | translate }}</li>
-          <li>{{ 'UI.INPUT.PASSWORD.AT_LEAST_ONE_UPPERCASE' | translate }}</li>
-          <li>{{ 'UI.INPUT.PASSWORD.AT_LEAST_ONE_NUMERIC' | translate }}</li>
-          <li>{{ 'UI.INPUT.PASSWORD.MIN_LENGTH' | translate }}</li>
-          <li>{{ 'UI.INPUT.PASSWORD.AT_LEAST_ONE_SPECIAL' | translate }}</li>
-        </ul>
-      </ng-template>
-    </p-password>
+    />
   `,
 })
 export class InputPasswordComponent implements OnInit {

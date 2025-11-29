@@ -1,0 +1,106 @@
+:root {
+  font-family: 'SF Pro Display', 'Inter', 'Nunito', 'Roboto', Arial, sans-serif;
+  font-size: 75%;
+
+  --color-primary: #390007;
+  --color-gray: #909090;
+  --color-gray-light: #f3f3f2;
+  --color-white: #ffffff;
+  --color-muted: #7e6960;
+  --color-surface: #c7bbae;
+  --color-black: #000000;
+
+  --color-primary-50: #ffd1d6;
+  --color-primary-100: #ffa3ae;
+  --color-primary-200: #390007;
+  --color-primary-300: #390007;
+  --color-primary-400: #390007;
+  --color-primary-500: #390007;
+  --color-primary-600: #2e0005;
+  --color-primary-700: #240004;
+  --color-primary-800: #140002;
+  --color-primary-900: #0a0001;
+  --color-primary-950: #050001;
+
+  --color-secondary-50: #f2efee;
+  --color-secondary-100: #e7e1df;
+  --color-secondary-200: #ccc1bc;
+  --color-secondary-300: #b4a49d;
+  --color-secondary-400: #9c867d;
+  --color-secondary-500: #7e6960;
+  --color-secondary-600: #65544d;
+  --color-secondary-700: #4b3f39;
+  --color-secondary-800: #312925;
+  --color-secondary-900: #1a1614;
+  --color-secondary-950: #0c0a09;
+
+  --color-gray-100: #f6f6f6;
+  --color-gray-200: #797a79;
+  --color-gray-300: #989897;
+  --color-gray-400: #b6b6b6;
+  --color-gray-500: #f3f3f2;
+  --color-gray-600: #e2e8f0;
+  --color-gray-700: #f6f6f5;
+  --color-gray-800: #f8f8f7;
+  --color-gray-900: #f9f9f9;
+}
+
+@media (width >= 1600px) {
+  :root {
+    font-size: 87.5%;
+  }
+}
+
+@media (min-width: 2560px) {
+  :root {
+    font-size: 100%;
+  }
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 0.5rem;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 0.25rem;
+  border: 0.125rem solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+input::placeholder {
+  color: var(--color-light-gray);
+}
+
+a {
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+p {
+  margin: 0rem;
+}

@@ -1,0 +1,19 @@
+.p-datepicker {
+  width: 100% !important;
+}
+
+.p-datepicker-input {
+  width: 100% !important;
+  border: 0.0625rem solid var(--color-gray) !important;
+  border-radius: 0.625rem !important;
+  padding: 0.5rem 1rem !important;
+  cursor: pointer;
+}
+
+.p-datepicker-input:hover {
+  border-color: var(--color-primary) !important;
+}
+
+.p-datepicker-input-icon-container {
+  right: 0.625rem !important;
+}
