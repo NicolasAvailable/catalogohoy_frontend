@@ -14,6 +14,10 @@ export const appRoutes: Route[] = [
         path: 'login',
         loadComponent: () => import('@catalogohoy/auth').then((m) => m.Login),
       },
+      {
+        path: 'signup',
+        loadComponent: () => import('@catalogohoy/auth').then((m) => m.Signup),
+      },
     ],
   },
 ];

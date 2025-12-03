@@ -1,0 +1,20 @@
+input::placeholder {
+  color: var(--color-grey-200) !important;
+}
+
+input.search::placeholder {
+  font-weight: 500;
+}
+
+.label {
+  @apply block text-base font-semibold mb-1;
+}
+
+input.ng-invalid {
+  & {
+    border-color: var(--p-inputtext-invalid-border-color) !important;
+  }
+  &:focus {
+    --p-inputtext-focus-ring-shadow: none;
+  }
+}

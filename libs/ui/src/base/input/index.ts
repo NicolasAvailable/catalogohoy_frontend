@@ -1,3 +1,4 @@
+export * from './input-mask';
 export * from './input-message';
 export * from './input-number';
 export * from './input-otp';

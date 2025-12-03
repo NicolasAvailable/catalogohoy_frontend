@@ -1,48 +1,126 @@
+@import 'tailwindcss';
+
 :root {
-  font-family: 'SF Pro Display', 'Inter', 'Nunito', 'Roboto', Arial, sans-serif;
+  font-family: 'Inter Display', 'Inter', 'Nunito', 'Roboto', Arial, sans-serif;
   font-size: 75%;
+}
 
-  --color-primary: #390007;
-  --color-gray: #909090;
-  --color-gray-light: #f3f3f2;
-  --color-white: #ffffff;
-  --color-muted: #7e6960;
-  --color-surface: #c7bbae;
-  --color-black: #000000;
+@theme {
+  --breakpoint-xs: 500px;
+  --breakpoint-3xl: 1600px;
+  --breakpoint-4xl: 1920px;
 
-  --color-primary-50: #ffd1d6;
-  --color-primary-100: #ffa3ae;
-  --color-primary-200: #390007;
-  --color-primary-300: #390007;
-  --color-primary-400: #390007;
-  --color-primary-500: #390007;
-  --color-primary-600: #2e0005;
-  --color-primary-700: #240004;
-  --color-primary-800: #140002;
-  --color-primary-900: #0a0001;
-  --color-primary-950: #050001;
+  --container-base: 76.5rem;
 
-  --color-secondary-50: #f2efee;
-  --color-secondary-100: #e7e1df;
-  --color-secondary-200: #ccc1bc;
-  --color-secondary-300: #b4a49d;
-  --color-secondary-400: #9c867d;
-  --color-secondary-500: #7e6960;
-  --color-secondary-600: #65544d;
-  --color-secondary-700: #4b3f39;
-  --color-secondary-800: #312925;
-  --color-secondary-900: #1a1614;
-  --color-secondary-950: #0c0a09;
+  --radius-base: 0.625rem;
 
-  --color-gray-100: #f6f6f6;
-  --color-gray-200: #797a79;
-  --color-gray-300: #989897;
-  --color-gray-400: #b6b6b6;
-  --color-gray-500: #f3f3f2;
-  --color-gray-600: #e2e8f0;
-  --color-gray-700: #f6f6f5;
-  --color-gray-800: #f8f8f7;
-  --color-gray-900: #f9f9f9;
+  --color-primary-50: #eaf1ff;
+  --color-primary-100: #d4e2ff;
+  --color-primary-200: #a9c4ff;
+  --color-primary-300: #7ea6ff;
+  --color-primary-400: #598dfe;
+  --color-primary-500: #3e7bfa;
+  --color-primary-600: #2d63d1;
+  --color-primary-700: #214da8;
+  --color-primary-800: #16367f;
+  --color-primary-900: #0c1f56;
+
+  --color-grey-50: #ececec;
+  --color-grey-100: #c3c3c3;
+  --color-grey-200: #a6a6a6;
+  --color-grey-300: #7d7d7d;
+  --color-grey-400: #646464;
+  --color-grey-500: #3d3d3d;
+  --color-grey-600: #383838;
+  --color-grey-700: #2b2b2b;
+  --color-grey-800: #222222;
+  --color-grey-900: #1a1a1a;
+
+  --color-red-50: #ffecec;
+  --color-red-100: #fec3c3;
+  --color-red-200: #fea6a6;
+  --color-red-300: #fd7e7e;
+  --color-red-400: #fd6565;
+  --color-red-500: #fc3e3e;
+  --color-red-600: #e53838;
+  --color-red-700: #b32c2c;
+  --color-red-800: #8b2222;
+  --color-red-900: #6a1a1a;
+
+  --color-green-50: #ebfaf1;
+  --color-green-100: #c2f0d5;
+  --color-green-200: #a4e8c0;
+  --color-green-300: #7bdea3;
+  --color-green-400: #61d891;
+  --color-green-500: #3ace76;
+  --color-green-600: #35bb6b;
+  --color-green-700: #299254;
+  --color-green-800: ##207141;
+  --color-green-900: ##185732;
+
+  --color-orange-50: #fff5ea;
+  --color-orange-100: #ffdebe;
+  --color-orange-200: #ffcf9e;
+  --color-orange-300: #ffb972;
+  --color-orange-400: #ffab56;
+  --color-orange-500: #ff962c;
+  --color-orange-600: #e88928;
+  --color-orange-700: #b56b1f;
+  --color-orange-800: #8c5318;
+  --color-orange-900: #6b3f12;
+
+  --color-white-500: #ffffff;
+  --color-white-600: #fafafa;
+  --color-white-700: #f5f7fa;
+  --color-white-800: #f1f1f1;
+
+  --color-gradient-red: linear-gradient(
+    180deg,
+    rgba(246, 26, 74, 0.5) 0%,
+    #f61a4a 100%
+  );
+  --color-gradient-orange: linear-gradient(
+    180deg,
+    rgba(255, 125, 74, 0.5) 0%,
+    #ff7d4a 100%
+  );
+  --color-gradient-green: linear-gradient(
+    180deg,
+    rgba(62, 204, 128, 0.5) 0%,
+    #3ecc80 100%
+  );
+  --color-gradient-blue: linear-gradient(
+    180deg,
+    rgba(82, 139, 254, 0.5) 0%,
+    #528bfe 100%
+  );
+  --color-gradient-yellow: linear-gradient(
+    180deg,
+    rgba(249, 198, 22, 0.5) 0%,
+    #f9c616 100%
+  );
+  --color-gradient-purple: linear-gradient(
+    180deg,
+    rgba(154, 138, 251, 0.5) 0%,
+    #9a8afb 100%
+  );
+  --color-gradient-pink: linear-gradient(
+    180deg,
+    rgba(245, 114, 197, 0.5) 0%,
+    #f572c5 100%
+  );
+  --color-gradient-grey: linear-gradient(
+    180deg,
+    rgba(158, 161, 166, 0.5) 0%,
+    #9ea1a6 100%
+  );
+  --color-gradient-turquoise: linear-gradient(
+    180deg,
+    rgba(188, 255, 255, 0.5) 0%,
+    #bcffff 100%
+  );
+
+  --color-background: #fbfcfe;
 }
 
 @media (width >= 1600px) {

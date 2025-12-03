@@ -1,9 +1,19 @@
 import { Component } from '@angular/core';
-import { InputPasswordComponent, InputTextComponent } from '@ui';
+import { RouterLink } from '@angular/router';
+import {
+  ButtonComponent,
+  InputPasswordComponent,
+  InputTextComponent,
+} from '@ui';
 
 @Component({
   selector: 'app-login',
-  imports: [InputTextComponent, InputPasswordComponent],
+  imports: [
+    RouterLink,
+    InputTextComponent,
+    InputPasswordComponent,
+    ButtonComponent,
+  ],
   templateUrl: './login.html',
 })
 export class Login {}
