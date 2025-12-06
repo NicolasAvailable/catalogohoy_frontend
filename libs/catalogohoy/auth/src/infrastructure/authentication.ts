@@ -25,14 +25,17 @@ export class AuthenticationService implements BaseAuthenticationService {
   public async signup(
     credentials: SignUpCredentials
   ): Promise<E.Either<Error, any>> {
+    console.log(credentials);
     const { data, error } = await this.client.auth.signUp({
       email: credentials.email,
       password: credentials.password,
-      phone: credentials.phone,
+      phone: credentials.phone.replace(/[^\d]/g, ''),
       options: {
         data: {
           name: credentials.name,
           display_name: credentials.name,
+          phone: credentials.phone.replace(/[^\d]/g, ''),
+          store_name: credentials.storeName,
         },
       },
     });

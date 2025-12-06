@@ -7,5 +7,6 @@ export type SignUpCredentials = {
   name: string;
   phone: string;
   email: string;
+  storeName: string;
   password: string;
 };

@@ -31,7 +31,7 @@ export class Signup {
       '',
       [Validators.required, Validators.email, whiteSpacesValidator()],
     ],
-    tenant: [
+    storeName: [
       '',
       [Validators.required, Validators.minLength(3), whiteSpacesValidator()],
     ],
