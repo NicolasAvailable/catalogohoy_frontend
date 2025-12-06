@@ -1,14 +1,19 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { whiteSpacesValidator } from '@shared/presenter';
 import {
   ButtonComponent,
   InputPasswordComponent,
   InputTextComponent,
 } from '@ui';
+import { AuthenticationFacade } from '../../application';
+import { LoginCredentials } from '../../domain';
 
 @Component({
   selector: 'app-login',
   imports: [
+    ReactiveFormsModule,
     RouterLink,
     InputTextComponent,
     InputPasswordComponent,
@@ -16,4 +21,22 @@ import {
   ],
   templateUrl: './login.html',
 })
-export class Login {}
+export class Login {
+  private readonly authenticationFacade = inject(AuthenticationFacade);
+  public readonly form = inject(FormBuilder).group({
+    email: [
+      '',
+      [Validators.required, Validators.email, whiteSpacesValidator()],
+    ],
+    password: [
+      '',
+      [Validators.required, Validators.minLength(6), whiteSpacesValidator()],
+    ],
+  });
+
+  public send() {
+    if (this.form.valid) {
+      this.authenticationFacade.login(this.form.value as LoginCredentials);
+    }
+  }
+}

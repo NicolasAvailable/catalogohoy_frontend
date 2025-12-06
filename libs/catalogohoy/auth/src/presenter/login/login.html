@@ -11,27 +11,25 @@
   <!-- Right: Login Form -->
   <div class="lg:p-36 md:p-52 sm:20 p-8 w-full lg:w-1/2">
     <h1 class="text-2xl font-semibold mb-4">Login</h1>
-    <form action="#" method="POST">
+    <form [formGroup]="form">
       <!-- Username Input -->
       <div class="mb-4">
-        <label for="username" class="block text-gray-600">Username</label>
-        <ui-input-text name="username" />
+        <label for="email" class="block text-gray-600">Correo</label>
+        <ui-input-text formControlName="email" name="email" />
       </div>
       <!-- Password Input -->
       <div class="mb-4">
-        <label for="password" class="block text-gray-600">Password</label>
-        <ui-input-password [feedback]="false" name="password" />
+        <label for="password" class="block text-gray-600">Contraseña</label>
+        <ui-input-password
+          formControlName="password"
+          [feedback]="false"
+          name="password"
+        />
       </div>
       <!-- Remember Me Checkbox -->
-      <div class="mb-4 flex items-center">
-        <label for="remember" class="text-gray-600 ml-2">Remember Me</label>
-      </div>
-      <!-- Forgot Password Link -->
-      <div class="mb-6 text-blue-500">
-        <a href="#" class="hover:underline">Forgot Password?</a>
-      </div>
+
       <!-- Login Button -->
-      <ui-button label="Login" severity="primary" />
+      <ui-button (click)="send()" label="Login" severity="primary" />
     </form>
     <!-- Sign up  Link -->
     <div class="mt-6 text-blue-500 text-center">

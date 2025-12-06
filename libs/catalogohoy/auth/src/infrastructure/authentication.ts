@@ -15,18 +15,25 @@ import { errorMapper } from './authentication-error';
 export class AuthenticationService implements BaseAuthenticationService {
   private readonly client = SupabaseClientProvider.getInstance();
 
-  public login(credentials: LoginCredentials): any {
-    return this.client.auth.signInWithPassword({
+  public async login(
+    credentials: LoginCredentials
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client.auth.signInWithPassword({
       email: credentials.email,
       password: credentials.password,
     });
+
+    if (error) {
+      return E.left(errorMapper(error as AuthApiError));
+    } else {
+      return E.right(undefined);
+    }
   }
 
   public async signup(
     credentials: SignUpCredentials
-  ): Promise<E.Either<Error, any>> {
-    console.log(credentials);
-    const { data, error } = await this.client.auth.signUp({
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client.auth.signUp({
       email: credentials.email,
       password: credentials.password,
       phone: credentials.phone.replace(/[^\d]/g, ''),
@@ -42,7 +49,7 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (error) {
       return E.left(errorMapper(error as AuthApiError));
     } else {
-      return E.right(data);
+      return E.right(undefined);
     }
   }
 }

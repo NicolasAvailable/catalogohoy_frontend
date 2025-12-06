@@ -1,9 +1,9 @@
 import { UseCase, progressBuilder } from '@shared/application';
 import { E } from '@shared/domain';
-import { BaseAuthenticationService, SignUpCredentials } from '../domain';
+import { BaseAuthenticationService, LoginCredentials } from '../domain';
 
-export class SignupUseCase extends UseCase<
-  SignUpCredentials,
+export class LoginUseCase extends UseCase<
+  LoginCredentials,
   Promise<E.Either<Error, void>>
 > {
   constructor(
@@ -12,16 +12,16 @@ export class SignupUseCase extends UseCase<
     super(
       progressBuilder()
         .withStart('Validando...')
-        .withComplete('¡Se ha creado su catalogo exitosamente!')
+        .withComplete('¡Bienvenido!')
         .build()
     );
   }
 
   public async execute(
-    input: SignUpCredentials
+    input: LoginCredentials
   ): Promise<E.Either<Error, void>> {
     this.start();
-    const result = await this.authenticationService.signup(input);
+    const result = await this.authenticationService.login(input);
     this.complete(result);
     return result;
   }
