@@ -18,6 +18,16 @@ export const appRoutes: Route[] = [
         path: 'signup',
         loadComponent: () => import('@catalogohoy/auth').then((m) => m.Signup),
       },
+      {
+        path: 'forgotten-password',
+        loadComponent: () =>
+          import('@catalogohoy/auth').then((m) => m.ForgottenPassword),
+      },
+      {
+        path: 'reset-password',
+        loadComponent: () =>
+          import('@catalogohoy/auth').then((m) => m.ResetPassword),
+      },
     ],
   },
 ];

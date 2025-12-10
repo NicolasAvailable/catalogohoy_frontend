@@ -8,8 +8,8 @@ import {
   InputPasswordComponent,
   InputTextComponent,
 } from '@ui';
-import { AuthenticationFacade } from '../../application';
-import { SignUpCredentials } from '../../domain';
+import { AuthenticationFacade } from '../../../application';
+import { SignUpCredentials } from '../../../domain';
 @Component({
   selector: 'app-signup',
   imports: [

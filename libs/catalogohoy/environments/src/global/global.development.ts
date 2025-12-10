@@ -1,3 +1,3 @@
 export const globalEnvironment = {
-  apiUrl: '',
+  apiUrl: 'http://localhost:5200',
 };

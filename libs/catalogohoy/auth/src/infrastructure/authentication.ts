@@ -4,7 +4,9 @@ import { E } from '@shared/domain';
 import { AuthApiError } from '@supabase/supabase-js';
 import {
   BaseAuthenticationService,
+  ForgottenPasswordCredentials,
   LoginCredentials,
+  ResetPasswordCredentials,
   SignUpCredentials,
 } from '../domain';
 import { errorMapper } from './authentication-error';
@@ -46,6 +48,42 @@ export class AuthenticationService implements BaseAuthenticationService {
         },
       },
     });
+    if (error) {
+      return E.left(errorMapper(error as AuthApiError));
+    } else {
+      return E.right(undefined);
+    }
+  }
+
+  public async forgottenPassword(input: ForgottenPasswordCredentials) {
+    const { error } = await this.client.auth.resetPasswordForEmail(
+      input.email,
+      { redirectTo: `${window.location.origin}/reset-password` }
+    );
+    if (error) {
+      return E.left(errorMapper(error as AuthApiError));
+    } else {
+      return E.right(undefined);
+    }
+  }
+
+  public async resetPassword(
+    input: ResetPasswordCredentials
+  ): Promise<E.Either<Error, void>> {
+    const { error: sessionError } = await this.client.auth.setSession({
+      access_token: input.accessToken,
+      refresh_token: input.refreshToken || '',
+    });
+
+    if (sessionError) {
+      return E.left(errorMapper(sessionError as AuthApiError));
+    }
+
+    // Actualizar la contraseña
+    const { error } = await this.client.auth.updateUser({
+      password: input.password,
+    });
+
     if (error) {
       return E.left(errorMapper(error as AuthApiError));
     } else {

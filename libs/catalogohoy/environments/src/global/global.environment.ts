@@ -1,3 +1,3 @@
 export const globalEnvironment = {
-  apiUrl: 'http://localhost:3000',
+  apiUrl: 'catalogohoy.com',
 };

@@ -10,3 +10,13 @@ export type SignUpCredentials = {
   storeName: string;
   password: string;
 };
+
+export type ForgottenPasswordCredentials = {
+  email: string;
+};
+
+export type ResetPasswordCredentials = {
+  password: string;
+  accessToken: string;
+  refreshToken: string | null;
+};

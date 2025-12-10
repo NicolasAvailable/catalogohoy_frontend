@@ -7,8 +7,8 @@ import {
   InputPasswordComponent,
   InputTextComponent,
 } from '@ui';
-import { AuthenticationFacade } from '../../application';
-import { LoginCredentials } from '../../domain';
+import { AuthenticationFacade } from '../../../application';
+import { LoginCredentials } from '../../../domain';
 
 @Component({
   selector: 'app-login',
