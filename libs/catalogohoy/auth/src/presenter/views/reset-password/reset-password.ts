@@ -37,23 +37,30 @@ export class ResetPassword implements OnInit {
 
   ngOnInit() {
     this.route.fragment.subscribe((fragment) => {
-      if (!fragment && !this.accessToken && !this.refreshToken) {
+      const params = new URLSearchParams(fragment as string);
+      const error = params.get('error');
+      if (error) {
         this.router.navigate(['/login']);
       }
-      const params = new URLSearchParams(fragment as string);
-      this.accessToken = params.get('access_token');
-      this.refreshToken = params.get('refresh_token');
+      if (!this.accessToken) {
+        this.accessToken = params.get('access_token');
+        this.refreshToken = params.get('refresh_token');
+      }
+      if (!this.accessToken) {
+        this.router.navigate(['/login']);
+      }
     });
   }
 
-  public resetPassword() {
+  public async resetPassword() {
     if (this.form.valid && this.accessToken) {
       const { password } = this.form.value;
-      this.authenticationFacade.resetPassword({
+      const result = await this.authenticationFacade.resetPassword({
         password: password,
         accessToken: this.accessToken,
         refreshToken: this.refreshToken,
       } as ResetPasswordCredentials);
+      result.mapRight(() => this.router.navigate(['/login']));
     }
   }
 

@@ -5,6 +5,9 @@ export const errorMapper = (error: AuthApiError): Error => {
     invalid_credentials: 'El correo o la contraseña son invalidos',
     user_already_exists: 'El usuario ya existe',
     weak_password: 'La contraseña debe tener al menos 6 caracteres',
+    over_email_send_rate_limit:
+      'Se ha excedido el límite emails, por favor intentalo más tarde',
+    same_password: 'La contraseña debe ser diferente a la anterior',
   };
   return new Error(
     MAP_ERRORS[error.code as string] ?? 'Ha ocurrido un error desconocido'
