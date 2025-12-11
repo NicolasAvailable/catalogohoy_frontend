@@ -1,7 +1,6 @@
 import { authenticationEnvironment } from './authentication/environment.development';
 import { globalEnvironment } from './global/global.development';
 
-// Use environment variables for Vercel deployment
 const supabaseEnvironment = {
   supabase: {
     url:
