@@ -45,4 +45,5 @@ Thumbs.db
 
 .angular
 
-libs/catalogohoy/environments
+libs/catalogohoy/environments/src/supabase
+libs/catalogohoy/environments/src/environment.local.ts
