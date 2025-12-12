@@ -1,19 +1,12 @@
 import { authenticationEnvironment } from './authentication/environment.development';
 import { globalEnvironment } from './global/global.development';
 
-const supabaseEnvironment = {
-  supabase: {
-    url:
-      (globalThis as any)?.process?.env?.['SUPABASE_URL'] ||
-      'https://your-project.supabase.co',
-    anonKey:
-      (globalThis as any)?.process?.env?.['SUPABASE_ANON_KEY'] ||
-      'your-anon-key',
-  },
-};
+// Declare process for TypeScript
+declare const process: any;
 
 export const environment = {
   ...globalEnvironment,
   ...authenticationEnvironment,
-  ...supabaseEnvironment,
+  supabaseUrl: process.env['SUPABASE_URL'],
+  supabaseKey: process.env['SUPABASE_ANON_KEY'],
 };
