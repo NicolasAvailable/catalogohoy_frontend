@@ -1,5 +1,0 @@
-{
-    "buildCommand": "nx build catalogohoy --prod",
-    "outputDirectory": "dist/apps/catalogohoy",
-    "framework": "angular"
-}
