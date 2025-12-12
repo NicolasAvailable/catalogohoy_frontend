@@ -1,12 +1,9 @@
 import { authenticationEnvironment } from './authentication/environment.development';
 import { globalEnvironment } from './global/global.development';
-
-// Declare process for TypeScript
-declare const process: any;
+import { supabaseEnvironment } from './supabase/supabase.development';
 
 export const environment = {
   ...globalEnvironment,
   ...authenticationEnvironment,
-  supabaseUrl: process.env['SUPABASE_URL'],
-  supabaseKey: process.env['SUPABASE_ANON_KEY'],
+  ...supabaseEnvironment,
 };

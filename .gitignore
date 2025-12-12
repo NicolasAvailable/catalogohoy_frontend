@@ -44,8 +44,3 @@ Thumbs.db
 .github/instructions/nx.instructions.md
 
 .angular
-
-.env
-.env.local
-libs/catalogohoy/environments/src/supabase
-libs/catalogohoy/environments/src/environment.local.ts
