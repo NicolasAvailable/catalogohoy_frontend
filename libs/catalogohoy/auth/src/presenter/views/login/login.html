@@ -1,42 +1,69 @@
 <!-- component -->
-<div class="bg-gray-100 flex justify-center items-center h-screen">
-  <!-- Left: Image -->
+
+<div
+  class="flex justify-center items-center h-screen bg-lino-500 overflow-hidden"
+>
+  <div class="flex flex-col gap-2 lg:p-36 md:p-52 sm:20 p-8 w-full lg:w-1/2">
+    <div class="flex flex-col gap-6">
+      <ui-icon
+        name="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/catalogohoy-logo.png"
+        styleClass="h-20 rounded-lg"
+        class="hidden lg:flex"
+      />
+      <div class="flex flex-col gap-2">
+        <h1 class="text-5xl font-semibold text-grey-700">
+          Ingresa a tu cuenta
+        </h1>
+        <span class="text-sm mb-4 text-grey-400">
+          Ingresa a tu cuenta para continuar
+        </span>
+      </div>
+    </div>
+    <form (keyup.enter)="send()" [formGroup]="form">
+      <div class="mb-4">
+        <label for="email" class="block font-medium text-grey-400">Email</label>
+        <ui-input-text
+          inputId="email"
+          formControlName="email"
+          placeholder="manuel@catalogohoy.com"
+        />
+      </div>
+
+      <div class="mb-4">
+        <label for="password" class="block font-medium text-grey-400"
+          >Contraseña</label
+        >
+        <ui-input-password
+          [feedback]="false"
+          inputId="password"
+          formControlName="password"
+          placeholder="*********"
+        />
+      </div>
+      <a routerLink="/forgot-password" class="font-semibold text-blue-500 mt-2"
+        >¿Olvidaste tu contraseña?</a
+      >
+
+      <ui-button
+        (click)="send()"
+        [disabled]="form.invalid || loaderStore.isEnable()"
+        label="Iniciar Sesión"
+        severity="primary"
+        styleClass="mt-4"
+      />
+    </form>
+    <div class="flex justify-center gap-1 mt-6 text-base text-center">
+      <p class="font-semibold text-grey-400">¿No tienes una cuenta?</p>
+      <a routerLink="/signup" class="font-semibold text-blue-500"
+        >Regístrate aquí</a
+      >
+    </div>
+  </div>
   <div class="w-1/2 h-screen hidden lg:block">
     <img
       src="https://placehold.co/800x/667fff/ffffff.png?text=Your+Image&font=Montserrat"
       alt="Placeholder Image"
       class="object-cover w-full h-full"
     />
-  </div>
-  <!-- Right: Login Form -->
-  <div class="lg:p-36 md:p-52 sm:20 p-8 w-full lg:w-1/2">
-    <h1 class="text-2xl font-semibold mb-4">Login</h1>
-    <form [formGroup]="form">
-      <!-- Username Input -->
-      <div class="mb-4">
-        <label for="email" class="block text-gray-600">Correo</label>
-        <ui-input-text formControlName="email" name="email" />
-      </div>
-      <!-- Password Input -->
-      <div class="mb-4">
-        <label for="password" class="block text-gray-600">Contraseña</label>
-        <ui-input-password
-          formControlName="password"
-          [feedback]="false"
-          name="password"
-        />
-        <a routerLink="/forgotten-password" class="hover:underline"
-          >forgotten password</a
-        >
-      </div>
-      <!-- Remember Me Checkbox -->
-
-      <!-- Login Button -->
-      <ui-button (click)="send()" label="Login" severity="primary" />
-    </form>
-    <!-- Sign up  Link -->
-    <div class="mt-6 text-blue-500 text-center">
-      <a routerLink="/signup" class="hover:underline">Sign up Here</a>
-    </div>
   </div>
 </div>

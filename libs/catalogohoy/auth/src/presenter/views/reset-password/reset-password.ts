@@ -2,6 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
+  BaseComponent,
   confirmPasswordValidator,
   whiteSpacesValidator,
 } from '@shared/presenter';
@@ -14,7 +15,7 @@ import { ResetPasswordCredentials } from '../../../domain';
   imports: [ReactiveFormsModule, InputPasswordComponent, ButtonComponent],
   templateUrl: './reset-password.html',
 })
-export class ResetPassword implements OnInit {
+export class ResetPassword extends BaseComponent implements OnInit {
   private readonly authenticationFacade = inject(AuthenticationFacade);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -52,7 +53,7 @@ export class ResetPassword implements OnInit {
     });
   }
 
-  public async resetPassword() {
+  public async send() {
     if (this.form.valid && this.accessToken) {
       const { password } = this.form.value;
       const result = await this.authenticationFacade.resetPassword({
@@ -62,11 +63,5 @@ export class ResetPassword implements OnInit {
       } as ResetPasswordCredentials);
       result.mapRight(() => this.router.navigate(['/login']));
     }
-  }
-
-  public get passwordsMatch(): boolean {
-    const password = this.form.get('password')?.value;
-    const confirmPassword = this.form.get('confirmPassword')?.value;
-    return password === confirmPassword;
   }
 }

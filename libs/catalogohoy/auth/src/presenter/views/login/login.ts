@@ -1,9 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { whiteSpacesValidator } from '@shared/presenter';
+import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import {
   ButtonComponent,
+  IconComponent,
   InputPasswordComponent,
   InputTextComponent,
 } from '@ui';
@@ -18,10 +19,11 @@ import { LoginCredentials } from '../../../domain';
     InputTextComponent,
     InputPasswordComponent,
     ButtonComponent,
+    IconComponent,
   ],
   templateUrl: './login.html',
 })
-export class Login {
+export class Login extends BaseComponent {
   private readonly authenticationFacade = inject(AuthenticationFacade);
   public readonly form = inject(FormBuilder).group({
     email: [
@@ -35,7 +37,7 @@ export class Login {
   });
 
   public send() {
-    if (this.form.valid) {
+    if (this.form.valid && this.loaderStore.isDisable()) {
       this.authenticationFacade.login(this.form.value as LoginCredentials);
     }
   }

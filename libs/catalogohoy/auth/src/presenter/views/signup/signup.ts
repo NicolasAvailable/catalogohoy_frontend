@@ -1,10 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { whiteSpacesValidator } from '@shared/presenter';
+import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import {
   ButtonComponent,
-  InputMaskComponent,
+  IconComponent,
   InputPasswordComponent,
   InputTextComponent,
 } from '@ui';
@@ -17,12 +17,12 @@ import { SignUpCredentials } from '../../../domain';
     RouterLink,
     InputTextComponent,
     InputPasswordComponent,
-    InputMaskComponent,
     ButtonComponent,
+    IconComponent,
   ],
   templateUrl: './signup.html',
 })
-export class Signup {
+export class Signup extends BaseComponent {
   private readonly authenticationFacade = inject(AuthenticationFacade);
   public readonly form = inject(FormBuilder).group({
     name: [
@@ -34,10 +34,6 @@ export class Signup {
       [Validators.required, Validators.email, whiteSpacesValidator()],
     ],
     storeName: ['', [Validators.required, Validators.minLength(3)]],
-    phone: [
-      '',
-      [Validators.required, Validators.minLength(10), whiteSpacesValidator()],
-    ],
     password: [
       '',
       [Validators.required, Validators.minLength(6), whiteSpacesValidator()],
@@ -45,7 +41,7 @@ export class Signup {
   });
 
   public send() {
-    if (this.form.valid) {
+    if (this.form.valid && this.loaderStore.isDisable()) {
       this.authenticationFacade.signup(this.form.value as SignUpCredentials);
     }
   }

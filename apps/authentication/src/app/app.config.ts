@@ -4,7 +4,11 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZoneChangeDetection,
 } from '@angular/core';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import {
+  provideRouter,
+  withComponentInputBinding,
+  withViewTransitions,
+} from '@angular/router';
 import {
   provideIcons,
   providePrimeNG,
@@ -17,7 +21,11 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(appRoutes, withComponentInputBinding()),
+    provideRouter(
+      appRoutes,
+      withComponentInputBinding(),
+      withViewTransitions()
+    ),
     provideHttpClient(withFetch()),
     providePrimeNG(),
     provideTranslation(),

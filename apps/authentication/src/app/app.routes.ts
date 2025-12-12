@@ -19,7 +19,7 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('@catalogohoy/auth').then((m) => m.Signup),
       },
       {
-        path: 'forgotten-password',
+        path: 'forgot-password',
         loadComponent: () =>
           import('@catalogohoy/auth').then((m) => m.ForgottenPassword),
       },

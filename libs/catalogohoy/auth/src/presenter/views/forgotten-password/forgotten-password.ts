@@ -1,16 +1,22 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { whiteSpacesValidator } from '@shared/presenter';
+import { RouterLink } from '@angular/router';
+import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import { ButtonComponent, InputTextComponent } from '@ui';
 import { AuthenticationFacade } from '../../../application';
 import { ForgottenPasswordCredentials } from '../../../domain';
 
 @Component({
   selector: 'app-forgotten-password',
-  imports: [ReactiveFormsModule, InputTextComponent, ButtonComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    InputTextComponent,
+    ButtonComponent,
+  ],
   templateUrl: './forgotten-password.html',
 })
-export class ForgottenPassword {
+export class ForgottenPassword extends BaseComponent {
   private readonly authenticationFacade = inject(AuthenticationFacade);
   public readonly form = inject(FormBuilder).group({
     email: [
@@ -20,7 +26,7 @@ export class ForgottenPassword {
   });
 
   public send() {
-    if (this.form.valid) {
+    if (this.form.valid && this.loaderStore.isDisable()) {
       this.authenticationFacade.forgottenPassword(
         this.form.value as ForgottenPasswordCredentials
       );

@@ -38,12 +38,12 @@ export class AuthenticationService implements BaseAuthenticationService {
     const { error } = await this.client.auth.signUp({
       email: credentials.email,
       password: credentials.password,
-      phone: credentials.phone.replace(/[^\d]/g, ''),
+      phone: '',
       options: {
         data: {
           name: credentials.name,
           display_name: credentials.name,
-          phone: credentials.phone.replace(/[^\d]/g, ''),
+          phone: '',
           store_name: credentials.storeName,
         },
       },
