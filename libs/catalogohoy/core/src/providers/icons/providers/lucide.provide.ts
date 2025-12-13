@@ -1,10 +1,12 @@
 import { EnvironmentProviders, importProvidersFrom } from '@angular/core';
 import {
+  ChevronRight,
   Home,
   LogOut,
   LucideAngularModule,
   NotepadText,
   ShoppingBag,
+  SquareArrowOutUpRight,
   Tag,
 } from 'lucide-angular';
 
@@ -16,6 +18,8 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       NotepadText,
       ShoppingBag,
       LogOut,
+      ChevronRight,
+      SquareArrowOutUpRight,
     })
   );
 };

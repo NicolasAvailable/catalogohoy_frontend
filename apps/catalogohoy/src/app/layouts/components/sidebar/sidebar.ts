@@ -1,9 +1,10 @@
+import { NgClass } from '@angular/common';
 import { Component } from '@angular/core';
 import { IconComponent, PanelMenuComponent, PanelMenuItem } from '@ui';
 
 @Component({
   selector: 'app-sidebar',
-  imports: [PanelMenuComponent, IconComponent],
+  imports: [NgClass, PanelMenuComponent, IconComponent],
   templateUrl: './sidebar.html',
 })
 export class Sidebar {
@@ -12,9 +13,14 @@ export class Sidebar {
     {
       label: 'Productos',
       icon: 'tag',
-      routerLink: '/dashboard',
-      routerLinkActiveOptions: { exact: true },
+      iconNext: 'chevron-right',
+      state: { isOpen: false },
       items: [
+        {
+          label: 'Todo',
+          routerLink: '/products',
+          routerLinkActiveOptions: { exact: true },
+        },
         {
           label: 'Categotias',
           routerLink: '/category',
@@ -28,4 +34,10 @@ export class Sidebar {
       ],
     },
   ];
+
+  public toggle(item: PanelMenuItem) {
+    if (item.state) {
+      item.state['isOpen'] = !item.state['isOpen'];
+    }
+  }
 }
