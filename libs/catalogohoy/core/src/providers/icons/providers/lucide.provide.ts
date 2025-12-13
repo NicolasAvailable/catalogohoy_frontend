@@ -4,6 +4,7 @@ import {
   Home,
   LogOut,
   LucideAngularModule,
+  MessageCircleQuestion,
   NotepadText,
   ShoppingBag,
   SquareArrowOutUpRight,
@@ -20,6 +21,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       LogOut,
       ChevronRight,
       SquareArrowOutUpRight,
+      MessageCircleQuestion,
     })
   );
 };

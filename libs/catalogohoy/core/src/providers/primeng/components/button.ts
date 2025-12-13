@@ -20,7 +20,8 @@ export const root = {
   label: {
     fontWeight: '700',
   },
-  raisedShadow: '0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12)',
+  raisedShadow:
+    '0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12)',
   focusRing: {
     width: '{form.field.focus.ring.width}',
     style: '{form.field.focus.ring.style}',
@@ -150,7 +151,8 @@ export const colorScheme = {
         activeBorderColor: 'var(--color-grey-100)',
         focusRing: {
           color: 'transparent',
-          shadow: '0 0 0 0.2rem color-mix(in srgb, {surface.0}, transparent 80%)',
+          shadow:
+            '0 0 0 0.2rem color-mix(in srgb, {surface.0}, transparent 80%)',
         },
       },
     },
@@ -186,10 +188,10 @@ export const colorScheme = {
         color: '{orange.500}',
       },
       help: {
-        hoverBackground: '{purple.50}',
-        activeBackground: '{purple.100}',
-        borderColor: '{purple.200}',
-        color: '{purple.500}',
+        hoverBackground: 'var(--color-grey-50)',
+        activeBackground: 'var(--color-grey-50)',
+        borderColor: 'transparent',
+        color: 'var(--color-grey-700)',
       },
       danger: {
         hoverBackground: '{red.50}',
@@ -277,7 +279,8 @@ export const colorScheme = {
         activeColor: '{primary.contrast.color}',
         focusRing: {
           color: 'transparent',
-          shadow: '0 0 0 0.2rem color-mix(in srgb, {primary.color}, transparent 80%)',
+          shadow:
+            '0 0 0 0.2rem color-mix(in srgb, {primary.color}, transparent 80%)',
         },
       },
       secondary: {
@@ -322,7 +325,8 @@ export const colorScheme = {
         activeColor: '{green.950}',
         focusRing: {
           color: 'transparent',
-          shadow: '0 0 0 0.2rem color-mix(in srgb, {green.400}, transparent 80%)',
+          shadow:
+            '0 0 0 0.2rem color-mix(in srgb, {green.400}, transparent 80%)',
         },
       },
       warn: {
@@ -337,7 +341,8 @@ export const colorScheme = {
         activeColor: '{orange.950}',
         focusRing: {
           color: 'transparent',
-          shadow: '0 0 0 0.2rem color-mix(in srgb, {orange.400}, transparent 80%)',
+          shadow:
+            '0 0 0 0.2rem color-mix(in srgb, {orange.400}, transparent 80%)',
         },
       },
       help: {
@@ -352,7 +357,8 @@ export const colorScheme = {
         activeColor: '{purple.950}',
         focusRing: {
           color: 'transparent',
-          shadow: '0 0 0 0.2rem color-mix(in srgb, {purple.400}, transparent 80%)',
+          shadow:
+            '0 0 0 0.2rem color-mix(in srgb, {purple.400}, transparent 80%)',
         },
       },
       danger: {
@@ -382,14 +388,16 @@ export const colorScheme = {
         activeBorderColor: 'var(--color-grey-100)',
         focusRing: {
           color: 'transparent',
-          shadow: '0 0 0 0.2rem color-mix(in srgb, {surface.0}, transparent 80%)',
+          shadow:
+            '0 0 0 0.2rem color-mix(in srgb, {surface.0}, transparent 80%)',
         },
       },
     },
     outlined: {
       primary: {
         hoverBackground: 'color-mix(in srgb, {primary.color}, transparent 96%)',
-        activeBackground: 'color-mix(in srgb, {primary.color}, transparent 84%)',
+        activeBackground:
+          'color-mix(in srgb, {primary.color}, transparent 84%)',
         borderColor: '{primary.700}',
         color: '{primary.color}',
       },
@@ -445,7 +453,8 @@ export const colorScheme = {
     text: {
       primary: {
         hoverBackground: 'color-mix(in srgb, {primary.color}, transparent 96%)',
-        activeBackground: 'color-mix(in srgb, {primary.color}, transparent 84%)',
+        activeBackground:
+          'color-mix(in srgb, {primary.color}, transparent 84%)',
         color: '{primary.color}',
       },
       secondary: {
