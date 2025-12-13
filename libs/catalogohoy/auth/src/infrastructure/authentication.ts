@@ -8,8 +8,10 @@ import {
   LoginCredentials,
   ResetPasswordCredentials,
   SignUpCredentials,
+  TenantModel,
 } from '../domain';
 import { errorMapper } from './authentication-error';
+import { TenantMapper } from './mappers';
 
 @Injectable({
   providedIn: 'root',
@@ -19,7 +21,7 @@ export class AuthenticationService implements BaseAuthenticationService {
 
   public async login(
     credentials: LoginCredentials
-  ): Promise<E.Either<Error, void>> {
+  ): Promise<E.Either<Error, TenantModel>> {
     const { error } = await this.client.auth.signInWithPassword({
       email: credentials.email,
       password: credentials.password,
@@ -27,14 +29,19 @@ export class AuthenticationService implements BaseAuthenticationService {
 
     if (error) {
       return E.left(errorMapper(error as AuthApiError));
-    } else {
-      return E.right(undefined);
     }
+    const { data: tenantRows, error: tenantError } = await this.client.rpc(
+      'get_my_tenant'
+    );
+    if (tenantError) {
+      return E.left(new Error(tenantError.message));
+    }
+    return E.right(TenantMapper.toDomain(tenantRows[0]));
   }
 
   public async signup(
     credentials: SignUpCredentials
-  ): Promise<E.Either<Error, void>> {
+  ): Promise<E.Either<Error, TenantModel>> {
     const { error } = await this.client.auth.signUp({
       email: credentials.email,
       password: credentials.password,
@@ -50,9 +57,15 @@ export class AuthenticationService implements BaseAuthenticationService {
     });
     if (error) {
       return E.left(errorMapper(error as AuthApiError));
-    } else {
-      return E.right(undefined);
     }
+
+    const { data: tenantRows, error: tenantError } = await this.client.rpc(
+      'get_my_tenant'
+    );
+    if (tenantError) {
+      return E.left(new Error(tenantError.message));
+    }
+    return E.right(TenantMapper.toDomain(tenantRows[0]));
   }
 
   public async forgottenPassword(input: ForgottenPasswordCredentials) {
@@ -79,7 +92,6 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(errorMapper(sessionError as AuthApiError));
     }
 
-    // Actualizar la contraseña
     const { error } = await this.client.auth.updateUser({
       password: input.password,
     });

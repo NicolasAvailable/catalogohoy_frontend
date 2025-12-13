@@ -5,10 +5,11 @@ import {
   ResetPasswordCredentials,
   SignUpCredentials,
 } from './authentication.types';
+import { TenantModel } from './tenant.model';
 
 export interface BaseAuthenticationService {
-  login(credentials: LoginCredentials): Promise<E.Either<Error, void>>;
-  signup(credentials: SignUpCredentials): Promise<E.Either<Error, void>>;
+  login(credentials: LoginCredentials): Promise<E.Either<Error, TenantModel>>;
+  signup(credentials: SignUpCredentials): Promise<E.Either<Error, TenantModel>>;
   forgottenPassword(
     input: ForgottenPasswordCredentials
   ): Promise<E.Either<Error, void>>;

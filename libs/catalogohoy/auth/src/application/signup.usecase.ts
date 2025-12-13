@@ -1,10 +1,14 @@
 import { UseCase, progressBuilder } from '@shared/application';
 import { E } from '@shared/domain';
-import { BaseAuthenticationService, SignUpCredentials } from '../domain';
+import {
+  BaseAuthenticationService,
+  SignUpCredentials,
+  TenantModel,
+} from '../domain';
 
 export class SignupUseCase extends UseCase<
   SignUpCredentials,
-  Promise<E.Either<Error, void>>
+  Promise<E.Either<Error, TenantModel>>
 > {
   constructor(
     private readonly authenticationService: BaseAuthenticationService
@@ -19,7 +23,7 @@ export class SignupUseCase extends UseCase<
 
   public async execute(
     input: SignUpCredentials
-  ): Promise<E.Either<Error, void>> {
+  ): Promise<E.Either<Error, TenantModel>> {
     this.start();
     const result = await this.authenticationService.signup(input);
     this.complete(result);
