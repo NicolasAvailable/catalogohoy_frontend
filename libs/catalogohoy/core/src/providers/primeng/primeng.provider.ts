@@ -23,6 +23,7 @@ import {
   menu,
   menubar,
   message,
+  panelmenu,
   progressbar,
   select,
   selectbutton,
@@ -65,6 +66,7 @@ const preset = definePreset(Lara, {
     accordion,
     checkbox,
     colorpicker,
+    panelmenu,
   },
 });
 

@@ -1,0 +1,15 @@
+.p-panelmenu .p-panelmenu-header-link,
+.p-panelmenu .p-panelmenu-submenu-icon {
+  display: none;
+}
+
+.p-panelmenu-header:not(.p-disabled) .p-panelmenu-header-content:hover,
+.p-panelmenu-item:not(.p-disabled) > .p-panelmenu-item-content:hover {
+  background-color: var(--color-primary-50) !important;
+}
+
+.p-panelmenu .p-panelmenu-panel {
+  padding: 0px !important;
+  border-width: 0px !important;
+  margin-top: 0.188rem;
+}

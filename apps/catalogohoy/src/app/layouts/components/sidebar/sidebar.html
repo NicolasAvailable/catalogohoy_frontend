@@ -1,5 +1,5 @@
 <aside
-  class="flex flex-col gap-6 h-full w-72 bg-white px-3 py-5 border-r border-grey-50"
+  class="flex flex-col gap-5 h-full w-72 bg-white px-3 py-5 border-r border-grey-50"
 >
   <div class="w-full h-16">
     <div class="flex items-center h-full">
@@ -7,15 +7,54 @@
         name="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/catalogohoy-logo.png"
         styleClass="h-14"
       />
-      <span class="text-lg font-semibold text-grey-700">CatalogoHoy</span>
+      <h1 class="text-lg font-semibold text-grey-700">CatalogoHoy</h1>
     </div>
   </div>
-  <section class="flex flex-col gap-1 w-full h-full">
-    <div
-      class="flex items-center gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-primary-50"
+  <ul class="flex flex-col gap-1.5 w-full h-full">
+    <li
+      class="flex items-center gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
     >
       <ui-icon name="home" size="16" />
       <a class="font-base font-semibold text-grey-700 mt-0.5">Inicio</a>
+    </li>
+    <li class="flex items-center gap-2 w-full rounded-md cursor-pointer">
+      <ui-panel-menu
+        [items]="productsMenu"
+        [transitionOptions]="transitionOptions"
+        class="w-full"
+        styleClass="w-full"
+      >
+        <ng-template #item let-item>
+          <div
+            class="flex items-center gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+          >
+            <ui-icon [name]="item?.icon" size="16" />
+            <a class="font-base font-semibold text-grey-700 mt-0.5"
+              >{{item.label}}</a
+            >
+          </div>
+        </ng-template>
+      </ui-panel-menu>
+    </li>
+    <li
+      class="flex items-center gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+    >
+      <ui-icon name="notepad-text" size="16" />
+      <a class="font-base font-semibold text-grey-700 mt-0.5">Ordenes</a>
+    </li>
+    <li
+      class="flex items-center gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+    >
+      <ui-icon name="shopping-bag" size="16" />
+      <a class="font-base font-semibold text-grey-700 mt-0.5">Mi catálogo</a>
+    </li>
+  </ul>
+  <div class="w-full h-auto">
+    <div
+      class="flex items-center gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+    >
+      <ui-icon name="log-out" size="16" />
+      <h4 class="text-base font-semibold text-grey-700">Cerrar sesión</h4>
     </div>
-  </section>
+  </div>
 </aside>
