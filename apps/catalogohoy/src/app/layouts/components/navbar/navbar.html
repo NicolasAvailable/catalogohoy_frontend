@@ -6,6 +6,7 @@
     styleClass="!border-none !text-grey-700"
   />
   <div
+    (click)="profileMenu.menu()?.toggle($event)"
     class="flex items-center gap-2 rounded-lg py-1 px-2 cursor-pointer hover:bg-primary-50"
   >
     <ui-avatar [image]="image()" label="Nicolas" class="leading-none h-auto" />
@@ -13,4 +14,5 @@
       >Nicolás</span
     >
   </div>
+  <app-profile-menu #profileMenu></app-profile-menu>
 </nav>

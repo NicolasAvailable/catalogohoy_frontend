@@ -1,0 +1,49 @@
+<ui-menu #profileMenu [items]="profileItems()" styleClass="profile-menu">
+  <ng-template #start>
+    <div
+      class="flex items-center gap-2 border-b border-grey-50 px-3 py-3 rounded-t-lg"
+    >
+      <span class="text-base font-semibold text-grey-700 leading-none h-auto"
+        >Mis tiendas</span
+      >
+    </div>
+  </ng-template>
+  <ng-template #item let-item>
+    <li
+      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-lg cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+    >
+      <div class="flex items-center gap-2 min-w-0 flex-1">
+        <ui-icon
+          name="circle-user"
+          size="20"
+          class="leading-none h-auto shrink-0"
+          styleClass="!text-grey-700 "
+        />
+        <a class="text-sm text-grey-700 leading-none h-auto truncate"
+          >{{ item.label }}</a
+        >
+      </div>
+      <ui-icon
+        name="square-arrow-out-up-right"
+        size="16"
+        class="transition-transform duration-200 ease-in-out shrink-0"
+        styleClass="text-grey-700"
+      />
+    </li>
+  </ng-template>
+  <ng-template #end>
+    <div
+      class="flex items-center gap-2 border-t border-grey-50 bg-lino-500 px-3 py-3 rounded-b-lg"
+    >
+      <ui-icon
+        name="circle-user"
+        size="20"
+        class="leading-none h-auto"
+        styleClass="!text-grey-700 "
+      />
+      <span class="text-base font-semibold text-grey-700 leading-none h-auto"
+        >Mi Cuenta</span
+      >
+    </div>
+  </ng-template>
+</ui-menu>
