@@ -1,9 +1,10 @@
 import { Component, signal, viewChild } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { IconComponent, MenuComponent, MenuItem } from '@ui';
 
 @Component({
   selector: 'app-profile-menu',
-  imports: [MenuComponent, IconComponent],
+  imports: [RouterLink, MenuComponent, IconComponent],
   templateUrl: './profile-menu.html',
   styleUrl: './profile-menu.css',
 })

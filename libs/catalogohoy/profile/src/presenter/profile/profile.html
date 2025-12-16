@@ -1,0 +1,42 @@
+<section class="container flex flex-col gap-4 max-w-2xl mx-auto">
+  <ui-card>
+    <form [formGroup]="form" class="flex flex-col gap-3">
+      <h1 class="text-3xl font-bold">Perfil</h1>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="name" class="text-sm font-medium text-gray-700"
+          >Nombre</label
+        >
+        <ui-input-text formControlName="name" inputId="name"></ui-input-text>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label for="email" class="text-sm font-medium text-gray-700"
+          >E-mail</label
+        >
+        <ui-input-text formControlName="email" inputId="email"></ui-input-text>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label for="newPassword" class="text-sm font-medium text-gray-700"
+          >Nueva contraseña</label
+        >
+        <ui-input-text
+          formControlName="newPassword"
+          inputId="newPassword"
+        ></ui-input-text>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label for="confirmPassword" class="text-sm font-medium text-gray-700"
+          >Confirmar contraseña</label
+        >
+        <ui-input-text
+          formControlName="confirmPassword"
+          inputId="confirmPassword"
+        ></ui-input-text>
+      </div>
+      <div class="flex gap-3 justify-end w-full mt-4">
+        <ui-button label="Cancelar" severity="contrast"></ui-button>
+        <ui-button label="Guardar" severity="primary"></ui-button>
+      </div>
+    </form>
+  </ui-card>
+</section>

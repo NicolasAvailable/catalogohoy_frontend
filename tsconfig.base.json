@@ -22,7 +22,8 @@
       "@shared/presenter": ["libs/shared/presenter/src/index.ts"],
       "@catalogohoy/core": ["libs/catalogohoy/core/src/index.ts"],
       "@catalogohoy/env": ["libs/catalogohoy/environments/src/index.ts"],
-      "@catalogohoy/auth": ["libs/catalogohoy/auth/src/index.ts"]
+      "@catalogohoy/auth": ["libs/catalogohoy/auth/src/index.ts"],
+      "@catalogohoy/profile": ["libs/catalogohoy/profile/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
