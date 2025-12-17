@@ -1,5 +1,6 @@
 import { EnvironmentProviders, importProvidersFrom } from '@angular/core';
 import {
+  ChevronDown,
   ChevronRight,
   CircleUser,
   ExternalLink,
@@ -22,6 +23,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       ShoppingBag,
       LogOut,
       ChevronRight,
+      ChevronDown,
       SquareArrowOutUpRight,
       MessageCircleQuestion,
       CircleUser,

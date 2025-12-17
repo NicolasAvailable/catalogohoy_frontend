@@ -6,7 +6,7 @@ export const root = {
 };
 
 export const body = {
-  padding: '1rem 1.5rem',
+  padding: '1.5rem',
   gap: '0.5rem',
 };
 

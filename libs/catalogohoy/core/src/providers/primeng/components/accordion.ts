@@ -12,7 +12,7 @@ export const header = {
   hoverColor: 'var(--color-grey-500)',
   activeColor: 'var(--color-grey-500)',
   activeHoverColor: 'var(--color-grey-500)',
-  padding: '2.5rem',
+  padding: '1.5rem',
   fontWeight: '700',
   borderRadius: 'var(--radius-base)',
   borderWidth: '1px 1px 1px 1px',

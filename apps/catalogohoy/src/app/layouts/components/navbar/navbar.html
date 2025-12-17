@@ -9,7 +9,11 @@
     (click)="profileMenu.menu()?.toggle($event)"
     class="flex items-center gap-2 rounded-lg py-1 px-2 cursor-pointer hover:bg-primary-50"
   >
-    <ui-avatar [image]="image()" label="Nicolas" class="leading-none h-auto" />
+    <ui-avatar
+      label="Nicolas"
+      class="leading-none h-auto"
+      styleClass="!bg-[#8892F0] !text-lino-500"
+    />
     <span class="text-base font-semibold text-grey-700 leading-none h-auto"
       >Nicolás</span
     >

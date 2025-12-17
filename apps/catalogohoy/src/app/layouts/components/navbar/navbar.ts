@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { AvatarComponent, ButtonComponent } from '@ui';
 import { ProfileMenu } from './components';
 
@@ -7,8 +7,4 @@ import { ProfileMenu } from './components';
   imports: [AvatarComponent, ButtonComponent, ProfileMenu],
   templateUrl: './navbar.html',
 })
-export class Navbar {
-  public readonly image = signal(
-    'https://prod-files.socialgest.net/356607/images/09264503-17d6-43b4-b8c4-9f3de6908fdc.jpeg'
-  );
-}
+export class Navbar {}
