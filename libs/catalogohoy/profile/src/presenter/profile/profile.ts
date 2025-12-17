@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import {
   AccordionComponent,
@@ -8,6 +8,7 @@ import {
   CardComponent,
   InputTextComponent,
 } from '@ui';
+import { ProfileStore } from '../../infrastructure';
 
 @Component({
   selector: 'lib-profile',
@@ -23,6 +24,8 @@ import {
   templateUrl: './profile.html',
 })
 export class Profile {
+  private readonly profileStore = inject(ProfileStore);
+
   public readonly items = signal([
     {
       ref: 'Password',
@@ -37,4 +40,13 @@ export class Profile {
     newPassword: [''],
     confirmPassword: [''],
   });
+
+  constructor() {
+    effect(() => {
+      this.profileForm.get('name')?.setValue(this.profileStore.profile().name);
+      this.profileForm
+        .get('email')
+        ?.setValue(this.profileStore.profile().email);
+    });
+  }
 }
