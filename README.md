@@ -1,6 +1,6 @@
 # CatalogoHoy
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+<a alt="catalogohoy logo" href="https://auth.catalogohoy.com" target="_blank" rel="noreferrer"><img src="[https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png](https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/favicon-c.png)" width="45"></a>
 
 **CatalogoHoy** es una aplicación web moderna para la creación y gestión de catálogos digitales. Desarrollada con Angular y construida sobre la arquitectura de monorepo de Nx, permite a los usuarios crear, personalizar y administrar catálogos de productos de manera eficiente y profesional.
 
