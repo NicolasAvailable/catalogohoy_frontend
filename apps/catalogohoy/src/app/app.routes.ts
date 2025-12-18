@@ -1,9 +1,11 @@
 import { Route } from '@angular/router';
 import { profileResolver } from '@catalogohoy/profile';
+import { authenticationGuard } from '@catalogohoy/auth';
 
 export const appRoutes: Route[] = [
   {
     path: '',
+    canActivate: [authenticationGuard],
     resolve: {
       profile: profileResolver,
     },
