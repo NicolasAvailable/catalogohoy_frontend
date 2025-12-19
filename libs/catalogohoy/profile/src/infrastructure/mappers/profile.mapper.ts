@@ -1,6 +1,6 @@
+import { TenantListMapper } from '@catalogohoy/tenant';
 import { Profile } from '../../domain';
 import { ProfileResponse } from '../primitives';
-import { TenantListMapper } from './tenant.mapper';
 
 export class ProfileMapper {
   static toDomain(profile: ProfileResponse) {

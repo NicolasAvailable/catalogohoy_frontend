@@ -1,3 +1,4 @@
+import { Tenant } from '@catalogohoy/tenant';
 import { E } from '@shared/domain';
 import {
   ForgottenPasswordCredentials,
@@ -5,11 +6,10 @@ import {
   ResetPasswordCredentials,
   SignUpCredentials,
 } from './authentication.types';
-import { TenantModel } from './tenant.model';
 
 export interface BaseAuthenticationService {
-  login(credentials: LoginCredentials): Promise<E.Either<Error, TenantModel>>;
-  signup(credentials: SignUpCredentials): Promise<E.Either<Error, TenantModel>>;
+  login(credentials: LoginCredentials): Promise<E.Either<Error, Tenant>>;
+  signup(credentials: SignUpCredentials): Promise<E.Either<Error, Tenant>>;
   forgottenPassword(
     input: ForgottenPasswordCredentials
   ): Promise<E.Either<Error, void>>;

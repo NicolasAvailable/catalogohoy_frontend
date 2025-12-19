@@ -1,17 +1,9 @@
-import { TenantRol } from '../../domain';
+import { TenantEntity } from '@catalogohoy/tenant';
 
 export interface ProfileResponse {
   user: ProfileEntity;
   tenants: TenantEntity[];
   default_tenant: TenantEntity;
-}
-
-export interface TenantEntity {
-  id: number;
-  name: string;
-  role: TenantRol;
-  slug: string;
-  is_default: boolean;
 }
 
 export interface ProfileEntity {

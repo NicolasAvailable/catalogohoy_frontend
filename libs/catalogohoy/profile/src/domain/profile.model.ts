@@ -1,5 +1,5 @@
+import { TenantList } from '@catalogohoy/tenant';
 import { Entity } from '@shared/domain';
-import { TenantList } from './tenant-list.model';
 
 export class Profile extends Entity {
   constructor(

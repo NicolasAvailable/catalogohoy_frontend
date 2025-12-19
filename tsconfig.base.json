@@ -23,7 +23,8 @@
       "@catalogohoy/core": ["libs/catalogohoy/core/src/index.ts"],
       "@catalogohoy/env": ["libs/catalogohoy/environments/src/index.ts"],
       "@catalogohoy/auth": ["libs/catalogohoy/auth/src/index.ts"],
-      "@catalogohoy/profile": ["libs/catalogohoy/profile/src/index.ts"]
+      "@catalogohoy/profile": ["libs/catalogohoy/profile/src/index.ts"],
+      "@catalogohoy/tenant": ["libs/catalogohoy/tenant/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

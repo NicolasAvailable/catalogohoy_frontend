@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
+import { Tenant, TenantMapper } from '@catalogohoy/tenant';
 import { E } from '@shared/domain';
 import { AuthApiError } from '@supabase/supabase-js';
 import {
@@ -8,10 +9,8 @@ import {
   LoginCredentials,
   ResetPasswordCredentials,
   SignUpCredentials,
-  TenantModel,
 } from '../domain';
 import { errorMapper } from './authentication-error';
-import { TenantMapper } from './mappers';
 
 @Injectable({
   providedIn: 'root',
@@ -21,7 +20,7 @@ export class AuthenticationService implements BaseAuthenticationService {
 
   public async login(
     credentials: LoginCredentials
-  ): Promise<E.Either<Error, TenantModel>> {
+  ): Promise<E.Either<Error, Tenant>> {
     const { error } = await this.client.auth.signInWithPassword({
       email: credentials.email,
       password: credentials.password,
@@ -41,7 +40,7 @@ export class AuthenticationService implements BaseAuthenticationService {
 
   public async signup(
     credentials: SignUpCredentials
-  ): Promise<E.Either<Error, TenantModel>> {
+  ): Promise<E.Either<Error, Tenant>> {
     const { error } = await this.client.auth.signUp({
       email: credentials.email,
       password: credentials.password,

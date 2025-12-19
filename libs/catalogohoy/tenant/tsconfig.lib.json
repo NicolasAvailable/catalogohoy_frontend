@@ -14,8 +14,5 @@
     "src/**/*.test.ts",
     "jest.config.cts"
   ],
-  "include": [
-    "src/**/*.ts",
-    "../tenant/src/infrastructure/mappers/tenant.mapper.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }
