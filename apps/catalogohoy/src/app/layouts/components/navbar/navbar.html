@@ -10,12 +10,12 @@
     class="flex items-center gap-2 rounded-lg py-1 px-2 cursor-pointer hover:bg-primary-50"
   >
     <ui-avatar
-      label="Nicolas"
+      [label]="profileStore.profile().name"
       class="leading-none h-auto"
       styleClass="!bg-[#8892F0] !text-lino-500"
     />
     <span class="text-base font-semibold text-grey-700 leading-none h-auto"
-      >Nicolás</span
+      >{{ profileStore.profile().name }}</span
     >
   </div>
   <app-profile-menu #profileMenu></app-profile-menu>

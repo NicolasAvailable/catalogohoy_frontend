@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { ProfileStore } from '@catalogohoy/profile';
 import { AvatarComponent, ButtonComponent } from '@ui';
 import { ProfileMenu } from './components';
 
@@ -7,4 +8,6 @@ import { ProfileMenu } from './components';
   imports: [AvatarComponent, ButtonComponent, ProfileMenu],
   templateUrl: './navbar.html',
 })
-export class Navbar {}
+export class Navbar {
+  public readonly profileStore = inject(ProfileStore);
+}
