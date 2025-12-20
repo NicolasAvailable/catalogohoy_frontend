@@ -1,16 +1,18 @@
 import { Route } from '@angular/router';
 import { authenticationGuard } from '@catalogohoy/auth';
 import { profileResolver } from '@catalogohoy/profile';
+import { isValidSlugGuard } from '@catalogohoy/tenant';
 
 export const appRoutes: Route[] = [
   {
     path: '',
+    canActivate: [isValidSlugGuard],
     loadComponent: () =>
       import('@catalogohoy/e-commerce').then((m) => m.ECommerce),
   },
   {
     path: 'admin',
-    canActivate: [authenticationGuard],
+    canActivate: [isValidSlugGuard, authenticationGuard],
     resolve: {
       profile: profileResolver,
     },
