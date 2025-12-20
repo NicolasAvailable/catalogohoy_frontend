@@ -42,7 +42,7 @@ export class Login extends BaseComponent {
         this.form.value as LoginCredentials
       );
       result.mapRight(({ slug }) => {
-        window.location.href = `${slug}.catalogohoy.com/admin`;
+        window.location.href = `https://${slug}.catalogohoy.com/admin`;
       });
     }
   }

@@ -40,9 +40,14 @@ export class Signup extends BaseComponent {
     ],
   });
 
-  public send() {
+  public async send() {
     if (this.form.valid && this.loaderStore.isDisable()) {
-      this.authenticationFacade.signup(this.form.value as SignUpCredentials);
+      const result = await this.authenticationFacade.signup(
+        this.form.value as SignUpCredentials
+      );
+      result.mapRight(({ slug }) => {
+        window.location.href = `https://${slug}.catalogohoy.com/admin`;
+      });
     }
   }
 }
