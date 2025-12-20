@@ -36,9 +36,14 @@ export class Login extends BaseComponent {
     ],
   });
 
-  public send() {
+  public async send() {
     if (this.form.valid && this.loaderStore.isDisable()) {
-      this.authenticationFacade.login(this.form.value as LoginCredentials);
+      const result = await this.authenticationFacade.login(
+        this.form.value as LoginCredentials
+      );
+      result.mapRight(({ slug }) => {
+        window.location.href = `${slug}.catalogohoy.com/admin`;
+      });
     }
   }
 }
