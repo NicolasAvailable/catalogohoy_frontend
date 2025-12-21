@@ -38,7 +38,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    const redirectUrl = `https://${tenant.select}.catalogohoy.com/admin?${this.authenticationTokenService.AUTH_CONFIG_KEY}=${this.authenticationTokenService.authConfigValue}`;
+    const redirectUrl = `https://${tenant.slug}.catalogohoy.com/admin?${this.authenticationTokenService.AUTH_CONFIG_KEY}=${this.authenticationTokenService.authConfigValue}`;
     return E.right(redirectUrl);
   }
 
@@ -69,7 +69,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    const redirectUrl = `https://${tenant.select}.catalogohoy.com/admin?${this.authenticationTokenService.AUTH_CONFIG_KEY}=${this.authenticationTokenService.authConfigValue}`;
+    const redirectUrl = `https://${tenant.slug}.catalogohoy.com/admin?${this.authenticationTokenService.AUTH_CONFIG_KEY}=${this.authenticationTokenService.authConfigValue}`;
     return E.right(redirectUrl);
   }
 
