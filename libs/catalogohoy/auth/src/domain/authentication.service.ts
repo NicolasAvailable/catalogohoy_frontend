@@ -1,4 +1,3 @@
-import { Tenant } from '@catalogohoy/tenant';
 import { E } from '@shared/domain';
 import {
   ForgottenPasswordCredentials,
@@ -8,8 +7,8 @@ import {
 } from './authentication.types';
 
 export interface BaseAuthenticationService {
-  login(credentials: LoginCredentials): Promise<E.Either<Error, Tenant>>;
-  signup(credentials: SignUpCredentials): Promise<E.Either<Error, Tenant>>;
+  login(credentials: LoginCredentials): Promise<E.Either<Error, string>>;
+  signup(credentials: SignUpCredentials): Promise<E.Either<Error, string>>;
   forgottenPassword(
     input: ForgottenPasswordCredentials
   ): Promise<E.Either<Error, void>>;

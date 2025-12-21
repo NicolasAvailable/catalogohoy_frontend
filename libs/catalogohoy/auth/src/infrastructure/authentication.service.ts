@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
-import { Tenant, TenantMapper } from '@catalogohoy/tenant';
+import { TenantMapper } from '@catalogohoy/tenant';
 import { E } from '@shared/domain';
 import { AuthApiError } from '@supabase/supabase-js';
 import {
@@ -11,16 +11,18 @@ import {
   SignUpCredentials,
 } from '../domain';
 import { errorMapper } from './authentication-error';
+import { authenticationTokenService } from './authentication-token.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthenticationService implements BaseAuthenticationService {
   private readonly client = SupabaseClientProvider.getInstance();
+  private readonly authenticationTokenService = authenticationTokenService;
 
   public async login(
     credentials: LoginCredentials
-  ): Promise<E.Either<Error, Tenant>> {
+  ): Promise<E.Either<Error, string>> {
     const { error } = await this.client.auth.signInWithPassword({
       email: credentials.email,
       password: credentials.password,
@@ -35,12 +37,14 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (tenantError) {
       return E.left(new Error(tenantError.message));
     }
-    return E.right(TenantMapper.toDomain(tenantRows[0]));
+    const tenant = TenantMapper.toDomain(tenantRows[0]);
+    const redirectUrl = `https://${tenant.select}.catalogohoy.com/admin?${this.authenticationTokenService.AUTH_CONFIG_KEY}=${this.authenticationTokenService.authConfigValue}`;
+    return E.right(redirectUrl);
   }
 
   public async signup(
     credentials: SignUpCredentials
-  ): Promise<E.Either<Error, Tenant>> {
+  ): Promise<E.Either<Error, string>> {
     const { error } = await this.client.auth.signUp({
       email: credentials.email,
       password: credentials.password,
@@ -64,7 +68,9 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (tenantError) {
       return E.left(new Error(tenantError.message));
     }
-    return E.right(TenantMapper.toDomain(tenantRows[0]));
+    const tenant = TenantMapper.toDomain(tenantRows[0]);
+    const redirectUrl = `https://${tenant.select}.catalogohoy.com/admin?${this.authenticationTokenService.AUTH_CONFIG_KEY}=${this.authenticationTokenService.authConfigValue}`;
+    return E.right(redirectUrl);
   }
 
   public async forgottenPassword(input: ForgottenPasswordCredentials) {

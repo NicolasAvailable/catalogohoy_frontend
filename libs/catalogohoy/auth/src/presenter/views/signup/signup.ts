@@ -45,9 +45,7 @@ export class Signup extends BaseComponent {
       const result = await this.authenticationFacade.signup(
         this.form.value as SignUpCredentials
       );
-      result.mapRight(({ slug }) => {
-        window.location.href = `https://${slug}.catalogohoy.com/admin`;
-      });
+      result.mapRight((url) => (window.location.href = url));
     }
   }
 }
