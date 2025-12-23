@@ -50,8 +50,8 @@
           "sourceMap": true,
           "fileReplacements": [
             {
-              "replace": "libs/catalogohoy/@environments/src/environment.ts",
-              "with": "libs/catalogohoy/@environments/src/environment.development.ts"
+              "replace": "libs/catalogohoy/environments/src/environment.ts",
+              "with": "libs/catalogohoy/environments/src/environment.development.ts"
             }
           ]
         }
