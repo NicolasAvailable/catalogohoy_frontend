@@ -2,7 +2,11 @@ import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
-import { ButtonComponent, InputTextComponent } from '@ui';
+import {
+  ButtonComponent,
+  InputMessageComponent,
+  InputTextComponent,
+} from '@ui';
 import { AuthenticationFacade } from '../../../application';
 import { ForgottenPasswordCredentials } from '../../../domain';
 
@@ -12,6 +16,7 @@ import { ForgottenPasswordCredentials } from '../../../domain';
     ReactiveFormsModule,
     RouterLink,
     InputTextComponent,
+    InputMessageComponent,
     ButtonComponent,
   ],
   templateUrl: './forgotten-password.html',

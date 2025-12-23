@@ -6,13 +6,22 @@ import {
   confirmPasswordValidator,
   whiteSpacesValidator,
 } from '@shared/presenter';
-import { ButtonComponent, InputPasswordComponent } from '@ui';
+import {
+  ButtonComponent,
+  InputMessageComponent,
+  InputPasswordComponent,
+} from '@ui';
 import { AuthenticationFacade } from '../../../application';
 import { ResetPasswordCredentials } from '../../../domain';
 
 @Component({
   selector: 'app-reset-password',
-  imports: [ReactiveFormsModule, InputPasswordComponent, ButtonComponent],
+  imports: [
+    ReactiveFormsModule,
+    InputPasswordComponent,
+    InputMessageComponent,
+    ButtonComponent,
+  ],
   templateUrl: './reset-password.html',
 })
 export class ResetPassword extends BaseComponent implements OnInit {

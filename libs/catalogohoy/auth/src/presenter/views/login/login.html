@@ -31,6 +31,21 @@
           formControlName="email"
           placeholder="manuel@catalogohoy.com"
         />
+        <ui-input-message
+          [control]="form.get('email')"
+          error="required"
+          text="El campo es obligatorio"
+        />
+        <ui-input-message
+          [control]="form.get('email')"
+          error="whitespace"
+          text="No puede contener espacios en blanco"
+        />
+        <ui-input-message
+          [control]="form.get('email')"
+          error="email"
+          text="El formato no es válido"
+        />
       </div>
 
       <div class="mb-4">
@@ -44,6 +59,16 @@
           inputId="password"
           formControlName="password"
           placeholder="*********"
+        />
+        <ui-input-message
+          [control]="form.get('password')"
+          error="required"
+          text="El campo es obligatorio"
+        />
+        <ui-input-message
+          [control]="form.get('password')"
+          error="minlength"
+          text="Debe tener mínimo 6 caracteres"
         />
       </div>
       <a routerLink="/forgot-password" class="font-semibold text-blue-500 mt-2"

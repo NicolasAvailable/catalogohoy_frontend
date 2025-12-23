@@ -5,6 +5,7 @@ import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import {
   ButtonComponent,
   IconComponent,
+  InputMessageComponent,
   InputPasswordComponent,
   InputTextComponent,
 } from '@ui';
@@ -17,6 +18,7 @@ import { SignUpCredentials } from '../../../domain';
     RouterLink,
     InputTextComponent,
     InputPasswordComponent,
+    InputMessageComponent,
     ButtonComponent,
     IconComponent,
   ],

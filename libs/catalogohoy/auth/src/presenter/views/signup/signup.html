@@ -29,6 +29,21 @@
           formControlName="name"
           placeholder="Manuel"
         />
+        <ui-input-message
+          [control]="form.get('name')"
+          error="required"
+          text="El campo es obligatorio"
+        />
+        <ui-input-message
+          [control]="form.get('name')"
+          error="whitespace"
+          text="No puede contener espacios en blanco"
+        />
+        <ui-input-message
+          [control]="form.get('name')"
+          error="minlength"
+          text="Debe tener mínimo 4 caracteres"
+        />
       </div>
       <div class="mb-4">
         <label
@@ -41,6 +56,16 @@
           formControlName="storeName"
           placeholder="Nombre de tu tienda"
         />
+        <ui-input-message
+          [control]="form.get('storeName')"
+          error="required"
+          text="El campo es obligatorio"
+        />
+        <ui-input-message
+          [control]="form.get('storeName')"
+          error="minlength"
+          text="Debe tener mínimo 3 caracteres"
+        />
       </div>
       <div class="mb-4">
         <label
@@ -52,6 +77,21 @@
           inputId="email"
           formControlName="email"
           placeholder="manuel@catalogohoy.com"
+        />
+        <ui-input-message
+          [control]="form.get('email')"
+          error="required"
+          text="El campo es obligatorio"
+        />
+        <ui-input-message
+          [control]="form.get('email')"
+          error="whitespace"
+          text="No puede contener espacios en blanco"
+        />
+        <ui-input-message
+          [control]="form.get('email')"
+          error="email"
+          text="El formato no es válido"
         />
       </div>
 
@@ -66,6 +106,21 @@
           inputId="password"
           formControlName="password"
           placeholder="*********"
+        />
+        <ui-input-message
+          [control]="form.get('password')"
+          error="required"
+          text="El campo es obligatorio"
+        />
+        <ui-input-message
+          [control]="form.get('password')"
+          error="whitespace"
+          text="No puede contener espacios en blanco"
+        />
+        <ui-input-message
+          [control]="form.get('password')"
+          error="minlength"
+          text="Debe tener mínimo 6 caracteres"
         />
       </div>
 
