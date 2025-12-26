@@ -45,11 +45,11 @@ export class Profile {
   });
   public readonly passwordForm = inject(FormBuilder).group(
     {
-      newPassword: [
+      password: [
         '',
         [Validators.required, Validators.minLength(6), whiteSpacesValidator()],
       ],
-      confirmPassword: [
+      passwordConfirmed: [
         '',
         [Validators.required, Validators.minLength(6), whiteSpacesValidator()],
       ],
@@ -79,6 +79,14 @@ export class Profile {
     if (this.profileForm.valid && name) {
       await this.profileFacade.updateName(name);
       this.profileStore.$profile();
+    }
+  }
+
+  public async updatePassword(): Promise<void> {
+    const password = this.passwordForm.get('password')?.value;
+    if (this.passwordForm.valid && password) {
+      await this.profileFacade.updatePassword(password);
+      this.passwordForm.reset();
     }
   }
 }

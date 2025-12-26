@@ -39,4 +39,16 @@ export class ProfileService implements BaseProfileService {
     }
     return E.right(undefined);
   }
+
+  public async updatePassword(password: string): Promise<Either<Error, void>> {
+    const { error } = await this.client.auth.updateUser({
+      password,
+    });
+
+    if (error) {
+      return E.left(new Error(error.message));
+    } else {
+      return E.right(undefined);
+    }
+  }
 }

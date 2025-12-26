@@ -56,51 +56,53 @@
     <ng-template [accordionPanel]="item.ref" let-item="item">
       <form [formGroup]="passwordForm" class="flex flex-col gap-2 p-6">
         <div class="flex flex-col gap-1.5">
-          <label for="newPassword" class="text-sm font-medium text-grey-700"
+          <label for="password" class="text-sm font-medium text-grey-700"
             >Nueva contraseña</label
           >
           <ui-input-password
             [feedback]="false"
-            formControlName="newPassword"
-            inputId="newPassword"
+            formControlName="password"
+            inputId="password"
           />
           <ui-input-message
-            [control]="passwordForm.get('newPassword')"
+            [control]="passwordForm.get('password')"
             error="required"
             text="El campo es obligatorio"
           />
           <ui-input-message
-            [control]="passwordForm.get('newPassword')"
+            [control]="passwordForm.get('password')"
             error="whitespace"
             text="No puede contener espacios en blanco"
           />
           <ui-input-message
-            [control]="passwordForm.get('newPassword')"
+            [control]="passwordForm.get('password')"
             error="minlength"
             text="Debe tener mínimo 6 caracteres"
           />
         </div>
         <div class="flex flex-col gap-1.5">
-          <label for="confirmPassword" class="text-sm font-medium text-grey-700"
+          <label
+            for="passwordConfirmed"
+            class="text-sm font-medium text-grey-700"
             >Confirmar contraseña</label
           >
           <ui-input-password
             [feedback]="false"
-            formControlName="confirmPassword"
-            inputId="confirmPassword"
+            formControlName="passwordConfirmed"
+            inputId="passwordConfirmed"
           />
           <ui-input-message
-            [control]="passwordForm.get('confirmPassword')"
+            [control]="passwordForm.get('passwordConfirmed')"
             error="required"
             text="El campo es obligatorio"
           />
           <ui-input-message
-            [control]="passwordForm.get('confirmPassword')"
+            [control]="passwordForm.get('passwordConfirmed')"
             error="whitespace"
             text="No puede contener espacios en blanco"
           />
           <ui-input-message
-            [control]="passwordForm.get('confirmPassword')"
+            [control]="passwordForm.get('passwordConfirmed')"
             error="minlength"
             text="Debe tener mínimo 6 caracteres"
           />
@@ -112,6 +114,7 @@
         </div>
         <div class="flex gap-3 justify-end w-full mt-4">
           <ui-button
+            (click)="updatePassword()"
             [disabled]="passwordForm.invalid"
             label="Guardar"
             severity="primary"
