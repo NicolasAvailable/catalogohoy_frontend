@@ -1,11 +1,17 @@
 import { NgClass } from '@angular/common';
 import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { IconComponent, PanelMenuComponent, PanelMenuItem } from '@ui';
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, NgClass, PanelMenuComponent, IconComponent],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    NgClass,
+    PanelMenuComponent,
+    IconComponent,
+  ],
   templateUrl: './sidebar.html',
 })
 export class Sidebar {
