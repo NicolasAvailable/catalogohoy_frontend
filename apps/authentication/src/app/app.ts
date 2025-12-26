@@ -12,7 +12,6 @@ import { AppSubscriber } from './app.subscriber';
 })
 export class App {
   private readonly subscriber = inject(AppSubscriber);
-  protected title = 'authentication';
 
   constructor() {
     SupabaseClientProvider.create();

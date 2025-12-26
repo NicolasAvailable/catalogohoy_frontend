@@ -15,10 +15,28 @@ export class ProfileService implements BaseProfileService {
     const { data: profile, error } = await this.client.rpc(
       'get_my_profile_with_tenants'
     );
-    console.log(profile);
     if (error) {
       return E.left(error);
     }
     return E.right(ProfileMapper.toDomain(profile));
+  }
+
+  public async updateName(name: string): Promise<Either<Error, void>> {
+    const { data } = await this.client.auth.getUser();
+    if (data.user === null) {
+      return E.left(new Error('User not authenticated'));
+    }
+    const { error } = await this.client
+      .from('users')
+      .update({
+        name,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('auth_user_id', data.user.id)
+      .select();
+    if (error) {
+      return E.left(error);
+    }
+    return E.right(undefined);
   }
 }

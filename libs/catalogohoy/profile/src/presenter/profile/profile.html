@@ -1,6 +1,6 @@
 <section class="container flex flex-col gap-4 max-w-2xl mx-auto">
   <ui-card>
-    <form [formGroup]="profileForm" class="flex flex-col gap-3">
+    <form [formGroup]="profileForm" class="flex flex-col gap-2">
       <h1 class="text-3xl font-bold">Perfil</h1>
 
       <div class="flex flex-col gap-1.5">
@@ -8,6 +8,21 @@
           >Nombre</label
         >
         <ui-input-text formControlName="name" inputId="name"></ui-input-text>
+        <ui-input-message
+          [control]="profileForm.get('name')"
+          error="required"
+          text="El campo es obligatorio"
+        />
+        <ui-input-message
+          [control]="profileForm.get('name')"
+          error="whitespace"
+          text="No puede contener espacios en blanco"
+        />
+        <ui-input-message
+          [control]="profileForm.get('name')"
+          error="minlength"
+          text="Debe tener mínimo 4 caracteres"
+        />
       </div>
       <div class="flex flex-col gap-1.5">
         <label for="email" class="text-sm font-medium text-grey-700"
@@ -17,7 +32,12 @@
       </div>
 
       <div class="flex gap-3 justify-end w-full mt-4">
-        <ui-button label="Guardar" severity="primary"></ui-button>
+        <ui-button
+          (click)="updateName()"
+          [disabled]="profileForm.invalid"
+          label="Guardar"
+          severity="primary"
+        ></ui-button>
       </div>
     </form>
   </ui-card>
@@ -34,27 +54,68 @@
     } @for(item of items(); track item.ref) {
 
     <ng-template [accordionPanel]="item.ref" let-item="item">
-      <form [formGroup]="passwordForm" class="flex flex-col gap-3 p-6">
+      <form [formGroup]="passwordForm" class="flex flex-col gap-2 p-6">
         <div class="flex flex-col gap-1.5">
           <label for="newPassword" class="text-sm font-medium text-grey-700"
             >Nueva contraseña</label
           >
-          <ui-input-text
+          <ui-input-password
+            [feedback]="false"
             formControlName="newPassword"
             inputId="newPassword"
-          ></ui-input-text>
+          />
+          <ui-input-message
+            [control]="passwordForm.get('newPassword')"
+            error="required"
+            text="El campo es obligatorio"
+          />
+          <ui-input-message
+            [control]="passwordForm.get('newPassword')"
+            error="whitespace"
+            text="No puede contener espacios en blanco"
+          />
+          <ui-input-message
+            [control]="passwordForm.get('newPassword')"
+            error="minlength"
+            text="Debe tener mínimo 6 caracteres"
+          />
         </div>
         <div class="flex flex-col gap-1.5">
           <label for="confirmPassword" class="text-sm font-medium text-grey-700"
             >Confirmar contraseña</label
           >
-          <ui-input-text
+          <ui-input-password
+            [feedback]="false"
             formControlName="confirmPassword"
             inputId="confirmPassword"
-          ></ui-input-text>
+          />
+          <ui-input-message
+            [control]="passwordForm.get('confirmPassword')"
+            error="required"
+            text="El campo es obligatorio"
+          />
+          <ui-input-message
+            [control]="passwordForm.get('confirmPassword')"
+            error="whitespace"
+            text="No puede contener espacios en blanco"
+          />
+          <ui-input-message
+            [control]="passwordForm.get('confirmPassword')"
+            error="minlength"
+            text="Debe tener mínimo 6 caracteres"
+          />
+          <ui-input-message
+            [control]="passwordForm"
+            error="confirmPassword"
+            text="Las contraseñas no coinciden"
+          />
         </div>
         <div class="flex gap-3 justify-end w-full mt-4">
-          <ui-button label="Guardar" severity="primary"></ui-button>
+          <ui-button
+            [disabled]="passwordForm.invalid"
+            label="Guardar"
+            severity="primary"
+          ></ui-button>
         </div>
       </form>
     </ng-template>

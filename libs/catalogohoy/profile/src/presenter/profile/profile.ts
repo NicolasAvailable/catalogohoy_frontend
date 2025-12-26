@@ -1,13 +1,20 @@
 import { Component, effect, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  confirmPasswordValidator,
+  whiteSpacesValidator,
+} from '@shared/presenter';
 import {
   AccordionComponent,
   AccordionHeaderDirective,
   AccordionPanelDirective,
   ButtonComponent,
   CardComponent,
+  InputMessageComponent,
+  InputPasswordComponent,
   InputTextComponent,
 } from '@ui';
+import { ProfileFacade } from '../../application';
 import { ProfileStore } from '../../infrastructure';
 
 @Component({
@@ -19,27 +26,44 @@ import { ProfileStore } from '../../infrastructure';
     AccordionPanelDirective,
     CardComponent,
     InputTextComponent,
+    InputMessageComponent,
+    InputPasswordComponent,
     ButtonComponent,
   ],
   templateUrl: './profile.html',
 })
 export class Profile {
+  private readonly profileFacade = inject(ProfileFacade);
   private readonly profileStore = inject(ProfileStore);
 
+  public readonly profileForm = inject(FormBuilder).group({
+    name: [
+      '',
+      [Validators.required, Validators.minLength(4), whiteSpacesValidator()],
+    ],
+    email: [{ value: '', disabled: true }],
+  });
+  public readonly passwordForm = inject(FormBuilder).group(
+    {
+      newPassword: [
+        '',
+        [Validators.required, Validators.minLength(6), whiteSpacesValidator()],
+      ],
+      confirmPassword: [
+        '',
+        [Validators.required, Validators.minLength(6), whiteSpacesValidator()],
+      ],
+    },
+    {
+      validators: confirmPasswordValidator,
+    }
+  );
   public readonly items = signal([
     {
       ref: 'Password',
       label: 'Contraseña',
     },
   ]);
-  public readonly profileForm = inject(FormBuilder).group({
-    name: [''],
-    email: [{ value: '', disabled: true }],
-  });
-  public readonly passwordForm = inject(FormBuilder).group({
-    newPassword: [''],
-    confirmPassword: [''],
-  });
 
   constructor() {
     effect(() => {
@@ -48,5 +72,13 @@ export class Profile {
         .get('email')
         ?.setValue(this.profileStore.profile().email);
     });
+  }
+
+  public async updateName(): Promise<void> {
+    const name = this.profileForm.get('name')?.value;
+    if (this.profileForm.valid && name) {
+      await this.profileFacade.updateName(name);
+      this.profileStore.$profile();
+    }
   }
 }
