@@ -10,6 +10,10 @@ export class Tenant extends Entity {
     super();
   }
 
+  public get url(): string {
+    return `https://${this.slug}.catalogohoy.com`;
+  }
+
   static create(primitives: TenantPrimitives) {
     return new Tenant(
       primitives.name,

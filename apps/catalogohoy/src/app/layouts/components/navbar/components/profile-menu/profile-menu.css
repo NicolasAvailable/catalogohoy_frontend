@@ -1,5 +1,5 @@
 ::ng-deep .profile-menu .p-menu-list {
-  height: 9rem;
+  max-height: 9rem;
   width: 12rem;
   overflow: auto;
 }
