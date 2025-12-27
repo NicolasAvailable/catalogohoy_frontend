@@ -1,0 +1,20 @@
+<section class="container flex flex-col gap-4 max-w-2xl mx-auto py-2">
+  <h1 class="text-3xl font-bold">Inicio</h1>
+  <p>¡Chequeá los pasos para dejar tu tienda a tu manera!</p>
+  <ui-accordion [items]="items()">
+    @for(item of items(); track item.ref) {
+
+    <ng-template [accordionHeader]="item.ref" let-item="item">
+      <div class="flex items-center gap-6">
+        <span class="text-lg font-bold">{{ item.label }}</span>
+      </div>
+    </ng-template>
+
+    } @for(item of items(); track item.ref) {
+
+    <ng-template [accordionPanel]="item.ref" let-item="item">
+      Claro que si
+    </ng-template>
+    }
+  </ui-accordion>
+</section>

@@ -1,0 +1,20 @@
+:host ::ng-deep .p-accordionpanel:first-child > .p-accordionheader {
+  border-bottom-left-radius: 0px !important;
+  border-bottom-right-radius: 0px !important;
+}
+
+:host
+  ::ng-deep
+  .p-accordionpanel:not(:first-child):not(:last-child)
+  > .p-accordionheader {
+  border-top: 0px !important;
+  border-bottom: 0px !important;
+  border-radius: 0px !important;
+}
+
+:host ::ng-deep .p-accordionpanel:last-child > .p-accordionheader {
+  border-top-left-radius: 0px !important;
+  border-top-right-radius: 0px !important;
+  border-bottom-left-radius: 0.625rem !important;
+  border-bottom-right-radius: 0.625rem !important;
+}
