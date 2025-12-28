@@ -1,22 +1,24 @@
 <nav class="flex items-center justify-end h-16 w-full py-3 px-4 bg-transparent">
-  <ui-button
-    icon="message-circle-question"
-    severity="primary"
-    variant="outlined"
-    styleClass="!border-none !text-grey-700"
-  />
-  <div
-    (click)="profileMenu.menu()?.toggle($event)"
-    class="flex items-center gap-2 rounded-lg py-1 px-2 cursor-pointer hover:bg-primary-50"
-  >
-    <ui-avatar
-      [label]="profileStore.profile().name"
-      class="leading-none h-auto"
-      styleClass="!bg-[#8892F0] !text-lino-500"
+  <div class="flex items-center">
+    <ui-button
+      icon="message-circle-question"
+      severity="primary"
+      variant="outlined"
+      styleClass="!border-none !text-grey-700"
     />
-    <span class="text-base font-semibold text-grey-700 leading-none h-auto"
-      >{{ profileStore.profile().name }}</span
+    <div
+      (click)="profileMenu.menu()?.toggle($event)"
+      class="flex items-center gap-2 rounded-lg py-1 px-2 cursor-pointer hover:bg-primary-50"
     >
+      <ui-avatar
+        [label]="profileStore.profile().name"
+        class="leading-none h-auto"
+        styleClass="!bg-[#8892F0] !text-lino-500"
+      />
+      <span class="text-base font-semibold text-grey-700 leading-none h-auto"
+        >{{ profileStore.profile().name }}</span
+      >
+    </div>
+    <app-profile-menu #profileMenu></app-profile-menu>
   </div>
-  <app-profile-menu #profileMenu></app-profile-menu>
 </nav>

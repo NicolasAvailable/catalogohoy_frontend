@@ -1,4 +1,5 @@
 import { Component, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import {
   AccordionComponent,
   AccordionHeaderDirective,
@@ -10,6 +11,7 @@ import {
 @Component({
   selector: 'app-home',
   imports: [
+    RouterLink,
     AccordionComponent,
     AccordionHeaderDirective,
     AccordionPanelDirective,

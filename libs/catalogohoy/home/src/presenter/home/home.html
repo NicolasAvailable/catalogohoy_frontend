@@ -25,7 +25,12 @@
             Podés importar de un archivo personal o agregar uno a uno de forma
             manual.
           </p>
-          <ui-button [fluid]="false" label="Crear" size="small" />
+          <ui-button
+            [fluid]="false"
+            routerLink="products"
+            label="Crear"
+            size="small"
+          />
         </div>
 
         } @if(item.ref === 'category') {

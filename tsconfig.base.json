@@ -26,7 +26,8 @@
       "@catalogohoy/profile": ["libs/catalogohoy/profile/src/index.ts"],
       "@catalogohoy/tenant": ["libs/catalogohoy/tenant/src/index.ts"],
       "@catalogohoy/e-commerce": ["libs/catalogohoy/e-commerce/src/index.ts"],
-      "@catalogohoy/home": ["libs/catalogohoy/home/src/index.ts"]
+      "@catalogohoy/home": ["libs/catalogohoy/home/src/index.ts"],
+      "@catalogohoy/product": ["libs/catalogohoy/product/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

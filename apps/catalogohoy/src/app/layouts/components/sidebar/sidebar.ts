@@ -24,18 +24,18 @@ export class Sidebar {
       state: { isOpen: false },
       items: [
         {
-          label: 'Todo',
-          routerLink: '/products',
+          label: 'Listado de productos',
+          routerLink: 'products',
           routerLinkActiveOptions: { exact: true },
         },
         {
-          label: 'Categotias',
-          routerLink: '/category',
+          label: 'Categorías',
+          routerLink: 'category',
           routerLinkActiveOptions: { exact: true },
         },
         {
           label: 'Cupones',
-          routerLink: '/coupons',
+          routerLink: 'coupons',
           routerLinkActiveOptions: { exact: true },
         },
       ],

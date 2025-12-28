@@ -34,6 +34,8 @@
         <ng-template #item let-item>
           <div
             (click)="toggle(item)"
+            [routerLink]="item.routerLink"
+            routerLinkActive="bg-primary-50"
             class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
           >
             <div class="flex items-center gap-2">
