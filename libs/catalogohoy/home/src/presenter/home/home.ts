@@ -3,6 +3,8 @@ import {
   AccordionComponent,
   AccordionHeaderDirective,
   AccordionPanelDirective,
+  ButtonComponent,
+  IconComponent,
 } from '@ui';
 
 @Component({
@@ -11,6 +13,8 @@ import {
     AccordionComponent,
     AccordionHeaderDirective,
     AccordionPanelDirective,
+    IconComponent,
+    ButtonComponent,
   ],
   templateUrl: './home.html',
   styleUrls: ['./home.css'],
@@ -20,14 +24,17 @@ export class Home {
     {
       label: 'Crear Producto',
       ref: 'product',
+      icon: 'package',
     },
     {
       label: 'Crear Categoría',
       ref: 'category',
+      icon: 'tag',
     },
     {
       label: 'Crear Cupon',
       ref: 'coupon',
+      icon: 'ticket-percent',
     },
   ]);
 }

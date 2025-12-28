@@ -10,9 +10,11 @@ import {
   LucideAngularModule,
   MessageCircleQuestion,
   NotepadText,
+  Package,
   ShoppingBag,
   SquareArrowOutUpRight,
   Tag,
+  TicketPercent,
 } from 'lucide-angular';
 
 export const provideLucideIcons = (): EnvironmentProviders => {
@@ -30,6 +32,8 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       CircleUser,
       ExternalLink,
       Building,
+      Package,
+      TicketPercent,
     })
   );
 };

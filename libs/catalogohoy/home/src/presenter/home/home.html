@@ -5,7 +5,12 @@
     @for(item of items(); track item.ref) {
 
     <ng-template [accordionHeader]="item.ref" let-item="item">
-      <div class="flex items-center gap-6">
+      <div class="flex items-center gap-4">
+        <ui-icon
+          [name]="item.icon"
+          class="bg-primary-50 p-1.5 rounded-base"
+          styleClass="w-6 h-6"
+        />
         <span class="text-lg font-bold">{{ item.label }}</span>
       </div>
     </ng-template>
@@ -13,7 +18,38 @@
     } @for(item of items(); track item.ref) {
 
     <ng-template [accordionPanel]="item.ref" let-item="item">
-      Claro que si
+      <div class="flex flex-column w-full h-full bg-lino-400">
+        @if(item.ref === 'product') {
+        <div class="flex flex-col w-full gap-2 py-4 pr-4 pl-[4.8rem]">
+          <p class="text-grey-700 text-sm">
+            Podés importar de un archivo personal o agregar uno a uno de forma
+            manual.
+          </p>
+          <ui-button [fluid]="false" label="Crear" size="small" />
+        </div>
+
+        } @if(item.ref === 'category') {
+        <div class="flex flex-col w-full gap-2 py-4 pr-4 pl-[4.8rem]">
+          <p class="text-grey-700 text-sm">
+            Organizá tus productos creando categorías para facilitar la
+            navegación y agrupar artículos relacionados.
+          </p>
+          <ui-button [fluid]="false" label="Crear" size="small" />
+        </div>
+
+        } @if(item.ref === 'coupon') {
+        <div class="flex flex-col w-full gap-2 py-4 pr-4 pl-[4.8rem]">
+          <p class="text-grey-700 text-sm">
+            Creá cupones y promociones para atraer clientes y aumentar las
+            ventas.
+          </p>
+          <div class="flex gap-2">
+            <ui-button [fluid]="false" label="Crear" size="small" />
+          </div>
+        </div>
+
+        }
+      </div>
     </ng-template>
     }
   </ui-accordion>
