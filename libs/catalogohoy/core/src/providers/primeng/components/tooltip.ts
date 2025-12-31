@@ -2,7 +2,7 @@ export const root = {
   maxWidth: '12.5rem',
   gutter: '0.25rem',
   shadow: '{overlay.popover.shadow}',
-  padding: '0.625rem 0.75rem',
+  padding: '0.4rem 0.6rem',
   borderRadius: '{overlay.popover.border.radius}',
 };
 

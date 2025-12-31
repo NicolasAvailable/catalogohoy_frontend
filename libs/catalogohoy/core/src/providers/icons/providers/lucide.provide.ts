@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronRight,
   CircleUser,
+  Copy,
   ExternalLink,
   Home,
   LogOut,
@@ -11,6 +12,8 @@ import {
   MessageCircleQuestion,
   NotepadText,
   Package,
+  QrCode,
+  Share2,
   ShoppingBag,
   SquareArrowOutUpRight,
   Tag,
@@ -34,6 +37,9 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Building,
       Package,
       TicketPercent,
+      Copy,
+      Share2,
+      QrCode,
     })
   );
 };

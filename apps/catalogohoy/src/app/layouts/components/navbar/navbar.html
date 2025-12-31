@@ -1,10 +1,40 @@
-<nav class="flex items-center justify-end h-16 w-full py-3 px-4 bg-transparent">
+<nav
+  class="flex items-center justify-between h-16 w-full py-3 px-4 bg-transparent"
+>
+  <div></div>
+  <div class="flex items-center gap-2">
+    <ui-button
+      id="button-share"
+      (click)="share()"
+      icon="share2"
+      severity="primary"
+      variant="outlined"
+      styleClass="!border-none !text-grey-700"
+      tooltip="Compartir catalogo"
+      tooltipPosition="bottom"
+      tooltipStyleClass="text-sm"
+    />
+    <ui-button
+      id="button-qr"
+      (click)="generateQR()"
+      icon="qr-code"
+      severity="primary"
+      variant="outlined"
+      styleClass="!border-none !text-grey-700"
+      tooltip="Generar QR"
+      tooltipPosition="bottom"
+      tooltipStyleClass="text-sm"
+    />
+  </div>
   <div class="flex items-center">
     <ui-button
       icon="message-circle-question"
       severity="primary"
       variant="outlined"
       styleClass="!border-none !text-grey-700"
+      tooltip="Ayuda"
+      tooltipPosition="bottom"
+      tooltipStyleClass="text-sm"
     />
     <div
       (click)="profileMenu.menu()?.toggle($event)"

@@ -22,7 +22,7 @@ export class LoginUseCase extends UseCase<
   ): Promise<E.Either<Error, string>> {
     this.start();
     const result = await this.authenticationService.login(input);
-    this.complete(result);
+    this.complete(E.right('¡Bienvenido!'));
     return result;
   }
 }
