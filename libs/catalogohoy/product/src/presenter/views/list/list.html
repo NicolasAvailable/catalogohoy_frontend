@@ -1,1 +1,32 @@
-<p>product works!</p>,
+<section
+  class="container flex flex-col h-full max-w-5xl mx-auto overflow-hidden"
+>
+  <header class="flex justify-between items-center py-4">
+    <h1 class="text-4xl font-bold">Productos</h1>
+    <div class="flex gap-3">
+      <ui-button
+        label="Importar"
+        icon="arrow-down-to-line"
+        variant="outlined"
+        severity="contrast"
+      />
+      <ui-button label="Crear producto" icon="circle-plus" />
+    </div>
+  </header>
+
+  <section class="flex-1 overflow-y-auto min-h-0">
+    <div class="flex flex-col gap-4 pb-4">
+      @for(item of [1,2,3,4,4,45,5,1,2,3,4,5,6,7,8,9,10]; track $index) {
+      <ui-card>
+        <div class="flex">
+          <ui-icon
+            name="https://dcdn-us.mitiendanube.com/stores/006/718/418/products/trompo-37b2d9e8e268c00c8d17580772492180-640-0.webp"
+            styleClass="w-24 rounded-sm"
+          />
+          <h2 class="ml-4 flex items-center text-xl font-semibold">Producto</h2>
+        </div>
+      </ui-card>
+      }
+    </div>
+  </section>
+</section>

@@ -18,6 +18,8 @@ import {
   SquareArrowOutUpRight,
   Tag,
   TicketPercent,
+  CirclePlus,
+  ArrowDownToLine
 } from 'lucide-angular';
 
 export const provideLucideIcons = (): EnvironmentProviders => {
@@ -40,6 +42,8 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Copy,
       Share2,
       QrCode,
+      CirclePlus,
+      ArrowDownToLine
     })
   );
 };

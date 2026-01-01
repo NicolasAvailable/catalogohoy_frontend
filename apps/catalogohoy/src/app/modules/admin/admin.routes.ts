@@ -7,7 +7,7 @@ export const adminRoutes: Route[] = [
   },
   {
     path: 'products',
-    loadComponent: () => import('@catalogohoy/product').then((m) => m.Product),
+    loadChildren: () => import('@catalogohoy/product').then((m) => m.productRoutes),
   },
   {
     path: 'profile',

@@ -1,10 +1,13 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { Component } from '@angular/core';
+import { ButtonComponent, CardComponent, IconComponent } from '@ui';
 
 @Component({
-  selector: 'app-list',
-  imports: [],
-  template: `<p>list works!</p>`,
+  selector: 'lib-list',
+  imports: [CardComponent, ButtonComponent, IconComponent],
+  templateUrl: './list.html',
   styleUrl: './list.css',
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    class: 'flex-1 flex flex-col overflow-hidden',
+  },
 })
-export class List { }
+export default class List {}
