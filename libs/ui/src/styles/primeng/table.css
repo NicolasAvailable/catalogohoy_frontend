@@ -7,7 +7,7 @@
 .p-datatable-thead > tr > th,
 .p-paginator,
 .p-datatable-tbody > tr {
-  background-color: transparent !important;
+  background-color: white !important;
 }
 
 .p-paginator-page.p-paginator-page-selected {
@@ -33,5 +33,5 @@
   > .p-datatable-table-container
   > .p-datatable-table
   > .p-datatable-thead {
-  background-color: var(--color-gray-500) !important;
+  background: transparent !important;
 }

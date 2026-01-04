@@ -1,9 +1,10 @@
 <section
-  class="container flex flex-col h-full max-w-5xl mx-auto overflow-hidden"
+  class="container flex flex-col flex-1 max-w-5xl mx-auto px-1 overflow-hidden"
 >
   <header class="flex justify-between items-center py-4">
     <h1 class="text-4xl font-bold">Productos</h1>
-    <div class="flex gap-3">
+    <div class="flex gap-3 items-center">
+      <span>200 productos</span>
       <ui-button
         label="Importar"
         icon="arrow-down-to-line"
@@ -13,20 +14,53 @@
       <ui-button label="Crear producto" icon="circle-plus" />
     </div>
   </header>
-
-  <section class="flex-1 overflow-y-auto min-h-0">
-    <div class="flex flex-col gap-4 pb-4">
-      @for(item of [1,2,3,4,4,45,5,1,2,3,4,5,6,7,8,9,10]; track $index) {
-      <ui-card>
-        <div class="flex">
-          <ui-icon
-            name="https://dcdn-us.mitiendanube.com/stores/006/718/418/products/trompo-37b2d9e8e268c00c8d17580772492180-640-0.webp"
-            styleClass="w-24 rounded-sm"
-          />
-          <h2 class="ml-4 flex items-center text-xl font-semibold">Producto</h2>
+  <form [formGroup]="searchForm" class="flex py-2">
+    <ui-input-text
+      formControlName="search"
+      placeholder="Buscar..."
+      class="w-full"
+      styleClass="w-full"
+    />
+  </form>
+  <section class="flex-1 flex flex-col gap-4 overflow-y-auto h-full">
+    <ui-table
+      class="flex-1"
+      [items]="[{
+      label: 'Producto'
+    }]"
+      [scrollable]="true"
+      scrollHeight="flex"
+    >
+      <ng-template #header>
+        <div class="flex justify-between py-3 px-6">
+          <h4 class="flex-3 text-base font-semibold">Producto</h4>
+          <h4 class="flex-1 text-base font-semibold">Precio</h4>
+          <h4 class="flex-1 text-base font-semibold">Stock</h4>
+          <h4 class="flex-1 text-base font-semibold">Acciones</h4>
         </div>
-      </ui-card>
-      }
-    </div>
+      </ng-template>
+      <ng-template #body>
+        <ui-card styleClass="mx-6">
+          <section class="flex justify-between">
+            <div class="flex gap-2 flex-3">
+              <ui-icon
+                name="https://dcdn-us.mitiendanube.com/stores/006/718/418/products/trompo-37b2d9e8e268c00c8d17580772492180-640-0.webp"
+                styleClass="w-24 rounded-sm"
+              />
+              <h2 class="ml-4 text-lg">Producto</h2>
+            </div>
+            <div class="flex-1 flex">
+              <span>100</span>
+            </div>
+            <div class="flex-1 flex">
+              <span>100</span>
+            </div>
+            <div class="flex-1 flex">
+              <span>100</span>
+            </div>
+          </section>
+        </ui-card>
+      </ng-template>
+    </ui-table>
   </section>
 </section>
