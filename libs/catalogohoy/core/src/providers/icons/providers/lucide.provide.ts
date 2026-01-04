@@ -1,11 +1,15 @@
 import { EnvironmentProviders, importProvidersFrom } from '@angular/core';
 import {
+  ArrowDownToLine,
   Building,
   ChevronDown,
   ChevronRight,
+  CirclePlus,
   CircleUser,
   Copy,
+  EllipsisVertical,
   ExternalLink,
+  Eye,
   Home,
   LogOut,
   LucideAngularModule,
@@ -18,8 +22,6 @@ import {
   SquareArrowOutUpRight,
   Tag,
   TicketPercent,
-  CirclePlus,
-  ArrowDownToLine
 } from 'lucide-angular';
 
 export const provideLucideIcons = (): EnvironmentProviders => {
@@ -43,7 +45,9 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Share2,
       QrCode,
       CirclePlus,
-      ArrowDownToLine
+      ArrowDownToLine,
+      EllipsisVertical,
+      Eye,
     })
   );
 };

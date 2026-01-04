@@ -25,6 +25,23 @@ import {
   },
 })
 export default class List {
+  public products = [
+    {
+      name: 'Producto',
+      price: 100,
+      stock: 100,
+    },
+    {
+      name: 'Producto',
+      price: 100,
+      stock: 100,
+    },
+    {
+      name: 'Producto',
+      price: 100,
+      stock: 100,
+    },
+  ];
   public searchForm = new FormGroup({
     search: new FormControl('', []),
   });

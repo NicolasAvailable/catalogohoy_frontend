@@ -7,8 +7,8 @@ export const root = {
   iconOnlyWidth: '2.5rem',
   sm: {
     fontSize: '{form.field.sm.font.size}',
-    paddingX: '1rem',
-    paddingY: '.4rem',
+    paddingX: '0.5rem',
+    paddingY: '0.5rem',
     iconOnlyWidth: '2.25rem',
   },
   lg: {

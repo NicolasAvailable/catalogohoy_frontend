@@ -25,9 +25,7 @@
   <section class="flex-1 flex flex-col gap-4 overflow-y-auto h-full">
     <ui-table
       class="flex-1"
-      [items]="[{
-      label: 'Producto'
-    }]"
+      [items]="[1,12,2,2,3,4,4,4,44,]"
       [scrollable]="true"
       scrollHeight="flex"
     >
@@ -39,15 +37,15 @@
           <h4 class="flex-1 text-base font-semibold">Acciones</h4>
         </div>
       </ng-template>
-      <ng-template #body>
+      <ng-template #body let-item>
         <ui-card styleClass="mx-6">
           <section class="flex justify-between">
-            <div class="flex gap-2 flex-3">
+            <div class="flex gap-2 flex-3 overflow-hidden">
               <ui-icon
                 name="https://dcdn-us.mitiendanube.com/stores/006/718/418/products/trompo-37b2d9e8e268c00c8d17580772492180-640-0.webp"
                 styleClass="w-24 rounded-sm"
               />
-              <h2 class="ml-4 text-lg">Producto</h2>
+              <h2 class="ml-4 text-lg line-clamp-3">Producto</h2>
             </div>
             <div class="flex-1 flex">
               <span>100</span>
@@ -55,8 +53,25 @@
             <div class="flex-1 flex">
               <span>100</span>
             </div>
-            <div class="flex-1 flex">
-              <span>100</span>
+            <div class="flex-1 flex gap-1">
+              <ui-button
+                icon="eye"
+                variant="outlined"
+                severity="contrast"
+                size="small"
+              />
+              <ui-button
+                icon="share2"
+                variant="outlined"
+                severity="contrast"
+                size="small"
+              />
+              <ui-button
+                icon="ellipsis-vertical"
+                variant="outlined"
+                severity="contrast"
+                size="small"
+              />
             </div>
           </section>
         </ui-card>

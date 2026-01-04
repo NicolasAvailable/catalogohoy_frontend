@@ -7,3 +7,16 @@
 :host ::ng-deep ui-table p-card {
   border-radius: 0px !important;
 }
+
+:host
+  ::ng-deep
+  ui-table
+  section
+  p-table
+  div
+  table
+  tbody:first-child
+  ui-card
+  p-card {
+  border-bottom: none !important;
+}
