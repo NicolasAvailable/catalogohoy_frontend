@@ -1,6 +1,7 @@
 import { EnvironmentProviders, importProvidersFrom } from '@angular/core';
 import {
   ArrowDownToLine,
+  BookImage,
   Building,
   ChevronDown,
   ChevronRight,
@@ -48,6 +49,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       ArrowDownToLine,
       EllipsisVertical,
       Eye,
+      BookImage,
     })
   );
 };

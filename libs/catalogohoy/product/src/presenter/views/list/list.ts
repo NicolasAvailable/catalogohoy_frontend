@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import {
   ButtonComponent,
   CardComponent,
@@ -12,6 +13,7 @@ import {
   selector: 'lib-list',
   imports: [
     ReactiveFormsModule,
+    RouterLink,
     TableComponent,
     CardComponent,
     ButtonComponent,

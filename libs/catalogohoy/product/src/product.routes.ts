@@ -10,6 +10,10 @@ export const productRoutes: Route[] = [
         path: '',
         loadComponent: () => import('./presenter/views/list/list'),
       },
+      {
+        path: 'create',
+        loadComponent: () => import('./presenter/views/save/save'),
+      },
     ],
   },
 ];

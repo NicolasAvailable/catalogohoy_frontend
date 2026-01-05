@@ -26,7 +26,11 @@ import { TextareaModule } from 'primeng/textarea';
       [disabled]="disabled()"
       [autoResize]="autoResize()"
       [class]="'h-full w-full resize-none ' + styleClass()"
-      [ngClass]="{ 'ng-invalid ng-dirty': (control?.invalid && (control?.dirty || control?.touched)) || invalid() }"
+      [ngClass]="{
+        'ng-invalid ng-dirty':
+          (control?.invalid && (control?.dirty || control?.touched)) ||
+          invalid()
+      }"
     ></textarea>
   `,
 })
