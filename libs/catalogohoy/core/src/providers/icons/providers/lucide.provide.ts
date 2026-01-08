@@ -15,8 +15,10 @@ import {
   LogOut,
   LucideAngularModule,
   MessageCircleQuestion,
+  Minus,
   NotepadText,
   Package,
+  Plus,
   QrCode,
   Share2,
   ShoppingBag,
@@ -50,6 +52,8 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       EllipsisVertical,
       Eye,
       BookImage,
+      Plus,
+      Minus,
     })
   );
 };

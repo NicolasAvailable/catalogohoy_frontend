@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
@@ -8,6 +8,7 @@ import {
   InputTextComponent,
   TableComponent,
 } from '@ui';
+import { ProductStore } from '../../../infrastructure';
 
 @Component({
   selector: 'lib-list',
@@ -26,25 +27,13 @@ import {
     class: 'flex-1 flex flex-col min-h-0',
   },
 })
-export default class List {
-  public products = [
-    {
-      name: 'Producto',
-      price: 100,
-      stock: 100,
-    },
-    {
-      name: 'Producto',
-      price: 100,
-      stock: 100,
-    },
-    {
-      name: 'Producto',
-      price: 100,
-      stock: 100,
-    },
-  ];
+export default class List implements OnInit {
+  public readonly productStore = inject(ProductStore);
   public searchForm = new FormGroup({
     search: new FormControl('', []),
   });
+
+  ngOnInit() {
+    this.productStore.productList$();
+  }
 }

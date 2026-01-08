@@ -11,7 +11,11 @@
         variant="outlined"
         severity="contrast"
       />
-      <ui-button routerLink="create" label="Crear producto" icon="circle-plus" />
+      <ui-button
+        routerLink="create"
+        label="Crear producto"
+        icon="circle-plus"
+      />
     </div>
   </header>
   <form [formGroup]="searchForm" class="flex py-2">
@@ -25,15 +29,16 @@
   <section class="flex-1 flex flex-col gap-4 overflow-y-auto h-full">
     <ui-table
       class="flex-1"
-      [items]="[1,12,2,2,3,4,4,4,44,]"
+      [items]="productStore.productList().products"
       [scrollable]="true"
       scrollHeight="flex"
     >
       <ng-template #header>
         <div class="flex justify-between py-3 px-6">
           <h4 class="flex-3 text-base font-semibold">Producto</h4>
-          <h4 class="flex-1 text-base font-semibold">Precio</h4>
           <h4 class="flex-1 text-base font-semibold">Stock</h4>
+          <h4 class="flex-1 text-base font-semibold">Precio</h4>
+          <h4 class="flex-1 text-base font-semibold">Promocional</h4>
           <h4 class="flex-1 text-base font-semibold">Acciones</h4>
         </div>
       </ng-template>
@@ -45,13 +50,16 @@
                 name="https://dcdn-us.mitiendanube.com/stores/006/718/418/products/trompo-37b2d9e8e268c00c8d17580772492180-640-0.webp"
                 styleClass="w-24 rounded-sm"
               />
-              <h2 class="ml-4 text-lg line-clamp-3">Producto</h2>
+              <h2 class="ml-4 text-lg line-clamp-3">{{item.name}}</h2>
             </div>
             <div class="flex-1 flex">
-              <span>100</span>
+              <span>{{item.stock}}</span>
             </div>
             <div class="flex-1 flex">
-              <span>100</span>
+              <span>{{item.price}}</span>
+            </div>
+            <div class="flex-1 flex">
+              <span>{{item.pricePromotional}}</span>
             </div>
             <div class="flex-1 flex gap-1">
               <ui-button

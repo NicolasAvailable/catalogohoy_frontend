@@ -10,7 +10,11 @@
         variant="outlined"
         severity="contrast"
       />
-      <ui-button label="Guardar cambios" />
+      <ui-button
+        (click)="create()"
+        [disabled]="form.invalid"
+        label="Guardar cambios"
+      />
     </div>
   </header>
   <form
@@ -92,18 +96,82 @@
             />
           </div>
           <div class="flex flex-col gap-2">
-            <label class="text-base text-grey-100" for="price_promotional"
+            <label class="text-base text-grey-100" for="pricePromotional"
               >Precio promocional</label
             >
             <ui-input-number
-              formControlName="price_promotional"
+              formControlName="pricePromotional"
               mode="currency"
               currency="USD"
               locale="en-US"
               [showButtons]="false"
               placeholder="$ 0.00"
-              inputId="price_promotional"
+              inputId="pricePromotional"
             />
+          </div>
+        </div>
+      </div>
+    </ui-card>
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <h2 class="text-xl font-bold">Inventario</h2>
+
+        <div class="flex flex-col gap-3">
+          <span class="text-base text-grey-100 font-medium">Stock</span>
+
+          <div class="flex flex-col gap-3">
+            <!-- Infinito Option -->
+            <div
+              [class]="'flex items-start gap-3 p-4 border rounded-lg transition-all cursor-pointer ' + 
+                (form.get('stock')?.value === null 
+                  ? 'border-primary-500 bg-primary-50/10' 
+                  : 'border-grey-200 hover:border-primary-300')"
+            >
+              <ui-radio-button
+                formControlName="stock"
+                inputId="stock-unlimited"
+                name="stock"
+                [optionValue]="null"
+              />
+              <label for="stock-unlimited" class="cursor-pointer flex-1 pt-0.5">
+                Infinito
+              </label>
+            </div>
+
+            <!-- Limitado Option -->
+            <div
+              [class]="'flex flex-col gap-3 p-4 border rounded-lg transition-all ' + 
+                (form.get('stock')?.value !== null 
+                  ? 'border-primary-500 bg-primary-50/10' 
+                  : 'border-grey-200 hover:border-primary-300')"
+            >
+              <div class="flex items-start gap-3 cursor-pointer">
+                <ui-radio-button
+                  formControlName="stock"
+                  inputId="stock-limited"
+                  name="stock"
+                  [optionValue]="1"
+                />
+                <label for="stock-limited" class="cursor-pointer flex-1 pt-0.5">
+                  Limitado
+                </label>
+              </div>
+
+              @if (form.get('stock')?.value !== null) {
+              <div class="flex flex-col gap-2 pl-8">
+                <label class="text-sm text-grey-100" for="stockQuantity">
+                  Cantidad
+                </label>
+                <ui-input-number
+                  formControlName="stock"
+                  inputId="stockQuantity"
+                  [min]="0"
+                  [showButtons]="true"
+                  placeholder="0"
+                />
+              </div>
+              }
+            </div>
           </div>
         </div>
       </div>
