@@ -1,0 +1,14 @@
+<section
+  [class]="
+    'size-full flex flex-col justify-center items-center gap-5 bg-grey-50 rounded-xl border border-dashed border-grey-100 group-[.drag-over]:bg-secondary-50 transition-colors ' +
+    styleClass()
+  "
+>
+  <header
+    class="size-24 bg-white-500 rounded-full flex justify-center items-center"
+  >
+    <ui-icon name="file-up" styleClass="size-12 text-grey-300" />
+  </header>
+
+  <ng-content />
+</section>

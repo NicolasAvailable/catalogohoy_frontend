@@ -28,7 +28,6 @@ export class ProductService implements BaseProductService {
     if (error) {
       return E.left(error);
     }
-
     return E.right(ProductListMapper.toDomain(data as ProductEntity[]));
   }
 
@@ -50,7 +49,7 @@ export class ProductService implements BaseProductService {
         description: input.description,
         price: input.price,
         price_promotional: input.pricePromotional,
-        photo: '',
+        photos: input.photos,
         auth_user_id: user.id,
         stock: input.stock,
       })

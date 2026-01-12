@@ -20,11 +20,7 @@ export class MultimediaBuilder {
   }
 
   public build() {
-    if (this.hasMetadata) {
-      return this.urls.map((url) => Multimedia.from(url).loadMetadata());
-    } else {
-      return this.urls.map((url) => Multimedia.from(url));
-    }
+    return this.urls.map((url) => Multimedia.from(url));
   }
 
   public static from(input: string[] | MultimediaBuilder) {

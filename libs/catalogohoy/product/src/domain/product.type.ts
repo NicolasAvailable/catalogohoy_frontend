@@ -1,8 +1,8 @@
 export type CreateProductInput = {
   name: string;
-  description: string;
-  price: number;
-  pricePromotional: number;
-  photo: string;
-  stock: number | null;
+  description: string | null;
+  price: string;
+  pricePromotional: string;
+  photos: string[] | null;
+  stock: string | null;
 };

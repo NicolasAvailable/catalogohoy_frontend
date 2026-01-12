@@ -47,7 +47,7 @@
           <section class="flex justify-between">
             <div class="flex gap-2 flex-3 overflow-hidden">
               <ui-icon
-                name="https://dcdn-us.mitiendanube.com/stores/006/718/418/products/trompo-37b2d9e8e268c00c8d17580772492180-640-0.webp"
+                [name]="item.photos.length > 0 ? item.photos[0] : 'https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg'"
                 styleClass="w-24 rounded-sm"
               />
               <h2 class="ml-4 text-lg line-clamp-3">{{item.name}}</h2>

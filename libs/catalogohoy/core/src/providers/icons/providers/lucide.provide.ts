@@ -25,6 +25,7 @@ import {
   SquareArrowOutUpRight,
   Tag,
   TicketPercent,
+  Trash,
 } from 'lucide-angular';
 
 export const provideLucideIcons = (): EnvironmentProviders => {
@@ -54,6 +55,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       BookImage,
       Plus,
       Minus,
+      Trash,
     })
   );
 };

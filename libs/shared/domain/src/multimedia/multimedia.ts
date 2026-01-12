@@ -1,54 +1,22 @@
 import { Entity } from '../entity/entity';
-import { aws, html, $url } from '../utilities';
-import { Metadata } from './metadata';
+import { $url, aws, html } from '../utilities';
 
 export class Multimedia extends Entity {
   public readonly url: string;
   public readonly cover: Multimedia | undefined;
   public readonly status: 'error' | 'ok' | 'loading' = 'ok';
-  public readonly metadata: Metadata;
 
   constructor(url: string) {
     super();
-    this.url = aws.parse(url ?? '');
-    this.metadata = new Metadata(this.url);
+    this.url = url;
   }
 
   public get type(): string {
-    return this.metadata.type || this.url.split('.').pop()?.split(/[#?]/)[0] || '';
+    return this.url.split('.').pop()?.split(/[#?]/)[0] || '';
   }
 
   public get file() {
     return $url.to.file(this.url);
-  }
-
-  public get width() {
-    return this.metadata.width;
-  }
-
-  public get height() {
-    return this.metadata.height;
-  }
-
-  public get size() {
-    return this.metadata.size;
-  }
-
-  public get duration() {
-    return this.metadata.duration;
-  }
-
-  public get ext() {
-    return this.metadata.type.split('.').pop() ?? '';
-  }
-
-  public get loaded() {
-    return this.metadata.loaded;
-  }
-
-  public async change(url: string) {
-    (this.url as string) = url;
-    (this.metadata as Metadata) = await new Metadata(this.url).load();
   }
 
   public isError() {
@@ -83,12 +51,13 @@ export class Multimedia extends Entity {
     return this.type.toLowerCase() === type.toLowerCase();
   }
 
-  public isDimension(width: number, height: number) {
-    return this.width === width && this.height === height;
-  }
-
   public isSVG() {
-    return this.isEqual('svg') || this.isEqual('svg+xml') || this.url.includes('svg+xml') || this.url.includes('.svg');
+    return (
+      this.isEqual('svg') ||
+      this.isEqual('svg+xml') ||
+      this.url.includes('svg+xml') ||
+      this.url.includes('.svg')
+    );
   }
 
   public isPNG() {
@@ -262,120 +231,6 @@ export class Multimedia extends Entity {
     return this.isImage() || this.isVideo() || this.isDocument();
   }
 
-  public isHorizontal() {
-    return this.width >= this.height;
-  }
-
-  public isSquare() {
-    return this.width === this.height;
-  }
-
-  public isVertical() {
-    return this.height > this.width;
-  }
-
-  public get aspectRatio() {
-    return {
-      value: this.width / this.height,
-      toString: () => this.calculateAspectRatio(),
-      includes: (aspectRatio: string[]) => aspectRatio.includes(this.calculateAspectRatio()),
-    };
-  }
-
-  public isHeightGreaterThan(height: number) {
-    return this.height > height;
-  }
-
-  public isHeightLessThan(height: number) {
-    return this.height < height;
-  }
-
-  public isHeightGreaterOrEqualThan(height: number) {
-    return this.height >= height;
-  }
-
-  public isHeightLessOrEqualThan(height: number) {
-    return this.height <= height;
-  }
-
-  public isWidthGreaterThan(width: number) {
-    return this.width > width;
-  }
-
-  public isWidthLessThan(width: number) {
-    return this.width < width;
-  }
-
-  public isWidthGreaterOrEqualThan(width: number) {
-    return this.width >= width;
-  }
-
-  public isWidthLessOrEqualThan(width: number) {
-    return this.width <= width;
-  }
-
-  public isDurationGreaterThan(duration: number) {
-    return this.duration > duration;
-  }
-
-  public isDurationLessThan(duration: number) {
-    return this.duration < duration;
-  }
-
-  public isDurationGreaterOrEqualThan(duration: number) {
-    return this.duration >= duration;
-  }
-
-  public isDurationLessOrEqualThan(duration: number) {
-    return this.duration <= duration;
-  }
-
-  public isSizeGreaterThan(size: number) {
-    return this.size > size;
-  }
-
-  public isSizeLessThan(size: number) {
-    return this.size < size;
-  }
-
-  public isSizeGreaterOrEqualThan(size: number) {
-    return this.size >= size;
-  }
-
-  public isSizeLessOrEqualThan(size: number) {
-    return this.size <= size;
-  }
-
-  public isOther(other: Multimedia) {
-    return this.url === other.url;
-  }
-
-  public hasDimension() {
-    return this.width > 0 && this.height > 0;
-  }
-
-  public includes(types: string[]) {
-    return types.includes(this.type);
-  }
-
-  public checkVerticalAspectRatio(height: number, width: number) {
-    return this.height / height > this.width / width;
-  }
-
-  public checkHorizontalAspectRatio(height: number, width: number) {
-    return this.height / height < this.width / width;
-  }
-
-  public checkEqualAspectRatio(height: number, width: number) {
-    return this.height / height === this.width / width;
-  }
-
-  public calculateAspectRatio(): string {
-    const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
-    const divisor = gcd(this.width, this.height);
-    return `${this.width / divisor}:${this.height / divisor}`;
-  }
-
   public download(): void {
     $url.download(this.url);
   }
@@ -408,16 +263,6 @@ export class Multimedia extends Entity {
       this.to.error();
     }
     return predicate(this);
-  }
-
-  public loadMetadata(): Multimedia {
-    this.metadata.load();
-    return this;
-  }
-
-  public withCover(cover: string): Multimedia {
-    (this.cover as Multimedia) = Multimedia.from(cover).loadMetadata();
-    return this;
   }
 
   public getElement() {

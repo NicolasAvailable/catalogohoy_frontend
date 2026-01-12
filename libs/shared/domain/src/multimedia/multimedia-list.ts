@@ -24,7 +24,6 @@ export class MultimediaList extends EntityList<Multimedia> {
         video: this.items.some((multimedia) => multimedia.isVideo()),
         pdf: this.items.some((multimedia) => multimedia.isPdf()),
         audio: this.items.some((multimedia) => multimedia.isAudio()),
-        multimedia: (multimedia: Multimedia) => this.items.some((m) => m.isOther(multimedia)),
       },
     };
   }
@@ -57,20 +56,16 @@ export class MultimediaList extends EntityList<Multimedia> {
     return this.filter((multimedia) => multimedia.isLoading());
   }
 
-  public get totalSize(): number {
-    return this.items.reduce((total, m) => total + m.size, 0);
-  }
-
   public get search() {
     return {
       url: (url: string) => this.items.find((m) => m.isEqual(url)),
-      multimedia: (multimedia: Multimedia) => this.items.find((m) => m.isOther(multimedia)),
     };
   }
 
   public get findIndex() {
     return {
-      multimedia: (multimedia: Multimedia) => this.items.findIndex((m) => m.isEqual(multimedia.url)),
+      multimedia: (multimedia: Multimedia) =>
+        this.items.findIndex((m) => m.isEqual(multimedia.url)),
     };
   }
 
@@ -87,17 +82,7 @@ export class MultimediaList extends EntityList<Multimedia> {
   public get is() {
     return {
       carousel: this.items.length > 1,
-      totalSizeGreaterThan: (size: number) => this.totalSize > size,
-      durationGreaterThan: (d: number) => this.items.some((multimedia) => multimedia.isDurationGreaterThan(d)),
-      equal: (multimedia: Multimedia[]) => multimedia.every((m) => this.has.some.multimedia(m)),
     };
-  }
-
-  public insert(urls: string | string[]) {
-    [urls]
-      .flat()
-      .map((url) => Multimedia.from(url).loadMetadata())
-      .forEach((m) => this.mutable.insert(m));
   }
 
   public ensure(predicate: (m: Multimedia) => boolean) {

@@ -54,18 +54,28 @@
       <div class="flex flex-col gap-4">
         <h2 class="text-xl font-bold">Fotos y multimedia</h2>
         <div class="flex flex-col gap-4">
-          <div
-            class="flex flex-col items-center justify-center border-2 border-dashed border-primary-500 rounded-xl py-10 bg-primary-50/10 cursor-pointer hover:bg-primary-50/20 transition-colors"
+          <ui-uploader
+            (valueChange)="setPhoto($event)"
+            [accept]="'image/webp, image/png, image/jpeg'"
+            [max]="{ mb: 40 }"
           >
-            <ui-icon
-              name="circle-plus"
-              size="24"
-              styleClass="text-primary-500 mb-2"
-            />
-            <p class="text-primary-500 font-bold text-base">
-              Arrastrá y soltá, o subí fotos del producto
-            </p>
-          </div>
+            <ng-template #picker let-pick="pick">
+              <button
+                type="button"
+                (click)="pick()"
+                class="flex flex-col items-center justify-center w-full border-2 border-dashed border-primary-500 rounded-xl py-10 bg-primary-50/10 cursor-pointer hover:bg-primary-50/20 transition-colors"
+              >
+                <ui-icon
+                  name="circle-plus"
+                  size="24"
+                  styleClass="text-primary-500 mb-2"
+                />
+                <p class="text-primary-500 font-bold text-base">
+                  Arrastrá y soltá, o subí fotos del producto
+                </p>
+              </button>
+            </ng-template>
+          </ui-uploader>
 
           <div class="flex items-center gap-2 text-grey-300 text-sm">
             <ui-icon name="book-image" size="18" />
@@ -74,6 +84,29 @@
               PNG o JPEG
             </p>
           </div>
+
+          @if (photos().length > 0) {
+          <div class="grid grid-cols-3 gap-4 mt-4">
+            @for (photo of photos(); track photo) {
+            <div
+              class="relative max-w-56 group aspect-square rounded-xl overflow-hidden border border-grey-200"
+            >
+              <img
+                [src]="photo"
+                alt="Foto del producto"
+                class="w-full h-full object-cover"
+              />
+              <button
+                type="button"
+                (click)="removePhoto(photo)"
+                class="absolute top-2 right-2 p-1 bg-white/80 rounded-sm cursor-pointer hover:bg-white text-grey-500 transition-colors opacity-0 group-hover:opacity-100"
+              >
+                <ui-icon name="trash" size="18" />
+              </button>
+            </div>
+            }
+          </div>
+          }
         </div>
       </div>
     </ui-card>

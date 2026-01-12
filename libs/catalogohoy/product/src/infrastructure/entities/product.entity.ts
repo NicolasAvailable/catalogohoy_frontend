@@ -5,6 +5,6 @@ export interface ProductEntity {
   price: number;
   price_promotional: number;
   auth_user_id: string;
-  photo: string;
+  photos: string[];
   created_at: string;
 }
