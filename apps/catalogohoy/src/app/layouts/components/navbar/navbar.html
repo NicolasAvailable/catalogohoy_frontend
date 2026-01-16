@@ -1,7 +1,15 @@
 <nav
   class="flex items-center justify-between h-16 w-full py-3 px-4 bg-transparent"
 >
-  <div></div>
+  <div class="flex items-center">
+    <ui-button
+      icon="menu"
+      (click)="toggleSidebar.emit()"
+      variant="outlined"
+      severity="primary"
+      styleClass="!border-none !text-grey-700 sm:!hidden"
+    />
+  </div>
   <div class="flex items-center gap-2">
     <ui-button
       id="button-share"

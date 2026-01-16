@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Navbar, Sidebar } from '../../components';
 
@@ -7,4 +7,10 @@ import { Navbar, Sidebar } from '../../components';
   imports: [RouterOutlet, Navbar, Sidebar],
   templateUrl: './base.html',
 })
-export class Base {}
+export class Base {
+  public readonly sidebarOpen = signal(false);
+
+  public toggleSidebar() {
+    this.sidebarOpen.update((v: boolean) => !v);
+  }
+}

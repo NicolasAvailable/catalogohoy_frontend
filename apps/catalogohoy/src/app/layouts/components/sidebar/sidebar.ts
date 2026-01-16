@@ -1,5 +1,5 @@
 import { NgClass } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { IconComponent, PanelMenuComponent, PanelMenuItem } from '@ui';
 
@@ -15,6 +15,9 @@ import { IconComponent, PanelMenuComponent, PanelMenuItem } from '@ui';
   templateUrl: './sidebar.html',
 })
 export class Sidebar {
+  public visible = input<boolean>(false);
+  public closeSidebar = output<void>();
+
   public readonly transitionOptions = '200ms cubic-bezier(0.86, 0, 0.07, 1)';
   public readonly productsMenu: PanelMenuItem[] = [
     {

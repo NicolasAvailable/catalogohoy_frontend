@@ -1,5 +1,13 @@
+@if(visible()) {
+<div
+  (click)="closeSidebar.emit()"
+  class="fixed inset-0 bg-slate-900/20 z-40 sm:hidden glass"
+></div>
+}
+
 <aside
-  class="flex flex-col gap-5 h-full w-72 bg-white px-3 py-5 border-r border-grey-50"
+  class="flex flex-col gap-5 h-full w-1/2 sm:w-72 bg-white px-3 py-5 border-r border-grey-50 fixed inset-y-0 left-0 z-50 transition-transform duration-300 sm:translate-x-0 sm:static"
+  [ngClass]="{ 'translate-x-0': visible(), '-translate-x-full': !visible() }"
 >
   <div class="w-full h-16">
     <div routerLink="/admin" class="flex items-center h-full cursor-pointer">

@@ -15,6 +15,7 @@ import {
   Home,
   LogOut,
   LucideAngularModule,
+  Menu,
   MessageCircleQuestion,
   Minus,
   NotepadText,
@@ -58,6 +59,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Minus,
       Trash,
       DollarSign,
+      Menu,
     })
   );
 };

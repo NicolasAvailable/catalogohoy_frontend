@@ -1,5 +1,5 @@
 import { Clipboard } from '@angular/cdk/clipboard';
-import { Component, inject } from '@angular/core';
+import { Component, inject, output } from '@angular/core';
 import { ProfileStore } from '@catalogohoy/profile';
 import { is, qr } from '@shared/domain';
 import { BaseComponent } from '@shared/presenter';
@@ -12,6 +12,7 @@ import { ProfileMenu } from './components';
   templateUrl: './navbar.html',
 })
 export class Navbar extends BaseComponent {
+  public toggleSidebar = output<void>();
   private readonly clipboard = inject(Clipboard);
   public readonly profileStore = inject(ProfileStore);
 

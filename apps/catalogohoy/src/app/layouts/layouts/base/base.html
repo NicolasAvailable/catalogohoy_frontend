@@ -1,7 +1,10 @@
 <main class="flex w-full h-screen overflow-hidden">
-  <app-sidebar />
+  <app-sidebar
+    [visible]="sidebarOpen()"
+    (closeSidebar)="sidebarOpen.set(false)"
+  />
   <section class="flex flex-auto flex-col bg-lino-500 overflow-hidden">
-    <app-navbar />
+    <app-navbar (toggleSidebar)="toggleSidebar()" />
     <div class="flex w-full flex-auto flex-col overflow-hidden px-4 py-6">
       <router-outlet />
     </div>
