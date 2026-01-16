@@ -19,9 +19,6 @@ import { IconComponent } from '../../icon/icon';
     >
       <ng-template #header>
         <div class="flex items-center gap-5">
-          <div [class]="headerBackground()" class="w-16 h-16 flex items-center justify-center rounded-full">
-            <ui-icon [name]="icon()" [styleClass]="'w-8 h-8 ' + iconStyleClass()" />
-          </div>
           <h2 class="font-bold text-2xl text-grey-800">
             {{ headerLabel() | translate : { target: target() | translate } }}
           </h2>
@@ -31,7 +28,10 @@ import { IconComponent } from '../../icon/icon';
       <ng-template #message>
         <section class="flex flex-col w-full">
           <ng-content select="content-top" />
-          <div [class]="contentBackground()" class="w-full py-4 px-5 text-base rounded-base text-grey-800">
+          <div
+            [class]="contentBackground()"
+            class="w-full text-base rounded-base text-grey-800"
+          >
             @if(contentLabel()) {
             <p [innerHTML]="contentLabel() | translate"></p>
             }
@@ -44,7 +44,11 @@ import { IconComponent } from '../../icon/icon';
       <ng-template #footer>
         <div class="flex justify-end gap-8">
           @if(rejectLabel()) {
-          <ui-button (click)="alert.onReject()" [label]="rejectLabel() | translate" [severity]="'contrast'" />
+          <ui-button
+            (click)="alert.onReject()"
+            [label]="rejectLabel() | translate"
+            [severity]="'contrast'"
+          />
           } @if(showAccept()) {
           <ui-button
             (click)="alert.onAccept()"
@@ -82,7 +86,10 @@ export class ConfirmDialogComponent {
   constructor(private readonly confirmationService: ConfirmationService) {}
 
   public open() {
-    this.confirmationService.confirm({ accept: () => this.confirm.emit(), reject: () => this.cancel.emit() });
+    this.confirmationService.confirm({
+      accept: () => this.confirm.emit(),
+      reject: () => this.cancel.emit(),
+    });
   }
 
   public success() {

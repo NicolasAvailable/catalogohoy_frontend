@@ -82,6 +82,7 @@ export class UploaderComponent {
     assert(has(this.uploaderList().length).isRight(), 'No files selected');
 
     this.isLoading.set(true);
+    this.toastService.wait('Subiendo imagen...');
 
     const result = await this.uploaderFacade.upload({
       files: this.uploaderList().files,
@@ -112,6 +113,7 @@ export class UploaderComponent {
     });
 
     this.isLoading.set(false);
+    this.toastService.dismissWait();
   }
 
   public onInputChange(event: Event): void {

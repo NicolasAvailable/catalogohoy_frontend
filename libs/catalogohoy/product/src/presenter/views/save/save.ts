@@ -2,11 +2,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   inject,
+  input,
+  OnInit,
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { Exception } from '@shared/domain';
+import { Router, RouterLink } from '@angular/router';
+import { Exception, is } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { whiteSpacesValidator } from '@shared/presenter';
 import {
@@ -20,6 +22,7 @@ import {
   UploaderComponent,
 } from '@ui';
 import { ProductFacade } from '../../../application';
+import { Product } from '../../../domain';
 
 @Component({
   selector: 'lib-save',
@@ -39,7 +42,9 @@ import { ProductFacade } from '../../../application';
   styleUrl: './save.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class Save {
+export default class Save implements OnInit {
+  private readonly router = inject(Router);
+  private readonly toastService = inject(ToastService);
   private readonly productFacade = inject(ProductFacade);
   public readonly form = inject(FormBuilder).group({
     name: ['', [Validators.required, whiteSpacesValidator()]],
@@ -50,9 +55,30 @@ export default class Save {
     stock: [null],
   });
 
-  public readonly toastService = inject(ToastService);
+  public readonly id = input<string | undefined>(undefined);
   public readonly photos = signal<string[]>([]);
+  public readonly isCreate = signal<boolean>(true);
   private readonly maxPhotos = 3;
+
+  ngOnInit(): void {
+    is.affirmative(this.id())
+      .mapRight(async () => {
+        const product = await this.productFacade.getById(this.id() as string);
+        product.mapRight((p) => this.setValuesForm(p));
+      })
+      .mapRight(() => this.isCreate.set(false));
+  }
+
+  private setValuesForm(product: Product) {
+    this.form.controls.name.setValue(product.name);
+    this.form.controls.description.setValue(product.description);
+    this.form.controls.price.setValue(String(product.price));
+    this.form.controls.pricePromotional.setValue(
+      String(product.pricePromotional)
+    );
+    this.form.controls.stock.setValue(product.stock as null);
+    this.photos.set(product.photos);
+  }
 
   public setPhoto(url: string | string[]) {
     const newPhotos = Array.isArray(url) ? url : [url];
@@ -80,16 +106,24 @@ export default class Save {
     this.form.controls.photos.setValue(this.photos());
   }
 
-  public create() {
+  public async create() {
     if (this.form.invalid) return;
-    const body = this.form.getRawValue();
-    this.productFacade.create({
-      name: body.name!,
-      description: body.description,
-      photos: body.photos,
-      price: body.price!,
-      pricePromotional: body.pricePromotional!,
-      stock: body.stock,
-    });
+    const body = {
+      id: '',
+      name: this.form.controls.name.value!,
+      description: this.form.controls.description.value,
+      photos: this.photos(),
+      price: this.form.controls.price.value!,
+      pricePromotional: this.form.controls.pricePromotional.value!,
+      stock: this.form.controls.stock.value,
+    };
+    if (this.isCreate()) {
+      const product = await this.productFacade.create(body);
+      product.mapRight(() => this.router.navigate(['/admin/products']));
+    } else {
+      body['id'] = this.id() as string;
+      const product = await this.productFacade.update(body);
+      product.mapRight(() => this.router.navigate(['/admin/products']));
+    }
   }
 }

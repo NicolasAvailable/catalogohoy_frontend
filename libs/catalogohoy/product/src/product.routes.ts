@@ -14,6 +14,10 @@ export const productRoutes: Route[] = [
         path: 'create',
         loadComponent: () => import('./presenter/views/save/save'),
       },
+      {
+        path: 'edit/:id',
+        loadComponent: () => import('./presenter/views/save/save'),
+      },
     ],
   },
 ];

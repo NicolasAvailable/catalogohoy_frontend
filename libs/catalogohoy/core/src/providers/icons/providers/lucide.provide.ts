@@ -8,6 +8,7 @@ import {
   CirclePlus,
   CircleUser,
   Copy,
+  DollarSign,
   EllipsisVertical,
   ExternalLink,
   Eye,
@@ -56,6 +57,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Plus,
       Minus,
       Trash,
+      DollarSign,
     })
   );
 };

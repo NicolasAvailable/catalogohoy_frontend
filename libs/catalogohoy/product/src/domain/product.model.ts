@@ -7,6 +7,7 @@ export class Product extends Entity {
     public readonly price: number,
     public readonly pricePromotional: number,
     public readonly photos: string[],
+    public readonly stock: string | null,
     public readonly authUserId: string,
     public readonly createdAt: string
   ) {
@@ -20,6 +21,7 @@ export class Product extends Entity {
       primitives.price,
       primitives.pricePromotional,
       primitives.photos,
+      primitives.stock,
       primitives.authUserId,
       primitives.createdAt
     ).withId(primitives.id);
@@ -33,6 +35,7 @@ export interface ProductPrimitives {
   price: number;
   pricePromotional: number;
   photos: string[];
+  stock: string | null;
   authUserId: string;
   createdAt: string;
 }

@@ -14,6 +14,7 @@ export class ProductListMapper {
           pricePromotional: entity.price_promotional,
           authUserId: entity.auth_user_id,
           photos: entity.photos,
+          stock: entity.stock,
           createdAt: entity.created_at,
         })
       )

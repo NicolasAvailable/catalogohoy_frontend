@@ -4,7 +4,7 @@
   <header class="flex justify-between items-center py-4">
     <h1 class="text-4xl font-bold">Productos</h1>
     <div class="flex gap-3 items-center">
-      <span>200 productos</span>
+      <span>{{productStore.productList().products.length}} productos</span>
       <ui-button
         label="Importar"
         icon="arrow-down-to-line"
@@ -35,34 +35,85 @@
     >
       <ng-template #header>
         <div class="flex justify-between py-3 px-6">
-          <h4 class="flex-3 text-base font-semibold">Producto</h4>
-          <h4 class="flex-1 text-base font-semibold">Stock</h4>
-          <h4 class="flex-1 text-base font-semibold">Precio</h4>
-          <h4 class="flex-1 text-base font-semibold">Promocional</h4>
-          <h4 class="flex-1 text-base font-semibold">Acciones</h4>
+          <h4 class="flex-3 flex items-center text-base font-semibold">
+            Producto
+          </h4>
+          <h4
+            class="flex-1 flex items-center justify-center text-base font-semibold"
+          >
+            Stock
+          </h4>
+          <h4
+            class="flex-1 flex items-center justify-center text-base font-semibold"
+          >
+            Precio
+          </h4>
+          <h4
+            class="flex-1 flex items-center justify-center text-base font-semibold"
+          >
+            Promocional
+          </h4>
+          <h4
+            class="flex-1 flex items-center justify-center text-base font-semibold"
+          >
+            Acciones
+          </h4>
         </div>
       </ng-template>
       <ng-template #body let-item>
         <ui-card styleClass="mx-6">
-          <section class="flex justify-between">
-            <div class="flex gap-2 flex-3 overflow-hidden">
+          <section class="flex gap-4 justify-between">
+            <div
+              [routerLink]="['edit', item.id]"
+              class="flex gap-2 flex-3 cursor-pointer overflow-hidden"
+            >
               <ui-icon
                 [name]="item.photos.length > 0 ? item.photos[0] : 'https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg'"
-                styleClass="w-24 rounded-sm"
+                class="flex items-center justify-center w-24 h-24"
+                styleClass="max-w-24 max-h-24 rounded-sm object-cover "
               />
-              <h2 class="ml-4 text-lg line-clamp-3">{{item.name}}</h2>
+              <h2
+                class="ml-4 text-primary-500 font-semibold text-lg line-clamp-3 break-all"
+              >
+                {{item.name}}
+              </h2>
             </div>
-            <div class="flex-1 flex">
-              <span>{{item.stock}}</span>
+            <div
+              class="flex-1 flex items-center justify-center overflow-hidden"
+            >
+              <span class="line-clamp-1 break-all"
+                >{{!item.stock ? '∞ Infinito' : item.stock}}</span
+              >
             </div>
-            <div class="flex-1 flex">
-              <span>{{item.price}}</span>
+            <div
+              class="flex-1 flex items-center justify-center overflow-hidden"
+            >
+              <div
+                class="flex items-center gap-2 px-3 py-2 border border-slate-700 rounded-lg w-full max-w-32"
+              >
+                <ui-icon name="dollar-sign" size="14" class="text-slate-700" />
+                <span class="text-sm font-medium truncate">{{item.price}}</span>
+              </div>
             </div>
-            <div class="flex-1 flex">
-              <span>{{item.pricePromotional}}</span>
+            <div
+              class="flex-1 flex items-center justify-center overflow-hidden"
+            >
+              @if (item.pricePromotional) {
+              <div
+                class="flex items-center gap-2 px-3 py-2 border border-slate-700 rounded-lg w-full max-w-32"
+              >
+                <ui-icon name="dollar-sign" size="14" class="text-slate-700" />
+                <span class="text-sm font-medium truncate"
+                  >{{item.pricePromotional}}</span
+                >
+              </div>
+              } @else {
+              <span class="text-grey-300">-</span>
+              }
             </div>
-            <div class="flex-1 flex gap-1">
+            <div class="flex-1 flex items-center justify-center gap-1">
               <ui-button
+                [routerLink]="['edit', item.id]"
                 icon="eye"
                 variant="outlined"
                 severity="contrast"
@@ -75,7 +126,8 @@
                 size="small"
               />
               <ui-button
-                icon="ellipsis-vertical"
+                (click)="onDelete(item)"
+                icon="trash"
                 variant="outlined"
                 severity="contrast"
                 size="small"
@@ -86,4 +138,11 @@
       </ng-template>
     </ui-table>
   </section>
+  <ui-confirm-dialog
+    (confirm)="onConfirmDelete()"
+    headerLabel="Eliminar producto"
+    contentLabel="¿Estás seguro de que deseas eliminar este producto? Esta acción es irreversible."
+    acceptLabel="Eliminar"
+    rejectLabel="Cancelar"
+  />
 </section>

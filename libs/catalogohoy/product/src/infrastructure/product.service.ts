@@ -1,7 +1,13 @@
 import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
-import { BaseProductService, CreateProductInput, ProductList } from '../domain';
+import {
+  BaseProductService,
+  CreateProductInput,
+  Product,
+  ProductList,
+  UpdateProductInput,
+} from '../domain';
 import { ProductEntity } from './entities';
 import { ProductListMapper } from './mappers';
 
@@ -23,12 +29,41 @@ export class ProductService implements BaseProductService {
     const { data, error } = await this.client
       .from('products')
       .select('*')
-      .eq('auth_user_id', user.id);
+      .eq('auth_user_id', user.id)
+      .order('id', { ascending: true });
 
     if (error) {
       return E.left(error);
     }
     return E.right(ProductListMapper.toDomain(data as ProductEntity[]));
+  }
+
+  public async getById(id: string): Promise<E.Either<Error, Product>> {
+    const { data, error } = await this.client
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      return E.left(error);
+    }
+
+    const entity = data as ProductEntity;
+
+    return E.right(
+      Product.create({
+        id: entity.id,
+        name: entity.name,
+        description: entity.description,
+        price: entity.price,
+        pricePromotional: entity.price_promotional,
+        photos: entity.photos,
+        stock: entity.stock,
+        authUserId: entity.auth_user_id,
+        createdAt: entity.created_at,
+      })
+    );
   }
 
   public async create(
@@ -56,7 +91,38 @@ export class ProductService implements BaseProductService {
       .select('*');
 
     if (error) {
-      return E.left(error);
+      return E.left(new Error(error.message));
+    }
+    return E.right(undefined);
+  }
+
+  public async update(
+    input: UpdateProductInput
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('products')
+      .update({
+        name: input.name,
+        description: input.description,
+        price: input.price,
+        price_promotional: input.pricePromotional,
+        photos: input.photos,
+        stock: input.stock,
+      })
+      .eq('id', input.id)
+      .select('*');
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+    return E.right(undefined);
+  }
+
+  public async delete(id: string): Promise<E.Either<Error, void>> {
+    const { error } = await this.client.from('products').delete().eq('id', id);
+
+    if (error) {
+      return E.left(new Error(error.message));
     }
     return E.right(undefined);
   }

@@ -26,7 +26,7 @@ export class SonnerToasterService {
   }
 
   public wait(message: string) {
-    this.waitId = toast.info(this.translate.translate(message));
+    this.waitId = toast.loading(this.translate.translate(message));
   }
 
   public dismissWait() {

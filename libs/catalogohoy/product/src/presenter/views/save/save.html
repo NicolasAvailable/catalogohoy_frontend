@@ -2,10 +2,12 @@
   class="container flex flex-col flex-1 max-w-5xl mx-auto px-1 overflow-hidden"
 >
   <header class="flex justify-between items-center py-4">
-    <h1 class="text-4xl font-bold">Crear producto</h1>
+    <h1 class="text-4xl font-bold">
+      {{isCreate() ? 'Crear producto' : 'Editar producto'}}
+    </h1>
     <div class="flex gap-3 items-center">
       <ui-button
-        routerLink=".."
+        routerLink="/admin/products"
         label="Cancelar"
         variant="outlined"
         severity="contrast"
@@ -62,16 +64,27 @@
             <ng-template #picker let-pick="pick">
               <button
                 type="button"
-                (click)="pick()"
-                class="flex flex-col items-center justify-center w-full border-2 border-dashed border-primary-500 rounded-xl py-10 bg-primary-50/10 cursor-pointer hover:bg-primary-50/20 transition-colors"
+                (click)="photos().length < 3 && pick()"
+                [class]="
+                  'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl py-10 transition-colors ' +
+                  (photos().length >= 3
+                    ? 'border-grey-300 bg-grey-50 opacity-50 cursor-not-allowed'
+                    : 'border-primary-500 bg-primary-50/10 cursor-pointer hover:bg-primary-50/20')
+                "
               >
                 <ui-icon
                   name="circle-plus"
                   size="24"
-                  styleClass="text-primary-500 mb-2"
+                  [styleClass]="photos().length >= 3 ? 'text-grey-400 mb-2' : 'text-primary-500 mb-2'"
                 />
-                <p class="text-primary-500 font-bold text-base">
-                  Arrastrá y soltá, o subí fotos del producto
+                <p
+                  [class]="
+                    'font-bold text-base ' +
+                    (photos().length >= 3 ? 'text-grey-400' : 'text-primary-500')
+                  "
+                >
+                  {{ photos().length >= 3 ? 'Límite de imágenes alcanzado' :
+                  'Arrastrá y soltá, o subí fotos del producto' }}
                 </p>
               </button>
             </ng-template>
@@ -86,7 +99,7 @@
           </div>
 
           @if (photos().length > 0) {
-          <div class="grid grid-cols-3 gap-4 mt-4">
+          <div class="flex flex-wrap gap-4 mt-4 overflow-x-auto">
             @for (photo of photos(); track photo) {
             <div
               class="relative max-w-56 group aspect-square rounded-xl overflow-hidden border border-grey-200"
