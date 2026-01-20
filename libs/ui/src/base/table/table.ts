@@ -23,6 +23,8 @@ import { TableModule } from 'primeng/table';
         [styleClass]="styleClass() + ' flex-1'"
         [scrollable]="scrollable()"
         [scrollHeight]="scrollHeight()"
+        [paginator]="paginator()"
+        [rows]="rows()"
       >
         <ng-template #header>
           <ng-container [ngTemplateOutlet]="headerTemplate()!" />
@@ -44,6 +46,8 @@ export class TableComponent {
   public readonly styleClass = input<string>('');
   public readonly scrollable = input<boolean>(false);
   public readonly scrollHeight = input<string>(''); // puede ser 'flex', '60vh', etc.
+  public readonly paginator = input<boolean>(false);
+  public readonly rows = input<number>(10);
 
   public readonly headerTemplate = contentChild<TemplateRef<unknown>>('header');
   public readonly bodyTemplate = contentChild<TemplateRef<unknown>>('body');

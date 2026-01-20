@@ -32,6 +32,8 @@
       [items]="productStore.productList().products"
       [scrollable]="true"
       scrollHeight="flex"
+      [paginator]="true"
+      [rows]="10"
     >
       <ng-template #header>
         <div class="flex justify-between py-3 px-6">

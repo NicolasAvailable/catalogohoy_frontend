@@ -17,7 +17,10 @@ import { ProductListMapper } from './mappers';
 export class ProductService implements BaseProductService {
   private readonly client = SupabaseClientProvider.getInstance();
 
-  public async getAll(): Promise<E.Either<Error, ProductList>> {
+  public async getAll(
+    page?: number,
+    pageSize?: number
+  ): Promise<E.Either<Error, ProductList>> {
     const {
       data: { user },
     } = await this.client.auth.getUser();
@@ -26,11 +29,19 @@ export class ProductService implements BaseProductService {
       return E.left(new Error('User not authenticated'));
     }
 
-    const { data, error } = await this.client
+    let query = this.client
       .from('products')
       .select('*')
       .eq('auth_user_id', user.id)
       .order('id', { ascending: true });
+
+    if (page !== undefined && pageSize !== undefined) {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       return E.left(error);
@@ -83,7 +94,8 @@ export class ProductService implements BaseProductService {
         name: input.name,
         description: input.description,
         price: input.price,
-        price_promotional: input.pricePromotional,
+        price_promotional:
+          input.pricePromotional.length === 0 ? null : input.pricePromotional,
         photos: input.photos,
         auth_user_id: user.id,
         stock: input.stock,
