@@ -144,4 +144,18 @@ export class CategoryService implements BaseCategoryService {
     }
     return E.right(undefined);
   }
+
+  public async updatePositions(
+    categories: Category[]
+  ): Promise<E.Either<Error, void>> {
+    const updates = categories.map((cat, index) =>
+      this.client
+        .from('categories')
+        .update({ position: index })
+        .eq('id', cat.id)
+    );
+
+    await Promise.all(updates);
+    return E.right(undefined);
+  }
 }

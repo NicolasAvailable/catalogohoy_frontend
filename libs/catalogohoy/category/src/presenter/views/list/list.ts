@@ -1,15 +1,19 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { Component, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
   ButtonComponent,
   CardComponent,
+  ConfirmDialogComponent,
   IconComponent,
   InputTextComponent,
 } from '@ui';
 import { PaginatorModule } from 'primeng/paginator';
 import { CategoryFacade } from '../../../application';
+import { Category } from '../../../domain';
 import { CategoryStore } from '../../../infrastructure';
+import { CategoryService } from '../../../infrastructure/category.service';
 
 @Component({
   selector: 'lib-category-list',
@@ -21,6 +25,8 @@ import { CategoryStore } from '../../../infrastructure';
     IconComponent,
     PaginatorModule,
     CardComponent,
+    DragDropModule,
+    ConfirmDialogComponent,
   ],
   templateUrl: './list.html',
   styleUrl: './list.css',
@@ -31,8 +37,13 @@ import { CategoryStore } from '../../../infrastructure';
 export default class CategoryListComponent implements OnInit {
   public readonly categoryStore = inject(CategoryStore);
   public readonly categoryFacade = inject(CategoryFacade);
+  public readonly categoryService = inject(CategoryService);
   public readonly isCreating = signal(false);
   public readonly createControl = new FormControl('', [Validators.required]);
+  public readonly selectedCategory = signal<Category | null>(null);
+
+  @ViewChild(ConfirmDialogComponent)
+  public confirmDialog!: ConfirmDialogComponent;
 
   // Pagination state
   public first = 0;
@@ -77,11 +88,28 @@ export default class CategoryListComponent implements OnInit {
     });
   }
 
-  public onDelete(id: string | number) {
-    if (confirm('¿Estás seguro de eliminar esta categoría?')) {
-      this.categoryFacade.delete(String(id)).then((result) => {
-        result.mapRight(() => this.categoryStore.categoryList$());
+  public onDelete(category: Category) {
+    this.selectedCategory.set(category);
+    this.confirmDialog.warning();
+  }
+
+  public async onConfirmDelete() {
+    const category = this.selectedCategory();
+    if (category) {
+      const result = await this.categoryFacade.delete(String(category.id));
+      result.mapRight(() => {
+        this.categoryStore.categoryList$();
       });
     }
+  }
+
+  public async drop(event: CdkDragDrop<Category[]>) {
+    const categories = [...this.categoryStore.categoryList().categories];
+    const movedItem = categories.splice(event.previousIndex, 1)[0];
+    categories.splice(event.currentIndex, 0, movedItem);
+
+    // Update positions in backend
+    await this.categoryService.updatePositions(categories);
+    this.loadData();
   }
 }

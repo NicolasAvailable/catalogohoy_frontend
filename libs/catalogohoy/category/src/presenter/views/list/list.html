@@ -34,36 +34,45 @@
     }
 
     <!-- List Items -->
-    @for (category of categoryStore.categoryList().categories; track
-    category.id) {
     <div
-      class="flex items-center justify-between p-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
+      cdkDropList
+      (cdkDropListDropped)="drop($event)"
+      class="flex flex-col category-list"
     >
-      <div class="flex items-center gap-4">
-        <ui-icon
-          name="grip-vertical"
-          class="text-gray-300 cursor-move"
-          size="20"
-        />
-        <span class="font-medium text-lg">{{ category.name }}</span>
+      @for (category of categoryStore.categoryList().categories; track
+      category.id) {
+      <div
+        cdkDrag
+        cdkDragBoundary=".category-list"
+        class="flex items-center justify-between p-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
+      >
+        <div class="flex items-center gap-4" cdkDragHandle>
+          <ui-icon
+            name="grip-vertical"
+            class="text-gray-300 cursor-move"
+            size="20"
+          />
+          <span class="font-medium text-lg">{{ category.name }}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <ui-button
+            icon="pencil"
+            variant="text"
+            severity="secondary"
+            [routerLink]="['edit', category.id]"
+          />
+          <ui-button
+            icon="trash"
+            variant="text"
+            severity="danger"
+            (click)="onDelete(category)"
+          />
+        </div>
       </div>
-      <div class="flex items-center gap-2">
-        <ui-button
-          icon="pencil"
-          variant="text"
-          severity="secondary"
-          [routerLink]="['edit', category.id]"
-        />
-        <ui-button
-          icon="trash"
-          variant="text"
-          severity="danger"
-          (click)="onDelete(category.id)"
-        />
-      </div>
+      }
     </div>
-    } @if (categoryStore.categoryList().categories.length === 0 &&
-    !isCreating()) {
+    @if (categoryStore.categoryList().categories.length === 0 && !isCreating())
+    {
     <div class="flex flex-col items-center justify-center py-10 text-gray-400">
       <ui-icon name="list" size="48" class="mb-4 opacity-50" />
       <p>No hay categorías aún.</p>
@@ -76,8 +85,16 @@
       (onPageChange)="onPageChange($event)"
       [first]="first"
       [rows]="rows"
-      [totalRecords]="100"
+      [totalRecords]="categoryStore.categoryList().length"
       [showCurrentPageReport]="true"
     ></p-paginator>
   </ui-card>
+
+  <ui-confirm-dialog
+    (confirm)="onConfirmDelete()"
+    headerLabel="Eliminar categoría"
+    contentLabel="¿Estás seguro de que deseas eliminar esta categoría? Esta acción es irreversible."
+    acceptLabel="Eliminar"
+    rejectLabel="Cancelar"
+  />
 </section>
