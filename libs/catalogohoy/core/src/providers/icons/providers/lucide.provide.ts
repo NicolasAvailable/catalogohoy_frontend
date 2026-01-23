@@ -3,6 +3,7 @@ import {
   ArrowDownToLine,
   BookImage,
   Building,
+  Check,
   ChevronDown,
   ChevronRight,
   CirclePlus,
@@ -12,7 +13,9 @@ import {
   EllipsisVertical,
   ExternalLink,
   Eye,
+  GripVertical,
   Home,
+  List,
   LogOut,
   LucideAngularModule,
   Menu,
@@ -20,6 +23,7 @@ import {
   Minus,
   NotepadText,
   Package,
+  Pencil,
   Plus,
   QrCode,
   Share2,
@@ -28,6 +32,7 @@ import {
   Tag,
   TicketPercent,
   Trash,
+  X,
 } from 'lucide-angular';
 
 export const provideLucideIcons = (): EnvironmentProviders => {
@@ -60,6 +65,11 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Trash,
       DollarSign,
       Menu,
+      List,
+      X,
+      Check,
+      GripVertical,
+      Pencil,
     })
   );
 };

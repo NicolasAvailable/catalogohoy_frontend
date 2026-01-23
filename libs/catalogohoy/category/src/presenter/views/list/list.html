@@ -1,0 +1,83 @@
+<section
+  class="container flex flex-col flex-1 max-w-5xl mx-auto px-1 overflow-hidden h-full"
+>
+  <header class="flex justify-between items-center py-4">
+    <div>
+      <h1 class="text-4xl font-bold">Categorías</h1>
+      <p class="text-gray-500 mt-2">
+        Para organizar tus productos, creá categorías y subcategorías que
+        aparecerán en el menú de la tienda.
+      </p>
+    </div>
+    <ui-button label="Crear categoría" (click)="toggleCreate()" />
+  </header>
+
+  <ui-card class="flex-1 flex flex-col gap-2 overflow-y-auto h-full">
+    <!-- Inline Create Row -->
+    @if (isCreating()) {
+    <div
+      class="flex items-center gap-4 p-3 border border-blue-500 rounded-md bg-blue-50/10"
+    >
+      <ui-icon name="grip-vertical" class="text-gray-300" size="20" />
+      <ui-input-text
+        [formControl]="createControl"
+        class="flex-1"
+        styleClass="w-full border-none focus:ring-0 bg-transparent text-lg"
+        placeholder="Nombre de la categoría"
+        (keydown.enter)="saveCreate()"
+      />
+      <div class="flex gap-2">
+        <ui-button icon="x" variant="text" (click)="cancelCreate()" />
+        <ui-button icon="check" variant="text" (click)="saveCreate()" />
+      </div>
+    </div>
+    }
+
+    <!-- List Items -->
+    @for (category of categoryStore.categoryList().categories; track
+    category.id) {
+    <div
+      class="flex items-center justify-between p-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
+    >
+      <div class="flex items-center gap-4">
+        <ui-icon
+          name="grip-vertical"
+          class="text-gray-300 cursor-move"
+          size="20"
+        />
+        <span class="font-medium text-lg">{{ category.name }}</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <ui-button
+          icon="pencil"
+          variant="text"
+          severity="secondary"
+          [routerLink]="['edit', category.id]"
+        />
+        <ui-button
+          icon="trash"
+          variant="text"
+          severity="danger"
+          (click)="onDelete(category.id)"
+        />
+      </div>
+    </div>
+    } @if (categoryStore.categoryList().categories.length === 0 &&
+    !isCreating()) {
+    <div class="flex flex-col items-center justify-center py-10 text-gray-400">
+      <ui-icon name="list" size="48" class="mb-4 opacity-50" />
+      <p>No hay categorías aún.</p>
+    </div>
+    }
+  </ui-card>
+
+  <ui-card class="py-4">
+    <p-paginator
+      (onPageChange)="onPageChange($event)"
+      [first]="first"
+      [rows]="rows"
+      [totalRecords]="100"
+      [showCurrentPageReport]="true"
+    ></p-paginator>
+  </ui-card>
+</section>

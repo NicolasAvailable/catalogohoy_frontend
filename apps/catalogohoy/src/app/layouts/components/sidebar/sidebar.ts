@@ -33,7 +33,7 @@ export class Sidebar {
         },
         {
           label: 'Categorías',
-          routerLink: 'category',
+          routerLink: 'categories',
           routerLinkActiveOptions: { exact: true },
         },
         {

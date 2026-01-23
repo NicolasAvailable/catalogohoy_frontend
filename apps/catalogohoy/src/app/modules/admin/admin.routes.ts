@@ -7,10 +7,16 @@ export const adminRoutes: Route[] = [
   },
   {
     path: 'products',
-    loadChildren: () => import('@catalogohoy/product').then((m) => m.productRoutes),
+    loadChildren: () =>
+      import('@catalogohoy/product').then((m) => m.productRoutes),
   },
   {
     path: 'profile',
     loadComponent: () => import('@catalogohoy/profile').then((m) => m.Profile),
+  },
+  {
+    path: 'categories',
+    loadChildren: () =>
+      import('@catalogohoy/category').then((m) => m.categoryRoutes),
   },
 ];
