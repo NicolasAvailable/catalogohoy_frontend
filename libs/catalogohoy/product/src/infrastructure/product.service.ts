@@ -9,7 +9,7 @@ import {
   UpdateProductInput,
 } from '../domain';
 import { ProductEntity } from './entities';
-import { ProductListMapper } from './mappers';
+import { ProductListMapper, ProductMapper } from './mappers';
 
 @Injectable({
   providedIn: 'root',
@@ -31,7 +31,16 @@ export class ProductService implements BaseProductService {
 
     let query = this.client
       .from('products')
-      .select('*')
+      .select(
+        `
+      *,
+      product_categories (
+        categories (
+          *
+        )
+      )
+      `
+      )
       .eq('auth_user_id', user.id)
       .order('id', { ascending: true });
 
@@ -46,13 +55,28 @@ export class ProductService implements BaseProductService {
     if (error) {
       return E.left(error);
     }
-    return E.right(ProductListMapper.toDomain(data as ProductEntity[]));
+    const entities = (data as any[]).map((item) => ({
+      ...item,
+      product_categories:
+        item.product_categories?.map((pc: any) => pc.categories) ?? [],
+    })) as ProductEntity[];
+
+    return E.right(ProductListMapper.toDomain(entities));
   }
 
   public async getById(id: string): Promise<E.Either<Error, Product>> {
     const { data, error } = await this.client
       .from('products')
-      .select('*')
+      .select(
+        `
+    *,
+    product_categories (
+      categories (
+        *
+      )
+    )
+  `
+      )
       .eq('id', id)
       .single();
 
@@ -60,21 +84,15 @@ export class ProductService implements BaseProductService {
       return E.left(error);
     }
 
-    const entity = data as ProductEntity;
+    const transformedData = {
+      ...data,
+      product_categories:
+        (data as any).product_categories?.map((pc: any) => pc.categories) ?? [],
+    };
 
-    return E.right(
-      Product.create({
-        id: entity.id,
-        name: entity.name,
-        description: entity.description,
-        price: entity.price,
-        pricePromotional: entity.price_promotional,
-        photos: entity.photos,
-        stock: entity.stock,
-        authUserId: entity.auth_user_id,
-        createdAt: entity.created_at,
-      })
-    );
+    const entity = transformedData as ProductEntity;
+
+    return E.right(ProductMapper.toDomain(entity));
   }
 
   public async create(
@@ -88,7 +106,7 @@ export class ProductService implements BaseProductService {
       return E.right(undefined);
     }
 
-    const { error } = await this.client
+    const { data, error } = await this.client
       .from('products')
       .insert({
         name: input.name,
@@ -105,19 +123,28 @@ export class ProductService implements BaseProductService {
     if (error) {
       return E.left(new Error(error.message));
     }
+    input.categoryIds.forEach(async (categoryId) => {
+      await this.client.from('product_categories').insert([
+        {
+          product_id: data[0].id,
+          category_id: categoryId,
+        },
+      ]);
+    });
     return E.right(undefined);
   }
 
   public async update(
     input: UpdateProductInput
   ): Promise<E.Either<Error, void>> {
-    const { error } = await this.client
+    const { data, error } = await this.client
       .from('products')
       .update({
         name: input.name,
         description: input.description,
         price: input.price,
-        price_promotional: input.pricePromotional,
+        price_promotional:
+          input.pricePromotional.length === 0 ? null : input.pricePromotional,
         photos: input.photos,
         stock: input.stock,
       })
@@ -127,6 +154,15 @@ export class ProductService implements BaseProductService {
     if (error) {
       return E.left(new Error(error.message));
     }
+
+    input.categoryIds.forEach(async (categoryId) => {
+      await this.client.from('product_categories').insert([
+        {
+          product_id: data[0].id,
+          category_id: categoryId,
+        },
+      ]);
+    });
     return E.right(undefined);
   }
 

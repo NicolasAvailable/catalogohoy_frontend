@@ -16,6 +16,7 @@ export * as inputtext from './input-text';
 export * as menu from './menu';
 export * as menubar from './menubar';
 export * as message from './message';
+export * as multiselect from './multiselect';
 export * as panelmenu from './panelmenu';
 export * as progressbar from './progress-bar';
 export * as select from './select';

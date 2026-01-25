@@ -16,6 +16,7 @@ export * from './icon';
 export * from './input';
 export * from './menu';
 export * from './message';
+export * from './multi-select';
 export * from './multimedia';
 export * from './progress-bar';
 export * from './qr';

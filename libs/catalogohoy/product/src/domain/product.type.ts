@@ -5,6 +5,7 @@ export type CreateProductInput = {
   pricePromotional: string;
   photos: string[] | null;
   stock: string | null;
+  categoryIds: string[];
 };
 
 export type UpdateProductInput = CreateProductInput & { id: string };

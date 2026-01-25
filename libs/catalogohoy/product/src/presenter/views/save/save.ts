@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { CategoryStore } from '@catalogohoy/category';
 import { Exception, is } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { whiteSpacesValidator } from '@shared/presenter';
@@ -17,6 +18,7 @@ import {
   IconComponent,
   InputNumberComponent,
   InputTextComponent,
+  MultiSelectComponent,
   RadioButtonComponent,
   TextareaComponent,
   UploaderComponent,
@@ -37,6 +39,7 @@ import { Product } from '../../../domain';
     IconComponent,
     InputNumberComponent,
     RadioButtonComponent,
+    MultiSelectComponent,
   ],
   templateUrl: './save.html',
   styleUrl: './save.css',
@@ -46,6 +49,7 @@ export default class Save implements OnInit {
   private readonly router = inject(Router);
   private readonly toastService = inject(ToastService);
   private readonly productFacade = inject(ProductFacade);
+  public readonly categoryStore = inject(CategoryStore);
   public readonly form = inject(FormBuilder).group({
     name: ['', [Validators.required, whiteSpacesValidator()]],
     description: [''],
@@ -53,6 +57,7 @@ export default class Save implements OnInit {
     price: ['', [Validators.required]],
     pricePromotional: [''],
     stock: [null],
+    categoryIds: [[] as string[]],
   });
 
   public readonly id = input<string | undefined>(undefined);
@@ -61,6 +66,7 @@ export default class Save implements OnInit {
   private readonly maxPhotos = 3;
 
   ngOnInit(): void {
+    this.categoryStore.categoryList$(1, 100);
     is.affirmative(this.id())
       .mapRight(async () => {
         const product = await this.productFacade.getById(this.id() as string);
@@ -77,6 +83,9 @@ export default class Save implements OnInit {
       String(product.pricePromotional)
     );
     this.form.controls.stock.setValue(product.stock as null);
+    this.form.controls.categoryIds.setValue(
+      product.categoryList.ids as string[]
+    );
     this.photos.set(product.photos);
   }
 
@@ -110,12 +119,13 @@ export default class Save implements OnInit {
     if (this.form.invalid) return;
     const body = {
       id: '',
-      name: this.form.controls.name.value!,
+      name: this.form.controls.name.value as string,
       description: this.form.controls.description.value,
       photos: this.photos(),
       price: this.form.controls.price.value!,
       pricePromotional: this.form.controls.pricePromotional.value!,
       stock: this.form.controls.stock.value,
+      categoryIds: this.form.controls.categoryIds.value!,
     };
     if (this.isCreate()) {
       const product = await this.productFacade.create(body);

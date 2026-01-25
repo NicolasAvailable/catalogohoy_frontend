@@ -1,3 +1,4 @@
+import { CategoryListMapper } from '@catalogohoy/category';
 import { Product } from '../../domain';
 import { ProductList } from '../../domain/product-list.model';
 import { ProductEntity } from '../entities';
@@ -6,15 +7,18 @@ export class ProductListMapper {
   static toDomain(entities: ProductEntity[]): ProductList {
     return ProductList.from(
       entities.map((entity) =>
-        Product.create({
+        Product.fromPrimitives({
           id: entity.id,
           name: entity.name,
           description: entity.description,
           price: entity.price,
-          pricePromotional: entity.price_promotional,
+          pricePromotional: entity.price_promotional ?? 0,
           authUserId: entity.auth_user_id,
           photos: entity.photos,
           stock: entity.stock,
+          categoryList: CategoryListMapper.toDomain(
+            entity.product_categories ?? []
+          ),
           createdAt: entity.created_at,
         })
       )
