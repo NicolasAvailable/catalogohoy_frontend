@@ -5,9 +5,10 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   ButtonComponent,
+  CardComponent,
   CheckboxComponent,
   InputTextComponent,
   TextareaComponent,
@@ -17,11 +18,13 @@ import { CategoryFacade } from '../../../application';
 @Component({
   selector: 'lib-category-edit',
   imports: [
+    RouterLink,
     ReactiveFormsModule,
     ButtonComponent,
     InputTextComponent,
     TextareaComponent,
     CheckboxComponent,
+    CardComponent,
   ],
   templateUrl: './edit.html',
   styleUrl: './edit.css',
@@ -68,20 +71,8 @@ export default class CategoryEdit implements OnInit {
       isVisible,
     });
 
-    result.mapRight(() => {
-      this.goBack();
-    });
-  }
-
-  public goBack() {
-    this.router.navigate(['../../'], { relativeTo: this.route });
-  }
-
-  public onDelete() {
-    if (this.id && confirm('¿Eliminar categoría?')) {
-      this.categoryFacade.delete(this.id).then((res) => {
-        res.mapRight(() => this.goBack());
-      });
-    }
+    result.mapRight(() =>
+      this.router.navigate(['../../'], { relativeTo: this.route })
+    );
   }
 }

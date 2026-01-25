@@ -27,6 +27,11 @@
     />
   </form>
   <section class="flex-1 flex flex-col gap-4 overflow-y-auto h-full">
+    @if (productStore.isLoading()) {
+    <section class="bg-white-500 py-6">
+      <ui-skeleton-list [count]="15" height="6rem" styleClass="mx-6" />
+    </section>
+    } @else {
     <ui-table
       class="flex-1"
       [items]="productStore.productList().products"
@@ -139,6 +144,7 @@
         </ui-card>
       </ng-template>
     </ui-table>
+    }
   </section>
   <ui-confirm-dialog
     (confirm)="onConfirmDelete()"

@@ -3,11 +3,10 @@ import { TranslatePipe } from '@shared/presenter';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ButtonComponent, ButtonSeverity } from '../../button/button';
-import { IconComponent } from '../../icon/icon';
 
 @Component({
   selector: 'ui-confirm-dialog',
-  imports: [TranslatePipe, ButtonComponent, ConfirmDialogModule, IconComponent],
+  imports: [TranslatePipe, ButtonComponent, ConfirmDialogModule],
   providers: [ConfirmationService],
   template: `
     <p-confirmDialog

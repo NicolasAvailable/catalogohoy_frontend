@@ -8,6 +8,7 @@ import {
   ConfirmDialogComponent,
   IconComponent,
   InputTextComponent,
+  SkeletonListComponent,
 } from '@ui';
 import { PaginatorModule } from 'primeng/paginator';
 import { CategoryFacade } from '../../../application';
@@ -27,6 +28,7 @@ import { CategoryService } from '../../../infrastructure/category.service';
     CardComponent,
     DragDropModule,
     ConfirmDialogComponent,
+    SkeletonListComponent,
   ],
   templateUrl: './list.html',
   styleUrl: './list.css',

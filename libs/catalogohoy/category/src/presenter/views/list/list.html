@@ -4,15 +4,18 @@
   <header class="flex justify-between items-center py-4">
     <div>
       <h1 class="text-4xl font-bold">Categorías</h1>
-      <p class="text-gray-500 mt-2">
-        Para organizar tus productos, creá categorías y subcategorías que
-        aparecerán en el menú de la tienda.
-      </p>
     </div>
-    <ui-button label="Crear categoría" (click)="toggleCreate()" />
+    <ui-button
+      label="Crear categoría"
+      icon="circle-plus"
+      (click)="toggleCreate()"
+    />
   </header>
 
   <ui-card class="flex-1 flex flex-col gap-2 overflow-y-auto h-full">
+    @if (categoryStore.isLoading()) {
+    <ui-skeleton-list [count]="10" height="4.5rem" styleClass="mx-4 mb-2" />
+    } @else {
     <!-- Inline Create Row -->
     @if (isCreating()) {
     <div
@@ -77,7 +80,7 @@
       <ui-icon name="list" size="48" class="mb-4 opacity-50" />
       <p>No hay categorías aún.</p>
     </div>
-    }
+    } }
   </ui-card>
 
   <ui-card class="py-4">

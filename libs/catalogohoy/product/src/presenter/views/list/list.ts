@@ -7,6 +7,7 @@ import {
   ConfirmDialogComponent,
   IconComponent,
   InputTextComponent,
+  SkeletonListComponent,
   TableComponent,
 } from '@ui';
 import { ProductFacade } from '../../../application';
@@ -19,6 +20,7 @@ import { ProductStore } from '../../../infrastructure';
     ReactiveFormsModule,
     RouterLink,
     TableComponent,
+    SkeletonListComponent,
     CardComponent,
     ButtonComponent,
     InputTextComponent,

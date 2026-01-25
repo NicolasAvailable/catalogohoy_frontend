@@ -10,7 +10,7 @@ type ProductState = {
 
 const initialState: ProductState = {
   productList: ProductList.empty(),
-  isLoading: false,
+  isLoading: true,
 };
 
 export const ProductStore = signalStore(

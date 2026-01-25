@@ -1,74 +1,64 @@
-<header class="flex justify-between items-center mb-6">
-  <div class="flex items-center gap-4">
-    <ui-button
-      icon="arrow-left"
-      variant="text"
-      (click)="goBack()"
-      size="large"
-    />
-    <h1 class="text-3xl font-bold">Editar categoría</h1>
-  </div>
-  <div class="flex gap-3">
-    <ui-button
-      label="Eliminar"
-      variant="outlined"
-      severity="danger"
-      icon="trash"
-      (click)="onDelete()"
-    />
-    <ui-button label="Guardar" icon="check" (click)="onSave()" />
-  </div>
-</header>
+<section
+  class="container flex flex-col gap-6 flex-1 max-w-5xl mx-auto px-1 overflow-hidden"
+>
+  <header class="flex justify-between items-center">
+    <div class="flex items-center gap-4">
+      <h1 class="text-3xl font-bold">Editar categoría</h1>
+    </div>
+    <div class="flex gap-3">
+      <ui-button
+        routerLink="/admin/categories"
+        label="Cancelar"
+        variant="outlined"
+        severity="contrast"
+      />
+      <ui-button label="Guardar cambios" (click)="onSave()" />
+    </div>
+  </header>
 
-<form [formGroup]="form" class="flex flex-col gap-6">
-  <!-- Info Card -->
-  <section class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-    <h2 class="text-xl font-bold mb-6">Información sobre la categoría</h2>
-
-    <div class="flex flex-col gap-6">
-      <div class="flex flex-col gap-2">
-        <label class="font-medium text-gray-700">Nombre</label>
-        <ui-input-text formControlName="name" class="w-full" />
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <div class="flex items-center gap-2 justify-between">
-          <div class="flex items-center gap-2">
-            <label class="font-medium text-gray-700"
-              >Descripción (opcional)</label
-            >
-            <span
-              class="text-purple-600 text-sm flex items-center gap-1 cursor-pointer font-medium hover:underline"
-            >
-              Generar con IA
-            </span>
-          </div>
-          <span class="text-xs text-gray-400">0/140</span>
+  <ui-card>
+    <form [formGroup]="form" class="flex flex-col gap-6">
+      <!-- Info Card -->
+      <div class="flex flex-col gap-6">
+        <div class="flex flex-col gap-2">
+          <label for="name" class="text-base text-grey-100">Nombre</label>
+          <ui-input-text formControlName="name" inputId="name" class="w-full" />
         </div>
-        <ui-textarea
-          formControlName="description"
-          class="w-full"
-          [rows]="4"
-          placeholder="Contale a tus clientes lo que van a encontrar en esta categoría."
+
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center gap-2 justify-between">
+            <div class="flex items-center gap-2">
+              <label for="description" class="text-base text-grey-100"
+                >Descripción (opcional)</label
+              >
+            </div>
+            <span class="text-xs text-gray-400"
+              >{{description.value().length}}/140</span
+            >
+          </div>
+          <ui-textarea
+            #description
+            formControlName="description"
+            textareaId="description"
+            class="w-full"
+            [rows]="4"
+            placeholder="Contale a tus clientes lo que van a encontrar en esta categoría."
+          />
+        </div>
+      </div>
+    </form>
+  </ui-card>
+
+  <ui-card>
+    <form [formGroup]="form" class="flex gap-6">
+      <h2 class="text-xl font-bold mb-4">Visibilidad</h2>
+
+      <div class="flex items-center gap-2">
+        <ui-checkbox
+          formControlName="isVisible"
+          label="Mostrar esta categoría en la tienda"
         />
       </div>
-    </div>
-  </section>
-
-  <!-- Visibility Card -->
-  <section class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-    <h2 class="text-xl font-bold mb-4">Visibilidad</h2>
-
-    <div class="flex items-center gap-2">
-      <ui-checkbox
-        formControlName="isVisible"
-        label="Mostrar esta categoría en la tienda"
-      />
-    </div>
-  </section>
-
-  <div class="flex justify-end gap-3 py-4">
-    <ui-button label="Cancelar" variant="outlined" (click)="goBack()" />
-    <ui-button label="Guardar" (click)="onSave()" />
-  </div>
-</form>
+    </form>
+  </ui-card>
+</section>

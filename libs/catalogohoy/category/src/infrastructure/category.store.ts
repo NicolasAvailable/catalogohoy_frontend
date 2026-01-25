@@ -10,7 +10,7 @@ type CategoryState = {
 
 const initialState: CategoryState = {
   categoryList: CategoryList.empty(),
-  isLoading: false,
+  isLoading: true,
 };
 
 export const CategoryStore = signalStore(
