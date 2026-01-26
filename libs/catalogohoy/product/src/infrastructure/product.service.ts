@@ -19,7 +19,8 @@ export class ProductService implements BaseProductService {
 
   public async getAll(
     page?: number,
-    pageSize?: number
+    pageSize?: number,
+    search?: string
   ): Promise<E.Either<Error, ProductList>> {
     const {
       data: { user },
@@ -43,6 +44,10 @@ export class ProductService implements BaseProductService {
       )
       .eq('auth_user_id', user.id)
       .order('id', { ascending: true });
+
+    if (search && search.trim().length > 0) {
+      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+    }
 
     if (page !== undefined && pageSize !== undefined) {
       const from = (page - 1) * pageSize;

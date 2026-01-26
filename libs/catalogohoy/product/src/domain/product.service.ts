@@ -6,7 +6,8 @@ import { CreateProductInput, UpdateProductInput } from './product.type';
 export interface BaseProductService {
   getAll(
     page?: number,
-    pageSize?: number
+    pageSize?: number,
+    search?: string
   ): Promise<E.Either<Error, ProductList>>;
   getById(id: string): Promise<E.Either<Error, Product>>;
   create(input: CreateProductInput): Promise<E.Either<Error, void>>;

@@ -17,15 +17,19 @@ export const ProductStore = signalStore(
   { providedIn: 'root' },
   withState(initialState),
   withMethods((store, productService = inject(ProductService)) => ({
-    async productList$() {
+    async productList$(search?: string) {
       patchState(store, () => ({ isLoading: true }));
 
       try {
-        const result = await productService.getAll();
+        const result = await productService.getAll(
+          undefined,
+          undefined,
+          search
+        );
         result.mapRight((productList) =>
           patchState(store, () => ({ productList, isLoading: false }))
         );
-      } catch (error) {
+      } catch {
         patchState(store, () => ({ isLoading: false }));
       }
     },
