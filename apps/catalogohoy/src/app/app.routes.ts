@@ -7,8 +7,8 @@ export const appRoutes: Route[] = [
   {
     path: '',
     canActivate: [isValidSlugGuard],
-    loadComponent: () =>
-      import('@catalogohoy/e-commerce').then((m) => m.ECommerce),
+    loadChildren: () =>
+      import('@catalogohoy/e-commerce').then((m) => m.ecommerceRoutes),
   },
   {
     path: 'admin',

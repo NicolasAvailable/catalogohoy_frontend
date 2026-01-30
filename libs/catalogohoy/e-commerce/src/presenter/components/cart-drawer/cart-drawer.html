@@ -1,0 +1,76 @@
+@if (cartStore.isOpen()) {
+<div class="cart-drawer">
+  <div
+    class="cart-drawer__backdrop"
+    role="button"
+    tabindex="0"
+    (click)="onClose()"
+    (keydown.enter)="onClose()"
+    (keydown.escape)="onClose()"
+  ></div>
+
+  <div class="cart-drawer__panel">
+    <header class="cart-drawer__header">
+      <button class="cart-drawer__back" (click)="onClose()">
+        <ui-icon name="arrowLeft" styleClass="size-5" />
+      </button>
+      <h2 class="cart-drawer__title">Carrito de Compras</h2>
+      @if (!cartStore.isEmpty()) {
+      <button class="cart-drawer__clear" (click)="onClearCart()">
+        Vaciar Carrito
+      </button>
+      }
+    </header>
+
+    <div class="cart-drawer__content">
+      @if (cartStore.isEmpty()) {
+      <div class="cart-drawer__empty">
+        <ui-icon name="shoppingCart" styleClass="size-16 text-gray-300" />
+        <p>Tu carrito está vacío</p>
+      </div>
+      } @else {
+      <div class="cart-drawer__items">
+        @for (item of cartStore.items(); track item.productId) {
+        <div class="cart-item">
+          <img
+            class="cart-item__image"
+            [src]="item.photo || 'assets/placeholder-product.png'"
+            [alt]="item.name"
+          />
+          <div class="cart-item__details">
+            <h4 class="cart-item__name">{{ item.name }}</h4>
+            <p class="cart-item__description">{{ item.description }}</p>
+            <span class="cart-item__price">${{ item.price }}</span>
+          </div>
+          <div class="cart-item__actions">
+            <button class="cart-item__qty-btn" (click)="onDecrement(item)">
+              <ui-icon name="minus" styleClass="size-4" />
+            </button>
+            <span class="cart-item__qty">{{ item.quantity }}</span>
+            <button class="cart-item__qty-btn" (click)="onIncrement(item)">
+              <ui-icon name="plus" styleClass="size-4" />
+            </button>
+          </div>
+        </div>
+        }
+      </div>
+      }
+    </div>
+
+    @if (!cartStore.isEmpty()) {
+    <footer class="cart-drawer__footer">
+      <button class="cart-drawer__checkout-btn" (click)="onProceedToCheckout()">
+        <div class="cart-drawer__checkout-count">
+          {{ cartStore.totalItems() }}
+        </div>
+        <span>Ir a pagar</span>
+        <div class="cart-drawer__checkout-price">
+          ${{ cartStore.totalPrice() }}
+          <ui-icon name="chevronRight" styleClass="size-5" />
+        </div>
+      </button>
+    </footer>
+    }
+  </div>
+</div>
+}

@@ -1,0 +1,19 @@
+<div class="category-filter">
+  <button
+    class="category-filter__pill"
+    [class.category-filter__pill--active]="isSelected(null)"
+    (click)="onCategoryClick(null)"
+  >
+    Ver todos
+  </button>
+
+  @for (category of categories(); track category.id) {
+  <button
+    class="category-filter__pill"
+    [class.category-filter__pill--active]="isSelected(category.id)"
+    (click)="onCategoryClick(category.id)"
+  >
+    {{ category.name }}
+  </button>
+  }
+</div>

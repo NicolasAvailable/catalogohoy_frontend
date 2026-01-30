@@ -1,0 +1,84 @@
+<div class="product-detail">
+  @if (ecommerceStore.isLoading()) {
+  <div class="product-detail__loading">
+    <div class="product-detail__skeleton-image"></div>
+    <div class="product-detail__skeleton-content">
+      <div class="product-detail__skeleton-title"></div>
+      <div class="product-detail__skeleton-text"></div>
+      <div class="product-detail__skeleton-text"></div>
+    </div>
+  </div>
+  } @else if (product) {
+  <button class="product-detail__back" (click)="goBack()">
+    <ui-icon name="arrowLeft" styleClass="size-5" />
+    <span>Volver</span>
+  </button>
+
+  <div class="product-detail__container">
+    <div class="product-detail__gallery">
+      <div class="product-detail__main-image">
+        <img [src]="currentImage" [alt]="product.name" />
+        @if (hasDiscount) {
+        <span class="product-detail__discount-badge">Oferta</span>
+        }
+      </div>
+
+      @if (product.photos.length > 1) {
+      <div class="product-detail__thumbnails">
+        @for (photo of product.photos; track $index) {
+        <button
+          class="product-detail__thumbnail"
+          [class.product-detail__thumbnail--active]="currentImageIndex === $index"
+          (click)="setImage($index)"
+        >
+          <img [src]="photo" [alt]="product.name + ' - ' + ($index + 1)" />
+        </button>
+        }
+      </div>
+      }
+    </div>
+
+    <div class="product-detail__info">
+      <h1 class="product-detail__name">{{ product.name }}</h1>
+
+      @if (product.categoryList.categories.length) {
+      <div class="product-detail__categories">
+        @for (category of product.categoryList.categories; track category.id) {
+        <span class="product-detail__category">{{ category.name }}</span>
+        }
+      </div>
+      }
+
+      <div class="product-detail__prices">
+        <span class="product-detail__price">${{ displayPrice }}</span>
+        @if (hasDiscount) {
+        <span class="product-detail__original-price">${{ product.price }}</span>
+        }
+      </div>
+
+      <div class="product-detail__description">
+        <h3>Descripción</h3>
+        <p>{{ product.description }}</p>
+      </div>
+
+      @if (product.stock) {
+      <div class="product-detail__stock">
+        <ui-icon name="package" styleClass="size-5" />
+        <span>Stock: {{ product.stock }}</span>
+      </div>
+      }
+
+      <button class="product-detail__add-btn" (click)="onAddToCart()">
+        <ui-icon name="shoppingCart" styleClass="size-5" />
+        Agregar al carrito
+      </button>
+    </div>
+  </div>
+  } @else {
+  <div class="product-detail__not-found">
+    <ui-icon name="packageSearch" styleClass="size-16 text-gray-300" />
+    <p>Producto no encontrado</p>
+    <a routerLink="/" class="product-detail__back-link">Volver al catálogo</a>
+  </div>
+  }
+</div>

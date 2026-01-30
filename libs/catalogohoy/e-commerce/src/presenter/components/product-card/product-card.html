@@ -1,0 +1,43 @@
+<article
+  class="product-card"
+  [class.product-card--list]="viewMode() === 'list'"
+>
+  <a [routerLink]="['/product', product().id]" class="product-card__image-link">
+    <div class="product-card__image">
+      @if (product().photos?.length) {
+      <img [src]="product().photos[0]" [alt]="product().name" loading="lazy" />
+      } @else {
+      <div class="product-card__placeholder">
+        <ui-icon name="package" styleClass="size-10" />
+      </div>
+      }
+    </div>
+  </a>
+
+  <div class="product-card__content">
+    <a
+      [routerLink]="['/product', product().id]"
+      class="product-card__title-link"
+    >
+      <h3 class="product-card__title">{{ product().name }}</h3>
+    </a>
+    <p class="product-card__description">{{ product().description }}</p>
+
+    <div class="product-card__footer">
+      <div class="product-card__price">
+        @if (product().pricePromotional > 0) {
+        <span class="product-card__price-original">${{ product().price }}</span>
+        <span class="product-card__price-promo"
+          >${{ product().pricePromotional }}</span
+        >
+        } @else {
+        <span class="product-card__price-current">${{ product().price }}</span>
+        }
+      </div>
+
+      <button class="product-card__add-btn" (click)="onAddToCart($event)">
+        <ui-icon name="plus" styleClass="size-5" />
+      </button>
+    </div>
+  </div>
+</article>

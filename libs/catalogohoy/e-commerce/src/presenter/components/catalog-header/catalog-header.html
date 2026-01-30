@@ -1,0 +1,46 @@
+<header class="catalog-header">
+  <div class="catalog-header__container">
+    <div class="catalog-header__left">
+      <h1 class="catalog-header__title">
+        {{ ecommerceStore.catalogInfo()?.name || 'Catálogo' }}
+      </h1>
+    </div>
+
+    <div class="catalog-header__right">
+      <div class="catalog-header__search">
+        <ui-input-search
+          placeholder="Buscar producto"
+          (valueChange)="onSearch($event)"
+        />
+      </div>
+
+      <button class="catalog-header__cart" (click)="cartStore.openCart()">
+        <ui-icon name="shoppingCart" styleClass="size-6" />
+        @if (cartStore.totalItems() > 0) {
+        <span class="catalog-header__cart-badge"
+          >{{ cartStore.totalItems() }}</span
+        >
+        }
+      </button>
+    </div>
+  </div>
+
+  <!-- Horario debajo del título -->
+  <div class="catalog-header__status-bar">
+    @if (ecommerceStore.catalogInfo()?.isOpen) {
+    <span class="catalog-header__status catalog-header__status--open">
+      <ui-icon name="clock" styleClass="size-4" />
+      Abierto
+    </span>
+    } @else {
+    <span class="catalog-header__status catalog-header__status--closed">
+      <ui-icon name="clock" styleClass="size-4" />
+      Cerrado
+    </span>
+    }
+    <span class="catalog-header__hours">
+      {{ ecommerceStore.catalogInfo()?.openTime }} - {{
+      ecommerceStore.catalogInfo()?.closeTime }}
+    </span>
+  </div>
+</header>
