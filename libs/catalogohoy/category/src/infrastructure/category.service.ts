@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
+import { TenantStore } from '@catalogohoy/tenant';
 import { E } from '@shared/domain';
 import {
   BaseCategoryService,
@@ -16,24 +17,23 @@ import { CategoryListMapper } from './mappers';
 })
 export class CategoryService implements BaseCategoryService {
   private readonly client = SupabaseClientProvider.getInstance();
+  private readonly tenantStore = inject(TenantStore);
 
   public async getAll(
     page?: number,
     pageSize?: number
   ): Promise<E.Either<Error, CategoryList>> {
-    const {
-      data: { user },
-    } = await this.client.auth.getUser();
+    const authUserId = this.tenantStore.getAuthUserId();
 
-    if (!user) {
+    if (!authUserId) {
       return E.left(new Error('User not authenticated'));
     }
 
     let query = this.client
       .from('categories')
       .select('*')
-      .eq('auth_user_id', user.id)
-      .order('position', { ascending: true }); // Order by position
+      .eq('auth_user_id', authUserId)
+      .order('position', { ascending: true });
 
     if (page !== undefined && pageSize !== undefined) {
       const from = (page - 1) * pageSize;
@@ -78,19 +78,18 @@ export class CategoryService implements BaseCategoryService {
   public async create(
     input: CreateCategoryInput
   ): Promise<E.Either<Error, void>> {
-    const {
-      data: { user },
-    } = await this.client.auth.getUser();
+    const authUserId = this.tenantStore.getAuthUserId();
+    const tenantId = this.tenantStore.getTenantId();
 
-    if (!user) {
-      return E.right(undefined);
+    if (!authUserId) {
+      return E.left(new Error('User not authenticated'));
     }
 
     // Get the last position
     const { data: maxPosData } = await this.client
       .from('categories')
       .select('position')
-      .eq('auth_user_id', user.id)
+      .eq('auth_user_id', authUserId)
       .order('position', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -104,7 +103,8 @@ export class CategoryService implements BaseCategoryService {
         description: input.description,
         is_visible: input.isVisible,
         position: newPosition,
-        auth_user_id: user.id,
+        auth_user_id: authUserId,
+        tenant_id: tenantId,
       })
       .select('*');
 

@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
+import { TenantStore } from '@catalogohoy/tenant';
 import { E } from '@shared/domain';
 import {
   BaseProductService,
@@ -16,6 +17,7 @@ import { ProductListMapper, ProductMapper } from './mappers';
 })
 export class ProductService implements BaseProductService {
   private readonly client = SupabaseClientProvider.getInstance();
+  private readonly tenantStore = inject(TenantStore);
 
   public async getAll(
     page?: number,
@@ -60,10 +62,14 @@ export class ProductService implements BaseProductService {
     if (error) {
       return E.left(error);
     }
-    const entities = (data as any[]).map((item) => ({
+
+    const entities = (data as ProductEntity[]).map((item) => ({
       ...item,
       product_categories:
-        item.product_categories?.map((pc: any) => pc.categories) ?? [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (item as any).product_categories?.map(
+          (pc: { categories: unknown }) => pc.categories
+        ) ?? [],
     })) as ProductEntity[];
 
     return E.right(ProductListMapper.toDomain(entities));
@@ -92,7 +98,10 @@ export class ProductService implements BaseProductService {
     const transformedData = {
       ...data,
       product_categories:
-        (data as any).product_categories?.map((pc: any) => pc.categories) ?? [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (data as any).product_categories?.map(
+          (pc: { categories: unknown }) => pc.categories
+        ) ?? [],
     };
 
     const entity = transformedData as ProductEntity;
@@ -103,12 +112,11 @@ export class ProductService implements BaseProductService {
   public async create(
     input: CreateProductInput
   ): Promise<E.Either<Error, void>> {
-    const {
-      data: { user },
-    } = await this.client.auth.getUser();
+    const authUserId = this.tenantStore.getAuthUserId();
+    const tenantId = this.tenantStore.getTenantId();
 
-    if (!user) {
-      return E.right(undefined);
+    if (!authUserId) {
+      return E.left(new Error('User not authenticated'));
     }
 
     const { data, error } = await this.client
@@ -120,14 +128,16 @@ export class ProductService implements BaseProductService {
         price_promotional:
           input.pricePromotional.length === 0 ? null : input.pricePromotional,
         photos: input.photos,
-        auth_user_id: user.id,
+        auth_user_id: authUserId,
         stock: input.stock,
+        tenant_id: tenantId,
       })
       .select('*');
 
     if (error) {
       return E.left(new Error(error.message));
     }
+
     input.categoryIds.forEach(async (categoryId) => {
       await this.client.from('product_categories').insert([
         {
