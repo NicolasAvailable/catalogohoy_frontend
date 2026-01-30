@@ -23,7 +23,7 @@ export class CategoryService implements BaseCategoryService {
     page?: number,
     pageSize?: number
   ): Promise<E.Either<Error, CategoryList>> {
-    const authUserId = this.tenantStore.getAuthUserId();
+    const authUserId = await this.tenantStore.getAuthUserIdAsync();
 
     if (!authUserId) {
       return E.left(new Error('User not authenticated'));
@@ -78,10 +78,9 @@ export class CategoryService implements BaseCategoryService {
   public async create(
     input: CreateCategoryInput
   ): Promise<E.Either<Error, void>> {
-    const authUserId = this.tenantStore.getAuthUserId();
-    const tenantId = this.tenantStore.getTenantId();
+    const tenantInfo = await this.tenantStore.ensureLoaded();
 
-    if (!authUserId) {
+    if (!tenantInfo.authUserId) {
       return E.left(new Error('User not authenticated'));
     }
 
@@ -89,7 +88,7 @@ export class CategoryService implements BaseCategoryService {
     const { data: maxPosData } = await this.client
       .from('categories')
       .select('position')
-      .eq('auth_user_id', authUserId)
+      .eq('auth_user_id', tenantInfo.authUserId)
       .order('position', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -103,8 +102,8 @@ export class CategoryService implements BaseCategoryService {
         description: input.description,
         is_visible: input.isVisible,
         position: newPosition,
-        auth_user_id: authUserId,
-        tenant_id: tenantId,
+        auth_user_id: tenantInfo.authUserId,
+        tenant_id: tenantInfo.tenantId,
       })
       .select('*');
 

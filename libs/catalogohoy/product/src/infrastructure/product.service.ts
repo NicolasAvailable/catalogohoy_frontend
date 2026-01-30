@@ -24,11 +24,9 @@ export class ProductService implements BaseProductService {
     pageSize?: number,
     search?: string
   ): Promise<E.Either<Error, ProductList>> {
-    const {
-      data: { user },
-    } = await this.client.auth.getUser();
+    const authUserId = await this.tenantStore.getAuthUserIdAsync();
 
-    if (!user) {
+    if (!authUserId) {
       return E.left(new Error('User not authenticated'));
     }
 
@@ -44,7 +42,7 @@ export class ProductService implements BaseProductService {
       )
       `
       )
-      .eq('auth_user_id', user.id)
+      .eq('auth_user_id', authUserId)
       .order('id', { ascending: true });
 
     if (search && search.trim().length > 0) {
@@ -112,10 +110,9 @@ export class ProductService implements BaseProductService {
   public async create(
     input: CreateProductInput
   ): Promise<E.Either<Error, void>> {
-    const authUserId = this.tenantStore.getAuthUserId();
-    const tenantId = this.tenantStore.getTenantId();
+    const tenantInfo = await this.tenantStore.ensureLoaded();
 
-    if (!authUserId) {
+    if (!tenantInfo.authUserId) {
       return E.left(new Error('User not authenticated'));
     }
 
@@ -128,9 +125,9 @@ export class ProductService implements BaseProductService {
         price_promotional:
           input.pricePromotional.length === 0 ? null : input.pricePromotional,
         photos: input.photos,
-        auth_user_id: authUserId,
+        auth_user_id: tenantInfo.authUserId,
         stock: input.stock,
-        tenant_id: tenantId,
+        tenant_id: tenantInfo.tenantId,
       })
       .select('*');
 
