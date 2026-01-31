@@ -7,15 +7,4 @@
 
   <lib-cart-drawer />
   <lib-checkout-drawer />
-
-  @if (!cartStore.isEmpty()) {
-  <button class="ecommerce__cart-bar" (click)="cartStore.openCart()">
-    <div class="ecommerce__cart-bar-count">{{ cartStore.totalItems() }}</div>
-    <span class="ecommerce__cart-bar-text">Ver carrito</span>
-    <div class="ecommerce__cart-bar-price">
-      ${{ cartStore.totalPrice() }}
-      <ui-icon name="chevronRight" styleClass="size-5" />
-    </div>
-  </button>
-  }
 </div>

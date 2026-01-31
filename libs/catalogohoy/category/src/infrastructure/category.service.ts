@@ -1,6 +1,5 @@
-import { inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
-import { TenantStore } from '@catalogohoy/tenant';
 import { E } from '@shared/domain';
 import {
   BaseCategoryService,
@@ -17,22 +16,23 @@ import { CategoryListMapper } from './mappers';
 })
 export class CategoryService implements BaseCategoryService {
   private readonly client = SupabaseClientProvider.getInstance();
-  private readonly tenantStore = inject(TenantStore);
 
   public async getAll(
     page?: number,
     pageSize?: number
   ): Promise<E.Either<Error, CategoryList>> {
-    const authUserId = await this.tenantStore.getAuthUserIdAsync();
+    const {
+      data: { user },
+    } = await this.client.auth.getUser();
 
-    if (!authUserId) {
+    if (!user) {
       return E.left(new Error('User not authenticated'));
     }
 
     let query = this.client
       .from('categories')
       .select('*')
-      .eq('auth_user_id', authUserId)
+      .eq('auth_user_id', user.id)
       .order('position', { ascending: true });
 
     if (page !== undefined && pageSize !== undefined) {
@@ -75,20 +75,59 @@ export class CategoryService implements BaseCategoryService {
     );
   }
 
+  private async getTenantId(userId: string): Promise<number | null> {
+    // Obtener user.id de la tabla users
+    const { data: userData } = await this.client
+      .from('users')
+      .select('id')
+      .eq('auth_user_id', userId)
+      .maybeSingle();
+
+    if (!userData) {
+      return null;
+    }
+
+    // Intentar obtener tenant con is_default=true
+    let { data: tenantData } = await this.client
+      .from('users_tenants')
+      .select('tenant_id')
+      .eq('user_id', userData.id)
+      .eq('is_default', true)
+      .maybeSingle();
+
+    // Si no hay tenant por defecto, obtener el primero disponible
+    if (!tenantData) {
+      const { data: firstTenant } = await this.client
+        .from('users_tenants')
+        .select('tenant_id')
+        .eq('user_id', userData.id)
+        .limit(1)
+        .maybeSingle();
+
+      tenantData = firstTenant;
+    }
+
+    return tenantData?.tenant_id ?? null;
+  }
+
   public async create(
     input: CreateCategoryInput
   ): Promise<E.Either<Error, void>> {
-    const tenantInfo = await this.tenantStore.ensureLoaded();
+    const {
+      data: { user },
+    } = await this.client.auth.getUser();
 
-    if (!tenantInfo.authUserId) {
+    if (!user) {
       return E.left(new Error('User not authenticated'));
     }
+
+    const tenantId = await this.getTenantId(user.id);
 
     // Get the last position
     const { data: maxPosData } = await this.client
       .from('categories')
       .select('position')
-      .eq('auth_user_id', tenantInfo.authUserId)
+      .eq('auth_user_id', user.id)
       .order('position', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -102,8 +141,8 @@ export class CategoryService implements BaseCategoryService {
         description: input.description,
         is_visible: input.isVisible,
         position: newPosition,
-        auth_user_id: tenantInfo.authUserId,
-        tenant_id: tenantInfo.tenantId,
+        auth_user_id: user.id,
+        tenant_id: tenantId,
       })
       .select('*');
 
