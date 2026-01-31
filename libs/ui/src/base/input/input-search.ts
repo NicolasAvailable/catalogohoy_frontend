@@ -1,6 +1,19 @@
-import { animate, state, style, transition, trigger } from '@angular/animations';
+import {
+  animate,
+  state,
+  style,
+  transition,
+  trigger,
+} from '@angular/animations';
 import { CommonModule } from '@angular/common';
-import { Component, computed, forwardRef, input, output, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  forwardRef,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { ClickOutsideDirective, TranslatePipe } from '@shared/presenter';
 import { AutoFocusModule } from 'primeng/autofocus';
@@ -72,11 +85,19 @@ import { IconComponent } from '../icon';
       />
       }
 
-      <div [@expandWidth]="animationState()" class="w-full flex-shrink-0" [class.ml-2]="isExpanded() && resizable()">
+      <div
+        [@expandWidth]="animationState()"
+        class="w-full flex-shrink-0"
+        [class.ml-2]="isExpanded() && resizable()"
+      >
         @if (isExpanded()) {
         <p-iconfield (appClickOutside)="!value() && collapse()">
-          <p-inputicon class="-mt-3!">
-            <ui-icon name="search" class="text-grey-300" styleClass="size-6!" />
+          <p-inputicon>
+            <ui-icon
+              name="search"
+              class="text-grey-300"
+              [styleClass]="iconStyleClass()"
+            />
           </p-inputicon>
           <input
             pInputText
@@ -91,7 +112,12 @@ import { IconComponent } from '../icon';
           />
           <p-inputicon class="-mt-2.5!">
             @if(value()) {
-            <ui-icon (click)="clear()" name="x" styleClass="size-5!" class="text-grey-300 cursor-pointer" />
+            <ui-icon
+              (click)="clear()"
+              name="x"
+              styleClass="size-5!"
+              class="text-grey-300 cursor-pointer"
+            />
             }
           </p-inputicon>
         </p-iconfield>
@@ -105,6 +131,7 @@ export class InputSearchComponent {
   public readonly size = input<'small' | 'large' | any>(undefined);
   public readonly resizable = input<boolean>(false);
   public readonly styleClass = input('');
+  public readonly iconStyleClass = input<string>('size-6!');
 
   public readonly valueChange = output<string>();
 
@@ -112,8 +139,12 @@ export class InputSearchComponent {
   public readonly disabled = signal(false);
   public readonly isCollapsed = signal(true);
 
-  public readonly isExpanded = computed(() => !this.resizable() || !this.isCollapsed());
-  public readonly animationState = computed(() => (this.isExpanded() ? 'expanded' : 'collapsed'));
+  public readonly isExpanded = computed(
+    () => !this.resizable() || !this.isCollapsed()
+  );
+  public readonly animationState = computed(() =>
+    this.isExpanded() ? 'expanded' : 'collapsed'
+  );
 
   private onChange: (value: string) => void = () => {
     /* This will be overridden by registerOnChange */

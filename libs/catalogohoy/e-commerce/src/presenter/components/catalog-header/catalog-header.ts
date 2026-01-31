@@ -1,9 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { IconComponent, InputSearchComponent } from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 
@@ -12,7 +7,6 @@ import { CartStore, EcommerceStore } from '../../../infrastructure';
   imports: [IconComponent, InputSearchComponent],
   templateUrl: './catalog-header.html',
   styleUrl: './catalog-header.css',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CatalogHeader {
   public readonly ecommerceStore = inject(EcommerceStore);

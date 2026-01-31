@@ -1,6 +1,5 @@
 .ecommerce {
   min-height: 100vh;
-  background-color: #fafafa;
   display: flex;
   flex-direction: column;
 }

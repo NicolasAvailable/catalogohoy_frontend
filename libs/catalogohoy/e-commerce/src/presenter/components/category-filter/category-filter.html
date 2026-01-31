@@ -1,19 +1,18 @@
 <div class="category-filter">
-  <button
-    class="category-filter__pill"
-    [class.category-filter__pill--active]="isSelected(null)"
+  <ui-button
     (click)="onCategoryClick(null)"
-  >
-    Ver todos
-  </button>
+    label="Ver todos"
+    [severity]="isSelected(null) ? 'primary' : 'contrast'"
+    size="small"
+  />
 
   @for (category of categories(); track category.id) {
-  <button
-    class="category-filter__pill"
-    [class.category-filter__pill--active]="isSelected(category.id)"
+  <ui-button
     (click)="onCategoryClick(category.id)"
-  >
-    {{ category.name }}
-  </button>
+    [label]="category.name"
+    [severity]="isSelected(category.id) ? 'primary' : 'contrast'"
+    size="small"
+  />
+
   }
 </div>

@@ -10,40 +10,18 @@
     </div>
 
     <div class="catalog__actions">
-      <!-- Order Dropdown -->
-      <div class="catalog__dropdown">
-        <button
-          class="catalog__dropdown-trigger"
-          (click)="toggleOrderDropdown()"
-        >
-          <ui-icon name="arrowUpDown" styleClass="size-4" />
-          <span>{{ getOrderLabel() }}</span>
-          <ui-icon name="chevronDown" styleClass="size-4" />
-        </button>
+      <!-- Order Menu -->
+      <button
+        #orderButton
+        class="catalog__dropdown-trigger"
+        (click)="toggleOrderMenu($event)"
+      >
+        <ui-icon name="arrowUpDown" styleClass="size-4 text-grey-300" />
+        <span class="text-grey-300 font-bold">{{ getOrderLabel() }}</span>
+        <ui-icon name="chevronDown" styleClass="size-4 text-grey-300" />
+      </button>
 
-        @if (isOrderDropdownOpen()) {
-        <div class="catalog__dropdown-menu">
-          <button class="catalog__dropdown-item" (click)="setOrder(null)">
-            Más recientes
-          </button>
-          <button class="catalog__dropdown-item" (click)="setOrder('name')">
-            Nombre
-          </button>
-          <button
-            class="catalog__dropdown-item"
-            (click)="setOrder('price_asc')"
-          >
-            Menor precio
-          </button>
-          <button
-            class="catalog__dropdown-item"
-            (click)="setOrder('price_desc')"
-          >
-            Mayor precio
-          </button>
-        </div>
-        }
-      </div>
+      <ui-menu #orderMenu [items]="orderMenuItems()" [popup]="true" />
 
       <!-- View Mode Toggle -->
       <div class="catalog__view-toggle">

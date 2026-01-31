@@ -11,6 +11,8 @@
         <ui-input-search
           placeholder="Buscar producto"
           (valueChange)="onSearch($event)"
+          styleClass="rounded-base! gap-2!"
+          iconStyleClass="size-5!"
         />
       </div>
 
@@ -23,24 +25,5 @@
         }
       </button>
     </div>
-  </div>
-
-  <!-- Horario debajo del título -->
-  <div class="catalog-header__status-bar">
-    @if (ecommerceStore.catalogInfo()?.isOpen) {
-    <span class="catalog-header__status catalog-header__status--open">
-      <ui-icon name="clock" styleClass="size-4" />
-      Abierto
-    </span>
-    } @else {
-    <span class="catalog-header__status catalog-header__status--closed">
-      <ui-icon name="clock" styleClass="size-4" />
-      Cerrado
-    </span>
-    }
-    <span class="catalog-header__hours">
-      {{ ecommerceStore.catalogInfo()?.openTime }} - {{
-      ecommerceStore.catalogInfo()?.closeTime }}
-    </span>
   </div>
 </header>

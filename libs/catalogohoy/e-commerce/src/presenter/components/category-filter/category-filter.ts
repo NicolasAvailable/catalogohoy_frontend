@@ -4,10 +4,11 @@ import {
   input,
   output,
 } from '@angular/core';
+import { ButtonComponent } from '@ui';
 
 @Component({
   selector: 'lib-category-filter',
-  imports: [],
+  imports: [ButtonComponent],
   templateUrl: './category-filter.html',
   styleUrl: './category-filter.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

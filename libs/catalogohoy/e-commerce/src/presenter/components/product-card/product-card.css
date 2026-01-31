@@ -106,7 +106,6 @@
 .product-card__price-promo {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--color-primary-500);
 }
 
 .product-card__add-btn {
@@ -117,7 +116,7 @@
   justify-content: center;
   background: transparent;
   border: 1.5px solid var(--color-grey-200);
-  border-radius: 50%;
+  border-radius: 0.375rem;
   color: var(--color-grey-500);
   cursor: pointer;
   transition: all 0.2s;

@@ -3,11 +3,13 @@ import {
   Component,
   OnDestroy,
   OnInit,
+  computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
-import { IconComponent } from '@ui';
+import { IconComponent, MenuComponent, MenuItem } from '@ui';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { CategoryFilter } from '../../components/category-filter/category-filter';
@@ -15,7 +17,7 @@ import { ProductCard } from '../../components/product-card/product-card';
 
 @Component({
   selector: 'lib-catalog',
-  imports: [IconComponent, ProductCard, CategoryFilter],
+  imports: [IconComponent, ProductCard, CategoryFilter, MenuComponent],
   templateUrl: './catalog.html',
   styleUrl: './catalog.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -25,8 +27,31 @@ export default class Catalog implements OnInit, OnDestroy {
   public readonly cartStore = inject(CartStore);
 
   public readonly viewMode = signal<'grid' | 'list'>('grid');
-  public readonly isOrderDropdownOpen = signal(false);
   public readonly searchValue = signal('');
+  public readonly orderMenu = viewChild.required<MenuComponent>('orderMenu');
+
+  public readonly orderMenuItems = computed<MenuItem[]>(() => [
+    {
+      label: 'Más recientes',
+      command: () => this.setOrder(null),
+      styleClass: 'text-sm text-grey-300! font-bold',
+    },
+    {
+      label: 'Nombre',
+      command: () => this.setOrder('name'),
+      styleClass: 'text-sm text-grey-300! font-bold',
+    },
+    {
+      label: 'Menor precio',
+      command: () => this.setOrder('price_asc'),
+      styleClass: 'text-sm text-grey-300! font-bold',
+    },
+    {
+      label: 'Mayor precio',
+      command: () => this.setOrder('price_desc'),
+      styleClass: 'text-sm text-grey-300! font-bold',
+    },
+  ]);
 
   private readonly searchSubject = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
@@ -59,13 +84,12 @@ export default class Catalog implements OnInit, OnDestroy {
     this.viewMode.set(mode);
   }
 
-  toggleOrderDropdown() {
-    this.isOrderDropdownOpen.update((v) => !v);
+  toggleOrderMenu(event: Event) {
+    this.orderMenu().toggle(event);
   }
 
   setOrder(order: 'name' | 'price_asc' | 'price_desc' | null) {
     this.ecommerceStore.setOrderBy(order);
-    this.isOrderDropdownOpen.set(false);
     if (this.slug) {
       this.ecommerceStore.loadProducts(this.slug);
     }
