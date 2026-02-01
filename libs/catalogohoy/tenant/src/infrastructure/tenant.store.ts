@@ -7,6 +7,7 @@ import {
   withMethods,
   withState,
 } from '@ngrx/signals';
+import { TenantList } from '../domain';
 
 export type TenantInfo = {
   tenantId: number | null;
@@ -18,6 +19,7 @@ export type TenantInfo = {
 
 type TenantState = {
   tenant: TenantInfo;
+  tenantList: TenantList;
   isLoading: boolean;
   isLoaded: boolean;
   error: string | null;
@@ -31,6 +33,7 @@ const initialState: TenantState = {
     tenantName: null,
     tenantSlug: null,
   },
+  tenantList: TenantList.empty(),
   isLoading: false,
   isLoaded: false,
   error: null,
@@ -49,6 +52,12 @@ export const TenantStore = signalStore(
     tenantName: computed(() => store.tenant().tenantName),
     tenantSlug: computed(() => store.tenant().tenantSlug),
     hasTenant: computed(() => store.tenant().tenantId !== null),
+    tenants: computed(() => store.tenantList().items),
+    defaultTenant: computed(() => {
+      const list = store.tenantList();
+      const defaultTenant = list.items.find((t) => t.isDefault);
+      return defaultTenant ?? list.items[0] ?? null;
+    }),
   })),
   withMethods((store) => {
     const client = SupabaseClientProvider.getInstance();
@@ -219,6 +228,34 @@ export const TenantStore = signalStore(
 
       getAuthUserId(): string | null {
         return store.tenant().authUserId;
+      },
+
+      // Método para recibir el TenantList desde ProfileStore
+      setFromProfile(tenantList: TenantList): void {
+        const defaultTenant = tenantList.items.find((t) => t.isDefault);
+        const tenant = defaultTenant ?? tenantList.items[0];
+
+        patchState(store, {
+          tenantList,
+          tenant: {
+            tenantId: tenant ? Number(tenant.id) : null,
+            userId: null,
+            authUserId: null,
+            tenantName: tenant?.name ?? null,
+            tenantSlug: tenant?.slug ?? null,
+          },
+          isLoaded: true,
+          isLoading: false,
+          error: null,
+        });
+      },
+
+      // Obtener el tenant_id del tenant por defecto
+      getDefaultTenantId(): number | null {
+        const list = store.tenantList();
+        const defaultTenant = list.items.find((t) => t.isDefault);
+        const tenant = defaultTenant ?? list.items[0];
+        return tenant ? Number(tenant.id) : null;
       },
     };
   })

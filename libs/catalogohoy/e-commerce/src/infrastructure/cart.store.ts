@@ -7,6 +7,7 @@ import {
   withMethods,
   withState,
 } from '@ngrx/signals';
+import { toast } from 'ngx-sonner';
 import { Cart, CartItem } from '../domain';
 
 type CartState = {
@@ -75,6 +76,7 @@ export const CartStore = signalStore(
       const newCart = store.cart().addItem(item);
       saveCartToStorage(newCart);
       patchState(store, () => ({ cart: newCart }));
+      toast.success('Se ha agregado el producto al carrito');
     },
 
     removeItem(productId: string) {

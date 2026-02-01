@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
+import { TenantStore } from '@catalogohoy/tenant';
 import { E } from '@shared/domain';
 import {
   BaseProductService,
@@ -16,6 +17,7 @@ import { ProductListMapper, ProductMapper } from './mappers';
 })
 export class ProductService implements BaseProductService {
   private readonly client = SupabaseClientProvider.getInstance();
+  private readonly tenantStore = inject(TenantStore);
 
   public async getAll(
     page?: number,
@@ -107,41 +109,6 @@ export class ProductService implements BaseProductService {
     return E.right(ProductMapper.toDomain(entity));
   }
 
-  private async getTenantId(userId: string): Promise<number | null> {
-    // Obtener user.id de la tabla users
-    const { data: userData } = await this.client
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', userId)
-      .maybeSingle();
-
-    if (!userData) {
-      return null;
-    }
-
-    // Intentar obtener tenant con is_default=true
-    let { data: tenantData } = await this.client
-      .from('users_tenants')
-      .select('tenant_id')
-      .eq('user_id', userData.id)
-      .eq('is_default', true)
-      .maybeSingle();
-
-    // Si no hay tenant por defecto, obtener el primero disponible
-    if (!tenantData) {
-      const { data: firstTenant } = await this.client
-        .from('users_tenants')
-        .select('tenant_id')
-        .eq('user_id', userData.id)
-        .limit(1)
-        .maybeSingle();
-
-      tenantData = firstTenant;
-    }
-
-    return tenantData?.tenant_id ?? null;
-  }
-
   public async create(
     input: CreateProductInput
   ): Promise<E.Either<Error, void>> {
@@ -153,7 +120,7 @@ export class ProductService implements BaseProductService {
       return E.left(new Error('User not authenticated'));
     }
 
-    const tenantId = await this.getTenantId(user.id);
+    const tenantId = this.tenantStore.getDefaultTenantId();
 
     const { data, error } = await this.client
       .from('products')
