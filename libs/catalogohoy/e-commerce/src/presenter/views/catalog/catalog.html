@@ -1,6 +1,14 @@
 <div class="catalog">
   <!-- Filters and actions row -->
   <div class="catalog__toolbar">
+    <div class="block md:hidden">
+      <ui-input-search
+        (valueChange)="onSearch($event)"
+        placeholder="Buscar producto"
+        styleClass="rounded-base! gap-2!"
+        iconStyleClass="size-5!"
+      />
+    </div>
     <div class="catalog__filters">
       <lib-category-filter
         [categories]="ecommerceStore.categories()"

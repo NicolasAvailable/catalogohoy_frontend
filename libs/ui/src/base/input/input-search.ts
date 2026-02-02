@@ -110,7 +110,7 @@ import { IconComponent } from '../icon';
             [fluid]="true"
             [class]="'search rounded-3xl! ' + styleClass()"
           />
-          <p-inputicon class="-mt-2.5!">
+          <p-inputicon>
             @if(value()) {
             <ui-icon
               (click)="clear()"

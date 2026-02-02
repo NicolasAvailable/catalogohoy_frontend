@@ -9,7 +9,12 @@ import {
   viewChild,
 } from '@angular/core';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
-import { IconComponent, MenuComponent, MenuItem } from '@ui';
+import {
+  IconComponent,
+  InputSearchComponent,
+  MenuComponent,
+  MenuItem,
+} from '@ui';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { CategoryFilter } from '../../components/category-filter/category-filter';
@@ -17,7 +22,13 @@ import { ProductCard } from '../../components/product-card/product-card';
 
 @Component({
   selector: 'lib-catalog',
-  imports: [IconComponent, ProductCard, CategoryFilter, MenuComponent],
+  imports: [
+    IconComponent,
+    ProductCard,
+    CategoryFilter,
+    MenuComponent,
+    InputSearchComponent,
+  ],
   templateUrl: './catalog.html',
   styleUrl: './catalog.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
