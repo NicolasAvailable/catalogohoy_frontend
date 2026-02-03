@@ -106,8 +106,8 @@
 
 .checkout-drawer__input:focus {
   outline: none;
-  border-color: #facc15;
-  box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.2);
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(62, 123, 250, 0.2);
 }
 
 .checkout-drawer__input::placeholder {
@@ -136,7 +136,7 @@
 
 .checkout-drawer__country-dropdown:focus {
   outline: none;
-  border-color: #facc15;
+  border-color: var(--color-primary-500);
 }
 
 .checkout-drawer__input--phone {
@@ -157,8 +157,8 @@
 
 .checkout-drawer__textarea:focus {
   outline: none;
-  border-color: #facc15;
-  box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.2);
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(62, 123, 250, 0.2);
 }
 
 .checkout-drawer__textarea::placeholder {
@@ -176,16 +176,20 @@
   align-items: center;
   gap: 1rem;
   padding: 0.875rem 1.5rem;
-  background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-500) 0%,
+    var(--color-primary-700) 100%
+  );
   color: white;
   border: none;
-  border-radius: 50px;
+  border-radius: 0.6rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .checkout-drawer__submit-btn:hover:not(:disabled) {
-  box-shadow: 0 8px 25px rgba(30, 58, 95, 0.35);
+  box-shadow: 0 8px 25px rgba(62, 123, 250, 0.35);
 }
 
 .checkout-drawer__submit-btn:disabled {
@@ -194,8 +198,8 @@
 }
 
 .checkout-drawer__submit-count {
-  background: #facc15;
-  color: #1e3a5f;
+  background: white;
+  color: var(--color-primary-600);
   width: 28px;
   height: 28px;
   border-radius: 50%;
