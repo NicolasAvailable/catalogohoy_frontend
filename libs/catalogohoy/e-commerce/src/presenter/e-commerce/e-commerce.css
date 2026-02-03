@@ -1,11 +1,8 @@
 .ecommerce {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
 .ecommerce__content {
-  flex: 1;
   padding: 1rem;
   padding-bottom: 5rem;
   max-width: 1400px;
