@@ -41,14 +41,6 @@
     <div class="product-detail__info">
       <h1 class="product-detail__name">{{ product.name }}</h1>
 
-      @if (product.categoryList.categories.length) {
-      <div class="product-detail__categories">
-        @for (category of product.categoryList.categories; track category.id) {
-        <span class="product-detail__category">{{ category.name }}</span>
-        }
-      </div>
-      }
-
       <div class="product-detail__prices">
         <span class="product-detail__price">${{ displayPrice }}</span>
         @if (hasDiscount) {
@@ -56,22 +48,50 @@
         }
       </div>
 
+      @if (product.categoryList.categories.length) {
+      <div class="product-detail__categories">
+        @for (category of product.categoryList.categories; track category.id) {
+        <span class="product-detail__category">{{ category.name }}</span>
+        }
+      </div>
+      } @if (product.description) {
       <div class="product-detail__description">
         <h3>Descripción</h3>
         <p>{{ product.description }}</p>
       </div>
-
-      @if (product.stock) {
+      } @if (product.stock) {
       <div class="product-detail__stock">
         <ui-icon name="package" styleClass="size-5" />
         <span>Stock: {{ product.stock }}</span>
       </div>
       }
 
-      <button class="product-detail__add-btn" (click)="onAddToCart()">
-        <ui-icon name="shoppingCart" styleClass="size-5" />
-        Agregar al carrito
-      </button>
+      <div class="product-detail__actions">
+        <div class="product-detail__quantity">
+          <span class="product-detail__quantity-label">Cantidad:</span>
+          <div class="product-detail__quantity-controls">
+            <button
+              class="product-detail__qty-btn"
+              (click)="decrementQuantity()"
+            >
+              <ui-icon name="minus" styleClass="size-4" />
+            </button>
+            <span class="product-detail__qty-value">{{ quantity() }}</span>
+            <button
+              class="product-detail__qty-btn"
+              (click)="incrementQuantity()"
+            >
+              <ui-icon name="plus" styleClass="size-4" />
+            </button>
+          </div>
+        </div>
+
+        <button class="product-detail__add-btn" (click)="onAddToCart()">
+          <ui-icon name="shoppingCart" styleClass="size-5" />
+          <span>Agregar</span>
+          <span>${{ totalPrice }}</span>
+        </button>
+      </div>
     </div>
   </div>
   } @else {

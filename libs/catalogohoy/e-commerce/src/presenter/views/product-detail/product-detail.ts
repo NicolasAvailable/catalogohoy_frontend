@@ -3,6 +3,7 @@ import {
   Component,
   inject,
   OnInit,
+  signal,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IconComponent } from '@ui';
@@ -22,6 +23,7 @@ export default class ProductDetail implements OnInit {
   private readonly router = inject(Router);
 
   public currentImageIndex = 0;
+  public readonly quantity = signal(1);
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
@@ -40,16 +42,30 @@ export default class ProductDetail implements OnInit {
     return p.pricePromotional > 0 ? p.pricePromotional : p.price;
   }
 
+  get totalPrice(): number {
+    return this.displayPrice * this.quantity();
+  }
+
   get hasDiscount(): boolean {
     const p = this.product;
     if (!p) return false;
     return p.pricePromotional > 0 && p.pricePromotional < p.price;
   }
 
+  incrementQuantity() {
+    this.quantity.update((q) => q + 1);
+  }
+
+  decrementQuantity() {
+    this.quantity.update((q) => (q > 1 ? q - 1 : 1));
+  }
+
   onAddToCart() {
     const p = this.product;
     if (p) {
-      this.cartStore.addProduct(p);
+      for (let i = 0; i < this.quantity(); i++) {
+        this.cartStore.addProduct(p);
+      }
       this.cartStore.openCart();
     }
   }
