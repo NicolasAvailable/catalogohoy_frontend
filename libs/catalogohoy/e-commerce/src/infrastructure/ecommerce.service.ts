@@ -90,16 +90,27 @@ export class EcommerceService implements BaseEcommerceService {
     }
 
     // Buscar productos por tenant_id
-    let query = this.client
-      .from('products')
-      .select(
-        `
+    let selectQuery = `
+      *,
+      product_categories (
+        categories (*)
+      )
+    `;
+
+    // Si hay categoryId, usamos inner join para filtrar
+    if (categoryId) {
+      selectQuery = `
         *,
-        product_categories (
+        product_categories!inner (
+          category_id,
           categories (*)
         )
-        `
-      )
+      `;
+    }
+
+    let query = this.client
+      .from('products')
+      .select(selectQuery)
       .eq('tenant_id', tenant.id);
 
     if (search && search.trim().length > 0) {
