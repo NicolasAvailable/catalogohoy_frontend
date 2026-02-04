@@ -23,7 +23,7 @@ export class CheckoutDrawer {
   public readonly name = signal('');
   public readonly phone = signal('');
   public readonly comments = signal('');
-  public readonly countryCode = signal('+57');
+  public readonly countryCode = signal('+58');
 
   onClose() {
     this.cartStore.closeCheckout();
@@ -33,7 +33,7 @@ export class CheckoutDrawer {
     this.cartStore.closeCheckout();
   }
 
-  onSubmit() {
+  async onSubmit() {
     const catalogInfo = this.ecommerceStore.catalogInfo();
     if (!catalogInfo?.whatsapp) {
       alert('Número de WhatsApp no configurado');
@@ -42,6 +42,26 @@ export class CheckoutDrawer {
 
     const items = this.cartStore.items();
     const total = this.cartStore.totalPrice();
+
+    // Guardar pedido en Supabase
+    const orderResult = await this.ecommerceStore.createOrder({
+      name: this.name(),
+      phone: `${this.countryCode()} ${this.phone()}`,
+      comments: this.comments(),
+      items: items.map((item) => ({
+        productId: item.productId,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.total,
+      })),
+      total: total,
+    });
+
+    if (orderResult && orderResult.isLeft()) {
+      alert('Hubo un error al procesar tu pedido. Por favor intenta de nuevo.');
+      return;
+    }
 
     let message = `¡Hola! Me gustaría hacer un pedido:\n\n`;
     message += `*Nombre:* ${this.name()}\n`;

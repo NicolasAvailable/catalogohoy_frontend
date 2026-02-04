@@ -107,6 +107,31 @@ export const EcommerceStore = signalStore(
       patchState(store, () => ({ selectedProduct: null }));
     },
 
+    async createOrder(order: {
+      name: string;
+      phone: string;
+      comments: string;
+      items: any[];
+      total: number;
+    }) {
+      const catalogInfo = store.catalogInfo();
+      if (!catalogInfo) return;
+
+      patchState(store, () => ({ isLoading: true }));
+
+      const result = await ecommerceService.createOrder({
+        tenant_id: Number(catalogInfo.id),
+        name: order.name,
+        products: order.items,
+        total_usd: order.total,
+        phone: order.phone,
+        comments: order.comments,
+      });
+
+      patchState(store, () => ({ isLoading: false }));
+      return result;
+    },
+
     reset() {
       patchState(store, () => initialState);
     },

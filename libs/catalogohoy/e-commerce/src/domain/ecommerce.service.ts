@@ -2,6 +2,7 @@ import { Product, ProductList } from '@catalogohoy/product';
 import { E } from '@shared/domain';
 
 export interface CatalogInfo {
+  id: string;
   name: string;
   whatsapp: string;
   openTime: string;
@@ -24,4 +25,12 @@ export interface BaseEcommerceService {
   ): Promise<E.Either<Error, ProductList>>;
   getProductById(id: string): Promise<E.Either<Error, Product>>;
   getCategories(slug: string): Promise<E.Either<Error, Category[]>>;
+  createOrder(order: {
+    tenant_id: number;
+    name: string;
+    products: any[];
+    total_usd: number;
+    phone: string;
+    comments: string;
+  }): Promise<E.Either<Error, void>>;
 }

@@ -64,6 +64,7 @@ export class EcommerceService implements BaseEcommerceService {
     }
 
     return E.right({
+      id: tenant.id,
       name: tenant.name,
       whatsapp: config?.whatsapp || '',
       openTime,
@@ -209,5 +210,32 @@ export class EcommerceService implements BaseEcommerceService {
         name: cat.name,
       }))
     );
+  }
+
+  public async createOrder(order: {
+    tenant_id: number;
+    name: string;
+    products: any[];
+    total_usd: number;
+    phone: string;
+    comments: string;
+  }): Promise<E.Either<Error, void>> {
+    const { error } = await this.client.from('orders').insert([
+      {
+        tenant_id: order.tenant_id,
+        name: order.name,
+        products: order.products,
+        total_usd: order.total_usd,
+        phone: order.phone,
+        comments: order.comments,
+        status: 'pending',
+      },
+    ]);
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    return E.right(undefined);
   }
 }

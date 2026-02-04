@@ -87,9 +87,12 @@
     <footer class="checkout-drawer__footer">
       <button
         class="checkout-drawer__submit-btn"
-        [disabled]="!isValid"
+        [disabled]="!isValid || ecommerceStore.isLoading()"
         (click)="onSubmit()"
       >
+        @if (ecommerceStore.isLoading()) {
+        <span>Procesando...</span>
+        } @else {
         <div class="checkout-drawer__submit-count">
           {{ cartStore.totalItems() }}
         </div>
@@ -98,6 +101,7 @@
           ${{ cartStore.totalPrice() }}
           <ui-icon name="chevronRight" styleClass="size-5" />
         </div>
+        }
       </button>
     </footer>
   </div>

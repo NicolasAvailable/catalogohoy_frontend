@@ -20,4 +20,8 @@ export const appRoutes: Route[] = [
     loadChildren: () =>
       import('./modules/admin/admin.routes').then((m) => m.adminRoutes),
   },
+  {
+    path: '**',
+    redirectTo: '',
+  },
 ];
