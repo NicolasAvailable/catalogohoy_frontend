@@ -10,7 +10,10 @@ import { TableModule } from 'primeng/table';
   },
   template: `
     <section
-      class="rounded-base! overflow-hidden bg-white-500 p-8 pb-0 flex flex-col h-full"
+      [class]="
+        'rounded-base! overflow-hidden bg-white-500 p-8 pb-0 flex flex-col h-full ' +
+        sectionStyleClass()
+      "
     >
       @if(title()){
       <header class="mb-4">
@@ -51,6 +54,7 @@ import { TableModule } from 'primeng/table';
 export class TableComponent {
   public readonly title = input<string>('');
   public readonly items = input<unknown[]>([]);
+  public readonly sectionStyleClass = input<string>('');
   public readonly styleClass = input<string>('');
   public readonly scrollable = input<boolean>(false);
   public readonly scrollHeight = input<string>(''); // puede ser 'flex', '60vh', etc.
