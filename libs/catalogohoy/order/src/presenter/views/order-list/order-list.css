@@ -1,0 +1,7 @@
+:host {
+  display: block;
+}
+
+::ng-deep .p-datatable-tbody > tr > td {
+  border-width: 0 !important;
+}

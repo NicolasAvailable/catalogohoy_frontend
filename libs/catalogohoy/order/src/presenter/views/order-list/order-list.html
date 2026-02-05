@@ -1,0 +1,85 @@
+<div class="h-full flex flex-col gap-6 px-6 pb-6 mt-4">
+  <header class="flex justify-between items-center">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">Órdenes</h1>
+      <p class="text-gray-500">Gestiona los pedidos de tu catálogo</p>
+    </div>
+    <ui-button
+      label="Crear orden manual"
+      icon="plus"
+      (click)="onCreateOrder()"
+    />
+  </header>
+
+  <ui-table
+    [title]="'Lista de Pedidos'"
+    [items]="orderStore.orderList().items"
+    [paginator]="true"
+    [rows]="10"
+    [scrollable]="true"
+    scrollHeight="flex"
+    [columnsCount]="7"
+  >
+    <ng-template #header>
+      <tr>
+        <th class="w-20">ID</th>
+        <th>Cliente</th>
+        <th>Fecha</th>
+        <th>Productos</th>
+        <th>Total</th>
+        <th>Estado</th>
+        <th class="w-20">Acciones</th>
+      </tr>
+    </ng-template>
+
+    <ng-template #body let-order>
+      <tr>
+        <td>#{{ order.id }}</td>
+        <td>
+          <div class="flex flex-col">
+            <span class="font-medium">{{ order.name }}</span>
+            <span class="text-xs text-gray-500">{{ order.phone }}</span>
+          </div>
+        </td>
+        <td>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+        <td>
+          <div class="flex flex-col gap-1">
+            @for (item of order.products; track $index) {
+            <span class="text-xs"> {{ item.quantity }}x {{ item.name }} </span>
+            }
+          </div>
+        </td>
+        <td class="font-bold text-primary-600">${{ order.totalUsd }}</td>
+        <td>
+          <ui-badge
+            [value]="order.status"
+            [severity]="getStatusSeverity(order.status)"
+          />
+        </td>
+        <td>
+          <div class="flex gap-2">
+            <button
+              class="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ui-icon name="eye" styleClass="size-5 text-gray-500" />
+            </button>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template #empty>
+      <div class="py-12">
+        <ui-empty-list
+          [isLoading]="orderStore.isLoading()"
+          [hasItems]="false"
+          label="No tienes órdenes todavía"
+          description="Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente."
+          icon="notepad-text"
+          cta=""
+          [isScreenView]="false"
+        />
+      </div>
+    </ng-template>
+  </ui-table>
+</div>

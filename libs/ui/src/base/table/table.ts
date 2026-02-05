@@ -10,10 +10,10 @@ import { TableModule } from 'primeng/table';
   },
   template: `
     <section
-      class="rounded-base! overflow-hidden bg-white-500 p-10 pb-0 flex flex-col h-full"
+      class="rounded-base! overflow-hidden bg-white-500 p-8 pb-0 flex flex-col h-full"
     >
       @if(title()){
-      <header class="mb-8">
+      <header class="mb-4">
         <h3 class="font-bold text-2xl">{{ title() }}</h3>
       </header>
       }
@@ -26,15 +26,23 @@ import { TableModule } from 'primeng/table';
         [paginator]="paginator()"
         [rows]="rows()"
       >
-        <ng-template #header>
+        <ng-template pTemplate="header">
           <ng-container [ngTemplateOutlet]="headerTemplate()!" />
         </ng-template>
 
-        <ng-template #body let-item>
+        <ng-template pTemplate="body" let-item>
           <ng-container
             [ngTemplateOutlet]="bodyTemplate()!"
             [ngTemplateOutletContext]="{ $implicit: item }"
           />
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td [attr.colspan]="columnsCount()">
+              <ng-container [ngTemplateOutlet]="emptyTemplate()!" />
+            </td>
+          </tr>
         </ng-template>
       </p-table>
     </section>
@@ -48,7 +56,9 @@ export class TableComponent {
   public readonly scrollHeight = input<string>(''); // puede ser 'flex', '60vh', etc.
   public readonly paginator = input<boolean>(false);
   public readonly rows = input<number>(10);
+  public readonly columnsCount = input<number>(1);
 
   public readonly headerTemplate = contentChild<TemplateRef<unknown>>('header');
   public readonly bodyTemplate = contentChild<TemplateRef<unknown>>('body');
+  public readonly emptyTemplate = contentChild<TemplateRef<unknown>>('empty');
 }

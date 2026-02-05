@@ -19,4 +19,9 @@ export const adminRoutes: Route[] = [
     loadChildren: () =>
       import('@catalogohoy/category').then((m) => m.categoryRoutes),
   },
+  {
+    path: 'orders',
+    loadChildren: () =>
+      import('@catalogohoy/order').then((m) => m.ORDER_ROUTES),
+  },
 ];

@@ -29,7 +29,7 @@ import { CategoryFacade } from '../../../application';
   templateUrl: './edit.html',
   styleUrl: './edit.css',
   host: {
-    class: 'flex-1 flex flex-col min-h-0 container max-w-3xl mx-auto py-8 px-4',
+    class: 'flex-1 flex flex-col min-h-0 container max-w-3xl mx-auto pb-8 px-4',
   },
 })
 export default class CategoryEdit implements OnInit {
