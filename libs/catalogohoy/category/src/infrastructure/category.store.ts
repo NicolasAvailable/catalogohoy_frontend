@@ -17,7 +17,7 @@ export const CategoryStore = signalStore(
   { providedIn: 'root' },
   withState(initialState),
   withMethods((store, categoryService = inject(CategoryService)) => ({
-    async categoryList$(page = 1, pageSize = 10) {
+    async categoryList$(page = 1, pageSize = 100) {
       patchState(store, () => ({ isLoading: true }));
 
       try {
@@ -29,11 +29,28 @@ export const CategoryStore = signalStore(
         patchState(store, () => ({ isLoading: false }));
       }
     },
+    async save(input: {
+      id?: string;
+      name: string;
+      description?: string;
+      isVisible: boolean;
+    }) {
+      patchState(store, () => ({ isLoading: true }));
+
+      const result = input.id
+        ? await categoryService.update(input as any)
+        : await categoryService.create(input as any);
+
+      return result.mapRight(() => {
+        this.categoryList$();
+        return;
+      });
+    },
     set(categoryList: CategoryList) {
-      patchState(store, () => ({ categoryList }));
+      patchState(store, () => ({ categoryList, isLoading: false }));
     },
     reset() {
-      patchState(store, () => initialState);
+      patchState(store, () => ({ ...initialState, isLoading: false }));
     },
   }))
 );

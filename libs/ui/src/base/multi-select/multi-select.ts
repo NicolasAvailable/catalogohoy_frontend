@@ -50,6 +50,11 @@ import { MultiSelectModule } from 'primeng/multiselect';
                 <ng-container [ngTemplateOutlet]="selectedItemsTemplate" [ngTemplateOutletContext]="{ $implicit: value }"></ng-container>
             </ng-template>
         }
+        @if(footerTemplate) {
+            <ng-template pTemplate="footer">
+                <ng-container [ngTemplateOutlet]="footerTemplate"></ng-container>
+            </ng-template>
+        }
     </p-multiSelect>
   `,
 })
@@ -69,6 +74,8 @@ export class MultiSelectComponent<T> implements ControlValueAccessor {
   itemTemplate?: _.TemplateRef<unknown>;
   @_.ContentChild('selectedItems', { read: _.TemplateRef })
   selectedItemsTemplate?: _.TemplateRef<unknown>;
+  @_.ContentChild('footer', { read: _.TemplateRef })
+  footerTemplate?: _.TemplateRef<unknown>;
 
   public readonly value = _.signal<T[] | null>(null);
   public readonly disabled = _.signal(false);

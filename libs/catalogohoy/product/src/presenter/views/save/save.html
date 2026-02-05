@@ -70,7 +70,25 @@
             styleClass="w-full"
             appendTo="body"
             inputId="categoryIds"
-          />
+          >
+            <ng-template #footer>
+              <div class="px-4 py-3 border-t border-grey-50 flex gap-2">
+                <ui-input-text
+                  [placeholder]="'Nueva categoría...'"
+                  [ngModel]="newCategoryName()"
+                  (ngModelChange)="onNewCategoryNameChange($event)"
+                  [ngModelOptions]="{ standalone: true }"
+                  class="flex-1"
+                />
+                <ui-button
+                  icon="plus"
+                  (click)="onCreateCategory()"
+                  [disabled]="!newCategoryName().trim()"
+                  severity="primary"
+                />
+              </div>
+            </ng-template>
+          </ui-multi-select>
         </div>
       </form>
     </ui-card>

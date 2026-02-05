@@ -6,7 +6,12 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  FormsModule,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CategoryStore } from '@catalogohoy/category';
 import { Exception, is } from '@shared/domain';
@@ -30,6 +35,7 @@ import { Product } from '../../../domain';
   selector: 'lib-save',
   imports: [
     ReactiveFormsModule,
+    FormsModule,
     RouterLink,
     UploaderComponent,
     CardComponent,
@@ -63,6 +69,7 @@ export default class Save implements OnInit {
   public readonly id = input<string | undefined>(undefined);
   public readonly photos = signal<string[]>([]);
   public readonly isCreate = signal<boolean>(true);
+  public readonly newCategoryName = signal<string>('');
   private readonly maxPhotos = 3;
 
   ngOnInit(): void {
@@ -73,6 +80,26 @@ export default class Save implements OnInit {
         product.mapRight((p) => this.setValuesForm(p));
       })
       .mapRight(() => this.isCreate.set(false));
+  }
+
+  public async onCreateCategory() {
+    const name = this.newCategoryName();
+    if (!name || name.trim() === '') return;
+
+    const result = await this.categoryStore.save({
+      name: name.trim(),
+      isVisible: true,
+    });
+
+    result.mapRight(() => {
+      this.toastService.success('Categoría creada' as any);
+      this.newCategoryName.set('');
+      // Recargar la lista de categorías está manejado por el store.save()
+    });
+  }
+
+  public onNewCategoryNameChange(event: any) {
+    this.newCategoryName.set(event);
   }
 
   private setValuesForm(product: Product) {
