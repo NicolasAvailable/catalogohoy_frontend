@@ -31,8 +31,8 @@ jobs:
           START_ISO: ${{ env.START_ISO }}
         run: |
           curl -H "Content-Type: application/json" -X POST -d "{
-            \"content\": \"🚀 **Build started**\\nRepo: **${REPO}**\\nBranch: **${BRANCH}**\\nBy: **${ACTOR}**\\nStart: **${START_ISO}**\\nCommit: ${COMMIT_URL}\\nRun: ${RUN_URL}\\nSHA: \`${SHA:0:7}\`\"
-          }" "$DISCORD_WEBHOOK_URL"
+            \"content\": \"🚀 **Build started 🚀**\\nRepo: **${REPO}**\\nBranch: **${BRANCH}**\\nBy: **${ACTOR}**\\nStart: **${START_ISO}**\\nCommit: ${COMMIT_URL}\\nRun: ${RUN_URL}\\nSHA: \`${SHA:0:7}\`\"
+          }" "$DISCORD_WEBHOOK_URL" || true
 
       # 3) Build real
       - name: Checkout
@@ -68,7 +68,7 @@ jobs:
           DURATION=$((END_EPOCH-START_EPOCH))
 
           curl -H "Content-Type: application/json" -X POST -d "{
-            \"content\": \"✅ **Build finished (SUCCESS)**\\nRepo: **${REPO}**\\nBranch: **${BRANCH}**\\nBy: **${ACTOR}**\\nEnd: **${END_ISO}**\\nDuration: **${DURATION}s**\\nCommit: ${COMMIT_URL}\\nRun: ${RUN_URL}\"
+            \"content\": \"✅ **Build finished (SUCCESS) ✅**\\nRepo: **${REPO}**\\nBranch: **${BRANCH}**\\nBy: **${ACTOR}**\\nEnd: **${END_ISO}**\\nDuration: **${DURATION}s**\\nCommit: ${COMMIT_URL}\\nRun: ${RUN_URL}\"
           }" "$DISCORD_WEBHOOK_URL"
 
       # 5) Notificar fin FAIL (con hora fin + duración)
@@ -88,5 +88,5 @@ jobs:
           DURATION=$((END_EPOCH-START_EPOCH))
 
           curl -H "Content-Type: application/json" -X POST -d "{
-            \"content\": \"❌ **Build finished (FAILED)**\\nRepo: **${REPO}**\\nBranch: **${BRANCH}**\\nBy: **${ACTOR}**\\nEnd: **${END_ISO}**\\nDuration: **${DURATION}s**\\nCommit: ${COMMIT_URL}\\nRun: ${RUN_URL}\"
+            \"content\": \"❌ **Build finished (FAILED) ❌**\\nRepo: **${REPO}**\\nBranch: **${BRANCH}**\\nBy: **${ACTOR}**\\nEnd: **${END_ISO}**\\nDuration: **${DURATION}s**\\nCommit: ${COMMIT_URL}\\nRun: ${RUN_URL}\"
           }" "$DISCORD_WEBHOOK_URL"
