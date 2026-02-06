@@ -14,7 +14,7 @@ jobs:
       - name: Set start time
         run: |
           echo "START_EPOCH=$(date +%s)" >> $GITHUB_ENV
-          echo "START_ISO=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
+          echo "START_ISO=$(TZ='America/Caracas' date +'%d/%m/%Y - %I:%M %p')" >> $GITHUB_ENV
 
       - name: Notify Discord (start) - embed
         env:
