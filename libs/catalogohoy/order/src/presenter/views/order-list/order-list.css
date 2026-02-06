@@ -2,6 +2,42 @@
   display: block;
 }
 
-::ng-deep .p-datatable-tbody > tr > td {
-  border-width: 0 !important;
+/* Hide scrollbar for filter tabs */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Table row hover animation */
+table tbody tr {
+  transition: background-color 0.15s ease-in-out;
+}
+
+/* Action buttons fade in on row hover */
+.group:hover .group-hover\:opacity-100 {
+  opacity: 1;
+}
+
+/* Smooth transitions for buttons */
+button {
+  transition: all 0.15s ease-in-out;
+}
+
+/* Stats cards hover effect */
+.grid > div {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.grid > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Custom bg color for very light grey */
+.bg-grey-25 {
+  background-color: rgba(var(--color-grey-50), 0.5);
 }

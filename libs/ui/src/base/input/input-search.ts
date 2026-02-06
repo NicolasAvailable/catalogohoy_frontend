@@ -108,7 +108,7 @@ import { IconComponent } from '../icon';
             [disabled]="disabled()"
             [pSize]="size()"
             [fluid]="true"
-            [class]="'search rounded-3xl! ' + styleClass()"
+            [class]="'search rounded-lg! ' + styleClass()"
           />
           <p-inputicon>
             @if(value()) {

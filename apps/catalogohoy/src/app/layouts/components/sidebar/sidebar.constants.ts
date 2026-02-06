@@ -17,11 +17,6 @@ export const PRODUCTS_MENU: PanelMenuItem[] = [
         routerLink: '/admin/categories',
         routerLinkActiveOptions: { exact: true },
       },
-      {
-        label: 'Cupones',
-        routerLink: '/admin/coupons',
-        routerLinkActiveOptions: { exact: true },
-      },
     ],
   },
 ];

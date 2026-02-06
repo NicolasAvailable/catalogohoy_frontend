@@ -1,86 +1,338 @@
 <div class="h-full flex flex-col gap-6 px-6 pb-6 mt-4">
-  <header class="flex justify-between items-center">
+  <!-- Header -->
+  <header
+    class="flex flex-col md:flex-row md:items-center justify-between gap-4"
+  >
     <div>
-      <h1 class="text-2xl font-bold text-gray-800">Órdenes</h1>
-      <p class="text-gray-500">Gestiona los pedidos de tu catálogo</p>
+      <h1 class="text-3xl font-bold text-grey-800 mb-1">Órdenes</h1>
+      <p class="text-grey-400">
+        Gestiona los pedidos y el estado de ventas de tu catálogo
+      </p>
     </div>
     <ui-button
       label="Crear orden manual"
       icon="plus"
+      [fluid]="false"
+      styleClass="shadow-sm"
       (click)="onCreateOrder()"
     />
   </header>
 
-  <ui-table
-    [title]="'Lista de Pedidos'"
-    [items]="orderStore.orderList().items"
-    [paginator]="true"
-    [rows]="10"
-    [scrollable]="true"
-    scrollHeight="flex"
-    [columnsCount]="7"
-    sectionStyleClass="border border-grey-50 rounded-base"
+  <!-- Main Card Container -->
+  <div
+    class="bg-white border border-grey-100 rounded-xl shadow-sm overflow-hidden flex-1 flex flex-col"
   >
-    <ng-template #header>
-      <tr>
-        <th class="w-20">ID</th>
-        <th>Cliente</th>
-        <th>Fecha</th>
-        <th>Productos</th>
-        <th>Total</th>
-        <th>Estado</th>
-        <th class="w-20">Acciones</th>
-      </tr>
-    </ng-template>
-
-    <ng-template #body let-order>
-      <tr>
-        <td>#{{ order.id }}</td>
-        <td>
-          <div class="flex flex-col">
-            <span class="font-medium">{{ order.name }}</span>
-            <span class="text-xs text-gray-500">{{ order.phone }}</span>
-          </div>
-        </td>
-        <td>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
-        <td>
-          <div class="flex flex-col gap-1">
-            @for (item of order.products; track $index) {
-            <span class="text-xs"> {{ item.quantity }}x {{ item.name }} </span>
-            }
-          </div>
-        </td>
-        <td class="font-bold text-primary-600">${{ order.totalUsd }}</td>
-        <td>
-          <ui-badge
-            [value]="order.status"
-            [severity]="getStatusSeverity(order.status)"
-          />
-        </td>
-        <td>
-          <div class="flex gap-2">
-            <button
-              class="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <ui-icon name="eye" styleClass="size-5 text-gray-500" />
-            </button>
-          </div>
-        </td>
-      </tr>
-    </ng-template>
-
-    <ng-template #empty>
-      <div class="py-12">
-        <ui-empty-list
-          [isLoading]="orderStore.isLoading()"
-          [hasItems]="false"
-          label="No tienes órdenes todavía"
-          description="Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente."
-          icon="notepad-text"
-          cta=""
-          [isScreenView]="false"
+    <!-- Filters Row -->
+    <div
+      class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-grey-50"
+    >
+      <!-- Search -->
+      <div class="relative flex-1 max-w-md">
+        <ui-input-search
+          placeholder="Buscar por ID, cliente o producto..."
+          [(ngModel)]="searchQuery"
+          size="small"
+          styleClass="w-full"
+          iconStyleClass="size-4.5!"
         />
       </div>
-    </ng-template>
-  </ui-table>
+
+      <!-- Filter Tabs -->
+      <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+        @for (tab of filterTabs; track tab.value) {
+        <ui-button
+          (click)="selectFilter(tab.value)"
+          [label]="tab.label"
+          [severity]="selectedFilter() === tab.value ? 'primary' : 'contrast'"
+          size="small"
+        />
+        }
+        <div class="w-px h-6 bg-grey-100 mx-1"></div>
+        <!-- Order Menu -->
+        <button
+          #orderButton
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-grey-50 transition-colors cursor-pointer"
+          (click)="toggleOrderMenu($event)"
+        >
+          <ui-icon name="arrow-up-down" styleClass="size-4 text-grey-400" />
+          <span class="text-sm font-medium text-grey-500"
+            >{{ getOrderLabel() }}</span
+          >
+          <ui-icon name="chevron-down" styleClass="size-4 text-grey-400" />
+        </button>
+        <ui-menu #orderMenu [items]="orderMenuItems()" [popup]="true" />
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto flex-1">
+      <table class="w-full text-left">
+        <thead>
+          <tr
+            class="bg-grey-25 text-grey-400 text-[11px] uppercase tracking-wider font-bold"
+          >
+            <th class="px-6 py-3 border-b border-grey-50">ID</th>
+            <th class="px-6 py-3 border-b border-grey-50">Nombre</th>
+            <th class="px-6 py-3 border-b border-grey-50">Productos</th>
+            <th class="px-6 py-3 border-b border-grey-50">Pago</th>
+            <th class="px-6 py-3 border-b border-grey-50 text-center">
+              Estado
+            </th>
+            <th class="px-6 py-3 border-b border-grey-50">Total</th>
+            <th class="px-6 py-3 border-b border-grey-50">Fecha</th>
+            <th class="px-6 py-3 border-b border-grey-50">WhatsApp</th>
+            <th class="px-6 py-3 border-b border-grey-50 text-right">
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-grey-50">
+          <!-- Skeleton Loading State -->
+          @if (orderStore.isLoading()) { @for (_ of [1, 2, 3, 4, 5, 6, 7, 8, 9];
+          track $index) {
+          <tr class="animate-pulse">
+            <!-- ID -->
+            <td class="px-6 py-3.5">
+              <div class="h-4 w-8 bg-grey-100 rounded"></div>
+            </td>
+            <!-- Nombre -->
+            <td class="px-6 py-3.5">
+              <div class="h-4 w-24 bg-grey-100 rounded"></div>
+            </td>
+            <!-- Productos -->
+            <td class="px-6 py-3.5">
+              <div class="flex flex-col gap-1">
+                <div class="h-3 w-24 bg-grey-100 rounded"></div>
+                <div class="h-3 w-16 bg-grey-100 rounded"></div>
+              </div>
+            </td>
+            <!-- Pago -->
+            <td class="px-6 py-3.5">
+              <div class="h-4 w-20 bg-grey-100 rounded"></div>
+            </td>
+            <!-- Estado -->
+            <td class="px-6 py-3.5">
+              <div class="flex justify-center">
+                <div class="h-6 w-20 bg-grey-100 rounded-full"></div>
+              </div>
+            </td>
+            <!-- Total -->
+            <td class="px-6 py-3.5">
+              <div class="h-4 w-16 bg-grey-100 rounded"></div>
+            </td>
+            <!-- Fecha -->
+            <td class="px-6 py-3.5">
+              <div class="h-4 w-28 bg-grey-100 rounded"></div>
+            </td>
+            <!-- WhatsApp -->
+            <td class="px-6 py-3.5">
+              <div class="h-4 w-32 bg-grey-100 rounded"></div>
+            </td>
+            <!-- Acciones -->
+            <td class="px-6 py-3.5">
+              <div class="flex justify-end gap-2">
+                <div class="h-8 w-8 bg-grey-100 rounded"></div>
+                <div class="h-8 w-8 bg-grey-100 rounded"></div>
+              </div>
+            </td>
+          </tr>
+          } } @else { @for (order of filteredOrders(); track order.id) {
+          <tr class="hover:bg-grey-25 transition-colors group">
+            <!-- ID -->
+            <td class="px-6 py-3.5 font-medium text-grey-300">
+              #{{ order.id }}
+            </td>
+            <!-- Nombre -->
+            <td class="px-6 py-3.5">
+              <span class="font-semibold text-grey-800">{{ order.name }}</span>
+            </td>
+            <!-- Productos -->
+            <td class="px-6 py-3.5">
+              <div class="flex flex-col gap-0.5">
+                @for (item of order.products; track $index) {
+                <span class="text-grey-700"
+                  >{{ item.quantity }}x {{ item.name }}</span
+                >
+                }
+              </div>
+            </td>
+            <!-- Pago -->
+            <td class="px-6 py-3.5">
+              <div class="flex items-center gap-1.5">
+                <ui-icon
+                  [name]="getPaymentIcon(order)"
+                  [styleClass]="'size-4 ' + getPaymentColor(order)"
+                />
+                <span class="text-xs font-medium text-grey-500"
+                  >{{ getPaymentMethod(order) }}</span
+                >
+              </div>
+            </td>
+            <!-- Estado -->
+            <td class="px-6 py-3.5">
+              <div class="flex justify-center">
+                <span [class]="getStatusBadgeClass(order.status)">
+                  {{ getStatusLabel(order.status) }}
+                </span>
+              </div>
+            </td>
+            <!-- Total -->
+            <td class="px-6 py-3.5 text-sm font-bold text-primary-600">
+              ${{ order.totalUsd | number:'1.2-2' }}
+            </td>
+            <!-- Fecha -->
+            <td class="px-6 py-3.5 text-grey-500">
+              {{ order.createdAt | date: 'dd/MM/yyyy hh:mm a' }}
+            </td>
+            <!-- WhatsApp -->
+            <td class="px-6 py-3.5">
+              @if (order.phone) {
+              <a
+                [href]="getWhatsAppLink(order.phone)"
+                target="_blank"
+                class="flex items-center gap-1.5 text-green-600 hover:text-green-700 transition-colors"
+              >
+                <ui-icon name="message-circle" styleClass="size-4" />
+                <span class="text-sm font-medium">{{ order.phone }}</span>
+                <ui-icon name="external-link" styleClass="size-3 opacity-60" />
+              </a>
+              } @else {
+              <span class="text-grey-400 text-sm">—</span>
+              }
+            </td>
+            <!-- Acciones -->
+            <td class="px-6 py-3.5">
+              <div class="flex items-center justify-end gap-2">
+                <ui-button
+                  icon="pencil"
+                  variant="outlined"
+                  severity="contrast"
+                  size="small"
+                />
+                <ui-button
+                  icon="trash"
+                  variant="outlined"
+                  severity="contrast"
+                  size="small"
+                />
+              </div>
+            </td>
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="9">
+              <div class="py-12">
+                <ui-empty-list
+                  [isLoading]="false"
+                  [hasItems]="false"
+                  label="No tienes órdenes todavía"
+                  description="Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente."
+                  icon="notepad-text"
+                  cta=""
+                  [isScreenView]="false"
+                />
+              </div>
+            </td>
+          </tr>
+          } }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div
+      class="p-4 bg-grey-25 border-t border-grey-50 flex items-center justify-between"
+    >
+      <span class="text-xs text-grey-400 font-medium">
+        Mostrando {{ filteredOrders().length }} de {{
+        orderStore.orderList().items.length }} órdenes
+      </span>
+      <div class="flex items-center gap-1">
+        <button
+          class="p-1 text-grey-300 hover:text-primary-500 disabled:opacity-30 transition-colors"
+          disabled
+        >
+          <ui-icon name="chevrons-left" styleClass="size-4" />
+        </button>
+        <button
+          class="p-1 text-grey-300 hover:text-primary-500 disabled:opacity-30 transition-colors"
+          disabled
+        >
+          <ui-icon name="chevron-left" styleClass="size-4" />
+        </button>
+        <button
+          class="w-7 h-7 flex items-center justify-center rounded bg-primary-50 text-primary-500 text-xs font-bold"
+        >
+          1
+        </button>
+        <button
+          class="p-1 text-grey-300 hover:text-primary-500 disabled:opacity-30 transition-colors"
+          disabled
+        >
+          <ui-icon name="chevron-right" styleClass="size-4" />
+        </button>
+        <button
+          class="p-1 text-grey-300 hover:text-primary-500 disabled:opacity-30 transition-colors"
+          disabled
+        >
+          <ui-icon name="chevrons-right" styleClass="size-4" />
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div
+      class="bg-white p-4 rounded-xl border border-grey-100 shadow-sm flex items-center gap-4"
+    >
+      <div
+        class="w-12 h-12 bg-primary-50 rounded-lg flex items-center justify-center text-primary-500"
+      >
+        <ui-icon name="trending-up" styleClass="size-6" />
+      </div>
+      <div>
+        <p class="text-grey-400 text-xs font-medium uppercase tracking-wider">
+          Ventas hoy
+        </p>
+        <p class="text-xl font-bold text-grey-800">
+          ${{ getTodaySales() | number:'1.2-2' }}
+        </p>
+      </div>
+    </div>
+    <div
+      class="bg-white p-4 rounded-xl border border-grey-100 shadow-sm flex items-center gap-4"
+    >
+      <div
+        class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center text-orange-500"
+      >
+        <ui-icon name="clock" styleClass="size-6" />
+      </div>
+      <div>
+        <p class="text-grey-400 text-xs font-medium uppercase tracking-wider">
+          Por confirmar
+        </p>
+        <p class="text-xl font-bold text-grey-800">
+          {{ getPendingCount() }} órdenes
+        </p>
+      </div>
+    </div>
+    <div
+      class="bg-white p-4 rounded-xl border border-grey-100 shadow-sm flex items-center gap-4"
+    >
+      <div
+        class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center text-green-500"
+      >
+        <ui-icon name="check-circle" styleClass="size-6" />
+      </div>
+      <div>
+        <p class="text-grey-400 text-xs font-medium uppercase tracking-wider">
+          Completadas
+        </p>
+        <p class="text-xl font-bold text-grey-800">
+          {{ getCompletedCount() }} órdenes
+        </p>
+      </div>
+    </div>
+  </div>
 </div>
