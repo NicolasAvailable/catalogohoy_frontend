@@ -1,7 +1,19 @@
-import { Component, effect, forwardRef, input, model, signal } from '@angular/core';
-import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { DatePickerModule } from 'primeng/datepicker';
+import {
+  Component,
+  effect,
+  forwardRef,
+  input,
+  model,
+  output,
+  signal,
+} from '@angular/core';
+import {
+  ControlValueAccessor,
+  FormsModule,
+  NG_VALUE_ACCESSOR,
+} from '@angular/forms';
 import { $date } from '@shared/domain';
+import { DatePickerModule } from 'primeng/datepicker';
 
 @Component({
   selector: 'ui-datepicker',
@@ -16,6 +28,8 @@ import { $date } from '@shared/domain';
   template: `<p-datepicker
     [(ngModel)]="value"
     (ngModelChange)="change($event)"
+    (onClear)="cleaned.emit()"
+    [showClear]="showClear()"
     [dateFormat]="dateFormat()"
     [selectionMode]="mode()"
     [minDate]="minDate()"
@@ -32,7 +46,9 @@ import { $date } from '@shared/domain';
     [appendTo]="'body'"
     [panelStyleClass]="panelStyleClass()"
     [styleClass]="styleClass()"
-    [inputStyleClass]="'bg-white-500! text-grey-800! text-base! font-medium! cursor-pointer!'"
+    [inputStyleClass]="
+      'bg-white-500! text-grey-800! text-base! font-medium! cursor-pointer!'
+    "
   /> `,
 })
 export class DatepickerComponent implements ControlValueAccessor {
@@ -42,15 +58,19 @@ export class DatepickerComponent implements ControlValueAccessor {
   public readonly maxDate = input<Date | null>(null);
   public readonly restrict = input(false);
   public readonly size = input<'small' | 'large' | any>(undefined);
+  public readonly showClear = input(false);
   public readonly showTime = input(false);
   public readonly panelStyleClass = input('');
   public readonly styleClass = input('');
 
   public readonly disabled = signal(false);
   public readonly value = signal(new Date());
+  public readonly cleaned = output<void>();
 
   constructor() {
-    effect(() => this.minDate.set(this.restrict() ? $date().minus.minutes(1) : null));
+    effect(() =>
+      this.minDate.set(this.restrict() ? $date().minus.minutes(1) : null)
+    );
   }
 
   private onChange: (value: Date) => void = () => {
@@ -61,7 +81,9 @@ export class DatepickerComponent implements ControlValueAccessor {
     /* This will be overridden by registerOnTouched */
   };
 
-  public writeValue(value: Date | string | number | null | undefined | unknown): void {
+  public writeValue(
+    value: Date | string | number | null | undefined | unknown
+  ): void {
     this.value.set($date.create(value));
   }
 

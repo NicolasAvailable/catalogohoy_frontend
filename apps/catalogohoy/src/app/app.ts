@@ -28,8 +28,6 @@ export class App implements OnInit {
 
     // Store each query parameter in localStorage
     urlParams.forEach((value, key) => {
-      console.log('key', key);
-      console.log('value', value);
       localStorage.setItem(key, value);
     });
 

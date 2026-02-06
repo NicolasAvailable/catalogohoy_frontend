@@ -81,12 +81,12 @@ export const weekDay = {
 
 export const date = {
   hoverBackground: 'var(--color-grey-50)',
-  selectedBackground: 'var(--color-secondary-500)',
-  rangeSelectedBackground: 'var(--color-secondary-500)',
+  selectedBackground: 'var(--color-primary-500)',
+  rangeSelectedBackground: 'var(--color-primary-500)',
   color: 'var(--color-grey-800)',
   hoverColor: 'var(--color-grey-800)',
-  selectedColor: '{primary.contrast.color}',
-  rangeSelectedColor: '{highlight.color}',
+  selectedColor: 'var(--color-white-500)',
+  rangeSelectedColor: 'var(--color-white-500)',
   width: '1.75rem',
   height: '1.75rem',
   borderRadius: '50%',

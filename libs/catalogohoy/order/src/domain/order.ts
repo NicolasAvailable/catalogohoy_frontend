@@ -6,12 +6,7 @@ export interface OrderItem {
   total: number;
 }
 
-export type OrderStatus =
-  | 'pending'
-  | 'confirmed'
-  | 'shipped'
-  | 'delivered'
-  | 'cancelled';
+export type OrderStatus = 'pending' | 'completed';
 
 export interface Order {
   id: number;

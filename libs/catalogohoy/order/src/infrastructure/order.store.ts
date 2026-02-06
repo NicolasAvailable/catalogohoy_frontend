@@ -25,37 +25,30 @@ export const OrderStore = signalStore(
       orderService = inject(OrderService),
       tenantStore = inject(TenantStore)
     ) => ({
-      async loadOrders() {
+      async loadOrders(date?: Date) {
         patchState(store, { isLoading: true, error: null });
 
         try {
           const tenantId = await tenantStore.getTenantIdAsync();
-          console.log('tenantId', tenantId);
 
           if (!tenantId) {
             patchState(store, { isLoading: false });
             return;
           }
 
-          const result = await orderService.getOrdersByTenant(tenantId);
+          const result = await orderService.getOrdersByTenant(tenantId, date);
 
           result.fold(
             (error) => {
               patchState(store, { isLoading: false, error: error.message });
             },
-            (orders) => {
-              console.log(
-                '✅ [OrderStore] Órdenes cargadas exitosamente. Cantidad:',
-                orders.length
-              );
+            (orders) =>
               patchState(store, {
                 orderList: new OrderList(orders),
                 isLoading: false,
-              });
-            }
+              })
           );
         } catch (err) {
-          console.error('❌ [OrderStore] Error inesperado:', err);
           patchState(store, { isLoading: false, error: 'Error inesperado' });
         }
       },

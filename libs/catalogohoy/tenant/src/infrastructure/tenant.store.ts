@@ -63,15 +63,12 @@ export const TenantStore = signalStore(
     const client = SupabaseClientProvider.getInstance();
 
     const doLoadTenant = async (): Promise<void> => {
-      console.log('TenantStore.doLoadTenant() - Start');
       patchState(store, { isLoading: true, error: null });
 
       try {
         const {
           data: { user },
         } = await client.auth.getUser();
-
-        console.log('TenantStore.doLoadTenant() - Auth User:', user?.id);
 
         if (!user) {
           patchState(store, {
@@ -88,12 +85,6 @@ export const TenantStore = signalStore(
           .select('id')
           .eq('auth_user_id', user.id)
           .maybeSingle();
-
-        console.log(
-          'TenantStore.doLoadTenant() - User Data:',
-          userData,
-          userError
-        );
 
         if (userError || !userData) {
           patchState(store, {
@@ -121,11 +112,6 @@ export const TenantStore = signalStore(
           .eq('is_default', true)
           .maybeSingle();
 
-        console.log(
-          'TenantStore.doLoadTenant() - Default Tenant Data:',
-          tenantData
-        );
-
         // Si no hay tenant por defecto, obtener el primero disponible
         if (!tenantData) {
           const { data: firstTenant } = await client
@@ -145,16 +131,9 @@ export const TenantStore = signalStore(
             .maybeSingle();
 
           tenantData = firstTenant;
-          console.log(
-            'TenantStore.doLoadTenant() - First available Tenant Data:',
-            tenantData
-          );
         }
 
         if (!tenantData) {
-          console.log(
-            '🔍 [TenantStore] No se encontró tenant por usuario. Buscando por slug "catalogohoy" o actual...'
-          );
           // Fallback: Si no hay link, buscar el tenant por el slug de la URL o el por defecto de local
           const currentSlug =
             window.location.pathname.split('/')[1] === 'admin'
@@ -168,7 +147,6 @@ export const TenantStore = signalStore(
             .maybeSingle();
 
           if (fallbackTenant) {
-            console.log('✅ [TenantStore] Fallback exitoso:', fallbackTenant);
             tenantData = {
               tenant_id: fallbackTenant.id,
               tenants: fallbackTenant,
@@ -177,9 +155,6 @@ export const TenantStore = signalStore(
         }
 
         if (!tenantData) {
-          console.warn(
-            'TenantStore.doLoadTenant() - No tenant found for user or slug'
-          );
           patchState(store, {
             tenant: {
               tenantId: null,
@@ -201,8 +176,6 @@ export const TenantStore = signalStore(
           slug: string;
         };
 
-        console.log('TenantStore.doLoadTenant() - Success:', tenantInfo);
-
         patchState(store, {
           tenant: {
             tenantId: tenantData.tenant_id,
@@ -216,7 +189,6 @@ export const TenantStore = signalStore(
           error: null,
         });
       } catch (err) {
-        console.error('TenantStore.doLoadTenant() - Error:', err);
         patchState(store, {
           isLoading: false,
           isLoaded: true,
@@ -244,9 +216,7 @@ export const TenantStore = signalStore(
 
       // Esperar a que el tenant esté cargado y retornar la info
       async ensureLoaded(): Promise<TenantInfo> {
-        console.log('TenantStore.ensureLoaded() - Status:', store.isLoaded());
         if (!store.isLoaded()) {
-          console.log('TenantStore.ensureLoaded() - Calling loadTenant');
           await this.loadTenant();
         }
         return store.tenant();
@@ -255,10 +225,6 @@ export const TenantStore = signalStore(
       // Método asíncrono para obtener tenant_id (espera a que esté cargado)
       async getTenantIdAsync(): Promise<number | null> {
         const tenant = await this.ensureLoaded();
-        console.log(
-          'TenantStore.getTenantIdAsync() - Resolved Tenant:',
-          tenant
-        );
         return tenant.tenantId;
       },
 

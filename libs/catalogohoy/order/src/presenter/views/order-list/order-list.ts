@@ -1,12 +1,5 @@
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  computed,
-  inject,
-  OnInit,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   ButtonComponent,
@@ -14,8 +7,9 @@ import {
   EmptyListComponent,
   IconComponent,
   InputSearchComponent,
-  MenuComponent,
-  MenuItem,
+  SelectComponent,
+  SelectItemDirective,
+  SelectSelectedItemDirective,
 } from '@ui';
 import { Order, OrderStatus } from '../../../domain/order';
 import { OrderStore } from '../../../infrastructure/order.store';
@@ -34,7 +28,9 @@ type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
     DatepickerComponent,
     EmptyListComponent,
     InputSearchComponent,
-    MenuComponent,
+    SelectComponent,
+    SelectItemDirective,
+    SelectSelectedItemDirective,
   ],
   templateUrl: './order-list.html',
   styleUrl: './order-list.css',
@@ -49,38 +45,23 @@ export class OrderListComponent implements OnInit {
   public readonly selectedFilter = signal<OrderStatus | 'all'>('all');
   public readonly selectedOrder = signal<OrderBy>('date_desc');
   public readonly selectedDate = signal<Date | null>(null);
-  public readonly orderMenu = viewChild.required<MenuComponent>('orderMenu');
 
   public readonly filterTabs: FilterTab[] = [
     { label: 'Todas', value: 'all' },
     { label: 'Pendientes', value: 'pending' },
-    { label: 'Confirmadas', value: 'confirmed' },
-    { label: 'Enviadas', value: 'shipped' },
-    { label: 'Entregadas', value: 'delivered' },
+    { label: 'Completadas', value: 'completed' },
   ];
 
-  public readonly orderMenuItems = computed<MenuItem[]>(() => [
-    {
-      label: 'Más nuevas',
-      command: () => this.setOrder('date_desc'),
-      styleClass: 'text-sm text-grey-300! font-bold',
-    },
-    {
-      label: 'Más viejas',
-      command: () => this.setOrder('date_asc'),
-      styleClass: 'text-sm text-grey-300! font-bold',
-    },
-    {
-      label: 'Total más alto',
-      command: () => this.setOrder('total_desc'),
-      styleClass: 'text-sm text-grey-300! font-bold',
-    },
-    {
-      label: 'Total más bajo',
-      command: () => this.setOrder('total_asc'),
-      styleClass: 'text-sm text-grey-300! font-bold',
-    },
-  ]);
+  public readonly orderOptions: {
+    label: string;
+    value: OrderBy;
+    icon: string;
+  }[] = [
+    { label: 'Más nuevas', value: 'date_desc', icon: 'arrow-down' },
+    { label: 'Más viejas', value: 'date_asc', icon: 'arrow-up' },
+    { label: 'Total más alto', value: 'total_desc', icon: 'trending-up' },
+    { label: 'Total más bajo', value: 'total_asc', icon: 'trending-down' },
+  ];
 
   public readonly filteredOrders = computed(() => {
     let orders = [...this.orderStore.orderList().items];
@@ -89,15 +70,6 @@ export class OrderListComponent implements OnInit {
     const filter = this.selectedFilter();
     if (filter !== 'all') {
       orders = orders.filter((order) => order.status === filter);
-    }
-
-    // Filter by date
-    const date = this.selectedDate();
-    if (date) {
-      const selectedDateStr = date.toDateString();
-      orders = orders.filter(
-        (order) => new Date(order.createdAt).toDateString() === selectedDateStr
-      );
     }
 
     // Filter by search query
@@ -149,51 +121,28 @@ export class OrderListComponent implements OnInit {
     this.selectedFilter.set(filter);
   }
 
-  toggleOrderMenu(event: Event) {
-    this.orderMenu().toggle(event);
-  }
-
   setOrder(order: OrderBy) {
     this.selectedOrder.set(order);
   }
 
   onDateChange(date: Date | null) {
     this.selectedDate.set(date);
+    this.orderStore.loadOrders(date ?? undefined);
   }
 
   clearDateFilter() {
     this.selectedDate.set(null);
-  }
-
-  getOrderLabel(): string {
-    const order = this.selectedOrder();
-    switch (order) {
-      case 'date_desc':
-        return 'Más nuevas';
-      case 'date_asc':
-        return 'Más viejas';
-      case 'total_desc':
-        return 'Total más alto';
-      case 'total_asc':
-        return 'Total más bajo';
-      default:
-        return 'Ordenar por';
-    }
+    this.orderStore.loadOrders();
   }
 
   getStatusSeverity(
     status: string
   ): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
     switch (status) {
-      case 'delivered':
+      case 'completed':
         return 'success';
-      case 'confirmed':
-      case 'shipped':
-        return 'info';
       case 'pending':
         return 'warn';
-      case 'cancelled':
-        return 'danger';
       default:
         return 'secondary';
     }
@@ -202,10 +151,7 @@ export class OrderListComponent implements OnInit {
   getStatusLabel(status: OrderStatus): string {
     const labels: Record<OrderStatus, string> = {
       pending: 'Pendiente',
-      confirmed: 'Confirmada',
-      shipped: 'Enviada',
-      delivered: 'Entregada',
-      cancelled: 'Cancelada',
+      completed: 'Completada',
     };
     return labels[status] || status;
   }
@@ -215,10 +161,7 @@ export class OrderListComponent implements OnInit {
       'px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide';
     const colorClasses: Record<OrderStatus, string> = {
       pending: 'bg-orange-100 text-orange-600',
-      confirmed: 'bg-blue-100 text-blue-600',
-      shipped: 'bg-indigo-100 text-indigo-600',
-      delivered: 'bg-green-100 text-green-600',
-      cancelled: 'bg-red-100 text-red-600',
+      completed: 'bg-green-100 text-green-600',
     };
     return `${baseClass} ${
       colorClasses[status] || 'bg-grey-100 text-grey-600'
@@ -258,9 +201,7 @@ export class OrderListComponent implements OnInit {
     return this.orderStore
       .orderList()
       .items.filter(
-        (order) =>
-          new Date(order.createdAt).toDateString() === today &&
-          order.status !== 'cancelled'
+        (order) => new Date(order.createdAt).toDateString() === today
       )
       .reduce((sum, order) => sum + order.totalUsd, 0);
   }
@@ -274,7 +215,7 @@ export class OrderListComponent implements OnInit {
   getCompletedCount(): number {
     return this.orderStore
       .orderList()
-      .items.filter((order) => order.status === 'delivered').length;
+      .items.filter((order) => order.status === 'completed').length;
   }
 
   getWhatsAppLink(phone: string): string {

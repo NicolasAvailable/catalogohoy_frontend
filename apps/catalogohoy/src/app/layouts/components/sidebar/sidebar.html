@@ -6,10 +6,10 @@
 }
 
 <aside
-  class="flex flex-col gap-5 h-full w-1/2 sm:w-72 bg-white px-3 py-5 border-r border-grey-50 fixed inset-y-0 left-0 z-50 transition-transform duration-300 sm:translate-x-0 sm:static"
+  class="flex flex-col gap-5 h-full w-1/2 sm:w-72 bg-white py-5 border-r border-grey-50 fixed inset-y-0 left-0 z-50 transition-transform duration-300 sm:translate-x-0 sm:static"
   [ngClass]="{ 'translate-x-0': visible(), '-translate-x-full': !visible() }"
 >
-  <div class="w-full h-16">
+  <div class="w-full h-16 px-3">
     <div routerLink="/admin" class="flex items-center h-full cursor-pointer">
       <ui-icon
         name="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg"
@@ -22,7 +22,7 @@
       </h1>
     </div>
   </div>
-  <ul class="flex flex-col gap-1.5 w-full h-full">
+  <ul class="flex flex-col gap-1.5 w-full h-full px-3">
     <li
       routerLink="/admin"
       routerLinkActive="bg-primary-50"
@@ -133,12 +133,14 @@
       </ui-panel-menu>
     </li>
   </ul>
-  <div class="w-full h-auto">
-    <div
-      class="flex items-center gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-red-50 transition-colors duration-100 ease-in-out"
-    >
-      <ui-icon name="log-out" size="16" styleClass="text-red-400" />
-      <h4 class="text-base font-semibold text-red-400">Cerrar sesión</h4>
+  <div class="w-full h-auto border-t border-grey-50 pt-5">
+    <div class="px-3 w-full">
+      <div
+        class="flex items-center gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-red-50 transition-colors duration-100 ease-in-out"
+      >
+        <ui-icon name="log-out" size="16" styleClass="text-red-400" />
+        <h4 class="text-base font-semibold text-red-400">Cerrar sesión</h4>
+      </div>
     </div>
   </div>
 </aside>

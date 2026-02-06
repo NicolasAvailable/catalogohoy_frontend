@@ -1,7 +1,9 @@
 import { EnvironmentProviders, importProvidersFrom } from '@angular/core';
 import {
+  ArrowDown,
   ArrowDownToLine,
   ArrowLeft,
+  ArrowUp,
   ArrowUpDown,
   Banknote,
   BookImage,
@@ -48,6 +50,7 @@ import {
   Tag,
   TicketPercent,
   Trash,
+  TrendingDown,
   TrendingUp,
   Wallet,
   X,
@@ -108,6 +111,9 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Wallet,
       X,
       Zap,
+      TrendingDown,
+      ArrowDown,
+      ArrowUp,
     })
   );
 };
