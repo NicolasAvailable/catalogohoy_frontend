@@ -5,6 +5,7 @@
   "scripts": {
     "serve:catalogohoy": "nx serve catalogohoy",
     "serve:authentication": "nx serve authentication",
+    "build": "nx run-many --target=build --all",
     "build:catalogohoy": "nx build catalogohoy",
     "build:authentication": "nx build authentication"
   },
