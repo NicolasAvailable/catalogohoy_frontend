@@ -8,7 +8,7 @@ export const panel = {
   color: 'var(--color-grey-800)',
   borderRadius: '0.75rem',
   shadow: '0px 4px 15px 0px #0000001F',
-  padding: '1.25rem',
+  padding: '1.25rem 1rem',
 };
 
 export const header = {

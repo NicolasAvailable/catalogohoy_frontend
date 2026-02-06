@@ -25,7 +25,7 @@ export const OrderStore = signalStore(
       orderService = inject(OrderService),
       tenantStore = inject(TenantStore)
     ) => ({
-      async loadOrders(date?: Date) {
+      async loadOrders(options?: { date?: Date; search?: string }) {
         patchState(store, { isLoading: true, error: null });
 
         try {
@@ -36,7 +36,10 @@ export const OrderStore = signalStore(
             return;
           }
 
-          const result = await orderService.getOrdersByTenant(tenantId, date);
+          const result = await orderService.getOrdersByTenant(
+            tenantId,
+            options
+          );
 
           result.fold(
             (error) => {
@@ -48,7 +51,7 @@ export const OrderStore = signalStore(
                 isLoading: false,
               })
           );
-        } catch (err) {
+        } catch {
           patchState(store, { isLoading: false, error: 'Error inesperado' });
         }
       },

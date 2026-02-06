@@ -29,8 +29,9 @@
       <!-- Search -->
       <div class="relative flex-1 max-w-md">
         <ui-input-search
-          placeholder="Buscar por ID, cliente o producto..."
-          [(ngModel)]="searchQuery"
+          placeholder="Buscar por nombre..."
+          [ngModel]="searchQuery()"
+          (ngModelChange)="onSearch($event)"
           size="small"
           styleClass="w-full"
           iconStyleClass="size-4.5!"

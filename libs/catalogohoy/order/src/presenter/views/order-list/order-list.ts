@@ -1,6 +1,19 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import {
+  debounceTime,
+  distinctUntilChanged,
+  Subject,
+  Subscription,
+} from 'rxjs';
 import {
   ButtonComponent,
   DatepickerComponent,
@@ -38,10 +51,13 @@ type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
     class: 'flex-1 flex flex-col min-h-0',
   },
 })
-export class OrderListComponent implements OnInit {
+export class OrderListComponent implements OnInit, OnDestroy {
   public readonly orderStore = inject(OrderStore);
 
-  public searchQuery = '';
+  private readonly searchSubject = new Subject<string>();
+  private searchSubscription?: Subscription;
+
+  public readonly searchQuery = signal('');
   public readonly selectedFilter = signal<OrderStatus | 'all'>('all');
   public readonly selectedOrder = signal<OrderBy>('date_desc');
   public readonly selectedDate = signal<Date | null>(null);
@@ -72,16 +88,7 @@ export class OrderListComponent implements OnInit {
       orders = orders.filter((order) => order.status === filter);
     }
 
-    // Filter by search query
-    if (this.searchQuery.trim()) {
-      const query = this.searchQuery.toLowerCase();
-      orders = orders.filter(
-        (order) =>
-          order.id.toString().includes(query) ||
-          order.name.toLowerCase().includes(query) ||
-          order.products.some((p) => p.name.toLowerCase().includes(query))
-      );
-    }
+    // Search is now handled by Supabase query
 
     // Sort by selected order
     const orderBy = this.selectedOrder();
@@ -110,7 +117,19 @@ export class OrderListComponent implements OnInit {
   });
 
   ngOnInit() {
+    // Setup debounced search
+    this.searchSubscription = this.searchSubject
+      .pipe(debounceTime(300), distinctUntilChanged())
+      .subscribe((query) => {
+        this.searchQuery.set(query);
+        this.reloadOrders();
+      });
+
     this.orderStore.loadOrders();
+  }
+
+  ngOnDestroy() {
+    this.searchSubscription?.unsubscribe();
   }
 
   onCreateOrder() {
@@ -125,14 +144,19 @@ export class OrderListComponent implements OnInit {
     this.selectedOrder.set(order);
   }
 
-  onDateChange(date: Date | null) {
-    this.selectedDate.set(date);
-    this.orderStore.loadOrders(date ?? undefined);
+  reloadOrders() {
+    const date = this.selectedDate() ?? undefined;
+    const search = this.searchQuery() || undefined;
+    this.orderStore.loadOrders({ date, search });
   }
 
-  clearDateFilter() {
-    this.selectedDate.set(null);
-    this.orderStore.loadOrders();
+  onDateChange(date: Date | null) {
+    this.selectedDate.set(date);
+    this.reloadOrders();
+  }
+
+  onSearch(query: string) {
+    this.searchSubject.next(query);
   }
 
   getStatusSeverity(

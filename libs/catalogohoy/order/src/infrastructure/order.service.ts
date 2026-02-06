@@ -11,7 +11,7 @@ export class OrderService {
 
   async getOrdersByTenant(
     tenantId: number,
-    date?: Date
+    options?: { date?: Date; search?: string }
   ): Promise<E.Either<Error, Order[]>> {
     let query = this.client
       .from('orders')
@@ -19,16 +19,21 @@ export class OrderService {
       .eq('tenant_id', tenantId);
 
     // Filter by date if provided
-    if (date) {
-      const startOfDay = new Date(date);
+    if (options?.date) {
+      const startOfDay = new Date(options.date);
       startOfDay.setHours(0, 0, 0, 0);
 
-      const endOfDay = new Date(date);
+      const endOfDay = new Date(options.date);
       endOfDay.setHours(23, 59, 59, 999);
 
       query = query
         .gte('created_at', startOfDay.toISOString())
         .lt('created_at', endOfDay.toISOString());
+    }
+
+    // Filter by search query (search in name field)
+    if (options?.search?.trim()) {
+      query = query.ilike('name', `%${options.search.trim()}%`);
     }
 
     const { data, error } = await query.order('created_at', {
