@@ -72,9 +72,16 @@ jobs:
         run: npm install
 
       - name: Build
-        run: npm run build
+        run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            npm run build:catalogohoy
+          elif [ "${{ github.ref_name }}" == "authentication" ]; then
+            npm run build:authentication
+          else
+            echo "Branch ${{ github.ref_name }} doesn't have a specific build target. Running default build."
+            npm run build
+          fi
       # -----------------------------------
-
       - name: Notify Discord (success) - embed
         if: success()
         env:
