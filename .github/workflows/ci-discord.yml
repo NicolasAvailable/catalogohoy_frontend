@@ -1,4 +1,4 @@
-name: CI + Discord Notify (main/authentication)
+name: CI + Discord Notify
 
 on:
   push:
@@ -11,15 +11,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1) Capturar hora de inicio (UTC) y guardarla para pasos siguientes
       - name: Set start time
-        id: start
         run: |
           echo "START_EPOCH=$(date +%s)" >> $GITHUB_ENV
           echo "START_ISO=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
 
-      # 2) Notificar inicio a Discord (incluye rama y hora)
-      - name: Notify Discord (start)
+      - name: Notify Discord (start) - embed
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           REPO: ${{ github.repository }}
@@ -30,15 +27,41 @@ jobs:
           SHA: ${{ github.sha }}
           START_ISO: ${{ env.START_ISO }}
         run: |
-          curl -H "Content-Type: application/json" -X POST -d "{
-            \"content\": \"🚀 **Build started 🚀**\\nRepo: **${REPO}**\\nBranch: **${BRANCH}**\\nBy: **${ACTOR}**\\nStart: **${START_ISO}**\\nCommit: ${COMMIT_URL}\\nRun: ${RUN_URL}\\nSHA: \`${SHA:0:7}\`\"
-          }" "$DISCORD_WEBHOOK_URL" || true
+          payload=$(cat << 'JSON'
+          {
+            "username": "GitHub Actions",
+            "embeds": [
+              {
+                "title": "🚀 CI started",
+                "color": 16449320,
+                "fields": [
+                  { "name": "📦 Project", "value": "__REPO__", "inline": true },
+                  { "name": "🌿 Branch", "value": "__BRANCH__", "inline": true },
+                  { "name": "⚙️ State", "value": "RUNNING", "inline": true },
+                  { "name": "🔗 Run", "value": "[Open workflow run](__RUN_URL__)", "inline": false },
+                  { "name": "🧾 Commit", "value": "[__SHA7__](__COMMIT_URL__)", "inline": false },
+                  { "name": "🕒 Started", "value": "__START__", "inline": false }
+                ],
+                "footer": { "text": "CatalogoHoy · GitHub Actions" }
+              }
+            ]
+          }
+          JSON
+          )
 
-      # 3) Build real
+          payload=${payload/__REPO__/$REPO}
+          payload=${payload/__BRANCH__/$BRANCH}
+          payload=${payload/__RUN_URL__/$RUN_URL}
+          payload=${payload/__COMMIT_URL__/$COMMIT_URL}
+          payload=${payload/__START__/$START_ISO}
+          payload=${payload/__SHA7__/$(echo $SHA | cut -c1-7)}
+
+          curl -sS -H "Content-Type: application/json" -X POST -d "$payload" "$DISCORD_WEBHOOK_URL" || true
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Ajusta esto a tu proyecto (si usas pnpm/yarn/nx me dices y lo adapto)
+      # --- BUILD (ajusta a tu proyecto) ---
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -46,47 +69,88 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: npm install
 
       - name: Build
         run: npm run build
+      # -----------------------------------
 
-      # 4) Notificar fin OK (con hora fin + duración)
-      - name: Notify Discord (success)
+      - name: Notify Discord (success) - embed
         if: success()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           REPO: ${{ github.repository }}
           BRANCH: ${{ github.ref_name }}
-          ACTOR: ${{ github.actor }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
           START_EPOCH: ${{ env.START_EPOCH }}
         run: |
           END_EPOCH=$(date +%s)
-          END_ISO=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
           DURATION=$((END_EPOCH-START_EPOCH))
 
-          curl -H "Content-Type: application/json" -X POST -d "{
-            \"content\": \"✅ **Build finished (SUCCESS) ✅**\\nRepo: **${REPO}**\\nBranch: **${BRANCH}**\\nBy: **${ACTOR}**\\nEnd: **${END_ISO}**\\nDuration: **${DURATION}s**\\nCommit: ${COMMIT_URL}\\nRun: ${RUN_URL}\"
-          }" "$DISCORD_WEBHOOK_URL" || true
+          payload=$(cat << 'JSON'
+          {
+            "username": "GitHub Actions",
+            "embeds": [
+              {
+                "title": "✅ CI finished",
+                "color": 2278751,
+                "fields": [
+                  { "name": "📦 Project", "value": "__REPO__", "inline": true },
+                  { "name": "🌿 Branch", "value": "__BRANCH__", "inline": true },
+                  { "name": "⚙️ State", "value": "SUCCESS", "inline": true },
+                  { "name": "⏱️ Duration", "value": "__DURATION__s", "inline": false },
+                  { "name": "🔗 Run", "value": "[Open workflow run](__RUN_URL__)", "inline": false }
+                ],
+                "footer": { "text": "CatalogoHoy · GitHub Actions" }
+              }
+            ]
+          }
+          JSON
+          )
 
-      # 5) Notificar fin FAIL (con hora fin + duración)
-      - name: Notify Discord (failure)
+          payload=${payload/__REPO__/$REPO}
+          payload=${payload/__BRANCH__/$BRANCH}
+          payload=${payload/__RUN_URL__/$RUN_URL}
+          payload=${payload/__DURATION__/$DURATION}
+
+          curl -sS -H "Content-Type: application/json" -X POST -d "$payload" "$DISCORD_WEBHOOK_URL" || true
+
+      - name: Notify Discord (failure) - embed
         if: failure()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           REPO: ${{ github.repository }}
           BRANCH: ${{ github.ref_name }}
-          ACTOR: ${{ github.actor }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
           START_EPOCH: ${{ env.START_EPOCH }}
         run: |
           END_EPOCH=$(date +%s)
-          END_ISO=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
           DURATION=$((END_EPOCH-START_EPOCH))
 
-          curl -H "Content-Type: application/json" -X POST -d "{
-            \"content\": \"❌ **Build finished (FAILED) ❌**\\nRepo: **${REPO}**\\nBranch: **${BRANCH}**\\nBy: **${ACTOR}**\\nEnd: **${END_ISO}**\\nDuration: **${DURATION}s**\\nCommit: ${COMMIT_URL}\\nRun: ${RUN_URL}\"
-          }" "$DISCORD_WEBHOOK_URL" || true
+          payload=$(cat << 'JSON'
+          {
+            "username": "GitHub Actions",
+            "embeds": [
+              {
+                "title": "❌ CI failed",
+                "color": 15548997,
+                "fields": [
+                  { "name": "📦 Project", "value": "__REPO__", "inline": true },
+                  { "name": "🌿 Branch", "value": "__BRANCH__", "inline": true },
+                  { "name": "⚙️ State", "value": "FAILED", "inline": true },
+                  { "name": "⏱️ Duration", "value": "__DURATION__s", "inline": false },
+                  { "name": "🔗 Run", "value": "[Open workflow run](__RUN_URL__)", "inline": false }
+                ],
+                "footer": { "text": "CatalogoHoy · GitHub Actions" }
+              }
+            ]
+          }
+          JSON
+          )
+
+          payload=${payload/__REPO__/$REPO}
+          payload=${payload/__BRANCH__/$BRANCH}
+          payload=${payload/__RUN_URL__/$RUN_URL}
+          payload=${payload/__DURATION__/$DURATION}
+
+          curl -sS -H "Content-Type: application/json" -X POST -d "$payload" "$DISCORD_WEBHOOK_URL" || true
