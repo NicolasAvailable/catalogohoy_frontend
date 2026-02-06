@@ -10,6 +10,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import {
   ButtonComponent,
+  DatepickerComponent,
   EmptyListComponent,
   IconComponent,
   InputSearchComponent,
@@ -30,6 +31,7 @@ type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
     FormsModule,
     IconComponent,
     ButtonComponent,
+    DatepickerComponent,
     EmptyListComponent,
     InputSearchComponent,
     MenuComponent,
@@ -46,6 +48,7 @@ export class OrderListComponent implements OnInit {
   public searchQuery = '';
   public readonly selectedFilter = signal<OrderStatus | 'all'>('all');
   public readonly selectedOrder = signal<OrderBy>('date_desc');
+  public readonly selectedDate = signal<Date | null>(null);
   public readonly orderMenu = viewChild.required<MenuComponent>('orderMenu');
 
   public readonly filterTabs: FilterTab[] = [
@@ -86,6 +89,15 @@ export class OrderListComponent implements OnInit {
     const filter = this.selectedFilter();
     if (filter !== 'all') {
       orders = orders.filter((order) => order.status === filter);
+    }
+
+    // Filter by date
+    const date = this.selectedDate();
+    if (date) {
+      const selectedDateStr = date.toDateString();
+      orders = orders.filter(
+        (order) => new Date(order.createdAt).toDateString() === selectedDateStr
+      );
     }
 
     // Filter by search query
@@ -143,6 +155,14 @@ export class OrderListComponent implements OnInit {
 
   setOrder(order: OrderBy) {
     this.selectedOrder.set(order);
+  }
+
+  onDateChange(date: Date | null) {
+    this.selectedDate.set(date);
+  }
+
+  clearDateFilter() {
+    this.selectedDate.set(null);
   }
 
   getOrderLabel(): string {

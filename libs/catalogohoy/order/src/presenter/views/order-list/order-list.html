@@ -61,6 +61,28 @@
           <ui-icon name="chevron-down" styleClass="size-4 text-grey-400" />
         </button>
         <ui-menu #orderMenu [items]="orderMenuItems()" [popup]="true" />
+
+        <div class="w-px h-6 bg-grey-100 mx-1"></div>
+        <!-- Date Filter -->
+        <div class="flex items-center gap-2">
+          <ui-datepicker
+            [(ngModel)]="selectedDate"
+            (ngModelChange)="onDateChange($event)"
+            dateFormat="dd/mm/yy"
+            mode="single"
+            size="small"
+            styleClass="w-40"
+          />
+          @if (selectedDate()) {
+          <button
+            (click)="clearDateFilter()"
+            class="p-1.5 rounded-md hover:bg-grey-100 text-grey-400 hover:text-grey-600 transition-colors"
+            title="Limpiar fecha"
+          >
+            <ui-icon name="x" styleClass="size-4" />
+          </button>
+          }
+        </div>
       </div>
     </div>
 
