@@ -69,7 +69,7 @@ jobs:
 
           curl -H "Content-Type: application/json" -X POST -d "{
             \"content\": \"✅ **Build finished (SUCCESS) ✅**\\nRepo: **${REPO}**\\nBranch: **${BRANCH}**\\nBy: **${ACTOR}**\\nEnd: **${END_ISO}**\\nDuration: **${DURATION}s**\\nCommit: ${COMMIT_URL}\\nRun: ${RUN_URL}\"
-          }" "$DISCORD_WEBHOOK_URL"
+          }" "$DISCORD_WEBHOOK_URL" || true
 
       # 5) Notificar fin FAIL (con hora fin + duración)
       - name: Notify Discord (failure)
@@ -89,4 +89,4 @@ jobs:
 
           curl -H "Content-Type: application/json" -X POST -d "{
             \"content\": \"❌ **Build finished (FAILED) ❌**\\nRepo: **${REPO}**\\nBranch: **${BRANCH}**\\nBy: **${ACTOR}**\\nEnd: **${END_ISO}**\\nDuration: **${DURATION}s**\\nCommit: ${COMMIT_URL}\\nRun: ${RUN_URL}\"
-          }" "$DISCORD_WEBHOOK_URL"
+          }" "$DISCORD_WEBHOOK_URL" || true
