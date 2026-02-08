@@ -1,0 +1,190 @@
+<div class="rate-container p-6">
+  <header
+    class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8"
+  >
+    <div>
+      <h1 class="text-3xl font-bold text-grey-800 mb-1">Tasas del día</h1>
+      <p class="text-grey-400">
+        Configura las tasas de cambio oficiales y personalizadas para el cálculo
+        automático de precios en tu catálogo.
+      </p>
+    </div>
+
+    <ui-button
+      (click)="rateStore.syncRates()"
+      [disabled]="rateStore.isLoading()"
+      [icon]="rateStore.isLoading() ? 'loader' : 'refresh-cw'"
+      label="Refrescar"
+      variant="outlined"
+      severity="primary"
+    >
+      <div class="flex items-center gap-2">
+        <ui-icon
+          [size]="20"
+          [ngClass]="{'syncing-icon': rateStore.isLoading()}"
+        />
+        <span></span>
+      </div>
+    </ui-button>
+  </header>
+
+  <div class="rate-grid">
+    <!-- USD BCV Card -->
+    <div
+      class="rate-card usd"
+      [ngClass]="{'active': rateStore.rates()?.active_rate === 'bcv_usd'}"
+    >
+      <div class="card-header">
+        <div class="currency-info">
+          <div class="currency-icon">
+            <ui-icon name="dollar-sign" size="24" />
+          </div>
+          <div>
+            <h3 class="currency-name">Dólar BCV</h3>
+            <span class="currency-label">USD / VES</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="sync-badge">
+            <ui-icon name="check-circle" size="12" />
+            Oficial
+          </div>
+          <ui-checkbox
+            [ngModel]="rateStore.rates()?.active_rate === 'bcv_usd'"
+            (ngModelChange)="setActiveRate('bcv_usd')"
+            [checkboxId]="'check-usd'"
+          />
+        </div>
+      </div>
+
+      <div class="rate-value">
+        {{ rateStore.rates()?.bcv_usd || '0.00' }}
+        <span class="rate-unit">Bs.</span>
+      </div>
+
+      <div class="last-update">
+        <ui-icon name="clock" size="14" />
+        <span>Actualizado: {{ rateStore.rates()?.last_sync || '---' }}</span>
+      </div>
+    </div>
+
+    <!-- EUR BCV Card -->
+    <div
+      class="rate-card eur"
+      [ngClass]="{'active': rateStore.rates()?.active_rate === 'bcv_eur'}"
+    >
+      <div class="card-header">
+        <div class="currency-info">
+          <div class="currency-icon">
+            <ui-icon name="euro" size="24" />
+          </div>
+          <div>
+            <h3 class="currency-name">Euro BCV</h3>
+            <span class="currency-label">EUR / VES</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="sync-badge">
+            <ui-icon name="check-circle" size="12" />
+            Oficial
+          </div>
+          <ui-checkbox
+            [ngModel]="rateStore.rates()?.active_rate === 'bcv_eur'"
+            (ngModelChange)="setActiveRate('bcv_eur')"
+            [checkboxId]="'check-eur'"
+          />
+        </div>
+      </div>
+
+      <div class="rate-value">
+        {{ rateStore.rates()?.bcv_eur || '0.00' }}
+        <span class="rate-unit">Bs.</span>
+      </div>
+
+      <div class="last-update">
+        <ui-icon name="clock" size="14" />
+        <span>Actualizado: {{ rateStore.rates()?.last_sync || '---' }}</span>
+      </div>
+    </div>
+
+    <!-- Custom Rate Card -->
+    <div
+      class="rate-card custom"
+      [ngClass]="{'active': rateStore.rates()?.active_rate === 'custom'}"
+    >
+      <div class="card-header">
+        <div class="currency-info">
+          <div class="currency-icon">
+            <ui-icon name="settings-2" size="24" />
+          </div>
+          <div>
+            <h3 class="currency-name">Tasa personalizada</h3>
+            <span class="currency-label">Tasa de venta</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div
+            class="sync-badge bg-amber-50 text-amber-600 border border-amber-100"
+          >
+            Editable
+          </div>
+          <ui-checkbox
+            [ngModel]="rateStore.rates()?.active_rate === 'custom'"
+            (ngModelChange)="setActiveRate('custom')"
+            [checkboxId]="'check-custom'"
+          />
+        </div>
+      </div>
+
+      <div class="rate-value">
+        {{ rateStore.rates()?.custom_rate || '0.00' }}
+        <span class="rate-unit">Bs.</span>
+      </div>
+
+      <div class="custom-rate-input">
+        <div class="input-wrapper">
+          <ui-input-number
+            [(ngModel)]="tempCustomRate"
+            [min]="0"
+            [showButtons]="false"
+            placeholder="Introduce la tasa"
+            styleClass="rounded-xl border-grey-100"
+          />
+          <span class="input-suffix">VES</span>
+        </div>
+
+        <ui-button
+          (click)="updateCustomRate()"
+          [disabled]="rateStore.isLoading() || !tempCustomRate"
+          label="Actualizar tasa"
+          severity="contrast"
+          class="w-full"
+          styleClass="rounded-xl py-3"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- History Section (Optional but adds value) -->
+  <section class="mt-16">
+    <div class="flex items-center gap-3 mb-6">
+      <div
+        class="w-10 h-10 rounded-xl bg-grey-50 flex items-center justify-center text-grey-500"
+      >
+        <ui-icon name="history" size="20" />
+      </div>
+      <h2 class="text-2xl font-bold text-grey-800">Reciente</h2>
+    </div>
+
+    <div
+      class="bg-white rounded-3xl border border-grey-50 overflow-hidden shadow-sm"
+    >
+      <div class="p-8 text-center text-grey-400">
+        <ui-icon name="bar-chart-3" size="48" class="mx-auto mb-4 opacity-20" />
+        <p>
+          Próximamente: Podrás ver el histórico de variaciones de las tasas.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

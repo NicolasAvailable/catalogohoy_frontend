@@ -24,4 +24,8 @@ export const adminRoutes: Route[] = [
     loadChildren: () =>
       import('@catalogohoy/order').then((m) => m.ORDER_ROUTES),
   },
+  {
+    path: 'exchange-rates',
+    loadChildren: () => import('@catalogohoy/rate').then((m) => m.RATE_ROUTES),
+  },
 ];
