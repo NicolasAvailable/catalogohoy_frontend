@@ -9,11 +9,11 @@ import { ExchangeRate, RateType } from '../domain/rate';
 export class RateService {
   private readonly client = SupabaseClientProvider.getInstance();
 
-  async getRates(tenantId: number): Promise<E.Either<Error, ExchangeRate>> {
+  async getRates(): Promise<E.Either<Error, ExchangeRate>> {
     const { data, error } = await this.client
       .from('exchange_rates')
       .select('*')
-      .eq('tenant_id', tenantId)
+      .eq('id', 1)
       .maybeSingle();
 
     if (error) {
@@ -21,8 +21,8 @@ export class RateService {
     }
 
     if (!data) {
-      // Default rates if none exist
       return E.right({
+        id: 1,
         bcv_usd: 0,
         bcv_eur: 0,
         custom_rate: 0,
@@ -33,72 +33,50 @@ export class RateService {
     return E.right(data as ExchangeRate);
   }
 
-  async updateActiveRate(
-    tenantId: number,
-    rateType: RateType
-  ): Promise<E.Either<Error, void>> {
-    const { error } = await this.client.from('exchange_rates').upsert(
-      {
-        tenant_id: tenantId,
-        active_rate: rateType,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'tenant_id' }
-    );
-
-    if (error) {
-      return E.left(new Error(error.message));
-    }
-
-    return E.right(undefined);
-  }
-
-  async updateCustomRate(
-    tenantId: number,
-    rate: number
-  ): Promise<E.Either<Error, void>> {
-    const { error } = await this.client.from('exchange_rates').upsert(
-      {
-        tenant_id: tenantId,
-        custom_rate: rate,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'tenant_id' }
-    );
-
-    if (error) {
-      return E.left(new Error(error.message));
-    }
-
-    return E.right(undefined);
-  }
-
-  async syncBcvRates(tenantId: number): Promise<E.Either<Error, ExchangeRate>> {
-    // This could call an edge function or a public API.
-    // For now, let's pretend we fetch them and update the DB.
-    // In a real scenario, this logic might be in the backend.
-    const mockBcvUsd = 38.11; // Example BCV rate
-    const mockBcvEur = 44.98;
-
-    const { data, error } = await this.client
+  async updateActiveRate(rateType: RateType): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
       .from('exchange_rates')
-      .upsert(
-        {
-          tenant_id: tenantId,
-          bcv_usd: mockBcvUsd,
-          bcv_eur: mockBcvEur,
-          last_sync: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'tenant_id' }
-      )
-      .select()
-      .single();
+      .update({ active_rate: rateType, updated_at: new Date().toISOString() })
+      .eq('id', 1);
 
     if (error) {
       return E.left(new Error(error.message));
     }
 
-    return E.right(data as ExchangeRate);
+    return E.right(undefined);
+  }
+
+  async updateCustomRate(rate: number): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('exchange_rates')
+      .update({ custom_rate: rate, updated_at: new Date().toISOString() })
+      .eq('id', 1);
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    return E.right(undefined);
+  }
+
+  async syncBcvRates(): Promise<E.Either<Error, void>> {
+    // Mocking BCV update (replace with real API call if needed)
+    const mockBcvUsd = 38.45;
+    const mockBcvEur = 45.12;
+
+    const { error } = await this.client
+      .from('exchange_rates')
+      .update({
+        bcv_usd: mockBcvUsd,
+        bcv_eur: mockBcvEur,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', 1);
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    return E.right(undefined);
   }
 }

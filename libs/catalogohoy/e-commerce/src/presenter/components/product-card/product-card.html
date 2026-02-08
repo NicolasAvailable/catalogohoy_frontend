@@ -4,7 +4,7 @@
 >
   <a [routerLink]="['/product', product().id]" class="product-card__image-link">
     <div class="product-card__image">
-      @if (product().photos?.length) {
+      @if (product().photos.length) {
       <img [src]="product().photos[0]" [alt]="product().name" loading="lazy" />
       } @else {
       <div class="product-card__placeholder">

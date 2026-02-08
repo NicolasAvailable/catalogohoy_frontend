@@ -6,7 +6,6 @@ import {
 } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
-import { IconComponent } from '@ui';
 import { CartStore, EcommerceStore } from '../../infrastructure';
 import { CartDrawer } from '../components/cart-drawer/cart-drawer';
 import { CatalogHeader } from '../components/catalog-header/catalog-header';
@@ -14,13 +13,7 @@ import { CheckoutDrawer } from '../components/checkout-drawer/checkout-drawer';
 
 @Component({
   selector: 'lib-e-commerce',
-  imports: [
-    RouterOutlet,
-    IconComponent,
-    CatalogHeader,
-    CartDrawer,
-    CheckoutDrawer,
-  ],
+  imports: [RouterOutlet, CatalogHeader, CartDrawer, CheckoutDrawer],
   templateUrl: './e-commerce.html',
   styleUrl: './e-commerce.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

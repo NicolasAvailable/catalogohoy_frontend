@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   OnInit,
 } from '@angular/core';
@@ -10,6 +11,7 @@ import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import {
   ButtonComponent,
+  CardComponent,
   CheckboxComponent,
   IconComponent,
   InputNumberComponent,
@@ -27,6 +29,7 @@ import { RateStore } from '../../../infrastructure/rate.store';
     ButtonComponent,
     InputNumberComponent,
     CheckboxComponent,
+    CardComponent,
   ],
   templateUrl: './rate-view.html',
   styleUrl: './rate-view.css',
@@ -36,11 +39,20 @@ export class RateView implements OnInit {
   public readonly rateStore = inject(RateStore);
   private readonly toastService = inject(ToastService);
 
+  public readonly bcvUsd = computed(() => this.rateStore.rate()?.bcv_usd || 0);
+  public readonly bcvEur = computed(() => this.rateStore.rate()?.bcv_eur || 0);
+  public readonly customRate = computed(
+    () => this.rateStore.rate()?.custom_rate || 0
+  );
+  public readonly activeRate = computed(
+    () => this.rateStore.rate()?.active_rate || 'bcv_usd'
+  );
+
   public tempCustomRate: number | null = null;
 
   ngOnInit(): void {
     this.rateStore.loadRates().then(() => {
-      this.tempCustomRate = this.rateStore.rates()?.custom_rate || null;
+      this.tempCustomRate = this.customRate();
     });
   }
 

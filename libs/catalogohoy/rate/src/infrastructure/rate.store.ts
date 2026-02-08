@@ -1,18 +1,17 @@
 import { inject } from '@angular/core';
-import { TenantStore } from '@catalogohoy/tenant';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { E } from '@shared/domain';
 import { ExchangeRate, RateType } from '../domain/rate';
 import { RateService } from './rate.service';
 
 type RateState = {
-  rates: ExchangeRate | null;
+  rate: ExchangeRate | null;
   isLoading: boolean;
   error: string | null;
 };
 
 const initialState: RateState = {
-  rates: null,
+  rate: null,
   isLoading: false,
   error: null,
 };
@@ -22,95 +21,77 @@ export const RateStore = signalStore(
   withState(initialState),
   withMethods((store) => {
     const rateService = inject(RateService);
-    const tenantStore = inject(TenantStore);
 
     return {
       async loadRates() {
-        const tenantId = await tenantStore.getTenantIdAsync();
-        if (!tenantId) return;
-
         patchState(store, { isLoading: true, error: null });
-
-        const result = await rateService.getRates(tenantId);
-
+        const result = await rateService.getRates();
         patchState(store, { isLoading: false });
 
         result.fold(
           (error: Error) => patchState(store, { error: error.message }),
-          (rates: ExchangeRate) => patchState(store, { rates })
+          (rate: ExchangeRate) => patchState(store, { rate })
         );
       },
 
       async updateActiveRate(
         rateType: RateType
       ): Promise<E.Either<string, void>> {
-        const tenantId = await tenantStore.getTenantIdAsync();
-        if (!tenantId) return E.left('Tenant no encontrado');
-
         patchState(store, { isLoading: true, error: null });
-
-        const result = await rateService.updateActiveRate(tenantId, rateType);
-
+        const result = await rateService.updateActiveRate(rateType);
         patchState(store, { isLoading: false });
 
-        return result.fold(
-          (error: Error) => {
-            patchState(store, { error: error.message });
-            return E.left(error.message);
-          },
-          () => {
-            const currentRates = store.rates();
-            if (currentRates) {
-              patchState(store, {
-                rates: { ...currentRates, active_rate: rateType },
-              });
-            }
-            return E.right(undefined);
-          }
-        );
+        if (result.isLeft()) {
+          const error = result.value.message;
+          patchState(store, { error });
+          return E.left(error);
+        }
+
+        // Optimistic update
+        const currentRate = store.rate();
+        if (currentRate) {
+          patchState(store, {
+            rate: { ...currentRate, active_rate: rateType },
+          });
+        }
+
+        return E.right(undefined);
       },
 
       async updateCustomRate(rate: number): Promise<E.Either<string, void>> {
-        const tenantId = await tenantStore.getTenantIdAsync();
-        if (!tenantId) return E.left('Tenant no encontrado');
-
         patchState(store, { isLoading: true, error: null });
-
-        const result = await rateService.updateCustomRate(tenantId, rate);
-
+        const result = await rateService.updateCustomRate(rate);
         patchState(store, { isLoading: false });
 
-        return result.fold(
-          (error: Error) => {
-            patchState(store, { error: error.message });
-            return E.left(error.message);
-          },
-          () => {
-            const currentRates = store.rates();
-            if (currentRates) {
-              patchState(store, {
-                rates: { ...currentRates, custom_rate: rate },
-              });
-            }
-            return E.right(undefined);
-          }
-        );
+        if (result.isLeft()) {
+          const error = result.value.message;
+          patchState(store, { error });
+          return E.left(error);
+        }
+
+        const currentRate = store.rate();
+        if (currentRate) {
+          patchState(store, { rate: { ...currentRate, custom_rate: rate } });
+        }
+
+        return E.right(undefined);
       },
 
       async syncRates() {
-        const tenantId = await tenantStore.getTenantIdAsync();
-        if (!tenantId) return;
-
         patchState(store, { isLoading: true, error: null });
-
-        const result = await rateService.syncBcvRates(tenantId);
-
+        const result = await rateService.syncBcvRates();
         patchState(store, { isLoading: false });
 
-        result.fold(
-          (error: Error) => patchState(store, { error: error.message }),
-          (rates: ExchangeRate) => patchState(store, { rates })
-        );
+        if (result.isLeft()) {
+          patchState(store, { error: result.value.message });
+        } else {
+          // Reload everything to get the exact values from DB
+          const reloadResult = await rateService.getRates();
+          reloadResult.fold(
+            () => {},
+            (rate) => patchState(store, { rate })
+          );
+        }
       },
     };
   })

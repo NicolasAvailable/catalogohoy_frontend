@@ -17,22 +17,13 @@
       label="Refrescar"
       variant="outlined"
       severity="primary"
-    >
-      <div class="flex items-center gap-2">
-        <ui-icon
-          [size]="20"
-          [ngClass]="{'syncing-icon': rateStore.isLoading()}"
-        />
-        <span></span>
-      </div>
-    </ui-button>
+    />
   </header>
 
   <div class="rate-grid">
     <!-- USD BCV Card -->
-    <div
-      class="rate-card usd"
-      [ngClass]="{'active': rateStore.rates()?.active_rate === 'bcv_usd'}"
+    <ui-card
+      [styleClass]="'rate-card usd ' + (activeRate() === 'bcv_usd' ? 'active' : '')"
     >
       <div class="card-header">
         <div class="currency-info">
@@ -50,7 +41,7 @@
             Oficial
           </div>
           <ui-checkbox
-            [ngModel]="rateStore.rates()?.active_rate === 'bcv_usd'"
+            [ngModel]="activeRate() === 'bcv_usd'"
             (ngModelChange)="setActiveRate('bcv_usd')"
             [checkboxId]="'check-usd'"
           />
@@ -58,20 +49,22 @@
       </div>
 
       <div class="rate-value">
-        {{ rateStore.rates()?.bcv_usd || '0.00' }}
+        {{ bcvUsd() | number:'1.2-2' }}
         <span class="rate-unit">Bs.</span>
       </div>
 
       <div class="last-update">
         <ui-icon name="clock" size="14" />
-        <span>Actualizado: {{ rateStore.rates()?.last_sync || '---' }}</span>
+        <span
+          >Actualizado: {{ rateStore.rate()?.updated_at | date:"d 'de' MMMM
+          'del' y, h:mm a" }}</span
+        >
       </div>
-    </div>
+    </ui-card>
 
     <!-- EUR BCV Card -->
-    <div
-      class="rate-card eur"
-      [ngClass]="{'active': rateStore.rates()?.active_rate === 'bcv_eur'}"
+    <ui-card
+      [styleClass]="'rate-card eur ' + (activeRate() === 'bcv_eur' ? 'active' : '')"
     >
       <div class="card-header">
         <div class="currency-info">
@@ -89,7 +82,7 @@
             Oficial
           </div>
           <ui-checkbox
-            [ngModel]="rateStore.rates()?.active_rate === 'bcv_eur'"
+            [ngModel]="activeRate() === 'bcv_eur'"
             (ngModelChange)="setActiveRate('bcv_eur')"
             [checkboxId]="'check-eur'"
           />
@@ -97,20 +90,22 @@
       </div>
 
       <div class="rate-value">
-        {{ rateStore.rates()?.bcv_eur || '0.00' }}
+        {{ bcvEur() | number:'1.2-2' }}
         <span class="rate-unit">Bs.</span>
       </div>
 
       <div class="last-update">
         <ui-icon name="clock" size="14" />
-        <span>Actualizado: {{ rateStore.rates()?.last_sync || '---' }}</span>
+        <span
+          >Actualizado: {{ rateStore.rate()?.updated_at | date:"d 'de' MMMM
+          'del' y, h:mm a" }}</span
+        >
       </div>
-    </div>
+    </ui-card>
 
     <!-- Custom Rate Card -->
-    <div
-      class="rate-card custom"
-      [ngClass]="{'active': rateStore.rates()?.active_rate === 'custom'}"
+    <ui-card
+      [styleClass]="'rate-card custom ' + (activeRate() === 'custom' ? 'active' : '')"
     >
       <div class="card-header">
         <div class="currency-info">
@@ -123,13 +118,9 @@
           </div>
         </div>
         <div class="flex items-center gap-3">
-          <div
-            class="sync-badge bg-amber-50 text-amber-600 border border-amber-100"
-          >
-            Editable
-          </div>
+          <div class="sync-badge bg-amber-50 text-amber-600">Editable</div>
           <ui-checkbox
-            [ngModel]="rateStore.rates()?.active_rate === 'custom'"
+            [ngModel]="activeRate() === 'custom'"
             (ngModelChange)="setActiveRate('custom')"
             [checkboxId]="'check-custom'"
           />
@@ -137,8 +128,16 @@
       </div>
 
       <div class="rate-value">
-        {{ rateStore.rates()?.custom_rate || '0.00' }}
+        {{ customRate() | number:'1.2-2' }}
         <span class="rate-unit">Bs.</span>
+      </div>
+
+      <div class="last-update">
+        <ui-icon name="clock" size="14" />
+        <span
+          >Actualizado: {{ rateStore.rate()?.updated_at | date:"d 'de' MMMM
+          'del' y, h:mm a" }}</span
+        >
       </div>
 
       <div class="custom-rate-input">
@@ -162,10 +161,10 @@
           styleClass="rounded-xl py-3"
         />
       </div>
-    </div>
+    </ui-card>
   </div>
 
-  <!-- History Section (Optional but adds value) -->
+  <!-- History Section -->
   <section class="mt-16">
     <div class="flex items-center gap-3 mb-6">
       <div
@@ -177,7 +176,7 @@
     </div>
 
     <div
-      class="bg-white rounded-3xl border border-grey-50 overflow-hidden shadow-sm"
+      class="bg-white rounded-xl border border-grey-50 overflow-hidden shadow-sm"
     >
       <div class="p-8 text-center text-grey-400">
         <ui-icon name="bar-chart-3" size="48" class="mx-auto mb-4 opacity-20" />

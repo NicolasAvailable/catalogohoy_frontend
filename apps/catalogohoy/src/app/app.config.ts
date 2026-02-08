@@ -1,6 +1,9 @@
+import { registerLocaleData } from '@angular/common';
 import { provideHttpClient, withFetch } from '@angular/common/http';
+import localeEs from '@angular/common/locales/es';
 import {
   ApplicationConfig,
+  LOCALE_ID,
   provideBrowserGlobalErrorListeners,
   provideZoneChangeDetection,
 } from '@angular/core';
@@ -17,6 +20,8 @@ import {
 } from '@catalogohoy/core';
 import { appRoutes } from './app.routes';
 
+registerLocaleData(localeEs);
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
@@ -31,5 +36,6 @@ export const appConfig: ApplicationConfig = {
     provideTranslation(),
     provideUi(),
     provideIcons(),
+    { provide: LOCALE_ID, useValue: 'es' },
   ],
 };
