@@ -123,4 +123,21 @@ export class OrderService {
 
     return E.right(OrderMapper.toDomain(data));
   }
+
+  async deleteOrder(
+    id: number,
+    tenantId: number
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('orders')
+      .delete()
+      .eq('id', id)
+      .eq('tenant_id', tenantId);
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    return E.right(undefined);
+  }
 }

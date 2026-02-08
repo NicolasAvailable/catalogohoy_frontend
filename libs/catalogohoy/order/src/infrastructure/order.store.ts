@@ -153,6 +153,38 @@ export const OrderStore = signalStore(
           return E.left('Error inesperado');
         }
       },
+
+      async deleteOrder(id: number): Promise<E.Either<string, void>> {
+        try {
+          const tenantId = await tenantStore.getTenantIdAsync();
+          if (!tenantId) {
+            return E.left('Tenant no encontrado');
+          }
+
+          patchState(store, { isLoading: true, error: null });
+
+          const result = await orderService.deleteOrder(id, tenantId);
+
+          patchState(store, { isLoading: false });
+
+          return result.fold(
+            (error) => E.left(error.message),
+            () => {
+              // Remover la orden de la lista
+              const updatedItems = store
+                .orderList()
+                .items.filter((o) => o.id !== id);
+              patchState(store, {
+                orderList: new OrderList(updatedItems),
+              });
+              return E.right(undefined);
+            }
+          );
+        } catch {
+          patchState(store, { isLoading: false, error: 'Error inesperado' });
+          return E.left('Error inesperado');
+        }
+      },
     })
   )
 );

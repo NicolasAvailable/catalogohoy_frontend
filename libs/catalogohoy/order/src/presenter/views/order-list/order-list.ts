@@ -9,8 +9,11 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Exception } from '@shared/domain';
+import { ToastService } from '@shared/infrastructure';
 import {
   ButtonComponent,
+  ConfirmDialogService,
   DatepickerComponent,
   EmptyListComponent,
   IconComponent,
@@ -54,6 +57,8 @@ type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
 })
 export class OrderListComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
+  private readonly confirmDialogService = inject(ConfirmDialogService);
+  private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
 
   private readonly searchSubject = new Subject<string>();
@@ -252,5 +257,34 @@ export class OrderListComponent implements OnInit, OnDestroy {
     // Remove all non-numeric characters except +
     const cleanPhone = phone.replace(/[^\d+]/g, '');
     return `https://wa.me/${cleanPhone}`;
+  }
+
+  onDeleteOrder(order: Order) {
+    this.confirmDialogService
+      .warning({
+        headerLabel: '¿Eliminar orden?',
+        contentLabel: `¿Estás seguro de que deseas eliminar la orden de "${order.name}"? Esta acción no se puede deshacer.`,
+        acceptLabel: 'Eliminar',
+        rejectLabel: 'Cancelar',
+      })
+      .subscribe((result) => {
+        result.fold(
+          () => {
+            // Usuario canceló
+          },
+          async () => {
+            // Usuario confirmó
+            const deleteResult = await this.orderStore.deleteOrder(order.id);
+            deleteResult.fold(
+              (error) => {
+                this.toastService.error(new Exception(error));
+              },
+              () => {
+                this.toastService.success('Orden eliminada correctamente');
+              }
+            );
+          }
+        );
+      });
   }
 }
