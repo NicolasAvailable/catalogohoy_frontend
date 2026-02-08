@@ -61,11 +61,15 @@ export class OrderService {
     return E.right(OrderMapper.toDomainList(data || []));
   }
 
-  async getOrderById(id: number): Promise<E.Either<Error, Order>> {
+  async getOrderById(
+    id: number,
+    tenantId: number
+  ): Promise<E.Either<Error, Order>> {
     const { data, error } = await this.client
       .from('orders')
       .select('*')
       .eq('id', id)
+      .eq('tenant_id', tenantId)
       .single();
 
     if (error) {
@@ -109,6 +113,7 @@ export class OrderService {
         total_usd: input.totalUsd,
       })
       .eq('id', input.id)
+      .eq('tenant_id', input.tenantId)
       .select()
       .single();
 

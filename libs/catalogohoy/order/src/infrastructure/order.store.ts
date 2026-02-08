@@ -58,7 +58,10 @@ export const OrderStore = signalStore(
       },
 
       async getOrderById(id: number): Promise<Order | null> {
-        const result = await orderService.getOrderById(id);
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return null;
+
+        const result = await orderService.getOrderById(id, tenantId);
         return result.fold(
           () => null,
           (order) => order

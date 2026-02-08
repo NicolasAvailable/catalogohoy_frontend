@@ -138,6 +138,10 @@ export class OrderListComponent implements OnInit, OnDestroy {
     this.router.navigate(['/admin/orders/create']);
   }
 
+  onEditOrder(order: Order) {
+    this.router.navigate(['/admin/orders/edit', order.id]);
+  }
+
   selectFilter(filter: OrderStatus | 'all') {
     this.selectedFilter.set(filter);
   }

@@ -4,6 +4,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   total: number;
+  photo?: string;
 }
 
 export type OrderStatus = 'pending' | 'completed';

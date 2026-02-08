@@ -127,6 +127,7 @@ export default class OrderSave implements OnInit {
           productId: selectedProduct.id,
           name: selectedProduct.name,
           price: selectedProduct.price,
+          photo: selectedProduct.photos?.[0],
           total: selectedProduct.price * updated[index].quantity,
         };
         return updated;

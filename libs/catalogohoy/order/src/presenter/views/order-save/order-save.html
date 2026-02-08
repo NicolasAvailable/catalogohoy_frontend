@@ -116,7 +116,7 @@
                   [selectId]="'product-' + $index"
                 >
                   <ng-template selectSelectedItem let-selected>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-3">
                       @if (selected.photos?.length) {
                       <img
                         [src]="selected.photos[0]"
@@ -129,14 +129,19 @@
                       >
                         <ui-icon
                           name="package"
-                          size="14"
+                          size="16"
                           styleClass="text-grey-300"
                         />
                       </div>
+                      } @if (product.name) {
+                      <div class="flex items-center gap-2">
+                        <span class="text-grey-800 font-medium truncate"
+                          >{{ product.name }}</span
+                        >
+                      </div>
+                      } @else {
+                      <span class="text-grey-400">Seleccionar producto</span>
                       }
-                      <span class="text-grey-800 font-medium truncate"
-                        >{{ selected.name }}</span
-                      >
                     </div>
                   </ng-template>
                   <ng-template selectItem let-item>

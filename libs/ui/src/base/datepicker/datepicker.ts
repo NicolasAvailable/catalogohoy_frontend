@@ -44,6 +44,7 @@ import { DatePickerModule } from 'primeng/datepicker';
     [fluid]="true"
     [disabled]="disabled()"
     [appendTo]="'body'"
+    [placeholder]="placeholder()"
     [panelStyleClass]="panelStyleClass()"
     [styleClass]="styleClass()"
     [inputStyleClass]="
@@ -57,14 +58,15 @@ export class DatepickerComponent implements ControlValueAccessor {
   public readonly minDate = model<Date | null>(null);
   public readonly maxDate = input<Date | null>(null);
   public readonly restrict = input(false);
-  public readonly size = input<'small' | 'large' | any>(undefined);
+  public readonly size = input<'small' | 'large' | undefined>(undefined);
   public readonly showClear = input(false);
   public readonly showTime = input(false);
+  public readonly placeholder = input('');
   public readonly panelStyleClass = input('');
   public readonly styleClass = input('');
 
   public readonly disabled = signal(false);
-  public readonly value = signal(new Date());
+  public readonly value = signal<Date | null>(null);
   public readonly cleaned = output<void>();
 
   constructor() {
@@ -73,7 +75,7 @@ export class DatepickerComponent implements ControlValueAccessor {
     );
   }
 
-  private onChange: (value: Date) => void = () => {
+  private onChange: (value: Date | null) => void = () => {
     /* This will be overridden by registerOnChange */
   };
 
@@ -84,10 +86,14 @@ export class DatepickerComponent implements ControlValueAccessor {
   public writeValue(
     value: Date | string | number | null | undefined | unknown
   ): void {
-    this.value.set($date.create(value));
+    if (value === null || value === undefined) {
+      this.value.set(null);
+    } else {
+      this.value.set($date.create(value));
+    }
   }
 
-  public registerOnChange(fn: (value: Date) => void): void {
+  public registerOnChange(fn: (value: Date | null) => void): void {
     this.onChange = fn;
   }
 
@@ -99,15 +105,15 @@ export class DatepickerComponent implements ControlValueAccessor {
     this.disabled.set(isDisabled);
   }
 
-  public change(value: Date) {
+  public change(value: Date | null) {
     this.value.set(value);
     this.onChange(value);
     this.onTouched();
   }
 
   public clear() {
-    this.value.set(new Date());
-    this.onChange(this.value());
+    this.value.set(null);
+    this.onChange(null);
     this.onTouched();
   }
 }
