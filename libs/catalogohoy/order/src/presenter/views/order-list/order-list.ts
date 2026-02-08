@@ -8,12 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import {
-  debounceTime,
-  distinctUntilChanged,
-  Subject,
-  Subscription,
-} from 'rxjs';
+import { Router } from '@angular/router';
 import {
   ButtonComponent,
   DatepickerComponent,
@@ -24,6 +19,12 @@ import {
   SelectItemDirective,
   SelectSelectedItemDirective,
 } from '@ui';
+import {
+  debounceTime,
+  distinctUntilChanged,
+  Subject,
+  Subscription,
+} from 'rxjs';
 import { Order, OrderStatus } from '../../../domain/order';
 import { OrderStore } from '../../../infrastructure/order.store';
 
@@ -52,6 +53,7 @@ type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
   },
 })
 export class OrderListComponent implements OnInit, OnDestroy {
+  private readonly router = inject(Router);
   public readonly orderStore = inject(OrderStore);
 
   private readonly searchSubject = new Subject<string>();
@@ -133,7 +135,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   }
 
   onCreateOrder() {
-    // TODO: Implement create order navigation
+    this.router.navigate(['/admin/orders/create']);
   }
 
   selectFilter(filter: OrderStatus | 'all') {

@@ -8,4 +8,12 @@ export const ORDER_ROUTES: Routes = [
         (c) => c.OrderListComponent
       ),
   },
+  {
+    path: 'create',
+    loadComponent: () => import('./presenter/views/order-save/order-save'),
+  },
+  {
+    path: 'edit/:id',
+    loadComponent: () => import('./presenter/views/order-save/order-save'),
+  },
 ];

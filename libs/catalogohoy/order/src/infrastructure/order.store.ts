@@ -1,7 +1,8 @@
 import { inject } from '@angular/core';
 import { TenantStore } from '@catalogohoy/tenant';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
-import { OrderList } from '../domain/order';
+import { E } from '@shared/domain';
+import { Order, OrderItem, OrderList, OrderStatus } from '../domain/order';
 import { OrderService } from './order.service';
 
 type OrderState = {
@@ -53,6 +54,100 @@ export const OrderStore = signalStore(
           );
         } catch {
           patchState(store, { isLoading: false, error: 'Error inesperado' });
+        }
+      },
+
+      async getOrderById(id: number): Promise<Order | null> {
+        const result = await orderService.getOrderById(id);
+        return result.fold(
+          () => null,
+          (order) => order
+        );
+      },
+
+      async createOrder(input: {
+        name: string;
+        phone?: string;
+        comments?: string;
+        status: OrderStatus;
+        products: OrderItem[];
+        totalUsd: number;
+      }): Promise<E.Either<string, Order>> {
+        patchState(store, { isLoading: true, error: null });
+
+        try {
+          const tenantId = await tenantStore.getTenantIdAsync();
+
+          if (!tenantId) {
+            patchState(store, { isLoading: false });
+            return E.left('No se pudo obtener el tenant');
+          }
+
+          const result = await orderService.createOrder({
+            ...input,
+            tenantId,
+          });
+
+          patchState(store, { isLoading: false });
+
+          return result.fold(
+            (error) => E.left(error.message),
+            (order) => {
+              // Actualizar la lista de órdenes
+              patchState(store, {
+                orderList: new OrderList([order, ...store.orderList().items]),
+              });
+              return E.right(order);
+            }
+          );
+        } catch {
+          patchState(store, { isLoading: false, error: 'Error inesperado' });
+          return E.left('Error inesperado');
+        }
+      },
+
+      async updateOrder(input: {
+        id: number;
+        name: string;
+        phone?: string;
+        comments?: string;
+        status: OrderStatus;
+        products: OrderItem[];
+        totalUsd: number;
+      }): Promise<E.Either<string, Order>> {
+        patchState(store, { isLoading: true, error: null });
+
+        try {
+          const tenantId = await tenantStore.getTenantIdAsync();
+
+          if (!tenantId) {
+            patchState(store, { isLoading: false });
+            return E.left('No se pudo obtener el tenant');
+          }
+
+          const result = await orderService.updateOrder({
+            ...input,
+            tenantId,
+          });
+
+          patchState(store, { isLoading: false });
+
+          return result.fold(
+            (error) => E.left(error.message),
+            (order) => {
+              // Actualizar la orden en la lista
+              const updatedItems = store
+                .orderList()
+                .items.map((o) => (o.id === order.id ? order : o));
+              patchState(store, {
+                orderList: new OrderList(updatedItems),
+              });
+              return E.right(order);
+            }
+          );
+        } catch {
+          patchState(store, { isLoading: false, error: 'Error inesperado' });
+          return E.left('Error inesperado');
         }
       },
     })

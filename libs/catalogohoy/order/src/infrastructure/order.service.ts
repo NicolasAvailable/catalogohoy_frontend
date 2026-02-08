@@ -1,7 +1,21 @@
 import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
-import { Order, OrderMapper } from '../domain';
+import { Order, OrderItem, OrderMapper, OrderStatus } from '../domain';
+
+export interface CreateOrderInput {
+  name: string;
+  phone?: string;
+  comments?: string;
+  status: OrderStatus;
+  products: OrderItem[];
+  totalUsd: number;
+  tenantId: number;
+}
+
+export interface UpdateOrderInput extends CreateOrderInput {
+  id: number;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -45,5 +59,63 @@ export class OrderService {
     }
 
     return E.right(OrderMapper.toDomainList(data || []));
+  }
+
+  async getOrderById(id: number): Promise<E.Either<Error, Order>> {
+    const { data, error } = await this.client
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    return E.right(OrderMapper.toDomain(data));
+  }
+
+  async createOrder(input: CreateOrderInput): Promise<E.Either<Error, Order>> {
+    const { data, error } = await this.client
+      .from('orders')
+      .insert({
+        name: input.name,
+        phone: input.phone,
+        comments: input.comments,
+        status: input.status,
+        products: input.products,
+        total_usd: input.totalUsd,
+        tenant_id: input.tenantId,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    return E.right(OrderMapper.toDomain(data));
+  }
+
+  async updateOrder(input: UpdateOrderInput): Promise<E.Either<Error, Order>> {
+    const { data, error } = await this.client
+      .from('orders')
+      .update({
+        name: input.name,
+        phone: input.phone,
+        comments: input.comments,
+        status: input.status,
+        products: input.products,
+        total_usd: input.totalUsd,
+      })
+      .eq('id', input.id)
+      .select()
+      .single();
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    return E.right(OrderMapper.toDomain(data));
   }
 }
