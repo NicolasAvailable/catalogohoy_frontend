@@ -1,59 +1,82 @@
-<section class="container flex flex-col gap-4 max-w-2xl mx-auto">
+<section class="container flex flex-col gap-4 max-w-4xl mx-auto">
   <h1 class="text-4xl font-bold">Inicio</h1>
-  <p>¡Chequeá los pasos para dejar tu tienda a tu manera!</p>
-  <ui-accordion [items]="items()">
-    @for(item of items(); track item.ref) {
+  <p class="text-slate-500">
+    ¡Chequeá los pasos para dejar tu tienda a tu manera!
+  </p>
 
-    <ng-template [accordionHeader]="item.ref" let-item="item">
-      <div class="flex items-center gap-4">
-        <ui-icon
-          [name]="item.icon"
-          class="bg-primary-50 p-1.5 rounded-base"
-          styleClass="w-6 h-6"
-        />
-        <span class="text-xl font-bold">{{ item.label }}</span>
+  <!-- Blue Widget from Stitch -->
+  <div
+    class="mb-2 relative overflow-hidden bg-linear-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 text-white flex items-center justify-between shadow-lg"
+  >
+    <div class="relative z-10 max-w-md">
+      <h2 class="text-2xl font-bold mb-2">Impulsa tus ventas hoy</h2>
+      <p class="text-blue-100 mb-6">
+        Optimiza tu catálogo y alcanza a más clientes con nuestras herramientas
+        de gestión inteligente.
+      </p>
+      <button
+        class="bg-white text-blue-600 px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-sm"
+      >
+        Ver Tutoriales
+      </button>
+    </div>
+    <div class="hidden lg:block relative z-10">
+      <img
+        alt="Ecommerce Illustration"
+        class="w-64 h-auto rounded-xl shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-500 object-cover"
+        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAF31kKHQKyGUY2a3SIOwdqm7bERvly5nl-eF5QVVcW5MO7Jjky0SRkJOzb67zTn9S9e5xGjpkoZPkBMaXZbaFdljLmyCGgaDfUd1Wok9OCJBsUDR-avYgwdz9SlQ2xLCiL0IgOMvQEyK0RpbP8PsX2J0QczmQZKVA7i_qvobyNGt06YhXnKHKbkVDu70dGxYOAGlcmsQmHnFKE5exLcjfj1G6KdBWo15iy0LmcR6-HVlbCjOO2ZFgTJi_80P12AupdJ6fUXLP1I4s"
+      />
+    </div>
+    <div
+      class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-3xl"
+    ></div>
+    <div
+      class="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-indigo-400/20 rounded-full blur-2xl"
+    ></div>
+  </div>
+
+  <!-- Action Accordion with Stitch Design -->
+  <ui-accordion
+    [items]="items()"
+    class="action-accordion mb-10"
+    styleClass="flex flex-col gap-2"
+  >
+    @for(item of items(); track item.ref) {
+    <ng-template [accordionHeader]="item.ref">
+      <div class="flex items-center justify-between w-full pr-4">
+        <div class="flex items-center gap-4">
+          <div
+            class="w-12 h-12 rounded-xl flex items-center justify-center"
+            [ngClass]="item.bgClass + ' ' + item.colorClass"
+          >
+            <ui-icon [name]="item.icon" [size]="24" />
+          </div>
+          <div class="text-left">
+            <h3 class="font-bold text-slate-800">{{ item.label }}</h3>
+            <p class="text-sm font-medium">{{ item.description }}</p>
+          </div>
+        </div>
       </div>
     </ng-template>
 
-    } @for(item of items(); track item.ref) {
-
-    <ng-template [accordionPanel]="item.ref" let-item="item">
-      <div class="flex flex-column w-full h-full bg-lino-400">
-        @if(item.ref === 'product') {
-        <div class="flex flex-col w-full gap-2 py-4 pr-4 pl-[4.8rem]">
-          <p class="text-grey-700 text-sm">
-            Podés importar de un archivo personal o agregar uno a uno de forma
-            manual.
-          </p>
-          <ui-button
-            [fluid]="false"
-            routerLink="products"
-            label="Crear"
-            size="small"
-          />
-        </div>
-
-        } @if(item.ref === 'category') {
-        <div class="flex flex-col w-full gap-2 py-4 pr-4 pl-[4.8rem]">
-          <p class="text-grey-700 text-sm">
-            Organizá tus productos creando categorías para facilitar la
-            navegación y agrupar artículos relacionados.
-          </p>
-          <ui-button [fluid]="false" label="Crear" size="small" />
-        </div>
-
-        } @if(item.ref === 'coupon') {
-        <div class="flex flex-col w-full gap-2 py-4 pr-4 pl-[4.8rem]">
-          <p class="text-grey-700 text-sm">
-            Creá cupones y promociones para atraer clientes y aumentar las
-            ventas.
-          </p>
-          <div class="flex gap-2">
-            <ui-button [fluid]="false" label="Crear" size="small" />
-          </div>
-        </div>
-
-        }
+    <ng-template [accordionPanel]="item.ref">
+      <div class="flex flex-col w-full gap-3 py-4 pr-4 pl-[4.8rem]">
+        <p class="text-grey-700 text-sm">
+          @if(item.ref === 'product') { Podés importar de un archivo personal o
+          agregar uno a uno de forma manual. } @else if(item.ref === 'category')
+          { Organizá tus productos creando categorías para facilitar la
+          navegación y agrupar artículos relacionados. } @else if(item.ref ===
+          'order') { Registrá tus órdenes de forma manual para llevar un control
+          de tus ventas. }
+        </p>
+        <ui-button
+          [fluid]="false"
+          [routerLink]="item.ref === 'product' ? 'products' : (item.ref === 'category' ? 'categories' : (item.ref === 'order' ? 'orders' : null))"
+          label="Empezar"
+          size="small"
+          severity="primary"
+          styleClass="rounded-lg"
+        />
       </div>
     </ng-template>
     }

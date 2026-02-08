@@ -30,6 +30,7 @@ import {
   History,
   Home,
   LayoutGrid,
+  Lightbulb,
   List,
   Loader,
   LogOut,
@@ -52,6 +53,7 @@ import {
   ShoppingCart,
   SlidersHorizontal,
   Smartphone,
+  Sparkles,
   SquareArrowOutUpRight,
   Tag,
   TicketPercent,
@@ -126,6 +128,8 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Euro,
       Settings2,
       Loader,
+      Sparkles,
+      Lightbulb,
     })
   );
 };
