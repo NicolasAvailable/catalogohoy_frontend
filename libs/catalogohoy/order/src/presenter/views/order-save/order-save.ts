@@ -24,6 +24,8 @@ import {
   InputNumberComponent,
   InputTextComponent,
   SelectComponent,
+  SelectItemDirective,
+  SelectSelectedItemDirective,
   TextareaComponent,
 } from '@ui';
 import { Order, OrderItem, OrderStatus } from '../../../domain/order';
@@ -43,6 +45,8 @@ import { OrderStore } from '../../../infrastructure/order.store';
     IconComponent,
     InputNumberComponent,
     SelectComponent,
+    SelectItemDirective,
+    SelectSelectedItemDirective,
   ],
   templateUrl: './order-save.html',
   styleUrl: './order-save.css',

@@ -114,7 +114,61 @@
                   [ngModelOptions]="{ standalone: true }"
                   appendTo="body"
                   [selectId]="'product-' + $index"
-                />
+                >
+                  <ng-template selectSelectedItem let-selected>
+                    <div class="flex items-center gap-2">
+                      @if (selected.photos?.length) {
+                      <img
+                        [src]="selected.photos[0]"
+                        [alt]="selected.name"
+                        class="w-6 h-6 rounded object-cover"
+                      />
+                      } @else {
+                      <div
+                        class="w-6 h-6 rounded bg-grey-100 flex items-center justify-center"
+                      >
+                        <ui-icon
+                          name="package"
+                          size="14"
+                          styleClass="text-grey-300"
+                        />
+                      </div>
+                      }
+                      <span class="text-grey-800 font-medium truncate"
+                        >{{ selected.name }}</span
+                      >
+                    </div>
+                  </ng-template>
+                  <ng-template selectItem let-item>
+                    <div class="flex items-center gap-3 py-1">
+                      @if (item.photos?.length) {
+                      <img
+                        [src]="item.photos[0]"
+                        [alt]="item.name"
+                        class="w-8 h-8 rounded object-cover"
+                      />
+                      } @else {
+                      <div
+                        class="w-8 h-8 rounded bg-grey-100 flex items-center justify-center"
+                      >
+                        <ui-icon
+                          name="package"
+                          size="16"
+                          styleClass="text-grey-300"
+                        />
+                      </div>
+                      }
+                      <div class="flex flex-col">
+                        <span class="text-grey-800 font-medium"
+                          >{{ item.name }}</span
+                        >
+                        <span class="text-xs text-grey-400"
+                          >$ {{ item.price.toFixed(2) }}</span
+                        >
+                      </div>
+                    </div>
+                  </ng-template>
+                </ui-select>
               </div>
               <div class="flex flex-col gap-1">
                 <label

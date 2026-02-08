@@ -5,18 +5,17 @@ import {
   FormsModule,
   NG_VALUE_ACCESSOR,
 } from '@angular/forms';
-import { TranslatePipe } from '@shared/presenter';
 import { SelectModule } from 'primeng/select';
 
-@_.Directive({ selector: '[selectSelectedItem]' })
+@_.Directive({ selector: '[selectSelectedItem]', standalone: true })
 export class SelectSelectedItemDirective {}
 
-@_.Directive({ selector: '[selectItem]' })
+@_.Directive({ selector: '[selectItem]', standalone: true })
 export class SelectItemDirective {}
 
 @_.Component({
   selector: 'ui-select',
-  imports: [CommonModule, FormsModule, TranslatePipe, SelectModule],
+  imports: [CommonModule, FormsModule, SelectModule],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -37,7 +36,7 @@ export class SelectItemDirective {}
       [variant]="variant()"
       [attr.mode]="mode()"
       [virtualScroll]="true"
-      [virtualScrollItemSize]="30"
+      [virtualScrollItemSize]="38"
       [scrollHeight]="height()"
       [size]="size()"
       [fluid]="true"
@@ -47,21 +46,21 @@ export class SelectItemDirective {}
       [id]="selectId()"
       [panelStyleClass]="panelStyleClass()"
     >
-      @if(selectedItemTemplate) {
-        <ng-template #selectedItem let-selected>
-          <ng-container [ngTemplateOutlet]="selectedItemTemplate" [ngTemplateOutletContext]="{ $implicit: selected }"></ng-container>
-        </ng-template>
-      } @else {
-        <ng-template #selectedItem let-selected>{{ selected.label ?? selected | translate }}</ng-template>
-      }
+      <ng-template #selectedItem let-selected>
+        @if(selectedItemTemplate()) {
+          <ng-container [ngTemplateOutlet]="selectedItemTemplate()!" [ngTemplateOutletContext]="{ $implicit: selected }"></ng-container>
+        } @else {
+          {{ getOptionLabel(selected) }}
+        }
+      </ng-template>
 
-      @if(itemTemplate) {
-        <ng-template #item let-item>
-          <ng-container [ngTemplateOutlet]="itemTemplate" [ngTemplateOutletContext]="{ $implicit: item }"></ng-container>
-        </ng-template>
-      } @else {
-        <ng-template #item let-item> {{ item.label ?? item | translate }} </ng-template>
-      }
+      <ng-template #item let-item>
+        @if(itemTemplate()) {
+          <ng-container [ngTemplateOutlet]="itemTemplate()!" [ngTemplateOutletContext]="{ $implicit: item }"></ng-container>
+        } @else {
+          {{ getOptionLabel(item) }}
+        }
+      </ng-template>
     </p-select>
   `,
 })
@@ -77,22 +76,42 @@ export class SelectComponent<T>
   public readonly filter = _.input(false);
   public readonly variant = _.input<'filled' | 'outlined'>('outlined');
   public readonly mode = _.input<'text' | 'normal'>('normal');
-  public readonly size = _.input<'small' | 'large' | 'normal' | any>(undefined);
+  public readonly size = _.input<'small' | 'large' | undefined>(undefined);
   public readonly styleClass = _.input('');
   public readonly panelStyleClass = _.input('');
   public readonly appendTo = _.input('body');
   public readonly selectId = _.input('');
 
   @_.ContentChild(SelectSelectedItemDirective, { read: _.TemplateRef })
-  selectedItemTemplate?: _.TemplateRef<any>;
+  private _selectedItemTemplate?: _.TemplateRef<unknown>;
   @_.ContentChild(SelectItemDirective, { read: _.TemplateRef })
-  itemTemplate?: _.TemplateRef<any>;
+  private _itemTemplate?: _.TemplateRef<unknown>;
+
+  // Signals para los templates que se actualizan después de AfterContentInit
+  public readonly selectedItemTemplate =
+    _.signal<_.TemplateRef<unknown> | null>(null);
+  public readonly itemTemplate = _.signal<_.TemplateRef<unknown> | null>(null);
 
   public readonly value = _.signal<T | null>(null);
   public readonly disabled = _.signal(false);
 
   ngAfterContentInit() {
-    // Templates are automatically detected via @ContentChild
+    // Actualizar signals después de que los ContentChild sean detectados
+    if (this._selectedItemTemplate) {
+      this.selectedItemTemplate.set(this._selectedItemTemplate);
+    }
+    if (this._itemTemplate) {
+      this.itemTemplate.set(this._itemTemplate);
+    }
+  }
+
+  public getOptionLabel(item: T): string {
+    if (!item) return '';
+    const label = this.optionLabel();
+    if (label && typeof item === 'object' && item !== null) {
+      return ((item as Record<string, unknown>)[label] as string) ?? '';
+    }
+    return String(item);
   }
 
   private onChange: (value: T | null) => void = () => {
