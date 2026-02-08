@@ -23,7 +23,6 @@ import {
   IconComponent,
   InputNumberComponent,
   InputTextComponent,
-  RadioButtonComponent,
   SelectComponent,
   TextareaComponent,
 } from '@ui';
@@ -43,7 +42,6 @@ import { OrderStore } from '../../../infrastructure/order.store';
     ButtonComponent,
     IconComponent,
     InputNumberComponent,
-    RadioButtonComponent,
     SelectComponent,
   ],
   templateUrl: './order-save.html',

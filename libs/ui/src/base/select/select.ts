@@ -1,6 +1,10 @@
 import { CommonModule } from '@angular/common';
 import * as _ from '@angular/core';
-import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
+import {
+  ControlValueAccessor,
+  FormsModule,
+  NG_VALUE_ACCESSOR,
+} from '@angular/forms';
 import { TranslatePipe } from '@shared/presenter';
 import { SelectModule } from 'primeng/select';
 
@@ -40,7 +44,7 @@ export class SelectItemDirective {}
       [showClear]="clearable()"
       [styleClass]="styleClass()"
       [appendTo]="appendTo()"
-      [id]="id()"
+      [id]="selectId()"
       [panelStyleClass]="panelStyleClass()"
     >
       @if(selectedItemTemplate) {
@@ -61,7 +65,9 @@ export class SelectItemDirective {}
     </p-select>
   `,
 })
-export class SelectComponent<T> implements ControlValueAccessor, _.AfterContentInit {
+export class SelectComponent<T>
+  implements ControlValueAccessor, _.AfterContentInit
+{
   public readonly options = _.input<T[]>([]);
   public readonly placeholder = _.input('');
   public readonly optionLabel = _.input<string | undefined>(undefined);
@@ -75,10 +81,12 @@ export class SelectComponent<T> implements ControlValueAccessor, _.AfterContentI
   public readonly styleClass = _.input('');
   public readonly panelStyleClass = _.input('');
   public readonly appendTo = _.input('body');
-  public readonly id = _.input('');
+  public readonly selectId = _.input('');
 
-  @_.ContentChild(SelectSelectedItemDirective, { read: _.TemplateRef }) selectedItemTemplate?: _.TemplateRef<any>;
-  @_.ContentChild(SelectItemDirective, { read: _.TemplateRef }) itemTemplate?: _.TemplateRef<any>;
+  @_.ContentChild(SelectSelectedItemDirective, { read: _.TemplateRef })
+  selectedItemTemplate?: _.TemplateRef<any>;
+  @_.ContentChild(SelectItemDirective, { read: _.TemplateRef })
+  itemTemplate?: _.TemplateRef<any>;
 
   public readonly value = _.signal<T | null>(null);
   public readonly disabled = _.signal(false);

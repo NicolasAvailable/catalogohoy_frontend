@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, forwardRef, input } from '@angular/core';
+import { Component, forwardRef, input, signal } from '@angular/core';
 import {
   ControlValueAccessor,
   FormsModule,
@@ -19,7 +19,7 @@ import { RadioButtonModule } from 'primeng/radiobutton';
   ],
   template: `
     <p-radiobutton
-      [(ngModel)]="value"
+      [ngModel]="selectedValue()"
       (ngModelChange)="change($event)"
       [inputId]="inputId()"
       [name]="name()"
@@ -34,7 +34,10 @@ export class RadioButtonComponent implements ControlValueAccessor {
   public readonly optionValue = input<string | number | boolean | null>();
   public readonly disabled = input<boolean>(false);
 
-  public value: string | number | boolean | null = null;
+  // Usar signal para que el template reaccione a los cambios
+  public readonly selectedValue = signal<string | number | boolean | null>(
+    null
+  );
 
   private onChange: (value: string | number | boolean | null) => void = () => {
     /* This will be overridden by registerOnChange */
@@ -45,7 +48,8 @@ export class RadioButtonComponent implements ControlValueAccessor {
   };
 
   public writeValue(value: string | number | boolean | null): void {
-    this.value = value;
+    // Actualizar el signal con el valor del formulario
+    this.selectedValue.set(value);
   }
 
   public registerOnChange(
@@ -64,8 +68,8 @@ export class RadioButtonComponent implements ControlValueAccessor {
 
   public change(value: string | number | boolean | null) {
     if (this.disabled()) return;
-    this.value = value;
-    this.onChange(this.value);
+    this.selectedValue.set(value);
+    this.onChange(value);
     this.onTouched();
   }
 }

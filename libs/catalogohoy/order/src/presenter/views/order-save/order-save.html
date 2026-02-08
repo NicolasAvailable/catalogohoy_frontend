@@ -99,7 +99,11 @@
           >
             <div class="flex-1 grid grid-cols-4 gap-4">
               <div class="flex flex-col gap-1 col-span-2">
-                <label class="text-sm text-grey-100">Producto</label>
+                <label
+                  class="text-sm text-grey-100"
+                  [attr.for]="'product-' + $index"
+                  >Producto</label
+                >
                 <ui-select
                   [options]="productStore.productList().products"
                   optionLabel="name"
@@ -109,20 +113,26 @@
                   (ngModelChange)="onProductSelect($index, $event)"
                   [ngModelOptions]="{ standalone: true }"
                   appendTo="body"
+                  [selectId]="'product-' + $index"
                 />
               </div>
               <div class="flex flex-col gap-1">
-                <label class="text-sm text-grey-100">Cantidad</label>
+                <label
+                  class="text-sm text-grey-100"
+                  [attr.for]="'quantity-' + $index"
+                  >Cantidad</label
+                >
                 <ui-input-number
                   [ngModel]="product.quantity"
                   (ngModelChange)="onQuantityChange($index, $event)"
                   [ngModelOptions]="{ standalone: true }"
                   [min]="1"
                   [showButtons]="true"
+                  [inputId]="'quantity-' + $index"
                 />
               </div>
               <div class="flex flex-col gap-1">
-                <label class="text-sm text-grey-100">Subtotal</label>
+                <span class="text-sm text-grey-100">Subtotal</span>
                 <p class="text-lg font-semibold text-grey-800 pt-2">
                   $ {{ product.total.toFixed(2) }}
                 </p>
@@ -146,40 +156,64 @@
     <ui-card>
       <div class="flex flex-col gap-4">
         <h2 class="text-xl font-bold">Estado de la orden</h2>
-        <div class="flex gap-4">
+        <div
+          class="flex gap-4"
+          role="radiogroup"
+          aria-label="Estado de la orden"
+        >
           <div
+            role="radio"
+            tabindex="0"
+            [attr.aria-checked]="form.get('status')?.value === 'pending'"
+            (click)="form.get('status')?.setValue('pending')"
+            (keydown.enter)="form.get('status')?.setValue('pending')"
+            (keydown.space)="form.get('status')?.setValue('pending'); $event.preventDefault()"
             [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer flex-1 ' + 
               (form.get('status')?.value === 'pending' 
                 ? 'border-orange-500 bg-orange-50/30' 
                 : 'border-grey-200 hover:border-orange-300')"
           >
-            <ui-radio-button
-              formControlName="status"
-              inputId="status-pending"
-              name="status"
-              optionValue="pending"
-            />
-            <label for="status-pending" class="cursor-pointer flex-1">
+            <div
+              [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ' +
+                (form.get('status')?.value === 'pending'
+                  ? 'border-primary-500'
+                  : 'border-grey-300')"
+            >
+              @if (form.get('status')?.value === 'pending') {
+              <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
+              }
+            </div>
+            <div class="flex-1">
               <span class="font-medium">Pendiente</span>
               <p class="text-sm text-grey-300">La orden está en proceso</p>
-            </label>
+            </div>
           </div>
           <div
+            role="radio"
+            tabindex="0"
+            [attr.aria-checked]="form.get('status')?.value === 'completed'"
+            (click)="form.get('status')?.setValue('completed')"
+            (keydown.enter)="form.get('status')?.setValue('completed')"
+            (keydown.space)="form.get('status')?.setValue('completed'); $event.preventDefault()"
             [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer flex-1 ' + 
               (form.get('status')?.value === 'completed' 
                 ? 'border-green-500 bg-green-50/30' 
                 : 'border-grey-200 hover:border-green-300')"
           >
-            <ui-radio-button
-              formControlName="status"
-              inputId="status-completed"
-              name="status"
-              optionValue="completed"
-            />
-            <label for="status-completed" class="cursor-pointer flex-1">
+            <div
+              [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ' +
+                (form.get('status')?.value === 'completed'
+                  ? 'border-primary-500'
+                  : 'border-grey-300')"
+            >
+              @if (form.get('status')?.value === 'completed') {
+              <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
+              }
+            </div>
+            <div class="flex-1">
               <span class="font-medium">Completada</span>
               <p class="text-sm text-grey-300">La orden ha sido entregada</p>
-            </label>
+            </div>
           </div>
         </div>
       </div>

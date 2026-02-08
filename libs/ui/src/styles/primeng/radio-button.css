@@ -1,3 +1,9 @@
 .p-radiobutton .p-radiobutton-box {
   border-width: 0.125rem !important;
 }
+
+.p-radiobutton.p-radiobutton-checked .p-radiobutton-box .p-radiobutton-icon {
+  transform: translateZ(0) scale(0.8) !important;
+  margin-bottom: 0.036rem;
+  margin-left: 0.063rem;
+}
