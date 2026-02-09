@@ -107,4 +107,11 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.right(undefined);
     }
   }
+  public async logout(): Promise<E.Either<Error, void>> {
+    const { error } = await this.client.auth.signOut();
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+    return E.right(undefined);
+  }
 }

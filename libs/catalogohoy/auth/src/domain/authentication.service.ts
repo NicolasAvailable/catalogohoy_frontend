@@ -15,4 +15,5 @@ export interface BaseAuthenticationService {
   resetPassword(
     input: ResetPasswordCredentials
   ): Promise<E.Either<Error, void>>;
+  logout(): Promise<E.Either<Error, void>>;
 }

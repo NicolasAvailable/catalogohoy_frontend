@@ -1,11 +1,18 @@
 import { NgClass } from '@angular/common';
 import { Component, inject, input, output } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { IconComponent, PanelMenuComponent, PanelMenuItem } from '@ui';
+import { AuthenticationService } from '@catalogohoy/auth';
+import {
+  ConfirmDialogService,
+  IconComponent,
+  PanelMenuComponent,
+  PanelMenuItem,
+} from '@ui';
 import { CATALOG_MENU, PRODUCTS_MENU } from './sidebar.constants';
 
 @Component({
   selector: 'app-sidebar',
+  standalone: true,
   imports: [
     RouterLink,
     RouterLinkActive,
@@ -20,6 +27,8 @@ export class Sidebar {
   public closeSidebar = output<void>();
 
   private router = inject(Router);
+  private authService = inject(AuthenticationService);
+  private confirmService = inject(ConfirmDialogService);
 
   public readonly transitionOptions = '200ms cubic-bezier(0.86, 0, 0.07, 1)';
   public readonly productsMenu: PanelMenuItem[] = PRODUCTS_MENU;
@@ -46,8 +55,25 @@ export class Sidebar {
       });
     }
     if (item.items) {
-      return item.items.some((child) => this.isActive(child));
+      return item.items.some((child: PanelMenuItem) => this.isActive(child));
     }
     return false;
+  }
+
+  public logout() {
+    this.confirmService
+      .warning({
+        headerLabel: '¿Cerrar sesión?',
+        contentLabel: '¿Estás seguro que deseas cerrar sesión?',
+        acceptLabel: 'Cerrar sesión',
+        rejectLabel: 'Cancelar',
+      })
+      .subscribe((result) => {
+        if (result.isRight()) {
+          this.authService.logout().then(() => {
+            window.location.href = 'https://auth.catalogohoy.com';
+          });
+        }
+      });
   }
 }
