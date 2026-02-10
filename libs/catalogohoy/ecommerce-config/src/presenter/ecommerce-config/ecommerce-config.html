@@ -1,0 +1,188 @@
+<div class="ecommerce-config-wrapper">
+  <div class="header-section">
+    <h1 class="page-title">Configuración de la Tienda</h1>
+    <p class="page-description">
+      Gestiona la identidad visual y el comportamiento de tu catálogo online.
+    </p>
+  </div>
+
+  <div class="config-grid">
+    <!-- Columna Principal: Identidad -->
+    <div class="main-column">
+      <ui-card header="Identidad de la Marca" styleClass="config-card">
+        <div class="card-content">
+          <!-- Sección: Nombre -->
+          <div class="form-field">
+            <label for="shop-name">Nombre Comercial</label>
+            <ui-input-text
+              inputId="shop-name"
+              [ngModel]="configStore.config()?.name"
+              (ngModelChange)="onNameChange($event)"
+              placeholder="Ej: Mi Tienda Increíble"
+              [disabled]="configStore.isSaving()"
+              styleClass="w-full"
+            ></ui-input-text>
+            <small class="field-hint"
+              >Este nombre se usará en el título de la página y
+              comunicaciones.</small
+            >
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Sección: WhatsApp y Descripción -->
+          <div class="social-description-section">
+            <div class="form-field">
+              <label for="shop-whatsapp">WhatsApp de Pedidos</label>
+              <ui-input-text
+                inputId="shop-whatsapp"
+                [ngModel]="configStore.config()?.whatsapp"
+                (ngModelChange)="onGenericChange({ whatsapp: $event })"
+                placeholder="Ej: +584124807708"
+                [disabled]="configStore.isSaving()"
+                styleClass="w-full"
+              ></ui-input-text>
+              <small class="field-hint"
+                >Este número recibirá los pedidos de tus clientes.</small
+              >
+            </div>
+
+            <div class="form-field">
+              <label for="shop-description">Descripción del Catálogo</label>
+              <ui-textarea
+                textareaId="shop-description"
+                [ngModel]="configStore.config()?.description"
+                (ngModelChange)="onGenericChange({ description: $event })"
+                placeholder="Cuenta un poco sobre tu tienda..."
+                [disabled]="configStore.isSaving()"
+                [rows]="3"
+                styleClass="w-full"
+              ></ui-textarea>
+              <small class="field-hint"
+                >Aparecerá como resumen al compartir tu enlace.</small
+              >
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Sección: Logo -->
+          <ui-uploader
+            (valueChange)="onUrlChange($event)"
+            [disabled]="configStore.isSaving()"
+          >
+            <ng-template #picker let-pick="pick">
+              <div class="logo-section">
+                <div class="avatar-wrapper" (click)="pick()">
+                  <div class="logo-avatar-container">
+                    @if (configStore.config()?.logo) {
+                    <img
+                      [src]="configStore.config()?.logo"
+                      [alt]="configStore.config()?.name"
+                    />
+                    } @else {
+                    <div class="logo-placeholder">
+                      {{ (configStore.config()?.name || 'T').substring(0,
+                      1).toUpperCase() }}
+                    </div>
+                    }
+                  </div>
+                  <div class="badge-upload">
+                    <ui-icon name="camera" styleClass="size-4"></ui-icon>
+                  </div>
+                </div>
+
+                <div class="logo-info">
+                  <h3>Logo del E-commerce</h3>
+                  <p>
+                    Este logo aparecerá en la cabecera de tu catálogo y en los
+                    compartidos por WhatsApp.
+                  </p>
+
+                  <ui-button
+                    label="Subir Nueva Imagen"
+                    [variant]="'outlined'"
+                    severity="secondary"
+                    size="small"
+                    (click)="pick()"
+                    [isLoading]="configStore.isSaving()"
+                    icon="upload"
+                    [fluid]="false"
+                  >
+                  </ui-button>
+                </div>
+              </div>
+            </ng-template>
+          </ui-uploader>
+        </div>
+      </ui-card>
+    </div>
+
+    <!-- Columna Lateral: Configuración -->
+    <div class="side-column">
+      <ui-card header="Comportamiento" styleClass="config-card">
+        <div class="card-content">
+          <!-- Visibilidad -->
+          <div class="action-toggle">
+            <div class="toggle-info">
+              <label>Catálogo Público</label>
+              <p>Hacer que tu catálogo sea accesible para todos.</p>
+            </div>
+            <ui-toggle
+              [ngModel]="configStore.config()?.isVisible"
+              (ngModelChange)="onGenericChange({ isVisible: $event })"
+              [disabled]="configStore.isSaving()"
+            ></ui-toggle>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Ventas -->
+          <div
+            class="status-box"
+            [class.active]="configStore.config()?.isAcceptingOrders"
+          >
+            <div class="status-icon">
+              <ui-icon name="shopping-bag"></ui-icon>
+            </div>
+            <div class="status-text">
+              <strong
+                >Ventas {{ configStore.config()?.isAcceptingOrders ? 'Activas' :
+                'Pausadas' }}</strong
+              >
+              <span
+                >{{ configStore.config()?.isAcceptingOrders ? 'Tus clientes
+                pueden pagar' : 'Botón de pago oculto' }}</span
+              >
+            </div>
+          </div>
+
+          <div class="action-toggle">
+            <div class="toggle-info">
+              <label>Botón "Ir a pagar"</label>
+              <p>
+                Habilita la opción de finalizar compra y enviar pedido por
+                WhatsApp.
+              </p>
+            </div>
+            <ui-toggle
+              [ngModel]="configStore.config()?.isAcceptingOrders"
+              (ngModelChange)="onToggleOrders($event)"
+              [disabled]="configStore.isSaving()"
+            ></ui-toggle>
+          </div>
+        </div>
+      </ui-card>
+
+      @if(configStore.error()) {
+      <div class="error-alert">
+        <ui-icon name="alert-triangle" styleClass="size-5"></ui-icon>
+        <div class="alert-content">
+          <strong>Error al guardar</strong>
+          <span>{{ configStore.error() }}</span>
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+</div>

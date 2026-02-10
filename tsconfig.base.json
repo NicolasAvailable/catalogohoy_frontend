@@ -30,7 +30,10 @@
       "@catalogohoy/product": ["libs/catalogohoy/product/src/index.ts"],
       "@catalogohoy/category": ["libs/catalogohoy/category/src/index.ts"],
       "@catalogohoy/order": ["libs/catalogohoy/order/src/index.ts"],
-      "@catalogohoy/rate": ["libs/catalogohoy/rate/src/index.ts"]
+      "@catalogohoy/rate": ["libs/catalogohoy/rate/src/index.ts"],
+      "@catalogohoy/ecommerce-config": [
+        "libs/catalogohoy/ecommerce-config/src/index.ts"
+      ]
     }
   },
   "exclude": ["node_modules", "tmp"]

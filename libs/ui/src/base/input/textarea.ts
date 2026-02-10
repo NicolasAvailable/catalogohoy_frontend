@@ -1,5 +1,12 @@
 import { NgClass } from '@angular/common';
-import { Component, forwardRef, Injector, input, signal } from '@angular/core';
+import {
+  Component,
+  forwardRef,
+  Injector,
+  input,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { FormsModule, NG_VALUE_ACCESSOR, NgControl } from '@angular/forms';
 import { TextareaModule } from 'primeng/textarea';
 
@@ -34,7 +41,7 @@ import { TextareaModule } from 'primeng/textarea';
     ></textarea>
   `,
 })
-export class TextareaComponent {
+export class TextareaComponent implements OnInit {
   public readonly rows = input<number | 'auto'>('auto');
   public readonly cols = input<number>(30);
   public readonly autoResize = input(false);
@@ -75,7 +82,7 @@ export class TextareaComponent {
     this.onTouched = fn;
   }
 
-  public setDisabled(isDisabled: boolean): void {
+  public setDisabledState(isDisabled: boolean): void {
     this.disabled.set(isDisabled);
   }
 

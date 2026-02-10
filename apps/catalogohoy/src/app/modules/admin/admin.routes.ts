@@ -28,4 +28,11 @@ export const adminRoutes: Route[] = [
     path: 'exchange-rates',
     loadChildren: () => import('@catalogohoy/rate').then((m) => m.RATE_ROUTES),
   },
+  {
+    path: 'catalog',
+    loadChildren: () =>
+      import('@catalogohoy/ecommerce-config').then(
+        (m) => m.ecommerceConfigRoutes
+      ),
+  },
 ];

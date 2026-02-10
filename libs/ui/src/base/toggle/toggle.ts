@@ -1,11 +1,15 @@
-import { Component, forwardRef, input, linkedSignal, output, signal } from '@angular/core';
-import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { Component, forwardRef, input, output, signal } from '@angular/core';
+import {
+  ControlValueAccessor,
+  FormsModule,
+  NG_VALUE_ACCESSOR,
+} from '@angular/forms';
 import { has } from '@shared/domain';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { ToggleSwitch } from 'primeng/toggleswitch';
 
 @Component({
   selector: 'ui-toggle',
-  imports: [FormsModule, ToggleSwitchModule],
+  imports: [FormsModule, ToggleSwitch],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -17,15 +21,20 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
     <p-toggleswitch
       (ngModelChange)="change($event)"
       [ngModel]="value()"
-      [attr.size]="size()"
       [disabled]="disabled()"
       [styleClass]="styleClass()"
       [inputId]="toggleId()"
     />
   `,
+  styles: [
+    `
+      :host {
+        display: inline-flex;
+      }
+    `,
+  ],
 })
 export class ToggleComponent implements ControlValueAccessor {
-  public readonly size = input<'small' | 'large' | undefined>(undefined);
   public readonly styleClass = input('');
   public readonly toggleId = input<string>('');
   public readonly defaultDisabled = input<boolean>(false);
@@ -34,7 +43,7 @@ export class ToggleComponent implements ControlValueAccessor {
   public readonly disable = output<void>();
 
   public readonly value = signal(false);
-  public readonly disabled = linkedSignal(() => this.defaultDisabled());
+  public readonly disabled = signal(false);
 
   private onChange: (value: boolean) => void = () => {
     /* This will be overridden by registerOnChange */
@@ -45,7 +54,7 @@ export class ToggleComponent implements ControlValueAccessor {
   };
 
   public writeValue(value: boolean): void {
-    this.value.set(value);
+    this.value.set(!!value);
   }
 
   public registerOnChange(fn: (value: boolean) => void): void {
@@ -56,7 +65,7 @@ export class ToggleComponent implements ControlValueAccessor {
     this.onTouched = fn;
   }
 
-  public setDisabled(isDisabled: boolean): void {
+  public setDisabledState(isDisabled: boolean): void {
     this.disabled.set(isDisabled);
   }
 

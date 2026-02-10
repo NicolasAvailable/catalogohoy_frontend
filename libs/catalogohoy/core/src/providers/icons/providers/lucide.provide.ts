@@ -9,6 +9,7 @@ import {
   BarChart3,
   BookImage,
   Building,
+  Camera,
   Check,
   CheckCircle,
   ChevronDown,
@@ -50,6 +51,7 @@ import {
   Settings2,
   Share2,
   ShoppingBag,
+  ShoppingBagIcon,
   ShoppingCart,
   SlidersHorizontal,
   Smartphone,
@@ -60,6 +62,7 @@ import {
   Trash,
   TrendingDown,
   TrendingUp,
+  Upload,
   Wallet,
   X,
   Zap,
@@ -130,6 +133,9 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Loader,
       Sparkles,
       Lightbulb,
+      Upload,
+      Camera,
+      ShoppingBagIcon,
     })
   );
 };
