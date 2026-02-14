@@ -40,8 +40,8 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly tenantStore = inject(TenantStore);
   public readonly configStore = inject(EcommerceConfigStore);
 
-  ngOnInit() {
-    const tenantId = this.tenantStore.tenantId();
+  async ngOnInit() {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
     if (tenantId) {
       this.configStore.loadConfig(String(tenantId));
     }
