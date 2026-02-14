@@ -74,15 +74,23 @@ export class EcommerceConfigService {
         updateData['currency_symbol'] = config.currencySymbol;
 
       if (Object.keys(updateData).length > 0) {
-        const { error: configError } = await this.client
+        const tenantIdNum = Number(config.tenantId);
+
+        // Verificar si ya existe el registro
+        const { data: existing } = await this.client
           .from('tenant_ecommerce_config')
-          .upsert(
-            {
-              tenant_id: Number(config.tenantId),
-              ...updateData,
-            },
-            { onConflict: 'tenant_id' }
-          );
+          .select('id')
+          .eq('tenant_id', tenantIdNum)
+          .maybeSingle();
+
+        const { error: configError } = existing
+          ? await this.client
+              .from('tenant_ecommerce_config')
+              .update(updateData)
+              .eq('tenant_id', tenantIdNum)
+          : await this.client
+              .from('tenant_ecommerce_config')
+              .insert({ tenant_id: tenantIdNum, ...updateData });
 
         if (configError) return E.left(configError);
       }
