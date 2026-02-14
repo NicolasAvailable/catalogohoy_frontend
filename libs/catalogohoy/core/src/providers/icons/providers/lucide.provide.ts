@@ -35,6 +35,7 @@ import {
   Lightbulb,
   List,
   Loader,
+  LoaderCircle,
   LogOut,
   LucideAngularModule,
   Menu,
@@ -48,6 +49,7 @@ import {
   Plus,
   QrCode,
   RefreshCw,
+  Save,
   Search,
   Settings2,
   Share2,
@@ -138,6 +140,8 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Camera,
       ShoppingBagIcon,
       AlertTriangle,
+      LoaderCircle,
+      Save,
     })
   );
 };
