@@ -32,8 +32,8 @@ export const colorScheme = {
       background: 'var(--color-grey-100)',
       disabledBackground: 'var(--color-grey-50)',
       hoverBackground: 'var(--color-grey-100)',
-      checkedBackground: '{secondary.color}',
-      checkedHoverBackground: '{secondary.hover.color}',
+      checkedBackground: 'var(--color-primary-500)',
+      checkedHoverBackground: 'var(--color-primary-500)',
     },
     handle: {
       background: 'var(--color-white-500)',
