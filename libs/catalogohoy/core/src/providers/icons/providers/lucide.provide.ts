@@ -1,5 +1,6 @@
 import { EnvironmentProviders, importProvidersFrom } from '@angular/core';
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowDownToLine,
   ArrowLeft,
@@ -136,6 +137,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Upload,
       Camera,
       ShoppingBagIcon,
+      AlertTriangle,
     })
   );
 };
