@@ -1,12 +1,28 @@
+:host {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+}
+
+.ecommerce-config-wrapper,
+.ecommerce-config-wrapper * {
+  box-sizing: border-box;
+}
+
 .ecommerce-config-wrapper {
   padding: 2.5rem;
   max-width: 1200px;
   margin: 0 auto;
   font-family: var(--font-family, 'Inter', sans-serif);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .header-section {
   margin-bottom: 2.5rem;
+  flex-shrink: 0;
 }
 
 .page-title {
@@ -27,6 +43,41 @@
   display: grid;
   grid-template-columns: 1fr 340px;
   gap: 2rem;
+  flex: 1;
+  overflow: hidden;
+  align-items: start;
+}
+
+.main-column,
+.side-column {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.main-column::-webkit-scrollbar,
+.side-column::-webkit-scrollbar {
+  width: 8px;
+}
+
+.main-column::-webkit-scrollbar-track,
+.side-column::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.main-column::-webkit-scrollbar-thumb,
+.side-column::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.main-column::-webkit-scrollbar-thumb:hover,
+.side-column::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .config-card {
@@ -46,11 +97,20 @@
   gap: 2rem;
 }
 
-/* Logo Section Refined */
+/* Logo Section Refined - Horizontal (deprecated) */
 .logo-section {
   display: flex;
   align-items: center;
   gap: 2.5rem;
+  padding: 1rem 0;
+}
+
+/* Logo Section Vertical (side column) */
+.logo-section-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
   padding: 1rem 0;
 }
 
@@ -59,6 +119,14 @@
   width: 120px;
   height: 120px;
   flex-shrink: 0;
+}
+
+.avatar-wrapper-vertical {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+  cursor: pointer;
 }
 
 .logo-avatar-container {
@@ -122,6 +190,22 @@
   margin: 0.5rem 0 1.25rem;
   line-height: 1.5;
   max-width: 300px;
+}
+
+.logo-info-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  gap: 1rem;
+}
+
+.logo-info-vertical p {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+  margin: 0;
+  line-height: 1.5;
 }
 
 /* Forms */

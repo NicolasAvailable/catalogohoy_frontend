@@ -63,80 +63,11 @@
               >
             </div>
           </div>
-
-          <div class="divider"></div>
-
-          <!-- Sección: Logo -->
-          <ui-uploader
-            (valueChange)="onUrlChange($event)"
-            [disabled]="configStore.isSaving()"
-          >
-            <ng-template #picker let-pick="pick">
-              <div class="logo-section">
-                <div class="avatar-wrapper" (click)="pick()">
-                  <div class="logo-avatar-container">
-                    @if (configStore.config()?.logo) {
-                    <img
-                      [src]="configStore.config()?.logo"
-                      [alt]="configStore.config()?.name"
-                    />
-                    } @else {
-                    <div class="logo-placeholder">
-                      {{ (configStore.config()?.name || 'T').substring(0,
-                      1).toUpperCase() }}
-                    </div>
-                    }
-                  </div>
-                  <div class="badge-upload">
-                    <ui-icon name="camera" styleClass="size-4"></ui-icon>
-                  </div>
-                </div>
-
-                <div class="logo-info">
-                  <h3>Logo del E-commerce</h3>
-                  <p>
-                    Este logo aparecerá en la cabecera de tu catálogo y en los
-                    compartidos por WhatsApp.
-                  </p>
-
-                  <ui-button
-                    label="Subir Nueva Imagen"
-                    [variant]="'outlined'"
-                    severity="secondary"
-                    size="small"
-                    (click)="pick()"
-                    [isLoading]="configStore.isSaving()"
-                    icon="upload"
-                    [fluid]="false"
-                  >
-                  </ui-button>
-                </div>
-              </div>
-            </ng-template>
-          </ui-uploader>
         </div>
       </ui-card>
-    </div>
 
-    <!-- Columna Lateral: Configuración -->
-    <div class="side-column">
       <ui-card header="Comportamiento" styleClass="config-card">
         <div class="card-content">
-          <!-- Visibilidad -->
-          <div class="action-toggle">
-            <div class="toggle-info">
-              <label>Catálogo Público</label>
-              <p>Hacer que tu catálogo sea accesible para todos.</p>
-            </div>
-            <ui-toggle
-              [ngModel]="configStore.config()?.isVisible"
-              (ngModelChange)="onGenericChange({ isVisible: $event })"
-              [disabled]="configStore.isSaving()"
-            ></ui-toggle>
-          </div>
-
-          <div class="divider"></div>
-
           <!-- Ventas -->
           <div
             class="status-box"
@@ -171,6 +102,61 @@
               [disabled]="configStore.isSaving()"
             ></ui-toggle>
           </div>
+        </div>
+      </ui-card>
+    </div>
+
+    <!-- Columna Lateral: Configuración -->
+    <div class="side-column">
+      <!-- Sección: Logo del Catálogo -->
+      <ui-card header="Logo del Catálogo" styleClass="config-card">
+        <div class="card-content">
+          <ui-uploader
+            (valueChange)="onUrlChange($event)"
+            [disabled]="configStore.isSaving()"
+          >
+            <ng-template #picker let-pick="pick">
+              <div class="logo-section-vertical">
+                <div class="avatar-wrapper-vertical" (click)="pick()">
+                  <div class="logo-avatar-container">
+                    @if (configStore.config()?.logo) {
+                    <img
+                      [src]="configStore.config()?.logo"
+                      [alt]="configStore.config()?.name"
+                    />
+                    } @else {
+                    <div class="logo-placeholder">
+                      {{ (configStore.config()?.name || 'T').substring(0,
+                      1).toUpperCase() }}
+                    </div>
+                    }
+                  </div>
+                  <div class="badge-upload">
+                    <ui-icon name="camera" styleClass="size-4"></ui-icon>
+                  </div>
+                </div>
+
+                <div class="logo-info-vertical">
+                  <p>
+                    Este logo aparecerá en la cabecera de tu catálogo y en los
+                    compartidos por WhatsApp.
+                  </p>
+
+                  <ui-button
+                    label="Subir Nueva Imagen"
+                    [variant]="'outlined'"
+                    severity="secondary"
+                    size="small"
+                    (click)="pick()"
+                    [isLoading]="configStore.isSaving()"
+                    icon="upload"
+                    [fluid]="true"
+                  >
+                  </ui-button>
+                </div>
+              </div>
+            </ng-template>
+          </ui-uploader>
         </div>
       </ui-card>
 

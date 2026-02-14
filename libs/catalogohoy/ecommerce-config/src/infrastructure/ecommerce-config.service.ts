@@ -22,7 +22,7 @@ export class EcommerceConfigService {
       const { data: config } = await this.client
         .from('tenant_ecommerce_config')
         .select(
-          'logo, banner, whatsapp, description, is_accepting_orders, is_visible, currency, currency_sym'
+          'logo, banner, whatsapp, description, is_accepting_orders, is_visible, currency, currency_symbol'
         )
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -37,7 +37,7 @@ export class EcommerceConfigService {
         isAcceptingOrders: config?.is_accepting_orders ?? true,
         isVisible: config?.is_visible ?? true,
         currency: config?.currency ?? 'USD',
-        currencySymbol: config?.currency_sym ?? '$',
+        currencySymbol: config?.currency_symbol ?? '$',
       });
     } catch (error) {
       return E.left(error as Error);
@@ -71,7 +71,7 @@ export class EcommerceConfigService {
       if (config.currency !== undefined)
         updateData['currency'] = config.currency;
       if (config.currencySymbol !== undefined)
-        updateData['currency_sym'] = config.currencySymbol;
+        updateData['currency_symbol'] = config.currencySymbol;
 
       if (Object.keys(updateData).length > 0) {
         const { error: configError } = await this.client
