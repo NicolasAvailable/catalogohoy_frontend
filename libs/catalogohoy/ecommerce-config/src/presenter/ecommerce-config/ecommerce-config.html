@@ -16,8 +16,8 @@
             <label for="shop-name">Nombre Comercial</label>
             <ui-input-text
               inputId="shop-name"
-              [ngModel]="configStore.config()?.name"
-              (ngModelChange)="onNameChange($event)"
+              [ngModel]="draftName()"
+              (ngModelChange)="draftName.set($event)"
               placeholder="Ej: Mi Tienda Increíble"
               [disabled]="configStore.isSaving()"
               styleClass="w-full"
@@ -36,8 +36,8 @@
               <label for="shop-whatsapp">WhatsApp de Pedidos</label>
               <ui-input-text
                 inputId="shop-whatsapp"
-                [ngModel]="configStore.config()?.whatsapp"
-                (ngModelChange)="onGenericChange({ whatsapp: $event })"
+                [ngModel]="draftWhatsapp()"
+                (ngModelChange)="draftWhatsapp.set($event)"
                 placeholder="Ej: +584124807708"
                 [disabled]="configStore.isSaving()"
                 styleClass="w-full"
@@ -51,8 +51,8 @@
               <label for="shop-description">Descripción del Catálogo</label>
               <ui-textarea
                 textareaId="shop-description"
-                [ngModel]="configStore.config()?.description"
-                (ngModelChange)="onGenericChange({ description: $event })"
+                [ngModel]="draftDescription()"
+                (ngModelChange)="draftDescription.set($event)"
                 placeholder="Cuenta un poco sobre tu tienda..."
                 [disabled]="configStore.isSaving()"
                 [rows]="3"
@@ -62,6 +62,18 @@
                 >Aparecerá como resumen al compartir tu enlace.</small
               >
             </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="save-section">
+            <ui-button
+              label="Guardar cambios"
+              (click)="saveIdentity()"
+              [isLoading]="configStore.isSaving()"
+              icon="save"
+              [fluid]="true"
+            ></ui-button>
           </div>
         </div>
       </ui-card>

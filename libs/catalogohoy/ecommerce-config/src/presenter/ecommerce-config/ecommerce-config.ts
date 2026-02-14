@@ -3,7 +3,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   OnInit,
+  effect,
   inject,
+  signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TenantStore } from '@catalogohoy/tenant';
@@ -16,7 +18,6 @@ import {
   ToggleComponent,
   UploaderComponent,
 } from '@ui';
-import { EcommerceConfig } from '../../domain';
 import { EcommerceConfigStore } from '../../infrastructure';
 
 @Component({
@@ -40,6 +41,23 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly tenantStore = inject(TenantStore);
   public readonly configStore = inject(EcommerceConfigStore);
 
+  // Estado local para el formulario de identidad
+  public readonly draftName = signal('');
+  public readonly draftWhatsapp = signal('');
+  public readonly draftDescription = signal('');
+
+  constructor() {
+    // Sincronizar estado local cuando se carga la config del servidor
+    effect(() => {
+      const config = this.configStore.config();
+      if (config) {
+        this.draftName.set(config.name ?? '');
+        this.draftWhatsapp.set(config.whatsapp ?? '');
+        this.draftDescription.set(config.description ?? '');
+      }
+    });
+  }
+
   async ngOnInit() {
     const tenantId = await this.tenantStore.getTenantIdAsync();
     if (tenantId) {
@@ -47,12 +65,12 @@ export class EcommerceConfigComponent implements OnInit {
     }
   }
 
-  onNameChange(name: string) {
-    this.configStore.updateName(name);
-  }
-
-  onGenericChange(partial: Partial<EcommerceConfig>) {
-    this.configStore.updatePartialConfig(partial);
+  async saveIdentity() {
+    await this.configStore.updatePartialConfig({
+      name: this.draftName(),
+      whatsapp: this.draftWhatsapp(),
+      description: this.draftDescription(),
+    });
   }
 
   onToggleOrders(enabled: boolean) {
