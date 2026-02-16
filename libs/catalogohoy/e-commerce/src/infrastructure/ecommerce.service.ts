@@ -212,6 +212,27 @@ export class EcommerceService implements BaseEcommerceService {
     );
   }
 
+  private async getExchangeRate(): Promise<number> {
+    const { data, error } = await this.client
+      .from('exchange_rates')
+      .select('bcv_usd, bcv_eur, custom_rate, active_rate')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      return 0;
+    }
+
+    const rateMap: Record<string, number> = {
+      bcv_usd: data.bcv_usd ?? 0,
+      bcv_eur: data.bcv_eur ?? 0,
+      custom: data.custom_rate ?? 0,
+    };
+
+    return rateMap[data.active_rate] ?? 0;
+  }
+
   public async createOrder(order: {
     tenant_id: number;
     name: string;
@@ -220,12 +241,17 @@ export class EcommerceService implements BaseEcommerceService {
     phone: string;
     comments: string;
   }): Promise<E.Either<Error, void>> {
+    // Obtener la tasa de cambio activa del tenant
+    const exchangeRate = await this.getExchangeRate();
+    const totalBs = order.total_usd * exchangeRate;
+
     const { error } = await this.client.from('orders').insert([
       {
         tenant_id: order.tenant_id,
         name: order.name,
         products: order.products,
         total_usd: order.total_usd,
+        total_bs: totalBs,
         phone: order.phone,
         comments: order.comments,
         status: 'pending',

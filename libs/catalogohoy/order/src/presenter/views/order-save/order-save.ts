@@ -1,6 +1,8 @@
+import { DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   input,
   OnInit,
@@ -14,6 +16,7 @@ import {
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ProductStore } from '@catalogohoy/product';
+import { RateStore, RateType } from '@catalogohoy/rate';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { whiteSpacesValidator } from '@shared/presenter';
@@ -35,6 +38,7 @@ import { OrderStore } from '../../../infrastructure/order.store';
   selector: 'lib-order-save',
   standalone: true,
   imports: [
+    DecimalPipe,
     ReactiveFormsModule,
     FormsModule,
     RouterLink,
@@ -57,6 +61,7 @@ export default class OrderSave implements OnInit {
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
   public readonly productStore = inject(ProductStore);
+  public readonly rateStore = inject(RateStore);
 
   public readonly form = inject(FormBuilder).group({
     name: ['', [Validators.required, whiteSpacesValidator()]],
@@ -69,10 +74,41 @@ export default class OrderSave implements OnInit {
   public readonly products = signal<OrderItem[]>([]);
   public readonly isCreate = signal<boolean>(true);
   public readonly isSubmitting = signal<boolean>(false);
+  public readonly totalBs = signal<number>(0);
+  public readonly selectedRateType = signal<RateType>('bcv_usd');
+
+  public readonly exchangeRate = computed(() => {
+    const rate = this.rateStore.rate();
+    if (!rate) return 0;
+    const rateMap: Record<string, number> = {
+      bcv_usd: rate.bcv_usd ?? 0,
+      bcv_eur: rate.bcv_eur ?? 0,
+      custom: rate.custom_rate ?? 0,
+    };
+    return rateMap[this.selectedRateType()] ?? 0;
+  });
+
+  public readonly rateOptions: {
+    label: string;
+    value: RateType;
+    icon: string;
+  }[] = [
+    { label: 'Dólar BCV', value: 'bcv_usd', icon: 'dollar-sign' },
+    { label: 'Euro BCV', value: 'bcv_eur', icon: 'euro' },
+    { label: 'Personalizada', value: 'custom', icon: 'settings-2' },
+  ];
 
   ngOnInit(): void {
     // Cargar productos disponibles
     this.productStore.productList$();
+
+    // Cargar tasas de cambio
+    this.rateStore.loadRates().then(() => {
+      const rate = this.rateStore.rate();
+      if (rate) {
+        this.selectedRateType.set(rate.active_rate);
+      }
+    });
 
     // Si hay un ID, cargar la orden para edición
     const orderId = this.id();
@@ -95,6 +131,7 @@ export default class OrderSave implements OnInit {
     this.form.controls.comments.setValue(order.comments || '');
     this.form.controls.status.setValue(order.status);
     this.products.set(order.products);
+    this.totalBs.set(order.totalBs ?? 0);
   }
 
   public addProduct() {
@@ -151,6 +188,28 @@ export default class OrderSave implements OnInit {
     return this.products().reduce((sum, product) => sum + product.total, 0);
   }
 
+  public recalculateTotalBs() {
+    const totalUsd = this.calculateTotal();
+    const rate = this.exchangeRate();
+    this.totalBs.set(totalUsd * rate);
+  }
+
+  public async onRateTypeChange(rateType: RateType) {
+    this.selectedRateType.set(rateType);
+
+    // Actualizar la tasa activa globalmente
+    const result = await this.rateStore.updateActiveRate(rateType);
+    result.fold(
+      (error: string) => {
+        this.toastService.error(new Exception(error));
+      },
+      () => {
+        this.toastService.success('Tasa activa actualizada');
+        this.recalculateTotalBs();
+      }
+    );
+  }
+
   public async save() {
     if (this.form.invalid) {
       this.toastService.error(
@@ -175,6 +234,7 @@ export default class OrderSave implements OnInit {
       status: this.form.controls.status.value as OrderStatus,
       products: this.products(),
       totalUsd: this.calculateTotal(),
+      totalBs: this.totalBs(),
     };
 
     try {

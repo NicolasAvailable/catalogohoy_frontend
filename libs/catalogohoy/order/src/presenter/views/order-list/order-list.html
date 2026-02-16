@@ -103,13 +103,13 @@
             <th class="px-6 py-3 border-b border-grey-50">ID</th>
             <th class="px-6 py-3 border-b border-grey-50">Nombre</th>
             <th class="px-6 py-3 border-b border-grey-50">Productos</th>
-            <th class="px-6 py-3 border-b border-grey-50">Pago</th>
             <th class="px-6 py-3 border-b border-grey-50 text-center">
               Estado
             </th>
-            <th class="px-6 py-3 border-b border-grey-50">Total</th>
-            <th class="px-6 py-3 border-b border-grey-50">Fecha</th>
             <th class="px-6 py-3 border-b border-grey-50">WhatsApp</th>
+            <th class="px-6 py-3 border-b border-grey-50">Fecha</th>
+            <th class="px-6 py-3 border-b border-grey-50">Total USD</th>
+            <th class="px-6 py-3 border-b border-grey-50">Total Bs</th>
             <th class="px-6 py-3 border-b border-grey-50 text-right">
               Acciones
             </th>
@@ -135,27 +135,27 @@
                 <div class="h-3 w-16 bg-grey-100 rounded"></div>
               </div>
             </td>
-            <!-- Pago -->
-            <td class="px-6 py-3.5">
-              <div class="h-4 w-20 bg-grey-100 rounded"></div>
-            </td>
             <!-- Estado -->
             <td class="px-6 py-3.5">
               <div class="flex justify-center">
                 <div class="h-6 w-20 bg-grey-100 rounded-full"></div>
               </div>
             </td>
-            <!-- Total -->
+            <!-- WhatsApp -->
             <td class="px-6 py-3.5">
-              <div class="h-4 w-16 bg-grey-100 rounded"></div>
+              <div class="h-4 w-32 bg-grey-100 rounded"></div>
             </td>
             <!-- Fecha -->
             <td class="px-6 py-3.5">
               <div class="h-4 w-28 bg-grey-100 rounded"></div>
             </td>
-            <!-- WhatsApp -->
+            <!-- Total USD -->
             <td class="px-6 py-3.5">
-              <div class="h-4 w-32 bg-grey-100 rounded"></div>
+              <div class="h-4 w-16 bg-grey-100 rounded"></div>
+            </td>
+            <!-- Total Bs -->
+            <td class="px-6 py-3.5">
+              <div class="h-4 w-16 bg-grey-100 rounded"></div>
             </td>
             <!-- Acciones -->
             <td class="px-6 py-3.5">
@@ -185,18 +185,6 @@
                 }
               </div>
             </td>
-            <!-- Pago -->
-            <td class="px-6 py-3.5">
-              <div class="flex items-center gap-1.5">
-                <ui-icon
-                  [name]="getPaymentIcon(order)"
-                  [styleClass]="'size-4 ' + getPaymentColor(order)"
-                />
-                <span class="text-xs font-medium text-grey-500"
-                  >{{ getPaymentMethod(order) }}</span
-                >
-              </div>
-            </td>
             <!-- Estado -->
             <td class="px-6 py-3.5">
               <div class="flex justify-center">
@@ -204,14 +192,6 @@
                   {{ getStatusLabel(order.status) }}
                 </span>
               </div>
-            </td>
-            <!-- Total -->
-            <td class="px-6 py-3.5 text-sm font-bold text-primary-600">
-              ${{ order.totalUsd | number:'1.2-2' }}
-            </td>
-            <!-- Fecha -->
-            <td class="px-6 py-3.5 text-grey-500">
-              {{ order.createdAt | date: 'dd/MM/yyyy hh:mm a' }}
             </td>
             <!-- WhatsApp -->
             <td class="px-6 py-3.5">
@@ -228,6 +208,18 @@
               } @else {
               <span class="text-grey-400 text-sm">—</span>
               }
+            </td>
+            <!-- Fecha -->
+            <td class="px-6 py-3.5 text-grey-500">
+              {{ order.createdAt | date: 'dd/MM/yyyy hh:mm a' }}
+            </td>
+            <!-- Total USD -->
+            <td class="px-6 py-3.5 text-sm font-bold text-primary-600">
+              ${{ order.totalUsd | number:'1.2-2' }}
+            </td>
+            <!-- Total Bs -->
+            <td class="px-6 py-3.5 text-sm font-bold text-grey-700">
+              Bs. {{ order.totalBs | number:'1.2-2' }}
             </td>
             <!-- Acciones -->
             <td class="px-6 py-3.5">

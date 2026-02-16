@@ -49,12 +49,15 @@ export class EcommerceConfigService {
   ): Promise<E.Either<Error, void>> {
     try {
       if (config.name) {
-        const { error: tenantError } = await this.client
+        const { data: tenantData, error: tenantError } = await this.client
           .from('tenants')
           .update({ name: config.name })
-          .eq('id', config.tenantId);
+          .eq('id', config.tenantId)
+          .select('id');
 
         if (tenantError) return E.left(tenantError);
+        if (!tenantData?.length)
+          return E.left(new Error('No se pudo actualizar el nombre. Verifica los permisos.'));
       }
 
       const updateData: Record<string, string | boolean | number | null> = {};
@@ -83,16 +86,20 @@ export class EcommerceConfigService {
           .eq('tenant_id', tenantIdNum)
           .maybeSingle();
 
-        const { error: configError } = existing
+        const { data: configData, error: configError } = existing
           ? await this.client
               .from('tenant_ecommerce_config')
               .update(updateData)
               .eq('tenant_id', tenantIdNum)
+              .select('id')
           : await this.client
               .from('tenant_ecommerce_config')
-              .insert({ tenant_id: tenantIdNum, ...updateData });
+              .insert({ tenant_id: tenantIdNum, ...updateData })
+              .select('id');
 
         if (configError) return E.left(configError);
+        if (!configData?.length)
+          return E.left(new Error('No se pudo actualizar la configuración. Verifica los permisos.'));
       }
 
       return E.right(undefined);

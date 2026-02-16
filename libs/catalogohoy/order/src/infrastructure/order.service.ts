@@ -10,6 +10,7 @@ export interface CreateOrderInput {
   status: OrderStatus;
   products: OrderItem[];
   totalUsd: number;
+  totalBs: number;
   tenantId: number;
 }
 
@@ -89,6 +90,7 @@ export class OrderService {
         status: input.status,
         products: input.products,
         total_usd: input.totalUsd,
+        total_bs: input.totalBs,
         tenant_id: input.tenantId,
       })
       .select()
@@ -111,6 +113,7 @@ export class OrderService {
         status: input.status,
         products: input.products,
         total_usd: input.totalUsd,
+        total_bs: input.totalBs,
       })
       .eq('id', input.id)
       .eq('tenant_id', input.tenantId)
