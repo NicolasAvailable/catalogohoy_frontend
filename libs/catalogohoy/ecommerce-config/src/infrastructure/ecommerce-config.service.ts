@@ -88,20 +88,16 @@ export class EcommerceConfigService {
           .eq('tenant_id', tenantIdNum)
           .maybeSingle();
 
-        const { data: configData, error: configError } = existing
+        const { error: configError } = existing
           ? await this.client
               .from('tenant_ecommerce_config')
               .update(updateData)
               .eq('tenant_id', tenantIdNum)
-              .select('id')
           : await this.client
               .from('tenant_ecommerce_config')
-              .insert({ tenant_id: tenantIdNum, ...updateData })
-              .select('id');
+              .insert({ tenant_id: tenantIdNum, ...updateData });
 
-        if (configError) return E.left(configError);
-        if (!configData?.length)
-          return E.left(new Error('No se pudo actualizar la configuración. Verifica los permisos.'));
+        if (configError) return E.left(new Error(configError.message));
       }
 
       return E.right(undefined);
