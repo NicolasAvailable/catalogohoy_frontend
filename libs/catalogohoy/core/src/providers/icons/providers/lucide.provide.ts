@@ -24,13 +24,16 @@ import {
   Copy,
   CreditCard,
   DollarSign,
+  Download,
   EllipsisVertical,
   Euro,
   ExternalLink,
   Eye,
+  FileSpreadsheet,
   GripVertical,
   History,
   Home,
+  Info,
   LayoutGrid,
   Lightbulb,
   List,
@@ -68,6 +71,7 @@ import {
   Upload,
   Wallet,
   X,
+  XCircle,
   Zap,
 } from 'lucide-angular';
 
@@ -93,11 +97,14 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Copy,
       CreditCard,
       DollarSign,
+      Download,
       EllipsisVertical,
       ExternalLink,
       Eye,
+      FileSpreadsheet,
       GripVertical,
       Home,
+      Info,
       LayoutGrid,
       List,
       LogOut,
@@ -142,6 +149,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       AlertTriangle,
       LoaderCircle,
       Save,
+      XCircle,
     })
   );
 };

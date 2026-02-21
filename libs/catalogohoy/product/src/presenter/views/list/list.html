@@ -6,8 +6,9 @@
     <div class="flex gap-3 items-center">
       <span>{{productStore.productList().products.length}} productos</span>
       <ui-button
-        label="Importar"
-        icon="arrow-down-to-line"
+        (click)="openImportExport()"
+        label="Importar / Exportar"
+        icon="arrow-up-down"
         variant="outlined"
         severity="contrast"
       />
@@ -155,4 +156,5 @@
     acceptLabel="Eliminar"
     rejectLabel="Cancelar"
   />
+  <lib-import-export-hub />
 </section>

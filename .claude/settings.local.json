@@ -5,7 +5,12 @@
       "Bash(npx nx:*)",
       "mcp__supabase__list_tables",
       "mcp__supabase__execute_sql",
-      "mcp__supabase__apply_migration"
+      "mcp__supabase__apply_migration",
+      "Bash(npm install:*)",
+      "Bash(npm ls:*)",
+      "Bash(node -e:*)",
+      "Bash(python3 -c:*)",
+      "Bash(python -c:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

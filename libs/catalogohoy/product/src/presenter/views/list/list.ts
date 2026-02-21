@@ -21,6 +21,7 @@ import { debounceTime, distinctUntilChanged, Subscription } from 'rxjs';
 import { ProductFacade } from '../../../application';
 import { Product } from '../../../domain';
 import { ProductStore } from '../../../infrastructure';
+import { ImportExportHubComponent } from '../import-export/import-export-hub';
 
 @Component({
   selector: 'lib-list',
@@ -34,6 +35,7 @@ import { ProductStore } from '../../../infrastructure';
     InputTextComponent,
     IconComponent,
     ConfirmDialogComponent,
+    ImportExportHubComponent,
   ],
   templateUrl: './list.html',
   styleUrl: './list.css',
@@ -48,6 +50,9 @@ export default class List implements OnInit, OnDestroy {
 
   @ViewChild(ConfirmDialogComponent)
   public confirmDialog!: ConfirmDialogComponent;
+
+  @ViewChild(ImportExportHubComponent)
+  public importExportHub!: ImportExportHubComponent;
 
   public searchForm = new FormGroup({
     search: new FormControl('', []),
@@ -72,6 +77,10 @@ export default class List implements OnInit, OnDestroy {
   public onDelete(product: Product) {
     this.selectedProduct.set(product);
     this.confirmDialog.warning();
+  }
+
+  public openImportExport(): void {
+    this.importExportHub.open();
   }
 
   public async onConfirmDelete() {
