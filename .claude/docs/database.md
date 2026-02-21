@@ -37,6 +37,14 @@ exchange_rates                 (singleton id=1 · UNRESTRICTED · no RLS)
 | created_at | timestamp | `now()` | |
 | updated_at | timestamp | `now()` | |
 
+**RLS:** Enabled
+
+| Policy | Command | Roles | USING (qual) | WITH CHECK |
+| --- | --- | --- | --- | --- |
+| Lectura pública de tenants | SELECT | public | `true` | — |
+| public can read tenant slugs | SELECT | public | `true` | — |
+| tenant_update | UPDATE | public | `true` | `true` |
+
 **Storefront lookup:**
 ```typescript
 await supabase.from('tenants').select('id, name').eq('slug', slug).single();
@@ -59,6 +67,19 @@ await supabase.from('tenants').select('id, name').eq('slug', slug).single();
 | created_at | timestamp | `now()` | |
 | updated_at | timestamp | `now()` | |
 
+**RLS:** Enabled
+
+| Policy | Command | Roles | USING (qual) | WITH CHECK |
+| --- | --- | --- | --- | --- |
+| users read own row | SELECT | public | `auth.uid() = auth_user_id` | — |
+| auth hook can insert users | INSERT | supabase_auth_admin | — | `true` |
+| user can update own profile | UPDATE | public | `auth_user_id = auth.uid()` | `auth_user_id = auth.uid()` |
+| users can update own profile | UPDATE | public | `auth_user_id = auth.uid()` | `auth_user_id = auth.uid()` |
+| users can update their own profile | UPDATE | public | `auth.uid() = auth_user_id` | `auth.uid() = auth_user_id` |
+| users update own row | UPDATE | public | `auth.uid() = auth_user_id` | `auth.uid() = auth_user_id` |
+
+> **Note:** There are 4 duplicate UPDATE policies — consider consolidating into one.
+
 **Lookup by auth session:**
 ```typescript
 const { data: { user } } = await supabase.auth.getUser(); // user.id = UUID
@@ -80,6 +101,10 @@ Junction table — links users to the tenants they manage.
 | is_default | bool | `false` | Primary tenant for this user |
 | created_at | timestamp | `now()` | |
 | updated_at | timestamp | `now()` | |
+
+**RLS:** Enabled — **No policies defined**
+
+> **Warning:** RLS is ON but there are zero policies, so all access is **denied** by default. Reads work only through joins from tables that already passed their own RLS checks, or via service-role key.
 
 **Get active tenant for logged-in user:**
 ```typescript
@@ -104,7 +129,7 @@ await supabase.from('users_tenants')
 | Column | Type | Default | Notes |
 | --- | --- | --- | --- |
 | id | int8 | — | PK |
-| name | text | NULL | |
+| name | text | NULL | Unique |
 | description | varchar | NULL | |
 | position | numeric | NULL | Display order |
 | is_visible | bool | `true` | |
@@ -112,6 +137,16 @@ await supabase.from('users_tenants')
 | tenant_id | int8 | NULL | FK → tenants.id |
 | created_at | timestamp | `now()` | |
 | updated_at | timestamp | `now()` | |
+
+**RLS:** Enabled
+
+| Policy | Command | Roles | USING (qual) | WITH CHECK |
+| --- | --- | --- | --- | --- |
+| Lectura pública de categorías | SELECT | public | `true` | — |
+| Users can view own categories | SELECT | public | `auth.uid() = auth_user_id` | — |
+| Users can insert own categories | INSERT | public | — | `auth.uid() = auth_user_id` |
+| Users can update own categories | UPDATE | public | `auth.uid() = auth_user_id` | — |
+| Users can delete own categories | DELETE | public | `auth.uid() = auth_user_id` | — |
 
 **Admin query (by auth user, ordered by position):**
 ```typescript
@@ -150,12 +185,23 @@ await Promise.all(
 | description | varchar | NULL | |
 | price | numeric | NULL | |
 | price_promotional | numeric | NULL | |
-| photos | text | NULL | PostgreSQL text array (`text[]`) |
+| production_cost | numeric | NULL | Cost of production |
+| photos | text[] | NULL | PostgreSQL text array (`text[]`) |
 | stock | numeric | NULL | |
-| sku | text | NULL | Unique product code (optional) — see migration below |
+| sku | text | NULL | Unique product code (optional) |
 | auth_user_id | uuid | `gen_random_uuid()` | FK → users.auth_user_id |
 | tenant_id | int8 | NULL | FK → tenants.id |
 | created_at | timestamp | `now()` | |
+
+**RLS:** Enabled
+
+| Policy | Command | Roles | USING (qual) | WITH CHECK |
+| --- | --- | --- | --- | --- |
+| Lectura pública de productos | SELECT | public | `true` | — |
+| Users can view their own products | SELECT | authenticated | `auth.uid() = auth_user_id` | — |
+| Users can insert their own products | INSERT | authenticated | — | `auth.uid() = auth_user_id` |
+| Users can update their own products | UPDATE | authenticated | `auth.uid() = auth_user_id` | `auth.uid() = auth_user_id` |
+| Users can delete their own products | DELETE | authenticated | `auth.uid() = auth_user_id` | — |
 
 **Join with categories (storefront):**
 ```typescript
@@ -190,6 +236,17 @@ Junction table — many-to-many between products and categories.
 | position | int4 | `0` | |
 | created_at | timestamp | `now()` | |
 
+**RLS:** Enabled
+
+| Policy | Command | Roles | USING (qual) | WITH CHECK |
+| --- | --- | --- | --- | --- |
+| Authenticated users can read product categories | SELECT | authenticated | `true` | — |
+| Authenticated users can insert product categories | INSERT | authenticated | — | `true` |
+| Authenticated users can update product categories | UPDATE | authenticated | `true` | `true` |
+| Authenticated users can delete product categories | DELETE | authenticated | `true` | — |
+
+> **Note:** Only `authenticated` role has access. Anonymous/public users cannot read `product_categories` directly — storefront reads products with nested joins which rely on the `products` table's public SELECT policy.
+
 **Insert after product create/update:**
 ```typescript
 await Promise.all(
@@ -205,7 +262,7 @@ await Promise.all(
 
 | Column | Type | Default | Notes |
 | --- | --- | --- | --- |
-| id | int8 | — | PK |
+| id | int8 | — | PK (ALWAYS generated) |
 | tenant_id | int8 | NULL | FK → tenants.id |
 | name | text | NULL | Customer name |
 | phone | text | NULL | |
@@ -216,6 +273,16 @@ await Promise.all(
 | total_bs | numeric | `0` | Venezuelan bolivares |
 | created_at | timestamp | `timezone('utc')` | |
 | updated_at | timestamp | `timezone('utc')` | |
+
+**RLS:** Enabled
+
+| Policy | Command | Roles | USING (qual) | WITH CHECK |
+| --- | --- | --- | --- | --- |
+| lectura_publica | SELECT | anon, authenticated | `true` | — |
+| creacion_publica | INSERT | anon, authenticated | — | `true` |
+| Allow update orders for authenticated users | UPDATE | authenticated | `true` | `true` |
+
+> **Note:** No DELETE policy — orders cannot be deleted via client.
 
 **`OrderItem` shape (stored in `products` JSONB column):**
 ```typescript
@@ -247,7 +314,7 @@ if (search) q = q.ilike('name', `%${search}%`);
 | Column | Type | Default | Notes |
 | --- | --- | --- | --- |
 | id | int8 | — | PK |
-| tenant_id | int8 | NULL | FK → tenants.id |
+| tenant_id | int8 | NULL | FK → tenants.id (**Unique**) |
 | whatsapp_buttons | jsonb | `'[]'` | Array of `{ name, number }` — max 3 WhatsApp sales contacts |
 | logo | text | NULL | URL |
 | banner | text | NULL | URL |
@@ -258,6 +325,19 @@ if (search) q = q.ilike('name', `%${search}%`);
 | currency_symbol | text | `'$'` | |
 | created_at | timestamp | `now()` | |
 | updated_at | timestamp | `now()` | |
+
+**RLS:** Enabled
+
+| Policy | Command | Roles | USING (qual) | WITH CHECK |
+| --- | --- | --- | --- | --- |
+| Lectura pública de configuración e-commerce | SELECT | public | `true` | — |
+| tenant_ecommerce_config_select | SELECT | authenticated | `tenant_id IN (SELECT ut.tenant_id FROM users_tenants ut JOIN users u ON u.id = ut.user_id WHERE u.auth_user_id = auth.uid())` | — |
+| Usuarios pueden crear config de su tenant | INSERT | authenticated | — | `EXISTS(users_tenants check via auth.uid())` |
+| tenant_ecommerce_config_insert | INSERT | authenticated | — | `tenant_id IN (SELECT ut.tenant_id ... WHERE u.auth_user_id = auth.uid())` |
+| tenant_ecommerce_config_update | UPDATE | authenticated | `true` | `true` |
+| Usuarios pueden eliminar config de su tenant | DELETE | authenticated | `EXISTS(users_tenants check via auth.uid())` | — |
+
+> **Note:** Has duplicate INSERT policies and a permissive UPDATE that allows any authenticated user to update any config. Consider tightening.
 
 **Upsert pattern:**
 ```typescript
@@ -280,7 +360,7 @@ if (existing) {
 | Column | Type | Default | Notes |
 | --- | --- | --- | --- |
 | id | int8 | — | PK |
-| tenant_id | int8 | NULL | FK → tenants.id |
+| tenant_id | int8 | NULL | FK → tenants.id (**Unique**) |
 | product_currency | text | `'USD'` | Currency used for product prices |
 | display_currency | text | `'USD'` | Currency shown to customers |
 | exchange_rate_type | text | `'none'` | Rate source: `'none'`, `'bcv_usd'`, `'bcv_eur'`, `'custom'` |
@@ -292,6 +372,15 @@ if (existing) {
 | created_at | timestamp | `now()` | |
 | updated_at | timestamp | `now()` | |
 
+**RLS:** Enabled
+
+| Policy | Command | Roles | USING (qual) | WITH CHECK |
+| --- | --- | --- | --- | --- |
+| Lectura pública de config moneda | SELECT | public | `true` | — |
+| Usuarios pueden crear config moneda de su tenant | INSERT | authenticated | — | `EXISTS(users_tenants check via auth.uid())` |
+| Usuarios pueden modificar config moneda de su tenant | UPDATE | authenticated | `EXISTS(users_tenants check via auth.uid())` | `EXISTS(users_tenants check via auth.uid())` |
+| Usuarios pueden eliminar config moneda de su tenant | DELETE | authenticated | `EXISTS(users_tenants check via auth.uid())` | — |
+
 ---
 
 ### `tenant_business_hours`
@@ -302,12 +391,21 @@ Description: *Horarios de apertura por día de la semana*
 | --- | --- | --- | --- |
 | id | int8 | — | PK |
 | tenant_id | int8 | NULL | FK → tenants.id |
-| day_of_week | int2 | NULL | `0`=Sunday … `6`=Saturday |
+| day_of_week | int2 | NULL | `0`=Sunday … `6`=Saturday (CHECK: 0–6) |
 | open_time | time | `'08:00:00'` | |
 | close_time | time | `'20:00:00'` | |
 | is_open | bool | `true` | |
 | created_at | timestamp | `now()` | |
 | updated_at | timestamp | `now()` | |
+
+**RLS:** Enabled
+
+| Policy | Command | Roles | USING (qual) | WITH CHECK |
+| --- | --- | --- | --- | --- |
+| Lectura pública de horarios | SELECT | public | `true` | — |
+| Usuarios pueden crear horarios de su tenant | INSERT | authenticated | — | `EXISTS(users_tenants check via auth.uid())` |
+| Usuarios pueden modificar horarios de su tenant | UPDATE | authenticated | `EXISTS(users_tenants check via auth.uid())` | `EXISTS(users_tenants check via auth.uid())` |
+| Usuarios pueden eliminar horarios de su tenant | DELETE | authenticated | `EXISTS(users_tenants check via auth.uid())` | — |
 
 **Query today's hours:**
 ```typescript
@@ -327,12 +425,14 @@ Singleton — always `id = 1`. **UNRESTRICTED** (no Row Level Security).
 
 | Column | Type | Default | Notes |
 | --- | --- | --- | --- |
-| id | int8 | `1` | Always 1 |
+| id | int8 | `1` | Always 1 (CHECK: id = 1) |
 | bcv_usd | numeric | `0` | BCV official USD rate |
 | bcv_eur | numeric | `0` | BCV official EUR rate |
 | custom_rate | numeric | `0` | Manual override |
 | active_rate | text | `'bcv_usd'` | `'bcv_usd'` \| `'bcv_eur'` \| `'custom'` |
 | updated_at | timestamp | `now()` | |
+
+**RLS:** Disabled
 
 **Storefront — get active rate:**
 ```typescript
@@ -347,6 +447,33 @@ await supabase.from('exchange_rates')
 await supabase.from('exchange_rates')
   .update({ active_rate: rateType, updated_at: new Date().toISOString() })
   .eq('id', 1);
+```
+
+---
+
+## RLS Summary
+
+| Table | RLS | Public SELECT | Auth INSERT | Auth UPDATE | Auth DELETE | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| tenants | ON | `true` | — | `true` (public!) | — | UPDATE too permissive |
+| users | ON | own row | auth_admin only | own row | — | 4 duplicate UPDATE policies |
+| users_tenants | ON | **none** | **none** | **none** | **none** | No policies = all denied |
+| categories | ON | `true` | own (`auth_user_id`) | own | own | |
+| products | ON | `true` | own (`auth_user_id`) | own | own | |
+| product_categories | ON | authenticated only | authenticated | authenticated | authenticated | No anon/public read |
+| orders | ON | anon + auth | anon + auth | authenticated | — | No DELETE |
+| tenant_ecommerce_config | ON | `true` | tenant member | any auth (!) | tenant member | UPDATE too permissive |
+| tenant_currency_config | ON | `true` | tenant member | tenant member | tenant member | |
+| tenant_business_hours | ON | `true` | tenant member | tenant member | tenant member | |
+| exchange_rates | OFF | — | — | — | — | Singleton, no RLS |
+
+**"Tenant member" check pattern:**
+```sql
+EXISTS (
+  SELECT 1 FROM users_tenants ut
+  WHERE ut.tenant_id = <table>.tenant_id
+    AND ut.user_id = (SELECT users.id FROM users WHERE users.auth_user_id = auth.uid())
+)
 ```
 
 ---

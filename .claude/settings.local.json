@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(npx nx lint:*)",
-      "Bash(npx nx:*)"
+      "Bash(npx nx:*)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }
