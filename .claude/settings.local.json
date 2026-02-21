@@ -4,7 +4,8 @@
       "Bash(npx nx lint:*)",
       "Bash(npx nx:*)",
       "mcp__supabase__list_tables",
-      "mcp__supabase__execute_sql"
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__apply_migration"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -70,6 +70,7 @@
             <div class="whatsapp-buttons-list">
               @for (button of draftWhatsappButtons(); track $index) {
               <div class="whatsapp-button-item">
+                <span class="whatsapp-button-label">Botón {{ $index + 1 }}</span>
                 <div class="whatsapp-button-fields">
                   <ui-input-text
                     [ngModel]="button.name"

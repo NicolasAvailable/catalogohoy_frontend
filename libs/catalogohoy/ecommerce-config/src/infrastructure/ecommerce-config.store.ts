@@ -1,5 +1,6 @@
 import { inject } from '@angular/core';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
+import { toast } from 'ngx-sonner';
 import { EcommerceConfig } from '../domain';
 import { EcommerceConfigService } from './ecommerce-config.service';
 
@@ -43,13 +44,16 @@ export const EcommerceConfigStore = signalStore(
       });
 
       result.fold(
-        (error: Error) =>
-          patchState(store, { isSaving: false, error: error.message }),
+        (error: Error) => {
+          patchState(store, { isSaving: false, error: error.message });
+          toast.error('Error al guardar el nombre');
+        },
         () => {
           patchState(store, {
             isSaving: false,
             config: { ...currentConfig, name },
           });
+          toast.success('Nombre actualizado correctamente');
         }
       );
     },
@@ -65,13 +69,20 @@ export const EcommerceConfigStore = signalStore(
       });
 
       result.fold(
-        (error: Error) =>
-          patchState(store, { isSaving: false, error: error.message }),
+        (error: Error) => {
+          patchState(store, { isSaving: false, error: error.message });
+          toast.error('Error al actualizar estado de pedidos');
+        },
         () => {
           patchState(store, {
             isSaving: false,
             config: { ...currentConfig, isAcceptingOrders },
           });
+          toast.success(
+            isAcceptingOrders
+              ? 'Pedidos activados'
+              : 'Pedidos desactivados'
+          );
         }
       );
     },
@@ -91,6 +102,7 @@ export const EcommerceConfigStore = signalStore(
           isSaving: false,
           error: uploadResult.value.message,
         });
+        toast.error('Error al subir el logo');
         return;
       }
 
@@ -101,13 +113,16 @@ export const EcommerceConfigStore = signalStore(
       });
 
       updateResult.fold(
-        (error: Error) =>
-          patchState(store, { isSaving: false, error: error.message }),
+        (error: Error) => {
+          patchState(store, { isSaving: false, error: error.message });
+          toast.error('Error al guardar el logo');
+        },
         () => {
           patchState(store, {
             isSaving: false,
             config: { ...currentConfig, logo: logoUrl },
           });
+          toast.success('Logo actualizado correctamente');
         }
       );
     },
@@ -123,13 +138,16 @@ export const EcommerceConfigStore = signalStore(
       });
 
       updateResult.fold(
-        (error: Error) =>
-          patchState(store, { isSaving: false, error: error.message }),
+        (error: Error) => {
+          patchState(store, { isSaving: false, error: error.message });
+          toast.error('Error al guardar el logo');
+        },
         () => {
           patchState(store, {
             isSaving: false,
             config: { ...currentConfig, logo: logoUrl },
           });
+          toast.success('Logo actualizado correctamente');
         }
       );
     },
@@ -145,13 +163,16 @@ export const EcommerceConfigStore = signalStore(
       });
 
       result.fold(
-        (error: Error) =>
-          patchState(store, { isSaving: false, error: error.message }),
+        (error: Error) => {
+          patchState(store, { isSaving: false, error: error.message });
+          toast.error('Error al guardar la configuración');
+        },
         () => {
           patchState(store, {
             isSaving: false,
             config: { ...currentConfig, ...partialConfig },
           });
+          toast.success('Configuración actualizada correctamente');
         }
       );
     },
