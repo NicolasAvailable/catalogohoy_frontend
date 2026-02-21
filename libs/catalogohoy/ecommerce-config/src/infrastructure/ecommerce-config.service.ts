@@ -78,21 +78,12 @@ export class EcommerceConfigService {
       if (Object.keys(updateData).length > 0) {
         const tenantIdNum = Number(config.tenantId);
 
-        // Verificar si ya existe el registro
-        const { data: existing } = await this.client
+        const { error: configError } = await this.client
           .from('tenant_ecommerce_config')
-          .select('id')
-          .eq('tenant_id', tenantIdNum)
-          .maybeSingle();
-
-        const { error: configError } = existing
-          ? await this.client
-              .from('tenant_ecommerce_config')
-              .update(updateData)
-              .eq('tenant_id', tenantIdNum)
-          : await this.client
-              .from('tenant_ecommerce_config')
-              .insert({ tenant_id: tenantIdNum, ...updateData });
+          .upsert(
+            { tenant_id: tenantIdNum, ...updateData },
+            { onConflict: 'tenant_id' }
+          );
 
         if (configError) return E.left(new Error(configError.message));
       }
