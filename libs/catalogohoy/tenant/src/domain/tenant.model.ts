@@ -5,7 +5,8 @@ export class Tenant extends Entity {
     public readonly name: string,
     public readonly slug: string,
     public readonly isDefault: boolean,
-    public readonly role: TenantRol
+    public readonly role: TenantRol,
+    public readonly logo: string | null = null
   ) {
     super();
   }
@@ -19,12 +20,13 @@ export class Tenant extends Entity {
       primitives.name,
       primitives.slug,
       primitives.isDefault,
-      primitives.role
+      primitives.role,
+      primitives.logo ?? null
     ).withId(primitives.id);
   }
 
   static empty() {
-    return new Tenant('', '', false, 'member');
+    return new Tenant('', '', false, 'member', null);
   }
 }
 
@@ -34,5 +36,6 @@ export interface TenantPrimitives {
   slug: string;
   isDefault: boolean;
   role: TenantRol;
+  logo?: string | null;
 }
 export type TenantRol = 'owner' | 'admin' | 'member';

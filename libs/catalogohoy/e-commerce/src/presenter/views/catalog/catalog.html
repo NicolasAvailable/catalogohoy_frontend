@@ -78,5 +78,19 @@
     </div>
     }
   </div>
+
+  @if (ecommerceStore.isLoadingMore()) {
+  <div class="catalog__loading-more">
+    <div class="catalog__loading-grid">
+      @for (i of [1,2,3,4,5,6]; track i) {
+      <div class="catalog__skeleton"></div>
+      }
+    </div>
+  </div>
+  }
+
+  @if (ecommerceStore.hasMore()) {
+  <div #scrollSentinel class="catalog__sentinel"></div>
+  }
   }
 </div>

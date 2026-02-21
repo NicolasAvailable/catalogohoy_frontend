@@ -11,15 +11,28 @@
   <ng-template #item let-item>
     <li
       class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-lg cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+      [class.bg-primary-50]="item.data?.slug === currentSlug()"
     >
       <div class="flex items-center gap-2 min-w-0 flex-1">
-        <ui-icon
-          [name]="item.icon"
-          size="20"
-          class="leading-none h-auto shrink-0"
-          styleClass="!text-grey-700 "
-        />
-        <a class="text-sm text-grey-700 leading-none h-auto truncate"
+        @if (item.data?.logo) {
+          <img
+            [src]="item.data.logo"
+            [alt]="item.label"
+            class="w-5 h-5 rounded-full object-cover shrink-0"
+          />
+        } @else {
+          <ui-icon
+            [name]="item.icon"
+            size="20"
+            class="leading-none h-auto shrink-0"
+            styleClass="!text-grey-700"
+          />
+        }
+        <a
+          class="text-base leading-none h-auto truncate"
+          [class.text-primary-600]="item.data?.slug === currentSlug()"
+          [class.font-semibold]="item.data?.slug === currentSlug()"
+          [class.text-grey-700]="item.data?.slug !== currentSlug()"
           >{{ item.label }}</a
         >
       </div>

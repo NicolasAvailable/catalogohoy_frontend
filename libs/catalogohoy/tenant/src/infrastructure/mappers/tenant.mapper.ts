@@ -9,6 +9,7 @@ export class TenantMapper {
       slug: entity.slug,
       isDefault: entity.is_default,
       role: entity.role,
+      logo: entity.logo ?? null,
     });
   }
 }

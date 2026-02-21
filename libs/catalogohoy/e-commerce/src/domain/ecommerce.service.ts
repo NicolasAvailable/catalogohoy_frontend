@@ -16,14 +16,21 @@ export interface Category {
   name: string;
 }
 
+export interface PaginatedProductList {
+  productList: ProductList;
+  totalCount: number;
+}
+
 export interface BaseEcommerceService {
   getCatalogInfo(slug: string): Promise<E.Either<Error, CatalogInfo>>;
   getProducts(
     slug: string,
     search?: string,
     categoryId?: string,
-    orderBy?: 'name' | 'price_asc' | 'price_desc'
-  ): Promise<E.Either<Error, ProductList>>;
+    orderBy?: 'name' | 'price_asc' | 'price_desc',
+    page?: number,
+    pageSize?: number
+  ): Promise<E.Either<Error, PaginatedProductList>>;
   getProductById(id: string): Promise<E.Either<Error, Product>>;
   getCategories(slug: string): Promise<E.Either<Error, Category[]>>;
   createOrder(order: {

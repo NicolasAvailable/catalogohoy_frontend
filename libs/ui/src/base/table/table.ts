@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, contentChild, input, TemplateRef } from '@angular/core';
-import { TableModule } from 'primeng/table';
+import { Component, contentChild, input, output, TemplateRef } from '@angular/core';
+import { TableModule, TablePageEvent } from 'primeng/table';
 
 @Component({
   selector: 'ui-table',
@@ -28,6 +28,7 @@ import { TableModule } from 'primeng/table';
         [scrollHeight]="scrollHeight()"
         [paginator]="paginator()"
         [rows]="rows()"
+        (onPage)="pageChange.emit($event)"
       >
         <ng-template pTemplate="header">
           <ng-container [ngTemplateOutlet]="headerTemplate()!" />
@@ -61,6 +62,8 @@ export class TableComponent {
   public readonly paginator = input<boolean>(false);
   public readonly rows = input<number>(10);
   public readonly columnsCount = input<number>(1);
+
+  public readonly pageChange = output<TablePageEvent>();
 
   public readonly headerTemplate = contentChild<TemplateRef<unknown>>('header');
   public readonly bodyTemplate = contentChild<TemplateRef<unknown>>('body');

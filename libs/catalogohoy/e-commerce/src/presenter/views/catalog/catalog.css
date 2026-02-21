@@ -146,6 +146,15 @@
   }
 }
 
+/* Loading more / Infinite scroll */
+.catalog__loading-more {
+  padding: 1rem 0;
+}
+
+.catalog__sentinel {
+  height: 1px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .catalog {

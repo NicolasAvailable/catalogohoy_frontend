@@ -18,6 +18,26 @@ export class ProfileService implements BaseProfileService {
     if (error) {
       return E.left(error);
     }
+
+    // Fetch logos from tenant_ecommerce_config for all tenants
+    const tenantIds = profile.tenants.map((t: any) => t.id);
+    if (tenantIds.length > 0) {
+      const { data: configs } = await this.client
+        .from('tenant_ecommerce_config')
+        .select('tenant_id, logo')
+        .in('tenant_id', tenantIds);
+
+      if (configs) {
+        const logoMap = new Map(
+          configs.map((c: any) => [c.tenant_id, c.logo])
+        );
+        profile.tenants = profile.tenants.map((t: any) => ({
+          ...t,
+          logo: logoMap.get(t.id) ?? null,
+        }));
+      }
+    }
+
     return E.right(ProfileMapper.toDomain(profile));
   }
 

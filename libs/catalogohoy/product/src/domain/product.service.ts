@@ -13,4 +13,5 @@ export interface BaseProductService {
   create(input: CreateProductInput): Promise<E.Either<Error, void>>;
   update(input: UpdateProductInput): Promise<E.Either<Error, void>>;
   delete(id: string): Promise<E.Either<Error, void>>;
+  deleteMany(ids: string[]): Promise<E.Either<Error, void>>;
 }

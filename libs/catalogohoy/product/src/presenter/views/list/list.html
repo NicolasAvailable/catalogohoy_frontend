@@ -5,6 +5,20 @@
     <h1 class="text-4xl font-bold">Productos</h1>
     <div class="flex gap-3 items-center">
       <span>{{productStore.productList().products.length}} productos</span>
+      @if (hasSelection()) {
+      <ui-button
+        (click)="onDeleteSelected()"
+        [label]="'Eliminar (' + selectedIds().size + ')'"
+        icon="trash"
+        severity="danger"
+      />
+      <ui-button
+        (click)="clearSelection()"
+        label="Cancelar"
+        variant="outlined"
+        severity="contrast"
+      />
+      } @else {
       <ui-button
         (click)="openImportExport()"
         label="Importar / Exportar"
@@ -17,6 +31,7 @@
         label="Crear producto"
         icon="circle-plus"
       />
+      }
     </div>
   </header>
   <form [formGroup]="searchForm" class="flex py-2">
@@ -42,12 +57,19 @@
       scrollHeight="flex"
       [paginator]="true"
       [rows]="10"
+      (pageChange)="onPageChange($event)"
     >
       <ng-template #header>
         <div class="flex justify-between py-3 px-6">
-          <h4 class="flex-3 flex items-center text-base font-semibold">
-            Producto
-          </h4>
+          <div class="flex items-center gap-3 flex-3">
+            <ui-checkbox
+              [ngModel]="isAllPageSelected()"
+              (valueChange)="toggleAllPage()"
+            />
+            <h4 class="flex items-center text-base font-semibold">
+              Producto
+            </h4>
+          </div>
           <h4
             class="flex-1 flex items-center justify-center text-base font-semibold"
           >
@@ -73,20 +95,26 @@
       <ng-template #body let-item>
         <ui-card styleClass="mx-6">
           <section class="flex gap-4 justify-between">
-            <div
-              [routerLink]="['edit', item.id]"
-              class="flex gap-2 flex-3 cursor-pointer overflow-hidden"
-            >
-              <ui-icon
-                [name]="item.photos.length > 0 ? item.photos[0] : 'https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg'"
-                class="flex items-center justify-center w-24 h-24"
-                styleClass="max-w-24 max-h-24 rounded-sm object-cover "
+            <div class="flex items-center gap-3 flex-3 overflow-hidden">
+              <ui-checkbox
+                [ngModel]="isSelected(item)"
+                (valueChange)="toggleProduct(item)"
               />
-              <h2
-                class="ml-4 text-primary-500 font-semibold text-lg line-clamp-3 break-all"
+              <div
+                [routerLink]="['edit', item.id]"
+                class="flex gap-2 flex-1 cursor-pointer overflow-hidden"
               >
-                {{item.name}}
-              </h2>
+                <ui-icon
+                  [name]="item.photos.length > 0 ? item.photos[0] : 'https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg'"
+                  class="flex items-center justify-center w-24 h-24"
+                  styleClass="max-w-24 max-h-24 rounded-sm object-cover "
+                />
+                <h2
+                  class="ml-4 text-primary-500 font-semibold text-lg line-clamp-3 break-all"
+                >
+                  {{item.name}}
+                </h2>
+              </div>
             </div>
             <div
               class="flex-1 flex items-center justify-center overflow-hidden"
@@ -152,7 +180,7 @@
   <ui-confirm-dialog
     (confirm)="onConfirmDelete()"
     headerLabel="Eliminar producto"
-    contentLabel="¿Estás seguro de que deseas eliminar este producto? Esta acción es irreversible."
+    [contentLabel]="getDeleteDialogContent()"
     acceptLabel="Eliminar"
     rejectLabel="Cancelar"
   />

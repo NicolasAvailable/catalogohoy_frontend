@@ -2,12 +2,16 @@ import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import {
   Product,
-  ProductList,
   ProductListMapper,
   ProductMapper,
 } from '@catalogohoy/product';
 import { E } from '@shared/domain';
-import { BaseEcommerceService, CatalogInfo, Category } from '../domain';
+import {
+  BaseEcommerceService,
+  CatalogInfo,
+  Category,
+  PaginatedProductList,
+} from '../domain';
 
 @Injectable({
   providedIn: 'root',
@@ -79,8 +83,10 @@ export class EcommerceService implements BaseEcommerceService {
     slug: string,
     search?: string,
     categoryId?: string,
-    orderBy?: 'name' | 'price_asc' | 'price_desc'
-  ): Promise<E.Either<Error, ProductList>> {
+    orderBy?: 'name' | 'price_asc' | 'price_desc',
+    page: number = 1,
+    pageSize: number = 20
+  ): Promise<E.Either<Error, PaginatedProductList>> {
     // Primero obtener el tenant_id por slug
     const { data: tenant, error: tenantError } = await this.client
       .from('tenants')
@@ -113,7 +119,7 @@ export class EcommerceService implements BaseEcommerceService {
 
     let query = this.client
       .from('products')
-      .select(selectQuery)
+      .select(selectQuery, { count: 'exact' })
       .eq('tenant_id', tenant.id);
 
     if (search && search.trim().length > 0) {
@@ -138,7 +144,11 @@ export class EcommerceService implements BaseEcommerceService {
         query = query.order('created_at', { ascending: false });
     }
 
-    const { data, error } = await query;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
+
+    const { data, error, count } = await query;
 
     if (error) {
       return E.left(error);
@@ -150,7 +160,10 @@ export class EcommerceService implements BaseEcommerceService {
         item.product_categories?.map((pc: any) => pc.categories) ?? [],
     }));
 
-    return E.right(ProductListMapper.toDomain(entities));
+    return E.right({
+      productList: ProductListMapper.toDomain(entities),
+      totalCount: count ?? 0,
+    });
   }
 
   public async getProductById(id: string): Promise<E.Either<Error, Product>> {

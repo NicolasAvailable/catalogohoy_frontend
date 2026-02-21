@@ -6,4 +6,5 @@ export interface TenantEntity {
   role: TenantRol;
   slug: string;
   is_default: boolean;
+  logo?: string | null;
 }

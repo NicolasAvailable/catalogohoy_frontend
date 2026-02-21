@@ -1,9 +1,11 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   OnDestroy,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
   viewChild,
@@ -40,6 +42,7 @@ export default class Catalog implements OnInit, OnDestroy {
   public readonly viewMode = signal<'grid' | 'list'>('grid');
   public readonly searchValue = signal('');
   public readonly orderMenu = viewChild.required<MenuComponent>('orderMenu');
+  public readonly scrollSentinel = viewChild<ElementRef<HTMLDivElement>>('scrollSentinel');
 
   public readonly orderMenuItems = computed<MenuItem[]>(() => [
     {
@@ -67,6 +70,26 @@ export default class Catalog implements OnInit, OnDestroy {
   private readonly searchSubject = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
   private slug: string | null = null;
+  private observer: IntersectionObserver | null = null;
+
+  constructor() {
+    effect(() => {
+      const sentinel = this.scrollSentinel();
+      this.observer?.disconnect();
+
+      if (sentinel) {
+        this.observer = new IntersectionObserver(
+          (entries) => {
+            if (entries[0].isIntersecting && this.slug) {
+              this.ecommerceStore.loadMoreProducts(this.slug);
+            }
+          },
+          { rootMargin: '200px' }
+        );
+        this.observer.observe(sentinel.nativeElement);
+      }
+    });
+  }
 
   ngOnInit() {
     this.slug = getTenantSlugFromUrl();
@@ -84,6 +107,7 @@ export default class Catalog implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+    this.observer?.disconnect();
   }
 
   onSearch(value: string) {

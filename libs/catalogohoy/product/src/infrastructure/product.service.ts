@@ -196,4 +196,16 @@ export class ProductService implements BaseProductService {
     }
     return E.right(undefined);
   }
+
+  public async deleteMany(ids: string[]): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('products')
+      .delete()
+      .in('id', ids);
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+    return E.right(undefined);
+  }
 }
