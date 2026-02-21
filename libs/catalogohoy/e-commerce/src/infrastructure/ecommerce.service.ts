@@ -32,7 +32,7 @@ export class EcommerceService implements BaseEcommerceService {
     // Obtener configuración de e-commerce
     const { data: config } = await this.client
       .from('tenant_ecommerce_config')
-      .select('whatsapp, logo, is_accepting_orders')
+      .select('whatsapp_buttons, logo, is_accepting_orders')
       .eq('tenant_id', tenant.id)
       .single();
 
@@ -66,7 +66,9 @@ export class EcommerceService implements BaseEcommerceService {
     return E.right({
       id: tenant.id,
       name: tenant.name,
-      whatsapp: config?.whatsapp || '',
+      whatsappButtons: Array.isArray(config?.whatsapp_buttons)
+        ? config.whatsapp_buttons
+        : [],
       openTime,
       closeTime,
       isOpen,

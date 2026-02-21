@@ -18,6 +18,7 @@ import {
   ToggleComponent,
   UploaderComponent,
 } from '@ui';
+import { WhatsappButton } from '../../domain';
 import { EcommerceConfigStore } from '../../infrastructure';
 
 @Component({
@@ -43,7 +44,7 @@ export class EcommerceConfigComponent implements OnInit {
 
   // Estado local para el formulario de identidad
   public readonly draftName = signal('');
-  public readonly draftWhatsapp = signal('');
+  public readonly draftWhatsappButtons = signal<WhatsappButton[]>([]);
   public readonly draftDescription = signal('');
 
   constructor() {
@@ -52,7 +53,11 @@ export class EcommerceConfigComponent implements OnInit {
       const config = this.configStore.config();
       if (config) {
         this.draftName.set(config.name ?? '');
-        this.draftWhatsapp.set(config.whatsapp ?? '');
+        this.draftWhatsappButtons.set(
+          config.whatsappButtons?.length
+            ? config.whatsappButtons.map((b) => ({ ...b }))
+            : [{ name: '', number: '' }]
+        );
         this.draftDescription.set(config.description ?? '');
       }
     });
@@ -65,10 +70,35 @@ export class EcommerceConfigComponent implements OnInit {
     }
   }
 
+  addWhatsappButton() {
+    const current = this.draftWhatsappButtons();
+    if (current.length >= 3) return;
+    this.draftWhatsappButtons.set([...current, { name: '', number: '' }]);
+  }
+
+  removeWhatsappButton(index: number) {
+    const current = this.draftWhatsappButtons();
+    this.draftWhatsappButtons.set(current.filter((_, i) => i !== index));
+  }
+
+  updateButtonName(index: number, name: string) {
+    const current = this.draftWhatsappButtons();
+    const updated = current.map((b, i) => (i === index ? { ...b, name } : b));
+    this.draftWhatsappButtons.set(updated);
+  }
+
+  updateButtonNumber(index: number, number: string) {
+    const current = this.draftWhatsappButtons();
+    const updated = current.map((b, i) =>
+      i === index ? { ...b, number } : b
+    );
+    this.draftWhatsappButtons.set(updated);
+  }
+
   async saveIdentity() {
     await this.configStore.updatePartialConfig({
       name: this.draftName(),
-      whatsapp: this.draftWhatsapp(),
+      whatsappButtons: this.draftWhatsappButtons(),
       description: this.draftDescription(),
     });
   }

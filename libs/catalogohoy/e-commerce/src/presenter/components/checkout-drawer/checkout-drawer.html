@@ -18,7 +18,7 @@
     </header>
 
     <div class="checkout-drawer__content">
-      <form class="checkout-drawer__form" (ngSubmit)="onSubmit()">
+      <form class="checkout-drawer__form">
         <div class="checkout-drawer__field">
           <label class="checkout-drawer__label" for="name">
             Nombre<span class="checkout-drawer__required">*</span>
@@ -85,24 +85,37 @@
     </div>
 
     <footer class="checkout-drawer__footer">
-      <button
-        class="checkout-drawer__submit-btn"
-        [disabled]="!isValid || ecommerceStore.isLoading()"
-        (click)="onSubmit()"
-      >
-        @if (ecommerceStore.isLoading()) {
-        <span>Procesando...</span>
-        } @else {
-        <div class="checkout-drawer__submit-count">
-          {{ cartStore.totalItems() }}
+      @if (ecommerceStore.catalogInfo()?.whatsappButtons?.length) {
+        <div class="checkout-drawer__buttons">
+          @for (button of ecommerceStore.catalogInfo()!.whatsappButtons; track $index) {
+          <button
+            class="checkout-drawer__submit-btn"
+            [disabled]="!isValid || ecommerceStore.isLoading()"
+            (click)="onSubmit(button)"
+          >
+            @if (ecommerceStore.isLoading()) {
+            <span>Procesando...</span>
+            } @else {
+            <div class="checkout-drawer__submit-count">
+              {{ cartStore.totalItems() }}
+            </div>
+            <span>Hacer pedido{{ button.name ? ' (' + button.name + ')' : '' }}</span>
+            <div class="checkout-drawer__submit-price">
+              ${{ cartStore.totalPrice() }}
+              <ui-icon name="chevronRight" styleClass="size-5" />
+            </div>
+            }
+          </button>
+          }
         </div>
-        <span>Hacer pedido</span>
-        <div class="checkout-drawer__submit-price">
-          ${{ cartStore.totalPrice() }}
-          <ui-icon name="chevronRight" styleClass="size-5" />
-        </div>
-        }
-      </button>
+      } @else {
+        <button
+          class="checkout-drawer__submit-btn checkout-drawer__submit-btn--disabled"
+          disabled
+        >
+          <span>WhatsApp no configurado</span>
+        </button>
+      }
     </footer>
   </div>
 </div>

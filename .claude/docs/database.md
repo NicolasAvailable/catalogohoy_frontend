@@ -248,7 +248,7 @@ if (search) q = q.ilike('name', `%${search}%`);
 | --- | --- | --- | --- |
 | id | int8 | — | PK |
 | tenant_id | int8 | NULL | FK → tenants.id |
-| whatsapp | text | NULL | Phone number |
+| whatsapp_buttons | jsonb | `'[]'` | Array of `{ name, number }` — max 3 WhatsApp sales contacts |
 | logo | text | NULL | URL |
 | banner | text | NULL | URL |
 | description | text | NULL | |

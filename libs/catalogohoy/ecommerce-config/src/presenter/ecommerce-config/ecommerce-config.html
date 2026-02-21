@@ -30,21 +30,58 @@
 
           <div class="divider"></div>
 
-          <!-- Sección: WhatsApp y Descripción -->
+          <!-- Sección: Botones WhatsApp -->
           <div class="social-description-section">
             <div class="form-field">
-              <label for="shop-whatsapp">WhatsApp de Pedidos</label>
-              <ui-input-text
-                inputId="shop-whatsapp"
-                [ngModel]="draftWhatsapp()"
-                (ngModelChange)="draftWhatsapp.set($event)"
-                placeholder="Ej: +584124807708"
+              <label>Vendedores WhatsApp</label>
+              <small class="field-hint">
+                Cada vendedor aparecerá como un botón de pago en el checkout.
+                Máximo 3.
+              </small>
+
+              <div class="whatsapp-buttons-list">
+                @for (button of draftWhatsappButtons(); track $index) {
+                <div class="whatsapp-button-item">
+                  <div class="whatsapp-button-fields">
+                    <ui-input-text
+                      [ngModel]="button.name"
+                      (ngModelChange)="updateButtonName($index, $event)"
+                      placeholder="Nombre (Ej: Juan)"
+                      [disabled]="configStore.isSaving()"
+                      styleClass="w-full"
+                    ></ui-input-text>
+                    <ui-input-text
+                      [ngModel]="button.number"
+                      (ngModelChange)="updateButtonNumber($index, $event)"
+                      placeholder="Número (Ej: +584124807708)"
+                      [disabled]="configStore.isSaving()"
+                      styleClass="w-full"
+                    ></ui-input-text>
+                  </div>
+                  <button
+                    type="button"
+                    class="whatsapp-button-remove"
+                    (click)="removeWhatsappButton($index)"
+                    [disabled]="configStore.isSaving()"
+                    title="Eliminar vendedor"
+                  >
+                    <ui-icon name="trash" styleClass="size-4"></ui-icon>
+                  </button>
+                </div>
+                }
+              </div>
+
+              @if (draftWhatsappButtons().length < 3) {
+              <ui-button
+                label="Agregar vendedor"
+                [variant]="'outlined'"
+                severity="secondary"
+                size="small"
+                icon="plus"
+                (click)="addWhatsappButton()"
                 [disabled]="configStore.isSaving()"
-                styleClass="w-full"
-              ></ui-input-text>
-              <small class="field-hint"
-                >Este número recibirá los pedidos de tus clientes.</small
-              >
+              ></ui-button>
+              }
             </div>
 
             <div class="form-field">

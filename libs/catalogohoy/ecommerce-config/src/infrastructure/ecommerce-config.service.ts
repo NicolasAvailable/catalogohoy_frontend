@@ -22,7 +22,7 @@ export class EcommerceConfigService {
       const { data: config } = await this.client
         .from('tenant_ecommerce_config')
         .select(
-          'logo, banner, whatsapp, description, is_accepting_orders, is_visible, currency, currency_symbol'
+          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol'
         )
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -32,7 +32,9 @@ export class EcommerceConfigService {
         name: tenant.name,
         logo: config?.logo ?? null,
         banner: config?.banner ?? null,
-        whatsapp: config?.whatsapp ?? null,
+        whatsappButtons: Array.isArray(config?.whatsapp_buttons)
+          ? config.whatsapp_buttons
+          : [],
         description: config?.description ?? null,
         isAcceptingOrders: config?.is_accepting_orders ?? true,
         isVisible: config?.is_visible ?? true,
@@ -60,11 +62,11 @@ export class EcommerceConfigService {
           return E.left(new Error('No se pudo actualizar el nombre. Verifica los permisos.'));
       }
 
-      const updateData: Record<string, string | boolean | number | null> = {};
+      const updateData: Record<string, unknown> = {};
       if (config.logo !== undefined) updateData['logo'] = config.logo;
       if (config.banner !== undefined) updateData['banner'] = config.banner;
-      if (config.whatsapp !== undefined)
-        updateData['whatsapp'] = config.whatsapp;
+      if (config.whatsappButtons !== undefined)
+        updateData['whatsapp_buttons'] = config.whatsappButtons;
       if (config.description !== undefined)
         updateData['description'] = config.description;
       if (config.isAcceptingOrders !== undefined)

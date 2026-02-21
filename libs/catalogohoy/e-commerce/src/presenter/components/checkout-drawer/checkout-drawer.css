@@ -170,6 +170,16 @@
   border-top: 1px solid #e5e7eb;
 }
 
+.checkout-drawer__buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.checkout-drawer__submit-btn--disabled {
+  justify-content: center;
+}
+
 .checkout-drawer__submit-btn {
   width: 100%;
   display: flex;

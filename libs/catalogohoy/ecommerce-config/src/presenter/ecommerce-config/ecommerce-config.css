@@ -226,6 +226,51 @@
   color: var(--text-color-secondary);
 }
 
+/* WhatsApp Buttons */
+.whatsapp-buttons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.whatsapp-button-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+}
+
+.whatsapp-button-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.whatsapp-button-remove {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: background 0.2s;
+  margin-top: 0.25rem;
+}
+
+.whatsapp-button-remove:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.whatsapp-button-remove:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .social-description-section {
   display: flex;
   flex-direction: column;

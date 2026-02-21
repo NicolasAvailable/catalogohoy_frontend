@@ -5,6 +5,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { WhatsappButton } from '@catalogohoy/ecommerce-config';
 import { IconComponent } from '@ui';
 import { CartItem } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
@@ -33,9 +34,8 @@ export class CheckoutDrawer {
     this.cartStore.closeCheckout();
   }
 
-  async onSubmit() {
-    const catalogInfo = this.ecommerceStore.catalogInfo();
-    if (!catalogInfo?.whatsapp) {
+  async onSubmit(button: WhatsappButton) {
+    if (!button.number) {
       alert('Número de WhatsApp no configurado');
       return;
     }
@@ -79,7 +79,7 @@ export class CheckoutDrawer {
     }
 
     const encodedMessage = encodeURIComponent(message);
-    const whatsappNumber = catalogInfo.whatsapp.replace(/\D/g, '');
+    const whatsappNumber = button.number.replace(/\D/g, '');
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
 
     window.open(whatsappUrl, '_blank');

@@ -1,10 +1,11 @@
+import { WhatsappButton } from '@catalogohoy/ecommerce-config';
 import { Product, ProductList } from '@catalogohoy/product';
 import { E } from '@shared/domain';
 
 export interface CatalogInfo {
   id: string;
   name: string;
-  whatsapp: string;
+  whatsappButtons: WhatsappButton[];
   openTime: string;
   closeTime: string;
   isOpen: boolean;
