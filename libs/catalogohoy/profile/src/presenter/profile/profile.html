@@ -43,7 +43,7 @@
     </form>
   </ui-card>
 
-  <ui-accordion [items]="items()" [contentStyleClass]="'mb-8!'">
+  <ui-accordion [items]="items()" [value]="0" [contentStyleClass]="'mb-8!'">
     @for(item of items(); track item.ref) {
 
     <ng-template [accordionHeader]="item.ref" let-item="item">
