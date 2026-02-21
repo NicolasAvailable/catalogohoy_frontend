@@ -2,7 +2,11 @@
   class="product-card"
   [class.product-card--list]="viewMode() === 'list'"
 >
-  <a [routerLink]="['/product', product().id]" class="product-card__image-link">
+  <button
+    type="button"
+    class="product-card__image-link"
+    (click)="openModal($event)"
+  >
     <div class="product-card__image">
       @if (product().photos.length) {
       <img [src]="product().photos[0]" [alt]="product().name" loading="lazy" />
@@ -12,32 +16,58 @@
       </div>
       }
     </div>
-  </a>
+  </button>
 
   <div class="product-card__content">
-    <a
-      [routerLink]="['/product', product().id]"
+    <button
+      type="button"
       class="product-card__title-link"
+      (click)="openModal($event)"
     >
       <h3 class="product-card__title">{{ product().name }}</h3>
-    </a>
+    </button>
     <p class="product-card__description">{{ product().description }}</p>
 
-    <div class="product-card__footer">
-      <div class="product-card__price">
-        @if (product().pricePromotional > 0) {
-        <span class="product-card__price-original">${{ product().price }}</span>
-        <span class="product-card__price-promo"
-          >${{ product().pricePromotional }}</span
-        >
-        } @else {
-        <span class="product-card__price-current">${{ product().price }}</span>
-        }
-      </div>
+    <div class="product-card__price">
+      @if (product().pricePromotional > 0) {
+      <span class="product-card__price-original">${{ product().price }}</span>
+      <span class="product-card__price-promo"
+        >${{ product().pricePromotional }}</span
+      >
+      } @else {
+      <span class="product-card__price-current">${{ product().price }}</span>
+      }
+    </div>
 
-      <button class="product-card__add-btn" (click)="onAddToCart($event)">
+    <div class="product-card__actions">
+      @if (cartQuantity() === 0) {
+      <button
+        type="button"
+        class="product-card__add-full-btn"
+        (click)="onAddToCart($event)"
+      >
         <ui-icon name="circle-plus" styleClass="size-5" />
+        Agregar
       </button>
+      } @else {
+      <div class="product-card__quantity">
+        <button
+          type="button"
+          class="product-card__qty-btn"
+          (click)="onDecrement($event)"
+        >
+          −
+        </button>
+        <span class="product-card__qty-count">{{ cartQuantity() }}</span>
+        <button
+          type="button"
+          class="product-card__qty-btn"
+          (click)="onIncrement($event)"
+        >
+          +
+        </button>
+      </div>
+      }
     </div>
   </div>
 </article>

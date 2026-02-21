@@ -14,6 +14,11 @@
 .product-card__image-link {
   display: block;
   text-decoration: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  width: 100%;
+  cursor: pointer;
 }
 
 .product-card__image {
@@ -55,6 +60,12 @@
 .product-card__title-link {
   text-decoration: none;
   color: inherit;
+  background: transparent;
+  border: none;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
 }
 
 .product-card__title {
@@ -81,17 +92,72 @@
   line-height: 1.4;
 }
 
-.product-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 0.625rem;
-}
-
 .product-card__price {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  margin-top: 0.625rem;
+}
+
+.product-card__actions {
+  margin-top: 0.625rem;
+}
+
+.product-card__add-full-btn {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  background: var(--color-primary-500);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.product-card__add-full-btn:hover {
+  background: var(--color-primary-600);
+}
+
+.product-card__quantity {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 1.5px solid var(--color-primary-500);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.product-card__qty-btn {
+  flex: 0 0 2.75rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-primary-500);
+  font-size: 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.product-card__qty-btn:hover {
+  background: color-mix(in srgb, var(--color-primary-500) 10%, transparent);
+}
+
+.product-card__qty-count {
+  flex: 1;
+  text-align: center;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-grey-600);
 }
 
 .product-card__price-current {
@@ -110,26 +176,6 @@
   font-size: 1rem;
   font-weight: 700;
   color: var(--color-grey-600);
-}
-
-.product-card__add-btn {
-  width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: 1.5px solid var(--color-grey-200);
-  border-radius: 0.5rem;
-  color: var(--color-grey-400);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.product-card__add-btn:hover {
-  border-color: var(--color-primary-500);
-  color: var(--color-primary-500);
-  background: var(--color-primary-50);
 }
 
 /* List view */

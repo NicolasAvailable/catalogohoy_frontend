@@ -1,16 +1,18 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
+  inject,
   input,
-  output,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { Product } from '@catalogohoy/product';
-import { IconComponent } from '@ui';
+import { DialogService, IconComponent, dialogConfig } from '@ui';
+import { CartStore } from '../../../infrastructure';
+import { ProductDetailModal } from '../product-detail-modal/product-detail-modal';
 
 @Component({
   selector: 'lib-product-card',
-  imports: [RouterLink, IconComponent],
+  imports: [IconComponent],
   templateUrl: './product-card.html',
   styleUrl: './product-card.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,26 +20,50 @@ import { IconComponent } from '@ui';
 export class ProductCard {
   public readonly product = input.required<Product>();
   public readonly viewMode = input<'grid' | 'list'>('grid');
-  public readonly addToCart = output<Product>();
+  private readonly cartStore = inject(CartStore);
+  private readonly dialogService = inject(DialogService);
+
+  public readonly cartQuantity = computed(() => {
+    const item = this.cartStore
+      .items()
+      .find((i) => i.productId === String(this.product().id));
+    return item?.quantity ?? 0;
+  });
+
+  openModal(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dialogService.open(
+      ProductDetailModal,
+      dialogConfig({
+        data: { product: this.product() },
+        showHeader: false,
+        style: { width: '56rem', maxWidth: '95vw' },
+        contentStyle: { padding: '0', overflow: 'hidden' },
+      })
+    );
+  }
 
   onAddToCart(event: Event) {
     event.preventDefault();
     event.stopPropagation();
-    this.addToCart.emit(this.product());
+    this.cartStore.addProduct(this.product());
   }
 
-  get displayPrice(): number {
-    const p = this.product();
-    return p.pricePromotional > 0 ? p.pricePromotional : p.price;
+  onIncrement(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.cartStore.incrementItem(String(this.product().id));
+  }
+
+  onDecrement(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.cartStore.decrementItem(String(this.product().id));
   }
 
   get hasDiscount(): boolean {
     const p = this.product();
     return p.pricePromotional > 0 && p.pricePromotional < p.price;
-  }
-
-  get mainPhoto(): string {
-    const p = this.product();
-    return p.photos[0] || 'assets/placeholder-product.png';
   }
 }

@@ -1,0 +1,89 @@
+<div class="pdm">
+  <button type="button" class="pdm__close" (click)="close()">
+    <ui-icon name="x" styleClass="size-4" />
+  </button>
+
+  <!-- Gallery -->
+  <div class="pdm__gallery">
+    <div class="pdm__main-image">
+      @if (product.photos.length) {
+      <img [src]="currentImage" [alt]="product.name" />
+      } @else {
+      <div class="pdm__placeholder">
+        <ui-icon name="package" styleClass="size-16" />
+      </div>
+      } @if (hasDiscount) {
+      <span class="pdm__discount-badge">Oferta</span>
+      }
+    </div>
+
+    @if (product.photos.length > 1) {
+    <div class="pdm__thumbnails">
+      @for (photo of product.photos; track $index) {
+      <button
+        type="button"
+        class="pdm__thumbnail"
+        [class.pdm__thumbnail--active]="currentImageIndex() === $index"
+        (click)="setImage($index)"
+      >
+        <img [src]="photo" [alt]="product.name" />
+      </button>
+      }
+    </div>
+    }
+  </div>
+
+  <!-- Info -->
+  <div class="pdm__info">
+    <div class="pdm__header">
+      @if (product.categoryList.categories.length) {
+      <div class="pdm__categories">
+        @for (cat of product.categoryList.categories; track cat.id) {
+        <span class="pdm__category">{{ cat.name }}</span>
+        }
+      </div>
+      }
+      <h2 class="pdm__name">{{ product.name }}</h2>
+
+      <div class="pdm__prices">
+        <span class="pdm__price">${{ displayPrice }}</span>
+        @if (hasDiscount) {
+        <span class="pdm__price-original">${{ product.price }}</span>
+        }
+      </div>
+    </div>
+
+    @if (product.description) {
+    <p class="pdm__description">{{ product.description }}</p>
+    }
+
+    <div class="pdm__footer">
+      <div class="pdm__quantity-row">
+        <span class="pdm__qty-label">Cantidad</span>
+        <div class="pdm__quantity-selector">
+          <button
+            type="button"
+            class="pdm__qty-btn"
+            (click)="decrementQuantity()"
+          >
+            <ui-icon name="minus" styleClass="size-4" />
+          </button>
+          <span class="pdm__qty-value">{{ quantity() }}</span>
+          <button
+            type="button"
+            class="pdm__qty-btn"
+            (click)="incrementQuantity()"
+          >
+            <ui-icon name="plus" styleClass="size-4" />
+          </button>
+        </div>
+      </div>
+
+      <button type="button" class="pdm__add-btn" (click)="onAddToCart()">
+        <ui-icon name="shoppingCart" styleClass="size-5" />
+        <span>Agregar al carrito</span>
+        <span class="pdm__total">${{ displayPrice * quantity() }}</span>
+      </button>
+    </div>
+  </div>
+</div>
