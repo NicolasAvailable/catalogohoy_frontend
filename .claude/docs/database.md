@@ -1,0 +1,379 @@
+# Supabase Database Schema
+
+Source of truth extracted directly from Supabase table definitions.
+All queries use `@supabase/supabase-js` via `inject(SupabaseClientProvider).client`.
+
+---
+
+## Entity Relationship Overview
+
+```
+tenants (slug → unique)
+  ├── tenant_ecommerce_config  (tenant_id → tenants.id)
+  ├── tenant_currency_config   (tenant_id → tenants.id)
+  ├── tenant_business_hours    (tenant_id → tenants.id)
+  ├── categories               (tenant_id → tenants.id, auth_user_id → users.auth_user_id)
+  ├── products                 (tenant_id → tenants.id, auth_user_id → users.auth_user_id)
+  │     └── product_categories (product_id + category_id  junction)
+  ├── orders                   (tenant_id → tenants.id)
+  └── users_tenants            (tenant_id + user_id  junction, role, is_default)
+        └── users              (auth_user_id → Supabase auth.users.id)
+
+exchange_rates                 (singleton id=1 · UNRESTRICTED · no RLS)
+```
+
+---
+
+## Tables
+
+### `tenants`
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | — | PK |
+| name | text | NULL | Display name |
+| slug | text | NULL | **Unique** — primary storefront filter |
+| country_code | text | `'VE'` | ISO country code |
+| created_at | timestamp | `now()` | |
+| updated_at | timestamp | `now()` | |
+
+**Storefront lookup:**
+```typescript
+await supabase.from('tenants').select('id, name').eq('slug', slug).single();
+```
+
+---
+
+### `users`
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | — | PK |
+| name | text | NULL | |
+| last_name | text | NULL | |
+| email | text | NULL | Unique |
+| phone | text | NULL | |
+| timezone | text | `'America/Caracas'` | |
+| country_code | text | `'VE'` | |
+| auth_user_id | uuid | `gen_random_uuid()` | **Unique** — links to `supabase.auth.users.id` |
+| created_at | timestamp | `now()` | |
+| updated_at | timestamp | `now()` | |
+
+**Lookup by auth session:**
+```typescript
+const { data: { user } } = await supabase.auth.getUser(); // user.id = UUID
+await supabase.from('users').select('id').eq('auth_user_id', user.id).maybeSingle();
+```
+
+---
+
+### `users_tenants`
+
+Junction table — links users to the tenants they manage.
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | — | PK |
+| user_id | int8 | NULL | FK → users.id |
+| tenant_id | int8 | NULL | FK → tenants.id |
+| role | text | NULL | e.g. `'owner'`, `'admin'`, `'member'` |
+| is_default | bool | `false` | Primary tenant for this user |
+| created_at | timestamp | `now()` | |
+| updated_at | timestamp | `now()` | |
+
+**Get active tenant for logged-in user:**
+```typescript
+// Preferred: default tenant
+await supabase.from('users_tenants')
+  .select('tenant_id, tenants(id, name, slug)')
+  .eq('user_id', userData.id)
+  .eq('is_default', true)
+  .maybeSingle();
+
+// Fallback: first tenant
+await supabase.from('users_tenants')
+  .select('tenant_id, tenants(id, name, slug)')
+  .eq('user_id', userData.id)
+  .limit(1).maybeSingle();
+```
+
+---
+
+### `categories`
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | — | PK |
+| name | text | NULL | |
+| description | varchar | NULL | |
+| position | numeric | NULL | Display order |
+| is_visible | bool | `true` | |
+| auth_user_id | uuid | `gen_random_uuid()` | FK → users.auth_user_id |
+| tenant_id | int8 | NULL | FK → tenants.id |
+| created_at | timestamp | `now()` | |
+| updated_at | timestamp | `now()` | |
+
+**Admin query (by auth user, ordered by position):**
+```typescript
+await supabase.from('categories')
+  .select('*')
+  .eq('auth_user_id', user.id)
+  .order('position', { ascending: true });
+```
+
+**Storefront query (visible only):**
+```typescript
+await supabase.from('categories')
+  .select('id, name')
+  .eq('tenant_id', tenant.id)
+  .eq('is_visible', true)
+  .order('position', { ascending: true });
+```
+
+**Reorder (bulk update):**
+```typescript
+await Promise.all(
+  categories.map((cat, index) =>
+    supabase.from('categories').update({ position: index }).eq('id', cat.id)
+  )
+);
+```
+
+---
+
+### `products`
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | — | PK |
+| name | text | NULL | |
+| description | varchar | NULL | |
+| price | numeric | NULL | |
+| price_promotional | numeric | NULL | |
+| photos | text | NULL | PostgreSQL text array (`text[]`) |
+| stock | numeric | NULL | |
+| auth_user_id | uuid | `gen_random_uuid()` | FK → users.auth_user_id |
+| tenant_id | int8 | NULL | FK → tenants.id |
+| created_at | timestamp | `now()` | |
+
+**Join with categories (storefront):**
+```typescript
+await supabase.from('products')
+  .select('*, product_categories(categories(*))')
+  .eq('tenant_id', tenant.id);
+```
+
+**Search + sort (storefront):**
+```typescript
+let q = supabase.from('products')
+  .select('*, product_categories(categories(*))')
+  .eq('tenant_id', tenant.id);
+
+if (search) q = q.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+if (orderBy === 'price_asc')  q = q.order('price', { ascending: true });
+if (orderBy === 'price_desc') q = q.order('price', { ascending: false });
+if (orderBy === 'name_asc')   q = q.order('name',  { ascending: true });
+```
+
+---
+
+### `product_categories`
+
+Junction table — many-to-many between products and categories.
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | `nextval(...)` | PK (auto-sequence) |
+| product_id | int8 | NULL | FK → products.id |
+| category_id | int8 | NULL | FK → categories.id |
+| position | int4 | `0` | |
+| created_at | timestamp | `now()` | |
+
+**Insert after product create/update:**
+```typescript
+await Promise.all(
+  categoryIds.map((category_id) =>
+    supabase.from('product_categories').insert({ product_id, category_id })
+  )
+);
+```
+
+---
+
+### `orders`
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | — | PK |
+| tenant_id | int8 | NULL | FK → tenants.id |
+| name | text | NULL | Customer name |
+| phone | text | NULL | |
+| comments | text | NULL | |
+| status | text | `'pending'` | `'pending'` \| `'completed'` |
+| products | jsonb | `'[]'::jsonb` | **Embedded order lines** — see `OrderItem` below |
+| total_usd | numeric | `0` | |
+| total_bs | numeric | `0` | Venezuelan bolivares |
+| created_at | timestamp | `timezone('utc')` | |
+| updated_at | timestamp | `timezone('utc')` | |
+
+**`OrderItem` shape (stored in `products` JSONB column):**
+```typescript
+interface OrderItem {
+  productId: string | number;
+  name: string;
+  price: number;
+  quantity: number;
+  total: number;
+  photo?: string;
+}
+```
+
+**List with date + search filters:**
+```typescript
+let q = supabase.from('orders')
+  .select('*')
+  .eq('tenant_id', tenantId)
+  .order('created_at', { ascending: false });
+
+if (date)   q = q.gte('created_at', startOfDay).lt('created_at', endOfDay);
+if (search) q = q.ilike('name', `%${search}%`);
+```
+
+---
+
+### `tenant_ecommerce_config`
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | — | PK |
+| tenant_id | int8 | NULL | FK → tenants.id |
+| whatsapp | text | NULL | Phone number |
+| logo | text | NULL | URL |
+| banner | text | NULL | URL |
+| description | text | NULL | |
+| is_accepting_orders | bool | `true` | |
+| is_visible | bool | `true` | Storefront publicly visible |
+| currency | text | `'USD'` | |
+| currency_symbol | text | `'$'` | |
+| created_at | timestamp | `now()` | |
+| updated_at | timestamp | `now()` | |
+
+**Upsert pattern:**
+```typescript
+const { data: existing } = await supabase.from('tenant_ecommerce_config')
+  .select('id').eq('tenant_id', tenantId).maybeSingle();
+
+if (existing) {
+  await supabase.from('tenant_ecommerce_config')
+    .update(payload).eq('tenant_id', tenantId).select('id');
+} else {
+  await supabase.from('tenant_ecommerce_config')
+    .insert({ tenant_id: tenantId, ...payload }).select('id');
+}
+```
+
+---
+
+### `tenant_currency_config`
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | — | PK |
+| tenant_id | int8 | NULL | FK → tenants.id |
+| product_currency | text | `'USD'` | Currency used for product prices |
+| display_currency | text | `'USD'` | Currency shown to customers |
+| exchange_rate_type | text | `'none'` | Rate source: `'none'`, `'bcv_usd'`, `'bcv_eur'`, `'custom'` |
+| custom_rate | numeric | NULL | Manual exchange rate |
+| show_dual_currency | bool | `false` | Show both currencies in storefront |
+| currency_symbol | text | `'$'` | |
+| decimal_separator | text | `','` | e.g. `,` (Venezuelan format) |
+| thousand_separator | text | `'.'` | e.g. `.` (Venezuelan format) |
+| created_at | timestamp | `now()` | |
+| updated_at | timestamp | `now()` | |
+
+---
+
+### `tenant_business_hours`
+
+Description: *Horarios de apertura por día de la semana*
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | — | PK |
+| tenant_id | int8 | NULL | FK → tenants.id |
+| day_of_week | int2 | NULL | `0`=Sunday … `6`=Saturday |
+| open_time | time | `'08:00:00'` | |
+| close_time | time | `'20:00:00'` | |
+| is_open | bool | `true` | |
+| created_at | timestamp | `now()` | |
+| updated_at | timestamp | `now()` | |
+
+**Query today's hours:**
+```typescript
+const dayOfWeek = new Date().getDay(); // 0-6
+await supabase.from('tenant_business_hours')
+  .select('open_time, close_time, is_open')
+  .eq('tenant_id', tenant.id)
+  .eq('day_of_week', dayOfWeek)
+  .single();
+```
+
+---
+
+### `exchange_rates`
+
+Singleton — always `id = 1`. **UNRESTRICTED** (no Row Level Security).
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | `1` | Always 1 |
+| bcv_usd | numeric | `0` | BCV official USD rate |
+| bcv_eur | numeric | `0` | BCV official EUR rate |
+| custom_rate | numeric | `0` | Manual override |
+| active_rate | text | `'bcv_usd'` | `'bcv_usd'` \| `'bcv_eur'` \| `'custom'` |
+| updated_at | timestamp | `now()` | |
+
+**Storefront — get active rate:**
+```typescript
+await supabase.from('exchange_rates')
+  .select('bcv_usd, bcv_eur, custom_rate, active_rate')
+  .order('updated_at', { ascending: false })
+  .limit(1).single();
+```
+
+**Admin — update active rate:**
+```typescript
+await supabase.from('exchange_rates')
+  .update({ active_rate: rateType, updated_at: new Date().toISOString() })
+  .eq('id', 1);
+```
+
+---
+
+## Auth Flow
+
+```text
+supabase.auth.getUser()
+  └── user.id (UUID)
+        └── users.auth_user_id
+              └── users.id
+                    └── users_tenants.user_id
+                          └── users_tenants.tenant_id → tenants
+```
+
+- Supabase auth UUID ≠ `users.id` — always join via `auth_user_id`
+- Default tenant: `users_tenants.is_default = true`
+- Fallback: first row in `users_tenants` for that user
+
+## Defaults & Conventions
+
+| Convention | Value |
+| --- | --- |
+| Default country | `VE` (Venezuela) |
+| Default timezone | `America/Caracas` |
+| Default currency | `USD` |
+| Decimal separator | `,` (Venezuelan format) |
+| Thousand separator | `.` (Venezuelan format) |
+| Default order status | `pending` |
+| Default exchange rate | `bcv_usd` |
+| Business hours open | `08:00 – 20:00` |

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nx test *)",
+      "Bash(nx lint *)",
+      "Bash(nx build *)",
+      "Bash(nx serve *)",
+      "Bash(nx run-many *)",
+      "Bash(nx affected *)",
+      "Bash(nx generate *)",
+      "Bash(nx graph *)",
+      "Bash(npm run serve:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run build)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)"
+    ]
+  }
+}
