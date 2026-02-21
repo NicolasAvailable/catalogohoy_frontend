@@ -51,15 +51,12 @@ export class EcommerceConfigService {
   ): Promise<E.Either<Error, void>> {
     try {
       if (config.name) {
-        const { data: tenantData, error: tenantError } = await this.client
+        const { error: tenantError } = await this.client
           .from('tenants')
           .update({ name: config.name })
-          .eq('id', config.tenantId)
-          .select('id');
+          .eq('id', config.tenantId);
 
-        if (tenantError) return E.left(tenantError);
-        if (!tenantData?.length)
-          return E.left(new Error('No se pudo actualizar el nombre. Verifica los permisos.'));
+        if (tenantError) return E.left(new Error(tenantError.message));
       }
 
       const updateData: Record<string, unknown> = {};

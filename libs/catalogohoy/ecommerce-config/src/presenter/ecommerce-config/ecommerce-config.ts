@@ -98,8 +98,13 @@ export class EcommerceConfigComponent implements OnInit {
   async saveIdentity() {
     await this.configStore.updatePartialConfig({
       name: this.draftName(),
-      whatsappButtons: this.draftWhatsappButtons(),
       description: this.draftDescription(),
+    });
+  }
+
+  async saveWhatsappButtons() {
+    await this.configStore.updatePartialConfig({
+      whatsappButtons: this.draftWhatsappButtons(),
     });
   }
 

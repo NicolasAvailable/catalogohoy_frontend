@@ -7,11 +7,11 @@
   </div>
 
   <div class="config-grid">
-    <!-- Columna Principal: Identidad -->
+    <!-- Columna Principal -->
     <div class="main-column">
+      <!-- Card 1: Identidad de la Marca -->
       <ui-card header="Identidad de la Marca" styleClass="config-card">
         <div class="card-content">
-          <!-- Sección: Nombre -->
           <div class="form-field">
             <label for="shop-name">Nombre Comercial</label>
             <ui-input-text
@@ -28,77 +28,20 @@
             >
           </div>
 
-          <div class="divider"></div>
-
-          <!-- Sección: Botones WhatsApp -->
-          <div class="social-description-section">
-            <div class="form-field">
-              <label>Vendedores WhatsApp</label>
-              <small class="field-hint">
-                Cada vendedor aparecerá como un botón de pago en el checkout.
-                Máximo 3.
-              </small>
-
-              <div class="whatsapp-buttons-list">
-                @for (button of draftWhatsappButtons(); track $index) {
-                <div class="whatsapp-button-item">
-                  <div class="whatsapp-button-fields">
-                    <ui-input-text
-                      [ngModel]="button.name"
-                      (ngModelChange)="updateButtonName($index, $event)"
-                      placeholder="Nombre (Ej: Juan)"
-                      [disabled]="configStore.isSaving()"
-                      styleClass="w-full"
-                    ></ui-input-text>
-                    <ui-input-text
-                      [ngModel]="button.number"
-                      (ngModelChange)="updateButtonNumber($index, $event)"
-                      placeholder="Número (Ej: +584124807708)"
-                      [disabled]="configStore.isSaving()"
-                      styleClass="w-full"
-                    ></ui-input-text>
-                  </div>
-                  <button
-                    type="button"
-                    class="whatsapp-button-remove"
-                    (click)="removeWhatsappButton($index)"
-                    [disabled]="configStore.isSaving()"
-                    title="Eliminar vendedor"
-                  >
-                    <ui-icon name="trash" styleClass="size-4"></ui-icon>
-                  </button>
-                </div>
-                }
-              </div>
-
-              @if (draftWhatsappButtons().length < 3) {
-              <ui-button
-                label="Agregar vendedor"
-                [variant]="'outlined'"
-                severity="secondary"
-                size="small"
-                icon="plus"
-                (click)="addWhatsappButton()"
-                [disabled]="configStore.isSaving()"
-              ></ui-button>
-              }
-            </div>
-
-            <div class="form-field">
-              <label for="shop-description">Descripción del Catálogo</label>
-              <ui-textarea
-                textareaId="shop-description"
-                [ngModel]="draftDescription()"
-                (ngModelChange)="draftDescription.set($event)"
-                placeholder="Cuenta un poco sobre tu tienda..."
-                [disabled]="configStore.isSaving()"
-                [rows]="3"
-                styleClass="w-full"
-              ></ui-textarea>
-              <small class="field-hint"
-                >Aparecerá como resumen al compartir tu enlace.</small
-              >
-            </div>
+          <div class="form-field">
+            <label for="shop-description">Descripción del Catálogo</label>
+            <ui-textarea
+              textareaId="shop-description"
+              [ngModel]="draftDescription()"
+              (ngModelChange)="draftDescription.set($event)"
+              placeholder="Cuenta un poco sobre tu tienda..."
+              [disabled]="configStore.isSaving()"
+              [rows]="3"
+              styleClass="w-full"
+            ></ui-textarea>
+            <small class="field-hint"
+              >Aparecerá como resumen al compartir tu enlace.</small
+            >
           </div>
 
           <div class="divider"></div>
@@ -115,9 +58,77 @@
         </div>
       </ui-card>
 
+      <!-- Card 2: Vendedores WhatsApp -->
+      <ui-card header="Vendedores WhatsApp" styleClass="config-card">
+        <div class="card-content">
+          <div class="form-field">
+            <small class="field-hint">
+              Cada vendedor aparecerá como un botón de pago en el checkout.
+              Máximo 3.
+            </small>
+
+            <div class="whatsapp-buttons-list">
+              @for (button of draftWhatsappButtons(); track $index) {
+              <div class="whatsapp-button-item">
+                <div class="whatsapp-button-fields">
+                  <ui-input-text
+                    [ngModel]="button.name"
+                    (ngModelChange)="updateButtonName($index, $event)"
+                    placeholder="Nombre (Ej: Juan)"
+                    [disabled]="configStore.isSaving()"
+                    styleClass="w-full"
+                  ></ui-input-text>
+                  <ui-input-text
+                    [ngModel]="button.number"
+                    (ngModelChange)="updateButtonNumber($index, $event)"
+                    placeholder="Número (Ej: +584124807708)"
+                    [disabled]="configStore.isSaving()"
+                    styleClass="w-full"
+                  ></ui-input-text>
+                </div>
+                <button
+                  type="button"
+                  class="whatsapp-button-remove"
+                  (click)="removeWhatsappButton($index)"
+                  [disabled]="configStore.isSaving()"
+                  title="Eliminar vendedor"
+                >
+                  <ui-icon name="trash" styleClass="size-4"></ui-icon>
+                </button>
+              </div>
+              }
+            </div>
+
+            @if (draftWhatsappButtons().length < 3) {
+            <ui-button
+              label="Agregar vendedor"
+              [variant]="'outlined'"
+              severity="secondary"
+              size="small"
+              icon="plus"
+              (click)="addWhatsappButton()"
+              [disabled]="configStore.isSaving()"
+            ></ui-button>
+            }
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="save-section">
+            <ui-button
+              label="Guardar vendedores"
+              (click)="saveWhatsappButtons()"
+              [isLoading]="configStore.isSaving()"
+              icon="save"
+              [fluid]="true"
+            ></ui-button>
+          </div>
+        </div>
+      </ui-card>
+
+      <!-- Card 3: Comportamiento -->
       <ui-card header="Comportamiento" styleClass="config-card">
         <div class="card-content">
-          <!-- Ventas -->
           <div
             class="status-box"
             [class.active]="configStore.config()?.isAcceptingOrders"
@@ -155,9 +166,8 @@
       </ui-card>
     </div>
 
-    <!-- Columna Lateral: Configuración -->
+    <!-- Columna Lateral -->
     <div class="side-column">
-      <!-- Sección: Logo del Catálogo -->
       <ui-card header="Logo del Catálogo" styleClass="config-card">
         <div class="card-content">
           <ui-uploader
