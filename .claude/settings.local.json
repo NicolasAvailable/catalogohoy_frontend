@@ -10,7 +10,22 @@
       "Bash(npm ls:*)",
       "Bash(node -e:*)",
       "Bash(python3 -c:*)",
-      "Bash(python -c:*)"
+      "Bash(python -c:*)",
+      "WebFetch(domain:www.bcv.org.ve)",
+      "mcp__supabase__list_edge_functions",
+      "Bash(git -C \"c:/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo\" log --oneline)",
+      "mcp__supabase__get_project_url",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:dolarapi.com)",
+      "Bash(test:*)",
+      "WebFetch(domain:ve.dolarapi.com)",
+      "mcp__supabase__search_docs",
+      "mcp__supabase__deploy_edge_function",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "mcp__supabase__get_publishable_keys",
+      "Bash(curl:*)",
+      "mcp__supabase__list_extensions"
     ]
   },
   "enableAllProjectMcpServers": true,

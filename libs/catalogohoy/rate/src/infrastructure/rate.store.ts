@@ -25,6 +25,10 @@ export const RateStore = signalStore(
     return {
       async loadRates() {
         patchState(store, { isLoading: true, error: null });
+
+        // Auto-sync BCV rates from bcv_rates table before loading
+        await rateService.syncBcvRates();
+
         const result = await rateService.getRates();
         patchState(store, { isLoading: false });
 

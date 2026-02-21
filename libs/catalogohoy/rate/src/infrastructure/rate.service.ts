@@ -60,15 +60,27 @@ export class RateService {
   }
 
   async syncBcvRates(): Promise<E.Either<Error, void>> {
-    // Mocking BCV update (replace with real API call if needed)
-    const mockBcvUsd = 38.45;
-    const mockBcvEur = 45.12;
+    // Read latest rates from bcv_rates table (populated by pg_cron every 4h)
+    const { data: bcvRate, error: bcvError } = await this.client
+      .from('bcv_rates')
+      .select('usd, eur')
+      .order('fetched_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (bcvError) {
+      return E.left(new Error(bcvError.message));
+    }
+
+    if (!bcvRate) {
+      return E.left(new Error('No hay tasas BCV disponibles'));
+    }
 
     const { error } = await this.client
       .from('exchange_rates')
       .update({
-        bcv_usd: mockBcvUsd,
-        bcv_eur: mockBcvEur,
+        bcv_usd: bcvRate.usd,
+        bcv_eur: bcvRate.eur,
         updated_at: new Date().toISOString(),
       })
       .eq('id', 1);
