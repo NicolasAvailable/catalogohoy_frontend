@@ -25,7 +25,9 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "mcp__supabase__get_publishable_keys",
       "Bash(curl:*)",
-      "mcp__supabase__list_extensions"
+      "mcp__supabase__list_extensions",
+      "WebFetch(domain:catalogohoy.com)",
+      "Bash(dir:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

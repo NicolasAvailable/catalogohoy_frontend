@@ -35,4 +35,9 @@ export const adminRoutes: Route[] = [
         (m) => m.ecommerceConfigRoutes
       ),
   },
+  {
+    path: 'plans',
+    loadChildren: () =>
+      import('@catalogohoy/plan').then((m) => m.planRoutes),
+  },
 ];

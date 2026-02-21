@@ -1,0 +1,65 @@
+<section class="plans-wrapper">
+  <header class="plans-header">
+    <h1 class="plans-title">Planes y Precios</h1>
+    <p class="plans-subtitle">
+      Elige el plan que mejor se adapte a tu negocio.
+    </p>
+  </header>
+
+  <div class="plans-grid">
+    @for (plan of plans(); track plan.id) {
+    <div class="plan-card" [class.plan-card--popular]="plan.isPopular">
+      @if (plan.isPopular) {
+      <div class="popular-badge">Más popular</div>
+      }
+
+      <div class="plan-card__content">
+        <!-- Header -->
+        <div class="plan-card__header">
+          <h2 class="plan-card__name">{{ plan.name }}</h2>
+          <p class="plan-card__description">{{ plan.description }}</p>
+        </div>
+
+        <!-- Price -->
+        <div class="plan-card__price">
+          <span class="plan-card__price-amount">
+            ${{ plan.price % 1 === 0 ? plan.price : plan.price }}
+          </span>
+          <span class="plan-card__price-period">{{ plan.period }}</span>
+        </div>
+
+        <!-- Badges -->
+        <div class="plan-card__badges">
+          <span class="badge badge--blue">{{ plan.maxProducts }}</span>
+          <span class="badge badge--dark">{{ plan.rateType }}</span>
+        </div>
+
+        <!-- Features -->
+        <ul class="plan-card__features">
+          @for (feature of plan.features; track feature.text) {
+          <li class="plan-card__feature">
+            <ui-icon name="check" styleClass="size-5 text-blue-500 shrink-0" />
+            <span>{{ feature.text }}</span>
+          </li>
+          }
+        </ul>
+
+        <!-- Additional catalog -->
+        <p class="plan-card__additional">
+          Catálogo adicional: <strong>{{ plan.additionalCatalogPrice }}</strong>
+        </p>
+
+        <!-- CTA Button -->
+        <button
+          class="plan-card__button"
+          [class.plan-card__button--primary]="plan.isPopular"
+          [class.plan-card__button--secondary]="!plan.isPopular"
+          (click)="selectPlan(plan)"
+        >
+          {{ plan.buttonLabel }}
+        </button>
+      </div>
+    </div>
+    }
+  </div>
+</section>
