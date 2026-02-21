@@ -11,7 +11,9 @@ export class Product extends Entity {
     public readonly stock: string | null,
     public readonly categoryList: CategoryList,
     public readonly authUserId: string,
-    public readonly createdAt: string
+    public readonly createdAt: string,
+    public readonly sku: string | null,
+    public readonly productionCost: number | null
   ) {
     super();
   }
@@ -26,7 +28,9 @@ export class Product extends Entity {
       primitives.stock,
       primitives.categoryList,
       primitives.authUserId,
-      primitives.createdAt
+      primitives.createdAt,
+      primitives.sku,
+      primitives.productionCost
     ).withId(primitives.id);
   }
 }
@@ -42,4 +46,6 @@ export interface ProductPrimitives {
   categoryList: CategoryList;
   authUserId: string;
   createdAt: string;
+  sku: string | null;
+  productionCost: number | null;
 }

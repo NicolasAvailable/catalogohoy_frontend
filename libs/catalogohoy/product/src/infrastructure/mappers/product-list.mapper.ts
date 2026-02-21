@@ -20,6 +20,8 @@ export class ProductListMapper {
             entity.product_categories ?? []
           ),
           createdAt: entity.created_at,
+          sku: entity.sku,
+          productionCost: entity.production_cost,
         })
       )
     );

@@ -59,9 +59,11 @@ export default class Save implements OnInit {
   public readonly form = inject(FormBuilder).group({
     name: ['', [Validators.required, whiteSpacesValidator()]],
     description: [''],
+    sku: [''],
     photos: [[] as string[]],
     price: ['', [Validators.required]],
     pricePromotional: [''],
+    productionCost: [''],
     stock: [null],
     categoryIds: [[] as string[]],
   });
@@ -102,9 +104,22 @@ export default class Save implements OnInit {
     this.newCategoryName.set(event);
   }
 
+  public generateSku(): void {
+    const name = this.form.controls.name.value || '';
+    if (!name.trim()) return;
+    const words = name.trim().toUpperCase().split(/\s+/);
+    const prefix = words.map((w) => w.slice(0, 3)).join('-');
+    const suffix = Math.floor(1000 + Math.random() * 9000);
+    this.form.controls.sku.setValue(`${prefix}-${suffix}`);
+  }
+
   private setValuesForm(product: Product) {
     this.form.controls.name.setValue(product.name);
     this.form.controls.description.setValue(product.description);
+    this.form.controls.sku.setValue(product.sku ?? '');
+    this.form.controls.productionCost.setValue(
+      product.productionCost != null ? String(product.productionCost) : ''
+    );
     this.form.controls.price.setValue(String(product.price));
     this.form.controls.pricePromotional.setValue(
       String(product.pricePromotional)
@@ -148,6 +163,8 @@ export default class Save implements OnInit {
       id: '',
       name: this.form.controls.name.value as string,
       description: this.form.controls.description.value,
+      sku: this.form.controls.sku.value || null,
+      productionCost: this.form.controls.productionCost.value || null,
       photos: this.photos(),
       price: this.form.controls.price.value!,
       pricePromotional: this.form.controls.pricePromotional.value!,

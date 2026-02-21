@@ -15,6 +15,8 @@ export class ProductMapper {
       authUserId: entity.auth_user_id,
       categoryList: CategoryListMapper.toDomain(entity.product_categories),
       createdAt: entity.created_at,
+      sku: entity.sku,
+      productionCost: entity.production_cost,
     });
   }
 }

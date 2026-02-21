@@ -6,6 +6,8 @@ export type CreateProductInput = {
   photos: string[] | null;
   stock: string | null;
   categoryIds: string[];
+  sku: string | null;
+  productionCost: string | null;
 };
 
 export type UpdateProductInput = CreateProductInput & { id: string };

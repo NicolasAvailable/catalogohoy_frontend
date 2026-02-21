@@ -134,6 +134,8 @@ export class ProductService implements BaseProductService {
         auth_user_id: user.id,
         stock: input.stock,
         tenant_id: tenantId,
+        sku: input.sku || null,
+        production_cost: input.productionCost ? Number(input.productionCost) : null,
       })
       .select('*');
 
@@ -165,6 +167,8 @@ export class ProductService implements BaseProductService {
           input.pricePromotional.length === 0 ? null : input.pricePromotional,
         photos: input.photos,
         stock: input.stock,
+        sku: input.sku || null,
+        production_cost: input.productionCost ? Number(input.productionCost) : null,
       })
       .eq('id', input.id)
       .select('*');

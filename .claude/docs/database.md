@@ -152,6 +152,7 @@ await Promise.all(
 | price_promotional | numeric | NULL | |
 | photos | text | NULL | PostgreSQL text array (`text[]`) |
 | stock | numeric | NULL | |
+| sku | text | NULL | Unique product code (optional) — see migration below |
 | auth_user_id | uuid | `gen_random_uuid()` | FK → users.auth_user_id |
 | tenant_id | int8 | NULL | FK → tenants.id |
 | created_at | timestamp | `now()` | |

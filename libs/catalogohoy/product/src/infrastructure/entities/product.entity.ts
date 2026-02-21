@@ -9,6 +9,8 @@ export interface ProductEntity {
   auth_user_id: string;
   photos: string[];
   stock: string | null;
+  sku: string | null;
+  production_cost: number | null;
   product_categories: CategoryEntity[];
   created_at: string;
 }
