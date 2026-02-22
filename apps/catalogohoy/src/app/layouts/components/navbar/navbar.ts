@@ -1,20 +1,39 @@
 import { Clipboard } from '@angular/cdk/clipboard';
-import { Component, inject, output } from '@angular/core';
+import { Component, inject, OnInit, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { PlanStore } from '@catalogohoy/plan';
 import { ProfileStore } from '@catalogohoy/profile';
 import { is, qr } from '@shared/domain';
 import { BaseComponent } from '@shared/presenter';
-import { AvatarComponent, ButtonComponent, TooltipDirective } from '@ui';
+import {
+  AvatarComponent,
+  ButtonComponent,
+  IconComponent,
+  TooltipDirective,
+} from '@ui';
 import { ProfileMenu } from './components';
 
 @Component({
   selector: 'app-navbar',
-  imports: [AvatarComponent, ButtonComponent, TooltipDirective, ProfileMenu],
+  imports: [
+    AvatarComponent,
+    ButtonComponent,
+    IconComponent,
+    TooltipDirective,
+    ProfileMenu,
+    RouterLink,
+  ],
   templateUrl: './navbar.html',
 })
-export class Navbar extends BaseComponent {
+export class Navbar extends BaseComponent implements OnInit {
   public toggleSidebar = output<void>();
   private readonly clipboard = inject(Clipboard);
   public readonly profileStore = inject(ProfileStore);
+  public readonly planStore = inject(PlanStore);
+
+  ngOnInit(): void {
+    this.planStore.loadTenantPlanUsage();
+  }
 
   public share() {
     const url = this.profileStore.profile().tenantList.first.url;

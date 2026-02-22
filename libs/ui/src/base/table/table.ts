@@ -28,6 +28,9 @@ import { TableModule, TablePageEvent } from 'primeng/table';
         [scrollHeight]="scrollHeight()"
         [paginator]="paginator()"
         [rows]="rows()"
+        [pageLinks]="pageLinks()"
+        [showCurrentPageReport]="showCurrentPageReport()"
+        [currentPageReportTemplate]="currentPageReportTemplate()"
         (onPage)="pageChange.emit($event)"
       >
         <ng-template pTemplate="header">
@@ -61,6 +64,9 @@ export class TableComponent {
   public readonly scrollHeight = input<string>(''); // puede ser 'flex', '60vh', etc.
   public readonly paginator = input<boolean>(false);
   public readonly rows = input<number>(10);
+  public readonly pageLinks = input<number>(5);
+  public readonly showCurrentPageReport = input<boolean>(false);
+  public readonly currentPageReportTemplate = input<string>('{currentPage} de {totalPages}');
   public readonly columnsCount = input<number>(1);
 
   public readonly pageChange = output<TablePageEvent>();

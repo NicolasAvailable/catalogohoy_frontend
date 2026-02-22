@@ -5,6 +5,7 @@ import {
   input,
   OnInit,
   signal,
+  ViewChild,
 } from '@angular/core';
 import {
   FormBuilder,
@@ -14,6 +15,7 @@ import {
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CategoryStore } from '@catalogohoy/category';
+import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
 import { Exception, is } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { whiteSpacesValidator } from '@shared/presenter';
@@ -46,6 +48,7 @@ import { Product } from '../../../domain';
     InputNumberComponent,
     RadioButtonComponent,
     MultiSelectComponent,
+    PlanLimitDialogComponent,
   ],
   templateUrl: './save.html',
   styleUrl: './save.css',
@@ -56,6 +59,11 @@ export default class Save implements OnInit {
   private readonly toastService = inject(ToastService);
   private readonly productFacade = inject(ProductFacade);
   public readonly categoryStore = inject(CategoryStore);
+  public readonly planStore = inject(PlanStore);
+
+  @ViewChild(PlanLimitDialogComponent)
+  planLimitDialog!: PlanLimitDialogComponent;
+
   public readonly form = inject(FormBuilder).group({
     name: ['', [Validators.required, whiteSpacesValidator()]],
     description: [''],
@@ -76,6 +84,7 @@ export default class Save implements OnInit {
 
   ngOnInit(): void {
     this.categoryStore.categoryList$(1, 100);
+    this.planStore.loadTenantPlanUsage();
     is.affirmative(this.id())
       .mapRight(async () => {
         const product = await this.productFacade.getById(this.id() as string);
@@ -159,6 +168,12 @@ export default class Save implements OnInit {
 
   public async create() {
     if (this.form.invalid) return;
+
+    if (this.isCreate() && !this.planStore.canCreateProduct()) {
+      this.planLimitDialog.show();
+      return;
+    }
+
     const body = {
       id: '',
       name: this.form.controls.name.value as string,
@@ -173,7 +188,14 @@ export default class Save implements OnInit {
     };
     if (this.isCreate()) {
       const product = await this.productFacade.create(body);
-      product.mapRight(() => this.router.navigate(['/admin/products']));
+      product
+        .mapRight(() => this.router.navigate(['/admin/products']))
+        .mapLeft((error) => {
+          if (error.message?.includes('PLAN_LIMIT_EXCEEDED')) {
+            this.planStore.refreshUsage();
+            this.planLimitDialog.show();
+          }
+        });
     } else {
       body['id'] = this.id() as string;
       const product = await this.productFacade.update(body);

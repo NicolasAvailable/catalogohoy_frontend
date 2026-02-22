@@ -8,7 +8,8 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
 import {
   ButtonComponent,
   CardComponent,
@@ -41,6 +42,7 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
     ConfirmDialogComponent,
     ImportExportHubComponent,
     CheckboxComponent,
+    PlanLimitDialogComponent,
   ],
   templateUrl: './list.html',
   styleUrl: './list.css',
@@ -49,8 +51,10 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
   },
 })
 export default class List implements OnInit, OnDestroy {
+  private readonly router = inject(Router);
   public readonly productStore = inject(ProductStore);
   public readonly productFacade = inject(ProductFacade);
+  public readonly planStore = inject(PlanStore);
   public readonly selectedProduct = signal<Product | null>(null);
   public readonly selectedIds = signal<Set<string>>(new Set());
   public readonly deleteMode = signal<'single' | 'bulk'>('single');
@@ -77,6 +81,9 @@ export default class List implements OnInit, OnDestroy {
   @ViewChild(ImportExportHubComponent)
   public importExportHub!: ImportExportHubComponent;
 
+  @ViewChild(PlanLimitDialogComponent)
+  public planLimitDialog!: PlanLimitDialogComponent;
+
   public searchForm = new FormGroup({
     search: new FormControl('', []),
   });
@@ -85,6 +92,7 @@ export default class List implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.productStore.productList$();
+    this.planStore.loadTenantPlanUsage();
 
     this.searchSubscription = this.searchForm.controls.search.valueChanges
       .pipe(debounceTime(300), distinctUntilChanged())
@@ -145,6 +153,14 @@ export default class List implements OnInit, OnDestroy {
   public onDeleteSelected() {
     this.deleteMode.set('bulk');
     this.confirmDialog.warning();
+  }
+
+  public onCreateProduct(): void {
+    if (!this.planStore.canCreateProduct()) {
+      this.planLimitDialog.show();
+      return;
+    }
+    this.router.navigate(['/admin/products/create']);
   }
 
   public openImportExport(): void {

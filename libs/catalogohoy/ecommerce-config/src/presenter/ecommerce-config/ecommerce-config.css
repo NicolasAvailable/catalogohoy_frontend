@@ -17,7 +17,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .header-section {
@@ -26,11 +26,17 @@
 }
 
 .page-title {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: var(--text-color, #1a1a1a);
   margin: 0;
   letter-spacing: -0.02em;
+}
+
+@media (min-width: 640px) {
+  .page-title {
+    font-size: 2rem;
+  }
 }
 
 .page-description {
@@ -44,7 +50,7 @@
   grid-template-columns: 1fr 340px;
   gap: 2rem;
   flex: 1;
-  overflow: hidden;
+  min-height: 0;
   align-items: start;
 }
 
@@ -91,7 +97,7 @@
 }
 
 .card-content {
-  padding: 0.5rem;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 2rem;

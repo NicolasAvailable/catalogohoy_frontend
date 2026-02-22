@@ -1,21 +1,44 @@
 <section
   class="container flex flex-col flex-1 max-w-5xl mx-auto px-1 overflow-hidden"
 >
-  <header class="flex justify-between items-center py-4">
-    <h1 class="text-4xl font-bold">
+  <header class="flex justify-between items-center gap-2 py-4">
+    <h1 class="text-2xl sm:text-4xl font-bold shrink-0">
       {{isCreate() ? 'Crear producto' : 'Editar producto'}}
     </h1>
-    <div class="flex gap-3 items-center">
+    <div class="flex gap-2 items-center">
+      <!-- Mobile buttons -->
       <ui-button
+        class="sm:hidden"
         routerLink="/admin/products"
         label="Cancelar"
         variant="outlined"
         severity="contrast"
+        [fluid]="false"
+        size="small"
       />
       <ui-button
+        class="sm:hidden"
+        (click)="create()"
+        [disabled]="form.invalid"
+        label="Guardar"
+        [fluid]="false"
+        size="small"
+      />
+      <!-- Desktop buttons -->
+      <ui-button
+        class="hidden sm:block"
+        routerLink="/admin/products"
+        label="Cancelar"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+      />
+      <ui-button
+        class="hidden sm:block"
         (click)="create()"
         [disabled]="form.invalid"
         label="Guardar cambios"
+        [fluid]="false"
       />
     </div>
   </header>
@@ -166,7 +189,7 @@
     <ui-card>
       <div class="flex flex-col gap-4">
         <h2 class="text-xl font-bold">Precios</h2>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="flex flex-col gap-2">
             <label class="text-base text-grey-100" for="price"
               >Precio de venta</label
@@ -316,4 +339,5 @@
       </div>
     </ui-card>
   </form>
+  <lib-plan-limit-dialog />
 </section>

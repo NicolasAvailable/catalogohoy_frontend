@@ -225,6 +225,13 @@
             <td class="px-6 py-3.5">
               <div class="flex items-center justify-end gap-2">
                 <ui-button
+                  (click)="toggleExpand(order.id)"
+                  [icon]="expandedOrderId() === order.id ? 'chevron-down' : 'chevron-right'"
+                  variant="outlined"
+                  severity="contrast"
+                  size="small"
+                />
+                <ui-button
                   (click)="onEditOrder(order)"
                   icon="pencil"
                   variant="outlined"
@@ -241,6 +248,39 @@
               </div>
             </td>
           </tr>
+          <!-- Expanded detail row -->
+          @if (expandedOrderId() === order.id) {
+          <tr>
+            <td colspan="9" class="px-6 py-4 bg-grey-25">
+              <div class="flex flex-col gap-3">
+                <h4 class="text-xs font-bold text-grey-400 uppercase tracking-wider">Detalle de productos</h4>
+                <div class="flex flex-col gap-2">
+                  @for (item of order.products; track $index) {
+                  <div class="flex items-center gap-4 bg-white rounded-lg p-3 border border-grey-50">
+                    <ui-icon
+                      [name]="item.photo || 'package'"
+                      class="flex items-center justify-center w-10 h-10 shrink-0"
+                      styleClass="max-w-10 max-h-10 rounded-sm object-cover"
+                    />
+                    <div class="flex-1 min-w-0">
+                      <span class="font-semibold text-grey-800 text-sm">{{ item.name }}</span>
+                    </div>
+                    <span class="text-sm text-grey-400 shrink-0">x{{ item.quantity }}</span>
+                    <span class="text-sm font-medium text-grey-700 shrink-0">${{ item.price | number:'1.2-2' }}</span>
+                    <span class="text-sm font-bold text-primary-600 shrink-0">${{ item.total | number:'1.2-2' }}</span>
+                  </div>
+                  }
+                </div>
+                @if (order.comments) {
+                <div class="flex items-start gap-2 mt-1">
+                  <ui-icon name="message-circle-question" styleClass="size-4 text-grey-300 mt-0.5" />
+                  <p class="text-sm text-grey-400">{{ order.comments }}</p>
+                </div>
+                }
+              </div>
+            </td>
+          </tr>
+          }
           } @empty {
           <tr>
             <td colspan="9">

@@ -35,6 +35,15 @@
     />
   </div>
   <div class="flex items-center">
+    @if (planStore.currentPlan(); as plan) {
+    <a
+      routerLink="/admin/plans"
+      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-50 hover:bg-primary-100 transition-colors cursor-pointer mr-1"
+    >
+      <ui-icon name="crown" size="16" styleClass="text-primary-500" />
+      <span class="text-sm font-semibold text-primary-600">{{ plan.name }}</span>
+    </a>
+    }
     <ui-button
       icon="message-circle-question"
       severity="primary"

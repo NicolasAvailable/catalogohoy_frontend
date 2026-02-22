@@ -27,7 +27,10 @@
       "Bash(curl:*)",
       "mcp__supabase__list_extensions",
       "WebFetch(domain:catalogohoy.com)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(echo:*)",
+      "Bash(tee:*)",
+      "mcp__supabase__list_migrations"
     ]
   },
   "enableAllProjectMcpServers": true,

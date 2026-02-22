@@ -68,6 +68,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly selectedFilter = signal<OrderStatus | 'all'>('all');
   public readonly selectedOrder = signal<OrderBy>('date_desc');
   public readonly selectedDate = signal<Date | null>(null);
+  public readonly expandedOrderId = signal<number | null>(null);
 
   public readonly filterTabs: FilterTab[] = [
     { label: 'Todas', value: 'all' },
@@ -137,6 +138,12 @@ export class OrderListComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.searchSubscription?.unsubscribe();
+  }
+
+  toggleExpand(orderId: number) {
+    this.expandedOrderId.set(
+      this.expandedOrderId() === orderId ? null : orderId
+    );
   }
 
   onCreateOrder() {

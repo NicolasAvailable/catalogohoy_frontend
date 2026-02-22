@@ -1,35 +1,82 @@
 <section
   class="container flex flex-col flex-1 max-w-5xl mx-auto px-1 overflow-hidden"
 >
-  <header class="flex justify-between items-center py-4">
-    <h1 class="text-4xl font-bold">Productos</h1>
-    <div class="flex gap-3 items-center">
-      <span>{{productStore.productList().products.length}} productos</span>
+  <header class="flex justify-between items-center gap-2 py-4">
+    <h1 class="text-2xl sm:text-4xl font-bold shrink-0">Productos</h1>
+    <div class="flex gap-2 items-center justify-end">
       @if (hasSelection()) {
+      <!-- Mobile selection buttons -->
       <ui-button
+        class="sm:hidden"
         (click)="onDeleteSelected()"
         [label]="'Eliminar (' + selectedIds().size + ')'"
         icon="trash"
         severity="danger"
+        [fluid]="false"
+        size="small"
       />
       <ui-button
+        class="sm:hidden"
         (click)="clearSelection()"
         label="Cancelar"
         variant="outlined"
         severity="contrast"
+        [fluid]="false"
+        size="small"
+      />
+      <!-- Desktop selection buttons -->
+      <ui-button
+        class="hidden sm:block"
+        (click)="onDeleteSelected()"
+        [label]="'Eliminar (' + selectedIds().size + ')'"
+        icon="trash"
+        severity="danger"
+        [fluid]="false"
+      />
+      <ui-button
+        class="hidden sm:block"
+        (click)="clearSelection()"
+        label="Cancelar"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
       />
       } @else {
+      <!-- Mobile buttons -->
       <ui-button
+        class="sm:hidden"
         (click)="openImportExport()"
         label="Importar / Exportar"
         icon="arrow-up-down"
         variant="outlined"
         severity="contrast"
+        [fluid]="false"
+        size="small"
       />
       <ui-button
-        routerLink="create"
+        class="sm:hidden"
+        (click)="onCreateProduct()"
+        label="Crear"
+        icon="circle-plus"
+        [fluid]="false"
+        size="small"
+      />
+      <!-- Desktop buttons -->
+      <ui-button
+        class="hidden sm:block"
+        (click)="openImportExport()"
+        label="Importar / Exportar"
+        icon="arrow-up-down"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+      />
+      <ui-button
+        class="hidden sm:block"
+        (click)="onCreateProduct()"
         label="Crear producto"
         icon="circle-plus"
+        [fluid]="false"
       />
       }
     </div>
@@ -43,7 +90,7 @@
     />
   </form>
   <section
-    class="flex-1 flex flex-col gap-4 overflow-y-auto h-full border border-grey-50 rounded-base"
+    class="flex-1 flex flex-col overflow-hidden border border-grey-50 rounded-base"
   >
     @if (productStore.isLoading()) {
     <section class="bg-white-500 py-6">
@@ -57,10 +104,13 @@
       scrollHeight="flex"
       [paginator]="true"
       [rows]="10"
+      [pageLinks]="6"
+      [showCurrentPageReport]="true"
+      [currentPageReportTemplate]="productStore.productList().products.length + ' productos — Pág. {currentPage}/{totalPages}'"
       (pageChange)="onPageChange($event)"
     >
       <ng-template #header>
-        <div class="flex justify-between py-3 px-6">
+        <div class="flex justify-between py-3 px-6 min-w-[700px]">
           <div class="flex items-center gap-3 flex-3">
             <ui-checkbox
               [ngModel]="isAllPageSelected()"
@@ -94,7 +144,7 @@
       </ng-template>
       <ng-template #body let-item>
         <ui-card styleClass="mx-6">
-          <section class="flex gap-4 justify-between">
+          <section class="flex gap-4 justify-between min-w-[700px]">
             <div class="flex items-center gap-3 flex-3 overflow-hidden">
               <ui-checkbox
                 [ngModel]="isSelected(item)"
@@ -174,6 +224,23 @@
           </section>
         </ui-card>
       </ng-template>
+      <ng-template #empty>
+        <div class="py-16 flex flex-col items-center justify-center text-center px-4">
+          <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
+            <ui-icon name="package" styleClass="size-8 text-primary-400" />
+          </div>
+          <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes productos todavia</h3>
+          <p class="text-grey-300 text-sm mb-6 max-w-sm">
+            Empieza creando tu primer producto para que aparezca en tu catalogo online.
+          </p>
+          <ui-button
+            (click)="onCreateProduct()"
+            label="Crear mi primer producto"
+            icon="circle-plus"
+            [fluid]="false"
+          />
+        </div>
+      </ng-template>
     </ui-table>
     }
   </section>
@@ -185,4 +252,5 @@
     rejectLabel="Cancelar"
   />
   <lib-import-export-hub />
+  <lib-plan-limit-dialog />
 </section>

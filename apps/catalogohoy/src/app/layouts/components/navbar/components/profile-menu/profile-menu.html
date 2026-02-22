@@ -10,8 +10,8 @@
   </ng-template>
   <ng-template #item let-item>
     <li
-      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-lg cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
-      [class.bg-primary-50]="item.data?.slug === currentSlug()"
+      class="flex items-center justify-between gap-2 w-full px-3 py-2.5 rounded-lg cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+      [class.bg-primary-100]="item.data?.slug === currentSlug()"
     >
       <div class="flex items-center gap-2 min-w-0 flex-1">
         @if (item.data?.logo) {
@@ -49,20 +49,6 @@
       class="flex flex-col border-t border-grey-50 bg-lino-500 rounded-b-lg"
     >
       <a
-        routerLink="profile"
-        class="flex items-center gap-2 px-3 py-3 hover:bg-primary-50 transition-colors duration-100 ease-in-out cursor-pointer"
-      >
-        <ui-icon
-          name="circle-user"
-          size="20"
-          class="leading-none h-auto"
-          styleClass="!text-grey-700"
-        />
-        <span class="text-base font-semibold text-grey-700 leading-none h-auto"
-          >Mi Cuenta</span
-        >
-      </a>
-      <a
         routerLink="plans"
         class="flex items-center gap-2 px-3 py-3 hover:bg-primary-50 transition-colors duration-100 ease-in-out cursor-pointer"
       >
@@ -74,6 +60,20 @@
         />
         <span class="text-base font-semibold text-grey-700 leading-none h-auto"
           >Planes</span
+        >
+      </a>
+      <a
+        routerLink="profile"
+        class="flex items-center gap-2 px-3 py-3 hover:bg-primary-50 transition-colors duration-100 ease-in-out cursor-pointer"
+      >
+        <ui-icon
+          name="circle-user"
+          size="20"
+          class="leading-none h-auto"
+          styleClass="!text-grey-700"
+        />
+        <span class="text-base font-semibold text-grey-700 leading-none h-auto"
+          >Mi Cuenta</span
         >
       </a>
     </div>

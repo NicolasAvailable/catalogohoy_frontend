@@ -6,6 +6,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { CategoryStore } from '@catalogohoy/category';
+import { PlanStore } from '@catalogohoy/plan';
 import {
   ButtonComponent,
   DialogComponent,
@@ -45,6 +46,7 @@ export class ImportExportHubComponent {
   private readonly productStore = inject(ProductStore);
   private readonly excelService = inject(ProductExcelService);
   private readonly categoryStore = inject(CategoryStore);
+  private readonly planStore = inject(PlanStore);
 
   @ViewChild(DialogComponent) dialog!: DialogComponent;
 
@@ -112,8 +114,18 @@ export class ImportExportHubComponent {
   }
 
   public async startImport(): Promise<void> {
-    this.view.set('import-progress');
+    await this.planStore.refreshUsage();
+    const remaining = this.planStore.remainingProducts();
     const rows = this.parsedRows();
+
+    if (rows.length > remaining) {
+      toast.error(
+        `No puedes importar ${rows.length} productos. Tu plan solo permite ${remaining} más. Mejora tu plan para continuar.`
+      );
+      return;
+    }
+
+    this.view.set('import-progress');
     const results: ImportRowResult[] = rows.map((data, i) => ({
       rowIndex: i,
       data,
