@@ -165,6 +165,38 @@
   color: #9ca3af;
 }
 
+.checkout-drawer__payment-methods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.checkout-drawer__payment-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: white;
+  font-size: 0.875rem;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.checkout-drawer__payment-option:hover {
+  border-color: var(--color-primary-300);
+  background: color-mix(in srgb, var(--color-primary-500) 5%, white);
+}
+
+.checkout-drawer__payment-option--selected {
+  border-color: var(--color-primary-500);
+  background: color-mix(in srgb, var(--color-primary-500) 8%, white);
+  color: var(--color-primary-700);
+  font-weight: 500;
+}
+
 .checkout-drawer__footer {
   padding: 1rem;
   border-top: 1px solid #e5e7eb;

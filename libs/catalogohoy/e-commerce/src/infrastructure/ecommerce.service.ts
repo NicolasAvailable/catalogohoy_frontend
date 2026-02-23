@@ -37,7 +37,7 @@ export class EcommerceService implements BaseEcommerceService {
     const { data: config } = await this.client
       .from('tenant_ecommerce_config')
       .select(
-        'whatsapp_buttons, logo, banner, is_accepting_orders, theme_color, show_design_section'
+        'whatsapp_buttons, logo, banner, is_accepting_orders, theme_color, show_design_section, payment_methods, show_payment_methods_section'
       )
       .eq('tenant_id', tenant.id)
       .single();
@@ -82,6 +82,11 @@ export class EcommerceService implements BaseEcommerceService {
       isOpen,
       themeColor: config?.theme_color ?? '#10b981',
       showDesignSection: config?.show_design_section ?? true,
+      paymentMethods: Array.isArray(config?.payment_methods)
+        ? config.payment_methods
+        : [],
+      showPaymentMethodsSection:
+        config?.show_payment_methods_section ?? true,
     });
   }
 
@@ -261,6 +266,7 @@ export class EcommerceService implements BaseEcommerceService {
     total_usd: number;
     phone: string;
     comments: string;
+    payment_method?: string;
   }): Promise<E.Either<Error, void>> {
     // Obtener la tasa de cambio activa del tenant
     const exchangeRate = await this.getExchangeRate();
@@ -275,6 +281,7 @@ export class EcommerceService implements BaseEcommerceService {
         total_bs: totalBs,
         phone: order.phone,
         comments: order.comments,
+        payment_method: order.payment_method ?? null,
         status: 'pending',
       },
     ]);

@@ -198,6 +198,7 @@ export const EcommerceStore = signalStore(
       comments: string;
       items: any[];
       total: number;
+      payment_method?: string;
     }) {
       const catalogInfo = store.catalogInfo();
       if (!catalogInfo) return;
@@ -211,6 +212,7 @@ export const EcommerceStore = signalStore(
         total_usd: order.total,
         phone: order.phone,
         comments: order.comments,
+        payment_method: order.payment_method,
       });
 
       patchState(store, () => ({ isLoading: false }));

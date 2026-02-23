@@ -9,7 +9,65 @@
           online.
         </p>
       </div>
-      <!-- Card 1: Diseño del catálogo -->
+      <!-- Card 1: Identidad de la Marca -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon identity-icon">
+              <ui-icon name="store" styleClass="size-5"></ui-icon>
+            </div>
+            <h2 class="card-title">Identidad de la Marca</h2>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <div class="form-field">
+            <label for="shop-name">Nombre Comercial</label>
+            <ui-input-text
+              inputId="shop-name"
+              [ngModel]="draftName()"
+              (ngModelChange)="draftName.set($event)"
+              placeholder="Ej: Mi Tienda Increíble"
+              [disabled]="configStore.isSaving()"
+              styleClass="w-full"
+            ></ui-input-text>
+            <small class="field-hint"
+              >Este nombre se usará en el título de la página y
+              comunicaciones.</small
+            >
+          </div>
+
+          <div class="form-field">
+            <label for="shop-description">Descripción del Catálogo</label>
+            <ui-textarea
+              textareaId="shop-description"
+              [ngModel]="draftDescription()"
+              (ngModelChange)="draftDescription.set($event)"
+              placeholder="Cuenta un poco sobre tu tienda..."
+              [disabled]="configStore.isSaving()"
+              [rows]="3"
+              styleClass="w-full"
+            ></ui-textarea>
+            <small class="field-hint"
+              >Aparecerá como resumen al compartir tu enlace.</small
+            >
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="save-section">
+            <ui-button
+              label="Guardar cambios"
+              (click)="saveIdentity()"
+              [isLoading]="isSavingSection('identity')"
+              icon="save"
+              [fluid]="true"
+            ></ui-button>
+          </div>
+        </div>
+      </ui-card>
+
+      <!-- Card 2: Diseño del catálogo -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
           <div class="card-header-left">
@@ -313,64 +371,6 @@
               label="Guardar métodos de pago"
               (click)="savePaymentMethods()"
               [isLoading]="isSavingSection('paymentMethods')"
-              icon="save"
-              [fluid]="true"
-            ></ui-button>
-          </div>
-        </div>
-      </ui-card>
-
-      <!-- Card 5: Identidad de la Marca -->
-      <ui-card styleClass="config-card">
-        <div class="card-header-custom">
-          <div class="card-header-left">
-            <div class="card-icon identity-icon">
-              <ui-icon name="store" styleClass="size-5"></ui-icon>
-            </div>
-            <h2 class="card-title">Identidad de la Marca</h2>
-          </div>
-        </div>
-
-        <div class="card-content">
-          <div class="form-field">
-            <label for="shop-name">Nombre Comercial</label>
-            <ui-input-text
-              inputId="shop-name"
-              [ngModel]="draftName()"
-              (ngModelChange)="draftName.set($event)"
-              placeholder="Ej: Mi Tienda Increíble"
-              [disabled]="configStore.isSaving()"
-              styleClass="w-full"
-            ></ui-input-text>
-            <small class="field-hint"
-              >Este nombre se usará en el título de la página y
-              comunicaciones.</small
-            >
-          </div>
-
-          <div class="form-field">
-            <label for="shop-description">Descripción del Catálogo</label>
-            <ui-textarea
-              textareaId="shop-description"
-              [ngModel]="draftDescription()"
-              (ngModelChange)="draftDescription.set($event)"
-              placeholder="Cuenta un poco sobre tu tienda..."
-              [disabled]="configStore.isSaving()"
-              [rows]="3"
-              styleClass="w-full"
-            ></ui-textarea>
-            <small class="field-hint"
-              >Aparecerá como resumen al compartir tu enlace.</small
-            >
-          </div>
-
-          <div class="divider"></div>
-
-          <div class="save-section">
-            <ui-button
-              label="Guardar cambios"
-              (click)="saveIdentity()"
-              [isLoading]="isSavingSection('identity')"
               icon="save"
               [fluid]="true"
             ></ui-button>

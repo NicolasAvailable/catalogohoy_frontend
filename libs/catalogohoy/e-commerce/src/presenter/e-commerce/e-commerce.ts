@@ -62,7 +62,7 @@ export class ECommerce implements OnInit, OnDestroy {
     effect(() => {
       const info = this.ecommerceStore.effectiveCatalogInfo();
       if (info?.name) {
-        this.titleService.setTitle(`Catálogo | ${info.name}`);
+        this.titleService.setTitle(`${info.name} | Catálogo`);
       }
     });
 

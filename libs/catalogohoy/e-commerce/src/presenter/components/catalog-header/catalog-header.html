@@ -1,6 +1,9 @@
 <header class="catalog-header">
   <div class="catalog-header__container">
     <div class="catalog-header__left">
+      @if (ecommerceStore.effectiveCatalogInfo()?.logo; as logo) {
+        <img [src]="logo" alt="" class="catalog-header__logo" />
+      }
       <h1 class="catalog-header__title">
         {{ ecommerceStore.effectiveCatalogInfo()?.name || 'Catálogo' }}
       </h1>

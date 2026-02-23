@@ -2,11 +2,16 @@ import { DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { WhatsappButton } from '@catalogohoy/ecommerce-config';
+import {
+  PAYMENT_METHOD_OPTIONS,
+  PaymentMethod,
+  WhatsappButton,
+} from '@catalogohoy/ecommerce-config';
 import { IconComponent } from '@ui';
 import { CartItem } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
@@ -26,6 +31,30 @@ export class CheckoutDrawer {
   public readonly phone = signal('');
   public readonly comments = signal('');
   public readonly countryCode = signal('+58');
+  public readonly selectedPaymentMethod = signal<string>('');
+
+  private readonly paymentIcons: Record<string, string> = {
+    efectivo: 'banknote',
+    transferencia: 'building',
+    tarjeta_credito: 'creditCard',
+    pago_movil: 'smartphone',
+    binance: 'dollarSign',
+    zelle: 'zap',
+    paypal: 'wallet',
+  };
+
+  public readonly availablePaymentMethods = computed(() => {
+    const info = this.ecommerceStore.effectiveCatalogInfo();
+    if (!info?.showPaymentMethodsSection || !info.paymentMethods?.length)
+      return [];
+    return PAYMENT_METHOD_OPTIONS.filter((opt) =>
+      info.paymentMethods.includes(opt.value)
+    );
+  });
+
+  getPaymentIcon(method: string): string {
+    return this.paymentIcons[method] ?? 'wallet';
+  }
 
   onClose() {
     this.cartStore.closeCheckout();
@@ -57,6 +86,7 @@ export class CheckoutDrawer {
         total: item.total,
       })),
       total: total,
+      payment_method: this.selectedPaymentMethod() || undefined,
     });
 
     if (orderResult && orderResult.isLeft()) {
@@ -79,6 +109,16 @@ export class CheckoutDrawer {
       message += `\n\n*Comentarios:* ${this.comments()}`;
     }
 
+    if (this.selectedPaymentMethod()) {
+      const methodLabel = this.availablePaymentMethods().find(
+        (m) => m.value === this.selectedPaymentMethod()
+      )?.label;
+      if (methodLabel) {
+        message += `\n\n*Método de pago:* ${methodLabel}`;
+        message += `\nPor favor compartir los datos para realizar el pago.`;
+      }
+    }
+
     const encodedMessage = encodeURIComponent(message);
     const whatsappNumber = button.number.replace(/\D/g, '');
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
@@ -94,10 +134,16 @@ export class CheckoutDrawer {
     this.name.set('');
     this.phone.set('');
     this.comments.set('');
+    this.selectedPaymentMethod.set('');
   }
 
   get isValid(): boolean {
-    return this.name().trim().length > 0 && this.phone().trim().length > 0;
+    const hasName = this.name().trim().length > 0;
+    const hasPhone = this.phone().trim().length > 0;
+    const methods = this.availablePaymentMethods();
+    const hasPayment =
+      methods.length === 0 || this.selectedPaymentMethod().length > 0;
+    return hasName && hasPhone && hasPayment;
   }
 
   countryCodes = [

@@ -34,7 +34,8 @@
       "Bash(git ls-tree:*)",
       "Read(//c/tmp/**)",
       "Read(//c/Users/nicol/**)",
-      "Bash(iconv:*)"
+      "Bash(iconv:*)",
+      "Bash(cmd /c dir:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

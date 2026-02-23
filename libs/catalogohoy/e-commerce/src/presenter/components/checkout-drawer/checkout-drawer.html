@@ -81,6 +81,32 @@
             rows="4"
           ></textarea>
         </div>
+
+        @if (availablePaymentMethods().length > 0) {
+        <div class="checkout-drawer__field">
+          <label class="checkout-drawer__label">
+            Método de pago<span class="checkout-drawer__required">*</span>
+          </label>
+          <div class="checkout-drawer__payment-methods">
+            @for (method of availablePaymentMethods(); track method.value) {
+            <button
+              type="button"
+              class="checkout-drawer__payment-option"
+              [class.checkout-drawer__payment-option--selected]="
+                selectedPaymentMethod() === method.value
+              "
+              (click)="selectedPaymentMethod.set(method.value)"
+            >
+              <ui-icon
+                [name]="getPaymentIcon(method.value)"
+                styleClass="size-5"
+              />
+              <span>{{ method.label }}</span>
+            </button>
+            }
+          </div>
+        </div>
+        }
       </form>
     </div>
 
