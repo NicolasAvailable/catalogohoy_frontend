@@ -1,10 +1,11 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { TranslatePipe } from '@shared/presenter';
 import { DialogModule } from 'primeng/dialog';
+import { IconComponent } from '../icon/icon';
 
 @Component({
   selector: 'ui-dialog',
-  imports: [TranslatePipe, DialogModule],
+  imports: [TranslatePipe, DialogModule, IconComponent],
   template: `
     <p-dialog
       (onShow)="open.emit()"
@@ -17,10 +18,19 @@ import { DialogModule } from 'primeng/dialog';
       [closable]="closable()"
       [closeOnEscape]="closeOnEscape()"
       [dismissableMask]="dismissableMask()"
-      [styleClass]="styleClass()"
+      [styleClass]="computedStyleClass()"
       [resizable]="false"
       [appendTo]="appendTo()"
     >
+      @if (closable() && visible()) {
+        <button
+          (click)="hide()"
+          class="absolute top-4 left-4 z-10 flex items-center justify-center w-8 h-8 rounded-full hover:bg-grey-50 transition-colors cursor-pointer"
+          aria-label="Cerrar"
+        >
+          <ui-icon name="x" size="20" styleClass="text-grey-700" />
+        </button>
+      }
       <ng-content />
     </p-dialog>
   `,
@@ -41,6 +51,13 @@ export class DialogComponent {
   public readonly visible = signal(false);
 
   public readonly isOpen = computed(() => this.visible());
+
+  public readonly computedStyleClass = computed(() => {
+    const base = this.styleClass();
+    return this.closable()
+      ? `${base} [&_.p-dialog-close-button]:hidden`.trim()
+      : base;
+  });
 
   public show() {
     this.visible.set(true);

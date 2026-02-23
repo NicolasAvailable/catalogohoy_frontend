@@ -2,7 +2,10 @@ import { NgClass } from '@angular/common';
 import { Component, inject, input, output } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthenticationService } from '@catalogohoy/auth';
+import { ProfileStore } from '@catalogohoy/profile';
+import { TenantStore } from '@catalogohoy/tenant';
 import {
+  AvatarComponent,
   ConfirmDialogService,
   IconComponent,
   PanelMenuComponent,
@@ -19,6 +22,7 @@ import { CATALOG_MENU, PRODUCTS_MENU } from './sidebar.constants';
     NgClass,
     PanelMenuComponent,
     IconComponent,
+    AvatarComponent,
   ],
   templateUrl: './sidebar.html',
 })
@@ -29,6 +33,8 @@ export class Sidebar {
   private router = inject(Router);
   private authService = inject(AuthenticationService);
   private confirmService = inject(ConfirmDialogService);
+  public readonly profileStore = inject(ProfileStore);
+  public readonly tenantStore = inject(TenantStore);
 
   public readonly transitionOptions = '200ms cubic-bezier(0.86, 0, 0.07, 1)';
   public readonly productsMenu: PanelMenuItem[] = PRODUCTS_MENU;

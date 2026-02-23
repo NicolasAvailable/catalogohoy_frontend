@@ -6,20 +6,35 @@
 }
 
 <aside
-  class="flex flex-col gap-5 h-full w-1/2 sm:w-72 bg-white py-5 border-r border-grey-50 fixed inset-y-0 left-0 z-50 transition-transform duration-300 sm:translate-x-0 sm:static"
+  class="flex flex-col gap-2 h-full w-1/2 sm:w-72 bg-white py-5 border-r border-grey-50 fixed inset-y-0 left-0 z-50 transition-transform duration-300 sm:translate-x-0 sm:static"
   [ngClass]="{ 'translate-x-0': visible(), '-translate-x-full': !visible() }"
 >
-  <div class="w-full h-16 px-3">
-    <div routerLink="/admin" class="flex items-center h-full cursor-pointer">
-      <ui-icon
-        name="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg"
-        styleClass="h-14"
+  <div class="w-full px-3">
+    <div class="flex items-center gap-3 h-16">
+      @if (profileStore.profile().tenantList.first; as tenant) { @if
+      (tenant.logo) {
+      <img
+        [src]="tenant.logo"
+        [alt]="tenant.name"
+        class="w-10 h-10 rounded-xl object-cover shrink-0"
       />
-      <h1
-        class="text-lg font-semibold text-grey-700 leading-none h-auto pt-1.5"
-      >
-        CatalogoHoy
-      </h1>
+      } @else {
+      <ui-avatar
+        [label]="tenant.name"
+        size="normal"
+        shape="square"
+        styleClass="!bg-primary-100 !text-primary-600 !rounded-xl shrink-0"
+      />
+      }
+      <div class="flex flex-col min-w-0">
+        <span class="text-base font-bold text-grey-700 truncate">
+          {{ tenant.name }}
+        </span>
+        <span class="text-xs text-grey-300 truncate">
+          catalogohoy.com/{{ tenant.slug }}
+        </span>
+      </div>
+      }
     </div>
   </div>
   <ul class="flex flex-col gap-1.5 w-full h-full px-3">
