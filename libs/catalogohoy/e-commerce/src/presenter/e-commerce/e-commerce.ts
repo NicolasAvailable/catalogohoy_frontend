@@ -69,7 +69,8 @@ export class ECommerce implements OnInit, OnDestroy {
     // Dynamic favicon + cache logo for splash screen
     effect(() => {
       const info = this.ecommerceStore.effectiveCatalogInfo();
-      const logoUrl = info?.logo;
+      if (!info) return; // Wait until catalog info is loaded
+      const logoUrl = info.logo;
       this.updateFavicon(logoUrl ?? null);
       // Cache logo for splash screen on next visit
       if (logoUrl) {

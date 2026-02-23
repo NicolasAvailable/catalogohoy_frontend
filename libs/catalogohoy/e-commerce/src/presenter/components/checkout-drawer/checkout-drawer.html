@@ -111,6 +111,9 @@
     </div>
 
     <footer class="checkout-drawer__footer">
+      <p class="checkout-drawer__hint">
+        Al confirmar se creará tu orden y serás redirigido a WhatsApp para completar el pedido.
+      </p>
       @if (ecommerceStore.effectiveCatalogInfo()?.whatsappButtons?.length) {
         <div class="checkout-drawer__buttons">
           @for (button of ecommerceStore.effectiveCatalogInfo()!.whatsappButtons; track $index) {
