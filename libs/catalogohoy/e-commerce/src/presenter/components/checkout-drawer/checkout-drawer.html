@@ -85,9 +85,9 @@
     </div>
 
     <footer class="checkout-drawer__footer">
-      @if (ecommerceStore.catalogInfo()?.whatsappButtons?.length) {
+      @if (ecommerceStore.effectiveCatalogInfo()?.whatsappButtons?.length) {
         <div class="checkout-drawer__buttons">
-          @for (button of ecommerceStore.catalogInfo()!.whatsappButtons; track $index) {
+          @for (button of ecommerceStore.effectiveCatalogInfo()!.whatsappButtons; track $index) {
           <button
             class="checkout-drawer__submit-btn"
             [disabled]="!isValid || ecommerceStore.isLoading()"
@@ -101,7 +101,7 @@
             </div>
             <span>Hacer pedido{{ button.name ? ' (' + button.name + ')' : '' }}</span>
             <div class="checkout-drawer__submit-price">
-              ${{ cartStore.totalPrice() }}
+              ${{ cartStore.totalPrice() | number:'1.2-2' }}
               <ui-icon name="chevronRight" styleClass="size-5" />
             </div>
             }

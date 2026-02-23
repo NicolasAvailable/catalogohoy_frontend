@@ -30,7 +30,11 @@
       "Bash(dir:*)",
       "Bash(echo:*)",
       "Bash(tee:*)",
-      "mcp__supabase__list_migrations"
+      "mcp__supabase__list_migrations",
+      "Bash(git ls-tree:*)",
+      "Read(//c/tmp/**)",
+      "Read(//c/Users/nicol/**)",
+      "Bash(iconv:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -5,10 +5,14 @@ import { E } from '@shared/domain';
 export interface CatalogInfo {
   id: string;
   name: string;
+  logo: string | null;
+  banner: string | null;
   whatsappButtons: WhatsappButton[];
   openTime: string;
   closeTime: string;
   isOpen: boolean;
+  themeColor: string;
+  showDesignSection: boolean;
 }
 
 export interface Category {

@@ -27,7 +27,7 @@
   align-items: center;
   gap: 1rem;
   cursor: pointer;
-  box-shadow: 0 8px 32px rgba(62, 123, 250, 0.35);
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--color-primary-500) 35%, transparent);
   z-index: 100;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 200px;
@@ -35,7 +35,7 @@
 
 .ecommerce__cart-bar:hover {
   transform: translateX(-50%) translateY(-2px);
-  box-shadow: 0 12px 40px rgba(62, 123, 250, 0.45);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--color-primary-500) 45%, transparent);
 }
 
 .ecommerce__cart-bar-count {

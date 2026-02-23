@@ -8,7 +8,8 @@ export class Cart {
   }
 
   public get total(): number {
-    return this._items.reduce((acc, item) => acc + item.total, 0);
+    const raw = this._items.reduce((acc, item) => acc + item.total, 0);
+    return Math.round(raw * 100) / 100;
   }
 
   public get totalItems(): number {

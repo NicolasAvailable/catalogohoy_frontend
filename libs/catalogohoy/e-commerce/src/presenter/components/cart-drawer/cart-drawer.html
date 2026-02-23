@@ -64,7 +64,7 @@
         </div>
         <span>Ir a pagar</span>
         <div class="cart-drawer__checkout-price">
-          ${{ cartStore.totalPrice() }}
+          ${{ cartStore.totalPrice() | number:'1.2-2' }}
           <ui-icon name="chevronRight" styleClass="size-5" />
         </div>
       </button>

@@ -15,10 +15,23 @@
   <body class="overflow-y-auto">
     <splash-screen>
       <img
+        id="splash-logo"
         src="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/favicon-c.png"
         alt="Loading"
       />
     </splash-screen>
+    <script>
+      (function () {
+        var isAdmin = /^\/admin(\/|$)/.test(window.location.pathname);
+        if (!isAdmin) {
+          var cached = localStorage.getItem('splash-logo');
+          if (cached) {
+            var img = document.getElementById('splash-logo');
+            if (img) img.src = cached;
+          }
+        }
+      })();
+    </script>
     <app-root></app-root>
   </body>
 </html>

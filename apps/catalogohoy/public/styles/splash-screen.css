@@ -16,6 +16,8 @@ body splash-screen {
 body splash-screen img {
   width: 8rem;
   height: 8rem;
+  border-radius: 1rem;
+  object-fit: contain;
   animation: pulse 2s ease-in-out infinite;
 }
 

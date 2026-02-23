@@ -36,7 +36,9 @@ export class EcommerceService implements BaseEcommerceService {
     // Obtener configuración de e-commerce
     const { data: config } = await this.client
       .from('tenant_ecommerce_config')
-      .select('whatsapp_buttons, logo, is_accepting_orders')
+      .select(
+        'whatsapp_buttons, logo, banner, is_accepting_orders, theme_color, show_design_section'
+      )
       .eq('tenant_id', tenant.id)
       .single();
 
@@ -70,12 +72,16 @@ export class EcommerceService implements BaseEcommerceService {
     return E.right({
       id: tenant.id,
       name: tenant.name,
+      logo: config?.logo ?? null,
+      banner: config?.banner ?? null,
       whatsappButtons: Array.isArray(config?.whatsapp_buttons)
         ? config.whatsapp_buttons
         : [],
       openTime,
       closeTime,
       isOpen,
+      themeColor: config?.theme_color ?? '#10b981',
+      showDesignSection: config?.show_design_section ?? true,
     });
   }
 
@@ -84,8 +90,8 @@ export class EcommerceService implements BaseEcommerceService {
     search?: string,
     categoryId?: string,
     orderBy?: 'name' | 'price_asc' | 'price_desc',
-    page: number = 1,
-    pageSize: number = 20
+    page = 1,
+    pageSize = 20
   ): Promise<E.Either<Error, PaginatedProductList>> {
     // Primero obtener el tenant_id por slug
     const { data: tenant, error: tenantError } = await this.client

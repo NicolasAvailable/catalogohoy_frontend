@@ -1,6 +1,12 @@
-import { inject } from '@angular/core';
+import { computed, inject } from '@angular/core';
 import { Product, ProductList } from '@catalogohoy/product';
-import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
+import {
+  patchState,
+  signalStore,
+  withComputed,
+  withMethods,
+  withState,
+} from '@ngrx/signals';
 import { CatalogInfo } from '../domain';
 import { EcommerceService } from './ecommerce.service';
 
@@ -19,6 +25,8 @@ type EcommerceState = {
   currentPage: number;
   totalCount: number;
   hasMore: boolean;
+  previewOverrides: Partial<CatalogInfo> | null;
+  isPreviewMode: boolean;
 };
 
 const initialState: EcommerceState = {
@@ -34,11 +42,22 @@ const initialState: EcommerceState = {
   currentPage: 1,
   totalCount: 0,
   hasMore: true,
+  previewOverrides: null,
+  isPreviewMode: false,
 };
 
 export const EcommerceStore = signalStore(
   { providedIn: 'root' },
   withState(initialState),
+  withComputed((store) => ({
+    effectiveCatalogInfo: computed(() => {
+      const base = store.catalogInfo();
+      const overrides = store.previewOverrides();
+      if (!base) return null;
+      if (!overrides || !store.isPreviewMode()) return base;
+      return { ...base, ...overrides };
+    }),
+  })),
   withMethods((store, ecommerceService = inject(EcommerceService)) => ({
     async loadCatalog(slug: string) {
       patchState(store, () => ({ isLoading: true }));
@@ -47,7 +66,14 @@ export const EcommerceStore = signalStore(
         const [catalogResult, productsResult, categoriesResult] =
           await Promise.all([
             ecommerceService.getCatalogInfo(slug),
-            ecommerceService.getProducts(slug, undefined, undefined, undefined, 1, PAGE_SIZE),
+            ecommerceService.getProducts(
+              slug,
+              undefined,
+              undefined,
+              undefined,
+              1,
+              PAGE_SIZE
+            ),
             ecommerceService.getCategories(slug),
           ]);
 
@@ -120,7 +146,10 @@ export const EcommerceStore = signalStore(
 
         result.mapRight(({ productList: newProducts, totalCount }) => {
           const currentProducts = store.productList().products;
-          const merged = ProductList.from([...currentProducts, ...newProducts.products]);
+          const merged = ProductList.from([
+            ...currentProducts,
+            ...newProducts.products,
+          ]);
           patchState(store, () => ({
             productList: merged,
             totalCount,
@@ -186,6 +215,20 @@ export const EcommerceStore = signalStore(
 
       patchState(store, () => ({ isLoading: false }));
       return result;
+    },
+
+    enterPreviewMode() {
+      patchState(store, { isPreviewMode: true });
+    },
+
+    exitPreviewMode() {
+      patchState(store, { isPreviewMode: false, previewOverrides: null });
+    },
+
+    applyPreviewOverrides(overrides: Partial<CatalogInfo>) {
+      patchState(store, {
+        previewOverrides: { ...store.previewOverrides(), ...overrides },
+      });
     },
 
     reset() {

@@ -14,7 +14,7 @@ export class CartItem {
   }
 
   public get total(): number {
-    return this.price * this.quantity;
+    return Math.round(this.price * this.quantity * 100) / 100;
   }
 
   public incrementQuantity(): CartItem {

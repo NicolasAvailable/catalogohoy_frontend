@@ -92,7 +92,7 @@
 
 .product-detail__thumbnail--active {
   border-color: var(--color-primary-500);
-  box-shadow: 0 0 0 3px rgba(62, 123, 250, 0.2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-500) 20%, transparent);
 }
 
 .product-detail__thumbnail img {
@@ -260,7 +260,7 @@
 
 .product-detail__add-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(62, 123, 250, 0.4);
+  box-shadow: 0 8px 25px color-mix(in srgb, var(--color-primary-500) 40%, transparent);
 }
 
 .product-detail__add-btn:active {

@@ -69,13 +69,13 @@
   background: transparent;
   border: none;
   font-size: 0.875rem;
-  color: #3b82f6;
+  color: var(--color-primary-500);
   cursor: pointer;
   text-decoration: underline;
 }
 
 .cart-drawer__clear:hover {
-  color: #2563eb;
+  color: var(--color-primary-600);
 }
 
 .cart-drawer__content {
@@ -209,7 +209,7 @@
 }
 
 .cart-drawer__checkout-btn:hover {
-  box-shadow: 0 8px 25px rgba(62, 123, 250, 0.35);
+  box-shadow: 0 8px 25px color-mix(in srgb, var(--color-primary-500) 35%, transparent);
 }
 
 .cart-drawer__checkout-count {

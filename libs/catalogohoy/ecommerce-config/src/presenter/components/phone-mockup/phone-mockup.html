@@ -1,0 +1,36 @@
+@if (isOverlay()) {
+<div class="overlay-backdrop" (click)="close.emit()">
+  <div class="overlay-container" (click)="$event.stopPropagation()">
+    <div class="overlay-header">
+      <div class="overlay-title">
+        <ui-icon name="monitor-smartphone" styleClass="size-5"></ui-icon>
+        <span>Vista en Tiempo Real</span>
+      </div>
+      <button class="overlay-close" (click)="close.emit()">
+        <ui-icon name="x" styleClass="size-5"></ui-icon>
+      </button>
+    </div>
+    <div class="phone-bezel">
+      <div class="phone-notch"></div>
+      <iframe
+        #previewIframe
+        [src]="iframeUrl()"
+        class="phone-screen"
+        title="Vista previa del catálogo"
+      ></iframe>
+    </div>
+  </div>
+</div>
+} @else {
+<div class="mockup-wrapper">
+  <div class="phone-bezel">
+    <div class="phone-notch"></div>
+    <iframe
+      #previewIframe
+      [src]="iframeUrl()"
+      class="phone-screen"
+      title="Vista previa del catálogo"
+    ></iframe>
+  </div>
+</div>
+}

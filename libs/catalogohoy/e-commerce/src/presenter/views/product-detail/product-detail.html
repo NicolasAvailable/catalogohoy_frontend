@@ -89,7 +89,7 @@
         <button class="product-detail__add-btn" (click)="onAddToCart()">
           <ui-icon name="shoppingCart" styleClass="size-5" />
           <span>Agregar</span>
-          <span>${{ totalPrice }}</span>
+          <span>${{ totalPrice | number:'1.2-2' }}</span>
         </button>
       </div>
     </div>

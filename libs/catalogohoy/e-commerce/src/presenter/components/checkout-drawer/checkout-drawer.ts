@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -12,7 +13,7 @@ import { CartStore, EcommerceStore } from '../../../infrastructure';
 
 @Component({
   selector: 'lib-checkout-drawer',
-  imports: [FormsModule, IconComponent],
+  imports: [DecimalPipe, FormsModule, IconComponent],
   templateUrl: './checkout-drawer.html',
   styleUrl: './checkout-drawer.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

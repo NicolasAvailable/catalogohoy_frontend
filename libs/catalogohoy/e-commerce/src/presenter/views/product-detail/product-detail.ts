@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,7 +12,7 @@ import { CartStore, EcommerceStore } from '../../../infrastructure';
 
 @Component({
   selector: 'lib-product-detail',
-  imports: [RouterLink, IconComponent],
+  imports: [DecimalPipe, RouterLink, IconComponent],
   templateUrl: './product-detail.html',
   styleUrl: './product-detail.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,7 +44,7 @@ export default class ProductDetail implements OnInit {
   }
 
   get totalPrice(): number {
-    return this.displayPrice * this.quantity();
+    return Math.round(this.displayPrice * this.quantity() * 100) / 100;
   }
 
   get hasDiscount(): boolean {

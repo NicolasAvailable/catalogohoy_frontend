@@ -1,16 +1,336 @@
 <div class="ecommerce-config-wrapper">
-  <div class="header-section">
-    <h1 class="page-title">Configuración de la Tienda</h1>
-    <p class="page-description">
-      Gestiona la identidad visual y el comportamiento de tu catálogo online.
-    </p>
-  </div>
-
   <div class="config-grid">
-    <!-- Columna Principal -->
+    <!-- ========== LEFT COLUMN: Form Sections ========== -->
     <div class="main-column">
-      <!-- Card 1: Identidad de la Marca -->
-      <ui-card header="Identidad de la Marca" styleClass="config-card">
+      <div class="header-section">
+        <h1 class="page-title">Configuración de la Tienda</h1>
+        <p class="page-description">
+          Gestiona la identidad visual y el comportamiento de tu catálogo
+          online.
+        </p>
+      </div>
+      <!-- Card 1: Diseño del catálogo -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon design-icon">
+              <ui-icon name="palette" styleClass="size-5"></ui-icon>
+            </div>
+            <h2 class="card-title">Diseño de tu catálogo</h2>
+          </div>
+          <ui-toggle
+            [ngModel]="draftShowDesignSection()"
+            (ngModelChange)="draftShowDesignSection.set($event)"
+          ></ui-toggle>
+        </div>
+
+        <div
+          class="card-content"
+          [class.section-disabled]="!draftShowDesignSection()"
+        >
+          <div class="upload-row">
+            <!-- Logo Upload -->
+            <div class="upload-item">
+              <label class="upload-label">Logo (opcional)</label>
+              <ui-uploader
+                (valueChange)="onLogoUrlChange($event)"
+                [disabled]="configStore.isSaving()"
+              >
+                <ng-template #picker let-pick="pick">
+                  <div class="upload-zone-wrapper">
+                    <div class="upload-zone" (click)="pick()">
+                      @if (configStore.config()?.logo) {
+                      <img
+                        class="upload-preview"
+                        [src]="configStore.config()?.logo"
+                        alt="Logo"
+                      />
+                      } @else {
+                      <div class="upload-placeholder">
+                        <ui-icon
+                          name="camera"
+                          styleClass="size-8 text-gray-300"
+                        ></ui-icon>
+                      </div>
+                      }
+                    </div>
+                    @if (configStore.config()?.logo) {
+                    <button
+                      type="button"
+                      class="upload-remove-btn"
+                      (click)="removeLogo()"
+                      title="Eliminar logo"
+                    >
+                      <ui-icon name="x" styleClass="size-3.5"></ui-icon>
+                    </button>
+                    }
+                  </div>
+                  <ui-button
+                    label="Subir Logo"
+                    [variant]="'outlined'"
+                    severity="secondary"
+                    size="small"
+                    icon="upload"
+                    (click)="pick()"
+                    [isLoading]="isSavingSection('design')"
+                  ></ui-button>
+                </ng-template>
+              </ui-uploader>
+              <small class="field-hint"
+                >Recomendado: 200x200px, PNG o JPG. Máx 2MB.</small
+              >
+            </div>
+
+            <!-- Banner Upload -->
+            <div class="upload-item">
+              <label class="upload-label">Banner (opcional)</label>
+              <ui-uploader
+                (valueChange)="onBannerUrlChange($event)"
+                [disabled]="configStore.isSaving()"
+              >
+                <ng-template #picker let-pick="pick">
+                  <div class="upload-zone-wrapper upload-zone-wrapper--banner">
+                    <div class="upload-zone upload-zone-banner" (click)="pick()">
+                      @if (configStore.config()?.banner) {
+                      <img
+                        class="upload-preview-banner"
+                        [src]="configStore.config()?.banner"
+                        alt="Banner"
+                      />
+                      } @else {
+                      <div class="upload-placeholder">
+                        <ui-icon
+                          name="image"
+                          styleClass="size-8 text-gray-300"
+                        ></ui-icon>
+                      </div>
+                      }
+                    </div>
+                    @if (configStore.config()?.banner) {
+                    <button
+                      type="button"
+                      class="upload-remove-btn"
+                      (click)="removeBanner()"
+                      title="Eliminar banner"
+                    >
+                      <ui-icon name="x" styleClass="size-3.5"></ui-icon>
+                    </button>
+                    }
+                  </div>
+                  <ui-button
+                    label="Subir Banner"
+                    [variant]="'outlined'"
+                    severity="secondary"
+                    size="small"
+                    icon="upload"
+                    (click)="pick()"
+                    [isLoading]="isSavingSection('design')"
+                  ></ui-button>
+                </ng-template>
+              </ui-uploader>
+              <small class="field-hint"
+                >Recomendado: 1200x400px, PNG o JPG. Máx 5MB.</small
+              >
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="save-section">
+            <ui-button
+              label="Guardar diseño"
+              (click)="saveDesignSection()"
+              [isLoading]="isSavingSection('design')"
+              icon="save"
+              [fluid]="true"
+            ></ui-button>
+          </div>
+        </div>
+      </ui-card>
+
+      <!-- Card 2: Color del tema -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon color-icon">
+              <ui-icon name="droplets" styleClass="size-5"></ui-icon>
+            </div>
+            <h2 class="card-title">Color del tema</h2>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <div class="color-grid">
+            @for (color of themeColors; track color.value) {
+            <button
+              type="button"
+              class="color-circle"
+              [style.background]="color.value"
+              [class.selected]="draftThemeColor() === color.value"
+              (click)="selectThemeColor(color.value)"
+              [title]="color.name"
+            >
+              @if (draftThemeColor() === color.value) {
+              <ui-icon name="check" styleClass="size-4 text-white"></ui-icon>
+              }
+            </button>
+            }
+
+            <!-- Custom color picker -->
+            <ui-color-picker
+              [ngModel]="draftThemeColor()"
+              (ngModelChange)="selectThemeColor($event)"
+            >
+              <ng-template #picker let-color let-pick="pick">
+                @if (isCustomColor()) {
+                <button
+                  type="button"
+                  class="color-circle selected"
+                  [style.background]="draftThemeColor()"
+                  (click)="pick($event)"
+                  title="Color personalizado"
+                >
+                  <ui-icon name="check" styleClass="size-4 text-white"></ui-icon>
+                </button>
+                } @else {
+                <button
+                  type="button"
+                  class="color-circle color-circle--add"
+                  (click)="pick($event)"
+                  title="Agregar color personalizado"
+                >
+                  <ui-icon name="plus" styleClass="size-4"></ui-icon>
+                </button>
+                }
+              </ng-template>
+            </ui-color-picker>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="save-section">
+            <ui-button
+              label="Guardar color"
+              (click)="saveThemeColor()"
+              [isLoading]="isSavingSection('themeColor')"
+              icon="save"
+              [fluid]="true"
+            ></ui-button>
+          </div>
+        </div>
+      </ui-card>
+
+      <!-- Card 3: Ubicación -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon location-icon">
+              <ui-icon name="map-pin" styleClass="size-5"></ui-icon>
+            </div>
+            <h2 class="card-title">Ubicación</h2>
+          </div>
+          <ui-toggle
+            [ngModel]="draftShowLocationSection()"
+            (ngModelChange)="draftShowLocationSection.set($event)"
+          ></ui-toggle>
+        </div>
+
+        <div
+          class="card-content"
+          [class.section-disabled]="!draftShowLocationSection()"
+        >
+          <div class="form-row">
+            <div class="form-field">
+              <label>Estado</label>
+              <ui-select
+                [options]="venezuelanStates"
+                [ngModel]="draftState()"
+                (ngModelChange)="draftState.set($event)"
+                placeholder="Selecciona un estado"
+                [filter]="true"
+              ></ui-select>
+            </div>
+            <div class="form-field">
+              <label>Ciudad</label>
+              <ui-input-text
+                [ngModel]="draftCity()"
+                (ngModelChange)="draftCity.set($event)"
+                placeholder="Ej: Caracas, Valencia..."
+                styleClass="w-full"
+              ></ui-input-text>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="save-section">
+            <ui-button
+              label="Guardar ubicación"
+              (click)="saveLocationSection()"
+              [isLoading]="isSavingSection('location')"
+              icon="save"
+              [fluid]="true"
+            ></ui-button>
+          </div>
+        </div>
+      </ui-card>
+
+      <!-- Card 4: Métodos de pago -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon payment-icon">
+              <ui-icon name="credit-card" styleClass="size-5"></ui-icon>
+            </div>
+            <h2 class="card-title">Métodos de pago</h2>
+          </div>
+          <ui-toggle
+            [ngModel]="draftShowPaymentMethodsSection()"
+            (ngModelChange)="draftShowPaymentMethodsSection.set($event)"
+          ></ui-toggle>
+        </div>
+
+        <div
+          class="card-content"
+          [class.section-disabled]="!draftShowPaymentMethodsSection()"
+        >
+          <div class="payment-methods-grid">
+            @for (method of paymentMethodOptions; track method.value) {
+            <label class="payment-method-item">
+              <ui-checkbox
+                [ngModel]="isPaymentMethodSelected(method.value)"
+                (ngModelChange)="togglePaymentMethod(method.value)"
+              ></ui-checkbox>
+              <span>{{ method.label }}</span>
+            </label>
+            }
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="save-section">
+            <ui-button
+              label="Guardar métodos de pago"
+              (click)="savePaymentMethods()"
+              [isLoading]="isSavingSection('paymentMethods')"
+              icon="save"
+              [fluid]="true"
+            ></ui-button>
+          </div>
+        </div>
+      </ui-card>
+
+      <!-- Card 5: Identidad de la Marca -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon identity-icon">
+              <ui-icon name="store" styleClass="size-5"></ui-icon>
+            </div>
+            <h2 class="card-title">Identidad de la Marca</h2>
+          </div>
+        </div>
+
         <div class="card-content">
           <div class="form-field">
             <label for="shop-name">Nombre Comercial</label>
@@ -50,7 +370,7 @@
             <ui-button
               label="Guardar cambios"
               (click)="saveIdentity()"
-              [isLoading]="configStore.isSaving()"
+              [isLoading]="isSavingSection('identity')"
               icon="save"
               [fluid]="true"
             ></ui-button>
@@ -58,60 +378,69 @@
         </div>
       </ui-card>
 
-      <!-- Card 2: Vendedores WhatsApp -->
-      <ui-card header="Vendedores WhatsApp" styleClass="config-card">
-        <div class="card-content">
-          <div class="form-field">
-            <small class="field-hint">
-              Cada vendedor aparecerá como un botón de pago en el checkout.
-              Máximo 3.
-            </small>
-
-            <div class="whatsapp-buttons-list">
-              @for (button of draftWhatsappButtons(); track $index) {
-              <div class="whatsapp-button-item">
-                <span class="whatsapp-button-label">Botón {{ $index + 1 }}</span>
-                <div class="whatsapp-button-fields">
-                  <ui-input-text
-                    [ngModel]="button.name"
-                    (ngModelChange)="updateButtonName($index, $event)"
-                    placeholder="Nombre (Ej: Juan)"
-                    [disabled]="configStore.isSaving()"
-                    styleClass="w-full"
-                  ></ui-input-text>
-                  <ui-input-text
-                    [ngModel]="button.number"
-                    (ngModelChange)="updateButtonNumber($index, $event)"
-                    placeholder="Número (Ej: +584124807708)"
-                    [disabled]="configStore.isSaving()"
-                    styleClass="w-full"
-                  ></ui-input-text>
-                </div>
-                <button
-                  type="button"
-                  class="whatsapp-button-remove"
-                  (click)="removeWhatsappButton($index)"
-                  [disabled]="configStore.isSaving()"
-                  title="Eliminar vendedor"
-                >
-                  <ui-icon name="trash" styleClass="size-4"></ui-icon>
-                </button>
-              </div>
-              }
+      <!-- Card 6: Vendedores WhatsApp -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon whatsapp-icon">
+              <ui-icon name="message-circle" styleClass="size-5"></ui-icon>
             </div>
+            <h2 class="card-title">Vendedores WhatsApp</h2>
+          </div>
+        </div>
 
-            @if (draftWhatsappButtons().length < 3) {
-            <ui-button
-              label="Agregar vendedor"
-              [variant]="'outlined'"
-              severity="secondary"
-              size="small"
-              icon="plus"
-              (click)="addWhatsappButton()"
-              [disabled]="configStore.isSaving()"
-            ></ui-button>
+        <div class="card-content">
+          <small class="field-hint">
+            Cada vendedor aparecerá como un botón de pago en el checkout. Máximo
+            3.
+          </small>
+
+          <div class="whatsapp-buttons-list">
+            @for (button of draftWhatsappButtons(); track $index) {
+            <div class="whatsapp-button-item">
+              <span class="whatsapp-button-label"
+                >Botón {{ $index + 1 }}</span
+              >
+              <div class="whatsapp-button-fields">
+                <ui-input-text
+                  [ngModel]="button.name"
+                  (ngModelChange)="updateButtonName($index, $event)"
+                  placeholder="Nombre (Ej: Juan)"
+                  [disabled]="configStore.isSaving()"
+                  styleClass="w-full"
+                ></ui-input-text>
+                <ui-input-text
+                  [ngModel]="button.number"
+                  (ngModelChange)="updateButtonNumber($index, $event)"
+                  placeholder="Número (Ej: +584124807708)"
+                  [disabled]="configStore.isSaving()"
+                  styleClass="w-full"
+                ></ui-input-text>
+              </div>
+              <button
+                type="button"
+                class="whatsapp-button-remove"
+                (click)="removeWhatsappButton($index)"
+                [disabled]="configStore.isSaving()"
+                title="Eliminar vendedor"
+              >
+                <ui-icon name="trash" styleClass="size-4"></ui-icon>
+              </button>
+            </div>
             }
           </div>
+
+          @if (draftWhatsappButtons().length < 3) {
+          <ui-button
+            label="Agregar vendedor"
+            [variant]="'outlined'"
+            severity="secondary"
+            size="small"
+            icon="plus"
+            (click)="addWhatsappButton()"
+            [disabled]="configStore.isSaving()"
+          ></ui-button>
+          }
 
           <div class="divider"></div>
 
@@ -119,7 +448,7 @@
             <ui-button
               label="Guardar vendedores"
               (click)="saveWhatsappButtons()"
-              [isLoading]="configStore.isSaving()"
+              [isLoading]="isSavingSection('whatsapp')"
               icon="save"
               [fluid]="true"
             ></ui-button>
@@ -127,8 +456,17 @@
         </div>
       </ui-card>
 
-      <!-- Card 3: Comportamiento -->
-      <ui-card header="Comportamiento" styleClass="config-card">
+      <!-- Card 7: Comportamiento -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon behavior-icon">
+              <ui-icon name="settings" styleClass="size-5"></ui-icon>
+            </div>
+            <h2 class="card-title">Comportamiento</h2>
+          </div>
+        </div>
+
         <div class="card-content">
           <div
             class="status-box"
@@ -139,13 +477,18 @@
             </div>
             <div class="status-text">
               <strong
-                >Ventas {{ configStore.config()?.isAcceptingOrders ? 'Activas' :
-                'Pausadas' }}</strong
+                >Ventas
+                {{
+                  configStore.config()?.isAcceptingOrders
+                    ? 'Activas'
+                    : 'Pausadas'
+                }}</strong
               >
-              <span
-                >{{ configStore.config()?.isAcceptingOrders ? 'Tus clientes
-                pueden pagar' : 'Botón de pago oculto' }}</span
-              >
+              <span>{{
+                configStore.config()?.isAcceptingOrders
+                  ? 'Tus clientes pueden pagar'
+                  : 'Botón de pago oculto'
+              }}</span>
             </div>
           </div>
 
@@ -167,68 +510,40 @@
       </ui-card>
     </div>
 
-    <!-- Columna Lateral -->
-    <div class="side-column">
-      <ui-card header="Logo del Catálogo" styleClass="config-card">
-        <div class="card-content">
-          <ui-uploader
-            (valueChange)="onUrlChange($event)"
-            [disabled]="configStore.isSaving()"
-          >
-            <ng-template #picker let-pick="pick">
-              <div class="logo-section-vertical">
-                <div class="avatar-wrapper-vertical" (click)="pick()">
-                  <div class="logo-avatar-container">
-                    @if (configStore.config()?.logo) {
-                    <img
-                      [src]="configStore.config()?.logo"
-                      [alt]="configStore.config()?.name"
-                    />
-                    } @else {
-                    <div class="logo-placeholder">
-                      {{ (configStore.config()?.name || 'T').substring(0,
-                      1).toUpperCase() }}
-                    </div>
-                    }
-                  </div>
-                  <div class="badge-upload">
-                    <ui-icon name="camera" styleClass="size-4"></ui-icon>
-                  </div>
-                </div>
-
-                <div class="logo-info-vertical">
-                  <p>
-                    Este logo aparecerá en la cabecera de tu catálogo y en los
-                    compartidos por WhatsApp.
-                  </p>
-
-                  <ui-button
-                    label="Subir Nueva Imagen"
-                    [variant]="'outlined'"
-                    severity="secondary"
-                    size="small"
-                    (click)="pick()"
-                    [isLoading]="configStore.isSaving()"
-                    icon="upload"
-                    [fluid]="true"
-                  >
-                  </ui-button>
-                </div>
-              </div>
-            </ng-template>
-          </ui-uploader>
-        </div>
-      </ui-card>
-
-      @if(configStore.error()) {
-      <div class="error-alert">
-        <ui-icon name="alert-triangle" styleClass="size-5"></ui-icon>
-        <div class="alert-content">
-          <strong>Error al guardar</strong>
-          <span>{{ configStore.error() }}</span>
-        </div>
-      </div>
+    <!-- ========== RIGHT COLUMN: Phone Mockup ========== -->
+    <div class="mockup-column">
+      @if (safeIframeUrl) {
+      <lib-phone-mockup
+        #phoneMockup
+        [iframeUrl]="safeIframeUrl"
+      ></lib-phone-mockup>
       }
     </div>
   </div>
+
+  <!-- FAB for mobile preview -->
+  <button class="fab-preview" (click)="openMockup()" title="Vista previa">
+    <ui-icon name="eye" styleClass="size-6"></ui-icon>
+  </button>
+
+  <!-- Mobile overlay mockup -->
+  @if (isMockupOpen() && safeIframeUrl) {
+  <lib-phone-mockup
+    #phoneMockupOverlay
+    [iframeUrl]="safeIframeUrl"
+    [isOverlay]="true"
+    (close)="closeMockup()"
+  ></lib-phone-mockup>
+  }
+
+  <!-- Error alert -->
+  @if (configStore.error()) {
+  <div class="error-alert">
+    <ui-icon name="alert-triangle" styleClass="size-5"></ui-icon>
+    <div class="alert-content">
+      <strong>Error al guardar</strong>
+      <span>{{ configStore.error() }}</span>
+    </div>
+  </div>
+  }
 </div>
