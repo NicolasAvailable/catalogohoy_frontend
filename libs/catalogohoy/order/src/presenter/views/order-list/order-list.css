@@ -37,6 +37,11 @@ button {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
+/* Ensure table shows enough rows on mobile */
+.order-table-wrapper {
+  min-height: 350px;
+}
+
 /* Custom bg color for very light grey */
 .bg-grey-25 {
   background-color: rgba(var(--color-grey-50), 0.5);
