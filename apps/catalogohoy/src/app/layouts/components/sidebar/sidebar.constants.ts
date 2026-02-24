@@ -30,13 +30,17 @@ export const CATALOG_MENU: PanelMenuItem[] = [
     items: [
       {
         label: 'Ver mi catálogo',
-        routerLink: '/',
         iconNext: 'square-arrow-out-up-right',
-        routerLinkActiveOptions: { exact: true },
+        data: { externalUrl: true },
       },
       {
         label: 'Editar',
         routerLink: '/admin/catalog/edit',
+        routerLinkActiveOptions: { exact: true },
+      },
+      {
+        label: 'Crear',
+        routerLink: '/admin/catalog/create',
         routerLinkActiveOptions: { exact: true },
       },
     ],

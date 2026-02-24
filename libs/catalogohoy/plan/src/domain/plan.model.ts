@@ -8,6 +8,7 @@ export interface Plan {
   description: string;
   price: number;
   maxProducts: number;
+  maxCatalogs: number;
   isFree: boolean;
   position: number;
 }
@@ -21,6 +22,7 @@ export interface PlanDisplay extends Plan {
   buttonLabel: string;
   buttonSeverity: 'primary' | 'secondary';
   isPopular: boolean;
+  isCurrent: boolean;
 }
 
 export interface TenantPlanUsage {
@@ -28,6 +30,9 @@ export interface TenantPlanUsage {
   currentProductCount: number;
   canCreateProduct: boolean;
   remainingProducts: number;
+  currentCatalogCount: number;
+  canCreateCatalog: boolean;
+  remainingCatalogs: number;
   planExpired: boolean;
   planExpiresAt: string | null;
 }

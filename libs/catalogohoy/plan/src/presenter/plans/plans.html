@@ -8,8 +8,14 @@
 
   <div class="plans-grid">
     @for (plan of plans(); track plan.id) {
-    <div class="plan-card" [class.plan-card--popular]="plan.isPopular">
-      @if (plan.isPopular) {
+    <div
+      class="plan-card"
+      [class.plan-card--popular]="plan.isPopular && !plan.isCurrent"
+      [class.plan-card--current]="plan.isCurrent"
+    >
+      @if (plan.isCurrent) {
+      <div class="current-badge">Actual</div>
+      } @else if (plan.isPopular) {
       <div class="popular-badge">Más popular</div>
       }
 
@@ -52,8 +58,10 @@
         <!-- CTA Button -->
         <button
           class="plan-card__button"
-          [class.plan-card__button--primary]="plan.isPopular"
-          [class.plan-card__button--secondary]="!plan.isPopular"
+          [class.plan-card__button--primary]="plan.isPopular && !plan.isCurrent"
+          [class.plan-card__button--secondary]="!plan.isPopular && !plan.isCurrent"
+          [class.plan-card__button--current]="plan.isCurrent"
+          [disabled]="plan.isCurrent"
           (click)="selectPlan(plan)"
         >
           {{ plan.buttonLabel }}

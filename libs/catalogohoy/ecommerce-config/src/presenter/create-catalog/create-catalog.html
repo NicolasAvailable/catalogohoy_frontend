@@ -1,0 +1,89 @@
+<section class="create-catalog-wrapper">
+  @if (isLoading()) {
+  <div class="create-catalog-card">
+    <div class="flex items-center justify-center py-8">
+      <ui-icon name="loader-circle" size="32" styleClass="text-blue-500 animate-spin" />
+    </div>
+  </div>
+  } @else if (canCreate()) {
+  <div class="create-catalog-card">
+    <div>
+      <h1 class="create-catalog__title">Crear nuevo catálogo</h1>
+      <p class="create-catalog__subtitle">
+        Completa los datos para crear tu nuevo catálogo.
+      </p>
+    </div>
+
+    <div class="form-field">
+      <label class="form-field__label">Nombre del catálogo</label>
+      <input
+        type="text"
+        class="form-field__input"
+        placeholder="Ej: Mi tienda de ropa"
+        [value]="name()"
+        (input)="onNameChange($event)"
+      />
+    </div>
+
+    <div class="form-field">
+      <label class="form-field__label">Slug (URL)</label>
+      <div
+        class="slug-input-wrapper"
+        [class.slug-input-wrapper--error]="slugStatus() === 'taken'"
+      >
+        <span class="slug-prefix">catalogohoy.com/</span>
+        <input
+          type="text"
+          class="slug-input"
+          placeholder="mi-tienda"
+          [value]="slug()"
+          (input)="onSlugChange($event)"
+        />
+      </div>
+      @if (slugStatus() === 'checking') {
+      <span class="slug-status slug-status--checking">
+        <ui-icon name="loader-circle" size="14" styleClass="animate-spin" />
+        Verificando disponibilidad...
+      </span>
+      } @else if (slugStatus() === 'available') {
+      <span class="slug-status slug-status--available">
+        <ui-icon name="check-circle" size="14" />
+        Disponible
+      </span>
+      } @else if (slugStatus() === 'taken') {
+      <span class="slug-status slug-status--taken">
+        <ui-icon name="x-circle" size="14" />
+        Este slug ya está en uso
+      </span>
+      }
+    </div>
+
+    <button
+      class="create-catalog__button"
+      [disabled]="!canSubmit()"
+      (click)="onSubmit()"
+    >
+      @if (isSubmitting()) {
+      <ui-icon name="loader-circle" size="18" styleClass="animate-spin inline-block mr-2" />
+      Creando...
+      } @else {
+      Crear catálogo
+      }
+    </button>
+  </div>
+  } @else {
+  <div class="create-catalog-card">
+    <div class="no-slots">
+      <ui-icon name="package-x" size="56" styleClass="text-slate-300" />
+      <h2 class="no-slots__title">No tienes catálogos disponibles</h2>
+      <p class="no-slots__description">
+        Adquiere un catálogo adicional y vuelve a esta vista para crearlo.
+      </p>
+      <button class="no-slots__button" (click)="openWhatsApp()">
+        <ui-icon name="message-circle" size="18" />
+        Adquirir catálogo
+      </button>
+    </div>
+  </div>
+  }
+</section>

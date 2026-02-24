@@ -59,8 +59,17 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   },
 };
 
-function toPlanDisplay(plan: Plan): PlanDisplay {
+function toPlanDisplay(plan: Plan, currentPlanPosition: number): PlanDisplay {
   const config = PLAN_UI_CONFIG[plan.id] ?? PLAN_UI_CONFIG['gratis'];
+  const isCurrent = currentPlanPosition >= 0 && plan.position === currentPlanPosition;
+
+  let buttonLabel = config.buttonLabel;
+  if (isCurrent) {
+    buttonLabel = 'Plan actual';
+  } else if (currentPlanPosition >= 0 && plan.position > currentPlanPosition) {
+    buttonLabel = 'Mejorar';
+  }
+
   return {
     ...plan,
     period: config.period,
@@ -68,9 +77,10 @@ function toPlanDisplay(plan: Plan): PlanDisplay {
     rateType: config.rateType,
     features: config.features,
     additionalCatalogPrice: config.additionalCatalogPrice,
-    buttonLabel: config.buttonLabel,
+    buttonLabel,
     buttonSeverity: config.buttonSeverity,
     isPopular: config.isPopular,
+    isCurrent,
   };
 }
 
@@ -86,16 +96,21 @@ function toPlanDisplay(plan: Plan): PlanDisplay {
 export class Plans implements OnInit {
   public readonly planStore = inject(PlanStore);
 
+  private readonly currentPlanPosition = computed(
+    () => this.planStore.currentPlan()?.position ?? -1
+  );
+
   public readonly plans = computed<PlanDisplay[]>(() =>
-    this.planStore.plans().map(toPlanDisplay)
+    this.planStore.plans().map((plan) => toPlanDisplay(plan, this.currentPlanPosition()))
   );
 
   ngOnInit(): void {
     this.planStore.loadPlans();
+    this.planStore.loadTenantPlanUsage();
   }
 
   public selectPlan(plan: PlanDisplay): void {
-    if (plan.isFree) {
+    if (plan.isCurrent || plan.isFree) {
       return;
     }
 

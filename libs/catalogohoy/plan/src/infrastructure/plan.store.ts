@@ -43,6 +43,18 @@ export const PlanStore = signalStore(
       () => store.tenantPlanUsage()?.remainingProducts ?? 0
     ),
     currentPlan: computed(() => store.tenantPlanUsage()?.plan ?? null),
+    canCreateCatalog: computed(
+      () => store.tenantPlanUsage()?.canCreateCatalog ?? false
+    ),
+    remainingCatalogs: computed(
+      () => store.tenantPlanUsage()?.remainingCatalogs ?? 0
+    ),
+    currentCatalogCount: computed(
+      () => store.tenantPlanUsage()?.currentCatalogCount ?? 0
+    ),
+    maxCatalogs: computed(
+      () => store.tenantPlanUsage()?.plan.maxCatalogs ?? 1
+    ),
     usagePercentage: computed(() => {
       const usage = store.tenantPlanUsage();
       if (!usage) return 0;
@@ -71,10 +83,11 @@ export const PlanStore = signalStore(
 
       async loadTenantPlanUsage() {
         const tenantId = await tenantStore.getTenantIdAsync();
-        if (!tenantId) return;
+        const userId = tenantStore.userId();
+        if (!tenantId || !userId) return;
 
         patchState(store, { isLoading: true });
-        const result = await planService.getTenantPlanUsage(tenantId);
+        const result = await planService.getTenantPlanUsage(tenantId, userId);
         result
           .mapRight((tenantPlanUsage) =>
             patchState(store, {
@@ -89,9 +102,10 @@ export const PlanStore = signalStore(
 
       async refreshUsage() {
         const tenantId = await tenantStore.getTenantIdAsync();
-        if (!tenantId) return;
+        const userId = tenantStore.userId();
+        if (!tenantId || !userId) return;
 
-        const result = await planService.getTenantPlanUsage(tenantId);
+        const result = await planService.getTenantPlanUsage(tenantId, userId);
         result.mapRight((tenantPlanUsage) =>
           patchState(store, {
             tenantPlanUsage,

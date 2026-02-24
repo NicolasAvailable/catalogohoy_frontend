@@ -1,9 +1,9 @@
 import { NgClass } from '@angular/common';
-import { Component, inject, input, output } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthenticationService } from '@catalogohoy/auth';
 import { ProfileStore } from '@catalogohoy/profile';
-import { TenantStore } from '@catalogohoy/tenant';
+import { Tenant, TenantStore } from '@catalogohoy/tenant';
 import {
   AvatarComponent,
   ConfirmDialogService,
@@ -40,7 +40,24 @@ export class Sidebar {
   public readonly productsMenu: PanelMenuItem[] = PRODUCTS_MENU;
   public readonly catalogMenu: PanelMenuItem[] = CATALOG_MENU;
 
+  public readonly showCatalogSwitcher = signal(false);
+  public readonly allTenants = computed(() => this.profileStore.profile().tenantList.tenants);
+
+  public toggleCatalogSwitcher() {
+    this.showCatalogSwitcher.update((v) => !v);
+  }
+
+  public openTenantCatalog(tenant: Tenant) {
+    window.open(tenant.url, '_blank');
+    this.showCatalogSwitcher.set(false);
+  }
+
   public toggle(item: PanelMenuItem) {
+    if (item['data']?.['externalUrl']) {
+      const url = this.profileStore.profile().tenantList.first.url;
+      window.open(url, '_blank');
+      return;
+    }
     if (item.state) {
       item.state['isOpen'] = !item.state['isOpen'];
     }

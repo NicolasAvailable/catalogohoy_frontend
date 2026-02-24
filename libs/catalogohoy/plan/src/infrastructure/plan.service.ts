@@ -17,7 +17,7 @@ export class PlanService implements BasePlanService {
   public async getAll(): Promise<E.Either<Error, Plan[]>> {
     const { data, error } = await this.client
       .from('plans')
-      .select('id, name, description, price, max_products, is_free, position')
+      .select('id, name, description, price, max_products, max_catalogs, is_free, position')
       .order('position', { ascending: true });
 
     if (error) {
@@ -30,6 +30,7 @@ export class PlanService implements BasePlanService {
       description: row.description,
       price: row.price,
       maxProducts: row.max_products,
+      maxCatalogs: row.max_catalogs ?? 1,
       isFree: row.is_free,
       position: row.position,
     }));
@@ -41,7 +42,7 @@ export class PlanService implements BasePlanService {
     const { data, error } = await this.client
       .from('tenants')
       .select(
-        'plans:plan_id (id, name, description, price, max_products, is_free, position)'
+        'plans:plan_id (id, name, description, price, max_products, max_catalogs, is_free, position)'
       )
       .eq('id', tenantId)
       .single();
@@ -61,6 +62,7 @@ export class PlanService implements BasePlanService {
       description: row['description'] as string,
       price: row['price'] as number,
       maxProducts: row['max_products'] as number,
+      maxCatalogs: (row['max_catalogs'] as number) ?? 1,
       isFree: row['is_free'] as boolean,
       position: row['position'] as number,
     });
@@ -81,8 +83,24 @@ export class PlanService implements BasePlanService {
     return E.right(count ?? 0);
   }
 
+  public async getCatalogCount(
+    userId: number
+  ): Promise<E.Either<Error, number>> {
+    const { count, error } = await this.client
+      .from('users_tenants')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    return E.right(count ?? 0);
+  }
+
   public async getTenantPlanUsage(
-    tenantId: number
+    tenantId: number,
+    userId: number
   ): Promise<E.Either<Error, TenantPlanUsage>> {
     const planResult = await this.getTenantPlan(tenantId);
     if (planResult.isLeft()) {
@@ -94,11 +112,21 @@ export class PlanService implements BasePlanService {
       return E.left(countResult.value as Error);
     }
 
+    const catalogCountResult = await this.getCatalogCount(userId);
+    const extraCatalogsResult = await this.getExtraCatalogs(userId);
     const expirationResult = await this.getTenantExpiration(tenantId);
 
     const plan = planResult.value as Plan;
     const currentProductCount = countResult.value as number;
     const remaining = plan.maxProducts - currentProductCount;
+    const currentCatalogCount = catalogCountResult.isRight()
+      ? (catalogCountResult.value as number)
+      : 1;
+    const extraCatalogs = extraCatalogsResult.isRight()
+      ? (extraCatalogsResult.value as number)
+      : 0;
+    const totalCatalogSlots = plan.maxCatalogs + extraCatalogs;
+    const remainingCatalogs = Math.max(0, totalCatalogSlots - currentCatalogCount);
 
     const expiration = expirationResult.isRight()
       ? (expirationResult.value as TenantPlanExpiration)
@@ -109,9 +137,28 @@ export class PlanService implements BasePlanService {
       currentProductCount,
       canCreateProduct: remaining > 0,
       remainingProducts: Math.max(0, remaining),
+      currentCatalogCount,
+      canCreateCatalog: remainingCatalogs > 0,
+      remainingCatalogs,
       planExpired: expiration.planExpired,
       planExpiresAt: expiration.planExpiresAt,
     });
+  }
+
+  public async getExtraCatalogs(
+    userId: number
+  ): Promise<E.Either<Error, number>> {
+    const { data, error } = await this.client
+      .from('users')
+      .select('extra_catalogs')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    return E.right(data.extra_catalogs ?? 0);
   }
 
   public async getTenantExpiration(
