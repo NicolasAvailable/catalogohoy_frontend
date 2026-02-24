@@ -1,7 +1,7 @@
 .ecommerce {
   min-height: 100vh;
   max-width: 100dvw;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .ecommerce__content {

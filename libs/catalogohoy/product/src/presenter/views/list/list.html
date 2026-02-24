@@ -116,6 +116,7 @@
               [ngModel]="isAllPageSelected()"
               (valueChange)="toggleAllPage()"
             />
+            <span class="w-7 text-center text-sm font-semibold text-grey-400">#</span>
             <h4 class="flex items-center text-base font-semibold">
               Producto
             </h4>
@@ -150,6 +151,7 @@
                 [ngModel]="isSelected(item)"
                 (valueChange)="toggleProduct(item)"
               />
+              <span class="w-7 text-center text-xs font-medium text-grey-300 shrink-0">{{ productStore.productList().products.indexOf(item) + 1 }}</span>
               <div
                 [routerLink]="['edit', item.id]"
                 class="flex gap-2 flex-1 cursor-pointer overflow-hidden"
