@@ -10,12 +10,12 @@
     <div>
       <h1 class="create-catalog__title">Crear nuevo catálogo</h1>
       <p class="create-catalog__subtitle">
-        Completa los datos para crear tu nuevo catálogo.
+        Ingresa el nombre de tu tienda para crear un nuevo catálogo.
       </p>
     </div>
 
     <div class="form-field">
-      <label class="form-field__label">Nombre del catálogo</label>
+      <label class="form-field__label">Nombre de la tienda</label>
       <input
         type="text"
         class="form-field__input"
@@ -25,25 +25,14 @@
       />
     </div>
 
-    <div class="form-field">
-      <label class="form-field__label">Slug (URL)</label>
-      <div
-        class="slug-input-wrapper"
-        [class.slug-input-wrapper--error]="slugStatus() === 'taken'"
-      >
-        <span class="slug-prefix">catalogohoy.com/</span>
-        <input
-          type="text"
-          class="slug-input"
-          placeholder="mi-tienda"
-          [value]="slug()"
-          (input)="onSlugChange($event)"
-        />
-      </div>
+    @if (slug().length > 0) {
+    <div class="slug-preview">
+      <span class="slug-preview__label">Tu catálogo estará en:</span>
+      <span class="slug-preview__url">{{ slug() }}.catalogohoy.com</span>
       @if (slugStatus() === 'checking') {
       <span class="slug-status slug-status--checking">
         <ui-icon name="loader-circle" size="14" styleClass="animate-spin" />
-        Verificando disponibilidad...
+        Verificando...
       </span>
       } @else if (slugStatus() === 'available') {
       <span class="slug-status slug-status--available">
@@ -53,10 +42,11 @@
       } @else if (slugStatus() === 'taken') {
       <span class="slug-status slug-status--taken">
         <ui-icon name="x-circle" size="14" />
-        Este slug ya está en uso
+        Este nombre ya está en uso
       </span>
       }
     </div>
+    }
 
     <button
       class="create-catalog__button"

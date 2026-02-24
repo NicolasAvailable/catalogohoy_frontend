@@ -69,46 +69,26 @@
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
-/* ── Slug prefix ── */
-.slug-input-wrapper {
+/* ── Slug preview ── */
+.slug-preview {
   display: flex;
-  align-items: center;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.625rem;
-  overflow: hidden;
-  transition: border-color 0.2s ease;
-}
-
-.slug-input-wrapper:focus-within {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.slug-input-wrapper--error {
-  border-color: #ef4444;
-}
-
-.slug-input-wrapper--error:focus-within {
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-}
-
-.slug-prefix {
-  padding: 0.7rem 0.5rem 0.7rem 0.85rem;
-  color: #94a3b8;
-  font-size: 0.9rem;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.75rem 1rem;
   background: #f8fafc;
-  white-space: nowrap;
-  user-select: none;
+  border-radius: 0.625rem;
+  border: 1px solid #e2e8f0;
 }
 
-.slug-input {
-  flex: 1;
-  padding: 0.7rem 0.85rem 0.7rem 0;
-  border: none;
+.slug-preview__label {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.slug-preview__url {
   font-size: 0.95rem;
+  font-weight: 600;
   color: #1e293b;
-  outline: none;
-  background: transparent;
 }
 
 /* ── Slug validation ── */

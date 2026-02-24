@@ -27,7 +27,6 @@ export class CreateCatalog implements OnInit {
   public readonly slug = signal('');
   public readonly slugStatus = signal<SlugStatus>('idle');
   public readonly isSubmitting = signal(false);
-  private slugManuallyEdited = false;
 
   public readonly isLoading = this.planStore.isLoading;
   public readonly canCreate = this.planStore.canCreateCatalog;
@@ -50,29 +49,14 @@ export class CreateCatalog implements OnInit {
     const value = (event.target as HTMLInputElement).value;
     this.name.set(value);
 
-    if (!this.slugManuallyEdited) {
-      const generated = this.toSlug(value);
-      this.slug.set(generated);
-      if (generated.length > 0) {
-        this.checkSlugAvailability(generated);
-      } else {
-        this.slugStatus.set('idle');
-      }
-    }
-  }
+    const generated = this.toSlug(value);
+    this.slug.set(generated);
 
-  public onSlugChange(event: Event): void {
-    this.slugManuallyEdited = true;
-    const raw = (event.target as HTMLInputElement).value;
-    const value = this.toSlug(raw);
-    this.slug.set(value);
-
-    if (value.length === 0) {
+    if (generated.length > 0) {
+      this.checkSlugAvailability(generated);
+    } else {
       this.slugStatus.set('idle');
-      return;
     }
-
-    this.checkSlugAvailability(value);
   }
 
   public async onSubmit(): Promise<void> {
@@ -111,7 +95,6 @@ export class CreateCatalog implements OnInit {
 
     this.slugCheckTimeout = setTimeout(async () => {
       const exists = await this.tenantService.isValidSlug(slug);
-      // isValidSlug returns true if the slug exists (tenant_exists_by_slug)
       this.slugStatus.set(exists ? 'taken' : 'available');
     }, 500);
   }
