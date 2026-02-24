@@ -7,12 +7,14 @@
   <div class="pdm__gallery">
     <div class="pdm__main-image">
       @if (product.photos.length) {
-      <img [src]="currentImage" [alt]="product.name" />
+      <img [src]="currentImage" [alt]="product.name" [class.pdm__img--dimmed]="isOutOfStock" />
       } @else {
       <div class="pdm__placeholder">
         <ui-icon name="package" styleClass="size-16" />
       </div>
-      } @if (hasDiscount) {
+      } @if (isOutOfStock) {
+      <span class="pdm__sold-out-badge">Agotado</span>
+      } @else if (hasDiscount) {
       <span class="pdm__discount-badge">Oferta</span>
       }
     </div>
@@ -58,6 +60,12 @@
     }
 
     <div class="pdm__footer">
+      @if (isOutOfStock) {
+      <button type="button" class="pdm__add-btn pdm__add-btn--disabled" disabled>
+        <ui-icon name="package-x" styleClass="size-5" />
+        <span>Agotado</span>
+      </button>
+      } @else {
       <div class="pdm__quantity-row">
         <span class="pdm__qty-label">Cantidad</span>
         <div class="pdm__quantity-selector">
@@ -72,6 +80,8 @@
           <button
             type="button"
             class="pdm__qty-btn"
+            [disabled]="!canAddMore()"
+            [style.opacity]="canAddMore() ? 1 : 0.3"
             (click)="incrementQuantity()"
           >
             <ui-icon name="plus" styleClass="size-4" />
@@ -79,11 +89,18 @@
         </div>
       </div>
 
-      <button type="button" class="pdm__add-btn" (click)="onAddToCart()">
+      <button
+        type="button"
+        class="pdm__add-btn"
+        [disabled]="!canAddMore()"
+        [class.pdm__add-btn--disabled]="!canAddMore()"
+        (click)="onAddToCart()"
+      >
         <ui-icon name="shoppingCart" styleClass="size-5" />
         <span>Agregar al carrito</span>
         <span class="pdm__total">${{ displayPrice * quantity() }}</span>
       </button>
+      }
     </div>
   </div>
 </div>

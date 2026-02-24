@@ -37,10 +37,18 @@ export class EcommerceService implements BaseEcommerceService {
     const { data: config } = await this.client
       .from('tenant_ecommerce_config')
       .select(
-        'whatsapp_buttons, logo, banner, is_accepting_orders, theme_color, show_design_section, payment_methods, show_payment_methods_section'
+        'whatsapp_buttons, logo, banner, is_accepting_orders, theme_color, show_design_section, show_payment_methods_section'
       )
       .eq('tenant_id', tenant.id)
       .single();
+
+    // Obtener métodos de pago activos desde la tabla dedicada
+    const { data: paymentMethods } = await this.client
+      .from('payment_methods')
+      .select('id, tenant_id, name, icon, is_active, created_at')
+      .eq('tenant_id', tenant.id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: true });
 
     // Obtener horarios del día actual
     const dayOfWeek = new Date().getDay(); // 0=Domingo, 1=Lunes, etc.
@@ -82,9 +90,14 @@ export class EcommerceService implements BaseEcommerceService {
       isOpen,
       themeColor: config?.theme_color ?? '#10b981',
       showDesignSection: config?.show_design_section ?? true,
-      paymentMethods: Array.isArray(config?.payment_methods)
-        ? config.payment_methods
-        : [],
+      paymentMethods: (paymentMethods ?? []).map((pm: any) => ({
+        id: pm.id,
+        tenantId: pm.tenant_id,
+        name: pm.name,
+        icon: pm.icon,
+        isActive: pm.is_active,
+        createdAt: pm.created_at,
+      })),
       showPaymentMethodsSection:
         config?.show_payment_methods_section ?? true,
     });
@@ -238,6 +251,29 @@ export class EcommerceService implements BaseEcommerceService {
     );
   }
 
+  private async deductStock(
+    products: { productId: string; quantity: number }[]
+  ): Promise<void> {
+    for (const item of products) {
+      // Get current stock
+      const { data: product } = await this.client
+        .from('products')
+        .select('stock')
+        .eq('id', item.productId)
+        .single();
+
+      // Only deduct if product has limited stock (stock is not null)
+      if (product && product.stock !== null) {
+        const currentStock = Number(product.stock);
+        const newStock = Math.max(0, currentStock - item.quantity);
+        await this.client
+          .from('products')
+          .update({ stock: newStock })
+          .eq('id', item.productId);
+      }
+    }
+  }
+
   private async getExchangeRate(): Promise<number> {
     const { data, error } = await this.client
       .from('exchange_rates')
@@ -289,6 +325,9 @@ export class EcommerceService implements BaseEcommerceService {
     if (error) {
       return E.left(new Error(error.message));
     }
+
+    // Deduct stock for products with limited stock
+    await this.deductStock(order.products);
 
     return E.right(undefined);
   }

@@ -7,11 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import {
-  PAYMENT_METHOD_OPTIONS,
-  PaymentMethod,
-  WhatsappButton,
-} from '@catalogohoy/ecommerce-config';
+import { WhatsappButton } from '@catalogohoy/ecommerce-config';
 import { IconComponent } from '@ui';
 import { CartItem } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
@@ -33,28 +29,12 @@ export class CheckoutDrawer {
   public readonly countryCode = signal('+58');
   public readonly selectedPaymentMethod = signal<string>('');
 
-  private readonly paymentIcons: Record<string, string> = {
-    efectivo: 'banknote',
-    transferencia: 'building',
-    tarjeta_credito: 'creditCard',
-    pago_movil: 'smartphone',
-    binance: 'dollarSign',
-    zelle: 'zap',
-    paypal: 'wallet',
-  };
-
   public readonly availablePaymentMethods = computed(() => {
     const info = this.ecommerceStore.effectiveCatalogInfo();
     if (!info?.showPaymentMethodsSection || !info.paymentMethods?.length)
       return [];
-    return PAYMENT_METHOD_OPTIONS.filter((opt) =>
-      info.paymentMethods.includes(opt.value)
-    );
+    return info.paymentMethods;
   });
-
-  getPaymentIcon(method: string): string {
-    return this.paymentIcons[method] ?? 'wallet';
-  }
 
   onClose() {
     this.cartStore.closeCheckout();
@@ -84,6 +64,7 @@ export class CheckoutDrawer {
         price: item.price,
         quantity: item.quantity,
         total: item.total,
+        photo: item.photo,
       })),
       total: total,
       payment_method: this.selectedPaymentMethod() || undefined,
@@ -110,13 +91,8 @@ export class CheckoutDrawer {
     }
 
     if (this.selectedPaymentMethod()) {
-      const methodLabel = this.availablePaymentMethods().find(
-        (m) => m.value === this.selectedPaymentMethod()
-      )?.label;
-      if (methodLabel) {
-        message += `\n\n*Método de pago:* ${methodLabel}`;
-        message += `\nPor favor compartir los datos para realizar el pago.`;
-      }
+      message += `\n\n*Método de pago:* ${this.selectedPaymentMethod()}`;
+      message += `\nPor favor compartir los datos para realizar el pago.`;
     }
 
     const encodedMessage = encodeURIComponent(message);

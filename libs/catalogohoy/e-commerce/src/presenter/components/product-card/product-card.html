@@ -1,6 +1,7 @@
 <article
   class="product-card"
   [class.product-card--list]="viewMode() === 'list'"
+  [class.product-card--out-of-stock]="isOutOfStock()"
 >
   <button
     type="button"
@@ -13,6 +14,11 @@
       } @else {
       <div class="product-card__placeholder">
         <ui-icon name="package" styleClass="size-10" />
+      </div>
+      }
+      @if (isOutOfStock()) {
+      <div class="product-card__sold-out-overlay">
+        <span class="product-card__sold-out-badge">Agotado</span>
       </div>
       }
     </div>
@@ -40,7 +46,16 @@
     </div>
 
     <div class="product-card__actions">
-      @if (cartQuantity() === 0) {
+      @if (isOutOfStock()) {
+      <button
+        type="button"
+        class="product-card__add-full-btn product-card__add-full-btn--disabled"
+        disabled
+      >
+        <ui-icon name="package-x" styleClass="size-5" />
+        Agotado
+      </button>
+      } @else if (cartQuantity() === 0) {
       <button
         type="button"
         class="product-card__add-full-btn"
@@ -62,6 +77,8 @@
         <button
           type="button"
           class="product-card__qty-btn"
+          [disabled]="!canIncrement()"
+          [class.product-card__qty-btn--disabled]="!canIncrement()"
           (click)="onIncrement($event)"
         >
           +

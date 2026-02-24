@@ -1,4 +1,4 @@
-import { PaymentMethod, WhatsappButton } from '@catalogohoy/ecommerce-config';
+import { PaymentMethodEntity, WhatsappButton } from '@catalogohoy/ecommerce-config';
 import { Product, ProductList } from '@catalogohoy/product';
 import { E } from '@shared/domain';
 
@@ -13,7 +13,7 @@ export interface CatalogInfo {
   isOpen: boolean;
   themeColor: string;
   showDesignSection: boolean;
-  paymentMethods: PaymentMethod[];
+  paymentMethods: PaymentMethodEntity[];
   showPaymentMethodsSection: boolean;
 }
 

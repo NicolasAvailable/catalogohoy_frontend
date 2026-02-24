@@ -74,6 +74,16 @@ export class OrderListComponent implements OnInit, OnDestroy {
     { label: 'Todas', value: 'all' },
     { label: 'Pendientes', value: 'pending' },
     { label: 'Completadas', value: 'completed' },
+    { label: 'Canceladas', value: 'cancelled' },
+  ];
+
+  public readonly statusOptions: {
+    label: string;
+    value: OrderStatus;
+  }[] = [
+    { label: 'Pendiente', value: 'pending' },
+    { label: 'Completada', value: 'completed' },
+    { label: 'Cancelada', value: 'cancelled' },
   ];
 
   public readonly orderOptions: {
@@ -194,6 +204,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
     const labels: Record<OrderStatus, string> = {
       pending: 'Pendiente',
       completed: 'Completada',
+      cancelled: 'Cancelada',
     };
     return labels[status] || status;
   }
@@ -204,6 +215,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
     const colorClasses: Record<OrderStatus, string> = {
       pending: 'bg-orange-100 text-orange-600',
       completed: 'bg-green-100 text-green-600',
+      cancelled: 'bg-red-100 text-red-600',
     };
     return `${baseClass} ${
       colorClasses[status] || 'bg-grey-100 text-grey-600'
@@ -264,6 +276,42 @@ export class OrderListComponent implements OnInit, OnDestroy {
     // Remove all non-numeric characters except +
     const cleanPhone = phone.replace(/[^\d+]/g, '');
     return `https://wa.me/${cleanPhone}`;
+  }
+
+  getCancelledCount(): number {
+    return this.orderStore
+      .orderList()
+      .items.filter((order) => order.status === 'cancelled').length;
+  }
+
+  async onStatusChange(order: Order, newStatus: OrderStatus) {
+    if (newStatus === order.status) return;
+
+    const result = await this.orderStore.updateOrderStatus(
+      order.id,
+      order.status,
+      newStatus
+    );
+    result.fold(
+      (error) => this.toastService.error(new Exception(error)),
+      () => {
+        const label = this.getStatusLabel(newStatus);
+        this.toastService.success(`Estado actualizado a "${label}"`);
+      }
+    );
+  }
+
+  getPaymentMethodLabel(method: string): string {
+    const labels: Record<string, string> = {
+      efectivo: 'Efectivo',
+      transferencia: 'Transferencia',
+      tarjeta_credito: 'Tarjeta de crédito',
+      pago_movil: 'Pago móvil',
+      binance: 'Binance',
+      zelle: 'Zelle',
+      paypal: 'PayPal',
+    };
+    return labels[method] || method;
   }
 
   onDeleteOrder(order: Order) {

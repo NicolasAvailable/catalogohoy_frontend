@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { E } from '../../../../shared/domain/src';
 import { SupabaseClientProvider } from '../../../core/src';
-import { EcommerceConfig } from '../domain';
+import { EcommerceConfig, PaymentMethodEntity } from '../domain';
 
 @Injectable({
   providedIn: 'root',
@@ -115,6 +115,75 @@ export class EcommerceConfigService {
     } catch (error) {
       return E.left(error as Error);
     }
+  }
+
+  async getPaymentMethods(
+    tenantId: string
+  ): Promise<E.Either<Error, PaymentMethodEntity[]>> {
+    const { data, error } = await this.client
+      .from('payment_methods')
+      .select('*')
+      .eq('tenant_id', Number(tenantId))
+      .order('created_at', { ascending: true });
+
+    if (error) return E.left(new Error(error.message));
+
+    return E.right(
+      (data || []).map((row: any) => ({
+        id: row.id,
+        tenantId: row.tenant_id,
+        name: row.name,
+        icon: row.icon,
+        isActive: row.is_active,
+        createdAt: row.created_at,
+      }))
+    );
+  }
+
+  async createPaymentMethod(
+    tenantId: string,
+    name: string,
+    icon: string
+  ): Promise<E.Either<Error, PaymentMethodEntity>> {
+    const { data, error } = await this.client
+      .from('payment_methods')
+      .insert({ tenant_id: Number(tenantId), name, icon })
+      .select()
+      .single();
+
+    if (error) return E.left(new Error(error.message));
+
+    return E.right({
+      id: data.id,
+      tenantId: data.tenant_id,
+      name: data.name,
+      icon: data.icon,
+      isActive: data.is_active,
+      createdAt: data.created_at,
+    });
+  }
+
+  async updatePaymentMethod(
+    id: number,
+    updates: { name?: string; icon?: string; is_active?: boolean }
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('payment_methods')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  async deletePaymentMethod(id: number): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('payment_methods')
+      .delete()
+      .eq('id', id);
+
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
   }
 
   async uploadLogo(

@@ -1,11 +1,12 @@
 import { inject } from '@angular/core';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { toast } from 'ngx-sonner';
-import { EcommerceConfig, PaymentMethod } from '../domain';
+import { EcommerceConfig, PaymentMethod, PaymentMethodEntity } from '../domain';
 import { EcommerceConfigService } from './ecommerce-config.service';
 
 type EcommerceConfigState = {
   config: EcommerceConfig | null;
+  paymentMethodsList: PaymentMethodEntity[];
   isLoading: boolean;
   isSaving: boolean;
   savingSection: string | null;
@@ -14,6 +15,7 @@ type EcommerceConfigState = {
 
 const initialState: EcommerceConfigState = {
   config: null,
+  paymentMethodsList: [],
   isLoading: false,
   isSaving: false,
   savingSection: null,
@@ -368,17 +370,14 @@ export const EcommerceConfigStore = signalStore(
       );
     },
 
-    async savePaymentMethods(data: {
-      paymentMethods: PaymentMethod[];
-      showPaymentMethodsSection: boolean;
-    }) {
+    async savePaymentMethodsSection(showPaymentMethodsSection: boolean) {
       const currentConfig = store.config();
       if (!currentConfig) return;
 
       patchState(store, { isSaving: true, savingSection: 'paymentMethods' });
       const result = await service.updateConfig({
         tenantId: currentConfig.tenantId,
-        ...data,
+        showPaymentMethodsSection,
       });
 
       result.fold(
@@ -388,15 +387,82 @@ export const EcommerceConfigStore = signalStore(
             savingSection: null,
             error: error.message,
           });
-          toast.error('Error al guardar los métodos de pago');
+          toast.error('Error al guardar la sección de pago');
         },
         () => {
           patchState(store, {
             isSaving: false,
             savingSection: null,
-            config: { ...currentConfig, ...data },
+            config: { ...currentConfig, showPaymentMethodsSection },
           });
-          toast.success('Métodos de pago actualizados');
+          toast.success('Sección de pago actualizada');
+        }
+      );
+    },
+
+    async loadPaymentMethods(tenantId: string) {
+      const result = await service.getPaymentMethods(tenantId);
+      result.fold(
+        () => {
+          toast.error('Error al cargar métodos de pago');
+        },
+        (methods: PaymentMethodEntity[]) => {
+          patchState(store, { paymentMethodsList: methods });
+        }
+      );
+    },
+
+    async addPaymentMethod(name: string, icon: string) {
+      const currentConfig = store.config();
+      if (!currentConfig) return;
+
+      const result = await service.createPaymentMethod(
+        currentConfig.tenantId,
+        name,
+        icon
+      );
+      result.fold(
+        () => {
+          toast.error('Error al crear método de pago');
+        },
+        (newMethod: PaymentMethodEntity) => {
+          patchState(store, {
+            paymentMethodsList: [...store.paymentMethodsList(), newMethod],
+          });
+          toast.success('Método de pago creado');
+        }
+      );
+    },
+
+    async togglePaymentMethodActive(id: number, isActive: boolean) {
+      const result = await service.updatePaymentMethod(id, {
+        is_active: isActive,
+      });
+      result.fold(
+        () => {
+          toast.error('Error al actualizar método de pago');
+        },
+        () => {
+          const updated = store
+            .paymentMethodsList()
+            .map((m) => (m.id === id ? { ...m, isActive } : m));
+          patchState(store, { paymentMethodsList: updated });
+        }
+      );
+    },
+
+    async removePaymentMethod(id: number) {
+      const result = await service.deletePaymentMethod(id);
+      result.fold(
+        () => {
+          toast.error('Error al eliminar método de pago');
+        },
+        () => {
+          const filtered = store
+            .paymentMethodsList()
+            .filter((m) => m.id !== id);
+          patchState(store, { paymentMethodsList: filtered });
+          toast.success('Método de pago eliminado');
         }
       );
     },

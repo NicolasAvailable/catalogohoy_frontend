@@ -127,6 +127,99 @@ export class OrderService {
     return E.right(OrderMapper.toDomain(data));
   }
 
+  async updateOrderStatus(
+    id: number,
+    tenantId: number,
+    oldStatus: OrderStatus,
+    newStatus: OrderStatus
+  ): Promise<E.Either<Error, Order>> {
+    const { data: order, error: fetchError } = await this.client
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .single();
+
+    if (fetchError) {
+      return E.left(new Error(fetchError.message));
+    }
+
+    const { data, error } = await this.client
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .select()
+      .single();
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    const products = Array.isArray(order.products) ? order.products : [];
+
+    // Cancelling → restore stock
+    if (oldStatus !== 'cancelled' && newStatus === 'cancelled') {
+      await this.restoreStock(products);
+    }
+
+    // Un-cancelling → deduct stock
+    if (oldStatus === 'cancelled' && newStatus !== 'cancelled') {
+      await this.deductStock(products);
+    }
+
+    return E.right(OrderMapper.toDomain(data));
+  }
+
+  async cancelOrder(
+    id: number,
+    tenantId: number
+  ): Promise<E.Either<Error, Order>> {
+    return this.updateOrderStatus(id, tenantId, 'pending', 'cancelled');
+  }
+
+  private async restoreStock(
+    products: { productId: string; quantity?: number }[]
+  ): Promise<void> {
+    for (const item of products) {
+      const { data: product } = await this.client
+        .from('products')
+        .select('stock')
+        .eq('id', item.productId)
+        .single();
+
+      if (product && product.stock !== null) {
+        const currentStock = Number(product.stock);
+        const restoredStock = currentStock + (item.quantity ?? 0);
+        await this.client
+          .from('products')
+          .update({ stock: restoredStock })
+          .eq('id', item.productId);
+      }
+    }
+  }
+
+  private async deductStock(
+    products: { productId: string; quantity?: number }[]
+  ): Promise<void> {
+    for (const item of products) {
+      const { data: product } = await this.client
+        .from('products')
+        .select('stock')
+        .eq('id', item.productId)
+        .single();
+
+      if (product && product.stock !== null) {
+        const currentStock = Number(product.stock);
+        const newStock = Math.max(0, currentStock - (item.quantity ?? 0));
+        await this.client
+          .from('products')
+          .update({ stock: newStock })
+          .eq('id', item.productId);
+      }
+    }
+  }
+
   async deleteOrder(
     id: number,
     tenantId: number

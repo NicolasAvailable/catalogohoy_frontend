@@ -1,7 +1,13 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
 .catalog {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 1.5rem;
+  overflow: hidden;
 }
 
 /* Toolbar con filtros y acciones */
@@ -17,6 +23,7 @@
 .catalog__filters {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .catalog__actions {
@@ -166,8 +173,25 @@
     align-items: stretch;
   }
 
+  .catalog__toolbar > * {
+    max-width: 100%;
+    min-width: 0;
+  }
+
   .catalog__actions {
     justify-content: space-between;
+    min-width: 0;
+  }
+
+  .catalog__dropdown-trigger {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .catalog__dropdown-trigger span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .catalog__products--grid {

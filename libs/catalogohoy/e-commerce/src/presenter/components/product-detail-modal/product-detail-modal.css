@@ -257,3 +257,32 @@
   font-size: 1.0625rem;
   font-weight: 700;
 }
+
+/* Out of stock */
+.pdm__sold-out-badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  background: #ef4444;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pdm__img--dimmed {
+  filter: grayscale(40%);
+  opacity: 0.7;
+}
+
+.pdm__add-btn--disabled {
+  background: var(--color-grey-200);
+  cursor: not-allowed;
+}
+
+.pdm__add-btn--disabled:hover {
+  background: var(--color-grey-200);
+}

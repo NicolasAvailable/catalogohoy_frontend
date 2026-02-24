@@ -17,6 +17,7 @@ export class OrderMapper {
       updatedAt: e.updated_at,
       phone: e.phone,
       comments: e.comments,
+      paymentMethod: e.payment_method,
     };
   }
 
@@ -28,6 +29,7 @@ export class OrderMapper {
       price: i.price,
       quantity: i.quantity,
       total: i.total,
+      photo: i.photo,
     };
   }
 

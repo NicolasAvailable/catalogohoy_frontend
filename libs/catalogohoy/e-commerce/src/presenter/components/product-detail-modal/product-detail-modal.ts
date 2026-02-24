@@ -25,12 +25,23 @@ export class ProductDetailModal {
   public readonly currentImageIndex = signal(0);
   public readonly quantity = signal(1);
 
+  public readonly isOutOfStock =
+    this.product.stock !== null && Number(this.product.stock) <= 0;
+
+  public readonly availableStock =
+    this.product.stock !== null ? Number(this.product.stock) : null;
+
   public readonly cartQuantity = computed(
     () =>
       this.cartStore
         .items()
         .find((i) => i.productId === String(this.product.id))?.quantity ?? 0
   );
+
+  public readonly canAddMore = computed(() => {
+    if (this.availableStock === null) return true;
+    return this.cartQuantity() + this.quantity() <= this.availableStock;
+  });
 
   get displayPrice(): number {
     return this.product.pricePromotional > 0
@@ -55,6 +66,10 @@ export class ProductDetailModal {
   }
 
   incrementQuantity() {
+    if (this.availableStock !== null) {
+      const maxCanAdd = this.availableStock - this.cartQuantity();
+      if (this.quantity() >= maxCanAdd) return;
+    }
     this.quantity.update((q) => q + 1);
   }
 

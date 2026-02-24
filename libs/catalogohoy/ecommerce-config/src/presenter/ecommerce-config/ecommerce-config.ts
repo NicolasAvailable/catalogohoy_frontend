@@ -14,8 +14,8 @@ import { TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
 import {
   ButtonComponent,
   CardComponent,
-  CheckboxComponent,
   ColorPickerComponent,
+  ConfirmDialogService,
   IconComponent,
   InputTextComponent,
   SelectComponent,
@@ -24,8 +24,6 @@ import {
   UploaderComponent,
 } from '@ui';
 import {
-  PaymentMethod,
-  PAYMENT_METHOD_OPTIONS,
   THEME_COLORS,
   VENEZUELAN_STATES,
   WhatsappButton,
@@ -44,7 +42,6 @@ import { PhoneMockupComponent } from '../components/phone-mockup/phone-mockup';
     CardComponent,
     UploaderComponent,
     TextareaComponent,
-    CheckboxComponent,
     ColorPickerComponent,
     SelectComponent,
     PhoneMockupComponent,
@@ -57,17 +54,33 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly tenantStore = inject(TenantStore);
   public readonly configStore = inject(EcommerceConfigStore);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly confirmDialogService = inject(ConfirmDialogService);
 
   public readonly themeColors = THEME_COLORS;
-  public readonly paymentMethodOptions = PAYMENT_METHOD_OPTIONS;
   public readonly venezuelanStates = VENEZUELAN_STATES;
+
+  // New payment method form
+  public readonly newMethodName = signal('');
+  public readonly newMethodIcon = signal('wallet');
+
+  public readonly iconOptions: { label: string; value: string }[] = [
+    { label: 'Billetera', value: 'wallet' },
+    { label: 'Billetes', value: 'banknote' },
+    { label: 'Tarjeta', value: 'credit-card' },
+    { label: 'Teléfono', value: 'smartphone' },
+    { label: 'Banco', value: 'building' },
+    { label: 'Dólar', value: 'dollar-sign' },
+    { label: 'Rayo', value: 'zap' },
+    { label: 'Monedas', value: 'coins' },
+    { label: 'Candado', value: 'lock' },
+    { label: 'Globo', value: 'globe' },
+  ];
 
   // Draft signals
   public readonly draftName = signal('');
   public readonly draftDescription = signal('');
   public readonly draftWhatsappButtons = signal<WhatsappButton[]>([]);
   public readonly draftThemeColor = signal('#10b981');
-  public readonly draftPaymentMethods = signal<PaymentMethod[]>([]);
   public readonly draftState = signal<string | null>(null);
   public readonly draftCity = signal<string | null>(null);
   public readonly draftShowDesignSection = signal(true);
@@ -103,7 +116,6 @@ export class EcommerceConfigComponent implements OnInit {
             : [{ name: '', number: '' }]
         );
         this.draftThemeColor.set(config.themeColor ?? '#10b981');
-        this.draftPaymentMethods.set(config.paymentMethods ?? []);
         this.draftState.set(config.state ?? null);
         this.draftCity.set(config.city ?? null);
         this.draftShowDesignSection.set(config.showDesignSection ?? true);
@@ -144,6 +156,7 @@ export class EcommerceConfigComponent implements OnInit {
     const tenantId = await this.tenantStore.getTenantIdAsync();
     if (tenantId) {
       this.configStore.loadConfig(String(tenantId));
+      this.configStore.loadPaymentMethods(String(tenantId));
     }
   }
 
@@ -193,24 +206,38 @@ export class EcommerceConfigComponent implements OnInit {
   }
 
   // --- Payment Methods ---
-  togglePaymentMethod(method: PaymentMethod) {
-    const current = this.draftPaymentMethods();
-    if (current.includes(method)) {
-      this.draftPaymentMethods.set(current.filter((m) => m !== method));
-    } else {
-      this.draftPaymentMethods.set([...current, method]);
-    }
+  async addPaymentMethod() {
+    const name = this.newMethodName().trim();
+    if (!name) return;
+    await this.configStore.addPaymentMethod(name, this.newMethodIcon());
+    this.newMethodName.set('');
+    this.newMethodIcon.set('wallet');
   }
 
-  isPaymentMethodSelected(method: PaymentMethod): boolean {
-    return this.draftPaymentMethods().includes(method);
+  toggleMethodActive(id: number, isActive: boolean) {
+    this.configStore.togglePaymentMethodActive(id, isActive);
   }
 
-  async savePaymentMethods() {
-    await this.configStore.savePaymentMethods({
-      paymentMethods: this.draftPaymentMethods(),
-      showPaymentMethodsSection: this.draftShowPaymentMethodsSection(),
-    });
+  deleteMethod(id: number, name: string) {
+    this.confirmDialogService
+      .warning({
+        headerLabel: '¿Eliminar método de pago?',
+        contentLabel: `¿Estás seguro de eliminar "${name}"? Esta acción no se puede deshacer.`,
+        acceptLabel: 'Eliminar',
+        rejectLabel: 'Cancelar',
+      })
+      .subscribe((result) => {
+        result.fold(
+          () => {},
+          () => this.configStore.removePaymentMethod(id)
+        );
+      });
+  }
+
+  async savePaymentMethodsSection() {
+    await this.configStore.savePaymentMethodsSection(
+      this.draftShowPaymentMethodsSection()
+    );
   }
 
   // --- Identity Section ---

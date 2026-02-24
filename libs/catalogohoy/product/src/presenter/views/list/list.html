@@ -169,9 +169,15 @@
             <div
               class="flex-1 flex items-center justify-center overflow-hidden"
             >
-              <span class="line-clamp-1 break-all"
-                >{{!item.stock ? '∞ Infinito' : item.stock}}</span
-              >
+              @if (!item.stock) {
+              <span class="line-clamp-1 break-all">∞ Infinito</span>
+              } @else if (+item.stock <= 0) {
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-red-100 text-red-600">
+                Agotado
+              </span>
+              } @else {
+              <span class="line-clamp-1 break-all">{{ item.stock }}</span>
+              }
             </div>
             <div
               class="flex-1 flex items-center justify-center overflow-hidden"

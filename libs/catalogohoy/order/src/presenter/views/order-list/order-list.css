@@ -12,6 +12,11 @@
   scrollbar-width: none;
 }
 
+/* Sticky table header */
+thead.sticky th {
+  background-color: rgba(var(--color-grey-50), 0.5);
+}
+
 /* Table row hover animation */
 table tbody tr {
   transition: background-color 0.15s ease-in-out;
@@ -45,4 +50,12 @@ button {
 /* Custom bg color for very light grey */
 .bg-grey-25 {
   background-color: rgba(var(--color-grey-50), 0.5);
+}
+
+/* Status select - compact inline style */
+:host ::ng-deep .order-status-select {
+  min-width: 140px;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }

@@ -88,20 +88,20 @@
             Método de pago<span class="checkout-drawer__required">*</span>
           </label>
           <div class="checkout-drawer__payment-methods">
-            @for (method of availablePaymentMethods(); track method.value) {
+            @for (method of availablePaymentMethods(); track method.id) {
             <button
               type="button"
               class="checkout-drawer__payment-option"
               [class.checkout-drawer__payment-option--selected]="
-                selectedPaymentMethod() === method.value
+                selectedPaymentMethod() === method.name
               "
-              (click)="selectedPaymentMethod.set(method.value)"
+              (click)="selectedPaymentMethod.set(method.name)"
             >
               <ui-icon
-                [name]="getPaymentIcon(method.value)"
+                [name]="method.icon"
                 styleClass="size-5"
               />
-              <span>{{ method.label }}</span>
+              <span>{{ method.name }}</span>
             </button>
             }
           </div>

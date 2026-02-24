@@ -65,6 +65,22 @@ export const CartStore = signalStore(
   })),
   withMethods((store) => ({
     addProduct(product: Product) {
+      // Check stock before adding
+      if (product.stock !== null) {
+        const stock = Number(product.stock);
+        if (stock <= 0) {
+          toast.error('Este producto está agotado');
+          return;
+        }
+        const currentInCart =
+          store.cart().items.find((i) => i.productId === String(product.id))
+            ?.quantity ?? 0;
+        if (currentInCart >= stock) {
+          toast.error('No hay más stock disponible de este producto');
+          return;
+        }
+      }
+
       const item = new CartItem(
         String(product.id),
         product.name,
@@ -76,7 +92,6 @@ export const CartStore = signalStore(
       const newCart = store.cart().addItem(item);
       saveCartToStorage(newCart);
       patchState(store, () => ({ cart: newCart }));
-      toast.success('Se ha agregado el producto al carrito');
     },
 
     removeItem(productId: string) {

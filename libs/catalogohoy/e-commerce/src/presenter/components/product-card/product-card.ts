@@ -23,11 +23,27 @@ export class ProductCard {
   private readonly cartStore = inject(CartStore);
   private readonly dialogService = inject(DialogService);
 
+  public readonly isOutOfStock = computed(() => {
+    const p = this.product();
+    return p.stock !== null && Number(p.stock) <= 0;
+  });
+
+  public readonly availableStock = computed(() => {
+    const p = this.product();
+    return p.stock !== null ? Number(p.stock) : null;
+  });
+
   public readonly cartQuantity = computed(() => {
     const item = this.cartStore
       .items()
       .find((i) => i.productId === String(this.product().id));
     return item?.quantity ?? 0;
+  });
+
+  public readonly canIncrement = computed(() => {
+    const stock = this.availableStock();
+    if (stock === null) return true;
+    return this.cartQuantity() < stock;
   });
 
   openModal(event: Event) {

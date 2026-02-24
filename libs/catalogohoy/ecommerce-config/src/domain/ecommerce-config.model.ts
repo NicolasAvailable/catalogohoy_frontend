@@ -67,6 +67,15 @@ export const VENEZUELAN_STATES: string[] = [
   'Zulia',
 ];
 
+export interface PaymentMethodEntity {
+  id: number;
+  tenantId: number;
+  name: string;
+  icon: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface EcommerceConfig {
   tenantId: string;
   name: string;

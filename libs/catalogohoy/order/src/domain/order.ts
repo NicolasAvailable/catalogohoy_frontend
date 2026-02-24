@@ -7,7 +7,7 @@ export interface OrderItem {
   photo?: string;
 }
 
-export type OrderStatus = 'pending' | 'completed';
+export type OrderStatus = 'pending' | 'completed' | 'cancelled';
 
 export interface Order {
   id: number;
@@ -21,6 +21,7 @@ export interface Order {
   updatedAt: string;
   phone?: string;
   comments?: string;
+  paymentMethod?: string;
 }
 
 export class OrderList {

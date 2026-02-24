@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowUp,
   ArrowUpDown,
+  Ban,
   Banknote,
   BarChart3,
   BookImage,
@@ -53,6 +54,7 @@ import {
   NotepadText,
   Package,
   PackageSearch,
+  PackageX,
   Palette,
   Pencil,
   Plus,
@@ -76,6 +78,7 @@ import {
   Trash,
   TrendingDown,
   TrendingUp,
+  TriangleAlert,
   Upload,
   Wallet,
   X,
@@ -89,6 +92,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       ArrowDownToLine,
       ArrowLeft,
       ArrowUpDown,
+      Ban,
       Banknote,
       BookImage,
       Building,
@@ -123,6 +127,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       NotepadText,
       Package,
       PackageSearch,
+      PackageX,
       Pencil,
       Plus,
       QrCode,
@@ -166,6 +171,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Store,
       CircleAlert,
       Crown,
+      TriangleAlert,
     })
   );
 };
