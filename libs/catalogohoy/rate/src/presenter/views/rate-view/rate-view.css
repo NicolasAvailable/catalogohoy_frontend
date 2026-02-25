@@ -1,199 +1,407 @@
+/* ─── Layout ─── */
+
 .rate-container {
   max-width: 1200px;
   margin: 0 auto;
 }
 
+/* ─── Header ─── */
+
+.rate-header {
+  margin-bottom: 2.5rem;
+}
+
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .header-content {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.header-title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.header-icon-wrapper {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 12px;
+  background: var(--color-primary-50);
+  color: var(--color-primary-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-title {
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: var(--color-grey-800);
+  line-height: 1.2;
+  margin-bottom: 0.25rem;
+}
+
+.header-subtitle {
+  font-size: 0.9rem;
+  color: var(--color-grey-300);
+  line-height: 1.5;
+  max-width: 420px;
+}
+
+:host ::ng-deep .sync-button {
+  white-space: nowrap;
+  border-radius: 10px !important;
+}
+
+/* ─── Rate Grid ─── */
+
 .rate-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-top: 2rem;
+  gap: 1.25rem;
 }
+
+/* ─── Rate Card ─── */
 
 .rate-card {
-  display: block;
+  position: relative;
+  background: white;
+  border-radius: 14px;
+  border: 1.5px solid var(--color-grey-50);
+  cursor: pointer;
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.35s ease,
+    transform 0.25s ease;
+  overflow: hidden;
+  outline: none;
+  animation: card-enter 0.5s ease both;
 }
 
-:host ::ng-deep .rate-card {
-  position: relative !important;
-  overflow: hidden !important;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+.rate-card:nth-child(1) {
+  animation-delay: 0s;
+}
+.rate-card:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.rate-card:nth-child(3) {
+  animation-delay: 0.16s;
 }
 
-:host ::ng-deep .rate-card .p-card-body {
-  padding: 2rem;
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .rate-card:hover {
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  border-color: var(--color-grey-100);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
 }
 
-:host ::ng-deep .rate-card.active {
-  border: 2px solid var(--primary-500) !important;
+.rate-card:focus-visible {
+  box-shadow: 0 0 0 3px var(--color-primary-100);
 }
 
-:host ::ng-deep .rate-card.active::after {
-  content: 'Tasa activa';
-  position: absolute;
-  bottom: 0.75rem;
-  right: 0.75rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--primary-600);
-  background: white;
-  padding: 0.15rem 0.6rem;
-  border-radius: 9999px;
-  border: 1px solid var(--primary-100);
-  z-index: 10;
-}
+/* ─── Card Accent (left bar) ─── */
 
-:host ::ng-deep .rate-card::before {
-  content: '';
+.card-accent {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 4px;
-  z-index: 20;
+  width: 4px;
+  height: 100%;
+  border-radius: 14px 0 0 14px;
+  opacity: 0.35;
+  transition: opacity 0.3s ease;
 }
 
-:host ::ng-deep .rate-card.usd::before {
-  background: linear-gradient(90deg, #10b981, #34d399) !important;
+.rate-card:hover .card-accent {
+  opacity: 0.6;
 }
 
-:host ::ng-deep .rate-card.eur::before {
-  background: linear-gradient(90deg, #3b82f6, #60a5fa) !important;
+.usd .card-accent {
+  background: var(--color-green-500);
+}
+.eur .card-accent {
+  background: var(--color-primary-500);
+}
+.custom .card-accent {
+  background: var(--color-orange-500);
 }
 
-:host ::ng-deep .rate-card.custom::before {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24) !important;
+/* ─── Active State ─── */
+
+.rate-card.active {
+  transform: translateY(-2px);
 }
+
+.rate-card.active .card-accent {
+  opacity: 1;
+  width: 5px;
+}
+
+.rate-card.active.usd {
+  border-color: var(--color-green-200);
+}
+
+.rate-card.active.eur {
+  border-color: var(--color-primary-200);
+}
+
+.rate-card.active.custom {
+  border-color: var(--color-orange-200);
+}
+
+/* ─── Card Body ─── */
+
+.card-body {
+  padding: 1.5rem 1.5rem 1.5rem 1.75rem;
+}
+
+/* ─── Card Header ─── */
 
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 1.5rem;
 }
 
 .currency-info {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
 .currency-icon {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.rate-card:hover .currency-icon {
+  transform: scale(1.05);
 }
 
 .usd .currency-icon {
-  background: #ecfdf5;
-  color: #059669;
+  background: var(--color-green-50);
+  color: var(--color-green-600);
 }
+
 .eur .currency-icon {
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--color-primary-50);
+  color: var(--color-primary-600);
 }
+
 .custom .currency-icon {
-  background: #fffbe6;
-  color: #d97706;
+  background: var(--color-orange-50);
+  color: var(--color-orange-600);
 }
 
 .currency-name {
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
-  color: var(--grey-800);
+  color: var(--color-grey-800);
+  line-height: 1.3;
 }
 
-.currency-label {
-  font-size: 0.875rem;
-  color: var(--grey-400);
+.currency-pair {
+  font-size: 0.8rem;
+  color: var(--color-grey-300);
+  font-weight: 500;
 }
 
-.rate-value {
-  font-size: 3rem;
-  font-weight: 700;
-  color: var(--grey-900);
-  margin: 1rem 0;
+/* ─── Badges ─── */
+
+.card-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.badge-official {
+  background: var(--color-green-50);
+  color: var(--color-green-700);
+}
+
+.badge-editable {
+  background: var(--color-orange-50);
+  color: var(--color-orange-700);
+}
+
+/* ─── Rate Display ─── */
+
+.rate-display {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
-.rate-unit {
-  font-size: 1.25rem;
+.rate-value {
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: var(--color-grey-900);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  transition: color 0.3s ease;
+}
+
+.rate-card.active.usd .rate-value {
+  color: var(--color-green-700);
+}
+
+.rate-card.active.eur .rate-value {
+  color: var(--color-primary-700);
+}
+
+.rate-card.active.custom .rate-value {
+  color: var(--color-orange-700);
+}
+
+.rate-currency {
+  font-size: 1.1rem;
   font-weight: 500;
-  color: var(--grey-400);
+  color: var(--color-grey-300);
+}
+
+/* ─── Card Footer ─── */
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .last-update {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: var(--grey-400);
-  margin-top: 1rem;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--color-grey-300);
 }
 
-.custom-rate-input {
-  margin-top: 1.5rem;
+/* ─── Card Selector ─── */
+
+.card-selector {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-grey-50);
+}
+
+.selector-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-grey-400);
+}
+
+/* ─── Custom Rate Editor ─── */
+
+.custom-rate-editor {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-grey-50);
+}
+
+.editor-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-grey-500);
+  margin-bottom: 0.75rem;
+}
+
+.editor-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
 }
 
 .input-wrapper {
   position: relative;
+  flex: 1;
+}
+
+:host ::ng-deep .custom-input {
   width: 100%;
+  border-radius: 10px !important;
+}
+
+:host ::ng-deep .custom-input .p-inputnumber-input {
+  padding-right: 3.5rem !important;
 }
 
 .input-suffix {
   position: absolute;
-  right: 1rem;
+  right: 0.85rem;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--grey-400);
-  font-weight: 500;
-}
-
-.sync-badge {
-  background: #f3f4f6;
-  color: #374151;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
+  color: var(--color-grey-300);
+  font-size: 0.8rem;
   font-weight: 600;
+  pointer-events: none;
+}
+
+:host ::ng-deep .save-button {
+  border-radius: 10px !important;
+  white-space: nowrap;
+  padding-left: 1.25rem !important;
+  padding-right: 1.25rem !important;
+}
+
+/* ─── Info Footer ─── */
+
+.info-footer {
   display: flex;
-  align-items: center;
-  gap: 0.25rem;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin-top: 2rem;
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  background: var(--color-lino-800);
+  color: var(--color-grey-300);
+  font-size: 0.825rem;
+  line-height: 1.5;
+  animation: card-enter 0.5s ease 0.3s both;
 }
 
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-.syncing-icon {
-  animation: spin 2s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.info-footer ui-icon {
+  margin-top: 0.1rem;
+  min-width: 15px;
+  color: var(--color-grey-200);
 }

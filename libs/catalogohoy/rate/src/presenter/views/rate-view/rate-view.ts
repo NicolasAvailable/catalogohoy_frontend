@@ -11,7 +11,6 @@ import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import {
   ButtonComponent,
-  CardComponent,
   CheckboxComponent,
   IconComponent,
   InputNumberComponent,
@@ -29,7 +28,6 @@ import { RateStore } from '../../../infrastructure/rate.store';
     ButtonComponent,
     InputNumberComponent,
     CheckboxComponent,
-    CardComponent,
   ],
   templateUrl: './rate-view.html',
   styleUrl: './rate-view.css',
