@@ -370,4 +370,8 @@
   .checkout-drawer__panel {
     max-width: 100%;
   }
+
+  .checkout-drawer__title {
+    font-size: 1.375rem;
+  }
 }
