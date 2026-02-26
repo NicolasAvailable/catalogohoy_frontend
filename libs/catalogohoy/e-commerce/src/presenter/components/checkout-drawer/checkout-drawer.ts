@@ -28,6 +28,7 @@ export class CheckoutDrawer {
   public readonly comments = signal('');
   public readonly countryCode = signal('+58');
   public readonly selectedPaymentMethod = signal<string>('');
+  public readonly pendingWhatsappUrl = signal<string | null>(null);
 
   public readonly availablePaymentMethods = computed(() => {
     const info = this.ecommerceStore.effectiveCatalogInfo();
@@ -37,11 +38,27 @@ export class CheckoutDrawer {
   });
 
   onClose() {
+    this.pendingWhatsappUrl.set(null);
     this.cartStore.closeCheckout();
   }
 
   onBack() {
+    this.pendingWhatsappUrl.set(null);
     this.cartStore.closeCheckout();
+  }
+
+  onContinueToWhatsApp() {
+    const url = this.pendingWhatsappUrl();
+    if (!url) return;
+    window.open(url, '_blank');
+    this.cartStore.closeCheckout();
+    this.cartStore.closeCart();
+  }
+
+  onKeepShopping() {
+    this.pendingWhatsappUrl.set(null);
+    this.cartStore.closeCheckout();
+    this.cartStore.closeCart();
   }
 
   async onSubmit(button: WhatsappButton) {
@@ -99,12 +116,9 @@ export class CheckoutDrawer {
     const whatsappNumber = button.number.replace(/\D/g, '');
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
 
-    window.location.href = whatsappUrl;
-
-    // Clear cart after sending
+    // Clear cart and show success screen with WhatsApp URL
     this.cartStore.clearCart();
-    this.cartStore.closeCheckout();
-    this.cartStore.closeCart();
+    this.pendingWhatsappUrl.set(whatsappUrl);
 
     // Reset form
     this.name.set('');

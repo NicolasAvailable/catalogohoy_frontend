@@ -10,142 +10,176 @@
   ></div>
 
   <div class="checkout-drawer__panel">
-    <header class="checkout-drawer__header">
-      <button class="checkout-drawer__back" (click)="onBack()">
-        <ui-icon name="arrowLeft" styleClass="size-5" />
-      </button>
-      <h2 class="checkout-drawer__title">Datos de contacto</h2>
-    </header>
+    @if (pendingWhatsappUrl()) {
 
-    <div class="checkout-drawer__content">
-      <form class="checkout-drawer__form">
-        <div class="checkout-drawer__field">
-          <label class="checkout-drawer__label" for="name">
-            Nombre<span class="checkout-drawer__required">*</span>
-          </label>
-          <input
-            type="text"
-            id="name"
-            class="checkout-drawer__input"
-            [ngModel]="name()"
-            (ngModelChange)="name.set($event)"
-            name="name"
-            placeholder="Tu nombre"
-            required
-          />
+      <!-- Order success screen -->
+      <div class="checkout-drawer__success">
+        <div class="checkout-drawer__success-icon">
+          <ui-icon name="checkCircle" styleClass="size-16" />
         </div>
+        <h2 class="checkout-drawer__success-title">
+          Tu orden se ha realizado correctamente
+        </h2>
+        <p class="checkout-drawer__success-subtitle">
+          Para revisar los detalles de su pedido y continuar con el proceso,
+          haga clic en el botón "Continuar a WhatsApp":
+        </p>
+        <div class="checkout-drawer__success-actions">
+          <button
+            class="checkout-drawer__whatsapp-btn"
+            (click)="onContinueToWhatsApp()"
+          >
+            <ui-icon name="messageCircle" styleClass="size-5" />
+            Continuar a WhatsApp
+          </button>
+          <button
+            class="checkout-drawer__keep-shopping-btn"
+            (click)="onKeepShopping()"
+          >
+            <ui-icon name="shoppingCart" styleClass="size-5" />
+            Seguir comprando
+          </button>
+        </div>
+      </div>
 
-        <div class="checkout-drawer__field">
-          <label class="checkout-drawer__label" for="phone">
-            Celular<span class="checkout-drawer__required">*</span>
-          </label>
-          <div class="checkout-drawer__phone-input">
-            <div class="checkout-drawer__country-select">
-              <select
-                class="checkout-drawer__country-dropdown"
-                [ngModel]="countryCode()"
-                (ngModelChange)="setCountryCode($event)"
-                name="countryCode"
-              >
-                @for (country of countryCodes; track country.code) {
-                <option [value]="country.code">
-                  {{ country.flag }} {{ country.code }}
-                </option>
-                }
-              </select>
-            </div>
+    } @else {
+
+      <!-- Checkout form -->
+      <header class="checkout-drawer__header">
+        <button class="checkout-drawer__back" (click)="onBack()">
+          <ui-icon name="arrowLeft" styleClass="size-5" />
+        </button>
+        <h2 class="checkout-drawer__title">Datos de contacto</h2>
+      </header>
+
+      <div class="checkout-drawer__content">
+        <form class="checkout-drawer__form">
+          <div class="checkout-drawer__field">
+            <label class="checkout-drawer__label" for="name">
+              Nombre<span class="checkout-drawer__required">*</span>
+            </label>
             <input
-              type="tel"
-              id="phone"
-              class="checkout-drawer__input checkout-drawer__input--phone"
-              [ngModel]="phone()"
-              (ngModelChange)="phone.set($event)"
-              name="phone"
-              placeholder="414 253 3898"
+              type="text"
+              id="name"
+              class="checkout-drawer__input"
+              [ngModel]="name()"
+              (ngModelChange)="name.set($event)"
+              name="name"
+              placeholder="Tu nombre"
               required
             />
           </div>
-        </div>
 
-        <div class="checkout-drawer__field">
-          <label class="checkout-drawer__label" for="comments">
-            Comentarios de la orden
-          </label>
-          <textarea
-            id="comments"
-            class="checkout-drawer__textarea"
-            [ngModel]="comments()"
-            (ngModelChange)="comments.set($event)"
-            name="comments"
-            placeholder="Indicaciones especiales..."
-            rows="4"
-          ></textarea>
-        </div>
-
-        @if (availablePaymentMethods().length > 0) {
-        <div class="checkout-drawer__field">
-          <label class="checkout-drawer__label">
-            Método de pago<span class="checkout-drawer__required">*</span>
-          </label>
-          <div class="checkout-drawer__payment-methods">
-            @for (method of availablePaymentMethods(); track method.id) {
-            <button
-              type="button"
-              class="checkout-drawer__payment-option"
-              [class.checkout-drawer__payment-option--selected]="
-                selectedPaymentMethod() === method.name
-              "
-              (click)="selectedPaymentMethod.set(method.name)"
-            >
-              <ui-icon
-                [name]="method.icon"
-                styleClass="size-5"
+          <div class="checkout-drawer__field">
+            <label class="checkout-drawer__label" for="phone">
+              Celular<span class="checkout-drawer__required">*</span>
+            </label>
+            <div class="checkout-drawer__phone-input">
+              <div class="checkout-drawer__country-select">
+                <select
+                  class="checkout-drawer__country-dropdown"
+                  [ngModel]="countryCode()"
+                  (ngModelChange)="setCountryCode($event)"
+                  name="countryCode"
+                >
+                  @for (country of countryCodes; track country.code) {
+                  <option [value]="country.code">
+                    {{ country.flag }} {{ country.code }}
+                  </option>
+                  }
+                </select>
+              </div>
+              <input
+                type="tel"
+                id="phone"
+                class="checkout-drawer__input checkout-drawer__input--phone"
+                [ngModel]="phone()"
+                (ngModelChange)="phone.set($event)"
+                name="phone"
+                placeholder="414 253 3898"
+                required
               />
-              <span>{{ method.name }}</span>
+            </div>
+          </div>
+
+          <div class="checkout-drawer__field">
+            <label class="checkout-drawer__label" for="comments">
+              Comentarios de la orden
+            </label>
+            <textarea
+              id="comments"
+              class="checkout-drawer__textarea"
+              [ngModel]="comments()"
+              (ngModelChange)="comments.set($event)"
+              name="comments"
+              placeholder="Indicaciones especiales..."
+              rows="4"
+            ></textarea>
+          </div>
+
+          @if (availablePaymentMethods().length > 0) {
+          <div class="checkout-drawer__field">
+            <label class="checkout-drawer__label">
+              Método de pago<span class="checkout-drawer__required">*</span>
+            </label>
+            <div class="checkout-drawer__payment-methods">
+              @for (method of availablePaymentMethods(); track method.id) {
+              <button
+                type="button"
+                class="checkout-drawer__payment-option"
+                [class.checkout-drawer__payment-option--selected]="
+                  selectedPaymentMethod() === method.name
+                "
+                (click)="selectedPaymentMethod.set(method.name)"
+              >
+                <ui-icon [name]="method.icon" styleClass="size-5" />
+                <span>{{ method.name }}</span>
+              </button>
+              }
+            </div>
+          </div>
+          }
+        </form>
+      </div>
+
+      <footer class="checkout-drawer__footer">
+        <p class="checkout-drawer__hint">
+          Al confirmar se creará tu orden y serás redirigido a WhatsApp para completar el pedido.
+        </p>
+        @if (ecommerceStore.effectiveCatalogInfo()?.whatsappButtons?.length) {
+          <div class="checkout-drawer__buttons">
+            @for (button of ecommerceStore.effectiveCatalogInfo()!.whatsappButtons; track $index) {
+            <button
+              class="checkout-drawer__submit-btn"
+              [disabled]="!isValid || ecommerceStore.isLoading()"
+              (click)="onSubmit(button)"
+            >
+              @if (ecommerceStore.isLoading()) {
+              <span>Procesando...</span>
+              } @else {
+              <div class="checkout-drawer__submit-count">
+                {{ cartStore.totalItems() }}
+              </div>
+              <span>Hacer pedido{{ button.name ? ' (' + button.name + ')' : '' }}</span>
+              <div class="checkout-drawer__submit-price">
+                ${{ cartStore.totalPrice() | number:'1.2-2' }}
+                <ui-icon name="chevronRight" styleClass="size-5" />
+              </div>
+              }
             </button>
             }
           </div>
-        </div>
-        }
-      </form>
-    </div>
-
-    <footer class="checkout-drawer__footer">
-      <p class="checkout-drawer__hint">
-        Al confirmar se creará tu orden y serás redirigido a WhatsApp para completar el pedido.
-      </p>
-      @if (ecommerceStore.effectiveCatalogInfo()?.whatsappButtons?.length) {
-        <div class="checkout-drawer__buttons">
-          @for (button of ecommerceStore.effectiveCatalogInfo()!.whatsappButtons; track $index) {
+        } @else {
           <button
-            class="checkout-drawer__submit-btn"
-            [disabled]="!isValid || ecommerceStore.isLoading()"
-            (click)="onSubmit(button)"
+            class="checkout-drawer__submit-btn checkout-drawer__submit-btn--disabled"
+            disabled
           >
-            @if (ecommerceStore.isLoading()) {
-            <span>Procesando...</span>
-            } @else {
-            <div class="checkout-drawer__submit-count">
-              {{ cartStore.totalItems() }}
-            </div>
-            <span>Hacer pedido{{ button.name ? ' (' + button.name + ')' : '' }}</span>
-            <div class="checkout-drawer__submit-price">
-              ${{ cartStore.totalPrice() | number:'1.2-2' }}
-              <ui-icon name="chevronRight" styleClass="size-5" />
-            </div>
-            }
+            <span>WhatsApp no configurado</span>
           </button>
-          }
-        </div>
-      } @else {
-        <button
-          class="checkout-drawer__submit-btn checkout-drawer__submit-btn--disabled"
-          disabled
-        >
-          <span>WhatsApp no configurado</span>
-        </button>
-      }
-    </footer>
+        }
+      </footer>
+
+    }
   </div>
 </div>
 }
