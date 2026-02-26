@@ -1,21 +1,19 @@
 {
   "buildCommand": "npm run build:catalogohoy",
   "outputDirectory": "dist/apps/catalogohoy/browser",
+  "functions": {
+    "api/og.ts": {
+      "includeFiles": "dist/apps/catalogohoy/browser/index.html"
+    }
+  },
   "rewrites": [
     {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "header",
-          "key": "user-agent",
-          "value": ".*(facebookexternalhit|Facebookexternalhit|Twitterbot|twitterbot|WhatsApp|whatsapp|LinkedInBot|linkedinbot|Slackbot|slackbot|TelegramBot|telegrambot|Pinterest|pinterest|Discordbot|discordbot|Baiduspider|baiduspider|Googlebot|googlebot).*"
-        }
-      ],
-      "destination": "/api/og?path=$1"
+      "source": "/product/:id",
+      "destination": "/api/og?path=product/:id"
     },
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/",
+      "destination": "/api/og"
     },
     {
       "source": "/(.*)",

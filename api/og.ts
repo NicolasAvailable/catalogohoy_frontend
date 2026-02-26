@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 const SUPABASE_URL = process.env['SUPABASE_URL'] || 'https://yvkurjivijnhliofmfmj.supabase.co';
 const SUPABASE_KEY = process.env['SUPABASE_ANON_KEY'] || 'sb_publishable_yYkWS23HI8l698Fl-sK12w_FcqIggPs';
@@ -8,6 +10,27 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const DEFAULT_IMAGE =
   'https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/favicon-c.png';
+
+const CRAWLER_REGEX =
+  /facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Pinterest|Discordbot|Baiduspider|Googlebot|bingbot|yandex|Applebot/i;
+
+// Cache the index.html content at cold start
+let cachedIndexHtml: string | null = null;
+
+function getIndexHtml(): string {
+  if (cachedIndexHtml) return cachedIndexHtml;
+  try {
+    // Vercel bundles the file via "includeFiles" in vercel.json
+    cachedIndexHtml = readFileSync(
+      join(process.cwd(), 'dist/apps/catalogohoy/browser/index.html'),
+      'utf-8'
+    );
+  } catch {
+    // Fallback: minimal HTML that loads the SPA
+    cachedIndexHtml = '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=/"></head></html>';
+  }
+  return cachedIndexHtml;
+}
 
 function extractSlugFromHost(host: string): string | null {
   const hostname = host.split(':')[0];
@@ -83,6 +106,16 @@ const defaultMeta = {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const userAgent = (req.headers['user-agent'] || '') as string;
+  const isCrawler = CRAWLER_REGEX.test(userAgent);
+
+  // Normal users get the SPA
+  if (!isCrawler) {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.status(200).send(getIndexHtml());
+  }
+
+  // Crawlers get dynamic OG meta tags
   try {
     const host = (req.headers['host'] || req.headers['x-forwarded-host'] || '') as string;
     const slug = extractSlugFromHost(host);
@@ -116,8 +149,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const tenantDescription =
       config?.description || `Explora el catálogo de ${tenant.name} en CatalogoHoy.`;
 
-    // Check if it's a product page: /product/:id
-    const productMatch = path.match(/^\/?product\/(\d+)/);
+    // Check if it's a product page: product/:id
+    const productMatch = path.match(/^product\/(\d+)/);
 
     if (productMatch) {
       const productId = productMatch[1];
@@ -159,8 +192,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         type: 'website',
       })
     );
-  } catch (error) {
-    // On any error, return default meta tags (never break the crawler)
+  } catch {
     return res.status(200).send(buildHtml(defaultMeta));
   }
 }
