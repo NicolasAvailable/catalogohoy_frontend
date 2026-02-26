@@ -2,10 +2,13 @@ import { DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DOCUMENT,
+  effect,
   inject,
   OnInit,
   signal,
 } from '@angular/core';
+import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IconComponent } from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
@@ -22,15 +25,75 @@ export default class ProductDetail implements OnInit {
   public readonly cartStore = inject(CartStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly titleService = inject(Title);
+  private readonly metaService = inject(Meta);
+  private readonly document = inject(DOCUMENT);
 
   public currentImageIndex = 0;
   public readonly quantity = signal(1);
+
+  constructor() {
+    effect(() => {
+      const product = this.ecommerceStore.selectedProduct();
+      const catalogInfo = this.ecommerceStore.effectiveCatalogInfo();
+      if (!product) return;
+
+      const storeName = catalogInfo?.name || 'CatalogoHoy';
+      const title = `${product.name} — ${storeName}`;
+      const description = product.description
+        ? product.description.slice(0, 160)
+        : `${product.name} disponible en ${storeName}`;
+      const image = product.photos.length > 0 ? product.photos[0] : (catalogInfo?.logo || '');
+      const url = window.location.href;
+      const price = product.pricePromotional > 0 ? product.pricePromotional : product.price;
+
+      this.titleService.setTitle(title);
+
+      this.metaService.updateTag({ name: 'description', content: description });
+      this.metaService.updateTag({ property: 'og:title', content: title });
+      this.metaService.updateTag({ property: 'og:description', content: `$${price.toFixed(2)} · ${description}` });
+      this.metaService.updateTag({ property: 'og:image', content: image });
+      this.metaService.updateTag({ property: 'og:url', content: url });
+      this.metaService.updateTag({ property: 'og:type', content: 'product' });
+      this.metaService.updateTag({ name: 'twitter:title', content: title });
+      this.metaService.updateTag({ name: 'twitter:description', content: `$${price.toFixed(2)} · ${description}` });
+      this.metaService.updateTag({ name: 'twitter:image', content: image });
+
+      this.updateJsonLd({
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: product.name,
+        description: product.description || undefined,
+        image: product.photos.length > 0 ? product.photos : undefined,
+        url,
+        offers: {
+          '@type': 'Offer',
+          price: price.toFixed(2),
+          priceCurrency: 'USD',
+          availability: product.stock === null || Number(product.stock) > 0
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/OutOfStock',
+        },
+      });
+    });
+  }
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.ecommerceStore.loadProduct(id);
     }
+  }
+
+  private updateJsonLd(data: Record<string, unknown>): void {
+    const head = this.document.head;
+    let script: HTMLScriptElement | null = head.querySelector('script[type="application/ld+json"]');
+    if (!script) {
+      script = this.document.createElement('script');
+      script.type = 'application/ld+json';
+      head.appendChild(script);
+    }
+    script.textContent = JSON.stringify(data);
   }
 
   get product() {

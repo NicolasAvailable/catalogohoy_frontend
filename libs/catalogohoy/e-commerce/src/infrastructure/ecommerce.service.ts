@@ -37,7 +37,7 @@ export class EcommerceService implements BaseEcommerceService {
     const { data: config } = await this.client
       .from('tenant_ecommerce_config')
       .select(
-        'whatsapp_buttons, logo, banner, is_accepting_orders, theme_color, show_design_section, show_payment_methods_section'
+        'whatsapp_buttons, logo, banner, is_accepting_orders, theme_color, show_design_section, show_payment_methods_section, description'
       )
       .eq('tenant_id', tenant.id)
       .single();
@@ -80,6 +80,7 @@ export class EcommerceService implements BaseEcommerceService {
     return E.right({
       id: tenant.id,
       name: tenant.name,
+      description: config?.description ?? null,
       logo: config?.logo ?? null,
       banner: config?.banner ?? null,
       whatsappButtons: Array.isArray(config?.whatsapp_buttons)

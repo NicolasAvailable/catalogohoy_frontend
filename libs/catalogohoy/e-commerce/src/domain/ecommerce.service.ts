@@ -5,6 +5,7 @@ import { E } from '@shared/domain';
 export interface CatalogInfo {
   id: string;
   name: string;
+  description: string | null;
   logo: string | null;
   banner: string | null;
   whatsappButtons: WhatsappButton[];

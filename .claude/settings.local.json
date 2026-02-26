@@ -35,7 +35,9 @@
       "Read(//c/tmp/**)",
       "Read(//c/Users/nicol/**)",
       "Bash(iconv:*)",
-      "Bash(cmd /c dir:*)"
+      "Bash(cmd /c dir:*)",
+      "Bash(cat .github/workflows/*)",
+      "Bash(xargs ls -lh)"
     ]
   },
   "enableAllProjectMcpServers": true,

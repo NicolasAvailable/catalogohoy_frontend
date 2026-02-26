@@ -5,8 +5,9 @@ import {
   OnDestroy,
   OnInit,
   effect,
+  DOCUMENT,
 } from '@angular/core';
-import { Title } from '@angular/platform-browser';
+import { Meta, Title } from '@angular/platform-browser';
 import { RouterOutlet } from '@angular/router';
 import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
@@ -37,6 +38,8 @@ export class ECommerce implements OnInit, OnDestroy {
   public readonly cartStore = inject(CartStore);
   public readonly planStore = inject(PlanStore);
   private readonly titleService = inject(Title);
+  private readonly metaService = inject(Meta);
+  private readonly document = inject(DOCUMENT);
 
   private readonly handlePreviewMessage = (event: MessageEvent) => {
     if (event.origin !== window.location.origin) return;
@@ -58,11 +61,37 @@ export class ECommerce implements OnInit, OnDestroy {
   };
 
   constructor() {
-    // Dynamic title
+    // Dynamic title + SEO meta tags
     effect(() => {
       const info = this.ecommerceStore.effectiveCatalogInfo();
       if (info?.name) {
-        this.titleService.setTitle(`${info.name} | Catálogo`);
+        const title = `${info.name} | Catálogo`;
+        const description = info.description || `Explora el catálogo de ${info.name}`;
+        const image = info.logo || info.banner || DEFAULT_FAVICON;
+        const url = window.location.origin;
+
+        this.titleService.setTitle(title);
+
+        this.metaService.updateTag({ name: 'description', content: description });
+        this.metaService.updateTag({ property: 'og:title', content: title });
+        this.metaService.updateTag({ property: 'og:description', content: description });
+        this.metaService.updateTag({ property: 'og:image', content: image });
+        this.metaService.updateTag({ property: 'og:url', content: url });
+        this.metaService.updateTag({ property: 'og:type', content: 'website' });
+        this.metaService.updateTag({ name: 'twitter:title', content: title });
+        this.metaService.updateTag({ name: 'twitter:description', content: description });
+        this.metaService.updateTag({ name: 'twitter:image', content: image });
+
+        this.updateCanonical(url);
+        this.updateJsonLd({
+          '@context': 'https://schema.org',
+          '@type': 'Store',
+          name: info.name,
+          description,
+          url,
+          ...(info.logo ? { logo: info.logo } : {}),
+          ...(info.banner ? { image: info.banner } : {}),
+        });
       }
     });
 
@@ -175,5 +204,27 @@ export class ECommerce implements OnInit, OnDestroy {
     }
     link.type = 'image/png';
     link.href = href;
+  }
+
+  private updateCanonical(url: string): void {
+    const head = this.document.head;
+    let link: HTMLLinkElement | null = head.querySelector('link[rel="canonical"]');
+    if (!link) {
+      link = this.document.createElement('link');
+      link.setAttribute('rel', 'canonical');
+      head.appendChild(link);
+    }
+    link.setAttribute('href', url);
+  }
+
+  private updateJsonLd(data: Record<string, unknown>): void {
+    const head = this.document.head;
+    let script: HTMLScriptElement | null = head.querySelector('script[type="application/ld+json"]');
+    if (!script) {
+      script = this.document.createElement('script');
+      script.type = 'application/ld+json';
+      head.appendChild(script);
+    }
+    script.textContent = JSON.stringify(data);
   }
 }
