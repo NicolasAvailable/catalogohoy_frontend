@@ -8,10 +8,14 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": "(?i).*(facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Pinterest|Discordbot|Baiduspider).*"
+          "value": ".*(facebookexternalhit|Facebookexternalhit|Twitterbot|twitterbot|WhatsApp|whatsapp|LinkedInBot|linkedinbot|Slackbot|slackbot|TelegramBot|telegrambot|Pinterest|pinterest|Discordbot|discordbot|Baiduspider|baiduspider|Googlebot|googlebot).*"
         }
       ],
       "destination": "/api/og?path=$1"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
     },
     {
       "source": "/(.*)",
