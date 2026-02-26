@@ -99,7 +99,7 @@ export class CheckoutDrawer {
     const whatsappNumber = button.number.replace(/\D/g, '');
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
 
-    window.open(whatsappUrl, '_blank');
+    window.location.href = whatsappUrl;
 
     // Clear cart after sending
     this.cartStore.clearCart();
