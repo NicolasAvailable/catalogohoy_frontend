@@ -10,7 +10,7 @@
       />
     </div>
     <div class="catalog__filters">
-      @if (ecommerceStore.isLoading()) {
+      @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
         <div class="catalog__category-skeleton">
           @for (i of [1,2,3,4,5]; track i) {
             <div class="catalog__category-pill-skeleton"></div>
