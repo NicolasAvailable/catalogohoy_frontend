@@ -10,7 +10,15 @@
   [ngClass]="{ 'translate-x-0': visible(), '-translate-x-full': !visible() }"
 >
   <div class="w-full px-3">
-    @if (profileStore.profile().tenantList.first; as tenant) {
+    @if (profileStore.isLoading()) {
+    <div class="flex items-center gap-3 h-16 animate-pulse">
+      <div class="w-10 h-10 rounded-xl bg-grey-100 shrink-0"></div>
+      <div class="flex flex-col gap-2 flex-1 min-w-0">
+        <div class="h-3.5 w-24 bg-grey-100 rounded-md"></div>
+        <div class="h-3 w-32 bg-grey-100 rounded-md"></div>
+      </div>
+    </div>
+    } @else if (profileStore.profile().tenantList.first; as tenant) {
     <div class="flex items-center gap-3 h-16">
       @if (tenant.logo) {
       <img

@@ -19,6 +19,7 @@ import {
   InputTextComponent,
   SkeletonListComponent,
   TableComponent,
+  TooltipDirective,
 } from '@ui';
 import { TablePageEvent } from 'primeng/table';
 import { debounceTime, distinctUntilChanged, Subscription } from 'rxjs';
@@ -43,6 +44,7 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
     ImportExportHubComponent,
     CheckboxComponent,
     PlanLimitDialogComponent,
+    TooltipDirective,
   ],
   templateUrl: './list.html',
   styleUrl: './list.css',

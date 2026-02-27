@@ -238,6 +238,8 @@
                   variant="outlined"
                   severity="contrast"
                   size="small"
+                  [tooltip]="expandedOrderId() === order.id ? 'Ocultar detalle' : 'Ver detalle'"
+                  tooltipPosition="bottom"
                 />
                 <ui-button
                   (click)="onEditOrder(order)"
@@ -245,6 +247,8 @@
                   variant="outlined"
                   severity="contrast"
                   size="small"
+                  tooltip="Editar"
+                  tooltipPosition="bottom"
                 />
                 <ui-button
                   (click)="onDeleteOrder(order)"
@@ -252,6 +256,8 @@
                   variant="outlined"
                   severity="contrast"
                   size="small"
+                  tooltip="Eliminar"
+                  tooltipPosition="bottom"
                 />
               </div>
             </td>

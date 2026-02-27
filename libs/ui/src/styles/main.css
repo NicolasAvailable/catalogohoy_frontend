@@ -1,11 +1,14 @@
 @import 'tailwindcss';
 
 :root {
-  font-family: 'SF Pro Display', 'Inter', 'Nunito', 'Roboto', Arial, sans-serif;
+  font-family: 'Inter var', 'Inter', ui-sans-serif, system-ui, sans-serif;
   font-size: 75%;
 }
 
 @theme {
+  --font-sans: 'Inter var', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
   --breakpoint-xs: 500px;
   --breakpoint-3xl: 1600px;
   --breakpoint-4xl: 1920px;

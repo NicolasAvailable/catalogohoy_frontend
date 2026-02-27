@@ -61,15 +61,29 @@
         <div class="flex items-center gap-2">
           <ui-button
             icon="pencil"
-            variant="text"
-            severity="secondary"
+            variant="outlined"
+            severity="contrast"
+            size="small"
             [routerLink]="['edit', category.id]"
+            tooltip="Editar"
+            tooltipPosition="bottom"
+          />
+          <ui-button
+            icon="share2"
+            variant="outlined"
+            severity="contrast"
+            size="small"
+            tooltip="Compartir"
+            tooltipPosition="bottom"
           />
           <ui-button
             icon="trash"
-            variant="text"
+            variant="outlined"
             severity="danger"
+            size="small"
             (click)="onDelete(category)"
+            tooltip="Eliminar"
+            tooltipPosition="bottom"
           />
         </div>
       </div>

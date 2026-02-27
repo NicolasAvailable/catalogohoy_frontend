@@ -9,6 +9,7 @@ import {
   IconComponent,
   InputTextComponent,
   SkeletonListComponent,
+  TooltipDirective,
 } from '@ui';
 import { PaginatorModule } from 'primeng/paginator';
 import { CategoryFacade } from '../../../application';
@@ -29,6 +30,7 @@ import { CategoryService } from '../../../infrastructure/category.service';
     DragDropModule,
     ConfirmDialogComponent,
     SkeletonListComponent,
+    TooltipDirective,
   ],
   templateUrl: './list.html',
   styleUrl: './list.css',

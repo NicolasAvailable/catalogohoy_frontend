@@ -21,6 +21,7 @@ import {
   SelectComponent,
   SelectItemDirective,
   SelectSelectedItemDirective,
+  TooltipDirective,
 } from '@ui';
 import {
   debounceTime,
@@ -48,6 +49,7 @@ type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
+    TooltipDirective,
   ],
   templateUrl: './order-list.html',
   styleUrl: './order-list.css',
