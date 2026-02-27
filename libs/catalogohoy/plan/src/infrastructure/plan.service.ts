@@ -6,6 +6,7 @@ import {
   BasePlanService,
   Plan,
   TenantPlanExpiration,
+  TenantPlanPublicInfo,
   TenantPlanUsage,
 } from '../domain';
 
@@ -183,10 +184,10 @@ export class PlanService implements BasePlanService {
 
   public async getTenantExpiredBySlug(
     slug: string
-  ): Promise<E.Either<Error, boolean>> {
+  ): Promise<E.Either<Error, TenantPlanPublicInfo>> {
     const { data, error } = await this.client
       .from('tenants')
-      .select('plan_expired')
+      .select('plan_expired, plans:plan_id (is_free)')
       .eq('slug', slug)
       .single();
 
@@ -194,6 +195,11 @@ export class PlanService implements BasePlanService {
       return E.left(new Error(error.message));
     }
 
-    return E.right(data.plan_expired ?? false);
+    const plans = data?.plans as unknown as Record<string, unknown> | null;
+
+    return E.right({
+      planExpired: data.plan_expired ?? false,
+      isFreePlan: (plans?.['is_free'] as boolean) ?? true,
+    });
   }
 }

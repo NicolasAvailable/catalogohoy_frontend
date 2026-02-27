@@ -16,6 +16,7 @@ type PlanState = {
   isLoading: boolean;
   planExpired: boolean;
   planExpiresAt: string | null;
+  isFreePlan: boolean;
 };
 
 const initialState: PlanState = {
@@ -24,6 +25,7 @@ const initialState: PlanState = {
   isLoading: false,
   planExpired: false,
   planExpiresAt: null,
+  isFreePlan: false,
 };
 
 export const PlanStore = signalStore(
@@ -63,6 +65,7 @@ export const PlanStore = signalStore(
       );
     }),
     isPlanExpired: computed(() => store.planExpired()),
+    isFreePlan: computed(() => store.isFreePlan()),
     planExpiresAtDate: computed(() =>
       store.planExpiresAt() ? new Date(store.planExpiresAt()!) : null
     ),
@@ -117,8 +120,11 @@ export const PlanStore = signalStore(
 
       async checkExpiredBySlug(slug: string) {
         const result = await planService.getTenantExpiredBySlug(slug);
-        result.mapRight((expired) =>
-          patchState(store, { planExpired: expired })
+        result.mapRight((info) =>
+          patchState(store, {
+            planExpired: info.planExpired,
+            isFreePlan: info.isFreePlan,
+          })
         );
       },
     })

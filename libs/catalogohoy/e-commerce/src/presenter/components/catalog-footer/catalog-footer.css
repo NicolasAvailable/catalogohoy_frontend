@@ -86,6 +86,37 @@
   width: 100%;
 }
 
+/* Watermark — free plan */
+.catalog-footer__watermark {
+  text-align: center;
+  padding: 1rem 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.catalog-footer__watermark-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #9ca3af;
+  text-decoration: none;
+  transition: color 0.2s;
+  letter-spacing: 0.02em;
+}
+
+.catalog-footer__watermark-link:hover {
+  color: #ffffff;
+}
+
+.catalog-footer__watermark-link strong {
+  font-weight: 700;
+}
+
+.catalog-footer__watermark-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
 @media (max-width: 640px) {
   .catalog-footer__container {
     padding: 1.25rem 1.25rem 1rem;
@@ -94,5 +125,9 @@
 
   .catalog-footer__copyright {
     padding: 0.75rem 1.25rem;
+  }
+
+  .catalog-footer__watermark {
+    padding: 0.5rem 1.25rem;
   }
 }

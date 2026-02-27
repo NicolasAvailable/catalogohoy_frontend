@@ -1,5 +1,10 @@
 import { E } from '@shared/domain';
-import { Plan, TenantPlanExpiration, TenantPlanUsage } from './plan.model';
+import {
+  Plan,
+  TenantPlanExpiration,
+  TenantPlanPublicInfo,
+  TenantPlanUsage,
+} from './plan.model';
 
 export abstract class BasePlanService {
   abstract getAll(): Promise<E.Either<Error, Plan[]>>;
@@ -15,5 +20,5 @@ export abstract class BasePlanService {
   ): Promise<E.Either<Error, TenantPlanExpiration>>;
   abstract getTenantExpiredBySlug(
     slug: string
-  ): Promise<E.Either<Error, boolean>>;
+  ): Promise<E.Either<Error, TenantPlanPublicInfo>>;
 }

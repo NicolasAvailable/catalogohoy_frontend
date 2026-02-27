@@ -42,3 +42,8 @@ export interface TenantPlanExpiration {
   planExpiresAt: string | null;
   planExpired: boolean;
 }
+
+export interface TenantPlanPublicInfo {
+  planExpired: boolean;
+  isFreePlan: boolean;
+}
