@@ -1,4 +1,4 @@
-import { PaymentMethodEntity, WhatsappButton } from '@catalogohoy/ecommerce-config';
+import { PaymentMethodEntity, SocialLinks, WhatsappButton } from '@catalogohoy/ecommerce-config';
 import { Product, ProductList } from '@catalogohoy/product';
 import { E } from '@shared/domain';
 
@@ -16,6 +16,7 @@ export interface CatalogInfo {
   showDesignSection: boolean;
   paymentMethods: PaymentMethodEntity[];
   showPaymentMethodsSection: boolean;
+  socialLinks: SocialLinks;
 }
 
 export interface Category {

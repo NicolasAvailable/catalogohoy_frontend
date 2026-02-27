@@ -24,6 +24,8 @@ import {
   UploaderComponent,
 } from '@ui';
 import {
+  DEFAULT_SOCIAL_LINKS,
+  SocialLinks,
   THEME_COLORS,
   VENEZUELAN_STATES,
   WhatsappButton,
@@ -86,6 +88,7 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftShowDesignSection = signal(true);
   public readonly draftShowLocationSection = signal(true);
   public readonly draftShowPaymentMethodsSection = signal(true);
+  public readonly draftSocialLinks = signal<SocialLinks>({ ...DEFAULT_SOCIAL_LINKS });
 
   // Computed
   public readonly isCustomColor = computed(
@@ -123,6 +126,9 @@ export class EcommerceConfigComponent implements OnInit {
         this.draftShowPaymentMethodsSection.set(
           config.showPaymentMethodsSection ?? true
         );
+        this.draftSocialLinks.set(
+          config.socialLinks ?? { ...DEFAULT_SOCIAL_LINKS }
+        );
       }
     });
 
@@ -131,12 +137,13 @@ export class EcommerceConfigComponent implements OnInit {
       const name = this.draftName();
       const themeColor = this.draftThemeColor();
       const showDesignSection = this.draftShowDesignSection();
+      const socialLinks = this.draftSocialLinks();
       const logo = this.configStore.config()?.logo ?? null;
       const banner = this.configStore.config()?.banner ?? null;
 
       const message = {
         type: 'PREVIEW_UPDATE' as const,
-        payload: { name, logo, banner, themeColor, showDesignSection },
+        payload: { name, logo, banner, themeColor, showDesignSection, socialLinks },
         source: 'catalogohoy-admin' as const,
       };
 
@@ -278,6 +285,21 @@ export class EcommerceConfigComponent implements OnInit {
     await this.configStore.updatePartialConfig({
       whatsappButtons: this.draftWhatsappButtons(),
     });
+  }
+
+  // --- Social Links Section ---
+  updateSocialLinkUrl(network: keyof SocialLinks, url: string) {
+    const current = this.draftSocialLinks();
+    this.draftSocialLinks.set({ ...current, [network]: { ...current[network], url } });
+  }
+
+  updateSocialLinkVisible(network: keyof SocialLinks, visible: boolean) {
+    const current = this.draftSocialLinks();
+    this.draftSocialLinks.set({ ...current, [network]: { ...current[network], visible } });
+  }
+
+  async saveSocialLinks() {
+    await this.configStore.updatePartialConfig({ socialLinks: this.draftSocialLinks() });
   }
 
   // --- Behavior Section ---

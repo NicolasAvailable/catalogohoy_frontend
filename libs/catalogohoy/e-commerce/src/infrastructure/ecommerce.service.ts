@@ -6,6 +6,7 @@ import {
   ProductMapper,
 } from '@catalogohoy/product';
 import { E } from '@shared/domain';
+import { DEFAULT_SOCIAL_LINKS, SocialLinks } from '@catalogohoy/ecommerce-config';
 import {
   BaseEcommerceService,
   CatalogInfo,
@@ -37,7 +38,7 @@ export class EcommerceService implements BaseEcommerceService {
     const { data: config } = await this.client
       .from('tenant_ecommerce_config')
       .select(
-        'whatsapp_buttons, logo, banner, is_accepting_orders, theme_color, show_design_section, show_payment_methods_section, description'
+        'whatsapp_buttons, logo, banner, is_accepting_orders, theme_color, show_design_section, show_payment_methods_section, description, social_links'
       )
       .eq('tenant_id', tenant.id)
       .single();
@@ -101,6 +102,7 @@ export class EcommerceService implements BaseEcommerceService {
       })),
       showPaymentMethodsSection:
         config?.show_payment_methods_section ?? true,
+      socialLinks: (config?.social_links as SocialLinks) ?? DEFAULT_SOCIAL_LINKS,
     });
   }
 

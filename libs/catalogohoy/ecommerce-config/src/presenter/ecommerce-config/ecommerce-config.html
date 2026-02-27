@@ -505,7 +505,94 @@
         </div>
       </ui-card>
 
-      <!-- Card 7: Comportamiento -->
+      <!-- Card 7: Redes Sociales -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon social-icon">
+              <ui-icon name="share2" styleClass="size-5"></ui-icon>
+            </div>
+            <h2 class="card-title">Redes Sociales</h2>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <!-- Instagram -->
+          <div class="action-toggle">
+            <div class="toggle-info">
+              <label>Instagram</label>
+              <p>Mostrar enlace a Instagram en el footer del catálogo.</p>
+            </div>
+            <ui-toggle
+              [ngModel]="draftSocialLinks().instagram.visible"
+              (ngModelChange)="updateSocialLinkVisible('instagram', $event)"
+              [disabled]="configStore.isSaving()"
+            ></ui-toggle>
+          </div>
+          <ui-input-text
+            label="Enlace de Instagram"
+            placeholder="https://instagram.com/tu_tienda"
+            [ngModel]="draftSocialLinks().instagram.url"
+            (ngModelChange)="updateSocialLinkUrl('instagram', $event)"
+          ></ui-input-text>
+
+          <div class="divider"></div>
+
+          <!-- Facebook -->
+          <div class="action-toggle">
+            <div class="toggle-info">
+              <label>Facebook</label>
+              <p>Mostrar enlace a Facebook en el footer del catálogo.</p>
+            </div>
+            <ui-toggle
+              [ngModel]="draftSocialLinks().facebook.visible"
+              (ngModelChange)="updateSocialLinkVisible('facebook', $event)"
+              [disabled]="configStore.isSaving()"
+            ></ui-toggle>
+          </div>
+          <ui-input-text
+            label="Enlace de Facebook"
+            placeholder="https://facebook.com/tu_tienda"
+            [ngModel]="draftSocialLinks().facebook.url"
+            (ngModelChange)="updateSocialLinkUrl('facebook', $event)"
+          ></ui-input-text>
+
+          <div class="divider"></div>
+
+          <!-- TikTok -->
+          <div class="action-toggle">
+            <div class="toggle-info">
+              <label>TikTok</label>
+              <p>Mostrar enlace a TikTok en el footer del catálogo.</p>
+            </div>
+            <ui-toggle
+              [ngModel]="draftSocialLinks().tiktok.visible"
+              (ngModelChange)="updateSocialLinkVisible('tiktok', $event)"
+              [disabled]="configStore.isSaving()"
+            ></ui-toggle>
+          </div>
+          <ui-input-text
+            label="Enlace de TikTok"
+            placeholder="https://tiktok.com/@tu_tienda"
+            [ngModel]="draftSocialLinks().tiktok.url"
+            (ngModelChange)="updateSocialLinkUrl('tiktok', $event)"
+          ></ui-input-text>
+
+          <div class="divider"></div>
+
+          <div class="save-section">
+            <ui-button
+              label="Guardar redes sociales"
+              (click)="saveSocialLinks()"
+              [isLoading]="configStore.isSaving()"
+              icon="save"
+              [fluid]="true"
+            ></ui-button>
+          </div>
+        </div>
+      </ui-card>
+
+      <!-- Card 8: Comportamiento -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
           <div class="card-header-left">

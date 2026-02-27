@@ -1,3 +1,5 @@
+import { SocialLinks } from './ecommerce-config.model';
+
 export interface PreviewMessage {
   type: 'PREVIEW_UPDATE' | 'PREVIEW_ENTER' | 'PREVIEW_EXIT';
   payload: Partial<{
@@ -6,6 +8,7 @@ export interface PreviewMessage {
     banner: string | null;
     themeColor: string;
     showDesignSection: boolean;
+    socialLinks: SocialLinks;
   }>;
   source: 'catalogohoy-admin';
 }

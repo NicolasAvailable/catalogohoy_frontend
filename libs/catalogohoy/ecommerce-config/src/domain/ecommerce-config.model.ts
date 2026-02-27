@@ -76,6 +76,23 @@ export interface PaymentMethodEntity {
   createdAt: string;
 }
 
+export interface SocialLink {
+  url: string;
+  visible: boolean;
+}
+
+export interface SocialLinks {
+  instagram: SocialLink;
+  facebook: SocialLink;
+  tiktok: SocialLink;
+}
+
+export const DEFAULT_SOCIAL_LINKS: SocialLinks = {
+  instagram: { url: '', visible: false },
+  facebook: { url: '', visible: false },
+  tiktok: { url: '', visible: false },
+};
+
 export interface EcommerceConfig {
   tenantId: string;
   name: string;
@@ -94,4 +111,5 @@ export interface EcommerceConfig {
   showDesignSection: boolean;
   showPaymentMethodsSection: boolean;
   showLocationSection: boolean;
+  socialLinks: SocialLinks;
 }
