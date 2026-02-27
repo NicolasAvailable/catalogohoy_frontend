@@ -1,4 +1,4 @@
 export const posthogEnvironment = {
-  posthogKey: 'phx_12DxU7VfN6bNJ25fyfdVqnWEfOgRkXjxVEkymCoYT5B4H3wp',
+  posthogKey: 'phc_EZvAUaWjmwW82CARAgNOBc5BAMYnsy9myS44H9aMxf1',
   posthogHost: 'https://us.i.posthog.com',
 };
