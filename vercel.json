@@ -1,20 +1,7 @@
 {
   "buildCommand": "npm run build:catalogohoy",
   "outputDirectory": "dist/apps/catalogohoy/browser",
-  "functions": {
-    "api/og.ts": {
-      "includeFiles": "dist/apps/catalogohoy/browser/index.html"
-    }
-  },
   "rewrites": [
-    {
-      "source": "/product/:id",
-      "destination": "/api/og?path=product/:id"
-    },
-    {
-      "source": "/",
-      "destination": "/api/og"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
