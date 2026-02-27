@@ -2,6 +2,7 @@ import { NgClass } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthenticationService } from '@catalogohoy/auth';
+import { PosthogService } from '@catalogohoy/core';
 import { ProfileStore } from '@catalogohoy/profile';
 import { Tenant, TenantStore } from '@catalogohoy/tenant';
 import {
@@ -33,6 +34,7 @@ export class Sidebar {
   private router = inject(Router);
   private authService = inject(AuthenticationService);
   private confirmService = inject(ConfirmDialogService);
+  private posthog = inject(PosthogService);
   public readonly profileStore = inject(ProfileStore);
   public readonly tenantStore = inject(TenantStore);
 
@@ -93,6 +95,7 @@ export class Sidebar {
       })
       .subscribe((result) => {
         if (result.isRight()) {
+          this.posthog.reset();
           this.authService.logout().then(() => {
             window.location.href = 'https://auth.catalogohoy.com';
           });
