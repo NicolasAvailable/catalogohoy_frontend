@@ -3,6 +3,7 @@ import {
   Component,
   effect,
   inject,
+  Injector,
   OnInit,
   signal,
   ViewChild,
@@ -18,6 +19,7 @@ import { Navbar, Sidebar } from '../../components';
 })
 export class Base implements OnInit, AfterViewInit {
   private readonly planStore = inject(PlanStore);
+  private readonly injector = inject(Injector);
 
   @ViewChild(PlanExpiredDialogComponent)
   planExpiredDialog!: PlanExpiredDialogComponent;
@@ -29,11 +31,14 @@ export class Base implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    effect(() => {
-      if (this.planStore.isPlanExpired()) {
-        this.planExpiredDialog.show();
-      }
-    });
+    effect(
+      () => {
+        if (this.planStore.isPlanExpired()) {
+          this.planExpiredDialog.show();
+        }
+      },
+      { injector: this.injector }
+    );
   }
 
   public toggleSidebar() {
