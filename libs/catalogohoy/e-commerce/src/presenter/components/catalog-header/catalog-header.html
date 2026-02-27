@@ -15,23 +15,26 @@
     </div>
 
     <div class="catalog-header__right">
-      <div class="catalog-header__search">
-        <ui-input-search
-          placeholder="Buscar producto"
-          (valueChange)="onSearch($event)"
-          styleClass="rounded-base! gap-2!"
-          iconStyleClass="size-5!"
-        />
-      </div>
+      @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
+        <div class="catalog-header__search-skeleton"></div>
+        <div class="catalog-header__cart-skeleton"></div>
+      } @else {
+        <div class="catalog-header__search">
+          <ui-input-search
+            placeholder="Buscar producto"
+            (valueChange)="onSearch($event)"
+            styleClass="rounded-base! gap-2!"
+            iconStyleClass="size-5!"
+          />
+        </div>
 
-      <button class="catalog-header__cart" (click)="cartStore.openCart()">
-        <ui-icon name="shoppingCart" styleClass="size-6" />
-        @if (cartStore.totalItems() > 0) {
-        <span class="catalog-header__cart-badge"
-          >{{ cartStore.totalItems() }}</span
-        >
-        }
-      </button>
+        <button class="catalog-header__cart" (click)="cartStore.openCart()">
+          <ui-icon name="shoppingCart" styleClass="size-6" />
+          @if (cartStore.totalItems() > 0) {
+            <span class="catalog-header__cart-badge">{{ cartStore.totalItems() }}</span>
+          }
+        </button>
+      }
     </div>
   </div>
 </header>
