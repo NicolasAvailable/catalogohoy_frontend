@@ -1,5 +1,6 @@
 import { authenticationEnvironment } from './authentication/environment.development';
 import { globalEnvironment } from './global/global.development';
+import { posthogEnvironment } from './posthog/posthog';
 import { supabaseEnvironment } from './supabase/supabase.development';
 
 export const environment = {
@@ -7,4 +8,5 @@ export const environment = {
   ...globalEnvironment,
   ...authenticationEnvironment,
   ...supabaseEnvironment,
+  ...posthogEnvironment,
 };

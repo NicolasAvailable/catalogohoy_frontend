@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { SupabaseClientProvider } from '@catalogohoy/core';
+import { PosthogService, SupabaseClientProvider } from '@catalogohoy/core';
 import { NgxSonnerToaster } from 'ngx-sonner';
 import { AppSubscriber } from './app.subscriber';
 
@@ -12,11 +12,14 @@ import { AppSubscriber } from './app.subscriber';
 })
 export class App implements OnInit {
   private readonly subscriber = inject(AppSubscriber);
+  // La inyección del servicio dispara su constructor (init + router tracking)
+  readonly posthog = inject(PosthogService);
 
   constructor() {
     SupabaseClientProvider.create();
     this.subscriber.init();
   }
+
   protected title = 'catalogohoy';
 
   ngOnInit(): void {
@@ -26,12 +29,10 @@ export class App implements OnInit {
   private captureQueryParametersToLocalStorage(): void {
     const urlParams = new URLSearchParams(window.location.search);
 
-    // Store each query parameter in localStorage
     urlParams.forEach((value, key) => {
       localStorage.setItem(key, value);
     });
 
-    // Clean up URL by removing all query parameters
     if (urlParams.toString()) {
       const url = new URL(window.location.href);
       url.search = '';
