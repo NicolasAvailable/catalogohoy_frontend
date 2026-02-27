@@ -402,7 +402,20 @@
                 optionLabel="label"
                 optionValue="value"
                 placeholder="Icono"
-              ></ui-select>
+              >
+                <ng-template selectSelectedItem let-selected>
+                  <div class="flex items-center gap-2">
+                    <ui-icon [name]="selected.value" styleClass="size-4" />
+                    <span class="text-sm">{{ selected.label }}</span>
+                  </div>
+                </ng-template>
+                <ng-template selectItem let-item>
+                  <div class="flex items-center gap-2.5 py-0.5">
+                    <ui-icon [name]="item.value" styleClass="size-4 text-grey-500" />
+                    <span>{{ item.label }}</span>
+                  </div>
+                </ng-template>
+              </ui-select>
             </div>
             <ui-button
               label="Agregar"
