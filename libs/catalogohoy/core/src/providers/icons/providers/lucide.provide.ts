@@ -54,6 +54,7 @@ import {
   Menu,
   MessageCircle,
   MessageCircleQuestion,
+  MessageSquare,
   Minus,
   NotepadText,
   Package,
@@ -74,6 +75,8 @@ import {
   ShoppingCart,
   SlidersHorizontal,
   Smartphone,
+  Paperclip,
+  Send,
   Sparkles,
   SquareArrowOutUpRight,
   Store,
@@ -84,6 +87,7 @@ import {
   TrendingUp,
   TriangleAlert,
   Upload,
+  VolumeX,
   Wallet,
   X,
   XCircle,
@@ -131,6 +135,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Menu,
       MessageCircle,
       MessageCircleQuestion,
+      MessageSquare,
       Minus,
       NotepadText,
       Package,
@@ -180,6 +185,9 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       CircleAlert,
       Crown,
       TriangleAlert,
+      Paperclip,
+      Send,
+      VolumeX,
     })
   );
 };

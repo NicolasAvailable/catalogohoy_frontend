@@ -34,7 +34,8 @@
       "@catalogohoy/ecommerce-config": [
         "libs/catalogohoy/ecommerce-config/src/index.ts"
       ],
-      "@catalogohoy/plan": ["libs/catalogohoy/plan/src/index.ts"]
+      "@catalogohoy/plan": ["libs/catalogohoy/plan/src/index.ts"],
+      "@catalogohoy/chat": ["libs/catalogohoy/chat/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

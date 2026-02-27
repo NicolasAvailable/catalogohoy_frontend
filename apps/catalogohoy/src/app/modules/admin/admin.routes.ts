@@ -40,4 +40,9 @@ export const adminRoutes: Route[] = [
     loadChildren: () =>
       import('@catalogohoy/plan').then((m) => m.planRoutes),
   },
+  {
+    path: 'chat',
+    loadChildren: () =>
+      import('@catalogohoy/chat').then((m) => m.CHAT_ROUTES),
+  },
 ];
