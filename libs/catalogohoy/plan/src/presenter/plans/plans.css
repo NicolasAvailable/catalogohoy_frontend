@@ -270,24 +270,23 @@
 }
 
 .plan-card__button--primary {
-  background: var(--plan-color);
+  background: #6366f1;
   color: #ffffff;
 }
 
 .plan-card__button--primary:hover {
-  opacity: 0.88;
-  background: var(--plan-color);
+  background: #4f46e5;
 }
 
 .plan-card__button--secondary {
   background: #f8fafc;
-  color: var(--plan-color);
-  border: 1px solid color-mix(in srgb, var(--plan-color) 25%, #e2e8f0);
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
 }
 
 .plan-card__button--secondary:hover {
-  background: color-mix(in srgb, var(--plan-color) 6%, white);
-  border-color: color-mix(in srgb, var(--plan-color) 40%, #e2e8f0);
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .plan-card__button--current {

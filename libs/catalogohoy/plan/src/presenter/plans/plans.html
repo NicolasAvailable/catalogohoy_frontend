@@ -35,7 +35,7 @@
         <!-- Header: nombre + badge inline -->
         <div class="plan-card__header">
           <div class="plan-card__name-row">
-            <h2 class="plan-card__name">{{ plan.name }}</h2>
+            <h2 class="plan-card__name" [class.plan-card__name--popular]="plan.isPopular && !plan.isCurrent">{{ plan.name }}</h2>
             @if (plan.isCurrent) {
               <span class="badge-inline badge-inline--current">Actual</span>
             } @else if (plan.isPopular) {
