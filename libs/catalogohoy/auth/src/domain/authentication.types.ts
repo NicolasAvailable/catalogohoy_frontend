@@ -10,6 +10,11 @@ export type SignUpCredentials = {
   password: string;
 };
 
+export type GoogleSignupCredentials = {
+  name: string;
+  storeName: string;
+};
+
 export type ForgottenPasswordCredentials = {
   email: string;
 };

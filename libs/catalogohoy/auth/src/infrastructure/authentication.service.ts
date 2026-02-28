@@ -6,6 +6,7 @@ import { AuthApiError } from '@supabase/supabase-js';
 import {
   BaseAuthenticationService,
   ForgottenPasswordCredentials,
+  GoogleSignupCredentials,
   LoginCredentials,
   ResetPasswordCredentials,
   SignUpCredentials,
@@ -107,6 +108,57 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.right(undefined);
     }
   }
+  public async loginWithGoogle(redirectTo: string): Promise<string | null> {
+    const { data } = await this.client.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo, skipBrowserRedirect: true },
+    });
+    return data.url;
+  }
+
+  public onAuthStateChange(callback: (event: string) => void): () => void {
+    const {
+      data: { subscription },
+    } = this.client.auth.onAuthStateChange((event) => callback(event));
+    return () => subscription.unsubscribe();
+  }
+
+  public async getSession(): Promise<boolean> {
+    const {
+      data: { session },
+    } = await this.client.auth.getSession();
+    return !!session;
+  }
+
+  public async getLoginRedirectUrl(): Promise<E.Either<Error, string>> {
+    const { data: tenantRows, error } = await this.client.rpc('get_my_tenant');
+    if (error) return E.left(new Error(error.message));
+    if (!tenantRows?.length) return E.left(new Error('no_tenant'));
+    const tenant = TenantMapper.toDomain(tenantRows[0]);
+    const redirectUrl = `https://${tenant.slug}.catalogohoy.com/admin?${this.authenticationTokenService.AUTH_CONFIG_KEY}=${this.authenticationTokenService.authConfigValue}`;
+    return E.right(redirectUrl);
+  }
+
+  public async completeGoogleSignup(
+    credentials: GoogleSignupCredentials
+  ): Promise<E.Either<Error, string>> {
+    const { error } = await this.client.rpc('complete_google_signup', {
+      p_name: credentials.name,
+      p_store_name: credentials.storeName,
+    });
+    if (error) {
+      const MSG: Record<string, string> = {
+        user_not_found: 'Usuario no encontrado',
+        tenant_already_exists: 'Ya tienes un catálogo registrado',
+        slug_taken: 'El nombre de la tienda ya está en uso, elige otro',
+        invalid_store_name: 'El nombre de la tienda no es válido',
+      };
+      const key = Object.keys(MSG).find((k) => error.message.includes(k));
+      return E.left(new Error(key ? MSG[key] : error.message));
+    }
+    return this.getLoginRedirectUrl();
+  }
+
   public async logout(): Promise<E.Either<Error, void>> {
     const { error } = await this.client.auth.signOut();
     if (error) {

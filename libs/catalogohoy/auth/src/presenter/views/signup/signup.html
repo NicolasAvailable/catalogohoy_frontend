@@ -1,144 +1,184 @@
-<div
-  class="flex justify-center items-center h-screen bg-lino-500 overflow-hidden"
->
-  <div class="flex flex-col gap-2 lg:p-36 md:p-52 sm:20 p-8 w-full lg:w-1/2">
-    <div class="flex flex-col gap-6">
-      <ui-icon
-        name="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg"
-        styleClass="h-20 rounded-lg"
-        class="flex justify-center sm:justify-start"
-      />
-      <div class="flex flex-col gap-2">
-        <h1 class="text-4xl sm:text-5xl font-semibold text-grey-700">
-          Crea tu catálogo
-        </h1>
-        <span class="text-base sm:text-sm mb-4 text-grey-400">
-          ¡Comienza a llenar tus datos y haz tu catálogo en minutos!
+<div class="flex justify-center items-center h-screen bg-lino-500 overflow-hidden">
+
+  <!-- ── Form panel ── -->
+  <div class="flex flex-col lg:p-28 md:p-44 sm:p-20 p-8 w-full lg:w-1/2 h-full justify-center gap-6">
+
+    <!-- Logo -->
+    <ui-icon
+      name="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg"
+      styleClass="h-14 rounded-lg"
+      class="flex justify-center sm:justify-start"
+    />
+
+    <!-- Step indicator (only when method is chosen) -->
+    @if (method()) {
+      <div class="flex items-center gap-2">
+        @for (i of [].constructor(totalSteps()); track $index) {
+          <div
+            class="h-1.5 flex-1 rounded-full transition-all duration-300"
+            [class.bg-primary-500]="$index + 1 <= displayStep()"
+            [class.bg-grey-200]="$index + 1 > displayStep()"
+          ></div>
+        }
+        <span class="text-xs font-medium text-grey-400 shrink-0">
+          {{ displayStep() }} / {{ totalSteps() }}
         </span>
       </div>
-    </div>
-    <form (keyup.enter)="send()" [formGroup]="form">
-      <div class="mb-4">
-        <label
-          for="name"
-          class="block font-medium text-base sm:text-sm text-grey-400"
-          >Nombre</label
-        >
-        <ui-input-text
-          inputId="name"
-          formControlName="name"
-          placeholder="Manuel"
-        />
-        <ui-input-message
-          [control]="form.get('name')"
-          error="required"
-          text="El campo es obligatorio"
-        />
-        <ui-input-message
-          [control]="form.get('name')"
-          error="whitespace"
-          text="No puede contener espacios en blanco"
-        />
-        <ui-input-message
-          [control]="form.get('name')"
-          error="minlength"
-          text="Debe tener mínimo 4 caracteres"
-        />
-      </div>
-      <div class="mb-4">
-        <label
-          for="storeName"
-          class="block font-medium text-base sm:text-sm text-grey-400"
-          >Nombre de la tienda</label
-        >
-        <ui-input-text
-          inputId="storeName"
-          formControlName="storeName"
-          placeholder="Nombre de tu tienda"
-        />
-        <ui-input-message
-          [control]="form.get('storeName')"
-          error="required"
-          text="El campo es obligatorio"
-        />
-        <ui-input-message
-          [control]="form.get('storeName')"
-          error="minlength"
-          text="Debe tener mínimo 3 caracteres"
-        />
-      </div>
-      <div class="mb-4">
-        <label
-          for="email"
-          class="block font-medium text-base sm:text-sm text-grey-400"
-          >Email</label
-        >
-        <ui-input-text
-          inputId="email"
-          formControlName="email"
-          placeholder="manuel@catalogohoy.com"
-        />
-        <ui-input-message
-          [control]="form.get('email')"
-          error="required"
-          text="El campo es obligatorio"
-        />
-        <ui-input-message
-          [control]="form.get('email')"
-          error="whitespace"
-          text="No puede contener espacios en blanco"
-        />
-        <ui-input-message
-          [control]="form.get('email')"
-          error="email"
-          text="El formato no es válido"
-        />
+    }
+
+    <!-- ══════════════════════════════════════════════════════
+         STEP 1 — Choose method
+    ══════════════════════════════════════════════════════ -->
+    @if (step() === 1) {
+      <div class="flex flex-col gap-1">
+        <h1 class="text-3xl sm:text-4xl font-semibold text-grey-700">Crea tu catálogo</h1>
+        <p class="text-base text-grey-400">Elige cómo quieres registrarte para comenzar.</p>
       </div>
 
-      <div class="mb-4">
-        <label
-          for="password"
-          class="block font-medium text-base sm:text-sm text-grey-400"
-          >Contraseña</label
+      <div class="flex flex-col gap-3">
+        <!-- Email option -->
+        <button
+          type="button"
+          (click)="chooseEmail()"
+          class="flex items-center justify-center gap-3 w-full px-5 py-4 rounded-xl border border-grey-200 bg-white hover:bg-grey-50 transition-all duration-150 cursor-pointer font-semibold text-grey-700 text-base"
         >
-        <ui-input-password
-          [feedback]="false"
-          inputId="password"
-          formControlName="password"
-          placeholder="*********"
-        />
-        <ui-input-message
-          [control]="form.get('password')"
-          error="required"
-          text="El campo es obligatorio"
-        />
-        <ui-input-message
-          [control]="form.get('password')"
-          error="whitespace"
-          text="No puede contener espacios en blanco"
-        />
-        <ui-input-message
-          [control]="form.get('password')"
-          error="minlength"
-          text="Debe tener mínimo 6 caracteres"
-        />
+          <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          Continuar con el email
+        </button>
+
+        <!-- Divider -->
+        <div class="flex items-center gap-3">
+          <div class="flex-1 h-px bg-grey-200"></div>
+          <span class="text-xs text-grey-400 font-medium">o</span>
+          <div class="flex-1 h-px bg-grey-200"></div>
+        </div>
+
+        <!-- Google option -->
+        <button
+          type="button"
+          (click)="chooseGoogle()"
+          [disabled]="isGoogleLoading()"
+          class="flex items-center justify-center gap-3 w-full px-5 py-4 rounded-xl border border-grey-200 bg-white hover:bg-grey-50 transition-all duration-150 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed font-semibold text-grey-700 text-base"
+        >
+          @if (isGoogleLoading()) {
+            <ui-icon name="loader-circle" styleClass="w-6 h-6 animate-spin text-grey-400" />
+            Conectando con Google...
+          } @else {
+            <svg class="w-6 h-6 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continuar con Google
+          }
+        </button>
       </div>
 
-      <ui-button
-        (click)="send()"
-        [disabled]="form.invalid || loaderStore.isEnable()"
-        label="Crear Catálogo"
-        severity="primary"
-        styleClass="mt-4"
-      />
-    </form>
-    <div class="flex justify-center gap-1 mt-6 text-base text-center">
-      <p class="font-semibold text-grey-400">¿Ya tienes una cuenta?</p>
-      <a routerLink="/login" class="font-semibold text-blue-500"
-        >Inicia sesión</a
-      >
-    </div>
+      <div class="flex justify-center gap-1 text-base text-center mt-2">
+        <p class="font-semibold text-grey-400">¿Ya tienes una cuenta?</p>
+        <a routerLink="/login" class="font-semibold text-blue-500">Inicia sesión</a>
+      </div>
+    }
+
+    <!-- ══════════════════════════════════════════════════════
+         STEP 2 — Credentials (email path only)
+    ══════════════════════════════════════════════════════ -->
+    @if (step() === 2) {
+      <div>
+        <button type="button" (click)="back()" class="flex items-center gap-1 text-sm text-grey-400 hover:text-grey-600 mb-4 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+          </svg>
+          Volver
+        </button>
+        <h2 class="text-2xl font-semibold text-grey-700">Tus credenciales</h2>
+        <p class="text-sm text-grey-400 mt-1">Con estas podrás ingresar a tu catálogo.</p>
+      </div>
+
+      <form [formGroup]="credentialsForm" (keyup.enter)="nextStep()">
+        <div class="mb-4">
+          <label class="block font-medium text-sm text-grey-400 mb-1">Email</label>
+          <ui-input-text size="large" formControlName="email" placeholder="tu@correo.com" />
+          <ui-input-message [control]="credentialsForm.get('email')" error="required" text="El campo es obligatorio" />
+          <ui-input-message [control]="credentialsForm.get('email')" error="email" text="El formato no es válido" />
+          <ui-input-message [control]="credentialsForm.get('email')" error="whitespace" text="No puede contener espacios en blanco" />
+        </div>
+        <div class="mb-6">
+          <label class="block font-medium text-sm text-grey-400 mb-1">Contraseña</label>
+          <ui-input-password size="large" [feedback]="false" formControlName="password" placeholder="Mínimo 6 caracteres" />
+          <ui-input-message [control]="credentialsForm.get('password')" error="required" text="El campo es obligatorio" />
+          <ui-input-message [control]="credentialsForm.get('password')" error="minlength" text="Debe tener mínimo 6 caracteres" />
+          <ui-input-message [control]="credentialsForm.get('password')" error="whitespace" text="No puede contener espacios en blanco" />
+        </div>
+        <ui-button (click)="nextStep()" [disabled]="credentialsForm.invalid || loaderStore.isEnable()" label="Siguiente" severity="primary" styleClass="!py-4 !text-base" />
+      </form>
+    }
+
+    <!-- ══════════════════════════════════════════════════════
+         STEP 3 — Profile (both paths)
+    ══════════════════════════════════════════════════════ -->
+    @if (step() === 3) {
+      <div>
+        @if (method() === 'email') {
+          <button type="button" (click)="back()" class="flex items-center gap-1 text-sm text-grey-400 hover:text-grey-600 mb-4 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Volver
+          </button>
+        }
+        <h2 class="text-2xl font-semibold text-grey-700">Datos de tu tienda</h2>
+        <p class="text-sm text-grey-400 mt-1">
+          @if (method() === 'google') {
+            Conectado con Google. Ahora cuéntanos sobre tu tienda.
+          } @else {
+            Ya casi terminas. ¿Cómo se llama tu tienda?
+          }
+        </p>
+      </div>
+
+      <form [formGroup]="profileForm" (keyup.enter)="submit()">
+        <div class="mb-4">
+          <label class="block font-medium text-sm text-grey-400 mb-1">Tu nombre completo</label>
+          <ui-input-text size="large" formControlName="name" placeholder="María González" />
+          <ui-input-message [control]="profileForm.get('name')" error="required" text="El campo es obligatorio" />
+          <ui-input-message [control]="profileForm.get('name')" error="minlength" text="Debe tener mínimo 4 caracteres" />
+          <ui-input-message [control]="profileForm.get('name')" error="whitespace" text="No puede contener espacios en blanco" />
+        </div>
+        <div class="mb-2">
+          <label class="block font-medium text-sm text-grey-400 mb-1">Nombre de la tienda</label>
+          <ui-input-text size="large" formControlName="storeName" placeholder="Mi Tienda Génova" />
+          <ui-input-message [control]="profileForm.get('storeName')" error="required" text="El campo es obligatorio" />
+          <ui-input-message [control]="profileForm.get('storeName')" error="minlength" text="Debe tener mínimo 3 caracteres" />
+        </div>
+
+        <!-- URL preview -->
+        @if (slugPreview()) {
+          <p class="text-xs text-grey-400 mb-5 flex items-center gap-1">
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+            </svg>
+            Tu catálogo estará en:
+            <span class="font-medium text-primary-500">{{ slugPreview() }}.catalogohoy.com</span>
+          </p>
+        }
+
+        <ui-button
+          (click)="submit()"
+          [disabled]="profileForm.invalid || loaderStore.isEnable()"
+          label="Crear catálogo"
+          severity="primary"
+          styleClass="!py-4 !text-base"
+        />
+      </form>
+    }
+
   </div>
+
+  <!-- ── Side image ── -->
   <div class="w-1/2 h-screen hidden lg:block">
     <img
       src="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/auth-side.svg"
