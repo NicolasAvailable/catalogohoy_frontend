@@ -1,9 +1,26 @@
 <section class="plans-wrapper">
   <header class="plans-header">
-    <h1 class="plans-title">Planes y Precios</h1>
+    <span class="plans-eyebrow">Planes</span>
+    <h1 class="plans-title">El plan perfecto para tu negocio</h1>
     <p class="plans-subtitle">
-      Elige el plan que mejor se adapte a tu negocio.
+      Elige el plan que mejor se adapte y escala cuando lo necesites.
     </p>
+
+    <!-- Selector de periodo de facturación -->
+    <div class="billing-toggle">
+      @for (option of billingOptions; track option.key) {
+        <button
+          class="billing-toggle__btn"
+          [class.billing-toggle__btn--active]="billingPeriod() === option.key"
+          (click)="billingPeriod.set(option.key)"
+        >
+          {{ option.label }}
+          @if (option.savingsLabel) {
+            <span class="billing-toggle__savings">{{ option.savingsLabel }}</span>
+          }
+        </button>
+      }
+    </div>
   </header>
 
   <div class="plans-grid">
@@ -12,50 +29,39 @@
       class="plan-card"
       [class.plan-card--popular]="plan.isPopular && !plan.isCurrent"
       [class.plan-card--current]="plan.isCurrent"
+      [style.--plan-color]="plan.color"
     >
-      @if (plan.isCurrent) {
-      <div class="current-badge">Actual</div>
-      } @else if (plan.isPopular) {
-      <div class="popular-badge">Más popular</div>
-      }
-
       <div class="plan-card__content">
-        <!-- Header -->
+        <!-- Header: nombre + badge inline -->
         <div class="plan-card__header">
-          <h2 class="plan-card__name">{{ plan.name }}</h2>
+          <div class="plan-card__name-row">
+            <h2 class="plan-card__name">{{ plan.name }}</h2>
+            @if (plan.isCurrent) {
+              <span class="badge-inline badge-inline--current">Actual</span>
+            } @else if (plan.isPopular) {
+              <span class="badge-inline badge-inline--popular">Más popular</span>
+            }
+          </div>
           <p class="plan-card__description">{{ plan.description }}</p>
         </div>
 
-        <!-- Price -->
+        <!-- Precio -->
         <div class="plan-card__price">
-          <span class="plan-card__price-amount">
-            ${{ plan.price % 1 === 0 ? plan.price : plan.price }}
-          </span>
-          <span class="plan-card__price-period">{{ plan.period }}</span>
-        </div>
-
-        <!-- Badges -->
-        <div class="plan-card__badges">
-          <span class="badge badge--blue">{{ plan.maxProductsLabel }}</span>
-          <span class="badge badge--dark">{{ plan.rateType }}</span>
-        </div>
-
-        <!-- Features -->
-        <ul class="plan-card__features">
-          @for (feature of plan.features; track feature.text) {
-          <li class="plan-card__feature">
-            <ui-icon name="check" styleClass="size-5 text-blue-500 shrink-0" />
-            <span>{{ feature.text }}</span>
-          </li>
+          @if (plan.isFree) {
+            <span class="plan-card__price-amount">$0</span>
+            <span class="plan-card__price-period">por siempre</span>
+          } @else {
+            <span class="plan-card__price-amount">${{ getPeriodPrice(plan) }}</span>
+            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }}</span>
           }
-        </ul>
+        </div>
+        @if (!plan.isFree && billingPeriod() !== 'monthly') {
+          <p class="plan-card__monthly-equiv">
+            ${{ getMonthlyEquivalent(plan) }}/mes por persona
+          </p>
+        }
 
-        <!-- Additional catalog -->
-        <p class="plan-card__additional">
-          Catálogo adicional: <strong>{{ plan.additionalCatalogPrice }}</strong>
-        </p>
-
-        <!-- CTA Button -->
+        <!-- Botón CTA — justo bajo el precio -->
         <button
           class="plan-card__button"
           [class.plan-card__button--primary]="plan.isPopular && !plan.isCurrent"
@@ -66,6 +72,31 @@
         >
           {{ plan.buttonLabel }}
         </button>
+
+        <hr class="plan-card__divider" />
+
+        <!-- Features -->
+        <ul class="plan-card__features">
+          <li class="plan-card__feature">
+            <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
+            <span>{{ plan.maxProductsLabel }}</span>
+          </li>
+          @for (feature of plan.features; track feature.text) {
+          <li class="plan-card__feature">
+            <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
+            <span>{{ feature.text }}</span>
+          </li>
+          }
+        </ul>
+
+        <!-- Rate type + additional catalog note -->
+        <div class="plan-card__footer">
+          <span class="badge badge--dim">{{ plan.rateType }}</span>
+          <p class="plan-card__extra-catalog">
+            <ui-icon name="plus-circle" styleClass="size-3.5 shrink-0" />
+            Catálogo adicional {{ plan.additionalCatalogPrice }}
+          </p>
+        </div>
       </div>
     </div>
     }

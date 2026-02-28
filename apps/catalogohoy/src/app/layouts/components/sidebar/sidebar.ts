@@ -3,6 +3,7 @@ import { Component, computed, inject, input, output, signal } from '@angular/cor
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthenticationService } from '@catalogohoy/auth';
 import { PosthogService } from '@catalogohoy/core';
+import { PlanStore } from '@catalogohoy/plan';
 import { ProfileStore } from '@catalogohoy/profile';
 import { Tenant, TenantStore } from '@catalogohoy/tenant';
 import {
@@ -35,8 +36,13 @@ export class Sidebar {
   private authService = inject(AuthenticationService);
   private confirmService = inject(ConfirmDialogService);
   private posthog = inject(PosthogService);
+  public readonly planStore = inject(PlanStore);
   public readonly profileStore = inject(ProfileStore);
   public readonly tenantStore = inject(TenantStore);
+
+  public readonly analyticsLocked = computed(
+    () => this.planStore.currentPlan()?.isFree ?? false
+  );
 
   public readonly transitionOptions = '200ms cubic-bezier(0.86, 0, 0.07, 1)';
   public readonly productsMenu: PanelMenuItem[] = PRODUCTS_MENU;

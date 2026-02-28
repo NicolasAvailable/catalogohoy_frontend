@@ -1,5 +1,6 @@
+/* ── Wrapper ── */
 .plans-wrapper {
-  padding: 2.5rem;
+  padding: 1.5rem 2.5rem;
   max-width: 1200px;
   margin: 0 auto;
   height: 100%;
@@ -8,24 +9,82 @@
   overflow-y: auto;
 }
 
+/* ── Header ── */
 .plans-header {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.75rem;
+}
+
+.plans-eyebrow {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6366f1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
 }
 
 .plans-title {
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 800;
   color: #1e293b;
+  line-height: 1.2;
 }
 
 .plans-subtitle {
   color: #64748b;
   margin-top: 0.5rem;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-/* ── Grid ── */
+/* ── Billing period toggle ── */
+.billing-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 0.25rem;
+  margin-top: 1.25rem;
+}
+
+.billing-toggle__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.billing-toggle__btn--active {
+  background: #ffffff;
+  color: #1e293b;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.billing-toggle__savings {
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+/* ── Grid — equal height cards ── */
 .plans-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -39,77 +98,84 @@
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 1.25rem;
-  overflow: visible;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   display: flex;
   flex-direction: column;
 }
 
 .plan-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.1);
 }
 
 .plan-card--popular {
-  border: 2px solid #3b82f6;
-  box-shadow: 0 4px 20px -4px rgba(59, 130, 246, 0.18);
-}
-
-.plan-card--current {
+  border: 2px solid #6366f1;
+  box-shadow: 0 8px 30px -6px rgba(99, 102, 241, 0.25);
 }
 
 .plan-card__content {
-  padding: 2rem;
+  padding: 1.75rem;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
   flex: 1;
 }
 
-/* ── Popular badge ── */
-.popular-badge {
-  position: absolute;
-  top: -14px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: #ffffff;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.3rem 1.25rem;
-  border-radius: 999px;
-  white-space: nowrap;
+/* ── Header: nombre + badge en la misma fila ── */
+.plan-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
-/* ── Current badge ── */
-.current-badge {
-  position: absolute;
-  top: -14px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: #ffffff;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.3rem 1.25rem;
-  border-radius: 999px;
-  white-space: nowrap;
+.plan-card__name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
-/* ── Header ── */
 .plan-card__name {
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: #1e293b;
 }
 
-.plan-card__description {
-  color: #64748b;
-  font-size: 0.9rem;
-  margin-top: 0.25rem;
+.plan-card__name--popular {
+  color: #6366f1;
 }
 
-/* ── Price ── */
+.plan-card__description {
+  color: #64748b;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* ── Badge inline (junto al nombre) ── */
+.badge-inline {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.badge-inline--popular {
+  background: #eef2ff;
+  color: #6366f1;
+  border: 1px solid #c7d2fe;
+}
+
+.badge-inline--current {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+/* ── Precio ── */
 .plan-card__price {
   display: flex;
   align-items: baseline;
@@ -124,35 +190,22 @@
 }
 
 .plan-card__price-period {
-  font-size: 1rem;
-  color: #64748b;
+  font-size: 0.9rem;
+  color: #94a3b8;
 }
 
-/* ── Badges ── */
-.plan-card__badges {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+/* ── Monthly equivalent ── */
+.plan-card__monthly-equiv {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: -0.5rem;
 }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.35rem 0.85rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.badge--blue {
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid #bfdbfe;
-}
-
-.badge--dark {
-  background: #1e293b;
-  color: #ffffff;
+/* ── Divider ── */
+.plan-card__divider {
+  border: none;
+  border-top: 1px solid #f1f5f9;
+  margin: 0;
 }
 
 /* ── Features ── */
@@ -162,7 +215,7 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.55rem;
   flex: 1;
 }
 
@@ -170,22 +223,46 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-size: 0.92rem;
+  font-size: 0.875rem;
   color: #334155;
 }
 
-/* ── Additional catalog ── */
-.plan-card__additional {
-  font-size: 0.85rem;
+/* ── Footer: rate type + catálogo adicional ── */
+.plan-card__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.plan-card__extra-catalog {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
   color: #94a3b8;
 }
 
-/* ── Buttons ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge--dim {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+/* ── Botón ── */
 .plan-card__button {
   width: 100%;
-  padding: 0.85rem 1.5rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -193,23 +270,24 @@
 }
 
 .plan-card__button--primary {
-  background: #3b82f6;
+  background: var(--plan-color);
   color: #ffffff;
 }
 
 .plan-card__button--primary:hover {
-  background: #2563eb;
+  opacity: 0.88;
+  background: var(--plan-color);
 }
 
 .plan-card__button--secondary {
-  background: #ffffff;
-  color: #1e293b;
-  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: var(--plan-color);
+  border: 1px solid color-mix(in srgb, var(--plan-color) 25%, #e2e8f0);
 }
 
 .plan-card__button--secondary:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: color-mix(in srgb, var(--plan-color) 6%, white);
+  border-color: color-mix(in srgb, var(--plan-color) 40%, #e2e8f0);
 }
 
 .plan-card__button--current {

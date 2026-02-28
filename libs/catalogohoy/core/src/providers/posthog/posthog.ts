@@ -1,6 +1,7 @@
 import { inject, Injectable, NgZone } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { environment } from '@catalogohoy/env';
+import { PlanStore } from '@catalogohoy/plan';
 import posthog from 'posthog-js';
 import { filter } from 'rxjs';
 
@@ -8,6 +9,7 @@ import { filter } from 'rxjs';
 export class PosthogService {
   private readonly ngZone = inject(NgZone);
   private readonly router = inject(Router);
+  private readonly planStore = inject(PlanStore);
 
   private get isConfigured(): boolean {
     return (
@@ -68,6 +70,7 @@ export class PosthogService {
 
   capture(event: string, properties?: Record<string, unknown>): void {
     if (!this.isConfigured) return;
+    if (this.planStore.currentPlan()?.isFree) return;
     posthog.capture(event, properties);
   }
 }

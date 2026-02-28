@@ -23,6 +23,7 @@ export interface PlanDisplay extends Plan {
   buttonSeverity: 'primary' | 'secondary';
   isPopular: boolean;
   isCurrent: boolean;
+  color: string;
 }
 
 export interface TenantPlanUsage {

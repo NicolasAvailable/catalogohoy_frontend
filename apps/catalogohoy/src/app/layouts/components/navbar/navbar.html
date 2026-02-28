@@ -55,10 +55,12 @@
     } @else if (planStore.currentPlan(); as plan) {
       <a
         routerLink="/admin/plans"
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-50 hover:bg-primary-100 transition-colors cursor-pointer mr-1"
+        [style.background-color]="currentPlanPalette().bg"
+        [style.color]="currentPlanPalette().color"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity cursor-pointer mr-1"
       >
-        <ui-icon name="crown" size="16" styleClass="text-primary-500" />
-        <span class="text-sm font-semibold text-primary-600">{{ plan.name }}</span>
+        <ui-icon name="crown" size="16" />
+        <span class="text-sm font-semibold">{{ plan.name }}</span>
       </a>
     }
     @if (!profileStore.profile().name) {

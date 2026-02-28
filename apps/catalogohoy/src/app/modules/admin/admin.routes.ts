@@ -1,4 +1,5 @@
 import { Route } from '@angular/router';
+import { freePlanGuard } from '@catalogohoy/plan';
 
 export const adminRoutes: Route[] = [
   {
@@ -42,6 +43,7 @@ export const adminRoutes: Route[] = [
   },
   {
     path: 'analytics',
+    canActivate: [freePlanGuard],
     loadChildren: () =>
       import('@catalogohoy/analytics').then((m) => m.ANALYTICS_ROUTES),
   },
