@@ -1,0 +1,375 @@
+<div class="flex flex-col flex-auto w-full overflow-auto bg-grey-25">
+  <div class="flex flex-col w-full max-w-screen-xl mx-auto p-6 gap-6">
+    <!-- HEADER -->
+    <div class="flex items-start justify-between">
+      <div>
+        <h1
+          class="text-2xl font-semibold text-grey-800 tracking-tight leading-tight"
+        >
+          Analíticas
+        </h1>
+        <p class="text-sm text-grey-400 mt-1">
+          Monitorea las visitas y actividad de tu catálogo
+        </p>
+      </div>
+    </div>
+
+    @if (analyticsStore.isLoading()) {
+    <!-- ─── SKELETON ─────────────────────────────────────────── -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div
+        class="sm:col-span-2 lg:col-span-3 h-80 bg-grey-100 rounded-xl animate-pulse"
+      ></div>
+      <div
+        class="sm:col-span-2 lg:col-span-1 h-40 bg-grey-100 rounded-xl animate-pulse"
+      ></div>
+      <div class="h-40 bg-grey-100 rounded-xl animate-pulse"></div>
+      <div class="h-40 bg-grey-100 rounded-xl animate-pulse"></div>
+    </div>
+    <div class="h-96 bg-grey-100 rounded-xl animate-pulse"></div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="h-64 bg-grey-100 rounded-xl animate-pulse"></div>
+      <div class="h-64 bg-grey-100 rounded-xl animate-pulse"></div>
+      <div class="h-64 bg-grey-100 rounded-xl animate-pulse"></div>
+      <div class="h-64 bg-grey-100 rounded-xl animate-pulse"></div>
+    </div>
+
+    } @else if (analyticsStore.data(); as data) {
+    <!-- ─── ROW 1: Main chart + 3 sparklines ─────────────────── -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Page views overview — dark area chart -->
+      <div
+        class="sm:col-span-2 lg:col-span-3 flex flex-col bg-[#0f172a] rounded-xl overflow-hidden"
+      >
+        <div class="flex items-center justify-between px-6 pt-6 pb-2">
+          <div>
+            <h2 class="text-xl font-semibold text-white tracking-tight">
+              Visitas en tu catálogo
+            </h2>
+            <p class="text-sm text-slate-400 mt-0.5">Clientes que ingresaron a ver tu catálogo público</p>
+          </div>
+          <div class="flex items-center gap-1 bg-slate-800 rounded-lg p-1">
+            <button
+              (click)="pageViewsYear.set('last-year')"
+              class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
+              [class.bg-slate-700]="pageViewsYear() === 'last-year'"
+              [class.text-white]="pageViewsYear() === 'last-year'"
+              [class.text-slate-400]="pageViewsYear() !== 'last-year'"
+            >
+              Año anterior
+            </button>
+            <button
+              (click)="pageViewsYear.set('this-year')"
+              class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
+              [class.bg-slate-700]="pageViewsYear() === 'this-year'"
+              [class.text-white]="pageViewsYear() === 'this-year'"
+              [class.text-slate-400]="pageViewsYear() !== 'this-year'"
+            >
+              Este año
+            </button>
+          </div>
+        </div>
+        <div class="h-72">
+          @let pv = $any(chartPageViews());
+          <apx-chart
+            class="block w-full h-full"
+            [chart]="pv.chart"
+            [colors]="pv.colors"
+            [dataLabels]="pv.dataLabels"
+            [fill]="pv.fill"
+            [grid]="pv.grid"
+            [series]="pv.series"
+            [stroke]="pv.stroke"
+            [tooltip]="pv.tooltip"
+            [xaxis]="pv.xaxis"
+            [yaxis]="pv.yaxis"
+          />
+        </div>
+      </div>
+
+      <!-- Sessions stat card -->
+      <div
+        class="sm:col-span-2 lg:col-span-1 flex flex-col items-center justify-center bg-white border border-grey-50 rounded-xl px-5 py-6 gap-2"
+      >
+        <span
+          class="text-xs font-semibold uppercase tracking-widest text-grey-400"
+          >Sesiones</span
+        >
+        <span class="text-5xl font-bold text-grey-800 tracking-tight"
+          >{{ data.sessions.amount | number }}</span
+        >
+      </div>
+
+      <!-- Page views stat card -->
+      <div
+        class="flex flex-col items-center justify-center bg-white border border-grey-50 rounded-xl px-5 py-6 gap-2"
+      >
+        <span
+          class="text-xs font-semibold uppercase tracking-widest text-grey-400"
+          >Vistas de página</span
+        >
+        <span class="text-5xl font-bold text-grey-800 tracking-tight"
+          >{{ data.pageViewsMetric.amount | number }}</span
+        >
+      </div>
+
+      <!-- Unique users stat card -->
+      <div
+        class="flex flex-col items-center justify-center bg-white border border-grey-50 rounded-xl px-5 py-6 gap-2"
+      >
+        <span
+          class="text-xs font-semibold uppercase tracking-widest text-grey-400"
+          >Visitantes únicos</span
+        >
+        <span class="text-5xl font-bold text-grey-800 tracking-tight"
+          >{{ data.users.amount | number }}</span
+        >
+      </div>
+    </div>
+
+    <!-- ─── ROW 2: Active Hours heatmap ──────────────────────── -->
+    <div
+      class="flex flex-col bg-white border border-grey-50 rounded-xl overflow-hidden"
+    >
+      <div class="flex items-center justify-between px-6 pt-5 pb-2">
+        <div>
+          <span class="text-base font-semibold text-grey-700"
+            >Horas activas</span
+          >
+          <p class="text-xs text-grey-400 mt-0.5">
+            Actividad por día y hora · últimos 30 días
+          </p>
+        </div>
+        <div class="flex items-center gap-1 bg-grey-50 rounded-lg p-1">
+          <button
+            (click)="activeHoursMode.set('unique-users')"
+            class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
+            [class.bg-white]="activeHoursMode() === 'unique-users'"
+            [class.text-grey-800]="activeHoursMode() === 'unique-users'"
+            [class.shadow-sm]="activeHoursMode() === 'unique-users'"
+            [class.text-grey-400]="activeHoursMode() !== 'unique-users'"
+          >
+            Usuarios únicos
+          </button>
+          <button
+            (click)="activeHoursMode.set('pageviews')"
+            class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
+            [class.bg-white]="activeHoursMode() === 'pageviews'"
+            [class.text-grey-800]="activeHoursMode() === 'pageviews'"
+            [class.shadow-sm]="activeHoursMode() === 'pageviews'"
+            [class.text-grey-400]="activeHoursMode() !== 'pageviews'"
+          >
+            Vistas de página
+          </button>
+        </div>
+      </div>
+      <div class="h-72">
+        @let ah = $any(chartActiveHours());
+        <apx-chart
+          class="block w-full h-full"
+          [chart]="ah.chart"
+          [colors]="ah.colors"
+          [dataLabels]="ah.dataLabels"
+          [plotOptions]="ah.plotOptions"
+          [series]="ah.series"
+          [stroke]="ah.stroke"
+          [tooltip]="ah.tooltip"
+          [xaxis]="ah.xaxis"
+          [yaxis]="ah.yaxis"
+          [legend]="ah.legend"
+        />
+      </div>
+    </div>
+
+    <!-- ─── ROW 3: 4 Donut charts ────────────────────────────── -->
+    <div>
+      <h3 class="text-lg font-semibold text-grey-800">Métricas de sesión</h3>
+      <p class="text-sm text-grey-400 mt-0.5">
+        Propiedades técnicas de las visitas al catálogo público
+      </p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <!-- Browser donut — blue -->
+      <div class="flex flex-col bg-white border border-grey-50 rounded-xl p-5">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-semibold text-grey-700">Navegador</span>
+          <span
+            class="text-xs text-grey-400 bg-grey-50 px-2 py-0.5 rounded-full"
+            >30 días</span
+          >
+        </div>
+        <div class="h-44 mt-4">
+          @let cb = $any(chartBrowser());
+          <apx-chart
+            class="flex items-center justify-center w-full h-full"
+            [chart]="cb.chart"
+            [colors]="cb.colors"
+            [labels]="cb.labels"
+            [plotOptions]="cb.plotOptions"
+            [series]="cb.series"
+            [states]="cb.states"
+            [tooltip]="cb.tooltip"
+          />
+        </div>
+        <div class="mt-4 space-y-2">
+          @for (value of data.browser.series; track $index) {
+          <div class="grid grid-cols-3 gap-1 text-xs">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <div
+                class="w-2 h-2 rounded-full shrink-0"
+                [style.background-color]="$any(chartBrowser()).colors[$index]"
+              ></div>
+              <span class="truncate text-grey-700"
+                >{{ data.browser.labels[$index] }}</span
+              >
+            </div>
+            <div class="font-medium text-right text-grey-800">
+              {{ data.browser.uniqueVisitors * value / 100 | number:'1.0-0' }}
+            </div>
+            <div class="text-right text-grey-400">{{ value }}%</div>
+          </div>
+          }
+        </div>
+      </div>
+
+      <!-- OS donut — teal -->
+      <div class="flex flex-col bg-white border border-grey-50 rounded-xl p-5">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-semibold text-grey-700"
+            >Sistema operativo</span
+          >
+          <span
+            class="text-xs text-grey-400 bg-grey-50 px-2 py-0.5 rounded-full"
+            >30 días</span
+          >
+        </div>
+        <div class="h-44 mt-4">
+          @let co = $any(chartOs());
+          <apx-chart
+            class="flex items-center justify-center w-full h-full"
+            [chart]="co.chart"
+            [colors]="co.colors"
+            [labels]="co.labels"
+            [plotOptions]="co.plotOptions"
+            [series]="co.series"
+            [states]="co.states"
+            [tooltip]="co.tooltip"
+          />
+        </div>
+        <div class="mt-4 space-y-2">
+          @for (value of data.os.series; track $index) {
+          <div class="grid grid-cols-3 gap-1 text-xs">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <div
+                class="w-2 h-2 rounded-full shrink-0"
+                [style.background-color]="$any(chartOs()).colors[$index]"
+              ></div>
+              <span class="truncate text-grey-700"
+                >{{ data.os.labels[$index] }}</span
+              >
+            </div>
+            <div class="font-medium text-right text-grey-800">
+              {{ data.os.uniqueVisitors * value / 100 | number:'1.0-0' }}
+            </div>
+            <div class="text-right text-grey-400">{{ value }}%</div>
+          </div>
+          }
+        </div>
+      </div>
+
+      <!-- Device donut — orange -->
+      <div class="flex flex-col bg-white border border-grey-50 rounded-xl p-5">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-semibold text-grey-700">Dispositivo</span>
+          <span
+            class="text-xs text-grey-400 bg-grey-50 px-2 py-0.5 rounded-full"
+            >30 días</span
+          >
+        </div>
+        <div class="h-44 mt-4">
+          @let cd = $any(chartDevice());
+          <apx-chart
+            class="flex items-center justify-center w-full h-full"
+            [chart]="cd.chart"
+            [colors]="cd.colors"
+            [labels]="cd.labels"
+            [plotOptions]="cd.plotOptions"
+            [series]="cd.series"
+            [states]="cd.states"
+            [tooltip]="cd.tooltip"
+          />
+        </div>
+        <div class="mt-4 space-y-2">
+          @for (value of data.device.series; track $index) {
+          <div class="grid grid-cols-3 gap-1 text-xs">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <div
+                class="w-2 h-2 rounded-full shrink-0"
+                [style.background-color]="$any(chartDevice()).colors[$index]"
+              ></div>
+              <span class="truncate text-grey-700"
+                >{{ data.device.labels[$index] }}</span
+              >
+            </div>
+            <div class="font-medium text-right text-grey-800">
+              {{ data.device.uniqueVisitors * value / 100 | number:'1.0-0' }}
+            </div>
+            <div class="text-right text-grey-400">{{ value }}%</div>
+          </div>
+          }
+        </div>
+      </div>
+
+      <!-- Language donut — purple -->
+      <div class="flex flex-col bg-white border border-grey-50 rounded-xl p-5">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-semibold text-grey-700">Idioma</span>
+          <span
+            class="text-xs text-grey-400 bg-grey-50 px-2 py-0.5 rounded-full"
+            >30 días</span
+          >
+        </div>
+        <div class="h-44 mt-4">
+          @let cl = $any(chartLanguage());
+          <apx-chart
+            class="flex items-center justify-center w-full h-full"
+            [chart]="cl.chart"
+            [colors]="cl.colors"
+            [labels]="cl.labels"
+            [plotOptions]="cl.plotOptions"
+            [series]="cl.series"
+            [states]="cl.states"
+            [tooltip]="cl.tooltip"
+          />
+        </div>
+        <div class="mt-4 space-y-2">
+          @for (value of data.language.series; track $index) {
+          <div class="grid grid-cols-3 gap-1 text-xs">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <div
+                class="w-2 h-2 rounded-full shrink-0"
+                [style.background-color]="$any(chartLanguage()).colors[$index]"
+              ></div>
+              <span class="truncate text-grey-700"
+                >{{ data.language.labels[$index] }}</span
+              >
+            </div>
+            <div class="font-medium text-right text-grey-800">
+              {{ data.language.uniqueVisitors * value / 100 | number:'1.0-0' }}
+            </div>
+            <div class="text-right text-grey-400">{{ value }}%</div>
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    } @else {
+    <!-- ─── Empty / error state ──────────────────────────────── -->
+    <div class="flex flex-col items-center justify-center py-24 gap-3">
+      <ui-icon name="bar-chart-3" size="48" styleClass="text-grey-200" />
+      <p class="text-sm text-grey-400">No hay datos disponibles</p>
+    </div>
+    }
+  </div>
+</div>

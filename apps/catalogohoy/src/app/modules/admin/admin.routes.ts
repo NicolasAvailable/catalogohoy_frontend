@@ -40,4 +40,9 @@ export const adminRoutes: Route[] = [
     loadChildren: () =>
       import('@catalogohoy/plan').then((m) => m.planRoutes),
   },
+  {
+    path: 'analytics',
+    loadChildren: () =>
+      import('@catalogohoy/analytics').then((m) => m.ANALYTICS_ROUTES),
+  },
 ];
