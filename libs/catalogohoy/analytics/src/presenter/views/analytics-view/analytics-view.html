@@ -366,9 +366,37 @@
 
     } @else {
     <!-- ─── Empty / error state ──────────────────────────────── -->
-    <div class="flex flex-col items-center justify-center py-24 gap-3">
-      <ui-icon name="bar-chart-3" size="48" styleClass="text-grey-200" />
-      <p class="text-sm text-grey-400">No hay datos disponibles</p>
+    <div class="flex flex-col items-center justify-center py-16 gap-8">
+      <!-- Illustration -->
+      <div class="relative flex items-center justify-center w-40 h-40">
+        <!-- Background circle -->
+        <div class="absolute inset-0 rounded-full bg-indigo-50"></div>
+        <!-- Central icon -->
+        <ui-icon name="bar-chart-3" size="56" styleClass="text-indigo-300 relative z-10" />
+        <!-- Floating accent icons -->
+        <div class="absolute -top-1 -right-1 flex items-center justify-center w-10 h-10 rounded-full bg-white shadow-sm border border-grey-100">
+          <ui-icon name="trending-up" size="18" styleClass="text-emerald-400" />
+        </div>
+        <div class="absolute -bottom-1 -left-1 flex items-center justify-center w-10 h-10 rounded-full bg-white shadow-sm border border-grey-100">
+          <ui-icon name="eye" size="18" styleClass="text-blue-400" />
+        </div>
+      </div>
+
+      <!-- Text -->
+      <div class="flex flex-col items-center gap-2 max-w-sm text-center">
+        <h3 class="text-lg font-semibold text-grey-700">Aún no hay datos</h3>
+        <p class="text-sm text-grey-400 leading-relaxed">
+          Las analíticas aparecerán cuando los clientes comiencen a visitar tu catálogo público. Comparte el enlace de tu tienda para empezar a recibir visitas.
+        </p>
+      </div>
+
+      <!-- Hint card -->
+      <div class="flex items-center gap-3 bg-indigo-50 rounded-xl px-5 py-3.5">
+        <ui-icon name="share-2" size="18" styleClass="text-indigo-500 shrink-0" />
+        <p class="text-sm text-indigo-600">
+          Usa el botón <span class="font-medium">Compartir</span> en la barra superior para enviar el enlace de tu catálogo.
+        </p>
+      </div>
     </div>
     }
   </div>
