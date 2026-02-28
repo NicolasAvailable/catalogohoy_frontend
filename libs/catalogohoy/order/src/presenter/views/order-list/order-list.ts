@@ -211,17 +211,17 @@ export class OrderListComponent implements OnInit, OnDestroy {
     return labels[status] || status;
   }
 
-  getStatusBadgeClass(status: OrderStatus): string {
-    const baseClass =
-      'px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide';
-    const colorClasses: Record<OrderStatus, string> = {
-      pending: 'bg-orange-100 text-orange-600',
-      completed: 'bg-green-100 text-green-600',
-      cancelled: 'bg-red-100 text-red-600',
+  getStatusBadgeClass(_status: OrderStatus): string {
+    return 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white border border-grey-100 text-grey-700';
+  }
+
+  getStatusDotClass(status: OrderStatus): string {
+    const colors: Record<OrderStatus, string> = {
+      pending: 'bg-orange-400',
+      completed: 'bg-green-500',
+      cancelled: 'bg-red-500',
     };
-    return `${baseClass} ${
-      colorClasses[status] || 'bg-grey-100 text-grey-600'
-    }`;
+    return `w-2 h-2 rounded-full shrink-0 ${colors[status] ?? 'bg-grey-400'}`;
   }
 
   getPaymentMethod(order: Order): string {

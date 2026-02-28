@@ -190,11 +190,13 @@
                 >
                   <ng-template selectSelectedItem let-selected>
                     <span [class]="getStatusBadgeClass(selected.value)">
+                      <span [class]="getStatusDotClass(selected.value)"></span>
                       {{ selected.label }}
                     </span>
                   </ng-template>
                   <ng-template selectItem let-item>
                     <span [class]="getStatusBadgeClass(item.value)">
+                      <span [class]="getStatusDotClass(item.value)"></span>
                       {{ item.label }}
                     </span>
                   </ng-template>

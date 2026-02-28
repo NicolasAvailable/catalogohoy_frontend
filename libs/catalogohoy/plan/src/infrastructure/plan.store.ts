@@ -85,6 +85,9 @@ export const PlanStore = signalStore(
       },
 
       async loadTenantPlanUsage() {
+        // Skip if already loaded — store is a singleton, data persists across navigation
+        if (store.tenantPlanUsage() !== null) return;
+
         const tenantId = await tenantStore.getTenantIdAsync();
         const userId = tenantStore.userId();
         if (!tenantId || !userId) return;
