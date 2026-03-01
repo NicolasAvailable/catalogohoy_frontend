@@ -1,11 +1,16 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { IconComponent } from '@ui';
-import { Plan, PlanDisplay, PlanFeature } from '../../domain';
+import {
+  BillingPeriod,
+  CATALOG_ADDON_PRICE_BY_CURRENCY,
+  PaymentCurrency,
+  Plan,
+  PLAN_BASE_PRICES,
+  PlanDisplay,
+  PlanFeature,
+} from '../../domain';
 import { PlanStore } from '../../infrastructure';
-
-const WHATSAPP_NUMBER = '584124807708';
-
-export type BillingPeriod = 'monthly' | 'quarterly' | 'annual';
 
 const BILLING_CONFIG: Record<BillingPeriod, { label: string; months: number; discount: number }> = {
   monthly:   { label: 'Mensual',     months: 1,  discount: 0    },
@@ -17,7 +22,6 @@ type PlanUIConfig = {
   period: string;
   rateType: string;
   features: PlanFeature[];
-  additionalCatalogPrice: string;
   buttonLabel: string;
   buttonSeverity: 'primary' | 'secondary';
   isPopular: boolean;
@@ -27,13 +31,12 @@ type PlanUIConfig = {
 const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   gratis: {
     period: 'por siempre',
-    rateType: 'A BCV',
+    rateType: 'Gratis',
     features: [
       { text: '1 catálogo' },
       { text: 'Edición limitada del catálogo' },
       { text: 'No permite descargar QR del catálogo' },
     ],
-    additionalCatalogPrice: '$6.99/mes',
     buttonLabel: 'Empezar gratis',
     buttonSeverity: 'secondary',
     isPopular: false,
@@ -41,7 +44,7 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   },
   basico: {
     period: '/mes',
-    rateType: 'A BCV',
+    rateType: 'USD',
     features: [
       { text: '1 catálogo' },
       { text: 'Todos los módulos disponibles' },
@@ -49,7 +52,6 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
       { text: 'Diseño personalizable' },
       { text: 'Soporte prioritario' },
     ],
-    additionalCatalogPrice: '$6.99/mes',
     buttonLabel: 'Comenzar ahora',
     buttonSeverity: 'primary',
     isPopular: true,
@@ -57,7 +59,7 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   },
   avanzado: {
     period: '/mes',
-    rateType: 'A BCV',
+    rateType: 'USD',
     features: [
       { text: '1 catálogo' },
       { text: 'Todo del plan Básico' },
@@ -65,7 +67,6 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
       { text: 'Dominio personalizado' },
       { text: 'Soporte dedicado' },
     ],
-    additionalCatalogPrice: '$6.99/mes',
     buttonLabel: 'Comenzar ahora',
     buttonSeverity: 'secondary',
     isPopular: false,
@@ -80,6 +81,8 @@ function toPlanDisplay(plan: Plan, currentPlanPosition: number): PlanDisplay {
   let buttonLabel = config.buttonLabel;
   if (isCurrent) {
     buttonLabel = 'Plan actual';
+  } else if (!plan.isFree && currentPlanPosition > 0) {
+    buttonLabel = plan.position > currentPlanPosition ? 'Mejorar plan' : 'Cambiar plan';
   } else if (currentPlanPosition >= 0 && plan.position > currentPlanPosition) {
     buttonLabel = 'Mejorar';
   }
@@ -90,7 +93,7 @@ function toPlanDisplay(plan: Plan, currentPlanPosition: number): PlanDisplay {
     maxProductsLabel: `Hasta ${plan.maxProducts} productos`,
     rateType: config.rateType,
     features: config.features,
-    additionalCatalogPrice: config.additionalCatalogPrice,
+    additionalCatalogPrice: '',
     buttonLabel,
     buttonSeverity: config.buttonSeverity,
     isPopular: config.isPopular,
@@ -110,13 +113,20 @@ function toPlanDisplay(plan: Plan, currentPlanPosition: number): PlanDisplay {
 })
 export class Plans implements OnInit {
   public readonly planStore = inject(PlanStore);
+  private readonly router = inject(Router);
 
   public readonly billingPeriod = signal<BillingPeriod>('monthly');
+  public readonly paymentCurrency = signal<PaymentCurrency>('usd');
 
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
     { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
     { key: 'annual',    label: 'Anual',      savingsLabel: '15% off' },
+  ];
+
+  public readonly currencyOptions: { key: PaymentCurrency; flag: string; label: string }[] = [
+    { key: 'usd', flag: '🇺🇸', label: 'USD' },
+    { key: 'ves', flag: '🇻🇪', label: 'Bs.' },
   ];
 
   private readonly currentPlanPosition = computed(
@@ -132,21 +142,25 @@ export class Plans implements OnInit {
     this.planStore.loadTenantPlanUsage();
   }
 
-  /** Precio total del periodo seleccionado (con descuento) */
+  public getBasePrice(plan: PlanDisplay): number {
+    if (plan.isFree) return 0;
+    return PLAN_BASE_PRICES[this.paymentCurrency()][plan.id] ?? plan.price;
+  }
+
   public getPeriodPrice(plan: PlanDisplay): number {
     if (plan.isFree) return 0;
     const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
-    return Math.round(plan.price * months * (1 - discount) * 100) / 100;
+    const base = this.getBasePrice(plan);
+    return Math.round(base * months * (1 - discount) * 100) / 100;
   }
 
-  /** Equivalente mensual para mostrar junto al precio total */
   public getMonthlyEquivalent(plan: PlanDisplay): number {
     if (plan.isFree) return 0;
-    const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
-    return Math.round(plan.price * (1 - discount) * 100) / 100;
+    const { discount } = BILLING_CONFIG[this.billingPeriod()];
+    const base = this.getBasePrice(plan);
+    return Math.round(base * (1 - discount) * 100) / 100;
   }
 
-  /** Label del periodo para mostrar bajo el precio */
   public getPeriodLabel(plan: PlanDisplay): string {
     if (plan.isFree) return 'por siempre';
     const period = this.billingPeriod();
@@ -155,15 +169,18 @@ export class Plans implements OnInit {
     return '/año';
   }
 
+  public getCatalogAddonPrice(): number {
+    return CATALOG_ADDON_PRICE_BY_CURRENCY[this.paymentCurrency()];
+  }
+
   public selectPlan(plan: PlanDisplay): void {
     if (plan.isCurrent || plan.isFree) return;
 
-    const price = this.getPeriodPrice(plan);
-    const periodLabel = this.getPeriodLabel(plan);
-    const message = encodeURIComponent(
-      `Hola, me interesa adquirir el plan *${plan.name}* ($${price}${periodLabel}) de CatálogoHoy. ¿Me pueden dar más información?`
-    );
-    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
-    window.open(url, '_blank');
+    this.router.navigate(['/admin/plans/checkout', plan.id], {
+      queryParams: {
+        period:   this.billingPeriod(),
+        currency: this.paymentCurrency(),
+      },
+    });
   }
 }

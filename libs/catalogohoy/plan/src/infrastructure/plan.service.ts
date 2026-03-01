@@ -114,7 +114,7 @@ export class PlanService implements BasePlanService {
     }
 
     const catalogCountResult = await this.getCatalogCount(userId);
-    const extraCatalogsResult = await this.getExtraCatalogs(userId);
+    const extraCatalogsResult = await this.getExtraCatalogs(tenantId);
     const expirationResult = await this.getTenantExpiration(tenantId);
 
     const plan = planResult.value as Plan;
@@ -141,25 +141,26 @@ export class PlanService implements BasePlanService {
       currentCatalogCount,
       canCreateCatalog: remainingCatalogs > 0,
       remainingCatalogs,
+      extraCatalogs,
       planExpired: expiration.planExpired,
       planExpiresAt: expiration.planExpiresAt,
     });
   }
 
   public async getExtraCatalogs(
-    userId: number
+    tenantId: number
   ): Promise<E.Either<Error, number>> {
     const { data, error } = await this.client
-      .from('users')
+      .from('tenants')
       .select('extra_catalogs')
-      .eq('id', userId)
+      .eq('id', tenantId)
       .single();
 
     if (error) {
       return E.left(new Error(error.message));
     }
 
-    return E.right(data.extra_catalogs ?? 0);
+    return E.right(data?.extra_catalogs ?? 0);
   }
 
   public async getTenantExpiration(

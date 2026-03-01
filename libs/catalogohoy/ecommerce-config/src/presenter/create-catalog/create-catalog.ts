@@ -1,10 +1,8 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { PlanStore } from '@catalogohoy/plan';
-import { IconComponent } from '@ui';
 import { TenantService } from '@catalogohoy/tenant';
-
-const WHATSAPP_NUMBER = '584124807708';
+import { IconComponent } from '@ui';
 
 type SlugStatus = 'idle' | 'checking' | 'available' | 'taken';
 
@@ -30,6 +28,30 @@ export class CreateCatalog implements OnInit {
 
   public readonly isLoading = this.planStore.isLoading;
   public readonly canCreate = this.planStore.canCreateCatalog;
+
+  // Catalog slots purchase
+  public readonly addonQty = signal(1);
+  public readonly isAddingSlots = signal(false);
+  public readonly addSlotsError = signal<string | null>(null);
+  public readonly addSlotsSuccess = signal(false);
+
+  public static readonly CATALOG_ADDON_PRICE = 6.99;
+
+  public readonly hasActivePlan = computed(
+    () => !!this.planStore.currentPlan() && !this.planStore.isPlanExpired()
+  );
+
+  public readonly currentCatalogCount = this.planStore.currentCatalogCount;
+  public readonly maxCatalogs = this.planStore.maxCatalogs;
+  public readonly extraCatalogs = this.planStore.extraCatalogs;
+
+  public readonly totalSlots = computed(
+    () => this.maxCatalogs() + this.extraCatalogs()
+  );
+
+  public readonly addonCost = computed(
+    () => Math.round(CreateCatalog.CATALOG_ADDON_PRICE * this.addonQty() * 100) / 100
+  );
 
   private slugCheckTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -78,12 +100,37 @@ export class CreateCatalog implements OnInit {
       });
   }
 
-  public openWhatsApp(): void {
-    const message = encodeURIComponent(
-      'Hola, me interesa adquirir un catálogo adicional en CatálogoHoy. ¿Me pueden dar más información?'
-    );
-    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
-    window.open(url, '_blank');
+  public decreaseAddonQty(): void {
+    if (this.addonQty() > 1) {
+      this.addonQty.set(this.addonQty() - 1);
+    }
+  }
+
+  public increaseAddonQty(): void {
+    this.addonQty.set(this.addonQty() + 1);
+  }
+
+  public async purchaseCatalogSlots(): Promise<void> {
+    if (this.isAddingSlots()) return;
+
+    this.isAddingSlots.set(true);
+    this.addSlotsError.set(null);
+
+    const error = await this.planStore.addCatalogSlots(this.addonQty());
+
+    if (error) {
+      this.addSlotsError.set(error);
+      this.isAddingSlots.set(false);
+    } else {
+      this.addSlotsSuccess.set(true);
+      this.isAddingSlots.set(false);
+      // Refresh usage so canCreate updates
+      await this.planStore.refreshUsage();
+    }
+  }
+
+  public goToPlans(): void {
+    this.router.navigate(['/admin/plans']);
   }
 
   private checkSlugAvailability(slug: string): void {

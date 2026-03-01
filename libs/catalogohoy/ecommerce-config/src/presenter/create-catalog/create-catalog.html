@@ -61,19 +61,99 @@
       }
     </button>
   </div>
+
+  } @else if (hasActivePlan()) {
+
+  <!-- ── Has active plan but no slots: buy more ── -->
+  <div class="create-catalog-card">
+    @if (addSlotsSuccess()) {
+    <!-- Success state -->
+    <div class="slots-success">
+      <ui-icon name="check-circle" size="48" styleClass="text-green-500" />
+      <h2 class="slots-success__title">¡Catálogos agregados!</h2>
+      <p class="slots-success__desc">
+        Tu suscripción ha sido actualizada. Ya puedes crear un nuevo catálogo.
+      </p>
+      <button class="create-catalog__button" (click)="addSlotsSuccess.set(false)">
+        Crear catálogo ahora
+      </button>
+    </div>
+    } @else {
+    <!-- Purchase slots UI -->
+    <div class="slots-header">
+      <ui-icon name="folder-plus" size="36" styleClass="text-violet-500" />
+      <div>
+        <h2 class="slots-header__title">Agregar catálogos adicionales</h2>
+        <p class="slots-header__desc">
+          Usas {{ currentCatalogCount() }} de {{ totalSlots() }} catálogos disponibles.
+        </p>
+      </div>
+    </div>
+
+    <!-- Stepper -->
+    <div class="slots-stepper-row">
+      <div class="slots-stepper-info">
+        <span class="slots-stepper-info__label">Catálogos a agregar</span>
+        <span class="slots-stepper-info__price">$6.99 / mes c/u</span>
+      </div>
+      <div class="slots-stepper-controls">
+        <button
+          class="stepper-btn"
+          [class.stepper-btn--disabled]="addonQty() <= 1"
+          (click)="decreaseAddonQty()"
+        >−</button>
+        <span class="stepper-qty">{{ addonQty() }}</span>
+        <button class="stepper-btn" (click)="increaseAddonQty()">+</button>
+      </div>
+    </div>
+
+    <!-- Total -->
+    <div class="slots-total">
+      <span class="slots-total__label">Total mensual adicional</span>
+      <span class="slots-total__amount">${{ addonCost() }}/mes</span>
+    </div>
+
+    @if (addSlotsError()) {
+    <p class="slots-error">
+      <ui-icon name="circle-alert" size="14" styleClass="shrink-0" />
+      {{ addSlotsError() }}
+    </p>
+    }
+
+    <button
+      class="create-catalog__button create-catalog__button--violet"
+      [disabled]="isAddingSlots()"
+      (click)="purchaseCatalogSlots()"
+    >
+      @if (isAddingSlots()) {
+      <ui-icon name="loader-circle" size="18" styleClass="animate-spin inline-block mr-2" />
+      Procesando...
+      } @else {
+      Agregar {{ addonQty() }} catálogo{{ addonQty() > 1 ? 's' : '' }}
+      }
+    </button>
+    <p class="slots-note">
+      El cargo se aplicará de forma prorrateada en tu próxima factura de Stripe.
+    </p>
+    }
+  </div>
+
   } @else {
+
+  <!-- ── No active plan ── -->
   <div class="create-catalog-card">
     <div class="no-slots">
       <ui-icon name="package-x" size="56" styleClass="text-slate-300" />
-      <h2 class="no-slots__title">No tienes catálogos disponibles</h2>
+      <h2 class="no-slots__title">Necesitas un plan activo</h2>
       <p class="no-slots__description">
-        Adquiere un catálogo adicional y vuelve a esta vista para crearlo.
+        Para crear catálogos primero debes adquirir un plan.
       </p>
-      <button class="no-slots__button" (click)="openWhatsApp()">
-        <ui-icon name="message-circle" size="18" />
-        Adquirir catálogo
+      <button class="no-slots__button" (click)="goToPlans()">
+        <ui-icon name="arrow-right" size="18" />
+        Ver planes
       </button>
     </div>
   </div>
+
   }
 </section>

@@ -10,4 +10,8 @@ import { IconComponent, MenuComponent } from '@ui';
 })
 export class ProfileMenu {
   public readonly menu = viewChild<MenuComponent>('profileMenu');
+
+  public close(): void {
+    this.menu()?.hide();
+  }
 }

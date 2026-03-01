@@ -6,20 +6,42 @@
       Elige el plan que mejor se adapte y escala cuando lo necesites.
     </p>
 
-    <!-- Selector de periodo de facturación -->
-    <div class="billing-toggle">
-      @for (option of billingOptions; track option.key) {
+    <!-- Controles: moneda + periodo -->
+    <div class="plans-controls">
+
+      <!-- Selector de moneda -->
+      <div class="currency-flip">
         <button
-          class="billing-toggle__btn"
-          [class.billing-toggle__btn--active]="billingPeriod() === option.key"
-          (click)="billingPeriod.set(option.key)"
+          class="currency-flip__option"
+          [class.currency-flip__option--active]="paymentCurrency() === 'usd'"
+          (click)="paymentCurrency.set('usd')"
         >
-          {{ option.label }}
-          @if (option.savingsLabel) {
-            <span class="billing-toggle__savings">{{ option.savingsLabel }}</span>
-          }
+          🇺🇸 Dólares (USD)
         </button>
-      }
+        <button
+          class="currency-flip__option"
+          [class.currency-flip__option--active]="paymentCurrency() === 'ves'"
+          (click)="paymentCurrency.set('ves')"
+        >
+          🇻🇪 Bolívares (Bs.)
+        </button>
+      </div>
+
+      <!-- Selector de periodo de facturación -->
+      <div class="billing-toggle">
+        @for (option of billingOptions; track option.key) {
+          <button
+            class="billing-toggle__btn"
+            [class.billing-toggle__btn--active]="billingPeriod() === option.key"
+            (click)="billingPeriod.set(option.key)"
+          >
+            {{ option.label }}
+            @if (option.savingsLabel) {
+              <span class="billing-toggle__savings">{{ option.savingsLabel }}</span>
+            }
+          </button>
+        }
+      </div>
     </div>
   </header>
 
@@ -51,17 +73,20 @@
             <span class="plan-card__price-amount">$0</span>
             <span class="plan-card__price-period">por siempre</span>
           } @else {
-            <span class="plan-card__price-amount">${{ getPeriodPrice(plan) }}</span>
-            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }}</span>
+            <div class="plan-card__price-main">
+              <span class="plan-card__price-currency">$</span>
+              <span class="plan-card__price-amount">{{ getPeriodPrice(plan) }}</span>
+            </div>
+            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }} · {{ paymentCurrency() === 'usd' ? 'USD' : 'ref. USD' }}</span>
           }
         </div>
         @if (!plan.isFree && billingPeriod() !== 'monthly') {
           <p class="plan-card__monthly-equiv">
-            ${{ getMonthlyEquivalent(plan) }}/mes por persona
+            ${{ getMonthlyEquivalent(plan) }}/mes
           </p>
         }
 
-        <!-- Botón CTA — justo bajo el precio -->
+        <!-- Botón CTA -->
         <button
           class="plan-card__button"
           [class.plan-card__button--primary]="plan.isPopular && !plan.isCurrent"
@@ -70,6 +95,9 @@
           [disabled]="plan.isCurrent"
           (click)="selectPlan(plan)"
         >
+          @if (paymentCurrency() === 'ves' && !plan.isFree && !plan.isCurrent) {
+            <ui-icon name="message-circle" styleClass="size-4 shrink-0" />
+          }
           {{ plan.buttonLabel }}
         </button>
 
@@ -89,13 +117,20 @@
           }
         </ul>
 
-        <!-- Rate type + additional catalog note -->
+        <!-- Footer: método de pago + addon -->
         <div class="plan-card__footer">
-          <span class="badge badge--dim">{{ plan.rateType }}</span>
-          <p class="plan-card__extra-catalog">
-            <ui-icon name="plus-circle" styleClass="size-3.5 shrink-0" />
-            Catálogo adicional {{ plan.additionalCatalogPrice }}
-          </p>
+          @if (!plan.isFree) {
+            <span class="badge" [class.badge--usd]="paymentCurrency() === 'usd'" [class.badge--ves]="paymentCurrency() === 'ves'">
+              @if (paymentCurrency() === 'usd') { 🇺🇸 Pago con tarjeta }
+              @else { 🇻🇪 Pago por transferencia }
+            </span>
+          }
+          @if (!plan.isFree) {
+            <p class="plan-card__extra-catalog">
+              <ui-icon name="plus-circle" styleClass="size-3.5 shrink-0" />
+              Catálogo adicional ${{ getCatalogAddonPrice() }}/mes
+            </p>
+          }
         </div>
       </div>
     </div>

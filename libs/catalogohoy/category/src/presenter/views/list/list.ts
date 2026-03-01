@@ -13,7 +13,7 @@ import {
 } from '@ui';
 import { PaginatorModule } from 'primeng/paginator';
 import { CategoryFacade } from '../../../application';
-import { Category } from '../../../domain';
+import { Category, CategoryList } from '../../../domain';
 import { CategoryStore } from '../../../infrastructure';
 import { CategoryService } from '../../../infrastructure/category.service';
 
@@ -108,12 +108,13 @@ export default class CategoryListComponent implements OnInit {
   }
 
   public async drop(event: CdkDragDrop<Category[]>) {
+    if (event.previousIndex === event.currentIndex) return;
+
     const categories = [...this.categoryStore.categoryList().categories];
     const movedItem = categories.splice(event.previousIndex, 1)[0];
     categories.splice(event.currentIndex, 0, movedItem);
 
-    // Update positions in backend
+    this.categoryStore.set(CategoryList.from(categories));
     await this.categoryService.updatePositions(categories);
-    this.loadData();
   }
 }

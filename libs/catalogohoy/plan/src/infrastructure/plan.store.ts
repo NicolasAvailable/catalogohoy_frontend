@@ -8,6 +8,7 @@ import {
   withState,
 } from '@ngrx/signals';
 import { Plan, TenantPlanUsage } from '../domain';
+import { CheckoutService } from './checkout.service';
 import { PlanService } from './plan.service';
 
 type PlanState = {
@@ -57,6 +58,9 @@ export const PlanStore = signalStore(
     maxCatalogs: computed(
       () => store.tenantPlanUsage()?.plan.maxCatalogs ?? 1
     ),
+    extraCatalogs: computed(
+      () => store.tenantPlanUsage()?.extraCatalogs ?? 0
+    ),
     usagePercentage: computed(() => {
       const usage = store.tenantPlanUsage();
       if (!usage) return 0;
@@ -74,6 +78,7 @@ export const PlanStore = signalStore(
     (
       store,
       planService = inject(PlanService),
+      checkoutService = inject(CheckoutService),
       tenantStore = inject(TenantStore)
     ) => ({
       async loadPlans() {
@@ -130,6 +135,28 @@ export const PlanStore = signalStore(
           })
         );
       },
+
+      /** Add extra catalog slots to the active subscription. Returns error message or null. */
+      async addCatalogSlots(additionalQuantity: number): Promise<string | null> {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return 'No se pudo obtener información del negocio.';
+
+        const result = await checkoutService.updateCatalogSlots({ tenantId, additionalQuantity });
+
+        return result
+          .mapRight(({ extraCatalogs }) => {
+            const current = store.tenantPlanUsage();
+            if (current) {
+              patchState(store, {
+                tenantPlanUsage: { ...current, extraCatalogs },
+              });
+            }
+            return null as string | null;
+          })
+          .mapLeft((err) => err.message)
+          .value as string | null;
+      },
+
     })
   )
 );
