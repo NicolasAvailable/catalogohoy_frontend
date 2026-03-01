@@ -7,6 +7,7 @@ import {
   CreateProductInput,
   Product,
   ProductList,
+  ReplaceCategoriesInput,
   UpdateProductInput,
 } from '../domain';
 import { ProductEntity } from './entities';
@@ -177,14 +178,22 @@ export class ProductService implements BaseProductService {
       return E.left(new Error(error.message));
     }
 
-    input.categoryIds.forEach(async (categoryId) => {
-      await this.client.from('product_categories').insert([
-        {
-          product_id: data[0].id,
-          category_id: categoryId,
-        },
-      ]);
-    });
+    const { error: deleteError } = await this.client
+      .from('product_categories')
+      .delete()
+      .eq('product_id', data[0].id);
+
+    if (deleteError) {
+      return E.left(new Error(deleteError.message));
+    }
+
+    for (const categoryId of input.categoryIds) {
+      await this.client.from('product_categories').insert({
+        product_id: data[0].id,
+        category_id: categoryId,
+      });
+    }
+
     return E.right(undefined);
   }
 
@@ -205,6 +214,32 @@ export class ProductService implements BaseProductService {
 
     if (error) {
       return E.left(new Error(error.message));
+    }
+    return E.right(undefined);
+  }
+
+  public async replaceCategories(
+    input: ReplaceCategoriesInput
+  ): Promise<E.Either<Error, void>> {
+    for (const productId of input.productIds) {
+      const { error: deleteError } = await this.client
+        .from('product_categories')
+        .delete()
+        .eq('product_id', productId);
+
+      if (deleteError) {
+        return E.left(new Error(deleteError.message));
+      }
+
+      for (const categoryId of input.categoryIds) {
+        const { error: insertError } = await this.client
+          .from('product_categories')
+          .insert({ product_id: productId, category_id: categoryId });
+
+        if (insertError) {
+          return E.left(new Error(insertError.message));
+        }
+      }
     }
     return E.right(undefined);
   }

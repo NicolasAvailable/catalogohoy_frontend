@@ -9,14 +9,17 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { CategoryStore } from '@catalogohoy/category';
 import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
 import {
   ButtonComponent,
   CardComponent,
   CheckboxComponent,
   ConfirmDialogComponent,
+  DialogComponent,
   IconComponent,
   InputTextComponent,
+  MultiSelectComponent,
   SkeletonListComponent,
   TableComponent,
   TooltipDirective,
@@ -45,6 +48,8 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
     CheckboxComponent,
     PlanLimitDialogComponent,
     TooltipDirective,
+    DialogComponent,
+    MultiSelectComponent,
   ],
   templateUrl: './list.html',
   styleUrl: './list.css',
@@ -57,11 +62,14 @@ export default class List implements OnInit, OnDestroy {
   public readonly productStore = inject(ProductStore);
   public readonly productFacade = inject(ProductFacade);
   public readonly planStore = inject(PlanStore);
+  public readonly categoryStore = inject(CategoryStore);
   public readonly selectedProduct = signal<Product | null>(null);
   public readonly selectedIds = signal<Set<string>>(new Set());
   public readonly deleteMode = signal<'single' | 'bulk'>('single');
   public readonly pageFirst = signal(0);
   public readonly pageRows = 10;
+
+  public readonly bulkCategoryIds = signal<string[]>([]);
 
   public readonly hasSelection = computed(() => this.selectedIds().size > 0);
 
@@ -86,6 +94,9 @@ export default class List implements OnInit, OnDestroy {
   @ViewChild(PlanLimitDialogComponent)
   public planLimitDialog!: PlanLimitDialogComponent;
 
+  @ViewChild('categoryDialog')
+  public categoryDialog!: DialogComponent;
+
   public searchForm = new FormGroup({
     search: new FormControl('', []),
   });
@@ -95,6 +106,7 @@ export default class List implements OnInit, OnDestroy {
   ngOnInit() {
     this.productStore.productList$();
     this.planStore.loadTenantPlanUsage();
+    this.categoryStore.categoryList$(1, 100);
 
     this.searchSubscription = this.searchForm.controls.search.valueChanges
       .pipe(debounceTime(300), distinctUntilChanged())
@@ -157,6 +169,11 @@ export default class List implements OnInit, OnDestroy {
     this.confirmDialog.warning();
   }
 
+  public onAssignCategories() {
+    this.bulkCategoryIds.set([]);
+    this.categoryDialog.show();
+  }
+
   public onCreateProduct(): void {
     if (!this.planStore.canCreateProduct()) {
       this.planLimitDialog.show();
@@ -186,6 +203,18 @@ export default class List implements OnInit, OnDestroy {
         });
       }
     }
+  }
+
+  public async onConfirmCategoryAssign() {
+    const productIds = Array.from(this.selectedIds());
+    const categoryIds = this.bulkCategoryIds();
+
+    const result = await this.productFacade.replaceCategories({ productIds, categoryIds });
+    result.mapRight(() => {
+      this.categoryDialog.hide();
+      this.clearSelection();
+      this.refreshList();
+    });
   }
 
   public getDeleteDialogContent(): string {

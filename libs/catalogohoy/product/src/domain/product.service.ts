@@ -1,7 +1,7 @@
 import { E } from '@shared/domain';
 import { ProductList } from './product-list.model';
 import { Product } from './product.model';
-import { CreateProductInput, UpdateProductInput } from './product.type';
+import { CreateProductInput, ReplaceCategoriesInput, UpdateProductInput } from './product.type';
 
 export interface BaseProductService {
   getAll(
@@ -14,4 +14,5 @@ export interface BaseProductService {
   update(input: UpdateProductInput): Promise<E.Either<Error, void>>;
   delete(id: string): Promise<E.Either<Error, void>>;
   deleteMany(ids: string[]): Promise<E.Either<Error, void>>;
+  replaceCategories(input: ReplaceCategoriesInput): Promise<E.Either<Error, void>>;
 }

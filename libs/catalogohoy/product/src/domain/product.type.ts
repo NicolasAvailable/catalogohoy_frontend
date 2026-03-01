@@ -11,3 +11,8 @@ export type CreateProductInput = {
 };
 
 export type UpdateProductInput = CreateProductInput & { id: string };
+
+export type ReplaceCategoriesInput = {
+  productIds: string[];
+  categoryIds: string[];
+};

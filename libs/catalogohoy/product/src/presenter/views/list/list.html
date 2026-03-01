@@ -8,6 +8,16 @@
       <!-- Mobile selection buttons -->
       <ui-button
         class="sm:hidden"
+        (click)="onAssignCategories()"
+        [label]="'Categorías (' + selectedIds().size + ')'"
+        icon="tag"
+        severity="primary"
+        variant="outlined"
+        [fluid]="false"
+        size="small"
+      />
+      <ui-button
+        class="sm:hidden"
         (click)="onDeleteSelected()"
         [label]="'Eliminar (' + selectedIds().size + ')'"
         icon="trash"
@@ -25,6 +35,15 @@
         size="small"
       />
       <!-- Desktop selection buttons -->
+      <ui-button
+        class="hidden sm:block"
+        (click)="onAssignCategories()"
+        [label]="'Asignar categorías (' + selectedIds().size + ')'"
+        icon="tag"
+        severity="primary"
+        variant="outlined"
+        [fluid]="false"
+      />
       <ui-button
         class="hidden sm:block"
         (click)="onDeleteSelected()"
@@ -258,6 +277,7 @@
     </ui-table>
     }
   </section>
+
   <ui-confirm-dialog
     (confirm)="onConfirmDelete()"
     headerLabel="Eliminar producto"
@@ -265,6 +285,47 @@
     acceptLabel="Eliminar"
     rejectLabel="Cancelar"
   />
+
+  <!-- Dialog: asignación masiva de categorías -->
+  <ui-dialog
+    #categoryDialog
+    headerTitle="Asignar categorías"
+    styleClass="w-[32rem]"
+  >
+    <div class="flex flex-col gap-4 pt-2">
+      <p class="text-sm text-grey-400">
+        Se reemplazarán las categorías de los
+        <strong>{{ selectedIds().size }} productos</strong> seleccionados por las que elijas aquí.
+      </p>
+      <ui-multi-select
+        [options]="categoryStore.categoryList().categories"
+        [ngModel]="bulkCategoryIds()"
+        (ngModelChange)="bulkCategoryIds.set($event)"
+        optionLabel="name"
+        optionValue="id"
+        display="chip"
+        placeholder="Seleccionar categorías..."
+        styleClass="w-full"
+        appendTo="body"
+      />
+      <div class="flex justify-end gap-3 pt-2">
+        <ui-button
+          label="Cancelar"
+          variant="outlined"
+          severity="contrast"
+          [fluid]="false"
+          (click)="categoryDialog.hide()"
+        />
+        <ui-button
+          label="Asignar"
+          icon="check"
+          [fluid]="false"
+          (click)="onConfirmCategoryAssign()"
+        />
+      </div>
+    </div>
+  </ui-dialog>
+
   <lib-import-export-hub />
   <lib-plan-limit-dialog />
 </section>
