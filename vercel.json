@@ -1,6 +1,4 @@
 {
-  "buildCommand": "npm run build:catalogohoy",
-  "outputDirectory": "dist/apps/catalogohoy/browser",
   "rewrites": [
     {
       "source": "/(.*)",
