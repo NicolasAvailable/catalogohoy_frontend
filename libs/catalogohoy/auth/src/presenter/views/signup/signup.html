@@ -30,6 +30,7 @@
          STEP 1 — Choose method
     ══════════════════════════════════════════════════════ -->
     @if (step() === 1) {
+      <div class="step-enter flex flex-col gap-6">
       <div class="flex flex-col gap-1">
         <h1 class="text-3xl sm:text-4xl font-semibold text-grey-700">Crea tu catálogo</h1>
         <p class="text-base text-grey-400">Elige cómo quieres registrarte para comenzar.</p>
@@ -75,11 +76,16 @@
             Continuar con Google
           }
         </button>
+
+        @if (googleAccountExistsError()) {
+          <p class="text-sm text-red-500 text-center">Este correo de Google ya está registrado. <a routerLink="/login" class="font-semibold text-blue-500">Inicia sesión</a></p>
+        }
       </div>
 
       <div class="flex justify-center gap-1 text-base text-center mt-2">
         <p class="font-semibold text-grey-400">¿Ya tienes una cuenta?</p>
         <a routerLink="/login" class="font-semibold text-blue-500">Inicia sesión</a>
+      </div>
       </div>
     }
 
@@ -87,93 +93,99 @@
          STEP 2 — Credentials (email path only)
     ══════════════════════════════════════════════════════ -->
     @if (step() === 2) {
-      <div>
-        <button type="button" (click)="back()" class="flex items-center gap-1 text-sm text-grey-400 hover:text-grey-600 mb-4 transition-colors">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
-          </svg>
-          Volver
-        </button>
-        <h2 class="text-2xl font-semibold text-grey-700">Tus credenciales</h2>
-        <p class="text-sm text-grey-400 mt-1">Con estas podrás ingresar a tu catálogo.</p>
-      </div>
-
-      <form [formGroup]="credentialsForm" (keyup.enter)="nextStep()">
-        <div class="mb-4">
-          <label class="block font-medium text-sm text-grey-400 mb-1">Email</label>
-          <ui-input-text size="large" formControlName="email" placeholder="tu@correo.com" />
-          <ui-input-message [control]="credentialsForm.get('email')" error="required" text="El campo es obligatorio" />
-          <ui-input-message [control]="credentialsForm.get('email')" error="email" text="El formato no es válido" />
-          <ui-input-message [control]="credentialsForm.get('email')" error="whitespace" text="No puede contener espacios en blanco" />
-        </div>
-        <div class="mb-6">
-          <label class="block font-medium text-sm text-grey-400 mb-1">Contraseña</label>
-          <ui-input-password size="large" [feedback]="false" formControlName="password" placeholder="Mínimo 6 caracteres" />
-          <ui-input-message [control]="credentialsForm.get('password')" error="required" text="El campo es obligatorio" />
-          <ui-input-message [control]="credentialsForm.get('password')" error="minlength" text="Debe tener mínimo 6 caracteres" />
-          <ui-input-message [control]="credentialsForm.get('password')" error="whitespace" text="No puede contener espacios en blanco" />
-        </div>
-        <ui-button (click)="nextStep()" [disabled]="credentialsForm.invalid || loaderStore.isEnable()" label="Siguiente" severity="primary" styleClass="!py-4 !text-base" />
-      </form>
-    }
-
-    <!-- ══════════════════════════════════════════════════════
-         STEP 3 — Profile (both paths)
-    ══════════════════════════════════════════════════════ -->
-    @if (step() === 3) {
-      <div>
-        @if (method() === 'email') {
+      <div class="step-enter flex flex-col gap-6">
+        <div>
           <button type="button" (click)="back()" class="flex items-center gap-1 text-sm text-grey-400 hover:text-grey-600 mb-4 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
             </svg>
             Volver
           </button>
-        }
-        <h2 class="text-2xl font-semibold text-grey-700">Datos de tu tienda</h2>
-        <p class="text-sm text-grey-400 mt-1">
-          @if (method() === 'google') {
-            Conectado con Google. Ahora cuéntanos sobre tu tienda.
-          } @else {
-            Ya casi terminas. ¿Cómo se llama tu tienda?
-          }
-        </p>
+          <h2 class="text-2xl font-semibold text-grey-700">Tus credenciales</h2>
+          <p class="text-sm text-grey-400 mt-1">Con estas podrás ingresar a tu catálogo.</p>
+        </div>
+
+        <form [formGroup]="credentialsForm" (keyup.enter)="nextStep()">
+          <div class="mb-4">
+            <label class="block font-medium text-sm text-grey-400 mb-1">Email</label>
+            <ui-input-text size="large" formControlName="email" placeholder="tu@correo.com" />
+            <ui-input-message [control]="credentialsForm.get('email')" error="required" text="El campo es obligatorio" />
+            <ui-input-message [control]="credentialsForm.get('email')" error="email" text="El formato no es válido" />
+            <ui-input-message [control]="credentialsForm.get('email')" error="whitespace" text="No puede contener espacios en blanco" />
+            @if (emailExistsError()) {
+              <p class="text-xs text-red-500 mt-1">Este correo ya está registrado. <a routerLink="/login" class="font-semibold text-blue-500">Inicia sesión</a></p>
+            }
+          </div>
+          <div class="mb-6">
+            <label class="block font-medium text-sm text-grey-400 mb-1">Contraseña</label>
+            <ui-input-password size="large" [feedback]="false" formControlName="password" placeholder="Mínimo 6 caracteres" />
+            <ui-input-message [control]="credentialsForm.get('password')" error="required" text="El campo es obligatorio" />
+            <ui-input-message [control]="credentialsForm.get('password')" error="minlength" text="Debe tener mínimo 6 caracteres" />
+            <ui-input-message [control]="credentialsForm.get('password')" error="whitespace" text="No puede contener espacios en blanco" />
+          </div>
+          <ui-button (click)="nextStep()" [disabled]="credentialsForm.invalid || isCheckingEmail()" [label]="isCheckingEmail() ? 'Verificando...' : 'Siguiente'" severity="primary" styleClass="!py-4 !text-base" />
+        </form>
       </div>
+    }
 
-      <form [formGroup]="profileForm" (keyup.enter)="submit()">
-        <div class="mb-4">
-          <label class="block font-medium text-sm text-grey-400 mb-1">Tu nombre completo</label>
-          <ui-input-text size="large" formControlName="name" placeholder="María González" />
-          <ui-input-message [control]="profileForm.get('name')" error="required" text="El campo es obligatorio" />
-          <ui-input-message [control]="profileForm.get('name')" error="minlength" text="Debe tener mínimo 4 caracteres" />
-          <ui-input-message [control]="profileForm.get('name')" error="whitespace" text="No puede contener espacios en blanco" />
-        </div>
-        <div class="mb-2">
-          <label class="block font-medium text-sm text-grey-400 mb-1">Nombre de la tienda</label>
-          <ui-input-text size="large" formControlName="storeName" placeholder="Mi Tienda Génova" />
-          <ui-input-message [control]="profileForm.get('storeName')" error="required" text="El campo es obligatorio" />
-          <ui-input-message [control]="profileForm.get('storeName')" error="minlength" text="Debe tener mínimo 3 caracteres" />
-        </div>
-
-        <!-- URL preview -->
-        @if (slugPreview()) {
-          <p class="text-xs text-grey-400 mb-5 flex items-center gap-1">
-            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
-            </svg>
-            Tu catálogo estará en:
-            <span class="font-medium text-primary-500">{{ slugPreview() }}.catalogohoy.com</span>
+    <!-- ══════════════════════════════════════════════════════
+         STEP 3 — Profile (both paths)
+    ══════════════════════════════════════════════════════ -->
+    @if (step() === 3) {
+      <div class="step-enter flex flex-col gap-6">
+        <div>
+          @if (method() === 'email') {
+            <button type="button" (click)="back()" class="flex items-center gap-1 text-sm text-grey-400 hover:text-grey-600 mb-4 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+              </svg>
+              Volver
+            </button>
+          }
+          <h2 class="text-2xl font-semibold text-grey-700">Datos de tu tienda</h2>
+          <p class="text-sm text-grey-400 mt-1">
+            @if (method() === 'google') {
+              Conectado con Google. Ahora cuéntanos sobre tu tienda.
+            } @else {
+              Ya casi terminas. ¿Cómo se llama tu tienda?
+            }
           </p>
-        }
+        </div>
 
-        <ui-button
-          (click)="submit()"
-          [disabled]="profileForm.invalid || loaderStore.isEnable()"
-          label="Crear catálogo"
-          severity="primary"
-          styleClass="!py-4 !text-base"
-        />
-      </form>
+        <form [formGroup]="profileForm" (keyup.enter)="submit()">
+          <div class="mb-4">
+            <label class="block font-medium text-sm text-grey-400 mb-1">Tu nombre completo</label>
+            <ui-input-text size="large" formControlName="name" placeholder="María González" />
+            <ui-input-message [control]="profileForm.get('name')" error="required" text="El campo es obligatorio" />
+            <ui-input-message [control]="profileForm.get('name')" error="minlength" text="Debe tener mínimo 4 caracteres" />
+            <ui-input-message [control]="profileForm.get('name')" error="whitespace" text="No puede contener espacios en blanco" />
+          </div>
+          <div class="mb-6">
+            <label class="block font-medium text-sm text-grey-400 mb-1">Nombre de la tienda</label>
+            <ui-input-text size="large" formControlName="storeName" placeholder="Mi Tienda Génova" />
+            <ui-input-message [control]="profileForm.get('storeName')" error="required" text="El campo es obligatorio" />
+            <ui-input-message [control]="profileForm.get('storeName')" error="minlength" text="Debe tener mínimo 3 caracteres" />
+            <!-- URL preview -->
+            @if (slugPreview()) {
+              <p class="text-xs text-grey-400 mt-1.5 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                </svg>
+                Tu catálogo estará en:
+                <span class="font-medium text-primary-500">{{ slugPreview() }}.catalogohoy.com</span>
+              </p>
+            }
+          </div>
+
+          <ui-button
+            (click)="submit()"
+            [disabled]="profileForm.invalid || loaderStore.isEnable()"
+            label="Crear catálogo"
+            severity="primary"
+            styleClass="!py-4 !text-base"
+          />
+        </form>
+      </div>
     }
 
   </div>

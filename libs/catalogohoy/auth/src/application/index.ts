@@ -50,6 +50,14 @@ export class AuthenticationFacade {
     return this.authenticationService.getLoginRedirectUrl();
   }
 
+  public checkEmailExists(email: string) {
+    return this.authenticationService.checkEmailExists(email);
+  }
+
+  public checkUserHasStore() {
+    return this.authenticationService.checkUserHasStore();
+  }
+
   public logout() {
     return this.authenticationService.logout();
   }

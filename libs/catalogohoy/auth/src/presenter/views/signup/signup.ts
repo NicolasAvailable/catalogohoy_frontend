@@ -1,4 +1,5 @@
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
@@ -42,16 +43,22 @@ type Step = 1 | 2 | 3;
     IconComponent,
   ],
   templateUrl: './signup.html',
+  styleUrl: './signup.css',
 })
 export class Signup extends BaseComponent implements OnInit, OnDestroy {
   private readonly facade = inject(AuthenticationFacade);
   private readonly fb = inject(FormBuilder);
   private authSub: (() => void) | null = null;
   private googlePopup: Window | null = null;
+  private popupPollId: ReturnType<typeof setInterval> | null = null;
+  private slugSub?: Subscription;
 
   readonly step = signal<Step>(1);
   readonly method = signal<Method>(null);
   readonly isGoogleLoading = signal(false);
+  readonly isCheckingEmail = signal(false);
+  readonly emailExistsError = signal(false);
+  readonly googleAccountExistsError = signal(false);
 
   readonly credentialsForm = this.fb.group({
     email: ['', [Validators.required, Validators.email, whiteSpacesValidator()]],
@@ -63,10 +70,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     storeName: ['', [Validators.required, Validators.minLength(3)]],
   });
 
-  readonly slugPreview = computed(() => {
-    const storeName = this.profileForm.get('storeName')?.value ?? '';
-    return slugify(storeName);
-  });
+  readonly slugPreview = signal('');
 
   readonly totalSteps = computed(() => (this.method() === 'google' ? 2 : 3));
 
@@ -77,15 +81,23 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   });
 
   async ngOnInit() {
+    this.slugSub = this.profileForm.controls.storeName.valueChanges.subscribe(
+      (value) => this.slugPreview.set(slugify(value ?? ''))
+    );
+
     const pending = sessionStorage.getItem('auth_pending');
     if (pending === 'google_signup') {
+      sessionStorage.removeItem('auth_pending');
       const hasSession = await this.facade.getSession();
       if (hasSession) {
-        sessionStorage.removeItem('auth_pending');
+        const hasStore = await this.facade.checkUserHasStore();
+        if (hasStore) {
+          this.googleAccountExistsError.set(true);
+          await this.facade.logout();
+          return;
+        }
         this.method.set('google');
         this.step.set(3);
-      } else {
-        sessionStorage.removeItem('auth_pending');
       }
     }
   }
@@ -96,6 +108,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   }
 
   async chooseGoogle() {
+    this.googleAccountExistsError.set(false);
     this.isGoogleLoading.set(true);
 
     const url = await this.facade.loginWithGoogle('signup');
@@ -115,28 +128,67 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
 
     this.authSub = this.facade.onAuthStateChange(async (event) => {
       if (event === 'SIGNED_IN') {
-        this.authSub?.();
-        this.authSub = null;
-        this.googlePopup?.close();
-        this.googlePopup = null;
+        this.clearGooglePolling();
+        this.isGoogleLoading.set(false);
+
+        const hasStore = await this.facade.checkUserHasStore();
+        if (hasStore) {
+          this.googleAccountExistsError.set(true);
+          await this.facade.logout();
+          return;
+        }
+
         this.method.set('google');
         this.step.set(3);
-        this.isGoogleLoading.set(false);
       }
     });
+
+    this.popupPollId = setInterval(() => {
+      if (popup.closed) {
+        if (this.isGoogleLoading()) {
+          this.clearGooglePolling();
+          this.isGoogleLoading.set(false);
+        }
+      }
+    }, 500);
+  }
+
+  private clearGooglePolling() {
+    this.authSub?.();
+    this.authSub = null;
+    this.googlePopup?.close();
+    this.googlePopup = null;
+    if (this.popupPollId) {
+      clearInterval(this.popupPollId);
+      this.popupPollId = null;
+    }
   }
 
   ngOnDestroy() {
-    this.authSub?.();
-    this.googlePopup?.close();
+    this.clearGooglePolling();
+    this.slugSub?.unsubscribe();
   }
 
-  nextStep() {
-    if (this.credentialsForm.valid) {
-      this.step.set(3);
-    } else {
+  async nextStep() {
+    if (!this.credentialsForm.valid) {
       this.credentialsForm.markAllAsTouched();
+      return;
     }
+
+    this.emailExistsError.set(false);
+    this.isCheckingEmail.set(true);
+
+    const email = this.credentialsForm.value.email as string;
+    const exists = await this.facade.checkEmailExists(email);
+
+    this.isCheckingEmail.set(false);
+
+    if (exists) {
+      this.emailExistsError.set(true);
+      return;
+    }
+
+    this.step.set(3);
   }
 
   back() {

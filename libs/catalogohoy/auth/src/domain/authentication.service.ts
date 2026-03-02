@@ -23,5 +23,7 @@ export interface BaseAuthenticationService {
   resetPassword(
     input: ResetPasswordCredentials
   ): Promise<E.Either<Error, void>>;
+  checkEmailExists(email: string): Promise<boolean>;
+  checkUserHasStore(): Promise<boolean>;
   logout(): Promise<E.Either<Error, void>>;
 }

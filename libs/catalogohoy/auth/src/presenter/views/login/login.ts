@@ -43,6 +43,7 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
 
   private authSub: (() => void) | null = null;
   private googlePopup: Window | null = null;
+  private popupPollId: ReturnType<typeof setInterval> | null = null;
 
   async ngOnInit() {
     const pending = sessionStorage.getItem('auth_pending');
@@ -61,8 +62,18 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.clearGooglePolling();
+  }
+
+  private clearGooglePolling() {
     this.authSub?.();
+    this.authSub = null;
     this.googlePopup?.close();
+    this.googlePopup = null;
+    if (this.popupPollId) {
+      clearInterval(this.popupPollId);
+      this.popupPollId = null;
+    }
   }
 
   public async send() {
@@ -95,13 +106,19 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
 
     this.authSub = this.facade.onAuthStateChange(async (event) => {
       if (event === 'SIGNED_IN') {
-        this.authSub?.();
-        this.authSub = null;
-        this.googlePopup?.close();
-        this.googlePopup = null;
+        this.clearGooglePolling();
         await this.handlePostGoogleAuth();
       }
     });
+
+    this.popupPollId = setInterval(() => {
+      if (popup.closed) {
+        if (this.isGoogleLoading()) {
+          this.clearGooglePolling();
+          this.isGoogleLoading.set(false);
+        }
+      }
+    }, 500);
   }
 
   private async handlePostGoogleAuth() {

@@ -11,4 +11,5 @@ export interface ProfileEntity {
   name: string;
   email: string;
   phone: string;
+  photo: string | null;
 }

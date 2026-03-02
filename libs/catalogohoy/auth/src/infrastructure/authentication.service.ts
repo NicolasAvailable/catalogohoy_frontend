@@ -108,10 +108,13 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.right(undefined);
     }
   }
-  public async loginWithGoogle(redirectTo: string): Promise<string | null> {
+  public async loginWithGoogle(path: string): Promise<string | null> {
     const { data } = await this.client.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo, skipBrowserRedirect: true },
+      options: {
+        redirectTo: `${window.location.origin}/${path}`,
+        skipBrowserRedirect: true,
+      },
     });
     return data.url;
   }
@@ -157,6 +160,18 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(key ? MSG[key] : error.message));
     }
     return this.getLoginRedirectUrl();
+  }
+
+  public async checkEmailExists(email: string): Promise<boolean> {
+    const { data } = await this.client.rpc('check_email_exists', {
+      p_email: email,
+    });
+    return data === true;
+  }
+
+  public async checkUserHasStore(): Promise<boolean> {
+    const { data } = await this.client.rpc('check_user_has_store');
+    return data === true;
   }
 
   public async logout(): Promise<E.Either<Error, void>> {
