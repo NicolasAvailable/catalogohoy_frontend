@@ -129,8 +129,10 @@
       <div class="catalog-addon-stepper">
         <div class="catalog-addon-stepper__info">
           <ui-icon name="folder-plus" styleClass="size-4 shrink-0 text-violet-500" />
-          <span class="catalog-addon-stepper__label">Catálogos adicionales</span>
-          <span class="catalog-addon-stepper__unit-price">+${{ catalogAddonDisplayCost() }}/{{ periodLabel() }} c/u</span>
+          <div class="catalog-addon-stepper__text">
+            <span class="catalog-addon-stepper__label">Catálogos adicionales</span>
+            <span class="catalog-addon-stepper__unit-price">+${{ catalogAddonDisplayCost() }}/{{ periodLabel() }} c/u</span>
+          </div>
         </div>
         <div class="catalog-addon-stepper__controls">
           <button

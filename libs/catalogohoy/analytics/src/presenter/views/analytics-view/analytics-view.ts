@@ -84,13 +84,34 @@ export class AnalyticsViewComponent {
   // ─── Chart: Active Hours heatmap ─────────────────────────────
   protected readonly activeHoursMode = signal<'unique-users' | 'pageviews'>('unique-users');
 
+  /**
+   * Shifts a UTC 7×24 matrix to America/Caracas (UTC-4, no DST).
+   * Events with utcHour < 4 cross midnight and belong to the previous day.
+   */
+  private _shiftMatrixToCaracas(utcMatrix: number[][]): number[][] {
+    const OFFSET = -4; // America/Caracas = UTC-4
+    const result: number[][] = Array.from({ length: 7 }, () => new Array(24).fill(0));
+    for (let day = 0; day < 7; day++) {
+      for (let hour = 0; hour < 24; hour++) {
+        const value = utcMatrix[day]?.[hour] ?? 0;
+        if (value === 0) continue;
+        const caracasHour = (hour + OFFSET + 24) % 24;
+        const caracasDay = hour + OFFSET < 0 ? (day - 1 + 7) % 7 : day;
+        result[caracasDay][caracasHour] += value;
+      }
+    }
+    return result;
+  }
+
   protected readonly chartActiveHours = computed<ApexOptions>(() => {
     const data = this.analyticsStore.data()?.activeHours;
     const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    const matrix =
+    const rawMatrix =
       this.activeHoursMode() === 'unique-users'
         ? data?.byUniqueUsers
         : data?.byPageViews;
+
+    const matrix = rawMatrix ? this._shiftMatrixToCaracas(rawMatrix) : undefined;
 
     // Reverse so Sun (index 0) renders at the top in ApexCharts heatmap
     const series = [...days].reverse().map((day, ri) => {

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { isDevMode, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { TenantMapper } from '@catalogohoy/tenant';
 import { E } from '@shared/domain';
@@ -39,8 +39,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    const redirectUrl = `https://${tenant.slug}.catalogohoy.com/admin?${this.authenticationTokenService.AUTH_CONFIG_KEY}=${this.authenticationTokenService.authConfigValue}`;
-    return E.right(redirectUrl);
+    return E.right(this._buildRedirectUrl(tenant.slug));
   }
 
   public async signup(
@@ -70,8 +69,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    const redirectUrl = `https://${tenant.slug}.catalogohoy.com/admin?${this.authenticationTokenService.AUTH_CONFIG_KEY}=${this.authenticationTokenService.authConfigValue}`;
-    return E.right(redirectUrl);
+    return E.right(this._buildRedirectUrl(tenant.slug));
   }
 
   public async forgottenPassword(input: ForgottenPasswordCredentials) {
@@ -138,8 +136,16 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (error) return E.left(new Error(error.message));
     if (!tenantRows?.length) return E.left(new Error('no_tenant'));
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    const redirectUrl = `https://${tenant.slug}.catalogohoy.com/admin?${this.authenticationTokenService.AUTH_CONFIG_KEY}=${this.authenticationTokenService.authConfigValue}`;
-    return E.right(redirectUrl);
+    return E.right(this._buildRedirectUrl(tenant.slug));
+  }
+
+  private _buildRedirectUrl(slug: string): string {
+    const key = this.authenticationTokenService.AUTH_CONFIG_KEY;
+    const value = encodeURIComponent(this.authenticationTokenService.authConfigValue ?? '');
+    if (isDevMode()) {
+      return `http://localhost:4200/admin?${key}=${value}`;
+    }
+    return `https://${slug}.catalogohoy.com/admin?${key}=${value}`;
   }
 
   public async completeGoogleSignup(
