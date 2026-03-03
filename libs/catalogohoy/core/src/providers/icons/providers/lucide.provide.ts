@@ -25,6 +25,7 @@ import {
   CircleAlert,
   CirclePlus,
   CircleUser,
+  CircleX,
   Clock,
   Coins,
   Copy,
@@ -210,6 +211,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Shield,
       ChevronUp,
       ChevronDownIcon,
+      CircleX,
     })
   );
 };

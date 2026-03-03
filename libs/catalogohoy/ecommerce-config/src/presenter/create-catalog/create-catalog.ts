@@ -2,6 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { PlanStore } from '@catalogohoy/plan';
 import { TenantService } from '@catalogohoy/tenant';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { IconComponent } from '@ui';
 
 type SlugStatus = 'idle' | 'checking' | 'available' | 'taken';
@@ -19,6 +20,7 @@ type SlugStatus = 'idle' | 'checking' | 'available' | 'taken';
 export class CreateCatalog implements OnInit {
   private readonly planStore = inject(PlanStore);
   private readonly tenantService = inject(TenantService);
+  private readonly permissionsStore = inject(TeamPermissionsStore);
   private readonly router = inject(Router);
 
   public readonly name = signal('');
@@ -27,7 +29,11 @@ export class CreateCatalog implements OnInit {
   public readonly isSubmitting = signal(false);
 
   public readonly isLoading = this.planStore.isLoading;
-  public readonly canCreate = this.planStore.canCreateCatalog;
+  // Team members (non-owners) always get to create their own catalog for free;
+  // only the owner of the current tenant is subject to plan slot limits.
+  public readonly canCreate = computed(() =>
+    !this.permissionsStore.isOwner() || this.planStore.canCreateCatalog()
+  );
 
   // Catalog slots purchase
   public readonly addonQty = signal(1);

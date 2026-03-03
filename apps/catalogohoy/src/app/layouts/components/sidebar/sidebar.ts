@@ -63,10 +63,10 @@ export class Sidebar {
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('analiticas', 'view')
   );
   public readonly canViewRates = computed(
-    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('tasas', 'view')
+    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('tasas', 'edit')
   );
   public readonly canViewCatalog = computed(
-    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('catalogo', 'view')
+    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('catalogo', 'edit')
   );
   public readonly canViewTeam = computed(
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'view')

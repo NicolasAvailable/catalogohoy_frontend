@@ -31,12 +31,12 @@ export const adminRoutes: Route[] = [
   },
   {
     path: 'exchange-rates',
-    canActivate: [teamPermissionGuard('tasas', 'view')],
+    canActivate: [teamPermissionGuard('tasas', 'edit')],
     loadChildren: () => import('@catalogohoy/rate').then((m) => m.RATE_ROUTES),
   },
   {
     path: 'catalog',
-    canActivate: [teamPermissionGuard('catalogo', 'view')],
+    canActivate: [teamPermissionGuard('catalogo', 'edit')],
     loadChildren: () =>
       import('@catalogohoy/ecommerce-config').then(
         (m) => m.ecommerceConfigRoutes
