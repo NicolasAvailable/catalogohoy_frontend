@@ -7,7 +7,9 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { CheckboxComponent } from '@ui';
 import {
   ACTION_LABELS,
   MODULE_ACTIONS,
@@ -20,7 +22,7 @@ import {
 @Component({
   selector: 'lib-permission-picker',
   standalone: true,
-  imports: [NgClass, LucideAngularModule],
+  imports: [NgClass, LucideAngularModule, FormsModule, CheckboxComponent],
   templateUrl: './permission-picker.html',
   styleUrl: './permission-picker.css',
 })
@@ -91,8 +93,7 @@ export class PermissionPickerComponent {
     return count > 0 && !this.isModuleAllSelected(mod);
   }
 
-  protected toggleAllModule(mod: PermissionModule, event: Event): void {
-    event.stopPropagation();
+  protected toggleAllModule(mod: PermissionModule): void {
     if (this.disabled()) return;
     const allSelected = this.isModuleAllSelected(mod);
     this.localPermissions.update((set) => {

@@ -253,8 +253,14 @@ export const TenantStore = signalStore(
 
       // Método para recibir el TenantList desde ProfileStore
       setFromProfile(tenantList: TenantList): void {
+        // Prioridad: subdominio actual > is_default > primero de la lista
+        const parts = window.location.hostname.split('.');
+        const currentSlug = parts.length >= 3 ? parts[0] : null;
+        const subdomainTenant = currentSlug
+          ? tenantList.items.find((t) => t.slug === currentSlug)
+          : null;
         const defaultTenant = tenantList.items.find((t) => t.isDefault);
-        const tenant = defaultTenant ?? tenantList.items[0];
+        const tenant = subdomainTenant ?? defaultTenant ?? tenantList.items[0];
 
         patchState(store, {
           tenantList,

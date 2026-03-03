@@ -81,9 +81,22 @@ export class Sidebar {
   public readonly showCatalogSwitcher = signal(false);
   public readonly allTenants = computed(() => this.profileStore.profile().tenantList.tenants);
   public readonly isOwner = computed(() => this.permissionsStore.isOwner());
-  public readonly currentTenantSlug = computed(
-    () => this.profileStore.profile().tenantList.first?.slug ?? ''
+
+  // Slug derivado del subdominio actual (tech-fone en tech-fone.catalogohoy.com)
+  private readonly subdomainSlug: string = (() => {
+    const parts = window.location.hostname.split('.');
+    return parts.length >= 3 ? parts[0] : '';
+  })();
+
+  public readonly currentTenantSlug = computed(() =>
+    this.subdomainSlug || this.tenantStore.tenantSlug() || ''
   );
+
+  public readonly currentTenant = computed(() => {
+    const slug = this.currentTenantSlug();
+    const tenants = this.profileStore.profile().tenantList.tenants;
+    return tenants.find((t) => t.slug === slug) ?? this.profileStore.profile().tenantList.first;
+  });
 
   public toggleCatalogSwitcher() {
     this.showCatalogSwitcher.update((v) => !v);
@@ -91,7 +104,7 @@ export class Sidebar {
 
   public openTenantCatalog(tenant: Tenant) {
     if (tenant.slug === this.currentTenantSlug()) return;
-    window.location.href = this.authService.buildTenantAdminUrl(tenant.slug);
+    window.open(this.authService.buildTenantAdminUrl(tenant.slug), '_blank');
     this.showCatalogSwitcher.set(false);
   }
 

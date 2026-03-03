@@ -1,64 +1,84 @@
 <div class="permission-picker">
-  <label class="permission-picker__select-all">
-    <input
-      type="checkbox"
-      [checked]="allSelected()"
+  <!-- Seleccionar todos -->
+  <label class="permission-picker__select-all" for="perm-select-all">
+    <ui-checkbox
+      checkboxId="perm-select-all"
+      [size]="'small'"
+      [ngModel]="allSelected()"
+      (valueChange)="toggleAll()"
       [disabled]="disabled()"
-      (change)="toggleAll()"
     />
     <span>Seleccionar todos</span>
   </label>
-  @for (mod of modules; track mod) {
-    <div class="permission-picker__module" [ngClass]="{ 'is-expanded': expandedModule() === mod }">
-      <div class="permission-picker__module-header" (click)="toggleModule(mod)">
-        <input
-          type="checkbox"
-          class="permission-picker__module-check"
-          [checked]="isModuleAllSelected(mod)"
-          [disabled]="disabled()"
-          (change)="toggleAllModule(mod, $event)"
-          (click)="$event.stopPropagation()"
-        />
-        <span class="permission-picker__module-label">{{ MODULE_LABELS[mod] }}</span>
-        @if (isModulePartiallySelected(mod)) {
-          <span class="permission-picker__partial-dot"></span>
-        }
-        <span class="permission-picker__module-badge" [class.permission-picker__module-badge--active]="moduleCount()(mod) > 0">
-          {{ moduleCount()(mod) }} de {{ MODULE_ACTIONS[mod].length }}
-        </span>
-        <lucide-icon name="chevron-down" class="permission-picker__chevron" [size]="16" />
-      </div>
 
-      @if (expandedModule() === mod) {
-        <div class="permission-picker__actions">
-          @for (action of MODULE_ACTIONS[mod]; track action) {
-            <label class="permission-picker__action">
-              <input
-                type="checkbox"
-                [checked]="hasPermission(mod, action)"
-                [disabled]="disabled()"
-                (change)="togglePermission(mod, action)"
-              />
-              <span>{{ ACTION_LABELS[action] }}</span>
-            </label>
-          }
-        </div>
+  @for (mod of modules; track mod) {
+  <div
+    class="permission-picker__module"
+    [ngClass]="{ 'is-expanded': expandedModule() === mod }"
+  >
+    <div class="permission-picker__module-header" (click)="toggleModule(mod)">
+      <!-- Wrapper para evitar que el click en el checkbox abra/cierre el acordeón -->
+      <div (click)="$event.stopPropagation()">
+        <ui-checkbox
+          [ngModel]="isModuleAllSelected(mod)"
+          [disabled]="disabled()"
+          (valueChange)="toggleAllModule(mod)"
+          [size]="'small'"
+        />
+      </div>
+      <span class="permission-picker__module-label"
+        >{{ MODULE_LABELS[mod] }}</span
+      >
+      @if (isModulePartiallySelected(mod)) {
+      <span class="permission-picker__partial-dot"></span>
+      }
+      <span
+        class="permission-picker__module-badge"
+        [class.permission-picker__module-badge--active]="moduleCount()(mod) > 0"
+      >
+        {{ moduleCount()(mod) }} de {{ MODULE_ACTIONS[mod].length }}
+      </span>
+      <lucide-icon
+        name="chevron-down"
+        class="permission-picker__chevron"
+        [size]="16"
+      />
+    </div>
+
+    @if (expandedModule() === mod) {
+    <div class="permission-picker__actions">
+      @for (action of MODULE_ACTIONS[mod]; track action) {
+      <label class="permission-picker__action" [for]="mod + '-' + action">
+        <ui-checkbox
+          [checkboxId]="mod + '-' + action"
+          [ngModel]="hasPermission(mod, action)"
+          [disabled]="disabled()"
+          (valueChange)="togglePermission(mod, action)"
+          [size]="'small'"
+        />
+        <span>{{ ACTION_LABELS[action] }}</span>
+      </label>
       }
     </div>
-  }
-  @if (!hideActions()) {
-    <div class="permission-picker__footer">
-      <button type="button" class="permission-picker__btn-cancel" (click)="onCancel()">
-        Cancelar
-      </button>
-      <button
-        type="button"
-        class="permission-picker__btn-save"
-        [disabled]="disabled()"
-        (click)="onSave()"
-      >
-        Guardar
-      </button>
-    </div>
+    }
+  </div>
+  } @if (!hideActions()) {
+  <div class="permission-picker__footer">
+    <button
+      type="button"
+      class="permission-picker__btn-cancel"
+      (click)="onCancel()"
+    >
+      Cancelar
+    </button>
+    <button
+      type="button"
+      class="permission-picker__btn-save"
+      [disabled]="disabled()"
+      (click)="onSave()"
+    >
+      Guardar
+    </button>
+  </div>
   }
 </div>

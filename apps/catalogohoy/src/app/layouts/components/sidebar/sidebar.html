@@ -18,7 +18,7 @@
         <div class="h-3 w-32 bg-grey-100 rounded-md"></div>
       </div>
     </div>
-    } @else if (profileStore.profile().tenantList.first; as tenant) {
+    } @else if (currentTenant(); as tenant) {
     <div class="flex items-center gap-3 h-16">
       @if (tenant.logo) {
       <img
