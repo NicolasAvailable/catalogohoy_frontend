@@ -74,6 +74,7 @@ import {
   Settings,
   Settings2,
   Share2,
+  Shield,
   ShieldCheck,
   ShoppingBag,
   ShoppingBagIcon,
@@ -204,6 +205,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       UsersRound,
       UserPlus,
       StoreIcon,
+      Shield,
     })
   );
 };
