@@ -2,9 +2,10 @@ import { NgClass } from '@angular/common';
 import {
   Component,
   computed,
+  effect,
   input,
-  linkedSignal,
   output,
+  signal,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
@@ -33,11 +34,14 @@ export class PermissionPickerComponent {
   readonly cancel = output<void>();
   readonly change = output<PermissionKey[]>();
 
-  protected readonly expandedModule = linkedSignal<PermissionModule | null>(() => null);
-  protected readonly localPermissions = linkedSignal<PermissionKey[], Set<PermissionKey>>({
-    source: () => this.currentPermissions(),
-    computation: (perms) => new Set<PermissionKey>(perms),
-  });
+  protected readonly expandedModule = signal<PermissionModule | null>(null);
+  protected readonly localPermissions = signal<Set<PermissionKey>>(new Set());
+
+  constructor() {
+    effect(() => {
+      this.localPermissions.set(new Set(this.currentPermissions()));
+    });
+  }
 
   protected readonly modules = Object.keys(MODULE_ACTIONS) as PermissionModule[];
   protected readonly MODULE_LABELS = MODULE_LABELS;

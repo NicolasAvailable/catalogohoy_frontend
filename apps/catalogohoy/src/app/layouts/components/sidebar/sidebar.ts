@@ -14,6 +14,7 @@ import {
   PanelMenuComponent,
   PanelMenuItem,
 } from '@ui';
+import { TooltipModule } from 'primeng/tooltip';
 import { CATALOG_MENU, PRODUCTS_MENU, TEAMS_MENU } from './sidebar.constants';
 
 @Component({
@@ -26,6 +27,7 @@ import { CATALOG_MENU, PRODUCTS_MENU, TEAMS_MENU } from './sidebar.constants';
     PanelMenuComponent,
     IconComponent,
     AvatarComponent,
+    TooltipModule,
   ],
   templateUrl: './sidebar.html',
 })
@@ -70,6 +72,7 @@ export class Sidebar {
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'view')
   );
 
+  public readonly noPermissionTooltip = 'Habla con el dueño del catálogo para obtener acceso a este módulo';
   public readonly transitionOptions = '200ms cubic-bezier(0.86, 0, 0.07, 1)';
   public readonly productsMenu: PanelMenuItem[] = PRODUCTS_MENU;
   public readonly catalogMenu: PanelMenuItem[] = CATALOG_MENU;

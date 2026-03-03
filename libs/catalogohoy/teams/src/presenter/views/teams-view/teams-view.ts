@@ -97,7 +97,6 @@ export default class TeamsViewComponent implements OnInit {
       ...cache,
       [event.memberId]: event.permissions,
     }));
-    this.expandedMemberId.set(null);
     this.toaster.success('Permisos actualizados');
   }
 
