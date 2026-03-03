@@ -87,7 +87,7 @@ export class Sidebar {
   }
 
   public openTenantCatalog(tenant: Tenant) {
-    window.open(tenant.url, '_blank');
+    window.open(`${tenant.url}/admin`, '_blank');
     this.showCatalogSwitcher.set(false);
   }
 
