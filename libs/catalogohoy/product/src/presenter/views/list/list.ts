@@ -26,6 +26,7 @@ import {
 } from '@ui';
 import { TablePageEvent } from 'primeng/table';
 import { debounceTime, distinctUntilChanged, Subscription } from 'rxjs';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { ProductFacade } from '../../../application';
 import { Product } from '../../../domain';
 import { ProductStore } from '../../../infrastructure';
@@ -59,6 +60,9 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
 })
 export default class List implements OnInit, OnDestroy {
   private readonly router = inject(Router);
+  private readonly permissions = inject(TeamPermissionsStore);
+  protected readonly canCreateProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'create'));
+  protected readonly canDeleteProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'delete'));
   public readonly productStore = inject(ProductStore);
   public readonly productFacade = inject(ProductFacade);
   public readonly planStore = inject(PlanStore);

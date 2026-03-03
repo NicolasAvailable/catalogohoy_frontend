@@ -21,6 +21,15 @@ export const PRODUCTS_MENU: PanelMenuItem[] = [
   },
 ];
 
+export const TEAMS_MENU: PanelMenuItem[] = [
+  {
+    label: 'Equipo',
+    icon: 'users',
+    routerLink: '/admin/teams',
+    routerLinkActiveOptions: { exact: false },
+  },
+];
+
 export const CATALOG_MENU: PanelMenuItem[] = [
   {
     label: 'Mi catálogo',

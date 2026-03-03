@@ -61,6 +61,9 @@ export const PlanStore = signalStore(
     extraCatalogs: computed(
       () => store.tenantPlanUsage()?.extraCatalogs ?? 0
     ),
+    maxTeamMembers: computed(
+      () => store.tenantPlanUsage()?.plan.maxTeamMembers ?? 0
+    ),
     usagePercentage: computed(() => {
       const usage = store.tenantPlanUsage();
       if (!usage) return 0;

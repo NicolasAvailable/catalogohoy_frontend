@@ -35,7 +35,8 @@
         "libs/catalogohoy/ecommerce-config/src/index.ts"
       ],
       "@catalogohoy/plan": ["libs/catalogohoy/plan/src/index.ts"],
-      "@catalogohoy/analytics": ["libs/catalogohoy/analytics/src/index.ts"]
+      "@catalogohoy/analytics": ["libs/catalogohoy/analytics/src/index.ts"],
+      "@catalogohoy/teams": ["libs/catalogohoy/teams/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

@@ -26,4 +26,7 @@ export interface BaseAuthenticationService {
   checkEmailExists(email: string): Promise<boolean>;
   checkUserHasStore(): Promise<boolean>;
   logout(): Promise<E.Either<Error, void>>;
+  validateInviteToken(token: string): Promise<E.Either<Error, { email: string; tenantName: string; isRegistered: boolean }>>;
+  acceptInvite(token: string): Promise<E.Either<Error, void>>;
+  signupInvitee(credentials: { email: string; password: string; name: string }): Promise<E.Either<Error, void>>;
 }

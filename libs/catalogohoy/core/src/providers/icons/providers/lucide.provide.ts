@@ -51,6 +51,7 @@ import {
   Lock,
   LogOut,
   LucideAngularModule,
+  Mail,
   MapPin,
   Menu,
   MessageCircle,
@@ -69,6 +70,7 @@ import {
   RefreshCw,
   Save,
   Search,
+  Send,
   Settings,
   Settings2,
   Share2,
@@ -90,6 +92,9 @@ import {
   TriangleAlert,
   Upload,
   User,
+  UserPlus,
+  Users,
+  UsersRound,
   Wallet,
   X,
   XCircle,
@@ -192,6 +197,11 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Crown,
       TriangleAlert,
       User,
+      Users,
+      Send,
+      Mail,
+      UsersRound,
+      UserPlus,
     })
   );
 };

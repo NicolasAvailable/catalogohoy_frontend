@@ -16,6 +16,7 @@
         [fluid]="false"
         size="small"
       />
+      @if (canDeleteProduct()) {
       <ui-button
         class="sm:hidden"
         (click)="onDeleteSelected()"
@@ -25,6 +26,7 @@
         [fluid]="false"
         size="small"
       />
+      }
       <ui-button
         class="sm:hidden"
         (click)="clearSelection()"
@@ -44,6 +46,7 @@
         variant="outlined"
         [fluid]="false"
       />
+      @if (canDeleteProduct()) {
       <ui-button
         class="hidden sm:block"
         (click)="onDeleteSelected()"
@@ -52,6 +55,7 @@
         severity="danger"
         [fluid]="false"
       />
+      }
       <ui-button
         class="hidden sm:block"
         (click)="clearSelection()"
@@ -72,6 +76,7 @@
         [fluid]="false"
         size="small"
       />
+      @if (canCreateProduct()) {
       <ui-button
         class="sm:hidden"
         (click)="onCreateProduct()"
@@ -80,6 +85,7 @@
         [fluid]="false"
         size="small"
       />
+      }
       <!-- Desktop buttons -->
       <ui-button
         class="hidden sm:block"
@@ -90,6 +96,7 @@
         severity="contrast"
         [fluid]="false"
       />
+      @if (canCreateProduct()) {
       <ui-button
         class="hidden sm:block"
         (click)="onCreateProduct()"
@@ -97,6 +104,7 @@
         icon="circle-plus"
         [fluid]="false"
       />
+      }
       }
     </div>
   </header>
@@ -244,6 +252,7 @@
                 tooltip="Compartir"
                 tooltipPosition="bottom"
               />
+              @if (canDeleteProduct()) {
               <ui-button
                 (click)="onDelete(item)"
                 icon="trash"
@@ -253,6 +262,7 @@
                 tooltip="Eliminar"
                 tooltipPosition="bottom"
               />
+              }
             </div>
           </section>
         </ui-card>
@@ -266,12 +276,14 @@
           <p class="text-grey-300 text-sm mb-6 max-w-sm">
             Empieza creando tu primer producto para que aparezca en tu catalogo online.
           </p>
+          @if (canCreateProduct()) {
           <ui-button
             (click)="onCreateProduct()"
             label="Crear mi primer producto"
             icon="circle-plus"
             [fluid]="false"
           />
+          }
         </div>
       </ng-template>
     </ui-table>

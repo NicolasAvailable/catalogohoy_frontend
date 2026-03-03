@@ -7,6 +7,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Exception } from '@shared/domain';
@@ -62,6 +63,10 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private readonly confirmDialogService = inject(ConfirmDialogService);
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
+  private readonly permissions = inject(TeamPermissionsStore);
+  protected readonly canCreateOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'create'));
+  protected readonly canEditOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'edit'));
+  protected readonly canDeleteOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'delete'));
 
   private readonly searchSubject = new Subject<string>();
   private searchSubscription?: Subscription;

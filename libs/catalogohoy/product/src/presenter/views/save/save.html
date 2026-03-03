@@ -16,6 +16,7 @@
         [fluid]="false"
         size="small"
       />
+      @if (canEditProduct()) {
       <ui-button
         class="sm:hidden"
         (click)="create()"
@@ -24,6 +25,7 @@
         [fluid]="false"
         size="small"
       />
+      }
       <!-- Desktop buttons -->
       <ui-button
         class="hidden sm:block"
@@ -33,6 +35,7 @@
         severity="contrast"
         [fluid]="false"
       />
+      @if (canEditProduct()) {
       <ui-button
         class="hidden sm:block"
         (click)="create()"
@@ -40,6 +43,7 @@
         label="Guardar cambios"
         [fluid]="false"
       />
+      }
     </div>
   </header>
   <form

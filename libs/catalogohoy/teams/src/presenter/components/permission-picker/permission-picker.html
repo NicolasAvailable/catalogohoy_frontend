@@ -1,0 +1,46 @@
+<div class="permission-picker">
+  @for (mod of modules; track mod) {
+    <div class="permission-picker__module" [ngClass]="{ 'is-expanded': expandedModule() === mod }">
+      <button
+        type="button"
+        class="permission-picker__module-header"
+        (click)="toggleModule(mod)"
+      >
+        <span class="permission-picker__module-label">{{ MODULE_LABELS[mod] }}</span>
+        <span class="permission-picker__module-badge">
+          {{ moduleCount()(mod) }} de {{ MODULE_ACTIONS[mod].length }}
+        </span>
+        <lucide-icon name="chevron-down" class="permission-picker__chevron" [size]="16" />
+      </button>
+
+      @if (expandedModule() === mod) {
+        <div class="permission-picker__actions">
+          @for (action of MODULE_ACTIONS[mod]; track action) {
+            <label class="permission-picker__action">
+              <input
+                type="checkbox"
+                [checked]="hasPermission(mod, action)"
+                [disabled]="disabled()"
+                (change)="togglePermission(mod, action)"
+              />
+              <span>{{ ACTION_LABELS[action] }}</span>
+            </label>
+          }
+          <div class="permission-picker__footer">
+            <button type="button" class="permission-picker__btn-cancel" (click)="onCancel()">
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="permission-picker__btn-save"
+              [disabled]="disabled()"
+              (click)="onSave()"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

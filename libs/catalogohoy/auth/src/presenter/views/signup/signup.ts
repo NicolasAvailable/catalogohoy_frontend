@@ -1,7 +1,7 @@
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import {
   ButtonComponent,
@@ -48,11 +48,14 @@ type Step = 1 | 2 | 3;
 export class Signup extends BaseComponent implements OnInit, OnDestroy {
   private readonly facade = inject(AuthenticationFacade);
   private readonly fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
   private authSub: (() => void) | null = null;
   private googlePopup: Window | null = null;
   private popupPollId: ReturnType<typeof setInterval> | null = null;
   private slugSub?: Subscription;
+  private inviteToken: string | null = null;
 
+  readonly isInviteMode = signal(false);
   readonly step = signal<Step>(1);
   readonly method = signal<Method>(null);
   readonly isGoogleLoading = signal(false);
@@ -84,6 +87,20 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     this.slugSub = this.profileForm.controls.storeName.valueChanges.subscribe(
       (value) => this.slugPreview.set(slugify(value ?? ''))
     );
+
+    const skipStore = this.route.snapshot.queryParamMap.get('skip_store') === 'true';
+    this.inviteToken =
+      this.route.snapshot.queryParamMap.get('invite_token') ??
+      sessionStorage.getItem('pending_invite_token');
+
+    if (skipStore && this.inviteToken) {
+      this.isInviteMode.set(true);
+      this.profileForm.controls.storeName.clearValidators();
+      this.profileForm.controls.storeName.updateValueAndValidity();
+      this.method.set('email');
+      this.step.set(2);
+      return;
+    }
 
     const pending = sessionStorage.getItem('auth_pending');
     if (pending === 'google_signup') {
@@ -211,6 +228,20 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
       name: string;
       storeName: string;
     };
+
+    if (this.isInviteMode() && this.inviteToken) {
+      const { email, password } = this.credentialsForm.value as {
+        email: string;
+        password: string;
+      };
+      const signupResult = await this.facade.signupInvitee({ email, password, name });
+      if (signupResult.isLeft()) return;
+      await this.facade.acceptInvite(this.inviteToken);
+      sessionStorage.removeItem('pending_invite_token');
+      const redirectResult = await this.facade.getLoginRedirectUrl();
+      redirectResult.mapRight((url) => (window.location.href = url));
+      return;
+    }
 
     if (this.method() === 'google') {
       const result = await this.facade.completeGoogleSignup({ name, storeName });

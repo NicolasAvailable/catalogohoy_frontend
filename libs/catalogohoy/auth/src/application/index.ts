@@ -71,4 +71,16 @@ export class AuthenticationFacade {
   public resetPassword(input: ResetPasswordCredentials) {
     return new ResetPasswordUseCase(this.authenticationService).execute(input);
   }
+
+  public validateInviteToken(token: string) {
+    return this.authenticationService.validateInviteToken(token);
+  }
+
+  public acceptInvite(token: string) {
+    return this.authenticationService.acceptInvite(token);
+  }
+
+  public signupInvitee(credentials: { email: string; password: string; name: string }) {
+    return this.authenticationService.signupInvitee(credentials);
+  }
 }

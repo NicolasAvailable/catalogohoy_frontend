@@ -18,7 +18,7 @@ export class PlanService implements BasePlanService {
   public async getAll(): Promise<E.Either<Error, Plan[]>> {
     const { data, error } = await this.client
       .from('plans')
-      .select('id, name, description, price, max_products, max_catalogs, is_free, position')
+      .select('id, name, description, price, max_products, max_catalogs, max_team_members, is_free, position')
       .order('position', { ascending: true });
 
     if (error) {
@@ -32,6 +32,7 @@ export class PlanService implements BasePlanService {
       price: row.price,
       maxProducts: row.max_products,
       maxCatalogs: row.max_catalogs ?? 1,
+      maxTeamMembers: row.max_team_members ?? 0,
       isFree: row.is_free,
       position: row.position,
     }));
@@ -43,7 +44,7 @@ export class PlanService implements BasePlanService {
     const { data, error } = await this.client
       .from('tenants')
       .select(
-        'plans:plan_id (id, name, description, price, max_products, max_catalogs, is_free, position)'
+        'plans:plan_id (id, name, description, price, max_products, max_catalogs, max_team_members, is_free, position)'
       )
       .eq('id', tenantId)
       .single();
@@ -64,6 +65,7 @@ export class PlanService implements BasePlanService {
       price: row['price'] as number,
       maxProducts: row['max_products'] as number,
       maxCatalogs: (row['max_catalogs'] as number) ?? 1,
+      maxTeamMembers: (row['max_team_members'] as number) ?? 0,
       isFree: row['is_free'] as boolean,
       position: row['position'] as number,
     });

@@ -1,5 +1,6 @@
 import { Route } from '@angular/router';
 import { freePlanGuard } from '@catalogohoy/plan';
+import { teamPermissionGuard, TEAMS_ROUTES } from '@catalogohoy/teams';
 
 export const adminRoutes: Route[] = [
   {
@@ -43,8 +44,13 @@ export const adminRoutes: Route[] = [
   },
   {
     path: 'analytics',
-    canActivate: [freePlanGuard],
+    canActivate: [freePlanGuard, teamPermissionGuard('analiticas', 'view')],
     loadChildren: () =>
       import('@catalogohoy/analytics').then((m) => m.ANALYTICS_ROUTES),
+  },
+  {
+    path: 'teams',
+    canActivate: [freePlanGuard],
+    children: TEAMS_ROUTES,
   },
 ];

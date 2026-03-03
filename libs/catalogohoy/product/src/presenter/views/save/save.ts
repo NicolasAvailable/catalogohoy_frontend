@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   input,
   OnInit,
@@ -16,6 +17,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { CategoryStore } from '@catalogohoy/category';
 import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { Exception, is } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { whiteSpacesValidator } from '@shared/presenter';
@@ -60,6 +62,8 @@ export default class Save implements OnInit {
   private readonly productFacade = inject(ProductFacade);
   public readonly categoryStore = inject(CategoryStore);
   public readonly planStore = inject(PlanStore);
+  private readonly permissions = inject(TeamPermissionsStore);
+  protected readonly canEditProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'edit'));
 
   @ViewChild(PlanLimitDialogComponent)
   planLimitDialog!: PlanLimitDialogComponent;

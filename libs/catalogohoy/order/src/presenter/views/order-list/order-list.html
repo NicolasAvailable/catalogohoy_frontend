@@ -9,6 +9,7 @@
         Gestiona los pedidos y el estado de ventas de tu catálogo
       </p>
     </div>
+    @if (canCreateOrder()) {
     <ui-button
       (click)="onCreateOrder()"
       [fluid]="false"
@@ -16,6 +17,7 @@
       icon="circle-plus"
       styleClass="shadow-sm"
     />
+    }
   </header>
 
   <!-- Main Card Container -->
@@ -243,6 +245,7 @@
                   [tooltip]="expandedOrderId() === order.id ? 'Ocultar detalle' : 'Ver detalle'"
                   tooltipPosition="bottom"
                 />
+                @if (canEditOrder()) {
                 <ui-button
                   (click)="onEditOrder(order)"
                   icon="pencil"
@@ -252,6 +255,8 @@
                   tooltip="Editar"
                   tooltipPosition="bottom"
                 />
+                }
+                @if (canDeleteOrder()) {
                 <ui-button
                   (click)="onDeleteOrder(order)"
                   icon="trash"
@@ -261,6 +266,7 @@
                   tooltip="Eliminar"
                   tooltipPosition="bottom"
                 />
+                }
               </div>
             </td>
           </tr>

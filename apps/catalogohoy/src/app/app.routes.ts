@@ -2,6 +2,7 @@ import { Route } from '@angular/router';
 import { authenticationGuard } from '@catalogohoy/auth';
 import { profileResolver } from '@catalogohoy/profile';
 import { isValidSlugGuard } from '@catalogohoy/tenant';
+import { teamPermissionsResolver } from '@catalogohoy/teams';
 
 export const appRoutes: Route[] = [
   {
@@ -15,6 +16,7 @@ export const appRoutes: Route[] = [
     canActivate: [isValidSlugGuard, authenticationGuard],
     resolve: {
       profile: profileResolver,
+      teamPermissions: teamPermissionsResolver,
     },
     loadComponent: () => import('./layouts/layout').then((m) => m.default),
     loadChildren: () =>

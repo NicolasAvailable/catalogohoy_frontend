@@ -187,4 +187,49 @@ export class AuthenticationService implements BaseAuthenticationService {
     }
     return E.right(undefined);
   }
+
+  public async validateInviteToken(
+    token: string
+  ): Promise<E.Either<Error, { email: string; tenantName: string; isRegistered: boolean }>> {
+    const { data, error } = await this.client.functions.invoke<{
+      email: string;
+      tenantName: string;
+      isRegistered: boolean;
+    }>('accept-team-invite', {
+      body: { action: 'check', token },
+    });
+
+    if (error) return E.left(new Error(error.message));
+    if (!data) return E.left(new Error('Respuesta inválida del servidor'));
+    return E.right(data);
+  }
+
+  public async acceptInvite(token: string): Promise<E.Either<Error, void>> {
+    const { error } = await this.client.functions.invoke('accept-team-invite', {
+      body: { token },
+    });
+
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  public async signupInvitee(credentials: {
+    email: string;
+    password: string;
+    name: string;
+  }): Promise<E.Either<Error, void>> {
+    const { error } = await this.client.auth.signUp({
+      email: credentials.email,
+      password: credentials.password,
+      options: {
+        data: {
+          name: credentials.name,
+          display_name: credentials.name,
+        },
+      },
+    });
+
+    if (error) return E.left(errorMapper(error as AuthApiError));
+    return E.right(undefined);
+  }
 }

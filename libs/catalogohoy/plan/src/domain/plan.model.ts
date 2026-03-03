@@ -9,6 +9,7 @@ export interface Plan {
   price: number;
   maxProducts: number;
   maxCatalogs: number;
+  maxTeamMembers: number;
   isFree: boolean;
   position: number;
 }

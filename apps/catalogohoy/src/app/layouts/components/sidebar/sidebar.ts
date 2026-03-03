@@ -13,7 +13,7 @@ import {
   PanelMenuComponent,
   PanelMenuItem,
 } from '@ui';
-import { CATALOG_MENU, PRODUCTS_MENU } from './sidebar.constants';
+import { CATALOG_MENU, PRODUCTS_MENU, TEAMS_MENU } from './sidebar.constants';
 
 @Component({
   selector: 'app-sidebar',
@@ -44,9 +44,14 @@ export class Sidebar {
     () => this.planStore.currentPlan()?.isFree ?? false
   );
 
+  public readonly teamsLocked = computed(
+    () => this.planStore.currentPlan()?.isFree ?? false
+  );
+
   public readonly transitionOptions = '200ms cubic-bezier(0.86, 0, 0.07, 1)';
   public readonly productsMenu: PanelMenuItem[] = PRODUCTS_MENU;
   public readonly catalogMenu: PanelMenuItem[] = CATALOG_MENU;
+  public readonly teamsMenu: PanelMenuItem[] = TEAMS_MENU;
 
   public readonly showCatalogSwitcher = signal(false);
   public readonly allTenants = computed(() => this.profileStore.profile().tenantList.tenants);

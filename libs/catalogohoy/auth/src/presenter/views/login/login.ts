@@ -1,6 +1,6 @@
 import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import {
   ButtonComponent,
@@ -27,6 +27,8 @@ import { LoginCredentials } from '../../../domain';
 })
 export class Login extends BaseComponent implements OnInit, OnDestroy {
   private readonly facade = inject(AuthenticationFacade);
+  private readonly route = inject(ActivatedRoute);
+  private pendingInviteToken: string | null = null;
   public readonly form = inject(FormBuilder).group({
     email: [
       '',
@@ -46,6 +48,10 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
   private popupPollId: ReturnType<typeof setInterval> | null = null;
 
   async ngOnInit() {
+    this.pendingInviteToken =
+      this.route.snapshot.queryParamMap.get('invite_token') ??
+      sessionStorage.getItem('pending_invite_token');
+
     const pending = sessionStorage.getItem('auth_pending');
     if (pending !== 'google_login') return;
 
@@ -81,7 +87,13 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
       const result = await this.facade.login(
         this.form.value as LoginCredentials
       );
-      result.mapRight((url) => (window.location.href = url));
+      result.mapRight(async (url) => {
+        if (this.pendingInviteToken) {
+          await this.facade.acceptInvite(this.pendingInviteToken);
+          sessionStorage.removeItem('pending_invite_token');
+        }
+        window.location.href = url;
+      });
     }
   }
 
