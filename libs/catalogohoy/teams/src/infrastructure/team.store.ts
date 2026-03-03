@@ -47,10 +47,13 @@ export const TeamStore = signalStore(
       tenantStore = inject(TenantStore)
     ) => ({
       async load(): Promise<void> {
-        const tenantId = await tenantStore.getTenantIdAsync();
-        if (!tenantId) return;
-
         patchState(store, { isLoading: true, error: null });
+
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) {
+          patchState(store, { isLoading: false });
+          return;
+        }
 
         const teamResult = await teamService.getOrCreateTeam(tenantId);
         if (teamResult.isLeft()) {
@@ -67,14 +70,17 @@ export const TeamStore = signalStore(
           .mapLeft((err) => patchState(store, { isLoading: false, error: err.message }));
       },
 
-      async inviteMember(email: string): Promise<string | null> {
+      async inviteMember(
+        email: string,
+        permissions: Array<{ module: PermissionModule; action: PermissionAction }> = []
+      ): Promise<string | null> {
         const tenantId = await tenantStore.getTenantIdAsync();
         const teamId = store.teamId();
         if (!tenantId || !teamId) return 'No se pudo obtener información del equipo.';
 
         patchState(store, { isInviting: true, error: null });
 
-        const result = await teamService.inviteMember({ teamId, email, tenantId });
+        const result = await teamService.inviteMember({ teamId, email, tenantId, permissions });
 
         return result
           .mapRight((member) => {

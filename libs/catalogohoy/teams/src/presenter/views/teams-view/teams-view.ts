@@ -1,8 +1,9 @@
 import { Component, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { LucideAngularModule } from 'lucide-angular';
-import { ButtonComponent } from '@ui';
+import { ButtonComponent, ConfirmDialogComponent } from '@ui';
 import { ToastService } from '@shared/infrastructure';
+import { SkeletonModule } from 'primeng/skeleton';
 import { TeamPermissionsStore } from '../../../infrastructure/team-permissions.store';
 import { TeamStore } from '../../../infrastructure/team.store';
 import { PermissionAction, PermissionKey, PermissionModule, TeamMember } from '../../../domain';
@@ -17,10 +18,12 @@ import { TooltipModule } from 'primeng/tooltip';
   imports: [
     LucideAngularModule,
     ButtonComponent,
+    ConfirmDialogComponent,
     InviteMemberDialogComponent,
     PermissionPickerComponent,
     FormsModule,
     TooltipModule,
+    SkeletonModule,
   ],
   templateUrl: './teams-view.html',
   styleUrl: './teams-view.css',
@@ -34,8 +37,10 @@ export default class TeamsViewComponent implements OnInit {
   protected readonly expandedMemberId = signal<number | null>(null);
   protected readonly memberPermissionsCache = signal<Record<number, PermissionKey[]>>({});
   protected readonly savingMemberId = signal<number | null>(null);
+  protected readonly pendingRemoveMemberId = signal<number | null>(null);
 
   @ViewChild(InviteMemberDialogComponent) inviteDialog!: InviteMemberDialogComponent;
+  @ViewChild(ConfirmDialogComponent) confirmDialog!: ConfirmDialogComponent;
 
   async ngOnInit(): Promise<void> {
     await this.planStore.loadTenantPlanUsage();
@@ -73,14 +78,32 @@ export default class TeamsViewComponent implements OnInit {
     this.expandedMemberId.set(null);
   }
 
-  protected async removeMember(memberId: number): Promise<void> {
+  protected removeMember(memberId: number): void {
+    this.pendingRemoveMemberId.set(memberId);
+    this.confirmDialog.warning();
+  }
+
+  protected async onConfirmRemove(): Promise<void> {
+    const memberId = this.pendingRemoveMemberId();
+    if (memberId === null) return;
     const member = this.teamStore.members().find((m) => m.id === memberId);
     await this.teamStore.removeMember(memberId);
+    this.pendingRemoveMemberId.set(null);
     if (member?.status === 'pending') {
       this.toaster.success('Invitación cancelada');
     } else {
       this.toaster.success('Miembro eliminado del equipo');
     }
+  }
+
+  protected getConfirmRemoveContent(): string {
+    const memberId = this.pendingRemoveMemberId();
+    if (memberId === null) return '';
+    const member = this.teamStore.members().find((m) => m.id === memberId);
+    if (member?.status === 'pending') {
+      return `¿Cancelar la invitación enviada a <strong>${member.invitedEmail}</strong>?`;
+    }
+    return `¿Eliminar a <strong>${member?.invitedEmail}</strong> del equipo? Perderá acceso inmediatamente.`;
   }
 
   protected getMemberInitial(email: string): string {

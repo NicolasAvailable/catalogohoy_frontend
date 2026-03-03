@@ -1,17 +1,30 @@
 <div class="permission-picker">
+  <label class="permission-picker__select-all">
+    <input
+      type="checkbox"
+      [checked]="allSelected()"
+      [disabled]="disabled()"
+      (change)="toggleAll()"
+    />
+    <span>Seleccionar todos</span>
+  </label>
   @for (mod of modules; track mod) {
     <div class="permission-picker__module" [ngClass]="{ 'is-expanded': expandedModule() === mod }">
-      <button
-        type="button"
-        class="permission-picker__module-header"
-        (click)="toggleModule(mod)"
-      >
+      <div class="permission-picker__module-header" (click)="toggleModule(mod)">
+        <input
+          type="checkbox"
+          class="permission-picker__module-check"
+          [checked]="isModuleAllSelected(mod)"
+          [disabled]="disabled()"
+          (change)="toggleAllModule(mod, $event)"
+          (click)="$event.stopPropagation()"
+        />
         <span class="permission-picker__module-label">{{ MODULE_LABELS[mod] }}</span>
         <span class="permission-picker__module-badge">
           {{ moduleCount()(mod) }} de {{ MODULE_ACTIONS[mod].length }}
         </span>
         <lucide-icon name="chevron-down" class="permission-picker__chevron" [size]="16" />
-      </button>
+      </div>
 
       @if (expandedModule() === mod) {
         <div class="permission-picker__actions">
@@ -26,19 +39,21 @@
               <span>{{ ACTION_LABELS[action] }}</span>
             </label>
           }
-          <div class="permission-picker__footer">
-            <button type="button" class="permission-picker__btn-cancel" (click)="onCancel()">
-              Cancelar
-            </button>
-            <button
-              type="button"
-              class="permission-picker__btn-save"
-              [disabled]="disabled()"
-              (click)="onSave()"
-            >
-              Guardar
-            </button>
-          </div>
+          @if (!hideActions()) {
+            <div class="permission-picker__footer">
+              <button type="button" class="permission-picker__btn-cancel" (click)="onCancel()">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                class="permission-picker__btn-save"
+                [disabled]="disabled()"
+                (click)="onSave()"
+              >
+                Guardar
+              </button>
+            </div>
+          }
         </div>
       }
     </div>

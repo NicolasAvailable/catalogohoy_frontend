@@ -2,10 +2,9 @@ import { NgClass } from '@angular/common';
 import {
   Component,
   computed,
-  effect,
   input,
+  linkedSignal,
   output,
-  signal,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import {
@@ -25,15 +24,17 @@ import {
   styleUrl: './permission-picker.css',
 })
 export class PermissionPickerComponent {
-  readonly memberId = input.required<number>();
+  readonly memberId = input<number>(0);
   readonly currentPermissions = input<PermissionKey[]>([]);
   readonly disabled = input<boolean>(false);
+  readonly hideActions = input<boolean>(false);
 
   readonly save = output<{ memberId: number; permissions: PermissionKey[] }>();
   readonly cancel = output<void>();
+  readonly change = output<PermissionKey[]>();
 
-  protected readonly expandedModule = signal<PermissionModule | null>(null);
-  protected readonly localPermissions = signal<Set<PermissionKey>>(new Set());
+  protected readonly expandedModule = linkedSignal<PermissionModule | null>(() => null);
+  protected readonly localPermissions = linkedSignal(() => new Set<PermissionKey>(this.currentPermissions()));
 
   protected readonly modules = Object.keys(MODULE_ACTIONS) as PermissionModule[];
   protected readonly MODULE_LABELS = MODULE_LABELS;
@@ -46,14 +47,55 @@ export class PermissionPickerComponent {
       MODULE_ACTIONS[mod].filter((a) => perms.has(`${mod}:${a}`)).length;
   });
 
-  constructor() {
-    effect(() => {
-      this.localPermissions.set(new Set(this.currentPermissions()));
-    });
+  protected readonly allSelected = computed(() => {
+    const perms = this.localPermissions();
+    return this.modules.every((mod) =>
+      MODULE_ACTIONS[mod].every((action) => perms.has(`${mod}:${action}`))
+    );
+  });
+
+  protected toggleAll(): void {
+    if (this.disabled()) return;
+    if (this.allSelected()) {
+      this.localPermissions.set(new Set());
+    } else {
+      const all = new Set<PermissionKey>();
+      for (const mod of this.modules) {
+        for (const action of MODULE_ACTIONS[mod]) {
+          all.add(`${mod}:${action}` as PermissionKey);
+        }
+      }
+      this.localPermissions.set(all);
+    }
+    this.change.emit(Array.from(this.localPermissions()));
   }
 
   protected toggleModule(mod: PermissionModule): void {
     this.expandedModule.update((current) => (current === mod ? null : mod));
+  }
+
+  protected isModuleAllSelected(mod: PermissionModule): boolean {
+    const perms = this.localPermissions();
+    return MODULE_ACTIONS[mod].every((action) => perms.has(`${mod}:${action}`));
+  }
+
+  protected toggleAllModule(mod: PermissionModule, event: Event): void {
+    event.stopPropagation();
+    if (this.disabled()) return;
+    const allSelected = this.isModuleAllSelected(mod);
+    this.localPermissions.update((set) => {
+      const next = new Set(set);
+      for (const action of MODULE_ACTIONS[mod]) {
+        const key = `${mod}:${action}` as PermissionKey;
+        if (allSelected) {
+          next.delete(key);
+        } else {
+          next.add(key);
+        }
+      }
+      return next;
+    });
+    this.change.emit(Array.from(this.localPermissions()));
   }
 
   protected togglePermission(mod: PermissionModule, action: PermissionAction): void {
@@ -68,6 +110,7 @@ export class PermissionPickerComponent {
       }
       return next;
     });
+    this.change.emit(Array.from(this.localPermissions()));
   }
 
   protected hasPermission(mod: PermissionModule, action: PermissionAction): boolean {

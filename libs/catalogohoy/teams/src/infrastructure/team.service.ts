@@ -73,6 +73,7 @@ export class TeamService implements BaseTeamService {
     teamId: number;
     email: string;
     tenantId: number;
+    permissions?: Array<{ module: PermissionModule; action: PermissionAction }>;
   }): Promise<E.Either<Error, TeamMember>> {
     const { data, error } = await this.client.functions.invoke<{
       id: number;
@@ -84,7 +85,12 @@ export class TeamService implements BaseTeamService {
       invite_expires_at: string | null;
       created_at: string;
     }>('invite-team-member', {
-      body: { teamId: params.teamId, email: params.email, tenantId: params.tenantId },
+      body: {
+        teamId: params.teamId,
+        email: params.email,
+        tenantId: params.tenantId,
+        permissions: params.permissions ?? [],
+      },
     });
 
     if (error) return E.left(new Error(error.message));

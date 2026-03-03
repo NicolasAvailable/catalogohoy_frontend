@@ -83,6 +83,7 @@ import {
   Sparkles,
   SquareArrowOutUpRight,
   Store,
+  StoreIcon,
   Tag,
   Ticket,
   TicketPercent,
@@ -202,6 +203,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Mail,
       UsersRound,
       UserPlus,
+      StoreIcon,
     })
   );
 };

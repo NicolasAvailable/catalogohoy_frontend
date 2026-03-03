@@ -33,7 +33,7 @@ export const TEAMS_MENU: PanelMenuItem[] = [
 export const CATALOG_MENU: PanelMenuItem[] = [
   {
     label: 'Mi catálogo',
-    icon: 'tag',
+    icon: 'store',
     iconNext: 'chevron-right',
     state: { isOpen: false },
     items: [

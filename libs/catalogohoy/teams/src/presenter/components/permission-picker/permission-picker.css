@@ -6,6 +6,26 @@
   overflow: hidden;
 }
 
+.permission-picker__select-all {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--p-surface-200);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--p-surface-700);
+  background: var(--p-surface-50);
+}
+
+.permission-picker__select-all input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--p-primary-500);
+  cursor: pointer;
+}
+
 .permission-picker__module {
   border-bottom: 1px solid var(--p-surface-200);
 }
@@ -21,7 +41,6 @@
   width: 100%;
   padding: 0.75rem 1rem;
   background: transparent;
-  border: none;
   cursor: pointer;
   text-align: left;
   transition: background 0.15s;
@@ -29,6 +48,14 @@
 
 .permission-picker__module-header:hover {
   background: var(--p-surface-50);
+}
+
+.permission-picker__module-check {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--p-primary-500);
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .permission-picker__module-label {

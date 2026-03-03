@@ -10,6 +10,7 @@ export abstract class BaseTeamService {
     teamId: number;
     email: string;
     tenantId: number;
+    permissions?: Array<{ module: PermissionModule; action: PermissionAction }>;
   }): Promise<E.Either<Error, TeamMember>>;
   abstract removeMember(memberId: number): Promise<E.Either<Error, void>>;
   abstract updateMemberPermissions(

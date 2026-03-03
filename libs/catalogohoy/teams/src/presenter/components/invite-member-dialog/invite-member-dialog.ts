@@ -3,11 +3,13 @@ import { FormsModule } from '@angular/forms';
 import { ButtonComponent, DialogComponent, IconComponent } from '@ui';
 import { ToastService } from '@shared/infrastructure';
 import { TeamStore } from '../../../infrastructure';
+import { PermissionAction, PermissionKey, PermissionModule } from '../../../domain';
+import { PermissionPickerComponent } from '../permission-picker/permission-picker';
 
 @Component({
   selector: 'lib-invite-member-dialog',
   standalone: true,
-  imports: [DialogComponent, ButtonComponent, IconComponent, FormsModule],
+  imports: [DialogComponent, ButtonComponent, IconComponent, FormsModule, PermissionPickerComponent],
   templateUrl: './invite-member-dialog.html',
 })
 export class InviteMemberDialogComponent {
@@ -23,18 +25,29 @@ export class InviteMemberDialogComponent {
   protected readonly isEmailValid = computed(() =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email().trim())
   );
+  protected readonly selectedPermissions = signal<PermissionKey[]>([]);
 
   public show(): void {
     this.email.set('');
     this.errorMessage.set(null);
+    this.selectedPermissions.set([]);
     this.dialog.show();
+  }
+
+  protected onPermissionsChange(keys: PermissionKey[]): void {
+    this.selectedPermissions.set(keys);
   }
 
   protected async onInvite(): Promise<void> {
     const email = this.email().trim();
     if (!email) return;
 
-    const error = await this.teamStore.inviteMember(email);
+    const perms = this.selectedPermissions().map((key) => {
+      const [module, action] = key.split(':') as [PermissionModule, PermissionAction];
+      return { module, action };
+    });
+
+    const error = await this.teamStore.inviteMember(email, perms);
     if (error) {
       this.errorMessage.set(error);
       return;
