@@ -90,86 +90,88 @@
       <ui-icon name="home" size="16" />
       <a class="font-base font-semibold text-grey-700 mt-0.5">Inicio</a>
     </li>
-    @if (canViewProducts()) {
-      <li class="flex items-center gap-2 w-full rounded-md cursor-pointer">
-        <ui-panel-menu
-          [items]="productsMenu"
-          [transitionOptions]="transitionOptions"
-          class="w-full"
-          styleClass="w-full"
-        >
-          <ng-template #item let-item>
-            <div
-              (click)="toggle(item)"
-              [routerLink]="item.routerLink"
-              [ngClass]="{ 'bg-primary-50': isActive(item) }"
-              class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
-            >
-              <div class="flex items-center gap-2">
-                @if (item?.icon) {
-                <ui-icon [name]="item?.icon" size="16" styleClass="text-grey-700" />
-                }
-                <a [ngClass]="{ 'ml-2': !item?.icon }" class="font-base font-semibold text-grey-700 mt-0.5">{{item.label}}</a>
-              </div>
-              @if (item?.iconNext) {
-              <ui-icon [name]="item?.iconNext" [ngClass]="{ 'rotate-90': item?.state?.isOpen }" size="16" class="transition-transform duration-200 ease-in-out" styleClass="text-grey-700" />
-              }
-            </div>
-          </ng-template>
-        </ui-panel-menu>
-      </li>
-    }
-    @if (canViewOrders()) {
-      <li
-        routerLink="/admin/orders"
-        routerLinkActive="bg-primary-50"
-        [routerLinkActiveOptions]="{exact: true}"
-        class="flex items-center gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
-      >
-        <ui-icon name="notepad-text" size="16" />
-        <a class="font-base font-semibold text-grey-700 mt-0.5">Ordenes</a>
-      </li>
-    }
-    @if (canViewAnalytics()) {
-      <li
-        [routerLink]="analyticsLocked() ? null : '/admin/analytics'"
-        [routerLinkActive]="analyticsLocked() ? '' : 'bg-primary-50'"
-        [routerLinkActiveOptions]="{exact: true}"
-        [class.opacity-60]="analyticsLocked()"
-        [class.cursor-not-allowed]="analyticsLocked()"
-        [class.cursor-pointer]="!analyticsLocked()"
-        class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
-      >
-        <div class="flex items-center gap-2">
-          <ui-icon name="bar-chart-3" size="16" />
-          <a class="font-base font-semibold text-grey-700 mt-0.5">Analíticas</a>
-        </div>
-        @if (analyticsLocked()) {
-          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-600 text-[10px] font-semibold leading-none">
-            <ui-icon name="crown" size="10" styleClass="text-amber-500" />
-            Pro
-          </span>
-        }
-      </li>
-    }
-    @if (canViewRates()) {
-      <li
-        routerLink="/admin/exchange-rates"
-        routerLinkActive="bg-primary-50"
-        [routerLinkActiveOptions]="{exact: true}"
-        class="flex items-center gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
-      >
-        <ui-icon name="dollar-sign" size="16" />
-        <a class="font-base font-semibold text-grey-700 mt-0.5">Tasas del día</a>
-      </li>
-    }
     <li
-      [routerLink]="teamsLocked() ? null : '/admin/teams'"
-      [routerLinkActive]="teamsLocked() ? '' : 'bg-primary-50'"
+      class="flex items-center gap-2 w-full rounded-md cursor-pointer"
+      [class.opacity-50]="!canViewProducts()"
+      [class.pointer-events-none]="!canViewProducts()"
+    >
+      <ui-panel-menu
+        [items]="productsMenu"
+        [transitionOptions]="transitionOptions"
+        class="w-full"
+        styleClass="w-full"
+      >
+        <ng-template #item let-item>
+          <div
+            (click)="toggle(item)"
+            [routerLink]="item.routerLink"
+            [ngClass]="{ 'bg-primary-50': isActive(item) }"
+            class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+          >
+            <div class="flex items-center gap-2">
+              @if (item?.icon) {
+              <ui-icon [name]="item?.icon" size="16" styleClass="text-grey-700" />
+              }
+              <a [ngClass]="{ 'ml-2': !item?.icon }" class="font-base font-semibold text-grey-700 mt-0.5">{{item.label}}</a>
+            </div>
+            @if (item?.iconNext) {
+            <ui-icon [name]="item?.iconNext" [ngClass]="{ 'rotate-90': item?.state?.isOpen }" size="16" class="transition-transform duration-200 ease-in-out" styleClass="text-grey-700" />
+            }
+          </div>
+        </ng-template>
+      </ui-panel-menu>
+    </li>
+    <li
+      [routerLink]="canViewOrders() ? '/admin/orders' : null"
+      [routerLinkActive]="canViewOrders() ? 'bg-primary-50' : ''"
+      [routerLinkActiveOptions]="{exact: true}"
+      [class.opacity-50]="!canViewOrders()"
+      [class.cursor-not-allowed]="!canViewOrders()"
+      [class.cursor-pointer]="canViewOrders()"
+      class="flex items-center gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+    >
+      <ui-icon name="notepad-text" size="16" />
+      <a class="font-base font-semibold text-grey-700 mt-0.5">Ordenes</a>
+    </li>
+    <li
+      [routerLink]="(analyticsLocked() || !canViewAnalytics()) ? null : '/admin/analytics'"
+      [routerLinkActive]="(analyticsLocked() || !canViewAnalytics()) ? '' : 'bg-primary-50'"
+      [routerLinkActiveOptions]="{exact: true}"
+      [class.opacity-60]="analyticsLocked() || !canViewAnalytics()"
+      [class.cursor-not-allowed]="analyticsLocked() || !canViewAnalytics()"
+      [class.cursor-pointer]="!analyticsLocked() && canViewAnalytics()"
+      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+    >
+      <div class="flex items-center gap-2">
+        <ui-icon name="bar-chart-3" size="16" />
+        <a class="font-base font-semibold text-grey-700 mt-0.5">Analíticas</a>
+      </div>
+      @if (analyticsLocked()) {
+        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-600 text-[10px] font-semibold leading-none">
+          <ui-icon name="crown" size="10" styleClass="text-amber-500" />
+          Pro
+        </span>
+      }
+    </li>
+    <li
+      [routerLink]="canViewRates() ? '/admin/exchange-rates' : null"
+      [routerLinkActive]="canViewRates() ? 'bg-primary-50' : ''"
+      [routerLinkActiveOptions]="{exact: true}"
+      [class.opacity-50]="!canViewRates()"
+      [class.cursor-not-allowed]="!canViewRates()"
+      [class.cursor-pointer]="canViewRates()"
+      class="flex items-center gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+    >
+      <ui-icon name="dollar-sign" size="16" />
+      <a class="font-base font-semibold text-grey-700 mt-0.5">Tasas del día</a>
+    </li>
+    <li
+      [routerLink]="(teamsLocked() || !canViewTeam()) ? null : '/admin/teams'"
+      [routerLinkActive]="(teamsLocked() || !canViewTeam()) ? '' : 'bg-primary-50'"
       [routerLinkActiveOptions]="{exact: false}"
-      [class.opacity-60]="teamsLocked()"
-      [class.cursor-not-allowed]="teamsLocked()"
-      [class.cursor-pointer]="!teamsLocked()"
+      [class.opacity-60]="teamsLocked() || !canViewTeam()"
+      [class.cursor-not-allowed]="teamsLocked() || !canViewTeam()"
+      [class.cursor-pointer]="!teamsLocked() && canViewTeam()"
       class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
     >
       <div class="flex items-center gap-2">
@@ -183,35 +185,37 @@
         </span>
       }
     </li>
-    @if (canViewCatalog()) {
-      <li class="flex items-center gap-2 w-full rounded-md cursor-pointer">
-        <ui-panel-menu
-          [items]="catalogMenu"
-          [transitionOptions]="transitionOptions"
-          class="w-full"
-          styleClass="w-full"
-        >
-          <ng-template #item let-item>
-            <div
-              (click)="toggle(item)"
-              [routerLink]="item['data']?.['externalUrl'] ? null : item.routerLink"
-              [ngClass]="{ 'bg-primary-50': isActive(item) }"
-              class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
-            >
-              <div class="flex items-center gap-2">
-                @if (item?.icon) {
-                <ui-icon [name]="item?.icon" size="16" styleClass="text-grey-700" />
-                }
-                <a [ngClass]="{ 'ml-2': !item?.icon }" class="font-base font-semibold text-grey-700 mt-0.5">{{item.label}}</a>
-              </div>
-              @if (item?.iconNext) {
-              <ui-icon [name]="item?.iconNext" [ngClass]="{ 'rotate-90': item?.state?.isOpen }" size="16" class="transition-transform duration-200 ease-in-out" styleClass="text-grey-700" />
+    <li
+      class="flex items-center gap-2 w-full rounded-md cursor-pointer"
+      [class.opacity-50]="!canViewCatalog()"
+      [class.pointer-events-none]="!canViewCatalog()"
+    >
+      <ui-panel-menu
+        [items]="catalogMenu"
+        [transitionOptions]="transitionOptions"
+        class="w-full"
+        styleClass="w-full"
+      >
+        <ng-template #item let-item>
+          <div
+            (click)="toggle(item)"
+            [routerLink]="item['data']?.['externalUrl'] ? null : item.routerLink"
+            [ngClass]="{ 'bg-primary-50': isActive(item) }"
+            class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+          >
+            <div class="flex items-center gap-2">
+              @if (item?.icon) {
+              <ui-icon [name]="item?.icon" size="16" styleClass="text-grey-700" />
               }
+              <a [ngClass]="{ 'ml-2': !item?.icon }" class="font-base font-semibold text-grey-700 mt-0.5">{{item.label}}</a>
             </div>
-          </ng-template>
-        </ui-panel-menu>
-      </li>
-    }
+            @if (item?.iconNext) {
+            <ui-icon [name]="item?.iconNext" [ngClass]="{ 'rotate-90': item?.state?.isOpen }" size="16" class="transition-transform duration-200 ease-in-out" styleClass="text-grey-700" />
+            }
+          </div>
+        </ng-template>
+      </ui-panel-menu>
+    </li>
   </ul>
   <div class="w-full h-auto border-t border-grey-50 pt-5">
     <div class="px-3 w-full">

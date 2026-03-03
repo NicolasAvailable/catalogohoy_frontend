@@ -39,23 +39,23 @@
               <span>{{ ACTION_LABELS[action] }}</span>
             </label>
           }
-          @if (!hideActions()) {
-            <div class="permission-picker__footer">
-              <button type="button" class="permission-picker__btn-cancel" (click)="onCancel()">
-                Cancelar
-              </button>
-              <button
-                type="button"
-                class="permission-picker__btn-save"
-                [disabled]="disabled()"
-                (click)="onSave()"
-              >
-                Guardar
-              </button>
-            </div>
-          }
         </div>
       }
+    </div>
+  }
+  @if (!hideActions()) {
+    <div class="permission-picker__footer">
+      <button type="button" class="permission-picker__btn-cancel" (click)="onCancel()">
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="permission-picker__btn-save"
+        [disabled]="disabled()"
+        (click)="onSave()"
+      >
+        Guardar
+      </button>
     </div>
   }
 </div>

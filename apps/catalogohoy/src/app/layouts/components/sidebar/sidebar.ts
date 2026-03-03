@@ -66,6 +66,9 @@ export class Sidebar {
   public readonly canViewCatalog = computed(
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('catalogo', 'view')
   );
+  public readonly canViewTeam = computed(
+    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'view')
+  );
 
   public readonly transitionOptions = '200ms cubic-bezier(0.86, 0, 0.07, 1)';
   public readonly productsMenu: PanelMenuItem[] = PRODUCTS_MENU;

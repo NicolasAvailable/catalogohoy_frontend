@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { Exception } from '@shared/domain';
 import { PlanStore } from '@catalogohoy/plan';
 import { LucideAngularModule } from 'lucide-angular';
 import { ButtonComponent, ConfirmDialogComponent } from '@ui';
@@ -34,8 +35,18 @@ export default class TeamsViewComponent implements OnInit {
   protected readonly permissionsStore = inject(TeamPermissionsStore);
   private readonly toaster = inject(ToastService);
 
+  protected readonly canInvite = computed(
+    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'invite')
+  );
+  protected readonly canEditPermissions = computed(
+    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'edit')
+  );
+  protected readonly canRemove = computed(
+    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'delete')
+  );
+
   protected readonly expandedMemberId = signal<number | null>(null);
-  protected readonly memberPermissionsCache = signal<Record<number, PermissionKey[]>>({});
+  protected readonly memberPermissionsCache = signal<Record<number, PermissionKey[] | undefined>>({});
   protected readonly savingMemberId = signal<number | null>(null);
   protected readonly pendingRemoveMemberId = signal<number | null>(null);
 
@@ -51,13 +62,20 @@ export default class TeamsViewComponent implements OnInit {
     this.inviteDialog.show();
   }
 
-  protected togglePermissions(member: TeamMember): void {
+  protected async togglePermissions(member: TeamMember): Promise<void> {
     const currentExpanded = this.expandedMemberId();
     if (currentExpanded === member.id) {
       this.expandedMemberId.set(null);
       return;
     }
     this.expandedMemberId.set(member.id);
+    if (this.memberPermissionsCache()[member.id] === undefined) {
+      const perms = await this.teamStore.getMemberPermissions(member.id);
+      this.memberPermissionsCache.update((cache) => ({
+        ...cache,
+        [member.id]: perms ?? [],
+      }));
+    }
   }
 
   protected async onSavePermissions(event: {
@@ -69,9 +87,18 @@ export default class TeamsViewComponent implements OnInit {
       const [module, action] = key.split(':') as [PermissionModule, PermissionAction];
       return { module, action };
     });
-    await this.teamStore.savePermissions(event.memberId, perms);
+    const error = await this.teamStore.savePermissions(event.memberId, perms);
     this.savingMemberId.set(null);
+    if (error) {
+      this.toaster.error(new Exception(error));
+      return;
+    }
+    this.memberPermissionsCache.update((cache) => ({
+      ...cache,
+      [event.memberId]: event.permissions,
+    }));
     this.expandedMemberId.set(null);
+    this.toaster.success('Permisos actualizados');
   }
 
   protected onCancelPermissions(): void {

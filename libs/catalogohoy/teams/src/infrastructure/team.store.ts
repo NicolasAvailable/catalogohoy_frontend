@@ -8,7 +8,7 @@ import {
   withMethods,
   withState,
 } from '@ngrx/signals';
-import { PermissionAction, PermissionModule, Team, TeamMember } from '../domain';
+import { PermissionAction, PermissionKey, PermissionModule, Team, TeamMember } from '../domain';
 import { TeamService } from './team.service';
 
 type TeamState = {
@@ -104,6 +104,14 @@ export const TeamStore = signalStore(
             members: store.members().filter((m) => m.id !== memberId),
           });
         });
+      },
+
+      async getMemberPermissions(memberId: number): Promise<PermissionKey[] | null> {
+        const result = await teamService.getMemberPermissions(memberId);
+        return result
+          .mapRight((perms) => perms as PermissionKey[] | null)
+          .mapLeft(() => null as PermissionKey[] | null)
+          .value as PermissionKey[] | null;
       },
 
       async savePermissions(

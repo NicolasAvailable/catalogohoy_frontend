@@ -145,6 +145,20 @@ export class TeamService implements BaseTeamService {
     return E.right(undefined);
   }
 
+  public async getMemberPermissions(memberId: number): Promise<E.Either<Error, PermissionKey[]>> {
+    const { data, error } = await this.client
+      .from('team_member_permissions')
+      .select('module, action')
+      .eq('team_member_id', memberId);
+
+    if (error) return E.left(new Error(error.message));
+
+    const permissions = (data ?? []).map(
+      (row) => `${row.module}:${row.action}` as PermissionKey
+    );
+    return E.right(permissions);
+  }
+
   public async getMyPermissions(
     tenantId: number
   ): Promise<E.Either<Error, { permissions: PermissionKey[]; isMember: boolean }>> {

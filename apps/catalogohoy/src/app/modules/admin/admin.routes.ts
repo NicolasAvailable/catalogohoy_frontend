@@ -55,7 +55,7 @@ export const adminRoutes: Route[] = [
   },
   {
     path: 'teams',
-    canActivate: [freePlanGuard],
+    canActivate: [freePlanGuard, teamPermissionGuard('equipo', 'view')],
     children: TEAMS_ROUTES,
   },
 ];

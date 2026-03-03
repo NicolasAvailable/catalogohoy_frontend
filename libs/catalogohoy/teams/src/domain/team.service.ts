@@ -20,4 +20,5 @@ export abstract class BaseTeamService {
   abstract getMyPermissions(
     tenantId: number
   ): Promise<E.Either<Error, { permissions: PermissionKey[]; isMember: boolean }>>;
+  abstract getMemberPermissions(memberId: number): Promise<E.Either<Error, PermissionKey[]>>;
 }

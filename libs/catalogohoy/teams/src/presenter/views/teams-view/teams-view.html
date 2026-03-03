@@ -7,7 +7,7 @@
         {{ teamStore.memberCount() }} de {{ planStore.maxTeamMembers() }} miembros activos
       </p>
     </div>
-    @if (teamStore.canInviteMore()) {
+    @if (teamStore.canInviteMore() && canInvite()) {
       <ui-button
         label="Invitar miembro"
         icon="user-plus"
@@ -62,30 +62,34 @@
                 </div>
               </div>
               <div class="teams-view__member-actions">
-                <button
-                  type="button"
-                  class="teams-view__btn-permissions"
-                  (click)="togglePermissions(member)"
-                >
-                  <lucide-icon name="shield" [size]="14" />
-                  Permisos
-                </button>
-                <button
-                  type="button"
-                  class="teams-view__btn-remove"
-                  pTooltip="Eliminar miembro"
-                  tooltipPosition="top"
-                  (click)="removeMember(member.id)"
-                >
-                  <lucide-icon name="x" [size]="14" />
-                </button>
+                @if (canEditPermissions()) {
+                  <button
+                    type="button"
+                    class="teams-view__btn-permissions"
+                    (click)="togglePermissions(member)"
+                  >
+                    <lucide-icon name="shield" [size]="14" />
+                    Permisos
+                  </button>
+                }
+                @if (canRemove()) {
+                  <button
+                    type="button"
+                    class="teams-view__btn-remove"
+                    pTooltip="Eliminar miembro"
+                    tooltipPosition="top"
+                    (click)="removeMember(member.id)"
+                  >
+                    <lucide-icon name="x" [size]="14" />
+                  </button>
+                }
               </div>
 
               @if (expandedMemberId() === member.id) {
                 <div class="teams-view__permission-picker">
                   <lib-permission-picker
                     [memberId]="member.id"
-                    [currentPermissions]="[]"
+                    [currentPermissions]="memberPermissionsCache()[member.id] ?? []"
                     [disabled]="savingMemberId() === member.id"
                     (save)="onSavePermissions($event)"
                     (cancel)="onCancelPermissions()"
@@ -123,15 +127,17 @@
                   <p class="teams-view__member-status">Invitación enviada</p>
                 </div>
               </div>
-              <button
-                type="button"
-                class="teams-view__btn-remove"
-                pTooltip="Cancelar invitación"
-                tooltipPosition="top"
-                (click)="removeMember(member.id)"
-              >
-                <lucide-icon name="x" [size]="14" />
-              </button>
+              @if (canRemove()) {
+                <button
+                  type="button"
+                  class="teams-view__btn-remove"
+                  pTooltip="Cancelar invitación"
+                  tooltipPosition="top"
+                  (click)="removeMember(member.id)"
+                >
+                  <lucide-icon name="x" [size]="14" />
+                </button>
+              }
             </div>
           }
         </div>
@@ -164,7 +170,7 @@
             <span>Hasta {{ planStore.maxTeamMembers() }} miembros en tu plan</span>
           </div>
         </div>
-        @if (teamStore.canInviteMore()) {
+        @if (teamStore.canInviteMore() && canInvite()) {
           <ui-button
             label="Invitar primer miembro"
             icon="user-plus"
