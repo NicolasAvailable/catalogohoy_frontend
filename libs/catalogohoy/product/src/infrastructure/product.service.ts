@@ -25,12 +25,9 @@ export class ProductService implements BaseProductService {
     pageSize?: number,
     search?: string
   ): Promise<E.Either<Error, ProductList>> {
-    const {
-      data: { user },
-    } = await this.client.auth.getUser();
-
-    if (!user) {
-      return E.left(new Error('User not authenticated'));
+    const tenantId = this.tenantStore.getDefaultTenantId();
+    if (!tenantId) {
+      return E.left(new Error('No tenant found'));
     }
 
     let query = this.client
@@ -45,7 +42,7 @@ export class ProductService implements BaseProductService {
       )
       `
       )
-      .eq('auth_user_id', user.id)
+      .eq('tenant_id', tenantId)
       .order('id', { ascending: true });
 
     if (search && search.trim().length > 0) {

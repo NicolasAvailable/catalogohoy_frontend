@@ -7,7 +7,7 @@ import { ToastService } from '@shared/infrastructure';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TeamPermissionsStore } from '../../../infrastructure/team-permissions.store';
 import { TeamStore } from '../../../infrastructure/team.store';
-import { PermissionAction, PermissionKey, PermissionModule, TeamMember } from '../../../domain';
+import { MODULE_ACTIONS, PermissionAction, PermissionKey, PermissionModule, TeamMember } from '../../../domain';
 import { InviteMemberDialogComponent } from '../../components/invite-member-dialog/invite-member-dialog';
 import { PermissionPickerComponent } from '../../components/permission-picker/permission-picker';
 import { FormsModule } from '@angular/forms';
@@ -45,6 +45,11 @@ export default class TeamsViewComponent implements OnInit {
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'delete')
   );
 
+  protected readonly totalPermissions = Object.values(MODULE_ACTIONS).reduce(
+    (sum, actions) => sum + actions.length,
+    0
+  );
+
   protected readonly expandedMemberId = signal<number | null>(null);
   protected readonly memberPermissionsCache = signal<Record<number, PermissionKey[] | undefined>>({});
   protected readonly savingMemberId = signal<number | null>(null);
@@ -56,6 +61,15 @@ export default class TeamsViewComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     await this.planStore.loadTenantPlanUsage();
     await this.teamStore.load();
+    await Promise.all(
+      this.teamStore.acceptedMembers().map(async (member) => {
+        const perms = await this.teamStore.getMemberPermissions(member.id);
+        this.memberPermissionsCache.update((cache) => ({
+          ...cache,
+          [member.id]: perms ?? [],
+        }));
+      })
+    );
   }
 
   protected openInviteDialog(): void {

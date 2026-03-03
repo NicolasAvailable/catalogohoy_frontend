@@ -43,46 +43,55 @@
         <div class="teams-view__members">
           @for (member of teamStore.acceptedMembers(); track member.id) {
             <div class="teams-view__member-card">
-              <div class="teams-view__member-info">
-                <div class="teams-view__avatar-wrap">
-                  <div class="teams-view__avatar">
-                    {{ getMemberInitial(member.invitedEmail) }}
+              <div
+                class="teams-view__member-header"
+                [class.teams-view__member-header--clickable]="canEditPermissions()"
+                (click)="canEditPermissions() ? togglePermissions(member) : null"
+              >
+                <div class="teams-view__member-info">
+                  <div class="teams-view__avatar-wrap">
+                    <div class="teams-view__avatar">
+                      {{ getMemberInitial(member.invitedEmail) }}
+                    </div>
+                    <span
+                      class="teams-view__status-badge teams-view__status-badge--accepted"
+                      pTooltip="Miembro activo"
+                      tooltipPosition="top"
+                    >
+                      <lucide-icon name="check" [size]="9" />
+                    </span>
                   </div>
-                  <span
-                    class="teams-view__status-badge teams-view__status-badge--accepted"
-                    pTooltip="Miembro activo"
-                    tooltipPosition="top"
-                  >
-                    <lucide-icon name="check" [size]="9" />
-                  </span>
+                  <div>
+                    <p class="teams-view__member-email">{{ member.invitedEmail }}</p>
+                    <p class="teams-view__member-status">Miembro activo</p>
+                  </div>
                 </div>
-                <div>
-                  <p class="teams-view__member-email">{{ member.invitedEmail }}</p>
-                  <p class="teams-view__member-status">Miembro activo</p>
+                <div class="teams-view__member-actions">
+                  @if (canEditPermissions()) {
+                    <div
+                      class="teams-view__permission-count"
+                      [class.teams-view__permission-count--active]="expandedMemberId() === member.id"
+                    >
+                      <lucide-icon name="shield" [size]="13" />
+                      <span>{{ (memberPermissionsCache()[member.id] ?? []).length }} / {{ totalPermissions }}</span>
+                      <lucide-icon
+                        [name]="expandedMemberId() === member.id ? 'chevron-up' : 'chevron-down'"
+                        [size]="13"
+                      />
+                    </div>
+                  }
+                  @if (canRemove()) {
+                    <button
+                      type="button"
+                      class="teams-view__btn-remove"
+                      pTooltip="Eliminar miembro"
+                      tooltipPosition="top"
+                      (click)="$event.stopPropagation(); removeMember(member.id)"
+                    >
+                      <lucide-icon name="x" [size]="14" />
+                    </button>
+                  }
                 </div>
-              </div>
-              <div class="teams-view__member-actions">
-                @if (canEditPermissions()) {
-                  <button
-                    type="button"
-                    class="teams-view__btn-permissions"
-                    (click)="togglePermissions(member)"
-                  >
-                    <lucide-icon name="shield" [size]="14" />
-                    Permisos
-                  </button>
-                }
-                @if (canRemove()) {
-                  <button
-                    type="button"
-                    class="teams-view__btn-remove"
-                    pTooltip="Eliminar miembro"
-                    tooltipPosition="top"
-                    (click)="removeMember(member.id)"
-                  >
-                    <lucide-icon name="x" [size]="14" />
-                  </button>
-                }
               </div>
 
               @if (expandedMemberId() === member.id) {
