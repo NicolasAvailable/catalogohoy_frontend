@@ -95,12 +95,13 @@ export const TenantStore = signalStore(
           return;
         }
 
-        // Intentar obtener tenant con is_default=true
-        let { data: tenantData } = await client
+        // Obtener todos los tenants del usuario de una sola query
+        const { data: allTenantLinks } = await client
           .from('users_tenants')
           .select(
             `
             tenant_id,
+            is_default,
             tenants (
               id,
               name,
@@ -108,51 +109,31 @@ export const TenantStore = signalStore(
             )
           `
           )
-          .eq('user_id', userData.id)
-          .eq('is_default', true)
-          .maybeSingle();
+          .eq('user_id', userData.id);
 
-        // Si no hay tenant por defecto, obtener el primero disponible
-        if (!tenantData) {
-          const { data: firstTenant } = await client
-            .from('users_tenants')
-            .select(
-              `
-              tenant_id,
-              tenants (
-                id,
-                name,
-                slug
-              )
-            `
-            )
-            .eq('user_id', userData.id)
-            .limit(1)
-            .maybeSingle();
+        // Aplicar prioridad: subdominio actual > is_default > primero de la lista
+        const subdomainSlug = (() => {
+          const parts = window.location.hostname.split('.');
+          return parts.length >= 3 ? parts[0] : null;
+        })();
 
-          tenantData = firstTenant;
-        }
+        type TenantLink = {
+          tenant_id: number;
+          is_default: boolean;
+          tenants: { id: number; name: string; slug: string } | null;
+        };
 
-        if (!tenantData) {
-          // Fallback: Si no hay link, buscar el tenant por el slug de la URL o el por defecto de local
-          const currentSlug =
-            window.location.pathname.split('/')[1] === 'admin'
-              ? 'catalogohoy'
-              : window.location.pathname.split('/')[1];
+        const links = (allTenantLinks ?? []) as TenantLink[];
+        const subdomainLink = subdomainSlug
+          ? links.find((l) => l.tenants?.slug === subdomainSlug)
+          : null;
+        const defaultLink = links.find((l) => l.is_default);
+        const chosenLink = subdomainLink ?? defaultLink ?? links[0] ?? null;
 
-          const { data: fallbackTenant } = await client
-            .from('tenants')
-            .select('id, name, slug')
-            .eq('slug', currentSlug)
-            .maybeSingle();
-
-          if (fallbackTenant) {
-            tenantData = {
-              tenant_id: fallbackTenant.id,
-              tenants: fallbackTenant,
-            } as any;
-          }
-        }
+        let tenantData: { tenant_id: number; tenants: { id: number; name: string; slug: string } } | null =
+          chosenLink && chosenLink.tenants
+            ? { tenant_id: chosenLink.tenant_id, tenants: chosenLink.tenants }
+            : null;
 
         if (!tenantData) {
           patchState(store, {
@@ -170,11 +151,7 @@ export const TenantStore = signalStore(
           return;
         }
 
-        const tenantInfo = tenantData.tenants as unknown as {
-          id: number;
-          name: string;
-          slug: string;
-        };
+        const tenantInfo = tenantData.tenants;
 
         patchState(store, {
           tenant: {
