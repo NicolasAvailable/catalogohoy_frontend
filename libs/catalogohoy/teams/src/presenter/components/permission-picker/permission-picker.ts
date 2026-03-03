@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { CheckboxComponent } from '@ui';
+import { ButtonComponent, CheckboxComponent } from '@ui';
 import {
   ACTION_LABELS,
   MODULE_ACTIONS,
@@ -22,7 +22,7 @@ import {
 @Component({
   selector: 'lib-permission-picker',
   standalone: true,
-  imports: [NgClass, LucideAngularModule, FormsModule, CheckboxComponent],
+  imports: [NgClass, LucideAngularModule, FormsModule, CheckboxComponent, ButtonComponent],
   templateUrl: './permission-picker.html',
   styleUrl: './permission-picker.css',
 })

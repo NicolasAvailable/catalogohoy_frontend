@@ -64,21 +64,21 @@
   </div>
   } @if (!hideActions()) {
   <div class="permission-picker__footer">
-    <button
-      type="button"
-      class="permission-picker__btn-cancel"
+    <ui-button
+      label="Cancelar"
+      variant="outlined"
+      severity="contrast"
+      [size]="'small'"
+      [fluid]="false"
       (click)="onCancel()"
-    >
-      Cancelar
-    </button>
-    <button
-      type="button"
-      class="permission-picker__btn-save"
+    />
+    <ui-button
+      label="Guardar"
+      [size]="'small'"
+      [fluid]="false"
       [disabled]="disabled()"
       (click)="onSave()"
-    >
-      Guardar
-    </button>
+    />
   </div>
   }
 </div>
