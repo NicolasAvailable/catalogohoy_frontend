@@ -98,8 +98,8 @@ export class CreateCatalog implements OnInit {
     );
 
     result
-      .mapRight(() => {
-        this.router.navigate(['/admin']);
+      .mapRight((catalog) => {
+        window.location.href = `https://${catalog.slug}.catalogohoy.com/admin`;
       })
       .mapLeft(() => {
         this.isSubmitting.set(false);

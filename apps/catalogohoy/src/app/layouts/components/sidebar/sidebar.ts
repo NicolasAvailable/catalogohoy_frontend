@@ -81,13 +81,17 @@ export class Sidebar {
   public readonly showCatalogSwitcher = signal(false);
   public readonly allTenants = computed(() => this.profileStore.profile().tenantList.tenants);
   public readonly isOwner = computed(() => this.permissionsStore.isOwner());
+  public readonly currentTenantSlug = computed(
+    () => this.profileStore.profile().tenantList.first?.slug ?? ''
+  );
 
   public toggleCatalogSwitcher() {
     this.showCatalogSwitcher.update((v) => !v);
   }
 
   public openTenantCatalog(tenant: Tenant) {
-    window.open(`${tenant.url}/admin`, '_blank');
+    if (tenant.slug === this.currentTenantSlug()) return;
+    window.location.href = this.authService.buildTenantAdminUrl(tenant.slug);
     this.showCatalogSwitcher.set(false);
   }
 

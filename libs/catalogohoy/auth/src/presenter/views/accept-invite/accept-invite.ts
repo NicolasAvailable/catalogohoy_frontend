@@ -3,6 +3,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthenticationFacade } from '../../../application';
 
+type InviteInfo = { email: string; tenantName: string; isRegistered: boolean };
+
 @Component({
   selector: 'app-accept-invite',
   standalone: true,
@@ -16,17 +18,20 @@ export class AcceptInviteComponent implements OnInit {
 
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly inviteInfo = signal<InviteInfo | null>(null);
+
+  private token: string | null = null;
 
   async ngOnInit(): Promise<void> {
-    const token = this.route.snapshot.queryParamMap.get('token');
+    this.token = this.route.snapshot.queryParamMap.get('token');
 
-    if (!token) {
+    if (!this.token) {
       this.errorMessage.set('Token de invitación inválido o expirado.');
       this.isLoading.set(false);
       return;
     }
 
-    const result = await this.facade.validateInviteToken(token);
+    const result = await this.facade.validateInviteToken(this.token);
 
     if (result.isLeft()) {
       this.errorMessage.set('La invitación no es válida o ha expirado.');
@@ -34,19 +39,21 @@ export class AcceptInviteComponent implements OnInit {
       return;
     }
 
-    const { isRegistered } = result.value as {
-      email: string;
-      tenantName: string;
-      isRegistered: boolean;
-    };
+    this.inviteInfo.set(result.value as InviteInfo);
+    this.isLoading.set(false);
+  }
 
-    sessionStorage.setItem('pending_invite_token', token);
+  protected onAccept(): void {
+    const info = this.inviteInfo();
+    if (!info || !this.token) return;
 
-    if (isRegistered) {
-      this.router.navigate(['/login'], { queryParams: { invite_token: token } });
+    sessionStorage.setItem('pending_invite_token', this.token);
+
+    if (info.isRegistered) {
+      this.router.navigate(['/login'], { queryParams: { invite_token: this.token } });
     } else {
       this.router.navigate(['/signup'], {
-        queryParams: { invite_token: token, skip_store: 'true' },
+        queryParams: { invite_token: this.token, skip_store: 'true' },
       });
     }
   }

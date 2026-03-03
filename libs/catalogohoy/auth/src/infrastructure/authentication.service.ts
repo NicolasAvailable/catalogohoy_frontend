@@ -139,6 +139,10 @@ export class AuthenticationService implements BaseAuthenticationService {
     return E.right(this._buildRedirectUrl(tenant.slug));
   }
 
+  public buildTenantAdminUrl(slug: string): string {
+    return this._buildRedirectUrl(slug);
+  }
+
   private _buildRedirectUrl(slug: string): string {
     const key = this.authenticationTokenService.AUTH_CONFIG_KEY;
     const value = encodeURIComponent(this.authenticationTokenService.authConfigValue ?? '');

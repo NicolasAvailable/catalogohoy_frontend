@@ -1,14 +1,64 @@
-<div class="flex flex-col items-center justify-center min-h-screen gap-4 text-center p-6">
+<div class="flex flex-col items-center justify-center min-h-screen p-6 bg-white">
   @if (isLoading()) {
-    <lucide-icon name="loader-circle" [size]="32" class="animate-spin text-violet-500" />
-    <p class="text-grey-500 text-sm">Verificando tu invitación...</p>
+    <div class="flex flex-col items-center gap-3 text-center">
+      <lucide-icon name="loader-circle" [size]="32" class="animate-spin text-violet-500" />
+      <p class="text-grey-500 text-sm">Verificando tu invitación...</p>
+    </div>
+
   } @else if (errorMessage()) {
-    <div class="flex flex-col items-center gap-3">
-      <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center">
-        <lucide-icon name="circle-x" [size]="28" class="text-red-500" />
+    <div class="flex flex-col items-center gap-4 text-center max-w-xs">
+      <div class="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center">
+        <lucide-icon name="circle-x" [size]="32" class="text-red-500" />
       </div>
-      <h2 class="text-lg font-semibold text-grey-700">Invitación inválida</h2>
-      <p class="text-sm text-grey-400 max-w-xs">{{ errorMessage() }}</p>
+      <div>
+        <h2 class="text-lg font-semibold text-grey-700">Invitación inválida</h2>
+        <p class="text-sm text-grey-400 mt-1">{{ errorMessage() }}</p>
+      </div>
+    </div>
+
+  } @else if (inviteInfo(); as info) {
+    <div class="flex flex-col items-center gap-6 text-center max-w-sm w-full">
+
+      <!-- Emoji + icono -->
+      <div class="relative">
+        <div class="w-20 h-20 bg-violet-50 rounded-3xl flex items-center justify-center text-4xl shadow-sm">
+          🎉
+        </div>
+        <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-violet-600 rounded-full flex items-center justify-center shadow">
+          <lucide-icon name="users" [size]="14" class="text-white" />
+        </div>
+      </div>
+
+      <!-- Texto principal -->
+      <div class="flex flex-col gap-2">
+        <h1 class="text-2xl font-bold text-grey-800">¡Te invitaron a un equipo!</h1>
+        <p class="text-grey-500 text-sm leading-relaxed">
+          Fuiste invitado a unirte al equipo de
+          <span class="font-semibold text-violet-600">{{ info.tenantName }}</span>.
+          Acepta la invitación para empezar a colaborar.
+        </p>
+      </div>
+
+      <!-- Email chip -->
+      <div class="w-full bg-grey-25 border border-grey-100 rounded-xl px-4 py-3 flex items-center gap-2">
+        <lucide-icon name="mail" [size]="16" class="text-grey-400 shrink-0" />
+        <span class="text-sm text-grey-600 font-medium truncate">{{ info.email }}</span>
+      </div>
+
+      <!-- CTA -->
+      <div class="flex flex-col gap-3 w-full">
+        <button
+          (click)="onAccept()"
+          class="w-full bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white font-semibold py-3 px-6 rounded-xl transition-colors cursor-pointer"
+        >
+          {{ info.isRegistered ? 'Iniciar sesión y aceptar' : 'Crear cuenta y aceptar' }}
+        </button>
+        <p class="text-xs text-grey-400">
+          Al {{ info.isRegistered ? 'iniciar sesión' : 'registrarte' }} serás parte del equipo de
+          <span class="font-medium text-grey-500">{{ info.tenantName }}</span>
+        </p>
+      </div>
+
     </div>
   }
 </div>
