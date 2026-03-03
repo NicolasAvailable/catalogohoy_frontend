@@ -1,4 +1,4 @@
-import { Component, inject, output, signal, ViewChild } from '@angular/core';
+import { Component, computed, inject, output, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent, DialogComponent, IconComponent } from '@ui';
 import { ToastService } from '@shared/infrastructure';
@@ -20,6 +20,9 @@ export class InviteMemberDialogComponent {
 
   protected email = signal('');
   protected errorMessage = signal<string | null>(null);
+  protected readonly isEmailValid = computed(() =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email().trim())
+  );
 
   public show(): void {
     this.email.set('');

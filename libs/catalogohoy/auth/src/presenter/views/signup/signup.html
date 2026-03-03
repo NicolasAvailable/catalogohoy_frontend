@@ -10,8 +10,8 @@
       class="flex justify-center sm:justify-start"
     />
 
-    <!-- Step indicator (only when method is chosen) -->
-    @if (method()) {
+    <!-- Step indicator (only when method is chosen and not invite mode) -->
+    @if (method() && !isInviteMode()) {
       <div class="flex items-center gap-2">
         @for (i of [].constructor(totalSteps()); track $index) {
           <div
@@ -95,14 +95,20 @@
     @if (step() === 2) {
       <div class="step-enter flex flex-col gap-6">
         <div>
-          <button type="button" (click)="back()" class="flex items-center gap-1 text-sm text-grey-400 hover:text-grey-600 mb-4 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
-            </svg>
-            Volver
-          </button>
-          <h2 class="text-2xl font-semibold text-grey-700">Tus credenciales</h2>
-          <p class="text-sm text-grey-400 mt-1">Con estas podrás ingresar a tu catálogo.</p>
+          @if (!isInviteMode()) {
+            <button type="button" (click)="back()" class="flex items-center gap-1 text-sm text-grey-400 hover:text-grey-600 mb-4 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+              </svg>
+              Volver
+            </button>
+          }
+          <h2 class="text-2xl font-semibold text-grey-700">
+            @if (isInviteMode()) { Crea tu cuenta } @else { Tus credenciales }
+          </h2>
+          <p class="text-sm text-grey-400 mt-1">
+            @if (isInviteMode()) { Elige un email y contraseña para acceder al equipo. } @else { Con estas podrás ingresar a tu catálogo. }
+          </p>
         </div>
 
         <form [formGroup]="credentialsForm" (keyup.enter)="nextStep()">
@@ -123,7 +129,13 @@
             <ui-input-message [control]="credentialsForm.get('password')" error="minlength" text="Debe tener mínimo 6 caracteres" />
             <ui-input-message [control]="credentialsForm.get('password')" error="whitespace" text="No puede contener espacios en blanco" />
           </div>
-          <ui-button (click)="nextStep()" [disabled]="credentialsForm.invalid || isCheckingEmail()" [label]="isCheckingEmail() ? 'Verificando...' : 'Siguiente'" severity="primary" styleClass="!py-4 !text-base" />
+          <ui-button
+            (click)="nextStep()"
+            [disabled]="credentialsForm.invalid || isCheckingEmail()"
+            [label]="isCheckingEmail() ? 'Procesando...' : (isInviteMode() ? 'Crear cuenta' : 'Siguiente')"
+            severity="primary"
+            styleClass="!py-4 !text-base"
+          />
         </form>
       </div>
     }

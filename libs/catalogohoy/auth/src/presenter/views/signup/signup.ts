@@ -75,10 +75,13 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
 
   readonly slugPreview = signal('');
 
-  readonly totalSteps = computed(() => (this.method() === 'google' ? 2 : 3));
+  readonly totalSteps = computed(() =>
+    this.method() === 'google' || this.isInviteMode() ? 2 : 3
+  );
 
   readonly displayStep = computed(() => {
     const s = this.step();
+    if (this.isInviteMode()) return 2;
     if (this.method() === 'google') return s === 3 ? 2 : 1;
     return s;
   });
@@ -198,13 +201,28 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     const email = this.credentialsForm.value.email as string;
     const exists = await this.facade.checkEmailExists(email);
 
-    this.isCheckingEmail.set(false);
-
     if (exists) {
+      this.isCheckingEmail.set(false);
       this.emailExistsError.set(true);
       return;
     }
 
+    if (this.isInviteMode() && this.inviteToken) {
+      const { password } = this.credentialsForm.value as { password: string };
+      const name = email.split('@')[0];
+      const signupResult = await this.facade.signupInvitee({ email, password, name });
+      if (signupResult.isLeft()) {
+        this.isCheckingEmail.set(false);
+        return;
+      }
+      await this.facade.acceptInvite(this.inviteToken);
+      sessionStorage.removeItem('pending_invite_token');
+      const redirectResult = await this.facade.getLoginRedirectUrl();
+      redirectResult.mapRight((url) => (window.location.href = url));
+      return;
+    }
+
+    this.isCheckingEmail.set(false);
     this.step.set(3);
   }
 
