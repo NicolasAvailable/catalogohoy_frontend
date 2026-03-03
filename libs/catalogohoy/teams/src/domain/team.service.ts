@@ -17,5 +17,7 @@ export abstract class BaseTeamService {
     memberId: number,
     perms: Array<{ module: PermissionModule; action: PermissionAction }>
   ): Promise<E.Either<Error, void>>;
-  abstract getMyPermissions(tenantId: number): Promise<E.Either<Error, PermissionKey[]>>;
+  abstract getMyPermissions(
+    tenantId: number
+  ): Promise<E.Either<Error, { permissions: PermissionKey[]; isMember: boolean }>>;
 }

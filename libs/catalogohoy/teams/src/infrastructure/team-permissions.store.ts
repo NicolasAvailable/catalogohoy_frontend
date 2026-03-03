@@ -35,9 +35,9 @@ export const TeamPermissionsStore = signalStore(
   withMethods((store, teamService = inject(TeamService)) => ({
     async load(tenantId: number): Promise<void> {
       const result = await teamService.getMyPermissions(tenantId);
-      result.mapRight((permissions) => {
-        // Empty array from the RPC means the user is the owner
-        const isOwner = permissions.length === 0;
+      result.mapRight(({ permissions, isMember }) => {
+        // Owner = authenticated user but NOT in team_members table
+        const isOwner = !isMember;
         patchState(store, { permissions, isOwner, isLoaded: true });
       });
     },

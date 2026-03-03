@@ -9,6 +9,7 @@ export const adminRoutes: Route[] = [
   },
   {
     path: 'products',
+    canActivate: [teamPermissionGuard('productos', 'view')],
     loadChildren: () =>
       import('@catalogohoy/product').then((m) => m.productRoutes),
   },
@@ -18,20 +19,24 @@ export const adminRoutes: Route[] = [
   },
   {
     path: 'categories',
+    canActivate: [teamPermissionGuard('productos', 'view')],
     loadChildren: () =>
       import('@catalogohoy/category').then((m) => m.categoryRoutes),
   },
   {
     path: 'orders',
+    canActivate: [teamPermissionGuard('ordenes', 'view')],
     loadChildren: () =>
       import('@catalogohoy/order').then((m) => m.ORDER_ROUTES),
   },
   {
     path: 'exchange-rates',
+    canActivate: [teamPermissionGuard('tasas', 'view')],
     loadChildren: () => import('@catalogohoy/rate').then((m) => m.RATE_ROUTES),
   },
   {
     path: 'catalog',
+    canActivate: [teamPermissionGuard('catalogo', 'view')],
     loadChildren: () =>
       import('@catalogohoy/ecommerce-config').then(
         (m) => m.ecommerceConfigRoutes

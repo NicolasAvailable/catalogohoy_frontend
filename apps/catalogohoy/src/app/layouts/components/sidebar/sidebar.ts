@@ -6,6 +6,7 @@ import { PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { ProfileStore } from '@catalogohoy/profile';
 import { Tenant, TenantStore } from '@catalogohoy/tenant';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import {
   AvatarComponent,
   ConfirmDialogService,
@@ -40,12 +41,30 @@ export class Sidebar {
   public readonly profileStore = inject(ProfileStore);
   public readonly tenantStore = inject(TenantStore);
 
+  private readonly permissionsStore = inject(TeamPermissionsStore);
+
   public readonly analyticsLocked = computed(
     () => this.planStore.currentPlan()?.isFree ?? false
   );
 
   public readonly teamsLocked = computed(
     () => this.planStore.currentPlan()?.isFree ?? false
+  );
+
+  public readonly canViewProducts = computed(
+    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('productos', 'view')
+  );
+  public readonly canViewOrders = computed(
+    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('ordenes', 'view')
+  );
+  public readonly canViewAnalytics = computed(
+    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('analiticas', 'view')
+  );
+  public readonly canViewRates = computed(
+    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('tasas', 'view')
+  );
+  public readonly canViewCatalog = computed(
+    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('catalogo', 'view')
   );
 
   public readonly transitionOptions = '200ms cubic-bezier(0.86, 0, 0.07, 1)';

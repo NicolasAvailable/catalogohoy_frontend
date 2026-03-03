@@ -34,7 +34,10 @@ export class PermissionPickerComponent {
   readonly change = output<PermissionKey[]>();
 
   protected readonly expandedModule = linkedSignal<PermissionModule | null>(() => null);
-  protected readonly localPermissions = linkedSignal(() => new Set<PermissionKey>(this.currentPermissions()));
+  protected readonly localPermissions = linkedSignal<PermissionKey[], Set<PermissionKey>>({
+    source: () => this.currentPermissions(),
+    computation: (perms) => new Set<PermissionKey>(perms),
+  });
 
   protected readonly modules = Object.keys(MODULE_ACTIONS) as PermissionModule[];
   protected readonly MODULE_LABELS = MODULE_LABELS;

@@ -145,17 +145,21 @@ export class TeamService implements BaseTeamService {
     return E.right(undefined);
   }
 
-  public async getMyPermissions(tenantId: number): Promise<E.Either<Error, PermissionKey[]>> {
+  public async getMyPermissions(
+    tenantId: number
+  ): Promise<E.Either<Error, { permissions: PermissionKey[]; isMember: boolean }>> {
     const { data, error } = await this.client.rpc('get_my_team_permissions', {
       p_tenant_id: tenantId,
     });
 
     if (error) return E.left(new Error(error.message));
 
-    const keys = ((data as Array<{ module: string; action: string }>) ?? []).map(
-      (row) => `${row.module}:${row.action}` as PermissionKey
-    );
+    const rows = (data as Array<{ module: string; action: string; is_member: boolean }>) ?? [];
+    const isMember = rows.some((r) => r.is_member);
+    const permissions = rows
+      .filter((r) => r.module !== '')
+      .map((r) => `${r.module}:${r.action}` as PermissionKey);
 
-    return E.right(keys);
+    return E.right({ permissions, isMember });
   }
 }
