@@ -73,7 +73,8 @@
                       [class.teams-view__permission-count--active]="expandedMemberId() === member.id"
                     >
                       <lucide-icon name="shield" [size]="13" />
-                      <span>{{ (memberPermissionsCache()[member.id] ?? []).length }} / {{ totalPermissions }}</span>
+                      <span>Permisos</span>
+                      <span class="teams-view__permission-count-badge">{{ (memberPermissionsCache()[member.id] ?? []).length }}/{{ totalPermissions }}</span>
                       <lucide-icon
                         [name]="expandedMemberId() === member.id ? 'chevron-up' : 'chevron-down'"
                         [size]="13"

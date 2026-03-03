@@ -43,6 +43,11 @@ export const adminRoutes: Route[] = [
       ),
   },
   {
+    path: 'new-catalog',
+    loadComponent: () =>
+      import('@catalogohoy/ecommerce-config').then((m) => m.CreateCatalog),
+  },
+  {
     path: 'plans',
     loadChildren: () =>
       import('@catalogohoy/plan').then((m) => m.planRoutes),

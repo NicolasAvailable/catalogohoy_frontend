@@ -15,11 +15,13 @@ import {
   Check,
   CheckCircle,
   ChevronDown,
+  ChevronDownIcon,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
+  ChevronUp,
   CircleAlert,
   CirclePlus,
   CircleUser,
@@ -206,6 +208,8 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       UserPlus,
       StoreIcon,
       Shield,
+      ChevronUp,
+      ChevronDownIcon,
     })
   );
 };

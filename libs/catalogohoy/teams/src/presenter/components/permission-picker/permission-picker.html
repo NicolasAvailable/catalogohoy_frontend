@@ -20,7 +20,10 @@
           (click)="$event.stopPropagation()"
         />
         <span class="permission-picker__module-label">{{ MODULE_LABELS[mod] }}</span>
-        <span class="permission-picker__module-badge">
+        @if (isModulePartiallySelected(mod)) {
+          <span class="permission-picker__partial-dot"></span>
+        }
+        <span class="permission-picker__module-badge" [class.permission-picker__module-badge--active]="moduleCount()(mod) > 0">
           {{ moduleCount()(mod) }} de {{ MODULE_ACTIONS[mod].length }}
         </span>
         <lucide-icon name="chevron-down" class="permission-picker__chevron" [size]="16" />

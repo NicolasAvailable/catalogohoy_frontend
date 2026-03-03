@@ -32,7 +32,7 @@ export class PermissionPickerComponent {
 
   readonly save = output<{ memberId: number; permissions: PermissionKey[] }>();
   readonly cancel = output<void>();
-  readonly change = output<PermissionKey[]>();
+  readonly permissionsChange = output<PermissionKey[]>();
 
   protected readonly expandedModule = signal<PermissionModule | null>(null);
   protected readonly localPermissions = signal<Set<PermissionKey>>(new Set());
@@ -74,7 +74,7 @@ export class PermissionPickerComponent {
       }
       this.localPermissions.set(all);
     }
-    this.change.emit(Array.from(this.localPermissions()));
+    this.permissionsChange.emit(Array.from(this.localPermissions()));
   }
 
   protected toggleModule(mod: PermissionModule): void {
@@ -84,6 +84,11 @@ export class PermissionPickerComponent {
   protected isModuleAllSelected(mod: PermissionModule): boolean {
     const perms = this.localPermissions();
     return MODULE_ACTIONS[mod].every((action) => perms.has(`${mod}:${action}`));
+  }
+
+  protected isModulePartiallySelected(mod: PermissionModule): boolean {
+    const count = this.moduleCount()(mod);
+    return count > 0 && !this.isModuleAllSelected(mod);
   }
 
   protected toggleAllModule(mod: PermissionModule, event: Event): void {
@@ -102,7 +107,7 @@ export class PermissionPickerComponent {
       }
       return next;
     });
-    this.change.emit(Array.from(this.localPermissions()));
+    this.permissionsChange.emit(Array.from(this.localPermissions()));
   }
 
   protected togglePermission(mod: PermissionModule, action: PermissionAction): void {
@@ -117,7 +122,7 @@ export class PermissionPickerComponent {
       }
       return next;
     });
-    this.change.emit(Array.from(this.localPermissions()));
+    this.permissionsChange.emit(Array.from(this.localPermissions()));
   }
 
   protected hasPermission(mod: PermissionModule, action: PermissionAction): boolean {

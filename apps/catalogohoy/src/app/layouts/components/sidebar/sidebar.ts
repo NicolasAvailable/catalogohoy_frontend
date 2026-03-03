@@ -80,6 +80,7 @@ export class Sidebar {
 
   public readonly showCatalogSwitcher = signal(false);
   public readonly allTenants = computed(() => this.profileStore.profile().tenantList.tenants);
+  public readonly isOwner = computed(() => this.permissionsStore.isOwner());
 
   public toggleCatalogSwitcher() {
     this.showCatalogSwitcher.update((v) => !v);
@@ -88,6 +89,11 @@ export class Sidebar {
   public openTenantCatalog(tenant: Tenant) {
     window.open(tenant.url, '_blank');
     this.showCatalogSwitcher.set(false);
+  }
+
+  public navigateToCreateCatalog(): void {
+    this.showCatalogSwitcher.set(false);
+    this.router.navigate(['/admin/new-catalog']);
   }
 
   public toggle(item: PanelMenuItem) {

@@ -42,11 +42,10 @@
           {{ tenant.slug }}.catalogohoy.com
         </span>
       </div>
-      @if (allTenants().length > 1) {
       <button
         (click)="toggleCatalogSwitcher()"
         class="shrink-0 w-7 h-7 flex items-center justify-center rounded-md hover:bg-primary-50 transition-colors"
-        title="Cambiar catálogo"
+        title="Gestionar catálogos"
       >
         <ui-icon
           name="chevrons-up-down"
@@ -54,7 +53,6 @@
           styleClass="text-grey-400"
         />
       </button>
-      }
     </div>
     @if (showCatalogSwitcher()) {
     <div class="flex flex-col mb-2 border border-grey-50 rounded-lg overflow-hidden bg-grey-25">
@@ -76,6 +74,14 @@
         <ui-icon name="square-arrow-out-up-right" size="12" styleClass="text-grey-300 shrink-0" />
       </button>
       }
+      <div class="border-t border-grey-50 mx-2"></div>
+      <button
+        (click)="navigateToCreateCatalog()"
+        class="flex items-center gap-2 px-3 py-2.5 hover:bg-primary-50 transition-colors w-full text-left"
+      >
+        <ui-icon name="plus" size="16" styleClass="text-primary-500 shrink-0" />
+        <span class="text-sm font-medium text-primary-600">Crear catálogo</span>
+      </button>
     </div>
     }
     }
