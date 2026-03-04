@@ -3,7 +3,7 @@
   <div class="catalog__toolbar">
     <div class="block md:hidden">
       @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
-        <div class="h-10 w-full bg-grey-100 rounded-xl animate-pulse"></div>
+        <div class="catalog__search-skeleton"></div>
       } @else {
         <ui-input-search
           (valueChange)="onSearch($event)"

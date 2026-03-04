@@ -173,6 +173,25 @@
       }
     </li>
     <li
+      [routerLink]="canViewOrders() ? '/admin/clients' : null"
+      [routerLinkActive]="canViewOrders() ? 'bg-primary-50' : ''"
+      [routerLinkActiveOptions]="{exact: false}"
+      [class.opacity-50]="!canViewOrders()"
+      [class.cursor-not-allowed]="!canViewOrders()"
+      [class.cursor-pointer]="canViewOrders()"
+      [pTooltip]="!canViewOrders() ? noPermissionTooltip : ''"
+      tooltipPosition="right"
+      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+    >
+      <div class="flex items-center gap-2">
+        <ui-icon name="contact" size="16" />
+        <a class="font-base font-semibold text-grey-700 mt-0.5">Clientes</a>
+      </div>
+      @if (!canViewOrders()) {
+        <ui-icon name="lock" size="12" styleClass="text-grey-400" />
+      }
+    </li>
+    <li
       [routerLink]="(analyticsLocked() || !canViewAnalytics()) ? null : '/admin/analytics'"
       [routerLinkActive]="(analyticsLocked() || !canViewAnalytics()) ? '' : 'bg-primary-50'"
       [routerLinkActiveOptions]="{exact: true}"

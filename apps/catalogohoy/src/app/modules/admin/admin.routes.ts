@@ -30,6 +30,12 @@ export const adminRoutes: Route[] = [
       import('@catalogohoy/order').then((m) => m.ORDER_ROUTES),
   },
   {
+    path: 'clients',
+    canActivate: [teamPermissionGuard('ordenes', 'view')],
+    loadChildren: () =>
+      import('@catalogohoy/client').then((m) => m.CLIENT_ROUTES),
+  },
+  {
     path: 'exchange-rates',
     canActivate: [teamPermissionGuard('tasas', 'edit')],
     loadChildren: () => import('@catalogohoy/rate').then((m) => m.RATE_ROUTES),
