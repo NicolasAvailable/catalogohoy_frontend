@@ -47,11 +47,6 @@ export const CATALOG_MENU: PanelMenuItem[] = [
         routerLink: '/admin/catalog/edit',
         routerLinkActiveOptions: { exact: true },
       },
-      {
-        label: 'Crear',
-        routerLink: '/admin/catalog/create',
-        routerLinkActiveOptions: { exact: true },
-      },
     ],
   },
 ];

@@ -2,12 +2,16 @@
   <!-- Filters and actions row -->
   <div class="catalog__toolbar">
     <div class="block md:hidden">
-      <ui-input-search
-        (valueChange)="onSearch($event)"
-        placeholder="Buscar producto"
-        styleClass="rounded-base! gap-2!"
-        iconStyleClass="size-5!"
-      />
+      @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
+        <div class="h-10 w-full bg-grey-100 rounded-xl animate-pulse"></div>
+      } @else {
+        <ui-input-search
+          (valueChange)="onSearch($event)"
+          placeholder="Buscar producto"
+          styleClass="rounded-base! gap-2!"
+          iconStyleClass="size-5!"
+        />
+      }
     </div>
     <div class="catalog__filters">
       @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
