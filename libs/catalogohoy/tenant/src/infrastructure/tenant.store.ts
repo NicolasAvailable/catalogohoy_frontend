@@ -123,7 +123,7 @@ export const TenantStore = signalStore(
           tenants: { id: number; name: string; slug: string } | null;
         };
 
-        const links = (allTenantLinks ?? []) as TenantLink[];
+        const links = (allTenantLinks ?? []) as unknown as TenantLink[];
         const subdomainLink = subdomainSlug
           ? links.find((l) => l.tenants?.slug === subdomainSlug)
           : null;

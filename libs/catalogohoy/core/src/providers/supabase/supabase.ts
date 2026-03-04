@@ -2,8 +2,8 @@ import { isDevMode } from '@angular/core';
 import { environment } from '@catalogohoy/env';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// In development, Supabase must never delete tokens from localStorage
-// (it does so when a refresh fails). This storage adapter is a no-op on removeItem.
+// In dev, keep the manually-pasted token safe by making removeItem a no-op.
+// autoRefreshToken stays true so the token is refreshed before it expires.
 const devStorage = {
   getItem: (key: string) => localStorage.getItem(key),
   setItem: (key: string, value: string) => localStorage.setItem(key, value),
@@ -27,7 +27,7 @@ export class SupabaseClientProvider {
     this.client = createClient(
       environment.supabaseUrl,
       environment.supabaseKey,
-      isDevMode() ? { auth: { storage: devStorage, autoRefreshToken: false } } : {}
+      isDevMode() ? { auth: { storage: devStorage } } : {}
     );
   }
 }

@@ -16,15 +16,14 @@ export class App implements OnInit {
   readonly posthog = inject(PosthogService);
 
   constructor() {
+    this.captureQueryParametersToLocalStorage();
     SupabaseClientProvider.create();
     this.subscriber.init();
   }
 
   protected title = 'catalogohoy';
 
-  ngOnInit(): void {
-    this.captureQueryParametersToLocalStorage();
-  }
+  ngOnInit(): void {}
 
   private captureQueryParametersToLocalStorage(): void {
     const urlParams = new URLSearchParams(window.location.search);
