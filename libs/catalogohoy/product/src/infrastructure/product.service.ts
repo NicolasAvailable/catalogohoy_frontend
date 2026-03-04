@@ -43,7 +43,7 @@ export class ProductService implements BaseProductService {
       `
       )
       .eq('tenant_id', tenantId)
-      .order('id', { ascending: true });
+      .order('position', { ascending: true });
 
     if (search && search.trim().length > 0) {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
@@ -120,6 +120,17 @@ export class ProductService implements BaseProductService {
 
     const tenantId = this.tenantStore.getDefaultTenantId();
 
+    // Get next position for this tenant
+    const { data: maxData } = await this.client
+      .from('products')
+      .select('position')
+      .eq('tenant_id', tenantId)
+      .order('position', { ascending: false })
+      .limit(1)
+      .single();
+
+    const nextPosition = (maxData?.position ?? -1) + 1;
+
     const { data, error } = await this.client
       .from('products')
       .insert({
@@ -134,6 +145,7 @@ export class ProductService implements BaseProductService {
         tenant_id: tenantId,
         sku: input.sku || null,
         production_cost: input.productionCost ? Number(input.productionCost) : null,
+        position: nextPosition,
       })
       .select('*');
 
@@ -155,19 +167,25 @@ export class ProductService implements BaseProductService {
   public async update(
     input: UpdateProductInput
   ): Promise<E.Either<Error, void>> {
+    const updatePayload: Record<string, unknown> = {
+      name: input.name,
+      description: input.description,
+      price: input.price,
+      price_promotional:
+        input.pricePromotional.length === 0 ? null : input.pricePromotional,
+      photos: input.photos,
+      stock: input.stock,
+      sku: input.sku || null,
+      production_cost: input.productionCost ? Number(input.productionCost) : null,
+    };
+
+    if (input.position !== undefined) {
+      updatePayload['position'] = input.position;
+    }
+
     const { data, error } = await this.client
       .from('products')
-      .update({
-        name: input.name,
-        description: input.description,
-        price: input.price,
-        price_promotional:
-          input.pricePromotional.length === 0 ? null : input.pricePromotional,
-        photos: input.photos,
-        stock: input.stock,
-        sku: input.sku || null,
-        production_cost: input.productionCost ? Number(input.productionCost) : null,
-      })
+      .update(updatePayload)
       .eq('id', input.id)
       .select('*');
 
@@ -238,6 +256,20 @@ export class ProductService implements BaseProductService {
         }
       }
     }
+    return E.right(undefined);
+  }
+
+  public async updatePositions(
+    products: Product[]
+  ): Promise<E.Either<Error, void>> {
+    const updates = products.map((product, index) =>
+      this.client
+        .from('products')
+        .update({ position: index })
+        .eq('id', product.id)
+    );
+
+    await Promise.all(updates);
     return E.right(undefined);
   }
 }

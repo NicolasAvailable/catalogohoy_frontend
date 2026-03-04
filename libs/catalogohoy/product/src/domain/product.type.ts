@@ -10,7 +10,7 @@ export type CreateProductInput = {
   productionCost: string | null;
 };
 
-export type UpdateProductInput = CreateProductInput & { id: string };
+export type UpdateProductInput = CreateProductInput & { id: string; position?: number };
 
 export type ReplaceCategoriesInput = {
   productIds: string[];

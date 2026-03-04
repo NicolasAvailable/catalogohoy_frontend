@@ -13,4 +13,5 @@ export interface ProductEntity {
   production_cost: number | null;
   product_categories: CategoryEntity[];
   created_at: string;
+  position: number;
 }

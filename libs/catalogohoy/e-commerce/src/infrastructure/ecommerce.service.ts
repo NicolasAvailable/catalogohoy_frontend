@@ -168,7 +168,7 @@ export class EcommerceService implements BaseEcommerceService {
         query = query.order('price', { ascending: false });
         break;
       default:
-        query = query.order('created_at', { ascending: false });
+        query = query.order('position', { ascending: true });
     }
 
     const from = (page - 1) * pageSize;

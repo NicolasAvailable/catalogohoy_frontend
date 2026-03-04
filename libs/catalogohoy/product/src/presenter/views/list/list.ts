@@ -9,6 +9,8 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { CategoryStore } from '@catalogohoy/category';
 import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
 import {
@@ -21,15 +23,13 @@ import {
   InputTextComponent,
   MultiSelectComponent,
   SkeletonListComponent,
-  TableComponent,
   TooltipDirective,
 } from '@ui';
-import { TablePageEvent } from 'primeng/table';
 import { debounceTime, distinctUntilChanged, Subscription } from 'rxjs';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { ProductFacade } from '../../../application';
-import { Product } from '../../../domain';
-import { ProductStore } from '../../../infrastructure';
+import { Product, ProductList } from '../../../domain';
+import { ProductService, ProductStore } from '../../../infrastructure';
 import { ImportExportHubComponent } from '../import-export/import-export-hub';
 
 @Component({
@@ -38,7 +38,8 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
-    TableComponent,
+    DragDropModule,
+    PaginatorModule,
     SkeletonListComponent,
     CardComponent,
     ButtonComponent,
@@ -61,6 +62,7 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
 export default class List implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly permissions = inject(TeamPermissionsStore);
+  private readonly productService = inject(ProductService);
   protected readonly canCreateProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'create'));
   protected readonly canDeleteProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'delete'));
   public readonly productStore = inject(ProductStore);
@@ -71,7 +73,7 @@ export default class List implements OnInit, OnDestroy {
   public readonly selectedIds = signal<Set<string>>(new Set());
   public readonly deleteMode = signal<'single' | 'bulk'>('single');
   public readonly pageFirst = signal(0);
-  public readonly pageRows = 10;
+  public readonly pageRows = signal(10);
 
   public readonly bulkCategoryIds = signal<string[]>([]);
 
@@ -79,7 +81,7 @@ export default class List implements OnInit, OnDestroy {
 
   public readonly currentPageItems = computed(() => {
     const products = this.productStore.productList().products;
-    return products.slice(this.pageFirst(), this.pageFirst() + this.pageRows);
+    return products.slice(this.pageFirst(), this.pageFirst() + this.pageRows());
   });
 
   public readonly isAllPageSelected = computed(() => {
@@ -124,8 +126,21 @@ export default class List implements OnInit, OnDestroy {
     this.searchSubscription?.unsubscribe();
   }
 
-  public onPageChange(event: TablePageEvent) {
-    this.pageFirst.set(event.first);
+  public onPageChange(event: PaginatorState) {
+    this.pageFirst.set(event.first ?? 0);
+    this.pageRows.set(event.rows ?? 10);
+  }
+
+  public async drop(event: CdkDragDrop<Product[]>) {
+    if (event.previousIndex === event.currentIndex) return;
+
+    const offset = this.pageFirst();
+    const products = [...this.productStore.productList().products];
+    const movedItem = products.splice(offset + event.previousIndex, 1)[0];
+    products.splice(offset + event.currentIndex, 0, movedItem);
+
+    this.productStore.set(ProductList.from(products));
+    await this.productService.updatePositions(products);
   }
 
   public toggleProduct(product: Product) {
