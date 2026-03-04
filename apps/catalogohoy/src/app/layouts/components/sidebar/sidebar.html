@@ -189,6 +189,10 @@
       </div>
       @if (!canViewOrders()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
+      } @else {
+        <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
+          Nuevo
+        </span>
       }
     </li>
     <li
@@ -213,6 +217,10 @@
         </span>
       } @else if (!canViewAnalytics()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
+      } @else {
+        <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
+          Nuevo
+        </span>
       }
     </li>
     <li
