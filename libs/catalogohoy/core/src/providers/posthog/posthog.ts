@@ -1,4 +1,4 @@
-import { inject, Injectable, NgZone } from '@angular/core';
+import { inject, Injectable, isDevMode, NgZone } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { environment } from '@catalogohoy/env';
 import { PlanStore } from '@catalogohoy/plan';
@@ -12,6 +12,7 @@ export class PosthogService {
   private readonly planStore = inject(PlanStore);
 
   private get isConfigured(): boolean {
+    if (isDevMode()) return false;
     return (
       !!environment.posthogKey &&
       environment.posthogKey !== 'YOUR_POSTHOG_API_KEY'
