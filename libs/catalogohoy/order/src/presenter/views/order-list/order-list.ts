@@ -31,6 +31,7 @@ import {
   Subscription,
 } from 'rxjs';
 import { Order, OrderStatus } from '../../../domain/order';
+import { OrderRealtimeService } from '../../../infrastructure/order-realtime.service';
 import { OrderStore } from '../../../infrastructure/order.store';
 
 type FilterTab = { label: string; value: OrderStatus | 'all' };
@@ -63,6 +64,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private readonly confirmDialogService = inject(ConfirmDialogService);
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
+  private readonly orderRealtime = inject(OrderRealtimeService);
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canCreateOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'create'));
   protected readonly canEditOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'edit'));
@@ -151,10 +153,12 @@ export class OrderListComponent implements OnInit, OnDestroy {
       });
 
     this.orderStore.loadOrders();
+    this.orderRealtime.subscribe();
   }
 
   ngOnDestroy() {
     this.searchSubscription?.unsubscribe();
+    this.orderRealtime.unsubscribe();
   }
 
   toggleExpand(orderId: number) {

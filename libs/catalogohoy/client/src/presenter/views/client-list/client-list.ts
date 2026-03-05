@@ -16,6 +16,7 @@ import {
 } from '@ui';
 import { debounceTime, distinctUntilChanged, Subject, Subscription } from 'rxjs';
 import { Client } from '../../../domain/client.model';
+import { ClientRealtimeService } from '../../../infrastructure/client-realtime.service';
 import { ClientStore } from '../../../infrastructure/client.store';
 
 type FilterValue = 'all' | 'with_completed' | 'with_pending' | 'no_completed';
@@ -36,6 +37,7 @@ type FilterValue = 'all' | 'with_completed' | 'with_pending' | 'no_completed';
 export default class ClientListComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   public readonly clientStore = inject(ClientStore);
+  private readonly clientRealtime = inject(ClientRealtimeService);
 
   private readonly searchSubject = new Subject<string>();
   private searchSubscription?: Subscription;
@@ -72,10 +74,12 @@ export default class ClientListComponent implements OnInit, OnDestroy {
       .subscribe((query) => this.searchQuery.set(query));
 
     this.clientStore.loadClients();
+    this.clientRealtime.subscribe();
   }
 
   ngOnDestroy() {
     this.searchSubscription?.unsubscribe();
+    this.clientRealtime.unsubscribe();
   }
 
   onSearch(query: string) {

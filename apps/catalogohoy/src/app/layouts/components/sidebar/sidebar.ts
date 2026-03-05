@@ -59,6 +59,9 @@ export class Sidebar {
   public readonly canViewOrders = computed(
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('ordenes', 'view')
   );
+  public readonly canViewClients = computed(
+    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('clientes', 'view')
+  );
   public readonly canViewAnalytics = computed(
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('analiticas', 'view')
   );

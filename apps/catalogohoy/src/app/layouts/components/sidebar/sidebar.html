@@ -173,13 +173,13 @@
       }
     </li>
     <li
-      [routerLink]="canViewOrders() ? '/admin/clients' : null"
-      [routerLinkActive]="canViewOrders() ? 'bg-primary-50' : ''"
+      [routerLink]="canViewClients() ? '/admin/clients' : null"
+      [routerLinkActive]="canViewClients() ? 'bg-primary-50' : ''"
       [routerLinkActiveOptions]="{exact: false}"
-      [class.opacity-50]="!canViewOrders()"
-      [class.cursor-not-allowed]="!canViewOrders()"
-      [class.cursor-pointer]="canViewOrders()"
-      [pTooltip]="!canViewOrders() ? noPermissionTooltip : ''"
+      [class.opacity-50]="!canViewClients()"
+      [class.cursor-not-allowed]="!canViewClients()"
+      [class.cursor-pointer]="canViewClients()"
+      [pTooltip]="!canViewClients() ? noPermissionTooltip : ''"
       tooltipPosition="right"
       class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
     >
@@ -187,7 +187,7 @@
         <ui-icon name="contact" size="16" />
         <a class="font-base font-semibold text-grey-700 mt-0.5">Clientes</a>
       </div>
-      @if (!canViewOrders()) {
+      @if (!canViewClients()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
       } @else {
         <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">

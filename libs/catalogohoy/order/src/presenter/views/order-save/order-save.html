@@ -276,6 +276,33 @@
               <p class="text-sm text-grey-300">La orden ha sido entregada</p>
             </div>
           </div>
+          <div
+            role="radio"
+            tabindex="0"
+            [attr.aria-checked]="form.get('status')?.value === 'cancelled'"
+            (click)="form.get('status')?.setValue('cancelled')"
+            (keydown.enter)="form.get('status')?.setValue('cancelled')"
+            (keydown.space)="form.get('status')?.setValue('cancelled'); $event.preventDefault()"
+            [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer flex-1 ' +
+              (form.get('status')?.value === 'cancelled'
+                ? 'border-red-500 bg-red-50/30'
+                : 'border-grey-200 hover:border-red-300')"
+          >
+            <div
+              [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ' +
+                (form.get('status')?.value === 'cancelled'
+                  ? 'border-primary-500'
+                  : 'border-grey-300')"
+            >
+              @if (form.get('status')?.value === 'cancelled') {
+              <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
+              }
+            </div>
+            <div class="flex-1">
+              <span class="font-medium">Cancelada</span>
+              <p class="text-sm text-grey-300">La orden fue cancelada</p>
+            </div>
+          </div>
         </div>
       </div>
     </ui-card>
