@@ -146,7 +146,16 @@ export default class TeamsViewComponent implements OnInit {
     return `¿Eliminar a <strong>${member?.invitedEmail}</strong> del equipo? Perderá acceso inmediatamente.`;
   }
 
-  protected getMemberInitial(email: string): string {
-    return email.charAt(0).toUpperCase();
+  protected getMemberDisplayName(member: TeamMember): string | null {
+    if (member.userName) {
+      return member.userLastName
+        ? `${member.userName} ${member.userLastName}`
+        : member.userName;
+    }
+    return null;
+  }
+
+  protected getMemberInitial(nameOrEmail: string): string {
+    return nameOrEmail.charAt(0).toUpperCase();
   }
 }

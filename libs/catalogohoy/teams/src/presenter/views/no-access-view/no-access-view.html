@@ -1,0 +1,26 @@
+<div class="flex flex-col items-center gap-6 max-w-md text-center">
+  <div class="flex items-center justify-center w-16 h-16 rounded-full bg-red-50 text-red-400">
+    <lucide-icon name="lock" [size]="32" />
+  </div>
+
+  <div class="flex flex-col gap-2">
+    <h1 class="text-2xl font-bold text-gray-900">No tienes acceso a este catalogo</h1>
+    <p class="text-sm text-gray-500">
+      Es posible que el administrador haya revocado tu acceso o que este catalogo ya no este disponible para ti.
+    </p>
+  </div>
+
+  @if (ownTenant()) {
+    <ui-button
+      label="Ir a mi tienda"
+      icon="store"
+      (click)="goToOwnStore()"
+    />
+  } @else {
+    <ui-button
+      label="Crear mi tienda"
+      icon="plus"
+      (click)="createStore()"
+    />
+  }
+</div>

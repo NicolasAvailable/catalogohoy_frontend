@@ -9,4 +9,6 @@ export interface TeamMember {
   inviteToken: string;
   inviteExpiresAt: string | null;
   createdAt: string;
+  userName: string | null;
+  userLastName: string | null;
 }

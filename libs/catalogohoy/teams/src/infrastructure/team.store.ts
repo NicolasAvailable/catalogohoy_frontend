@@ -14,6 +14,8 @@ import { TeamService } from './team.service';
 type TeamState = {
   teamId: number | null;
   members: TeamMember[];
+  ownerEmail: string | null;
+  ownerName: string | null;
   isLoading: boolean;
   isInviting: boolean;
   error: string | null;
@@ -22,6 +24,8 @@ type TeamState = {
 const initialState: TeamState = {
   teamId: null,
   members: [],
+  ownerEmail: null,
+  ownerName: null,
   isLoading: false,
   isInviting: false,
   error: null,
@@ -64,9 +68,17 @@ export const TeamStore = signalStore(
         const team = teamResult.value as Team;
         patchState(store, { teamId: team.id });
 
-        const membersResult = await teamService.getMembers(team.id);
+        const [membersResult, ownerResult] = await Promise.all([
+          teamService.getMembers(team.id),
+          teamService.getOwnerInfo(tenantId),
+        ]);
+
+        const ownerInfo = ownerResult.isRight()
+          ? (ownerResult.value as { email: string | null; name: string | null })
+          : { email: null, name: null };
+
         membersResult
-          .mapRight((members) => patchState(store, { members, isLoading: false }))
+          .mapRight((members) => patchState(store, { members, ownerEmail: ownerInfo.email, ownerName: ownerInfo.name, isLoading: false }))
           .mapLeft((err) => patchState(store, { isLoading: false, error: err.message }));
       },
 

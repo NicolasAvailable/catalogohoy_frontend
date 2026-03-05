@@ -37,11 +37,48 @@
     </div>
   } @else {
     <!-- Miembros activos -->
-    @if (teamStore.acceptedMembers().length > 0) {
-      <section class="teams-view__section">
-        <h2 class="teams-view__section-title">Miembros activos</h2>
-        <div class="teams-view__members">
-          @for (member of teamStore.acceptedMembers(); track member.id) {
+    <section class="teams-view__section">
+      <h2 class="teams-view__section-title">Miembros activos</h2>
+      <div class="teams-view__members">
+        <!-- Owner card -->
+        @if (teamStore.ownerEmail()) {
+          <div class="teams-view__member-card">
+            <div class="teams-view__member-header">
+              <div class="teams-view__member-info">
+                <div class="teams-view__avatar-wrap">
+                  <div class="teams-view__avatar">
+                    {{ getMemberInitial(teamStore.ownerName() ?? teamStore.ownerEmail()!) }}
+                  </div>
+                  <span
+                    class="teams-view__status-badge teams-view__status-badge--accepted"
+                    pTooltip="Administrador"
+                    tooltipPosition="top"
+                  >
+                    <lucide-icon name="crown" [size]="9" />
+                  </span>
+                </div>
+                <div>
+                  @if (teamStore.ownerName()) {
+                    <p class="teams-view__member-email">{{ teamStore.ownerName() }}</p>
+                    <p class="teams-view__member-status">{{ teamStore.ownerEmail() }} · Administrador</p>
+                  } @else {
+                    <p class="teams-view__member-email">{{ teamStore.ownerEmail() }}</p>
+                    <p class="teams-view__member-status">Administrador</p>
+                  }
+                </div>
+              </div>
+              <div class="teams-view__member-actions">
+                <div class="teams-view__permission-count">
+                  <lucide-icon name="shield" [size]="13" />
+                  <span>Permisos</span>
+                  <span class="teams-view__permission-count-badge">{{ totalPermissions }}/{{ totalPermissions }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+
+        @for (member of teamStore.acceptedMembers(); track member.id) {
             <div class="teams-view__member-card">
               <div
                 class="teams-view__member-header"
@@ -51,7 +88,7 @@
                 <div class="teams-view__member-info">
                   <div class="teams-view__avatar-wrap">
                     <div class="teams-view__avatar">
-                      {{ getMemberInitial(member.invitedEmail) }}
+                      {{ getMemberInitial(getMemberDisplayName(member) ?? member.invitedEmail) }}
                     </div>
                     <span
                       class="teams-view__status-badge teams-view__status-badge--accepted"
@@ -62,8 +99,13 @@
                     </span>
                   </div>
                   <div>
-                    <p class="teams-view__member-email">{{ member.invitedEmail }}</p>
-                    <p class="teams-view__member-status">Miembro activo</p>
+                    @if (getMemberDisplayName(member)) {
+                      <p class="teams-view__member-email">{{ getMemberDisplayName(member) }}</p>
+                      <p class="teams-view__member-status">{{ member.invitedEmail }} · Miembro activo</p>
+                    } @else {
+                      <p class="teams-view__member-email">{{ member.invitedEmail }}</p>
+                      <p class="teams-view__member-status">Miembro activo</p>
+                    }
                   </div>
                 </div>
                 <div class="teams-view__member-actions">
@@ -110,7 +152,6 @@
           }
         </div>
       </section>
-    }
 
     <!-- Invitaciones pendientes -->
     @if (teamStore.pendingInvites().length > 0) {

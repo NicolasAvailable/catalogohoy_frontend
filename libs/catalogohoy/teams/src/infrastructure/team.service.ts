@@ -49,13 +49,13 @@ export class TeamService implements BaseTeamService {
   public async getMembers(teamId: number): Promise<E.Either<Error, TeamMember[]>> {
     const { data, error } = await this.client
       .from('team_members')
-      .select('id, team_id, user_id, invited_email, status, invite_token, invite_expires_at, created_at')
+      .select('id, team_id, user_id, invited_email, status, invite_token, invite_expires_at, created_at, users(name, last_name)')
       .eq('team_id', teamId)
       .order('created_at', { ascending: true });
 
     if (error) return E.left(new Error(error.message));
 
-    const members: TeamMember[] = (data ?? []).map((row) => ({
+    const members: TeamMember[] = (data ?? []).map((row: any) => ({
       id: row.id,
       teamId: row.team_id,
       userId: row.user_id,
@@ -64,6 +64,8 @@ export class TeamService implements BaseTeamService {
       inviteToken: row.invite_token,
       inviteExpiresAt: row.invite_expires_at,
       createdAt: row.created_at,
+      userName: row.users?.name ?? null,
+      userLastName: row.users?.last_name ?? null,
     }));
 
     return E.right(members);
@@ -105,6 +107,8 @@ export class TeamService implements BaseTeamService {
       inviteToken: data.invite_token,
       inviteExpiresAt: data.invite_expires_at,
       createdAt: data.created_at,
+      userName: null,
+      userLastName: null,
     });
   }
 
@@ -159,21 +163,38 @@ export class TeamService implements BaseTeamService {
     return E.right(permissions);
   }
 
+  public async getOwnerInfo(tenantId: number): Promise<E.Either<Error, { email: string | null; name: string | null }>> {
+    const { data, error } = await this.client
+      .from('users_tenants')
+      .select('users(email, name, last_name)')
+      .eq('tenant_id', tenantId)
+      .eq('role', 'owner')
+      .maybeSingle();
+
+    if (error) return E.left(new Error(error.message));
+    const user = (data as any)?.users;
+    const name = user?.name
+      ? `${user.name}${user.last_name ? ' ' + user.last_name : ''}`
+      : null;
+    return E.right({ email: user?.email ?? null, name });
+  }
+
   public async getMyPermissions(
     tenantId: number
-  ): Promise<E.Either<Error, { permissions: PermissionKey[]; isMember: boolean }>> {
+  ): Promise<E.Either<Error, { permissions: PermissionKey[]; isMember: boolean; isOwner: boolean }>> {
     const { data, error } = await this.client.rpc('get_my_team_permissions', {
       p_tenant_id: tenantId,
     });
 
     if (error) return E.left(new Error(error.message));
 
-    const rows = (data as Array<{ module: string; action: string; is_member: boolean }>) ?? [];
+    const rows = (data as Array<{ module: string; action: string; is_member: boolean; is_owner: boolean }>) ?? [];
     const isMember = rows.some((r) => r.is_member);
+    const isOwner = rows.some((r) => r.is_owner);
     const permissions = rows
       .filter((r) => r.module !== '')
       .map((r) => `${r.module}:${r.action}` as PermissionKey);
 
-    return E.right({ permissions, isMember });
+    return E.right({ permissions, isMember, isOwner });
   }
 }
