@@ -87,13 +87,14 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
       const result = await this.facade.login(
         this.form.value as LoginCredentials
       );
-      result.mapRight(async (url) => {
+      if (result.isRight()) {
+        const url = result.value as string;
         if (this.pendingInviteToken) {
           await this.facade.acceptInvite(this.pendingInviteToken);
           sessionStorage.removeItem('pending_invite_token');
         }
         window.location.href = url;
-      });
+      }
     }
   }
 
@@ -134,6 +135,10 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
   }
 
   private async handlePostGoogleAuth() {
+    if (this.pendingInviteToken) {
+      await this.facade.acceptInvite(this.pendingInviteToken);
+      sessionStorage.removeItem('pending_invite_token');
+    }
     const result = await this.facade.getLoginRedirectUrl();
     if (result.isRight()) {
       window.location.href = result.value as string;
