@@ -7,12 +7,21 @@
         {{ teamStore.memberCount() }} de {{ planStore.maxTeamMembers() }} miembros activos
       </p>
     </div>
-    @if (teamStore.canInviteMore() && canInvite()) {
-      <ui-button
-        label="Invitar miembro"
-        icon="user-plus"
-        (click)="openInviteDialog()"
-      />
+    @if (canInvite()) {
+      @if (teamFull()) {
+        <ui-button
+          label="Mejorar plan"
+          icon="arrow-up-circle"
+          severity="secondary"
+          (click)="goToPlans()"
+        />
+      } @else {
+        <ui-button
+          label="Invitar miembro"
+          icon="user-plus"
+          (click)="openInviteDialog()"
+        />
+      }
     }
   </header>
 

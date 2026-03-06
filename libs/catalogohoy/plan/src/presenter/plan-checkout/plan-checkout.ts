@@ -42,6 +42,10 @@ const CHECKOUT_FEATURES: Record<string, FeatureSection[]> = {
       ],
     },
     {
+      title: 'Equipo',
+      items: ['1 miembro de equipo', 'Permisos por módulo'],
+    },
+    {
       title: 'Analíticas',
       items: ['Visitas al catálogo', 'Analíticas en tiempo real'],
     },
@@ -61,6 +65,10 @@ const CHECKOUT_FEATURES: Record<string, FeatureSection[]> = {
         'Código QR descargable',
         'Compartir por WhatsApp',
       ],
+    },
+    {
+      title: 'Equipo',
+      items: ['Hasta 5 miembros de equipo', 'Permisos por módulo'],
     },
     {
       title: 'Analíticas',

@@ -17,6 +17,7 @@ export interface Plan {
 export interface PlanDisplay extends Plan {
   period: string;
   maxProductsLabel: string;
+  teamMembersLabel: string;
   rateType: string;
   features: PlanFeature[];
   additionalCatalogPrice: string;

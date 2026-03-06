@@ -1,4 +1,5 @@
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { Router } from '@angular/router';
 import { Exception } from '@shared/domain';
 import { PlanStore } from '@catalogohoy/plan';
 import { LucideAngularModule } from 'lucide-angular';
@@ -34,6 +35,7 @@ export default class TeamsViewComponent implements OnInit {
   protected readonly planStore = inject(PlanStore);
   protected readonly permissionsStore = inject(TeamPermissionsStore);
   private readonly toaster = inject(ToastService);
+  private readonly router = inject(Router);
 
   protected readonly canInvite = computed(
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'invite')
@@ -44,6 +46,7 @@ export default class TeamsViewComponent implements OnInit {
   protected readonly canRemove = computed(
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'delete')
   );
+  protected readonly teamFull = computed(() => !this.teamStore.canInviteMore());
 
   protected readonly totalPermissions = Object.values(MODULE_ACTIONS).reduce(
     (sum, actions) => sum + actions.length,
@@ -74,6 +77,10 @@ export default class TeamsViewComponent implements OnInit {
 
   protected openInviteDialog(): void {
     this.inviteDialog.show();
+  }
+
+  protected goToPlans(): void {
+    this.router.navigate(['/admin/plans']);
   }
 
   protected async togglePermissions(member: TeamMember): Promise<void> {

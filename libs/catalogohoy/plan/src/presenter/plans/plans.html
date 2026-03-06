@@ -109,6 +109,10 @@
             <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
             <span>{{ plan.maxProductsLabel }}</span>
           </li>
+          <li class="plan-card__feature">
+            <ui-icon name="{{ plan.maxTeamMembers > 0 ? 'check' : 'x' }}" styleClass="size-4 shrink-0 {{ plan.maxTeamMembers > 0 ? 'text-green-500' : 'text-gray-300' }}" />
+            <span>{{ plan.teamMembersLabel }}</span>
+          </li>
           @for (feature of plan.features; track feature.text) {
           <li class="plan-card__feature">
             <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />

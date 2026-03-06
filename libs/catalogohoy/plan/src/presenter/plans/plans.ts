@@ -87,10 +87,17 @@ function toPlanDisplay(plan: Plan, currentPlanPosition: number): PlanDisplay {
     buttonLabel = 'Mejorar';
   }
 
+  const teamLabel = plan.maxTeamMembers === 0
+    ? 'Sin equipo de trabajo'
+    : plan.maxTeamMembers === 1
+      ? '1 miembro de equipo'
+      : `Hasta ${plan.maxTeamMembers} miembros de equipo`;
+
   return {
     ...plan,
     period: config.period,
     maxProductsLabel: `Hasta ${plan.maxProducts} productos`,
+    teamMembersLabel: teamLabel,
     rateType: config.rateType,
     features: config.features,
     additionalCatalogPrice: '',
