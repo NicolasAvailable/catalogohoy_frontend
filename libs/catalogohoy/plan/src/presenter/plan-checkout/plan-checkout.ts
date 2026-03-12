@@ -85,7 +85,7 @@ const CHECKOUT_FEATURES: Record<string, FeatureSection[]> = {
   ],
 };
 
-const WHATSAPP_NUMBER = '584124807708';
+const WHATSAPP_NUMBER = '584220240947';
 
 @Component({
   selector: 'lib-plan-checkout',

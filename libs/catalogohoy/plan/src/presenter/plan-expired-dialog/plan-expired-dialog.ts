@@ -64,13 +64,13 @@ export class PlanExpiredDialogComponent {
     const message = encodeURIComponent(
       `Hola, quiero pagar mi plan ${planName}`
     );
-    window.open(`https://wa.me/584124807708?text=${message}`, '_blank');
+    window.open(`https://wa.me/584220240947?text=${message}`, '_blank');
   }
 
   public upgradePlan(): void {
     const message = encodeURIComponent(
       'Hola, quiero mejorar mi plan a uno superior'
     );
-    window.open(`https://wa.me/584124807708?text=${message}`, '_blank');
+    window.open(`https://wa.me/584220240947?text=${message}`, '_blank');
   }
 }
