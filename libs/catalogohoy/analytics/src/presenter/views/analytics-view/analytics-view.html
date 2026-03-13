@@ -50,22 +50,31 @@
           </div>
           <div class="flex items-center gap-1 bg-slate-800 rounded-lg p-1">
             <button
-              (click)="pageViewsYear.set('last-year')"
-              class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
-              [class.bg-slate-700]="pageViewsYear() === 'last-year'"
-              [class.text-white]="pageViewsYear() === 'last-year'"
-              [class.text-slate-400]="pageViewsYear() !== 'last-year'"
+              (click)="pageViewsPeriod.set('today')"
+              class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer"
+              [class.bg-slate-700]="pageViewsPeriod() === 'today'"
+              [class.text-white]="pageViewsPeriod() === 'today'"
+              [class.text-slate-400]="pageViewsPeriod() !== 'today'"
             >
-              Año anterior
+              Hoy
             </button>
             <button
-              (click)="pageViewsYear.set('this-year')"
-              class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
-              [class.bg-slate-700]="pageViewsYear() === 'this-year'"
-              [class.text-white]="pageViewsYear() === 'this-year'"
-              [class.text-slate-400]="pageViewsYear() !== 'this-year'"
+              (click)="pageViewsPeriod.set('one-month')"
+              class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer"
+              [class.bg-slate-700]="pageViewsPeriod() === 'one-month'"
+              [class.text-white]="pageViewsPeriod() === 'one-month'"
+              [class.text-slate-400]="pageViewsPeriod() !== 'one-month'"
             >
-              Este año
+              Un mes
+            </button>
+            <button
+              (click)="pageViewsPeriod.set('one-year')"
+              class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer"
+              [class.bg-slate-700]="pageViewsPeriod() === 'one-year'"
+              [class.text-white]="pageViewsPeriod() === 'one-year'"
+              [class.text-slate-400]="pageViewsPeriod() !== 'one-year'"
+            >
+              Un año
             </button>
           </div>
         </div>

@@ -2,6 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AnalyticsStore } from '../../../infrastructure';
+import { PageViewsPeriod } from '../../../domain';
 import { IconComponent } from '@ui';
 import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
 
@@ -14,7 +15,7 @@ import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
 export class AnalyticsViewComponent {
   private readonly router = inject(Router);
   protected readonly analyticsStore = inject(AnalyticsStore);
-  protected readonly pageViewsYear = signal<'this-year' | 'last-year'>('this-year');
+  protected readonly pageViewsPeriod = signal<PageViewsPeriod>('today');
 
   constructor() {
     this.analyticsStore.load();
@@ -43,12 +44,25 @@ export class AnalyticsViewComponent {
       position: 'back',
       xaxis: { lines: { show: true } },
     },
-    series: this.analyticsStore.data()?.pageViews?.series?.[this.pageViewsYear()] ?? [],
+    series: this.analyticsStore.data()?.pageViews?.series?.[this.pageViewsPeriod()] ?? [],
     stroke: { width: 2 },
     tooltip: {
       followCursor: true,
       theme: 'dark',
-      x: { format: 'MMM dd, yyyy' },
+      x: {
+        formatter: (val: number) => {
+          const d = new Date(val);
+          const period = this.pageViewsPeriod();
+          if (period === 'today') {
+            const h = d.getUTCHours();
+            if (h === 0) return '12:00 am';
+            if (h === 12) return '12:00 pm';
+            return h < 12 ? `${h}:00 am` : `${h - 12}:00 pm`;
+          }
+          if (period === 'one-month') return d.toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
+          return d.toLocaleDateString('es', { month: 'long', year: 'numeric' });
+        },
+      },
       y: { formatter: (value: number) => `${value}` },
     },
     xaxis: {
@@ -59,14 +73,22 @@ export class AnalyticsViewComponent {
         offsetY: -20,
         style: { colors: '#CBD5E1' },
         rotate: 0,
-        // Custom formatter is more reliable than datetimeFormatter for sparse data
         formatter: (value: string, timestamp?: number) => {
           const ts = timestamp ?? parseInt(value);
           if (!ts || isNaN(ts)) return value;
-          return new Date(ts).toLocaleDateString('es', { month: 'short', year: '2-digit' });
+          const d = new Date(ts);
+          const period = this.pageViewsPeriod();
+          if (period === 'today') {
+            const h = d.getUTCHours();
+            if (h === 0) return '12 am';
+            if (h === 12) return '12 pm';
+            return h < 12 ? `${h} am` : `${h - 12} pm`;
+          }
+          if (period === 'one-month') return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+          return d.toLocaleDateString('es', { month: 'short', year: '2-digit' });
         },
       },
-      tickAmount: 6,
+      tickAmount: this.pageViewsPeriod() === 'today' ? 12 : this.pageViewsPeriod() === 'one-month' ? 10 : 6,
       tooltip: { enabled: false },
       type: 'datetime',
     },

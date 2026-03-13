@@ -26,12 +26,11 @@ export interface ActiveHoursData {
   byUniqueUsers: number[][];
 }
 
+export type PageViewsPeriod = 'today' | 'one-month' | 'one-year';
+
 export interface AnalyticsData {
   pageViews: {
-    series: {
-      'this-year': ChartSeries[];
-      'last-year': ChartSeries[];
-    };
+    series: Record<PageViewsPeriod, ChartSeries[]>;
   };
   sessions: SparklineMetric;
   pageViewsMetric: SparklineMetric;
