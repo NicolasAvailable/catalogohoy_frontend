@@ -514,6 +514,42 @@
           ></ui-button>
           }
 
+          <!-- WhatsApp API registered numbers -->
+          @if (whatsAppStore.activeAccounts().length) {
+          <div class="mt-4">
+            <small class="field-hint">
+              Números registrados vía WhatsApp API — haz clic para agregar como vendedor.
+            </small>
+            <div class="flex flex-col gap-2 mt-2">
+              @for (account of whatsAppStore.activeAccounts(); track account.id) {
+              <button
+                type="button"
+                class="flex items-center justify-between gap-2 w-full px-3 py-2 rounded-md border border-grey-200 hover:border-primary-300 hover:bg-primary-50 transition-colors cursor-pointer"
+                [disabled]="draftWhatsappButtons().length >= 3"
+                (click)="useApiNumber(account.phoneNumber, account.displayName)"
+              >
+                <div class="flex items-center gap-2">
+                  <ui-icon name="phone" styleClass="size-4 text-green-600"></ui-icon>
+                  <span class="text-sm font-medium text-grey-700">{{ account.displayName ?? account.phoneNumber }}</span>
+                </div>
+                <span class="text-xs text-grey-400">{{ account.phoneNumber }}</span>
+              </button>
+              }
+            </div>
+          </div>
+          }
+
+          <div class="mt-3">
+            <ui-button
+              label="Registrar número con WhatsApp API"
+              [variant]="'outlined'"
+              severity="secondary"
+              size="small"
+              icon="plus"
+              (click)="whatsAppDialog.show()"
+            ></ui-button>
+          </div>
+
           <div class="divider"></div>
 
           @if (canEditCatalog()) {
@@ -709,4 +745,16 @@
     </div>
   </div>
   }
+
+  <!-- WhatsApp API registration dialog -->
+  <ui-dialog
+    #whatsAppDialog
+    headerTitle="Registrar WhatsApp API"
+    styleClass="w-full max-w-lg"
+  >
+    <lib-whatsapp-setup
+      mode="dialog"
+      (registered)="onWhatsAppRegistered()"
+    />
+  </ui-dialog>
 </div>

@@ -1,0 +1,151 @@
+<div
+  [class]="mode() === 'fullpage'
+    ? 'flex flex-col items-center justify-center w-full h-full p-6'
+    : 'flex flex-col w-full p-4'"
+>
+  <!-- Step 1: Enter phone number and display name -->
+  @if (currentStep() === 1) {
+  <div class="flex flex-col items-center max-w-lg w-full mx-auto gap-6">
+    <div
+      class="flex items-center justify-center w-16 h-16 rounded-full bg-green-50"
+    >
+      <ui-icon name="message-square" size="32" styleClass="text-green-600" />
+    </div>
+
+    <div class="text-center">
+      <h2 class="text-xl font-bold text-grey-800">
+        Conectar WhatsApp Business API
+      </h2>
+      <p class="text-sm text-grey-500 mt-2">
+        Registra tu número de WhatsApp Business para recibir y enviar mensajes
+        desde tu catálogo.
+      </p>
+    </div>
+
+    <div class="flex flex-col gap-4 w-full">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-semibold text-grey-700">
+          Número de teléfono
+        </label>
+        <ui-input-tel
+          [ngModel]="phoneNumber()"
+          (ngModelChange)="phoneNumber.set($event)"
+          placeholder="+58 412 480 7708"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-semibold text-grey-700">
+          Nombre para mostrar
+        </label>
+        <ui-input-text
+          [ngModel]="displayName()"
+          (ngModelChange)="displayName.set($event)"
+          placeholder="Mi Tienda"
+        />
+      </div>
+    </div>
+
+    <ui-button
+      label="Continuar"
+      icon="arrow-right"
+      iconPos="right"
+      [disabled]="!isFormValid"
+      (click)="goToStep2()"
+      class="w-full"
+      styleClass="w-full"
+    />
+  </div>
+  }
+
+  <!-- Step 2: Optional WABA credentials -->
+  @if (currentStep() === 2) {
+  <div class="flex flex-col items-center max-w-lg w-full mx-auto gap-6">
+    <div
+      class="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50"
+    >
+      <ui-icon name="settings" size="32" styleClass="text-blue-600" />
+    </div>
+
+    <div class="text-center">
+      <h2 class="text-xl font-bold text-grey-800">
+        Credenciales de la API
+      </h2>
+      <p class="text-sm text-grey-500 mt-2">
+        Ingresa los datos de tu cuenta de WhatsApp Business API. Estos campos
+        son opcionales si aún no tienes las credenciales.
+      </p>
+    </div>
+
+    <div class="flex flex-col gap-4 w-full">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-semibold text-grey-700">
+          WABA ID
+        </label>
+        <ui-input-text
+          [ngModel]="wabaId()"
+          (ngModelChange)="wabaId.set($event)"
+          placeholder="WABA ID"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-semibold text-grey-700">
+          Phone Number ID
+        </label>
+        <ui-input-text
+          [ngModel]="phoneNumberId()"
+          (ngModelChange)="phoneNumberId.set($event)"
+          placeholder="Phone Number ID"
+        />
+      </div>
+    </div>
+
+    <div class="flex gap-3 w-full">
+      <ui-button
+        label="Volver"
+        icon="arrow-left"
+        severity="secondary"
+        (click)="goBack()"
+        class="flex-1"
+        styleClass="w-full"
+      />
+      <ui-button
+        label="Registrar"
+        icon="check"
+        [isLoading]="whatsAppStore.isConnecting()"
+        (click)="register()"
+        class="flex-1"
+        styleClass="w-full"
+      />
+    </div>
+  </div>
+  }
+
+  <!-- Step 3: Success -->
+  @if (currentStep() === 3) {
+  <div class="flex flex-col items-center max-w-lg w-full mx-auto gap-6">
+    <div
+      class="flex items-center justify-center w-16 h-16 rounded-full bg-green-50"
+    >
+      <ui-icon name="check-circle" size="32" styleClass="text-green-600" />
+    </div>
+
+    <div class="text-center">
+      <h2 class="text-xl font-bold text-grey-800">
+        Número registrado exitosamente
+      </h2>
+      <p class="text-sm text-grey-500 mt-2">
+        Tu número de WhatsApp Business ha sido conectado. Ya puedes recibir
+        y enviar mensajes desde tu catálogo.
+      </p>
+    </div>
+  </div>
+  }
+
+  @if (whatsAppStore.error()) {
+  <p class="text-sm text-red-500 mt-4 text-center">
+    {{ whatsAppStore.error() }}
+  </p>
+  }
+</div>

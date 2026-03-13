@@ -38,7 +38,8 @@
       "@catalogohoy/plan": ["libs/catalogohoy/plan/src/index.ts"],
       "@catalogohoy/chat": ["libs/catalogohoy/chat/src/index.ts"],
       "@catalogohoy/analytics": ["libs/catalogohoy/analytics/src/index.ts"],
-      "@catalogohoy/teams": ["libs/catalogohoy/teams/src/index.ts"]
+      "@catalogohoy/teams": ["libs/catalogohoy/teams/src/index.ts"],
+      "@catalogohoy/whatsapp": ["libs/catalogohoy/whatsapp/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

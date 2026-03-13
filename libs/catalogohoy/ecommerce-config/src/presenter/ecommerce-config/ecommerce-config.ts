@@ -12,11 +12,13 @@ import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
+import { WhatsAppSetupComponent, WhatsAppStore } from '@catalogohoy/whatsapp';
 import {
   ButtonComponent,
   CardComponent,
   ColorPickerComponent,
   ConfirmDialogService,
+  DialogComponent,
   IconComponent,
   InputTextComponent,
   SelectComponent,
@@ -52,6 +54,8 @@ import { PhoneMockupComponent } from '../components/phone-mockup/phone-mockup';
     SelectItemDirective,
     SelectSelectedItemDirective,
     PhoneMockupComponent,
+    DialogComponent,
+    WhatsAppSetupComponent,
   ],
   templateUrl: './ecommerce-config.html',
   styleUrl: './ecommerce-config.css',
@@ -60,10 +64,13 @@ import { PhoneMockupComponent } from '../components/phone-mockup/phone-mockup';
 export class EcommerceConfigComponent implements OnInit {
   public readonly tenantStore = inject(TenantStore);
   public readonly configStore = inject(EcommerceConfigStore);
+  public readonly whatsAppStore = inject(WhatsAppStore);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly confirmDialogService = inject(ConfirmDialogService);
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canEditCatalog = computed(() => this.permissions.isOwner() || this.permissions.can()('catalogo', 'edit'));
+
+  public readonly whatsAppDialog = viewChild<DialogComponent>('whatsAppDialog');
 
   public readonly themeColors = THEME_COLORS;
   public readonly venezuelanStates = VENEZUELAN_STATES;
@@ -171,6 +178,7 @@ export class EcommerceConfigComponent implements OnInit {
     if (tenantId) {
       this.configStore.loadConfig(String(tenantId));
       this.configStore.loadPaymentMethods(String(tenantId));
+      this.whatsAppStore.loadAccounts();
     }
   }
 
@@ -292,6 +300,19 @@ export class EcommerceConfigComponent implements OnInit {
     await this.configStore.updatePartialConfig({
       whatsappButtons: this.draftWhatsappButtons(),
     });
+  }
+
+  onWhatsAppRegistered() {
+    this.whatsAppDialog()?.hide();
+  }
+
+  useApiNumber(phoneNumber: string, displayName: string | null) {
+    const current = this.draftWhatsappButtons();
+    if (current.length >= 3) return;
+    this.draftWhatsappButtons.set([
+      ...current,
+      { name: displayName ?? '', number: phoneNumber },
+    ]);
   }
 
   // --- Social Links Section ---
