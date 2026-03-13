@@ -8,6 +8,7 @@ export class ProfileMapper {
       id: profile.user.id,
       name: profile.user.name,
       email: profile.user.email,
+      photo: profile.user.photo ?? null,
       tenantList: TenantListMapper.toDomain(profile.tenants),
     });
   }

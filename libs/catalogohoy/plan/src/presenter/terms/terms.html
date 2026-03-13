@@ -1,0 +1,238 @@
+<div class="terms-page">
+
+  <!-- ── Top bar (no imprime) ── -->
+  <div class="terms-topbar no-print">
+    <div class="terms-topbar__brand">
+      <span class="terms-topbar__logo">CatálogoHoy</span>
+    </div>
+    <button class="terms-download-btn" (click)="downloadPdf()">
+      <ui-icon name="download" styleClass="size-4 shrink-0" />
+      Descargar PDF
+    </button>
+  </div>
+
+  <!-- ── Documento ── -->
+  <article class="terms-document">
+
+    <!-- Encabezado -->
+    <header class="terms-doc-header">
+      <p class="terms-doc-brand">CatálogoHoy</p>
+      <h1 class="terms-doc-title">Términos y Condiciones de Servicio</h1>
+      <p class="terms-doc-date">Vigentes desde: {{ effectiveDate }}</p>
+    </header>
+
+    <hr class="terms-divider" />
+
+    <!-- 1. Aceptación -->
+    <section class="terms-section">
+      <h2 class="terms-section__title">1. Aceptación de los Términos</h2>
+      <p>
+        Al acceder o utilizar los servicios de <strong>CatálogoHoy</strong> ("la Plataforma"), usted acepta estar
+        legalmente vinculado por estos Términos y Condiciones de Servicio ("Términos"). Si no está de acuerdo con
+        alguno de estos términos, no deberá utilizar la Plataforma.
+      </p>
+      <p>
+        El uso continuado de la Plataforma tras la publicación de cambios a estos Términos constituye aceptación
+        de dichos cambios. Le recomendamos revisar esta página periódicamente.
+      </p>
+    </section>
+
+    <!-- 2. Descripción del Servicio -->
+    <section class="terms-section">
+      <h2 class="terms-section__title">2. Descripción del Servicio</h2>
+      <p>
+        CatálogoHoy es una plataforma SaaS (Software como Servicio) que permite a negocios y emprendedores crear,
+        publicar y compartir catálogos digitales de productos en línea. Los servicios incluyen, entre otros:
+      </p>
+      <ul class="terms-list">
+        <li>Creación y edición de catálogos digitales personalizables.</li>
+        <li>Publicación del catálogo bajo un subdominio propio (ej. <em>sunegocio.catalogohoy.com</em>).</li>
+        <li>Analíticas de visitas y comportamiento de los visitantes.</li>
+        <li>Generación y descarga de código QR del catálogo.</li>
+        <li>Gestión de productos, categorías y pedidos.</li>
+        <li>Dominio personalizado (según el plan contratado).</li>
+      </ul>
+    </section>
+
+    <!-- 3. Registro y Cuenta -->
+    <section class="terms-section">
+      <h2 class="terms-section__title">3. Registro y Cuenta de Usuario</h2>
+      <p>
+        Para utilizar los servicios de pago, el usuario debe registrarse y crear una cuenta. Usted es responsable
+        de mantener la confidencialidad de sus credenciales de acceso y de todas las actividades que ocurran bajo
+        su cuenta.
+      </p>
+      <p>
+        Usted acepta proporcionar información veraz, completa y actualizada durante el proceso de registro.
+        CatálogoHoy se reserva el derecho de suspender o cancelar cuentas con información falsa o incompleta.
+      </p>
+    </section>
+
+    <!-- 4. Planes y Pagos -->
+    <section class="terms-section">
+      <h2 class="terms-section__title">4. Planes y Pagos</h2>
+
+      <h3 class="terms-section__subtitle">4.1 Suscripciones</h3>
+      <p>
+        CatálogoHoy ofrece planes de suscripción mensuales, trimestrales y anuales. Los precios se muestran en
+        dólares estadounidenses (USD) o en bolívares venezolanos (Bs.) como referencia en USD, según la moneda
+        seleccionada por el usuario.
+      </p>
+
+      <h3 class="terms-section__subtitle">4.2 Pagos en USD</h3>
+      <p>
+        Los pagos en dólares se procesan de forma segura a través de <strong>Stripe</strong>. Al proporcionar sus
+        datos de tarjeta, autoriza el cargo recurrente según el período de facturación elegido. CatálogoHoy no
+        almacena datos de tarjetas de crédito.
+      </p>
+
+      <h3 class="terms-section__subtitle">4.3 Pagos en Bolívares (Venezuela)</h3>
+      <p>
+        Los pagos en bolívares se realizan mediante transferencia bancaria o Pago Móvil. El usuario debe
+        coordinar el pago directamente con el administrador de CatálogoHoy a través de WhatsApp. La activación
+        del plan está condicionada a la confirmación del pago por parte del equipo de CatálogoHoy.
+      </p>
+      <p>
+        El tipo de cambio aplicado corresponde a la tasa oficial vigente al momento del pago, la cual puede
+        variar. CatálogoHoy no garantiza precios fijos en bolívares.
+      </p>
+
+      <h3 class="terms-section__subtitle">4.4 Renovación Automática</h3>
+      <p>
+        Las suscripciones en USD se renuevan automáticamente al vencimiento del período contratado, salvo que el
+        usuario cancele antes de la fecha de renovación. Para suscripciones en bolívares, la renovación debe ser
+        gestionada manualmente por el usuario.
+      </p>
+
+      <h3 class="terms-section__subtitle">4.5 Impuestos</h3>
+      <p>
+        Los precios mostrados no incluyen impuestos locales que pudieran aplicar según la jurisdicción del usuario.
+        El usuario es responsable del pago de cualquier impuesto aplicable.
+      </p>
+    </section>
+
+    <!-- 5. Política de Reembolso -->
+    <section class="terms-section">
+      <h2 class="terms-section__title">5. Política de Reembolso</h2>
+      <p>
+        CatálogoHoy ofrece un período de prueba gratuito a través del Plan Gratis. Dado que los usuarios pueden
+        evaluar la plataforma antes de realizar cualquier pago, <strong>no se realizan reembolsos</strong> una vez
+        procesado el cobro de una suscripción, salvo que exista un error técnico imputable directamente a
+        CatálogoHoy.
+      </p>
+      <p>
+        Solicitudes de reembolso por error técnico deben realizarse dentro de los <strong>7 días calendario</strong>
+        siguientes al cobro, enviando un correo a soporte con el detalle del inconveniente.
+      </p>
+    </section>
+
+    <!-- 6. Cancelación -->
+    <section class="terms-section">
+      <h2 class="terms-section__title">6. Cancelación del Servicio</h2>
+      <p>
+        El usuario puede cancelar su suscripción en cualquier momento desde su panel de administración o
+        contactando al equipo de soporte. La cancelación tendrá efecto al finalizar el período de facturación
+        vigente; el usuario mantendrá acceso al servicio hasta dicha fecha.
+      </p>
+      <p>
+        CatálogoHoy se reserva el derecho de suspender o cancelar cuentas que infrinjan estos Términos, sin
+        previo aviso y sin derecho a reembolso.
+      </p>
+    </section>
+
+    <!-- 7. Uso Aceptable -->
+    <section class="terms-section">
+      <h2 class="terms-section__title">7. Uso Aceptable</h2>
+      <p>El usuario se compromete a no utilizar la Plataforma para:</p>
+      <ul class="terms-list">
+        <li>Publicar contenido ilegal, fraudulento, difamatorio o que infrinja derechos de terceros.</li>
+        <li>Vender productos prohibidos por la legislación aplicable.</li>
+        <li>Intentar acceder sin autorización a sistemas o datos de otros usuarios.</li>
+        <li>Realizar actividades que interfieran con el funcionamiento normal de la Plataforma.</li>
+        <li>Usar la Plataforma para enviar comunicaciones no solicitadas (spam).</li>
+      </ul>
+    </section>
+
+    <!-- 8. Propiedad Intelectual -->
+    <section class="terms-section">
+      <h2 class="terms-section__title">8. Propiedad Intelectual</h2>
+      <p>
+        Todos los derechos sobre la Plataforma, incluyendo su diseño, código fuente, marca, logotipos y
+        funcionalidades, son propiedad exclusiva de CatálogoHoy o sus licenciantes. Queda prohibida la
+        reproducción, distribución o modificación de cualquier parte de la Plataforma sin autorización expresa
+        por escrito.
+      </p>
+      <p>
+        El usuario conserva la propiedad de todo el contenido (imágenes, textos, datos de productos) que suba a
+        la Plataforma, y otorga a CatálogoHoy una licencia no exclusiva para mostrar dicho contenido en el
+        contexto del servicio.
+      </p>
+    </section>
+
+    <!-- 9. Limitación de Responsabilidad -->
+    <section class="terms-section">
+      <h2 class="terms-section__title">9. Limitación de Responsabilidad</h2>
+      <p>
+        La Plataforma se proporciona "tal cual" y "según disponibilidad". CatálogoHoy no garantiza que el
+        servicio sea ininterrumpido, libre de errores o adecuado para un propósito particular. En la máxima
+        medida permitida por la ley aplicable, CatálogoHoy no será responsable por daños indirectos, incidentales,
+        especiales o consecuentes derivados del uso o la imposibilidad de uso de la Plataforma.
+      </p>
+      <p>
+        La responsabilidad total de CatálogoHoy frente al usuario, por cualquier causa, no excederá el importe
+        pagado por el usuario durante los últimos <strong>3 meses</strong> anteriores al evento que dio origen
+        a la reclamación.
+      </p>
+    </section>
+
+    <!-- 10. Privacidad -->
+    <section class="terms-section">
+      <h2 class="terms-section__title">10. Privacidad y Protección de Datos</h2>
+      <p>
+        El tratamiento de los datos personales del usuario se rige por la Política de Privacidad de CatálogoHoy.
+        Al utilizar la Plataforma, el usuario consiente la recopilación y uso de sus datos conforme a dicha
+        política.
+      </p>
+    </section>
+
+    <!-- 11. Modificaciones -->
+    <section class="terms-section">
+      <h2 class="terms-section__title">11. Modificaciones a los Términos</h2>
+      <p>
+        CatálogoHoy se reserva el derecho de modificar estos Términos en cualquier momento. Los cambios serán
+        notificados mediante la publicación de los Términos actualizados en la Plataforma y, cuando sean
+        materiales, mediante un correo electrónico al usuario. El uso continuado de la Plataforma tras la
+        notificación constituirá aceptación de los nuevos Términos.
+      </p>
+    </section>
+
+    <!-- 12. Ley Aplicable -->
+    <section class="terms-section">
+      <h2 class="terms-section__title">12. Ley Aplicable y Jurisdicción</h2>
+      <p>
+        Estos Términos se rigen por las leyes de la República Bolivariana de Venezuela. Cualquier disputa que
+        surja en relación con estos Términos se someterá a la jurisdicción de los tribunales competentes de
+        Venezuela, salvo acuerdo expreso en contrario.
+      </p>
+    </section>
+
+    <!-- 13. Contacto -->
+    <section class="terms-section">
+      <h2 class="terms-section__title">13. Contacto</h2>
+      <p>
+        Para cualquier consulta sobre estos Términos, puede contactarnos a través de:
+      </p>
+      <ul class="terms-list">
+        <li>WhatsApp: +58 412 480 7708</li>
+        <li>Plataforma: <strong>catalogohoy.com</strong></li>
+      </ul>
+    </section>
+
+    <!-- Footer del documento -->
+    <footer class="terms-doc-footer">
+      <p>© {{ effectiveDate }} CatálogoHoy. Todos los derechos reservados.</p>
+    </footer>
+
+  </article>
+
+</div>

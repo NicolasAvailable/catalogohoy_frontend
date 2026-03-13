@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   input,
   OnInit,
@@ -16,6 +17,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { CategoryStore } from '@catalogohoy/category';
 import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { Exception, is } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { whiteSpacesValidator } from '@shared/presenter';
@@ -60,6 +62,8 @@ export default class Save implements OnInit {
   private readonly productFacade = inject(ProductFacade);
   public readonly categoryStore = inject(CategoryStore);
   public readonly planStore = inject(PlanStore);
+  private readonly permissions = inject(TeamPermissionsStore);
+  protected readonly canEditProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'edit'));
 
   @ViewChild(PlanLimitDialogComponent)
   planLimitDialog!: PlanLimitDialogComponent;
@@ -74,6 +78,7 @@ export default class Save implements OnInit {
     productionCost: [''],
     stock: [null],
     categoryIds: [[] as string[]],
+    position: [0],
   });
 
   public readonly id = input<string | undefined>(undefined);
@@ -137,6 +142,7 @@ export default class Save implements OnInit {
     this.form.controls.categoryIds.setValue(
       product.categoryList.ids as string[]
     );
+    this.form.controls.position.setValue(product.position);
     this.photos.set(product.photos);
   }
 
@@ -198,6 +204,7 @@ export default class Save implements OnInit {
         });
     } else {
       body['id'] = this.id() as string;
+      (body as any).position = Number(this.form.controls.position.value);
       const product = await this.productFacade.update(body);
       product.mapRight(() => this.router.navigate(['/admin/products']));
     }

@@ -16,6 +16,7 @@
         [fluid]="false"
         size="small"
       />
+      @if (canEditProduct()) {
       <ui-button
         class="sm:hidden"
         (click)="create()"
@@ -24,6 +25,7 @@
         [fluid]="false"
         size="small"
       />
+      }
       <!-- Desktop buttons -->
       <ui-button
         class="hidden sm:block"
@@ -33,6 +35,7 @@
         severity="contrast"
         [fluid]="false"
       />
+      @if (canEditProduct()) {
       <ui-button
         class="hidden sm:block"
         (click)="create()"
@@ -40,6 +43,7 @@
         label="Guardar cambios"
         [fluid]="false"
       />
+      }
     </div>
   </header>
   <form
@@ -274,6 +278,26 @@
         </div>
       </div>
     </ui-card>
+    @if (!isCreate()) {
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <h2 class="text-xl font-bold">Orden en el catálogo</h2>
+        <div class="flex flex-col gap-2">
+          <label class="text-base text-grey-100" for="position">Posición</label>
+          <ui-input-number
+            formControlName="position"
+            inputId="position"
+            [min]="0"
+            [showButtons]="true"
+            placeholder="0"
+          />
+          <p class="text-sm text-grey-300">
+            Define el orden en que aparece este producto en el catálogo. Los productos con menor número aparecen primero.
+          </p>
+        </div>
+      </div>
+    </ui-card>
+    }
     <ui-card>
       <div class="flex flex-col gap-4">
         <h2 class="text-xl font-bold">Inventario</h2>

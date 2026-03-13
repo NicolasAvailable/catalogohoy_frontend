@@ -1,0 +1,280 @@
+.teams-view__subtitle {
+  font-size: 0.875rem;
+  color: var(--p-surface-500);
+  margin: 0.125rem 0 0;
+}
+
+.teams-view__loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--p-surface-500);
+  font-size: 0.875rem;
+}
+
+.teams-view__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.teams-view__section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--p-surface-400);
+  margin: 0;
+}
+
+.teams-view__members {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.teams-view__member-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: var(--p-surface-0);
+  border: 1px solid var(--p-surface-200);
+  border-radius: 0.75rem;
+  transition: border-color 0.15s;
+}
+
+.teams-view__member-card:hover {
+  border-color: var(--p-surface-300);
+}
+
+.teams-view__member-card--pending {
+  background: var(--p-surface-50);
+  opacity: 0.8;
+}
+
+.teams-view__member-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.teams-view__avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.teams-view__status-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--p-surface-0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.teams-view__status-badge--accepted {
+  background: #22c55e;
+  color: #fff;
+}
+
+.teams-view__status-badge--pending {
+  background: #f87171;
+  color: #fff;
+}
+
+.teams-view__avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--p-primary-100);
+  color: var(--p-primary-700);
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.teams-view__avatar--pending {
+  background: var(--p-surface-200);
+  color: var(--p-surface-500);
+}
+
+.teams-view__member-email {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--p-surface-800);
+  margin: 0;
+}
+
+.teams-view__member-status {
+  font-size: 0.75rem;
+  color: var(--p-surface-400);
+  margin: 0.125rem 0 0;
+}
+
+.teams-view__member-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.teams-view__member-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+  border-radius: 0.5rem;
+  padding: 0.25rem;
+  margin: -0.25rem;
+  transition: background 0.15s;
+}
+
+.teams-view__member-header--clickable {
+  cursor: pointer;
+}
+
+.teams-view__member-header--clickable:hover {
+  background: var(--p-surface-50);
+}
+
+.teams-view__permission-count {
+  display: flex;
+  align-items: center;
+  gap: 0.3125rem;
+  font-size: 0.8125rem;
+  color: var(--p-surface-500);
+  padding: 0.3125rem 0.625rem;
+  border-radius: 999px;
+  background: var(--p-surface-100);
+  border: 1px solid var(--p-surface-200);
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  user-select: none;
+}
+
+.teams-view__permission-count--active {
+  background: var(--p-primary-50);
+  border-color: var(--p-primary-200);
+  color: var(--p-primary-600);
+}
+
+.teams-view__permission-count-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 999px;
+  background: var(--p-surface-200);
+  color: var(--p-surface-600);
+  line-height: 1.4;
+}
+
+.teams-view__permission-count--active .teams-view__permission-count-badge {
+  background: var(--p-primary-100);
+  color: var(--p-primary-700);
+}
+
+.teams-view__btn-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.375rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--p-surface-400);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.teams-view__btn-remove:hover {
+  background: var(--p-red-50);
+  color: var(--p-red-500);
+  border-color: var(--p-red-200);
+}
+
+.teams-view__permission-picker {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.teams-view__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 6rem 2rem 4rem;
+  text-align: center;
+  width: 100%;
+}
+
+.teams-view__empty-icon-wrap {
+  width: 5rem;
+  height: 5rem;
+  background: var(--p-primary-50);
+  border-radius: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--p-primary-500);
+}
+
+.teams-view__empty-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 36ch;
+}
+
+.teams-view__empty-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--p-surface-800);
+  margin: 0;
+}
+
+.teams-view__empty-text {
+  font-size: 0.9375rem;
+  color: var(--p-surface-400);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.teams-view__empty-features {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  align-items: flex-start;
+  background: var(--p-surface-50);
+  border: 1px solid var(--p-surface-100);
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+}
+
+.teams-view__empty-feature {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.875rem;
+  color: var(--p-surface-600);
+}
+
+.teams-view__empty-feature lucide-icon {
+  color: var(--p-primary-400);
+  flex-shrink: 0;
+}
+
+.teams-view__error {
+  font-size: 0.875rem;
+  color: var(--p-red-500);
+}

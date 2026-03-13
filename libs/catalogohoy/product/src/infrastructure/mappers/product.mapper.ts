@@ -17,6 +17,7 @@ export class ProductMapper {
       createdAt: entity.created_at,
       sku: entity.sku,
       productionCost: entity.production_cost,
+      position: entity.position ?? 0,
     });
   }
 }

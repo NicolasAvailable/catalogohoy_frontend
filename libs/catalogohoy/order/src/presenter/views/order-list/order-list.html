@@ -9,6 +9,7 @@
         Gestiona los pedidos y el estado de ventas de tu catálogo
       </p>
     </div>
+    @if (canCreateOrder()) {
     <ui-button
       (click)="onCreateOrder()"
       [fluid]="false"
@@ -16,6 +17,7 @@
       icon="circle-plus"
       styleClass="shadow-sm"
     />
+    }
   </header>
 
   <!-- Main Card Container -->
@@ -107,7 +109,7 @@
               Estado
             </th>
             <th class="px-6 py-3 border-b border-grey-50">WhatsApp</th>
-            <th class="px-6 py-3 border-b border-grey-50">Fecha</th>
+            <th class="px-6 py-3 border-b border-grey-50">Fecha de creación</th>
             <th class="px-6 py-3 border-b border-grey-50">Total USD</th>
             <th class="px-6 py-3 border-b border-grey-50">Total Bs</th>
             <th class="px-6 py-3 border-b border-grey-50 text-right">
@@ -190,11 +192,13 @@
                 >
                   <ng-template selectSelectedItem let-selected>
                     <span [class]="getStatusBadgeClass(selected.value)">
+                      <span [class]="getStatusDotClass(selected.value)"></span>
                       {{ selected.label }}
                     </span>
                   </ng-template>
                   <ng-template selectItem let-item>
                     <span [class]="getStatusBadgeClass(item.value)">
+                      <span [class]="getStatusDotClass(item.value)"></span>
                       {{ item.label }}
                     </span>
                   </ng-template>
@@ -241,6 +245,7 @@
                   [tooltip]="expandedOrderId() === order.id ? 'Ocultar detalle' : 'Ver detalle'"
                   tooltipPosition="bottom"
                 />
+                @if (canEditOrder()) {
                 <ui-button
                   (click)="onEditOrder(order)"
                   icon="pencil"
@@ -250,6 +255,8 @@
                   tooltip="Editar"
                   tooltipPosition="bottom"
                 />
+                }
+                @if (canDeleteOrder()) {
                 <ui-button
                   (click)="onDeleteOrder(order)"
                   icon="trash"
@@ -259,6 +266,7 @@
                   tooltip="Eliminar"
                   tooltipPosition="bottom"
                 />
+                }
               </div>
             </td>
           </tr>

@@ -7,6 +7,13 @@
     "vercel": {
       "type": "http",
       "url": "https://mcp.vercel.com"
+    },
+    "posthog": {
+      "type": "http",
+      "url": "https://mcp.posthog.com/mcp",
+      "headers": {
+        "Authorization": "Bearer phx_12DxU7VfN6bNJ25fyfdVqnWEfOgRkXjxVEkymCoYT5B4H3wp"
+      }
     }
   }
 }

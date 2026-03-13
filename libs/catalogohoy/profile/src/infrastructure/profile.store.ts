@@ -1,4 +1,5 @@
 import { inject } from '@angular/core';
+import { PosthogService } from '@catalogohoy/core';
 import { TenantStore } from '@catalogohoy/tenant';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { Profile } from '../domain';
@@ -21,14 +22,20 @@ export const ProfileStore = signalStore(
     (
       store,
       profileService = inject(ProfileService),
-      tenantStore = inject(TenantStore)
+      tenantStore = inject(TenantStore),
+      posthog = inject(PosthogService)
     ) => ({
       $profile() {
         patchState(store, () => ({ isLoading: true }));
         profileService.profile().then((profileResult) => {
           profileResult.mapRight((profile) => {
-            // Guardar el tenantList en el TenantStore
             tenantStore.setFromProfile(profile.tenantList);
+
+            // Identificar al admin en PostHog para asociar grabaciones y eventos
+            posthog.identify(String(profile.id), {
+              name: profile.name,
+              email: profile.email,
+            });
 
             patchState(store, () => ({
               profile: profile,

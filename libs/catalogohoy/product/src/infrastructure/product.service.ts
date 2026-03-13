@@ -7,6 +7,7 @@ import {
   CreateProductInput,
   Product,
   ProductList,
+  ReplaceCategoriesInput,
   UpdateProductInput,
 } from '../domain';
 import { ProductEntity } from './entities';
@@ -24,12 +25,9 @@ export class ProductService implements BaseProductService {
     pageSize?: number,
     search?: string
   ): Promise<E.Either<Error, ProductList>> {
-    const {
-      data: { user },
-    } = await this.client.auth.getUser();
-
-    if (!user) {
-      return E.left(new Error('User not authenticated'));
+    const tenantId = this.tenantStore.getDefaultTenantId();
+    if (!tenantId) {
+      return E.left(new Error('No tenant found'));
     }
 
     let query = this.client
@@ -44,8 +42,8 @@ export class ProductService implements BaseProductService {
       )
       `
       )
-      .eq('auth_user_id', user.id)
-      .order('id', { ascending: true });
+      .eq('tenant_id', tenantId)
+      .order('position', { ascending: true });
 
     if (search && search.trim().length > 0) {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
@@ -122,6 +120,17 @@ export class ProductService implements BaseProductService {
 
     const tenantId = this.tenantStore.getDefaultTenantId();
 
+    // Get next position for this tenant
+    const { data: maxData } = await this.client
+      .from('products')
+      .select('position')
+      .eq('tenant_id', tenantId)
+      .order('position', { ascending: false })
+      .limit(1)
+      .single();
+
+    const nextPosition = (maxData?.position ?? -1) + 1;
+
     const { data, error } = await this.client
       .from('products')
       .insert({
@@ -136,6 +145,7 @@ export class ProductService implements BaseProductService {
         tenant_id: tenantId,
         sku: input.sku || null,
         production_cost: input.productionCost ? Number(input.productionCost) : null,
+        position: nextPosition,
       })
       .select('*');
 
@@ -157,19 +167,25 @@ export class ProductService implements BaseProductService {
   public async update(
     input: UpdateProductInput
   ): Promise<E.Either<Error, void>> {
+    const updatePayload: Record<string, unknown> = {
+      name: input.name,
+      description: input.description,
+      price: input.price,
+      price_promotional:
+        input.pricePromotional.length === 0 ? null : input.pricePromotional,
+      photos: input.photos,
+      stock: input.stock,
+      sku: input.sku || null,
+      production_cost: input.productionCost ? Number(input.productionCost) : null,
+    };
+
+    if (input.position !== undefined) {
+      updatePayload['position'] = input.position;
+    }
+
     const { data, error } = await this.client
       .from('products')
-      .update({
-        name: input.name,
-        description: input.description,
-        price: input.price,
-        price_promotional:
-          input.pricePromotional.length === 0 ? null : input.pricePromotional,
-        photos: input.photos,
-        stock: input.stock,
-        sku: input.sku || null,
-        production_cost: input.productionCost ? Number(input.productionCost) : null,
-      })
+      .update(updatePayload)
       .eq('id', input.id)
       .select('*');
 
@@ -177,14 +193,22 @@ export class ProductService implements BaseProductService {
       return E.left(new Error(error.message));
     }
 
-    input.categoryIds.forEach(async (categoryId) => {
-      await this.client.from('product_categories').insert([
-        {
-          product_id: data[0].id,
-          category_id: categoryId,
-        },
-      ]);
-    });
+    const { error: deleteError } = await this.client
+      .from('product_categories')
+      .delete()
+      .eq('product_id', data[0].id);
+
+    if (deleteError) {
+      return E.left(new Error(deleteError.message));
+    }
+
+    for (const categoryId of input.categoryIds) {
+      await this.client.from('product_categories').insert({
+        product_id: data[0].id,
+        category_id: categoryId,
+      });
+    }
+
     return E.right(undefined);
   }
 
@@ -206,6 +230,46 @@ export class ProductService implements BaseProductService {
     if (error) {
       return E.left(new Error(error.message));
     }
+    return E.right(undefined);
+  }
+
+  public async replaceCategories(
+    input: ReplaceCategoriesInput
+  ): Promise<E.Either<Error, void>> {
+    for (const productId of input.productIds) {
+      const { error: deleteError } = await this.client
+        .from('product_categories')
+        .delete()
+        .eq('product_id', productId);
+
+      if (deleteError) {
+        return E.left(new Error(deleteError.message));
+      }
+
+      for (const categoryId of input.categoryIds) {
+        const { error: insertError } = await this.client
+          .from('product_categories')
+          .insert({ product_id: productId, category_id: categoryId });
+
+        if (insertError) {
+          return E.left(new Error(insertError.message));
+        }
+      }
+    }
+    return E.right(undefined);
+  }
+
+  public async updatePositions(
+    products: Product[]
+  ): Promise<E.Either<Error, void>> {
+    const updates = products.map((product, index) =>
+      this.client
+        .from('products')
+        .update({ position: index })
+        .eq('id', product.id)
+    );
+
+    await Promise.all(updates);
     return E.right(undefined);
   }
 }

@@ -1,10 +1,11 @@
 import { inject, Injectable } from '@angular/core';
-import { CreateProductInput, UpdateProductInput } from '../domain';
+import { CreateProductInput, ReplaceCategoriesInput, UpdateProductInput } from '../domain';
 import { ProductService } from '../infrastructure';
 import { CreateProductUseCase } from './create-product/create-product.usecase';
 import { DeleteManyProductsUseCase } from './delete-many-products/delete-many-products.usecase';
 import { DeleteProductUseCase } from './delete-product/delete-product.usecase';
 import { GetByIdUseCase } from './get-by-id/get-by-id.usecase';
+import { ReplaceCategoriesUseCase } from './replace-categories/replace-categories.usecase';
 import { UpdateProductUseCase } from './update-product/update-product.usecase';
 
 @Injectable({ providedIn: 'root' })
@@ -29,5 +30,9 @@ export class ProductFacade {
 
   public deleteMany(ids: string[]) {
     return new DeleteManyProductsUseCase(this.productService).execute(ids);
+  }
+
+  public replaceCategories(input: ReplaceCategoriesInput) {
+    return new ReplaceCategoriesUseCase(this.productService).execute(input);
   }
 }

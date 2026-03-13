@@ -1,9 +1,48 @@
 <section class="plans-wrapper">
   <header class="plans-header">
-    <h1 class="plans-title">Planes y Precios</h1>
+    <span class="plans-eyebrow">Planes</span>
+    <h1 class="plans-title">El plan perfecto para tu negocio</h1>
     <p class="plans-subtitle">
-      Elige el plan que mejor se adapte a tu negocio.
+      Elige el plan que mejor se adapte y escala cuando lo necesites.
     </p>
+
+    <!-- Controles: moneda + periodo -->
+    <div class="plans-controls">
+
+      <!-- Selector de moneda -->
+      <div class="currency-flip">
+        <button
+          class="currency-flip__option"
+          [class.currency-flip__option--active]="paymentCurrency() === 'usd'"
+          (click)="paymentCurrency.set('usd')"
+        >
+          🇺🇸 Dólares (USD)
+        </button>
+        <button
+          class="currency-flip__option"
+          [class.currency-flip__option--active]="paymentCurrency() === 'ves'"
+          (click)="paymentCurrency.set('ves')"
+        >
+          🇻🇪 Bolívares (Bs.)
+        </button>
+      </div>
+
+      <!-- Selector de periodo de facturación -->
+      <div class="billing-toggle">
+        @for (option of billingOptions; track option.key) {
+          <button
+            class="billing-toggle__btn"
+            [class.billing-toggle__btn--active]="billingPeriod() === option.key"
+            (click)="billingPeriod.set(option.key)"
+          >
+            {{ option.label }}
+            @if (option.savingsLabel) {
+              <span class="billing-toggle__savings">{{ option.savingsLabel }}</span>
+            }
+          </button>
+        }
+      </div>
+    </div>
   </header>
 
   <div class="plans-grid">
@@ -12,50 +51,42 @@
       class="plan-card"
       [class.plan-card--popular]="plan.isPopular && !plan.isCurrent"
       [class.plan-card--current]="plan.isCurrent"
+      [style.--plan-color]="plan.color"
     >
-      @if (plan.isCurrent) {
-      <div class="current-badge">Actual</div>
-      } @else if (plan.isPopular) {
-      <div class="popular-badge">Más popular</div>
-      }
-
       <div class="plan-card__content">
-        <!-- Header -->
+        <!-- Header: nombre + badge inline -->
         <div class="plan-card__header">
-          <h2 class="plan-card__name">{{ plan.name }}</h2>
+          <div class="plan-card__name-row">
+            <h2 class="plan-card__name" [class.plan-card__name--popular]="plan.isPopular && !plan.isCurrent">{{ plan.name }}</h2>
+            @if (plan.isCurrent) {
+              <span class="badge-inline badge-inline--current">Actual</span>
+            } @else if (plan.isPopular) {
+              <span class="badge-inline badge-inline--popular">Más popular</span>
+            }
+          </div>
           <p class="plan-card__description">{{ plan.description }}</p>
         </div>
 
-        <!-- Price -->
+        <!-- Precio -->
         <div class="plan-card__price">
-          <span class="plan-card__price-amount">
-            ${{ plan.price % 1 === 0 ? plan.price : plan.price }}
-          </span>
-          <span class="plan-card__price-period">{{ plan.period }}</span>
-        </div>
-
-        <!-- Badges -->
-        <div class="plan-card__badges">
-          <span class="badge badge--blue">{{ plan.maxProductsLabel }}</span>
-          <span class="badge badge--dark">{{ plan.rateType }}</span>
-        </div>
-
-        <!-- Features -->
-        <ul class="plan-card__features">
-          @for (feature of plan.features; track feature.text) {
-          <li class="plan-card__feature">
-            <ui-icon name="check" styleClass="size-5 text-blue-500 shrink-0" />
-            <span>{{ feature.text }}</span>
-          </li>
+          @if (plan.isFree) {
+            <span class="plan-card__price-amount">$0</span>
+            <span class="plan-card__price-period">por siempre</span>
+          } @else {
+            <div class="plan-card__price-main">
+              <span class="plan-card__price-currency">$</span>
+              <span class="plan-card__price-amount">{{ getPeriodPrice(plan) }}</span>
+            </div>
+            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }} · {{ paymentCurrency() === 'usd' ? 'USD' : 'ref. USD' }}</span>
           }
-        </ul>
+        </div>
+        @if (!plan.isFree && billingPeriod() !== 'monthly') {
+          <p class="plan-card__monthly-equiv">
+            ${{ getMonthlyEquivalent(plan) }}/mes
+          </p>
+        }
 
-        <!-- Additional catalog -->
-        <p class="plan-card__additional">
-          Catálogo adicional: <strong>{{ plan.additionalCatalogPrice }}</strong>
-        </p>
-
-        <!-- CTA Button -->
+        <!-- Botón CTA -->
         <button
           class="plan-card__button"
           [class.plan-card__button--primary]="plan.isPopular && !plan.isCurrent"
@@ -64,8 +95,47 @@
           [disabled]="plan.isCurrent"
           (click)="selectPlan(plan)"
         >
+          @if (paymentCurrency() === 'ves' && !plan.isFree && !plan.isCurrent) {
+            <ui-icon name="message-circle" styleClass="size-4 shrink-0" />
+          }
           {{ plan.buttonLabel }}
         </button>
+
+        <hr class="plan-card__divider" />
+
+        <!-- Features -->
+        <ul class="plan-card__features">
+          <li class="plan-card__feature">
+            <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
+            <span>{{ plan.maxProductsLabel }}</span>
+          </li>
+          <li class="plan-card__feature">
+            <ui-icon name="{{ plan.maxTeamMembers > 0 ? 'check' : 'x' }}" styleClass="size-4 shrink-0 {{ plan.maxTeamMembers > 0 ? 'text-green-500' : 'text-gray-300' }}" />
+            <span>{{ plan.teamMembersLabel }}</span>
+          </li>
+          @for (feature of plan.features; track feature.text) {
+          <li class="plan-card__feature">
+            <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
+            <span>{{ feature.text }}</span>
+          </li>
+          }
+        </ul>
+
+        <!-- Footer: método de pago + addon -->
+        <div class="plan-card__footer">
+          @if (!plan.isFree) {
+            <span class="badge" [class.badge--usd]="paymentCurrency() === 'usd'" [class.badge--ves]="paymentCurrency() === 'ves'">
+              @if (paymentCurrency() === 'usd') { 🇺🇸 Pago con tarjeta }
+              @else { 🇻🇪 Pago por transferencia }
+            </span>
+          }
+          @if (!plan.isFree) {
+            <p class="plan-card__extra-catalog">
+              <ui-icon name="plus-circle" styleClass="size-3.5 shrink-0" />
+              Catálogo adicional ${{ getCatalogAddonPrice() }}/mes
+            </p>
+          }
+        </div>
       </div>
     </div>
     }

@@ -1,0 +1,249 @@
+<div class="checkout-page">
+
+  <!-- ── Header ── -->
+  <header class="checkout-header">
+    <div class="checkout-header__brand">
+      <ui-icon name="shopping-cart" styleClass="size-6 text-primary" />
+      <h1 class="checkout-header__title">Pagar orden</h1>
+    </div>
+    <button class="checkout-header__cancel" (click)="cancel()">
+      Cancelar
+    </button>
+  </header>
+
+  <!-- ── Body ── -->
+  <div class="checkout-body">
+
+    <!-- ── Left: Plan details ── -->
+    <section class="checkout-plan">
+      <div class="checkout-plan__top">
+        <div>
+          <h2 class="checkout-plan__name">Plan {{ plan()?.name ?? '' }}</h2>
+          <span class="checkout-plan__subtitle">{{ maxProductsLabel() }}</span>
+        </div>
+      </div>
+
+      <!-- Billing period toggle -->
+      <div class="checkout-billing-toggle">
+        @for (option of billingOptions; track option.key) {
+          <button
+            class="checkout-billing-toggle__btn"
+            [class.checkout-billing-toggle__btn--active]="billingPeriod() === option.key"
+            (click)="billingPeriod.set(option.key)"
+          >
+            {{ option.label }}
+            @if (option.savingsLabel) {
+              <span class="checkout-billing-toggle__savings">{{ option.savingsLabel }}</span>
+            }
+          </button>
+        }
+      </div>
+
+      <p class="checkout-plan__section-label">¿Qué incluye este plan?</p>
+
+      @if (!plan()) {
+        <div class="checkout-plan__skeleton">
+          @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+            <div class="skeleton-line"></div>
+          }
+        </div>
+      } @else {
+        <div class="checkout-plan__features-grid">
+          @for (section of planSections(); track section.title) {
+            <div class="feature-section">
+              <h3 class="feature-section__title">{{ section.title }}</h3>
+              @for (item of section.items; track item) {
+                <div class="feature-section__item">
+                  <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
+                  <span>{{ item }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- ── Right: Payment summary ── -->
+    <aside class="checkout-summary">
+      <h2 class="checkout-summary__title">A Pagar</h2>
+
+      <!-- Currency toggle -->
+      <div class="checkout-currency-toggle">
+        <button
+          class="checkout-currency-toggle__btn"
+          [class.checkout-currency-toggle__btn--active]="paymentCurrency() === 'usd'"
+          (click)="onCurrencyChange('usd')"
+        >
+          🇺🇸 Dólares (USD)
+        </button>
+        <button
+          class="checkout-currency-toggle__btn"
+          [class.checkout-currency-toggle__btn--active]="paymentCurrency() === 'ves'"
+          (click)="onCurrencyChange('ves')"
+        >
+          🇻🇪 Bolívares (Bs.)
+        </button>
+      </div>
+
+      <!-- VES rate info -->
+      @if (paymentCurrency() === 'ves') {
+        <div class="ves-rate-info">
+          @if (isFetchingRate()) {
+            <ui-icon name="loader-circle" styleClass="size-3.5 shrink-0 animate-spin text-slate-400" />
+            <span>Cargando tasa...</span>
+          } @else if (vesRate()) {
+            <ui-icon name="trending-up" styleClass="size-3.5 shrink-0 text-amber-500" />
+            <span>Tasa oficial: <strong>Bs. {{ vesRate() | number:'1.2-2' }}</strong> / USD</span>
+          } @else {
+            <ui-icon name="info" styleClass="size-3.5 shrink-0 text-slate-400" />
+            <span>Tasa no disponible. Configure la tasa en el módulo de tasas.</span>
+          }
+        </div>
+      }
+
+      <hr class="summary-divider" />
+
+      <!-- Breakdown -->
+      <div class="summary-breakdown">
+        <div class="summary-line">
+          <span>Costo del plan x {{ monthsLabel() }}</span>
+          <span>${{ baseCost() }}</span>
+        </div>
+
+        @if (discountAmount() > 0) {
+          <div class="summary-line summary-line--discount">
+            <span>Descuento ({{ discountPercent() }}%)</span>
+            <span>-${{ discountAmount() }}</span>
+          </div>
+        }
+        @if (catalogAddonQuantity() > 0) {
+          <div class="summary-line">
+            <span>{{ catalogAddonQuantity() }} catálogo{{ catalogAddonQuantity() > 1 ? 's' : '' }} adicional{{ catalogAddonQuantity() > 1 ? 'es' : '' }} x {{ monthsLabel() }}</span>
+            <span>+${{ catalogAddonCost() }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Catalog addon stepper -->
+      <div class="catalog-addon-stepper">
+        <div class="catalog-addon-stepper__info">
+          <ui-icon name="folder-plus" styleClass="size-4 shrink-0 text-violet-500" />
+          <div class="catalog-addon-stepper__text">
+            <span class="catalog-addon-stepper__label">Catálogos adicionales</span>
+            <span class="catalog-addon-stepper__unit-price">+${{ catalogAddonDisplayCost() }}/{{ periodLabel() }} c/u</span>
+          </div>
+        </div>
+        <div class="catalog-addon-stepper__controls">
+          <button
+            class="stepper-btn"
+            (click)="catalogAddonQuantity.set(catalogAddonQuantity() > 0 ? catalogAddonQuantity() - 1 : 0)"
+            [class.stepper-btn--disabled]="catalogAddonQuantity() === 0"
+          >−</button>
+          <span class="stepper-qty">{{ catalogAddonQuantity() }}</span>
+          <button
+            class="stepper-btn"
+            (click)="catalogAddonQuantity.set(catalogAddonQuantity() + 1)"
+          >+</button>
+        </div>
+      </div>
+
+      <hr class="summary-divider" />
+
+      <!-- Coupon — USD only -->
+      @if (paymentCurrency() === 'usd') {
+        <div class="coupon-row">
+          <ui-icon name="ticket" styleClass="size-4 shrink-0 text-orange-500" />
+          <input
+            class="coupon-input"
+            type="text"
+            placeholder="¿Tienes un cupón de descuento?"
+          />
+          <button class="coupon-apply-btn">Aplicar</button>
+        </div>
+
+        <hr class="summary-divider" />
+      }
+
+      <!-- Total -->
+      <div class="summary-total">
+        <span class="summary-total__label">Total a pagar</span>
+        <div class="summary-total__amounts">
+          <span class="summary-total__amount">${{ total() }} USD</span>
+          @if (paymentCurrency() === 'ves' && totalVes()) {
+            <span class="summary-total__ves">≈ Bs. {{ totalVes()! | number:'1.0-0' }}</span>
+          }
+        </div>
+      </div>
+
+      <!-- VES payment note -->
+      @if (paymentCurrency() === 'ves') {
+        <div class="ves-payment-note">
+          <ui-icon name="info" styleClass="size-4 shrink-0 text-amber-500" />
+          <span>El pago es por transferencia bancaria o Pago Móvil. Al confirmar te enviaremos al WhatsApp del administrador para coordinar el pago.</span>
+        </div>
+      }
+
+      <!-- Error -->
+      @if (error()) {
+        <p class="checkout-error">
+          <ui-icon name="circle-alert" styleClass="size-4 shrink-0" />
+          {{ error() }}
+        </p>
+      }
+
+      <!-- Terms -->
+      <label class="terms-label" (click)="toggleTerms()">
+        <div class="terms-checkbox" [class.terms-checkbox--checked]="termsAccepted()">
+          @if (termsAccepted()) {
+            <ui-icon name="check" styleClass="size-3 text-white" />
+          }
+        </div>
+        <span>
+          He leído, comprendo y acepto los
+          <a
+            class="terms-link"
+            href="/admin/plans/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            (click)="$event.stopPropagation()"
+          >
+            términos y condiciones de servicio
+          </a>
+        </span>
+      </label>
+
+      <!-- Pay button: Stripe (USD) -->
+      @if (paymentCurrency() === 'usd') {
+        <button
+          class="pay-btn"
+          [class.pay-btn--disabled]="!termsAccepted() || isLoading()"
+          [disabled]="!termsAccepted() || isLoading()"
+          (click)="pay()"
+        >
+          @if (isLoading()) {
+            <ui-icon name="loader-circle" styleClass="size-5 animate-spin" />
+            Procesando...
+          } @else {
+            <ui-icon name="credit-card" styleClass="size-5" />
+            Pagar con tarjeta
+          }
+        </button>
+      }
+
+      <!-- Pay button: WhatsApp (VES) -->
+      @if (paymentCurrency() === 'ves') {
+        <button
+          class="pay-btn pay-btn--whatsapp"
+          [class.pay-btn--disabled]="!termsAccepted()"
+          [disabled]="!termsAccepted()"
+          (click)="payVes()"
+        >
+          <ui-icon name="message-circle" styleClass="size-5" />
+          Coordinar pago por WhatsApp
+        </button>
+      }
+    </aside>
+
+  </div>
+</div>

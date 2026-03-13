@@ -7,6 +7,7 @@ import {
   OnInit,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import {
@@ -36,6 +37,8 @@ import { RateStore } from '../../../infrastructure/rate.store';
 export class RateView implements OnInit {
   public readonly rateStore = inject(RateStore);
   private readonly toastService = inject(ToastService);
+  private readonly permissions = inject(TeamPermissionsStore);
+  protected readonly canEditRates = computed(() => this.permissions.isOwner() || this.permissions.can()('tasas', 'edit'));
 
   public readonly bcvUsd = computed(() => this.rateStore.rate()?.bcv_usd || 0);
   public readonly bcvEur = computed(() => this.rateStore.rate()?.bcv_eur || 0);

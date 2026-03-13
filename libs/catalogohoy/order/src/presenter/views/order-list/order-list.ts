@@ -7,6 +7,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Exception } from '@shared/domain';
@@ -30,6 +31,7 @@ import {
   Subscription,
 } from 'rxjs';
 import { Order, OrderStatus } from '../../../domain/order';
+import { OrderRealtimeService } from '../../../infrastructure/order-realtime.service';
 import { OrderStore } from '../../../infrastructure/order.store';
 
 type FilterTab = { label: string; value: OrderStatus | 'all' };
@@ -62,6 +64,11 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private readonly confirmDialogService = inject(ConfirmDialogService);
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
+  private readonly orderRealtime = inject(OrderRealtimeService);
+  private readonly permissions = inject(TeamPermissionsStore);
+  protected readonly canCreateOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'create'));
+  protected readonly canEditOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'edit'));
+  protected readonly canDeleteOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'delete'));
 
   private readonly searchSubject = new Subject<string>();
   private searchSubscription?: Subscription;
@@ -146,10 +153,12 @@ export class OrderListComponent implements OnInit, OnDestroy {
       });
 
     this.orderStore.loadOrders();
+    this.orderRealtime.subscribe();
   }
 
   ngOnDestroy() {
     this.searchSubscription?.unsubscribe();
+    this.orderRealtime.unsubscribe();
   }
 
   toggleExpand(orderId: number) {
@@ -211,17 +220,17 @@ export class OrderListComponent implements OnInit, OnDestroy {
     return labels[status] || status;
   }
 
-  getStatusBadgeClass(status: OrderStatus): string {
-    const baseClass =
-      'px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide';
-    const colorClasses: Record<OrderStatus, string> = {
-      pending: 'bg-orange-100 text-orange-600',
-      completed: 'bg-green-100 text-green-600',
-      cancelled: 'bg-red-100 text-red-600',
+  getStatusBadgeClass(_status: OrderStatus): string {
+    return 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white border border-grey-100 text-grey-700';
+  }
+
+  getStatusDotClass(status: OrderStatus): string {
+    const colors: Record<OrderStatus, string> = {
+      pending: 'bg-orange-400',
+      completed: 'bg-green-500',
+      cancelled: 'bg-red-500',
     };
-    return `${baseClass} ${
-      colorClasses[status] || 'bg-grey-100 text-grey-600'
-    }`;
+    return `w-2 h-2 rounded-full shrink-0 ${colors[status] ?? 'bg-grey-400'}`;
   }
 
   getPaymentMethod(order: Order): string {

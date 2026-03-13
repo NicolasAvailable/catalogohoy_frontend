@@ -71,4 +71,14 @@ export class ProfileService implements BaseProfileService {
       return E.right(undefined);
     }
   }
+
+  public async deleteAccount(): Promise<Either<Error, void>> {
+    const { error } = await this.client.functions.invoke('delete-account');
+
+    if (error) return E.left(new Error(error.message));
+
+    await this.client.auth.signOut();
+    window.location.href = 'https://auth.catalogohoy.com';
+    return E.right(undefined);
+  }
 }

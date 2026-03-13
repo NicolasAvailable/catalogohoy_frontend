@@ -144,13 +144,43 @@
   animation: catalog-header-skeleton 1.5s ease-in-out infinite;
 }
 
+.catalog-header__search-skeleton {
+  width: 250px;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(
+    90deg,
+    var(--color-grey-50) 25%,
+    var(--color-lino-400) 50%,
+    var(--color-grey-50) 75%
+  );
+  background-size: 200% 100%;
+  animation: catalog-header-skeleton 1.5s ease-in-out infinite;
+}
+
+.catalog-header__cart-skeleton {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  flex-shrink: 0;
+  background: linear-gradient(
+    90deg,
+    var(--color-grey-50) 25%,
+    var(--color-lino-400) 50%,
+    var(--color-grey-50) 75%
+  );
+  background-size: 200% 100%;
+  animation: catalog-header-skeleton 1.5s ease-in-out infinite;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .catalog-header__container {
     padding: 1rem 1.25rem;
   }
 
-  .catalog-header__search {
+  .catalog-header__search,
+  .catalog-header__search-skeleton {
     display: none;
   }
 

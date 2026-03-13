@@ -5,4 +5,5 @@ export interface BaseProfileService {
   profile(): Promise<E.Either<Error, Profile>>;
   updateName(name: string): Promise<E.Either<Error, void>>;
   updatePassword(password: string): Promise<E.Either<Error, void>>;
+  deleteAccount(): Promise<E.Either<Error, void>>;
 }

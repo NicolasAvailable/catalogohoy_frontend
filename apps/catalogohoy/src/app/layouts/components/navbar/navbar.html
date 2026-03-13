@@ -20,62 +20,84 @@
     </a>
   </div>
   <div class="flex items-center gap-1">
-    <ui-button
-      id="button-share"
-      (click)="share()"
-      icon="share2"
-      severity="primary"
-      variant="outlined"
-      styleClass="!border-none !text-grey-700"
-      tooltip="Compartir catálogo"
-      tooltipPosition="bottom"
-      tooltipStyleClass="text-sm"
-    />
-    <ui-button
-      id="button-qr"
-      (click)="generateQR()"
-      icon="qr-code"
-      severity="primary"
-      variant="outlined"
-      styleClass="!border-none !text-grey-700"
-      tooltip="Generar QR"
-      tooltipPosition="bottom"
-      tooltipStyleClass="text-sm"
-    />
-    @if (planStore.currentPlan(); as plan) {
-    <a
-      routerLink="/admin/plans"
-      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-50 hover:bg-primary-100 transition-colors cursor-pointer mr-1"
-    >
-      <ui-icon name="crown" size="16" styleClass="text-primary-500" />
-      <span class="text-sm font-semibold text-primary-600"
-        >{{ plan.name }}</span
-      >
-    </a>
-    }
-    <ui-button
-      icon="message-circle-question"
-      severity="primary"
-      variant="outlined"
-      styleClass="!border-none !text-grey-700"
-      tooltip="Ayuda"
-      tooltipPosition="bottom"
-      tooltipStyleClass="text-sm"
-    />
-    <div
-      (click)="profileMenu.menu()?.toggle($event)"
-      class="flex items-center gap-2 rounded-lg py-1 px-2 cursor-pointer hover:bg-primary-50"
-    >
-      <ui-avatar
-        [label]="profileStore.profile().name"
-        class="leading-none h-auto"
-        styleClass="!bg-[#8892F0] !text-lino-500"
+    @if (!profileStore.profile().name) {
+      <div class="w-9 h-9 rounded-lg bg-grey-100 animate-pulse"></div>
+    } @else {
+      <ui-button
+        id="button-share"
+        (click)="share()"
+        icon="share2"
+        severity="primary"
+        variant="outlined"
+        styleClass="!border-none !text-grey-700"
+        tooltip="Compartir catálogo"
+        tooltipPosition="bottom"
+        tooltipStyleClass="text-sm"
       />
-      <span
-        class="hidden sm:block text-base font-semibold text-grey-700 leading-none h-auto"
-        >{{ profileStore.profile().name }}</span
+    }
+    @if (!profileStore.profile().name) {
+      <div class="w-9 h-9 rounded-lg bg-grey-100 animate-pulse"></div>
+    } @else {
+      <ui-button
+        id="button-qr"
+        (click)="generateQR()"
+        icon="qr-code"
+        severity="primary"
+        variant="outlined"
+        styleClass="!border-none !text-grey-700"
+        tooltip="Generar QR"
+        tooltipPosition="bottom"
+        tooltipStyleClass="text-sm"
+      />
+    }
+    @if (planStore.isLoading()) {
+      <div class="w-24 h-8 rounded-lg bg-grey-100 animate-pulse mx-1"></div>
+    } @else if (planStore.currentPlan(); as plan) {
+      <a
+        routerLink="/admin/plans"
+        [style.background-color]="currentPlanPalette().bg"
+        [style.color]="currentPlanPalette().color"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity cursor-pointer mr-1"
       >
-    </div>
-    <app-profile-menu #profileMenu></app-profile-menu>
+        <ui-icon name="crown" size="16" />
+        <span class="text-sm font-semibold">{{ plan.name }}</span>
+      </a>
+    }
+    @if (!profileStore.profile().name) {
+      <div class="w-9 h-9 rounded-lg bg-grey-100 animate-pulse"></div>
+    } @else {
+      <ui-button
+        icon="message-circle-question"
+        severity="primary"
+        variant="outlined"
+        styleClass="!border-none !text-grey-700"
+        tooltip="Ayuda"
+        tooltipPosition="bottom"
+        tooltipStyleClass="text-sm"
+      />
+    }
+    @if (!profileStore.profile().name) {
+      <div class="flex items-center gap-2 rounded-lg py-1 px-2">
+        <div class="w-8 h-8 rounded-full bg-grey-100 animate-pulse"></div>
+        <div class="hidden sm:block w-24 h-5 rounded bg-grey-100 animate-pulse"></div>
+      </div>
+    } @else {
+      <div
+        (click)="profileMenu.menu()?.toggle($event)"
+        class="flex items-center gap-2 rounded-lg py-1 px-2 cursor-pointer hover:bg-primary-50"
+      >
+        <ui-avatar
+          [label]="profileStore.profile().name"
+          [image]="profileStore.profile().photo ?? ''"
+          class="leading-none h-auto"
+          styleClass="!bg-[#8892F0] !text-lino-500"
+        />
+        <span
+          class="hidden sm:block text-base font-semibold text-grey-700 leading-none h-auto"
+          >{{ profileStore.profile().name }}</span
+        >
+      </div>
+      <app-profile-menu #profileMenu></app-profile-menu>
+    }
   </div>
 </nav>

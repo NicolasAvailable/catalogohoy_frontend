@@ -21,10 +21,19 @@ export const PRODUCTS_MENU: PanelMenuItem[] = [
   },
 ];
 
+export const TEAMS_MENU: PanelMenuItem[] = [
+  {
+    label: 'Equipo',
+    icon: 'users',
+    routerLink: '/admin/teams',
+    routerLinkActiveOptions: { exact: false },
+  },
+];
+
 export const CATALOG_MENU: PanelMenuItem[] = [
   {
     label: 'Mi catálogo',
-    icon: 'tag',
+    icon: 'store',
     iconNext: 'chevron-right',
     state: { isOpen: false },
     items: [
@@ -36,11 +45,6 @@ export const CATALOG_MENU: PanelMenuItem[] = [
       {
         label: 'Editar',
         routerLink: '/admin/catalog/edit',
-        routerLinkActiveOptions: { exact: true },
-      },
-      {
-        label: 'Crear',
-        routerLink: '/admin/catalog/create',
         routerLinkActiveOptions: { exact: true },
       },
     ],

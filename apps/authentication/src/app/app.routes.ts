@@ -31,6 +31,11 @@ export const appRoutes: Route[] = [
     ],
   },
   {
+    path: 'accept-invite',
+    loadComponent: () =>
+      import('@catalogohoy/auth').then((m) => m.AcceptInviteComponent),
+  },
+  {
     path: '**',
     redirectTo: 'login',
     pathMatch: 'full',

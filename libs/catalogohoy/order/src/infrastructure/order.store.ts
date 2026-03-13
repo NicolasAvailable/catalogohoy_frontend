@@ -220,6 +220,24 @@ export const OrderStore = signalStore(
           return E.left('Error inesperado');
         }
       },
+
+      addOrder(order: Order) {
+        const exists = store.orderList().items.some((o) => o.id === order.id);
+        if (exists) return;
+        patchState(store, {
+          orderList: new OrderList([order, ...store.orderList().items]),
+        });
+      },
+
+      replaceOrder(order: Order) {
+        const items = store.orderList().items.map((o) => (o.id === order.id ? order : o));
+        patchState(store, { orderList: new OrderList(items) });
+      },
+
+      removeOrder(id: number) {
+        const items = store.orderList().items.filter((o) => o.id !== id);
+        patchState(store, { orderList: new OrderList(items) });
+      },
     })
   )
 );

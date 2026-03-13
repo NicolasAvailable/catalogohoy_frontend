@@ -1,0 +1,258 @@
+<section class="container flex flex-col flex-1 max-w-5xl mx-auto px-1 gap-8">
+  <!-- Header -->
+  <header class="flex justify-between items-center gap-2 py-4">
+    <div>
+      <h1 class="text-2xl sm:text-4xl font-bold shrink-0">Equipo</h1>
+      <p class="teams-view__subtitle">
+        {{ teamStore.memberCount() }} de {{ planStore.maxTeamMembers() }} miembros activos
+      </p>
+    </div>
+    @if (canInvite()) {
+      @if (teamFull()) {
+        <ui-button
+          label="Mejorar plan"
+          icon="arrow-up-circle"
+          severity="secondary"
+          (click)="goToPlans()"
+        />
+      } @else {
+        <ui-button
+          label="Invitar miembro"
+          icon="user-plus"
+          (click)="openInviteDialog()"
+        />
+      }
+    }
+  </header>
+
+  @if (teamStore.isLoading()) {
+    <div class="teams-view__section">
+      <p-skeleton width="7rem" height="0.625rem" borderRadius="9999px" />
+      <div class="teams-view__members mt-3">
+        @for (i of [1, 2, 3]; track i) {
+          <div class="teams-view__member-card">
+            <p-skeleton shape="circle" size="2.25rem" styleClass="shrink-0" />
+            <div class="flex flex-col gap-1.5 flex-1">
+              <p-skeleton width="12rem" height="0.75rem" borderRadius="9999px" />
+              <p-skeleton width="6rem" height="0.625rem" borderRadius="9999px" />
+            </div>
+            <div class="flex items-center gap-2">
+              <p-skeleton width="5rem" height="1.75rem" borderRadius="0.375rem" />
+              <p-skeleton width="1.75rem" height="1.75rem" borderRadius="0.375rem" />
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
+    <!-- Miembros activos -->
+    <section class="teams-view__section">
+      <h2 class="teams-view__section-title">Miembros activos</h2>
+      <div class="teams-view__members">
+        <!-- Owner card -->
+        @if (teamStore.ownerEmail()) {
+          <div class="teams-view__member-card">
+            <div class="teams-view__member-header">
+              <div class="teams-view__member-info">
+                <div class="teams-view__avatar-wrap">
+                  <div class="teams-view__avatar">
+                    {{ getMemberInitial(teamStore.ownerName() ?? teamStore.ownerEmail()!) }}
+                  </div>
+                  <span
+                    class="teams-view__status-badge teams-view__status-badge--accepted"
+                    pTooltip="Administrador"
+                    tooltipPosition="top"
+                  >
+                    <lucide-icon name="crown" [size]="9" />
+                  </span>
+                </div>
+                <div>
+                  @if (teamStore.ownerName()) {
+                    <p class="teams-view__member-email">{{ teamStore.ownerName() }}</p>
+                    <p class="teams-view__member-status">{{ teamStore.ownerEmail() }} · Administrador</p>
+                  } @else {
+                    <p class="teams-view__member-email">{{ teamStore.ownerEmail() }}</p>
+                    <p class="teams-view__member-status">Administrador</p>
+                  }
+                </div>
+              </div>
+              <div class="teams-view__member-actions">
+                <div class="teams-view__permission-count">
+                  <lucide-icon name="shield" [size]="13" />
+                  <span>Permisos</span>
+                  <span class="teams-view__permission-count-badge">{{ totalPermissions }}/{{ totalPermissions }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+
+        @for (member of teamStore.acceptedMembers(); track member.id) {
+            <div class="teams-view__member-card">
+              <div
+                class="teams-view__member-header"
+                [class.teams-view__member-header--clickable]="canEditPermissions()"
+                (click)="canEditPermissions() ? togglePermissions(member) : null"
+              >
+                <div class="teams-view__member-info">
+                  <div class="teams-view__avatar-wrap">
+                    <div class="teams-view__avatar">
+                      {{ getMemberInitial(getMemberDisplayName(member) ?? member.invitedEmail) }}
+                    </div>
+                    <span
+                      class="teams-view__status-badge teams-view__status-badge--accepted"
+                      pTooltip="Miembro activo"
+                      tooltipPosition="top"
+                    >
+                      <lucide-icon name="check" [size]="9" />
+                    </span>
+                  </div>
+                  <div>
+                    @if (getMemberDisplayName(member)) {
+                      <p class="teams-view__member-email">{{ getMemberDisplayName(member) }}</p>
+                      <p class="teams-view__member-status">{{ member.invitedEmail }} · Miembro activo</p>
+                    } @else {
+                      <p class="teams-view__member-email">{{ member.invitedEmail }}</p>
+                      <p class="teams-view__member-status">Miembro activo</p>
+                    }
+                  </div>
+                </div>
+                <div class="teams-view__member-actions">
+                  @if (canEditPermissions()) {
+                    <div
+                      class="teams-view__permission-count"
+                      [class.teams-view__permission-count--active]="expandedMemberId() === member.id"
+                    >
+                      <lucide-icon name="shield" [size]="13" />
+                      <span>Permisos</span>
+                      <span class="teams-view__permission-count-badge">{{ (memberPermissionsCache()[member.id] ?? []).length }}/{{ totalPermissions }}</span>
+                      <lucide-icon
+                        [name]="expandedMemberId() === member.id ? 'chevron-up' : 'chevron-down'"
+                        [size]="13"
+                      />
+                    </div>
+                  }
+                  @if (canRemove()) {
+                    <button
+                      type="button"
+                      class="teams-view__btn-remove"
+                      pTooltip="Eliminar miembro"
+                      tooltipPosition="top"
+                      (click)="$event.stopPropagation(); removeMember(member.id)"
+                    >
+                      <lucide-icon name="x" [size]="14" />
+                    </button>
+                  }
+                </div>
+              </div>
+
+              @if (expandedMemberId() === member.id) {
+                <div class="teams-view__permission-picker">
+                  <lib-permission-picker
+                    [memberId]="member.id"
+                    [currentPermissions]="memberPermissionsCache()[member.id] ?? []"
+                    [disabled]="savingMemberId() === member.id"
+                    (save)="onSavePermissions($event)"
+                    (cancel)="onCancelPermissions()"
+                  />
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </section>
+
+    <!-- Invitaciones pendientes -->
+    @if (teamStore.pendingInvites().length > 0) {
+      <section class="teams-view__section">
+        <h2 class="teams-view__section-title">Invitaciones pendientes</h2>
+        <div class="teams-view__members">
+          @for (member of teamStore.pendingInvites(); track member.id) {
+            <div class="teams-view__member-card teams-view__member-card--pending">
+              <div class="teams-view__member-info">
+                <div class="teams-view__avatar-wrap">
+                  <div class="teams-view__avatar teams-view__avatar--pending">
+                    {{ getMemberInitial(member.invitedEmail) }}
+                  </div>
+                  <span
+                    class="teams-view__status-badge teams-view__status-badge--pending"
+                    pTooltip="Pendiente por aceptar la invitación"
+                    tooltipPosition="top"
+                  >
+                    <lucide-icon name="clock" [size]="9" />
+                  </span>
+                </div>
+                <div>
+                  <p class="teams-view__member-email">{{ member.invitedEmail }}</p>
+                  <p class="teams-view__member-status">Invitación enviada</p>
+                </div>
+              </div>
+              @if (canRemove()) {
+                <button
+                  type="button"
+                  class="teams-view__btn-remove"
+                  pTooltip="Cancelar invitación"
+                  tooltipPosition="top"
+                  (click)="removeMember(member.id)"
+                >
+                  <lucide-icon name="x" [size]="14" />
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- Estado vacío -->
+    @if (teamStore.members().length === 0) {
+      <div class="teams-view__empty">
+        <div class="teams-view__empty-icon-wrap">
+          <lucide-icon name="users" [size]="32" />
+        </div>
+        <div class="teams-view__empty-body">
+          <h2 class="teams-view__empty-title">Construye tu equipo</h2>
+          <p class="teams-view__empty-text">
+            Invita personas para que gestionen tu catálogo junto a ti. Asígnales permisos por módulo y controla exactamente qué pueden hacer.
+          </p>
+        </div>
+        <div class="teams-view__empty-features">
+          <div class="teams-view__empty-feature">
+            <lucide-icon name="shield-check" [size]="15" />
+            <span>Permisos granulares por módulo</span>
+          </div>
+          <div class="teams-view__empty-feature">
+            <lucide-icon name="mail" [size]="15" />
+            <span>Invitación por correo electrónico</span>
+          </div>
+          <div class="teams-view__empty-feature">
+            <lucide-icon name="users-round" [size]="15" />
+            <span>Hasta {{ planStore.maxTeamMembers() }} miembros en tu plan</span>
+          </div>
+        </div>
+        @if (teamStore.canInviteMore() && canInvite()) {
+          <ui-button
+            label="Invitar primer miembro"
+            icon="user-plus"
+            [fluid]="true"
+            (click)="openInviteDialog()"
+          />
+        }
+      </div>
+    }
+  }
+
+  @if (teamStore.error()) {
+    <p class="teams-view__error">{{ teamStore.error() }}</p>
+  }
+</section>
+
+<lib-invite-member-dialog (invited)="teamStore.load()" />
+
+<ui-confirm-dialog
+  (confirm)="onConfirmRemove()"
+  headerLabel="Confirmar acción"
+  [contentLabel]="getConfirmRemoveContent()"
+  acceptLabel="Confirmar"
+  rejectLabel="Cancelar"
+/>

@@ -1,31 +1,155 @@
-<section class="container flex flex-col gap-4 max-w-4xl mx-auto">
+@if (showDashboard()) {
+<!-- ===== DASHBOARD VIEW (Owner / Members with order permissions) ===== -->
+<section
+  class="container flex flex-col gap-6 max-w-4xl mx-auto px-4 md:px-0 pt-4"
+>
+  <!-- Greeting -->
+  <div>
+    <h1 class="text-3xl font-bold text-slate-800">{{ greeting() }} 🪄</h1>
+  </div>
+
+  <!-- Stats Cards -->
+  @if (isLoading()) {
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    @for (i of [1, 2, 3]; track i) {
+    <div
+      class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm animate-pulse"
+    >
+      <div class="h-4 bg-slate-200 rounded w-24 mb-3"></div>
+      <div class="h-7 bg-slate-200 rounded w-32"></div>
+    </div>
+    }
+  </div>
+  } @else if (stats()) {
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+      <p class="text-sm text-slate-500 mb-1">Pedidos de hoy</p>
+      <p class="text-2xl font-bold text-slate-800">
+        {{ stats()!.todayOrders }}
+      </p>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+      <p class="text-sm text-slate-500 mb-1">Ventas de hoy</p>
+      <p class="text-2xl font-bold text-slate-800">
+        Bs.S {{ stats()!.todaySalesBs | number:'1.2-2' }}
+      </p>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+      <p class="text-sm text-slate-500 mb-1">Ventas mensuales</p>
+      <p class="text-2xl font-bold text-slate-800">
+        Bs.S {{ stats()!.monthlySalesBs | number:'1.2-2' }}
+      </p>
+    </div>
+  </div>
+  }
+
+  <!-- Bar Chart -->
+  @if (stats()) {
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+    <!-- Tabs -->
+    <div class="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit mb-6">
+      <button
+        (click)="setChartTab('ventas')"
+        class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors"
+        [ngClass]="activeChartTab() === 'ventas' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+      >
+        Ventas
+      </button>
+      <button
+        (click)="setChartTab('pedidos')"
+        class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors"
+        [ngClass]="activeChartTab() === 'pedidos' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+      >
+        Pedidos
+      </button>
+    </div>
+
+    <!-- Bars -->
+    <div class="flex items-end justify-between gap-3 h-48">
+      @for (bar of chartBars(); track bar.label) {
+      <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+        @if (bar.value > 0) {
+        <span class="text-xs text-slate-500 font-medium">
+          {{ activeChartTab() === 'ventas' ? (bar.value | number:'1.0-0') :
+          bar.value }}
+        </span>
+        }
+        <div
+          class="w-full max-w-[40px] bg-blue-400 rounded-t-md transition-all duration-300"
+          [style.height.%]="bar.height"
+        ></div>
+      </div>
+      }
+    </div>
+    <!-- Labels -->
+    <div class="flex items-center justify-between gap-3 mt-2">
+      @for (bar of chartBars(); track bar.label) {
+      <div class="flex-1 text-center">
+        <span class="text-xs text-slate-400">{{ bar.label }}</span>
+      </div>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- Module Info Cards -->
+  <div class="flex flex-col gap-4 mb-6">
+    <h2 class="text-lg font-semibold text-slate-800">
+      Explora tus herramientas
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      @for (card of moduleCards(); track card.route) {
+      <a
+        [routerLink]="card.route"
+        class="flex items-center gap-4 bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-slate-300 hover:shadow-md transition-all group cursor-pointer"
+      >
+        <div
+          class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+          [ngClass]="card.bgClass + ' ' + card.colorClass"
+        >
+          <ui-icon [name]="card.icon" [size]="20" />
+        </div>
+        <div class="flex-1 min-w-0">
+          <h3 class="text-sm font-semibold text-slate-800">{{ card.title }}</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            {{ card.description }}
+          </p>
+        </div>
+        <ui-icon
+          name="chevron-right"
+          [size]="16"
+          class="text-slate-300 group-hover:text-slate-500 transition-colors shrink-0"
+        />
+      </a>
+      }
+    </div>
+  </div>
+</section>
+} @else {
+<!-- ===== DEFAULT VIEW (Members without order permissions) ===== -->
+<section
+  class="container flex flex-col gap-4 max-w-4xl mx-auto px-4 md:px-0 pt-4"
+>
   <h1 class="text-4xl font-bold">Inicio</h1>
   <p class="text-slate-500">
-    ¡Chequeá los pasos para dejar tu tienda a tu manera!
+    Chequea los pasos para dejar tu tienda a tu manera!
   </p>
 
-  <!-- Blue Widget from Stitch -->
+  <!-- Blue Widget -->
   <div
     class="mb-2 relative overflow-hidden bg-linear-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 text-white flex items-center justify-between shadow-lg"
   >
     <div class="relative z-10 max-w-md">
       <h2 class="text-2xl font-bold mb-2">Impulsa tus ventas hoy</h2>
       <p class="text-blue-100 mb-6">
-        Optimiza tu catálogo y alcanza a más clientes con nuestras herramientas
-        de gestión inteligente.
+        Optimiza tu catalogo y alcanza a mas clientes con nuestras herramientas
+        de gestion inteligente.
       </p>
       <button
         class="bg-white text-blue-600 px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-sm"
       >
         Ver Tutoriales
       </button>
-    </div>
-    <div class="hidden lg:block relative z-10">
-      <img
-        alt="Ecommerce Illustration"
-        class="w-64 h-auto rounded-xl shadow-2xl object-cover"
-        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAF31kKHQKyGUY2a3SIOwdqm7bERvly5nl-eF5QVVcW5MO7Jjky0SRkJOzb67zTn9S9e5xGjpkoZPkBMaXZbaFdljLmyCGgaDfUd1Wok9OCJBsUDR-avYgwdz9SlQ2xLCiL0IgOMvQEyK0RpbP8PsX2J0QczmQZKVA7i_qvobyNGt06YhXnKHKbkVDu70dGxYOAGlcmsQmHnFKE5exLcjfj1G6KdBWo15iy0LmcR6-HVlbCjOO2ZFgTJi_80P12AupdJ6fUXLP1I4s"
-      />
     </div>
     <div
       class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-3xl"
@@ -35,7 +159,7 @@
     ></div>
   </div>
 
-  <!-- Action Accordion with Stitch Design -->
+  <!-- Action Accordion -->
   <ui-accordion
     [items]="items()"
     class="action-accordion mb-10"
@@ -62,11 +186,11 @@
     <ng-template [accordionPanel]="item.ref">
       <div class="flex flex-col w-full gap-3 py-4 pr-4 pl-[4.8rem]">
         <p class="text-grey-700 text-sm">
-          @if(item.ref === 'product') { Podés importar de un archivo personal o
+          @if(item.ref === 'product') { Podes importar de un archivo personal o
           agregar uno a uno de forma manual. } @else if(item.ref === 'category')
-          { Organizá tus productos creando categorías para facilitar la
-          navegación y agrupar artículos relacionados. } @else if(item.ref ===
-          'order') { Registrá tus órdenes de forma manual para llevar un control
+          { Organiza tus productos creando categorias para facilitar la
+          navegacion y agrupar articulos relacionados. } @else if(item.ref ===
+          'order') { Registra tus ordenes de forma manual para llevar un control
           de tus ventas. }
         </p>
         <ui-button
@@ -82,3 +206,4 @@
     }
   </ui-accordion>
 </section>
+}

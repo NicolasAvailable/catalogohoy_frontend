@@ -15,6 +15,7 @@
         </div>
       </div>
 
+      @if (canEditRates()) {
       <ui-button
         (click)="rateStore.syncRates()"
         [disabled]="rateStore.isLoading()"
@@ -24,11 +25,12 @@
         severity="primary"
         styleClass="sync-button"
       />
+      }
     </div>
   </header>
 
   <!-- Rate Cards Grid -->
-  <div class="rate-grid">
+  <div class="rate-grid" [class.pointer-events-none]="!canEditRates()" [class.opacity-60]="!canEditRates()">
     <!-- USD BCV Card -->
     <div
       class="rate-card usd"
@@ -211,6 +213,7 @@
         </div>
 
         <!-- Custom rate editor - stop click propagation to avoid toggling selection -->
+        @if (canEditRates()) {
         <div class="custom-rate-editor" (click)="$event.stopPropagation()">
           <label class="editor-label">Ajustar tasa manualmente</label>
           <div class="editor-row">
@@ -234,6 +237,7 @@
             />
           </div>
         </div>
+        }
       </div>
     </div>
   </div>

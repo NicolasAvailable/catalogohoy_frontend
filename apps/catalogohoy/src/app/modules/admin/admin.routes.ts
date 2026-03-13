@@ -1,4 +1,6 @@
 import { Route } from '@angular/router';
+import { freePlanGuard } from '@catalogohoy/plan';
+import { teamPermissionGuard, TEAMS_ROUTES } from '@catalogohoy/teams';
 
 export const adminRoutes: Route[] = [
   {
@@ -7,6 +9,7 @@ export const adminRoutes: Route[] = [
   },
   {
     path: 'products',
+    canActivate: [teamPermissionGuard('productos', 'view')],
     loadChildren: () =>
       import('@catalogohoy/product').then((m) => m.productRoutes),
   },
@@ -16,33 +19,57 @@ export const adminRoutes: Route[] = [
   },
   {
     path: 'categories',
+    canActivate: [teamPermissionGuard('productos', 'view')],
     loadChildren: () =>
       import('@catalogohoy/category').then((m) => m.categoryRoutes),
   },
   {
     path: 'orders',
+    canActivate: [teamPermissionGuard('ordenes', 'view')],
     loadChildren: () =>
       import('@catalogohoy/order').then((m) => m.ORDER_ROUTES),
   },
   {
+    path: 'clients',
+    canActivate: [teamPermissionGuard('clientes', 'view')],
+    loadChildren: () =>
+      import('@catalogohoy/client').then((m) => m.CLIENT_ROUTES),
+  },
+  {
     path: 'exchange-rates',
+    canActivate: [teamPermissionGuard('tasas', 'edit')],
     loadChildren: () => import('@catalogohoy/rate').then((m) => m.RATE_ROUTES),
   },
   {
     path: 'catalog',
+    canActivate: [teamPermissionGuard('catalogo', 'edit')],
     loadChildren: () =>
       import('@catalogohoy/ecommerce-config').then(
         (m) => m.ecommerceConfigRoutes
       ),
   },
   {
+    path: 'new-catalog',
+    loadComponent: () =>
+      import('@catalogohoy/ecommerce-config').then((m) => m.CreateCatalog),
+  },
+  {
     path: 'plans',
+    loadChildren: () => import('@catalogohoy/plan').then((m) => m.planRoutes),
+  },
+  {
+    path: 'analytics',
+    canActivate: [freePlanGuard, teamPermissionGuard('analiticas', 'view')],
     loadChildren: () =>
-      import('@catalogohoy/plan').then((m) => m.planRoutes),
+      import('@catalogohoy/analytics').then((m) => m.ANALYTICS_ROUTES),
+  },
+  {
+    path: 'teams',
+    canActivate: [freePlanGuard, teamPermissionGuard('equipo', 'view')],
+    children: TEAMS_ROUTES,
   },
   {
     path: 'chat',
-    loadChildren: () =>
-      import('@catalogohoy/chat').then((m) => m.CHAT_ROUTES),
+    loadChildren: () => import('@catalogohoy/chat').then((m) => m.CHAT_ROUTES),
   },
 ];

@@ -2,12 +2,16 @@
   <!-- Filters and actions row -->
   <div class="catalog__toolbar">
     <div class="block md:hidden">
-      <ui-input-search
-        (valueChange)="onSearch($event)"
-        placeholder="Buscar producto"
-        styleClass="rounded-base! gap-2!"
-        iconStyleClass="size-5!"
-      />
+      @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
+        <div class="catalog__search-skeleton"></div>
+      } @else {
+        <ui-input-search
+          (valueChange)="onSearch($event)"
+          placeholder="Buscar producto"
+          styleClass="rounded-base! gap-2!"
+          iconStyleClass="size-5!"
+        />
+      }
     </div>
     <div class="catalog__filters">
       @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
@@ -26,36 +30,41 @@
     </div>
 
     <div class="catalog__actions">
-      <!-- Order Menu -->
-      <button
-        #orderButton
-        class="catalog__dropdown-trigger"
-        (click)="toggleOrderMenu($event)"
-      >
-        <ui-icon name="arrowUpDown" styleClass="size-4 text-grey-300" />
-        <span class="text-grey-300 font-bold">{{ getOrderLabel() }}</span>
-        <ui-icon name="chevronDown" styleClass="size-4 text-grey-300" />
-      </button>
-
-      <ui-menu #orderMenu [items]="orderMenuItems()" [popup]="true" />
-
-      <!-- View Mode Toggle -->
-      <div class="catalog__view-toggle">
+      @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
+        <div class="catalog__sort-skeleton"></div>
+        <div class="catalog__view-toggle-skeleton"></div>
+      } @else {
+        <!-- Order Menu -->
         <button
-          class="catalog__view-btn"
-          [class.catalog__view-btn--active]="viewMode() === 'grid'"
-          (click)="setViewMode('grid')"
+          #orderButton
+          class="catalog__dropdown-trigger"
+          (click)="toggleOrderMenu($event)"
         >
-          <ui-icon name="layoutGrid" styleClass="size-5" />
+          <ui-icon name="arrowUpDown" styleClass="size-4 text-grey-300" />
+          <span class="text-grey-300 font-bold">{{ getOrderLabel() }}</span>
+          <ui-icon name="chevronDown" styleClass="size-4 text-grey-300" />
         </button>
-        <button
-          class="catalog__view-btn"
-          [class.catalog__view-btn--active]="viewMode() === 'list'"
-          (click)="setViewMode('list')"
-        >
-          <ui-icon name="list" styleClass="size-5" />
-        </button>
-      </div>
+
+        <ui-menu #orderMenu [items]="orderMenuItems()" [popup]="true" />
+
+        <!-- View Mode Toggle -->
+        <div class="catalog__view-toggle">
+          <button
+            class="catalog__view-btn"
+            [class.catalog__view-btn--active]="viewMode() === 'grid'"
+            (click)="setViewMode('grid')"
+          >
+            <ui-icon name="layoutGrid" styleClass="size-5" />
+          </button>
+          <button
+            class="catalog__view-btn"
+            [class.catalog__view-btn--active]="viewMode() === 'list'"
+            (click)="setViewMode('list')"
+          >
+            <ui-icon name="list" styleClass="size-5" />
+          </button>
+        </div>
+      }
     </div>
   </div>
 

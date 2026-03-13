@@ -1,0 +1,57 @@
+<div class="flex-1 flex flex-col items-center justify-center px-6 overflow-y-auto">
+
+  <!-- Background glow -->
+  <div class="absolute inset-0 pointer-events-none overflow-hidden">
+    <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-green-100 opacity-40 blur-3xl"></div>
+  </div>
+
+  <div class="relative flex flex-col items-center text-center max-w-lg w-full gap-6 py-12">
+
+    <!-- Icon -->
+    <div class="relative">
+      <div class="absolute inset-0 rounded-full bg-green-200 opacity-40 scale-150 blur-xl"></div>
+      <div class="absolute -top-4 -right-4 w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center shadow-sm">
+        <ui-icon name="sparkles" styleClass="size-4 text-yellow-500" />
+      </div>
+      <div class="absolute -bottom-3 -left-5 w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center shadow-sm">
+        <ui-icon name="zap" styleClass="size-3 text-primary-500" />
+      </div>
+      <div class="relative w-32 h-32 rounded-full bg-linear-to-br from-green-400 to-green-500 flex items-center justify-center shadow-xl shadow-green-200">
+        <ui-icon name="check" styleClass="size-16 text-white" />
+      </div>
+    </div>
+
+    <!-- Texts -->
+    <div class="flex flex-col gap-3">
+      <h1 class="text-4xl sm:text-5xl font-bold text-grey-800 leading-tight">
+        ¡Pago exitoso!
+      </h1>
+      <p class="text-lg text-grey-500 leading-relaxed">
+        Tu suscripción está siendo activada. En unos segundos tu plan estará disponible.
+      </p>
+      <p class="text-sm text-grey-300 leading-relaxed max-w-sm mx-auto">
+        Recibirás acceso completo a todas las funciones de tu nuevo plan de inmediato.
+      </p>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex flex-col sm:flex-row gap-3 w-full max-w-sm pt-2">
+      <button
+        (click)="goHome()"
+        class="flex-1 flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white font-semibold text-base transition-colors cursor-pointer shadow-lg shadow-primary-200"
+      >
+        <ui-icon name="home" styleClass="size-5" />
+        Ir al inicio
+      </button>
+      <button
+        (click)="goPlans()"
+        class="flex-1 flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl border-2 border-grey-100 hover:bg-grey-50 active:bg-grey-100 text-grey-600 font-semibold text-base transition-colors cursor-pointer"
+      >
+        <ui-icon name="crown" styleClass="size-5 text-yellow-500" />
+        Ver mi plan
+      </button>
+    </div>
+
+  </div>
+
+</div>

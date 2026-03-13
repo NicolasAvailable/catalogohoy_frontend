@@ -1,5 +1,7 @@
 import { authenticationEnvironment } from './authentication/environment';
 import { globalEnvironment } from './global/global.environment';
+import { posthogEnvironment } from './posthog/posthog';
+import { stripeEnvironment } from './stripe/stripe';
 import { supabaseEnvironment } from './supabase/supabase';
 
 export const environment = {
@@ -7,4 +9,6 @@ export const environment = {
   ...globalEnvironment,
   ...authenticationEnvironment,
   ...supabaseEnvironment,
+  ...posthogEnvironment,
+  ...stripeEnvironment,
 };

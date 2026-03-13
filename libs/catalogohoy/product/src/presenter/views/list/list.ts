@@ -9,23 +9,27 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { PaginatorModule, PaginatorState } from 'primeng/paginator';
+import { CategoryStore } from '@catalogohoy/category';
 import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
 import {
   ButtonComponent,
   CardComponent,
   CheckboxComponent,
   ConfirmDialogComponent,
+  DialogComponent,
   IconComponent,
   InputTextComponent,
+  MultiSelectComponent,
   SkeletonListComponent,
-  TableComponent,
   TooltipDirective,
 } from '@ui';
-import { TablePageEvent } from 'primeng/table';
 import { debounceTime, distinctUntilChanged, Subscription } from 'rxjs';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { ProductFacade } from '../../../application';
-import { Product } from '../../../domain';
-import { ProductStore } from '../../../infrastructure';
+import { Product, ProductList } from '../../../domain';
+import { ProductService, ProductStore } from '../../../infrastructure';
 import { ImportExportHubComponent } from '../import-export/import-export-hub';
 
 @Component({
@@ -34,7 +38,8 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
-    TableComponent,
+    DragDropModule,
+    PaginatorModule,
     SkeletonListComponent,
     CardComponent,
     ButtonComponent,
@@ -45,6 +50,8 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
     CheckboxComponent,
     PlanLimitDialogComponent,
     TooltipDirective,
+    DialogComponent,
+    MultiSelectComponent,
   ],
   templateUrl: './list.html',
   styleUrl: './list.css',
@@ -54,20 +61,27 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
 })
 export default class List implements OnInit, OnDestroy {
   private readonly router = inject(Router);
+  private readonly permissions = inject(TeamPermissionsStore);
+  private readonly productService = inject(ProductService);
+  protected readonly canCreateProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'create'));
+  protected readonly canDeleteProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'delete'));
   public readonly productStore = inject(ProductStore);
   public readonly productFacade = inject(ProductFacade);
   public readonly planStore = inject(PlanStore);
+  public readonly categoryStore = inject(CategoryStore);
   public readonly selectedProduct = signal<Product | null>(null);
   public readonly selectedIds = signal<Set<string>>(new Set());
   public readonly deleteMode = signal<'single' | 'bulk'>('single');
   public readonly pageFirst = signal(0);
-  public readonly pageRows = 10;
+  public readonly pageRows = signal(10);
+
+  public readonly bulkCategoryIds = signal<string[]>([]);
 
   public readonly hasSelection = computed(() => this.selectedIds().size > 0);
 
   public readonly currentPageItems = computed(() => {
     const products = this.productStore.productList().products;
-    return products.slice(this.pageFirst(), this.pageFirst() + this.pageRows);
+    return products.slice(this.pageFirst(), this.pageFirst() + this.pageRows());
   });
 
   public readonly isAllPageSelected = computed(() => {
@@ -86,6 +100,9 @@ export default class List implements OnInit, OnDestroy {
   @ViewChild(PlanLimitDialogComponent)
   public planLimitDialog!: PlanLimitDialogComponent;
 
+  @ViewChild('categoryDialog')
+  public categoryDialog!: DialogComponent;
+
   public searchForm = new FormGroup({
     search: new FormControl('', []),
   });
@@ -95,6 +112,7 @@ export default class List implements OnInit, OnDestroy {
   ngOnInit() {
     this.productStore.productList$();
     this.planStore.loadTenantPlanUsage();
+    this.categoryStore.categoryList$(1, 100);
 
     this.searchSubscription = this.searchForm.controls.search.valueChanges
       .pipe(debounceTime(300), distinctUntilChanged())
@@ -108,8 +126,21 @@ export default class List implements OnInit, OnDestroy {
     this.searchSubscription?.unsubscribe();
   }
 
-  public onPageChange(event: TablePageEvent) {
-    this.pageFirst.set(event.first);
+  public onPageChange(event: PaginatorState) {
+    this.pageFirst.set(event.first ?? 0);
+    this.pageRows.set(event.rows ?? 10);
+  }
+
+  public async drop(event: CdkDragDrop<Product[]>) {
+    if (event.previousIndex === event.currentIndex) return;
+
+    const offset = this.pageFirst();
+    const products = [...this.productStore.productList().products];
+    const movedItem = products.splice(offset + event.previousIndex, 1)[0];
+    products.splice(offset + event.currentIndex, 0, movedItem);
+
+    this.productStore.set(ProductList.from(products));
+    await this.productService.updatePositions(products);
   }
 
   public toggleProduct(product: Product) {
@@ -157,6 +188,11 @@ export default class List implements OnInit, OnDestroy {
     this.confirmDialog.warning();
   }
 
+  public onAssignCategories() {
+    this.bulkCategoryIds.set([]);
+    this.categoryDialog.show();
+  }
+
   public onCreateProduct(): void {
     if (!this.planStore.canCreateProduct()) {
       this.planLimitDialog.show();
@@ -186,6 +222,18 @@ export default class List implements OnInit, OnDestroy {
         });
       }
     }
+  }
+
+  public async onConfirmCategoryAssign() {
+    const productIds = Array.from(this.selectedIds());
+    const categoryIds = this.bulkCategoryIds();
+
+    const result = await this.productFacade.replaceCategories({ productIds, categoryIds });
+    result.mapRight(() => {
+      this.categoryDialog.hide();
+      this.clearSelection();
+      this.refreshList();
+    });
   }
 
   public getDeleteDialogContent(): string {

@@ -1,40 +1,53 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal, ViewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { CheckoutService, PlanStore } from '@catalogohoy/plan';
+import { TenantStore } from '@catalogohoy/tenant';
 import {
   confirmPasswordValidator,
   whiteSpacesValidator,
 } from '@shared/presenter';
 import {
-  AccordionComponent,
-  AccordionHeaderDirective,
-  AccordionPanelDirective,
   ButtonComponent,
   CardComponent,
+  ConfirmDialogComponent,
+  IconComponent,
   InputMessageComponent,
   InputPasswordComponent,
   InputTextComponent,
 } from '@ui';
 import { ProfileFacade } from '../../application';
-import { ProfileStore } from '../../infrastructure';
+import { ProfileService, ProfileStore } from '../../infrastructure';
 
 @Component({
   selector: 'lib-profile',
   imports: [
     ReactiveFormsModule,
-    AccordionComponent,
-    AccordionHeaderDirective,
-    AccordionPanelDirective,
     CardComponent,
     InputTextComponent,
     InputMessageComponent,
     InputPasswordComponent,
     ButtonComponent,
+    ConfirmDialogComponent,
+    IconComponent,
   ],
   templateUrl: './profile.html',
 })
 export class Profile {
   private readonly profileFacade = inject(ProfileFacade);
   private readonly profileStore = inject(ProfileStore);
+  private readonly profileService = inject(ProfileService);
+  private readonly tenantStore = inject(TenantStore);
+  private readonly checkoutService = inject(CheckoutService);
+  public readonly planStore = inject(PlanStore);
+
+  public readonly isCancelling = signal(false);
+  public readonly isDeleting = signal(false);
+
+  @ViewChild('cancelDialog')
+  public cancelDialog!: ConfirmDialogComponent;
+
+  @ViewChild('deleteDialog')
+  public deleteDialog!: ConfirmDialogComponent;
 
   public readonly profileForm = inject(FormBuilder).group({
     name: [
@@ -43,6 +56,7 @@ export class Profile {
     ],
     email: [{ value: '', disabled: true }],
   });
+
   public readonly passwordForm = inject(FormBuilder).group(
     {
       password: [
@@ -58,12 +72,6 @@ export class Profile {
       validators: confirmPasswordValidator,
     }
   );
-  public readonly items = signal([
-    {
-      ref: 'Password',
-      label: 'Contraseña',
-    },
-  ]);
 
   constructor() {
     effect(() => {
@@ -88,5 +96,28 @@ export class Profile {
       await this.profileFacade.updatePassword(password);
       this.passwordForm.reset();
     }
+  }
+
+  public onCancelSubscription(): void {
+    this.cancelDialog.warning();
+  }
+
+  public async onConfirmCancel(): Promise<void> {
+    const tenantId = this.tenantStore.tenant().tenantId;
+    if (!tenantId) return;
+
+    this.isCancelling.set(true);
+    await this.checkoutService.cancelSubscription(tenantId);
+    this.isCancelling.set(false);
+  }
+
+  public onDeleteAccount(): void {
+    this.deleteDialog.warning();
+  }
+
+  public async onConfirmDelete(): Promise<void> {
+    this.isDeleting.set(true);
+    await this.profileService.deleteAccount();
+    this.isDeleting.set(false);
   }
 }

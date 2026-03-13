@@ -1,11 +1,22 @@
 <section
-  class="container flex flex-col flex-1 max-w-5xl mx-auto px-1 overflow-hidden"
+  class="container flex flex-col flex-1 max-w-7xl mx-auto px-1 overflow-hidden"
 >
   <header class="flex justify-between items-center gap-2 py-4">
     <h1 class="text-2xl sm:text-4xl font-bold shrink-0">Productos</h1>
     <div class="flex gap-2 items-center justify-end">
       @if (hasSelection()) {
       <!-- Mobile selection buttons -->
+      <ui-button
+        class="sm:hidden"
+        (click)="onAssignCategories()"
+        [label]="'Categorías (' + selectedIds().size + ')'"
+        icon="tag"
+        severity="primary"
+        variant="outlined"
+        [fluid]="false"
+        size="small"
+      />
+      @if (canDeleteProduct()) {
       <ui-button
         class="sm:hidden"
         (click)="onDeleteSelected()"
@@ -15,6 +26,7 @@
         [fluid]="false"
         size="small"
       />
+      }
       <ui-button
         class="sm:hidden"
         (click)="clearSelection()"
@@ -27,12 +39,23 @@
       <!-- Desktop selection buttons -->
       <ui-button
         class="hidden sm:block"
+        (click)="onAssignCategories()"
+        [label]="'Asignar categorías (' + selectedIds().size + ')'"
+        icon="tag"
+        severity="primary"
+        variant="outlined"
+        [fluid]="false"
+      />
+      @if (canDeleteProduct()) {
+      <ui-button
+        class="hidden sm:block"
         (click)="onDeleteSelected()"
         [label]="'Eliminar (' + selectedIds().size + ')'"
         icon="trash"
         severity="danger"
         [fluid]="false"
       />
+      }
       <ui-button
         class="hidden sm:block"
         (click)="clearSelection()"
@@ -53,6 +76,7 @@
         [fluid]="false"
         size="small"
       />
+      @if (canCreateProduct()) {
       <ui-button
         class="sm:hidden"
         (click)="onCreateProduct()"
@@ -61,6 +85,7 @@
         [fluid]="false"
         size="small"
       />
+      }
       <!-- Desktop buttons -->
       <ui-button
         class="hidden sm:block"
@@ -71,6 +96,7 @@
         severity="contrast"
         [fluid]="false"
       />
+      @if (canCreateProduct()) {
       <ui-button
         class="hidden sm:block"
         (click)="onCreateProduct()"
@@ -78,6 +104,7 @@
         icon="circle-plus"
         [fluid]="false"
       />
+      }
       }
     </div>
   </header>
@@ -90,174 +117,236 @@
     />
   </form>
   <section
-    class="flex-1 flex flex-col overflow-hidden border border-grey-50 rounded-base"
+    class="flex-1 flex flex-col overflow-hidden border border-grey-50 rounded-base bg-white"
   >
     @if (productStore.isLoading()) {
     <section class="bg-white-500 py-6">
       <ui-skeleton-list [count]="15" height="6rem" styleClass="mx-6" />
     </section>
+    } @else if (productStore.productList().products.length === 0) {
+    <div class="flex-1 flex flex-col items-center justify-center py-16 text-center px-4">
+      <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
+        <ui-icon name="package" styleClass="size-8 text-primary-400" />
+      </div>
+      <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes productos todavía</h3>
+      <p class="text-grey-300 text-sm mb-6 max-w-sm">
+        Empieza creando tu primer producto para que aparezca en tu catálogo online.
+      </p>
+      @if (canCreateProduct()) {
+      <ui-button
+        (click)="onCreateProduct()"
+        label="Crear mi primer producto"
+        icon="circle-plus"
+        [fluid]="false"
+      />
+      }
+    </div>
     } @else {
-    <ui-table
-      class="flex-1"
-      [items]="productStore.productList().products"
-      [scrollable]="true"
-      scrollHeight="flex"
-      [paginator]="true"
-      [rows]="10"
-      [pageLinks]="6"
-      [showCurrentPageReport]="true"
-      [currentPageReportTemplate]="productStore.productList().products.length + ' productos — Pág. {currentPage}/{totalPages}'"
-      (pageChange)="onPageChange($event)"
+    <!-- Table header (desktop) -->
+    <div class="hidden sm:flex justify-between py-3 px-6 border-b border-grey-50 min-w-[700px]">
+      <div class="flex items-center gap-3 flex-3">
+        <ui-checkbox
+          [ngModel]="isAllPageSelected()"
+          (valueChange)="toggleAllPage()"
+        />
+        <span class="w-7 text-center text-sm font-semibold text-grey-400">#</span>
+        <h4 class="flex items-center text-base font-semibold">
+          Producto
+        </h4>
+      </div>
+      <h4
+        class="flex-1 flex items-center justify-center text-base font-semibold"
+      >
+        Stock
+      </h4>
+      <h4
+        class="flex-1 flex items-center justify-center text-base font-semibold"
+      >
+        Precio
+      </h4>
+      <h4
+        class="flex-1 flex items-center justify-center text-base font-semibold"
+      >
+        Promocional
+      </h4>
+      <h4
+        class="flex-1 flex items-center justify-center text-base font-semibold"
+      >
+        Acciones
+      </h4>
+    </div>
+
+    <!-- Product list with drag-and-drop -->
+    <div
+      cdkDropList
+      (cdkDropListDropped)="drop($event)"
+      class="flex-1 flex flex-col overflow-y-auto product-list"
     >
-      <ng-template #header>
-        <div class="flex justify-between py-3 px-6 min-w-[700px]">
-          <div class="flex items-center gap-3 flex-3">
+      @for (item of currentPageItems(); track item.id) {
+      <div
+        cdkDrag
+        cdkDragBoundary=".product-list"
+        class="border-b border-grey-50 last:border-0 hover:bg-grey-25 transition-colors"
+      >
+        <!-- Desktop row -->
+        <section class="hidden sm:flex gap-4 justify-between px-6 py-4 items-center min-w-[700px]">
+          <div class="flex items-center gap-3 flex-3 overflow-hidden">
+            <div cdkDragHandle class="cursor-move shrink-0 p-1 -ml-1">
+              <ui-icon name="grip-vertical" styleClass="size-5 text-grey-300" />
+            </div>
             <ui-checkbox
-              [ngModel]="isAllPageSelected()"
-              (valueChange)="toggleAllPage()"
+              [ngModel]="isSelected(item)"
+              (valueChange)="toggleProduct(item)"
             />
-            <span class="w-7 text-center text-sm font-semibold text-grey-400">#</span>
-            <h4 class="flex items-center text-base font-semibold">
-              Producto
-            </h4>
+            <span class="w-7 text-center text-xs font-medium text-grey-300 shrink-0">{{ pageFirst() + $index + 1 }}</span>
+            <div
+              [routerLink]="['edit', item.id]"
+              class="flex gap-2 flex-1 cursor-pointer overflow-hidden"
+            >
+              <ui-icon
+                [name]="item.photos.length > 0 ? item.photos[0] : 'https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg'"
+                class="flex items-center justify-center w-24 h-24"
+                styleClass="max-w-24 max-h-24 rounded-sm object-cover"
+              />
+              <h2
+                class="ml-2 text-primary-500 font-semibold text-base line-clamp-2 break-all self-center"
+              >
+                {{item.name}}
+              </h2>
+            </div>
           </div>
-          <h4
-            class="flex-1 flex items-center justify-center text-base font-semibold"
+          <div
+            class="flex-1 flex items-center justify-center overflow-hidden"
           >
-            Stock
-          </h4>
-          <h4
-            class="flex-1 flex items-center justify-center text-base font-semibold"
-          >
-            Precio
-          </h4>
-          <h4
-            class="flex-1 flex items-center justify-center text-base font-semibold"
-          >
-            Promocional
-          </h4>
-          <h4
-            class="flex-1 flex items-center justify-center text-base font-semibold"
-          >
-            Acciones
-          </h4>
-        </div>
-      </ng-template>
-      <ng-template #body let-item>
-        <ui-card styleClass="mx-6">
-          <section class="flex gap-4 justify-between min-w-[700px]">
-            <div class="flex items-center gap-3 flex-3 overflow-hidden">
-              <ui-checkbox
-                [ngModel]="isSelected(item)"
-                (valueChange)="toggleProduct(item)"
-              />
-              <span class="w-7 text-center text-xs font-medium text-grey-300 shrink-0">{{ productStore.productList().products.indexOf(item) + 1 }}</span>
-              <div
-                [routerLink]="['edit', item.id]"
-                class="flex gap-2 flex-1 cursor-pointer overflow-hidden"
-              >
-                <ui-icon
-                  [name]="item.photos.length > 0 ? item.photos[0] : 'https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg'"
-                  class="flex items-center justify-center w-24 h-24"
-                  styleClass="max-w-24 max-h-24 rounded-sm object-cover "
-                />
-                <h2
-                  class="ml-4 text-primary-500 font-semibold text-lg line-clamp-3 break-all"
-                >
-                  {{item.name}}
-                </h2>
-              </div>
-            </div>
-            <div
-              class="flex-1 flex items-center justify-center overflow-hidden"
-            >
-              @if (!item.stock) {
-              <span class="line-clamp-1 break-all">∞ Infinito</span>
-              } @else if (+item.stock <= 0) {
-              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-red-100 text-red-600">
-                Agotado
-              </span>
-              } @else {
-              <span class="line-clamp-1 break-all">{{ item.stock }}</span>
-              }
-            </div>
-            <div
-              class="flex-1 flex items-center justify-center overflow-hidden"
-            >
-              <div
-                class="flex items-center gap-2 px-3 py-2 border border-slate-700 rounded-lg w-full max-w-32"
-              >
-                <ui-icon name="dollar-sign" size="14" class="text-slate-700" />
-                <span class="text-sm font-medium truncate">{{item.price}}</span>
-              </div>
-            </div>
-            <div
-              class="flex-1 flex items-center justify-center overflow-hidden"
-            >
-              @if (item.pricePromotional) {
-              <div
-                class="flex items-center gap-2 px-3 py-2 border border-slate-700 rounded-lg w-full max-w-32"
-              >
-                <ui-icon name="dollar-sign" size="14" class="text-slate-700" />
-                <span class="text-sm font-medium truncate"
-                  >{{item.pricePromotional}}</span
-                >
-              </div>
-              } @else {
-              <span class="text-grey-300">-</span>
-              }
-            </div>
-            <div class="flex-1 flex items-center justify-center gap-1">
-              <ui-button
-                [routerLink]="['edit', item.id]"
-                icon="pencil"
-                variant="outlined"
-                severity="contrast"
-                size="small"
-                tooltip="Editar"
-                tooltipPosition="bottom"
-              />
-              <ui-button
-                icon="share2"
-                variant="outlined"
-                severity="contrast"
-                size="small"
-                tooltip="Compartir"
-                tooltipPosition="bottom"
-              />
-              <ui-button
-                (click)="onDelete(item)"
-                icon="trash"
-                variant="outlined"
-                severity="contrast"
-                size="small"
-                tooltip="Eliminar"
-                tooltipPosition="bottom"
-              />
-            </div>
-          </section>
-        </ui-card>
-      </ng-template>
-      <ng-template #empty>
-        <div class="py-16 flex flex-col items-center justify-center text-center px-4">
-          <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
-            <ui-icon name="package" styleClass="size-8 text-primary-400" />
+            @if (!item.stock) {
+            <span class="line-clamp-1 break-all text-sm">∞ Infinito</span>
+            } @else if (+item.stock <= 0) {
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-red-100 text-red-600">
+              Agotado
+            </span>
+            } @else {
+            <span class="line-clamp-1 break-all text-sm">{{ item.stock }}</span>
+            }
           </div>
-          <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes productos todavia</h3>
-          <p class="text-grey-300 text-sm mb-6 max-w-sm">
-            Empieza creando tu primer producto para que aparezca en tu catalogo online.
-          </p>
-          <ui-button
-            (click)="onCreateProduct()"
-            label="Crear mi primer producto"
-            icon="circle-plus"
-            [fluid]="false"
+          <div
+            class="flex-1 flex items-center justify-center overflow-hidden"
+          >
+            <div
+              class="flex items-center gap-2 px-3 py-2 border border-slate-700 rounded-lg w-full max-w-32"
+            >
+              <ui-icon name="dollar-sign" size="14" class="text-slate-700" />
+              <span class="text-sm font-medium truncate">{{item.price}}</span>
+            </div>
+          </div>
+          <div
+            class="flex-1 flex items-center justify-center overflow-hidden"
+          >
+            @if (item.pricePromotional) {
+            <div
+              class="flex items-center gap-2 px-3 py-2 border border-slate-700 rounded-lg w-full max-w-32"
+            >
+              <ui-icon name="dollar-sign" size="14" class="text-slate-700" />
+              <span class="text-sm font-medium truncate"
+                >{{item.pricePromotional}}</span
+              >
+            </div>
+            } @else {
+            <span class="text-grey-300">-</span>
+            }
+          </div>
+          <div class="flex-1 flex items-center justify-center gap-1">
+            <ui-button
+              [routerLink]="['edit', item.id]"
+              icon="pencil"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+              tooltip="Editar"
+              tooltipPosition="bottom"
+            />
+            <ui-button
+              icon="share2"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+              tooltip="Compartir"
+              tooltipPosition="bottom"
+            />
+            @if (canDeleteProduct()) {
+            <ui-button
+              (click)="onDelete(item)"
+              icon="trash"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+              tooltip="Eliminar"
+              tooltipPosition="bottom"
+            />
+            }
+          </div>
+        </section>
+
+        <!-- Mobile row -->
+        <div class="flex sm:hidden items-center gap-3 px-4 py-3">
+          <div cdkDragHandle class="cursor-move shrink-0">
+            <ui-icon name="grip-vertical" styleClass="size-5 text-grey-300" />
+          </div>
+          <ui-checkbox
+            [ngModel]="isSelected(item)"
+            (valueChange)="toggleProduct(item)"
           />
+          <div
+            [routerLink]="['edit', item.id]"
+            class="flex gap-3 flex-1 cursor-pointer overflow-hidden items-center"
+          >
+            <ui-icon
+              [name]="item.photos.length > 0 ? item.photos[0] : 'https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg'"
+              class="flex items-center justify-center w-12 h-12 shrink-0"
+              styleClass="max-w-12 max-h-12 rounded-sm object-cover"
+            />
+            <div class="flex flex-col min-w-0">
+              <h2 class="text-primary-500 font-semibold text-base line-clamp-1 break-all">
+                {{item.name}}
+              </h2>
+              <span class="text-sm text-grey-400">${{item.price}}</span>
+            </div>
+          </div>
+          <div class="flex gap-1 shrink-0">
+            <ui-button
+              [routerLink]="['edit', item.id]"
+              icon="pencil"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+            />
+            @if (canDeleteProduct()) {
+            <ui-button
+              (click)="onDelete(item)"
+              icon="trash"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+            />
+            }
+          </div>
         </div>
-      </ng-template>
-    </ui-table>
+      </div>
+      }
+    </div>
+
+    <!-- Pagination -->
+    <p-paginator
+      [first]="pageFirst()"
+      [rows]="pageRows()"
+      [totalRecords]="productStore.productList().products.length"
+      [rowsPerPageOptions]="[10, 25, 50]"
+      [showCurrentPageReport]="true"
+      currentPageReportTemplate="{totalRecords} productos — Pág. {currentPage} de {totalPages}"
+      (onPageChange)="onPageChange($event)"
+    />
     }
   </section>
+
   <ui-confirm-dialog
     (confirm)="onConfirmDelete()"
     headerLabel="Eliminar producto"
@@ -265,6 +354,47 @@
     acceptLabel="Eliminar"
     rejectLabel="Cancelar"
   />
+
+  <!-- Dialog: asignación masiva de categorías -->
+  <ui-dialog
+    #categoryDialog
+    headerTitle="Asignar categorías"
+    styleClass="w-[32rem]"
+  >
+    <div class="flex flex-col gap-4 pt-2">
+      <p class="text-sm text-grey-400">
+        Se reemplazarán las categorías de los
+        <strong>{{ selectedIds().size }} productos</strong> seleccionados por las que elijas aquí.
+      </p>
+      <ui-multi-select
+        [options]="categoryStore.categoryList().categories"
+        [ngModel]="bulkCategoryIds()"
+        (ngModelChange)="bulkCategoryIds.set($event)"
+        optionLabel="name"
+        optionValue="id"
+        display="chip"
+        placeholder="Seleccionar categorías..."
+        styleClass="w-full"
+        appendTo="body"
+      />
+      <div class="flex justify-end gap-3 pt-2">
+        <ui-button
+          label="Cancelar"
+          variant="outlined"
+          severity="contrast"
+          [fluid]="false"
+          (click)="categoryDialog.hide()"
+        />
+        <ui-button
+          label="Asignar"
+          icon="check"
+          [fluid]="false"
+          (click)="onConfirmCategoryAssign()"
+        />
+      </div>
+    </div>
+  </ui-dialog>
+
   <lib-import-export-hub />
   <lib-plan-limit-dialog />
 </section>

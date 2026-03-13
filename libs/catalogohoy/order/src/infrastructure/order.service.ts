@@ -3,6 +3,21 @@ import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
 import { Order, OrderItem, OrderMapper, OrderStatus } from '../domain';
 
+export interface WeekDayData {
+  label: string;
+  salesBs: number;
+  orders: number;
+}
+
+export interface HomeStats {
+  todayOrders: number;
+  todaySalesUsd: number;
+  todaySalesBs: number;
+  monthlySalesUsd: number;
+  monthlySalesBs: number;
+  weeklyData: WeekDayData[];
+}
+
 export interface CreateOrderInput {
   name: string;
   phone?: string;
@@ -218,6 +233,90 @@ export class OrderService {
           .eq('id', item.productId);
       }
     }
+  }
+
+  async getHomeStats(tenantId: number): Promise<E.Either<Error, HomeStats>> {
+    const now = new Date();
+
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    // Weekly data: last 7 days (Mon-Sun or relative)
+    const dayLabels = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Hoy'];
+    const weekStart = new Date(now);
+    weekStart.setDate(weekStart.getDate() - 6);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const [todayResult, monthResult, weekResult] = await Promise.all([
+      this.client
+        .from('orders')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .gte('created_at', startOfDay.toISOString())
+        .lt('created_at', endOfDay.toISOString())
+        .neq('status', 'cancelled')
+        .order('created_at', { ascending: false }),
+      this.client
+        .from('orders')
+        .select('total_usd, total_bs')
+        .eq('tenant_id', tenantId)
+        .gte('created_at', startOfMonth.toISOString())
+        .neq('status', 'cancelled'),
+      this.client
+        .from('orders')
+        .select('total_bs, created_at')
+        .eq('tenant_id', tenantId)
+        .gte('created_at', weekStart.toISOString())
+        .neq('status', 'cancelled'),
+    ]);
+
+    if (todayResult.error) return E.left(new Error(todayResult.error.message));
+    if (monthResult.error) return E.left(new Error(monthResult.error.message));
+    if (weekResult.error) return E.left(new Error(weekResult.error.message));
+
+    const todayOrders = OrderMapper.toDomainList(todayResult.data || []);
+    const todaySalesUsd = todayOrders.reduce((sum, o) => sum + (o.totalUsd || 0), 0);
+    const todaySalesBs = todayOrders.reduce((sum, o) => sum + (o.totalBs || 0), 0);
+
+    const monthData = monthResult.data || [];
+    const monthlySalesUsd = monthData.reduce((sum, o) => sum + (o.total_usd || 0), 0);
+    const monthlySalesBs = monthData.reduce((sum, o) => sum + (o.total_bs || 0), 0);
+
+    // Group weekly orders by day
+    const weeklyData: WeekDayData[] = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(weekStart);
+      day.setDate(day.getDate() + i);
+      const dayStart = new Date(day);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(day);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const dayOrders = (weekResult.data || []).filter((o) => {
+        const d = new Date(o.created_at);
+        return d >= dayStart && d <= dayEnd;
+      });
+
+      weeklyData.push({
+        label: dayLabels[i],
+        salesBs: dayOrders.reduce((sum, o) => sum + (o.total_bs || 0), 0),
+        orders: dayOrders.length,
+      });
+    }
+
+    return E.right({
+      todayOrders: todayOrders.length,
+      todaySalesUsd,
+      todaySalesBs,
+      monthlySalesUsd,
+      monthlySalesBs,
+      weeklyData,
+    });
   }
 
   async deleteOrder(
