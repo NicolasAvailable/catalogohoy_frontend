@@ -7,7 +7,11 @@ import {
   withMethods,
   withState,
 } from '@ngrx/signals';
-import { CreateWhatsAppAccountPayload, WhatsAppAccount } from '../domain';
+import {
+  CreateWhatsAppAccountPayload,
+  EmbeddedSignupPayload,
+  WhatsAppAccount,
+} from '../domain';
 import { WhatsAppService } from './whatsapp.service';
 
 type WhatsAppState = {
@@ -72,6 +76,39 @@ export const WhatsAppStore = signalStore(
         }
 
         const result = await whatsAppService.createAccount(tenantId, payload);
+
+        let created: WhatsAppAccount | null = null;
+
+        result.fold(
+          (err) =>
+            patchState(store, { isConnecting: false, error: err.message }),
+          (account) => {
+            created = account;
+            patchState(store, {
+              accounts: [account, ...store.accounts()],
+              isConnecting: false,
+            });
+          }
+        );
+
+        return created;
+      },
+
+      async registerFromEmbeddedSignup(
+        payload: EmbeddedSignupPayload
+      ): Promise<WhatsAppAccount | null> {
+        patchState(store, { isConnecting: true, error: null });
+
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) {
+          patchState(store, { isConnecting: false });
+          return null;
+        }
+
+        const result = await whatsAppService.createAccountFromSignup(
+          tenantId,
+          payload
+        );
 
         let created: WhatsAppAccount | null = null;
 

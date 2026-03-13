@@ -1,61 +1,65 @@
-import { Component, inject, input, output, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import {
-  ButtonComponent,
-  IconComponent,
-  InputTextComponent,
-  InputTelComponent,
-} from '@ui';
+import { Component, DestroyRef, inject, input, OnInit, output, signal } from '@angular/core';
+import { ButtonComponent, IconComponent } from '@ui';
 import { WhatsAppAccount } from '../../../domain';
-import { WhatsAppStore } from '../../../infrastructure';
+import {
+  EmbeddedSignupData,
+  FacebookSdkService,
+  WhatsAppStore,
+} from '../../../infrastructure';
 
 @Component({
   selector: 'lib-whatsapp-setup',
   standalone: true,
-  imports: [
-    FormsModule,
-    ButtonComponent,
-    IconComponent,
-    InputTextComponent,
-    InputTelComponent,
-  ],
+  imports: [ButtonComponent, IconComponent],
   templateUrl: './whatsapp-setup.html',
 })
-export class WhatsAppSetupComponent {
+export class WhatsAppSetupComponent implements OnInit {
   readonly whatsAppStore = inject(WhatsAppStore);
   readonly mode = input<'fullpage' | 'dialog'>('fullpage');
   readonly registered = output<WhatsAppAccount>();
 
-  readonly currentStep = signal<1 | 2 | 3>(1);
-  readonly phoneNumber = signal('');
-  readonly displayName = signal('');
-  readonly wabaId = signal('');
-  readonly phoneNumberId = signal('');
+  private readonly facebookSdk = inject(FacebookSdkService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  get isFormValid(): boolean {
-    return this.phoneNumber().trim().length > 0;
+  readonly sdkReady = signal(false);
+  readonly signupComplete = signal(false);
+
+  private removeMessageListener?: () => void;
+
+  ngOnInit(): void {
+    this.facebookSdk.loadSdk().then(() => this.sdkReady.set(true));
+
+    this.removeMessageListener = this.facebookSdk.onEmbeddedSignupMessage(
+      (event) => {
+        if (event.event === 'FINISH') {
+          this.handleSignupFinish(event.data);
+        }
+      }
+    );
+
+    this.destroyRef.onDestroy(() => this.removeMessageListener?.());
   }
 
-  goToStep2(): void {
-    if (!this.isFormValid) return;
-    this.currentStep.set(2);
+  async connectWithFacebook(): Promise<void> {
+    const response = await this.facebookSdk.launchEmbeddedSignup();
+
+    if (response.status !== 'connected' || !response.authResponse?.code) {
+      return;
+    }
+
+    // The auth code will be used by the backend to exchange for a long-lived token.
+    // The waba_id and phone_number_id come from the message event listener.
   }
 
-  goBack(): void {
-    if (this.currentStep() === 2) this.currentStep.set(1);
-    if (this.currentStep() === 3) this.currentStep.set(2);
-  }
-
-  async register(): Promise<void> {
-    const account = await this.whatsAppStore.registerAccount({
-      phoneNumber: this.phoneNumber().trim(),
-      displayName: this.displayName().trim() || null,
-      wabaId: this.wabaId().trim() || null,
-      phoneNumberId: this.phoneNumberId().trim() || null,
+  private async handleSignupFinish(data: EmbeddedSignupData): Promise<void> {
+    const account = await this.whatsAppStore.registerFromEmbeddedSignup({
+      wabaId: data.waba_id,
+      phoneNumberId: data.phone_number_id,
+      authCode: '',
     });
 
     if (account) {
-      this.currentStep.set(3);
+      this.signupComplete.set(true);
       this.registered.emit(account);
     }
   }

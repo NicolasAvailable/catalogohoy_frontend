@@ -3,6 +3,7 @@ import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
 import {
   CreateWhatsAppAccountPayload,
+  EmbeddedSignupPayload,
   WhatsAppAccount,
   WhatsAppAccountMapper,
 } from '../domain';
@@ -41,6 +42,31 @@ export class WhatsAppService {
         tenant_id: tenantId,
         phone_number: payload.phoneNumber,
         display_name: payload.displayName,
+        waba_id: payload.wabaId,
+        phone_number_id: payload.phoneNumberId,
+        status: 'active',
+      })
+      .select(
+        'id, tenant_id, phone_number, display_name, waba_id, phone_number_id, status, created_at, updated_at'
+      )
+      .single();
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    return E.right(WhatsAppAccountMapper.toDomain(data));
+  }
+
+  async createAccountFromSignup(
+    tenantId: number,
+    payload: EmbeddedSignupPayload
+  ): Promise<E.Either<Error, WhatsAppAccount>> {
+    const { data, error } = await this.client
+      .from('whatsapp_accounts')
+      .insert({
+        tenant_id: tenantId,
+        phone_number: '',
         waba_id: payload.wabaId,
         phone_number_id: payload.phoneNumberId,
         status: 'active',

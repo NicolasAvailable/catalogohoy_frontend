@@ -16,3 +16,9 @@ export interface CreateWhatsAppAccountPayload {
   wabaId: string | null;
   phoneNumberId: string | null;
 }
+
+export interface EmbeddedSignupPayload {
+  wabaId: string;
+  phoneNumberId: string;
+  authCode: string;
+}

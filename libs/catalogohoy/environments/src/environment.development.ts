@@ -2,6 +2,7 @@ import { authenticationEnvironment } from './authentication/environment.developm
 import { globalEnvironment } from './global/global.development';
 import { posthogEnvironment } from './posthog/posthog';
 import { supabaseEnvironment } from './supabase/supabase.development';
+import { whatsappEnvironment } from './whatsapp/whatsapp';
 
 export const environment = {
   production: false,
@@ -9,4 +10,5 @@ export const environment = {
   ...authenticationEnvironment,
   ...supabaseEnvironment,
   ...posthogEnvironment,
+  ...whatsappEnvironment,
 };
