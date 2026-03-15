@@ -1,7 +1,7 @@
 export const whatsappEnvironment = {
   whatsapp: {
-    facebookAppId: '', // TODO: Set your Meta App ID from developers.facebook.com
-    facebookConfigId: '', // TODO: Set your Embedded Signup Configuration ID
+    facebookAppId: '2650734015311155',
+    facebookConfigId: '', // TODO: Set your Embedded Signup Configuration ID from WhatsApp > Configuraciones
     graphApiVersion: 'v22.0',
   },
 };
