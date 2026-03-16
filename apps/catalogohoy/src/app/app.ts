@@ -1,6 +1,10 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { PosthogService, SupabaseClientProvider } from '@catalogohoy/core';
+import {
+  MetaPixelService,
+  PosthogService,
+  SupabaseClientProvider,
+} from '@catalogohoy/core';
 import { NgxSonnerToaster } from 'ngx-sonner';
 import { AppSubscriber } from './app.subscriber';
 
@@ -14,6 +18,7 @@ export class App implements OnInit {
   private readonly subscriber = inject(AppSubscriber);
   // La inyección del servicio dispara su constructor (init + router tracking)
   readonly posthog = inject(PosthogService);
+  readonly metaPixel = inject(MetaPixelService);
 
   constructor() {
     this.captureQueryParametersToLocalStorage();

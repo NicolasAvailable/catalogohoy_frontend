@@ -2,6 +2,7 @@ import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular
 import { Subscription } from 'rxjs';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { MetaPixelService } from '@catalogohoy/core';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import {
   ButtonComponent,
@@ -49,6 +50,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   private readonly facade = inject(AuthenticationFacade);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
+  private readonly metaPixel = inject(MetaPixelService);
   private authSub: (() => void) | null = null;
   private googlePopup: Window | null = null;
   private popupPollId: ReturnType<typeof setInterval> | null = null;
@@ -263,7 +265,10 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
 
     if (this.method() === 'google') {
       const result = await this.facade.completeGoogleSignup({ name, storeName });
-      result.mapRight((url) => (window.location.href = url));
+      result.mapRight((url) => {
+        this.metaPixel.trackEvent('CompleteRegistration', { content_name: storeName });
+        window.location.href = url;
+      });
     } else {
       const { email, password } = this.credentialsForm.value as {
         email: string;
@@ -275,7 +280,10 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
         storeName,
         password,
       } as SignUpCredentials);
-      result.mapRight((url) => (window.location.href = url));
+      result.mapRight((url) => {
+        this.metaPixel.trackEvent('CompleteRegistration', { content_name: storeName });
+        window.location.href = url;
+      });
     }
   }
 }

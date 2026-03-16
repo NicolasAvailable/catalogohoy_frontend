@@ -1,5 +1,6 @@
 import { authenticationEnvironment } from './authentication/environment';
 import { globalEnvironment } from './global/global.environment';
+import { metaPixelEnvironment } from './meta-pixel/meta-pixel';
 import { posthogEnvironment } from './posthog/posthog';
 import { stripeEnvironment } from './stripe/stripe';
 import { supabaseEnvironment } from './supabase/supabase';
@@ -11,4 +12,5 @@ export const environment = {
   ...supabaseEnvironment,
   ...posthogEnvironment,
   ...stripeEnvironment,
+  ...metaPixelEnvironment,
 };

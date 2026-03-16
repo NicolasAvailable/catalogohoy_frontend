@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { SupabaseClientProvider } from '@catalogohoy/core';
+import { MetaPixelService, SupabaseClientProvider } from '@catalogohoy/core';
 import { NgxSonnerToaster } from 'ngx-sonner';
 import { AppSubscriber } from './app.subscriber';
 
@@ -12,6 +12,7 @@ import { AppSubscriber } from './app.subscriber';
 })
 export class App {
   private readonly subscriber = inject(AppSubscriber);
+  readonly metaPixel = inject(MetaPixelService);
 
   constructor() {
     SupabaseClientProvider.create();

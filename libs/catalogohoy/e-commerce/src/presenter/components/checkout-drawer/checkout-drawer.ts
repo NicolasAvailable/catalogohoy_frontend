@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MetaPixelService } from '@catalogohoy/core';
 import { WhatsappButton } from '@catalogohoy/ecommerce-config';
 import { IconComponent } from '@ui';
 import { CartItem } from '../../../domain';
@@ -22,6 +23,7 @@ import { CartStore, EcommerceStore } from '../../../infrastructure';
 export class CheckoutDrawer {
   public readonly cartStore = inject(CartStore);
   public readonly ecommerceStore = inject(EcommerceStore);
+  private readonly metaPixel = inject(MetaPixelService);
 
   public readonly name = signal('');
   public readonly phone = signal('');
@@ -115,6 +117,12 @@ export class CheckoutDrawer {
     const encodedMessage = encodeURIComponent(message);
     const whatsappNumber = button.number.replace(/\D/g, '');
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+
+    this.metaPixel.trackEvent('Purchase', {
+      currency: 'USD',
+      value: total,
+      num_items: items.length,
+    });
 
     // Clear cart and show success screen with WhatsApp URL
     this.cartStore.clearCart();

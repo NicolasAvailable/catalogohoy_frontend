@@ -1,4 +1,5 @@
 export * from './icons/icons.provider';
+export * from './meta-pixel/meta-pixel.provider';
 export * from './posthog/posthog.provider';
 export * from './primeng/primeng.provider';
 export * from './supabase/supabase.provider';

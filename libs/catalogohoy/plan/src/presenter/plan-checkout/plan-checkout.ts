@@ -11,6 +11,7 @@ import {
   Plan,
 } from '../../domain';
 import { CheckoutService, PlanStore } from '../../infrastructure';
+import { MetaPixelService } from '@catalogohoy/core';
 import { TenantStore } from '@catalogohoy/tenant';
 import { RateStore } from '@catalogohoy/rate';
 
@@ -101,6 +102,7 @@ export class PlanCheckout implements OnInit {
   private readonly checkoutService = inject(CheckoutService);
   private readonly tenantStore = inject(TenantStore);
   private readonly rateStore = inject(RateStore);
+  private readonly metaPixel = inject(MetaPixelService);
 
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
@@ -252,6 +254,11 @@ export class PlanCheckout implements OnInit {
     msg += `\n🏪 *Negocio:* ${slug}`;
 
     const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+    this.metaPixel.trackEvent('InitiateCheckout', {
+      content_name: this.planId(),
+      currency: 'VES',
+      value: totalUsd,
+    });
     window.open(url, '_blank');
   }
 
@@ -287,6 +294,11 @@ export class PlanCheckout implements OnInit {
 
     result
       .mapRight(({ url }) => {
+        this.metaPixel.trackEvent('InitiateCheckout', {
+          content_name: this.planId(),
+          currency: 'USD',
+          value: this.total(),
+        });
         window.location.href = url;
       })
       .mapLeft((err) => {
