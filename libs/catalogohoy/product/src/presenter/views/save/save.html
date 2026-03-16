@@ -169,12 +169,12 @@
           <div class="flex flex-wrap gap-4 mt-4 overflow-x-auto">
             @for (photo of photos(); track photo) {
             <div
-              class="relative max-w-56 group aspect-square rounded-xl overflow-hidden border border-grey-200"
+              class="relative w-full sm:max-w-56 group rounded-xl overflow-hidden border border-grey-200"
             >
               <img
                 [src]="photo"
                 alt="Foto del producto"
-                class="w-full h-full object-cover"
+                class="w-full h-auto object-contain"
               />
               <button
                 type="button"
