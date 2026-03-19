@@ -15,7 +15,7 @@
 .hero__logo {
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid white;
+  border: 0.1875rem solid white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   background: white;
 }
@@ -23,7 +23,7 @@
 .hero__logo-placeholder {
   border-radius: 50%;
   background: var(--color-primary-100, #dbeafe);
-  border: 3px solid white;
+  border: 0.1875rem solid white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
@@ -52,7 +52,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: -3.5rem;
+  margin-top: -2.4rem;
   gap: 0.125rem;
   padding: 0 1rem 0.25rem;
 }
