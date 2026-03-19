@@ -100,6 +100,18 @@
   color: #ca8a04;
 }
 
+.unsaved-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #fef9c3;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  color: #92400e;
+  margin-top: 0.25rem;
+}
+
 .design-icon {
   background: #ecfdf5;
   color: #10b981;

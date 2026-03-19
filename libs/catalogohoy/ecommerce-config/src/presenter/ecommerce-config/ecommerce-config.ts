@@ -105,6 +105,9 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly isCustomColor = computed(
     () => !this.themeColors.some((c) => c.value === this.draftThemeColor())
   );
+  public readonly hasUnsavedTemplate = computed(
+    () => this.draftTemplate() !== (this.configStore.config()?.template ?? 'classic')
+  );
 
   // Mobile overlay
   public readonly isMockupOpen = signal(false);

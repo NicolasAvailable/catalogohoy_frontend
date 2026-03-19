@@ -86,12 +86,19 @@
             (selectedChange)="selectTemplate($event)"
           ></lib-template-selector>
 
+          @if (hasUnsavedTemplate()) {
+          <div class="unsaved-hint">
+            <ui-icon name="info" styleClass="size-4"></ui-icon>
+            <span>Vista previa temporal — guarda para aplicar el cambio.</span>
+          </div>
+          }
+
           <div class="divider"></div>
 
           @if (canEditCatalog()) {
           <div class="save-section">
             <ui-button
-              label="Guardar plantilla"
+              [label]="hasUnsavedTemplate() ? 'Guardar plantilla ●' : 'Guardar plantilla'"
               (click)="saveTemplate()"
               [isLoading]="isSavingSection('template')"
               icon="save"
