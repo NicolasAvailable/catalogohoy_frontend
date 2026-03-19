@@ -3,8 +3,12 @@
 } @else {
 <div class="ecommerce">
   <lib-catalog-header />
+  <lib-catalog-hero />
 
-  <main class="ecommerce__content">
+  <main
+    class="ecommerce__content"
+    [ngClass]="{ 'pt-0!': ecommerceStore.effectiveCatalogInfo()?.template !== 'classic' } "
+  >
     <router-outlet />
   </main>
 

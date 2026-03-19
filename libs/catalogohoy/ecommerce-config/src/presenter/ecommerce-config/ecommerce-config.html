@@ -69,6 +69,39 @@
         </div>
       </ui-card>
 
+      <!-- Card: Plantilla del Catálogo -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon template-icon">
+              <ui-icon name="layout-template" styleClass="size-5"></ui-icon>
+            </div>
+            <h2 class="card-title">Plantilla del Catálogo</h2>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <lib-template-selector
+            [selected]="draftTemplate()"
+            (selectedChange)="selectTemplate($event)"
+          ></lib-template-selector>
+
+          <div class="divider"></div>
+
+          @if (canEditCatalog()) {
+          <div class="save-section">
+            <ui-button
+              label="Guardar plantilla"
+              (click)="saveTemplate()"
+              [isLoading]="isSavingSection('template')"
+              icon="save"
+              [fluid]="true"
+            ></ui-button>
+          </div>
+          }
+        </div>
+      </ui-card>
+
       <!-- Card 2: Diseño del catálogo -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">

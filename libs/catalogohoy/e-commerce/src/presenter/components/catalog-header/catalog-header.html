@@ -5,8 +5,10 @@
         <div class="catalog-header__logo-skeleton"></div>
         <div class="catalog-header__title-skeleton"></div>
       } @else {
-        @if (ecommerceStore.effectiveCatalogInfo()?.logo; as logo) {
-          <img [src]="logo" alt="" class="catalog-header__logo" />
+        @if (ecommerceStore.effectiveCatalogInfo()?.template !== 'banner-centered' && ecommerceStore.effectiveCatalogInfo()?.template !== 'minimal') {
+          @if (ecommerceStore.effectiveCatalogInfo()?.logo; as logo) {
+            <img [src]="logo" alt="" class="catalog-header__logo" />
+          }
         }
         <h1 class="catalog-header__title">
           {{ ecommerceStore.effectiveCatalogInfo()?.name || 'Catálogo' }}

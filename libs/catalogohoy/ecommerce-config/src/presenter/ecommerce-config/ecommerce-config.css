@@ -95,6 +95,11 @@
   flex-shrink: 0;
 }
 
+.template-icon {
+  background: #fef9c3;
+  color: #ca8a04;
+}
+
 .design-icon {
   background: #ecfdf5;
   color: #10b981;

@@ -27,6 +27,7 @@ import {
   UploaderComponent,
 } from '@ui';
 import {
+  CatalogTemplate,
   DEFAULT_SOCIAL_LINKS,
   SocialLinks,
   THEME_COLORS,
@@ -35,6 +36,7 @@ import {
 } from '../../domain';
 import { EcommerceConfigStore } from '../../infrastructure';
 import { PhoneMockupComponent } from '../components/phone-mockup/phone-mockup';
+import { TemplateSelectorComponent } from '../components/template-selector/template-selector';
 
 @Component({
   selector: 'lib-ecommerce-config',
@@ -52,6 +54,7 @@ import { PhoneMockupComponent } from '../components/phone-mockup/phone-mockup';
     SelectItemDirective,
     SelectSelectedItemDirective,
     PhoneMockupComponent,
+    TemplateSelectorComponent,
   ],
   templateUrl: './ecommerce-config.html',
   styleUrl: './ecommerce-config.css',
@@ -96,6 +99,7 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftShowLocationSection = signal(true);
   public readonly draftShowPaymentMethodsSection = signal(true);
   public readonly draftSocialLinks = signal<SocialLinks>({ ...DEFAULT_SOCIAL_LINKS });
+  public readonly draftTemplate = signal<CatalogTemplate>('classic');
 
   // Computed
   public readonly isCustomColor = computed(
@@ -136,6 +140,7 @@ export class EcommerceConfigComponent implements OnInit {
         this.draftSocialLinks.set(
           config.socialLinks ?? { ...DEFAULT_SOCIAL_LINKS }
         );
+        this.draftTemplate.set(config.template ?? 'classic');
       }
     });
 
@@ -145,12 +150,13 @@ export class EcommerceConfigComponent implements OnInit {
       const themeColor = this.draftThemeColor();
       const showDesignSection = this.draftShowDesignSection();
       const socialLinks = this.draftSocialLinks();
+      const template = this.draftTemplate();
       const logo = this.configStore.config()?.logo ?? null;
       const banner = this.configStore.config()?.banner ?? null;
 
       const message = {
         type: 'PREVIEW_UPDATE' as const,
-        payload: { name, logo, banner, themeColor, showDesignSection, socialLinks },
+        payload: { name, logo, banner, themeColor, showDesignSection, socialLinks, template },
         source: 'catalogohoy-admin' as const,
       };
 
@@ -172,6 +178,15 @@ export class EcommerceConfigComponent implements OnInit {
       this.configStore.loadConfig(String(tenantId));
       this.configStore.loadPaymentMethods(String(tenantId));
     }
+  }
+
+  // --- Template Section ---
+  selectTemplate(template: CatalogTemplate) {
+    this.draftTemplate.set(template);
+  }
+
+  async saveTemplate() {
+    await this.configStore.saveTemplate(this.draftTemplate());
   }
 
   // --- Design Section ---

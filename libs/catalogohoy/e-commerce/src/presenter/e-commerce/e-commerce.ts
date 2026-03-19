@@ -1,11 +1,12 @@
+import { NgClass } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DOCUMENT,
+  effect,
   inject,
   OnDestroy,
   OnInit,
-  effect,
-  DOCUMENT,
 } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { RouterOutlet } from '@angular/router';
@@ -16,6 +17,7 @@ import { CartDrawer } from '../components/cart-drawer/cart-drawer';
 import { CatalogExpiredComponent } from '../components/catalog-expired/catalog-expired';
 import { CatalogFooter } from '../components/catalog-footer/catalog-footer';
 import { CatalogHeader } from '../components/catalog-header/catalog-header';
+import { CatalogHero } from '../components/catalog-hero/catalog-hero';
 import { CheckoutDrawer } from '../components/checkout-drawer/checkout-drawer';
 
 const DEFAULT_FAVICON =
@@ -25,7 +27,9 @@ const DEFAULT_FAVICON =
   selector: 'lib-e-commerce',
   imports: [
     RouterOutlet,
+    NgClass,
     CatalogHeader,
+    CatalogHero,
     CatalogFooter,
     CartDrawer,
     CheckoutDrawer,
@@ -68,20 +72,30 @@ export class ECommerce implements OnInit, OnDestroy {
       const info = this.ecommerceStore.effectiveCatalogInfo();
       if (info?.name) {
         const title = `${info.name} | Catálogo`;
-        const description = info.description || `Explora el catálogo de ${info.name}`;
+        const description =
+          info.description || `Explora el catálogo de ${info.name}`;
         const image = info.logo || info.banner || DEFAULT_FAVICON;
         const url = window.location.origin;
 
         this.titleService.setTitle(title);
 
-        this.metaService.updateTag({ name: 'description', content: description });
+        this.metaService.updateTag({
+          name: 'description',
+          content: description,
+        });
         this.metaService.updateTag({ property: 'og:title', content: title });
-        this.metaService.updateTag({ property: 'og:description', content: description });
+        this.metaService.updateTag({
+          property: 'og:description',
+          content: description,
+        });
         this.metaService.updateTag({ property: 'og:image', content: image });
         this.metaService.updateTag({ property: 'og:url', content: url });
         this.metaService.updateTag({ property: 'og:type', content: 'website' });
         this.metaService.updateTag({ name: 'twitter:title', content: title });
-        this.metaService.updateTag({ name: 'twitter:description', content: description });
+        this.metaService.updateTag({
+          name: 'twitter:description',
+          content: description,
+        });
         this.metaService.updateTag({ name: 'twitter:image', content: image });
 
         this.updateCanonical(url);
@@ -145,29 +159,41 @@ export class ECommerce implements OnInit, OnDestroy {
 
     el.style.setProperty('--color-primary-50', tint(0.92));
     el.style.setProperty('--color-primary-100', tint(0.85));
-    el.style.setProperty('--color-primary-200', tint(0.70));
-    el.style.setProperty('--color-primary-300', tint(0.50));
+    el.style.setProperty('--color-primary-200', tint(0.7));
+    el.style.setProperty('--color-primary-300', tint(0.5));
     el.style.setProperty('--color-primary-400', tint(0.25));
     el.style.setProperty('--color-primary-500', baseColor);
     el.style.setProperty('--color-primary-600', shade(0.15));
-    el.style.setProperty('--color-primary-700', shade(0.30));
-    el.style.setProperty('--color-primary-800', shade(0.50));
+    el.style.setProperty('--color-primary-700', shade(0.3));
+    el.style.setProperty('--color-primary-800', shade(0.5));
     el.style.setProperty('--color-primary-900', shade(0.65));
   }
 
   private hexToRgb(hex: string): [number, number, number] | null {
     const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : null;
+    return m
+      ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)]
+      : null;
   }
 
-  private mixWithWhite([r, g, b]: [number, number, number], amount: number): string {
+  private mixWithWhite(
+    [r, g, b]: [number, number, number],
+    amount: number
+  ): string {
     const mix = (c: number) => Math.round(c + (255 - c) * amount);
-    return `#${[mix(r), mix(g), mix(b)].map(c => c.toString(16).padStart(2, '0')).join('')}`;
+    return `#${[mix(r), mix(g), mix(b)]
+      .map((c) => c.toString(16).padStart(2, '0'))
+      .join('')}`;
   }
 
-  private mixWithBlack([r, g, b]: [number, number, number], amount: number): string {
+  private mixWithBlack(
+    [r, g, b]: [number, number, number],
+    amount: number
+  ): string {
     const mix = (c: number) => Math.round(c * (1 - amount));
-    return `#${[mix(r), mix(g), mix(b)].map(c => c.toString(16).padStart(2, '0')).join('')}`;
+    return `#${[mix(r), mix(g), mix(b)]
+      .map((c) => c.toString(16).padStart(2, '0'))
+      .join('')}`;
   }
 
   private updateFavicon(logoUrl: string | null): void {
@@ -210,7 +236,9 @@ export class ECommerce implements OnInit, OnDestroy {
 
   private updateCanonical(url: string): void {
     const head = this.document.head;
-    let link: HTMLLinkElement | null = head.querySelector('link[rel="canonical"]');
+    let link: HTMLLinkElement | null = head.querySelector(
+      'link[rel="canonical"]'
+    );
     if (!link) {
       link = this.document.createElement('link');
       link.setAttribute('rel', 'canonical');
@@ -221,7 +249,9 @@ export class ECommerce implements OnInit, OnDestroy {
 
   private updateJsonLd(data: Record<string, unknown>): void {
     const head = this.document.head;
-    let script: HTMLScriptElement | null = head.querySelector('script[type="application/ld+json"]');
+    let script: HTMLScriptElement | null = head.querySelector(
+      'script[type="application/ld+json"]'
+    );
     if (!script) {
       script = this.document.createElement('script');
       script.type = 'application/ld+json';

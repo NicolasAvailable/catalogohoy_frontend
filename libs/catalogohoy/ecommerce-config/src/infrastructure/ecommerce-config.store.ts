@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { toast } from 'ngx-sonner';
-import { EcommerceConfig, PaymentMethod, PaymentMethodEntity } from '../domain';
+import { CatalogTemplate, EcommerceConfig, PaymentMethod, PaymentMethodEntity } from '../domain';
 import { EcommerceConfigService } from './ecommerce-config.service';
 
 type EcommerceConfigState = {
@@ -366,6 +366,36 @@ export const EcommerceConfigStore = signalStore(
             config: { ...currentConfig, themeColor },
           });
           toast.success('Color del tema actualizado');
+        }
+      );
+    },
+
+    async saveTemplate(template: CatalogTemplate) {
+      const currentConfig = store.config();
+      if (!currentConfig) return;
+
+      patchState(store, { isSaving: true, savingSection: 'template' });
+      const result = await service.updateConfig({
+        tenantId: currentConfig.tenantId,
+        template,
+      });
+
+      result.fold(
+        (error: Error) => {
+          patchState(store, {
+            isSaving: false,
+            savingSection: null,
+            error: error.message,
+          });
+          toast.error('Error al guardar la plantilla');
+        },
+        () => {
+          patchState(store, {
+            isSaving: false,
+            savingSection: null,
+            config: { ...currentConfig, template },
+          });
+          toast.success('Plantilla actualizada');
         }
       );
     },

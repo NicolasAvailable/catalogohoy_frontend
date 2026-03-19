@@ -1,0 +1,44 @@
+@if (ecommerceStore.effectiveCatalogInfo(); as info) {
+  @if (info.showDesignSection) {
+    @switch (info.template) {
+      @case ('banner-centered') {
+        <section class="hero hero--banner-centered">
+          <div class="hero__banner">
+            @if (info.banner) {
+              <img [src]="info.banner" alt="" class="hero__banner-img" />
+            }
+          </div>
+          <div class="hero__profile">
+            @if (info.logo) {
+              <img [src]="info.logo" alt="" class="hero__logo" />
+            } @else {
+              <div class="hero__logo-placeholder">
+                <span class="hero__logo-initial">{{ info.name?.charAt(0) || 'C' }}</span>
+              </div>
+            }
+            <h2 class="hero__name">{{ info.name }}</h2>
+          </div>
+        </section>
+      }
+      @case ('minimal') {
+        <section class="hero hero--minimal">
+          <div class="hero__banner">
+            @if (info.banner) {
+              <img [src]="info.banner" alt="" class="hero__banner-img" />
+            }
+          </div>
+          <div class="hero__profile">
+            @if (info.logo) {
+              <img [src]="info.logo" alt="" class="hero__logo" />
+            } @else {
+              <div class="hero__logo-placeholder">
+                <span class="hero__logo-initial">{{ info.name?.charAt(0) || 'C' }}</span>
+              </div>
+            }
+            <h2 class="hero__name">{{ info.name }}</h2>
+          </div>
+        </section>
+      }
+    }
+  }
+}

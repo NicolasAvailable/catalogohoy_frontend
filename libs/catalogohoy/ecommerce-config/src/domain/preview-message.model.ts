@@ -1,4 +1,4 @@
-import { SocialLinks } from './ecommerce-config.model';
+import { CatalogTemplate, SocialLinks } from './ecommerce-config.model';
 
 export interface PreviewMessage {
   type: 'PREVIEW_UPDATE' | 'PREVIEW_ENTER' | 'PREVIEW_EXIT';
@@ -9,6 +9,7 @@ export interface PreviewMessage {
     themeColor: string;
     showDesignSection: boolean;
     socialLinks: SocialLinks;
+    template: CatalogTemplate;
   }>;
   source: 'catalogohoy-admin';
 }

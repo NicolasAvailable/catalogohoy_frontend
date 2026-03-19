@@ -8,7 +8,7 @@ import { TenantStore } from '@catalogohoy/tenant';
   standalone: true,
   imports: [LucideAngularModule, ButtonComponent],
   templateUrl: './no-access-view.html',
-  host: { class: 'flex-1 flex items-center justify-center p-6' },
+  host: { class: 'flex items-center justify-center p-6 min-h-dvh' },
 })
 export default class NoAccessViewComponent {
   private readonly tenantStore = inject(TenantStore);

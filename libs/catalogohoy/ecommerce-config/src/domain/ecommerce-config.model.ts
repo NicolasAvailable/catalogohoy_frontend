@@ -93,6 +93,18 @@ export const DEFAULT_SOCIAL_LINKS: SocialLinks = {
   tiktok: { url: '', visible: false },
 };
 
+export type CatalogTemplate = 'classic' | 'banner-centered' | 'minimal';
+
+export const CATALOG_TEMPLATES: {
+  id: CatalogTemplate;
+  name: string;
+  description: string;
+}[] = [
+  { id: 'classic', name: 'Clásico', description: 'Logo en el navbar, sin banner' },
+  { id: 'banner-centered', name: 'Centrado', description: 'Banner con logo superpuesto' },
+  { id: 'minimal', name: 'Moderno', description: 'Banner con logo centrado debajo' },
+];
+
 export interface EcommerceConfig {
   tenantId: string;
   name: string;
@@ -112,4 +124,5 @@ export interface EcommerceConfig {
   showPaymentMethodsSection: boolean;
   showLocationSection: boolean;
   socialLinks: SocialLinks;
+  template: CatalogTemplate;
 }

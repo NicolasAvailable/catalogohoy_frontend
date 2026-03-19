@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { E } from '../../../../shared/domain/src';
 import { SupabaseClientProvider } from '../../../core/src';
-import { DEFAULT_SOCIAL_LINKS, EcommerceConfig, PaymentMethodEntity, SocialLinks } from '../domain';
+import { CatalogTemplate, DEFAULT_SOCIAL_LINKS, EcommerceConfig, PaymentMethodEntity, SocialLinks } from '../domain';
 
 @Injectable({
   providedIn: 'root',
@@ -22,7 +22,7 @@ export class EcommerceConfigService {
       const { data: config } = await this.client
         .from('tenant_ecommerce_config')
         .select(
-          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, social_links'
+          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, social_links, template'
         )
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -51,6 +51,7 @@ export class EcommerceConfigService {
           config?.show_payment_methods_section ?? true,
         showLocationSection: config?.show_location_section ?? true,
         socialLinks: (config?.social_links as SocialLinks) ?? DEFAULT_SOCIAL_LINKS,
+        template: (config?.template as CatalogTemplate) ?? 'classic',
       });
     } catch (error) {
       return E.left(error as Error);
@@ -100,6 +101,8 @@ export class EcommerceConfigService {
         updateData['show_location_section'] = config.showLocationSection;
       if (config.socialLinks !== undefined)
         updateData['social_links'] = config.socialLinks;
+      if (config.template !== undefined)
+        updateData['template'] = config.template;
 
       if (Object.keys(updateData).length > 0) {
         const tenantIdNum = Number(config.tenantId);

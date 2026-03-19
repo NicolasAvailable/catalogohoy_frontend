@@ -1,0 +1,80 @@
+<div class="template-grid">
+  @for (tpl of templates; track tpl.id) {
+  <button
+    type="button"
+    class="template-card"
+    [class.template-card--selected]="selected() === tpl.id"
+    (click)="selectTemplate(tpl.id)"
+  >
+    <!-- Mini preview SVG -->
+    <div class="template-preview">
+      @switch (tpl.id) {
+      @case ('classic') {
+      <svg viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Navbar bar -->
+        <rect x="0" y="0" width="120" height="30" rx="0" fill="#f1f5f9" />
+        <!-- Logo (square/rounded) in navbar -->
+        <rect x="6" y="8" width="14" height="14" rx="3" fill="#cbd5e1" />
+        <!-- Name in navbar -->
+        <rect x="24" y="11" width="40" height="7" rx="2" fill="#cbd5e1" />
+        <!-- Cart icon in navbar -->
+        <rect x="100" y="10" width="12" height="10" rx="2" fill="#e2e8f0" />
+        <!-- Product grid -->
+        <rect x="8" y="40" width="48" height="34" rx="4" fill="#e2e8f0" />
+        <rect x="64" y="40" width="48" height="34" rx="4" fill="#e2e8f0" />
+        <rect x="8" y="82" width="48" height="34" rx="4" fill="#e2e8f0" />
+        <rect x="64" y="82" width="48" height="34" rx="4" fill="#e2e8f0" />
+        <rect x="8" y="124" width="48" height="34" rx="4" fill="#e2e8f0" />
+        <rect x="64" y="124" width="48" height="34" rx="4" fill="#e2e8f0" />
+      </svg>
+      } @case ('banner-centered') {
+      <svg viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Navbar -->
+        <rect x="0" y="0" width="120" height="18" rx="0" fill="#f1f5f9" />
+        <rect x="6" y="5" width="36" height="7" rx="2" fill="#cbd5e1" />
+        <!-- Banner -->
+        <rect x="0" y="18" width="120" height="36" rx="0" fill="#e2e8f0" />
+        <!-- Centered logo overlapping banner -->
+        <circle cx="60" cy="54" r="16" fill="#cbd5e1" stroke="white" stroke-width="3" />
+        <!-- Name centered -->
+        <rect x="30" y="76" width="60" height="7" rx="2" fill="#cbd5e1" />
+        <!-- Product grid -->
+        <rect x="8" y="92" width="48" height="30" rx="4" fill="#e2e8f0" />
+        <rect x="64" y="92" width="48" height="30" rx="4" fill="#e2e8f0" />
+        <rect x="8" y="128" width="48" height="28" rx="4" fill="#e2e8f0" />
+        <rect x="64" y="128" width="48" height="28" rx="4" fill="#e2e8f0" />
+      </svg>
+      } @case ('minimal') {
+      <svg viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Navbar -->
+        <rect x="0" y="0" width="120" height="18" rx="0" fill="#f1f5f9" />
+        <rect x="6" y="5" width="36" height="7" rx="2" fill="#cbd5e1" />
+        <!-- Banner -->
+        <rect x="0" y="18" width="120" height="36" rx="0" fill="#e2e8f0" />
+        <!-- Centered logo below banner -->
+        <circle cx="60" cy="66" r="14" fill="#cbd5e1" />
+        <!-- Name centered -->
+        <rect x="30" y="86" width="60" height="7" rx="2" fill="#cbd5e1" />
+        <!-- Product grid -->
+        <rect x="8" y="102" width="48" height="26" rx="4" fill="#e2e8f0" />
+        <rect x="64" y="102" width="48" height="26" rx="4" fill="#e2e8f0" />
+        <rect x="8" y="132" width="48" height="24" rx="4" fill="#e2e8f0" />
+        <rect x="64" y="132" width="48" height="24" rx="4" fill="#e2e8f0" />
+      </svg>
+      }
+      }
+    </div>
+
+    <div class="template-info">
+      <span class="template-name">{{ tpl.name }}</span>
+      <span class="template-desc">{{ tpl.description }}</span>
+    </div>
+
+    @if (selected() === tpl.id) {
+    <div class="template-check">
+      <ui-icon name="check" styleClass="size-4 text-white"></ui-icon>
+    </div>
+    }
+  </button>
+  }
+</div>
