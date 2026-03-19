@@ -229,7 +229,7 @@ export const TenantStore = signalStore(
       },
 
       // Método para recibir el TenantList desde ProfileStore
-      setFromProfile(tenantList: TenantList): void {
+      setFromProfile(tenantList: TenantList, userId?: number): void {
         // Prioridad: subdominio actual > is_default > primero de la lista
         const parts = window.location.hostname.split('.');
         const currentSlug = parts.length >= 3 ? parts[0] : null;
@@ -243,7 +243,7 @@ export const TenantStore = signalStore(
           tenantList,
           tenant: {
             tenantId: tenant ? Number(tenant.id) : null,
-            userId: null,
+            userId: userId ?? null,
             authUserId: null,
             tenantName: tenant?.name ?? null,
             tenantSlug: tenant?.slug ?? null,

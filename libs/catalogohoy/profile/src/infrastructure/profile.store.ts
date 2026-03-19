@@ -29,7 +29,7 @@ export const ProfileStore = signalStore(
         patchState(store, () => ({ isLoading: true }));
         profileService.profile().then((profileResult) => {
           profileResult.mapRight((profile) => {
-            tenantStore.setFromProfile(profile.tenantList);
+            tenantStore.setFromProfile(profile.tenantList, profile.id);
 
             // Identificar al admin en PostHog para asociar grabaciones y eventos
             posthog.identify(String(profile.id), {

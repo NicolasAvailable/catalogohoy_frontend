@@ -147,6 +147,14 @@ export class ECommerce implements OnInit, OnDestroy {
     if (this.ecommerceStore.isPreviewMode()) {
       this.ecommerceStore.exitPreviewMode();
     }
+    this.removeThemePalette();
+  }
+
+  private removeThemePalette(): void {
+    const el = document.documentElement;
+    for (const suffix of [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]) {
+      el.style.removeProperty(`--color-primary-${suffix}`);
+    }
   }
 
   private applyThemePalette(baseColor: string): void {
