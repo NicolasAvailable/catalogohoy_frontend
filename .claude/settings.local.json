@@ -37,7 +37,8 @@
       "Bash(iconv:*)",
       "Bash(cmd /c dir:*)",
       "Bash(cat .github/workflows/*)",
-      "Bash(xargs ls -lh)"
+      "Bash(xargs ls -lh)",
+      "Bash(claude mcp:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -118,7 +118,7 @@ export class Sidebar {
 
   public toggle(item: PanelMenuItem) {
     if (item['data']?.['externalUrl']) {
-      const url = this.profileStore.profile().tenantList.first.url;
+      const url = this.currentTenant()?.url ?? this.profileStore.profile().tenantList.first.url;
       window.open(url, '_blank');
       return;
     }
