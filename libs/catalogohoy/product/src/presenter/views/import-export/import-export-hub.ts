@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   inject,
   signal,
   ViewChild,
@@ -20,7 +21,7 @@ import {
   ImportSummary,
   ProductExcelRow,
 } from '../../../domain';
-import { ProductExcelService, ProductStore } from '../../../infrastructure';
+import { ProductAiExcelService, ProductExcelService, ProductStore } from '../../../infrastructure';
 
 type View =
   | 'hub'
@@ -28,7 +29,16 @@ type View =
   | 'import-upload'
   | 'import-preview'
   | 'import-progress'
-  | 'import-done';
+  | 'import-done'
+  | 'ai-analyzing';
+
+const AI_STATUS_MESSAGES = [
+  { text: 'Analizando tu archivo...', icon: 'sparkles' },
+  { text: 'Identificando columnas...', icon: 'search' },
+  { text: 'Mapeando datos...', icon: 'arrow-up-down' },
+  { text: 'Normalizando informacion...', icon: 'wand-sparkles' },
+  { text: 'Preparando vista previa...', icon: 'eye' },
+];
 
 @Component({
   selector: 'lib-import-export-hub',
@@ -40,13 +50,25 @@ type View =
     ProgressBarComponent,
   ],
   templateUrl: './import-export-hub.html',
+  styles: [`
+    .indeterminate-bar {
+      animation: indeterminate 1.5s ease-in-out infinite;
+    }
+    @keyframes indeterminate {
+      0% { transform: translateX(-100%); }
+      50% { transform: translateX(100%); }
+      100% { transform: translateX(200%); }
+    }
+  `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ImportExportHubComponent {
   private readonly productStore = inject(ProductStore);
   private readonly excelService = inject(ProductExcelService);
+  private readonly aiExcelService = inject(ProductAiExcelService);
   private readonly categoryStore = inject(CategoryStore);
   private readonly planStore = inject(PlanStore);
+  private readonly destroyRef = inject(DestroyRef);
 
   @ViewChild(DialogComponent) dialog!: DialogComponent;
 
@@ -56,6 +78,12 @@ export class ImportExportHubComponent {
   public readonly importResults = signal<ImportRowResult[]>([]);
   public readonly importSummary = signal<ImportSummary | null>(null);
   public readonly importProgress = signal(0);
+  public readonly aiStatusMessage = signal(AI_STATUS_MESSAGES[0]);
+  private aiMessageInterval: ReturnType<typeof setInterval> | null = null;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => this.stopAiMessages());
+  }
 
   public open(): void {
     this.view.set('hub');
@@ -178,11 +206,54 @@ export class ImportExportHubComponent {
 
   private async processFile(file: File): Promise<void> {
     const result = await this.excelService.parseExcelFile(file);
-    result
-      .mapRight((rows) => {
-        this.parsedRows.set(rows);
-        this.view.set('import-preview');
-      })
-      .mapLeft((err) => toast.error(err.message));
+
+    if (result.isRight()) {
+      this.parsedRows.set(result.value);
+      this.view.set('import-preview');
+      return;
+    }
+
+    // Standard parse failed — try AI fallback
+    this.view.set('ai-analyzing');
+    this.startAiMessages();
+
+    const rawResult = await this.excelService.extractRawData(file);
+
+    if (rawResult.isLeft()) {
+      this.stopAiMessages();
+      toast.error(rawResult.value.message);
+      this.view.set('import-upload');
+      return;
+    }
+
+    const { headers, rows } = rawResult.value;
+    const aiResult = await this.aiExcelService.aiParse(headers, rows);
+
+    this.stopAiMessages();
+
+    if (aiResult.isRight()) {
+      this.parsedRows.set(aiResult.value);
+      this.view.set('import-preview');
+      toast.success('Archivo analizado con IA correctamente');
+    } else {
+      toast.error(aiResult.value.message);
+      this.view.set('import-upload');
+    }
+  }
+
+  private startAiMessages(): void {
+    let index = 0;
+    this.aiStatusMessage.set(AI_STATUS_MESSAGES[0]);
+    this.aiMessageInterval = setInterval(() => {
+      index = (index + 1) % AI_STATUS_MESSAGES.length;
+      this.aiStatusMessage.set(AI_STATUS_MESSAGES[index]);
+    }, 3000);
+  }
+
+  private stopAiMessages(): void {
+    if (this.aiMessageInterval) {
+      clearInterval(this.aiMessageInterval);
+      this.aiMessageInterval = null;
+    }
   }
 }

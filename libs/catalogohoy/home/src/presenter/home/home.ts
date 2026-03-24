@@ -94,7 +94,7 @@ export class Home implements OnInit {
       title: 'Configurar tienda',
       description: 'Personaliza tu catalogo y opciones de pago.',
       icon: 'settings',
-      route: 'ecommerce-config',
+      route: 'catalog',
       colorClass: 'text-purple-600',
       bgClass: 'bg-purple-50',
     },

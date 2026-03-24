@@ -114,6 +114,38 @@ export class ProductExcelService {
     });
   }
 
+  public extractRawData(
+    file: File
+  ): Promise<E.Either<Error, { headers: string[]; rows: Record<string, unknown>[] }>> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+
+          if (jsonRows.length === 0) {
+            resolve(E.left(new Error('El archivo no contiene datos')));
+            return;
+          }
+
+          const headers = Object.keys(jsonRows[0]);
+          resolve(E.right({ headers, rows: jsonRows }));
+        } catch {
+          resolve(
+            E.left(new Error('Error al leer el archivo. Asegurate de que sea un .xlsx valido.'))
+          );
+        }
+      };
+
+      reader.onerror = () => resolve(E.left(new Error('Error al leer el archivo')));
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
   public async importRow(row: ProductExcelRow): Promise<E.Either<Error, void>> {
     const categoryIds = this.resolveCategoryIds(row.categories);
 
