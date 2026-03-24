@@ -60,14 +60,15 @@ POST /functions/v1/ai-excel-mapper
 
 ### Logic
 
-1. Validate input (headers present, rows non-empty, rows < 1000 limit)
-2. Build Claude prompt with:
+1. Verify JWT from `Authorization` header — reject anonymous calls to prevent API token abuse
+2. Validate input (headers present, rows non-empty, reject if rows > 1000 with error message)
+3. Build Claude prompt with:
    - Target schema description (ProductExcelRow fields, types, constraints)
    - User's headers
    - All rows to map and normalize
-3. Call Claude API (`claude-sonnet-4-6` for speed/cost balance)
-4. Parse Claude's JSON response
-5. Return mapped rows
+4. Call Claude API (`claude-sonnet-4-6` for speed/cost balance) with `max_tokens` scaled to row count
+5. Parse Claude's JSON response (if invalid JSON, retry once with `"RESPOND WITH VALID JSON ONLY"` appended)
+6. Return mapped rows
 
 ### Response
 
@@ -123,17 +124,21 @@ INSTRUCTIONS:
 ```typescript
 @Injectable({ providedIn: 'root' })
 export class ProductAiExcelService {
-  private supabase = inject(SupabaseClientProvider);
+  private readonly client = SupabaseClientProvider.getInstance();
 
   async aiParse(
     headers: string[],
     rows: Record<string, any>[]
   ): Promise<Either<Error, ProductExcelRow[]>> {
-    // calls supabase.functions.invoke('ai-excel-mapper', { body: { headers, rows } })
+    // calls this.client.functions.invoke('ai-excel-mapper', { body: { headers, rows } })
     // returns Either<Error, ProductExcelRow[]>
   }
 }
 ```
+
+**Domain contract:** Define abstract `BaseProductAiExcelService` in `libs/catalogohoy/product/src/domain/product-ai-excel.service.ts` with the `aiParse` signature. Export from `domain/index.ts`.
+
+**Barrel export:** Export `ProductAiExcelService` from `libs/catalogohoy/product/src/infrastructure/index.ts`.
 
 ### 2. New method in `ProductExcelService`
 
@@ -144,6 +149,8 @@ extractRawData(file: File): Promise<Either<Error, { headers: string[], rows: Rec
 Parses the Excel file with XLSX and returns raw headers + rows without any column validation. This is the data that gets sent to the AI service.
 
 ### 3. Modified `import-export-hub.ts`
+
+**View type update:** Add `'ai-analyzing'` to the `View` union type.
 
 **New signals:**
 - `isAiAnalyzing: Signal<boolean>` — controls the AI analyzing view
@@ -178,11 +185,11 @@ Parses the Excel file with XLSX and returns raw headers + rows without any colum
 +------------------------------------------+
 ```
 
-Rotating messages (cycle every ~3s):
+Rotating messages (cycle every ~3s) — use `transloco` keys (`product.import.ai.*`):
 1. "Analizando tu archivo..." (sparkles icon)
 2. "Identificando columnas..." (search icon)
 3. "Mapeando datos..." (arrows icon)
-4. "Normalizando informacion..." (wand icon)
+4. "Normalizando informacion..." (wand-sparkles icon)
 5. "Preparando vista previa..." (eye icon)
 
 ### 4. Modified hub view
@@ -220,9 +227,9 @@ Excel file (.xlsx)
 |---|---|
 | Edge Function unreachable | Show error toast, offer retry or template download |
 | Claude API error (rate limit, timeout) | Show error with retry button |
-| Claude returns invalid JSON | Retry once with stricter prompt, then show error |
+| Claude returns invalid JSON | Retry once appending "RESPOND WITH VALID JSON ONLY", then show error |
 | Claude can't map required field (name) | Set name to first text-like column, price to 0; user validates in preview |
-| Excel has > 1000 rows | Process in batches of 500, show progress |
+| Excel has > 1000 rows | Show error "El archivo tiene demasiadas filas. El limite es 1000." and offer template download |
 | Empty Excel | Show "El archivo no contiene datos" error |
 
 ## Scope
@@ -237,12 +244,14 @@ Excel file (.xlsx)
 
 ### Lucide icons to register
 
-New icons needed in `app.config.ts` `provideIcons()`:
-- `Sparkles` — hub tile + AI analyzing view
-- `Wand` — AI analyzing rotating message
+New icons needed in Lucide icon registry (`libs/catalogohoy/core/src/providers/icons/providers/lucide.provide.ts`):
+
+- `Sparkles` — already registered, no action needed
+- `WandSparkles` — AI analyzing rotating message (correct Lucide export name)
 - `BrainCircuit` — AI analyzing rotating message (alternative)
 
 ### Out of scope
+
 - Batch processing for very large files (can add later)
 - Column mapping review/edit screen (Claude handles it)
 - Saving mapping rules for repeated imports
