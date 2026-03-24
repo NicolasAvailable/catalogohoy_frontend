@@ -104,6 +104,7 @@ import {
   Users,
   UsersRound,
   Wallet,
+  WandSparkles,
   X,
   XCircle,
   Zap,
@@ -218,6 +219,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       ChevronUp,
       ChevronDownIcon,
       CircleX,
+      WandSparkles,
     })
   );
 };
