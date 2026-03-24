@@ -3,37 +3,115 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
-const TARGET_SCHEMA = `TARGET FORMAT - each product must have these fields:
+const MAPPING_PROMPT = `You are a product data mapping assistant. Analyze the source columns and sample data, then return a JSON mapping object.
+
+TARGET FIELDS:
 - name (string, required): product name
-- description (string): product description, empty string if not found
-- price (number, required): numeric price without currency symbols
-- pricePromotional (number | null): promotional/sale price, null if not found
-- stock (string | null): stock quantity as plain number string, null if not found or unlimited
-- sku (string | null): SKU/product code, null if not found
-- productionCost (number | null): production/manufacturing cost as number, null if not found
-- categories (string): comma-separated category names, empty string if not found`;
+- description (string): product description
+- price (number, required): numeric price
+- pricePromotional (number | null): promotional/sale price
+- stock (string | null): stock quantity
+- sku (string | null): SKU/product code
+- productionCost (number | null): production cost
+- categories (string): comma-separated category names
 
-const INSTRUCTIONS = `INSTRUCTIONS:
-1. Identify which source column corresponds to each target field using fuzzy matching (e.g. "Articulo"->name, "Valor"->price, "Cantidad"->stock)
-2. Normalize values: strip currency symbols ($, USD, RD$, etc.), extract numbers from strings like "50 unidades" or "$15.00", trim whitespace
-3. For fields with no matching source column, use null (or empty string for name/description/categories)
-4. price is REQUIRED - if you cannot determine a price for a row, set it to 0
-5. Return ONLY a valid JSON array of objects with the target fields. No markdown fences, no explanation, no extra text.`;
+For each target field, tell me:
+1. Which source column maps to it (or null if none)
+2. A normalization rule: "none", "number" (strip currency/text, extract number), "string" (trim), or "null" (always null)
 
-function buildPrompt(
-  headers: string[],
-  rows: Record<string, unknown>[]
-): string {
-  return `You are a product data mapping assistant.
+RESPOND WITH ONLY a JSON object in this exact format, no explanation:
+{
+  "name": { "sourceColumn": "Articulo", "rule": "string" },
+  "description": { "sourceColumn": "Detalle", "rule": "string" },
+  "price": { "sourceColumn": "Valor", "rule": "number" },
+  "pricePromotional": { "sourceColumn": null, "rule": "null" },
+  "stock": { "sourceColumn": "Cantidad", "rule": "number" },
+  "sku": { "sourceColumn": "Codigo", "rule": "string" },
+  "productionCost": { "sourceColumn": null, "rule": "null" },
+  "categories": { "sourceColumn": "Categoria", "rule": "string" }
+}`;
 
-${TARGET_SCHEMA}
+interface ColumnMapping {
+  sourceColumn: string | null;
+  rule: "none" | "number" | "string" | "null";
+}
+
+interface MappingPlan {
+  name: ColumnMapping;
+  description: ColumnMapping;
+  price: ColumnMapping;
+  pricePromotional: ColumnMapping;
+  stock: ColumnMapping;
+  sku: ColumnMapping;
+  productionCost: ColumnMapping;
+  categories: ColumnMapping;
+}
+
+interface ProductExcelRow {
+  name: string;
+  description: string;
+  price: number;
+  pricePromotional: number | null;
+  stock: string | null;
+  sku: string | null;
+  productionCost: number | null;
+  categories: string;
+}
+
+function buildMappingPrompt(headers: string[], sampleRows: Record<string, unknown>[]): string {
+  return `${MAPPING_PROMPT}
 
 SOURCE DATA:
 Column headers: ${JSON.stringify(headers)}
-Rows (${rows.length} total):
-${JSON.stringify(rows)}
+Sample rows (${sampleRows.length} of many):
+${JSON.stringify(sampleRows, null, 2)}`;
+}
 
-${INSTRUCTIONS}`;
+function normalizeValue(value: unknown, rule: string): string | number | null {
+  if (value === null || value === undefined || value === "") return null;
+
+  const str = String(value).trim();
+  if (!str) return null;
+
+  switch (rule) {
+    case "number": {
+      // Strip currency symbols and text, extract number
+      const cleaned = str.replace(/[^0-9.,\-]/g, "").replace(/,/g, ".");
+      const num = parseFloat(cleaned);
+      return isNaN(num) ? 0 : num;
+    }
+    case "string":
+      return str;
+    case "null":
+      return null;
+    case "none":
+    default:
+      return str;
+  }
+}
+
+function applyMapping(row: Record<string, unknown>, mapping: MappingPlan): ProductExcelRow {
+  const getValue = (field: ColumnMapping): unknown => {
+    if (!field.sourceColumn) return null;
+    return row[field.sourceColumn] ?? null;
+  };
+
+  const name = normalizeValue(getValue(mapping.name), mapping.name.rule);
+  const price = normalizeValue(getValue(mapping.price), mapping.price.rule);
+
+  return {
+    name: typeof name === "string" ? name : "",
+    description: (normalizeValue(getValue(mapping.description), mapping.description.rule) as string) ?? "",
+    price: typeof price === "number" ? price : 0,
+    pricePromotional: normalizeValue(getValue(mapping.pricePromotional), mapping.pricePromotional.rule) as number | null,
+    stock: (() => {
+      const v = normalizeValue(getValue(mapping.stock), mapping.stock.rule);
+      return v !== null ? String(v) : null;
+    })(),
+    sku: normalizeValue(getValue(mapping.sku), mapping.sku.rule) as string | null,
+    productionCost: normalizeValue(getValue(mapping.productionCost), mapping.productionCost.rule) as number | null,
+    categories: (normalizeValue(getValue(mapping.categories), mapping.categories.rule) as string) ?? "",
+  };
 }
 
 Deno.serve(async (req) => {
@@ -48,7 +126,6 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Verify JWT - reject anonymous calls
   const authHeader = req.headers.get("authorization");
   if (!authHeader) {
     return new Response(JSON.stringify({ success: false, error: "Missing authorization header" }), {
@@ -91,20 +168,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (rows.length > 1000) {
+    if (rows.length > 5000) {
       return new Response(JSON.stringify({
         success: false,
-        error: "El archivo tiene demasiadas filas. El limite es 1000.",
+        error: "El archivo tiene demasiadas filas. El limite es 5000.",
       }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    const prompt = buildPrompt(headers, rows);
-    const maxTokens = Math.min(Math.max(4096, rows.length * 200), 64000);
+    // Step 1: Send only 5 sample rows to Claude for mapping analysis
+    const sampleRows = rows.slice(0, 5);
+    const prompt = buildMappingPrompt(headers, sampleRows);
 
-    const response = await callClaude(prompt, maxTokens);
+    const response = await callClaude(prompt, 2048);
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -118,14 +196,14 @@ Deno.serve(async (req) => {
     const claudeResult = await response.json();
     const content = claudeResult.content?.[0]?.text ?? "";
 
-    let mappedRows;
+    let mapping: MappingPlan;
     try {
-      mappedRows = JSON.parse(content);
+      mapping = JSON.parse(content);
     } catch {
       // Retry once with stricter instruction
       const retryResponse = await callClaude(
         prompt + "\n\nCRITICAL: Your previous response was not valid JSON. RESPOND WITH VALID JSON ONLY. No markdown fences.",
-        maxTokens
+        2048
       );
       if (!retryResponse.ok) {
         return new Response(JSON.stringify({ success: false, error: "Error al procesar con IA. Intenta de nuevo." }), {
@@ -136,7 +214,7 @@ Deno.serve(async (req) => {
       const retryResult = await retryResponse.json();
       const retryContent = retryResult.content?.[0]?.text ?? "";
       try {
-        mappedRows = JSON.parse(retryContent);
+        mapping = JSON.parse(retryContent);
       } catch {
         return new Response(JSON.stringify({ success: false, error: "La IA no pudo procesar el archivo correctamente. Intenta con la plantilla." }), {
           status: 422,
@@ -145,12 +223,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (!Array.isArray(mappedRows)) {
-      return new Response(JSON.stringify({ success: false, error: "La IA devolvio un formato inesperado." }), {
+    // Validate mapping has required fields
+    if (!mapping.name || !mapping.price) {
+      return new Response(JSON.stringify({ success: false, error: "La IA no pudo identificar las columnas de nombre y precio." }), {
         status: 422,
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    // Step 2: Apply mapping to ALL rows deterministically (no AI needed)
+    const mappedRows = rows.map((row) => applyMapping(row, mapping));
 
     return new Response(JSON.stringify({ success: true, mappedRows }), {
       headers: { "Content-Type": "application/json" },
