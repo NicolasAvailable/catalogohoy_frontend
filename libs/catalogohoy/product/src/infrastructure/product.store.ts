@@ -26,9 +26,13 @@ export const ProductStore = signalStore(
           undefined,
           search
         );
-        result.mapRight((productList) =>
-          patchState(store, () => ({ productList, isLoading: false }))
-        );
+        result
+          .mapRight((productList) =>
+            patchState(store, () => ({ productList, isLoading: false }))
+          )
+          .mapLeft(() =>
+            patchState(store, () => ({ isLoading: false }))
+          );
       } catch {
         patchState(store, () => ({ isLoading: false }));
       }

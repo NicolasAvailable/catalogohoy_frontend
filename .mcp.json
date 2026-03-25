@@ -14,6 +14,10 @@
       "headers": {
         "Authorization": "Bearer phx_12DxU7VfN6bNJ25fyfdVqnWEfOgRkXjxVEkymCoYT5B4H3wp"
       }
+    },
+    "meta-ads": {
+      "type": "http",
+      "url": "https://mcp.pipeboard.co/meta-ads-mcp?token=pk_f0323591e55a4db596233bbe9409ee5d"
     }
   }
 }

@@ -3,6 +3,19 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+function jsonResponse(body: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
+}
+
 const MAPPING_PROMPT = `You are a product data mapping assistant. Analyze the source columns and sample data, then return a JSON mapping object.
 
 TARGET FIELDS:
@@ -75,7 +88,6 @@ function normalizeValue(value: unknown, rule: string): string | number | null {
 
   switch (rule) {
     case "number": {
-      // Strip currency symbols and text, extract number
       const cleaned = str.replace(/[^0-9.,\-]/g, "").replace(/,/g, ".");
       const num = parseFloat(cleaned);
       return isNaN(num) ? 0 : num;
@@ -116,22 +128,12 @@ function applyMapping(row: Record<string, unknown>, mapping: MappingPlan): Produ
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers":
-          "authorization, x-client-info, apikey, content-type",
-      },
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   const authHeader = req.headers.get("authorization");
   if (!authHeader) {
-    return new Response(JSON.stringify({ success: false, error: "Missing authorization header" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse({ success: false, error: "Missing authorization header" }, 401);
   }
 
   const supabaseClient = createClient(
@@ -142,17 +144,11 @@ Deno.serve(async (req) => {
 
   const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
   if (authError || !user) {
-    return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse({ success: false, error: "Unauthorized" }, 401);
   }
 
   if (!ANTHROPIC_API_KEY) {
-    return new Response(JSON.stringify({ success: false, error: "AI service not configured" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse({ success: false, error: "AI service not configured" }, 500);
   }
 
   try {
@@ -162,87 +158,70 @@ Deno.serve(async (req) => {
     };
 
     if (!headers?.length || !rows?.length) {
-      return new Response(JSON.stringify({ success: false, error: "Headers and rows are required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonResponse({ success: false, error: "Headers and rows are required" }, 400);
     }
 
     if (rows.length > 5000) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: "El archivo tiene demasiadas filas. El limite es 5000.",
-      }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonResponse({ success: false, error: "El archivo tiene demasiadas filas. El limite es 5000." }, 400);
     }
 
     // Step 1: Send only 5 sample rows to Claude for mapping analysis
     const sampleRows = rows.slice(0, 5);
     const prompt = buildMappingPrompt(headers, sampleRows);
 
+    console.log("Calling Claude with", headers.length, "headers and", sampleRows.length, "sample rows");
+
     const response = await callClaude(prompt, 2048);
 
     if (!response.ok) {
       const errorBody = await response.text();
       console.error("Claude API error:", errorBody);
-      return new Response(JSON.stringify({ success: false, error: "Error al procesar con IA. Intenta de nuevo." }), {
-        status: 502,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonResponse({ success: false, error: "Error al procesar con IA. Intenta de nuevo." }, 502);
     }
 
     const claudeResult = await response.json();
     const content = claudeResult.content?.[0]?.text ?? "";
+
+    console.log("Claude raw response:", content.substring(0, 500));
 
     let mapping: MappingPlan;
     try {
       mapping = JSON.parse(content);
     } catch {
       // Retry once with stricter instruction
+      console.log("JSON parse failed, retrying...");
       const retryResponse = await callClaude(
         prompt + "\n\nCRITICAL: Your previous response was not valid JSON. RESPOND WITH VALID JSON ONLY. No markdown fences.",
         2048
       );
       if (!retryResponse.ok) {
-        return new Response(JSON.stringify({ success: false, error: "Error al procesar con IA. Intenta de nuevo." }), {
-          status: 502,
-          headers: { "Content-Type": "application/json" },
-        });
+        return jsonResponse({ success: false, error: "Error al procesar con IA. Intenta de nuevo." }, 502);
       }
       const retryResult = await retryResponse.json();
       const retryContent = retryResult.content?.[0]?.text ?? "";
       try {
         mapping = JSON.parse(retryContent);
       } catch {
-        return new Response(JSON.stringify({ success: false, error: "La IA no pudo procesar el archivo correctamente. Intenta con la plantilla." }), {
-          status: 422,
-          headers: { "Content-Type": "application/json" },
-        });
+        return jsonResponse({ success: false, error: "La IA no pudo procesar el archivo correctamente. Intenta con la plantilla." }, 422);
       }
     }
 
+    console.log("Mapping plan:", JSON.stringify(mapping));
+
     // Validate mapping has required fields
     if (!mapping.name || !mapping.price) {
-      return new Response(JSON.stringify({ success: false, error: "La IA no pudo identificar las columnas de nombre y precio." }), {
-        status: 422,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonResponse({ success: false, error: "La IA no pudo identificar las columnas de nombre y precio." }, 422);
     }
 
     // Step 2: Apply mapping to ALL rows deterministically (no AI needed)
     const mappedRows = rows.map((row) => applyMapping(row, mapping));
 
-    return new Response(JSON.stringify({ success: true, mappedRows }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    console.log("Mapped", mappedRows.length, "rows. First row:", JSON.stringify(mappedRows[0]));
+
+    return jsonResponse({ success: true, mappedRows });
   } catch (err) {
     console.error("Edge function error:", err);
-    return new Response(JSON.stringify({ success: false, error: "Error interno del servidor" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse({ success: false, error: "Error interno del servidor" }, 500);
   }
 });
 
@@ -255,7 +234,7 @@ async function callClaude(prompt: string, maxTokens: number): Promise<Response> 
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: maxTokens,
       messages: [{ role: "user", content: prompt }],
     }),
