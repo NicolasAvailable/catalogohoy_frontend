@@ -11,6 +11,7 @@
         label="Cancelar"
         variant="outlined"
         severity="contrast"
+        [disabled]="isSubmitting()"
       />
       @if (canEditOrder()) {
       <ui-button

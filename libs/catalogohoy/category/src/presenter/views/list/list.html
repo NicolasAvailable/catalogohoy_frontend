@@ -30,8 +30,8 @@
         (keydown.enter)="saveCreate()"
       />
       <div class="flex gap-2">
-        <ui-button icon="x" variant="text" (click)="cancelCreate()" />
-        <ui-button icon="check" variant="text" (click)="saveCreate()" />
+        <ui-button icon="x" variant="text" (click)="cancelCreate()" [disabled]="isSaving()" />
+        <ui-button icon="check" variant="text" (click)="saveCreate()" [disabled]="isSaving()" />
       </div>
     </div>
     }

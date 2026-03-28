@@ -15,6 +15,7 @@
         variant="outlined"
         [fluid]="false"
         size="small"
+        [disabled]="isProcessing()"
       />
       @if (canDeleteProduct()) {
       <ui-button
@@ -25,6 +26,7 @@
         severity="danger"
         [fluid]="false"
         size="small"
+        [disabled]="isProcessing()"
       />
       }
       <ui-button
@@ -35,6 +37,7 @@
         severity="contrast"
         [fluid]="false"
         size="small"
+        [disabled]="isProcessing()"
       />
       <!-- Desktop selection buttons -->
       <ui-button
@@ -45,6 +48,7 @@
         severity="primary"
         variant="outlined"
         [fluid]="false"
+        [disabled]="isProcessing()"
       />
       @if (canDeleteProduct()) {
       <ui-button
@@ -54,6 +58,7 @@
         icon="trash"
         severity="danger"
         [fluid]="false"
+        [disabled]="isProcessing()"
       />
       }
       <ui-button
@@ -63,6 +68,7 @@
         variant="outlined"
         severity="contrast"
         [fluid]="false"
+        [disabled]="isProcessing()"
       />
       } @else {
       <!-- Mobile buttons -->
@@ -383,12 +389,14 @@
           variant="outlined"
           severity="contrast"
           [fluid]="false"
+          [disabled]="isProcessing()"
           (click)="categoryDialog.hide()"
         />
         <ui-button
           label="Asignar"
           icon="check"
           [fluid]="false"
+          [disabled]="isProcessing()"
           (click)="onConfirmCategoryAssign()"
         />
       </div>

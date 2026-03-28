@@ -84,6 +84,8 @@ export default class Save implements OnInit {
   public readonly id = input<string | undefined>(undefined);
   public readonly photos = signal<string[]>([]);
   public readonly isCreate = signal<boolean>(true);
+  public readonly isSubmitting = signal<boolean>(false);
+  public readonly isCreatingCategory = signal<boolean>(false);
   public readonly newCategoryName = signal<string>('');
   private readonly maxPhotos = 3;
 
@@ -100,8 +102,9 @@ export default class Save implements OnInit {
 
   public async onCreateCategory() {
     const name = this.newCategoryName();
-    if (!name || name.trim() === '') return;
+    if (!name || name.trim() === '' || this.isCreatingCategory()) return;
 
+    this.isCreatingCategory.set(true);
     const result = await this.categoryStore.save({
       name: name.trim(),
       isVisible: true,
@@ -110,8 +113,8 @@ export default class Save implements OnInit {
     result.mapRight(() => {
       this.toastService.success('Categoría creada' as any);
       this.newCategoryName.set('');
-      // Recargar la lista de categorías está manejado por el store.save()
     });
+    this.isCreatingCategory.set(false);
   }
 
   public onNewCategoryNameChange(event: any) {
@@ -173,13 +176,14 @@ export default class Save implements OnInit {
   }
 
   public async create() {
-    if (this.form.invalid) return;
+    if (this.form.invalid || this.isSubmitting()) return;
 
     if (this.isCreate() && !this.planStore.canCreateProduct()) {
       this.planLimitDialog.show();
       return;
     }
 
+    this.isSubmitting.set(true);
     const body = {
       id: '',
       name: this.form.controls.name.value as string,
@@ -197,6 +201,7 @@ export default class Save implements OnInit {
       product
         .mapRight(() => this.router.navigate(['/admin/products']))
         .mapLeft((error) => {
+          this.isSubmitting.set(false);
           if (error.message?.includes('PLAN_LIMIT_EXCEEDED')) {
             this.planStore.refreshUsage();
             this.planLimitDialog.show();
@@ -206,7 +211,9 @@ export default class Save implements OnInit {
       body['id'] = this.id() as string;
       (body as any).position = Number(this.form.controls.position.value);
       const product = await this.productFacade.update(body);
-      product.mapRight(() => this.router.navigate(['/admin/products']));
+      product
+        .mapRight(() => this.router.navigate(['/admin/products']))
+        .mapLeft(() => this.isSubmitting.set(false));
     }
   }
 }

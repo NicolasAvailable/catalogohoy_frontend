@@ -43,6 +43,7 @@ export default class CategoryListComponent implements OnInit {
   public readonly categoryFacade = inject(CategoryFacade);
   public readonly categoryService = inject(CategoryService);
   public readonly isCreating = signal(false);
+  public readonly isSaving = signal(false);
   public readonly createControl = new FormControl('', [Validators.required]);
   public readonly selectedCategory = signal<Category | null>(null);
 
@@ -78,8 +79,9 @@ export default class CategoryListComponent implements OnInit {
   }
 
   public async saveCreate() {
-    if (this.createControl.invalid || !this.createControl.value) return;
+    if (this.createControl.invalid || !this.createControl.value || this.isSaving()) return;
 
+    this.isSaving.set(true);
     const name = this.createControl.value;
     const result = await this.categoryFacade.create({
       name,
@@ -90,6 +92,7 @@ export default class CategoryListComponent implements OnInit {
       this.cancelCreate();
       this.categoryStore.categoryList$();
     });
+    this.isSaving.set(false);
   }
 
   public onDelete(category: Category) {
@@ -99,12 +102,14 @@ export default class CategoryListComponent implements OnInit {
 
   public async onConfirmDelete() {
     const category = this.selectedCategory();
-    if (category) {
-      const result = await this.categoryFacade.delete(String(category.id));
-      result.mapRight(() => {
-        this.categoryStore.categoryList$();
-      });
-    }
+    if (!category || this.isSaving()) return;
+
+    this.isSaving.set(true);
+    const result = await this.categoryFacade.delete(String(category.id));
+    result.mapRight(() => {
+      this.categoryStore.categoryList$();
+    });
+    this.isSaving.set(false);
   }
 
   public async drop(event: CdkDragDrop<Category[]>) {

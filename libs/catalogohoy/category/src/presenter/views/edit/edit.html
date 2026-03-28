@@ -11,8 +11,9 @@
         label="Cancelar"
         variant="outlined"
         severity="contrast"
+        [disabled]="isSaving()"
       />
-      <ui-button label="Guardar cambios" (click)="onSave()" />
+      <ui-button label="Guardar cambios" (click)="onSave()" [disabled]="form.invalid || isSaving()" />
     </div>
   </header>
 

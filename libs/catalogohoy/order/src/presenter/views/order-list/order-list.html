@@ -252,6 +252,7 @@
                   variant="outlined"
                   severity="contrast"
                   size="small"
+                  [disabled]="isProcessing()"
                   tooltip="Editar"
                   tooltipPosition="bottom"
                 />
@@ -263,6 +264,7 @@
                   variant="outlined"
                   severity="contrast"
                   size="small"
+                  [disabled]="isProcessing()"
                   tooltip="Eliminar"
                   tooltipPosition="bottom"
                 />

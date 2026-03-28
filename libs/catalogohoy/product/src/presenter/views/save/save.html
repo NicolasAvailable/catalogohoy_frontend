@@ -15,12 +15,13 @@
         severity="contrast"
         [fluid]="false"
         size="small"
+        [disabled]="isSubmitting()"
       />
       @if (canEditProduct()) {
       <ui-button
         class="sm:hidden"
         (click)="create()"
-        [disabled]="form.invalid"
+        [disabled]="form.invalid || isSubmitting()"
         label="Guardar"
         [fluid]="false"
         size="small"
@@ -34,12 +35,13 @@
         variant="outlined"
         severity="contrast"
         [fluid]="false"
+        [disabled]="isSubmitting()"
       />
       @if (canEditProduct()) {
       <ui-button
         class="hidden sm:block"
         (click)="create()"
-        [disabled]="form.invalid"
+        [disabled]="form.invalid || isSubmitting()"
         label="Guardar cambios"
         [fluid]="false"
       />
@@ -110,7 +112,7 @@
                 <ui-button
                   icon="plus"
                   (click)="onCreateCategory()"
-                  [disabled]="!newCategoryName().trim()"
+                  [disabled]="!newCategoryName().trim() || isCreatingCategory()"
                   severity="primary"
                 />
               </div>

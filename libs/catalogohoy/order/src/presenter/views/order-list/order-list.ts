@@ -78,6 +78,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly selectedOrder = signal<OrderBy>('date_desc');
   public readonly selectedDate = signal<Date | null>(null);
   public readonly expandedOrderId = signal<number | null>(null);
+  public readonly isProcessing = signal(false);
 
   public readonly filterTabs: FilterTab[] = [
     { label: 'Todas', value: 'all' },
@@ -296,8 +297,9 @@ export class OrderListComponent implements OnInit, OnDestroy {
   }
 
   async onStatusChange(order: Order, newStatus: OrderStatus) {
-    if (newStatus === order.status) return;
+    if (newStatus === order.status || this.isProcessing()) return;
 
+    this.isProcessing.set(true);
     const result = await this.orderStore.updateOrderStatus(
       order.id,
       order.status,
@@ -310,6 +312,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
         this.toastService.success(`Estado actualizado a "${label}"`);
       }
     );
+    this.isProcessing.set(false);
   }
 
   getPaymentMethodLabel(method: string): string {
@@ -326,6 +329,8 @@ export class OrderListComponent implements OnInit, OnDestroy {
   }
 
   onDeleteOrder(order: Order) {
+    if (this.isProcessing()) return;
+
     this.confirmDialogService
       .warning({
         headerLabel: '¿Eliminar orden?',
@@ -340,6 +345,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
           },
           async () => {
             // Usuario confirmó
+            this.isProcessing.set(true);
             const deleteResult = await this.orderStore.deleteOrder(order.id);
             deleteResult.fold(
               (error) => {
@@ -349,6 +355,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
                 this.toastService.success('Orden eliminada correctamente');
               }
             );
+            this.isProcessing.set(false);
           }
         );
       });

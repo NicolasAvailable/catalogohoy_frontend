@@ -75,6 +75,7 @@ export default class List implements OnInit, OnDestroy {
   public readonly pageFirst = signal(0);
   public readonly pageRows = signal(10);
 
+  public readonly isProcessing = signal(false);
   public readonly bulkCategoryIds = signal<string[]>([]);
 
   public readonly hasSelection = computed(() => this.selectedIds().size > 0);
@@ -206,6 +207,9 @@ export default class List implements OnInit, OnDestroy {
   }
 
   public async onConfirmDelete() {
+    if (this.isProcessing()) return;
+
+    this.isProcessing.set(true);
     if (this.deleteMode() === 'single') {
       const product = this.selectedProduct();
       if (product) {
@@ -222,9 +226,13 @@ export default class List implements OnInit, OnDestroy {
         });
       }
     }
+    this.isProcessing.set(false);
   }
 
   public async onConfirmCategoryAssign() {
+    if (this.isProcessing()) return;
+
+    this.isProcessing.set(true);
     const productIds = Array.from(this.selectedIds());
     const categoryIds = this.bulkCategoryIds();
 
@@ -234,6 +242,7 @@ export default class List implements OnInit, OnDestroy {
       this.clearSelection();
       this.refreshList();
     });
+    this.isProcessing.set(false);
   }
 
   public getDeleteDialogContent(): string {

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -38,6 +38,7 @@ export default class CategoryEdit implements OnInit {
   public readonly router = inject(Router);
 
   public id?: string;
+  public readonly isSaving = signal(false);
   public form = new FormGroup({
     name: new FormControl('', [Validators.required]),
     description: new FormControl(''),
@@ -59,11 +60,12 @@ export default class CategoryEdit implements OnInit {
   }
 
   public async onSave() {
-    if (this.form.invalid || !this.id) return;
+    if (this.form.invalid || !this.id || this.isSaving()) return;
     const { name, description, isVisible } = this.form.value;
 
     if (!name || isVisible === null || isVisible === undefined) return;
 
+    this.isSaving.set(true);
     const result = await this.categoryFacade.update({
       id: this.id,
       name,
@@ -71,8 +73,10 @@ export default class CategoryEdit implements OnInit {
       isVisible,
     });
 
-    result.mapRight(() =>
-      this.router.navigate(['../../'], { relativeTo: this.route })
-    );
+    result
+      .mapRight(() =>
+        this.router.navigate(['../../'], { relativeTo: this.route })
+      )
+      .mapLeft(() => this.isSaving.set(false));
   }
 }
