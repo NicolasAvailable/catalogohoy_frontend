@@ -6,26 +6,8 @@
       Elige el plan que mejor se adapte y escala cuando lo necesites.
     </p>
 
-    <!-- Controles: moneda + periodo -->
+    <!-- Controles: periodo -->
     <div class="plans-controls">
-
-      <!-- Selector de moneda -->
-      <div class="currency-flip">
-        <button
-          class="currency-flip__option"
-          [class.currency-flip__option--active]="paymentCurrency() === 'usd'"
-          (click)="paymentCurrency.set('usd')"
-        >
-          🇺🇸 Dólares (USD)
-        </button>
-        <button
-          class="currency-flip__option"
-          [class.currency-flip__option--active]="paymentCurrency() === 'ves'"
-          (click)="paymentCurrency.set('ves')"
-        >
-          🇻🇪 Bolívares (Bs.)
-        </button>
-      </div>
 
       <!-- Selector de periodo de facturación -->
       <div class="billing-toggle">
@@ -77,7 +59,7 @@
               <span class="plan-card__price-currency">$</span>
               <span class="plan-card__price-amount">{{ getPeriodPrice(plan) }}</span>
             </div>
-            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }} · {{ paymentCurrency() === 'usd' ? 'USD' : 'ref. USD' }}</span>
+            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }} · USD</span>
           }
         </div>
         @if (!plan.isFree && billingPeriod() !== 'monthly') {
@@ -95,9 +77,6 @@
           [disabled]="plan.isCurrent"
           (click)="selectPlan(plan)"
         >
-          @if (paymentCurrency() === 'ves' && !plan.isFree && !plan.isCurrent) {
-            <ui-icon name="message-circle" styleClass="size-4 shrink-0" />
-          }
           {{ plan.buttonLabel }}
         </button>
 
@@ -124,9 +103,8 @@
         <!-- Footer: método de pago + addon -->
         <div class="plan-card__footer">
           @if (!plan.isFree) {
-            <span class="badge" [class.badge--usd]="paymentCurrency() === 'usd'" [class.badge--ves]="paymentCurrency() === 'ves'">
-              @if (paymentCurrency() === 'usd') { 🇺🇸 Pago con tarjeta }
-              @else { 🇻🇪 Pago por transferencia }
+            <span class="badge badge--usd">
+              🇺🇸 Pago con tarjeta
             </span>
           }
           @if (!plan.isFree) {

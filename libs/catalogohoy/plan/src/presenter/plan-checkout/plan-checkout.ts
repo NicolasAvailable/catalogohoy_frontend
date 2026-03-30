@@ -4,16 +4,14 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IconComponent } from '@ui';
 import {
   BillingPeriod,
-  CATALOG_ADDON_PRICE_BY_CURRENCY,
+  CATALOG_ADDON_PRICE,
   CheckoutRequest,
-  PaymentCurrency,
   PLAN_BASE_PRICES,
   Plan,
 } from '../../domain';
 import { CheckoutService, PlanStore } from '../../infrastructure';
-import { MetaPixelService } from '@catalogohoy/core';
+import { MetaPixelService, SupabaseClientProvider } from '@catalogohoy/core';
 import { TenantStore } from '@catalogohoy/tenant';
-import { RateStore } from '@catalogohoy/rate';
 
 type FeatureSection = {
   title: string;
@@ -101,8 +99,8 @@ export class PlanCheckout implements OnInit {
   private readonly planStore = inject(PlanStore);
   private readonly checkoutService = inject(CheckoutService);
   private readonly tenantStore = inject(TenantStore);
-  private readonly rateStore = inject(RateStore);
   private readonly metaPixel = inject(MetaPixelService);
+  private readonly supabase = SupabaseClientProvider.getInstance();
 
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
@@ -110,29 +108,17 @@ export class PlanCheckout implements OnInit {
     { key: 'annual',    label: 'Anual',      savingsLabel: '15% off' },
   ];
 
-  public readonly currencyOptions: { key: PaymentCurrency; flag: string; label: string }[] = [
-    { key: 'usd', flag: '🇺🇸', label: 'USD' },
-    { key: 'ves', flag: '🇻🇪', label: 'Bs.' },
-  ];
-
   public readonly planId               = signal<string>('');
   public readonly billingPeriod        = signal<BillingPeriod>('monthly');
-  public readonly paymentCurrency      = signal<PaymentCurrency>('usd');
+  public readonly paymentMethod        = signal<'card' | 'mobile'>('card');
   public readonly isLoading            = signal(false);
   public readonly termsAccepted        = signal(false);
   public readonly catalogAddonQuantity = signal(0);
   public readonly error                = signal<string | null>(null);
 
-  /** Tasa activa del módulo "Tasas del día" (bcv_usd, bcv_eur o custom) */
-  public readonly vesRate = computed<number | null>(() => {
-    const rate = this.rateStore.rate();
-    if (!rate) return null;
-    if (rate.active_rate === 'custom')  return rate.custom_rate;
-    if (rate.active_rate === 'bcv_eur') return rate.bcv_eur;
-    return rate.bcv_usd;
-  });
-
-  public readonly isFetchingRate = computed(() => this.rateStore.isLoading());
+  /** Tasa BCV USD (directo de bcv_rates, independiente del módulo "Tasas del día") */
+  public readonly bcvUsdRate = signal<number | null>(null);
+  public readonly isFetchingRate = signal(false);
 
   public readonly plan = computed<Plan | null>(
     () => this.planStore.plans().find((p) => p.id === this.planId()) ?? null
@@ -149,7 +135,7 @@ export class PlanCheckout implements OnInit {
   });
 
   private readonly monthlyBasePrice = computed(
-    () => PLAN_BASE_PRICES[this.paymentCurrency()][this.planId()] ?? 0
+    () => PLAN_BASE_PRICES[this.planId()] ?? 0
   );
 
   public readonly baseCost = computed(() => {
@@ -164,7 +150,7 @@ export class PlanCheckout implements OnInit {
 
   public readonly catalogAddonDisplayCost = computed(() => {
     const { months } = BILLING_CONFIG[this.billingPeriod()];
-    const addonPrice = CATALOG_ADDON_PRICE_BY_CURRENCY[this.paymentCurrency()];
+    const addonPrice = CATALOG_ADDON_PRICE;
     return Math.round(addonPrice * months * 100) / 100;
   });
 
@@ -180,7 +166,7 @@ export class PlanCheckout implements OnInit {
   );
 
   public readonly totalVes = computed(() => {
-    const rate = this.vesRate();
+    const rate = this.bcvUsdRate();
     if (!rate) return null;
     return Math.round(this.total() * rate);
   });
@@ -204,28 +190,37 @@ export class PlanCheckout implements OnInit {
   );
 
   ngOnInit(): void {
-    const planId   = this.route.snapshot.paramMap.get('planId') ?? '';
-    const period   = (this.route.snapshot.queryParamMap.get('period')   as BillingPeriod)   ?? 'monthly';
-    const currency = (this.route.snapshot.queryParamMap.get('currency') as PaymentCurrency) ?? 'usd';
+    const planId = this.route.snapshot.paramMap.get('planId') ?? '';
+    const period = (this.route.snapshot.queryParamMap.get('period') as BillingPeriod) ?? 'monthly';
 
     this.planId.set(planId);
     this.billingPeriod.set(period);
-    this.paymentCurrency.set(currency);
 
     this.planStore.loadPlans();
     this.planStore.loadTenantPlanUsage();
-    this.rateStore.loadRates();
+    this.loadBcvRate();
   }
 
-  public onCurrencyChange(currency: PaymentCurrency): void {
-    this.paymentCurrency.set(currency);
+  private async loadBcvRate(): Promise<void> {
+    this.isFetchingRate.set(true);
+    const { data } = await this.supabase
+      .from('bcv_rates')
+      .select('usd')
+      .order('fetched_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (data?.usd) {
+      this.bcvUsdRate.set(data.usd);
+    }
+    this.isFetchingRate.set(false);
   }
 
   public toggleTerms(): void {
     this.termsAccepted.set(!this.termsAccepted());
   }
 
-  public payVes(): void {
+  public payMobile(): void {
     if (!this.termsAccepted()) return;
 
     const plan        = this.plan();
@@ -241,17 +236,19 @@ export class PlanCheckout implements OnInit {
     const slug      = localStorage.getItem('slug') ?? '';
     const catalogs  = this.catalogAddonQuantity();
 
-    let msg = `Hola! Quiero adquirir el *${planName}* en CatálogoHoy 🛍️\n\n`;
-    msg += `📦 *Plan:* ${planName}\n`;
-    msg += `📅 *Periodo:* ${periodStr}\n`;
+    const tenantSlug = this.tenantStore.tenantSlug() ?? slug;
+
+    let msg = `Hola! Quiero adquirir el *${planName}* en CatálogoHoy\n\n`;
+    msg += `- *Plan:* ${planName}\n`;
+    msg += `- *Periodo:* ${periodStr}\n`;
     if (catalogs > 0) {
-      msg += `🗂️ *Catálogos adicionales:* ${catalogs}\n`;
+      msg += `- *Catálogos adicionales:* ${catalogs}\n`;
     }
-    msg += `💵 *Total:* $${totalUsd} USD`;
+    msg += `- *Total:* $${totalUsd} USD`;
     if (totalBs) {
-      msg += ` (≈ Bs. ${totalBs.toLocaleString('es-VE')})`;
+      msg += ` (= Bs. ${totalBs.toLocaleString('es-VE')})`;
     }
-    msg += `\n🏪 *Negocio:* ${slug}`;
+    msg += `\n- *Negocio:* ${tenantSlug}`;
 
     const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
     this.metaPixel.trackEvent('InitiateCheckout', {
@@ -264,8 +261,9 @@ export class PlanCheckout implements OnInit {
 
   public async pay(): Promise<void> {
     if (!this.termsAccepted() || this.isLoading()) return;
-    if (this.paymentCurrency() === 'ves') {
-      this.payVes();
+
+    if (this.paymentMethod() === 'mobile') {
+      this.payMobile();
       return;
     }
 
@@ -286,7 +284,7 @@ export class PlanCheckout implements OnInit {
       billingPeriod:        this.billingPeriod(),
       tenantId,
       successUrl:  `${origin}/admin/plans/success?slug=${slug}`,
-      cancelUrl:   `${origin}/admin/plans/checkout/${this.planId()}?period=${this.billingPeriod()}&currency=usd&slug=${slug}`,
+      cancelUrl:   `${origin}/admin/plans/checkout/${this.planId()}?period=${this.billingPeriod()}&slug=${slug}`,
       catalogAddonQuantity: this.catalogAddonQuantity(),
     };
 

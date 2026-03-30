@@ -3,8 +3,7 @@ import { Router } from '@angular/router';
 import { IconComponent } from '@ui';
 import {
   BillingPeriod,
-  CATALOG_ADDON_PRICE_BY_CURRENCY,
-  PaymentCurrency,
+  CATALOG_ADDON_PRICE,
   Plan,
   PLAN_BASE_PRICES,
   PlanDisplay,
@@ -123,17 +122,11 @@ export class Plans implements OnInit {
   private readonly router = inject(Router);
 
   public readonly billingPeriod = signal<BillingPeriod>('monthly');
-  public readonly paymentCurrency = signal<PaymentCurrency>('usd');
 
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
     { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
     { key: 'annual',    label: 'Anual',      savingsLabel: '15% off' },
-  ];
-
-  public readonly currencyOptions: { key: PaymentCurrency; flag: string; label: string }[] = [
-    { key: 'usd', flag: '🇺🇸', label: 'USD' },
-    { key: 'ves', flag: '🇻🇪', label: 'Bs.' },
   ];
 
   private readonly currentPlanPosition = computed(
@@ -151,7 +144,7 @@ export class Plans implements OnInit {
 
   public getBasePrice(plan: PlanDisplay): number {
     if (plan.isFree) return 0;
-    return PLAN_BASE_PRICES[this.paymentCurrency()][plan.id] ?? plan.price;
+    return PLAN_BASE_PRICES[plan.id] ?? plan.price;
   }
 
   public getPeriodPrice(plan: PlanDisplay): number {
@@ -177,7 +170,7 @@ export class Plans implements OnInit {
   }
 
   public getCatalogAddonPrice(): number {
-    return CATALOG_ADDON_PRICE_BY_CURRENCY[this.paymentCurrency()];
+    return CATALOG_ADDON_PRICE;
   }
 
   public selectPlan(plan: PlanDisplay): void {
@@ -185,8 +178,7 @@ export class Plans implements OnInit {
 
     this.router.navigate(['/admin/plans/checkout', plan.id], {
       queryParams: {
-        period:   this.billingPeriod(),
-        currency: this.paymentCurrency(),
+        period: this.billingPeriod(),
       },
     });
   }
