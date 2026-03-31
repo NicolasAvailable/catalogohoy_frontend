@@ -40,6 +40,16 @@ export const PAYMENT_METHOD_OPTIONS: { label: string; value: PaymentMethod }[] =
     { label: 'PayPal', value: 'paypal' },
   ];
 
+export const DEFAULT_PAYMENT_METHODS: { name: string; icon: string }[] = [
+  { name: 'Efectivo', icon: 'banknote' },
+  { name: 'Pago movil', icon: 'smartphone' },
+  { name: 'PayPal', icon: 'globe' },
+  { name: 'Transferencia', icon: 'building' },
+  { name: 'Zelle', icon: 'dollar-sign' },
+  { name: 'Binance', icon: 'coins' },
+  { name: 'Tarjeta de credito', icon: 'credit-card' },
+];
+
 export const VENEZUELAN_STATES: string[] = [
   'Amazonas',
   'Anzoátegui',

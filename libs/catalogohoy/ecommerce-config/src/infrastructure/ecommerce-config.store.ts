@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { toast } from 'ngx-sonner';
-import { CatalogTemplate, EcommerceConfig, PaymentMethod, PaymentMethodEntity } from '../domain';
+import { CatalogTemplate, DEFAULT_PAYMENT_METHODS, EcommerceConfig, PaymentMethod, PaymentMethodEntity } from '../domain';
 import { EcommerceConfigService } from './ecommerce-config.service';
 
 type EcommerceConfigState = {
@@ -436,8 +436,17 @@ export const EcommerceConfigStore = signalStore(
         () => {
           toast.error('Error al cargar métodos de pago');
         },
-        (methods: PaymentMethodEntity[]) => {
-          patchState(store, { paymentMethodsList: methods });
+        async (methods: PaymentMethodEntity[]) => {
+          if (methods.length === 0) {
+            const created: PaymentMethodEntity[] = [];
+            for (const def of DEFAULT_PAYMENT_METHODS) {
+              const r = await service.createPaymentMethod(tenantId, def.name, def.icon);
+              r.mapRight((m) => created.push(m));
+            }
+            patchState(store, { paymentMethodsList: created });
+          } else {
+            patchState(store, { paymentMethodsList: methods });
+          }
         }
       );
     },

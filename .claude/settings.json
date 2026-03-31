@@ -16,7 +16,12 @@
       "Bash(git diff *)",
       "Bash(git log *)",
       "WebFetch(domain:yvkurjivijnhliofmfmj.supabase.co)",
-      "Bash(grep -E \"\\\\.\\(ts|html|scss\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|html|scss\\)$\")",
+      "Bash(find c:UsersnicolOneDriveDesktopprojectscatalogohoy_frontend_monorepo -type f \\\\\\(-name *.sql \\\\\\))",
+      "Bash(grep -r payment_methods c:UsersnicolOneDriveDesktopprojectscatalogohoy_frontend_monorepo --include=*.md)",
+      "Bash(grep -r payment_methods c:UsersnicolOneDriveDesktopprojectscatalogohoy_frontend_monorepo --include=*.ts --include=*.tsx)",
+      "Bash(find c:UsersnicolOneDriveDesktopprojectscatalogohoy_frontend_monorepo -type f \\\\\\(-name *.sql -o -name *.md \\\\\\))",
+      "Bash(grep -r \"create_catalog_for_user\\\\|get_my_tenant\\\\|tenant_exists_by_slug\" c:UsersnicolOneDriveDesktopprojectscatalogohoy_frontend_monorepo --include=*.ts --include=*.md)"
     ]
   }
 }
