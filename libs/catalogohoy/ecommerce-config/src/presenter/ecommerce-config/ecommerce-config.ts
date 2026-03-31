@@ -280,10 +280,14 @@ export class EcommerceConfigComponent implements OnInit {
           headerLabel: 'Cambios sin guardar',
           contentLabel: 'Tienes cambios sin guardar. ¿Deseas guardarlos antes de salir?',
           acceptLabel: 'Guardar y salir',
-          rejectLabel: 'Descartar',
+          rejectLabel: 'Descartar y salir',
           rejectSeverity: 'danger',
-          closable: false,
+          closable: true,
           dismissableMask: false,
+          onClose: () => {
+            subscriber.next(false);
+            subscriber.complete();
+          },
         })
         .subscribe((result) => {
           result.fold(

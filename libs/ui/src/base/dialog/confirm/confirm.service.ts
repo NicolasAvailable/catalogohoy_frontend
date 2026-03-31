@@ -15,6 +15,7 @@ export type ConfirmDialogConfig = {
   dismissableMask?: boolean;
   closable?: boolean;
   styleClass?: string;
+  onClose?: () => void;
 };
 
 export type ConfirmDialogResult = E.Either<void, void>;
@@ -82,10 +83,19 @@ export class ConfirmDialogService {
       this.closeDialog();
     });
 
+    const closeSub = dialogInstance.close.subscribe(() => {
+      config.onClose?.();
+      resultSubject.complete();
+      destroy$.next();
+      destroy$.complete();
+      this.closeDialog();
+    });
+
     destroy$.subscribe({
       complete: () => {
         confirmSub.unsubscribe();
         cancelSub.unsubscribe();
+        closeSub.unsubscribe();
       },
     });
 

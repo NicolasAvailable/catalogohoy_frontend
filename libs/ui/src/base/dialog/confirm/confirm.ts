@@ -15,6 +15,7 @@ import { ButtonComponent, ButtonSeverity } from '../../button/button';
       [closable]="closable()"
       [dismissableMask]="dismissableMask()"
       [styleClass]="'w-[43.7rem] ' + styleClass()"
+      (onHide)="onDialogHide()"
     >
       <ng-template #header>
         <div class="flex items-center gap-5">
@@ -44,7 +45,7 @@ import { ButtonComponent, ButtonSeverity } from '../../button/button';
         <div class="flex justify-end gap-8">
           @if(rejectLabel()) {
           <ui-button
-            (click)="alert.onReject()"
+            (click)="onRejectClick(); alert.onReject()"
             [label]="rejectLabel() | translate"
             [severity]="rejectSeverity()"
           />
@@ -75,6 +76,7 @@ export class ConfirmDialogComponent {
 
   public readonly confirm = output<void>();
   public readonly cancel = output<void>();
+  public readonly close = output<void>();
 
   public readonly headerBackground = signal<string>('');
   public readonly contentBackground = signal<string>('');
@@ -83,12 +85,32 @@ export class ConfirmDialogComponent {
   public readonly iconStyleClass = signal<string>('');
   public readonly styleClass = signal<string>('');
 
+  private rejectFromButton = false;
+
   constructor(private readonly confirmationService: ConfirmationService) {}
 
+  public onDialogHide() {
+    // noop — handled via accept/reject/close flow
+  }
+
+  public onRejectClick() {
+    this.rejectFromButton = true;
+  }
+
   public open() {
+    this.rejectFromButton = false;
     this.confirmationService.confirm({
-      accept: () => this.confirm.emit(),
-      reject: () => this.cancel.emit(),
+      accept: () => {
+        this.confirm.emit();
+      },
+      reject: () => {
+        if (this.rejectFromButton) {
+          this.cancel.emit();
+        } else {
+          this.close.emit();
+        }
+        this.rejectFromButton = false;
+      },
     });
   }
 
