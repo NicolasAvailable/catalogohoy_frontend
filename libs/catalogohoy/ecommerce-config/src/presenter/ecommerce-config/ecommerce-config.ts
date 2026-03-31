@@ -1,6 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
+  ElementRef,
   OnInit,
   computed,
   effect,
@@ -26,9 +28,11 @@ import {
   ToggleComponent,
   UploaderComponent,
 } from '@ui';
+import { Observable } from 'rxjs';
 import {
   CatalogTemplate,
   DEFAULT_SOCIAL_LINKS,
+  EcommerceConfig,
   SocialLinks,
   THEME_COLORS,
   VENEZUELAN_STATES,
@@ -105,9 +109,14 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly isCustomColor = computed(
     () => !this.themeColors.some((c) => c.value === this.draftThemeColor())
   );
-  public readonly hasUnsavedTemplate = computed(
-    () => this.draftTemplate() !== (this.configStore.config()?.template ?? 'classic')
-  );
+  public readonly hasUnsavedChanges = computed(() => {
+    const config = this.configStore.config();
+    if (!config) return false;
+    return Object.keys(this.getChangedFields()).length > 0;
+  });
+
+  // Responsive label for top save button
+  public readonly saveButtonTopLabel = signal('Guardar cambios');
 
   // Mobile overlay
   public readonly isMockupOpen = signal(false);
@@ -115,12 +124,55 @@ export class EcommerceConfigComponent implements OnInit {
   // iframe URL
   public safeIframeUrl: SafeResourceUrl = '';
 
+  // Save button visibility tracking
+  private readonly topSaveAnchor = viewChild<ElementRef>('topSaveAnchor');
+  private readonly bottomSaveAnchor = viewChild<ElementRef>('bottomSaveAnchor');
+  private readonly mainColumn = viewChild<ElementRef>('mainColumn');
+  private readonly isTopSaveVisible = signal(true);
+  private readonly isBottomSaveVisible = signal(false);
+  public readonly showStickyBanner = computed(
+    () => this.hasUnsavedChanges() && this.canEditCatalog() && !this.isTopSaveVisible() && !this.isBottomSaveVisible()
+  );
+
   // Phone mockup refs
   public readonly phoneMockup = viewChild<PhoneMockupComponent>('phoneMockup');
   public readonly phoneMockupOverlay =
     viewChild<PhoneMockupComponent>('phoneMockupOverlay');
 
+  private readonly destroyRef = inject(DestroyRef);
+
   constructor() {
+    // Responsive save button label
+    const mq = window.matchMedia('(min-width: 640px)');
+    const updateLabel = (matches: boolean) =>
+      this.saveButtonTopLabel.set(matches ? 'Guardar cambios' : 'Guardar');
+    updateLabel(mq.matches);
+    const handler = (e: MediaQueryListEvent) => updateLabel(e.matches);
+    mq.addEventListener('change', handler);
+    this.destroyRef.onDestroy(() => mq.removeEventListener('change', handler));
+
+    // Intersection observer for save button visibility
+    effect((onCleanup) => {
+      const topEl = this.topSaveAnchor()?.nativeElement;
+      const bottomEl = this.bottomSaveAnchor()?.nativeElement;
+      const scrollContainer = this.mainColumn()?.nativeElement;
+      if (!scrollContainer) return;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.target === topEl) this.isTopSaveVisible.set(entry.isIntersecting);
+            if (entry.target === bottomEl) this.isBottomSaveVisible.set(entry.isIntersecting);
+          }
+        },
+        { root: scrollContainer, threshold: 0 }
+      );
+
+      if (topEl) observer.observe(topEl);
+      if (bottomEl) observer.observe(bottomEl);
+      onCleanup(() => observer.disconnect());
+    });
+
     // Sync drafts from server config
     effect(() => {
       const config = this.configStore.config();
@@ -183,13 +235,75 @@ export class EcommerceConfigComponent implements OnInit {
     }
   }
 
+  // --- Unified Save ---
+  getChangedFields(): Partial<EcommerceConfig> {
+    const config = this.configStore.config();
+    if (!config) return {};
+
+    const changes: Partial<EcommerceConfig> = {};
+
+    if (this.draftName() !== (config.name ?? '')) changes.name = this.draftName();
+    if (this.draftDescription() !== (config.description ?? '')) changes.description = this.draftDescription();
+    if (this.draftTemplate() !== (config.template ?? 'classic')) changes.template = this.draftTemplate();
+    if (this.draftThemeColor() !== (config.themeColor ?? '#10b981')) changes.themeColor = this.draftThemeColor();
+    if (this.draftState() !== (config.state ?? null)) changes.state = this.draftState();
+    if (this.draftCity() !== (config.city ?? null)) changes.city = this.draftCity();
+    if (this.draftShowDesignSection() !== (config.showDesignSection ?? true)) changes.showDesignSection = this.draftShowDesignSection();
+    if (this.draftShowLocationSection() !== (config.showLocationSection ?? true)) changes.showLocationSection = this.draftShowLocationSection();
+    if (this.draftShowPaymentMethodsSection() !== (config.showPaymentMethodsSection ?? true)) changes.showPaymentMethodsSection = this.draftShowPaymentMethodsSection();
+
+    const serverButtons = config.whatsappButtons?.length
+      ? config.whatsappButtons
+      : [{ name: '', number: '' }];
+    if (JSON.stringify(this.draftWhatsappButtons()) !== JSON.stringify(serverButtons)) {
+      changes.whatsappButtons = this.draftWhatsappButtons();
+    }
+
+    const serverSocialLinks = config.socialLinks ?? DEFAULT_SOCIAL_LINKS;
+    if (JSON.stringify(this.draftSocialLinks()) !== JSON.stringify(serverSocialLinks)) {
+      changes.socialLinks = this.draftSocialLinks();
+    }
+
+    return changes;
+  }
+
+  async saveAllChanges() {
+    const changes = this.getChangedFields();
+    if (Object.keys(changes).length === 0) return;
+    await this.configStore.updatePartialConfig(changes);
+  }
+
+  showUnsavedChangesDialog(): Observable<boolean> {
+    return new Observable<boolean>((subscriber) => {
+      this.confirmDialogService
+        .info({
+          headerLabel: 'Cambios sin guardar',
+          contentLabel: 'Tienes cambios sin guardar. ¿Deseas guardarlos antes de salir?',
+          acceptLabel: 'Guardar y salir',
+          rejectLabel: 'Descartar',
+          rejectSeverity: 'danger',
+          closable: false,
+          dismissableMask: false,
+        })
+        .subscribe((result) => {
+          result.fold(
+            () => {
+              subscriber.next(true);
+              subscriber.complete();
+            },
+            async () => {
+              await this.saveAllChanges();
+              subscriber.next(true);
+              subscriber.complete();
+            }
+          );
+        });
+    });
+  }
+
   // --- Template Section ---
   selectTemplate(template: CatalogTemplate) {
     this.draftTemplate.set(template);
-  }
-
-  async saveTemplate() {
-    await this.configStore.saveTemplate(this.draftTemplate());
   }
 
   // --- Design Section ---
@@ -213,28 +327,9 @@ export class EcommerceConfigComponent implements OnInit {
     this.configStore.updateBannerUrl('');
   }
 
-  async saveDesignSection() {
-    await this.configStore.saveDesignSection({
-      showDesignSection: this.draftShowDesignSection(),
-    });
-  }
-
-  // --- Location Section ---
-  async saveLocationSection() {
-    await this.configStore.saveLocationSection({
-      state: this.draftState(),
-      city: this.draftCity(),
-      showLocationSection: this.draftShowLocationSection(),
-    });
-  }
-
   // --- Theme Color ---
   selectThemeColor(color: string) {
     this.draftThemeColor.set(color);
-  }
-
-  async saveThemeColor() {
-    await this.configStore.saveThemeColor(this.draftThemeColor());
   }
 
   // --- Payment Methods ---
@@ -266,20 +361,6 @@ export class EcommerceConfigComponent implements OnInit {
       });
   }
 
-  async savePaymentMethodsSection() {
-    await this.configStore.savePaymentMethodsSection(
-      this.draftShowPaymentMethodsSection()
-    );
-  }
-
-  // --- Identity Section ---
-  async saveIdentity() {
-    await this.configStore.updatePartialConfig({
-      name: this.draftName(),
-      description: this.draftDescription(),
-    });
-  }
-
   // --- WhatsApp Section ---
   addWhatsappButton() {
     const current = this.draftWhatsappButtons();
@@ -306,12 +387,6 @@ export class EcommerceConfigComponent implements OnInit {
     this.draftWhatsappButtons.set(updated);
   }
 
-  async saveWhatsappButtons() {
-    await this.configStore.updatePartialConfig({
-      whatsappButtons: this.draftWhatsappButtons(),
-    });
-  }
-
   // --- Social Links Section ---
   updateSocialLinkUrl(network: keyof SocialLinks, url: string) {
     const current = this.draftSocialLinks();
@@ -321,10 +396,6 @@ export class EcommerceConfigComponent implements OnInit {
   updateSocialLinkVisible(network: keyof SocialLinks, visible: boolean) {
     const current = this.draftSocialLinks();
     this.draftSocialLinks.set({ ...current, [network]: { ...current[network], visible } });
-  }
-
-  async saveSocialLinks() {
-    await this.configStore.updatePartialConfig({ socialLinks: this.draftSocialLinks() });
   }
 
   // --- Behavior Section ---

@@ -46,7 +46,7 @@ import { ButtonComponent, ButtonSeverity } from '../../button/button';
           <ui-button
             (click)="alert.onReject()"
             [label]="rejectLabel() | translate"
-            [severity]="'contrast'"
+            [severity]="rejectSeverity()"
           />
           } @if(showAccept()) {
           <ui-button
@@ -71,6 +71,7 @@ export class ConfirmDialogComponent {
   public readonly dismissableMask = input<boolean>(true);
   public readonly closable = input<boolean>(true);
   public readonly acceptDisabled = input<boolean>(false);
+  public readonly rejectSeverity = input<ButtonSeverity>('contrast');
 
   public readonly confirm = output<void>();
   public readonly cancel = output<void>();

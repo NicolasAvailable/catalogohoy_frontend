@@ -1,14 +1,45 @@
 <div class="ecommerce-config-wrapper">
   <div class="config-grid">
     <!-- ========== LEFT COLUMN: Form Sections ========== -->
-    <div class="main-column">
+    <div class="main-column" #mainColumn>
       <div class="header-section">
-        <h1 class="page-title">Configuración de la Tienda</h1>
+        <div class="header-title-row">
+          <h1 class="page-title">Editar Catálogo</h1>
+          @if (canEditCatalog()) {
+          <div #topSaveAnchor>
+            <ui-button
+              class="save-btn-top"
+              [label]="saveButtonTopLabel()"
+              (click)="saveAllChanges()"
+              [isLoading]="configStore.isSaving()"
+              [disabled]="!hasUnsavedChanges()"
+              icon="save"
+            ></ui-button>
+          </div>
+          }
+        </div>
         <p class="page-description">
           Gestiona la identidad visual y el comportamiento de tu catálogo
           online.
         </p>
       </div>
+
+      <!-- Sticky unsaved changes banner (visible only when save buttons are out of view) -->
+      @if (showStickyBanner()) {
+      <div class="unsaved-banner">
+        <div class="unsaved-banner-content">
+          <ui-icon name="circle-alert" styleClass="size-4"></ui-icon>
+          <span>Tienes cambios sin guardar</span>
+        </div>
+        <ui-button
+          label="Guardar"
+          (click)="saveAllChanges()"
+          [isLoading]="configStore.isSaving()"
+          icon="save"
+          size="small"
+        ></ui-button>
+      </div>
+      }
       <!-- Card 1: Identidad de la Marca -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -53,19 +84,6 @@
             >
           </div>
 
-          <div class="divider"></div>
-
-          @if (canEditCatalog()) {
-          <div class="save-section">
-            <ui-button
-              label="Guardar cambios"
-              (click)="saveIdentity()"
-              [isLoading]="isSavingSection('identity')"
-              icon="save"
-              [fluid]="true"
-            ></ui-button>
-          </div>
-          }
         </div>
       </ui-card>
 
@@ -86,26 +104,6 @@
             (selectedChange)="selectTemplate($event)"
           ></lib-template-selector>
 
-          @if (hasUnsavedTemplate()) {
-          <div class="unsaved-hint">
-            <ui-icon name="info" styleClass="size-4"></ui-icon>
-            <span>Vista previa temporal — guarda para aplicar el cambio.</span>
-          </div>
-          }
-
-          <div class="divider"></div>
-
-          @if (canEditCatalog()) {
-          <div class="save-section">
-            <ui-button
-              [label]="hasUnsavedTemplate() ? 'Guardar plantilla ●' : 'Guardar plantilla'"
-              (click)="saveTemplate()"
-              [isLoading]="isSavingSection('template')"
-              icon="save"
-              [fluid]="true"
-            ></ui-button>
-          </div>
-          }
         </div>
       </ui-card>
 
@@ -233,20 +231,6 @@
               >
             </div>
           </div>
-
-          <div class="divider"></div>
-
-          @if (canEditCatalog()) {
-          <div class="save-section">
-            <ui-button
-              label="Guardar diseño"
-              (click)="saveDesignSection()"
-              [isLoading]="isSavingSection('design')"
-              icon="save"
-              [fluid]="true"
-            ></ui-button>
-          </div>
-          }
         </div>
       </ui-card>
 
@@ -307,20 +291,6 @@
               </ng-template>
             </ui-color-picker>
           </div>
-
-          <div class="divider"></div>
-
-          @if (canEditCatalog()) {
-          <div class="save-section">
-            <ui-button
-              label="Guardar color"
-              (click)="saveThemeColor()"
-              [isLoading]="isSavingSection('themeColor')"
-              icon="save"
-              [fluid]="true"
-            ></ui-button>
-          </div>
-          }
         </div>
       </ui-card>
 
@@ -365,19 +335,6 @@
             </div>
           </div>
 
-          <div class="divider"></div>
-
-          @if (canEditCatalog()) {
-          <div class="save-section">
-            <ui-button
-              label="Guardar ubicación"
-              (click)="saveLocationSection()"
-              [isLoading]="isSavingSection('location')"
-              icon="save"
-              [fluid]="true"
-            ></ui-button>
-          </div>
-          }
         </div>
       </ui-card>
 
@@ -474,19 +431,6 @@
             ></ui-button>
           </div>
 
-          <div class="divider"></div>
-
-          @if (canEditCatalog()) {
-          <div class="save-section">
-            <ui-button
-              label="Guardar sección de pago"
-              (click)="savePaymentMethodsSection()"
-              [isLoading]="isSavingSection('paymentMethods')"
-              icon="save"
-              [fluid]="true"
-            ></ui-button>
-          </div>
-          }
         </div>
       </ui-card>
 
@@ -554,19 +498,6 @@
           ></ui-button>
           }
 
-          <div class="divider"></div>
-
-          @if (canEditCatalog()) {
-          <div class="save-section">
-            <ui-button
-              label="Guardar vendedores"
-              (click)="saveWhatsappButtons()"
-              [isLoading]="isSavingSection('whatsapp')"
-              icon="save"
-              [fluid]="true"
-            ></ui-button>
-          </div>
-          }
         </div>
       </ui-card>
 
@@ -643,19 +574,6 @@
             (ngModelChange)="updateSocialLinkUrl('tiktok', $event)"
           ></ui-input-text>
 
-          <div class="divider"></div>
-
-          @if (canEditCatalog()) {
-          <div class="save-section">
-            <ui-button
-              label="Guardar redes sociales"
-              (click)="saveSocialLinks()"
-              [isLoading]="configStore.isSaving()"
-              icon="save"
-              [fluid]="true"
-            ></ui-button>
-          </div>
-          }
         </div>
       </ui-card>
 
@@ -711,6 +629,20 @@
           </div>
         </div>
       </ui-card>
+
+      <!-- Bottom Save Button -->
+      @if (canEditCatalog()) {
+      <div class="bottom-save-section" #bottomSaveAnchor>
+        <ui-button
+          label="Guardar cambios"
+          (click)="saveAllChanges()"
+          [isLoading]="configStore.isSaving()"
+          [disabled]="!hasUnsavedChanges()"
+          icon="save"
+          [fluid]="true"
+        ></ui-button>
+      </div>
+      }
     </div>
 
     <!-- ========== RIGHT COLUMN: Phone Mockup ========== -->

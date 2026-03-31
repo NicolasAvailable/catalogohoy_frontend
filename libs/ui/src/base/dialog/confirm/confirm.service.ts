@@ -10,6 +10,7 @@ export type ConfirmDialogConfig = {
   contentLabel?: string;
   acceptLabel?: string;
   rejectLabel?: string;
+  rejectSeverity?: string;
   showAccept?: boolean;
   dismissableMask?: boolean;
   closable?: boolean;
@@ -57,8 +58,9 @@ export class ConfirmDialogService {
     config.rejectLabel && this.activeDialog.setInput('rejectLabel', config.rejectLabel);
     config.contentLabel && this.activeDialog.setInput('contentLabel', config.contentLabel);
     config.showAccept !== undefined && this.activeDialog.setInput('showAccept', config.showAccept);
-    config.dismissableMask && this.activeDialog.setInput('dismissableMask', config.dismissableMask);
-    config.closable && this.activeDialog.setInput('closable', config.closable);
+    config.dismissableMask !== undefined && this.activeDialog.setInput('dismissableMask', config.dismissableMask);
+    config.closable !== undefined && this.activeDialog.setInput('closable', config.closable);
+    config.rejectSeverity && this.activeDialog.setInput('rejectSeverity', config.rejectSeverity);
     config.styleClass && this.activeDialog.setInput('styleClass', config.styleClass);
 
     const resultSubject = new Subject<ConfirmDialogResult>();

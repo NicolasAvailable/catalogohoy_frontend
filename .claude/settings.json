@@ -15,7 +15,8 @@
       "Bash(git status)",
       "Bash(git diff *)",
       "Bash(git log *)",
-      "WebFetch(domain:yvkurjivijnhliofmfmj.supabase.co)"
+      "WebFetch(domain:yvkurjivijnhliofmfmj.supabase.co)",
+      "Bash(grep -E \"\\\\.\\(ts|html|scss\\)$\")"
     ]
   }
 }
