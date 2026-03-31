@@ -275,6 +275,14 @@ export class EcommerceConfigComponent implements OnInit {
 
   showUnsavedChangesDialog(): Observable<boolean> {
     return new Observable<boolean>((subscriber) => {
+      let resolved = false;
+      const resolve = (value: boolean) => {
+        if (resolved) return;
+        resolved = true;
+        subscriber.next(value);
+        subscriber.complete();
+      };
+
       this.confirmDialogService
         .info({
           headerLabel: 'Cambios sin guardar',
@@ -284,21 +292,14 @@ export class EcommerceConfigComponent implements OnInit {
           rejectSeverity: 'danger',
           closable: true,
           dismissableMask: false,
-          onClose: () => {
-            subscriber.next(false);
-            subscriber.complete();
-          },
+          onClose: () => resolve(false),
         })
         .subscribe((result) => {
           result.fold(
-            () => {
-              subscriber.next(true);
-              subscriber.complete();
-            },
+            () => resolve(true),
             async () => {
               await this.saveAllChanges();
-              subscriber.next(true);
-              subscriber.complete();
+              resolve(true);
             }
           );
         });

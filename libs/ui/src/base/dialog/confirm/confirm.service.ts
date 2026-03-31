@@ -65,38 +65,37 @@ export class ConfirmDialogService {
     config.styleClass && this.activeDialog.setInput('styleClass', config.styleClass);
 
     const resultSubject = new Subject<ConfirmDialogResult>();
-    const destroy$ = new Subject<void>();
+    let handled = false;
+
+    const cleanup = () => {
+      confirmSub.unsubscribe();
+      cancelSub.unsubscribe();
+      closeSub.unsubscribe();
+      setTimeout(() => this.closeDialog());
+    };
 
     const confirmSub = dialogInstance.confirm.subscribe(() => {
+      if (handled) return;
+      handled = true;
       resultSubject.next(E.right(undefined));
       resultSubject.complete();
-      destroy$.next();
-      destroy$.complete();
-      this.closeDialog();
+      cleanup();
     });
 
     const cancelSub = dialogInstance.cancel.subscribe(() => {
+      if (handled) return;
+      handled = true;
       resultSubject.next(E.left(undefined));
       resultSubject.complete();
-      destroy$.next();
-      destroy$.complete();
-      this.closeDialog();
+      cleanup();
     });
 
     const closeSub = dialogInstance.close.subscribe(() => {
+      if (handled) return;
+      handled = true;
       config.onClose?.();
       resultSubject.complete();
-      destroy$.next();
-      destroy$.complete();
-      this.closeDialog();
-    });
-
-    destroy$.subscribe({
-      complete: () => {
-        confirmSub.unsubscribe();
-        cancelSub.unsubscribe();
-        closeSub.unsubscribe();
-      },
+      cleanup();
     });
 
     switch (type) {
