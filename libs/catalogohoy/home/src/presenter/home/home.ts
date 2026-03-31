@@ -91,10 +91,10 @@ export class Home implements OnInit {
       bgClass: 'bg-green-50',
     },
     {
-      title: 'Configurar tienda',
+      title: 'Editar catálogo',
       description: 'Personaliza tu catalogo y opciones de pago.',
       icon: 'settings',
-      route: 'catalog',
+      route: 'catalog/edit',
       colorClass: 'text-purple-600',
       bgClass: 'bg-purple-50',
     },
