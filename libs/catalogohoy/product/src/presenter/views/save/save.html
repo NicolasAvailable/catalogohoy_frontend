@@ -101,11 +101,12 @@
             inputId="categoryIds"
             emptyMessage="📭 Todavía no tenés categorías. ¡Creá una en la caja de texto de abajo y guardala! ✨"
             emptyFilterMessage="🔍 No se encontraron categorías con ese nombre"
+            filterPlaceHolder="Buscar categoría"
           >
             <ng-template #footer>
               <div class="px-4 py-3 border-t border-grey-50 flex gap-2">
                 <ui-input-text
-                  [placeholder]="'Nueva categoría...'"
+                  [placeholder]="'Crear nueva categoría...'"
                   [ngModel]="newCategoryName()"
                   (ngModelChange)="onNewCategoryNameChange($event)"
                   [ngModelOptions]="{ standalone: true }"
