@@ -1,6 +1,6 @@
 import { NgClass } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthenticationService } from '@catalogohoy/auth';
 import { PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
@@ -80,6 +80,14 @@ export class Sidebar {
   public readonly productsMenu: PanelMenuItem[] = PRODUCTS_MENU;
   public readonly catalogMenu: PanelMenuItem[] = CATALOG_MENU;
   public readonly teamsMenu: PanelMenuItem[] = TEAMS_MENU;
+
+  constructor() {
+    this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd && this.visible()) {
+        this.closeSidebar.emit();
+      }
+    });
+  }
 
   public readonly showCatalogSwitcher = signal(false);
   public readonly allTenants = computed(() => this.profileStore.profile().tenantList.tenants);
