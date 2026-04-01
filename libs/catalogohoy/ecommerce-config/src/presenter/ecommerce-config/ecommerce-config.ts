@@ -124,6 +124,9 @@ export class EcommerceConfigComponent implements OnInit {
   // iframe URL
   public safeIframeUrl: SafeResourceUrl = '';
 
+  // Tracks the last config snapshot used to sync drafts
+  private lastSyncedConfig: EcommerceConfig | null = null;
+
   // Save button visibility tracking
   private readonly topSaveAnchor = viewChild<ElementRef>('topSaveAnchor');
   private readonly bottomSaveAnchor = viewChild<ElementRef>('bottomSaveAnchor');
@@ -173,30 +176,43 @@ export class EcommerceConfigComponent implements OnInit {
       onCleanup(() => observer.disconnect());
     });
 
-    // Sync drafts from server config
+    // Sync drafts from server config (selective: preserves user-modified fields)
     effect(() => {
       const config = this.configStore.config();
-      if (config) {
-        this.draftName.set(config.name ?? '');
-        this.draftDescription.set(config.description ?? '');
-        this.draftWhatsappButtons.set(
-          config.whatsappButtons?.length
-            ? config.whatsappButtons.map((b) => ({ ...b }))
-            : [{ name: '', number: '' }]
-        );
-        this.draftThemeColor.set(config.themeColor ?? '#10b981');
-        this.draftState.set(config.state ?? null);
-        this.draftCity.set(config.city ?? null);
-        this.draftShowDesignSection.set(config.showDesignSection ?? true);
-        this.draftShowLocationSection.set(config.showLocationSection ?? true);
-        this.draftShowPaymentMethodsSection.set(
-          config.showPaymentMethodsSection ?? true
-        );
-        this.draftSocialLinks.set(
-          config.socialLinks ?? { ...DEFAULT_SOCIAL_LINKS }
-        );
-        this.draftTemplate.set(config.template ?? 'classic');
-      }
+      if (!config) return;
+
+      const prev = this.lastSyncedConfig;
+      const isFirstLoad = !prev;
+
+      // Helper: only update a draft if user hasn't modified it since last sync
+      const syncField = <T>(draft: { (): T; set: (v: T) => void }, prevVal: T, newVal: T) => {
+        if (isFirstLoad || draft() === prevVal) draft.set(newVal);
+      };
+
+      const syncFieldJson = <T>(draft: { (): T; set: (v: T) => void }, prevVal: T, newVal: T) => {
+        if (isFirstLoad || JSON.stringify(draft()) === JSON.stringify(prevVal)) draft.set(newVal);
+      };
+
+      const prevButtons = prev?.whatsappButtons?.length
+        ? prev.whatsappButtons
+        : [{ name: '', number: '' }];
+      const newButtons = config.whatsappButtons?.length
+        ? config.whatsappButtons.map((b) => ({ ...b }))
+        : [{ name: '', number: '' }];
+
+      syncField(this.draftName, prev?.name ?? '', config.name ?? '');
+      syncField(this.draftDescription, prev?.description ?? '', config.description ?? '');
+      syncField(this.draftThemeColor, prev?.themeColor ?? '#10b981', config.themeColor ?? '#10b981');
+      syncField(this.draftState, prev?.state ?? null, config.state ?? null);
+      syncField(this.draftCity, prev?.city ?? null, config.city ?? null);
+      syncField(this.draftShowDesignSection, prev?.showDesignSection ?? true, config.showDesignSection ?? true);
+      syncField(this.draftShowLocationSection, prev?.showLocationSection ?? true, config.showLocationSection ?? true);
+      syncField(this.draftShowPaymentMethodsSection, prev?.showPaymentMethodsSection ?? true, config.showPaymentMethodsSection ?? true);
+      syncField(this.draftTemplate, prev?.template ?? 'classic' as CatalogTemplate, config.template ?? 'classic' as CatalogTemplate);
+      syncFieldJson(this.draftWhatsappButtons, prevButtons, newButtons);
+      syncFieldJson(this.draftSocialLinks, prev?.socialLinks ?? DEFAULT_SOCIAL_LINKS, config.socialLinks ?? { ...DEFAULT_SOCIAL_LINKS });
+
+      this.lastSyncedConfig = { ...config };
     });
 
     // Send preview messages when drafts change
