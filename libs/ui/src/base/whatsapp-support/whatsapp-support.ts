@@ -1,10 +1,14 @@
-import { Component, input, signal, ViewEncapsulation } from '@angular/core';
+import { Component, computed, inject, input, signal, ViewEncapsulation } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'ui-whatsapp-support',
   imports: [LucideAngularModule],
   template: `
+    @if (!isHidden()) {
     @if (isOpen()) {
     <div
       class="fixed bottom-28 right-6 z-50 w-88 rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden animate-fade-in-up"
@@ -51,6 +55,7 @@ import { LucideAngularModule } from 'lucide-angular';
       <lucide-angular name="headset" class="fab-icon" />
       }
     </button>
+    }
   `,
   encapsulation: ViewEncapsulation.None,
   styles: `
@@ -97,6 +102,19 @@ import { LucideAngularModule } from 'lucide-angular';
 export class WhatsappSupportComponent {
   public readonly phoneNumber = input('');
   public readonly defaultMessage = input('');
+  public readonly hiddenRoutes = input<string[]>([]);
+
+  private readonly router = inject(Router);
+  private readonly url = toSignal(
+    this.router.events.pipe(
+      filter((e) => e instanceof NavigationEnd),
+      map((e) => (e as NavigationEnd).urlAfterRedirects)
+    ),
+    { initialValue: this.router.url }
+  );
+  public readonly isHidden = computed(() =>
+    this.hiddenRoutes().some((route) => this.url().includes(route))
+  );
 
   public readonly isOpen = signal(false);
 
