@@ -10,11 +10,12 @@ import {
 } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { PlanExpiredDialogComponent, PlanStore } from '@catalogohoy/plan';
+import { WhatsappSupportComponent } from '@ui';
 import { Navbar, Sidebar } from '../../components';
 
 @Component({
   selector: 'app-base',
-  imports: [RouterOutlet, Navbar, Sidebar, PlanExpiredDialogComponent],
+  imports: [RouterOutlet, Navbar, Sidebar, PlanExpiredDialogComponent, WhatsappSupportComponent],
   templateUrl: './base.html',
 })
 export class Base implements OnInit, AfterViewInit {

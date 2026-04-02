@@ -612,10 +612,10 @@
 .fab-preview {
   display: none;
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  width: 56px;
-  height: 56px;
+  bottom: 1.5rem;
+  left: 1.5rem;
+  width: 4rem;
+  height: 4rem;
   border-radius: 50%;
   background: var(--color-primary-500, #3e7bfa);
   color: white;

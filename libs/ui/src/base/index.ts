@@ -30,3 +30,4 @@ export * from './table';
 export * from './tabs';
 export * from './toggle';
 export * from './tooltip';
+export * from './whatsapp-support';
