@@ -13,7 +13,7 @@ import { LucideAngularModule } from 'lucide-angular';
         class="bg-primary-500 px-6 py-5 text-white flex items-center justify-between"
       >
         <div class="flex items-center gap-3">
-          <lucide-angular name="headset" [size]="20" class="text-white" />
+          <lucide-angular name="headset" class="text-white header-icon" />
           <span class="font-semibold text-lg">Soporte</span>
         </div>
         <button
@@ -67,6 +67,18 @@ import { LucideAngularModule } from 'lucide-angular';
 
     .animate-fade-in-up {
       animation: fadeInUp 0.2s ease-out;
+    }
+
+    ui-whatsapp-support .header-icon svg {
+      width: 1.75rem;  /* 28px */
+      height: 1.75rem;
+    }
+
+    @media (min-width: 640px) {
+      ui-whatsapp-support .header-icon svg {
+        width: 1.875rem;  /* 30px */
+        height: 1.875rem;
+      }
     }
 
     ui-whatsapp-support .fab-icon svg {
