@@ -228,9 +228,22 @@
         </div>
         }
         } @empty {
-        <div class="py-12">
-          <ui-empty-list [isLoading]="false" [hasItems]="false" label="No tienes órdenes todavía"
-            description="Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente." icon="notepad-text" cta="" [isScreenView]="false" />
+        <div class="flex-1 flex flex-col items-center justify-center py-16 text-center px-4">
+          <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
+            <ui-icon name="notepad-text" styleClass="size-8 text-primary-400" />
+          </div>
+          <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes órdenes todavía</h3>
+          <p class="text-grey-300 text-sm mb-6 max-w-sm">
+            Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente.
+          </p>
+          @if (canCreateOrder()) {
+          <ui-button
+            (click)="onCreateOrder()"
+            label="Crear orden manual"
+            icon="circle-plus"
+            [fluid]="false"
+          />
+          }
         </div>
         }
       }
@@ -450,16 +463,22 @@
           } @empty {
           <tr>
             <td colspan="9">
-              <div class="py-12">
-                <ui-empty-list
-                  [isLoading]="false"
-                  [hasItems]="false"
-                  label="No tienes órdenes todavía"
-                  description="Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente."
-                  icon="notepad-text"
-                  cta=""
-                  [isScreenView]="false"
+              <div class="flex flex-col items-center justify-center py-16 text-center px-4">
+                <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
+                  <ui-icon name="notepad-text" styleClass="size-8 text-primary-400" />
+                </div>
+                <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes órdenes todavía</h3>
+                <p class="text-grey-300 text-sm mb-6 max-w-sm">
+                  Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente.
+                </p>
+                @if (canCreateOrder()) {
+                <ui-button
+                  (click)="onCreateOrder()"
+                  label="Crear orden manual"
+                  icon="circle-plus"
+                  [fluid]="false"
                 />
+                }
               </div>
             </td>
           </tr>
