@@ -33,6 +33,7 @@ export class SelectItemDirective {}
       [optionValue]="optionValue()"
       [disabled]="disabled()"
       [filter]="filter()"
+      [filterPlaceholder]="filterPlaceholder()"
       [variant]="variant()"
       [attr.mode]="mode()"
       [virtualScroll]="true"
@@ -85,6 +86,7 @@ export class SelectComponent<T>
   public readonly selectId = _.input('');
   public readonly emptyMessage = _.input('Sin resultados');
   public readonly emptyFilterMessage = _.input('Sin resultados');
+  public readonly filterPlaceholder = _.input('Buscar...');
 
   @_.ContentChild(SelectSelectedItemDirective, { read: _.TemplateRef })
   private _selectedItemTemplate?: _.TemplateRef<unknown>;

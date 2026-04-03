@@ -23,7 +23,7 @@ export class CategoryService implements BaseCategoryService {
     page?: number,
     pageSize?: number
   ): Promise<E.Either<Error, CategoryList>> {
-    const tenantId = this.tenantStore.getDefaultTenantId();
+    const tenantId = await this.tenantStore.getTenantIdAsync();
     if (!tenantId) {
       return E.left(new Error('No tenant found'));
     }
@@ -120,7 +120,7 @@ export class CategoryService implements BaseCategoryService {
       return E.left(new Error('User not authenticated'));
     }
 
-    const tenantId = this.tenantStore.getDefaultTenantId();
+    const tenantId = await this.tenantStore.getTenantIdAsync();
 
     // Get the last position
     const { data: maxPosData } = await this.client
