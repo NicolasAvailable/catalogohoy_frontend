@@ -126,13 +126,6 @@
               <a [href]="getWhatsAppLink(order.phone)" target="_blank" class="text-green-600 font-medium">{{ order.phone }}</a>
             </div>
             }
-            <div>
-              <span class="text-grey-800 font-bold">Productos: </span>
-              @for (item of order.products; track $index) {
-                @if (!$first) {, }
-                <span class="text-grey-700">{{ item.quantity }}x {{ item.name }}</span>
-              }
-            </div>
             <div class="flex items-center gap-1">
               <span class="text-grey-800 font-bold">Estado: </span>
               <ui-select
@@ -158,7 +151,18 @@
                 </ng-template>
               </ui-select>
             </div>
+            <div>
+              <span class="text-grey-800 font-bold">Productos:</span>
+              <ul class="list-disc list-inside text-grey-700 mt-0.5">
+                @for (item of order.products; track $index) {
+                <li>{{ item.quantity }}x {{ item.name }}</li>
+                }
+              </ul>
+            </div>
             <div><span class="text-grey-800 font-bold">Total: </span><span class="font-bold text-primary-600">${{ order.totalUsd | number:'1.2-2' }}</span></div>
+            @if (order.totalBs) {
+            <div><span class="text-grey-800 font-bold">Total Bs: </span><span class="font-bold text-primary-600">Bs. {{ order.totalBs | number:'1.2-2' }}</span></div>
+            }
             <span class="text-grey-300">{{ order.createdAt | date: 'dd/MM/yy hh:mm a' }}</span>
           </div>
           <!-- Actions -->
@@ -303,13 +307,11 @@
               <span class="font-semibold text-grey-800">{{ order.name }}</span>
             </td>
             <td class="px-6 py-3.5">
-              <div class="flex flex-col gap-0.5">
+              <ul class="list-disc list-inside text-grey-700">
                 @for (item of order.products; track $index) {
-                <span class="text-grey-700"
-                  >{{ item.quantity }}x {{ item.name }}</span
-                >
+                <li>{{ item.quantity }}x {{ item.name }}</li>
                 }
-              </div>
+              </ul>
             </td>
             <td class="px-6 py-3.5">
               <div class="flex justify-center">

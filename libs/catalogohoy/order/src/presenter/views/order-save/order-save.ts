@@ -102,9 +102,6 @@ export default class OrderSave implements OnInit {
   ];
 
   ngOnInit(): void {
-    // Cargar productos disponibles
-    this.productStore.productList$();
-
     // Cargar tasas de cambio
     this.rateStore.loadRates().then(() => {
       const rate = this.rateStore.rate();
@@ -113,12 +110,14 @@ export default class OrderSave implements OnInit {
       }
     });
 
-    // Si hay un ID, cargar la orden para edición
-    const orderId = this.id();
-    if (orderId) {
-      this.isCreate.set(false);
-      this.loadOrder(orderId);
-    }
+    // Cargar productos primero, luego la orden (para que el select tenga opciones)
+    this.productStore.productList$().then(() => {
+      const orderId = this.id();
+      if (orderId) {
+        this.isCreate.set(false);
+        this.loadOrder(orderId);
+      }
+    });
   }
 
   private async loadOrder(id: string) {
@@ -133,7 +132,17 @@ export default class OrderSave implements OnInit {
     this.form.controls.phone.setValue(order.phone || '');
     this.form.controls.comments.setValue(order.comments || '');
     this.form.controls.status.setValue(order.status);
-    this.products.set(order.products);
+
+    const storeProducts = this.productStore.productList().products;
+    this.products.set(
+      order.products.map((p) => {
+        const match = storeProducts.find((sp) => String(sp.id) === String(p.productId));
+        return {
+          ...p,
+          productId: match ? match.id : p.productId,
+        };
+      })
+    );
     this.totalBs.set(order.totalBs ?? 0);
   }
 
@@ -160,15 +169,19 @@ export default class OrderSave implements OnInit {
       .products.find((p) => p.id === productId);
 
     if (selectedProduct) {
+      const price = selectedProduct.isWholesale && selectedProduct.wholesaleTiers.length > 0
+        ? selectedProduct.wholesaleTiers[0].price
+        : selectedProduct.price;
+
       this.products.update((products) => {
         const updated = [...products];
         updated[index] = {
           ...updated[index],
           productId: selectedProduct.id,
           name: selectedProduct.name,
-          price: selectedProduct.price,
+          price,
           photo: selectedProduct.photos?.[0],
-          total: selectedProduct.price * updated[index].quantity,
+          total: price * updated[index].quantity,
         };
         return updated;
       });
