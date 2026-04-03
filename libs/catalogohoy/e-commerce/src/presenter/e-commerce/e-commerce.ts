@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { RouterOutlet } from '@angular/router';
+import { PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
 import { CartStore, EcommerceStore } from '../../infrastructure';
@@ -43,6 +44,7 @@ export class ECommerce implements OnInit, OnDestroy {
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cartStore = inject(CartStore);
   public readonly planStore = inject(PlanStore);
+  private readonly posthogService = inject(PosthogService);
   private readonly titleService = inject(Title);
   private readonly metaService = inject(Meta);
   private readonly document = inject(DOCUMENT);
@@ -132,11 +134,15 @@ export class ECommerce implements OnInit, OnDestroy {
     });
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     const slug = getTenantSlugFromUrl();
     if (slug) {
       this.ecommerceStore.loadCatalog(slug);
-      this.planStore.checkExpiredBySlug(slug);
+      await this.planStore.checkExpiredBySlug(slug);
+
+      if (!this.planStore.isFreePlan() && !this.planStore.isPlanExpired()) {
+        this.posthogService.enablePublicTracking(slug);
+      }
     }
 
     window.addEventListener('message', this.handlePreviewMessage);

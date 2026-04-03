@@ -8,8 +8,10 @@ export class AnalyticsService {
   private readonly client = SupabaseClientProvider.getInstance();
 
   async getAnalytics(): Promise<E.Either<Error, AnalyticsData>> {
+    const slug = localStorage.getItem('slug') ?? '';
     const { data, error } = await this.client.functions.invoke<AnalyticsData>(
-      'posthog-analytics'
+      'posthog-analytics',
+      { body: { slug } }
     );
     if (error) return E.left(new Error(error.message));
     return E.right(data!);

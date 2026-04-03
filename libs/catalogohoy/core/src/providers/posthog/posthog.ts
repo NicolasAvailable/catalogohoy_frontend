@@ -10,6 +10,7 @@ export class PosthogService {
   private readonly ngZone = inject(NgZone);
   private readonly router = inject(Router);
   private readonly planStore = inject(PlanStore);
+  private publicTrackingEnabled = false;
 
   private get isConfigured(): boolean {
     if (isDevMode()) return false;
@@ -22,18 +23,17 @@ export class PosthogService {
   constructor() {
     if (!this.isConfigured) return;
 
-    // Fuera de la zona Angular para no afectar el change detection,
-    // especialmente crítico durante session recording
     this.ngZone.runOutsideAngular(() => {
       posthog.init(environment.posthogKey, {
         api_host: environment.posthogHost,
-        defaults: '2026-01-30', // auto-pageview en SPA + mejores defaults
+        defaults: '2026-01-30',
+        capture_pageview: false, // Control manual: solo planes pagados y vigentes
         session_recording: {
-          maskAllInputs: true,
-          maskInputOptions: { password: true, email: true },
+          maskAllInputs: false,
+          maskInputOptions: { password: true, email: false },
           blockSelector: '[data-ph-no-capture]',
         },
-        disable_session_recording: true, // solo activa en /admin
+        disable_session_recording: true,
         persistence: 'localStorage',
         autocapture: false,
       });
@@ -50,13 +50,27 @@ export class PosthogService {
         const isAdmin = event.urlAfterRedirects.startsWith('/admin');
 
         if (isAdmin) {
-          this.ngZone.runOutsideAngular(() => posthog.startSessionRecording());
+          this.ngZone.runOutsideAngular(() => {
+            posthog.startSessionRecording();
+            posthog.capture('$pageview');
+          });
         } else {
           this.ngZone.runOutsideAngular(() => posthog.stopSessionRecording());
-          const slug = localStorage.getItem('slug');
-          if (slug) posthog.register({ tenant_slug: slug });
+          if (this.publicTrackingEnabled) {
+            this.ngZone.runOutsideAngular(() => posthog.capture('$pageview'));
+          }
         }
       });
+  }
+
+  /** Activa captura de eventos para un catálogo público con plan pagado y vigente */
+  enablePublicTracking(slug: string): void {
+    if (!this.isConfigured) return;
+    this.publicTrackingEnabled = true;
+    this.ngZone.runOutsideAngular(() => {
+      posthog.register({ tenant_slug: slug });
+      posthog.capture('$pageview');
+    });
   }
 
   identify(userId: string, properties?: Record<string, unknown>): void {
@@ -67,6 +81,7 @@ export class PosthogService {
   reset(): void {
     if (!this.isConfigured) return;
     posthog.reset();
+    this.publicTrackingEnabled = false;
   }
 
   capture(event: string, properties?: Record<string, unknown>): void {
