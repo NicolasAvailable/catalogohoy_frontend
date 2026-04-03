@@ -1,16 +1,23 @@
-<div class="h-full flex flex-col gap-6 px-6 pb-6 mt-4">
+<div class="flex flex-col gap-4 sm:gap-6 px-4 sm:px-6 pb-6 mt-4 sm:h-full">
   <!-- Header -->
-  <header
-    class="flex flex-col md:flex-row md:items-center justify-between gap-4"
-  >
+  <header class="flex items-start justify-between gap-4">
     <div>
-      <h1 class="text-3xl font-bold text-grey-800 mb-1">Órdenes</h1>
-      <p class="text-grey-400">
+      <h1 class="text-2xl sm:text-3xl font-bold text-grey-800 mb-1">Órdenes</h1>
+      <p class="text-sm sm:text-base text-grey-400">
         Gestiona los pedidos y el estado de ventas de tu catálogo
       </p>
     </div>
     @if (canCreateOrder()) {
     <ui-button
+      class="sm:hidden shrink-0"
+      (click)="onCreateOrder()"
+      [fluid]="false"
+      label="Crear"
+      icon="circle-plus"
+      size="small"
+    />
+    <ui-button
+      class="hidden sm:block shrink-0"
       (click)="onCreateOrder()"
       [fluid]="false"
       label="Crear orden manual"
@@ -22,7 +29,7 @@
 
   <!-- Main Card Container -->
   <div
-    class="bg-white border border-grey-100 rounded-xl shadow-sm overflow-hidden flex-1 flex flex-col"
+    class="bg-white border border-grey-100 rounded-xl shadow-sm overflow-hidden sm:flex-1 flex flex-col"
   >
     <!-- Filters Row -->
     <div
@@ -95,8 +102,138 @@
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="overflow-auto flex-1 order-table-wrapper">
+    <!-- Mobile List -->
+    <div class="sm:hidden overflow-y-auto mobile-order-list">
+      @if (orderStore.isLoading()) {
+        <div class="p-4 flex flex-col gap-3">
+          @for (_ of [1, 2, 3, 4, 5]; track $index) {
+          <div class="animate-pulse rounded-lg p-4 flex flex-col gap-2">
+            <div class="h-4 w-24 bg-grey-100 rounded"></div>
+            <div class="h-3 w-32 bg-grey-100 rounded"></div>
+          </div>
+          }
+        </div>
+      } @else {
+        @for (order of filteredOrders(); track order.id) {
+        <div class="border-b border-grey-50 px-4 py-3 flex gap-3">
+          <!-- Info -->
+          <div class="flex-1 flex flex-col gap-1 min-w-0 text-xs">
+            <span class="text-grey-300 font-medium">#{{ order.id }}</span>
+            <div><span class="text-grey-800 font-bold">Nombre: </span><span class="text-grey-700">{{ order.name }}</span></div>
+            @if (order.phone) {
+            <div>
+              <span class="text-grey-800 font-bold">Número: </span>
+              <a [href]="getWhatsAppLink(order.phone)" target="_blank" class="text-green-600 font-medium">{{ order.phone }}</a>
+            </div>
+            }
+            <div>
+              <span class="text-grey-800 font-bold">Productos: </span>
+              @for (item of order.products; track $index) {
+                @if (!$first) {, }
+                <span class="text-grey-700">{{ item.quantity }}x {{ item.name }}</span>
+              }
+            </div>
+            <div class="flex items-center gap-1">
+              <span class="text-grey-800 font-bold">Estado: </span>
+              <ui-select
+                [options]="statusOptions"
+                [ngModel]="order.status"
+                (ngModelChange)="onStatusChange(order, $event)"
+                optionLabel="label"
+                optionValue="value"
+                size="small"
+                styleClass="order-status-select"
+              >
+                <ng-template selectSelectedItem let-selected>
+                  <span [class]="getStatusBadgeClass(selected.value)">
+                    <span [class]="getStatusDotClass(selected.value)"></span>
+                    {{ selected.label }}
+                  </span>
+                </ng-template>
+                <ng-template selectItem let-item>
+                  <span [class]="getStatusBadgeClass(item.value)">
+                    <span [class]="getStatusDotClass(item.value)"></span>
+                    {{ item.label }}
+                  </span>
+                </ng-template>
+              </ui-select>
+            </div>
+            <div><span class="text-grey-800 font-bold">Total: </span><span class="font-bold text-primary-600">${{ order.totalUsd | number:'1.2-2' }}</span></div>
+            <span class="text-grey-300">{{ order.createdAt | date: 'dd/MM/yy hh:mm a' }}</span>
+          </div>
+          <!-- Actions -->
+          <div class="flex flex-col gap-1 shrink-0 justify-center">
+            <ui-button
+              (click)="toggleExpand(order.id)"
+              [icon]="expandedOrderId() === order.id ? 'chevron-up' : 'chevron-down'"
+              variant="text"
+              severity="contrast"
+              size="small"
+            />
+            @if (canEditOrder()) {
+            <ui-button
+              (click)="onEditOrder(order)"
+              icon="pencil"
+              variant="text"
+              severity="contrast"
+              size="small"
+              [disabled]="isProcessing()"
+            />
+            }
+            @if (canDeleteOrder()) {
+            <ui-button
+              (click)="onDeleteOrder(order)"
+              icon="trash"
+              variant="text"
+              severity="danger"
+              size="small"
+              [disabled]="isProcessing()"
+            />
+            }
+          </div>
+        </div>
+        <!-- Expanded detail -->
+        @if (expandedOrderId() === order.id) {
+        <div class="border-b border-grey-50 px-4 py-3 flex flex-col gap-2 bg-grey-25">
+          @for (item of order.products; track $index) {
+          <div class="flex items-center gap-3 rounded-lg p-2 bg-white">
+            @if (item.photo) {
+            <img [src]="item.photo" [alt]="item.name" class="w-8 h-8 rounded-sm object-cover shrink-0" />
+            } @else {
+            <div class="w-8 h-8 bg-grey-50 rounded-sm flex items-center justify-center shrink-0">
+              <ui-icon name="package" styleClass="size-4 text-grey-300" />
+            </div>
+            }
+            <span class="flex-1 text-xs font-medium text-grey-800 truncate">{{ item.name }}</span>
+            <span class="text-xs text-grey-400">x{{ item.quantity }}</span>
+            <span class="text-xs font-bold text-primary-600">${{ item.total | number:'1.2-2' }}</span>
+          </div>
+          }
+          @if (order.totalBs) {
+          <div class="text-xs text-grey-500">Total Bs: {{ order.totalBs | number:'1.2-2' }}</div>
+          }
+          @if (order.paymentMethod) {
+          <div class="flex items-center gap-1 text-xs text-grey-400">
+            <ui-icon name="credit-card" styleClass="size-3.5" />
+            {{ getPaymentMethodLabel(order.paymentMethod) }}
+          </div>
+          }
+          @if (order.comments) {
+          <p class="text-xs text-grey-400 italic">{{ order.comments }}</p>
+          }
+        </div>
+        }
+        } @empty {
+        <div class="py-12">
+          <ui-empty-list [isLoading]="false" [hasItems]="false" label="No tienes órdenes todavía"
+            description="Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente." icon="notepad-text" cta="" [isScreenView]="false" />
+        </div>
+        }
+      }
+    </div>
+
+    <!-- Desktop Table -->
+    <div class="hidden sm:block overflow-auto sm:flex-1 sm:min-h-0">
       <table class="w-full text-left">
         <thead class="sticky top-0 z-10 bg-white">
           <tr
@@ -118,7 +255,6 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-grey-50">
-          <!-- Skeleton Loading State -->
           @if (orderStore.isLoading()) { @for (_ of [1, 2, 3, 4, 5, 6, 7, 8, 9];
           track $index) {
           <tr class="animate-pulse">
@@ -160,15 +296,12 @@
           </tr>
           } } @else { @for (order of filteredOrders(); track order.id) {
           <tr class="hover:bg-grey-25 transition-colors group">
-            <!-- ID -->
             <td class="px-6 py-3.5 font-medium text-grey-300">
               #{{ order.id }}
             </td>
-            <!-- Nombre -->
             <td class="px-6 py-3.5">
               <span class="font-semibold text-grey-800">{{ order.name }}</span>
             </td>
-            <!-- Productos -->
             <td class="px-6 py-3.5">
               <div class="flex flex-col gap-0.5">
                 @for (item of order.products; track $index) {
@@ -178,7 +311,6 @@
                 }
               </div>
             </td>
-            <!-- Estado -->
             <td class="px-6 py-3.5">
               <div class="flex justify-center">
                 <ui-select
@@ -205,7 +337,6 @@
                 </ui-select>
               </div>
             </td>
-            <!-- WhatsApp -->
             <td class="px-6 py-3.5">
               @if (order.phone) {
               <a
@@ -221,19 +352,15 @@
               <span class="text-grey-400 text-sm">—</span>
               }
             </td>
-            <!-- Fecha -->
             <td class="px-6 py-3.5 text-grey-500">
               {{ order.createdAt | date: 'dd/MM/yyyy hh:mm a' }}
             </td>
-            <!-- Total USD -->
             <td class="px-6 py-3.5 text-sm font-bold text-primary-600">
               ${{ order.totalUsd | number:'1.2-2' }}
             </td>
-            <!-- Total Bs -->
             <td class="px-6 py-3.5 text-sm font-bold text-grey-700">
               Bs. {{ order.totalBs | number:'1.2-2' }}
             </td>
-            <!-- Acciones -->
             <td class="px-6 py-3.5">
               <div class="flex items-center justify-end gap-2">
                 <ui-button

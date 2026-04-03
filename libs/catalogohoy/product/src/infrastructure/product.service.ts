@@ -136,9 +136,9 @@ export class ProductService implements BaseProductService {
       .insert({
         name: input.name,
         description: input.description,
-        price: input.price,
+        price: input.price === '' ? 0 : input.price,
         price_promotional:
-          input.pricePromotional.length === 0 ? null : input.pricePromotional,
+          !input.pricePromotional || input.pricePromotional.length === 0 ? null : input.pricePromotional,
         photos: input.photos,
         auth_user_id: user.id,
         stock: input.stock,
@@ -174,9 +174,9 @@ export class ProductService implements BaseProductService {
     const updatePayload: Record<string, unknown> = {
       name: input.name,
       description: input.description,
-      price: input.price,
+      price: input.price === '' ? 0 : input.price,
       price_promotional:
-        input.pricePromotional.length === 0 ? null : input.pricePromotional,
+        !input.pricePromotional || input.pricePromotional.length === 0 ? null : input.pricePromotional,
       photos: input.photos,
       stock: input.stock,
       sku: input.sku || null,

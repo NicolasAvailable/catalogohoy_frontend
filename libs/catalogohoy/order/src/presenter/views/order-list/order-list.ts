@@ -79,6 +79,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly selectedDate = signal<Date | null>(null);
   public readonly expandedOrderId = signal<number | null>(null);
   public readonly isProcessing = signal(false);
+  public readonly mobileShowAll = signal(false);
 
   public readonly filterTabs: FilterTab[] = [
     { label: 'Todas', value: 'all' },
@@ -142,6 +143,11 @@ export class OrderListComponent implements OnInit, OnDestroy {
     }
 
     return orders;
+  });
+
+  public readonly mobileOrders = computed(() => {
+    const orders = this.filteredOrders();
+    return this.mobileShowAll() ? orders : orders.slice(0, 5);
   });
 
   ngOnInit() {

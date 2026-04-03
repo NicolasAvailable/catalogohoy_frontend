@@ -42,9 +42,14 @@ button {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* Ensure table shows enough rows on mobile */
+/* Ensure table shows enough rows */
 .order-table-wrapper {
-  min-height: 350px;
+  min-height: 31.25rem;
+}
+
+/* Mobile list: fits ~5 orders then scrolls internally */
+.mobile-order-list {
+  max-height: 31.25rem;
 }
 
 /* Custom bg color for very light grey */
