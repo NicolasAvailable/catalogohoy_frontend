@@ -82,7 +82,7 @@ export default class Save implements OnInit {
     price: ['', [Validators.required]],
     pricePromotional: [''],
     productionCost: [''],
-    stock: [null],
+    stock: [null as number | null],
     categoryIds: [[] as string[]],
     position: [0],
     isWholesale: [false],
@@ -95,6 +95,7 @@ export default class Save implements OnInit {
   public readonly isSubmitting = signal<boolean>(false);
   public readonly isCreatingCategory = signal<boolean>(false);
   public readonly newCategoryName = signal<string>('');
+  public readonly stockMode = signal<'unlimited' | 'limited'>('unlimited');
   private readonly maxPhotos = 3;
 
   get wholesaleTiersArray(): FormArray {
@@ -172,6 +173,15 @@ export default class Save implements OnInit {
     this.wholesaleTiersArray.removeAt(index);
   }
 
+  public onStockModeChange(mode: 'unlimited' | 'limited'): void {
+    this.stockMode.set(mode);
+    if (mode === 'unlimited') {
+      this.form.controls.stock.setValue(null);
+    } else if (this.form.controls.stock.value === null) {
+      this.form.controls.stock.setValue(1);
+    }
+  }
+
   private setValuesForm(product: Product) {
     this.form.controls.name.setValue(product.name);
     this.form.controls.description.setValue(product.description);
@@ -184,6 +194,7 @@ export default class Save implements OnInit {
       String(product.pricePromotional)
     );
     this.form.controls.stock.setValue(product.stock as null);
+    this.stockMode.set(product.stock !== null ? 'limited' : 'unlimited');
     this.form.controls.categoryIds.setValue(
       product.categoryList.ids as string[]
     );
@@ -250,7 +261,7 @@ export default class Save implements OnInit {
       photos: this.photos(),
       price: this.form.controls.price.value!,
       pricePromotional: this.form.controls.pricePromotional.value!,
-      stock: this.form.controls.stock.value,
+      stock: this.form.controls.stock.value != null ? String(this.form.controls.stock.value) : null,
       categoryIds: this.form.controls.categoryIds.value!,
       isWholesale: this.form.controls.isWholesale.value ?? false,
       wholesaleTiers: this.wholesaleTiersArray.value ?? [],
