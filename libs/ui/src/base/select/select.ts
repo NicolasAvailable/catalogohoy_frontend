@@ -45,6 +45,8 @@ export class SelectItemDirective {}
       [appendTo]="appendTo()"
       [id]="selectId()"
       [panelStyleClass]="panelStyleClass()"
+      [emptyMessage]="emptyMessage()"
+      [emptyFilterMessage]="emptyFilterMessage()"
     >
       <ng-template #selectedItem let-selected>
         @if(selectedItemTemplate()) {
@@ -81,6 +83,8 @@ export class SelectComponent<T>
   public readonly panelStyleClass = _.input('');
   public readonly appendTo = _.input('body');
   public readonly selectId = _.input('');
+  public readonly emptyMessage = _.input('Sin resultados');
+  public readonly emptyFilterMessage = _.input('Sin resultados');
 
   @_.ContentChild(SelectSelectedItemDirective, { read: _.TemplateRef })
   private _selectedItemTemplate?: _.TemplateRef<unknown>;

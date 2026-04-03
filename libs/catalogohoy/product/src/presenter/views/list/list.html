@@ -114,12 +114,25 @@
       }
     </div>
   </header>
-  <form [formGroup]="searchForm" class="flex py-2">
+  <form [formGroup]="searchForm" class="flex gap-2 py-2">
     <ui-input-text
       formControlName="search"
       placeholder="Buscar..."
-      class="w-full"
-      styleClass="w-full "
+      class="flex-1"
+      styleClass="w-full"
+    />
+    <ui-select
+      [options]="categoryStore.categoryList().categories"
+      [ngModel]="filterCategoryId()"
+      [ngModelOptions]="{standalone: true}"
+      (ngModelChange)="onCategoryFilterChange($event)"
+      optionLabel="name"
+      optionValue="id"
+      placeholder="Categoría"
+      [clearable]="true"
+      [filter]="true"
+      styleClass="w-full"
+      class="w-36 sm:w-56 shrink-0"
     />
   </form>
   <section
@@ -370,7 +383,7 @@
     <p-paginator
       [first]="pageFirst()"
       [rows]="pageRows()"
-      [totalRecords]="productStore.productList().products.length"
+      [totalRecords]="filteredProducts().length"
       [rowsPerPageOptions]="[10, 25, 50]"
       [showCurrentPageReport]="true"
       currentPageReportTemplate="{totalRecords} productos — Pág. {currentPage} de {totalPages}"

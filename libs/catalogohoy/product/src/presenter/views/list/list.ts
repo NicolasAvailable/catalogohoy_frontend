@@ -15,13 +15,13 @@ import { CategoryStore } from '@catalogohoy/category';
 import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
 import {
   ButtonComponent,
-  CardComponent,
   CheckboxComponent,
   ConfirmDialogComponent,
   DialogComponent,
   IconComponent,
   InputTextComponent,
   MultiSelectComponent,
+  SelectComponent,
   SkeletonListComponent,
   TooltipDirective,
 } from '@ui';
@@ -41,8 +41,8 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
     DragDropModule,
     PaginatorModule,
     SkeletonListComponent,
-    CardComponent,
     ButtonComponent,
+    SelectComponent,
     InputTextComponent,
     IconComponent,
     ConfirmDialogComponent,
@@ -77,11 +77,19 @@ export default class List implements OnInit, OnDestroy {
 
   public readonly isProcessing = signal(false);
   public readonly bulkCategoryIds = signal<string[]>([]);
+  public readonly filterCategoryId = signal<string | null>(null);
 
   public readonly hasSelection = computed(() => this.selectedIds().size > 0);
 
-  public readonly currentPageItems = computed(() => {
+  public readonly filteredProducts = computed(() => {
     const products = this.productStore.productList().products;
+    const categoryId = this.filterCategoryId();
+    if (!categoryId) return products;
+    return products.filter((p) => p.categoryList.ids.includes(categoryId));
+  });
+
+  public readonly currentPageItems = computed(() => {
+    const products = this.filteredProducts();
     return products.slice(this.pageFirst(), this.pageFirst() + this.pageRows());
   });
 
@@ -125,6 +133,12 @@ export default class List implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.searchSubscription?.unsubscribe();
+  }
+
+  public onCategoryFilterChange(categoryId: string | null): void {
+    this.filterCategoryId.set(categoryId);
+    this.pageFirst.set(0);
+    this.clearSelection();
   }
 
   public onPageChange(event: PaginatorState) {
