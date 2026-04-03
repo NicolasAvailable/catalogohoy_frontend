@@ -25,7 +25,7 @@ export class ProductService implements BaseProductService {
     pageSize?: number,
     search?: string
   ): Promise<E.Either<Error, ProductList>> {
-    const tenantId = this.tenantStore.getDefaultTenantId();
+    const tenantId = await this.tenantStore.getTenantIdAsync();
     if (!tenantId) {
       return E.left(new Error('No tenant found'));
     }
@@ -118,7 +118,7 @@ export class ProductService implements BaseProductService {
       return E.left(new Error('User not authenticated'));
     }
 
-    const tenantId = this.tenantStore.getDefaultTenantId();
+    const tenantId = await this.tenantStore.getTenantIdAsync();
 
     // Get next position for this tenant
     const { data: maxData } = await this.client
