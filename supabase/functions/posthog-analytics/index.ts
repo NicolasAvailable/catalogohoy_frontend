@@ -57,7 +57,7 @@ function pageViewsMonthQuery(slug: string): string {
     FROM events
     WHERE event = '$pageview'
       AND properties.tenant_slug = '${slug}'
-      AND timestamp >= dateSub(day, 30, now())
+      AND timestamp >= now() - INTERVAL 30 DAY
     GROUP BY day
     ORDER BY day`;
 }
@@ -68,7 +68,7 @@ function pageViewsYearQuery(slug: string): string {
     FROM events
     WHERE event = '$pageview'
       AND properties.tenant_slug = '${slug}'
-      AND timestamp >= dateSub(month, 12, now())
+      AND timestamp >= now() - INTERVAL 12 MONTH
     GROUP BY month
     ORDER BY month`;
 }
@@ -82,7 +82,7 @@ function metricsQuery(slug: string): string {
     FROM events
     WHERE event = '$pageview'
       AND properties.tenant_slug = '${slug}'
-      AND timestamp >= dateSub(day, 30, now())`;
+      AND timestamp >= now() - INTERVAL 30 DAY`;
 }
 
 function activeHoursQuery(slug: string): string {
@@ -95,7 +95,7 @@ function activeHoursQuery(slug: string): string {
     FROM events
     WHERE event = '$pageview'
       AND properties.tenant_slug = '${slug}'
-      AND timestamp >= dateSub(day, 30, now())
+      AND timestamp >= now() - INTERVAL 30 DAY
     GROUP BY dow, hour
     ORDER BY dow, hour`;
 }
@@ -108,7 +108,7 @@ function breakdownQuery(slug: string, prop: string): string {
     FROM events
     WHERE event = '$pageview'
       AND properties.tenant_slug = '${slug}'
-      AND timestamp >= dateSub(day, 30, now())
+      AND timestamp >= now() - INTERVAL 30 DAY
       AND properties.${prop} IS NOT NULL
       AND properties.${prop} != ''
     GROUP BY label
