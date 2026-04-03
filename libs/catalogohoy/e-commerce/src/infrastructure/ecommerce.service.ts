@@ -85,7 +85,10 @@ export class EcommerceService implements BaseEcommerceService {
       logo: config?.logo ?? null,
       banner: config?.banner ?? null,
       whatsappButtons: Array.isArray(config?.whatsapp_buttons)
-        ? config.whatsapp_buttons
+        ? config.whatsapp_buttons.filter(
+            (b: { name?: string; number?: string }) =>
+              b.name?.trim() && b.number?.trim()
+          )
         : [],
       openTime,
       closeTime,
