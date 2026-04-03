@@ -8,6 +8,7 @@ export class CartItem {
     public readonly price: number,
     public readonly photo: string,
     public quantity: number,
+    public readonly tierTitle: string | null = null,
     id?: string
   ) {
     this.id = id || crypto.randomUUID();
@@ -25,6 +26,7 @@ export class CartItem {
       this.price,
       this.photo,
       this.quantity + 1,
+      this.tierTitle,
       this.id
     );
   }
@@ -38,6 +40,7 @@ export class CartItem {
       this.price,
       this.photo,
       this.quantity - 1,
+      this.tierTitle,
       this.id
     );
   }
@@ -50,6 +53,7 @@ export class CartItem {
       primitives.price,
       primitives.photo,
       primitives.quantity,
+      primitives.tierTitle ?? null,
       primitives.id
     );
   }
@@ -63,4 +67,5 @@ export interface CartItemPrimitives {
   price: number;
   photo: string;
   quantity: number;
+  tierTitle: string | null;
 }

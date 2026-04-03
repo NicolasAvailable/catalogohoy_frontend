@@ -146,6 +146,10 @@ export class ProductService implements BaseProductService {
         sku: input.sku || null,
         production_cost: input.productionCost ? Number(input.productionCost) : null,
         position: nextPosition,
+        is_wholesale: input.isWholesale ?? false,
+        wholesale_tiers: input.isWholesale
+          ? input.wholesaleTiers.map((t) => ({ title: t.title, price: Number(t.price) }))
+          : [],
       })
       .select('*');
 
@@ -177,6 +181,10 @@ export class ProductService implements BaseProductService {
       stock: input.stock,
       sku: input.sku || null,
       production_cost: input.productionCost ? Number(input.productionCost) : null,
+      is_wholesale: input.isWholesale ?? false,
+      wholesale_tiers: input.isWholesale
+        ? input.wholesaleTiers.map((t) => ({ title: t.title, price: Number(t.price) }))
+        : [],
     };
 
     if (input.position !== undefined) {

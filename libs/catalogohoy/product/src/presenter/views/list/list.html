@@ -214,11 +214,19 @@
                 class="flex items-center justify-center w-24 h-24"
                 styleClass="max-w-24 max-h-24 rounded-sm object-cover"
               />
-              <h2
-                class="ml-2 text-primary-500 font-semibold text-base line-clamp-2 break-all self-center"
-              >
-                {{item.name}}
-              </h2>
+              <div class="ml-2 flex flex-col gap-1 self-center">
+                <h2
+                  class="text-primary-500 font-semibold text-base line-clamp-2 break-all"
+                >
+                  {{item.name}}
+                </h2>
+                @if (item.isWholesale) {
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 w-fit">
+                  <ui-icon name="package" size="10" />
+                  Al mayor
+                </span>
+                }
+              </div>
             </div>
           </div>
           <div
@@ -237,17 +245,26 @@
           <div
             class="flex-1 flex items-center justify-center overflow-hidden"
           >
+            @if (item.isWholesale && item.wholesaleTiers.length > 0) {
+            <div class="flex flex-col items-center gap-0.5 text-sm">
+              <span class="font-medium text-amber-700">{{ item.wholesaleTiers.length }} escalas</span>
+              <span class="text-grey-400 text-xs">Desde ${{ item.wholesaleTiers[item.wholesaleTiers.length - 1].price }}</span>
+            </div>
+            } @else {
             <div
               class="flex items-center gap-2 px-3 py-2 border border-slate-700 rounded-lg w-full max-w-32"
             >
               <ui-icon name="dollar-sign" size="14" class="text-slate-700" />
               <span class="text-sm font-medium truncate">{{item.price}}</span>
             </div>
+            }
           </div>
           <div
             class="flex-1 flex items-center justify-center overflow-hidden"
           >
-            @if (item.pricePromotional) {
+            @if (item.isWholesale) {
+            <span class="text-grey-300">-</span>
+            } @else if (item.pricePromotional) {
             <div
               class="flex items-center gap-2 px-3 py-2 border border-slate-700 rounded-lg w-full max-w-32"
             >
@@ -310,11 +327,20 @@
               class="flex items-center justify-center w-12 h-12 shrink-0"
               styleClass="max-w-12 max-h-12 rounded-sm object-cover"
             />
-            <div class="flex flex-col min-w-0">
+            <div class="flex flex-col min-w-0 gap-0.5">
               <h2 class="text-primary-500 font-semibold text-base line-clamp-1 break-all">
                 {{item.name}}
               </h2>
+              @if (item.isWholesale && item.wholesaleTiers.length > 0) {
+              <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700">
+                  Al mayor
+                </span>
+                <span class="text-xs text-grey-400">Desde ${{ item.wholesaleTiers[item.wholesaleTiers.length - 1].price }}</span>
+              </div>
+              } @else {
               <span class="text-sm text-grey-400">${{item.price}}</span>
+              }
             </div>
           </div>
           <div class="flex gap-1 shrink-0">

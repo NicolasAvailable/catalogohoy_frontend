@@ -47,12 +47,14 @@
       }
       <h2 class="pdm__name">{{ product.name }}</h2>
 
+      @if (!isWholesale) {
       <div class="pdm__prices">
         <span class="pdm__price">${{ displayPrice }}</span>
         @if (hasDiscount) {
         <span class="pdm__price-original">${{ product.price }}</span>
         }
       </div>
+      }
     </div>
 
     @if (product.description) {
@@ -65,6 +67,26 @@
         <ui-icon name="package-x" styleClass="size-5" />
         <span>Agotado</span>
       </button>
+      } @else if (isWholesale) {
+      <div class="pdm__tiers">
+        <span class="pdm__tiers-label">Precios al mayor</span>
+        @for (tier of product.wholesaleTiers; track $index) {
+        <div class="pdm__tier">
+          <div class="pdm__tier-info">
+            <span class="pdm__tier-title">{{ tier.title }}</span>
+            <span class="pdm__tier-price">${{ tier.price }}</span>
+          </div>
+          <button
+            type="button"
+            class="pdm__tier-btn"
+            (click)="onAddTierToCart(tier)"
+          >
+            <ui-icon name="shoppingCart" styleClass="size-4" />
+            Agregar
+          </button>
+        </div>
+        }
+      </div>
       } @else {
       <div class="pdm__quantity-row">
         <span class="pdm__qty-label">Cantidad</span>

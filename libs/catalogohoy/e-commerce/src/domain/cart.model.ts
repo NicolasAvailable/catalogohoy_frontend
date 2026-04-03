@@ -22,7 +22,7 @@ export class Cart {
 
   public addItem(item: CartItem): Cart {
     const existingIndex = this._items.findIndex(
-      (i) => i.productId === item.productId
+      (i) => i.productId === item.productId && i.tierTitle === item.tierTitle
     );
 
     if (existingIndex >= 0) {
@@ -35,17 +35,17 @@ export class Cart {
     return new Cart([...this._items, item]);
   }
 
-  public removeItem(productId: string): Cart {
-    return new Cart(this._items.filter((item) => item.productId !== productId));
+  public removeItem(itemId: string): Cart {
+    return new Cart(this._items.filter((item) => item.id !== itemId));
   }
 
-  public updateQuantity(productId: string, quantity: number): Cart {
+  public updateQuantity(itemId: string, quantity: number): Cart {
     if (quantity <= 0) {
-      return this.removeItem(productId);
+      return this.removeItem(itemId);
     }
 
     const updatedItems = this._items.map((item) => {
-      if (item.productId === productId) {
+      if (item.id === itemId) {
         return new CartItem(
           item.productId,
           item.name,
@@ -53,6 +53,7 @@ export class Cart {
           item.price,
           item.photo,
           quantity,
+          item.tierTitle,
           item.id
         );
       }
@@ -62,9 +63,9 @@ export class Cart {
     return new Cart(updatedItems);
   }
 
-  public incrementItem(productId: string): Cart {
+  public incrementItem(itemId: string): Cart {
     const updatedItems = this._items.map((item) => {
-      if (item.productId === productId) {
+      if (item.id === itemId) {
         return item.incrementQuantity();
       }
       return item;
@@ -72,16 +73,16 @@ export class Cart {
     return new Cart(updatedItems);
   }
 
-  public decrementItem(productId: string): Cart {
-    const item = this._items.find((i) => i.productId === productId);
+  public decrementItem(itemId: string): Cart {
+    const item = this._items.find((i) => i.id === itemId);
     if (!item) return this;
 
     if (item.quantity <= 1) {
-      return this.removeItem(productId);
+      return this.removeItem(itemId);
     }
 
     const updatedItems = this._items.map((i) => {
-      if (i.productId === productId) {
+      if (i.id === itemId) {
         return i.decrementQuantity();
       }
       return i;

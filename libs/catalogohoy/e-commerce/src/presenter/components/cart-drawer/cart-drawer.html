@@ -30,7 +30,7 @@
       </div>
       } @else {
       <div class="cart-drawer__items">
-        @for (item of cartStore.items(); track item.productId) {
+        @for (item of cartStore.items(); track item.id) {
         <div class="cart-item">
           <img
             class="cart-item__image"

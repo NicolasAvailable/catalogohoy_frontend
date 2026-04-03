@@ -9,7 +9,9 @@ import {
   ViewChild,
 } from '@angular/core';
 import {
+  FormArray,
   FormBuilder,
+  FormGroup,
   FormsModule,
   ReactiveFormsModule,
   Validators,
@@ -30,6 +32,7 @@ import {
   MultiSelectComponent,
   RadioButtonComponent,
   TextareaComponent,
+  ToggleComponent,
   UploaderComponent,
 } from '@ui';
 import { ProductFacade } from '../../../application';
@@ -51,6 +54,7 @@ import { Product } from '../../../domain';
     RadioButtonComponent,
     MultiSelectComponent,
     PlanLimitDialogComponent,
+    ToggleComponent,
   ],
   templateUrl: './save.html',
   styleUrl: './save.css',
@@ -68,7 +72,9 @@ export default class Save implements OnInit {
   @ViewChild(PlanLimitDialogComponent)
   planLimitDialog!: PlanLimitDialogComponent;
 
-  public readonly form = inject(FormBuilder).group({
+  private readonly fb = inject(FormBuilder);
+
+  public readonly form = this.fb.group({
     name: ['', [Validators.required, whiteSpacesValidator()]],
     description: [''],
     sku: [''],
@@ -79,6 +85,8 @@ export default class Save implements OnInit {
     stock: [null],
     categoryIds: [[] as string[]],
     position: [0],
+    isWholesale: [false],
+    wholesaleTiers: this.fb.array([]),
   });
 
   public readonly id = input<string | undefined>(undefined);
@@ -88,6 +96,10 @@ export default class Save implements OnInit {
   public readonly isCreatingCategory = signal<boolean>(false);
   public readonly newCategoryName = signal<string>('');
   private readonly maxPhotos = 3;
+
+  get wholesaleTiersArray(): FormArray {
+    return this.form.get('wholesaleTiers') as FormArray;
+  }
 
   ngOnInit(): void {
     this.categoryStore.categoryList$(1, 100);
@@ -130,6 +142,36 @@ export default class Save implements OnInit {
     this.form.controls.sku.setValue(`${prefix}-${suffix}`);
   }
 
+  public onWholesaleToggle(): void {
+    const isWholesale = this.form.controls.isWholesale.value;
+    if (isWholesale) {
+      this.form.controls.price.clearValidators();
+      this.form.controls.price.setValue('');
+      this.form.controls.pricePromotional.setValue('');
+      this.form.controls.productionCost.setValue('');
+      if (this.wholesaleTiersArray.length === 0) {
+        this.addTier();
+      }
+    } else {
+      this.form.controls.price.setValidators([Validators.required]);
+      this.wholesaleTiersArray.clear();
+    }
+    this.form.controls.price.updateValueAndValidity();
+  }
+
+  public addTier(): void {
+    this.wholesaleTiersArray.push(
+      this.fb.group({
+        title: ['', Validators.required],
+        price: ['', Validators.required],
+      })
+    );
+  }
+
+  public removeTier(index: number): void {
+    this.wholesaleTiersArray.removeAt(index);
+  }
+
   private setValuesForm(product: Product) {
     this.form.controls.name.setValue(product.name);
     this.form.controls.description.setValue(product.description);
@@ -147,6 +189,21 @@ export default class Save implements OnInit {
     );
     this.form.controls.position.setValue(product.position);
     this.photos.set(product.photos);
+
+    this.form.controls.isWholesale.setValue(product.isWholesale);
+    if (product.isWholesale) {
+      this.form.controls.price.clearValidators();
+      this.form.controls.price.updateValueAndValidity();
+    }
+    this.wholesaleTiersArray.clear();
+    product.wholesaleTiers.forEach((tier) => {
+      this.wholesaleTiersArray.push(
+        this.fb.group({
+          title: [tier.title, Validators.required],
+          price: [String(tier.price), Validators.required],
+        })
+      );
+    });
   }
 
   public setPhoto(url: string | string[]) {
@@ -195,6 +252,8 @@ export default class Save implements OnInit {
       pricePromotional: this.form.controls.pricePromotional.value!,
       stock: this.form.controls.stock.value,
       categoryIds: this.form.controls.categoryIds.value!,
+      isWholesale: this.form.controls.isWholesale.value ?? false,
+      wholesaleTiers: this.wholesaleTiersArray.value ?? [],
     };
     if (this.isCreate()) {
       const product = await this.productFacade.create(body);

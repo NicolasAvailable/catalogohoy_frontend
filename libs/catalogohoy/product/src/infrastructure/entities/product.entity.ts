@@ -14,4 +14,6 @@ export interface ProductEntity {
   product_categories: CategoryEntity[];
   created_at: string;
   position: number;
+  is_wholesale: boolean;
+  wholesale_tiers: { title: string; price: number }[];
 }

@@ -28,16 +28,31 @@ export class ProductCard {
     return p.stock !== null && Number(p.stock) <= 0;
   });
 
+  public readonly isWholesale = computed(() => this.product().isWholesale);
+
+  public readonly minWholesalePrice = computed(() => {
+    const tiers = this.product().wholesaleTiers;
+    if (!tiers.length) return this.product().price;
+    return Math.min(...tiers.map((t) => t.price));
+  });
+
   public readonly availableStock = computed(() => {
     const p = this.product();
     return p.stock !== null ? Number(p.stock) : null;
   });
 
   public readonly cartQuantity = computed(() => {
+    const items = this.cartStore
+      .items()
+      .filter((i) => i.productId === String(this.product().id));
+    return items.reduce((sum, i) => sum + i.quantity, 0);
+  });
+
+  private readonly cartItemId = computed(() => {
     const item = this.cartStore
       .items()
       .find((i) => i.productId === String(this.product().id));
-    return item?.quantity ?? 0;
+    return item?.id ?? null;
   });
 
   public readonly canIncrement = computed(() => {
@@ -69,13 +84,15 @@ export class ProductCard {
   onIncrement(event: Event) {
     event.preventDefault();
     event.stopPropagation();
-    this.cartStore.incrementItem(String(this.product().id));
+    const id = this.cartItemId();
+    if (id) this.cartStore.incrementItem(id);
   }
 
   onDecrement(event: Event) {
     event.preventDefault();
     event.stopPropagation();
-    this.cartStore.decrementItem(String(this.product().id));
+    const id = this.cartItemId();
+    if (id) this.cartStore.decrementItem(id);
   }
 
   get hasDiscount(): boolean {

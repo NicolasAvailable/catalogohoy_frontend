@@ -261,22 +261,27 @@ export class EcommerceService implements BaseEcommerceService {
   private async deductStock(
     products: { productId: string; quantity: number }[]
   ): Promise<void> {
-    for (const item of products) {
-      // Get current stock
+    // Agrupar cantidades por productId para evitar condiciones de carrera
+    // cuando un mismo producto tiene múltiples escalas (wholesale tiers)
+    const grouped = products.reduce<Record<string, number>>((acc, item) => {
+      acc[item.productId] = (acc[item.productId] ?? 0) + item.quantity;
+      return acc;
+    }, {});
+
+    for (const [productId, totalQuantity] of Object.entries(grouped)) {
       const { data: product } = await this.client
         .from('products')
         .select('stock')
-        .eq('id', item.productId)
+        .eq('id', productId)
         .single();
 
-      // Only deduct if product has limited stock (stock is not null)
       if (product && product.stock !== null) {
         const currentStock = Number(product.stock);
-        const newStock = Math.max(0, currentStock - item.quantity);
+        const newStock = Math.max(0, currentStock - totalQuantity);
         await this.client
           .from('products')
           .update({ stock: newStock })
-          .eq('id', item.productId);
+          .eq('id', productId);
       }
     }
   }

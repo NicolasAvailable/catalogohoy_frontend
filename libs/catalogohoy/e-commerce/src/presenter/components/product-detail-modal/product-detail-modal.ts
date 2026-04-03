@@ -5,7 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { Product } from '@catalogohoy/product';
+import { Product, WholesaleTier } from '@catalogohoy/product';
 import { DynamicDialogConfig, DynamicDialogRef, IconComponent } from '@ui';
 import { CartStore } from '../../../infrastructure';
 
@@ -24,6 +24,9 @@ export class ProductDetailModal {
   public readonly product: Product = this.config.data.product;
   public readonly currentImageIndex = signal(0);
   public readonly quantity = signal(1);
+
+  public readonly isWholesale =
+    this.product.isWholesale && this.product.wholesaleTiers.length > 0;
 
   public readonly isOutOfStock =
     this.product.stock !== null && Number(this.product.stock) <= 0;
@@ -85,6 +88,12 @@ export class ProductDetailModal {
     for (let i = 0; i < this.quantity(); i++) {
       this.cartStore.addProduct(this.product);
     }
+    this.cartStore.openCart();
+    this.ref.close();
+  }
+
+  onAddTierToCart(tier: WholesaleTier) {
+    this.cartStore.addWholesaleProduct(this.product, tier);
     this.cartStore.openCart();
     this.ref.close();
   }

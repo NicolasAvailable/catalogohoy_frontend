@@ -23,6 +23,8 @@ export class ProductListMapper {
           sku: entity.sku,
           productionCost: entity.production_cost,
           position: entity.position ?? 0,
+          isWholesale: entity.is_wholesale ?? false,
+          wholesaleTiers: entity.wholesale_tiers ?? [],
         })
       )
     );

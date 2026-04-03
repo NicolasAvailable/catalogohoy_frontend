@@ -2,12 +2,16 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   position: relative;
-  min-height: 420px;
+  min-height: 26.25rem;  /* 420px */
+  border-radius: 0.75rem;
+  overflow: hidden;
 }
 
 @media (max-width: 600px) {
   .pdm {
     grid-template-columns: 1fr;
+    max-height: 85vh;
+    overflow-y: auto;
   }
 }
 
@@ -285,4 +289,63 @@
 
 .pdm__add-btn--disabled:hover {
   background: var(--color-grey-200);
+}
+
+/* Wholesale tiers */
+.pdm__tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pdm__tiers-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-grey-500);
+}
+
+.pdm__tier {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  border: 0.0625rem solid var(--color-grey-100);
+  border-radius: 0.5rem;
+}
+
+.pdm__tier-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.pdm__tier-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-grey-600);
+}
+
+.pdm__tier-price {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-grey-800);
+}
+
+.pdm__tier-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  background: var(--color-primary-500);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pdm__tier-btn:hover {
+  background: var(--color-primary-600);
 }

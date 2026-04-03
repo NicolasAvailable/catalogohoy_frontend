@@ -23,15 +23,15 @@ export class CartDrawer {
   }
 
   onIncrement(item: CartItem) {
-    this.cartStore.incrementItem(item.productId);
+    this.cartStore.incrementItem(item.id);
   }
 
   onDecrement(item: CartItem) {
-    this.cartStore.decrementItem(item.productId);
+    this.cartStore.decrementItem(item.id);
   }
 
   onRemove(item: CartItem) {
-    this.cartStore.removeItem(item.productId);
+    this.cartStore.removeItem(item.id);
   }
 
   onProceedToCheckout() {

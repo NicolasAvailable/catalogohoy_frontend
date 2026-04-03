@@ -1,5 +1,5 @@
 import { computed } from '@angular/core';
-import { Product } from '@catalogohoy/product';
+import { Product, WholesaleTier } from '@catalogohoy/product';
 import {
   patchState,
   signalStore,
@@ -41,6 +41,7 @@ function saveCartToStorage(cart: Cart): void {
       price: item.price,
       photo: item.photo,
       quantity: item.quantity,
+      tierTitle: item.tierTitle,
     }));
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   } catch {
@@ -65,16 +66,16 @@ export const CartStore = signalStore(
   })),
   withMethods((store) => ({
     addProduct(product: Product) {
-      // Check stock before adding
       if (product.stock !== null) {
         const stock = Number(product.stock);
         if (stock <= 0) {
           toast.error('Este producto está agotado');
           return;
         }
-        const currentInCart =
-          store.cart().items.find((i) => i.productId === String(product.id))
-            ?.quantity ?? 0;
+        const currentInCart = store
+          .cart()
+          .items.filter((i) => i.productId === String(product.id))
+          .reduce((sum, i) => sum + i.quantity, 0);
         if (currentInCart >= stock) {
           toast.error('No hay más stock disponible de este producto');
           return;
@@ -94,26 +95,57 @@ export const CartStore = signalStore(
       patchState(store, () => ({ cart: newCart }));
     },
 
-    removeItem(productId: string) {
-      const newCart = store.cart().removeItem(productId);
+    addWholesaleProduct(product: Product, tier: WholesaleTier) {
+      if (product.stock !== null) {
+        const stock = Number(product.stock);
+        if (stock <= 0) {
+          toast.error('Este producto está agotado');
+          return;
+        }
+        const currentInCart = store
+          .cart()
+          .items.filter((i) => i.productId === String(product.id))
+          .reduce((sum, i) => sum + i.quantity, 0);
+        if (currentInCart >= stock) {
+          toast.error('No hay más stock disponible de este producto');
+          return;
+        }
+      }
+
+      const item = new CartItem(
+        String(product.id),
+        `${product.name} (${tier.title})`,
+        product.description,
+        tier.price,
+        product.photos[0] || '',
+        1,
+        tier.title
+      );
+      const newCart = store.cart().addItem(item);
       saveCartToStorage(newCart);
       patchState(store, () => ({ cart: newCart }));
     },
 
-    incrementItem(productId: string) {
-      const newCart = store.cart().incrementItem(productId);
+    removeItem(itemId: string) {
+      const newCart = store.cart().removeItem(itemId);
       saveCartToStorage(newCart);
       patchState(store, () => ({ cart: newCart }));
     },
 
-    decrementItem(productId: string) {
-      const newCart = store.cart().decrementItem(productId);
+    incrementItem(itemId: string) {
+      const newCart = store.cart().incrementItem(itemId);
       saveCartToStorage(newCart);
       patchState(store, () => ({ cart: newCart }));
     },
 
-    updateQuantity(productId: string, quantity: number) {
-      const newCart = store.cart().updateQuantity(productId, quantity);
+    decrementItem(itemId: string) {
+      const newCart = store.cart().decrementItem(itemId);
+      saveCartToStorage(newCart);
+      patchState(store, () => ({ cart: newCart }));
+    },
+
+    updateQuantity(itemId: string, quantity: number) {
+      const newCart = store.cart().updateQuantity(itemId, quantity);
       saveCartToStorage(newCart);
       patchState(store, () => ({ cart: newCart }));
     },

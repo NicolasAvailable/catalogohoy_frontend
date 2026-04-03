@@ -54,6 +54,20 @@
   color: var(--color-grey-200);
 }
 
+.product-card__wholesale-tag {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 2;
+  background: var(--color-primary-500);
+  color: white;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.3125rem 0.625rem;
+  border-radius: 0.375rem;
+  letter-spacing: 0.02em;
+}
+
 .product-card__content {
   padding-top: 1rem;
 }
@@ -95,9 +109,42 @@
 
 .product-card__price {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
   margin-top: 0.625rem;
+}
+
+/* Wholesale tiers in card */
+.product-card__wholesale-tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+}
+
+.product-card__wholesale-tier {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.product-card__wholesale-tier-title {
+  font-size: 0.8125rem;
+  color: var(--color-grey-400);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.product-card__wholesale-tier-price {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-grey-600);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .product-card__actions {
@@ -123,6 +170,16 @@
 
 .product-card__add-full-btn:hover {
   background: var(--color-primary-600);
+}
+
+.product-card__add-full-btn--outline {
+  background: transparent;
+  color: var(--color-primary-500);
+  border: 0.1rem solid var(--color-primary-500);
+}
+
+.product-card__add-full-btn--outline:hover {
+  background: color-mix(in srgb, var(--color-primary-500) 8%, transparent);
 }
 
 .product-card__quantity {

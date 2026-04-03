@@ -161,6 +161,8 @@ export class ProductExcelService {
       sku: row.sku,
       productionCost:
         row.productionCost != null ? String(row.productionCost) : null,
+      isWholesale: false,
+      wholesaleTiers: [],
     };
 
     return this.productService.create(input);

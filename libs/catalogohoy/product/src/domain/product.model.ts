@@ -1,6 +1,11 @@
 import { CategoryList } from '@catalogohoy/category';
 import { Entity } from '@shared/domain';
 
+export interface WholesaleTier {
+  title: string;
+  price: number;
+}
+
 export class Product extends Entity {
   constructor(
     public readonly name: string,
@@ -14,7 +19,9 @@ export class Product extends Entity {
     public readonly createdAt: string,
     public readonly sku: string | null,
     public readonly productionCost: number | null,
-    public readonly position: number
+    public readonly position: number,
+    public readonly isWholesale: boolean,
+    public readonly wholesaleTiers: WholesaleTier[]
   ) {
     super();
   }
@@ -32,7 +39,9 @@ export class Product extends Entity {
       primitives.createdAt,
       primitives.sku,
       primitives.productionCost,
-      primitives.position
+      primitives.position,
+      primitives.isWholesale,
+      primitives.wholesaleTiers
     ).withId(primitives.id);
   }
 }
@@ -51,4 +60,6 @@ export interface ProductPrimitives {
   sku: string | null;
   productionCost: number | null;
   position: number;
+  isWholesale: boolean;
+  wholesaleTiers: WholesaleTier[];
 }

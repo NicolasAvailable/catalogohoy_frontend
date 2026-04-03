@@ -8,6 +8,8 @@ export type CreateProductInput = {
   categoryIds: string[];
   sku: string | null;
   productionCost: string | null;
+  isWholesale: boolean;
+  wholesaleTiers: { title: string; price: string }[];
 };
 
 export type UpdateProductInput = CreateProductInput & { id: string; position?: number };

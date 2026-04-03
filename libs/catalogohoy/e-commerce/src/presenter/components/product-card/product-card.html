@@ -21,6 +21,9 @@
         <span class="product-card__sold-out-badge">Agotado</span>
       </div>
       }
+      @if (isWholesale()) {
+      <span class="product-card__wholesale-tag">Al mayor</span>
+      }
     </div>
   </button>
 
@@ -35,7 +38,16 @@
     <p class="product-card__description">{{ product().description }}</p>
 
     <div class="product-card__price">
-      @if (product().pricePromotional > 0) {
+      @if (isWholesale() && product().wholesaleTiers.length > 0) {
+      <div class="product-card__wholesale-tiers">
+        @for (tier of product().wholesaleTiers.slice(0, 3); track $index) {
+        <div class="product-card__wholesale-tier">
+          <span class="product-card__wholesale-tier-title">{{ tier.title }}</span>
+          <span class="product-card__wholesale-tier-price">${{ tier.price }}</span>
+        </div>
+        }
+      </div>
+      } @else if (product().pricePromotional > 0) {
       <span class="product-card__price-original">${{ product().price }}</span>
       <span class="product-card__price-promo"
         >${{ product().pricePromotional }}</span
@@ -54,6 +66,15 @@
       >
         <ui-icon name="package-x" styleClass="size-5" />
         Agotado
+      </button>
+      } @else if (isWholesale()) {
+      <button
+        type="button"
+        class="product-card__add-full-btn product-card__add-full-btn--outline"
+        (click)="openModal($event)"
+      >
+        <ui-icon name="eye" styleClass="size-5" />
+        Ver más
       </button>
       } @else if (cartQuantity() === 0) {
       <button
