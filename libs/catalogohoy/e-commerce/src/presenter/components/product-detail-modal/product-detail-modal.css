@@ -51,7 +51,7 @@
 
 /* Gallery */
 .pdm__gallery {
-  background: var(--color-grey-50);
+  background: white;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
