@@ -1,27 +1,23 @@
-<div class="h-full flex flex-col gap-6 px-6 pb-6 mt-4">
+<div class="flex flex-col gap-4 sm:gap-6 px-4 sm:px-6 pb-6 mt-4 sm:h-full">
   <!-- Header -->
-  <header class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+  <header class="flex items-start justify-between gap-4">
     <div>
-      <h1 class="text-3xl font-bold text-grey-800 mb-1">Clientes</h1>
-      <p class="text-grey-400">
+      <h1 class="text-2xl sm:text-3xl font-bold text-grey-800 mb-1">Clientes</h1>
+      <p class="text-sm sm:text-base text-grey-400">
         Clientes únicos vinculados a tus órdenes por número de teléfono
       </p>
     </div>
-    <div class="flex items-center gap-2">
-      <span class="text-sm text-grey-400 font-medium">
-        Total {{ totalClients() }}
-      </span>
-    </div>
+    <span class="text-sm text-grey-400 font-medium shrink-0">
+      Total {{ totalClients() }}
+    </span>
   </header>
 
   <!-- Main Card Container -->
   <div
-    class="bg-white border border-grey-100 rounded-xl shadow-sm overflow-hidden flex-1 flex flex-col"
+    class="bg-white border border-grey-100 rounded-xl shadow-sm overflow-hidden sm:flex-1 flex flex-col"
   >
     <!-- Search Row -->
-    <div
-      class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-grey-50"
-    >
+    <div class="p-4 border-b border-grey-50">
       <div class="relative flex-1 max-w-md">
         <ui-input-search
           placeholder="Buscar por nombre o teléfono..."
@@ -34,8 +30,84 @@
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="overflow-auto flex-1">
+    <!-- Mobile List -->
+    <div class="sm:hidden overflow-y-auto max-h-125">
+      @if (clientStore.isLoading()) {
+        <div class="p-4 flex flex-col gap-3">
+          @for (_ of [1, 2, 3, 4, 5]; track $index) {
+          <div class="animate-pulse rounded-lg p-4 flex flex-col gap-2">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 bg-grey-100 rounded-full"></div>
+              <div class="h-4 w-28 bg-grey-100 rounded"></div>
+            </div>
+            <div class="h-3 w-32 bg-grey-100 rounded"></div>
+          </div>
+          }
+        </div>
+      } @else {
+        @for (client of filteredClients(); track client.phone) {
+        <div
+          (click)="navigateToClient(client)"
+          class="border-b border-grey-50 px-4 py-3 flex gap-3 cursor-pointer active:bg-grey-25"
+        >
+          <div class="flex-1 flex flex-col gap-1 min-w-0 text-xs">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
+                <span class="text-xs font-bold text-primary-600">{{ client.name.charAt(0).toUpperCase() }}</span>
+              </div>
+              <span class="font-semibold text-grey-800 text-sm truncate">{{ client.name }}</span>
+            </div>
+            <div>
+              <span class="text-grey-800 font-bold">Teléfono: </span>
+              <a
+                [href]="getWhatsAppLink(client.phone)"
+                target="_blank"
+                (click)="$event.stopPropagation()"
+                class="text-green-600 font-medium"
+              >{{ client.phone }}</a>
+            </div>
+            <div>
+              <span class="text-grey-800 font-bold">Pedidos: </span>
+              <span class="text-primary-600 font-bold">{{ client.totalOrders }}</span>
+            </div>
+            <div>
+              <span class="text-grey-800 font-bold">Total: </span>
+              <span class="font-bold text-primary-600">${{ client.totalSpentUsd | number:'1.2-2' }}</span>
+            </div>
+            @if (client.totalSpentBs) {
+            <div>
+              <span class="text-grey-800 font-bold">Total Bs: </span>
+              <span class="font-bold text-primary-600">Bs. {{ client.totalSpentBs | number:'1.2-2' }}</span>
+            </div>
+            }
+            <div>
+              <span class="text-grey-800 font-bold">Último pedido: </span>
+              <span class="text-grey-500">{{ formatDate(client.lastOrderAt) }}</span>
+            </div>
+          </div>
+          <div class="flex items-center shrink-0">
+            <div class="flex items-center gap-1 text-primary-500">
+              <ui-icon name="eye" styleClass="size-3.5" />
+              <span class="text-xs font-medium">Ver detalles</span>
+            </div>
+          </div>
+        </div>
+        } @empty {
+        <div class="flex-1 flex flex-col items-center justify-center py-16 text-center px-4">
+          <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
+            <ui-icon name="users" styleClass="size-8 text-primary-400" />
+          </div>
+          <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes clientes todavía</h3>
+          <p class="text-grey-300 text-sm mb-6 max-w-sm">
+            Cuando tus clientes realicen pedidos con número de teléfono, aparecerán aquí automáticamente.
+          </p>
+        </div>
+        }
+      }
+    </div>
+
+    <!-- Desktop Table -->
+    <div class="hidden sm:block overflow-auto sm:flex-1 sm:min-h-0">
       <table class="w-full text-left">
         <thead class="sticky top-0 z-10 bg-white">
           <tr
@@ -82,7 +154,6 @@
                 (click)="navigateToClient(client)"
                 class="hover:bg-grey-25 transition-colors cursor-pointer group"
               >
-                <!-- Cliente -->
                 <td class="px-6 py-3.5">
                   <div class="flex items-center gap-3">
                     <div
@@ -97,7 +168,6 @@
                     }}</span>
                   </div>
                 </td>
-                <!-- Teléfono -->
                 <td class="px-6 py-3.5">
                   <a
                     [href]="getWhatsAppLink(client.phone)"
@@ -109,15 +179,13 @@
                     <span class="text-sm font-medium">{{ client.phone }}</span>
                   </a>
                 </td>
-                <!-- Pedidos -->
                 <td class="px-6 py-3.5 text-center">
                   <span
-                    class="inline-flex items-center justify-center min-w-[1.75rem] px-2 py-0.5 rounded-full bg-primary-50 text-primary-600 text-xs font-bold"
+                    class="inline-flex items-center justify-center min-w-7 px-2 py-0.5 rounded-full bg-primary-50 text-primary-600 text-xs font-bold"
                   >
                     {{ client.totalOrders }}
                   </span>
                 </td>
-                <!-- Total gastado -->
                 <td class="px-6 py-3.5">
                   <div class="flex flex-col">
                     <span class="text-sm font-bold text-primary-600">
@@ -128,7 +196,6 @@
                     </span>
                   </div>
                 </td>
-                <!-- Último pedido -->
                 <td class="px-6 py-3.5 text-grey-500 text-sm">
                   {{ formatDate(client.lastOrderAt) }}
                 </td>
@@ -136,16 +203,14 @@
             } @empty {
               <tr>
                 <td colspan="5">
-                  <div class="py-12">
-                    <ui-empty-list
-                      [isLoading]="false"
-                      [hasItems]="false"
-                      label="No tienes clientes todavía"
-                      description="Cuando tus clientes realicen pedidos con número de teléfono, aparecerán aquí automáticamente."
-                      icon="users"
-                      cta=""
-                      [isScreenView]="false"
-                    />
+                  <div class="flex flex-col items-center justify-center py-16 text-center px-4">
+                    <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
+                      <ui-icon name="users" styleClass="size-8 text-primary-400" />
+                    </div>
+                    <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes clientes todavía</h3>
+                    <p class="text-grey-300 text-sm mb-6 max-w-sm">
+                      Cuando tus clientes realicen pedidos con número de teléfono, aparecerán aquí automáticamente.
+                    </p>
                   </div>
                 </td>
               </tr>
