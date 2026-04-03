@@ -1,5 +1,7 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { DiscordWebhookService } from '@catalogohoy/core';
+import { TenantStore } from '@catalogohoy/tenant';
 import { IconComponent } from '@ui';
 import {
   BillingPeriod,
@@ -120,6 +122,8 @@ function toPlanDisplay(plan: Plan, currentPlanPosition: number): PlanDisplay {
 export class Plans implements OnInit {
   public readonly planStore = inject(PlanStore);
   private readonly router = inject(Router);
+  private readonly tenantStore = inject(TenantStore);
+  private readonly discord = inject(DiscordWebhookService);
 
   public readonly billingPeriod = signal<BillingPeriod>('monthly');
 
@@ -175,6 +179,13 @@ export class Plans implements OnInit {
 
   public selectPlan(plan: PlanDisplay): void {
     if (plan.isCurrent || plan.isFree) return;
+
+    this.discord.notifyCheckoutIntent({
+      tenantName: this.tenantStore.tenantName(),
+      tenantSlug: this.tenantStore.tenantSlug(),
+      planName: plan.name,
+      billingPeriod: this.billingPeriod(),
+    });
 
     this.router.navigate(['/admin/plans/checkout', plan.id], {
       queryParams: {

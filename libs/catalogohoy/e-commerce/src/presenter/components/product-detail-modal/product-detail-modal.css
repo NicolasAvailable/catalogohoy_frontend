@@ -10,8 +10,16 @@
 @media (max-width: 600px) {
   .pdm {
     grid-template-columns: 1fr;
-    max-height: 85vh;
+    max-height: 90vh;
     overflow-y: auto;
+  }
+
+  .pdm__gallery {
+    padding: 0.75rem;
+  }
+
+  .pdm__main-image {
+    aspect-ratio: 4 / 3;
   }
 }
 
@@ -21,22 +29,24 @@
   top: 0.75rem;
   right: 0.75rem;
   z-index: 10;
-  width: 2rem;
-  height: 2rem;
+  width: 2.5rem;
+  height: 2.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: white;
-  border: 1px solid var(--color-grey-200);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(0.25rem);
+  border: none;
   border-radius: 50%;
   cursor: pointer;
-  color: var(--color-grey-400);
+  color: white;
   transition: all 0.2s;
+  box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.15);
 }
 
 .pdm__close:hover {
-  border-color: var(--color-grey-400);
-  color: var(--color-grey-700);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
 }
 
 /* Gallery */

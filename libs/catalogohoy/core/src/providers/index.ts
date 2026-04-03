@@ -1,3 +1,4 @@
+export * from './discord/discord-webhook';
 export * from './icons/icons.provider';
 export * from './meta-pixel/meta-pixel.provider';
 export * from './posthog/posthog.provider';
