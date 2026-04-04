@@ -81,7 +81,7 @@ export const PlanStore = signalStore(
       if (!expiresAt || store.isFreePlan() || store.planExpired()) return false;
       const diff = new Date(expiresAt).getTime() - Date.now();
       const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-      return true;
+      return days;
     }),
   })),
   withMethods(
