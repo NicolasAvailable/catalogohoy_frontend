@@ -10,6 +10,7 @@ export class TenantMapper {
       isDefault: entity.is_default,
       role: entity.role,
       logo: entity.logo ?? null,
+      customDomain: entity.custom_domain ?? null,
     });
   }
 }

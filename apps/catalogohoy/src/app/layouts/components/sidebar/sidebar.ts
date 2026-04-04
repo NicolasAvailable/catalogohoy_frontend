@@ -5,7 +5,7 @@ import { AuthenticationService } from '@catalogohoy/auth';
 import { PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { ProfileStore } from '@catalogohoy/profile';
-import { Tenant, TenantStore } from '@catalogohoy/tenant';
+import { Tenant, TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import {
   AvatarComponent,
@@ -93,14 +93,8 @@ export class Sidebar {
   public readonly allTenants = computed(() => this.profileStore.profile().tenantList.tenants);
   public readonly isOwner = computed(() => this.permissionsStore.isOwner());
 
-  // Slug derivado del subdominio actual (tech-fone en tech-fone.catalogohoy.com)
-  private readonly subdomainSlug: string = (() => {
-    const parts = window.location.hostname.split('.');
-    return parts.length >= 3 ? parts[0] : '';
-  })();
-
   public readonly currentTenantSlug = computed(() =>
-    this.subdomainSlug || this.tenantStore.tenantSlug() || ''
+    getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || ''
   );
 
   public readonly currentTenant = computed(() => {
@@ -115,7 +109,7 @@ export class Sidebar {
 
   public openTenantCatalog(tenant: Tenant) {
     if (tenant.slug === this.currentTenantSlug()) return;
-    window.open(this.authService.buildTenantAdminUrl(tenant.slug), '_blank');
+    window.open(this.authService.buildTenantAdminUrl(tenant.slug, tenant.customDomain), '_blank');
     this.showCatalogSwitcher.set(false);
   }
 

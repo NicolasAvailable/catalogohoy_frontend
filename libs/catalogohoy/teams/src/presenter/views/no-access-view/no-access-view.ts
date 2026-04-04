@@ -20,7 +20,7 @@ export default class NoAccessViewComponent {
   protected goToOwnStore(): void {
     const tenant = this.ownTenant();
     if (tenant) {
-      window.location.href = `https://${tenant.slug}.catalogohoy.com/admin`;
+      window.location.href = `${tenant.url}/admin`;
     }
   }
 

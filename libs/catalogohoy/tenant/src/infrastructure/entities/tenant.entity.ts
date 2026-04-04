@@ -7,4 +7,5 @@ export interface TenantEntity {
   slug: string;
   is_default: boolean;
   logo?: string | null;
+  custom_domain?: string | null;
 }

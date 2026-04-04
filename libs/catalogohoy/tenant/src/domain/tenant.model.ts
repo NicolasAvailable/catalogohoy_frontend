@@ -6,12 +6,16 @@ export class Tenant extends Entity {
     public readonly slug: string,
     public readonly isDefault: boolean,
     public readonly role: TenantRol,
-    public readonly logo: string | null = null
+    public readonly logo: string | null = null,
+    public readonly customDomain: string | null = null
   ) {
     super();
   }
 
   public get url(): string {
+    if (this.customDomain) {
+      return `https://${this.customDomain}`;
+    }
     return `https://${this.slug}.catalogohoy.com`;
   }
 
@@ -21,12 +25,13 @@ export class Tenant extends Entity {
       primitives.slug,
       primitives.isDefault,
       primitives.role,
-      primitives.logo ?? null
+      primitives.logo ?? null,
+      primitives.customDomain ?? null
     ).withId(primitives.id);
   }
 
   static empty() {
-    return new Tenant('', '', false, 'member', null);
+    return new Tenant('', '', false, 'member', null, null);
   }
 }
 
@@ -37,5 +42,6 @@ export interface TenantPrimitives {
   isDefault: boolean;
   role: TenantRol;
   logo?: string | null;
+  customDomain?: string | null;
 }
 export type TenantRol = 'owner' | 'admin' | 'member';

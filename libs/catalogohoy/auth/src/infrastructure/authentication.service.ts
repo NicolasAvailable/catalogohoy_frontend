@@ -39,7 +39,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    return E.right(this._buildRedirectUrl(tenant.slug));
+    return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
   public async signup(
@@ -69,7 +69,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    return E.right(this._buildRedirectUrl(tenant.slug));
+    return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
   public async forgottenPassword(input: ForgottenPasswordCredentials) {
@@ -136,20 +136,21 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (error) return E.left(new Error(error.message));
     if (!tenantRows?.length) return E.left(new Error('no_tenant'));
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    return E.right(this._buildRedirectUrl(tenant.slug));
+    return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
-  public buildTenantAdminUrl(slug: string): string {
-    return this._buildRedirectUrl(slug);
+  public buildTenantAdminUrl(slug: string, customDomain?: string | null): string {
+    return this._buildRedirectUrl(slug, customDomain);
   }
 
-  private _buildRedirectUrl(slug: string): string {
+  private _buildRedirectUrl(slug: string, customDomain?: string | null): string {
     const key = this.authenticationTokenService.AUTH_CONFIG_KEY;
     const value = encodeURIComponent(this.authenticationTokenService.authConfigValue ?? '');
     if (isDevMode()) {
       return `http://localhost:4200/admin?${key}=${value}`;
     }
-    return `https://${slug}.catalogohoy.com/admin?${key}=${value}`;
+    const host = customDomain ?? `${slug}.catalogohoy.com`;
+    return `https://${host}/admin?${key}=${value}`;
   }
 
   public async completeGoogleSignup(

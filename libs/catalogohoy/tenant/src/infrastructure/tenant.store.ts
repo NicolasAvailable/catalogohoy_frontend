@@ -8,6 +8,7 @@ import {
   withState,
 } from '@ngrx/signals';
 import { TenantList } from '../domain';
+import { getTenantSlugFromUrl } from '../presenter';
 
 export type TenantInfo = {
   tenantId: number | null;
@@ -111,11 +112,8 @@ export const TenantStore = signalStore(
           )
           .eq('user_id', userData.id);
 
-        // Aplicar prioridad: subdominio actual > is_default > primero de la lista
-        const subdomainSlug = (() => {
-          const parts = window.location.hostname.split('.');
-          return parts.length >= 3 ? parts[0] : null;
-        })();
+        // Aplicar prioridad: slug actual (subdominio o dominio custom) > is_default > primero
+        const subdomainSlug = getTenantSlugFromUrl();
 
         type TenantLink = {
           tenant_id: number;
@@ -230,9 +228,8 @@ export const TenantStore = signalStore(
 
       // Método para recibir el TenantList desde ProfileStore
       setFromProfile(tenantList: TenantList, userId?: number): void {
-        // Prioridad: subdominio actual > is_default > primero de la lista
-        const parts = window.location.hostname.split('.');
-        const currentSlug = parts.length >= 3 ? parts[0] : null;
+        // Prioridad: slug actual (subdominio o dominio custom) > is_default > primero
+        const currentSlug = getTenantSlugFromUrl();
         const subdomainTenant = currentSlug
           ? tenantList.items.find((t) => t.slug === currentSlug)
           : null;
