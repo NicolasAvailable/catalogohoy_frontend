@@ -91,9 +91,8 @@
 /* Scroll animation */
 :host ::ng-deep lib-product-card {
   opacity: 0;
-  transform: translateY(0.75rem);
-  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(0.5rem);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
 
 :host ::ng-deep lib-product-card.catalog__animate-enter {
@@ -155,11 +154,21 @@
   flex-shrink: 0;
 }
 
-.catalog__category-pill-skeleton:nth-child(1) { width: 72px; }
-.catalog__category-pill-skeleton:nth-child(2) { width: 88px; }
-.catalog__category-pill-skeleton:nth-child(3) { width: 64px; }
-.catalog__category-pill-skeleton:nth-child(4) { width: 96px; }
-.catalog__category-pill-skeleton:nth-child(5) { width: 80px; }
+.catalog__category-pill-skeleton:nth-child(1) {
+  width: 72px;
+}
+.catalog__category-pill-skeleton:nth-child(2) {
+  width: 88px;
+}
+.catalog__category-pill-skeleton:nth-child(3) {
+  width: 64px;
+}
+.catalog__category-pill-skeleton:nth-child(4) {
+  width: 96px;
+}
+.catalog__category-pill-skeleton:nth-child(5) {
+  width: 80px;
+}
 
 /* Search skeleton (mobile) */
 .catalog__search-skeleton {
