@@ -105,6 +105,12 @@ export class CheckoutDrawer {
 
     message += `\n*Total:* $${total}`;
 
+    const exchangeRate = this.ecommerceStore.exchangeRate();
+    if (exchangeRate > 0) {
+      const totalBs = (total * exchangeRate).toFixed(2);
+      message += ` (Bs. ${totalBs})`;
+    }
+
     if (this.comments()) {
       message += `\n\n*Comentarios:* ${this.comments()}`;
     }

@@ -12,6 +12,7 @@ import {
   CatalogInfo,
   Category,
   PaginatedProductList,
+  PublicCatalogData,
 } from '../domain';
 
 @Injectable({
@@ -20,45 +21,30 @@ import {
 export class EcommerceService implements BaseEcommerceService {
   private readonly client = SupabaseClientProvider.getInstance();
 
-  public async getCatalogInfo(
+  /**
+   * Single RPC call that returns all public catalog data:
+   * tenant info, ecommerce config, payment methods, business hours,
+   * categories, exchange rate, and plan status.
+   *
+   * Replaces: getCatalogInfo + getCategories + getExchangeRate + checkExpiredBySlug
+   */
+  public async getPublicCatalog(
     slug: string
-  ): Promise<E.Either<Error, CatalogInfo>> {
-    // Obtener información del tenant con su configuración de e-commerce
-    const { data: tenant, error: tenantError } = await this.client
-      .from('tenants')
-      .select('id, name')
-      .eq('slug', slug)
-      .single();
+  ): Promise<E.Either<Error, PublicCatalogData>> {
+    const { data, error } = await this.client.rpc('get_public_catalog', {
+      p_slug: slug,
+    });
 
-    if (tenantError) {
-      return E.left(tenantError);
+    if (error) {
+      return E.left(new Error(error.message));
     }
 
-    // Obtener configuración de e-commerce
-    const { data: config } = await this.client
-      .from('tenant_ecommerce_config')
-      .select(
-        'whatsapp_buttons, logo, banner, is_accepting_orders, theme_color, show_design_section, show_payment_methods_section, description, social_links, template'
-      )
-      .eq('tenant_id', tenant.id)
-      .single();
+    if (!data || data.error) {
+      return E.left(new Error(data?.error ?? 'Catálogo no encontrado'));
+    }
 
-    // Obtener métodos de pago activos desde la tabla dedicada
-    const { data: paymentMethods } = await this.client
-      .from('payment_methods')
-      .select('id, tenant_id, name, icon, is_active, created_at')
-      .eq('tenant_id', tenant.id)
-      .eq('is_active', true)
-      .order('created_at', { ascending: true });
-
-    // Obtener horarios del día actual
-    const dayOfWeek = new Date().getDay(); // 0=Domingo, 1=Lunes, etc.
-    const { data: hours } = await this.client
-      .from('tenant_business_hours')
-      .select('open_time, close_time, is_open')
-      .eq('tenant_id', tenant.id)
-      .eq('day_of_week', dayOfWeek)
-      .single();
+    const config = data.config;
+    const hours = data.business_hours;
 
     // Calcular si está abierto ahora
     const now = new Date();
@@ -78,9 +64,21 @@ export class EcommerceService implements BaseEcommerceService {
         hours.is_open && currentTime >= openTime && currentTime <= closeTime;
     }
 
-    return E.right({
-      id: tenant.id,
-      name: tenant.name,
+    // Calcular tasa de cambio activa
+    let exchangeRate = 0;
+    const er = data.exchange_rate;
+    if (er) {
+      const rateMap: Record<string, number> = {
+        bcv_usd: er.bcv_usd ?? 0,
+        bcv_eur: er.bcv_eur ?? 0,
+        custom: er.custom_rate ?? 0,
+      };
+      exchangeRate = rateMap[er.active_rate] ?? 0;
+    }
+
+    const catalogInfo: CatalogInfo = {
+      id: data.tenant.id,
+      name: data.tenant.name,
       description: config?.description ?? null,
       logo: config?.logo ?? null,
       banner: config?.banner ?? null,
@@ -95,7 +93,7 @@ export class EcommerceService implements BaseEcommerceService {
       isOpen,
       themeColor: config?.theme_color ?? '#10b981',
       showDesignSection: config?.show_design_section ?? true,
-      paymentMethods: (paymentMethods ?? []).map((pm: any) => ({
+      paymentMethods: (data.payment_methods ?? []).map((pm: any) => ({
         id: pm.id,
         tenantId: pm.tenant_id,
         name: pm.name,
@@ -107,7 +105,27 @@ export class EcommerceService implements BaseEcommerceService {
         config?.show_payment_methods_section ?? true,
       socialLinks: (config?.social_links as SocialLinks) ?? DEFAULT_SOCIAL_LINKS,
       template: (config?.template as CatalogTemplate) ?? 'classic',
+    };
+
+    const categories: Category[] = (data.categories ?? []).map((cat: any) => ({
+      id: String(cat.id),
+      name: cat.name,
+    }));
+
+    return E.right({
+      catalogInfo,
+      categories,
+      exchangeRate,
+      planExpired: data.plan?.plan_expired ?? false,
+      isFreePlan: data.plan?.is_free ?? true,
     });
+  }
+
+  public async getCatalogInfo(
+    slug: string
+  ): Promise<E.Either<Error, CatalogInfo>> {
+    const result = await this.getPublicCatalog(slug);
+    return result.mapRight((d) => d.catalogInfo);
   }
 
   public async getProducts(
@@ -116,20 +134,22 @@ export class EcommerceService implements BaseEcommerceService {
     categoryId?: string,
     orderBy?: 'name' | 'price_asc' | 'price_desc',
     page = 1,
-    pageSize = 20
+    pageSize = 20,
+    tenantId?: string
   ): Promise<E.Either<Error, PaginatedProductList>> {
-    // Primero obtener el tenant_id por slug
-    const { data: tenant, error: tenantError } = await this.client
-      .from('tenants')
-      .select('id')
-      .eq('slug', slug)
-      .single();
+    // Use provided tenantId or look it up by slug
+    let resolvedTenantId = tenantId;
+    if (!resolvedTenantId) {
+      const { data: tenant, error: tenantError } = await this.client
+        .from('tenants')
+        .select('id')
+        .eq('slug', slug)
+        .single();
 
-    if (tenantError) {
-      return E.left(tenantError);
+      if (tenantError) return E.left(tenantError);
+      resolvedTenantId = tenant.id;
     }
 
-    // Buscar productos por tenant_id
     let selectQuery = `
       *,
       product_categories (
@@ -137,7 +157,6 @@ export class EcommerceService implements BaseEcommerceService {
       )
     `;
 
-    // Si hay categoryId, usamos inner join para filtrar
     if (categoryId) {
       selectQuery = `
         *,
@@ -151,7 +170,7 @@ export class EcommerceService implements BaseEcommerceService {
     let query = this.client
       .from('products')
       .select(selectQuery, { count: 'exact' })
-      .eq('tenant_id', tenant.id);
+      .eq('tenant_id', resolvedTenantId);
 
     if (search && search.trim().length > 0) {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
@@ -227,42 +246,13 @@ export class EcommerceService implements BaseEcommerceService {
   public async getCategories(
     slug: string
   ): Promise<E.Either<Error, Category[]>> {
-    // Primero obtener el tenant_id por slug
-    const { data: tenant, error: tenantError } = await this.client
-      .from('tenants')
-      .select('id')
-      .eq('slug', slug)
-      .single();
-
-    if (tenantError) {
-      return E.left(tenantError);
-    }
-
-    // Buscar categorías por tenant_id
-    const { data, error } = await this.client
-      .from('categories')
-      .select('id, name')
-      .eq('tenant_id', tenant.id)
-      .eq('is_visible', true)
-      .order('position', { ascending: true });
-
-    if (error) {
-      return E.left(error);
-    }
-
-    return E.right(
-      data.map((cat: any) => ({
-        id: String(cat.id),
-        name: cat.name,
-      }))
-    );
+    const result = await this.getPublicCatalog(slug);
+    return result.mapRight((d) => d.categories);
   }
 
   private async deductStock(
     products: { productId: string; quantity: number }[]
   ): Promise<void> {
-    // Agrupar cantidades por productId para evitar condiciones de carrera
-    // cuando un mismo producto tiene múltiples escalas (wholesale tiers)
     const grouped = products.reduce<Record<string, number>>((acc, item) => {
       acc[item.productId] = (acc[item.productId] ?? 0) + item.quantity;
       return acc;
@@ -286,7 +276,7 @@ export class EcommerceService implements BaseEcommerceService {
     }
   }
 
-  private async getExchangeRate(): Promise<number> {
+  public async getExchangeRate(): Promise<number> {
     const { data, error } = await this.client
       .from('exchange_rates')
       .select('bcv_usd, bcv_eur, custom_rate, active_rate')
@@ -316,7 +306,6 @@ export class EcommerceService implements BaseEcommerceService {
     comments: string;
     payment_method?: string;
   }): Promise<E.Either<Error, void>> {
-    // Obtener la tasa de cambio activa del tenant
     const exchangeRate = await this.getExchangeRate();
     const totalBs = order.total_usd * exchangeRate;
 
@@ -338,7 +327,6 @@ export class EcommerceService implements BaseEcommerceService {
       return E.left(new Error(error.message));
     }
 
-    // Deduct stock for products with limited stock
     await this.deductStock(order.products);
 
     return E.right(undefined);

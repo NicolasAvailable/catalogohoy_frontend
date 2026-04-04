@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { IconComponent } from '@ui';
 import { CartItem } from '../../../domain';
-import { CartStore } from '../../../infrastructure';
+import { CartStore, EcommerceStore } from '../../../infrastructure';
 
 @Component({
   selector: 'lib-cart-drawer',
@@ -13,6 +13,7 @@ import { CartStore } from '../../../infrastructure';
 })
 export class CartDrawer {
   public readonly cartStore = inject(CartStore);
+  public readonly ecommerceStore = inject(EcommerceStore);
 
   onClose() {
     this.cartStore.closeCart();

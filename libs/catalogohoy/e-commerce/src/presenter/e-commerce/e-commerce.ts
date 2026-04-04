@@ -137,11 +137,15 @@ export class ECommerce implements OnInit, OnDestroy {
   async ngOnInit() {
     const slug = getTenantSlugFromUrl();
     if (slug) {
-      this.ecommerceStore.loadCatalog(slug);
-      await this.planStore.checkExpiredBySlug(slug);
+      const result = await this.ecommerceStore.loadCatalog(slug);
 
-      if (!this.planStore.isFreePlan() && !this.planStore.isPlanExpired()) {
-        this.posthogService.enablePublicTracking(slug);
+      // Plan status comes from the same RPC — no extra query needed
+      if (result && 'planExpired' in result) {
+        this.planStore.setPlanPublicStatus(result.planExpired, result.isFreePlan);
+
+        if (!result.isFreePlan && !result.planExpired) {
+          this.posthogService.enablePublicTracking(slug);
+        }
       }
     }
 

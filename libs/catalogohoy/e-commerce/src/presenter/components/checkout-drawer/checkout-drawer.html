@@ -162,7 +162,12 @@
               </div>
               <span>Hacer pedido{{ button.name ? ' (' + button.name + ')' : '' }}</span>
               <div class="checkout-drawer__submit-price">
-                ${{ cartStore.totalPrice() | number:'1.2-2' }}
+                <span>
+                  ${{ cartStore.totalPrice() | number:'1.2-2' }}
+                  @if (ecommerceStore.exchangeRate() > 0) {
+                  <small class="checkout-drawer__submit-bs">Bs. {{ cartStore.totalPrice() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
+                  }
+                </span>
                 <ui-icon name="chevronRight" styleClass="size-5" />
               </div>
               }

@@ -30,7 +30,16 @@ export interface PaginatedProductList {
   totalCount: number;
 }
 
+export interface PublicCatalogData {
+  catalogInfo: CatalogInfo;
+  categories: Category[];
+  exchangeRate: number;
+  planExpired: boolean;
+  isFreePlan: boolean;
+}
+
 export interface BaseEcommerceService {
+  getPublicCatalog(slug: string): Promise<E.Either<Error, PublicCatalogData>>;
   getCatalogInfo(slug: string): Promise<E.Either<Error, CatalogInfo>>;
   getProducts(
     slug: string,
@@ -38,7 +47,8 @@ export interface BaseEcommerceService {
     categoryId?: string,
     orderBy?: 'name' | 'price_asc' | 'price_desc',
     page?: number,
-    pageSize?: number
+    pageSize?: number,
+    tenantId?: string
   ): Promise<E.Either<Error, PaginatedProductList>>;
   getProductById(id: string): Promise<E.Either<Error, Product>>;
   getCategories(slug: string): Promise<E.Either<Error, Category[]>>;

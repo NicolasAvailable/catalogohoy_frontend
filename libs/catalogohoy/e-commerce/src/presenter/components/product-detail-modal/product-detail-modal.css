@@ -10,7 +10,7 @@
 @media (max-width: 600px) {
   .pdm {
     grid-template-columns: 1fr;
-    max-height: 90vh;
+    max-height: 90dvh;
     overflow-y: auto;
   }
 
@@ -182,6 +182,25 @@
   font-size: 1rem;
   color: var(--color-grey-300);
   text-decoration: line-through;
+}
+
+.pdm__price-bs {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-grey-600);
+}
+
+.pdm__tier-price-bs {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-grey-600);
+}
+
+.pdm__total-bs {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .pdm__description {

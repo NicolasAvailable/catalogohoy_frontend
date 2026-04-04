@@ -156,6 +156,19 @@
   color: #374151;
 }
 
+.cart-item__price-bs {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.cart-drawer__checkout-bs {
+  display: block;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
 .cart-item__actions {
   display: flex;
   align-items: center;
@@ -239,6 +252,7 @@
   align-items: center;
   gap: 0.25rem;
   font-weight: 600;
+  font-size: 0.8125rem;
 }
 
 @media (max-width: 640px) {

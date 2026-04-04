@@ -52,8 +52,14 @@
       <span class="product-card__price-promo"
         >${{ product().pricePromotional }}</span
       >
+      @if (ecommerceStore.exchangeRate() > 0) {
+      <span class="product-card__price-bs">Bs. {{ product().pricePromotional * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
+      }
       } @else {
       <span class="product-card__price-current">${{ product().price }}</span>
+      @if (ecommerceStore.exchangeRate() > 0) {
+      <span class="product-card__price-bs">Bs. {{ product().price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
+      }
       }
     </div>
 

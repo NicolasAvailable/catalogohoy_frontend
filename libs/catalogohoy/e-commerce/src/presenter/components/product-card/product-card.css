@@ -236,6 +236,13 @@
   color: var(--color-grey-600);
 }
 
+.product-card__price-bs {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-grey-600);
+  width: 100%;
+}
+
 /* Out of stock */
 .product-card--out-of-stock {
   opacity: 0.65;

@@ -146,6 +146,10 @@ export const PlanStore = signalStore(
         );
       },
 
+      setPlanPublicStatus(planExpired: boolean, isFreePlan: boolean) {
+        patchState(store, { planExpired, isFreePlan });
+      },
+
       /** Add extra catalog slots to the active subscription. Returns error message or null. */
       async addCatalogSlots(
         additionalQuantity: number

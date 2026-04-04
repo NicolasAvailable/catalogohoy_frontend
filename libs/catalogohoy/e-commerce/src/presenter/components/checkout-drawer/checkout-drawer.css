@@ -271,6 +271,13 @@
   align-items: center;
   gap: 0.25rem;
   font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.checkout-drawer__submit-bs {
+  display: block;
+  font-size: inherit;
+  font-weight: inherit;
 }
 
 /* Order success screen */

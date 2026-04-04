@@ -27,6 +27,7 @@ type EcommerceState = {
   hasMore: boolean;
   previewOverrides: Partial<CatalogInfo> | null;
   isPreviewMode: boolean;
+  exchangeRate: number;
 };
 
 const initialState: EcommerceState = {
@@ -44,6 +45,7 @@ const initialState: EcommerceState = {
   hasMore: true,
   previewOverrides: null,
   isPreviewMode: false,
+  exchangeRate: 0,
 };
 
 export const EcommerceStore = signalStore(
@@ -63,22 +65,32 @@ export const EcommerceStore = signalStore(
       patchState(store, () => ({ isLoading: true }));
 
       try {
-        const [catalogResult, productsResult, categoriesResult] =
-          await Promise.all([
-            ecommerceService.getCatalogInfo(slug),
-            ecommerceService.getProducts(
-              slug,
-              undefined,
-              undefined,
-              undefined,
-              1,
-              PAGE_SIZE
-            ),
-            ecommerceService.getCategories(slug),
-          ]);
+        // 1. Single RPC: catalog info + categories + rate + plan status
+        const catalogResult = await ecommerceService.getPublicCatalog(slug);
 
-        catalogResult.mapRight((catalogInfo) =>
-          patchState(store, () => ({ catalogInfo }))
+        if (catalogResult.isLeft()) {
+          patchState(store, () => ({ isLoading: false }));
+          return catalogResult;
+        }
+
+        const { catalogInfo, categories, exchangeRate, planExpired, isFreePlan } =
+          catalogResult.value;
+
+        patchState(store, () => ({
+          catalogInfo,
+          categories,
+          exchangeRate,
+        }));
+
+        // 2. Products query using tenant_id from RPC (no extra tenant lookup)
+        const productsResult = await ecommerceService.getProducts(
+          slug,
+          undefined,
+          undefined,
+          undefined,
+          1,
+          PAGE_SIZE,
+          String(catalogInfo.id)
         );
 
         productsResult.mapRight(({ productList, totalCount }) =>
@@ -90,13 +102,11 @@ export const EcommerceStore = signalStore(
           }))
         );
 
-        categoriesResult.mapRight((categories) =>
-          patchState(store, () => ({ categories }))
-        );
-
         patchState(store, () => ({ isLoading: false }));
+        return { planExpired, isFreePlan };
       } catch {
         patchState(store, () => ({ isLoading: false }));
+        return undefined;
       }
     },
 
@@ -104,13 +114,17 @@ export const EcommerceStore = signalStore(
       patchState(store, () => ({ isLoading: true }));
 
       try {
+        const tenantId = store.catalogInfo()?.id
+          ? String(store.catalogInfo()!.id)
+          : undefined;
         const result = await ecommerceService.getProducts(
           slug,
           store.searchTerm(),
           store.selectedCategoryId() ?? undefined,
           store.orderBy() ?? undefined,
           1,
-          PAGE_SIZE
+          PAGE_SIZE,
+          tenantId
         );
 
         result.mapRight(({ productList, totalCount }) =>
@@ -135,13 +149,17 @@ export const EcommerceStore = signalStore(
       const nextPage = store.currentPage() + 1;
 
       try {
+        const tenantId = store.catalogInfo()?.id
+          ? String(store.catalogInfo()!.id)
+          : undefined;
         const result = await ecommerceService.getProducts(
           slug,
           store.searchTerm(),
           store.selectedCategoryId() ?? undefined,
           store.orderBy() ?? undefined,
           nextPage,
-          PAGE_SIZE
+          PAGE_SIZE,
+          tenantId
         );
 
         result.mapRight(({ productList: newProducts, totalCount }) => {

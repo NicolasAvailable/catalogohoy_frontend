@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -7,11 +8,11 @@ import {
 } from '@angular/core';
 import { Product, WholesaleTier } from '@catalogohoy/product';
 import { DynamicDialogConfig, DynamicDialogRef, IconComponent } from '@ui';
-import { CartStore } from '../../../infrastructure';
+import { CartStore, EcommerceStore } from '../../../infrastructure';
 
 @Component({
   selector: 'lib-product-detail-modal',
-  imports: [IconComponent],
+  imports: [DecimalPipe, IconComponent],
   templateUrl: './product-detail-modal.html',
   styleUrl: './product-detail-modal.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -20,6 +21,7 @@ export class ProductDetailModal {
   private readonly ref = inject(DynamicDialogRef);
   private readonly config = inject(DynamicDialogConfig);
   private readonly cartStore = inject(CartStore);
+  public readonly ecommerceStore = inject(EcommerceStore);
 
   public readonly product: Product = this.config.data.product;
   public readonly currentImageIndex = signal(0);

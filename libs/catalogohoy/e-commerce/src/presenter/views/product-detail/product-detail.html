@@ -47,6 +47,9 @@
         <span class="product-detail__original-price">${{ product.price }}</span>
         }
       </div>
+      @if (ecommerceStore.exchangeRate() > 0) {
+      <span class="product-detail__price-bs">Bs. {{ displayPrice * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
+      }
 
       @if (product.categoryList.categories.length) {
       <div class="product-detail__categories">
@@ -89,7 +92,12 @@
         <button class="product-detail__add-btn" (click)="onAddToCart()">
           <ui-icon name="shoppingCart" styleClass="size-5" />
           <span>Agregar</span>
-          <span>${{ totalPrice | number:'1.2-2' }}</span>
+          <span>
+            ${{ totalPrice | number:'1.2-2' }}
+            @if (ecommerceStore.exchangeRate() > 0) {
+            <small class="product-detail__btn-bs">/ Bs. {{ totalPrice * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
+            }
+          </span>
         </button>
       </div>
     </div>

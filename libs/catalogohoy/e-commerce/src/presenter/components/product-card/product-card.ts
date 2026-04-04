@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -7,12 +8,12 @@ import {
 } from '@angular/core';
 import { Product } from '@catalogohoy/product';
 import { DialogService, IconComponent, dialogConfig } from '@ui';
-import { CartStore } from '../../../infrastructure';
+import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { ProductDetailModal } from '../product-detail-modal/product-detail-modal';
 
 @Component({
   selector: 'lib-product-card',
-  imports: [IconComponent],
+  imports: [DecimalPipe, IconComponent],
   templateUrl: './product-card.html',
   styleUrl: './product-card.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,6 +22,7 @@ export class ProductCard {
   public readonly product = input.required<Product>();
   public readonly viewMode = input<'grid' | 'list'>('grid');
   private readonly cartStore = inject(CartStore);
+  public readonly ecommerceStore = inject(EcommerceStore);
   private readonly dialogService = inject(DialogService);
 
   public readonly isOutOfStock = computed(() => {

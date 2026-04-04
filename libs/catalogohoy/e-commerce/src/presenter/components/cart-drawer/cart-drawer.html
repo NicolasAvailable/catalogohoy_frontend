@@ -40,7 +40,12 @@
           <div class="cart-item__details">
             <h4 class="cart-item__name">{{ item.name }}</h4>
             <p class="cart-item__description">{{ item.description }}</p>
-            <span class="cart-item__price">${{ item.price }}</span>
+            <span class="cart-item__price">
+              ${{ item.price }}
+              @if (ecommerceStore.exchangeRate() > 0) {
+              <span class="cart-item__price-bs">Bs. {{ item.price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
+              }
+            </span>
           </div>
           <div class="cart-item__actions">
             <button class="cart-item__qty-btn" (click)="onDecrement(item)">
@@ -64,7 +69,12 @@
         </div>
         <span>Ir a pagar</span>
         <div class="cart-drawer__checkout-price">
-          ${{ cartStore.totalPrice() | number:'1.2-2' }}
+          <span>
+            ${{ cartStore.totalPrice() | number:'1.2-2' }}
+            @if (ecommerceStore.exchangeRate() > 0) {
+            <small class="cart-drawer__checkout-bs">Bs. {{ cartStore.totalPrice() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
+            }
+          </span>
           <ui-icon name="chevronRight" styleClass="size-5" />
         </div>
       </button>

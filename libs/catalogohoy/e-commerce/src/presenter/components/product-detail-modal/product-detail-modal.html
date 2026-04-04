@@ -54,6 +54,9 @@
         <span class="pdm__price-original">${{ product.price }}</span>
         }
       </div>
+      @if (ecommerceStore.exchangeRate() > 0) {
+      <span class="pdm__price-bs">Bs. {{ displayPrice * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
+      }
       }
     </div>
 
@@ -74,7 +77,12 @@
         <div class="pdm__tier">
           <div class="pdm__tier-info">
             <span class="pdm__tier-title">{{ tier.title }}</span>
-            <span class="pdm__tier-price">${{ tier.price }}</span>
+            <span class="pdm__tier-price">
+              ${{ tier.price }}
+              @if (ecommerceStore.exchangeRate() > 0) {
+              <small class="pdm__tier-price-bs">Bs. {{ tier.price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
+              }
+            </span>
           </div>
           <button
             type="button"
@@ -120,7 +128,12 @@
       >
         <ui-icon name="shoppingCart" styleClass="size-5" />
         <span>Agregar al carrito</span>
-        <span class="pdm__total">${{ displayPrice * quantity() }}</span>
+        <span class="pdm__total">
+          ${{ displayPrice * quantity() }}
+          @if (ecommerceStore.exchangeRate() > 0) {
+          <small class="pdm__total-bs">/ Bs. {{ displayPrice * quantity() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
+          }
+        </span>
       </button>
       }
     </div>
