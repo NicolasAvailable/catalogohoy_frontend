@@ -11,7 +11,7 @@ export const isValidSlugGuard: CanActivateFn = async (): Promise<boolean> => {
   const tenantService = inject(TenantService);
 
   if (isCustomDomain()) {
-    const domain = window.location.hostname;
+    const domain = window.location.hostname.replace(/^www\./, '');
     const slug = await tenantService.getSlugByCustomDomain(domain);
     if (!slug) {
       window.location.href = 'https://catalogohoy.com';

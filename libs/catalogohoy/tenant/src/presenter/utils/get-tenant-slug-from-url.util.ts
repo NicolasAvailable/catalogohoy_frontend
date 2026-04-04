@@ -7,7 +7,7 @@ export const setCustomDomainSlug = (slug: string): void => {
 };
 
 export const isCustomDomain = (): boolean => {
-  const host = window.location.hostname;
+  const host = window.location.hostname.replace(/^www\./, '');
   return !host.endsWith('catalogohoy.com') && host !== 'localhost' && host !== '127.0.0.1';
 };
 
