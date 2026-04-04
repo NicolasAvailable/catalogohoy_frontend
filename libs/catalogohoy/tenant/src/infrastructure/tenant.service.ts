@@ -16,6 +16,15 @@ export class TenantService implements BaseTenantService {
     return tenant;
   }
 
+  public async getSlugByCustomDomain(domain: string): Promise<string | null> {
+    const { data } = await this.client
+      .from('tenants')
+      .select('slug')
+      .eq('custom_domain', domain)
+      .single();
+    return data?.slug ?? null;
+  }
+
   public async createCatalog(
     name: string,
     slug: string

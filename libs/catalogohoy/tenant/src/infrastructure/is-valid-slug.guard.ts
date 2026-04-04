@@ -1,24 +1,35 @@
 import { inject, isDevMode } from '@angular/core';
 import type { CanActivateFn } from '@angular/router';
-import { getTenantSlugFromUrl } from '../presenter';
+import { getTenantSlugFromUrl, isCustomDomain, setCustomDomainSlug } from '../presenter';
 import { TenantService } from './tenant.service';
 
 export const isValidSlugGuard: CanActivateFn = async (): Promise<boolean> => {
-  // En modo desarrollo, siempre permitir el acceso
   if (isDevMode()) {
-    return Promise.resolve(true);
+    return true;
   }
 
   const tenantService = inject(TenantService);
+
+  if (isCustomDomain()) {
+    const domain = window.location.hostname;
+    const slug = await tenantService.getSlugByCustomDomain(domain);
+    if (!slug) {
+      window.location.href = 'https://catalogohoy.com';
+      return false;
+    }
+    setCustomDomainSlug(slug);
+    return true;
+  }
+
   const slug = getTenantSlugFromUrl();
   if (!slug) {
     window.location.href = 'https://catalogohoy.com';
-    return Promise.resolve(false);
+    return false;
   }
   const isValid = await tenantService.isValidSlug(slug);
   if (!isValid) {
     window.location.href = 'https://catalogohoy.com';
-    return Promise.resolve(false);
+    return false;
   }
-  return Promise.resolve(true);
+  return true;
 };
