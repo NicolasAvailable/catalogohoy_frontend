@@ -13,16 +13,24 @@ export class UploaderService implements BaseUploaderService {
       complete: async () => {
         try {
           const client = SupabaseClientProvider.getInstance();
-          const path = `multimedia/${Date.now()}_${file.name.replace(
-            /\s/g,
-            '_'
-          )}`;
+          const ext = file.name.split('.').pop() || 'jpg';
+          const baseName = file.name
+            .replace(/\.[^.]+$/, '')
+            .normalize('NFKD')
+            .replace(/[^\w.-]/g, '_')
+            .replace(/_+/g, '_')
+            .replace(/^_|_$/g, '')
+            .substring(0, 80);
+          const path = `multimedia/${Date.now()}_${baseName}.${ext}`;
           const { error } = await client.storage
             .from('catalogohoy')
             .upload(path, file);
 
           if (error) {
-            return E.left(new Error(error.message));
+            const userMessage = error.message?.includes('Invalid key')
+              ? 'El nombre del archivo contiene caracteres no permitidos. Renombra la imagen e intenta de nuevo.'
+              : error.message;
+            return E.left(new Error(userMessage));
           }
 
           const { data } = client.storage
