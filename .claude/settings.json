@@ -23,7 +23,9 @@
       "Bash(find c:UsersnicolOneDriveDesktopprojectscatalogohoy_frontend_monorepo -type f \\\\\\(-name *.sql -o -name *.md \\\\\\))",
       "Bash(grep -r \"create_catalog_for_user\\\\|get_my_tenant\\\\|tenant_exists_by_slug\" c:UsersnicolOneDriveDesktopprojectscatalogohoy_frontend_monorepo --include=*.ts --include=*.md)",
       "Bash(grep -E \"\\\\.\\(ts|html|css\\)$\")",
-      "mcp__vercel__list_deployments"
+      "mcp__vercel__list_deployments",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(grep -r \"SupabaseClientProvider\\\\|supabase\\\\\\\\.create\" /c/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo/libs --include=\"*.ts\")"
     ]
   }
 }

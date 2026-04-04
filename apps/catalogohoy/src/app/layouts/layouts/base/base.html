@@ -4,6 +4,7 @@
     (closeSidebar)="sidebarOpen.set(false)"
   />
   <section class="flex flex-auto flex-col bg-lino-500 overflow-hidden">
+    <lib-expiration-banner />
     <app-navbar (toggleSidebar)="toggleSidebar()" />
     <div class="flex w-full flex-auto flex-col overflow-y-auto px-4 py-4">
       <router-outlet />

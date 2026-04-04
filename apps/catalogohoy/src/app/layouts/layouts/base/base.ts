@@ -9,13 +9,13 @@ import {
   ViewChild,
 } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { PlanExpiredDialogComponent, PlanStore } from '@catalogohoy/plan';
+import { ExpirationBannerComponent, PlanExpiredDialogComponent, PlanStore } from '@catalogohoy/plan';
 import { WhatsappSupportComponent } from '@ui';
 import { Navbar, Sidebar } from '../../components';
 
 @Component({
   selector: 'app-base',
-  imports: [RouterOutlet, Navbar, Sidebar, PlanExpiredDialogComponent, WhatsappSupportComponent],
+  imports: [RouterOutlet, Navbar, Sidebar, PlanExpiredDialogComponent, WhatsappSupportComponent, ExpirationBannerComponent],
   templateUrl: './base.html',
 })
 export class Base implements OnInit, AfterViewInit {
