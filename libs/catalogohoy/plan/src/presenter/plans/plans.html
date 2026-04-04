@@ -54,6 +54,13 @@
           @if (plan.isFree) {
             <span class="plan-card__price-amount">$0</span>
             <span class="plan-card__price-period">por siempre</span>
+          } @else if (isUpgradePlan(plan)) {
+            <div class="plan-card__price-main">
+              <span class="plan-card__price-currency">$</span>
+              <span class="plan-card__price-amount">{{ getUpgradePrice(plan) }}</span>
+            </div>
+            <span class="plan-card__price-original">${{ getPeriodPrice(plan) }}</span>
+            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }} · USD</span>
           } @else {
             <div class="plan-card__price-main">
               <span class="plan-card__price-currency">$</span>
@@ -72,11 +79,15 @@
         <button
           class="plan-card__button"
           [class.plan-card__button--primary]="plan.isPopular && !plan.isCurrent"
-          [class.plan-card__button--secondary]="!plan.isPopular && !plan.isCurrent"
+          [class.plan-card__button--secondary]="!plan.isPopular && !plan.isCurrent && !(hasPaidPlan() && !plan.isFree && plan.position > currentPlanPosition())"
           [class.plan-card__button--current]="plan.isCurrent"
-          [disabled]="plan.isCurrent"
+          [class.plan-card__button--upgrade]="hasPaidPlan() && !plan.isCurrent && !plan.isFree && plan.position > currentPlanPosition()"
+          [disabled]="plan.isCurrent || (plan.isFree && hasPaidPlan())"
           (click)="selectPlan(plan)"
         >
+          @if (hasPaidPlan() && !plan.isCurrent && !plan.isFree && plan.position > currentPlanPosition()) {
+          <ui-icon name="zap" styleClass="size-4" />
+          }
           {{ plan.buttonLabel }}
         </button>
 

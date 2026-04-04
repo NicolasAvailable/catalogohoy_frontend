@@ -321,6 +321,10 @@
   color: #dc2626;
 }
 
+.summary-line--info {
+  color: #2563eb;
+}
+
 /* Catalog addon stepper */
 .catalog-addon-stepper {
   display: flex;

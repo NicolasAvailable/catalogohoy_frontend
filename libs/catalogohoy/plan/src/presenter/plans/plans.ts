@@ -133,8 +133,12 @@ export class Plans implements OnInit {
     { key: 'annual',    label: 'Anual',      savingsLabel: '15% off' },
   ];
 
-  private readonly currentPlanPosition = computed(
+  public readonly currentPlanPosition = computed(
     () => this.planStore.currentPlan()?.position ?? -1
+  );
+
+  public readonly hasPaidPlan = computed(
+    () => this.currentPlanPosition() > 0
   );
 
   public readonly plans = computed<PlanDisplay[]>(() =>
@@ -143,7 +147,7 @@ export class Plans implements OnInit {
 
   ngOnInit(): void {
     this.planStore.loadPlans();
-    this.planStore.loadTenantPlanUsage();
+    this.planStore.refreshUsage();
   }
 
   public getBasePrice(plan: PlanDisplay): number {
@@ -163,6 +167,18 @@ export class Plans implements OnInit {
     const { discount } = BILLING_CONFIG[this.billingPeriod()];
     const base = this.getBasePrice(plan);
     return Math.round(base * (1 - discount) * 100) / 100;
+  }
+
+  public isUpgradePlan(plan: PlanDisplay): boolean {
+    return this.hasPaidPlan() && !plan.isCurrent && !plan.isFree && plan.position > this.currentPlanPosition();
+  }
+
+  public getUpgradePrice(plan: PlanDisplay): number {
+    const currentPrice = PLAN_BASE_PRICES[this.planStore.currentPlan()?.id ?? ''] ?? 0;
+    const targetPrice = PLAN_BASE_PRICES[plan.id] ?? 0;
+    const diff = targetPrice - currentPrice;
+    const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
+    return Math.round(diff * months * (1 - discount) * 100) / 100;
   }
 
   public getPeriodLabel(plan: PlanDisplay): string {

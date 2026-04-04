@@ -134,9 +134,31 @@ export class PlanCheckout implements OnInit {
     return `Hasta ${plan.maxProducts} productos`;
   });
 
-  private readonly monthlyBasePrice = computed(
-    () => PLAN_BASE_PRICES[this.planId()] ?? 0
+  public readonly isUpgrade = computed(() => {
+    const current = this.planStore.currentPlan();
+    if (!current || current.isFree) return false;
+    const currentPrice = PLAN_BASE_PRICES[current.id] ?? 0;
+    const targetPrice = PLAN_BASE_PRICES[this.planId()] ?? 0;
+    return currentPrice > 0 && targetPrice > currentPrice;
+  });
+
+  public readonly currentPlanName = computed(
+    () => this.planStore.currentPlan()?.name ?? ''
   );
+
+  public readonly currentPlanPrice = computed(() => {
+    const current = this.planStore.currentPlan();
+    if (!current) return 0;
+    return PLAN_BASE_PRICES[current.id] ?? 0;
+  });
+
+  private readonly monthlyBasePrice = computed(() => {
+    const targetPrice = PLAN_BASE_PRICES[this.planId()] ?? 0;
+    if (this.isUpgrade()) {
+      return Math.round((targetPrice - this.currentPlanPrice()) * 100) / 100;
+    }
+    return targetPrice;
+  });
 
   public readonly baseCost = computed(() => {
     const { months } = BILLING_CONFIG[this.billingPeriod()];

@@ -171,6 +171,12 @@
 
       <hr class="summary-divider" />
 
+      @if (isUpgrade()) {
+      <div class="summary-line summary-line--info" style="margin-bottom: 0.5rem;">
+        <span>💡 Ya tienes el plan {{ currentPlanName() }} — solo pagas la diferencia</span>
+      </div>
+      }
+
       <!-- Total -->
       <div class="summary-total">
         <span class="summary-total__label">Total a pagar</span>
