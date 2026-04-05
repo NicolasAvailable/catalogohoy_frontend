@@ -6,6 +6,7 @@ import { Order, OrderItem, OrderMapper, OrderStatus } from '../domain';
 export interface WeekDayData {
   label: string;
   salesBs: number;
+  salesUsd: number;
   orders: number;
 }
 
@@ -269,7 +270,7 @@ export class OrderService {
         .neq('status', 'cancelled'),
       this.client
         .from('orders')
-        .select('total_bs, created_at')
+        .select('total_bs, total_usd, created_at')
         .eq('tenant_id', tenantId)
         .gte('created_at', weekStart.toISOString())
         .neq('status', 'cancelled'),
@@ -305,6 +306,7 @@ export class OrderService {
       weeklyData.push({
         label: dayLabels[i],
         salesBs: dayOrders.reduce((sum, o) => sum + (o.total_bs || 0), 0),
+        salesUsd: dayOrders.reduce((sum, o) => sum + (o.total_usd || 0), 0),
         orders: dayOrders.length,
       });
     }

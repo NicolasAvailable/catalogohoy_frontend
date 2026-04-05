@@ -47,21 +47,41 @@
   @if (stats()) {
   <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
     <!-- Tabs -->
-    <div class="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit mb-6">
-      <button
-        (click)="setChartTab('ventas')"
-        class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors"
-        [ngClass]="activeChartTab() === 'ventas' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
-      >
-        Ventas
-      </button>
-      <button
-        (click)="setChartTab('pedidos')"
-        class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors"
-        [ngClass]="activeChartTab() === 'pedidos' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
-      >
-        Pedidos
-      </button>
+    <div class="flex items-center justify-between gap-3 mb-6 flex-wrap">
+      <div class="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+        <button
+          (click)="setChartTab('ventas')"
+          class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer"
+          [ngClass]="activeChartTab() === 'ventas' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+        >
+          Ventas
+        </button>
+        <button
+          (click)="setChartTab('pedidos')"
+          class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer"
+          [ngClass]="activeChartTab() === 'pedidos' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+        >
+          Pedidos
+        </button>
+      </div>
+      @if (activeChartTab() === 'ventas') {
+      <div class="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+        <button
+          (click)="setCurrency('bs')"
+          class="px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer"
+          [ngClass]="activeCurrency() === 'bs' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+        >
+          Bs
+        </button>
+        <button
+          (click)="setCurrency('usd')"
+          class="px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer"
+          [ngClass]="activeCurrency() === 'usd' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+        >
+          USD
+        </button>
+      </div>
+      }
     </div>
 
     <!-- Bars -->
@@ -69,9 +89,12 @@
       @for (bar of chartBars(); track bar.label) {
       <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
         @if (bar.value > 0) {
-        <span class="text-xs text-slate-500 font-medium">
-          {{ activeChartTab() === 'ventas' ? (bar.value | number:'1.0-0') :
-          bar.value }}
+        <span class="text-xs text-slate-500 font-medium whitespace-nowrap">
+          @if (activeChartTab() === 'ventas') {
+            {{ currencyPrefix() }} {{ bar.value | number:'1.0-0' }}
+          } @else {
+            {{ bar.value }}
+          }
         </span>
         }
         <div

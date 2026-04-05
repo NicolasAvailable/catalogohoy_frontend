@@ -13,6 +13,7 @@ import {
 import { HomeStore } from '../../infrastructure/home.store';
 
 type ChartTab = 'ventas' | 'pedidos';
+type Currency = 'bs' | 'usd';
 
 @Component({
   selector: 'app-home',
@@ -49,13 +50,23 @@ export class Home implements OnInit {
   });
 
   public activeChartTab = signal<ChartTab>('ventas');
+  public activeCurrency = signal<Currency>('bs');
+
+  public readonly currencyPrefix = computed(() =>
+    this.activeCurrency() === 'bs' ? 'Bs.' : '$'
+  );
 
   public readonly chartBars = computed(() => {
     const data = this.stats()?.weeklyData;
     if (!data) return [];
 
     const tab = this.activeChartTab();
-    const values = data.map((d) => (tab === 'ventas' ? d.salesBs : d.orders));
+    const currency = this.activeCurrency();
+    const values = data.map((d) =>
+      tab === 'ventas'
+        ? currency === 'bs' ? d.salesBs : d.salesUsd
+        : d.orders
+    );
     const max = Math.max(...values, 1);
 
     return data.map((d, i) => ({
@@ -147,5 +158,9 @@ export class Home implements OnInit {
 
   setChartTab(tab: ChartTab): void {
     this.activeChartTab.set(tab);
+  }
+
+  setCurrency(currency: Currency): void {
+    this.activeCurrency.set(currency);
   }
 }
