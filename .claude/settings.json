@@ -26,9 +26,7 @@
       "mcp__vercel__list_deployments",
       "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
       "Bash(grep -r \"SupabaseClientProvider\\\\|supabase\\\\\\\\.create\" /c/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo/libs --include=\"*.ts\")",
-      "Bash(find /c/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo -name \"*.css\" -type f -exec grep -l \"animation\\\\|@keyframes\" {} \\\\;)",
-      "Bash(SUPABASE_ANON_KEY=\"sb_publishable_yYkWS23HI8l698Fl-sK12w_FcqIggPs\" node scripts/compress-images.mjs)",
-      "Bash(SUPABASE_ANON_KEY=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2a3Vyaml2aWpuaGxpb2ZtZm1qIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzIyMDk1MywiZXhwIjoyMDc4Nzk2OTUzfQ.4pxAhTIhxx-c2PPwE32cUKvS33k_TpYhqX13aaVnWWs\" node scripts/compress-images.mjs)"
+      "Bash(find /c/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo -name \"*.css\" -type f -exec grep -l \"animation\\\\|@keyframes\" {} \\\\;)"
     ]
   }
 }
