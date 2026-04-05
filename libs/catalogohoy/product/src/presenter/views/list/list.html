@@ -353,6 +353,11 @@
                 </span>
                 <span class="text-xs text-grey-400">Desde ${{ item.wholesaleTiers[item.wholesaleTiers.length - 1].price }}</span>
               </div>
+              } @else if (item.pricePromotional > 0) {
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-grey-600">${{item.pricePromotional}}</span>
+                <span class="text-xs text-grey-300 line-through">${{item.price}}</span>
+              </div>
               } @else {
               <span class="text-sm text-grey-400">${{item.price}}</span>
               }
