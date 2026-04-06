@@ -235,12 +235,13 @@ export class EcommerceConfigComponent implements OnInit {
       const showDesignSection = this.draftShowDesignSection();
       const socialLinks = this.draftSocialLinks();
       const template = this.draftTemplate();
+      const currencySymbol = this.draftCurrencySymbol();
       const logo = this.configStore.config()?.logo ?? null;
       const banner = this.configStore.config()?.banner ?? null;
 
       const message = {
         type: 'PREVIEW_UPDATE' as const,
-        payload: { name, logo, banner, themeColor, showDesignSection, socialLinks, template },
+        payload: { name, logo, banner, themeColor, showDesignSection, socialLinks, template, currencySymbol },
         source: 'catalogohoy-admin' as const,
       };
 

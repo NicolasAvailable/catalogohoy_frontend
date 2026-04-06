@@ -10,6 +10,7 @@ export interface PreviewMessage {
     showDesignSection: boolean;
     socialLinks: SocialLinks;
     template: CatalogTemplate;
+    currencySymbol: string;
   }>;
   source: 'catalogohoy-admin';
 }
