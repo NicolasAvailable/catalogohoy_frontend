@@ -43,20 +43,20 @@
         @for (tier of product().wholesaleTiers.slice(0, 3); track $index) {
         <div class="product-card__wholesale-tier">
           <span class="product-card__wholesale-tier-title">{{ tier.title }}</span>
-          <span class="product-card__wholesale-tier-price">${{ tier.price }}</span>
+          <span class="product-card__wholesale-tier-price">{{ cs() }}{{ tier.price }}</span>
         </div>
         }
       </div>
       } @else if (product().pricePromotional > 0) {
-      <span class="product-card__price-original">${{ product().price }}</span>
+      <span class="product-card__price-original">{{ cs() }}{{ product().price }}</span>
       <span class="product-card__price-promo"
-        >${{ product().pricePromotional }}</span
+        >{{ cs() }}{{ product().pricePromotional }}</span
       >
       @if (ecommerceStore.exchangeRate() > 0) {
       <span class="product-card__price-bs">Bs. {{ product().pricePromotional * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
       }
       } @else {
-      <span class="product-card__price-current">${{ product().price }}</span>
+      <span class="product-card__price-current">{{ cs() }}{{ product().price }}</span>
       @if (ecommerceStore.exchangeRate() > 0) {
       <span class="product-card__price-bs">Bs. {{ product().price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
       }

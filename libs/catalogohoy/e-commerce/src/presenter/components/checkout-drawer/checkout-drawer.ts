@@ -23,6 +23,7 @@ import { CartStore, EcommerceStore } from '../../../infrastructure';
 export class CheckoutDrawer {
   public readonly cartStore = inject(CartStore);
   public readonly ecommerceStore = inject(EcommerceStore);
+  public readonly cs = this.ecommerceStore.currencySymbol;
   private readonly metaPixel = inject(MetaPixelService);
 
   public readonly name = signal('');
@@ -99,11 +100,12 @@ export class CheckoutDrawer {
     message += `*Teléfono:* ${this.countryCode()} ${this.phone()}\n\n`;
     message += `*Productos:*\n`;
 
+    const symbol = this.cs();
     items.forEach((item: CartItem) => {
-      message += `• ${item.name} x${item.quantity} - $${item.total}\n`;
+      message += `• ${item.name} x${item.quantity} - ${symbol}${item.total}\n`;
     });
 
-    message += `\n*Total:* $${total}`;
+    message += `\n*Total:* ${symbol}${total}`;
 
     const exchangeRate = this.ecommerceStore.exchangeRate();
     if (exchangeRate > 0) {

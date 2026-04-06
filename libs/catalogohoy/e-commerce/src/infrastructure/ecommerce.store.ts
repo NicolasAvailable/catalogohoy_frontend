@@ -59,6 +59,9 @@ export const EcommerceStore = signalStore(
       if (!overrides || !store.isPreviewMode()) return base;
       return { ...base, ...overrides };
     }),
+    currencySymbol: computed(
+      () => store.catalogInfo()?.currencySymbol ?? '$'
+    ),
   })),
   withMethods((store, ecommerceService = inject(EcommerceService)) => ({
     async loadCatalog(slug: string) {

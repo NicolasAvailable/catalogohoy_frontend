@@ -49,9 +49,9 @@
 
       @if (!isWholesale) {
       <div class="pdm__prices">
-        <span class="pdm__price">${{ displayPrice }}</span>
+        <span class="pdm__price">{{ cs() }}{{ displayPrice }}</span>
         @if (hasDiscount) {
-        <span class="pdm__price-original">${{ product.price }}</span>
+        <span class="pdm__price-original">{{ cs() }}{{ product.price }}</span>
         }
       </div>
       @if (ecommerceStore.exchangeRate() > 0) {
@@ -78,7 +78,7 @@
           <div class="pdm__tier-info">
             <span class="pdm__tier-title">{{ tier.title }}</span>
             <span class="pdm__tier-price">
-              ${{ tier.price }}
+              {{ cs() }}{{ tier.price }}
               @if (ecommerceStore.exchangeRate() > 0) {
               <small class="pdm__tier-price-bs">Bs. {{ tier.price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
               }
@@ -129,7 +129,7 @@
         <ui-icon name="shoppingCart" styleClass="size-5" />
         <span>Agregar al carrito</span>
         <span class="pdm__total">
-          ${{ displayPrice * quantity() }}
+          {{ cs() }}{{ displayPrice * quantity() }}
           @if (ecommerceStore.exchangeRate() > 0) {
           <small class="pdm__total-bs">/ Bs. {{ displayPrice * quantity() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
           }

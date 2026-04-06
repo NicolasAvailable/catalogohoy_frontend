@@ -7,6 +7,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { EcommerceConfigStore } from '@catalogohoy/ecommerce-config';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -64,6 +65,8 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private readonly confirmDialogService = inject(ConfirmDialogService);
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
+  private readonly configStore = inject(EcommerceConfigStore);
+  public readonly cs = computed(() => this.configStore.config()?.currencySymbol ?? '$');
   private readonly orderRealtime = inject(OrderRealtimeService);
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canCreateOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'create'));

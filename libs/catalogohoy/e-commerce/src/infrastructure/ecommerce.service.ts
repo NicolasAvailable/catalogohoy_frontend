@@ -105,6 +105,7 @@ export class EcommerceService implements BaseEcommerceService {
         config?.show_payment_methods_section ?? true,
       socialLinks: (config?.social_links as SocialLinks) ?? DEFAULT_SOCIAL_LINKS,
       template: (config?.template as CatalogTemplate) ?? 'classic',
+      currencySymbol: config?.currency_symbol ?? '$',
     };
 
     const categories: Category[] = (data.categories ?? []).map((cat: any) => ({

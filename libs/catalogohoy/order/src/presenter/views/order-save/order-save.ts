@@ -8,6 +8,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { EcommerceConfigStore } from '@catalogohoy/ecommerce-config';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import {
   FormBuilder,
@@ -63,6 +64,8 @@ export default class OrderSave implements OnInit {
   public readonly orderStore = inject(OrderStore);
   public readonly productStore = inject(ProductStore);
   public readonly rateStore = inject(RateStore);
+  private readonly configStore = inject(EcommerceConfigStore);
+  public readonly cs = computed(() => this.configStore.config()?.currencySymbol ?? '$');
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canEditOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'edit'));
 

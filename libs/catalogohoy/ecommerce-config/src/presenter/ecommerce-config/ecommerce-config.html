@@ -434,6 +434,41 @@
         </div>
       </ui-card>
 
+      <!-- Card: Moneda de referencia -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon" style="background: #eff6ff;">
+              <ui-icon name="coins" styleClass="size-5 text-blue-500"></ui-icon>
+            </div>
+            <h2 class="card-title">Moneda de referencia del catálogo</h2>
+          </div>
+        </div>
+        <div class="card-content">
+          <p class="text-sm text-grey-300 mb-4">
+            Selecciona la moneda que se mostrará en los precios de tu catálogo.
+          </p>
+          <div class="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              class="px-4 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer"
+              [class]="draftCurrencySymbol() === '$' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-grey-500 border-grey-200 hover:border-grey-300'"
+              (click)="draftCurrencySymbol.set('$')"
+            >
+              $ Dólar
+            </button>
+            <button
+              type="button"
+              class="px-4 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer"
+              [class]="draftCurrencySymbol() === '€' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-grey-500 border-grey-200 hover:border-grey-300'"
+              (click)="draftCurrencySymbol.set('€')"
+            >
+              € Euro
+            </button>
+          </div>
+        </div>
+      </ui-card>
+
       <!-- Card 6: Vendedores WhatsApp -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">

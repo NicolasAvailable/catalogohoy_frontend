@@ -18,6 +18,7 @@ export interface CatalogInfo {
   showPaymentMethodsSection: boolean;
   socialLinks: SocialLinks;
   template: CatalogTemplate;
+  currencySymbol: string;
 }
 
 export interface Category {

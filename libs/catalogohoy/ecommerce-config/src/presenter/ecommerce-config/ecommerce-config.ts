@@ -104,6 +104,7 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftShowPaymentMethodsSection = signal(true);
   public readonly draftSocialLinks = signal<SocialLinks>({ ...DEFAULT_SOCIAL_LINKS });
   public readonly draftTemplate = signal<CatalogTemplate>('classic');
+  public readonly draftCurrencySymbol = signal('$');
 
   // Computed
   public readonly isCustomColor = computed(
@@ -209,6 +210,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftShowLocationSection, prev?.showLocationSection ?? true, config.showLocationSection ?? true);
       syncField(this.draftShowPaymentMethodsSection, prev?.showPaymentMethodsSection ?? true, config.showPaymentMethodsSection ?? true);
       syncField(this.draftTemplate, prev?.template ?? 'classic' as CatalogTemplate, config.template ?? 'classic' as CatalogTemplate);
+      syncField(this.draftCurrencySymbol, prev?.currencySymbol ?? '$', config.currencySymbol ?? '$');
       syncFieldJson(this.draftWhatsappButtons, prevButtons, newButtons);
       syncFieldJson(this.draftSocialLinks, prev?.socialLinks ?? DEFAULT_SOCIAL_LINKS, config.socialLinks ?? { ...DEFAULT_SOCIAL_LINKS });
 
@@ -246,7 +248,7 @@ export class EcommerceConfigComponent implements OnInit {
 
     const tenantId = await this.tenantStore.getTenantIdAsync();
     if (tenantId) {
-      this.configStore.loadConfig(String(tenantId));
+      this.configStore.reloadConfig(String(tenantId));
       this.configStore.loadPaymentMethods(String(tenantId));
     }
   }
@@ -267,6 +269,7 @@ export class EcommerceConfigComponent implements OnInit {
     if (this.draftShowDesignSection() !== (config.showDesignSection ?? true)) changes.showDesignSection = this.draftShowDesignSection();
     if (this.draftShowLocationSection() !== (config.showLocationSection ?? true)) changes.showLocationSection = this.draftShowLocationSection();
     if (this.draftShowPaymentMethodsSection() !== (config.showPaymentMethodsSection ?? true)) changes.showPaymentMethodsSection = this.draftShowPaymentMethodsSection();
+    if (this.draftCurrencySymbol() !== (config.currencySymbol ?? '$')) changes.currencySymbol = this.draftCurrencySymbol();
 
     const serverButtons = config.whatsappButtons?.length
       ? config.whatsappButtons

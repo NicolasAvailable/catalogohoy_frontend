@@ -14,6 +14,7 @@ import { CartStore, EcommerceStore } from '../../../infrastructure';
 export class CartDrawer {
   public readonly cartStore = inject(CartStore);
   public readonly ecommerceStore = inject(EcommerceStore);
+  public readonly cs = this.ecommerceStore.currencySymbol;
 
   onClose() {
     this.cartStore.closeCart();

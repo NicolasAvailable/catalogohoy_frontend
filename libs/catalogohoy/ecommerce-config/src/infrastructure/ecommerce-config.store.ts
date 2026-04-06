@@ -27,6 +27,18 @@ export const EcommerceConfigStore = signalStore(
   withState(initialState),
   withMethods((store, service = inject(EcommerceConfigService)) => ({
     async loadConfig(tenantId: string) {
+      if (store.config() !== null) return;
+      patchState(store, { isLoading: true, error: null });
+      const result = await service.getConfig(tenantId);
+      result.fold(
+        (error: Error) =>
+          patchState(store, { isLoading: false, error: error.message }),
+        (config: EcommerceConfig) =>
+          patchState(store, { isLoading: false, config })
+      );
+    },
+
+    async reloadConfig(tenantId: string) {
       patchState(store, { isLoading: true, error: null });
       const result = await service.getConfig(tenantId);
       result.fold(

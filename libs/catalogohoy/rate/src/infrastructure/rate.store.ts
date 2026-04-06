@@ -1,8 +1,16 @@
 import { inject } from '@angular/core';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { E } from '@shared/domain';
+import { EcommerceConfigService } from '@catalogohoy/ecommerce-config';
+import { TenantStore } from '@catalogohoy/tenant';
 import { ExchangeRate, RateType } from '../domain/rate';
 import { RateService } from './rate.service';
+
+const RATE_CURRENCY_MAP: Record<RateType, { currency: string; currencySymbol: string }> = {
+  bcv_usd: { currency: 'USD', currencySymbol: '$' },
+  bcv_eur: { currency: 'EUR', currencySymbol: '€' },
+  custom:  { currency: 'USD', currencySymbol: '$' },
+};
 
 type RateState = {
   rate: ExchangeRate | null;
@@ -21,6 +29,8 @@ export const RateStore = signalStore(
   withState(initialState),
   withMethods((store) => {
     const rateService = inject(RateService);
+    const configService = inject(EcommerceConfigService);
+    const tenantStore = inject(TenantStore);
 
     return {
       async loadRates() {
@@ -56,6 +66,17 @@ export const RateStore = signalStore(
         if (currentRate) {
           patchState(store, {
             rate: { ...currentRate, active_rate: rateType },
+          });
+        }
+
+        // Auto-update currency symbol in catalog config
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (tenantId) {
+          const { currency, currencySymbol } = RATE_CURRENCY_MAP[rateType];
+          configService.updateConfig({
+            tenantId: String(tenantId),
+            currency,
+            currencySymbol,
           });
         }
 
