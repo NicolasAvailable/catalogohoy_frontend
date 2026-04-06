@@ -79,6 +79,7 @@ export class EcommerceConfigComponent implements OnInit {
   // New payment method form
   public readonly newMethodName = signal('');
   public readonly newMethodIcon = signal('wallet');
+  public readonly isAddingMethod = signal(false);
 
   public readonly iconOptions: { label: string; value: string }[] = [
     { label: 'Billetera', value: 'wallet' },
@@ -371,10 +372,12 @@ export class EcommerceConfigComponent implements OnInit {
   // --- Payment Methods ---
   async addPaymentMethod() {
     const name = this.newMethodName().trim();
-    if (!name) return;
+    if (!name || this.isAddingMethod()) return;
+    this.isAddingMethod.set(true);
     await this.configStore.addPaymentMethod(name, this.newMethodIcon());
     this.newMethodName.set('');
     this.newMethodIcon.set('wallet');
+    this.isAddingMethod.set(false);
   }
 
   toggleMethodActive(id: number, isActive: boolean) {

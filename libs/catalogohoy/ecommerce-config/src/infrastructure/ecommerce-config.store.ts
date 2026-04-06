@@ -467,11 +467,13 @@ export const EcommerceConfigStore = signalStore(
       const currentConfig = store.config();
       if (!currentConfig) return;
 
+      const loadingId = toast.loading('Creando método de pago...');
       const result = await service.createPaymentMethod(
         currentConfig.tenantId,
         name,
         icon
       );
+      toast.dismiss(loadingId);
       result.fold(
         () => {
           toast.error('Error al crear método de pago');

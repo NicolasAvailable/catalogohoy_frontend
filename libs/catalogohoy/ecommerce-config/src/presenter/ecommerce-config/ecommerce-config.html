@@ -427,7 +427,8 @@
               icon="plus"
               size="small"
               (click)="addPaymentMethod()"
-              [disabled]="!newMethodName().trim()"
+              [disabled]="!newMethodName().trim() || isAddingMethod()"
+              [isLoading]="isAddingMethod()"
             ></ui-button>
           </div>
 
