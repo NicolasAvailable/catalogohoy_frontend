@@ -8,6 +8,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -178,6 +179,8 @@ export class EcommerceConfigComponent implements OnInit {
     });
 
     // Sync drafts from server config (selective: preserves user-modified fields)
+    // IMPORTANT: Draft signals are read with untracked() to avoid circular dependencies.
+    // This effect must ONLY react to configStore.config() changes.
     effect(() => {
       const config = this.configStore.config();
       if (!config) return;
@@ -186,12 +189,20 @@ export class EcommerceConfigComponent implements OnInit {
       const isFirstLoad = !prev;
 
       // Helper: only update a draft if user hasn't modified it since last sync
+      // Uses untracked() to read drafts without registering them as dependencies
       const syncField = <T>(draft: { (): T; set: (v: T) => void }, prevVal: T, newVal: T) => {
-        if (isFirstLoad || draft() === prevVal) draft.set(newVal);
+        const currentVal = untracked(() => draft());
+        if (isFirstLoad || currentVal === prevVal) {
+          if (currentVal !== newVal) draft.set(newVal);
+        }
       };
 
       const syncFieldJson = <T>(draft: { (): T; set: (v: T) => void }, prevVal: T, newVal: T) => {
-        if (isFirstLoad || JSON.stringify(draft()) === JSON.stringify(prevVal)) draft.set(newVal);
+        const currentVal = untracked(() => draft());
+        const currentJson = JSON.stringify(currentVal);
+        if (isFirstLoad || currentJson === JSON.stringify(prevVal)) {
+          if (currentJson !== JSON.stringify(newVal)) draft.set(newVal);
+        }
       };
 
       const prevButtons = prev?.whatsappButtons?.length
