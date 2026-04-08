@@ -61,7 +61,21 @@
     </div>
 
     @if (product.description) {
-    <p class="pdm__description">{{ product.description }}</p>
+    <div
+      class="pdm__description-wrap"
+      [class.pdm__description-wrap--clamped]="isClamped()"
+      [class.pdm__description-wrap--clickable]="shouldClampDescription"
+      role="button"
+      tabindex="0"
+      (click)="toggleDescription()"
+      (keydown.enter)="toggleDescription()"
+      (keydown.space)="toggleDescription(); $event.preventDefault()"
+    >
+      <p class="pdm__description">{{ product.description }}@if (shouldClampDescription && descriptionExpanded()) {<span class="pdm__inline-less"> Ver menos</span>}</p>
+      @if (isClamped()) {
+      <span class="pdm__overlay-more">… Ver más</span>
+      }
+    </div>
     }
 
     <div class="pdm__footer">
