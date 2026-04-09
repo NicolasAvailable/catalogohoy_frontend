@@ -42,9 +42,10 @@
 .catalog-header__logo {
   width: 2.75rem;
   height: 2.75rem;
-  border-radius: 0.5rem;
+  border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  border: 2px solid var(--color-grey-50);
   transform: translateX(-0.5rem) scale(0.75);
   transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }

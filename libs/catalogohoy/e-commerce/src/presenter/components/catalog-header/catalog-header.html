@@ -2,7 +2,6 @@
   <div class="catalog-header__container">
     <div class="catalog-header__left">
       @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
-        <div class="catalog-header__logo-skeleton"></div>
         <div class="catalog-header__title-skeleton"></div>
       } @else {
         @if (ecommerceStore.effectiveCatalogInfo()?.logo; as logo) {

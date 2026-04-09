@@ -73,7 +73,15 @@
   <div class="catalog__loading">
     <div class="catalog__loading-grid">
       @for (i of [1,2,3,4,5,6,7,8,9,10]; track i) {
-      <div class="catalog__skeleton"></div>
+      <div class="catalog__skeleton-card">
+        <div class="catalog__skeleton-image"></div>
+        <div class="catalog__skeleton-body">
+          <div class="catalog__skeleton-title"></div>
+          <div class="catalog__skeleton-desc"></div>
+          <div class="catalog__skeleton-price"></div>
+          <div class="catalog__skeleton-btn"></div>
+        </div>
+      </div>
       }
     </div>
   </div>
@@ -104,7 +112,14 @@
   <div class="catalog__loading-more">
     <div class="catalog__loading-grid">
       @for (i of [1,2,3,4,5,6]; track i) {
-      <div class="catalog__skeleton"></div>
+      <div class="catalog__skeleton-card">
+        <div class="catalog__skeleton-image"></div>
+        <div class="catalog__skeleton-body">
+          <div class="catalog__skeleton-title"></div>
+          <div class="catalog__skeleton-desc"></div>
+          <div class="catalog__skeleton-price"></div>
+        </div>
+      </div>
       }
     </div>
   </div>

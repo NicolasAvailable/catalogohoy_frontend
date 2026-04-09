@@ -1,4 +1,13 @@
-@if (ecommerceStore.effectiveCatalogInfo(); as info) {
+@if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
+  <!-- Skeleton while catalog data loads -->
+  <section class="hero hero--skeleton">
+    <div class="hero__banner hero__banner--skeleton"></div>
+    <div class="hero__profile">
+      <div class="hero__logo-skeleton"></div>
+      <div class="hero__name-skeleton"></div>
+    </div>
+  </section>
+} @else if (ecommerceStore.effectiveCatalogInfo(); as info) {
   @if (info.showDesignSection) {
     @switch (info.template) {
       @case ('banner-centered') {
