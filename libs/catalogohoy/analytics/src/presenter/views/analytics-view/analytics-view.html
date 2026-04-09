@@ -35,11 +35,11 @@
     </div>
 
     } @else if (analyticsStore.data(); as data) {
-    <!-- ─── ROW 1: Main chart + 3 sparklines ─────────────────── -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- ─── ROW 1: Main chart + 2 sparklines ─────────────────── -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
       <!-- Page views overview — dark area chart -->
       <div
-        class="sm:col-span-2 lg:col-span-3 flex flex-col bg-[#0f172a] rounded-xl overflow-hidden"
+        class="sm:col-span-2 flex flex-col bg-[#0f172a] rounded-xl overflow-hidden"
       >
         <div class="flex items-center justify-between px-6 pt-6 pb-2">
           <div>
@@ -94,19 +94,6 @@
             [yaxis]="pv.yaxis"
           />
         </div>
-      </div>
-
-      <!-- Sessions stat card -->
-      <div
-        class="sm:col-span-2 lg:col-span-1 flex flex-col items-center justify-center bg-white border border-grey-50 rounded-xl px-5 py-6 gap-2"
-      >
-        <span
-          class="text-xs font-semibold uppercase tracking-widest text-grey-400"
-          >Sesiones</span
-        >
-        <span class="text-5xl font-bold text-grey-800 tracking-tight"
-          >{{ data.sessions.amount | number }}</span
-        >
       </div>
 
       <!-- Page views stat card -->

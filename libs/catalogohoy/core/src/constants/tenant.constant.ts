@@ -5,6 +5,14 @@
 export const DEV_TENANT_SLUG = 'catalogohoy';
 
 /**
+ * Reserved subdomains that redirect to other apps instead of loading a catalog.
+ * Key: subdomain slug, Value: target URL.
+ */
+export const RESERVED_SUBDOMAIN_REDIRECTS: Record<string, string> = {
+  internal: 'https://internal.catalogohoy.com',
+};
+
+/**
  * Check if we're running in development mode
  */
 export const isDevMode = (): boolean => {
