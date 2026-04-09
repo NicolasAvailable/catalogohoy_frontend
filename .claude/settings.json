@@ -28,7 +28,10 @@
       "Bash(grep -r \"SupabaseClientProvider\\\\|supabase\\\\\\\\.create\" /c/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo/libs --include=\"*.ts\")",
       "Bash(find /c/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo -name \"*.css\" -type f -exec grep -l \"animation\\\\|@keyframes\" {} \\\\;)",
       "Bash(xargs ls:*)",
-      "Bash(npx vercel:*)"
+      "Bash(npx vercel:*)",
+      "Bash(git push:*)",
+      "mcp__vercel__search_vercel_documentation",
+      "mcp__vercel__deploy_to_vercel"
     ]
   }
 }
