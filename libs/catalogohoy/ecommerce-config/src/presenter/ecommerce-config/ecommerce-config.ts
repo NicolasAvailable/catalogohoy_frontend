@@ -105,7 +105,7 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftShowLocationSection = signal(true);
   public readonly draftShowPaymentMethodsSection = signal(true);
   public readonly draftSocialLinks = signal<SocialLinks>({ ...DEFAULT_SOCIAL_LINKS });
-  public readonly draftTemplate = signal<CatalogTemplate>('classic');
+  public readonly draftTemplate = signal<CatalogTemplate>('banner-centered');
   public readonly draftCurrencySymbol = signal('$');
 
   // Computed
@@ -221,7 +221,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftShowDesignSection, prev?.showDesignSection ?? true, config.showDesignSection ?? true);
       syncField(this.draftShowLocationSection, prev?.showLocationSection ?? true, config.showLocationSection ?? true);
       syncField(this.draftShowPaymentMethodsSection, prev?.showPaymentMethodsSection ?? true, config.showPaymentMethodsSection ?? true);
-      syncField(this.draftTemplate, prev?.template ?? 'classic' as CatalogTemplate, config.template ?? 'classic' as CatalogTemplate);
+      syncField(this.draftTemplate, prev?.template ?? 'banner-centered' as CatalogTemplate, config.template ?? 'banner-centered' as CatalogTemplate);
       syncField(this.draftCurrencySymbol, prev?.currencySymbol ?? '$', config.currencySymbol ?? '$');
       syncFieldJson(this.draftWhatsappButtons, prevButtons, newButtons);
       syncFieldJson(this.draftSocialLinks, prev?.socialLinks ?? DEFAULT_SOCIAL_LINKS, config.socialLinks ?? { ...DEFAULT_SOCIAL_LINKS });
@@ -275,7 +275,7 @@ export class EcommerceConfigComponent implements OnInit {
 
     if (this.draftName() !== (config.name ?? '')) changes.name = this.draftName();
     if (this.draftDescription() !== (config.description ?? '')) changes.description = this.draftDescription();
-    if (this.draftTemplate() !== (config.template ?? 'classic')) changes.template = this.draftTemplate();
+    if (this.draftTemplate() !== (config.template ?? 'banner-centered')) changes.template = this.draftTemplate();
     if (this.draftThemeColor() !== (config.themeColor ?? '#10b981')) changes.themeColor = this.draftThemeColor();
     if (this.draftState() !== (config.state ?? null)) changes.state = this.draftState();
     if (this.draftCity() !== (config.city ?? null)) changes.city = this.draftCity();

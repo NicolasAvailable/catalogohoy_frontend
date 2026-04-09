@@ -104,7 +104,7 @@ export class EcommerceService implements BaseEcommerceService {
       showPaymentMethodsSection:
         config?.show_payment_methods_section ?? true,
       socialLinks: (config?.social_links as SocialLinks) ?? DEFAULT_SOCIAL_LINKS,
-      template: (config?.template as CatalogTemplate) ?? 'classic',
+      template: (config?.template as CatalogTemplate) ?? 'banner-centered',
       currencySymbol: config?.currency_symbol ?? '$',
     };
 

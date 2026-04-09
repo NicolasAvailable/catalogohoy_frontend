@@ -51,7 +51,7 @@ export class EcommerceConfigService {
           config?.show_payment_methods_section ?? true,
         showLocationSection: config?.show_location_section ?? true,
         socialLinks: (config?.social_links as SocialLinks) ?? DEFAULT_SOCIAL_LINKS,
-        template: (config?.template as CatalogTemplate) ?? 'classic',
+        template: (config?.template as CatalogTemplate) ?? 'banner-centered',
       });
     } catch (error) {
       return E.left(error as Error);
