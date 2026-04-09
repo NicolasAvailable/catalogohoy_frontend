@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+@import '../../../libs/ui/src/styles/index.css';
+
+/* ----------------------------------------------------------------
+   Dark mode overrides for the internal admin panel.
+
+   Tailwind v4 emits utilities (`bg-grey-50`, `text-grey-700`, etc.)
+   as `var(--color-…)` references. By overriding the same custom
+   properties under `[data-theme="dark"]`, every utility flips to
+   the dark palette without any component changes.
+
+   The grey scale is *inverted* in dark mode:
+     • 25–200 → backgrounds / surfaces (dark)
+     • 300–700 → text colors (light, with high enough contrast
+       on dark surfaces to stay legible)
+   ---------------------------------------------------------------- */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Surfaces (darkest → mid) */
+  --color-grey-25: #0b0d12;
+  --color-grey-50: #161a24;
+  --color-grey-100: #232938;
+  --color-grey-200: #353b4c;
+
+  /* Text (mid → brightest). Tuned for ≥ 4.5:1 contrast on grey-25/50. */
+  --color-grey-300: #a8b2c1; /* placeholders, hints */
+  --color-grey-400: #c7cfdb; /* secondary text, labels */
+  --color-grey-500: #e2e8f0; /* body text */
+  --color-grey-600: #eef2f7; /* strong text */
+  --color-grey-700: #ffffff; /* headings */
+
+  /* Tailwind built-in white → card surface */
+  --color-white: #161a24;
+
+  /* Lino tones (used by some shared layouts) */
+  --color-lino-500: #0b0d12;
+  --color-lino-400: #0b0d12;
+  --color-lino-600: #0b0d12;
+
+  /* Primary tints */
+  --color-primary-50: rgba(62, 123, 250, 0.18);
+  --color-primary-100: rgba(62, 123, 250, 0.26);
+
+  /* Status tints — dim backgrounds, keep saturated text */
+  --color-emerald-50: rgba(16, 185, 129, 0.18);
+  --color-emerald-100: rgba(16, 185, 129, 0.26);
+  --color-amber-50: rgba(245, 158, 11, 0.18);
+  --color-amber-100: rgba(245, 158, 11, 0.26);
+  --color-red-50: rgba(239, 68, 68, 0.18);
+  --color-red-100: rgba(239, 68, 68, 0.26);
+  --color-sky-50: rgba(14, 165, 233, 0.18);
+}
+
+/* Body background follows the theme */
+html[data-theme='dark'] body {
+  background-color: #0b0d12;
+}
+
+/* PrimeNG inputs: brighten placeholders + value text in dark mode.
+   PrimeNG's tokens default to a very low-contrast grey on dark
+   backgrounds, so we tighten them here. */
+html[data-theme='dark'] .p-inputtext,
+html[data-theme='dark'] .p-password-input,
+html[data-theme='dark'] input.p-inputtext {
+  color: #f1f5f9;
+}
+
+html[data-theme='dark'] .p-inputtext::placeholder,
+html[data-theme='dark'] .p-password-input::placeholder,
+html[data-theme='dark'] input.p-inputtext::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
