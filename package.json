@@ -5,11 +5,9 @@
   "scripts": {
     "serve:catalogohoy": "nx serve catalogohoy",
     "serve:authentication": "nx serve authentication",
-    "serve:internal": "nx serve internal",
     "build": "nx run-many --target=build --all",
     "build:catalogohoy": "nx build catalogohoy",
-    "build:authentication": "nx build authentication",
-    "build:internal": "nx build internal"
+    "build:authentication": "nx build authentication"
   },
   "private": true,
   "dependencies": {
