@@ -8,7 +8,7 @@
               <img [src]="info.banner" alt="" class="hero__banner-img" />
             }
           </div>
-          <div class="hero__profile">
+          <div #heroProfile class="hero__profile">
             @if (info.logo) {
               <img [src]="info.logo" alt="" class="hero__logo" />
             } @else {
@@ -27,7 +27,7 @@
               <img [src]="info.banner" alt="" class="hero__banner-img" />
             }
           </div>
-          <div class="hero__profile">
+          <div #heroProfile class="hero__profile">
             @if (info.logo) {
               <img [src]="info.logo" alt="" class="hero__logo" />
             } @else {

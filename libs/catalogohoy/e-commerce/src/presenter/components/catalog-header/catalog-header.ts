@@ -1,4 +1,4 @@
-import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
 import { IconComponent, InputSearchComponent } from '@ui';
 import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
@@ -18,6 +18,18 @@ export class CatalogHeader implements OnInit, OnDestroy {
   private readonly searchSubject = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
   private slug: string | null = null;
+
+  /**
+   * For non-classic templates the logo starts in the hero; when the hero
+   * scrolls away this flips to `true` so the navbar reveals it.
+   * For classic templates the logo is always visible in the navbar.
+   */
+  public readonly isNavbarLogoVisible = computed(() => {
+    const template =
+      this.ecommerceStore.effectiveCatalogInfo()?.template;
+    if (!template || template === 'classic') return true;
+    return !this.ecommerceStore.heroLogoVisible();
+  });
 
   ngOnInit() {
     this.slug = getTenantSlugFromUrl();

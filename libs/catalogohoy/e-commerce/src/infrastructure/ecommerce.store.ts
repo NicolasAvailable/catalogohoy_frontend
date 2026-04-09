@@ -28,6 +28,7 @@ type EcommerceState = {
   previewOverrides: Partial<CatalogInfo> | null;
   isPreviewMode: boolean;
   exchangeRate: number;
+  heroLogoVisible: boolean;
 };
 
 const initialState: EcommerceState = {
@@ -46,6 +47,7 @@ const initialState: EcommerceState = {
   previewOverrides: null,
   isPreviewMode: false,
   exchangeRate: 0,
+  heroLogoVisible: true,
 };
 
 export const EcommerceStore = signalStore(
@@ -199,6 +201,10 @@ export const EcommerceStore = signalStore(
       } catch {
         patchState(store, () => ({ isLoading: false }));
       }
+    },
+
+    setHeroLogoVisible(visible: boolean) {
+      patchState(store, { heroLogoVisible: visible });
     },
 
     setSearchTerm(searchTerm: string) {
