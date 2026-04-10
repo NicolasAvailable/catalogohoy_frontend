@@ -33,7 +33,8 @@
       "Bash(npx vercel:*)",
       "Bash(git push:*)",
       "mcp__vercel__search_vercel_documentation",
-      "mcp__vercel__deploy_to_vercel"
+      "mcp__vercel__deploy_to_vercel",
+      "mcp__vercel__get_deployment"
     ]
   }
 }
