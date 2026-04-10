@@ -50,18 +50,18 @@
       <div
         cdkDrag
         cdkDragBoundary=".category-list"
-        class="flex items-center justify-between p-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
+        class="flex items-center justify-between gap-3 p-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
       >
-        <div class="flex items-center gap-4" cdkDragHandle>
+        <div class="flex items-center gap-4 min-w-0 flex-1" cdkDragHandle>
           <ui-icon
             name="grip-vertical"
-            class="text-gray-300 cursor-move"
+            class="text-gray-300 cursor-move shrink-0"
             size="20"
           />
           <span class="w-6 text-center text-xs font-medium text-grey-300 shrink-0">{{ $index + first + 1 }}</span>
-          <span class="font-medium text-lg">{{ category.name }}</span>
+          <span class="font-medium text-lg truncate min-w-0">{{ category.name }}</span>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 shrink-0">
           <ui-button
             icon="pencil"
             variant="outlined"

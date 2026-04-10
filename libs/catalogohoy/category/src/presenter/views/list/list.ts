@@ -120,6 +120,9 @@ export default class CategoryListComponent implements OnInit {
     categories.splice(event.currentIndex, 0, movedItem);
 
     this.categoryStore.set(CategoryList.from(categories));
-    await this.categoryService.updatePositions(categories);
+    // Pass `first` (the global index of this page's first item) so the
+    // service writes positions like 10, 11, 12, … on page 2 instead of
+    // 0, 1, 2, … which would clobber page 1.
+    await this.categoryService.updatePositions(categories, this.first);
   }
 }

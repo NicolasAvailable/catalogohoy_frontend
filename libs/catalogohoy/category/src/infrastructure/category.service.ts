@@ -190,9 +190,70 @@ export class CategoryService implements BaseCategoryService {
   }
 
   public async updatePositions(
-    categories: Category[]
+    categories: Category[],
+    offset = 0
   ): Promise<E.Either<Error, void>> {
+    // `offset` is the global index of the first item in the current page,
+    // so when reordering page 2 (offset=10) the items get positions
+    // 10, 11, 12, … instead of 0, 1, 2, … which would clobber page 1.
     const updates = categories.map((cat, index) =>
+      this.client
+        .from('categories')
+        .update({ position: offset + index })
+        .eq('id', cat.id)
+    );
+
+    await Promise.all(updates);
+    return E.right(undefined);
+  }
+
+  /**
+   * Moves a single category to an arbitrary global position (1-based).
+   * Loads the full ordered list, splices the moved item, and rewrites
+   * every position so the ordering stays contiguous across pages.
+   */
+  public async moveCategoryToPosition(
+    categoryId: number | string,
+    newPosition: number
+  ): Promise<E.Either<Error, void>> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) {
+      return E.left(new Error('No tenant found'));
+    }
+
+    const { data, error } = await this.client
+      .from('categories')
+      .select('id, position')
+      .eq('tenant_id', tenantId)
+      .order('position', { ascending: true });
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    const all = (data ?? []) as { id: number; position: number }[];
+    if (all.length === 0) {
+      return E.right(undefined);
+    }
+
+    const numericId = Number(categoryId);
+    const currentIndex = all.findIndex((c) => c.id === numericId);
+    if (currentIndex === -1) {
+      return E.left(new Error('Category not found'));
+    }
+
+    const targetIndex = Math.max(
+      0,
+      Math.min(all.length - 1, Math.floor(newPosition) - 1)
+    );
+    if (currentIndex === targetIndex) {
+      return E.right(undefined);
+    }
+
+    const [moved] = all.splice(currentIndex, 1);
+    all.splice(targetIndex, 0, moved);
+
+    const updates = all.map((cat, index) =>
       this.client
         .from('categories')
         .update({ position: index })

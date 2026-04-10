@@ -46,15 +46,36 @@
             placeholder="Contale a tus clientes lo que van a encontrar en esta categoría."
           />
         </div>
+
       </div>
     </form>
   </ui-card>
 
-  <ui-card>
-    <form [formGroup]="form" class="flex gap-6">
-      <h2 class="text-xl font-bold mb-4">Visibilidad</h2>
+  @if (totalCategories() > 1) {
+    <ui-card>
+      <form [formGroup]="form" class="flex flex-col gap-2">
+        <h2 class="text-xl font-bold">Posición en el catálogo</h2>
+        <p class="text-sm text-grey-300">
+          Elegí en qué lugar aparece esta categoría dentro de tu catálogo.
+        </p>
+        <ui-select
+          formControlName="position"
+          selectId="position"
+          [options]="positionOptions()"
+          styleClass="!w-32 mt-2"
+        />
+      </form>
+    </ui-card>
+  }
 
-      <div class="flex items-center gap-2">
+  <ui-card>
+    <form [formGroup]="form" class="flex flex-col gap-2">
+      <h2 class="text-xl font-bold">Visibilidad</h2>
+      <p class="text-sm text-grey-300">
+        Si lo desactivás, esta categoría no aparecerá en los filtros de tu
+        catálogo público.
+      </p>
+      <div class="flex items-center gap-2 mt-2">
         <ui-checkbox
           formControlName="isVisible"
           label="Mostrar esta categoría en la tienda"
