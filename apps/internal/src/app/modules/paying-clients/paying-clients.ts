@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@ui';
 import { cycleLabel, tierLabel } from '../shared/plan-cycle.model';
 import { ClientDetailDialog } from './components/client-detail-dialog/client-detail-dialog';
+import { ImpersonateTenantService } from './impersonate-tenant.service';
 import {
   computeStatus,
   PayingClient,
@@ -142,6 +143,15 @@ type StatusFilter = 'all' | PayingClientStatus;
         </div>
       }
 
+      @if (impersonateError()) {
+        <div
+          class="flex items-center gap-2 px-4 py-3 rounded-md bg-red-50 border border-red-100 shrink-0"
+        >
+          <ui-icon name="circle-alert" size="16" styleClass="text-red-500" />
+          <span class="text-sm text-red-600">{{ impersonateError() }}</span>
+        </div>
+      }
+
       <section
         class="flex-1 min-h-0 bg-white rounded-xl border border-grey-50 overflow-hidden flex flex-col"
       >
@@ -270,18 +280,43 @@ type StatusFilter = 'all' | PayingClientStatus;
                       </span>
                     </td>
                     <td class="px-4 py-3 text-right border-b border-grey-50">
-                      <button
-                        type="button"
-                        (click)="openDetail(client); $event.stopPropagation()"
-                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors cursor-pointer text-xs font-semibold"
-                      >
-                        <ui-icon
-                          name="eye"
-                          size="12"
-                          styleClass="text-primary-500"
-                        />
-                        Ver detalle
-                      </button>
+                      <div class="inline-flex items-center gap-2">
+                        <button
+                          type="button"
+                          (click)="
+                            enterAsAdmin(client); $event.stopPropagation()
+                          "
+                          [disabled]="impersonatingId() === client.tenantId"
+                          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors cursor-pointer text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          @if (impersonatingId() === client.tenantId) {
+                            <ui-icon
+                              name="loader-circle"
+                              size="12"
+                              styleClass="text-emerald-500 animate-spin"
+                            />
+                          } @else {
+                            <ui-icon
+                              name="log-in"
+                              size="12"
+                              styleClass="text-emerald-500"
+                            />
+                          }
+                          Entrar como admin
+                        </button>
+                        <button
+                          type="button"
+                          (click)="openDetail(client); $event.stopPropagation()"
+                          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors cursor-pointer text-xs font-semibold"
+                        >
+                          <ui-icon
+                            name="eye"
+                            size="12"
+                            styleClass="text-primary-500"
+                          />
+                          Ver detalle
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 } @empty {
@@ -313,9 +348,12 @@ type StatusFilter = 'all' | PayingClientStatus;
 })
 export class PayingClients implements OnInit {
   protected readonly store = inject(PayingClientsStore);
+  private readonly impersonateService = inject(ImpersonateTenantService);
 
   protected readonly searchTerm = signal('');
   protected readonly statusFilter = signal<StatusFilter>('all');
+  protected readonly impersonatingId = signal<number | null>(null);
+  protected readonly impersonateError = signal<string | null>(null);
 
   protected readonly statusFilters: { value: StatusFilter; label: string }[] = [
     { value: 'all', label: 'Todos' },
@@ -349,6 +387,22 @@ export class PayingClients implements OnInit {
   protected async openDetail(client: PayingClient): Promise<void> {
     await this.store.openDetail(client.tenantId);
     this.detailDialog().show();
+  }
+
+  protected async enterAsAdmin(client: PayingClient): Promise<void> {
+    if (this.impersonatingId() !== null) return;
+    this.impersonatingId.set(client.tenantId);
+    this.impersonateError.set(null);
+    const result = await this.impersonateService.getImpersonationLink(
+      client.tenantId
+    );
+    this.impersonatingId.set(null);
+    result.fold(
+      (err) => this.impersonateError.set(err.message),
+      (data) => {
+        window.open(data.actionLink, '_blank', 'noopener,noreferrer');
+      }
+    );
   }
 
   protected computeStatus = computeStatus;
