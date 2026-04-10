@@ -90,7 +90,7 @@ export default class CategoryListComponent implements OnInit {
 
     result.mapRight(() => {
       this.cancelCreate();
-      this.categoryStore.categoryList$();
+      this.loadData();
     });
     this.isSaving.set(false);
   }
@@ -107,7 +107,7 @@ export default class CategoryListComponent implements OnInit {
     this.isSaving.set(true);
     const result = await this.categoryFacade.delete(String(category.id));
     result.mapRight(() => {
-      this.categoryStore.categoryList$();
+      this.loadData();
     });
     this.isSaving.set(false);
   }

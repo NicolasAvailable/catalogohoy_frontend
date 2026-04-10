@@ -5,7 +5,7 @@ import { E } from '@shared/domain';
 import {
   BaseCategoryService,
   Category,
-  CategoryList,
+  CategoryListPage,
   CreateCategoryInput,
   UpdateCategoryInput,
 } from '../domain';
@@ -22,15 +22,18 @@ export class CategoryService implements BaseCategoryService {
   public async getAll(
     page?: number,
     pageSize?: number
-  ): Promise<E.Either<Error, CategoryList>> {
+  ): Promise<E.Either<Error, CategoryListPage>> {
     const tenantId = await this.tenantStore.getTenantIdAsync();
     if (!tenantId) {
       return E.left(new Error('No tenant found'));
     }
 
+    // Request `count: 'exact'` so we get the total number of categories
+    // for this tenant alongside the paginated rows — needed by the
+    // paginator UI to compute totalRecords / page count.
     let query = this.client
       .from('categories')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('tenant_id', tenantId)
       .order('position', { ascending: true });
 
@@ -40,12 +43,16 @@ export class CategoryService implements BaseCategoryService {
       query = query.range(from, to);
     }
 
-    const { data, error } = await query;
+    const { data, count, error } = await query;
 
     if (error) {
       return E.left(new Error(error.message));
     }
-    return E.right(CategoryListMapper.toDomain(data as CategoryEntity[]));
+
+    return E.right({
+      list: CategoryListMapper.toDomain(data as CategoryEntity[]),
+      total: count ?? 0,
+    });
   }
 
   public async getById(id: string): Promise<E.Either<Error, Category>> {

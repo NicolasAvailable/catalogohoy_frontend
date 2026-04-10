@@ -12,7 +12,10 @@
     />
   </header>
 
-  <ui-card class="flex-1 flex flex-col gap-2 overflow-y-auto h-full">
+  <div
+    class="flex-1 min-h-0 flex flex-col bg-white border border-grey-50 rounded-lg overflow-hidden"
+  >
+   <div class="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-2">
     @if (categoryStore.isLoading()) {
     <ui-skeleton-list [count]="10" height="4.5rem" styleClass="mx-4 mb-2" />
     } @else {
@@ -107,14 +110,15 @@
       />
     </div>
     } }
-  </ui-card>
+   </div>
+  </div>
 
   <ui-card class="py-4">
     <p-paginator
       (onPageChange)="onPageChange($event)"
       [first]="first"
       [rows]="rows"
-      [totalRecords]="categoryStore.categoryList().length"
+      [totalRecords]="categoryStore.total()"
       [showCurrentPageReport]="true"
       currentPageReportTemplate="{currentPage} de {totalPages}"
     ></p-paginator>
