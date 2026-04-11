@@ -88,7 +88,10 @@ export const CartStore = signalStore(
         product.description,
         product.pricePromotional > 0 ? product.pricePromotional : product.price,
         product.photos[0] || '',
-        1
+        1,
+        null,
+        undefined,
+        product.sku ?? null
       );
       const newCart = store.cart().addItem(item);
       saveCartToStorage(newCart);
@@ -119,7 +122,9 @@ export const CartStore = signalStore(
         tier.price,
         product.photos[0] || '',
         1,
-        tier.title
+        tier.title,
+        undefined,
+        product.sku ?? null
       );
       const newCart = store.cart().addItem(item);
       saveCartToStorage(newCart);

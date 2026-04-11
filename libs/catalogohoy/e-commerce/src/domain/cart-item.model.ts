@@ -9,7 +9,8 @@ export class CartItem {
     public readonly photo: string,
     public quantity: number,
     public readonly tierTitle: string | null = null,
-    id?: string
+    id?: string,
+    public readonly sku: string | null = null
   ) {
     this.id = id || crypto.randomUUID();
   }
@@ -27,7 +28,8 @@ export class CartItem {
       this.photo,
       this.quantity + 1,
       this.tierTitle,
-      this.id
+      this.id,
+      this.sku
     );
   }
 
@@ -41,7 +43,8 @@ export class CartItem {
       this.photo,
       this.quantity - 1,
       this.tierTitle,
-      this.id
+      this.id,
+      this.sku
     );
   }
 
@@ -54,7 +57,8 @@ export class CartItem {
       primitives.photo,
       primitives.quantity,
       primitives.tierTitle ?? null,
-      primitives.id
+      primitives.id,
+      primitives.sku ?? null
     );
   }
 }
@@ -68,4 +72,5 @@ export interface CartItemPrimitives {
   photo: string;
   quantity: number;
   tierTitle: string | null;
+  sku?: string | null;
 }

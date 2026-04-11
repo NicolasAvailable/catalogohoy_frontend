@@ -85,6 +85,7 @@ export class CheckoutDrawer {
         quantity: item.quantity,
         total: item.total,
         photo: item.photo,
+        sku: item.sku ?? null,
       })),
       total: total,
       payment_method: this.selectedPaymentMethod() || undefined,

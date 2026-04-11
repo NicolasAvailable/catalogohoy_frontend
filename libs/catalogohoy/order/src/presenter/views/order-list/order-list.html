@@ -174,6 +174,13 @@
               severity="contrast"
               size="small"
             />
+            <ui-button
+              (click)="downloadPdf(order)"
+              icon="download"
+              variant="text"
+              severity="contrast"
+              size="small"
+            />
             @if (canEditOrder()) {
             <ui-button
               (click)="onEditOrder(order)"
@@ -385,6 +392,15 @@
                   severity="contrast"
                   size="small"
                   [tooltip]="expandedOrderId() === order.id ? 'Ocultar detalle' : 'Ver detalle'"
+                  tooltipPosition="bottom"
+                />
+                <ui-button
+                  (click)="downloadPdf(order)"
+                  icon="download"
+                  variant="outlined"
+                  severity="contrast"
+                  size="small"
+                  tooltip="Descargar PDF"
                   tooltipPosition="bottom"
                 />
                 @if (canEditOrder()) {

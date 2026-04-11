@@ -32,6 +32,7 @@ import {
   Subscription,
 } from 'rxjs';
 import { Order, OrderStatus } from '../../../domain/order';
+import { OrderPdfService } from '../../../infrastructure/order-pdf.service';
 import { OrderRealtimeService } from '../../../infrastructure/order-realtime.service';
 import { OrderStore } from '../../../infrastructure/order.store';
 
@@ -66,6 +67,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
   private readonly configStore = inject(EcommerceConfigStore);
+  private readonly orderPdf = inject(OrderPdfService);
   public readonly cs = computed(() => this.configStore.config()?.currencySymbol ?? '$');
   private readonly orderRealtime = inject(OrderRealtimeService);
   private readonly permissions = inject(TeamPermissionsStore);
@@ -368,5 +370,9 @@ export class OrderListComponent implements OnInit, OnDestroy {
           }
         );
       });
+  }
+
+  downloadPdf(order: Order): void {
+    this.orderPdf.download(order);
   }
 }

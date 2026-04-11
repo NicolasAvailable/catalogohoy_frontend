@@ -5,6 +5,7 @@ export interface OrderItem {
   quantity: number;
   total: number;
   photo?: string;
+  sku?: string | null;
 }
 
 export type OrderStatus = 'pending' | 'completed' | 'cancelled';
