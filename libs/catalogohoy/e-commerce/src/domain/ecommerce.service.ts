@@ -19,6 +19,7 @@ export interface CatalogInfo {
   socialLinks: SocialLinks;
   template: CatalogTemplate;
   currencySymbol: string;
+  whatsappOrderMessage: string | null;
 }
 
 export interface Category {

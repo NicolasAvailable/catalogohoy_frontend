@@ -106,6 +106,7 @@ export class EcommerceService implements BaseEcommerceService {
       socialLinks: (config?.social_links as SocialLinks) ?? DEFAULT_SOCIAL_LINKS,
       template: (config?.template as CatalogTemplate) ?? 'banner-centered',
       currencySymbol: config?.currency_symbol ?? '$',
+      whatsappOrderMessage: config?.whatsapp_order_message ?? null,
     };
 
     const categories: Category[] = (data.categories ?? []).map((cat: any) => ({

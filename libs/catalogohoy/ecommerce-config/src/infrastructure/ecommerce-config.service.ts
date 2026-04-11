@@ -22,7 +22,7 @@ export class EcommerceConfigService {
       const { data: config } = await this.client
         .from('tenant_ecommerce_config')
         .select(
-          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, social_links, template'
+          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, social_links, template, whatsapp_order_message'
         )
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -52,6 +52,7 @@ export class EcommerceConfigService {
         showLocationSection: config?.show_location_section ?? true,
         socialLinks: (config?.social_links as SocialLinks) ?? DEFAULT_SOCIAL_LINKS,
         template: (config?.template as CatalogTemplate) ?? 'banner-centered',
+        whatsappOrderMessage: config?.whatsapp_order_message ?? null,
       });
     } catch (error) {
       return E.left(error as Error);
@@ -103,6 +104,8 @@ export class EcommerceConfigService {
         updateData['social_links'] = config.socialLinks;
       if (config.template !== undefined)
         updateData['template'] = config.template;
+      if (config.whatsappOrderMessage !== undefined)
+        updateData['whatsapp_order_message'] = config.whatsappOrderMessage;
 
       if (Object.keys(updateData).length > 0) {
         const tenantIdNum = Number(config.tenantId);

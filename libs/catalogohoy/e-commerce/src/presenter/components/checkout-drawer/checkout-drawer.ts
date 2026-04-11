@@ -96,31 +96,57 @@ export class CheckoutDrawer {
       return;
     }
 
-    let message = `¡Hola! Me gustaría hacer un pedido:\n\n`;
-    message += `*Nombre:* ${this.name()}\n`;
-    message += `*Teléfono:* ${this.countryCode()} ${this.phone()}\n\n`;
-    message += `*Productos:*\n`;
-
     const symbol = this.cs();
+    const exchangeRate = this.ecommerceStore.exchangeRate();
+
+    // Build product list string
+    let productsList = '';
     items.forEach((item: CartItem) => {
-      message += `• ${item.name} x${item.quantity} - ${symbol}${item.total}\n`;
+      productsList += `• ${item.name} x${item.quantity} - ${symbol}${item.total}\n`;
     });
 
-    message += `\n*Total:* ${symbol}${total}`;
-
-    const exchangeRate = this.ecommerceStore.exchangeRate();
+    // Build total Bs string
+    let totalBsStr = '';
     if (exchangeRate > 0) {
       const totalBs = (total * exchangeRate).toFixed(2);
-      message += ` (Bs. ${totalBs})`;
+      totalBsStr = ` (Bs. ${totalBs})`;
     }
 
+    // Build comments string
+    let commentsStr = '';
     if (this.comments()) {
-      message += `\n\n*Comentarios:* ${this.comments()}`;
+      commentsStr = `*Comentarios:* ${this.comments()}`;
     }
 
+    // Build payment method string
+    let paymentStr = '';
     if (this.selectedPaymentMethod()) {
-      message += `\n\n*Método de pago:* ${this.selectedPaymentMethod()}`;
-      message += `\nPor favor compartir los datos para realizar el pago.`;
+      paymentStr = `*Método de pago:* ${this.selectedPaymentMethod()}\nPor favor compartir los datos para realizar el pago.`;
+    }
+
+    // Use custom template from config or fall back to the default
+    const customTemplate =
+      this.ecommerceStore.effectiveCatalogInfo()?.whatsappOrderMessage;
+
+    let message: string;
+
+    if (customTemplate) {
+      message = customTemplate
+        .replace(/\{nombre\}/g, this.name())
+        .replace(/\{telefono\}/g, `${this.countryCode()} ${this.phone()}`)
+        .replace(/\{productos\}/g, productsList.trimEnd())
+        .replace(/\{total\}/g, `${symbol}${total}`)
+        .replace(/\{totalBs\}/g, totalBsStr)
+        .replace(/\{comentarios\}/g, commentsStr)
+        .replace(/\{metodoPago\}/g, paymentStr);
+    } else {
+      message = `¡Hola! Me gustaría hacer un pedido:\n\n`;
+      message += `*Nombre:* ${this.name()}\n`;
+      message += `*Teléfono:* ${this.countryCode()} ${this.phone()}\n\n`;
+      message += `*Productos:*\n${productsList}`;
+      message += `\n*Total:* ${symbol}${total}${totalBsStr}`;
+      if (commentsStr) message += `\n\n${commentsStr}`;
+      if (paymentStr) message += `\n\n${paymentStr}`;
     }
 
     const encodedMessage = encodeURIComponent(message);

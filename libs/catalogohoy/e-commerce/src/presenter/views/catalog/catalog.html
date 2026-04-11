@@ -93,10 +93,6 @@
   >
     @for (product of ecommerceStore.productList().items; track product.id) {
     <lib-product-card
-      pAnimateOnScroll
-      enterClass="catalog__animate-enter"
-      [once]="true"
-      [threshold]="0.05"
       [product]="product"
       [viewMode]="viewMode()"
     />

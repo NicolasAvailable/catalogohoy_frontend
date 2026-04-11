@@ -33,10 +33,13 @@ import { Observable } from 'rxjs';
 import {
   CatalogTemplate,
   DEFAULT_SOCIAL_LINKS,
+  DEFAULT_WHATSAPP_ORDER_MESSAGE,
   EcommerceConfig,
   SocialLinks,
   THEME_COLORS,
   VENEZUELAN_STATES,
+  WHATSAPP_MESSAGE_MAX_LENGTH,
+  WHATSAPP_MESSAGE_VARIABLES,
   WhatsappButton,
 } from '../../domain';
 import { EcommerceConfigStore } from '../../infrastructure';
@@ -94,6 +97,12 @@ export class EcommerceConfigComponent implements OnInit {
     { label: 'Globo', value: 'globe' },
   ];
 
+  // WhatsApp message template
+  public readonly whatsappMessageVariables = WHATSAPP_MESSAGE_VARIABLES;
+  public readonly defaultWhatsappMessage = DEFAULT_WHATSAPP_ORDER_MESSAGE;
+  public readonly whatsappMaxLength = WHATSAPP_MESSAGE_MAX_LENGTH;
+  public readonly whatsappMessageTextarea = viewChild<ElementRef>('whatsappMessageTextarea');
+
   // Draft signals
   public readonly draftName = signal('');
   public readonly draftDescription = signal('');
@@ -107,6 +116,7 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftSocialLinks = signal<SocialLinks>({ ...DEFAULT_SOCIAL_LINKS });
   public readonly draftTemplate = signal<CatalogTemplate>('banner-centered');
   public readonly draftCurrencySymbol = signal('$');
+  public readonly draftWhatsappOrderMessage = signal<string | null>(null);
 
   // Computed
   public readonly isCustomColor = computed(
@@ -223,6 +233,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftShowPaymentMethodsSection, prev?.showPaymentMethodsSection ?? true, config.showPaymentMethodsSection ?? true);
       syncField(this.draftTemplate, prev?.template ?? 'banner-centered' as CatalogTemplate, config.template ?? 'banner-centered' as CatalogTemplate);
       syncField(this.draftCurrencySymbol, prev?.currencySymbol ?? '$', config.currencySymbol ?? '$');
+      syncField(this.draftWhatsappOrderMessage, prev?.whatsappOrderMessage ?? null, config.whatsappOrderMessage ?? null);
       syncFieldJson(this.draftWhatsappButtons, prevButtons, newButtons);
       syncFieldJson(this.draftSocialLinks, prev?.socialLinks ?? DEFAULT_SOCIAL_LINKS, config.socialLinks ?? { ...DEFAULT_SOCIAL_LINKS });
 
@@ -283,6 +294,7 @@ export class EcommerceConfigComponent implements OnInit {
     if (this.draftShowLocationSection() !== (config.showLocationSection ?? true)) changes.showLocationSection = this.draftShowLocationSection();
     if (this.draftShowPaymentMethodsSection() !== (config.showPaymentMethodsSection ?? true)) changes.showPaymentMethodsSection = this.draftShowPaymentMethodsSection();
     if (this.draftCurrencySymbol() !== (config.currencySymbol ?? '$')) changes.currencySymbol = this.draftCurrencySymbol();
+    if (this.draftWhatsappOrderMessage() !== (config.whatsappOrderMessage ?? null)) changes.whatsappOrderMessage = this.draftWhatsappOrderMessage();
 
     const serverButtons = config.whatsappButtons?.length
       ? config.whatsappButtons
@@ -440,6 +452,40 @@ export class EcommerceConfigComponent implements OnInit {
   // --- Behavior Section ---
   onToggleOrders(enabled: boolean) {
     this.configStore.updateIsAcceptingOrders(enabled);
+  }
+
+  resetWhatsappMessage() {
+    this.draftWhatsappOrderMessage.set(null);
+  }
+
+  insertVariable(variable: string) {
+    const current = this.draftWhatsappOrderMessage() ?? this.defaultWhatsappMessage;
+    const textarea = this.whatsappMessageTextarea()?.nativeElement as
+      | HTMLTextAreaElement
+      | undefined;
+
+    if (textarea) {
+      const start = textarea.selectionStart ?? current.length;
+      const end = textarea.selectionEnd ?? current.length;
+      const updated =
+        current.slice(0, start) + variable + current.slice(end);
+      this.draftWhatsappOrderMessage.set(updated);
+
+      // Restore cursor right after the inserted variable
+      requestAnimationFrame(() => {
+        const pos = start + variable.length;
+        textarea.focus();
+        textarea.setSelectionRange(pos, pos);
+      });
+    } else {
+      this.draftWhatsappOrderMessage.set(current + variable);
+    }
+  }
+
+  get whatsappMessageLength(): number {
+    return (
+      this.draftWhatsappOrderMessage() ?? this.defaultWhatsappMessage
+    ).length;
   }
 
   // --- Mobile ---
