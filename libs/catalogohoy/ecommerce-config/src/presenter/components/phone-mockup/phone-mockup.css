@@ -124,6 +124,11 @@
   background: var(--color-grey-100, #c3c3c3);
 }
 
+.overlay-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

@@ -21,6 +21,7 @@ import { PreviewMessage } from '../../../domain';
 export class PhoneMockupComponent {
   public readonly iframeUrl = input.required<SafeResourceUrl>();
   public readonly isOverlay = input(false);
+  public readonly hidden = input(false);
   public readonly close = output<void>();
 
   private readonly iframeRef =

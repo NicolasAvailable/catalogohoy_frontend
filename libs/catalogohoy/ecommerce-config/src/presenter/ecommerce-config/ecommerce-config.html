@@ -766,12 +766,13 @@
     <ui-icon name="eye" styleClass="size-7"></ui-icon>
   </button>
 
-  <!-- Mobile overlay mockup -->
-  @if (isMockupOpen() && safeIframeUrl) {
+  <!-- Mobile overlay mockup (always in DOM to keep iframe alive) -->
+  @if (safeIframeUrl) {
   <lib-phone-mockup
     #phoneMockupOverlay
     [iframeUrl]="safeIframeUrl"
     [isOverlay]="true"
+    [hidden]="!isMockupOpen()"
     (close)="closeMockup()"
   ></lib-phone-mockup>
   }
