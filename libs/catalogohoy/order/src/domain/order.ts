@@ -6,6 +6,8 @@ export interface OrderItem {
   total: number;
   photo?: string;
   sku?: string | null;
+  isCustom?: boolean;
+  description?: string;
 }
 
 export type OrderStatus = 'pending' | 'completed' | 'cancelled';

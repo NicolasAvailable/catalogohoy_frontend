@@ -69,12 +69,28 @@ export default class OrderSave implements OnInit {
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canEditOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'edit'));
 
+  private static readonly CUSTOM_PRODUCT_ID = '__custom__';
+
+  public readonly selectableProducts = computed(() => {
+    const real = this.productStore.productList().products;
+    const customOption = {
+      id: OrderSave.CUSTOM_PRODUCT_ID,
+      name: 'Otros',
+      price: 0,
+      photos: [] as string[],
+      isWholesale: false,
+      wholesaleTiers: [] as { title: string; price: number }[],
+    };
+    return [customOption, ...real];
+  });
+
   public readonly form = inject(FormBuilder).group({
     name: ['', [Validators.required, whiteSpacesValidator()]],
     phone: [''],
     comments: [''],
     status: ['pending' as OrderStatus],
   });
+
 
   public readonly id = input<string | undefined>(undefined);
   public readonly products = signal<OrderItem[]>([]);
@@ -162,11 +178,60 @@ export default class OrderSave implements OnInit {
     ]);
   }
 
+  public addCustomProduct() {
+    this.products.update((products) => [
+      ...products,
+      {
+        productId: OrderSave.CUSTOM_PRODUCT_ID,
+        name: '',
+        price: 0,
+        quantity: 1,
+        total: 0,
+        isCustom: true,
+        description: '',
+      },
+    ]);
+  }
+
+  public cancelCustomProduct(index: number) {
+    this.products.update((products) => {
+      const updated = [...products];
+      updated[index] = {
+        productId: '',
+        name: '',
+        price: 0,
+        quantity: 1,
+        total: 0,
+        isCustom: false,
+        description: undefined,
+      };
+      return updated;
+    });
+  }
+
   public removeProduct(index: number) {
     this.products.update((products) => products.filter((_, i) => i !== index));
   }
 
   public onProductSelect(index: number, productId: string) {
+    if (productId === OrderSave.CUSTOM_PRODUCT_ID) {
+      this.products.update((products) => {
+        const updated = [...products];
+        updated[index] = {
+          ...updated[index],
+          productId: OrderSave.CUSTOM_PRODUCT_ID,
+          name: '',
+          price: 0,
+          photo: undefined,
+          total: 0,
+          isCustom: true,
+          description: '',
+        };
+        return updated;
+      });
+      return;
+    }
+
     const selectedProduct = this.productStore
       .productList()
       .products.find((p) => p.id === productId);
@@ -174,7 +239,9 @@ export default class OrderSave implements OnInit {
     if (selectedProduct) {
       const price = selectedProduct.isWholesale && selectedProduct.wholesaleTiers.length > 0
         ? selectedProduct.wholesaleTiers[0].price
-        : selectedProduct.price;
+        : selectedProduct.pricePromotional > 0
+          ? selectedProduct.pricePromotional
+          : selectedProduct.price;
 
       this.products.update((products) => {
         const updated = [...products];
@@ -185,10 +252,40 @@ export default class OrderSave implements OnInit {
           price,
           photo: selectedProduct.photos?.[0],
           total: price * updated[index].quantity,
+          isCustom: false,
         };
         return updated;
       });
     }
+  }
+
+  public onCustomNameChange(index: number, name: string) {
+    this.products.update((products) => {
+      const updated = [...products];
+      updated[index] = { ...updated[index], name };
+      return updated;
+    });
+  }
+
+  public onCustomDescriptionChange(index: number, description: string) {
+    this.products.update((products) => {
+      const updated = [...products];
+      updated[index] = { ...updated[index], description };
+      return updated;
+    });
+  }
+
+  public onCustomPriceChange(index: number, price: number) {
+    const safePrice = price || 0;
+    this.products.update((products) => {
+      const updated = [...products];
+      updated[index] = {
+        ...updated[index],
+        price: safePrice,
+        total: safePrice * updated[index].quantity,
+      };
+      return updated;
+    });
   }
 
   public onQuantityChange(index: number, quantity: number) {

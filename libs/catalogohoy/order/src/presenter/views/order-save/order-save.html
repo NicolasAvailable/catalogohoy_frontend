@@ -100,6 +100,8 @@
           <div class="p-4 border border-grey-200 rounded-lg">
             <div class="flex flex-col sm:flex-row sm:items-start gap-4">
               <div class="flex-1 flex flex-col sm:grid sm:grid-cols-4 gap-4">
+                <!-- Selector de producto (visible cuando NO es custom) -->
+                @if (!product.isCustom) {
                 <div class="flex flex-col gap-1 sm:col-span-2">
                   <label
                     class="text-sm text-grey-100"
@@ -107,7 +109,7 @@
                     >Producto</label
                   >
                   <ui-select
-                    [options]="productStore.productList().products"
+                    [options]="selectableProducts()"
                     optionLabel="name"
                     optionValue="id"
                     placeholder="Seleccionar producto"
@@ -148,6 +150,21 @@
                     </ng-template>
                     <ng-template selectItem let-item>
                       <div class="flex items-center gap-3 py-1">
+                        @if (item.id === '__custom__') {
+                        <div
+                          class="w-8 h-8 rounded bg-primary-50 flex items-center justify-center"
+                        >
+                          <ui-icon
+                            name="plus-circle"
+                            size="16"
+                            styleClass="text-primary-500"
+                          />
+                        </div>
+                        <div class="flex flex-col">
+                          <span class="text-primary-600 font-medium">Otros</span>
+                          <span class="text-xs text-grey-400">Producto personalizado</span>
+                        </div>
+                        } @else {
                         @if (item.photos?.length) {
                         <img
                           [src]="item.photos[0]"
@@ -173,16 +190,95 @@
                           <span class="text-xs text-amber-600"
                             >Al mayor · Desde ${{ item.wholesaleTiers[0].price.toFixed(2) }}</span
                           >
+                          } @else if (item.pricePromotional > 0) {
+                          <span class="text-xs text-grey-400">
+                            <span class="line-through">$ {{ item.price.toFixed(2) }}</span>
+                            <span class="text-grey-800 ml-1">$ {{ item.pricePromotional.toFixed(2) }}</span>
+                          </span>
                           } @else {
                           <span class="text-xs text-grey-400"
                             >$ {{ item.price.toFixed(2) }}</span
                           >
                           }
                         </div>
+                        }
                       </div>
                     </ng-template>
                   </ui-select>
                 </div>
+                } @else {
+                <!-- Campos custom (visible cuando ES custom) -->
+                <div class="flex flex-col gap-3 sm:col-span-2">
+                  <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center gap-2">
+                      <div
+                        class="w-6 h-6 rounded bg-primary-50 flex items-center justify-center"
+                      >
+                        <ui-icon
+                          name="plus-circle"
+                          size="14"
+                          styleClass="text-primary-500"
+                        />
+                      </div>
+                      <span class="text-xs font-medium text-primary-600">Producto adicional</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="text-xs text-grey-400 hover:text-grey-600 transition-colors cursor-pointer underline"
+                      (click)="cancelCustomProduct($index)"
+                    >
+                      Cambiar a producto
+                    </button>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label
+                      class="text-sm text-grey-100"
+                      [attr.for]="'custom-name-' + $index"
+                      >Nombre</label
+                    >
+                    <ui-input-text
+                      [ngModel]="product.name"
+                      (ngModelChange)="onCustomNameChange($index, $event)"
+                      [ngModelOptions]="{ standalone: true }"
+                      placeholder="Ej: Anillo, Nota, Tarjeta..."
+                      [inputId]="'custom-name-' + $index"
+                    />
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <div class="flex items-center gap-2">
+                      <label
+                        class="text-sm text-grey-100"
+                        [attr.for]="'custom-desc-' + $index"
+                        >Descripción</label
+                      >
+                      <span class="text-xs text-grey-300">(Opcional)</span>
+                    </div>
+                    <ui-input-text
+                      [ngModel]="product.description ?? ''"
+                      (ngModelChange)="onCustomDescriptionChange($index, $event)"
+                      [ngModelOptions]="{ standalone: true }"
+                      placeholder="Detalle del producto..."
+                      [inputId]="'custom-desc-' + $index"
+                    />
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label
+                      class="text-sm text-grey-100"
+                      [attr.for]="'custom-price-' + $index"
+                      >Precio ({{ cs() }})</label
+                    >
+                    <ui-input-number
+                      [ngModel]="product.price"
+                      (ngModelChange)="onCustomPriceChange($index, $event)"
+                      [ngModelOptions]="{ standalone: true }"
+                      [min]="0"
+                      mode="decimal"
+                      prefix="$ "
+                      [inputId]="'custom-price-' + $index"
+                    />
+                  </div>
+                </div>
+                }
                 <div class="flex items-center sm:items-stretch sm:flex-col gap-4 sm:gap-1">
                   <div class="flex flex-col gap-1 flex-1 sm:flex-none">
                     <label
