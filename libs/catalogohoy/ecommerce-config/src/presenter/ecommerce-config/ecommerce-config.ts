@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { PlanStore } from '@catalogohoy/plan';
 import { TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import {
@@ -75,6 +76,8 @@ export class EcommerceConfigComponent implements OnInit {
   private readonly confirmDialogService = inject(ConfirmDialogService);
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canEditCatalog = computed(() => this.permissions.isOwner() || this.permissions.can()('catalogo', 'edit'));
+  private readonly planStore = inject(PlanStore);
+  public readonly isWhatsappLocked = computed(() => this.planStore.currentPlan()?.isFree ?? false);
 
   public readonly themeColors = THEME_COLORS;
   public readonly venezuelanStates = VENEZUELAN_STATES;

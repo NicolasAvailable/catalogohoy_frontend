@@ -668,12 +668,20 @@
 
       <!-- Card 7: Mensaje de WhatsApp personalizado -->
       <ui-card>
-        <div class="card-section">
+        <div class="card-section" [class.opacity-50]="isWhatsappLocked()" [class.pointer-events-none]="isWhatsappLocked()">
           <div class="card-header">
             <div class="card-icon card-icon--green">
               <ui-icon name="message-circle" size="20" styleClass="text-green-600" />
             </div>
-            <h2 class="card-title">Mensaje de WhatsApp</h2>
+            <div class="flex items-center gap-2">
+              <h2 class="card-title">Mensaje de WhatsApp</h2>
+              @if (isWhatsappLocked()) {
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none">
+                <ui-icon name="crown" size="10" styleClass="text-indigo-500" />
+                Pro
+              </span>
+              }
+            </div>
           </div>
           <p class="card-subtitle">
             Personalizá el mensaje que se envía al WhatsApp cuando un cliente
