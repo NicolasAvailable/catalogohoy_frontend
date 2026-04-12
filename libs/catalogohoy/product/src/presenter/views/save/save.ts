@@ -96,7 +96,15 @@ export default class Save implements OnInit {
   public readonly isCreatingCategory = signal<boolean>(false);
   public readonly newCategoryName = signal<string>('');
   public readonly stockMode = signal<'unlimited' | 'limited'>('unlimited');
-  private readonly maxPhotos = 3;
+
+  private readonly photosLimitByPlan: Record<string, number> = {
+    gratis: 3,
+    basico: 10,
+    avanzado: 50,
+  };
+  public readonly maxPhotos = computed(
+    () => this.photosLimitByPlan[this.planStore.currentPlan()?.id ?? 'gratis'] ?? 3
+  );
 
   get wholesaleTiersArray(): FormArray {
     return this.form.get('wholesaleTiers') as FormArray;
@@ -220,11 +228,12 @@ export default class Save implements OnInit {
   public setPhoto(url: string | string[]) {
     const newPhotos = Array.isArray(url) ? url : [url];
     const currentPhotos = this.photos();
+    const limit = this.maxPhotos();
 
-    if (currentPhotos.length + newPhotos.length > this.maxPhotos) {
+    if (currentPhotos.length + newPhotos.length > limit) {
       this.toastService.error(
         ('Solo puedes subir un máximo de ' +
-          this.maxPhotos +
+          limit +
           ' imágenes.') as unknown as Exception
       );
       return;
