@@ -105,6 +105,12 @@ export default class Save implements OnInit {
   public readonly maxPhotos = computed(
     () => this.photosLimitByPlan[this.planStore.currentPlan()?.id ?? 'gratis'] ?? 3
   );
+  public readonly photosLimitMessage = computed(() => {
+    const planId = this.planStore.currentPlan()?.id ?? 'gratis';
+    if (planId === 'gratis') return 'Mejora tu plan para subir hasta 10 o 50 imágenes';
+    if (planId === 'basico') return 'Mejora tu plan para subir hasta 50 imágenes';
+    return 'Límite de imágenes alcanzado';
+  });
 
   get wholesaleTiersArray(): FormArray {
     return this.form.get('wholesaleTiers') as FormArray;

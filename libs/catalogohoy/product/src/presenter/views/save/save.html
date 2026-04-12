@@ -218,7 +218,7 @@
                     (photos().length >= maxPhotos() ? 'text-grey-400' : 'text-primary-500')
                   "
                 >
-                  {{ photos().length >= maxPhotos() ? 'Límite de imágenes alcanzado' :
+                  {{ photos().length >= maxPhotos() ? photosLimitMessage() :
                   'Arrastrá y soltá, o subí fotos del producto' }}
                 </p>
               </button>
