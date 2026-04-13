@@ -33,17 +33,22 @@ import {
 import { Observable } from 'rxjs';
 import {
   CatalogTemplate,
+  DEFAULT_CURRENCY_CONFIG,
   DEFAULT_SOCIAL_LINKS,
   DEFAULT_WHATSAPP_ORDER_MESSAGE,
   EcommerceConfig,
+  ExchangeRateType,
+  findCountryByCode,
   SocialLinks,
+  SUPPORTED_COUNTRIES,
+  SUPPORTED_CURRENCIES,
+  TenantCurrencyConfig,
   THEME_COLORS,
-  VENEZUELAN_STATES,
   WHATSAPP_MESSAGE_MAX_LENGTH,
   WHATSAPP_MESSAGE_VARIABLES,
   WhatsappButton,
 } from '../../domain';
-import { EcommerceConfigStore } from '../../infrastructure';
+import { EcommerceConfigStore, LocationApiService } from '../../infrastructure';
 import { PhoneMockupComponent } from '../components/phone-mockup/phone-mockup';
 import { TemplateSelectorComponent } from '../components/template-selector/template-selector';
 
@@ -80,7 +85,15 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly isWhatsappLocked = computed(() => this.planStore.currentPlan()?.isFree ?? false);
 
   public readonly themeColors = THEME_COLORS;
-  public readonly venezuelanStates = VENEZUELAN_STATES;
+  public readonly supportedCountries = SUPPORTED_COUNTRIES;
+  public readonly supportedCurrencies = SUPPORTED_CURRENCIES;
+  private readonly locationApi = inject(LocationApiService);
+
+  // Location cascade signals
+  public readonly availableStates = signal<string[]>([]);
+  public readonly availableCities = signal<string[]>([]);
+  public readonly isLoadingStates = signal(false);
+  public readonly isLoadingCities = signal(false);
 
   // New payment method form
   public readonly newMethodName = signal('');
@@ -111,6 +124,7 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftDescription = signal('');
   public readonly draftWhatsappButtons = signal<WhatsappButton[]>([]);
   public readonly draftThemeColor = signal('#10b981');
+  public readonly draftCountryCode = signal<string | null>(null);
   public readonly draftState = signal<string | null>(null);
   public readonly draftCity = signal<string | null>(null);
   public readonly draftShowDesignSection = signal(true);
@@ -121,6 +135,12 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftCurrencySymbol = signal('$');
   public readonly draftWhatsappOrderMessage = signal<string | null>(null);
 
+  // Currency config drafts — TenantCurrencyConfig shape
+  public readonly draftCurrency = signal<TenantCurrencyConfig>({ ...DEFAULT_CURRENCY_CONFIG });
+  public readonly isVenezuela = computed(
+    () => this.draftCountryCode() === 'VE'
+  );
+
   // Computed
   public readonly isCustomColor = computed(
     () => !this.themeColors.some((c) => c.value === this.draftThemeColor())
@@ -128,7 +148,20 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly hasUnsavedChanges = computed(() => {
     const config = this.configStore.config();
     if (!config) return false;
-    return Object.keys(this.getChangedFields()).length > 0;
+    if (Object.keys(this.getChangedFields()).length > 0) return true;
+
+    // Country (lives on tenants)
+    if (this.draftCountryCode() !== (config.countryCode ?? null)) return true;
+
+    // Currency config (lives on tenant_currency_config)
+    const cc = this.configStore.currencyConfig();
+    const dc = this.draftCurrency();
+    const currencyKeys: (keyof TenantCurrencyConfig)[] = [
+      'productCurrency', 'displayCurrency', 'exchangeRateType',
+      'customRate', 'showDualCurrency', 'currencySymbol',
+      'decimalSeparator', 'thousandSeparator',
+    ];
+    return currencyKeys.some((k) => dc[k] !== cc[k]);
   });
 
   // Responsive label for top save button
@@ -229,6 +262,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftName, prev?.name ?? '', config.name ?? '');
       syncField(this.draftDescription, prev?.description ?? '', config.description ?? '');
       syncField(this.draftThemeColor, prev?.themeColor ?? '#10b981', config.themeColor ?? '#10b981');
+      syncField(this.draftCountryCode, prev?.countryCode ?? null, config.countryCode ?? null);
       syncField(this.draftState, prev?.state ?? null, config.state ?? null);
       syncField(this.draftCity, prev?.city ?? null, config.city ?? null);
       syncField(this.draftShowDesignSection, prev?.showDesignSection ?? true, config.showDesignSection ?? true);
@@ -263,6 +297,142 @@ export class EcommerceConfigComponent implements OnInit {
       this.phoneMockup()?.sendPreviewMessage(message);
       this.phoneMockupOverlay()?.sendPreviewMessage(message);
     });
+
+    // Load states whenever the country changes.
+    effect(() => {
+      const code = this.draftCountryCode();
+      const country = findCountryByCode(code);
+      if (!country) {
+        this.availableStates.set([]);
+        return;
+      }
+      this.isLoadingStates.set(true);
+      this.locationApi.getStates(country.name).then((result) => {
+        result.fold(
+          () => this.availableStates.set([]),
+          (states) => this.availableStates.set(states)
+        );
+        this.isLoadingStates.set(false);
+      });
+    });
+
+    // Load cities whenever the state changes (only if country is resolved).
+    effect(() => {
+      const code = this.draftCountryCode();
+      const state = this.draftState();
+      const country = findCountryByCode(code);
+      if (!country || !state) {
+        this.availableCities.set([]);
+        return;
+      }
+      this.isLoadingCities.set(true);
+      this.locationApi.getCities(country.name, state).then((result) => {
+        result.fold(
+          () => this.availableCities.set([]),
+          (cities) => this.availableCities.set(cities)
+        );
+        this.isLoadingCities.set(false);
+      });
+    });
+
+    // Sync currency config from the store into the draft.
+    // If no row exists in DB yet, seed the draft from the country's
+    // default currency so VE users see VES/USD-ref out of the box.
+    effect(() => {
+      const cc = this.configStore.currencyConfig();
+      const exists = this.configStore.currencyConfigExists();
+      const countryCode = this.configStore.config()?.countryCode ?? null;
+      untracked(() => {
+        if (!exists && countryCode) {
+          const seeded = this.buildCurrencyDefaultsForCountry(countryCode);
+          if (seeded) {
+            this.draftCurrency.set(seeded);
+            return;
+          }
+        }
+        this.draftCurrency.set({ ...cc });
+      });
+    });
+  }
+
+  private buildCurrencyDefaultsForCountry(
+    code: string
+  ): TenantCurrencyConfig | null {
+    const country = findCountryByCode(code);
+    if (!country) return null;
+
+    if (code === 'VE') {
+      return {
+        productCurrency: 'VES',
+        displayCurrency: 'USD',
+        exchangeRateType: 'bcv_usd',
+        customRate: null,
+        showDualCurrency: true,
+        currencySymbol: 'Bs.',
+        decimalSeparator: ',',
+        thousandSeparator: '.',
+      };
+    }
+
+    return {
+      productCurrency: country.defaultCurrency,
+      displayCurrency: country.defaultCurrency,
+      exchangeRateType: 'none',
+      customRate: null,
+      showDualCurrency: false,
+      currencySymbol: SUPPORTED_CURRENCIES.find((c) => c.code === country.defaultCurrency)?.symbol ?? '$',
+      decimalSeparator: country.decimalSeparator,
+      thousandSeparator: country.thousandSeparator,
+    };
+  }
+
+  // Flag CDN — ISO2 lowercase, free, no auth. Used in country select templates.
+  flagUrl(code: string | null | undefined): string {
+    if (!code) return '';
+    return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
+  }
+
+  // --- Location cascade handlers ---
+  onCountryChange(code: string | null) {
+    const prev = this.draftCountryCode();
+    if (prev === code) return;
+    this.draftCountryCode.set(code);
+    // Reset state + city when country changes
+    this.draftState.set(null);
+    this.draftCity.set(null);
+    // Seed currency defaults from the new country (same helper as initial sync)
+    if (code) {
+      const seeded = this.buildCurrencyDefaultsForCountry(code);
+      if (seeded) this.draftCurrency.set(seeded);
+    }
+  }
+
+  // Venezuela-only: quick-toggle between USD and EUR as the reference currency.
+  // Mirrors the pre-internationalization UX (two buttons with symbol + name).
+  setReferenceCurrency(code: 'USD' | 'EUR') {
+    this.draftCurrency.set({
+      ...this.draftCurrency(),
+      displayCurrency: code,
+      exchangeRateType: code === 'USD' ? 'bcv_usd' : 'bcv_eur',
+    });
+  }
+
+  onStateChange(state: string | null) {
+    if (this.draftState() === state) return;
+    this.draftState.set(state);
+    this.draftCity.set(null);
+  }
+
+  onCityChange(city: string | null) {
+    this.draftCity.set(city);
+  }
+
+  // --- Currency section handlers ---
+  updateCurrencyField<K extends keyof TenantCurrencyConfig>(
+    key: K,
+    value: TenantCurrencyConfig[K]
+  ) {
+    this.draftCurrency.set({ ...this.draftCurrency(), [key]: value });
   }
 
   async ngOnInit() {
@@ -277,6 +447,7 @@ export class EcommerceConfigComponent implements OnInit {
     if (tenantId) {
       this.configStore.reloadConfig(String(tenantId));
       this.configStore.loadPaymentMethods(String(tenantId));
+      this.configStore.loadCurrencyConfig(String(tenantId));
     }
   }
 
@@ -293,6 +464,8 @@ export class EcommerceConfigComponent implements OnInit {
     if (this.draftThemeColor() !== (config.themeColor ?? '#10b981')) changes.themeColor = this.draftThemeColor();
     if (this.draftState() !== (config.state ?? null)) changes.state = this.draftState();
     if (this.draftCity() !== (config.city ?? null)) changes.city = this.draftCity();
+    // country lives on `tenants` — handled by a separate saveTenantCountry call
+    // in saveAllChanges, not through updateConfig.
     if (this.draftShowDesignSection() !== (config.showDesignSection ?? true)) changes.showDesignSection = this.draftShowDesignSection();
     if (this.draftShowLocationSection() !== (config.showLocationSection ?? true)) changes.showLocationSection = this.draftShowLocationSection();
     if (this.draftShowPaymentMethodsSection() !== (config.showPaymentMethodsSection ?? true)) changes.showPaymentMethodsSection = this.draftShowPaymentMethodsSection();
@@ -315,9 +488,37 @@ export class EcommerceConfigComponent implements OnInit {
   }
 
   async saveAllChanges() {
+    const config = this.configStore.config();
     const changes = this.getChangedFields();
-    if (Object.keys(changes).length === 0) return;
-    await this.configStore.updatePartialConfig(changes);
+
+    // 1. Country lives on tenants → separate call.
+    // Persist the Spanish label as `tenants.country` so it renders directly
+    // in the public catalog without needing client-side translation.
+    const newCountryCode = this.draftCountryCode();
+    if (config && newCountryCode && newCountryCode !== (config.countryCode ?? null)) {
+      const country = findCountryByCode(newCountryCode);
+      if (country) {
+        await this.configStore.saveTenantCountry(country.label, country.code);
+      }
+    }
+
+    // 2. Currency config lives on tenant_currency_config → separate call
+    const currentCurrency = this.configStore.currencyConfig();
+    const draftCurrency = this.draftCurrency();
+    const currencyPatch: Partial<TenantCurrencyConfig> = {};
+    (Object.keys(draftCurrency) as (keyof TenantCurrencyConfig)[]).forEach((key) => {
+      if (draftCurrency[key] !== currentCurrency[key]) {
+        (currencyPatch as Record<string, unknown>)[key] = draftCurrency[key];
+      }
+    });
+    if (Object.keys(currencyPatch).length > 0) {
+      await this.configStore.saveCurrencyConfig(currencyPatch);
+    }
+
+    // 3. Everything else goes through updateConfig
+    if (Object.keys(changes).length > 0) {
+      await this.configStore.updatePartialConfig(changes);
+    }
   }
 
   showUnsavedChangesDialog(): Observable<boolean> {

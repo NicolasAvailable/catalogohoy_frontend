@@ -6,7 +6,13 @@ import {
   ProductMapper,
 } from '@catalogohoy/product';
 import { E } from '@shared/domain';
-import { CatalogTemplate, DEFAULT_SOCIAL_LINKS, SocialLinks } from '@catalogohoy/ecommerce-config';
+import {
+  CatalogTemplate,
+  DEFAULT_SOCIAL_LINKS,
+  ExchangeRateType,
+  SocialLinks,
+  TenantCurrencyConfig,
+} from '@catalogohoy/ecommerce-config';
 import {
   BaseEcommerceService,
   CatalogInfo,
@@ -76,6 +82,20 @@ export class EcommerceService implements BaseEcommerceService {
       exchangeRate = rateMap[er.active_rate] ?? 0;
     }
 
+    const cc = data.currency_config;
+    const currencyConfig: TenantCurrencyConfig | null = cc
+      ? {
+          productCurrency: cc.product_currency ?? 'USD',
+          displayCurrency: cc.display_currency ?? 'USD',
+          exchangeRateType: (cc.exchange_rate_type as ExchangeRateType) ?? 'none',
+          customRate: cc.custom_rate ?? null,
+          showDualCurrency: cc.show_dual_currency ?? false,
+          currencySymbol: cc.currency_symbol ?? '$',
+          decimalSeparator: cc.decimal_separator ?? ',',
+          thousandSeparator: cc.thousand_separator ?? '.',
+        }
+      : null;
+
     const catalogInfo: CatalogInfo = {
       id: data.tenant.id,
       name: data.tenant.name,
@@ -107,6 +127,12 @@ export class EcommerceService implements BaseEcommerceService {
       template: (config?.template as CatalogTemplate) ?? 'banner-centered',
       currencySymbol: config?.currency_symbol ?? '$',
       whatsappOrderMessage: config?.whatsapp_order_message ?? null,
+      country: data.tenant.country ?? null,
+      countryCode: data.tenant.country_code ?? null,
+      state: config?.state ?? null,
+      city: config?.city ?? null,
+      showLocationSection: config?.show_location_section ?? true,
+      currencyConfig,
     };
 
     const categories: Category[] = (data.categories ?? []).map((cat: any) => ({

@@ -36,7 +36,9 @@
       "mcp__vercel__deploy_to_vercel",
       "mcp__vercel__get_deployment",
       "WebFetch(domain:www.quickreply.ai)",
-      "Bash(grep -E \"\\\\.ts$\")"
+      "Bash(grep -E \"\\\\.ts$\")",
+      "Bash(find /c/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo -name \"*.md\" -type f -exec grep -l \"trigger\\\\|webhook\\\\|hook\\\\|auth.users\" {} \\\\;)",
+      "mcp__supabase__list_branches"
     ]
   }
 }

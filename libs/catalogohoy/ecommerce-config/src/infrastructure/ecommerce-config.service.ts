@@ -1,7 +1,16 @@
 import { Injectable } from '@angular/core';
 import { E } from '../../../../shared/domain/src';
 import { SupabaseClientProvider } from '../../../core/src';
-import { CatalogTemplate, DEFAULT_SOCIAL_LINKS, EcommerceConfig, PaymentMethodEntity, SocialLinks } from '../domain';
+import {
+  CatalogTemplate,
+  countryNameFromCode,
+  DEFAULT_SOCIAL_LINKS,
+  EcommerceConfig,
+  ExchangeRateType,
+  PaymentMethodEntity,
+  SocialLinks,
+  TenantCurrencyConfig,
+} from '../domain';
 
 @Injectable({
   providedIn: 'root',
@@ -13,7 +22,7 @@ export class EcommerceConfigService {
     try {
       const { data: tenant, error: tenantError } = await this.client
         .from('tenants')
-        .select('id, name')
+        .select('id, name, country, country_code')
         .eq('id', tenantId)
         .single();
 
@@ -26,6 +35,10 @@ export class EcommerceConfigService {
         )
         .eq('tenant_id', tenantId)
         .maybeSingle();
+
+      const countryCode = (tenant as { country_code?: string }).country_code ?? null;
+      const country =
+        (tenant as { country?: string }).country ?? countryNameFromCode(countryCode);
 
       return E.right({
         tenantId: String(tenant.id),
@@ -44,6 +57,8 @@ export class EcommerceConfigService {
         paymentMethods: Array.isArray(config?.payment_methods)
           ? config.payment_methods
           : [],
+        country,
+        countryCode,
         state: config?.state ?? null,
         city: config?.city ?? null,
         showDesignSection: config?.show_design_section ?? true,
@@ -54,6 +69,90 @@ export class EcommerceConfigService {
         template: (config?.template as CatalogTemplate) ?? 'banner-centered',
         whatsappOrderMessage: config?.whatsapp_order_message ?? null,
       });
+    } catch (error) {
+      return E.left(error as Error);
+    }
+  }
+
+  async getCurrencyConfig(
+    tenantId: string
+  ): Promise<E.Either<Error, TenantCurrencyConfig | null>> {
+    try {
+      const { data, error } = await this.client
+        .from('tenant_currency_config')
+        .select(
+          'product_currency, display_currency, exchange_rate_type, custom_rate, show_dual_currency, currency_symbol, decimal_separator, thousand_separator'
+        )
+        .eq('tenant_id', Number(tenantId))
+        .maybeSingle();
+
+      if (error) return E.left(new Error(error.message));
+
+      // null signals "no persisted row" — the caller seeds defaults based
+      // on the tenant's country instead of returning USD blindly.
+      if (!data) return E.right(null);
+
+      return E.right({
+        productCurrency: data.product_currency ?? 'USD',
+        displayCurrency: data.display_currency ?? 'USD',
+        exchangeRateType: (data.exchange_rate_type as ExchangeRateType) ?? 'none',
+        customRate: data.custom_rate ?? null,
+        showDualCurrency: data.show_dual_currency ?? false,
+        currencySymbol: data.currency_symbol ?? '$',
+        decimalSeparator: data.decimal_separator ?? ',',
+        thousandSeparator: data.thousand_separator ?? '.',
+      });
+    } catch (error) {
+      return E.left(error as Error);
+    }
+  }
+
+  async updateCurrencyConfig(
+    tenantId: string,
+    patch: Partial<TenantCurrencyConfig>
+  ): Promise<E.Either<Error, void>> {
+    try {
+      const row: Record<string, unknown> = { tenant_id: Number(tenantId) };
+      if (patch.productCurrency !== undefined)
+        row['product_currency'] = patch.productCurrency;
+      if (patch.displayCurrency !== undefined)
+        row['display_currency'] = patch.displayCurrency;
+      if (patch.exchangeRateType !== undefined)
+        row['exchange_rate_type'] = patch.exchangeRateType;
+      if (patch.customRate !== undefined) row['custom_rate'] = patch.customRate;
+      if (patch.showDualCurrency !== undefined)
+        row['show_dual_currency'] = patch.showDualCurrency;
+      if (patch.currencySymbol !== undefined)
+        row['currency_symbol'] = patch.currencySymbol;
+      if (patch.decimalSeparator !== undefined)
+        row['decimal_separator'] = patch.decimalSeparator;
+      if (patch.thousandSeparator !== undefined)
+        row['thousand_separator'] = patch.thousandSeparator;
+
+      const { error } = await this.client
+        .from('tenant_currency_config')
+        .upsert(row, { onConflict: 'tenant_id' });
+
+      if (error) return E.left(new Error(error.message));
+      return E.right(undefined);
+    } catch (error) {
+      return E.left(error as Error);
+    }
+  }
+
+  async updateTenantCountry(
+    tenantId: string,
+    country: string,
+    countryCode: string
+  ): Promise<E.Either<Error, void>> {
+    try {
+      const { error } = await this.client
+        .from('tenants')
+        .update({ country, country_code: countryCode })
+        .eq('id', tenantId);
+
+      if (error) return E.left(new Error(error.message));
+      return E.right(undefined);
     } catch (error) {
       return E.left(error as Error);
     }

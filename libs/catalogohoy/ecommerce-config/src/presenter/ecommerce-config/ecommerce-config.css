@@ -4,6 +4,14 @@
   overflow: hidden;
 }
 
+.country-flag {
+  width: 1.25rem;
+  height: 0.9375rem;
+  object-fit: cover;
+  border-radius: 0.125rem;
+  flex-shrink: 0;
+}
+
 .ecommerce-config-wrapper {
   max-width: 1400px;
   margin: 0 auto;

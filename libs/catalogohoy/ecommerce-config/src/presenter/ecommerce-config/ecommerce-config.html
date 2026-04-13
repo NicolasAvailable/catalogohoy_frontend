@@ -315,23 +315,84 @@
         >
           <div class="form-row">
             <div class="form-field">
-              <label>Estado</label>
+              <label>País</label>
               <ui-select
-                [options]="venezuelanStates"
-                [ngModel]="draftState()"
-                (ngModelChange)="draftState.set($event)"
-                placeholder="Selecciona un estado"
+                [options]="supportedCountries"
+                [ngModel]="draftCountryCode()"
+                (ngModelChange)="onCountryChange($event)"
+                optionLabel="label"
+                optionValue="code"
+                placeholder="Selecciona un país"
                 [filter]="true"
-              ></ui-select>
+                styleClass="w-full"
+              >
+                <ng-template selectSelectedItem let-selected>
+                  <div class="flex items-center gap-2">
+                    <img
+                      [src]="flagUrl(selected.code)"
+                      [alt]="selected.label"
+                      class="country-flag"
+                    />
+                    <span class="text-sm">{{ selected.label }}</span>
+                  </div>
+                </ng-template>
+                <ng-template selectItem let-item>
+                  <div class="flex items-center gap-2.5 py-0.5">
+                    <img
+                      [src]="flagUrl(item.code)"
+                      [alt]="item.label"
+                      class="country-flag"
+                    />
+                    <span>{{ item.label }}</span>
+                  </div>
+                </ng-template>
+              </ui-select>
             </div>
             <div class="form-field">
-              <label>Ciudad</label>
-              <ui-input-text
-                [ngModel]="draftCity()"
-                (ngModelChange)="draftCity.set($event)"
-                placeholder="Ej: Caracas, Valencia..."
+              <div class="flex items-center gap-2">
+                <label>Estado / Provincia</label>
+                @if (isLoadingStates()) {
+                  <ui-icon name="loader" styleClass="size-4 text-primary-500 animate-spin" />
+                }
+              </div>
+              <ui-select
+                [options]="availableStates()"
+                [ngModel]="draftState()"
+                (ngModelChange)="onStateChange($event)"
+                [placeholder]="isLoadingStates() ? 'Cargando estados...' : (draftCountryCode() ? 'Selecciona un estado' : 'Primero selecciona un país')"
+                [filter]="true"
+                [disabled]="!draftCountryCode() || isLoadingStates()"
                 styleClass="w-full"
-              ></ui-input-text>
+              ></ui-select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <div class="flex items-center gap-2">
+                <label>Ciudad</label>
+                @if (isLoadingCities()) {
+                  <ui-icon name="loader" styleClass="size-4 text-primary-500 animate-spin" />
+                }
+              </div>
+              @if (availableCities().length > 0) {
+                <ui-select
+                  [options]="availableCities()"
+                  [ngModel]="draftCity()"
+                  (ngModelChange)="onCityChange($event)"
+                  [placeholder]="isLoadingCities() ? 'Cargando ciudades...' : 'Selecciona una ciudad'"
+                  [filter]="true"
+                  [disabled]="isLoadingCities()"
+                  styleClass="w-full"
+                ></ui-select>
+              } @else {
+                <ui-input-text
+                  [ngModel]="draftCity()"
+                  (ngModelChange)="onCityChange($event)"
+                  [placeholder]="isLoadingCities() ? 'Cargando ciudades...' : (draftState() ? 'Escribe la ciudad' : 'Primero selecciona un estado')"
+                  [disabled]="!draftState() || isLoadingCities()"
+                  styleClass="w-full"
+                ></ui-input-text>
+              }
             </div>
           </div>
 
@@ -435,38 +496,73 @@
         </div>
       </ui-card>
 
-      <!-- Card: Moneda de referencia -->
+      <!-- Card: Monedas -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
           <div class="card-header-left">
             <div class="card-icon" style="background: #eff6ff;">
               <ui-icon name="coins" styleClass="size-5 text-blue-500"></ui-icon>
             </div>
-            <h2 class="card-title">Moneda de referencia del catálogo</h2>
+            <h2 class="card-title">Monedas del catálogo</h2>
           </div>
         </div>
         <div class="card-content">
           <p class="text-sm text-grey-300 mb-4">
-            Selecciona la moneda que se mostrará en los precios de tu catálogo.
+            Configura la moneda local en la que precias tus productos.
           </p>
-          <div class="flex gap-2 flex-wrap">
-            <button
-              type="button"
-              class="px-4 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer"
-              [class]="draftCurrencySymbol() === '$' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-grey-500 border-grey-200 hover:border-grey-300'"
-              (click)="draftCurrencySymbol.set('$')"
-            >
-              $ Dólar
-            </button>
-            <button
-              type="button"
-              class="px-4 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer"
-              [class]="draftCurrencySymbol() === '€' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-grey-500 border-grey-200 hover:border-grey-300'"
-              (click)="draftCurrencySymbol.set('€')"
-            >
-              € Euro
-            </button>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label>Moneda local</label>
+              <ui-select
+                [options]="supportedCurrencies"
+                [ngModel]="draftCurrency().productCurrency"
+                (ngModelChange)="updateCurrencyField('productCurrency', $event)"
+                optionLabel="name"
+                optionValue="code"
+                placeholder="Selecciona una moneda"
+                [filter]="true"
+                styleClass="w-full"
+              ></ui-select>
+            </div>
           </div>
+
+          @if (isVenezuela()) {
+            <div class="divider"></div>
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="text-base font-semibold">Moneda de referencia</h3>
+                <p class="text-sm text-grey-300">
+                  Muestra un precio de referencia junto al precio local usando la tasa BCV.
+                </p>
+              </div>
+              <ui-toggle
+                [ngModel]="draftCurrency().showDualCurrency"
+                (ngModelChange)="updateCurrencyField('showDualCurrency', $event)"
+              ></ui-toggle>
+            </div>
+
+            @if (draftCurrency().showDualCurrency) {
+              <div class="flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  class="px-4 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer"
+                  [class]="draftCurrency().displayCurrency === 'USD' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-grey-500 border-grey-200 hover:border-grey-300'"
+                  (click)="setReferenceCurrency('USD')"
+                >
+                  $ Dólar
+                </button>
+                <button
+                  type="button"
+                  class="px-4 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer"
+                  [class]="draftCurrency().displayCurrency === 'EUR' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-grey-500 border-grey-200 hover:border-grey-300'"
+                  (click)="setReferenceCurrency('EUR')"
+                >
+                  € Euro
+                </button>
+              </div>
+            }
+          }
         </div>
       </ui-card>
 

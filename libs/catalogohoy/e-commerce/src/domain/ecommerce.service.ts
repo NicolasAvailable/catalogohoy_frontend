@@ -1,4 +1,10 @@
-import { CatalogTemplate, PaymentMethodEntity, SocialLinks, WhatsappButton } from '@catalogohoy/ecommerce-config';
+import {
+  CatalogTemplate,
+  PaymentMethodEntity,
+  SocialLinks,
+  TenantCurrencyConfig,
+  WhatsappButton,
+} from '@catalogohoy/ecommerce-config';
 import { Product, ProductList } from '@catalogohoy/product';
 import { E } from '@shared/domain';
 
@@ -20,6 +26,12 @@ export interface CatalogInfo {
   template: CatalogTemplate;
   currencySymbol: string;
   whatsappOrderMessage: string | null;
+  country: string | null;
+  countryCode: string | null;
+  state: string | null;
+  city: string | null;
+  showLocationSection: boolean;
+  currencyConfig: TenantCurrencyConfig | null;
 }
 
 export interface Category {

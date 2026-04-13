@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MetaPixelService } from '@catalogohoy/core';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
+import { LocationService } from '@shared/infrastructure';
 import {
   ButtonComponent,
   IconComponent,
@@ -51,6 +52,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly metaPixel = inject(MetaPixelService);
+  private readonly locationService = inject(LocationService);
   private authSub: (() => void) | null = null;
   private googlePopup: Window | null = null;
   private popupPollId: ReturnType<typeof setInterval> | null = null;
@@ -89,6 +91,12 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   });
 
   async ngOnInit() {
+    // Prime the geo detection early so the country is cached by the time
+    // the user submits. Fire-and-forget — signup works even if this fails.
+    this.locationService.init().catch((err) => {
+      console.warn('geo init failed:', err);
+    });
+
     this.slugSub = this.profileForm.controls.storeName.valueChanges.subscribe(
       (value) => this.slugPreview.set(slugify(value ?? ''))
     );

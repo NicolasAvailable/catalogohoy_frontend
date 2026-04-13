@@ -128,6 +128,8 @@ export interface EcommerceConfig {
   currencySymbol: string;
   themeColor: string;
   paymentMethods: PaymentMethod[];
+  country: string | null;
+  countryCode: string | null;
   state: string | null;
   city: string | null;
   showDesignSection: boolean;
@@ -137,6 +139,30 @@ export interface EcommerceConfig {
   template: CatalogTemplate;
   whatsappOrderMessage: string | null;
 }
+
+export type ExchangeRateType = 'none' | 'bcv_usd' | 'bcv_eur' | 'custom';
+
+export interface TenantCurrencyConfig {
+  productCurrency: string;
+  displayCurrency: string;
+  exchangeRateType: ExchangeRateType;
+  customRate: number | null;
+  showDualCurrency: boolean;
+  currencySymbol: string;
+  decimalSeparator: string;
+  thousandSeparator: string;
+}
+
+export const DEFAULT_CURRENCY_CONFIG: TenantCurrencyConfig = {
+  productCurrency: 'USD',
+  displayCurrency: 'USD',
+  exchangeRateType: 'none',
+  customRate: null,
+  showDualCurrency: false,
+  currencySymbol: '$',
+  decimalSeparator: ',',
+  thousandSeparator: '.',
+};
 
 /**
  * Default WhatsApp message template.

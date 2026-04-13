@@ -1,7 +1,8 @@
-import { isDevMode, Injectable } from '@angular/core';
+import { isDevMode, Injectable, inject } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { TenantMapper } from '@catalogohoy/tenant';
 import { E } from '@shared/domain';
+import { LocationService } from '@shared/infrastructure';
 import { AuthApiError } from '@supabase/supabase-js';
 import {
   BaseAuthenticationService,
@@ -20,6 +21,29 @@ import { authenticationTokenService } from './authentication-token.service';
 export class AuthenticationService implements BaseAuthenticationService {
   private readonly client = SupabaseClientProvider.getInstance();
   private readonly authenticationTokenService = authenticationTokenService;
+  private readonly locationService = inject(LocationService);
+
+  /**
+   * Fire-and-forget tenant country patch. Called right after signup so the
+   * detected country is persisted. Never throws — signup must succeed even
+   * if geo detection or the RPC fail.
+   */
+  private async patchTenantCountryFromGeo(): Promise<void> {
+    try {
+      if (!this.locationService.values) {
+        await this.locationService.init();
+      }
+      const loc = this.locationService.values;
+      if (!loc?.country || !loc?.countryCode) return;
+
+      await this.client.rpc('update_tenant_country', {
+        p_country: loc.country,
+        p_country_code: loc.countryCode,
+      });
+    } catch (err) {
+      console.warn('patchTenantCountryFromGeo failed:', err);
+    }
+  }
 
   public async login(
     credentials: LoginCredentials
@@ -69,6 +93,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
+    await this.patchTenantCountryFromGeo();
     return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
@@ -170,6 +195,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       const key = Object.keys(MSG).find((k) => error.message.includes(k));
       return E.left(new Error(key ? MSG[key] : error.message));
     }
+    await this.patchTenantCountryFromGeo();
     return this.getLoginRedirectUrl();
   }
 

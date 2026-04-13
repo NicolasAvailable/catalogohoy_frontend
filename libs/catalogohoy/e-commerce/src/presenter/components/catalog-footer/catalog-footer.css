@@ -51,6 +51,20 @@
   line-height: 1.4;
 }
 
+/* Location */
+.catalog-footer__location {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.catalog-footer__location svg {
+  flex-shrink: 0;
+}
+
 /* Social links */
 .catalog-footer__social {
   display: flex;
