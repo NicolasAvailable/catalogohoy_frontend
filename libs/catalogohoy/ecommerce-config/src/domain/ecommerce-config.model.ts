@@ -126,6 +126,8 @@ export interface EcommerceConfig {
   isVisible: boolean;
   currency: string;
   currencySymbol: string;
+  showReferencePrice: boolean;
+  showLocalCurrencyPrice: boolean;
   themeColor: string;
   paymentMethods: PaymentMethod[];
   state: string | null;

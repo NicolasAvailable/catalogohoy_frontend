@@ -48,13 +48,15 @@
       <h2 class="pdm__name">{{ product.name }}</h2>
 
       @if (!isWholesale) {
+      @if (showReferencePrice()) {
       <div class="pdm__prices">
         <span class="pdm__price">{{ cs() }}{{ displayPrice }}</span>
         @if (hasDiscount) {
         <span class="pdm__price-original">{{ cs() }}{{ product.price }}</span>
         }
       </div>
-      @if (ecommerceStore.exchangeRate() > 0) {
+      }
+      @if (showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
       <span class="pdm__price-bs">Bs. {{ displayPrice * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
       }
       }
@@ -143,9 +145,11 @@
         <ui-icon name="shoppingCart" styleClass="size-5" />
         <span>Agregar al carrito</span>
         <span class="pdm__total">
+          @if (showReferencePrice()) {
           {{ cs() }}{{ displayPrice * quantity() }}
-          @if (ecommerceStore.exchangeRate() > 0) {
-          <small class="pdm__total-bs">/ Bs. {{ displayPrice * quantity() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
+          }
+          @if (showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
+          <small class="pdm__total-bs">@if (showReferencePrice()) { / }Bs. {{ displayPrice * quantity() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
           }
         </span>
       </button>

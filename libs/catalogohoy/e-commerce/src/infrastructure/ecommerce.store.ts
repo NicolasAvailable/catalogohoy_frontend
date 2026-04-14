@@ -68,6 +68,20 @@ export const EcommerceStore = signalStore(
       }
       return store.catalogInfo()?.currencySymbol ?? '$';
     }),
+    showReferencePrice: computed(() => {
+      const overrides = store.previewOverrides();
+      if (store.isPreviewMode() && overrides?.showReferencePrice !== undefined) {
+        return overrides.showReferencePrice;
+      }
+      return store.catalogInfo()?.showReferencePrice ?? true;
+    }),
+    showLocalCurrencyPrice: computed(() => {
+      const overrides = store.previewOverrides();
+      if (store.isPreviewMode() && overrides?.showLocalCurrencyPrice !== undefined) {
+        return overrides.showLocalCurrencyPrice;
+      }
+      return store.catalogInfo()?.showLocalCurrencyPrice ?? true;
+    }),
   })),
   withMethods((store, ecommerceService = inject(EcommerceService)) => ({
     async loadCatalog(slug: string) {

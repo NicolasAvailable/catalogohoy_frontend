@@ -23,6 +23,8 @@ export class ProductDetailModal {
   private readonly cartStore = inject(CartStore);
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cs = this.ecommerceStore.currencySymbol;
+  public readonly showReferencePrice = this.ecommerceStore.showReferencePrice;
+  public readonly showLocalCurrencyPrice = this.ecommerceStore.showLocalCurrencyPrice;
 
   public readonly product: Product = this.config.data.product;
   public readonly currentImageIndex = signal(0);

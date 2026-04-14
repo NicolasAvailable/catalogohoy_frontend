@@ -48,16 +48,20 @@
         }
       </div>
       } @else if (product().pricePromotional > 0) {
+      @if (showReferencePrice()) {
       <span class="product-card__price-original">{{ cs() }}{{ product().price }}</span>
       <span class="product-card__price-promo"
         >{{ cs() }}{{ product().pricePromotional }}</span
       >
-      @if (ecommerceStore.exchangeRate() > 0) {
+      }
+      @if (showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
       <span class="product-card__price-bs">Bs. {{ product().pricePromotional * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
       }
       } @else {
+      @if (showReferencePrice()) {
       <span class="product-card__price-current">{{ cs() }}{{ product().price }}</span>
-      @if (ecommerceStore.exchangeRate() > 0) {
+      }
+      @if (showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
       <span class="product-card__price-bs">Bs. {{ product().price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
       }
       }

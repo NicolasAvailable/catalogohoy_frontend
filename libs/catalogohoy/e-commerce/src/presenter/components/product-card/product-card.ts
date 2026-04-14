@@ -26,6 +26,8 @@ export class ProductCard {
   private readonly dialogService = inject(DialogService);
 
   public readonly cs = computed(() => this.ecommerceStore.currencySymbol());
+  public readonly showReferencePrice = this.ecommerceStore.showReferencePrice;
+  public readonly showLocalCurrencyPrice = this.ecommerceStore.showLocalCurrencyPrice;
 
   public readonly isOutOfStock = computed(() => {
     const p = this.product();

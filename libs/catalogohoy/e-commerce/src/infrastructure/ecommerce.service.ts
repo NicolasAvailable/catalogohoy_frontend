@@ -106,6 +106,8 @@ export class EcommerceService implements BaseEcommerceService {
       socialLinks: (config?.social_links as SocialLinks) ?? DEFAULT_SOCIAL_LINKS,
       template: (config?.template as CatalogTemplate) ?? 'banner-centered',
       currencySymbol: config?.currency_symbol ?? '$',
+      showReferencePrice: config?.show_reference_price ?? true,
+      showLocalCurrencyPrice: config?.show_local_currency_price ?? true,
       whatsappOrderMessage: config?.whatsapp_order_message ?? null,
     };
 

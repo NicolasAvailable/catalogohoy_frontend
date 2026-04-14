@@ -22,7 +22,7 @@ export class EcommerceConfigService {
       const { data: config } = await this.client
         .from('tenant_ecommerce_config')
         .select(
-          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, social_links, template, whatsapp_order_message'
+          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, social_links, template, whatsapp_order_message'
         )
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -40,6 +40,8 @@ export class EcommerceConfigService {
         isVisible: config?.is_visible ?? true,
         currency: config?.currency ?? 'USD',
         currencySymbol: config?.currency_symbol ?? '$',
+        showReferencePrice: config?.show_reference_price ?? true,
+        showLocalCurrencyPrice: config?.show_local_currency_price ?? true,
         themeColor: config?.theme_color ?? '#10b981',
         paymentMethods: Array.isArray(config?.payment_methods)
           ? config.payment_methods
@@ -87,6 +89,10 @@ export class EcommerceConfigService {
         updateData['currency'] = config.currency;
       if (config.currencySymbol !== undefined)
         updateData['currency_symbol'] = config.currencySymbol;
+      if (config.showReferencePrice !== undefined)
+        updateData['show_reference_price'] = config.showReferencePrice;
+      if (config.showLocalCurrencyPrice !== undefined)
+        updateData['show_local_currency_price'] = config.showLocalCurrencyPrice;
       if (config.themeColor !== undefined)
         updateData['theme_color'] = config.themeColor;
       if (config.paymentMethods !== undefined)

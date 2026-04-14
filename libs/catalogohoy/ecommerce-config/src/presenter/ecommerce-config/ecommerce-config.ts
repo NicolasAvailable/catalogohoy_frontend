@@ -119,6 +119,8 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftSocialLinks = signal<SocialLinks>({ ...DEFAULT_SOCIAL_LINKS });
   public readonly draftTemplate = signal<CatalogTemplate>('banner-centered');
   public readonly draftCurrencySymbol = signal('$');
+  public readonly draftShowReferencePrice = signal(true);
+  public readonly draftShowLocalCurrencyPrice = signal(true);
   public readonly draftWhatsappOrderMessage = signal<string | null>(null);
 
   // Computed
@@ -236,6 +238,8 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftShowPaymentMethodsSection, prev?.showPaymentMethodsSection ?? true, config.showPaymentMethodsSection ?? true);
       syncField(this.draftTemplate, prev?.template ?? 'banner-centered' as CatalogTemplate, config.template ?? 'banner-centered' as CatalogTemplate);
       syncField(this.draftCurrencySymbol, prev?.currencySymbol ?? '$', config.currencySymbol ?? '$');
+      syncField(this.draftShowReferencePrice, prev?.showReferencePrice ?? true, config.showReferencePrice ?? true);
+      syncField(this.draftShowLocalCurrencyPrice, prev?.showLocalCurrencyPrice ?? true, config.showLocalCurrencyPrice ?? true);
       syncField(this.draftWhatsappOrderMessage, prev?.whatsappOrderMessage ?? null, config.whatsappOrderMessage ?? null);
       syncFieldJson(this.draftWhatsappButtons, prevButtons, newButtons);
       syncFieldJson(this.draftSocialLinks, prev?.socialLinks ?? DEFAULT_SOCIAL_LINKS, config.socialLinks ?? { ...DEFAULT_SOCIAL_LINKS });
@@ -251,12 +255,25 @@ export class EcommerceConfigComponent implements OnInit {
       const socialLinks = this.draftSocialLinks();
       const template = this.draftTemplate();
       const currencySymbol = this.draftCurrencySymbol();
+      const showReferencePrice = this.draftShowReferencePrice();
+      const showLocalCurrencyPrice = this.draftShowLocalCurrencyPrice();
       const logo = this.configStore.config()?.logo ?? null;
       const banner = this.configStore.config()?.banner ?? null;
 
       const message = {
         type: 'PREVIEW_UPDATE' as const,
-        payload: { name, logo, banner, themeColor, showDesignSection, socialLinks, template, currencySymbol },
+        payload: {
+          name,
+          logo,
+          banner,
+          themeColor,
+          showDesignSection,
+          socialLinks,
+          template,
+          currencySymbol,
+          showReferencePrice,
+          showLocalCurrencyPrice,
+        },
         source: 'catalogohoy-admin' as const,
       };
 
@@ -297,6 +314,8 @@ export class EcommerceConfigComponent implements OnInit {
     if (this.draftShowLocationSection() !== (config.showLocationSection ?? true)) changes.showLocationSection = this.draftShowLocationSection();
     if (this.draftShowPaymentMethodsSection() !== (config.showPaymentMethodsSection ?? true)) changes.showPaymentMethodsSection = this.draftShowPaymentMethodsSection();
     if (this.draftCurrencySymbol() !== (config.currencySymbol ?? '$')) changes.currencySymbol = this.draftCurrencySymbol();
+    if (this.draftShowReferencePrice() !== (config.showReferencePrice ?? true)) changes.showReferencePrice = this.draftShowReferencePrice();
+    if (this.draftShowLocalCurrencyPrice() !== (config.showLocalCurrencyPrice ?? true)) changes.showLocalCurrencyPrice = this.draftShowLocalCurrencyPrice();
     if (this.draftWhatsappOrderMessage() !== (config.whatsappOrderMessage ?? null)) changes.whatsappOrderMessage = this.draftWhatsappOrderMessage();
 
     const serverButtons = config.whatsappButtons?.length

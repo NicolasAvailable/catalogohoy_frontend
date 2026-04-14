@@ -647,6 +647,39 @@
   }
 }
 
+.price-visibility-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.price-visibility-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.price-visibility-toggle__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.price-visibility-toggle__title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.price-visibility-toggle__hint {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
 @media (max-width: 640px) {
   .main-column {
     padding: 0 1rem 1rem 1rem;

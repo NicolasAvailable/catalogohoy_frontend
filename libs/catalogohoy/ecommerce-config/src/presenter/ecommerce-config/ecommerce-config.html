@@ -467,6 +467,38 @@
               € Euro
             </button>
           </div>
+
+          <div class="price-visibility-toggles">
+            <div class="price-visibility-toggle">
+              <div class="price-visibility-toggle__text">
+                <span class="price-visibility-toggle__title">
+                  Mostrar precio de referencia
+                </span>
+                <small class="price-visibility-toggle__hint">
+                  Muestra el precio en {{ draftCurrencySymbol() }} en el catálogo público.
+                </small>
+              </div>
+              <ui-toggle
+                [ngModel]="draftShowReferencePrice()"
+                (ngModelChange)="draftShowReferencePrice.set($event)"
+              ></ui-toggle>
+            </div>
+
+            <div class="price-visibility-toggle">
+              <div class="price-visibility-toggle__text">
+                <span class="price-visibility-toggle__title">
+                  Mostrar precio en moneda local
+                </span>
+                <small class="price-visibility-toggle__hint">
+                  Muestra el precio convertido (Bs.) según la tasa de cambio configurada.
+                </small>
+              </div>
+              <ui-toggle
+                [ngModel]="draftShowLocalCurrencyPrice()"
+                (ngModelChange)="draftShowLocalCurrencyPrice.set($event)"
+              ></ui-toggle>
+            </div>
+          </div>
         </div>
       </ui-card>
 
