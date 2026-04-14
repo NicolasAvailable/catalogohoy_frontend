@@ -1,6 +1,7 @@
 import {
   Component,
   computed,
+  effect,
   inject,
   OnDestroy,
   OnInit,
@@ -117,6 +118,20 @@ export default class List implements OnInit, OnDestroy {
   });
 
   private searchSubscription?: Subscription;
+
+  private readonly clampPageFirstOnOverflow = effect(() => {
+    const total = this.filteredProducts().length;
+    const first = this.pageFirst();
+    const rows = this.pageRows();
+    if (total === 0) {
+      if (first !== 0) this.pageFirst.set(0);
+      return;
+    }
+    if (first >= total) {
+      const lastPageFirst = Math.floor((total - 1) / rows) * rows;
+      this.pageFirst.set(lastPageFirst);
+    }
+  });
 
   ngOnInit() {
     this.productStore.productList$();
