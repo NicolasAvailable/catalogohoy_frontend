@@ -3,6 +3,7 @@ export * from './input-message';
 export * from './input-number';
 export * from './input-otp';
 export * from './input-password';
+export * from './input-phone';
 export * from './input-search';
 export * from './input-tel';
 export * from './input-text';

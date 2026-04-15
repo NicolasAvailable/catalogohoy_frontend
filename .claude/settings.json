@@ -36,7 +36,8 @@
       "mcp__vercel__deploy_to_vercel",
       "mcp__vercel__get_deployment",
       "WebFetch(domain:www.quickreply.ai)",
-      "Bash(grep -E \"\\\\.ts$\")"
+      "Bash(grep -E \"\\\\.ts$\")",
+      "Bash(find \"c:/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.json\" \\\\\\) -exec grep -l \"countryCode\\\\|dialCode\\\\|country.*code\" {} \\\\;)"
     ]
   }
 }

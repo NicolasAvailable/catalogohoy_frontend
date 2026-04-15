@@ -533,13 +533,11 @@
                   [disabled]="configStore.isSaving()"
                   styleClass="w-full"
                 ></ui-input-text>
-                <ui-input-text
+                <ui-input-phone
                   [ngModel]="button.number"
                   (ngModelChange)="updateButtonNumber($index, $event)"
-                  placeholder="Número (Ej: +584124807708)"
-                  [disabled]="configStore.isSaving()"
-                  styleClass="w-full"
-                ></ui-input-text>
+                  [defaultCountry]="'ve'"
+                ></ui-input-phone>
               </div>
               <button
                 type="button"
@@ -557,10 +555,8 @@
           @if (draftWhatsappButtons().length < 3) {
           <ui-button
             label="Agregar vendedor"
-            [variant]="'outlined'"
-            severity="secondary"
-            size="small"
             icon="plus"
+            size="small"
             (click)="addWhatsappButton()"
             [disabled]="configStore.isSaving()"
           ></ui-button>
