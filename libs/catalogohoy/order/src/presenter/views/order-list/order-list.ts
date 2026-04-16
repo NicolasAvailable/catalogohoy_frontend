@@ -37,7 +37,12 @@ import { OrderPdfService } from '../../../infrastructure/order-pdf.service';
 import { OrderRealtimeService } from '../../../infrastructure/order-realtime.service';
 import { OrderStore } from '../../../infrastructure/order.store';
 
-type FilterTab = { label: string; value: OrderStatus | 'all' };
+type FilterTab = {
+  label: string;
+  value: OrderStatus | 'all';
+  /** Tailwind bg color class for the colored dot matching the status badge. */
+  dotClass?: string;
+};
 type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
 
 @Component({
@@ -105,9 +110,9 @@ export class OrderListComponent implements OnInit, OnDestroy {
 
   public readonly filterTabs: FilterTab[] = [
     { label: 'Todas', value: 'all' },
-    { label: 'Pendientes', value: 'pending' },
-    { label: 'Completadas', value: 'completed' },
-    { label: 'Canceladas', value: 'cancelled' },
+    { label: 'Pendientes', value: 'pending', dotClass: 'bg-orange-500' },
+    { label: 'Completadas', value: 'completed', dotClass: 'bg-green-500' },
+    { label: 'Canceladas', value: 'cancelled', dotClass: 'bg-red-500' },
   ];
 
   public readonly statusOptions: {

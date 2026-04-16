@@ -73,6 +73,7 @@ export class ClientService {
       updatedAt: e['updated_at'] as string,
       phone: e['phone'] as string | undefined,
       comments: e['comments'] as string | undefined,
+      deliveryDate: (e['delivery_date'] as string | null) ?? (e['created_at'] as string),
     }));
 
     return E.right(orders);

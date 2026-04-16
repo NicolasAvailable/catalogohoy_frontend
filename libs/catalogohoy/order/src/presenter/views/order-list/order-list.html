@@ -50,12 +50,19 @@
       <!-- Filter Tabs -->
       <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide">
         @for (tab of filterTabs; track tab.value) {
-        <ui-button
+        <button
+          type="button"
           (click)="selectFilter(tab.value)"
-          [label]="tab.label"
-          [severity]="selectedFilter() === tab.value ? 'primary' : 'contrast'"
-          size="small"
-        />
+          [class]="'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer whitespace-nowrap ' +
+            (selectedFilter() === tab.value
+              ? 'bg-primary-500 text-white border border-primary-500'
+              : 'bg-white text-grey-700 border border-grey-200 hover:bg-grey-50')"
+        >
+          @if (tab.dotClass) {
+            <span [class]="'w-1.5 h-1.5 rounded-full shrink-0 ' + tab.dotClass"></span>
+          }
+          {{ tab.label }}
+        </button>
         }
         <div class="w-px h-6 bg-grey-100 mx-1"></div>
         <!-- Order Select -->
@@ -163,6 +170,7 @@
             @if (tenantCurrency.isVenezuela() && order.totalBs) {
             <div><span class="text-grey-800 font-bold">Total Bs: </span><span class="font-bold text-primary-600">Bs. {{ order.totalBs | number:'1.2-2' }}</span></div>
             }
+            <div><span class="text-grey-800 font-bold">Entrega: </span><span class="text-grey-700">{{ order.deliveryDate | date: 'dd/MM/yyyy' }}</span></div>
             <span class="text-grey-300">{{ order.createdAt | date: 'dd/MM/yy hh:mm a' }}</span>
           </div>
           <!-- Actions -->
@@ -271,6 +279,7 @@
             </th>
             <th class="px-6 py-3 border-b border-grey-50">WhatsApp</th>
             <th class="px-6 py-3 border-b border-grey-50">Fecha de creación</th>
+            <th class="px-6 py-3 border-b border-grey-50">Fecha de entrega</th>
             <th class="px-6 py-3 border-b border-grey-50">Total</th>
             @if (tenantCurrency.isVenezuela()) {
             <th class="px-6 py-3 border-b border-grey-50">Total Bs</th>
@@ -378,6 +387,9 @@
             </td>
             <td class="px-6 py-3.5 text-grey-500">
               {{ order.createdAt | date: 'dd/MM/yyyy hh:mm a' }}
+            </td>
+            <td class="px-6 py-3.5 text-grey-700 font-medium">
+              {{ order.deliveryDate | date: 'dd/MM/yyyy' }}
             </td>
             <td class="px-6 py-3.5 text-sm font-bold text-primary-600">
               {{ cs() }}{{ order.totalUsd | number:'1.2-2' }}

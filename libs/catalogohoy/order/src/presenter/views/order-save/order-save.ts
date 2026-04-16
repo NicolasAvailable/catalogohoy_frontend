@@ -26,6 +26,7 @@ import { whiteSpacesValidator } from '@shared/presenter';
 import {
   ButtonComponent,
   CardComponent,
+  DatepickerComponent,
   IconComponent,
   InputNumberComponent,
   InputTextComponent,
@@ -54,6 +55,7 @@ import { OrderStore } from '../../../infrastructure/order.store';
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
+    DatepickerComponent,
   ],
   templateUrl: './order-save.html',
   styleUrl: './order-save.css',
@@ -102,6 +104,8 @@ export default class OrderSave implements OnInit {
     phone: [''],
     comments: [''],
     status: ['pending' as OrderStatus],
+    // Default: today. Admin can pick any date via the datepicker.
+    deliveryDate: [new Date() as Date | null, [Validators.required]],
   });
 
 
@@ -164,11 +168,25 @@ export default class OrderSave implements OnInit {
     }
   }
 
+  /** Format a Date as "YYYY-MM-DD" in local time. `toISOString()` would
+   *  shift by the timezone offset and can land on a different calendar day. */
+  private toIsoDate(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
   private setValuesForm(order: Order) {
     this.form.controls.name.setValue(order.name);
     this.form.controls.phone.setValue(order.phone || '');
     this.form.controls.comments.setValue(order.comments || '');
     this.form.controls.status.setValue(order.status);
+    if (order.deliveryDate) {
+      // Parse "YYYY-MM-DD" as local date (avoid the UTC-shift that new Date(iso) causes).
+      const [y, m, d] = order.deliveryDate.split('-').map(Number);
+      this.form.controls.deliveryDate.setValue(new Date(y, m - 1, d));
+    }
 
     const storeProducts = this.productStore.productList().products;
     this.products.set(
@@ -361,6 +379,7 @@ export default class OrderSave implements OnInit {
 
     this.isSubmitting.set(true);
 
+    const delivery = this.form.controls.deliveryDate.value;
     const orderData = {
       name: this.form.controls.name.value as string,
       phone: this.form.controls.phone.value || undefined,
@@ -369,6 +388,7 @@ export default class OrderSave implements OnInit {
       products: this.products(),
       totalUsd: this.calculateTotal(),
       totalBs: this.totalBs(),
+      deliveryDate: delivery ? this.toIsoDate(delivery) : undefined,
     };
 
     try {

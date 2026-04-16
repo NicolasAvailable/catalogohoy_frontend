@@ -56,6 +56,22 @@
           </div>
         </div>
         <div class="flex flex-col gap-2">
+          <label class="text-base text-grey-100" for="deliveryDate"
+            >Fecha de entrega</label
+          >
+          <ui-datepicker
+            formControlName="deliveryDate"
+            inputId="deliveryDate"
+            placeholder="Selecciona una fecha"
+            dateFormat="dd/mm/yy"
+            mode="single"
+            styleClass="w-full border! border-grey-100! rounded-xl!"
+          />
+          <span class="text-sm text-grey-300">
+            Por defecto es hoy. Puedes cambiarla si la orden se entrega otro día.
+          </span>
+        </div>
+        <div class="flex flex-col gap-2">
           <div class="flex items-center gap-3">
             <label class="text-base text-grey-100" for="comments"
               >Comentarios</label

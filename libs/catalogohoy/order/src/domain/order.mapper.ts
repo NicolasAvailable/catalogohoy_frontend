@@ -18,6 +18,7 @@ export class OrderMapper {
       phone: e.phone,
       comments: e.comments,
       paymentMethod: e.payment_method,
+      deliveryDate: e.delivery_date,
     };
   }
 

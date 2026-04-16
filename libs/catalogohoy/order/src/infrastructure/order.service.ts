@@ -28,6 +28,8 @@ export interface CreateOrderInput {
   totalUsd: number;
   totalBs: number;
   tenantId: number;
+  /** ISO date "YYYY-MM-DD". If omitted, the DB defaults to CURRENT_DATE. */
+  deliveryDate?: string;
 }
 
 export interface UpdateOrderInput extends CreateOrderInput {
@@ -97,18 +99,21 @@ export class OrderService {
   }
 
   async createOrder(input: CreateOrderInput): Promise<E.Either<Error, Order>> {
+    const payload: Record<string, unknown> = {
+      name: input.name,
+      phone: input.phone,
+      comments: input.comments,
+      status: input.status,
+      products: input.products,
+      total_usd: input.totalUsd,
+      total_bs: input.totalBs,
+      tenant_id: input.tenantId,
+    };
+    if (input.deliveryDate) payload['delivery_date'] = input.deliveryDate;
+
     const { data, error } = await this.client
       .from('orders')
-      .insert({
-        name: input.name,
-        phone: input.phone,
-        comments: input.comments,
-        status: input.status,
-        products: input.products,
-        total_usd: input.totalUsd,
-        total_bs: input.totalBs,
-        tenant_id: input.tenantId,
-      })
+      .insert(payload)
       .select()
       .single();
 
@@ -120,17 +125,20 @@ export class OrderService {
   }
 
   async updateOrder(input: UpdateOrderInput): Promise<E.Either<Error, Order>> {
+    const patch: Record<string, unknown> = {
+      name: input.name,
+      phone: input.phone,
+      comments: input.comments,
+      status: input.status,
+      products: input.products,
+      total_usd: input.totalUsd,
+      total_bs: input.totalBs,
+    };
+    if (input.deliveryDate) patch['delivery_date'] = input.deliveryDate;
+
     const { data, error } = await this.client
       .from('orders')
-      .update({
-        name: input.name,
-        phone: input.phone,
-        comments: input.comments,
-        status: input.status,
-        products: input.products,
-        total_usd: input.totalUsd,
-        total_bs: input.totalBs,
-      })
+      .update(patch)
       .eq('id', input.id)
       .eq('tenant_id', input.tenantId)
       .select()
