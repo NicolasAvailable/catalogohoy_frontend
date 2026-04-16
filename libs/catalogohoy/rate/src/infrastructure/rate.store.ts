@@ -39,7 +39,8 @@ export const RateStore = signalStore(
         // Auto-sync BCV rates from bcv_rates table before loading
         await rateService.syncBcvRates();
 
-        const result = await rateService.getRates();
+        const tenantId = await tenantStore.getTenantIdAsync();
+        const result = await rateService.getRates(String(tenantId ?? ''));
         patchState(store, { isLoading: false });
 
         result.fold(
@@ -51,8 +52,11 @@ export const RateStore = signalStore(
       async updateActiveRate(
         rateType: RateType
       ): Promise<E.Either<string, void>> {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return E.left('No tenant found');
+
         patchState(store, { isLoading: true, error: null });
-        const result = await rateService.updateActiveRate(rateType);
+        const result = await rateService.updateActiveRate(String(tenantId), rateType);
         patchState(store, { isLoading: false });
 
         if (result.isLeft()) {
@@ -70,22 +74,22 @@ export const RateStore = signalStore(
         }
 
         // Auto-update currency symbol in catalog config
-        const tenantId = await tenantStore.getTenantIdAsync();
-        if (tenantId) {
-          const { currency, currencySymbol } = RATE_CURRENCY_MAP[rateType];
-          configService.updateConfig({
-            tenantId: String(tenantId),
-            currency,
-            currencySymbol,
-          });
-        }
+        const { currency, currencySymbol } = RATE_CURRENCY_MAP[rateType];
+        configService.updateConfig({
+          tenantId: String(tenantId),
+          currency,
+          currencySymbol,
+        });
 
         return E.right(undefined);
       },
 
       async updateCustomRate(rate: number): Promise<E.Either<string, void>> {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return E.left('No tenant found');
+
         patchState(store, { isLoading: true, error: null });
-        const result = await rateService.updateCustomRate(rate);
+        const result = await rateService.updateCustomRate(String(tenantId), rate);
         patchState(store, { isLoading: false });
 
         if (result.isLeft()) {
@@ -110,8 +114,8 @@ export const RateStore = signalStore(
         if (result.isLeft()) {
           patchState(store, { error: result.value.message });
         } else {
-          // Reload everything to get the exact values from DB
-          const reloadResult = await rateService.getRates();
+          const tenantId = await tenantStore.getTenantIdAsync();
+          const reloadResult = await rateService.getRates(String(tenantId ?? ''));
           reloadResult.fold(
             () => {},
             (rate) => patchState(store, { rate })

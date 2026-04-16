@@ -9,35 +9,49 @@ import { ExchangeRate, RateType } from '../domain/rate';
 export class RateService {
   private readonly client = SupabaseClientProvider.getInstance();
 
-  async getRates(): Promise<E.Either<Error, ExchangeRate>> {
-    const { data, error } = await this.client
+  async getRates(tenantId: string): Promise<E.Either<Error, ExchangeRate>> {
+    const { data: globalRates, error: globalError } = await this.client
       .from('exchange_rates')
-      .select('*')
+      .select('bcv_usd, bcv_eur')
       .eq('id', 1)
       .maybeSingle();
 
-    if (error) {
-      return E.left(new Error(error.message));
+    if (globalError) {
+      return E.left(new Error(globalError.message));
     }
 
-    if (!data) {
-      return E.right({
-        id: 1,
-        bcv_usd: 0,
-        bcv_eur: 0,
-        custom_rate: 0,
-        active_rate: 'bcv_usd',
-      });
-    }
+    const { data: tenantConfig } = await this.client
+      .from('tenant_currency_config')
+      .select('exchange_rate_type, custom_rate')
+      .eq('tenant_id', Number(tenantId))
+      .maybeSingle();
 
-    return E.right(data as ExchangeRate);
+    const rawRate = tenantConfig?.exchange_rate_type as string | null;
+    const validRates: RateType[] = ['bcv_usd', 'bcv_eur', 'custom'];
+    const activeRate: RateType = rawRate && validRates.includes(rawRate as RateType)
+      ? (rawRate as RateType)
+      : 'bcv_usd';
+
+    return E.right({
+      id: 1,
+      bcv_usd: globalRates?.bcv_usd ?? 0,
+      bcv_eur: globalRates?.bcv_eur ?? 0,
+      custom_rate: tenantConfig?.custom_rate ?? 0,
+      active_rate: activeRate,
+    });
   }
 
-  async updateActiveRate(rateType: RateType): Promise<E.Either<Error, void>> {
+  async updateActiveRate(tenantId: string, rateType: RateType): Promise<E.Either<Error, void>> {
     const { error } = await this.client
-      .from('exchange_rates')
-      .update({ active_rate: rateType, updated_at: new Date().toISOString() })
-      .eq('id', 1);
+      .from('tenant_currency_config')
+      .upsert(
+        {
+          tenant_id: Number(tenantId),
+          exchange_rate_type: rateType,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'tenant_id' }
+      );
 
     if (error) {
       return E.left(new Error(error.message));
@@ -46,11 +60,17 @@ export class RateService {
     return E.right(undefined);
   }
 
-  async updateCustomRate(rate: number): Promise<E.Either<Error, void>> {
+  async updateCustomRate(tenantId: string, rate: number): Promise<E.Either<Error, void>> {
     const { error } = await this.client
-      .from('exchange_rates')
-      .update({ custom_rate: rate, updated_at: new Date().toISOString() })
-      .eq('id', 1);
+      .from('tenant_currency_config')
+      .upsert(
+        {
+          tenant_id: Number(tenantId),
+          custom_rate: rate,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'tenant_id' }
+      );
 
     if (error) {
       return E.left(new Error(error.message));
@@ -60,7 +80,6 @@ export class RateService {
   }
 
   async syncBcvRates(): Promise<E.Either<Error, void>> {
-    // Read latest rates from bcv_rates table (populated by pg_cron every 4h)
     const { data: bcvRate, error: bcvError } = await this.client
       .from('bcv_rates')
       .select('usd, eur')
