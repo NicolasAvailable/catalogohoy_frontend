@@ -105,9 +105,9 @@ export class CheckoutDrawer {
       productsList += `• ${item.name} x${item.quantity} - ${symbol}${item.total}\n`;
     });
 
-    // Build total Bs string
+    // Build total Bs string — Venezuela only (dual-currency is VE-specific)
     let totalBsStr = '';
-    if (exchangeRate > 0) {
+    if (this.ecommerceStore.isVenezuela() && exchangeRate > 0) {
       const totalBs = (total * exchangeRate).toFixed(2);
       totalBsStr = ` (Bs. ${totalBs})`;
     }

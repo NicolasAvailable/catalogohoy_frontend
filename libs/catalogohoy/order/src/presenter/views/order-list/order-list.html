@@ -159,8 +159,8 @@
                 }
               </ul>
             </div>
-            <div><span class="text-grey-800 font-bold">Total: </span><span class="font-bold text-primary-600">${{ order.totalUsd | number:'1.2-2' }}</span></div>
-            @if (order.totalBs) {
+            <div><span class="text-grey-800 font-bold">Total: </span><span class="font-bold text-primary-600">{{ cs() }}{{ order.totalUsd | number:'1.2-2' }}</span></div>
+            @if (tenantCurrency.isVenezuela() && order.totalBs) {
             <div><span class="text-grey-800 font-bold">Total Bs: </span><span class="font-bold text-primary-600">Bs. {{ order.totalBs | number:'1.2-2' }}</span></div>
             }
             <span class="text-grey-300">{{ order.createdAt | date: 'dd/MM/yy hh:mm a' }}</span>
@@ -217,10 +217,10 @@
             }
             <span class="flex-1 text-xs font-medium text-grey-800 truncate">{{ item.name }}</span>
             <span class="text-xs text-grey-400">x{{ item.quantity }}</span>
-            <span class="text-xs font-bold text-primary-600">${{ item.total | number:'1.2-2' }}</span>
+            <span class="text-xs font-bold text-primary-600">{{ cs() }}{{ item.total | number:'1.2-2' }}</span>
           </div>
           }
-          @if (order.totalBs) {
+          @if (tenantCurrency.isVenezuela() && order.totalBs) {
           <div class="text-xs text-grey-500">Total Bs: {{ order.totalBs | number:'1.2-2' }}</div>
           }
           @if (order.paymentMethod) {
@@ -271,8 +271,10 @@
             </th>
             <th class="px-6 py-3 border-b border-grey-50">WhatsApp</th>
             <th class="px-6 py-3 border-b border-grey-50">Fecha de creación</th>
-            <th class="px-6 py-3 border-b border-grey-50">Total USD</th>
+            <th class="px-6 py-3 border-b border-grey-50">Total</th>
+            @if (tenantCurrency.isVenezuela()) {
             <th class="px-6 py-3 border-b border-grey-50">Total Bs</th>
+            }
             <th class="px-6 py-3 border-b border-grey-50 text-right">
               Acciones
             </th>
@@ -378,11 +380,13 @@
               {{ order.createdAt | date: 'dd/MM/yyyy hh:mm a' }}
             </td>
             <td class="px-6 py-3.5 text-sm font-bold text-primary-600">
-              ${{ order.totalUsd | number:'1.2-2' }}
+              {{ cs() }}{{ order.totalUsd | number:'1.2-2' }}
             </td>
+            @if (tenantCurrency.isVenezuela()) {
             <td class="px-6 py-3.5 text-sm font-bold text-grey-700">
               Bs. {{ order.totalBs | number:'1.2-2' }}
             </td>
+            }
             <td class="px-6 py-3.5">
               <div class="flex items-center justify-end gap-2">
                 <ui-button
@@ -454,8 +458,8 @@
                       <span class="font-semibold text-grey-800 text-sm">{{ item.name }}</span>
                     </div>
                     <span class="text-sm text-grey-400 shrink-0">x{{ item.quantity }}</span>
-                    <span class="text-sm font-medium text-grey-700 shrink-0">${{ item.price | number:'1.2-2' }}</span>
-                    <span class="text-sm font-bold text-primary-600 shrink-0">${{ item.total | number:'1.2-2' }}</span>
+                    <span class="text-sm font-medium text-grey-700 shrink-0">{{ cs() }}{{ item.price | number:'1.2-2' }}</span>
+                    <span class="text-sm font-bold text-primary-600 shrink-0">{{ cs() }}{{ item.total | number:'1.2-2' }}</span>
                   </div>
                   }
                 </div>
@@ -560,7 +564,7 @@
           Ventas hoy
         </p>
         <p class="text-xl font-bold text-grey-800">
-          ${{ getTodaySales() | number:'1.2-2' }}
+          {{ cs() }}{{ getTodaySales() | number:'1.2-2' }}
         </p>
       </div>
     </div>

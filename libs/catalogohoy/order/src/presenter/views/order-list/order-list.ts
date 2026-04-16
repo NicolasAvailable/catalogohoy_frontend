@@ -7,7 +7,8 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { EcommerceConfigStore } from '@catalogohoy/ecommerce-config';
+import { EcommerceConfigStore, TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
+import { TenantStore } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -67,8 +68,18 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
   private readonly configStore = inject(EcommerceConfigStore);
+  public readonly tenantCurrency = inject(TenantCurrencyStore);
+  private readonly tenantStore = inject(TenantStore);
   private readonly orderPdf = inject(OrderPdfService);
-  public readonly cs = computed(() => this.configStore.config()?.currencySymbol ?? '$');
+  // Prefer the cached tenant currency symbol (from localStorage / DB).
+  // Falls back to the editor config only if the cache hasn't been
+  // primed yet (e.g., user opens orders before visiting home).
+  public readonly cs = computed(
+    () =>
+      this.tenantCurrency.localSymbol() ||
+      this.configStore.config()?.currencySymbol ||
+      '$'
+  );
   private readonly orderRealtime = inject(OrderRealtimeService);
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canCreateOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'create'));
@@ -155,7 +166,11 @@ export class OrderListComponent implements OnInit, OnDestroy {
     return this.mobileShowAll() ? orders : orders.slice(0, 5);
   });
 
-  ngOnInit() {
+  async ngOnInit() {
+    // Prime the tenant currency cache (localStorage → DB fallback).
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (tenantId) this.tenantCurrency.load(tenantId);
+
     // Setup debounced search
     this.searchSubscription = this.searchSubject
       .pipe(debounceTime(300), distinctUntilChanged())

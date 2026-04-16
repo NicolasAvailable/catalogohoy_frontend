@@ -159,11 +159,13 @@
               <label class="text-sm text-grey-100">Precio unitario</label>
               <ui-input-number
                 formControlName="price"
-                mode="currency"
-                currency="USD"
+                mode="decimal"
+                [prefix]="cs() + ' '"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="2"
                 locale="en-US"
                 [showButtons]="false"
-                placeholder="$ 0.00"
+                [placeholder]="cs() + ' 0.00'"
               />
             </div>
             <button
@@ -269,11 +271,13 @@
             >
             <ui-input-number
               formControlName="price"
-              mode="currency"
-              currency="USD"
+              mode="decimal"
+              [prefix]="cs() + ' '"
+              [minFractionDigits]="2"
+              [maxFractionDigits]="2"
               locale="en-US"
               [showButtons]="false"
-              placeholder="$ 0.00"
+              [placeholder]="cs() + ' 0.00'"
               inputId="price"
             />
           </div>
@@ -283,11 +287,13 @@
             >
             <ui-input-number
               formControlName="pricePromotional"
-              mode="currency"
-              currency="USD"
+              mode="decimal"
+              [prefix]="cs() + ' '"
+              [minFractionDigits]="2"
+              [maxFractionDigits]="2"
               locale="en-US"
               [showButtons]="false"
-              placeholder="$ 0.00"
+              [placeholder]="cs() + ' 0.00'"
               inputId="pricePromotional"
             />
           </div>
@@ -302,11 +308,13 @@
           </div>
           <ui-input-number
             formControlName="productionCost"
-            mode="currency"
-            currency="USD"
+            mode="decimal"
+            [prefix]="cs() + ' '"
+            [minFractionDigits]="2"
+            [maxFractionDigits]="2"
             locale="en-US"
             [showButtons]="false"
-            placeholder="$ 0.00"
+            [placeholder]="cs() + ' 0.00'"
             inputId="productionCost"
           />
           <p class="text-sm text-grey-300">
@@ -364,6 +372,32 @@
           <p class="text-sm text-grey-300">
             Define el orden en que aparece este producto en el catálogo. Los productos con menor número aparecen primero.
           </p>
+        </div>
+      </div>
+    </ui-card>
+    }
+    @if (!isCreate()) {
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <h2 class="text-xl font-bold">Disponibilidad</h2>
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex flex-col gap-1">
+            <span class="text-base text-grey-100 font-medium">Marcar como agotado</span>
+            <span class="text-sm text-grey-300">
+              El producto se mostrará como no disponible en el catálogo.
+            </span>
+          </div>
+          <ui-toggle formControlName="isSoldOut" />
+        </div>
+        <hr class="border-grey-50" />
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex flex-col gap-1">
+            <span class="text-base text-grey-100 font-medium">Ocultar del catálogo</span>
+            <span class="text-sm text-grey-300">
+              El producto no será visible para los clientes temporalmente.
+            </span>
+          </div>
+          <ui-toggle formControlName="isHidden" />
         </div>
       </div>
     </ui-card>

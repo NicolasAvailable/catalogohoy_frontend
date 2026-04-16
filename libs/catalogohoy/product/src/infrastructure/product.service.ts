@@ -150,6 +150,8 @@ export class ProductService implements BaseProductService {
         wholesale_tiers: input.isWholesale
           ? input.wholesaleTiers.map((t) => ({ title: t.title, price: Number(t.price) }))
           : [],
+        is_sold_out: input.isSoldOut ?? false,
+        is_hidden: input.isHidden ?? false,
       })
       .select('*');
 
@@ -185,6 +187,8 @@ export class ProductService implements BaseProductService {
       wholesale_tiers: input.isWholesale
         ? input.wholesaleTiers.map((t) => ({ title: t.title, price: Number(t.price) }))
         : [],
+      is_sold_out: input.isSoldOut ?? false,
+      is_hidden: input.isHidden ?? false,
     };
 
     if (input.position !== undefined) {

@@ -19,6 +19,8 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Logo slide-in / slide-out wrapper.  max-width animates the space
@@ -60,6 +62,10 @@
   color: var(--color-grey-800);
   margin: 0;
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .catalog-header__right {

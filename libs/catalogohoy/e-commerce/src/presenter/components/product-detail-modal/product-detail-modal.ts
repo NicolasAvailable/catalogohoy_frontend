@@ -23,6 +23,8 @@ export class ProductDetailModal {
   private readonly cartStore = inject(CartStore);
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cs = this.ecommerceStore.currencySymbol;
+  public readonly showReferencePrice = this.ecommerceStore.showReferencePrice;
+  public readonly showLocalCurrencyPrice = this.ecommerceStore.showLocalCurrencyPrice;
 
   public readonly product: Product = this.config.data.product;
   public readonly currentImageIndex = signal(0);
@@ -53,7 +55,7 @@ export class ProductDetailModal {
     this.product.isWholesale && this.product.wholesaleTiers.length > 0;
 
   public readonly isOutOfStock =
-    this.product.stock !== null && Number(this.product.stock) <= 0;
+    this.product.isSoldOut || (this.product.stock !== null && Number(this.product.stock) <= 0);
 
   public readonly availableStock =
     this.product.stock !== null ? Number(this.product.stock) : null;

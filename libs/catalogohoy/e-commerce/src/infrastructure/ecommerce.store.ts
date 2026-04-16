@@ -68,6 +68,30 @@ export const EcommerceStore = signalStore(
       }
       return store.catalogInfo()?.currencySymbol ?? '$';
     }),
+    showReferencePrice: computed(() => {
+      const overrides = store.previewOverrides();
+      if (store.isPreviewMode() && overrides?.showReferencePrice !== undefined) {
+        return overrides.showReferencePrice;
+      }
+      return store.catalogInfo()?.showReferencePrice ?? true;
+    }),
+    showLocalCurrencyPrice: computed(() => {
+      const overrides = store.previewOverrides();
+      if (store.isPreviewMode() && overrides?.showLocalCurrencyPrice !== undefined) {
+        return overrides.showLocalCurrencyPrice;
+      }
+      return store.catalogInfo()?.showLocalCurrencyPrice ?? true;
+    }),
+    // Dual-currency display (Bs. prices alongside USD/EUR) is a
+    // Venezuela-specific concept tied to the BCV exchange rate. For every
+    // other country, the public catalog must only show the single price.
+    isVenezuela: computed(() => {
+      const overrides = store.previewOverrides();
+      if (store.isPreviewMode() && overrides?.countryCode !== undefined) {
+        return overrides.countryCode === 'VE';
+      }
+      return store.catalogInfo()?.countryCode === 'VE';
+    }),
   })),
   withMethods((store, ecommerceService = inject(EcommerceService)) => ({
     async loadCatalog(slug: string) {

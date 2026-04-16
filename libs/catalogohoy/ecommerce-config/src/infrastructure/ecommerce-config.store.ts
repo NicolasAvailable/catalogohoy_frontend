@@ -105,7 +105,8 @@ export const EcommerceConfigStore = signalStore(
             currencyConfig: { ...store.currencyConfig(), ...patch },
             currencyConfigExists: true,
           });
-          toast.success('Moneda actualizada correctamente');
+          // No success toast — this fires alongside the main "Configuración
+          // actualizada" toast from updatePartialConfig; a second one is noise.
         }
       );
     },

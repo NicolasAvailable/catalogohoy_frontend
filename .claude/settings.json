@@ -38,7 +38,9 @@
       "WebFetch(domain:www.quickreply.ai)",
       "Bash(grep -E \"\\\\.ts$\")",
       "Bash(find /c/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo -name \"*.md\" -type f -exec grep -l \"trigger\\\\|webhook\\\\|hook\\\\|auth.users\" {} \\\\;)",
-      "mcp__supabase__list_branches"
+      "mcp__supabase__list_branches",
+      "Bash(find \"c:/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.json\" \\\\\\) -exec grep -l \"countryCode\\\\|dialCode\\\\|country.*code\" {} \\\\;)",
+      "Bash(grep -r \"Bs\\\\\\\\.S\" \"c:\\\\Users\\\\nicol\\\\OneDrive\\\\Desktop\\\\projects\\\\catalogohoy_frontend_monorepo\\\\libs\\\\catalogohoy\" --include=\"*.html\" --include=\"*.ts\")"
     ]
   }
 }

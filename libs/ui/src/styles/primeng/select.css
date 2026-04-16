@@ -5,3 +5,9 @@
 .p-select-clear-icon {
   inset-inline-end: 21% !important;
 }
+
+/* Match the placeholder color of ui-input-text (`--color-grey-200`) so
+   inputs and selects look consistent side-by-side in filter bars. */
+.p-select .p-select-label.p-placeholder {
+  color: var(--color-grey-200) !important;
+}

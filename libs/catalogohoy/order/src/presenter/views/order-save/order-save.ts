@@ -8,7 +8,8 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { EcommerceConfigStore } from '@catalogohoy/ecommerce-config';
+import { EcommerceConfigStore, TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
+import { TenantStore } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import {
   FormBuilder,
@@ -65,7 +66,14 @@ export default class OrderSave implements OnInit {
   public readonly productStore = inject(ProductStore);
   public readonly rateStore = inject(RateStore);
   private readonly configStore = inject(EcommerceConfigStore);
-  public readonly cs = computed(() => this.configStore.config()?.currencySymbol ?? '$');
+  public readonly tenantCurrency = inject(TenantCurrencyStore);
+  private readonly tenantStore = inject(TenantStore);
+  public readonly cs = computed(
+    () =>
+      this.tenantCurrency.localSymbol() ||
+      this.configStore.config()?.currencySymbol ||
+      '$'
+  );
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canEditOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'edit'));
 
@@ -121,6 +129,11 @@ export default class OrderSave implements OnInit {
   ];
 
   ngOnInit(): void {
+    // Prime tenant currency cache (localStorage → DB fallback)
+    this.tenantStore.getTenantIdAsync().then((tid) => {
+      if (tid) this.tenantCurrency.load(tid);
+    });
+
     // Cargar tasas de cambio
     this.rateStore.loadRates().then(() => {
       const rate = this.rateStore.rate();

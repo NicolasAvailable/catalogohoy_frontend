@@ -1,5 +1,8 @@
 import { inject, Injectable } from '@angular/core';
-import { EcommerceConfigStore } from '@catalogohoy/ecommerce-config';
+import {
+  EcommerceConfigStore,
+  TenantCurrencyStore,
+} from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
 import { jsPDF } from 'jspdf';
 import { Order, OrderItem } from '../domain';
@@ -28,14 +31,25 @@ const LIGHT = [200, 200, 200] as const;
 export class OrderPdfService {
   private readonly configStore = inject(EcommerceConfigStore);
   private readonly tenantStore = inject(TenantStore);
+  private readonly tenantCurrency = inject(TenantCurrencyStore);
 
   async download(order: Order): Promise<void> {
+    // Ensure the tenant currency is loaded (cache-first — typically a no-op
+    // because some view has already primed it, but cheap if not).
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (tenantId) await this.tenantCurrency.load(tenantId);
+
     const config = this.configStore.config();
     const storeName =
       config?.name ||
       this.tenantStore.tenantName() ||
       'Catálogo';
-    const cs = config?.currencySymbol ?? '$';
+    // Symbol: prefer the cached tenant currency (dynamic per-country).
+    const cs =
+      this.tenantCurrency.localSymbol() ||
+      config?.currencySymbol ||
+      '$';
+    const isVenezuela = this.tenantCurrency.isVenezuela();
     const logoUrl = config?.logo ?? null;
 
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -252,7 +266,7 @@ export class OrderPdfService {
     });
     y += 5;
 
-    if (order.totalBs && order.totalBs > 0) {
+    if (isVenezuela && order.totalBs && order.totalBs > 0) {
       doc.text('Total en Bs.', labelX, y);
       doc.text(`Bs. ${order.totalBs.toFixed(2)}`, valX, y, {
         align: 'right',

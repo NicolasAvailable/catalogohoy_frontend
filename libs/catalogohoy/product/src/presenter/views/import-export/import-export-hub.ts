@@ -1,12 +1,14 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   inject,
   signal,
   ViewChild,
 } from '@angular/core';
 import { CategoryStore } from '@catalogohoy/category';
+import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { PlanStore } from '@catalogohoy/plan';
 import {
   ButtonComponent,
@@ -68,6 +70,8 @@ export class ImportExportHubComponent {
   private readonly aiExcelService = inject(ProductAiExcelService);
   private readonly categoryStore = inject(CategoryStore);
   private readonly planStore = inject(PlanStore);
+  public readonly tenantCurrency = inject(TenantCurrencyStore);
+  public readonly cs = computed(() => this.tenantCurrency.localSymbol() || '$');
   private readonly destroyRef = inject(DestroyRef);
 
   @ViewChild(DialogComponent) dialog!: DialogComponent;

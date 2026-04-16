@@ -209,7 +209,7 @@
           <tr class="border-b border-gray-50 hover:bg-gray-50/50">
             <td class="p-3 text-gray-400">{{ $index + 1 }}</td>
             <td class="p-3 font-medium text-gray-900">{{ row.name }}</td>
-            <td class="p-3 text-gray-700">${{ row.price }}</td>
+            <td class="p-3 text-gray-700">{{ cs() }}{{ row.price }}</td>
             <td class="p-3 text-gray-700">{{ row.stock ?? 'Sin limite' }}</td>
             <td class="p-3 text-gray-500">{{ row.sku ?? '-' }}</td>
             <td class="p-3 text-gray-500">{{ row.categories || '-' }}</td>

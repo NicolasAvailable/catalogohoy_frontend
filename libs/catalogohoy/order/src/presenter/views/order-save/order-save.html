@@ -188,7 +188,7 @@
                           >
                           @if (item.isWholesale && item.wholesaleTiers?.length) {
                           <span class="text-xs text-amber-600"
-                            >Al mayor · Desde ${{ item.wholesaleTiers[0].price.toFixed(2) }}</span
+                            >Al mayor · Desde {{ cs() }}{{ item.wholesaleTiers[0].price.toFixed(2) }}</span
                           >
                           } @else if (item.pricePromotional > 0) {
                           <span class="text-xs text-grey-400">
@@ -273,7 +273,7 @@
                       [ngModelOptions]="{ standalone: true }"
                       [min]="0"
                       mode="decimal"
-                      prefix="$ "
+                      [prefix]="cs() + ' '"
                       [minFractionDigits]="2"
                       [maxFractionDigits]="2"
                       [inputId]="'custom-price-' + $index"
@@ -419,16 +419,17 @@
       <div class="flex flex-col gap-4">
         <h2 class="text-xl font-bold">Resumen</h2>
 
-        <!-- Total USD -->
+        <!-- Total -->
         <div
           class="flex justify-between items-center py-4 border-t border-grey-100"
         >
-          <span class="text-lg text-grey-300">Total USD</span>
+          <span class="text-lg text-grey-300">Total</span>
           <span class="text-2xl font-bold text-primary-600"
-            >$ {{ calculateTotal().toFixed(2) }}</span
+            >{{ cs() }} {{ calculateTotal().toFixed(2) }}</span
           >
         </div>
 
+        @if (tenantCurrency.isVenezuela()) {
         <!-- Tasa de cambio -->
         <div class="flex flex-col gap-3 py-4 border-t border-grey-100">
           <div class="flex items-center justify-between">
@@ -474,6 +475,7 @@
             >Bs. {{ totalBs() | number:'1.2-2' }}</span
           >
         </div>
+        }
       </div>
     </ui-card>
   </form>

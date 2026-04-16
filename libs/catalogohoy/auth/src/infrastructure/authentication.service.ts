@@ -216,6 +216,15 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (error) {
       return E.left(new Error(error.message));
     }
+    // Clear any per-tenant currency caches left in localStorage so the next
+    // session (potentially different user/tenant) doesn't see stale data.
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('tenant_currency_'))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {
+      /* storage not available — nothing to clean */
+    }
     return E.right(undefined);
   }
 

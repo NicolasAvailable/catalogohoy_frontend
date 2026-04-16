@@ -25,6 +25,8 @@ export interface CatalogInfo {
   socialLinks: SocialLinks;
   template: CatalogTemplate;
   currencySymbol: string;
+  showReferencePrice: boolean;
+  showLocalCurrencyPrice: boolean;
   whatsappOrderMessage: string | null;
   country: string | null;
   countryCode: string | null;

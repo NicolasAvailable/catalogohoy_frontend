@@ -9,6 +9,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
+import { TenantStore } from '@catalogohoy/tenant';
 import {
   EmptyListComponent,
   IconComponent,
@@ -37,7 +39,10 @@ type FilterValue = 'all' | 'with_completed' | 'with_pending' | 'no_completed';
 export default class ClientListComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   public readonly clientStore = inject(ClientStore);
+  public readonly tenantCurrency = inject(TenantCurrencyStore);
+  private readonly tenantStore = inject(TenantStore);
   private readonly clientRealtime = inject(ClientRealtimeService);
+  public readonly cs = computed(() => this.tenantCurrency.localSymbol() || '$');
 
   private readonly searchSubject = new Subject<string>();
   private searchSubscription?: Subscription;
@@ -69,6 +74,10 @@ export default class ClientListComponent implements OnInit, OnDestroy {
   );
 
   ngOnInit() {
+    this.tenantStore.getTenantIdAsync().then((tid) => {
+      if (tid) this.tenantCurrency.load(tid);
+    });
+
     this.searchSubscription = this.searchSubject
       .pipe(debounceTime(300), distinctUntilChanged())
       .subscribe((query) => this.searchQuery.set(query));

@@ -38,7 +38,13 @@
       "Bash(cmd /c dir:*)",
       "Bash(cat .github/workflows/*)",
       "Bash(xargs ls -lh)",
-      "Bash(claude mcp:*)"
+      "Bash(claude mcp:*)",
+      "mcp__meta-ads__get_ad_accounts",
+      "mcp__meta-ads__get_campaigns",
+      "mcp__meta-ads__get_adsets",
+      "mcp__meta-ads__get_ads",
+      "mcp__meta-ads__get_insights",
+      "mcp__meta-ads__update_adset"
     ]
   },
   "enableAllProjectMcpServers": true,

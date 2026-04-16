@@ -22,6 +22,7 @@ import {
   ColorPickerComponent,
   ConfirmDialogService,
   IconComponent,
+  InputPhoneComponent,
   InputTextComponent,
   SelectComponent,
   SelectItemDirective,
@@ -48,7 +49,7 @@ import {
   WHATSAPP_MESSAGE_VARIABLES,
   WhatsappButton,
 } from '../../domain';
-import { EcommerceConfigStore, LocationApiService } from '../../infrastructure';
+import { EcommerceConfigStore, LocationApiService, TenantCurrencyStore } from '../../infrastructure';
 import { PhoneMockupComponent } from '../components/phone-mockup/phone-mockup';
 import { TemplateSelectorComponent } from '../components/template-selector/template-selector';
 
@@ -58,6 +59,7 @@ import { TemplateSelectorComponent } from '../components/template-selector/templ
     FormsModule,
     ButtonComponent,
     InputTextComponent,
+    InputPhoneComponent,
     ToggleComponent,
     IconComponent,
     CardComponent,
@@ -77,6 +79,7 @@ import { TemplateSelectorComponent } from '../components/template-selector/templ
 export class EcommerceConfigComponent implements OnInit {
   public readonly tenantStore = inject(TenantStore);
   public readonly configStore = inject(EcommerceConfigStore);
+  private readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly confirmDialogService = inject(ConfirmDialogService);
   private readonly permissions = inject(TeamPermissionsStore);
@@ -133,6 +136,8 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftSocialLinks = signal<SocialLinks>({ ...DEFAULT_SOCIAL_LINKS });
   public readonly draftTemplate = signal<CatalogTemplate>('banner-centered');
   public readonly draftCurrencySymbol = signal('$');
+  public readonly draftShowReferencePrice = signal(true);
+  public readonly draftShowLocalCurrencyPrice = signal(true);
   public readonly draftWhatsappOrderMessage = signal<string | null>(null);
 
   // Currency config drafts — TenantCurrencyConfig shape
@@ -270,6 +275,8 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftShowPaymentMethodsSection, prev?.showPaymentMethodsSection ?? true, config.showPaymentMethodsSection ?? true);
       syncField(this.draftTemplate, prev?.template ?? 'banner-centered' as CatalogTemplate, config.template ?? 'banner-centered' as CatalogTemplate);
       syncField(this.draftCurrencySymbol, prev?.currencySymbol ?? '$', config.currencySymbol ?? '$');
+      syncField(this.draftShowReferencePrice, prev?.showReferencePrice ?? true, config.showReferencePrice ?? true);
+      syncField(this.draftShowLocalCurrencyPrice, prev?.showLocalCurrencyPrice ?? true, config.showLocalCurrencyPrice ?? true);
       syncField(this.draftWhatsappOrderMessage, prev?.whatsappOrderMessage ?? null, config.whatsappOrderMessage ?? null);
       syncFieldJson(this.draftWhatsappButtons, prevButtons, newButtons);
       syncFieldJson(this.draftSocialLinks, prev?.socialLinks ?? DEFAULT_SOCIAL_LINKS, config.socialLinks ?? { ...DEFAULT_SOCIAL_LINKS });
@@ -285,12 +292,41 @@ export class EcommerceConfigComponent implements OnInit {
       const socialLinks = this.draftSocialLinks();
       const template = this.draftTemplate();
       const currencySymbol = this.draftCurrencySymbol();
+      const showReferencePrice = this.draftShowReferencePrice();
+      const showLocalCurrencyPrice = this.draftShowLocalCurrencyPrice();
+      // Read draftCurrency so the effect re-fires when the user picks
+      // a different reference currency (USD/EUR) via setReferenceCurrency.
+      const currencyConfig = this.draftCurrency();
+      // Location drafts — so the public footer updates live when the user
+      // changes country/state/city in the editor.
+      const countryCode = this.draftCountryCode();
+      const country = findCountryByCode(countryCode)?.label ?? null;
+      const state = this.draftState();
+      const city = this.draftCity();
+      const showLocationSection = this.draftShowLocationSection();
       const logo = this.configStore.config()?.logo ?? null;
       const banner = this.configStore.config()?.banner ?? null;
 
       const message = {
         type: 'PREVIEW_UPDATE' as const,
-        payload: { name, logo, banner, themeColor, showDesignSection, socialLinks, template, currencySymbol },
+        payload: {
+          name,
+          logo,
+          banner,
+          themeColor,
+          showDesignSection,
+          socialLinks,
+          template,
+          currencySymbol,
+          showReferencePrice,
+          showLocalCurrencyPrice,
+          currencyConfig,
+          country,
+          countryCode,
+          state,
+          city,
+          showLocationSection,
+        },
         source: 'catalogohoy-admin' as const,
       };
 
@@ -343,10 +379,24 @@ export class EcommerceConfigComponent implements OnInit {
       const exists = this.configStore.currencyConfigExists();
       const countryCode = this.configStore.config()?.countryCode ?? null;
       untracked(() => {
-        if (!exists && countryCode) {
+        // Seed from country defaults when:
+        // - No persisted row yet, OR
+        // - VE tenant still has the old USD default that should be VES
+        const needsVeSeed =
+          countryCode === 'VE' &&
+          cc.productCurrency === 'USD' &&
+          cc.exchangeRateType === 'none';
+
+        if ((!exists || needsVeSeed) && countryCode) {
           const seeded = this.buildCurrencyDefaultsForCountry(countryCode);
           if (seeded) {
             this.draftCurrency.set(seeded);
+            // Sync the old currency_symbol field so the public catalog
+            // shows the right symbol ($ for VE/USD reference, etc.)
+            if (countryCode === 'VE') {
+              const refSymbol = seeded.displayCurrency === 'EUR' ? '€' : '$';
+              this.draftCurrencySymbol.set(refSymbol);
+            }
             return;
           }
         }
@@ -403,18 +453,33 @@ export class EcommerceConfigComponent implements OnInit {
     // Seed currency defaults from the new country (same helper as initial sync)
     if (code) {
       const seeded = this.buildCurrencyDefaultsForCountry(code);
-      if (seeded) this.draftCurrency.set(seeded);
+      if (seeded) {
+        this.draftCurrency.set(seeded);
+        // Sync the old currency_symbol so preview + public catalog update.
+        // VE: reference symbol ($, €). Others: local symbol.
+        if (code === 'VE') {
+          this.draftCurrencySymbol.set(seeded.displayCurrency === 'EUR' ? '€' : '$');
+        } else {
+          const sym = SUPPORTED_CURRENCIES.find((c) => c.code === seeded.productCurrency)?.symbol ?? '$';
+          this.draftCurrencySymbol.set(sym);
+        }
+      }
     }
   }
 
   // Venezuela-only: quick-toggle between USD and EUR as the reference currency.
   // Mirrors the pre-internationalization UX (two buttons with symbol + name).
+  // Also syncs `draftCurrencySymbol` — the old field in tenant_ecommerce_config
+  // that the public catalog still reads for price rendering.
   setReferenceCurrency(code: 'USD' | 'EUR') {
+    const symbol = code === 'USD' ? '$' : '€';
     this.draftCurrency.set({
       ...this.draftCurrency(),
       displayCurrency: code,
       exchangeRateType: code === 'USD' ? 'bcv_usd' : 'bcv_eur',
+      showDualCurrency: true,
     });
+    this.draftCurrencySymbol.set(symbol);
   }
 
   onStateChange(state: string | null) {
@@ -470,6 +535,8 @@ export class EcommerceConfigComponent implements OnInit {
     if (this.draftShowLocationSection() !== (config.showLocationSection ?? true)) changes.showLocationSection = this.draftShowLocationSection();
     if (this.draftShowPaymentMethodsSection() !== (config.showPaymentMethodsSection ?? true)) changes.showPaymentMethodsSection = this.draftShowPaymentMethodsSection();
     if (this.draftCurrencySymbol() !== (config.currencySymbol ?? '$')) changes.currencySymbol = this.draftCurrencySymbol();
+    if (this.draftShowReferencePrice() !== (config.showReferencePrice ?? true)) changes.showReferencePrice = this.draftShowReferencePrice();
+    if (this.draftShowLocalCurrencyPrice() !== (config.showLocalCurrencyPrice ?? true)) changes.showLocalCurrencyPrice = this.draftShowLocalCurrencyPrice();
     if (this.draftWhatsappOrderMessage() !== (config.whatsappOrderMessage ?? null)) changes.whatsappOrderMessage = this.draftWhatsappOrderMessage();
 
     const serverButtons = config.whatsappButtons?.length
@@ -519,6 +586,26 @@ export class EcommerceConfigComponent implements OnInit {
     if (Object.keys(changes).length > 0) {
       await this.configStore.updatePartialConfig(changes);
     }
+
+    // 4. Refresh the TenantCurrencyStore cache + localStorage so every
+    //    admin view (home, orders, create order, etc.) picks up the new
+    //    currency without a reload. Skipped when there was no meaningful
+    //    currency/country change, since localStorage already has the
+    //    current values.
+    const tenantId = config?.tenantId;
+    if (tenantId) {
+      const cc = this.configStore.currencyConfig();
+      const finalCode = this.draftCurrencyCode();
+      this.tenantCurrency.setCurrency(tenantId, {
+        localCode: cc.productCurrency,
+        localSymbol: cc.currencySymbol,
+        countryCode: finalCode,
+      });
+    }
+  }
+
+  private draftCurrencyCode(): string | null {
+    return this.draftCountryCode() ?? this.configStore.config()?.countryCode ?? null;
   }
 
   showUnsavedChangesDialog(): Observable<boolean> {

@@ -20,6 +20,8 @@ export class ProductMapper {
       position: entity.position ?? 0,
       isWholesale: entity.is_wholesale ?? false,
       wholesaleTiers: entity.wholesale_tiers ?? [],
+      isSoldOut: entity.is_sold_out ?? false,
+      isHidden: entity.is_hidden ?? false,
     });
   }
 }

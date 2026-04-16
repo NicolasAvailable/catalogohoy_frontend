@@ -31,13 +31,13 @@
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
       <p class="text-sm text-slate-500 mb-1">Ventas de hoy</p>
       <p class="text-2xl font-bold text-slate-800">
-        Bs.S {{ stats()!.todaySalesBs | number:'1.2-2' }}
+        {{ tenantCurrency.localSymbol() }} {{ (tenantCurrency.isVenezuela() ? stats()!.todaySalesBs : stats()!.todaySalesUsd) | number:'1.2-2' }}
       </p>
     </div>
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
       <p class="text-sm text-slate-500 mb-1">Ventas mensuales</p>
       <p class="text-2xl font-bold text-slate-800">
-        Bs.S {{ stats()!.monthlySalesBs | number:'1.2-2' }}
+        {{ tenantCurrency.localSymbol() }} {{ (tenantCurrency.isVenezuela() ? stats()!.monthlySalesBs : stats()!.monthlySalesUsd) | number:'1.2-2' }}
       </p>
     </div>
   </div>
@@ -91,7 +91,7 @@
           Pedidos
         </button>
       </div>
-      @if (activeChartTab() === 'ventas') {
+      @if (activeChartTab() === 'ventas' && tenantCurrency.isVenezuela()) {
       <div class="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
         <button
           (click)="setCurrency('bs')"

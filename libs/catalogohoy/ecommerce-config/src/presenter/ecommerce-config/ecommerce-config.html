@@ -294,7 +294,104 @@
         </div>
       </ui-card>
 
-      <!-- Card 3: Ubicación -->
+      <!-- Card 3: Métodos de pago -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon payment-icon">
+              <ui-icon name="credit-card" styleClass="size-5"></ui-icon>
+            </div>
+            <h2 class="card-title">Métodos de pago</h2>
+          </div>
+          <ui-toggle
+            [ngModel]="draftShowPaymentMethodsSection()"
+            (ngModelChange)="draftShowPaymentMethodsSection.set($event)"
+          ></ui-toggle>
+        </div>
+
+        <div
+          class="card-content"
+          [class.section-disabled]="!draftShowPaymentMethodsSection()"
+        >
+          <!-- Payment methods list -->
+          <div class="payment-methods-list">
+            @for (method of configStore.paymentMethodsList(); track method.id) {
+            <div class="payment-method-row">
+              <div class="payment-method-info">
+                <ui-icon [name]="method.icon" styleClass="size-5 text-grey-500"></ui-icon>
+                <span class="payment-method-name">{{ method.name }}</span>
+              </div>
+              <div class="payment-method-actions">
+                <ui-toggle
+                  [ngModel]="method.isActive"
+                  (ngModelChange)="toggleMethodActive(method.id, $event)"
+                ></ui-toggle>
+                <button
+                  type="button"
+                  class="payment-method-delete"
+                  (click)="deleteMethod(method.id, method.name)"
+                  title="Eliminar"
+                >
+                  <ui-icon name="trash" styleClass="size-4"></ui-icon>
+                </button>
+              </div>
+            </div>
+            } @empty {
+            <div class="payment-methods-empty">
+              <ui-icon name="credit-card" styleClass="size-6 text-grey-300"></ui-icon>
+              <span>No hay métodos de pago configurados</span>
+            </div>
+            }
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Add new payment method -->
+          <div class="add-method-form">
+            <span class="add-method-title">Agregar método de pago</span>
+            <div class="add-method-fields">
+              <ui-input-text
+                [ngModel]="newMethodName()"
+                (ngModelChange)="newMethodName.set($event)"
+                placeholder="Nombre (Ej: Zelle, Binance...)"
+                styleClass="w-full"
+              ></ui-input-text>
+              <ui-select
+                [options]="iconOptions"
+                [ngModel]="newMethodIcon()"
+                (ngModelChange)="newMethodIcon.set($event)"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Icono"
+              >
+                <ng-template selectSelectedItem let-selected>
+                  <div class="flex items-center gap-2">
+                    <ui-icon [name]="selected.value" styleClass="size-4" />
+                    <span class="text-sm">{{ selected.label }}</span>
+                  </div>
+                </ng-template>
+                <ng-template selectItem let-item>
+                  <div class="flex items-center gap-2.5 py-0.5">
+                    <ui-icon [name]="item.value" styleClass="size-4 text-grey-500" />
+                    <span>{{ item.label }}</span>
+                  </div>
+                </ng-template>
+              </ui-select>
+            </div>
+            <ui-button
+              label="Agregar"
+              icon="plus"
+              size="small"
+              (click)="addPaymentMethod()"
+              [disabled]="!newMethodName().trim() || isAddingMethod()"
+              [isLoading]="isAddingMethod()"
+            ></ui-button>
+          </div>
+
+        </div>
+      </ui-card>
+
+      <!-- Card 4: Ubicación -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
           <div class="card-header-left">
@@ -399,103 +496,6 @@
         </div>
       </ui-card>
 
-      <!-- Card 4: Métodos de pago -->
-      <ui-card styleClass="config-card">
-        <div class="card-header-custom">
-          <div class="card-header-left">
-            <div class="card-icon payment-icon">
-              <ui-icon name="credit-card" styleClass="size-5"></ui-icon>
-            </div>
-            <h2 class="card-title">Métodos de pago</h2>
-          </div>
-          <ui-toggle
-            [ngModel]="draftShowPaymentMethodsSection()"
-            (ngModelChange)="draftShowPaymentMethodsSection.set($event)"
-          ></ui-toggle>
-        </div>
-
-        <div
-          class="card-content"
-          [class.section-disabled]="!draftShowPaymentMethodsSection()"
-        >
-          <!-- Payment methods list -->
-          <div class="payment-methods-list">
-            @for (method of configStore.paymentMethodsList(); track method.id) {
-            <div class="payment-method-row">
-              <div class="payment-method-info">
-                <ui-icon [name]="method.icon" styleClass="size-5 text-grey-500"></ui-icon>
-                <span class="payment-method-name">{{ method.name }}</span>
-              </div>
-              <div class="payment-method-actions">
-                <ui-toggle
-                  [ngModel]="method.isActive"
-                  (ngModelChange)="toggleMethodActive(method.id, $event)"
-                ></ui-toggle>
-                <button
-                  type="button"
-                  class="payment-method-delete"
-                  (click)="deleteMethod(method.id, method.name)"
-                  title="Eliminar"
-                >
-                  <ui-icon name="trash" styleClass="size-4"></ui-icon>
-                </button>
-              </div>
-            </div>
-            } @empty {
-            <div class="payment-methods-empty">
-              <ui-icon name="credit-card" styleClass="size-6 text-grey-300"></ui-icon>
-              <span>No hay métodos de pago configurados</span>
-            </div>
-            }
-          </div>
-
-          <div class="divider"></div>
-
-          <!-- Add new payment method -->
-          <div class="add-method-form">
-            <span class="add-method-title">Agregar método de pago</span>
-            <div class="add-method-fields">
-              <ui-input-text
-                [ngModel]="newMethodName()"
-                (ngModelChange)="newMethodName.set($event)"
-                placeholder="Nombre (Ej: Zelle, Binance...)"
-                styleClass="w-full"
-              ></ui-input-text>
-              <ui-select
-                [options]="iconOptions"
-                [ngModel]="newMethodIcon()"
-                (ngModelChange)="newMethodIcon.set($event)"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Icono"
-              >
-                <ng-template selectSelectedItem let-selected>
-                  <div class="flex items-center gap-2">
-                    <ui-icon [name]="selected.value" styleClass="size-4" />
-                    <span class="text-sm">{{ selected.label }}</span>
-                  </div>
-                </ng-template>
-                <ng-template selectItem let-item>
-                  <div class="flex items-center gap-2.5 py-0.5">
-                    <ui-icon [name]="item.value" styleClass="size-4 text-grey-500" />
-                    <span>{{ item.label }}</span>
-                  </div>
-                </ng-template>
-              </ui-select>
-            </div>
-            <ui-button
-              label="Agregar"
-              icon="plus"
-              size="small"
-              (click)="addPaymentMethod()"
-              [disabled]="!newMethodName().trim() || isAddingMethod()"
-              [isLoading]="isAddingMethod()"
-            ></ui-button>
-          </div>
-
-        </div>
-      </ui-card>
-
       <!-- Card: Monedas -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -529,20 +529,11 @@
 
           @if (isVenezuela()) {
             <div class="divider"></div>
-            <div class="flex items-center justify-between mb-3">
-              <div>
-                <h3 class="text-base font-semibold">Moneda de referencia</h3>
-                <p class="text-sm text-grey-300">
-                  Muestra un precio de referencia junto al precio local usando la tasa BCV.
-                </p>
-              </div>
-              <ui-toggle
-                [ngModel]="draftCurrency().showDualCurrency"
-                (ngModelChange)="updateCurrencyField('showDualCurrency', $event)"
-              ></ui-toggle>
-            </div>
-
-            @if (draftCurrency().showDualCurrency) {
+            <div>
+              <h3 class="text-base font-semibold">Moneda de referencia</h3>
+              <p class="text-sm text-grey-300 mb-3">
+                Elige la moneda en la que quieres mostrar el precio de referencia usando la tasa BCV.
+              </p>
               <div class="flex gap-2 flex-wrap">
                 <button
                   type="button"
@@ -561,7 +552,39 @@
                   € Euro
                 </button>
               </div>
-            }
+            </div>
+
+            <div class="price-visibility-toggles">
+              <div class="price-visibility-toggle">
+                <div class="price-visibility-toggle__text">
+                  <span class="price-visibility-toggle__title">
+                    Mostrar precio de referencia
+                  </span>
+                  <small class="price-visibility-toggle__hint">
+                    Muestra el precio en {{ draftCurrencySymbol() }} en el catálogo público.
+                  </small>
+                </div>
+                <ui-toggle
+                  [ngModel]="draftShowReferencePrice()"
+                  (ngModelChange)="draftShowReferencePrice.set($event)"
+                ></ui-toggle>
+              </div>
+
+              <div class="price-visibility-toggle">
+                <div class="price-visibility-toggle__text">
+                  <span class="price-visibility-toggle__title">
+                    Mostrar precio en moneda local
+                  </span>
+                  <small class="price-visibility-toggle__hint">
+                    Muestra el precio convertido (Bs.) según la tasa de cambio configurada.
+                  </small>
+                </div>
+                <ui-toggle
+                  [ngModel]="draftShowLocalCurrencyPrice()"
+                  (ngModelChange)="draftShowLocalCurrencyPrice.set($event)"
+                ></ui-toggle>
+              </div>
+            </div>
           }
         </div>
       </ui-card>
@@ -597,13 +620,11 @@
                   [disabled]="configStore.isSaving()"
                   styleClass="w-full"
                 ></ui-input-text>
-                <ui-input-text
+                <ui-input-phone
                   [ngModel]="button.number"
                   (ngModelChange)="updateButtonNumber($index, $event)"
-                  placeholder="Número (Ej: +584124807708)"
-                  [disabled]="configStore.isSaving()"
-                  styleClass="w-full"
-                ></ui-input-text>
+                  [defaultCountry]="'ve'"
+                ></ui-input-phone>
               </div>
               <button
                 type="button"
@@ -621,10 +642,8 @@
           @if (draftWhatsappButtons().length < 3) {
           <ui-button
             label="Agregar vendedor"
-            [variant]="'outlined'"
-            severity="secondary"
-            size="small"
             icon="plus"
+            size="small"
             (click)="addWhatsappButton()"
             [disabled]="configStore.isSaving()"
           ></ui-button>

@@ -18,8 +18,10 @@ import {
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CategoryStore } from '@catalogohoy/category';
+import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
+import { TenantStore } from '@catalogohoy/tenant';
 import { Exception, is } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { whiteSpacesValidator } from '@shared/presenter';
@@ -66,7 +68,13 @@ export default class Save implements OnInit {
   private readonly productFacade = inject(ProductFacade);
   public readonly categoryStore = inject(CategoryStore);
   public readonly planStore = inject(PlanStore);
+  public readonly tenantCurrency = inject(TenantCurrencyStore);
+  private readonly tenantStore = inject(TenantStore);
   private readonly permissions = inject(TeamPermissionsStore);
+  public readonly cs = computed(() => this.tenantCurrency.localSymbol() || '$');
+  public readonly currencyCode = computed(
+    () => this.tenantCurrency.localCode() || 'USD'
+  );
   protected readonly canEditProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'edit'));
 
   @ViewChild(PlanLimitDialogComponent)
@@ -87,6 +95,8 @@ export default class Save implements OnInit {
     position: [0],
     isWholesale: [false],
     wholesaleTiers: this.fb.array([]),
+    isSoldOut: [false],
+    isHidden: [false],
   });
 
   public readonly id = input<string | undefined>(undefined);
@@ -119,6 +129,9 @@ export default class Save implements OnInit {
   ngOnInit(): void {
     this.categoryStore.categoryList$(1, 100);
     this.planStore.loadTenantPlanUsage();
+    this.tenantStore.getTenantIdAsync().then((tid) => {
+      if (tid) this.tenantCurrency.load(tid);
+    });
     is.affirmative(this.id())
       .mapRight(async () => {
         const product = await this.productFacade.getById(this.id() as string);
@@ -215,6 +228,8 @@ export default class Save implements OnInit {
     this.form.controls.position.setValue(product.position);
     this.photos.set(product.photos);
 
+    this.form.controls.isSoldOut.setValue(product.isSoldOut);
+    this.form.controls.isHidden.setValue(product.isHidden);
     this.form.controls.isWholesale.setValue(product.isWholesale);
     if (product.isWholesale) {
       this.form.controls.price.clearValidators();
@@ -280,6 +295,8 @@ export default class Save implements OnInit {
       categoryIds: this.form.controls.categoryIds.value!,
       isWholesale: this.form.controls.isWholesale.value ?? false,
       wholesaleTiers: this.wholesaleTiersArray.value ?? [],
+      isSoldOut: this.form.controls.isSoldOut.value ?? false,
+      isHidden: this.form.controls.isHidden.value ?? false,
     };
     if (this.isCreate()) {
       const product = await this.productFacade.create(body);

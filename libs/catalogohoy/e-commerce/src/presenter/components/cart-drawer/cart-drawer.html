@@ -42,7 +42,7 @@
             <p class="cart-item__description">{{ item.description }}</p>
             <span class="cart-item__price">
               {{ cs() }}{{ item.price }}
-              @if (ecommerceStore.exchangeRate() > 0) {
+              @if (ecommerceStore.isVenezuela() && ecommerceStore.exchangeRate() > 0) {
               <span class="cart-item__price-bs">Bs. {{ item.price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
               }
             </span>
@@ -71,7 +71,7 @@
         <div class="cart-drawer__checkout-price">
           <span>
             {{ cs() }}{{ cartStore.totalPrice() | number:'1.2-2' }}
-            @if (ecommerceStore.exchangeRate() > 0) {
+            @if (ecommerceStore.isVenezuela() && ecommerceStore.exchangeRate() > 0) {
             <small class="cart-drawer__checkout-bs">Bs. {{ cartStore.totalPrice() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
             }
           </span>

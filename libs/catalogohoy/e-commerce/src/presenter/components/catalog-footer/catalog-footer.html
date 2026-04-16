@@ -15,23 +15,6 @@
       </div>
     </div>
 
-    <!-- Location -->
-    @if (info.showLocationSection && (info.city || info.state || info.country)) {
-      <div class="catalog-footer__location">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
-          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-          <circle cx="12" cy="10" r="3"/>
-        </svg>
-        <span>
-          @if (info.city) { {{ info.city }} }
-          @if (info.city && info.state) { , }
-          @if (info.state) { {{ info.state }} }
-          @if ((info.city || info.state) && info.country) { , }
-          @if (info.country) { {{ info.country }} }
-        </span>
-      </div>
-    }
-
     <!-- Social links -->
     @if (info.socialLinks.instagram.visible && info.socialLinks.instagram.url ||
          info.socialLinks.facebook.visible && info.socialLinks.facebook.url ||
@@ -86,6 +69,25 @@
       </div>
     }
   </div>
+
+  <!-- Location — own row -->
+  @if (info.showLocationSection && (info.city || info.state || info.country)) {
+    <div class="catalog-footer__location-row">
+      <div class="catalog-footer__location">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+        <span>
+          @if (info.city) { {{ info.city }} }
+          @if (info.city && info.state) { , }
+          @if (info.state) { {{ info.state }} }
+          @if ((info.city || info.state) && info.country) { , }
+          @if (info.country) { {{ info.country }} }
+        </span>
+      </div>
+    </div>
+  }
 
   <!-- Copyright -->
   <div class="catalog-footer__copyright">

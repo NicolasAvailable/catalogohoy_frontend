@@ -164,7 +164,7 @@
               <div class="checkout-drawer__submit-price">
                 <span>
                   {{ cs() }}{{ cartStore.totalPrice() | number:'1.2-2' }}
-                  @if (ecommerceStore.exchangeRate() > 0) {
+                  @if (ecommerceStore.isVenezuela() && ecommerceStore.exchangeRate() > 0) {
                   <small class="checkout-drawer__submit-bs">Bs. {{ cartStore.totalPrice() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
                   }
                 </span>
