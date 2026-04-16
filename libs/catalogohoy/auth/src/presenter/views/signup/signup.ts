@@ -3,6 +3,7 @@ import { Subscription } from 'rxjs';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MetaPixelService } from '@catalogohoy/core';
+import { SUPPORTED_COUNTRIES } from '@catalogohoy/ecommerce-config';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import { LocationService } from '@shared/infrastructure';
 import {
@@ -11,6 +12,9 @@ import {
   InputMessageComponent,
   InputPasswordComponent,
   InputTextComponent,
+  SelectComponent,
+  SelectItemDirective,
+  SelectSelectedItemDirective,
 } from '@ui';
 import { AuthenticationFacade } from '../../../application';
 import { SignUpCredentials } from '../../../domain';
@@ -43,6 +47,9 @@ type Step = 1 | 2 | 3;
     InputMessageComponent,
     ButtonComponent,
     IconComponent,
+    SelectComponent,
+    SelectItemDirective,
+    SelectSelectedItemDirective,
   ],
   templateUrl: './signup.html',
   styleUrl: './signup.css',
@@ -75,9 +82,17 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   readonly profileForm = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(4), whiteSpacesValidator()]],
     storeName: ['', [Validators.required, Validators.minLength(3)]],
+    country: ['', [Validators.required]],
   });
 
   readonly slugPreview = signal('');
+  readonly supportedCountries = SUPPORTED_COUNTRIES;
+
+  /** Flag CDN URL — ISO2 lowercase. Used in country select templates. */
+  flagUrl(code: string | null | undefined): string {
+    if (!code) return '';
+    return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
+  }
 
   readonly totalSteps = computed(() =>
     this.method() === 'google' || this.isInviteMode() ? 2 : 3
@@ -252,9 +267,10 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     }
     if (this.loaderStore.isEnable()) return;
 
-    const { name, storeName } = this.profileForm.value as {
+    const { name, storeName, country } = this.profileForm.value as {
       name: string;
       storeName: string;
+      country: string;
     };
 
     if (this.isInviteMode() && this.inviteToken) {
@@ -272,7 +288,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     }
 
     if (this.method() === 'google') {
-      const result = await this.facade.completeGoogleSignup({ name, storeName });
+      const result = await this.facade.completeGoogleSignup({ name, storeName, countryCode: country });
       result.mapRight((url) => {
         this.metaPixel.trackEvent('CompleteRegistration', { content_name: storeName });
         window.location.href = url;
@@ -287,6 +303,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
         email,
         storeName,
         password,
+        countryCode: country,
       } as SignUpCredentials);
       result.mapRight((url) => {
         this.metaPixel.trackEvent('CompleteRegistration', { content_name: storeName });

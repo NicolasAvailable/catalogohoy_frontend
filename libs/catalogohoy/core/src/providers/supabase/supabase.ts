@@ -2,12 +2,21 @@ import { isDevMode } from '@angular/core';
 import { environment } from '@catalogohoy/env';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// In dev, keep the manually-pasted token safe by making removeItem a no-op.
-// autoRefreshToken stays true so the token is refreshed before it expires.
+// Dev storage — delegates directly to localStorage. Previously removeItem
+// was a no-op to "preserve manually pasted tokens", but that caused
+// Supabase to loop when an invalid refresh token couldn't be cleared:
+// refresh → 4xx → removeItem no-op → token persists → retry → …
+// If you need to pin a token during a dev session, set `__sb_pin=1` in
+// localStorage and the no-op comes back *only* for the auth-token key.
 const devStorage = {
   getItem: (key: string) => localStorage.getItem(key),
   setItem: (key: string, value: string) => localStorage.setItem(key, value),
-  removeItem: (_key: string) => { /* intentional no-op */ },
+  removeItem: (key: string) => {
+    const pin = localStorage.getItem('__sb_pin');
+    const isAuthToken = key.includes('-auth-token');
+    if (pin === '1' && isAuthToken) return; // opt-in skip
+    localStorage.removeItem(key);
+  },
 };
 
 export class SupabaseClientProvider {

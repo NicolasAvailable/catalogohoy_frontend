@@ -172,7 +172,7 @@
             <ui-input-message [control]="profileForm.get('name')" error="minlength" text="Debe tener mínimo 4 caracteres" />
             <ui-input-message [control]="profileForm.get('name')" error="whitespace" text="No puede contener espacios en blanco" />
           </div>
-          <div class="mb-6">
+          <div class="mb-4">
             <label class="block font-medium text-sm text-grey-400 mb-1">Nombre de la tienda</label>
             <ui-input-text size="large" formControlName="storeName" placeholder="Mi Tienda Génova" />
             <ui-input-message [control]="profileForm.get('storeName')" error="required" text="El campo es obligatorio" />
@@ -187,6 +187,34 @@
                 <span class="font-medium text-primary-500">{{ slugPreview() }}.catalogohoy.com</span>
               </p>
             }
+          </div>
+          <div class="mb-6">
+            <label class="block font-medium text-sm text-grey-400 mb-1">País</label>
+            <ui-select
+              size="large"
+              [options]="supportedCountries"
+              formControlName="country"
+              optionLabel="label"
+              optionValue="code"
+              placeholder="Selecciona tu país"
+              [filter]="true"
+              styleClass="w-full"
+            >
+              <ng-template selectSelectedItem let-selected>
+                <div class="flex items-center gap-2">
+                  <img [src]="flagUrl(selected.code)" [alt]="selected.label" class="w-5 h-3.75 object-cover rounded-xs shrink-0" />
+                  <span class="text-sm">{{ selected.label }}</span>
+                </div>
+              </ng-template>
+              <ng-template selectItem let-item>
+                <div class="flex items-center gap-2.5 py-0.5">
+                  <img [src]="flagUrl(item.code)" [alt]="item.label" class="w-5 h-3.75 object-cover rounded-xs shrink-0" />
+                  <span>{{ item.label }}</span>
+                </div>
+              </ng-template>
+            </ui-select>
+            <ui-input-message [control]="profileForm.get('country')" error="required" text="Selecciona tu país" />
+            <p class="text-xs text-grey-400 mt-3">La moneda de tu catálogo se configurará automáticamente.</p>
           </div>
 
           <ui-button
