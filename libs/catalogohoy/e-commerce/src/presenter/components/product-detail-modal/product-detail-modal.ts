@@ -55,7 +55,7 @@ export class ProductDetailModal {
     this.product.isWholesale && this.product.wholesaleTiers.length > 0;
 
   public readonly isOutOfStock =
-    this.product.stock !== null && Number(this.product.stock) <= 0;
+    this.product.isSoldOut || (this.product.stock !== null && Number(this.product.stock) <= 0);
 
   public readonly availableStock =
     this.product.stock !== null ? Number(this.product.stock) : null;

@@ -21,7 +21,9 @@ export class Product extends Entity {
     public readonly productionCost: number | null,
     public readonly position: number,
     public readonly isWholesale: boolean,
-    public readonly wholesaleTiers: WholesaleTier[]
+    public readonly wholesaleTiers: WholesaleTier[],
+    public readonly isSoldOut: boolean,
+    public readonly isHidden: boolean
   ) {
     super();
   }
@@ -41,7 +43,9 @@ export class Product extends Entity {
       primitives.productionCost,
       primitives.position,
       primitives.isWholesale,
-      primitives.wholesaleTiers
+      primitives.wholesaleTiers,
+      primitives.isSoldOut,
+      primitives.isHidden
     ).withId(primitives.id);
   }
 }
@@ -62,4 +66,6 @@ export interface ProductPrimitives {
   position: number;
   isWholesale: boolean;
   wholesaleTiers: WholesaleTier[];
+  isSoldOut: boolean;
+  isHidden: boolean;
 }

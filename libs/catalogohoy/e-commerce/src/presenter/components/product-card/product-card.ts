@@ -31,7 +31,7 @@ export class ProductCard {
 
   public readonly isOutOfStock = computed(() => {
     const p = this.product();
-    return p.stock !== null && Number(p.stock) <= 0;
+    return p.isSoldOut || (p.stock !== null && Number(p.stock) <= 0);
   });
 
   public readonly isWholesale = computed(() => this.product().isWholesale);

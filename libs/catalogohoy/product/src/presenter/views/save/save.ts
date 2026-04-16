@@ -87,6 +87,8 @@ export default class Save implements OnInit {
     position: [0],
     isWholesale: [false],
     wholesaleTiers: this.fb.array([]),
+    isSoldOut: [false],
+    isHidden: [false],
   });
 
   public readonly id = input<string | undefined>(undefined);
@@ -215,6 +217,8 @@ export default class Save implements OnInit {
     this.form.controls.position.setValue(product.position);
     this.photos.set(product.photos);
 
+    this.form.controls.isSoldOut.setValue(product.isSoldOut);
+    this.form.controls.isHidden.setValue(product.isHidden);
     this.form.controls.isWholesale.setValue(product.isWholesale);
     if (product.isWholesale) {
       this.form.controls.price.clearValidators();
@@ -280,6 +284,8 @@ export default class Save implements OnInit {
       categoryIds: this.form.controls.categoryIds.value!,
       isWholesale: this.form.controls.isWholesale.value ?? false,
       wholesaleTiers: this.wholesaleTiersArray.value ?? [],
+      isSoldOut: this.form.controls.isSoldOut.value ?? false,
+      isHidden: this.form.controls.isHidden.value ?? false,
     };
     if (this.isCreate()) {
       const product = await this.productFacade.create(body);
