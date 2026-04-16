@@ -16,11 +16,15 @@
         <ui-icon name="package" styleClass="size-10" />
       </div>
       }
-      @if (isOutOfStock()) {
-      <span class="product-card__sold-out-tag">Agotado</span>
-      }
-      @if (isWholesale()) {
-      <span class="product-card__wholesale-tag">Al mayor</span>
+      @if (isWholesale() || isOutOfStock()) {
+      <div class="product-card__tags">
+        @if (isWholesale()) {
+        <span class="product-card__wholesale-tag">Al mayor</span>
+        }
+        @if (isOutOfStock()) {
+        <span class="product-card__sold-out-tag">Agotado</span>
+        }
+      </div>
       }
     </div>
   </button>

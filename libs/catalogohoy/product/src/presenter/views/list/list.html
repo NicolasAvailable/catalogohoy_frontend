@@ -235,12 +235,26 @@
                 >
                   {{item.name}}
                 </h2>
-                @if (item.isWholesale) {
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 w-fit">
-                  <ui-icon name="package" size="10" />
-                  Al mayor
-                </span>
-                }
+                <div class="flex flex-wrap items-center gap-1">
+                  @if (item.isWholesale) {
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 w-fit">
+                    <ui-icon name="package" size="10" />
+                    Al mayor
+                  </span>
+                  }
+                  @if (item.isSoldOut) {
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-red-100 text-red-600 w-fit">
+                    <ui-icon name="package-x" size="10" />
+                    Agotado
+                  </span>
+                  }
+                  @if (item.isHidden) {
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-slate-200 text-slate-700 w-fit">
+                    <ui-icon name="eye-off" size="10" />
+                    Oculto
+                  </span>
+                  }
+                </div>
               </div>
             </div>
           </div>
@@ -346,6 +360,20 @@
               <h2 class="text-primary-500 font-semibold text-base line-clamp-1 break-all">
                 {{item.name}}
               </h2>
+              @if (item.isSoldOut || item.isHidden) {
+              <div class="flex flex-wrap items-center gap-1">
+                @if (item.isSoldOut) {
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-red-100 text-red-600 w-fit">
+                  Agotado
+                </span>
+                }
+                @if (item.isHidden) {
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-slate-200 text-slate-700 w-fit">
+                  Oculto
+                </span>
+                }
+              </div>
+              }
               @if (item.isWholesale && item.wholesaleTiers.length > 0) {
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700">

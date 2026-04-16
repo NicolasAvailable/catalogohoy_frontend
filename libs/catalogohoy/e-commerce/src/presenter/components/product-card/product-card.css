@@ -69,11 +69,17 @@
   color: var(--color-grey-200);
 }
 
-.product-card__wholesale-tag {
+.product-card__tags {
   position: absolute;
   top: 0.5rem;
   left: 0.5rem;
   z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.product-card__wholesale-tag {
   background: var(--color-primary-500);
   color: white;
   font-size: 0.8125rem;
@@ -281,10 +287,6 @@
 }
 
 .product-card__sold-out-tag {
-  position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
-  z-index: 2;
   background: var(--color-primary-400);
   color: white;
   font-size: 0.8125rem;

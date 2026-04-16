@@ -200,7 +200,8 @@ export class EcommerceService implements BaseEcommerceService {
     let query = this.client
       .from('products')
       .select(selectQuery, { count: 'exact' })
-      .eq('tenant_id', resolvedTenantId);
+      .eq('tenant_id', resolvedTenantId)
+      .eq('is_hidden', false);
 
     if (search && search.trim().length > 0) {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
