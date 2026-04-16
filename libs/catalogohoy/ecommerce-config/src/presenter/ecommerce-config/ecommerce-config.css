@@ -460,32 +460,45 @@
 }
 
 .whatsapp-button-item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0.5rem;
+  row-gap: 0.5rem;
+  align-items: center;
   padding: 0.75rem;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .whatsapp-button-label {
-  width: 100%;
+  grid-row: 1;
+  grid-column: 1;
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-color-secondary, #64748b);
 }
 
 .whatsapp-button-fields {
-  flex: 1;
+  grid-row: 2;
+  grid-column: 1 / -1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
+.whatsapp-button-fields ui-input-phone {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
 .whatsapp-button-remove {
-  flex-shrink: 0;
+  grid-row: 1;
+  grid-column: 2;
   background: transparent;
   border: none;
   color: #ef4444;
@@ -493,7 +506,7 @@
   padding: 0.5rem;
   border-radius: 0.5rem;
   transition: background 0.2s;
-  margin-top: 0.25rem;
+  justify-self: end;
 }
 
 .whatsapp-button-remove:hover:not(:disabled) {
@@ -1138,32 +1151,45 @@
 }
 
 .whatsapp-button-item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0.5rem;
+  row-gap: 0.5rem;
+  align-items: center;
   padding: 0.75rem;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .whatsapp-button-label {
-  width: 100%;
+  grid-row: 1;
+  grid-column: 1;
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-color-secondary, #64748b);
 }
 
 .whatsapp-button-fields {
-  flex: 1;
+  grid-row: 2;
+  grid-column: 1 / -1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
+.whatsapp-button-fields ui-input-phone {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
 .whatsapp-button-remove {
-  flex-shrink: 0;
+  grid-row: 1;
+  grid-column: 2;
   background: transparent;
   border: none;
   color: #ef4444;
@@ -1171,7 +1197,7 @@
   padding: 0.5rem;
   border-radius: 0.5rem;
   transition: background 0.2s;
-  margin-top: 0.25rem;
+  justify-self: end;
 }
 
 .whatsapp-button-remove:hover:not(:disabled) {

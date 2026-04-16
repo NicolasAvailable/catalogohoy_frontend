@@ -145,11 +145,15 @@ const NATIONAL_PLACEHOLDER_BY_ISO: Record<string, string> = {
         display: flex;
         align-items: stretch;
         width: 100%;
+        min-width: 0;
         gap: 0.5rem;
       }
       .ui-phone--disabled {
         opacity: 0.6;
         pointer-events: none;
+      }
+      .ui-phone .ui-phone__select {
+        flex-shrink: 0;
       }
       .ui-phone .ui-phone__select .p-select {
         min-width: 7rem;
@@ -193,7 +197,9 @@ const NATIONAL_PLACEHOLDER_BY_ISO: Record<string, string> = {
         color: #6b7280;
       }
       .ui-phone .ui-phone__input.p-inputtext {
-        flex: 1;
+        flex: 1 1 0;
+        min-width: 0;
+        width: 100%;
       }
     `,
   ],
