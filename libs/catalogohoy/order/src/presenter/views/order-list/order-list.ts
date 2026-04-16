@@ -74,12 +74,18 @@ export class OrderListComponent implements OnInit, OnDestroy {
   // Prefer the cached tenant currency symbol (from localStorage / DB).
   // Falls back to the editor config only if the cache hasn't been
   // primed yet (e.g., user opens orders before visiting home).
-  public readonly cs = computed(
-    () =>
+  //
+  // Venezuela exception: order totals are tracked in USD (dual with Bs.
+  // in the next column), so the "Total" column shows '$' even though
+  // the tenant's local symbol would be 'Bs.'.
+  public readonly cs = computed(() => {
+    if (this.tenantCurrency.isVenezuela()) return '$';
+    return (
       this.tenantCurrency.localSymbol() ||
       this.configStore.config()?.currencySymbol ||
       '$'
-  );
+    );
+  });
   private readonly orderRealtime = inject(OrderRealtimeService);
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canCreateOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'create'));

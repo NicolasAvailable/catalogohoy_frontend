@@ -74,7 +74,13 @@ export default class List implements OnInit, OnDestroy {
   public readonly categoryStore = inject(CategoryStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
-  public readonly cs = computed(() => this.tenantCurrency.localSymbol() || '$');
+  // Venezuela exception: prices in the admin product list are maintained in
+  // USD even though the public catalog renders them in Bs. via the BCV rate.
+  // Force '$' here so the admin sees the actual stored value, not the
+  // computed local symbol.
+  public readonly cs = computed(() =>
+    this.tenantCurrency.isVenezuela() ? '$' : this.tenantCurrency.localSymbol() || '$'
+  );
   public readonly selectedProduct = signal<Product | null>(null);
   public readonly selectedIds = signal<Set<string>>(new Set());
   public readonly deleteMode = signal<'single' | 'bulk'>('single');

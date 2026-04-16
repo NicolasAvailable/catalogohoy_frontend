@@ -71,9 +71,14 @@ export default class Save implements OnInit {
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
   private readonly permissions = inject(TeamPermissionsStore);
-  public readonly cs = computed(() => this.tenantCurrency.localSymbol() || '$');
-  public readonly currencyCode = computed(
-    () => this.tenantCurrency.localCode() || 'USD'
+  // Venezuela exception: admin-side product prices are stored in USD and the
+  // public catalog converts to Bs. via the BCV rate. Force '$' + 'USD' in
+  // this form so the value the seller enters matches what gets persisted.
+  public readonly cs = computed(() =>
+    this.tenantCurrency.isVenezuela() ? '$' : this.tenantCurrency.localSymbol() || '$'
+  );
+  public readonly currencyCode = computed(() =>
+    this.tenantCurrency.isVenezuela() ? 'USD' : this.tenantCurrency.localCode() || 'USD'
   );
   protected readonly canEditProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'edit'));
 
