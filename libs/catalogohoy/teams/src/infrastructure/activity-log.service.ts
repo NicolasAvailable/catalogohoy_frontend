@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
+import { TenantStore } from '@catalogohoy/tenant';
 import { E } from '@shared/domain';
 import {
   ActivityLogEntry,
@@ -10,10 +11,13 @@ import {
 @Injectable({ providedIn: 'root' })
 export class ActivityLogService {
   private readonly client = SupabaseClientProvider.getInstance();
+  private readonly tenantStore = inject(TenantStore);
 
   /** Fire-and-forget. Logs an activity entry via the SECURITY DEFINER RPC.
-   *  If the user is the owner the RPC silently no-ops; callers don't
-   *  need to check ownership before calling. */
+   *  Resolves the active tenant from TenantStore so users that own their own
+   *  catalog AND are invited to another one get logged against the correct
+   *  tenant (not always their own default). If the caller is the owner of
+   *  that tenant the RPC silently no-ops. */
   async log(params: {
     action: string;
     entityType: string;
@@ -22,7 +26,11 @@ export class ActivityLogService {
     changes?: FieldChange[];
   }): Promise<void> {
     try {
+      const tenantId = await this.tenantStore.getTenantIdAsync();
+      if (!tenantId) return;
+
       await this.client.rpc('log_activity', {
+        p_tenant_id: tenantId,
         p_action: params.action,
         p_entity_type: params.entityType,
         p_entity_id: params.entityId ?? null,

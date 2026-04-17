@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { Exception } from '@shared/domain';
+import { SupabaseClientProvider } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { TenantStore } from '@catalogohoy/tenant';
 import { LucideAngularModule } from 'lucide-angular';
@@ -81,6 +82,9 @@ export default class TeamsViewComponent implements OnInit {
   protected readonly historyPageSize = signal(20);
   protected readonly historyLoading = signal(false);
 
+  // Current user email — used to mark "(tú)" next to their own row.
+  protected readonly currentUserEmail = signal<string | null>(null);
+
   protected readonly canInvite = computed(
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'invite')
   );
@@ -106,6 +110,11 @@ export default class TeamsViewComponent implements OnInit {
   @ViewChild(ConfirmDialogComponent) confirmDialog!: ConfirmDialogComponent;
 
   async ngOnInit(): Promise<void> {
+    // Pull the auth email so we can mark "(tú)" on the member's own row.
+    const client = SupabaseClientProvider.getInstance();
+    const { data } = await client.auth.getUser();
+    this.currentUserEmail.set(data.user?.email ?? null);
+
     await this.planStore.loadTenantPlanUsage();
     await this.teamStore.load();
     await Promise.all(
@@ -208,6 +217,12 @@ export default class TeamsViewComponent implements OnInit {
 
   protected getMemberInitial(nameOrEmail: string): string {
     return nameOrEmail.charAt(0).toUpperCase();
+  }
+
+  /** True when the given email matches the currently authenticated user. */
+  protected isCurrentUser(email: string | null | undefined): boolean {
+    const me = this.currentUserEmail();
+    return !!me && !!email && me.toLowerCase() === email.toLowerCase();
   }
 
   // ── History tab ──────────────────────────────────────────

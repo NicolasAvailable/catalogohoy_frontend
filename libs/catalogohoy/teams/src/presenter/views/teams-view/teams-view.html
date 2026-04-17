@@ -72,10 +72,20 @@
                 </div>
                 <div>
                   @if (teamStore.ownerName()) {
-                    <p class="teams-view__member-email">{{ teamStore.ownerName() }}</p>
+                    <p class="teams-view__member-email">
+                      {{ teamStore.ownerName() }}
+                      @if (isCurrentUser(teamStore.ownerEmail())) {
+                        <span class="text-xs font-semibold ml-1">(tú)</span>
+                      }
+                    </p>
                     <p class="teams-view__member-status">{{ teamStore.ownerEmail() }} · Administrador</p>
                   } @else {
-                    <p class="teams-view__member-email">{{ teamStore.ownerEmail() }}</p>
+                    <p class="teams-view__member-email">
+                      {{ teamStore.ownerEmail() }}
+                      @if (isCurrentUser(teamStore.ownerEmail())) {
+                        <span class="text-xs font-semibold ml-1">(tú)</span>
+                      }
+                    </p>
                     <p class="teams-view__member-status">Administrador</p>
                   }
                 </div>
@@ -115,10 +125,20 @@
                   </div>
                   <div>
                     @if (getMemberDisplayName(member)) {
-                      <p class="teams-view__member-email">{{ getMemberDisplayName(member) }}</p>
+                      <p class="teams-view__member-email">
+                        {{ getMemberDisplayName(member) }}
+                        @if (isCurrentUser(member.invitedEmail)) {
+                          <span class="text-xs font-semibold ml-1">(tú)</span>
+                        }
+                      </p>
                       <p class="teams-view__member-status">{{ member.invitedEmail }} · Miembro activo</p>
                     } @else {
-                      <p class="teams-view__member-email">{{ member.invitedEmail }}</p>
+                      <p class="teams-view__member-email">
+                        {{ member.invitedEmail }}
+                        @if (isCurrentUser(member.invitedEmail)) {
+                          <span class="text-xs font-semibold ml-1">(tú)</span>
+                        }
+                      </p>
                       <p class="teams-view__member-status">Miembro activo</p>
                     }
                   </div>
