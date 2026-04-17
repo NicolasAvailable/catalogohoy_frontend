@@ -3,7 +3,9 @@ import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular
 import { Router } from '@angular/router';
 import { Exception } from '@shared/domain';
 import { SupabaseClientProvider } from '@catalogohoy/core';
+import { OrderService, Order } from '@catalogohoy/order';
 import { PlanStore } from '@catalogohoy/plan';
+import { Product, ProductService } from '@catalogohoy/product';
 import { TenantStore } from '@catalogohoy/tenant';
 import { LucideAngularModule } from 'lucide-angular';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
@@ -65,6 +67,8 @@ export default class TeamsViewComponent implements OnInit {
   protected readonly permissionsStore = inject(TeamPermissionsStore);
   private readonly tenantStore = inject(TenantStore);
   private readonly activityLogService = inject(ActivityLogService);
+  private readonly productService = inject(ProductService);
+  private readonly orderService = inject(OrderService);
   private readonly toaster = inject(ToastService);
   private readonly router = inject(Router);
 
@@ -84,6 +88,12 @@ export default class TeamsViewComponent implements OnInit {
 
   // Current user email — used to mark "(tú)" next to their own row.
   protected readonly currentUserEmail = signal<string | null>(null);
+
+  // History accordion: which entry is expanded + lazy-loaded entity cache.
+  protected readonly expandedEntryId = signal<number | null>(null);
+  protected readonly entityCache = signal<
+    Record<number, { loading: boolean; product?: Product; order?: Order; missing?: boolean }>
+  >({});
 
   protected readonly canInvite = computed(
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'invite')
@@ -298,5 +308,68 @@ export default class TeamsViewComponent implements OnInit {
       catalog: 'settings',
     };
     return icons[entityType] ?? 'activity';
+  }
+
+  // ── Accordion expand / lazy-load detail ──────────────────
+
+  protected async toggleExpanded(entry: ActivityLogEntry): Promise<void> {
+    const current = this.expandedEntryId();
+    if (current === entry.id) {
+      this.expandedEntryId.set(null);
+      return;
+    }
+    this.expandedEntryId.set(entry.id);
+
+    // Only product/order carry fetchable detail today. Skip if already cached.
+    if (!entry.entityId) return;
+    if (entry.entityType !== 'product' && entry.entityType !== 'order') return;
+
+    const cached = this.entityCache()[entry.id];
+    if (cached && (cached.product || cached.order || cached.missing)) return;
+
+    this.entityCache.update((map) => ({
+      ...map,
+      [entry.id]: { loading: true },
+    }));
+
+    if (entry.entityType === 'product') {
+      const result = await this.productService.getById(String(entry.entityId));
+      this.entityCache.update((map) => ({
+        ...map,
+        [entry.id]: result.isRight()
+          ? { loading: false, product: result.value as Product }
+          : { loading: false, missing: true },
+      }));
+    } else if (entry.entityType === 'order') {
+      const tenantId = await this.tenantStore.getTenantIdAsync();
+      if (!tenantId) return;
+      const result = await this.orderService.getOrderById(entry.entityId, tenantId);
+      this.entityCache.update((map) => ({
+        ...map,
+        [entry.id]: result.isRight()
+          ? { loading: false, order: result.value as Order }
+          : { loading: false, missing: true },
+      }));
+    }
+  }
+
+  protected isExpanded(entryId: number): boolean {
+    return this.expandedEntryId() === entryId;
+  }
+
+  protected getCachedProduct(entryId: number): Product | undefined {
+    return this.entityCache()[entryId]?.product;
+  }
+
+  protected getCachedOrder(entryId: number): Order | undefined {
+    return this.entityCache()[entryId]?.order;
+  }
+
+  protected isCacheLoading(entryId: number): boolean {
+    return this.entityCache()[entryId]?.loading ?? false;
+  }
+
+  protected isCacheMissing(entryId: number): boolean {
+    return this.entityCache()[entryId]?.missing ?? false;
   }
 }

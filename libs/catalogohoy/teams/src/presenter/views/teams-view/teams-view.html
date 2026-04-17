@@ -299,41 +299,145 @@
         </div>
       </div>
     } @else {
-      <div class="flex flex-col gap-1">
+      <div class="flex flex-col gap-3">
         @for (entry of historyEntries(); track entry.id) {
-          <div class="flex items-start gap-4 py-4 border-b border-grey-50 last:border-b-0">
-            <!-- Avatar -->
-            <div class="w-9 h-9 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center text-sm font-bold shrink-0">
-              {{ getMemberInitial(entry.userName ?? entry.userEmail) }}
-            </div>
-            <!-- Content -->
-            <div class="flex-1 min-w-0">
-              <p class="text-sm text-grey-800">
-                <span class="font-semibold">{{ entry.userName ?? entry.userEmail }}</span>
-                {{ getActionLabel(entry.action) }}
-                @if (entry.entityName) {
-                  <span class="font-medium">"{{ entry.entityName }}"</span>
-                }
-              </p>
-              <!-- Diffs -->
-              @if (entry.changes.length > 0) {
-                <div class="mt-2 flex flex-col gap-1">
-                  @for (change of entry.changes; track change.field) {
-                    <div class="text-xs text-grey-500 flex items-center gap-1.5 flex-wrap">
-                      <span class="font-medium text-grey-600">{{ getFieldLabel(change.field) }}:</span>
-                      <span class="line-through text-red-400">{{ formatValue(change.from) }}</span>
-                      <lucide-icon name="arrow-right" [size]="11" class="text-grey-300" />
-                      <span class="text-green-600 font-medium">{{ formatValue(change.to) }}</span>
-                    </div>
+          <div class="bg-white border border-grey-100 rounded-xl px-4 py-3.5 transition-colors hover:border-grey-200">
+            <!-- Clickable header -->
+            <button
+              type="button"
+              class="w-full flex items-start gap-4 text-left cursor-pointer group"
+              (click)="toggleExpanded(entry)"
+            >
+              <!-- Avatar -->
+              <div class="w-9 h-9 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center text-sm font-bold shrink-0">
+                {{ getMemberInitial(entry.userName ?? entry.userEmail) }}
+              </div>
+              <!-- Content -->
+              <div class="flex-1 min-w-0">
+                <p class="text-sm text-grey-800">
+                  <span class="font-semibold">{{ entry.userName ?? entry.userEmail }}</span>
+                  {{ getActionLabel(entry.action) }}
+                  @if (entry.entityName) {
+                    <span class="font-medium">"{{ entry.entityName }}"</span>
                   }
-                </div>
-              }
-              <!-- Timestamp -->
-              <p class="text-xs text-grey-300 mt-1.5 flex items-center gap-1.5">
-                <ui-icon [name]="getEntityIcon(entry.entityType)" size="12" styleClass="text-grey-300" />
-                {{ timeAgo(entry.createdAt) }}
-              </p>
-            </div>
+                </p>
+                <!-- Diffs -->
+                @if (entry.changes.length > 0) {
+                  <div class="mt-2 flex flex-col gap-1">
+                    @for (change of entry.changes; track change.field) {
+                      <div class="text-xs text-grey-500 flex items-center gap-1.5 flex-wrap">
+                        <span class="font-medium text-grey-600">{{ getFieldLabel(change.field) }}:</span>
+                        <span class="line-through text-red-400">{{ formatValue(change.from) }}</span>
+                        <lucide-icon name="arrow-right" [size]="11" class="text-grey-300" />
+                        <span class="text-green-600 font-medium">{{ formatValue(change.to) }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+                <!-- Timestamp -->
+                <p class="text-xs text-grey-300 mt-1.5 flex items-center gap-1.5">
+                  <ui-icon [name]="getEntityIcon(entry.entityType)" size="12" styleClass="text-grey-300" />
+                  {{ timeAgo(entry.createdAt) }}
+                </p>
+              </div>
+              <!-- Chevron -->
+              <lucide-icon
+                [name]="isExpanded(entry.id) ? 'chevron-up' : 'chevron-down'"
+                [size]="16"
+                class="text-grey-300 group-hover:text-grey-500 shrink-0 mt-2"
+              />
+            </button>
+
+            <!-- Expanded detail -->
+            @if (isExpanded(entry.id)) {
+              <div class="mt-3 ml-13 rounded-lg bg-grey-25 border border-grey-50 px-8 py-6 text-sm">
+                @if (isCacheLoading(entry.id)) {
+                  <p class="text-grey-400 flex items-center gap-2">
+                    <lucide-icon name="loader-circle" [size]="14" class="animate-spin" />
+                    Cargando detalle...
+                  </p>
+                } @else if (isCacheMissing(entry.id)) {
+                  <p class="text-grey-400 italic">
+                    El elemento ya no existe. Último nombre registrado: <strong>{{ entry.entityName ?? '—' }}</strong>
+                  </p>
+                } @else if (entry.entityType === 'product' && getCachedProduct(entry.id); as product) {
+                  <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3">
+                    <span class="text-grey-500 font-medium">Nombre</span>
+                    <span class="text-grey-800">{{ product.name }}</span>
+
+                    @if (product.description) {
+                      <span class="text-grey-500 font-medium">Descripción</span>
+                      <span class="text-grey-800">{{ product.description }}</span>
+                    }
+
+                    <span class="text-grey-500 font-medium">Precio</span>
+                    <span class="text-grey-800">${{ product.price }}</span>
+
+                    @if (product.pricePromotional) {
+                      <span class="text-grey-500 font-medium">Precio promocional</span>
+                      <span class="text-grey-800">${{ product.pricePromotional }}</span>
+                    }
+
+                    <span class="text-grey-500 font-medium">Stock</span>
+                    <span class="text-grey-800">{{ product.stock ?? 'Sin límite' }}</span>
+
+                    @if (product.sku) {
+                      <span class="text-grey-500 font-medium">SKU</span>
+                      <span class="text-grey-800">{{ product.sku }}</span>
+                    }
+
+                    @if (product.isWholesale) {
+                      <span class="text-grey-500 font-medium">Venta al mayor</span>
+                      <span class="text-grey-800">Sí ({{ product.wholesaleTiers.length }} escalas)</span>
+                    }
+
+                    <span class="text-grey-500 font-medium">Agotado</span>
+                    <span class="text-grey-800">{{ product.isSoldOut ? 'Sí' : 'No' }}</span>
+
+                    <span class="text-grey-500 font-medium">Oculto</span>
+                    <span class="text-grey-800">{{ product.isHidden ? 'Sí' : 'No' }}</span>
+                  </div>
+                } @else if (entry.entityType === 'order' && getCachedOrder(entry.id); as order) {
+                  <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3">
+                    <span class="text-grey-500 font-medium">Cliente</span>
+                    <span class="text-grey-800">{{ order.name }}</span>
+
+                    @if (order.phone) {
+                      <span class="text-grey-500 font-medium">Teléfono</span>
+                      <span class="text-grey-800">{{ order.phone }}</span>
+                    }
+
+                    <span class="text-grey-500 font-medium">Estado</span>
+                    <span class="text-grey-800">{{ order.status }}</span>
+
+                    <span class="text-grey-500 font-medium">Total USD</span>
+                    <span class="text-grey-800">${{ order.totalUsd }}</span>
+
+                    @if (order.totalBs) {
+                      <span class="text-grey-500 font-medium">Total Bs</span>
+                      <span class="text-grey-800">Bs. {{ order.totalBs }}</span>
+                    }
+
+                    <span class="text-grey-500 font-medium">Fecha de entrega</span>
+                    <span class="text-grey-800">{{ order.deliveryDate }}</span>
+
+                    @if (order.comments) {
+                      <span class="text-grey-500 font-medium">Comentarios</span>
+                      <span class="text-grey-800">{{ order.comments }}</span>
+                    }
+
+                    <span class="text-grey-500 font-medium">Productos</span>
+                    <ul class="list-disc list-inside text-grey-800">
+                      @for (item of order.products; track $index) {
+                        <li>{{ item.quantity }}x {{ item.name }} — ${{ item.price }}</li>
+                      }
+                    </ul>
+                  </div>
+                } @else {
+                  <p class="text-grey-400 italic">Sin detalle adicional para este tipo de acción.</p>
+                }
+              </div>
+            }
           </div>
         }
       </div>
