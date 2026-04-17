@@ -32,7 +32,7 @@
         <h2 class="text-xl font-bold">Información del cliente</h2>
         <div class="grid grid-cols-2 gap-4">
           <div class="flex flex-col gap-2">
-            <label class="text-base text-grey-100" for="name"
+            <label class="text-base text-grey-400 font-semibold" for="name"
               >Nombre del cliente</label
             >
             <ui-input-text
@@ -43,10 +43,10 @@
           </div>
           <div class="flex flex-col gap-2">
             <div class="flex items-center gap-3">
-              <label class="text-base text-grey-100" for="phone"
+              <label class="text-base text-grey-400 font-semibold" for="phone"
                 >Teléfono</label
               >
-              <span class="text-sm text-grey-100">(Opcional)</span>
+              <span class="text-sm text-grey-400">(Opcional)</span>
             </div>
             <ui-input-text
               formControlName="phone"
@@ -56,7 +56,7 @@
           </div>
         </div>
         <div class="flex flex-col gap-2">
-          <label class="text-base text-grey-100" for="deliveryDate"
+          <label class="text-base text-grey-400 font-semibold" for="deliveryDate"
             >Fecha de entrega</label
           >
           <ui-datepicker
@@ -73,10 +73,10 @@
         </div>
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-3">
-            <label class="text-base text-grey-100" for="comments"
+            <label class="text-base text-grey-400 font-semibold" for="comments"
               >Comentarios</label
             >
-            <span class="text-sm text-grey-100">(Opcional)</span>
+            <span class="text-sm text-grey-400">(Opcional)</span>
           </div>
           <ui-textarea
             formControlName="comments"
@@ -120,7 +120,7 @@
                 @if (!product.isCustom) {
                 <div class="flex flex-col gap-1 sm:col-span-2">
                   <label
-                    class="text-sm text-grey-100"
+                    class="text-sm text-grey-400"
                     [attr.for]="'product-' + $index"
                     >Producto</label
                   >
@@ -248,7 +248,7 @@
                   </div>
                   <div class="flex flex-col gap-1">
                     <label
-                      class="text-sm text-grey-100"
+                      class="text-sm text-grey-400"
                       [attr.for]="'custom-name-' + $index"
                       >Nombre</label
                     >
@@ -263,7 +263,7 @@
                   <div class="flex flex-col gap-1">
                     <div class="flex items-center gap-2">
                       <label
-                        class="text-sm text-grey-100"
+                        class="text-sm text-grey-400"
                         [attr.for]="'custom-desc-' + $index"
                         >Descripción</label
                       >
@@ -279,7 +279,7 @@
                   </div>
                   <div class="flex flex-col gap-1">
                     <label
-                      class="text-sm text-grey-100"
+                      class="text-sm text-grey-400"
                       [attr.for]="'custom-price-' + $index"
                       >Precio ({{ cs() }})</label
                     >
@@ -300,7 +300,7 @@
                 <div class="flex items-center sm:items-stretch sm:flex-col gap-4 sm:gap-1">
                   <div class="flex flex-col gap-1 flex-1 sm:flex-none">
                     <label
-                      class="text-sm text-grey-100"
+                      class="text-sm text-grey-400"
                       [attr.for]="'quantity-' + $index"
                       >Cantidad</label
                     >
@@ -314,7 +314,7 @@
                     />
                   </div>
                   <div class="flex flex-col gap-1">
-                    <span class="text-sm text-grey-100">Subtotal</span>
+                    <span class="text-sm text-grey-400">Subtotal</span>
                     <p class="text-lg font-semibold text-grey-800 sm:pt-2">
                       $ {{ product.total.toFixed(2) }}
                     </p>
@@ -439,7 +439,7 @@
         <div
           class="flex justify-between items-center py-4 border-t border-grey-100"
         >
-          <span class="text-lg text-grey-300">Total</span>
+          <span class="text-lg text-grey-400 font-semibold">Total</span>
           <span class="text-2xl font-bold text-primary-600"
             >{{ cs() }} {{ calculateTotal().toFixed(2) }}</span
           >
@@ -449,7 +449,7 @@
         <!-- Tasa de cambio -->
         <div class="flex flex-col gap-3 py-4 border-t border-grey-100">
           <div class="flex items-center justify-between">
-            <span class="text-lg text-grey-300">Tasa de cambio</span>
+            <span class="text-lg text-grey-400 font-semibold">Tasa de cambio</span>
             <span class="text-sm text-grey-400 font-medium"
               >{{ exchangeRate() | number:'1.2-2' }} Bs.</span
             >
@@ -477,7 +477,7 @@
           class="flex justify-between items-center py-4 border-t border-grey-100"
         >
           <div class="flex items-center gap-3">
-            <span class="text-lg text-grey-300">Total Bs</span>
+            <span class="text-lg text-grey-400 font-semibold">Total Bs</span>
             <ui-button
               (click)="recalculateTotalBs()"
               icon="refresh-cw"
