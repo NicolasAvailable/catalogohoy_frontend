@@ -8,7 +8,14 @@
       </p>
     </div>
     @if (canInvite()) {
-      @if (teamFull()) {
+      @if (planStore.isFreePlan()) {
+        <ui-button
+          label="Invitar miembro"
+          icon="sparkles"
+          severity="primary"
+          [disabled]="true"
+        />
+      } @else if (teamFull()) {
         <ui-button
           label="Mejorar plan"
           icon="arrow-up-circle"
@@ -232,39 +239,47 @@
 
     <!-- Estado vacío -->
     @if (teamStore.members().length === 0) {
-      <div class="teams-view__empty">
-        <div class="teams-view__empty-icon-wrap">
-          <lucide-icon name="users" [size]="32" />
-        </div>
-        <div class="teams-view__empty-body">
-          <h2 class="teams-view__empty-title">Construye tu equipo</h2>
-          <p class="teams-view__empty-text">
-            Invita personas para que gestionen tu catálogo junto a ti. Asígnales permisos por módulo y controla exactamente qué pueden hacer.
-          </p>
-        </div>
-        <div class="teams-view__empty-features">
-          <div class="teams-view__empty-feature">
-            <lucide-icon name="shield-check" [size]="15" />
-            <span>Permisos granulares por módulo</span>
+      @if (planStore.isFreePlan()) {
+        <ui-premium-upgrade-prompt
+          icon="users-round"
+          title="Invita a tu equipo a gestionar el catálogo"
+          description="Mejora tu plan para invitar miembros, asignarles permisos por módulo y controlar qué puede hacer cada uno."
+        />
+      } @else {
+        <div class="teams-view__empty">
+          <div class="teams-view__empty-icon-wrap">
+            <lucide-icon name="users" [size]="32" />
           </div>
-          <div class="teams-view__empty-feature">
-            <lucide-icon name="mail" [size]="15" />
-            <span>Invitación por correo electrónico</span>
+          <div class="teams-view__empty-body">
+            <h2 class="teams-view__empty-title">Construye tu equipo</h2>
+            <p class="teams-view__empty-text">
+              Invita personas para que gestionen tu catálogo junto a ti. Asígnales permisos por módulo y controla exactamente qué pueden hacer.
+            </p>
           </div>
-          <div class="teams-view__empty-feature">
-            <lucide-icon name="users-round" [size]="15" />
-            <span>Hasta {{ planStore.maxTeamMembers() }} miembros en tu plan</span>
+          <div class="teams-view__empty-features">
+            <div class="teams-view__empty-feature">
+              <lucide-icon name="shield-check" [size]="15" />
+              <span>Permisos granulares por módulo</span>
+            </div>
+            <div class="teams-view__empty-feature">
+              <lucide-icon name="mail" [size]="15" />
+              <span>Invitación por correo electrónico</span>
+            </div>
+            <div class="teams-view__empty-feature">
+              <lucide-icon name="users-round" [size]="15" />
+              <span>Hasta {{ planStore.maxTeamMembers() }} miembros en tu plan</span>
+            </div>
           </div>
+          @if (teamStore.canInviteMore() && canInvite()) {
+            <ui-button
+              label="Invitar primer miembro"
+              icon="user-plus"
+              [fluid]="true"
+              (click)="openInviteDialog()"
+            />
+          }
         </div>
-        @if (teamStore.canInviteMore() && canInvite()) {
-          <ui-button
-            label="Invitar primer miembro"
-            icon="user-plus"
-            [fluid]="true"
-            (click)="openInviteDialog()"
-          />
-        }
-      </div>
+      }
     }
   }
 

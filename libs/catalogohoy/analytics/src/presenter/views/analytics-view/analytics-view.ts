@@ -1,24 +1,34 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { PlanStore } from '@catalogohoy/plan';
 import { AnalyticsStore } from '../../../infrastructure';
 import { PageViewsPeriod } from '../../../domain';
-import { IconComponent } from '@ui';
+import { IconComponent, PremiumUpgradePromptComponent } from '@ui';
 import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
 
 @Component({
   selector: 'app-analytics-view',
   standalone: true,
-  imports: [NgApexchartsModule, DecimalPipe, IconComponent],
+  imports: [
+    NgApexchartsModule,
+    DecimalPipe,
+    IconComponent,
+    PremiumUpgradePromptComponent,
+  ],
   templateUrl: './analytics-view.html',
 })
 export class AnalyticsViewComponent {
   private readonly router = inject(Router);
   protected readonly analyticsStore = inject(AnalyticsStore);
+  protected readonly planStore = inject(PlanStore);
   protected readonly pageViewsPeriod = signal<PageViewsPeriod>('today');
 
   constructor() {
-    this.analyticsStore.load();
+    // Free plan users land on the upgrade prompt — don't burn analytics RPCs.
+    if (!this.planStore.isFreePlan()) {
+      this.analyticsStore.load();
+    }
     this._initApexFix();
   }
 

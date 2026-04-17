@@ -45,13 +45,10 @@ export class Sidebar {
 
   private readonly permissionsStore = inject(TeamPermissionsStore);
 
-  public readonly analyticsLocked = computed(
-    () => this.planStore.currentPlan()?.isFree ?? false
-  );
-
-  public readonly teamsLocked = computed(
-    () => this.planStore.currentPlan()?.isFree ?? false
-  );
+  // Free-plan users can now enter these routes — the views themselves show
+  // an upgrade prompt. The sidebar no longer needs to lock them.
+  public readonly analyticsLocked = computed(() => false);
+  public readonly teamsLocked = computed(() => false);
 
   public readonly canViewProducts = computed(
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('productos', 'view')
