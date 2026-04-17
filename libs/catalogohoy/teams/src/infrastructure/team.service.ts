@@ -46,27 +46,57 @@ export class TeamService implements BaseTeamService {
     });
   }
 
-  public async getMembers(teamId: number): Promise<E.Either<Error, TeamMember[]>> {
-    const { data, error } = await this.client
-      .from('team_members')
-      .select('id, team_id, user_id, invited_email, status, invite_token, invite_expires_at, created_at, users(name, last_name)')
-      .eq('team_id', teamId)
-      .order('created_at', { ascending: true });
+  public async getMembers(
+    teamId: number,
+    tenantId: number
+  ): Promise<E.Either<Error, TeamMember[]>> {
+    // users RLS blocks reading other people's rows via a JOIN, so we fetch
+    // names through the SECURITY DEFINER `get_team_directory` RPC and merge
+    // them into the members list client-side.
+    const [membersResult, directoryResult] = await Promise.all([
+      this.client
+        .from('team_members')
+        .select(
+          'id, team_id, user_id, invited_email, status, invite_token, invite_expires_at, created_at'
+        )
+        .eq('team_id', teamId)
+        .order('created_at', { ascending: true }),
+      this.client.rpc('get_team_directory', { p_tenant_id: tenantId }),
+    ]);
 
-    if (error) return E.left(new Error(error.message));
+    if (membersResult.error) {
+      return E.left(new Error(membersResult.error.message));
+    }
 
-    const members: TeamMember[] = (data ?? []).map((row: any) => ({
-      id: row.id,
-      teamId: row.team_id,
-      userId: row.user_id,
-      invitedEmail: row.invited_email,
-      status: row.status,
-      inviteToken: row.invite_token,
-      inviteExpiresAt: row.invite_expires_at,
-      createdAt: row.created_at,
-      userName: row.users?.name ?? null,
-      userLastName: row.users?.last_name ?? null,
-    }));
+    const directory = new Map<number, { name: string | null; last_name: string | null }>();
+    if (!directoryResult.error) {
+      for (const row of (directoryResult.data ?? []) as Array<{
+        user_id: number;
+        name: string | null;
+        last_name: string | null;
+      }>) {
+        directory.set(row.user_id, {
+          name: row.name,
+          last_name: row.last_name,
+        });
+      }
+    }
+
+    const members: TeamMember[] = (membersResult.data ?? []).map((row: any) => {
+      const dir = row.user_id ? directory.get(row.user_id) : null;
+      return {
+        id: row.id,
+        teamId: row.team_id,
+        userId: row.user_id,
+        invitedEmail: row.invited_email,
+        status: row.status,
+        inviteToken: row.invite_token,
+        inviteExpiresAt: row.invite_expires_at,
+        createdAt: row.created_at,
+        userName: dir?.name ?? null,
+        userLastName: dir?.last_name ?? null,
+      };
+    });
 
     return E.right(members);
   }
@@ -164,19 +194,27 @@ export class TeamService implements BaseTeamService {
   }
 
   public async getOwnerInfo(tenantId: number): Promise<E.Either<Error, { email: string | null; name: string | null }>> {
-    const { data, error } = await this.client
-      .from('users_tenants')
-      .select('users(email, name, last_name)')
-      .eq('tenant_id', tenantId)
-      .eq('role', 'owner')
-      .maybeSingle();
+    // Use the SECURITY DEFINER directory RPC so non-owner members can
+    // still read the owner's name/email (users RLS blocks cross-user reads).
+    const { data, error } = await this.client.rpc('get_team_directory', {
+      p_tenant_id: tenantId,
+    });
 
     if (error) return E.left(new Error(error.message));
-    const user = (data as any)?.users;
-    const name = user?.name
-      ? `${user.name}${user.last_name ? ' ' + user.last_name : ''}`
+
+    const owner = ((data ?? []) as Array<{
+      email: string;
+      name: string | null;
+      last_name: string | null;
+      role: string;
+    }>).find((row) => row.role === 'owner');
+
+    if (!owner) return E.right({ email: null, name: null });
+
+    const name = owner.name
+      ? `${owner.name}${owner.last_name ? ' ' + owner.last_name : ''}`
       : null;
-    return E.right({ email: user?.email ?? null, name });
+    return E.right({ email: owner.email, name });
   }
 
   public async getMyPermissions(

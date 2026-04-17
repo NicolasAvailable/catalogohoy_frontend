@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
+import { ActivityLogService } from '@catalogohoy/teams';
 import { E } from '@shared/domain';
 import { Order, OrderItem, OrderMapper, OrderStatus } from '../domain';
 
@@ -41,6 +42,7 @@ export interface UpdateOrderInput extends CreateOrderInput {
 })
 export class OrderService {
   private readonly client = SupabaseClientProvider.getInstance();
+  private readonly activityLog = inject(ActivityLogService);
 
   async getOrdersByTenant(
     tenantId: number,
@@ -176,10 +178,24 @@ export class OrderService {
       return E.left(new Error(error.message));
     }
 
+    this.activityLog.log({
+      action: 'order.create',
+      entityType: 'order',
+      entityId: data.id,
+      entityName: `Orden #${data.id} — ${input.name}`,
+    });
+
     return E.right(OrderMapper.toDomain(data));
   }
 
   async updateOrder(input: UpdateOrderInput): Promise<E.Either<Error, Order>> {
+    // Snapshot before for diff
+    const { data: before } = await this.client
+      .from('orders')
+      .select('name, status, delivery_date')
+      .eq('id', input.id)
+      .single();
+
     const patch: Record<string, unknown> = {
       name: input.name,
       phone: input.phone,
@@ -201,6 +217,22 @@ export class OrderService {
 
     if (error) {
       return E.left(new Error(error.message));
+    }
+
+    if (before) {
+      const changes = this.activityLog.diff(
+        { name: before.name, status: before.status, deliveryDate: before.delivery_date },
+        { name: input.name, status: input.status, deliveryDate: input.deliveryDate }
+      );
+      if (changes.length > 0) {
+        this.activityLog.log({
+          action: 'order.update',
+          entityType: 'order',
+          entityId: input.id,
+          entityName: `Orden #${input.id} — ${input.name}`,
+          changes,
+        });
+      }
     }
 
     return E.right(OrderMapper.toDomain(data));
@@ -246,6 +278,14 @@ export class OrderService {
     if (oldStatus === 'cancelled' && newStatus !== 'cancelled') {
       await this.deductStock(products);
     }
+
+    this.activityLog.log({
+      action: 'order.status',
+      entityType: 'order',
+      entityId: id,
+      entityName: `Orden #${id} — ${order.name}`,
+      changes: [{ field: 'status', from: oldStatus, to: newStatus }],
+    });
 
     return E.right(OrderMapper.toDomain(data));
   }

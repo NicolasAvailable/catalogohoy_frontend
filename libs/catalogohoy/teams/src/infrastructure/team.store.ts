@@ -69,7 +69,7 @@ export const TeamStore = signalStore(
         patchState(store, { teamId: team.id });
 
         const [membersResult, ownerResult] = await Promise.all([
-          teamService.getMembers(team.id),
+          teamService.getMembers(team.id, tenantId),
           teamService.getOwnerInfo(tenantId),
         ]);
 
