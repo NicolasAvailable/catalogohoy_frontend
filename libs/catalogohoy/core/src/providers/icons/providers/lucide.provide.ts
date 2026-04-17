@@ -1,9 +1,11 @@
 import { EnvironmentProviders, importProvidersFrom } from '@angular/core';
 import {
+  Activity,
   AlertTriangle,
   ArrowDown,
   ArrowDownToLine,
   ArrowLeft,
+  ArrowRight,
   ArrowUp,
   ArrowUpDown,
   Ban,
@@ -119,8 +121,10 @@ import {
 export const provideLucideIcons = (): EnvironmentProviders => {
   return importProvidersFrom(
     LucideAngularModule.pick({
+      Activity,
       ArrowDownToLine,
       ArrowLeft,
+      ArrowRight,
       ArrowUpDown,
       Ban,
       Banknote,
