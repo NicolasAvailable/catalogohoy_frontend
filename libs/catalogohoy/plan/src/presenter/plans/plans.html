@@ -52,26 +52,26 @@
         <!-- Precio -->
         <div class="plan-card__price">
           @if (plan.isFree) {
-            <span class="plan-card__price-amount">$0</span>
+            <span class="plan-card__price-amount">{{ currencySymbol() }}0</span>
             <span class="plan-card__price-period">por siempre</span>
           } @else if (isUpgradePlan(plan)) {
             <div class="plan-card__price-main">
-              <span class="plan-card__price-currency">$</span>
-              <span class="plan-card__price-amount">{{ getUpgradePrice(plan) }}</span>
+              <span class="plan-card__price-currency">{{ currencySymbol() }}</span>
+              <span class="plan-card__price-amount">{{ getUpgradePrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
             </div>
-            <span class="plan-card__price-original">${{ getPeriodPrice(plan) }}</span>
-            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }} · USD</span>
+            <span class="plan-card__price-original">{{ currencySymbol() }}{{ getPeriodPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
+            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }} · {{ currencyCode() }}</span>
           } @else {
             <div class="plan-card__price-main">
-              <span class="plan-card__price-currency">$</span>
-              <span class="plan-card__price-amount">{{ getPeriodPrice(plan) }}</span>
+              <span class="plan-card__price-currency">{{ currencySymbol() }}</span>
+              <span class="plan-card__price-amount">{{ getPeriodPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
             </div>
-            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }} · USD</span>
+            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }} · {{ currencyCode() }}</span>
           }
         </div>
         @if (!plan.isFree && billingPeriod() !== 'monthly') {
           <p class="plan-card__monthly-equiv">
-            ${{ getMonthlyEquivalent(plan) }}/mes
+            {{ currencySymbol() }}{{ getMonthlyEquivalent(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}/mes
           </p>
         }
 
@@ -128,7 +128,7 @@
           @if (!plan.isFree) {
             <p class="plan-card__extra-catalog">
               <ui-icon name="plus-circle" styleClass="size-3.5 shrink-0" />
-              Catálogo adicional ${{ getCatalogAddonPrice() }}/mes
+              Catálogo adicional {{ currencySymbol() }}{{ getCatalogAddonPrice() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}/mes
             </p>
           }
         </div>

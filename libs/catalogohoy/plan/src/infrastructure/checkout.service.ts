@@ -16,15 +16,15 @@ export class CheckoutService implements BaseCheckoutService {
   public async createCheckoutSession(
     request: CheckoutRequest
   ): Promise<E.Either<Error, CheckoutSession>> {
-    const { data, error } = await this.client.functions.invoke<{ url: string }>(
-      'create-checkout-session',
-      { body: request }
-    );
+    const { data, error } = await this.client.functions.invoke<{
+      url: string;
+      currency?: CheckoutSession['currency'];
+    }>('create-checkout-session', { body: request });
 
     if (error) return E.left(new Error(error.message));
     if (!data?.url) return E.left(new Error('No se recibió URL de pago'));
 
-    return E.right({ url: data.url });
+    return E.right({ url: data.url, currency: data.currency });
   }
 
   public async cancelSubscription(
