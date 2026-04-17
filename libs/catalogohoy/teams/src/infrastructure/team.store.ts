@@ -26,7 +26,9 @@ const initialState: TeamState = {
   members: [],
   ownerEmail: null,
   ownerName: null,
-  isLoading: false,
+  // Start true so the first render shows the skeleton, not the empty
+  // state (there was a flash of "no tienes equipo" before ngOnInit kicks in).
+  isLoading: true,
   isInviting: false,
   error: null,
 };
