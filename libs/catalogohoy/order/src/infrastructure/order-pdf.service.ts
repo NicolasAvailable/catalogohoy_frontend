@@ -44,12 +44,16 @@ export class OrderPdfService {
       config?.name ||
       this.tenantStore.tenantName() ||
       'Catálogo';
-    // Symbol: prefer the cached tenant currency (dynamic per-country).
-    const cs =
-      this.tenantCurrency.localSymbol() ||
-      config?.currencySymbol ||
-      '$';
     const isVenezuela = this.tenantCurrency.isVenezuela();
+    // Symbol: prefer the cached tenant currency (dynamic per-country).
+    // VE exception: order totals are stored in USD (with the Bs. dual shown
+    // separately below), so the per-line / header amounts must render with
+    // "$", not the tenant's local "Bs." symbol.
+    const cs = isVenezuela
+      ? '$'
+      : this.tenantCurrency.localSymbol() ||
+        config?.currencySymbol ||
+        '$';
     const logoUrl = config?.logo ?? null;
 
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -92,17 +96,27 @@ export class OrderPdfService {
     doc.setFontSize(9);
     doc.setTextColor(...BLACK);
 
-    const date = new Date(order.createdAt);
+    const createdDate = new Date(order.createdAt);
+    const formatLong = (d: Date) =>
+      d.toLocaleDateString('es-VE', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+
+    // delivery_date is "YYYY-MM-DD"; parse as local to avoid UTC shift.
+    let deliveryDate: Date | null = null;
+    if (order.deliveryDate) {
+      const [y, m, d] = order.deliveryDate.split('-').map(Number);
+      deliveryDate = new Date(y, m - 1, d);
+    }
 
     const meta: [string, string][] = [
       ['Número de orden', `#${order.id}`],
+      ['Fecha de creación', formatLong(createdDate)],
       [
-        'Fecha',
-        date.toLocaleDateString('es-VE', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        }),
+        'Fecha de entrega',
+        deliveryDate ? formatLong(deliveryDate) : formatLong(createdDate),
       ],
       ['Estado', STATUS_LABELS[order.status] ?? order.status],
     ];
