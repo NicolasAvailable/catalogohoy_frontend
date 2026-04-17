@@ -26,6 +26,7 @@ import {
   SelectSelectedItemDirective,
   TooltipDirective,
 } from '@ui';
+import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import {
   debounceTime,
   distinctUntilChanged,
@@ -60,6 +61,7 @@ type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
     SelectItemDirective,
     SelectSelectedItemDirective,
     TooltipDirective,
+    PaginatorModule,
   ],
   templateUrl: './order-list.html',
   styleUrl: './order-list.css',
@@ -107,6 +109,9 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly expandedOrderId = signal<number | null>(null);
   public readonly isProcessing = signal(false);
   public readonly mobileShowAll = signal(false);
+  // Pagination state — desktop table only (mobile keeps the "show all" toggle)
+  public readonly pageFirst = signal(0);
+  public readonly pageRows = signal(10);
 
   public readonly filterTabs: FilterTab[] = [
     { label: 'Todas', value: 'all' },
@@ -135,47 +140,24 @@ export class OrderListComponent implements OnInit, OnDestroy {
     { label: 'Total más bajo', value: 'total_asc', icon: 'trending-down' },
   ];
 
-  public readonly filteredOrders = computed(() => {
-    let orders = [...this.orderStore.orderList().items];
-
-    // Filter by status
-    const filter = this.selectedFilter();
-    if (filter !== 'all') {
-      orders = orders.filter((order) => order.status === filter);
-    }
-
-    // Search is now handled by Supabase query
-
-    // Sort by selected order
-    const orderBy = this.selectedOrder();
-    switch (orderBy) {
-      case 'date_desc':
-        orders.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        break;
-      case 'date_asc':
-        orders.sort(
-          (a, b) =>
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
-        break;
-      case 'total_desc':
-        orders.sort((a, b) => b.totalUsd - a.totalUsd);
-        break;
-      case 'total_asc':
-        orders.sort((a, b) => a.totalUsd - b.totalUsd);
-        break;
-    }
-
-    return orders;
-  });
+  /** Server-side already filters + sorts + paginates, so this is just
+   *  whatever the store currently has. Kept as a computed for readability. */
+  public readonly filteredOrders = computed(() => this.orderStore.orderList().items);
 
   public readonly mobileOrders = computed(() => {
     const orders = this.filteredOrders();
     return this.mobileShowAll() ? orders : orders.slice(0, 5);
   });
+
+  /** Desktop table — pagination is server-side, so the page contains
+   *  exactly what the backend returned, just filtered by status locally. */
+  public readonly paginatedOrders = computed(() => this.filteredOrders());
+
+  public onPageChange(event: PaginatorState) {
+    this.pageFirst.set(event.first ?? 0);
+    this.pageRows.set(event.rows ?? 10);
+    this.reloadOrders();
+  }
 
   async ngOnInit() {
     // Prime the tenant currency cache (localStorage → DB fallback).
@@ -187,10 +169,14 @@ export class OrderListComponent implements OnInit, OnDestroy {
       .pipe(debounceTime(300), distinctUntilChanged())
       .subscribe((query) => {
         this.searchQuery.set(query);
+        this.pageFirst.set(0);
         this.reloadOrders();
       });
 
-    this.orderStore.loadOrders();
+    // Initial load pulls just the first page — no more full-table download.
+    this.reloadOrders();
+    // Grand total (unfiltered) for the footer label.
+    this.orderStore.loadGrandTotalCount();
     this.orderRealtime.subscribe();
   }
 
@@ -215,20 +201,29 @@ export class OrderListComponent implements OnInit, OnDestroy {
 
   selectFilter(filter: OrderStatus | 'all') {
     this.selectedFilter.set(filter);
+    this.pageFirst.set(0);
+    this.reloadOrders();
   }
 
   setOrder(order: OrderBy) {
     this.selectedOrder.set(order);
+    this.pageFirst.set(0);
+    this.reloadOrders();
   }
 
   reloadOrders() {
     const date = this.selectedDate() ?? undefined;
     const search = this.searchQuery() || undefined;
-    this.orderStore.loadOrders({ date, search });
+    const status = this.selectedFilter();
+    const orderBy = this.selectedOrder();
+    const pageSize = this.pageRows();
+    const page = Math.floor(this.pageFirst() / pageSize) + 1;
+    this.orderStore.loadOrders({ date, search, status, orderBy, page, pageSize });
   }
 
   onDateChange(date: Date | null) {
     this.selectedDate.set(date);
+    this.pageFirst.set(0);
     this.reloadOrders();
   }
 
@@ -390,6 +385,11 @@ export class OrderListComponent implements OnInit, OnDestroy {
               },
               () => {
                 this.toastService.success('Orden eliminada correctamente');
+                // Refresh both the current page (in case the page shrank to
+                // fewer rows than pageSize and we can backfill from the next
+                // page) and the grand total footer label.
+                this.reloadOrders();
+                this.orderStore.loadGrandTotalCount();
               }
             );
             this.isProcessing.set(false);

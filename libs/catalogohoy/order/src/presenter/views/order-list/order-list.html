@@ -103,7 +103,7 @@
             mode="single"
             size="small"
             placeholder="Seleccionar fecha"
-            styleClass="w-40 border! border-grey-100! rounded-xl!"
+            styleClass="w-40 order-filter-datepicker"
           />
         </div>
       </div>
@@ -329,7 +329,7 @@
               </div>
             </td>
           </tr>
-          } } @else { @for (order of filteredOrders(); track order.id) {
+          } } @else { @for (order of paginatedOrders(); track order.id) {
           <tr class="hover:bg-grey-25 transition-colors group">
             <td class="px-6 py-3.5 font-medium text-grey-300">
               #{{ order.id }}
@@ -519,45 +519,21 @@
       </table>
     </div>
 
-    <!-- Pagination Footer -->
+    <!-- Pagination footer — count on the left, controls on the right -->
     <div
-      class="p-4 bg-grey-25 border-t border-grey-50 flex items-center justify-between"
+      class="p-4 bg-grey-25 border-t border-grey-50 flex items-center justify-between gap-2 flex-wrap"
     >
       <span class="text-xs text-grey-400 font-medium">
-        Mostrando {{ filteredOrders().length }} de {{
-        orderStore.orderList().items.length }} órdenes
+        Mostrando {{ paginatedOrders().length }} · Total: {{ orderStore.grandTotalCount() }} órdenes
       </span>
-      <div class="flex items-center gap-1">
-        <button
-          class="p-1 text-grey-300 hover:text-primary-500 disabled:opacity-30 transition-colors"
-          disabled
-        >
-          <ui-icon name="chevrons-left" styleClass="size-4" />
-        </button>
-        <button
-          class="p-1 text-grey-300 hover:text-primary-500 disabled:opacity-30 transition-colors"
-          disabled
-        >
-          <ui-icon name="chevron-left" styleClass="size-4" />
-        </button>
-        <button
-          class="w-7 h-7 flex items-center justify-center rounded bg-primary-50 text-primary-500 text-xs font-bold"
-        >
-          1
-        </button>
-        <button
-          class="p-1 text-grey-300 hover:text-primary-500 disabled:opacity-30 transition-colors"
-          disabled
-        >
-          <ui-icon name="chevron-right" styleClass="size-4" />
-        </button>
-        <button
-          class="p-1 text-grey-300 hover:text-primary-500 disabled:opacity-30 transition-colors"
-          disabled
-        >
-          <ui-icon name="chevrons-right" styleClass="size-4" />
-        </button>
-      </div>
+      <p-paginator
+        [first]="pageFirst()"
+        [rows]="pageRows()"
+        [totalRecords]="orderStore.totalCount()"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        (onPageChange)="onPageChange($event)"
+        styleClass="order-paginator"
+      />
     </div>
   </div>
 

@@ -56,6 +56,9 @@ export class OrderRealtimeService {
     if (eventType === 'INSERT') {
       const result = await this.orderService.getOrderById(payload.new.id, tenantId);
       result.mapRight((order) => this.orderStore.addOrder(order));
+      // Keep "Total: X" footer in sync when a new order lands via realtime
+      // (e.g., a client just placed an order from the public catalog).
+      this.orderStore.loadGrandTotalCount();
     } else if (eventType === 'UPDATE') {
       const result = await this.orderService.getOrderById(payload.new.id, tenantId);
       console.log('[OrderRealtime] UPDATE fetched, isLoading:', this.orderStore.isLoading());
@@ -63,6 +66,7 @@ export class OrderRealtimeService {
     } else if (eventType === 'DELETE') {
       console.log('[OrderRealtime] DELETE payload.old:', payload.old);
       this.orderStore.removeOrder(payload.old.id);
+      this.orderStore.loadGrandTotalCount();
     }
   }
 }

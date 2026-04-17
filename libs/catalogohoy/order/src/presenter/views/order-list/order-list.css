@@ -2,6 +2,40 @@
   display: block;
 }
 
+/* Strip the paginator's default bg/border so it blends into the footer
+   wrapper that holds the "Mostrando X de Y" span on its left. */
+:host ::ng-deep .order-paginator .p-paginator {
+  background: transparent;
+  border: none;
+  padding: 0;
+  justify-content: flex-end;
+}
+
+/* Match the filter buttons (Todas / Pendientes / …) border + placeholder
+   so the date filter blends visually with the rest of the toolbar. */
+:host ::ng-deep .order-filter-datepicker .p-datepicker-input {
+  border: 1px solid var(--color-grey-200) !important;
+  border-radius: 0.5rem !important;
+  color: var(--color-grey-700) !important;
+}
+
+:host ::ng-deep .order-filter-datepicker .p-datepicker-input::placeholder {
+  color: var(--color-grey-200) !important;
+}
+
+/* Hover + focus (opened) — pick up the primary color, same as any other
+   PrimeNG input, since the gray !important above was killing it. */
+:host ::ng-deep .order-filter-datepicker .p-datepicker-input:hover {
+  border-color: var(--color-grey-300) !important;
+}
+
+:host ::ng-deep .order-filter-datepicker .p-datepicker-input:focus,
+:host ::ng-deep .order-filter-datepicker .p-datepicker-input:focus-visible {
+  border-color: var(--color-primary-500) !important;
+  box-shadow: 0 0 0 2px rgb(59 130 246 / 0.15) !important;
+  outline: none !important;
+}
+
 /* Hide scrollbar for filter tabs */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;

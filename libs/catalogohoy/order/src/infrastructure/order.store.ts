@@ -7,12 +7,18 @@ import { OrderService } from './order.service';
 
 type OrderState = {
   orderList: OrderList;
+  /** Total rows that match the current filter (server-side count). */
+  totalCount: number;
+  /** Total rows for the tenant with NO filters — used for the footer label. */
+  grandTotalCount: number;
   isLoading: boolean;
   error: string | null;
 };
 
 const initialState: OrderState = {
   orderList: OrderList.empty(),
+  totalCount: 0,
+  grandTotalCount: 0,
   isLoading: false,
   error: null,
 };
@@ -26,7 +32,14 @@ export const OrderStore = signalStore(
       orderService = inject(OrderService),
       tenantStore = inject(TenantStore)
     ) => ({
-      async loadOrders(options?: { date?: Date; search?: string }) {
+      async loadOrders(options?: {
+        date?: Date;
+        search?: string;
+        status?: OrderStatus | 'all';
+        page?: number;
+        pageSize?: number;
+        orderBy?: 'date_desc' | 'date_asc' | 'total_desc' | 'total_asc';
+      }) {
         patchState(store, { isLoading: true, error: null });
 
         try {
@@ -46,15 +59,27 @@ export const OrderStore = signalStore(
             (error) => {
               patchState(store, { isLoading: false, error: error.message });
             },
-            (orders) =>
+            ({ orders, totalCount }) =>
               patchState(store, {
                 orderList: new OrderList(orders),
+                totalCount,
                 isLoading: false,
               })
           );
         } catch {
           patchState(store, { isLoading: false, error: 'Error inesperado' });
         }
+      },
+
+      /** Grand total (unfiltered). Call once on init; refresh after
+       *  create/delete since those are the only ops that change it. */
+      async loadGrandTotalCount() {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return;
+        const result = await orderService.countOrdersByTenant(tenantId);
+        result.mapRight((grandTotalCount) =>
+          patchState(store, { grandTotalCount })
+        );
       },
 
       async getOrderById(id: number): Promise<Order | null> {

@@ -31,6 +31,31 @@
 
   <!-- Rate Cards Grid -->
   <div class="rate-grid" [class.pointer-events-none]="!canEditRates()" [class.opacity-60]="!canEditRates()">
+    @if (isInitialLoading()) {
+    @for (i of [1, 2, 3]; track i) {
+    <div class="rate-card-skeleton">
+      <div class="skeleton-accent"></div>
+      <div class="skeleton-body">
+        <div class="skeleton-header">
+          <div class="skeleton-currency-info">
+            <div class="skeleton-icon"></div>
+            <div class="skeleton-title-group">
+              <div class="skeleton-line skeleton-line-title"></div>
+              <div class="skeleton-line skeleton-line-subtitle"></div>
+            </div>
+          </div>
+          <div class="skeleton-badge"></div>
+        </div>
+        <div class="skeleton-rate-value"></div>
+        <div class="skeleton-line skeleton-line-footer"></div>
+        <div class="skeleton-selector">
+          <div class="skeleton-line skeleton-line-selector"></div>
+          <div class="skeleton-checkbox"></div>
+        </div>
+      </div>
+    </div>
+    }
+    } @else {
     <!-- USD BCV Card -->
     <div
       class="rate-card usd"
@@ -240,6 +265,7 @@
         }
       </div>
     </div>
+    }
   </div>
 
   <!-- Info Footer -->

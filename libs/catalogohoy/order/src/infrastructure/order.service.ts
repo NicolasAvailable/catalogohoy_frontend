@@ -44,12 +44,28 @@ export class OrderService {
 
   async getOrdersByTenant(
     tenantId: number,
-    options?: { date?: Date; search?: string }
-  ): Promise<E.Either<Error, Order[]>> {
+    options?: {
+      date?: Date;
+      search?: string;
+      /** Filter by status ('all' = no filter). */
+      status?: OrderStatus | 'all';
+      /** 1-based page index. */
+      page?: number;
+      /** How many rows per page. When omitted, no range is applied (all). */
+      pageSize?: number;
+      /** 'date_desc' | 'date_asc' | 'total_desc' | 'total_asc'. */
+      orderBy?: 'date_desc' | 'date_asc' | 'total_desc' | 'total_asc';
+    }
+  ): Promise<E.Either<Error, { orders: Order[]; totalCount: number }>> {
     let query = this.client
       .from('orders')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('tenant_id', tenantId);
+
+    // Filter by status
+    if (options?.status && options.status !== 'all') {
+      query = query.eq('status', options.status);
+    }
 
     // Filter by date if provided
     if (options?.date) {
@@ -69,15 +85,54 @@ export class OrderService {
       query = query.ilike('name', `%${options.search.trim()}%`);
     }
 
-    const { data, error } = await query.order('created_at', {
-      ascending: false,
-    });
+    // Ordering
+    switch (options?.orderBy) {
+      case 'date_asc':
+        query = query.order('created_at', { ascending: true });
+        break;
+      case 'total_desc':
+        query = query.order('total_usd', { ascending: false });
+        break;
+      case 'total_asc':
+        query = query.order('total_usd', { ascending: true });
+        break;
+      case 'date_desc':
+      default:
+        query = query.order('created_at', { ascending: false });
+    }
+
+    // Server-side pagination — avoid dragging every row over the wire.
+    if (options?.pageSize) {
+      const page = options.page && options.page > 0 ? options.page : 1;
+      const from = (page - 1) * options.pageSize;
+      const to = from + options.pageSize - 1;
+      query = query.range(from, to);
+    }
+
+    const { data, error, count } = await query;
 
     if (error) {
       return E.left(new Error(error.message));
     }
 
-    return E.right(OrderMapper.toDomainList(data || []));
+    return E.right({
+      orders: OrderMapper.toDomainList(data || []),
+      totalCount: count ?? 0,
+    });
+  }
+
+  /** Count-only query. Ignores all filters — used for the "total in general"
+   *  label shown in the orders list footer. */
+  async countOrdersByTenant(
+    tenantId: number
+  ): Promise<E.Either<Error, number>> {
+    const { count, error } = await this.client
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId);
+
+    if (error) return E.left(new Error(error.message));
+    return E.right(count ?? 0);
   }
 
   async getOrderById(
