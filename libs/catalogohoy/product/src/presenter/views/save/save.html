@@ -91,6 +91,7 @@
           <ui-multi-select
             [options]="categoryStore.categoryList().categories"
             [showClear]="true"
+            [filter]="hasCategories()"
             formControlName="categoryIds"
             optionLabel="name"
             optionValue="id"

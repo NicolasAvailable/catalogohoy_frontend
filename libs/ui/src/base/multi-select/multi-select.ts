@@ -33,7 +33,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
       [panelStyleClass]="panelStyleClass()"
       [appendTo]="appendTo()"
       [fluid]="true"
-      [filter]="true"
+      [filter]="filter()"
       [inputId]="inputId()"
       [emptyMessage]="emptyMessage()"
       [emptyFilterMessage]="emptyFilterMessage()"
@@ -75,6 +75,7 @@ export class MultiSelectComponent<T> implements ControlValueAccessor {
   public readonly emptyMessage = _.input('No se encontraron resultados');
   public readonly emptyFilterMessage = _.input('No se encontraron resultados');
   public readonly filterPlaceHolder = _.input('');
+  public readonly filter = _.input(true);
 
   @_.ContentChild('item', { read: _.TemplateRef })
   itemTemplate?: _.TemplateRef<unknown>;

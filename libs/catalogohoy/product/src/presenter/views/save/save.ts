@@ -110,6 +110,9 @@ export default class Save implements OnInit {
   public readonly isSubmitting = signal<boolean>(false);
   public readonly isCreatingCategory = signal<boolean>(false);
   public readonly newCategoryName = signal<string>('');
+  public readonly hasCategories = computed(
+    () => this.categoryStore.categoryList().categories.length > 0
+  );
   public readonly stockMode = signal<'unlimited' | 'limited'>('unlimited');
 
   private readonly photosLimitByPlan: Record<string, number> = {
@@ -146,19 +149,33 @@ export default class Save implements OnInit {
   }
 
   public async onCreateCategory() {
-    const name = this.newCategoryName();
-    if (!name || name.trim() === '' || this.isCreatingCategory()) return;
+    const name = this.newCategoryName().trim();
+    if (!name || this.isCreatingCategory()) return;
 
     this.isCreatingCategory.set(true);
     const result = await this.categoryStore.save({
-      name: name.trim(),
+      name,
       isVisible: true,
     });
 
-    result.mapRight(() => {
+    if (result.isRight()) {
+      // The store's save() triggers a list refresh but doesn't await it and
+      // doesn't return the created id. Force a refresh we *can* await and
+      // match the new row by name so we can pre-select it in the form.
+      await this.categoryStore.categoryList$();
+      const created = this.categoryStore
+        .categoryList()
+        .categories.find((c) => c.name === name);
+      if (created) {
+        const current = this.form.controls.categoryIds.value ?? [];
+        this.form.controls.categoryIds.setValue([
+          ...current,
+          String(created.id),
+        ]);
+      }
       this.toastService.success('Categoría creada' as any);
       this.newCategoryName.set('');
-    });
+    }
     this.isCreatingCategory.set(false);
   }
 
