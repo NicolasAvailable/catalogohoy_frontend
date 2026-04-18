@@ -644,7 +644,7 @@
                 <ui-input-phone
                   [ngModel]="button.number"
                   (ngModelChange)="updateButtonNumber($index, $event)"
-                  [defaultCountry]="'ve'"
+                  [defaultCountry]="draftCountryCode() ?? 've'"
                 ></ui-input-phone>
               </div>
               <button

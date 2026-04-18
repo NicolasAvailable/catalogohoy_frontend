@@ -22,34 +22,44 @@ export interface PhoneCountry {
   dialCode: string;
 }
 
+// Must stay in sync with SUPPORTED_COUNTRIES in @catalogohoy/ecommerce-config:
+// signup + location select + phone picker all draw from the same country set
+// so a tenant can never pick a country in one place and be unable to use it
+// in another. VE first, then alphabetical by Spanish label.
+// NANP countries (CA, BS, BB, JM, PR, DO, TT) share +1 with the US but include
+// the area code so the stored number is dialable.
 export const PHONE_COUNTRIES: PhoneCountry[] = [
-  { iso: 'VE', name: 'Venezuela', dialCode: '+58' },
-  { iso: 'AR', name: 'Argentina', dialCode: '+54' },
-  { iso: 'BO', name: 'Bolivia', dialCode: '+591' },
-  { iso: 'BR', name: 'Brasil', dialCode: '+55' },
-  { iso: 'CA', name: 'Canadá', dialCode: '+1' },
-  { iso: 'CL', name: 'Chile', dialCode: '+56' },
-  { iso: 'CO', name: 'Colombia', dialCode: '+57' },
-  { iso: 'CR', name: 'Costa Rica', dialCode: '+506' },
-  { iso: 'CU', name: 'Cuba', dialCode: '+53' },
-  { iso: 'DO', name: 'República Dominicana', dialCode: '+1' },
-  { iso: 'EC', name: 'Ecuador', dialCode: '+593' },
-  { iso: 'SV', name: 'El Salvador', dialCode: '+503' },
-  { iso: 'ES', name: 'España', dialCode: '+34' },
-  { iso: 'US', name: 'Estados Unidos', dialCode: '+1' },
-  { iso: 'FR', name: 'Francia', dialCode: '+33' },
-  { iso: 'GT', name: 'Guatemala', dialCode: '+502' },
-  { iso: 'HN', name: 'Honduras', dialCode: '+504' },
-  { iso: 'IT', name: 'Italia', dialCode: '+39' },
-  { iso: 'MX', name: 'México', dialCode: '+52' },
-  { iso: 'NI', name: 'Nicaragua', dialCode: '+505' },
-  { iso: 'PA', name: 'Panamá', dialCode: '+507' },
-  { iso: 'PY', name: 'Paraguay', dialCode: '+595' },
-  { iso: 'PE', name: 'Perú', dialCode: '+51' },
-  { iso: 'PT', name: 'Portugal', dialCode: '+351' },
-  { iso: 'PR', name: 'Puerto Rico', dialCode: '+1' },
-  { iso: 'GB', name: 'Reino Unido', dialCode: '+44' },
-  { iso: 'UY', name: 'Uruguay', dialCode: '+598' },
+  { iso: 'VE', name: 'Venezuela',           dialCode: '+58'   },
+  { iso: 'AR', name: 'Argentina',           dialCode: '+54'   },
+  { iso: 'BS', name: 'Bahamas',             dialCode: '+1242' },
+  { iso: 'BB', name: 'Barbados',            dialCode: '+1246' },
+  { iso: 'BZ', name: 'Belice',              dialCode: '+501'  },
+  { iso: 'BO', name: 'Bolivia',             dialCode: '+591'  },
+  { iso: 'BR', name: 'Brasil',              dialCode: '+55'   },
+  { iso: 'CA', name: 'Canadá',              dialCode: '+1'    },
+  { iso: 'CL', name: 'Chile',               dialCode: '+56'   },
+  { iso: 'CO', name: 'Colombia',            dialCode: '+57'   },
+  { iso: 'CR', name: 'Costa Rica',          dialCode: '+506'  },
+  { iso: 'CU', name: 'Cuba',                dialCode: '+53'   },
+  { iso: 'EC', name: 'Ecuador',             dialCode: '+593'  },
+  { iso: 'SV', name: 'El Salvador',         dialCode: '+503'  },
+  { iso: 'ES', name: 'España',              dialCode: '+34'   },
+  { iso: 'US', name: 'Estados Unidos',      dialCode: '+1'    },
+  { iso: 'GT', name: 'Guatemala',           dialCode: '+502'  },
+  { iso: 'GY', name: 'Guyana',              dialCode: '+592'  },
+  { iso: 'HT', name: 'Haití',               dialCode: '+509'  },
+  { iso: 'HN', name: 'Honduras',            dialCode: '+504'  },
+  { iso: 'JM', name: 'Jamaica',             dialCode: '+1876' },
+  { iso: 'MX', name: 'México',              dialCode: '+52'   },
+  { iso: 'NI', name: 'Nicaragua',           dialCode: '+505'  },
+  { iso: 'PA', name: 'Panamá',              dialCode: '+507'  },
+  { iso: 'PY', name: 'Paraguay',            dialCode: '+595'  },
+  { iso: 'PE', name: 'Perú',                dialCode: '+51'   },
+  { iso: 'PR', name: 'Puerto Rico',         dialCode: '+1787' },
+  { iso: 'DO', name: 'República Dominicana', dialCode: '+1809' },
+  { iso: 'SR', name: 'Surinam',             dialCode: '+597'  },
+  { iso: 'TT', name: 'Trinidad y Tobago',   dialCode: '+1868' },
+  { iso: 'UY', name: 'Uruguay',             dialCode: '+598'  },
 ];
 
 const COUNTRIES_BY_DIAL_LENGTH = [...PHONE_COUNTRIES].sort(
@@ -177,7 +187,6 @@ const NATIONAL_PLACEHOLDER_BY_ISO: Record<string, string> = {
         border-radius: 0.125rem;
         object-fit: cover;
         flex-shrink: 0;
-        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
       }
       .ui-phone__dial {
         font-size: 0.875rem;
@@ -264,7 +273,9 @@ export class InputPhoneComponent implements ControlValueAccessor, OnInit {
   }
 
   public flagUrl(iso: string): string {
-    return `https://flagcdn.com/24x18/${iso.toLowerCase()}.png`;
+    // Matches the location-country select in the catalog editor so flags
+    // look identical across every country picker in the app.
+    return `https://flagcdn.com/w40/${iso.toLowerCase()}.png`;
   }
 
   private emit(): void {
