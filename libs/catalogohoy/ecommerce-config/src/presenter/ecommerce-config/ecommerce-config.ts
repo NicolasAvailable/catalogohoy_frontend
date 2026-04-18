@@ -133,6 +133,7 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftShowDesignSection = signal(true);
   public readonly draftShowLocationSection = signal(true);
   public readonly draftShowPaymentMethodsSection = signal(true);
+  public readonly draftShowCategoriesSection = signal(true);
   public readonly draftSocialLinks = signal<SocialLinks>({ ...DEFAULT_SOCIAL_LINKS });
   public readonly draftTemplate = signal<CatalogTemplate>('banner-centered');
   public readonly draftCurrencySymbol = signal('$');
@@ -273,6 +274,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftShowDesignSection, prev?.showDesignSection ?? true, config.showDesignSection ?? true);
       syncField(this.draftShowLocationSection, prev?.showLocationSection ?? true, config.showLocationSection ?? true);
       syncField(this.draftShowPaymentMethodsSection, prev?.showPaymentMethodsSection ?? true, config.showPaymentMethodsSection ?? true);
+      syncField(this.draftShowCategoriesSection, prev?.showCategoriesSection ?? true, config.showCategoriesSection ?? true);
       syncField(this.draftTemplate, prev?.template ?? 'banner-centered' as CatalogTemplate, config.template ?? 'banner-centered' as CatalogTemplate);
       syncField(this.draftCurrencySymbol, prev?.currencySymbol ?? '$', config.currencySymbol ?? '$');
       syncField(this.draftShowReferencePrice, prev?.showReferencePrice ?? true, config.showReferencePrice ?? true);
@@ -286,6 +288,13 @@ export class EcommerceConfigComponent implements OnInit {
 
     // Send preview messages when drafts change
     effect(() => {
+      // Guard: don't broadcast until the config has loaded. Otherwise the
+      // first firings spread `logo: null`/`banner: null` into the iframe's
+      // override map and clobber the values the iframe loaded itself from
+      // the public RPC.
+      const config = this.configStore.config();
+      if (!config) return;
+
       const name = this.draftName();
       const themeColor = this.draftThemeColor();
       const showDesignSection = this.draftShowDesignSection();
@@ -304,17 +313,17 @@ export class EcommerceConfigComponent implements OnInit {
       const state = this.draftState();
       const city = this.draftCity();
       const showLocationSection = this.draftShowLocationSection();
-      const logo = this.configStore.config()?.logo ?? null;
-      const banner = this.configStore.config()?.banner ?? null;
+      const showCategoriesSection = this.draftShowCategoriesSection();
 
       const message = {
         type: 'PREVIEW_UPDATE' as const,
         payload: {
           name,
-          logo,
-          banner,
+          logo: config.logo,
+          banner: config.banner,
           themeColor,
           showDesignSection,
+          showCategoriesSection,
           socialLinks,
           template,
           currencySymbol,
@@ -534,6 +543,7 @@ export class EcommerceConfigComponent implements OnInit {
     if (this.draftShowDesignSection() !== (config.showDesignSection ?? true)) changes.showDesignSection = this.draftShowDesignSection();
     if (this.draftShowLocationSection() !== (config.showLocationSection ?? true)) changes.showLocationSection = this.draftShowLocationSection();
     if (this.draftShowPaymentMethodsSection() !== (config.showPaymentMethodsSection ?? true)) changes.showPaymentMethodsSection = this.draftShowPaymentMethodsSection();
+    if (this.draftShowCategoriesSection() !== (config.showCategoriesSection ?? true)) changes.showCategoriesSection = this.draftShowCategoriesSection();
     if (this.draftCurrencySymbol() !== (config.currencySymbol ?? '$')) changes.currencySymbol = this.draftCurrencySymbol();
     if (this.draftShowReferencePrice() !== (config.showReferencePrice ?? true)) changes.showReferencePrice = this.draftShowReferencePrice();
     if (this.draftShowLocalCurrencyPrice() !== (config.showLocalCurrencyPrice ?? true)) changes.showLocalCurrencyPrice = this.draftShowLocalCurrencyPrice();

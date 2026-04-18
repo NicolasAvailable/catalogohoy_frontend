@@ -13,21 +13,23 @@
         />
       }
     </div>
-    <div class="catalog__filters">
-      @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
-        <div class="catalog__category-skeleton">
-          @for (i of [1,2,3,4,5]; track i) {
-            <div class="catalog__category-pill-skeleton"></div>
-          }
-        </div>
-      } @else {
-        <lib-category-filter
-          [categories]="ecommerceStore.categories()"
-          [selectedCategoryId]="ecommerceStore.selectedCategoryId()"
-          (categorySelect)="onCategorySelect($event)"
-        />
-      }
-    </div>
+    @if (ecommerceStore.effectiveCatalogInfo()?.showCategoriesSection ?? true) {
+      <div class="catalog__filters">
+        @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
+          <div class="catalog__category-skeleton">
+            @for (i of [1,2,3,4,5]; track i) {
+              <div class="catalog__category-pill-skeleton"></div>
+            }
+          </div>
+        } @else {
+          <lib-category-filter
+            [categories]="ecommerceStore.categories()"
+            [selectedCategoryId]="ecommerceStore.selectedCategoryId()"
+            (categorySelect)="onCategorySelect($event)"
+          />
+        }
+      </div>
+    }
 
     <div class="catalog__actions">
       @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {

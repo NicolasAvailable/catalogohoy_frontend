@@ -391,6 +391,27 @@
         </div>
       </ui-card>
 
+      <!-- Card: Categorías (toggle-only) -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon categories-icon">
+              <ui-icon name="tag" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">Categorías</h2>
+              <small class="card-subtitle">
+                Muestra u oculta la barra de categorías en el catálogo.
+              </small>
+            </div>
+          </div>
+          <ui-toggle
+            [ngModel]="draftShowCategoriesSection()"
+            (ngModelChange)="draftShowCategoriesSection.set($event)"
+          ></ui-toggle>
+        </div>
+      </ui-card>
+
       <!-- Card 4: Ubicación -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">

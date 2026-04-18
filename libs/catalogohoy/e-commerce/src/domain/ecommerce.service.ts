@@ -33,6 +33,7 @@ export interface CatalogInfo {
   state: string | null;
   city: string | null;
   showLocationSection: boolean;
+  showCategoriesSection: boolean;
   currencyConfig: TenantCurrencyConfig | null;
 }
 

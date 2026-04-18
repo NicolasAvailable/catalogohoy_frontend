@@ -134,6 +134,7 @@ export class EcommerceService implements BaseEcommerceService {
       state: config?.state ?? null,
       city: config?.city ?? null,
       showLocationSection: config?.show_location_section ?? true,
+      showCategoriesSection: config?.show_categories_section ?? true,
       currencyConfig,
     };
 

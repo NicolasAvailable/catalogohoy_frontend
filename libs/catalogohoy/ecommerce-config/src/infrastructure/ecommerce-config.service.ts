@@ -31,7 +31,7 @@ export class EcommerceConfigService {
       const { data: config } = await this.client
         .from('tenant_ecommerce_config')
         .select(
-          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, social_links, template, whatsapp_order_message'
+          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message'
         )
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -67,6 +67,7 @@ export class EcommerceConfigService {
         showPaymentMethodsSection:
           config?.show_payment_methods_section ?? true,
         showLocationSection: config?.show_location_section ?? true,
+        showCategoriesSection: config?.show_categories_section ?? true,
         socialLinks: (config?.social_links as SocialLinks) ?? DEFAULT_SOCIAL_LINKS,
         template: (config?.template as CatalogTemplate) ?? 'banner-centered',
         whatsappOrderMessage: config?.whatsapp_order_message ?? null,
@@ -205,6 +206,8 @@ export class EcommerceConfigService {
           config.showPaymentMethodsSection;
       if (config.showLocationSection !== undefined)
         updateData['show_location_section'] = config.showLocationSection;
+      if (config.showCategoriesSection !== undefined)
+        updateData['show_categories_section'] = config.showCategoriesSection;
       if (config.socialLinks !== undefined)
         updateData['social_links'] = config.socialLinks;
       if (config.template !== undefined)

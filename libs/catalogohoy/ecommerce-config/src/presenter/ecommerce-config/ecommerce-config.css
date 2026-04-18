@@ -172,6 +172,11 @@
   color: #8b5cf6;
 }
 
+.categories-icon {
+  background: #ffe4e6;
+  color: #f43f5e;
+}
+
 .identity-icon {
   background: #e0f2fe;
   color: #0ea5e9;
@@ -197,6 +202,13 @@
   font-weight: 700;
   margin: 0;
   color: var(--text-color, #1a1a1a);
+}
+
+.card-subtitle {
+  display: block;
+  font-size: 0.8125rem;
+  color: #6b7280;
+  margin-top: 0.125rem;
 }
 
 .card-content {
@@ -863,6 +875,11 @@
   color: #8b5cf6;
 }
 
+.categories-icon {
+  background: #ffe4e6;
+  color: #f43f5e;
+}
+
 .identity-icon {
   background: #e0f2fe;
   color: #0ea5e9;
@@ -888,6 +905,13 @@
   font-weight: 700;
   margin: 0;
   color: var(--text-color, #1a1a1a);
+}
+
+.card-subtitle {
+  display: block;
+  font-size: 0.8125rem;
+  color: #6b7280;
+  margin-top: 0.125rem;
 }
 
 .card-content {

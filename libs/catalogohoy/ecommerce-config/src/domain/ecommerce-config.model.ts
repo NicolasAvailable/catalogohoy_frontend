@@ -137,6 +137,7 @@ export interface EcommerceConfig {
   showDesignSection: boolean;
   showPaymentMethodsSection: boolean;
   showLocationSection: boolean;
+  showCategoriesSection: boolean;
   socialLinks: SocialLinks;
   template: CatalogTemplate;
   whatsappOrderMessage: string | null;

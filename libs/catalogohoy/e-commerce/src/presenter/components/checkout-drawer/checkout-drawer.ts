@@ -8,7 +8,11 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MetaPixelService } from '@catalogohoy/core';
-import { WhatsappButton } from '@catalogohoy/ecommerce-config';
+import {
+  flagEmoji,
+  SUPPORTED_COUNTRIES,
+  WhatsappButton,
+} from '@catalogohoy/ecommerce-config';
 import { IconComponent } from '@ui';
 import { CartItem } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
@@ -179,17 +183,16 @@ export class CheckoutDrawer {
     return hasName && hasPhone && hasPayment;
   }
 
-  countryCodes = [
-    { code: '+57', flag: '🇨🇴' },
-    { code: '+58', flag: '🇻🇪' },
-    { code: '+1', flag: '🇺🇸' },
-    { code: '+52', flag: '🇲🇽' },
-    { code: '+34', flag: '🇪🇸' },
-    { code: '+54', flag: '🇦🇷' },
-    { code: '+56', flag: '🇨🇱' },
-    { code: '+51', flag: '🇵🇪' },
-    { code: '+593', flag: '🇪🇨' },
-  ];
+  // Matches the countries in the catalog editor's Ubicación select so the
+  // customer can pick any supported country. `iso` is the track key — some
+  // countries (US/CA, JM/PR/DO/BS/TT/BB) share the same dial code, so we
+  // can't track by `code` alone.
+  countryCodes = SUPPORTED_COUNTRIES.map((c) => ({
+    iso: c.code,
+    code: c.dialCode,
+    flag: flagEmoji(c.code),
+    label: c.label,
+  }));
 
   setCountryCode(code: string) {
     this.countryCode.set(code);

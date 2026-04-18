@@ -82,9 +82,9 @@
                   (ngModelChange)="setCountryCode($event)"
                   name="countryCode"
                 >
-                  @for (country of countryCodes; track country.code) {
+                  @for (country of countryCodes; track country.iso) {
                   <option [value]="country.code">
-                    {{ country.flag }} {{ country.code }}
+                    {{ country.flag }} {{ country.label }} ({{ country.code }})
                   </option>
                   }
                 </select>
