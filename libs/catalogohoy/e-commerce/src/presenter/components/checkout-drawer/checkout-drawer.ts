@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  HostListener,
   inject,
   signal,
 } from '@angular/core';
@@ -34,8 +35,16 @@ export class CheckoutDrawer {
   public readonly phone = signal('');
   public readonly comments = signal('');
   public readonly countryCode = signal('+58');
+  public readonly countryIso = signal('VE');
+  public readonly countryDropdownOpen = signal(false);
   public readonly selectedPaymentMethod = signal<string>('');
   public readonly pendingWhatsappUrl = signal<string | null>(null);
+
+  public readonly selectedCountry = computed(
+    () =>
+      this.countryCodes.find((c) => c.iso === this.countryIso()) ??
+      this.countryCodes[0]
+  );
 
   public readonly availablePaymentMethods = computed(() => {
     const info = this.ecommerceStore.effectiveCatalogInfo();
@@ -194,7 +203,23 @@ export class CheckoutDrawer {
     label: c.label,
   }));
 
-  setCountryCode(code: string) {
-    this.countryCode.set(code);
+  selectCountry(country: { iso: string; code: string }) {
+    this.countryIso.set(country.iso);
+    this.countryCode.set(country.code);
+    this.countryDropdownOpen.set(false);
+  }
+
+  toggleCountryDropdown(event: Event) {
+    event.stopPropagation();
+    this.countryDropdownOpen.update((v) => !v);
+  }
+
+  // Close the dropdown when the user clicks/touches anywhere outside.
+  // Angular's HostListener on `document:click` fires after the toggle button's
+  // own click (which stops propagation), so clicks on the trigger don't
+  // re-close what they just opened.
+  @HostListener('document:click')
+  closeCountryDropdown() {
+    if (this.countryDropdownOpen()) this.countryDropdownOpen.set(false);
   }
 }
