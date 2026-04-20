@@ -1,18 +1,10 @@
 <div class="category-filter">
-  <ui-button
-    (click)="onCategoryClick(null)"
-    label="Ver todos"
-    [severity]="isSelected(null) ? 'primary' : 'contrast'"
-    size="small"
-  />
-
   @for (category of categories(); track category.id) {
-  <ui-button
-    (click)="onCategoryClick(category.id)"
-    [label]="category.name"
-    [severity]="isSelected(category.id) ? 'primary' : 'contrast'"
-    size="small"
-  />
-
+    <ui-button
+      (click)="onCategoryClick(category)"
+      [label]="category.name"
+      [severity]="isSelected(category) ? 'primary' : 'contrast'"
+      size="small"
+    />
   }
 </div>

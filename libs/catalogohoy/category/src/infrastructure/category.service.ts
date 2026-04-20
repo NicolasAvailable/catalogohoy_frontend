@@ -77,6 +77,7 @@ export class CategoryService implements BaseCategoryService {
         position: entity.position,
         authUserId: entity.auth_user_id,
         createdAt: entity.created_at,
+        isViewAll: entity.is_view_all ?? false,
       })
     );
   }

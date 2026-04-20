@@ -40,6 +40,9 @@ export interface CatalogInfo {
 export interface Category {
   id: string;
   name: string;
+  /** The seeded default "Ver todos" row — clicking it clears the active
+   *  filter on the public catalog (acts as a show-all pill). */
+  isViewAll?: boolean;
 }
 
 export interface PaginatedProductList {

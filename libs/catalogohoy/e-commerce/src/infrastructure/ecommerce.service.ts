@@ -141,6 +141,7 @@ export class EcommerceService implements BaseEcommerceService {
     const categories: Category[] = (data.categories ?? []).map((cat: any) => ({
       id: String(cat.id),
       name: cat.name,
+      isViewAll: cat.is_view_all ?? false,
     }));
 
     return E.right({

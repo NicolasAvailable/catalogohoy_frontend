@@ -6,4 +6,5 @@ export interface CategoryEntity {
   position: number;
   auth_user_id: string;
   created_at: string;
+  is_view_all?: boolean;
 }
