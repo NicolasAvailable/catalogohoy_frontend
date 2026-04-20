@@ -11,6 +11,7 @@ import {
   SkeletonListComponent,
   TooltipDirective,
 } from '@ui';
+import { ToastService } from '@shared/infrastructure';
 import { PaginatorModule } from 'primeng/paginator';
 import { CategoryFacade } from '../../../application';
 import { Category, CategoryList } from '../../../domain';
@@ -42,6 +43,7 @@ export default class CategoryListComponent implements OnInit {
   public readonly categoryStore = inject(CategoryStore);
   public readonly categoryFacade = inject(CategoryFacade);
   public readonly categoryService = inject(CategoryService);
+  private readonly toastService = inject(ToastService);
   public readonly isCreating = signal(false);
   public readonly isSaving = signal(false);
   public readonly createControl = new FormControl('', [Validators.required]);
@@ -96,6 +98,16 @@ export default class CategoryListComponent implements OnInit {
   }
 
   public onDelete(category: Category) {
+    // The seeded "Ver todos" category acts as the public catalog's clear-filter
+    // pill. Removing it silently changes how customers navigate, so we block
+    // deletion — the user can still hide it via the visibility toggle if they
+    // don't want it on the public catalog.
+    if (category.isViewAll) {
+      this.toastService.error(
+        'Esta categoría no se puede eliminar. Si no quieres mostrarla en tu catálogo público, desactiva la visibilidad.' as any
+      );
+      return;
+    }
     this.selectedCategory.set(category);
     this.confirmDialog.warning();
   }
