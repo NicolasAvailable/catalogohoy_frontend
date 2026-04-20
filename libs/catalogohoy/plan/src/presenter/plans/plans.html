@@ -119,10 +119,12 @@
                 <ui-icon name="credit-card" styleClass="size-3.5" />
                 Tarjeta internacional
               </span>
-              <span class="badge badge--usd">
-                <ui-icon name="smartphone" styleClass="size-3.5" />
-                Pago móvil
-              </span>
+              @if (isVenezuela()) {
+                <span class="badge badge--usd">
+                  <ui-icon name="smartphone" styleClass="size-3.5" />
+                  Pago móvil
+                </span>
+              }
             </div>
           }
           @if (!plan.isFree) {

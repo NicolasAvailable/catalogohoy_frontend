@@ -18,6 +18,14 @@ import { IconComponent } from '@ui';
 import { CartItem } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 
+function isPagoMovil(name: string): boolean {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .includes('pago movil');
+}
+
 @Component({
   selector: 'lib-checkout-drawer',
   imports: [DecimalPipe, FormsModule, IconComponent],
@@ -50,7 +58,9 @@ export class CheckoutDrawer {
     const info = this.ecommerceStore.effectiveCatalogInfo();
     if (!info?.showPaymentMethodsSection || !info.paymentMethods?.length)
       return [];
-    return info.paymentMethods;
+    if (this.ecommerceStore.isVenezuela()) return info.paymentMethods;
+    // Pago móvil is a Venezuela-only payment rail — hide it for other countries.
+    return info.paymentMethods.filter((m) => !isPagoMovil(m.name));
   });
 
   onClose() {

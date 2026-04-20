@@ -154,16 +154,18 @@
             <ui-icon name="credit-card" styleClass="size-4 shrink-0" />
             Tarjeta internacional
           </button>
-          <button
-            class="payment-method-toggle__btn"
-            [class.payment-method-toggle__btn--active]="paymentMethod() === 'mobile'"
-            (click)="paymentMethod.set('mobile')"
-          >
-            <ui-icon name="smartphone" styleClass="size-4 shrink-0" />
-            Pago móvil
-          </button>
+          @if (isVenezuela()) {
+            <button
+              class="payment-method-toggle__btn"
+              [class.payment-method-toggle__btn--active]="paymentMethod() === 'mobile'"
+              (click)="paymentMethod.set('mobile')"
+            >
+              <ui-icon name="smartphone" styleClass="size-4 shrink-0" />
+              Pago móvil
+            </button>
+          }
         </div>
-        @if (paymentMethod() === 'mobile') {
+        @if (isVenezuela() && paymentMethod() === 'mobile') {
           <div class="ves-payment-note">
             <ui-icon name="info" styleClass="size-4 shrink-0 text-amber-500" />
             <span>El pago es por transferencia bancaria o Pago Móvil. Al confirmar te enviaremos al WhatsApp del administrador para coordinar el pago.</span>

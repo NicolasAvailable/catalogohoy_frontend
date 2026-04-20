@@ -169,6 +169,8 @@ export class Plans implements OnInit {
     () => this.currentPlanPosition() > 0
   );
 
+  public readonly isVenezuela = computed(() => this.tenantCurrency.isVenezuela());
+
   public readonly plans = computed<PlanDisplay[]>(() =>
     this.planStore
       .plans()
