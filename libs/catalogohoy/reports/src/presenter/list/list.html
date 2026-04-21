@@ -18,7 +18,7 @@
       icon="circle-plus"
       severity="primary"
       [fluid]="false"
-      [disabled]="limitReached()"
+      [disabled]="limitReached() || !canCreate()"
       (click)="goToCreate()"
     />
   </header>
@@ -96,7 +96,7 @@
             icon="sparkles"
             severity="primary"
             [fluid]="false"
-            [disabled]="limitReached()"
+            [disabled]="limitReached() || !canCreate()"
             (click)="goToCreate()"
           />
         </div>
@@ -133,14 +133,16 @@
                 [fluid]="false"
                 (click)="copyPublicLink($event, report)"
               />
-              <ui-button
-                icon="trash"
-                variant="outlined"
-                severity="danger"
-                size="small"
-                [fluid]="false"
-                (click)="onDelete($event, report)"
-              />
+              @if (canDelete()) {
+                <ui-button
+                  icon="trash"
+                  variant="outlined"
+                  severity="danger"
+                  size="small"
+                  [fluid]="false"
+                  (click)="onDelete($event, report)"
+                />
+              }
             </div>
           </div>
         }

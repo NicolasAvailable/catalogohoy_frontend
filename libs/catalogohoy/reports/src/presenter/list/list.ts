@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { PlanStore } from '@catalogohoy/plan';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
 import { ToastService } from '@shared/infrastructure';
 import {
@@ -47,8 +48,16 @@ export default class ReportListComponent implements OnInit {
   public readonly store = inject(ReportStore);
   private readonly tenantStore = inject(TenantStore);
   private readonly planStore = inject(PlanStore);
+  private readonly permissions = inject(TeamPermissionsStore);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+
+  public readonly canCreate = computed(
+    () => this.permissions.isOwner() || this.permissions.can()('reportes', 'create')
+  );
+  public readonly canDelete = computed(
+    () => this.permissions.isOwner() || this.permissions.can()('reportes', 'delete')
+  );
 
   public readonly selectedReport = signal<Report | null>(null);
 
@@ -78,6 +87,12 @@ export default class ReportListComponent implements OnInit {
   }
 
   goToCreate(): void {
+    if (!this.canCreate()) {
+      this.toast.error(
+        'No tienes permiso para generar reportes' as any
+      );
+      return;
+    }
     if (this.limitReached()) {
       this.toast.error(
         'Alcanzaste el límite de reportes de tu plan este mes. Mejora tu plan para generar más.' as any
@@ -104,6 +119,10 @@ export default class ReportListComponent implements OnInit {
 
   onDelete(event: Event, report: Report): void {
     event.stopPropagation();
+    if (!this.canDelete()) {
+      this.toast.error('No tienes permiso para eliminar reportes' as any);
+      return;
+    }
     this.selectedReport.set(report);
     this.confirmDialog.warning();
   }

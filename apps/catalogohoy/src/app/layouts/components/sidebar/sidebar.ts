@@ -71,6 +71,9 @@ export class Sidebar {
   public readonly canViewTeam = computed(
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'view')
   );
+  public readonly canViewReports = computed(
+    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('reportes', 'view')
+  );
 
   public readonly noPermissionTooltip = 'Habla con el dueño del catálogo para obtener acceso a este módulo';
   public readonly transitionOptions = '200ms cubic-bezier(0.86, 0, 0.07, 1)';

@@ -1,4 +1,5 @@
 import { Route } from '@angular/router';
+import { teamPermissionGuard } from '@catalogohoy/teams';
 
 export const REPORTS_ADMIN_ROUTES: Route[] = [
   {
@@ -7,6 +8,8 @@ export const REPORTS_ADMIN_ROUTES: Route[] = [
   },
   {
     path: 'new',
+    // Extra guard: only members with reportes:create can reach the form.
+    canActivate: [teamPermissionGuard('reportes', 'create')],
     loadComponent: () => import('./presenter/create/create'),
   },
   {

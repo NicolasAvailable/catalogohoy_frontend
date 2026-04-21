@@ -67,7 +67,7 @@ export const adminRoutes: Route[] = [
   },
   {
     path: 'reports',
-    canActivate: [teamPermissionGuard('analiticas', 'view')],
+    canActivate: [teamPermissionGuard('reportes', 'view')],
     loadChildren: () =>
       import('@catalogohoy/reports').then((m) => m.REPORTS_ADMIN_ROUTES),
   },
