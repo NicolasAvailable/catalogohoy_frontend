@@ -70,19 +70,31 @@ export class EcommerceService implements BaseEcommerceService {
         hours.is_open && currentTime >= openTime && currentTime <= closeTime;
     }
 
-    // Calcular tasa de cambio activa
-    let exchangeRate = 0;
+    // Calcular tasa de cambio activa.
+    //
+    // IMPORTANTE: el tipo de tasa activa y la custom_rate son PER-TENANT
+    // (se setean en "Tasas del día" → tabla tenant_currency_config). El RPC
+    // devuelve `exchange_rate.active_rate` desde la fila global singleton
+    // de `exchange_rates`, que NO es lo que el tenant eligió. Por eso
+    // leemos siempre desde `currency_config` (que sí viene per-tenant en
+    // la misma respuesta del RPC) y caemos al global solo como último
+    // recurso si el tenant aún no tiene config.
     const er = data.exchange_rate;
+    const cc = data.currency_config;
+    let exchangeRate = 0;
     if (er) {
+      const activeRate: string =
+        cc?.exchange_rate_type && cc.exchange_rate_type !== 'none'
+          ? cc.exchange_rate_type
+          : er.active_rate ?? 'bcv_usd';
       const rateMap: Record<string, number> = {
         bcv_usd: er.bcv_usd ?? 0,
         bcv_eur: er.bcv_eur ?? 0,
-        custom: er.custom_rate ?? 0,
+        custom: cc?.custom_rate ?? er.custom_rate ?? 0,
       };
-      exchangeRate = rateMap[er.active_rate] ?? 0;
+      exchangeRate = rateMap[activeRate] ?? 0;
     }
 
-    const cc = data.currency_config;
     const currencyConfig: TenantCurrencyConfig | null = cc
       ? {
           productCurrency: cc.product_currency ?? 'USD',
@@ -309,25 +321,42 @@ export class EcommerceService implements BaseEcommerceService {
     }
   }
 
-  public async getExchangeRate(): Promise<number> {
-    const { data, error } = await this.client
+  public async getExchangeRate(tenantId?: number | string): Promise<number> {
+    const { data: global, error } = await this.client
       .from('exchange_rates')
-      .select('bcv_usd, bcv_eur, custom_rate, active_rate')
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .single();
+      .select('bcv_usd, bcv_eur')
+      .eq('id', 1)
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error || !global) {
       return 0;
     }
 
+    // The active rate type and custom rate are per-tenant (set in
+    // Tasas del día). Without a tenantId we can't know the selection,
+    // so fall back to BCV USD to avoid silently using a stale global value.
+    let activeRate = 'bcv_usd';
+    let customRate = 0;
+    if (tenantId !== undefined) {
+      const { data: tenant } = await this.client
+        .from('tenant_currency_config')
+        .select('exchange_rate_type, custom_rate')
+        .eq('tenant_id', Number(tenantId))
+        .maybeSingle();
+
+      if (tenant?.exchange_rate_type) {
+        activeRate = tenant.exchange_rate_type;
+      }
+      customRate = tenant?.custom_rate ?? 0;
+    }
+
     const rateMap: Record<string, number> = {
-      bcv_usd: data.bcv_usd ?? 0,
-      bcv_eur: data.bcv_eur ?? 0,
-      custom: data.custom_rate ?? 0,
+      bcv_usd: global.bcv_usd ?? 0,
+      bcv_eur: global.bcv_eur ?? 0,
+      custom: customRate,
     };
 
-    return rateMap[data.active_rate] ?? 0;
+    return rateMap[activeRate] ?? 0;
   }
 
   public async createOrder(order: {
@@ -339,7 +368,7 @@ export class EcommerceService implements BaseEcommerceService {
     comments: string;
     payment_method?: string;
   }): Promise<E.Either<Error, void>> {
-    const exchangeRate = await this.getExchangeRate();
+    const exchangeRate = await this.getExchangeRate(order.tenant_id);
     const totalBs = order.total_usd * exchangeRate;
 
     const { error } = await this.client.from('orders').insert([
