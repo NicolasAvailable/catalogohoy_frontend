@@ -1,0 +1,136 @@
+<section
+  class="container flex flex-col flex-1 max-w-5xl mx-auto px-1 pt-4 overflow-hidden"
+>
+  <header class="flex justify-between items-center gap-2 pb-6">
+    <h1 class="text-2xl sm:text-4xl font-bold shrink truncate">Nuevo reporte</h1>
+    <div class="flex gap-2 items-center">
+      <ui-button
+        label="Volver"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        (click)="cancel()"
+        [disabled]="store.isGenerating()"
+      />
+      <ui-button
+        label="Generar reporte"
+        icon="sparkles"
+        severity="primary"
+        [fluid]="false"
+        (click)="submit()"
+        [disabled]="!canSubmit() || store.isGenerating()"
+      />
+    </div>
+  </header>
+
+  <div class="flex flex-col gap-3 flex-1 overflow-y-auto min-h-0 pb-4">
+    <ui-card>
+      <h2 class="report-create__section-title">Información básica</h2>
+      <div class="report-create__field">
+        <label for="title">Título</label>
+        <ui-input-text
+          [ngModel]="title()"
+          (ngModelChange)="title.set($event)"
+          placeholder="Reporte mensual del catálogo"
+          styleClass="w-full"
+        />
+      </div>
+    </ui-card>
+
+    <ui-card>
+      <h2 class="report-create__section-title">Periodo</h2>
+      <div class="report-create__presets">
+        @for (p of presets; track p.key) {
+          <button
+            type="button"
+            class="preset"
+            [class.preset--active]="preset() === p.key"
+            (click)="selectPreset(p.key)"
+          >
+            {{ p.label }}
+          </button>
+        }
+      </div>
+
+      @if (preset() === 'custom') {
+        <div class="report-create__custom-range">
+          <div class="report-create__field">
+            <label for="customStart">Desde</label>
+            <ui-datepicker
+              inputId="customStart"
+              placeholder="Selecciona una fecha"
+              dateFormat="dd/mm/yy"
+              mode="single"
+              [ngModel]="customStart()"
+              (ngModelChange)="customStart.set($event)"
+              styleClass="w-full border! border-grey-100! rounded-xl!"
+            />
+          </div>
+          <div class="report-create__field">
+            <label for="customEnd">Hasta</label>
+            <ui-datepicker
+              inputId="customEnd"
+              placeholder="Selecciona una fecha"
+              dateFormat="dd/mm/yy"
+              mode="single"
+              [ngModel]="customEnd()"
+              (ngModelChange)="customEnd.set($event)"
+              [minDate]="customStart()"
+              styleClass="w-full border! border-grey-100! rounded-xl!"
+            />
+          </div>
+        </div>
+      }
+    </ui-card>
+
+    <ui-card>
+      <h2 class="report-create__section-title">¿Qué incluir?</h2>
+      <p class="report-create__hint">
+        Seleccioná las métricas que querés que aparezcan en este reporte.
+      </p>
+
+      <ul class="report-create__metrics">
+        <li>
+          <div>
+            <strong>Órdenes</strong>
+            <small>Total de órdenes y distribución por estado</small>
+          </div>
+          <ui-toggle
+            [ngModel]="metrics().orders"
+            (ngModelChange)="toggleMetric('orders')"
+          />
+        </li>
+        <li>
+          <div>
+            <strong>Ventas</strong>
+            <small>Total del periodo y evolución día a día</small>
+          </div>
+          <ui-toggle
+            [ngModel]="metrics().sales"
+            (ngModelChange)="toggleMetric('sales')"
+          />
+        </li>
+        <li>
+          <div>
+            <strong>Productos más vendidos</strong>
+            <small>Top 10 por unidades e ingresos generados</small>
+          </div>
+          <ui-toggle
+            [ngModel]="metrics().topProducts"
+            (ngModelChange)="toggleMetric('topProducts')"
+          />
+        </li>
+        <li>
+          <div>
+            <strong>Mejores clientes</strong>
+            <small>Top 10 por gasto total</small>
+          </div>
+          <ui-toggle
+            [ngModel]="metrics().topCustomers"
+            (ngModelChange)="toggleMetric('topCustomers')"
+          />
+        </li>
+      </ul>
+    </ui-card>
+  </div>
+</section>

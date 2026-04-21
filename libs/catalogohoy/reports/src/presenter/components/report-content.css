@@ -1,0 +1,711 @@
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+  background: #ffffff;
+  color: #1f2937;
+  font-family: inherit;
+}
+
+/* ---------- Header ---------- */
+.report__header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.report__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.report__brand-logo {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04);
+  background: #f9fafb;
+}
+
+.report__brand-logo--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+.report__title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.report__brand-name {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0.125rem 0 0;
+}
+
+.report__meta {
+  text-align: right;
+  font-size: 0.875rem;
+}
+
+.report__period {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: #374151;
+  font-weight: 600;
+}
+
+.report__generated {
+  display: block;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+}
+
+/* ---------- KPI row (flat cards, no icon, no color block) ---------- */
+.report__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.875rem;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #ffffff;
+}
+
+.kpi__label {
+  font-size: 0.8125rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.kpi__value {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- Card ---------- */
+.report__card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  background: #ffffff;
+  page-break-inside: avoid;
+}
+
+.report__card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.report__card-header h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.report__card-sub {
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+.report__chart {
+  width: 100%;
+}
+
+.report__chart--tall   { height: 18rem; }
+.report__chart--square { height: 15rem; }
+.report__chart--short  { height: 13rem; }
+
+/* ---------- Apex area chart ---------- */
+.report__card--area {
+  padding: 0;
+  overflow: hidden;
+}
+
+.report__card--area > .report__card-header {
+  padding: 1.25rem 1.25rem 0;
+  margin-bottom: 0.75rem;
+}
+
+.report__area-chart {
+  width: 100%;
+  padding: 0 0.5rem 0.5rem;
+}
+
+.report__area-chart apx-chart {
+  display: block;
+  width: 100%;
+}
+
+/* ---------- Payment-method progress bars ---------- */
+.pm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pm-item__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.pm-item__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.pm-item__dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pm-item__title strong {
+  color: #0f172a;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* html2canvas clips tight single-line boxes at 2x scale — extra line-height
+   * and a 2px bottom pad keep descenders/caps inside the rasterized glyph. */
+  line-height: 1.4;
+  padding-bottom: 2px;
+}
+
+.pm-item__amount {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.pm-item__bar {
+  position: relative;
+  width: 100%;
+  height: 0.5rem;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.pm-item__bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+
+.pm-item__foot {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.pm-item__tag {
+  background: #eef2ff;
+  color: #4f46e5;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.report__split {
+  display: grid;
+  grid-template-columns: 15rem 1fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.report__split--wide {
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .report__split,
+  .report__split--wide {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Status bar chart ---------- */
+.status-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  /* Cap at ~28rem wide and center so a single bar doesn't stretch across
+   * the full card and two bars don't sit on opposite edges. */
+  max-width: 28rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.status-chart__bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2.5rem;
+  height: 12rem;
+  padding: 0 0.5rem;
+}
+
+.status-chart__col {
+  width: 3.5rem;
+  flex: 0 0 3.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  gap: 0.5rem;
+}
+
+.status-chart__value {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-chart__bar {
+  width: 100%;
+  border-radius: 0.5rem 0.5rem 0 0;
+  transition: height 0.3s ease;
+  min-height: 0.375rem;
+}
+
+.status-chart__labels {
+  display: flex;
+  justify-content: center;
+  gap: 2.5rem;
+  padding: 0 0.5rem;
+}
+
+.status-chart__label {
+  /* Slightly wider than the bar so longer status names ("Preparando", etc.)
+   * don't wrap when multiple pills are side by side. */
+  width: 5.5rem;
+  flex: 0 0 5.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  color: #6b7280;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.status-chart__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ---------- Status list ---------- */
+.report__status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.report__status-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+}
+
+.report__status-label {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #374151;
+  text-transform: capitalize;
+}
+
+.report__status-value {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.report__status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+/* ---------- Payment methods list ---------- */
+.report__pm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.report__pm-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+}
+
+.report__pm-rank {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6366f1;
+}
+
+.report__pm-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.report__pm-body strong {
+  display: block;
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report__pm-body small {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.report__pm-amount {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Products list ---------- */
+.report__products {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.report__products li {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #eef2ff;
+  background: #ffffff;
+  border-radius: 0.625rem;
+}
+
+.report__products-rank {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #eef2ff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+.report__products-photo {
+  width: 3rem;
+  height: 3rem;
+  flex-shrink: 0;
+  border-radius: 0.625rem;
+  object-fit: cover;
+  background: #f3f4f6;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+.report__products-photo--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-weight: 700;
+}
+
+.report__products-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.report__products-body strong {
+  display: block;
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
+  padding-bottom: 2px;
+}
+
+.report__products-body small {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.report__products-amount {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Customers list (mirrors the client-list look) ---------- */
+.customers {
+  display: flex;
+  flex-direction: column;
+}
+
+.customers__header,
+.customers__row {
+  display: grid;
+  grid-template-columns: 2.2fr 1.6fr 5rem 1.4fr;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.5rem;
+}
+
+.customers__header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.customers__row {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.customers__row:last-child {
+  border-bottom: 0;
+}
+
+.customers__col {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.customers__col--orders {
+  justify-content: center;
+}
+
+.customers__col--total {
+  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.125rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.customers__avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef2ff;
+  border-radius: 50%;
+  color: #4f46e5;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.customers__name {
+  font-weight: 600;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
+  padding-bottom: 2px;
+}
+
+.customers__phone {
+  color: #16a34a;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
+  padding-bottom: 2px;
+}
+
+.customers__phone--empty {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.customers__orders-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  padding: 0.125rem 0.5rem;
+  background: #eef2ff;
+  color: #4f46e5;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.customers__total-usd {
+  color: #4f46e5;
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+
+.customers__total-bs {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .customers__header {
+    display: none;
+  }
+  .customers__row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'name   total'
+      'phone  orders';
+    row-gap: 0.5rem;
+  }
+  .customers__col--name   { grid-area: name; }
+  .customers__col--phone  { grid-area: phone; font-size: 0.8125rem; }
+  .customers__col--orders { grid-area: orders; justify-content: flex-end; }
+  .customers__col--total  { grid-area: total; }
+}
+
+/* ---------- Table ---------- */
+.report__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.report__table th,
+.report__table td {
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.report__table th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #6b7280;
+  letter-spacing: 0.04em;
+}
+
+.report__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.report__table .right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.report__empty {
+  color: #9ca3af;
+  font-size: 0.875rem;
+  margin: 0;
+  padding: 1rem 0;
+  text-align: center;
+}
+
+.report__footer {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  text-align: center;
+}

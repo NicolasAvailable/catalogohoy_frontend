@@ -31,6 +31,7 @@
     "anchorme": "^3.0.8",
     "angularx-qrcode": "^20.0.0",
     "apexcharts": "^5.6.0",
+    "chart.js": "^4.5.1",
     "falso": "github:ngneat/falso",
     "jspdf": "^3.0.3",
     "lucide-angular": "^0.553.0",

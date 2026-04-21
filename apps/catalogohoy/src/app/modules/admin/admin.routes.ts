@@ -66,6 +66,12 @@ export const adminRoutes: Route[] = [
       import('@catalogohoy/analytics').then((m) => m.ANALYTICS_ROUTES),
   },
   {
+    path: 'reports',
+    canActivate: [teamPermissionGuard('analiticas', 'view')],
+    loadChildren: () =>
+      import('@catalogohoy/reports').then((m) => m.REPORTS_ADMIN_ROUTES),
+  },
+  {
     path: 'teams',
     // Same: free plan can see the list + history, but invite button is
     // disabled and empty state nudges them to upgrade.

@@ -1,5 +1,8 @@
 export interface PlanFeature {
   text: string;
+  /** When true the feature renders with an `x` (unsupported/absent).
+   *  Used for plan cards to show what a plan *doesn't* include. */
+  negative?: boolean;
 }
 
 export interface Plan {

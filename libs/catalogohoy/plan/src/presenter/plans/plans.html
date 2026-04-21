@@ -105,7 +105,12 @@
           </li>
           @for (feature of plan.features; track feature.text) {
           <li class="plan-card__feature">
-            <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
+            <ui-icon
+              [name]="feature.negative ? 'x' : 'check'"
+              [styleClass]="feature.negative
+                ? 'size-4 shrink-0 text-gray-300'
+                : 'size-4 shrink-0 text-green-500'"
+            />
             <span>{{ feature.text }}</span>
           </li>
           }

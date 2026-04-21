@@ -24,6 +24,11 @@ export const appRoutes: Route[] = [
       import('./modules/admin/admin.routes').then((m) => m.adminRoutes),
   },
   {
+    path: 'public/report',
+    loadChildren: () =>
+      import('@catalogohoy/reports').then((m) => m.REPORTS_PUBLIC_ROUTES),
+  },
+  {
     path: 'no-access',
     canActivate: [authenticationGuard],
     resolve: {

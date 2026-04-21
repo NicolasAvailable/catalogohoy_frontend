@@ -224,6 +224,29 @@
       }
     </li>
     <li
+      [routerLink]="canViewAnalytics() ? '/admin/reports' : null"
+      [routerLinkActive]="canViewAnalytics() ? 'bg-primary-50' : ''"
+      [routerLinkActiveOptions]="{exact: false}"
+      [class.opacity-50]="!canViewAnalytics()"
+      [class.cursor-not-allowed]="!canViewAnalytics()"
+      [class.cursor-pointer]="canViewAnalytics()"
+      [pTooltip]="!canViewAnalytics() ? noPermissionTooltip : ''"
+      tooltipPosition="right"
+      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+    >
+      <div class="flex items-center gap-2">
+        <ui-icon name="clipboard-list" size="16" />
+        <a class="font-base font-semibold text-grey-700 mt-0.5">Reportes</a>
+      </div>
+      @if (!canViewAnalytics()) {
+        <ui-icon name="lock" size="12" styleClass="text-grey-400" />
+      } @else {
+        <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
+          Nuevo
+        </span>
+      }
+    </li>
+    <li
       [routerLink]="canViewRates() ? '/admin/exchange-rates' : null"
       [routerLinkActive]="canViewRates() ? 'bg-primary-50' : ''"
       [routerLinkActiveOptions]="{exact: true}"
