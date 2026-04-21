@@ -1,23 +1,51 @@
 :host {
   display: block;
   min-width: 0;
+  width: 100%;
 }
 
 .category-filter {
-  display: flex;
+  display: block;
+  width: 100%;
+}
+
+/* Let PrimeNG's p-tablist handle its own overflow: when tabs don't fit it
+ * renders prev/next nav buttons automatically. Overriding overflow-x here
+ * would disable that behavior, so we only touch the visual theming. */
+:host ::ng-deep .category-filter .p-tablist {
+  background: transparent;
+}
+
+:host ::ng-deep .category-filter .p-tab {
+  font-weight: 600;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  /* Center the label horizontally and vertically inside its hit area */
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  justify-content: center;
+  text-align: center;
+  padding: 0.75rem 1rem;
 }
 
-.category-filter::-webkit-scrollbar {
-  display: none;
+/* Active-tab underline: thinner, rounded ends, and slightly narrower than
+ * the tab's full width. PrimeNG uses a couple of selectors depending on
+ * version — target them all so we don't break on upgrades. */
+/* The "active bar" in this PrimeNG version is actually the bottom border
+ * rendered directly on `.p-tab-active`. */
+:host ::ng-deep .category-filter .p-tab.p-tab-active {
+  border-bottom-width: 0.2rem !important; /* ~3px */
+  border-radius: 0.375rem 0.375rem 0 0 !important;
 }
 
-.category-filter ui-button {
-  flex-shrink: 0;
+/* PrimeNG ships a separate sliding indicator element that animates the
+ * underline from one tab to the next. It keeps its theme-default height
+ * during the transition, which produced a visible "jump" from thick to our
+ * thin border when switching tabs. Hide it entirely — the border-bottom on
+ * .p-tab-active is our single source of truth, no animation gymnastics. */
+:host ::ng-deep .category-filter .p-tab-active-bar,
+:host ::ng-deep .category-filter [data-p-active-bar='true'],
+:host ::ng-deep .category-filter .p-tablist-active-bar,
+:host ::ng-deep .category-filter .p-tablist-indicator {
+  display: none !important;
 }

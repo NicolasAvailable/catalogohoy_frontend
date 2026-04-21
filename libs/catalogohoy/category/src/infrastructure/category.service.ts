@@ -10,7 +10,7 @@ import {
   UpdateCategoryInput,
 } from '../domain';
 import { CategoryEntity } from './entities';
-import { CategoryListMapper } from './mappers';
+import { CategoryListMapper, CategoryMapper } from './mappers';
 
 @Injectable({
   providedIn: 'root',
@@ -119,7 +119,7 @@ export class CategoryService implements BaseCategoryService {
 
   public async create(
     input: CreateCategoryInput
-  ): Promise<E.Either<Error, void>> {
+  ): Promise<E.Either<Error, Category>> {
     const {
       data: { user },
     } = await this.client.auth.getUser();
@@ -141,7 +141,7 @@ export class CategoryService implements BaseCategoryService {
 
     const newPosition = (maxPosData?.position ?? -1) + 1;
 
-    const { error } = await this.client
+    const { data, error } = await this.client
       .from('categories')
       .insert({
         name: input.name,
@@ -151,12 +151,13 @@ export class CategoryService implements BaseCategoryService {
         auth_user_id: user.id,
         tenant_id: tenantId,
       })
-      .select('*');
+      .select('*')
+      .single();
 
     if (error) {
       return E.left(new Error(error.message));
     }
-    return E.right(undefined);
+    return E.right(CategoryMapper.toDomain(data as CategoryEntity));
   }
 
   public async update(

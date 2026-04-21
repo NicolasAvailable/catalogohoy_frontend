@@ -1,10 +1,17 @@
-<div class="category-filter">
-  @for (category of categories(); track category.id) {
-    <ui-button
-      (click)="onCategoryClick(category)"
-      [label]="category.name"
-      [severity]="isSelected(category) ? 'primary' : 'contrast'"
-      size="small"
-    />
-  }
-</div>
+<p-tabs
+  class="category-filter"
+  [scrollable]="true"
+  [value]="activeTab()"
+  (valueChange)="onTabChange($event)"
+>
+  <p-tablist>
+    @if (!hasViewAllCategory()) {
+      <p-tab [value]="allTabValue">Ver todos</p-tab>
+    }
+    @for (category of categories(); track category.id) {
+      <p-tab [value]="category.isViewAll ? allTabValue : category.id">
+        {{ category.name }}
+      </p-tab>
+    }
+  </p-tablist>
+</p-tabs>

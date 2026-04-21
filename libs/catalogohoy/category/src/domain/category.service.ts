@@ -15,7 +15,7 @@ export interface BaseCategoryService {
     pageSize?: number
   ): Promise<E.Either<Error, CategoryListPage>>;
   getById(id: string): Promise<E.Either<Error, Category>>;
-  create(input: CreateCategoryInput): Promise<E.Either<Error, void>>;
+  create(input: CreateCategoryInput): Promise<E.Either<Error, Category>>;
   update(input: UpdateCategoryInput): Promise<E.Either<Error, void>>;
   delete(id: string): Promise<E.Either<Error, void>>;
 }

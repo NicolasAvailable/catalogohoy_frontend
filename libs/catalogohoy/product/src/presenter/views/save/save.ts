@@ -158,14 +158,7 @@ export default class Save implements OnInit {
       isVisible: true,
     });
 
-    if (result.isRight()) {
-      // The store's save() triggers a list refresh but doesn't await it and
-      // doesn't return the created id. Force a refresh we *can* await and
-      // match the new row by name so we can pre-select it in the form.
-      await this.categoryStore.categoryList$();
-      const created = this.categoryStore
-        .categoryList()
-        .categories.find((c) => c.name === name);
+    result.mapRight((created) => {
       if (created) {
         const current = this.form.controls.categoryIds.value ?? [];
         this.form.controls.categoryIds.setValue([
@@ -175,7 +168,7 @@ export default class Save implements OnInit {
       }
       this.toastService.success('Categoría creada' as any);
       this.newCategoryName.set('');
-    }
+    });
     this.isCreatingCategory.set(false);
   }
 

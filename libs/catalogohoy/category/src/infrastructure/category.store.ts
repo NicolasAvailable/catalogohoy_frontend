@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
-import { CategoryList } from '../domain';
+import { Category, CategoryList } from '../domain';
 import { CategoryService } from './category.service';
 
 type CategoryState = {
@@ -57,15 +57,33 @@ export const CategoryStore = signalStore(
     }) {
       patchState(store, () => ({ isLoading: true }));
 
-      const result = input.id
-        ? await categoryService.update(input as any)
-        : await categoryService.create(input as any);
+      if (input.id) {
+        const result = await categoryService.update(input as any);
+        return result.mapRight(() => {
+          // Re-fetch using the current pagination state above so mutations
+          // don't accidentally load every category and break the paginator.
+          this.categoryList$();
+          return undefined as Category | undefined;
+        });
+      }
 
-      return result.mapRight(() => {
+      const result = await categoryService.create(input as any);
+      return result.mapRight((created) => {
+        // Insert the created row into the local list so consumers (e.g. the
+        // product form's category multi-select) can pre-select it before the
+        // paginated refresh completes.
+        const next = CategoryList.from([
+          ...store.categoryList().categories,
+          created,
+        ]);
+        patchState(store, () => ({
+          categoryList: next,
+          total: store.total() + 1,
+        }));
         // Re-fetch using the current pagination state above so mutations
         // don't accidentally load every category and break the paginator.
         this.categoryList$();
-        return;
+        return created as Category | undefined;
       });
     },
     set(categoryList: CategoryList) {
