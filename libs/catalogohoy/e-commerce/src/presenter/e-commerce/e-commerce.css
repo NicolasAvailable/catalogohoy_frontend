@@ -1,7 +1,12 @@
 .ecommerce {
   min-height: 100dvh;
-  max-width: 100dvw;
+  /* Cap the whole catalog shell (header + hero + content + footer) on
+   * desktop so the banner and other elements don't stretch too wide and
+   * break the layout. Below the cap it fills the viewport naturally. */
+  max-width: 1200px;
+  margin: 0 auto;
   overflow-x: clip;
+  background: #ffffff;
 }
 
 .ecommerce__content {
