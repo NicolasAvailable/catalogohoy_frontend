@@ -1,6 +1,7 @@
 import {
   Component,
   computed,
+  effect,
   inject,
   OnDestroy,
   OnInit,
@@ -12,7 +13,9 @@ import { Router, RouterLink } from '@angular/router';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { CategoryStore } from '@catalogohoy/category';
+import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
+import { TenantStore } from '@catalogohoy/tenant';
 import {
   ButtonComponent,
   CheckboxComponent,
@@ -69,6 +72,15 @@ export default class List implements OnInit, OnDestroy {
   public readonly productFacade = inject(ProductFacade);
   public readonly planStore = inject(PlanStore);
   public readonly categoryStore = inject(CategoryStore);
+  public readonly tenantCurrency = inject(TenantCurrencyStore);
+  private readonly tenantStore = inject(TenantStore);
+  // Venezuela exception: prices in the admin product list are maintained in
+  // USD even though the public catalog renders them in Bs. via the BCV rate.
+  // Force '$' here so the admin sees the actual stored value, not the
+  // computed local symbol.
+  public readonly cs = computed(() =>
+    this.tenantCurrency.isVenezuela() ? '$' : this.tenantCurrency.localSymbol() || '$'
+  );
   public readonly selectedProduct = signal<Product | null>(null);
   public readonly selectedIds = signal<Set<string>>(new Set());
   public readonly deleteMode = signal<'single' | 'bulk'>('single');
@@ -118,7 +130,26 @@ export default class List implements OnInit, OnDestroy {
 
   private searchSubscription?: Subscription;
 
+  private readonly clampPageFirstOnOverflow = effect(() => {
+    const total = this.filteredProducts().length;
+    const first = this.pageFirst();
+    const rows = this.pageRows();
+    if (total === 0) {
+      if (first !== 0) this.pageFirst.set(0);
+      return;
+    }
+    if (first >= total) {
+      const lastPageFirst = Math.floor((total - 1) / rows) * rows;
+      this.pageFirst.set(lastPageFirst);
+    }
+  });
+
   ngOnInit() {
+    // Prime tenant currency cache (localStorage → DB fallback)
+    this.tenantStore.getTenantIdAsync().then((tid) => {
+      if (tid) this.tenantCurrency.load(tid);
+    });
+
     this.productStore.productList$();
     this.planStore.loadTenantPlanUsage();
     this.categoryStore.categoryList$(1, 100);

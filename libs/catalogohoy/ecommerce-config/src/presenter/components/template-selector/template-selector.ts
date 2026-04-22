@@ -10,7 +10,7 @@ import { CATALOG_TEMPLATES, CatalogTemplate } from '../../../domain';
   styleUrl: './template-selector.css',
 })
 export class TemplateSelectorComponent {
-  readonly selected = input<CatalogTemplate>('classic');
+  readonly selected = input<CatalogTemplate>('banner-centered');
   readonly selectedChange = output<CatalogTemplate>();
 
   readonly templates = CATALOG_TEMPLATES;

@@ -51,6 +51,28 @@
   line-height: 1.4;
 }
 
+/* Location — own row above copyright */
+.catalog-footer__location-row {
+  display: flex;
+  justify-content: center;
+  padding: 0.875rem 2rem 0;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.catalog-footer__location {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: #9ca3af;
+}
+
+.catalog-footer__location svg {
+  flex-shrink: 0;
+}
+
 /* Social links */
 .catalog-footer__social {
   display: flex;

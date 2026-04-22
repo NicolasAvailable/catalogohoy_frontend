@@ -1,6 +1,7 @@
 import { CommonModule, DecimalPipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
 import {
@@ -34,6 +35,7 @@ type Currency = 'bs' | 'usd';
 export class Home implements OnInit {
   private readonly homeStore = inject(HomeStore);
   private readonly tenantStore = inject(TenantStore);
+  public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly permissionsStore = inject(TeamPermissionsStore);
 
   public readonly showDashboard = computed(() => {
@@ -50,11 +52,28 @@ export class Home implements OnInit {
   });
 
   public activeChartTab = signal<ChartTab>('ventas');
+  // For VE: user toggles between 'bs' and 'usd'. For non-VE: always 'usd'
+  // (prices are stored in USD internally; symbol comes from the tenant currency).
   public activeCurrency = signal<Currency>('bs');
 
-  public readonly currencyPrefix = computed(() =>
-    this.activeCurrency() === 'bs' ? 'Bs.' : '$'
-  );
+  constructor() {
+    // Auto-align the chart currency with the tenant country once it loads.
+    effect(() => {
+      if (this.tenantCurrency.isLoaded() && !this.tenantCurrency.isVenezuela()) {
+        this.activeCurrency.set('usd');
+      }
+    });
+  }
+
+  // Metrics + chart prefix:
+  //   VE     → 'Bs.' or '$' depending on chart toggle
+  //   non-VE → local symbol from TenantCurrencyStore (e.g. 'S/', 'Bs', '$')
+  public readonly currencyPrefix = computed(() => {
+    if (!this.tenantCurrency.isVenezuela()) {
+      return this.tenantCurrency.localSymbol();
+    }
+    return this.activeCurrency() === 'bs' ? 'Bs.' : '$';
+  });
 
   public readonly chartBars = computed(() => {
     const data = this.stats()?.weeklyData;
@@ -140,6 +159,9 @@ export class Home implements OnInit {
   ]);
 
   async ngOnInit(): Promise<void> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (tenantId) this.tenantCurrency.load(tenantId);
+
     if (this.permissionsStore.isLoaded()) {
       if (this.showDashboard()) {
         await this.homeStore.loadStats();

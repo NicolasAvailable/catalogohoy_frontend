@@ -5,3 +5,24 @@
 .p-select-clear-icon {
   inset-inline-end: 21% !important;
 }
+
+/* Match the placeholder color of ui-input-text (`--color-grey-200`) so
+   inputs and selects look consistent side-by-side in filter bars. */
+.p-select .p-select-label.p-placeholder {
+  color: var(--color-grey-200) !important;
+}
+
+/* Soft gray highlight for the currently-selected option inside the
+   dropdown panel, so users can see which value is active when re-opening
+   the select. PrimeNG's default doesn't distinguish it clearly. */
+.p-select-overlay .p-select-option.p-select-option-selected,
+.p-select-overlay .p-select-option[aria-selected="true"] {
+  background: var(--color-grey-25, #f8fafc) !important;
+  color: inherit !important;
+  font-weight: 600;
+}
+
+.p-select-overlay .p-select-option.p-select-option-selected:hover,
+.p-select-overlay .p-select-option[aria-selected="true"]:hover {
+  background: var(--color-grey-50, #f1f5f9) !important;
+}

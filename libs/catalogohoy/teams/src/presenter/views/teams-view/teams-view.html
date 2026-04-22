@@ -8,7 +8,14 @@
       </p>
     </div>
     @if (canInvite()) {
-      @if (teamFull()) {
+      @if (planStore.isFreePlan()) {
+        <ui-button
+          label="Invitar miembro"
+          icon="sparkles"
+          severity="primary"
+          [disabled]="true"
+        />
+      } @else if (teamFull()) {
         <ui-button
           label="Mejorar plan"
           icon="arrow-up-circle"
@@ -24,6 +31,10 @@
       }
     }
   </header>
+
+  <ui-tabs [headers]="tabHeaders" (valueChange)="switchTab($event)">
+    <!-- ═════════════ MEMBERS TAB ═════════════ -->
+    <ng-template tabPanel="members">
 
   @if (teamStore.isLoading()) {
     <div class="teams-view__section">
@@ -68,14 +79,25 @@
                 </div>
                 <div>
                   @if (teamStore.ownerName()) {
-                    <p class="teams-view__member-email">{{ teamStore.ownerName() }}</p>
+                    <p class="teams-view__member-email">
+                      {{ teamStore.ownerName() }}
+                      @if (isCurrentUser(teamStore.ownerEmail())) {
+                        <span class="text-xs font-semibold ml-1">(tú)</span>
+                      }
+                    </p>
                     <p class="teams-view__member-status">{{ teamStore.ownerEmail() }} · Administrador</p>
                   } @else {
-                    <p class="teams-view__member-email">{{ teamStore.ownerEmail() }}</p>
+                    <p class="teams-view__member-email">
+                      {{ teamStore.ownerEmail() }}
+                      @if (isCurrentUser(teamStore.ownerEmail())) {
+                        <span class="text-xs font-semibold ml-1">(tú)</span>
+                      }
+                    </p>
                     <p class="teams-view__member-status">Administrador</p>
                   }
                 </div>
               </div>
+              @if (permissionsStore.isOwner()) {
               <div class="teams-view__member-actions">
                 <div class="teams-view__permission-count">
                   <lucide-icon name="shield" [size]="13" />
@@ -83,6 +105,7 @@
                   <span class="teams-view__permission-count-badge">{{ totalPermissions }}/{{ totalPermissions }}</span>
                 </div>
               </div>
+              }
             </div>
           </div>
         }
@@ -109,10 +132,20 @@
                   </div>
                   <div>
                     @if (getMemberDisplayName(member)) {
-                      <p class="teams-view__member-email">{{ getMemberDisplayName(member) }}</p>
+                      <p class="teams-view__member-email">
+                        {{ getMemberDisplayName(member) }}
+                        @if (isCurrentUser(member.invitedEmail)) {
+                          <span class="text-xs font-semibold ml-1">(tú)</span>
+                        }
+                      </p>
                       <p class="teams-view__member-status">{{ member.invitedEmail }} · Miembro activo</p>
                     } @else {
-                      <p class="teams-view__member-email">{{ member.invitedEmail }}</p>
+                      <p class="teams-view__member-email">
+                        {{ member.invitedEmail }}
+                        @if (isCurrentUser(member.invitedEmail)) {
+                          <span class="text-xs font-semibold ml-1">(tú)</span>
+                        }
+                      </p>
                       <p class="teams-view__member-status">Miembro activo</p>
                     }
                   </div>
@@ -206,45 +239,238 @@
 
     <!-- Estado vacío -->
     @if (teamStore.members().length === 0) {
-      <div class="teams-view__empty">
-        <div class="teams-view__empty-icon-wrap">
-          <lucide-icon name="users" [size]="32" />
-        </div>
-        <div class="teams-view__empty-body">
-          <h2 class="teams-view__empty-title">Construye tu equipo</h2>
-          <p class="teams-view__empty-text">
-            Invita personas para que gestionen tu catálogo junto a ti. Asígnales permisos por módulo y controla exactamente qué pueden hacer.
-          </p>
-        </div>
-        <div class="teams-view__empty-features">
-          <div class="teams-view__empty-feature">
-            <lucide-icon name="shield-check" [size]="15" />
-            <span>Permisos granulares por módulo</span>
+      @if (planStore.isFreePlan()) {
+        <ui-premium-upgrade-prompt
+          icon="users-round"
+          title="Invita a tu equipo a gestionar el catálogo"
+          description="Mejora tu plan para invitar miembros, asignarles permisos por módulo y controlar qué puede hacer cada uno."
+        />
+      } @else {
+        <div class="teams-view__empty">
+          <div class="teams-view__empty-icon-wrap">
+            <lucide-icon name="users" [size]="32" />
           </div>
-          <div class="teams-view__empty-feature">
-            <lucide-icon name="mail" [size]="15" />
-            <span>Invitación por correo electrónico</span>
+          <div class="teams-view__empty-body">
+            <h2 class="teams-view__empty-title">Construye tu equipo</h2>
+            <p class="teams-view__empty-text">
+              Invita personas para que gestionen tu catálogo junto a ti. Asígnales permisos por módulo y controla exactamente qué pueden hacer.
+            </p>
           </div>
-          <div class="teams-view__empty-feature">
-            <lucide-icon name="users-round" [size]="15" />
-            <span>Hasta {{ planStore.maxTeamMembers() }} miembros en tu plan</span>
+          <div class="teams-view__empty-features">
+            <div class="teams-view__empty-feature">
+              <lucide-icon name="shield-check" [size]="15" />
+              <span>Permisos granulares por módulo</span>
+            </div>
+            <div class="teams-view__empty-feature">
+              <lucide-icon name="mail" [size]="15" />
+              <span>Invitación por correo electrónico</span>
+            </div>
+            <div class="teams-view__empty-feature">
+              <lucide-icon name="users-round" [size]="15" />
+              <span>Hasta {{ planStore.maxTeamMembers() }} miembros en tu plan</span>
+            </div>
           </div>
+          @if (teamStore.canInviteMore() && canInvite()) {
+            <ui-button
+              label="Invitar primer miembro"
+              icon="user-plus"
+              [fluid]="true"
+              (click)="openInviteDialog()"
+            />
+          }
         </div>
-        @if (teamStore.canInviteMore() && canInvite()) {
-          <ui-button
-            label="Invitar primer miembro"
-            icon="user-plus"
-            [fluid]="true"
-            (click)="openInviteDialog()"
-          />
-        }
-      </div>
+      }
     }
   }
 
   @if (teamStore.error()) {
     <p class="teams-view__error">{{ teamStore.error() }}</p>
   }
+
+    </ng-template>
+
+    <!-- ═════════════ HISTORY TAB ═════════════ -->
+    <ng-template tabPanel="history">
+    @if (historyLoading()) {
+      <div class="flex flex-col gap-4 py-8">
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+          <div class="flex items-start gap-4 animate-pulse">
+            <p-skeleton shape="circle" size="2.25rem" />
+            <div class="flex-1 flex flex-col gap-1.5">
+              <p-skeleton width="70%" height="0.75rem" borderRadius="9999px" />
+              <p-skeleton width="40%" height="0.625rem" borderRadius="9999px" />
+            </div>
+          </div>
+        }
+      </div>
+    } @else if (historyEntries().length === 0) {
+      <div class="flex flex-col items-center justify-center py-16 text-center gap-4">
+        <div class="w-16 h-16 bg-grey-50 rounded-full flex items-center justify-center text-grey-300">
+          <lucide-icon name="clock" [size]="28" />
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-grey-700">Sin actividad registrada</h3>
+          <p class="text-sm text-grey-400 mt-1">Las acciones de los miembros del equipo aparecerán aquí.</p>
+        </div>
+      </div>
+    } @else {
+      <div class="flex flex-col gap-3">
+        @for (entry of historyEntries(); track entry.id) {
+          <div class="bg-white border border-grey-100 rounded-xl px-4 py-3.5 transition-colors hover:border-grey-200">
+            <!-- Clickable header -->
+            <button
+              type="button"
+              class="w-full flex items-start gap-4 text-left cursor-pointer group"
+              (click)="toggleExpanded(entry)"
+            >
+              <!-- Avatar -->
+              <div class="w-9 h-9 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center text-sm font-bold shrink-0">
+                {{ getMemberInitial(entry.userName ?? entry.userEmail) }}
+              </div>
+              <!-- Content -->
+              <div class="flex-1 min-w-0">
+                <p class="text-sm text-grey-800">
+                  <span class="font-semibold">{{ entry.userName ?? entry.userEmail }}</span>
+                  {{ getActionLabel(entry.action) }}
+                  @if (entry.entityName) {
+                    <span class="font-medium">"{{ entry.entityName }}"</span>
+                  }
+                </p>
+                <!-- Diffs -->
+                @if (entry.changes.length > 0) {
+                  <div class="mt-2 flex flex-col gap-1">
+                    @for (change of entry.changes; track change.field) {
+                      <div class="text-xs text-grey-500 flex items-center gap-1.5 flex-wrap">
+                        <span class="font-medium text-grey-600">{{ getFieldLabel(change.field) }}:</span>
+                        <span class="line-through text-red-400">{{ formatValue(change.from) }}</span>
+                        <lucide-icon name="arrow-right" [size]="11" class="text-grey-300" />
+                        <span class="text-green-600 font-medium">{{ formatValue(change.to) }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+                <!-- Timestamp -->
+                <p class="text-xs text-grey-300 mt-1.5 flex items-center gap-1.5">
+                  <ui-icon [name]="getEntityIcon(entry.entityType)" size="12" styleClass="text-grey-300" />
+                  {{ timeAgo(entry.createdAt) }}
+                </p>
+              </div>
+              <!-- Chevron -->
+              <lucide-icon
+                [name]="isExpanded(entry.id) ? 'chevron-up' : 'chevron-down'"
+                [size]="16"
+                class="text-grey-300 group-hover:text-grey-500 shrink-0 mt-2"
+              />
+            </button>
+
+            <!-- Expanded detail -->
+            @if (isExpanded(entry.id)) {
+              <div class="mt-3 ml-13 rounded-lg bg-grey-25 border border-grey-50 px-8 py-6 text-sm">
+                @if (isCacheLoading(entry.id)) {
+                  <p class="text-grey-400 flex items-center gap-2">
+                    <lucide-icon name="loader-circle" [size]="14" class="animate-spin" />
+                    Cargando detalle...
+                  </p>
+                } @else if (isCacheMissing(entry.id)) {
+                  <p class="text-grey-400 italic">
+                    El elemento ya no existe. Último nombre registrado: <strong>{{ entry.entityName ?? '—' }}</strong>
+                  </p>
+                } @else if (entry.entityType === 'product' && getCachedProduct(entry.id); as product) {
+                  <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3">
+                    <span class="text-grey-500 font-medium">Nombre</span>
+                    <span class="text-grey-800">{{ product.name }}</span>
+
+                    @if (product.description) {
+                      <span class="text-grey-500 font-medium">Descripción</span>
+                      <span class="text-grey-800">{{ product.description }}</span>
+                    }
+
+                    <span class="text-grey-500 font-medium">Precio</span>
+                    <span class="text-grey-800">${{ product.price }}</span>
+
+                    @if (product.pricePromotional) {
+                      <span class="text-grey-500 font-medium">Precio promocional</span>
+                      <span class="text-grey-800">${{ product.pricePromotional }}</span>
+                    }
+
+                    <span class="text-grey-500 font-medium">Stock</span>
+                    <span class="text-grey-800">{{ product.stock ?? 'Sin límite' }}</span>
+
+                    @if (product.sku) {
+                      <span class="text-grey-500 font-medium">SKU</span>
+                      <span class="text-grey-800">{{ product.sku }}</span>
+                    }
+
+                    @if (product.isWholesale) {
+                      <span class="text-grey-500 font-medium">Venta al mayor</span>
+                      <span class="text-grey-800">Sí ({{ product.wholesaleTiers.length }} escalas)</span>
+                    }
+
+                    <span class="text-grey-500 font-medium">Agotado</span>
+                    <span class="text-grey-800">{{ product.isSoldOut ? 'Sí' : 'No' }}</span>
+
+                    <span class="text-grey-500 font-medium">Oculto</span>
+                    <span class="text-grey-800">{{ product.isHidden ? 'Sí' : 'No' }}</span>
+                  </div>
+                } @else if (entry.entityType === 'order' && getCachedOrder(entry.id); as order) {
+                  <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3">
+                    <span class="text-grey-500 font-medium">Cliente</span>
+                    <span class="text-grey-800">{{ order.name }}</span>
+
+                    @if (order.phone) {
+                      <span class="text-grey-500 font-medium">Teléfono</span>
+                      <span class="text-grey-800">{{ order.phone }}</span>
+                    }
+
+                    <span class="text-grey-500 font-medium">Estado</span>
+                    <span class="text-grey-800">{{ order.status }}</span>
+
+                    <span class="text-grey-500 font-medium">Total USD</span>
+                    <span class="text-grey-800">${{ order.totalUsd }}</span>
+
+                    @if (order.totalBs) {
+                      <span class="text-grey-500 font-medium">Total Bs</span>
+                      <span class="text-grey-800">Bs. {{ order.totalBs }}</span>
+                    }
+
+                    <span class="text-grey-500 font-medium">Fecha de entrega</span>
+                    <span class="text-grey-800">{{ order.deliveryDate }}</span>
+
+                    @if (order.comments) {
+                      <span class="text-grey-500 font-medium">Comentarios</span>
+                      <span class="text-grey-800">{{ order.comments }}</span>
+                    }
+
+                    <span class="text-grey-500 font-medium">Productos</span>
+                    <ul class="list-disc list-inside text-grey-800">
+                      @for (item of order.products; track $index) {
+                        <li>{{ item.quantity }}x {{ item.name }} — ${{ item.price }}</li>
+                      }
+                    </ul>
+                  </div>
+                } @else {
+                  <p class="text-grey-400 italic">Sin detalle adicional para este tipo de acción.</p>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Pagination -->
+      @if (historyTotalCount() > historyPageSize()) {
+        <p-paginator
+          [first]="(historyPage() - 1) * historyPageSize()"
+          [rows]="historyPageSize()"
+          [totalRecords]="historyTotalCount()"
+          [rowsPerPageOptions]="[20, 50]"
+          (onPageChange)="onHistoryPageChange($event)"
+        />
+      }
+    }
+    </ng-template>
+  </ui-tabs>
+
 </section>
 
 <lib-invite-member-dialog (invited)="teamStore.load()" />

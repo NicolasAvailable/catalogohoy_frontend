@@ -75,19 +75,46 @@
               Celular<span class="checkout-drawer__required">*</span>
             </label>
             <div class="checkout-drawer__phone-input">
-              <div class="checkout-drawer__country-select">
-                <select
-                  class="checkout-drawer__country-dropdown"
-                  [ngModel]="countryCode()"
-                  (ngModelChange)="setCountryCode($event)"
-                  name="countryCode"
+              <div
+                class="checkout-drawer__country-select"
+                [class.checkout-drawer__country-select--open]="countryDropdownOpen()"
+              >
+                <button
+                  type="button"
+                  class="checkout-drawer__country-trigger"
+                  (click)="toggleCountryDropdown($event)"
+                  [attr.aria-expanded]="countryDropdownOpen()"
+                  aria-haspopup="listbox"
                 >
-                  @for (country of countryCodes; track country.code) {
-                  <option [value]="country.code">
-                    {{ country.flag }} {{ country.code }}
-                  </option>
-                  }
-                </select>
+                  <span class="checkout-drawer__country-flag">{{ selectedCountry().flag }}</span>
+                  <span class="checkout-drawer__country-code">{{ selectedCountry().code }}</span>
+                  <ui-icon name="chevronDown" styleClass="size-3.5 text-grey-400" />
+                </button>
+
+                @if (countryDropdownOpen()) {
+                  <ul
+                    class="checkout-drawer__country-list"
+                    role="listbox"
+                    (click)="$event.stopPropagation()"
+                  >
+                    @for (country of countryCodes; track country.iso) {
+                      <li>
+                        <button
+                          type="button"
+                          class="checkout-drawer__country-option"
+                          [class.checkout-drawer__country-option--active]="country.iso === countryIso()"
+                          (click)="selectCountry(country)"
+                          role="option"
+                          [attr.aria-selected]="country.iso === countryIso()"
+                        >
+                          <span class="checkout-drawer__country-flag">{{ country.flag }}</span>
+                          <span class="checkout-drawer__country-name">{{ country.label }}</span>
+                          <span class="checkout-drawer__country-dial">{{ country.code }}</span>
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                }
               </div>
               <input
                 type="tel"
@@ -164,7 +191,7 @@
               <div class="checkout-drawer__submit-price">
                 <span>
                   {{ cs() }}{{ cartStore.totalPrice() | number:'1.2-2' }}
-                  @if (ecommerceStore.exchangeRate() > 0) {
+                  @if (ecommerceStore.isVenezuela() && ecommerceStore.exchangeRate() > 0) {
                   <small class="checkout-drawer__submit-bs">Bs. {{ cartStore.totalPrice() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
                   }
                 </span>

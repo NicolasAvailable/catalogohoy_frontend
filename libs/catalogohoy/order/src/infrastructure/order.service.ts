@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
+import { ActivityLogService } from '@catalogohoy/teams';
 import { E } from '@shared/domain';
 import { Order, OrderItem, OrderMapper, OrderStatus } from '../domain';
 
@@ -28,6 +29,8 @@ export interface CreateOrderInput {
   totalUsd: number;
   totalBs: number;
   tenantId: number;
+  /** ISO date "YYYY-MM-DD". If omitted, the DB defaults to CURRENT_DATE. */
+  deliveryDate?: string;
 }
 
 export interface UpdateOrderInput extends CreateOrderInput {
@@ -39,15 +42,32 @@ export interface UpdateOrderInput extends CreateOrderInput {
 })
 export class OrderService {
   private readonly client = SupabaseClientProvider.getInstance();
+  private readonly activityLog = inject(ActivityLogService);
 
   async getOrdersByTenant(
     tenantId: number,
-    options?: { date?: Date; search?: string }
-  ): Promise<E.Either<Error, Order[]>> {
+    options?: {
+      date?: Date;
+      search?: string;
+      /** Filter by status ('all' = no filter). */
+      status?: OrderStatus | 'all';
+      /** 1-based page index. */
+      page?: number;
+      /** How many rows per page. When omitted, no range is applied (all). */
+      pageSize?: number;
+      /** 'date_desc' | 'date_asc' | 'total_desc' | 'total_asc'. */
+      orderBy?: 'date_desc' | 'date_asc' | 'total_desc' | 'total_asc';
+    }
+  ): Promise<E.Either<Error, { orders: Order[]; totalCount: number }>> {
     let query = this.client
       .from('orders')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('tenant_id', tenantId);
+
+    // Filter by status
+    if (options?.status && options.status !== 'all') {
+      query = query.eq('status', options.status);
+    }
 
     // Filter by date if provided
     if (options?.date) {
@@ -67,15 +87,54 @@ export class OrderService {
       query = query.ilike('name', `%${options.search.trim()}%`);
     }
 
-    const { data, error } = await query.order('created_at', {
-      ascending: false,
-    });
+    // Ordering
+    switch (options?.orderBy) {
+      case 'date_asc':
+        query = query.order('created_at', { ascending: true });
+        break;
+      case 'total_desc':
+        query = query.order('total_usd', { ascending: false });
+        break;
+      case 'total_asc':
+        query = query.order('total_usd', { ascending: true });
+        break;
+      case 'date_desc':
+      default:
+        query = query.order('created_at', { ascending: false });
+    }
+
+    // Server-side pagination — avoid dragging every row over the wire.
+    if (options?.pageSize) {
+      const page = options.page && options.page > 0 ? options.page : 1;
+      const from = (page - 1) * options.pageSize;
+      const to = from + options.pageSize - 1;
+      query = query.range(from, to);
+    }
+
+    const { data, error, count } = await query;
 
     if (error) {
       return E.left(new Error(error.message));
     }
 
-    return E.right(OrderMapper.toDomainList(data || []));
+    return E.right({
+      orders: OrderMapper.toDomainList(data || []),
+      totalCount: count ?? 0,
+    });
+  }
+
+  /** Count-only query. Ignores all filters — used for the "total in general"
+   *  label shown in the orders list footer. */
+  async countOrdersByTenant(
+    tenantId: number
+  ): Promise<E.Either<Error, number>> {
+    const { count, error } = await this.client
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId);
+
+    if (error) return E.left(new Error(error.message));
+    return E.right(count ?? 0);
   }
 
   async getOrderById(
@@ -97,18 +156,21 @@ export class OrderService {
   }
 
   async createOrder(input: CreateOrderInput): Promise<E.Either<Error, Order>> {
+    const payload: Record<string, unknown> = {
+      name: input.name,
+      phone: input.phone,
+      comments: input.comments,
+      status: input.status,
+      products: input.products,
+      total_usd: input.totalUsd,
+      total_bs: input.totalBs,
+      tenant_id: input.tenantId,
+    };
+    if (input.deliveryDate) payload['delivery_date'] = input.deliveryDate;
+
     const { data, error } = await this.client
       .from('orders')
-      .insert({
-        name: input.name,
-        phone: input.phone,
-        comments: input.comments,
-        status: input.status,
-        products: input.products,
-        total_usd: input.totalUsd,
-        total_bs: input.totalBs,
-        tenant_id: input.tenantId,
-      })
+      .insert(payload)
       .select()
       .single();
 
@@ -116,21 +178,38 @@ export class OrderService {
       return E.left(new Error(error.message));
     }
 
+    this.activityLog.log({
+      action: 'order.create',
+      entityType: 'order',
+      entityId: data.id,
+      entityName: `Orden #${data.id} — ${input.name}`,
+    });
+
     return E.right(OrderMapper.toDomain(data));
   }
 
   async updateOrder(input: UpdateOrderInput): Promise<E.Either<Error, Order>> {
+    // Snapshot before for diff
+    const { data: before } = await this.client
+      .from('orders')
+      .select('name, status, delivery_date')
+      .eq('id', input.id)
+      .single();
+
+    const patch: Record<string, unknown> = {
+      name: input.name,
+      phone: input.phone,
+      comments: input.comments,
+      status: input.status,
+      products: input.products,
+      total_usd: input.totalUsd,
+      total_bs: input.totalBs,
+    };
+    if (input.deliveryDate) patch['delivery_date'] = input.deliveryDate;
+
     const { data, error } = await this.client
       .from('orders')
-      .update({
-        name: input.name,
-        phone: input.phone,
-        comments: input.comments,
-        status: input.status,
-        products: input.products,
-        total_usd: input.totalUsd,
-        total_bs: input.totalBs,
-      })
+      .update(patch)
       .eq('id', input.id)
       .eq('tenant_id', input.tenantId)
       .select()
@@ -138,6 +217,22 @@ export class OrderService {
 
     if (error) {
       return E.left(new Error(error.message));
+    }
+
+    if (before) {
+      const changes = this.activityLog.diff(
+        { name: before.name, status: before.status, deliveryDate: before.delivery_date },
+        { name: input.name, status: input.status, deliveryDate: input.deliveryDate }
+      );
+      if (changes.length > 0) {
+        this.activityLog.log({
+          action: 'order.update',
+          entityType: 'order',
+          entityId: input.id,
+          entityName: `Orden #${input.id} — ${input.name}`,
+          changes,
+        });
+      }
     }
 
     return E.right(OrderMapper.toDomain(data));
@@ -183,6 +278,14 @@ export class OrderService {
     if (oldStatus === 'cancelled' && newStatus !== 'cancelled') {
       await this.deductStock(products);
     }
+
+    this.activityLog.log({
+      action: 'order.status',
+      entityType: 'order',
+      entityId: id,
+      entityName: `Orden #${id} — ${order.name}`,
+      changes: [{ field: 'status', from: oldStatus, to: newStatus }],
+    });
 
     return E.right(OrderMapper.toDomain(data));
   }

@@ -50,12 +50,19 @@
       <!-- Filter Tabs -->
       <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide">
         @for (tab of filterTabs; track tab.value) {
-        <ui-button
+        <button
+          type="button"
           (click)="selectFilter(tab.value)"
-          [label]="tab.label"
-          [severity]="selectedFilter() === tab.value ? 'primary' : 'contrast'"
-          size="small"
-        />
+          [class]="'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer whitespace-nowrap ' +
+            (selectedFilter() === tab.value
+              ? 'bg-primary-500 text-white border border-primary-500'
+              : 'bg-white text-grey-700 border border-grey-200 hover:bg-grey-50')"
+        >
+          @if (tab.dotClass) {
+            <span [class]="'w-1.5 h-1.5 rounded-full shrink-0 ' + tab.dotClass"></span>
+          }
+          {{ tab.label }}
+        </button>
         }
         <div class="w-px h-6 bg-grey-100 mx-1"></div>
         <!-- Order Select -->
@@ -96,7 +103,7 @@
             mode="single"
             size="small"
             placeholder="Seleccionar fecha"
-            styleClass="w-40 border! border-grey-100! rounded-xl!"
+            styleClass="w-40 order-filter-datepicker"
           />
         </div>
       </div>
@@ -159,10 +166,11 @@
                 }
               </ul>
             </div>
-            <div><span class="text-grey-800 font-bold">Total: </span><span class="font-bold text-primary-600">${{ order.totalUsd | number:'1.2-2' }}</span></div>
-            @if (order.totalBs) {
+            <div><span class="text-grey-800 font-bold">Total: </span><span class="font-bold text-primary-600">{{ cs() }}{{ order.totalUsd | number:'1.2-2' }}</span></div>
+            @if (tenantCurrency.isVenezuela() && order.totalBs) {
             <div><span class="text-grey-800 font-bold">Total Bs: </span><span class="font-bold text-primary-600">Bs. {{ order.totalBs | number:'1.2-2' }}</span></div>
             }
+            <div><span class="text-grey-800 font-bold">Entrega: </span><span class="text-grey-700">{{ order.deliveryDate | date: 'dd/MM/yyyy' }}</span></div>
             <span class="text-grey-300">{{ order.createdAt | date: 'dd/MM/yy hh:mm a' }}</span>
           </div>
           <!-- Actions -->
@@ -170,6 +178,13 @@
             <ui-button
               (click)="toggleExpand(order.id)"
               [icon]="expandedOrderId() === order.id ? 'chevron-up' : 'chevron-down'"
+              variant="text"
+              severity="contrast"
+              size="small"
+            />
+            <ui-button
+              (click)="downloadPdf(order)"
+              icon="download"
               variant="text"
               severity="contrast"
               size="small"
@@ -210,10 +225,10 @@
             }
             <span class="flex-1 text-xs font-medium text-grey-800 truncate">{{ item.name }}</span>
             <span class="text-xs text-grey-400">x{{ item.quantity }}</span>
-            <span class="text-xs font-bold text-primary-600">${{ item.total | number:'1.2-2' }}</span>
+            <span class="text-xs font-bold text-primary-600">{{ cs() }}{{ item.total | number:'1.2-2' }}</span>
           </div>
           }
-          @if (order.totalBs) {
+          @if (tenantCurrency.isVenezuela() && order.totalBs) {
           <div class="text-xs text-grey-500">Total Bs: {{ order.totalBs | number:'1.2-2' }}</div>
           }
           @if (order.paymentMethod) {
@@ -264,8 +279,11 @@
             </th>
             <th class="px-6 py-3 border-b border-grey-50">WhatsApp</th>
             <th class="px-6 py-3 border-b border-grey-50">Fecha de creación</th>
-            <th class="px-6 py-3 border-b border-grey-50">Total USD</th>
+            <th class="px-6 py-3 border-b border-grey-50">Fecha de entrega</th>
+            <th class="px-6 py-3 border-b border-grey-50">Total</th>
+            @if (tenantCurrency.isVenezuela()) {
             <th class="px-6 py-3 border-b border-grey-50">Total Bs</th>
+            }
             <th class="px-6 py-3 border-b border-grey-50 text-right">
               Acciones
             </th>
@@ -311,7 +329,7 @@
               </div>
             </td>
           </tr>
-          } } @else { @for (order of filteredOrders(); track order.id) {
+          } } @else { @for (order of paginatedOrders(); track order.id) {
           <tr class="hover:bg-grey-25 transition-colors group">
             <td class="px-6 py-3.5 font-medium text-grey-300">
               #{{ order.id }}
@@ -370,12 +388,17 @@
             <td class="px-6 py-3.5 text-grey-500">
               {{ order.createdAt | date: 'dd/MM/yyyy hh:mm a' }}
             </td>
-            <td class="px-6 py-3.5 text-sm font-bold text-primary-600">
-              ${{ order.totalUsd | number:'1.2-2' }}
+            <td class="px-6 py-3.5 text-grey-700 font-medium">
+              {{ order.deliveryDate | date: 'dd/MM/yyyy' }}
             </td>
+            <td class="px-6 py-3.5 text-sm font-bold text-primary-600">
+              {{ cs() }}{{ order.totalUsd | number:'1.2-2' }}
+            </td>
+            @if (tenantCurrency.isVenezuela()) {
             <td class="px-6 py-3.5 text-sm font-bold text-grey-700">
               Bs. {{ order.totalBs | number:'1.2-2' }}
             </td>
+            }
             <td class="px-6 py-3.5">
               <div class="flex items-center justify-end gap-2">
                 <ui-button
@@ -385,6 +408,15 @@
                   severity="contrast"
                   size="small"
                   [tooltip]="expandedOrderId() === order.id ? 'Ocultar detalle' : 'Ver detalle'"
+                  tooltipPosition="bottom"
+                />
+                <ui-button
+                  (click)="downloadPdf(order)"
+                  icon="download"
+                  variant="outlined"
+                  severity="contrast"
+                  size="small"
+                  tooltip="Descargar PDF"
                   tooltipPosition="bottom"
                 />
                 @if (canEditOrder()) {
@@ -438,8 +470,8 @@
                       <span class="font-semibold text-grey-800 text-sm">{{ item.name }}</span>
                     </div>
                     <span class="text-sm text-grey-400 shrink-0">x{{ item.quantity }}</span>
-                    <span class="text-sm font-medium text-grey-700 shrink-0">${{ item.price | number:'1.2-2' }}</span>
-                    <span class="text-sm font-bold text-primary-600 shrink-0">${{ item.total | number:'1.2-2' }}</span>
+                    <span class="text-sm font-medium text-grey-700 shrink-0">{{ cs() }}{{ item.price | number:'1.2-2' }}</span>
+                    <span class="text-sm font-bold text-primary-600 shrink-0">{{ cs() }}{{ item.total | number:'1.2-2' }}</span>
                   </div>
                   }
                 </div>
@@ -487,45 +519,21 @@
       </table>
     </div>
 
-    <!-- Pagination Footer -->
+    <!-- Pagination footer — count on the left, controls on the right -->
     <div
-      class="p-4 bg-grey-25 border-t border-grey-50 flex items-center justify-between"
+      class="p-4 bg-grey-25 border-t border-grey-50 flex items-center justify-between gap-2 flex-wrap"
     >
       <span class="text-xs text-grey-400 font-medium">
-        Mostrando {{ filteredOrders().length }} de {{
-        orderStore.orderList().items.length }} órdenes
+        Mostrando {{ paginatedOrders().length }} · Total: {{ orderStore.grandTotalCount() }} órdenes
       </span>
-      <div class="flex items-center gap-1">
-        <button
-          class="p-1 text-grey-300 hover:text-primary-500 disabled:opacity-30 transition-colors"
-          disabled
-        >
-          <ui-icon name="chevrons-left" styleClass="size-4" />
-        </button>
-        <button
-          class="p-1 text-grey-300 hover:text-primary-500 disabled:opacity-30 transition-colors"
-          disabled
-        >
-          <ui-icon name="chevron-left" styleClass="size-4" />
-        </button>
-        <button
-          class="w-7 h-7 flex items-center justify-center rounded bg-primary-50 text-primary-500 text-xs font-bold"
-        >
-          1
-        </button>
-        <button
-          class="p-1 text-grey-300 hover:text-primary-500 disabled:opacity-30 transition-colors"
-          disabled
-        >
-          <ui-icon name="chevron-right" styleClass="size-4" />
-        </button>
-        <button
-          class="p-1 text-grey-300 hover:text-primary-500 disabled:opacity-30 transition-colors"
-          disabled
-        >
-          <ui-icon name="chevrons-right" styleClass="size-4" />
-        </button>
-      </div>
+      <p-paginator
+        [first]="pageFirst()"
+        [rows]="pageRows()"
+        [totalRecords]="orderStore.totalCount()"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        (onPageChange)="onPageChange($event)"
+        styleClass="order-paginator"
+      />
     </div>
   </div>
 
@@ -544,7 +552,7 @@
           Ventas hoy
         </p>
         <p class="text-xl font-bold text-grey-800">
-          ${{ getTodaySales() | number:'1.2-2' }}
+          {{ cs() }}{{ getTodaySales() | number:'1.2-2' }}
         </p>
       </div>
     </div>

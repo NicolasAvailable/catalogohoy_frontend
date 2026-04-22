@@ -16,13 +16,15 @@
         <ui-icon name="package" styleClass="size-10" />
       </div>
       }
-      @if (isOutOfStock()) {
-      <div class="product-card__sold-out-overlay">
-        <span class="product-card__sold-out-badge">Agotado</span>
+      @if (isWholesale() || isOutOfStock()) {
+      <div class="product-card__tags">
+        @if (isWholesale()) {
+        <span class="product-card__wholesale-tag">Al mayor</span>
+        }
+        @if (isOutOfStock()) {
+        <span class="product-card__sold-out-tag">Agotado</span>
+        }
       </div>
-      }
-      @if (isWholesale()) {
-      <span class="product-card__wholesale-tag">Al mayor</span>
       }
     </div>
   </button>
@@ -48,16 +50,20 @@
         }
       </div>
       } @else if (product().pricePromotional > 0) {
+      @if (showReferencePrice()) {
       <span class="product-card__price-original">{{ cs() }}{{ product().price }}</span>
       <span class="product-card__price-promo"
         >{{ cs() }}{{ product().pricePromotional }}</span
       >
-      @if (ecommerceStore.exchangeRate() > 0) {
+      }
+      @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
       <span class="product-card__price-bs">Bs. {{ product().pricePromotional * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
       }
       } @else {
+      @if (showReferencePrice()) {
       <span class="product-card__price-current">{{ cs() }}{{ product().price }}</span>
-      @if (ecommerceStore.exchangeRate() > 0) {
+      }
+      @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
       <span class="product-card__price-bs">Bs. {{ product().price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
       }
       }

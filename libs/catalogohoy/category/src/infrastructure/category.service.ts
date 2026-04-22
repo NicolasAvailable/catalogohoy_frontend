@@ -5,12 +5,12 @@ import { E } from '@shared/domain';
 import {
   BaseCategoryService,
   Category,
-  CategoryList,
+  CategoryListPage,
   CreateCategoryInput,
   UpdateCategoryInput,
 } from '../domain';
 import { CategoryEntity } from './entities';
-import { CategoryListMapper } from './mappers';
+import { CategoryListMapper, CategoryMapper } from './mappers';
 
 @Injectable({
   providedIn: 'root',
@@ -22,15 +22,18 @@ export class CategoryService implements BaseCategoryService {
   public async getAll(
     page?: number,
     pageSize?: number
-  ): Promise<E.Either<Error, CategoryList>> {
+  ): Promise<E.Either<Error, CategoryListPage>> {
     const tenantId = await this.tenantStore.getTenantIdAsync();
     if (!tenantId) {
       return E.left(new Error('No tenant found'));
     }
 
+    // Request `count: 'exact'` so we get the total number of categories
+    // for this tenant alongside the paginated rows — needed by the
+    // paginator UI to compute totalRecords / page count.
     let query = this.client
       .from('categories')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('tenant_id', tenantId)
       .order('position', { ascending: true });
 
@@ -40,12 +43,16 @@ export class CategoryService implements BaseCategoryService {
       query = query.range(from, to);
     }
 
-    const { data, error } = await query;
+    const { data, count, error } = await query;
 
     if (error) {
       return E.left(new Error(error.message));
     }
-    return E.right(CategoryListMapper.toDomain(data as CategoryEntity[]));
+
+    return E.right({
+      list: CategoryListMapper.toDomain(data as CategoryEntity[]),
+      total: count ?? 0,
+    });
   }
 
   public async getById(id: string): Promise<E.Either<Error, Category>> {
@@ -70,6 +77,7 @@ export class CategoryService implements BaseCategoryService {
         position: entity.position,
         authUserId: entity.auth_user_id,
         createdAt: entity.created_at,
+        isViewAll: entity.is_view_all ?? false,
       })
     );
   }
@@ -111,7 +119,7 @@ export class CategoryService implements BaseCategoryService {
 
   public async create(
     input: CreateCategoryInput
-  ): Promise<E.Either<Error, void>> {
+  ): Promise<E.Either<Error, Category>> {
     const {
       data: { user },
     } = await this.client.auth.getUser();
@@ -133,7 +141,7 @@ export class CategoryService implements BaseCategoryService {
 
     const newPosition = (maxPosData?.position ?? -1) + 1;
 
-    const { error } = await this.client
+    const { data, error } = await this.client
       .from('categories')
       .insert({
         name: input.name,
@@ -143,12 +151,13 @@ export class CategoryService implements BaseCategoryService {
         auth_user_id: user.id,
         tenant_id: tenantId,
       })
-      .select('*');
+      .select('*')
+      .single();
 
     if (error) {
       return E.left(new Error(error.message));
     }
-    return E.right(undefined);
+    return E.right(CategoryMapper.toDomain(data as CategoryEntity));
   }
 
   public async update(
@@ -183,9 +192,70 @@ export class CategoryService implements BaseCategoryService {
   }
 
   public async updatePositions(
-    categories: Category[]
+    categories: Category[],
+    offset = 0
   ): Promise<E.Either<Error, void>> {
+    // `offset` is the global index of the first item in the current page,
+    // so when reordering page 2 (offset=10) the items get positions
+    // 10, 11, 12, … instead of 0, 1, 2, … which would clobber page 1.
     const updates = categories.map((cat, index) =>
+      this.client
+        .from('categories')
+        .update({ position: offset + index })
+        .eq('id', cat.id)
+    );
+
+    await Promise.all(updates);
+    return E.right(undefined);
+  }
+
+  /**
+   * Moves a single category to an arbitrary global position (1-based).
+   * Loads the full ordered list, splices the moved item, and rewrites
+   * every position so the ordering stays contiguous across pages.
+   */
+  public async moveCategoryToPosition(
+    categoryId: number | string,
+    newPosition: number
+  ): Promise<E.Either<Error, void>> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) {
+      return E.left(new Error('No tenant found'));
+    }
+
+    const { data, error } = await this.client
+      .from('categories')
+      .select('id, position')
+      .eq('tenant_id', tenantId)
+      .order('position', { ascending: true });
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    const all = (data ?? []) as { id: number; position: number }[];
+    if (all.length === 0) {
+      return E.right(undefined);
+    }
+
+    const numericId = Number(categoryId);
+    const currentIndex = all.findIndex((c) => c.id === numericId);
+    if (currentIndex === -1) {
+      return E.left(new Error('Category not found'));
+    }
+
+    const targetIndex = Math.max(
+      0,
+      Math.min(all.length - 1, Math.floor(newPosition) - 1)
+    );
+    if (currentIndex === targetIndex) {
+      return E.right(undefined);
+    }
+
+    const [moved] = all.splice(currentIndex, 1);
+    all.splice(targetIndex, 0, moved);
+
+    const updates = all.map((cat, index) =>
       this.client
         .from('categories')
         .update({ position: index })

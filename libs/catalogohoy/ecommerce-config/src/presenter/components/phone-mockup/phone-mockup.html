@@ -1,5 +1,5 @@
 @if (isOverlay()) {
-<div class="overlay-backdrop" (click)="close.emit()">
+<div class="overlay-backdrop" [class.overlay-hidden]="hidden()" (click)="close.emit()">
   <div class="overlay-container" (click)="$event.stopPropagation()">
     <div class="overlay-header">
       <div class="overlay-title">

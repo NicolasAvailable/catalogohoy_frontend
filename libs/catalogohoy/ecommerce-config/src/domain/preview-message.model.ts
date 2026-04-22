@@ -8,6 +8,7 @@ export interface PreviewMessage {
     banner: string | null;
     themeColor: string;
     showDesignSection: boolean;
+    showCategoriesSection: boolean;
     socialLinks: SocialLinks;
     template: CatalogTemplate;
     currencySymbol: string;

@@ -211,11 +211,34 @@
         <a class="font-base font-semibold text-grey-700 mt-0.5">Analíticas</a>
       </div>
       @if (analyticsLocked()) {
-        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-600 text-[10px] font-semibold leading-none">
-          <ui-icon name="crown" size="10" styleClass="text-amber-500" />
+        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none">
+          <ui-icon name="crown" size="10" styleClass="text-indigo-500" />
           Pro
         </span>
       } @else if (!canViewAnalytics()) {
+        <ui-icon name="lock" size="12" styleClass="text-grey-400" />
+      } @else {
+        <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
+          Nuevo
+        </span>
+      }
+    </li>
+    <li
+      [routerLink]="canViewReports() ? '/admin/reports' : null"
+      [routerLinkActive]="canViewReports() ? 'bg-primary-50' : ''"
+      [routerLinkActiveOptions]="{exact: false}"
+      [class.opacity-50]="!canViewReports()"
+      [class.cursor-not-allowed]="!canViewReports()"
+      [class.cursor-pointer]="canViewReports()"
+      [pTooltip]="!canViewReports() ? noPermissionTooltip : ''"
+      tooltipPosition="right"
+      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+    >
+      <div class="flex items-center gap-2">
+        <ui-icon name="clipboard-list" size="16" />
+        <a class="font-base font-semibold text-grey-700 mt-0.5">Reportes</a>
+      </div>
+      @if (!canViewReports()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
       } @else {
         <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
@@ -258,8 +281,8 @@
         <a class="font-base font-semibold text-grey-700 mt-0.5">Equipo</a>
       </div>
       @if (teamsLocked()) {
-        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-600 text-[10px] font-semibold leading-none">
-          <ui-icon name="crown" size="10" styleClass="text-amber-500" />
+        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none">
+          <ui-icon name="crown" size="10" styleClass="text-indigo-500" />
           Pro
         </span>
       } @else if (!canViewTeam()) {

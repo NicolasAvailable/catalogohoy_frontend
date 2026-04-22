@@ -126,13 +126,73 @@ export interface EcommerceConfig {
   isVisible: boolean;
   currency: string;
   currencySymbol: string;
+  showReferencePrice: boolean;
+  showLocalCurrencyPrice: boolean;
   themeColor: string;
   paymentMethods: PaymentMethod[];
+  country: string | null;
+  countryCode: string | null;
   state: string | null;
   city: string | null;
   showDesignSection: boolean;
   showPaymentMethodsSection: boolean;
   showLocationSection: boolean;
+  showCategoriesSection: boolean;
   socialLinks: SocialLinks;
   template: CatalogTemplate;
+  whatsappOrderMessage: string | null;
 }
+
+export type ExchangeRateType = 'none' | 'bcv_usd' | 'bcv_eur' | 'custom';
+
+export interface TenantCurrencyConfig {
+  productCurrency: string;
+  displayCurrency: string;
+  exchangeRateType: ExchangeRateType;
+  customRate: number | null;
+  showDualCurrency: boolean;
+  currencySymbol: string;
+  decimalSeparator: string;
+  thousandSeparator: string;
+}
+
+export const DEFAULT_CURRENCY_CONFIG: TenantCurrencyConfig = {
+  productCurrency: 'USD',
+  displayCurrency: 'USD',
+  exchangeRateType: 'none',
+  customRate: null,
+  showDualCurrency: false,
+  currencySymbol: '$',
+  decimalSeparator: ',',
+  thousandSeparator: '.',
+};
+
+/**
+ * Default WhatsApp message template.
+ * Variables: {nombre}, {telefono}, {productos}, {total}, {totalBs},
+ *            {comentarios}, {metodoPago}
+ */
+export const DEFAULT_WHATSAPP_ORDER_MESSAGE =
+  `¡Hola! Me gustaría hacer un pedido:\n\n` +
+  `*Nombre:* {nombre}\n` +
+  `*Teléfono:* {telefono}\n\n` +
+  `*Productos:*\n{productos}\n\n` +
+  `*Total:* {total}{totalBs}\n\n` +
+  `{comentarios}{metodoPago}`;
+
+export const WHATSAPP_MESSAGE_VARIABLES = [
+  { key: '{nombre}', label: 'Nombre del cliente' },
+  { key: '{telefono}', label: 'Teléfono del cliente' },
+  { key: '{productos}', label: 'Lista de productos' },
+  { key: '{total}', label: 'Total del pedido' },
+  { key: '{totalBs}', label: 'Total en bolívares' },
+  { key: '{comentarios}', label: 'Comentarios del cliente' },
+  { key: '{metodoPago}', label: 'Método de pago' },
+];
+
+/**
+ * Practical character limit for the raw message template.
+ * wa.me URLs URL-encode the message — mobile browsers may truncate
+ * URLs beyond ~2000-3000 encoded chars, so ~1000 raw chars is safe.
+ */
+export const WHATSAPP_MESSAGE_MAX_LENGTH = 1000;

@@ -1,0 +1,268 @@
+<article class="report">
+  <!-- White-label header -->
+  <header class="report__header">
+    <div class="report__brand">
+      @if (branding().logo) {
+        <img class="report__brand-logo" [src]="branding().logo" [alt]="branding().name" />
+      } @else {
+        <div class="report__brand-logo report__brand-logo--placeholder">
+          {{ branding().name.charAt(0) }}
+        </div>
+      }
+      <div>
+        <h1 class="report__title">{{ title() }}</h1>
+        <p class="report__brand-name">{{ branding().name }}</p>
+      </div>
+    </div>
+    <div class="report__meta">
+      <div class="report__period">
+        <ui-icon name="clock" styleClass="size-4 text-grey-400" />
+        <span>
+          {{ periodStart() | date:'d MMM y':'':'es-ES' }}
+          –
+          {{ periodEnd()   | date:'d MMM y':'':'es-ES' }}
+        </span>
+      </div>
+      @if (createdAt()) {
+        <small class="report__generated">
+          Generado {{ createdAt() | date:'d MMM y, HH:mm':'':'es-ES' }}
+        </small>
+      }
+    </div>
+  </header>
+
+  <!-- KPI row — flat cards. VE tenants get both USD and Bs totals. -->
+  <section class="report__kpis">
+    @if (metrics().orders) {
+      <div class="kpi">
+        <span class="kpi__label">Total de pedidos</span>
+        <span class="kpi__value">{{ snapshot().orders.total }}</span>
+      </div>
+    }
+
+    @if (metrics().sales) {
+      @if (isVenezuela()) {
+        <div class="kpi">
+          <span class="kpi__label">Ventas en USD</span>
+          <span class="kpi__value">
+            ${{ snapshot().sales.total | number:'1.2-2' }}
+          </span>
+        </div>
+        <div class="kpi">
+          <span class="kpi__label">Ventas en Bs</span>
+          <span class="kpi__value">
+            Bs.{{ snapshot().sales.totalBs | number:'1.2-2' }}
+          </span>
+        </div>
+      } @else {
+        <div class="kpi">
+          <span class="kpi__label">Ventas en el periodo</span>
+          <span class="kpi__value">
+            {{ branding().currencySymbol }}{{ snapshot().sales.total | number:'1.2-2' }}
+          </span>
+        </div>
+      }
+      <div class="kpi">
+        <span class="kpi__label">Ticket promedio</span>
+        <span class="kpi__value">
+          ${{ snapshot().sales.avgTicket | number:'1.2-2' }}
+        </span>
+      </div>
+    }
+  </section>
+
+  <!-- Sales evolution — Apex area sparkline -->
+  @if (metrics().sales) {
+    <section class="report__card report__card--area">
+      <header class="report__card-header">
+        <div>
+          <h2>Evolución de ventas</h2>
+          <span class="report__card-sub">
+            Total ${{ snapshot().sales.total | number:'1.2-2' }}
+            @if (isVenezuela()) {
+              · Bs.{{ snapshot().sales.totalBs | number:'1.2-2' }}
+            }
+          </span>
+        </div>
+      </header>
+      @if (snapshot().sales.byDay.length > 0) {
+        <div class="report__area-chart">
+          <apx-chart
+            [chart]="salesAreaOptions().chart!"
+            [colors]="salesAreaOptions().colors!"
+            [dataLabels]="salesAreaOptions().dataLabels!"
+            [fill]="salesAreaOptions().fill!"
+            [grid]="salesAreaOptions().grid!"
+            [series]="salesAreaOptions().series!"
+            [stroke]="salesAreaOptions().stroke!"
+            [tooltip]="salesAreaOptions().tooltip!"
+            [xaxis]="salesAreaOptions().xaxis!"
+            [yaxis]="salesAreaOptions().yaxis!"
+            [markers]="salesAreaOptions().markers!"
+          ></apx-chart>
+        </div>
+      } @else {
+        <p class="report__empty">Sin ventas registradas en este periodo.</p>
+      }
+    </section>
+  }
+
+  <!-- Payment methods — Fuse-style progress bars -->
+  @if (paymentMethods().length > 0) {
+    <section class="report__card">
+      <header class="report__card-header">
+        <h2>Métodos de pago</h2>
+        <span class="report__card-sub">
+          {{ paymentMethods().length }} {{ paymentMethods().length === 1 ? 'método' : 'métodos' }} usados
+        </span>
+      </header>
+
+      <ul class="pm-list">
+        @for (m of paymentMethods(); track m.method; let i = $index) {
+          <li class="pm-item">
+            <div class="pm-item__head">
+              <div class="pm-item__title">
+                <span class="pm-item__dot" [style.background]="m.color"></span>
+                <strong>{{ m.method }}</strong>
+              </div>
+              <span class="pm-item__amount">
+                ${{ m.totalRevenue | number:'1.2-2' }}
+              </span>
+            </div>
+            <div class="pm-item__bar">
+              <div
+                class="pm-item__bar-fill"
+                [style.width.%]="m.share"
+                [style.background]="m.color"
+              ></div>
+            </div>
+            <div class="pm-item__foot">
+              <span>{{ m.ordersCount }} {{ m.ordersCount === 1 ? 'orden' : 'órdenes' }}</span>
+              @if ($first) {
+                <span class="pm-item__tag">Más usado</span>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <!-- Orders by status — vertical bars (one per status, status-colored) -->
+  @if (metrics().orders && snapshot().orders.total > 0) {
+    <section class="report__card">
+      <header class="report__card-header">
+        <h2>Órdenes por estado</h2>
+        <span class="report__card-sub">{{ snapshot().orders.total }} órdenes</span>
+      </header>
+
+      <div class="status-chart">
+        <!-- Bars -->
+        <div class="status-chart__bars">
+          @for (bar of statusBars(); track bar.key) {
+            <div class="status-chart__col">
+              <span class="status-chart__value">{{ bar.value }}</span>
+              <div
+                class="status-chart__bar"
+                [style.height.%]="bar.height"
+                [style.background]="bar.color"
+              ></div>
+            </div>
+          }
+        </div>
+        <!-- Labels -->
+        <div class="status-chart__labels">
+          @for (bar of statusBars(); track bar.key) {
+            <div class="status-chart__label">
+              <span class="status-chart__dot" [style.background]="bar.color"></span>
+              <span>{{ bar.label }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- Top products -->
+  @if (metrics().topProducts && snapshot().topProducts.length > 0) {
+    <section class="report__card">
+      <header class="report__card-header">
+        <h2>Top 10 productos más vendidos</h2>
+      </header>
+      <ul class="report__products">
+        @for (p of snapshot().topProducts; track p.productId; let i = $index) {
+          <li>
+            <span class="report__products-rank">{{ i + 1 }}</span>
+            @if (p.photo) {
+              <img class="report__products-photo" [src]="p.photo" [alt]="p.name" />
+            } @else {
+              <div class="report__products-photo report__products-photo--empty">
+                {{ p.name.charAt(0) }}
+              </div>
+            }
+            <div class="report__products-body">
+              <strong>{{ p.name }}</strong>
+              <small>{{ p.quantity }} unidades</small>
+            </div>
+            <span class="report__products-amount">
+              ${{ p.revenue | number:'1.2-2' }}
+            </span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <!-- Top customers -->
+  @if (metrics().topCustomers && snapshot().topCustomers.length > 0) {
+    <section class="report__card">
+      <header class="report__card-header">
+        <h2>Top 10 clientes</h2>
+      </header>
+      <div class="customers">
+        <div class="customers__header">
+          <span class="customers__col customers__col--name">Cliente</span>
+          <span class="customers__col customers__col--phone">Teléfono</span>
+          <span class="customers__col customers__col--orders">Pedidos</span>
+          <span class="customers__col customers__col--total">Total gastado</span>
+        </div>
+
+        @for (c of snapshot().topCustomers; track c.phone; let i = $index) {
+          <div class="customers__row">
+            <div class="customers__col customers__col--name">
+              <div class="customers__avatar">
+                {{ (c.name || '?').charAt(0).toUpperCase() }}
+              </div>
+              <span class="customers__name">{{ c.name || '—' }}</span>
+            </div>
+            <div class="customers__col customers__col--phone">
+              @if (c.phone) {
+                <ui-icon name="message-circle" styleClass="size-4 text-green-600 shrink-0" />
+                <span class="customers__phone">{{ c.phone }}</span>
+              } @else {
+                <span class="customers__phone customers__phone--empty">—</span>
+              }
+            </div>
+            <div class="customers__col customers__col--orders">
+              <span class="customers__orders-pill">{{ c.ordersCount }}</span>
+            </div>
+            <div class="customers__col customers__col--total">
+              <span class="customers__total-usd">
+                ${{ c.totalSpent | number:'1.2-2' }}
+              </span>
+              @if (isVenezuela()) {
+                <span class="customers__total-bs">
+                  Bs. {{ c.totalSpentBs | number:'1.2-2' }}
+                </span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <footer class="report__footer">
+    <p>Reporte generado por <strong>{{ branding().name }}</strong> · catalogohoy.com</p>
+  </footer>
+</article>

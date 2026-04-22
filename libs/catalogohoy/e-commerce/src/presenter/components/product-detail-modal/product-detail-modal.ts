@@ -23,16 +23,39 @@ export class ProductDetailModal {
   private readonly cartStore = inject(CartStore);
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cs = this.ecommerceStore.currencySymbol;
+  public readonly showReferencePrice = this.ecommerceStore.showReferencePrice;
+  public readonly showLocalCurrencyPrice = this.ecommerceStore.showLocalCurrencyPrice;
 
   public readonly product: Product = this.config.data.product;
   public readonly currentImageIndex = signal(0);
   public readonly quantity = signal(1);
+  public readonly descriptionExpanded = signal(false);
+
+  /**
+   * Whether the description is long enough to warrant a "Ver más" toggle.
+   * Heuristic: ~50 chars per line × 3 lines = 150 chars, OR 3+ newlines.
+   */
+  public readonly shouldClampDescription = (() => {
+    const desc = this.product.description ?? '';
+    if (!desc) return false;
+    const newlines = (desc.match(/\n/g) ?? []).length;
+    return desc.length > 150 || newlines >= 3;
+  })();
+
+  public readonly isClamped = computed(
+    () => this.shouldClampDescription && !this.descriptionExpanded()
+  );
+
+  toggleDescription(): void {
+    if (!this.shouldClampDescription) return;
+    this.descriptionExpanded.update((v) => !v);
+  }
 
   public readonly isWholesale =
     this.product.isWholesale && this.product.wholesaleTiers.length > 0;
 
   public readonly isOutOfStock =
-    this.product.stock !== null && Number(this.product.stock) <= 0;
+    this.product.isSoldOut || (this.product.stock !== null && Number(this.product.stock) <= 0);
 
   public readonly availableStock =
     this.product.stock !== null ? Number(this.product.stock) : null;

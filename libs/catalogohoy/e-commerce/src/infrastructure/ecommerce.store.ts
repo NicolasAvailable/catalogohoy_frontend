@@ -28,6 +28,7 @@ type EcommerceState = {
   previewOverrides: Partial<CatalogInfo> | null;
   isPreviewMode: boolean;
   exchangeRate: number;
+  heroLogoVisible: boolean;
 };
 
 const initialState: EcommerceState = {
@@ -46,6 +47,7 @@ const initialState: EcommerceState = {
   previewOverrides: null,
   isPreviewMode: false,
   exchangeRate: 0,
+  heroLogoVisible: true,
 };
 
 export const EcommerceStore = signalStore(
@@ -65,6 +67,30 @@ export const EcommerceStore = signalStore(
         return overrides.currencySymbol;
       }
       return store.catalogInfo()?.currencySymbol ?? '$';
+    }),
+    showReferencePrice: computed(() => {
+      const overrides = store.previewOverrides();
+      if (store.isPreviewMode() && overrides?.showReferencePrice !== undefined) {
+        return overrides.showReferencePrice;
+      }
+      return store.catalogInfo()?.showReferencePrice ?? true;
+    }),
+    showLocalCurrencyPrice: computed(() => {
+      const overrides = store.previewOverrides();
+      if (store.isPreviewMode() && overrides?.showLocalCurrencyPrice !== undefined) {
+        return overrides.showLocalCurrencyPrice;
+      }
+      return store.catalogInfo()?.showLocalCurrencyPrice ?? true;
+    }),
+    // Dual-currency display (Bs. prices alongside USD/EUR) is a
+    // Venezuela-specific concept tied to the BCV exchange rate. For every
+    // other country, the public catalog must only show the single price.
+    isVenezuela: computed(() => {
+      const overrides = store.previewOverrides();
+      if (store.isPreviewMode() && overrides?.countryCode !== undefined) {
+        return overrides.countryCode === 'VE';
+      }
+      return store.catalogInfo()?.countryCode === 'VE';
     }),
   })),
   withMethods((store, ecommerceService = inject(EcommerceService)) => ({
@@ -199,6 +225,10 @@ export const EcommerceStore = signalStore(
       } catch {
         patchState(store, () => ({ isLoading: false }));
       }
+    },
+
+    setHeroLogoVisible(visible: boolean) {
+      patchState(store, { heroLogoVisible: visible });
     },
 
     setSearchTerm(searchTerm: string) {

@@ -1,7 +1,13 @@
-import { isDevMode, Injectable } from '@angular/core';
+import { isDevMode, Injectable, inject } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
+import {
+  findCountryByCode,
+  SUPPORTED_CURRENCIES,
+  TenantCurrencyStore,
+} from '@catalogohoy/ecommerce-config';
 import { TenantMapper } from '@catalogohoy/tenant';
 import { E } from '@shared/domain';
+import { LocationService } from '@shared/infrastructure';
 import { AuthApiError } from '@supabase/supabase-js';
 import {
   BaseAuthenticationService,
@@ -20,6 +26,120 @@ import { authenticationTokenService } from './authentication-token.service';
 export class AuthenticationService implements BaseAuthenticationService {
   private readonly client = SupabaseClientProvider.getInstance();
   private readonly authenticationTokenService = authenticationTokenService;
+  private readonly locationService = inject(LocationService);
+  private readonly tenantCurrency = inject(TenantCurrencyStore);
+
+  /**
+   * Setup tenant country + currency config right after signup. Fire-and-forget
+   * — signup must succeed even if this fails.
+   *
+   *   1. If `explicitCountryCode` is provided (user picked at signup), use it
+   *      and resolve the Spanish label from SUPPORTED_COUNTRIES.
+   *   2. Otherwise fall back to geo-IP detection (Google OAuth path where we
+   *      don't ask for country — though the signup form now always does).
+   *
+   * Writes:
+   *   - `tenants.country` + `country_code`  (via update_tenant_country RPC)
+   *   - `tenant_currency_config`            (upsert with country defaults)
+   *   - `TenantCurrencyStore`               (localStorage cache seed)
+   */
+  private async setupTenantLocale(explicitCountryCode?: string): Promise<void> {
+    try {
+      let country: string | null = null;
+      let countryCode: string | null = null;
+
+      if (explicitCountryCode) {
+        const found = findCountryByCode(explicitCountryCode);
+        if (found) {
+          country = found.label;
+          countryCode = found.code;
+        }
+      }
+
+      if (!countryCode) {
+        // Geo-IP fallback (Google OAuth or missing explicit selection)
+        if (!this.locationService.values) {
+          await this.locationService.init();
+        }
+        const loc = this.locationService.values;
+        if (loc?.country && loc?.countryCode) {
+          country = loc.country;
+          countryCode = loc.countryCode;
+        }
+      }
+
+      if (!country || !countryCode) return;
+
+      // 1. Persist tenant country
+      await this.client.rpc('update_tenant_country', {
+        p_country: country,
+        p_country_code: countryCode,
+      });
+
+      // 2. Seed tenant_currency_config with country-appropriate defaults.
+      //    VE: VES local + USD reference via BCV. Others: local currency only.
+      const tenantId = await this.resolveMyTenantId();
+      const defaults = this.buildCurrencyDefaults(countryCode);
+      if (tenantId && defaults) {
+        await this.client.from('tenant_currency_config').upsert(
+          {
+            tenant_id: tenantId,
+            product_currency: defaults.productCurrency,
+            display_currency: defaults.displayCurrency,
+            exchange_rate_type: defaults.exchangeRateType,
+            show_dual_currency: defaults.showDualCurrency,
+            currency_symbol: defaults.currencySymbol,
+            decimal_separator: defaults.decimalSeparator,
+            thousand_separator: defaults.thousandSeparator,
+          },
+          { onConflict: 'tenant_id' }
+        );
+
+        // 3. Prime the localStorage cache so the next page renders instantly.
+        this.tenantCurrency.setCurrency(tenantId, {
+          localCode: defaults.productCurrency,
+          localSymbol: defaults.currencySymbol,
+          countryCode,
+        });
+      }
+    } catch (err) {
+      console.warn('setupTenantLocale failed:', err);
+    }
+  }
+
+  private async resolveMyTenantId(): Promise<number | null> {
+    const { data } = await this.client.rpc('get_my_tenant');
+    const rows = data as { id?: number }[] | null;
+    return rows?.[0]?.id ?? null;
+  }
+
+  private buildCurrencyDefaults(countryCode: string) {
+    if (countryCode === 'VE') {
+      return {
+        productCurrency: 'VES',
+        displayCurrency: 'USD',
+        exchangeRateType: 'bcv_usd',
+        showDualCurrency: true,
+        currencySymbol: 'Bs.',
+        decimalSeparator: ',',
+        thousandSeparator: '.',
+      };
+    }
+    const country = findCountryByCode(countryCode);
+    if (!country) return null;
+    const symbol =
+      SUPPORTED_CURRENCIES.find((c) => c.code === country.defaultCurrency)
+        ?.symbol ?? '$';
+    return {
+      productCurrency: country.defaultCurrency,
+      displayCurrency: country.defaultCurrency,
+      exchangeRateType: 'none',
+      showDualCurrency: false,
+      currencySymbol: symbol,
+      decimalSeparator: country.decimalSeparator,
+      thousandSeparator: country.thousandSeparator,
+    };
+  }
 
   public async login(
     credentials: LoginCredentials
@@ -45,6 +165,14 @@ export class AuthenticationService implements BaseAuthenticationService {
   public async signup(
     credentials: SignUpCredentials
   ): Promise<E.Either<Error, string>> {
+    // Pass country in user_metadata so the `handle_new_user` DB hook
+    // creates the tenant with the correct country_code from the start.
+    // This prevents the Discord lead notification (triggered on
+    // users_tenants INSERT) from firing with the stale 'VE' default.
+    const selectedCountry = credentials.countryCode
+      ? findCountryByCode(credentials.countryCode)
+      : null;
+
     const { error } = await this.client.auth.signUp({
       email: credentials.email,
       password: credentials.password,
@@ -55,6 +183,8 @@ export class AuthenticationService implements BaseAuthenticationService {
           display_name: credentials.name,
           phone: '',
           store_name: credentials.storeName,
+          store_country_code: selectedCountry?.code ?? null,
+          store_country: selectedCountry?.label ?? null,
         },
       },
     });
@@ -69,6 +199,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
+    await this.setupTenantLocale(credentials.countryCode);
     return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
@@ -156,9 +287,17 @@ export class AuthenticationService implements BaseAuthenticationService {
   public async completeGoogleSignup(
     credentials: GoogleSignupCredentials
   ): Promise<E.Either<Error, string>> {
+    // Pass country directly into the RPC so the tenant is created with
+    // the correct country_code, avoiding the Discord-lead race condition.
+    const selectedCountry = credentials.countryCode
+      ? findCountryByCode(credentials.countryCode)
+      : null;
+
     const { error } = await this.client.rpc('complete_google_signup', {
       p_name: credentials.name,
       p_store_name: credentials.storeName,
+      p_country_code: selectedCountry?.code ?? null,
+      p_country: selectedCountry?.label ?? null,
     });
     if (error) {
       const MSG: Record<string, string> = {
@@ -170,6 +309,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       const key = Object.keys(MSG).find((k) => error.message.includes(k));
       return E.left(new Error(key ? MSG[key] : error.message));
     }
+    await this.setupTenantLocale(credentials.countryCode);
     return this.getLoginRedirectUrl();
   }
 
@@ -189,6 +329,15 @@ export class AuthenticationService implements BaseAuthenticationService {
     const { error } = await this.client.auth.signOut();
     if (error) {
       return E.left(new Error(error.message));
+    }
+    // Clear any per-tenant currency caches left in localStorage so the next
+    // session (potentially different user/tenant) doesn't see stale data.
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('tenant_currency_'))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {
+      /* storage not available — nothing to clean */
     }
     return E.right(undefined);
   }

@@ -11,6 +11,7 @@ import {
   SkeletonListComponent,
   TooltipDirective,
 } from '@ui';
+import { ToastService } from '@shared/infrastructure';
 import { PaginatorModule } from 'primeng/paginator';
 import { CategoryFacade } from '../../../application';
 import { Category, CategoryList } from '../../../domain';
@@ -42,6 +43,7 @@ export default class CategoryListComponent implements OnInit {
   public readonly categoryStore = inject(CategoryStore);
   public readonly categoryFacade = inject(CategoryFacade);
   public readonly categoryService = inject(CategoryService);
+  private readonly toastService = inject(ToastService);
   public readonly isCreating = signal(false);
   public readonly isSaving = signal(false);
   public readonly createControl = new FormControl('', [Validators.required]);
@@ -90,12 +92,22 @@ export default class CategoryListComponent implements OnInit {
 
     result.mapRight(() => {
       this.cancelCreate();
-      this.categoryStore.categoryList$();
+      this.loadData();
     });
     this.isSaving.set(false);
   }
 
   public onDelete(category: Category) {
+    // The seeded "Ver todos" category acts as the public catalog's clear-filter
+    // pill. Removing it silently changes how customers navigate, so we block
+    // deletion — the user can still hide it via the visibility toggle if they
+    // don't want it on the public catalog.
+    if (category.isViewAll) {
+      this.toastService.error(
+        'Esta categoría no se puede eliminar. Si no quieres mostrarla en tu catálogo público, desactiva la visibilidad.' as any
+      );
+      return;
+    }
     this.selectedCategory.set(category);
     this.confirmDialog.warning();
   }
@@ -107,7 +119,7 @@ export default class CategoryListComponent implements OnInit {
     this.isSaving.set(true);
     const result = await this.categoryFacade.delete(String(category.id));
     result.mapRight(() => {
-      this.categoryStore.categoryList$();
+      this.loadData();
     });
     this.isSaving.set(false);
   }
@@ -120,6 +132,9 @@ export default class CategoryListComponent implements OnInit {
     categories.splice(event.currentIndex, 0, movedItem);
 
     this.categoryStore.set(CategoryList.from(categories));
-    await this.categoryService.updatePositions(categories);
+    // Pass `first` (the global index of this page's first item) so the
+    // service writes positions like 10, 11, 12, … on page 2 instead of
+    // 0, 1, 2, … which would clobber page 1.
+    await this.categoryService.updatePositions(categories, this.first);
   }
 }

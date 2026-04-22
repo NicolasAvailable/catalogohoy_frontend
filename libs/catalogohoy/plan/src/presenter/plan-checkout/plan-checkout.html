@@ -68,36 +68,38 @@
     <aside class="checkout-summary">
       <h2 class="checkout-summary__title">A Pagar</h2>
 
-      <!-- BCV rate info -->
-      <div class="ves-rate-info">
-        @if (isFetchingRate()) {
-          <ui-icon name="loader-circle" styleClass="size-3.5 shrink-0 animate-spin text-slate-400" />
-          <span>Cargando tasa...</span>
-        } @else if (bcvUsdRate()) {
-          <ui-icon name="trending-up" styleClass="size-3.5 shrink-0 text-amber-500" />
-          <span>Tasa BCV: <strong>Bs. {{ bcvUsdRate() | number:'1.2-2' }}</strong> / USD</span>
-        }
-      </div>
+      <!-- BCV rate info — only relevant for VE (charged in USD with Bs. hint) -->
+      @if (isVenezuela()) {
+        <div class="ves-rate-info">
+          @if (isFetchingRate()) {
+            <ui-icon name="loader-circle" styleClass="size-3.5 shrink-0 animate-spin text-slate-400" />
+            <span>Cargando tasa...</span>
+          } @else if (bcvUsdRate()) {
+            <ui-icon name="trending-up" styleClass="size-3.5 shrink-0 text-amber-500" />
+            <span>Tasa BCV: <strong>Bs. {{ bcvUsdRate() | number:'1.2-2' }}</strong> / USD</span>
+          }
+        </div>
 
-      <hr class="summary-divider" />
+        <hr class="summary-divider" />
+      }
 
       <!-- Breakdown -->
       <div class="summary-breakdown">
         <div class="summary-line">
           <span>Costo del plan x {{ monthsLabel() }}</span>
-          <span>${{ baseCost() }}</span>
+          <span>{{ currencySymbol() }}{{ baseCost() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
         </div>
 
         @if (discountAmount() > 0) {
           <div class="summary-line summary-line--discount">
             <span>Descuento ({{ discountPercent() }}%)</span>
-            <span>-${{ discountAmount() }}</span>
+            <span>-{{ currencySymbol() }}{{ discountAmount() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
           </div>
         }
         @if (catalogAddonQuantity() > 0) {
           <div class="summary-line">
             <span>{{ catalogAddonQuantity() }} catálogo{{ catalogAddonQuantity() > 1 ? 's' : '' }} adicional{{ catalogAddonQuantity() > 1 ? 'es' : '' }} x {{ monthsLabel() }}</span>
-            <span>+${{ catalogAddonCost() }}</span>
+            <span>+{{ currencySymbol() }}{{ catalogAddonCost() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
           </div>
         }
       </div>
@@ -108,7 +110,7 @@
           <ui-icon name="folder-plus" styleClass="size-4 shrink-0 text-violet-500" />
           <div class="catalog-addon-stepper__text">
             <span class="catalog-addon-stepper__label">Catálogos adicionales</span>
-            <span class="catalog-addon-stepper__unit-price">+${{ catalogAddonDisplayCost() }}/{{ periodLabel() }} c/u</span>
+            <span class="catalog-addon-stepper__unit-price">+{{ currencySymbol() }}{{ catalogAddonDisplayCost() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}/{{ periodLabel() }} c/u</span>
           </div>
         </div>
         <div class="catalog-addon-stepper__controls">
@@ -152,16 +154,18 @@
             <ui-icon name="credit-card" styleClass="size-4 shrink-0" />
             Tarjeta internacional
           </button>
-          <button
-            class="payment-method-toggle__btn"
-            [class.payment-method-toggle__btn--active]="paymentMethod() === 'mobile'"
-            (click)="paymentMethod.set('mobile')"
-          >
-            <ui-icon name="smartphone" styleClass="size-4 shrink-0" />
-            Pago móvil
-          </button>
+          @if (isVenezuela()) {
+            <button
+              class="payment-method-toggle__btn"
+              [class.payment-method-toggle__btn--active]="paymentMethod() === 'mobile'"
+              (click)="paymentMethod.set('mobile')"
+            >
+              <ui-icon name="smartphone" styleClass="size-4 shrink-0" />
+              Pago móvil
+            </button>
+          }
         </div>
-        @if (paymentMethod() === 'mobile') {
+        @if (isVenezuela() && paymentMethod() === 'mobile') {
           <div class="ves-payment-note">
             <ui-icon name="info" styleClass="size-4 shrink-0 text-amber-500" />
             <span>El pago es por transferencia bancaria o Pago Móvil. Al confirmar te enviaremos al WhatsApp del administrador para coordinar el pago.</span>
@@ -181,8 +185,8 @@
       <div class="summary-total">
         <span class="summary-total__label">Total a pagar</span>
         <div class="summary-total__amounts">
-          <span class="summary-total__amount">${{ total() }} USD</span>
-          @if (totalVes()) {
+          <span class="summary-total__amount">{{ currencySymbol() }}{{ total() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }} {{ currencyCode() }}</span>
+          @if (isVenezuela() && totalVes()) {
             <span class="summary-total__ves">≈ Bs. {{ totalVes()! | number:'1.0-0' }}</span>
           }
         </div>

@@ -14,7 +14,13 @@
       </div>
     </div>
 
-    @if (analyticsStore.isLoading()) {
+    @if (planStore.isFreePlan()) {
+    <ui-premium-upgrade-prompt
+      icon="bar-chart-3"
+      title="Entiende el comportamiento de tus clientes"
+      description="Mejora tu plan para acceder a métricas de visitas, horarios pico, productos más vistos y analíticas en tiempo real."
+    />
+    } @else if (analyticsStore.isLoading()) {
     <!-- ─── SKELETON ─────────────────────────────────────────── -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       <div

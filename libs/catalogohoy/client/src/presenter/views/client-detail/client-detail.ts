@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { is } from '@shared/domain';
@@ -8,7 +8,9 @@ import {
   IconComponent,
   TooltipDirective,
 } from '@ui';
+import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { Order, OrderStatus } from '@catalogohoy/order';
+import { TenantStore } from '@catalogohoy/tenant';
 import { ClientStore } from '../../../infrastructure/client.store';
 
 @Component({
@@ -27,8 +29,15 @@ export default class ClientDetailComponent extends BaseComponent implements OnIn
   private readonly router = inject(Router);
   private readonly clipboard = inject(Clipboard);
   public readonly clientStore = inject(ClientStore);
+  public readonly tenantCurrency = inject(TenantCurrencyStore);
+  private readonly tenantStore = inject(TenantStore);
+  public readonly cs = computed(() => this.tenantCurrency.localSymbol() || '$');
 
   ngOnInit() {
+    this.tenantStore.getTenantIdAsync().then((tid) => {
+      if (tid) this.tenantCurrency.load(tid);
+    });
+
     const phone = decodeURIComponent(
       this.route.snapshot.paramMap.get('phone') ?? ''
     );

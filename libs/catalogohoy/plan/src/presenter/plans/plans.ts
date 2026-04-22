@@ -1,15 +1,24 @@
+import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { DiscordWebhookService } from '@catalogohoy/core';
+import {
+  findCountryByCode,
+  TenantCurrencyStore,
+} from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
 import { IconComponent } from '@ui';
 import {
   BillingPeriod,
   CATALOG_ADDON_PRICE,
+  convertUsdToLocal,
+  CURRENCY_SYMBOLS,
+  PaymentCurrency,
   Plan,
   PLAN_BASE_PRICES,
   PlanDisplay,
   PlanFeature,
+  resolveCheckoutCurrency,
 } from '../../domain';
 import { PlanStore } from '../../infrastructure';
 
@@ -21,7 +30,6 @@ const BILLING_CONFIG: Record<BillingPeriod, { label: string; months: number; dis
 
 type PlanUIConfig = {
   period: string;
-  rateType: string;
   features: PlanFeature[];
   buttonLabel: string;
   buttonSeverity: 'primary' | 'secondary';
@@ -32,11 +40,12 @@ type PlanUIConfig = {
 const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   gratis: {
     period: 'por siempre',
-    rateType: 'Gratis',
     features: [
       { text: '1 catálogo' },
       { text: 'Edición limitada del catálogo' },
       { text: 'No permite descargar QR del catálogo' },
+      { text: 'Sin analíticas del catálogo', negative: true },
+      { text: '1 reporte por mes' },
     ],
     buttonLabel: 'Empezar gratis',
     buttonSeverity: 'secondary',
@@ -45,11 +54,11 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   },
   basico: {
     period: '/mes',
-    rateType: 'USD',
     features: [
       { text: '1 catálogo' },
       { text: 'Todos los módulos disponibles' },
       { text: 'Analíticas del catálogo' },
+      { text: 'Hasta 10 reportes por mes' },
       { text: 'Diseño personalizable' },
       { text: 'Soporte prioritario' },
     ],
@@ -60,11 +69,11 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   },
   avanzado: {
     period: '/mes',
-    rateType: 'USD',
     features: [
       { text: '1 catálogo' },
       { text: 'Todo del plan Básico' },
       { text: 'Analíticas del catálogo' },
+      { text: 'Hasta 20 reportes por mes' },
       { text: 'Dominio personalizado' },
       { text: 'Soporte dedicado' },
     ],
@@ -75,7 +84,7 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   },
 };
 
-function toPlanDisplay(plan: Plan, currentPlanPosition: number): PlanDisplay {
+function toPlanDisplay(plan: Plan, currentPlanPosition: number, rateType: string): PlanDisplay {
   const config = PLAN_UI_CONFIG[plan.id] ?? PLAN_UI_CONFIG['gratis'];
   const isCurrent = currentPlanPosition >= 0 && plan.position === currentPlanPosition;
 
@@ -99,7 +108,7 @@ function toPlanDisplay(plan: Plan, currentPlanPosition: number): PlanDisplay {
     period: config.period,
     maxProductsLabel: `Hasta ${plan.maxProducts} productos`,
     teamMembersLabel: teamLabel,
-    rateType: config.rateType,
+    rateType,
     features: config.features,
     additionalCatalogPrice: '',
     buttonLabel,
@@ -112,7 +121,7 @@ function toPlanDisplay(plan: Plan, currentPlanPosition: number): PlanDisplay {
 
 @Component({
   selector: 'lib-plans',
-  imports: [IconComponent],
+  imports: [IconComponent, DecimalPipe],
   templateUrl: './plans.html',
   styleUrl: './plans.css',
   host: {
@@ -123,6 +132,7 @@ export class Plans implements OnInit {
   public readonly planStore = inject(PlanStore);
   private readonly router = inject(Router);
   private readonly tenantStore = inject(TenantStore);
+  private readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly discord = inject(DiscordWebhookService);
 
   public readonly billingPeriod = signal<BillingPeriod>('monthly');
@@ -133,6 +143,28 @@ export class Plans implements OnInit {
     { key: 'annual',    label: 'Anual',      savingsLabel: '15% off' },
   ];
 
+  // Resolve the currency we'll charge in, driven by the tenant's country.
+  // VE always falls back to USD; unsupported countries fall back to USD.
+  public readonly displayCurrency = computed<PaymentCurrency>(() => {
+    const code = this.tenantCurrency.countryCode();
+    const country = findCountryByCode(code);
+    return resolveCheckoutCurrency(code, country?.defaultCurrency);
+  });
+
+  public readonly currencySymbol = computed(
+    () => CURRENCY_SYMBOLS[this.displayCurrency()] ?? '$'
+  );
+
+  public readonly currencyCode = computed(
+    () => this.displayCurrency().toUpperCase()
+  );
+
+  /** CLP / PYG etc. — hide the decimal part. */
+  public readonly isZeroDecimalCurrency = computed(() => {
+    const c = this.displayCurrency();
+    return c === 'clp' || c === 'pyg';
+  });
+
   public readonly currentPlanPosition = computed(
     () => this.planStore.currentPlan()?.position ?? -1
   );
@@ -141,13 +173,19 @@ export class Plans implements OnInit {
     () => this.currentPlanPosition() > 0
   );
 
+  public readonly isVenezuela = computed(() => this.tenantCurrency.isVenezuela());
+
   public readonly plans = computed<PlanDisplay[]>(() =>
-    this.planStore.plans().map((plan) => toPlanDisplay(plan, this.currentPlanPosition()))
+    this.planStore
+      .plans()
+      .map((plan) => toPlanDisplay(plan, this.currentPlanPosition(), this.currencyCode()))
   );
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.planStore.loadPlans();
     this.planStore.refreshUsage();
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (tenantId) this.tenantCurrency.load(tenantId);
   }
 
   public getBasePrice(plan: PlanDisplay): number {
@@ -158,15 +196,15 @@ export class Plans implements OnInit {
   public getPeriodPrice(plan: PlanDisplay): number {
     if (plan.isFree) return 0;
     const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
-    const base = this.getBasePrice(plan);
-    return Math.round(base * months * (1 - discount) * 100) / 100;
+    const baseUsd = this.getBasePrice(plan) * months * (1 - discount);
+    return convertUsdToLocal(baseUsd, this.displayCurrency());
   }
 
   public getMonthlyEquivalent(plan: PlanDisplay): number {
     if (plan.isFree) return 0;
     const { discount } = BILLING_CONFIG[this.billingPeriod()];
-    const base = this.getBasePrice(plan);
-    return Math.round(base * (1 - discount) * 100) / 100;
+    const baseUsd = this.getBasePrice(plan) * (1 - discount);
+    return convertUsdToLocal(baseUsd, this.displayCurrency());
   }
 
   public isUpgradePlan(plan: PlanDisplay): boolean {
@@ -176,9 +214,9 @@ export class Plans implements OnInit {
   public getUpgradePrice(plan: PlanDisplay): number {
     const currentPrice = PLAN_BASE_PRICES[this.planStore.currentPlan()?.id ?? ''] ?? 0;
     const targetPrice = PLAN_BASE_PRICES[plan.id] ?? 0;
-    const diff = targetPrice - currentPrice;
+    const diffUsd = targetPrice - currentPrice;
     const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
-    return Math.round(diff * months * (1 - discount) * 100) / 100;
+    return convertUsdToLocal(diffUsd * months * (1 - discount), this.displayCurrency());
   }
 
   public getPeriodLabel(plan: PlanDisplay): string {
@@ -190,7 +228,7 @@ export class Plans implements OnInit {
   }
 
   public getCatalogAddonPrice(): number {
-    return CATALOG_ADDON_PRICE;
+    return convertUsdToLocal(CATALOG_ADDON_PRICE, this.displayCurrency());
   }
 
   public selectPlan(plan: PlanDisplay): void {

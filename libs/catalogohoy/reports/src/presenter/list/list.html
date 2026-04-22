@@ -1,0 +1,160 @@
+<section
+  class="container flex flex-col flex-1 max-w-5xl mx-auto px-1 pt-4 overflow-hidden"
+>
+  <header class="flex justify-between items-center gap-2 pb-6">
+    <div class="flex items-center gap-3 flex-wrap min-w-0">
+      <h1 class="text-2xl sm:text-4xl font-bold shrink-0">Reportes</h1>
+      @if (!store.isLoading() || store.reports().length > 0) {
+        <span
+          class="reports-usage"
+          [class.reports-usage--full]="limitReached()"
+        >
+          {{ reportsThisMonth() }} / {{ monthlyLimit() }} este mes
+        </span>
+      }
+    </div>
+    <ui-button
+      label="Crear reporte"
+      icon="circle-plus"
+      severity="primary"
+      [fluid]="false"
+      [disabled]="limitReached() || !canCreate()"
+      (click)="goToCreate()"
+    />
+  </header>
+
+  <div class="flex-1 overflow-y-auto min-h-0 pb-4">
+    @if (store.isLoading() && store.reports().length === 0) {
+      <div class="reports-table reports-table--skeleton">
+        @for (i of [1,2,3,4]; track i) {
+          <div class="reports-table__row reports-table__row--skeleton">
+            <ui-skeleton-list [count]="1" width="14rem" height="1.1rem" borderRadius="0.375rem" />
+            <ui-skeleton-list [count]="1" width="10rem" height="0.9rem"  borderRadius="0.375rem" />
+            <ui-skeleton-list [count]="1" width="8rem"  height="0.9rem"  borderRadius="0.375rem" />
+            <ui-skeleton-list [count]="1" width="5rem"  height="2rem"    borderRadius="0.5rem" />
+          </div>
+        }
+      </div>
+    } @else if (store.reports().length === 0) {
+      <section class="reports-empty">
+        <div class="reports-empty__hero">
+          <div class="reports-empty__badge">
+            <ui-icon name="clipboard-list" styleClass="size-9 text-white" />
+          </div>
+          <div class="reports-empty__spark reports-empty__spark--1"></div>
+          <div class="reports-empty__spark reports-empty__spark--2"></div>
+          <div class="reports-empty__spark reports-empty__spark--3"></div>
+        </div>
+
+        <h2 class="reports-empty__title">Todavía no generaste reportes</h2>
+        <p class="reports-empty__subtitle">
+          Generá un resumen con las métricas de tu catálogo y compartilo como link público o descargalo en PDF con tu logo y tu nombre.
+        </p>
+
+        <ul class="reports-empty__features">
+          <li>
+            <div class="reports-empty__feature-icon reports-empty__feature-icon--indigo">
+              <ui-icon name="trendingUp" styleClass="size-4" />
+            </div>
+            <div>
+              <strong>Ventas y órdenes</strong>
+              <small>Totales del periodo + evolución día a día</small>
+            </div>
+          </li>
+          <li>
+            <div class="reports-empty__feature-icon reports-empty__feature-icon--emerald">
+              <ui-icon name="tag" styleClass="size-4" />
+            </div>
+            <div>
+              <strong>Top 10 productos</strong>
+              <small>Los más vendidos por unidades e ingresos</small>
+            </div>
+          </li>
+          <li>
+            <div class="reports-empty__feature-icon reports-empty__feature-icon--pink">
+              <ui-icon name="users" styleClass="size-4" />
+            </div>
+            <div>
+              <strong>Top 10 clientes</strong>
+              <small>Los que más gastan en tu catálogo</small>
+            </div>
+          </li>
+          <li>
+            <div class="reports-empty__feature-icon reports-empty__feature-icon--amber">
+              <ui-icon name="share2" styleClass="size-4" />
+            </div>
+            <div>
+              <strong>Link público o PDF</strong>
+              <small>Compartí el reporte por link o descargalo en PDF con tu logo</small>
+            </div>
+          </li>
+        </ul>
+
+        <div class="reports-empty__cta">
+          <ui-button
+            label="Crear mi primer reporte"
+            icon="sparkles"
+            severity="primary"
+            [fluid]="false"
+            [disabled]="limitReached() || !canCreate()"
+            (click)="goToCreate()"
+          />
+        </div>
+      </section>
+    } @else {
+      <div class="reports-table">
+        <div class="reports-table__header">
+          <span class="reports-table__col reports-table__col--title">Título</span>
+          <span class="reports-table__col reports-table__col--period">Periodo</span>
+          <span class="reports-table__col reports-table__col--generated">Generado</span>
+          <span class="reports-table__col reports-table__col--actions">Acciones</span>
+        </div>
+
+        @for (report of store.reports(); track report.id) {
+          <div class="reports-table__row" (click)="goToDetail(report)">
+            <div class="reports-table__col reports-table__col--title">
+              <ui-icon name="clipboard-list" styleClass="size-4 text-primary-500 shrink-0" />
+              <span>{{ report.title }}</span>
+            </div>
+            <div class="reports-table__col reports-table__col--period">
+              {{ report.periodStart | date:'d MMM y':'':'es-ES' }}
+              <span class="reports-table__dash">—</span>
+              {{ report.periodEnd | date:'d MMM y':'':'es-ES' }}
+            </div>
+            <div class="reports-table__col reports-table__col--generated">
+              {{ report.createdAt | date:'d MMM y, HH:mm':'':'es-ES' }}
+            </div>
+            <div class="reports-table__col reports-table__col--actions" (click)="$event.stopPropagation()">
+              <ui-button
+                icon="share2"
+                variant="outlined"
+                severity="contrast"
+                size="small"
+                [fluid]="false"
+                (click)="copyPublicLink($event, report)"
+              />
+              @if (canDelete()) {
+                <ui-button
+                  icon="trash"
+                  variant="outlined"
+                  severity="danger"
+                  size="small"
+                  [fluid]="false"
+                  (click)="onDelete($event, report)"
+                />
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <ui-confirm-dialog
+    (confirm)="onConfirmDelete()"
+    headerLabel="Eliminar reporte"
+    contentLabel="¿Estás seguro de que deseas eliminar este reporte? Esta acción es irreversible."
+    acceptLabel="Eliminar"
+    rejectLabel="Cancelar"
+  />
+</section>

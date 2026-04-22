@@ -5,6 +5,9 @@ export interface OrderItem {
   quantity: number;
   total: number;
   photo?: string;
+  sku?: string | null;
+  isCustom?: boolean;
+  description?: string;
 }
 
 export type OrderStatus = 'pending' | 'completed' | 'cancelled';
@@ -22,6 +25,8 @@ export interface Order {
   phone?: string;
   comments?: string;
   paymentMethod?: string;
+  /** ISO date "YYYY-MM-DD". Defaults to the creation date on the server. */
+  deliveryDate: string;
 }
 
 export class OrderList {

@@ -8,7 +8,8 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { EcommerceConfigStore } from '@catalogohoy/ecommerce-config';
+import { EcommerceConfigStore, TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
+import { TenantStore } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import {
   FormBuilder,
@@ -25,6 +26,7 @@ import { whiteSpacesValidator } from '@shared/presenter';
 import {
   ButtonComponent,
   CardComponent,
+  DatepickerComponent,
   IconComponent,
   InputNumberComponent,
   InputTextComponent,
@@ -53,6 +55,7 @@ import { OrderStore } from '../../../infrastructure/order.store';
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
+    DatepickerComponent,
   ],
   templateUrl: './order-save.html',
   styleUrl: './order-save.css',
@@ -65,16 +68,46 @@ export default class OrderSave implements OnInit {
   public readonly productStore = inject(ProductStore);
   public readonly rateStore = inject(RateStore);
   private readonly configStore = inject(EcommerceConfigStore);
-  public readonly cs = computed(() => this.configStore.config()?.currencySymbol ?? '$');
+  public readonly tenantCurrency = inject(TenantCurrencyStore);
+  private readonly tenantStore = inject(TenantStore);
+  // Venezuela exception: products are priced in USD internally (dual with
+  // Bs. via BCV rate). Force '$' in the create/edit order form so prices
+  // displayed next to product options match the stored values.
+  public readonly cs = computed(() => {
+    if (this.tenantCurrency.isVenezuela()) return '$';
+    return (
+      this.tenantCurrency.localSymbol() ||
+      this.configStore.config()?.currencySymbol ||
+      '$'
+    );
+  });
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canEditOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'edit'));
+
+  private static readonly CUSTOM_PRODUCT_ID = '__custom__';
+
+  public readonly selectableProducts = computed(() => {
+    const real = this.productStore.productList().products;
+    const customOption = {
+      id: OrderSave.CUSTOM_PRODUCT_ID,
+      name: 'Otros',
+      price: 0,
+      photos: [] as string[],
+      isWholesale: false,
+      wholesaleTiers: [] as { title: string; price: number }[],
+    };
+    return [customOption, ...real];
+  });
 
   public readonly form = inject(FormBuilder).group({
     name: ['', [Validators.required, whiteSpacesValidator()]],
     phone: [''],
     comments: [''],
     status: ['pending' as OrderStatus],
+    // Default: today. Admin can pick any date via the datepicker.
+    deliveryDate: [new Date() as Date | null, [Validators.required]],
   });
+
 
   public readonly id = input<string | undefined>(undefined);
   public readonly products = signal<OrderItem[]>([]);
@@ -105,6 +138,11 @@ export default class OrderSave implements OnInit {
   ];
 
   ngOnInit(): void {
+    // Prime tenant currency cache (localStorage → DB fallback)
+    this.tenantStore.getTenantIdAsync().then((tid) => {
+      if (tid) this.tenantCurrency.load(tid);
+    });
+
     // Cargar tasas de cambio
     this.rateStore.loadRates().then(() => {
       const rate = this.rateStore.rate();
@@ -130,11 +168,25 @@ export default class OrderSave implements OnInit {
     }
   }
 
+  /** Format a Date as "YYYY-MM-DD" in local time. `toISOString()` would
+   *  shift by the timezone offset and can land on a different calendar day. */
+  private toIsoDate(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
   private setValuesForm(order: Order) {
     this.form.controls.name.setValue(order.name);
     this.form.controls.phone.setValue(order.phone || '');
     this.form.controls.comments.setValue(order.comments || '');
     this.form.controls.status.setValue(order.status);
+    if (order.deliveryDate) {
+      // Parse "YYYY-MM-DD" as local date (avoid the UTC-shift that new Date(iso) causes).
+      const [y, m, d] = order.deliveryDate.split('-').map(Number);
+      this.form.controls.deliveryDate.setValue(new Date(y, m - 1, d));
+    }
 
     const storeProducts = this.productStore.productList().products;
     this.products.set(
@@ -162,11 +214,60 @@ export default class OrderSave implements OnInit {
     ]);
   }
 
+  public addCustomProduct() {
+    this.products.update((products) => [
+      ...products,
+      {
+        productId: OrderSave.CUSTOM_PRODUCT_ID,
+        name: '',
+        price: 0,
+        quantity: 1,
+        total: 0,
+        isCustom: true,
+        description: '',
+      },
+    ]);
+  }
+
+  public cancelCustomProduct(index: number) {
+    this.products.update((products) => {
+      const updated = [...products];
+      updated[index] = {
+        productId: '',
+        name: '',
+        price: 0,
+        quantity: 1,
+        total: 0,
+        isCustom: false,
+        description: undefined,
+      };
+      return updated;
+    });
+  }
+
   public removeProduct(index: number) {
     this.products.update((products) => products.filter((_, i) => i !== index));
   }
 
   public onProductSelect(index: number, productId: string) {
+    if (productId === OrderSave.CUSTOM_PRODUCT_ID) {
+      this.products.update((products) => {
+        const updated = [...products];
+        updated[index] = {
+          ...updated[index],
+          productId: OrderSave.CUSTOM_PRODUCT_ID,
+          name: '',
+          price: 0,
+          photo: undefined,
+          total: 0,
+          isCustom: true,
+          description: '',
+        };
+        return updated;
+      });
+      return;
+    }
+
     const selectedProduct = this.productStore
       .productList()
       .products.find((p) => p.id === productId);
@@ -174,7 +275,9 @@ export default class OrderSave implements OnInit {
     if (selectedProduct) {
       const price = selectedProduct.isWholesale && selectedProduct.wholesaleTiers.length > 0
         ? selectedProduct.wholesaleTiers[0].price
-        : selectedProduct.price;
+        : selectedProduct.pricePromotional > 0
+          ? selectedProduct.pricePromotional
+          : selectedProduct.price;
 
       this.products.update((products) => {
         const updated = [...products];
@@ -185,10 +288,40 @@ export default class OrderSave implements OnInit {
           price,
           photo: selectedProduct.photos?.[0],
           total: price * updated[index].quantity,
+          isCustom: false,
         };
         return updated;
       });
     }
+  }
+
+  public onCustomNameChange(index: number, name: string) {
+    this.products.update((products) => {
+      const updated = [...products];
+      updated[index] = { ...updated[index], name };
+      return updated;
+    });
+  }
+
+  public onCustomDescriptionChange(index: number, description: string) {
+    this.products.update((products) => {
+      const updated = [...products];
+      updated[index] = { ...updated[index], description };
+      return updated;
+    });
+  }
+
+  public onCustomPriceChange(index: number, price: number) {
+    const safePrice = price || 0;
+    this.products.update((products) => {
+      const updated = [...products];
+      updated[index] = {
+        ...updated[index],
+        price: safePrice,
+        total: safePrice * updated[index].quantity,
+      };
+      return updated;
+    });
   }
 
   public onQuantityChange(index: number, quantity: number) {
@@ -246,6 +379,7 @@ export default class OrderSave implements OnInit {
 
     this.isSubmitting.set(true);
 
+    const delivery = this.form.controls.deliveryDate.value;
     const orderData = {
       name: this.form.controls.name.value as string,
       phone: this.form.controls.phone.value || undefined,
@@ -254,6 +388,7 @@ export default class OrderSave implements OnInit {
       products: this.products(),
       totalUsd: this.calculateTotal(),
       totalBs: this.totalBs(),
+      deliveryDate: delivery ? this.toIsoDate(delivery) : undefined,
     };
 
     try {

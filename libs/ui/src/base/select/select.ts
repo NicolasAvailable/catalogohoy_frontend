@@ -36,7 +36,7 @@ export class SelectItemDirective {}
       [filterPlaceholder]="filterPlaceholder()"
       [variant]="variant()"
       [attr.mode]="mode()"
-      [virtualScroll]="true"
+      [virtualScroll]="virtualScroll()"
       [virtualScrollItemSize]="38"
       [scrollHeight]="height()"
       [size]="size()"
@@ -87,6 +87,10 @@ export class SelectComponent<T>
   public readonly emptyMessage = _.input('Sin resultados');
   public readonly emptyFilterMessage = _.input('Sin resultados');
   public readonly filterPlaceholder = _.input('Buscar...');
+  // Off by default — PrimeNG virtual scroll mis-measures when options come
+  // from signals or templates contain async content (images), causing
+  // blank-until-scroll glitches. Opt in only for truly large (>200 item) lists.
+  public readonly virtualScroll = _.input(false);
 
   @_.ContentChild(SelectSelectedItemDirective, { read: _.TemplateRef })
   private _selectedItemTemplate?: _.TemplateRef<unknown>;

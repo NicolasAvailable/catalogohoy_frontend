@@ -1,8 +1,8 @@
 import { progressBuilder, UseCase } from '@shared/application';
 import { E } from '@shared/domain';
-import { BaseCategoryService, CreateCategoryInput } from '../../domain';
+import { BaseCategoryService, Category, CreateCategoryInput } from '../../domain';
 
-export type CreateCategoryOutput = Promise<E.Either<Error, void>>;
+export type CreateCategoryOutput = Promise<E.Either<Error, Category>>;
 
 export class CreateCategoryUseCase extends UseCase<
   CreateCategoryInput,

@@ -26,10 +26,12 @@ export class ProductCard {
   private readonly dialogService = inject(DialogService);
 
   public readonly cs = computed(() => this.ecommerceStore.currencySymbol());
+  public readonly showReferencePrice = this.ecommerceStore.showReferencePrice;
+  public readonly showLocalCurrencyPrice = this.ecommerceStore.showLocalCurrencyPrice;
 
   public readonly isOutOfStock = computed(() => {
     const p = this.product();
-    return p.stock !== null && Number(p.stock) <= 0;
+    return p.isSoldOut || (p.stock !== null && Number(p.stock) <= 0);
   });
 
   public readonly isWholesale = computed(() => this.product().isWholesale);

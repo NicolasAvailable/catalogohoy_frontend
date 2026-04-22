@@ -38,6 +38,8 @@ import { IconComponent } from '../icon';
       [locale]="locale()"
       [prefix]="prefix()"
       [placeholder]="placeholder()"
+      [minFractionDigits]="minFractionDigits()"
+      [maxFractionDigits]="maxFractionDigits()"
       buttonLayout="horizontal"
       [inputStyleClass]="showButtons() ? 'text-center' : ''"
       [styleClass]="styleClass()"
@@ -66,6 +68,8 @@ export class InputNumberComponent implements OnInit {
   public readonly currency = input<string | undefined>(undefined);
   public readonly locale = input<string | undefined>(undefined);
   public readonly prefix = input<string | undefined>(undefined);
+  public readonly minFractionDigits = input<number | undefined>(undefined);
+  public readonly maxFractionDigits = input<number | undefined>(undefined);
 
   public readonly value = signal<number | null>(null);
   public readonly disabled = signal(false);

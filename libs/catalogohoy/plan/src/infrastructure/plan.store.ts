@@ -66,7 +66,11 @@ export const PlanStore = signalStore(
       );
     }),
     isPlanExpired: computed(() => store.planExpired()),
-    isFreePlan: computed(() => store.isFreePlan()),
+    // Covers both the public-catalog flow (sets the `isFreePlan` state flag
+    // via checkExpiredBySlug) and the admin flow (loads tenantPlanUsage.plan).
+    isFreePlan: computed(
+      () => store.isFreePlan() || (store.tenantPlanUsage()?.plan.isFree ?? false)
+    ),
     planExpiresAtDate: computed(() =>
       store.planExpiresAt() ? new Date(store.planExpiresAt()!) : null
     ),

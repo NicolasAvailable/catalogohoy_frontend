@@ -12,7 +12,12 @@ export default {
       },
     ],
   },
-  transformIgnorePatterns: ['node_modules/(?!.*\\.mjs$)'],
+  transformIgnorePatterns: [
+    // Transform these ESM-only packages — default is to skip node_modules,
+    // but @jsverse/transloco ships untranspiled ESM (.js files using `export`)
+    // and gets pulled in transitively through @catalogohoy/tenant → ui.
+    'node_modules/(?!(.*\\.mjs$|@jsverse|lucide-angular|@sweet-monads|@ngrx))',
+  ],
   snapshotSerializers: [
     'jest-preset-angular/build/serializers/no-ng-attributes',
     'jest-preset-angular/build/serializers/ng-snapshot',

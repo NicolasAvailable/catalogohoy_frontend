@@ -1,5 +1,4 @@
 import { Route } from '@angular/router';
-import { freePlanGuard } from '@catalogohoy/plan';
 import { teamPermissionGuard, TEAMS_ROUTES } from '@catalogohoy/teams';
 
 export const adminRoutes: Route[] = [
@@ -60,13 +59,23 @@ export const adminRoutes: Route[] = [
   },
   {
     path: 'analytics',
-    canActivate: [freePlanGuard, teamPermissionGuard('analiticas', 'view')],
+    // Free-plan users can enter — the view renders a premium-upgrade prompt
+    // instead of the dashboard, so they discover what they're missing.
+    canActivate: [teamPermissionGuard('analiticas', 'view')],
     loadChildren: () =>
       import('@catalogohoy/analytics').then((m) => m.ANALYTICS_ROUTES),
   },
   {
+    path: 'reports',
+    canActivate: [teamPermissionGuard('reportes', 'view')],
+    loadChildren: () =>
+      import('@catalogohoy/reports').then((m) => m.REPORTS_ADMIN_ROUTES),
+  },
+  {
     path: 'teams',
-    canActivate: [freePlanGuard, teamPermissionGuard('equipo', 'view')],
+    // Same: free plan can see the list + history, but invite button is
+    // disabled and empty state nudges them to upgrade.
+    canActivate: [teamPermissionGuard('equipo', 'view')],
     children: TEAMS_ROUTES,
   },
 ];

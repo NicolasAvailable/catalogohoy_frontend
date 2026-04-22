@@ -18,8 +18,10 @@ import {
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CategoryStore } from '@catalogohoy/category';
+import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
+import { TenantStore } from '@catalogohoy/tenant';
 import { Exception, is } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { whiteSpacesValidator } from '@shared/presenter';
@@ -66,7 +68,18 @@ export default class Save implements OnInit {
   private readonly productFacade = inject(ProductFacade);
   public readonly categoryStore = inject(CategoryStore);
   public readonly planStore = inject(PlanStore);
+  public readonly tenantCurrency = inject(TenantCurrencyStore);
+  private readonly tenantStore = inject(TenantStore);
   private readonly permissions = inject(TeamPermissionsStore);
+  // Venezuela exception: admin-side product prices are stored in USD and the
+  // public catalog converts to Bs. via the BCV rate. Force '$' + 'USD' in
+  // this form so the value the seller enters matches what gets persisted.
+  public readonly cs = computed(() =>
+    this.tenantCurrency.isVenezuela() ? '$' : this.tenantCurrency.localSymbol() || '$'
+  );
+  public readonly currencyCode = computed(() =>
+    this.tenantCurrency.isVenezuela() ? 'USD' : this.tenantCurrency.localCode() || 'USD'
+  );
   protected readonly canEditProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'edit'));
 
   @ViewChild(PlanLimitDialogComponent)
@@ -87,6 +100,8 @@ export default class Save implements OnInit {
     position: [0],
     isWholesale: [false],
     wholesaleTiers: this.fb.array([]),
+    isSoldOut: [false],
+    isHidden: [false],
   });
 
   public readonly id = input<string | undefined>(undefined);
@@ -95,8 +110,33 @@ export default class Save implements OnInit {
   public readonly isSubmitting = signal<boolean>(false);
   public readonly isCreatingCategory = signal<boolean>(false);
   public readonly newCategoryName = signal<string>('');
+  // The "Ver todos" category is a special pill shown only on the public
+  // catalog (acts as a clear-filter). Products must never be assigned to it,
+  // so it's hidden from the create/edit dropdown.
+  public readonly selectableCategories = computed(() =>
+    this.categoryStore
+      .categoryList()
+      .categories.filter((c) => !c.isViewAll)
+  );
+  public readonly hasCategories = computed(
+    () => this.selectableCategories().length > 0
+  );
   public readonly stockMode = signal<'unlimited' | 'limited'>('unlimited');
-  private readonly maxPhotos = 3;
+
+  private readonly photosLimitByPlan: Record<string, number> = {
+    gratis: 3,
+    basico: 10,
+    avanzado: 50,
+  };
+  public readonly maxPhotos = computed(
+    () => this.photosLimitByPlan[this.planStore.currentPlan()?.id ?? 'gratis'] ?? 3
+  );
+  public readonly photosLimitMessage = computed(() => {
+    const planId = this.planStore.currentPlan()?.id ?? 'gratis';
+    if (planId === 'gratis') return 'Mejora tu plan para subir hasta 10 o 50 imágenes';
+    if (planId === 'basico') return 'Mejora tu plan para subir hasta 50 imágenes';
+    return 'Límite de imágenes alcanzado';
+  });
 
   get wholesaleTiersArray(): FormArray {
     return this.form.get('wholesaleTiers') as FormArray;
@@ -105,6 +145,9 @@ export default class Save implements OnInit {
   ngOnInit(): void {
     this.categoryStore.categoryList$(1, 100);
     this.planStore.loadTenantPlanUsage();
+    this.tenantStore.getTenantIdAsync().then((tid) => {
+      if (tid) this.tenantCurrency.load(tid);
+    });
     is.affirmative(this.id())
       .mapRight(async () => {
         const product = await this.productFacade.getById(this.id() as string);
@@ -114,16 +157,23 @@ export default class Save implements OnInit {
   }
 
   public async onCreateCategory() {
-    const name = this.newCategoryName();
-    if (!name || name.trim() === '' || this.isCreatingCategory()) return;
+    const name = this.newCategoryName().trim();
+    if (!name || this.isCreatingCategory()) return;
 
     this.isCreatingCategory.set(true);
     const result = await this.categoryStore.save({
-      name: name.trim(),
+      name,
       isVisible: true,
     });
 
-    result.mapRight(() => {
+    result.mapRight((created) => {
+      if (created) {
+        const current = this.form.controls.categoryIds.value ?? [];
+        this.form.controls.categoryIds.setValue([
+          ...current,
+          String(created.id),
+        ]);
+      }
       this.toastService.success('Categoría creada' as any);
       this.newCategoryName.set('');
     });
@@ -201,6 +251,8 @@ export default class Save implements OnInit {
     this.form.controls.position.setValue(product.position);
     this.photos.set(product.photos);
 
+    this.form.controls.isSoldOut.setValue(product.isSoldOut);
+    this.form.controls.isHidden.setValue(product.isHidden);
     this.form.controls.isWholesale.setValue(product.isWholesale);
     if (product.isWholesale) {
       this.form.controls.price.clearValidators();
@@ -220,11 +272,12 @@ export default class Save implements OnInit {
   public setPhoto(url: string | string[]) {
     const newPhotos = Array.isArray(url) ? url : [url];
     const currentPhotos = this.photos();
+    const limit = this.maxPhotos();
 
-    if (currentPhotos.length + newPhotos.length > this.maxPhotos) {
+    if (currentPhotos.length + newPhotos.length > limit) {
       this.toastService.error(
         ('Solo puedes subir un máximo de ' +
-          this.maxPhotos +
+          limit +
           ' imágenes.') as unknown as Exception
       );
       return;
@@ -265,6 +318,8 @@ export default class Save implements OnInit {
       categoryIds: this.form.controls.categoryIds.value!,
       isWholesale: this.form.controls.isWholesale.value ?? false,
       wholesaleTiers: this.wholesaleTiersArray.value ?? [],
+      isSoldOut: this.form.controls.isSoldOut.value ?? false,
+      isHidden: this.form.controls.isHidden.value ?? false,
     };
     if (this.isCreate()) {
       const product = await this.productFacade.create(body);

@@ -54,7 +54,7 @@
                 Valor medio
               </p>
               <p class="text-xl font-bold text-grey-800">
-                ${{ client.avgOrderUsd | number : '1.2-2' }}
+                {{ cs() }}{{ client.avgOrderUsd | number : '1.2-2' }}
               </p>
             </div>
           </div>
@@ -73,7 +73,7 @@
                 Total gastado
               </p>
               <p class="text-xl font-bold text-grey-800">
-                ${{ client.totalSpentUsd | number : '1.2-2' }}
+                {{ cs() }}{{ client.totalSpentUsd | number : '1.2-2' }}
               </p>
             </div>
           </div>
@@ -133,7 +133,7 @@
                   </div>
                   <div class="flex items-center gap-4">
                     <span class="text-sm font-bold text-primary-600">
-                      ${{ order.totalUsd | number : '1.2-2' }}
+                      {{ cs() }}{{ order.totalUsd | number : '1.2-2' }}
                     </span>
                     <ui-icon
                       name="chevron-right"
@@ -191,7 +191,8 @@
                 {{ formatDate(client.firstOrderAt) }}
               </p>
             </div>
-            <!-- Total in Bs -->
+            <!-- Total in Bs — Venezuela only -->
+            @if (tenantCurrency.isVenezuela()) {
             <div>
               <p class="text-xs text-grey-400 font-medium uppercase tracking-wider mb-1">
                 Total gastado (Bs)
@@ -200,6 +201,7 @@
                 Bs. {{ client.totalSpentBs | number : '1.2-2' }}
               </p>
             </div>
+            }
           </div>
         </div>
 

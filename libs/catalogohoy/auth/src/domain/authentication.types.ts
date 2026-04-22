@@ -8,11 +8,15 @@ export type SignUpCredentials = {
   email: string;
   storeName: string;
   password: string;
+  /** ISO2 country code chosen by the user at signup (e.g. "VE", "BR"). */
+  countryCode?: string;
 };
 
 export type GoogleSignupCredentials = {
   name: string;
   storeName: string;
+  /** ISO2 country code chosen by the user at signup. */
+  countryCode?: string;
 };
 
 export type ForgottenPasswordCredentials = {

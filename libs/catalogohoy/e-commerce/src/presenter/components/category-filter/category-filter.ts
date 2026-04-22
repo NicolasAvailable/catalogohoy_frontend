@@ -1,28 +1,62 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   input,
   output,
 } from '@angular/core';
-import { ButtonComponent } from '@ui';
+import { TabsModule } from 'primeng/tabs';
+
+interface CategoryPill {
+  id: string;
+  name: string;
+  isViewAll?: boolean;
+}
+
+/** Value used for "no filter" on the tab so PrimeNG tabs (which require a
+ *  stable identifier per tab) can always represent the current selection. */
+const ALL_TAB = '__all__';
 
 @Component({
   selector: 'lib-category-filter',
-  imports: [ButtonComponent],
+  imports: [TabsModule],
   templateUrl: './category-filter.html',
   styleUrl: './category-filter.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CategoryFilter {
-  public readonly categories = input<{ id: string; name: string }[]>([]);
+  public readonly categories = input<CategoryPill[]>([]);
   public readonly selectedCategoryId = input<string | null>(null);
   public readonly categorySelect = output<string | null>();
 
-  onCategoryClick(categoryId: string | null) {
-    this.categorySelect.emit(categoryId);
-  }
+  public readonly allTabValue = ALL_TAB;
 
-  isSelected(categoryId: string | null): boolean {
-    return this.selectedCategoryId() === categoryId;
+  /** True when the tenant seeded a "Ver todos" category — if so, we rely on
+   *  it instead of rendering a synthetic "All" tab at position 0. */
+  public readonly hasViewAllCategory = computed(() =>
+    this.categories().some((c) => c.isViewAll)
+  );
+
+  /** Tab bound to the active selection. "Ver todos" category OR no filter
+   *  both collapse to ALL_TAB. */
+  public readonly activeTab = computed(() => {
+    const selected = this.selectedCategoryId();
+    if (selected === null) return ALL_TAB;
+    return selected;
+  });
+
+  onTabChange(value: string | number | undefined): void {
+    if (!value || value === ALL_TAB) {
+      this.categorySelect.emit(null);
+      return;
+    }
+    const id = String(value);
+    const category = this.categories().find((c) => c.id === id);
+    // Clicking the seeded "Ver todos" tab also means "clear filter".
+    if (category?.isViewAll) {
+      this.categorySelect.emit(null);
+      return;
+    }
+    this.categorySelect.emit(id);
   }
 }

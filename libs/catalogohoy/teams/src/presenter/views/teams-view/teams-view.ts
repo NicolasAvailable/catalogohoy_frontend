@@ -1,41 +1,101 @@
+import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { Exception } from '@shared/domain';
+import { SupabaseClientProvider } from '@catalogohoy/core';
+import { OrderService, Order } from '@catalogohoy/order';
 import { PlanStore } from '@catalogohoy/plan';
+import { Product, ProductService } from '@catalogohoy/product';
+import { TenantStore } from '@catalogohoy/tenant';
 import { LucideAngularModule } from 'lucide-angular';
-import { ButtonComponent, ConfirmDialogComponent } from '@ui';
+import { PaginatorModule, PaginatorState } from 'primeng/paginator';
+import {
+  ButtonComponent,
+  ConfirmDialogComponent,
+  IconComponent,
+  PremiumUpgradePromptComponent,
+  TabPanelDirective,
+  TabsComponent,
+  type TabHeader,
+} from '@ui';
 import { ToastService } from '@shared/infrastructure';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TeamPermissionsStore } from '../../../infrastructure/team-permissions.store';
 import { TeamStore } from '../../../infrastructure/team.store';
-import { MODULE_ACTIONS, PermissionAction, PermissionKey, PermissionModule, TeamMember } from '../../../domain';
+import { ActivityLogService } from '../../../infrastructure/activity-log.service';
+import {
+  ACTIVITY_ACTION_LABELS,
+  ActivityLogEntry,
+  FIELD_LABELS,
+  MODULE_ACTIONS,
+  PermissionAction,
+  PermissionKey,
+  PermissionModule,
+  TeamMember,
+} from '../../../domain';
 import { InviteMemberDialogComponent } from '../../components/invite-member-dialog/invite-member-dialog';
 import { PermissionPickerComponent } from '../../components/permission-picker/permission-picker';
 import { FormsModule } from '@angular/forms';
 import { TooltipModule } from 'primeng/tooltip';
 
+type TabKey = 'members' | 'history';
+
 @Component({
   selector: 'lib-teams-view',
   standalone: true,
   imports: [
+    CommonModule,
     LucideAngularModule,
     ButtonComponent,
+    IconComponent,
     ConfirmDialogComponent,
     InviteMemberDialogComponent,
     PermissionPickerComponent,
+    PaginatorModule,
     FormsModule,
     TooltipModule,
     SkeletonModule,
+    TabsComponent,
+    TabPanelDirective,
+    PremiumUpgradePromptComponent,
   ],
   templateUrl: './teams-view.html',
   styleUrl: './teams-view.css',
 })
+
 export default class TeamsViewComponent implements OnInit {
   protected readonly teamStore = inject(TeamStore);
   protected readonly planStore = inject(PlanStore);
   protected readonly permissionsStore = inject(TeamPermissionsStore);
+  private readonly tenantStore = inject(TenantStore);
+  private readonly activityLogService = inject(ActivityLogService);
+  private readonly productService = inject(ProductService);
+  private readonly orderService = inject(OrderService);
   private readonly toaster = inject(ToastService);
   private readonly router = inject(Router);
+
+  // Tab state
+  protected readonly activeTab = signal<TabKey>('members');
+  protected readonly tabHeaders: TabHeader[] = [
+    { ref: 'members', label: 'Miembros' },
+    { ref: 'history', label: 'Historial' },
+  ];
+
+  // History state
+  protected readonly historyEntries = signal<ActivityLogEntry[]>([]);
+  protected readonly historyTotalCount = signal(0);
+  protected readonly historyPage = signal(1);
+  protected readonly historyPageSize = signal(20);
+  protected readonly historyLoading = signal(false);
+
+  // Current user email — used to mark "(tú)" next to their own row.
+  protected readonly currentUserEmail = signal<string | null>(null);
+
+  // History accordion: which entry is expanded + lazy-loaded entity cache.
+  protected readonly expandedEntryId = signal<number | null>(null);
+  protected readonly entityCache = signal<
+    Record<number, { loading: boolean; product?: Product; order?: Order; missing?: boolean }>
+  >({});
 
   protected readonly canInvite = computed(
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'invite')
@@ -62,6 +122,11 @@ export default class TeamsViewComponent implements OnInit {
   @ViewChild(ConfirmDialogComponent) confirmDialog!: ConfirmDialogComponent;
 
   async ngOnInit(): Promise<void> {
+    // Pull the auth email so we can mark "(tú)" on the member's own row.
+    const client = SupabaseClientProvider.getInstance();
+    const { data } = await client.auth.getUser();
+    this.currentUserEmail.set(data.user?.email ?? null);
+
     await this.planStore.loadTenantPlanUsage();
     await this.teamStore.load();
     await Promise.all(
@@ -164,5 +229,149 @@ export default class TeamsViewComponent implements OnInit {
 
   protected getMemberInitial(nameOrEmail: string): string {
     return nameOrEmail.charAt(0).toUpperCase();
+  }
+
+  /** True when the given email matches the currently authenticated user. */
+  protected isCurrentUser(email: string | null | undefined): boolean {
+    const me = this.currentUserEmail();
+    return !!me && !!email && me.toLowerCase() === email.toLowerCase();
+  }
+
+  // ── History tab ──────────────────────────────────────────
+
+  protected async switchTab(tab: string | number | undefined): Promise<void> {
+    if (tab !== 'members' && tab !== 'history') return;
+    this.activeTab.set(tab);
+    if (tab === 'history' && this.historyEntries().length === 0) {
+      await this.loadHistory();
+    }
+  }
+
+  protected async loadHistory(): Promise<void> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return;
+
+    this.historyLoading.set(true);
+    const result = await this.activityLogService.getPage(
+      tenantId,
+      this.historyPage(),
+      this.historyPageSize()
+    );
+    result.mapRight(({ entries, totalCount }) => {
+      this.historyEntries.set(entries);
+      this.historyTotalCount.set(totalCount);
+    });
+    this.historyLoading.set(false);
+  }
+
+  protected async onHistoryPageChange(event: PaginatorState): Promise<void> {
+    const pageSize = event.rows ?? 20;
+    const page = Math.floor((event.first ?? 0) / pageSize) + 1;
+    this.historyPage.set(page);
+    this.historyPageSize.set(pageSize);
+    await this.loadHistory();
+  }
+
+  protected getActionLabel(action: string): string {
+    return ACTIVITY_ACTION_LABELS[action] ?? action;
+  }
+
+  protected getFieldLabel(field: string): string {
+    return FIELD_LABELS[field] ?? field;
+  }
+
+  protected formatValue(val: unknown): string {
+    if (val === null || val === undefined) return '—';
+    if (typeof val === 'boolean') return val ? 'Sí' : 'No';
+    return String(val);
+  }
+
+  protected timeAgo(dateStr: string): string {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Justo ahora';
+    if (mins < 60) return `Hace ${mins} min`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `Hace ${hours}h`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `Hace ${days}d`;
+    return new Date(dateStr).toLocaleDateString('es', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+
+  protected getEntityIcon(entityType: string): string {
+    const icons: Record<string, string> = {
+      product: 'package',
+      order: 'clipboard-list',
+      category: 'tag',
+      catalog: 'settings',
+    };
+    return icons[entityType] ?? 'activity';
+  }
+
+  // ── Accordion expand / lazy-load detail ──────────────────
+
+  protected async toggleExpanded(entry: ActivityLogEntry): Promise<void> {
+    const current = this.expandedEntryId();
+    if (current === entry.id) {
+      this.expandedEntryId.set(null);
+      return;
+    }
+    this.expandedEntryId.set(entry.id);
+
+    // Only product/order carry fetchable detail today. Skip if already cached.
+    if (!entry.entityId) return;
+    if (entry.entityType !== 'product' && entry.entityType !== 'order') return;
+
+    const cached = this.entityCache()[entry.id];
+    if (cached && (cached.product || cached.order || cached.missing)) return;
+
+    this.entityCache.update((map) => ({
+      ...map,
+      [entry.id]: { loading: true },
+    }));
+
+    if (entry.entityType === 'product') {
+      const result = await this.productService.getById(String(entry.entityId));
+      this.entityCache.update((map) => ({
+        ...map,
+        [entry.id]: result.isRight()
+          ? { loading: false, product: result.value as Product }
+          : { loading: false, missing: true },
+      }));
+    } else if (entry.entityType === 'order') {
+      const tenantId = await this.tenantStore.getTenantIdAsync();
+      if (!tenantId) return;
+      const result = await this.orderService.getOrderById(entry.entityId, tenantId);
+      this.entityCache.update((map) => ({
+        ...map,
+        [entry.id]: result.isRight()
+          ? { loading: false, order: result.value as Order }
+          : { loading: false, missing: true },
+      }));
+    }
+  }
+
+  protected isExpanded(entryId: number): boolean {
+    return this.expandedEntryId() === entryId;
+  }
+
+  protected getCachedProduct(entryId: number): Product | undefined {
+    return this.entityCache()[entryId]?.product;
+  }
+
+  protected getCachedOrder(entryId: number): Order | undefined {
+    return this.entityCache()[entryId]?.order;
+  }
+
+  protected isCacheLoading(entryId: number): boolean {
+    return this.entityCache()[entryId]?.loading ?? false;
+  }
+
+  protected isCacheMissing(entryId: number): boolean {
+    return this.entityCache()[entryId]?.missing ?? false;
   }
 }

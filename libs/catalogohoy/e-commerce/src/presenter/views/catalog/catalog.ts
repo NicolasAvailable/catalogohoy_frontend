@@ -17,7 +17,6 @@ import {
   MenuComponent,
   MenuItem,
 } from '@ui';
-import { AnimateOnScroll } from 'primeng/animateonscroll';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { CategoryFilter } from '../../components/category-filter/category-filter';
@@ -31,7 +30,6 @@ import { ProductCard } from '../../components/product-card/product-card';
     CategoryFilter,
     MenuComponent,
     InputSearchComponent,
-    AnimateOnScroll,
   ],
   templateUrl: './catalog.html',
   styleUrl: './catalog.css',

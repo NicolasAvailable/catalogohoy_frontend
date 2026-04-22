@@ -1,13 +1,21 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import {
+  findCountryByCode,
+  TenantCurrencyStore,
+} from '@catalogohoy/ecommerce-config';
 import { IconComponent } from '@ui';
 import {
   BillingPeriod,
   CATALOG_ADDON_PRICE,
   CheckoutRequest,
-  PLAN_BASE_PRICES,
+  convertUsdToLocal,
+  CURRENCY_SYMBOLS,
+  PaymentCurrency,
   Plan,
+  PLAN_BASE_PRICES,
+  resolveCheckoutCurrency,
 } from '../../domain';
 import { CheckoutService, PlanStore } from '../../infrastructure';
 import { MetaPixelService, SupabaseClientProvider } from '@catalogohoy/core';
@@ -99,6 +107,7 @@ export class PlanCheckout implements OnInit {
   private readonly planStore = inject(PlanStore);
   private readonly checkoutService = inject(CheckoutService);
   private readonly tenantStore = inject(TenantStore);
+  private readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly metaPixel = inject(MetaPixelService);
   private readonly supabase = SupabaseClientProvider.getInstance();
 
@@ -119,6 +128,27 @@ export class PlanCheckout implements OnInit {
   /** Tasa BCV USD (directo de bcv_rates, independiente del módulo "Tasas del día") */
   public readonly bcvUsdRate = signal<number | null>(null);
   public readonly isFetchingRate = signal(false);
+
+  // Currency Stripe will actually charge in. Drives the on-screen totals +
+  // the `currency` sent to the checkout edge function. VE → USD always.
+  public readonly chargeCurrency = computed<PaymentCurrency>(() => {
+    const code = this.tenantCurrency.countryCode();
+    const country = findCountryByCode(code);
+    return resolveCheckoutCurrency(code, country?.defaultCurrency);
+  });
+
+  public readonly currencySymbol = computed(
+    () => CURRENCY_SYMBOLS[this.chargeCurrency()] ?? '$'
+  );
+
+  public readonly currencyCode = computed(
+    () => this.chargeCurrency().toUpperCase()
+  );
+
+  public readonly isZeroDecimalCurrency = computed(() => {
+    const c = this.chargeCurrency();
+    return c === 'clp' || c === 'pyg';
+  });
 
   public readonly plan = computed<Plan | null>(
     () => this.planStore.plans().find((p) => p.id === this.planId()) ?? null
@@ -152,7 +182,7 @@ export class PlanCheckout implements OnInit {
     return PLAN_BASE_PRICES[current.id] ?? 0;
   });
 
-  private readonly monthlyBasePrice = computed(() => {
+  private readonly monthlyBasePriceUsd = computed(() => {
     const targetPrice = PLAN_BASE_PRICES[this.planId()] ?? 0;
     if (this.isUpgrade()) {
       return Math.round((targetPrice - this.currentPlanPrice()) * 100) / 100;
@@ -162,36 +192,54 @@ export class PlanCheckout implements OnInit {
 
   public readonly baseCost = computed(() => {
     const { months } = BILLING_CONFIG[this.billingPeriod()];
-    return Math.round(this.monthlyBasePrice() * months * 100) / 100;
+    return convertUsdToLocal(this.monthlyBasePriceUsd() * months, this.chargeCurrency());
   });
 
   public readonly discountAmount = computed(() => {
     const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
-    return Math.round(this.monthlyBasePrice() * months * discount * 100) / 100;
+    return convertUsdToLocal(this.monthlyBasePriceUsd() * months * discount, this.chargeCurrency());
   });
 
   public readonly catalogAddonDisplayCost = computed(() => {
     const { months } = BILLING_CONFIG[this.billingPeriod()];
-    const addonPrice = CATALOG_ADDON_PRICE;
-    return Math.round(addonPrice * months * 100) / 100;
+    return convertUsdToLocal(CATALOG_ADDON_PRICE * months, this.chargeCurrency());
   });
 
-  public readonly catalogAddonCost = computed(
-    () => Math.round(this.catalogAddonDisplayCost() * this.catalogAddonQuantity() * 100) / 100
+  public readonly catalogAddonCost = computed(() =>
+    convertUsdToLocal(
+      CATALOG_ADDON_PRICE *
+        BILLING_CONFIG[this.billingPeriod()].months *
+        this.catalogAddonQuantity(),
+      this.chargeCurrency()
+    )
   );
 
-  public readonly total = computed(
-    () =>
-      Math.round(
-        (this.baseCost() - this.discountAmount() + this.catalogAddonCost()) * 100
-      ) / 100
-  );
+  // Total the user will be charged, in the charge currency.
+  public readonly total = computed(() => {
+    const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
+    const baseUsd = this.monthlyBasePriceUsd() * months * (1 - discount);
+    const addonUsd =
+      CATALOG_ADDON_PRICE * months * this.catalogAddonQuantity();
+    return convertUsdToLocal(baseUsd + addonUsd, this.chargeCurrency());
+  });
+
+  // Pure USD total — used for the Venezuela Bs. approximation line and the
+  // WhatsApp message (Pago Móvil is a VE-only flow, priced in USD + BCV).
+  public readonly totalUsd = computed(() => {
+    const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
+    const baseUsd = this.monthlyBasePriceUsd() * months * (1 - discount);
+    const addonUsd =
+      CATALOG_ADDON_PRICE * months * this.catalogAddonQuantity();
+    return Math.round((baseUsd + addonUsd) * 100) / 100;
+  });
 
   public readonly totalVes = computed(() => {
     const rate = this.bcvUsdRate();
     if (!rate) return null;
-    return Math.round(this.total() * rate);
+    return Math.round(this.totalUsd() * rate);
   });
+
+  public readonly isVenezuela = computed(() => this.tenantCurrency.isVenezuela());
 
   public readonly monthsLabel = computed(() => {
     const { months } = BILLING_CONFIG[this.billingPeriod()];
@@ -211,7 +259,7 @@ export class PlanCheckout implements OnInit {
     () => BILLING_CONFIG[this.billingPeriod()].discount * 100
   );
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     const planId = this.route.snapshot.paramMap.get('planId') ?? '';
     const period = (this.route.snapshot.queryParamMap.get('period') as BillingPeriod) ?? 'monthly';
 
@@ -221,6 +269,8 @@ export class PlanCheckout implements OnInit {
     this.planStore.loadPlans();
     this.planStore.loadTenantPlanUsage();
     this.loadBcvRate();
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (tenantId) this.tenantCurrency.load(tenantId);
   }
 
   private async loadBcvRate(): Promise<void> {
@@ -253,7 +303,7 @@ export class PlanCheckout implements OnInit {
       annual:    'Anual',
     };
     const periodStr = periodNames[this.billingPeriod()];
-    const totalUsd  = this.total();
+    const totalUsd  = this.totalUsd();
     const totalBs   = this.totalVes();
     const slug      = localStorage.getItem('slug') ?? '';
     const catalogs  = this.catalogAddonQuantity();
@@ -308,6 +358,7 @@ export class PlanCheckout implements OnInit {
       successUrl:  `${origin}/admin/plans/success?slug=${slug}`,
       cancelUrl:   `${origin}/admin/plans/checkout/${this.planId()}?period=${this.billingPeriod()}&slug=${slug}`,
       catalogAddonQuantity: this.catalogAddonQuantity(),
+      currency:             this.chargeCurrency(),
     };
 
     const result = await this.checkoutService.createCheckoutSession(request);
@@ -316,7 +367,7 @@ export class PlanCheckout implements OnInit {
       .mapRight(({ url }) => {
         this.metaPixel.trackEvent('InitiateCheckout', {
           content_name: this.planId(),
-          currency: 'USD',
+          currency: this.currencyCode(),
           value: this.total(),
         });
         window.location.href = url;

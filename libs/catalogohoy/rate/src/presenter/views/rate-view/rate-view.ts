@@ -48,6 +48,9 @@ export class RateView implements OnInit {
   public readonly activeRate = computed(
     () => this.rateStore.rate()?.active_rate || 'bcv_usd'
   );
+  public readonly isInitialLoading = computed(
+    () => this.rateStore.isLoading() && !this.rateStore.rate()
+  );
 
   public tempCustomRate: number | null = null;
 

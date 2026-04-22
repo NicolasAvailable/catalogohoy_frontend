@@ -5,7 +5,8 @@ export const PRODUCTS_MENU: PanelMenuItem[] = [
     label: 'Productos',
     icon: 'tag',
     iconNext: 'chevron-right',
-    state: { isOpen: false },
+    expanded: true,
+    state: { isOpen: true },
     items: [
       {
         label: 'Listado de productos',
@@ -35,7 +36,8 @@ export const CATALOG_MENU: PanelMenuItem[] = [
     label: 'Mi catálogo',
     icon: 'store',
     iconNext: 'chevron-right',
-    state: { isOpen: false },
+    expanded: true,
+    state: { isOpen: true },
     items: [
       {
         label: 'Ver mi catálogo',

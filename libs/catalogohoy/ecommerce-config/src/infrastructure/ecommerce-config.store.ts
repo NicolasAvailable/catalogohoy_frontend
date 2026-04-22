@@ -1,11 +1,22 @@
 import { inject } from '@angular/core';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { toast } from 'ngx-sonner';
-import { CatalogTemplate, DEFAULT_PAYMENT_METHODS, EcommerceConfig, PaymentMethod, PaymentMethodEntity } from '../domain';
+import {
+  CatalogTemplate,
+  DEFAULT_CURRENCY_CONFIG,
+  DEFAULT_PAYMENT_METHODS,
+  EcommerceConfig,
+  PaymentMethod,
+  PaymentMethodEntity,
+  TenantCurrencyConfig,
+} from '../domain';
 import { EcommerceConfigService } from './ecommerce-config.service';
 
 type EcommerceConfigState = {
   config: EcommerceConfig | null;
+  currencyConfig: TenantCurrencyConfig;
+  /** false until loadCurrencyConfig runs; true only when a DB row actually exists. */
+  currencyConfigExists: boolean;
   paymentMethodsList: PaymentMethodEntity[];
   isLoading: boolean;
   isSaving: boolean;
@@ -15,6 +26,8 @@ type EcommerceConfigState = {
 
 const initialState: EcommerceConfigState = {
   config: null,
+  currencyConfig: { ...DEFAULT_CURRENCY_CONFIG },
+  currencyConfigExists: false,
   paymentMethodsList: [],
   isLoading: false,
   isSaving: false,
@@ -46,6 +59,85 @@ export const EcommerceConfigStore = signalStore(
           patchState(store, { isLoading: false, error: error.message }),
         (config: EcommerceConfig) =>
           patchState(store, { isLoading: false, config })
+      );
+    },
+
+    async loadCurrencyConfig(tenantId: string) {
+      const result = await service.getCurrencyConfig(tenantId);
+      result.mapRight((currencyConfig) => {
+        if (currencyConfig === null) {
+          patchState(store, {
+            currencyConfig: { ...DEFAULT_CURRENCY_CONFIG },
+            currencyConfigExists: false,
+          });
+        } else {
+          patchState(store, {
+            currencyConfig,
+            currencyConfigExists: true,
+          });
+        }
+      });
+    },
+
+    async saveCurrencyConfig(patch: Partial<TenantCurrencyConfig>) {
+      const currentConfig = store.config();
+      if (!currentConfig) return;
+
+      patchState(store, { isSaving: true, savingSection: 'currency' });
+      const result = await service.updateCurrencyConfig(
+        currentConfig.tenantId,
+        patch
+      );
+
+      result.fold(
+        (error: Error) => {
+          patchState(store, {
+            isSaving: false,
+            savingSection: null,
+            error: error.message,
+          });
+          toast.error('Error al guardar la moneda');
+        },
+        () => {
+          patchState(store, {
+            isSaving: false,
+            savingSection: null,
+            currencyConfig: { ...store.currencyConfig(), ...patch },
+            currencyConfigExists: true,
+          });
+          // No success toast — this fires alongside the main "Configuración
+          // actualizada" toast from updatePartialConfig; a second one is noise.
+        }
+      );
+    },
+
+    async saveTenantCountry(country: string, countryCode: string) {
+      const currentConfig = store.config();
+      if (!currentConfig) return;
+
+      patchState(store, { isSaving: true, savingSection: 'country' });
+      const result = await service.updateTenantCountry(
+        currentConfig.tenantId,
+        country,
+        countryCode
+      );
+
+      result.fold(
+        (error: Error) => {
+          patchState(store, {
+            isSaving: false,
+            savingSection: null,
+            error: error.message,
+          });
+          toast.error('Error al guardar el país');
+        },
+        () => {
+          patchState(store, {
+            isSaving: false,
+            savingSection: null,
+            config: { ...currentConfig, country, countryCode },
+          });
+        }
       );
     },
 

@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
+import { ActivityLogService } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
 import { E } from '@shared/domain';
 import {
@@ -19,6 +20,7 @@ import { ProductListMapper, ProductMapper } from './mappers';
 export class ProductService implements BaseProductService {
   private readonly client = SupabaseClientProvider.getInstance();
   private readonly tenantStore = inject(TenantStore);
+  private readonly activityLog = inject(ActivityLogService);
 
   public async getAll(
     page?: number,
@@ -150,6 +152,8 @@ export class ProductService implements BaseProductService {
         wholesale_tiers: input.isWholesale
           ? input.wholesaleTiers.map((t) => ({ title: t.title, price: Number(t.price) }))
           : [],
+        is_sold_out: input.isSoldOut ?? false,
+        is_hidden: input.isHidden ?? false,
       })
       .select('*');
 
@@ -165,12 +169,27 @@ export class ProductService implements BaseProductService {
         },
       ]);
     });
+
+    this.activityLog.log({
+      action: 'product.create',
+      entityType: 'product',
+      entityId: data[0].id,
+      entityName: input.name,
+    });
+
     return E.right(undefined);
   }
 
   public async update(
     input: UpdateProductInput
   ): Promise<E.Either<Error, void>> {
+    // Snapshot the current state BEFORE update for diff.
+    const { data: before } = await this.client
+      .from('products')
+      .select('name, description, price, price_promotional, stock, sku, production_cost, is_wholesale, is_sold_out, is_hidden, position')
+      .eq('id', input.id)
+      .single();
+
     const updatePayload: Record<string, unknown> = {
       name: input.name,
       description: input.description,
@@ -185,6 +204,8 @@ export class ProductService implements BaseProductService {
       wholesale_tiers: input.isWholesale
         ? input.wholesaleTiers.map((t) => ({ title: t.title, price: Number(t.price) }))
         : [],
+      is_sold_out: input.isSoldOut ?? false,
+      is_hidden: input.isHidden ?? false,
     };
 
     if (input.position !== undefined) {
@@ -217,15 +238,65 @@ export class ProductService implements BaseProductService {
       });
     }
 
+    // Log the diff (fire-and-forget)
+    if (before) {
+      const changes = this.activityLog.diff(
+        {
+          name: before.name,
+          price: before.price,
+          pricePromotional: before.price_promotional,
+          stock: before.stock,
+          sku: before.sku,
+          isSoldOut: before.is_sold_out,
+          isHidden: before.is_hidden,
+          position: before.position,
+        },
+        {
+          name: input.name,
+          price: input.price === '' ? 0 : Number(input.price),
+          pricePromotional: !input.pricePromotional || input.pricePromotional.length === 0 ? null : Number(input.pricePromotional),
+          stock: input.stock,
+          sku: input.sku || null,
+          isSoldOut: input.isSoldOut ?? false,
+          isHidden: input.isHidden ?? false,
+          position: input.position,
+        }
+      );
+      if (changes.length > 0) {
+        this.activityLog.log({
+          action: 'product.update',
+          entityType: 'product',
+          entityId: Number(input.id),
+          entityName: input.name,
+          changes,
+        });
+      }
+    }
+
     return E.right(undefined);
   }
 
   public async delete(id: string): Promise<E.Either<Error, void>> {
+    // Snapshot the name for the log before we lose the row.
+    const { data: snap } = await this.client
+      .from('products')
+      .select('name')
+      .eq('id', id)
+      .single();
+
     const { error } = await this.client.from('products').delete().eq('id', id);
 
     if (error) {
       return E.left(new Error(error.message));
     }
+
+    this.activityLog.log({
+      action: 'product.delete',
+      entityType: 'product',
+      entityId: Number(id),
+      entityName: snap?.name ?? null,
+    });
+
     return E.right(undefined);
   }
 

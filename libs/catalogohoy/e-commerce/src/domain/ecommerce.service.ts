@@ -1,4 +1,10 @@
-import { CatalogTemplate, PaymentMethodEntity, SocialLinks, WhatsappButton } from '@catalogohoy/ecommerce-config';
+import {
+  CatalogTemplate,
+  PaymentMethodEntity,
+  SocialLinks,
+  TenantCurrencyConfig,
+  WhatsappButton,
+} from '@catalogohoy/ecommerce-config';
 import { Product, ProductList } from '@catalogohoy/product';
 import { E } from '@shared/domain';
 
@@ -19,11 +25,24 @@ export interface CatalogInfo {
   socialLinks: SocialLinks;
   template: CatalogTemplate;
   currencySymbol: string;
+  showReferencePrice: boolean;
+  showLocalCurrencyPrice: boolean;
+  whatsappOrderMessage: string | null;
+  country: string | null;
+  countryCode: string | null;
+  state: string | null;
+  city: string | null;
+  showLocationSection: boolean;
+  showCategoriesSection: boolean;
+  currencyConfig: TenantCurrencyConfig | null;
 }
 
 export interface Category {
   id: string;
   name: string;
+  /** The seeded default "Ver todos" row — clicking it clears the active
+   *  filter on the public catalog (acts as a show-all pill). */
+  isViewAll?: boolean;
 }
 
 export interface PaginatedProductList {
