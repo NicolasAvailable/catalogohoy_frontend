@@ -39,10 +39,16 @@ export const TenantsStore = signalStore(
     async assignPlan(
       tenantId: number,
       tier: PlanTier,
-      cycle: PlanCycle
+      cycle: PlanCycle,
+      amountUsd: number
     ): Promise<void> {
       patchState(store, { isMutating: true, error: null });
-      const result = await tenantsService.assignPlan(tenantId, tier, cycle);
+      const result = await tenantsService.assignPlan(
+        tenantId,
+        tier,
+        cycle,
+        amountUsd
+      );
       patchState(store, { isMutating: false });
       if (result.isLeft()) {
         patchState(store, { error: result.value.message });

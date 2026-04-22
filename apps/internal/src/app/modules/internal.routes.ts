@@ -23,4 +23,9 @@ export const internalRoutes: Route[] = [
         (m) => m.payingClientsRoutes
       ),
   },
+  {
+    path: 'plans',
+    loadChildren: () =>
+      import('./plans/plans.routes').then((m) => m.plansRoutes),
+  },
 ];

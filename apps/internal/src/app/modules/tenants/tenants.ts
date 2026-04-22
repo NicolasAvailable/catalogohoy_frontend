@@ -297,7 +297,12 @@ export class Tenants implements OnInit {
   }
 
   protected async onAssign(payload: AssignPlanPayload): Promise<void> {
-    await this.store.assignPlan(payload.tenantId, payload.tier, payload.cycle);
+    await this.store.assignPlan(
+      payload.tenantId,
+      payload.tier,
+      payload.cycle,
+      payload.amountUsd
+    );
   }
 
   protected async onRemove(tenantId: number): Promise<void> {

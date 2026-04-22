@@ -27,4 +27,9 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     icon: 'credit-card',
     routerLink: '/paying-clients',
   },
+  {
+    label: 'Planes',
+    icon: 'crown',
+    routerLink: '/plans',
+  },
 ];

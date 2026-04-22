@@ -1,11 +1,15 @@
 import { EnvironmentProviders, importProvidersFrom } from '@angular/core';
 import {
+  Activity,
   AlertTriangle,
   ArrowDown,
   ArrowDownToLine,
   ArrowLeft,
   ArrowUp,
   ArrowUpDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  CalendarDays,
   Ban,
   Banknote,
   BarChart3,
@@ -228,6 +232,10 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       ChevronDownIcon,
       CircleX,
       WandSparkles,
+      Activity,
+      ArrowUpRight,
+      ArrowDownRight,
+      CalendarDays,
     })
   );
 };
