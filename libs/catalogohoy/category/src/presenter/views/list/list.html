@@ -67,7 +67,8 @@
             variant="outlined"
             severity="contrast"
             size="small"
-            [routerLink]="['edit', category.id]"
+            [routerLink]="category.isViewAll ? null : ['edit', category.id]"
+            [disabled]="category.isViewAll"
             tooltip="Editar"
             tooltipPosition="bottom"
           />
@@ -85,6 +86,7 @@
             severity="danger"
             size="small"
             (click)="onDelete(category)"
+            [disabled]="category.isViewAll"
             tooltip="Eliminar"
             tooltipPosition="bottom"
           />
