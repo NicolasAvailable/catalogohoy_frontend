@@ -46,12 +46,11 @@ import { ThemeStore } from '../../../modules/theme/theme.store';
 
         @if (authStore.session(); as session) {
           <div
-            class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-grey-25 border border-grey-50"
+            class="flex items-center justify-center w-9 h-9 rounded-full bg-primary-500 text-white text-sm font-bold uppercase shrink-0"
+            [pTooltip]="session.email"
+            tooltipPosition="bottom"
           >
-            <ui-icon name="user" size="14" styleClass="text-grey-500" />
-            <span class="text-xs font-medium text-grey-700">
-              {{ session.email }}
-            </span>
+            {{ initial(session.email) }}
           </div>
         }
 
@@ -79,5 +78,9 @@ export class Topbar {
   protected async logout(): Promise<void> {
     await this.authStore.logout();
     this.router.navigateByUrl('/login');
+  }
+
+  protected initial(email: string | null | undefined): string {
+    return (email ?? '?').trim().charAt(0).toUpperCase() || '?';
   }
 }
