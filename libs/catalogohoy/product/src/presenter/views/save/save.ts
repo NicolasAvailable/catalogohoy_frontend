@@ -110,8 +110,16 @@ export default class Save implements OnInit {
   public readonly isSubmitting = signal<boolean>(false);
   public readonly isCreatingCategory = signal<boolean>(false);
   public readonly newCategoryName = signal<string>('');
+  // The "Ver todos" category is a special pill shown only on the public
+  // catalog (acts as a clear-filter). Products must never be assigned to it,
+  // so it's hidden from the create/edit dropdown.
+  public readonly selectableCategories = computed(() =>
+    this.categoryStore
+      .categoryList()
+      .categories.filter((c) => !c.isViewAll)
+  );
   public readonly hasCategories = computed(
-    () => this.categoryStore.categoryList().categories.length > 0
+    () => this.selectableCategories().length > 0
   );
   public readonly stockMode = signal<'unlimited' | 'limited'>('unlimited');
 

@@ -89,7 +89,7 @@
             >Seleccionar categorías</label
           >
           <ui-multi-select
-            [options]="categoryStore.categoryList().categories"
+            [options]="selectableCategories()"
             [showClear]="true"
             [filter]="hasCategories()"
             formControlName="categoryIds"
