@@ -241,7 +241,6 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       ChevronDownIcon,
       CircleX,
       WandSparkles,
-      Activity,
       ArrowUpRight,
       ArrowDownRight,
       CalendarDays,
