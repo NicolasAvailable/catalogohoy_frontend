@@ -73,6 +73,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   readonly isCheckingEmail = signal(false);
   readonly emailExistsError = signal(false);
   readonly googleAccountExistsError = signal(false);
+  readonly invitedTenantName = signal<string | null>(null);
 
   readonly credentialsForm = this.fb.group({
     email: ['', [Validators.required, Validators.email, whiteSpacesValidator()]],
@@ -127,6 +128,16 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
       this.profileForm.controls.storeName.updateValueAndValidity();
       this.method.set('email');
       this.step.set(2);
+
+      // Lock the email field to the invited address — the backend validates
+      // the invite by matching email, so letting the user type a different
+      // one guarantees either a rejection or (worse) a silent mismatch.
+      const inviteResult = await this.facade.validateInviteToken(this.inviteToken);
+      inviteResult.mapRight((info) => {
+        this.credentialsForm.controls.email.setValue(info.email);
+        this.credentialsForm.controls.email.disable();
+        this.invitedTenantName.set(info.tenantName);
+      });
       return;
     }
 
@@ -223,7 +234,12 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     this.emailExistsError.set(false);
     this.isCheckingEmail.set(true);
 
-    const email = this.credentialsForm.value.email as string;
+    // getRawValue() so we include the `email` control when it's disabled
+    // in invite mode (locked to the invited address).
+    const { email } = this.credentialsForm.getRawValue() as {
+      email: string;
+      password: string;
+    };
     const exists = await this.facade.checkEmailExists(email);
 
     if (exists) {
@@ -233,7 +249,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     }
 
     if (this.isInviteMode() && this.inviteToken) {
-      const { password } = this.credentialsForm.value as { password: string };
+      const { password } = this.credentialsForm.getRawValue() as { password: string };
       const name = email.split('@')[0];
       const signupResult = await this.facade.signupInvitee({
         email,
@@ -279,7 +295,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     };
 
     if (this.isInviteMode() && this.inviteToken) {
-      const { email, password } = this.credentialsForm.value as {
+      const { email, password } = this.credentialsForm.getRawValue() as {
         email: string;
         password: string;
       };

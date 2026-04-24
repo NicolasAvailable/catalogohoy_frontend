@@ -107,7 +107,13 @@
             @if (isInviteMode()) { Crea tu cuenta } @else { Tus credenciales }
           </h2>
           <p class="text-sm text-grey-400 mt-1">
-            @if (isInviteMode()) { Elige un email y contraseña para acceder al equipo. } @else { Con estas podrás ingresar a tu catálogo. }
+            @if (isInviteMode()) {
+              @if (invitedTenantName(); as tenantName) {
+                Fuiste invitado a <span class="font-semibold text-grey-700">{{ tenantName }}</span>. Elige una contraseña para aceptar la invitación.
+              } @else {
+                Elige una contraseña para aceptar la invitación.
+              }
+            } @else { Con estas podrás ingresar a tu catálogo. }
           </p>
         </div>
 
@@ -115,6 +121,9 @@
           <div class="mb-4">
             <label class="block font-medium text-sm text-grey-400 mb-1">Email</label>
             <ui-input-text size="large" formControlName="email" placeholder="tu@correo.com" />
+            @if (isInviteMode()) {
+              <p class="text-xs text-grey-400 mt-1">Este es el correo al que enviaron la invitación y no se puede cambiar.</p>
+            }
             <ui-input-message [control]="credentialsForm.get('email')" error="required" text="El campo es obligatorio" />
             <ui-input-message [control]="credentialsForm.get('email')" error="email" text="El formato no es válido" />
             <ui-input-message [control]="credentialsForm.get('email')" error="whitespace" text="No puede contener espacios en blanco" />
