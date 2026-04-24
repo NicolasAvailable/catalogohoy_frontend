@@ -7,6 +7,7 @@
   margin: 0 auto;
   overflow-x: clip;
   background: #ffffff;
+  position: relative;
 }
 
 .ecommerce__content {
@@ -17,57 +18,63 @@
   width: 100%;
 }
 
-.ecommerce__cart-bar {
-  position: fixed;
-  bottom: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(
-    135deg,
-    var(--color-primary-500) 0%,
-    var(--color-primary-700) 100%
-  );
-  color: white;
-  padding: 0.875rem 1.5rem;
-  border-radius: 50px;
+/* ===== Top floating action buttons (Fatness-style) ===== */
+.ecommerce__top-actions {
+  position: absolute;
+  top: 0.625rem;
+  right: 0.625rem;
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  cursor: pointer;
-  box-shadow: 0 8px 32px color-mix(in srgb, var(--color-primary-500) 35%, transparent);
-  z-index: 100;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  min-width: 200px;
+  gap: 0.5rem;
+  z-index: 50;
 }
 
-.ecommerce__cart-bar:hover {
-  transform: translateX(-50%) translateY(-2px);
-  box-shadow: 0 12px 40px color-mix(in srgb, var(--color-primary-500) 45%, transparent);
-}
-
-.ecommerce__cart-bar-count {
-  background: white;
-  color: var(--color-primary-600);
-  width: 28px;
-  height: 28px;
+.ecommerce__action-btn {
+  width: 2.4rem;
+  height: 2.4rem;
   border-radius: 50%;
+  background: white;
+  border: none;
+  cursor: pointer;
+  color: rgba(51, 51, 51, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 0.875rem;
+  box-shadow: 0.0625rem 0.125rem 0.5rem rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease, color 0.15s ease;
+  text-decoration: none;
 }
 
-.ecommerce__cart-bar-text {
-  flex: 1;
-  font-weight: 500;
+.ecommerce__action-btn:hover {
+  transform: translateY(-0.0625rem);
+  color: var(--color-primary-500);
 }
 
-.ecommerce__cart-bar-price {
+/* ===== Floating "Ver Carrito" pill bar ===== */
+.ecommerce__cart-pill {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  max-width: 14rem;
+  background: var(--color-primary-500);
+  color: white;
+  border: none;
+  border-radius: 0.625rem;
+  padding: 0.875rem 1.25rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  font-weight: 600;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.25);
+  z-index: 100;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.ecommerce__cart-pill:hover {
+  background: var(--color-primary-600);
+  transform: translateY(-0.125rem);
 }
 
 @media (min-width: 768px) {
@@ -76,9 +83,8 @@
     padding-bottom: 2rem;
   }
 
-  .ecommerce__cart-bar {
+  .ecommerce__cart-pill {
     bottom: 1.5rem;
-    min-width: 280px;
-    padding: 1rem 2rem;
+    right: 1.5rem;
   }
 }

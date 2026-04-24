@@ -1,17 +1,36 @@
-<p-tabs
-  class="category-filter"
-  [scrollable]="true"
-  [value]="activeTab()"
-  (valueChange)="onTabChange($event)"
->
-  <p-tablist>
-    @if (!hasViewAllCategory()) {
-      <p-tab [value]="allTabValue">Ver todos</p-tab>
-    }
-    @for (category of categories(); track category.id) {
-      <p-tab [value]="category.isViewAll ? allTabValue : category.id">
-        {{ category.name }}
-      </p-tab>
-    }
-  </p-tablist>
-</p-tabs>
+<nav class="category-filter-nav">
+  <button
+    type="button"
+    class="category-filter-icon-btn"
+    (click)="searchClick.emit()"
+    aria-label="Buscar"
+  >
+    <ui-icon name="search" styleClass="size-5" />
+  </button>
+  <button
+    type="button"
+    class="category-filter-icon-btn"
+    (click)="filterClick.emit()"
+    aria-label="Filtros"
+  >
+    <ui-icon name="slidersHorizontal" styleClass="size-5" />
+  </button>
+
+  <p-tabs
+    class="category-filter"
+    [scrollable]="true"
+    [value]="activeTab()"
+    (valueChange)="onTabChange($event)"
+  >
+    <p-tablist>
+      @if (!hasViewAllCategory()) {
+        <p-tab [value]="allTabValue">Ver todos</p-tab>
+      }
+      @for (category of categories(); track category.id) {
+        <p-tab [value]="category.isViewAll ? allTabValue : category.id">
+          {{ category.name }}
+        </p-tab>
+      }
+    </p-tablist>
+  </p-tabs>
+</nav>

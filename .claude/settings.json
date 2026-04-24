@@ -42,7 +42,12 @@
       "Bash(find \"c:/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.json\" \\\\\\) -exec grep -l \"countryCode\\\\|dialCode\\\\|country.*code\" {} \\\\;)",
       "Bash(grep -r \"Bs\\\\\\\\.S\" \"c:\\\\Users\\\\nicol\\\\OneDrive\\\\Desktop\\\\projects\\\\catalogohoy_frontend_monorepo\\\\libs\\\\catalogohoy\" --include=\"*.html\" --include=\"*.ts\")",
       "Bash(find /c/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo/apps/authentication -name \"*.ts\" -exec grep -l \"onAuthStateChange\\\\|autoRefreshToken\\\\|persistSession\" {} \\\\;)",
-      "Bash(find /c/Users/nicol/OneDrive/Desktop -name \".claude\" -type d -exec grep -l \"catalogohoy\" {} \\\\;)"
+      "Bash(find /c/Users/nicol/OneDrive/Desktop -name \".claude\" -type d -exec grep -l \"catalogohoy\" {} \\\\;)",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_close"
     ]
   }
 }

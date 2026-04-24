@@ -391,3 +391,114 @@
 :host ::ng-deep .p-menu .p-menu-item-content {
   color: var(--color-grey-300);
 }
+
+/* ===== Categories bottom sheet (Fatness-style) ===== */
+.cat-sheet__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 150;
+  animation: cat-sheet-fade 0.2s ease;
+}
+
+.cat-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 151;
+  background: white;
+  border-radius: 1rem 1rem 0 0;
+  padding: 1.25rem 1.25rem 1.5rem;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -0.5rem 1.5rem rgba(0, 0, 0, 0.15);
+  animation: cat-sheet-slide 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (min-width: 768px) {
+  .cat-sheet {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 26rem;
+    border-radius: 1rem;
+    bottom: 1.5rem;
+  }
+}
+
+.cat-sheet__title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--color-grey-800);
+  margin: 0 0 0.25rem;
+}
+
+.cat-sheet__hint {
+  font-size: 0.875rem;
+  color: var(--color-grey-400);
+  margin: 0 0 1rem;
+}
+
+.cat-sheet__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.cat-sheet__item {
+  width: 100%;
+  text-align: left;
+  padding: 0.9rem 0.5rem 0.9rem 0.75rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-grey-50);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-grey-400);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.cat-sheet__item:hover {
+  background: var(--color-grey-50);
+}
+
+.cat-sheet__item--active {
+  color: var(--color-primary-600);
+  border-left: 0.25rem solid var(--color-primary-600);
+  padding-left: 0.5rem;
+}
+
+.cat-sheet__close {
+  margin-top: 1rem;
+  padding: 0.95rem 1.5rem;
+  background: var(--color-primary-500);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.cat-sheet__close:hover {
+  background: var(--color-primary-600);
+}
+
+@keyframes cat-sheet-slide {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes cat-sheet-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

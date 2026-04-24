@@ -1,9 +1,11 @@
 import {
   Component,
+  computed,
   effect,
   ElementRef,
   inject,
   OnDestroy,
+  signal,
   viewChild,
 } from '@angular/core';
 import { EcommerceStore } from '../../../infrastructure';
@@ -16,6 +18,14 @@ import { EcommerceStore } from '../../../infrastructure';
 })
 export class CatalogHero implements OnDestroy {
   readonly ecommerceStore = inject(EcommerceStore);
+
+  readonly showDetails = signal(false);
+
+  readonly locationText = computed(() => {
+    const info = this.ecommerceStore.effectiveCatalogInfo();
+    if (!info) return '';
+    return [info.city, info.state, info.country].filter(Boolean).join(', ');
+  });
 
   /**
    * Reference to the `.hero__profile` wrapper that contains the centred
@@ -47,6 +57,10 @@ export class CatalogHero implements OnDestroy {
 
       this.observer.observe(el);
     });
+  }
+
+  toggleDetails(): void {
+    this.showDetails.update((v) => !v);
   }
 
   ngOnDestroy(): void {

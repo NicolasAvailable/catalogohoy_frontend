@@ -17,15 +17,48 @@
               <img [src]="info.banner" alt="" class="hero__banner-img" />
             }
           </div>
-          <div #heroProfile class="hero__profile">
-            @if (info.logo) {
-              <img [src]="info.logo" alt="" class="hero__logo" />
-            } @else {
-              <div class="hero__logo-placeholder">
-                <span class="hero__logo-initial">{{ info.name?.charAt(0) || 'C' }}</span>
-              </div>
-            }
-            <h2 class="hero__name">{{ info.name }}</h2>
+
+          <div class="hero__card">
+            <button
+              type="button"
+              class="hero__card-more"
+              (click)="toggleDetails()"
+            >
+              {{ showDetails() ? 'Ver Menos' : 'Ver Más' }}
+            </button>
+
+            <div #heroProfile class="hero__card-body">
+              @if (info.logo) {
+                <img [src]="info.logo" alt="" class="hero__logo" />
+              } @else {
+                <div class="hero__logo-placeholder">
+                  <span class="hero__logo-initial">{{ info.name?.charAt(0) || 'C' }}</span>
+                </div>
+              }
+
+              <h1 class="hero__name">{{ info.name }}</h1>
+
+              @if (info.showLocationSection && locationText()) {
+                <p class="hero__location">{{ locationText() }}</p>
+              }
+
+              <p class="hero__subtitle">
+                @if (info.isOpen) {
+                  <span class="hero__status hero__status--open">Abierto</span>
+                } @else {
+                  <span class="hero__status hero__status--closed">Cerrado</span>
+                }
+                @if (info.openTime && info.closeTime) {
+                  <span class="hero__hours">· {{ info.openTime }} - {{ info.closeTime }}</span>
+                }
+              </p>
+
+              @if (info.description) {
+                <p class="hero__description" [class.hero__description--expanded]="showDetails()">
+                  {{ info.description }}
+                </p>
+              }
+            </div>
           </div>
         </section>
       }
