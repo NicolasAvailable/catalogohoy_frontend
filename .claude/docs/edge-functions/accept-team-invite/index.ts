@@ -130,6 +130,42 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Clean up orphan tenants auto-created by the `handle_new_user` trigger
+    // when this user signed up through an invitation. Without this, the
+    // invitee ends up with two tenants in the switcher (their auto-created
+    // one + the inviter's), which looks like a duplicate (see bug where
+    // "Essence Royale" owner invited X → invitee saw both "Essence Royale"
+    // and "Essence Royalee").
+    //
+    // We only delete tenants where this user is the *sole* owner and which
+    // are NOT the tenant they were just invited to — that's always an
+    // orphan from the signup trigger.
+    if (user.user_metadata?.is_invitee === true) {
+      const { data: ownedLinks } = await supabase
+        .from('users_tenants')
+        .select('tenant_id')
+        .eq('user_id', userData.id)
+        .eq('role', 'owner');
+
+      const orphanTenantIds = (ownedLinks ?? [])
+        .map((r: { tenant_id: number }) => r.tenant_id)
+        .filter((id: number) => id !== tenantId);
+
+      for (const orphanId of orphanTenantIds) {
+        // Only delete if this user is the only member — protects against
+        // unexpected multi-owner tenants.
+        const { count } = await supabase
+          .from('users_tenants')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', orphanId);
+
+        if (count === 1) {
+          await supabase.from('users_tenants').delete().eq('tenant_id', orphanId);
+          await supabase.from('tenants').delete().eq('id', orphanId);
+        }
+      }
+    }
+
     return json({ ok: true }, 200);
   } catch (err) {
     return json({ error: String(err) }, 500);

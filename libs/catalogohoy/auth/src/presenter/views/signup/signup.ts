@@ -235,7 +235,12 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     if (this.isInviteMode() && this.inviteToken) {
       const { password } = this.credentialsForm.value as { password: string };
       const name = email.split('@')[0];
-      const signupResult = await this.facade.signupInvitee({ email, password, name });
+      const signupResult = await this.facade.signupInvitee({
+        email,
+        password,
+        name,
+        inviteToken: this.inviteToken,
+      });
       if (signupResult.isLeft()) {
         this.isCheckingEmail.set(false);
         return;
@@ -278,7 +283,12 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
         email: string;
         password: string;
       };
-      const signupResult = await this.facade.signupInvitee({ email, password, name });
+      const signupResult = await this.facade.signupInvitee({
+        email,
+        password,
+        name,
+        inviteToken: this.inviteToken,
+      });
       if (signupResult.isLeft()) return;
       await this.facade.acceptInvite(this.inviteToken);
       sessionStorage.removeItem('pending_invite_token');
