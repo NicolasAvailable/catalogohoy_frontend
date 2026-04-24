@@ -25,6 +25,25 @@ export class InviteMemberDialogComponent {
   protected readonly isEmailValid = computed(() =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email().trim())
   );
+  /** Blocks inviting the tenant owner or an already-invited/active member.
+   *  Returns a user-facing message or null when the email is invitable. */
+  protected readonly duplicateError = computed<string | null>(() => {
+    if (!this.isEmailValid()) return null;
+    const target = this.email().trim().toLowerCase();
+    const owner = this.teamStore.ownerEmail()?.toLowerCase() ?? '';
+    if (target === owner) {
+      return 'No puedes invitarte a ti mismo — ya eres el dueño del catálogo.';
+    }
+    const existing = this.teamStore.members().find(
+      (m) => m.invitedEmail.toLowerCase() === target && m.status !== 'declined'
+    );
+    if (existing) {
+      return existing.status === 'pending'
+        ? 'Ya existe una invitación pendiente para este correo.'
+        : 'Este usuario ya es miembro del equipo.';
+    }
+    return null;
+  });
   protected readonly selectedPermissions = signal<PermissionKey[]>([]);
 
   public show(): void {
@@ -41,6 +60,12 @@ export class InviteMemberDialogComponent {
   protected async onInvite(): Promise<void> {
     const email = this.email().trim();
     if (!email) return;
+
+    const dup = this.duplicateError();
+    if (dup) {
+      this.errorMessage.set(dup);
+      return;
+    }
 
     const perms = this.selectedPermissions().map((key) => {
       const [module, action] = key.split(':') as [PermissionModule, PermissionAction];

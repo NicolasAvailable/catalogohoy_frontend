@@ -2,6 +2,8 @@ import { Component, effect, inject, signal, ViewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CheckoutService, PlanStore } from '@catalogohoy/plan';
 import { TenantStore } from '@catalogohoy/tenant';
+import { Exception } from '@shared/domain';
+import { ToastService } from '@shared/infrastructure';
 import {
   confirmPasswordValidator,
   whiteSpacesValidator,
@@ -38,6 +40,7 @@ export class Profile {
   private readonly profileService = inject(ProfileService);
   private readonly tenantStore = inject(TenantStore);
   private readonly checkoutService = inject(CheckoutService);
+  private readonly toaster = inject(ToastService);
   public readonly planStore = inject(PlanStore);
 
   public readonly isCancelling = signal(false);
@@ -117,7 +120,16 @@ export class Profile {
 
   public async onConfirmDelete(): Promise<void> {
     this.isDeleting.set(true);
-    await this.profileService.deleteAccount();
+    const result = await this.profileService.deleteAccount();
+    // Previously the result was discarded: if the `delete-account` edge
+    // function isn't deployed or returns 4xx/5xx, the user saw nothing —
+    // just the loading spinner stopping — and thought "no me deja eliminar
+    // cuenta". Surface the failure instead of swallowing it.
+    result.mapLeft((err) => {
+      this.toaster.error(
+        new Exception('No se pudo eliminar la cuenta: ' + (err.message || 'error desconocido'))
+      );
+    });
     this.isDeleting.set(false);
   }
 }
