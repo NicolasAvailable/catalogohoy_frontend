@@ -25,8 +25,8 @@
         (ngModelChange)="email.set($event)"
         (keydown.enter)="onInvite()"
       />
-      @if (errorMessage()) {
-      <p class="text-xs text-red-500">{{ errorMessage() }}</p>
+      @if (errorMessage() || duplicateError()) {
+      <p class="text-xs text-red-500">{{ errorMessage() || duplicateError() }}</p>
       }
     </div>
 
@@ -50,7 +50,7 @@
         label="Enviar invitación"
         icon="send"
         [isLoading]="teamStore.isInviting()"
-        [disabled]="!isEmailValid()"
+        [disabled]="!isEmailValid() || !!duplicateError()"
         (click)="onInvite()"
       />
     </div>

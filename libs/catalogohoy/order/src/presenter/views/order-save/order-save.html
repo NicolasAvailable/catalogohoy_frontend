@@ -208,12 +208,12 @@
                           >
                           } @else if (item.pricePromotional > 0) {
                           <span class="text-xs text-grey-400">
-                            <span class="line-through">$ {{ item.price.toFixed(2) }}</span>
-                            <span class="text-grey-800 ml-1">$ {{ item.pricePromotional.toFixed(2) }}</span>
+                            <span class="line-through">{{ cs() }} {{ item.price.toFixed(2) }}</span>
+                            <span class="text-grey-800 ml-1">{{ cs() }} {{ item.pricePromotional.toFixed(2) }}</span>
                           </span>
                           } @else {
                           <span class="text-xs text-grey-400"
-                            >$ {{ item.price.toFixed(2) }}</span
+                            >{{ cs() }} {{ item.price.toFixed(2) }}</span
                           >
                           }
                         </div>
@@ -316,7 +316,7 @@
                   <div class="flex flex-col gap-1">
                     <span class="text-sm text-grey-400">Subtotal</span>
                     <p class="text-lg font-semibold text-grey-800 sm:pt-2">
-                      $ {{ product.total.toFixed(2) }}
+                      {{ cs() }} {{ product.total.toFixed(2) }}
                     </p>
                   </div>
                 </div>

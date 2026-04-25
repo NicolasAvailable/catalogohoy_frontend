@@ -371,7 +371,13 @@ export class AuthenticationService implements BaseAuthenticationService {
     email: string;
     password: string;
     name: string;
+    inviteToken: string;
   }): Promise<E.Either<Error, void>> {
+    // `is_invitee` + `invite_token` let the `handle_new_user` DB trigger skip
+    // auto-creating a tenant for this user (they will be linked to the
+    // inviter's tenant via `accept-team-invite`). Without this flag, the
+    // trigger seeds an orphan tenant named after the email prefix, which
+    // shows up in the tenant switcher and confuses the invitee.
     const { error } = await this.client.auth.signUp({
       email: credentials.email,
       password: credentials.password,
@@ -379,6 +385,8 @@ export class AuthenticationService implements BaseAuthenticationService {
         data: {
           name: credentials.name,
           display_name: credentials.name,
+          is_invitee: true,
+          invite_token: credentials.inviteToken,
         },
       },
     });
