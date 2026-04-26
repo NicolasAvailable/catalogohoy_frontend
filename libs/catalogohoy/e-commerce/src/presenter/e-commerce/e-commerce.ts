@@ -19,7 +19,9 @@ import { CartStore, EcommerceStore } from '../../infrastructure';
 import { CartDrawer } from '../components/cart-drawer/cart-drawer';
 import { CatalogExpiredComponent } from '../components/catalog-expired/catalog-expired';
 import { CatalogFooter } from '../components/catalog-footer/catalog-footer';
+import { CatalogHeader } from '../components/catalog-header/catalog-header';
 import { CatalogHero } from '../components/catalog-hero/catalog-hero';
+import { CatalogInfoModal } from '../components/catalog-info-modal/catalog-info-modal';
 import { CheckoutDrawer } from '../components/checkout-drawer/checkout-drawer';
 
 const DEFAULT_FAVICON =
@@ -31,11 +33,13 @@ const DEFAULT_FAVICON =
     RouterOutlet,
     NgClass,
     IconComponent,
+    CatalogHeader,
     CatalogHero,
     CatalogFooter,
     CartDrawer,
     CheckoutDrawer,
     CatalogExpiredComponent,
+    CatalogInfoModal,
   ],
   templateUrl: './e-commerce.html',
   styleUrl: './e-commerce.css',

@@ -1,0 +1,299 @@
+.info-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  animation: info-modal-fade 0.2s ease;
+}
+
+.info-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100vw - 2rem);
+  max-width: 28rem;
+  max-height: 85vh;
+  z-index: 201;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 1.25rem 3rem rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  animation: info-modal-slide 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.info-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.25rem 0.75rem;
+  flex-shrink: 0;
+}
+
+.info-modal__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-grey-800, #1f2937);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.info-modal__close {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-500);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.info-modal__close:hover {
+  background: var(--color-primary-600);
+}
+
+.info-modal__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.info-modal__status {
+  background: var(--color-grey-50, #f1f5f9);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  color: var(--color-grey-700, #334155);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.info-modal__status--open {
+  color: var(--color-primary-600);
+}
+
+.info-modal__status--closed {
+  color: var(--color-red-500, #dc2626);
+}
+
+/* Accordion panel */
+.info-modal__panel {
+  border-bottom: 0.0625rem solid var(--color-grey-50, #f1f5f9);
+}
+
+.info-modal__panel-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 0.25rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--color-grey-800, #1f2937);
+  text-align: left;
+}
+
+/* Hours panel uses the status banner as its trigger — gets the gray pill look. */
+.info-modal__status-header {
+  background: var(--color-grey-50, #f1f5f9);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin: 0;
+}
+
+.info-modal__panel--hours {
+  border-bottom: none;
+}
+
+.info-modal__status-text {
+  flex: 1;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-grey-700, #334155);
+  line-height: 1.5;
+}
+
+.info-modal__panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-weight: 700;
+}
+
+.info-modal__chevron {
+  transition: transform 0.2s ease;
+  color: var(--color-grey-400, #94a3b8);
+}
+
+.info-modal__panel-header--open .info-modal__chevron {
+  transform: rotate(180deg);
+}
+
+.info-modal__panel-body {
+  padding: 0.25rem 0.25rem 1rem;
+  animation: info-modal-panel 0.2s ease;
+}
+
+/* Hours table */
+.info-modal__hours {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.info-modal__hours tr {
+  border-bottom: 0.0625rem solid var(--color-grey-50, #f1f5f9);
+}
+
+.info-modal__hours tr:last-child {
+  border-bottom: none;
+}
+
+.info-modal__hours-row--today {
+  background: var(--color-primary-50, #eff6ff);
+}
+
+.info-modal__hours {
+  table-layout: fixed;
+}
+
+.info-modal__hours-day {
+  padding: 0.625rem 0.75rem;
+  color: var(--color-grey-700, #334155);
+  font-weight: 500;
+  width: 30%;
+}
+
+.info-modal__hours-status {
+  padding: 0.625rem 0.5rem;
+  width: 32%;
+  text-align: center;
+}
+
+.info-modal__day-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.info-modal__day-badge--open {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.info-modal__day-badge--closed {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.info-modal__hours-time {
+  padding: 0.625rem 0.75rem;
+  color: var(--color-grey-600, #475569);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  width: 38%;
+  white-space: nowrap;
+}
+
+.info-modal__hours-row--today .info-modal__hours-day,
+.info-modal__hours-row--today .info-modal__hours-time {
+  color: var(--color-primary-700);
+  font-weight: 700;
+}
+
+.info-modal__hours-closed {
+  color: var(--color-red-500, #dc2626);
+  font-weight: 600;
+}
+
+/* Description */
+.info-modal__description {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--color-grey-700, #334155);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+/* Social */
+.info-modal__social {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.info-modal__social-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.5rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  color: var(--color-grey-800, #1f2937);
+  transition: background-color 0.15s ease;
+  font-size: 0.9375rem;
+}
+
+.info-modal__social-link:hover {
+  background: var(--color-grey-50, #f1f5f9);
+}
+
+.info-modal__social-link svg {
+  flex-shrink: 0;
+  color: var(--color-primary-500);
+}
+
+.info-modal__social-link span {
+  flex: 1;
+  font-weight: 500;
+}
+
+.info-modal__social-arrow {
+  color: var(--color-grey-400, #94a3b8);
+}
+
+.info-modal__empty {
+  text-align: center;
+  color: var(--color-grey-400, #94a3b8);
+  margin: 2rem 0;
+  font-size: 0.9375rem;
+}
+
+@keyframes info-modal-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes info-modal-slide {
+  from { transform: translate(-50%, -45%); opacity: 0; }
+  to   { transform: translate(-50%, -50%); opacity: 1; }
+}
+
+@keyframes info-modal-panel {
+  from { opacity: 0; transform: translateY(-0.25rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}

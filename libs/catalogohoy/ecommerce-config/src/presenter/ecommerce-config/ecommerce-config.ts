@@ -13,6 +13,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { ActivatedRoute, Router } from '@angular/router';
+import { DatePickerModule } from 'primeng/datepicker';
 import { PlanStore } from '@catalogohoy/plan';
 import { TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
@@ -33,7 +35,10 @@ import {
 } from '@ui';
 import { Observable } from 'rxjs';
 import {
+  BusinessHoursWeek,
   CatalogTemplate,
+  DAY_LABELS_ES,
+  DEFAULT_BUSINESS_HOURS_WEEK,
   DEFAULT_CURRENCY_CONFIG,
   DEFAULT_SOCIAL_LINKS,
   DEFAULT_WHATSAPP_ORDER_MESSAGE,
@@ -49,9 +54,17 @@ import {
   WHATSAPP_MESSAGE_VARIABLES,
   WhatsappButton,
 } from '../../domain';
-import { EcommerceConfigStore, LocationApiService, TenantCurrencyStore } from '../../infrastructure';
+import {
+  EcommerceConfigService,
+  EcommerceConfigStore,
+  LocationApiService,
+  TenantCurrencyStore,
+} from '../../infrastructure';
 import { PhoneMockupComponent } from '../components/phone-mockup/phone-mockup';
 import { TemplateSelectorComponent } from '../components/template-selector/template-selector';
+
+export type TabId = 'general' | 'location' | 'payments' | 'social';
+const VALID_TABS: TabId[] = ['general', 'location', 'payments', 'social'];
 
 @Component({
   selector: 'lib-ecommerce-config',
@@ -71,6 +84,7 @@ import { TemplateSelectorComponent } from '../components/template-selector/templ
     SelectSelectedItemDirective,
     PhoneMockupComponent,
     TemplateSelectorComponent,
+    DatePickerModule,
   ],
   templateUrl: './ecommerce-config.html',
   styleUrl: './ecommerce-config.css',
@@ -91,6 +105,32 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly supportedCountries = SUPPORTED_COUNTRIES;
   public readonly supportedCurrencies = SUPPORTED_CURRENCIES;
   private readonly locationApi = inject(LocationApiService);
+  private readonly configService = inject(EcommerceConfigService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  // ── Tabs ──────────────────────────────────────────────────────────────
+  public readonly tabs: { id: TabId; label: string; icon: string }[] = [
+    { id: 'general', label: 'General', icon: 'store' },
+    { id: 'location', label: 'Ubicación y Horario', icon: 'map-pin' },
+    { id: 'payments', label: 'Pagos', icon: 'credit-card' },
+    { id: 'social', label: 'Redes Sociales', icon: 'share2' },
+  ];
+  public readonly activeTab = signal<TabId>('general');
+
+  setActiveTab(tab: TabId): void {
+    this.activeTab.set(tab);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+    // Reset scroll to the top of the form column whenever the tab changes
+    queueMicrotask(() => {
+      this.mainColumn()?.nativeElement?.scrollTo?.({ top: 0, behavior: 'auto' });
+    });
+  }
 
   // Location cascade signals
   public readonly availableStates = signal<string[]>([]);
@@ -141,6 +181,100 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftShowLocalCurrencyPrice = signal(true);
   public readonly draftWhatsappOrderMessage = signal<string | null>(null);
 
+  // Business hours editor (one row per day, Sunday → Saturday)
+  public readonly dayLabels = DAY_LABELS_ES;
+  public readonly draftBusinessHours = signal<BusinessHoursWeek>(
+    DEFAULT_BUSINESS_HOURS_WEEK.map((d) => ({ ...d }))
+  );
+  /** Snapshot used to detect changes — set whenever we sync from the server. */
+  private lastSyncedHours: BusinessHoursWeek = DEFAULT_BUSINESS_HOURS_WEEK.map(
+    (d) => ({ ...d })
+  );
+
+  public readonly hasUnsavedHours = computed(() => {
+    const a = JSON.stringify(this.draftBusinessHours());
+    const b = JSON.stringify(this.lastSyncedHours);
+    return a !== b;
+  });
+
+  /** Return the draft hours sorted Mon→Sun (Sunday last) for display, with
+   *  precomputed `Date` instances for the time-only datepicker. Using a
+   *  computed (instead of a method called from the template) keeps the Date
+   *  references stable between signal updates — otherwise every CD cycle
+   *  produces new Date objects and `[ngModel]` thinks the value changed,
+   *  causing p-datepicker to write back, looping forever. */
+  public readonly orderedDraftHours = computed(() => {
+    const week = this.draftBusinessHours();
+    return this.dayLabels
+      .map((l) => {
+        const day = week.find((d) => d.dayOfWeek === l.day);
+        if (!day) return null;
+        return {
+          ...day,
+          label: l.label,
+          openDate: this.timeStringToDate(day.openTime),
+          closeDate: this.timeStringToDate(day.closeTime),
+        };
+      })
+      .filter((d): d is NonNullable<typeof d> => !!d);
+  });
+
+  updateDayIsOpen(dayOfWeek: number, isOpen: boolean): void {
+    this.draftBusinessHours.update((week) =>
+      week.map((d) => (d.dayOfWeek === dayOfWeek ? { ...d, isOpen } : d))
+    );
+  }
+
+  updateDayOpenTime(dayOfWeek: number, openTime: string): void {
+    this.draftBusinessHours.update((week) =>
+      week.map((d) => (d.dayOfWeek === dayOfWeek ? { ...d, openTime } : d))
+    );
+  }
+
+  updateDayCloseTime(dayOfWeek: number, closeTime: string): void {
+    this.draftBusinessHours.update((week) =>
+      week.map((d) => (d.dayOfWeek === dayOfWeek ? { ...d, closeTime } : d))
+    );
+  }
+
+  /** PrimeNG's `p-datepicker [timeOnly]` works with Date objects. We store
+   *  business hours as "HH:MM" strings, so convert at the binding edges. */
+  timeStringToDate(time: string | null | undefined): Date | null {
+    if (!time) return null;
+    const [hStr, mStr] = time.split(':');
+    const h = Number(hStr);
+    const m = Number(mStr ?? '0');
+    if (Number.isNaN(h) || Number.isNaN(m)) return null;
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d;
+  }
+
+  private dateToTimeString(d: Date | null | undefined): string | null {
+    if (!d) return null;
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  setDayOpenDate(dayOfWeek: number, date: Date | null): void {
+    const time = this.dateToTimeString(date);
+    if (!time) return;
+    // Guard: skip redundant updates so p-datepicker round-tripping its own
+    // value can't push us into an infinite signal-update loop.
+    const current = this.draftBusinessHours().find((d) => d.dayOfWeek === dayOfWeek);
+    if (current?.openTime?.startsWith(time)) return;
+    this.updateDayOpenTime(dayOfWeek, time);
+  }
+
+  setDayCloseDate(dayOfWeek: number, date: Date | null): void {
+    const time = this.dateToTimeString(date);
+    if (!time) return;
+    const current = this.draftBusinessHours().find((d) => d.dayOfWeek === dayOfWeek);
+    if (current?.closeTime?.startsWith(time)) return;
+    this.updateDayCloseTime(dayOfWeek, time);
+  }
+
   // Currency config drafts — TenantCurrencyConfig shape
   public readonly draftCurrency = signal<TenantCurrencyConfig>({ ...DEFAULT_CURRENCY_CONFIG });
   public readonly isVenezuela = computed(
@@ -158,6 +292,9 @@ export class EcommerceConfigComponent implements OnInit {
 
     // Country (lives on tenants)
     if (this.draftCountryCode() !== (config.countryCode ?? null)) return true;
+
+    // Business hours (lives on tenant_business_hours, one row per day)
+    if (this.hasUnsavedHours()) return true;
 
     // Currency config (lives on tenant_currency_config)
     const cc = this.configStore.currencyConfig();
@@ -517,12 +654,36 @@ export class EcommerceConfigComponent implements OnInit {
         this.sanitizer.bypassSecurityTrustResourceUrl(url);
     }
 
+    // Restore active tab from query param (?tab=general|location|payments|social).
+    // We treat the query param as one-way bootstrap — afterwards the signal is
+    // the source of truth and setActiveTab keeps the URL in sync.
+    const initialTab = this.route.snapshot.queryParamMap.get('tab') as TabId | null;
+    if (initialTab && VALID_TABS.includes(initialTab)) {
+      this.activeTab.set(initialTab);
+    }
+
     const tenantId = await this.tenantStore.getTenantIdAsync();
     if (tenantId) {
       this.configStore.reloadConfig(String(tenantId));
       this.configStore.loadPaymentMethods(String(tenantId));
       this.configStore.loadCurrencyConfig(String(tenantId));
+      this.loadBusinessHours(String(tenantId));
     }
+  }
+
+  private async loadBusinessHours(tenantId: string): Promise<void> {
+    const result = await this.configService.getBusinessHours(tenantId);
+    result.fold(
+      () => {
+        // Service errored — keep the current draft (defaults) so the form
+        // still renders. The save flow will surface the error later.
+      },
+      (week) => {
+        const cloned = week.map((d) => ({ ...d }));
+        this.draftBusinessHours.set(cloned);
+        this.lastSyncedHours = cloned.map((d) => ({ ...d }));
+      }
+    );
   }
 
   // --- Unified Save ---
@@ -595,6 +756,23 @@ export class EcommerceConfigComponent implements OnInit {
     // 3. Everything else goes through updateConfig
     if (Object.keys(changes).length > 0) {
       await this.configStore.updatePartialConfig(changes);
+    }
+
+    // 3b. Business hours live on tenant_business_hours (one row per day)
+    if (this.hasUnsavedHours() && config?.tenantId) {
+      const week = this.draftBusinessHours();
+      const result = await this.configService.upsertBusinessHours(
+        config.tenantId,
+        week
+      );
+      result.fold(
+        () => {
+          /* error surfaced below via configStore.error if relevant */
+        },
+        () => {
+          this.lastSyncedHours = week.map((d) => ({ ...d }));
+        }
+      );
     }
 
     // 4. Refresh the TenantCurrencyStore cache + localStorage so every

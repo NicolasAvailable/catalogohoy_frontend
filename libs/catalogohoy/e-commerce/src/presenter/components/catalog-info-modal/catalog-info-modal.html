@@ -1,0 +1,191 @@
+@if (isOpen() && ecommerceStore.effectiveCatalogInfo(); as info) {
+  <div class="info-modal__backdrop" (click)="close()"></div>
+  <div class="info-modal" role="dialog" aria-modal="true" [attr.aria-label]="'Más sobre ' + info.name">
+    <header class="info-modal__header">
+      <h2 class="info-modal__title">Más sobre {{ info.name }}</h2>
+      <button
+        type="button"
+        class="info-modal__close"
+        (click)="close()"
+        aria-label="Cerrar"
+      >
+        <ui-icon name="x" styleClass="size-5" />
+      </button>
+    </header>
+
+    <div class="info-modal__body">
+      <!-- Status banner — current open/closed state at a glance -->
+      @if (info.openTime || hasHours()) {
+        <p class="info-modal__status">
+          {{ info.name }} está
+          <strong [class.info-modal__status--open]="info.isOpen" [class.info-modal__status--closed]="!info.isOpen">
+            {{ info.isOpen ? 'Abierto' : 'Cerrado' }}
+          </strong>
+          @if (info.openTime && info.closeTime) {
+            · {{ formatHourAmPm(info.openTime) }} - {{ formatHourAmPm(info.closeTime) }}
+          }
+        </p>
+      }
+
+      <!-- Horario accordion -->
+      @if (hasHours()) {
+        <section class="info-modal__panel">
+          <button
+            type="button"
+            class="info-modal__panel-header"
+            [class.info-modal__panel-header--open]="expandedPanel() === 'hours'"
+            (click)="togglePanel('hours')"
+            [attr.aria-expanded]="expandedPanel() === 'hours'"
+          >
+            <span class="info-modal__panel-title">
+              <ui-icon name="clock" styleClass="size-5" />
+              Horario
+            </span>
+            <ui-icon
+              name="chevronDown"
+              styleClass="size-5 info-modal__chevron"
+            />
+          </button>
+          @if (expandedPanel() === 'hours') {
+            <div class="info-modal__panel-body">
+              <table class="info-modal__hours">
+                <tbody>
+                  @for (day of orderedHours(); track day.dayOfWeek) {
+                    <tr [class.info-modal__hours-row--today]="day.dayOfWeek === todayIndex">
+                      <td class="info-modal__hours-day">{{ dayLabel(day.dayOfWeek) }}</td>
+                      <td class="info-modal__hours-status">
+                        <span
+                          class="info-modal__day-badge"
+                          [class.info-modal__day-badge--open]="day.isOpen"
+                          [class.info-modal__day-badge--closed]="!day.isOpen"
+                        >
+                          {{ day.isOpen ? 'Abierto' : 'Cerrado' }}
+                        </span>
+                      </td>
+                      <td class="info-modal__hours-time">
+                        @if (day.isOpen) {
+                          {{ formatHourAmPm(day.openTime) }} - {{ formatHourAmPm(day.closeTime) }}
+                        } @else {
+                          <span class="info-modal__hours-closed">—</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      }
+
+      <!-- Descripción accordion -->
+      @if (hasDescription()) {
+        <section class="info-modal__panel">
+          <button
+            type="button"
+            class="info-modal__panel-header"
+            [class.info-modal__panel-header--open]="expandedPanel() === 'description'"
+            (click)="togglePanel('description')"
+            [attr.aria-expanded]="expandedPanel() === 'description'"
+          >
+            <span class="info-modal__panel-title">
+              <ui-icon name="info" styleClass="size-5" />
+              Descripción
+            </span>
+            <ui-icon
+              name="chevronDown"
+              styleClass="size-5 info-modal__chevron"
+            />
+          </button>
+          @if (expandedPanel() === 'description') {
+            <div class="info-modal__panel-body">
+              <p class="info-modal__description">{{ info.description }}</p>
+            </div>
+          }
+        </section>
+      }
+
+      <!-- Redes sociales accordion -->
+      @if (hasSocial()) {
+        <section class="info-modal__panel">
+          <button
+            type="button"
+            class="info-modal__panel-header"
+            [class.info-modal__panel-header--open]="expandedPanel() === 'social'"
+            (click)="togglePanel('social')"
+            [attr.aria-expanded]="expandedPanel() === 'social'"
+          >
+            <span class="info-modal__panel-title">
+              <ui-icon name="share2" styleClass="size-5" />
+              Redes sociales
+            </span>
+            <ui-icon
+              name="chevronDown"
+              styleClass="size-5 info-modal__chevron"
+            />
+          </button>
+          @if (expandedPanel() === 'social') {
+            <div class="info-modal__panel-body">
+              <ul class="info-modal__social">
+                @if (info.socialLinks.instagram.visible && info.socialLinks.instagram.url) {
+                  <li>
+                    <a
+                      [href]="info.socialLinks.instagram.url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="info-modal__social-link"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                        <circle cx="12" cy="12" r="4"/>
+                        <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/>
+                      </svg>
+                      <span>Instagram</span>
+                      <ui-icon name="externalLink" styleClass="size-4 info-modal__social-arrow" />
+                    </a>
+                  </li>
+                }
+                @if (info.socialLinks.facebook.visible && info.socialLinks.facebook.url) {
+                  <li>
+                    <a
+                      [href]="info.socialLinks.facebook.url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="info-modal__social-link"
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                      </svg>
+                      <span>Facebook</span>
+                      <ui-icon name="externalLink" styleClass="size-4 info-modal__social-arrow" />
+                    </a>
+                  </li>
+                }
+                @if (info.socialLinks.tiktok.visible && info.socialLinks.tiktok.url) {
+                  <li>
+                    <a
+                      [href]="info.socialLinks.tiktok.url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="info-modal__social-link"
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.75a4.85 4.85 0 0 1-1.01-.06z"/>
+                      </svg>
+                      <span>TikTok</span>
+                      <ui-icon name="externalLink" styleClass="size-4 info-modal__social-arrow" />
+                    </a>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        </section>
+      }
+
+      @if (!hasHours() && !hasDescription() && !hasSocial()) {
+        <p class="info-modal__empty">No hay información adicional disponible.</p>
+      }
+    </div>
+  </div>
+}

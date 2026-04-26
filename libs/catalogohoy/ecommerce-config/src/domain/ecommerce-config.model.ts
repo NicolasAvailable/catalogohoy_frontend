@@ -143,6 +143,41 @@ export interface EcommerceConfig {
   whatsappOrderMessage: string | null;
 }
 
+/** Business hours for a single day. `dayOfWeek` follows JS convention:
+ *  0 = Sunday … 6 = Saturday. */
+export interface BusinessHoursDay {
+  dayOfWeek: number;
+  openTime: string;   // "HH:MM" or "HH:MM:SS"
+  closeTime: string;
+  isOpen: boolean;
+}
+
+/** A full week: always 7 entries (Sunday → Saturday) so the editor has a stable
+ *  shape regardless of which days the tenant has saved. Days the tenant marked
+ *  as closed still keep their open/close hours so the user can flip them on
+ *  again without re-typing. */
+export type BusinessHoursWeek = BusinessHoursDay[];
+
+export const DAY_LABELS_ES: { day: number; label: string }[] = [
+  { day: 1, label: 'Lunes' },
+  { day: 2, label: 'Martes' },
+  { day: 3, label: 'Miércoles' },
+  { day: 4, label: 'Jueves' },
+  { day: 5, label: 'Viernes' },
+  { day: 6, label: 'Sábado' },
+  { day: 0, label: 'Domingo' },
+];
+
+export const DEFAULT_BUSINESS_HOURS_WEEK: BusinessHoursWeek = [
+  { dayOfWeek: 0, openTime: '08:00', closeTime: '20:00', isOpen: false },
+  { dayOfWeek: 1, openTime: '08:00', closeTime: '20:00', isOpen: true },
+  { dayOfWeek: 2, openTime: '08:00', closeTime: '20:00', isOpen: true },
+  { dayOfWeek: 3, openTime: '08:00', closeTime: '20:00', isOpen: true },
+  { dayOfWeek: 4, openTime: '08:00', closeTime: '20:00', isOpen: true },
+  { dayOfWeek: 5, openTime: '08:00', closeTime: '20:00', isOpen: true },
+  { dayOfWeek: 6, openTime: '08:00', closeTime: '20:00', isOpen: false },
+];
+
 export type ExchangeRateType = 'none' | 'bcv_usd' | 'bcv_eur' | 'custom';
 
 export interface TenantCurrencyConfig {

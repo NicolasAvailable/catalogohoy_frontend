@@ -29,6 +29,7 @@ type EcommerceState = {
   isPreviewMode: boolean;
   exchangeRate: number;
   heroLogoVisible: boolean;
+  isInfoModalOpen: boolean;
 };
 
 const initialState: EcommerceState = {
@@ -48,6 +49,7 @@ const initialState: EcommerceState = {
   isPreviewMode: false,
   exchangeRate: 0,
   heroLogoVisible: true,
+  isInfoModalOpen: false,
 };
 
 export const EcommerceStore = signalStore(
@@ -229,6 +231,14 @@ export const EcommerceStore = signalStore(
 
     setHeroLogoVisible(visible: boolean) {
       patchState(store, { heroLogoVisible: visible });
+    },
+
+    openInfoModal() {
+      patchState(store, { isInfoModalOpen: true });
+    },
+
+    closeInfoModal() {
+      patchState(store, { isInfoModalOpen: false });
     },
 
     setSearchTerm(searchTerm: string) {

@@ -2,8 +2,11 @@ import { Injectable } from '@angular/core';
 import { E } from '../../../../shared/domain/src';
 import { SupabaseClientProvider } from '../../../core/src';
 import {
+  BusinessHoursDay,
+  BusinessHoursWeek,
   CatalogTemplate,
   countryNameFromCode,
+  DEFAULT_BUSINESS_HOURS_WEEK,
   DEFAULT_SOCIAL_LINKS,
   EcommerceConfig,
   ExchangeRateType,
@@ -300,6 +303,72 @@ export class EcommerceConfigService {
       .eq('id', id);
 
     if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  /** Reads all 7 days of `tenant_business_hours`. If the tenant doesn't yet
+   *  have a row for some days, fills in defaults so the editor renders a
+   *  complete week without having to handle missing rows. */
+  async getBusinessHours(
+    tenantId: string
+  ): Promise<E.Either<Error, BusinessHoursWeek>> {
+    const { data, error } = await this.client
+      .from('tenant_business_hours')
+      .select('day_of_week, open_time, close_time, is_open')
+      .eq('tenant_id', Number(tenantId))
+      .order('day_of_week', { ascending: true });
+
+    if (error) return E.left(new Error(error.message));
+
+    const byDay = new Map<number, BusinessHoursDay>();
+    for (const row of (data ?? []) as Array<{
+      day_of_week: number;
+      open_time: string;
+      close_time: string;
+      is_open: boolean;
+    }>) {
+      byDay.set(row.day_of_week, {
+        dayOfWeek: row.day_of_week,
+        openTime: row.open_time,
+        closeTime: row.close_time,
+        isOpen: row.is_open,
+      });
+    }
+
+    return E.right(
+      DEFAULT_BUSINESS_HOURS_WEEK.map((d) => byDay.get(d.dayOfWeek) ?? { ...d })
+    );
+  }
+
+  /** Upserts a full week of business hours. We delete-then-insert per tenant
+   *  to keep this a single round-trip — `tenant_business_hours` has no unique
+   *  constraint on `(tenant_id, day_of_week)`, so plain upsert isn't an option. */
+  async upsertBusinessHours(
+    tenantId: string,
+    week: BusinessHoursWeek
+  ): Promise<E.Either<Error, void>> {
+    const tenantIdNum = Number(tenantId);
+
+    const { error: deleteError } = await this.client
+      .from('tenant_business_hours')
+      .delete()
+      .eq('tenant_id', tenantIdNum);
+
+    if (deleteError) return E.left(new Error(deleteError.message));
+
+    const rows = week.map((d) => ({
+      tenant_id: tenantIdNum,
+      day_of_week: d.dayOfWeek,
+      open_time: d.openTime,
+      close_time: d.closeTime,
+      is_open: d.isOpen,
+    }));
+
+    const { error: insertError } = await this.client
+      .from('tenant_business_hours')
+      .insert(rows);
+
+    if (insertError) return E.left(new Error(insertError.message));
     return E.right(undefined);
   }
 

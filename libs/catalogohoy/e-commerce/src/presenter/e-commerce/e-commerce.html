@@ -2,56 +2,62 @@
 <lib-catalog-expired />
 } @else {
 <div class="ecommerce">
-  <!-- Top floating action buttons (Fatness-style) -->
-  <nav class="ecommerce__top-actions">
-    <button class="ecommerce__action-btn" aria-label="Tamaño de texto" type="button">
-      <ui-icon name="type" styleClass="size-5" />
-    </button>
-    <button class="ecommerce__action-btn" aria-label="Favorito" type="button">
-      <ui-icon name="heart" styleClass="size-5" />
-    </button>
-    <button
-      class="ecommerce__action-btn"
-      aria-label="Compartir"
-      type="button"
-      (click)="onShare()"
-    >
-      <ui-icon name="share2" styleClass="size-5" />
-    </button>
-    <a
-      class="ecommerce__action-btn"
-      aria-label="WhatsApp"
-      [href]="whatsappUrl()"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <ui-icon name="messageCircle" styleClass="size-5" />
-    </a>
-  </nav>
+  @let isClassic = ecommerceStore.effectiveCatalogInfo()?.template === 'classic';
 
-  <lib-catalog-hero />
+  @if (isClassic) {
+    <lib-catalog-header />
+  } @else {
+    <!-- Top floating action buttons (Fatness-style) -->
+    <nav class="ecommerce__top-actions">
+      <button class="ecommerce__action-btn" aria-label="Favorito" type="button">
+        <ui-icon name="heart" styleClass="size-5" />
+      </button>
+      <button
+        class="ecommerce__action-btn"
+        aria-label="Compartir"
+        type="button"
+        (click)="onShare()"
+      >
+        <ui-icon name="share2" styleClass="size-5" />
+      </button>
+      <a
+        class="ecommerce__action-btn"
+        aria-label="WhatsApp"
+        [href]="whatsappUrl()"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <ui-icon name="messageCircle" styleClass="size-5" />
+      </a>
+    </nav>
+
+    <lib-catalog-hero />
+  }
 
   <main
     class="ecommerce__content"
-    [ngClass]="{ 'pt-0!': ecommerceStore.effectiveCatalogInfo()?.template !== 'classic' } "
+    [ngClass]="{ 'pt-0!': !isClassic } "
   >
     <router-outlet />
   </main>
 
-  <!-- Floating cart pill bar (Fatness-style) -->
-  <button
-    class="ecommerce__cart-pill"
-    (click)="cartStore.openCart()"
-    aria-label="Ver carrito"
-    type="button"
-  >
-    <ui-icon name="shoppingCart" styleClass="size-5" />
-    <span>Ver Carrito ({{ cartStore.totalItems() }})</span>
-  </button>
+  @if (!isClassic) {
+    <!-- Floating cart pill bar (Fatness-style) — hidden for classic, which uses navbar cart icon -->
+    <button
+      class="ecommerce__cart-pill"
+      (click)="cartStore.openCart()"
+      aria-label="Ver carrito"
+      type="button"
+    >
+      <ui-icon name="shoppingCart" styleClass="size-5" />
+      <span>Ver Carrito ({{ cartStore.totalItems() }})</span>
+    </button>
+  }
 
   <lib-catalog-footer />
 
   <lib-cart-drawer />
   <lib-checkout-drawer />
+  <lib-catalog-info-modal />
 </div>
 }

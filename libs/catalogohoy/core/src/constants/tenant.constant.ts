@@ -2,7 +2,7 @@
  * Default tenant slug for local development.
  * Change this value to test with different tenants.
  */
-export const DEV_TENANT_SLUG = 'catalogohoy';
+export const DEV_TENANT_SLUG = 'a1-caraudio';
 
 /**
  * Reserved subdomains that redirect to other apps instead of loading a catalog.

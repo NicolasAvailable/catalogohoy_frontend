@@ -1,18 +1,5 @@
 <div class="catalog">
-  <!-- Mobile search input -->
   <div class="catalog__toolbar">
-    <div class="block md:hidden">
-      @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
-        <div class="catalog__search-skeleton"></div>
-      } @else {
-        <ui-input-search
-          (valueChange)="onSearch($event)"
-          placeholder="Buscar producto"
-          styleClass="rounded-base! gap-2!"
-          iconStyleClass="size-5!"
-        />
-      }
-    </div>
     @if (ecommerceStore.effectiveCatalogInfo()?.showCategoriesSection ?? true) {
       <div class="catalog__filters">
         @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
@@ -27,10 +14,28 @@
             [selectedCategoryId]="ecommerceStore.selectedCategoryId()"
             (categorySelect)="onCategorySelect($event)"
             (filterClick)="openCategoriesSheet()"
+            (searchClick)="toggleSearch()"
           />
         }
       </div>
     }
+
+    <!-- Animated search input (mobile) — toggled by category-filter search icon -->
+    <div
+      class="catalog__search-wrapper md:hidden"
+      [class.catalog__search-wrapper--open]="showSearch()"
+    >
+      @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
+        <div class="catalog__search-skeleton"></div>
+      } @else {
+        <ui-input-search
+          (valueChange)="onSearch($event)"
+          placeholder="Buscar producto"
+          styleClass="catalog__search-input rounded-base! gap-2!"
+          iconStyleClass="size-5!"
+        />
+      }
+    </div>
   </div>
 
   <!-- Products Grid -->

@@ -35,6 +35,7 @@ export default class Catalog implements OnInit, OnDestroy {
 
   public readonly searchValue = signal('');
   public readonly showCategoriesSheet = signal(false);
+  public readonly showSearch = signal(false);
   public readonly scrollSentinel = viewChild<ElementRef<HTMLDivElement>>('scrollSentinel');
 
   private readonly searchSubject = new Subject<string>();
@@ -90,6 +91,10 @@ export default class Catalog implements OnInit, OnDestroy {
     if (this.slug) {
       this.ecommerceStore.loadProducts(this.slug);
     }
+  }
+
+  toggleSearch() {
+    this.showSearch.update((v) => !v);
   }
 
   openCategoriesSheet() {
