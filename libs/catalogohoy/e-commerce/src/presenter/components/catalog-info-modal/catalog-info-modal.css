@@ -152,6 +152,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9375rem;
+  table-layout: fixed;
 }
 
 .info-modal__hours tr {
@@ -162,24 +163,26 @@
   border-bottom: none;
 }
 
+/* Subtle "today" highlight — just a background tint. We deliberately do not
+ * change font-weight or color here: bolding shifts the visual width of every
+ * cell in the row and makes the table look broken next to the other days. */
 .info-modal__hours-row--today {
   background: var(--color-primary-50, #eff6ff);
 }
 
-.info-modal__hours {
-  table-layout: fixed;
-}
-
 .info-modal__hours-day {
-  padding: 0.625rem 0.75rem;
+  padding: 0.625rem 0.5rem;
   color: var(--color-grey-700, #334155);
   font-weight: 500;
-  width: 30%;
+  width: 28%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .info-modal__hours-status {
-  padding: 0.625rem 0.5rem;
-  width: 32%;
+  padding: 0.625rem 0.25rem;
+  width: 28%;
   text-align: center;
 }
 
@@ -187,7 +190,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 4.25rem;
+  min-width: 0;
   padding: 0.125rem 0.5rem;
   border-radius: 999px;
   font-size: 0.6875rem;
@@ -208,18 +211,42 @@
 }
 
 .info-modal__hours-time {
-  padding: 0.625rem 0.75rem;
+  padding: 0.625rem 0.5rem 0.625rem 0.25rem;
   color: var(--color-grey-600, #475569);
   text-align: right;
   font-variant-numeric: tabular-nums;
-  width: 38%;
+  width: 44%;
   white-space: nowrap;
+  font-size: 0.8125rem;
 }
 
-.info-modal__hours-row--today .info-modal__hours-day,
-.info-modal__hours-row--today .info-modal__hours-time {
+/* Tighten the table further on narrow phones — at ~360px viewports the modal
+ * is roughly 296px wide and the time string ("9:00 AM - 8:00 PM") otherwise
+ * spills past the right edge regardless of column ratios. */
+@media (max-width: 26rem) {
+  .info-modal__hours {
+    font-size: 0.8125rem;
+  }
+  .info-modal__hours-day {
+    width: 26%;
+    padding-left: 0.25rem;
+  }
+  .info-modal__hours-status {
+    width: 30%;
+  }
+  .info-modal__hours-time {
+    width: 44%;
+    font-size: 0.75rem;
+    padding-right: 0.25rem;
+  }
+  .info-modal__day-badge {
+    padding: 0.125rem 0.375rem;
+    font-size: 0.625rem;
+  }
+}
+
+.info-modal__hours-row--today .info-modal__hours-day {
   color: var(--color-primary-700);
-  font-weight: 700;
 }
 
 .info-modal__hours-closed {

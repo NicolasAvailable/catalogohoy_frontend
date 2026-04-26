@@ -169,13 +169,13 @@ export const DAY_LABELS_ES: { day: number; label: string }[] = [
 ];
 
 export const DEFAULT_BUSINESS_HOURS_WEEK: BusinessHoursWeek = [
-  { dayOfWeek: 0, openTime: '08:00', closeTime: '20:00', isOpen: false },
+  { dayOfWeek: 0, openTime: '08:00', closeTime: '20:00', isOpen: true },
   { dayOfWeek: 1, openTime: '08:00', closeTime: '20:00', isOpen: true },
   { dayOfWeek: 2, openTime: '08:00', closeTime: '20:00', isOpen: true },
   { dayOfWeek: 3, openTime: '08:00', closeTime: '20:00', isOpen: true },
   { dayOfWeek: 4, openTime: '08:00', closeTime: '20:00', isOpen: true },
   { dayOfWeek: 5, openTime: '08:00', closeTime: '20:00', isOpen: true },
-  { dayOfWeek: 6, openTime: '08:00', closeTime: '20:00', isOpen: false },
+  { dayOfWeek: 6, openTime: '08:00', closeTime: '20:00', isOpen: true },
 ];
 
 export type ExchangeRateType = 'none' | 'bcv_usd' | 'bcv_eur' | 'custom';

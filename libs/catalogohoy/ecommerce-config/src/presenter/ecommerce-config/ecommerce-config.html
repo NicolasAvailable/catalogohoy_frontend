@@ -567,7 +567,7 @@
 
         <div class="card-content">
           <div class="schedule-table">
-            @for (day of orderedDraftHours(); track day.dayOfWeek) {
+            @for (day of orderedDraftHours(); track day.dayOfWeek; let first = $first) {
               <div
                 class="schedule-row"
                 [class.schedule-row--closed]="!day.isOpen"

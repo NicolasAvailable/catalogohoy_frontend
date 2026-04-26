@@ -52,7 +52,10 @@
       "mcp__playwright__browser_click",
       "Bash(git rm *)",
       "Bash(awk 'NR==1 || /^\\\\.ecommerce-config-wrapper/ { print NR\": \"$0 }' c:/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo/libs/catalogohoy/ecommerce-config/src/presenter/ecommerce-config/ecommerce-config.css)",
-      "Bash(awk '/^\\\\.|^@media|^:host/ { count[$0]++ } END { for \\(c in count\\) if \\(count[c] > 1\\) print count[c], c }' c:/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo/libs/catalogohoy/ecommerce-config/src/presenter/ecommerce-config/ecommerce-config.css)"
+      "Bash(awk '/^\\\\.|^@media|^:host/ { count[$0]++ } END { for \\(c in count\\) if \\(count[c] > 1\\) print count[c], c }' c:/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo/libs/catalogohoy/ecommerce-config/src/presenter/ecommerce-config/ecommerce-config.css)",
+      "Bash(npm run *)",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_console_messages"
     ],
     "additionalDirectories": [
       "c:\\Users\\nicol\\OneDrive\\Desktop\\projects\\catalogohoy_frontend_monorepo"

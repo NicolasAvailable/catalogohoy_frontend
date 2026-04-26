@@ -33,6 +33,7 @@ import {
   ToggleComponent,
   UploaderComponent,
 } from '@ui';
+import { toast } from 'ngx-sonner';
 import { Observable } from 'rxjs';
 import {
   BusinessHoursWeek,
@@ -186,14 +187,17 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftBusinessHours = signal<BusinessHoursWeek>(
     DEFAULT_BUSINESS_HOURS_WEEK.map((d) => ({ ...d }))
   );
-  /** Snapshot used to detect changes — set whenever we sync from the server. */
-  private lastSyncedHours: BusinessHoursWeek = DEFAULT_BUSINESS_HOURS_WEEK.map(
-    (d) => ({ ...d })
+  /** Snapshot used to detect changes — set whenever we sync from the server.
+   *  Must be a signal so `hasUnsavedHours` re-evaluates after a save updates
+   *  it; a plain field would leave the unsaved banner sticky after persisting
+   *  hours-only edits. */
+  private readonly lastSyncedHours = signal<BusinessHoursWeek>(
+    DEFAULT_BUSINESS_HOURS_WEEK.map((d) => ({ ...d }))
   );
 
   public readonly hasUnsavedHours = computed(() => {
     const a = JSON.stringify(this.draftBusinessHours());
-    const b = JSON.stringify(this.lastSyncedHours);
+    const b = JSON.stringify(this.lastSyncedHours());
     return a !== b;
   });
 
@@ -681,7 +685,7 @@ export class EcommerceConfigComponent implements OnInit {
       (week) => {
         const cloned = week.map((d) => ({ ...d }));
         this.draftBusinessHours.set(cloned);
-        this.lastSyncedHours = cloned.map((d) => ({ ...d }));
+        this.lastSyncedHours.set(cloned.map((d) => ({ ...d })));
       }
     );
   }
@@ -729,6 +733,13 @@ export class EcommerceConfigComponent implements OnInit {
     const config = this.configStore.config();
     const changes = this.getChangedFields();
 
+    // Track silent ops (country, currency, hours) so we can fall back to a
+    // unified toast when `updatePartialConfig` doesn't run — its success
+    // toast is the only one the other paths rely on, so without this the
+    // user sees no feedback when they only change hours/currency/country.
+    let didSilentOp = false;
+    let hadSilentError = false;
+
     // 1. Country lives on tenants → separate call.
     // Persist the Spanish label as `tenants.country` so it renders directly
     // in the public catalog without needing client-side translation.
@@ -736,7 +747,12 @@ export class EcommerceConfigComponent implements OnInit {
     if (config && newCountryCode && newCountryCode !== (config.countryCode ?? null)) {
       const country = findCountryByCode(newCountryCode);
       if (country) {
+        didSilentOp = true;
+        const beforeError = this.configStore.error();
         await this.configStore.saveTenantCountry(country.label, country.code);
+        if (this.configStore.error() && this.configStore.error() !== beforeError) {
+          hadSilentError = true;
+        }
       }
     }
 
@@ -750,16 +766,22 @@ export class EcommerceConfigComponent implements OnInit {
       }
     });
     if (Object.keys(currencyPatch).length > 0) {
+      didSilentOp = true;
+      const beforeError = this.configStore.error();
       await this.configStore.saveCurrencyConfig(currencyPatch);
+      if (this.configStore.error() && this.configStore.error() !== beforeError) {
+        hadSilentError = true;
+      }
     }
 
-    // 3. Everything else goes through updateConfig
+    // 3. Everything else goes through updateConfig (this one DOES toast on its own)
     if (Object.keys(changes).length > 0) {
       await this.configStore.updatePartialConfig(changes);
     }
 
     // 3b. Business hours live on tenant_business_hours (one row per day)
     if (this.hasUnsavedHours() && config?.tenantId) {
+      didSilentOp = true;
       const week = this.draftBusinessHours();
       const result = await this.configService.upsertBusinessHours(
         config.tenantId,
@@ -767,12 +789,20 @@ export class EcommerceConfigComponent implements OnInit {
       );
       result.fold(
         () => {
-          /* error surfaced below via configStore.error if relevant */
+          hadSilentError = true;
+          toast.error('Error al guardar el horario');
         },
         () => {
-          this.lastSyncedHours = week.map((d) => ({ ...d }));
+          this.lastSyncedHours.set(week.map((d) => ({ ...d })));
         }
       );
+    }
+
+    // Surface a single success toast when only silent ops ran. When
+    // `updatePartialConfig` ran we let its own toast speak, since duplicating
+    // it would be noisy.
+    if (didSilentOp && !hadSilentError && Object.keys(changes).length === 0) {
+      toast.success('Catálogo actualizado correctamente');
     }
 
     // 4. Refresh the TenantCurrencyStore cache + localStorage so every

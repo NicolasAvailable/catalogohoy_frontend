@@ -340,21 +340,14 @@ export class EcommerceConfigService {
     );
   }
 
-  /** Upserts a full week of business hours. We delete-then-insert per tenant
-   *  to keep this a single round-trip — `tenant_business_hours` has no unique
-   *  constraint on `(tenant_id, day_of_week)`, so plain upsert isn't an option. */
+  /** Upserts a full week of business hours via the (tenant_id, day_of_week)
+   *  UNIQUE constraint, so existing rows are updated in place and missing
+   *  ones are inserted in a single round-trip. */
   async upsertBusinessHours(
     tenantId: string,
     week: BusinessHoursWeek
   ): Promise<E.Either<Error, void>> {
     const tenantIdNum = Number(tenantId);
-
-    const { error: deleteError } = await this.client
-      .from('tenant_business_hours')
-      .delete()
-      .eq('tenant_id', tenantIdNum);
-
-    if (deleteError) return E.left(new Error(deleteError.message));
 
     const rows = week.map((d) => ({
       tenant_id: tenantIdNum,
@@ -364,11 +357,11 @@ export class EcommerceConfigService {
       is_open: d.isOpen,
     }));
 
-    const { error: insertError } = await this.client
+    const { error } = await this.client
       .from('tenant_business_hours')
-      .insert(rows);
+      .upsert(rows, { onConflict: 'tenant_id,day_of_week' });
 
-    if (insertError) return E.left(new Error(insertError.message));
+    if (error) return E.left(new Error(error.message));
     return E.right(undefined);
   }
 

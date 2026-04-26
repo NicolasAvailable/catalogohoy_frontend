@@ -22,8 +22,8 @@ export class CatalogHero implements OnDestroy {
   readonly showDetails = signal(false);
 
   /** Approximate character count above which the description is long enough
-   *  to spill past 3 lines in the hero card and therefore needs the toggle. */
-  private readonly DESCRIPTION_TOGGLE_THRESHOLD = 120;
+   *  to spill past 2 lines in the hero card and therefore needs the toggle. */
+  private readonly DESCRIPTION_TOGGLE_THRESHOLD = 80;
 
   /** True when the description is long enough to warrant the
    *  "Mostrar más / Mostrar menos" toggle. */

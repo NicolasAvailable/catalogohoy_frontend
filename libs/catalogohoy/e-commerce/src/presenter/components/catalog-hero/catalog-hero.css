@@ -139,17 +139,15 @@
   font-size: 0.875rem;
   color: var(--color-grey-700, #333);
   text-align: center;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  line-height: 1.5;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .hero--banner-centered .hero__description-wrap--expanded .hero__description {
   -webkit-line-clamp: unset;
-  text-transform: none;
 }
 
 .hero__description-toggle {
@@ -287,17 +285,15 @@
   font-size: 0.875rem;
   color: var(--color-grey-700, #333);
   text-align: center;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  line-height: 1.5;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .hero--minimal .hero__description-wrap--expanded .hero__description {
   -webkit-line-clamp: unset;
-  text-transform: none;
 }
 
 /* ===== Skeleton ===== */
