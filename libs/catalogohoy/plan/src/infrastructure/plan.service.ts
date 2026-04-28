@@ -121,7 +121,12 @@ export class PlanService implements BasePlanService {
 
     const plan = planResult.value as Plan;
     const currentProductCount = countResult.value as number;
-    const remaining = plan.maxProducts - currentProductCount;
+    // `max_products = 0` is the unlimited sentinel (Avanzado plan onwards).
+    // Treat it as effectively infinite so creation/import flows never gate.
+    const isUnlimitedProducts = plan.maxProducts <= 0;
+    const remaining = isUnlimitedProducts
+      ? Number.MAX_SAFE_INTEGER
+      : plan.maxProducts - currentProductCount;
     const currentCatalogCount = catalogCountResult.isRight()
       ? (catalogCountResult.value as number)
       : 1;
@@ -138,8 +143,8 @@ export class PlanService implements BasePlanService {
     return E.right({
       plan,
       currentProductCount,
-      canCreateProduct: remaining > 0,
-      remainingProducts: Math.max(0, remaining),
+      canCreateProduct: isUnlimitedProducts || remaining > 0,
+      remainingProducts: isUnlimitedProducts ? Number.MAX_SAFE_INTEGER : Math.max(0, remaining),
       currentCatalogCount,
       canCreateCatalog: remainingCatalogs > 0,
       remainingCatalogs,

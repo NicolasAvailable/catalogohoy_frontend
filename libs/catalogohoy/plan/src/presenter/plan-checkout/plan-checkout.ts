@@ -66,23 +66,23 @@ const CHECKOUT_FEATURES: Record<string, FeatureSection[]> = {
       title: 'Tu catálogo',
       items: [
         '1 catálogo digital',
-        'Hasta 500 productos',
+        '∞ productos (ilimitados)',
         'Todo lo del Plan Básico',
-        'Dominio personalizado',
+        'Vinculación de dominio personalizado (el dominio se adquiere por separado)',
         'Código QR descargable',
         'Compartir por WhatsApp',
       ],
     },
     {
       title: 'Equipo',
-      items: ['Hasta 5 miembros de equipo', 'Permisos por módulo'],
+      items: ['Hasta 10 miembros de equipo', 'Permisos por módulo'],
     },
     {
       title: 'Analíticas',
       items: [
         'Analíticas avanzadas',
         'Visitas al catálogo',
-        'Reportes detallados',
+        'Hasta 30 reportes por mes',
       ],
     },
     {
@@ -161,6 +161,7 @@ export class PlanCheckout implements OnInit {
   public readonly maxProductsLabel = computed(() => {
     const plan = this.plan();
     if (!plan) return '';
+    if (plan.maxProducts <= 0) return '∞ productos';
     return `Hasta ${plan.maxProducts} productos`;
   });
 

@@ -26,8 +26,6 @@ import {
 import { ProductAiExcelService, ProductExcelService, ProductStore } from '../../../infrastructure';
 
 type View =
-  | 'hub'
-  | 'export'
   | 'import-upload'
   | 'import-preview'
   | 'import-progress'
@@ -76,8 +74,7 @@ export class ImportExportHubComponent {
 
   @ViewChild(DialogComponent) dialog!: DialogComponent;
 
-  public readonly view = signal<View>('hub');
-  public readonly isExporting = signal(false);
+  public readonly view = signal<View>('import-upload');
   public readonly parsedRows = signal<ProductExcelRow[]>([]);
   public readonly importResults = signal<ImportRowResult[]>([]);
   public readonly importSummary = signal<ImportSummary | null>(null);
@@ -90,40 +87,13 @@ export class ImportExportHubComponent {
   }
 
   public open(): void {
-    this.view.set('hub');
+    this.view.set('import-upload');
     this.parsedRows.set([]);
     this.importResults.set([]);
     this.importSummary.set(null);
     this.importProgress.set(0);
-    this.dialog.show();
-  }
-
-  public async onExport(): Promise<void> {
-    this.view.set('export');
-    this.isExporting.set(true);
-
-    await new Promise((r) => setTimeout(r, 300));
-
-    const products = this.productStore.productList().products;
-    if (products.length === 0) {
-      toast.error('No hay productos para exportar');
-      this.isExporting.set(false);
-      this.view.set('hub');
-      return;
-    }
-
-    const result = this.excelService.exportToExcel(products);
-    result
-      .mapRight(() => toast.success('Productos exportados correctamente'))
-      .mapLeft((err) => toast.error(err.message));
-
-    this.isExporting.set(false);
-    setTimeout(() => this.dialog.hide(), 1200);
-  }
-
-  public onImport(): void {
-    this.view.set('import-upload');
     this.categoryStore.categoryList$(1, 100);
+    this.dialog.show();
   }
 
   public async onFileSelected(event: Event): Promise<void> {
