@@ -43,10 +43,14 @@
 .hero--banner-centered .hero__card {
   position: relative;
   background: white;
-  margin: -0.5rem 0.5rem 0;
+  /* `auto` horizontal margins center the card itself; the negative top
+   * margin pulls the white card up so the logo can overlap the banner. */
+  margin: -0.5rem auto 0;
+  width: calc(100% - 1rem);
   border-radius: 0.75rem 0.75rem 0 0;
   box-shadow: 0 0.0625rem 0.125rem rgba(0, 0, 0, 0.05);
   padding: 2rem 1.5rem 0.75rem;
+  box-sizing: border-box;
 }
 
 .hero--banner-centered .hero__card-body {
@@ -54,6 +58,20 @@
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
+  text-align: center;
+  /* Belt-and-suspenders centering: the logo + name + everything inside the
+   * body is explicitly centered in the row. The absolute "Ver Más" button
+   * lives on top of this and doesn't take up flow space, but a few browsers
+   * can still drift the flex column when the body has a 0-width starting
+   * point — explicit width keeps the column anchored to the card width. */
+  width: 100%;
+}
+
+.hero--banner-centered .hero__logo,
+.hero--banner-centered .hero__logo-placeholder {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .hero--banner-centered .hero__card-more {
@@ -80,7 +98,7 @@
 .hero--banner-centered .hero__logo-placeholder {
   width: 8.5rem;
   height: 8.5rem;
-  margin-top: -7.25rem;
+  margin-top: -6.8rem;
 }
 
 .hero--banner-centered .hero__logo-initial {
@@ -376,7 +394,7 @@
   .hero--banner-centered .hero__logo-placeholder {
     width: 7.5rem;
     height: 7.5rem;
-    margin-top: -6.25rem;
+    margin-top: -5.8rem;
   }
 
   .hero--banner-centered .hero__name {

@@ -41,8 +41,11 @@
     <router-outlet />
   </main>
 
-  @if (!isClassic) {
-    <!-- Floating cart pill bar (Fatness-style) — hidden for classic, which uses navbar cart icon -->
+  @if (!isClassic && ecommerceStore.effectiveCatalogInfo()) {
+    <!-- Floating cart pill bar (Fatness-style) — hidden for classic (uses
+         navbar cart icon) AND while catalog config is still loading, so the
+         pill never flashes in the default blue before the tenant's primary
+         color palette gets applied. -->
     <button
       class="ecommerce__cart-pill"
       (click)="cartStore.openCart()"

@@ -246,25 +246,29 @@
         </span>
       }
     </li>
-    <li
-      [routerLink]="canViewRates() ? '/admin/exchange-rates' : null"
-      [routerLinkActive]="canViewRates() ? 'bg-primary-50' : ''"
-      [routerLinkActiveOptions]="{exact: true}"
-      [class.opacity-50]="!canViewRates()"
-      [class.cursor-not-allowed]="!canViewRates()"
-      [class.cursor-pointer]="canViewRates()"
-      [pTooltip]="!canViewRates() ? noPermissionTooltip : ''"
-      tooltipPosition="right"
-      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
-    >
-      <div class="flex items-center gap-2">
-        <ui-icon name="dollar-sign" size="16" />
-        <a class="font-base font-semibold text-grey-700 mt-0.5">Tasas del día</a>
-      </div>
-      @if (!canViewRates()) {
-        <ui-icon name="lock" size="12" styleClass="text-grey-400" />
-      }
-    </li>
+    @if (isVenezuela()) {
+      <!-- Venezuela-only: BCV USD/EUR rates. Catalogs in any other country
+           don't need this module so we hide it from the sidebar entirely. -->
+      <li
+        [routerLink]="canViewRates() ? '/admin/exchange-rates' : null"
+        [routerLinkActive]="canViewRates() ? 'bg-primary-50' : ''"
+        [routerLinkActiveOptions]="{exact: true}"
+        [class.opacity-50]="!canViewRates()"
+        [class.cursor-not-allowed]="!canViewRates()"
+        [class.cursor-pointer]="canViewRates()"
+        [pTooltip]="!canViewRates() ? noPermissionTooltip : ''"
+        tooltipPosition="right"
+        class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+      >
+        <div class="flex items-center gap-2">
+          <ui-icon name="dollar-sign" size="16" />
+          <a class="font-base font-semibold text-grey-700 mt-0.5">Tasas del día</a>
+        </div>
+        @if (!canViewRates()) {
+          <ui-icon name="lock" size="12" styleClass="text-grey-400" />
+        }
+      </li>
+    }
     <li
       [routerLink]="(teamsLocked() || !canViewTeam()) ? null : '/admin/teams'"
       [routerLinkActive]="(teamsLocked() || !canViewTeam()) ? '' : 'bg-primary-50'"
