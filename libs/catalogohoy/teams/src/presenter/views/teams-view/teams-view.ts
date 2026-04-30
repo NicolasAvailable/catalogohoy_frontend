@@ -106,6 +106,25 @@ export default class TeamsViewComponent implements OnInit {
   protected readonly canRemove = computed(
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'delete')
   );
+
+  /** A member with `equipo:edit` could otherwise self-grant any permission
+   *  by editing their own row. RLS in Supabase rejects this anyway, but we
+   *  block it at the UI level so the user gets clear "no puedes editarte
+   *  a ti mismo" feedback instead of a generic RLS error.
+   *  Owners never appear in the members list (they have implicit
+   *  full access), so this rule reduces to "never let me edit my own row". */
+  protected canEditMember(member: TeamMember): boolean {
+    if (!this.canEditPermissions()) return false;
+    return !this.isCurrentUser(member.invitedEmail);
+  }
+
+  /** Same idea as `canEditMember` but for the remove button — a member
+   *  shouldn't be able to remove themselves from the team (RLS would reject
+   *  it anyway, and the result would leave them mid-page with no warning). */
+  protected canRemoveMember(member: TeamMember): boolean {
+    if (!this.canRemove()) return false;
+    return !this.isCurrentUser(member.invitedEmail);
+  }
   protected readonly teamFull = computed(() => !this.teamStore.canInviteMore());
 
   protected readonly totalPermissions = Object.values(MODULE_ACTIONS).reduce(
@@ -149,6 +168,12 @@ export default class TeamsViewComponent implements OnInit {
   }
 
   protected async togglePermissions(member: TeamMember): Promise<void> {
+    // Belt-and-suspenders: the click handler in the template is already
+    // gated by `canEditMember`, but if anyone calls this method directly
+    // (or a future template tweak forgets the gate) we still refuse to
+    // open the editor for the current user's own row.
+    if (!this.canEditMember(member)) return;
+
     const currentExpanded = this.expandedMemberId();
     if (currentExpanded === member.id) {
       this.expandedMemberId.set(null);
@@ -168,6 +193,14 @@ export default class TeamsViewComponent implements OnInit {
     memberId: number;
     permissions: PermissionKey[];
   }): Promise<void> {
+    const member = this.teamStore.acceptedMembers().find((m) => m.id === event.memberId);
+    if (member && !this.canEditMember(member)) {
+      this.toaster.error(
+        new Exception('No puedes modificar tus propios permisos. Pídeselo al dueño del catálogo.')
+      );
+      return;
+    }
+
     this.savingMemberId.set(event.memberId);
     const perms = event.permissions.map((key) => {
       const [module, action] = key.split(':') as [PermissionModule, PermissionAction];
@@ -176,7 +209,7 @@ export default class TeamsViewComponent implements OnInit {
     const error = await this.teamStore.savePermissions(event.memberId, perms);
     this.savingMemberId.set(null);
     if (error) {
-      this.toaster.error(new Exception(error));
+      this.toaster.error(new Exception(this.translatePermissionError(error)));
       return;
     }
     this.memberPermissionsCache.update((cache) => ({
@@ -186,11 +219,31 @@ export default class TeamsViewComponent implements OnInit {
     this.toaster.success('Permisos actualizados');
   }
 
+  /** Translate RLS / Postgres errors that bubble up from the Supabase
+   *  client into a message the user can act on. The DB rejects writes when
+   *  a non-owner tries to grant themselves more access (or remove
+   *  themselves) — the raw message is "new row violates row-level
+   *  security policy", which is opaque for end users. */
+  private translatePermissionError(rawError: string): string {
+    const lower = rawError.toLowerCase();
+    if (lower.includes('row-level security') || lower.includes('row level security') || lower.includes('policy')) {
+      return 'No tienes permiso para realizar esta acción. Solo el dueño del catálogo puede modificar permisos del equipo.';
+    }
+    return rawError;
+  }
+
   protected onCancelPermissions(): void {
     this.expandedMemberId.set(null);
   }
 
   protected removeMember(memberId: number): void {
+    const member = this.teamStore.members().find((m) => m.id === memberId);
+    if (member && !this.canRemoveMember(member)) {
+      this.toaster.error(
+        new Exception('No puedes eliminarte a ti mismo del equipo. Pídeselo al dueño del catálogo.')
+      );
+      return;
+    }
     this.pendingRemoveMemberId.set(memberId);
     this.confirmDialog.warning();
   }
