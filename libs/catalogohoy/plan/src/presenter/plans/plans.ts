@@ -72,7 +72,7 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   avanzado: {
     period: '/mes',
     features: [
-      { text: '1 catálogo' },
+      { text: '2 catálogos' },
       { text: 'Todo del plan Básico' },
       { text: 'Analíticas del catálogo' },
       { text: 'Hasta 30 reportes por mes' },

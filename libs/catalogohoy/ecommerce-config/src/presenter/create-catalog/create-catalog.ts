@@ -1,6 +1,6 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { PlanStore } from '@catalogohoy/plan';
+import { CATALOG_ADDON_PRICE, PlanStore } from '@catalogohoy/plan';
 import { TenantService } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { IconComponent } from '@ui';
@@ -41,10 +41,18 @@ export class CreateCatalog implements OnInit {
   public readonly addSlotsError = signal<string | null>(null);
   public readonly addSlotsSuccess = signal(false);
 
-  public static readonly CATALOG_ADDON_PRICE = 6.99;
+  // Single source of truth — same constant the plans + checkout pages use.
+  public readonly catalogAddonPrice = CATALOG_ADDON_PRICE;
 
+  // The "buy more slots" flow goes through `update-catalog-slots`, which
+  // pokes Stripe to add a line item to the existing subscription. Free-plan
+  // users have no Stripe subscription, so the function 404s. Gate the UI so
+  // those users see "necesitas un plan activo" and get routed to /plans.
   public readonly hasActivePlan = computed(
-    () => !!this.planStore.currentPlan() && !this.planStore.isPlanExpired()
+    () =>
+      !!this.planStore.currentPlan() &&
+      !this.planStore.isPlanExpired() &&
+      !this.planStore.isFreePlan()
   );
 
   public readonly currentCatalogCount = this.planStore.currentCatalogCount;
@@ -56,7 +64,7 @@ export class CreateCatalog implements OnInit {
   );
 
   public readonly addonCost = computed(
-    () => Math.round(CreateCatalog.CATALOG_ADDON_PRICE * this.addonQty() * 100) / 100
+    () => Math.round(this.catalogAddonPrice * this.addonQty() * 100) / 100
   );
 
   private slugCheckTimeout: ReturnType<typeof setTimeout> | null = null;
