@@ -18,6 +18,10 @@
     "meta-ads": {
       "type": "http",
       "url": "https://mcp.pipeboard.co/meta-ads-mcp?token=pk_f0323591e55a4db596233bbe9409ee5d"
+    },
+    "stripe": {
+      "type": "http",
+      "url": "https://mcp.stripe.com"
     }
   }
 }
