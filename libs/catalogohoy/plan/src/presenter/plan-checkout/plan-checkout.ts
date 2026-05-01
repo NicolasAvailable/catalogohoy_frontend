@@ -1,5 +1,6 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   findCountryByCode,
@@ -15,6 +16,7 @@ import {
   PaymentCurrency,
   Plan,
   PLAN_BASE_PRICES,
+  PromotionCodeValidation,
   resolveCheckoutCurrency,
 } from '../../domain';
 import { CheckoutService, PlanStore } from '../../infrastructure';
@@ -96,7 +98,7 @@ const WHATSAPP_NUMBER = '584220240947';
 
 @Component({
   selector: 'lib-plan-checkout',
-  imports: [IconComponent, DecimalPipe],
+  imports: [IconComponent, DecimalPipe, FormsModule],
   templateUrl: './plan-checkout.html',
   styleUrl: './plan-checkout.css',
   host: { class: 'flex-1 flex flex-col min-h-0' },
@@ -128,6 +130,15 @@ export class PlanCheckout implements OnInit {
   /** Tasa BCV USD (directo de bcv_rates, independiente del módulo "Tasas del día") */
   public readonly bcvUsdRate = signal<number | null>(null);
   public readonly isFetchingRate = signal(false);
+
+  /** Coupon UI state. The user types the code, hits "Aplicar", we validate
+   *  against Stripe via `validate-promotion-code` edge function, then store
+   *  the resolved promo so the totals recalc and the Pay button forwards it
+   *  to `create-checkout-session`. */
+  public readonly couponInput      = signal('');
+  public readonly appliedCoupon    = signal<PromotionCodeValidation | null>(null);
+  public readonly couponError      = signal<string | null>(null);
+  public readonly isApplyingCoupon = signal(false);
 
   // Currency Stripe will actually charge in. Drives the on-screen totals +
   // the `currency` sent to the checkout edge function. VE → USD always.
@@ -215,23 +226,52 @@ export class PlanCheckout implements OnInit {
     )
   );
 
-  // Total the user will be charged, in the charge currency.
-  public readonly total = computed(() => {
+  /** Subtotal in USD before applying the coupon (plan + addon, with the
+   *  billing-period discount baked in). Used as the base for both the visual
+   *  coupon-discount line and the final totals. */
+  private readonly preCouponTotalUsd = computed(() => {
     const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
     const baseUsd = this.monthlyBasePriceUsd() * months * (1 - discount);
     const addonUsd =
       CATALOG_ADDON_PRICE * months * this.catalogAddonQuantity();
-    return convertUsdToLocal(baseUsd + addonUsd, this.chargeCurrency());
+    return baseUsd + addonUsd;
+  });
+
+  /** Discount the applied coupon contributes (USD). `amount_off` from Stripe
+   *  comes in minor units (cents). */
+  private readonly couponDiscountUsd = computed(() => {
+    const coupon = this.appliedCoupon();
+    if (!coupon) return 0;
+    if (coupon.percentOff != null) {
+      return this.preCouponTotalUsd() * (coupon.percentOff / 100);
+    }
+    if (coupon.amountOff != null) {
+      // Stripe `amount_off` is in the coupon's currency in minor units. We
+      // only have a USD pipeline here, so we treat amount-off coupons as USD.
+      return coupon.amountOff / 100;
+    }
+    return 0;
+  });
+
+  public readonly couponDiscountAmount = computed(() =>
+    convertUsdToLocal(this.couponDiscountUsd(), this.chargeCurrency())
+  );
+
+  public readonly couponDiscountPercent = computed(
+    () => this.appliedCoupon()?.percentOff ?? null
+  );
+
+  // Total the user will be charged, in the charge currency.
+  public readonly total = computed(() => {
+    const final = Math.max(0, this.preCouponTotalUsd() - this.couponDiscountUsd());
+    return convertUsdToLocal(final, this.chargeCurrency());
   });
 
   // Pure USD total — used for the Venezuela Bs. approximation line and the
   // WhatsApp message (Pago Móvil is a VE-only flow, priced in USD + BCV).
   public readonly totalUsd = computed(() => {
-    const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
-    const baseUsd = this.monthlyBasePriceUsd() * months * (1 - discount);
-    const addonUsd =
-      CATALOG_ADDON_PRICE * months * this.catalogAddonQuantity();
-    return Math.round((baseUsd + addonUsd) * 100) / 100;
+    const final = Math.max(0, this.preCouponTotalUsd() - this.couponDiscountUsd());
+    return Math.round(final * 100) / 100;
   });
 
   public readonly totalVes = computed(() => {
@@ -291,6 +331,34 @@ export class PlanCheckout implements OnInit {
 
   public toggleTerms(): void {
     this.termsAccepted.set(!this.termsAccepted());
+  }
+
+  public async applyCoupon(): Promise<void> {
+    const code = this.couponInput().trim();
+    if (!code || this.isApplyingCoupon()) return;
+
+    this.isApplyingCoupon.set(true);
+    this.couponError.set(null);
+
+    const result = await this.checkoutService.validatePromotionCode(code, this.planId());
+
+    result
+      .mapRight((promo) => {
+        this.appliedCoupon.set(promo);
+        this.couponInput.set(promo.code);
+      })
+      .mapLeft((err) => {
+        this.appliedCoupon.set(null);
+        this.couponError.set(err.message);
+      });
+
+    this.isApplyingCoupon.set(false);
+  }
+
+  public removeCoupon(): void {
+    this.appliedCoupon.set(null);
+    this.couponInput.set('');
+    this.couponError.set(null);
   }
 
   public payMobile(): void {
@@ -360,6 +428,7 @@ export class PlanCheckout implements OnInit {
       cancelUrl:   `${origin}/admin/plans/checkout/${this.planId()}?period=${this.billingPeriod()}&slug=${slug}`,
       catalogAddonQuantity: this.catalogAddonQuantity(),
       currency:             this.chargeCurrency(),
+      promotionCode:        this.appliedCoupon()?.code,
     };
 
     const result = await this.checkoutService.createCheckoutSession(request);

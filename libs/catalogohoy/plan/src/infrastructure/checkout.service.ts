@@ -6,6 +6,7 @@ import {
   CatalogCheckoutRequest,
   CheckoutRequest,
   CheckoutSession,
+  PromotionCodeValidation,
   UpdateCatalogSlotsRequest,
 } from '../domain';
 
@@ -63,5 +64,34 @@ export class CheckoutService implements BaseCheckoutService {
     if (error) return E.left(new Error(error.message));
     if (!data?.success) return E.left(new Error('No se pudo actualizar los catálogos'));
     return E.right({ extraCatalogs: data.extraCatalogs });
+  }
+
+  public async validatePromotionCode(
+    code: string,
+    planId: string
+  ): Promise<E.Either<Error, PromotionCodeValidation>> {
+    const { data, error } = await this.client.functions.invoke<
+      PromotionCodeValidation | { error: string }
+    >('validate-promotion-code', { body: { code, planId } });
+
+    if (error) {
+      // FunctionsHttpError has the response body in `context` — read it so we
+      // surface Stripe's actual reason ("código expirado", "no aplica a este
+      // plan", etc.) instead of a generic "non-2xx status".
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        try {
+          const body = await ctx.json();
+          if (body?.error) return E.left(new Error(body.error));
+        } catch {
+          // fall through to generic error
+        }
+      }
+      return E.left(new Error(error.message));
+    }
+    if (!data || 'error' in data) {
+      return E.left(new Error((data as { error?: string })?.error ?? 'Cupón inválido'));
+    }
+    return E.right(data);
   }
 }

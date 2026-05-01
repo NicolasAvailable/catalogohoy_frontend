@@ -3,6 +3,7 @@ import {
   CatalogCheckoutRequest,
   CheckoutRequest,
   CheckoutSession,
+  PromotionCodeValidation,
   UpdateCatalogSlotsRequest,
 } from './checkout.model';
 
@@ -22,4 +23,9 @@ export abstract class BaseCheckoutService {
   abstract updateCatalogSlots(
     request: UpdateCatalogSlotsRequest
   ): Promise<E.Either<Error, { extraCatalogs: number }>>;
+
+  abstract validatePromotionCode(
+    code: string,
+    planId: string
+  ): Promise<E.Either<Error, PromotionCodeValidation>>;
 }

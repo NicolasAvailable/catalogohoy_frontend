@@ -80,11 +80,23 @@ export interface CheckoutRequest {
   catalogAddonQuantity?: number;
   /** ISO-4217 (lowercase) — defaults to USD if omitted by the edge function. */
   currency?: PaymentCurrency;
+  /** Promotion code text (e.g. "AVANZADO24") pre-validated in our UI. The
+   *  edge function resolves it to a `promo_xxx` ID and passes it to Stripe
+   *  as `discounts: [{ promotion_code }]`. */
+  promotionCode?: string;
 }
 
 export interface CheckoutSession {
   url: string;
   currency?: PaymentCurrency;
+}
+
+export interface PromotionCodeValidation {
+  promotionCodeId: string;
+  code: string;
+  percentOff: number | null;
+  amountOff: number | null;
+  currency: string | null;
 }
 
 export interface CatalogCheckoutRequest {
