@@ -38,6 +38,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
       [emptyMessage]="emptyMessage()"
       [emptyFilterMessage]="emptyFilterMessage()"
       [filterPlaceHolder]="filterPlaceHolder()"
+      [showToggleAll]="showToggleAll()"
     >
         @if(itemTemplate) {
             <ng-template pTemplate="item" let-item>
@@ -76,6 +77,7 @@ export class MultiSelectComponent<T> implements ControlValueAccessor {
   public readonly emptyFilterMessage = _.input('No se encontraron resultados');
   public readonly filterPlaceHolder = _.input('');
   public readonly filter = _.input(true);
+  public readonly showToggleAll = _.input(true);
 
   @_.ContentChild('item', { read: _.TemplateRef })
   itemTemplate?: _.TemplateRef<unknown>;

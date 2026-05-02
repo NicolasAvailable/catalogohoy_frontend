@@ -167,7 +167,15 @@ export default class List implements OnInit, OnDestroy {
   }
 
   public onCategoryFilterChange(categoryId: string | null): void {
-    this.filterCategoryId.set(categoryId);
+    // The seeded "Ver todos" category clears the filter — same behavior as
+    // the public catalog. Selecting it from the dropdown should show every
+    // product, not filter to that pseudo-category.
+    const category = this.categoryStore
+      .categoryList()
+      .categories.find((c) => c.id === categoryId);
+    const resolvedId = category?.isViewAll ? null : categoryId;
+
+    this.filterCategoryId.set(resolvedId);
     this.pageFirst.set(0);
     this.clearSelection();
   }
