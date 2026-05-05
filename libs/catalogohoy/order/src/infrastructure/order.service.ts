@@ -31,6 +31,10 @@ export interface CreateOrderInput {
   tenantId: number;
   /** ISO date "YYYY-MM-DD". If omitted, the DB defaults to CURRENT_DATE. */
   deliveryDate?: string;
+  /** Free-form payment method label (e.g. "Efectivo", "Pago móvil"). Mirrors
+   *  the public catalog checkout flow where the customer picks a method
+   *  before sending the order via WhatsApp. */
+  paymentMethod?: string;
 }
 
 export interface UpdateOrderInput extends CreateOrderInput {
@@ -167,6 +171,7 @@ export class OrderService {
       tenant_id: input.tenantId,
     };
     if (input.deliveryDate) payload['delivery_date'] = input.deliveryDate;
+    if (input.paymentMethod !== undefined) payload['payment_method'] = input.paymentMethod || null;
 
     const { data, error } = await this.client
       .from('orders')
@@ -206,6 +211,7 @@ export class OrderService {
       total_bs: input.totalBs,
     };
     if (input.deliveryDate) patch['delivery_date'] = input.deliveryDate;
+    if (input.paymentMethod !== undefined) patch['payment_method'] = input.paymentMethod || null;
 
     const { data, error } = await this.client
       .from('orders')

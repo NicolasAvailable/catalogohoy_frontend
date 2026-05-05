@@ -62,7 +62,8 @@
       "mcp__stripe__stripe_api_execute",
       "mcp__stripe__stripe_api_details",
       "mcp__stripe__create_coupon",
-      "WebFetch(domain:multparts-the-store.catalogohoy.com)"
+      "WebFetch(domain:multparts-the-store.catalogohoy.com)",
+      "Bash(grep -A 5 \"### \\\\`users\\\\`\" /c/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo/.claude/docs/database.md)"
     ],
     "additionalDirectories": [
       "c:\\Users\\nicol\\OneDrive\\Desktop\\projects\\catalogohoy_frontend_monorepo"

@@ -101,6 +101,8 @@ export const OrderStore = signalStore(
         products: OrderItem[];
         totalUsd: number;
         totalBs: number;
+        deliveryDate?: string;
+        paymentMethod?: string;
       }): Promise<E.Either<string, Order>> {
         patchState(store, { isLoading: true, error: null });
 
@@ -144,6 +146,8 @@ export const OrderStore = signalStore(
         products: OrderItem[];
         totalUsd: number;
         totalBs: number;
+        deliveryDate?: string;
+        paymentMethod?: string;
       }): Promise<E.Either<string, Order>> {
         patchState(store, { isLoading: true, error: null });
 

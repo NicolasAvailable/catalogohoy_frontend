@@ -199,33 +199,55 @@
             (valueChange)="setPhoto($event)"
             [accept]="'image/webp, image/png, image/jpeg'"
             [max]="{ mb: 40 }"
+            [acceptPaste]="photos().length < maxPhotos()"
           >
-            <ng-template #picker let-pick="pick">
-              <button
-                type="button"
-                (click)="photos().length < maxPhotos() && pick()"
-                [class]="
-                  'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl py-10 transition-colors ' +
-                  (photos().length >= maxPhotos()
-                    ? 'border-grey-300 bg-grey-50 opacity-50 cursor-not-allowed'
-                    : 'border-primary-500 bg-primary-50/10 cursor-pointer hover:bg-primary-50/20')
-                "
-              >
-                <ui-icon
-                  name="circle-plus"
-                  size="24"
-                  [styleClass]="photos().length >= maxPhotos() ? 'text-grey-400 mb-2' : 'text-primary-500 mb-2'"
-                />
-                <p
+            <ng-template #picker let-pick="pick" let-paste="paste" let-canPaste="canPaste">
+              <div class="flex flex-col gap-3">
+                <button
+                  type="button"
+                  (click)="photos().length < maxPhotos() && pick()"
                   [class]="
-                    'font-bold text-base ' +
-                    (photos().length >= maxPhotos() ? 'text-grey-400' : 'text-primary-500')
+                    'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl py-10 transition-colors ' +
+                    (photos().length >= maxPhotos()
+                      ? 'border-grey-300 bg-grey-50 opacity-50 cursor-not-allowed'
+                      : 'border-primary-500 bg-primary-50/10 cursor-pointer hover:bg-primary-50/20')
                   "
                 >
-                  {{ photos().length >= maxPhotos() ? photosLimitMessage() :
-                  'Arrastrá y soltá, o subí fotos del producto' }}
-                </p>
-              </button>
+                  <ui-icon
+                    name="circle-plus"
+                    size="24"
+                    [styleClass]="photos().length >= maxPhotos() ? 'text-grey-400 mb-2' : 'text-primary-500 mb-2'"
+                  />
+                  <p
+                    [class]="
+                      'font-bold text-base ' +
+                      (photos().length >= maxPhotos() ? 'text-grey-400' : 'text-primary-500')
+                    "
+                  >
+                    {{ photos().length >= maxPhotos() ? photosLimitMessage() :
+                    'Arrastrá, soltá o subí fotos del producto' }}
+                  </p>
+                  <p
+                    *ngIf="photos().length < maxPhotos()"
+                    class="text-sm text-grey-300 mt-1"
+                  >
+                    También podés pegar (Ctrl+V) o usar el botón de abajo
+                  </p>
+                </button>
+
+                <!-- Mobile-friendly paste button. Hidden on browsers that
+                     don't expose `navigator.clipboard.read()` (older Firefox
+                     etc.) where the user must use Subir or Ctrl+V instead. -->
+                <button
+                  *ngIf="canPaste && photos().length < maxPhotos()"
+                  type="button"
+                  (click)="paste()"
+                  class="self-stretch sm:self-center inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-grey-100 bg-white hover:bg-primary-50/30 hover:border-primary-300 transition-colors text-sm font-semibold text-grey-700 cursor-pointer"
+                >
+                  <ui-icon name="copy" size="16" styleClass="text-primary-500" />
+                  Pegar imagen del portapapeles
+                </button>
+              </div>
             </ng-template>
           </ui-uploader>
 
