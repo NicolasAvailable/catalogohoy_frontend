@@ -12,4 +12,5 @@ export interface ProfileEntity {
   email: string;
   phone: string;
   photo: string | null;
+  notify_plan_expiry?: boolean;
 }

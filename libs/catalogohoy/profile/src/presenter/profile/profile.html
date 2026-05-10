@@ -1,189 +1,389 @@
 <section class="container flex flex-col gap-4 max-w-2xl mx-auto px-4 py-2 sm:px-0 sm:py-0">
   <h1 class="text-4xl font-bold">Perfil</h1>
-  <ui-card>
-    <form [formGroup]="profileForm" class="flex flex-col gap-3">
-      <h1 class="text-2xl font-bold">Datos personales</h1>
 
-      <div class="flex flex-col gap-1.5">
-        <label for="name" class="text-sm font-medium text-grey-700"
-          >Nombre</label
-        >
-        <ui-input-text formControlName="name" inputId="name"></ui-input-text>
-        <ui-input-message
-          [control]="profileForm.get('name')"
-          error="required"
-          text="El campo es obligatorio"
-        />
-        <ui-input-message
-          [control]="profileForm.get('name')"
-          error="whitespace"
-          text="No puede contener espacios en blanco"
-        />
-        <ui-input-message
-          [control]="profileForm.get('name')"
-          error="minlength"
-          text="Debe tener mínimo 4 caracteres"
-        />
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <label for="email" class="text-sm font-medium text-grey-700"
-          >E-mail</label
-        >
-        <ui-input-text formControlName="email" inputId="email"></ui-input-text>
-      </div>
+  <!-- Tabs -->
+  <nav class="profile-tabs" role="tablist" aria-label="Secciones del perfil">
+    @for (tab of tabs; track tab.id) {
+    <button
+      type="button"
+      role="tab"
+      class="profile-tab"
+      [class.profile-tab--active]="activeTab() === tab.id"
+      [class.profile-tab--danger]="tab.id === 'danger'"
+      [attr.aria-selected]="activeTab() === tab.id"
+      (click)="setActiveTab(tab.id)"
+    >
+      <ui-icon [name]="tab.icon" styleClass="size-4 shrink-0"></ui-icon>
+      <span>{{ tab.label }}</span>
+    </button>
+    }
+  </nav>
 
-      <div class="flex gap-3 justify-end w-full mt-4">
-        <ui-button
-          (click)="updateName()"
-          [disabled]="profileForm.invalid"
-          label="Guardar"
-          severity="primary"
-        ></ui-button>
-      </div>
-    </form>
-  </ui-card>
+  <!-- ===== TAB: GENERAL ===== -->
+  <div class="profile-tab-content" [hidden]="activeTab() !== 'general'">
+    <ui-card>
+      <form [formGroup]="profileForm" class="flex flex-col gap-3">
+        <h2 class="text-2xl font-bold">Datos personales</h2>
 
-  <ui-card>
-    <form [formGroup]="passwordForm" class="flex flex-col gap-3">
-      <h2 class="text-2xl font-bold">Contraseña</h2>
-      <div class="flex flex-col gap-1.5">
-        <label for="password" class="text-sm font-medium text-grey-700"
-          >Nueva contraseña</label
-        >
-        <ui-input-password
-          [feedback]="false"
-          formControlName="password"
-          inputId="password"
-        />
-        <ui-input-message
-          [control]="passwordForm.get('password')"
-          error="required"
-          text="El campo es obligatorio"
-        />
-        <ui-input-message
-          [control]="passwordForm.get('password')"
-          error="whitespace"
-          text="No puede contener espacios en blanco"
-        />
-        <ui-input-message
-          [control]="passwordForm.get('password')"
-          error="minlength"
-          text="Debe tener mínimo 6 caracteres"
-        />
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <label for="passwordConfirmed" class="text-sm font-medium text-grey-700"
-          >Confirmar contraseña</label
-        >
-        <ui-input-password
-          [feedback]="false"
-          formControlName="passwordConfirmed"
-          inputId="passwordConfirmed"
-        />
-        <ui-input-message
-          [control]="passwordForm.get('passwordConfirmed')"
-          error="required"
-          text="El campo es obligatorio"
-        />
-        <ui-input-message
-          [control]="passwordForm.get('passwordConfirmed')"
-          error="whitespace"
-          text="No puede contener espacios en blanco"
-        />
-        <ui-input-message
-          [control]="passwordForm.get('passwordConfirmed')"
-          error="minlength"
-          text="Debe tener mínimo 6 caracteres"
-        />
-        <ui-input-message
-          [control]="passwordForm"
-          error="confirmPassword"
-          text="Las contraseñas no coinciden"
-        />
-      </div>
-      <div class="flex gap-3 justify-end w-full mt-4">
-        <ui-button
-          (click)="updatePassword()"
-          [disabled]="passwordForm.invalid"
-          label="Guardar"
-          severity="primary"
-        />
-      </div>
-    </form>
-  </ui-card>
+        <div class="flex flex-col gap-1.5">
+          <label for="name" class="text-sm font-medium text-grey-700">Nombre</label>
+          <ui-input-text formControlName="name" inputId="name"></ui-input-text>
+          <ui-input-message
+            [control]="profileForm.get('name')"
+            error="required"
+            text="El campo es obligatorio"
+          />
+          <ui-input-message
+            [control]="profileForm.get('name')"
+            error="whitespace"
+            text="No puede contener espacios en blanco"
+          />
+          <ui-input-message
+            [control]="profileForm.get('name')"
+            error="minlength"
+            text="Debe tener mínimo 4 caracteres"
+          />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="email" class="text-sm font-medium text-grey-700">E-mail</label>
+          <ui-input-text formControlName="email" inputId="email"></ui-input-text>
+        </div>
 
-  @if (!planStore.isFreePlan()) {
-  <ui-card>
-    <div class="flex flex-col gap-4">
-      <div class="flex items-center justify-between gap-3">
-        <h2 class="text-2xl font-bold">Suscripción <span class="text-base font-normal text-grey-400">(pago con tarjeta)</span></h2>
-        @if (planStore.currentPlan(); as plan) {
-        <span
-          class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary shrink-0"
+        <div class="flex gap-3 justify-end w-full mt-4">
+          <ui-button
+            (click)="updateName()"
+            [disabled]="profileForm.invalid"
+            label="Guardar"
+            severity="primary"
+          ></ui-button>
+        </div>
+      </form>
+    </ui-card>
+
+    <ui-card>
+      <form [formGroup]="passwordForm" class="flex flex-col gap-3">
+        <h2 class="text-2xl font-bold">Contraseña</h2>
+        <div class="flex flex-col gap-1.5">
+          <label for="password" class="text-sm font-medium text-grey-700">Nueva contraseña</label>
+          <ui-input-password
+            [feedback]="false"
+            formControlName="password"
+            inputId="password"
+          />
+          <ui-input-message
+            [control]="passwordForm.get('password')"
+            error="required"
+            text="El campo es obligatorio"
+          />
+          <ui-input-message
+            [control]="passwordForm.get('password')"
+            error="whitespace"
+            text="No puede contener espacios en blanco"
+          />
+          <ui-input-message
+            [control]="passwordForm.get('password')"
+            error="minlength"
+            text="Debe tener mínimo 6 caracteres"
+          />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="passwordConfirmed" class="text-sm font-medium text-grey-700">Confirmar contraseña</label>
+          <ui-input-password
+            [feedback]="false"
+            formControlName="passwordConfirmed"
+            inputId="passwordConfirmed"
+          />
+          <ui-input-message
+            [control]="passwordForm.get('passwordConfirmed')"
+            error="required"
+            text="El campo es obligatorio"
+          />
+          <ui-input-message
+            [control]="passwordForm.get('passwordConfirmed')"
+            error="whitespace"
+            text="No puede contener espacios en blanco"
+          />
+          <ui-input-message
+            [control]="passwordForm.get('passwordConfirmed')"
+            error="minlength"
+            text="Debe tener mínimo 6 caracteres"
+          />
+          <ui-input-message
+            [control]="passwordForm"
+            error="confirmPassword"
+            text="Las contraseñas no coinciden"
+          />
+        </div>
+        <div class="flex gap-3 justify-end w-full mt-4">
+          <ui-button
+            (click)="updatePassword()"
+            [disabled]="passwordForm.invalid"
+            label="Guardar"
+            severity="primary"
+          />
+        </div>
+      </form>
+    </ui-card>
+  </div>
+
+  <!-- ===== TAB: SUSCRIPCIÓN ===== -->
+  <div class="profile-tab-content" [hidden]="activeTab() !== 'subscription'">
+    @if (!planStore.isFreePlan()) {
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-2xl font-bold">
+            Suscripción
+            <span class="text-base font-normal text-grey-400">(pago con tarjeta)</span>
+          </h2>
+          @if (planStore.currentPlan(); as plan) {
+          <span
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary shrink-0"
+          >
+            <ui-icon name="crown" size="13" />
+            {{ plan.name }}
+          </span>
+          }
+        </div>
+
+        <p class="text-sm text-grey-400">
+          Seguirás teniendo acceso a todas las funciones premium hasta el final
+          del período de facturación actual.
+        </p>
+
+        <div
+          class="flex items-center justify-between gap-4 pt-4 border-t border-grey-100"
         >
-          <ui-icon name="crown" size="13" />
-          {{ plan.name }}
+          <div class="flex items-center gap-2 text-sm text-grey-400">
+            <ui-icon name="circle-alert" size="15" styleClass="text-amber-400" />
+            Esta acción puede revertirse antes del próximo cobro.
+          </div>
+          <ui-button
+            label="Cancelar suscripción"
+            severity="danger"
+            variant="outlined"
+            [fluid]="false"
+            [isLoading]="isCancelling()"
+            (click)="onCancelSubscription()"
+          />
+        </div>
+      </div>
+    </ui-card>
+    } @else {
+    <ui-card>
+      <div class="flex flex-col items-center gap-3 py-6 text-center">
+        <span class="flex items-center justify-center w-12 h-12 rounded-xl bg-grey-50">
+          <ui-icon name="credit-card" size="22" styleClass="text-grey-400" />
         </span>
+        <h2 class="text-xl font-bold">No tenés suscripción activa</h2>
+        <p class="text-sm text-grey-400 max-w-sm">
+          Explorá los planes disponibles y desbloqueá funcionalidades premium para tu catálogo.
+        </p>
+      </div>
+    </ui-card>
+    }
+
+    <!-- Historial de pagos: Stripe + manuales VE -->
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <h3 class="text-lg font-bold">Historial de pagos</h3>
+            <p class="text-xs text-grey-400">
+              Incluye cobros con tarjeta y pagos manuales (Pago Móvil, transferencia, etc.).
+            </p>
+          </div>
+          <ui-button
+            icon="refresh-cw"
+            variant="outlined"
+            severity="secondary"
+            size="small"
+            [isLoading]="isLoadingBilling()"
+            (click)="loadBillingHistory()"
+            label="Actualizar"
+            [fluid]="false"
+          />
+        </div>
+
+        @if (isLoadingBilling() && !hasBillingHistory()) {
+        <div class="flex items-center gap-2 text-sm text-grey-400 py-4">
+          <ui-icon name="loader-circle" styleClass="size-4 animate-spin" />
+          Cargando historial...
+        </div>
+        } @else if (billingError()) {
+        <div class="flex items-center gap-2 text-sm text-red-500 py-2">
+          <ui-icon name="circle-alert" styleClass="size-4" />
+          {{ billingError() }}
+        </div>
+        } @else if (!hasBillingHistory()) {
+        <div class="flex flex-col items-center gap-2 py-6 text-center">
+          <ui-icon name="file-spreadsheet" styleClass="size-7 text-grey-300" />
+          <p class="text-sm text-grey-400">
+            Todavía no hay pagos registrados.
+          </p>
+        </div>
+        } @else {
+        <div class="billing-table-wrapper">
+          <table class="billing-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Concepto</th>
+                <th>Método</th>
+                <th class="right">Monto</th>
+                <th>Estado</th>
+                <th class="right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (entry of billingEntries(); track entry.id) {
+              <tr>
+                <td data-label="Fecha" class="whitespace-nowrap">
+                  {{ entry.date | date: 'dd MMM yyyy' }}
+                </td>
+                <td data-label="Concepto">
+                  <div class="flex flex-col">
+                    <span class="text-sm font-semibold text-grey-700">{{ entry.description }}</span>
+                    @if (entry.reference) {
+                    <span class="text-[0.6875rem] text-grey-400 font-mono">{{ entry.reference }}</span>
+                    }
+                    @if (entry.notes) {
+                    <span class="text-xs text-grey-500 italic">{{ entry.notes }}</span>
+                    }
+                  </div>
+                </td>
+                <td data-label="Método">
+                  <span class="inline-flex items-center gap-1 text-sm text-grey-700">
+                    <ui-icon
+                      [name]="entry.source === 'stripe' ? 'credit-card' : 'wallet'"
+                      styleClass="size-3.5"
+                    />
+                    {{ entry.methodLabel }}
+                  </span>
+                </td>
+                <td data-label="Monto" class="right whitespace-nowrap font-semibold">
+                  $ {{ entry.amountUsd | number: '1.2-2' }}
+                </td>
+                <td data-label="Estado">
+                  <span
+                    class="inline-flex px-2 py-0.5 rounded-full text-[0.6875rem] font-semibold uppercase tracking-wide"
+                    [class]="statusBadgeClass(entry.status)"
+                  >
+                    {{ statusLabel(entry.status) }}
+                  </span>
+                </td>
+                <td data-label="Acciones" class="right">
+                  <div class="flex gap-1.5 justify-end items-center">
+                    <button
+                      type="button"
+                      class="invoice-action"
+                      title="Ver factura"
+                      [disabled]="busyInvoiceId() === entry.id"
+                      (click)="openInvoice(entry)"
+                    >
+                      @if (busyInvoiceId() === entry.id) {
+                      <ui-icon name="loader-circle" styleClass="size-3.5 animate-spin" />
+                      } @else {
+                      <ui-icon name="external-link" styleClass="size-3.5" />
+                      }
+                      <span>Ver</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="invoice-action invoice-action--primary"
+                      title="Descargar PDF"
+                      [disabled]="busyInvoiceId() === entry.id"
+                      (click)="downloadPdf(entry)"
+                    >
+                      <ui-icon name="download" styleClass="size-3.5" />
+                      <span>PDF</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
         }
       </div>
+    </ui-card>
+  </div>
 
-      <p class="text-sm text-grey-400">
-        Seguirás teniendo acceso a todas las funciones premium hasta el final
-        del período de facturación actual.
-      </p>
-
-      <div
-        class="flex items-center justify-between gap-4 pt-4 border-t border-grey-100"
-      >
-        <div class="flex items-center gap-2 text-sm text-grey-400">
-          <ui-icon name="circle-alert" size="15" styleClass="text-amber-400" />
-          Esta acción puede revertirse antes del próximo cobro.
-        </div>
-        <ui-button
-          label="Cancelar suscripción"
-          severity="danger"
-          variant="outlined"
-          [fluid]="false"
-          [isLoading]="isCancelling()"
-          (click)="onCancelSubscription()"
-        />
-      </div>
-    </div>
-  </ui-card>
-  }
-
-  <ui-card styleClass="!border-red-200">
-    <div class="flex flex-col gap-4">
-      <div class="flex items-center gap-3">
-        <span
-          class="flex items-center justify-center w-9 h-9 rounded-xl bg-red-50 shrink-0"
-        >
-          <ui-icon name="triangle-alert" size="17" styleClass="text-red-500" />
-        </span>
+  <!-- ===== TAB: NOTIFICACIONES ===== -->
+  <div class="profile-tab-content" [hidden]="activeTab() !== 'notifications'">
+    <ui-card>
+      <div class="flex flex-col gap-4">
         <div>
-          <h2 class="text-2xl font-bold">Eliminar cuenta</h2>
-          <p class="text-xs text-red-400 font-medium">Zona de peligro</p>
+          <h2 class="text-2xl font-bold">Notificaciones</h2>
+          <p class="text-sm text-grey-400">
+            Configurá los avisos por email que recibís sobre tu cuenta y tu plan.
+          </p>
+        </div>
+
+        <div class="flex items-start justify-between gap-3 pt-4 border-t border-grey-100">
+          <div class="flex flex-col gap-1 min-w-0">
+            <span class="text-sm font-semibold text-grey-700">
+              Avisos de expiración de plan
+            </span>
+            <p class="text-xs text-grey-400">
+              Te avisamos por email cuando faltan 6, 4, 2 y 0 días para que tu plan venza, así no perdés acceso por descuido.
+            </p>
+          </div>
+          <ui-toggle
+            [ngModel]="draftNotifyPlanExpiry()"
+            (ngModelChange)="draftNotifyPlanExpiry.set($event)"
+          ></ui-toggle>
+        </div>
+
+        <div class="flex justify-end pt-4 border-t border-grey-100">
+          <ui-button
+            label="Guardar"
+            severity="primary"
+            [fluid]="false"
+            [isLoading]="isSavingNotifications()"
+            (click)="saveNotificationPreferences()"
+          />
         </div>
       </div>
+    </ui-card>
+  </div>
 
-      <p class="text-sm text-grey-400">
-        Esta acción es
-        <strong class="text-grey-600">permanente e irreversible</strong>. Se
-        eliminarán todos tus datos, productos y catálogos. No podrás recuperar
-        tu cuenta una vez confirmada la eliminación.
-      </p>
+  <!-- ===== TAB: ZONA DE PELIGRO ===== -->
+  <div class="profile-tab-content" [hidden]="activeTab() !== 'danger'">
+    <ui-card styleClass="!border-red-200">
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-3">
+          <span
+            class="flex items-center justify-center w-9 h-9 rounded-xl bg-red-50 shrink-0"
+          >
+            <ui-icon name="triangle-alert" size="17" styleClass="text-red-500" />
+          </span>
+          <div>
+            <h2 class="text-2xl font-bold">Eliminar cuenta</h2>
+            <p class="text-xs text-red-400 font-medium">Zona de peligro</p>
+          </div>
+        </div>
 
-      <div class="flex justify-end pt-4 border-t border-red-100">
-        <ui-button
-          label="Eliminar mi cuenta"
-          severity="danger"
-          [fluid]="false"
-          [isLoading]="isDeleting()"
-          (click)="onDeleteAccount()"
-        />
+        <p class="text-sm text-grey-400">
+          Esta acción es
+          <strong class="text-grey-600">permanente e irreversible</strong>. Se
+          eliminarán todos tus datos, productos y catálogos. No podrás recuperar
+          tu cuenta una vez confirmada la eliminación.
+        </p>
+
+        <div class="flex justify-end pt-4 border-t border-red-100">
+          <ui-button
+            label="Eliminar mi cuenta"
+            severity="danger"
+            [fluid]="false"
+            [isLoading]="isDeleting()"
+            (click)="onDeleteAccount()"
+          />
+        </div>
       </div>
-    </div>
-  </ui-card>
+    </ui-card>
+  </div>
 
   <ui-confirm-dialog
     #cancelDialog

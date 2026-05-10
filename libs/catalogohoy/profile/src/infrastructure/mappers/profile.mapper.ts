@@ -10,6 +10,7 @@ export class ProfileMapper {
       email: profile.user.email,
       photo: profile.user.photo ?? null,
       tenantList: TenantListMapper.toDomain(profile.tenants),
+      notifyPlanExpiry: profile.user.notify_plan_expiry ?? true,
     });
   }
 }

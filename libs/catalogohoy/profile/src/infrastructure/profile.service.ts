@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
 import { Either } from '@sweet-monads/either';
-import { BaseProfileService } from '../domain';
+import { BaseProfileService, NotificationPreferences } from '../domain';
 import { ProfileMapper } from './mappers';
 
 @Injectable({
@@ -70,6 +70,24 @@ export class ProfileService implements BaseProfileService {
     } else {
       return E.right(undefined);
     }
+  }
+
+  public async updateNotificationPreferences(
+    prefs: NotificationPreferences
+  ): Promise<Either<Error, void>> {
+    const { data: auth } = await this.client.auth.getUser();
+    if (auth.user === null) {
+      return E.left(new Error('User not authenticated'));
+    }
+    const { error } = await this.client
+      .from('users')
+      .update({
+        notify_plan_expiry: prefs.notifyPlanExpiry,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('auth_user_id', auth.user.id);
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
   }
 
   public async deleteAccount(): Promise<Either<Error, void>> {
