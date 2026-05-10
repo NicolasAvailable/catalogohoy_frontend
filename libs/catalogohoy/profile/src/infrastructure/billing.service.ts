@@ -49,21 +49,6 @@ export class BillingService {
     return E.right(data?.entries ?? []);
   }
 
-  /** Open the manual-invoice HTML view in a new tab. Goes through
-   *  authenticated fetch (the edge function requires JWT) and then opens
-   *  the result via a blob URL — direct anchor clicks don't include the
-   *  Authorization header so the browser can't navigate to the function
-   *  directly. */
-  public async openInvoiceHtml(invoiceNumber: string): Promise<E.Either<Error, void>> {
-    const result = await this.fetchInvoice(invoiceNumber, 'html');
-    return result.mapRight((blob) => {
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
-      // Best-effort cleanup; revoking immediately would break the open tab.
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    });
-  }
-
   /** Trigger a PDF download for the given manual invoice. */
   public async downloadInvoicePdf(invoiceNumber: string): Promise<E.Either<Error, void>> {
     const result = await this.fetchInvoice(invoiceNumber, 'pdf');
@@ -84,7 +69,7 @@ export class BillingService {
    *  the response as JSON — it would corrupt the PDF bytes. */
   private async fetchInvoice(
     invoiceNumber: string,
-    format: 'html' | 'pdf'
+    format: 'pdf'
   ): Promise<E.Either<Error, Blob>> {
     try {
       const { data: session } = await this.client.auth.getSession();

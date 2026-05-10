@@ -182,22 +182,6 @@ export class Profile {
    *  loader without flickering the whole table. */
   public readonly busyInvoiceId = signal<string | null>(null);
 
-  public async openInvoice(entry: BillingEntry): Promise<void> {
-    if (entry.source === 'stripe') {
-      // Stripe ships its own hosted page — open it directly.
-      const url = entry.receiptUrl ?? entry.invoicePdfUrl;
-      if (url) window.open(url, '_blank', 'noopener,noreferrer');
-      return;
-    }
-    if (!entry.invoiceNumber) return;
-    this.busyInvoiceId.set(entry.id);
-    const result = await this.billingService.openInvoiceHtml(entry.invoiceNumber);
-    result.mapLeft((err) =>
-      this.toaster.error(new Exception('No se pudo abrir la factura: ' + err.message))
-    );
-    this.busyInvoiceId.set(null);
-  }
-
   public async downloadPdf(entry: BillingEntry): Promise<void> {
     if (entry.source === 'stripe') {
       // Stripe has a hosted PDF; just trigger the browser to fetch it.

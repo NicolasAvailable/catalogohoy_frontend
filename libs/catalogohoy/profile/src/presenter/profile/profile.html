@@ -232,7 +232,7 @@
                 <th>Método</th>
                 <th class="right">Monto</th>
                 <th>Estado</th>
-                <th class="right">Acciones</th>
+                <th class="right">Factura</th>
               </tr>
             </thead>
             <tbody>
@@ -272,33 +272,21 @@
                     {{ statusLabel(entry.status) }}
                   </span>
                 </td>
-                <td data-label="Acciones" class="right">
-                  <div class="flex gap-1.5 justify-end items-center">
-                    <button
-                      type="button"
-                      class="invoice-action"
-                      title="Ver factura"
-                      [disabled]="busyInvoiceId() === entry.id"
-                      (click)="openInvoice(entry)"
-                    >
-                      @if (busyInvoiceId() === entry.id) {
-                      <ui-icon name="loader-circle" styleClass="size-3.5 animate-spin" />
-                      } @else {
-                      <ui-icon name="external-link" styleClass="size-3.5" />
-                      }
-                      <span>Ver</span>
-                    </button>
-                    <button
-                      type="button"
-                      class="invoice-action invoice-action--primary"
-                      title="Descargar PDF"
-                      [disabled]="busyInvoiceId() === entry.id"
-                      (click)="downloadPdf(entry)"
-                    >
-                      <ui-icon name="download" styleClass="size-3.5" />
-                      <span>PDF</span>
-                    </button>
-                  </div>
+                <td data-label="Factura" class="right">
+                  <button
+                    type="button"
+                    class="invoice-action invoice-action--primary"
+                    title="Descargar PDF"
+                    [disabled]="busyInvoiceId() === entry.id"
+                    (click)="downloadPdf(entry)"
+                  >
+                    @if (busyInvoiceId() === entry.id) {
+                    <ui-icon name="loader-circle" styleClass="size-3.5 animate-spin" />
+                    } @else {
+                    <ui-icon name="download" styleClass="size-3.5" />
+                    }
+                    <span>PDF</span>
+                  </button>
                 </td>
               </tr>
               }
