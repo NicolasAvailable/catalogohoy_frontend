@@ -64,8 +64,8 @@ import {
 import { PhoneMockupComponent } from '../components/phone-mockup/phone-mockup';
 import { TemplateSelectorComponent } from '../components/template-selector/template-selector';
 
-export type TabId = 'general' | 'location' | 'payments' | 'social';
-const VALID_TABS: TabId[] = ['general', 'location', 'payments', 'social'];
+export type TabId = 'general' | 'location' | 'payments' | 'social' | 'notifications';
+const VALID_TABS: TabId[] = ['general', 'location', 'payments', 'social', 'notifications'];
 
 @Component({
   selector: 'lib-ecommerce-config',
@@ -116,6 +116,7 @@ export class EcommerceConfigComponent implements OnInit {
     { id: 'location', label: 'Ubicación y Horario', icon: 'map-pin' },
     { id: 'payments', label: 'Pagos', icon: 'credit-card' },
     { id: 'social', label: 'Redes Sociales', icon: 'share2' },
+    { id: 'notifications', label: 'Notificaciones', icon: 'mail' },
   ];
   public readonly activeTab = signal<TabId>('general');
 
@@ -181,6 +182,7 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftShowReferencePrice = signal(true);
   public readonly draftShowLocalCurrencyPrice = signal(true);
   public readonly draftWhatsappOrderMessage = signal<string | null>(null);
+  public readonly draftNotifyNewOrders = signal<boolean>(true);
 
   // Business hours editor (one row per day, Sunday → Saturday)
   public readonly dayLabels = DAY_LABELS_ES;
@@ -421,6 +423,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftShowReferencePrice, prev?.showReferencePrice ?? true, config.showReferencePrice ?? true);
       syncField(this.draftShowLocalCurrencyPrice, prev?.showLocalCurrencyPrice ?? true, config.showLocalCurrencyPrice ?? true);
       syncField(this.draftWhatsappOrderMessage, prev?.whatsappOrderMessage ?? null, config.whatsappOrderMessage ?? null);
+      syncField(this.draftNotifyNewOrders, prev?.notifyNewOrders ?? true, config.notifyNewOrders ?? true);
       syncFieldJson(this.draftWhatsappButtons, prevButtons, newButtons);
       syncFieldJson(this.draftSocialLinks, prev?.socialLinks ?? DEFAULT_SOCIAL_LINKS, config.socialLinks ?? { ...DEFAULT_SOCIAL_LINKS });
 
@@ -713,6 +716,7 @@ export class EcommerceConfigComponent implements OnInit {
     if (this.draftShowReferencePrice() !== (config.showReferencePrice ?? true)) changes.showReferencePrice = this.draftShowReferencePrice();
     if (this.draftShowLocalCurrencyPrice() !== (config.showLocalCurrencyPrice ?? true)) changes.showLocalCurrencyPrice = this.draftShowLocalCurrencyPrice();
     if (this.draftWhatsappOrderMessage() !== (config.whatsappOrderMessage ?? null)) changes.whatsappOrderMessage = this.draftWhatsappOrderMessage();
+    if (this.draftNotifyNewOrders() !== (config.notifyNewOrders ?? true)) changes.notifyNewOrders = this.draftNotifyNewOrders();
 
     const serverButtons = config.whatsappButtons?.length
       ? config.whatsappButtons

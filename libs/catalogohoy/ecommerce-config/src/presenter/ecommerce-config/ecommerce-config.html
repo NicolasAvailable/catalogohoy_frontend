@@ -1001,6 +1001,53 @@
 
       </div> <!-- /TAB PAYMENTS (block 3) -->
 
+      <!-- ===== TAB: NOTIFICATIONS ===== -->
+      <div [hidden]="activeTab() !== 'notifications'">
+        <ui-card styleClass="config-card">
+          <div class="card-header-custom">
+            <div class="card-header-left">
+              <div class="card-icon" style="background: #fff7ed;">
+                <ui-icon name="mail" styleClass="size-5"></ui-icon>
+              </div>
+              <div>
+                <h2 class="card-title">Avisos de pedidos por email</h2>
+                <small class="card-subtitle">
+                  Recibí un correo cada vez que un cliente confirma un pedido en tu catálogo.
+                </small>
+              </div>
+            </div>
+            <ui-toggle
+              [ngModel]="draftNotifyNewOrders()"
+              (ngModelChange)="draftNotifyNewOrders.set($event)"
+            ></ui-toggle>
+          </div>
+
+          <div
+            class="card-content"
+            [class.section-disabled]="!draftNotifyNewOrders()"
+          >
+            <ul class="notifications-list">
+              <li>
+                El correo lo recibe el <strong>dueño del catálogo</strong> y los
+                <strong>miembros del equipo con permiso "Ver órdenes"</strong>.
+              </li>
+              <li>
+                Aplica tanto a pedidos hechos desde el catálogo público como a las
+                órdenes manuales que creás vos en el panel.
+              </li>
+              <li>
+                El email viene desde <strong>noreply&#64;catalogohoy.com</strong> con tu
+                logo y color de marca, e incluye un botón directo al pedido.
+              </li>
+              <li>
+                Para cambiar quién recibe los correos, ajustá los permisos de cada
+                miembro en la sección <strong>Equipo</strong> del menú lateral.
+              </li>
+            </ul>
+          </div>
+        </ui-card>
+      </div> <!-- /TAB NOTIFICATIONS -->
+
       <!-- Bottom Save Button -->
       @if (canEditCatalog()) {
       <div class="bottom-save-section" #bottomSaveAnchor>

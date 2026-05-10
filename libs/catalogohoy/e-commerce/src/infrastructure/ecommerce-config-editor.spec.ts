@@ -95,6 +95,7 @@ function buildConfig(overrides: Partial<EcommerceConfig> = {}): EcommerceConfig 
     socialLinks: DEFAULT_SOCIAL_LINKS,
     template: 'banner-centered',
     whatsappOrderMessage: null,
+    notifyNewOrders: true,
     ...overrides,
   };
 }
@@ -227,6 +228,7 @@ describe('EcommerceConfigComponent (editor)', () => {
           : [{ name: '', number: '' }]
       );
       component.draftSocialLinks.set(seeded.socialLinks ?? DEFAULT_SOCIAL_LINKS);
+      component.draftNotifyNewOrders.set(seeded.notifyNewOrders ?? true);
     }
     component.draftCurrency.set({ ...DEFAULT_CURRENCY_CONFIG });
   });
@@ -354,6 +356,24 @@ describe('EcommerceConfigComponent (editor)', () => {
       expect(changes).not.toHaveProperty('logo');
       expect(changes).not.toHaveProperty('banner');
       expect(changes).not.toHaveProperty('socialLinks');
+    });
+
+    it('captures notifyNewOrders flips and forwards the patch through saveAllChanges', async () => {
+      // The Notificaciones tab's only writable field. Flipping to false must
+      // (a) show up in the diff, (b) reach updateConfig, (c) not pull other
+      // fields along for the ride.
+      component.draftNotifyNewOrders.set(false);
+
+      expect(component.getChangedFields()).toEqual({ notifyNewOrders: false });
+
+      await component.saveAllChanges();
+
+      expect(configService.updateConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ notifyNewOrders: false })
+      );
+      const patch = configService.updateConfig.mock.calls[0][0];
+      expect(patch).not.toHaveProperty('logo');
+      expect(patch).not.toHaveProperty('name');
     });
 
     it('detects whatsappButtons changes via deep equality', () => {

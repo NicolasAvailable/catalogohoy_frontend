@@ -141,6 +141,10 @@ export interface EcommerceConfig {
   socialLinks: SocialLinks;
   template: CatalogTemplate;
   whatsappOrderMessage: string | null;
+  /** When true, new orders trigger an email to the owner + team members
+   *  with the `ordenes:view` permission. Toggled from the catalog editor
+   *  on the "Notificaciones" tab. */
+  notifyNewOrders: boolean;
 }
 
 /** Business hours for a single day. `dayOfWeek` follows JS convention:

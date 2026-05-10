@@ -249,6 +249,20 @@ describe('EcommerceConfigService', () => {
       expect(row).not.toHaveProperty('social_links');
     });
 
+    it('serializes notifyNewOrders to the snake_case notify_new_orders column', async () => {
+      const chain = buildChain({ error: null });
+      __fakeClient.from.mockReturnValue(chain);
+
+      await service.updateConfig({ tenantId: '42', notifyNewOrders: false });
+
+      expect(__fakeClient.from).toHaveBeenCalledWith('tenant_ecommerce_config');
+      const [row] = chain['upsert'].mock.calls[0];
+      expect(row).toEqual({
+        tenant_id: 42,
+        notify_new_orders: false,
+      });
+    });
+
     it('updates the tenant name on the tenants table when name is supplied', async () => {
       // First call → tenants update (name).
       // Second call → tenant_ecommerce_config upsert is skipped because no
