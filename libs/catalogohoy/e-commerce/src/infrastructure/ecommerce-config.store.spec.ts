@@ -54,6 +54,7 @@ function buildConfig(overrides: Partial<EcommerceConfig> = {}): EcommerceConfig 
     socialLinks: DEFAULT_SOCIAL_LINKS,
     template: 'banner-centered',
     whatsappOrderMessage: null,
+    notifyNewOrders: true,
     ...overrides,
   };
 }
@@ -193,6 +194,33 @@ describe('EcommerceConfigStore', () => {
 
       expect(store.currencyConfigExists()).toBe(false);
       expect(toast.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('notifyNewOrders', () => {
+    it('seeds default true when the server omits the field', async () => {
+      service.getConfig.mockResolvedValue(E.right(buildConfig()));
+      await store.reloadConfig('42');
+      expect(store.config()?.notifyNewOrders).toBe(true);
+    });
+
+    it('round-trips a flip to false through updatePartialConfig without clobbering siblings', async () => {
+      service.getConfig.mockResolvedValue(E.right(buildConfig()));
+      await store.reloadConfig('42');
+
+      service.updateConfig.mockResolvedValue(E.right(undefined));
+      await store.updatePartialConfig({ notifyNewOrders: false });
+
+      expect(service.updateConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ notifyNewOrders: false })
+      );
+      const after = store.config()!;
+      expect(after.notifyNewOrders).toBe(false);
+      // Other fields must stay put — same regression class as
+      // showCategoriesSection. Pin them down explicitly.
+      expect(after.logo).toBe('https://img/logo.png');
+      expect(after.banner).toBe('https://img/banner.png');
+      expect(after.name).toBe('Nortesur');
     });
   });
 

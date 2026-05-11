@@ -14,8 +14,10 @@ export const PLAN_BASE_PRICES: Record<string, number> = {
   avanzado: 19.99,
 };
 
-/** Catalog addon monthly price (USD) */
-export const CATALOG_ADDON_PRICE = 5.99;
+/** Catalog addon monthly price (USD). Mirror this in Stripe — the actual
+ *  charge comes from the price IDs configured in the
+ *  `create-checkout-session` / `update-catalog-slots` edge functions. */
+export const CATALOG_ADDON_PRICE = 3.99;
 
 // Mirrors the Stripe edge function FX_RATES map. Used client-side so the plans
 // page can preview the local amount without a Stripe round-trip. Stripe remains
@@ -78,11 +80,23 @@ export interface CheckoutRequest {
   catalogAddonQuantity?: number;
   /** ISO-4217 (lowercase) — defaults to USD if omitted by the edge function. */
   currency?: PaymentCurrency;
+  /** Promotion code text (e.g. "AVANZADO24") pre-validated in our UI. The
+   *  edge function resolves it to a `promo_xxx` ID and passes it to Stripe
+   *  as `discounts: [{ promotion_code }]`. */
+  promotionCode?: string;
 }
 
 export interface CheckoutSession {
   url: string;
   currency?: PaymentCurrency;
+}
+
+export interface PromotionCodeValidation {
+  promotionCodeId: string;
+  code: string;
+  percentOff: number | null;
+  amountOff: number | null;
+  currency: string | null;
 }
 
 export interface CatalogCheckoutRequest {

@@ -2,6 +2,7 @@ import { NgClass } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DOCUMENT,
   effect,
   inject,
@@ -13,12 +14,14 @@ import { RouterOutlet } from '@angular/router';
 import { PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
+import { IconComponent } from '@ui';
 import { CartStore, EcommerceStore } from '../../infrastructure';
 import { CartDrawer } from '../components/cart-drawer/cart-drawer';
 import { CatalogExpiredComponent } from '../components/catalog-expired/catalog-expired';
 import { CatalogFooter } from '../components/catalog-footer/catalog-footer';
 import { CatalogHeader } from '../components/catalog-header/catalog-header';
 import { CatalogHero } from '../components/catalog-hero/catalog-hero';
+import { CatalogInfoModal } from '../components/catalog-info-modal/catalog-info-modal';
 import { CheckoutDrawer } from '../components/checkout-drawer/checkout-drawer';
 
 const DEFAULT_FAVICON =
@@ -29,12 +32,14 @@ const DEFAULT_FAVICON =
   imports: [
     RouterOutlet,
     NgClass,
+    IconComponent,
     CatalogHeader,
     CatalogHero,
     CatalogFooter,
     CartDrawer,
     CheckoutDrawer,
     CatalogExpiredComponent,
+    CatalogInfoModal,
   ],
   templateUrl: './e-commerce.html',
   styleUrl: './e-commerce.css',
@@ -48,6 +53,31 @@ export class ECommerce implements OnInit, OnDestroy {
   private readonly titleService = inject(Title);
   private readonly metaService = inject(Meta);
   private readonly document = inject(DOCUMENT);
+
+  public readonly whatsappUrl = computed(() => {
+    const btn = this.ecommerceStore.effectiveCatalogInfo()?.whatsappButtons?.[0];
+    if (!btn?.number) return '#';
+    const phone = String(btn.number).replace(/\D/g, '');
+    return `https://wa.me/${phone}`;
+  });
+
+  public async onShare(): Promise<void> {
+    const info = this.ecommerceStore.effectiveCatalogInfo();
+    const shareData = {
+      title: info?.name ?? 'Catálogo',
+      text: info?.description ?? '',
+      url: window.location.href,
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        /* user cancelled */
+      }
+    } else {
+      await navigator.clipboard?.writeText(window.location.href);
+    }
+  }
 
   private readonly handlePreviewMessage = (event: MessageEvent) => {
     if (event.origin !== window.location.origin) return;

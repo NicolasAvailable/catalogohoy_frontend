@@ -67,16 +67,19 @@
             variant="outlined"
             severity="contrast"
             size="small"
-            [routerLink]="['edit', category.id]"
+            [routerLink]="category.isViewAll ? null : ['edit', category.id]"
+            [disabled]="category.isViewAll"
             tooltip="Editar"
             tooltipPosition="bottom"
           />
           <ui-button
-            icon="share2"
+            [icon]="category.isVisible ? 'eye' : 'eye-off'"
             variant="outlined"
-            severity="contrast"
+            [severity]="category.isVisible ? 'contrast' : 'secondary'"
             size="small"
-            tooltip="Compartir"
+            (click)="onToggleVisibility(category)"
+            [disabled]="isTogglingVisibility() === category.id"
+            [tooltip]="category.isVisible ? 'Ocultar del catálogo' : 'Mostrar en el catálogo'"
             tooltipPosition="bottom"
           />
           <ui-button
@@ -85,6 +88,7 @@
             severity="danger"
             size="small"
             (click)="onDelete(category)"
+            [disabled]="category.isViewAll"
             tooltip="Eliminar"
             tooltipPosition="bottom"
           />

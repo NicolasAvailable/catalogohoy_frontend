@@ -52,6 +52,25 @@ export class EcommerceService implements BaseEcommerceService {
     const config = data.config;
     const hours = data.business_hours;
 
+    // Fetch the full week of business hours for the schedule modal.
+    const { data: weekHoursData } = await this.client
+      .from('tenant_business_hours')
+      .select('day_of_week, open_time, close_time, is_open')
+      .eq('tenant_id', data.tenant.id)
+      .order('day_of_week', { ascending: true });
+
+    const businessHoursWeek = (weekHoursData ?? []).map((h: {
+      day_of_week: number;
+      open_time: string;
+      close_time: string;
+      is_open: boolean;
+    }) => ({
+      dayOfWeek: h.day_of_week,
+      openTime: h.open_time,
+      closeTime: h.close_time,
+      isOpen: h.is_open,
+    }));
+
     // Calcular si está abierto ahora
     const now = new Date();
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now
@@ -123,6 +142,7 @@ export class EcommerceService implements BaseEcommerceService {
       openTime,
       closeTime,
       isOpen,
+      businessHoursWeek,
       themeColor: config?.theme_color ?? '#10b981',
       showDesignSection: config?.show_design_section ?? true,
       paymentMethods: (data.payment_methods ?? []).map((pm: any) => ({

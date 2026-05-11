@@ -1,18 +1,5 @@
 <div class="catalog">
-  <!-- Filters and actions row -->
   <div class="catalog__toolbar">
-    <div class="block md:hidden">
-      @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
-        <div class="catalog__search-skeleton"></div>
-      } @else {
-        <ui-input-search
-          (valueChange)="onSearch($event)"
-          placeholder="Buscar producto"
-          styleClass="rounded-base! gap-2!"
-          iconStyleClass="size-5!"
-        />
-      }
-    </div>
     @if (ecommerceStore.effectiveCatalogInfo()?.showCategoriesSection ?? true) {
       <div class="catalog__filters">
         @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
@@ -26,51 +13,32 @@
             [categories]="ecommerceStore.categories()"
             [selectedCategoryId]="ecommerceStore.selectedCategoryId()"
             (categorySelect)="onCategorySelect($event)"
+            (filterClick)="openCategoriesSheet()"
+            (searchClick)="toggleSearch()"
           />
         }
       </div>
     }
 
-    <div class="catalog__actions">
+    <!-- Animated search input (mobile) — toggled by category-filter search icon -->
+    <div
+      class="catalog__search-wrapper md:hidden"
+      [class.catalog__search-wrapper--open]="showSearch()"
+    >
       @if (ecommerceStore.isLoading() && !ecommerceStore.effectiveCatalogInfo()) {
-        <div class="catalog__sort-skeleton"></div>
-        <div class="catalog__view-toggle-skeleton"></div>
+        <div class="catalog__search-skeleton"></div>
       } @else {
-        <!-- Order Menu -->
-        <button
-          #orderButton
-          class="catalog__dropdown-trigger"
-          (click)="toggleOrderMenu($event)"
-        >
-          <ui-icon name="arrowUpDown" styleClass="size-4 text-grey-300" />
-          <span class="text-grey-300 font-bold">{{ getOrderLabel() }}</span>
-          <ui-icon name="chevronDown" styleClass="size-4 text-grey-300" />
-        </button>
-
-        <ui-menu #orderMenu [items]="orderMenuItems()" [popup]="true" />
-
-        <!-- View Mode Toggle -->
-        <div class="catalog__view-toggle">
-          <button
-            class="catalog__view-btn"
-            [class.catalog__view-btn--active]="viewMode() === 'grid'"
-            (click)="setViewMode('grid')"
-          >
-            <ui-icon name="layoutGrid" styleClass="size-5" />
-          </button>
-          <button
-            class="catalog__view-btn"
-            [class.catalog__view-btn--active]="viewMode() === 'list'"
-            (click)="setViewMode('list')"
-          >
-            <ui-icon name="list" styleClass="size-5" />
-          </button>
-        </div>
+        <ui-input-search
+          (valueChange)="onSearch($event)"
+          placeholder="Buscar producto"
+          styleClass="catalog__search-input rounded-base! gap-2!"
+          iconStyleClass="size-5!"
+        />
       }
     </div>
   </div>
 
-  <!-- Products Grid/List -->
+  <!-- Products Grid -->
   @if (ecommerceStore.isLoading()) {
   <div class="catalog__loading">
     <div class="catalog__loading-grid">
@@ -88,16 +56,9 @@
     </div>
   </div>
   } @else {
-  <div
-    class="catalog__products"
-    [class.catalog__products--grid]="viewMode() === 'grid'"
-    [class.catalog__products--list]="viewMode() === 'list'"
-  >
+  <div class="catalog__products catalog__products--grid">
     @for (product of ecommerceStore.productList().items; track product.id) {
-    <lib-product-card
-      [product]="product"
-      [viewMode]="viewMode()"
-    />
+    <lib-product-card [product]="product" viewMode="grid" />
     } @empty {
     <div class="catalog__empty">
       <ui-icon name="packageSearch" styleClass="size-16" />
@@ -126,5 +87,31 @@
   @if (ecommerceStore.hasMore()) {
   <div #scrollSentinel class="catalog__sentinel"></div>
   }
+  }
+
+  <!-- Categories bottom sheet -->
+  @if (showCategoriesSheet()) {
+    <div class="cat-sheet__backdrop" (click)="closeCategoriesSheet()"></div>
+    <div class="cat-sheet" role="dialog" aria-label="Categorías">
+      <h3 class="cat-sheet__title">Categorías</h3>
+      <p class="cat-sheet__hint">Puedes presionar sobre cada una para deslizarte rápidamente</p>
+      <ul class="cat-sheet__list">
+        @for (cat of ecommerceStore.categories(); track cat.id) {
+          <li>
+            <button
+              type="button"
+              class="cat-sheet__item"
+              [class.cat-sheet__item--active]="isActiveCategory(cat)"
+              (click)="onSheetCategorySelect(cat)"
+            >
+              {{ cat.name }}
+            </button>
+          </li>
+        }
+      </ul>
+      <button type="button" class="cat-sheet__close" (click)="closeCategoriesSheet()">
+        Cerrar
+      </button>
+    </div>
   }
 </div>

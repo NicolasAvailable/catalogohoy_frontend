@@ -9,7 +9,7 @@
       }
       <div class="catalog-footer__brand-text">
         <span class="catalog-footer__name">{{ info.name }}</span>
-        @if (info.description) {
+        @if (info.description && info.template === 'classic') {
           <span class="catalog-footer__tagline">{{ info.description }}</span>
         }
       </div>
@@ -70,8 +70,8 @@
     }
   </div>
 
-  <!-- Location — own row -->
-  @if (info.showLocationSection && (info.city || info.state || info.country)) {
+  <!-- Location — own row (only on classic template; centered/advanced show it in the hero) -->
+  @if (info.template === 'classic' && info.showLocationSection && (info.city || info.state || info.country)) {
     <div class="catalog-footer__location-row">
       <div class="catalog-footer__location">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">

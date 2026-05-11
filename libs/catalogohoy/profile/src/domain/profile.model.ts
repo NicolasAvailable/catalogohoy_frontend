@@ -6,13 +6,14 @@ export class Profile extends Entity {
     public name: string,
     public email: string,
     public photo: string | null,
-    public tenantList: TenantList
+    public tenantList: TenantList,
+    public notifyPlanExpiry: boolean = true
   ) {
     super();
   }
 
   static empty() {
-    return new Profile('', '', null, TenantList.empty());
+    return new Profile('', '', null, TenantList.empty(), true);
   }
 
   static primitives(primitives: ProfilePrimitive) {
@@ -20,7 +21,8 @@ export class Profile extends Entity {
       primitives.name,
       primitives.email,
       primitives.photo,
-      primitives.tenantList
+      primitives.tenantList,
+      primitives.notifyPlanExpiry ?? true
     ).withId(primitives.id);
   }
 }
@@ -31,4 +33,5 @@ export interface ProfilePrimitive {
   email: string;
   photo: string | null;
   tenantList: TenantList;
+  notifyPlanExpiry?: boolean;
 }

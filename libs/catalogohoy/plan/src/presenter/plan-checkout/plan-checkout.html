@@ -102,6 +102,14 @@
             <span>+{{ currencySymbol() }}{{ catalogAddonCost() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
           </div>
         }
+        @if (appliedCoupon(); as coupon) {
+          <div class="summary-line summary-line--discount">
+            <span>
+              Cupón {{ coupon.code }}@if (couponDiscountPercent() != null) { ({{ couponDiscountPercent() }}%) }
+            </span>
+            <span>-{{ currencySymbol() }}{{ couponDiscountAmount() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
+          </div>
+        }
       </div>
 
       <!-- Catalog addon stepper -->
@@ -136,9 +144,33 @@
           class="coupon-input"
           type="text"
           placeholder="¿Tienes un cupón de descuento?"
+          [ngModel]="couponInput()"
+          (ngModelChange)="couponInput.set($event); couponError.set(null)"
+          [disabled]="!!appliedCoupon() || isApplyingCoupon()"
+          (keydown.enter)="applyCoupon()"
         />
-        <button class="coupon-apply-btn">Aplicar</button>
+        @if (appliedCoupon()) {
+          <button class="coupon-apply-btn" (click)="removeCoupon()">Quitar</button>
+        } @else {
+          <button
+            class="coupon-apply-btn"
+            (click)="applyCoupon()"
+            [disabled]="!couponInput().trim() || isApplyingCoupon()"
+          >
+            @if (isApplyingCoupon()) {
+              <ui-icon name="loader-circle" styleClass="size-4 animate-spin" />
+            } @else {
+              Aplicar
+            }
+          </button>
+        }
       </div>
+      @if (couponError()) {
+        <p class="coupon-error">
+          <ui-icon name="circle-alert" styleClass="size-3.5 shrink-0" />
+          {{ couponError() }}
+        </p>
+      }
 
       <hr class="summary-divider" />
 

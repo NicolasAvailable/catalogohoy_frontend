@@ -2,8 +2,11 @@ import { Injectable } from '@angular/core';
 import { E } from '../../../../shared/domain/src';
 import { SupabaseClientProvider } from '../../../core/src';
 import {
+  BusinessHoursDay,
+  BusinessHoursWeek,
   CatalogTemplate,
   countryNameFromCode,
+  DEFAULT_BUSINESS_HOURS_WEEK,
   DEFAULT_SOCIAL_LINKS,
   EcommerceConfig,
   ExchangeRateType,
@@ -31,7 +34,7 @@ export class EcommerceConfigService {
       const { data: config } = await this.client
         .from('tenant_ecommerce_config')
         .select(
-          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message'
+          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message, notify_new_orders'
         )
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -71,6 +74,7 @@ export class EcommerceConfigService {
         socialLinks: (config?.social_links as SocialLinks) ?? DEFAULT_SOCIAL_LINKS,
         template: (config?.template as CatalogTemplate) ?? 'banner-centered',
         whatsappOrderMessage: config?.whatsapp_order_message ?? null,
+        notifyNewOrders: config?.notify_new_orders ?? true,
       });
     } catch (error) {
       return E.left(error as Error);
@@ -214,6 +218,8 @@ export class EcommerceConfigService {
         updateData['template'] = config.template;
       if (config.whatsappOrderMessage !== undefined)
         updateData['whatsapp_order_message'] = config.whatsappOrderMessage;
+      if (config.notifyNewOrders !== undefined)
+        updateData['notify_new_orders'] = config.notifyNewOrders;
 
       if (Object.keys(updateData).length > 0) {
         const tenantIdNum = Number(config.tenantId);
@@ -298,6 +304,65 @@ export class EcommerceConfigService {
       .from('payment_methods')
       .delete()
       .eq('id', id);
+
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  /** Reads all 7 days of `tenant_business_hours`. If the tenant doesn't yet
+   *  have a row for some days, fills in defaults so the editor renders a
+   *  complete week without having to handle missing rows. */
+  async getBusinessHours(
+    tenantId: string
+  ): Promise<E.Either<Error, BusinessHoursWeek>> {
+    const { data, error } = await this.client
+      .from('tenant_business_hours')
+      .select('day_of_week, open_time, close_time, is_open')
+      .eq('tenant_id', Number(tenantId))
+      .order('day_of_week', { ascending: true });
+
+    if (error) return E.left(new Error(error.message));
+
+    const byDay = new Map<number, BusinessHoursDay>();
+    for (const row of (data ?? []) as Array<{
+      day_of_week: number;
+      open_time: string;
+      close_time: string;
+      is_open: boolean;
+    }>) {
+      byDay.set(row.day_of_week, {
+        dayOfWeek: row.day_of_week,
+        openTime: row.open_time,
+        closeTime: row.close_time,
+        isOpen: row.is_open,
+      });
+    }
+
+    return E.right(
+      DEFAULT_BUSINESS_HOURS_WEEK.map((d) => byDay.get(d.dayOfWeek) ?? { ...d })
+    );
+  }
+
+  /** Upserts a full week of business hours via the (tenant_id, day_of_week)
+   *  UNIQUE constraint, so existing rows are updated in place and missing
+   *  ones are inserted in a single round-trip. */
+  async upsertBusinessHours(
+    tenantId: string,
+    week: BusinessHoursWeek
+  ): Promise<E.Either<Error, void>> {
+    const tenantIdNum = Number(tenantId);
+
+    const rows = week.map((d) => ({
+      tenant_id: tenantIdNum,
+      day_of_week: d.dayOfWeek,
+      open_time: d.openTime,
+      close_time: d.closeTime,
+      is_open: d.isOpen,
+    }));
+
+    const { error } = await this.client
+      .from('tenant_business_hours')
+      .upsert(rows, { onConflict: 'tenant_id,day_of_week' });
 
     if (error) return E.left(new Error(error.message));
     return E.right(undefined);

@@ -34,9 +34,39 @@
       "Bash(git push:*)",
       "mcp__vercel__search_vercel_documentation",
       "mcp__vercel__deploy_to_vercel",
-      "Bash(ls -la /c/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo/supabase/functions/*/)",
-      "Bash(npx --yes vercel --version)",
-      "Bash(npm run:*)"
+      "mcp__vercel__get_deployment",
+      "WebFetch(domain:www.quickreply.ai)",
+      "Bash(grep -E \"\\\\.ts$\")",
+      "Bash(find /c/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo -name \"*.md\" -type f -exec grep -l \"trigger\\\\|webhook\\\\|hook\\\\|auth.users\" {} \\\\;)",
+      "mcp__supabase__list_branches",
+      "Bash(find \"c:/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.json\" \\\\\\) -exec grep -l \"countryCode\\\\|dialCode\\\\|country.*code\" {} \\\\;)",
+      "Bash(grep -r \"Bs\\\\\\\\.S\" \"c:\\\\Users\\\\nicol\\\\OneDrive\\\\Desktop\\\\projects\\\\catalogohoy_frontend_monorepo\\\\libs\\\\catalogohoy\" --include=\"*.html\" --include=\"*.ts\")",
+      "Bash(find /c/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo/apps/authentication -name \"*.ts\" -exec grep -l \"onAuthStateChange\\\\|autoRefreshToken\\\\|persistSession\" {} \\\\;)",
+      "Bash(find /c/Users/nicol/OneDrive/Desktop -name \".claude\" -type d -exec grep -l \"catalogohoy\" {} \\\\;)",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_close",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_click",
+      "Bash(git rm *)",
+      "Bash(awk 'NR==1 || /^\\\\.ecommerce-config-wrapper/ { print NR\": \"$0 }' c:/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo/libs/catalogohoy/ecommerce-config/src/presenter/ecommerce-config/ecommerce-config.css)",
+      "Bash(awk '/^\\\\.|^@media|^:host/ { count[$0]++ } END { for \\(c in count\\) if \\(count[c] > 1\\) print count[c], c }' c:/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo/libs/catalogohoy/ecommerce-config/src/presenter/ecommerce-config/ecommerce-config.css)",
+      "Bash(npm run *)",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_console_messages",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "mcp__stripe__list_products",
+      "mcp__stripe__stripe_api_execute",
+      "mcp__stripe__stripe_api_details",
+      "mcp__stripe__create_coupon",
+      "WebFetch(domain:multparts-the-store.catalogohoy.com)",
+      "Bash(grep -A 5 \"### \\\\`users\\\\`\" /c/Users/nicol/OneDrive/Desktop/projects/catalogohoy_frontend_monorepo/.claude/docs/database.md)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\nicol\\OneDrive\\Desktop\\projects\\catalogohoy_frontend_monorepo"
     ]
   }
 }

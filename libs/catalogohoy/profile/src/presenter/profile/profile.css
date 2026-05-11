@@ -1,0 +1,203 @@
+.profile-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 0.0625rem solid var(--color-grey-50, #f1f5f9);
+  margin-bottom: 1rem;
+}
+
+.profile-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.profile-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: transparent;
+  border: none;
+  border-bottom: 0.1875rem solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-grey-400, #94a3b8);
+  white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+  margin-bottom: -0.0625rem;
+}
+
+.profile-tab:hover {
+  color: var(--color-grey-600, #475569);
+}
+
+.profile-tab--active {
+  color: var(--color-primary-600);
+  border-bottom-color: var(--color-primary-600);
+}
+
+.profile-tab--danger.profile-tab--active {
+  color: #ef4444;
+  border-bottom-color: #ef4444;
+}
+
+.profile-tab-content[hidden] {
+  display: none !important;
+}
+
+.profile-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (max-width: 40rem) {
+  .profile-tab {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .profile-tab span {
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* ===== Billing table ===== */
+.billing-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.billing-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.billing-table thead th {
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 0.0625rem solid #f1f5f9;
+  white-space: nowrap;
+}
+
+.billing-table thead th.right,
+.billing-table tbody td.right {
+  text-align: right;
+}
+
+.billing-table tbody td {
+  padding: 0.875rem 0.75rem;
+  border-bottom: 0.0625rem solid #f1f5f9;
+  vertical-align: top;
+  color: #1e293b;
+}
+
+.billing-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.invoice-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3125rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  border: 0.0625rem solid #e2e8f0;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.invoice-action:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.invoice-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.invoice-action--primary {
+  background: var(--color-primary-600, #2563eb);
+  color: #ffffff;
+  border-color: var(--color-primary-600, #2563eb);
+}
+
+.invoice-action--primary:hover {
+  background: var(--color-primary-700, #1d4ed8);
+  border-color: var(--color-primary-700, #1d4ed8);
+}
+
+/* On mobile, switch each row to a stacked card so columns don't overflow.
+ * Hides the <thead> and labels each cell using its data-label attribute. */
+@media (max-width: 40rem) {
+  .billing-table thead {
+    position: absolute;
+    left: -624.9375rem;
+    width: 0.0625rem;
+    height: 0.0625rem;
+    overflow: hidden;
+  }
+
+  .billing-table,
+  .billing-table tbody,
+  .billing-table tr,
+  .billing-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .billing-table tr {
+    border: 0.0625rem solid #f1f5f9;
+    border-radius: 0.75rem;
+    padding: 0.5rem;
+    margin-bottom: 0.625rem;
+    background: #ffffff;
+  }
+
+  .billing-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.375rem 0.25rem;
+    border-bottom: 0;
+    text-align: right;
+  }
+
+  .billing-table tbody td.right {
+    text-align: right;
+  }
+
+  .billing-table tbody td::before {
+    content: attr(data-label);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    flex-shrink: 0;
+  }
+
+  .billing-table tbody td > * {
+    text-align: right;
+    margin-left: auto;
+  }
+}

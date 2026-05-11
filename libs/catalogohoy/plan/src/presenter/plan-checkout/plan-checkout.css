@@ -457,6 +457,26 @@
   background: var(--surface-200, #e2e8f0);
 }
 
+.coupon-apply-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.coupon-input:disabled {
+  background: var(--surface-50, #f8fafc);
+  color: var(--text-color-secondary, #64748b);
+  cursor: not-allowed;
+}
+
+.coupon-error {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: #dc2626;
+  margin: 0.375rem 0 0 0;
+}
+
 /* Total */
 .summary-total {
   display: flex;

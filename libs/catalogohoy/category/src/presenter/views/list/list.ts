@@ -48,6 +48,9 @@ export default class CategoryListComponent implements OnInit {
   public readonly isSaving = signal(false);
   public readonly createControl = new FormControl('', [Validators.required]);
   public readonly selectedCategory = signal<Category | null>(null);
+  /** Id of the category currently being toggled, or null. Used to disable
+   *  the eye button while the update request is in flight. */
+  public readonly isTogglingVisibility = signal<string | number | null>(null);
 
   @ViewChild(ConfirmDialogComponent)
   public confirmDialog!: ConfirmDialogComponent;
@@ -110,6 +113,27 @@ export default class CategoryListComponent implements OnInit {
     }
     this.selectedCategory.set(category);
     this.confirmDialog.warning();
+  }
+
+  public async onToggleVisibility(category: Category) {
+    if (this.isTogglingVisibility() !== null) return;
+
+    this.isTogglingVisibility.set(category.id);
+    const result = await this.categoryFacade.update({
+      id: String(category.id),
+      name: category.name,
+      description: category.description ?? undefined,
+      isVisible: !category.isVisible,
+    });
+
+    result
+      .mapRight(() => this.loadData())
+      .mapLeft(() =>
+        this.toastService.error(
+          'No se pudo actualizar la visibilidad de la categoría' as any
+        )
+      );
+    this.isTogglingVisibility.set(null);
   }
 
   public async onConfirmDelete() {

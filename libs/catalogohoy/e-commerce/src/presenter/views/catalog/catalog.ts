@@ -4,21 +4,16 @@ import {
   ElementRef,
   OnDestroy,
   OnInit,
-  computed,
   effect,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
-import {
-  IconComponent,
-  InputSearchComponent,
-  MenuComponent,
-  MenuItem,
-} from '@ui';
+import { IconComponent, InputSearchComponent } from '@ui';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
+import { Category } from '../../../domain';
 import { CategoryFilter } from '../../components/category-filter/category-filter';
 import { ProductCard } from '../../components/product-card/product-card';
 
@@ -28,7 +23,6 @@ import { ProductCard } from '../../components/product-card/product-card';
     IconComponent,
     ProductCard,
     CategoryFilter,
-    MenuComponent,
     InputSearchComponent,
   ],
   templateUrl: './catalog.html',
@@ -39,33 +33,10 @@ export default class Catalog implements OnInit, OnDestroy {
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cartStore = inject(CartStore);
 
-  public readonly viewMode = signal<'grid' | 'list'>('grid');
   public readonly searchValue = signal('');
-  public readonly orderMenu = viewChild.required<MenuComponent>('orderMenu');
+  public readonly showCategoriesSheet = signal(false);
+  public readonly showSearch = signal(false);
   public readonly scrollSentinel = viewChild<ElementRef<HTMLDivElement>>('scrollSentinel');
-
-  public readonly orderMenuItems = computed<MenuItem[]>(() => [
-    {
-      label: 'Más recientes',
-      command: () => this.setOrder(null),
-      styleClass: 'text-sm text-grey-300! font-bold',
-    },
-    {
-      label: 'Nombre',
-      command: () => this.setOrder('name'),
-      styleClass: 'text-sm text-grey-300! font-bold',
-    },
-    {
-      label: 'Menor precio',
-      command: () => this.setOrder('price_asc'),
-      styleClass: 'text-sm text-grey-300! font-bold',
-    },
-    {
-      label: 'Mayor precio',
-      command: () => this.setOrder('price_desc'),
-      styleClass: 'text-sm text-grey-300! font-bold',
-    },
-  ]);
 
   private readonly searchSubject = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
@@ -115,21 +86,6 @@ export default class Catalog implements OnInit, OnDestroy {
     this.searchSubject.next(value);
   }
 
-  setViewMode(mode: 'grid' | 'list') {
-    this.viewMode.set(mode);
-  }
-
-  toggleOrderMenu(event: Event) {
-    this.orderMenu().toggle(event);
-  }
-
-  setOrder(order: 'name' | 'price_asc' | 'price_desc' | null) {
-    this.ecommerceStore.setOrderBy(order);
-    if (this.slug) {
-      this.ecommerceStore.loadProducts(this.slug);
-    }
-  }
-
   onCategorySelect(categoryId: string | null) {
     this.ecommerceStore.setSelectedCategory(categoryId);
     if (this.slug) {
@@ -137,17 +93,26 @@ export default class Catalog implements OnInit, OnDestroy {
     }
   }
 
-  getOrderLabel(): string {
-    const order = this.ecommerceStore.orderBy();
-    switch (order) {
-      case 'name':
-        return 'Nombre';
-      case 'price_asc':
-        return 'Menor precio';
-      case 'price_desc':
-        return 'Mayor precio';
-      default:
-        return 'Ordenar por';
-    }
+  toggleSearch() {
+    this.showSearch.update((v) => !v);
+  }
+
+  openCategoriesSheet() {
+    this.showCategoriesSheet.set(true);
+  }
+
+  closeCategoriesSheet() {
+    this.showCategoriesSheet.set(false);
+  }
+
+  onSheetCategorySelect(category: Category) {
+    this.onCategorySelect(category.isViewAll ? null : category.id);
+    this.closeCategoriesSheet();
+  }
+
+  isActiveCategory(category: Category): boolean {
+    const selected = this.ecommerceStore.selectedCategoryId();
+    if (category.isViewAll) return selected === null;
+    return selected === category.id;
   }
 }

@@ -46,3 +46,5 @@ Thumbs.db
 .angular
 
 .vercel
+
+.playwright-mcp

@@ -19,13 +19,13 @@ import { PickerTemplate, UploaderOutput, UploaderComponent } from '../uploader/u
       [max]="max()"
       class="block size-full"
     >
-      <ng-template #picker let-uploaderList let-fileList="fileList" let-pick="pick">
+      <ng-template #picker let-uploaderList let-fileList="fileList" let-pick="pick" let-paste="paste" let-canPaste="canPaste">
         <section class="size-full absolute inset-0" [ngClass]="{ 'pointer-events-none': disabled() }">
           @for(uploader of uploaderList.items; track $index) {
           <ui-file-upload-item (remove)="remove(uploader)" [uploader]="uploader" [removable]="removable()" />
           }@empty {
           <ui-file-upload-zone [styleClass]="styleClass()">
-            <ng-container *ngTemplateOutlet="pickerTemplate(); context: { $implicit: uploaderList, pick }" />
+            <ng-container *ngTemplateOutlet="pickerTemplate(); context: { $implicit: uploaderList, pick, paste, canPaste }" />
           </ui-file-upload-zone>
           }
         </section>

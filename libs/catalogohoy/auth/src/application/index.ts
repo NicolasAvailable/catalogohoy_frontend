@@ -80,7 +80,7 @@ export class AuthenticationFacade {
     return this.authenticationService.acceptInvite(token);
   }
 
-  public signupInvitee(credentials: { email: string; password: string; name: string }) {
+  public signupInvitee(credentials: { email: string; password: string; name: string; inviteToken: string }) {
     return this.authenticationService.signupInvitee(credentials);
   }
 }

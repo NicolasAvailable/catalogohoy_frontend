@@ -13,6 +13,15 @@ export type UploaderOutput = string | string[];
 export type PickerTemplate = _.TemplateRef<{
   $implicit: UploaderList;
   pick: VoidFunction;
+  /** Programmatic paste — reads images from `navigator.clipboard` so the
+   *  template can render a "Pegar imagen" button. Works on mobile (where
+   *  Ctrl+V doesn't exist) and triggers the OS permission prompt the first
+   *  time the user invokes it. */
+  paste: () => Promise<void>;
+  /** Truthy when the browser exposes the Clipboard Read API. The template
+   *  can use this to hide the paste button on environments that don't
+   *  support it (older Firefox, some webviews). */
+  canPaste: boolean;
 }>;
 
 @_.Component({
@@ -32,7 +41,7 @@ export type PickerTemplate = _.TemplateRef<{
         />
       </form>
 
-      <ng-container *ngTemplateOutlet="pickerTemplate(); context: { $implicit: uploaderList(), pick }"
+      <ng-container *ngTemplateOutlet="pickerTemplate(); context: { $implicit: uploaderList(), pick, paste, canPaste: canUseClipboardApi() }"
       />
     </section>
   `,
@@ -43,6 +52,12 @@ export class UploaderComponent {
   public readonly autoUpload = _.input<boolean>(true);
   public readonly disabled = _.input<boolean>(false);
   public readonly max = _.input<{ mb: number | undefined }>({ mb: undefined });
+  /** Listen to `window:paste` and grab images from the clipboard. Off by
+   *  default so multiple uploaders on the same page (e.g. logo + banner in
+   *  the catalog editor) don't compete for the same paste event. Opt in
+   *  from the parent when there's a single primary uploader on the screen
+   *  (product save view). */
+  public readonly acceptPaste = _.input<boolean>(false);
 
   public readonly idleChange = _.output<UploaderList>();
   public readonly valueChange = _.output<UploaderOutput>();
@@ -59,8 +74,104 @@ export class UploaderComponent {
 
   constructor(private readonly uploaderFacade: UploaderFacade) {}
 
+  @_.HostListener('window:paste', ['$event'])
+  public onPaste(event: ClipboardEvent): void {
+    if (!this.acceptPaste() || this.disabled() || this.isLoading()) return;
+
+    // If the user is typing into a text field, never hijack their paste.
+    const target = event.target as HTMLElement | null;
+    if (target) {
+      const tag = target.tagName?.toLowerCase();
+      const isEditable =
+        tag === 'input' ||
+        tag === 'textarea' ||
+        target.isContentEditable;
+      if (isEditable) return;
+    }
+
+    const items = event.clipboardData?.items;
+    if (!items || items.length === 0) return;
+
+    const files: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) files.push(file);
+      }
+    }
+
+    if (files.length === 0) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Build a synthetic FileList — `load()` accepts FileList, not File[].
+    const dt = new DataTransfer();
+    files.forEach((f) => dt.items.add(f));
+    this.load(dt.files);
+  }
+
   public pick = (): void => {
     this.input().nativeElement.click();
+  };
+
+  /** Returns true when the current browser supports `navigator.clipboard.read()`.
+   *  Lets the template hide the "Pegar" button on browsers without support
+   *  (older Firefox, some embedded webviews). */
+  public canUseClipboardApi(): boolean {
+    return typeof navigator !== 'undefined'
+      && !!navigator.clipboard
+      && typeof navigator.clipboard.read === 'function';
+  }
+
+  /** Programmatic paste — invoked from the template's "Pegar imagen" button.
+   *  Designed for mobile (no Ctrl+V) and as an explicit alternative on
+   *  desktop. Asks the OS for clipboard read permission on first call. */
+  public paste = async (): Promise<void> => {
+    if (this.disabled() || this.isLoading()) return;
+
+    if (!this.canUseClipboardApi()) {
+      this.toastService.error(
+        new Exception('Tu navegador no soporta pegar desde el portapapeles. Usa el botón Subir.')
+      );
+      return;
+    }
+
+    let items: ClipboardItem[];
+    try {
+      items = await navigator.clipboard.read();
+    } catch {
+      // User denied permission, or there's nothing in the clipboard.
+      this.toastService.error(
+        new Exception('No se pudo acceder al portapapeles. Asegúrate de copiar una imagen primero.')
+      );
+      return;
+    }
+
+    const files: File[] = [];
+    for (const item of items) {
+      const imageType = item.types.find((t) => t.startsWith('image/'));
+      if (!imageType) continue;
+      try {
+        const blob = await item.getType(imageType);
+        const ext = imageType.split('/')[1] ?? 'png';
+        files.push(new File([blob], `pasted-${Date.now()}.${ext}`, { type: imageType }));
+      } catch {
+        /* skip — item couldn't be read */
+      }
+    }
+
+    if (files.length === 0) {
+      this.toastService.error(
+        new Exception('No hay ninguna imagen en el portapapeles.')
+      );
+      return;
+    }
+
+    const dt = new DataTransfer();
+    files.forEach((f) => dt.items.add(f));
+    this.load(dt.files);
   };
 
   private load(fileList: FileList | null) {

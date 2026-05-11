@@ -5,6 +5,7 @@ import {
   input,
   output,
 } from '@angular/core';
+import { IconComponent } from '@ui';
 import { TabsModule } from 'primeng/tabs';
 
 interface CategoryPill {
@@ -19,7 +20,7 @@ const ALL_TAB = '__all__';
 
 @Component({
   selector: 'lib-category-filter',
-  imports: [TabsModule],
+  imports: [TabsModule, IconComponent],
   templateUrl: './category-filter.html',
   styleUrl: './category-filter.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,6 +29,8 @@ export class CategoryFilter {
   public readonly categories = input<CategoryPill[]>([]);
   public readonly selectedCategoryId = input<string | null>(null);
   public readonly categorySelect = output<string | null>();
+  public readonly searchClick = output<void>();
+  public readonly filterClick = output<void>();
 
   public readonly allTabValue = ALL_TAB;
 

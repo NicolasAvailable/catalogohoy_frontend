@@ -8,6 +8,13 @@ import {
 import { Product, ProductList } from '@catalogohoy/product';
 import { E } from '@shared/domain';
 
+export interface BusinessHoursDay {
+  dayOfWeek: number;
+  openTime: string;
+  closeTime: string;
+  isOpen: boolean;
+}
+
 export interface CatalogInfo {
   id: string;
   name: string;
@@ -18,6 +25,7 @@ export interface CatalogInfo {
   openTime: string;
   closeTime: string;
   isOpen: boolean;
+  businessHoursWeek: BusinessHoursDay[];
   themeColor: string;
   showDesignSection: boolean;
   paymentMethods: PaymentMethodEntity[];

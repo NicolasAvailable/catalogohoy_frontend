@@ -40,6 +40,26 @@
         ></ui-button>
       </div>
       }
+
+      <!-- Tabs -->
+      <nav class="config-tabs" role="tablist" aria-label="Secciones de configuración">
+        @for (tab of tabs; track tab.id) {
+          <button
+            type="button"
+            role="tab"
+            class="config-tab"
+            [class.config-tab--active]="activeTab() === tab.id"
+            [attr.aria-selected]="activeTab() === tab.id"
+            (click)="setActiveTab(tab.id)"
+          >
+            <ui-icon [name]="tab.icon" styleClass="size-4 shrink-0"></ui-icon>
+            <span>{{ tab.label }}</span>
+          </button>
+        }
+      </nav>
+
+      <!-- ===== TAB: GENERAL ===== -->
+      <div [hidden]="activeTab() !== 'general'">
       <!-- Card 1: Identidad de la Marca -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -294,6 +314,10 @@
         </div>
       </ui-card>
 
+      </div> <!-- /TAB GENERAL (block 1) -->
+
+      <!-- ===== TAB: PAYMENTS (block 1) ===== -->
+      <div [hidden]="activeTab() !== 'payments'">
       <!-- Card 3: Métodos de pago -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -391,6 +415,10 @@
         </div>
       </ui-card>
 
+      </div> <!-- /TAB PAYMENTS (block 1) -->
+
+      <!-- ===== TAB: GENERAL (block 2) ===== -->
+      <div [hidden]="activeTab() !== 'general'">
       <!-- Card: Categorías (toggle-only) -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -412,6 +440,10 @@
         </div>
       </ui-card>
 
+      </div> <!-- /TAB GENERAL (block 2) -->
+
+      <!-- ===== TAB: LOCATION ===== -->
+      <div [hidden]="activeTab() !== 'location'">
       <!-- Card 4: Ubicación -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -517,6 +549,82 @@
         </div>
       </ui-card>
 
+      <!-- Card: Horario de atención -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon" style="background: #f0fdf4;">
+              <ui-icon name="clock" styleClass="size-5 text-green-600"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">Horario de atención</h2>
+              <small class="card-subtitle">
+                Define los días que abres y la hora de apertura/cierre. Los días marcados como cerrados no se mostrarán como disponibles en el catálogo.
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <div class="schedule-table">
+            @for (day of orderedDraftHours(); track day.dayOfWeek; let first = $first) {
+              <div
+                class="schedule-row"
+                [class.schedule-row--closed]="!day.isOpen"
+              >
+                <div class="schedule-row__day">
+                  <span class="schedule-row__day-name">{{ day.label }}</span>
+                  <span
+                    class="schedule-row__badge"
+                    [class.schedule-row__badge--open]="day.isOpen"
+                    [class.schedule-row__badge--closed]="!day.isOpen"
+                  >
+                    {{ day.isOpen ? 'Abierto' : 'Cerrado' }}
+                  </span>
+                </div>
+                <div class="schedule-row__times">
+                  <p-datepicker
+                    class="schedule-row__time-picker"
+                    [timeOnly]="true"
+                    [hourFormat]="'12'"
+                    [iconDisplay]="'input'"
+                    [showIcon]="true"
+                    [readonlyInput]="true"
+                    [appendTo]="'body'"
+                    [disabled]="!day.isOpen"
+                    [ngModel]="day.openDate"
+                    (ngModelChange)="setDayOpenDate(day.dayOfWeek, $event)"
+                    placeholder="Apertura"
+                  ></p-datepicker>
+                  <span class="schedule-row__sep">—</span>
+                  <p-datepicker
+                    class="schedule-row__time-picker"
+                    [timeOnly]="true"
+                    [hourFormat]="'12'"
+                    [iconDisplay]="'input'"
+                    [showIcon]="true"
+                    [readonlyInput]="true"
+                    [appendTo]="'body'"
+                    [disabled]="!day.isOpen"
+                    [ngModel]="day.closeDate"
+                    (ngModelChange)="setDayCloseDate(day.dayOfWeek, $event)"
+                    placeholder="Cierre"
+                  ></p-datepicker>
+                </div>
+                <ui-toggle
+                  [ngModel]="day.isOpen"
+                  (ngModelChange)="updateDayIsOpen(day.dayOfWeek, $event)"
+                ></ui-toggle>
+              </div>
+            }
+          </div>
+        </div>
+      </ui-card>
+
+      </div> <!-- /TAB LOCATION -->
+
+      <!-- ===== TAB: PAYMENTS (block 2) ===== -->
+      <div [hidden]="activeTab() !== 'payments'">
       <!-- Card: Monedas -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -673,6 +781,10 @@
         </div>
       </ui-card>
 
+      </div> <!-- /TAB PAYMENTS (block 2 — closes after WhatsApp sellers) -->
+
+      <!-- ===== TAB: SOCIAL ===== -->
+      <div [hidden]="activeTab() !== 'social'">
       <!-- Card 7: Redes Sociales -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -749,6 +861,10 @@
         </div>
       </ui-card>
 
+      </div> <!-- /TAB SOCIAL -->
+
+      <!-- ===== TAB: GENERAL (block 3) ===== -->
+      <div [hidden]="activeTab() !== 'general'">
       <!-- Card 8: Comportamiento -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -802,6 +918,10 @@
         </div>
       </ui-card>
 
+      </div> <!-- /TAB GENERAL (block 3) -->
+
+      <!-- ===== TAB: PAYMENTS (block 3) ===== -->
+      <div [hidden]="activeTab() !== 'payments'">
       <!-- Card 7: Mensaje de WhatsApp personalizado -->
       <ui-card>
         <div class="card-section" [class.opacity-50]="isWhatsappLocked()" [class.pointer-events-none]="isWhatsappLocked()">
@@ -878,6 +998,55 @@
           </div>
         </div>
       </ui-card>
+
+      </div> <!-- /TAB PAYMENTS (block 3) -->
+
+      <!-- ===== TAB: NOTIFICATIONS ===== -->
+      <div [hidden]="activeTab() !== 'notifications'">
+        <ui-card styleClass="config-card">
+          <div class="card-header-custom">
+            <div class="card-header-left">
+              <div class="card-icon" style="background: #fff7ed;">
+                <ui-icon name="mail" styleClass="size-5"></ui-icon>
+              </div>
+              <div>
+                <h2 class="card-title">Avisos de pedidos por email</h2>
+                <small class="card-subtitle">
+                  Recibí un correo cada vez que un cliente confirma un pedido en tu catálogo.
+                </small>
+              </div>
+            </div>
+            <ui-toggle
+              [ngModel]="draftNotifyNewOrders()"
+              (ngModelChange)="draftNotifyNewOrders.set($event)"
+            ></ui-toggle>
+          </div>
+
+          <div
+            class="card-content"
+            [class.section-disabled]="!draftNotifyNewOrders()"
+          >
+            <ul class="notifications-list">
+              <li>
+                El correo lo recibe el <strong>dueño del catálogo</strong> y los
+                <strong>miembros del equipo con permiso "Ver órdenes"</strong>.
+              </li>
+              <li>
+                Aplica tanto a pedidos hechos desde el catálogo público como a las
+                órdenes manuales que creás vos en el panel.
+              </li>
+              <li>
+                El email viene desde <strong>noreply&#64;catalogohoy.com</strong> con tu
+                logo y color de marca, e incluye un botón directo al pedido.
+              </li>
+              <li>
+                Para cambiar quién recibe los correos, ajustá los permisos de cada
+                miembro en la sección <strong>Equipo</strong> del menú lateral.
+              </li>
+            </ul>
+          </div>
+        </ui-card>
+      </div> <!-- /TAB NOTIFICATIONS -->
 
       <!-- Bottom Save Button -->
       @if (canEditCatalog()) {

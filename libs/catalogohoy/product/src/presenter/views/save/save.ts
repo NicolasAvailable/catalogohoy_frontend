@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   input,
   OnInit,
@@ -121,6 +122,24 @@ export default class Save implements OnInit {
   public readonly hasCategories = computed(
     () => this.selectableCategories().length > 0
   );
+
+  /** Strip any IDs that don't map to a real (selectable) category — e.g. the
+   *  hidden "Ver todos" pseudo-category that legacy products may still have
+   *  assigned. Without this, those IDs render as empty chips in the
+   *  multi-select. The effect waits for categories to load before sanitizing
+   *  so we don't wipe valid IDs during the initial fetch. */
+  private readonly sanitizeCategoryIds = effect(() => {
+    const selectable = this.selectableCategories();
+    if (selectable.length === 0) return;
+    const validIds = new Set(selectable.map((c) => String(c.id)));
+    const currentRaw = this.form.controls.categoryIds.value ?? [];
+    const cleaned = currentRaw
+      .filter((id): id is string => !!id && validIds.has(String(id)))
+      .map(String);
+    if (cleaned.length !== currentRaw.length) {
+      this.form.controls.categoryIds.setValue(cleaned, { emitEvent: false });
+    }
+  });
   public readonly stockMode = signal<'unlimited' | 'limited'>('unlimited');
 
   private readonly photosLimitByPlan: Record<string, number> = {
@@ -166,17 +185,29 @@ export default class Save implements OnInit {
       isVisible: true,
     });
 
-    result.mapRight((created) => {
-      if (created) {
-        const current = this.form.controls.categoryIds.value ?? [];
+    if (result.isRight()) {
+      // The store re-fetches after save and can race with the optimistic
+      // insert, so resolve the new category's id from the visible list by
+      // name AFTER the store has settled. Wait a microtask plus a frame so
+      // both `patchState` calls (optimistic + re-fetch) have run.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const stored = this.selectableCategories().find((c) => c.name === name);
+      if (stored) {
+        const validIds = new Set(
+          this.selectableCategories().map((c) => String(c.id))
+        );
+        const current = (this.form.controls.categoryIds.value ?? [])
+          .filter((id): id is string => !!id && validIds.has(String(id)))
+          .map(String);
         this.form.controls.categoryIds.setValue([
           ...current,
-          String(created.id),
+          String(stored.id),
         ]);
       }
       this.toastService.success('Categoría creada' as any);
       this.newCategoryName.set('');
-    });
+    }
     this.isCreatingCategory.set(false);
   }
 

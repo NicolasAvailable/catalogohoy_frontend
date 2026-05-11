@@ -25,7 +25,7 @@ import { PlanStore } from '../../infrastructure';
           }}</strong>
           permite un máximo de
           <strong class="text-grey-700">{{
-            planStore.maxProducts()
+            planStore.maxProducts() > 0 ? planStore.maxProducts() : '∞'
           }}</strong>
           productos. Actualmente tienes
           <strong class="text-grey-700">{{

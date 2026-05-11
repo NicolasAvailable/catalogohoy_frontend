@@ -106,7 +106,17 @@ export default class OrderSave implements OnInit {
     status: ['pending' as OrderStatus],
     // Default: today. Admin can pick any date via the datepicker.
     deliveryDate: [new Date() as Date | null, [Validators.required]],
+    // Manual orders mirror the public-catalog checkout: the admin picks
+    // which method the customer paid with so the order list shows it.
+    paymentMethod: [''],
   });
+
+  /** Active payment methods from the catalog config — same source the
+   *  public checkout uses. Inactive methods stay hidden so the manual
+   *  order form mirrors what's currently advertised in the catalog. */
+  public readonly orderPaymentMethods = computed(() =>
+    this.configStore.paymentMethodsList().filter((m) => m.isActive)
+  );
 
 
   public readonly id = input<string | undefined>(undefined);
@@ -138,9 +148,14 @@ export default class OrderSave implements OnInit {
   ];
 
   ngOnInit(): void {
-    // Prime tenant currency cache (localStorage → DB fallback)
+    // Prime tenant currency cache (localStorage → DB fallback) and load the
+    // list of payment methods configured by the tenant so the selector can
+    // populate.
     this.tenantStore.getTenantIdAsync().then((tid) => {
-      if (tid) this.tenantCurrency.load(tid);
+      if (tid) {
+        this.tenantCurrency.load(tid);
+        this.configStore.loadPaymentMethods(String(tid));
+      }
     });
 
     // Cargar tasas de cambio
@@ -182,6 +197,7 @@ export default class OrderSave implements OnInit {
     this.form.controls.phone.setValue(order.phone || '');
     this.form.controls.comments.setValue(order.comments || '');
     this.form.controls.status.setValue(order.status);
+    this.form.controls.paymentMethod.setValue(order.paymentMethod || '');
     if (order.deliveryDate) {
       // Parse "YYYY-MM-DD" as local date (avoid the UTC-shift that new Date(iso) causes).
       const [y, m, d] = order.deliveryDate.split('-').map(Number);
@@ -389,6 +405,7 @@ export default class OrderSave implements OnInit {
       totalUsd: this.calculateTotal(),
       totalBs: this.totalBs(),
       deliveryDate: delivery ? this.toIsoDate(delivery) : undefined,
+      paymentMethod: this.form.controls.paymentMethod.value || undefined,
     };
 
     try {

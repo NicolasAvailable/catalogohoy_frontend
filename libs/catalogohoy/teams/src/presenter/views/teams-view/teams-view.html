@@ -114,8 +114,10 @@
             <div class="teams-view__member-card">
               <div
                 class="teams-view__member-header"
-                [class.teams-view__member-header--clickable]="canEditPermissions()"
-                (click)="canEditPermissions() ? togglePermissions(member) : null"
+                [class.teams-view__member-header--clickable]="canEditMember(member)"
+                [pTooltip]="canEditPermissions() && !canEditMember(member) ? 'No puedes editar tus propios permisos' : ''"
+                tooltipPosition="top"
+                (click)="canEditMember(member) ? togglePermissions(member) : null"
               >
                 <div class="teams-view__member-info">
                   <div class="teams-view__avatar-wrap">
@@ -151,7 +153,7 @@
                   </div>
                 </div>
                 <div class="teams-view__member-actions">
-                  @if (canEditPermissions()) {
+                  @if (canEditMember(member)) {
                     <div
                       class="teams-view__permission-count"
                       [class.teams-view__permission-count--active]="expandedMemberId() === member.id"
@@ -165,7 +167,7 @@
                       />
                     </div>
                   }
-                  @if (canRemove()) {
+                  @if (canRemoveMember(member)) {
                     <button
                       type="button"
                       class="teams-view__btn-remove"

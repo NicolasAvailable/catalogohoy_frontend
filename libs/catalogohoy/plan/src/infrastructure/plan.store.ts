@@ -61,6 +61,9 @@ export const PlanStore = signalStore(
     usagePercentage: computed(() => {
       const usage = store.tenantPlanUsage();
       if (!usage) return 0;
+      // `maxProducts <= 0` is the unlimited sentinel — there's no meaningful
+      // usage % to render, so we collapse to 0 and let the UI hide the bar.
+      if (usage.plan.maxProducts <= 0) return 0;
       return Math.round(
         (usage.currentProductCount / usage.plan.maxProducts) * 100
       );

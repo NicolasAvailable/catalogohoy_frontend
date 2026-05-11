@@ -1,8 +1,9 @@
 import { NgClass } from '@angular/common';
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthenticationService } from '@catalogohoy/auth';
 import { PosthogService } from '@catalogohoy/core';
+import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { PlanStore } from '@catalogohoy/plan';
 import { ProfileStore } from '@catalogohoy/profile';
 import { Tenant, TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
@@ -42,8 +43,15 @@ export class Sidebar {
   public readonly planStore = inject(PlanStore);
   public readonly profileStore = inject(ProfileStore);
   public readonly tenantStore = inject(TenantStore);
+  public readonly tenantCurrency = inject(TenantCurrencyStore);
 
   private readonly permissionsStore = inject(TeamPermissionsStore);
+
+  /** "Tasas del día" only makes sense for Venezuelan catalogs (BCV rate is
+   *  Venezuela-specific). The sidebar lazy-loads the currency store so the
+   *  flag becomes available even when the user lands on a route that
+   *  doesn't otherwise touch the currency. */
+  public readonly isVenezuela = computed(() => this.tenantCurrency.isVenezuela());
 
   // Free-plan users can now enter these routes — the views themselves show
   // an upgrade prompt. The sidebar no longer needs to lock them.
@@ -86,6 +94,15 @@ export class Sidebar {
       if (event instanceof NavigationEnd && this.visible()) {
         this.closeSidebar.emit();
       }
+    });
+
+    // Lazy-load currency info as soon as we have a tenantId — needed to
+    // decide whether to render the Venezuela-specific "Tasas del día" item.
+    // The store guards against duplicate calls so this is safe even when
+    // other views also call `load()`.
+    effect(() => {
+      const tid = this.tenantStore.tenantId();
+      if (tid) this.tenantCurrency.load(tid);
     });
   }
 

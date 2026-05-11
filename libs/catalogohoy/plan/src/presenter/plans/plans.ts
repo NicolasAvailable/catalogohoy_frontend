@@ -43,9 +43,11 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
     features: [
       { text: '1 catálogo' },
       { text: 'Edición limitada del catálogo' },
-      { text: 'No permite descargar QR del catálogo' },
-      { text: 'Sin analíticas del catálogo', negative: true },
       { text: '1 reporte por mes' },
+      // Negatives stay grouped at the end so the cross icons render
+      // together as a "what you don't get" block instead of being
+      // sprinkled between checks.
+      { text: 'Sin analíticas del catálogo', negative: true },
     ],
     buttonLabel: 'Empezar gratis',
     buttonSeverity: 'secondary',
@@ -70,11 +72,11 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   avanzado: {
     period: '/mes',
     features: [
-      { text: '1 catálogo' },
+      { text: '2 catálogos' },
       { text: 'Todo del plan Básico' },
       { text: 'Analíticas del catálogo' },
-      { text: 'Hasta 20 reportes por mes' },
-      { text: 'Dominio personalizado' },
+      { text: 'Hasta 30 reportes por mes' },
+      { text: 'Vinculación de dominio personalizado (dominio aparte)' },
       { text: 'Soporte dedicado' },
     ],
     buttonLabel: 'Comenzar ahora',
@@ -103,10 +105,14 @@ function toPlanDisplay(plan: Plan, currentPlanPosition: number, rateType: string
       ? '1 miembro de equipo'
       : `Hasta ${plan.maxTeamMembers} miembros de equipo`;
 
+  const productsLabel = plan.maxProducts <= 0
+    ? '∞ productos'
+    : `Hasta ${plan.maxProducts} productos`;
+
   return {
     ...plan,
     period: config.period,
-    maxProductsLabel: `Hasta ${plan.maxProducts} productos`,
+    maxProductsLabel: productsLabel,
     teamMembersLabel: teamLabel,
     rateType,
     features: config.features,
