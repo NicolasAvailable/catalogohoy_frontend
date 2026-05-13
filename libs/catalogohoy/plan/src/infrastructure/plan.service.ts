@@ -89,10 +89,14 @@ export class PlanService implements BasePlanService {
   public async getCatalogCount(
     userId: number
   ): Promise<E.Either<Error, number>> {
+    // Only OWNED tenants count toward the plan limit. Team memberships
+    // (role='member') let the user access someone else's catalog but
+    // don't consume their own quota.
     const { count, error } = await this.client
       .from('users_tenants')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('role', 'owner');
 
     if (error) {
       return E.left(new Error(error.message));
@@ -116,7 +120,11 @@ export class PlanService implements BasePlanService {
     }
 
     const catalogCountResult = await this.getCatalogCount(userId);
-    const extraCatalogsResult = await this.getExtraCatalogs(tenantId);
+    // Add-on quota is per USER, not per tenant — customers buy slots on
+    // whichever catalog they happen to be viewing, but the slot belongs
+    // to the account. Sum across every tenant they own so the limit is
+    // consistent regardless of which catalog they're currently in.
+    const extraCatalogsResult = await this.getUserTotalExtraCatalogs(userId);
     const expirationResult = await this.getTenantExpiration(tenantId);
 
     const plan = planResult.value as Plan;
@@ -168,6 +176,35 @@ export class PlanService implements BasePlanService {
     }
 
     return E.right(data?.extra_catalogs ?? 0);
+  }
+
+  /** Sum the user's add-on catalog slots across every tenant they own.
+   *  When customers buy add-ons via Stripe, the `extra_catalogs` counter
+   *  lands on whichever tenant initiated the checkout — but the slot is
+   *  account-level. This aggregates them so the quota check is the same
+   *  regardless of which catalog the user is currently viewing. */
+  public async getUserTotalExtraCatalogs(
+    userId: number
+  ): Promise<E.Either<Error, number>> {
+    const { data, error } = await this.client
+      .from('users_tenants')
+      .select('tenants!inner(extra_catalogs)')
+      .eq('user_id', userId)
+      .eq('role', 'owner');
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    const rows = (data ?? []) as unknown as {
+      tenants: { extra_catalogs: number | null } | { extra_catalogs: number | null }[];
+    }[];
+    const total = rows.reduce((acc, row) => {
+      const t = Array.isArray(row.tenants) ? row.tenants[0] : row.tenants;
+      return acc + (t?.extra_catalogs ?? 0);
+    }, 0);
+
+    return E.right(total);
   }
 
   public async getTenantExpiration(
