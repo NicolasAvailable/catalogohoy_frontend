@@ -7,12 +7,18 @@ import {
   signal,
 } from '@angular/core';
 import { Product, WholesaleTier } from '@catalogohoy/product';
-import { DynamicDialogConfig, DynamicDialogRef, IconComponent } from '@ui';
+import { isVideoUrl } from '@shared/domain';
+import {
+  DynamicDialogConfig,
+  DynamicDialogRef,
+  IconComponent,
+  ProductMediaComponent,
+} from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 
 @Component({
   selector: 'lib-product-detail-modal',
-  imports: [DecimalPipe, IconComponent],
+  imports: [DecimalPipe, IconComponent, ProductMediaComponent],
   templateUrl: './product-detail-modal.html',
   styleUrl: './product-detail-modal.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -88,6 +94,14 @@ export class ProductDetailModal {
   get currentImage(): string {
     if (!this.product.photos.length) return 'assets/placeholder-product.png';
     return this.product.photos[this.currentImageIndex()] || this.product.photos[0];
+  }
+
+  get currentIsVideo(): boolean {
+    return isVideoUrl(this.currentImage);
+  }
+
+  isVideoUrl(url: string): boolean {
+    return isVideoUrl(url);
   }
 
   setImage(index: number) {

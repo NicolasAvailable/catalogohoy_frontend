@@ -19,6 +19,7 @@ export * from './message';
 export * from './multi-select';
 export * from './multimedia';
 export * from './premium-upgrade-prompt';
+export * from './product-media';
 export * from './progress-bar';
 export * from './qr';
 export * from './radio-button';

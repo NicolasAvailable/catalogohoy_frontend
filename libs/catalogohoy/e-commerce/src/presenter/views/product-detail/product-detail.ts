@@ -10,12 +10,13 @@ import {
 } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { IconComponent } from '@ui';
+import { isVideoUrl } from '@shared/domain';
+import { IconComponent, ProductMediaComponent } from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 
 @Component({
   selector: 'lib-product-detail',
-  imports: [DecimalPipe, RouterLink, IconComponent],
+  imports: [DecimalPipe, RouterLink, IconComponent, ProductMediaComponent],
   templateUrl: './product-detail.html',
   styleUrl: './product-detail.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -146,5 +147,13 @@ export default class ProductDetail implements OnInit {
     const p = this.product;
     if (!p || !p.photos.length) return 'assets/placeholder-product.png';
     return p.photos[this.currentImageIndex] || p.photos[0];
+  }
+
+  get currentIsVideo(): boolean {
+    return isVideoUrl(this.currentImage);
+  }
+
+  isVideoUrl(url: string): boolean {
+    return isVideoUrl(url);
   }
 }

@@ -2,6 +2,7 @@ export * from './entity';
 export * from './transaction/transaction';
 export * from './multimedia/multimedia';
 export * from './multimedia/multimedia-list';
+export * from './multimedia/media-type';
 export * from './multimedia/builders/multimedia.builder';
 export * from './either/either.builder';
 export * from './factory/id';

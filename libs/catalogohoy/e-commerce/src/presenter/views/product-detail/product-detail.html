@@ -17,7 +17,13 @@
   <div class="product-detail__container">
     <div class="product-detail__gallery">
       <div class="product-detail__main-image">
-        <img [src]="currentImage" [alt]="product.name" />
+        <ui-product-media
+          [url]="currentImage"
+          [alt]="product.name"
+          [controls]="true"
+          [autoplay]="currentIsVideo"
+          [lazy]="false"
+        />
         @if (hasDiscount) {
         <span class="product-detail__discount-badge">Oferta</span>
         }
@@ -31,7 +37,14 @@
           [class.product-detail__thumbnail--active]="currentImageIndex === $index"
           (click)="setImage($index)"
         >
+          @if (isVideoUrl(photo)) {
+          <video [src]="photo" preload="metadata" muted playsinline></video>
+          <span class="product-detail__thumb-play-badge" aria-hidden="true">
+            <ui-icon name="play" styleClass="size-3 text-white" />
+          </span>
+          } @else {
           <img [src]="photo" [alt]="product.name + ' - ' + ($index + 1)" />
+          }
         </button>
         }
       </div>

@@ -10,7 +10,17 @@
   >
     <div class="product-card__image">
       @if (product().photos.length) {
-      <img [src]="product().photos[0]" [alt]="product().name" loading="lazy" />
+      <ui-product-media
+        [url]="coverUrl()"
+        [alt]="product().name"
+        [controls]="false"
+        styleClass="product-card__media"
+      />
+      @if (hasVideo()) {
+      <span class="product-card__play-badge" aria-hidden="true">
+        <ui-icon name="play" styleClass="size-6 text-white" />
+      </span>
+      }
       } @else {
       <div class="product-card__placeholder">
         <ui-icon name="package" styleClass="size-10" />

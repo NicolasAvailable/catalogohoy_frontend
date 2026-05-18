@@ -7,7 +7,14 @@
   <div class="pdm__gallery">
     <div class="pdm__main-image">
       @if (product.photos.length) {
-      <img [src]="currentImage" [alt]="product.name" [class.pdm__img--dimmed]="isOutOfStock" />
+      <ui-product-media
+        [url]="currentImage"
+        [alt]="product.name"
+        [controls]="true"
+        [autoplay]="currentIsVideo"
+        [lazy]="false"
+        [styleClass]="'pdm__main-media ' + (isOutOfStock ? 'pdm__img--dimmed' : '')"
+      />
       } @else {
       <div class="pdm__placeholder">
         <ui-icon name="package" styleClass="size-16" />
@@ -28,7 +35,14 @@
         [class.pdm__thumbnail--active]="currentImageIndex() === $index"
         (click)="setImage($index)"
       >
+        @if (isVideoUrl(photo)) {
+        <video [src]="photo" preload="metadata" muted playsinline></video>
+        <span class="pdm__thumb-play-badge" aria-hidden="true">
+          <ui-icon name="play" styleClass="size-3 text-white" />
+        </span>
+        } @else {
         <img [src]="photo" [alt]="product.name" />
+        }
       </button>
       }
     </div>

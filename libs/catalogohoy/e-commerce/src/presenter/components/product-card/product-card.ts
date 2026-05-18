@@ -7,13 +7,19 @@ import {
   input,
 } from '@angular/core';
 import { Product } from '@catalogohoy/product';
-import { DialogService, IconComponent, dialogConfig } from '@ui';
+import { firstImageUrl, isVideoUrl } from '@shared/domain';
+import {
+  DialogService,
+  IconComponent,
+  ProductMediaComponent,
+  dialogConfig,
+} from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { ProductDetailModal } from '../product-detail-modal/product-detail-modal';
 
 @Component({
   selector: 'lib-product-card',
-  imports: [DecimalPipe, IconComponent],
+  imports: [DecimalPipe, IconComponent, ProductMediaComponent],
   templateUrl: './product-card.html',
   styleUrl: './product-card.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,6 +34,20 @@ export class ProductCard {
   public readonly cs = computed(() => this.ecommerceStore.currencySymbol());
   public readonly showReferencePrice = this.ecommerceStore.showReferencePrice;
   public readonly showLocalCurrencyPrice = this.ecommerceStore.showLocalCurrencyPrice;
+
+  // Cover for the grid card. Prefer an image so the grid stays cheap to
+  // render (no <video> elements opening media decoders per card). Only
+  // when EVERY media is a video does this fall back to the first video
+  // URL — the browser will show its first frame via the <video> tag's
+  // poster behavior.
+  public readonly coverUrl = computed(() => {
+    const list = this.product().photos ?? [];
+    return firstImageUrl(list) ?? list[0] ?? '';
+  });
+
+  public readonly hasVideo = computed(() =>
+    (this.product().photos ?? []).some((url) => isVideoUrl(url))
+  );
 
   public readonly isOutOfStock = computed(() => {
     const p = this.product();

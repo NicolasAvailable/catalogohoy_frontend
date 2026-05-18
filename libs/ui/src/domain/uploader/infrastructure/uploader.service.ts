@@ -6,6 +6,11 @@ import { BaseUploaderService } from '../domain/uploader.service';
 
 const MAX_WIDTH = 1200;
 const QUALITY = 0.8;
+// Images get a fixed extension because we always re-encode to JPEG via
+// canvas. Videos keep their original extension so the browser knows the
+// container format (mp4/webm) and the public catalog's <video> tag picks
+// the right decoder.
+const ALLOWED_VIDEO_EXT = new Set(['mp4', 'webm', 'ogg', 'ogv']);
 
 @Injectable({ providedIn: 'root' })
 export class UploaderService implements BaseUploaderService {
@@ -15,8 +20,8 @@ export class UploaderService implements BaseUploaderService {
       progress: () => 0,
       complete: async () => {
         try {
+          const isVideo = (file.type || '').toLowerCase().startsWith('video/');
           const client = SupabaseClientProvider.getInstance();
-          const ext = file.name.split('.').pop() || 'jpg';
           const baseName = file.name
             .replace(/\.[^.]+$/, '')
             .normalize('NFKD')
@@ -24,17 +29,34 @@ export class UploaderService implements BaseUploaderService {
             .replace(/_+/g, '_')
             .replace(/^_|_$/g, '')
             .substring(0, 80);
-          const path = `multimedia/${Date.now()}_${baseName}.jpeg`;
 
-          const compressed = await this.compressImage(file);
+          let body: Blob;
+          let contentType: string;
+          let ext: string;
+
+          if (isVideo) {
+            // Skip canvas compression — that pipeline only works for images.
+            // Trust the file as-is; the form's accept list + size validator
+            // already enforce mp4/webm under the per-product cap.
+            body = file;
+            contentType = file.type || 'video/mp4';
+            const rawExt = (file.name.split('.').pop() || 'mp4').toLowerCase();
+            ext = ALLOWED_VIDEO_EXT.has(rawExt) ? rawExt : 'mp4';
+          } else {
+            body = await this.compressImage(file);
+            contentType = 'image/jpeg';
+            ext = 'jpeg';
+          }
+
+          const path = `multimedia/${Date.now()}_${baseName}.${ext}`;
 
           const { error } = await client.storage
             .from('catalogohoy')
-            .upload(path, compressed, { contentType: 'image/jpeg' });
+            .upload(path, body, { contentType });
 
           if (error) {
             const userMessage = error.message?.includes('Invalid key')
-              ? 'El nombre del archivo contiene caracteres no permitidos. Renombra la imagen e intenta de nuevo.'
+              ? 'El nombre del archivo contiene caracteres no permitidos. Renombra el archivo e intenta de nuevo.'
               : error.message;
             return E.left(new Error(userMessage));
           }

@@ -176,6 +176,14 @@ export class Multimedia extends Entity {
     return this.isEqual('mov') || this.url.includes('.mov');
   }
 
+  public isWEBM() {
+    return this.isEqual('webm') || this.url.includes('.webm');
+  }
+
+  public isOGG() {
+    return this.isEqual('ogg') || this.isEqual('ogv') || this.url.includes('.ogv');
+  }
+
   public isQuickTime() {
     return this.isEqual('quicktime') || this.url.includes('.quicktime');
   }
@@ -196,6 +204,8 @@ export class Multimedia extends Entity {
     return (
       this.isMP4() ||
       this.isMOV() ||
+      this.isWEBM() ||
+      this.isOGG() ||
       this.isQuickTime() ||
       this.isBase64Video() ||
       this.isPexelsVideo() ||
