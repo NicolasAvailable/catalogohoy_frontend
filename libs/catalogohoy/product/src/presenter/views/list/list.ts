@@ -24,10 +24,12 @@ import {
   IconComponent,
   InputTextComponent,
   MultiSelectComponent,
+  ProductMediaComponent,
   SelectComponent,
   SkeletonListComponent,
   TooltipDirective,
 } from '@ui';
+import { firstImageUrl } from '@shared/domain';
 import { debounceTime, distinctUntilChanged, Subscription } from 'rxjs';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { ProductFacade } from '../../../application';
@@ -55,6 +57,7 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
     TooltipDirective,
     DialogComponent,
     MultiSelectComponent,
+    ProductMediaComponent,
   ],
   templateUrl: './list.html',
   styleUrl: './list.css',
@@ -81,6 +84,14 @@ export default class List implements OnInit, OnDestroy {
   public readonly cs = computed(() =>
     this.tenantCurrency.isVenezuela() ? '$' : this.tenantCurrency.localSymbol() || '$'
   );
+
+  /** Choose the URL to show in the product-row thumbnail. Prefer an
+   *  image so the list stays cheap to render; fall back to the first
+   *  media (likely a video) when the product has no images at all.
+   *  Empty string means "no media" → caller renders a placeholder. */
+  public thumbnailUrl(item: Product): string {
+    return firstImageUrl(item.photos) ?? item.photos[0] ?? '';
+  }
   public readonly selectedProduct = signal<Product | null>(null);
   public readonly selectedIds = signal<Set<string>>(new Set());
   public readonly deleteMode = signal<'single' | 'bulk'>('single');

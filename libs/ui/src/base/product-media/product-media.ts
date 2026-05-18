@@ -11,8 +11,10 @@ import { isVideoUrl } from '@shared/domain';
  *
  *  For grids/lists prefer passing a known image URL via
  *  `firstImageUrl(media)` so the heavy `<video>` element never renders.
- *  When that's not possible the component still works — videos will
- *  show their first frame via the browser's built-in poster logic. */
+ *  When that's not possible (product has only videos) you can pass
+ *  `posterSeconds` to seek the video element to a non-zero frame —
+ *  the browser then paints that frame instead of the often-black first
+ *  one, which makes thumbnails actually readable. */
 @Component({
   selector: 'ui-product-media',
   imports: [CommonModule],
@@ -27,6 +29,7 @@ import { isVideoUrl } from '@shared/domain';
         [autoplay]="autoplay()"
         [loop]="loop()"
         [class]="styleClass()"
+        (loadedmetadata)="onLoadedMetadata($event)"
       ></video>
     } @else {
       <img
@@ -47,6 +50,26 @@ export class ProductMediaComponent {
   public readonly autoplay = input<boolean>(false);
   public readonly loop = input<boolean>(false);
   public readonly lazy = input<boolean>(true);
+  /** Seconds to seek the video to when used as a poster. Setting this to
+   *  e.g. 1.5 makes thumbnails skip the typical black-fade first frame.
+   *  Zero (default) leaves the browser-native first-frame behavior. */
+  public readonly posterSeconds = input<number>(0);
 
   public readonly isVideo = computed(() => isVideoUrl(this.url()));
+
+  protected onLoadedMetadata(event: Event): void {
+    const seconds = this.posterSeconds();
+    if (seconds <= 0) return;
+    const video = event.target as HTMLVideoElement;
+    if (!video) return;
+    // Clamp to (duration - 0.1) so we never request a frame past the end,
+    // which some browsers reject silently.
+    const safeTarget = Math.min(seconds, Math.max(0, (video.duration || seconds) - 0.1));
+    try {
+      video.currentTime = safeTarget;
+    } catch {
+      /* seek can throw on cross-origin / unsupported codecs — swallow,
+       * the browser still falls back to the first frame. */
+    }
+  }
 }
