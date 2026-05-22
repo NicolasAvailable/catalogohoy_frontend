@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   HostListener,
   inject,
   signal,
@@ -53,6 +54,24 @@ export class CheckoutDrawer {
       this.countryCodes.find((c) => c.iso === this.countryIso()) ??
       this.countryCodes[0]
   );
+
+  /** True once the customer manually picks a country from the dropdown.
+   *  Locks the default-from-catalog effect so we don't overwrite their
+   *  choice when the catalog info signal re-emits. */
+  private userPickedCountry = false;
+
+  /** Default the phone country to whatever country the seller configured
+   *  for this catalog (CatalogInfo.countryCode, ISO-2). Runs reactively
+   *  because catalog info loads async — first emission is usually null. */
+  private readonly applyCatalogDefaultCountry = effect(() => {
+    if (this.userPickedCountry) return;
+    const iso = this.ecommerceStore.effectiveCatalogInfo()?.countryCode;
+    if (!iso) return;
+    const match = this.countryCodes.find((c) => c.iso === iso);
+    if (!match) return;
+    this.countryIso.set(match.iso);
+    this.countryCode.set(match.code);
+  });
 
   public readonly availablePaymentMethods = computed(() => {
     const info = this.ecommerceStore.effectiveCatalogInfo();
@@ -214,6 +233,7 @@ export class CheckoutDrawer {
   }));
 
   selectCountry(country: { iso: string; code: string }) {
+    this.userPickedCountry = true;
     this.countryIso.set(country.iso);
     this.countryCode.set(country.code);
     this.countryDropdownOpen.set(false);

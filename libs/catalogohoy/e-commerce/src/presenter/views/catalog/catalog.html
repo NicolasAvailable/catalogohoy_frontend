@@ -61,8 +61,14 @@
     <lib-product-card [product]="product" viewMode="grid" />
     } @empty {
     <div class="catalog__empty">
-      <ui-icon name="packageSearch" styleClass="size-16" />
-      <p>No se encontraron productos</p>
+      <div class="catalog__empty-bubble" aria-hidden="true">
+        <ui-icon name="packageSearch" styleClass="size-12 text-primary-500" />
+      </div>
+      <h3 class="catalog__empty-title">No hay productos para mostrar</h3>
+      <p class="catalog__empty-subtitle">
+        Aún no se han publicado productos en este catálogo. Vuelve más tarde
+        para descubrir las novedades.
+      </p>
     </div>
     }
   </div>
