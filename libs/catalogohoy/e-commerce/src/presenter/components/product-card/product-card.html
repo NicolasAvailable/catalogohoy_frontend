@@ -47,7 +47,7 @@
     >
       <h3 class="product-card__title">{{ product().name }}</h3>
     </button>
-    <p class="product-card__description">{{ product().description }}</p>
+    <p class="product-card__description">{{ product().description | stripHtml }}</p>
 
     <div class="product-card__price">
       @if (isWholesale() && product().wholesaleTiers.length > 0) {

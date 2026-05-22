@@ -5,26 +5,37 @@
 
   <!-- Gallery -->
   <div class="pdm__gallery">
-    <div class="pdm__main-image">
-      @if (product.photos.length) {
-      <ui-product-media
-        [url]="currentImage"
-        [alt]="product.name"
-        [controls]="true"
-        [autoplay]="currentIsVideo"
-        [lazy]="false"
-        [styleClass]="'pdm__main-media ' + (isOutOfStock ? 'pdm__img--dimmed' : '')"
-      />
-      } @else {
-      <div class="pdm__placeholder">
-        <ui-icon name="package" styleClass="size-16" />
+    @if (product.photos.length) {
+    <div
+      #carousel
+      class="pdm__carousel"
+      (scroll)="onCarouselScroll()"
+    >
+      @for (photo of product.photos; track $index) {
+      <div class="pdm__carousel-slide">
+        <ui-product-media
+          [url]="photo"
+          [alt]="product.name"
+          [controls]="true"
+          [autoplay]="currentImageIndex() === $index && isVideoUrl(photo)"
+          [lazy]="currentImageIndex() !== $index"
+          [styleClass]="'pdm__main-media ' + (isOutOfStock ? 'pdm__img--dimmed' : '')"
+        />
       </div>
-      } @if (isOutOfStock) {
+      }
+      @if (isOutOfStock) {
       <span class="pdm__sold-out-badge">Agotado</span>
       } @else if (hasDiscount) {
       <span class="pdm__discount-badge">Oferta</span>
       }
     </div>
+    } @else {
+    <div class="pdm__main-image">
+      <div class="pdm__placeholder">
+        <ui-icon name="package" styleClass="size-16" />
+      </div>
+    </div>
+    }
 
     @if (product.photos.length > 1) {
     <div class="pdm__thumbnails">
@@ -80,14 +91,18 @@
     <div
       class="pdm__description-wrap"
       [class.pdm__description-wrap--clamped]="isClamped()"
-      [class.pdm__description-wrap--clickable]="shouldClampDescription"
-      role="button"
-      tabindex="0"
-      (click)="toggleDescription()"
-      (keydown.enter)="toggleDescription()"
-      (keydown.space)="toggleDescription(); $event.preventDefault()"
+      [class.pdm__description-wrap--expanded]="shouldClampDescription && descriptionExpanded()"
+      [class.pdm__description-wrap--clickable]="isClamped()"
+      [attr.role]="isClamped() ? 'button' : null"
+      [attr.tabindex]="isClamped() ? 0 : null"
+      (click)="onWrapActivate($event)"
+      (keydown.enter)="onWrapActivate($event)"
+      (keydown.space)="onWrapActivate($event)"
     >
-      <p class="pdm__description">{{ product.description }}@if (shouldClampDescription && descriptionExpanded()) {<span class="pdm__inline-less"> Ver menos</span>}</p>
+      <div #descriptionEl class="pdm__description pdm__prose" [innerHTML]="product.description | safeDescriptionHtml"></div>
+      @if (shouldClampDescription && descriptionExpanded()) {
+      <button type="button" class="pdm__inline-less" (click)="toggleDescription(); $event.stopPropagation()">Ver menos</button>
+      }
       @if (isClamped()) {
       <span class="pdm__overlay-more">… Ver más</span>
       }

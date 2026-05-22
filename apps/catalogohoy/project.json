@@ -25,7 +25,8 @@
           }
         ],
         "styles": [
-          "apps/catalogohoy/src/styles.css"
+          "apps/catalogohoy/src/styles.css",
+          "node_modules/quill/dist/quill.snow.css"
         ]
       },
       "configurations": {

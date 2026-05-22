@@ -73,7 +73,7 @@
       } @if (product.description) {
       <div class="product-detail__description">
         <h3>Descripción</h3>
-        <p>{{ product.description }}</p>
+        <div class="product-detail__description-body product-detail__prose" [innerHTML]="product.description | safeDescriptionHtml"></div>
       </div>
       } @if (product.stock) {
       <div class="product-detail__stock">

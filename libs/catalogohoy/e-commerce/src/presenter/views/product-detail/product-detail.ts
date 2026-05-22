@@ -11,12 +11,19 @@ import {
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { isVideoUrl } from '@shared/domain';
+import { SafeDescriptionHtmlPipe, StripHtmlPipe } from '@shared/presenter';
 import { IconComponent, ProductMediaComponent } from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 
 @Component({
   selector: 'lib-product-detail',
-  imports: [DecimalPipe, RouterLink, IconComponent, ProductMediaComponent],
+  imports: [
+    DecimalPipe,
+    RouterLink,
+    IconComponent,
+    ProductMediaComponent,
+    SafeDescriptionHtmlPipe,
+  ],
   templateUrl: './product-detail.html',
   styleUrl: './product-detail.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,6 +36,7 @@ export default class ProductDetail implements OnInit {
   private readonly titleService = inject(Title);
   private readonly metaService = inject(Meta);
   private readonly document = inject(DOCUMENT);
+  private readonly stripHtmlPipe = new StripHtmlPipe();
 
   public currentImageIndex = 0;
   public readonly quantity = signal(1);
@@ -41,8 +49,9 @@ export default class ProductDetail implements OnInit {
 
       const storeName = catalogInfo?.name || 'CatalogoHoy';
       const title = `${product.name} — ${storeName}`;
-      const description = product.description
-        ? product.description.slice(0, 160)
+      const plainDescription = this.stripHtmlPipe.transform(product.description);
+      const description = plainDescription
+        ? plainDescription.slice(0, 160)
         : `${product.name} disponible en ${storeName}`;
       const image = product.photos.length > 0 ? product.photos[0] : (catalogInfo?.logo || '');
       const url = window.location.href;
@@ -64,7 +73,7 @@ export default class ProductDetail implements OnInit {
         '@context': 'https://schema.org',
         '@type': 'Product',
         name: product.name,
-        description: product.description || undefined,
+        description: plainDescription || undefined,
         image: product.photos.length > 0 ? product.photos : undefined,
         url,
         offers: {

@@ -19,7 +19,8 @@
     gap: 0.5rem;
   }
 
-  .pdm__main-image {
+  .pdm__main-image,
+  .pdm__carousel {
     aspect-ratio: 4 / 3;
   }
 
@@ -78,6 +79,48 @@
   height: 100%;
   object-fit: cover;
   background: white;
+}
+
+/* Swipeable carousel — replaces the single main-image. Uses native CSS
+   scroll-snap so swipe gestures on mobile are handled by the browser
+   without JS gesture libraries. On desktop, thumbnails programmatically
+   scrollTo() the relevant slide. */
+.pdm__carousel {
+  aspect-ratio: 1;
+  border-radius: 0.75rem;
+  position: relative;
+  background: white;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.pdm__carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.pdm__carousel-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  position: relative;
+  background: white;
+}
+
+.pdm__carousel-slide img,
+.pdm__carousel-slide video,
+.pdm__carousel-slide .pdm__main-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: white;
+  pointer-events: auto;
 }
 
 .pdm__placeholder {
@@ -156,6 +199,7 @@
   flex-direction: column;
   gap: 0.625rem;
   overflow-y: auto;
+  min-width: 0;
 }
 
 .pdm__header {
@@ -188,6 +232,9 @@
   margin: 0;
   text-transform: uppercase;
   line-height: 1.25;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  padding-right: 2.5rem;
 }
 
 .pdm__prices {
@@ -231,6 +278,8 @@
 
 .pdm__description-wrap {
   position: relative;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .pdm__description-wrap--clickable {
@@ -242,13 +291,73 @@
   font-size: 0.9375rem;
   line-height: 1.65;
   margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
+/* Rich HTML can't use -webkit-line-clamp (only works on flat text), so we
+   cap with max-height. 6.6rem ≈ 4 lines × 1.65 line-height — gives a
+   comfortable 3-line minimum even when the description starts with a
+   short element like an <em> tagline or <h2> heading. The overlay fade
+   hides the partial cut at the bottom. */
 .pdm__description-wrap--clamped .pdm__description {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+  max-height: 6.6rem;
   overflow: hidden;
+}
+
+/* Expanded long descriptions get an internal scroll so the add-to-cart
+   button stays in view. Short descriptions (shouldClampDescription = false)
+   don't get this class, so they flow naturally. */
+.pdm__description-wrap--expanded .pdm__description {
+  max-height: 16rem;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  scrollbar-width: thin;
+}
+
+/* Rich-text rendering rules (HTML stored in description, injected via
+   [innerHTML] — needs ::ng-deep to pierce view encapsulation). */
+.pdm__prose ::ng-deep > *:first-child { margin-top: 0; }
+.pdm__prose ::ng-deep > *:last-child { margin-bottom: 0; }
+.pdm__prose ::ng-deep p { margin: 0 0 0.5rem 0; }
+.pdm__prose ::ng-deep h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-grey-700);
+  margin: 0.75rem 0 0.375rem 0;
+  line-height: 1.4;
+}
+.pdm__prose ::ng-deep h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-grey-700);
+  margin: 0.625rem 0 0.375rem 0;
+  line-height: 1.4;
+}
+.pdm__prose ::ng-deep ul,
+.pdm__prose ::ng-deep ol {
+  margin: 0.375rem 0 0.5rem 0;
+  padding-left: 1.5rem;
+}
+.pdm__prose ::ng-deep ul { list-style: disc; }
+.pdm__prose ::ng-deep ol { list-style: decimal; }
+.pdm__prose ::ng-deep li {
+  margin: 0.125rem 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.pdm__prose ::ng-deep a {
+  color: var(--color-primary-600);
+  text-decoration: underline;
+  word-break: break-word;
+}
+.pdm__prose ::ng-deep strong,
+.pdm__prose ::ng-deep b { font-weight: 600; color: var(--color-grey-500); }
+.pdm__prose ::ng-deep blockquote {
+  border-left: 0.1875rem solid var(--color-grey-200);
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  color: var(--color-grey-500);
 }
 
 /* "Ver más" overlays the bottom-right of the last visible line, fading
@@ -266,11 +375,24 @@
   pointer-events: none;
 }
 
-/* "Ver menos" sits inline at the end of the expanded description. */
+/* "Ver menos" — collapses the expanded description back to the clamped
+   preview. Rendered as a <button> so it's clickable independently from
+   the wrap (which is only clickable in the clamped state). */
 .pdm__inline-less {
-  margin-left: 0.375rem;
+  display: inline-block;
+  margin-top: 0.375rem;
+  padding: 0;
+  background: transparent;
+  border: 0;
   color: var(--color-primary-600);
   font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.pdm__inline-less:hover {
+  text-decoration: underline;
 }
 
 /* Footer */

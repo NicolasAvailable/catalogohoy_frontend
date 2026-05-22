@@ -193,11 +193,52 @@
   letter-spacing: 0.02em;
 }
 
-.product-detail__description p {
+.product-detail__description-body {
   font-size: 1rem;
   color: var(--color-grey-500);
   line-height: 1.7;
-  margin: 0;
+}
+
+.product-detail__prose ::ng-deep p { margin: 0 0 0.625rem 0; }
+.product-detail__prose ::ng-deep p:last-child { margin-bottom: 0; }
+.product-detail__prose ::ng-deep h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-grey-700);
+  margin: 0.875rem 0 0.5rem 0;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.product-detail__prose ::ng-deep h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-grey-700);
+  margin: 0.75rem 0 0.5rem 0;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.product-detail__prose ::ng-deep ul,
+.product-detail__prose ::ng-deep ol {
+  margin: 0.5rem 0 0.625rem 0;
+  padding-left: 1.5rem;
+}
+.product-detail__prose ::ng-deep ul { list-style: disc; }
+.product-detail__prose ::ng-deep ol { list-style: decimal; }
+.product-detail__prose ::ng-deep li { margin: 0.1875rem 0; }
+.product-detail__prose ::ng-deep a {
+  color: var(--color-primary-600);
+  text-decoration: underline;
+  word-break: break-word;
+}
+.product-detail__prose ::ng-deep strong,
+.product-detail__prose ::ng-deep b { font-weight: 600; color: var(--color-grey-600); }
+.product-detail__prose ::ng-deep blockquote {
+  border-left: 0.1875rem solid var(--color-grey-200);
+  padding-left: 0.75rem;
+  margin: 0.625rem 0;
+  color: var(--color-grey-500);
 }
 
 .product-detail__stock {

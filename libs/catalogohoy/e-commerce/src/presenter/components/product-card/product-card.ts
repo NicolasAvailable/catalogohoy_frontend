@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { Product } from '@catalogohoy/product';
 import { firstImageUrl, isVideoUrl } from '@shared/domain';
+import { StripHtmlPipe } from '@shared/presenter';
 import {
   DialogService,
   IconComponent,
@@ -19,7 +20,7 @@ import { ProductDetailModal } from '../product-detail-modal/product-detail-modal
 
 @Component({
   selector: 'lib-product-card',
-  imports: [DecimalPipe, IconComponent, ProductMediaComponent],
+  imports: [DecimalPipe, IconComponent, ProductMediaComponent, StripHtmlPipe],
   templateUrl: './product-card.html',
   styleUrl: './product-card.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -17,15 +17,20 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { CategoryStore } from '@catalogohoy/category';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
+import { EditorModule } from 'primeng/editor';
 import { Exception, is } from '@shared/domain';
-import { ToastService } from '@shared/infrastructure';
-import { whiteSpacesValidator } from '@shared/presenter';
+import { HtmlSanitizerService, ToastService } from '@shared/infrastructure';
+import {
+  richTextMaxLengthValidator,
+  whiteSpacesValidator,
+} from '@shared/presenter';
 import {
   ButtonComponent,
   CardComponent,
@@ -35,7 +40,6 @@ import {
   MultiSelectComponent,
   ProductMediaComponent,
   RadioButtonComponent,
-  TextareaComponent,
   ToggleComponent,
   UploaderComponent,
 } from '@ui';
@@ -51,7 +55,7 @@ import { Product } from '../../../domain';
     UploaderComponent,
     CardComponent,
     InputTextComponent,
-    TextareaComponent,
+    EditorModule,
     ButtonComponent,
     IconComponent,
     InputNumberComponent,
@@ -90,9 +94,10 @@ export default class Save implements OnInit {
 
   private readonly fb = inject(FormBuilder);
 
+  public readonly DESCRIPTION_MAX_TEXT_LENGTH = 5000;
   public readonly form = this.fb.group({
     name: ['', [Validators.required, whiteSpacesValidator()]],
-    description: [''],
+    description: ['', [richTextMaxLengthValidator(this.DESCRIPTION_MAX_TEXT_LENGTH)]],
     sku: [''],
     photos: [[] as string[]],
     price: ['', [Validators.required]],
@@ -105,6 +110,15 @@ export default class Save implements OnInit {
     wholesaleTiers: this.fb.array([]),
     isSoldOut: [false],
     isHidden: [false],
+  });
+
+  private readonly descriptionValue = toSignal(
+    this.form.controls.description.valueChanges,
+    { initialValue: this.form.controls.description.value }
+  );
+  public readonly descriptionTextLength = computed(() => {
+    const html = this.descriptionValue() ?? '';
+    return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').length;
   });
 
   public readonly id = input<string | undefined>(undefined);

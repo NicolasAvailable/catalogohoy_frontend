@@ -3,6 +3,7 @@ import { SupabaseClientProvider } from '@catalogohoy/core';
 import { ActivityLogService } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
 import { E } from '@shared/domain';
+import { HtmlSanitizerService } from '@shared/infrastructure';
 import {
   BaseProductService,
   CreateProductInput,
@@ -21,6 +22,7 @@ export class ProductService implements BaseProductService {
   private readonly client = SupabaseClientProvider.getInstance();
   private readonly tenantStore = inject(TenantStore);
   private readonly activityLog = inject(ActivityLogService);
+  private readonly htmlSanitizer = inject(HtmlSanitizerService);
 
   public async getAll(
     page?: number,
@@ -137,7 +139,7 @@ export class ProductService implements BaseProductService {
       .from('products')
       .insert({
         name: input.name,
-        description: input.description,
+        description: this.htmlSanitizer.sanitizeRichText(input.description),
         price: input.price === '' ? 0 : input.price,
         price_promotional:
           !input.pricePromotional || input.pricePromotional.length === 0 ? null : input.pricePromotional,
@@ -192,7 +194,7 @@ export class ProductService implements BaseProductService {
 
     const updatePayload: Record<string, unknown> = {
       name: input.name,
-      description: input.description,
+      description: this.htmlSanitizer.sanitizeRichText(input.description),
       price: input.price === '' ? 0 : input.price,
       price_promotional:
         !input.pricePromotional || input.pricePromotional.length === 0 ? null : input.pricePromotional,

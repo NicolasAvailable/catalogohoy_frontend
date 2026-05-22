@@ -3,11 +3,15 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
+  ElementRef,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { Product, WholesaleTier } from '@catalogohoy/product';
 import { isVideoUrl } from '@shared/domain';
+import { SafeDescriptionHtmlPipe } from '@shared/presenter';
 import {
   DynamicDialogConfig,
   DynamicDialogRef,
@@ -18,7 +22,7 @@ import { CartStore, EcommerceStore } from '../../../infrastructure';
 
 @Component({
   selector: 'lib-product-detail-modal',
-  imports: [DecimalPipe, IconComponent, ProductMediaComponent],
+  imports: [DecimalPipe, IconComponent, ProductMediaComponent, SafeDescriptionHtmlPipe],
   templateUrl: './product-detail-modal.html',
   styleUrl: './product-detail-modal.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,24 +41,44 @@ export class ProductDetailModal {
   public readonly quantity = signal(1);
   public readonly descriptionExpanded = signal(false);
 
-  /**
-   * Whether the description is long enough to warrant a "Ver más" toggle.
-   * Heuristic: ~50 chars per line × 3 lines = 150 chars, OR 3+ newlines.
-   */
   public readonly shouldClampDescription = (() => {
     const desc = this.product.description ?? '';
     if (!desc) return false;
-    const newlines = (desc.match(/\n/g) ?? []).length;
-    return desc.length > 150 || newlines >= 3;
+    const text = desc.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+    const blocks = (desc.match(/<(p|br|li|h[1-6])\b/gi) ?? []).length;
+    return text.length > 150 || blocks >= 3;
   })();
 
   public readonly isClamped = computed(
     () => this.shouldClampDescription && !this.descriptionExpanded()
   );
 
+  private readonly descriptionEl = viewChild<ElementRef<HTMLElement>>('descriptionEl');
+  private readonly carouselEl = viewChild<ElementRef<HTMLElement>>('carousel');
+  private carouselScrollTimer: ReturnType<typeof setTimeout> | null = null;
+  private suppressScrollSync = false;
+
+  // Reset the inner scroll position when the description collapses so the
+  // clamped preview always shows the start of the text, not whatever the
+  // user had scrolled into view.
+  private readonly resetScrollOnCollapse = effect(() => {
+    if (this.descriptionExpanded()) return;
+    const el = this.descriptionEl()?.nativeElement;
+    if (el) el.scrollTop = 0;
+  });
+
   toggleDescription(): void {
     if (!this.shouldClampDescription) return;
     this.descriptionExpanded.update((v) => !v);
+  }
+
+  /** Expands the description from the clamped state. Bound to the wrap's
+   *  click/Enter/Space when clamped only — once expanded, the inner
+   *  description scrolls and a dedicated "Ver menos" button collapses it. */
+  onWrapActivate(event: Event): void {
+    if (!this.shouldClampDescription || this.descriptionExpanded()) return;
+    if (event.type === 'keydown') event.preventDefault();
+    this.descriptionExpanded.set(true);
   }
 
   public readonly isWholesale =
@@ -106,6 +130,29 @@ export class ProductDetailModal {
 
   setImage(index: number) {
     this.currentImageIndex.set(index);
+    const el = this.carouselEl()?.nativeElement;
+    if (!el) return;
+    // Programmatic scroll: suppress the scroll handler so the smooth
+    // animation doesn't ping-pong the index back as it crosses slides.
+    this.suppressScrollSync = true;
+    el.scrollTo({ left: index * el.clientWidth, behavior: 'smooth' });
+    if (this.carouselScrollTimer) clearTimeout(this.carouselScrollTimer);
+    this.carouselScrollTimer = setTimeout(() => {
+      this.suppressScrollSync = false;
+    }, 400);
+  }
+
+  /** Debounced scroll handler — updates the active index after the user
+   *  has stopped scrolling so we don't fight the snap animation. */
+  onCarouselScroll(): void {
+    if (this.suppressScrollSync) return;
+    if (this.carouselScrollTimer) clearTimeout(this.carouselScrollTimer);
+    this.carouselScrollTimer = setTimeout(() => {
+      const el = this.carouselEl()?.nativeElement;
+      if (!el || el.clientWidth === 0) return;
+      const index = Math.round(el.scrollLeft / el.clientWidth);
+      if (index !== this.currentImageIndex()) this.currentImageIndex.set(index);
+    }, 80);
   }
 
   incrementQuantity() {

@@ -25,8 +25,21 @@
     <div class="cart-drawer__content">
       @if (cartStore.isEmpty()) {
       <div class="cart-drawer__empty">
-        <ui-icon name="shoppingCart" styleClass="size-16 text-gray-300" />
-        <p>Tu carrito está vacío</p>
+        <div class="cart-drawer__empty-bubble" aria-hidden="true">
+          <ui-icon name="shoppingCart" styleClass="size-12 text-primary-500" />
+        </div>
+        <h3 class="cart-drawer__empty-title">Tu carrito está vacío</h3>
+        <p class="cart-drawer__empty-subtitle">
+          Agrega productos del catálogo para empezar tu compra.
+        </p>
+        <button
+          type="button"
+          class="cart-drawer__empty-cta"
+          (click)="onClose()"
+        >
+          <ui-icon name="arrowLeft" styleClass="size-4" />
+          Seguir explorando
+        </button>
       </div>
       } @else {
       <div class="cart-drawer__items">

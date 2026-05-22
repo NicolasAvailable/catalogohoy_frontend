@@ -72,12 +72,42 @@
             <span class="text-sm text-grey-400 font-semibold">(Opcional)</span>
           </div>
 
-          <ui-textarea
+          <p-editor
             formControlName="description"
             placeholder="Es una franela de manga corta perfecta para..."
-            textareaId="description"
-            [rows]="5"
-          />
+            [style]="{ height: '12rem' }"
+            styleClass="product-description-editor"
+          >
+            <ng-template #header>
+              <span class="ql-formats">
+                <button type="button" class="ql-bold" aria-label="Negrita"></button>
+                <button type="button" class="ql-italic" aria-label="Itálica"></button>
+                <button type="button" class="ql-underline" aria-label="Subrayado"></button>
+              </span>
+              <span class="ql-formats">
+                <select class="ql-header" aria-label="Encabezado">
+                  <option value="2"></option>
+                  <option value="3"></option>
+                  <option selected></option>
+                </select>
+              </span>
+              <span class="ql-formats">
+                <button type="button" class="ql-list" value="ordered" aria-label="Lista numerada"></button>
+                <button type="button" class="ql-list" value="bullet" aria-label="Lista con viñetas"></button>
+              </span>
+              <span class="ql-formats">
+                <button type="button" class="ql-link" aria-label="Enlace"></button>
+                <button type="button" class="ql-clean" aria-label="Quitar formato"></button>
+              </span>
+            </ng-template>
+          </p-editor>
+          <div
+            class="flex justify-end text-xs"
+            [class.text-grey-400]="descriptionTextLength() <= DESCRIPTION_MAX_TEXT_LENGTH"
+            [class.text-red-500]="descriptionTextLength() > DESCRIPTION_MAX_TEXT_LENGTH"
+          >
+            {{ descriptionTextLength() }} / {{ DESCRIPTION_MAX_TEXT_LENGTH }}
+          </div>
         </div>
       </div>
     </ui-card>
