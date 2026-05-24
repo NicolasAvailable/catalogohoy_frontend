@@ -40,6 +40,9 @@ export class ProductDetailModal {
   public readonly currentImageIndex = signal(0);
   public readonly quantity = signal(1);
   public readonly descriptionExpanded = signal(false);
+  public readonly selectedSize = signal<string | null>(null);
+
+  public readonly isSized = this.product.isSized && this.product.sizes.length > 0;
 
   public readonly shouldClampDescription = (() => {
     const desc = this.product.description ?? '';
@@ -90,17 +93,55 @@ export class ProductDetailModal {
   public readonly availableStock =
     this.product.stock !== null ? Number(this.product.stock) : null;
 
-  public readonly cartQuantity = computed(
-    () =>
-      this.cartStore
-        .items()
-        .find((i) => i.productId === String(this.product.id))?.quantity ?? 0
-  );
+  /** Stock available for the currently-selected size (or the product-level
+   *  stock when the product isn't sized / no size selected yet). `null`
+   *  means unlimited. */
+  public readonly effectiveStock = computed(() => {
+    if (this.isSized) {
+      const size = this.selectedSize();
+      if (!size) return null;
+      const entry = this.product.sizes.find((s) => s.name === size);
+      return entry?.stock ?? null;
+    }
+    return this.availableStock;
+  });
+
+  public readonly cartQuantity = computed(() => {
+    const size = this.selectedSize();
+    return this.cartStore
+      .items()
+      .filter(
+        (i) =>
+          i.productId === String(this.product.id) &&
+          (this.isSized ? i.size === size : true)
+      )
+      .reduce((sum, i) => sum + i.quantity, 0);
+  });
 
   public readonly canAddMore = computed(() => {
-    if (this.availableStock === null) return true;
-    return this.cartQuantity() + this.quantity() <= this.availableStock;
+    const stock = this.effectiveStock();
+    if (stock === null) return true;
+    return this.cartQuantity() + this.quantity() <= stock;
   });
+
+  public readonly canSubmit = computed(() => {
+    if (this.isSized && !this.selectedSize()) return false;
+    return this.canAddMore();
+  });
+
+  public readonly isSizeOutOfStock = (sizeName: string): boolean => {
+    const entry = this.product.sizes.find((s) => s.name === sizeName);
+    if (!entry || entry.stock === null) return false;
+    return entry.stock <= 0;
+  };
+
+  selectSize(name: string): void {
+    if (this.isSizeOutOfStock(name)) return;
+    this.selectedSize.set(name);
+    // Quantity may exceed the new size's stock — clamp back to 1 when
+    // switching sizes for safety.
+    this.quantity.set(1);
+  }
 
   get displayPrice(): number {
     return this.product.pricePromotional > 0
@@ -172,8 +213,11 @@ export class ProductDetailModal {
   }
 
   onAddToCart() {
+    if (this.isSized && !this.selectedSize()) return;
     for (let i = 0; i < this.quantity(); i++) {
-      this.cartStore.addProduct(this.product);
+      this.cartStore.addProduct(this.product, {
+        size: this.selectedSize(),
+      });
     }
     this.cartStore.openCart();
     this.ref.close();
