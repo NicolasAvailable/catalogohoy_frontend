@@ -56,7 +56,7 @@
       <div class="flex flex-col gap-4">
         <h2 class="text-xl font-bold">Nombre y Descripción</h2>
         <div class="flex flex-col gap-2">
-          <label class="text-base text-grey-400 font-semibold" for="name">Nombre</label>
+          <label class="text-base text-grey-400 font-semibold" for="name">Nombre<span class="text-red-500 ml-0.5">*</span></label>
           <ui-input-text
             formControlName="name"
             placeholder="Franela de manga corta"
@@ -167,6 +167,7 @@
           </div>
           <ui-toggle
             formControlName="isWholesale"
+            [defaultDisabled]="form.controls.isSized.value ?? false"
             (enable)="onWholesaleToggle()"
             (disable)="onWholesaleToggle()"
           />
@@ -181,14 +182,14 @@
           @for (tier of wholesaleTiersArray.controls; track $index) {
           <div [formGroupName]="$index" class="flex items-end gap-3">
             <div class="flex flex-col gap-2 flex-1">
-              <label class="text-sm text-grey-400 font-semibold">Etiqueta</label>
+              <label class="text-sm text-grey-400 font-semibold">Etiqueta<span class="text-red-500 ml-0.5">*</span></label>
               <ui-input-text
                 formControlName="title"
                 placeholder="Ej: A partir de 30 piezas"
               />
             </div>
             <div class="flex flex-col gap-2 flex-1">
-              <label class="text-sm text-grey-400 font-semibold">Precio unitario</label>
+              <label class="text-sm text-grey-400 font-semibold">Precio unitario<span class="text-red-500 ml-0.5">*</span></label>
               <ui-input-number
                 formControlName="price"
                 mode="decimal"
@@ -217,6 +218,91 @@
             <ui-icon name="circle-plus" styleClass="size-5" />
             Agregar escala de precio
           </button>
+        </div>
+        }
+        @if (form.controls.isSized.value) {
+        <p class="text-sm text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+          Por ahora no es posible combinar venta al mayor con tallas. Desactiva
+          las tallas para habilitar esta opción.
+        </p>
+        }
+      </div>
+    </ui-card>
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <h2 class="text-xl font-bold">¿Vendes por tallas?</h2>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-500 text-white">
+              Nuevo
+            </span>
+          </div>
+          <ui-toggle
+            formControlName="isSized"
+            [defaultDisabled]="form.controls.isWholesale.value ?? false"
+            (enable)="onSizedToggle()"
+            (disable)="onSizedToggle()"
+          />
+        </div>
+        <p class="text-sm text-grey-300">
+          Activa esta opción si tu producto viene en diferentes tallas o tamaños (S, M, L, 42, 44, etc.).
+        </p>
+        @if (form.controls.isWholesale.value) {
+        <p class="text-sm text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+          Por ahora no es posible combinar tallas con venta al mayor. Desactiva
+          la venta al mayor para habilitar esta opción.
+        </p>
+        }
+
+        @if (form.controls.isSized.value) {
+        <hr class="border-grey-50" />
+        <div formArrayName="sizes" class="flex flex-col gap-4">
+          @for (size of sizesArray.controls; track $index) {
+          <div [formGroupName]="$index" class="flex items-end gap-3">
+            <div class="flex flex-col gap-2 flex-1">
+              <label class="text-sm text-grey-400 font-semibold">Talla / Tamaño<span class="text-red-500 ml-0.5">*</span></label>
+              <ui-input-text
+                formControlName="name"
+                placeholder="Ej: S, M, L, 42"
+              />
+            </div>
+            <div class="flex flex-col gap-2 flex-1">
+              <label class="text-sm text-grey-400 font-semibold">Stock (opcional)</label>
+              <ui-input-number
+                formControlName="stock"
+                mode="decimal"
+                [minFractionDigits]="0"
+                [maxFractionDigits]="0"
+                [showButtons]="false"
+                placeholder="Sin límite"
+              />
+            </div>
+            <button
+              type="button"
+              (click)="removeSize($index)"
+              class="mb-1 p-2 text-grey-400 hover:text-red-500 cursor-pointer"
+              [disabled]="sizesArray.controls.length === 1"
+              [class.opacity-30]="sizesArray.controls.length === 1"
+              [class.cursor-not-allowed]="sizesArray.controls.length === 1"
+            >
+              <ui-icon name="trash" styleClass="size-5" />
+            </button>
+          </div>
+          }
+          <button
+            type="button"
+            (click)="addSize()"
+            class="flex items-center gap-2 text-primary-500 font-semibold text-sm cursor-pointer"
+          >
+            <ui-icon name="circle-plus" styleClass="size-5" />
+            Agregar talla
+          </button>
+          <div class="flex items-center justify-between text-sm bg-grey-50 rounded-lg px-3 py-2">
+            <span class="text-grey-500 font-semibold">Stock total</span>
+            <span class="text-grey-700 font-bold">
+              {{ totalSizedStock() === null ? 'Sin límite' : (totalSizedStock() + ' unidades') }}
+            </span>
+          </div>
         </div>
         }
       </div>
@@ -322,7 +408,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="flex flex-col gap-2">
             <label class="text-base text-grey-400 font-semibold" for="price"
-              >Precio de venta</label
+              >Precio de venta<span class="text-red-500 ml-0.5">*</span></label
             >
             <ui-input-number
               formControlName="price"
@@ -463,6 +549,7 @@
       </div>
     </ui-card>
     }
+    @if (!form.controls.isSized.value) {
     <ui-card>
       <div class="flex flex-col gap-4">
         <h2 class="text-xl font-bold">Inventario</h2>
@@ -533,6 +620,7 @@
         </div>
       </div>
     </ui-card>
+    }
   </form>
   <lib-plan-limit-dialog />
 </section>

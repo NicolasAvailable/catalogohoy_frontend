@@ -21,7 +21,7 @@ import { ToggleSwitch } from 'primeng/toggleswitch';
     <p-toggleswitch
       (ngModelChange)="change($event)"
       [ngModel]="value()"
-      [disabled]="disabled()"
+      [disabled]="disabled() || defaultDisabled()"
       [styleClass]="styleClass()"
       [inputId]="toggleId()"
     />

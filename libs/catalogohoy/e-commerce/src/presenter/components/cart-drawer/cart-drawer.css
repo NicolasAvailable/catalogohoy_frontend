@@ -200,6 +200,18 @@
   text-overflow: ellipsis;
 }
 
+.cart-item__size {
+  display: inline-block;
+  margin: 0.125rem 0;
+  font-size: 0.75rem;
+  color: var(--color-grey-500);
+}
+
+.cart-item__size strong {
+  color: var(--color-grey-700);
+  font-weight: 700;
+}
+
 .cart-item__description {
   font-size: 0.75rem;
   color: #6b7280;

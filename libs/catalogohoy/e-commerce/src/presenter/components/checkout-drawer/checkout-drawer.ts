@@ -128,6 +128,7 @@ export class CheckoutDrawer {
         total: item.total,
         photo: item.photo,
         sku: item.sku ?? null,
+        size: item.size ?? null,
       })),
       total: total,
       payment_method: this.selectedPaymentMethod() || undefined,
@@ -144,7 +145,8 @@ export class CheckoutDrawer {
     // Build product list string
     let productsList = '';
     items.forEach((item: CartItem) => {
-      productsList += `• ${item.name} x${item.quantity} - ${symbol}${item.total}\n`;
+      const sizeLabel = item.size ? ` (Talla ${item.size})` : '';
+      productsList += `• ${item.name}${sizeLabel} x${item.quantity} - ${symbol}${item.total}\n`;
     });
 
     // Build total Bs string — Venezuela only (dual-currency is VE-specific)

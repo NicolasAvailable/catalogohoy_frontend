@@ -150,12 +150,23 @@ export class ProductService implements BaseProductService {
         sku: input.sku || null,
         production_cost: input.productionCost ? Number(input.productionCost) : null,
         position: nextPosition,
-        is_wholesale: input.isWholesale ?? false,
-        wholesale_tiers: input.isWholesale
-          ? input.wholesaleTiers.map((t) => ({ title: t.title, price: Number(t.price) }))
-          : [],
+        is_wholesale: input.isSized ? false : input.isWholesale ?? false,
+        wholesale_tiers:
+          !input.isSized && input.isWholesale
+            ? input.wholesaleTiers.map((t) => ({
+                title: t.title,
+                price: Number(t.price),
+              }))
+            : [],
         is_sold_out: input.isSoldOut ?? false,
         is_hidden: input.isHidden ?? false,
+        is_sized: input.isSized ?? false,
+        sizes: input.isSized
+          ? input.sizes.map((s) => ({
+              name: s.name,
+              stock: s.stock === null || s.stock === '' ? null : Number(s.stock),
+            }))
+          : [],
       })
       .select('*');
 
@@ -202,12 +213,23 @@ export class ProductService implements BaseProductService {
       stock: input.stock,
       sku: input.sku || null,
       production_cost: input.productionCost ? Number(input.productionCost) : null,
-      is_wholesale: input.isWholesale ?? false,
-      wholesale_tiers: input.isWholesale
-        ? input.wholesaleTiers.map((t) => ({ title: t.title, price: Number(t.price) }))
-        : [],
+      is_wholesale: input.isSized ? false : input.isWholesale ?? false,
+      wholesale_tiers:
+        !input.isSized && input.isWholesale
+          ? input.wholesaleTiers.map((t) => ({
+              title: t.title,
+              price: Number(t.price),
+            }))
+          : [],
       is_sold_out: input.isSoldOut ?? false,
       is_hidden: input.isHidden ?? false,
+      is_sized: input.isSized ?? false,
+      sizes: input.isSized
+        ? input.sizes.map((s) => ({
+            name: s.name,
+            stock: s.stock === null || s.stock === '' ? null : Number(s.stock),
+          }))
+        : [],
     };
 
     if (input.position !== undefined) {

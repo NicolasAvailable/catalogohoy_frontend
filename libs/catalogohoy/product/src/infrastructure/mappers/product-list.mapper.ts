@@ -27,6 +27,8 @@ export class ProductListMapper {
           wholesaleTiers: entity.wholesale_tiers ?? [],
           isSoldOut: entity.is_sold_out ?? false,
           isHidden: entity.is_hidden ?? false,
+          isSized: entity.is_sized ?? false,
+          sizes: entity.sizes ?? [],
         })
       )
     );

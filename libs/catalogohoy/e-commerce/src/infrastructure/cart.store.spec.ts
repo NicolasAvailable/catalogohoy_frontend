@@ -58,6 +58,8 @@ function buildProduct(overrides: Partial<ProductPrimitives> = {}): Product {
     wholesaleTiers: [],
     isSoldOut: false,
     isHidden: false,
+    isSized: false,
+    sizes: [],
     ...overrides,
   });
 }

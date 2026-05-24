@@ -6,6 +6,13 @@ export interface WholesaleTier {
   price: number;
 }
 
+export interface ProductSize {
+  /** Label shown to the buyer, e.g. "S", "M", "L", "42". */
+  name: string;
+  /** Units available in this size. `null` = unlimited stock. */
+  stock: number | null;
+}
+
 export class Product extends Entity {
   constructor(
     public readonly name: string,
@@ -23,7 +30,9 @@ export class Product extends Entity {
     public readonly isWholesale: boolean,
     public readonly wholesaleTiers: WholesaleTier[],
     public readonly isSoldOut: boolean,
-    public readonly isHidden: boolean
+    public readonly isHidden: boolean,
+    public readonly isSized: boolean,
+    public readonly sizes: ProductSize[]
   ) {
     super();
   }
@@ -45,7 +54,9 @@ export class Product extends Entity {
       primitives.isWholesale,
       primitives.wholesaleTiers,
       primitives.isSoldOut,
-      primitives.isHidden
+      primitives.isHidden,
+      primitives.isSized,
+      primitives.sizes
     ).withId(primitives.id);
   }
 }
@@ -68,4 +79,6 @@ export interface ProductPrimitives {
   wholesaleTiers: WholesaleTier[];
   isSoldOut: boolean;
   isHidden: boolean;
+  isSized: boolean;
+  sizes: ProductSize[];
 }

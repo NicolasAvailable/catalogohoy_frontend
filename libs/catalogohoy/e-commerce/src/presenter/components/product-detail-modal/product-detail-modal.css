@@ -23,6 +23,26 @@
   grid-area: footer;
 }
 
+/* Wholesale: each tier has its own add button, so there's no single CTA that
+   must stay pinned. The modal scrolls as one column (gallery + info + tiers)
+   like a regular modal instead of the retail fixed-footer layout. */
+.pdm--wholesale {
+  display: flex;
+  flex-direction: column;
+  grid-template-areas: none;
+  overflow-y: auto;
+}
+
+.pdm--wholesale .pdm__info {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.pdm--wholesale .pdm__footer {
+  position: static;
+  box-shadow: none;
+}
+
 @media (max-width: 600px) {
   /* Mobile: the whole card scrolls (gallery + info together) and the footer
      stays fixed at the bottom via sticky. The footer is a DIRECT child of the
@@ -432,8 +452,7 @@
 .pdm__sizes {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding-bottom: 0.25rem;
+  gap: 0.25rem;
 }
 
 .pdm__sizes-label {
@@ -449,10 +468,10 @@
 }
 
 .pdm__size-pill {
-  min-width: 2.75rem;
-  height: 2.5rem;
-  padding: 0 0.875rem;
-  border-radius: 0.625rem;
+  min-width: 2.375rem;
+  height: 2rem;
+  padding: 0 0.75rem;
+  border-radius: 0.5rem;
   border: 1.5px solid var(--color-grey-200);
   background: white;
   color: var(--color-grey-700);
@@ -481,7 +500,8 @@
 
 /* Footer — a direct child of .pdm (its own grid cell on desktop, sticky on
    mobile), so the add-to-cart button always stays fixed at the bottom of the
-   card regardless of description length — same as the cart drawer's footer. */
+   card regardless of description length — same as the cart drawer's footer.
+   Kept compact so it doesn't eat the space the price/description need. */
 .pdm__footer {
   display: flex;
   flex-direction: column;

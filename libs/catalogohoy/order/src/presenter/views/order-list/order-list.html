@@ -162,7 +162,7 @@
               <span class="text-grey-800 font-bold">Productos:</span>
               <ul class="list-disc list-inside text-grey-700 mt-0.5">
                 @for (item of order.products; track $index) {
-                <li>{{ item.quantity }}x {{ item.name }}</li>
+                <li>{{ item.quantity }}x {{ item.name }}@if (item.size) { <span class="text-grey-400">(Talla: {{ item.size }})</span> }</li>
                 }
               </ul>
             </div>
@@ -340,7 +340,7 @@
             <td class="px-6 py-3.5">
               <ul class="list-disc list-inside text-grey-700">
                 @for (item of order.products; track $index) {
-                <li>{{ item.quantity }}x {{ item.name }}</li>
+                <li>{{ item.quantity }}x {{ item.name }}@if (item.size) { <span class="text-grey-400">(Talla: {{ item.size }})</span> }</li>
                 }
               </ul>
             </td>
@@ -468,6 +468,9 @@
                     }
                     <div class="flex-1 min-w-0">
                       <span class="font-semibold text-grey-800 text-sm">{{ item.name }}</span>
+                      @if (item.size) {
+                      <span class="block text-xs text-grey-400">Talla: <span class="font-semibold text-grey-600">{{ item.size }}</span></span>
+                      }
                     </div>
                     <span class="text-sm text-grey-400 shrink-0">x{{ item.quantity }}</span>
                     <span class="text-sm font-medium text-grey-700 shrink-0">{{ cs() }}{{ item.price | number:'1.2-2' }}</span>

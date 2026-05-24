@@ -18,4 +18,6 @@ export interface ProductEntity {
   wholesale_tiers: { title: string; price: number }[];
   is_sold_out: boolean;
   is_hidden: boolean;
+  is_sized?: boolean;
+  sizes?: { name: string; stock: number | null }[];
 }
