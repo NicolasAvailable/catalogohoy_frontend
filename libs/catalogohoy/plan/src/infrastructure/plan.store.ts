@@ -11,11 +11,21 @@ import { Plan, TenantPlanUsage } from '../domain';
 import { CheckoutService } from './checkout.service';
 import { PlanService } from './plan.service';
 
+// Per-plan brand palette. Same source of truth for the navbar badge,
+// the avatar dropdown summary, and any future plan-aware accent.
+const PLAN_PALETTE: Record<string, { color: string; bg: string }> = {
+  gratis:   { color: '#64748b', bg: '#f1f5f9' },
+  basico:   { color: '#6366f1', bg: '#eef2ff' },
+  avanzado: { color: '#7c3aed', bg: '#f5f3ff' },
+};
+const DEFAULT_PALETTE = PLAN_PALETTE['basico'];
+
 type PlanState = {
   plans: Plan[];
   tenantPlanUsage: TenantPlanUsage | null;
   isLoading: boolean;
   planExpired: boolean;
+  planStartedAt: string | null;
   planExpiresAt: string | null;
   isFreePlan: boolean;
 };
@@ -25,6 +35,7 @@ const initialState: PlanState = {
   tenantPlanUsage: null,
   isLoading: false,
   planExpired: false,
+  planStartedAt: null,
   planExpiresAt: null,
   isFreePlan: false,
 };
@@ -77,6 +88,13 @@ export const PlanStore = signalStore(
     planExpiresAtDate: computed(() =>
       store.planExpiresAt() ? new Date(store.planExpiresAt()!) : null
     ),
+    planStartedAtDate: computed(() =>
+      store.planStartedAt() ? new Date(store.planStartedAt()!) : null
+    ),
+    currentPlanPalette: computed(() => {
+      const id = store.tenantPlanUsage()?.plan.id ?? '';
+      return PLAN_PALETTE[id] ?? DEFAULT_PALETTE;
+    }),
     daysUntilExpiration: computed(() => {
       const expiresAt = store.planExpiresAt();
       if (!expiresAt || store.isFreePlan()) return null;
@@ -122,6 +140,7 @@ export const PlanStore = signalStore(
               tenantPlanUsage,
               isLoading: false,
               planExpired: tenantPlanUsage.planExpired,
+              planStartedAt: tenantPlanUsage.planStartedAt,
               planExpiresAt: tenantPlanUsage.planExpiresAt,
             })
           )
@@ -138,6 +157,7 @@ export const PlanStore = signalStore(
           patchState(store, {
             tenantPlanUsage,
             planExpired: tenantPlanUsage.planExpired,
+            planStartedAt: tenantPlanUsage.planStartedAt,
             planExpiresAt: tenantPlanUsage.planExpiresAt,
           })
         );

@@ -95,6 +95,25 @@ export class Profile {
     () => (this.billingEntries() ?? []).length > 0
   );
 
+  // ── Plan summary card (Suscripción tab) ────────────────────────────
+  /** Most recent successful payment — drives the "Método de pago" and
+   *  "Última factura" fields. Falls back to the latest entry of any
+   *  status when no paid entry exists yet. */
+  public readonly latestBillingEntry = computed<BillingEntry | null>(() => {
+    const entries = this.billingEntries() ?? [];
+    if (entries.length === 0) return null;
+    return entries.find((e) => e.status === 'paid') ?? entries[0];
+  });
+
+  /** Active|expired|expiring|free — drives the status pill in the plan card. */
+  public readonly planStatus = computed<'active' | 'expired' | 'expiring' | 'free'>(() => {
+    if (this.planStore.isFreePlan()) return 'free';
+    if (this.planStore.isPlanExpired()) return 'expired';
+    const days = this.planStore.daysUntilExpiration();
+    if (days !== null && days <= 6) return 'expiring';
+    return 'active';
+  });
+
   // ── Notifications draft (Phase 3) ──────────────────────────────────
   // Mirrors the column we'll add to `users.notify_plan_expiry`. Persisted
   // through `ProfileFacade.updateNotificationPreferences` (added below).

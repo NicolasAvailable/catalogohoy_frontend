@@ -16,7 +16,70 @@
   gap: 0.125rem;
 }
 
-/* ── Item row ── */
+/* ── Plan summary (top block) ──
+ * Background + icon color come inline from PlanStore.currentPlanPalette
+ * so the dropdown matches the navbar badge exactly. The --expired modifier
+ * overrides everything because it represents state, not plan brand. */
+.pm-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.625rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: filter 0.12s ease;
+}
+
+.pm-summary:hover {
+  filter: brightness(0.96);
+}
+
+.pm-summary--expired,
+.pm-summary--expired:hover {
+  background: #fee2e2 !important;
+  filter: none;
+}
+
+.pm-summary--expired:hover {
+  background: #fecaca !important;
+}
+
+::ng-deep .pm-summary__icon {
+  flex-shrink: 0;
+}
+
+.pm-summary--expired ::ng-deep .pm-summary__icon {
+  color: #dc2626 !important;
+}
+
+.pm-summary__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.pm-summary__label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.pm-summary__sub {
+  font-size: 0.6875rem;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+.pm-summary--expired .pm-summary__sub {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+/* ── Item row (Planes / Mi Cuenta) ── */
 .pm-item {
   display: flex;
   align-items: center;
@@ -32,56 +95,21 @@
   background: var(--p-surface-100, #f1f5f9);
 }
 
-/* ── Icon badge ── */
-.pm-item__icon {
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+::ng-deep .pm-item__icon {
+  color: #64748b;
   flex-shrink: 0;
-}
-
-.pm-item__icon--plans {
-  background: #ede9fe;
-  color: #7c3aed;
-}
-
-.pm-item__icon--profile {
-  background: #dbeafe;
-  color: #2563eb;
-}
-
-/* ── Text block ── */
-.pm-item__text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
 }
 
 .pm-item__label {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: #1e293b;
   line-height: 1.2;
-}
-
-.pm-item__sub {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  line-height: 1.2;
-}
-
-/* ── Chevron ── */
-::ng-deep .pm-item__chevron {
-  color: #cbd5e1;
 }
 
 /* ── Divider ── */
 .pm-divider {
   height: 1px;
   background: #f1f5f9;
-  margin: 0.125rem 0;
+  margin: 0.25rem 0;
 }

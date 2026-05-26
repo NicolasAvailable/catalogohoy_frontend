@@ -41,6 +41,7 @@ export interface TenantPlanUsage {
   remainingCatalogs: number;
   extraCatalogs: number;
   planExpired: boolean;
+  planStartedAt: string | null;
   planExpiresAt: string | null;
 }
 
