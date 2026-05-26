@@ -193,28 +193,31 @@ export class TeamService implements BaseTeamService {
     return E.right(permissions);
   }
 
-  public async getOwnerInfo(tenantId: number): Promise<E.Either<Error, { email: string | null; name: string | null }>> {
+  public async getOwners(tenantId: number): Promise<E.Either<Error, Array<{ email: string; name: string | null }>>> {
     // Use the SECURITY DEFINER directory RPC so non-owner members can
-    // still read the owner's name/email (users RLS blocks cross-user reads).
+    // still read owner names/emails (users RLS blocks cross-user reads).
+    // A tenant can have multiple co-owners via users_tenants.role='owner'.
     const { data, error } = await this.client.rpc('get_team_directory', {
       p_tenant_id: tenantId,
     });
 
     if (error) return E.left(new Error(error.message));
 
-    const owner = ((data ?? []) as Array<{
+    const owners = ((data ?? []) as Array<{
       email: string;
       name: string | null;
       last_name: string | null;
       role: string;
-    }>).find((row) => row.role === 'owner');
+    }>)
+      .filter((row) => row.role === 'owner')
+      .map((row) => ({
+        email: row.email,
+        name: row.name
+          ? `${row.name}${row.last_name ? ' ' + row.last_name : ''}`
+          : null,
+      }));
 
-    if (!owner) return E.right({ email: null, name: null });
-
-    const name = owner.name
-      ? `${owner.name}${owner.last_name ? ' ' + owner.last_name : ''}`
-      : null;
-    return E.right({ email: owner.email, name });
+    return E.right(owners);
   }
 
   public async getMyPermissions(
