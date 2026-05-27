@@ -25,14 +25,16 @@ export class InviteMemberDialogComponent {
   protected readonly isEmailValid = computed(() =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email().trim())
   );
-  /** Blocks inviting the tenant owner or an already-invited/active member.
+  /** Blocks inviting a tenant owner or an already-invited/active member.
    *  Returns a user-facing message or null when the email is invitable. */
   protected readonly duplicateError = computed<string | null>(() => {
     if (!this.isEmailValid()) return null;
     const target = this.email().trim().toLowerCase();
-    const owner = this.teamStore.ownerEmail()?.toLowerCase() ?? '';
-    if (target === owner) {
-      return 'No puedes invitarte a ti mismo — ya eres el dueño del catálogo.';
+    const isOwner = this.teamStore
+      .owners()
+      .some((o) => o.email.toLowerCase() === target);
+    if (isOwner) {
+      return 'Este correo ya es dueño del catálogo.';
     }
     const existing = this.teamStore.members().find(
       (m) => m.invitedEmail.toLowerCase() === target && m.status !== 'declined'

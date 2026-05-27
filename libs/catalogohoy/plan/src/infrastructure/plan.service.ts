@@ -146,7 +146,7 @@ export class PlanService implements BasePlanService {
 
     const expiration = expirationResult.isRight()
       ? (expirationResult.value as TenantPlanExpiration)
-      : { planExpired: false, planExpiresAt: null };
+      : { planExpired: false, planStartedAt: null, planExpiresAt: null };
 
     return E.right({
       plan,
@@ -158,6 +158,7 @@ export class PlanService implements BasePlanService {
       remainingCatalogs,
       extraCatalogs,
       planExpired: expiration.planExpired,
+      planStartedAt: expiration.planStartedAt,
       planExpiresAt: expiration.planExpiresAt,
     });
   }

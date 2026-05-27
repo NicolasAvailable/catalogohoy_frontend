@@ -1,26 +1,40 @@
 <ui-menu #profileMenu [items]="[]" styleClass="profile-menu">
   <ng-template #end>
     <div class="pm-list">
+      @if (summary(); as s) {
+        <a
+          routerLink="profile"
+          [queryParams]="{ tab: 'subscription' }"
+          class="pm-summary"
+          [class.pm-summary--expired]="s.state === 'expired'"
+          [style.background]="s.state === 'expired' ? null : palette().bg"
+          (click)="close()"
+        >
+          <ui-icon
+            name="crown"
+            size="16"
+            styleClass="pm-summary__icon"
+            [style.color]="s.state === 'expired' ? null : palette().color"
+          />
+          <div class="pm-summary__text">
+            <span class="pm-summary__label">{{ s.label }}</span>
+            <span class="pm-summary__sub">
+              {{ s.sub }}
+              @if (s.expiresAt && s.state === 'active') {
+                · {{ s.expiresAt | date: 'd MMM' }}
+              }
+            </span>
+          </div>
+        </a>
+        <div class="pm-divider"></div>
+      }
       <a routerLink="plans" class="pm-item" (click)="close()">
-        <div class="pm-item__icon pm-item__icon--plans">
-          <ui-icon name="crown" size="16" />
-        </div>
-        <div class="pm-item__text">
-          <span class="pm-item__label">Planes</span>
-          <span class="pm-item__sub">Gestiona tu suscripción</span>
-        </div>
-        <ui-icon name="chevron-right" size="14" styleClass="pm-item__chevron" />
+        <ui-icon name="crown" size="16" styleClass="pm-item__icon" />
+        <span class="pm-item__label">Planes</span>
       </a>
-      <div class="pm-divider"></div>
       <a routerLink="profile" class="pm-item" (click)="close()">
-        <div class="pm-item__icon pm-item__icon--profile">
-          <ui-icon name="user" size="16" />
-        </div>
-        <div class="pm-item__text">
-          <span class="pm-item__label">Mi Cuenta</span>
-          <span class="pm-item__sub">Perfil y configuración</span>
-        </div>
-        <ui-icon name="chevron-right" size="14" styleClass="pm-item__chevron" />
+        <ui-icon name="user" size="16" styleClass="pm-item__icon" />
+        <span class="pm-item__label">Mi Cuenta</span>
       </a>
     </div>
   </ng-template>

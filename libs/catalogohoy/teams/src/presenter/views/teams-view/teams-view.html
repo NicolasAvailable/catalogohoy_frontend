@@ -60,14 +60,14 @@
     <section class="teams-view__section">
       <h2 class="teams-view__section-title">Miembros activos</h2>
       <div class="teams-view__members">
-        <!-- Owner card -->
-        @if (teamStore.ownerEmail()) {
+        <!-- Owner cards (a tenant can have multiple co-owners) -->
+        @for (owner of teamStore.owners(); track owner.email) {
           <div class="teams-view__member-card">
             <div class="teams-view__member-header">
               <div class="teams-view__member-info">
                 <div class="teams-view__avatar-wrap">
                   <div class="teams-view__avatar">
-                    {{ getMemberInitial(teamStore.ownerName() ?? teamStore.ownerEmail()!) }}
+                    {{ getMemberInitial(owner.name ?? owner.email) }}
                   </div>
                   <span
                     class="teams-view__status-badge teams-view__status-badge--accepted"
@@ -78,18 +78,18 @@
                   </span>
                 </div>
                 <div>
-                  @if (teamStore.ownerName()) {
+                  @if (owner.name) {
                     <p class="teams-view__member-email">
-                      {{ teamStore.ownerName() }}
-                      @if (isCurrentUser(teamStore.ownerEmail())) {
+                      {{ owner.name }}
+                      @if (isCurrentUser(owner.email)) {
                         <span class="text-xs font-semibold ml-1">(tú)</span>
                       }
                     </p>
-                    <p class="teams-view__member-status">{{ teamStore.ownerEmail() }} · Administrador</p>
+                    <p class="teams-view__member-status">{{ owner.email }} · Administrador</p>
                   } @else {
                     <p class="teams-view__member-email">
-                      {{ teamStore.ownerEmail() }}
-                      @if (isCurrentUser(teamStore.ownerEmail())) {
+                      {{ owner.email }}
+                      @if (isCurrentUser(owner.email)) {
                         <span class="text-xs font-semibold ml-1">(tú)</span>
                       }
                     </p>

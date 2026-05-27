@@ -11,11 +11,12 @@ import {
 import { PermissionAction, PermissionKey, PermissionModule, Team, TeamMember } from '../domain';
 import { TeamService } from './team.service';
 
+type TeamOwner = { email: string; name: string | null };
+
 type TeamState = {
   teamId: number | null;
   members: TeamMember[];
-  ownerEmail: string | null;
-  ownerName: string | null;
+  owners: TeamOwner[];
   isLoading: boolean;
   isInviting: boolean;
   error: string | null;
@@ -24,8 +25,7 @@ type TeamState = {
 const initialState: TeamState = {
   teamId: null,
   members: [],
-  ownerEmail: null,
-  ownerName: null,
+  owners: [],
   // Start true so the first render shows the skeleton, not the empty
   // state (there was a flash of "no tienes equipo" before ngOnInit kicks in).
   isLoading: true,
@@ -70,17 +70,17 @@ export const TeamStore = signalStore(
         const team = teamResult.value as Team;
         patchState(store, { teamId: team.id });
 
-        const [membersResult, ownerResult] = await Promise.all([
+        const [membersResult, ownersResult] = await Promise.all([
           teamService.getMembers(team.id, tenantId),
-          teamService.getOwnerInfo(tenantId),
+          teamService.getOwners(tenantId),
         ]);
 
-        const ownerInfo = ownerResult.isRight()
-          ? (ownerResult.value as { email: string | null; name: string | null })
-          : { email: null, name: null };
+        const owners = ownersResult.isRight()
+          ? (ownersResult.value as TeamOwner[])
+          : [];
 
         membersResult
-          .mapRight((members) => patchState(store, { members, ownerEmail: ownerInfo.email, ownerName: ownerInfo.name, isLoading: false }))
+          .mapRight((members) => patchState(store, { members, owners, isLoading: false }))
           .mapLeft((err) => patchState(store, { isLoading: false, error: err.message }));
       },
 
