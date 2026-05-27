@@ -60,7 +60,7 @@
         <span class="product-detail__original-price">${{ product.price }}</span>
         }
       </div>
-      @if (ecommerceStore.isVenezuela() && ecommerceStore.exchangeRate() > 0) {
+      @if (ecommerceStore.isVenezuela() && ecommerceStore.showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
       <span class="product-detail__price-bs">Bs. {{ displayPrice * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
       }
 
@@ -107,7 +107,7 @@
           <span>Agregar</span>
           <span>
             ${{ totalPrice | number:'1.2-2' }}
-            @if (ecommerceStore.isVenezuela() && ecommerceStore.exchangeRate() > 0) {
+            @if (ecommerceStore.isVenezuela() && ecommerceStore.showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
             <small class="product-detail__btn-bs">/ Bs. {{ totalPrice * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
             }
           </span>

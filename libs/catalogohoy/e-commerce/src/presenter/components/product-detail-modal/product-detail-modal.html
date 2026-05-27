@@ -127,7 +127,7 @@
             <span class="pdm__tier-title">{{ tier.title }}</span>
             <span class="pdm__tier-price">
               {{ cs() }}{{ tier.price }}
-              @if (ecommerceStore.isVenezuela() && ecommerceStore.exchangeRate() > 0) {
+              @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
               <small class="pdm__tier-price-bs">Bs. {{ tier.price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
               }
             </span>
