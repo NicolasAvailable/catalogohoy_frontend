@@ -82,8 +82,13 @@
     @if (isSized() && availableSizes().length) {
     <div class="product-card__sizes">
       <span class="product-card__sizes-label">Tallas:</span>
-      @for (size of availableSizes(); track size) {
+      @for (size of visibleSizes(); track size) {
       <span class="product-card__size-chip">{{ size }}</span>
+      }
+      @if (extraSizesCount() > 0) {
+      <span class="product-card__size-chip product-card__size-chip--more"
+        >+{{ extraSizesCount() }}</span
+      >
       }
     </div>
     }

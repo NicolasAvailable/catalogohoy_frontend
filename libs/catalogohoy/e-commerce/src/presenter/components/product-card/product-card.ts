@@ -71,6 +71,16 @@ export class ProductCard {
       .map((s) => s.name)
   );
 
+  private static readonly MAX_VISIBLE_SIZES = 4;
+
+  public readonly visibleSizes = computed(() =>
+    this.availableSizes().slice(0, ProductCard.MAX_VISIBLE_SIZES)
+  );
+
+  public readonly extraSizesCount = computed(() =>
+    Math.max(0, this.availableSizes().length - ProductCard.MAX_VISIBLE_SIZES)
+  );
+
   public readonly minWholesalePrice = computed(() => {
     const tiers = this.product().wholesaleTiers;
     if (!tiers.length) return this.product().price;
