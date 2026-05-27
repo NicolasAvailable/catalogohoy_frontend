@@ -12,6 +12,8 @@ export type CreateProductInput = {
   wholesaleTiers: { title: string; price: string }[];
   isSoldOut: boolean;
   isHidden: boolean;
+  isSized: boolean;
+  sizes: { name: string; stock: string | null }[];
 };
 
 export type UpdateProductInput = CreateProductInput & { id: string; position?: number };

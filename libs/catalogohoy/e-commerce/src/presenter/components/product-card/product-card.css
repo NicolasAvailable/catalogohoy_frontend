@@ -191,6 +191,39 @@
   flex-shrink: 0;
 }
 
+/* Available sizes — chips shown under the price so buyers see what's in
+   stock without opening the modal. */
+.product-card__sizes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.375rem;
+}
+
+.product-card__sizes-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-grey-400);
+  margin-right: 0.125rem;
+}
+
+.product-card__size-chip {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--color-grey-600);
+  background: transparent;
+  border: 1px solid var(--color-grey-200);
+  padding: 0.0625rem 0.375rem;
+  border-radius: 0.375rem;
+  line-height: 1.4;
+}
+
+.product-card__size-chip--more {
+  color: var(--color-grey-400);
+  border-style: dashed;
+}
+
 .product-card__actions {
   margin-top: auto;
   padding-top: 0.625rem;

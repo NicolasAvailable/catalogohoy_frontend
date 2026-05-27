@@ -22,7 +22,10 @@ export class Cart {
 
   public addItem(item: CartItem): Cart {
     const existingIndex = this._items.findIndex(
-      (i) => i.productId === item.productId && i.tierTitle === item.tierTitle
+      (i) =>
+        i.productId === item.productId &&
+        i.tierTitle === item.tierTitle &&
+        i.size === item.size
     );
 
     if (existingIndex >= 0) {
@@ -54,7 +57,9 @@ export class Cart {
           item.photo,
           quantity,
           item.tierTitle,
-          item.id
+          item.id,
+          item.sku,
+          item.size
         );
       }
       return item;

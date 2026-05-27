@@ -1,12 +1,13 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { StripHtmlPipe } from '@shared/presenter';
 import { IconComponent } from '@ui';
 import { CartItem } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 
 @Component({
   selector: 'lib-cart-drawer',
-  imports: [DecimalPipe, IconComponent],
+  imports: [DecimalPipe, IconComponent, StripHtmlPipe],
   templateUrl: './cart-drawer.html',
   styleUrl: './cart-drawer.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

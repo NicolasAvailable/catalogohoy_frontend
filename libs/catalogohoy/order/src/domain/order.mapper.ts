@@ -31,6 +31,8 @@ export class OrderMapper {
       quantity: i.quantity,
       total: i.total,
       photo: i.photo,
+      sku: i.sku ?? null,
+      size: i.size ?? null,
     };
   }
 

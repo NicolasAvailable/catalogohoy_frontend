@@ -57,6 +57,30 @@ export class ProductCard {
 
   public readonly isWholesale = computed(() => this.product().isWholesale);
 
+  /** Products with sizes need a size picked before adding, so the card's
+   *  "Agregar" button delegates to the modal where the buyer can choose. */
+  public readonly isSized = computed(
+    () => this.product().isSized && this.product().sizes.length > 0
+  );
+
+  /** Size labels that are still in stock (null stock = unlimited). Shown as
+   *  chips on the card so buyers see availability without opening the modal. */
+  public readonly availableSizes = computed(() =>
+    this.product()
+      .sizes.filter((s) => s.stock === null || s.stock > 0)
+      .map((s) => s.name)
+  );
+
+  private static readonly MAX_VISIBLE_SIZES = 4;
+
+  public readonly visibleSizes = computed(() =>
+    this.availableSizes().slice(0, ProductCard.MAX_VISIBLE_SIZES)
+  );
+
+  public readonly extraSizesCount = computed(() =>
+    Math.max(0, this.availableSizes().length - ProductCard.MAX_VISIBLE_SIZES)
+  );
+
   public readonly minWholesalePrice = computed(() => {
     const tiers = this.product().wholesaleTiers;
     if (!tiers.length) return this.product().price;

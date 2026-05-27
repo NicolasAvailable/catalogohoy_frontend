@@ -165,6 +165,8 @@ export class ProductExcelService {
       wholesaleTiers: [],
       isSoldOut: false,
       isHidden: false,
+      isSized: false,
+      sizes: [],
     };
 
     return this.productService.create(input);

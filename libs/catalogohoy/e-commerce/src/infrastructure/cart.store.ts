@@ -42,6 +42,8 @@ function saveCartToStorage(cart: Cart): void {
       photo: item.photo,
       quantity: item.quantity,
       tierTitle: item.tierTitle,
+      sku: item.sku,
+      size: item.size,
     }));
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   } catch {
@@ -65,18 +67,36 @@ export const CartStore = signalStore(
     items: computed(() => store.cart().items),
   })),
   withMethods((store) => ({
-    addProduct(product: Product) {
-      if (product.stock !== null) {
-        const stock = Number(product.stock);
-        if (stock <= 0) {
+    addProduct(product: Product, options?: { size?: string | null }) {
+      const size = options?.size ?? null;
+
+      // If the product is sized, prefer per-size stock; otherwise fall back
+      // to the product-level stock. Either way, "no stock" rejects the add.
+      const sizeEntry =
+        product.isSized && size
+          ? product.sizes.find((s) => s.name === size) ?? null
+          : null;
+      const effectiveStock =
+        sizeEntry !== null
+          ? sizeEntry.stock
+          : product.stock !== null
+          ? Number(product.stock)
+          : null;
+
+      if (effectiveStock !== null) {
+        if (effectiveStock <= 0) {
           toast.error('Este producto está agotado');
           return;
         }
         const currentInCart = store
           .cart()
-          .items.filter((i) => i.productId === String(product.id))
+          .items.filter(
+            (i) =>
+              i.productId === String(product.id) &&
+              i.size === size
+          )
           .reduce((sum, i) => sum + i.quantity, 0);
-        if (currentInCart >= stock) {
+        if (currentInCart >= effectiveStock) {
           toast.error('No hay más stock disponible de este producto');
           return;
         }
@@ -91,7 +111,8 @@ export const CartStore = signalStore(
         1,
         null,
         undefined,
-        product.sku ?? null
+        product.sku ?? null,
+        size
       );
       const newCart = store.cart().addItem(item);
       saveCartToStorage(newCart);

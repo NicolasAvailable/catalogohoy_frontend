@@ -6,6 +6,7 @@ export interface OrderItem {
   total: number;
   photo?: string;
   sku?: string | null;
+  size?: string | null;
   isCustom?: boolean;
   description?: string;
 }

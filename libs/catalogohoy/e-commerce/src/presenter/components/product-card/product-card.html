@@ -79,6 +79,20 @@
       }
     </div>
 
+    @if (isSized() && availableSizes().length) {
+    <div class="product-card__sizes">
+      <span class="product-card__sizes-label">Tallas:</span>
+      @for (size of visibleSizes(); track size) {
+      <span class="product-card__size-chip">{{ size }}</span>
+      }
+      @if (extraSizesCount() > 0) {
+      <span class="product-card__size-chip product-card__size-chip--more"
+        >+{{ extraSizesCount() }}</span
+      >
+      }
+    </div>
+    }
+
     <div class="product-card__actions">
       @if (isOutOfStock()) {
       <button
@@ -89,7 +103,7 @@
         <ui-icon name="package-x" styleClass="size-5" />
         Agotado
       </button>
-      } @else if (isWholesale()) {
+      } @else if (isWholesale() || isSized()) {
       <button
         type="button"
         class="product-card__add-full-btn product-card__add-full-btn--outline"

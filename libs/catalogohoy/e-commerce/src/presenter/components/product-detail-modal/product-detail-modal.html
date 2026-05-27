@@ -1,4 +1,4 @@
-<div class="pdm">
+<div class="pdm" [class.pdm--wholesale]="isWholesale">
   <button type="button" class="pdm__close" (click)="close()">
     <ui-icon name="x" styleClass="size-5" />
   </button>
@@ -60,7 +60,9 @@
     }
   </div>
 
-  <!-- Info -->
+  <!-- Info: name + price + description. On mobile this scrolls together with
+       the gallery; the footer is a direct child of .pdm (below) so it stays
+       fixed at the bottom — same pattern as the cart drawer. -->
   <div class="pdm__info">
     <div class="pdm__header">
       @if (product.categoryList.categories.length) {
@@ -108,8 +110,9 @@
       }
     </div>
     }
+  </div>
 
-    <div class="pdm__footer">
+  <div class="pdm__footer">
       @if (isOutOfStock) {
       <button type="button" class="pdm__add-btn pdm__add-btn--disabled" disabled>
         <ui-icon name="package-x" styleClass="size-5" />
@@ -141,6 +144,28 @@
         }
       </div>
       } @else {
+      @if (isSized) {
+      <div class="pdm__sizes">
+        <span class="pdm__sizes-label">Selecciona una talla</span>
+        <div class="pdm__sizes-grid" role="radiogroup" aria-label="Talla">
+          @for (size of product.sizes; track size.name) {
+          <button
+            type="button"
+            class="pdm__size-pill"
+            [class.pdm__size-pill--selected]="selectedSize() === size.name"
+            [class.pdm__size-pill--disabled]="isSizeOutOfStock(size.name)"
+            [disabled]="isSizeOutOfStock(size.name)"
+            role="radio"
+            [attr.aria-checked]="selectedSize() === size.name"
+            (click)="selectSize(size.name)"
+          >
+            {{ size.name }}
+          </button>
+          }
+        </div>
+      </div>
+      }
+
       <div class="pdm__quantity-row">
         <span class="pdm__qty-label">Cantidad</span>
         <div class="pdm__quantity-selector">
@@ -167,12 +192,12 @@
       <button
         type="button"
         class="pdm__add-btn"
-        [disabled]="!canAddMore()"
-        [class.pdm__add-btn--disabled]="!canAddMore()"
+        [disabled]="!canSubmit()"
+        [class.pdm__add-btn--disabled]="!canSubmit()"
         (click)="onAddToCart()"
       >
         <ui-icon name="shoppingCart" styleClass="size-5" />
-        <span>Agregar al carrito</span>
+        <span>{{ isSized && !selectedSize() ? 'Selecciona una talla' : 'Agregar al carrito' }}</span>
         <span class="pdm__total">
           @if (showReferencePrice()) {
           {{ cs() }}{{ displayPrice * quantity() }}
@@ -184,5 +209,4 @@
       </button>
       }
     </div>
-  </div>
 </div>

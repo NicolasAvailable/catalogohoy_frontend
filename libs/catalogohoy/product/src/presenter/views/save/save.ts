@@ -110,6 +110,8 @@ export default class Save implements OnInit {
     wholesaleTiers: this.fb.array([]),
     isSoldOut: [false],
     isHidden: [false],
+    isSized: [false],
+    sizes: this.fb.array([]),
   });
 
   private readonly descriptionValue = toSignal(
@@ -177,6 +179,31 @@ export default class Save implements OnInit {
     return this.form.get('wholesaleTiers') as FormArray;
   }
 
+  get sizesArray(): FormArray {
+    return this.form.get('sizes') as FormArray;
+  }
+
+  private readonly sizesValue = toSignal(this.sizesArray.valueChanges, {
+    initialValue: this.sizesArray.value,
+  });
+  private readonly isSizedValue = toSignal(
+    this.form.controls.isSized.valueChanges,
+    { initialValue: this.form.controls.isSized.value }
+  );
+
+  /** Sum of stock across all sizes. `null` when any size is unlimited
+   *  (so the product as a whole inherits "unlimited"). */
+  public readonly totalSizedStock = computed(() => {
+    if (!this.isSizedValue()) return null;
+    const sizes = (this.sizesValue() ?? []) as {
+      name: string;
+      stock: string | number | null;
+    }[];
+    if (sizes.length === 0) return 0;
+    if (sizes.some((s) => s.stock === null || s.stock === '')) return null;
+    return sizes.reduce((acc, s) => acc + Number(s.stock || 0), 0);
+  });
+
   ngOnInit(): void {
     this.categoryStore.categoryList$(1, 100);
     this.planStore.loadTenantPlanUsage();
@@ -243,6 +270,12 @@ export default class Save implements OnInit {
   public onWholesaleToggle(): void {
     const isWholesale = this.form.controls.isWholesale.value;
     if (isWholesale) {
+      // Wholesale and sizes are mutually exclusive — turn sizes off if it
+      // happened to be on.
+      if (this.form.controls.isSized.value) {
+        this.form.controls.isSized.setValue(false);
+        this.sizesArray.clear();
+      }
       this.form.controls.price.clearValidators();
       this.form.controls.price.setValue('');
       this.form.controls.pricePromotional.setValue('');
@@ -255,6 +288,42 @@ export default class Save implements OnInit {
       this.wholesaleTiersArray.clear();
     }
     this.form.controls.price.updateValueAndValidity();
+  }
+
+  public onSizedToggle(): void {
+    const isSized = this.form.controls.isSized.value;
+    if (isSized) {
+      // Sizes and wholesale are mutually exclusive — turn wholesale off.
+      if (this.form.controls.isWholesale.value) {
+        this.form.controls.isWholesale.setValue(false);
+        this.wholesaleTiersArray.clear();
+        this.form.controls.price.setValidators([Validators.required]);
+        this.form.controls.price.updateValueAndValidity();
+      }
+      // Sized products derive stock from per-size inputs — clear the
+      // product-level stock and force "unlimited" so submit doesn't
+      // accidentally persist a stale value.
+      this.stockMode.set('unlimited');
+      this.form.controls.stock.setValue(null);
+      if (this.sizesArray.length === 0) {
+        this.addSize();
+      }
+    } else {
+      this.sizesArray.clear();
+    }
+  }
+
+  public addSize(): void {
+    this.sizesArray.push(
+      this.fb.group({
+        name: ['', Validators.required],
+        stock: [null as string | null],
+      })
+    );
+  }
+
+  public removeSize(index: number): void {
+    this.sizesArray.removeAt(index);
   }
 
   public addTier(): void {
@@ -314,6 +383,17 @@ export default class Save implements OnInit {
         })
       );
     });
+
+    this.form.controls.isSized.setValue(product.isSized);
+    this.sizesArray.clear();
+    product.sizes.forEach((size) => {
+      this.sizesArray.push(
+        this.fb.group({
+          name: [size.name, Validators.required],
+          stock: [size.stock != null ? String(size.stock) : null],
+        })
+      );
+    });
   }
 
   public setPhoto(url: string | string[]) {
@@ -367,6 +447,8 @@ export default class Save implements OnInit {
       wholesaleTiers: this.wholesaleTiersArray.value ?? [],
       isSoldOut: this.form.controls.isSoldOut.value ?? false,
       isHidden: this.form.controls.isHidden.value ?? false,
+      isSized: this.form.controls.isSized.value ?? false,
+      sizes: this.sizesArray.value ?? [],
     };
     if (this.isCreate()) {
       const product = await this.productFacade.create(body);

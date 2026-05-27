@@ -52,7 +52,10 @@
           />
           <div class="cart-item__details">
             <h4 class="cart-item__name">{{ item.name }}</h4>
-            <p class="cart-item__description">{{ item.description }}</p>
+            @if (item.size) {
+            <span class="cart-item__size">Talla: <strong>{{ item.size }}</strong></span>
+            }
+            <p class="cart-item__description">{{ item.description | stripHtml }}</p>
             <span class="cart-item__price">
               {{ cs() }}{{ item.price }}
               @if (ecommerceStore.isVenezuela() && ecommerceStore.exchangeRate() > 0) {
