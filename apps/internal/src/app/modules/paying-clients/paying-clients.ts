@@ -393,14 +393,34 @@ export class PayingClients implements OnInit {
     if (this.impersonatingId() !== null) return;
     this.impersonatingId.set(client.tenantId);
     this.impersonateError.set(null);
+
+    // Open the new tab synchronously inside the click handler. Safari (and
+    // strict Chrome) block window.open() that runs after an await because the
+    // user-gesture chain is broken, which is what caused this button to fail
+    // in Safari. We can't pass noopener here or the returned reference would
+    // be null and we couldn't navigate it later; opener is severed manually
+    // after navigation, and the target domain is ours so the exposure window
+    // is negligible.
+    const newWindow = window.open('about:blank', '_blank');
+
     const result = await this.impersonateService.getImpersonationLink(
       client.tenantId
     );
     this.impersonatingId.set(null);
     result.fold(
-      (err) => this.impersonateError.set(err.message),
+      (err) => {
+        this.impersonateError.set(err.message);
+        newWindow?.close();
+      },
       (data) => {
-        window.open(data.actionLink, '_blank', 'noopener,noreferrer');
+        if (newWindow && !newWindow.closed) {
+          newWindow.opener = null;
+          newWindow.location.replace(data.actionLink);
+        } else {
+          this.impersonateError.set(
+            'Tu navegador bloqueó la ventana. Permití los popups para este sitio e intentá de nuevo.'
+          );
+        }
       }
     );
   }
