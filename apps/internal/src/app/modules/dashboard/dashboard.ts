@@ -275,7 +275,17 @@ type ChartType = 'bar' | 'area';
               <ui-icon name="globe" size="18" styleClass="text-sky-500" />
             </div>
           </header>
-          @if (countryBreakdown().length === 0) {
+          @if (tenants.isLoading() && countryBreakdown().length === 0) {
+            <ul class="flex flex-col gap-2" aria-busy="true">
+              @for (_ of countrySkeletonRows; track $index) {
+                <li class="flex items-center gap-3 animate-pulse">
+                  <span class="h-4 rounded bg-grey-50 flex-1 min-w-0"></span>
+                  <span class="h-1.5 w-24 rounded-full bg-grey-50 shrink-0"></span>
+                  <span class="h-4 w-12 rounded bg-grey-50 shrink-0"></span>
+                </li>
+              }
+            </ul>
+          } @else if (countryBreakdown().length === 0) {
             <div class="flex items-center justify-center py-8 text-xs text-grey-400">
               Sin datos todavía
             </div>
@@ -394,6 +404,9 @@ export class Dashboard implements OnInit {
   protected readonly users = inject(UsersStore);
   protected readonly tenants = inject(TenantsStore);
   protected readonly payingClients = inject(PayingClientsStore);
+
+  /** Static array used to drive the skeleton @for in the country card. */
+  protected readonly countrySkeletonRows = Array.from({ length: 4 });
 
   /** Keys of chart/card sections whose value is currently hidden. */
   private readonly hidden = signal<Set<string>>(new Set());
