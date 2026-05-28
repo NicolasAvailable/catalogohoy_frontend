@@ -9,6 +9,10 @@ import {
 } from '@angular/core';
 import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
 import { IconComponent } from '@ui';
+import { groupByOwner } from '../paying-accounts/paying-accounts.model';
+import { PayingClientsStore } from '../paying-clients/paying-clients.store';
+import { TIER_MONTHLY_PRICE_USD } from '../shared/plan-cycle.model';
+import { TenantsStore } from '../tenants/tenants.store';
 import { UsersStore } from '../users/users.store';
 import { RevenuePoint } from './revenue.service';
 import { RevenueStore } from './revenue.store';
@@ -251,6 +255,127 @@ type ChartType = 'bar' | 'area';
         }
       </section>
 
+      <!-- Country breakdown + top paying accounts -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <article
+          class="flex flex-col gap-3 p-5 bg-white rounded-xl border border-grey-50"
+        >
+          <header class="flex items-start justify-between gap-3">
+            <div class="flex flex-col">
+              <span class="text-sm font-medium text-grey-400">
+                Clientes por país
+              </span>
+              <span class="text-xs text-grey-300">
+                Catálogos con plan pago activo
+              </span>
+            </div>
+            <div
+              class="flex items-center justify-center w-9 h-9 rounded-lg bg-sky-50 shrink-0"
+            >
+              <ui-icon name="globe" size="18" styleClass="text-sky-500" />
+            </div>
+          </header>
+          @if (countryBreakdown().length === 0) {
+            <div class="flex items-center justify-center py-8 text-xs text-grey-400">
+              Sin datos todavía
+            </div>
+          } @else {
+            <ul class="flex flex-col gap-2">
+              @for (entry of countryBreakdown(); track entry.code) {
+                <li class="flex items-center gap-3">
+                  <span
+                    class="text-sm font-medium text-grey-700 truncate flex-1 min-w-0"
+                  >
+                    {{ entry.name }}
+                  </span>
+                  <div
+                    class="h-1.5 w-24 rounded-full bg-grey-50 overflow-hidden shrink-0"
+                  >
+                    <div
+                      class="h-full bg-sky-500 rounded-full"
+                      [style.width.%]="entry.pct"
+                    ></div>
+                  </div>
+                  <span
+                    class="text-xs text-grey-500 tabular-nums w-12 text-right shrink-0"
+                  >
+                    {{ entry.count }} ({{ entry.pct }}%)
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </article>
+
+        <article
+          class="flex flex-col gap-3 p-5 bg-white rounded-xl border border-grey-50"
+        >
+          <header class="flex items-start justify-between gap-3">
+            <div class="flex flex-col">
+              <span class="text-sm font-medium text-grey-400">
+                Clientes que pagan más
+              </span>
+              <span class="text-xs text-grey-300">
+                Top 5 por valor mensual aproximado (suma de precios de lista)
+              </span>
+            </div>
+            <div
+              class="flex items-center justify-center w-9 h-9 rounded-lg bg-amber-50 shrink-0"
+            >
+              <ui-icon name="crown" size="18" styleClass="text-amber-500" />
+            </div>
+          </header>
+          @if (topAccounts().length === 0) {
+            <div class="flex items-center justify-center py-8 text-xs text-grey-400">
+              Sin datos todavía
+            </div>
+          } @else {
+            <ul class="flex flex-col gap-2">
+              @for (account of topAccounts(); track account.email) {
+                <li class="flex items-center gap-3">
+                  @if (account.avatarUrl) {
+                    <img
+                      [src]="account.avatarUrl"
+                      [alt]="account.name ?? ''"
+                      referrerpolicy="no-referrer"
+                      class="w-8 h-8 rounded-full object-cover shrink-0 border border-grey-50"
+                    />
+                  } @else {
+                    <div
+                      class="w-8 h-8 rounded-full bg-primary-500 text-white text-xs font-bold flex items-center justify-center shrink-0 uppercase"
+                    >
+                      {{ (account.name ?? account.email).charAt(0) }}
+                    </div>
+                  }
+                  <div class="flex flex-col min-w-0 flex-1">
+                    <strong
+                      class="text-sm font-semibold text-grey-700 truncate"
+                    >
+                      {{ account.name ?? account.email }}
+                    </strong>
+                    <span class="text-xs text-grey-400 truncate">
+                      {{ account.catalogCount }}
+                      {{
+                        account.catalogCount === 1 ? 'catálogo' : 'catálogos'
+                      }}
+                    </span>
+                  </div>
+                  <strong
+                    class="text-sm font-bold text-grey-700 tabular-nums shrink-0"
+                  >
+                    {{
+                      account.monthlyValueUsd
+                        | currency: 'USD' : 'symbol' : '1.0-2'
+                    }}
+                    <span class="text-xs font-medium text-grey-400">/mes</span>
+                  </strong>
+                </li>
+              }
+            </ul>
+          }
+        </article>
+      </section>
+
       <section class="bg-white rounded-xl border border-grey-50 p-6">
         <h2 class="text-base font-semibold text-grey-700 mb-4">
           Bienvenido al sistema interno
@@ -267,6 +392,8 @@ type ChartType = 'bar' | 'area';
 export class Dashboard implements OnInit {
   protected readonly revenue = inject(RevenueStore);
   protected readonly users = inject(UsersStore);
+  protected readonly tenants = inject(TenantsStore);
+  protected readonly payingClients = inject(PayingClientsStore);
 
   /** Keys of chart/card sections whose value is currently hidden. */
   private readonly hidden = signal<Set<string>>(new Set());
@@ -359,9 +486,60 @@ export class Dashboard implements OnInit {
     },
   ]);
 
+  /** Tenants with an active paid plan, broken down by country. ISO codes are
+   *  translated via Intl.DisplayNames so we don't need a hand-maintained map. */
+  protected readonly countryBreakdown = computed(() => {
+    const paid = this.tenants
+      .tenants()
+      .filter((t) => t.plan.tier !== 'gratis');
+    const counts = new Map<string, number>();
+    for (const t of paid) {
+      const code = (t.countryCode ?? '').toUpperCase() || '__';
+      counts.set(code, (counts.get(code) ?? 0) + 1);
+    }
+    const namer = new Intl.DisplayNames(['es'], { type: 'region' });
+    const total = paid.length;
+    return Array.from(counts.entries())
+      .map(([code, count]) => ({
+        code,
+        name:
+          code === '__'
+            ? 'Sin país'
+            : (() => {
+                try {
+                  return namer.of(code) ?? code;
+                } catch {
+                  return code;
+                }
+              })(),
+        count,
+        pct: total > 0 ? Math.round((count / total) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+  });
+
+  /** Top 5 paying accounts by approximate monthly value (∑ list price of
+   *  each catalog's current tier). Without per-tenant payment history loaded
+   *  on the dashboard, list price is the cheapest fair proxy. */
+  protected readonly topAccounts = computed(() => {
+    const accounts = groupByOwner(this.payingClients.clients());
+    return accounts
+      .map((a) => ({
+        ...a,
+        monthlyValueUsd: a.catalogs.reduce((sum, c) => {
+          if (c.tier === 'gratis') return sum;
+          return sum + TIER_MONTHLY_PRICE_USD[c.tier];
+        }, 0),
+      }))
+      .sort((a, b) => b.monthlyValueUsd - a.monthlyValueUsd)
+      .slice(0, 5);
+  });
+
   ngOnInit(): void {
     this.revenue.load(12);
     this.users.load();
+    this.tenants.load();
+    this.payingClients.load();
   }
 
   private pointsAs(
