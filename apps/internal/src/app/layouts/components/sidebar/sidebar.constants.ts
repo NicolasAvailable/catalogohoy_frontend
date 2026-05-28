@@ -23,8 +23,13 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     routerLink: '/users',
   },
   {
-    label: 'Clientes pagos',
+    label: 'Catálogos activos',
     icon: 'credit-card',
     routerLink: '/paying-clients',
+  },
+  {
+    label: 'Clientes pagos',
+    icon: 'contact',
+    routerLink: '/paying-accounts',
   },
 ];

@@ -1,12 +1,15 @@
 import {
   Component,
   computed,
+  effect,
   output,
   signal,
   viewChild,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { DialogComponent, IconComponent } from '@ui';
 import {
+  defaultAmountUsd,
   PLAN_CYCLES,
   PLAN_TIERS,
   PlanCycle,
@@ -18,12 +21,13 @@ export interface AssignPlanPayload {
   tenantId: number;
   tier: PlanTier;
   cycle: PlanCycle;
+  amountUsd: number;
 }
 
 @Component({
   selector: 'app-assign-plan-dialog',
   standalone: true,
-  imports: [DialogComponent, IconComponent],
+  imports: [DialogComponent, IconComponent, FormsModule],
   template: `
     <ui-dialog
       headerTitle="Asignar plan"
@@ -135,6 +139,39 @@ export interface AssignPlanPayload {
             </div>
           </div>
 
+          <div class="flex flex-col gap-2">
+            <span
+              class="text-xs text-grey-400 uppercase font-semibold tracking-wide"
+            >
+              Monto cobrado (USD)
+            </span>
+            <div
+              class="flex items-center gap-2 px-3 py-2 rounded-lg border border-grey-50 focus-within:border-primary-500 transition-colors"
+            >
+              <span class="text-grey-400 text-sm font-semibold">$</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                inputmode="decimal"
+                class="flex-1 outline-none text-sm text-grey-700 bg-transparent"
+                [ngModel]="amountUsd()"
+                (ngModelChange)="onAmountChange($event)"
+              />
+              <button
+                type="button"
+                (click)="resetAmount()"
+                class="text-[10px] font-semibold text-primary-500 hover:text-primary-600 uppercase tracking-wide cursor-pointer"
+              >
+                Sugerido
+              </button>
+            </div>
+            <span class="text-[11px] text-grey-400 leading-tight">
+              Se guarda como monto cobrado de la suscripción. Puede ser
+              <strong>0</strong> si es una cuenta de prueba o cortesía.
+            </span>
+          </div>
+
           <div
             class="flex items-center justify-end gap-2 pt-3 border-t border-grey-50"
           >
@@ -179,24 +216,58 @@ export class AssignPlanDialog {
   protected readonly currentTenant = signal<Tenant | null>(null);
   protected readonly selectedTier = signal<PlanTier>('basico');
   protected readonly selectedCycle = signal<PlanCycle>('monthly');
+  protected readonly amountUsd = signal<number>(0);
+  /** Tracks whether the user has manually edited the amount. */
+  private readonly amountTouched = signal<boolean>(false);
 
   protected readonly canConfirm = computed(
-    () => !!this.selectedTier() && !!this.selectedCycle()
+    () =>
+      !!this.selectedTier() &&
+      !!this.selectedCycle() &&
+      this.amountUsd() !== null &&
+      this.amountUsd() !== undefined &&
+      Number(this.amountUsd()) >= 0
   );
 
   private readonly dialog = viewChild.required(DialogComponent);
+
+  constructor() {
+    // Auto-update suggested amount when tier/cycle change and the user
+    // hasn't manually edited the field.
+    effect(() => {
+      const tier = this.selectedTier();
+      const cycle = this.selectedCycle();
+      if (!this.amountTouched()) {
+        this.amountUsd.set(defaultAmountUsd(tier, cycle));
+      }
+    });
+  }
 
   public show(tenant: Tenant): void {
     this.currentTenant.set(tenant);
     const tier =
       tenant.plan.tier === 'gratis' ? 'basico' : tenant.plan.tier;
+    const cycle = tenant.plan.cycle ?? 'monthly';
+    this.amountTouched.set(false);
     this.selectedTier.set(tier);
-    this.selectedCycle.set(tenant.plan.cycle ?? 'monthly');
+    this.selectedCycle.set(cycle);
+    this.amountUsd.set(defaultAmountUsd(tier, cycle));
     this.dialog().show();
   }
 
   public hide(): void {
     this.dialog().hide();
+  }
+
+  protected resetAmount(): void {
+    this.amountUsd.set(defaultAmountUsd(this.selectedTier(), this.selectedCycle()));
+    this.amountTouched.set(false);
+  }
+
+  protected onAmountChange(value: number | string | null): void {
+    const parsed = value === null || value === undefined || value === '' ? 0 : Number(value);
+    this.amountUsd.set(Number.isFinite(parsed) ? parsed : 0);
+    this.amountTouched.set(true);
   }
 
   protected onConfirm(): void {
@@ -206,6 +277,7 @@ export class AssignPlanDialog {
       tenantId: tenant.id,
       tier: this.selectedTier(),
       cycle: this.selectedCycle(),
+      amountUsd: Number(this.amountUsd()) || 0,
     });
     this.hide();
   }

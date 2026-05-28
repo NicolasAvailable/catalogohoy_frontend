@@ -9,6 +9,9 @@ import {
   ArrowUp,
   ArrowUpCircle,
   ArrowUpDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  CalendarDays,
   Ban,
   Banknote,
   BarChart3,
@@ -244,6 +247,9 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       ChevronDownIcon,
       CircleX,
       WandSparkles,
+      ArrowUpRight,
+      ArrowDownRight,
+      CalendarDays,
     })
   );
 };

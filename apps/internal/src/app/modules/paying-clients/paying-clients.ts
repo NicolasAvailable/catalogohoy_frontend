@@ -10,7 +10,14 @@ import {
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@ui';
 import { cycleLabel, tierLabel } from '../shared/plan-cycle.model';
+import {
+  AssignPlanDialog,
+  AssignPlanPayload,
+} from '../tenants/components/assign-plan-dialog/assign-plan-dialog';
+import { Tenant } from '../tenants/tenants.model';
+import { TenantsStore } from '../tenants/tenants.store';
 import { ClientDetailDialog } from './components/client-detail-dialog/client-detail-dialog';
+import { ImpersonateTenantService } from './impersonate-tenant.service';
 import {
   computeStatus,
   PayingClient,
@@ -23,15 +30,21 @@ type StatusFilter = 'all' | PayingClientStatus;
 @Component({
   selector: 'app-paying-clients',
   standalone: true,
-  imports: [IconComponent, FormsModule, DatePipe, ClientDetailDialog],
+  imports: [
+    IconComponent,
+    FormsModule,
+    DatePipe,
+    ClientDetailDialog,
+    AssignPlanDialog,
+  ],
   host: { class: 'flex-1 min-h-0 flex flex-col' },
   template: `
     <div class="flex flex-col gap-6 h-full min-h-0">
       <header class="flex flex-col gap-1 shrink-0">
-        <h1 class="text-2xl font-bold text-grey-700">Clientes pagos</h1>
+        <h1 class="text-2xl font-bold text-grey-700">Catálogos activos</h1>
         <p class="text-sm text-grey-400">
-          Catálogos con suscripción activa. Click en un cliente para ver el
-          historial de planes que ha tenido.
+          Catálogos con suscripción activa. Click en uno para ver el historial
+          de planes que ha tenido.
         </p>
       </header>
 
@@ -142,6 +155,15 @@ type StatusFilter = 'all' | PayingClientStatus;
         </div>
       }
 
+      @if (impersonateError()) {
+        <div
+          class="flex items-center gap-2 px-4 py-3 rounded-md bg-red-50 border border-red-100 shrink-0"
+        >
+          <ui-icon name="circle-alert" size="16" styleClass="text-red-500" />
+          <span class="text-sm text-red-600">{{ impersonateError() }}</span>
+        </div>
+      }
+
       <section
         class="flex-1 min-h-0 bg-white rounded-xl border border-grey-50 overflow-hidden flex flex-col"
       >
@@ -213,9 +235,37 @@ type StatusFilter = 'all' | PayingClientStatus;
                           </div>
                         }
                         <div class="flex flex-col min-w-0">
-                          <strong class="font-semibold text-grey-700 truncate">
-                            {{ client.tenantName ?? 'Sin nombre' }}
-                          </strong>
+                          <div class="flex items-center gap-1.5 min-w-0">
+                            <strong class="font-semibold text-grey-700 truncate">
+                              {{ client.tenantName ?? 'Sin nombre' }}
+                            </strong>
+                            @if (client.tenantSlug) {
+                              <button
+                                type="button"
+                                (click)="copyCatalogUrl(client); $event.stopPropagation()"
+                                class="inline-flex items-center justify-center w-6 h-6 rounded-md text-grey-400 hover:text-primary-500 hover:bg-primary-50 transition-colors cursor-pointer shrink-0"
+                                [title]="
+                                  copiedTenantId() === client.tenantId
+                                    ? 'Copiado'
+                                    : 'Copiar URL del catálogo'
+                                "
+                              >
+                                <ui-icon
+                                  [name]="
+                                    copiedTenantId() === client.tenantId
+                                      ? 'check'
+                                      : 'copy'
+                                  "
+                                  size="14"
+                                  [styleClass]="
+                                    copiedTenantId() === client.tenantId
+                                      ? 'text-emerald-500'
+                                      : ''
+                                  "
+                                />
+                              </button>
+                            }
+                          </div>
                           <span class="text-xs text-grey-400 truncate">
                             {{ client.ownerName ?? '—' }} ·
                             {{ client.ownerEmail ?? '—' }}
@@ -270,18 +320,43 @@ type StatusFilter = 'all' | PayingClientStatus;
                       </span>
                     </td>
                     <td class="px-4 py-3 text-right border-b border-grey-50">
-                      <button
-                        type="button"
-                        (click)="openDetail(client); $event.stopPropagation()"
-                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors cursor-pointer text-xs font-semibold"
-                      >
-                        <ui-icon
-                          name="eye"
-                          size="12"
-                          styleClass="text-primary-500"
-                        />
-                        Ver detalle
-                      </button>
+                      <div class="inline-flex items-center gap-2">
+                        <button
+                          type="button"
+                          (click)="
+                            enterAsAdmin(client); $event.stopPropagation()
+                          "
+                          [disabled]="impersonatingId() === client.tenantId"
+                          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors cursor-pointer text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          @if (impersonatingId() === client.tenantId) {
+                            <ui-icon
+                              name="loader-circle"
+                              size="12"
+                              styleClass="text-emerald-500 animate-spin"
+                            />
+                          } @else {
+                            <ui-icon
+                              name="log-in"
+                              size="12"
+                              styleClass="text-emerald-500"
+                            />
+                          }
+                          Entrar como admin
+                        </button>
+                        <button
+                          type="button"
+                          (click)="openDetail(client); $event.stopPropagation()"
+                          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors cursor-pointer text-xs font-semibold"
+                        >
+                          <ui-icon
+                            name="eye"
+                            size="12"
+                            styleClass="text-primary-500"
+                          />
+                          Ver detalle
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 } @empty {
@@ -308,14 +383,24 @@ type StatusFilter = 'all' | PayingClientStatus;
       </section>
     </div>
 
-    <app-client-detail-dialog />
+    <app-client-detail-dialog (adjustPlan)="onAdjustPlan($event)" />
+    <app-assign-plan-dialog
+      (assign)="onAssign($event)"
+      (remove)="onRemovePlan($event)"
+    />
   `,
 })
 export class PayingClients implements OnInit {
   protected readonly store = inject(PayingClientsStore);
+  private readonly impersonateService = inject(ImpersonateTenantService);
+  private readonly tenantsStore = inject(TenantsStore);
 
   protected readonly searchTerm = signal('');
   protected readonly statusFilter = signal<StatusFilter>('all');
+  protected readonly impersonatingId = signal<number | null>(null);
+  protected readonly impersonateError = signal<string | null>(null);
+  protected readonly copiedTenantId = signal<number | null>(null);
+  private copyResetTimeout: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly statusFilters: { value: StatusFilter; label: string }[] = [
     { value: 'all', label: 'Todos' },
@@ -325,6 +410,7 @@ export class PayingClients implements OnInit {
   ];
 
   private readonly detailDialog = viewChild.required(ClientDetailDialog);
+  private readonly assignDialog = viewChild.required(AssignPlanDialog);
 
   protected readonly filteredClients = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
@@ -349,6 +435,97 @@ export class PayingClients implements OnInit {
   protected async openDetail(client: PayingClient): Promise<void> {
     await this.store.openDetail(client.tenantId);
     this.detailDialog().show();
+  }
+
+  protected async copyCatalogUrl(client: PayingClient): Promise<void> {
+    if (!client.tenantSlug) return;
+    const url = `https://${client.tenantSlug}.catalogohoy.com`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Fallback for environments without clipboard permission (rare in
+      // the internal panel, but cheaper than a try/catch on every call).
+      return;
+    }
+    this.copiedTenantId.set(client.tenantId);
+    if (this.copyResetTimeout) clearTimeout(this.copyResetTimeout);
+    this.copyResetTimeout = setTimeout(() => this.copiedTenantId.set(null), 1500);
+  }
+
+  protected onAdjustPlan(client: PayingClient): void {
+    // The detail dialog already hid itself before emitting. AssignPlanDialog
+    // expects a Tenant; we adapt from PayingClient (the only field it does
+    // not have is country_code, which the dialog ignores).
+    const tenant: Tenant = {
+      id: client.tenantId,
+      name: client.tenantName,
+      slug: client.tenantSlug,
+      countryCode: null,
+      logo: client.tenantLogo,
+      ownerName: client.ownerName,
+      ownerEmail: client.ownerEmail,
+      createdAt: client.startedAt,
+      plan: {
+        tier: client.tier,
+        cycle: client.cycle,
+        startedAt: client.startedAt,
+        expiresAt: client.expiresAt,
+        expired:
+          client.daysUntilExpiry !== null && client.daysUntilExpiry < 0,
+      },
+    };
+    this.assignDialog().show(tenant);
+  }
+
+  protected async onAssign(payload: AssignPlanPayload): Promise<void> {
+    await this.tenantsStore.assignPlan(
+      payload.tenantId,
+      payload.tier,
+      payload.cycle,
+      payload.amountUsd
+    );
+    await this.store.load();
+  }
+
+  protected async onRemovePlan(tenantId: number): Promise<void> {
+    await this.tenantsStore.removePlan(tenantId);
+    await this.store.load();
+  }
+
+  protected async enterAsAdmin(client: PayingClient): Promise<void> {
+    if (this.impersonatingId() !== null) return;
+    this.impersonatingId.set(client.tenantId);
+    this.impersonateError.set(null);
+
+    // Open the new tab synchronously inside the click handler. Safari (and
+    // strict Chrome) block window.open() that runs after an await because the
+    // user-gesture chain is broken, which is what caused this button to fail
+    // in Safari. We can't pass noopener here or the returned reference would
+    // be null and we couldn't navigate it later; opener is severed manually
+    // after navigation, and the target domain is ours so the exposure window
+    // is negligible.
+    const newWindow = window.open('about:blank', '_blank');
+
+    const result = await this.impersonateService.getImpersonationLink(
+      client.tenantId
+    );
+    this.impersonatingId.set(null);
+    result.fold(
+      (err) => {
+        this.impersonateError.set(err.message);
+        newWindow?.close();
+      },
+      (data) => {
+        if (newWindow && !newWindow.closed) {
+          newWindow.opener = null;
+          newWindow.location.replace(data.actionLink);
+        } else {
+          this.impersonateError.set(
+            'Tu navegador bloqueó la ventana. Permití los popups para este sitio e intentá de nuevo.'
+          );
+        }
+      }
+    );
   }
 
   protected computeStatus = computeStatus;

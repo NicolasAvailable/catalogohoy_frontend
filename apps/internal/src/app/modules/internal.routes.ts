@@ -23,4 +23,11 @@ export const internalRoutes: Route[] = [
         (m) => m.payingClientsRoutes
       ),
   },
+  {
+    path: 'paying-accounts',
+    loadChildren: () =>
+      import('./paying-accounts/paying-accounts.routes').then(
+        (m) => m.payingAccountsRoutes
+      ),
+  },
 ];

@@ -1,11 +1,12 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, inject, viewChild } from '@angular/core';
+import { CurrencyPipe, DatePipe, formatDate } from '@angular/common';
+import { Component, inject, output, viewChild } from '@angular/core';
 import { DialogComponent, IconComponent } from '@ui';
 import {
   cycleLabel,
   tierLabel,
 } from '../../../shared/plan-cycle.model';
 import { PayingClient } from '../../paying-clients.model';
+import { WhatsappContact } from '../../paying-clients.service';
 import { PayingClientsStore } from '../../paying-clients.store';
 
 @Component({
@@ -224,7 +225,31 @@ import { PayingClientsStore } from '../../paying-clients.store';
             }
           </div>
 
-          <div class="flex items-center justify-end gap-2 pt-3 border-t border-grey-50">
+          <div class="flex items-center justify-end gap-2 pt-3 border-t border-grey-50 flex-wrap">
+            @for (contact of store.whatsappNumbers(); track contact.number) {
+              <a
+                [href]="buildWhatsappUrl(client, contact)"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 transition-colors cursor-pointer"
+                [title]="contact.name ? contact.name + ' · ' + contact.number : contact.number"
+              >
+                <ui-icon name="message-circle" size="14" styleClass="text-white" />
+                @if (store.whatsappNumbers().length > 1 && contact.name) {
+                  WhatsApp · {{ contact.name }}
+                } @else {
+                  Enviar WhatsApp
+                }
+              </a>
+            }
+            <button
+              type="button"
+              (click)="onAdjustPlan(client)"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors cursor-pointer"
+            >
+              <ui-icon name="settings-2" size="14" styleClass="text-white" />
+              Ajustar plan
+            </button>
             <button
               type="button"
               (click)="hide()"
@@ -239,6 +264,8 @@ import { PayingClientsStore } from '../../paying-clients.store';
   `,
 })
 export class ClientDetailDialog {
+  public readonly adjustPlan = output<PayingClient>();
+
   protected readonly store = inject(PayingClientsStore);
   private readonly dialog = viewChild.required(DialogComponent);
 
@@ -249,6 +276,45 @@ export class ClientDetailDialog {
   public hide(): void {
     this.dialog().hide();
     this.store.closeDetail();
+  }
+
+  protected onAdjustPlan(client: PayingClient): void {
+    this.dialog().hide();
+    this.adjustPlan.emit(client);
+  }
+
+  /** Builds a wa.me deeplink with an expiry-aware default message. The phone
+   *  number is stripped of every non-digit (wa.me requires E.164 digits only). */
+  protected buildWhatsappUrl(
+    client: PayingClient,
+    contact: WhatsappContact
+  ): string {
+    const digits = contact.number.replace(/\D+/g, '');
+    const message = this.buildWhatsappMessage(client);
+    return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+  }
+
+  private buildWhatsappMessage(client: PayingClient): string {
+    const greeting = client.ownerName?.trim()
+      ? `Hola ${client.ownerName.trim()}! 👋`
+      : 'Hola! 👋';
+    const tenant = client.tenantName?.trim() || 'tu catálogo';
+    const tier = tierLabel(client.tier);
+    const days = client.daysUntilExpiry;
+    const expiry = client.expiresAt
+      ? formatDate(client.expiresAt, 'dd/MM/yyyy', 'es-ES')
+      : null;
+
+    if (days !== null && days < 0 && expiry) {
+      return `${greeting} Te escribo de CatalogoHoy. Notamos que tu plan ${tier} de "${tenant}" venció el ${expiry}. ¿Te ayudo a reactivarlo?`;
+    }
+    if (days !== null && days <= 7 && expiry) {
+      return `${greeting} Te escribo de CatalogoHoy. Tu plan ${tier} de "${tenant}" vence el ${expiry}. ¿Te ayudo a renovarlo?`;
+    }
+    if (expiry) {
+      return `${greeting} Te escribo de CatalogoHoy sobre tu plan ${tier} de "${tenant}" (vence el ${expiry}).`;
+    }
+    return `${greeting} Te escribo de CatalogoHoy sobre tu plan ${tier} de "${tenant}".`;
   }
 
   protected initial(client: PayingClient): string {

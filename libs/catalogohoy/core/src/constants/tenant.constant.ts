@@ -9,7 +9,7 @@ export const DEV_TENANT_SLUG = 'catalogohoy';
  * Key: subdomain slug, Value: target URL.
  */
 export const RESERVED_SUBDOMAIN_REDIRECTS: Record<string, string> = {
-  internal: 'https://internal.catalogohoy.com',
+  internal: 'https://catalogohoy-internal.vercel.app',
 };
 
 /**
