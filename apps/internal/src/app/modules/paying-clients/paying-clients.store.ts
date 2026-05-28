@@ -11,11 +11,12 @@ import {
   PayingClient,
   SubscriptionHistoryEntry,
 } from './paying-clients.model';
-import { PayingClientsService } from './paying-clients.service';
+import { PayingClientsService, WhatsappContact } from './paying-clients.service';
 
 type PayingClientsState = {
   clients: PayingClient[];
   history: SubscriptionHistoryEntry[];
+  whatsappNumbers: WhatsappContact[];
   selectedTenantId: number | null;
   isLoading: boolean;
   isLoadingHistory: boolean;
@@ -25,6 +26,7 @@ type PayingClientsState = {
 const initialState: PayingClientsState = {
   clients: [],
   history: [],
+  whatsappNumbers: [],
   selectedTenantId: null,
   isLoading: false,
   isLoadingHistory: false,
@@ -69,11 +71,19 @@ export const PayingClientsStore = signalStore(
         selectedTenantId: tenantId,
         isLoadingHistory: true,
         history: [],
+        whatsappNumbers: [],
       });
-      const result = await service.getHistory(tenantId);
-      result.fold(
+      // Fetch in parallel — history drives the spinner, whatsapp is best-effort.
+      const [historyResult, whatsappResult] = await Promise.all([
+        service.getHistory(tenantId),
+        service.getWhatsappNumbers(tenantId),
+      ]);
+      historyResult.fold(
         () => patchState(store, { isLoadingHistory: false }),
         (history) => patchState(store, { history, isLoadingHistory: false })
+      );
+      whatsappResult.mapRight((whatsappNumbers) =>
+        patchState(store, { whatsappNumbers })
       );
     },
 
@@ -81,6 +91,7 @@ export const PayingClientsStore = signalStore(
       patchState(store, {
         selectedTenantId: null,
         history: [],
+        whatsappNumbers: [],
         isLoadingHistory: false,
       });
     },

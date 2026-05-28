@@ -34,6 +34,11 @@ interface HistoryRow {
   created_at: string;
 }
 
+export interface WhatsappContact {
+  name: string;
+  number: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PayingClientsService {
   private readonly client = SupabaseClientProvider.getInstance();
@@ -64,6 +69,29 @@ export class PayingClientsService {
     );
 
     return E.right(clients);
+  }
+
+  /** Reads the catalog's configured WhatsApp buttons so the admin can reach
+   *  out to the owner from the detail dialog. Relies on RLS allowing admins
+   *  to read `tenant_ecommerce_config`; if a tenant has no buttons or no
+   *  config row, returns an empty list rather than failing. */
+  async getWhatsappNumbers(
+    tenantId: number
+  ): Promise<Either<Error, WhatsappContact[]>> {
+    const { data, error } = await this.client
+      .from('tenant_ecommerce_config')
+      .select('whatsapp_buttons')
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    const buttons = Array.isArray(data?.whatsapp_buttons)
+      ? (data.whatsapp_buttons as WhatsappContact[])
+      : [];
+    return E.right(buttons.filter((b) => b?.number?.trim()));
   }
 
   async getHistory(
