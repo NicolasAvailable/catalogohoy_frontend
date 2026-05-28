@@ -29,10 +29,10 @@ type StatusFilter = 'all' | PayingClientStatus;
   template: `
     <div class="flex flex-col gap-6 h-full min-h-0">
       <header class="flex flex-col gap-1 shrink-0">
-        <h1 class="text-2xl font-bold text-grey-700">Clientes pagos</h1>
+        <h1 class="text-2xl font-bold text-grey-700">Catálogos activos</h1>
         <p class="text-sm text-grey-400">
-          Catálogos con suscripción activa. Click en un cliente para ver el
-          historial de planes que ha tenido.
+          Catálogos con suscripción activa. Click en uno para ver el historial
+          de planes que ha tenido.
         </p>
       </header>
 
