@@ -235,9 +235,37 @@ type StatusFilter = 'all' | PayingClientStatus;
                           </div>
                         }
                         <div class="flex flex-col min-w-0">
-                          <strong class="font-semibold text-grey-700 truncate">
-                            {{ client.tenantName ?? 'Sin nombre' }}
-                          </strong>
+                          <div class="flex items-center gap-1.5 min-w-0">
+                            <strong class="font-semibold text-grey-700 truncate">
+                              {{ client.tenantName ?? 'Sin nombre' }}
+                            </strong>
+                            @if (client.tenantSlug) {
+                              <button
+                                type="button"
+                                (click)="copyCatalogUrl(client); $event.stopPropagation()"
+                                class="inline-flex items-center justify-center w-6 h-6 rounded-md text-grey-400 hover:text-primary-500 hover:bg-primary-50 transition-colors cursor-pointer shrink-0"
+                                [title]="
+                                  copiedTenantId() === client.tenantId
+                                    ? 'Copiado'
+                                    : 'Copiar URL del catálogo'
+                                "
+                              >
+                                <ui-icon
+                                  [name]="
+                                    copiedTenantId() === client.tenantId
+                                      ? 'check'
+                                      : 'copy'
+                                  "
+                                  size="14"
+                                  [styleClass]="
+                                    copiedTenantId() === client.tenantId
+                                      ? 'text-emerald-500'
+                                      : ''
+                                  "
+                                />
+                              </button>
+                            }
+                          </div>
                           <span class="text-xs text-grey-400 truncate">
                             {{ client.ownerName ?? '—' }} ·
                             {{ client.ownerEmail ?? '—' }}
@@ -371,6 +399,8 @@ export class PayingClients implements OnInit {
   protected readonly statusFilter = signal<StatusFilter>('all');
   protected readonly impersonatingId = signal<number | null>(null);
   protected readonly impersonateError = signal<string | null>(null);
+  protected readonly copiedTenantId = signal<number | null>(null);
+  private copyResetTimeout: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly statusFilters: { value: StatusFilter; label: string }[] = [
     { value: 'all', label: 'Todos' },
@@ -405,6 +435,21 @@ export class PayingClients implements OnInit {
   protected async openDetail(client: PayingClient): Promise<void> {
     await this.store.openDetail(client.tenantId);
     this.detailDialog().show();
+  }
+
+  protected async copyCatalogUrl(client: PayingClient): Promise<void> {
+    if (!client.tenantSlug) return;
+    const url = `https://${client.tenantSlug}.catalogohoy.com`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Fallback for environments without clipboard permission (rare in
+      // the internal panel, but cheaper than a try/catch on every call).
+      return;
+    }
+    this.copiedTenantId.set(client.tenantId);
+    if (this.copyResetTimeout) clearTimeout(this.copyResetTimeout);
+    this.copyResetTimeout = setTimeout(() => this.copiedTenantId.set(null), 1500);
   }
 
   protected onAdjustPlan(client: PayingClient): void {
