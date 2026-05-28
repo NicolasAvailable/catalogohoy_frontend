@@ -1,5 +1,5 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, inject, viewChild } from '@angular/core';
+import { Component, inject, output, viewChild } from '@angular/core';
 import { DialogComponent, IconComponent } from '@ui';
 import {
   cycleLabel,
@@ -227,6 +227,14 @@ import { PayingClientsStore } from '../../paying-clients.store';
           <div class="flex items-center justify-end gap-2 pt-3 border-t border-grey-50">
             <button
               type="button"
+              (click)="onAdjustPlan(client)"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors cursor-pointer"
+            >
+              <ui-icon name="settings-2" size="14" styleClass="text-white" />
+              Ajustar plan
+            </button>
+            <button
+              type="button"
               (click)="hide()"
               class="px-4 py-2 rounded-md text-sm font-semibold text-grey-500 hover:bg-grey-50 transition-colors cursor-pointer"
             >
@@ -239,6 +247,8 @@ import { PayingClientsStore } from '../../paying-clients.store';
   `,
 })
 export class ClientDetailDialog {
+  public readonly adjustPlan = output<PayingClient>();
+
   protected readonly store = inject(PayingClientsStore);
   private readonly dialog = viewChild.required(DialogComponent);
 
@@ -249,6 +259,11 @@ export class ClientDetailDialog {
   public hide(): void {
     this.dialog().hide();
     this.store.closeDetail();
+  }
+
+  protected onAdjustPlan(client: PayingClient): void {
+    this.dialog().hide();
+    this.adjustPlan.emit(client);
   }
 
   protected initial(client: PayingClient): string {

@@ -10,6 +10,12 @@ import {
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@ui';
 import { cycleLabel, tierLabel } from '../shared/plan-cycle.model';
+import {
+  AssignPlanDialog,
+  AssignPlanPayload,
+} from '../tenants/components/assign-plan-dialog/assign-plan-dialog';
+import { Tenant } from '../tenants/tenants.model';
+import { TenantsStore } from '../tenants/tenants.store';
 import { ClientDetailDialog } from './components/client-detail-dialog/client-detail-dialog';
 import { ImpersonateTenantService } from './impersonate-tenant.service';
 import {
@@ -24,7 +30,13 @@ type StatusFilter = 'all' | PayingClientStatus;
 @Component({
   selector: 'app-paying-clients',
   standalone: true,
-  imports: [IconComponent, FormsModule, DatePipe, ClientDetailDialog],
+  imports: [
+    IconComponent,
+    FormsModule,
+    DatePipe,
+    ClientDetailDialog,
+    AssignPlanDialog,
+  ],
   host: { class: 'flex-1 min-h-0 flex flex-col' },
   template: `
     <div class="flex flex-col gap-6 h-full min-h-0">
@@ -343,12 +355,17 @@ type StatusFilter = 'all' | PayingClientStatus;
       </section>
     </div>
 
-    <app-client-detail-dialog />
+    <app-client-detail-dialog (adjustPlan)="onAdjustPlan($event)" />
+    <app-assign-plan-dialog
+      (assign)="onAssign($event)"
+      (remove)="onRemovePlan($event)"
+    />
   `,
 })
 export class PayingClients implements OnInit {
   protected readonly store = inject(PayingClientsStore);
   private readonly impersonateService = inject(ImpersonateTenantService);
+  private readonly tenantsStore = inject(TenantsStore);
 
   protected readonly searchTerm = signal('');
   protected readonly statusFilter = signal<StatusFilter>('all');
@@ -363,6 +380,7 @@ export class PayingClients implements OnInit {
   ];
 
   private readonly detailDialog = viewChild.required(ClientDetailDialog);
+  private readonly assignDialog = viewChild.required(AssignPlanDialog);
 
   protected readonly filteredClients = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
@@ -387,6 +405,46 @@ export class PayingClients implements OnInit {
   protected async openDetail(client: PayingClient): Promise<void> {
     await this.store.openDetail(client.tenantId);
     this.detailDialog().show();
+  }
+
+  protected onAdjustPlan(client: PayingClient): void {
+    // The detail dialog already hid itself before emitting. AssignPlanDialog
+    // expects a Tenant; we adapt from PayingClient (the only field it does
+    // not have is country_code, which the dialog ignores).
+    const tenant: Tenant = {
+      id: client.tenantId,
+      name: client.tenantName,
+      slug: client.tenantSlug,
+      countryCode: null,
+      logo: client.tenantLogo,
+      ownerName: client.ownerName,
+      ownerEmail: client.ownerEmail,
+      createdAt: client.startedAt,
+      plan: {
+        tier: client.tier,
+        cycle: client.cycle,
+        startedAt: client.startedAt,
+        expiresAt: client.expiresAt,
+        expired:
+          client.daysUntilExpiry !== null && client.daysUntilExpiry < 0,
+      },
+    };
+    this.assignDialog().show(tenant);
+  }
+
+  protected async onAssign(payload: AssignPlanPayload): Promise<void> {
+    await this.tenantsStore.assignPlan(
+      payload.tenantId,
+      payload.tier,
+      payload.cycle,
+      payload.amountUsd
+    );
+    await this.store.load();
+  }
+
+  protected async onRemovePlan(tenantId: number): Promise<void> {
+    await this.tenantsStore.removePlan(tenantId);
+    await this.store.load();
   }
 
   protected async enterAsAdmin(client: PayingClient): Promise<void> {
