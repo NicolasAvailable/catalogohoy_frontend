@@ -8,17 +8,13 @@ interface ReferralListItem {
   id: number;
   status: 'pending' | 'qualified' | 'rewarded' | 'expired';
   signupAt: string;
-  qualifiedAt: string | null;
-  rewardedAt: string | null;
-  referredSlug: string | null;
-  referredName: string | null;
-  referredEmailMasked: string | null;
   rewardUsd: number | null;
 }
 
-// Programa de referidos del tenant: muestra su código compartible + lista
-// de invitados con status y crédito ganado. Se renderiza como una card
-// dentro del tab "Referidos" de Mi Perfil.
+// Programa de referidos del tenant. Por privacidad NO mostramos email ni
+// slug del referido al referrer: solo fecha, status y crédito ganado.
+// Es información suficiente para que el referrer entienda su programa
+// sin exponer datos personales de los invitados.
 @Component({
   selector: 'lib-referral-panel',
   standalone: true,
@@ -58,14 +54,18 @@ export class ReferralPanel implements OnInit {
       return;
     }
 
-    // 1) Código (lazy) y balance del tenant
-    const [{ data: codeData }, { data: tenantRow }] = await Promise.all([
+    const [{ data: codeData }, { data: tenantRow }, { data: rows }] = await Promise.all([
       this.client.rpc('get_or_create_referral_code', { p_tenant_id: tenantId }),
       this.client
         .from('tenants')
         .select('referral_credit_usd, referral_credit_used_usd')
         .eq('id', tenantId)
         .maybeSingle(),
+      this.client
+        .from('referrals')
+        .select('id, status, signup_at, referrer_credit_usd')
+        .eq('referrer_tenant_id', tenantId)
+        .order('signup_at', { ascending: false }),
     ]);
 
     if (typeof codeData === 'string') this.code.set(codeData);
@@ -74,60 +74,14 @@ export class ReferralPanel implements OnInit {
       this.creditUsedUsd.set(Number(tenantRow.referral_credit_used_usd ?? 0));
     }
 
-    // 2) Lista de referrals donde este tenant es el referrer
-    const { data: rows } = await this.client
-      .from('referrals')
-      .select('id, status, signup_at, qualified_at, rewarded_at, referrer_credit_usd, referred_tenant_id')
-      .eq('referrer_tenant_id', tenantId)
-      .order('signup_at', { ascending: false });
-
     if (rows?.length) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const typedRows = rows as any[];
-      const referredIds = typedRows.map((r) => r.referred_tenant_id as number);
-
-      const { data: referredTenants } = await this.client
-        .from('tenants')
-        .select('id, slug, name')
-        .in('id', referredIds);
-
-      const { data: ownerLinks } = await this.client
-        .from('users_tenants')
-        .select('tenant_id, users!inner(email)')
-        .in('tenant_id', referredIds)
-        .eq('role', 'owner');
-
-      const slugByTenant = new Map<number, { slug: string; name: string | null }>();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ((referredTenants ?? []) as any[]).forEach((t) =>
-        slugByTenant.set(t.id as number, { slug: t.slug, name: t.name })
-      );
-
-      const emailByTenant = new Map<number, string>();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ((ownerLinks ?? []) as any[]).forEach((l) => {
-        const u = l.users;
-        const email = Array.isArray(u) ? u[0]?.email : u?.email;
-        if (email) emailByTenant.set(l.tenant_id as number, email);
-      });
-
-      this.referrals.set(
-        typedRows.map((r) => {
-          const referredTenantId = r.referred_tenant_id as number;
-          const tn = slugByTenant.get(referredTenantId);
-          return {
-            id: r.id as number,
-            status: r.status as ReferralListItem['status'],
-            signupAt: r.signup_at as string,
-            qualifiedAt: r.qualified_at as string | null,
-            rewardedAt: r.rewarded_at as string | null,
-            referredSlug: tn?.slug ?? null,
-            referredName: tn?.name ?? null,
-            referredEmailMasked: this.maskEmail(emailByTenant.get(referredTenantId)),
-            rewardUsd: r.referrer_credit_usd != null ? Number(r.referrer_credit_usd) : null,
-          };
-        })
-      );
+      this.referrals.set((rows as any[]).map((r) => ({
+        id: r.id as number,
+        status: r.status as ReferralListItem['status'],
+        signupAt: r.signup_at as string,
+        rewardUsd: r.referrer_credit_usd != null ? Number(r.referrer_credit_usd) : null,
+      })));
     }
 
     this.isLoading.set(false);
@@ -161,18 +115,5 @@ export class ReferralPanel implements OnInit {
       rewarded:  'bg-emerald-100 text-emerald-700',
       expired:   'bg-grey-100 text-grey-500',
     }[s];
-  }
-
-  /** Enmascara `prv.audio@gmail.com` → `p**.a***@gmail.com` para no exponer
-   *  el email completo del referido en el panel del referrer. */
-  private maskEmail(email: string | undefined): string | null {
-    if (!email) return null;
-    const [local, domain] = email.split('@');
-    if (!local || !domain) return email;
-    const masked = local
-      .split('.')
-      .map((part) => (part.length <= 1 ? part : part[0] + '*'.repeat(Math.min(3, part.length - 1))))
-      .join('.');
-    return `${masked}@${domain}`;
   }
 }
