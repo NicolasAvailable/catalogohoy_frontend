@@ -17,6 +17,11 @@ export const adminRoutes: Route[] = [
     loadComponent: () => import('@catalogohoy/profile').then((m) => m.Profile),
   },
   {
+    path: 'referrals',
+    loadComponent: () =>
+      import('@catalogohoy/profile').then((m) => m.ReferralPanel),
+  },
+  {
     path: 'categories',
     canActivate: [teamPermissionGuard('productos', 'view')],
     loadChildren: () =>

@@ -189,10 +189,6 @@
       </div>
       @if (!canViewClients()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
-      } @else {
-        <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
-          Nuevo
-        </span>
       }
     </li>
     <li
@@ -217,10 +213,6 @@
         </span>
       } @else if (!canViewAnalytics()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
-      } @else {
-        <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
-          Nuevo
-        </span>
       }
     </li>
     <li
@@ -292,6 +284,20 @@
       } @else if (!canViewTeam()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
       }
+    </li>
+    <li
+      routerLink="/admin/referrals"
+      routerLinkActive="bg-primary-50"
+      [routerLinkActiveOptions]="{exact: false}"
+      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out cursor-pointer"
+    >
+      <div class="flex items-center gap-2">
+        <ui-icon name="gift" size="16" />
+        <a class="font-base font-semibold text-grey-700 mt-0.5">Referidos</a>
+      </div>
+      <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
+        Nuevo
+      </span>
     </li>
     <li class="flex items-center gap-2 w-full rounded-md">
       @if (!canViewCatalog()) {
