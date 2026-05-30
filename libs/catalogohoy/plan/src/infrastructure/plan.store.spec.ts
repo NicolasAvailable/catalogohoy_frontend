@@ -53,7 +53,9 @@ function buildUsage(overrides: Partial<TenantPlanUsage> = {}): TenantPlanUsage {
     remainingCatalogs: 0,
     extraCatalogs: 0,
     planExpired: false,
+    planStartedAt: null,
     planExpiresAt: null,
+    hasStripeSubscription: false,
     ...overrides,
   };
 }

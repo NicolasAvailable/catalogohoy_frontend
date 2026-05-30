@@ -146,7 +146,12 @@ export class PlanService implements BasePlanService {
 
     const expiration = expirationResult.isRight()
       ? (expirationResult.value as TenantPlanExpiration)
-      : { planExpired: false, planStartedAt: null, planExpiresAt: null };
+      : {
+          planExpired: false,
+          planStartedAt: null,
+          planExpiresAt: null,
+          stripeSubscriptionId: null,
+        };
 
     return E.right({
       plan,
@@ -160,6 +165,7 @@ export class PlanService implements BasePlanService {
       planExpired: expiration.planExpired,
       planStartedAt: expiration.planStartedAt,
       planExpiresAt: expiration.planExpiresAt,
+      hasStripeSubscription: !!expiration.stripeSubscriptionId,
     });
   }
 
@@ -213,7 +219,9 @@ export class PlanService implements BasePlanService {
   ): Promise<E.Either<Error, TenantPlanExpiration>> {
     const { data, error } = await this.client
       .from('tenants')
-      .select('plan_started_at, plan_expires_at, plan_expired')
+      .select(
+        'plan_started_at, plan_expires_at, plan_expired, stripe_subscription_id'
+      )
       .eq('id', tenantId)
       .single();
 
@@ -221,10 +229,23 @@ export class PlanService implements BasePlanService {
       return E.left(new Error(error.message));
     }
 
+    // The stripe-webhook can flip `plan_expired` to true the moment a
+    // subscription is canceled in Stripe, but the prepaid period continues
+    // until `plan_expires_at`. Trust the date as the source of truth and
+    // only consider the plan expired when both the flag is set AND the date
+    // is in the past — prevents users from being locked out of access they
+    // already paid for.
+    const flag = data.plan_expired ?? false;
+    const expiresAt = data.plan_expires_at
+      ? new Date(data.plan_expires_at)
+      : null;
+    const datePassed = expiresAt !== null && expiresAt.getTime() <= Date.now();
+
     return E.right({
       planStartedAt: data.plan_started_at,
       planExpiresAt: data.plan_expires_at,
-      planExpired: data.plan_expired ?? false,
+      planExpired: flag && datePassed,
+      stripeSubscriptionId: data.stripe_subscription_id ?? null,
     });
   }
 

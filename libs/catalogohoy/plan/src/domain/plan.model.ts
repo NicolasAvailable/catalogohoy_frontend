@@ -43,12 +43,16 @@ export interface TenantPlanUsage {
   planExpired: boolean;
   planStartedAt: string | null;
   planExpiresAt: string | null;
+  /** True when the tenant has (or had) a Stripe subscription — used to route
+   *  the expired-plan dialog to a Stripe checkout instead of WhatsApp. */
+  hasStripeSubscription: boolean;
 }
 
 export interface TenantPlanExpiration {
   planStartedAt: string | null;
   planExpiresAt: string | null;
   planExpired: boolean;
+  stripeSubscriptionId: string | null;
 }
 
 export interface TenantPlanPublicInfo {

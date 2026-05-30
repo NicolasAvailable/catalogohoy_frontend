@@ -1,4 +1,5 @@
 import { Component, inject, ViewChild } from '@angular/core';
+import { Router } from '@angular/router';
 import { ButtonComponent, DialogComponent, IconComponent } from '@ui';
 import { PlanStore } from '../../infrastructure';
 
@@ -52,6 +53,7 @@ import { PlanStore } from '../../infrastructure';
 })
 export class PlanExpiredDialogComponent {
   public readonly planStore = inject(PlanStore);
+  private readonly router = inject(Router);
 
   @ViewChild(DialogComponent) dialog!: DialogComponent;
 
@@ -60,6 +62,10 @@ export class PlanExpiredDialogComponent {
   }
 
   public payPlan(): void {
+    if (this.hasStripeHistory()) {
+      this.goToCheckout();
+      return;
+    }
     const planName = this.planStore.currentPlan()?.name ?? 'mi plan';
     const message = encodeURIComponent(
       `Hola, quiero pagar mi plan ${planName}`
@@ -68,9 +74,26 @@ export class PlanExpiredDialogComponent {
   }
 
   public upgradePlan(): void {
+    if (this.hasStripeHistory()) {
+      this.goToCheckout();
+      return;
+    }
     const message = encodeURIComponent(
       'Hola, quiero mejorar mi plan a uno superior'
     );
     window.open(`https://wa.me/584220240947?text=${message}`, '_blank');
+  }
+
+  /** Stripe users land on the plans page where they can pick a tier and run
+   *  through the existing Stripe Checkout flow — that's where the pending
+   *  invoice / re-subscription is handled. Manual-payment users (mostly VE)
+   *  keep going to WhatsApp because their billing happens off-platform. */
+  private hasStripeHistory(): boolean {
+    return this.planStore.tenantPlanUsage()?.hasStripeSubscription ?? false;
+  }
+
+  private goToCheckout(): void {
+    this.dialog.hide();
+    this.router.navigate(['/admin/plans']);
   }
 }
