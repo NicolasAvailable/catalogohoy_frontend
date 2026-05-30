@@ -273,6 +273,35 @@
   line-height: 1.4;
 }
 
+.plan-card__price-tag--referral {
+  background: #faf5ff;
+  color: #7c3aed;
+  margin-top: 0.4rem;
+  margin-bottom: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+
+/* ── Referral discount banner (top of plans page) ── */
+.plans-referral-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1rem;
+  margin-bottom: 1.25rem;
+  background: linear-gradient(90deg, #faf5ff 0%, #ecfdf5 100%);
+  border: 1px solid #e9d5ff;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  color: #6b21a8;
+}
+
+.plans-referral-banner strong {
+  font-weight: 700;
+  color: #581c87;
+}
+
 /* ── Monthly equivalent ── */
 .plan-card__monthly-equiv {
   font-size: 0.78rem;

@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { DiscordWebhookService } from '@catalogohoy/core';
+import { DiscordWebhookService, SupabaseClientProvider } from '@catalogohoy/core';
 import {
   findCountryByCode,
   TenantCurrencyStore,
@@ -140,6 +140,7 @@ export class Plans implements OnInit {
   private readonly tenantStore = inject(TenantStore);
   private readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly discord = inject(DiscordWebhookService);
+  private readonly supabase = SupabaseClientProvider.getInstance();
 
   public readonly billingPeriod = signal<BillingPeriod>('monthly');
 
@@ -181,6 +182,11 @@ export class Plans implements OnInit {
 
   public readonly isVenezuela = computed(() => this.tenantCurrency.isVenezuela());
 
+  /** Si el tenant es referido con un referral pending, el porcentaje de
+   *  descuento que va a recibir automáticamente al pagar su PRIMER plan.
+   *  Null = no aplica (sin referido o ya pagó antes). */
+  public readonly referralDiscountPct = signal<number | null>(null);
+
   public readonly plans = computed<PlanDisplay[]>(() =>
     this.planStore
       .plans()
@@ -191,7 +197,52 @@ export class Plans implements OnInit {
     this.planStore.loadPlans();
     this.planStore.refreshUsage();
     const tenantId = await this.tenantStore.getTenantIdAsync();
-    if (tenantId) this.tenantCurrency.load(tenantId);
+    if (tenantId) {
+      this.tenantCurrency.load(tenantId);
+      this.loadReferralDiscount(tenantId);
+    }
+  }
+
+  /** Solo aplica si hay referral pending. La RLS de referrals deja al owner
+   *  leer su propia fila — perfecto, no exponemos info del referrer. */
+  private async loadReferralDiscount(tenantId: number): Promise<void> {
+    const { data: referral } = await this.supabase
+      .from('referrals')
+      .select('status')
+      .eq('referred_tenant_id', tenantId)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (!referral) return;
+
+    const { data: cfg } = await this.supabase
+      .from('referral_config')
+      .select('referred_discount_pct')
+      .eq('id', 1)
+      .maybeSingle();
+
+    const pct = (cfg?.referred_discount_pct as number | undefined) ?? 20;
+    this.referralDiscountPct.set(pct);
+  }
+
+  /** Precio mostrado del plan ya con el descuento de referido aplicado.
+   *  Para gratis devuelve 0, para upgrade pricing usa la diferencia (sin
+   *  descuento porque el referral solo aplica al primer pago, no a upgrades). */
+  public getReferralDiscountedPrice(plan: PlanDisplay): number {
+    const pct = this.referralDiscountPct();
+    if (!pct || plan.isFree || this.isUpgradePlan(plan)) {
+      return this.getPeriodPrice(plan);
+    }
+    return this.getPeriodPrice(plan) * (1 - pct / 100);
+  }
+
+  public hasReferralDiscount(plan: PlanDisplay): boolean {
+    return (
+      this.referralDiscountPct() != null &&
+      !plan.isFree &&
+      !this.isUpgradePlan(plan) &&
+      !plan.isCurrent
+    );
   }
 
   public getBasePrice(plan: PlanDisplay): number {

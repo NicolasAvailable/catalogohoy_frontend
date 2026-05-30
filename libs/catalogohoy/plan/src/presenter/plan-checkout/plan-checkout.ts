@@ -404,6 +404,41 @@ export class PlanCheckout implements OnInit {
     this.isApplyingCoupon.set(true);
     this.couponError.set(null);
 
+    // 1) Si todavía no tenemos referral aplicado, probar como código de
+    //    referido. register_referral devuelve `registered` la primera vez
+    //    o `already_registered` si ya estaba seteado en signup.
+    if (!this.referralInfo()) {
+      const tenantId = await this.tenantStore.getTenantIdAsync();
+      if (tenantId) {
+        const { data: refData, error: refError } = await this.supabase.rpc(
+          'register_referral',
+          { p_code: code, p_referred_tenant_id: tenantId }
+        );
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const status = (refData as any)?.status as string | undefined;
+
+        if (!refError && (status === 'registered' || status === 'already_registered')) {
+          await this.loadReferralInfo(tenantId);
+          this.couponInput.set('');
+          this.isApplyingCoupon.set(false);
+          return;
+        }
+        if (status === 'self_referral_email' || status === 'self_referral_tenant') {
+          this.couponError.set('No podés usar tu propio código de referido.');
+          this.isApplyingCoupon.set(false);
+          return;
+        }
+        if (status === 'disposable_email') {
+          this.couponError.set('Tu email no califica para el programa de referidos.');
+          this.isApplyingCoupon.set(false);
+          return;
+        }
+        // status === 'invalid_code' o 'no_code' → caemos al Stripe promo.
+      }
+    }
+
+    // 2) Validar como Stripe promotion_code (cupón clásico).
     const result = await this.checkoutService.validatePromotionCode(code, this.planId());
 
     result

@@ -1,4 +1,10 @@
 <section class="plans-wrapper">
+  @if (referralDiscountPct(); as pct) {
+    <div class="plans-referral-banner">
+      <ui-icon name="gift" styleClass="size-4 shrink-0" />
+      <span>Tenés <strong>{{ pct }}% off</strong> en tu primer pago por venir con código de referido.</span>
+    </div>
+  }
   <header class="plans-header">
     <span class="plans-eyebrow">Planes</span>
     <h1 class="plans-title">El plan perfecto para tu negocio</h1>
@@ -70,6 +76,14 @@
             <p class="plan-card__upgrade-hint">
               Solo cobramos la diferencia prorrateada hasta el final de tu período actual.
             </p>
+          } @else if (hasReferralDiscount(plan)) {
+            <span class="plan-card__price-original">{{ currencySymbol() }}{{ getPeriodPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
+            <div class="plan-card__price-main">
+              <span class="plan-card__price-currency">{{ currencySymbol() }}</span>
+              <span class="plan-card__price-amount">{{ getReferralDiscountedPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
+            </div>
+            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }} · {{ currencyCode() }}</span>
+            <span class="plan-card__price-tag plan-card__price-tag--referral">🎁 {{ referralDiscountPct() }}% off referido aplicado</span>
           } @else {
             <div class="plan-card__price-main">
               <span class="plan-card__price-currency">{{ currencySymbol() }}</span>

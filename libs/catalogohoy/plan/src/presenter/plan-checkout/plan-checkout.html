@@ -151,10 +151,10 @@
         <input
           class="coupon-input"
           type="text"
-          placeholder="¿Tienes un cupón de descuento?"
+          placeholder="¿Cupón o código de referido?"
           [ngModel]="couponInput()"
           (ngModelChange)="couponInput.set($event); couponError.set(null)"
-          [disabled]="!!appliedCoupon() || isApplyingCoupon()"
+          [disabled]="!!appliedCoupon() || !!referralInfo() || isApplyingCoupon()"
           (keydown.enter)="applyCoupon()"
         />
         @if (appliedCoupon()) {
