@@ -6,53 +6,43 @@
   "tags": [],
   "targets": {
     "build": {
-      "executor": "@nx/vite:build",
-      "outputs": ["{options.outputPath}"],
-      "defaultConfiguration": "production",
+      "executor": "nx:run-commands",
+      "cache": true,
+      "outputs": ["{projectRoot}/dist"],
       "options": {
-        "outputPath": "dist/apps/landing"
-      },
-      "configurations": {
-        "development": {
-          "mode": "development"
-        },
-        "production": {
-          "mode": "production"
-        }
+        "cwd": "apps/landing",
+        "command": "vite build"
       }
     },
     "serve": {
-      "executor": "@nx/vite:dev-server",
-      "defaultConfiguration": "development",
+      "executor": "nx:run-commands",
       "continuous": true,
       "options": {
-        "buildTarget": "landing:build",
-        "port": 7200,
-        "host": "localhost"
-      },
-      "configurations": {
-        "development": {
-          "buildTarget": "landing:build:development",
-          "hmr": true
-        },
-        "production": {
-          "buildTarget": "landing:build:production"
-        }
+        "cwd": "apps/landing",
+        "command": "vite --port 7200 --host localhost"
       }
     },
     "preview": {
-      "executor": "@nx/vite:preview-server",
+      "executor": "nx:run-commands",
       "continuous": true,
       "options": {
-        "buildTarget": "landing:build"
+        "cwd": "apps/landing",
+        "command": "vite preview --port 7200 --host localhost"
       }
     },
     "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"]
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/landing",
+        "command": "vitest run"
+      }
     },
     "lint": {
-      "executor": "@nx/eslint:lint"
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/landing",
+        "command": "eslint ."
+      }
     }
   }
 }
