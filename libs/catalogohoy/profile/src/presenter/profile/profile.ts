@@ -21,6 +21,7 @@ import {
   ToggleComponent,
 } from '@ui';
 import { ProfileFacade } from '../../application';
+import { ReferralPanel } from '../referral-panel/referral-panel';
 import {
   BillingEntry,
   BillingService,
@@ -28,8 +29,8 @@ import {
   ProfileStore,
 } from '../../infrastructure';
 
-export type ProfileTabId = 'general' | 'subscription' | 'notifications' | 'danger';
-const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'notifications', 'danger'];
+export type ProfileTabId = 'general' | 'subscription' | 'referrals' | 'notifications' | 'danger';
+const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'referrals', 'notifications', 'danger'];
 
 @Component({
   selector: 'lib-profile',
@@ -46,6 +47,7 @@ const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'notifications', 
     ConfirmDialogComponent,
     IconComponent,
     ToggleComponent,
+    ReferralPanel,
   ],
   templateUrl: './profile.html',
   styleUrl: './profile.css',
@@ -69,6 +71,7 @@ export class Profile {
   public readonly tabs: { id: ProfileTabId; label: string; icon: string }[] = [
     { id: 'general',       label: 'General',          icon: 'user' },
     { id: 'subscription',  label: 'Suscripción',      icon: 'credit-card' },
+    { id: 'referrals',     label: 'Referidos',        icon: 'gift' },
     { id: 'notifications', label: 'Notificaciones',   icon: 'mail' },
     { id: 'danger',        label: 'Zona de peligro',  icon: 'triangle-alert' },
   ];

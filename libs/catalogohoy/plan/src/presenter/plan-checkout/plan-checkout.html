@@ -110,6 +110,14 @@
             <span>-{{ currencySymbol() }}{{ couponDiscountAmount() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
           </div>
         }
+        @if (referralInfo(); as ref) {
+          <div class="summary-line summary-line--discount">
+            <span>
+              🎁 Referido por {{ ref.referrerName ?? ref.referrerSlug }} ({{ ref.discountPct }}%)
+            </span>
+            <span>-{{ currencySymbol() }}{{ referralDiscountAmount() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
+          </div>
+        }
       </div>
 
       <!-- Catalog addon stepper -->

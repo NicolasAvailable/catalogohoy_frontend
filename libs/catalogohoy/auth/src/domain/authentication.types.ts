@@ -10,6 +10,9 @@ export type SignUpCredentials = {
   password: string;
   /** ISO2 country code chosen by the user at signup (e.g. "VE", "BR"). */
   countryCode?: string;
+  /** Código de afiliado capturado de la cookie chy_ref o tipeado a mano.
+   *  Vacío/null = no es un referido. Se resuelve contra register_referral RPC. */
+  referralCode?: string | null;
 };
 
 export type GoogleSignupCredentials = {
@@ -17,6 +20,7 @@ export type GoogleSignupCredentials = {
   storeName: string;
   /** ISO2 country code chosen by the user at signup. */
   countryCode?: string;
+  referralCode?: string | null;
 };
 
 export type ForgottenPasswordCredentials = {

@@ -140,6 +140,16 @@ export class PlanCheckout implements OnInit {
   public readonly couponError      = signal<string | null>(null);
   public readonly isApplyingCoupon = signal(false);
 
+  /** Datos del referido pendiente del tenant, si entró por programa de
+   *  Afiliados. El descuento se aplica automáticamente al total — tanto en
+   *  el flujo Stripe (vía create-checkout-session) como en el de Pago Móvil
+   *  (cálculo local + leyenda en el mensaje de WhatsApp). */
+  public readonly referralInfo = signal<{
+    referrerSlug: string | null;
+    referrerName: string | null;
+    discountPct: number;
+  } | null>(null);
+
   // Currency Stripe will actually charge in. Drives the on-screen totals +
   // the `currency` sent to the checkout edge function. VE → USD always.
   public readonly chargeCurrency = computed<PaymentCurrency>(() => {
@@ -237,6 +247,18 @@ export class PlanCheckout implements OnInit {
     return baseUsd + addonUsd;
   });
 
+  /** Descuento del programa de referidos (USD), aplicado sobre el subtotal
+   *  pre-cupón. Solo aplica si el tenant tiene un referral pending. */
+  private readonly referralDiscountUsd = computed(() => {
+    const info = this.referralInfo();
+    if (!info) return 0;
+    return this.preCouponTotalUsd() * (info.discountPct / 100);
+  });
+
+  public readonly referralDiscountAmount = computed(() =>
+    convertUsdToLocal(this.referralDiscountUsd(), this.chargeCurrency())
+  );
+
   /** Discount the applied coupon contributes (USD). `amount_off` from Stripe
    *  comes in minor units (cents). */
   private readonly couponDiscountUsd = computed(() => {
@@ -263,14 +285,20 @@ export class PlanCheckout implements OnInit {
 
   // Total the user will be charged, in the charge currency.
   public readonly total = computed(() => {
-    const final = Math.max(0, this.preCouponTotalUsd() - this.couponDiscountUsd());
+    const final = Math.max(
+      0,
+      this.preCouponTotalUsd() - this.couponDiscountUsd() - this.referralDiscountUsd()
+    );
     return convertUsdToLocal(final, this.chargeCurrency());
   });
 
   // Pure USD total — used for the Venezuela Bs. approximation line and the
   // WhatsApp message (Pago Móvil is a VE-only flow, priced in USD + BCV).
   public readonly totalUsd = computed(() => {
-    const final = Math.max(0, this.preCouponTotalUsd() - this.couponDiscountUsd());
+    const final = Math.max(
+      0,
+      this.preCouponTotalUsd() - this.couponDiscountUsd() - this.referralDiscountUsd()
+    );
     return Math.round(final * 100) / 100;
   });
 
@@ -311,7 +339,43 @@ export class PlanCheckout implements OnInit {
     this.planStore.loadTenantPlanUsage();
     this.loadBcvRate();
     const tenantId = await this.tenantStore.getTenantIdAsync();
-    if (tenantId) this.tenantCurrency.load(tenantId);
+    if (tenantId) {
+      this.tenantCurrency.load(tenantId);
+      this.loadReferralInfo(tenantId);
+    }
+  }
+
+  /** Si el tenant entró por programa de Afiliados y tiene un referral pending,
+   *  cargar los datos para mostrar y aplicar el descuento. RLS permite al
+   *  owner leer su propia fila en `referrals`. */
+  private async loadReferralInfo(tenantId: number): Promise<void> {
+    const { data } = await this.supabase
+      .from('referrals')
+      .select('referrer_tenant_id, status')
+      .eq('referred_tenant_id', tenantId)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (!data) return;
+
+    const [referrerResp, configResp] = await Promise.all([
+      this.supabase
+        .from('tenants')
+        .select('slug, name')
+        .eq('id', data.referrer_tenant_id)
+        .maybeSingle(),
+      this.supabase
+        .from('referral_config')
+        .select('referred_discount_pct')
+        .eq('id', 1)
+        .maybeSingle(),
+    ]);
+
+    this.referralInfo.set({
+      referrerSlug: referrerResp.data?.slug ?? null,
+      referrerName: referrerResp.data?.name ?? null,
+      discountPct: (configResp.data?.referred_discount_pct as number | undefined) ?? 20,
+    });
   }
 
   private async loadBcvRate(): Promise<void> {
@@ -379,11 +443,17 @@ export class PlanCheckout implements OnInit {
 
     const tenantSlug = this.tenantStore.tenantSlug() ?? slug;
 
+    const referral = this.referralInfo();
+
     let msg = `Hola! Quiero adquirir el *${planName}* en CatálogoHoy\n\n`;
     msg += `- *Plan:* ${planName}\n`;
     msg += `- *Periodo:* ${periodStr}\n`;
     if (catalogs > 0) {
       msg += `- *Catálogos adicionales:* ${catalogs}\n`;
+    }
+    if (referral) {
+      const refLabel = referral.referrerName ?? referral.referrerSlug ?? '-';
+      msg += `- *🎁 Código referido aplicado:* ${refLabel} (-${referral.discountPct}% descuento)\n`;
     }
     msg += `- *Total:* $${totalUsd} USD`;
     if (totalBs) {

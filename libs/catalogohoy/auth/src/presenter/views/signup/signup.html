@@ -226,6 +226,20 @@
             <p class="text-xs text-grey-400 mt-3">La moneda de tu catálogo se configurará automáticamente.</p>
           </div>
 
+          <!-- Código de referido (opcional). Si llegó desde catalogohoy.com/?ref=XXX
+               la cookie chy_ref pre-llena este campo automáticamente. -->
+          <div class="mb-6">
+            <label class="block font-medium text-sm text-grey-400 mb-1">
+              Código de referido <span class="text-grey-300 font-normal">(opcional)</span>
+            </label>
+            <ui-input-text
+              size="large"
+              formControlName="referralCode"
+              placeholder="Si alguien te invitó, pega su código acá"
+            />
+            <p class="text-xs text-grey-400 mt-1.5">Te aplicamos un descuento en tu primer pago.</p>
+          </div>
+
           <ui-button
             (click)="submit()"
             [disabled]="profileForm.invalid || loaderStore.isEnable()"

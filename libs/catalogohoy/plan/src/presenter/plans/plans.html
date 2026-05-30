@@ -55,12 +55,21 @@
             <span class="plan-card__price-amount">{{ currencySymbol() }}0</span>
             <span class="plan-card__price-period">por siempre</span>
           } @else if (isUpgradePlan(plan)) {
+            <!-- Upgrade desde plan pago actual: el precio que mostramos es la
+                 diferencia prorrateada, NO el precio absoluto del nuevo plan.
+                 Por eso lo etiquetamos explícito para no confundir. -->
+            <span class="plan-card__price-tag">Pagás ahora para upgradear</span>
             <div class="plan-card__price-main">
               <span class="plan-card__price-currency">{{ currencySymbol() }}</span>
               <span class="plan-card__price-amount">{{ getUpgradePrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
             </div>
-            <span class="plan-card__price-original">{{ currencySymbol() }}{{ getPeriodPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
-            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }} · {{ currencyCode() }}</span>
+            <span class="plan-card__price-period">{{ currencyCode() }} · una vez</span>
+            <p class="plan-card__upgrade-renewal">
+              A partir de tu próxima renovación: <strong>{{ currencySymbol() }}{{ getPeriodPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}{{ getPeriodLabel(plan) }}</strong>
+            </p>
+            <p class="plan-card__upgrade-hint">
+              Solo cobramos la diferencia prorrateada hasta el final de tu período actual.
+            </p>
           } @else {
             <div class="plan-card__price-main">
               <span class="plan-card__price-currency">{{ currencySymbol() }}</span>

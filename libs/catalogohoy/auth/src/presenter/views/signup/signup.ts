@@ -84,6 +84,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     name: ['', [Validators.required, Validators.minLength(4), whiteSpacesValidator()]],
     storeName: ['', [Validators.required, Validators.minLength(3)]],
     country: ['', [Validators.required]],
+    referralCode: [''],
   });
 
   readonly slugPreview = signal('');
@@ -116,6 +117,14 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     this.slugSub = this.profileForm.controls.storeName.valueChanges.subscribe(
       (value) => this.slugPreview.set(slugify(value ?? ''))
     );
+
+    // Pre-llenar el campo de código de referido con la cookie `chy_ref`
+    // que vino de la landing (catalogohoy.com/?ref=XXX). Si no hay cookie
+    // el campo queda vacío y el usuario puede tipear a mano.
+    const cookieRef = this._readReferralCookie();
+    if (cookieRef) {
+      this.profileForm.controls.referralCode.setValue(cookieRef);
+    }
 
     const skipStore = this.route.snapshot.queryParamMap.get('skip_store') === 'true';
     this.inviteToken =
@@ -288,11 +297,13 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     }
     if (this.loaderStore.isEnable()) return;
 
-    const { name, storeName, country } = this.profileForm.value as {
+    const { name, storeName, country, referralCode } = this.profileForm.value as {
       name: string;
       storeName: string;
       country: string;
+      referralCode?: string | null;
     };
+    const normalizedRef = (referralCode ?? '').trim() || null;
 
     if (this.isInviteMode() && this.inviteToken) {
       const { email, password } = this.credentialsForm.getRawValue() as {
@@ -314,9 +325,15 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     }
 
     if (this.method() === 'google') {
-      const result = await this.facade.completeGoogleSignup({ name, storeName, countryCode: country });
+      const result = await this.facade.completeGoogleSignup({
+        name,
+        storeName,
+        countryCode: country,
+        referralCode: normalizedRef,
+      });
       result.mapRight((url) => {
         this.metaPixel.trackEvent('CompleteRegistration', { content_name: storeName });
+        this._clearReferralCookie();
         window.location.href = url;
       });
     } else {
@@ -330,11 +347,42 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
         storeName,
         password,
         countryCode: country,
+        referralCode: normalizedRef,
       } as SignUpCredentials);
       result.mapRight((url) => {
         this.metaPixel.trackEvent('CompleteRegistration', { content_name: storeName });
+        this._clearReferralCookie();
         window.location.href = url;
       });
     }
+  }
+
+  // ── Cookie helpers ─────────────────────────────────────────────
+  // La cookie `chy_ref` la setea apps/landing con domain=.catalogohoy.com.
+  // Acá la leemos para pre-llenar el campo, y la borramos cuando el signup
+  // completa (con el mismo domain para que efectivamente se elimine en el
+  // navegador del cliente).
+  private _readReferralCookie(): string | null {
+    const match = document.cookie.match(/(?:^|;\s*)chy_ref=([^;]+)/);
+    if (!match) return null;
+    return decodeURIComponent(match[1]).trim() || null;
+  }
+
+  private _clearReferralCookie(): void {
+    const domain = this._referralCookieDomain();
+    const parts = ['chy_ref=', 'path=/', 'max-age=0', 'SameSite=Lax'];
+    if (domain) parts.push(`domain=${domain}`);
+    document.cookie = parts.join('; ');
+  }
+
+  private _referralCookieDomain(): string | null {
+    const host = window.location.hostname;
+    if (host === 'catalogohoy.com' || host.endsWith('.catalogohoy.com')) {
+      return '.catalogohoy.com';
+    }
+    if (host === 'catalogohoy.localhost' || host.endsWith('.catalogohoy.localhost')) {
+      return '.catalogohoy.localhost';
+    }
+    return null;
   }
 }

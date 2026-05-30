@@ -244,6 +244,35 @@
   color: #94a3b8;
 }
 
+/* ── Upgrade pricing clarifier ── */
+.plan-card__price-tag {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 0.15rem 0.5rem;
+  margin-bottom: 0.5rem;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  border-radius: 9999px;
+}
+
+.plan-card__upgrade-renewal {
+  font-size: 0.78rem;
+  color: #475569;
+  margin: 0.5rem 0 0;
+}
+
+.plan-card__upgrade-hint {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin: 0.25rem 0 0;
+  line-height: 1.4;
+}
+
 /* ── Monthly equivalent ── */
 .plan-card__monthly-equiv {
   font-size: 0.78rem;

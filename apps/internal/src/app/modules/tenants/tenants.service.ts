@@ -63,13 +63,15 @@ export class TenantsService {
     tenantId: number,
     tier: PlanTier,
     cycle: PlanCycle,
-    amountUsd: number
+    amountUsd: number,
+    consumeCreditUsd: number | null = null
   ): Promise<Either<Error, number>> {
     const { data, error } = await this.client.rpc('assign_tenant_plan_admin', {
       p_tenant_id: tenantId,
       p_tier: tier,
       p_cycle: cycle,
       p_amount_usd: amountUsd,
+      p_consume_credit_usd: consumeCreditUsd,
     });
 
     if (error) {

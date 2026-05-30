@@ -200,7 +200,31 @@ export class AuthenticationService implements BaseAuthenticationService {
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
     await this.setupTenantLocale(credentials.countryCode);
+    await this._tryRegisterReferral(Number(tenant.id), credentials.referralCode);
     return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
+  }
+
+  /** Best-effort: si el usuario llegó por un link `?ref=` (o tipeó un código
+   *  a mano), registramos el referral pending. Errores se silencian — el
+   *  signup nunca falla por esto. */
+  private async _tryRegisterReferral(
+    referredTenantId: number,
+    code: string | null | undefined
+  ): Promise<void> {
+    if (!code || !code.trim()) return;
+    try {
+      const { data, error } = await this.client.rpc('register_referral', {
+        p_code: code.trim(),
+        p_referred_tenant_id: referredTenantId,
+      });
+      if (error) {
+        console.warn('register_referral failed:', error.message);
+      } else if (data) {
+        console.info('register_referral:', data);
+      }
+    } catch (err) {
+      console.warn('register_referral threw:', err);
+    }
   }
 
   public async forgottenPassword(input: ForgottenPasswordCredentials) {
@@ -310,6 +334,16 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(key ? MSG[key] : error.message));
     }
     await this.setupTenantLocale(credentials.countryCode);
+
+    // Tras crear el tenant vía complete_google_signup, podemos registrar el
+    // referral. getLoginRedirectUrl ya hace get_my_tenant — lo replicamos
+    // aquí porque necesitamos el id del tenant, no solo el slug.
+    const { data: tenantRows } = await this.client.rpc('get_my_tenant');
+    if (tenantRows?.length) {
+      const tenant = TenantMapper.toDomain(tenantRows[0]);
+      await this._tryRegisterReferral(Number(tenant.id), credentials.referralCode);
+    }
+
     return this.getLoginRedirectUrl();
   }
 

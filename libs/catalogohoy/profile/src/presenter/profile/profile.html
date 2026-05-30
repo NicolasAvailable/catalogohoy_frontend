@@ -375,6 +375,11 @@
     </ui-card>
   </div>
 
+  <!-- ===== TAB: REFERIDOS ===== -->
+  <div class="profile-tab-content" [hidden]="activeTab() !== 'referrals'">
+    <lib-referral-panel />
+  </div>
+
   <!-- ===== TAB: NOTIFICACIONES ===== -->
   <div class="profile-tab-content" [hidden]="activeTab() !== 'notifications'">
     <ui-card>
