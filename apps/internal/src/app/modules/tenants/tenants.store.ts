@@ -72,5 +72,19 @@ export const TenantsStore = signalStore(
       const refreshed = await tenantsService.list();
       refreshed.mapRight((tenants) => patchState(store, { tenants }));
     },
+
+    async setOwnersBanned(
+      tenantId: number,
+      banned: boolean
+    ): Promise<number | null> {
+      patchState(store, { isMutating: true, error: null });
+      const result = await tenantsService.setOwnersBanned(tenantId, banned);
+      patchState(store, { isMutating: false });
+      if (result.isLeft()) {
+        patchState(store, { error: result.value.message });
+        return null;
+      }
+      return result.value;
+    },
   }))
 );

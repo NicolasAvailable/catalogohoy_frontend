@@ -150,6 +150,12 @@ export class PlanCheckout implements OnInit {
     discountPct: number;
   } | null>(null);
 
+  /** Crédito de referidos acumulado por este tenant (siendo referrer).
+   *  Si > 0 se ofrece la opción de aplicarlo en este pago — flujo Pago Móvil
+   *  por ahora; en Stripe se aplica vía dashboard interno al confirmar. */
+  public readonly availableCreditUsd = signal<number>(0);
+  public readonly useReferralCredit = signal<boolean>(false);
+
   // Currency Stripe will actually charge in. Drives the on-screen totals +
   // the `currency` sent to the checkout edge function. VE → USD always.
   public readonly chargeCurrency = computed<PaymentCurrency>(() => {
@@ -279,6 +285,21 @@ export class PlanCheckout implements OnInit {
     convertUsdToLocal(this.couponDiscountUsd(), this.chargeCurrency())
   );
 
+  /** Crédito a consumir en este pago (capado al saldo disponible + al monto
+   *  restante luego de los descuentos por cupón y referido). */
+  public readonly creditUsedUsd = computed(() => {
+    if (!this.useReferralCredit()) return 0;
+    const remainingAfterDiscounts = Math.max(
+      0,
+      this.preCouponTotalUsd() - this.couponDiscountUsd() - this.referralDiscountUsd()
+    );
+    return Math.min(this.availableCreditUsd(), remainingAfterDiscounts);
+  });
+
+  public readonly creditUsedAmount = computed(() =>
+    convertUsdToLocal(this.creditUsedUsd(), this.chargeCurrency())
+  );
+
   public readonly couponDiscountPercent = computed(
     () => this.appliedCoupon()?.percentOff ?? null
   );
@@ -287,7 +308,7 @@ export class PlanCheckout implements OnInit {
   public readonly total = computed(() => {
     const final = Math.max(
       0,
-      this.preCouponTotalUsd() - this.couponDiscountUsd() - this.referralDiscountUsd()
+      this.preCouponTotalUsd() - this.couponDiscountUsd() - this.referralDiscountUsd() - this.creditUsedUsd()
     );
     return convertUsdToLocal(final, this.chargeCurrency());
   });
@@ -297,7 +318,7 @@ export class PlanCheckout implements OnInit {
   public readonly totalUsd = computed(() => {
     const final = Math.max(
       0,
-      this.preCouponTotalUsd() - this.couponDiscountUsd() - this.referralDiscountUsd()
+      this.preCouponTotalUsd() - this.couponDiscountUsd() - this.referralDiscountUsd() - this.creditUsedUsd()
     );
     return Math.round(final * 100) / 100;
   });
@@ -342,6 +363,21 @@ export class PlanCheckout implements OnInit {
     if (tenantId) {
       this.tenantCurrency.load(tenantId);
       this.loadReferralInfo(tenantId);
+      this.loadAvailableCredit(tenantId);
+    }
+  }
+
+  /** Carga el crédito de referidos acumulado por este tenant (siendo referrer
+   *  de otros que pagaron). Si tiene > 0 mostramos la opción de aplicarlo. */
+  private async loadAvailableCredit(tenantId: number): Promise<void> {
+    const { data } = await this.supabase
+      .from('tenants')
+      .select('referral_credit_usd')
+      .eq('id', tenantId)
+      .maybeSingle();
+
+    if (data?.referral_credit_usd != null) {
+      this.availableCreditUsd.set(Number(data.referral_credit_usd));
     }
   }
 
@@ -489,6 +525,10 @@ export class PlanCheckout implements OnInit {
     if (referral) {
       const refLabel = referral.referrerName ?? referral.referrerSlug ?? '-';
       msg += `- *🎁 Código referido aplicado:* ${refLabel} (-${referral.discountPct}% descuento)\n`;
+    }
+    const credit = this.creditUsedUsd();
+    if (credit > 0) {
+      msg += `- *💰 Crédito de referidos a consumir:* $${credit.toFixed(2)} USD\n`;
     }
     msg += `- *Total:* $${totalUsd} USD`;
     if (totalBs) {

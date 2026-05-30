@@ -718,3 +718,55 @@
 .pay-btn--whatsapp:hover:not(.pay-btn--disabled) {
   background: #15803d;
 }
+
+/* ── Referral credit checkbox ── */
+.referral-credit-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  border-radius: 0.6rem;
+  background: linear-gradient(90deg, #faf5ff 0%, #ecfdf5 100%);
+  border: 1px solid #e9d5ff;
+  cursor: pointer;
+  user-select: none;
+}
+
+.referral-credit-row input[type='checkbox'] {
+  margin-top: 0.2rem;
+  accent-color: #16a34a;
+  flex-shrink: 0;
+}
+
+.referral-credit-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.referral-credit-row__title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6b21a8;
+}
+
+.referral-credit-row__subtitle {
+  font-size: 0.75rem;
+  color: #047857;
+  line-height: 1.35;
+}
+
+.referral-credit-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0.4rem 0 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.45rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  font-size: 0.72rem;
+  color: #92400e;
+  line-height: 1.35;
+}

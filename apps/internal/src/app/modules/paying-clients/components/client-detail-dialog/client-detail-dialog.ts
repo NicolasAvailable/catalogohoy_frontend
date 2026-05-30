@@ -1,10 +1,11 @@
 import { CurrencyPipe, DatePipe, formatDate } from '@angular/common';
-import { Component, inject, output, viewChild } from '@angular/core';
+import { Component, inject, output, signal, viewChild } from '@angular/core';
 import { DialogComponent, IconComponent } from '@ui';
 import {
   cycleLabel,
   tierLabel,
 } from '../../../shared/plan-cycle.model';
+import { TenantsService } from '../../../tenants/tenants.service';
 import { PayingClient } from '../../paying-clients.model';
 import { WhatsappContact } from '../../paying-clients.service';
 import { PayingClientsStore } from '../../paying-clients.store';
@@ -225,7 +226,48 @@ import { PayingClientsStore } from '../../paying-clients.store';
             }
           </div>
 
-          <div class="flex items-center justify-end gap-2 pt-3 border-t border-grey-50 flex-wrap">
+          @if (ownersBanned()) {
+            <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-100 text-red-700 text-xs font-semibold">
+              <ui-icon name="circle-alert" size="14" styleClass="text-red-500" />
+              Cuenta baneada — el dueño no puede iniciar sesión.
+            </div>
+          }
+
+          <div class="flex items-center justify-between gap-2 pt-3 border-t border-grey-50 flex-wrap">
+            <div class="flex items-center gap-2 flex-wrap">
+              @if (client.tier !== 'gratis') {
+                <button
+                  type="button"
+                  (click)="onRemovePlan(client)"
+                  class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                >
+                  <ui-icon name="trash" size="14" styleClass="text-red-500" />
+                  Quitar plan
+                </button>
+              }
+              <button
+                type="button"
+                (click)="onToggleBan(client)"
+                [disabled]="isBanning()"
+                class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                [class.text-red-600]="!ownersBanned()"
+                [class.hover:bg-red-50]="!ownersBanned()"
+                [class.text-emerald-600]="ownersBanned()"
+                [class.hover:bg-emerald-50]="ownersBanned()"
+              >
+                @if (isBanning()) {
+                  <ui-icon name="loader-circle" size="14" styleClass="animate-spin" />
+                } @else if (ownersBanned()) {
+                  <ui-icon name="user-check" size="14" styleClass="text-emerald-500" />
+                  Desbanear dueño
+                } @else {
+                  <ui-icon name="user-x" size="14" styleClass="text-red-500" />
+                  Banear dueño
+                }
+              </button>
+            </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
             @for (contact of store.whatsappNumbers(); track contact.number) {
               <a
                 [href]="buildWhatsappUrl(client, contact)"
@@ -258,6 +300,7 @@ import { PayingClientsStore } from '../../paying-clients.store';
               Cerrar
             </button>
           </div>
+          </div>
         </div>
       }
     </ui-dialog>
@@ -265,22 +308,71 @@ import { PayingClientsStore } from '../../paying-clients.store';
 })
 export class ClientDetailDialog {
   public readonly adjustPlan = output<PayingClient>();
+  public readonly removePlan = output<number>();
+  public readonly banChanged = output<number>();
 
   protected readonly store = inject(PayingClientsStore);
+  private readonly tenantsService = inject(TenantsService);
   private readonly dialog = viewChild.required(DialogComponent);
+
+  protected readonly ownersBanned = signal<boolean>(false);
+  protected readonly isBanning = signal<boolean>(false);
 
   public show(): void {
     this.dialog().show();
+    this.refreshBanState();
   }
 
   public hide(): void {
     this.dialog().hide();
     this.store.closeDetail();
+    this.ownersBanned.set(false);
+  }
+
+  private async refreshBanState(): Promise<void> {
+    const client = this.store.selectedClient();
+    if (!client) return;
+    const res = await this.tenantsService.isOwnersBanned(client.tenantId);
+    res.mapRight((b) => this.ownersBanned.set(b));
   }
 
   protected onAdjustPlan(client: PayingClient): void {
     this.dialog().hide();
     this.adjustPlan.emit(client);
+  }
+
+  protected onRemovePlan(client: PayingClient): void {
+    const ok = window.confirm(
+      `¿Seguro que querés quitarle el plan a "${client.tenantName ?? client.tenantSlug ?? 'este catálogo'}"?\n\nLa cuenta vuelve a plan Gratis. Esta acción no borra el catálogo.`
+    );
+    if (!ok) return;
+    this.removePlan.emit(client.tenantId);
+    this.dialog().hide();
+  }
+
+  protected async onToggleBan(client: PayingClient): Promise<void> {
+    const willBan = !this.ownersBanned();
+    const verb = willBan ? 'BANEAR' : 'DESBANEAR';
+    const ok = window.confirm(
+      `¿Seguro que querés ${verb} al dueño de "${client.tenantName ?? client.tenantSlug ?? 'este catálogo'}"?\n\n` +
+      (willBan
+        ? 'No va a poder iniciar sesión en ningún subdominio de CatalogoHoy hasta que lo desbanees.'
+        : 'Va a recuperar acceso para iniciar sesión normalmente.')
+    );
+    if (!ok) return;
+    this.isBanning.set(true);
+    const res = await this.tenantsService.setOwnersBanned(
+      client.tenantId,
+      willBan
+    );
+    this.isBanning.set(false);
+    res.mapRight(() => {
+      this.ownersBanned.set(willBan);
+      this.banChanged.emit(client.tenantId);
+    });
+    res.mapLeft((err) => {
+      window.alert(`No se pudo ${verb.toLowerCase()}: ${err.message}`);
+    });
   }
 
   /** Builds a wa.me deeplink with an expiry-aware default message. The phone

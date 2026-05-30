@@ -93,6 +93,40 @@ export class TenantsService {
     return E.right(undefined);
   }
 
+  /** Banea (o desbanea) a todos los dueños del tenant via
+   *  `set_tenant_owners_banned_admin`. Setea `auth.users.banned_until` para
+   *  bloquear el login en cualquier subdominio. */
+  async setOwnersBanned(
+    tenantId: number,
+    banned: boolean
+  ): Promise<Either<Error, number>> {
+    const { data, error } = await this.client.rpc(
+      'set_tenant_owners_banned_admin',
+      { p_tenant_id: tenantId, p_banned: banned }
+    );
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const count = Number((data as any)?.users_affected ?? 0);
+    return E.right(count);
+  }
+
+  async isOwnersBanned(tenantId: number): Promise<Either<Error, boolean>> {
+    const { data, error } = await this.client.rpc(
+      'is_tenant_owners_banned_admin',
+      { p_tenant_id: tenantId }
+    );
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    return E.right(Boolean(data));
+  }
+
   /** Carga el contexto de referidos de un tenant para mostrar en el dialog
    *  de Asignar plan: si fue referido (+ por quién), y cuánto crédito tiene
    *  disponible para consumir al confirmar este pago. */

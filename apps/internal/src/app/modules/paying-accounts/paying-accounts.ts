@@ -192,7 +192,11 @@ import { groupByOwner, PayingAccount } from './paying-accounts.model';
       }
     </div>
 
-    <app-client-detail-dialog (adjustPlan)="onAdjustPlan($event)" />
+    <app-client-detail-dialog
+      (adjustPlan)="onAdjustPlan($event)"
+      (removePlan)="onRemovePlan($event)"
+      (banChanged)="onBanChanged()"
+    />
     <app-assign-plan-dialog
       (assign)="onAssign($event)"
       (remove)="onRemovePlan($event)"
@@ -259,7 +263,8 @@ export default class PayingAccounts implements OnInit {
       payload.tenantId,
       payload.tier,
       payload.cycle,
-      payload.amountUsd
+      payload.amountUsd,
+      payload.consumeCreditUsd
     );
     await this.store.load();
   }
@@ -267,6 +272,13 @@ export default class PayingAccounts implements OnInit {
   protected async onRemovePlan(tenantId: number): Promise<void> {
     await this.tenantsStore.removePlan(tenantId);
     await this.store.load();
+  }
+
+  protected onBanChanged(): void {
+    // El estado de ban se guarda en `auth.users.banned_until` — no impacta el
+    // listado de planes, así que solo refrescamos para que UI muestre datos
+    // consistentes si el dueño tenía sesión activa.
+    this.store.load();
   }
 
   protected initial(account: PayingAccount): string {

@@ -64,7 +64,7 @@
             <!-- Upgrade desde plan pago actual: el precio que mostramos es la
                  diferencia prorrateada, NO el precio absoluto del nuevo plan.
                  Por eso lo etiquetamos explícito para no confundir. -->
-            <span class="plan-card__price-tag">Pagás ahora para upgradear</span>
+            <span class="plan-card__price-tag">Solo pagás esta diferencia para mejorar el plan</span>
             <div class="plan-card__price-main">
               <span class="plan-card__price-currency">{{ currencySymbol() }}</span>
               <span class="plan-card__price-amount">{{ getUpgradePrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>

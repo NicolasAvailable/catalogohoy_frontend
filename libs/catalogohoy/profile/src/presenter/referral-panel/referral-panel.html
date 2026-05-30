@@ -16,6 +16,15 @@
         Tu invitado además recibe 20% off en su primer pago.
       </p>
 
+      <div class="flex items-start gap-2 px-3 py-2 rounded-md bg-amber-50 border border-amber-100 text-amber-800">
+        <ui-icon name="circle-alert" size="14" styleClass="mt-0.5 shrink-0" />
+        <p class="text-xs leading-relaxed">
+          <strong>Importante:</strong> el crédito en USD solo se puede usar para pagar planes
+          dentro de CatalogoHoy (renovaciones o catálogos adicionales). No es dinero retirable
+          en efectivo ni transferible a otra cuenta.
+        </p>
+      </div>
+
       @if (isLoading()) {
         <div class="text-sm text-grey-400 py-3">Cargando tu código...</div>
       } @else if (code(); as c) {

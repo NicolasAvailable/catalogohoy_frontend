@@ -118,6 +118,12 @@
             <span>-{{ currencySymbol() }}{{ referralDiscountAmount() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
           </div>
         }
+        @if (creditUsedUsd() > 0) {
+          <div class="summary-line summary-line--discount">
+            <span>💰 Crédito de referidos aplicado</span>
+            <span>-{{ currencySymbol() }}{{ creditUsedAmount() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
+          </div>
+        }
       </div>
 
       <!-- Catalog addon stepper -->
@@ -178,6 +184,30 @@
           <ui-icon name="circle-alert" styleClass="size-3.5 shrink-0" />
           {{ couponError() }}
         </p>
+      }
+
+      @if (availableCreditUsd() > 0) {
+        <label class="referral-credit-row">
+          <input
+            type="checkbox"
+            [checked]="useReferralCredit()"
+            (change)="useReferralCredit.set(!useReferralCredit())"
+          />
+          <div class="referral-credit-row__text">
+            <span class="referral-credit-row__title">
+              🎁 Aplicar mi crédito de referidos
+            </span>
+            <span class="referral-credit-row__subtitle">
+              Tenés ${{ availableCreditUsd() | number: '1.2-2' }} USD disponibles. Se descuentan automáticamente del total.
+            </span>
+          </div>
+        </label>
+        @if (useReferralCredit() && paymentMethod() === 'card') {
+          <p class="referral-credit-notice">
+            <ui-icon name="info" styleClass="size-3.5 shrink-0 text-amber-500" />
+            Por ahora el crédito de referidos se aplica solo pagando por Pago Móvil. Cambiá el método de pago para continuar.
+          </p>
+        }
       }
 
       <hr class="summary-divider" />
@@ -264,9 +294,9 @@
       <!-- Pay button -->
       <button
         class="pay-btn"
-        [class.pay-btn--disabled]="!termsAccepted() || isLoading()"
+        [class.pay-btn--disabled]="!termsAccepted() || isLoading() || (useReferralCredit() && paymentMethod() === 'card')"
         [class.pay-btn--whatsapp]="paymentMethod() === 'mobile'"
-        [disabled]="!termsAccepted() || isLoading()"
+        [disabled]="!termsAccepted() || isLoading() || (useReferralCredit() && paymentMethod() === 'card')"
         (click)="pay()"
       >
         @if (isLoading()) {
