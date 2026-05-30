@@ -92,4 +92,43 @@ export class TenantsService {
 
     return E.right(undefined);
   }
+
+  /** Carga el contexto de referidos de un tenant para mostrar en el dialog
+   *  de Asignar plan: si fue referido (+ por quién), y cuánto crédito tiene
+   *  disponible para consumir al confirmar este pago. */
+  async getReferralContext(tenantId: number): Promise<
+    Either<Error, ReferralContext>
+  > {
+    const { data, error } = await this.client.rpc('get_tenant_referral_context', {
+      p_tenant_id: tenantId,
+    });
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row = (data ?? {}) as any;
+    return E.right({
+      creditAvailableUsd: Number(row.credit_available_usd ?? 0),
+      creditUsedUsd: Number(row.credit_used_usd ?? 0),
+      isReferred: Boolean(row.is_referred),
+      referrerTenantId: row.referrer_tenant_id ?? null,
+      referrerName: row.referrer_name ?? null,
+      referrerSlug: row.referrer_slug ?? null,
+      referralStatus: row.referral_status ?? null,
+      referralCode: row.referral_code ?? null,
+    });
+  }
+}
+
+export interface ReferralContext {
+  creditAvailableUsd: number;
+  creditUsedUsd: number;
+  isReferred: boolean;
+  referrerTenantId: number | null;
+  referrerName: string | null;
+  referrerSlug: string | null;
+  referralStatus: 'pending' | 'qualified' | 'rewarded' | 'expired' | null;
+  referralCode: string | null;
 }

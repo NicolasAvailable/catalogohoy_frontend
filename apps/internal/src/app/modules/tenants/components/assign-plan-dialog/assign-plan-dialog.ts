@@ -1,7 +1,9 @@
+import { DecimalPipe } from '@angular/common';
 import {
   Component,
   computed,
   effect,
+  inject,
   output,
   signal,
   viewChild,
@@ -16,18 +18,20 @@ import {
   PlanTier,
 } from '../../../shared/plan-cycle.model';
 import { Tenant } from '../../tenants.model';
+import { ReferralContext, TenantsService } from '../../tenants.service';
 
 export interface AssignPlanPayload {
   tenantId: number;
   tier: PlanTier;
   cycle: PlanCycle;
   amountUsd: number;
+  consumeCreditUsd: number | null;
 }
 
 @Component({
   selector: 'app-assign-plan-dialog',
   standalone: true,
-  imports: [DialogComponent, IconComponent, FormsModule],
+  imports: [DialogComponent, IconComponent, FormsModule, DecimalPipe],
   template: `
     <ui-dialog
       headerTitle="Asignar plan"
@@ -66,6 +70,49 @@ export interface AssignPlanPayload {
               }
             </div>
           </div>
+
+          @if (referral(); as ref) {
+            @if (ref.isReferred) {
+              <div class="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-violet-50 border border-violet-100">
+                <ui-icon name="gift" size="16" styleClass="text-violet-500 mt-0.5" />
+                <div class="flex flex-col text-xs leading-snug">
+                  <span class="text-violet-700 font-semibold">
+                    Este catálogo fue referido por
+                    {{ ref.referrerName ?? ref.referrerSlug ?? '—' }}
+                  </span>
+                  <span class="text-violet-500">
+                    @if (ref.referralStatus === 'pending') {
+                      Al confirmar el primer pago, el referente recibirá $5 USD de crédito automáticamente.
+                    } @else if (ref.referralStatus === 'rewarded') {
+                      Reward ya acreditado.
+                    } @else if (ref.referralStatus === 'expired') {
+                      Referral expirado / flaggeado: no se acreditará reward.
+                    } @else {
+                      Status: {{ ref.referralStatus ?? '—' }}
+                    }
+                  </span>
+                </div>
+              </div>
+            }
+            @if (ref.creditAvailableUsd > 0) {
+              <label class="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-emerald-50 border border-emerald-100 cursor-pointer">
+                <input
+                  type="checkbox"
+                  class="mt-1 accent-emerald-600"
+                  [checked]="consumeCredit()"
+                  (change)="consumeCredit.set(!consumeCredit())"
+                />
+                <div class="flex flex-col text-xs leading-snug">
+                  <span class="text-emerald-700 font-semibold">
+                    Consumir crédito de referidos: \${{ ref.creditAvailableUsd }} disponibles
+                  </span>
+                  <span class="text-emerald-600">
+                    Se descontarán del monto a cobrar. El cliente paga la diferencia.
+                  </span>
+                </div>
+              </label>
+            }
+          }
 
           <div class="flex flex-col gap-2">
             <span
@@ -170,6 +217,16 @@ export interface AssignPlanPayload {
               Se guarda como monto cobrado de la suscripción. Puede ser
               <strong>0</strong> si es una cuenta de prueba o cortesía.
             </span>
+            @if (creditToConsume() > 0) {
+              <div class="flex items-center justify-between px-3 py-2 rounded-md bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                <span>Crédito a consumir</span>
+                <span>−\${{ creditToConsume() | number: '1.2-2' }}</span>
+              </div>
+              <div class="flex items-center justify-between px-3 py-2 rounded-md bg-grey-25 text-grey-700 text-sm font-bold">
+                <span>Neto a cobrar al cliente</span>
+                <span>\${{ netAmount() | number: '1.2-2' }}</span>
+              </div>
+            }
           </div>
 
           <div
@@ -210,6 +267,8 @@ export class AssignPlanDialog {
   public readonly assign = output<AssignPlanPayload>();
   public readonly remove = output<number>();
 
+  private readonly tenantsService = inject(TenantsService);
+
   protected readonly tiers = PLAN_TIERS;
   protected readonly cycles = PLAN_CYCLES;
 
@@ -219,6 +278,22 @@ export class AssignPlanDialog {
   protected readonly amountUsd = signal<number>(0);
   /** Tracks whether the user has manually edited the amount. */
   private readonly amountTouched = signal<boolean>(false);
+
+  /** Contexto de referidos del tenant. Se carga cada vez que abre el dialog. */
+  protected readonly referral = signal<ReferralContext | null>(null);
+  /** Si el admin tildó "consumir crédito" — solo aplicable cuando este
+   *  tenant es referrer con creditAvailableUsd > 0. */
+  protected readonly consumeCredit = signal<boolean>(false);
+
+  protected readonly creditToConsume = computed(() => {
+    const ref = this.referral();
+    if (!ref || !this.consumeCredit()) return 0;
+    return Math.min(ref.creditAvailableUsd, Number(this.amountUsd()) || 0);
+  });
+
+  protected readonly netAmount = computed(
+    () => Math.max(0, (Number(this.amountUsd()) || 0) - this.creditToConsume())
+  );
 
   protected readonly canConfirm = computed(
     () =>
@@ -252,7 +327,13 @@ export class AssignPlanDialog {
     this.selectedTier.set(tier);
     this.selectedCycle.set(cycle);
     this.amountUsd.set(defaultAmountUsd(tier, cycle));
+    this.referral.set(null);
+    this.consumeCredit.set(false);
     this.dialog().show();
+    // Fire-and-forget: si tiene contexto de referidos lo mostramos.
+    this.tenantsService.getReferralContext(tenant.id).then((res) => {
+      res.mapRight((ctx) => this.referral.set(ctx));
+    });
   }
 
   public hide(): void {
@@ -273,11 +354,13 @@ export class AssignPlanDialog {
   protected onConfirm(): void {
     const tenant = this.currentTenant();
     if (!tenant) return;
+    const consume = this.creditToConsume();
     this.assign.emit({
       tenantId: tenant.id,
       tier: this.selectedTier(),
       cycle: this.selectedCycle(),
       amountUsd: Number(this.amountUsd()) || 0,
+      consumeCreditUsd: consume > 0 ? consume : null,
     });
     this.hide();
   }

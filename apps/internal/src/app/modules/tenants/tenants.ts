@@ -301,7 +301,8 @@ export class Tenants implements OnInit {
       payload.tenantId,
       payload.tier,
       payload.cycle,
-      payload.amountUsd
+      payload.amountUsd,
+      payload.consumeCreditUsd
     );
   }
 
