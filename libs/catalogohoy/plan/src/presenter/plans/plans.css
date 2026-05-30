@@ -276,11 +276,18 @@
 .plan-card__price-tag--referral {
   background: #faf5ff;
   color: #7c3aed;
-  margin-top: 0.4rem;
-  margin-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0.4rem;
   text-transform: none;
   letter-spacing: 0;
   font-weight: 600;
+}
+
+.plan-card__price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 /* ── Referral discount banner (top of plans page) ── */

@@ -77,13 +77,15 @@
               Solo cobramos la diferencia prorrateada hasta el final de tu período actual.
             </p>
           } @else if (hasReferralDiscount(plan)) {
-            <span class="plan-card__price-original">{{ currencySymbol() }}{{ getPeriodPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
-            <div class="plan-card__price-main">
-              <span class="plan-card__price-currency">{{ currencySymbol() }}</span>
-              <span class="plan-card__price-amount">{{ getReferralDiscountedPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
+            <span class="plan-card__price-tag plan-card__price-tag--referral">🎁 {{ referralDiscountPct() }}% off referido aplicado</span>
+            <div class="plan-card__price-row">
+              <span class="plan-card__price-original">{{ currencySymbol() }}{{ getPeriodPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
+              <div class="plan-card__price-main">
+                <span class="plan-card__price-currency">{{ currencySymbol() }}</span>
+                <span class="plan-card__price-amount">{{ getReferralDiscountedPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
+              </div>
             </div>
             <span class="plan-card__price-period">{{ getPeriodLabel(plan) }} · {{ currencyCode() }}</span>
-            <span class="plan-card__price-tag plan-card__price-tag--referral">🎁 {{ referralDiscountPct() }}% off referido aplicado</span>
           } @else {
             <div class="plan-card__price-main">
               <span class="plan-card__price-currency">{{ currencySymbol() }}</span>
