@@ -9,7 +9,9 @@
     "build": "nx run-many --target=build --all",
     "build:catalogohoy": "nx build catalogohoy",
     "build:authentication": "nx build authentication",
-    "build:internal": "nx build internal"
+    "build:internal": "nx build internal",
+    "serve:landing": "nx serve landing",
+    "build:landing": "nx build landing"
   },
   "private": true,
   "dependencies": {
@@ -66,6 +68,7 @@
     "@nx/jest": "22.0.3",
     "@nx/js": "22.0.3",
     "@nx/playwright": "22.0.3",
+    "@nx/vite": "22.0.3",
     "@nx/web": "22.0.3",
     "@nx/workspace": "22.0.3",
     "@playwright/test": "^1.36.0",
@@ -96,5 +99,8 @@
     "tslib": "^2.3.0",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.40.0"
-  }
+  },
+  "workspaces": [
+    "apps/landing"
+  ]
 }
