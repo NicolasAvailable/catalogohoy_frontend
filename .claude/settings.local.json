@@ -44,7 +44,14 @@
       "mcp__meta-ads__get_adsets",
       "mcp__meta-ads__get_ads",
       "mcp__meta-ads__get_insights",
-      "mcp__meta-ads__update_adset"
+      "mcp__meta-ads__update_adset",
+      "Bash(npx tsc *)",
+      "Bash(git -C /Users/nicolassoto/Desktop/projects/catalogohoy_frontend log --oneline --all)",
+      "Bash(git -C /Users/nicolassoto/Desktop/projects/catalogohoy_frontend show 92d19d2 --name-only)",
+      "Read(//private/tmp/**)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git fetch *)"
     ]
   },
   "enableAllProjectMcpServers": true,

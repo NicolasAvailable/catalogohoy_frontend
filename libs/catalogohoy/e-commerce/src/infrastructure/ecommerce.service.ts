@@ -85,8 +85,14 @@ export class EcommerceService implements BaseEcommerceService {
     if (hours) {
       openTime = hours.open_time || '08:00';
       closeTime = hours.close_time || '20:00';
-      isOpen =
-        hours.is_open && currentTime >= openTime && currentTime <= closeTime;
+      // When close > open the window is same-day (08:00–20:00).
+      // When close <= open the window crosses midnight (18:00–02:00,
+      // or 08:00–00:00 = "until midnight"). Equal times mean 24h open.
+      const isInWindow =
+        closeTime > openTime
+          ? currentTime >= openTime && currentTime <= closeTime
+          : currentTime >= openTime || currentTime <= closeTime;
+      isOpen = hours.is_open && isInWindow;
     }
 
     // Calcular tasa de cambio activa.
