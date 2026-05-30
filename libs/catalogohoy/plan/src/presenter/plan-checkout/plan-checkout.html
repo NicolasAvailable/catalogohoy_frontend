@@ -154,7 +154,7 @@
           placeholder="¿Cupón o código de referido?"
           [ngModel]="couponInput()"
           (ngModelChange)="couponInput.set($event); couponError.set(null)"
-          [disabled]="!!appliedCoupon() || !!referralInfo() || isApplyingCoupon()"
+          [disabled]="!!appliedCoupon() || isApplyingCoupon()"
           (keydown.enter)="applyCoupon()"
         />
         @if (appliedCoupon()) {
