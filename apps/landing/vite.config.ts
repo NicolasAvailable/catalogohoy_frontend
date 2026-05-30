@@ -17,5 +17,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Evita copias duplicadas de React al ejecutar desde el monorepo (Nx)
+    dedupe: ["react", "react-dom"],
   },
 }));
