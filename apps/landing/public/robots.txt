@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /assets/
+
+Sitemap: https://catalogohoy.com/sitemap.xml
+
+Host: https://catalogohoy.com
