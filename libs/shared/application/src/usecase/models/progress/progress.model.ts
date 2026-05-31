@@ -17,6 +17,14 @@ export class UseCaseProgress {
       });
   }
 
+  /** True si el builder configuró un mensaje (texto o Error). Permite a
+   *  `base.usecase` saber si tiene que usar el mensaje del builder o caer al
+   *  string del value como fallback. */
+  public hasCompleteMessage(): boolean {
+    if (is.error(this.completeValue).isRight()) return true;
+    return typeof this.completeValue === 'string' && this.completeValue !== '';
+  }
+
   public static from({ start, complete }: { start: string; complete: string | Error }): UseCaseProgress {
     return new UseCaseProgress(start, complete);
   }
