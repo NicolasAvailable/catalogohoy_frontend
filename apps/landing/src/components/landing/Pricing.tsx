@@ -1,6 +1,7 @@
 import { Check, X, PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { isVenezuela, useVisitorCountry } from "@/hooks/use-visitor-country";
 
 /* ═══════════════════════════════════════
    TYPES & CONFIG
@@ -170,6 +171,10 @@ const cardVariants = {
    ═══════════════════════════════════════ */
 const Pricing = () => {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
+  // Mostramos "a tasa BCV" solo cuando el visitante (por geo-IP) está en
+  // Venezuela. Si está en otro país — directo o vía VPN — no aplica.
+  const { country } = useVisitorCountry();
+  const showBcv = isVenezuela(country);
 
   return (
     <section
@@ -291,7 +296,7 @@ const Pricing = () => {
                       ${getMonthlyEquivalent(plan, billingPeriod)}/mes
                     </p>
                   )}
-                  {!plan.isFree && (
+                  {!plan.isFree && showBcv && (
                     <p className="text-sm font-medium text-[#1e293b] mt-0.5">a tasa BCV</p>
                   )}
                 </div>
