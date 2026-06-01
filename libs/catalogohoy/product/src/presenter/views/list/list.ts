@@ -101,6 +101,10 @@ export default class List implements OnInit, OnDestroy {
   public readonly isProcessing = signal(false);
   public readonly bulkCategoryIds = signal<string[]>([]);
   public readonly filterCategoryId = signal<string | null>(null);
+  /** ID del producto cuya URL pública se acaba de copiar — usado para mostrar
+   *  el feedback "¡Link copiado!" en el tooltip del botón de compartir por
+   *  unos segundos. */
+  public readonly copiedId = signal<string | null>(null);
 
   public readonly hasSelection = computed(() => this.selectedIds().size > 0);
 
@@ -264,6 +268,39 @@ export default class List implements OnInit, OnDestroy {
       return;
     }
     this.router.navigate(['/admin/products/create']);
+  }
+
+  /** Duplica un producto: crea una copia exacta con el sufijo "(copia)" y
+   *  queda oculta por defecto (`is_hidden: true`) para que el dueño la
+   *  ajuste antes de publicarla. */
+  public async onDuplicate(product: Product): Promise<void> {
+    if (this.isProcessing()) return;
+    if (!this.planStore.canCreateProduct()) {
+      this.planLimitDialog.show();
+      return;
+    }
+    this.isProcessing.set(true);
+    const result = await this.productFacade.duplicate(String(product.id));
+    result.mapRight(() => this.refreshList());
+    this.isProcessing.set(false);
+  }
+
+  /** Copia al portapapeles la URL pública del producto. Pattern:
+   *  `https://{slug}.catalogohoy.com/?product={id}`. El catálogo público
+   *  lee ese query param al cargar y abre el modal de detalle. */
+  public async onShare(product: Product): Promise<void> {
+    const slug = this.tenantStore.tenantSlug();
+    if (!slug) return;
+    const url = `https://${slug}.catalogohoy.com/?product=${product.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      this.copiedId.set(String(product.id));
+      setTimeout(() => {
+        if (this.copiedId() === String(product.id)) this.copiedId.set(null);
+      }, 2000);
+    } catch {
+      /* clipboard puede no estar disponible en navegadores muy viejos */
+    }
   }
 
   public openImportExport(): void {

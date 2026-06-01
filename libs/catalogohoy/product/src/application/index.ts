@@ -4,6 +4,7 @@ import { ProductService } from '../infrastructure';
 import { CreateProductUseCase } from './create-product/create-product.usecase';
 import { DeleteManyProductsUseCase } from './delete-many-products/delete-many-products.usecase';
 import { DeleteProductUseCase } from './delete-product/delete-product.usecase';
+import { DuplicateProductUseCase } from './duplicate-product/duplicate-product.usecase';
 import { GetByIdUseCase } from './get-by-id/get-by-id.usecase';
 import { ReplaceCategoriesUseCase } from './replace-categories/replace-categories.usecase';
 import { UpdateProductUseCase } from './update-product/update-product.usecase';
@@ -22,6 +23,10 @@ export class ProductFacade {
 
   public update(input: UpdateProductInput) {
     return new UpdateProductUseCase(this.productService).execute(input);
+  }
+
+  public duplicate(id: string) {
+    return new DuplicateProductUseCase(this.productService).execute(id);
   }
 
   public delete(id: string) {

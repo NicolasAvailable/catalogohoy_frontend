@@ -300,6 +300,83 @@ export class ProductService implements BaseProductService {
     return E.right(undefined);
   }
 
+  /** Duplica un producto: inserta una nueva fila con los mismos campos +
+   *  sufijo "(copia)" en el nombre, posición al final, y re-linkea las
+   *  categorías al nuevo id. Todo lo que vive en la fila (sizes, wholesale
+   *  tiers, photos, flags) se copia tal cual — son columnas JSON, no FK. */
+  public async duplicate(id: string): Promise<E.Either<Error, string>> {
+    const {
+      data: { user },
+    } = await this.client.auth.getUser();
+    if (!user) {
+      return E.left(new Error('User not authenticated'));
+    }
+
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) {
+      return E.left(new Error('No tenant found'));
+    }
+
+    const { data: src, error: srcErr } = await this.client
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (srcErr || !src) {
+      return E.left(new Error(srcErr?.message ?? 'Producto no encontrado'));
+    }
+
+    const { data: maxData } = await this.client
+      .from('products')
+      .select('position')
+      .eq('tenant_id', tenantId)
+      .order('position', { ascending: false })
+      .limit(1)
+      .single();
+    const nextPosition = (maxData?.position ?? -1) + 1;
+
+    const { id: _omitId, created_at: _omitCreated, updated_at: _omitUpdated, ...rest } = src;
+    void _omitId; void _omitCreated; void _omitUpdated;
+
+    const { data: inserted, error: insErr } = await this.client
+      .from('products')
+      .insert({
+        ...rest,
+        name: `${src.name} (copia)`,
+        auth_user_id: user.id,
+        tenant_id: tenantId,
+        position: nextPosition,
+        is_hidden: true,
+      })
+      .select('id, name')
+      .single();
+    if (insErr || !inserted) {
+      return E.left(new Error(insErr?.message ?? 'No se pudo duplicar'));
+    }
+
+    const { data: cats } = await this.client
+      .from('product_categories')
+      .select('category_id')
+      .eq('product_id', id);
+    if (cats && cats.length > 0) {
+      await this.client.from('product_categories').insert(
+        cats.map((c) => ({
+          product_id: inserted.id,
+          category_id: c.category_id,
+        }))
+      );
+    }
+
+    this.activityLog.log({
+      action: 'product.create',
+      entityType: 'product',
+      entityId: inserted.id,
+      entityName: inserted.name,
+    });
+
+    return E.right(String(inserted.id));
+  }
+
   public async delete(id: string): Promise<E.Either<Error, void>> {
     // Snapshot the name for the log before we lose the row.
     const { data: snap } = await this.client

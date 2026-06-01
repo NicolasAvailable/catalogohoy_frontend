@@ -328,12 +328,24 @@
               tooltip="Editar"
               tooltipPosition="bottom"
             />
+            @if (canCreateProduct()) {
             <ui-button
+              (click)="onDuplicate(item)"
+              icon="copy"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+              tooltip="Duplicar"
+              tooltipPosition="bottom"
+            />
+            }
+            <ui-button
+              (click)="onShare(item)"
               icon="share2"
               variant="outlined"
               severity="contrast"
               size="small"
-              tooltip="Compartir"
+              [tooltip]="copiedId() === String(item.id) ? '¡Link copiado!' : 'Compartir'"
               tooltipPosition="bottom"
             />
             @if (canDeleteProduct()) {
