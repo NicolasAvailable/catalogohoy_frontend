@@ -240,6 +240,42 @@
             <p class="text-xs text-grey-400 mt-1.5">Te aplicamos un descuento en tu primer pago.</p>
           </div>
 
+          <!-- Aceptación de términos + privacidad — obligatorio. Reconoce el
+               monitoreo, recolección de IP/uso, acceso a datos para soporte y
+               todo lo que ya está descrito en /privacy-policy. -->
+          <div class="mb-6">
+            <label class="flex items-start gap-3 cursor-pointer select-none" for="accept-terms-checkbox">
+              <input
+                id="accept-terms-checkbox"
+                type="checkbox"
+                formControlName="acceptedTerms"
+                class="mt-1 w-4 h-4 accent-primary-600 cursor-pointer shrink-0"
+              />
+              <span class="text-xs text-grey-500 leading-relaxed">
+                He leído y acepto los
+                <a
+                  href="https://catalogohoy.com/terms-of-service"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-primary-600 hover:text-primary-700 underline font-medium"
+                >Términos y Condiciones</a>
+                y la
+                <a
+                  href="https://catalogohoy.com/privacy-policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-primary-600 hover:text-primary-700 underline font-medium"
+                >Política de Privacidad</a>.
+                Entiendo que CatalogoHoy recopila mi dirección IP, datos de uso y mensajes para
+                operar, dar soporte y prevenir fraude, y que el equipo puede acceder a esos
+                datos cuando sea necesario para esos fines.
+              </span>
+            </label>
+            @if (profileForm.controls.acceptedTerms.touched && profileForm.controls.acceptedTerms.invalid) {
+              <p class="text-xs text-red-500 mt-1.5 ml-7">Debés aceptar los términos y la política para continuar.</p>
+            }
+          </div>
+
           <ui-button
             (click)="submit()"
             [disabled]="profileForm.invalid || loaderStore.isEnable()"

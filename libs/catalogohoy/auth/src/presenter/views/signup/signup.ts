@@ -2,7 +2,7 @@ import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular
 import { Subscription } from 'rxjs';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { MetaPixelService } from '@catalogohoy/core';
+import { MetaPixelService, SupabaseClientProvider } from '@catalogohoy/core';
 import { SUPPORTED_COUNTRIES } from '@catalogohoy/ecommerce-config';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import { LocationService } from '@shared/infrastructure';
@@ -60,6 +60,12 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly metaPixel = inject(MetaPixelService);
   private readonly locationService = inject(LocationService);
+  private readonly supabase = SupabaseClientProvider.getInstance();
+
+  /** Versión publicada de los Términos + Privacy. Si cambian las políticas y
+   *  queremos forzar re-aceptación, subimos este número y filtramos en backend
+   *  los usuarios cuyo `accepted_terms_version` quedó atrás. */
+  private static readonly TERMS_VERSION = '2026-03-13';
   private authSub: (() => void) | null = null;
   private googlePopup: Window | null = null;
   private popupPollId: ReturnType<typeof setInterval> | null = null;
@@ -85,6 +91,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     storeName: ['', [Validators.required, Validators.minLength(3)]],
     country: ['', [Validators.required]],
     referralCode: [''],
+    acceptedTerms: [false, [Validators.requiredTrue]],
   });
 
   readonly slugPreview = signal('');
@@ -319,6 +326,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
       if (signupResult.isLeft()) return;
       await this.facade.acceptInvite(this.inviteToken);
       sessionStorage.removeItem('pending_invite_token');
+      await this._recordTermsAcceptance();
       const redirectResult = await this.facade.getLoginRedirectUrl();
       redirectResult.mapRight((url) => (window.location.href = url));
       return;
@@ -331,9 +339,10 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
         countryCode: country,
         referralCode: normalizedRef,
       });
-      result.mapRight((url) => {
+      result.mapRight(async (url) => {
         this.metaPixel.trackEvent('CompleteRegistration', { content_name: storeName });
         this._clearReferralCookie();
+        await this._recordTermsAcceptance();
         window.location.href = url;
       });
     } else {
@@ -349,11 +358,26 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
         countryCode: country,
         referralCode: normalizedRef,
       } as SignUpCredentials);
-      result.mapRight((url) => {
+      result.mapRight(async (url) => {
         this.metaPixel.trackEvent('CompleteRegistration', { content_name: storeName });
         this._clearReferralCookie();
+        await this._recordTermsAcceptance();
         window.location.href = url;
       });
+    }
+  }
+
+  /** Best-effort: registra la fecha + versión de aceptación de Términos +
+   *  Privacy en la fila del usuario. No bloqueamos el redirect si falla — la
+   *  aceptación quedó probada del lado del navegador por el `Validators.
+   *  requiredTrue` del checkbox; el row update es para auditoría. */
+  private async _recordTermsAcceptance(): Promise<void> {
+    try {
+      await this.supabase.rpc('record_terms_acceptance', {
+        p_version: Signup.TERMS_VERSION,
+      });
+    } catch (err) {
+      console.warn('record_terms_acceptance failed:', err);
     }
   }
 
