@@ -321,29 +321,28 @@ export class EcommerceService implements BaseEcommerceService {
     return result.mapRight((d) => d.categories);
   }
 
+  /** Descuenta stock vía RPC `decrement_product_stock` (SECURITY DEFINER).
+   *  El UPDATE directo client-side fallaba en silencio cuando lo disparaba
+   *  un visitante anónimo: la RLS de `products` solo permite UPDATE a
+   *  miembros autenticados del tenant. La RPC bypassa eso de forma segura,
+   *  validando tenant_id por cada item y soportando productos con sizes. */
   private async deductStock(
-    products: { productId: string; quantity: number }[]
+    tenantId: number,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    items: any[]
   ): Promise<void> {
-    const grouped = products.reduce<Record<string, number>>((acc, item) => {
-      acc[item.productId] = (acc[item.productId] ?? 0) + item.quantity;
-      return acc;
-    }, {});
-
-    for (const [productId, totalQuantity] of Object.entries(grouped)) {
-      const { data: product } = await this.client
-        .from('products')
-        .select('stock')
-        .eq('id', productId)
-        .single();
-
-      if (product && product.stock !== null) {
-        const currentStock = Number(product.stock);
-        const newStock = Math.max(0, currentStock - totalQuantity);
-        await this.client
-          .from('products')
-          .update({ stock: newStock })
-          .eq('id', productId);
-      }
+    if (!items?.length) return;
+    const payload = items.map((it) => ({
+      productId: it.productId,
+      quantity: it.quantity,
+      size: it.size ?? null,
+    }));
+    const { error } = await this.client.rpc('decrement_product_stock', {
+      p_tenant_id: tenantId,
+      p_items: payload,
+    });
+    if (error) {
+      console.warn('[decrement_product_stock] failed', error);
     }
   }
 
@@ -415,7 +414,7 @@ export class EcommerceService implements BaseEcommerceService {
       return E.left(new Error(error.message));
     }
 
-    await this.deductStock(order.products);
+    await this.deductStock(order.tenant_id, order.products);
 
     return E.right(undefined);
   }
