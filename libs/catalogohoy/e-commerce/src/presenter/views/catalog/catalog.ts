@@ -9,15 +9,13 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
-import { DialogService, IconComponent, InputSearchComponent, dialogConfig } from '@ui';
+import { IconComponent, InputSearchComponent } from '@ui';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
-import { CartStore, EcommerceService, EcommerceStore } from '../../../infrastructure';
+import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { Category } from '../../../domain';
 import { CategoryFilter } from '../../components/category-filter/category-filter';
 import { ProductCard } from '../../components/product-card/product-card';
-import { ProductDetailModal } from '../../components/product-detail-modal/product-detail-modal';
 
 @Component({
   selector: 'lib-catalog',
@@ -34,9 +32,6 @@ import { ProductDetailModal } from '../../components/product-detail-modal/produc
 export default class Catalog implements OnInit, OnDestroy {
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cartStore = inject(CartStore);
-  private readonly route = inject(ActivatedRoute);
-  private readonly ecommerceService = inject(EcommerceService);
-  private readonly dialogService = inject(DialogService);
 
   public readonly searchValue = signal('');
   public readonly showCategoriesSheet = signal(false);
@@ -65,6 +60,7 @@ export default class Catalog implements OnInit, OnDestroy {
         this.observer.observe(sentinel.nativeElement);
       }
     });
+
   }
 
   ngOnInit() {
@@ -78,26 +74,6 @@ export default class Catalog implements OnInit, OnDestroy {
           this.ecommerceStore.loadProducts(this.slug);
         }
       });
-
-    // Deep-link: si la URL trae ?product=<id> abrimos el modal de detalle.
-    // Esto soporta los links compartidos desde el admin (botón Compartir).
-    const productId = this.route.snapshot.queryParamMap.get('product');
-    if (productId) this.openProductFromQueryParam(productId);
-  }
-
-  private async openProductFromQueryParam(id: string): Promise<void> {
-    const result = await this.ecommerceService.getProductById(id);
-    result.mapRight((product) => {
-      this.dialogService.open(
-        ProductDetailModal,
-        dialogConfig({
-          data: { product },
-          showHeader: false,
-          style: { width: '56rem', maxWidth: '95vw' },
-          contentStyle: { padding: '0', overflow: 'hidden' },
-        })
-      );
-    });
   }
 
   ngOnDestroy() {

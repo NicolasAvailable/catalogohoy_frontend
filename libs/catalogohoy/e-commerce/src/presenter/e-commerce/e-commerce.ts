@@ -10,12 +10,13 @@ import {
   OnInit,
 } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
-import { RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
-import { IconComponent } from '@ui';
-import { CartStore, EcommerceStore } from '../../infrastructure';
+import { DialogService, IconComponent, dialogConfig } from '@ui';
+import { CartStore, EcommerceService, EcommerceStore } from '../../infrastructure';
+import { ProductDetailModal } from '../components/product-detail-modal/product-detail-modal';
 import { CartDrawer } from '../components/cart-drawer/cart-drawer';
 import { CatalogExpiredComponent } from '../components/catalog-expired/catalog-expired';
 import { CatalogFooter } from '../components/catalog-footer/catalog-footer';
@@ -53,6 +54,9 @@ export class ECommerce implements OnInit, OnDestroy {
   private readonly titleService = inject(Title);
   private readonly metaService = inject(Meta);
   private readonly document = inject(DOCUMENT);
+  private readonly ecommerceService = inject(EcommerceService);
+  private readonly dialogService = inject(DialogService);
+  private readonly router = inject(Router);
 
   public readonly whatsappUrl = computed(() => {
     const btn = this.ecommerceStore.effectiveCatalogInfo()?.whatsappButtons?.[0];
@@ -165,6 +169,11 @@ export class ECommerce implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
+    // Snapshot del `?product=<id>` ANTES de cualquier navigate.
+    const deepLinkProductId = new URL(window.location.href).searchParams.get(
+      'product'
+    );
+
     const slug = getTenantSlugFromUrl();
     if (slug) {
       const result = await this.ecommerceStore.loadCatalog(slug);
@@ -179,7 +188,42 @@ export class ECommerce implements OnInit, OnDestroy {
       }
     }
 
+    // Una vez resuelto el tenant (catalogInfo poblado), abrimos el modal
+    // del producto deep-linkeado. Lo hacemos acá y NO en el child Catalog
+    // porque el child se monta antes de que loadCatalog termine — y
+    // dialogService.open() pierde el host de PrimeNG si lo llamamos muy
+    // temprano.
+    if (deepLinkProductId) {
+      this.openDeepLinkProduct(deepLinkProductId);
+    }
+
     window.addEventListener('message', this.handlePreviewMessage);
+  }
+
+  private async openDeepLinkProduct(productId: string): Promise<void> {
+    const result = await this.ecommerceService.getProductById(productId);
+    if (result.isLeft()) {
+      console.warn('[deep-link] producto no encontrado', productId, result.value);
+      return;
+    }
+    result.mapRight((product) => {
+      this.dialogService.open(
+        ProductDetailModal,
+        dialogConfig({
+          data: { product },
+          showHeader: false,
+          style: { width: '56rem', maxWidth: '95vw' },
+          contentStyle: { padding: '0', overflow: 'hidden' },
+        })
+      );
+      // Limpia el query param sin recargar — back/forward no reabre y el
+      // link sigue compartible vía el botón Compartir.
+      this.router.navigate([], {
+        queryParams: { product: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    });
   }
 
   ngOnDestroy() {

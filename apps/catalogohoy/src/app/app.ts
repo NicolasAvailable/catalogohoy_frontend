@@ -30,16 +30,32 @@ export class App implements OnInit {
 
   ngOnInit(): void {}
 
+  /** Keys que NO se mueven a localStorage al inicio: tienen que quedar
+   *  visibles en la URL porque otras partes de la app los leen vía
+   *  `route.snapshot.queryParamMap` (deep-links). El resto sigue el
+   *  comportamiento original — se persiste en localStorage para futuras
+   *  navegaciones internas y se limpia de la URL. */
+  private static readonly QUERY_PARAMS_KEEP_IN_URL = new Set(['product']);
+
   private captureQueryParametersToLocalStorage(): void {
     const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.toString() === '') return;
+
+    const keepInUrl = new URLSearchParams();
 
     urlParams.forEach((value, key) => {
-      localStorage.setItem(key, value);
+      if (App.QUERY_PARAMS_KEEP_IN_URL.has(key)) {
+        keepInUrl.append(key, value);
+      } else {
+        localStorage.setItem(key, value);
+      }
     });
 
-    if (urlParams.toString()) {
+    const currentSearch = window.location.search.replace(/^\?/, '');
+    const newSearch = keepInUrl.toString();
+    if (currentSearch !== newSearch) {
       const url = new URL(window.location.href);
-      url.search = '';
+      url.search = newSearch;
       window.history.replaceState({}, '', url.toString());
     }
   }

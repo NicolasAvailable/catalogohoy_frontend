@@ -345,7 +345,7 @@
               variant="outlined"
               severity="contrast"
               size="small"
-              [tooltip]="copiedId() === String(item.id) ? '¡Link copiado!' : 'Compartir'"
+              [tooltip]="copiedId() === ('' + item.id) ? '¡Link copiado!' : 'Compartir'"
               tooltipPosition="bottom"
             />
             @if (canDeleteProduct()) {
