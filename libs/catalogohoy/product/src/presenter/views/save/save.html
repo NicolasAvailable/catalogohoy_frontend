@@ -315,6 +315,7 @@
             (valueChange)="setPhoto($event)"
             [accept]="'image/webp, image/png, image/jpeg, video/mp4, video/webm'"
             [max]="{ mb: 40 }"
+            [multiple]="true"
             [acceptPaste]="photos().length < maxPhotos()"
           >
             <ng-template #picker let-pick="pick" let-paste="paste" let-canPaste="canPaste">

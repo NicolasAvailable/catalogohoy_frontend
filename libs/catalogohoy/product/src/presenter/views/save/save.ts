@@ -401,20 +401,27 @@ export default class Save implements OnInit {
     const currentPhotos = this.photos();
     const limit = this.maxPhotos();
 
-    if (currentPhotos.length + newPhotos.length > limit) {
+    const uniquePhotos = newPhotos.filter(
+      (photo) => !currentPhotos.includes(photo)
+    );
+
+    // Con carga múltiple el usuario puede elegir más fotos que las que entran
+    // en su plan: agregamos las que caben y avisamos por el resto en vez de
+    // rechazar todo el lote.
+    const remaining = Math.max(0, limit - currentPhotos.length);
+    const toAdd = uniquePhotos.slice(0, remaining);
+
+    if (uniquePhotos.length > toAdd.length) {
       this.toastService.error(
         ('Solo puedes subir un máximo de ' +
           limit +
           ' imágenes.') as unknown as Exception
       );
-      return;
     }
 
-    const uniquePhotos = newPhotos.filter(
-      (photo) => !currentPhotos.includes(photo)
-    );
+    if (toAdd.length === 0) return;
 
-    this.photos.update((photos) => [...photos, ...uniquePhotos]);
+    this.photos.update((photos) => [...photos, ...toAdd]);
     this.form.controls.photos.setValue(this.photos());
   }
 
