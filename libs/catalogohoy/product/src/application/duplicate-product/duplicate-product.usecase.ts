@@ -13,7 +13,6 @@ export class DuplicateProductUseCase extends UseCase<
     super(
       progressBuilder()
         .withStart('Duplicando...')
-        .withComplete('Producto duplicado correctamente')
         .build()
     );
   }

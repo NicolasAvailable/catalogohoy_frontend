@@ -30,6 +30,7 @@ import {
   TooltipDirective,
 } from '@ui';
 import { firstImageUrl } from '@shared/domain';
+import { ToastService } from '@shared/infrastructure';
 import { debounceTime, distinctUntilChanged, Subscription } from 'rxjs';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { ProductFacade } from '../../../application';
@@ -69,6 +70,7 @@ export default class List implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly permissions = inject(TeamPermissionsStore);
   private readonly productService = inject(ProductService);
+  private readonly toastService = inject(ToastService);
   protected readonly canCreateProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'create'));
   protected readonly canDeleteProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'delete'));
   public readonly productStore = inject(ProductStore);
@@ -281,7 +283,10 @@ export default class List implements OnInit, OnDestroy {
     }
     this.isProcessing.set(true);
     const result = await this.productFacade.duplicate(String(product.id));
-    result.mapRight(() => this.refreshList());
+    result.mapRight(() => {
+      this.toastService.success('Producto duplicado correctamente');
+      this.refreshList();
+    });
     this.isProcessing.set(false);
   }
 
@@ -295,6 +300,7 @@ export default class List implements OnInit, OnDestroy {
     try {
       await navigator.clipboard.writeText(url);
       this.copiedId.set(String(product.id));
+      this.toastService.success('Link copiado al portapapeles');
       setTimeout(() => {
         if (this.copiedId() === String(product.id)) this.copiedId.set(null);
       }, 2000);
