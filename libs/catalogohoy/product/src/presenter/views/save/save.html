@@ -313,7 +313,7 @@
         <div class="flex flex-col gap-4">
           <ui-uploader
             (valueChange)="setPhoto($event)"
-            [accept]="'image/webp, image/png, image/jpeg, video/mp4, video/webm'"
+            [accept]="'image/*,video/*'"
             [max]="{ mb: 40 }"
             [multiple]="true"
             [acceptPaste]="photos().length < maxPhotos()"

@@ -29,17 +29,23 @@ export type PickerTemplate = _.TemplateRef<{
   imports: [CommonModule, DragDropUploaderDirective],
   template: `
     <section uiDragDropUploader (valueChange)="onFilesDropped($event)" [disabled]="isLoading()" class="group size-full relative">
-      <form #form>
-        <input
-          #input
-          (change)="onInputChange($event); form.reset()"
-          [accept]="accept()"
-          [multiple]="multiple()"
-          [disabled]="disabled()"
-          type="file"
-          class="hidden"
-        />
-      </form>
+      <!-- iOS Safari multi-select fix:
+           1. Sin wrapper <form> (iOS tiene casos donde el file input
+              dentro de un form limita la seleccion a 1).
+           2. multiple va como presence-only attribute via attr.multiple,
+              no como property binding. Sin esto, iOS 17/18 abre el
+              PhotoPicker en single-select.
+           3. disabled tambien va como attr para no renderizar
+              disabled='false' que Safari puede interpretar como presence. -->
+      <input
+        #input
+        (change)="onInputChange($event); input.value = ''"
+        [accept]="accept()"
+        [attr.multiple]="multiple() ? '' : null"
+        [attr.disabled]="disabled() ? '' : null"
+        type="file"
+        class="hidden"
+      />
 
       <ng-container *ngTemplateOutlet="pickerTemplate(); context: { $implicit: uploaderList(), pick, paste, canPaste: canUseClipboardApi() }"
       />
