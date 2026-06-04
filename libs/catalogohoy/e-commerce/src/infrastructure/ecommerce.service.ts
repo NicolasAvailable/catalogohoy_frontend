@@ -10,6 +10,8 @@ import {
   CatalogTemplate,
   DEFAULT_SOCIAL_LINKS,
   ExchangeRateType,
+  findCountryByCode,
+  findCurrencyByCode,
   SocialLinks,
   TenantCurrencyConfig,
 } from '@catalogohoy/ecommerce-config';
@@ -163,7 +165,18 @@ export class EcommerceService implements BaseEcommerceService {
         config?.show_payment_methods_section ?? true,
       socialLinks: (config?.social_links as SocialLinks) ?? DEFAULT_SOCIAL_LINKS,
       template: (config?.template as CatalogTemplate) ?? 'banner-centered',
-      currencySymbol: config?.currency_symbol ?? '$',
+      // Si el config no fijó un símbolo explícito, derivarlo del country_code
+      // del tenant. Sin esto los catálogos de PE/CL/BR/EUR muestran '$' por
+      // default aunque la moneda real sea S/, CLP, R$ o €.
+      currencySymbol:
+        config?.currency_symbol ??
+        (() => {
+          const country = findCountryByCode(data.tenant.country_code);
+          const currency = country
+            ? findCurrencyByCode(country.defaultCurrency)
+            : null;
+          return currency?.symbol ?? '$';
+        })(),
       showReferencePrice: config?.show_reference_price ?? true,
       showLocalCurrencyPrice: config?.show_local_currency_price ?? true,
       whatsappOrderMessage: config?.whatsapp_order_message ?? null,
@@ -414,7 +427,10 @@ export class EcommerceService implements BaseEcommerceService {
       return E.left(new Error(error.message));
     }
 
-    await this.deductStock(order.tenant_id, order.products);
+    // Las órdenes nacen 'pending' — NO descontamos stock aquí. El descuento
+    // ocurre cuando el admin marca la orden como 'completed' (ver
+    // OrderService.updateOrderStatus). Así una orden cancelada no afecta el
+    // inventario y evitamos restaurar stock por cada cancelación.
 
     return E.right(undefined);
   }

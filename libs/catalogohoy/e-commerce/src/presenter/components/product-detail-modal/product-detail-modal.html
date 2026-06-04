@@ -1,5 +1,10 @@
 <div class="pdm" [class.pdm--wholesale]="isWholesale">
-  <button type="button" class="pdm__close" (click)="close()">
+  <!-- Drag handle estilo iOS sheet — visible solo en mobile. Da el affordance
+       de "deslizar hacia abajo para cerrar" sin tapar el media con una X. -->
+  <button type="button" class="pdm__handle" (click)="close()" aria-label="Cerrar">
+    <span class="pdm__handle-bar"></span>
+  </button>
+  <button type="button" class="pdm__close" (click)="close()" aria-label="Cerrar">
     <ui-icon name="x" styleClass="size-5" />
   </button>
 
@@ -18,6 +23,7 @@
           [alt]="product.name"
           [controls]="true"
           [autoplay]="currentImageIndex() === $index && isVideoUrl(photo)"
+          [muted]="false"
           [lazy]="currentImageIndex() !== $index"
           [styleClass]="'pdm__main-media ' + (isOutOfStock ? 'pdm__img--dimmed' : '')"
         />

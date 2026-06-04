@@ -275,14 +275,14 @@ export class OrderService {
 
     const products = Array.isArray(order.products) ? order.products : [];
 
-    // Cancelling → restore stock
-    if (oldStatus !== 'cancelled' && newStatus === 'cancelled') {
-      await this.restoreStock(products);
-    }
-
-    // Un-cancelling → deduct stock
-    if (oldStatus === 'cancelled' && newStatus !== 'cancelled') {
-      await this.deductStock(products);
+    // El stock se mueve únicamente cuando la orden cruza la frontera
+    // `completed`. Mientras está pending/cancelled no afecta inventario.
+    //   - cualquier estado → completed: descontar
+    //   - completed → cualquier otro: restaurar
+    if (oldStatus !== 'completed' && newStatus === 'completed') {
+      await this.deductStock(tenantId, products);
+    } else if (oldStatus === 'completed' && newStatus !== 'completed') {
+      await this.restoreStock(tenantId, products);
     }
 
     this.activityLog.log({
@@ -303,45 +303,47 @@ export class OrderService {
     return this.updateOrderStatus(id, tenantId, 'pending', 'cancelled');
   }
 
+  /** Restaura stock vía RPC `increment_product_stock` (SECURITY DEFINER).
+   *  Soporta productos con sizes — el size se lee de cada item. */
   private async restoreStock(
-    products: { productId: string; quantity?: number }[]
+    tenantId: number,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    items: any[]
   ): Promise<void> {
-    for (const item of products) {
-      const { data: product } = await this.client
-        .from('products')
-        .select('stock')
-        .eq('id', item.productId)
-        .single();
-
-      if (product && product.stock !== null) {
-        const currentStock = Number(product.stock);
-        const restoredStock = currentStock + (item.quantity ?? 0);
-        await this.client
-          .from('products')
-          .update({ stock: restoredStock })
-          .eq('id', item.productId);
-      }
+    if (!items?.length) return;
+    const payload = items.map((it) => ({
+      productId: it.productId,
+      quantity: it.quantity ?? 0,
+      size: it.size ?? null,
+    }));
+    const { error } = await this.client.rpc('increment_product_stock', {
+      p_tenant_id: tenantId,
+      p_items: payload,
+    });
+    if (error) {
+      console.warn('[increment_product_stock] failed', error);
     }
   }
 
+  /** Descuenta stock vía RPC `decrement_product_stock` (SECURITY DEFINER).
+   *  Soporta productos con sizes — el size se lee de cada item. */
   private async deductStock(
-    products: { productId: string; quantity?: number }[]
+    tenantId: number,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    items: any[]
   ): Promise<void> {
-    for (const item of products) {
-      const { data: product } = await this.client
-        .from('products')
-        .select('stock')
-        .eq('id', item.productId)
-        .single();
-
-      if (product && product.stock !== null) {
-        const currentStock = Number(product.stock);
-        const newStock = Math.max(0, currentStock - (item.quantity ?? 0));
-        await this.client
-          .from('products')
-          .update({ stock: newStock })
-          .eq('id', item.productId);
-      }
+    if (!items?.length) return;
+    const payload = items.map((it) => ({
+      productId: it.productId,
+      quantity: it.quantity ?? 0,
+      size: it.size ?? null,
+    }));
+    const { error } = await this.client.rpc('decrement_product_stock', {
+      p_tenant_id: tenantId,
+      p_items: payload,
+    });
+    if (error) {
+      console.warn('[decrement_product_stock] failed', error);
     }
   }
 

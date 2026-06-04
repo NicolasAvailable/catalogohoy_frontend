@@ -56,6 +56,40 @@
     overflow-y: auto;
   }
 
+  /* En mobile escondemos la X (se solapaba con los controles nativos del
+     <video>) y usamos un drag handle estilo iOS sheet arriba del card.
+     Tap en el handle o en el backdrop cierran el modal. */
+  .pdm__close {
+    display: none;
+  }
+
+  .pdm__handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    width: 100%;
+    height: 1.5rem;
+    background: white;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .pdm__handle-bar {
+    display: block;
+    width: 2.25rem;
+    height: 0.25rem;
+    border-radius: 9999px;
+    background: rgba(15, 23, 42, 0.25);
+  }
+
+  .pdm__handle:active .pdm__handle-bar {
+    background: rgba(15, 23, 42, 0.45);
+  }
+
   .pdm__gallery {
     flex-shrink: 0;
     padding: 0.75rem 0.75rem 0.125rem;
@@ -81,7 +115,13 @@
   }
 }
 
-/* Close button */
+/* Drag handle (mobile only) — escondido en desktop. */
+.pdm__handle {
+  display: none;
+}
+
+/* Close button (X) — visible solo en desktop. En mobile usamos el drag
+   handle de arriba y el tap-en-backdrop que ya provee PrimeNG. */
 .pdm__close {
   position: absolute;
   top: 0.75rem;
