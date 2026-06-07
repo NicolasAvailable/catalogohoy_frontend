@@ -19,7 +19,11 @@ const OrderRedirect = () => {
     let cancelled = false;
 
     const resolve = async () => {
-      if (!orderId) {
+      // Los botones URL dinámicos de Meta APPENDEAN el parámetro a la base del
+      // template (que incluye "{{1}}"), así que el id puede llegar como
+      // "{{1}}730". Tomamos los dígitos finales para obtener el id real.
+      const id = (orderId ?? "").match(/\d+$/)?.[0] ?? "";
+      if (!id) {
         setError(true);
         return;
       }
@@ -33,14 +37,14 @@ const OrderRedirect = () => {
               Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ p_order_id: Number(orderId) }),
+            body: JSON.stringify({ p_order_id: Number(id) }),
           }
         );
         const slug = await res.json();
         if (cancelled) return;
         if (res.ok && typeof slug === "string" && slug) {
           window.location.replace(
-            `https://${slug}.catalogohoy.com/admin/orders/edit/${orderId}`
+            `https://${slug}.catalogohoy.com/admin/orders/edit/${id}`
           );
         } else {
           setError(true);
