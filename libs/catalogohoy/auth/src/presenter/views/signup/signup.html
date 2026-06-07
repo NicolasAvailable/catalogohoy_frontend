@@ -288,10 +288,17 @@
 
   <!-- ── Side image ── -->
   <div class="w-1/2 h-screen hidden lg:block">
-    <img
-      src="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/auth-side.svg"
-      alt="Auth side"
-      class="object-cover w-full h-full"
-    />
+    <picture>
+      <source
+        srcset="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing-hero/hero-2x.avif"
+        type="image/avif"
+      />
+      <img
+        src="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing-hero/hero-2x.webp"
+        alt="Empieza a vender hoy con CatalogoHoy"
+        class="object-cover w-full h-full"
+        fetchpriority="high"
+      />
+    </picture>
   </div>
 </div>
