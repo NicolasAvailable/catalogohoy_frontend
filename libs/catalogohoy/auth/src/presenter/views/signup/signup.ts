@@ -8,6 +8,7 @@ import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import { LocationService } from '@shared/infrastructure';
 import {
   ButtonComponent,
+  CheckboxComponent,
   IconComponent,
   InputMessageComponent,
   InputPasswordComponent,
@@ -46,6 +47,7 @@ type Step = 1 | 2 | 3;
     InputPasswordComponent,
     InputMessageComponent,
     ButtonComponent,
+    CheckboxComponent,
     IconComponent,
     SelectComponent,
     SelectItemDirective,
