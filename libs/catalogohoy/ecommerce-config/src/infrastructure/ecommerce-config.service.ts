@@ -240,6 +240,92 @@ export class EcommerceConfigService {
     }
   }
 
+  /** Lee los toggles de notificaciones WhatsApp + el número destinatario del
+   *  aviso de nueva orden, desde `whatsapp_notification_settings`. */
+  async getWhatsappNotifySettings(tenantId: string): Promise<
+    E.Either<
+      Error,
+      { orderReceived: boolean; orderCompleted: boolean; recipientNumber: string | null }
+    >
+  > {
+    const { data, error } = await this.client
+      .from('whatsapp_notification_settings')
+      .select('type, enabled, recipient_number')
+      .eq('tenant_id', Number(tenantId));
+    if (error) return E.left(new Error(error.message));
+
+    const byType = new Map(
+      (data ?? []).map(
+        (r: { type: string; enabled: boolean; recipient_number: string | null }) => [
+          r.type,
+          r,
+        ]
+      )
+    );
+    const received = byType.get('order_received');
+    const completed = byType.get('order_completed');
+    return E.right({
+      // Sin fila → "nueva orden recibida" arranca activa por defecto.
+      orderReceived: received?.enabled ?? true,
+      orderCompleted: completed?.enabled ?? false,
+      recipientNumber: received?.recipient_number ?? null,
+    });
+  }
+
+  /** Upsert de los toggles + número destinatario. El template y el idioma los
+   *  fija la plataforma; el tenant solo togglea y elige a qué número avisar. */
+  async saveWhatsappNotifySettings(
+    tenantId: string,
+    settings: {
+      orderReceived: boolean;
+      orderCompleted: boolean;
+      recipientNumber: string | null;
+    }
+  ): Promise<E.Either<Error, void>> {
+    const tenantIdNum = Number(tenantId);
+    const rows = [
+      {
+        tenant_id: tenantIdNum,
+        type: 'order_received',
+        enabled: settings.orderReceived,
+        recipient_number: settings.recipientNumber,
+        meta_template_name: 'order_received',
+        language_code: 'es',
+      },
+      {
+        tenant_id: tenantIdNum,
+        type: 'order_completed',
+        enabled: settings.orderCompleted,
+        recipient_number: null,
+        meta_template_name: 'order_completed',
+        language_code: 'es',
+      },
+    ];
+    const { error } = await this.client
+      .from('whatsapp_notification_settings')
+      .upsert(rows, { onConflict: 'tenant_id,type' });
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  /** Envía una notificación WhatsApp de prueba (template real con datos de
+   *  ejemplo) al número que se está configurando. La edge function autentica
+   *  con el JWT del usuario. */
+  async sendTestWhatsapp(
+    to: string,
+    tenantName: string
+  ): Promise<E.Either<Error, void>> {
+    const { data, error } = await this.client.functions.invoke(
+      'send-whatsapp-test',
+      { body: { to, tenantName } }
+    );
+    if (error) return E.left(new Error(error.message));
+    if (!data?.success) {
+      return E.left(new Error(data?.error ?? 'No se pudo enviar la prueba'));
+    }
+    return E.right(undefined);
+  }
+
   async getPaymentMethods(
     tenantId: string
   ): Promise<E.Either<Error, PaymentMethodEntity[]>> {

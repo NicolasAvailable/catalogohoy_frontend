@@ -1046,6 +1046,121 @@
             </ul>
           </div>
         </ui-card>
+
+        <!-- WhatsApp notifications (W5 — catálogo) -->
+        <ui-card
+          styleClass="config-card"
+          [class.opacity-50]="isWhatsappLocked()"
+          [class.pointer-events-none]="isWhatsappLocked()"
+        >
+          <div class="card-header-custom">
+            <div class="card-header-left">
+              <div class="card-icon" style="background: #ecfdf5;">
+                <ui-icon name="message-circle" styleClass="size-5 text-emerald-500"></ui-icon>
+              </div>
+              <div>
+                <h2 class="card-title">
+                  Notificaciones por WhatsApp
+                  @if (isWhatsappLocked()) {
+                  <span
+                    class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none align-middle"
+                  >
+                    <ui-icon name="crown" size="10" styleClass="text-indigo-500" />
+                    Pro
+                  </span>
+                  }
+                </h2>
+                <small class="card-subtitle">
+                  Avisá por WhatsApp (desde el número de CatalogoHoy) cuando entra una orden o cuando el pedido está listo.
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-content flex flex-col gap-5">
+            <!-- order_received: aviso al dueño -->
+            <div class="flex flex-col gap-3">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex flex-col gap-1 min-w-0">
+                  <span class="text-sm font-semibold text-grey-700">Nueva orden recibida</span>
+                  <small class="card-subtitle">
+                    Te avisamos por WhatsApp cada vez que entra una orden en tu catálogo.
+                  </small>
+                </div>
+                <ui-toggle
+                  [ngModel]="draftNotifyOrderReceived()"
+                  (ngModelChange)="draftNotifyOrderReceived.set($event)"
+                ></ui-toggle>
+              </div>
+
+              @if (draftNotifyOrderReceived()) {
+              <div class="form-field flex flex-col gap-2">
+                <label>¿A qué número enviar el aviso?</label>
+                @if (draftWhatsappNotifyNumber() || showRecipientNumberInput()) {
+                <div class="flex flex-col gap-2">
+                  <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div class="flex items-center gap-2">
+                      <ui-input-phone
+                        [ngModel]="draftWhatsappNotifyNumber()"
+                        (ngModelChange)="draftWhatsappNotifyNumber.set($event)"
+                        [defaultCountry]="draftCountryCode() ?? 've'"
+                      ></ui-input-phone>
+                      <button
+                        type="button"
+                        class="whatsapp-button-remove"
+                        (click)="draftWhatsappNotifyNumber.set(null); showRecipientNumberInput.set(false)"
+                        title="Quitar número"
+                      >
+                        <ui-icon name="trash" styleClass="size-4"></ui-icon>
+                      </button>
+                    </div>
+                    @if (draftWhatsappNotifyNumber()) {
+                    <ui-button
+                      label="Probar"
+                      icon="send"
+                      size="small"
+                      [fluid]="false"
+                      [isLoading]="isTestingWhatsapp()"
+                      (click)="testWhatsappNotification()"
+                    ></ui-button>
+                    }
+                  </div>
+                  @if (draftWhatsappNotifyNumber()) {
+                  <small class="field-hint">Te mandamos un WhatsApp de ejemplo a ese número.</small>
+                  }
+                </div>
+                } @else {
+                <ui-button
+                  label="Agregar número"
+                  icon="plus"
+                  size="small"
+                  [fluid]="false"
+                  (click)="showRecipientNumberInput.set(true)"
+                ></ui-button>
+                <small class="field-hint">El aviso de nueva orden llega a este número.</small>
+                }
+              </div>
+              }
+            </div>
+
+            <!-- order_completed: oculto por ahora (a pedido). La lógica queda
+                 intacta; cambiar @if(false) por una condición real para re-activar. -->
+            @if (false) {
+            <div class="flex items-start justify-between gap-3 pt-4 border-t border-grey-100">
+              <div class="flex flex-col gap-1 min-w-0">
+                <span class="text-sm font-semibold text-grey-700">Pedido listo para el cliente</span>
+                <small class="card-subtitle">
+                  Le avisamos al cliente cuando marcás su orden como completada, si dejó su número y aceptó recibir avisos en el checkout.
+                </small>
+              </div>
+              <ui-toggle
+                [ngModel]="draftNotifyOrderCompleted()"
+                (ngModelChange)="draftNotifyOrderCompleted.set($event)"
+              ></ui-toggle>
+            </div>
+            }
+          </div>
+        </ui-card>
       </div> <!-- /TAB NOTIFICATIONS -->
 
       <!-- Bottom Save Button -->

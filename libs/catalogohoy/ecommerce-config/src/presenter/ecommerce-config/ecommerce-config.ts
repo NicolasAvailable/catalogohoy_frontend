@@ -184,6 +184,24 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftWhatsappOrderMessage = signal<string | null>(null);
   public readonly draftNotifyNewOrders = signal<boolean>(true);
 
+  // WhatsApp notifications (tabla whatsapp_notification_settings). Se cargan
+  // y guardan aparte del config del catálogo (otra tabla). El número
+  // destinatario de `order_received` sale de los whatsappButtons del catálogo.
+  // "Nueva orden recibida" arranca ACTIVA por defecto (UI nudge). El número
+  // destinatario es standalone (no es un botón de vendedor del checkout).
+  public readonly draftNotifyOrderReceived = signal<boolean>(true);
+  public readonly draftNotifyOrderCompleted = signal<boolean>(false);
+  public readonly draftWhatsappNotifyNumber = signal<string | null>(null);
+  /** Progressive disclosure: mostrar el input de número recién al hacer click
+   *  en "Agregar número". */
+  public readonly showRecipientNumberInput = signal<boolean>(false);
+  public readonly isTestingWhatsapp = signal<boolean>(false);
+  private readonly lastSyncedWhatsappNotify = signal<{
+    orderReceived: boolean;
+    orderCompleted: boolean;
+    recipientNumber: string | null;
+  }>({ orderReceived: true, orderCompleted: false, recipientNumber: null });
+
   // Business hours editor (one row per day, Sunday → Saturday)
   public readonly dayLabels = DAY_LABELS_ES;
   public readonly draftBusinessHours = signal<BusinessHoursWeek>(
@@ -301,6 +319,16 @@ export class EcommerceConfigComponent implements OnInit {
 
     // Business hours (lives on tenant_business_hours, one row per day)
     if (this.hasUnsavedHours()) return true;
+
+    // WhatsApp notification settings (lives on whatsapp_notification_settings)
+    const wn = this.lastSyncedWhatsappNotify();
+    if (
+      this.draftNotifyOrderReceived() !== wn.orderReceived ||
+      this.draftNotifyOrderCompleted() !== wn.orderCompleted ||
+      (this.draftWhatsappNotifyNumber() ?? null) !== (wn.recipientNumber ?? null)
+    ) {
+      return true;
+    }
 
     // Currency config (lives on tenant_currency_config)
     const cc = this.configStore.currencyConfig();
@@ -675,7 +703,36 @@ export class EcommerceConfigComponent implements OnInit {
       this.configStore.loadPaymentMethods(String(tenantId));
       this.configStore.loadCurrencyConfig(String(tenantId));
       this.loadBusinessHours(String(tenantId));
+      this.loadWhatsappNotifySettings(String(tenantId));
     }
+  }
+
+  private async loadWhatsappNotifySettings(tenantId: string): Promise<void> {
+    const result = await this.configService.getWhatsappNotifySettings(tenantId);
+    result.mapRight((s) => {
+      this.draftNotifyOrderReceived.set(s.orderReceived);
+      this.draftNotifyOrderCompleted.set(s.orderCompleted);
+      this.draftWhatsappNotifyNumber.set(s.recipientNumber);
+      this.lastSyncedWhatsappNotify.set({ ...s });
+    });
+  }
+
+  /** Envía un WhatsApp de prueba al número que se está configurando (sin
+   *  necesidad de guardar primero). */
+  public async testWhatsappNotification(): Promise<void> {
+    const number = this.draftWhatsappNotifyNumber();
+    if (!number) return;
+    this.isTestingWhatsapp.set(true);
+    const result = await this.configService.sendTestWhatsapp(
+      number,
+      this.draftName()
+    );
+    result.fold(
+      (err) =>
+        toast.error('No se pudo enviar la prueba: ' + (err.message || '')),
+      () => toast.success('¡Te enviamos un WhatsApp de prueba a ese número!')
+    );
+    this.isTestingWhatsapp.set(false);
   }
 
   private async loadBusinessHours(tenantId: string): Promise<void> {
@@ -799,6 +856,33 @@ export class EcommerceConfigComponent implements OnInit {
         () => {
           this.lastSyncedHours.set(week.map((d) => ({ ...d })));
         }
+      );
+    }
+
+    // 3c. WhatsApp notification settings live on whatsapp_notification_settings
+    //     → separate call. Only save when the drafts actually changed.
+    const wn = this.lastSyncedWhatsappNotify();
+    const whatsappNotifyChanged =
+      this.draftNotifyOrderReceived() !== wn.orderReceived ||
+      this.draftNotifyOrderCompleted() !== wn.orderCompleted ||
+      (this.draftWhatsappNotifyNumber() ?? null) !== (wn.recipientNumber ?? null);
+    if (whatsappNotifyChanged && config?.tenantId) {
+      didSilentOp = true;
+      const next = {
+        orderReceived: this.draftNotifyOrderReceived(),
+        orderCompleted: this.draftNotifyOrderCompleted(),
+        recipientNumber: this.draftWhatsappNotifyNumber(),
+      };
+      const result = await this.configService.saveWhatsappNotifySettings(
+        config.tenantId,
+        next
+      );
+      result.fold(
+        () => {
+          hadSilentError = true;
+          toast.error('Error al guardar las notificaciones de WhatsApp');
+        },
+        () => this.lastSyncedWhatsappNotify.set(next)
       );
     }
 
