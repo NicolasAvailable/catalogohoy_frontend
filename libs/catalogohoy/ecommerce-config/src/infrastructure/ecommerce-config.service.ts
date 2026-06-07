@@ -313,11 +313,12 @@ export class EcommerceConfigService {
    *  con el JWT del usuario. */
   async sendTestWhatsapp(
     to: string,
-    tenantName: string
+    tenantName: string,
+    tenantId: string
   ): Promise<E.Either<Error, void>> {
     const { data, error } = await this.client.functions.invoke(
       'send-whatsapp-test',
-      { body: { to, tenantName } }
+      { body: { to, tenantName, tenantId: Number(tenantId) } }
     );
     if (error) return E.left(new Error(error.message));
     if (!data?.success) {

@@ -725,7 +725,8 @@ export class EcommerceConfigComponent implements OnInit {
     this.isTestingWhatsapp.set(true);
     const result = await this.configService.sendTestWhatsapp(
       number,
-      this.draftName()
+      this.draftName(),
+      this.configStore.config()?.tenantId ?? ''
     );
     result.fold(
       (err) =>

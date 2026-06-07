@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: false, error: "WhatsApp no configurado" });
   }
 
-  let body: { to?: string; tenantName?: string };
+  let body: { to?: string; tenantName?: string; tenantId?: number };
   try {
     body = await req.json();
   } catch {
@@ -65,6 +65,21 @@ Deno.serve(async (req) => {
   }
 
   const catalogName = (body.tenantName ?? "").trim() || "Tu catálogo";
+
+  // Para que el botón "Ver pedido" del test abra una orden real, usamos la
+  // última orden del tenant (RLS permite leerla al miembro logueado). Si no
+  // hay órdenes, el botón apunta a "0" (la landing muestra "no encontrado").
+  let buttonOrderId = "0";
+  if (body.tenantId) {
+    const { data: lastOrder } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("tenant_id", body.tenantId)
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (lastOrder?.id) buttonOrderId = String(lastOrder.id);
+  }
 
   // Mismo template real `order_received` con datos de ejemplo.
   const metaPayload = {
@@ -89,7 +104,7 @@ Deno.serve(async (req) => {
           type: "button",
           sub_type: "url",
           index: "0",
-          parameters: [{ type: "text", text: "0" }],
+          parameters: [{ type: "text", text: buttonOrderId }],
         },
       ],
     },
