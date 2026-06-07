@@ -906,6 +906,8 @@ export class EcommerceConfigComponent implements OnInit {
       this.tenantCurrency.setCurrency(tenantId, {
         localCode: cc.productCurrency,
         localSymbol: cc.currencySymbol,
+        displayCode: cc.displayCurrency,
+        showDualCurrency: cc.showDualCurrency,
         countryCode: finalCode,
       });
     }

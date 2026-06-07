@@ -44,7 +44,7 @@ const OrderRedirect = () => {
         if (cancelled) return;
         if (res.ok && typeof slug === "string" && slug) {
           window.location.replace(
-            `https://${slug}.catalogohoy.com/admin/orders/edit/${id}`
+            `https://${slug}.catalogohoy.com/admin/orders?order=${id}`
           );
         } else {
           setError(true);

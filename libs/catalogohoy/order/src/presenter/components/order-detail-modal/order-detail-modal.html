@@ -1,0 +1,150 @@
+<div class="flex flex-col max-h-[90vh]">
+  <!-- Header -->
+  <div class="relative flex items-center justify-center px-6 py-4 border-b border-grey-100 shrink-0">
+    <h2 class="text-xl font-bold text-grey-800">Orden #{{ order.id }}</h2>
+    <button
+      type="button"
+      class="absolute right-4 top-1/2 -translate-y-1/2 text-grey-400 hover:text-grey-700"
+      (click)="close()"
+      aria-label="Cerrar"
+    >
+      <ui-icon name="x" styleClass="size-5" />
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="flex flex-col lg:flex-row overflow-y-auto">
+    <!-- Left: estado + productos -->
+    <div class="flex-1 min-w-0 px-6 py-5 flex flex-col gap-5">
+      <!-- Estado + fecha de entrega -->
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-medium text-grey-500">Estado</span>
+          <ui-select
+            [options]="statusOptions"
+            [ngModel]="status()"
+            (ngModelChange)="onStatusChange($event)"
+            [disabled]="isUpdating()"
+            optionLabel="label"
+            optionValue="value"
+            size="small"
+            styleClass="order-status-select"
+          >
+            <ng-template selectSelectedItem let-selected>
+              <span [class]="getStatusBadgeClass(selected.value)">
+                <span [class]="getStatusDotClass(selected.value)"></span>
+                {{ selected.label }}
+              </span>
+            </ng-template>
+            <ng-template selectItem let-item>
+              <span [class]="getStatusBadgeClass(item.value)">
+                <span [class]="getStatusDotClass(item.value)"></span>
+                {{ item.label }}
+              </span>
+            </ng-template>
+          </ui-select>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+          <ui-icon name="calendar-days" styleClass="size-4 text-grey-300" />
+          <span class="text-grey-400">Entrega:</span>
+          <span class="font-semibold text-grey-700">{{ order.deliveryDate | date: 'dd/MM/yyyy' }}</span>
+        </div>
+      </div>
+
+      <!-- Tabla de productos -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead>
+            <tr class="text-grey-400 text-xs uppercase tracking-wider border-b border-grey-100">
+              <th class="pb-2.5 pr-4 font-bold">Producto</th>
+              <th class="pb-2.5 px-3 font-bold text-center">Cantidad</th>
+              <th class="pb-2.5 px-3 font-bold text-center">Talla</th>
+              <th class="pb-2.5 pl-3 font-bold text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of order.products; track $index) {
+            <tr class="border-b border-grey-50 last:border-0">
+              <td class="py-3 pr-4">
+                <div class="flex items-center gap-3">
+                  @if (item.photo) {
+                  <img [src]="item.photo" [alt]="item.name" class="w-10 h-10 rounded-md object-cover shrink-0" />
+                  } @else {
+                  <div class="w-10 h-10 bg-grey-50 rounded-md flex items-center justify-center shrink-0">
+                    <ui-icon name="package" styleClass="size-5 text-grey-300" />
+                  </div>
+                  }
+                  <span class="font-semibold text-grey-800 text-sm">{{ item.name }}</span>
+                </div>
+              </td>
+              <td class="py-3 px-3 text-center text-sm text-grey-600">{{ item.quantity }}</td>
+              <td class="py-3 px-3 text-center text-sm text-grey-600">{{ item.size || '—' }}</td>
+              <td class="py-3 pl-3 text-right text-sm font-bold text-primary-600">{{ cs }}{{ item.total | number: '1.2-2' }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Total -->
+      <div class="flex items-center justify-between pt-3 border-t border-grey-100 mt-auto">
+        <span class="text-sm font-semibold text-grey-500">Total</span>
+        <div class="text-right">
+          <div class="text-lg font-bold text-grey-800">{{ cs }}{{ order.totalUsd | number: '1.2-2' }}</div>
+          @if (showDualBs && order.totalBs) {
+          <div class="text-xs font-bold text-grey-500">Bs. {{ order.totalBs | number: '1.2-2' }}</div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: cliente + notas (panel gris) -->
+    <div
+      class="lg:w-80 shrink-0 bg-grey-25 border-t lg:border-t-0 lg:border-l border-grey-100 px-6 py-5 flex flex-col gap-5"
+    >
+      <!-- Cliente -->
+      <div class="flex flex-col gap-3">
+        <h4 class="text-xs font-bold text-grey-400 uppercase tracking-wider">Cliente</h4>
+        <div class="flex items-center gap-2 text-sm">
+          <ui-icon name="user" styleClass="size-4 text-grey-300" />
+          <span class="font-semibold text-grey-800">{{ order.name }}</span>
+        </div>
+        @if (order.phone) {
+        <a
+          [href]="getWhatsAppLink(order.phone)"
+          target="_blank"
+          rel="noopener"
+          class="flex items-center gap-2 text-sm text-green-600 hover:underline w-fit"
+        >
+          <ui-icon name="message-circle" styleClass="size-4" />
+          {{ order.phone }}
+        </a>
+        }
+        @if (order.paymentMethod) {
+        <div class="flex items-center gap-2 text-sm">
+          <ui-icon name="credit-card" styleClass="size-4 text-grey-300" />
+          <span class="text-grey-700">{{ getPaymentMethodLabel(order.paymentMethod) }}</span>
+        </div>
+        }
+        <div class="flex items-center gap-2 text-sm">
+          <ui-icon name="clock" styleClass="size-4 text-grey-300" />
+          <span class="text-grey-400">{{ order.createdAt | date: 'dd/MM/yyyy hh:mm a' }}</span>
+        </div>
+      </div>
+
+      <!-- Notas / comentarios -->
+      <div class="flex flex-col gap-2 flex-1 min-h-0">
+        <h4 class="text-xs font-bold text-grey-400 uppercase tracking-wider">Comentarios</h4>
+        <div
+          class="flex-1 min-h-[8rem] rounded-xl border border-grey-200 bg-white px-4 py-3 text-sm overflow-y-auto"
+        >
+          @if (order.comments) {
+          <p class="text-grey-700 whitespace-pre-line">{{ order.comments }}</p>
+          } @else {
+          <p class="text-grey-300 italic">Sin comentarios del cliente</p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
