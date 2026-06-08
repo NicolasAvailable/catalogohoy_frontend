@@ -70,17 +70,15 @@ export default class OrderSave implements OnInit {
   private readonly configStore = inject(EcommerceConfigStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
-  // Venezuela exception: products are priced in USD internally (dual with
-  // Bs. via BCV rate). Force '$' in the create/edit order form so prices
-  // displayed next to product options match the stored values.
-  public readonly cs = computed(() => {
-    if (this.tenantCurrency.isVenezuela()) return '$';
-    return (
-      this.tenantCurrency.localSymbol() ||
+  // Prices/totals are expressed in the catalog's reference (display) currency:
+  // VE shows its chosen reference (USD '$' or EUR '€') with the Bs. column
+  // alongside; every other country shows its local currency.
+  public readonly cs = computed(
+    () =>
+      this.tenantCurrency.displaySymbol() ||
       this.configStore.config()?.currencySymbol ||
       '$'
-    );
-  });
+  );
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canEditOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'edit'));
 

@@ -44,16 +44,15 @@ export class OrderPdfService {
       config?.name ||
       this.tenantStore.tenantName() ||
       'Catálogo';
-    const isVenezuela = this.tenantCurrency.isVenezuela();
-    // Symbol: prefer the cached tenant currency (dynamic per-country).
-    // VE exception: order totals are stored in USD (with the Bs. dual shown
-    // separately below), so the per-line / header amounts must render with
-    // "$", not the tenant's local "Bs." symbol.
-    const cs = isVenezuela
-      ? '$'
-      : this.tenantCurrency.localSymbol() ||
-        config?.currencySymbol ||
-        '$';
+    // Show the bolivar total only for Venezuela-style dual catalogs.
+    const showDualBs = this.tenantCurrency.showDualCurrency();
+    // Symbol: the catalog's reference (display) currency. VE renders its
+    // chosen reference (USD '$' or EUR '€') with the Bs. dual shown below;
+    // every other country renders its local currency.
+    const cs =
+      this.tenantCurrency.displaySymbol() ||
+      config?.currencySymbol ||
+      '$';
     const logoUrl = config?.logo ?? null;
 
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -280,7 +279,7 @@ export class OrderPdfService {
     });
     y += 5;
 
-    if (isVenezuela && order.totalBs && order.totalBs > 0) {
+    if (showDualBs && order.totalBs && order.totalBs > 0) {
       doc.text('Total en Bs.', labelX, y);
       doc.text(`Bs. ${order.totalBs.toFixed(2)}`, valX, y, {
         align: 'right',

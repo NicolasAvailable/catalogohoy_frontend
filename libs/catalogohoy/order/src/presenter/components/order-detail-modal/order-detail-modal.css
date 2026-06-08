@@ -1,0 +1,6 @@
+:host ::ng-deep .order-status-select {
+  min-width: 140px;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}

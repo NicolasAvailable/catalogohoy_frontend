@@ -157,7 +157,11 @@
 }
 
 .pdm__main-image {
-  aspect-ratio: 1;
+  /* Container con aspect ratio dinámico: el componente reporta el ratio
+     real del media cuando carga (w/h) via la CSS custom property
+     `--media-aspect`. Fallback a 4/5 para el primer paint. */
+  aspect-ratio: var(--media-aspect, 4 / 5);
+  transition: aspect-ratio 0.25s ease;
   border-radius: 0.75rem;
   overflow: hidden;
   position: relative;
@@ -178,7 +182,13 @@
    without JS gesture libraries. On desktop, thumbnails programmatically
    scrollTo() the relevant slide. */
 .pdm__carousel {
-  aspect-ratio: 1;
+  /* Container del carrusel: el componente setea `--media-aspect` al ratio
+     real del slide visible (currentImageIndex) cuando reporta sus
+     dimensiones. Cambia con cada swipe. La transition de 250ms suaviza el
+     cambio para que el "salto" entre slides verticales/horizontales se
+     sienta natural y no abrupto. */
+  aspect-ratio: var(--media-aspect, 4 / 5);
+  transition: aspect-ratio 0.25s ease;
   border-radius: 0.75rem;
   position: relative;
   background: white;

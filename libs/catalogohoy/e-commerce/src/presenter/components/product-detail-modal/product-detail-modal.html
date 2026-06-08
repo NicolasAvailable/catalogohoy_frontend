@@ -14,6 +14,7 @@
     <div
       #carousel
       class="pdm__carousel"
+      [style.--media-aspect]="currentSlideAspect()"
       (scroll)="onCarouselScroll()"
     >
       @for (photo of product.photos; track $index) {
@@ -26,6 +27,7 @@
           [muted]="false"
           [lazy]="currentImageIndex() !== $index"
           [styleClass]="'pdm__main-media ' + (isOutOfStock ? 'pdm__img--dimmed' : '')"
+          (aspectChange)="setSlideAspect($index, $event)"
         />
       </div>
       }

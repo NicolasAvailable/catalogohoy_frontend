@@ -11,13 +11,15 @@ import { EcommerceConfigStore, TenantCurrencyStore } from '@catalogohoy/ecommerc
 import { TenantStore } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import {
   ButtonComponent,
   ConfirmDialogService,
   DatepickerComponent,
+  DialogService,
+  dialogConfig,
   EmptyListComponent,
   IconComponent,
   InputSearchComponent,
@@ -26,6 +28,7 @@ import {
   SelectSelectedItemDirective,
   TooltipDirective,
 } from '@ui';
+import { OrderDetailModal } from '../../components/order-detail-modal/order-detail-modal';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import {
   debounceTime,
@@ -71,6 +74,8 @@ type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
 })
 export class OrderListComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
+  private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly dialogService = inject(DialogService);
   private readonly confirmDialogService = inject(ConfirmDialogService);
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
@@ -78,21 +83,22 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
   private readonly orderPdf = inject(OrderPdfService);
-  // Prefer the cached tenant currency symbol (from localStorage / DB).
-  // Falls back to the editor config only if the cache hasn't been
-  // primed yet (e.g., user opens orders before visiting home).
-  //
-  // Venezuela exception: order totals are tracked in USD (dual with Bs.
-  // in the next column), so the "Total" column shows '$' even though
-  // the tenant's local symbol would be 'Bs.'.
-  public readonly cs = computed(() => {
-    if (this.tenantCurrency.isVenezuela()) return '$';
-    return (
-      this.tenantCurrency.localSymbol() ||
+  // Primary "Total" column symbol = the catalog's reference/display currency.
+  // For Venezuela that's the chosen reference (USD '$' or EUR '€'); for every
+  // other country it's the local currency (DOP 'RD$', MXN '$', COP '$'…),
+  // because there display == product currency. `order.totalUsd` is always
+  // stored in this reference currency.
+  public readonly cs = computed(
+    () =>
+      this.tenantCurrency.displaySymbol() ||
       this.configStore.config()?.currencySymbol ||
       '$'
-    );
-  });
+  );
+
+  // Whether to render the second "Total Bs" column. Gated on the tenant's
+  // dual-currency flag (true only for Venezuela-style catalogs), NOT the
+  // country code — so a non-VE catalog never shows bolivars.
+  public readonly showBs = computed(() => this.tenantCurrency.showDualCurrency());
   private readonly orderRealtime = inject(OrderRealtimeService);
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canCreateOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'create'));
@@ -106,7 +112,6 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly selectedFilter = signal<OrderStatus | 'all'>('all');
   public readonly selectedOrder = signal<OrderBy>('date_desc');
   public readonly selectedDate = signal<Date | null>(null);
-  public readonly expandedOrderId = signal<number | null>(null);
   public readonly isProcessing = signal(false);
   public readonly mobileShowAll = signal(false);
   // Pagination state — desktop table only (mobile keeps the "show all" toggle)
@@ -178,6 +183,18 @@ export class OrderListComponent implements OnInit, OnDestroy {
     // Grand total (unfiltered) for the footer label.
     this.orderStore.loadGrandTotalCount();
     this.orderRealtime.subscribe();
+
+    // Deep-link: ?order=ID abre el modal de detalle (botón "Ver pedido" de
+    // las notificaciones WhatsApp). Limpiamos el query param después.
+    const deepLinkOrderId = this.activatedRoute.snapshot.queryParamMap.get('order');
+    if (deepLinkOrderId) {
+      this.openDeepLinkOrder(Number(deepLinkOrderId));
+      this.router.navigate([], {
+        queryParams: { order: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
   }
 
   ngOnDestroy() {
@@ -185,10 +202,25 @@ export class OrderListComponent implements OnInit, OnDestroy {
     this.orderRealtime.unsubscribe();
   }
 
-  toggleExpand(orderId: number) {
-    this.expandedOrderId.set(
-      this.expandedOrderId() === orderId ? null : orderId
+  openOrderDetail(order: Order) {
+    this.dialogService.open(
+      OrderDetailModal,
+      dialogConfig({
+        data: {
+          order,
+          currencySymbol: this.cs(),
+          showDualBs: this.tenantCurrency.showDualCurrency(),
+        },
+        showHeader: false,
+        style: { width: '56rem', maxWidth: '95vw' },
+        contentStyle: { padding: '0', overflow: 'hidden' },
+      })
     );
+  }
+
+  private async openDeepLinkOrder(orderId: number): Promise<void> {
+    const order = await this.orderStore.getOrderById(orderId);
+    if (order) this.openOrderDetail(order);
   }
 
   onCreateOrder() {

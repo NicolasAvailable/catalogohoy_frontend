@@ -42,6 +42,30 @@ export class ProductDetailModal {
   public readonly descriptionExpanded = signal(false);
   public readonly selectedSize = signal<string | null>(null);
 
+  /** Aspect ratios reportados por cada slide cuando carga la imagen o el
+   *  video (clave = índice del slide en `product.photos`, valor = w/h).
+   *  El container del carrusel usa el ratio del slide actual para que cada
+   *  foto/video se vea con su formato real — vertical, horizontal o
+   *  cuadrado — sin recortar. */
+  private readonly slideAspects = signal<Map<number, number>>(new Map());
+
+  /** Aspect ratio del slide visible ahora. Cae a 4/5 (un poco vertical) si
+   *  el slide actual todavía no reportó dimensiones — eso reduce el "salto"
+   *  visual cuando los media cargan. */
+  public readonly currentSlideAspect = computed(() => {
+    const real = this.slideAspects().get(this.currentImageIndex());
+    return real ?? 4 / 5;
+  });
+
+  public setSlideAspect(index: number, ratio: number): void {
+    if (!Number.isFinite(ratio) || ratio <= 0) return;
+    this.slideAspects.update((map) => {
+      const next = new Map(map);
+      next.set(index, ratio);
+      return next;
+    });
+  }
+
   public readonly isSized = this.product.isSized && this.product.sizes.length > 0;
 
   public readonly shouldClampDescription = (() => {

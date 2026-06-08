@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import { isVideoUrl } from '@shared/domain';
 
 /** Renders either `<img>` or `<video>` based on the URL extension. Used
@@ -37,6 +37,7 @@ import { isVideoUrl } from '@shared/domain';
         [alt]="alt()"
         [loading]="lazy() ? 'lazy' : 'eager'"
         [class]="styleClass()"
+        (load)="onImgLoad($event)"
       />
     }
   `,
@@ -55,13 +56,26 @@ export class ProductMediaComponent {
    *  Zero (default) leaves the browser-native first-frame behavior. */
   public readonly posterSeconds = input<number>(0);
 
+  /** Emite la relación de aspecto real (width / height) en cuanto la imagen
+   *  o el video reportan sus dimensiones intrínsecas. El padre lo usa para
+   *  aplicar `aspect-ratio` dinámico al container — así los verticales se
+   *  ven verticales, los horizontales horizontales, sin recortes. */
+  public readonly aspectChange = output<number>();
+
   public readonly isVideo = computed(() => isVideoUrl(this.url()));
 
   protected onLoadedMetadata(event: Event): void {
-    const seconds = this.posterSeconds();
-    if (seconds <= 0) return;
     const video = event.target as HTMLVideoElement;
     if (!video) return;
+
+    // Emit real aspect ratio antes de cualquier seek (los seeks no afectan
+    // las dimensiones pero por las dudas lo hacemos primero).
+    if (video.videoWidth > 0 && video.videoHeight > 0) {
+      this.aspectChange.emit(video.videoWidth / video.videoHeight);
+    }
+
+    const seconds = this.posterSeconds();
+    if (seconds <= 0) return;
     // Clamp to (duration - 0.1) so we never request a frame past the end,
     // which some browsers reject silently.
     const safeTarget = Math.min(seconds, Math.max(0, (video.duration || seconds) - 0.1));
@@ -70,6 +84,14 @@ export class ProductMediaComponent {
     } catch {
       /* seek can throw on cross-origin / unsupported codecs — swallow,
        * the browser still falls back to the first frame. */
+    }
+  }
+
+  protected onImgLoad(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (!img) return;
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+      this.aspectChange.emit(img.naturalWidth / img.naturalHeight);
     }
   }
 }
