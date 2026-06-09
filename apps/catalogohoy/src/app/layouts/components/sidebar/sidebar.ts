@@ -4,6 +4,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/ro
 import { AuthenticationService } from '@catalogohoy/auth';
 import { PosthogService } from '@catalogohoy/core';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
+import { OrderBadgeRealtimeService, OrderStore } from '@catalogohoy/order';
 import { PlanStore } from '@catalogohoy/plan';
 import { ProfileStore } from '@catalogohoy/profile';
 import { Tenant, TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
@@ -44,8 +45,17 @@ export class Sidebar {
   public readonly profileStore = inject(ProfileStore);
   public readonly tenantStore = inject(TenantStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
+  public readonly orderStore = inject(OrderStore);
+  private readonly orderBadge = inject(OrderBadgeRealtimeService);
 
   private readonly permissionsStore = inject(TeamPermissionsStore);
+
+  /** Pending (newly arrived) orders shown as a real-time badge next to
+   *  "Ordenes". Kept live app-wide by {@link OrderBadgeRealtimeService}. */
+  public readonly pendingOrdersCount = computed(() => this.orderStore.pendingCount());
+
+  /** Guard so the always-on badge subscription is started exactly once. */
+  private badgeStarted = false;
 
   /** "Tasas del día" only makes sense for Venezuelan catalogs (BCV rate is
    *  Venezuela-specific). The sidebar lazy-loads the currency store so the
@@ -103,6 +113,18 @@ export class Sidebar {
     effect(() => {
       const tid = this.tenantStore.tenantId();
       if (tid) this.tenantCurrency.load(tid);
+    });
+
+    // Start the real-time pending-orders badge once we have a tenant and the
+    // user is actually allowed to see orders. The service keeps the count in
+    // sync app-wide, so the badge reacts the moment an order arrives — even
+    // when the admin is on a different page.
+    effect(() => {
+      const tid = this.tenantStore.tenantId();
+      if (tid && this.canViewOrders() && !this.badgeStarted) {
+        this.badgeStarted = true;
+        this.orderBadge.start();
+      }
     });
   }
 

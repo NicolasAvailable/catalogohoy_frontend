@@ -141,6 +141,22 @@ export class OrderService {
     return E.right(count ?? 0);
   }
 
+  /** Count of pending (newly arrived, not yet fulfilled) orders. Powers the
+   *  real-time badge next to "Ordenes" in the sidebar. `head: true` fetches
+   *  no rows — only the server-side count. */
+  async countPendingByTenant(
+    tenantId: number
+  ): Promise<E.Either<Error, number>> {
+    const { count, error } = await this.client
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('status', 'pending');
+
+    if (error) return E.left(new Error(error.message));
+    return E.right(count ?? 0);
+  }
+
   async getOrderById(
     id: number,
     tenantId: number
