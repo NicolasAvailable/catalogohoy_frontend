@@ -60,7 +60,7 @@
                   class="hero__description-wrap"
                   [class.hero__description-wrap--expanded]="showDetails()"
                 >
-                  <p class="hero__description">{{ info.description }}</p>
+                  <div class="hero__description hero__prose" [innerHTML]="info.description | safeDescriptionHtml"></div>
                   @if (canToggleDescription()) {
                     <button
                       type="button"
@@ -124,7 +124,7 @@
                   class="hero__description-wrap"
                   [class.hero__description-wrap--expanded]="showDetails()"
                 >
-                  <p class="hero__description">{{ info.description }}</p>
+                  <div class="hero__description hero__prose" [innerHTML]="info.description | safeDescriptionHtml"></div>
                   @if (canToggleDescription()) {
                     <button
                       type="button"

@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { Router, RouterOutlet } from '@angular/router';
+import { StripHtmlPipe } from '@shared/presenter';
 import { PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
@@ -51,6 +52,7 @@ export class ECommerce implements OnInit, OnDestroy {
   private readonly posthogService = inject(PosthogService);
   private readonly titleService = inject(Title);
   private readonly metaService = inject(Meta);
+  private readonly stripHtmlPipe = new StripHtmlPipe();
   private readonly document = inject(DOCUMENT);
   private readonly ecommerceService = inject(EcommerceService);
   private readonly dialogService = inject(DialogService);
@@ -106,8 +108,12 @@ export class ECommerce implements OnInit, OnDestroy {
       const info = this.ecommerceStore.effectiveCatalogInfo();
       if (info?.name) {
         const title = `${info.name} | Catálogo`;
+        // description is now rich HTML — strip tags for meta/share previews.
+        const plainDescription = this.stripHtmlPipe
+          .transform(info.description ?? '')
+          .trim();
         const description =
-          info.description || `Explora el catálogo de ${info.name}`;
+          plainDescription || `Explora el catálogo de ${info.name}`;
         const image = info.logo || info.banner || DEFAULT_FAVICON;
         const url = window.location.origin;
 

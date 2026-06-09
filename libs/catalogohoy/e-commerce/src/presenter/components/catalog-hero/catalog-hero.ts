@@ -8,11 +8,13 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { SafeDescriptionHtmlPipe, StripHtmlPipe } from '@shared/presenter';
 import { EcommerceStore } from '../../../infrastructure';
 
 @Component({
   selector: 'lib-catalog-hero',
   standalone: true,
+  imports: [SafeDescriptionHtmlPipe],
   templateUrl: './catalog-hero.html',
   styleUrl: './catalog-hero.css',
 })
@@ -21,6 +23,10 @@ export class CatalogHero implements OnDestroy {
 
   readonly showDetails = signal(false);
 
+  /** The catalog description is now rich HTML — strip tags before measuring its
+   *  length so the "Mostrar más" threshold reflects the visible text. */
+  private readonly stripHtml = new StripHtmlPipe();
+
   /** Approximate character count above which the description is long enough
    *  to spill past 2 lines in the hero card and therefore needs the toggle. */
   private readonly DESCRIPTION_TOGGLE_THRESHOLD = 80;
@@ -28,7 +34,8 @@ export class CatalogHero implements OnDestroy {
   /** True when the description is long enough to warrant the
    *  "Mostrar más / Mostrar menos" toggle. */
   readonly canToggleDescription = computed(() => {
-    const desc = this.ecommerceStore.effectiveCatalogInfo()?.description?.trim() ?? '';
+    const raw = this.ecommerceStore.effectiveCatalogInfo()?.description ?? '';
+    const desc = this.stripHtml.transform(raw).trim();
     return desc.length > this.DESCRIPTION_TOGGLE_THRESHOLD;
   });
 

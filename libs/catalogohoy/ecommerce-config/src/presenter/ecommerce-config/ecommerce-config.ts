@@ -29,10 +29,11 @@ import {
   SelectComponent,
   SelectItemDirective,
   SelectSelectedItemDirective,
-  TextareaComponent,
   ToggleComponent,
   UploaderComponent,
 } from '@ui';
+import { HtmlSanitizerService } from '@shared/infrastructure';
+import { EditorModule } from 'primeng/editor';
 import { toast } from 'ngx-sonner';
 import { Observable } from 'rxjs';
 import {
@@ -78,7 +79,7 @@ const VALID_TABS: TabId[] = ['general', 'location', 'payments', 'social', 'notif
     IconComponent,
     CardComponent,
     UploaderComponent,
-    TextareaComponent,
+    EditorModule,
     ColorPickerComponent,
     SelectComponent,
     SelectItemDirective,
@@ -96,6 +97,7 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly configStore = inject(EcommerceConfigStore);
   private readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly htmlSanitizer = inject(HtmlSanitizerService);
   private readonly confirmDialogService = inject(ConfirmDialogService);
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canEditCatalog = computed(() => this.permissions.isOwner() || this.permissions.can()('catalogo', 'edit'));
@@ -759,7 +761,7 @@ export class EcommerceConfigComponent implements OnInit {
     const changes: Partial<EcommerceConfig> = {};
 
     if (this.draftName() !== (config.name ?? '')) changes.name = this.draftName();
-    if (this.draftDescription() !== (config.description ?? '')) changes.description = this.draftDescription();
+    if (this.draftDescription() !== (config.description ?? '')) changes.description = this.htmlSanitizer.sanitizeRichText(this.draftDescription());
     if (this.draftTemplate() !== (config.template ?? 'banner-centered')) changes.template = this.draftTemplate();
     if (this.draftThemeColor() !== (config.themeColor ?? '#10b981')) changes.themeColor = this.draftThemeColor();
     if (this.draftState() !== (config.state ?? null)) changes.state = this.draftState();
