@@ -1,6 +1,8 @@
 import {
   CatalogTemplate,
+  CustomerFieldsConfig,
   PaymentMethodEntity,
+  ShippingMethod,
   SocialLinks,
   TenantCurrencyConfig,
   WhatsappButton,
@@ -43,6 +45,12 @@ export interface CatalogInfo {
   showLocationSection: boolean;
   showCategoriesSection: boolean;
   currencyConfig: TenantCurrencyConfig | null;
+  /** Shipping options the customer can choose at checkout. */
+  shippingMethods: ShippingMethod[];
+  /** Whether to render the Envío section in the checkout. */
+  showShippingSection: boolean;
+  /** Which customer fields to request and whether each is required. */
+  customerFields: CustomerFieldsConfig;
 }
 
 export interface Category {
@@ -91,6 +99,14 @@ export interface BaseEcommerceService {
     total_usd: number;
     phone: string;
     comments: string;
+    email?: string;
     payment_method?: string;
-  }): Promise<E.Either<Error, void>>;
+    shipping_method?: {
+      name: string;
+      type: 'pickup' | 'delivery' | 'shipping';
+      fee: number;
+    } | null;
+    shipping_address?: string | null;
+    shipping_fee?: number;
+  }): Promise<E.Either<Error, { id: number }>>;
 }

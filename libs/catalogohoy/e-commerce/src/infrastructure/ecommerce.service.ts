@@ -8,10 +8,14 @@ import {
 import { E } from '@shared/domain';
 import {
   CatalogTemplate,
+  CustomerFieldsConfig,
+  DEFAULT_CUSTOMER_FIELDS,
   DEFAULT_SOCIAL_LINKS,
   ExchangeRateType,
   findCountryByCode,
   findCurrencyByCode,
+  ShippingMethod,
+  ShippingMethodType,
   SocialLinks,
   TenantCurrencyConfig,
 } from '@catalogohoy/ecommerce-config';
@@ -187,6 +191,11 @@ export class EcommerceService implements BaseEcommerceService {
       showLocationSection: config?.show_location_section ?? true,
       showCategoriesSection: config?.show_categories_section ?? true,
       currencyConfig,
+      shippingMethods: this.normalizeShippingMethods(config?.shipping_methods),
+      showShippingSection: config?.show_shipping_section ?? false,
+      customerFields:
+        (config?.customer_fields as CustomerFieldsConfig) ??
+        DEFAULT_CUSTOMER_FIELDS,
     };
 
     const categories: Category[] = (data.categories ?? []).map((cat: any) => ({
@@ -445,24 +454,40 @@ export class EcommerceService implements BaseEcommerceService {
     total_usd: number;
     phone: string;
     comments: string;
+    email?: string;
     payment_method?: string;
-  }): Promise<E.Either<Error, void>> {
+    shipping_method?: {
+      name: string;
+      type: 'pickup' | 'delivery' | 'shipping';
+      fee: number;
+    } | null;
+    shipping_address?: string | null;
+    shipping_fee?: number;
+  }): Promise<E.Either<Error, { id: number }>> {
     const exchangeRate = await this.getExchangeRate(order.tenant_id);
     const totalBs = order.total_usd * exchangeRate;
 
-    const { error } = await this.client.from('orders').insert([
-      {
-        tenant_id: order.tenant_id,
-        name: order.name,
-        products: order.products,
-        total_usd: order.total_usd,
-        total_bs: totalBs,
-        phone: order.phone,
-        comments: order.comments,
-        payment_method: order.payment_method ?? null,
-        status: 'pending',
-      },
-    ]);
+    const { data, error } = await this.client
+      .from('orders')
+      .insert([
+        {
+          tenant_id: order.tenant_id,
+          name: order.name,
+          products: order.products,
+          total_usd: order.total_usd,
+          total_bs: totalBs,
+          phone: order.phone,
+          comments: order.comments,
+          email: order.email ?? null,
+          payment_method: order.payment_method ?? null,
+          shipping_method: order.shipping_method ?? null,
+          shipping_address: order.shipping_address ?? null,
+          shipping_fee: order.shipping_fee ?? 0,
+          status: 'pending',
+        },
+      ])
+      .select('id')
+      .single();
 
     if (error) {
       return E.left(new Error(error.message));
@@ -473,6 +498,34 @@ export class EcommerceService implements BaseEcommerceService {
     // OrderService.updateOrderStatus). Así una orden cancelada no afecta el
     // inventario y evitamos restaurar stock por cada cancelación.
 
-    return E.right(undefined);
+    return E.right({ id: data.id as number });
+  }
+
+  /** Raw jsonb from the RPC isn't trusted — coerce each shipping method into a
+   *  well-formed object so the checkout never crashes on a malformed row. */
+  private normalizeShippingMethods(raw: unknown): ShippingMethod[] {
+    if (!Array.isArray(raw)) return [];
+    const types: ShippingMethodType[] = ['pickup', 'delivery', 'shipping'];
+    return raw
+      .map((m: any, i: number): ShippingMethod => {
+        const type: ShippingMethodType = types.includes(m?.type)
+          ? m.type
+          : 'pickup';
+        return {
+          id: String(m?.id ?? `sm_${i}`),
+          name: String(m?.name ?? ''),
+          type,
+          fee: Number(m?.fee) || 0,
+          instructions: String(m?.instructions ?? ''),
+          requestCustomerAddress: !!m?.requestCustomerAddress,
+          address: m?.address ?? null,
+          lat: m?.lat != null ? Number(m.lat) : null,
+          lng: m?.lng != null ? Number(m.lng) : null,
+          isActive: m?.isActive !== false,
+          isDefault: !!m?.isDefault,
+          position: Number(m?.position) || i,
+        };
+      })
+      .sort((a, b) => a.position - b.position);
   }
 }
