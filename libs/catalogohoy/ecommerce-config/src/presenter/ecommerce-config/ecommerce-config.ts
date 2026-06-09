@@ -38,14 +38,19 @@ import { Observable } from 'rxjs';
 import {
   BusinessHoursWeek,
   CatalogTemplate,
+  createDefaultShippingMethod,
+  CustomerFieldsConfig,
   DAY_LABELS_ES,
   DEFAULT_BUSINESS_HOURS_WEEK,
   DEFAULT_CURRENCY_CONFIG,
+  DEFAULT_CUSTOMER_FIELDS,
   DEFAULT_SOCIAL_LINKS,
   DEFAULT_WHATSAPP_ORDER_MESSAGE,
   EcommerceConfig,
   ExchangeRateType,
   findCountryByCode,
+  ShippingMethod,
+  SHIPPING_METHOD_TYPE_OPTIONS,
   SocialLinks,
   SUPPORTED_COUNTRIES,
   SUPPORTED_CURRENCIES,
@@ -64,8 +69,8 @@ import {
 import { PhoneMockupComponent } from '../components/phone-mockup/phone-mockup';
 import { TemplateSelectorComponent } from '../components/template-selector/template-selector';
 
-export type TabId = 'general' | 'location' | 'payments' | 'social' | 'notifications';
-const VALID_TABS: TabId[] = ['general', 'location', 'payments', 'social', 'notifications'];
+export type TabId = 'general' | 'location' | 'shipping' | 'payments' | 'social' | 'notifications';
+const VALID_TABS: TabId[] = ['general', 'location', 'shipping', 'payments', 'social', 'notifications'];
 
 @Component({
   selector: 'lib-ecommerce-config',
@@ -114,6 +119,7 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly tabs: { id: TabId; label: string; icon: string }[] = [
     { id: 'general', label: 'General', icon: 'store' },
     { id: 'location', label: 'Ubicación y Horario', icon: 'map-pin' },
+    { id: 'shipping', label: 'Envío', icon: 'truck' },
     { id: 'payments', label: 'Pagos', icon: 'credit-card' },
     { id: 'social', label: 'Redes Sociales', icon: 'share2' },
     { id: 'notifications', label: 'Notificaciones', icon: 'mail' },
@@ -183,6 +189,16 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftShowLocalCurrencyPrice = signal(true);
   public readonly draftWhatsappOrderMessage = signal<string | null>(null);
   public readonly draftNotifyNewOrders = signal<boolean>(true);
+
+  // --- Shipping (Envío) tab drafts ---
+  public readonly draftShippingMethods = signal<ShippingMethod[]>([]);
+  public readonly draftShowShippingSection = signal<boolean>(false);
+  public readonly draftCustomerFields = signal<CustomerFieldsConfig>({
+    name: { ...DEFAULT_CUSTOMER_FIELDS.name },
+    phone: { ...DEFAULT_CUSTOMER_FIELDS.phone },
+    email: { ...DEFAULT_CUSTOMER_FIELDS.email },
+  });
+  public readonly shippingTypeOptions = SHIPPING_METHOD_TYPE_OPTIONS;
 
   // WhatsApp notifications (tabla whatsapp_notification_settings). Se cargan
   // y guardan aparte del config del catálogo (otra tabla). El número
@@ -454,6 +470,9 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftNotifyNewOrders, prev?.notifyNewOrders ?? true, config.notifyNewOrders ?? true);
       syncFieldJson(this.draftWhatsappButtons, prevButtons, newButtons);
       syncFieldJson(this.draftSocialLinks, prev?.socialLinks ?? DEFAULT_SOCIAL_LINKS, config.socialLinks ?? { ...DEFAULT_SOCIAL_LINKS });
+      syncField(this.draftShowShippingSection, prev?.showShippingSection ?? false, config.showShippingSection ?? false);
+      syncFieldJson(this.draftShippingMethods, prev?.shippingMethods ?? [], config.shippingMethods ?? []);
+      syncFieldJson(this.draftCustomerFields, prev?.customerFields ?? DEFAULT_CUSTOMER_FIELDS, config.customerFields ?? DEFAULT_CUSTOMER_FIELDS);
 
       this.lastSyncedConfig = { ...config };
     });
@@ -788,6 +807,17 @@ export class EcommerceConfigComponent implements OnInit {
       changes.socialLinks = this.draftSocialLinks();
     }
 
+    if (this.draftShowShippingSection() !== (config.showShippingSection ?? false)) {
+      changes.showShippingSection = this.draftShowShippingSection();
+    }
+    if (JSON.stringify(this.draftShippingMethods()) !== JSON.stringify(config.shippingMethods ?? [])) {
+      changes.shippingMethods = this.draftShippingMethods();
+    }
+    const serverCustomerFields = config.customerFields ?? DEFAULT_CUSTOMER_FIELDS;
+    if (JSON.stringify(this.draftCustomerFields()) !== JSON.stringify(serverCustomerFields)) {
+      changes.customerFields = this.draftCustomerFields();
+    }
+
     return changes;
   }
 
@@ -1036,6 +1066,86 @@ export class EcommerceConfigComponent implements OnInit {
       i === index ? { ...b, number } : b
     );
     this.draftWhatsappButtons.set(updated);
+  }
+
+  // --- Shipping (Envío) Section ---
+  addShippingMethod() {
+    const current = this.draftShippingMethods();
+    const method = createDefaultShippingMethod(current.length);
+    // First method added becomes the default.
+    if (current.length === 0) method.isDefault = true;
+    this.draftShippingMethods.set([...current, method]);
+  }
+
+  removeShippingMethod(id: string) {
+    const current = this.draftShippingMethods();
+    const wasDefault = current.find((m) => m.id === id)?.isDefault;
+    let next = current
+      .filter((m) => m.id !== id)
+      .map((m, i) => ({ ...m, position: i }));
+    // If we removed the default, promote the first remaining active method.
+    if (wasDefault && next.length && !next.some((m) => m.isDefault)) {
+      next = next.map((m, i) => ({ ...m, isDefault: i === 0 }));
+    }
+    this.draftShippingMethods.set(next);
+  }
+
+  updateShippingMethodField<K extends keyof ShippingMethod>(
+    id: string,
+    key: K,
+    value: ShippingMethod[K]
+  ) {
+    this.draftShippingMethods.set(
+      this.draftShippingMethods().map((m) =>
+        m.id === id ? { ...m, [key]: value } : m
+      )
+    );
+  }
+
+  /** Coerce the raw number-input string into a finite number (or 0/null). */
+  updateShippingMethodNumber(
+    id: string,
+    key: 'fee' | 'lat' | 'lng',
+    raw: string | number | null
+  ) {
+    const n = raw === '' || raw === null ? null : Number(raw);
+    const value = n != null && Number.isFinite(n) ? n : key === 'fee' ? 0 : null;
+    this.updateShippingMethodField(id, key, value as ShippingMethod[typeof key]);
+  }
+
+  setDefaultShippingMethod(id: string) {
+    this.draftShippingMethods.set(
+      this.draftShippingMethods().map((m) => ({ ...m, isDefault: m.id === id }))
+    );
+  }
+
+  moveShippingMethod(id: string, dir: -1 | 1) {
+    const current = [...this.draftShippingMethods()];
+    const i = current.findIndex((m) => m.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= current.length) return;
+    [current[i], current[j]] = [current[j], current[i]];
+    this.draftShippingMethods.set(current.map((m, idx) => ({ ...m, position: idx })));
+  }
+
+  /** Build a dependency-free Google Maps embed URL for a pickup point. */
+  shippingMapUrl(method: ShippingMethod): SafeResourceUrl | null {
+    if (method.lat == null || method.lng == null) return null;
+    const url = `https://www.google.com/maps?q=${method.lat},${method.lng}&z=16&output=embed`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  }
+
+  // --- Customer fields config ---
+  updateCustomerField(
+    field: keyof CustomerFieldsConfig,
+    key: 'visible' | 'required',
+    value: boolean
+  ) {
+    const current = this.draftCustomerFields();
+    const next = { ...current, [field]: { ...current[field], [key]: value } };
+    // A field that's hidden can't be required.
+    if (key === 'visible' && !value) next[field].required = false;
+    this.draftCustomerFields.set(next);
   }
 
   // --- Social Links Section ---
