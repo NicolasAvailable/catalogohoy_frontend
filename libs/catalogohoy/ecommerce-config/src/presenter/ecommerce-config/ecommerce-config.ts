@@ -470,6 +470,8 @@ export class EcommerceConfigComponent implements OnInit {
       if (!config) return;
 
       const name = this.draftName();
+      // Rich HTML — sent live so the preview reflects formatting as you type.
+      const description = this.draftDescription();
       const themeColor = this.draftThemeColor();
       const showDesignSection = this.draftShowDesignSection();
       const socialLinks = this.draftSocialLinks();
@@ -493,6 +495,7 @@ export class EcommerceConfigComponent implements OnInit {
         type: 'PREVIEW_UPDATE' as const,
         payload: {
           name,
+          description,
           logo: config.logo,
           banner: config.banner,
           themeColor,
