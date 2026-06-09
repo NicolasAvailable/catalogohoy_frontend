@@ -76,9 +76,13 @@ export interface BaseEcommerceService {
     orderBy?: 'name' | 'price_asc' | 'price_desc',
     page?: number,
     pageSize?: number,
-    tenantId?: string
+    tenantId?: string,
+    cap?: number
   ): Promise<E.Either<Error, PaginatedProductList>>;
   getProductById(id: string): Promise<E.Either<Error, Product>>;
+  /** Max products the free plan allows — the public-catalog cap for downgraded
+   *  (free) tenants. Read from the `plans` table (public). */
+  getFreePlanMaxProducts(): Promise<number>;
   getCategories(slug: string): Promise<E.Either<Error, Category[]>>;
   createOrder(order: {
     tenant_id: number;

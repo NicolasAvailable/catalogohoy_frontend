@@ -122,6 +122,37 @@ export default class List implements OnInit, OnDestroy {
     return products.slice(this.pageFirst(), this.pageFirst() + this.pageRows());
   });
 
+  /** Products locked by the free-plan limit. When a tenant is downgraded to the
+   *  free plan and has more products than it allows, only the first `maxProducts`
+   *  visible (non-hidden) products — by their `position` order, same as the
+   *  public catalog — stay active. The rest are kept in the DB but locked here:
+   *  not visible in the storefront and not editable until they upgrade. */
+  public readonly lockedIds = computed(() => {
+    const locked = new Set<string>();
+    if (!this.planStore.isFreePlan()) return locked;
+    const cap = this.planStore.maxProducts();
+    if (cap <= 0) return locked; // 0 = unlimited sentinel
+    let rank = 0;
+    for (const p of this.productStore.productList().products) {
+      if (p.isHidden) continue; // hidden products don't consume a visible slot
+      if (rank >= cap) locked.add(String(p.id));
+      rank++;
+    }
+    return locked;
+  });
+
+  public isLocked(item: Product): boolean {
+    return this.lockedIds().has(String(item.id));
+  }
+
+  /** Intercepts an edit attempt on a plan-locked product: surfaces the upgrade
+   *  dialog instead of navigating. No-op for unlocked products. */
+  public onLockedAttempt(item: Product): void {
+    if (this.isLocked(item)) {
+      this.planLimitDialog.show();
+    }
+  }
+
   public readonly isAllPageSelected = computed(() => {
     const pageItems = this.currentPageItems();
     if (pageItems.length === 0) return false;

@@ -218,7 +218,12 @@ export class EcommerceService implements BaseEcommerceService {
     orderBy?: 'name' | 'price_asc' | 'price_desc',
     page = 1,
     pageSize = 20,
-    tenantId?: string
+    tenantId?: string,
+    // Hard ceiling on how many products the public catalog will serve. Used to
+    // enforce the free-plan limit on downgraded tenants: only the first `cap`
+    // products (by the default `position` order) are visible; the rest stay in
+    // the DB but never reach the storefront. `undefined`/0 = no cap.
+    cap?: number
   ): Promise<E.Either<Error, PaginatedProductList>> {
     // Use provided tenantId or look it up by slug
     let resolvedTenantId = tenantId;
@@ -278,8 +283,22 @@ export class EcommerceService implements BaseEcommerceService {
         query = query.order('position', { ascending: true });
     }
 
+    const hasCap = cap !== undefined && cap > 0;
     const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
+    let to = from + pageSize - 1;
+
+    // Page fully past the cap → nothing to serve. Report the capped total so the
+    // catalog's "load more" stops cleanly at the limit.
+    if (hasCap && from >= cap!) {
+      return E.right({
+        productList: ProductListMapper.toDomain([]),
+        totalCount: cap!,
+      });
+    }
+    if (hasCap) {
+      to = Math.min(to, cap! - 1);
+    }
+
     query = query.range(from, to);
 
     const { data, error, count } = await query;
@@ -294,10 +313,32 @@ export class EcommerceService implements BaseEcommerceService {
         item.product_categories?.map((pc: any) => pc.categories) ?? [],
     }));
 
+    const totalCount = hasCap
+      ? Math.min(count ?? 0, cap!)
+      : count ?? 0;
+
     return E.right({
       productList: ProductListMapper.toDomain(entities),
-      totalCount: count ?? 0,
+      totalCount,
     });
+  }
+
+  // Cached across the catalog session — the free-plan limit is a global product
+  // setting, not per-tenant, so one lookup is enough.
+  private freePlanMaxProductsCache: number | null = null;
+
+  public async getFreePlanMaxProducts(): Promise<number> {
+    if (this.freePlanMaxProductsCache !== null) {
+      return this.freePlanMaxProductsCache;
+    }
+    const { data } = await this.client
+      .from('plans')
+      .select('max_products')
+      .eq('is_free', true)
+      .single();
+    const max = data?.max_products ?? 10;
+    this.freePlanMaxProductsCache = max;
+    return max;
   }
 
   public async getProductById(id: string): Promise<E.Either<Error, Product>> {

@@ -7,9 +7,20 @@ import { PlanStore } from '../../infrastructure/plan.store';
   imports: [LucideAngularModule],
   template: `
     @if (showBanner() && !dismissed()) {
-    <div class="expiration-banner">
+    <div class="expiration-banner" [class.expiration-banner--grace]="isGrace()">
       <div class="expiration-banner__content">
         <div class="expiration-banner__text">
+          @if (isGrace()) {
+          <span>
+            ⚠️ Tu plan <strong>{{ planName() }}</strong> venció.
+            @if (graceDays() <= 1) {
+            Renuévalo <strong>hoy</strong> para no pasar al plan Gratis.
+            } @else {
+            Tenés <strong>{{ graceDays() }} días</strong> para renovar antes de
+            pasar al plan Gratis.
+            }
+          </span>
+          } @else {
           <span>
             ⏳ Tu plan <strong>{{ planName() }}</strong> vence
             @if (days() === 0) {
@@ -18,6 +29,7 @@ import { PlanStore } from '../../infrastructure/plan.store';
             <strong>{{ days() }} días</strong>
             }
           </span>
+          }
         </div>
         <div class="expiration-banner__actions">
           <button class="expiration-banner__cta" (click)="renewPlan()">
@@ -37,6 +49,10 @@ import { PlanStore } from '../../infrastructure/plan.store';
       color: white;
       z-index: 40;
       flex-shrink: 0;
+    }
+
+    .expiration-banner--grace {
+      background: #dc2626;
     }
 
     .expiration-banner__content {
@@ -133,11 +149,15 @@ export class ExpirationBannerComponent {
   private readonly _planStore = inject(PlanStore);
   public readonly dismissed = signal(this.isDismissedRecently());
 
-  public readonly showBanner = computed(() => this._planStore.showExpirationBanner());
+  public readonly isGrace = computed(() => this._planStore.inGracePeriod());
+  public readonly showBanner = computed(
+    () => this._planStore.showExpirationBanner() || this.isGrace()
+  );
   public readonly planName = computed(() => this._planStore.currentPlan()?.name ?? '');
   public readonly days = computed(
     () => this._planStore.daysUntilExpiration() ?? 0
   );
+  public readonly graceDays = computed(() => this._planStore.graceDaysLeft());
 
   public dismiss(): void {
     localStorage.setItem(

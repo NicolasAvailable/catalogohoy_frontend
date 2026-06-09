@@ -24,6 +24,37 @@ export class ProductService implements BaseProductService {
   private readonly activityLog = inject(ActivityLogService);
   private readonly htmlSanitizer = inject(HtmlSanitizerService);
 
+  /** True when a product falls outside the free-plan visible window — i.e. its
+   *  rank among non-hidden products (ordered by `position`, same as the catalog)
+   *  is >= the free-plan cap. Used to block editing a locked product reached via
+   *  a direct URL. `cap <= 0` means unlimited → never locked. */
+  public async isLockedByFreePlan(
+    productId: string,
+    cap: number
+  ): Promise<boolean> {
+    if (cap <= 0) return false;
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return false;
+
+    const { data: target } = await this.client
+      .from('products')
+      .select('position, is_hidden')
+      .eq('id', productId)
+      .single();
+    // Hidden products aren't part of the visible window, so they're never the
+    // ones the cap locks (the owner can still manage them normally).
+    if (!target || target.is_hidden) return false;
+
+    const { count } = await this.client
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('is_hidden', false)
+      .lt('position', target.position);
+
+    return (count ?? 0) >= cap;
+  }
+
   public async getAll(
     page?: number,
     pageSize?: number,

@@ -18,7 +18,6 @@ import { DialogService, IconComponent, dialogConfig } from '@ui';
 import { CartStore, EcommerceService, EcommerceStore } from '../../infrastructure';
 import { ProductDetailModal } from '../components/product-detail-modal/product-detail-modal';
 import { CartDrawer } from '../components/cart-drawer/cart-drawer';
-import { CatalogExpiredComponent } from '../components/catalog-expired/catalog-expired';
 import { CatalogFooter } from '../components/catalog-footer/catalog-footer';
 import { CatalogHeader } from '../components/catalog-header/catalog-header';
 import { CatalogHero } from '../components/catalog-hero/catalog-hero';
@@ -39,7 +38,6 @@ const DEFAULT_FAVICON =
     CatalogFooter,
     CartDrawer,
     CheckoutDrawer,
-    CatalogExpiredComponent,
     CatalogInfoModal,
   ],
   templateUrl: './e-commerce.html',

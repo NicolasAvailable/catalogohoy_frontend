@@ -1,6 +1,3 @@
-@if (planStore.isPlanExpired()) {
-<lib-catalog-expired />
-} @else {
 <div class="ecommerce">
   @let isClassic = ecommerceStore.effectiveCatalogInfo()?.template === 'classic';
 
@@ -63,4 +60,3 @@
   <lib-checkout-drawer />
   <lib-catalog-info-modal />
 </div>
-}

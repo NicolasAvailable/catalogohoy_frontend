@@ -30,6 +30,8 @@ type EcommerceState = {
   exchangeRate: number;
   heroLogoVisible: boolean;
   isInfoModalOpen: boolean;
+  // Public-catalog product ceiling for free (downgraded) tenants. null = no cap.
+  productCap: number | null;
 };
 
 const initialState: EcommerceState = {
@@ -50,6 +52,7 @@ const initialState: EcommerceState = {
   exchangeRate: 0,
   heroLogoVisible: true,
   isInfoModalOpen: false,
+  productCap: null,
 };
 
 export const EcommerceStore = signalStore(
@@ -111,10 +114,18 @@ export const EcommerceStore = signalStore(
         const { catalogInfo, categories, exchangeRate, planExpired, isFreePlan } =
           catalogResult.value;
 
+        // Free (incl. auto-downgraded) tenants only expose their first N products
+        // in the public catalog. Resolve the cap once here and keep it in state
+        // so pagination/search/load-more all respect the same ceiling.
+        const productCap = isFreePlan
+          ? await ecommerceService.getFreePlanMaxProducts()
+          : null;
+
         patchState(store, () => ({
           catalogInfo,
           categories,
           exchangeRate,
+          productCap,
         }));
 
         // 2. Products query using tenant_id from RPC (no extra tenant lookup)
@@ -125,7 +136,8 @@ export const EcommerceStore = signalStore(
           undefined,
           1,
           PAGE_SIZE,
-          String(catalogInfo.id)
+          String(catalogInfo.id),
+          productCap ?? undefined
         );
 
         productsResult.mapRight(({ productList, totalCount }) =>
@@ -159,7 +171,8 @@ export const EcommerceStore = signalStore(
           store.orderBy() ?? undefined,
           1,
           PAGE_SIZE,
-          tenantId
+          tenantId,
+          store.productCap() ?? undefined
         );
 
         result.mapRight(({ productList, totalCount }) =>
@@ -194,7 +207,8 @@ export const EcommerceStore = signalStore(
           store.orderBy() ?? undefined,
           nextPage,
           PAGE_SIZE,
-          tenantId
+          tenantId,
+          store.productCap() ?? undefined
         );
 
         result.mapRight(({ productList: newProducts, totalCount }) => {

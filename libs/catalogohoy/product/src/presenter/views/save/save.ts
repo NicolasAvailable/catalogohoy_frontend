@@ -45,6 +45,7 @@ import {
 } from '@ui';
 import { ProductFacade } from '../../../application';
 import { Product } from '../../../domain';
+import { ProductService } from '../../../infrastructure';
 
 @Component({
   selector: 'lib-save',
@@ -73,6 +74,7 @@ export default class Save implements OnInit {
   private readonly router = inject(Router);
   private readonly toastService = inject(ToastService);
   private readonly productFacade = inject(ProductFacade);
+  private readonly productService = inject(ProductService);
   public readonly categoryStore = inject(CategoryStore);
   public readonly planStore = inject(PlanStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
@@ -212,6 +214,23 @@ export default class Save implements OnInit {
     });
     is.affirmative(this.id())
       .mapRight(async () => {
+        // Block editing a product the free-plan cap has locked (reached via a
+        // direct URL — the list already hides the edit action for these).
+        await this.planStore.loadTenantPlanUsage();
+        if (this.planStore.isFreePlan()) {
+          const locked = await this.productService.isLockedByFreePlan(
+            this.id() as string,
+            this.planStore.maxProducts()
+          );
+          if (locked) {
+            this.toastService.error(
+              ('Este producto está oculto por el límite del plan Gratis. ' +
+                'Mejora tu plan para editarlo.') as unknown as Exception
+            );
+            this.router.navigate(['/admin/products']);
+            return;
+          }
+        }
         const product = await this.productFacade.getById(this.id() as string);
         product.mapRight((p) => this.setValuesForm(p));
       })
