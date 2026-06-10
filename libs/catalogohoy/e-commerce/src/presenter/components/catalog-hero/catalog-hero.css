@@ -174,6 +174,16 @@
   overflow: hidden;
 }
 
+/* In the collapsed teaser, flatten the inter-block spacing so `max-height: 3em`
+   measures exactly 2 *text* lines. Otherwise a description made of two short
+   paragraphs (each one line — common on the wider desktop card) spends part of
+   the 3em budget on the paragraph margin and the 2nd line gets cut in half.
+   The margins are restored when expanded. */
+.hero__description-wrap:not(.hero__description-wrap--expanded) .hero__prose ::ng-deep * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 .hero__description-wrap--expanded .hero__description {
   max-height: none;
   overflow: visible;
