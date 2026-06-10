@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { IconComponent } from '@ui';
+import { SafeDescriptionHtmlPipe } from '@shared/presenter';
 import { EcommerceStore } from '../../../infrastructure';
 
 const DAY_LABELS_ES = [
@@ -22,7 +23,7 @@ const DAY_LABELS_ES = [
 @Component({
   selector: 'lib-catalog-info-modal',
   standalone: true,
-  imports: [IconComponent],
+  imports: [IconComponent, SafeDescriptionHtmlPipe],
   templateUrl: './catalog-info-modal.html',
   styleUrl: './catalog-info-modal.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

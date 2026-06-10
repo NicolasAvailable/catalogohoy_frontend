@@ -47,7 +47,13 @@ export class HtmlSanitizerService {
 
   sanitizeRichText(html: string | null | undefined): string {
     if (!html) return '';
-    const clean = this.purifier.sanitize(html, {
+    // Editors (Quill) and pasted content often litter the text with
+    // non-breaking spaces — as the `&nbsp;` entity or the raw U+00A0 char —
+    // between words. A run of NBSPs is unbreakable, so the whole description
+    // renders as a single line that overflows its container instead of
+    // wrapping. Collapse them to regular spaces so the text flows normally.
+    const normalized = html.replace(/&nbsp;|\u00a0/gi, ' ');
+    const clean = this.purifier.sanitize(normalized, {
       ALLOWED_TAGS,
       ALLOWED_ATTR,
       ALLOWED_URI_REGEXP:

@@ -11,6 +11,10 @@ type OrderState = {
   totalCount: number;
   /** Total rows for the tenant with NO filters — used for the footer label. */
   grandTotalCount: number;
+  /** Pending (newly arrived) orders — drives the real-time sidebar badge.
+   *  Kept independent of `orderList` because the badge must stay accurate
+   *  app-wide, even on pages where the order list isn't loaded. */
+  pendingCount: number;
   isLoading: boolean;
   error: string | null;
 };
@@ -19,6 +23,7 @@ const initialState: OrderState = {
   orderList: OrderList.empty(),
   totalCount: 0,
   grandTotalCount: 0,
+  pendingCount: 0,
   isLoading: false,
   error: null,
 };
@@ -79,6 +84,17 @@ export const OrderStore = signalStore(
         const result = await orderService.countOrdersByTenant(tenantId);
         result.mapRight((grandTotalCount) =>
           patchState(store, { grandTotalCount })
+        );
+      },
+
+      /** Refresh the pending-order count for the sidebar badge. Cheap
+       *  count-only query; called on init and on every realtime order change. */
+      async loadPendingCount() {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return;
+        const result = await orderService.countPendingByTenant(tenantId);
+        result.mapRight((pendingCount) =>
+          patchState(store, { pendingCount })
         );
       },
 
