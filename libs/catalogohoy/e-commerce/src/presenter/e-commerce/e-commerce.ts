@@ -23,7 +23,6 @@ import { CatalogFooter } from '../components/catalog-footer/catalog-footer';
 import { CatalogHeader } from '../components/catalog-header/catalog-header';
 import { CatalogHero } from '../components/catalog-hero/catalog-hero';
 import { CatalogInfoModal } from '../components/catalog-info-modal/catalog-info-modal';
-import { CheckoutDrawer } from '../components/checkout-drawer/checkout-drawer';
 
 const DEFAULT_FAVICON =
   'https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/favicon-c.png';
@@ -38,7 +37,6 @@ const DEFAULT_FAVICON =
     CatalogHero,
     CatalogFooter,
     CartDrawer,
-    CheckoutDrawer,
     CatalogInfoModal,
   ],
   templateUrl: './e-commerce.html',

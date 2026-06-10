@@ -15,6 +15,10 @@ export const ecommerceRoutes: Route[] = [
         loadComponent: () =>
           import('./presenter/views/product-detail/product-detail'),
       },
+      {
+        path: 'checkout',
+        loadComponent: () => import('./presenter/views/checkout/checkout'),
+      },
     ],
   },
 ];

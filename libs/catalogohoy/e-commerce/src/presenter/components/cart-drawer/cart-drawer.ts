@@ -1,5 +1,6 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { StripHtmlPipe } from '@shared/presenter';
 import { IconComponent } from '@ui';
 import { CartItem } from '../../../domain';
@@ -16,6 +17,7 @@ export class CartDrawer {
   public readonly cartStore = inject(CartStore);
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cs = this.ecommerceStore.currencySymbol;
+  private readonly router = inject(Router);
 
   onClose() {
     this.cartStore.closeCart();
@@ -38,6 +40,7 @@ export class CartDrawer {
   }
 
   onProceedToCheckout() {
-    this.cartStore.openCheckout();
+    this.cartStore.closeCart();
+    this.router.navigate(['/checkout'], { queryParamsHandling: 'preserve' });
   }
 }
