@@ -29,6 +29,7 @@ import {
   SelectComponent,
   SelectItemDirective,
   SelectSelectedItemDirective,
+  TextareaComponent,
   ToggleComponent,
   UploaderComponent,
 } from '@ui';
@@ -89,6 +90,7 @@ const VALID_TABS: TabId[] = ['general', 'location', 'shipping', 'payments', 'soc
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
+    TextareaComponent,
     PhoneMockupComponent,
     TemplateSelectorComponent,
     DatePickerModule,
