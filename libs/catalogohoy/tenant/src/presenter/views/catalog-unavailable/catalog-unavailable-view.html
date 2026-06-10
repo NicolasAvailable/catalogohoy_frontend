@@ -1,0 +1,66 @@
+<div
+  class="w-full max-w-md text-center bg-white border border-grey-100 rounded-2xl shadow-sm px-8 py-10 flex flex-col items-center gap-5"
+>
+  @if (isError()) {
+  <!-- Error verificando el catálogo -->
+  <div
+    class="w-14 h-14 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center"
+  >
+    <lucide-angular name="triangle-alert" class="size-7" />
+  </div>
+  <div class="flex flex-col gap-2">
+    <h1 class="text-xl font-bold text-grey-800">
+      No pudimos cargar el catálogo
+    </h1>
+    <p class="text-sm text-grey-500">
+      Hubo un problema al verificar este catálogo. Suele ser temporal —
+      intenta de nuevo en unos segundos.
+    </p>
+    @if (detail()) {
+    <p class="mt-1 text-xs text-grey-400 break-words">
+      Detalle: {{ detail() }}
+    </p>
+    }
+  </div>
+  <div class="flex flex-col sm:flex-row gap-2 w-full">
+    <ui-button
+      class="w-full"
+      label="Reintentar"
+      icon="refresh-cw"
+      (click)="retry()"
+    />
+    <ui-button
+      class="w-full"
+      label="Ir a Catálogo Hoy"
+      variant="outlined"
+      (click)="goHome()"
+    />
+  </div>
+  } @else {
+  <!-- Catálogo inexistente -->
+  <div
+    class="w-14 h-14 rounded-full bg-grey-50 text-grey-400 flex items-center justify-center"
+  >
+    <lucide-angular name="store" class="size-7" />
+  </div>
+  <div class="flex flex-col gap-2">
+    <h1 class="text-xl font-bold text-grey-800">Este catálogo no existe</h1>
+    <p class="text-sm text-grey-500">
+      @if (slug()) {
+      No encontramos un catálogo en
+      <span class="font-semibold text-grey-700">{{ slug() }}</span>. Puede que
+      el enlace esté mal escrito o que el catálogo ya no esté disponible.
+      } @else {
+      No encontramos el catálogo que buscas. Puede que el enlace esté mal
+      escrito o que ya no esté disponible.
+      }
+    </p>
+  </div>
+  <ui-button
+    class="w-full"
+    label="Ir a Catálogo Hoy"
+    icon="arrow-right"
+    (click)="goHome()"
+  />
+  }
+</div>

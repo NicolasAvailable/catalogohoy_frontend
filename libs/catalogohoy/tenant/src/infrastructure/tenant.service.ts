@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
-import { BaseTenantService, CreateCatalogResult } from '../domain';
+import { BaseTenantService, CreateCatalogResult, SlugCheck } from '../domain';
 
 @Injectable({
   providedIn: 'root',
@@ -14,6 +14,26 @@ export class TenantService implements BaseTenantService {
       p_slug: slug,
     });
     return tenant;
+  }
+
+  /**
+   * Like isValidSlug but distinguishes "tenant not found" from "the check
+   * failed". Retries a few times before giving up so a transient/aborted RPC
+   * (e.g. a network blip during bootstrap) doesn't surface as not-found.
+   */
+  public async checkSlug(slug: string): Promise<SlugCheck> {
+    let lastError = 'No se pudo verificar el catálogo';
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data, error } = await this.client.rpc('tenant_exists_by_slug', {
+        p_slug: slug,
+      });
+      if (!error) {
+        return data === true ? { status: 'valid' } : { status: 'not-found' };
+      }
+      lastError = error.message;
+      await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+    }
+    return { status: 'error', message: lastError };
   }
 
   public async getSlugByCustomDomain(domain: string): Promise<string | null> {

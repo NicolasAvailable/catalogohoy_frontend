@@ -22,21 +22,29 @@ const devStorage = {
 export class SupabaseClientProvider {
   private static client: SupabaseClient;
 
-  static getInstance() {
-    if (!this.client) {
-      this.client = createClient(
-        environment.supabaseUrl,
-        environment.supabaseKey
-      );
-    }
-    return this.client;
-  }
-
-  static create() {
-    this.client = createClient(
+  private static build(): SupabaseClient {
+    return createClient(
       environment.supabaseUrl,
       environment.supabaseKey,
       isDevMode() ? { auth: { storage: devStorage } } : {}
     );
+  }
+
+  static getInstance() {
+    if (!this.client) {
+      this.client = this.build();
+    }
+    return this.client;
+  }
+
+  /**
+   * Kept for the bootstrap call site (AppComponent). Idempotent on purpose:
+   * a second createClient() spawns a second GoTrueClient that fights the first
+   * for the Navigator LockManager lock on the auth token. That lock contention
+   * made auth/RPC calls fail intermittently (aborted `tenant_exists_by_slug`),
+   * which bounced authenticated users out of /admin. One client, always.
+   */
+  static create() {
+    return this.getInstance();
   }
 }
