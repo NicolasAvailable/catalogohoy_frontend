@@ -1,14 +1,19 @@
 <div class="checkout">
   <!-- Header -->
-  <header class="checkout__header">
-    <div>
-      <p class="checkout__eyebrow">Checkout</p>
-      <h1 class="checkout__title">{{ info()?.name }}</h1>
-    </div>
-    <button type="button" class="checkout__home" (click)="goToStore()" title="Volver a la tienda">
-      <ui-icon name="home" size="20" />
+  <header class="checkout__topbar">
+    <button type="button" class="checkout__back" (click)="goToStore()" aria-label="Volver atrás">
+      <ui-icon name="arrow-left" size="22" />
     </button>
+    <h1 class="checkout__heading">Checkout</h1>
+    @if (info()?.logo) {
+    <img class="checkout__logo" [src]="info()?.logo" [alt]="info()?.name" />
+    } @else {
+    <span class="checkout__topbar-spacer" aria-hidden="true"></span>
+    }
   </header>
+  @if (info()?.name) {
+  <p class="checkout__business">{{ info()?.name }}</p>
+  }
 
   @if (phase() === 'form') {
   <!-- ===== Cliente ===== -->

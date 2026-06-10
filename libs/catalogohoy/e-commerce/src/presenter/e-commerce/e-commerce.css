@@ -88,3 +88,10 @@
     right: 1.5rem;
   }
 }
+
+/* Standalone full-page flows (checkout / invoice): a light page background so
+   the white cards have contrast and the area below the content reads as page
+   background rather than one endless white sheet. */
+.ecommerce--standalone {
+  background: var(--color-grey-50, #f8fafc);
+}

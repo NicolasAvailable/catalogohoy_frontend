@@ -183,7 +183,15 @@ export default class Checkout {
   }
 
   goToStore() {
-    this.router.navigate(['/'], { queryParamsHandling: 'preserve' });
+    // Real "back" so the catalog keeps its already-loaded state/tenant context
+    // (in dev the slug is derived from the path, so re-navigating to '/' from a
+    // path route like /checkout can lose it). Fall back to the store root when
+    // there's no history (e.g. the checkout was opened directly).
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      this.router.navigate(['/'], { queryParamsHandling: 'preserve' });
+    }
   }
 
   // --- Shipping ---
