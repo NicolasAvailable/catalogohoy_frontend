@@ -17,7 +17,12 @@ import {
   ShippingMethod,
   SUPPORTED_COUNTRIES,
 } from '@catalogohoy/ecommerce-config';
-import { IconComponent, QrCodeComponent } from '@ui';
+import {
+  IconComponent,
+  InputTextComponent,
+  QrCodeComponent,
+  TextareaComponent,
+} from '@ui';
 import { CartItem } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 
@@ -33,7 +38,14 @@ type CheckoutPhase = 'form' | 'confirm' | 'sent';
 
 @Component({
   selector: 'lib-checkout',
-  imports: [DecimalPipe, FormsModule, IconComponent, QrCodeComponent],
+  imports: [
+    DecimalPipe,
+    FormsModule,
+    IconComponent,
+    InputTextComponent,
+    TextareaComponent,
+    QrCodeComponent,
+  ],
   templateUrl: './checkout.html',
   styleUrl: './checkout.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -146,6 +158,16 @@ export default class Checkout {
       }
       const def = methods.find((m) => m.isDefault) ?? methods[0];
       this.selectedShippingId.set(def.id);
+    });
+
+    // Guard: an empty cart has nothing to check out. Bounce back to the store
+    // (covers landing on /checkout directly and removing the last item). Only
+    // while filling the form — after submit the cart is intentionally cleared
+    // and we stay on the confirm/sent screens.
+    effect(() => {
+      if (this.phase() === 'form' && this.cartStore.isEmpty()) {
+        this.router.navigate(['/'], { queryParamsHandling: 'preserve' });
+      }
     });
   }
 
@@ -264,9 +286,11 @@ export default class Checkout {
 
     this.pendingMessage.set(message);
     this.pendingWhatsappUrl.set(whatsappUrl);
+    // Flip the phase BEFORE clearing the cart so the empty-cart guard (which
+    // only fires in the 'form' phase) doesn't bounce us off the confirm screen.
+    this.phase.set('confirm');
     this.cartStore.clearCart();
     this.isSubmitting.set(false);
-    this.phase.set('confirm');
   }
 
   private buildWhatsappMessage(

@@ -8,9 +8,10 @@ import {
   inject,
   OnDestroy,
   OnInit,
+  signal,
 } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
-import { Router, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { StripHtmlPipe } from '@shared/presenter';
 import { PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
@@ -55,6 +56,16 @@ export class ECommerce implements OnInit, OnDestroy {
   private readonly ecommerceService = inject(EcommerceService);
   private readonly dialogService = inject(DialogService);
   private readonly router = inject(Router);
+
+  /** Checkout and invoice are full-page flows — hide the catalog chrome
+   *  (header/hero/cart-pill/footer) so they don't show their loading skeleton
+   *  and action buttons around those routes. */
+  public readonly isStandaloneRoute = signal(this.matchStandalone(this.router.url));
+
+  private matchStandalone(url: string): boolean {
+    const path = (url.split('?')[0] || '').replace(/\/$/, '');
+    return path === '/checkout' || /\/order\/[^/]+\/invoice$/.test(path);
+  }
 
   public readonly whatsappUrl = computed(() => {
     const btn = this.ecommerceStore.effectiveCatalogInfo()?.whatsappButtons?.[0];
@@ -101,6 +112,12 @@ export class ECommerce implements OnInit, OnDestroy {
   };
 
   constructor() {
+    this.router.events.subscribe((e) => {
+      if (e instanceof NavigationEnd) {
+        this.isStandaloneRoute.set(this.matchStandalone(e.urlAfterRedirects));
+      }
+    });
+
     // Dynamic title + SEO meta tags
     effect(() => {
       const info = this.ecommerceStore.effectiveCatalogInfo();

@@ -1,6 +1,7 @@
 <div class="ecommerce">
   @let isClassic = ecommerceStore.effectiveCatalogInfo()?.template === 'classic';
 
+  @if (!isStandaloneRoute()) {
   @if (isClassic) {
     <lib-catalog-header />
   } @else {
@@ -30,15 +31,16 @@
 
     <lib-catalog-hero />
   }
+  }
 
   <main
     class="ecommerce__content"
-    [ngClass]="{ 'pt-0!': !isClassic } "
+    [ngClass]="{ 'pt-0!': !isClassic || isStandaloneRoute() } "
   >
     <router-outlet />
   </main>
 
-  @if (!isClassic && ecommerceStore.effectiveCatalogInfo()) {
+  @if (!isStandaloneRoute() && !isClassic && ecommerceStore.effectiveCatalogInfo()) {
     <!-- Floating cart pill bar (Fatness-style) — hidden for classic (uses
          navbar cart icon) AND while catalog config is still loading, so the
          pill never flashes in the default blue before the tenant's primary
@@ -54,7 +56,9 @@
     </button>
   }
 
+  @if (!isStandaloneRoute()) {
   <lib-catalog-footer />
+  }
 
   <lib-cart-drawer />
   <lib-catalog-info-modal />

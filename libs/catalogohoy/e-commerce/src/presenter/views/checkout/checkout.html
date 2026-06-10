@@ -6,7 +6,7 @@
       <h1 class="checkout__title">{{ info()?.name }}</h1>
     </div>
     <button type="button" class="checkout__home" (click)="goToStore()" title="Volver a la tienda">
-      <ui-icon name="house" size="20" />
+      <ui-icon name="home" size="20" />
     </button>
   </header>
 
@@ -20,8 +20,8 @@
       <span class="checkout__label">
         Nombre @if (customerFields().name.required) { <span class="checkout__req">*</span> }
       </span>
-      <input class="checkout__input" type="text" [ngModel]="name()" (ngModelChange)="name.set($event)"
-        placeholder="Tu nombre" />
+      <ui-input-text [ngModel]="name()" (ngModelChange)="name.set($event)"
+        placeholder="Tu nombre" styleClass="w-full"></ui-input-text>
     </label>
     }
 
@@ -47,8 +47,10 @@
           }
         </div>
         }
-        <input class="checkout__input checkout__input--phone" type="tel" inputmode="numeric"
-          [ngModel]="phone()" (ngModelChange)="phone.set($event)" placeholder="4121234567" />
+        <div class="checkout__input--phone">
+          <ui-input-text [ngModel]="phone()" (ngModelChange)="phone.set($event)"
+            placeholder="4121234567" styleClass="w-full"></ui-input-text>
+        </div>
       </div>
     </label>
     }
@@ -58,8 +60,8 @@
       <span class="checkout__label">
         Correo electrónico @if (customerFields().email.required) { <span class="checkout__req">*</span> }
       </span>
-      <input class="checkout__input" type="email" [ngModel]="email()" (ngModelChange)="email.set($event)"
-        placeholder="tucorreo@ejemplo.com" />
+      <ui-input-text [ngModel]="email()" (ngModelChange)="email.set($event)"
+        placeholder="tucorreo@ejemplo.com" styleClass="w-full"></ui-input-text>
     </label>
     }
   </section>
@@ -140,9 +142,8 @@
     @if (selectedShipping()?.requestCustomerAddress) {
     <label class="checkout__field">
       <span class="checkout__label">Dirección de entrega <span class="checkout__req">*</span></span>
-      <textarea class="checkout__input" rows="2" [ngModel]="customerAddress()"
-        (ngModelChange)="customerAddress.set($event)"
-        placeholder="Calle, número, referencia..."></textarea>
+      <ui-textarea [ngModel]="customerAddress()" (ngModelChange)="customerAddress.set($event)"
+        placeholder="Calle, número, referencia..." [rows]="2" styleClass="w-full"></ui-textarea>
     </label>
     }
   </section>
@@ -169,8 +170,8 @@
   <section class="checkout__card">
     <label class="checkout__field">
       <span class="checkout__label">Comentarios (opcional)</span>
-      <textarea class="checkout__input" rows="2" [ngModel]="comments()"
-        (ngModelChange)="comments.set($event)" placeholder="Notas para tu pedido"></textarea>
+      <ui-textarea [ngModel]="comments()" (ngModelChange)="comments.set($event)"
+        placeholder="Notas para tu pedido" [rows]="2" styleClass="w-full"></ui-textarea>
     </label>
   </section>
 
