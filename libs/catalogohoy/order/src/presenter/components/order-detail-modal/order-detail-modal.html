@@ -1,7 +1,7 @@
 <div class="flex flex-col max-h-[90vh]">
   <!-- Header -->
   <div class="relative flex items-center justify-center px-6 py-4 border-b border-grey-100 shrink-0">
-    <h2 class="text-xl font-bold text-grey-800">Orden #{{ order.id }}</h2>
+    <h2 class="text-xl font-bold text-grey-800">Orden #{{ order.orderNumber ?? order.id }}</h2>
     <button
       type="button"
       class="absolute right-4 top-1/2 -translate-y-1/2 text-grey-400 hover:text-grey-700"
