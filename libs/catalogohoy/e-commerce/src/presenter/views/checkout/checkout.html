@@ -213,7 +213,7 @@
   </div>
   }
 
-  <!-- ===== Phase: sent (P4 will enrich with fallbacks + QR) ===== -->
+  <!-- ===== Phase: sent ===== -->
   @if (phase() === 'sent') {
   <div class="checkout__post">
     <h2 class="checkout__post-title">Envíenos los detalles del pedido para confirmarlo</h2>
@@ -222,6 +222,39 @@
     <button type="button" class="checkout__wa checkout__wa--outline" (click)="sendWhatsapp()">
       <ui-icon name="message-circle" size="18" /> Enviar WhatsApp
     </button>
+
+    <!-- ¿WhatsApp no abre? -->
+    <div class="checkout__fallback">
+      <p class="checkout__fallback-title">¿WhatsApp no abre?</p>
+
+      <details class="checkout__fallback-item">
+        <summary>Abrir en el navegador externo <ui-icon name="chevron-down" size="14" /></summary>
+        <div class="checkout__fallback-body">
+          <a [href]="pendingWhatsappUrl()" target="_blank" rel="noopener" class="checkout__fallback-link">
+            Abrir enlace de WhatsApp
+          </a>
+        </div>
+      </details>
+
+      <details class="checkout__fallback-item">
+        <summary>Enviar los detalles del pedido manualmente <ui-icon name="chevron-down" size="14" /></summary>
+        <div class="checkout__fallback-body">
+          <textarea class="checkout__fallback-msg" rows="6" readonly>{{ pendingMessage() }}</textarea>
+          <button type="button" class="checkout__post-secondary" (click)="copyMessage()">
+            {{ copied() ? '¡Copiado!' : 'Copiar mensaje' }}
+          </button>
+        </div>
+      </details>
+
+      <details class="checkout__fallback-item">
+        <summary>Escanear código QR para abrir esta página en el móvil <ui-icon name="chevron-down" size="14" /></summary>
+        <div class="checkout__fallback-body checkout__fallback-qr">
+          @if (pendingWhatsappUrl(); as url) {
+          <qrcode [qrdata]="url" [width]="180" [margin]="1" errorCorrectionLevel="M"></qrcode>
+          }
+        </div>
+      </details>
+    </div>
   </div>
   }
 </div>

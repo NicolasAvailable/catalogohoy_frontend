@@ -17,7 +17,7 @@ import {
   ShippingMethod,
   SUPPORTED_COUNTRIES,
 } from '@catalogohoy/ecommerce-config';
-import { IconComponent } from '@ui';
+import { IconComponent, QrCodeComponent } from '@ui';
 import { CartItem } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 
@@ -33,7 +33,7 @@ type CheckoutPhase = 'form' | 'confirm' | 'sent';
 
 @Component({
   selector: 'lib-checkout',
-  imports: [DecimalPipe, FormsModule, IconComponent],
+  imports: [DecimalPipe, FormsModule, IconComponent, QrCodeComponent],
   templateUrl: './checkout.html',
   styleUrl: './checkout.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -332,11 +332,25 @@ export default class Checkout {
   }
 
   // --- Post-order actions (confirm / sent) ---
+  public readonly copied = signal(false);
+
   sendWhatsapp() {
     const url = this.pendingWhatsappUrl();
     if (!url) return;
     window.open(url, '_blank');
     this.phase.set('sent');
+  }
+
+  async copyMessage() {
+    const msg = this.pendingMessage();
+    if (!msg) return;
+    try {
+      await navigator.clipboard.writeText(msg);
+      this.copied.set(true);
+      setTimeout(() => this.copied.set(false), 2000);
+    } catch {
+      /* clipboard blocked — the textarea fallback in the template still works */
+    }
   }
 
   viewInvoice() {

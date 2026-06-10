@@ -53,6 +53,30 @@ export interface CatalogInfo {
   customerFields: CustomerFieldsConfig;
 }
 
+/** Invoice-safe view of an order, fetched by id for the public receipt. */
+export interface PublicOrder {
+  id: number;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  products: {
+    name: string;
+    quantity: number;
+    price: number;
+    total: number;
+    size?: string | null;
+    sku?: string | null;
+  }[];
+  totalUsd: number;
+  totalBs: number | null;
+  shippingMethod: { name: string; type: string; fee: number } | null;
+  shippingAddress: string | null;
+  shippingFee: number;
+  paymentMethod: string | null;
+  comments: string | null;
+  createdAt: string;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -109,4 +133,5 @@ export interface BaseEcommerceService {
     shipping_address?: string | null;
     shipping_fee?: number;
   }): Promise<E.Either<Error, { id: number }>>;
+  getPublicOrder(id: number): Promise<E.Either<Error, PublicOrder>>;
 }

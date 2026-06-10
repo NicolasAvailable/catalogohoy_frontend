@@ -25,6 +25,7 @@ import {
   Category,
   PaginatedProductList,
   PublicCatalogData,
+  PublicOrder,
 } from '../domain';
 
 @Injectable({
@@ -499,6 +500,49 @@ export class EcommerceService implements BaseEcommerceService {
     // inventario y evitamos restaurar stock por cada cancelación.
 
     return E.right({ id: data.id as number });
+  }
+
+  /** Fetch an order by id for the public invoice/receipt. Orders are readable
+   *  by anon (RLS `lectura_publica`), so the invoice link is shareable like a
+   *  normal receipt — no extra RPC needed. */
+  public async getPublicOrder(
+    id: number
+  ): Promise<E.Either<Error, PublicOrder>> {
+    const { data, error } = await this.client
+      .from('orders')
+      .select(
+        'id, name, phone, email, products, total_usd, total_bs, shipping_method, shipping_address, shipping_fee, payment_method, comments, created_at'
+      )
+      .eq('id', id)
+      .single();
+
+    if (error) return E.left(new Error(error.message));
+    if (!data) return E.left(new Error('Orden no encontrada'));
+
+    return E.right({
+      id: data.id,
+      name: data.name ?? '',
+      phone: data.phone ?? null,
+      email: data.email ?? null,
+      products: Array.isArray(data.products)
+        ? data.products.map((p: any) => ({
+            name: p.name,
+            quantity: Number(p.quantity) || 0,
+            price: Number(p.price) || 0,
+            total: Number(p.total) || 0,
+            size: p.size ?? null,
+            sku: p.sku ?? null,
+          }))
+        : [],
+      totalUsd: Number(data.total_usd) || 0,
+      totalBs: data.total_bs != null ? Number(data.total_bs) : null,
+      shippingMethod: data.shipping_method ?? null,
+      shippingAddress: data.shipping_address ?? null,
+      shippingFee: Number(data.shipping_fee) || 0,
+      paymentMethod: data.payment_method ?? null,
+      comments: data.comments ?? null,
+      createdAt: data.created_at,
+    });
   }
 
   /** Raw jsonb from the RPC isn't trusted — coerce each shipping method into a

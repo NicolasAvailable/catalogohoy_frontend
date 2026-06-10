@@ -1,0 +1,208 @@
+.invoice {
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 4rem;
+}
+
+.invoice__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 4rem 1rem;
+  color: var(--color-grey-500, #64748b);
+  text-align: center;
+}
+
+.invoice__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.invoice__icon-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  border: 0.0625rem solid var(--color-grey-100, #e5e7eb);
+  background: white;
+  color: var(--color-grey-600, #475569);
+  cursor: pointer;
+}
+.invoice__icon-btn:hover {
+  background: var(--color-grey-50, #f8fafc);
+}
+.invoice__icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.invoice__sheet {
+  background: white;
+  border: 0.0625rem solid var(--color-grey-100, #e5e7eb);
+  border-radius: 0.875rem;
+  padding: 1.75rem 1.5rem;
+}
+
+.invoice__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.invoice__logo {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.5rem;
+  object-fit: cover;
+}
+.invoice__business {
+  font-size: 1.375rem;
+  font-weight: 800;
+  color: var(--color-grey-900, #0f172a);
+  margin: 0;
+}
+
+.invoice__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.invoice__meta > div {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+.invoice__meta span {
+  color: var(--color-grey-400, #94a3b8);
+  min-width: 8rem;
+}
+.invoice__meta strong {
+  color: var(--color-grey-800, #1f2937);
+  font-weight: 600;
+}
+
+.invoice__hr {
+  border: none;
+  border-top: 0.0625rem solid var(--color-grey-100, #e5e7eb);
+  margin: 1.125rem 0;
+}
+
+.invoice__section {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-grey-900, #0f172a);
+  margin: 0 0 0.75rem;
+}
+
+.invoice__item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  font-size: 0.9375rem;
+  margin-bottom: 0.5rem;
+}
+.invoice__item-qty {
+  color: var(--color-grey-400, #94a3b8);
+  font-size: 0.8125rem;
+}
+.invoice__item-name {
+  flex: 1;
+  color: var(--color-grey-800, #1f2937);
+}
+.invoice__item-size {
+  display: inline-block;
+  padding: 0.0625rem 0.375rem;
+  border: 0.0625rem solid var(--color-grey-200, #d1d5db);
+  border-radius: 0.25rem;
+  font-size: 0.6875rem;
+  color: var(--color-grey-500, #64748b);
+  margin-left: 0.25rem;
+}
+.invoice__item-total {
+  font-weight: 600;
+  color: var(--color-grey-900, #0f172a);
+}
+
+.invoice__row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9375rem;
+  color: var(--color-grey-600, #475569);
+  margin-bottom: 0.5rem;
+}
+.invoice__row--total {
+  font-weight: 800;
+  font-size: 1.0625rem;
+  color: var(--color-grey-900, #0f172a);
+  margin-top: 0.25rem;
+}
+.invoice__row--total small {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-grey-400, #94a3b8);
+}
+
+.invoice__details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.375rem 1rem;
+  margin: 0;
+  font-size: 0.875rem;
+}
+.invoice__details dt {
+  color: var(--color-grey-400, #94a3b8);
+}
+.invoice__details dd {
+  margin: 0;
+  color: var(--color-grey-800, #1f2937);
+}
+
+.invoice__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-top: 1.25rem;
+}
+.invoice__btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem;
+  background: var(--color-grey-900, #111827);
+  color: white;
+  border: none;
+  border-radius: 0.625rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.invoice__btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.invoice__btn-outline {
+  padding: 0.875rem;
+  background: white;
+  color: var(--color-grey-800, #1f2937);
+  border: 0.0625rem solid var(--color-grey-200, #d1d5db);
+  border-radius: 0.625rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media print {
+  .invoice__actions,
+  .invoice__footer {
+    display: none;
+  }
+  .invoice__sheet {
+    border: none;
+  }
+}
