@@ -125,7 +125,7 @@
         <div class="border-b border-grey-50 px-4 py-3 flex gap-3">
           <!-- Info -->
           <div class="flex-1 flex flex-col gap-1 min-w-0 text-xs">
-            <span class="text-grey-300 font-medium">#{{ order.id }}</span>
+            <span class="text-grey-300 font-medium">#{{ order.orderNumber ?? order.id }}</span>
             <div><span class="text-grey-800 font-bold">Nombre: </span><span class="text-grey-700">{{ order.name }}</span></div>
             @if (order.phone) {
             <div>
@@ -301,7 +301,7 @@
           } } @else { @for (order of paginatedOrders(); track order.id) {
           <tr class="hover:bg-grey-25 transition-colors group">
             <td class="px-6 py-3.5 font-medium text-grey-300">
-              #{{ order.id }}
+              #{{ order.orderNumber ?? order.id }}
             </td>
             <td class="px-6 py-3.5">
               <span class="font-semibold text-grey-800">{{ order.name }}</span>

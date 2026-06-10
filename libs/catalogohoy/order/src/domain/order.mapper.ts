@@ -5,6 +5,7 @@ export class OrderMapper {
     const e = entity as any;
     return {
       id: e.id,
+      orderNumber: e.order_number,
       name: e.name,
       products: Array.isArray(e.products)
         ? e.products.map(OrderMapper.toOrderItemDomain)

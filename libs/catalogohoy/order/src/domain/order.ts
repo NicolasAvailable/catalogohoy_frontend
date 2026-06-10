@@ -15,6 +15,9 @@ export type OrderStatus = 'pending' | 'completed' | 'cancelled';
 
 export interface Order {
   id: number;
+  /** Per-tenant incremental number shown in the UI (#N). Display-only;
+   *  routing and lookups still use the global `id`. */
+  orderNumber?: number;
   name: string;
   products: OrderItem[];
   status: OrderStatus;

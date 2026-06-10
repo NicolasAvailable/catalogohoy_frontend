@@ -111,7 +111,7 @@ export class OrderPdfService {
     }
 
     const meta: [string, string][] = [
-      ['Número de orden', `#${order.id}`],
+      ['Número de orden', `#${order.orderNumber ?? order.id}`],
       ['Fecha de creación', formatLong(createdDate)],
       [
         'Fecha de entrega',
@@ -164,7 +164,7 @@ export class OrderPdfService {
     doc.setFontSize(14);
     doc.setTextColor(...BLACK);
     doc.text(
-      `${cs}${order.totalUsd.toFixed(2)} — Orden #${order.id}`,
+      `${cs}${order.totalUsd.toFixed(2)} — Orden #${order.orderNumber ?? order.id}`,
       margin,
       y
     );
@@ -328,7 +328,7 @@ export class OrderPdfService {
       y
     );
 
-    doc.save(`orden-${order.id}.pdf`);
+    doc.save(`orden-${order.orderNumber ?? order.id}.pdf`);
   }
 
   private blobToBase64(blob: Blob): Promise<string> {
