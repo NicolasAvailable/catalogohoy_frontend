@@ -731,7 +731,7 @@
           <div class="shipping-methods-list">
             @for (method of draftShippingMethods(); track method.id; let i = $index) {
             <div class="shipping-method">
-              <div class="shipping-method-head">
+              <div class="shipping-method-toprow">
                 <div class="shipping-method-reorder">
                   <button type="button" class="reorder-btn" title="Subir"
                     [disabled]="i === 0" (click)="moveShippingMethod(method.id, -1)">
@@ -743,17 +743,21 @@
                     <ui-icon name="chevron-down" styleClass="size-4"></ui-icon>
                   </button>
                 </div>
-                <ui-input-text
-                  [ngModel]="method.name"
-                  (ngModelChange)="updateShippingMethodField(method.id, 'name', $event)"
-                  placeholder="Nombre (Ej: Retiro en local)"
-                  styleClass="w-full"
-                ></ui-input-text>
                 <button type="button" class="payment-method-delete" title="Eliminar"
                   (click)="removeShippingMethod(method.id)">
                   <ui-icon name="trash" styleClass="size-4"></ui-icon>
                 </button>
               </div>
+
+              <label class="shipping-field">
+                <span class="shipping-field-label">Nombre</span>
+                <ui-input-text
+                  [ngModel]="method.name"
+                  (ngModelChange)="updateShippingMethodField(method.id, 'name', $event)"
+                  placeholder="Ej: Retiro en local"
+                  styleClass="w-full"
+                ></ui-input-text>
+              </label>
 
               <div class="shipping-method-grid">
                 <label class="shipping-field">
@@ -796,34 +800,12 @@
                   styleClass="w-full"
                 ></ui-input-text>
               </label>
-              <div class="shipping-method-grid">
-                <label class="shipping-field">
-                  <span class="shipping-field-label">Latitud</span>
-                  <input type="number" step="any" class="shipping-num"
-                    [ngModel]="method.lat"
-                    (ngModelChange)="updateShippingMethodNumber(method.id, 'lat', $event)"
-                    placeholder="10.2469" />
-                </label>
-                <label class="shipping-field">
-                  <span class="shipping-field-label">Longitud</span>
-                  <input type="number" step="any" class="shipping-num"
-                    [ngModel]="method.lng"
-                    (ngModelChange)="updateShippingMethodNumber(method.id, 'lng', $event)"
-                    placeholder="-67.5958" />
-                </label>
-              </div>
-              @if (shippingMapUrl(method); as mapUrl) {
-              <div class="shipping-map">
-                <iframe [src]="mapUrl" title="Mapa del punto de retiro" loading="lazy"></iframe>
-              </div>
-              } @else {
-              <small class="shipping-hint">
-                Pega la latitud y longitud (desde Google Maps) para mostrar el mini-mapa.
-              </small>
-              }
               } @else {
               <label class="shipping-toggle-row">
-                <span>Pedir la dirección al cliente</span>
+                <div class="shipping-toggle-text">
+                  <span>Pedir la dirección al cliente</span>
+                  <small>El cliente escribe su dirección de entrega en el checkout.</small>
+                </div>
                 <ui-toggle
                   [ngModel]="method.requestCustomerAddress"
                   (ngModelChange)="updateShippingMethodField(method.id, 'requestCustomerAddress', $event)"
@@ -833,14 +815,20 @@
 
               <div class="shipping-method-footer">
                 <label class="shipping-toggle-row">
-                  <span>Activo</span>
+                  <div class="shipping-toggle-text">
+                    <span>Activo</span>
+                    <small>Se muestra como opción de envío en el checkout.</small>
+                  </div>
                   <ui-toggle
                     [ngModel]="method.isActive"
                     (ngModelChange)="updateShippingMethodField(method.id, 'isActive', $event)"
                   ></ui-toggle>
                 </label>
                 <label class="shipping-toggle-row">
-                  <span>Predeterminado</span>
+                  <div class="shipping-toggle-text">
+                    <span>Predeterminado</span>
+                    <small>Viene seleccionado por defecto al iniciar el pedido.</small>
+                  </div>
                   <ui-toggle
                     [ngModel]="method.isDefault"
                     (ngModelChange)="$event ? setDefaultShippingMethod(method.id) : updateShippingMethodField(method.id, 'isDefault', false)"
@@ -1426,10 +1414,11 @@
 
     <!-- ========== RIGHT COLUMN: Phone Mockup ========== -->
     <div class="mockup-column">
-      @if (safeIframeUrl) {
+      @if (safeIframeUrl()) {
       <lib-phone-mockup
         #phoneMockup
-        [iframeUrl]="safeIframeUrl"
+        [iframeUrl]="safeIframeUrl()"
+        (loaded)="onPreviewIframeLoaded()"
       ></lib-phone-mockup>
       }
     </div>
@@ -1441,13 +1430,14 @@
   </button>
 
   <!-- Mobile overlay mockup (always in DOM to keep iframe alive) -->
-  @if (safeIframeUrl) {
+  @if (safeIframeUrl()) {
   <lib-phone-mockup
     #phoneMockupOverlay
-    [iframeUrl]="safeIframeUrl"
+    [iframeUrl]="safeIframeUrl()"
     [isOverlay]="true"
     [hidden]="!isMockupOpen()"
     (close)="closeMockup()"
+    (loaded)="onPreviewIframeLoaded()"
   ></lib-phone-mockup>
   }
 

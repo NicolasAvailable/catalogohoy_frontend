@@ -35,7 +35,14 @@ export class App implements OnInit {
    *  `route.snapshot.queryParamMap` (deep-links). El resto sigue el
    *  comportamiento original — se persiste en localStorage para futuras
    *  navegaciones internas y se limpia de la URL. */
-  private static readonly QUERY_PARAMS_KEEP_IN_URL = new Set(['product']);
+  private static readonly QUERY_PARAMS_KEEP_IN_URL = new Set([
+    'product',
+    // `preview` must stay in the URL so the public checkout can detect it
+    // synchronously (the catalog-editor preview iframe loads
+    // /checkout?preview=true). Persisting it to localStorage would make it
+    // sticky and wrongly flag a real customer's checkout as a preview.
+    'preview',
+  ]);
 
   private captureQueryParametersToLocalStorage(): void {
     const urlParams = new URLSearchParams(window.location.search);

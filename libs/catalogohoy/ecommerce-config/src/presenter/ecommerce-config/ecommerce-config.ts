@@ -50,6 +50,7 @@ import {
   DEFAULT_WHATSAPP_ORDER_MESSAGE,
   EcommerceConfig,
   ExchangeRateType,
+  PreviewMessage,
   findCountryByCode,
   ShippingMethod,
   SHIPPING_METHOD_TYPE_OPTIONS,
@@ -123,8 +124,8 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly tabs: { id: TabId; label: string; icon: string }[] = [
     { id: 'general', label: 'General', icon: 'store' },
     { id: 'location', label: 'Ubicación y Horario', icon: 'map-pin' },
-    { id: 'shipping', label: 'Envío', icon: 'truck' },
     { id: 'payments', label: 'Pagos', icon: 'credit-card' },
+    { id: 'shipping', label: 'Envío', icon: 'truck' },
     { id: 'social', label: 'Redes Sociales', icon: 'share2' },
     { id: 'notifications', label: 'Notificaciones', icon: 'mail' },
   ];
@@ -142,6 +143,19 @@ export class EcommerceConfigComponent implements OnInit {
     queueMicrotask(() => {
       this.mainColumn()?.nativeElement?.scrollTo?.({ top: 0, behavior: 'auto' });
     });
+  }
+
+  /** Re-push the latest preview state after the iframe (re)loads — switching to
+   *  the Envío tab swaps the frame to the public checkout, which boots fresh and
+   *  must immediately reflect the current draft (shipping methods, fields…). */
+  onPreviewIframeLoaded(): void {
+    const msg = this.lastPreviewMessage;
+    if (!msg) return;
+    // The fresh frame wires its message listener on init; a tick avoids racing it.
+    setTimeout(() => {
+      this.phoneMockup()?.sendPreviewMessage(msg);
+      this.phoneMockupOverlay()?.sendPreviewMessage(msg);
+    }, 250);
   }
 
   // Location cascade signals
@@ -367,8 +381,24 @@ export class EcommerceConfigComponent implements OnInit {
   // Mobile overlay
   public readonly isMockupOpen = signal(false);
 
-  // iframe URL
-  public safeIframeUrl: SafeResourceUrl = '';
+  // iframe URL — points the preview at the public checkout while the user is on
+  // the "Envío" tab (so they see how shipping/customer fields look at checkout),
+  // and at the catalog home otherwise. Only the path crossing the shipping
+  // boundary changes the URL, so non-shipping tab switches don't reload it.
+  private readonly previewSlug = signal<string>('');
+  private readonly previewPath = computed(() =>
+    this.activeTab() === 'shipping' ? '/checkout' : '/'
+  );
+  public readonly safeIframeUrl = computed<SafeResourceUrl | ''>(() => {
+    const slug = this.previewSlug();
+    if (!slug) return '';
+    const url = `${window.location.origin}${this.previewPath()}?slug=${slug}&preview=true`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  });
+
+  /** Last preview message sent — re-sent when the iframe (re)loads so a fresh
+   *  checkout/catalog frame immediately reflects the current draft. */
+  private lastPreviewMessage: PreviewMessage | null = null;
 
   // Tracks the last config snapshot used to sync drafts
   private lastSyncedConfig: EcommerceConfig | null = null;
@@ -511,6 +541,10 @@ export class EcommerceConfigComponent implements OnInit {
       const city = this.draftCity();
       const showLocationSection = this.draftShowLocationSection();
       const showCategoriesSection = this.draftShowCategoriesSection();
+      // Shipping drafts — so the checkout preview reflects them live.
+      const shippingMethods = this.draftShippingMethods();
+      const showShippingSection = this.draftShowShippingSection();
+      const customerFields = this.draftCustomerFields();
 
       const message = {
         type: 'PREVIEW_UPDATE' as const,
@@ -533,10 +567,14 @@ export class EcommerceConfigComponent implements OnInit {
           state,
           city,
           showLocationSection,
+          shippingMethods,
+          showShippingSection,
+          customerFields,
         },
         source: 'catalogohoy-admin' as const,
       };
 
+      this.lastPreviewMessage = message;
       this.phoneMockup()?.sendPreviewMessage(message);
       this.phoneMockupOverlay()?.sendPreviewMessage(message);
     });
@@ -710,9 +748,7 @@ export class EcommerceConfigComponent implements OnInit {
   async ngOnInit() {
     const slug = getTenantSlugFromUrl();
     if (slug) {
-      const url = `${window.location.origin}/?slug=${slug}&preview=true`;
-      this.safeIframeUrl =
-        this.sanitizer.bypassSecurityTrustResourceUrl(url);
+      this.previewSlug.set(slug);
     }
 
     // Restore active tab from query param (?tab=general|location|payments|social).
@@ -1133,13 +1169,6 @@ export class EcommerceConfigComponent implements OnInit {
     if (i < 0 || j < 0 || j >= current.length) return;
     [current[i], current[j]] = [current[j], current[i]];
     this.draftShippingMethods.set(current.map((m, idx) => ({ ...m, position: idx })));
-  }
-
-  /** Build a dependency-free Google Maps embed URL for a pickup point. */
-  shippingMapUrl(method: ShippingMethod): SafeResourceUrl | null {
-    if (method.lat == null || method.lng == null) return null;
-    const url = `https://www.google.com/maps?q=${method.lat},${method.lng}&z=16&output=embed`;
-    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 
   // --- Customer fields config ---

@@ -131,16 +131,11 @@
     </button>
     }
 
-    <!-- Pickup map -->
-    @if (selectedShipping()?.type === 'pickup') {
-      @if (shippingMapUrl(selectedShipping()); as mapUrl) {
-      <div class="checkout__map">
-        <iframe [src]="mapUrl" title="Punto de retiro" loading="lazy"></iframe>
-      </div>
-      }
-      @if (selectedShipping()?.address) {
-      <p class="checkout__ship-address">{{ selectedShipping()?.address }}</p>
-      }
+    <!-- Pickup address -->
+    @if (selectedShipping()?.type === 'pickup' && selectedShipping()?.address) {
+    <p class="checkout__ship-address">
+      <ui-icon name="map-pin" size="14" /> {{ selectedShipping()?.address }}
+    </p>
     }
 
     <!-- Customer address input -->

@@ -9,7 +9,6 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { MetaPixelService } from '@catalogohoy/core';
 import {
@@ -56,7 +55,12 @@ export default class Checkout {
   public readonly cs = this.ecommerceStore.currencySymbol;
   private readonly metaPixel = inject(MetaPixelService);
   private readonly router = inject(Router);
-  private readonly sanitizer = inject(DomSanitizer);
+
+  /** Rendered inside the catalog-editor preview iframe (?preview=true). In that
+   *  mode there's no real cart, so the empty-cart guard must not bounce out —
+   *  the merchant is just looking at how checkout will appear. */
+  private readonly isPreview =
+    new URLSearchParams(window.location.search).get('preview') === 'true';
 
   // --- Customer form ---
   public readonly name = signal('');
@@ -165,6 +169,7 @@ export default class Checkout {
     // while filling the form — after submit the cart is intentionally cleared
     // and we stay on the confirm/sent screens.
     effect(() => {
+      if (this.isPreview) return;
       if (this.phase() === 'form' && this.cartStore.isEmpty()) {
         this.router.navigate(['/'], { queryParamsHandling: 'preserve' });
       }
@@ -197,12 +202,6 @@ export default class Checkout {
   // --- Shipping ---
   selectShipping(id: string) {
     this.selectedShippingId.set(id);
-  }
-
-  shippingMapUrl(method: ShippingMethod | null): SafeResourceUrl | null {
-    if (!method || method.lat == null || method.lng == null) return null;
-    const url = `https://www.google.com/maps?q=${method.lat},${method.lng}&z=16&output=embed`;
-    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 
   // --- Validation ---
