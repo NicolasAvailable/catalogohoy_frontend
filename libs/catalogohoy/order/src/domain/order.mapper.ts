@@ -17,8 +17,12 @@ export class OrderMapper {
       createdAt: e.created_at,
       updatedAt: e.updated_at,
       phone: e.phone,
+      email: e.email ?? undefined,
       comments: e.comments,
       paymentMethod: e.payment_method,
+      shippingMethod: e.shipping_method ?? null,
+      shippingAddress: e.shipping_address ?? null,
+      shippingFee: e.shipping_fee != null ? Number(e.shipping_fee) : undefined,
       deliveryDate: e.delivery_date,
     };
   }
