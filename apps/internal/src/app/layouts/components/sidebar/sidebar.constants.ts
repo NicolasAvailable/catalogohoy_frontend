@@ -32,4 +32,9 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     icon: 'contact',
     routerLink: '/paying-accounts',
   },
+  {
+    label: 'WhatsApp',
+    icon: 'message-circle',
+    routerLink: '/whatsapp-logs',
+  },
 ];

@@ -30,4 +30,11 @@ export const internalRoutes: Route[] = [
         (m) => m.payingAccountsRoutes
       ),
   },
+  {
+    path: 'whatsapp-logs',
+    loadChildren: () =>
+      import('./whatsapp-logs/whatsapp-logs.routes').then(
+        (m) => m.whatsappLogsRoutes
+      ),
+  },
 ];

@@ -81,16 +81,42 @@ Deno.serve(async (req) => {
     );
   }
 
-  const phone = toE164Digits(to);
-  if (phone.length < 8) {
-    return jsonResponse({ success: false, error: "Invalid phone" }, 400);
-  }
-
   // 2) Resolver la config del tenant (template + enabled) con service role.
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
+
+  // Log best-effort de cada intento → tabla whatsapp_notification_logs.
+  // Alimenta el panel interno (tipo Resend). Nunca rompe el envío: si el
+  // insert falla, sólo se loguea a consola.
+  async function logAttempt(fields: {
+    status: "sent" | "failed" | "skipped";
+    recipient: string;
+    messageId?: string | null;
+    error?: string | null;
+  }): Promise<void> {
+    try {
+      await admin.from("whatsapp_notification_logs").insert({
+        tenant_id: tenantId,
+        template_type: templateType,
+        recipient: fields.recipient,
+        status: fields.status,
+        message_id: fields.messageId ?? null,
+        error: fields.error ?? null,
+        variables: variables,
+        url_button_param: urlButtonParam ?? null,
+      });
+    } catch (err) {
+      console.error("whatsapp log insert failed:", err);
+    }
+  }
+
+  const phone = toE164Digits(to);
+  if (phone.length < 8) {
+    await logAttempt({ status: "failed", recipient: to, error: "Invalid phone" });
+    return jsonResponse({ success: false, error: "Invalid phone" }, 400);
+  }
 
   const { data: setting, error: settingError } = await admin
     .from("whatsapp_notification_settings")
@@ -101,11 +127,21 @@ Deno.serve(async (req) => {
 
   if (settingError) {
     console.error("settings lookup error:", settingError.message);
+    await logAttempt({
+      status: "failed",
+      recipient: phone,
+      error: "settings lookup failed",
+    });
     return jsonResponse({ success: false, error: "settings lookup failed" }, 500);
   }
 
   // Sin config o deshabilitado → skip silencioso (no es un error).
   if (!setting || !setting.enabled) {
+    await logAttempt({
+      status: "skipped",
+      recipient: phone,
+      error: setting ? "notificación deshabilitada" : "sin configuración",
+    });
     return jsonResponse({ success: true, skipped: true });
   }
 
@@ -155,18 +191,23 @@ Deno.serve(async (req) => {
 
     if (!res.ok) {
       console.error("Meta API error:", res.status, JSON.stringify(result));
+      await logAttempt({
+        status: "failed",
+        recipient: phone,
+        error: JSON.stringify(result?.error ?? result).slice(0, 1000),
+      });
       return jsonResponse(
         { success: false, status: res.status, error: result?.error ?? result },
         502,
       );
     }
 
-    return jsonResponse({
-      success: true,
-      messageId: result?.messages?.[0]?.id ?? null,
-    });
+    const messageId = result?.messages?.[0]?.id ?? null;
+    await logAttempt({ status: "sent", recipient: phone, messageId });
+    return jsonResponse({ success: true, messageId });
   } catch (err) {
     console.error("send-whatsapp-notification error:", err);
+    await logAttempt({ status: "failed", recipient: phone, error: String(err) });
     return jsonResponse({ success: false, error: String(err) }, 500);
   }
 });
