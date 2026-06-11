@@ -20,15 +20,12 @@
   <section class="checkout__card">
     <h2 class="checkout__card-title">Cliente</h2>
 
-    @if (customerFields().name.visible) {
+    <!-- Name is always shown and always required. -->
     <label class="checkout__field">
-      <span class="checkout__label">
-        Nombre @if (customerFields().name.required) { <span class="checkout__req">*</span> }
-      </span>
+      <span class="checkout__label">Nombre <span class="checkout__req">*</span></span>
       <ui-input-text [ngModel]="name()" (ngModelChange)="name.set($event)"
         placeholder="Tu nombre" styleClass="w-full"></ui-input-text>
     </label>
-    }
 
     @if (customerFields().phone.visible) {
     <label class="checkout__field">

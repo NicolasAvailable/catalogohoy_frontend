@@ -207,7 +207,8 @@ export default class Checkout {
   // --- Validation ---
   get isValid(): boolean {
     const f = this.customerFields();
-    if (f.name.required && !this.name().trim()) return false;
+    // Name is always required, regardless of config.
+    if (!this.name().trim()) return false;
     if (f.phone.visible && f.phone.required && !this.phone().trim()) return false;
     if (f.email.visible && f.email.required && !this.isValidEmail(this.email()))
       return false;

@@ -670,14 +670,11 @@
               <span>Pedir</span>
               <span>Obligatorio</span>
             </div>
-            <!-- Name: always requested; only "required" is editable -->
+            <!-- Name: always requested AND always required — not configurable. -->
             <div class="customer-field-row">
               <span class="customer-field-label">Nombre</span>
               <span class="customer-field-locked">Siempre</span>
-              <ui-toggle
-                [ngModel]="draftCustomerFields().name.required"
-                (ngModelChange)="updateCustomerField('name', 'required', $event)"
-              ></ui-toggle>
+              <span class="customer-field-locked">Siempre</span>
             </div>
             <div class="customer-field-row">
               <span class="customer-field-label">Número de WhatsApp</span>
