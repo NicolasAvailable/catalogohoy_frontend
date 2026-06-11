@@ -19,7 +19,7 @@ const Home = () => {
             "linear-gradient(180deg, #0f1115 0%, #161922 55%, #1b1f2b 100%)",
         }}
       >
-        <div className="container mx-auto max-w-3xl px-4 sm:px-6 pt-16 pb-14 text-center">
+        <div className="container mx-auto max-w-3xl px-4 sm:px-6 pt-16 pb-28 text-center">
           <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-white">
             ¿Cómo podemos ayudarte?
           </h1>
@@ -32,8 +32,8 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Category grid */}
-      <section className="container mx-auto max-w-5xl px-4 sm:px-6 -mt-8 pb-10">
+      {/* Category grid — floats up over the hero's bottom for a soft overlap */}
+      <section className="relative z-10 container mx-auto max-w-5xl px-4 sm:px-6 -mt-16 pb-16">
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((c) => (
             <CategoryCard key={c.slug} category={c} />
