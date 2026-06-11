@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ChevronRight, SearchX } from "lucide-react";
 import { Layout } from "@/components/help/Layout";
 import { SearchBar } from "@/components/help/SearchBar";
 import { searchArticles } from "@/content";
+import { Seo } from "@/lib/seo";
 
 const SearchPage = () => {
   const [params] = useSearchParams();
@@ -11,12 +12,9 @@ const SearchPage = () => {
 
   const results = useMemo(() => searchArticles(q), [q]);
 
-  useEffect(() => {
-    document.title = `Resultados para "${q}" | Centro de ayuda`;
-  }, [q]);
-
   return (
     <Layout withSearch={false}>
+      <Seo title="Buscar" path="/buscar" noindex />
       <div className="container mx-auto max-w-3xl px-4 sm:px-6 py-10">
         <div className="mb-8">
           <SearchBar size="lg" initial={q} autoFocus />

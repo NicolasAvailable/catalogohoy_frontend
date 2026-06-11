@@ -1,16 +1,30 @@
-import { useEffect } from "react";
 import { Layout } from "@/components/help/Layout";
 import { SearchBar } from "@/components/help/SearchBar";
 import { CategoryCard } from "@/components/help/CategoryCard";
 import { categories } from "@/content";
+import { Seo, SITE_NAME, SITE_URL, orgJsonLd } from "@/lib/seo";
 
 const Home = () => {
-  useEffect(() => {
-    document.title = "Centro de ayuda | Catálogo Hoy";
-  }, []);
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: SITE_URL,
+    inLanguage: "es",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${SITE_URL}/buscar?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  };
 
   return (
     <Layout withSearch={false}>
+      <Seo
+        title={SITE_NAME}
+        path="/"
+        jsonLd={[orgJsonLd, websiteJsonLd]}
+      />
       {/* Hero */}
       <section
         className="relative"

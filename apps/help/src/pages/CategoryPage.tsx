@@ -1,23 +1,43 @@
-import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { Layout } from "@/components/help/Layout";
 import { Icon } from "@/components/help/Icon";
 import { getCategory } from "@/content";
+import { Seo, SITE_URL, breadcrumbJsonLd } from "@/lib/seo";
 import NotFound from "./NotFound";
 
 const CategoryPage = () => {
   const { categorySlug } = useParams();
   const category = categorySlug ? getCategory(categorySlug) : undefined;
 
-  useEffect(() => {
-    if (category) document.title = `${category.title} | Centro de ayuda`;
-  }, [category]);
-
   if (!category) return <NotFound />;
+
+  const itemListJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: category.title,
+    itemListElement: category.articles.map((a, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: a.title,
+      url: `${SITE_URL}/a/${a.slug}`,
+    })),
+  };
 
   return (
     <Layout>
+      <Seo
+        title={category.title}
+        description={category.description}
+        path={`/c/${category.slug}`}
+        jsonLd={[
+          breadcrumbJsonLd([
+            { name: "Centro de ayuda", path: "/" },
+            { name: category.title, path: `/c/${category.slug}` },
+          ]),
+          itemListJsonLd,
+        ]}
+      />
       <div className="container mx-auto max-w-3xl px-4 sm:px-6 py-10">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">

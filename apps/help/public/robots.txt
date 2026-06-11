@@ -1,7 +1,7 @@
 User-agent: *
 Allow: /
-Disallow: /assets/
+Disallow: /buscar
 
-Sitemap: https://catalogohoy.com/sitemap.xml
+Sitemap: https://help.catalogohoy.com/sitemap.xml
 
-Host: https://catalogohoy.com
+Host: https://help.catalogohoy.com

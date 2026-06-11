@@ -11,7 +11,7 @@
       "outputs": ["{projectRoot}/dist"],
       "options": {
         "cwd": "apps/help",
-        "command": "vite build"
+        "command": "vite-react-ssg build && node scripts/gen-sitemap.mjs"
       }
     },
     "serve": {
@@ -19,7 +19,7 @@
       "continuous": true,
       "options": {
         "cwd": "apps/help",
-        "command": "vite --port 7201 --host localhost"
+        "command": "vite-react-ssg dev"
       }
     },
     "preview": {
