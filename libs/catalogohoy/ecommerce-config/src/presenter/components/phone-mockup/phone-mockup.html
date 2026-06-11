@@ -15,6 +15,7 @@
       <iframe
         #previewIframe
         [src]="iframeUrl()"
+        (load)="onIframeLoad()"
         class="phone-screen"
         title="Vista previa del catálogo"
       ></iframe>
@@ -28,6 +29,7 @@
     <iframe
       #previewIframe
       [src]="iframeUrl()"
+      (load)="onIframeLoad()"
       class="phone-screen"
       title="Vista previa del catálogo"
     ></iframe>

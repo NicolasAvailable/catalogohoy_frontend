@@ -52,9 +52,9 @@
       </div>
 
       <!-- Tabla de productos -->
-      <div class="overflow-x-auto">
+      <div class="overflow-auto max-h-72">
         <table class="w-full text-left">
-          <thead>
+          <thead class="sticky top-0 bg-white z-10">
             <tr class="text-grey-400 text-xs uppercase tracking-wider border-b border-grey-100">
               <th class="pb-2.5 pr-4 font-bold">Producto</th>
               <th class="pb-2.5 px-3 font-bold text-center">Cantidad</th>
@@ -120,10 +120,35 @@
           {{ order.phone }}
         </a>
         }
+        @if (order.email) {
+        <a
+          [href]="'mailto:' + order.email"
+          class="flex items-center gap-2 text-sm text-grey-700 hover:underline w-fit break-all"
+        >
+          <ui-icon name="mail" styleClass="size-4 text-grey-300" />
+          {{ order.email }}
+        </a>
+        }
         @if (order.paymentMethod) {
         <div class="flex items-center gap-2 text-sm">
           <ui-icon name="credit-card" styleClass="size-4 text-grey-300" />
           <span class="text-grey-700">{{ getPaymentMethodLabel(order.paymentMethod) }}</span>
+        </div>
+        }
+        @if (order.shippingMethod) {
+        <div class="flex items-start gap-2 text-sm">
+          <ui-icon name="truck" styleClass="size-4 text-grey-300 mt-0.5 shrink-0" />
+          <div class="flex flex-col">
+            <span class="text-grey-700">
+              {{ order.shippingMethod.name }}
+              <span class="text-grey-400">
+                · {{ order.shippingFee ? cs + (order.shippingFee | number: '1.2-2') : 'Gratis' }}
+              </span>
+            </span>
+            @if (order.shippingAddress) {
+            <span class="text-grey-400 text-xs">{{ order.shippingAddress }}</span>
+            }
+          </div>
         </div>
         }
         <div class="flex items-center gap-2 text-sm">
@@ -133,10 +158,10 @@
       </div>
 
       <!-- Notas / comentarios -->
-      <div class="flex flex-col gap-2 flex-1 min-h-0">
+      <div class="flex flex-col gap-2">
         <h4 class="text-xs font-bold text-grey-400 uppercase tracking-wider">Comentarios</h4>
         <div
-          class="flex-1 min-h-[8rem] rounded-xl border border-grey-200 bg-white px-4 py-3 text-sm overflow-y-auto"
+          class="min-h-[6rem] max-h-44 rounded-xl border border-grey-200 bg-white px-4 py-3 text-sm overflow-y-auto"
         >
           @if (order.comments) {
           <p class="text-grey-700 whitespace-pre-line">{{ order.comments }}</p>

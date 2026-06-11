@@ -29,6 +29,7 @@ import {
   SelectComponent,
   SelectItemDirective,
   SelectSelectedItemDirective,
+  TextareaComponent,
   ToggleComponent,
   UploaderComponent,
 } from '@ui';
@@ -39,14 +40,21 @@ import { Observable } from 'rxjs';
 import {
   BusinessHoursWeek,
   CatalogTemplate,
+  createDefaultShippingMethod,
+  createDefaultShippingMethods,
+  CustomerFieldsConfig,
   DAY_LABELS_ES,
   DEFAULT_BUSINESS_HOURS_WEEK,
   DEFAULT_CURRENCY_CONFIG,
+  DEFAULT_CUSTOMER_FIELDS,
   DEFAULT_SOCIAL_LINKS,
   DEFAULT_WHATSAPP_ORDER_MESSAGE,
   EcommerceConfig,
   ExchangeRateType,
+  PreviewMessage,
   findCountryByCode,
+  ShippingMethod,
+  SHIPPING_METHOD_TYPE_OPTIONS,
   SocialLinks,
   SUPPORTED_COUNTRIES,
   SUPPORTED_CURRENCIES,
@@ -65,8 +73,8 @@ import {
 import { PhoneMockupComponent } from '../components/phone-mockup/phone-mockup';
 import { TemplateSelectorComponent } from '../components/template-selector/template-selector';
 
-export type TabId = 'general' | 'location' | 'payments' | 'social' | 'notifications';
-const VALID_TABS: TabId[] = ['general', 'location', 'payments', 'social', 'notifications'];
+export type TabId = 'general' | 'location' | 'shipping' | 'payments' | 'social' | 'notifications';
+const VALID_TABS: TabId[] = ['general', 'location', 'shipping', 'payments', 'social', 'notifications'];
 
 @Component({
   selector: 'lib-ecommerce-config',
@@ -84,6 +92,7 @@ const VALID_TABS: TabId[] = ['general', 'location', 'payments', 'social', 'notif
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
+    TextareaComponent,
     PhoneMockupComponent,
     TemplateSelectorComponent,
     DatePickerModule,
@@ -113,10 +122,11 @@ export class EcommerceConfigComponent implements OnInit {
   private readonly router = inject(Router);
 
   // ── Tabs ──────────────────────────────────────────────────────────────
-  public readonly tabs: { id: TabId; label: string; icon: string }[] = [
+  public readonly tabs: { id: TabId; label: string; icon: string; badge?: string }[] = [
     { id: 'general', label: 'General', icon: 'store' },
     { id: 'location', label: 'Ubicación y Horario', icon: 'map-pin' },
     { id: 'payments', label: 'Pagos', icon: 'credit-card' },
+    { id: 'shipping', label: 'Envío', icon: 'truck', badge: 'Nuevo' },
     { id: 'social', label: 'Redes Sociales', icon: 'share2' },
     { id: 'notifications', label: 'Notificaciones', icon: 'mail' },
   ];
@@ -134,6 +144,19 @@ export class EcommerceConfigComponent implements OnInit {
     queueMicrotask(() => {
       this.mainColumn()?.nativeElement?.scrollTo?.({ top: 0, behavior: 'auto' });
     });
+  }
+
+  /** Re-push the latest preview state after the iframe (re)loads — switching to
+   *  the Envío tab swaps the frame to the public checkout, which boots fresh and
+   *  must immediately reflect the current draft (shipping methods, fields…). */
+  onPreviewIframeLoaded(): void {
+    const msg = this.lastPreviewMessage;
+    if (!msg) return;
+    // The fresh frame wires its message listener on init; a tick avoids racing it.
+    setTimeout(() => {
+      this.phoneMockup()?.sendPreviewMessage(msg);
+      this.phoneMockupOverlay()?.sendPreviewMessage(msg);
+    }, 250);
   }
 
   // Location cascade signals
@@ -185,6 +208,16 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftShowLocalCurrencyPrice = signal(true);
   public readonly draftWhatsappOrderMessage = signal<string | null>(null);
   public readonly draftNotifyNewOrders = signal<boolean>(true);
+
+  // --- Shipping (Envío) tab drafts ---
+  public readonly draftShippingMethods = signal<ShippingMethod[]>([]);
+  public readonly draftShowShippingSection = signal<boolean>(false);
+  public readonly draftCustomerFields = signal<CustomerFieldsConfig>({
+    name: { ...DEFAULT_CUSTOMER_FIELDS.name },
+    phone: { ...DEFAULT_CUSTOMER_FIELDS.phone },
+    email: { ...DEFAULT_CUSTOMER_FIELDS.email },
+  });
+  public readonly shippingTypeOptions = SHIPPING_METHOD_TYPE_OPTIONS;
 
   // WhatsApp notifications (tabla whatsapp_notification_settings). Se cargan
   // y guardan aparte del config del catálogo (otra tabla). El número
@@ -349,8 +382,26 @@ export class EcommerceConfigComponent implements OnInit {
   // Mobile overlay
   public readonly isMockupOpen = signal(false);
 
-  // iframe URL
-  public safeIframeUrl: SafeResourceUrl = '';
+  // iframe URL — points the preview at the public checkout while the user is on
+  // the "Envío" or "Pagos" tabs (so they see how shipping/customer fields and
+  // payment methods look at checkout), and at the catalog home otherwise. Only
+  // the path crossing the checkout boundary changes the URL, so unrelated tab
+  // switches don't reload it.
+  private readonly previewSlug = signal<string>('');
+  private readonly CHECKOUT_TABS: TabId[] = ['shipping', 'payments'];
+  private readonly previewPath = computed(() =>
+    this.CHECKOUT_TABS.includes(this.activeTab()) ? '/checkout' : '/'
+  );
+  public readonly safeIframeUrl = computed<SafeResourceUrl | ''>(() => {
+    const slug = this.previewSlug();
+    if (!slug) return '';
+    const url = `${window.location.origin}${this.previewPath()}?slug=${slug}&preview=true`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  });
+
+  /** Last preview message sent — re-sent when the iframe (re)loads so a fresh
+   *  checkout/catalog frame immediately reflects the current draft. */
+  private lastPreviewMessage: PreviewMessage | null = null;
 
   // Tracks the last config snapshot used to sync drafts
   private lastSyncedConfig: EcommerceConfig | null = null;
@@ -456,6 +507,14 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftNotifyNewOrders, prev?.notifyNewOrders ?? true, config.notifyNewOrders ?? true);
       syncFieldJson(this.draftWhatsappButtons, prevButtons, newButtons);
       syncFieldJson(this.draftSocialLinks, prev?.socialLinks ?? DEFAULT_SOCIAL_LINKS, config.socialLinks ?? { ...DEFAULT_SOCIAL_LINKS });
+      syncField(this.draftShowShippingSection, prev?.showShippingSection ?? false, config.showShippingSection ?? false);
+      // Seed two starter methods (pickup + national shipping) when none are
+      // configured, so the list is never empty. Stable seed ids keep the JSON
+      // comparison consistent; the merchant just hits Guardar to persist them.
+      const prevMethods = prev?.shippingMethods?.length ? prev.shippingMethods : createDefaultShippingMethods();
+      const newMethods = config.shippingMethods?.length ? config.shippingMethods : createDefaultShippingMethods();
+      syncFieldJson(this.draftShippingMethods, prevMethods, newMethods);
+      syncFieldJson(this.draftCustomerFields, prev?.customerFields ?? DEFAULT_CUSTOMER_FIELDS, config.customerFields ?? DEFAULT_CUSTOMER_FIELDS);
 
       this.lastSyncedConfig = { ...config };
     });
@@ -490,6 +549,10 @@ export class EcommerceConfigComponent implements OnInit {
       const city = this.draftCity();
       const showLocationSection = this.draftShowLocationSection();
       const showCategoriesSection = this.draftShowCategoriesSection();
+      // Shipping drafts — so the checkout preview reflects them live.
+      const shippingMethods = this.draftShippingMethods();
+      const showShippingSection = this.draftShowShippingSection();
+      const customerFields = this.draftCustomerFields();
 
       const message = {
         type: 'PREVIEW_UPDATE' as const,
@@ -512,10 +575,14 @@ export class EcommerceConfigComponent implements OnInit {
           state,
           city,
           showLocationSection,
+          shippingMethods,
+          showShippingSection,
+          customerFields,
         },
         source: 'catalogohoy-admin' as const,
       };
 
+      this.lastPreviewMessage = message;
       this.phoneMockup()?.sendPreviewMessage(message);
       this.phoneMockupOverlay()?.sendPreviewMessage(message);
     });
@@ -689,9 +756,7 @@ export class EcommerceConfigComponent implements OnInit {
   async ngOnInit() {
     const slug = getTenantSlugFromUrl();
     if (slug) {
-      const url = `${window.location.origin}/?slug=${slug}&preview=true`;
-      this.safeIframeUrl =
-        this.sanitizer.bypassSecurityTrustResourceUrl(url);
+      this.previewSlug.set(slug);
     }
 
     // Restore active tab from query param (?tab=general|location|payments|social).
@@ -791,6 +856,17 @@ export class EcommerceConfigComponent implements OnInit {
     const serverSocialLinks = config.socialLinks ?? DEFAULT_SOCIAL_LINKS;
     if (JSON.stringify(this.draftSocialLinks()) !== JSON.stringify(serverSocialLinks)) {
       changes.socialLinks = this.draftSocialLinks();
+    }
+
+    if (this.draftShowShippingSection() !== (config.showShippingSection ?? false)) {
+      changes.showShippingSection = this.draftShowShippingSection();
+    }
+    if (JSON.stringify(this.draftShippingMethods()) !== JSON.stringify(config.shippingMethods ?? [])) {
+      changes.shippingMethods = this.draftShippingMethods();
+    }
+    const serverCustomerFields = config.customerFields ?? DEFAULT_CUSTOMER_FIELDS;
+    if (JSON.stringify(this.draftCustomerFields()) !== JSON.stringify(serverCustomerFields)) {
+      changes.customerFields = this.draftCustomerFields();
     }
 
     return changes;
@@ -1041,6 +1117,79 @@ export class EcommerceConfigComponent implements OnInit {
       i === index ? { ...b, number } : b
     );
     this.draftWhatsappButtons.set(updated);
+  }
+
+  // --- Shipping (Envío) Section ---
+  addShippingMethod() {
+    const current = this.draftShippingMethods();
+    const method = createDefaultShippingMethod(current.length);
+    // First method added becomes the default.
+    if (current.length === 0) method.isDefault = true;
+    this.draftShippingMethods.set([...current, method]);
+  }
+
+  removeShippingMethod(id: string) {
+    const current = this.draftShippingMethods();
+    const wasDefault = current.find((m) => m.id === id)?.isDefault;
+    let next = current
+      .filter((m) => m.id !== id)
+      .map((m, i) => ({ ...m, position: i }));
+    // If we removed the default, promote the first remaining active method.
+    if (wasDefault && next.length && !next.some((m) => m.isDefault)) {
+      next = next.map((m, i) => ({ ...m, isDefault: i === 0 }));
+    }
+    this.draftShippingMethods.set(next);
+  }
+
+  updateShippingMethodField<K extends keyof ShippingMethod>(
+    id: string,
+    key: K,
+    value: ShippingMethod[K]
+  ) {
+    this.draftShippingMethods.set(
+      this.draftShippingMethods().map((m) =>
+        m.id === id ? { ...m, [key]: value } : m
+      )
+    );
+  }
+
+  /** Coerce the raw number-input string into a finite number (or 0/null). */
+  updateShippingMethodNumber(
+    id: string,
+    key: 'fee' | 'lat' | 'lng',
+    raw: string | number | null
+  ) {
+    const n = raw === '' || raw === null ? null : Number(raw);
+    const value = n != null && Number.isFinite(n) ? n : key === 'fee' ? 0 : null;
+    this.updateShippingMethodField(id, key, value as ShippingMethod[typeof key]);
+  }
+
+  setDefaultShippingMethod(id: string) {
+    this.draftShippingMethods.set(
+      this.draftShippingMethods().map((m) => ({ ...m, isDefault: m.id === id }))
+    );
+  }
+
+  moveShippingMethod(id: string, dir: -1 | 1) {
+    const current = [...this.draftShippingMethods()];
+    const i = current.findIndex((m) => m.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= current.length) return;
+    [current[i], current[j]] = [current[j], current[i]];
+    this.draftShippingMethods.set(current.map((m, idx) => ({ ...m, position: idx })));
+  }
+
+  // --- Customer fields config ---
+  updateCustomerField(
+    field: keyof CustomerFieldsConfig,
+    key: 'visible' | 'required',
+    value: boolean
+  ) {
+    const current = this.draftCustomerFields();
+    const next = { ...current, [field]: { ...current[field], [key]: value } };
+    // A field that's hidden can't be required.
+    if (key === 'visible' && !value) next[field].required = false;
+    this.draftCustomerFields.set(next);
   }
 
   // --- Social Links Section ---

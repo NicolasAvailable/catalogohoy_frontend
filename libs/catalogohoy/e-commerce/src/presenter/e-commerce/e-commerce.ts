@@ -8,9 +8,10 @@ import {
   inject,
   OnDestroy,
   OnInit,
+  signal,
 } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
-import { Router, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { StripHtmlPipe } from '@shared/presenter';
 import { PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
@@ -23,7 +24,6 @@ import { CatalogFooter } from '../components/catalog-footer/catalog-footer';
 import { CatalogHeader } from '../components/catalog-header/catalog-header';
 import { CatalogHero } from '../components/catalog-hero/catalog-hero';
 import { CatalogInfoModal } from '../components/catalog-info-modal/catalog-info-modal';
-import { CheckoutDrawer } from '../components/checkout-drawer/checkout-drawer';
 
 const DEFAULT_FAVICON =
   'https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/favicon-c.png';
@@ -38,7 +38,6 @@ const DEFAULT_FAVICON =
     CatalogHero,
     CatalogFooter,
     CartDrawer,
-    CheckoutDrawer,
     CatalogInfoModal,
   ],
   templateUrl: './e-commerce.html',
@@ -57,6 +56,16 @@ export class ECommerce implements OnInit, OnDestroy {
   private readonly ecommerceService = inject(EcommerceService);
   private readonly dialogService = inject(DialogService);
   private readonly router = inject(Router);
+
+  /** Checkout and invoice are full-page flows — hide the catalog chrome
+   *  (header/hero/cart-pill/footer) so they don't show their loading skeleton
+   *  and action buttons around those routes. */
+  public readonly isStandaloneRoute = signal(this.matchStandalone(this.router.url));
+
+  private matchStandalone(url: string): boolean {
+    const path = (url.split('?')[0] || '').replace(/\/$/, '');
+    return path === '/checkout' || /\/order\/[^/]+\/invoice$/.test(path);
+  }
 
   public readonly whatsappUrl = computed(() => {
     const btn = this.ecommerceStore.effectiveCatalogInfo()?.whatsappButtons?.[0];
@@ -103,6 +112,12 @@ export class ECommerce implements OnInit, OnDestroy {
   };
 
   constructor() {
+    this.router.events.subscribe((e) => {
+      if (e instanceof NavigationEnd) {
+        this.isStandaloneRoute.set(this.matchStandalone(e.urlAfterRedirects));
+      }
+    });
+
     // Dynamic title + SEO meta tags
     effect(() => {
       const info = this.ecommerceStore.effectiveCatalogInfo();

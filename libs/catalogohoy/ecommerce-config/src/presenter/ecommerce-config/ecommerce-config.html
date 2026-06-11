@@ -54,6 +54,9 @@
           >
             <ui-icon [name]="tab.icon" styleClass="size-4 shrink-0"></ui-icon>
             <span>{{ tab.label }}</span>
+            @if (tab.badge) {
+            <span class="config-tab__badge">{{ tab.badge }}</span>
+            }
           </button>
         }
       </nav>
@@ -396,12 +399,17 @@
           <div class="add-method-form">
             <span class="add-method-title">Agregar método de pago</span>
             <div class="add-method-fields">
-              <ui-input-text
-                [ngModel]="newMethodName()"
-                (ngModelChange)="newMethodName.set($event)"
-                placeholder="Nombre (Ej: Zelle, Binance...)"
-                styleClass="w-full"
-              ></ui-input-text>
+              <div class="add-method-field">
+                <label class="add-method-label">Nombre</label>
+                <ui-input-text
+                  [ngModel]="newMethodName()"
+                  (ngModelChange)="newMethodName.set($event)"
+                  placeholder="Ej: Zelle, Binance..."
+                  styleClass="w-full"
+                ></ui-input-text>
+              </div>
+              <div class="add-method-field">
+                <label class="add-method-label">Icono</label>
               <ui-select
                 [options]="iconOptions"
                 [ngModel]="newMethodIcon()"
@@ -423,6 +431,7 @@
                   </div>
                 </ng-template>
               </ui-select>
+              </div>
             </div>
             <ui-button
               label="Agregar"
@@ -644,6 +653,215 @@
       </ui-card>
 
       </div> <!-- /TAB LOCATION -->
+
+      <!-- ===== TAB: SHIPPING (Envío) ===== -->
+      <div [hidden]="activeTab() !== 'shipping'">
+
+      <!-- Card: Datos que se le piden al cliente -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon location-icon">
+              <ui-icon name="user" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">Datos del cliente</h2>
+              <small class="card-subtitle">
+                Elige qué datos pedir al hacer el pedido y cuáles son obligatorios.
+              </small>
+            </div>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="customer-fields">
+            <div class="customer-field-row customer-field-head">
+              <span></span>
+              <span>Pedir</span>
+              <span>Obligatorio</span>
+            </div>
+            <!-- Name: always requested AND always required — not configurable. -->
+            <div class="customer-field-row">
+              <span class="customer-field-label">Nombre</span>
+              <span class="customer-field-locked">Siempre</span>
+              <span class="customer-field-locked">Siempre</span>
+            </div>
+            <div class="customer-field-row">
+              <span class="customer-field-label">Número de WhatsApp</span>
+              <ui-toggle
+                [ngModel]="draftCustomerFields().phone.visible"
+                (ngModelChange)="updateCustomerField('phone', 'visible', $event)"
+              ></ui-toggle>
+              <ui-toggle
+                [ngModel]="draftCustomerFields().phone.required"
+                (ngModelChange)="updateCustomerField('phone', 'required', $event)"
+                [disabled]="!draftCustomerFields().phone.visible"
+              ></ui-toggle>
+            </div>
+            <div class="customer-field-row">
+              <span class="customer-field-label">Correo electrónico</span>
+              <ui-toggle
+                [ngModel]="draftCustomerFields().email.visible"
+                (ngModelChange)="updateCustomerField('email', 'visible', $event)"
+              ></ui-toggle>
+              <ui-toggle
+                [ngModel]="draftCustomerFields().email.required"
+                (ngModelChange)="updateCustomerField('email', 'required', $event)"
+                [disabled]="!draftCustomerFields().email.visible"
+              ></ui-toggle>
+            </div>
+          </div>
+        </div>
+      </ui-card>
+
+      <!-- Card: Métodos de envío -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon location-icon">
+              <ui-icon name="truck" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">Métodos de envío</h2>
+              <small class="card-subtitle">
+                Define cómo el cliente recibe su pedido (retiro, entrega o envío).
+              </small>
+            </div>
+          </div>
+          <ui-toggle
+            [ngModel]="draftShowShippingSection()"
+            (ngModelChange)="draftShowShippingSection.set($event)"
+          ></ui-toggle>
+        </div>
+
+        <div class="card-content" [class.section-disabled]="!draftShowShippingSection()">
+          <div class="shipping-methods-list">
+            @for (method of draftShippingMethods(); track method.id; let i = $index) {
+            <div class="shipping-method">
+              <div class="shipping-method-toprow">
+                <div class="shipping-method-reorder">
+                  <button type="button" class="reorder-btn" title="Subir"
+                    [disabled]="i === 0" (click)="moveShippingMethod(method.id, -1)">
+                    <ui-icon name="chevron-up" styleClass="size-4"></ui-icon>
+                  </button>
+                  <button type="button" class="reorder-btn" title="Bajar"
+                    [disabled]="i === draftShippingMethods().length - 1"
+                    (click)="moveShippingMethod(method.id, 1)">
+                    <ui-icon name="chevron-down" styleClass="size-4"></ui-icon>
+                  </button>
+                </div>
+                <button type="button" class="payment-method-delete" title="Eliminar"
+                  (click)="removeShippingMethod(method.id)">
+                  <ui-icon name="trash" styleClass="size-4"></ui-icon>
+                </button>
+              </div>
+
+              <label class="shipping-field">
+                <span class="shipping-field-label">Nombre</span>
+                <ui-input-text
+                  [ngModel]="method.name"
+                  (ngModelChange)="updateShippingMethodField(method.id, 'name', $event)"
+                  placeholder="Ej: Retiro en local"
+                  styleClass="w-full"
+                ></ui-input-text>
+              </label>
+
+              <div class="shipping-method-grid">
+                <label class="shipping-field">
+                  <span class="shipping-field-label">Tipo</span>
+                  <ui-select
+                    [options]="shippingTypeOptions"
+                    [ngModel]="method.type"
+                    (ngModelChange)="updateShippingMethodField(method.id, 'type', $event)"
+                    optionLabel="label"
+                    optionValue="value"
+                  ></ui-select>
+                </label>
+                <label class="shipping-field">
+                  <span class="shipping-field-label">Costo ({{ draftCurrencySymbol() }})</span>
+                  <input type="number" min="0" step="0.01" class="shipping-num"
+                    [ngModel]="method.fee"
+                    (ngModelChange)="updateShippingMethodNumber(method.id, 'fee', $event)"
+                    placeholder="0 = gratis" />
+                </label>
+              </div>
+
+              <label class="shipping-field">
+                <span class="shipping-field-label">Instrucciones (opcional)</span>
+                <ui-textarea
+                  [ngModel]="method.instructions"
+                  (ngModelChange)="updateShippingMethodField(method.id, 'instructions', $event)"
+                  placeholder="Ej: Solo se realizan entregas en Las Delicias"
+                  [rows]="2"
+                  styleClass="w-full"
+                ></ui-textarea>
+              </label>
+
+              @if (method.type === 'pickup') {
+              <label class="shipping-field">
+                <span class="shipping-field-label">Dirección del local</span>
+                <ui-input-text
+                  [ngModel]="method.address"
+                  (ngModelChange)="updateShippingMethodField(method.id, 'address', $event)"
+                  placeholder="Ej: Av. Bolívar 123, Maracay"
+                  styleClass="w-full"
+                ></ui-input-text>
+              </label>
+              } @else {
+              <label class="shipping-toggle-row">
+                <div class="shipping-toggle-text">
+                  <span>Pedir la dirección al cliente</span>
+                  <small>El cliente escribe su dirección de entrega en el checkout.</small>
+                </div>
+                <ui-toggle
+                  [ngModel]="method.requestCustomerAddress"
+                  (ngModelChange)="updateShippingMethodField(method.id, 'requestCustomerAddress', $event)"
+                ></ui-toggle>
+              </label>
+              }
+
+              <div class="shipping-method-footer">
+                <label class="shipping-toggle-row">
+                  <div class="shipping-toggle-text">
+                    <span>Activo</span>
+                    <small>Se muestra como opción de envío en el checkout.</small>
+                  </div>
+                  <ui-toggle
+                    [ngModel]="method.isActive"
+                    (ngModelChange)="updateShippingMethodField(method.id, 'isActive', $event)"
+                  ></ui-toggle>
+                </label>
+                <label class="shipping-toggle-row">
+                  <div class="shipping-toggle-text">
+                    <span>Predeterminado</span>
+                    <small>Viene seleccionado por defecto al iniciar el pedido.</small>
+                  </div>
+                  <ui-toggle
+                    [ngModel]="method.isDefault"
+                    (ngModelChange)="$event ? setDefaultShippingMethod(method.id) : updateShippingMethodField(method.id, 'isDefault', false)"
+                  ></ui-toggle>
+                </label>
+              </div>
+            </div>
+            } @empty {
+            <div class="payment-methods-empty">
+              <ui-icon name="truck" styleClass="size-6 text-grey-300"></ui-icon>
+              <span>Aún no agregaste métodos de envío</span>
+            </div>
+            }
+          </div>
+
+          <div class="divider"></div>
+
+          <ui-button
+            label="Agregar método de envío"
+            icon="plus"
+            size="small"
+            (click)="addShippingMethod()"
+          ></ui-button>
+        </div>
+      </ui-card>
+
+      </div> <!-- /TAB SHIPPING -->
 
       <!-- ===== TAB: PAYMENTS (block 2) ===== -->
       <div [hidden]="activeTab() !== 'payments'">
@@ -1083,6 +1301,7 @@
               <div>
                 <h2 class="card-title">
                   Notificaciones por WhatsApp
+                  <span class="config-tab__badge align-middle">Nuevo</span>
                   @if (isWhatsappLocked()) {
                   <span
                     class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none align-middle"
@@ -1202,10 +1421,11 @@
 
     <!-- ========== RIGHT COLUMN: Phone Mockup ========== -->
     <div class="mockup-column">
-      @if (safeIframeUrl) {
+      @if (safeIframeUrl()) {
       <lib-phone-mockup
         #phoneMockup
-        [iframeUrl]="safeIframeUrl"
+        [iframeUrl]="safeIframeUrl()"
+        (loaded)="onPreviewIframeLoaded()"
       ></lib-phone-mockup>
       }
     </div>
@@ -1217,13 +1437,14 @@
   </button>
 
   <!-- Mobile overlay mockup (always in DOM to keep iframe alive) -->
-  @if (safeIframeUrl) {
+  @if (safeIframeUrl()) {
   <lib-phone-mockup
     #phoneMockupOverlay
-    [iframeUrl]="safeIframeUrl"
+    [iframeUrl]="safeIframeUrl()"
     [isOverlay]="true"
     [hidden]="!isMockupOpen()"
     (close)="closeMockup()"
+    (loaded)="onPreviewIframeLoaded()"
   ></lib-phone-mockup>
   }
 

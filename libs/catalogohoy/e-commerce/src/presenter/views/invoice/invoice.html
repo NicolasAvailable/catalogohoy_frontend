@@ -1,0 +1,101 @@
+<div class="invoice">
+  @if (isLoading()) {
+  <div class="invoice__state">Cargando factura...</div>
+  } @else if (error()) {
+  <div class="invoice__state">
+    <ui-icon name="circle-alert" size="28" />
+    <p>{{ error() }}</p>
+    <button type="button" class="invoice__btn-outline" (click)="backToStore()">Volver a la tienda</button>
+  </div>
+  } @else if (order(); as o) {
+
+  <!-- Actions (hidden on print) -->
+  <div class="invoice__actions">
+    <button type="button" class="invoice__icon-btn invoice__back" (click)="goBack()" title="Volver atrás">
+      <ui-icon name="arrow-left" size="18" />
+    </button>
+    <div class="invoice__actions-right">
+      <button type="button" class="invoice__icon-btn" (click)="print()" title="Imprimir">
+        <ui-icon name="printer" size="18" />
+      </button>
+      <button type="button" class="invoice__icon-btn" (click)="downloadPdf()"
+        [disabled]="isGeneratingPdf()" title="Descargar PDF">
+        <ui-icon name="download" size="18" />
+      </button>
+    </div>
+  </div>
+
+  <!-- Receipt -->
+  <div class="invoice__sheet" id="invoice-sheet">
+    <header class="invoice__head">
+      @if (info()?.logo) {
+      <img class="invoice__logo" [src]="info()?.logo" [alt]="info()?.name" />
+      }
+      <h1 class="invoice__business">{{ info()?.name }}</h1>
+    </header>
+
+    <div class="invoice__meta">
+      <div><span>Núm. de factura</span><strong>#{{ displayNumber() }}</strong></div>
+      <div><span>Fecha de pedido</span><strong>{{ o.createdAt | date:'dd MMM yyyy HH:mm' }}</strong></div>
+    </div>
+
+    <hr class="invoice__hr" />
+
+    <h2 class="invoice__section">Artículos</h2>
+    @for (p of o.products; track $index) {
+    <div class="invoice__item">
+      <span class="invoice__item-qty">{{ p.quantity }}x</span>
+      <span class="invoice__item-name">
+        {{ p.name }}@if (p.size) { <small class="invoice__item-size">{{ p.size }}</small> }
+      </span>
+      <span class="invoice__item-total">{{ cs() }}{{ p.total }}</span>
+    </div>
+    }
+
+    <hr class="invoice__hr" />
+
+    <div class="invoice__row">
+      <span>Subtotal</span><span>{{ cs() }}{{ subtotal() }}</span>
+    </div>
+    @if (o.shippingMethod) {
+    <div class="invoice__row">
+      <span>{{ o.shippingMethod.name || 'Envío' }}</span>
+      <span>{{ o.shippingFee > 0 ? cs() + o.shippingFee : 'Gratis' }}</span>
+    </div>
+    }
+    <div class="invoice__row invoice__row--total">
+      <span>Total</span>
+      <span>
+        {{ cs() }}{{ o.totalUsd }}
+        @if (showBs()) { <small>Bs. {{ o.totalBs | number:'1.2-2' }}</small> }
+      </span>
+    </div>
+
+    <hr class="invoice__hr" />
+
+    <h2 class="invoice__section">Detalles del pedido</h2>
+    <dl class="invoice__details">
+      <dt>Cliente</dt>
+      <dd>{{ o.name }}@if (o.phone) { / {{ o.phone }} }</dd>
+      @if (o.email) { <dt>Correo</dt><dd>{{ o.email }}</dd> }
+      @if (o.shippingMethod) {
+      <dt>Envío</dt>
+      <dd>
+        {{ o.shippingMethod.name }}
+        @if (o.shippingAddress) { <br />{{ o.shippingAddress }} }
+      </dd>
+      }
+      @if (o.paymentMethod) { <dt>Pago</dt><dd>{{ o.paymentMethod }}</dd> }
+      @if (o.comments) { <dt>Comentarios</dt><dd>{{ o.comments }}</dd> }
+    </dl>
+  </div>
+
+  <div class="invoice__footer">
+    <button type="button" class="invoice__btn-primary" (click)="downloadPdf()" [disabled]="isGeneratingPdf()">
+      <ui-icon name="download" size="16" />
+      {{ isGeneratingPdf() ? 'Generando...' : 'Descargar PDF' }}
+    </button>
+    <button type="button" class="invoice__btn-outline" (click)="backToStore()">Volver a la tienda</button>
+  </div>
+  }
+</div>

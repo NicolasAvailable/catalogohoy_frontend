@@ -277,7 +277,15 @@ export const EcommerceStore = signalStore(
       comments: string;
       items: any[];
       total: number;
+      email?: string;
       payment_method?: string;
+      shipping_method?: {
+        name: string;
+        type: 'pickup' | 'delivery' | 'shipping';
+        fee: number;
+      } | null;
+      shipping_address?: string | null;
+      shipping_fee?: number;
     }) {
       const catalogInfo = store.catalogInfo();
       if (!catalogInfo) return;
@@ -291,7 +299,11 @@ export const EcommerceStore = signalStore(
         total_usd: order.total,
         phone: order.phone,
         comments: order.comments,
+        email: order.email,
         payment_method: order.payment_method,
+        shipping_method: order.shipping_method,
+        shipping_address: order.shipping_address,
+        shipping_fee: order.shipping_fee,
       });
 
       patchState(store, () => ({ isLoading: false }));

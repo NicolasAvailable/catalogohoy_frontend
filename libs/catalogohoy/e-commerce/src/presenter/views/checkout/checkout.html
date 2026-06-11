@@ -1,0 +1,274 @@
+<div class="checkout">
+  <!-- Header -->
+  <header class="checkout__topbar">
+    <button type="button" class="checkout__back" (click)="goToStore()" aria-label="Volver atrás">
+      <ui-icon name="arrow-left" size="22" />
+    </button>
+    <h1 class="checkout__heading">Checkout</h1>
+    @if (info()?.logo) {
+    <img class="checkout__logo" [src]="info()?.logo" [alt]="info()?.name" />
+    } @else {
+    <span class="checkout__topbar-spacer" aria-hidden="true"></span>
+    }
+  </header>
+  @if (info()?.name) {
+  <p class="checkout__business">{{ info()?.name }}</p>
+  }
+
+  @if (phase() === 'form') {
+  <!-- ===== Cliente ===== -->
+  <section class="checkout__card">
+    <h2 class="checkout__card-title">Cliente</h2>
+
+    <!-- Name is always shown and always required. -->
+    <label class="checkout__field">
+      <span class="checkout__label">Nombre <span class="checkout__req">*</span></span>
+      <ui-input-text [ngModel]="name()" (ngModelChange)="name.set($event)"
+        placeholder="Tu nombre" styleClass="w-full"></ui-input-text>
+    </label>
+
+    @if (customerFields().phone.visible) {
+    <label class="checkout__field">
+      <span class="checkout__label">
+        Número de WhatsApp @if (customerFields().phone.required) { <span class="checkout__req">*</span> }
+      </span>
+      <div class="checkout__phone">
+        <button type="button" class="checkout__country" (click)="toggleCountryDropdown($event)">
+          <span>{{ selectedCountry().flag }}</span>
+          <span>{{ selectedCountry().code }}</span>
+          <ui-icon name="chevron-down" size="14" />
+        </button>
+        @if (countryDropdownOpen()) {
+        <div class="checkout__country-menu">
+          @for (c of countryCodes; track c.iso) {
+          <button type="button" class="checkout__country-item" (click)="selectCountry(c)">
+            <span>{{ c.flag }}</span>
+            <span class="checkout__country-label">{{ c.label }}</span>
+            <span class="checkout__country-code">{{ c.code }}</span>
+          </button>
+          }
+        </div>
+        }
+        <div class="checkout__input--phone">
+          <ui-input-text [ngModel]="phone()" (ngModelChange)="phone.set($event)"
+            placeholder="4121234567" styleClass="w-full"></ui-input-text>
+        </div>
+      </div>
+    </label>
+    }
+
+    @if (customerFields().email.visible) {
+    <label class="checkout__field">
+      <span class="checkout__label">
+        Correo electrónico @if (customerFields().email.required) { <span class="checkout__req">*</span> }
+      </span>
+      <ui-input-text [ngModel]="email()" (ngModelChange)="email.set($event)"
+        placeholder="tucorreo@ejemplo.com" styleClass="w-full"></ui-input-text>
+    </label>
+    }
+  </section>
+
+  <!-- ===== Artículos ===== -->
+  <section class="checkout__card">
+    <div class="checkout__card-head">
+      <h2 class="checkout__card-title">Artículos</h2>
+      <button type="button" class="checkout__link" (click)="goToStore()">Añadir artículo</button>
+    </div>
+
+    @for (item of cartStore.items(); track item.id) {
+    <div class="checkout__item">
+      @if (item.photo) {
+      <img class="checkout__item-img" [src]="item.photo" [alt]="item.name" />
+      } @else {
+      <div class="checkout__item-img checkout__item-img--empty">
+        <ui-icon name="image" size="18" />
+      </div>
+      }
+      <div class="checkout__item-main">
+        <p class="checkout__item-name">
+          {{ item.name }}@if (item.size) { <span class="checkout__item-size">· {{ item.size }}</span> }
+        </p>
+        <p class="checkout__item-price">{{ cs() }}{{ item.total }}</p>
+        <div class="checkout__stepper">
+          <button type="button" (click)="onDecrement(item)" aria-label="Quitar uno">
+            <ui-icon name="minus" size="14" />
+          </button>
+          <span>{{ item.quantity }}</span>
+          <button type="button" (click)="onIncrement(item)" aria-label="Agregar uno">
+            <ui-icon name="plus" size="14" />
+          </button>
+        </div>
+      </div>
+      <button type="button" class="checkout__item-remove" (click)="onRemove(item)" aria-label="Eliminar">
+        <ui-icon name="x" size="16" />
+      </button>
+    </div>
+    } @empty {
+    <p class="checkout__empty">Tu carrito está vacío.</p>
+    }
+  </section>
+
+  <!-- ===== Envío ===== -->
+  @if (hasShipping()) {
+  <section class="checkout__card">
+    <h2 class="checkout__card-title">Envío <span class="checkout__req">*</span></h2>
+
+    @for (method of shippingMethods(); track method.id) {
+    <div class="checkout__ship-item"
+      [class.checkout__ship-item--active]="selectedShippingId() === method.id">
+      <button type="button" class="checkout__ship" (click)="selectShipping(method.id)">
+        <span class="checkout__radio" [class.checkout__radio--on]="selectedShippingId() === method.id"></span>
+        <span class="checkout__ship-name">{{ method.name }}</span>
+        <span class="checkout__ship-fee">{{ method.fee > 0 ? cs() + method.fee : 'Gratis' }}</span>
+        @if (method.instructions) {
+        <span class="checkout__ship-chevron"
+          [class.checkout__ship-chevron--open]="selectedShippingId() === method.id">
+          <ui-icon name="chevron-down" size="16" />
+        </span>
+        }
+      </button>
+      @if (method.instructions && selectedShippingId() === method.id) {
+      <div class="checkout__ship-body">
+        <p class="checkout__ship-desc">{{ method.instructions }}</p>
+      </div>
+      }
+    </div>
+    }
+
+    <!-- Pickup address -->
+    @if (selectedShipping()?.type === 'pickup' && selectedShipping()?.address) {
+    <p class="checkout__ship-address">
+      <ui-icon name="map-pin" size="14" /> {{ selectedShipping()?.address }}
+    </p>
+    }
+
+    <!-- Customer address input -->
+    @if (selectedShipping()?.requestCustomerAddress) {
+    <label class="checkout__field">
+      <span class="checkout__label">Dirección de entrega <span class="checkout__req">*</span></span>
+      <ui-textarea [ngModel]="customerAddress()" (ngModelChange)="customerAddress.set($event)"
+        placeholder="Calle, número, referencia..." [rows]="2" styleClass="w-full"></ui-textarea>
+    </label>
+    }
+  </section>
+  }
+
+  <!-- ===== Método de pago ===== -->
+  @if (availablePaymentMethods().length) {
+  <section class="checkout__card">
+    <h2 class="checkout__card-title">Método de pago <span class="checkout__req">*</span></h2>
+    <div class="checkout__pay-grid">
+      @for (pm of availablePaymentMethods(); track pm.id) {
+      <button type="button" class="checkout__pay"
+        [class.checkout__pay--active]="selectedPaymentMethod() === pm.name"
+        (click)="selectedPaymentMethod.set(pm.name)">
+        <ui-icon [name]="pm.icon" size="16" />
+        <span>{{ pm.name }}</span>
+      </button>
+      }
+    </div>
+  </section>
+  }
+
+  <!-- ===== Comentarios ===== -->
+  <section class="checkout__card">
+    <label class="checkout__field">
+      <span class="checkout__label">Comentarios (opcional)</span>
+      <ui-textarea [ngModel]="comments()" (ngModelChange)="comments.set($event)"
+        placeholder="Notas para tu pedido" [rows]="2" styleClass="w-full"></ui-textarea>
+    </label>
+  </section>
+
+  <!-- ===== Resumen ===== -->
+  <section class="checkout__card checkout__summary">
+    <h2 class="checkout__card-title">Resumen del pedido</h2>
+    <div class="checkout__summary-row">
+      <span>Artículos ({{ cartStore.totalItems() }})</span>
+      <span>{{ cs() }}{{ subtotal() }}</span>
+    </div>
+    @if (selectedShipping()) {
+    <div class="checkout__summary-row">
+      <span>{{ selectedShipping()?.name }}</span>
+      <span>{{ shippingFee() > 0 ? cs() + shippingFee() : 'Gratis' }}</span>
+    </div>
+    }
+    <div class="checkout__summary-total">
+      <span>Total</span>
+      <span>
+        {{ cs() }}{{ total() }}
+        @if (showBs()) {
+        <small>Bs. {{ totalBs() | number:'1.2-2' }}</small>
+        }
+      </span>
+    </div>
+  </section>
+
+  <button type="button" class="checkout__submit" [disabled]="!isValid || isSubmitting()" (click)="onSubmit()">
+    @if (isSubmitting()) { Procesando... } @else { Realizar pedido }
+  </button>
+  }
+
+  <!-- ===== Phase: confirm ===== -->
+  @if (phase() === 'confirm') {
+  <div class="checkout__post">
+    <div class="checkout__success-icon">
+      <ui-icon name="check-circle" size="64" />
+    </div>
+    <h2 class="checkout__post-title">¡Pedido realizado!</h2>
+    <p class="checkout__post-subtitle">
+      Envíanos los detalles por WhatsApp para confirmarlo con la tienda.
+    </p>
+    <button type="button" class="checkout__wa" (click)="sendWhatsapp()">
+      <ui-icon name="message-circle" size="18" /> Enviar WhatsApp
+    </button>
+  </div>
+  }
+
+  <!-- ===== Phase: sent ===== -->
+  @if (phase() === 'sent') {
+  <div class="checkout__post">
+    <div class="checkout__success-icon">
+      <ui-icon name="check-circle" size="56" />
+    </div>
+    <h2 class="checkout__post-title">¡Pedido realizado!</h2>
+    <button type="button" class="checkout__post-primary" (click)="viewInvoice()">Ver factura</button>
+    <button type="button" class="checkout__post-secondary" (click)="backToStore()">Volver a la tienda</button>
+    <button type="button" class="checkout__wa checkout__wa--outline" (click)="sendWhatsapp()">
+      <ui-icon name="message-circle" size="18" /> Enviar WhatsApp
+    </button>
+
+    <!-- ¿WhatsApp no abre? -->
+    <div class="checkout__fallback">
+      <p class="checkout__fallback-title">¿WhatsApp no abre?</p>
+
+      <details class="checkout__fallback-item">
+        <summary>Abrir en el navegador externo <ui-icon name="chevron-down" size="14" /></summary>
+        <div class="checkout__fallback-body">
+          <a [href]="pendingWhatsappUrl()" target="_blank" rel="noopener" class="checkout__fallback-link">
+            Abrir enlace de WhatsApp
+          </a>
+        </div>
+      </details>
+
+      <details class="checkout__fallback-item">
+        <summary>Enviar los detalles del pedido manualmente <ui-icon name="chevron-down" size="14" /></summary>
+        <div class="checkout__fallback-body">
+          <textarea class="checkout__fallback-msg" rows="6" readonly>{{ pendingMessage() }}</textarea>
+          <button type="button" class="checkout__post-secondary" (click)="copyMessage()">
+            {{ copied() ? '¡Copiado!' : 'Copiar mensaje' }}
+          </button>
+        </div>
+      </details>
+
+      <details class="checkout__fallback-item">
+        <summary>Escanear código QR para abrir esta página en el móvil <ui-icon name="chevron-down" size="14" /></summary>
+        <div class="checkout__fallback-body checkout__fallback-qr">
+          @if (pendingWhatsappUrl(); as url) {
+          <qrcode [qrdata]="url" [width]="180" [margin]="1" errorCorrectionLevel="M"></qrcode>
+          }
+        </div>
+      </details>
+    </div>
+  </div>
+  }
+</div>
