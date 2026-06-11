@@ -155,6 +155,42 @@ export function createDefaultShippingMethod(position: number): ShippingMethod {
   };
 }
 
+/** Seeded so a fresh catalog never shows an empty shipping list: a local
+ *  pickup and a national shipping option. Stable ids keep draft/config JSON
+ *  comparisons consistent across renders (no random UUIDs). */
+export function createDefaultShippingMethods(): ShippingMethod[] {
+  return [
+    {
+      id: 'seed-pickup',
+      name: 'Recoger en el local',
+      type: 'pickup',
+      fee: 0,
+      instructions: '',
+      requestCustomerAddress: false,
+      address: null,
+      lat: null,
+      lng: null,
+      isActive: true,
+      isDefault: true,
+      position: 0,
+    },
+    {
+      id: 'seed-shipping',
+      name: 'Envío nacional',
+      type: 'shipping',
+      fee: 0,
+      instructions: '',
+      requestCustomerAddress: true,
+      address: null,
+      lat: null,
+      lng: null,
+      isActive: true,
+      isDefault: false,
+      position: 1,
+    },
+  ];
+}
+
 /** Per-field config for the checkout customer form. `name` is always visible;
  *  only its `required` flag is editable. */
 export interface CustomerFieldConfig {

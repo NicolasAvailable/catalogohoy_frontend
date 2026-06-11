@@ -41,6 +41,7 @@ import {
   BusinessHoursWeek,
   CatalogTemplate,
   createDefaultShippingMethod,
+  createDefaultShippingMethods,
   CustomerFieldsConfig,
   DAY_LABELS_ES,
   DEFAULT_BUSINESS_HOURS_WEEK,
@@ -507,7 +508,12 @@ export class EcommerceConfigComponent implements OnInit {
       syncFieldJson(this.draftWhatsappButtons, prevButtons, newButtons);
       syncFieldJson(this.draftSocialLinks, prev?.socialLinks ?? DEFAULT_SOCIAL_LINKS, config.socialLinks ?? { ...DEFAULT_SOCIAL_LINKS });
       syncField(this.draftShowShippingSection, prev?.showShippingSection ?? false, config.showShippingSection ?? false);
-      syncFieldJson(this.draftShippingMethods, prev?.shippingMethods ?? [], config.shippingMethods ?? []);
+      // Seed two starter methods (pickup + national shipping) when none are
+      // configured, so the list is never empty. Stable seed ids keep the JSON
+      // comparison consistent; the merchant just hits Guardar to persist them.
+      const prevMethods = prev?.shippingMethods?.length ? prev.shippingMethods : createDefaultShippingMethods();
+      const newMethods = config.shippingMethods?.length ? config.shippingMethods : createDefaultShippingMethods();
+      syncFieldJson(this.draftShippingMethods, prevMethods, newMethods);
       syncFieldJson(this.draftCustomerFields, prev?.customerFields ?? DEFAULT_CUSTOMER_FIELDS, config.customerFields ?? DEFAULT_CUSTOMER_FIELDS);
 
       this.lastSyncedConfig = { ...config };
