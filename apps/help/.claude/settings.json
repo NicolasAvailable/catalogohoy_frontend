@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_close",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_evaluate",
+      "Bash(python -c \"import PIL; print\\('PIL', PIL.__version__\\)\")",
+      "Bash(python -c \"import rembg; print\\('rembg available'\\)\")",
+      "Bash(pip install *)",
+      "Bash(python -m pip install Pillow)",
+      "Bash(curl -sL \"https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing.png\" -o /tmp/landing-orig.png)",
+      "Bash(python -c \"from PIL import Image; im=Image.open\\('/tmp/landing-orig.png'\\); print\\('size:', im.size, 'mode:', im.mode\\); print\\('corner pixels:', im.getpixel\\(\\(0,0\\)\\), im.getpixel\\(\\(10,10\\)\\), im.getpixel\\(\\(20,0\\)\\), im.getpixel\\(\\(0,20\\)\\)\\)\")",
+      "Bash(curl -sL \"https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing.png\" -o c:/Users/nicol/OneDrive/Desktop/projects/catalogohoy_landing/.playwright-mcp/landing-orig.png)",
+      "Bash(python -c \"from PIL import Image; im=Image.open\\(r'c:/Users/nicol/OneDrive/Desktop/projects/catalogohoy_landing/.playwright-mcp/landing-orig.png'\\); print\\('size:', im.size, 'mode:', im.mode\\); print\\(im.getpixel\\(\\(0,0\\)\\), im.getpixel\\(\\(8,0\\)\\), im.getpixel\\(\\(0,8\\)\\), im.getpixel\\(\\(8,8\\)\\), im.getpixel\\(\\(20,20\\)\\)\\)\")",
+      "Bash(python)",
+      "Bash(rm catalogohoy-*.png pidefacil-*.png)",
+      "Bash(rm -rf .playwright-mcp)",
+      "Bash(ls *.png)",
+      "Bash(git ls-tree *)"
+    ]
+  }
+}
