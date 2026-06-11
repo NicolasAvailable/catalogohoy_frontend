@@ -14,6 +14,7 @@ interface WhatsappLogRow {
   status: WhatsappLogStatus;
   message_id: string | null;
   error: string | null;
+  variables: string[] | null;
   url_button_param: string | null;
   created_at: string;
 }
@@ -60,6 +61,7 @@ export class WhatsappLogsService {
         status: row.status,
         messageId: row.message_id,
         error: row.error,
+        variables: row.variables,
         urlButtonParam: row.url_button_param,
         createdAt: row.created_at,
       })

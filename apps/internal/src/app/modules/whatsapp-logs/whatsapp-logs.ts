@@ -3,8 +3,10 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@ui';
 import {
+  describeVariables,
   statusLabel,
   templateLabel,
+  WhatsappLog,
   WhatsappLogStatus,
 } from './whatsapp-logs.model';
 import { WhatsappLogsStore } from './whatsapp-logs.store';
@@ -191,9 +193,21 @@ type StatusFilter = 'all' | WhatsappLogStatus;
                 </tr>
               } @else {
                 @for (log of filteredLogs(); track log.id) {
-                  <tr class="hover:bg-grey-25 transition-colors align-top">
+                  <tr
+                    class="hover:bg-grey-25 transition-colors align-top cursor-pointer"
+                    (click)="toggle(log)"
+                  >
                     <td class="px-4 py-3 border-b border-grey-50">
                       <div class="flex items-center gap-2 min-w-0">
+                        <ui-icon
+                          [name]="
+                            expandedId() === log.id
+                              ? 'chevron-down'
+                              : 'chevron-right'
+                          "
+                          size="16"
+                          styleClass="text-grey-400 shrink-0"
+                        />
                         <ui-icon
                           name="message-circle"
                           size="16"
@@ -248,6 +262,62 @@ type StatusFilter = 'all' | WhatsappLogStatus;
                       {{ log.createdAt | date: 'dd/MM/yyyy HH:mm' }}
                     </td>
                   </tr>
+                  @if (expandedId() === log.id) {
+                    <tr class="bg-grey-25">
+                      <td colspan="5" class="px-4 py-4 border-b border-grey-50">
+                        <div class="flex flex-col gap-4 pl-6">
+                          <div>
+                            <p
+                              class="text-xs font-semibold uppercase tracking-wide text-grey-400 mb-2"
+                            >
+                              Datos enviados
+                            </p>
+                            @let fields = describeVariables(log);
+                            @if (fields.length) {
+                              <div
+                                class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 max-w-3xl"
+                              >
+                                @for (f of fields; track f.label) {
+                                  <div class="flex gap-2 text-sm">
+                                    <span class="text-grey-400 shrink-0">
+                                      {{ f.label }}:
+                                    </span>
+                                    <span class="text-grey-700 break-words">
+                                      {{ f.value }}
+                                    </span>
+                                  </div>
+                                }
+                              </div>
+                            } @else {
+                              <p class="text-sm text-grey-400">
+                                Esta notificación no envió variables.
+                              </p>
+                            }
+                          </div>
+                          @if (log.messageId) {
+                            <div class="flex gap-2 text-xs">
+                              <span class="text-grey-400 shrink-0">
+                                Meta message ID:
+                              </span>
+                              <span
+                                class="text-grey-600 font-mono break-all"
+                              >
+                                {{ log.messageId }}
+                              </span>
+                            </div>
+                          }
+                          @if (log.error) {
+                            <div class="flex gap-2 text-xs">
+                              <span class="text-grey-400 shrink-0">Error:</span>
+                              <span class="text-red-600 break-words">
+                                {{ log.error }}
+                              </span>
+                            </div>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
                 } @empty {
                   <tr>
                     <td colspan="5" class="px-4 py-12 text-center">
@@ -277,6 +347,7 @@ export class WhatsappLogs implements OnInit {
 
   protected readonly searchTerm = signal('');
   protected readonly statusFilter = signal<StatusFilter>('all');
+  protected readonly expandedId = signal<number | null>(null);
 
   protected readonly statusFilters: { value: StatusFilter; label: string }[] = [
     { value: 'all', label: 'Todas' },
@@ -303,6 +374,11 @@ export class WhatsappLogs implements OnInit {
     this.store.load();
   }
 
+  protected toggle(log: WhatsappLog): void {
+    this.expandedId.update((id) => (id === log.id ? null : log.id));
+  }
+
   protected templateLabel = templateLabel;
   protected statusLabel = statusLabel;
+  protected describeVariables = describeVariables;
 }
