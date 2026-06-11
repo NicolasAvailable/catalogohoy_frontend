@@ -260,7 +260,17 @@
   margin: 0;
 }
 
-/* Shipping options */
+/* Shipping options — collapsible card: header row toggles instructions */
+.checkout__ship-item {
+  border: 0.0625rem solid var(--color-grey-200, #d1d5db);
+  border-radius: 0.75rem;
+  background: white;
+  overflow: hidden;
+}
+.checkout__ship-item--active {
+  border-color: var(--color-primary-500, #3b82f6);
+  background: var(--color-primary-50, #eff6ff);
+}
 .checkout__ship {
   display: flex;
   align-items: center;
@@ -268,14 +278,22 @@
   width: 100%;
   text-align: left;
   padding: 0.875rem 1rem;
-  border: 0.0625rem solid var(--color-grey-200, #d1d5db);
-  border-radius: 0.75rem;
-  background: white;
+  border: none;
+  background: transparent;
   cursor: pointer;
 }
-.checkout__ship--active {
-  border-color: var(--color-primary-500, #3b82f6);
-  background: var(--color-primary-50, #eff6ff);
+.checkout__ship-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--color-grey-400, #94a3b8);
+  transition: transform 0.2s ease;
+}
+.checkout__ship-chevron--open {
+  transform: rotate(180deg);
+}
+.checkout__ship-body {
+  /* Align the instructions under the name: radio (1.125) + gap (0.75) + pad (1) */
+  padding: 0 1rem 0.875rem 2.875rem;
 }
 .checkout__radio {
   width: 1.125rem;
@@ -288,20 +306,16 @@
   border-color: var(--color-primary-500, #3b82f6);
   background: radial-gradient(circle, var(--color-primary-500, #3b82f6) 0 40%, white 45%);
 }
-.checkout__ship-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
 .checkout__ship-name {
+  flex: 1;
   font-size: 0.9375rem;
   font-weight: 500;
   color: var(--color-grey-800, #1f2937);
 }
 .checkout__ship-desc {
   font-size: 0.8125rem;
-  color: var(--color-grey-400, #94a3b8);
+  color: var(--color-grey-500, #64748b);
+  margin: 0;
 }
 .checkout__ship-fee {
   font-size: 0.875rem;

@@ -114,18 +114,25 @@
     <h2 class="checkout__card-title">Envío <span class="checkout__req">*</span></h2>
 
     @for (method of shippingMethods(); track method.id) {
-    <button type="button" class="checkout__ship"
-      [class.checkout__ship--active]="selectedShippingId() === method.id"
-      (click)="selectShipping(method.id)">
-      <span class="checkout__radio" [class.checkout__radio--on]="selectedShippingId() === method.id"></span>
-      <span class="checkout__ship-main">
+    <div class="checkout__ship-item"
+      [class.checkout__ship-item--active]="selectedShippingId() === method.id">
+      <button type="button" class="checkout__ship" (click)="selectShipping(method.id)">
+        <span class="checkout__radio" [class.checkout__radio--on]="selectedShippingId() === method.id"></span>
         <span class="checkout__ship-name">{{ method.name }}</span>
+        <span class="checkout__ship-fee">{{ method.fee > 0 ? cs() + method.fee : 'Gratis' }}</span>
         @if (method.instructions) {
-        <span class="checkout__ship-desc">{{ method.instructions }}</span>
+        <span class="checkout__ship-chevron"
+          [class.checkout__ship-chevron--open]="selectedShippingId() === method.id">
+          <ui-icon name="chevron-down" size="16" />
+        </span>
         }
-      </span>
-      <span class="checkout__ship-fee">{{ method.fee > 0 ? cs() + method.fee : 'Gratis' }}</span>
-    </button>
+      </button>
+      @if (method.instructions && selectedShippingId() === method.id) {
+      <div class="checkout__ship-body">
+        <p class="checkout__ship-desc">{{ method.instructions }}</p>
+      </div>
+      }
+    </div>
     }
 
     <!-- Pickup address -->
