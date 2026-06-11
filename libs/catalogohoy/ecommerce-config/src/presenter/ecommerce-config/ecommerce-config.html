@@ -54,6 +54,9 @@
           >
             <ui-icon [name]="tab.icon" styleClass="size-4 shrink-0"></ui-icon>
             <span>{{ tab.label }}</span>
+            @if (tab.badge) {
+            <span class="config-tab__badge">{{ tab.badge }}</span>
+            }
           </button>
         }
       </nav>
@@ -396,12 +399,17 @@
           <div class="add-method-form">
             <span class="add-method-title">Agregar método de pago</span>
             <div class="add-method-fields">
-              <ui-input-text
-                [ngModel]="newMethodName()"
-                (ngModelChange)="newMethodName.set($event)"
-                placeholder="Nombre (Ej: Zelle, Binance...)"
-                styleClass="w-full"
-              ></ui-input-text>
+              <div class="add-method-field">
+                <label class="add-method-label">Nombre</label>
+                <ui-input-text
+                  [ngModel]="newMethodName()"
+                  (ngModelChange)="newMethodName.set($event)"
+                  placeholder="Ej: Zelle, Binance..."
+                  styleClass="w-full"
+                ></ui-input-text>
+              </div>
+              <div class="add-method-field">
+                <label class="add-method-label">Icono</label>
               <ui-select
                 [options]="iconOptions"
                 [ngModel]="newMethodIcon()"
@@ -423,6 +431,7 @@
                   </div>
                 </ng-template>
               </ui-select>
+              </div>
             </div>
             <ui-button
               label="Agregar"

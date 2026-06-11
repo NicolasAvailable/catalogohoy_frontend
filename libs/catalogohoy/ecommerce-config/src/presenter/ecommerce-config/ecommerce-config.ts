@@ -121,11 +121,11 @@ export class EcommerceConfigComponent implements OnInit {
   private readonly router = inject(Router);
 
   // ── Tabs ──────────────────────────────────────────────────────────────
-  public readonly tabs: { id: TabId; label: string; icon: string }[] = [
+  public readonly tabs: { id: TabId; label: string; icon: string; badge?: string }[] = [
     { id: 'general', label: 'General', icon: 'store' },
     { id: 'location', label: 'Ubicación y Horario', icon: 'map-pin' },
     { id: 'payments', label: 'Pagos', icon: 'credit-card' },
-    { id: 'shipping', label: 'Envío', icon: 'truck' },
+    { id: 'shipping', label: 'Envío', icon: 'truck', badge: 'Nuevo' },
     { id: 'social', label: 'Redes Sociales', icon: 'share2' },
     { id: 'notifications', label: 'Notificaciones', icon: 'mail' },
   ];
@@ -382,12 +382,14 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly isMockupOpen = signal(false);
 
   // iframe URL — points the preview at the public checkout while the user is on
-  // the "Envío" tab (so they see how shipping/customer fields look at checkout),
-  // and at the catalog home otherwise. Only the path crossing the shipping
-  // boundary changes the URL, so non-shipping tab switches don't reload it.
+  // the "Envío" or "Pagos" tabs (so they see how shipping/customer fields and
+  // payment methods look at checkout), and at the catalog home otherwise. Only
+  // the path crossing the checkout boundary changes the URL, so unrelated tab
+  // switches don't reload it.
   private readonly previewSlug = signal<string>('');
+  private readonly CHECKOUT_TABS: TabId[] = ['shipping', 'payments'];
   private readonly previewPath = computed(() =>
-    this.activeTab() === 'shipping' ? '/checkout' : '/'
+    this.CHECKOUT_TABS.includes(this.activeTab()) ? '/checkout' : '/'
   );
   public readonly safeIframeUrl = computed<SafeResourceUrl | ''>(() => {
     const slug = this.previewSlug();
