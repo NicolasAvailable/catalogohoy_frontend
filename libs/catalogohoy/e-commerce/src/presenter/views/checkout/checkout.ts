@@ -188,6 +188,10 @@ export default class Checkout {
   }
 
   goToStore() {
+    // Inside the editor preview the checkout is the only thing being shown —
+    // no navigation button may leave it, or the merchant gets bounced to the
+    // storefront and loses the preview.
+    if (this.isPreview) return;
     // Real "back" so the catalog keeps its already-loaded state/tenant context
     // (in dev the slug is derived from the path, so re-navigating to '/' from a
     // path route like /checkout can lose it). Fall back to the store root when
@@ -386,6 +390,7 @@ export default class Checkout {
   }
 
   viewInvoice() {
+    if (this.isPreview) return;
     const id = this.lastOrderId();
     if (id == null) return;
     this.router.navigate(['/order', id, 'invoice'], {
@@ -394,6 +399,7 @@ export default class Checkout {
   }
 
   backToStore() {
+    if (this.isPreview) return;
     this.phase.set('form');
     this.router.navigate(['/'], { queryParamsHandling: 'preserve' });
   }
