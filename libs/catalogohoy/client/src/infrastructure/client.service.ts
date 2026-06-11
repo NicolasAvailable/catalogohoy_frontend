@@ -30,9 +30,15 @@ export class ClientService {
       return E.left(new Error(error.message));
     }
 
+    // The aggregate RPC doesn't expose email, so resolve it separately from the
+    // orders table (most recent non-null email per phone). Kept client-side to
+    // avoid touching the prod RPC's return signature.
+    const emailByPhone = await this.getLatestEmailByPhone(tenantId);
+
     const items: Client[] = ((data as RpcCustomerRow[]) ?? []).map((row) => ({
       phone: row.phone,
       name: row.name,
+      email: emailByPhone.get(row.phone) ?? null,
       totalOrders: Number(row.total_orders),
       totalSpentUsd: Number(row.total_spent_usd),
       totalSpentBs: Number(row.total_spent_bs),
@@ -42,6 +48,29 @@ export class ClientService {
     }));
 
     return E.right({ items });
+  }
+
+  /** Map of phone → most recent non-empty email, from this tenant's orders. */
+  private async getLatestEmailByPhone(
+    tenantId: number
+  ): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    const { data, error } = await this.client
+      .from('orders')
+      .select('phone, email, created_at')
+      .eq('tenant_id', tenantId)
+      .not('email', 'is', null)
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return map;
+
+    for (const row of data as { phone: string | null; email: string | null }[]) {
+      const phone = row.phone?.trim();
+      const email = row.email?.trim();
+      // Rows are newest-first, so the first email seen per phone is the latest.
+      if (phone && email && !map.has(phone)) map.set(phone, email);
+    }
+    return map;
   }
 
   async getOrdersByPhone(
