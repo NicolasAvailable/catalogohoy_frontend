@@ -207,7 +207,13 @@
   <!-- ===== Phase: confirm ===== -->
   @if (phase() === 'confirm') {
   <div class="checkout__post">
-    <h2 class="checkout__post-title">Envíenos los detalles del pedido para confirmarlo</h2>
+    <div class="checkout__success-icon">
+      <ui-icon name="check-circle" size="64" />
+    </div>
+    <h2 class="checkout__post-title">¡Pedido realizado!</h2>
+    <p class="checkout__post-subtitle">
+      Envíanos los detalles por WhatsApp para confirmarlo con la tienda.
+    </p>
     <button type="button" class="checkout__wa" (click)="sendWhatsapp()">
       <ui-icon name="message-circle" size="18" /> Enviar WhatsApp
     </button>
@@ -217,7 +223,10 @@
   <!-- ===== Phase: sent ===== -->
   @if (phase() === 'sent') {
   <div class="checkout__post">
-    <h2 class="checkout__post-title">Envíenos los detalles del pedido para confirmarlo</h2>
+    <div class="checkout__success-icon">
+      <ui-icon name="check-circle" size="56" />
+    </div>
+    <h2 class="checkout__post-title">¡Pedido realizado!</h2>
     <button type="button" class="checkout__post-primary" (click)="viewInvoice()">Ver factura</button>
     <button type="button" class="checkout__post-secondary" (click)="backToStore()">Volver a la tienda</button>
     <button type="button" class="checkout__wa checkout__wa--outline" (click)="sendWhatsapp()">

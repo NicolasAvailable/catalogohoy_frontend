@@ -56,16 +56,21 @@ export interface CatalogInfo {
 /** Invoice-safe view of an order, fetched by id for the public receipt. */
 export interface PublicOrder {
   id: number;
+  /** Per-tenant display number (#N) — the same one the admin receipt shows. */
+  orderNumber: number | null;
+  status: string;
   name: string;
   phone: string | null;
   email: string | null;
   products: {
+    productId?: string | number;
     name: string;
     quantity: number;
     price: number;
     total: number;
     size?: string | null;
     sku?: string | null;
+    photo?: string;
   }[];
   totalUsd: number;
   totalBs: number | null;

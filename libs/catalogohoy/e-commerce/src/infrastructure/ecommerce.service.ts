@@ -511,7 +511,7 @@ export class EcommerceService implements BaseEcommerceService {
     const { data, error } = await this.client
       .from('orders')
       .select(
-        'id, name, phone, email, products, total_usd, total_bs, shipping_method, shipping_address, shipping_fee, payment_method, comments, created_at'
+        'id, order_number, status, name, phone, email, products, total_usd, total_bs, shipping_method, shipping_address, shipping_fee, payment_method, comments, created_at'
       )
       .eq('id', id)
       .single();
@@ -521,17 +521,21 @@ export class EcommerceService implements BaseEcommerceService {
 
     return E.right({
       id: data.id,
+      orderNumber: data.order_number ?? null,
+      status: data.status ?? 'pending',
       name: data.name ?? '',
       phone: data.phone ?? null,
       email: data.email ?? null,
       products: Array.isArray(data.products)
         ? data.products.map((p: any) => ({
+            productId: p.productId,
             name: p.name,
             quantity: Number(p.quantity) || 0,
             price: Number(p.price) || 0,
             total: Number(p.total) || 0,
             size: p.size ?? null,
             sku: p.sku ?? null,
+            photo: p.photo,
           }))
         : [],
       totalUsd: Number(data.total_usd) || 0,
