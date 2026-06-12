@@ -1,0 +1,48 @@
+{
+  "name": "help",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/help/src",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "outputs": ["{projectRoot}/dist"],
+      "options": {
+        "cwd": "apps/help",
+        "command": "vite-react-ssg build && node scripts/gen-sitemap.mjs"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "cwd": "apps/help",
+        "command": "vite-react-ssg dev"
+      }
+    },
+    "preview": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "cwd": "apps/help",
+        "command": "vite preview --port 7201 --host localhost"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/help",
+        "command": "vitest run"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/help",
+        "command": "eslint ."
+      }
+    }
+  }
+}

@@ -11,7 +11,9 @@
     "build:authentication": "nx build authentication",
     "build:internal": "nx build internal",
     "serve:landing": "nx serve landing",
-    "build:landing": "nx build landing"
+    "build:landing": "nx build landing",
+    "serve:help": "nx serve help",
+    "build:help": "nx build help"
   },
   "private": true,
   "dependencies": {
