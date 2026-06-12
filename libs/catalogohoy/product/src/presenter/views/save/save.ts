@@ -18,6 +18,11 @@ import {
   Validators,
 } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
+import {
+  CdkDragDrop,
+  DragDropModule,
+  moveItemInArray,
+} from '@angular/cdk/drag-drop';
 import { Router, RouterLink } from '@angular/router';
 import { CategoryStore } from '@catalogohoy/category';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
@@ -52,6 +57,7 @@ import { ProductService } from '../../../infrastructure';
   imports: [
     ReactiveFormsModule,
     FormsModule,
+    DragDropModule,
     RouterLink,
     UploaderComponent,
     CardComponent,
@@ -446,6 +452,18 @@ export default class Save implements OnInit {
 
   public removePhoto(url: string) {
     this.photos.update((photos) => photos.filter((photo) => photo !== url));
+    this.form.controls.photos.setValue(this.photos());
+  }
+
+  /** Reorder the uploaded media via drag & drop. The first photo is the cover
+   *  shown in the catalog, so order is meaningful. */
+  public dropPhoto(event: CdkDragDrop<string[]>) {
+    if (event.previousIndex === event.currentIndex) return;
+    this.photos.update((photos) => {
+      const next = [...photos];
+      moveItemInArray(next, event.previousIndex, event.currentIndex);
+      return next;
+    });
     this.form.controls.photos.setValue(this.photos());
   }
 
