@@ -123,7 +123,7 @@ async function getInvoiceFailureReason(stripe: Stripe, invoice: Stripe.Invoice, 
       if (typeof dpi.latest_charge === "string") chargeIds.add(dpi.latest_charge);
     }
     const dch = inv.charge;
-    if (typeof dch === "string" && dch.startsWith("ch_")) chargeIds.add(dch);
+    if (typeof dch === "string" && (dch.startsWith("ch_") || dch.startsWith("py_"))) chargeIds.add(dch);
     else if (dch && typeof dch === "object") {
       const r = fmtChargeReason(dch);
       if (r) return r;
@@ -138,7 +138,7 @@ async function getInvoiceFailureReason(stripe: Stripe, invoice: Stripe.Invoice, 
         if (typeof pi.latest_charge === "string") chargeIds.add(pi.latest_charge);
       }
       const ch = p?.payment?.charge;
-      if (typeof ch === "string" && ch.startsWith("ch_")) chargeIds.add(ch);
+      if (typeof ch === "string" && (ch.startsWith("ch_") || ch.startsWith("py_"))) chargeIds.add(ch);
       else if (ch && typeof ch === "object") {
         const r = fmtChargeReason(ch);
         if (r) return r;
