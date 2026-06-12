@@ -1,5 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { environment } from '@catalogohoy/env';
 import { ExpirationBannerComponent, PlanStore } from '@catalogohoy/plan';
 import { WhatsappSupportComponent } from '@ui';
 import { Navbar, Sidebar } from '../../components';
@@ -13,6 +14,7 @@ export class Base implements OnInit {
   private readonly planStore = inject(PlanStore);
 
   public readonly sidebarOpen = signal(false);
+  public readonly helpGuideUrl = environment.helpGuideUrl;
 
   ngOnInit() {
     this.planStore.loadTenantPlanUsage();

@@ -67,11 +67,12 @@
       <div class="w-9 h-9 rounded-lg bg-grey-100 animate-pulse"></div>
     } @else {
       <ui-button
+        (click)="openGuide()"
         icon="message-circle-question"
         severity="primary"
         variant="outlined"
         styleClass="!border-none !text-grey-700"
-        tooltip="Ayuda"
+        tooltip="Guía de ayuda"
         tooltipPosition="bottom"
         tooltipStyleClass="text-sm"
       />
