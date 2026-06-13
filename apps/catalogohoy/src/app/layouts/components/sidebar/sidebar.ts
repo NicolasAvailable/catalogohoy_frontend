@@ -142,6 +142,13 @@ export class Sidebar {
     return tenants.find((t) => t.slug === slug) ?? this.profileStore.profile().tenantList.first;
   });
 
+  /** Muestra hasta 20 caracteres del nombre del catálogo; si es más largo, lo
+   *  corta y agrega "...". El nombre completo queda en el tooltip (title). */
+  protected truncateName(name: string | null | undefined): string {
+    const n = (name ?? '').trim();
+    return n.length > 20 ? `${n.slice(0, 20)}...` : n;
+  }
+
   public toggleCatalogSwitcher() {
     this.showCatalogSwitcher.update((v) => !v);
   }
