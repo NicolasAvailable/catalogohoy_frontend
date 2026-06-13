@@ -10,6 +10,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@ui';
 import { cycleLabel, tierLabel } from '../shared/plan-cycle.model';
+import { countryLabel } from '../shared/country.util';
 import {
   AssignPlanDialog,
   AssignPlanPayload,
@@ -179,6 +180,11 @@ type StatusFilter = 'all' | PayingClientStatus;
                 <th
                   class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100"
                 >
+                  País
+                </th>
+                <th
+                  class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100"
+                >
                   Plan
                 </th>
                 <th
@@ -201,7 +207,7 @@ type StatusFilter = 'all' | PayingClientStatus;
             <tbody>
               @if (store.isLoading()) {
                 <tr>
-                  <td colspan="5" class="px-4 py-12 text-center">
+                  <td colspan="6" class="px-4 py-12 text-center">
                     <div class="flex flex-col items-center gap-2">
                       <ui-icon
                         name="loader-circle"
@@ -272,6 +278,11 @@ type StatusFilter = 'all' | PayingClientStatus;
                           </span>
                         </div>
                       </div>
+                    </td>
+                    <td
+                      class="px-4 py-3 text-grey-600 border-b border-grey-50 whitespace-nowrap"
+                    >
+                      {{ countryLabel(client.countryCode) }}
                     </td>
                     <td class="px-4 py-3 border-b border-grey-50">
                       <div class="flex flex-col">
@@ -361,7 +372,7 @@ type StatusFilter = 'all' | PayingClientStatus;
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="5" class="px-4 py-12 text-center">
+                    <td colspan="6" class="px-4 py-12 text-center">
                       <div class="flex flex-col items-center gap-2">
                         <ui-icon
                           name="credit-card"
@@ -383,7 +394,11 @@ type StatusFilter = 'all' | PayingClientStatus;
       </section>
     </div>
 
-    <app-client-detail-dialog (adjustPlan)="onAdjustPlan($event)" />
+    <app-client-detail-dialog
+      (adjustPlan)="onAdjustPlan($event)"
+      (removePlan)="onRemovePlan($event)"
+      (banChanged)="onBanChanged()"
+    />
     <app-assign-plan-dialog
       (assign)="onAssign($event)"
       (remove)="onRemovePlan($event)"
@@ -460,7 +475,7 @@ export class PayingClients implements OnInit {
       id: client.tenantId,
       name: client.tenantName,
       slug: client.tenantSlug,
-      countryCode: null,
+      countryCode: client.countryCode,
       logo: client.tenantLogo,
       ownerName: client.ownerName,
       ownerEmail: client.ownerEmail,
@@ -490,6 +505,12 @@ export class PayingClients implements OnInit {
   protected async onRemovePlan(tenantId: number): Promise<void> {
     await this.tenantsStore.removePlan(tenantId);
     await this.store.load();
+  }
+
+  protected onBanChanged(): void {
+    // El ban se guarda en auth.users.banned_until; refrescamos para que la UI
+    // quede consistente (mismo criterio que paying-accounts).
+    this.store.load();
   }
 
   protected async enterAsAdmin(client: PayingClient): Promise<void> {
@@ -537,6 +558,7 @@ export class PayingClients implements OnInit {
 
   protected tierLabel = tierLabel;
   protected cycleLabel = cycleLabel;
+  protected countryLabel = countryLabel;
 
   protected statusLabel(status: PayingClientStatus): string {
     switch (status) {
