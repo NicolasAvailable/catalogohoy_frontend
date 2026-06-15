@@ -389,6 +389,17 @@
 }
 
 /* Submit */
+.checkout__submit-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.checkout__submit-hint {
+  font-size: 0.875rem;
+  color: var(--color-grey-500, #64748b);
+  margin: 0 0 -0.25rem;
+  text-align: center;
+}
 .checkout__submit {
   width: 100%;
   padding: 0.9375rem;

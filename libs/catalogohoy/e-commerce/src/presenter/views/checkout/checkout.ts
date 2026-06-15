@@ -139,6 +139,12 @@ export default class Checkout {
     () => this.info()?.whatsappButtons?.find((b) => b.number?.trim()) ?? null
   );
 
+  /** All configured seller WhatsApp buttons that have a number. The customer
+   *  chooses which seller to send the order to (the catalog allows up to 3). */
+  public readonly whatsappButtons = computed(() =>
+    (this.info()?.whatsappButtons ?? []).filter((b) => b.number?.trim())
+  );
+
   private userPickedCountry = false;
 
   constructor() {
@@ -234,10 +240,12 @@ export default class Checkout {
   }
 
   // --- Submit ---
-  async onSubmit() {
+  async onSubmit(button?: { name: string; number: string } | null) {
     if (!this.isValid || this.isSubmitting()) return;
-    const button = this.whatsappButton();
-    if (!button?.number) {
+    // The customer may pick which seller to send the order to; fall back to the
+    // first configured one when no specific seller is passed.
+    const seller = button ?? this.whatsappButton();
+    if (!seller?.number) {
       alert('Este catálogo no tiene un número de WhatsApp configurado.');
       return;
     }
@@ -287,7 +295,7 @@ export default class Checkout {
     this.lastOrderId.set(orderResult.value.id);
 
     const message = this.buildWhatsappMessage(items, subtotal, fee, total, sel);
-    const whatsappNumber = button.number.replace(/\D/g, '');
+    const whatsappNumber = seller.number.replace(/\D/g, '');
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
 
     this.metaPixel.trackEvent('Purchase', {

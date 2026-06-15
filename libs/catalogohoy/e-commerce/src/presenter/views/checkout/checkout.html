@@ -203,9 +203,24 @@
     </div>
   </section>
 
-  <button type="button" class="checkout__submit" [disabled]="!isValid || isSubmitting()" (click)="onSubmit()">
-    @if (isSubmitting()) { Procesando... } @else { Realizar pedido }
-  </button>
+  @if (whatsappButtons().length > 1) {
+  <p class="checkout__submit-hint">Envía tu pedido al vendedor que prefieras:</p>
+  }
+  <div class="checkout__submit-group">
+    @if (whatsappButtons().length > 0) {
+    @for (seller of whatsappButtons(); track seller.number) {
+    <button type="button" class="checkout__submit" [disabled]="!isValid || isSubmitting()" (click)="onSubmit(seller)">
+      @if (isSubmitting()) { Procesando... } @else {
+        Realizar pedido@if (seller.name?.trim()) { ({{ seller.name }}) }
+      }
+    </button>
+    }
+    } @else {
+    <button type="button" class="checkout__submit" [disabled]="!isValid || isSubmitting()" (click)="onSubmit()">
+      @if (isSubmitting()) { Procesando... } @else { Realizar pedido }
+    </button>
+    }
+  </div>
   }
 
   <!-- ===== Phase: confirm ===== -->
