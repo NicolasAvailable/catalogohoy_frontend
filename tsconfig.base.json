@@ -38,7 +38,8 @@
       "@catalogohoy/plan": ["libs/catalogohoy/plan/src/index.ts"],
       "@catalogohoy/analytics": ["libs/catalogohoy/analytics/src/index.ts"],
       "@catalogohoy/teams": ["libs/catalogohoy/teams/src/index.ts"],
-      "@catalogohoy/reports": ["libs/catalogohoy/reports/src/index.ts"]
+      "@catalogohoy/reports": ["libs/catalogohoy/reports/src/index.ts"],
+      "@catalogohoy/payments": ["libs/catalogohoy/payments/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

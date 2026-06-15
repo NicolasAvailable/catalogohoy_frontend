@@ -1287,6 +1287,48 @@
           </div>
         </ui-card>
 
+        <!-- Weekly report email -->
+        <ui-card styleClass="config-card">
+          <div class="card-header-custom">
+            <div class="card-header-left">
+              <div class="card-icon" style="background: #ecfdf5;">
+                <ui-icon name="bar-chart-3" styleClass="size-5"></ui-icon>
+              </div>
+              <div>
+                <h2 class="card-title">Reporte semanal por email</h2>
+                <small class="card-subtitle">
+                  Cada domingo recibí un resumen de cómo fue tu semana en tu catálogo.
+                </small>
+              </div>
+            </div>
+            <ui-toggle
+              [ngModel]="draftNotifyWeeklyReport()"
+              (ngModelChange)="draftNotifyWeeklyReport.set($event)"
+            ></ui-toggle>
+          </div>
+
+          <div
+            class="card-content"
+            [class.section-disabled]="!draftNotifyWeeklyReport()"
+          >
+            <ul class="notifications-list">
+              <li>
+                Lo recibe el <strong>dueño del catálogo</strong> y los
+                <strong>miembros del equipo con permiso "Ver órdenes"</strong>.
+              </li>
+              <li>
+                Incluye <strong>ventas de la semana</strong>, comparativa con la
+                semana anterior, <strong>top productos</strong>, clientes nuevos
+                y <strong>visitas al catálogo</strong>.
+              </li>
+              <li>
+                Disponible en <strong>planes pagos</strong>. Se envía los
+                <strong>domingos</strong>.
+              </li>
+            </ul>
+          </div>
+        </ui-card>
+
         <!-- WhatsApp notifications (W5 — catálogo) -->
         <ui-card
           styleClass="config-card"
