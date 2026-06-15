@@ -64,6 +64,16 @@
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <ui-button
+            icon="share2"
+            variant="outlined"
+            severity="contrast"
+            size="small"
+            (click)="onShare(category)"
+            [disabled]="category.isViewAll || isCreating()"
+            [tooltip]="copiedCategoryId() === ('' + category.id) ? '¡Link copiado!' : 'Compartir categoría'"
+            tooltipPosition="bottom"
+          />
+          <ui-button
             icon="pencil"
             variant="outlined"
             severity="contrast"

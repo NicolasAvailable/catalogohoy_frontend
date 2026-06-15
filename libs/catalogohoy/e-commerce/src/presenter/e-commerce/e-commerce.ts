@@ -192,6 +192,11 @@ export class ECommerce implements OnInit, OnDestroy {
     const deepLinkProductId = new URL(window.location.href).searchParams.get(
       'product'
     );
+    // Snapshot del `?category=<id>` (link compartido desde el admin) ANTES de
+    // cualquier navigate.
+    const deepLinkCategoryId = new URL(window.location.href).searchParams.get(
+      'category'
+    );
 
     const slug = getTenantSlugFromUrl();
     if (slug) {
@@ -205,6 +210,19 @@ export class ECommerce implements OnInit, OnDestroy {
           this.posthogService.enablePublicTracking(slug);
         }
       }
+    }
+
+    // Deep-link de categoría: si el link compartido trae `?category=<id>`,
+    // seleccionamos esa categoría y mostramos solo sus productos. El tab del
+    // category-filter se resalta porque está bindeado a selectedCategoryId.
+    if (deepLinkCategoryId && slug) {
+      this.ecommerceStore.setSelectedCategory(deepLinkCategoryId);
+      await this.ecommerceStore.loadProducts(slug);
+      this.router.navigate([], {
+        queryParams: { category: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
     }
 
     // Una vez resuelto el tenant (catalogInfo poblado), abrimos el modal
