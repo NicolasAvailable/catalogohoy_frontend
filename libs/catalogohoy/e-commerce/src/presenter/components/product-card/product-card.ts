@@ -65,11 +65,14 @@ export class ProductCard {
 
   /** Size labels that are still in stock (null stock = unlimited). Shown as
    *  chips on the card so buyers see availability without opening the modal. */
-  public readonly availableSizes = computed(() =>
-    this.product()
+  public readonly availableSizes = computed(() => {
+    // De-dup names: with variants the same size label can repeat across
+    // variants, but the card only needs to list each label once.
+    const names = this.product()
       .sizes.filter((s) => s.stock === null || s.stock > 0)
-      .map((s) => s.name)
-  );
+      .map((s) => s.name);
+    return [...new Set(names)];
+  });
 
   private static readonly MAX_VISIBLE_SIZES = 4;
 

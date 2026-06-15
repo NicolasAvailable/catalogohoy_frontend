@@ -167,7 +167,6 @@
           </div>
           <ui-toggle
             formControlName="isWholesale"
-            [defaultDisabled]="(form.controls.isSized.value ?? false) || (form.controls.isVariant.value ?? false)"
             (enable)="onWholesaleToggle()"
             (disable)="onWholesaleToggle()"
           />
@@ -210,21 +209,15 @@
             </button>
           </div>
           }
-          <button
-            type="button"
-            (click)="addTier()"
-            class="flex items-center gap-2 text-primary-500 font-semibold text-sm cursor-pointer"
-          >
-            <ui-icon name="circle-plus" styleClass="size-5" />
-            Agregar escala de precio
-          </button>
+          <div class="flex">
+            <ui-button
+              label="Agregar escala de precio"
+              icon="circle-plus"
+              [fluid]="false"
+              (click)="addTier()"
+            />
+          </div>
         </div>
-        }
-        @if (form.controls.isSized.value) {
-        <p class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
-          Por ahora no es posible combinar venta al mayor con tallas. Desactiva
-          las tallas para habilitar esta opción.
-        </p>
         }
       </div>
     </ui-card>
@@ -239,7 +232,6 @@
           </div>
           <ui-toggle
             formControlName="isSized"
-            [defaultDisabled]="(form.controls.isWholesale.value ?? false) || (form.controls.isVariant.value ?? false)"
             (enable)="onSizedToggle()"
             (disable)="onSizedToggle()"
           />
@@ -247,16 +239,15 @@
         <p class="text-sm text-grey-300">
           Activa esta opción si tu producto viene en diferentes tallas o tamaños (S, M, L, 42, 44, etc.).
         </p>
-        @if (form.controls.isWholesale.value) {
-        <p class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
-          Por ahora no es posible combinar tallas con venta al mayor. Desactiva
-          la venta al mayor para habilitar esta opción.
-        </p>
-        }
 
         @if (form.controls.isSized.value) {
         <hr class="border-grey-50" />
         <div formArrayName="sizes" class="flex flex-col gap-4">
+          @if (form.controls.isVariant.value) {
+          <p class="text-xs text-grey-400 -mt-2">
+            Tu producto tiene variantes: elegí a qué variante pertenece cada talla.
+          </p>
+          }
           @for (size of sizesArray.controls; track $index) {
           <div [formGroupName]="$index" class="flex items-end gap-3">
             <div class="flex flex-col gap-2 flex-1">
@@ -266,6 +257,18 @@
                 placeholder="Ej: S, M, L, 42"
               />
             </div>
+            @if (form.controls.isVariant.value) {
+            <div class="flex flex-col gap-2 flex-1">
+              <label class="text-sm text-grey-400 font-semibold">Variante</label>
+              <ui-select
+                formControlName="variantId"
+                [options]="variantOptions()"
+                optionLabel="name"
+                optionValue="id"
+                placeholder="Variante"
+              />
+            </div>
+            }
             <div class="flex flex-col gap-2 flex-1">
               <label class="text-sm text-grey-400 font-semibold">Stock (opcional)</label>
               <ui-input-number
@@ -289,14 +292,14 @@
             </button>
           </div>
           }
-          <button
-            type="button"
-            (click)="addSize()"
-            class="flex items-center gap-2 text-primary-500 font-semibold text-sm cursor-pointer"
-          >
-            <ui-icon name="circle-plus" styleClass="size-5" />
-            Agregar talla
-          </button>
+          <div class="flex">
+            <ui-button
+              label="Agregar talla"
+              icon="circle-plus"
+              [fluid]="false"
+              (click)="addSize()"
+            />
+          </div>
           <div class="flex items-center justify-between text-sm bg-grey-50 rounded-lg px-3 py-2">
             <span class="text-grey-500 font-semibold">Stock total</span>
             <span class="text-grey-700 font-bold">
@@ -318,7 +321,6 @@
           </div>
           <ui-toggle
             formControlName="isVariant"
-            [defaultDisabled]="(form.controls.isWholesale.value ?? false) || (form.controls.isSized.value ?? false)"
             (enable)="onVariantToggle()"
             (disable)="onVariantToggle()"
           />
@@ -326,14 +328,8 @@
         <p class="text-sm text-grey-300">
           Activa esta opción si este producto viene en versiones con distinto
           precio (colores, modelos, etc.). Cada variante puede tener su propio
-          precio e imagen.
+          precio e imagen. Podés combinarla con tallas.
         </p>
-        @if (form.controls.isWholesale.value || form.controls.isSized.value) {
-        <p class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
-          Por ahora no es posible combinar variantes con tallas o venta al mayor.
-          Desactiva esas opciones para habilitar las variantes.
-        </p>
-        }
 
         @if (form.controls.isVariant.value) {
         <hr class="border-grey-50" />
@@ -439,20 +435,15 @@
             </div>
           </div>
           }
-          <button
-            type="button"
-            (click)="addVariant()"
-            [disabled]="!canAddVariant()"
-            [class]="
-              'flex items-center gap-2 font-semibold text-sm ' +
-              (canAddVariant()
-                ? 'text-primary-500 cursor-pointer'
-                : 'text-grey-300 cursor-not-allowed')
-            "
-          >
-            <ui-icon name="circle-plus" styleClass="size-5" />
-            Agregar variante
-          </button>
+          <div class="flex">
+            <ui-button
+              label="Agregar variante"
+              icon="circle-plus"
+              [fluid]="false"
+              [disabled]="!canAddVariant()"
+              (click)="addVariant()"
+            />
+          </div>
           <div
             class="flex items-center justify-between text-sm bg-grey-50 rounded-lg px-3 py-2"
           >

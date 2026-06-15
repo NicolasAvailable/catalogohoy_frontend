@@ -192,15 +192,15 @@ export class ProductService implements BaseProductService {
             : [],
         is_sold_out: input.isSoldOut ?? false,
         is_hidden: input.isHidden ?? false,
-        is_sized: input.isVariant ? false : input.isSized ?? false,
-        sizes:
-          input.isSized && !input.isVariant
-            ? input.sizes.map((s) => ({
-                name: s.name,
-                stock:
-                  s.stock === null || s.stock === '' ? null : Number(s.stock),
-              }))
-            : [],
+        is_sized: input.isSized ?? false,
+        sizes: input.isSized
+          ? input.sizes.map((s) => ({
+              name: s.name,
+              stock:
+                s.stock === null || s.stock === '' ? null : Number(s.stock),
+              variantId: input.isVariant ? s.variantId ?? null : null,
+            }))
+          : [],
         is_variant: input.isVariant ?? false,
         variants: input.isVariant
           ? input.variants.map((v) => ({
@@ -269,14 +269,14 @@ export class ProductService implements BaseProductService {
           : [],
       is_sold_out: input.isSoldOut ?? false,
       is_hidden: input.isHidden ?? false,
-      is_sized: input.isVariant ? false : input.isSized ?? false,
-      sizes:
-        input.isSized && !input.isVariant
-          ? input.sizes.map((s) => ({
-              name: s.name,
-              stock: s.stock === null || s.stock === '' ? null : Number(s.stock),
-            }))
-          : [],
+      is_sized: input.isSized ?? false,
+      sizes: input.isSized
+        ? input.sizes.map((s) => ({
+            name: s.name,
+            stock: s.stock === null || s.stock === '' ? null : Number(s.stock),
+            variantId: input.isVariant ? s.variantId ?? null : null,
+          }))
+        : [],
       is_variant: input.isVariant ?? false,
       variants: input.isVariant
         ? input.variants.map((v) => ({

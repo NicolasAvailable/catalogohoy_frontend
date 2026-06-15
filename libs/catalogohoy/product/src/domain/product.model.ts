@@ -11,6 +11,9 @@ export interface ProductSize {
   name: string;
   /** Units available in this size. `null` = unlimited stock. */
   stock: number | null;
+  /** When the product also has variants, the variant this size belongs to.
+   *  `null` = applies to the product regardless of variant. */
+  variantId?: string | null;
 }
 
 export interface ProductVariant {

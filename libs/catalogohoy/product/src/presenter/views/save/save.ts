@@ -45,6 +45,7 @@ import {
   MultiSelectComponent,
   ProductMediaComponent,
   RadioButtonComponent,
+  SelectComponent,
   ToggleComponent,
   UploaderComponent,
 } from '@ui';
@@ -70,6 +71,7 @@ import { ProductService } from '../../../infrastructure';
     MultiSelectComponent,
     PlanLimitDialogComponent,
     ProductMediaComponent,
+    SelectComponent,
     ToggleComponent,
   ],
   templateUrl: './save.html',
@@ -204,6 +206,17 @@ export default class Save implements OnInit {
     { initialValue: this.form.controls.isSized.value }
   );
 
+  /** Options for the per-size variant select — reactive to variant name edits
+   *  so each size row can pick which variant it belongs to. */
+  private readonly variantsValue = toSignal(this.variantsArray.valueChanges, {
+    initialValue: this.variantsArray.value,
+  });
+  public readonly variantOptions = computed(() =>
+    ((this.variantsValue() ?? []) as { id: string; name: string }[]).map(
+      (v, i) => ({ id: v.id, name: v.name?.trim() || `Variante ${i + 1}` })
+    )
+  );
+
   /** Sum of stock across all sizes. `null` when any size is unlimited
    *  (so the product as a whole inherits "unlimited"). */
   public readonly totalSizedStock = computed(() => {
@@ -297,11 +310,44 @@ export default class Save implements OnInit {
     this.form.controls.sku.setValue(`${prefix}-${suffix}`);
   }
 
+  /** The base price is optional when variants or wholesale tiers carry the
+   *  price; required otherwise (sizes-only still share one base price). */
+  private updatePriceValidator(): void {
+    const optional =
+      !!this.form.controls.isWholesale.value ||
+      !!this.form.controls.isVariant.value;
+    if (optional) {
+      this.form.controls.price.clearValidators();
+    } else {
+      this.form.controls.price.setValidators([Validators.required]);
+    }
+    this.form.controls.price.updateValueAndValidity();
+  }
+
+  private firstVariantId(): string | null {
+    return this.variantsArray.at(0)?.get('id')?.value ?? null;
+  }
+
+  /** Attach sizes that have no variant to the first variant — used when
+   *  variants get turned on so existing sizes belong to a real variant. */
+  private syncSizesToFirstVariant(): void {
+    const first = this.firstVariantId();
+    this.sizesArray.controls.forEach((c) => {
+      if (!c.get('variantId')?.value) c.get('variantId')?.setValue(first);
+    });
+  }
+
+  private clearSizesVariant(): void {
+    this.sizesArray.controls.forEach((c) =>
+      c.get('variantId')?.setValue(null)
+    );
+  }
+
   public onWholesaleToggle(): void {
     const isWholesale = this.form.controls.isWholesale.value;
     if (isWholesale) {
-      // Wholesale, sizes and variants are mutually exclusive (Option A) —
-      // turn the others off if they happened to be on.
+      // Wholesale is exclusive with sizes AND variants — turning it on simply
+      // switches those off (no disabling → fewer clicks).
       if (this.form.controls.isSized.value) {
         this.form.controls.isSized.setValue(false);
         this.sizesArray.clear();
@@ -310,7 +356,6 @@ export default class Save implements OnInit {
         this.form.controls.isVariant.setValue(false);
         this.variantsArray.clear();
       }
-      this.form.controls.price.clearValidators();
       this.form.controls.price.setValue('');
       this.form.controls.pricePromotional.setValue('');
       this.form.controls.productionCost.setValue('');
@@ -318,31 +363,21 @@ export default class Save implements OnInit {
         this.addTier();
       }
     } else {
-      this.form.controls.price.setValidators([Validators.required]);
       this.wholesaleTiersArray.clear();
     }
-    this.form.controls.price.updateValueAndValidity();
+    this.updatePriceValidator();
   }
 
   public onSizedToggle(): void {
     const isSized = this.form.controls.isSized.value;
     if (isSized) {
-      // Sizes, wholesale and variants are mutually exclusive (Option A).
+      // Sizes coexist with variants but are exclusive with wholesale.
       if (this.form.controls.isWholesale.value) {
         this.form.controls.isWholesale.setValue(false);
         this.wholesaleTiersArray.clear();
-        this.form.controls.price.setValidators([Validators.required]);
-        this.form.controls.price.updateValueAndValidity();
-      }
-      if (this.form.controls.isVariant.value) {
-        this.form.controls.isVariant.setValue(false);
-        this.variantsArray.clear();
-        this.form.controls.price.setValidators([Validators.required]);
-        this.form.controls.price.updateValueAndValidity();
       }
       // Sized products derive stock from per-size inputs — clear the
-      // product-level stock and force "unlimited" so submit doesn't
-      // accidentally persist a stale value.
+      // product-level stock and force "unlimited".
       this.stockMode.set('unlimited');
       this.form.controls.stock.setValue(null);
       if (this.sizesArray.length === 0) {
@@ -351,6 +386,7 @@ export default class Save implements OnInit {
     } else {
       this.sizesArray.clear();
     }
+    this.updatePriceValidator();
   }
 
   public addSize(): void {
@@ -358,6 +394,12 @@ export default class Save implements OnInit {
       this.fb.group({
         name: ['', Validators.required],
         stock: [null as string | null],
+        // When variants are on, a new size defaults to the first variant.
+        variantId: [
+          this.form.controls.isVariant.value
+            ? this.firstVariantId()
+            : (null as string | null),
+        ],
       })
     );
   }
@@ -375,28 +417,23 @@ export default class Save implements OnInit {
   public onVariantToggle(): void {
     const isVariant = this.form.controls.isVariant.value;
     if (isVariant) {
-      // Variants are exclusive with wholesale and sizes (Option A).
+      // Variants coexist with sizes but are exclusive with wholesale.
       if (this.form.controls.isWholesale.value) {
         this.form.controls.isWholesale.setValue(false);
         this.wholesaleTiersArray.clear();
       }
-      if (this.form.controls.isSized.value) {
-        this.form.controls.isSized.setValue(false);
-        this.sizesArray.clear();
-      }
-      // Each variant carries its own price, so the base price is not required.
-      this.form.controls.price.clearValidators();
-      this.form.controls.price.setValue('');
       this.form.controls.pricePromotional.setValue('');
       this.form.controls.productionCost.setValue('');
       if (this.variantsArray.length === 0) {
         this.addVariant();
       }
+      // Attach any existing sizes to the first variant by default.
+      this.syncSizesToFirstVariant();
     } else {
-      this.form.controls.price.setValidators([Validators.required]);
       this.variantsArray.clear();
+      this.clearSizesVariant();
     }
-    this.form.controls.price.updateValueAndValidity();
+    this.updatePriceValidator();
   }
 
   public addVariant(): void {
@@ -407,15 +444,18 @@ export default class Save implements OnInit {
       );
       return;
     }
+    const wasEmpty = this.variantsArray.length === 0;
     this.variantsArray.push(
       this.fb.group({
-        id: [null as string | null],
+        // Stable id generated up-front so per-size selects can reference it.
+        id: [crypto.randomUUID() as string | null],
         name: ['', Validators.required],
         price: ['', Validators.required],
         originalPrice: [''],
         photo: [null as string | null],
       })
     );
+    if (wasEmpty) this.syncSizesToFirstVariant();
   }
 
   public removeVariant(index: number): void {
@@ -498,6 +538,7 @@ export default class Save implements OnInit {
         this.fb.group({
           name: [size.name, Validators.required],
           stock: [size.stock != null ? String(size.stock) : null],
+          variantId: [size.variantId ?? null],
         })
       );
     });

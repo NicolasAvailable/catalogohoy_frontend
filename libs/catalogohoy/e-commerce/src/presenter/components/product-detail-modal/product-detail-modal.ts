@@ -77,9 +77,19 @@ export class ProductDetailModal {
 
   selectVariant(variant: ProductVariant): void {
     this.selectedVariant.set(variant);
-    // Variants share product-level stock; reset the qty for a clean start.
+    // The available sizes change per variant, so drop the size selection.
+    this.selectedSize.set(null);
     this.quantity.set(1);
   }
+
+  /** Sizes shown for the current selection. With variants, only the sizes that
+   *  belong to the selected variant (variantId match, or unassigned ones). */
+  public readonly availableSizes = computed(() => {
+    if (!this.isSized) return [];
+    if (!this.isVariant) return this.product.sizes;
+    const vid = this.selectedVariant()?.id ?? null;
+    return this.product.sizes.filter((s) => !s.variantId || s.variantId === vid);
+  });
 
   public readonly shouldClampDescription = (() => {
     const desc = this.product.description ?? '';
@@ -137,7 +147,7 @@ export class ProductDetailModal {
     if (this.isSized) {
       const size = this.selectedSize();
       if (!size) return null;
-      const entry = this.product.sizes.find((s) => s.name === size);
+      const entry = this.availableSizes().find((s) => s.name === size);
       return entry?.stock ?? null;
     }
     return this.availableStock;
@@ -145,12 +155,14 @@ export class ProductDetailModal {
 
   public readonly cartQuantity = computed(() => {
     const size = this.selectedSize();
+    const vid = this.selectedVariant()?.id ?? null;
     return this.cartStore
       .items()
       .filter(
         (i) =>
           i.productId === String(this.product.id) &&
-          (this.isSized ? i.size === size : true)
+          (this.isSized ? i.size === size : true) &&
+          (this.isVariant ? i.variantId === vid : true)
       )
       .reduce((sum, i) => sum + i.quantity, 0);
   });
@@ -168,7 +180,7 @@ export class ProductDetailModal {
   });
 
   public readonly isSizeOutOfStock = (sizeName: string): boolean => {
-    const entry = this.product.sizes.find((s) => s.name === sizeName);
+    const entry = this.availableSizes().find((s) => s.name === sizeName);
     if (!entry || entry.stock === null) return false;
     return entry.stock <= 0;
   };

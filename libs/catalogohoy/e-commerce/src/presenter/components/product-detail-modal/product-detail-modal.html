@@ -199,7 +199,7 @@
       <div class="pdm__sizes">
         <span class="pdm__sizes-label">Selecciona una talla</span>
         <div class="pdm__sizes-grid" role="radiogroup" aria-label="Talla">
-          @for (size of product.sizes; track size.name) {
+          @for (size of availableSizes(); track size.name) {
           <button
             type="button"
             class="pdm__size-pill"
