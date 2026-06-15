@@ -203,6 +203,16 @@
       }
     </li>
     <li
+      routerLink="/admin/chat"
+      routerLinkActive="bg-primary-50"
+      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out cursor-pointer"
+    >
+      <div class="flex items-center gap-2">
+        <ui-icon name="message-square" size="16" />
+        <a class="font-base font-semibold text-grey-700 mt-0.5">Chats</a>
+      </div>
+    </li>
+    <li
       [routerLink]="(analyticsLocked() || !canViewAnalytics()) ? null : '/admin/analytics'"
       [routerLinkActive]="(analyticsLocked() || !canViewAnalytics()) ? '' : 'bg-primary-50'"
       [routerLinkActiveOptions]="{exact: true}"

@@ -17,7 +17,7 @@ import {
   PanelMenuItem,
 } from '@ui';
 import { TooltipModule } from 'primeng/tooltip';
-import { CATALOG_MENU, CHAT_MENU, PRODUCTS_MENU, TEAMS_MENU } from './sidebar.constants';
+import { CATALOG_MENU, PRODUCTS_MENU, TEAMS_MENU } from './sidebar.constants';
 
 @Component({
   selector: 'app-sidebar',
@@ -96,7 +96,6 @@ export class Sidebar {
   public readonly noPermissionTooltip = 'Habla con el dueño del catálogo para obtener acceso a este módulo';
   public readonly transitionOptions = '200ms cubic-bezier(0.86, 0, 0.07, 1)';
   public readonly productsMenu: PanelMenuItem[] = PRODUCTS_MENU;
-  public readonly chatMenu: PanelMenuItem[] = CHAT_MENU;
   public readonly catalogMenu: PanelMenuItem[] = CATALOG_MENU;
   public readonly teamsMenu: PanelMenuItem[] = TEAMS_MENU;
 
