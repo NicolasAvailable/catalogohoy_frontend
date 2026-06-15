@@ -300,11 +300,15 @@ export default class Save implements OnInit {
   public onWholesaleToggle(): void {
     const isWholesale = this.form.controls.isWholesale.value;
     if (isWholesale) {
-      // Wholesale and sizes are mutually exclusive — turn sizes off if it
-      // happened to be on.
+      // Wholesale, sizes and variants are mutually exclusive (Option A) —
+      // turn the others off if they happened to be on.
       if (this.form.controls.isSized.value) {
         this.form.controls.isSized.setValue(false);
         this.sizesArray.clear();
+      }
+      if (this.form.controls.isVariant.value) {
+        this.form.controls.isVariant.setValue(false);
+        this.variantsArray.clear();
       }
       this.form.controls.price.clearValidators();
       this.form.controls.price.setValue('');
@@ -323,10 +327,16 @@ export default class Save implements OnInit {
   public onSizedToggle(): void {
     const isSized = this.form.controls.isSized.value;
     if (isSized) {
-      // Sizes and wholesale are mutually exclusive — turn wholesale off.
+      // Sizes, wholesale and variants are mutually exclusive (Option A).
       if (this.form.controls.isWholesale.value) {
         this.form.controls.isWholesale.setValue(false);
         this.wholesaleTiersArray.clear();
+        this.form.controls.price.setValidators([Validators.required]);
+        this.form.controls.price.updateValueAndValidity();
+      }
+      if (this.form.controls.isVariant.value) {
+        this.form.controls.isVariant.setValue(false);
+        this.variantsArray.clear();
         this.form.controls.price.setValidators([Validators.required]);
         this.form.controls.price.updateValueAndValidity();
       }
@@ -354,6 +364,73 @@ export default class Save implements OnInit {
 
   public removeSize(index: number): void {
     this.sizesArray.removeAt(index);
+  }
+
+  /** True while the current plan still allows adding another variant.
+   *  Re-evaluated each change-detection (add/remove run on user clicks). */
+  public canAddVariant(): boolean {
+    return this.variantsArray.length < this.planStore.maxVariants();
+  }
+
+  public onVariantToggle(): void {
+    const isVariant = this.form.controls.isVariant.value;
+    if (isVariant) {
+      // Variants are exclusive with wholesale and sizes (Option A).
+      if (this.form.controls.isWholesale.value) {
+        this.form.controls.isWholesale.setValue(false);
+        this.wholesaleTiersArray.clear();
+      }
+      if (this.form.controls.isSized.value) {
+        this.form.controls.isSized.setValue(false);
+        this.sizesArray.clear();
+      }
+      // Each variant carries its own price, so the base price is not required.
+      this.form.controls.price.clearValidators();
+      this.form.controls.price.setValue('');
+      this.form.controls.pricePromotional.setValue('');
+      this.form.controls.productionCost.setValue('');
+      if (this.variantsArray.length === 0) {
+        this.addVariant();
+      }
+    } else {
+      this.form.controls.price.setValidators([Validators.required]);
+      this.variantsArray.clear();
+    }
+    this.form.controls.price.updateValueAndValidity();
+  }
+
+  public addVariant(): void {
+    if (!this.canAddVariant()) {
+      this.toastService.error(
+        (`Tu plan permite hasta ${this.planStore.maxVariants()} ` +
+          'variantes por producto. Mejora tu plan para agregar más.') as unknown as Exception
+      );
+      return;
+    }
+    this.variantsArray.push(
+      this.fb.group({
+        id: [null as string | null],
+        name: ['', Validators.required],
+        price: ['', Validators.required],
+        originalPrice: [''],
+        photo: [null as string | null],
+      })
+    );
+  }
+
+  public removeVariant(index: number): void {
+    this.variantsArray.removeAt(index);
+  }
+
+  /** The variant uploader runs in single mode, so `valueChange` emits one URL. */
+  public setVariantPhoto(index: number, url: string | string[]): void {
+    const photo = Array.isArray(url) ? url[0] : url;
+    if (!photo) return;
+    this.variantsArray.at(index).get('photo')?.setValue(photo);
+  }
+
+  public removeVariantPhoto(index: number): void {
+    this.variantsArray.at(index).get('photo')?.setValue(null);
   }
 
   public addTier(): void {
@@ -421,6 +498,26 @@ export default class Save implements OnInit {
         this.fb.group({
           name: [size.name, Validators.required],
           stock: [size.stock != null ? String(size.stock) : null],
+        })
+      );
+    });
+
+    this.form.controls.isVariant.setValue(product.isVariant);
+    if (product.isVariant) {
+      this.form.controls.price.clearValidators();
+      this.form.controls.price.updateValueAndValidity();
+    }
+    this.variantsArray.clear();
+    product.variants.forEach((variant) => {
+      this.variantsArray.push(
+        this.fb.group({
+          id: [variant.id ?? null],
+          name: [variant.name, Validators.required],
+          price: [String(variant.price), Validators.required],
+          originalPrice: [
+            variant.originalPrice ? String(variant.originalPrice) : '',
+          ],
+          photo: [variant.photo ?? null],
         })
       );
     });
