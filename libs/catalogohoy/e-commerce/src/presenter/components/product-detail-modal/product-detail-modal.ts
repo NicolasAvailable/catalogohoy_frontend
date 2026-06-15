@@ -9,7 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { Product, WholesaleTier } from '@catalogohoy/product';
+import { Product, ProductVariant, WholesaleTier } from '@catalogohoy/product';
 import { isVideoUrl } from '@shared/domain';
 import { SafeDescriptionHtmlPipe } from '@shared/presenter';
 import {
@@ -67,6 +67,19 @@ export class ProductDetailModal {
   }
 
   public readonly isSized = this.product.isSized && this.product.sizes.length > 0;
+
+  public readonly isVariant =
+    this.product.isVariant && this.product.variants.length > 0;
+  /** Defaults to the first variant so a price is always shown on open. */
+  public readonly selectedVariant = signal<ProductVariant | null>(
+    this.isVariant ? this.product.variants[0] : null
+  );
+
+  selectVariant(variant: ProductVariant): void {
+    this.selectedVariant.set(variant);
+    // Variants share product-level stock; reset the qty for a clean start.
+    this.quantity.set(1);
+  }
 
   public readonly shouldClampDescription = (() => {
     const desc = this.product.description ?? '';
@@ -150,6 +163,7 @@ export class ProductDetailModal {
 
   public readonly canSubmit = computed(() => {
     if (this.isSized && !this.selectedSize()) return false;
+    if (this.isVariant && !this.selectedVariant()) return false;
     return this.canAddMore();
   });
 
@@ -168,12 +182,25 @@ export class ProductDetailModal {
   }
 
   get displayPrice(): number {
+    if (this.isVariant) {
+      return this.selectedVariant()?.price ?? this.product.price;
+    }
     return this.product.pricePromotional > 0
       ? this.product.pricePromotional
       : this.product.price;
   }
 
+  /** Struck-through "before" price for the current selection. */
+  get originalDisplayPrice(): number {
+    if (this.isVariant) return this.selectedVariant()?.originalPrice ?? 0;
+    return this.product.price;
+  }
+
   get hasDiscount(): boolean {
+    if (this.isVariant) {
+      const v = this.selectedVariant();
+      return !!v && v.originalPrice > 0 && v.originalPrice > v.price;
+    }
     return (
       this.product.pricePromotional > 0 &&
       this.product.pricePromotional < this.product.price
@@ -238,9 +265,11 @@ export class ProductDetailModal {
 
   onAddToCart() {
     if (this.isSized && !this.selectedSize()) return;
+    if (this.isVariant && !this.selectedVariant()) return;
     for (let i = 0; i < this.quantity(); i++) {
       this.cartStore.addProduct(this.product, {
         size: this.selectedSize(),
+        variant: this.selectedVariant(),
       });
     }
     this.cartStore.openCart();

@@ -87,7 +87,7 @@
       <div class="pdm__prices">
         <span class="pdm__price">{{ cs() }}{{ displayPrice }}</span>
         @if (hasDiscount) {
-        <span class="pdm__price-original">{{ cs() }}{{ product.price }}</span>
+        <span class="pdm__price-original">{{ cs() }}{{ originalDisplayPrice }}</span>
         }
       </div>
       }
@@ -152,6 +152,49 @@
         }
       </div>
       } @else {
+      @if (isVariant) {
+      <div class="flex flex-col gap-2 mb-3">
+        <span class="text-sm font-semibold text-grey-500">Selecciona una opción</span>
+        <div class="flex flex-col gap-2" role="radiogroup" aria-label="Variante">
+          @for (variant of product.variants; track variant.id) {
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="selectedVariant()?.id === variant.id"
+            (click)="selectVariant(variant)"
+            [class]="
+              'flex items-center gap-3 p-2.5 rounded-xl border transition-colors text-left w-full cursor-pointer ' +
+              (selectedVariant()?.id === variant.id
+                ? 'border-primary-500 bg-primary-50/10'
+                : 'border-grey-200 hover:border-primary-300')
+            "
+          >
+            <span
+              [class]="
+                'flex items-center justify-center w-5 h-5 rounded-full border shrink-0 ' +
+                (selectedVariant()?.id === variant.id
+                  ? 'border-primary-500'
+                  : 'border-grey-300')
+              "
+            >
+              @if (selectedVariant()?.id === variant.id) {
+              <span class="w-2.5 h-2.5 rounded-full bg-primary-500"></span>
+              }
+            </span>
+            @if (variant.photo) {
+            <img
+              [src]="variant.photo"
+              [alt]="variant.name"
+              class="w-10 h-10 rounded-lg object-cover shrink-0"
+            />
+            }
+            <span class="flex-1 font-medium text-grey-700">{{ variant.name }}</span>
+            <span class="font-bold text-grey-900">{{ cs() }}{{ variant.price }}</span>
+          </button>
+          }
+        </div>
+      </div>
+      }
       @if (isSized) {
       <div class="pdm__sizes">
         <span class="pdm__sizes-label">Selecciona una talla</span>

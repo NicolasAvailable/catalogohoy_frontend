@@ -274,6 +274,8 @@ export default class Checkout {
         photo: item.photo,
         sku: item.sku ?? null,
         size: item.size ?? null,
+        variantId: item.variantId ?? null,
+        variantName: item.variantName ?? null,
       })),
       total,
       payment_method: this.selectedPaymentMethod() || undefined,
@@ -325,7 +327,8 @@ export default class Checkout {
     let productsList = '';
     items.forEach((item) => {
       const sizeLabel = item.size ? ` (Talla ${item.size})` : '';
-      productsList += `• ${item.name}${sizeLabel} x${item.quantity} - ${symbol}${item.total}\n`;
+      const variantLabel = item.variantName ? ` (${item.variantName})` : '';
+      productsList += `• ${item.name}${variantLabel}${sizeLabel} x${item.quantity} - ${symbol}${item.total}\n`;
     });
 
     const totalBsStr = this.showBs()

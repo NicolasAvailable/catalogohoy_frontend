@@ -162,7 +162,7 @@
               <span class="text-grey-800 font-bold">Productos:</span>
               <ul class="list-disc list-inside text-grey-700 mt-0.5">
                 @for (item of order.products; track $index) {
-                <li>{{ item.quantity }}x {{ item.name }}@if (item.size) { <span class="text-grey-400">(Talla: {{ item.size }})</span> }</li>
+                <li>{{ item.quantity }}x {{ item.name }}@if (item.variantName) { <span class="text-grey-400">({{ item.variantName }})</span> }@if (item.size) { <span class="text-grey-400">(Talla: {{ item.size }})</span> }</li>
                 }
               </ul>
             </div>
@@ -316,7 +316,7 @@
             <td class="px-6 py-3.5">
               <ul class="list-disc list-inside text-grey-700">
                 @for (item of order.products; track $index) {
-                <li>{{ item.quantity }}x {{ item.name }}@if (item.size) { <span class="text-grey-400">(Talla: {{ item.size }})</span> }</li>
+                <li>{{ item.quantity }}x {{ item.name }}@if (item.variantName) { <span class="text-grey-400">({{ item.variantName }})</span> }@if (item.size) { <span class="text-grey-400">(Talla: {{ item.size }})</span> }</li>
                 }
               </ul>
             </td>

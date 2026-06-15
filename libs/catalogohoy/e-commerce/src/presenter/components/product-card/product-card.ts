@@ -87,6 +87,21 @@ export class ProductCard {
     return Math.min(...tiers.map((t) => t.price));
   });
 
+  /** Products with variants need the buyer to pick one in the modal (each
+   *  variant has its own price), so the card delegates to "Ver más". */
+  public readonly isVariant = computed(
+    () => this.product().isVariant && this.product().variants.length > 0
+  );
+
+  /** Min/max price across variants — the card shows a range like TakeApp. */
+  public readonly variantPriceRange = computed(() => {
+    const prices = this.product().variants.map((v) => v.price);
+    if (!prices.length) {
+      return { min: this.product().price, max: this.product().price };
+    }
+    return { min: Math.min(...prices), max: Math.max(...prices) };
+  });
+
   public readonly availableStock = computed(() => {
     const p = this.product();
     return p.stock !== null ? Number(p.stock) : null;

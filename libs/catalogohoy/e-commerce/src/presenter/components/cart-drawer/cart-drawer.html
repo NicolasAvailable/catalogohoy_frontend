@@ -52,6 +52,9 @@
           />
           <div class="cart-item__details">
             <h4 class="cart-item__name">{{ item.name }}</h4>
+            @if (item.variantName) {
+            <span class="cart-item__size"><strong>{{ item.variantName }}</strong></span>
+            }
             @if (item.size) {
             <span class="cart-item__size">Talla: <strong>{{ item.size }}</strong></span>
             }
