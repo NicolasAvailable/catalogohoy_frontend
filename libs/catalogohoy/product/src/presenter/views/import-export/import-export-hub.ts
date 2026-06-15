@@ -26,6 +26,8 @@ import {
 import { ProductAiExcelService, ProductExcelService, ProductStore } from '../../../infrastructure';
 
 type View =
+  | 'hub'
+  | 'export'
   | 'import-upload'
   | 'import-preview'
   | 'import-progress'
@@ -74,7 +76,10 @@ export class ImportExportHubComponent {
 
   @ViewChild(DialogComponent) dialog!: DialogComponent;
 
-  public readonly view = signal<View>('import-upload');
+  public readonly view = signal<View>('hub');
+  /** Export is a paid-plan feature; free plans see it disabled with a Pro hint. */
+  public readonly isFreePlan = computed(() => this.planStore.isFreePlan());
+  public readonly isExporting = signal(false);
   public readonly parsedRows = signal<ProductExcelRow[]>([]);
   public readonly importResults = signal<ImportRowResult[]>([]);
   public readonly importSummary = signal<ImportSummary | null>(null);
@@ -87,13 +92,42 @@ export class ImportExportHubComponent {
   }
 
   public open(): void {
-    this.view.set('import-upload');
+    this.view.set('hub');
     this.parsedRows.set([]);
     this.importResults.set([]);
     this.importSummary.set(null);
     this.importProgress.set(0);
+    this.isExporting.set(false);
     this.categoryStore.categoryList$(1, 100);
     this.dialog.show();
+  }
+
+  /** From the hub, go to the import flow. */
+  public onImport(): void {
+    this.view.set('import-upload');
+  }
+
+  /** From the hub, export all products to .xlsx. Paid plans only. */
+  public async onExport(): Promise<void> {
+    if (this.isFreePlan()) {
+      toast.error('La exportación de productos está disponible en los planes pagos.');
+      return;
+    }
+    const products = this.productStore.productList().products;
+    if (products.length === 0) {
+      toast.error('No hay productos para exportar');
+      return;
+    }
+    this.view.set('export');
+    this.isExporting.set(true);
+    // Small delay so the "Exportando…" state is perceivable.
+    await new Promise((r) => setTimeout(r, 300));
+    this.excelService
+      .exportToExcel(products)
+      .mapRight(() => toast.success('Productos exportados correctamente'))
+      .mapLeft((err) => toast.error(err.message));
+    this.isExporting.set(false);
+    setTimeout(() => this.dialog.hide(), 1200);
   }
 
   public async onFileSelected(event: Event): Promise<void> {
