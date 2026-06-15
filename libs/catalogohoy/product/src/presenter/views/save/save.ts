@@ -414,28 +414,8 @@ export default class Save implements OnInit {
     return this.variantsArray.length < this.planStore.maxVariants();
   }
 
-  public onVariantToggle(): void {
-    const isVariant = this.form.controls.isVariant.value;
-    if (isVariant) {
-      // Variants coexist with sizes but are exclusive with wholesale.
-      if (this.form.controls.isWholesale.value) {
-        this.form.controls.isWholesale.setValue(false);
-        this.wholesaleTiersArray.clear();
-      }
-      this.form.controls.pricePromotional.setValue('');
-      this.form.controls.productionCost.setValue('');
-      if (this.variantsArray.length === 0) {
-        this.addVariant();
-      }
-      // Attach any existing sizes to the first variant by default.
-      this.syncSizesToFirstVariant();
-    } else {
-      this.variantsArray.clear();
-      this.clearSizesVariant();
-    }
-    this.updatePriceValidator();
-  }
-
+  /** Variants have no toggle — the section is driven by the list itself.
+   *  Adding the first variant flips the derived `isVariant` flag on. */
   public addVariant(): void {
     if (!this.canAddVariant()) {
       this.toastService.error(
@@ -445,6 +425,13 @@ export default class Save implements OnInit {
       return;
     }
     const wasEmpty = this.variantsArray.length === 0;
+    if (wasEmpty && this.form.controls.isWholesale.value) {
+      // Variants are exclusive with wholesale — adding one turns it off.
+      this.form.controls.isWholesale.setValue(false);
+      this.wholesaleTiersArray.clear();
+      this.form.controls.pricePromotional.setValue('');
+      this.form.controls.productionCost.setValue('');
+    }
     this.variantsArray.push(
       this.fb.group({
         // Stable id generated up-front so per-size selects can reference it.
@@ -455,11 +442,18 @@ export default class Save implements OnInit {
         photo: [null as string | null],
       })
     );
+    this.form.controls.isVariant.setValue(true);
     if (wasEmpty) this.syncSizesToFirstVariant();
+    this.updatePriceValidator();
   }
 
   public removeVariant(index: number): void {
     this.variantsArray.removeAt(index);
+    if (this.variantsArray.length === 0) {
+      this.form.controls.isVariant.setValue(false);
+      this.clearSizesVariant();
+    }
+    this.updatePriceValidator();
   }
 
   /** The variant uploader runs in single mode, so `valueChange` emits one URL. */
