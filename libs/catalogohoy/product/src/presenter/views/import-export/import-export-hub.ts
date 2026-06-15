@@ -99,6 +99,9 @@ export class ImportExportHubComponent {
     this.importProgress.set(0);
     this.isExporting.set(false);
     this.categoryStore.categoryList$(1, 100);
+    // Refrescamos el uso del plan para que el tile de Exportar muestre el
+    // estado correcto (bloqueado + "Pro" en planes gratis) desde el inicio.
+    this.planStore.refreshUsage();
     this.dialog.show();
   }
 
@@ -109,6 +112,10 @@ export class ImportExportHubComponent {
 
   /** From the hub, export all products to .xlsx. Paid plans only. */
   public async onExport(): Promise<void> {
+    // Revalidamos el plan contra el backend antes de exportar, por si el uso
+    // aún no estaba cargado al abrir el modal (evita que un plan gratis
+    // exporte aprovechando un estado por defecto).
+    await this.planStore.refreshUsage();
     if (this.isFreePlan()) {
       toast.error('La exportación de productos está disponible en los planes pagos.');
       return;
