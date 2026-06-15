@@ -51,7 +51,8 @@
       "Read(//private/tmp/**)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git fetch *)"
+      "Bash(git fetch *)",
+      "Bash(git checkout *)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -1,0 +1,113 @@
+@if (!chatStore.selectedChat()) {
+  <!-- Empty state -->
+  <div class="flex-1 flex flex-col items-center justify-center gap-3 bg-lino-400">
+    <ui-icon name="message-square" size="48" styleClass="text-grey-100" />
+    <p class="text-sm text-grey-300">Selecciona una conversación para comenzar</p>
+  </div>
+} @else {
+  <div class="flex flex-col h-full bg-lino-400">
+    <!-- Header -->
+    <div class="flex items-center gap-3 px-4 py-3 bg-white border-b border-grey-50 h-16 shrink-0">
+      <div class="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
+        <span class="text-xs font-bold text-primary-600">{{ initials(chatStore.selectedChat()!.customerName) }}</span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-grey-700 truncate">{{ chatStore.selectedChat()!.customerName }}</p>
+        @if (chatStore.selectedChat()!.customerPhone) {
+          <a
+            [href]="'tel:' + chatStore.selectedChat()!.customerPhone"
+            class="text-xs text-primary-500 hover:underline"
+          >
+            {{ chatStore.selectedChat()!.customerPhone }}
+          </a>
+        }
+      </div>
+      <button
+        (click)="chatStore.toggleMute(chatStore.selectedChat()!.id)"
+        class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 transition-colors"
+        [title]="chatStore.selectedChat()!.muted ? 'Activar notificaciones' : 'Silenciar'"
+      >
+        @if (chatStore.selectedChat()!.muted) {
+          <ui-icon name="volume-x" size="16" styleClass="text-primary-500" />
+        } @else {
+          <ui-icon name="ellipsis-vertical" size="16" styleClass="text-grey-400" />
+        }
+      </button>
+    </div>
+
+    <!-- Messages -->
+    <div
+      #messagesContainer
+      class="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-1"
+    >
+      @if (chatStore.isLoadingMessages()) {
+        <div class="flex flex-col gap-3 animate-pulse">
+          <div class="flex justify-start">
+            <div class="h-9 w-48 bg-grey-100 rounded-2xl rounded-tl-sm"></div>
+          </div>
+          <div class="flex justify-end">
+            <div class="h-9 w-36 bg-primary-100 rounded-2xl rounded-tr-sm"></div>
+          </div>
+          <div class="flex justify-start">
+            <div class="h-9 w-56 bg-grey-100 rounded-2xl rounded-tl-sm"></div>
+          </div>
+        </div>
+      } @else {
+        @for (group of chatStore.messagesByDay(); track group.date) {
+          <!-- Date separator -->
+          <div class="flex items-center gap-3 my-3">
+            <div class="flex-1 h-px bg-grey-50"></div>
+            <span class="text-xs text-grey-300 px-2">{{ formatDayLabel(group.date) }}</span>
+            <div class="flex-1 h-px bg-grey-50"></div>
+          </div>
+
+          @for (msg of group.msgs; track msg.id) {
+            <div class="flex" [class.justify-end]="msg.isMine" [class.justify-start]="!msg.isMine">
+              <div
+                class="max-w-[70%] px-3 py-2 rounded-2xl"
+                [class.rounded-tr-sm]="msg.isMine"
+                [class.rounded-tl-sm]="!msg.isMine"
+                [class.bg-primary-500]="msg.isMine"
+                [class.text-white]="msg.isMine"
+                [class.bg-white]="!msg.isMine"
+                [class.text-grey-700]="!msg.isMine"
+                [class.shadow-sm]="!msg.isMine"
+              >
+                <p class="text-sm whitespace-pre-wrap break-words">{{ msg.content }}</p>
+                <p
+                  class="text-[10px] mt-0.5"
+                  [class.text-primary-200]="msg.isMine"
+                  [class.text-grey-300]="!msg.isMine"
+                  [class.text-right]="msg.isMine"
+                >
+                  {{ formatTime(msg.createdAt) }}
+                </p>
+              </div>
+            </div>
+          }
+        }
+      }
+    </div>
+
+    <!-- Input area -->
+    <div class="flex items-end gap-2 px-4 py-3 bg-white border-t border-grey-50 shrink-0">
+      <ui-icon name="paperclip" size="18" styleClass="text-grey-300 mb-2 cursor-pointer shrink-0" />
+      <textarea
+        [ngModel]="messageInput()"
+        (ngModelChange)="messageInput.set($event)"
+        (keydown)="onKeydown($event)"
+        placeholder="Escribe un mensaje..."
+        rows="1"
+        class="flex-1 resize-none bg-lino-400 rounded-xl px-3 py-2 text-sm text-grey-700 placeholder:text-grey-300 focus:outline-none focus:ring-2 focus:ring-primary-200 max-h-32 overflow-y-auto"
+        style="field-sizing: content"
+      ></textarea>
+      <ui-button
+        icon="send"
+        size="small"
+        styleClass="shrink-0 mb-0.5"
+        [disabled]="!messageInput().trim() || chatStore.isSendingMessage()"
+        (click)="send()"
+      />
+    </div>
+  </div>
+}

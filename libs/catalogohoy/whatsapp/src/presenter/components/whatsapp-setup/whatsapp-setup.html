@@ -1,0 +1,65 @@
+<div
+  [class]="mode() === 'fullpage'
+    ? 'flex flex-col items-center justify-center w-full h-full p-6'
+    : 'flex flex-col w-full p-4'"
+>
+  @if (!signupComplete()) {
+  <div class="flex flex-col items-center max-w-lg w-full mx-auto gap-6">
+    <div
+      class="flex items-center justify-center w-20 h-20 rounded-full bg-green-50"
+    >
+      <ui-icon name="message-square" size="40" styleClass="text-green-600" />
+    </div>
+
+    <div class="text-center">
+      <h2 class="text-xl font-bold text-grey-800">
+        Conectar a WhatsApp Business
+      </h2>
+      <p class="text-sm text-grey-500 mt-2 max-w-sm">
+        Conecta tu cuenta de WhatsApp Business para enviar y recibir mensajes
+        directamente desde tu catálogo.
+      </p>
+    </div>
+
+    <div class="flex flex-col gap-3 w-full max-w-xs">
+      <ui-button
+        label="Conectar con Facebook"
+        icon="log-in"
+        [isLoading]="whatsAppStore.isConnecting()"
+        [disabled]="!sdkReady()"
+        (click)="connectWithFacebook()"
+        styleClass="w-full !bg-[#1877F2] !border-[#1877F2] hover:!bg-[#166FE5]"
+      />
+
+      <p class="text-xs text-grey-400 text-center">
+        Serás redirigido a Facebook para conectar tu cuenta de WhatsApp Business
+        API.
+      </p>
+    </div>
+  </div>
+  } @else {
+  <div class="flex flex-col items-center max-w-lg w-full mx-auto gap-6">
+    <div
+      class="flex items-center justify-center w-20 h-20 rounded-full bg-green-50"
+    >
+      <ui-icon name="check-circle" size="40" styleClass="text-green-600" />
+    </div>
+
+    <div class="text-center">
+      <h2 class="text-xl font-bold text-grey-800">
+        WhatsApp Business conectado
+      </h2>
+      <p class="text-sm text-grey-500 mt-2">
+        Tu cuenta de WhatsApp Business ha sido conectada exitosamente. Ya puedes
+        recibir y enviar mensajes desde tu catálogo.
+      </p>
+    </div>
+  </div>
+  }
+
+  @if (whatsAppStore.error()) {
+  <p class="text-sm text-red-500 mt-4 text-center">
+    {{ whatsAppStore.error() }}
+  </p>
+  }
+</div>

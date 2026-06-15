@@ -83,4 +83,8 @@ export const adminRoutes: Route[] = [
     canActivate: [teamPermissionGuard('equipo', 'view')],
     children: TEAMS_ROUTES,
   },
+  {
+    path: 'chat',
+    loadChildren: () => import('@catalogohoy/chat').then((m) => m.CHAT_ROUTES),
+  },
 ];

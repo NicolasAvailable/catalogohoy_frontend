@@ -3,6 +3,7 @@ import { globalEnvironment } from './global/global.development';
 import { metaPixelEnvironment } from './meta-pixel/meta-pixel';
 import { posthogEnvironment } from './posthog/posthog';
 import { supabaseEnvironment } from './supabase/supabase.development';
+import { whatsappEnvironment } from './whatsapp/whatsapp';
 
 export const environment = {
   production: false,
@@ -11,4 +12,5 @@ export const environment = {
   ...supabaseEnvironment,
   ...posthogEnvironment,
   ...metaPixelEnvironment,
+  ...whatsappEnvironment,
 };
