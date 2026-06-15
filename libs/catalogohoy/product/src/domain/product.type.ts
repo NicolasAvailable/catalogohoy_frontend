@@ -14,6 +14,14 @@ export type CreateProductInput = {
   isHidden: boolean;
   isSized: boolean;
   sizes: { name: string; stock: string | null }[];
+  isVariant: boolean;
+  variants: {
+    id: string | null;
+    name: string;
+    price: string;
+    originalPrice: string;
+    photo: string | null;
+  }[];
 };
 
 export type UpdateProductInput = CreateProductInput & { id: string; position?: number };

@@ -20,4 +20,12 @@ export interface ProductEntity {
   is_hidden: boolean;
   is_sized?: boolean;
   sizes?: { name: string; stock: number | null }[];
+  is_variant?: boolean;
+  variants?: {
+    id: string;
+    name: string;
+    price: number;
+    originalPrice: number;
+    photo: string | null;
+  }[];
 }

@@ -167,6 +167,8 @@ export class ProductExcelService {
       isHidden: false,
       isSized: false,
       sizes: [],
+      isVariant: false,
+      variants: [],
     };
 
     return this.productService.create(input);

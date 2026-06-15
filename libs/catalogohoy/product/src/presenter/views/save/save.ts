@@ -120,6 +120,8 @@ export default class Save implements OnInit {
     isHidden: [false],
     isSized: [false],
     sizes: this.fb.array([]),
+    isVariant: [false],
+    variants: this.fb.array([]),
   });
 
   private readonly descriptionValue = toSignal(
@@ -189,6 +191,9 @@ export default class Save implements OnInit {
 
   get sizesArray(): FormArray {
     return this.form.get('sizes') as FormArray;
+  }
+  get variantsArray(): FormArray {
+    return this.form.get('variants') as FormArray;
   }
 
   private readonly sizesValue = toSignal(this.sizesArray.valueChanges, {
@@ -493,6 +498,8 @@ export default class Save implements OnInit {
       isHidden: this.form.controls.isHidden.value ?? false,
       isSized: this.form.controls.isSized.value ?? false,
       sizes: this.sizesArray.value ?? [],
+      isVariant: this.form.controls.isVariant.value ?? false,
+      variants: this.variantsArray.value ?? [],
     };
     if (this.isCreate()) {
       const product = await this.productFacade.create(body);

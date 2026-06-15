@@ -51,6 +51,9 @@ export const PlanStore = signalStore(
       () => store.tenantPlanUsage()?.currentProductCount ?? 0
     ),
     maxProducts: computed(() => store.tenantPlanUsage()?.plan.maxProducts ?? 0),
+    /** Variants allowed per product on the current plan. Defaults to 1 until
+     *  the tenant plan usage loads (gratis floor). */
+    maxVariants: computed(() => store.tenantPlanUsage()?.plan.maxVariants ?? 1),
     remainingProducts: computed(
       () => store.tenantPlanUsage()?.remainingProducts ?? 0
     ),

@@ -11,7 +11,9 @@ export class CartItem {
     public readonly tierTitle: string | null = null,
     id?: string,
     public readonly sku: string | null = null,
-    public readonly size: string | null = null
+    public readonly size: string | null = null,
+    public readonly variantId: string | null = null,
+    public readonly variantName: string | null = null
   ) {
     this.id = id || crypto.randomUUID();
   }
@@ -31,7 +33,9 @@ export class CartItem {
       this.tierTitle,
       this.id,
       this.sku,
-      this.size
+      this.size,
+      this.variantId,
+      this.variantName
     );
   }
 
@@ -47,7 +51,9 @@ export class CartItem {
       this.tierTitle,
       this.id,
       this.sku,
-      this.size
+      this.size,
+      this.variantId,
+      this.variantName
     );
   }
 
@@ -62,7 +68,9 @@ export class CartItem {
       primitives.tierTitle ?? null,
       primitives.id,
       primitives.sku ?? null,
-      primitives.size ?? null
+      primitives.size ?? null,
+      primitives.variantId ?? null,
+      primitives.variantName ?? null
     );
   }
 }
@@ -78,4 +86,6 @@ export interface CartItemPrimitives {
   tierTitle: string | null;
   sku?: string | null;
   size?: string | null;
+  variantId?: string | null;
+  variantName?: string | null;
 }
