@@ -198,6 +198,15 @@ export class ECommerce implements OnInit, OnDestroy {
       'category'
     );
 
+    // Pre-seleccionamos la categoría ANTES de cargar el catálogo. Así, cuando
+    // el category-filter (p-tabs) renderice por primera vez, ya arranca con el
+    // tab correcto seleccionado. Si lo hiciéramos después del primer render,
+    // PrimeNG p-tabs reacciona al cambio de `value` post-init emitiendo un
+    // valueChange que termina reseteando la selección a "Ver todos".
+    if (deepLinkCategoryId) {
+      this.ecommerceStore.setSelectedCategory(deepLinkCategoryId);
+    }
+
     const slug = getTenantSlugFromUrl();
     if (slug) {
       const result = await this.ecommerceStore.loadCatalog(slug);
@@ -212,11 +221,10 @@ export class ECommerce implements OnInit, OnDestroy {
       }
     }
 
-    // Deep-link de categoría: si el link compartido trae `?category=<id>`,
-    // seleccionamos esa categoría y mostramos solo sus productos. El tab del
-    // category-filter se resalta porque está bindeado a selectedCategoryId.
+    // Deep-link de categoría: la categoría ya quedó pre-seleccionada arriba; el
+    // catálogo cargó TODOS los productos, así que recargamos filtrando por la
+    // categoría y limpiamos el query param.
     if (deepLinkCategoryId && slug) {
-      this.ecommerceStore.setSelectedCategory(deepLinkCategoryId);
       await this.ecommerceStore.loadProducts(slug);
       this.router.navigate([], {
         queryParams: { category: null },
