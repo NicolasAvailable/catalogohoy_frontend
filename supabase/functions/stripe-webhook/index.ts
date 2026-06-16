@@ -82,23 +82,78 @@ function getInvoiceSubId(invoice: Stripe.Invoice): string | null {
   return typeof fromParent === "string" && fromParent.startsWith("sub_") ? fromParent : null;
 }
 
+// Human, Spanish explanation for Stripe decline / charge-failure codes.
+// https://stripe.com/docs/declines/codes
+const DECLINE_ES: Record<string, string> = {
+  generic_decline: "La tarjeta fue rechazada por el banco (rechazo genérico). El cliente debe contactar a su banco o usar otra tarjeta.",
+  insufficient_funds: "Fondos insuficientes en la tarjeta.",
+  do_not_honor: "El banco rechazó el cobro (do not honor). El cliente debe contactar a su banco.",
+  transaction_not_allowed: "El banco no permite este tipo de transacción.",
+  card_declined: "La tarjeta fue rechazada por el banco.",
+  expired_card: "La tarjeta está vencida.",
+  incorrect_cvc: "El código de seguridad (CVC) es incorrecto.",
+  invalid_cvc: "El código de seguridad (CVC) es inválido.",
+  incorrect_number: "El número de tarjeta es incorrecto.",
+  invalid_expiry_month: "El mes de vencimiento de la tarjeta es inválido.",
+  invalid_expiry_year: "El año de vencimiento de la tarjeta es inválido.",
+  lost_card: "La tarjeta fue reportada como perdida.",
+  stolen_card: "La tarjeta fue reportada como robada.",
+  pickup_card: "El banco pidió retener la tarjeta.",
+  fraudulent: "El banco marcó el cobro como sospechoso de fraude.",
+  merchant_blacklist: "La tarjeta fue rechazada por una lista de bloqueo del banco.",
+  card_not_supported: "La tarjeta no soporta este tipo de compra.",
+  currency_not_supported: "La tarjeta no soporta esta moneda.",
+  processing_error: "Error de procesamiento del banco. Conviene reintentar más tarde.",
+  try_again_later: "El banco pidió reintentar más tarde.",
+  authentication_required: "El cobro requiere autenticación del banco (3D Secure) que no se completó.",
+  approve_with_id: "El banco no pudo identificar al titular. El cliente debe contactar a su banco.",
+  call_issuer: "El cliente debe contactar a su banco para autorizar el cobro.",
+  card_velocity_exceeded: "Se superó el límite de operaciones de la tarjeta.",
+  withdrawal_count_limit_exceeded: "Se superó el límite de operaciones/retiros de la tarjeta.",
+  not_permitted: "El banco no permite esta operación.",
+  service_not_allowed: "El banco no permite este servicio.",
+  no_action_taken: "El banco rechazó el cobro. El cliente debe contactar a su banco.",
+  revocation_of_authorization: "El cliente revocó la autorización de cobros recurrentes.",
+  test_mode_live_card: "Se usó una tarjeta real en modo de prueba.",
+};
+
+function declineReasonEs(code: string | null | undefined): string | null {
+  return code && DECLINE_ES[code] ? DECLINE_ES[code] : null;
+}
+
+// Generic, unhelpful values Stripe sometimes returns at the PaymentIntent level.
+const GENERIC_PI_MESSAGES = new Set(["The payment failed.", "The payment attempt failed."]);
+const NOISE_CODES = new Set(["payment_intent_payment_attempt_failed"]);
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function fmtPiError(err: any): string | null {
   if (!err) return null;
-  const parts = [
-    err.message,
-    err.decline_code ? `decline_code: ${err.decline_code}` : null,
-    err.code && err.code !== err.decline_code ? `code: ${err.code}` : null,
-  ].filter(Boolean);
-  return parts.length ? parts.join(" · ") : null;
+  const declineCode: string | null = err.decline_code || null;
+  // 1) Clear Spanish reason from the decline/error code.
+  const friendly = declineReasonEs(declineCode) || declineReasonEs(err.code);
+  if (friendly) return declineCode ? `${friendly} (decline_code: ${declineCode})` : friendly;
+  // 2) Stripe's own message, unless it's the generic placeholder.
+  if (err.message && !GENERIC_PI_MESSAGES.has(err.message)) {
+    return declineCode ? `${err.message} (decline_code: ${declineCode})` : err.message;
+  }
+  // 3) Bare decline code (still actionable).
+  if (declineCode) return `La tarjeta fue rechazada por el banco (decline_code: ${declineCode}).`;
+  // 4) A meaningful error code — skip the noisy PaymentIntent-level one.
+  if (err.code && !NOISE_CODES.has(err.code)) return `Error de Stripe: ${err.code}`;
+  return null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function fmtChargeReason(charge: any): string | null {
   if (!charge) return null;
-  const parts = [charge.failure_message, charge.failure_code ? `code: ${charge.failure_code}` : null].filter(Boolean);
-  if (parts.length) return parts.join(" · ");
+  const failureCode: string | null = charge.failure_code || null;
+  const friendly = declineReasonEs(failureCode);
+  if (friendly) return failureCode ? `${friendly} (code: ${failureCode})` : friendly;
+  if (charge.failure_message && !GENERIC_PI_MESSAGES.has(charge.failure_message)) {
+    return failureCode ? `${charge.failure_message} (code: ${failureCode})` : charge.failure_message;
+  }
   if (charge.outcome?.seller_message) return charge.outcome.seller_message;
+  if (failureCode) return `El cobro fue rechazado (code: ${failureCode}).`;
   return null;
 }
 
