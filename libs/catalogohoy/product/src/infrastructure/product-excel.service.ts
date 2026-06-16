@@ -21,7 +21,6 @@ export class ProductExcelService {
         sku: p.sku ?? '',
         costo_produccion: p.productionCost ?? '',
         categorias: p.categoryList.categories.map((c) => c.name).join(', '),
-        imagenes: (p.photos ?? []).join(', '),
         tallas: this.formatSizes(p.sizes),
         mayoreo: p.isWholesale
           ? p.wholesaleTiers.map((t) => `${t.title}: ${t.price}`).join(' | ')
