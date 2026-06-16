@@ -96,11 +96,17 @@ export class ProductCard {
     () => this.product().isVariant && this.product().variants.length > 0
   );
 
-  /** Min/max price across variants — the card shows a range like TakeApp. */
+  /** Min/max price across variants — the card shows a range like TakeApp.
+   *  Includes the base/original price when some sizes belong to the original. */
   public readonly variantPriceRange = computed(() => {
-    const prices = this.product().variants.map((v) => v.price);
+    const p = this.product();
+    const prices = p.variants.map((v) => v.price);
+    const hasBaseSizes = p.isSized && p.sizes.some((s) => !s.variantId);
+    if (hasBaseSizes) {
+      prices.push(p.pricePromotional > 0 ? p.pricePromotional : p.price);
+    }
     if (!prices.length) {
-      return { min: this.product().price, max: this.product().price };
+      return { min: p.price, max: p.price };
     }
     return { min: Math.min(...prices), max: Math.max(...prices) };
   });

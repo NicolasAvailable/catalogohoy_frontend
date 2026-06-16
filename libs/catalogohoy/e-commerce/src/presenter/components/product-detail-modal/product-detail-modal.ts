@@ -70,10 +70,44 @@ export class ProductDetailModal {
 
   public readonly isVariant =
     this.product.isVariant && this.product.variants.length > 0;
-  /** Defaults to the first variant so a price is always shown on open. */
+
+  /** Sentinel id for the synthetic "Producto original" option. */
+  private static readonly BASE_ID = '__base__';
+
+  /** True when at least one size belongs to the base/original product. */
+  private readonly hasBaseSizes =
+    this.isSized && this.product.sizes.some((s) => !s.variantId);
+
+  /** Options shown in the public selector: the base/original product (only
+   *  when it has its own sizes) followed by the real variants. The base uses
+   *  the product's own price and media. */
+  public readonly selectorOptions: ProductVariant[] = (() => {
+    const options: ProductVariant[] = [];
+    if (this.isVariant && this.hasBaseSizes) {
+      const hasPromo = this.product.pricePromotional > 0;
+      options.push({
+        id: ProductDetailModal.BASE_ID,
+        name: 'Producto original',
+        price: hasPromo ? this.product.pricePromotional : this.product.price,
+        originalPrice: hasPromo ? this.product.price : 0,
+        photos: this.product.photos,
+      });
+    }
+    options.push(...this.product.variants);
+    return options;
+  })();
+
+  /** Defaults to the first option so a price is always shown on open. */
   public readonly selectedVariant = signal<ProductVariant | null>(
-    this.isVariant ? this.product.variants[0] : null
+    this.isVariant ? this.selectorOptions[0] : null
   );
+
+  /** Variant id for the current selection, normalising the base sentinel to
+   *  null (the base/original product is stored without a variant). */
+  private selectedVariantId(): string | null {
+    const id = this.selectedVariant()?.id ?? null;
+    return id === ProductDetailModal.BASE_ID ? null : id;
+  }
 
   selectVariant(variant: ProductVariant): void {
     this.selectedVariant.set(variant);
@@ -96,8 +130,12 @@ export class ProductDetailModal {
   public readonly availableSizes = computed(() => {
     if (!this.isSized) return [];
     if (!this.isVariant) return this.product.sizes;
-    const vid = this.selectedVariant()?.id ?? null;
-    return this.product.sizes.filter((s) => !s.variantId || s.variantId === vid);
+    const sel = this.selectedVariant()?.id ?? null;
+    if (sel === ProductDetailModal.BASE_ID) {
+      // The "Producto original" option only shows base-assigned sizes.
+      return this.product.sizes.filter((s) => !s.variantId);
+    }
+    return this.product.sizes.filter((s) => s.variantId === sel);
   });
 
   public readonly shouldClampDescription = (() => {
@@ -164,7 +202,7 @@ export class ProductDetailModal {
 
   public readonly cartQuantity = computed(() => {
     const size = this.selectedSize();
-    const vid = this.selectedVariant()?.id ?? null;
+    const vid = this.selectedVariantId();
     return this.cartStore
       .items()
       .filter(
@@ -288,10 +326,13 @@ export class ProductDetailModal {
   onAddToCart() {
     if (this.isSized && !this.selectedSize()) return;
     if (this.isVariant && !this.selectedVariant()) return;
+    const sel = this.selectedVariant();
+    // The base/original option carries no real variant — add at the base price.
+    const variant = sel && sel.id !== ProductDetailModal.BASE_ID ? sel : null;
     for (let i = 0; i < this.quantity(); i++) {
       this.cartStore.addProduct(this.product, {
         size: this.selectedSize(),
-        variant: this.selectedVariant(),
+        variant,
       });
     }
     this.cartStore.openCart();
