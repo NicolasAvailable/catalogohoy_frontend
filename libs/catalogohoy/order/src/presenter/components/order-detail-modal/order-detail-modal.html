@@ -215,27 +215,51 @@
         </div>
       </div>
       } @else {
-      <!-- Notas internas del equipo -->
-      <div class="flex flex-col gap-2">
-        <p class="text-sm text-grey-400">
-          Estas notas son privadas para tu equipo — el cliente no las ve.
+      <!-- Notas internas del equipo (chat) -->
+      <div class="flex flex-col gap-3 min-h-[20rem]">
+        <p class="text-xs text-grey-400">
+          Privadas para tu equipo — el cliente no las ve.
         </p>
-        <textarea
-          [ngModel]="internalComments()"
-          (ngModelChange)="internalComments.set($event)"
-          rows="8"
-          placeholder="Escribí notas para tu equipo sobre esta orden..."
-          class="min-h-[14rem] rounded-xl border border-grey-200 bg-white px-4 py-3 text-sm text-grey-700 resize-none focus:outline-none focus:border-primary-400"
-        ></textarea>
-        <button
-          type="button"
-          (click)="saveInternalComments()"
-          [disabled]="isSavingNotes()"
-          class="self-end inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 disabled:opacity-60 cursor-pointer"
+        <!-- Hilo -->
+        <div
+          class="flex-1 min-h-[12rem] max-h-[24rem] overflow-y-auto flex flex-col gap-3 rounded-xl border border-grey-100 bg-white px-3 py-3"
         >
-          <ui-icon name="save" styleClass="size-4" />
-          {{ isSavingNotes() ? 'Guardando...' : 'Guardar cambios' }}
-        </button>
+          @if (notes().length === 0) {
+          <p class="text-grey-300 italic text-sm m-auto text-center">
+            Sin notas todavía.<br />Dejá la primera para tu equipo.
+          </p>
+          } @else {
+          @for (note of notes(); track $index) {
+          <div class="flex flex-col gap-0.5">
+            <div class="flex items-baseline gap-2 flex-wrap">
+              <span class="text-sm font-bold text-grey-800">{{ note.author }}</span>
+              <span class="text-[11px] text-grey-300">{{ note.createdAt | date: 'dd/MM HH:mm' }}</span>
+            </div>
+            <p class="text-sm text-grey-700 whitespace-pre-line break-words">{{ note.text }}</p>
+          </div>
+          }
+          }
+        </div>
+        <!-- Composer -->
+        <div class="flex flex-col gap-2">
+          <textarea
+            [ngModel]="draft()"
+            (ngModelChange)="draft.set($event)"
+            (keydown.enter)="$event.preventDefault(); addNote()"
+            rows="2"
+            placeholder="Deja un comentario para tu equipo..."
+            class="rounded-xl border border-grey-200 bg-white px-4 py-2.5 text-sm text-grey-700 resize-none focus:outline-none focus:border-primary-400"
+          ></textarea>
+          <button
+            type="button"
+            (click)="addNote()"
+            [disabled]="isSavingNotes() || !draft().trim()"
+            class="self-end inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <ui-icon name="send" styleClass="size-4" />
+            {{ isSavingNotes() ? 'Enviando...' : 'Enviar' }}
+          </button>
+        </div>
       </div>
       }
     </div>

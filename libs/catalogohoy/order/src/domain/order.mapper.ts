@@ -19,7 +19,7 @@ export class OrderMapper {
       phone: e.phone,
       email: e.email ?? undefined,
       comments: e.comments,
-      internalComments: e.internal_comments ?? undefined,
+      internalNotes: Array.isArray(e.internal_notes) ? e.internal_notes : [],
       paymentMethod: e.payment_method,
       shippingMethod: e.shipping_method ?? null,
       shippingAddress: e.shipping_address ?? null,

@@ -17,6 +17,14 @@ export interface OrderItem {
 
 export type OrderStatus = 'pending' | 'completed' | 'cancelled';
 
+/** A single internal team note (chat-style). */
+export interface InternalNote {
+  author: string;
+  text: string;
+  /** ISO timestamp. */
+  createdAt: string;
+}
+
 export interface Order {
   id: number;
   /** Per-tenant incremental number shown in the UI (#N). Display-only;
@@ -33,8 +41,8 @@ export interface Order {
   phone?: string;
   email?: string;
   comments?: string;
-  /** Internal team notes — admin-only, never shown to the customer. */
-  internalComments?: string;
+  /** Internal team notes thread — admin-only, never shown to the customer. */
+  internalNotes?: InternalNote[];
   paymentMethod?: string;
   /** Snapshot of the shipping option chosen at checkout. Local string union
    *  (not imported from ecommerce-config) to avoid a cross-lib cycle. */

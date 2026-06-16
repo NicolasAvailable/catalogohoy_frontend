@@ -12,7 +12,8 @@ import {
   SelectItemDirective,
   SelectSelectedItemDirective,
 } from '@ui';
-import { Order, OrderStatus } from '../../../domain/order';
+import { ProfileStore } from '@catalogohoy/profile';
+import { InternalNote, Order, OrderStatus } from '../../../domain/order';
 import { OrderStore } from '../../../infrastructure/order.store';
 
 /** Modal de detalle de una orden. Se abre vía DialogService desde el listado
@@ -39,6 +40,7 @@ export class OrderDetailModal {
   private readonly config = inject(DynamicDialogConfig);
   private readonly orderStore = inject(OrderStore);
   private readonly toastService = inject(ToastService);
+  private readonly profileStore = inject(ProfileStore);
 
   public readonly order: Order = this.config.data.order;
   public readonly cs: string = this.config.data.currencySymbol ?? '$';
@@ -55,23 +57,30 @@ export class OrderDetailModal {
   public readonly status = signal<OrderStatus>(this.order.status);
   public readonly isUpdating = signal(false);
 
-  /** Internal team notes (admin-only) — editable + saved from the modal. */
-  public readonly internalComments = signal(this.order.internalComments ?? '');
+  /** Internal team notes thread (admin-only, chat-style). */
+  public readonly notes = signal<InternalNote[]>(this.order.internalNotes ?? []);
+  public readonly draft = signal('');
   public readonly isSavingNotes = signal(false);
 
   /** Top tab: full order detail vs internal team notes. */
   public readonly activeTab = signal<'detalle' | 'notas'>('detalle');
 
-  async saveInternalComments(): Promise<void> {
-    if (this.isSavingNotes()) return;
+  async addNote(): Promise<void> {
+    const text = this.draft().trim();
+    if (!text || this.isSavingNotes()) return;
     this.isSavingNotes.set(true);
-    const result = await this.orderStore.updateInternalComments(
-      this.order.id,
-      this.internalComments().trim()
-    );
+    const note: InternalNote = {
+      author: this.profileStore.profile().name?.trim() || 'Equipo',
+      text,
+      createdAt: new Date().toISOString(),
+    };
+    const result = await this.orderStore.addInternalNote(this.order.id, note);
     result.fold(
       (error) => this.toastService.error(new Exception(error)),
-      () => this.toastService.success('Notas internas guardadas')
+      () => {
+        this.notes.update((n) => [...n, note]);
+        this.draft.set('');
+      }
     );
     this.isSavingNotes.set(false);
   }

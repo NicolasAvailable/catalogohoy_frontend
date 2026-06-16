@@ -2,7 +2,13 @@ import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { ActivityLogService } from '@catalogohoy/teams';
 import { E } from '@shared/domain';
-import { Order, OrderItem, OrderMapper, OrderStatus } from '../domain';
+import {
+  InternalNote,
+  Order,
+  OrderItem,
+  OrderMapper,
+  OrderStatus,
+} from '../domain';
 
 export interface WeekDayData {
   label: string;
@@ -319,15 +325,27 @@ export class OrderService {
     return this.updateOrderStatus(id, tenantId, 'pending', 'cancelled');
   }
 
-  /** Saves internal team notes on an order (admin-only). */
-  async updateInternalComments(
+  /** Appends an internal team note to an order's thread (admin-only). */
+  async addInternalNote(
     id: number,
     tenantId: number,
-    internalComments: string
+    note: InternalNote
   ): Promise<E.Either<Error, Order>> {
+    // Re-read the current thread so concurrent edits don't clobber each other.
+    const { data: cur, error: fetchError } = await this.client
+      .from('orders')
+      .select('internal_notes')
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .single();
+    if (fetchError) return E.left(new Error(fetchError.message));
+
+    const notes = Array.isArray(cur?.internal_notes) ? cur.internal_notes : [];
+    notes.push(note);
+
     const { data, error } = await this.client
       .from('orders')
-      .update({ internal_comments: internalComments || null })
+      .update({ internal_notes: notes })
       .eq('id', id)
       .eq('tenant_id', tenantId)
       .select()
