@@ -637,8 +637,10 @@
             </div>
             <div class="flex flex-col gap-2">
               <label class="text-sm text-grey-400 font-semibold"
-                >Imágenes y videos (opcional)</label
+                >Imágenes y videos ({{ (variant.get('photos')?.value?.length) ||
+                0 }}/{{ maxPhotos() }})</label
               >
+              @if (!variantPhotosFull($index)) {
               <ui-uploader
                 (valueChange)="addVariantPhotos($index, $event)"
                 [accept]="'image/*,video/*'"
@@ -662,6 +664,13 @@
                   </button>
                 </ng-template>
               </ui-uploader>
+              } @else {
+              <p
+                class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2"
+              >
+                Llegaste al límite de {{ maxPhotos() }} imágenes de tu plan.
+              </p>
+              }
               @if (variant.get('photos')?.value?.length) {
               <div class="flex flex-wrap gap-2 mt-1">
                 @for (media of variant.get('photos')?.value; track media) {

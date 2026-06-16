@@ -442,11 +442,26 @@ export default class Save implements OnInit {
     const urls = Array.isArray(url) ? url : [url];
     const ctrl = this.variantsArray.at(index).get('photos');
     const current = (ctrl?.value as string[]) ?? [];
-    const merged = [
-      ...current,
-      ...urls.filter((u) => u && !current.includes(u)),
-    ];
-    ctrl?.setValue(merged);
+    // Each variant gallery respects the same per-plan image cap as the product
+    // media (gratis 3 / basico 10 / avanzado 50): add what fits, warn on the rest.
+    const limit = this.maxPhotos();
+    const fresh = urls.filter((u) => u && !current.includes(u));
+    const remaining = Math.max(0, limit - current.length);
+    const toAdd = fresh.slice(0, remaining);
+    if (fresh.length > toAdd.length) {
+      this.toastService.error(
+        (`Solo puedes subir hasta ${limit} imágenes por variante en tu plan.`) as unknown as Exception
+      );
+    }
+    if (toAdd.length === 0) return;
+    ctrl?.setValue([...current, ...toAdd]);
+  }
+
+  /** True when the variant's gallery already reached the per-plan cap. */
+  public variantPhotosFull(index: number): boolean {
+    const photos =
+      (this.variantsArray.at(index).get('photos')?.value as string[]) ?? [];
+    return photos.length >= this.maxPhotos();
   }
 
   public removeVariantPhoto(index: number, url: string): void {
