@@ -86,7 +86,7 @@
       }
       <div class="checkout__item-main">
         <p class="checkout__item-name">
-          {{ item.name }}@if (item.size) { <span class="checkout__item-size">· {{ item.size }}</span> }
+          {{ item.name }}@if (item.variantName) { <span class="checkout__item-size">· {{ item.variantName }}</span> }@if (item.size) { <span class="checkout__item-size">· {{ item.size }}</span> }
         </p>
         <p class="checkout__item-price">{{ cs() }}{{ item.total }}</p>
         <div class="checkout__stepper">

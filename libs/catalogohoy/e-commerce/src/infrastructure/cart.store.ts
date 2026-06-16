@@ -1,5 +1,5 @@
 import { computed } from '@angular/core';
-import { Product, WholesaleTier } from '@catalogohoy/product';
+import { Product, ProductVariant, WholesaleTier } from '@catalogohoy/product';
 import {
   patchState,
   signalStore,
@@ -44,6 +44,8 @@ function saveCartToStorage(cart: Cart): void {
       tierTitle: item.tierTitle,
       sku: item.sku,
       size: item.size,
+      variantId: item.variantId,
+      variantName: item.variantName,
     }));
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   } catch {
@@ -67,11 +69,16 @@ export const CartStore = signalStore(
     items: computed(() => store.cart().items),
   })),
   withMethods((store) => ({
-    addProduct(product: Product, options?: { size?: string | null }) {
+    addProduct(
+      product: Product,
+      options?: { size?: string | null; variant?: ProductVariant | null }
+    ) {
       const size = options?.size ?? null;
+      const variant = options?.variant ?? null;
 
       // If the product is sized, prefer per-size stock; otherwise fall back
-      // to the product-level stock. Either way, "no stock" rejects the add.
+      // to the product-level stock. Variants share the product-level stock
+      // (no per-variant stock). Either way, "no stock" rejects the add.
       const sizeEntry =
         product.isSized && size
           ? product.sizes.find((s) => s.name === size) ?? null
@@ -102,17 +109,28 @@ export const CartStore = signalStore(
         }
       }
 
+      // A variant overrides the price and (when set) the cover image; its
+      // name is carried so the cart/order/WhatsApp show "Product (Variant)".
+      const basePrice =
+        product.pricePromotional > 0
+          ? product.pricePromotional
+          : product.price;
+      const price = variant ? variant.price : basePrice;
+      const photo = (variant?.photos?.[0] || product.photos[0]) ?? '';
+
       const item = new CartItem(
         String(product.id),
         product.name,
         product.description,
-        product.pricePromotional > 0 ? product.pricePromotional : product.price,
-        product.photos[0] || '',
+        price,
+        photo,
         1,
         null,
         undefined,
         product.sku ?? null,
-        size
+        size,
+        variant?.id ?? null,
+        variant?.name ?? null
       );
       const newCart = store.cart().addItem(item);
       saveCartToStorage(newCart);

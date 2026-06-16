@@ -38,6 +38,8 @@ export class OrderMapper {
       photo: i.photo,
       sku: i.sku ?? null,
       size: i.size ?? null,
+      variantId: i.variantId ?? null,
+      variantName: i.variantName ?? null,
     };
   }
 

@@ -74,7 +74,12 @@
                     <ui-icon name="package" styleClass="size-5 text-grey-300" />
                   </div>
                   }
-                  <span class="font-semibold text-grey-800 text-sm">{{ item.name }}</span>
+                  <div class="flex flex-col">
+                    <span class="font-semibold text-grey-800 text-sm">{{ item.name }}</span>
+                    @if (item.variantName) {
+                    <span class="text-xs text-grey-400">{{ item.variantName }}</span>
+                    }
+                  </div>
                 </div>
               </td>
               <td class="py-3 px-3 text-center text-sm text-grey-600">{{ item.quantity }}</td>

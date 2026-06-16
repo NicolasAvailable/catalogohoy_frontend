@@ -120,6 +120,8 @@ export default class Save implements OnInit {
     isHidden: [false],
     isSized: [false],
     sizes: this.fb.array([]),
+    isVariant: [false],
+    variants: this.fb.array([]),
   });
 
   private readonly descriptionValue = toSignal(
@@ -190,6 +192,9 @@ export default class Save implements OnInit {
   get sizesArray(): FormArray {
     return this.form.get('sizes') as FormArray;
   }
+  get variantsArray(): FormArray {
+    return this.form.get('variants') as FormArray;
+  }
 
   private readonly sizesValue = toSignal(this.sizesArray.valueChanges, {
     initialValue: this.sizesArray.value,
@@ -198,6 +203,11 @@ export default class Save implements OnInit {
     this.form.controls.isSized.valueChanges,
     { initialValue: this.form.controls.isSized.value }
   );
+
+  /** Sizes for a specific variant (each variant owns its tallas). */
+  public variantSizesArray(variantIndex: number): FormArray {
+    return this.variantsArray.at(variantIndex).get('sizes') as FormArray;
+  }
 
   /** Sum of stock across all sizes. `null` when any size is unlimited
    *  (so the product as a whole inherits "unlimited"). */
@@ -292,16 +302,33 @@ export default class Save implements OnInit {
     this.form.controls.sku.setValue(`${prefix}-${suffix}`);
   }
 
+  /** The base price is optional when variants or wholesale tiers carry the
+   *  price; required otherwise (sizes-only still share one base price). */
+  private updatePriceValidator(): void {
+    const optional =
+      !!this.form.controls.isWholesale.value ||
+      !!this.form.controls.isVariant.value;
+    if (optional) {
+      this.form.controls.price.clearValidators();
+    } else {
+      this.form.controls.price.setValidators([Validators.required]);
+    }
+    this.form.controls.price.updateValueAndValidity();
+  }
+
   public onWholesaleToggle(): void {
     const isWholesale = this.form.controls.isWholesale.value;
     if (isWholesale) {
-      // Wholesale and sizes are mutually exclusive — turn sizes off if it
-      // happened to be on.
+      // Wholesale is exclusive with sizes AND variants — turning it on simply
+      // switches those off (no disabling → fewer clicks).
       if (this.form.controls.isSized.value) {
         this.form.controls.isSized.setValue(false);
         this.sizesArray.clear();
       }
-      this.form.controls.price.clearValidators();
+      if (this.form.controls.isVariant.value) {
+        this.form.controls.isVariant.setValue(false);
+        this.variantsArray.clear();
+      }
       this.form.controls.price.setValue('');
       this.form.controls.pricePromotional.setValue('');
       this.form.controls.productionCost.setValue('');
@@ -309,25 +336,21 @@ export default class Save implements OnInit {
         this.addTier();
       }
     } else {
-      this.form.controls.price.setValidators([Validators.required]);
       this.wholesaleTiersArray.clear();
     }
-    this.form.controls.price.updateValueAndValidity();
+    this.updatePriceValidator();
   }
 
   public onSizedToggle(): void {
     const isSized = this.form.controls.isSized.value;
     if (isSized) {
-      // Sizes and wholesale are mutually exclusive — turn wholesale off.
+      // Sizes coexist with variants but are exclusive with wholesale.
       if (this.form.controls.isWholesale.value) {
         this.form.controls.isWholesale.setValue(false);
         this.wholesaleTiersArray.clear();
-        this.form.controls.price.setValidators([Validators.required]);
-        this.form.controls.price.updateValueAndValidity();
       }
       // Sized products derive stock from per-size inputs — clear the
-      // product-level stock and force "unlimited" so submit doesn't
-      // accidentally persist a stale value.
+      // product-level stock and force "unlimited".
       this.stockMode.set('unlimited');
       this.form.controls.stock.setValue(null);
       if (this.sizesArray.length === 0) {
@@ -336,6 +359,7 @@ export default class Save implements OnInit {
     } else {
       this.sizesArray.clear();
     }
+    this.updatePriceValidator();
   }
 
   public addSize(): void {
@@ -349,6 +373,86 @@ export default class Save implements OnInit {
 
   public removeSize(index: number): void {
     this.sizesArray.removeAt(index);
+  }
+
+  /** Per-variant sizes — each variant owns its tallas. */
+  public addVariantSize(variantIndex: number): void {
+    this.variantSizesArray(variantIndex).push(
+      this.fb.group({
+        name: ['', Validators.required],
+        stock: [null as string | null],
+      })
+    );
+  }
+
+  public removeVariantSize(variantIndex: number, sizeIndex: number): void {
+    this.variantSizesArray(variantIndex).removeAt(sizeIndex);
+  }
+
+  /** True while the current plan still allows adding another variant.
+   *  Re-evaluated each change-detection (add/remove run on user clicks). */
+  public canAddVariant(): boolean {
+    return this.variantsArray.length < this.planStore.maxVariants();
+  }
+
+  /** Variants have no toggle — the section is driven by the list itself.
+   *  Adding the first variant flips the derived `isVariant` flag on. */
+  public addVariant(): void {
+    if (!this.canAddVariant()) {
+      this.toastService.error(
+        (`Tu plan permite hasta ${this.planStore.maxVariants()} ` +
+          'variantes por producto. Mejora tu plan para agregar más.') as unknown as Exception
+      );
+      return;
+    }
+    const wasEmpty = this.variantsArray.length === 0;
+    if (wasEmpty && this.form.controls.isWholesale.value) {
+      // Variants are exclusive with wholesale — adding one turns it off.
+      this.form.controls.isWholesale.setValue(false);
+      this.wholesaleTiersArray.clear();
+      this.form.controls.pricePromotional.setValue('');
+      this.form.controls.productionCost.setValue('');
+    }
+    this.variantsArray.push(
+      this.fb.group({
+        id: [crypto.randomUUID() as string | null],
+        name: ['', Validators.required],
+        price: ['', Validators.required],
+        originalPrice: [''],
+        photos: [[] as string[]],
+        // Each variant owns its tallas.
+        sizes: this.fb.array([]),
+      })
+    );
+    this.form.controls.isVariant.setValue(true);
+    this.updatePriceValidator();
+  }
+
+  public removeVariant(index: number): void {
+    this.variantsArray.removeAt(index);
+    if (this.variantsArray.length === 0) {
+      this.form.controls.isVariant.setValue(false);
+    }
+    this.updatePriceValidator();
+  }
+
+  /** Variant uploader is multiple — append the uploaded media (images/videos)
+   *  to the variant's own gallery, just like the product media uploader. */
+  public addVariantPhotos(index: number, url: string | string[]): void {
+    const urls = Array.isArray(url) ? url : [url];
+    const ctrl = this.variantsArray.at(index).get('photos');
+    const current = (ctrl?.value as string[]) ?? [];
+    const merged = [
+      ...current,
+      ...urls.filter((u) => u && !current.includes(u)),
+    ];
+    ctrl?.setValue(merged);
+  }
+
+  public removeVariantPhoto(index: number, url: string): void {
+    const ctrl = this.variantsArray.at(index).get('photos');
+    const current = (ctrl?.value as string[]) ?? [];
+    ctrl?.setValue(current.filter((u) => u !== url));
   }
 
   public addTier(): void {
@@ -416,6 +520,34 @@ export default class Save implements OnInit {
         this.fb.group({
           name: [size.name, Validators.required],
           stock: [size.stock != null ? String(size.stock) : null],
+        })
+      );
+    });
+
+    this.form.controls.isVariant.setValue(product.isVariant);
+    if (product.isVariant) {
+      this.form.controls.price.clearValidators();
+      this.form.controls.price.updateValueAndValidity();
+    }
+    this.variantsArray.clear();
+    product.variants.forEach((variant) => {
+      this.variantsArray.push(
+        this.fb.group({
+          id: [variant.id ?? null],
+          name: [variant.name, Validators.required],
+          price: [String(variant.price), Validators.required],
+          originalPrice: [
+            variant.originalPrice ? String(variant.originalPrice) : '',
+          ],
+          photos: [variant.photos ?? []],
+          sizes: this.fb.array(
+            (variant.sizes ?? []).map((s) =>
+              this.fb.group({
+                name: [s.name, Validators.required],
+                stock: [s.stock != null ? String(s.stock) : null],
+              })
+            )
+          ),
         })
       );
     });
@@ -493,6 +625,8 @@ export default class Save implements OnInit {
       isHidden: this.form.controls.isHidden.value ?? false,
       isSized: this.form.controls.isSized.value ?? false,
       sizes: this.sizesArray.value ?? [],
+      isVariant: this.form.controls.isVariant.value ?? false,
+      variants: this.variantsArray.value ?? [],
     };
     if (this.isCreate()) {
       const product = await this.productFacade.create(body);

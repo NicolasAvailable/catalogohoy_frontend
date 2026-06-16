@@ -331,6 +331,7 @@ export class OrderService {
       productId: it.productId,
       quantity: it.quantity ?? 0,
       size: it.size ?? null,
+      variantId: it.variantId ?? null,
     }));
     const { error } = await this.client.rpc('increment_product_stock', {
       p_tenant_id: tenantId,
@@ -353,6 +354,7 @@ export class OrderService {
       productId: it.productId,
       quantity: it.quantity ?? 0,
       size: it.size ?? null,
+      variantId: it.variantId ?? null,
     }));
     const { error } = await this.client.rpc('decrement_product_stock', {
       p_tenant_id: tenantId,

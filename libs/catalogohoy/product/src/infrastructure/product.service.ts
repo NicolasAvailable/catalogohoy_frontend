@@ -15,6 +15,12 @@ import {
 import { ProductEntity } from './entities';
 import { ProductListMapper, ProductMapper } from './mappers';
 
+/** Normalises a form size (string stock) to the persisted shape. */
+const mapSize = (s: { name: string; stock: string | null }) => ({
+  name: s.name,
+  stock: s.stock === null || s.stock === '' ? null : Number(s.stock),
+});
+
 @Injectable({
   providedIn: 'root',
 })
@@ -181,9 +187,10 @@ export class ProductService implements BaseProductService {
         sku: input.sku || null,
         production_cost: input.productionCost ? Number(input.productionCost) : null,
         position: nextPosition,
-        is_wholesale: input.isSized ? false : input.isWholesale ?? false,
+        is_wholesale:
+          input.isSized || input.isVariant ? false : input.isWholesale ?? false,
         wholesale_tiers:
-          !input.isSized && input.isWholesale
+          !input.isSized && !input.isVariant && input.isWholesale
             ? input.wholesaleTiers.map((t) => ({
                 title: t.title,
                 price: Number(t.price),
@@ -192,10 +199,17 @@ export class ProductService implements BaseProductService {
         is_sold_out: input.isSoldOut ?? false,
         is_hidden: input.isHidden ?? false,
         is_sized: input.isSized ?? false,
-        sizes: input.isSized
-          ? input.sizes.map((s) => ({
-              name: s.name,
-              stock: s.stock === null || s.stock === '' ? null : Number(s.stock),
+        sizes: input.isSized ? input.sizes.map(mapSize) : [],
+        is_variant: input.isVariant ?? false,
+        variants: input.isVariant
+          ? input.variants.map((v) => ({
+              id: v.id || crypto.randomUUID(),
+              name: v.name,
+              price: v.price === '' ? 0 : Number(v.price),
+              originalPrice:
+                v.originalPrice === '' ? 0 : Number(v.originalPrice),
+              photos: v.photos ?? [],
+              sizes: (v.sizes ?? []).map(mapSize),
             }))
           : [],
       })
@@ -244,9 +258,10 @@ export class ProductService implements BaseProductService {
       stock: input.stock,
       sku: input.sku || null,
       production_cost: input.productionCost ? Number(input.productionCost) : null,
-      is_wholesale: input.isSized ? false : input.isWholesale ?? false,
+      is_wholesale:
+        input.isSized || input.isVariant ? false : input.isWholesale ?? false,
       wholesale_tiers:
-        !input.isSized && input.isWholesale
+        !input.isSized && !input.isVariant && input.isWholesale
           ? input.wholesaleTiers.map((t) => ({
               title: t.title,
               price: Number(t.price),
@@ -255,10 +270,16 @@ export class ProductService implements BaseProductService {
       is_sold_out: input.isSoldOut ?? false,
       is_hidden: input.isHidden ?? false,
       is_sized: input.isSized ?? false,
-      sizes: input.isSized
-        ? input.sizes.map((s) => ({
-            name: s.name,
-            stock: s.stock === null || s.stock === '' ? null : Number(s.stock),
+      sizes: input.isSized ? input.sizes.map(mapSize) : [],
+      is_variant: input.isVariant ?? false,
+      variants: input.isVariant
+        ? input.variants.map((v) => ({
+            id: v.id || crypto.randomUUID(),
+            name: v.name,
+            price: v.price === '' ? 0 : Number(v.price),
+            originalPrice: v.originalPrice === '' ? 0 : Number(v.originalPrice),
+            photos: v.photos ?? [],
+            sizes: (v.sizes ?? []).map(mapSize),
           }))
         : [],
     };

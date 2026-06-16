@@ -400,6 +400,7 @@ export class EcommerceService implements BaseEcommerceService {
       productId: it.productId,
       quantity: it.quantity,
       size: it.size ?? null,
+      variantId: it.variantId ?? null,
     }));
     const { error } = await this.client.rpc('decrement_product_stock', {
       p_tenant_id: tenantId,

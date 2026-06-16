@@ -7,6 +7,10 @@ export interface OrderItem {
   photo?: string;
   sku?: string | null;
   size?: string | null;
+  /** Variant id chosen at order time (when the product has variants). */
+  variantId?: string | null;
+  /** Variant label snapshot, shown next to the product name. */
+  variantName?: string | null;
   isCustom?: boolean;
   description?: string;
 }

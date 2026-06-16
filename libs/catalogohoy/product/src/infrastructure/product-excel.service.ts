@@ -14,23 +14,46 @@ export class ProductExcelService {
     try {
       const rows = products.map((p) => ({
         nombre: p.name,
-        descripcion: p.description ?? '',
+        descripcion: this.stripHtml(p.description ?? ''),
         precio: p.price,
         precio_promocional: p.pricePromotional || '',
         stock: p.stock ?? '',
         sku: p.sku ?? '',
         costo_produccion: p.productionCost ?? '',
         categorias: p.categoryList.categories.map((c) => c.name).join(', '),
+        tallas: this.formatSizes(p.sizes),
+        mayoreo: p.isWholesale
+          ? p.wholesaleTiers.map((t) => `${t.title}: ${t.price}`).join(' | ')
+          : '',
+        variantes: p.isVariant
+          ? p.variants
+              .map((v) => {
+                const tallas = v.sizes?.length
+                  ? ` [tallas: ${this.formatSizes(v.sizes)}]`
+                  : '';
+                const original = v.originalPrice
+                  ? ` (antes ${v.originalPrice})`
+                  : '';
+                return `${v.name}: ${v.price}${original}${tallas}`;
+              })
+              .join(' | ')
+          : '',
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(rows);
 
+      // Cap the auto width so long values (image URLs, variants) don't blow the
+      // column out to thousands of chars.
       const colWidths = Object.keys(rows[0] ?? {}).map((key) => ({
-        wch:
+        wch: Math.min(
+          60,
           Math.max(
             key.length,
-            ...rows.map((r) => String((r as Record<string, unknown>)[key]).length)
-          ) + 2,
+            ...rows.map(
+              (r) => String((r as Record<string, unknown>)[key] ?? '').length
+            )
+          ) + 2
+        ),
       }));
       worksheet['!cols'] = colWidths;
 
@@ -45,6 +68,24 @@ export class ProductExcelService {
     } catch {
       return E.left(new Error('Error al exportar productos'));
     }
+  }
+
+  /** Strips HTML tags + decodes entities so the description is plain text. */
+  private stripHtml(html: string): string {
+    if (!html) return '';
+    const el = document.createElement('div');
+    el.innerHTML = html;
+    return (el.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+
+  /** "S: 5, M: sin límite, L: 3" (omits stock when unlimited). */
+  private formatSizes(
+    sizes: { name: string; stock: number | null }[] | undefined
+  ): string {
+    if (!sizes?.length) return '';
+    return sizes
+      .map((s) => (s.stock != null ? `${s.name}: ${s.stock}` : s.name))
+      .join(', ');
   }
 
   public parseExcelFile(
@@ -167,6 +208,8 @@ export class ProductExcelService {
       isHidden: false,
       isSized: false,
       sizes: [],
+      isVariant: false,
+      variants: [],
     };
 
     return this.productService.create(input);
