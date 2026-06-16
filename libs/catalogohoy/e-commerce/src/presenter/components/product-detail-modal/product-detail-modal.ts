@@ -74,13 +74,12 @@ export class ProductDetailModal {
   /** Sentinel id for the synthetic "Producto original" option. */
   private static readonly BASE_ID = '__base__';
 
-  /** True when at least one size belongs to the base/original product. */
-  private readonly hasBaseSizes =
-    this.isSized && this.product.sizes.some((s) => !s.variantId);
+  /** True when the base/original product has its own sizes. */
+  private readonly hasBaseSizes = this.isSized && this.product.sizes.length > 0;
 
   /** Options shown in the public selector: the base/original product (only
    *  when it has its own sizes) followed by the real variants. The base uses
-   *  the product's own price and media. */
+   *  the product's own price, media and sizes. */
   public readonly selectorOptions: ProductVariant[] = (() => {
     const options: ProductVariant[] = [];
     if (this.isVariant && this.hasBaseSizes) {
@@ -91,6 +90,7 @@ export class ProductDetailModal {
         price: hasPromo ? this.product.pricePromotional : this.product.price,
         originalPrice: hasPromo ? this.product.price : 0,
         photos: this.product.photos,
+        sizes: this.product.sizes,
       });
     }
     options.push(...this.product.variants);
@@ -125,17 +125,11 @@ export class ProductDetailModal {
     return v && v.photos?.length ? v.photos : this.product.photos;
   });
 
-  /** Sizes shown for the current selection. With variants, only the sizes that
-   *  belong to the selected variant (variantId match, or unassigned ones). */
+  /** Sizes shown for the current selection: the selected option owns its own
+   *  sizes (the base/original option carries the product's sizes). */
   public readonly availableSizes = computed(() => {
-    if (!this.isSized) return [];
-    if (!this.isVariant) return this.product.sizes;
-    const sel = this.selectedVariant()?.id ?? null;
-    if (sel === ProductDetailModal.BASE_ID) {
-      // The "Producto original" option only shows base-assigned sizes.
-      return this.product.sizes.filter((s) => !s.variantId);
-    }
-    return this.product.sizes.filter((s) => s.variantId === sel);
+    if (this.isVariant) return this.selectedVariant()?.sizes ?? [];
+    return this.isSized ? this.product.sizes : [];
   });
 
   public readonly shouldClampDescription = (() => {
@@ -191,7 +185,7 @@ export class ProductDetailModal {
    *  stock when the product isn't sized / no size selected yet). `null`
    *  means unlimited. */
   public readonly effectiveStock = computed(() => {
-    if (this.isSized) {
+    if (this.availableSizes().length) {
       const size = this.selectedSize();
       if (!size) return null;
       const entry = this.availableSizes().find((s) => s.name === size);
@@ -208,7 +202,7 @@ export class ProductDetailModal {
       .filter(
         (i) =>
           i.productId === String(this.product.id) &&
-          (this.isSized ? i.size === size : true) &&
+          (this.availableSizes().length ? i.size === size : true) &&
           (this.isVariant ? i.variantId === vid : true)
       )
       .reduce((sum, i) => sum + i.quantity, 0);
@@ -221,7 +215,7 @@ export class ProductDetailModal {
   });
 
   public readonly canSubmit = computed(() => {
-    if (this.isSized && !this.selectedSize()) return false;
+    if (this.availableSizes().length && !this.selectedSize()) return false;
     if (this.isVariant && !this.selectedVariant()) return false;
     return this.canAddMore();
   });
@@ -324,7 +318,7 @@ export class ProductDetailModal {
   }
 
   onAddToCart() {
-    if (this.isSized && !this.selectedSize()) return;
+    if (this.availableSizes().length && !this.selectedSize()) return;
     if (this.isVariant && !this.selectedVariant()) return;
     const sel = this.selectedVariant();
     // The base/original option carries no real variant — add at the base price.

@@ -11,9 +11,6 @@ export interface ProductSize {
   name: string;
   /** Units available in this size. `null` = unlimited stock. */
   stock: number | null;
-  /** When the product also has variants, the variant this size belongs to.
-   *  `null` = applies to the product regardless of variant. */
-  variantId?: string | null;
 }
 
 export interface ProductVariant {
@@ -28,6 +25,9 @@ export interface ProductVariant {
   /** Own media (images and/or videos). When empty, the variant falls back to
    *  the product's media. The first item is the variant cover. */
   photos: string[];
+  /** This variant's own sizes, each with its own stock. Empty = the variant
+   *  has no sizes (added directly to the cart). */
+  sizes: ProductSize[];
 }
 
 export class Product extends Entity {

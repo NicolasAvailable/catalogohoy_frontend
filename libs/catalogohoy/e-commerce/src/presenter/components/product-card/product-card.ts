@@ -101,7 +101,7 @@ export class ProductCard {
   public readonly variantPriceRange = computed(() => {
     const p = this.product();
     const prices = p.variants.map((v) => v.price);
-    const hasBaseSizes = p.isSized && p.sizes.some((s) => !s.variantId);
+    const hasBaseSizes = p.isSized && p.sizes.length > 0;
     if (hasBaseSizes) {
       prices.push(p.pricePromotional > 0 ? p.pricePromotional : p.price);
     }

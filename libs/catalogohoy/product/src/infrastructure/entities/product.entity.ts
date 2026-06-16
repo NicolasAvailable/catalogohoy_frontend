@@ -19,7 +19,7 @@ export interface ProductEntity {
   is_sold_out: boolean;
   is_hidden: boolean;
   is_sized?: boolean;
-  sizes?: { name: string; stock: number | null; variantId?: string | null }[];
+  sizes?: { name: string; stock: number | null }[];
   is_variant?: boolean;
   variants?: {
     id: string;
@@ -27,5 +27,6 @@ export interface ProductEntity {
     price: number;
     originalPrice: number;
     photos: string[];
+    sizes?: { name: string; stock: number | null }[];
   }[];
 }

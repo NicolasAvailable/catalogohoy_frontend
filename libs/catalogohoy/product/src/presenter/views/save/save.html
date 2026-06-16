@@ -255,7 +255,8 @@
         <div formArrayName="sizes" class="flex flex-col gap-4">
           @if (form.controls.isVariant.value) {
           <p class="text-xs text-grey-400 -mt-2">
-            Tu producto tiene variantes: elegí a qué variante pertenece cada talla.
+            Estas son las tallas del <strong>Producto original</strong>. Cada
+            variante tiene sus propias tallas más abajo.
           </p>
           }
           @for (size of sizesArray.controls; track $index) {
@@ -267,18 +268,6 @@
                 placeholder="Ej: S, M, L, 42"
               />
             </div>
-            @if (form.controls.isVariant.value) {
-            <div class="flex flex-col gap-2 flex-1">
-              <label class="text-sm text-grey-400 font-semibold">Variante</label>
-              <ui-select
-                formControlName="variantId"
-                [options]="variantOptions()"
-                optionLabel="name"
-                optionValue="id"
-                placeholder="Variante"
-              />
-            </div>
-            }
             <div class="flex flex-col gap-2 flex-1">
               <label class="text-sm text-grey-400 font-semibold">Stock (opcional)</label>
               <ui-input-number
@@ -588,7 +577,7 @@
         @if (variantsArray.length > 0) {
         <hr class="border-grey-50" />
         <div formArrayName="variants" class="flex flex-col gap-4">
-          @for (variant of variantsArray.controls; track $index) {
+          @for (variant of variantsArray.controls; track $index; let vIndex = $index) {
           <div
             [formGroupName]="$index"
             class="flex flex-col gap-3 p-4 border border-grey-100 rounded-xl"
@@ -695,6 +684,51 @@
                 }
               </div>
               }
+            </div>
+
+            <!-- Tallas de esta variante -->
+            <div formArrayName="sizes" class="flex flex-col gap-2">
+              <label class="text-sm text-grey-400 font-semibold"
+                >Tallas de esta variante (opcional)</label
+              >
+              @for (vsize of variantSizesArray(vIndex).controls; track $index) {
+              <div [formGroupName]="$index" class="flex items-end gap-3">
+                <div class="flex flex-col gap-2 flex-1">
+                  <ui-input-text
+                    formControlName="name"
+                    placeholder="Ej: S, M, L, 42"
+                  />
+                </div>
+                <div class="flex flex-col gap-2 flex-1">
+                  <ui-input-number
+                    formControlName="stock"
+                    mode="decimal"
+                    [minFractionDigits]="0"
+                    [maxFractionDigits]="0"
+                    [showButtons]="false"
+                    placeholder="Stock (sin límite)"
+                  />
+                </div>
+                <button
+                  type="button"
+                  (click)="removeVariantSize(vIndex, $index)"
+                  class="mb-1 p-2 text-grey-400 hover:text-red-500 cursor-pointer"
+                >
+                  <ui-icon name="trash" styleClass="size-5" />
+                </button>
+              </div>
+              }
+              <div class="flex">
+                <ui-button
+                  label="Agregar talla"
+                  icon="circle-plus"
+                  variant="outlined"
+                  severity="contrast"
+                  size="small"
+                  [fluid]="false"
+                  (click)="addVariantSize(vIndex)"
+                />
+              </div>
             </div>
           </div>
           }

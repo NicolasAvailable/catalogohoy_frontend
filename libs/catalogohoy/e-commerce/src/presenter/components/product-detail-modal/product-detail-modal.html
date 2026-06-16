@@ -196,7 +196,7 @@
         </div>
       </div>
       }
-      @if (isSized) {
+      @if (availableSizes().length) {
       <div class="pdm__sizes">
         <span class="pdm__sizes-label">Selecciona una talla</span>
         <div class="pdm__sizes-grid" role="radiogroup" aria-label="Talla">
@@ -249,7 +249,7 @@
         (click)="onAddToCart()"
       >
         <ui-icon name="shoppingCart" styleClass="size-5" />
-        <span>{{ isSized && !selectedSize() ? 'Selecciona una talla' : 'Agregar al carrito' }}</span>
+        <span>{{ availableSizes().length && !selectedSize() ? 'Selecciona una talla' : 'Agregar al carrito' }}</span>
         <span class="pdm__total">
           @if (showReferencePrice()) {
           {{ cs() }}{{ displayPrice * quantity() }}

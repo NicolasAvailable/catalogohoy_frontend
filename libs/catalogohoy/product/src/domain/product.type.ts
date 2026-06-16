@@ -13,7 +13,7 @@ export type CreateProductInput = {
   isSoldOut: boolean;
   isHidden: boolean;
   isSized: boolean;
-  sizes: { name: string; stock: string | null; variantId?: string | null }[];
+  sizes: { name: string; stock: string | null }[];
   isVariant: boolean;
   variants: {
     id: string | null;
@@ -21,6 +21,7 @@ export type CreateProductInput = {
     price: string;
     originalPrice: string;
     photos: string[];
+    sizes: { name: string; stock: string | null }[];
   }[];
 };
 

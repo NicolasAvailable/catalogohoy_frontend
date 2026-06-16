@@ -45,7 +45,6 @@ import {
   MultiSelectComponent,
   ProductMediaComponent,
   RadioButtonComponent,
-  SelectComponent,
   ToggleComponent,
   UploaderComponent,
 } from '@ui';
@@ -71,7 +70,6 @@ import { ProductService } from '../../../infrastructure';
     MultiSelectComponent,
     PlanLimitDialogComponent,
     ProductMediaComponent,
-    SelectComponent,
     ToggleComponent,
   ],
   templateUrl: './save.html',
@@ -206,19 +204,10 @@ export default class Save implements OnInit {
     { initialValue: this.form.controls.isSized.value }
   );
 
-  /** Options for the per-size variant select — reactive to variant name edits
-   *  so each size row can pick which variant it belongs to. */
-  private readonly variantsValue = toSignal(this.variantsArray.valueChanges, {
-    initialValue: this.variantsArray.value,
-  });
-  public readonly variantOptions = computed(() => {
-    const variants = (
-      (this.variantsValue() ?? []) as { id: string; name: string }[]
-    ).map((v, i) => ({ id: v.id, name: v.name?.trim() || `Variante ${i + 1}` }));
-    // The first option is the base/original product so a size can stay
-    // unattached to any specific variant (default).
-    return [{ id: Save.BASE_VARIANT, name: 'Producto (original)' }, ...variants];
-  });
+  /** Sizes for a specific variant (each variant owns its tallas). */
+  public variantSizesArray(variantIndex: number): FormArray {
+    return this.variantsArray.at(variantIndex).get('sizes') as FormArray;
+  }
 
   /** Sum of stock across all sizes. `null` when any size is unlimited
    *  (so the product as a whole inherits "unlimited"). */
@@ -327,16 +316,6 @@ export default class Save implements OnInit {
     this.form.controls.price.updateValueAndValidity();
   }
 
-  /** Sentinel used in the per-size variant select to mean "the base/original
-   *  product" (no specific variant). Persisted as `null`. */
-  public static readonly BASE_VARIANT = '';
-
-  private clearSizesVariant(): void {
-    this.sizesArray.controls.forEach((c) =>
-      c.get('variantId')?.setValue(Save.BASE_VARIANT)
-    );
-  }
-
   public onWholesaleToggle(): void {
     const isWholesale = this.form.controls.isWholesale.value;
     if (isWholesale) {
@@ -388,15 +367,26 @@ export default class Save implements OnInit {
       this.fb.group({
         name: ['', Validators.required],
         stock: [null as string | null],
-        // New sizes default to the base/original product; the seller can
-        // reassign them to a specific variant from the per-row select.
-        variantId: [Save.BASE_VARIANT],
       })
     );
   }
 
   public removeSize(index: number): void {
     this.sizesArray.removeAt(index);
+  }
+
+  /** Per-variant sizes — each variant owns its tallas. */
+  public addVariantSize(variantIndex: number): void {
+    this.variantSizesArray(variantIndex).push(
+      this.fb.group({
+        name: ['', Validators.required],
+        stock: [null as string | null],
+      })
+    );
+  }
+
+  public removeVariantSize(variantIndex: number, sizeIndex: number): void {
+    this.variantSizesArray(variantIndex).removeAt(sizeIndex);
   }
 
   /** True while the current plan still allows adding another variant.
@@ -425,12 +415,13 @@ export default class Save implements OnInit {
     }
     this.variantsArray.push(
       this.fb.group({
-        // Stable id generated up-front so per-size selects can reference it.
         id: [crypto.randomUUID() as string | null],
         name: ['', Validators.required],
         price: ['', Validators.required],
         originalPrice: [''],
         photos: [[] as string[]],
+        // Each variant owns its tallas.
+        sizes: this.fb.array([]),
       })
     );
     this.form.controls.isVariant.setValue(true);
@@ -441,7 +432,6 @@ export default class Save implements OnInit {
     this.variantsArray.removeAt(index);
     if (this.variantsArray.length === 0) {
       this.form.controls.isVariant.setValue(false);
-      this.clearSizesVariant();
     }
     this.updatePriceValidator();
   }
@@ -530,7 +520,6 @@ export default class Save implements OnInit {
         this.fb.group({
           name: [size.name, Validators.required],
           stock: [size.stock != null ? String(size.stock) : null],
-          variantId: [size.variantId ?? Save.BASE_VARIANT],
         })
       );
     });
@@ -551,6 +540,14 @@ export default class Save implements OnInit {
             variant.originalPrice ? String(variant.originalPrice) : '',
           ],
           photos: [variant.photos ?? []],
+          sizes: this.fb.array(
+            (variant.sizes ?? []).map((s) =>
+              this.fb.group({
+                name: [s.name, Validators.required],
+                stock: [s.stock != null ? String(s.stock) : null],
+              })
+            )
+          ),
         })
       );
     });
