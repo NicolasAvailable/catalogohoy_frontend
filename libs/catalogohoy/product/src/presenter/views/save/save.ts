@@ -211,11 +211,14 @@ export default class Save implements OnInit {
   private readonly variantsValue = toSignal(this.variantsArray.valueChanges, {
     initialValue: this.variantsArray.value,
   });
-  public readonly variantOptions = computed(() =>
-    ((this.variantsValue() ?? []) as { id: string; name: string }[]).map(
-      (v, i) => ({ id: v.id, name: v.name?.trim() || `Variante ${i + 1}` })
-    )
-  );
+  public readonly variantOptions = computed(() => {
+    const variants = (
+      (this.variantsValue() ?? []) as { id: string; name: string }[]
+    ).map((v, i) => ({ id: v.id, name: v.name?.trim() || `Variante ${i + 1}` }));
+    // The first option is the base/original product so a size can stay
+    // unattached to any specific variant (default).
+    return [{ id: Save.BASE_VARIANT, name: 'Producto (original)' }, ...variants];
+  });
 
   /** Sum of stock across all sizes. `null` when any size is unlimited
    *  (so the product as a whole inherits "unlimited"). */
@@ -324,22 +327,13 @@ export default class Save implements OnInit {
     this.form.controls.price.updateValueAndValidity();
   }
 
-  private firstVariantId(): string | null {
-    return this.variantsArray.at(0)?.get('id')?.value ?? null;
-  }
-
-  /** Attach sizes that have no variant to the first variant — used when
-   *  variants get turned on so existing sizes belong to a real variant. */
-  private syncSizesToFirstVariant(): void {
-    const first = this.firstVariantId();
-    this.sizesArray.controls.forEach((c) => {
-      if (!c.get('variantId')?.value) c.get('variantId')?.setValue(first);
-    });
-  }
+  /** Sentinel used in the per-size variant select to mean "the base/original
+   *  product" (no specific variant). Persisted as `null`. */
+  public static readonly BASE_VARIANT = '';
 
   private clearSizesVariant(): void {
     this.sizesArray.controls.forEach((c) =>
-      c.get('variantId')?.setValue(null)
+      c.get('variantId')?.setValue(Save.BASE_VARIANT)
     );
   }
 
@@ -394,12 +388,9 @@ export default class Save implements OnInit {
       this.fb.group({
         name: ['', Validators.required],
         stock: [null as string | null],
-        // When variants are on, a new size defaults to the first variant.
-        variantId: [
-          this.form.controls.isVariant.value
-            ? this.firstVariantId()
-            : (null as string | null),
-        ],
+        // New sizes default to the base/original product; the seller can
+        // reassign them to a specific variant from the per-row select.
+        variantId: [Save.BASE_VARIANT],
       })
     );
   }
@@ -439,11 +430,10 @@ export default class Save implements OnInit {
         name: ['', Validators.required],
         price: ['', Validators.required],
         originalPrice: [''],
-        photo: [null as string | null],
+        photos: [[] as string[]],
       })
     );
     this.form.controls.isVariant.setValue(true);
-    if (wasEmpty) this.syncSizesToFirstVariant();
     this.updatePriceValidator();
   }
 
@@ -456,15 +446,23 @@ export default class Save implements OnInit {
     this.updatePriceValidator();
   }
 
-  /** The variant uploader runs in single mode, so `valueChange` emits one URL. */
-  public setVariantPhoto(index: number, url: string | string[]): void {
-    const photo = Array.isArray(url) ? url[0] : url;
-    if (!photo) return;
-    this.variantsArray.at(index).get('photo')?.setValue(photo);
+  /** Variant uploader is multiple — append the uploaded media (images/videos)
+   *  to the variant's own gallery, just like the product media uploader. */
+  public addVariantPhotos(index: number, url: string | string[]): void {
+    const urls = Array.isArray(url) ? url : [url];
+    const ctrl = this.variantsArray.at(index).get('photos');
+    const current = (ctrl?.value as string[]) ?? [];
+    const merged = [
+      ...current,
+      ...urls.filter((u) => u && !current.includes(u)),
+    ];
+    ctrl?.setValue(merged);
   }
 
-  public removeVariantPhoto(index: number): void {
-    this.variantsArray.at(index).get('photo')?.setValue(null);
+  public removeVariantPhoto(index: number, url: string): void {
+    const ctrl = this.variantsArray.at(index).get('photos');
+    const current = (ctrl?.value as string[]) ?? [];
+    ctrl?.setValue(current.filter((u) => u !== url));
   }
 
   public addTier(): void {
@@ -532,7 +530,7 @@ export default class Save implements OnInit {
         this.fb.group({
           name: [size.name, Validators.required],
           stock: [size.stock != null ? String(size.stock) : null],
-          variantId: [size.variantId ?? null],
+          variantId: [size.variantId ?? Save.BASE_VARIANT],
         })
       );
     });
@@ -552,7 +550,7 @@ export default class Save implements OnInit {
           originalPrice: [
             variant.originalPrice ? String(variant.originalPrice) : '',
           ],
-          photo: [variant.photo ?? null],
+          photos: [variant.photos ?? []],
         })
       );
     });

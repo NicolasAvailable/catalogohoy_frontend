@@ -116,7 +116,7 @@ export const CartStore = signalStore(
           ? product.pricePromotional
           : product.price;
       const price = variant ? variant.price : basePrice;
-      const photo = (variant?.photo || product.photos[0]) ?? '';
+      const photo = (variant?.photos?.[0] || product.photos[0]) ?? '';
 
       const item = new CartItem(
         String(product.id),

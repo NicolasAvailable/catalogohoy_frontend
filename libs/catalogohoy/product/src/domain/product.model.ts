@@ -25,8 +25,9 @@ export interface ProductVariant {
   price: number;
   /** Optional struck-through "before" price. `0` = none. */
   originalPrice: number;
-  /** Optional own image; falls back to the product cover when null. */
-  photo: string | null;
+  /** Own media (images and/or videos). When empty, the variant falls back to
+   *  the product's media. The first item is the variant cover. */
+  photos: string[];
 }
 
 export class Product extends Entity {

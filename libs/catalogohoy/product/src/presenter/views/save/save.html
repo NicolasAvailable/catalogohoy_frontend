@@ -641,43 +641,52 @@
             </div>
             <div class="flex flex-col gap-2">
               <label class="text-sm text-grey-400 font-semibold"
-                >Imagen (opcional)</label
+                >Imágenes y videos (opcional)</label
               >
-              @if (variant.get('photo')?.value) {
-              <div
-                class="relative w-24 h-24 rounded-lg overflow-hidden border border-grey-200"
-              >
-                <img
-                  [src]="variant.get('photo')?.value"
-                  alt="Imagen de la variante"
-                  class="w-full h-full object-cover"
-                />
-                <button
-                  type="button"
-                  (click)="removeVariantPhoto($index)"
-                  class="absolute top-1 right-1 p-1 bg-white/80 rounded-sm cursor-pointer hover:bg-white text-grey-500"
-                >
-                  <ui-icon name="trash" size="14" />
-                </button>
-              </div>
-              } @else {
               <ui-uploader
-                (valueChange)="setVariantPhoto($index, $event)"
-                [accept]="'image/*'"
+                (valueChange)="addVariantPhotos($index, $event)"
+                [accept]="'image/*,video/*'"
                 [max]="{ mb: 40 }"
-                [multiple]="false"
+                [multiple]="true"
               >
                 <ng-template #picker let-pick="pick">
                   <button
                     type="button"
                     (click)="pick()"
-                    class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-primary-500 bg-primary-50/10 text-primary-500 text-sm font-semibold cursor-pointer hover:bg-primary-50/20"
+                    class="flex flex-col items-center justify-center w-full border-2 border-dashed border-primary-500 bg-primary-50/10 rounded-xl py-6 cursor-pointer hover:bg-primary-50/20 transition-colors"
                   >
-                    <ui-icon name="circle-plus" size="18" />
-                    Subir imagen
+                    <ui-icon
+                      name="circle-plus"
+                      size="22"
+                      styleClass="text-primary-500 mb-1"
+                    />
+                    <span class="text-sm font-semibold text-primary-500"
+                      >Arrastrá, soltá o subí imágenes o videos</span
+                    >
                   </button>
                 </ng-template>
               </ui-uploader>
+              @if (variant.get('photos')?.value?.length) {
+              <div class="flex flex-wrap gap-2 mt-1">
+                @for (media of variant.get('photos')?.value; track media) {
+                <div
+                  class="relative w-20 h-20 rounded-lg overflow-hidden border border-grey-200"
+                >
+                  <ui-product-media
+                    [url]="media"
+                    [controls]="false"
+                    styleClass="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    (click)="removeVariantPhoto($index, media)"
+                    class="absolute top-1 right-1 p-1 bg-white/80 rounded-sm cursor-pointer hover:bg-white text-grey-500"
+                  >
+                    <ui-icon name="trash" size="14" />
+                  </button>
+                </div>
+                }
+              </div>
               }
             </div>
           </div>

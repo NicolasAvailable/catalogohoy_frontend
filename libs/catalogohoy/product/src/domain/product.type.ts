@@ -20,7 +20,7 @@ export type CreateProductInput = {
     name: string;
     price: string;
     originalPrice: string;
-    photo: string | null;
+    photos: string[];
   }[];
 };
 

@@ -26,6 +26,6 @@ export interface ProductEntity {
     name: string;
     price: number;
     originalPrice: number;
-    photo: string | null;
+    photos: string[];
   }[];
 }

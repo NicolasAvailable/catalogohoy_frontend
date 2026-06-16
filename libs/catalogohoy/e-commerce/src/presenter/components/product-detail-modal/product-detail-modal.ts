@@ -80,7 +80,16 @@ export class ProductDetailModal {
     // The available sizes change per variant, so drop the size selection.
     this.selectedSize.set(null);
     this.quantity.set(1);
+    // The gallery swaps to the variant's own media — reset to the first slide.
+    this.currentImageIndex.set(0);
   }
+
+  /** Media shown in the gallery: the selected variant's own photos/videos when
+   *  it has any, otherwise the product's media. */
+  public readonly galleryMedia = computed(() => {
+    const v = this.selectedVariant();
+    return v && v.photos?.length ? v.photos : this.product.photos;
+  });
 
   /** Sizes shown for the current selection. With variants, only the sizes that
    *  belong to the selected variant (variantId match, or unassigned ones). */
@@ -220,8 +229,9 @@ export class ProductDetailModal {
   }
 
   get currentImage(): string {
-    if (!this.product.photos.length) return 'assets/placeholder-product.png';
-    return this.product.photos[this.currentImageIndex()] || this.product.photos[0];
+    const media = this.galleryMedia();
+    if (!media.length) return 'assets/placeholder-product.png';
+    return media[this.currentImageIndex()] || media[0];
   }
 
   get currentIsVideo(): boolean {

@@ -198,7 +198,7 @@ export class ProductService implements BaseProductService {
               name: s.name,
               stock:
                 s.stock === null || s.stock === '' ? null : Number(s.stock),
-              variantId: input.isVariant ? s.variantId ?? null : null,
+              variantId: input.isVariant ? s.variantId || null : null,
             }))
           : [],
         is_variant: input.isVariant ?? false,
@@ -209,7 +209,7 @@ export class ProductService implements BaseProductService {
               price: v.price === '' ? 0 : Number(v.price),
               originalPrice:
                 v.originalPrice === '' ? 0 : Number(v.originalPrice),
-              photo: v.photo || null,
+              photos: v.photos ?? [],
             }))
           : [],
       })
@@ -284,7 +284,7 @@ export class ProductService implements BaseProductService {
             name: v.name,
             price: v.price === '' ? 0 : Number(v.price),
             originalPrice: v.originalPrice === '' ? 0 : Number(v.originalPrice),
-            photo: v.photo || null,
+            photos: v.photos ?? [],
           }))
         : [],
     };

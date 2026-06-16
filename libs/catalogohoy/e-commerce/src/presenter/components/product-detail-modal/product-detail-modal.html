@@ -10,14 +10,14 @@
 
   <!-- Gallery -->
   <div class="pdm__gallery">
-    @if (product.photos.length) {
+    @if (galleryMedia().length) {
     <div
       #carousel
       class="pdm__carousel"
       [style.--media-aspect]="currentSlideAspect()"
       (scroll)="onCarouselScroll()"
     >
-      @for (photo of product.photos; track $index) {
+      @for (photo of galleryMedia(); track photo) {
       <div class="pdm__carousel-slide">
         <ui-product-media
           [url]="photo"
@@ -45,9 +45,9 @@
     </div>
     }
 
-    @if (product.photos.length > 1) {
+    @if (galleryMedia().length > 1) {
     <div class="pdm__thumbnails">
-      @for (photo of product.photos; track $index) {
+      @for (photo of galleryMedia(); track photo) {
       <button
         type="button"
         class="pdm__thumbnail"
@@ -181,11 +181,12 @@
               <span class="w-2.5 h-2.5 rounded-full bg-primary-500"></span>
               }
             </span>
-            @if (variant.photo) {
-            <img
-              [src]="variant.photo"
+            @if (variant.photos?.length) {
+            <ui-product-media
+              [url]="variant.photos![0]"
               [alt]="variant.name"
-              class="w-10 h-10 rounded-lg object-cover shrink-0"
+              [controls]="false"
+              styleClass="w-10 h-10 rounded-lg object-cover shrink-0"
             />
             }
             <span class="flex-1 font-medium text-grey-700">{{ variant.name }}</span>
