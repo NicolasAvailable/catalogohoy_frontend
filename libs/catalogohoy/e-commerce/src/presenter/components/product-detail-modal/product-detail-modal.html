@@ -118,6 +118,77 @@
       }
     </div>
     }
+
+    <!-- Options (variant + sizes) live in the scrollable info so they sit
+         below the description; only the quantity + CTA stay in the fixed
+         footer (important on mobile, where the footer is sticky). -->
+    @if (!isOutOfStock && !isWholesale) {
+    @if (isVariant) {
+    <div class="flex flex-col gap-2 mt-4 mb-1">
+      <span class="text-sm font-semibold text-grey-500">Selecciona una opción</span>
+      <div class="flex flex-col gap-2" role="radiogroup" aria-label="Variante">
+        @for (variant of selectorOptions; track variant.id) {
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="selectedVariant()?.id === variant.id"
+          (click)="selectVariant(variant)"
+          [class]="
+            'flex items-center gap-3 p-2.5 rounded-xl border transition-colors text-left w-full cursor-pointer ' +
+            (selectedVariant()?.id === variant.id
+              ? 'border-primary-500 bg-primary-50/10'
+              : 'border-grey-200 hover:border-primary-300')
+          "
+        >
+          <span
+            [class]="
+              'flex items-center justify-center w-5 h-5 rounded-full border shrink-0 ' +
+              (selectedVariant()?.id === variant.id
+                ? 'border-primary-500'
+                : 'border-grey-300')
+            "
+          >
+            @if (selectedVariant()?.id === variant.id) {
+            <span class="w-2.5 h-2.5 rounded-full bg-primary-500"></span>
+            }
+          </span>
+          @if (variant.photos?.length) {
+          <ui-product-media
+            [url]="variant.photos![0]"
+            [alt]="variant.name"
+            [controls]="false"
+            styleClass="w-10 h-10 rounded-lg object-cover shrink-0"
+          />
+          }
+          <span class="flex-1 font-medium text-grey-700">{{ variant.name }}</span>
+          <span class="font-bold text-grey-900">{{ cs() }}{{ variant.price }}</span>
+        </button>
+        }
+      </div>
+    </div>
+    }
+    @if (availableSizes().length) {
+    <div class="pdm__sizes pdm__sizes--info">
+      <span class="pdm__sizes-label">Selecciona una talla</span>
+      <div class="pdm__sizes-grid" role="radiogroup" aria-label="Talla">
+        @for (size of availableSizes(); track size.name) {
+        <button
+          type="button"
+          class="pdm__size-pill"
+          [class.pdm__size-pill--selected]="selectedSize() === size.name"
+          [class.pdm__size-pill--disabled]="isSizeOutOfStock(size.name)"
+          [disabled]="isSizeOutOfStock(size.name)"
+          role="radio"
+          [attr.aria-checked]="selectedSize() === size.name"
+          (click)="selectSize(size.name)"
+        >
+          {{ size.name }}
+        </button>
+        }
+      </div>
+    </div>
+    }
+    }
   </div>
 
   <div class="pdm__footer">
@@ -152,72 +223,6 @@
         }
       </div>
       } @else {
-      @if (isVariant) {
-      <div class="flex flex-col gap-2 mb-3">
-        <span class="text-sm font-semibold text-grey-500">Selecciona una opción</span>
-        <div class="flex flex-col gap-2" role="radiogroup" aria-label="Variante">
-          @for (variant of selectorOptions; track variant.id) {
-          <button
-            type="button"
-            role="radio"
-            [attr.aria-checked]="selectedVariant()?.id === variant.id"
-            (click)="selectVariant(variant)"
-            [class]="
-              'flex items-center gap-3 p-2.5 rounded-xl border transition-colors text-left w-full cursor-pointer ' +
-              (selectedVariant()?.id === variant.id
-                ? 'border-primary-500 bg-primary-50/10'
-                : 'border-grey-200 hover:border-primary-300')
-            "
-          >
-            <span
-              [class]="
-                'flex items-center justify-center w-5 h-5 rounded-full border shrink-0 ' +
-                (selectedVariant()?.id === variant.id
-                  ? 'border-primary-500'
-                  : 'border-grey-300')
-              "
-            >
-              @if (selectedVariant()?.id === variant.id) {
-              <span class="w-2.5 h-2.5 rounded-full bg-primary-500"></span>
-              }
-            </span>
-            @if (variant.photos?.length) {
-            <ui-product-media
-              [url]="variant.photos![0]"
-              [alt]="variant.name"
-              [controls]="false"
-              styleClass="w-10 h-10 rounded-lg object-cover shrink-0"
-            />
-            }
-            <span class="flex-1 font-medium text-grey-700">{{ variant.name }}</span>
-            <span class="font-bold text-grey-900">{{ cs() }}{{ variant.price }}</span>
-          </button>
-          }
-        </div>
-      </div>
-      }
-      @if (availableSizes().length) {
-      <div class="pdm__sizes">
-        <span class="pdm__sizes-label">Selecciona una talla</span>
-        <div class="pdm__sizes-grid" role="radiogroup" aria-label="Talla">
-          @for (size of availableSizes(); track size.name) {
-          <button
-            type="button"
-            class="pdm__size-pill"
-            [class.pdm__size-pill--selected]="selectedSize() === size.name"
-            [class.pdm__size-pill--disabled]="isSizeOutOfStock(size.name)"
-            [disabled]="isSizeOutOfStock(size.name)"
-            role="radio"
-            [attr.aria-checked]="selectedSize() === size.name"
-            (click)="selectSize(size.name)"
-          >
-            {{ size.name }}
-          </button>
-          }
-        </div>
-      </div>
-      }
-
       <div class="pdm__quantity-row">
         <span class="pdm__qty-label">Cantidad</span>
         <div class="pdm__quantity-selector">
