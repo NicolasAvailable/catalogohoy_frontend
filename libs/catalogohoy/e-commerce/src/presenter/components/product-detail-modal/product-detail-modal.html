@@ -119,11 +119,10 @@
     </div>
     }
 
-    <!-- Options (variant + sizes) live in the scrollable info so they sit
-         below the description; only the quantity + CTA stay in the fixed
-         footer (important on mobile, where the footer is sticky). -->
-    @if (!isOutOfStock && !isWholesale) {
-    @if (isVariant) {
+    <!-- With variants, the option + size selectors live in the scrollable info
+         (below the description) so the sticky mobile footer doesn't overlap.
+         Without variants the size selector stays in the footer (see below). -->
+    @if (!isOutOfStock && !isWholesale && isVariant) {
     <div class="flex flex-col gap-2 mt-4 mb-1">
       <span class="text-sm font-semibold text-grey-500">Selecciona una opción</span>
       <div class="flex flex-col gap-2" role="radiogroup" aria-label="Variante">
@@ -166,7 +165,6 @@
         }
       </div>
     </div>
-    }
     @if (availableSizes().length) {
     <div class="pdm__sizes pdm__sizes--info">
       <span class="pdm__sizes-label">Selecciona una talla</span>
@@ -223,6 +221,28 @@
         }
       </div>
       } @else {
+      @if (!isVariant && availableSizes().length) {
+      <div class="pdm__sizes">
+        <span class="pdm__sizes-label">Selecciona una talla</span>
+        <div class="pdm__sizes-grid" role="radiogroup" aria-label="Talla">
+          @for (size of availableSizes(); track size.name) {
+          <button
+            type="button"
+            class="pdm__size-pill"
+            [class.pdm__size-pill--selected]="selectedSize() === size.name"
+            [class.pdm__size-pill--disabled]="isSizeOutOfStock(size.name)"
+            [disabled]="isSizeOutOfStock(size.name)"
+            role="radio"
+            [attr.aria-checked]="selectedSize() === size.name"
+            (click)="selectSize(size.name)"
+          >
+            {{ size.name }}
+          </button>
+          }
+        </div>
+      </div>
+      }
+
       <div class="pdm__quantity-row">
         <span class="pdm__qty-label">Cantidad</span>
         <div class="pdm__quantity-selector">
