@@ -234,6 +234,35 @@ export const OrderStore = signalStore(
         }
       },
 
+      async updateInternalComments(
+        id: number,
+        comments: string
+      ): Promise<E.Either<string, Order>> {
+        try {
+          const tenantId = await tenantStore.getTenantIdAsync();
+          if (!tenantId) return E.left('Tenant no encontrado');
+
+          const result = await orderService.updateInternalComments(
+            id,
+            tenantId,
+            comments
+          );
+
+          return result.fold(
+            (error) => E.left(error.message),
+            (order) => {
+              const updatedItems = store
+                .orderList()
+                .items.map((o) => (o.id === order.id ? order : o));
+              patchState(store, { orderList: new OrderList(updatedItems) });
+              return E.right(order);
+            }
+          );
+        } catch {
+          return E.left('Error inesperado');
+        }
+      },
+
       async deleteOrder(id: number): Promise<E.Either<string, void>> {
         try {
           const tenantId = await tenantStore.getTenantIdAsync();

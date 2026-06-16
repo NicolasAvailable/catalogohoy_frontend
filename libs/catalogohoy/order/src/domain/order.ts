@@ -33,6 +33,8 @@ export interface Order {
   phone?: string;
   email?: string;
   comments?: string;
+  /** Internal team notes — admin-only, never shown to the customer. */
+  internalComments?: string;
   paymentMethod?: string;
   /** Snapshot of the shipping option chosen at checkout. Local string union
    *  (not imported from ecommerce-config) to avoid a cross-lib cycle. */

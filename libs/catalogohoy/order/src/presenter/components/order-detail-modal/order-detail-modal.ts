@@ -49,6 +49,24 @@ export class OrderDetailModal {
   public readonly status = signal<OrderStatus>(this.order.status);
   public readonly isUpdating = signal(false);
 
+  /** Internal team notes (admin-only) — editable + saved from the modal. */
+  public readonly internalComments = signal(this.order.internalComments ?? '');
+  public readonly isSavingNotes = signal(false);
+
+  async saveInternalComments(): Promise<void> {
+    if (this.isSavingNotes()) return;
+    this.isSavingNotes.set(true);
+    const result = await this.orderStore.updateInternalComments(
+      this.order.id,
+      this.internalComments().trim()
+    );
+    result.fold(
+      (error) => this.toastService.error(new Exception(error)),
+      () => this.toastService.success('Notas internas guardadas')
+    );
+    this.isSavingNotes.set(false);
+  }
+
   public readonly statusOptions: { label: string; value: OrderStatus }[] = [
     { label: 'Pendiente', value: 'pending' },
     { label: 'Completada', value: 'completed' },

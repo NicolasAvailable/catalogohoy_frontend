@@ -180,6 +180,29 @@
           }
         </div>
       </div>
+
+      <!-- Notas internas del equipo (admin-only, no las ve el cliente) -->
+      <div class="flex flex-col gap-2">
+        <h4 class="text-xs font-bold text-grey-400 uppercase tracking-wider">
+          Notas internas (equipo)
+        </h4>
+        <textarea
+          [ngModel]="internalComments()"
+          (ngModelChange)="internalComments.set($event)"
+          rows="3"
+          placeholder="Notas para tu equipo — no las ve el cliente"
+          class="min-h-[5rem] rounded-xl border border-grey-200 bg-white px-4 py-3 text-sm text-grey-700 resize-none focus:outline-none focus:border-primary-400"
+        ></textarea>
+        <button
+          type="button"
+          (click)="saveInternalComments()"
+          [disabled]="isSavingNotes()"
+          class="self-end inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 disabled:opacity-60 cursor-pointer"
+        >
+          <ui-icon name="save" styleClass="size-4" />
+          {{ isSavingNotes() ? 'Guardando...' : 'Guardar nota' }}
+        </button>
+      </div>
     </div>
   </div>
 </div>

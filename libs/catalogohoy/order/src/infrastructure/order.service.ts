@@ -319,6 +319,24 @@ export class OrderService {
     return this.updateOrderStatus(id, tenantId, 'pending', 'cancelled');
   }
 
+  /** Saves internal team notes on an order (admin-only). */
+  async updateInternalComments(
+    id: number,
+    tenantId: number,
+    internalComments: string
+  ): Promise<E.Either<Error, Order>> {
+    const { data, error } = await this.client
+      .from('orders')
+      .update({ internal_comments: internalComments || null })
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .select()
+      .single();
+
+    if (error) return E.left(new Error(error.message));
+    return E.right(OrderMapper.toDomain(data));
+  }
+
   /** Restaura stock vía RPC `increment_product_stock` (SECURITY DEFINER).
    *  Soporta productos con sizes — el size se lee de cada item. */
   private async restoreStock(
