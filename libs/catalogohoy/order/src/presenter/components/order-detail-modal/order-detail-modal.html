@@ -12,7 +12,36 @@
     </button>
   </div>
 
+  <!-- Top tabs -->
+  <div class="flex items-center gap-6 px-6 border-b border-grey-100 shrink-0">
+    <button
+      type="button"
+      (click)="activeTab.set('detalle')"
+      [class]="
+        '-mb-px py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ' +
+        (activeTab() === 'detalle'
+          ? 'border-primary-500 text-grey-800'
+          : 'border-transparent text-grey-400 hover:text-grey-600')
+      "
+    >
+      Detalle de la orden
+    </button>
+    <button
+      type="button"
+      (click)="activeTab.set('notas')"
+      [class]="
+        '-mb-px py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ' +
+        (activeTab() === 'notas'
+          ? 'border-primary-500 text-grey-800'
+          : 'border-transparent text-grey-400 hover:text-grey-600')
+      "
+    >
+      Notas internas
+    </button>
+  </div>
+
   <!-- Body -->
+  @if (activeTab() === 'detalle') {
   <div class="flex flex-col lg:flex-row overflow-y-auto">
     <!-- Left: estado + productos -->
     <div class="flex-1 min-w-0 px-6 py-5 flex flex-col gap-5">
@@ -172,36 +201,9 @@
         </div>
       </div>
 
-      <!-- Tabs: comentarios del cliente / notas internas del equipo -->
-      <div class="flex flex-col gap-3">
-        <div class="flex items-center gap-5 border-b border-grey-100">
-          <button
-            type="button"
-            (click)="activeTab.set('comentarios')"
-            [class]="
-              '-mb-px pb-2 text-sm font-semibold border-b-2 transition-colors cursor-pointer ' +
-              (activeTab() === 'comentarios'
-                ? 'border-primary-500 text-grey-800'
-                : 'border-transparent text-grey-400 hover:text-grey-600')
-            "
-          >
-            Comentarios
-          </button>
-          <button
-            type="button"
-            (click)="activeTab.set('notas')"
-            [class]="
-              '-mb-px pb-2 text-sm font-semibold border-b-2 transition-colors cursor-pointer ' +
-              (activeTab() === 'notas'
-                ? 'border-primary-500 text-grey-800'
-                : 'border-transparent text-grey-400 hover:text-grey-600')
-            "
-          >
-            Notas internas
-          </button>
-        </div>
-
-        @if (activeTab() === 'comentarios') {
+      <!-- Comentarios del cliente -->
+      <div class="flex flex-col gap-2">
+        <h4 class="text-xs font-bold text-grey-400 uppercase tracking-wider">Comentarios</h4>
         <div
           class="min-h-[6rem] max-h-44 rounded-xl border border-grey-200 bg-white px-4 py-3 text-sm overflow-y-auto"
         >
@@ -211,27 +213,34 @@
           <p class="text-grey-300 italic">Sin comentarios del cliente</p>
           }
         </div>
-        } @else {
-        <div class="flex flex-col gap-2">
-          <textarea
-            [ngModel]="internalComments()"
-            (ngModelChange)="internalComments.set($event)"
-            rows="4"
-            placeholder="Notas para tu equipo — no las ve el cliente"
-            class="min-h-[6rem] rounded-xl border border-grey-200 bg-white px-4 py-3 text-sm text-grey-700 resize-none focus:outline-none focus:border-primary-400"
-          ></textarea>
-          <button
-            type="button"
-            (click)="saveInternalComments()"
-            [disabled]="isSavingNotes()"
-            class="self-end inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 disabled:opacity-60 cursor-pointer"
-          >
-            <ui-icon name="save" styleClass="size-4" />
-            {{ isSavingNotes() ? 'Guardando...' : 'Guardar nota' }}
-          </button>
-        </div>
-        }
       </div>
     </div>
   </div>
+  } @else {
+  <!-- Tab: notas internas del equipo -->
+  <div class="px-6 py-6 flex flex-col gap-3 overflow-y-auto">
+    <h4 class="text-xs font-bold text-grey-400 uppercase tracking-wider">
+      Notas internas (equipo)
+    </h4>
+    <p class="text-sm text-grey-400 -mt-1">
+      Estas notas son privadas para tu equipo — el cliente no las ve.
+    </p>
+    <textarea
+      [ngModel]="internalComments()"
+      (ngModelChange)="internalComments.set($event)"
+      rows="8"
+      placeholder="Escribí notas para tu equipo sobre esta orden..."
+      class="min-h-[12rem] rounded-xl border border-grey-200 bg-white px-4 py-3 text-sm text-grey-700 resize-none focus:outline-none focus:border-primary-400"
+    ></textarea>
+    <button
+      type="button"
+      (click)="saveInternalComments()"
+      [disabled]="isSavingNotes()"
+      class="self-end inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 disabled:opacity-60 cursor-pointer"
+    >
+      <ui-icon name="save" styleClass="size-4" />
+      {{ isSavingNotes() ? 'Guardando...' : 'Guardar cambios' }}
+    </button>
+  </div>
+  }
 </div>

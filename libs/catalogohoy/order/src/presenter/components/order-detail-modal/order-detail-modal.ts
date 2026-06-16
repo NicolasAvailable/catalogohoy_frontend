@@ -59,8 +59,8 @@ export class OrderDetailModal {
   public readonly internalComments = signal(this.order.internalComments ?? '');
   public readonly isSavingNotes = signal(false);
 
-  /** Right-panel tab: customer comments vs internal team notes. */
-  public readonly activeTab = signal<'comentarios' | 'notas'>('comentarios');
+  /** Top tab: full order detail vs internal team notes. */
+  public readonly activeTab = signal<'detalle' | 'notas'>('detalle');
 
   async saveInternalComments(): Promise<void> {
     if (this.isSavingNotes()) return;
