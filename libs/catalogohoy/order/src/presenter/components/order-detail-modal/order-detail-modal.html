@@ -89,7 +89,12 @@
               </td>
               <td class="py-3 px-3 text-center text-sm text-grey-600">{{ item.quantity }}</td>
               <td class="py-3 px-3 text-center text-sm text-grey-600">{{ item.size || '—' }}</td>
-              <td class="py-3 pl-3 text-right text-sm font-bold text-primary-600">{{ cs }}{{ item.total | number: '1.2-2' }}</td>
+              <td class="py-3 pl-3 text-right">
+                <div class="text-sm font-bold text-primary-600">{{ cs }}{{ item.total | number: '1.2-2' }}</div>
+                @if (showDualBs && bsRate) {
+                <div class="text-xs font-semibold text-grey-400">Bs. {{ item.total * bsRate | number: '1.2-2' }}</div>
+                }
+              </td>
             </tr>
             }
           </tbody>
@@ -167,9 +172,36 @@
         </div>
       </div>
 
-      <!-- Notas / comentarios -->
-      <div class="flex flex-col gap-2">
-        <h4 class="text-xs font-bold text-grey-400 uppercase tracking-wider">Comentarios</h4>
+      <!-- Tabs: comentarios del cliente / notas internas del equipo -->
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center gap-5 border-b border-grey-100">
+          <button
+            type="button"
+            (click)="activeTab.set('comentarios')"
+            [class]="
+              '-mb-px pb-2 text-sm font-semibold border-b-2 transition-colors cursor-pointer ' +
+              (activeTab() === 'comentarios'
+                ? 'border-primary-500 text-grey-800'
+                : 'border-transparent text-grey-400 hover:text-grey-600')
+            "
+          >
+            Comentarios
+          </button>
+          <button
+            type="button"
+            (click)="activeTab.set('notas')"
+            [class]="
+              '-mb-px pb-2 text-sm font-semibold border-b-2 transition-colors cursor-pointer ' +
+              (activeTab() === 'notas'
+                ? 'border-primary-500 text-grey-800'
+                : 'border-transparent text-grey-400 hover:text-grey-600')
+            "
+          >
+            Notas internas
+          </button>
+        </div>
+
+        @if (activeTab() === 'comentarios') {
         <div
           class="min-h-[6rem] max-h-44 rounded-xl border border-grey-200 bg-white px-4 py-3 text-sm overflow-y-auto"
         >
@@ -179,29 +211,26 @@
           <p class="text-grey-300 italic">Sin comentarios del cliente</p>
           }
         </div>
-      </div>
-
-      <!-- Notas internas del equipo (admin-only, no las ve el cliente) -->
-      <div class="flex flex-col gap-2">
-        <h4 class="text-xs font-bold text-grey-400 uppercase tracking-wider">
-          Notas internas (equipo)
-        </h4>
-        <textarea
-          [ngModel]="internalComments()"
-          (ngModelChange)="internalComments.set($event)"
-          rows="3"
-          placeholder="Notas para tu equipo — no las ve el cliente"
-          class="min-h-[5rem] rounded-xl border border-grey-200 bg-white px-4 py-3 text-sm text-grey-700 resize-none focus:outline-none focus:border-primary-400"
-        ></textarea>
-        <button
-          type="button"
-          (click)="saveInternalComments()"
-          [disabled]="isSavingNotes()"
-          class="self-end inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 disabled:opacity-60 cursor-pointer"
-        >
-          <ui-icon name="save" styleClass="size-4" />
-          {{ isSavingNotes() ? 'Guardando...' : 'Guardar nota' }}
-        </button>
+        } @else {
+        <div class="flex flex-col gap-2">
+          <textarea
+            [ngModel]="internalComments()"
+            (ngModelChange)="internalComments.set($event)"
+            rows="4"
+            placeholder="Notas para tu equipo — no las ve el cliente"
+            class="min-h-[6rem] rounded-xl border border-grey-200 bg-white px-4 py-3 text-sm text-grey-700 resize-none focus:outline-none focus:border-primary-400"
+          ></textarea>
+          <button
+            type="button"
+            (click)="saveInternalComments()"
+            [disabled]="isSavingNotes()"
+            class="self-end inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 disabled:opacity-60 cursor-pointer"
+          >
+            <ui-icon name="save" styleClass="size-4" />
+            {{ isSavingNotes() ? 'Guardando...' : 'Guardar nota' }}
+          </button>
+        </div>
+        }
       </div>
     </div>
   </div>

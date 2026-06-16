@@ -44,6 +44,12 @@ export class OrderDetailModal {
   public readonly cs: string = this.config.data.currencySymbol ?? '$';
   /** Show the bolivar total line — only for Venezuela-style dual catalogs. */
   public readonly showDualBs: boolean = this.config.data.showDualBs ?? false;
+  /** Exchange rate derived from the order snapshot, so per-line Bs amounts
+   *  match the order's stored total exactly. 0 when not applicable. */
+  public readonly bsRate: number =
+    this.order.totalUsd > 0 && this.order.totalBs
+      ? this.order.totalBs / this.order.totalUsd
+      : 0;
 
   /** Live status — updated in place when the user changes it from the modal. */
   public readonly status = signal<OrderStatus>(this.order.status);
@@ -52,6 +58,9 @@ export class OrderDetailModal {
   /** Internal team notes (admin-only) — editable + saved from the modal. */
   public readonly internalComments = signal(this.order.internalComments ?? '');
   public readonly isSavingNotes = signal(false);
+
+  /** Right-panel tab: customer comments vs internal team notes. */
+  public readonly activeTab = signal<'comentarios' | 'notas'>('comentarios');
 
   async saveInternalComments(): Promise<void> {
     if (this.isSavingNotes()) return;
