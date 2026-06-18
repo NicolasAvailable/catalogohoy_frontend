@@ -74,15 +74,14 @@ export class ProductDetailModal {
   /** Sentinel id for the synthetic "Producto original" option. */
   private static readonly BASE_ID = '__base__';
 
-  /** True when the base/original product has its own sizes. */
-  private readonly hasBaseSizes = this.isSized && this.product.sizes.length > 0;
-
-  /** Options shown in the public selector: the base/original product (only
-   *  when it has its own sizes) followed by the real variants. The base uses
-   *  the product's own price, media and sizes. */
+  /** Options shown in the public selector: the base/original product ALWAYS
+   *  first, followed by the real variants. The base uses the product's own
+   *  price, media and sizes (its sizes may be empty). Opening a product with
+   *  variants therefore lands on the original product by default — the buyer
+   *  then switches to a variant if they want. */
   public readonly selectorOptions: ProductVariant[] = (() => {
     const options: ProductVariant[] = [];
-    if (this.isVariant && this.hasBaseSizes) {
+    if (this.isVariant) {
       const hasPromo = this.product.pricePromotional > 0;
       options.push({
         id: ProductDetailModal.BASE_ID,
@@ -97,7 +96,8 @@ export class ProductDetailModal {
     return options;
   })();
 
-  /** Defaults to the first option so a price is always shown on open. */
+  /** Defaults to the base/original product so clicking a product always opens
+   *  on the product itself, not a variant. */
   public readonly selectedVariant = signal<ProductVariant | null>(
     this.isVariant ? this.selectorOptions[0] : null
   );
