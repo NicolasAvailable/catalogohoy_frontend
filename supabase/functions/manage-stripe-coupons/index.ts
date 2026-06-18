@@ -1,6 +1,9 @@
 // Internal-only edge function to manage Stripe coupons + promotion codes from
 // the company admin (apps/internal). The Stripe secret key never leaves the
-// server. Restricted to internal admins via an email allowlist.
+// server. Restricted to internal admins: the caller's JWT must pass the
+// public._assert_internal_admin() gate (same single source of truth as every
+// admin SQL RPC). An optional INTERNAL_ADMIN_EMAILS allowlist adds a second
+// layer when set.
 //
 // Actions (POST body { action, ... }):
 //   list_products  -> products + their prices (for the form dropdowns)
@@ -8,9 +11,9 @@
 //   create         -> create a coupon (+ optional promotion code)
 //   deactivate     -> deactivate a promotion code (active=false)
 //
-// Env required:
-//   STRIPE_SECRET_KEY        Stripe secret (live or test)
-//   INTERNAL_ADMIN_EMAILS    comma-separated allowlist of admin emails
+// Env:
+//   STRIPE_SECRET_KEY        Stripe secret (live or test) — required
+//   INTERNAL_ADMIN_EMAILS    optional comma-separated extra allowlist
 //   SUPABASE_URL / SUPABASE_ANON_KEY (auto-provided) — to verify the caller
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -96,7 +99,15 @@ Deno.serve(async (req) => {
     );
     const { data: userData } = await supabase.auth.getUser();
     const email = userData?.user?.email?.toLowerCase() ?? '';
-    if (!email || (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(email))) {
+    if (!email) return json({ error: 'No autorizado' }, 403);
+
+    // Primary gate: same single source of truth as every admin SQL RPC.
+    // Runs as the caller (authenticated role) so auth.uid() is the caller.
+    const { error: gateErr } = await supabase.rpc('_assert_internal_admin');
+    if (gateErr) return json({ error: 'No autorizado' }, 403);
+
+    // Optional extra allowlist, only enforced if INTERNAL_ADMIN_EMAILS is set.
+    if (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(email)) {
       return json({ error: 'No autorizado' }, 403);
     }
 
