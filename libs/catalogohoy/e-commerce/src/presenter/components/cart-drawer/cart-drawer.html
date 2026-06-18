@@ -49,6 +49,7 @@
             class="cart-item__image"
             [src]="item.photo || 'assets/placeholder-product.png'"
             [alt]="item.name"
+            loading="lazy"
           />
           <div class="cart-item__details">
             <h4 class="cart-item__name">{{ item.name }}</h4>

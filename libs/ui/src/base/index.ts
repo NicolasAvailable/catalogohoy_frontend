@@ -13,6 +13,7 @@ export * from './dialog';
 export * from './empty-list';
 export * from './header';
 export * from './icon';
+export * from './image';
 export * from './input';
 export * from './menu';
 export * from './message';
