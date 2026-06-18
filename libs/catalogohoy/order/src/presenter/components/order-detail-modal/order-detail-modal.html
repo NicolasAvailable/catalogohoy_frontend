@@ -68,7 +68,12 @@
               <td class="py-3 pr-4">
                 <div class="flex items-center gap-3">
                   @if (item.photo) {
-                  <img [src]="item.photo" [alt]="item.name" class="w-10 h-10 rounded-md object-cover shrink-0" />
+                  <ui-image
+                    [src]="item.photo"
+                    [alt]="item.name"
+                    styleClass="w-10 h-10 block rounded-md overflow-hidden shrink-0 cursor-zoom-in"
+                    imageClass="w-full h-full object-cover"
+                  />
                   } @else {
                   <div class="w-10 h-10 bg-grey-50 rounded-md flex items-center justify-center shrink-0">
                     <ui-icon name="package" styleClass="size-5 text-grey-300" />

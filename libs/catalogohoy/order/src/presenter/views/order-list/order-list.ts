@@ -22,6 +22,7 @@ import {
   dialogConfig,
   EmptyListComponent,
   IconComponent,
+  ImageComponent,
   InputSearchComponent,
   SelectComponent,
   SelectItemDirective,
@@ -36,7 +37,7 @@ import {
   Subject,
   Subscription,
 } from 'rxjs';
-import { Order, OrderStatus } from '../../../domain/order';
+import { Order, OrderItem, OrderStatus } from '../../../domain/order';
 import { OrderPdfService } from '../../../infrastructure/order-pdf.service';
 import { OrderRealtimeService } from '../../../infrastructure/order-realtime.service';
 import { OrderStore } from '../../../infrastructure/order.store';
@@ -60,6 +61,7 @@ type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
     DatepickerComponent,
     EmptyListComponent,
     InputSearchComponent,
+    ImageComponent,
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
@@ -114,6 +116,27 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly selectedDate = signal<Date | null>(null);
   public readonly isProcessing = signal(false);
   public readonly mobileShowAll = signal(false);
+
+  /** How many product lines to show before collapsing the products cell. */
+  public readonly PRODUCTS_PREVIEW = 3;
+  /** Order ids whose products cell is expanded ("Ver más"). */
+  private readonly expandedProducts = signal<Set<number>>(new Set());
+
+  public isProductsExpanded(orderId: number): boolean {
+    return this.expandedProducts().has(orderId);
+  }
+
+  public toggleProductsExpanded(orderId: number): void {
+    const next = new Set(this.expandedProducts());
+    if (next.has(orderId)) next.delete(orderId);
+    else next.add(orderId);
+    this.expandedProducts.set(next);
+  }
+
+  public visibleProducts(order: Order): OrderItem[] {
+    if (this.isProductsExpanded(order.id)) return order.products;
+    return order.products.slice(0, this.PRODUCTS_PREVIEW);
+  }
   // Pagination state — desktop table only (mobile keeps the "show all" toggle)
   public readonly pageFirst = signal(0);
   public readonly pageRows = signal(10);
@@ -185,15 +208,12 @@ export class OrderListComponent implements OnInit, OnDestroy {
     this.orderRealtime.subscribe();
 
     // Deep-link: ?order=ID abre el modal de detalle (botón "Ver pedido" de
-    // las notificaciones WhatsApp). Limpiamos el query param después.
+    // las notificaciones WhatsApp, o al recargar con el modal abierto). El
+    // query param se mantiene mientras el modal está abierto y se limpia al
+    // cerrarlo (ver openOrderDetail).
     const deepLinkOrderId = this.activatedRoute.snapshot.queryParamMap.get('order');
     if (deepLinkOrderId) {
       this.openDeepLinkOrder(Number(deepLinkOrderId));
-      this.router.navigate([], {
-        queryParams: { order: null },
-        queryParamsHandling: 'merge',
-        replaceUrl: true,
-      });
     }
   }
 
@@ -203,7 +223,9 @@ export class OrderListComponent implements OnInit, OnDestroy {
   }
 
   openOrderDetail(order: Order) {
-    this.dialogService.open(
+    // Reflect the open modal in the URL (?order=ID) so a reload reopens it.
+    this.setOrderParam(order.id);
+    const ref = this.dialogService.open(
       OrderDetailModal,
       dialogConfig({
         data: {
@@ -216,6 +238,24 @@ export class OrderListComponent implements OnInit, OnDestroy {
         contentStyle: { padding: '0', overflow: 'hidden' },
       })
     );
+    ref?.onClose.subscribe(() => this.clearOrderParam());
+  }
+
+  private setOrderParam(orderId: number): void {
+    this.router.navigate([], {
+      queryParams: { order: orderId },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  private clearOrderParam(): void {
+    if (!this.activatedRoute.snapshot.queryParamMap.has('order')) return;
+    this.router.navigate([], {
+      queryParams: { order: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   private async openDeepLinkOrder(orderId: number): Promise<void> {
