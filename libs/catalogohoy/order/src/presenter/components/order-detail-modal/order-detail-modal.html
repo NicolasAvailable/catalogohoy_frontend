@@ -99,6 +99,7 @@
               <th class="pb-2.5 pr-4 font-bold">Producto</th>
               <th class="pb-2.5 px-3 font-bold text-center">Cantidad</th>
               <th class="pb-2.5 px-3 font-bold text-center">Talla</th>
+              <th class="pb-2.5 px-3 font-bold text-center">SKU</th>
               <th class="pb-2.5 pl-3 font-bold text-right">Total</th>
             </tr>
           </thead>
@@ -122,13 +123,14 @@
                   <div class="flex flex-col">
                     <span class="font-semibold text-grey-800 text-sm">{{ item.name }}</span>
                     @if (item.variantName) {
-                    <span class="text-xs text-grey-400">{{ item.variantName }}</span>
+                    <span class="text-xs text-grey-400">Variante seleccionada: {{ item.variantName }}</span>
                     }
                   </div>
                 </div>
               </td>
               <td class="py-3 px-3 text-center text-sm text-grey-600">{{ item.quantity }}</td>
               <td class="py-3 px-3 text-center text-sm text-grey-600">{{ item.size || '—' }}</td>
+              <td class="py-3 px-3 text-center text-sm text-grey-600">{{ item.sku || '—' }}</td>
               <td class="py-3 pl-3 text-right">
                 <div class="text-sm font-bold text-primary-600">{{ cs }}{{ item.total | number: '1.2-2' }}</div>
                 @if (showDualBs && bsRate) {
