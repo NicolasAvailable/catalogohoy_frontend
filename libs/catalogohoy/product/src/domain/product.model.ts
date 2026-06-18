@@ -11,6 +11,8 @@ export interface ProductSize {
   name: string;
   /** Units available in this size. `null` = unlimited stock. */
   stock: number | null;
+  /** Optional SKU for this specific size. */
+  sku?: string | null;
 }
 
 export interface ProductVariant {
@@ -22,6 +24,8 @@ export interface ProductVariant {
   price: number;
   /** Optional struck-through "before" price. `0` = none. */
   originalPrice: number;
+  /** Optional SKU for this variant. */
+  sku?: string | null;
   /** Own media (images and/or videos). When empty, the variant falls back to
    *  the product's media. The first item is the variant cover. */
   photos: string[];

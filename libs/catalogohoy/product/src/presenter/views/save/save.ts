@@ -367,6 +367,7 @@ export default class Save implements OnInit {
       this.fb.group({
         name: ['', Validators.required],
         stock: [null as string | null],
+        sku: [''],
       })
     );
   }
@@ -381,6 +382,7 @@ export default class Save implements OnInit {
       this.fb.group({
         name: ['', Validators.required],
         stock: [null as string | null],
+        sku: [''],
       })
     );
   }
@@ -419,6 +421,7 @@ export default class Save implements OnInit {
         name: ['', Validators.required],
         price: ['', Validators.required],
         originalPrice: [''],
+        sku: [''],
         photos: [[] as string[]],
         // Each variant owns its tallas.
         sizes: this.fb.array([]),
@@ -535,6 +538,7 @@ export default class Save implements OnInit {
         this.fb.group({
           name: [size.name, Validators.required],
           stock: [size.stock != null ? String(size.stock) : null],
+          sku: [size.sku ?? ''],
         })
       );
     });
@@ -554,12 +558,14 @@ export default class Save implements OnInit {
           originalPrice: [
             variant.originalPrice ? String(variant.originalPrice) : '',
           ],
+          sku: [variant.sku ?? ''],
           photos: [variant.photos ?? []],
           sizes: this.fb.array(
             (variant.sizes ?? []).map((s) =>
               this.fb.group({
                 name: [s.name, Validators.required],
                 stock: [s.stock != null ? String(s.stock) : null],
+                sku: [s.sku ?? ''],
               })
             )
           ),

@@ -265,7 +265,7 @@
               <label class="text-sm text-grey-400 font-semibold">Talla / Tamaño<span class="text-red-500 ml-0.5">*</span></label>
               <ui-input-text
                 formControlName="name"
-                placeholder="Ej: S, M, L, 42"
+                placeholder="Ej: M o Talla 32"
               />
             </div>
             <div class="flex flex-col gap-2 flex-1">
@@ -278,6 +278,10 @@
                 [showButtons]="false"
                 placeholder="Sin límite"
               />
+            </div>
+            <div class="flex flex-col gap-2 flex-1">
+              <label class="text-sm text-grey-400 font-semibold">SKU (opcional)</label>
+              <ui-input-text formControlName="sku" placeholder="CAM-M-1234" />
             </div>
             <button
               type="button"
@@ -637,6 +641,12 @@
             </div>
             <div class="flex flex-col gap-2">
               <label class="text-sm text-grey-400 font-semibold"
+                >SKU (opcional)</label
+              >
+              <ui-input-text formControlName="sku" placeholder="CAM-VER-1234" />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="text-sm text-grey-400 font-semibold"
                 >Imágenes y videos ({{ (variant.get('photos')?.value?.length) ||
                 0 }}/{{ maxPhotos() }})</label
               >
@@ -705,7 +715,7 @@
                 <div class="flex flex-col gap-2 flex-1">
                   <ui-input-text
                     formControlName="name"
-                    placeholder="Ej: S, M, L, 42"
+                    placeholder="Ej: M o Talla 32"
                   />
                 </div>
                 <div class="flex flex-col gap-2 flex-1">
@@ -716,6 +726,12 @@
                     [maxFractionDigits]="0"
                     [showButtons]="false"
                     placeholder="Stock (sin límite)"
+                  />
+                </div>
+                <div class="flex flex-col gap-2 flex-1">
+                  <ui-input-text
+                    formControlName="sku"
+                    placeholder="SKU (opcional)"
                   />
                 </div>
                 <button
@@ -751,11 +767,6 @@
             [disabled]="!canAddVariant()"
             (click)="addVariant()"
           />
-          <span
-            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-500 text-white"
-          >
-            Nuevo
-          </span>
         </div>
         @if (variantsArray.length > 0) {
         <div

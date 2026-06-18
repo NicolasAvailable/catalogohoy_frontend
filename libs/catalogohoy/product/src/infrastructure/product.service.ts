@@ -16,9 +16,10 @@ import { ProductEntity } from './entities';
 import { ProductListMapper, ProductMapper } from './mappers';
 
 /** Normalises a form size (string stock) to the persisted shape. */
-const mapSize = (s: { name: string; stock: string | null }) => ({
+const mapSize = (s: { name: string; stock: string | null; sku?: string | null }) => ({
   name: s.name,
   stock: s.stock === null || s.stock === '' ? null : Number(s.stock),
+  sku: s.sku?.trim() ? s.sku.trim() : null,
 });
 
 @Injectable({
@@ -208,6 +209,7 @@ export class ProductService implements BaseProductService {
               price: v.price === '' ? 0 : Number(v.price),
               originalPrice:
                 v.originalPrice === '' ? 0 : Number(v.originalPrice),
+              sku: v.sku?.trim() ? v.sku.trim() : null,
               photos: v.photos ?? [],
               sizes: (v.sizes ?? []).map(mapSize),
             }))
@@ -278,6 +280,7 @@ export class ProductService implements BaseProductService {
             name: v.name,
             price: v.price === '' ? 0 : Number(v.price),
             originalPrice: v.originalPrice === '' ? 0 : Number(v.originalPrice),
+            sku: v.sku?.trim() ? v.sku.trim() : null,
             photos: v.photos ?? [],
             sizes: (v.sizes ?? []).map(mapSize),
           }))
