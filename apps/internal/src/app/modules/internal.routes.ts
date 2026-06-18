@@ -42,4 +42,11 @@ export const internalRoutes: Route[] = [
     loadChildren: () =>
       import('./coupons/coupons.routes').then((m) => m.couponsRoutes),
   },
+  {
+    path: 'orders',
+    loadChildren: () =>
+      import('./platform-orders/platform-orders.routes').then(
+        (m) => m.platformOrdersRoutes
+      ),
+  },
 ];

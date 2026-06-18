@@ -38,6 +38,11 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     routerLink: '/whatsapp-logs',
   },
   {
+    label: 'Órdenes',
+    icon: 'shopping-bag',
+    routerLink: '/orders',
+  },
+  {
     label: 'Cupones',
     icon: 'ticket-percent',
     routerLink: '/coupons',
