@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import {
   Component,
   computed,
+  effect,
   inject,
   OnDestroy,
   OnInit,
@@ -24,6 +25,7 @@ import {
   InputSearchComponent,
   SelectComponent,
 } from '@ui';
+import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { debounceTime, distinctUntilChanged, Subject, Subscription } from 'rxjs';
 import { Client } from '../../../domain/client.model';
 import { ClientRealtimeService } from '../../../infrastructure/client-realtime.service';
@@ -50,9 +52,20 @@ import { ClientTagCreateRowComponent } from '../../components/client-tag-create-
     ClientFormDialogComponent,
     ClientTagCreateRowComponent,
     ClientRowTagsComponent,
+    PaginatorModule,
   ],
   templateUrl: './client-list.html',
   host: { class: 'flex-1 flex flex-col min-h-0' },
+  styles: [
+    `
+    :host ::ng-deep .client-paginator .p-paginator {
+      background: transparent;
+      border: none;
+      padding: 0;
+      justify-content: flex-end;
+    }
+  `,
+  ],
 })
 export default class ClientListComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
@@ -102,10 +115,40 @@ export default class ClientListComponent implements OnInit, OnDestroy {
     () => this.clientStore.clientList().items.length
   );
 
+  // Pagination (client-side over the filtered set).
+  public readonly pageFirst = signal(0);
+  public readonly pageRows = signal(10);
+
+  public readonly currentPageClients = computed(() =>
+    this.filteredClients().slice(
+      this.pageFirst(),
+      this.pageFirst() + this.pageRows()
+    )
+  );
+
+  // Snap the page offset back when the filtered set shrinks below it.
+  private readonly clampPageFirstOnOverflow = effect(() => {
+    const total = this.filteredClients().length;
+    const first = this.pageFirst();
+    const rows = this.pageRows();
+    if (total === 0) {
+      if (first !== 0) this.pageFirst.set(0);
+      return;
+    }
+    if (first >= total) {
+      this.pageFirst.set(Math.floor((total - 1) / rows) * rows);
+    }
+  });
+
+  public onPageChange(event: PaginatorState) {
+    this.pageFirst.set(event.first ?? 0);
+    this.pageRows.set(event.rows ?? 10);
+  }
+
   public readonly selectedCount = computed(() => this.selectedIds().size);
 
   public readonly isAllVisibleSelected = computed(() => {
-    const visible = this.filteredClients();
+    const visible = this.currentPageClients();
     if (!visible.length) return false;
     const ids = this.selectedIds();
     return visible.every((c) => c.id !== null && ids.has(c.id));
@@ -118,7 +161,10 @@ export default class ClientListComponent implements OnInit, OnDestroy {
 
     this.searchSubscription = this.searchSubject
       .pipe(debounceTime(300), distinctUntilChanged())
-      .subscribe((query) => this.searchQuery.set(query));
+      .subscribe((query) => {
+        this.searchQuery.set(query);
+        this.pageFirst.set(0);
+      });
 
     this.clientStore.loadClients();
     this.clientStore.loadTags();
@@ -142,6 +188,7 @@ export default class ClientListComponent implements OnInit, OnDestroy {
 
   setTagFilter(tagId: number | null) {
     this.selectedTagId.set(tagId);
+    this.pageFirst.set(0);
   }
 
   onDeleteTag(tagId: number, event: Event) {
@@ -181,7 +228,7 @@ export default class ClientListComponent implements OnInit, OnDestroy {
   }
 
   toggleAllVisible() {
-    const visible = this.filteredClients();
+    const visible = this.currentPageClients();
     const ids = new Set(this.selectedIds());
     const allSelected = this.isAllVisibleSelected();
     for (const c of visible) {

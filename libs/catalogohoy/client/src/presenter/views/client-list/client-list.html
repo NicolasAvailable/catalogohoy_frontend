@@ -126,7 +126,7 @@
           }
         </div>
       } @else {
-        @for (client of filteredClients(); track client.id) {
+        @for (client of currentPageClients(); track client.id) {
         <div
           class="border-b border-grey-50 px-4 py-3 flex gap-3 active:bg-grey-25"
         >
@@ -244,7 +244,7 @@
               </tr>
             }
           } @else {
-            @for (client of filteredClients(); track client.id) {
+            @for (client of currentPageClients(); track client.id) {
               <tr class="hover:bg-grey-25 transition-colors group" [class.bg-primary-25]="isSelected(client)">
                 <td class="px-4 py-3.5" (click)="$event.stopPropagation()">
                   <ui-checkbox
@@ -342,13 +342,21 @@
       </table>
     </div>
 
-    <!-- Footer -->
+    <!-- Pagination footer — count on the left, controls on the right -->
     <div
-      class="p-4 bg-grey-25 border-t border-grey-50 flex items-center justify-between"
+      class="p-4 sm:pr-16 bg-grey-25 border-t border-grey-50 flex items-center justify-between gap-2 flex-wrap"
     >
       <span class="text-xs text-grey-400 font-medium">
-        Mostrando {{ filteredClients().length }} de {{ totalClients() }} clientes
+        Mostrando {{ currentPageClients().length }} · Total: {{ filteredClients().length }} clientes
       </span>
+      <p-paginator
+        [first]="pageFirst()"
+        [rows]="pageRows()"
+        [totalRecords]="filteredClients().length"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        (onPageChange)="onPageChange($event)"
+        styleClass="client-paginator"
+      />
     </div>
   </div>
 </div>
