@@ -8,7 +8,7 @@ import { PlatformOrdersService } from './platform-orders.service';
 @Component({
   selector: 'app-platform-orders',
   standalone: true,
-  imports: [DecimalPipe, IconComponent, ButtonComponent],
+  imports: [IconComponent, ButtonComponent],
   host: { class: 'flex-1 min-h-0 flex flex-col' },
   template: `
     <div class="flex flex-col gap-6 h-full min-h-0 p-1 overflow-y-auto">
@@ -147,7 +147,9 @@ export class PlatformOrders implements OnInit {
     this.isLoading.set(true);
     const res = await this.service.getStats();
     res.fold(
-      (e) => toast.error(e.message),
+      (e) => {
+        toast.error(e.message);
+      },
       (s) => this.stats.set(s)
     );
     this.isLoading.set(false);

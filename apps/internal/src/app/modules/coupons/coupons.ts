@@ -3,7 +3,6 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   ButtonComponent,
-  IconComponent,
   InputNumberComponent,
   InputTextComponent,
   SelectComponent,
@@ -24,7 +23,6 @@ import { CouponsService } from './coupons.service';
   imports: [
     FormsModule,
     DecimalPipe,
-    IconComponent,
     ButtonComponent,
     InputTextComponent,
     InputNumberComponent,
@@ -310,7 +308,9 @@ export class Coupons implements OnInit {
   private async loadProducts(): Promise<void> {
     const res = await this.service.listProducts();
     res.fold(
-      (e) => toast.error(e.message),
+      (e) => {
+        toast.error(e.message);
+      },
       ({ products }) => this.products.set(products)
     );
   }
@@ -319,7 +319,9 @@ export class Coupons implements OnInit {
     this.isLoadingList.set(true);
     const res = await this.service.listCoupons();
     res.fold(
-      (e) => toast.error(e.message),
+      (e) => {
+        toast.error(e.message);
+      },
       ({ promotionCodes }) => this.codes.set(promotionCodes)
     );
     this.isLoadingList.set(false);
