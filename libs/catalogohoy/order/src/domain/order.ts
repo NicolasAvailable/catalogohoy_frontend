@@ -23,6 +23,10 @@ export interface InternalNote {
   text: string;
   /** ISO timestamp. */
   createdAt: string;
+  /** Author's profile photo at the time the note was left (may be null). */
+  authorPhoto?: string | null;
+  /** Attached media (image/video URLs). */
+  media?: string[];
 }
 
 export interface Order {

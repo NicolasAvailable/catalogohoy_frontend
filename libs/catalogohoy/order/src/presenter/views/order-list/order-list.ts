@@ -234,7 +234,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
           showDualBs: this.tenantCurrency.showDualCurrency(),
         },
         showHeader: false,
-        style: { width: '56rem', maxWidth: '95vw' },
+        style: { width: '72rem', maxWidth: '95vw' },
         contentStyle: { padding: '0', overflow: 'hidden' },
       })
     );

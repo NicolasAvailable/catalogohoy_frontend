@@ -1,5 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  NgZone,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
@@ -11,8 +19,10 @@ import {
   SelectComponent,
   SelectItemDirective,
   SelectSelectedItemDirective,
+  UploaderComponent,
 } from '@ui';
 import { ProfileStore } from '@catalogohoy/profile';
+import { SupabaseClientProvider } from '@catalogohoy/core';
 import { InternalNote, Order, OrderStatus } from '../../../domain/order';
 import { OrderStore } from '../../../infrastructure/order.store';
 
@@ -30,6 +40,7 @@ import { OrderStore } from '../../../infrastructure/order.store';
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
+    UploaderComponent,
   ],
   templateUrl: './order-detail-modal.html',
   styleUrl: './order-detail-modal.css',
@@ -41,6 +52,8 @@ export class OrderDetailModal {
   private readonly orderStore = inject(OrderStore);
   private readonly toastService = inject(ToastService);
   private readonly profileStore = inject(ProfileStore);
+  private readonly supabase = SupabaseClientProvider.getInstance();
+  private readonly zone = inject(NgZone);
 
   public readonly order: Order = this.config.data.order;
   public readonly cs: string = this.config.data.currencySymbol ?? '$';
@@ -61,26 +74,133 @@ export class OrderDetailModal {
   public readonly notes = signal<InternalNote[]>(this.order.internalNotes ?? []);
   public readonly draft = signal('');
   public readonly isSavingNotes = signal(false);
+  /** Media (image/video URLs) already uploaded, waiting to be sent with a note. */
+  public readonly pendingMedia = signal<string[]>([]);
+  /** True while a chat attachment is uploading. */
+  public readonly isUploadingMedia = signal(false);
 
-  /** Top tab: full order detail vs internal team notes. */
-  public readonly activeTab = signal<'detalle' | 'notas'>('detalle');
+  public readonly canSend = computed(
+    () => !!this.draft().trim() || this.pendingMedia().length > 0
+  );
+
+  private readonly currentUserName = computed(
+    () => this.profileStore.profile().name?.trim() || 'Equipo'
+  );
+
+  /** Active section.
+   *  - Desktop: products are always shown on the left; the right panel toggles
+   *    between 'cliente' (Detalle) and 'notas'.
+   *  - Mobile: a single column with three tabs — 'info' (products), 'cliente'
+   *    and 'notas'. */
+  public readonly tab = signal<'info' | 'cliente' | 'notas'>('info');
+
+  /** True on lg+ screens, kept in sync with a matchMedia listener. */
+  public readonly isDesktop = signal(
+    typeof window !== 'undefined'
+      ? window.matchMedia('(min-width: 1024px)').matches
+      : true
+  );
+
+  /** Products are always visible on desktop; on mobile only under the Info tab. */
+  public readonly showProducts = computed(
+    () => this.isDesktop() || this.tab() === 'info'
+  );
+  /** Customer panel: desktop shows it unless the Notas tab is active. */
+  public readonly showCliente = computed(() =>
+    this.isDesktop() ? this.tab() !== 'notas' : this.tab() === 'cliente'
+  );
+  public readonly showNotas = computed(() => this.tab() === 'notas');
+
+  constructor() {
+    const destroyRef = inject(DestroyRef);
+
+    if (typeof window !== 'undefined') {
+      const mql = window.matchMedia('(min-width: 1024px)');
+      const handler = (e: MediaQueryListEvent) => this.isDesktop.set(e.matches);
+      mql.addEventListener('change', handler);
+      destroyRef.onDestroy(() => mql.removeEventListener('change', handler));
+    }
+
+    // Realtime: reflect notes other team members add to this order instantly.
+    const channel = this.supabase
+      .channel(`order-notes-${this.order.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+          filter: `id=eq.${this.order.id}`,
+        },
+        (payload) => {
+          const next = (payload.new as { internal_notes?: InternalNote[] })
+            ?.internal_notes;
+          if (Array.isArray(next)) {
+            this.zone.run(() => this.notes.set(next));
+          }
+        }
+      )
+      .subscribe();
+    destroyRef.onDestroy(() => {
+      this.supabase.removeChannel(channel);
+    });
+  }
+
+  /** First letter of the author's name, for the fallback avatar. */
+  initial(name: string | null | undefined): string {
+    return (name?.trim()?.charAt(0) || '?').toUpperCase();
+  }
+
+  /** A note authored by the logged-in user — rendered on the right. */
+  isMine(note: InternalNote): boolean {
+    return note.author?.trim() === this.currentUserName();
+  }
+
+  /** Rough media-type check by extension, to pick <img> vs <video>. */
+  isVideo(url: string): boolean {
+    return /\.(mp4|webm|mov|ogg|m4v)(\?|$)/i.test(url);
+  }
+
+  onMediaUploaded(value: string | string[]): void {
+    const urls = Array.isArray(value) ? value : [value];
+    this.pendingMedia.update((m) => [...m, ...urls.filter(Boolean)]);
+    this.isUploadingMedia.set(false);
+  }
+
+  removePendingMedia(url: string): void {
+    this.pendingMedia.update((m) => m.filter((u) => u !== url));
+  }
 
   async addNote(): Promise<void> {
     const text = this.draft().trim();
-    if (!text || this.isSavingNotes()) return;
-    this.isSavingNotes.set(true);
+    const media = this.pendingMedia();
+    if ((!text && media.length === 0) || this.isSavingNotes()) return;
+
     const note: InternalNote = {
-      author: this.profileStore.profile().name?.trim() || 'Equipo',
+      author: this.currentUserName(),
+      authorPhoto: this.profileStore.profile().photo ?? null,
       text,
       createdAt: new Date().toISOString(),
+      ...(media.length ? { media } : {}),
     };
+
+    // Optimistic: show the note immediately and clear the composer, so it feels
+    // instant. Persisting + realtime reconciliation happen in the background.
+    this.notes.update((n) => [...n, note]);
+    this.draft.set('');
+    this.pendingMedia.set([]);
+    this.isSavingNotes.set(true);
+
     const result = await this.orderStore.addInternalNote(this.order.id, note);
     result.fold(
-      (error) => this.toastService.error(new Exception(error)),
-      () => {
-        this.notes.update((n) => [...n, note]);
-        this.draft.set('');
-      }
+      (error) => {
+        // Roll back the optimistic note and restore the draft on failure.
+        this.notes.update((n) => n.filter((x) => x !== note));
+        this.draft.set(text);
+        this.pendingMedia.set(media);
+        this.toastService.error(new Exception(error));
+      },
+      () => undefined
     );
     this.isSavingNotes.set(false);
   }
