@@ -19,8 +19,6 @@ export class ClientRealtimeService {
     const tenantId = await this.tenantStore.getTenantIdAsync();
     if (!tenantId) return;
 
-    console.log('[ClientRealtime] Subscribing to tenant:', tenantId);
-
     this.channel = this.client
       .channel(`clients-tenant-${tenantId}`)
       .on(
@@ -31,14 +29,11 @@ export class ClientRealtimeService {
           table: 'orders',
           filter: `tenant_id=eq.${tenantId}`,
         },
-        (payload) => {
-          console.log('[ClientRealtime] Event received:', payload);
+        () => {
           this.zone.run(() => this.debouncedRefresh());
         }
       )
-      .subscribe((status) => {
-        console.log('[ClientRealtime] Channel status:', status);
-      });
+      .subscribe();
   }
 
   unsubscribe(): void {

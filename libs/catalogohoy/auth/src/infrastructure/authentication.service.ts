@@ -219,8 +219,6 @@ export class AuthenticationService implements BaseAuthenticationService {
       });
       if (error) {
         console.warn('register_referral failed:', error.message);
-      } else if (data) {
-        console.info('register_referral:', data);
       }
     } catch (err) {
       console.warn('register_referral threw:', err);
