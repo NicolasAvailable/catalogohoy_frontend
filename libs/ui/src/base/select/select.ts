@@ -64,6 +64,12 @@ export class SelectItemDirective {}
           {{ getOptionLabel(item) }}
         }
       </ng-template>
+
+      @if(footerTemplate) {
+        <ng-template pTemplate="footer">
+          <ng-container [ngTemplateOutlet]="footerTemplate"></ng-container>
+        </ng-template>
+      }
     </p-select>
   `,
 })
@@ -96,6 +102,8 @@ export class SelectComponent<T>
   private _selectedItemTemplate?: _.TemplateRef<unknown>;
   @_.ContentChild(SelectItemDirective, { read: _.TemplateRef })
   private _itemTemplate?: _.TemplateRef<unknown>;
+  @_.ContentChild('footer', { read: _.TemplateRef })
+  footerTemplate?: _.TemplateRef<unknown>;
 
   // Signals para los templates que se actualizan después de AfterContentInit
   public readonly selectedItemTemplate =

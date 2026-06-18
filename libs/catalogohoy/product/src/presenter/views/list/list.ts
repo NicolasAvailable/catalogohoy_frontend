@@ -383,6 +383,31 @@ export default class List implements OnInit, OnDestroy {
     this.isProcessing.set(false);
   }
 
+  // Inline category creation from inside the category dropdown.
+  public readonly newCategoryName = signal('');
+  public readonly creatingCategory = signal(false);
+
+  public async onCreateCategoryFromDropdown() {
+    const name = this.newCategoryName().trim();
+    if (!name || this.creatingCategory()) return;
+    this.creatingCategory.set(true);
+    const result = await this.categoryStore.save({ name, isVisible: true });
+    this.creatingCategory.set(false);
+    result.fold(
+      () => this.toastService.warning('No se pudo crear la categoría'),
+      (created) => {
+        if (created) {
+          this.bulkCategoryIds.set([
+            ...this.bulkCategoryIds(),
+            String(created.id),
+          ]);
+          this.newCategoryName.set('');
+          this.toastService.success('Categoría creada');
+        }
+      }
+    );
+  }
+
   public getDeleteDialogContent(): string {
     if (this.deleteMode() === 'single') {
       return '¿Estás seguro de que deseas eliminar este producto? Esta acción es irreversible.';

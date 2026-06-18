@@ -1,0 +1,132 @@
+<ui-dialog styleClass="max-w-xl w-full">
+  <div class="flex flex-col gap-4 p-2">
+    <!-- Header -->
+    <div class="flex items-center gap-3">
+      <div
+        class="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center shrink-0"
+      >
+        <ui-icon
+          [name]="isEditing ? 'pencil' : 'user-plus'"
+          styleClass="size-5 text-primary-500"
+        />
+      </div>
+      <div>
+        <h3 class="font-semibold text-grey-700">
+          {{ isEditing ? 'Editar cliente' : 'Añadir cliente' }}
+        </h3>
+        <p class="text-sm text-grey-300">
+          {{ isEditing ? 'Actualiza los datos del cliente' : 'Registra un cliente manualmente' }}
+        </p>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto px-1 py-1">
+      <!-- Nombre + Teléfono -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium text-grey-700">Nombre *</label>
+          <ui-input-text
+            placeholder="Nombre del cliente"
+            [ngModel]="name()"
+            (ngModelChange)="name.set($event)"
+          />
+          @if (submitted() && !name().trim()) {
+            <p class="text-xs text-red-500">El nombre es obligatorio</p>
+          }
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium text-grey-700">Teléfono *</label>
+          <ui-input-text
+            placeholder="+58 4141234567"
+            [ngModel]="phone()"
+            (ngModelChange)="phone.set($event)"
+          />
+          @if (submitted() && !phone().trim()) {
+            <p class="text-xs text-red-500">El teléfono es obligatorio</p>
+          }
+        </div>
+      </div>
+
+      <!-- Correo -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-grey-700">Correo electrónico</label>
+        <ui-input-text
+          placeholder="correo@ejemplo.com"
+          [ngModel]="email()"
+          (ngModelChange)="email.set($event)"
+        />
+      </div>
+
+      <!-- Dirección -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-grey-700">Dirección</label>
+        <ui-input-text
+          placeholder="Dirección del cliente"
+          [ngModel]="address()"
+          (ngModelChange)="address.set($event)"
+        />
+      </div>
+
+      <!-- Etiquetas -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-grey-700">Etiquetas</label>
+        <ui-multi-select
+          [options]="clientStore.tags()"
+          [ngModel]="tagIds()"
+          (ngModelChange)="tagIds.set($event)"
+          optionLabel="name"
+          optionValue="id"
+          display="chip"
+          placeholder="Seleccionar etiquetas..."
+          styleClass="w-full"
+          appendTo="body"
+          emptyMessage="Aún no hay etiquetas. Créala abajo 👇"
+          [showToggleAll]="clientStore.tags().length > 0"
+        >
+          <ng-template #footer>
+            <lib-client-tag-create-row (created)="onTagCreated($event)" />
+          </ng-template>
+        </ui-multi-select>
+      </div>
+
+      <!-- Código de referencia -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-grey-700">Código de referencia</label>
+        <ui-input-text
+          placeholder="Ej: REF-001"
+          [ngModel]="referralCode()"
+          (ngModelChange)="referralCode.set($event)"
+        />
+      </div>
+
+      <!-- Notas -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-grey-700">Notas</label>
+        <ui-textarea
+          [rows]="3"
+          placeholder="Notas internas sobre el cliente"
+          [ngModel]="notes()"
+          (ngModelChange)="notes.set($event)"
+        />
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="flex gap-2 justify-end pt-1">
+      <ui-button
+        label="Cancelar"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        (click)="close()"
+      />
+      <ui-button
+        [label]="isEditing ? 'Guardar cambios' : 'Crear cliente'"
+        [icon]="isEditing ? 'save' : 'plus'"
+        [fluid]="false"
+        [isLoading]="clientStore.isSaving()"
+        (click)="save()"
+      />
+    </div>
+  </div>
+</ui-dialog>
