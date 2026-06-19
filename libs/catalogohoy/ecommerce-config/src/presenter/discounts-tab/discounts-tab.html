@@ -1,0 +1,243 @@
+<div class="discounts">
+  <div class="discounts__head">
+    <div>
+      <h2 class="discounts__title">Descuentos y cupones</h2>
+      <small class="discounts__subtitle">
+        Crea cupones con código, descuentos automáticos, envío gratis, ofertas
+        por cantidad (BOGO) y promoción de primera compra.
+      </small>
+    </div>
+    <ui-button label="Crear descuento" icon="plus" (click)="openCreate()" />
+  </div>
+
+  @if (isLoading()) {
+  <p class="discounts__empty">Cargando...</p>
+  } @else if (rules().length === 0) {
+  <div class="discounts__empty-card">
+    <ui-icon name="ticket-percent" styleClass="size-8" />
+    <p>Aún no tienes descuentos.</p>
+    <ui-button label="Crear el primero" icon="plus" severity="secondary" (click)="openCreate()" />
+  </div>
+  } @else {
+  <div class="discounts__list">
+    @for (rule of rules(); track rule.id) {
+    <div class="discount-card" [class.discount-card--off]="!rule.isActive">
+      <div class="discount-card__main">
+        <div class="discount-card__title-row">
+          <span class="discount-card__name">{{ rule.name }}</span>
+          <span class="discount-card__badge">{{ typeLabel(rule.type) }}</span>
+          @if (rule.type === 'code' && rule.code) {
+          <span class="discount-card__code">{{ rule.code }}</span>
+          }
+        </div>
+        <small class="discount-card__summary">{{ summary(rule) }}</small>
+        @if (rule.usageLimit) {
+        <small class="discount-card__usage">
+          Usos: {{ rule.usageCount }} / {{ rule.usageLimit }}
+        </small>
+        }
+      </div>
+      <div class="discount-card__actions">
+        <ui-toggle
+          [ngModel]="rule.isActive"
+          (ngModelChange)="toggleActive(rule)"
+        ></ui-toggle>
+        <button type="button" class="discount-card__btn" title="Editar" (click)="openEdit(rule)">
+          <ui-icon name="pencil" styleClass="size-4" />
+        </button>
+        <button type="button" class="discount-card__btn discount-card__btn--danger" title="Eliminar" (click)="confirmDelete(rule)">
+          <ui-icon name="trash" styleClass="size-4" />
+        </button>
+      </div>
+    </div>
+    }
+  </div>
+  }
+</div>
+
+<!-- ===== Create / edit dialog ===== -->
+<ui-dialog #formDialog headerTitle="Descuento" styleClass="max-w-lg w-full">
+  @if (draft(); as d) {
+  <div class="discount-form">
+    <label class="discount-form__field">
+      <span class="discount-form__label">Nombre interno</span>
+      <ui-input-text
+        [ngModel]="d.name"
+        (ngModelChange)="patchDraft({ name: $event })"
+        placeholder="Ej: Promo de verano"
+      ></ui-input-text>
+    </label>
+
+    <label class="discount-form__field">
+      <span class="discount-form__label">Tipo de descuento</span>
+      <ui-select
+        [options]="typeOptions"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="d.type"
+        (ngModelChange)="onTypeChange($event)"
+      ></ui-select>
+      <small class="discount-form__hint">
+        @for (o of typeOptions; track o.value) {
+          @if (o.value === d.type) { {{ o.description }} }
+        }
+      </small>
+    </label>
+
+    @if (d.type === 'code') {
+    <label class="discount-form__field">
+      <span class="discount-form__label">Código del cupón</span>
+      <ui-input-text
+        [ngModel]="d.code"
+        (ngModelChange)="patchDraft({ code: $event })"
+        placeholder="Ej: VERANO10"
+      ></ui-input-text>
+    </label>
+    }
+
+    <!-- Value (percent/fixed) for value-bearing types -->
+    @if (draftHasValue()) {
+    <div class="discount-form__row">
+      <label class="discount-form__field">
+        <span class="discount-form__label">Tipo de valor</span>
+        <ui-select
+          [options]="valueTypeOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="d.valueType"
+          (ngModelChange)="patchDraft({ valueType: $event })"
+        ></ui-select>
+      </label>
+      <label class="discount-form__field">
+        <span class="discount-form__label">
+          {{ d.valueType === 'percent' ? 'Porcentaje' : 'Monto' }}
+        </span>
+        <ui-input-number
+          [ngModel]="d.value"
+          (ngModelChange)="patchDraft({ value: $event })"
+          [min]="0"
+        ></ui-input-number>
+      </label>
+    </div>
+    }
+
+    <!-- order_value / free_shipping: minimum order -->
+    @if (d.type === 'order_value' || d.type === 'free_shipping' || d.type === 'code') {
+    <label class="discount-form__field">
+      <span class="discount-form__label">Pedido mínimo (opcional)</span>
+      <ui-input-number
+        [ngModel]="d.minOrder"
+        (ngModelChange)="patchDraft({ minOrder: $event })"
+        [min]="0"
+      ></ui-input-number>
+    </label>
+    }
+
+    <!-- package: minimum items -->
+    @if (d.type === 'package') {
+    <label class="discount-form__field">
+      <span class="discount-form__label">Cantidad mínima de productos</span>
+      <ui-input-number
+        [ngModel]="d.minItems"
+        (ngModelChange)="patchDraft({ minItems: $event })"
+        [min]="1"
+      ></ui-input-number>
+    </label>
+    }
+
+    <!-- BOGO -->
+    @if (d.type === 'bogo') {
+    <div class="discount-form__row">
+      <label class="discount-form__field">
+        <span class="discount-form__label">Compra (unidades)</span>
+        <ui-input-number
+          [ngModel]="d.bogoBuy?.quantity ?? 2"
+          (ngModelChange)="patchBogoBuy($event)"
+          [min]="1"
+        ></ui-input-number>
+      </label>
+      <label class="discount-form__field">
+        <span class="discount-form__label">Lleva (unidades)</span>
+        <ui-input-number
+          [ngModel]="d.bogoGet?.quantity ?? 1"
+          (ngModelChange)="patchBogoGet({ quantity: $event })"
+          [min]="1"
+        ></ui-input-number>
+      </label>
+    </div>
+    <div class="discount-form__row">
+      <label class="discount-form__field">
+        <span class="discount-form__label">Descuento en las que lleva</span>
+        <ui-select
+          [options]="valueTypeOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="d.bogoGet?.valueType ?? 'percent'"
+          (ngModelChange)="patchBogoGet({ valueType: $event })"
+        ></ui-select>
+      </label>
+      <label class="discount-form__field">
+        <span class="discount-form__label">Valor</span>
+        <ui-input-number
+          [ngModel]="d.bogoGet?.value ?? 100"
+          (ngModelChange)="patchBogoGet({ value: $event })"
+          [min]="0"
+        ></ui-input-number>
+      </label>
+    </div>
+    <small class="discount-form__hint">
+      Ej: compra 2, lleva 1 al 100% = la tercera más barata es gratis.
+    </small>
+    }
+
+    <!-- free shipping add-on for value types -->
+    @if (draftHasValue() && d.type !== 'free_shipping') {
+    <div class="discount-form__toggle-row">
+      <span class="discount-form__label">También dar envío gratis</span>
+      <ui-toggle
+        [ngModel]="d.freeShipping"
+        (ngModelChange)="patchDraft({ freeShipping: $event })"
+      ></ui-toggle>
+    </div>
+    }
+
+    <!-- usage limit (mostly for codes) -->
+    @if (d.type === 'code') {
+    <label class="discount-form__field">
+      <span class="discount-form__label">Límite de usos (opcional)</span>
+      <ui-input-number
+        [ngModel]="d.usageLimit"
+        (ngModelChange)="patchDraft({ usageLimit: $event })"
+        [min]="1"
+      ></ui-input-number>
+    </label>
+    }
+
+    <div class="discount-form__toggle-row">
+      <span class="discount-form__label">Activo</span>
+      <ui-toggle
+        [ngModel]="d.isActive"
+        (ngModelChange)="patchDraft({ isActive: $event })"
+      ></ui-toggle>
+    </div>
+
+    <div class="discount-form__actions">
+      <ui-button label="Cancelar" severity="secondary" (click)="closeDialog()" />
+      <ui-button
+        label="Guardar"
+        [disabled]="!isDraftValid || isSaving()"
+        (click)="save()"
+      />
+    </div>
+  </div>
+  }
+</ui-dialog>
+
+<ui-confirm-dialog
+  (confirm)="onConfirmDelete()"
+  headerLabel="Eliminar descuento"
+  contentLabel="¿Seguro que quieres eliminar este descuento? Esta acción no se puede deshacer."
+  acceptLabel="Eliminar"
+  rejectLabel="Cancelar"
+  rejectSeverity="contrast"
+/>

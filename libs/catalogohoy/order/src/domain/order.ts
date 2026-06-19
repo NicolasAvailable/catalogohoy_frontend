@@ -59,6 +59,12 @@ export interface Order {
   shippingAddress?: string | null;
   /** Flat shipping fee added to the total. */
   shippingFee?: number;
+  /** Discount applied to the products subtotal (0 when none). */
+  discountAmount?: number;
+  /** Coupon code applied, if any. */
+  discountCode?: string | null;
+  /** Human label of the applied discount (e.g. "Cupón VERANO10"). */
+  discountLabel?: string | null;
   /** ISO date "YYYY-MM-DD". Defaults to the creation date on the server. */
   deliveryDate: string;
 }

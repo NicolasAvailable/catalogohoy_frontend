@@ -863,6 +863,15 @@
 
       </div> <!-- /TAB SHIPPING -->
 
+      <!-- ===== TAB: DISCOUNTS ===== -->
+      <div [hidden]="activeTab() !== 'discounts'">
+        <ui-card styleClass="config-card">
+          <div class="card-content">
+            <lib-discounts-tab />
+          </div>
+        </ui-card>
+      </div> <!-- /TAB DISCOUNTS -->
+
       <!-- ===== TAB: PAYMENTS (block 2) ===== -->
       <div [hidden]="activeTab() !== 'payments'">
       <!-- Card: Monedas -->

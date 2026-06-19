@@ -22,7 +22,11 @@ import {
   QrCodeComponent,
   TextareaComponent,
 } from '@ui';
-import { CartItem } from '../../../domain';
+import {
+  AppliedCode,
+  CartItem,
+  resolveDiscount,
+} from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 
 function isPagoMovil(name: string): boolean {
@@ -117,7 +121,50 @@ export default class Checkout {
   );
 
   public readonly subtotal = computed(() => this.cartStore.totalPrice());
-  public readonly total = computed(() => this.subtotal() + this.shippingFee());
+
+  // --- Discounts ---
+  public readonly discountCodeInput = signal('');
+  public readonly appliedCode = signal<AppliedCode | null>(null);
+  public readonly codeError = signal<string | null>(null);
+  public readonly isValidatingCode = signal(false);
+  /** Resolved via RPC when the customer's phone changes (first_purchase rules). */
+  public readonly isFirstPurchase = signal(false);
+
+  /** Whether the tenant has any first-purchase rule (gates the phone lookup). */
+  private readonly hasFirstPurchaseRule = computed(() =>
+    (this.info()?.discounts ?? []).some((d) => d.type === 'first_purchase')
+  );
+
+  /** The resolved discount for the current cart (automatic rules + applied code). */
+  public readonly discount = computed(() =>
+    resolveDiscount(this.info()?.discounts ?? [], {
+      items: this.cartStore.items().map((i) => ({
+        price: i.price,
+        quantity: i.quantity,
+      })),
+      subtotal: this.subtotal(),
+      itemCount: this.cartStore.totalItems(),
+      isFirstPurchase: this.isFirstPurchase(),
+      appliedCode: this.appliedCode(),
+    })
+  );
+
+  public readonly discountAmount = computed(() => this.discount().amount);
+  public readonly hasDiscount = computed(
+    () => this.discountAmount() > 0 || this.discount().freeShipping
+  );
+
+  /** Shipping fee after a free-shipping discount waives it. */
+  public readonly effectiveShippingFee = computed(() =>
+    this.discount().freeShipping ? 0 : this.shippingFee()
+  );
+
+  public readonly total = computed(() =>
+    Math.max(
+      0,
+      this.subtotal() - this.discountAmount() + this.effectiveShippingFee()
+    )
+  );
 
   /** Bolívares mirror of the total — Venezuela only and only with a rate. */
   public readonly showBs = computed(
@@ -170,6 +217,29 @@ export default class Checkout {
       this.selectedShippingId.set(def.id);
     });
 
+    // First-purchase rules need to know if this phone has ordered before. Only
+    // hit the RPC when such a rule exists and the phone looks complete; debounce
+    // so we don't query on every keystroke.
+    effect((onCleanup) => {
+      const phone = this.phone();
+      const code = this.countryCode();
+      if (!this.hasFirstPurchaseRule()) {
+        this.isFirstPurchase.set(false);
+        return;
+      }
+      const full = `${code} ${phone}`.replace(/\D/g, '');
+      if (full.length < 7) {
+        this.isFirstPurchase.set(false);
+        return;
+      }
+      const handle = setTimeout(() => {
+        this.ecommerceStore
+          .checkFirstPurchase(`${code} ${phone}`)
+          .then((first) => this.isFirstPurchase.set(first));
+      }, 500);
+      onCleanup(() => clearTimeout(handle));
+    });
+
     // Guard: an empty cart has nothing to check out. Bounce back to the store
     // (covers landing on /checkout directly and removing the last item). Only
     // while filling the form — after submit the cart is intentionally cleared
@@ -214,6 +284,57 @@ export default class Checkout {
     this.selectedShippingId.set(id);
   }
 
+  // --- Discount code ---
+  async applyDiscountCode() {
+    const code = this.discountCodeInput().trim();
+    if (!code || this.isValidatingCode()) return;
+    this.isValidatingCode.set(true);
+    this.codeError.set(null);
+
+    const phoneFull = this.customerFields().phone.visible
+      ? `${this.countryCode()} ${this.phone()}`.trim()
+      : '';
+    const res = await this.ecommerceStore.validateDiscountCode(
+      code,
+      this.subtotal(),
+      phoneFull || undefined
+    );
+    this.isValidatingCode.set(false);
+
+    if (!res || !res.valid) {
+      this.appliedCode.set(null);
+      this.codeError.set(this.codeErrorMessage(res?.error, res?.minOrder));
+      return;
+    }
+
+    this.appliedCode.set({
+      id: res.id!,
+      name: res.name ?? `Cupón ${code}`,
+      code: res.code ?? code,
+      valueType: res.valueType ?? 'percent',
+      value: res.value ?? 0,
+      freeShipping: res.freeShipping ?? false,
+    });
+    this.codeError.set(null);
+  }
+
+  removeDiscountCode() {
+    this.appliedCode.set(null);
+    this.discountCodeInput.set('');
+    this.codeError.set(null);
+  }
+
+  private codeErrorMessage(error?: string, minOrder?: number): string {
+    switch (error) {
+      case 'min_order':
+        return `El pedido mínimo para este cupón es ${this.cs()}${minOrder ?? ''}.`;
+      case 'usage_limit':
+        return 'Este cupón alcanzó su límite de usos.';
+      default:
+        return 'El cupón no es válido o expiró.';
+    }
+  }
+
   // --- Validation ---
   get isValid(): boolean {
     const f = this.customerFields();
@@ -254,8 +375,9 @@ export default class Checkout {
 
     const items = this.cartStore.items();
     const subtotal = this.subtotal();
-    const fee = this.shippingFee();
+    const fee = this.effectiveShippingFee();
     const total = this.total();
+    const discount = this.discount();
     const f = this.customerFields();
     const sel = this.selectedShipping();
     const phoneFull = f.phone.visible ? `${this.countryCode()} ${this.phone()}`.trim() : '';
@@ -286,6 +408,9 @@ export default class Checkout {
         ? this.customerAddress().trim() || null
         : null,
       shipping_fee: fee,
+      discount_amount: discount.amount,
+      discount_code: discount.code,
+      discount_label: discount.label,
     });
 
     if (!orderResult || orderResult.isLeft()) {
@@ -296,7 +421,14 @@ export default class Checkout {
 
     this.lastOrderId.set(orderResult.value.id);
 
-    const message = this.buildWhatsappMessage(items, subtotal, fee, total, sel);
+    const message = this.buildWhatsappMessage(
+      items,
+      subtotal,
+      fee,
+      total,
+      sel,
+      discount
+    );
     const whatsappNumber = seller.number.replace(/\D/g, '');
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
 
@@ -320,7 +452,8 @@ export default class Checkout {
     subtotal: number,
     fee: number,
     total: number,
-    shipping: ShippingMethod | null
+    shipping: ShippingMethod | null,
+    discount: { amount: number; freeShipping: boolean; label: string | null }
   ): string {
     const symbol = this.cs();
 
@@ -335,9 +468,24 @@ export default class Checkout {
       ? ` (Bs. ${this.totalBs().toFixed(2)})`
       : '';
 
-    const envioStr = shipping
-      ? `*Envío:* ${shipping.name}${fee > 0 ? ` (${symbol}${fee})` : ' (Gratis)'}\n`
-      : '';
+    // Discount block: label + amount saved, plus a free-shipping note. Includes
+    // a trailing newline so the template's {descuento} slot stays compact when
+    // there's no discount.
+    let descuentoStr = '';
+    if (discount.amount > 0) {
+      const label = discount.label ? ` (${discount.label})` : '';
+      descuentoStr = `*Descuento:*${label} -${symbol}${discount.amount}\n`;
+    }
+    if (discount.freeShipping) {
+      descuentoStr += `*Envío:* ¡Gratis! 🎉\n`;
+    }
+
+    const envioStr =
+      shipping && !discount.freeShipping
+        ? `*Envío:* ${shipping.name}${fee > 0 ? ` (${symbol}${fee})` : ' (Gratis)'}\n`
+        : shipping && discount.freeShipping
+          ? `*Envío:* ${shipping.name}\n`
+          : '';
     const direccionStr =
       shipping?.requestCustomerAddress && this.customerAddress().trim()
         ? `*Dirección:* ${this.customerAddress().trim()}\n`
@@ -359,6 +507,7 @@ export default class Checkout {
         .replace(/\{productos\}/g, productsList.trimEnd())
         .replace(/\{total\}/g, `${symbol}${total}`)
         .replace(/\{totalBs\}/g, totalBsStr)
+        .replace(/\{descuento\}/g, descuentoStr)
         .replace(/\{envio\}/g, envioStr)
         .replace(/\{direccion\}/g, direccionStr)
         .replace(/\{comentarios\}/g, commentsStr)
@@ -369,7 +518,10 @@ export default class Checkout {
     message += `*Nombre:* ${this.name().trim() || 'Cliente'}\n`;
     if (phoneFull) message += `*Teléfono:* ${phoneFull}\n`;
     message += `\n*Productos:*\n${productsList}`;
-    if (fee > 0) message += `\n*Subtotal:* ${symbol}${subtotal}`;
+    if (discount.amount > 0 || fee > 0) {
+      message += `\n*Subtotal:* ${symbol}${subtotal}`;
+    }
+    if (descuentoStr) message += `\n${descuentoStr.trimEnd()}`;
     message += `\n*Total:* ${symbol}${total}${totalBsStr}\n`;
     if (envioStr) message += `\n${envioStr.trimEnd()}`;
     if (direccionStr) message += `\n${direccionStr.trimEnd()}`;

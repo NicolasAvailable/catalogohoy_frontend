@@ -24,6 +24,9 @@ export class OrderMapper {
       shippingMethod: e.shipping_method ?? null,
       shippingAddress: e.shipping_address ?? null,
       shippingFee: e.shipping_fee != null ? Number(e.shipping_fee) : undefined,
+      discountAmount: e.discount_amount != null ? Number(e.discount_amount) : 0,
+      discountCode: e.discount_code ?? null,
+      discountLabel: e.discount_label ?? null,
       deliveryDate: e.delivery_date,
     };
   }

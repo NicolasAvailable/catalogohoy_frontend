@@ -179,6 +179,43 @@
     </label>
   </section>
 
+  <!-- ===== Cupón de descuento ===== -->
+  <section class="checkout__card checkout__coupon">
+    <h2 class="checkout__card-title">¿Tienes un cupón?</h2>
+    @if (appliedCode(); as code) {
+    <div class="checkout__coupon-applied">
+      <span class="checkout__coupon-tag">
+        <ui-icon name="ticket" size="16" /> {{ code.code }}
+      </span>
+      <button type="button" class="checkout__coupon-remove" (click)="removeDiscountCode()">
+        Quitar
+      </button>
+    </div>
+    } @else {
+    <div class="checkout__coupon-input">
+      <input
+        type="text"
+        class="checkout__coupon-field"
+        placeholder="Código de descuento"
+        [ngModel]="discountCodeInput()"
+        (ngModelChange)="discountCodeInput.set($event)"
+        (keyup.enter)="applyDiscountCode()"
+      />
+      <button
+        type="button"
+        class="checkout__coupon-apply"
+        [disabled]="!discountCodeInput().trim() || isValidatingCode()"
+        (click)="applyDiscountCode()"
+      >
+        @if (isValidatingCode()) { ... } @else { Aplicar }
+      </button>
+    </div>
+    @if (codeError()) {
+    <p class="checkout__coupon-error">{{ codeError() }}</p>
+    }
+    }
+  </section>
+
   <!-- ===== Resumen ===== -->
   <section class="checkout__card checkout__summary">
     <h2 class="checkout__card-title">Resumen del pedido</h2>
@@ -186,10 +223,23 @@
       <span>Artículos ({{ cartStore.totalItems() }})</span>
       <span>{{ cs() }}{{ subtotal() }}</span>
     </div>
+    @if (discountAmount() > 0) {
+    <div class="checkout__summary-row checkout__summary-row--discount">
+      <span>Descuento{{ discount().label ? ' · ' + discount().label : '' }}</span>
+      <span>-{{ cs() }}{{ discountAmount() }}</span>
+    </div>
+    }
     @if (selectedShipping()) {
     <div class="checkout__summary-row">
       <span>{{ selectedShipping()?.name }}</span>
-      <span>{{ shippingFee() > 0 ? cs() + shippingFee() : 'Gratis' }}</span>
+      <span>
+        @if (discount().freeShipping) {
+          <s class="checkout__summary-strike">{{ shippingFee() > 0 ? cs() + shippingFee() : '' }}</s>
+          ¡Gratis!
+        } @else {
+          {{ effectiveShippingFee() > 0 ? cs() + effectiveShippingFee() : 'Gratis' }}
+        }
+      </span>
     </div>
     }
     <div class="checkout__summary-total">

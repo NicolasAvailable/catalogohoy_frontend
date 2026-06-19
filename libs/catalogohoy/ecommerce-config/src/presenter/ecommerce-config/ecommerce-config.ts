@@ -72,9 +72,10 @@ import {
 } from '../../infrastructure';
 import { PhoneMockupComponent } from '../components/phone-mockup/phone-mockup';
 import { TemplateSelectorComponent } from '../components/template-selector/template-selector';
+import { DiscountsTabComponent } from '../discounts-tab/discounts-tab';
 
-export type TabId = 'general' | 'location' | 'shipping' | 'payments' | 'social' | 'notifications';
-const VALID_TABS: TabId[] = ['general', 'location', 'shipping', 'payments', 'social', 'notifications'];
+export type TabId = 'general' | 'location' | 'shipping' | 'discounts' | 'payments' | 'social' | 'notifications';
+const VALID_TABS: TabId[] = ['general', 'location', 'shipping', 'discounts', 'payments', 'social', 'notifications'];
 
 @Component({
   selector: 'lib-ecommerce-config',
@@ -96,6 +97,7 @@ const VALID_TABS: TabId[] = ['general', 'location', 'shipping', 'payments', 'soc
     PhoneMockupComponent,
     TemplateSelectorComponent,
     DatePickerModule,
+    DiscountsTabComponent,
   ],
   templateUrl: './ecommerce-config.html',
   styleUrl: './ecommerce-config.css',
@@ -126,7 +128,8 @@ export class EcommerceConfigComponent implements OnInit {
     { id: 'general', label: 'General', icon: 'store' },
     { id: 'location', label: 'Ubicación y Horario', icon: 'map-pin' },
     { id: 'payments', label: 'Pagos', icon: 'credit-card' },
-    { id: 'shipping', label: 'Envío', icon: 'truck', badge: 'Nuevo' },
+    { id: 'shipping', label: 'Envío', icon: 'truck' },
+    { id: 'discounts', label: 'Descuentos', icon: 'ticket-percent', badge: 'Nuevo' },
     { id: 'social', label: 'Redes Sociales', icon: 'share2' },
     { id: 'notifications', label: 'Notificaciones', icon: 'mail' },
   ];

@@ -2,6 +2,7 @@ import {
   CatalogTemplate,
   CustomerFieldsConfig,
   PaymentMethodEntity,
+  PublicDiscount,
   ShippingMethod,
   SocialLinks,
   TenantCurrencyConfig,
@@ -51,6 +52,22 @@ export interface CatalogInfo {
   showShippingSection: boolean;
   /** Which customer fields to request and whether each is required. */
   customerFields: CustomerFieldsConfig;
+  /** Automatic discount rules (non-code) the checkout engine evaluates. */
+  discounts: PublicDiscount[];
+}
+
+/** Result of validating a coupon code at checkout (RPC validate_discount_code). */
+export interface DiscountValidation {
+  valid: boolean;
+  id?: number;
+  name?: string;
+  code?: string;
+  valueType?: 'percent' | 'fixed';
+  value?: number;
+  freeShipping?: boolean;
+  /** Reason when invalid: 'not_found' | 'usage_limit' | 'min_order'. */
+  error?: string;
+  minOrder?: number;
 }
 
 /** Invoice-safe view of an order, fetched by id for the public receipt. */
@@ -77,6 +94,9 @@ export interface PublicOrder {
   shippingMethod: { name: string; type: string; fee: number } | null;
   shippingAddress: string | null;
   shippingFee: number;
+  discountAmount: number;
+  discountCode: string | null;
+  discountLabel: string | null;
   paymentMethod: string | null;
   comments: string | null;
   createdAt: string;
@@ -137,6 +157,18 @@ export interface BaseEcommerceService {
     } | null;
     shipping_address?: string | null;
     shipping_fee?: number;
+    discount_amount?: number;
+    discount_code?: string | null;
+    discount_label?: string | null;
   }): Promise<E.Either<Error, { id: number }>>;
   getPublicOrder(id: number): Promise<E.Either<Error, PublicOrder>>;
+  /** Validate a coupon code against the tenant's rules (server-side RPC). */
+  validateDiscountCode(
+    slug: string,
+    code: string,
+    subtotal: number,
+    phone?: string
+  ): Promise<E.Either<Error, DiscountValidation>>;
+  /** Whether the given phone has no prior orders in the tenant (first-purchase). */
+  isFirstPurchase(slug: string, phone: string): Promise<boolean>;
 }

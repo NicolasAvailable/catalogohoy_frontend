@@ -191,6 +191,160 @@ export function createDefaultShippingMethods(): ShippingMethod[] {
   ];
 }
 
+// ----------------------------------------------------------------- discounts ---
+
+/** Kinds of discount a merchant can configure. Stored in `tenant_discounts.type`.
+ *  - `code`            customer types a coupon code at checkout (validated by RPC).
+ *  - `automatic`       flat discount applied automatically to every order.
+ *  - `order_value`     applied automatically once the subtotal reaches `minOrder`.
+ *  - `package`         applied automatically once the cart has `minItems` units.
+ *  - `bogo`            buy X get Y (the cheapest qualifying units get a discount).
+ *  - `free_shipping`   waives the shipping fee (optionally above `minOrder`).
+ *  - `first_purchase`  applied only on the customer's first order. */
+export type DiscountType =
+  | 'code'
+  | 'automatic'
+  | 'order_value'
+  | 'package'
+  | 'bogo'
+  | 'free_shipping'
+  | 'first_purchase';
+
+export type DiscountValueType = 'percent' | 'fixed';
+
+/** "Buy" side of a BOGO rule: how many units must be in the cart to qualify. */
+export interface BogoBuy {
+  quantity: number;
+}
+
+/** "Get" side of a BOGO rule: how many of the cheapest remaining units get the
+ *  discount, and how big that discount is (default 100% = free). */
+export interface BogoGet {
+  quantity: number;
+  valueType: DiscountValueType;
+  value: number;
+}
+
+/** A discount/coupon rule. Maps 1:1 to a `tenant_discounts` row. `id` is null
+ *  until persisted. Code rules are validated server-side via the
+ *  `validate_discount_code` RPC and never delivered through the public catalog;
+ *  every other type ships inside `get_public_catalog.discounts`. */
+export interface DiscountRule {
+  id: number | null;
+  name: string;
+  type: DiscountType;
+  /** Only for `code` rules. Case-insensitive, unique per tenant. */
+  code: string | null;
+  /** How the discount value is interpreted. Null for `free_shipping`/`bogo`. */
+  valueType: DiscountValueType | null;
+  value: number;
+  /** Minimum subtotal to qualify (order_value / free_shipping / code). */
+  minOrder: number;
+  /** Minimum total units in cart to qualify (package). */
+  minItems: number;
+  /** Whether the rule also waives the shipping fee. */
+  freeShipping: boolean;
+  bogoBuy: BogoBuy | null;
+  bogoGet: BogoGet | null;
+  /** Optional cap on total redemptions. Null = unlimited. */
+  usageLimit: number | null;
+  usageCount: number;
+  /** ISO timestamps bounding when the rule is valid. Null = open-ended. */
+  startsAt: string | null;
+  endsAt: string | null;
+  isActive: boolean;
+  position: number;
+}
+
+/** The trimmed shape of an automatic rule delivered through the public catalog
+ *  (`get_public_catalog.discounts`). Codes are NEVER included here — they are
+ *  validated server-side via `validate_discount_code`. */
+export interface PublicDiscount {
+  id: number;
+  name: string;
+  type: Exclude<DiscountType, 'code'>;
+  valueType: DiscountValueType | null;
+  value: number;
+  minOrder: number;
+  minItems: number;
+  freeShipping: boolean;
+  bogoBuy: BogoBuy | null;
+  bogoGet: BogoGet | null;
+  position: number;
+}
+
+export const DISCOUNT_TYPE_OPTIONS: {
+  label: string;
+  value: DiscountType;
+  description: string;
+}[] = [
+  {
+    label: 'Código de cupón',
+    value: 'code',
+    description: 'El cliente escribe un código en el checkout.',
+  },
+  {
+    label: 'Descuento automático',
+    value: 'automatic',
+    description: 'Se aplica a todos los pedidos sin código.',
+  },
+  {
+    label: 'Por monto del pedido',
+    value: 'order_value',
+    description: 'Se aplica al superar un monto mínimo.',
+  },
+  {
+    label: 'Por cantidad (paquete)',
+    value: 'package',
+    description: 'Se aplica al llevar una cantidad mínima de productos.',
+  },
+  {
+    label: 'Compra X lleva Y (BOGO)',
+    value: 'bogo',
+    description: 'Lleva varias unidades y obtén otras con descuento.',
+  },
+  {
+    label: 'Envío gratis',
+    value: 'free_shipping',
+    description: 'Elimina el costo de envío del pedido.',
+  },
+  {
+    label: 'Primera compra',
+    value: 'first_purchase',
+    description: 'Solo para el primer pedido del cliente.',
+  },
+];
+
+export const DISCOUNT_VALUE_TYPE_OPTIONS: {
+  label: string;
+  value: DiscountValueType;
+}[] = [
+  { label: 'Porcentaje (%)', value: 'percent' },
+  { label: 'Monto fijo', value: 'fixed' },
+];
+
+export function createDefaultDiscountRule(position: number): DiscountRule {
+  return {
+    id: null,
+    name: '',
+    type: 'automatic',
+    code: null,
+    valueType: 'percent',
+    value: 10,
+    minOrder: 0,
+    minItems: 0,
+    freeShipping: false,
+    bogoBuy: null,
+    bogoGet: null,
+    usageLimit: null,
+    usageCount: 0,
+    startsAt: null,
+    endsAt: null,
+    isActive: true,
+    position,
+  };
+}
+
 /** Per-field config for the checkout customer form. `name` is always visible;
  *  only its `required` flag is editable. */
 export interface CustomerFieldConfig {
@@ -326,14 +480,14 @@ export const DEFAULT_CURRENCY_CONFIG: TenantCurrencyConfig = {
 /**
  * Default WhatsApp message template.
  * Variables: {nombre}, {telefono}, {productos}, {total}, {totalBs},
- *            {comentarios}, {metodoPago}, {envio}, {direccion}
+ *            {descuento}, {comentarios}, {metodoPago}, {envio}, {direccion}
  */
 export const DEFAULT_WHATSAPP_ORDER_MESSAGE =
   `¡Hola! Me gustaría hacer un pedido:\n\n` +
   `*Nombre:* {nombre}\n` +
   `*Teléfono:* {telefono}\n\n` +
   `*Productos:*\n{productos}\n\n` +
-  `*Total:* {total}{totalBs}\n\n` +
+  `{descuento}*Total:* {total}{totalBs}\n\n` +
   `{envio}{direccion}{comentarios}{metodoPago}`;
 
 export const WHATSAPP_MESSAGE_VARIABLES = [
@@ -342,6 +496,7 @@ export const WHATSAPP_MESSAGE_VARIABLES = [
   { key: '{productos}', label: 'Lista de productos' },
   { key: '{total}', label: 'Total del pedido' },
   { key: '{totalBs}', label: 'Total en bolívares' },
+  { key: '{descuento}', label: 'Descuento aplicado' },
   { key: '{envio}', label: 'Método de envío' },
   { key: '{direccion}', label: 'Dirección del cliente' },
   { key: '{comentarios}', label: 'Comentarios del cliente' },

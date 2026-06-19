@@ -57,6 +57,12 @@
     <div class="invoice__row">
       <span>Subtotal</span><span>{{ cs() }}{{ subtotal() }}</span>
     </div>
+    @if (o.discountAmount > 0) {
+    <div class="invoice__row invoice__row--discount">
+      <span>Descuento{{ o.discountLabel ? ' · ' + o.discountLabel : '' }}</span>
+      <span>-{{ cs() }}{{ o.discountAmount }}</span>
+    </div>
+    }
     @if (o.shippingMethod) {
     <div class="invoice__row">
       <span>{{ o.shippingMethod.name || 'Envío' }}</span>

@@ -11,9 +11,12 @@ import {
   CustomerFieldsConfig,
   DEFAULT_CUSTOMER_FIELDS,
   DEFAULT_SOCIAL_LINKS,
+  DiscountType,
+  DiscountValueType,
   ExchangeRateType,
   findCountryByCode,
   findCurrencyByCode,
+  PublicDiscount,
   ShippingMethod,
   ShippingMethodType,
   SocialLinks,
@@ -23,6 +26,7 @@ import {
   BaseEcommerceService,
   CatalogInfo,
   Category,
+  DiscountValidation,
   PaginatedProductList,
   PublicCatalogData,
   PublicOrder,
@@ -197,6 +201,7 @@ export class EcommerceService implements BaseEcommerceService {
       customerFields:
         (config?.customer_fields as CustomerFieldsConfig) ??
         DEFAULT_CUSTOMER_FIELDS,
+      discounts: this.normalizeDiscounts(data.discounts),
     };
 
     const categories: Category[] = (data.categories ?? []).map((cat: any) => ({
@@ -465,6 +470,9 @@ export class EcommerceService implements BaseEcommerceService {
     } | null;
     shipping_address?: string | null;
     shipping_fee?: number;
+    discount_amount?: number;
+    discount_code?: string | null;
+    discount_label?: string | null;
   }): Promise<E.Either<Error, { id: number }>> {
     const exchangeRate = await this.getExchangeRate(order.tenant_id);
     const totalBs = order.total_usd * exchangeRate;
@@ -485,6 +493,9 @@ export class EcommerceService implements BaseEcommerceService {
           shipping_method: order.shipping_method ?? null,
           shipping_address: order.shipping_address ?? null,
           shipping_fee: order.shipping_fee ?? 0,
+          discount_amount: order.discount_amount ?? 0,
+          discount_code: order.discount_code ?? null,
+          discount_label: order.discount_label ?? null,
           status: 'pending',
         },
       ])
@@ -512,7 +523,7 @@ export class EcommerceService implements BaseEcommerceService {
     const { data, error } = await this.client
       .from('orders')
       .select(
-        'id, order_number, status, name, phone, email, products, total_usd, total_bs, shipping_method, shipping_address, shipping_fee, payment_method, comments, created_at'
+        'id, order_number, status, name, phone, email, products, total_usd, total_bs, shipping_method, shipping_address, shipping_fee, discount_amount, discount_code, discount_label, payment_method, comments, created_at'
       )
       .eq('id', id)
       .single();
@@ -544,10 +555,55 @@ export class EcommerceService implements BaseEcommerceService {
       shippingMethod: data.shipping_method ?? null,
       shippingAddress: data.shipping_address ?? null,
       shippingFee: Number(data.shipping_fee) || 0,
+      discountAmount: Number(data.discount_amount) || 0,
+      discountCode: data.discount_code ?? null,
+      discountLabel: data.discount_label ?? null,
       paymentMethod: data.payment_method ?? null,
       comments: data.comments ?? null,
       createdAt: data.created_at,
     });
+  }
+
+  /** Validate a coupon code server-side. The RPC only ever returns the matched
+   *  code's data (never other codes) so it's safe to call from the storefront. */
+  public async validateDiscountCode(
+    slug: string,
+    code: string,
+    subtotal: number,
+    phone?: string
+  ): Promise<E.Either<Error, DiscountValidation>> {
+    const { data, error } = await this.client.rpc('validate_discount_code', {
+      p_slug: slug,
+      p_code: code,
+      p_subtotal: subtotal,
+      p_phone: phone ?? null,
+    });
+
+    if (error) return E.left(new Error(error.message));
+    if (!data) return E.right({ valid: false, error: 'not_found' });
+
+    return E.right({
+      valid: !!data.valid,
+      id: data.id ?? undefined,
+      name: data.name ?? undefined,
+      code: data.code ?? undefined,
+      valueType: data.value_type ?? undefined,
+      value: data.value != null ? Number(data.value) : undefined,
+      freeShipping: data.free_shipping ?? undefined,
+      error: data.error ?? undefined,
+      minOrder: data.min_order != null ? Number(data.min_order) : undefined,
+    });
+  }
+
+  /** True when the phone has no prior orders in the tenant. Best-effort: any RPC
+   *  error resolves to false so first-purchase rules fail closed (no discount). */
+  public async isFirstPurchase(slug: string, phone: string): Promise<boolean> {
+    const { data, error } = await this.client.rpc('is_first_purchase', {
+      p_slug: slug,
+      p_phone: phone,
+    });
+    if (error) return false;
+    return data === true;
   }
 
   /** Raw jsonb from the RPC isn't trusted — coerce each shipping method into a
@@ -573,6 +629,56 @@ export class EcommerceService implements BaseEcommerceService {
           isActive: m?.isActive !== false,
           isDefault: !!m?.isDefault,
           position: Number(m?.position) || i,
+        };
+      })
+      .sort((a, b) => a.position - b.position);
+  }
+
+  /** Coerce the RPC's `discounts` jsonb into well-formed PublicDiscount rows.
+   *  Code rules never appear here (the RPC filters `type <> 'code'`), but we
+   *  defend against malformed data so the checkout engine can't crash. */
+  private normalizeDiscounts(raw: unknown): PublicDiscount[] {
+    if (!Array.isArray(raw)) return [];
+    const types: DiscountType[] = [
+      'automatic',
+      'order_value',
+      'package',
+      'bogo',
+      'free_shipping',
+      'first_purchase',
+    ];
+    const valueTypes: DiscountValueType[] = ['percent', 'fixed'];
+    return raw
+      .filter((d: any) => d?.type !== 'code' && types.includes(d?.type))
+      .map((d: any, i: number): PublicDiscount => {
+        const valueType: DiscountValueType | null = valueTypes.includes(
+          d?.value_type
+        )
+          ? d.value_type
+          : null;
+        const bogo = (b: any): { quantity: number; valueType: DiscountValueType; value: number } | null =>
+          b && typeof b === 'object'
+            ? {
+                quantity: Number(b.quantity) || 0,
+                valueType: valueTypes.includes(b.valueType) ? b.valueType : 'percent',
+                value: Number(b.value) || 0,
+              }
+            : null;
+        return {
+          id: Number(d?.id),
+          name: String(d?.name ?? ''),
+          type: d.type,
+          valueType,
+          value: Number(d?.value) || 0,
+          minOrder: Number(d?.min_order) || 0,
+          minItems: Number(d?.min_items) || 0,
+          freeShipping: !!d?.free_shipping,
+          bogoBuy:
+            d?.bogo_buy && typeof d.bogo_buy === 'object'
+              ? { quantity: Number(d.bogo_buy.quantity) || 0 }
+              : null,
+          bogoGet: bogo(d?.bogo_get),
+          position: Number(d?.position) || i,
         };
       })
       .sort((a, b) => a.position - b.position);

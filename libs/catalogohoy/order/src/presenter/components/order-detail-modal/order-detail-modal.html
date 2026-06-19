@@ -143,8 +143,23 @@
         </table>
       </div>
 
-      <!-- Total -->
+      <!-- Descuento -->
+      @if (order.discountAmount && order.discountAmount > 0) {
       <div class="flex items-center justify-between pt-3 border-t border-grey-100 mt-auto">
+        <span class="text-sm font-medium text-green-600">
+          Descuento{{ order.discountLabel ? ' · ' + order.discountLabel : '' }}
+        </span>
+        <span class="text-sm font-semibold text-green-600">
+          -{{ cs }}{{ order.discountAmount | number: '1.2-2' }}
+        </span>
+      </div>
+      }
+
+      <!-- Total -->
+      <div
+        class="flex items-center justify-between pt-3 border-t border-grey-100"
+        [class.mt-auto]="!(order.discountAmount && order.discountAmount > 0)"
+      >
         <span class="text-sm font-semibold text-grey-500">Total</span>
         <div class="text-right">
           <div class="text-lg font-bold text-grey-800">{{ cs }}{{ order.totalUsd | number: '1.2-2' }}</div>

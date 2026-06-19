@@ -13,6 +13,8 @@ import { EcommerceService } from './ecommerce.service';
 const PAGE_SIZE = 20;
 
 type EcommerceState = {
+  /** Tenant slug the catalog was loaded with — needed for discount RPCs. */
+  slug: string | null;
   catalogInfo: CatalogInfo | null;
   productList: ProductList;
   selectedProduct: Product | null;
@@ -35,6 +37,7 @@ type EcommerceState = {
 };
 
 const initialState: EcommerceState = {
+  slug: null,
   catalogInfo: null,
   productList: ProductList.empty(),
   selectedProduct: null,
@@ -122,6 +125,7 @@ export const EcommerceStore = signalStore(
           : null;
 
         patchState(store, () => ({
+          slug,
           catalogInfo,
           categories,
           exchangeRate,
@@ -286,6 +290,9 @@ export const EcommerceStore = signalStore(
       } | null;
       shipping_address?: string | null;
       shipping_fee?: number;
+      discount_amount?: number;
+      discount_code?: string | null;
+      discount_label?: string | null;
     }) {
       const catalogInfo = store.catalogInfo();
       if (!catalogInfo) return;
@@ -304,10 +311,33 @@ export const EcommerceStore = signalStore(
         shipping_method: order.shipping_method,
         shipping_address: order.shipping_address,
         shipping_fee: order.shipping_fee,
+        discount_amount: order.discount_amount,
+        discount_code: order.discount_code,
+        discount_label: order.discount_label,
       });
 
       patchState(store, () => ({ isLoading: false }));
       return result;
+    },
+
+    /** Validate a coupon code against the loaded tenant's rules. */
+    async validateDiscountCode(code: string, subtotal: number, phone?: string) {
+      const slug = store.slug();
+      if (!slug) return null;
+      const result = await ecommerceService.validateDiscountCode(
+        slug,
+        code,
+        subtotal,
+        phone
+      );
+      return result.isRight() ? result.value : null;
+    },
+
+    /** Whether `phone` is a first-time customer for the loaded tenant. */
+    async checkFirstPurchase(phone: string): Promise<boolean> {
+      const slug = store.slug();
+      if (!slug) return false;
+      return ecommerceService.isFirstPurchase(slug, phone);
     },
 
     enterPreviewMode() {
