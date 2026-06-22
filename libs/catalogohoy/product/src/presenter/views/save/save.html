@@ -472,8 +472,11 @@
               [cdkDragDisabled]="photos().length < 2"
             >
               <!-- Región de la imagen: media + overlays (portada, arrastrar,
-                   eliminar). -->
-              <div class="relative">
+                   eliminar). min-height para que no colapse mientras carga la
+                   imagen nueva (p. ej. al quitar fondo con IA). -->
+              <div
+                class="relative flex items-center justify-center min-h-[11rem] sm:min-h-[14rem] bg-grey-50"
+              >
                 @if (i === 0) {
                 <span
                   class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-primary-500 text-white text-[0.6875rem] font-bold shadow-sm"
