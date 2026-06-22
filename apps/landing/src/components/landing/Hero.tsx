@@ -128,11 +128,11 @@ const Hero = () => {
                   />
                 ))}
                 <div className="w-10 h-10 rounded-full ring-2 ring-white bg-foreground text-white text-[0.65rem] font-bold flex items-center justify-center shadow-sm">
-                  +300
+                  +500
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">+300 negocios</span>{" "}
+                <span className="font-semibold text-foreground">+500 negocios</span>{" "}
                 ya usan Catálogo Hoy
               </p>
             </motion.div>
