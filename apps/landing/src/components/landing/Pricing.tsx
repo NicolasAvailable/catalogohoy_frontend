@@ -143,6 +143,20 @@ function getTeamLabel(members: number): string {
   return `Hasta ${members} miembros de equipo`;
 }
 
+// Arma la lista de features del plan (productos + equipo + extras) y deja los
+// negativos ("Sin...") agrupados al final, para que se vea claro qué SÍ incluye.
+function planItems(plan: PlanData): Feature[] {
+  const items: Feature[] = [
+    { label: plan.productsLabel ?? `Hasta ${plan.maxProducts} productos` },
+    { label: getTeamLabel(plan.maxTeamMembers), negative: plan.maxTeamMembers === 0 },
+    ...plan.features,
+  ];
+  return [
+    ...items.filter((f) => !f.negative),
+    ...items.filter((f) => f.negative),
+  ];
+}
+
 function handleSelectPlan(plan: PlanData, period: BillingPeriod): void {
   if (plan.isFree) {
     window.open("https://auth.catalogohoy.com/signup", "_blank");
@@ -321,19 +335,7 @@ const Pricing = () => {
 
                 {/* ── Features ── */}
                 <ul className="flex flex-col gap-[0.55rem] flex-1 list-none p-0 m-0">
-                  <li className="flex items-center gap-[0.6rem] text-sm text-[#334155]">
-                    <Check className="h-4 w-4 shrink-0 text-green-500" />
-                    <span>{plan.productsLabel ?? `Hasta ${plan.maxProducts} productos`}</span>
-                  </li>
-                  <li className="flex items-center gap-[0.6rem] text-sm text-[#334155]">
-                    {plan.maxTeamMembers > 0 ? (
-                      <Check className="h-4 w-4 shrink-0 text-green-500" />
-                    ) : (
-                      <X className="h-4 w-4 shrink-0 text-gray-300" />
-                    )}
-                    <span>{getTeamLabel(plan.maxTeamMembers)}</span>
-                  </li>
-                  {plan.features.map((feature, j) => (
+                  {planItems(plan).map((feature, j) => (
                     <li key={j} className="flex items-center gap-[0.6rem] text-sm text-[#334155]">
                       {feature.negative ? (
                         <X className="h-4 w-4 shrink-0 text-gray-300" />
