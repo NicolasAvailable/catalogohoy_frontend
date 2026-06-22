@@ -47,3 +47,4 @@ export const appRoutes: Route[] = [
     redirectTo: '',
   },
 ];
+

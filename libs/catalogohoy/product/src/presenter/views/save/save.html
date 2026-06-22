@@ -65,11 +65,64 @@
         </div>
 
         <div class="flex flex-col gap-2">
-          <div class="flex items-center gap-3">
-            <label class="text-base text-grey-400 font-semibold" for="description"
-              >Descripción</label
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-3">
+              <label
+                class="text-base text-grey-400 font-semibold"
+                for="description"
+                >Descripción</label
+              >
+              <span class="text-sm text-grey-400 font-semibold">(Opcional)</span>
+            </div>
+
+            <!-- Mejorar con IA: ui-select skineado como los botones de IA
+                 (borde degradado + sparkle). Se deshabilita con <15 chars o al procesar. -->
+            <!-- Deshabilitado (sin texto/procesando): sin interacción, pero las
+                 letras siguen violeta como los demás botones de IA (no gris). -->
+            <div
+              class="relative w-52"
+              [class.cursor-not-allowed]="
+                descriptionTextLength() < 15 || improvingDesc()
+              "
+              [class.pointer-events-none]="
+                descriptionTextLength() < 15 || improvingDesc()
+              "
             >
-            <span class="text-sm text-grey-400 font-semibold">(Opcional)</span>
+              <ui-icon
+                [name]="improvingDesc() ? 'loader-circle' : 'wand-sparkles'"
+                [styleClass]="
+                  'w-4 h-4 text-violet-600 absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none' +
+                  (improvingDesc() ? ' animate-spin' : '')
+                "
+              />
+              <div
+                class="rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400"
+              >
+                <ui-select
+                  styleClass="ai-improve-select"
+                  [options]="improveModes"
+                  optionLabel="label"
+                  optionValue="value"
+                  [placeholder]="
+                    improvingDesc() ? 'Mejorando…' : 'Mejorar con IA'
+                  "
+                  [ngModel]="improveModeValue()"
+                  [ngModelOptions]="{ standalone: true }"
+                  (ngModelChange)="onImproveMode($event)"
+                  size="small"
+                >
+                  <ng-template selectItem let-opt>
+                    <span class="flex items-center gap-2 text-grey-700">
+                      <ui-icon
+                        [name]="opt.icon"
+                        styleClass="w-4 h-4 text-violet-600"
+                      />
+                      {{ opt.label }}
+                    </span>
+                  </ng-template>
+                </ui-select>
+              </div>
+            </div>
           </div>
 
           <p-editor
@@ -382,6 +435,22 @@
             </p>
           </div>
 
+          <!-- Generar imagen con IA: abre un modal con un prompt (puede usar el
+               título/descripción del producto). -->
+          <button
+            type="button"
+            (click)="openGenerator()"
+            [disabled]="photos().length >= maxPhotos()"
+            class="self-start rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer transition-transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span
+              class="flex items-center gap-2 rounded-[0.4375rem] bg-white px-4 py-2.5 text-sm font-semibold text-violet-700"
+            >
+              <ui-icon name="sparkles" styleClass="w-[1.125rem] h-[1.125rem]" />
+              Generar imagen con IA
+            </span>
+          </button>
+
           @if (photos().length > 0) {
           @if (photos().length > 1) {
           <div class="flex items-center gap-2 text-grey-300 text-sm mt-2">
@@ -402,38 +471,94 @@
               cdkDragBoundary=".product-media-list"
               [cdkDragDisabled]="photos().length < 2"
             >
-              @if (i === 0) {
-              <span
-                class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-primary-500 text-white text-[11px] font-bold shadow-sm"
-              >
-                Portada
-              </span>
-              }
+              <!-- Región de la imagen: media + overlays (portada, arrastrar,
+                   eliminar). -->
+              <div class="relative">
+                @if (i === 0) {
+                <span
+                  class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-primary-500 text-white text-[0.6875rem] font-bold shadow-sm"
+                >
+                  Portada
+                </span>
+                }
 
-              @if (photos().length > 1) {
-              <button
-                type="button"
-                cdkDragHandle
-                class="absolute bottom-2 left-2 z-10 p-1.5 bg-white/90 rounded-md cursor-move text-grey-500 hover:text-grey-800 shadow-sm transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                aria-label="Arrastrar para reordenar"
-              >
-                <ui-icon name="grip-vertical" size="18" />
-              </button>
-              }
+                @if (photos().length > 1) {
+                <button
+                  type="button"
+                  cdkDragHandle
+                  class="absolute bottom-2 left-2 z-10 p-1.5 bg-white/90 rounded-md cursor-move text-grey-500 hover:text-grey-800 shadow-sm transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                  aria-label="Arrastrar para reordenar"
+                >
+                  <ui-icon name="grip-vertical" size="18" />
+                </button>
+                }
 
-              <ui-product-media
-                [url]="photo"
-                alt="Media del producto"
-                [controls]="true"
-                styleClass="w-full h-auto object-contain"
-              />
-              <button
-                type="button"
-                (click)="removePhoto(photo)"
-                class="absolute top-2 right-2 z-10 p-1 bg-white/80 rounded-sm cursor-pointer hover:bg-white text-grey-500 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-              >
-                <ui-icon name="trash" size="18" />
-              </button>
+                @if (isVideo(photo)) {
+                <ui-product-media
+                  [url]="photo"
+                  alt="Media del producto"
+                  [controls]="true"
+                  styleClass="w-full h-auto object-contain"
+                />
+                } @else {
+                <!-- Imágenes: click abre el preview a pantalla completa (mismo
+                     p-image que las órdenes). -->
+                <ui-image
+                  [src]="photo"
+                  alt="Imagen del producto"
+                  styleClass="w-full block cursor-zoom-in"
+                  imageClass="w-full h-auto object-contain"
+                />
+                }
+
+                <button
+                  type="button"
+                  (click)="removePhoto(photo)"
+                  class="absolute top-2 right-2 z-10 p-1 bg-white/80 rounded-sm cursor-pointer hover:bg-white text-grey-500 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                >
+                  <ui-icon name="trash" size="18" />
+                </button>
+              </div>
+
+              <!-- Barra de IA (solo imágenes): dos botones del mismo tamaño.
+                   "Quitar fondo" (BiRefNet, 1 clic) y "Recortar a mano" (abre el
+                   editor de selección por clics). Cada operación reemplaza la
+                   imagen, así que se encadenan sobre el último resultado. -->
+              @if (!isVideo(photo)) {
+              <div class="flex flex-col gap-1.5 p-2 border-t border-grey-100">
+                <button
+                  type="button"
+                  (click)="removeBackground(photo)"
+                  [disabled]="isAiProcessing(photo)"
+                  class="w-full rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer transition-transform hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  <span
+                    class="flex items-center justify-center gap-1.5 rounded-[0.4375rem] bg-white px-2 py-1.5 text-[0.6875rem] font-semibold text-violet-700"
+                  >
+                    @if (isAiProcessing(photo)) {
+                    <ui-icon name="loader-circle" styleClass="w-3.5 h-3.5 animate-spin" />
+                    Quitando fondo…
+                    } @else {
+                    <ui-icon name="bot" styleClass="w-3.5 h-3.5" />
+                    Quitar fondo
+                    }
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  (click)="openEraser(photo)"
+                  [disabled]="isAiProcessing(photo)"
+                  class="w-full rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer transition-transform hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  <span
+                    class="flex items-center justify-center gap-1.5 rounded-[0.4375rem] bg-white px-2 py-1.5 text-[0.6875rem] font-semibold text-violet-700"
+                  >
+                    <ui-icon name="eraser" styleClass="w-3.5 h-3.5" />
+                    Borrar a mano
+                  </span>
+                </button>
+              </div>
+              }
             </div>
             }
           </div>
@@ -891,4 +1016,24 @@
     }
   </form>
   <lib-plan-limit-dialog />
+
+  <!-- Borrador manual (pincel): borra a mano lo que sobra sobre la imagen
+       actual y sube el PNG resultante. Idealmente tras "Quitar fondo". -->
+  @if (eraserPhoto(); as eraserSrc) {
+  <lib-image-eraser
+    [src]="eraserSrc"
+    (applied)="onEraserApplied($event)"
+    (closed)="closeEraser()"
+  />
+  }
+
+  <!-- Generador de imagen con IA (FLUX). -->
+  @if (generatorOpen()) {
+  <lib-image-generator
+    [title]="form.controls.name.value ?? ''"
+    [description]="descriptionPlain()"
+    (generated)="onGenerated($event)"
+    (closed)="closeGenerator()"
+  />
+  }
 </section>

@@ -22,3 +22,22 @@
 .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
   transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1);
 }
+
+/* "Mejorar con IA": skin del p-select para que luzca como los botones de IA
+   (interior blanco, texto violeta, espacio para el sparkle a la izquierda). El
+   borde degradado lo aporta el wrapper en el HTML. */
+:host ::ng-deep .ai-improve-select.p-select {
+  background: #fff;
+  border: none;
+  border-radius: 0.4375rem;
+  box-shadow: none;
+}
+:host ::ng-deep .ai-improve-select .p-select-label,
+:host ::ng-deep .ai-improve-select .p-select-label.p-placeholder {
+  padding-left: 2.375rem;
+  color: #6d28d9;
+  font-weight: 600;
+}
+:host ::ng-deep .ai-improve-select .p-select-dropdown {
+  color: #6d28d9;
+}

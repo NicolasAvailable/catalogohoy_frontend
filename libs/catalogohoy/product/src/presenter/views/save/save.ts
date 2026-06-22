@@ -30,7 +30,7 @@ import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
 import { EditorModule } from 'primeng/editor';
-import { Exception, is } from '@shared/domain';
+import { Exception, is, isVideoUrl } from '@shared/domain';
 import { HtmlSanitizerService, ToastService } from '@shared/infrastructure';
 import {
   richTextMaxLengthValidator,
@@ -40,17 +40,22 @@ import {
   ButtonComponent,
   CardComponent,
   IconComponent,
+  ImageComponent,
   InputNumberComponent,
   InputTextComponent,
   MultiSelectComponent,
   ProductMediaComponent,
   RadioButtonComponent,
+  SelectComponent,
+  SelectItemDirective,
   ToggleComponent,
   UploaderComponent,
 } from '@ui';
 import { ProductFacade } from '../../../application';
 import { Product } from '../../../domain';
-import { ProductService } from '../../../infrastructure';
+import { AiImageService, ProductService } from '../../../infrastructure';
+import { ImageEraserComponent } from '../../components/image-eraser/image-eraser';
+import { ImageGeneratorComponent } from '../../components/image-generator/image-generator';
 
 @Component({
   selector: 'lib-save',
@@ -65,11 +70,16 @@ import { ProductService } from '../../../infrastructure';
     EditorModule,
     ButtonComponent,
     IconComponent,
+    ImageComponent,
+    ImageEraserComponent,
+    ImageGeneratorComponent,
     InputNumberComponent,
     RadioButtonComponent,
     MultiSelectComponent,
     PlanLimitDialogComponent,
     ProductMediaComponent,
+    SelectComponent,
+    SelectItemDirective,
     ToggleComponent,
   ],
   templateUrl: './save.html',
@@ -81,6 +91,7 @@ export default class Save implements OnInit {
   private readonly toastService = inject(ToastService);
   private readonly productFacade = inject(ProductFacade);
   private readonly productService = inject(ProductService);
+  private readonly aiImageService = inject(AiImageService);
   public readonly categoryStore = inject(CategoryStore);
   public readonly planStore = inject(PlanStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
@@ -132,9 +143,33 @@ export default class Save implements OnInit {
     const html = this.descriptionValue() ?? '';
     return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').length;
   });
+  // Descripción como texto plano (sin HTML), para usarla en el generador de IA.
+  public readonly descriptionPlain = computed(() =>
+    (this.descriptionValue() ?? '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
 
   public readonly id = input<string | undefined>(undefined);
   public readonly photos = signal<string[]>([]);
+  // URLs cuyo fondo se está removiendo con IA ahora mismo (varias a la vez).
+  // Se usa para mostrar el spinner y deshabilitar el botón por imagen.
+  public readonly aiProcessing = signal<ReadonlySet<string>>(new Set());
+  // Borrador manual (pincel): qué foto está abierta en el editor.
+  public readonly eraserPhoto = signal<string | null>(null);
+  // Generador de imagen con IA: si el modal está abierto.
+  public readonly generatorOpen = signal<boolean>(false);
+  // Mejorar descripción con IA: opciones del ui-select (cada una con su icono),
+  // valor seleccionado (se resetea tras elegir) y flag de procesando.
+  public readonly improveModes = [
+    { label: 'Mejorar redacción', value: 'improve', icon: 'wand-sparkles' },
+    { label: 'Alargar', value: 'expand', icon: 'plus' },
+    { label: 'Acortar', value: 'shorten', icon: 'minus' },
+  ];
+  public readonly improveModeValue = signal<string | null>(null);
+  public readonly improvingDesc = signal<boolean>(false);
   public readonly isCreate = signal<boolean>(true);
   public readonly isSubmitting = signal<boolean>(false);
   public readonly isCreatingCategory = signal<boolean>(false);
@@ -606,6 +641,114 @@ export default class Save implements OnInit {
   public removePhoto(url: string) {
     this.photos.update((photos) => photos.filter((photo) => photo !== url));
     this.form.controls.photos.setValue(this.photos());
+  }
+
+  /** Una entrada de la galería puede ser foto o video; solo las fotos
+   *  admiten preview de zoom y remover-fondo con IA. */
+  public isVideo(url: string): boolean {
+    return isVideoUrl(url);
+  }
+
+  public isAiProcessing(url: string): boolean {
+    return this.aiProcessing().has(url);
+  }
+
+  /** Remueve el fondo de una imagen con IA (fal.ai / BiRefNet vía la Edge
+   *  Function `fal-ai-images`). Reemplaza la imagen original por la versión
+   *  recortada en el mismo lugar, conservando el orden y la portada. */
+  public async removeBackground(url: string) {
+    if (this.isVideo(url) || this.isAiProcessing(url)) return;
+
+    this.aiProcessing.update((set) => new Set(set).add(url));
+    this.toastService.wait('Quitando fondo con IA…');
+    try {
+      const result = await this.aiImageService.removeBackground(url);
+      result
+        .mapRight((newUrl) => {
+          this.photos.update((photos) =>
+            photos.map((photo) => (photo === url ? newUrl : photo))
+          );
+          this.form.controls.photos.setValue(this.photos());
+          this.toastService.success('Fondo removido con IA');
+        })
+        .mapLeft((error) => this.toastService.error(new Exception(error.message)));
+    } finally {
+      this.toastService.dismissWait();
+      this.aiProcessing.update((set) => {
+        const next = new Set(set);
+        next.delete(url);
+        return next;
+      });
+    }
+  }
+
+  // ───── Borrador manual (pincel, estilo Canva/CapCut) ─────
+
+  /** Abre el editor de borrador para una imagen. */
+  public openEraser(photo: string) {
+    if (this.isVideo(photo)) return;
+    this.eraserPhoto.set(photo);
+  }
+
+  public closeEraser() {
+    this.eraserPhoto.set(null);
+  }
+
+  /** El borrador subió el PNG editado: reemplaza la imagen en su lugar
+   *  (conserva orden/portada) y cierra el editor. */
+  public onEraserApplied(newUrl: string) {
+    const photo = this.eraserPhoto();
+    if (!photo) return;
+    this.photos.update((photos) =>
+      photos.map((p) => (p === photo ? newUrl : p))
+    );
+    this.form.controls.photos.setValue(this.photos());
+    this.closeEraser();
+  }
+
+  // ───── Generar imagen con IA (FLUX) ─────
+
+  public openGenerator() {
+    this.generatorOpen.set(true);
+  }
+
+  public closeGenerator() {
+    this.generatorOpen.set(false);
+  }
+
+  /** La IA generó una imagen: la agregamos a la galería (respeta el límite del
+   *  plan vía setPhoto) y cerramos el modal. */
+  public onGenerated(url: string) {
+    this.setPhoto(url);
+    this.closeGenerator();
+  }
+
+  // ───── Mejorar descripción con IA (Claude Haiku) ─────
+
+  /** El ui-select emite el modo elegido; lo reseteamos a placeholder y mejoramos. */
+  public onImproveMode(mode: string | null) {
+    if (!mode) return;
+    this.improveModeValue.set(null);
+    this.improveDescription(mode as 'improve' | 'expand' | 'shorten');
+  }
+
+  public async improveDescription(mode: 'improve' | 'expand' | 'shorten') {
+    const text = this.descriptionPlain();
+    if (text.length < 15 || this.improvingDesc()) return;
+    this.improvingDesc.set(true);
+    this.toastService.wait('Mejorando con IA…');
+    try {
+      const result = await this.aiImageService.improveText(text, mode);
+      result
+        .mapRight((html) => {
+          this.form.controls.description.setValue(html);
+          this.toastService.success('Descripción mejorada con IA');
+        })
+        .mapLeft((e) => this.toastService.error(new Exception(e.message)));
+    } finally {
+      this.toastService.dismissWait();
+      this.improvingDesc.set(false);
+    }
   }
 
   /** Reorder the uploaded media via drag & drop. The first photo is the cover

@@ -68,6 +68,10 @@ export class AuthenticationFacade {
     );
   }
 
+  public confirmEmail(accessToken: string, refreshToken: string) {
+    return this.authenticationService.confirmEmail(accessToken, refreshToken);
+  }
+
   public resetPassword(input: ResetPasswordCredentials) {
     return new ResetPasswordUseCase(this.authenticationService).execute(input);
   }

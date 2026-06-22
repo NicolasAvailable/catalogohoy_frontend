@@ -28,6 +28,15 @@
         </a>
         <div class="pm-divider"></div>
       }
+      <!-- Créditos de IA: solo en móvil (en desktop está el chip del navbar). -->
+      <button type="button" class="pm-item sm:hidden" (click)="onBuyCredits()">
+        <ui-icon name="sparkles" size="16" styleClass="pm-item__icon" />
+        <span class="pm-item__label">
+          Créditos de IA@if (credits.balance() !== null) {
+            · {{ credits.balance() }}
+          }
+        </span>
+      </button>
       <a routerLink="plans" class="pm-item" (click)="close()">
         <ui-icon name="crown" size="16" styleClass="pm-item__icon" />
         <span class="pm-item__label">Planes</span>

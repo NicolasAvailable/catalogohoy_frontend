@@ -1,13 +1,14 @@
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MetaPixelService, SupabaseClientProvider } from '@catalogohoy/core';
 import { SUPPORTED_COUNTRIES } from '@catalogohoy/ecommerce-config';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import { LocationService } from '@shared/infrastructure';
 import {
   ButtonComponent,
+  CheckboxComponent,
   IconComponent,
   InputMessageComponent,
   InputPasswordComponent,
@@ -18,6 +19,7 @@ import {
 } from '@ui';
 import { AuthenticationFacade } from '../../../application';
 import { SignUpCredentials } from '../../../domain';
+import { SIGNUP_CONFIRM_EMAIL } from '../../../infrastructure';
 
 function slugify(text: string): string {
   const map: Record<string, string> = {
@@ -46,6 +48,7 @@ type Step = 1 | 2 | 3;
     InputPasswordComponent,
     InputMessageComponent,
     ButtonComponent,
+    CheckboxComponent,
     IconComponent,
     SelectComponent,
     SelectItemDirective,
@@ -58,6 +61,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   private readonly facade = inject(AuthenticationFacade);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly metaPixel = inject(MetaPixelService);
   private readonly locationService = inject(LocationService);
   private readonly supabase = SupabaseClientProvider.getInstance();
@@ -80,6 +84,9 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   readonly emailExistsError = signal(false);
   readonly googleAccountExistsError = signal(false);
   readonly invitedTenantName = signal<string | null>(null);
+  /** Si la confirmación de correo está activa, guardamos el email para mostrar
+   *  la pantalla "revisá tu correo" en vez de redirigir. */
+  readonly confirmEmailSent = signal<string | null>(null);
 
   readonly credentialsForm = this.fb.group({
     email: ['', [Validators.required, Validators.email, whiteSpacesValidator()]],
@@ -177,6 +184,10 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   chooseEmail() {
     this.method.set('email');
     this.step.set(2);
+  }
+
+  goToLogin() {
+    this.router.navigate(['/login']);
   }
 
   async chooseGoogle() {
@@ -361,6 +372,12 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
       result.mapRight(async (url) => {
         this.metaPixel.trackEvent('CompleteRegistration', { content_name: storeName });
         this._clearReferralCookie();
+        // Confirmación de correo activa: sin sesión todavía. Mostramos la
+        // pantalla de "revisá tu correo" en vez de redirigir.
+        if (url === SIGNUP_CONFIRM_EMAIL) {
+          this.confirmEmailSent.set(email);
+          return;
+        }
         await this._recordTermsAcceptance();
         window.location.href = url;
       });
@@ -410,3 +427,5 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     return null;
   }
 }
+
+

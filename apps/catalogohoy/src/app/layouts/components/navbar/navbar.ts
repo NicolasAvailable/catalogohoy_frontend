@@ -3,6 +3,7 @@ import { Component, inject, OnInit, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { environment } from '@catalogohoy/env';
 import { PlanStore } from '@catalogohoy/plan';
+import { CreditsWidgetComponent } from '@catalogohoy/product';
 import { ProfileStore } from '@catalogohoy/profile';
 import { is, qr } from '@shared/domain';
 import { BaseComponent } from '@shared/presenter';
@@ -19,6 +20,7 @@ import { ProfileMenu } from './components';
   imports: [
     AvatarComponent,
     ButtonComponent,
+    CreditsWidgetComponent,
     IconComponent,
     TooltipDirective,
     ProfileMenu,

@@ -12,3 +12,10 @@
 .step-enter {
   animation: stepFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* El texto/placeholder dentro de los inputs (size large) quedaba más grande
+   que el label. Lo igualamos al label (text-base) para que no se vea desbalanceado. */
+:host ::ng-deep .p-inputtext,
+:host ::ng-deep .p-select .p-select-label {
+  font-size: 1rem;
+}

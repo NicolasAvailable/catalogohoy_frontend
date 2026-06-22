@@ -1,0 +1,121 @@
+<!-- Chip de saldo (navbar, solo desktop; en móvil va en el dropdown del perfil
+     para no desbordar). Skeleton mientras carga. -->
+@if (credits.balance() === null) {
+<div class="w-20 h-8 rounded-lg bg-grey-100 animate-pulse mr-1 hidden sm:block"></div>
+} @else {
+<button
+  type="button"
+  (click)="open()"
+  class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors cursor-pointer mr-1"
+  title="Créditos de IA"
+>
+  <ui-icon name="sparkles" size="16" />
+  <span class="text-sm font-semibold">{{ credits.balance() }}</span>
+  <span class="hidden sm:inline text-sm font-semibold">créditos</span>
+</button>
+}
+
+<!-- Diálogo: armar paquete de créditos (cantidad libre + descuento por volumen). -->
+<ui-dialog
+  #buyDialog
+  headerTitle="Comprar créditos de IA"
+  [closable]="!busy()"
+  [dismissableMask]="!busy()"
+  [closeOnEscape]="!busy()"
+  styleClass="w-[30rem]! max-w-[94vw]!"
+>
+  <div class="flex flex-col gap-5 pt-1">
+    <p class="text-sm text-grey-400">
+      Armá tu paquete. Los créditos comprados no vencen y se suman a tu saldo
+      mensual. Mientras más agregás, mayor el descuento.
+    </p>
+
+    <!-- Presets rápidos -->
+    <div class="flex flex-wrap gap-2">
+      @for (p of presets; track p) {
+      <button
+        type="button"
+        (click)="setAmount(p)"
+        class="px-3 py-1.5 rounded-lg border text-sm font-semibold transition-colors cursor-pointer"
+        [class.border-violet-500]="amount() === p"
+        [class.bg-violet-50]="amount() === p"
+        [class.text-violet-700]="amount() === p"
+        [class.border-grey-200]="amount() !== p"
+        [class.text-grey-600]="amount() !== p"
+      >
+        {{ p }}
+      </button>
+      }
+    </div>
+
+    <!-- Cantidad: ± y slider -->
+    <div class="flex flex-col gap-3">
+      <div class="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          (click)="dec()"
+          [disabled]="amount() <= min"
+          aria-label="Quitar créditos"
+          class="w-9 h-9 shrink-0 inline-flex items-center justify-center rounded-lg border border-grey-200 text-grey-600 hover:border-violet-300 hover:text-violet-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <ui-icon name="minus" styleClass="w-5 h-5" />
+        </button>
+        <div class="flex flex-col items-center leading-tight">
+          <span class="text-2xl font-bold text-grey-800">{{ amount() }}</span>
+          <span class="text-xs text-grey-400">créditos</span>
+        </div>
+        <button
+          type="button"
+          (click)="inc()"
+          [disabled]="amount() >= max"
+          aria-label="Agregar créditos"
+          class="w-9 h-9 shrink-0 inline-flex items-center justify-center rounded-lg border border-grey-200 text-grey-600 hover:border-violet-300 hover:text-violet-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <ui-icon name="plus" styleClass="w-5 h-5" />
+        </button>
+      </div>
+      <input
+        type="range"
+        [min]="min"
+        [max]="max"
+        [step]="step"
+        [value]="amount()"
+        (input)="setAmount(+$any($event.target).value)"
+        class="w-full accent-violet-600 cursor-pointer"
+      />
+    </div>
+
+    <!-- Resumen de precio + descuento -->
+    <div class="flex items-end justify-between gap-3">
+      <div class="flex flex-col leading-tight">
+        <span class="text-sm text-grey-400">Total</span>
+        <span class="text-3xl font-extrabold text-grey-800">
+          ${{ totalLabel() }}
+        </span>
+      </div>
+      @if (discountPct() > 0) {
+      <span
+        class="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-700 px-3 py-1 text-sm font-semibold"
+      >
+        <ui-icon name="sparkles" styleClass="w-4 h-4" />
+        −{{ discountPct() }}% por volumen
+      </span>
+      }
+    </div>
+
+    <!-- Pagar -->
+    <button
+      type="button"
+      (click)="buy()"
+      [disabled]="busy()"
+      class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold py-3 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+    >
+      @if (busy()) {
+      <ui-icon name="loader-circle" styleClass="w-5 h-5 animate-spin" />
+      Redirigiendo…
+      } @else {
+      Continuar al pago · ${{ totalLabel() }}
+      }
+    </button>
+  </div>
+</ui-dialog>

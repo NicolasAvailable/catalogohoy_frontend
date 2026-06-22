@@ -1,0 +1,125 @@
+<div class="fixed inset-0 z-50 flex flex-col bg-black/85">
+  <!-- barra superior -->
+  <div class="flex items-center justify-between gap-2 p-3 text-white">
+    <div class="flex items-center gap-2">
+      <ui-icon name="eraser" styleClass="w-[1.125rem] h-[1.125rem]" />
+      <span class="font-semibold text-sm">Borrar a mano</span>
+    </div>
+    <button
+      type="button"
+      (click)="cancel()"
+      [disabled]="processing()"
+      aria-label="Cerrar"
+      class="p-1.5 rounded-md hover:bg-white/10 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+    >
+      <ui-icon name="x" styleClass="w-5 h-5" />
+    </button>
+  </div>
+
+  <p class="text-center text-white/80 text-[0.6875rem] px-4">
+    Arrastra el pincel sobre lo que quieres quitar — se borra al instante.
+  </p>
+
+  <!-- lienzo con fondo de cuadros (transparencia visible) -->
+  <div class="flex-1 min-h-0 flex items-center justify-center p-4">
+    <div
+      class="relative inline-block rounded-lg overflow-hidden"
+      style="
+        background-image: repeating-conic-gradient(
+          #cbd5e1 0% 25%,
+          #ffffff 0% 50%
+        );
+        background-size: 1.5rem 1.5rem;
+      "
+    >
+      <canvas
+        #canvas
+        (pointerdown)="onDown($event)"
+        (pointermove)="onMove($event)"
+        (pointerup)="onUp()"
+        (pointercancel)="onUp()"
+        (pointerleave)="onLeave()"
+        style="touch-action: none"
+        class="block max-h-[70vh] max-w-full select-none"
+        [class.cursor-none]="ready() && !processing()"
+      ></canvas>
+
+      <!-- aro del pincel siguiendo al cursor -->
+      @if (cursor().show && !processing()) {
+      <span
+        class="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-violet-500 bg-violet-500/20 pointer-events-none"
+        [style.left.px]="cursor().x"
+        [style.top.px]="cursor().y"
+        [style.width.px]="cursor().d"
+        [style.height.px]="cursor().d"
+      ></span>
+      }
+
+      @if (!ready()) {
+      <div
+        class="absolute inset-0 flex items-center justify-center bg-black/40 text-white"
+      >
+        <ui-icon name="loader-circle" styleClass="w-8 h-8 animate-spin" />
+      </div>
+      }
+    </div>
+  </div>
+
+  <!-- controles -->
+  <div class="p-3 flex flex-col gap-3 items-center">
+    <!-- tamaño del pincel -->
+    <div class="flex items-center gap-2 text-white text-[0.6875rem]">
+      <ui-icon name="eraser" styleClass="w-3.5 h-3.5" />
+      <span>Pincel</span>
+      <input
+        #brushInput
+        type="range"
+        min="10"
+        max="220"
+        [value]="brush()"
+        (input)="setBrush(brushInput.value)"
+        [disabled]="processing()"
+        class="w-40 accent-violet-500 cursor-pointer disabled:opacity-40"
+      />
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        (click)="undo()"
+        [disabled]="processing()"
+        class="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <ui-icon name="arrow-left" styleClass="w-4 h-4" />
+        Deshacer
+      </button>
+      <button
+        type="button"
+        (click)="reset()"
+        [disabled]="processing()"
+        class="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <ui-icon name="refresh-cw" styleClass="w-4 h-4" />
+        Restablecer
+      </button>
+      <button
+        type="button"
+        (click)="apply()"
+        [disabled]="processing() || !ready()"
+        class="rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <span
+          class="flex items-center gap-2 rounded-[0.4375rem] bg-white px-5 py-2.5 text-sm font-semibold text-violet-700"
+        >
+          @if (processing()) {
+          <ui-icon name="loader-circle" styleClass="w-[1.125rem] h-[1.125rem] animate-spin" />
+          Aplicando…
+          } @else {
+          <ui-icon name="eraser" styleClass="w-[1.125rem] h-[1.125rem]" />
+          Aplicar
+          }
+        </span>
+      </button>
+    </div>
+  </div>
+</div>

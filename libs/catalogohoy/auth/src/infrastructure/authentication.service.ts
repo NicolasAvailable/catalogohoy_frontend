@@ -20,6 +20,11 @@ import {
 import { errorMapper } from './authentication-error';
 import { authenticationTokenService } from './authentication-token.service';
 
+// Sentinel devuelto por `signup()` cuando Supabase exige confirmar el correo
+// (no hay sesión todavía). El componente lo usa para mostrar "revisá tu correo"
+// en vez de redirigir.
+export const SIGNUP_CONFIRM_EMAIL = '__confirm_email__';
+
 @Injectable({
   providedIn: 'root',
 })
@@ -173,11 +178,13 @@ export class AuthenticationService implements BaseAuthenticationService {
       ? findCountryByCode(credentials.countryCode)
       : null;
 
-    const { error } = await this.client.auth.signUp({
+    const { data, error } = await this.client.auth.signUp({
       email: credentials.email,
       password: credentials.password,
       phone: '',
       options: {
+        // A dónde vuelve el usuario tras hacer clic en el link de verificación.
+        emailRedirectTo: `${window.location.origin}/confirm-email`,
         data: {
           name: credentials.name,
           display_name: credentials.name,
@@ -190,6 +197,15 @@ export class AuthenticationService implements BaseAuthenticationService {
     });
     if (error) {
       return E.left(errorMapper(error as AuthApiError));
+    }
+
+    // Si la confirmación de correo está activada en Supabase, signUp NO devuelve
+    // sesión: el usuario debe confirmar su email antes de entrar. El tenant ya lo
+    // crea el hook `handle_new_user`, pero acá cortamos (no podemos llamar a
+    // get_my_tenant sin sesión) y avisamos al componente con un sentinel para
+    // que muestre la pantalla de "revisá tu correo".
+    if (!data.session) {
+      return E.right(SIGNUP_CONFIRM_EMAIL);
     }
 
     const { data: tenantRows, error: tenantError } = await this.client.rpc(
@@ -235,6 +251,29 @@ export class AuthenticationService implements BaseAuthenticationService {
     } else {
       return E.right(undefined);
     }
+  }
+
+  /** Confirma el correo tras el clic en el link de verificación: establece la
+   *  sesión con los tokens del fragment y devuelve la URL del admin del tenant
+   *  (el tenant ya lo creó el hook handle_new_user en el signup). */
+  public async confirmEmail(
+    accessToken: string,
+    refreshToken: string
+  ): Promise<E.Either<Error, string>> {
+    const { error: sessionError } = await this.client.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken || '',
+    });
+    if (sessionError) {
+      return E.left(new Error(sessionError.message));
+    }
+    const { data: tenantRows, error: tenantError } =
+      await this.client.rpc('get_my_tenant');
+    if (tenantError) {
+      return E.left(new Error(tenantError.message));
+    }
+    const tenant = TenantMapper.toDomain(tenantRows[0]);
+    return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
   public async resetPassword(

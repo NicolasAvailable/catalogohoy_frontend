@@ -223,6 +223,7 @@ export class UploaderComponent {
       const urls = successResults.map((result) => result.value as string);
 
       if (urls.length > 0) {
+        this.toastService.success('Subida completa');
         this.valueChange.emit(this.multiple() ? urls : urls[0]);
       }
 
