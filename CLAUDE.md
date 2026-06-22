@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🧠 READ FIRST: the project brain
+
+**Before answering, planning, or touching code, read [`.claude/docs/BRAIN.md`](.claude/docs/BRAIN.md)** —
+it's the central source of truth (architecture, features, business rules, deployment, gotchas,
+integrations) and points to every other doc. When you learn something non-obvious or change a
+rule/deploy/infra detail, **update the relevant doc in the same change** so the brain stays current.
+
 ## Monorepo Overview
 
 Nx monorepo with two Angular applications and feature libraries organized by domain.
@@ -92,7 +99,14 @@ Available under `/project:*` — see `.claude/commands/` for full prompts:
 | `/project:check [project]` | Run lint + tests on affected projects |
 | `/project:review` | Code review against project architecture rules |
 
-## Reference Docs
+## Reference Docs — the brain (`.claude/docs/`)
 
-- [`.claude/docs/patterns.md`](.claude/docs/patterns.md) — Either monad, Signal Store, component, routing, and i18n code examples
-- [`.claude/docs/database.md`](.claude/docs/database.md) — Full Supabase schema: all 11 tables with columns, types, relationships, and real query patterns extracted from the codebase
+- [`BRAIN.md`](.claude/docs/BRAIN.md) — **start here**: index + project overview + maintenance protocol
+- [`architecture.md`](.claude/docs/architecture.md) — monorepo, 3-layer pattern, multi-tenancy, routing, shared + ui
+- [`deployment.md`](.claude/docs/deployment.md) — deploy branches (main / authentication / landing), Tailwind v3 vs v4, secrets
+- [`gotchas.md`](.claude/docs/gotchas.md) — known traps (worktree+Nx, Tailwind v3/v4, headless capture, multi-tenant routing…)
+- [`business-rules.md`](.claude/docs/business-rules.md) — plans/limits, AI credit allocations, pricing, weekly reports
+- [`integrations.md`](.claude/docs/integrations.md) — all edge functions + third-party services
+- [`features/`](.claude/docs/features/) — per-domain: commerce, account-billing, supporting, ai-credits, auth-verification
+- [`patterns.md`](.claude/docs/patterns.md) — Either monad, Signal Store, component, routing, i18n code examples
+- [`database.md`](.claude/docs/database.md) — full Supabase schema, RPCs, triggers, real query patterns

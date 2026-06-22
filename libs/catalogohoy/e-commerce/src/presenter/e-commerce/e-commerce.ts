@@ -192,6 +192,20 @@ export class ECommerce implements OnInit, OnDestroy {
     const deepLinkProductId = new URL(window.location.href).searchParams.get(
       'product'
     );
+    // Snapshot del `?category=<id>` (link compartido desde el admin) ANTES de
+    // cualquier navigate.
+    const deepLinkCategoryId = new URL(window.location.href).searchParams.get(
+      'category'
+    );
+
+    // Pre-seleccionamos la categoría ANTES de cargar el catálogo. Así, cuando
+    // el category-filter (p-tabs) renderice por primera vez, ya arranca con el
+    // tab correcto seleccionado. Si lo hiciéramos después del primer render,
+    // PrimeNG p-tabs reacciona al cambio de `value` post-init emitiendo un
+    // valueChange que termina reseteando la selección a "Ver todos".
+    if (deepLinkCategoryId) {
+      this.ecommerceStore.setSelectedCategory(deepLinkCategoryId);
+    }
 
     const slug = getTenantSlugFromUrl();
     if (slug) {
@@ -205,6 +219,18 @@ export class ECommerce implements OnInit, OnDestroy {
           this.posthogService.enablePublicTracking(slug);
         }
       }
+    }
+
+    // Deep-link de categoría: la categoría ya quedó pre-seleccionada arriba; el
+    // catálogo cargó TODOS los productos, así que recargamos filtrando por la
+    // categoría y limpiamos el query param.
+    if (deepLinkCategoryId && slug) {
+      await this.ecommerceStore.loadProducts(slug);
+      this.router.navigate([], {
+        queryParams: { category: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
     }
 
     // Una vez resuelto el tenant (catalogInfo poblado), abrimos el modal

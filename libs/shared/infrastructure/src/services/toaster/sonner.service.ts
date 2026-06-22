@@ -10,23 +10,33 @@ export class SonnerToasterService {
   constructor(private readonly translate: TranslateService) {}
 
   public success(message: string) {
+    // Cualquier toast de resultado cierra el de espera pendiente (si lo hay),
+    // así nunca quedan apilados un "cargando…" y un "éxito/error".
+    this.dismissWait();
     toast.success(this.translate.translate(message));
   }
 
   public error(exception: Exception) {
+    this.dismissWait();
     toast.error(this.translate.translate(exception.message, exception.params));
   }
 
   public warning(message: string) {
+    this.dismissWait();
     toast.warning(this.translate.translate(message));
   }
 
   public info(message: string) {
+    this.dismissWait();
     toast.info(this.translate.translate(message));
   }
 
   public wait(message: string) {
-    this.waitId = toast.loading(this.translate.translate(message));
+    // duration: Infinity → el toast de espera NO se auto-cierra; persiste hasta
+    // que la acción termine (dismissWait) o lo reemplace un toast de resultado.
+    this.waitId = toast.loading(this.translate.translate(message), {
+      duration: Infinity,
+    });
   }
 
   public dismissWait() {

@@ -208,6 +208,7 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftShowLocalCurrencyPrice = signal(true);
   public readonly draftWhatsappOrderMessage = signal<string | null>(null);
   public readonly draftNotifyNewOrders = signal<boolean>(true);
+  public readonly draftNotifyWeeklyReport = signal<boolean>(true);
 
   // --- Shipping (Envío) tab drafts ---
   public readonly draftShippingMethods = signal<ShippingMethod[]>([]);
@@ -505,6 +506,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftShowLocalCurrencyPrice, prev?.showLocalCurrencyPrice ?? true, config.showLocalCurrencyPrice ?? true);
       syncField(this.draftWhatsappOrderMessage, prev?.whatsappOrderMessage ?? null, config.whatsappOrderMessage ?? null);
       syncField(this.draftNotifyNewOrders, prev?.notifyNewOrders ?? true, config.notifyNewOrders ?? true);
+      syncField(this.draftNotifyWeeklyReport, prev?.notifyWeeklyReport ?? true, config.notifyWeeklyReport ?? true);
       syncFieldJson(this.draftWhatsappButtons, prevButtons, newButtons);
       syncFieldJson(this.draftSocialLinks, prev?.socialLinks ?? DEFAULT_SOCIAL_LINKS, config.socialLinks ?? { ...DEFAULT_SOCIAL_LINKS });
       syncField(this.draftShowShippingSection, prev?.showShippingSection ?? false, config.showShippingSection ?? false);
@@ -845,6 +847,7 @@ export class EcommerceConfigComponent implements OnInit {
     if (this.draftShowLocalCurrencyPrice() !== (config.showLocalCurrencyPrice ?? true)) changes.showLocalCurrencyPrice = this.draftShowLocalCurrencyPrice();
     if (this.draftWhatsappOrderMessage() !== (config.whatsappOrderMessage ?? null)) changes.whatsappOrderMessage = this.draftWhatsappOrderMessage();
     if (this.draftNotifyNewOrders() !== (config.notifyNewOrders ?? true)) changes.notifyNewOrders = this.draftNotifyNewOrders();
+    if (this.draftNotifyWeeklyReport() !== (config.notifyWeeklyReport ?? true)) changes.notifyWeeklyReport = this.draftNotifyWeeklyReport();
 
     const serverButtons = config.whatsappButtons?.length
       ? config.whatsappButtons

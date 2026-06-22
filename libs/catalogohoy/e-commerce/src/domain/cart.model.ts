@@ -25,7 +25,8 @@ export class Cart {
       (i) =>
         i.productId === item.productId &&
         i.tierTitle === item.tierTitle &&
-        i.size === item.size
+        i.size === item.size &&
+        i.variantId === item.variantId
     );
 
     if (existingIndex >= 0) {
@@ -59,7 +60,9 @@ export class Cart {
           item.tierTitle,
           item.id,
           item.sku,
-          item.size
+          item.size,
+          item.variantId,
+          item.variantName
         );
       }
       return item;

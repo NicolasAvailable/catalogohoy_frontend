@@ -1,14 +1,17 @@
 <div class="flex justify-center items-center h-screen bg-lino-500 overflow-hidden">
 
   <!-- ── Form panel ── -->
-  <div class="flex flex-col lg:p-28 md:p-44 sm:p-20 p-8 w-full lg:w-1/2 h-full justify-center gap-6">
+  <div class="relative flex flex-col justify-center gap-6 w-full lg:w-1/2 h-full p-8 sm:p-20 md:p-44 lg:p-10 lg:items-center lg:bg-[#eceefb]">
 
     <!-- Logo -->
     <ui-icon
       name="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg"
-      styleClass="h-14 rounded-lg"
-      class="flex justify-center sm:justify-start"
+      styleClass="h-14 lg:h-11 rounded-lg"
+      class="flex justify-center sm:justify-start lg:absolute lg:top-8 lg:left-8"
     />
+
+    <!-- Card (desktop only) -->
+    <div class="flex flex-col gap-6 lg:gap-7 w-full lg:max-w-md lg:bg-white lg:rounded-3xl lg:p-12">
 
     <!-- Step indicator (only when method is chosen and not invite mode) -->
     @if (method() && !isInviteMode()) {
@@ -32,7 +35,7 @@
     @if (step() === 1) {
       <div class="step-enter flex flex-col gap-6">
       <div class="flex flex-col gap-1">
-        <h1 class="text-3xl sm:text-4xl font-semibold text-grey-700">Crea tu catálogo</h1>
+        <h1 class="text-3xl sm:text-4xl lg:text-3xl font-semibold text-grey-700">Crea tu catálogo</h1>
         <p class="text-base text-grey-400">Elige cómo quieres registrarte para comenzar.</p>
       </div>
 
@@ -96,7 +99,7 @@
       <div class="step-enter flex flex-col gap-6">
         <div>
           @if (!isInviteMode()) {
-            <button type="button" (click)="back()" class="flex items-center gap-1 text-sm text-grey-400 hover:text-grey-600 mb-4 transition-colors">
+            <button type="button" (click)="back()" class="flex items-center gap-1 text-sm text-grey-400 hover:text-grey-600 mb-4 transition-colors cursor-pointer">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
               </svg>
@@ -119,7 +122,7 @@
 
         <form [formGroup]="credentialsForm" (keyup.enter)="nextStep()">
           <div class="mb-4">
-            <label class="block font-medium text-sm text-grey-400 mb-1">Email</label>
+            <label class="block font-medium text-base text-grey-400 mb-1">Email</label>
             <ui-input-text size="large" formControlName="email" placeholder="tu@correo.com" />
             @if (isInviteMode()) {
               <p class="text-xs text-grey-400 mt-1">Este es el correo al que enviaron la invitación y no se puede cambiar.</p>
@@ -132,7 +135,7 @@
             }
           </div>
           <div class="mb-6">
-            <label class="block font-medium text-sm text-grey-400 mb-1">Contraseña</label>
+            <label class="block font-medium text-base text-grey-400 mb-1">Contraseña</label>
             <ui-input-password size="large" [feedback]="false" formControlName="password" placeholder="Mínimo 6 caracteres" />
             <ui-input-message [control]="credentialsForm.get('password')" error="required" text="El campo es obligatorio" />
             <ui-input-message [control]="credentialsForm.get('password')" error="minlength" text="Debe tener mínimo 6 caracteres" />
@@ -156,7 +159,7 @@
       <div class="step-enter flex flex-col gap-6">
         <div>
           @if (method() === 'email') {
-            <button type="button" (click)="back()" class="flex items-center gap-1 text-sm text-grey-400 hover:text-grey-600 mb-4 transition-colors">
+            <button type="button" (click)="back()" class="flex items-center gap-1 text-sm text-grey-400 hover:text-grey-600 mb-4 transition-colors cursor-pointer">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
               </svg>
@@ -175,21 +178,21 @@
 
         <form [formGroup]="profileForm" (keyup.enter)="submit()">
           <div class="mb-4">
-            <label class="block font-medium text-sm text-grey-400 mb-1">Tu nombre completo</label>
+            <label class="block font-medium text-base text-grey-400 mb-1">Tu nombre completo</label>
             <ui-input-text size="large" formControlName="name" placeholder="María González" />
             <ui-input-message [control]="profileForm.get('name')" error="required" text="El campo es obligatorio" />
             <ui-input-message [control]="profileForm.get('name')" error="minlength" text="Debe tener mínimo 4 caracteres" />
             <ui-input-message [control]="profileForm.get('name')" error="whitespace" text="No puede contener espacios en blanco" />
           </div>
           <div class="mb-4">
-            <label class="block font-medium text-sm text-grey-400 mb-1">Nombre de la tienda</label>
+            <label class="block font-medium text-base text-grey-400 mb-1">Nombre de la tienda</label>
             <ui-input-text size="large" formControlName="storeName" placeholder="Mi Tienda Génova" />
             <ui-input-message [control]="profileForm.get('storeName')" error="required" text="El campo es obligatorio" />
             <ui-input-message [control]="profileForm.get('storeName')" error="minlength" text="Debe tener mínimo 3 caracteres" />
             <!-- URL preview -->
             @if (slugPreview()) {
-              <p class="text-xs text-grey-400 mt-1.5 flex items-center gap-1">
-                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <p class="text-xs text-grey-400 mt-1.5 break-words leading-relaxed">
+                <svg class="inline w-3.5 h-3.5 mr-1 align-[-0.15em]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
                 </svg>
                 Tu catálogo estará en:
@@ -198,7 +201,7 @@
             }
           </div>
           <div class="mb-6">
-            <label class="block font-medium text-sm text-grey-400 mb-1">País</label>
+            <label class="block font-medium text-base text-grey-400 mb-1">País</label>
             <ui-select
               size="large"
               [options]="supportedCountries"
@@ -229,7 +232,7 @@
           <!-- Código de referido (opcional). Si llegó desde catalogohoy.com/?ref=XXX
                la cookie chy_ref pre-llena este campo automáticamente. -->
           <div class="mb-6">
-            <label class="block font-medium text-sm text-grey-400 mb-1">
+            <label class="block font-medium text-base text-grey-400 mb-1">
               Código de referido <span class="text-grey-300 font-normal">(opcional)</span>
             </label>
             <ui-input-text
@@ -244,14 +247,13 @@
                monitoreo, recolección de IP/uso, acceso a datos para soporte y
                todo lo que ya está descrito en /privacy-policy. -->
           <div class="mb-6">
-            <label class="flex items-start gap-3 cursor-pointer select-none" for="accept-terms-checkbox">
-              <input
-                id="accept-terms-checkbox"
-                type="checkbox"
+            <div class="flex items-start gap-3">
+              <ui-checkbox
                 formControlName="acceptedTerms"
-                class="mt-1 w-4 h-4 accent-primary-600 cursor-pointer shrink-0"
+                checkboxId="accept-terms-checkbox"
+                class="mt-0.5 shrink-0"
               />
-              <span class="text-xs text-grey-500 leading-relaxed">
+              <label for="accept-terms-checkbox" class="text-xs text-grey-500 leading-relaxed cursor-pointer select-none">
                 He leído y acepto los
                 <a
                   href="https://catalogohoy.com/terms-of-service"
@@ -266,8 +268,8 @@
                   rel="noopener noreferrer"
                   class="text-primary-600 hover:text-primary-700 underline font-medium"
                 >Política de Privacidad</a>.
-              </span>
-            </label>
+              </label>
+            </div>
             @if (profileForm.controls.acceptedTerms.touched && profileForm.controls.acceptedTerms.invalid) {
               <p class="text-xs text-red-500 mt-1.5 ml-7">Debés aceptar los términos y la política para continuar.</p>
             }
@@ -284,14 +286,93 @@
       </div>
     }
 
+    </div>
+    <!-- /Card -->
   </div>
 
   <!-- ── Side image ── -->
   <div class="w-1/2 h-screen hidden lg:block">
-    <img
-      src="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/auth-side.svg"
-      alt="Auth side"
-      class="object-cover w-full h-full"
-    />
+    <picture>
+      <source
+        srcset="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing-hero/hero-2x.avif"
+        type="image/avif"
+      />
+      <img
+        src="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing-hero/hero-2x.webp"
+        alt="Empieza a vender hoy con CatalogoHoy"
+        class="object-cover w-full h-full"
+        fetchpriority="high"
+      />
+    </picture>
   </div>
 </div>
+
+<!-- Pantalla "revisá tu correo": mismo layout de dos paneles que login/signup
+     (logo + mensaje a la izquierda, hero a la derecha). Solo si la confirmación
+     de correo está activa (signUp no devolvió sesión). -->
+@if (confirmEmailSent(); as confirmEmail) {
+<div class="fixed inset-0 z-50 flex justify-center items-center h-screen bg-lino-500 overflow-hidden">
+
+  <!-- ── Mensaje (izquierda) ── -->
+  <div class="relative flex flex-col justify-center gap-6 w-full lg:w-1/2 h-full p-8 sm:p-20 md:p-44 lg:p-10 lg:items-center lg:bg-[#eceefb]">
+
+    <!-- Logo -->
+    <ui-icon
+      name="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg"
+      styleClass="h-14 lg:h-11 rounded-lg"
+      class="flex justify-center sm:justify-start lg:absolute lg:top-8 lg:left-8"
+    />
+
+    <div class="flex flex-col gap-5 w-full lg:max-w-md lg:bg-white lg:rounded-3xl lg:p-12 items-center lg:items-start text-center lg:text-left">
+      <h1 class="text-3xl sm:text-4xl lg:text-[2rem] font-bold text-grey-700 leading-tight">
+        ¡Ya está todo listo!
+      </h1>
+
+      <p class="text-base text-grey-500 leading-relaxed">
+        Solo falta <strong class="font-semibold text-grey-700">verificar tu
+        correo</strong>. Te enviamos un enlace de confirmación a:
+      </p>
+
+      <p class="text-lg font-bold text-grey-800 break-all">
+        {{ confirmEmail }}
+      </p>
+
+      <p class="text-base text-grey-500 leading-relaxed">
+        Revisá tu bandeja y hacé clic en el enlace para empezar.
+      </p>
+
+      <div class="w-full h-px bg-grey-100"></div>
+
+      <p class="text-sm text-grey-400">
+        ¿No lo ves? Revisá la carpeta de
+        <span class="font-medium text-grey-500">spam</span> o
+        <span class="font-medium text-grey-500">promociones</span>.
+      </p>
+
+      <div class="w-full flex justify-center lg:justify-end">
+        <ui-button
+          label="Ir a iniciar sesión"
+          [fluid]="false"
+          (click)="goToLogin()"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Imagen (derecha) ── -->
+  <div class="w-1/2 h-screen hidden lg:block">
+    <picture>
+      <source
+        srcset="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing-hero/hero-2x.avif"
+        type="image/avif"
+      />
+      <img
+        src="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing-hero/hero-2x.webp"
+        alt="Empieza a vender hoy con CatalogoHoy"
+        class="object-cover w-full h-full"
+      />
+    </picture>
+  </div>
+</div>
+}
+

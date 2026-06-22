@@ -56,6 +56,12 @@ table tbody tr {
   transition: background-color 0.15s ease-in-out;
 }
 
+/* Top-align body cells so rows with a tall products list don't leave the
+   other columns floating in the vertical middle. */
+table tbody td {
+  vertical-align: top;
+}
+
 /* Action buttons fade in on row hover */
 .group:hover .group-hover\:opacity-100 {
   opacity: 1;

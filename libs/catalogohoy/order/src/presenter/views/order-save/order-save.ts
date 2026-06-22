@@ -29,6 +29,7 @@ import {
   DatepickerComponent,
   IconComponent,
   InputNumberComponent,
+  InputPhoneComponent,
   InputTextComponent,
   SelectComponent,
   SelectItemDirective,
@@ -56,6 +57,7 @@ import { OrderStore } from '../../../infrastructure/order.store';
     SelectItemDirective,
     SelectSelectedItemDirective,
     DatepickerComponent,
+    InputPhoneComponent,
   ],
   templateUrl: './order-save.html',
   styleUrl: './order-save.css',
@@ -81,6 +83,12 @@ export default class OrderSave implements OnInit {
   );
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canEditOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'edit'));
+
+  /** ISO country (lowercase) used to preselect the phone input's country code,
+   *  matching the catalog's configured country. Defaults to Venezuela. */
+  protected readonly defaultPhoneCountry = computed(() =>
+    (this.configStore.config()?.countryCode || 'VE').toLowerCase()
+  );
 
   private static readonly CUSTOM_PRODUCT_ID = '__custom__';
 

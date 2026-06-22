@@ -37,6 +37,10 @@ export class App implements OnInit {
    *  navegaciones internas y se limpia de la URL. */
   private static readonly QUERY_PARAMS_KEEP_IN_URL = new Set([
     'product',
+    // `category` is a deep-link (shared from the admin category list) read by
+    // the e-commerce component from the URL. Like `product`, it must survive
+    // bootstrap instead of being moved to localStorage and stripped.
+    'category',
     // `preview` must stay in the URL so the public checkout can detect it
     // synchronously (the catalog-editor preview iframe loads
     // /checkout?preview=true). Persisting it to localStorage would make it

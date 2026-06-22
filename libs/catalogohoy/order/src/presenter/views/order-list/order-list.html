@@ -160,17 +160,54 @@
             </div>
             <div>
               <span class="text-grey-800 font-bold">Productos:</span>
-              <ul class="list-disc list-inside text-grey-700 mt-0.5">
-                @for (item of order.products; track $index) {
-                <li>{{ item.quantity }}x {{ item.name }}@if (item.size) { <span class="text-grey-400">(Talla: {{ item.size }})</span> }</li>
+              <div class="flex flex-col gap-2 mt-1.5">
+                @for (item of visibleProducts(order); track $index) {
+                <div class="flex items-start gap-2.5">
+                  @if (item.photo) {
+                  <ui-image
+                    [src]="item.photo"
+                    [alt]="item.name"
+                    styleClass="w-9 h-9 block rounded-md overflow-hidden border border-grey-100 bg-grey-50 shrink-0 cursor-zoom-in"
+                    imageClass="w-full h-full object-cover"
+                  />
+                  } @else {
+                  <div class="w-9 h-9 rounded-md overflow-hidden border border-grey-100 bg-grey-50 shrink-0 flex items-center justify-center">
+                    <ui-icon name="package" styleClass="size-4 text-grey-300" />
+                  </div>
+                  }
+                  <div class="flex flex-col min-w-0">
+                    <div class="flex items-start gap-1.5">
+                      <span
+                        class="text-[0.625rem] font-bold text-primary-600 bg-primary-50 rounded px-1 py-0.5 shrink-0 leading-snug"
+                        >{{ item.quantity }}x</span
+                      >
+                      <span class="text-xs font-medium text-grey-800 leading-snug">{{ item.name }}</span>
+                    </div>
+                    @if (item.variantName || item.size || item.sku) {
+                    <div class="flex items-center gap-x-2 gap-y-0.5 flex-wrap text-[0.625rem] text-grey-400 mt-0.5">
+                      @if (item.variantName) { <span>{{ item.variantName }}</span> }
+                      @if (item.size) { <span>Talla {{ item.size }}</span> }
+                      @if (item.sku) { <span>sku: {{ item.sku }}</span> }
+                    </div>
+                    }
+                  </div>
+                </div>
                 }
-              </ul>
+                @if (order.products.length > PRODUCTS_PREVIEW) {
+                <button
+                  type="button"
+                  (click)="toggleProductsExpanded(order.id)"
+                  class="self-start text-xs font-semibold text-primary-600 hover:text-primary-700 cursor-pointer"
+                >
+                  @if (isProductsExpanded(order.id)) { Ver menos } @else { Ver {{ order.products.length - PRODUCTS_PREVIEW }} más }
+                </button>
+                }
+              </div>
             </div>
             <div><span class="text-grey-800 font-bold">Total: </span><span class="font-bold text-primary-600">{{ cs() }}{{ order.totalUsd | number:'1.2-2' }}</span></div>
             @if (showBs() && order.totalBs) {
             <div><span class="text-grey-800 font-bold">Total Bs: </span><span class="font-bold text-primary-600">Bs. {{ order.totalBs | number:'1.2-2' }}</span></div>
             }
-            <div><span class="text-grey-800 font-bold">Entrega: </span><span class="text-grey-700">{{ order.deliveryDate | date: 'dd/MM/yyyy' }}</span></div>
             @if (order.shippingMethod) {
             <div><span class="text-grey-800 font-bold">Envío: </span><span class="text-grey-700">{{ order.shippingMethod.name }}</span></div>
             }
@@ -181,6 +218,7 @@
             <ui-button
               (click)="openOrderDetail(order)"
               icon="eye"
+              iconStyleClass="size-3.5!"
               variant="text"
               severity="contrast"
               size="small"
@@ -251,7 +289,6 @@
             </th>
             <th class="px-6 py-3 border-b border-grey-50">WhatsApp</th>
             <th class="px-6 py-3 border-b border-grey-50">Fecha de creación</th>
-            <th class="px-6 py-3 border-b border-grey-50">Fecha de entrega</th>
             <th class="px-6 py-3 border-b border-grey-50">Envío</th>
             <th class="px-6 py-3 border-b border-grey-50">Total</th>
             @if (showBs()) {
@@ -313,14 +350,52 @@
             <td class="px-6 py-3.5">
               <span class="font-semibold text-grey-800">{{ order.name }}</span>
             </td>
-            <td class="px-6 py-3.5">
-              <ul class="list-disc list-inside text-grey-700">
-                @for (item of order.products; track $index) {
-                <li>{{ item.quantity }}x {{ item.name }}@if (item.size) { <span class="text-grey-400">(Talla: {{ item.size }})</span> }</li>
+            <td class="px-6 py-3.5 align-top">
+              <div class="flex flex-col gap-2 min-w-72">
+                @for (item of visibleProducts(order); track $index) {
+                <div class="flex items-start gap-2.5">
+                  @if (item.photo) {
+                  <ui-image
+                    [src]="item.photo"
+                    [alt]="item.name"
+                    styleClass="w-9 h-9 block rounded-md overflow-hidden border border-grey-100 bg-grey-50 shrink-0 cursor-zoom-in"
+                    imageClass="w-full h-full object-cover"
+                  />
+                  } @else {
+                  <div class="w-9 h-9 rounded-md overflow-hidden border border-grey-100 bg-grey-50 shrink-0 flex items-center justify-center">
+                    <ui-icon name="package" styleClass="size-4 text-grey-300" />
+                  </div>
+                  }
+                  <div class="flex flex-col min-w-0">
+                    <div class="flex items-start gap-1.5">
+                      <span
+                        class="text-[0.6875rem] font-bold text-primary-600 bg-primary-50 rounded px-1.5 py-0.5 shrink-0 leading-snug"
+                        >{{ item.quantity }}x</span
+                      >
+                      <span class="text-sm font-medium text-grey-800 leading-snug">{{ item.name }}</span>
+                    </div>
+                    @if (item.variantName || item.size || item.sku) {
+                    <div class="flex items-center gap-x-2 gap-y-0.5 flex-wrap text-[0.6875rem] text-grey-400 mt-0.5">
+                      @if (item.variantName) { <span>{{ item.variantName }}</span> }
+                      @if (item.size) { <span>Talla {{ item.size }}</span> }
+                      @if (item.sku) { <span>sku: {{ item.sku }}</span> }
+                    </div>
+                    }
+                  </div>
+                </div>
                 }
-              </ul>
+                @if (order.products.length > PRODUCTS_PREVIEW) {
+                <button
+                  type="button"
+                  (click)="toggleProductsExpanded(order.id)"
+                  class="self-start text-xs font-semibold text-primary-600 hover:text-primary-700 cursor-pointer"
+                >
+                  @if (isProductsExpanded(order.id)) { Ver menos } @else { Ver {{ order.products.length - PRODUCTS_PREVIEW }} más }
+                </button>
+                }
+              </div>
             </td>
-            <td class="px-6 py-3.5">
+            <td class="px-6 py-3.5 align-top">
               <div class="flex justify-center">
                 <ui-select
                   [options]="statusOptions"
@@ -364,9 +439,6 @@
             <td class="px-6 py-3.5 text-grey-500">
               {{ order.createdAt | date: 'dd/MM/yyyy hh:mm a' }}
             </td>
-            <td class="px-6 py-3.5 text-grey-700 font-medium">
-              {{ order.deliveryDate | date: 'dd/MM/yyyy' }}
-            </td>
             <td class="px-6 py-3.5 text-sm">
               @if (order.shippingMethod) {
               <div class="flex items-center gap-1.5 text-grey-700">
@@ -390,6 +462,7 @@
                 <ui-button
                   (click)="openOrderDetail(order)"
                   icon="eye"
+                  iconStyleClass="size-3.5!"
                   variant="outlined"
                   severity="contrast"
                   size="small"
@@ -434,7 +507,7 @@
           </tr>
           } @empty {
           <tr>
-            <td colspan="10">
+            <td colspan="9">
               <div class="flex flex-col items-center justify-center py-16 text-center px-4">
                 <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
                   <ui-icon name="notepad-text" styleClass="size-8 text-primary-400" />

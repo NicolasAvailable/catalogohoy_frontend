@@ -30,7 +30,7 @@ import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
 import { EditorModule } from 'primeng/editor';
-import { Exception, is } from '@shared/domain';
+import { Exception, is, isVideoUrl } from '@shared/domain';
 import { HtmlSanitizerService, ToastService } from '@shared/infrastructure';
 import {
   richTextMaxLengthValidator,
@@ -40,17 +40,22 @@ import {
   ButtonComponent,
   CardComponent,
   IconComponent,
+  ImageComponent,
   InputNumberComponent,
   InputTextComponent,
   MultiSelectComponent,
   ProductMediaComponent,
   RadioButtonComponent,
+  SelectComponent,
+  SelectItemDirective,
   ToggleComponent,
   UploaderComponent,
 } from '@ui';
 import { ProductFacade } from '../../../application';
 import { Product } from '../../../domain';
-import { ProductService } from '../../../infrastructure';
+import { AiImageService, ProductService } from '../../../infrastructure';
+import { ImageEraserComponent } from '../../components/image-eraser/image-eraser';
+import { ImageGeneratorComponent } from '../../components/image-generator/image-generator';
 
 @Component({
   selector: 'lib-save',
@@ -65,11 +70,16 @@ import { ProductService } from '../../../infrastructure';
     EditorModule,
     ButtonComponent,
     IconComponent,
+    ImageComponent,
+    ImageEraserComponent,
+    ImageGeneratorComponent,
     InputNumberComponent,
     RadioButtonComponent,
     MultiSelectComponent,
     PlanLimitDialogComponent,
     ProductMediaComponent,
+    SelectComponent,
+    SelectItemDirective,
     ToggleComponent,
   ],
   templateUrl: './save.html',
@@ -81,6 +91,7 @@ export default class Save implements OnInit {
   private readonly toastService = inject(ToastService);
   private readonly productFacade = inject(ProductFacade);
   private readonly productService = inject(ProductService);
+  private readonly aiImageService = inject(AiImageService);
   public readonly categoryStore = inject(CategoryStore);
   public readonly planStore = inject(PlanStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
@@ -120,6 +131,8 @@ export default class Save implements OnInit {
     isHidden: [false],
     isSized: [false],
     sizes: this.fb.array([]),
+    isVariant: [false],
+    variants: this.fb.array([]),
   });
 
   private readonly descriptionValue = toSignal(
@@ -130,9 +143,33 @@ export default class Save implements OnInit {
     const html = this.descriptionValue() ?? '';
     return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').length;
   });
+  // Descripción como texto plano (sin HTML), para usarla en el generador de IA.
+  public readonly descriptionPlain = computed(() =>
+    (this.descriptionValue() ?? '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
 
   public readonly id = input<string | undefined>(undefined);
   public readonly photos = signal<string[]>([]);
+  // URLs cuyo fondo se está removiendo con IA ahora mismo (varias a la vez).
+  // Se usa para mostrar el spinner y deshabilitar el botón por imagen.
+  public readonly aiProcessing = signal<ReadonlySet<string>>(new Set());
+  // Borrador manual (pincel): qué foto está abierta en el editor.
+  public readonly eraserPhoto = signal<string | null>(null);
+  // Generador de imagen con IA: si el modal está abierto.
+  public readonly generatorOpen = signal<boolean>(false);
+  // Mejorar descripción con IA: opciones del ui-select (cada una con su icono),
+  // valor seleccionado (se resetea tras elegir) y flag de procesando.
+  public readonly improveModes = [
+    { label: 'Mejorar redacción', value: 'improve', icon: 'wand-sparkles' },
+    { label: 'Alargar', value: 'expand', icon: 'plus' },
+    { label: 'Acortar', value: 'shorten', icon: 'minus' },
+  ];
+  public readonly improveModeValue = signal<string | null>(null);
+  public readonly improvingDesc = signal<boolean>(false);
   public readonly isCreate = signal<boolean>(true);
   public readonly isSubmitting = signal<boolean>(false);
   public readonly isCreatingCategory = signal<boolean>(false);
@@ -190,6 +227,9 @@ export default class Save implements OnInit {
   get sizesArray(): FormArray {
     return this.form.get('sizes') as FormArray;
   }
+  get variantsArray(): FormArray {
+    return this.form.get('variants') as FormArray;
+  }
 
   private readonly sizesValue = toSignal(this.sizesArray.valueChanges, {
     initialValue: this.sizesArray.value,
@@ -198,6 +238,11 @@ export default class Save implements OnInit {
     this.form.controls.isSized.valueChanges,
     { initialValue: this.form.controls.isSized.value }
   );
+
+  /** Sizes for a specific variant (each variant owns its tallas). */
+  public variantSizesArray(variantIndex: number): FormArray {
+    return this.variantsArray.at(variantIndex).get('sizes') as FormArray;
+  }
 
   /** Sum of stock across all sizes. `null` when any size is unlimited
    *  (so the product as a whole inherits "unlimited"). */
@@ -292,16 +337,33 @@ export default class Save implements OnInit {
     this.form.controls.sku.setValue(`${prefix}-${suffix}`);
   }
 
+  /** The base price is optional when variants or wholesale tiers carry the
+   *  price; required otherwise (sizes-only still share one base price). */
+  private updatePriceValidator(): void {
+    const optional =
+      !!this.form.controls.isWholesale.value ||
+      !!this.form.controls.isVariant.value;
+    if (optional) {
+      this.form.controls.price.clearValidators();
+    } else {
+      this.form.controls.price.setValidators([Validators.required]);
+    }
+    this.form.controls.price.updateValueAndValidity();
+  }
+
   public onWholesaleToggle(): void {
     const isWholesale = this.form.controls.isWholesale.value;
     if (isWholesale) {
-      // Wholesale and sizes are mutually exclusive — turn sizes off if it
-      // happened to be on.
+      // Wholesale is exclusive with sizes AND variants — turning it on simply
+      // switches those off (no disabling → fewer clicks).
       if (this.form.controls.isSized.value) {
         this.form.controls.isSized.setValue(false);
         this.sizesArray.clear();
       }
-      this.form.controls.price.clearValidators();
+      if (this.form.controls.isVariant.value) {
+        this.form.controls.isVariant.setValue(false);
+        this.variantsArray.clear();
+      }
       this.form.controls.price.setValue('');
       this.form.controls.pricePromotional.setValue('');
       this.form.controls.productionCost.setValue('');
@@ -309,25 +371,21 @@ export default class Save implements OnInit {
         this.addTier();
       }
     } else {
-      this.form.controls.price.setValidators([Validators.required]);
       this.wholesaleTiersArray.clear();
     }
-    this.form.controls.price.updateValueAndValidity();
+    this.updatePriceValidator();
   }
 
   public onSizedToggle(): void {
     const isSized = this.form.controls.isSized.value;
     if (isSized) {
-      // Sizes and wholesale are mutually exclusive — turn wholesale off.
+      // Sizes coexist with variants but are exclusive with wholesale.
       if (this.form.controls.isWholesale.value) {
         this.form.controls.isWholesale.setValue(false);
         this.wholesaleTiersArray.clear();
-        this.form.controls.price.setValidators([Validators.required]);
-        this.form.controls.price.updateValueAndValidity();
       }
       // Sized products derive stock from per-size inputs — clear the
-      // product-level stock and force "unlimited" so submit doesn't
-      // accidentally persist a stale value.
+      // product-level stock and force "unlimited".
       this.stockMode.set('unlimited');
       this.form.controls.stock.setValue(null);
       if (this.sizesArray.length === 0) {
@@ -336,6 +394,7 @@ export default class Save implements OnInit {
     } else {
       this.sizesArray.clear();
     }
+    this.updatePriceValidator();
   }
 
   public addSize(): void {
@@ -343,12 +402,110 @@ export default class Save implements OnInit {
       this.fb.group({
         name: ['', Validators.required],
         stock: [null as string | null],
+        sku: [''],
       })
     );
   }
 
   public removeSize(index: number): void {
     this.sizesArray.removeAt(index);
+  }
+
+  /** Per-variant sizes — each variant owns its tallas. */
+  public addVariantSize(variantIndex: number): void {
+    this.variantSizesArray(variantIndex).push(
+      this.fb.group({
+        name: ['', Validators.required],
+        stock: [null as string | null],
+        sku: [''],
+      })
+    );
+  }
+
+  public removeVariantSize(variantIndex: number, sizeIndex: number): void {
+    this.variantSizesArray(variantIndex).removeAt(sizeIndex);
+  }
+
+  /** True while the current plan still allows adding another variant.
+   *  Re-evaluated each change-detection (add/remove run on user clicks). */
+  public canAddVariant(): boolean {
+    return this.variantsArray.length < this.planStore.maxVariants();
+  }
+
+  /** Variants have no toggle — the section is driven by the list itself.
+   *  Adding the first variant flips the derived `isVariant` flag on. */
+  public addVariant(): void {
+    if (!this.canAddVariant()) {
+      this.toastService.error(
+        (`Tu plan permite hasta ${this.planStore.maxVariants()} ` +
+          'variantes por producto. Mejora tu plan para agregar más.') as unknown as Exception
+      );
+      return;
+    }
+    const wasEmpty = this.variantsArray.length === 0;
+    if (wasEmpty && this.form.controls.isWholesale.value) {
+      // Variants are exclusive with wholesale — adding one turns it off.
+      this.form.controls.isWholesale.setValue(false);
+      this.wholesaleTiersArray.clear();
+      this.form.controls.pricePromotional.setValue('');
+      this.form.controls.productionCost.setValue('');
+    }
+    this.variantsArray.push(
+      this.fb.group({
+        id: [crypto.randomUUID() as string | null],
+        name: ['', Validators.required],
+        price: ['', Validators.required],
+        originalPrice: [''],
+        sku: [''],
+        photos: [[] as string[]],
+        // Each variant owns its tallas.
+        sizes: this.fb.array([]),
+      })
+    );
+    this.form.controls.isVariant.setValue(true);
+    this.updatePriceValidator();
+  }
+
+  public removeVariant(index: number): void {
+    this.variantsArray.removeAt(index);
+    if (this.variantsArray.length === 0) {
+      this.form.controls.isVariant.setValue(false);
+    }
+    this.updatePriceValidator();
+  }
+
+  /** Variant uploader is multiple — append the uploaded media (images/videos)
+   *  to the variant's own gallery, just like the product media uploader. */
+  public addVariantPhotos(index: number, url: string | string[]): void {
+    const urls = Array.isArray(url) ? url : [url];
+    const ctrl = this.variantsArray.at(index).get('photos');
+    const current = (ctrl?.value as string[]) ?? [];
+    // Each variant gallery respects the same per-plan image cap as the product
+    // media (gratis 3 / basico 10 / avanzado 50): add what fits, warn on the rest.
+    const limit = this.maxPhotos();
+    const fresh = urls.filter((u) => u && !current.includes(u));
+    const remaining = Math.max(0, limit - current.length);
+    const toAdd = fresh.slice(0, remaining);
+    if (fresh.length > toAdd.length) {
+      this.toastService.error(
+        (`Solo puedes subir hasta ${limit} imágenes por variante en tu plan.`) as unknown as Exception
+      );
+    }
+    if (toAdd.length === 0) return;
+    ctrl?.setValue([...current, ...toAdd]);
+  }
+
+  /** True when the variant's gallery already reached the per-plan cap. */
+  public variantPhotosFull(index: number): boolean {
+    const photos =
+      (this.variantsArray.at(index).get('photos')?.value as string[]) ?? [];
+    return photos.length >= this.maxPhotos();
+  }
+
+  public removeVariantPhoto(index: number, url: string): void {
+    const ctrl = this.variantsArray.at(index).get('photos');
+    const current = (ctrl?.value as string[]) ?? [];
+    ctrl?.setValue(current.filter((u) => u !== url));
   }
 
   public addTier(): void {
@@ -416,6 +573,37 @@ export default class Save implements OnInit {
         this.fb.group({
           name: [size.name, Validators.required],
           stock: [size.stock != null ? String(size.stock) : null],
+          sku: [size.sku ?? ''],
+        })
+      );
+    });
+
+    this.form.controls.isVariant.setValue(product.isVariant);
+    if (product.isVariant) {
+      this.form.controls.price.clearValidators();
+      this.form.controls.price.updateValueAndValidity();
+    }
+    this.variantsArray.clear();
+    product.variants.forEach((variant) => {
+      this.variantsArray.push(
+        this.fb.group({
+          id: [variant.id ?? null],
+          name: [variant.name, Validators.required],
+          price: [String(variant.price), Validators.required],
+          originalPrice: [
+            variant.originalPrice ? String(variant.originalPrice) : '',
+          ],
+          sku: [variant.sku ?? ''],
+          photos: [variant.photos ?? []],
+          sizes: this.fb.array(
+            (variant.sizes ?? []).map((s) =>
+              this.fb.group({
+                name: [s.name, Validators.required],
+                stock: [s.stock != null ? String(s.stock) : null],
+                sku: [s.sku ?? ''],
+              })
+            )
+          ),
         })
       );
     });
@@ -453,6 +641,114 @@ export default class Save implements OnInit {
   public removePhoto(url: string) {
     this.photos.update((photos) => photos.filter((photo) => photo !== url));
     this.form.controls.photos.setValue(this.photos());
+  }
+
+  /** Una entrada de la galería puede ser foto o video; solo las fotos
+   *  admiten preview de zoom y remover-fondo con IA. */
+  public isVideo(url: string): boolean {
+    return isVideoUrl(url);
+  }
+
+  public isAiProcessing(url: string): boolean {
+    return this.aiProcessing().has(url);
+  }
+
+  /** Remueve el fondo de una imagen con IA (fal.ai / BiRefNet vía la Edge
+   *  Function `fal-ai-images`). Reemplaza la imagen original por la versión
+   *  recortada en el mismo lugar, conservando el orden y la portada. */
+  public async removeBackground(url: string) {
+    if (this.isVideo(url) || this.isAiProcessing(url)) return;
+
+    this.aiProcessing.update((set) => new Set(set).add(url));
+    this.toastService.wait('Quitando fondo con IA…');
+    try {
+      const result = await this.aiImageService.removeBackground(url);
+      result
+        .mapRight((newUrl) => {
+          this.photos.update((photos) =>
+            photos.map((photo) => (photo === url ? newUrl : photo))
+          );
+          this.form.controls.photos.setValue(this.photos());
+          this.toastService.success('Fondo removido con IA');
+        })
+        .mapLeft((error) => this.toastService.error(new Exception(error.message)));
+    } finally {
+      this.toastService.dismissWait();
+      this.aiProcessing.update((set) => {
+        const next = new Set(set);
+        next.delete(url);
+        return next;
+      });
+    }
+  }
+
+  // ───── Borrador manual (pincel, estilo Canva/CapCut) ─────
+
+  /** Abre el editor de borrador para una imagen. */
+  public openEraser(photo: string) {
+    if (this.isVideo(photo)) return;
+    this.eraserPhoto.set(photo);
+  }
+
+  public closeEraser() {
+    this.eraserPhoto.set(null);
+  }
+
+  /** El borrador subió el PNG editado: reemplaza la imagen en su lugar
+   *  (conserva orden/portada) y cierra el editor. */
+  public onEraserApplied(newUrl: string) {
+    const photo = this.eraserPhoto();
+    if (!photo) return;
+    this.photos.update((photos) =>
+      photos.map((p) => (p === photo ? newUrl : p))
+    );
+    this.form.controls.photos.setValue(this.photos());
+    this.closeEraser();
+  }
+
+  // ───── Generar imagen con IA (FLUX) ─────
+
+  public openGenerator() {
+    this.generatorOpen.set(true);
+  }
+
+  public closeGenerator() {
+    this.generatorOpen.set(false);
+  }
+
+  /** La IA generó una imagen: la agregamos a la galería (respeta el límite del
+   *  plan vía setPhoto) y cerramos el modal. */
+  public onGenerated(url: string) {
+    this.setPhoto(url);
+    this.closeGenerator();
+  }
+
+  // ───── Mejorar descripción con IA (Claude Haiku) ─────
+
+  /** El ui-select emite el modo elegido; lo reseteamos a placeholder y mejoramos. */
+  public onImproveMode(mode: string | null) {
+    if (!mode) return;
+    this.improveModeValue.set(null);
+    this.improveDescription(mode as 'improve' | 'expand' | 'shorten');
+  }
+
+  public async improveDescription(mode: 'improve' | 'expand' | 'shorten') {
+    const text = this.descriptionPlain();
+    if (text.length < 15 || this.improvingDesc()) return;
+    this.improvingDesc.set(true);
+    this.toastService.wait('Mejorando con IA…');
+    try {
+      const result = await this.aiImageService.improveText(text, mode);
+      result
+        .mapRight((html) => {
+          this.form.controls.description.setValue(html);
+          this.toastService.success('Descripción mejorada con IA');
+        })
+        .mapLeft((e) => this.toastService.error(new Exception(e.message)));
+    } finally {
+      this.toastService.dismissWait();
+      this.improvingDesc.set(false);
+    }
   }
 
   /** Reorder the uploaded media via drag & drop. The first photo is the cover
@@ -493,6 +789,8 @@ export default class Save implements OnInit {
       isHidden: this.form.controls.isHidden.value ?? false,
       isSized: this.form.controls.isSized.value ?? false,
       sizes: this.sizesArray.value ?? [],
+      isVariant: this.form.controls.isVariant.value ?? false,
+      variants: this.variantsArray.value ?? [],
     };
     if (this.isCreate()) {
       const product = await this.productFacade.create(body);

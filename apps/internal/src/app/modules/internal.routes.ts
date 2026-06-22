@@ -37,4 +37,16 @@ export const internalRoutes: Route[] = [
         (m) => m.whatsappLogsRoutes
       ),
   },
+  {
+    path: 'coupons',
+    loadChildren: () =>
+      import('./coupons/coupons.routes').then((m) => m.couponsRoutes),
+  },
+  {
+    path: 'orders',
+    loadChildren: () =>
+      import('./platform-orders/platform-orders.routes').then(
+        (m) => m.platformOrdersRoutes
+      ),
+  },
 ];

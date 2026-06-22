@@ -37,7 +37,7 @@ export class EcommerceConfigService {
       const { data: config } = await this.client
         .from('tenant_ecommerce_config')
         .select(
-          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message, notify_new_orders, shipping_methods, show_shipping_section, customer_fields'
+          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message, notify_new_orders, notify_weekly_report, shipping_methods, show_shipping_section, customer_fields'
         )
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -78,6 +78,7 @@ export class EcommerceConfigService {
         template: (config?.template as CatalogTemplate) ?? 'banner-centered',
         whatsappOrderMessage: config?.whatsapp_order_message ?? null,
         notifyNewOrders: config?.notify_new_orders ?? true,
+        notifyWeeklyReport: config?.notify_weekly_report ?? true,
         shippingMethods: Array.isArray(config?.shipping_methods)
           ? (config.shipping_methods as ShippingMethod[])
           : [],
@@ -230,6 +231,8 @@ export class EcommerceConfigService {
         updateData['whatsapp_order_message'] = config.whatsappOrderMessage;
       if (config.notifyNewOrders !== undefined)
         updateData['notify_new_orders'] = config.notifyNewOrders;
+      if (config.notifyWeeklyReport !== undefined)
+        updateData['notify_weekly_report'] = config.notifyWeeklyReport;
       if (config.shippingMethods !== undefined)
         updateData['shipping_methods'] = config.shippingMethods;
       if (config.showShippingSection !== undefined)

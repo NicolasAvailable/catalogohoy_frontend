@@ -2,7 +2,13 @@ import { inject } from '@angular/core';
 import { TenantStore } from '@catalogohoy/tenant';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { E } from '@shared/domain';
-import { Order, OrderItem, OrderList, OrderStatus } from '../domain/order';
+import {
+  InternalNote,
+  Order,
+  OrderItem,
+  OrderList,
+  OrderStatus,
+} from '../domain/order';
 import { OrderService } from './order.service';
 
 type OrderState = {
@@ -226,6 +232,31 @@ export const OrderStore = signalStore(
               patchState(store, {
                 orderList: new OrderList(updatedItems),
               });
+              return E.right(order);
+            }
+          );
+        } catch {
+          return E.left('Error inesperado');
+        }
+      },
+
+      async addInternalNote(
+        id: number,
+        note: InternalNote
+      ): Promise<E.Either<string, Order>> {
+        try {
+          const tenantId = await tenantStore.getTenantIdAsync();
+          if (!tenantId) return E.left('Tenant no encontrado');
+
+          const result = await orderService.addInternalNote(id, tenantId, note);
+
+          return result.fold(
+            (error) => E.left(error.message),
+            (order) => {
+              const updatedItems = store
+                .orderList()
+                .items.map((o) => (o.id === order.id ? order : o));
+              patchState(store, { orderList: new OrderList(updatedItems) });
               return E.right(order);
             }
           );

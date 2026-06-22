@@ -29,6 +29,38 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;');
 }
 
+/** Named HTML entities the rich-text editor commonly emits (Spanish accents,
+ *  punctuation, the basic five). Numeric entities are handled separately. */
+const NAMED_ENTITIES: Record<string, string> = {
+  nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'",
+  aacute: 'á', eacute: 'é', iacute: 'í', oacute: 'ó', uacute: 'ú',
+  uuml: 'ü', ntilde: 'ñ',
+  Aacute: 'Á', Eacute: 'É', Iacute: 'Í', Oacute: 'Ó', Uacute: 'Ú',
+  Uuml: 'Ü', Ntilde: 'Ñ',
+  iexcl: '¡', iquest: '¿', ordf: 'ª', ordm: 'º', deg: '°', euro: '€',
+  hellip: '…', mdash: '—', ndash: '–', laquo: '«', raquo: '»',
+  lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”',
+};
+
+/** The catalog/product description is stored as rich-text HTML (`<p>…</p>`,
+ *  `&nbsp;`, `&aacute;`, etc.). Social crawlers want plain text, so strip the
+ *  tags and decode the entities before it goes into a meta tag. */
+function stripHtml(str: string): string {
+  return str
+    .replace(/<[^>]*>/g, ' ') // drop tags
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) =>
+      String.fromCodePoint(parseInt(h, 16))
+    )
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(parseInt(n, 10)))
+    .replace(/&([a-zA-Z]+);/g, (_, name) =>
+      Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, name)
+        ? NAMED_ENTITIES[name]
+        : ' '
+    )
+    .replace(/\s+/g, ' ') // collapse whitespace
+    .trim();
+}
+
 function truncate(str: string, max: number): string {
   if (str.length <= max) return str;
   return str.slice(0, max - 3) + '...';
@@ -44,8 +76,8 @@ interface OgMeta {
 }
 
 function buildHtml(meta: OgMeta): string {
-  const t = escapeHtml(meta.title);
-  const d = escapeHtml(truncate(meta.description, 160));
+  const t = escapeHtml(stripHtml(meta.title));
+  const d = escapeHtml(truncate(stripHtml(meta.description), 160));
   const i = escapeHtml(meta.image);
   const u = escapeHtml(meta.url);
   const ty = escapeHtml(meta.type);

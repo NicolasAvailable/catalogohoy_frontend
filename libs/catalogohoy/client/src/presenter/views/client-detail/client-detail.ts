@@ -1,10 +1,17 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, OnInit } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { is } from '@shared/domain';
 import { BaseComponent } from '@shared/presenter';
 import {
+  ButtonComponent,
   IconComponent,
   TooltipDirective,
 } from '@ui';
@@ -12,6 +19,7 @@ import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { Order, OrderStatus } from '@catalogohoy/order';
 import { TenantStore } from '@catalogohoy/tenant';
 import { ClientStore } from '../../../infrastructure/client.store';
+import { ClientFormDialogComponent } from '../../components/client-form-dialog/client-form-dialog';
 
 @Component({
   selector: 'lib-client-detail',
@@ -20,6 +28,8 @@ import { ClientStore } from '../../../infrastructure/client.store';
     CommonModule,
     IconComponent,
     TooltipDirective,
+    ButtonComponent,
+    ClientFormDialogComponent,
   ],
   templateUrl: './client-detail.html',
   host: { class: 'flex-1 flex flex-col min-h-0 overflow-y-auto lg:overflow-hidden' },
@@ -32,6 +42,9 @@ export default class ClientDetailComponent extends BaseComponent implements OnIn
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
   public readonly cs = computed(() => this.tenantCurrency.localSymbol() || '$');
+
+  @ViewChild(ClientFormDialogComponent)
+  private editDialog!: ClientFormDialogComponent;
 
   ngOnInit() {
     this.tenantStore.getTenantIdAsync().then((tid) => {
@@ -50,6 +63,16 @@ export default class ClientDetailComponent extends BaseComponent implements OnIn
 
   goBack() {
     this.router.navigate(['/admin/clients']);
+  }
+
+  openEdit() {
+    const client = this.clientStore.selectedClient();
+    if (client) this.editDialog.open(client);
+  }
+
+  onSaved() {
+    const phone = this.clientStore.selectedClient()?.phone;
+    if (phone) this.clientStore.loadClientByPhone(phone);
   }
 
   copyPhone() {
@@ -85,7 +108,7 @@ export default class ClientDetailComponent extends BaseComponent implements OnIn
     return `w-2 h-2 rounded-full shrink-0 ${colors[status] ?? 'bg-grey-400'}`;
   }
 
-  formatDate(dateStr: string): string {
+  formatDate(dateStr: string | null): string {
     if (!dateStr) return '—';
     const date = new Date(dateStr);
     return date.toLocaleDateString('es', {

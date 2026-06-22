@@ -10,14 +10,14 @@
 
   <!-- Gallery -->
   <div class="pdm__gallery">
-    @if (product.photos.length) {
+    @if (galleryMedia().length) {
     <div
       #carousel
       class="pdm__carousel"
       [style.--media-aspect]="currentSlideAspect()"
       (scroll)="onCarouselScroll()"
     >
-      @for (photo of product.photos; track $index) {
+      @for (photo of galleryMedia(); track photo) {
       <div class="pdm__carousel-slide">
         <ui-product-media
           [url]="photo"
@@ -45,9 +45,9 @@
     </div>
     }
 
-    @if (product.photos.length > 1) {
+    @if (galleryMedia().length > 1) {
     <div class="pdm__thumbnails">
-      @for (photo of product.photos; track $index) {
+      @for (photo of galleryMedia(); track photo) {
       <button
         type="button"
         class="pdm__thumbnail"
@@ -87,7 +87,7 @@
       <div class="pdm__prices">
         <span class="pdm__price">{{ cs() }}{{ displayPrice }}</span>
         @if (hasDiscount) {
-        <span class="pdm__price-original">{{ cs() }}{{ product.price }}</span>
+        <span class="pdm__price-original">{{ cs() }}{{ originalDisplayPrice }}</span>
         }
       </div>
       }
@@ -117,6 +117,75 @@
       <span class="pdm__overlay-more">… Ver más</span>
       }
     </div>
+    }
+
+    <!-- With variants, the option + size selectors live in the scrollable info
+         (below the description) so the sticky mobile footer doesn't overlap.
+         Without variants the size selector stays in the footer (see below). -->
+    @if (!isOutOfStock && !isWholesale && isVariant) {
+    <div class="flex flex-col gap-2 mt-4 mb-1">
+      <span class="text-sm font-semibold text-grey-500">Selecciona una opción</span>
+      <div class="flex flex-col gap-2" role="radiogroup" aria-label="Variante">
+        @for (variant of selectorOptions; track variant.id) {
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="selectedVariant()?.id === variant.id"
+          (click)="selectVariant(variant)"
+          [class]="
+            'flex items-center gap-3 p-2.5 rounded-xl border transition-colors text-left w-full cursor-pointer ' +
+            (selectedVariant()?.id === variant.id
+              ? 'border-primary-500 bg-primary-50/10'
+              : 'border-grey-200 hover:border-primary-300')
+          "
+        >
+          <span
+            [class]="
+              'flex items-center justify-center w-5 h-5 rounded-full border shrink-0 ' +
+              (selectedVariant()?.id === variant.id
+                ? 'border-primary-500'
+                : 'border-grey-300')
+            "
+          >
+            @if (selectedVariant()?.id === variant.id) {
+            <span class="w-2.5 h-2.5 rounded-full bg-primary-500"></span>
+            }
+          </span>
+          @if (variant.photos?.length) {
+          <ui-product-media
+            [url]="variant.photos![0]"
+            [alt]="variant.name"
+            [controls]="false"
+            styleClass="w-10 h-10 rounded-lg object-cover shrink-0"
+          />
+          }
+          <span class="flex-1 font-medium text-grey-700">{{ variant.name }}</span>
+          <span class="font-bold text-grey-900">{{ cs() }}{{ variant.price }}</span>
+        </button>
+        }
+      </div>
+    </div>
+    @if (availableSizes().length) {
+    <div class="pdm__sizes pdm__sizes--info">
+      <span class="pdm__sizes-label">Selecciona una talla</span>
+      <div class="pdm__sizes-grid" role="radiogroup" aria-label="Talla">
+        @for (size of availableSizes(); track size.name) {
+        <button
+          type="button"
+          class="pdm__size-pill"
+          [class.pdm__size-pill--selected]="selectedSize() === size.name"
+          [class.pdm__size-pill--disabled]="isSizeOutOfStock(size.name)"
+          [disabled]="isSizeOutOfStock(size.name)"
+          role="radio"
+          [attr.aria-checked]="selectedSize() === size.name"
+          (click)="selectSize(size.name)"
+        >
+          {{ size.name }}
+        </button>
+        }
+      </div>
+    </div>
+    }
     }
   </div>
 
@@ -152,11 +221,11 @@
         }
       </div>
       } @else {
-      @if (isSized) {
+      @if (!isVariant && availableSizes().length) {
       <div class="pdm__sizes">
         <span class="pdm__sizes-label">Selecciona una talla</span>
         <div class="pdm__sizes-grid" role="radiogroup" aria-label="Talla">
-          @for (size of product.sizes; track size.name) {
+          @for (size of availableSizes(); track size.name) {
           <button
             type="button"
             class="pdm__size-pill"
@@ -205,7 +274,7 @@
         (click)="onAddToCart()"
       >
         <ui-icon name="shoppingCart" styleClass="size-5" />
-        <span>{{ isSized && !selectedSize() ? 'Selecciona una talla' : 'Agregar al carrito' }}</span>
+        <span>{{ availableSizes().length && !selectedSize() ? 'Selecciona una talla' : 'Agregar al carrito' }}</span>
         <span class="pdm__total">
           @if (showReferencePrice()) {
           {{ cs() }}{{ displayPrice * quantity() }}

@@ -1,17 +1,20 @@
 <div class="flex justify-center items-center h-screen bg-lino-500 overflow-hidden">
 
   <!-- ── Form panel ── -->
-  <div class="flex flex-col lg:p-28 md:p-44 sm:p-20 p-8 w-full lg:w-1/2 h-full justify-center gap-6">
+  <div class="relative flex flex-col justify-center gap-6 w-full lg:w-1/2 h-full p-8 sm:p-20 md:p-44 lg:p-10 lg:items-center lg:bg-[#eceefb]">
 
     <!-- Logo -->
     <ui-icon
       name="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg"
-      styleClass="h-14 rounded-lg"
-      class="flex justify-center sm:justify-start"
+      styleClass="h-14 lg:h-11 rounded-lg"
+      class="flex justify-center sm:justify-start lg:absolute lg:top-8 lg:left-8"
     />
 
+    <!-- Card (desktop only) -->
+    <div class="flex flex-col gap-6 w-full lg:max-w-md lg:bg-white lg:rounded-3xl lg:p-10">
+
     <div>
-      <h1 class="text-3xl sm:text-4xl font-semibold text-grey-700">Ingresa a tu cuenta</h1>
+      <h1 class="text-3xl sm:text-4xl lg:text-3xl font-semibold text-grey-700">Ingresa a tu cuenta</h1>
       <p class="text-base text-grey-400 mt-1">Accede para gestionar tu catálogo.</p>
     </div>
 
@@ -88,14 +91,23 @@
       <a routerLink="/signup" class="font-semibold text-blue-500">Regístrate aquí</a>
     </div>
 
+    </div>
+    <!-- /Card -->
   </div>
 
   <!-- ── Side image ── -->
   <div class="w-1/2 h-screen hidden lg:block">
-    <img
-      src="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/auth-side.svg"
-      alt="Auth side"
-      class="object-cover w-full h-full"
-    />
+    <picture>
+      <source
+        srcset="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing-hero/hero-2x.avif"
+        type="image/avif"
+      />
+      <img
+        src="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing-hero/hero-2x.webp"
+        alt="Empieza a vender hoy con CatalogoHoy"
+        class="object-cover w-full h-full"
+        fetchpriority="high"
+      />
+    </picture>
   </div>
 </div>

@@ -26,6 +26,7 @@ const freePlan: Plan = {
   maxProducts: 20,
   maxCatalogs: 1,
   maxTeamMembers: 0,
+  maxVariants: 1,
   isFree: true,
   position: 0,
 };
@@ -38,6 +39,7 @@ const paidPlan: Plan = {
   maxProducts: 100,
   maxCatalogs: 1,
   maxTeamMembers: 1,
+  maxVariants: 3,
   isFree: false,
   position: 1,
 };

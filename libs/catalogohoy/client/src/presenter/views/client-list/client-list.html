@@ -1,26 +1,63 @@
 <div class="flex flex-col gap-4 sm:gap-6 px-4 sm:px-6 pb-6 mt-4 sm:h-full">
   <!-- Header -->
-  <header class="flex items-start justify-between gap-4">
+  <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
     <div>
       <h1 class="text-2xl sm:text-3xl font-bold text-grey-800 mb-1">Clientes</h1>
       <p class="text-sm sm:text-base text-grey-400">
-        Clientes únicos vinculados a tus órdenes por número de teléfono
+        Gestiona tus clientes: etiquétalos, edítalos o créalos manualmente
       </p>
     </div>
-    <span class="text-sm text-grey-400 font-medium shrink-0">
-      Total {{ totalClients() }}
-    </span>
+    <div class="flex items-center gap-2 flex-wrap justify-end">
+      @if (selectedCount() > 0) {
+        <span class="text-sm font-semibold text-primary-700 mr-1">
+          {{ selectedCount() }} seleccionado{{ selectedCount() === 1 ? '' : 's' }}
+        </span>
+        <ui-button
+          label="Añadir etiqueta"
+          icon="tag"
+          variant="outlined"
+          severity="primary"
+          size="small"
+          [fluid]="false"
+          (click)="openAssignTag()"
+        />
+        <ui-button
+          label="Eliminar"
+          icon="trash"
+          severity="danger"
+          size="small"
+          [fluid]="false"
+          (click)="onDeleteSelected()"
+        />
+        <ui-button
+          label="Cancelar"
+          variant="outlined"
+          severity="contrast"
+          size="small"
+          [fluid]="false"
+          (click)="clearSelection()"
+        />
+      } @else {
+        <ui-button
+          label="Añadir cliente"
+          icon="user-plus"
+          size="small"
+          [fluid]="false"
+          (click)="openAdd()"
+        />
+      }
+    </div>
   </header>
 
   <!-- Main Card Container -->
   <div
     class="bg-white border border-grey-100 rounded-xl shadow-sm overflow-hidden sm:flex-1 flex flex-col"
   >
-    <!-- Search Row -->
-    <div class="p-4 border-b border-grey-50">
+    <!-- Search + tag filters -->
+    <div class="p-4 border-b border-grey-50 flex flex-col gap-3">
       <div class="relative flex-1 max-w-md">
         <ui-input-search
-          placeholder="Buscar por nombre o teléfono..."
+          placeholder="Buscar por nombre, teléfono o correo..."
           [ngModel]="searchQuery()"
           (ngModelChange)="onSearch($event)"
           size="small"
@@ -28,6 +65,50 @@
           iconStyleClass="size-4.5!"
         />
       </div>
+
+      @if (clientStore.tags().length) {
+        <div class="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            (click)="setTagFilter(null)"
+            class="px-3 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer"
+            [class.bg-primary-500]="selectedTagId() === null"
+            [class.text-white]="selectedTagId() === null"
+            [class.border-primary-500]="selectedTagId() === null"
+            [class.bg-white]="selectedTagId() !== null"
+            [class.text-grey-500]="selectedTagId() !== null"
+            [class.border-grey-200]="selectedTagId() !== null"
+          >
+            Todas
+          </button>
+          @for (tag of clientStore.tags(); track tag.id) {
+            <span
+              class="inline-flex items-center gap-1 pl-3 pr-1.5 py-1 rounded-full text-xs font-semibold border transition-colors"
+              [class.ring-2]="selectedTagId() === tag.id"
+              [style.background-color]="selectedTagId() === tag.id ? tag.color + '22' : '#fff'"
+              [style.border-color]="tag.color"
+              [style.color]="tag.color"
+            >
+              <button
+                type="button"
+                (click)="setTagFilter(tag.id)"
+                class="flex items-center gap-1.5 cursor-pointer"
+              >
+                <span class="w-2 h-2 rounded-full" [style.background-color]="tag.color"></span>
+                {{ tag.name }}
+              </button>
+              <button
+                type="button"
+                (click)="onDeleteTag(tag.id, $event)"
+                class="flex items-center justify-center w-4 h-4 rounded-full hover:bg-black/10 cursor-pointer"
+                title="Eliminar etiqueta"
+              >
+                <ui-icon name="x" styleClass="size-3" />
+              </button>
+            </span>
+          }
+        </div>
+      }
     </div>
 
     <!-- Mobile List -->
@@ -45,17 +126,28 @@
           }
         </div>
       } @else {
-        @for (client of filteredClients(); track client.phone) {
+        @for (client of currentPageClients(); track client.id) {
         <div
-          (click)="navigateToClient(client)"
-          class="border-b border-grey-50 px-4 py-3 flex gap-3 cursor-pointer active:bg-grey-25"
+          class="border-b border-grey-50 px-4 py-3 flex gap-3 active:bg-grey-25"
         >
-          <div class="flex-1 flex flex-col gap-1 min-w-0 text-xs">
+          <div class="pt-1" (click)="$event.stopPropagation()">
+            <ui-checkbox
+              [ngModel]="isSelected(client)"
+              (valueChange)="toggleSelect(client)"
+            />
+          </div>
+          <div
+            (click)="navigateToClient(client)"
+            class="flex-1 flex flex-col gap-1 min-w-0 text-xs cursor-pointer"
+          >
             <div class="flex items-center gap-2">
               <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
                 <span class="text-xs font-bold text-primary-600">{{ client.name.charAt(0).toUpperCase() }}</span>
               </div>
               <span class="font-semibold text-grey-800 text-sm truncate">{{ client.name }}</span>
+            </div>
+            <div (click)="$event.stopPropagation()">
+              <lib-client-row-tags [client]="client" />
             </div>
             <div>
               <span class="text-grey-800 font-bold">Teléfono: </span>
@@ -84,22 +176,16 @@
               <span class="text-grey-800 font-bold">Total: </span>
               <span class="font-bold text-primary-600">{{ cs() }}{{ client.totalSpentUsd | number:'1.2-2' }}</span>
             </div>
-            @if (tenantCurrency.isVenezuela() && client.totalSpentBs) {
-            <div>
-              <span class="text-grey-800 font-bold">Total Bs: </span>
-              <span class="font-bold text-primary-600">Bs. {{ client.totalSpentBs | number:'1.2-2' }}</span>
-            </div>
-            }
-            <div>
-              <span class="text-grey-800 font-bold">Último pedido: </span>
-              <span class="text-grey-500">{{ formatDate(client.lastOrderAt) }}</span>
-            </div>
           </div>
-          <div class="flex items-center shrink-0">
-            <div class="flex items-center gap-1 text-primary-500">
-              <ui-icon name="eye" styleClass="size-3.5" />
-              <span class="text-xs font-medium">Ver detalles</span>
-            </div>
+          <div class="flex flex-col items-center gap-2 shrink-0" (click)="$event.stopPropagation()">
+            <ui-button
+              icon="pencil"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+              [fluid]="false"
+              (click)="openEdit(client, $event)"
+            />
           </div>
         </div>
         } @empty {
@@ -109,7 +195,7 @@
           </div>
           <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes clientes todavía</h3>
           <p class="text-grey-300 text-sm mb-6 max-w-sm">
-            Cuando tus clientes realicen pedidos con número de teléfono, aparecerán aquí automáticamente.
+            Crea uno manualmente o aparecerán automáticamente cuando recibas pedidos.
           </p>
         </div>
         }
@@ -123,64 +209,61 @@
           <tr
             class="bg-grey-25 text-grey-400 text-[11px] uppercase tracking-wider font-bold"
           >
+            <th class="px-4 py-3 border-b border-grey-50 w-10">
+              <ui-checkbox
+                [ngModel]="isAllVisibleSelected()"
+                (valueChange)="toggleAllVisible()"
+              />
+            </th>
             <th class="px-6 py-3 border-b border-grey-50">Cliente</th>
+            <th class="px-6 py-3 border-b border-grey-50">Etiquetas</th>
             <th class="px-6 py-3 border-b border-grey-50">Teléfono</th>
             <th class="px-6 py-3 border-b border-grey-50">Correo</th>
-            <th class="px-6 py-3 border-b border-grey-50 text-center">
-              Pedidos
-            </th>
+            <th class="px-6 py-3 border-b border-grey-50 text-center">Pedidos</th>
             <th class="px-6 py-3 border-b border-grey-50">Total gastado</th>
-            <th class="px-6 py-3 border-b border-grey-50">Último pedido</th>
+            <th class="px-6 py-3 border-b border-grey-50 text-right">Acciones</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-grey-50">
           @if (clientStore.isLoading()) {
             @for (_ of [1, 2, 3, 4, 5, 6, 7, 8]; track $index) {
               <tr class="animate-pulse">
+                <td class="px-4 py-3.5"><div class="h-5 w-5 bg-grey-100 rounded"></div></td>
                 <td class="px-6 py-3.5">
                   <div class="flex items-center gap-3">
                     <div class="w-9 h-9 bg-grey-100 rounded-full"></div>
                     <div class="h-4 w-28 bg-grey-100 rounded"></div>
                   </div>
                 </td>
-                <td class="px-6 py-3.5">
-                  <div class="h-4 w-32 bg-grey-100 rounded"></div>
-                </td>
-                <td class="px-6 py-3.5">
-                  <div class="h-4 w-40 bg-grey-100 rounded"></div>
-                </td>
-                <td class="px-6 py-3.5">
-                  <div class="flex justify-center">
-                    <div class="h-6 w-8 bg-grey-100 rounded-full"></div>
-                  </div>
-                </td>
-                <td class="px-6 py-3.5">
-                  <div class="h-4 w-24 bg-grey-100 rounded"></div>
-                </td>
-                <td class="px-6 py-3.5">
-                  <div class="h-4 w-28 bg-grey-100 rounded"></div>
-                </td>
+                <td class="px-6 py-3.5"><div class="h-4 w-20 bg-grey-100 rounded"></div></td>
+                <td class="px-6 py-3.5"><div class="h-4 w-32 bg-grey-100 rounded"></div></td>
+                <td class="px-6 py-3.5"><div class="h-4 w-40 bg-grey-100 rounded"></div></td>
+                <td class="px-6 py-3.5"><div class="flex justify-center"><div class="h-6 w-8 bg-grey-100 rounded-full"></div></div></td>
+                <td class="px-6 py-3.5"><div class="h-4 w-24 bg-grey-100 rounded"></div></td>
+                <td class="px-6 py-3.5"><div class="h-4 w-16 bg-grey-100 rounded ml-auto"></div></td>
               </tr>
             }
           } @else {
-            @for (client of filteredClients(); track client.phone) {
-              <tr
-                (click)="navigateToClient(client)"
-                class="hover:bg-grey-25 transition-colors cursor-pointer group"
-              >
-                <td class="px-6 py-3.5">
+            @for (client of currentPageClients(); track client.id) {
+              <tr class="hover:bg-grey-25 transition-colors group" [class.bg-primary-25]="isSelected(client)">
+                <td class="px-4 py-3.5" (click)="$event.stopPropagation()">
+                  <ui-checkbox
+                    [ngModel]="isSelected(client)"
+                    (valueChange)="toggleSelect(client)"
+                  />
+                </td>
+                <td class="px-6 py-3.5 cursor-pointer" (click)="navigateToClient(client)">
                   <div class="flex items-center gap-3">
-                    <div
-                      class="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center shrink-0"
-                    >
+                    <div class="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
                       <span class="text-sm font-bold text-primary-600">
                         {{ client.name.charAt(0).toUpperCase() }}
                       </span>
                     </div>
-                    <span class="font-semibold text-grey-800">{{
-                      client.name
-                    }}</span>
+                    <span class="font-semibold text-grey-800">{{ client.name }}</span>
                   </div>
+                </td>
+                <td class="px-6 py-3.5">
+                  <lib-client-row-tags [client]="client" />
                 </td>
                 <td class="px-6 py-3.5">
                   <a
@@ -204,14 +287,14 @@
                     <span class="text-sm text-grey-300">—</span>
                   }
                 </td>
-                <td class="px-6 py-3.5 text-center">
+                <td class="px-6 py-3.5 text-center cursor-pointer" (click)="navigateToClient(client)">
                   <span
                     class="inline-flex items-center justify-center min-w-7 px-2 py-0.5 rounded-full bg-primary-50 text-primary-600 text-xs font-bold"
                   >
                     {{ client.totalOrders }}
                   </span>
                 </td>
-                <td class="px-6 py-3.5">
+                <td class="px-6 py-3.5 cursor-pointer" (click)="navigateToClient(client)">
                   <div class="flex flex-col">
                     <span class="text-sm font-bold text-primary-600">
                       {{ cs() }}{{ client.totalSpentUsd | number : '1.2-2' }}
@@ -223,21 +306,33 @@
                     }
                   </div>
                 </td>
-                <td class="px-6 py-3.5 text-grey-500 text-sm">
-                  {{ formatDate(client.lastOrderAt) }}
+                <td class="px-6 py-3.5">
+                  <div class="flex items-center justify-end gap-1">
+                    <ui-button
+                      icon="pencil"
+                      variant="outlined"
+                      severity="contrast"
+                      size="small"
+                      [fluid]="false"
+                      tooltip="Editar"
+                      tooltipPosition="bottom"
+                      (click)="openEdit(client, $event)"
+                    />
+                  </div>
                 </td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="6">
+                <td colspan="8">
                   <div class="flex flex-col items-center justify-center py-16 text-center px-4">
                     <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
                       <ui-icon name="users" styleClass="size-8 text-primary-400" />
                     </div>
                     <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes clientes todavía</h3>
                     <p class="text-grey-300 text-sm mb-6 max-w-sm">
-                      Cuando tus clientes realicen pedidos con número de teléfono, aparecerán aquí automáticamente.
+                      Crea uno manualmente o aparecerán automáticamente cuando recibas pedidos.
                     </p>
+                    <ui-button label="Añadir cliente" icon="user-plus" [fluid]="false" (click)="openAdd()" />
                   </div>
                 </td>
               </tr>
@@ -247,13 +342,76 @@
       </table>
     </div>
 
-    <!-- Footer -->
+    <!-- Pagination footer — count on the left, controls on the right -->
     <div
-      class="p-4 bg-grey-25 border-t border-grey-50 flex items-center justify-between"
+      class="p-4 sm:pr-16 bg-grey-25 border-t border-grey-50 flex items-center justify-between gap-2 flex-wrap"
     >
       <span class="text-xs text-grey-400 font-medium">
-        Mostrando {{ filteredClients().length }} de {{ totalClients() }} clientes
+        Mostrando {{ currentPageClients().length }} · Total: {{ filteredClients().length }} clientes
       </span>
+      <p-paginator
+        [first]="pageFirst()"
+        [rows]="pageRows()"
+        [totalRecords]="filteredClients().length"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        (onPageChange)="onPageChange($event)"
+        styleClass="client-paginator"
+      />
     </div>
   </div>
 </div>
+
+<!-- Add / edit dialog -->
+<lib-client-form-dialog (saved)="onSaved()" />
+
+<!-- Delete confirmation -->
+<ui-confirm-dialog
+  (confirm)="onConfirmDelete()"
+  [headerLabel]="confirmHeader()"
+  [contentLabel]="deleteDialogContent()"
+  acceptLabel="Eliminar"
+  rejectLabel="Cancelar"
+  rejectSeverity="contrast"
+/>
+
+<!-- Bulk assign tag dialog -->
+<ui-dialog #assignDialog headerTitle="Añadir etiqueta" styleClass="max-w-md w-full">
+  <div class="flex flex-col gap-4 pt-1">
+    <p class="text-sm text-grey-400">
+      Se asignará la etiqueta a los
+      <strong>{{ selectedCount() }}</strong> clientes seleccionados.
+    </p>
+    <ui-select
+      [options]="clientStore.tags()"
+      [ngModel]="bulkTagId()"
+      (ngModelChange)="bulkTagId.set($event)"
+      optionLabel="name"
+      optionValue="id"
+      placeholder="Seleccionar etiqueta..."
+      styleClass="w-full"
+      appendTo="body"
+      emptyMessage="Aún no hay etiquetas. Créala abajo 👇"
+    >
+      <ng-template #footer>
+        <lib-client-tag-create-row (created)="bulkTagId.set($event.id)" />
+      </ng-template>
+    </ui-select>
+    <div class="flex justify-end gap-2 pt-1">
+      <ui-button
+        label="Cancelar"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        (click)="assignDialog.hide()"
+      />
+      <ui-button
+        label="Asignar"
+        icon="check"
+        [fluid]="false"
+        [disabled]="bulkTagId() === null"
+        [isLoading]="clientStore.isSaving()"
+        (click)="onConfirmAssignTag()"
+      />
+    </div>
+  </div>
+</ui-dialog>

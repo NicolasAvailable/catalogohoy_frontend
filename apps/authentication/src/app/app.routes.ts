@@ -28,6 +28,11 @@ export const appRoutes: Route[] = [
         loadComponent: () =>
           import('@catalogohoy/auth').then((m) => m.ResetPassword),
       },
+      {
+        path: 'confirm-email',
+        loadComponent: () =>
+          import('@catalogohoy/auth').then((m) => m.ConfirmEmail),
+      },
     ],
   },
   {

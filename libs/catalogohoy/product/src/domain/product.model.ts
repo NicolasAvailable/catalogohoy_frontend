@@ -11,6 +11,27 @@ export interface ProductSize {
   name: string;
   /** Units available in this size. `null` = unlimited stock. */
   stock: number | null;
+  /** Optional SKU for this specific size. */
+  sku?: string | null;
+}
+
+export interface ProductVariant {
+  /** Stable id used as the cart/order line identity and for de-dup. */
+  id: string;
+  /** Label shown to the buyer, e.g. "Verde futbol", "Azul bella". */
+  name: string;
+  /** Price charged for this variant (overrides the product base price). */
+  price: number;
+  /** Optional struck-through "before" price. `0` = none. */
+  originalPrice: number;
+  /** Optional SKU for this variant. */
+  sku?: string | null;
+  /** Own media (images and/or videos). When empty, the variant falls back to
+   *  the product's media. The first item is the variant cover. */
+  photos: string[];
+  /** This variant's own sizes, each with its own stock. Empty = the variant
+   *  has no sizes (added directly to the cart). */
+  sizes: ProductSize[];
 }
 
 export class Product extends Entity {
@@ -32,7 +53,9 @@ export class Product extends Entity {
     public readonly isSoldOut: boolean,
     public readonly isHidden: boolean,
     public readonly isSized: boolean,
-    public readonly sizes: ProductSize[]
+    public readonly sizes: ProductSize[],
+    public readonly isVariant: boolean = false,
+    public readonly variants: ProductVariant[] = []
   ) {
     super();
   }
@@ -56,7 +79,9 @@ export class Product extends Entity {
       primitives.isSoldOut,
       primitives.isHidden,
       primitives.isSized,
-      primitives.sizes
+      primitives.sizes,
+      primitives.isVariant ?? false,
+      primitives.variants ?? []
     ).withId(primitives.id);
   }
 }
@@ -81,4 +106,6 @@ export interface ProductPrimitives {
   isHidden: boolean;
   isSized: boolean;
   sizes: ProductSize[];
+  isVariant?: boolean;
+  variants?: ProductVariant[];
 }

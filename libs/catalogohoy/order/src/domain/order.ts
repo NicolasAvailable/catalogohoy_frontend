@@ -7,11 +7,27 @@ export interface OrderItem {
   photo?: string;
   sku?: string | null;
   size?: string | null;
+  /** Variant id chosen at order time (when the product has variants). */
+  variantId?: string | null;
+  /** Variant label snapshot, shown next to the product name. */
+  variantName?: string | null;
   isCustom?: boolean;
   description?: string;
 }
 
 export type OrderStatus = 'pending' | 'completed' | 'cancelled';
+
+/** A single internal team note (chat-style). */
+export interface InternalNote {
+  author: string;
+  text: string;
+  /** ISO timestamp. */
+  createdAt: string;
+  /** Author's profile photo at the time the note was left (may be null). */
+  authorPhoto?: string | null;
+  /** Attached media (image/video URLs). */
+  media?: string[];
+}
 
 export interface Order {
   id: number;
@@ -29,6 +45,8 @@ export interface Order {
   phone?: string;
   email?: string;
   comments?: string;
+  /** Internal team notes thread — admin-only, never shown to the customer. */
+  internalNotes?: InternalNote[];
   paymentMethod?: string;
   /** Snapshot of the shipping option chosen at checkout. Local string union
    *  (not imported from ecommerce-config) to avoid a cross-lib cycle. */

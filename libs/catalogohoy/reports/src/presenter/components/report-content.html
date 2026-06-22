@@ -194,7 +194,7 @@
           <li>
             <span class="report__products-rank">{{ i + 1 }}</span>
             @if (p.photo) {
-              <img class="report__products-photo" [src]="p.photo" [alt]="p.name" />
+              <img class="report__products-photo" [src]="p.photo" [alt]="p.name" loading="lazy" />
             } @else {
               <div class="report__products-photo report__products-photo--empty">
                 {{ p.name.charAt(0) }}

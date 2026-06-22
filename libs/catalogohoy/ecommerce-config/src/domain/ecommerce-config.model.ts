@@ -252,6 +252,10 @@ export interface EcommerceConfig {
    *  with the `ordenes:view` permission. Toggled from the catalog editor
    *  on the "Notificaciones" tab. */
   notifyNewOrders: boolean;
+  /** When true, sends a weekly summary email (Sunday) with the week's sales,
+   *  orders, top products and traffic to the owner + team members with
+   *  `ordenes:view`. Paid plans only. Editor "Notificaciones" tab. */
+  notifyWeeklyReport: boolean;
   /** Shipping/delivery options offered at checkout (editor "Envío" tab). */
   shippingMethods: ShippingMethod[];
   /** Master toggle for the Envío section in the public checkout. */

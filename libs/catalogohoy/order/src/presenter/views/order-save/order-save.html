@@ -48,65 +48,66 @@
               >
               <span class="text-sm text-grey-400">(Opcional)</span>
             </div>
-            <ui-input-text
+            <ui-input-phone
               formControlName="phone"
-              placeholder="+58 412 1234567"
-              inputId="phone"
+              [defaultCountry]="defaultPhoneCountry()"
             />
           </div>
         </div>
-        <div class="flex flex-col gap-2">
-          <label class="text-base text-grey-400 font-semibold" for="deliveryDate"
-            >Fecha de entrega</label
-          >
-          <ui-datepicker
-            formControlName="deliveryDate"
-            inputId="deliveryDate"
-            placeholder="Selecciona una fecha"
-            dateFormat="dd/mm/yy"
-            mode="single"
-            styleClass="w-full border! border-grey-100! rounded-xl!"
-          />
-          <span class="text-sm text-grey-300">
-            Por defecto es hoy. Puedes cambiarla si la orden se entrega otro día.
-          </span>
-        </div>
-        <div class="flex flex-col gap-2">
-          <div class="flex items-center gap-3">
-            <label class="text-base text-grey-400 font-semibold" for="payment-method"
-              >Método de pago</label
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="flex flex-col gap-2">
+            <label class="text-base text-grey-400 font-semibold" for="deliveryDate"
+              >Fecha de entrega</label
             >
-            <span class="text-sm text-grey-400">(Opcional)</span>
-          </div>
-          @if (orderPaymentMethods().length > 0) {
-            <ui-select
-              [options]="orderPaymentMethods()"
-              formControlName="paymentMethod"
-              optionLabel="name"
-              optionValue="name"
-              placeholder="Selecciona el método de pago"
-              [clearable]="true"
-              styleClass="w-full"
-            >
-              <ng-template selectSelectedItem let-selected>
-                <div class="flex items-center gap-2">
-                  <ui-icon [name]="selected.icon" styleClass="size-4 text-grey-500" />
-                  <span class="text-sm">{{ selected.name }}</span>
-                </div>
-              </ng-template>
-              <ng-template selectItem let-item>
-                <div class="flex items-center gap-2.5 py-0.5">
-                  <ui-icon [name]="item.icon" styleClass="size-4 text-grey-500" />
-                  <span>{{ item.name }}</span>
-                </div>
-              </ng-template>
-            </ui-select>
-          } @else {
-            <span class="text-sm text-grey-400">
-              No tienes métodos de pago configurados. Configúralos en
-              <a routerLink="/admin/catalog/edit" [queryParams]="{tab: 'payments'}" class="text-primary-500 hover:underline">Editar catálogo → Pagos</a>.
+            <ui-datepicker
+              formControlName="deliveryDate"
+              inputId="deliveryDate"
+              placeholder="Selecciona una fecha"
+              dateFormat="dd/mm/yy"
+              mode="single"
+              styleClass="w-full border! border-grey-100! rounded-xl!"
+            />
+            <span class="text-sm text-grey-300">
+              Por defecto es hoy. Puedes cambiarla si la orden se entrega otro día.
             </span>
-          }
+          </div>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-3">
+              <label class="text-base text-grey-400 font-semibold" for="payment-method"
+                >Método de pago</label
+              >
+              <span class="text-sm text-grey-400">(Opcional)</span>
+            </div>
+            @if (orderPaymentMethods().length > 0) {
+              <ui-select
+                [options]="orderPaymentMethods()"
+                formControlName="paymentMethod"
+                optionLabel="name"
+                optionValue="name"
+                placeholder="Selecciona el método de pago"
+                [clearable]="true"
+                styleClass="w-full"
+              >
+                <ng-template selectSelectedItem let-selected>
+                  <div class="flex items-center gap-2">
+                    <ui-icon [name]="selected.icon" styleClass="size-4 text-grey-500" />
+                    <span class="text-sm">{{ selected.name }}</span>
+                  </div>
+                </ng-template>
+                <ng-template selectItem let-item>
+                  <div class="flex items-center gap-2.5 py-0.5">
+                    <ui-icon [name]="item.icon" styleClass="size-4 text-grey-500" />
+                    <span>{{ item.name }}</span>
+                  </div>
+                </ng-template>
+              </ui-select>
+            } @else {
+              <span class="text-sm text-grey-400">
+                No tienes métodos de pago configurados. Configúralos en
+                <a routerLink="/admin/catalog/edit" [queryParams]="{tab: 'payments'}" class="text-primary-500 hover:underline">Editar catálogo → Pagos</a>.
+              </span>
+            }
+          </div>
         </div>
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-3">
@@ -171,6 +172,8 @@
                     [ngModelOptions]="{ standalone: true }"
                     appendTo="body"
                     [selectId]="'product-' + $index"
+                    [filter]="true"
+                    filterPlaceholder="Buscar producto..."
                   >
                     <ng-template selectSelectedItem let-selected>
                       <div class="flex items-center gap-3">
@@ -178,6 +181,7 @@
                         <img
                           [src]="selected.photos[0]"
                           [alt]="selected.name"
+                          loading="lazy"
                           class="w-6 h-6 rounded object-cover"
                         />
                         } @else {
@@ -222,6 +226,7 @@
                         <img
                           [src]="item.photos[0]"
                           [alt]="item.name"
+                          loading="lazy"
                           class="w-8 h-8 rounded object-cover"
                         />
                         } @else {
