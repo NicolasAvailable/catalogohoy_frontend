@@ -7,7 +7,7 @@ import {
   withMethods,
   withState,
 } from '@ngrx/signals';
-import { Chat, ChatMessage } from '../domain';
+import { Chat, ChatMessage, ChatNote, PipelineStatus, QuickReply } from '../domain';
 import { ChatService } from './chat.service';
 
 type ChatState = {
@@ -18,6 +18,8 @@ type ChatState = {
   isLoadingMessages: boolean;
   isSendingMessage: boolean;
   searchQuery: string;
+  pipelineStatuses: PipelineStatus[];
+  quickReplies: QuickReply[];
 };
 
 const initialState: ChatState = {
@@ -28,6 +30,8 @@ const initialState: ChatState = {
   isLoadingMessages: false,
   isSendingMessage: false,
   searchQuery: '',
+  pipelineStatuses: [],
+  quickReplies: [],
 };
 
 export const ChatStore = signalStore(
@@ -124,6 +128,42 @@ export const ChatStore = signalStore(
         );
       },
 
+      /** Append a message that arrived via realtime (from the customer or
+       *  another agent). Deduped by id so our own optimistic sends don't double
+       *  up. Updates the conversation's preview/unread in the list too. */
+      applyIncomingMessage(msg: ChatMessage) {
+        const isSelected = store.selectedChatId() === msg.chatId;
+
+        if (isSelected && !store.messages().some((m) => m.id === msg.id)) {
+          patchState(store, { messages: [...store.messages(), msg] });
+        }
+
+        patchState(store, {
+          chats: store
+            .chats()
+            .map((c) =>
+              c.id === msg.chatId
+                ? {
+                    ...c,
+                    lastMessage: msg.content,
+                    lastMessageAt: msg.createdAt,
+                    unreadCount:
+                      !msg.isMine && !isSelected
+                        ? c.unreadCount + 1
+                        : c.unreadCount,
+                  }
+                : c
+            )
+            .sort((a, b) =>
+              (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? '')
+            ),
+        });
+
+        if (isSelected && !msg.isMine) {
+          chatService.markAsRead(msg.chatId);
+        }
+      },
+
       setSearchQuery(q: string) {
         patchState(store, { searchQuery: q });
       },
@@ -139,6 +179,53 @@ export const ChatStore = signalStore(
             c.id === id ? { ...c, muted: newMuted } : c
           ),
         });
+      },
+
+      // ----------------------------------------------------------- CRM ---
+
+      async loadCrmConfig() {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return;
+        const [statuses, replies] = await Promise.all([
+          chatService.getPipelineStatuses(tenantId),
+          chatService.getQuickReplies(tenantId),
+        ]);
+        if (statuses.isRight())
+          patchState(store, { pipelineStatuses: statuses.value });
+        if (replies.isRight())
+          patchState(store, { quickReplies: replies.value });
+      },
+
+      async setStatus(chatId: number, status: string | null) {
+        patchState(store, {
+          chats: store
+            .chats()
+            .map((c) => (c.id === chatId ? { ...c, pipelineStatus: status } : c)),
+        });
+        await chatService.updateStatus(chatId, status);
+      },
+
+      async assignChat(chatId: number, userId: number | null) {
+        patchState(store, {
+          chats: store
+            .chats()
+            .map((c) =>
+              c.id === chatId ? { ...c, assignedToUserId: userId } : c
+            ),
+        });
+        await chatService.assign(chatId, userId);
+      },
+
+      async addNote(chatId: number, note: ChatNote) {
+        const chat = store.chats().find((c) => c.id === chatId);
+        if (!chat) return;
+        const notes = [...chat.internalNotes, note];
+        patchState(store, {
+          chats: store
+            .chats()
+            .map((c) => (c.id === chatId ? { ...c, internalNotes: notes } : c)),
+        });
+        await chatService.saveNotes(chatId, notes);
       },
     })
   )

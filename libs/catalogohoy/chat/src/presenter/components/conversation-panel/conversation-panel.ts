@@ -53,6 +53,18 @@ export class ConversationPanelComponent {
     this.messageInput.set('');
   }
 
+  /** Quick-reply popover state + insertion. */
+  protected readonly quickRepliesOpen = signal(false);
+
+  toggleQuickReplies(): void {
+    this.quickRepliesOpen.update((v) => !v);
+  }
+
+  insertQuickReply(content: string): void {
+    this.messageInput.set(content);
+    this.quickRepliesOpen.set(false);
+  }
+
   formatTime(dateStr: string): string {
     return new Date(dateStr).toLocaleTimeString('es', {
       hour: '2-digit',

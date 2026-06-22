@@ -9,6 +9,20 @@ export interface Chat {
   unreadCount: number;
   muted: boolean;
   createdAt: string;
+  // --- CRM ---
+  /** Key of the pipeline status this conversation is in (configurable). */
+  pipelineStatus: string | null;
+  /** users.id of the team member responsible for this conversation. */
+  assignedToUserId: number | null;
+  /** Admin-only notes thread (never sent to the customer). */
+  internalNotes: ChatNote[];
+  tags: string[];
+}
+
+export interface ChatNote {
+  author: string;
+  text: string;
+  createdAt: string;
 }
 
 export interface ChatMessage {
@@ -17,4 +31,23 @@ export interface ChatMessage {
   content: string;
   isMine: boolean;
   createdAt: string;
+}
+
+/** A configurable kanban/pipeline stage for the tenant's CRM. */
+export interface PipelineStatus {
+  id: number;
+  tenantId: number;
+  key: string;
+  name: string;
+  color: string;
+  position: number;
+}
+
+/** A reusable canned response the team can insert into the composer. */
+export interface QuickReply {
+  id: number;
+  tenantId: number;
+  shortcut: string;
+  content: string;
+  position: number;
 }

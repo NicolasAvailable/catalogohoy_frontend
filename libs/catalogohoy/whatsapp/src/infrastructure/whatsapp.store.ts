@@ -127,6 +127,39 @@ export const WhatsAppStore = signalStore(
         return created;
       },
 
+      /** Connect a fake WhatsApp account so the inbox can be tested end-to-end
+       *  before Meta approves the real API. Clearly labeled as demo; the
+       *  public customer simulator chats against this same tenant. */
+      async connectDemoAccount(): Promise<WhatsAppAccount | null> {
+        patchState(store, { isConnecting: true, error: null });
+
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) {
+          patchState(store, { isConnecting: false });
+          return null;
+        }
+
+        const result = await whatsAppService.createAccount(tenantId, {
+          phoneNumber: '+10000000000',
+          displayName: 'Cuenta de prueba (demo)',
+          wabaId: null,
+          phoneNumberId: null,
+        });
+
+        let created: WhatsAppAccount | null = null;
+        result.fold(
+          (err) => patchState(store, { isConnecting: false, error: err.message }),
+          (account) => {
+            created = account;
+            patchState(store, {
+              accounts: [account, ...store.accounts()],
+              isConnecting: false,
+            });
+          }
+        );
+        return created;
+      },
+
       async removeAccount(id: number) {
         const result = await whatsAppService.deleteAccount(id);
 

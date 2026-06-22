@@ -1,7 +1,26 @@
 import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
-import { Chat, ChatMessage, ChatMapper, ChatMessageMapper } from '../domain';
+import {
+  Chat,
+  ChatMessage,
+  ChatMapper,
+  ChatMessageMapper,
+  ChatNote,
+  PipelineStatus,
+  PipelineStatusMapper,
+  QuickReply,
+  QuickReplyMapper,
+} from '../domain';
+
+/** A past order shown in the customer ficha. */
+export interface CustomerOrderSummary {
+  id: number;
+  orderNumber: number | null;
+  totalUsd: number;
+  status: string;
+  createdAt: string;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -111,5 +130,107 @@ export class ChatService {
     }
 
     return E.right(undefined);
+  }
+
+  // ----------------------------------------------------------------- CRM ---
+
+  async updateStatus(
+    chatId: number,
+    pipelineStatus: string | null
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('chats')
+      .update({ pipeline_status: pipelineStatus })
+      .eq('id', chatId);
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  async assign(
+    chatId: number,
+    userId: number | null
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('chats')
+      .update({ assigned_to_user_id: userId })
+      .eq('id', chatId);
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  async saveNotes(
+    chatId: number,
+    notes: ChatNote[]
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('chats')
+      .update({ internal_notes: notes })
+      .eq('id', chatId);
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  async getPipelineStatuses(
+    tenantId: number
+  ): Promise<E.Either<Error, PipelineStatus[]>> {
+    const { data, error } = await this.client
+      .from('pipeline_statuses')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('position', { ascending: true });
+    if (error) return E.left(new Error(error.message));
+    return E.right(PipelineStatusMapper.toDomainList(data || []));
+  }
+
+  async getQuickReplies(
+    tenantId: number
+  ): Promise<E.Either<Error, QuickReply[]>> {
+    const { data, error } = await this.client
+      .from('quick_replies')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('position', { ascending: true });
+    if (error) return E.left(new Error(error.message));
+    return E.right(QuickReplyMapper.toDomainList(data || []));
+  }
+
+  /** Past orders for the customer phone, for the ficha. Matches on digits so a
+   *  "+58 412…" order links to a "0412…" chat. */
+  async getCustomerOrders(
+    tenantId: number,
+    phone: string | null
+  ): Promise<E.Either<Error, CustomerOrderSummary[]>> {
+    if (!phone) return E.right([]);
+    const { data, error } = await this.client
+      .from('orders')
+      .select('id, order_number, total_usd, status, created_at, phone')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) return E.left(new Error(error.message));
+
+    const target = phone.replace(/\D/g, '');
+    return E.right(
+      (data || [])
+        .filter(
+          (o: { phone: string | null }) =>
+            (o.phone ?? '').replace(/\D/g, '') === target
+        )
+        .map(
+          (o: {
+            id: number;
+            order_number: number | null;
+            total_usd: number | string;
+            status: string | null;
+            created_at: string;
+          }) => ({
+            id: o.id,
+            orderNumber: o.order_number ?? null,
+            totalUsd: Number(o.total_usd) || 0,
+            status: o.status ?? 'pending',
+            createdAt: o.created_at,
+          })
+        )
+    );
   }
 }

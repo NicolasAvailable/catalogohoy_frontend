@@ -1,0 +1,110 @@
+@if (chat(); as c) {
+<div class="ficha">
+  <!-- Customer header -->
+  <div class="ficha__head">
+    <div class="ficha__avatar">{{ initial(c.customerName) }}</div>
+    <div class="ficha__id">
+      <span class="ficha__name">{{ c.customerName || 'Cliente' }}</span>
+      @if (c.customerPhone) {
+      <a
+        class="ficha__phone"
+        [href]="waLink(c.customerPhone)"
+        target="_blank"
+        rel="noopener"
+      >
+        <ui-icon name="phone" size="13" /> {{ c.customerPhone }}
+      </a>
+      }
+    </div>
+  </div>
+
+  <!-- Pipeline status -->
+  <div class="ficha__field">
+    <span class="ficha__label">Estado</span>
+    @if (statusOptions().length) {
+    <ui-select
+      [options]="statusOptions()"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Sin estado"
+      [ngModel]="c.pipelineStatus"
+      (ngModelChange)="onStatusChange($event)"
+    />
+    } @else {
+    <p class="ficha__hint">
+      Crea estados del pipeline en la configuración del CRM.
+    </p>
+    }
+  </div>
+
+  <!-- Assignment -->
+  <div class="ficha__field">
+    <span class="ficha__label">Asignado a</span>
+    <ui-select
+      [options]="assigneeOptions()"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Sin asignar"
+      [ngModel]="c.assignedToUserId"
+      (ngModelChange)="onAssigneeChange($event)"
+    />
+  </div>
+
+  <!-- Past orders -->
+  <div class="ficha__section">
+    <span class="ficha__section-title">
+      Órdenes ({{ orders().length }})
+    </span>
+    @if (orders().length) {
+    <div class="ficha__orders">
+      @for (o of orders(); track o.id) {
+      <div class="ficha__order">
+        <span class="ficha__order-num">#{{ o.orderNumber ?? o.id }}</span>
+        <span class="ficha__order-meta">
+          {{ formatDate(o.createdAt) }} · {{ orderStatusLabel(o.status) }}
+        </span>
+        <span class="ficha__order-total">${{ o.totalUsd }}</span>
+      </div>
+      }
+    </div>
+    } @else {
+    <p class="ficha__hint">Sin órdenes registradas.</p>
+    }
+  </div>
+
+  <!-- Internal notes -->
+  <div class="ficha__section ficha__section--notes">
+    <span class="ficha__section-title">Notas internas</span>
+    <div class="ficha__notes">
+      @for (n of c.internalNotes; track $index) {
+      <div class="ficha__note">
+        <div class="ficha__note-head">
+          <span class="ficha__note-author">{{ n.author }}</span>
+          <span class="ficha__note-date">{{ formatDate(n.createdAt) }}</span>
+        </div>
+        <p class="ficha__note-text">{{ n.text }}</p>
+      </div>
+      } @empty {
+      <p class="ficha__hint">Solo el equipo ve estas notas.</p>
+      }
+    </div>
+    <div class="ficha__note-composer">
+      <input
+        class="ficha__note-input"
+        placeholder="Agregar nota..."
+        [ngModel]="noteDraft()"
+        (ngModelChange)="noteDraft.set($event)"
+        (keyup.enter)="addNote()"
+      />
+      <button
+        class="ficha__note-add"
+        [disabled]="!noteDraft().trim()"
+        (click)="addNote()"
+        aria-label="Agregar nota"
+      >
+        <ui-icon name="plus" size="16" />
+      </button>
+    </div>
+  </div>
+</div>
+}

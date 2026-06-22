@@ -51,6 +51,15 @@ export class WhatsAppSetupComponent implements OnInit {
     // The waba_id and phone_number_id come from the message event listener.
   }
 
+  /** Connect a demo account so the inbox unlocks without the real Meta API. */
+  async connectDemo(): Promise<void> {
+    const account = await this.whatsAppStore.connectDemoAccount();
+    if (account) {
+      this.signupComplete.set(true);
+      this.registered.emit(account);
+    }
+  }
+
   private async handleSignupFinish(data: EmbeddedSignupData): Promise<void> {
     const account = await this.whatsAppStore.registerFromEmbeddedSignup({
       wabaId: data.waba_id,

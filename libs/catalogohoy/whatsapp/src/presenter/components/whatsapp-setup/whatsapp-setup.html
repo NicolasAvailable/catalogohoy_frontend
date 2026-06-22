@@ -5,11 +5,13 @@
 >
   @if (!signupComplete()) {
   <div class="flex flex-col items-center max-w-lg w-full mx-auto gap-6">
-    <div
-      class="flex items-center justify-center w-20 h-20 rounded-full bg-green-50"
-    >
-      <ui-icon name="message-square" size="40" styleClass="text-green-600" />
-    </div>
+    <img
+      src="/images/whatsapp.svg"
+      alt="WhatsApp"
+      width="80"
+      height="80"
+      class="w-20 h-20"
+    />
 
     <div class="text-center">
       <h2 class="text-xl font-bold text-grey-800">
@@ -34,6 +36,26 @@
       <p class="text-xs text-grey-400 text-center">
         Serás redirigido a Facebook para conectar tu cuenta de WhatsApp Business
         API.
+      </p>
+
+      <!-- Demo: probar el inbox en tiempo real sin la aprobación de Meta. -->
+      <div class="flex items-center gap-3 my-1">
+        <span class="flex-1 h-px bg-grey-100"></span>
+        <span class="text-xs text-grey-400">o</span>
+        <span class="flex-1 h-px bg-grey-100"></span>
+      </div>
+
+      <ui-button
+        label="Probar en modo demo"
+        icon="sparkles"
+        severity="secondary"
+        [isLoading]="whatsAppStore.isConnecting()"
+        (click)="connectDemo()"
+        styleClass="w-full"
+      />
+      <p class="text-xs text-grey-400 text-center">
+        Conecta una cuenta de prueba para chatear en tiempo real con el
+        simulador de cliente, sin esperar a Meta.
       </p>
     </div>
   </div>

@@ -49,6 +49,9 @@
         @for (chat of chatStore.filteredChats(); track chat.id) {
           <li
             (click)="chatStore.selectChat(chat.id)"
+            (keyup.enter)="chatStore.selectChat(chat.id)"
+            tabindex="0"
+            role="button"
             class="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-lino-400 transition-colors duration-100"
             [class.bg-primary-50]="chatStore.selectedChatId() === chat.id"
           >
