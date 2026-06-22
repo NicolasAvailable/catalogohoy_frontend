@@ -24,6 +24,12 @@ export class ProductMapper {
       isHidden: entity.is_hidden ?? false,
       isSized: entity.is_sized ?? false,
       sizes: entity.sizes ?? [],
+      isVariant: entity.is_variant ?? false,
+      variants: (entity.variants ?? []).map((v) => ({
+        ...v,
+        photos: v.photos ?? [],
+        sizes: v.sizes ?? [],
+      })),
     });
   }
 }

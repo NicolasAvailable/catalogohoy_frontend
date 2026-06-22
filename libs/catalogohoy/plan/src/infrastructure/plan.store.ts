@@ -51,6 +51,9 @@ export const PlanStore = signalStore(
       () => store.tenantPlanUsage()?.currentProductCount ?? 0
     ),
     maxProducts: computed(() => store.tenantPlanUsage()?.plan.maxProducts ?? 0),
+    /** Variants allowed per product on the current plan. Defaults to 1 until
+     *  the tenant plan usage loads (gratis floor). */
+    maxVariants: computed(() => store.tenantPlanUsage()?.plan.maxVariants ?? 1),
     remainingProducts: computed(
       () => store.tenantPlanUsage()?.remainingProducts ?? 0
     ),
@@ -107,6 +110,22 @@ export const PlanStore = signalStore(
       const diff = new Date(expiresAt).getTime() - Date.now();
       const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
       return days >= 0 && days <= 6;
+    }),
+    // Grace window: the paid plan already lapsed (plan_expired) but hasn't been
+    // downgraded to free yet. Instead of blocking, we keep the plan usable and
+    // warn the owner that they have a few days to renew before dropping to Gratis.
+    // Once the daily cron downgrades them, plan becomes free → this turns false.
+    inGracePeriod: computed(() => {
+      const isFree =
+        store.isFreePlan() || (store.tenantPlanUsage()?.plan.isFree ?? false);
+      return store.planExpired() && !isFree && store.planExpiresAt() !== null;
+    }),
+    graceDaysLeft: computed(() => {
+      const expiresAt = store.planExpiresAt();
+      if (!expiresAt) return 0;
+      const dayMs = 1000 * 60 * 60 * 24;
+      const graceEnd = new Date(expiresAt).getTime() + 3 * dayMs;
+      return Math.max(0, Math.ceil((graceEnd - Date.now()) / dayMs));
     }),
   })),
   withMethods(

@@ -1,7 +1,9 @@
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Component, inject, OnInit, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { environment } from '@catalogohoy/env';
 import { PlanStore } from '@catalogohoy/plan';
+import { CreditsWidgetComponent } from '@catalogohoy/product';
 import { ProfileStore } from '@catalogohoy/profile';
 import { is, qr } from '@shared/domain';
 import { BaseComponent } from '@shared/presenter';
@@ -18,6 +20,7 @@ import { ProfileMenu } from './components';
   imports: [
     AvatarComponent,
     ButtonComponent,
+    CreditsWidgetComponent,
     IconComponent,
     TooltipDirective,
     ProfileMenu,
@@ -32,6 +35,12 @@ export class Navbar extends BaseComponent implements OnInit {
   public readonly planStore = inject(PlanStore);
 
   public readonly currentPlanPalette = this.planStore.currentPlanPalette;
+  public readonly helpGuideUrl = environment.helpGuideUrl;
+
+  /** Open the public help center (guide) in a new tab. */
+  public openGuide(): void {
+    window.open(this.helpGuideUrl, '_blank', 'noopener');
+  }
 
   ngOnInit(): void {
     this.planStore.loadTenantPlanUsage();

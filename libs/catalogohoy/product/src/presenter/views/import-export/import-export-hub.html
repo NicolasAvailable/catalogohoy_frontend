@@ -5,6 +5,93 @@
   (close)="close()"
   styleClass="w-full max-w-3xl rounded-2xl! overflow-hidden"
 >
+  <!-- HUB VIEW (export + import) -->
+  @if (view() === 'hub') {
+  <section class="flex flex-col gap-6 p-8">
+    <div class="text-center">
+      <h2 class="text-2xl font-bold text-gray-900">Exportar / Importar productos</h2>
+      <p class="text-gray-500 mt-2">
+        Descargá tus productos en Excel o importá nuevos desde un archivo.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <!-- Export tile (paid plans only) -->
+      <button
+        type="button"
+        (click)="onExport()"
+        [disabled]="isFreePlan()"
+        class="relative flex flex-col items-center gap-3 p-8 border-2 border-gray-100 rounded-2xl transition-all"
+        [class.cursor-pointer]="!isFreePlan()"
+        [class.hover:border-green-400]="!isFreePlan()"
+        [class.hover:bg-green-50]="!isFreePlan()"
+        [class.opacity-60]="isFreePlan()"
+        [class.cursor-not-allowed]="isFreePlan()"
+      >
+        @if (isFreePlan()) {
+        <span
+          class="absolute top-3 right-3 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none"
+        >
+          <ui-icon name="crown" styleClass="size-3 text-indigo-500" />
+          Pro
+        </span>
+        }
+        <div class="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center">
+          <ui-icon name="download" styleClass="size-7 text-green-600" />
+        </div>
+        <h3 class="text-lg font-bold text-gray-900">Exportar</h3>
+        <p class="text-sm text-gray-500 text-center">
+          {{ isFreePlan() ? 'Disponible en planes pagos' : 'Descargá todos tus productos en un archivo de Excel' }}
+        </p>
+        <span
+          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-green-50 border border-green-200 text-green-700 text-xs font-semibold"
+        >
+          <ui-icon name="file-spreadsheet" styleClass="size-3.5 text-green-600" />
+          Excel (.xlsx)
+        </span>
+      </button>
+
+      <!-- Import tile -->
+      <button
+        type="button"
+        (click)="onImport()"
+        class="flex flex-col items-center gap-3 p-8 border-2 border-gray-100 rounded-2xl hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer"
+      >
+        <div class="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center">
+          <ui-icon name="upload" styleClass="size-7 text-blue-600" />
+        </div>
+        <h3 class="text-lg font-bold text-gray-900">Importar</h3>
+        <p class="text-sm text-gray-500 text-center">
+          Subí un archivo de Excel con productos para agregarlos a tu catálogo.
+        </p>
+        <span
+          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold"
+        >
+          <ui-icon name="file-spreadsheet" styleClass="size-3.5 text-blue-600" />
+          Excel (.xlsx)
+        </span>
+      </button>
+    </div>
+  </section>
+  }
+
+  <!-- EXPORT PROGRESS VIEW -->
+  @if (view() === 'export') {
+  <section class="flex flex-col items-center gap-6 p-12">
+    @if (isExporting()) {
+    <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center">
+      <ui-icon name="loader-circle" styleClass="size-8 text-blue-500 animate-spin" />
+    </div>
+    <p class="text-lg font-semibold text-gray-700">Exportando productos...</p>
+    } @else {
+    <div class="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center">
+      <ui-icon name="check-circle" styleClass="size-8 text-green-500" />
+    </div>
+    <p class="text-lg font-semibold text-gray-700">Exportación completada</p>
+    }
+  </section>
+  }
+
   <!-- IMPORT UPLOAD VIEW -->
   @if (view() === 'import-upload') {
   <section class="flex flex-col gap-6 p-8">

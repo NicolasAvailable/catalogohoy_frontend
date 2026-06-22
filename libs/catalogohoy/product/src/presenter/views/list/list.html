@@ -75,8 +75,8 @@
       <ui-button
         class="sm:hidden"
         (click)="openImportExport()"
-        label="Importar"
-        icon="upload"
+        label="Exportar/Importar"
+        icon="arrow-up-down"
         variant="outlined"
         severity="contrast"
         [fluid]="false"
@@ -96,8 +96,8 @@
       <ui-button
         class="hidden sm:block"
         (click)="openImportExport()"
-        label="Importar"
-        icon="upload"
+        label="Exportar/Importar"
+        icon="arrow-up-down"
         variant="outlined"
         severity="contrast"
         [fluid]="false"
@@ -208,6 +208,8 @@
         cdkDrag
         cdkDragBoundary=".product-list"
         class="border-b border-grey-50 last:border-0 hover:bg-grey-25 transition-colors"
+        [class.bg-slate-50]="isLocked(item)"
+        [class.opacity-70]="isLocked(item)"
       >
         <!-- Desktop row -->
         <section class="hidden sm:flex gap-4 justify-between px-6 py-4 items-center min-w-[700px]">
@@ -221,7 +223,8 @@
             />
             <span class="w-7 text-center text-xs font-medium text-grey-300 shrink-0">{{ pageFirst() + $index + 1 }}</span>
             <div
-              [routerLink]="['edit', item.id]"
+              [routerLink]="isLocked(item) ? null : ['edit', item.id]"
+              (click)="onLockedAttempt(item)"
               class="flex gap-2 flex-1 cursor-pointer overflow-hidden"
             >
               @if (item.photos.length > 0) {
@@ -264,6 +267,12 @@
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-slate-200 text-slate-700 w-fit">
                     <ui-icon name="eye-off" size="10" />
                     Oculto
+                  </span>
+                  }
+                  @if (isLocked(item)) {
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 w-fit">
+                    <ui-icon name="lock" size="10" />
+                    Oculto · plan gratis
                   </span>
                   }
                 </div>
@@ -320,12 +329,13 @@
           </div>
           <div class="flex-1 flex items-center justify-center gap-1">
             <ui-button
-              [routerLink]="['edit', item.id]"
-              icon="pencil"
+              [routerLink]="isLocked(item) ? null : ['edit', item.id]"
+              (click)="onLockedAttempt(item)"
+              [icon]="isLocked(item) ? 'lock' : 'pencil'"
               variant="outlined"
               severity="contrast"
               size="small"
-              tooltip="Editar"
+              [tooltip]="isLocked(item) ? 'Mejora tu plan para editar' : 'Editar'"
               tooltipPosition="bottom"
             />
             @if (canCreateProduct()) {
@@ -372,7 +382,8 @@
             (valueChange)="toggleProduct(item)"
           />
           <div
-            [routerLink]="['edit', item.id]"
+            [routerLink]="isLocked(item) ? null : ['edit', item.id]"
+            (click)="onLockedAttempt(item)"
             class="flex gap-3 flex-1 cursor-pointer overflow-hidden items-center"
           >
             @if (item.photos.length > 0) {
@@ -396,7 +407,7 @@
               <h2 class="text-primary-500 font-semibold text-base line-clamp-1 break-all">
                 {{item.name}}
               </h2>
-              @if (item.isSoldOut || item.isHidden) {
+              @if (item.isSoldOut || item.isHidden || isLocked(item)) {
               <div class="flex flex-wrap items-center gap-1">
                 @if (item.isSoldOut) {
                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-red-100 text-red-600 w-fit">
@@ -406,6 +417,11 @@
                 @if (item.isHidden) {
                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-slate-200 text-slate-700 w-fit">
                   Oculto
+                </span>
+                }
+                @if (isLocked(item)) {
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 w-fit">
+                  Plan gratis
                 </span>
                 }
               </div>
@@ -429,8 +445,9 @@
           </div>
           <div class="flex gap-1 shrink-0">
             <ui-button
-              [routerLink]="['edit', item.id]"
-              icon="pencil"
+              [routerLink]="isLocked(item) ? null : ['edit', item.id]"
+              (click)="onLockedAttempt(item)"
+              [icon]="isLocked(item) ? 'lock' : 'pencil'"
               variant="outlined"
               severity="contrast"
               size="small"
@@ -492,7 +509,29 @@
         placeholder="Seleccionar categorías..."
         styleClass="w-full"
         appendTo="body"
-      />
+        [showToggleAll]="categoryStore.categoryList().categories.length > 0"
+      >
+        <ng-template #footer>
+          <div class="flex flex-col gap-2 p-2 border-t border-grey-100">
+            <ui-input-text
+              placeholder="Nueva categoría..."
+              size="small"
+              styleClass="w-full"
+              [ngModel]="newCategoryName()"
+              (ngModelChange)="newCategoryName.set($event)"
+              (keydown.enter)="onCreateCategoryFromDropdown()"
+            />
+            <ui-button
+              icon="plus"
+              label="Crear categoría"
+              size="small"
+              [disabled]="!newCategoryName().trim()"
+              [isLoading]="creatingCategory()"
+              (click)="onCreateCategoryFromDropdown()"
+            />
+          </div>
+        </ng-template>
+      </ui-multi-select>
       <div class="flex justify-end gap-3 pt-2">
         <ui-button
           label="Cancelar"

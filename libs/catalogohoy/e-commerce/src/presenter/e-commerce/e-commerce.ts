@@ -8,9 +8,11 @@ import {
   inject,
   OnDestroy,
   OnInit,
+  signal,
 } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
-import { Router, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { StripHtmlPipe } from '@shared/presenter';
 import { PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
@@ -18,12 +20,10 @@ import { DialogService, IconComponent, dialogConfig } from '@ui';
 import { CartStore, EcommerceService, EcommerceStore } from '../../infrastructure';
 import { ProductDetailModal } from '../components/product-detail-modal/product-detail-modal';
 import { CartDrawer } from '../components/cart-drawer/cart-drawer';
-import { CatalogExpiredComponent } from '../components/catalog-expired/catalog-expired';
 import { CatalogFooter } from '../components/catalog-footer/catalog-footer';
 import { CatalogHeader } from '../components/catalog-header/catalog-header';
 import { CatalogHero } from '../components/catalog-hero/catalog-hero';
 import { CatalogInfoModal } from '../components/catalog-info-modal/catalog-info-modal';
-import { CheckoutDrawer } from '../components/checkout-drawer/checkout-drawer';
 
 const DEFAULT_FAVICON =
   'https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/favicon-c.png';
@@ -38,8 +38,6 @@ const DEFAULT_FAVICON =
     CatalogHero,
     CatalogFooter,
     CartDrawer,
-    CheckoutDrawer,
-    CatalogExpiredComponent,
     CatalogInfoModal,
   ],
   templateUrl: './e-commerce.html',
@@ -53,10 +51,21 @@ export class ECommerce implements OnInit, OnDestroy {
   private readonly posthogService = inject(PosthogService);
   private readonly titleService = inject(Title);
   private readonly metaService = inject(Meta);
+  private readonly stripHtmlPipe = new StripHtmlPipe();
   private readonly document = inject(DOCUMENT);
   private readonly ecommerceService = inject(EcommerceService);
   private readonly dialogService = inject(DialogService);
   private readonly router = inject(Router);
+
+  /** Checkout and invoice are full-page flows — hide the catalog chrome
+   *  (header/hero/cart-pill/footer) so they don't show their loading skeleton
+   *  and action buttons around those routes. */
+  public readonly isStandaloneRoute = signal(this.matchStandalone(this.router.url));
+
+  private matchStandalone(url: string): boolean {
+    const path = (url.split('?')[0] || '').replace(/\/$/, '');
+    return path === '/checkout' || /\/order\/[^/]+\/invoice$/.test(path);
+  }
 
   public readonly whatsappUrl = computed(() => {
     const btn = this.ecommerceStore.effectiveCatalogInfo()?.whatsappButtons?.[0];
@@ -103,13 +112,23 @@ export class ECommerce implements OnInit, OnDestroy {
   };
 
   constructor() {
+    this.router.events.subscribe((e) => {
+      if (e instanceof NavigationEnd) {
+        this.isStandaloneRoute.set(this.matchStandalone(e.urlAfterRedirects));
+      }
+    });
+
     // Dynamic title + SEO meta tags
     effect(() => {
       const info = this.ecommerceStore.effectiveCatalogInfo();
       if (info?.name) {
         const title = `${info.name} | Catálogo`;
+        // description is now rich HTML — strip tags for meta/share previews.
+        const plainDescription = this.stripHtmlPipe
+          .transform(info.description ?? '')
+          .trim();
         const description =
-          info.description || `Explora el catálogo de ${info.name}`;
+          plainDescription || `Explora el catálogo de ${info.name}`;
         const image = info.logo || info.banner || DEFAULT_FAVICON;
         const url = window.location.origin;
 
@@ -173,6 +192,20 @@ export class ECommerce implements OnInit, OnDestroy {
     const deepLinkProductId = new URL(window.location.href).searchParams.get(
       'product'
     );
+    // Snapshot del `?category=<id>` (link compartido desde el admin) ANTES de
+    // cualquier navigate.
+    const deepLinkCategoryId = new URL(window.location.href).searchParams.get(
+      'category'
+    );
+
+    // Pre-seleccionamos la categoría ANTES de cargar el catálogo. Así, cuando
+    // el category-filter (p-tabs) renderice por primera vez, ya arranca con el
+    // tab correcto seleccionado. Si lo hiciéramos después del primer render,
+    // PrimeNG p-tabs reacciona al cambio de `value` post-init emitiendo un
+    // valueChange que termina reseteando la selección a "Ver todos".
+    if (deepLinkCategoryId) {
+      this.ecommerceStore.setSelectedCategory(deepLinkCategoryId);
+    }
 
     const slug = getTenantSlugFromUrl();
     if (slug) {
@@ -186,6 +219,18 @@ export class ECommerce implements OnInit, OnDestroy {
           this.posthogService.enablePublicTracking(slug);
         }
       }
+    }
+
+    // Deep-link de categoría: la categoría ya quedó pre-seleccionada arriba; el
+    // catálogo cargó TODOS los productos, así que recargamos filtrando por la
+    // categoría y limpiamos el query param.
+    if (deepLinkCategoryId && slug) {
+      await this.ecommerceStore.loadProducts(slug);
+      this.router.navigate([], {
+        queryParams: { category: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
     }
 
     // Una vez resuelto el tenant (catalogInfo poblado), abrimos el modal

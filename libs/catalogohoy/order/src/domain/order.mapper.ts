@@ -5,6 +5,7 @@ export class OrderMapper {
     const e = entity as any;
     return {
       id: e.id,
+      orderNumber: e.order_number,
       name: e.name,
       products: Array.isArray(e.products)
         ? e.products.map(OrderMapper.toOrderItemDomain)
@@ -16,8 +17,13 @@ export class OrderMapper {
       createdAt: e.created_at,
       updatedAt: e.updated_at,
       phone: e.phone,
+      email: e.email ?? undefined,
       comments: e.comments,
+      internalNotes: Array.isArray(e.internal_notes) ? e.internal_notes : [],
       paymentMethod: e.payment_method,
+      shippingMethod: e.shipping_method ?? null,
+      shippingAddress: e.shipping_address ?? null,
+      shippingFee: e.shipping_fee != null ? Number(e.shipping_fee) : undefined,
       deliveryDate: e.delivery_date,
     };
   }
@@ -33,6 +39,8 @@ export class OrderMapper {
       photo: i.photo,
       sku: i.sku ?? null,
       size: i.size ?? null,
+      variantId: i.variantId ?? null,
+      variantName: i.variantName ?? null,
     };
   }
 

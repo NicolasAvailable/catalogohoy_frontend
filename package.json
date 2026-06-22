@@ -11,7 +11,9 @@
     "build:authentication": "nx build authentication",
     "build:internal": "nx build internal",
     "serve:landing": "nx serve landing",
-    "build:landing": "nx build landing"
+    "build:landing": "nx build landing",
+    "serve:help": "nx serve help",
+    "build:help": "nx build help"
   },
   "private": true,
   "dependencies": {
@@ -37,7 +39,6 @@
     "apexcharts": "^5.6.0",
     "chart.js": "^4.5.1",
     "dompurify": "^3.4.5",
-    "falso": "github:ngneat/falso",
     "jspdf": "^3.0.3",
     "lucide-angular": "^0.553.0",
     "ng-apexcharts": "^2.2.0",

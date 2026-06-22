@@ -122,6 +122,37 @@ export default class List implements OnInit, OnDestroy {
     return products.slice(this.pageFirst(), this.pageFirst() + this.pageRows());
   });
 
+  /** Products locked by the free-plan limit. When a tenant is downgraded to the
+   *  free plan and has more products than it allows, only the first `maxProducts`
+   *  visible (non-hidden) products — by their `position` order, same as the
+   *  public catalog — stay active. The rest are kept in the DB but locked here:
+   *  not visible in the storefront and not editable until they upgrade. */
+  public readonly lockedIds = computed(() => {
+    const locked = new Set<string>();
+    if (!this.planStore.isFreePlan()) return locked;
+    const cap = this.planStore.maxProducts();
+    if (cap <= 0) return locked; // 0 = unlimited sentinel
+    let rank = 0;
+    for (const p of this.productStore.productList().products) {
+      if (p.isHidden) continue; // hidden products don't consume a visible slot
+      if (rank >= cap) locked.add(String(p.id));
+      rank++;
+    }
+    return locked;
+  });
+
+  public isLocked(item: Product): boolean {
+    return this.lockedIds().has(String(item.id));
+  }
+
+  /** Intercepts an edit attempt on a plan-locked product: surfaces the upgrade
+   *  dialog instead of navigating. No-op for unlocked products. */
+  public onLockedAttempt(item: Product): void {
+    if (this.isLocked(item)) {
+      this.planLimitDialog.show();
+    }
+  }
+
   public readonly isAllPageSelected = computed(() => {
     const pageItems = this.currentPageItems();
     if (pageItems.length === 0) return false;
@@ -350,6 +381,31 @@ export default class List implements OnInit, OnDestroy {
       this.refreshList();
     });
     this.isProcessing.set(false);
+  }
+
+  // Inline category creation from inside the category dropdown.
+  public readonly newCategoryName = signal('');
+  public readonly creatingCategory = signal(false);
+
+  public async onCreateCategoryFromDropdown() {
+    const name = this.newCategoryName().trim();
+    if (!name || this.creatingCategory()) return;
+    this.creatingCategory.set(true);
+    const result = await this.categoryStore.save({ name, isVisible: true });
+    this.creatingCategory.set(false);
+    result.fold(
+      () => this.toastService.warning('No se pudo crear la categoría'),
+      (created) => {
+        if (created) {
+          this.bulkCategoryIds.set([
+            ...this.bulkCategoryIds(),
+            String(created.id),
+          ]);
+          this.newCategoryName.set('');
+          this.toastService.success('Categoría creada');
+        }
+      }
+    );
   }
 
   public getDeleteDialogContent(): string {

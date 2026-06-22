@@ -50,6 +50,7 @@
         tooltipStyleClass="text-sm"
       />
     }
+    <lib-credits-widget #creditsWidget />
     @if (planStore.isLoading()) {
       <div class="w-24 h-8 rounded-lg bg-grey-100 animate-pulse mx-1"></div>
     } @else if (planStore.currentPlan(); as plan) {
@@ -67,11 +68,12 @@
       <div class="w-9 h-9 rounded-lg bg-grey-100 animate-pulse"></div>
     } @else {
       <ui-button
+        (click)="openGuide()"
         icon="message-circle-question"
         severity="primary"
         variant="outlined"
         styleClass="!border-none !text-grey-700"
-        tooltip="Ayuda"
+        tooltip="Guía de ayuda"
         tooltipPosition="bottom"
         tooltipStyleClass="text-sm"
       />
@@ -97,7 +99,10 @@
           >{{ profileStore.profile().name }}</span
         >
       </div>
-      <app-profile-menu #profileMenu></app-profile-menu>
+      <app-profile-menu
+        #profileMenu
+        (buyCredits)="creditsWidget.open()"
+      ></app-profile-menu>
     }
   </div>
 </nav>

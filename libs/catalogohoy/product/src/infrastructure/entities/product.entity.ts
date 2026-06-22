@@ -19,5 +19,15 @@ export interface ProductEntity {
   is_sold_out: boolean;
   is_hidden: boolean;
   is_sized?: boolean;
-  sizes?: { name: string; stock: number | null }[];
+  sizes?: { name: string; stock: number | null; sku?: string | null }[];
+  is_variant?: boolean;
+  variants?: {
+    id: string;
+    name: string;
+    price: number;
+    originalPrice: number;
+    sku?: string | null;
+    photos: string[];
+    sizes?: { name: string; stock: number | null; sku?: string | null }[];
+  }[];
 }

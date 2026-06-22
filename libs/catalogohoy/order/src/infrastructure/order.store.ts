@@ -2,7 +2,13 @@ import { inject } from '@angular/core';
 import { TenantStore } from '@catalogohoy/tenant';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { E } from '@shared/domain';
-import { Order, OrderItem, OrderList, OrderStatus } from '../domain/order';
+import {
+  InternalNote,
+  Order,
+  OrderItem,
+  OrderList,
+  OrderStatus,
+} from '../domain/order';
 import { OrderService } from './order.service';
 
 type OrderState = {
@@ -11,6 +17,10 @@ type OrderState = {
   totalCount: number;
   /** Total rows for the tenant with NO filters — used for the footer label. */
   grandTotalCount: number;
+  /** Pending (newly arrived) orders — drives the real-time sidebar badge.
+   *  Kept independent of `orderList` because the badge must stay accurate
+   *  app-wide, even on pages where the order list isn't loaded. */
+  pendingCount: number;
   isLoading: boolean;
   error: string | null;
 };
@@ -19,6 +29,7 @@ const initialState: OrderState = {
   orderList: OrderList.empty(),
   totalCount: 0,
   grandTotalCount: 0,
+  pendingCount: 0,
   isLoading: false,
   error: null,
 };
@@ -79,6 +90,17 @@ export const OrderStore = signalStore(
         const result = await orderService.countOrdersByTenant(tenantId);
         result.mapRight((grandTotalCount) =>
           patchState(store, { grandTotalCount })
+        );
+      },
+
+      /** Refresh the pending-order count for the sidebar badge. Cheap
+       *  count-only query; called on init and on every realtime order change. */
+      async loadPendingCount() {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return;
+        const result = await orderService.countPendingByTenant(tenantId);
+        result.mapRight((pendingCount) =>
+          patchState(store, { pendingCount })
         );
       },
 
@@ -210,6 +232,31 @@ export const OrderStore = signalStore(
               patchState(store, {
                 orderList: new OrderList(updatedItems),
               });
+              return E.right(order);
+            }
+          );
+        } catch {
+          return E.left('Error inesperado');
+        }
+      },
+
+      async addInternalNote(
+        id: number,
+        note: InternalNote
+      ): Promise<E.Either<string, Order>> {
+        try {
+          const tenantId = await tenantStore.getTenantIdAsync();
+          if (!tenantId) return E.left('Tenant no encontrado');
+
+          const result = await orderService.addInternalNote(id, tenantId, note);
+
+          return result.fold(
+            (error) => E.left(error.message),
+            (order) => {
+              const updatedItems = store
+                .orderList()
+                .items.map((o) => (o.id === order.id ? order : o));
+              patchState(store, { orderList: new OrderList(updatedItems) });
               return E.right(order);
             }
           );

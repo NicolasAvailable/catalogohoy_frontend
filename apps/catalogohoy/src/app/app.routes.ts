@@ -24,6 +24,11 @@ export const appRoutes: Route[] = [
       import('./modules/admin/admin.routes').then((m) => m.adminRoutes),
   },
   {
+    path: 'catalog-unavailable',
+    loadComponent: () =>
+      import('@catalogohoy/tenant').then((m) => m.CatalogUnavailableView),
+  },
+  {
     path: 'public/report',
     loadChildren: () =>
       import('@catalogohoy/reports').then((m) => m.REPORTS_PUBLIC_ROUTES),
@@ -42,3 +47,4 @@ export const appRoutes: Route[] = [
     redirectTo: '',
   },
 ];
+

@@ -263,6 +263,46 @@
   white-space: pre-line;
 }
 
+/* Rich-text (Quill) output via [innerHTML] — needs ::ng-deep since inserted
+   HTML doesn't carry the component's encapsulation attributes. */
+.info-modal__prose { white-space: normal; }
+.info-modal__prose ::ng-deep > *:first-child { margin-top: 0; }
+.info-modal__prose ::ng-deep > *:last-child { margin-bottom: 0; }
+.info-modal__prose ::ng-deep p { margin: 0 0 0.5rem 0; }
+.info-modal__prose ::ng-deep h2 {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  margin: 0.75rem 0 0.375rem;
+  line-height: 1.4;
+}
+.info-modal__prose ::ng-deep h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.625rem 0 0.375rem;
+  line-height: 1.4;
+}
+.info-modal__prose ::ng-deep ul,
+.info-modal__prose ::ng-deep ol {
+  margin: 0.375rem 0 0.5rem;
+  padding-left: 1.5rem;
+}
+.info-modal__prose ::ng-deep ul { list-style: disc; }
+.info-modal__prose ::ng-deep ol { list-style: decimal; }
+.info-modal__prose ::ng-deep li { margin: 0.125rem 0; overflow-wrap: anywhere; }
+.info-modal__prose ::ng-deep a {
+  color: var(--color-primary-600);
+  text-decoration: underline;
+  word-break: break-word;
+}
+.info-modal__prose ::ng-deep strong,
+.info-modal__prose ::ng-deep b { font-weight: 700; }
+.info-modal__prose ::ng-deep blockquote {
+  border-left: 3px solid var(--color-grey-200);
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  color: var(--color-grey-500);
+}
+
 /* Social */
 .info-modal__social {
   list-style: none;

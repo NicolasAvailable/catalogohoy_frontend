@@ -12,6 +12,7 @@ import {
   TooltipDirective,
 } from '@ui';
 import { ToastService } from '@shared/infrastructure';
+import { TenantStore } from '@catalogohoy/tenant';
 import { PaginatorModule } from 'primeng/paginator';
 import { CategoryFacade } from '../../../application';
 import { Category, CategoryList } from '../../../domain';
@@ -44,6 +45,10 @@ export default class CategoryListComponent implements OnInit {
   public readonly categoryFacade = inject(CategoryFacade);
   public readonly categoryService = inject(CategoryService);
   private readonly toastService = inject(ToastService);
+  private readonly tenantStore = inject(TenantStore);
+  /** Id of the category whose share link was just copied — drives the
+   *  "¡Link copiado!" tooltip feedback for ~2s. */
+  public readonly copiedCategoryId = signal<string | null>(null);
   public readonly isCreating = signal(false);
   public readonly isSaving = signal(false);
   public readonly createControl = new FormControl('', [Validators.required]);
@@ -134,6 +139,26 @@ export default class CategoryListComponent implements OnInit {
         )
       );
     this.isTogglingVisibility.set(null);
+  }
+
+  /** Copies the public catalog link pre-filtered to this category. Opening
+   *  the shared link selects the category and shows only its products. */
+  public async onShare(category: Category): Promise<void> {
+    const slug = this.tenantStore.tenantSlug();
+    if (!slug) return;
+    const url = `https://${slug}.catalogohoy.com/?category=${category.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      this.copiedCategoryId.set(String(category.id));
+      this.toastService.success('Link de la categoría copiado');
+      setTimeout(() => {
+        if (this.copiedCategoryId() === String(category.id)) {
+          this.copiedCategoryId.set(null);
+        }
+      }, 2000);
+    } catch {
+      /* clipboard may be unavailable */
+    }
   }
 
   public async onConfirmDelete() {

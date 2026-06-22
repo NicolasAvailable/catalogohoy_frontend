@@ -8,10 +8,14 @@ import {
 import { E } from '@shared/domain';
 import {
   CatalogTemplate,
+  CustomerFieldsConfig,
+  DEFAULT_CUSTOMER_FIELDS,
   DEFAULT_SOCIAL_LINKS,
   ExchangeRateType,
   findCountryByCode,
   findCurrencyByCode,
+  ShippingMethod,
+  ShippingMethodType,
   SocialLinks,
   TenantCurrencyConfig,
 } from '@catalogohoy/ecommerce-config';
@@ -21,6 +25,7 @@ import {
   Category,
   PaginatedProductList,
   PublicCatalogData,
+  PublicOrder,
 } from '../domain';
 
 @Injectable({
@@ -187,6 +192,11 @@ export class EcommerceService implements BaseEcommerceService {
       showLocationSection: config?.show_location_section ?? true,
       showCategoriesSection: config?.show_categories_section ?? true,
       currencyConfig,
+      shippingMethods: this.normalizeShippingMethods(config?.shipping_methods),
+      showShippingSection: config?.show_shipping_section ?? false,
+      customerFields:
+        (config?.customer_fields as CustomerFieldsConfig) ??
+        DEFAULT_CUSTOMER_FIELDS,
     };
 
     const categories: Category[] = (data.categories ?? []).map((cat: any) => ({
@@ -218,7 +228,12 @@ export class EcommerceService implements BaseEcommerceService {
     orderBy?: 'name' | 'price_asc' | 'price_desc',
     page = 1,
     pageSize = 20,
-    tenantId?: string
+    tenantId?: string,
+    // Hard ceiling on how many products the public catalog will serve. Used to
+    // enforce the free-plan limit on downgraded tenants: only the first `cap`
+    // products (by the default `position` order) are visible; the rest stay in
+    // the DB but never reach the storefront. `undefined`/0 = no cap.
+    cap?: number
   ): Promise<E.Either<Error, PaginatedProductList>> {
     // Use provided tenantId or look it up by slug
     let resolvedTenantId = tenantId;
@@ -278,8 +293,22 @@ export class EcommerceService implements BaseEcommerceService {
         query = query.order('position', { ascending: true });
     }
 
+    const hasCap = cap !== undefined && cap > 0;
     const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
+    let to = from + pageSize - 1;
+
+    // Page fully past the cap → nothing to serve. Report the capped total so the
+    // catalog's "load more" stops cleanly at the limit.
+    if (hasCap && from >= cap!) {
+      return E.right({
+        productList: ProductListMapper.toDomain([]),
+        totalCount: cap!,
+      });
+    }
+    if (hasCap) {
+      to = Math.min(to, cap! - 1);
+    }
+
     query = query.range(from, to);
 
     const { data, error, count } = await query;
@@ -294,10 +323,32 @@ export class EcommerceService implements BaseEcommerceService {
         item.product_categories?.map((pc: any) => pc.categories) ?? [],
     }));
 
+    const totalCount = hasCap
+      ? Math.min(count ?? 0, cap!)
+      : count ?? 0;
+
     return E.right({
       productList: ProductListMapper.toDomain(entities),
-      totalCount: count ?? 0,
+      totalCount,
     });
+  }
+
+  // Cached across the catalog session — the free-plan limit is a global product
+  // setting, not per-tenant, so one lookup is enough.
+  private freePlanMaxProductsCache: number | null = null;
+
+  public async getFreePlanMaxProducts(): Promise<number> {
+    if (this.freePlanMaxProductsCache !== null) {
+      return this.freePlanMaxProductsCache;
+    }
+    const { data } = await this.client
+      .from('plans')
+      .select('max_products')
+      .eq('is_free', true)
+      .single();
+    const max = data?.max_products ?? 10;
+    this.freePlanMaxProductsCache = max;
+    return max;
   }
 
   public async getProductById(id: string): Promise<E.Either<Error, Product>> {
@@ -349,6 +400,7 @@ export class EcommerceService implements BaseEcommerceService {
       productId: it.productId,
       quantity: it.quantity,
       size: it.size ?? null,
+      variantId: it.variantId ?? null,
     }));
     const { error } = await this.client.rpc('decrement_product_stock', {
       p_tenant_id: tenantId,
@@ -404,24 +456,40 @@ export class EcommerceService implements BaseEcommerceService {
     total_usd: number;
     phone: string;
     comments: string;
+    email?: string;
     payment_method?: string;
-  }): Promise<E.Either<Error, void>> {
+    shipping_method?: {
+      name: string;
+      type: 'pickup' | 'delivery' | 'shipping';
+      fee: number;
+    } | null;
+    shipping_address?: string | null;
+    shipping_fee?: number;
+  }): Promise<E.Either<Error, { id: number }>> {
     const exchangeRate = await this.getExchangeRate(order.tenant_id);
     const totalBs = order.total_usd * exchangeRate;
 
-    const { error } = await this.client.from('orders').insert([
-      {
-        tenant_id: order.tenant_id,
-        name: order.name,
-        products: order.products,
-        total_usd: order.total_usd,
-        total_bs: totalBs,
-        phone: order.phone,
-        comments: order.comments,
-        payment_method: order.payment_method ?? null,
-        status: 'pending',
-      },
-    ]);
+    const { data, error } = await this.client
+      .from('orders')
+      .insert([
+        {
+          tenant_id: order.tenant_id,
+          name: order.name,
+          products: order.products,
+          total_usd: order.total_usd,
+          total_bs: totalBs,
+          phone: order.phone,
+          comments: order.comments,
+          email: order.email ?? null,
+          payment_method: order.payment_method ?? null,
+          shipping_method: order.shipping_method ?? null,
+          shipping_address: order.shipping_address ?? null,
+          shipping_fee: order.shipping_fee ?? 0,
+          status: 'pending',
+        },
+      ])
+      .select('id')
+      .single();
 
     if (error) {
       return E.left(new Error(error.message));
@@ -432,6 +500,81 @@ export class EcommerceService implements BaseEcommerceService {
     // OrderService.updateOrderStatus). Así una orden cancelada no afecta el
     // inventario y evitamos restaurar stock por cada cancelación.
 
-    return E.right(undefined);
+    return E.right({ id: data.id as number });
+  }
+
+  /** Fetch an order by id for the public invoice/receipt. Orders are readable
+   *  by anon (RLS `lectura_publica`), so the invoice link is shareable like a
+   *  normal receipt — no extra RPC needed. */
+  public async getPublicOrder(
+    id: number
+  ): Promise<E.Either<Error, PublicOrder>> {
+    const { data, error } = await this.client
+      .from('orders')
+      .select(
+        'id, order_number, status, name, phone, email, products, total_usd, total_bs, shipping_method, shipping_address, shipping_fee, payment_method, comments, created_at'
+      )
+      .eq('id', id)
+      .single();
+
+    if (error) return E.left(new Error(error.message));
+    if (!data) return E.left(new Error('Orden no encontrada'));
+
+    return E.right({
+      id: data.id,
+      orderNumber: data.order_number ?? null,
+      status: data.status ?? 'pending',
+      name: data.name ?? '',
+      phone: data.phone ?? null,
+      email: data.email ?? null,
+      products: Array.isArray(data.products)
+        ? data.products.map((p: any) => ({
+            productId: p.productId,
+            name: p.name,
+            quantity: Number(p.quantity) || 0,
+            price: Number(p.price) || 0,
+            total: Number(p.total) || 0,
+            size: p.size ?? null,
+            sku: p.sku ?? null,
+            photo: p.photo,
+          }))
+        : [],
+      totalUsd: Number(data.total_usd) || 0,
+      totalBs: data.total_bs != null ? Number(data.total_bs) : null,
+      shippingMethod: data.shipping_method ?? null,
+      shippingAddress: data.shipping_address ?? null,
+      shippingFee: Number(data.shipping_fee) || 0,
+      paymentMethod: data.payment_method ?? null,
+      comments: data.comments ?? null,
+      createdAt: data.created_at,
+    });
+  }
+
+  /** Raw jsonb from the RPC isn't trusted — coerce each shipping method into a
+   *  well-formed object so the checkout never crashes on a malformed row. */
+  private normalizeShippingMethods(raw: unknown): ShippingMethod[] {
+    if (!Array.isArray(raw)) return [];
+    const types: ShippingMethodType[] = ['pickup', 'delivery', 'shipping'];
+    return raw
+      .map((m: any, i: number): ShippingMethod => {
+        const type: ShippingMethodType = types.includes(m?.type)
+          ? m.type
+          : 'pickup';
+        return {
+          id: String(m?.id ?? `sm_${i}`),
+          name: String(m?.name ?? ''),
+          type,
+          fee: Number(m?.fee) || 0,
+          instructions: String(m?.instructions ?? ''),
+          requestCustomerAddress: !!m?.requestCustomerAddress,
+          address: m?.address ?? null,
+          lat: m?.lat != null ? Number(m.lat) : null,
+          lng: m?.lng != null ? Number(m.lng) : null,
+          isActive: m?.isActive !== false,
+          isDefault: !!m?.isDefault,
+          position: Number(m?.position) || i,
+        };
+      })
+      .sort((a, b) => a.position - b.position);
   }
 }

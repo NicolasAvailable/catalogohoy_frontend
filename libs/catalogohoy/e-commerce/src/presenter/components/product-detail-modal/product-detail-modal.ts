@@ -9,7 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { Product, WholesaleTier } from '@catalogohoy/product';
+import { Product, ProductVariant, WholesaleTier } from '@catalogohoy/product';
 import { isVideoUrl } from '@shared/domain';
 import { SafeDescriptionHtmlPipe } from '@shared/presenter';
 import {
@@ -68,6 +68,70 @@ export class ProductDetailModal {
 
   public readonly isSized = this.product.isSized && this.product.sizes.length > 0;
 
+  public readonly isVariant =
+    this.product.isVariant && this.product.variants.length > 0;
+
+  /** Sentinel id for the synthetic "Producto original" option. */
+  private static readonly BASE_ID = '__base__';
+
+  /** Options shown in the public selector: the base/original product ALWAYS
+   *  first, followed by the real variants. The base uses the product's own
+   *  price, media and sizes (its sizes may be empty). Opening a product with
+   *  variants therefore lands on the original product by default — the buyer
+   *  then switches to a variant if they want. */
+  public readonly selectorOptions: ProductVariant[] = (() => {
+    const options: ProductVariant[] = [];
+    if (this.isVariant) {
+      const hasPromo = this.product.pricePromotional > 0;
+      options.push({
+        id: ProductDetailModal.BASE_ID,
+        name: 'Producto original',
+        price: hasPromo ? this.product.pricePromotional : this.product.price,
+        originalPrice: hasPromo ? this.product.price : 0,
+        photos: this.product.photos,
+        sizes: this.product.sizes,
+      });
+    }
+    options.push(...this.product.variants);
+    return options;
+  })();
+
+  /** Defaults to the base/original product so clicking a product always opens
+   *  on the product itself, not a variant. */
+  public readonly selectedVariant = signal<ProductVariant | null>(
+    this.isVariant ? this.selectorOptions[0] : null
+  );
+
+  /** Variant id for the current selection, normalising the base sentinel to
+   *  null (the base/original product is stored without a variant). */
+  private selectedVariantId(): string | null {
+    const id = this.selectedVariant()?.id ?? null;
+    return id === ProductDetailModal.BASE_ID ? null : id;
+  }
+
+  selectVariant(variant: ProductVariant): void {
+    this.selectedVariant.set(variant);
+    // The available sizes change per variant, so drop the size selection.
+    this.selectedSize.set(null);
+    this.quantity.set(1);
+    // The gallery swaps to the variant's own media — reset to the first slide.
+    this.currentImageIndex.set(0);
+  }
+
+  /** Media shown in the gallery: the selected variant's own photos/videos when
+   *  it has any, otherwise the product's media. */
+  public readonly galleryMedia = computed(() => {
+    const v = this.selectedVariant();
+    return v && v.photos?.length ? v.photos : this.product.photos;
+  });
+
+  /** Sizes shown for the current selection: the selected option owns its own
+   *  sizes (the base/original option carries the product's sizes). */
+  public readonly availableSizes = computed(() => {
+    if (this.isVariant) return this.selectedVariant()?.sizes ?? [];
+    return this.isSized ? this.product.sizes : [];
+  });
+
   public readonly shouldClampDescription = (() => {
     const desc = this.product.description ?? '';
     if (!desc) return false;
@@ -121,10 +185,10 @@ export class ProductDetailModal {
    *  stock when the product isn't sized / no size selected yet). `null`
    *  means unlimited. */
   public readonly effectiveStock = computed(() => {
-    if (this.isSized) {
+    if (this.availableSizes().length) {
       const size = this.selectedSize();
       if (!size) return null;
-      const entry = this.product.sizes.find((s) => s.name === size);
+      const entry = this.availableSizes().find((s) => s.name === size);
       return entry?.stock ?? null;
     }
     return this.availableStock;
@@ -132,12 +196,14 @@ export class ProductDetailModal {
 
   public readonly cartQuantity = computed(() => {
     const size = this.selectedSize();
+    const vid = this.selectedVariantId();
     return this.cartStore
       .items()
       .filter(
         (i) =>
           i.productId === String(this.product.id) &&
-          (this.isSized ? i.size === size : true)
+          (this.availableSizes().length ? i.size === size : true) &&
+          (this.isVariant ? i.variantId === vid : true)
       )
       .reduce((sum, i) => sum + i.quantity, 0);
   });
@@ -149,12 +215,13 @@ export class ProductDetailModal {
   });
 
   public readonly canSubmit = computed(() => {
-    if (this.isSized && !this.selectedSize()) return false;
+    if (this.availableSizes().length && !this.selectedSize()) return false;
+    if (this.isVariant && !this.selectedVariant()) return false;
     return this.canAddMore();
   });
 
   public readonly isSizeOutOfStock = (sizeName: string): boolean => {
-    const entry = this.product.sizes.find((s) => s.name === sizeName);
+    const entry = this.availableSizes().find((s) => s.name === sizeName);
     if (!entry || entry.stock === null) return false;
     return entry.stock <= 0;
   };
@@ -168,12 +235,25 @@ export class ProductDetailModal {
   }
 
   get displayPrice(): number {
+    if (this.isVariant) {
+      return this.selectedVariant()?.price ?? this.product.price;
+    }
     return this.product.pricePromotional > 0
       ? this.product.pricePromotional
       : this.product.price;
   }
 
+  /** Struck-through "before" price for the current selection. */
+  get originalDisplayPrice(): number {
+    if (this.isVariant) return this.selectedVariant()?.originalPrice ?? 0;
+    return this.product.price;
+  }
+
   get hasDiscount(): boolean {
+    if (this.isVariant) {
+      const v = this.selectedVariant();
+      return !!v && v.originalPrice > 0 && v.originalPrice > v.price;
+    }
     return (
       this.product.pricePromotional > 0 &&
       this.product.pricePromotional < this.product.price
@@ -181,8 +261,9 @@ export class ProductDetailModal {
   }
 
   get currentImage(): string {
-    if (!this.product.photos.length) return 'assets/placeholder-product.png';
-    return this.product.photos[this.currentImageIndex()] || this.product.photos[0];
+    const media = this.galleryMedia();
+    if (!media.length) return 'assets/placeholder-product.png';
+    return media[this.currentImageIndex()] || media[0];
   }
 
   get currentIsVideo(): boolean {
@@ -237,10 +318,15 @@ export class ProductDetailModal {
   }
 
   onAddToCart() {
-    if (this.isSized && !this.selectedSize()) return;
+    if (this.availableSizes().length && !this.selectedSize()) return;
+    if (this.isVariant && !this.selectedVariant()) return;
+    const sel = this.selectedVariant();
+    // The base/original option carries no real variant — add at the base price.
+    const variant = sel && sel.id !== ProductDetailModal.BASE_ID ? sel : null;
     for (let i = 0; i < this.quantity(); i++) {
       this.cartStore.addProduct(this.product, {
         size: this.selectedSize(),
+        variant,
       });
     }
     this.cartStore.openCart();

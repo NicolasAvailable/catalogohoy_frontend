@@ -35,8 +35,11 @@
       />
       }
       <div class="flex flex-col min-w-0 flex-1">
-        <span class="text-base font-bold text-grey-700 truncate">
-          {{ tenant.name }}
+        <span
+          class="text-base font-bold text-grey-700 truncate"
+          [title]="tenant.name"
+        >
+          {{ truncateName(tenant.name) }}
         </span>
         <span class="text-xs text-grey-300 truncate">
           {{ tenant.slug }}.catalogohoy.com
@@ -170,6 +173,14 @@
       </div>
       @if (!canViewOrders()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
+      } @else if (pendingOrdersCount() > 0) {
+        <span
+          class="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-primary-500 text-white text-[11px] font-bold leading-none"
+          [pTooltip]="pendingOrdersCount() === 1 ? '1 pedido pendiente' : pendingOrdersCount() + ' pedidos pendientes'"
+          tooltipPosition="right"
+        >
+          {{ pendingOrdersCount() > 99 ? '99+' : pendingOrdersCount() }}
+        </span>
       }
     </li>
     <li

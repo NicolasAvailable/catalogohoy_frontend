@@ -65,11 +65,14 @@ export class ProductCard {
 
   /** Size labels that are still in stock (null stock = unlimited). Shown as
    *  chips on the card so buyers see availability without opening the modal. */
-  public readonly availableSizes = computed(() =>
-    this.product()
+  public readonly availableSizes = computed(() => {
+    // De-dup names: with variants the same size label can repeat across
+    // variants, but the card only needs to list each label once.
+    const names = this.product()
       .sizes.filter((s) => s.stock === null || s.stock > 0)
-      .map((s) => s.name)
-  );
+      .map((s) => s.name);
+    return [...new Set(names)];
+  });
 
   private static readonly MAX_VISIBLE_SIZES = 4;
 
@@ -85,6 +88,27 @@ export class ProductCard {
     const tiers = this.product().wholesaleTiers;
     if (!tiers.length) return this.product().price;
     return Math.min(...tiers.map((t) => t.price));
+  });
+
+  /** Products with variants need the buyer to pick one in the modal (each
+   *  variant has its own price), so the card delegates to "Ver más". */
+  public readonly isVariant = computed(
+    () => this.product().isVariant && this.product().variants.length > 0
+  );
+
+  /** Min/max price across variants — the card shows a range like TakeApp.
+   *  Includes the base/original price when some sizes belong to the original. */
+  public readonly variantPriceRange = computed(() => {
+    const p = this.product();
+    const prices = p.variants.map((v) => v.price);
+    const hasBaseSizes = p.isSized && p.sizes.length > 0;
+    if (hasBaseSizes) {
+      prices.push(p.pricePromotional > 0 ? p.pricePromotional : p.price);
+    }
+    if (!prices.length) {
+      return { min: p.price, max: p.price };
+    }
+    return { min: Math.min(...prices), max: Math.max(...prices) };
   });
 
   public readonly availableStock = computed(() => {

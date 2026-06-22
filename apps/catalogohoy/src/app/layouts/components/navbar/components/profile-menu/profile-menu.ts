@@ -1,7 +1,14 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, viewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  output,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PlanStore } from '@catalogohoy/plan';
+import { CreditsStore } from '@catalogohoy/product';
 import { IconComponent, MenuComponent } from '@ui';
 
 @Component({
@@ -14,6 +21,10 @@ export class ProfileMenu {
   public readonly menu = viewChild<MenuComponent>('profileMenu');
   protected readonly planStore = inject(PlanStore);
   protected readonly palette = this.planStore.currentPlanPalette;
+  /** Saldo de créditos de IA (para mostrarlo en el dropdown en móvil). */
+  protected readonly credits = inject(CreditsStore);
+  /** El navbar conecta esto con el diálogo de compra del CreditsWidget. */
+  public readonly buyCredits = output<void>();
 
   protected readonly summary = computed(() => {
     const plan = this.planStore.currentPlan();
@@ -42,5 +53,11 @@ export class ProfileMenu {
 
   public close(): void {
     this.menu()?.hide();
+  }
+
+  /** Abre el diálogo de compra (el navbar lo conecta con el CreditsWidget). */
+  public onBuyCredits(): void {
+    this.close();
+    this.buyCredits.emit();
   }
 }

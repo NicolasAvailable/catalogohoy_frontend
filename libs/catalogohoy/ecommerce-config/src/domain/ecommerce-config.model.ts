@@ -103,6 +103,113 @@ export const DEFAULT_SOCIAL_LINKS: SocialLinks = {
   tiktok: { url: '', visible: false },
 };
 
+/** A shipping/delivery option the merchant offers at checkout. Stored as a
+ *  JSON array on `tenant_ecommerce_config.shipping_methods`. `id` is a
+ *  client-generated uuid (jsonb rows have no DB id). */
+export type ShippingMethodType = 'pickup' | 'delivery' | 'shipping';
+
+export interface ShippingMethod {
+  id: string;
+  name: string;
+  type: ShippingMethodType;
+  /** Flat fee added to the order total. 0 = free. */
+  fee: number;
+  instructions: string;
+  /** delivery/shipping: ask the customer to type their address at checkout. */
+  requestCustomerAddress: boolean;
+  /** pickup-only: store address + coordinates for the embedded map. */
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  isActive: boolean;
+  isDefault: boolean;
+  position: number;
+}
+
+export const SHIPPING_METHOD_TYPE_OPTIONS: {
+  label: string;
+  value: ShippingMethodType;
+}[] = [
+  { label: 'Retiro en local', value: 'pickup' },
+  { label: 'Entrega personal', value: 'delivery' },
+  { label: 'Envío', value: 'shipping' },
+];
+
+export function createDefaultShippingMethod(position: number): ShippingMethod {
+  return {
+    id:
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `sm_${position}_${Date.now()}`,
+    name: '',
+    type: 'pickup',
+    fee: 0,
+    instructions: '',
+    requestCustomerAddress: false,
+    address: null,
+    lat: null,
+    lng: null,
+    isActive: true,
+    isDefault: position === 0,
+    position,
+  };
+}
+
+/** Seeded so a fresh catalog never shows an empty shipping list: a local
+ *  pickup and a national shipping option. Stable ids keep draft/config JSON
+ *  comparisons consistent across renders (no random UUIDs). */
+export function createDefaultShippingMethods(): ShippingMethod[] {
+  return [
+    {
+      id: 'seed-pickup',
+      name: 'Recoger en el local',
+      type: 'pickup',
+      fee: 0,
+      instructions: '',
+      requestCustomerAddress: false,
+      address: null,
+      lat: null,
+      lng: null,
+      isActive: true,
+      isDefault: true,
+      position: 0,
+    },
+    {
+      id: 'seed-shipping',
+      name: 'Envío nacional',
+      type: 'shipping',
+      fee: 0,
+      instructions: '',
+      requestCustomerAddress: true,
+      address: null,
+      lat: null,
+      lng: null,
+      isActive: true,
+      isDefault: false,
+      position: 1,
+    },
+  ];
+}
+
+/** Per-field config for the checkout customer form. `name` is always visible;
+ *  only its `required` flag is editable. */
+export interface CustomerFieldConfig {
+  visible: boolean;
+  required: boolean;
+}
+
+export interface CustomerFieldsConfig {
+  name: CustomerFieldConfig;
+  phone: CustomerFieldConfig;
+  email: CustomerFieldConfig;
+}
+
+export const DEFAULT_CUSTOMER_FIELDS: CustomerFieldsConfig = {
+  name: { visible: true, required: true },
+  phone: { visible: true, required: true },
+  email: { visible: false, required: false },
+};
+
 export type CatalogTemplate = 'classic' | 'banner-centered' | 'minimal';
 
 export const CATALOG_TEMPLATES: {
@@ -145,6 +252,16 @@ export interface EcommerceConfig {
    *  with the `ordenes:view` permission. Toggled from the catalog editor
    *  on the "Notificaciones" tab. */
   notifyNewOrders: boolean;
+  /** When true, sends a weekly summary email (Sunday) with the week's sales,
+   *  orders, top products and traffic to the owner + team members with
+   *  `ordenes:view`. Paid plans only. Editor "Notificaciones" tab. */
+  notifyWeeklyReport: boolean;
+  /** Shipping/delivery options offered at checkout (editor "Envío" tab). */
+  shippingMethods: ShippingMethod[];
+  /** Master toggle for the Envío section in the public checkout. */
+  showShippingSection: boolean;
+  /** Which customer fields to request at checkout and whether each is required. */
+  customerFields: CustomerFieldsConfig;
 }
 
 /** Business hours for a single day. `dayOfWeek` follows JS convention:
@@ -209,7 +326,7 @@ export const DEFAULT_CURRENCY_CONFIG: TenantCurrencyConfig = {
 /**
  * Default WhatsApp message template.
  * Variables: {nombre}, {telefono}, {productos}, {total}, {totalBs},
- *            {comentarios}, {metodoPago}
+ *            {comentarios}, {metodoPago}, {envio}, {direccion}
  */
 export const DEFAULT_WHATSAPP_ORDER_MESSAGE =
   `¡Hola! Me gustaría hacer un pedido:\n\n` +
@@ -217,7 +334,7 @@ export const DEFAULT_WHATSAPP_ORDER_MESSAGE =
   `*Teléfono:* {telefono}\n\n` +
   `*Productos:*\n{productos}\n\n` +
   `*Total:* {total}{totalBs}\n\n` +
-  `{comentarios}{metodoPago}`;
+  `{envio}{direccion}{comentarios}{metodoPago}`;
 
 export const WHATSAPP_MESSAGE_VARIABLES = [
   { key: '{nombre}', label: 'Nombre del cliente' },
@@ -225,6 +342,8 @@ export const WHATSAPP_MESSAGE_VARIABLES = [
   { key: '{productos}', label: 'Lista de productos' },
   { key: '{total}', label: 'Total del pedido' },
   { key: '{totalBs}', label: 'Total en bolívares' },
+  { key: '{envio}', label: 'Método de envío' },
+  { key: '{direccion}', label: 'Dirección del cliente' },
   { key: '{comentarios}', label: 'Comentarios del cliente' },
   { key: '{metodoPago}', label: 'Método de pago' },
 ];

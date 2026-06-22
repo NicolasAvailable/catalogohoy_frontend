@@ -27,33 +27,56 @@ const BLACK = [0, 0, 0] as const;
 const GREY = [120, 120, 120] as const;
 const LIGHT = [200, 200, 200] as const;
 
+/** Store/currency context for rendering a receipt outside the admin (e.g. the
+ *  public catalog invoice), where the config/tenant/currency stores aren't
+ *  populated. Omit to derive everything from those stores (admin path). */
+export interface OrderPdfContext {
+  storeName: string;
+  currencySymbol: string;
+  showDualBs: boolean;
+  logoUrl: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class OrderPdfService {
   private readonly configStore = inject(EcommerceConfigStore);
   private readonly tenantStore = inject(TenantStore);
   private readonly tenantCurrency = inject(TenantCurrencyStore);
 
-  async download(order: Order): Promise<void> {
-    // Ensure the tenant currency is loaded (cache-first — typically a no-op
-    // because some view has already primed it, but cheap if not).
-    const tenantId = await this.tenantStore.getTenantIdAsync();
-    if (tenantId) await this.tenantCurrency.load(tenantId);
+  /**
+   * @param order   The order to render.
+   * @param context Optional store/currency context. Pass it when the admin
+   *   stores aren't available (e.g. the public catalog invoice) so the exact
+   *   same receipt can be produced outside the admin. Omit it in the admin and
+   *   it derives everything from the config/tenant/currency stores.
+   */
+  async download(order: Order, context?: OrderPdfContext): Promise<void> {
+    let storeName: string;
+    let showDualBs: boolean;
+    let cs: string;
+    let logoUrl: string | null;
 
-    const config = this.configStore.config();
-    const storeName =
-      config?.name ||
-      this.tenantStore.tenantName() ||
-      'Catálogo';
-    // Show the bolivar total only for Venezuela-style dual catalogs.
-    const showDualBs = this.tenantCurrency.showDualCurrency();
-    // Symbol: the catalog's reference (display) currency. VE renders its
-    // chosen reference (USD '$' or EUR '€') with the Bs. dual shown below;
-    // every other country renders its local currency.
-    const cs =
-      this.tenantCurrency.displaySymbol() ||
-      config?.currencySymbol ||
-      '$';
-    const logoUrl = config?.logo ?? null;
+    if (context) {
+      storeName = context.storeName || 'Catálogo';
+      showDualBs = context.showDualBs;
+      cs = context.currencySymbol || '$';
+      logoUrl = context.logoUrl;
+    } else {
+      // Ensure the tenant currency is loaded (cache-first — typically a no-op
+      // because some view has already primed it, but cheap if not).
+      const tenantId = await this.tenantStore.getTenantIdAsync();
+      if (tenantId) await this.tenantCurrency.load(tenantId);
+
+      const config = this.configStore.config();
+      storeName = config?.name || this.tenantStore.tenantName() || 'Catálogo';
+      // Show the bolivar total only for Venezuela-style dual catalogs.
+      showDualBs = this.tenantCurrency.showDualCurrency();
+      // Symbol: the catalog's reference (display) currency. VE renders its
+      // chosen reference (USD '$' or EUR '€') with the Bs. dual shown below;
+      // every other country renders its local currency.
+      cs = this.tenantCurrency.displaySymbol() || config?.currencySymbol || '$';
+      logoUrl = config?.logo ?? null;
+    }
 
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const pageW = 210;
@@ -111,7 +134,7 @@ export class OrderPdfService {
     }
 
     const meta: [string, string][] = [
-      ['Número de orden', `#${order.id}`],
+      ['Número de orden', `#${order.orderNumber ?? order.id}`],
       ['Fecha de creación', formatLong(createdDate)],
       [
         'Fecha de entrega',
@@ -164,7 +187,7 @@ export class OrderPdfService {
     doc.setFontSize(14);
     doc.setTextColor(...BLACK);
     doc.text(
-      `${cs}${order.totalUsd.toFixed(2)} — Orden #${order.id}`,
+      `${cs}${order.totalUsd.toFixed(2)} — Orden #${order.orderNumber ?? order.id}`,
       margin,
       y
     );
@@ -328,7 +351,7 @@ export class OrderPdfService {
       y
     );
 
-    doc.save(`orden-${order.id}.pdf`);
+    doc.save(`orden-${order.orderNumber ?? order.id}.pdf`);
   }
 
   private blobToBase64(blob: Blob): Promise<string> {

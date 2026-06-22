@@ -99,7 +99,7 @@
           </button>
           @if (expandedPanel() === 'description') {
             <div class="info-modal__panel-body">
-              <p class="info-modal__description">{{ info.description }}</p>
+              <div class="info-modal__description info-modal__prose" [innerHTML]="info.description | safeDescriptionHtml"></div>
             </div>
           }
         </section>

@@ -191,8 +191,8 @@
             <ui-input-message [control]="profileForm.get('storeName')" error="minlength" text="Debe tener mínimo 3 caracteres" />
             <!-- URL preview -->
             @if (slugPreview()) {
-              <p class="text-xs text-grey-400 mt-1.5 flex items-center gap-1">
-                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <p class="text-xs text-grey-400 mt-1.5 break-words leading-relaxed">
+                <svg class="inline w-3.5 h-3.5 mr-1 align-[-0.15em]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
                 </svg>
                 Tu catálogo estará en:
@@ -306,3 +306,73 @@
     </picture>
   </div>
 </div>
+
+<!-- Pantalla "revisá tu correo": mismo layout de dos paneles que login/signup
+     (logo + mensaje a la izquierda, hero a la derecha). Solo si la confirmación
+     de correo está activa (signUp no devolvió sesión). -->
+@if (confirmEmailSent(); as confirmEmail) {
+<div class="fixed inset-0 z-50 flex justify-center items-center h-screen bg-lino-500 overflow-hidden">
+
+  <!-- ── Mensaje (izquierda) ── -->
+  <div class="relative flex flex-col justify-center gap-6 w-full lg:w-1/2 h-full p-8 sm:p-20 md:p-44 lg:p-10 lg:items-center lg:bg-[#eceefb]">
+
+    <!-- Logo -->
+    <ui-icon
+      name="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg"
+      styleClass="h-14 lg:h-11 rounded-lg"
+      class="flex justify-center sm:justify-start lg:absolute lg:top-8 lg:left-8"
+    />
+
+    <div class="flex flex-col gap-5 w-full lg:max-w-md lg:bg-white lg:rounded-3xl lg:p-12 items-center lg:items-start text-center lg:text-left">
+      <h1 class="text-3xl sm:text-4xl lg:text-[2rem] font-bold text-grey-700 leading-tight">
+        ¡Ya está todo listo!
+      </h1>
+
+      <p class="text-base text-grey-500 leading-relaxed">
+        Solo falta <strong class="font-semibold text-grey-700">verificar tu
+        correo</strong>. Te enviamos un enlace de confirmación a:
+      </p>
+
+      <p class="text-lg font-bold text-grey-800 break-all">
+        {{ confirmEmail }}
+      </p>
+
+      <p class="text-base text-grey-500 leading-relaxed">
+        Revisá tu bandeja y hacé clic en el enlace para empezar.
+      </p>
+
+      <div class="w-full h-px bg-grey-100"></div>
+
+      <p class="text-sm text-grey-400">
+        ¿No lo ves? Revisá la carpeta de
+        <span class="font-medium text-grey-500">spam</span> o
+        <span class="font-medium text-grey-500">promociones</span>.
+      </p>
+
+      <div class="w-full flex justify-center lg:justify-end">
+        <ui-button
+          label="Ir a iniciar sesión"
+          [fluid]="false"
+          (click)="goToLogin()"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Imagen (derecha) ── -->
+  <div class="w-1/2 h-screen hidden lg:block">
+    <picture>
+      <source
+        srcset="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing-hero/hero-2x.avif"
+        type="image/avif"
+      />
+      <img
+        src="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing-hero/hero-2x.webp"
+        alt="Empieza a vender hoy con CatalogoHoy"
+        class="object-cover w-full h-full"
+      />
+    </picture>
+  </div>
+</div>
+}
+

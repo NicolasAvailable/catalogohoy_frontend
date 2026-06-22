@@ -14,6 +14,7 @@ export interface PayingClient {
   startedAt: string;
   expiresAt: string | null;
   daysUntilExpiry: number | null;
+  countryCode: string | null;
 }
 
 export type PayingClientStatus = 'active' | 'expiring' | 'expired';

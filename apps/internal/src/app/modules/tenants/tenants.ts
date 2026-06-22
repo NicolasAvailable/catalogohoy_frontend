@@ -10,6 +10,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@ui';
 import { cycleLabel, tierLabel } from '../shared/plan-cycle.model';
+import { countryLabel } from '../shared/country.util';
 import {
   AssignPlanDialog,
   AssignPlanPayload,
@@ -87,6 +88,11 @@ import { TenantsStore } from './tenants.store';
                 <th
                   class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100"
                 >
+                  País
+                </th>
+                <th
+                  class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100"
+                >
                   Registro
                 </th>
                 <th
@@ -104,7 +110,7 @@ import { TenantsStore } from './tenants.store';
             <tbody>
               @if (store.isLoading()) {
                 <tr>
-                  <td colspan="5" class="px-4 py-12 text-center">
+                  <td colspan="6" class="px-4 py-12 text-center">
                     <div class="flex flex-col items-center gap-2">
                       <ui-icon
                         name="loader-circle"
@@ -159,6 +165,11 @@ import { TenantsStore } from './tenants.store';
                           <span class="text-xs text-grey-400">Sin dueño</span>
                         }
                       </div>
+                    </td>
+                    <td
+                      class="px-4 py-3 text-grey-600 border-b border-grey-50 whitespace-nowrap"
+                    >
+                      {{ countryLabel(tenant.countryCode) }}
                     </td>
                     <td class="px-4 py-3 text-grey-500 border-b border-grey-50">
                       {{ tenant.createdAt | date: 'dd/MM/yyyy' }}
@@ -236,7 +247,7 @@ import { TenantsStore } from './tenants.store';
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="5" class="px-4 py-12 text-center">
+                    <td colspan="6" class="px-4 py-12 text-center">
                       <div class="flex flex-col items-center gap-2">
                         <ui-icon
                           name="store"
@@ -324,5 +335,6 @@ export class Tenants implements OnInit {
   }
 
   protected tierLabel = tierLabel;
+  protected countryLabel = countryLabel;
   protected cycleLabel = cycleLabel;
 }

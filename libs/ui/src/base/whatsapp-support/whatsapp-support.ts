@@ -41,6 +41,16 @@ import { LucideAngularModule } from 'lucide-angular';
           <img src="images/whatsapp.svg" alt="WhatsApp" class="size-7" />
           Continuar en WhatsApp
         </button>
+
+        @if (guideUrl()) {
+        <button
+          (click)="openGuide()"
+          class="mt-3 w-full flex items-center justify-center gap-3 bg-primary-50 hover:bg-primary-100 text-primary-600 font-semibold py-3.5 px-5 rounded-xl transition-colors cursor-pointer text-base"
+        >
+          <lucide-angular name="headset" class="size-6 shrink-0" />
+          Guía de ayuda
+        </button>
+        }
       </div>
     </div>
     }
@@ -103,6 +113,8 @@ export class WhatsappSupportComponent {
   public readonly phoneNumber = input('');
   public readonly defaultMessage = input('');
   public readonly hiddenRoutes = input<string[]>([]);
+  /** When set, shows a "Guía de ayuda" button that opens this URL in a new tab. */
+  public readonly guideUrl = input('');
 
   private readonly router = inject(Router);
   private readonly url = toSignal(
@@ -127,5 +139,10 @@ export class WhatsappSupportComponent {
     const message = encodeURIComponent(this.defaultMessage());
     const url = `https://wa.me/${phone}${message ? '?text=' + message : ''}`;
     window.open(url, '_blank');
+  }
+
+  public openGuide(): void {
+    const url = this.guideUrl();
+    if (url) window.open(url, '_blank', 'noopener');
   }
 }

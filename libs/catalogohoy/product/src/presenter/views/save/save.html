@@ -65,11 +65,64 @@
         </div>
 
         <div class="flex flex-col gap-2">
-          <div class="flex items-center gap-3">
-            <label class="text-base text-grey-400 font-semibold" for="description"
-              >Descripción</label
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-3">
+              <label
+                class="text-base text-grey-400 font-semibold"
+                for="description"
+                >Descripción</label
+              >
+              <span class="text-sm text-grey-400 font-semibold">(Opcional)</span>
+            </div>
+
+            <!-- Mejorar con IA: ui-select skineado como los botones de IA
+                 (borde degradado + sparkle). Se deshabilita con <15 chars o al procesar. -->
+            <!-- Deshabilitado (sin texto/procesando): sin interacción, pero las
+                 letras siguen violeta como los demás botones de IA (no gris). -->
+            <div
+              class="relative w-52"
+              [class.cursor-not-allowed]="
+                descriptionTextLength() < 15 || improvingDesc()
+              "
+              [class.pointer-events-none]="
+                descriptionTextLength() < 15 || improvingDesc()
+              "
             >
-            <span class="text-sm text-grey-400 font-semibold">(Opcional)</span>
+              <ui-icon
+                [name]="improvingDesc() ? 'loader-circle' : 'wand-sparkles'"
+                [styleClass]="
+                  'w-4 h-4 text-violet-600 absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none' +
+                  (improvingDesc() ? ' animate-spin' : '')
+                "
+              />
+              <div
+                class="rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400"
+              >
+                <ui-select
+                  styleClass="ai-improve-select"
+                  [options]="improveModes"
+                  optionLabel="label"
+                  optionValue="value"
+                  [placeholder]="
+                    improvingDesc() ? 'Mejorando…' : 'Mejorar con IA'
+                  "
+                  [ngModel]="improveModeValue()"
+                  [ngModelOptions]="{ standalone: true }"
+                  (ngModelChange)="onImproveMode($event)"
+                  size="small"
+                >
+                  <ng-template selectItem let-opt>
+                    <span class="flex items-center gap-2 text-grey-700">
+                      <ui-icon
+                        [name]="opt.icon"
+                        styleClass="w-4 h-4 text-violet-600"
+                      />
+                      {{ opt.label }}
+                    </span>
+                  </ng-template>
+                </ui-select>
+              </div>
+            </div>
           </div>
 
           <p-editor
@@ -167,11 +220,15 @@
           </div>
           <ui-toggle
             formControlName="isWholesale"
-            [defaultDisabled]="form.controls.isSized.value ?? false"
             (enable)="onWholesaleToggle()"
             (disable)="onWholesaleToggle()"
           />
         </div>
+        @if (form.controls.isSized.value) {
+        <p class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+          Por los momentos no es posible combinar ventas al mayor con tallas.
+        </p>
+        }
         <p class="text-sm text-grey-300">
           Activa esta opción si vendes este producto por cantidades.
         </p>
@@ -210,21 +267,15 @@
             </button>
           </div>
           }
-          <button
-            type="button"
-            (click)="addTier()"
-            class="flex items-center gap-2 text-primary-500 font-semibold text-sm cursor-pointer"
-          >
-            <ui-icon name="circle-plus" styleClass="size-5" />
-            Agregar escala de precio
-          </button>
+          <div class="flex">
+            <ui-button
+              label="Agregar escala de precio"
+              icon="circle-plus"
+              [fluid]="false"
+              (click)="addTier()"
+            />
+          </div>
         </div>
-        }
-        @if (form.controls.isSized.value) {
-        <p class="text-sm text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-          Por ahora no es posible combinar venta al mayor con tallas. Desactiva
-          las tallas para habilitar esta opción.
-        </p>
         }
       </div>
     </ui-card>
@@ -239,31 +290,35 @@
           </div>
           <ui-toggle
             formControlName="isSized"
-            [defaultDisabled]="form.controls.isWholesale.value ?? false"
             (enable)="onSizedToggle()"
             (disable)="onSizedToggle()"
           />
         </div>
+        @if (form.controls.isWholesale.value) {
+        <p class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+          Por los momentos no es posible combinar tallas con ventas al mayor.
+        </p>
+        }
         <p class="text-sm text-grey-300">
           Activa esta opción si tu producto viene en diferentes tallas o tamaños (S, M, L, 42, 44, etc.).
         </p>
-        @if (form.controls.isWholesale.value) {
-        <p class="text-sm text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-          Por ahora no es posible combinar tallas con venta al mayor. Desactiva
-          la venta al mayor para habilitar esta opción.
-        </p>
-        }
 
         @if (form.controls.isSized.value) {
         <hr class="border-grey-50" />
         <div formArrayName="sizes" class="flex flex-col gap-4">
+          @if (form.controls.isVariant.value) {
+          <p class="text-xs text-grey-400 -mt-2">
+            Estas son las tallas del <strong>Producto original</strong>. Cada
+            variante tiene sus propias tallas más abajo.
+          </p>
+          }
           @for (size of sizesArray.controls; track $index) {
           <div [formGroupName]="$index" class="flex items-end gap-3">
             <div class="flex flex-col gap-2 flex-1">
               <label class="text-sm text-grey-400 font-semibold">Talla / Tamaño<span class="text-red-500 ml-0.5">*</span></label>
               <ui-input-text
                 formControlName="name"
-                placeholder="Ej: S, M, L, 42"
+                placeholder="Ej: M o Talla 32"
               />
             </div>
             <div class="flex flex-col gap-2 flex-1">
@@ -277,6 +332,10 @@
                 placeholder="Sin límite"
               />
             </div>
+            <div class="flex flex-col gap-2 flex-1">
+              <label class="text-sm text-grey-400 font-semibold">SKU (opcional)</label>
+              <ui-input-text formControlName="sku" placeholder="CAM-M-1234" />
+            </div>
             <button
               type="button"
               (click)="removeSize($index)"
@@ -289,14 +348,14 @@
             </button>
           </div>
           }
-          <button
-            type="button"
-            (click)="addSize()"
-            class="flex items-center gap-2 text-primary-500 font-semibold text-sm cursor-pointer"
-          >
-            <ui-icon name="circle-plus" styleClass="size-5" />
-            Agregar talla
-          </button>
+          <div class="flex">
+            <ui-button
+              label="Agregar talla"
+              icon="circle-plus"
+              [fluid]="false"
+              (click)="addSize()"
+            />
+          </div>
           <div class="flex items-center justify-between text-sm bg-grey-50 rounded-lg px-3 py-2">
             <span class="text-grey-500 font-semibold">Stock total</span>
             <span class="text-grey-700 font-bold">
@@ -376,25 +435,130 @@
             </p>
           </div>
 
-          @if (photos().length > 0) {
-          <div class="flex flex-wrap gap-4 mt-4 overflow-x-auto">
-            @for (photo of photos(); track photo) {
-            <div
-              class="relative w-full sm:max-w-56 group rounded-xl overflow-hidden border border-grey-200"
+          <!-- Generar imagen con IA: abre un modal con un prompt (puede usar el
+               título/descripción del producto). -->
+          <button
+            type="button"
+            (click)="openGenerator()"
+            [disabled]="photos().length >= maxPhotos()"
+            class="self-start rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer transition-transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span
+              class="flex items-center gap-2 rounded-[0.4375rem] bg-white px-4 py-2.5 text-sm font-semibold text-violet-700"
             >
-              <ui-product-media
-                [url]="photo"
-                alt="Media del producto"
-                [controls]="true"
-                styleClass="w-full h-auto object-contain"
-              />
-              <button
-                type="button"
-                (click)="removePhoto(photo)"
-                class="absolute top-2 right-2 p-1 bg-white/80 rounded-sm cursor-pointer hover:bg-white text-grey-500 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-              >
-                <ui-icon name="trash" size="18" />
-              </button>
+              <ui-icon name="sparkles" styleClass="w-[1.125rem] h-[1.125rem]" />
+              Generar imagen con IA
+            </span>
+          </button>
+
+          @if (photos().length > 0) {
+          @if (photos().length > 1) {
+          <div class="flex items-center gap-2 text-grey-300 text-sm mt-2">
+            <ui-icon name="grip-vertical" size="16" />
+            <p>Arrastrá las imágenes para reordenarlas · la primera es la portada del producto.</p>
+          </div>
+          }
+          <div
+            class="product-media-list flex flex-wrap gap-4 mt-2"
+            cdkDropList
+            cdkDropListOrientation="mixed"
+            (cdkDropListDropped)="dropPhoto($event)"
+          >
+            @for (photo of photos(); track photo; let i = $index) {
+            <div
+              class="relative w-full sm:max-w-56 group rounded-xl overflow-hidden border border-grey-200 bg-white"
+              cdkDrag
+              cdkDragBoundary=".product-media-list"
+              [cdkDragDisabled]="photos().length < 2"
+            >
+              <!-- Región de la imagen: media + overlays (portada, arrastrar,
+                   eliminar). -->
+              <div class="relative">
+                @if (i === 0) {
+                <span
+                  class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-primary-500 text-white text-[0.6875rem] font-bold shadow-sm"
+                >
+                  Portada
+                </span>
+                }
+
+                @if (photos().length > 1) {
+                <button
+                  type="button"
+                  cdkDragHandle
+                  class="absolute bottom-2 left-2 z-10 p-1.5 bg-white/90 rounded-md cursor-move text-grey-500 hover:text-grey-800 shadow-sm transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                  aria-label="Arrastrar para reordenar"
+                >
+                  <ui-icon name="grip-vertical" size="18" />
+                </button>
+                }
+
+                @if (isVideo(photo)) {
+                <ui-product-media
+                  [url]="photo"
+                  alt="Media del producto"
+                  [controls]="true"
+                  styleClass="w-full h-auto object-contain"
+                />
+                } @else {
+                <!-- Imágenes: click abre el preview a pantalla completa (mismo
+                     p-image que las órdenes). -->
+                <ui-image
+                  [src]="photo"
+                  alt="Imagen del producto"
+                  styleClass="w-full block cursor-zoom-in"
+                  imageClass="w-full h-auto object-contain"
+                />
+                }
+
+                <button
+                  type="button"
+                  (click)="removePhoto(photo)"
+                  class="absolute top-2 right-2 z-10 p-1 bg-white/80 rounded-sm cursor-pointer hover:bg-white text-grey-500 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                >
+                  <ui-icon name="trash" size="18" />
+                </button>
+              </div>
+
+              <!-- Barra de IA (solo imágenes): dos botones del mismo tamaño.
+                   "Quitar fondo" (BiRefNet, 1 clic) y "Recortar a mano" (abre el
+                   editor de selección por clics). Cada operación reemplaza la
+                   imagen, así que se encadenan sobre el último resultado. -->
+              @if (!isVideo(photo)) {
+              <div class="flex flex-col gap-1.5 p-2 border-t border-grey-100">
+                <button
+                  type="button"
+                  (click)="removeBackground(photo)"
+                  [disabled]="isAiProcessing(photo)"
+                  class="w-full rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer transition-transform hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  <span
+                    class="flex items-center justify-center gap-1.5 rounded-[0.4375rem] bg-white px-2 py-1.5 text-[0.6875rem] font-semibold text-violet-700"
+                  >
+                    @if (isAiProcessing(photo)) {
+                    <ui-icon name="loader-circle" styleClass="w-3.5 h-3.5 animate-spin" />
+                    Quitando fondo…
+                    } @else {
+                    <ui-icon name="bot" styleClass="w-3.5 h-3.5" />
+                    Quitar fondo
+                    }
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  (click)="openEraser(photo)"
+                  [disabled]="isAiProcessing(photo)"
+                  class="w-full rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer transition-transform hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  <span
+                    class="flex items-center justify-center gap-1.5 rounded-[0.4375rem] bg-white px-2 py-1.5 text-[0.6875rem] font-semibold text-violet-700"
+                  >
+                    <ui-icon name="eraser" styleClass="w-3.5 h-3.5" />
+                    Borrar a mano
+                  </span>
+                </button>
+              </div>
+              }
             </div>
             }
           </div>
@@ -406,6 +570,13 @@
     <ui-card>
       <div class="flex flex-col gap-4">
         <h2 class="text-xl font-bold">Precios</h2>
+        @if (form.controls.isVariant.value) {
+        <p class="text-xs text-grey-400 -mt-2">
+          Este es el precio del <strong>Producto original</strong>: se usa para
+          las tallas que asignes a "Producto original". Cada variante tiene su
+          propio precio arriba.
+        </p>
+        }
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="flex flex-col gap-2">
             <label class="text-base text-grey-400 font-semibold" for="price"
@@ -518,6 +689,227 @@
       </div>
     </ui-card>
     }
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-3">
+          <h2 class="text-xl font-bold">Variantes</h2>
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-500 text-white">
+            Nuevo
+          </span>
+        </div>
+        <p class="text-sm text-grey-300">
+          Agregá versiones del producto con distinto precio (colores, modelos,
+          etc.). Cada variante puede tener su propio precio e imagen, y podés
+          combinarla con tallas.
+        </p>
+
+        @if (variantsArray.length > 0) {
+        <hr class="border-grey-50" />
+        <div formArrayName="variants" class="flex flex-col gap-4">
+          @for (variant of variantsArray.controls; track $index; let vIndex = $index) {
+          <div
+            [formGroupName]="$index"
+            class="flex flex-col gap-3 p-4 border border-grey-100 rounded-xl"
+          >
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-bold text-grey-500"
+                >Variante {{ $index + 1 }}</span
+              >
+              <button
+                type="button"
+                (click)="removeVariant($index)"
+                class="p-1.5 text-grey-400 hover:text-red-500 cursor-pointer"
+              >
+                <ui-icon name="trash" styleClass="size-5" />
+              </button>
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="text-sm text-grey-400 font-semibold"
+                >Nombre<span class="text-red-500 ml-0.5">*</span></label
+              >
+              <ui-input-text
+                formControlName="name"
+                placeholder="Ej: Verde futbol"
+              />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="flex flex-col gap-2">
+                <label class="text-sm text-grey-400 font-semibold"
+                  >Precio<span class="text-red-500 ml-0.5">*</span></label
+                >
+                <ui-input-number
+                  formControlName="price"
+                  mode="decimal"
+                  [prefix]="cs() + ' '"
+                  [minFractionDigits]="2"
+                  [maxFractionDigits]="2"
+                  locale="en-US"
+                  [showButtons]="false"
+                  [placeholder]="cs() + ' 0.00'"
+                />
+              </div>
+              <div class="flex flex-col gap-2">
+                <label class="text-sm text-grey-400 font-semibold"
+                  >Precio original (opcional)</label
+                >
+                <ui-input-number
+                  formControlName="originalPrice"
+                  mode="decimal"
+                  [prefix]="cs() + ' '"
+                  [minFractionDigits]="2"
+                  [maxFractionDigits]="2"
+                  locale="en-US"
+                  [showButtons]="false"
+                  [placeholder]="cs() + ' 0.00'"
+                />
+              </div>
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="text-sm text-grey-400 font-semibold"
+                >SKU (opcional)</label
+              >
+              <ui-input-text formControlName="sku" placeholder="CAM-VER-1234" />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="text-sm text-grey-400 font-semibold"
+                >Imágenes y videos ({{ (variant.get('photos')?.value?.length) ||
+                0 }}/{{ maxPhotos() }})</label
+              >
+              @if (!variantPhotosFull($index)) {
+              <ui-uploader
+                (valueChange)="addVariantPhotos($index, $event)"
+                [accept]="'image/*,video/*'"
+                [max]="{ mb: 40 }"
+                [multiple]="true"
+              >
+                <ng-template #picker let-pick="pick">
+                  <button
+                    type="button"
+                    (click)="pick()"
+                    class="flex flex-col items-center justify-center w-full border-2 border-dashed border-primary-500 bg-primary-50/10 rounded-xl py-6 cursor-pointer hover:bg-primary-50/20 transition-colors"
+                  >
+                    <ui-icon
+                      name="circle-plus"
+                      size="22"
+                      styleClass="text-primary-500 mb-1"
+                    />
+                    <span class="text-sm font-semibold text-primary-500"
+                      >Arrastrá, soltá o subí imágenes o videos</span
+                    >
+                  </button>
+                </ng-template>
+              </ui-uploader>
+              } @else {
+              <p
+                class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2"
+              >
+                Llegaste al límite de {{ maxPhotos() }} imágenes de tu plan.
+              </p>
+              }
+              @if (variant.get('photos')?.value?.length) {
+              <div class="flex flex-wrap gap-2 mt-1">
+                @for (media of variant.get('photos')?.value; track media) {
+                <div
+                  class="relative w-20 h-20 rounded-lg overflow-hidden border border-grey-200"
+                >
+                  <ui-product-media
+                    [url]="media"
+                    [controls]="false"
+                    styleClass="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    (click)="removeVariantPhoto($index, media)"
+                    class="absolute top-1 right-1 p-1 bg-white/80 rounded-sm cursor-pointer hover:bg-white text-grey-500"
+                  >
+                    <ui-icon name="trash" size="14" />
+                  </button>
+                </div>
+                }
+              </div>
+              }
+            </div>
+
+            <!-- Tallas de esta variante -->
+            <div formArrayName="sizes" class="flex flex-col gap-2">
+              <label class="text-sm text-grey-400 font-semibold"
+                >Tallas de esta variante (opcional)</label
+              >
+              @for (vsize of variantSizesArray(vIndex).controls; track $index) {
+              <div [formGroupName]="$index" class="flex items-end gap-3">
+                <div class="flex flex-col gap-2 flex-1">
+                  <ui-input-text
+                    formControlName="name"
+                    placeholder="Ej: M o Talla 32"
+                  />
+                </div>
+                <div class="flex flex-col gap-2 flex-1">
+                  <ui-input-number
+                    formControlName="stock"
+                    mode="decimal"
+                    [minFractionDigits]="0"
+                    [maxFractionDigits]="0"
+                    [showButtons]="false"
+                    placeholder="Stock (sin límite)"
+                  />
+                </div>
+                <div class="flex flex-col gap-2 flex-1">
+                  <ui-input-text
+                    formControlName="sku"
+                    placeholder="SKU (opcional)"
+                  />
+                </div>
+                <button
+                  type="button"
+                  (click)="removeVariantSize(vIndex, $index)"
+                  class="mb-1 p-2 text-grey-400 hover:text-red-500 cursor-pointer"
+                >
+                  <ui-icon name="trash" styleClass="size-5" />
+                </button>
+              </div>
+              }
+              <div class="flex">
+                <ui-button
+                  label="Agregar talla"
+                  icon="circle-plus"
+                  variant="outlined"
+                  severity="contrast"
+                  size="small"
+                  [fluid]="false"
+                  (click)="addVariantSize(vIndex)"
+                />
+              </div>
+            </div>
+          </div>
+          }
+        </div>
+        }
+        <div class="flex items-center gap-2">
+          <ui-button
+            label="Agregar variante"
+            icon="circle-plus"
+            [fluid]="false"
+            [disabled]="!canAddVariant()"
+            (click)="addVariant()"
+          />
+        </div>
+        @if (variantsArray.length > 0) {
+        <div
+          class="flex items-center justify-between text-sm bg-grey-50 rounded-lg px-3 py-2"
+        >
+          <span class="text-grey-500 font-semibold"
+            >Variantes ({{ variantsArray.length }} /
+            {{ planStore.maxVariants() }})</span
+          >
+          @if (!canAddVariant()) {
+          <span class="text-grey-400"
+            >Límite del plan alcanzado — mejorá tu plan para más</span
+          >
+          }
+        </div>
+        }
+      </div>
+    </ui-card>
     @if (!isCreate()) {
     <ui-card>
       <div class="flex flex-col gap-4">
@@ -624,4 +1016,24 @@
     }
   </form>
   <lib-plan-limit-dialog />
+
+  <!-- Borrador manual (pincel): borra a mano lo que sobra sobre la imagen
+       actual y sube el PNG resultante. Idealmente tras "Quitar fondo". -->
+  @if (eraserPhoto(); as eraserSrc) {
+  <lib-image-eraser
+    [src]="eraserSrc"
+    (applied)="onEraserApplied($event)"
+    (closed)="closeEraser()"
+  />
+  }
+
+  <!-- Generador de imagen con IA (FLUX). -->
+  @if (generatorOpen()) {
+  <lib-image-generator
+    [title]="form.controls.name.value ?? ''"
+    [description]="descriptionPlain()"
+    (generated)="onGenerated($event)"
+    (closed)="closeGenerator()"
+  />
+  }
 </section>

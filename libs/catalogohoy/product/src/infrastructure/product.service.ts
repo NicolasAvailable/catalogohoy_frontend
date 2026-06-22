@@ -15,6 +15,13 @@ import {
 import { ProductEntity } from './entities';
 import { ProductListMapper, ProductMapper } from './mappers';
 
+/** Normalises a form size (string stock) to the persisted shape. */
+const mapSize = (s: { name: string; stock: string | null; sku?: string | null }) => ({
+  name: s.name,
+  stock: s.stock === null || s.stock === '' ? null : Number(s.stock),
+  sku: s.sku?.trim() ? s.sku.trim() : null,
+});
+
 @Injectable({
   providedIn: 'root',
 })
@@ -23,6 +30,37 @@ export class ProductService implements BaseProductService {
   private readonly tenantStore = inject(TenantStore);
   private readonly activityLog = inject(ActivityLogService);
   private readonly htmlSanitizer = inject(HtmlSanitizerService);
+
+  /** True when a product falls outside the free-plan visible window — i.e. its
+   *  rank among non-hidden products (ordered by `position`, same as the catalog)
+   *  is >= the free-plan cap. Used to block editing a locked product reached via
+   *  a direct URL. `cap <= 0` means unlimited → never locked. */
+  public async isLockedByFreePlan(
+    productId: string,
+    cap: number
+  ): Promise<boolean> {
+    if (cap <= 0) return false;
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return false;
+
+    const { data: target } = await this.client
+      .from('products')
+      .select('position, is_hidden')
+      .eq('id', productId)
+      .single();
+    // Hidden products aren't part of the visible window, so they're never the
+    // ones the cap locks (the owner can still manage them normally).
+    if (!target || target.is_hidden) return false;
+
+    const { count } = await this.client
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('is_hidden', false)
+      .lt('position', target.position);
+
+    return (count ?? 0) >= cap;
+  }
 
   public async getAll(
     page?: number,
@@ -150,9 +188,10 @@ export class ProductService implements BaseProductService {
         sku: input.sku || null,
         production_cost: input.productionCost ? Number(input.productionCost) : null,
         position: nextPosition,
-        is_wholesale: input.isSized ? false : input.isWholesale ?? false,
+        is_wholesale:
+          input.isSized || input.isVariant ? false : input.isWholesale ?? false,
         wholesale_tiers:
-          !input.isSized && input.isWholesale
+          !input.isSized && !input.isVariant && input.isWholesale
             ? input.wholesaleTiers.map((t) => ({
                 title: t.title,
                 price: Number(t.price),
@@ -161,10 +200,18 @@ export class ProductService implements BaseProductService {
         is_sold_out: input.isSoldOut ?? false,
         is_hidden: input.isHidden ?? false,
         is_sized: input.isSized ?? false,
-        sizes: input.isSized
-          ? input.sizes.map((s) => ({
-              name: s.name,
-              stock: s.stock === null || s.stock === '' ? null : Number(s.stock),
+        sizes: input.isSized ? input.sizes.map(mapSize) : [],
+        is_variant: input.isVariant ?? false,
+        variants: input.isVariant
+          ? input.variants.map((v) => ({
+              id: v.id || crypto.randomUUID(),
+              name: v.name,
+              price: v.price === '' ? 0 : Number(v.price),
+              originalPrice:
+                v.originalPrice === '' ? 0 : Number(v.originalPrice),
+              sku: v.sku?.trim() ? v.sku.trim() : null,
+              photos: v.photos ?? [],
+              sizes: (v.sizes ?? []).map(mapSize),
             }))
           : [],
       })
@@ -213,9 +260,10 @@ export class ProductService implements BaseProductService {
       stock: input.stock,
       sku: input.sku || null,
       production_cost: input.productionCost ? Number(input.productionCost) : null,
-      is_wholesale: input.isSized ? false : input.isWholesale ?? false,
+      is_wholesale:
+        input.isSized || input.isVariant ? false : input.isWholesale ?? false,
       wholesale_tiers:
-        !input.isSized && input.isWholesale
+        !input.isSized && !input.isVariant && input.isWholesale
           ? input.wholesaleTiers.map((t) => ({
               title: t.title,
               price: Number(t.price),
@@ -224,10 +272,17 @@ export class ProductService implements BaseProductService {
       is_sold_out: input.isSoldOut ?? false,
       is_hidden: input.isHidden ?? false,
       is_sized: input.isSized ?? false,
-      sizes: input.isSized
-        ? input.sizes.map((s) => ({
-            name: s.name,
-            stock: s.stock === null || s.stock === '' ? null : Number(s.stock),
+      sizes: input.isSized ? input.sizes.map(mapSize) : [],
+      is_variant: input.isVariant ?? false,
+      variants: input.isVariant
+        ? input.variants.map((v) => ({
+            id: v.id || crypto.randomUUID(),
+            name: v.name,
+            price: v.price === '' ? 0 : Number(v.price),
+            originalPrice: v.originalPrice === '' ? 0 : Number(v.originalPrice),
+            sku: v.sku?.trim() ? v.sku.trim() : null,
+            photos: v.photos ?? [],
+            sizes: (v.sizes ?? []).map(mapSize),
           }))
         : [],
     };

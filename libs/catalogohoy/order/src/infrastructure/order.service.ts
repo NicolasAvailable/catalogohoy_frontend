@@ -2,7 +2,13 @@ import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { ActivityLogService } from '@catalogohoy/teams';
 import { E } from '@shared/domain';
-import { Order, OrderItem, OrderMapper, OrderStatus } from '../domain';
+import {
+  InternalNote,
+  Order,
+  OrderItem,
+  OrderMapper,
+  OrderStatus,
+} from '../domain';
 
 export interface WeekDayData {
   label: string;
@@ -136,6 +142,22 @@ export class OrderService {
       .from('orders')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId);
+
+    if (error) return E.left(new Error(error.message));
+    return E.right(count ?? 0);
+  }
+
+  /** Count of pending (newly arrived, not yet fulfilled) orders. Powers the
+   *  real-time badge next to "Ordenes" in the sidebar. `head: true` fetches
+   *  no rows — only the server-side count. */
+  async countPendingByTenant(
+    tenantId: number
+  ): Promise<E.Either<Error, number>> {
+    const { count, error } = await this.client
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('status', 'pending');
 
     if (error) return E.left(new Error(error.message));
     return E.right(count ?? 0);
@@ -303,6 +325,36 @@ export class OrderService {
     return this.updateOrderStatus(id, tenantId, 'pending', 'cancelled');
   }
 
+  /** Appends an internal team note to an order's thread (admin-only). */
+  async addInternalNote(
+    id: number,
+    tenantId: number,
+    note: InternalNote
+  ): Promise<E.Either<Error, Order>> {
+    // Re-read the current thread so concurrent edits don't clobber each other.
+    const { data: cur, error: fetchError } = await this.client
+      .from('orders')
+      .select('internal_notes')
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .single();
+    if (fetchError) return E.left(new Error(fetchError.message));
+
+    const notes = Array.isArray(cur?.internal_notes) ? cur.internal_notes : [];
+    notes.push(note);
+
+    const { data, error } = await this.client
+      .from('orders')
+      .update({ internal_notes: notes })
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .select()
+      .single();
+
+    if (error) return E.left(new Error(error.message));
+    return E.right(OrderMapper.toDomain(data));
+  }
+
   /** Restaura stock vía RPC `increment_product_stock` (SECURITY DEFINER).
    *  Soporta productos con sizes — el size se lee de cada item. */
   private async restoreStock(
@@ -315,6 +367,7 @@ export class OrderService {
       productId: it.productId,
       quantity: it.quantity ?? 0,
       size: it.size ?? null,
+      variantId: it.variantId ?? null,
     }));
     const { error } = await this.client.rpc('increment_product_stock', {
       p_tenant_id: tenantId,
@@ -337,6 +390,7 @@ export class OrderService {
       productId: it.productId,
       quantity: it.quantity ?? 0,
       size: it.size ?? null,
+      variantId: it.variantId ?? null,
     }));
     const { error } = await this.client.rpc('decrement_product_stock', {
       p_tenant_id: tenantId,

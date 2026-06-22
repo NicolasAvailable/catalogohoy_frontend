@@ -59,6 +59,20 @@
         </div>
         }
       </div>
+      } @else if (isVariant()) {
+      @if (showReferencePrice()) {
+      <span class="product-card__price-current">
+        {{ cs() }}{{ variantPriceRange().min }}@if (variantPriceRange().min !==
+        variantPriceRange().max) { - {{ cs() }}{{ variantPriceRange().max }}}
+      </span>
+      }
+      @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
+      <span class="product-card__price-bs">
+        Bs. {{ variantPriceRange().min * ecommerceStore.exchangeRate() | number:'1.2-2' }}@if
+        (variantPriceRange().min !== variantPriceRange().max) { - Bs. {{
+        variantPriceRange().max * ecommerceStore.exchangeRate() | number:'1.2-2' }}}
+      </span>
+      }
       } @else if (product().pricePromotional > 0) {
       @if (showReferencePrice()) {
       <span class="product-card__price-original">{{ cs() }}{{ product().price }}</span>
@@ -103,7 +117,7 @@
         <ui-icon name="package-x" styleClass="size-5" />
         Agotado
       </button>
-      } @else if (isWholesale() || isSized()) {
+      } @else if (isWholesale() || isSized() || isVariant()) {
       <button
         type="button"
         class="product-card__add-full-btn product-card__add-full-btn--outline"

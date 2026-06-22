@@ -1,0 +1,85 @@
+<ui-dialog
+  #genDialog
+  headerTitle="🪄 Generar imagen con IA"
+  [closable]="!processing()"
+  [dismissableMask]="!processing()"
+  [closeOnEscape]="!processing()"
+  styleClass="w-[32rem]! max-w-[92vw]!"
+  (close)="onDialogClose()"
+>
+  <div class="flex flex-col gap-4 pt-1">
+    <p class="text-sm text-grey-400">
+      Describe la imagen que quieres. Podés usar el título y la descripción del
+      producto como base.
+    </p>
+
+    <textarea
+      #promptBox
+      [value]="prompt()"
+      (input)="setPrompt(promptBox.value)"
+      [disabled]="processing()"
+      rows="4"
+      placeholder="Ej: gorra roja de béisbol sobre fondo blanco, foto de producto profesional, luz suave"
+      class="w-full rounded-lg border border-grey-200 p-3 text-sm text-grey-700 placeholder:text-grey-300 outline-none focus:border-violet-400 resize-none disabled:opacity-60"
+    ></textarea>
+
+    <!-- Insertar título / descripción del producto como base del prompt -->
+    @if (title().trim() || description().trim()) {
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-xs text-grey-400">Insertar:</span>
+      @if (title().trim()) {
+      <button
+        type="button"
+        (click)="insertTitle()"
+        [disabled]="processing()"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-grey-200 text-xs font-medium text-grey-600 hover:border-violet-300 hover:text-violet-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <ui-icon name="plus" styleClass="w-3.5 h-3.5" />
+        Título
+      </button>
+      }
+      @if (description().trim()) {
+      <button
+        type="button"
+        (click)="insertDescription()"
+        [disabled]="processing()"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-grey-200 text-xs font-medium text-grey-600 hover:border-violet-300 hover:text-violet-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <ui-icon name="plus" styleClass="w-3.5 h-3.5" />
+        Descripción
+      </button>
+      }
+    </div>
+    }
+
+    <div class="flex items-center justify-end gap-2 mt-1">
+      <ui-button
+        label="Cancelar"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        size="small"
+        [disabled]="processing()"
+        (click)="cancel()"
+      />
+      <button
+        type="button"
+        (click)="generate()"
+        [disabled]="processing() || prompt().trim().length < 3"
+        class="rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <span
+          class="flex items-center gap-2 rounded-[0.4375rem] bg-white px-5 py-2.5 text-sm font-semibold text-violet-700"
+        >
+          @if (processing()) {
+          <ui-icon name="loader-circle" styleClass="w-[1.125rem] h-[1.125rem] animate-spin" />
+          Generando…
+          } @else {
+          <ui-icon name="sparkles" styleClass="w-[1.125rem] h-[1.125rem]" />
+          Generar
+          }
+        </span>
+      </button>
+    </div>
+  </div>
+</ui-dialog>

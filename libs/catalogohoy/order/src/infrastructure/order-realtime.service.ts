@@ -20,8 +20,6 @@ export class OrderRealtimeService {
     const tenantId = await this.tenantStore.getTenantIdAsync();
     if (!tenantId) return;
 
-    console.log('[OrderRealtime] Subscribing to tenant:', tenantId);
-
     this.channel = this.client
       .channel(`orders-tenant-${tenantId}`)
       .on(
@@ -33,13 +31,10 @@ export class OrderRealtimeService {
           filter: `tenant_id=eq.${tenantId}`,
         },
         (payload) => {
-          console.log('[OrderRealtime] Event received:', payload);
           this.zone.run(() => this.handleChange(payload, tenantId));
         }
       )
-      .subscribe((status) => {
-        console.log('[OrderRealtime] Channel status:', status);
-      });
+      .subscribe();
   }
 
   unsubscribe(): void {
@@ -51,7 +46,6 @@ export class OrderRealtimeService {
 
   private async handleChange(payload: any, tenantId: number): Promise<void> {
     const eventType = payload.eventType;
-    console.log('[OrderRealtime] handleChange:', eventType, 'isLoading before:', this.orderStore.isLoading());
 
     if (eventType === 'INSERT') {
       const result = await this.orderService.getOrderById(payload.new.id, tenantId);
@@ -61,10 +55,8 @@ export class OrderRealtimeService {
       this.orderStore.loadGrandTotalCount();
     } else if (eventType === 'UPDATE') {
       const result = await this.orderService.getOrderById(payload.new.id, tenantId);
-      console.log('[OrderRealtime] UPDATE fetched, isLoading:', this.orderStore.isLoading());
       result.mapRight((order) => this.orderStore.replaceOrder(order));
     } else if (eventType === 'DELETE') {
-      console.log('[OrderRealtime] DELETE payload.old:', payload.old);
       this.orderStore.removeOrder(payload.old.id);
       this.orderStore.loadGrandTotalCount();
     }

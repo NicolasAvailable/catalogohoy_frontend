@@ -49,11 +49,16 @@
             class="cart-item__image"
             [src]="item.photo || 'assets/placeholder-product.png'"
             [alt]="item.name"
+            loading="lazy"
           />
           <div class="cart-item__details">
             <h4 class="cart-item__name">{{ item.name }}</h4>
-            @if (item.size) {
-            <span class="cart-item__size">Talla: <strong>{{ item.size }}</strong></span>
+            @if (item.variantName || item.size) {
+            <span class="cart-item__size">
+              @if (item.variantName) {<strong>{{ item.variantName }}</strong>}@if
+              (item.variantName && item.size) { · }@if (item.size) {Talla:
+              <strong>{{ item.size }}</strong>}
+            </span>
             }
             <p class="cart-item__description">{{ item.description | stripHtml }}</p>
             <span class="cart-item__price">

@@ -1,0 +1,73 @@
+<div class="flex items-center gap-1 flex-wrap">
+  @for (tag of visibleTags(); track tag.id) {
+    <span
+      class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full text-[0.6875rem] font-semibold whitespace-nowrap"
+      [style.background-color]="tag.color + '22'"
+      [style.color]="tag.color"
+    >
+      {{ tag.name }}
+      <button
+        type="button"
+        (click)="toggleTag(tag, $event)"
+        class="flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-black/10 cursor-pointer"
+        title="Quitar etiqueta"
+      >
+        <ui-icon name="x" styleClass="size-2.5" />
+      </button>
+    </span>
+  }
+
+  @if (extraCount() > 0) {
+    <button
+      type="button"
+      (click)="$event.stopPropagation(); op.toggle($event)"
+      class="inline-flex items-center px-2 py-0.5 rounded-full text-[0.6875rem] font-semibold bg-primary-50 text-primary-600 hover:bg-primary-100 cursor-pointer shrink-0"
+      title="Ver todas las etiquetas"
+    >
+      +{{ extraCount() }}
+    </button>
+  }
+
+  <button
+    type="button"
+    (click)="$event.stopPropagation(); op.toggle($event)"
+    class="flex items-center justify-center w-6 h-6 rounded-full border border-dashed border-grey-300 text-grey-400 hover:border-primary-400 hover:text-primary-500 transition-colors cursor-pointer shrink-0"
+    title="Agregar etiqueta"
+  >
+    <ui-icon name="plus" styleClass="size-3.5" />
+  </button>
+
+  <p-popover #op appendTo="body">
+    <div class="w-72">
+      <div class="max-h-52 overflow-y-auto py-1">
+        @for (tag of clientStore.tags(); track tag.id) {
+          <button
+            type="button"
+            (click)="toggleTag(tag)"
+            class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-grey-25 text-left cursor-pointer"
+          >
+            <span
+              class="w-4 h-4 rounded border flex items-center justify-center shrink-0"
+              [style.border-color]="tag.color"
+              [style.background-color]="isAssigned(tag.id) ? tag.color : 'transparent'"
+            >
+              @if (isAssigned(tag.id)) {
+                <ui-icon name="check" styleClass="size-3 text-white" />
+              }
+            </span>
+            <span
+              class="w-2 h-2 rounded-full shrink-0"
+              [style.background-color]="tag.color"
+            ></span>
+            <span class="text-sm text-grey-700 truncate">{{ tag.name }}</span>
+          </button>
+        } @empty {
+          <p class="px-3 py-2 text-xs text-grey-400">
+            Aún no hay etiquetas. Créala abajo 👇
+          </p>
+        }
+      </div>
+      <lib-client-tag-create-row (created)="onCreated($event)" />
+    </div>
+  </p-popover>
+</div>

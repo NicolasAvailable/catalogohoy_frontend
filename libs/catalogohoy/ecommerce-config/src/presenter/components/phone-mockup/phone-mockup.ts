@@ -23,9 +23,15 @@ export class PhoneMockupComponent {
   public readonly isOverlay = input(false);
   public readonly hidden = input(false);
   public readonly close = output<void>();
+  /** Fires every time the iframe finishes (re)loading a document. */
+  public readonly loaded = output<void>();
 
   private readonly iframeRef =
     viewChild<ElementRef<HTMLIFrameElement>>('previewIframe');
+
+  onIframeLoad(): void {
+    this.loaded.emit();
+  }
 
   sendPreviewMessage(message: PreviewMessage): void {
     const iframe = this.iframeRef()?.nativeElement;

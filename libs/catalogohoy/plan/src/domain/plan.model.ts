@@ -13,6 +13,8 @@ export interface Plan {
   maxProducts: number;
   maxCatalogs: number;
   maxTeamMembers: number;
+  /** Max variants allowed per product on this plan (gratis 1, basico 3, avanzado 15). */
+  maxVariants: number;
   isFree: boolean;
   position: number;
 }

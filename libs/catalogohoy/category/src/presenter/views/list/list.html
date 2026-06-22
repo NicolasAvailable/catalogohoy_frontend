@@ -9,6 +9,7 @@
       label="Crear categoría"
       icon="circle-plus"
       (click)="toggleCreate()"
+      [disabled]="isCreating()"
     />
   </header>
 
@@ -33,8 +34,8 @@
         (keydown.enter)="saveCreate()"
       />
       <div class="flex gap-2">
-        <ui-button icon="x" variant="text" (click)="cancelCreate()" [disabled]="isSaving()" />
-        <ui-button icon="check" variant="text" (click)="saveCreate()" [disabled]="isSaving()" />
+        <ui-button icon="x" severity="danger" (click)="cancelCreate()" [disabled]="isSaving()" />
+        <ui-button icon="check" severity="primary" (click)="saveCreate()" [disabled]="createControl.invalid || isSaving()" [isLoading]="isSaving()" />
       </div>
     </div>
     }
@@ -63,12 +64,22 @@
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <ui-button
+            icon="share2"
+            variant="outlined"
+            severity="contrast"
+            size="small"
+            (click)="onShare(category)"
+            [disabled]="category.isViewAll || isCreating()"
+            [tooltip]="copiedCategoryId() === ('' + category.id) ? '¡Link copiado!' : 'Compartir categoría'"
+            tooltipPosition="bottom"
+          />
+          <ui-button
             icon="pencil"
             variant="outlined"
             severity="contrast"
             size="small"
-            [routerLink]="category.isViewAll ? null : ['edit', category.id]"
-            [disabled]="category.isViewAll"
+            [routerLink]="category.isViewAll || isCreating() ? null : ['edit', category.id]"
+            [disabled]="category.isViewAll || isCreating()"
             tooltip="Editar"
             tooltipPosition="bottom"
           />
@@ -78,7 +89,7 @@
             [severity]="category.isVisible ? 'contrast' : 'secondary'"
             size="small"
             (click)="onToggleVisibility(category)"
-            [disabled]="isTogglingVisibility() === category.id"
+            [disabled]="isTogglingVisibility() === category.id || isCreating()"
             [tooltip]="category.isVisible ? 'Ocultar del catálogo' : 'Mostrar en el catálogo'"
             tooltipPosition="bottom"
           />
@@ -88,7 +99,7 @@
             severity="danger"
             size="small"
             (click)="onDelete(category)"
-            [disabled]="category.isViewAll"
+            [disabled]="category.isViewAll || isCreating()"
             tooltip="Eliminar"
             tooltipPosition="bottom"
           />
