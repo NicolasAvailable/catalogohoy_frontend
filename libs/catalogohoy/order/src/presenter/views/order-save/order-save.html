@@ -172,6 +172,8 @@
                     [ngModelOptions]="{ standalone: true }"
                     appendTo="body"
                     [selectId]="'product-' + $index"
+                    [filter]="true"
+                    filterPlaceholder="Buscar producto..."
                   >
                     <ng-template selectSelectedItem let-selected>
                       <div class="flex items-center gap-3">
