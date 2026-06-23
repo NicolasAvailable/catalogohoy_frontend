@@ -1,31 +1,22 @@
 <div class="flex flex-col h-full border-r border-grey-50 bg-white">
-  <!-- Header -->
-  <div class="flex items-center gap-3 px-4 py-3 border-b border-grey-50 h-16 shrink-0">
-    @if (profileStore.profile().tenantList.first; as tenant) {
-      @if (tenant.logo) {
-        <img [src]="tenant.logo" [alt]="tenant.name" class="w-9 h-9 rounded-lg object-cover shrink-0" />
-      } @else {
-        <ui-avatar
-          [label]="tenant.name"
-          size="normal"
-          shape="square"
-          styleClass="!bg-primary-100 !text-primary-600 !rounded-lg shrink-0"
-        />
-      }
-      <span class="flex-1 text-sm font-semibold text-grey-700 truncate">Chats</span>
-    }
-    <ui-icon name="ellipsis-vertical" size="16" styleClass="text-grey-400 cursor-pointer shrink-0" />
-  </div>
-
-  <!-- Search -->
-  <div class="px-3 py-2 shrink-0">
+  <!-- Header: title + search (Fuse-style) -->
+  <div class="flex flex-col gap-3 px-4 pt-5 pb-3 shrink-0">
+    <div class="flex items-center justify-between">
+      <h2 class="text-2xl font-extrabold text-grey-800 leading-none">Chats</h2>
+      <ui-icon name="ellipsis-vertical" size="18" styleClass="text-grey-400 cursor-pointer shrink-0" />
+    </div>
     <ui-input-search
-      placeholder="Buscar..."
+      placeholder="Buscar o iniciar un chat"
       (valueChange)="onSearch($event)"
     />
   </div>
 
-  <!-- Chat list -->
+  <!-- Chat list.
+       TODO(whatsapp-integration): reintroducir cdk-virtual-scroll-viewport +
+       infinite scroll (loadMoreChats paginado en ChatService/ChatStore) cuando
+       conectemos la WhatsApp Cloud API y el volumen de conversaciones sea real.
+       Se quitó por ahora porque el realtime + el re-render hacían "saltar" el
+       scroll en el mock. -->
   <div class="flex-1 overflow-y-auto">
     @if (chatStore.isLoading()) {
       <div class="flex flex-col gap-1 px-2 pt-1">

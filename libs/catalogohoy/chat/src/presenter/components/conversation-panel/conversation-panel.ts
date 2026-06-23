@@ -1,29 +1,61 @@
+import { PickerComponent } from '@ctrl/ngx-emoji-mart';
 import {
   Component,
+  computed,
   effect,
   ElementRef,
+  HostListener,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ButtonComponent, IconComponent } from '@ui';
+import { TeamStore } from '@catalogohoy/teams';
+import { ButtonComponent, IconComponent, SelectComponent } from '@ui';
 import { ChatStore } from '../../../infrastructure/chat.store';
 
 @Component({
   selector: 'lib-conversation-panel',
   standalone: true,
-  imports: [FormsModule, IconComponent, ButtonComponent],
+  imports: [
+    FormsModule,
+    IconComponent,
+    ButtonComponent,
+    SelectComponent,
+    PickerComponent,
+  ],
   templateUrl: './conversation-panel.html',
 })
 export class ConversationPanelComponent {
   protected readonly chatStore = inject(ChatStore);
+  protected readonly teamStore = inject(TeamStore);
   protected readonly messageInput = signal('');
+
+  /** Team members for the header "Asignar a" control (mirrors the ficha). */
+  protected readonly assigneeOptions = computed(() => [
+    { label: 'Sin asignar', value: null as number | null },
+    ...this.teamStore
+      .acceptedMembers()
+      .filter((m) => m.userId !== null)
+      .map((m) => ({
+        label:
+          `${m.userName ?? ''} ${m.userLastName ?? ''}`.trim() ||
+          m.invitedEmail,
+        value: m.userId,
+      })),
+  ]);
 
   private readonly messagesContainer =
     viewChild<ElementRef<HTMLDivElement>>('messagesContainer');
 
+  onAssign(userId: number | null): void {
+    const c = this.chatStore.selectedChat();
+    if (c) this.chatStore.assignChat(c.id, userId);
+  }
+
   constructor() {
+    this.teamStore.load();
+
     effect(() => {
       const msgs = this.chatStore.messages();
       if (msgs.length > 0) {
@@ -56,7 +88,9 @@ export class ConversationPanelComponent {
   /** Quick-reply popover state + insertion. */
   protected readonly quickRepliesOpen = signal(false);
 
-  toggleQuickReplies(): void {
+  toggleQuickReplies(event: Event): void {
+    event.stopPropagation();
+    this.emojiPickerOpen.set(false);
     this.quickRepliesOpen.update((v) => !v);
   }
 
@@ -94,5 +128,29 @@ export class ConversationPanelComponent {
       .map((w) => w[0])
       .join('')
       .toUpperCase();
+  }
+
+  /** Emoji picker (Apple set) state + insertion. */
+  protected readonly emojiPickerOpen = signal(false);
+
+  toggleEmojiPicker(event: Event): void {
+    event.stopPropagation();
+    this.emojiPickerOpen.update((v) => !v);
+  }
+
+  /** Append the selected emoji to the message draft (keeps the picker open so
+   *  the user can add several). */
+  addEmoji(event: { emoji: { native: string } }): void {
+    this.messageInput.update((v) => v + (event.emoji?.native ?? ''));
+  }
+
+  private readonly host = inject(ElementRef<HTMLElement>);
+
+  /** Close popovers when clicking outside this conversation panel. */
+  @HostListener('document:click', ['$event'])
+  closePopovers(event: MouseEvent): void {
+    if (this.host.nativeElement.contains(event.target as Node)) return;
+    if (this.emojiPickerOpen()) this.emojiPickerOpen.set(false);
+    if (this.quickRepliesOpen()) this.quickRepliesOpen.set(false);
   }
 }

@@ -66,6 +66,9 @@ export const ChatStore = signalStore(
       chatService = inject(ChatService),
       tenantStore = inject(TenantStore)
     ) => ({
+      // TODO(whatsapp-integration): paginar + loadMoreChats (infinite scroll con
+      // cdk-virtual-scroll) cuando el volumen de conversaciones sea real. Por
+      // ahora carga todo (mock).
       async loadChats() {
         patchState(store, { isLoading: true });
 
@@ -162,6 +165,11 @@ export const ChatStore = signalStore(
         if (isSelected && !msg.isMine) {
           chatService.markAsRead(msg.chatId);
         }
+      },
+
+      /** Deselect the open conversation (mobile back button). */
+      closeChat() {
+        patchState(store, { selectedChatId: null, messages: [] });
       },
 
       setSearchQuery(q: string) {

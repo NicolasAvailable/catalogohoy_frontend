@@ -18,6 +18,17 @@
     </div>
   </div>
 
+  <!-- Información básica -->
+  <div class="ficha__section">
+    <span class="ficha__section-title">Información básica</span>
+    <dl class="ficha__info">
+      <dt>Fecha de creación</dt>
+      <dd>{{ formatDateTime(c.createdAt) }}</dd>
+      <dt>Teléfono</dt>
+      <dd>{{ c.customerPhone || '—' }}</dd>
+    </dl>
+  </div>
+
   <!-- Pipeline status -->
   <div class="ficha__field">
     <span class="ficha__label">Estado</span>
@@ -27,9 +38,23 @@
       optionLabel="label"
       optionValue="value"
       placeholder="Sin estado"
+      size="small"
       [ngModel]="c.pipelineStatus"
       (ngModelChange)="onStatusChange($event)"
-    />
+    >
+      <ng-template selectSelectedItem let-s>
+        <span class="ficha-opt">
+          <span class="ficha-dot" [style.background]="statusColor(s?.value)"></span>
+          {{ s?.label }}
+        </span>
+      </ng-template>
+      <ng-template selectItem let-item>
+        <span class="ficha-opt">
+          <span class="ficha-dot" [style.background]="statusColor(item?.value)"></span>
+          {{ item?.label }}
+        </span>
+      </ng-template>
+    </ui-select>
     } @else {
     <p class="ficha__hint">
       Crea estados del pipeline en la configuración del CRM.
@@ -45,9 +70,21 @@
       optionLabel="label"
       optionValue="value"
       placeholder="Sin asignar"
+      size="small"
       [ngModel]="c.assignedToUserId"
       (ngModelChange)="onAssigneeChange($event)"
-    />
+    >
+      <ng-template selectSelectedItem let-s>
+        <span class="ficha-opt">
+          <ui-icon name="user" size="13" styleClass="text-grey-400" /> {{ s?.label }}
+        </span>
+      </ng-template>
+      <ng-template selectItem let-item>
+        <span class="ficha-opt">
+          <ui-icon name="user" size="13" styleClass="text-grey-400" /> {{ item?.label }}
+        </span>
+      </ng-template>
+    </ui-select>
   </div>
 
   <!-- Past orders -->
@@ -89,20 +126,20 @@
       }
     </div>
     <div class="ficha__note-composer">
-      <input
+      <textarea
         class="ficha__note-input"
+        rows="2"
         placeholder="Agregar nota..."
         [ngModel]="noteDraft()"
         (ngModelChange)="noteDraft.set($event)"
-        (keyup.enter)="addNote()"
-      />
+        (keydown)="onNoteKeydown($event)"
+      ></textarea>
       <button
         class="ficha__note-add"
         [disabled]="!noteDraft().trim()"
         (click)="addNote()"
-        aria-label="Agregar nota"
       >
-        <ui-icon name="plus" size="16" />
+        <ui-icon name="plus" size="14" /> Agregar nota
       </button>
     </div>
   </div>

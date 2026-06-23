@@ -12,6 +12,7 @@ import {
   standalone: true,
   imports: [ButtonComponent, IconComponent],
   templateUrl: './whatsapp-setup.html',
+  host: { class: 'flex-1 flex min-h-0 min-w-0' },
 })
 export class WhatsAppSetupComponent implements OnInit {
   readonly whatsAppStore = inject(WhatsAppStore);

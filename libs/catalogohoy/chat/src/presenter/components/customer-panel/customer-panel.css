@@ -19,6 +19,45 @@
   align-items: center;
   gap: 0.75rem;
 }
+.ficha__collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--color-grey-400, #94a3b8);
+  cursor: pointer;
+}
+.ficha__collapse:hover {
+  background: var(--color-grey-100, #f1f5f9);
+  color: var(--color-grey-600, #475569);
+}
+
+/* Información básica */
+.ficha__info {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.625rem;
+  margin: 0;
+}
+.ficha__info dt {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-grey-400, #94a3b8);
+  margin-bottom: 0.125rem;
+}
+.ficha__info dd {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-grey-700, #334155);
+  word-break: break-word;
+}
 .ficha__avatar {
   width: 2.75rem;
   height: 2.75rem;
@@ -52,6 +91,23 @@
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
+}
+
+/* Compact option rows (status / assignee) with an icon, matching the ficha's
+   text scale — projected into the ui-select trigger and panel. */
+.ficha-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-grey-700, #334155);
+}
+.ficha-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  background: var(--color-grey-300, #cbd5e1);
 }
 .ficha__label,
 .ficha__section-title {
@@ -140,31 +196,40 @@
 
 .ficha__note-composer {
   display: flex;
-  gap: 0.375rem;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
 }
 .ficha__note-input {
-  flex: 1;
+  width: 100%;
   min-width: 0;
   padding: 0.5rem 0.625rem;
   border: 0.0625rem solid var(--color-grey-200, #e2e8f0);
   border-radius: 0.5rem;
   font-size: 0.8125rem;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.4;
 }
 .ficha__note-input:focus {
   outline: none;
-  border-color: #25d366;
+  border-color: var(--color-primary-400, #34d399);
 }
 .ficha__note-add {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  flex-shrink: 0;
+  gap: 0.3125rem;
+  padding: 0.4375rem 0.75rem;
   border: none;
   border-radius: 0.5rem;
-  background: #25d366;
+  background: var(--color-primary-500, #16a34a);
   color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
   cursor: pointer;
+}
+.ficha__note-add:hover:not(:disabled) {
+  background: var(--color-primary-600, #15803d);
 }
 .ficha__note-add:disabled {
   opacity: 0.5;

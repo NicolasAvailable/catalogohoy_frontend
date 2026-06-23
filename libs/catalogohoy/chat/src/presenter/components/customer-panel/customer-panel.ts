@@ -3,7 +3,12 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ProfileStore } from '@catalogohoy/profile';
 import { TeamStore } from '@catalogohoy/teams';
-import { IconComponent, SelectComponent } from '@ui';
+import {
+  IconComponent,
+  SelectComponent,
+  SelectItemDirective,
+  SelectSelectedItemDirective,
+} from '@ui';
 import { ChatNote } from '../../../domain';
 import {
   ChatService,
@@ -16,7 +21,14 @@ import { ChatStore } from '../../../infrastructure/chat.store';
 @Component({
   selector: 'lib-customer-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent, SelectComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    IconComponent,
+    SelectComponent,
+    SelectItemDirective,
+    SelectSelectedItemDirective,
+  ],
   templateUrl: './customer-panel.html',
   styleUrl: './customer-panel.css',
 })
@@ -86,6 +98,24 @@ export class CustomerPanelComponent {
     };
     this.chatStore.addNote(c.id, note);
     this.noteDraft.set('');
+  }
+
+  /** Enter sends the note; Shift+Enter inserts a newline. */
+  onNoteKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      this.addNote();
+    }
+  }
+
+  formatDateTime(dateStr: string): string {
+    return new Date(dateStr).toLocaleString('es', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
   initial(name: string | null): string {

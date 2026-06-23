@@ -1,21 +1,15 @@
 import { Component, inject } from '@angular/core';
-import { ProfileStore } from '@catalogohoy/profile';
-import {
-  AvatarComponent,
-  IconComponent,
-  InputSearchComponent,
-} from '@ui';
+import { IconComponent, InputSearchComponent } from '@ui';
 import { ChatStore } from '../../../infrastructure/chat.store';
 
 @Component({
   selector: 'lib-chat-list-panel',
   standalone: true,
-  imports: [AvatarComponent, IconComponent, InputSearchComponent],
+  imports: [IconComponent, InputSearchComponent],
   templateUrl: './chat-list-panel.html',
 })
 export class ChatListPanelComponent {
   protected readonly chatStore = inject(ChatStore);
-  protected readonly profileStore = inject(ProfileStore);
 
   onSearch(query: string) {
     this.chatStore.setSearchQuery(query);

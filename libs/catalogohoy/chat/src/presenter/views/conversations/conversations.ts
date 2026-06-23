@@ -7,7 +7,9 @@ import { ChatLayoutComponent } from '../chat-layout/chat-layout';
   selector: 'lib-conversations',
   standalone: true,
   imports: [ChatLayoutComponent, WhatsAppSetupComponent, SkeletonDirective],
-  host: { class: 'flex-1 flex min-h-0 overflow-hidden' },
+  // -m-4 cancels the admin layout's px-4 py-4 wrapper so the chat module sits
+  // edge-to-edge (full-bleed inbox, like Fuse) without a card/border.
+  host: { class: 'flex-1 flex min-h-0 overflow-hidden -m-4' },
   template: `
     @if (whatsAppStore.isLoading()) {
       <div class="flex flex-col gap-4 w-full p-6">

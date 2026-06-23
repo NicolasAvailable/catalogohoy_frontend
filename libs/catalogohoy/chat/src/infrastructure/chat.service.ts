@@ -28,6 +28,10 @@ export interface CustomerOrderSummary {
 export class ChatService {
   private readonly client = SupabaseClientProvider.getInstance();
 
+  /** Conversations for the tenant, newest activity first.
+   *  TODO(whatsapp-integration): paginar (offset/limit) y exponer loadMore para
+   *  el infinite scroll del inbox una vez que el volumen sea real. Por ahora
+   *  trae todo (mock). */
   async getChatsByTenant(
     tenantId: number,
     search?: string

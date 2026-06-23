@@ -127,6 +127,8 @@ import {
   Users,
   UsersRound,
   UserX,
+  Smile,
+  Volume2,
   VolumeX,
   Wallet,
   WandSparkles,
@@ -269,6 +271,8 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       ArrowDownRight,
       CalendarDays,
       Paperclip,
+      Smile,
+      Volume2,
       VolumeX,
     })
   );
