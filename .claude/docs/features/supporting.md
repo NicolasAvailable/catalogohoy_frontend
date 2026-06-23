@@ -30,8 +30,9 @@
 
 - **Rol**: dashboard de inicio con KPIs de órdenes del tenant. `HomeStore` lee
   `OrderService.getHomeStats(tenantId)`.
-- Acá vive el **modal de anuncio "Llegó la IA"** (una vez por cuenta vía
-  `users.seen_announcements` clave `ai_v1`; se abre en `ngAfterViewInit`). Botones Cerrar /
+- Acá vive el **modal de anuncio "Llegó la IA"** (una vez por **usuario autenticado** vía
+  tabla `user_announcement_views` + RPCs `has_seen_announcement`/`mark_announcement_seen`,
+  clave `ai_v1`; se abre en `ngAfterViewInit` después de hidratar la sesión). Botones Cerrar /
   Explorar (→ `/admin/products/create`). Imagen hero en `apps/catalogohoy/public/ai-generate-preview.png`.
 
 ## core / environments

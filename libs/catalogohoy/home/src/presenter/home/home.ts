@@ -61,6 +61,14 @@ export class Home implements OnInit, AfterViewInit {
 
   async ngAfterViewInit(): Promise<void> {
     try {
+      // Asegurar que la sesión esté hidratada antes de preguntar: si la RPC sale
+      // con auth.uid() null (carga en frío), devolvería false y el modal se
+      // mostraría aunque el usuario ya lo haya visto.
+      const {
+        data: { session },
+      } = await this.supabase.auth.getSession();
+      if (!session) return;
+
       const { data, error } = await this.supabase.rpc('has_seen_announcement', {
         p_key: ANNOUNCEMENT_KEY,
       });

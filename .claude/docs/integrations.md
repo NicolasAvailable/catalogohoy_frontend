@@ -35,8 +35,12 @@ edites a ciegas**; el repo puede estar atrás de prod.
   no alcanza), `refund_ai_credits`, `add_purchased_credits`, `reset_due_ai_credits` (cron
   diario), `sync_ai_credits_on_plan_change` (trigger en `tenants` AFTER UPDATE OF plan_id →
   acredita al subir de plan; defensivo, nunca bloquea el cambio de plan).
-- **Anuncios por cuenta**: `users.seen_announcements text[]` + `has_seen_announcement` /
-  `mark_announcement_seen` (el modal de IA en Home usa la clave `ai_v1`).
+- **Anuncios por usuario autenticado**: tabla `user_announcement_views(auth_user_id,
+  announcement_key)` + `has_seen_announcement` / `mark_announcement_seen` (SECURITY DEFINER,
+  keyean por `auth.uid()`). El modal de IA en Home usa la clave `ai_v1`. **Antes** se guardaba
+  en `users.seen_announcements text[]`, pero eso dejaba fuera a los miembros de equipo (no
+  tienen fila en `public.users`) → el modal les reaparecía siempre. La migración
+  `announcement_views_by_auth_uid` backfilleó los vistos previos.
 - **Discord lead on verify**: `notify_new_lead` (trigger en `users_tenants`, solo si el correo
   ya está confirmado) + `notify_lead_on_email_confirm` (trigger en `auth.users` AFTER UPDATE
   OF email_confirmed_at). Así notifica una sola vez, en el momento correcto según el toggle.
