@@ -2,6 +2,7 @@ import {
   EnvironmentProviders,
   ErrorHandler,
   inject,
+  isDevMode,
   Provider,
   provideAppInitializer,
 } from '@angular/core';
@@ -22,7 +23,12 @@ interface InitSentryOptions {
  * No hace nada en desarrollo ni si el DSN está vacío.
  */
 export function initSentry({ dsn, appName }: InitSentryOptions): void {
-  if (!dsn || !environment.production) return;
+  // OJO: NO usar `environment.production` para detectar prod. En este repo el
+  // barrel `@catalogohoy/env` siempre exporta `environment.development`
+  // (production:false), así que `environment.production` es SIEMPRE false.
+  // El resto de la app detecta prod con `isDevMode()` (PostHog, MetaPixel…),
+  // que sí es false en builds de producción. Sentry hace lo mismo.
+  if (!dsn || isDevMode()) return;
 
   Sentry.init({
     dsn,

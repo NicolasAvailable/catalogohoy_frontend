@@ -2,6 +2,18 @@
 
 > Lo que te hace perder tiempo si no lo sabés. Agregá acá cada nueva trampa.
 
+## `environment.production` es SIEMPRE false — usar `isDevMode()`
+
+- El barrel `@catalogohoy/env` (`libs/catalogohoy/environments/src/index.ts`) hace
+  `export * from './environment.development'` (production:false). El `fileReplacements` de la
+  config `development` reemplaza `environment.ts` → `environment.development.ts`, pero el barrel
+  **no importa `environment.ts`**, así que el reemplazo no aplica y **`environment.production`
+  queda en false en TODOS los builds** (`environment.ts` con production:true es código muerto).
+- Para detectar producción usá **`isDevMode()`** (false en builds prod), como ya hacen PostHog,
+  MetaPixel, Supabase y los guards. No te fíes de `environment.production`.
+- Esto tuvo a Sentry sin inicializar en prod (el DSN estaba en el bundle pero `init()` salía
+  por el guard `!environment.production`). Fix: guard con `isDevMode()`.
+
 ## Deploy / ramas
 
 - **Cada app deploya de una rama distinta** (`main` / `authentication` / `landing`). Un
