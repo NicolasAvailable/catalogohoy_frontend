@@ -24,6 +24,7 @@ import {
 } from '@ui';
 import { CartItem } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
+import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 
 function isPagoMovil(name: string): boolean {
   return name
@@ -44,6 +45,7 @@ type CheckoutPhase = 'form' | 'confirm' | 'sent';
     InputTextComponent,
     TextareaComponent,
     QrCodeComponent,
+    TenantPricePipe,
   ],
   templateUrl: './checkout.html',
   styleUrl: './checkout.css',

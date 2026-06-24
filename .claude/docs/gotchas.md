@@ -72,6 +72,24 @@
   cuando el padre lo monta con `@if`. `closable`/`dismissableMask`/`closeOnEscape` =
   `!processing()` para no cerrar mientras procesa.
 
+## Moneda del catálogo público
+
+- Hay **dos** símbolos de moneda en la respuesta de `get_public_catalog`:
+  `config.currency_symbol` (de `tenant_ecommerce_config`, **suele estar stale en `'$'`**)
+  y `currency_config.currency_symbol` (de `tenant_currency_config`, el que el tenant
+  realmente elige en "Tasas del día" → **autoritativo**: Q, S/, R$, €, RD$…).
+- `CatalogInfo.currencySymbol` (en `ecommerce.service.ts`) prioriza
+  `currency_config.currency_symbol` → derivado del `country_code` → `config.currency_symbol`
+  → `'$'`. Usar `config.currency_symbol` primero hacía que GT/BR/DO… mostraran `'$'` aunque
+  la moneda fuera GTQ/BRL/DOP. **VE queda en `'$'`** (su currency_config es `'$'`, precios base USD).
+- **Separadores de miles/decimales**: los precios del storefront se formatean con el pipe
+  `tenantPrice` (`e-commerce/.../presenter/pipes/tenant-price.pipe.ts`), que lee
+  `EcommerceStore.numberFormat()` (de `currency_config.decimal_separator` /
+  `thousand_separator`). Así un precio sale `1.234,50` (VE/AR) o `1,234.50` (GT/MX/US). Agrupa
+  miles siempre; muestra 2 decimales solo si hay fracción (no llena de `,00`). **NO** antepone
+  el símbolo (ese va aparte con `currencySymbol`). Las líneas de **Bs.** (VE) siguen con
+  `| number:'1.2-2'` (es-locale ya coincide con la convención venezolana).
+
 ## Supabase / datos
 
 - `users.id` (bigint) = owner; `users.auth_user_id` (uuid) = `auth.uid()`.

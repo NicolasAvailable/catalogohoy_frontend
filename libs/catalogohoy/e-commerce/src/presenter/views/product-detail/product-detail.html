@@ -55,9 +55,9 @@
       <h1 class="product-detail__name">{{ product.name }}</h1>
 
       <div class="product-detail__prices">
-        <span class="product-detail__price">${{ displayPrice }}</span>
+        <span class="product-detail__price">{{ cs() }}{{ displayPrice | tenantPrice }}</span>
         @if (hasDiscount) {
-        <span class="product-detail__original-price">${{ product.price }}</span>
+        <span class="product-detail__original-price">{{ cs() }}{{ product.price | tenantPrice }}</span>
         }
       </div>
       @if (ecommerceStore.isVenezuela() && ecommerceStore.showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
@@ -106,7 +106,7 @@
           <ui-icon name="shoppingCart" styleClass="size-5" />
           <span>Agregar</span>
           <span>
-            ${{ totalPrice | number:'1.2-2' }}
+            {{ cs() }}{{ totalPrice | tenantPrice }}
             @if (ecommerceStore.isVenezuela() && ecommerceStore.showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
             <small class="product-detail__btn-bs">/ Bs. {{ totalPrice * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
             }

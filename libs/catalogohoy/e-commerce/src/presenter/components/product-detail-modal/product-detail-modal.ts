@@ -19,10 +19,17 @@ import {
   ProductMediaComponent,
 } from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
+import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 
 @Component({
   selector: 'lib-product-detail-modal',
-  imports: [DecimalPipe, IconComponent, ProductMediaComponent, SafeDescriptionHtmlPipe],
+  imports: [
+    DecimalPipe,
+    IconComponent,
+    ProductMediaComponent,
+    SafeDescriptionHtmlPipe,
+    TenantPricePipe,
+  ],
   templateUrl: './product-detail-modal.html',
   styleUrl: './product-detail-modal.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

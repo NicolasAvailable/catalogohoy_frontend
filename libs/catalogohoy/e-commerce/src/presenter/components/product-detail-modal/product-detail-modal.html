@@ -85,9 +85,9 @@
       @if (!isWholesale) {
       @if (showReferencePrice()) {
       <div class="pdm__prices">
-        <span class="pdm__price">{{ cs() }}{{ displayPrice }}</span>
+        <span class="pdm__price">{{ cs() }}{{ displayPrice | tenantPrice }}</span>
         @if (hasDiscount) {
-        <span class="pdm__price-original">{{ cs() }}{{ originalDisplayPrice }}</span>
+        <span class="pdm__price-original">{{ cs() }}{{ originalDisplayPrice | tenantPrice }}</span>
         }
       </div>
       }
@@ -160,7 +160,7 @@
           />
           }
           <span class="flex-1 font-medium text-grey-700">{{ variant.name }}</span>
-          <span class="font-bold text-grey-900">{{ cs() }}{{ variant.price }}</span>
+          <span class="font-bold text-grey-900">{{ cs() }}{{ variant.price | tenantPrice }}</span>
         </button>
         }
       </div>
@@ -203,7 +203,7 @@
           <div class="pdm__tier-info">
             <span class="pdm__tier-title">{{ tier.title }}</span>
             <span class="pdm__tier-price">
-              {{ cs() }}{{ tier.price }}
+              {{ cs() }}{{ tier.price | tenantPrice }}
               @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
               <small class="pdm__tier-price-bs">Bs. {{ tier.price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
               }
@@ -277,7 +277,7 @@
         <span>{{ availableSizes().length && !selectedSize() ? 'Selecciona una talla' : 'Agregar al carrito' }}</span>
         <span class="pdm__total">
           @if (showReferencePrice()) {
-          {{ cs() }}{{ displayPrice * quantity() }}
+          {{ cs() }}{{ displayPrice * quantity() | tenantPrice }}
           }
           @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
           <small class="pdm__total-bs">@if (showReferencePrice()) { / }Bs. {{ displayPrice * quantity() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
