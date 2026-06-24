@@ -14,6 +14,7 @@ import { isVideoUrl } from '@shared/domain';
 import { SafeDescriptionHtmlPipe, StripHtmlPipe } from '@shared/presenter';
 import { IconComponent, ProductMediaComponent } from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
+import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 
 @Component({
   selector: 'lib-product-detail',
@@ -23,6 +24,7 @@ import { CartStore, EcommerceStore } from '../../../infrastructure';
     IconComponent,
     ProductMediaComponent,
     SafeDescriptionHtmlPipe,
+    TenantPricePipe,
   ],
   templateUrl: './product-detail.html',
   styleUrl: './product-detail.css',
@@ -31,6 +33,8 @@ import { CartStore, EcommerceStore } from '../../../infrastructure';
 export default class ProductDetail implements OnInit {
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cartStore = inject(CartStore);
+  // Símbolo de moneda del tenant (antes esta vista usaba '$' hardcodeado).
+  public readonly cs = this.ecommerceStore.currencySymbol;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly titleService = inject(Title);

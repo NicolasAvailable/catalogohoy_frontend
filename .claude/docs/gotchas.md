@@ -2,6 +2,18 @@
 
 > Lo que te hace perder tiempo si no lo sabés. Agregá acá cada nueva trampa.
 
+## `environment.production` es SIEMPRE false — usar `isDevMode()`
+
+- El barrel `@catalogohoy/env` (`libs/catalogohoy/environments/src/index.ts`) hace
+  `export * from './environment.development'` (production:false). El `fileReplacements` de la
+  config `development` reemplaza `environment.ts` → `environment.development.ts`, pero el barrel
+  **no importa `environment.ts`**, así que el reemplazo no aplica y **`environment.production`
+  queda en false en TODOS los builds** (`environment.ts` con production:true es código muerto).
+- Para detectar producción usá **`isDevMode()`** (false en builds prod), como ya hacen PostHog,
+  MetaPixel, Supabase y los guards. No te fíes de `environment.production`.
+- Esto tuvo a Sentry sin inicializar en prod (el DSN estaba en el bundle pero `init()` salía
+  por el guard `!environment.production`). Fix: guard con `isDevMode()`.
+
 ## Deploy / ramas
 
 - **Cada app deploya de una rama distinta** (`main` / `authentication` / `landing`). Un
@@ -71,6 +83,24 @@
   overlay `fixed inset-0` propio. Se abre con `show()` (viewChild) en `ngAfterViewInit`
   cuando el padre lo monta con `@if`. `closable`/`dismissableMask`/`closeOnEscape` =
   `!processing()` para no cerrar mientras procesa.
+
+## Moneda del catálogo público
+
+- Hay **dos** símbolos de moneda en la respuesta de `get_public_catalog`:
+  `config.currency_symbol` (de `tenant_ecommerce_config`, **suele estar stale en `'$'`**)
+  y `currency_config.currency_symbol` (de `tenant_currency_config`, el que el tenant
+  realmente elige en "Tasas del día" → **autoritativo**: Q, S/, R$, €, RD$…).
+- `CatalogInfo.currencySymbol` (en `ecommerce.service.ts`) prioriza
+  `currency_config.currency_symbol` → derivado del `country_code` → `config.currency_symbol`
+  → `'$'`. Usar `config.currency_symbol` primero hacía que GT/BR/DO… mostraran `'$'` aunque
+  la moneda fuera GTQ/BRL/DOP. **VE queda en `'$'`** (su currency_config es `'$'`, precios base USD).
+- **Separadores de miles/decimales**: los precios del storefront se formatean con el pipe
+  `tenantPrice` (`e-commerce/.../presenter/pipes/tenant-price.pipe.ts`), que lee
+  `EcommerceStore.numberFormat()` (de `currency_config.decimal_separator` /
+  `thousand_separator`). Así un precio sale `1.234,50` (VE/AR) o `1,234.50` (GT/MX/US). Agrupa
+  miles siempre; muestra 2 decimales solo si hay fracción (no llena de `,00`). **NO** antepone
+  el símbolo (ese va aparte con `currencySymbol`). Las líneas de **Bs.** (VE) siguen con
+  `| number:'1.2-2'` (es-locale ya coincide con la convención venezolana).
 
 ## Supabase / datos
 

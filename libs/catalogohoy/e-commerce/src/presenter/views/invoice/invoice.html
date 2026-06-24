@@ -48,25 +48,25 @@
       <span class="invoice__item-name">
         {{ p.name }}@if (p.size) { <small class="invoice__item-size">{{ p.size }}</small> }
       </span>
-      <span class="invoice__item-total">{{ cs() }}{{ p.total }}</span>
+      <span class="invoice__item-total">{{ cs() }}{{ p.total | tenantPrice }}</span>
     </div>
     }
 
     <hr class="invoice__hr" />
 
     <div class="invoice__row">
-      <span>Subtotal</span><span>{{ cs() }}{{ subtotal() }}</span>
+      <span>Subtotal</span><span>{{ cs() }}{{ subtotal() | tenantPrice }}</span>
     </div>
     @if (o.shippingMethod) {
     <div class="invoice__row">
       <span>{{ o.shippingMethod.name || 'Envío' }}</span>
-      <span>{{ o.shippingFee > 0 ? cs() + o.shippingFee : 'Gratis' }}</span>
+      <span>@if (o.shippingFee > 0) { {{ cs() }}{{ o.shippingFee | tenantPrice }} } @else { Gratis }</span>
     </div>
     }
     <div class="invoice__row invoice__row--total">
       <span>Total</span>
       <span>
-        {{ cs() }}{{ o.totalUsd }}
+        {{ cs() }}{{ o.totalUsd | tenantPrice }}
         @if (showBs()) { <small>Bs. {{ o.totalBs | number:'1.2-2' }}</small> }
       </span>
     </div>
