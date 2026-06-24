@@ -55,7 +55,25 @@ edites a ciegas**; el repo puede estar atrás de prod.
 | **fal.ai** | Generar/quitar fondo/segmentar imágenes | `fal-ai-images` · `FAL_KEY` |
 | **PostHog** | Analíticas (HogQL) | `core/providers/posthog` + `posthog-analytics` |
 | **Meta Pixel** | Tracking (solo prod) | `core/providers/meta-pixel` |
+| **Sentry** | Errores + performance (tracing) + session replay | `core/providers/sentry` (`initSentry`/`provideSentry`) · DSN en `env/sentry`. MCP en `.mcp.json`. |
 | **WhatsApp (Meta Cloud API)** | Notificaciones de órdenes/plan | `send-whatsapp-*` · `WHATSAPP_*` |
 | **Discord** | Webhooks de eventos internos (leads, checkout, pagos) | `notify-checkout-intent`, `stripe-webhook`, `new-lead-discord` |
 | **Resend** | Email transaccional (recibos de pago, reportes semanales) | `stripe-webhook`, `send-weekly-report` |
 | **countriesnow.space** | Estados/ciudades por país | `countries-proxy` |
+
+## Sentry (errores + performance + replay)
+
+- **Dos proyectos** (un DSN por app): `sentryDsnCatalogohoy` y `sentryDsnAuth` en
+  `libs/catalogohoy/environments/src/sentry/sentry.ts`. Los DSN son **públicos** (van en el
+  bundle, como la key de PostHog) — no son secretos.
+- **Init**: `initSentry({ dsn, appName })` en cada `apps/*/src/main.ts` **antes** de
+  `bootstrapApplication` (captura errores tempranos). **No corre en dev** ni si el DSN está vacío.
+- **Providers**: `...provideSentry()` en cada `app.config.ts` → `ErrorHandler` de Sentry +
+  `TraceService` (instrumenta el routing para performance). Vive en `core/providers/sentry`.
+- **Muestreo**: `tracesSampleRate 0.1`, replay `0.1` sesiones / `1.0` con error
+  (configurable en el env). Inputs enmascarados en el replay (`maskAllInputs: true`).
+- **`tracePropagationTargets`**: dominios `*.catalogohoy.com` + el proyecto Supabase (para
+  distributed tracing front↔backend).
+- **MCP**: `sentry` (remoto, OAuth) en `.mcp.json` → `https://mcp.sentry.dev/mcp`.
+- **Pendiente (opcional)**: subir **source maps** en el build de prod para stack traces legibles
+  (necesita auth token + org/project slugs; `@sentry/cli` o el plugin de esbuild como postbuild).

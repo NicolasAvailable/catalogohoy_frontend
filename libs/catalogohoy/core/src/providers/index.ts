@@ -3,6 +3,7 @@ export * from './icons/icons.provider';
 export * from './meta-pixel/meta-pixel.provider';
 export * from './posthog/posthog.provider';
 export * from './primeng/primeng.provider';
+export * from './sentry/sentry.provider';
 export * from './supabase/supabase.provider';
 export * from './transloco/transloco.provider';
 export * from './ui/ui.provider';
