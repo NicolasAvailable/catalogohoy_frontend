@@ -90,10 +90,16 @@
   `config.currency_symbol` (de `tenant_ecommerce_config`, **suele estar stale en `'$'`**)
   y `currency_config.currency_symbol` (de `tenant_currency_config`, el que el tenant
   realmente elige en "Tasas del día" → **autoritativo**: Q, S/, R$, €, RD$…).
-- `CatalogInfo.currencySymbol` (en `ecommerce.service.ts`) prioriza
-  `currency_config.currency_symbol` → derivado del `country_code` → `config.currency_symbol`
-  → `'$'`. Usar `config.currency_symbol` primero hacía que GT/BR/DO… mostraran `'$'` aunque
-  la moneda fuera GTQ/BRL/DOP. **VE queda en `'$'`** (su currency_config es `'$'`, precios base USD).
+- `CatalogInfo.currencySymbol` (en `ecommerce.service.ts`) tiene **dos ramas**:
+  - **Venezuela (`country_code === 'VE'`)** → caso especial: el precio base mostrado es la
+    moneda de **referencia** (`$`/`€`), NO la local (Bs.). El Bs. se muestra aparte con el
+    toggle `showLocalCurrencyPrice`. En VE `currency_config.currency_symbol` suele ser `'Bs.'`,
+    así que **NO** se usa; se mantiene la lógica histórica `config.currency_symbol` → país →
+    `'$'`. (Bug real: usar `cc` en VE hizo que un catálogo con config `'$'` y cc `'Bs.'`
+    —`dicenorepostero`— mostrara `'Bs.'` siempre aunque el Bs. estuviera apagado.)
+  - **Resto de países** → `currency_config.currency_symbol` es la fuente autoritativa
+    (`Q`/`R$`/`RD$`/`S/`/`€`…) → país → `config.currency_symbol` → `'$'`. Usar `config` primero
+    hacía que GT/BR/DO… mostraran `'$'` aunque la moneda fuera GTQ/BRL/DOP.
 - **Separadores de miles/decimales**: los precios del storefront se formatean con el pipe
   `tenantPrice` (`e-commerce/.../presenter/pipes/tenant-price.pipe.ts`), que lee
   `EcommerceStore.numberFormat()` (de `currency_config.decimal_separator` /
