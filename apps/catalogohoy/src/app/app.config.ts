@@ -15,6 +15,7 @@ import {
 import {
   provideIcons,
   providePrimeNG,
+  provideSentry,
   provideTranslation,
   provideUi,
 } from '@catalogohoy/core';
@@ -36,6 +37,7 @@ export const appConfig: ApplicationConfig = {
     provideTranslation(),
     provideUi(),
     provideIcons(),
+    ...provideSentry(),
     { provide: LOCALE_ID, useValue: 'es' },
   ],
 };

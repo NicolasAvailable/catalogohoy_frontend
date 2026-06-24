@@ -452,6 +452,13 @@
               severity="contrast"
               size="small"
             />
+            <ui-button
+              (click)="onShare(item)"
+              icon="share2"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+            />
             @if (canDeleteProduct()) {
             <ui-button
               (click)="onDelete(item)"

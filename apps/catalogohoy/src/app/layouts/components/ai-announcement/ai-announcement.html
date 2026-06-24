@@ -1,0 +1,103 @@
+<ui-dialog
+  #aiAnnounce
+  headerTitle="✨ Llegó la IA a CatálogoHoy"
+  styleClass="w-[54rem]! max-w-[95vw]!"
+  (close)="onAnnouncementClose()"
+>
+  <!-- Dos columnas en desktop (imagen izquierda · texto derecha); apilado en
+       móvil con la imagen arriba. -->
+  <div class="flex flex-col md:flex-row gap-5 pt-1">
+    <img
+      src="/ai-generate-preview.png"
+      alt="Generar imagen de producto con IA"
+      class="w-full md:w-1/2 self-start rounded-xl border border-grey-100 shadow-sm"
+    />
+
+    <div class="flex flex-col gap-5 md:w-1/2">
+      <p class="text-sm text-grey-500">
+        Ya podés crear y mejorar tus productos con inteligencia artificial,
+        directo desde el editor de productos:
+      </p>
+
+      <ul class="flex flex-col gap-4">
+      <li class="flex items-start gap-3">
+        <span
+          class="shrink-0 w-9 h-9 rounded-lg bg-violet-50 text-violet-600 inline-flex items-center justify-center"
+        >
+          <ui-icon name="sparkles" styleClass="w-5 h-5" />
+        </span>
+        <div class="leading-tight">
+          <span class="font-semibold text-grey-800">Generar imágenes con IA</span>
+          <p class="text-sm text-grey-400">
+            Creá fotos de producto a partir de un texto.
+          </p>
+        </div>
+      </li>
+      <li class="flex items-start gap-3">
+        <span
+          class="shrink-0 w-9 h-9 rounded-lg bg-violet-50 text-violet-600 inline-flex items-center justify-center"
+        >
+          <ui-icon name="bot" styleClass="w-5 h-5" />
+        </span>
+        <div class="leading-tight">
+          <span class="font-semibold text-grey-800">Quitar el fondo con IA</span>
+          <p class="text-sm text-grey-400">
+            Dejá tus fotos con un fondo limpio en un clic.
+          </p>
+        </div>
+      </li>
+      <li class="flex items-start gap-3">
+        <span
+          class="shrink-0 w-9 h-9 rounded-lg bg-violet-50 text-violet-600 inline-flex items-center justify-center"
+        >
+          <ui-icon name="eraser" styleClass="w-5 h-5" />
+        </span>
+        <div class="leading-tight">
+          <span class="font-semibold text-grey-800">Borrador a mano</span>
+          <p class="text-sm text-grey-400">
+            Borrá lo que sobra de la imagen, estilo Canva.
+          </p>
+        </div>
+      </li>
+      <li class="flex items-start gap-3">
+        <span
+          class="shrink-0 w-9 h-9 rounded-lg bg-violet-50 text-violet-600 inline-flex items-center justify-center"
+        >
+          <ui-icon name="wand-sparkles" styleClass="w-5 h-5" />
+        </span>
+        <div class="leading-tight">
+          <span class="font-semibold text-grey-800"
+            >Mejorar la descripción con IA</span
+          >
+          <p class="text-sm text-grey-400">
+            Redacción más clara y vendedora en un toque.
+          </p>
+        </div>
+      </li>
+    </ul>
+
+    <p class="text-xs text-grey-400">
+      Cada cuenta incluye créditos de IA mensuales según su plan.
+    </p>
+
+    <div class="flex items-center justify-end gap-2 mt-1">
+      <ui-button
+        label="Cerrar"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        size="small"
+        (click)="closeAnnouncement()"
+      />
+      <button
+        type="button"
+        (click)="exploreAi()"
+        class="inline-flex items-center gap-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2 transition-colors cursor-pointer"
+      >
+        <ui-icon name="sparkles" styleClass="w-4 h-4" />
+        Explorar
+      </button>
+      </div>
+    </div>
+  </div>
+</ui-dialog>

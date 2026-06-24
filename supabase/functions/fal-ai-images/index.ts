@@ -39,6 +39,27 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   });
 }
 
+// Registra una generación exitosa en ai_usage_log (panel internal "Uso de IA").
+// Best-effort: nunca debe romper la respuesta al usuario.
+async function logAiUsage(
+  admin: ReturnType<typeof createClient>,
+  userId: number,
+  feature: string,
+  prompt: string,
+  credits: number,
+): Promise<void> {
+  try {
+    await admin.from("ai_usage_log").insert({
+      user_id: userId,
+      feature,
+      prompt: prompt?.trim() ? prompt.trim() : null,
+      credits,
+    });
+  } catch (e) {
+    console.error("ai_usage_log insert failed:", e);
+  }
+}
+
 // Error de fal.ai con su status HTTP y el mensaje crudo, para poder mapearlo
 // a un texto amigable más adelante.
 class FalError extends Error {
@@ -301,6 +322,7 @@ Deno.serve(async (req) => {
         throw new Error("fal.ai no devolvió imagen");
       }
       const publicUrl = await persistToStorage(admin, resultUrl, "bg");
+      await logAiUsage(admin, ownerId, "image_remove_bg", "", cost);
       return jsonResponse({ success: true, url: publicUrl });
     }
 
@@ -340,6 +362,7 @@ Deno.serve(async (req) => {
       }
       const png = await compositeCutout(imageUrl, maskUrl);
       const publicUrl = await uploadPng(admin, png, "seg");
+      await logAiUsage(admin, ownerId, "image_segment", "", cost);
       return jsonResponse({ success: true, url: publicUrl });
     }
 
@@ -366,6 +389,7 @@ Deno.serve(async (req) => {
         throw new Error("fal.ai no devolvió imagen");
       }
       const publicUrl = await persistToStorage(admin, resultUrl, "gen");
+      await logAiUsage(admin, ownerId, "image_generate", prompt, cost);
       return jsonResponse({ success: true, url: publicUrl });
     }
 

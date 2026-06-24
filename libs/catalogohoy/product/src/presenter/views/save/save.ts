@@ -328,6 +328,21 @@ export default class Save implements OnInit {
     this.newCategoryName.set(event);
   }
 
+  /** Copia al portapapeles la URL pública del producto que se está editando.
+   *  Mismo patrón que el listado: `https://{slug}.catalogohoy.com/?product={id}`. */
+  public async onShare(): Promise<void> {
+    const slug = this.tenantStore.tenantSlug();
+    const productId = this.id();
+    if (!slug || !productId) return;
+    const url = `https://${slug}.catalogohoy.com/?product=${productId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      this.toastService.success('Link copiado al portapapeles');
+    } catch {
+      /* clipboard puede no estar disponible en navegadores muy viejos */
+    }
+  }
+
   public generateSku(): void {
     const name = this.form.controls.name.value || '';
     if (!name.trim()) return;

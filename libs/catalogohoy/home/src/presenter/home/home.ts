@@ -1,16 +1,13 @@
 import { CommonModule, DecimalPipe } from '@angular/common';
 import {
-  AfterViewInit,
   Component,
   computed,
   effect,
   inject,
   OnInit,
   signal,
-  viewChild,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
-import { SupabaseClientProvider } from '@catalogohoy/core';
+import { RouterLink } from '@angular/router';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
@@ -19,14 +16,9 @@ import {
   AccordionHeaderDirective,
   AccordionPanelDirective,
   ButtonComponent,
-  DialogComponent,
   IconComponent,
 } from '@ui';
 import { HomeStore } from '../../infrastructure/home.store';
-
-// Clave del anuncio (por CUENTA, guardada en users.seen_announcements). Para
-// re-anunciar una feature nueva, usar otra clave (ai_v2…).
-const ANNOUNCEMENT_KEY = 'ai_v1';
 
 type ChartTab = 'ventas' | 'pedidos';
 type Currency = 'bs' | 'usd';
@@ -42,59 +34,16 @@ type Currency = 'bs' | 'usd';
     AccordionComponent,
     AccordionHeaderDirective,
     AccordionPanelDirective,
-    DialogComponent,
     DecimalPipe,
   ],
   templateUrl: './home.html',
   styleUrls: ['./home.css'],
 })
-export class Home implements OnInit, AfterViewInit {
+export class Home implements OnInit {
   private readonly homeStore = inject(HomeStore);
   private readonly tenantStore = inject(TenantStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly permissionsStore = inject(TeamPermissionsStore);
-  private readonly router = inject(Router);
-  private readonly supabase = SupabaseClientProvider.getInstance();
-
-  // Modal de anuncio "Nuevo: IA en la plataforma" (una vez por CUENTA).
-  private readonly aiAnnounce = viewChild<DialogComponent>('aiAnnounce');
-
-  async ngAfterViewInit(): Promise<void> {
-    try {
-      const { data, error } = await this.supabase.rpc('has_seen_announcement', {
-        p_key: ANNOUNCEMENT_KEY,
-      });
-      if (!error && data === false) this.aiAnnounce()?.show();
-    } catch {
-      /* si falla la consulta, no mostramos para no molestar */
-    }
-  }
-
-  private markAnnouncementSeen(): void {
-    // Fire-and-forget; la RPC es idempotente (no re-agrega la clave).
-    this.supabase
-      .rpc('mark_announcement_seen', { p_key: ANNOUNCEMENT_KEY })
-      .then(
-        () => undefined,
-        () => undefined
-      );
-  }
-
-  /** El diálogo se cerró (X, máscara o escape): también cuenta como visto. */
-  public onAnnouncementClose(): void {
-    this.markAnnouncementSeen();
-  }
-
-  public closeAnnouncement(): void {
-    this.markAnnouncementSeen();
-    this.aiAnnounce()?.hide();
-  }
-
-  public exploreAi(): void {
-    this.markAnnouncementSeen();
-    this.aiAnnounce()?.hide();
-    this.router.navigate(['/admin/products/create']);
-  }
 
   public readonly showDashboard = computed(() => {
     return this.permissionsStore.isOwner() || this.permissionsStore.can()('ordenes', 'view');

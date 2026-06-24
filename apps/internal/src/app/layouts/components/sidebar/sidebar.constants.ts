@@ -47,4 +47,9 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     icon: 'ticket-percent',
     routerLink: '/coupons',
   },
+  {
+    label: 'Uso de IA',
+    icon: 'sparkles',
+    routerLink: '/ai-usage',
+  },
 ];

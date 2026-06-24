@@ -3,11 +3,18 @@ import { RouterOutlet } from '@angular/router';
 import { environment } from '@catalogohoy/env';
 import { ExpirationBannerComponent, PlanStore } from '@catalogohoy/plan';
 import { WhatsappSupportComponent } from '@ui';
-import { Navbar, Sidebar } from '../../components';
+import { AiAnnouncement, Navbar, Sidebar } from '../../components';
 
 @Component({
   selector: 'app-base',
-  imports: [RouterOutlet, Navbar, Sidebar, WhatsappSupportComponent, ExpirationBannerComponent],
+  imports: [
+    RouterOutlet,
+    Navbar,
+    Sidebar,
+    WhatsappSupportComponent,
+    ExpirationBannerComponent,
+    AiAnnouncement,
+  ],
   templateUrl: './base.html',
 })
 export class Base implements OnInit {
