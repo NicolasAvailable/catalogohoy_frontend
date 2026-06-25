@@ -2,6 +2,25 @@
 
 > Lo que te hace perder tiempo si no lo sabés. Agregá acá cada nueva trampa.
 
+## Sentry `tracePropagationTargets` rompe las Edge Functions (CORS)
+
+- El **browser tracing** de Sentry adjunta headers `sentry-trace` y `baggage` a
+  cada request cuyo URL matchee `tracePropagationTargets`. Las **Edge Functions
+  de Supabase** tienen un `Access-Control-Allow-Headers` **fijo** en el código
+  (`authorization, x-client-info, apikey, content-type`) que **no** incluye esos
+  headers → el browser **bloquea el POST en el preflight** (se ve `OPTIONS 200`
+  en los logs pero **nunca un POST**) y el cliente recibe *"Failed to send a
+  request to the Edge Function"* (`FunctionsFetchError`, un `fetch` rechazado).
+- Sucede para **todas** las funciones llamadas desde el browser (checkout/pagos,
+  IA, créditos…), en todos los países. Síntoma en DevTools: la request a la
+  función en rojo, "No data found for resource", y no llega nada al backend.
+- **Regla**: NO poner el dominio de Supabase (ni terceros con CORS estricto) en
+  `tracePropagationTargets`. Está en `[]` (no propagar a nada). El backend no
+  continúa la traza igual, así que no se pierde nada útil.
+- Si en el futuro hiciera falta propagar, primero agregá `sentry-trace, baggage`
+  al `Access-Control-Allow-Headers` de **todas** las edge functions invocadas
+  desde el browser.
+
 ## `environment.production` es SIEMPRE false — usar `isDevMode()`
 
 - El barrel `@catalogohoy/env` (`libs/catalogohoy/environments/src/index.ts`) hace
