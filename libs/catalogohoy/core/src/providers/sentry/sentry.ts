@@ -45,11 +45,16 @@ export function initSentry({ dsn, appName }: InitSentryOptions): void {
     ],
     // Performance: % de transacciones muestreadas.
     tracesSampleRate: environment.sentryTracesSampleRate,
-    // Conecta las trazas del front con el backend (Supabase) para distributed tracing.
-    tracePropagationTargets: [
-      /^https:\/\/[^/]*\.catalogohoy\.com/,
-      /^https:\/\/yvkurjivijnhliofmfmj\.supabase\.co/,
-    ],
+    // ⚠️ NO propagar trazas (NO adjuntar headers sentry-trace/baggage a las
+    // requests). El tracing distribuido adjunta esos headers a las llamadas que
+    // matcheen estos targets, pero las Edge Functions de Supabase tienen un
+    // Access-Control-Allow-Headers FIJO (authorization, x-client-info, apikey,
+    // content-type) que NO incluye sentry-trace/baggage → el browser bloquea el
+    // POST en el preflight (OPTIONS 200 pero el POST nunca sale) y se rompe TODO
+    // lo que llama a una edge function (checkout, IA, créditos…). Backend no
+    // continúa la traza igual, así que no perdemos nada útil. Array vacío =
+    // no adjuntar headers a ninguna request. NO agregar el dominio de Supabase.
+    tracePropagationTargets: [],
     // Session Replay.
     replaysSessionSampleRate: environment.sentryReplaysSessionSampleRate,
     replaysOnErrorSampleRate: environment.sentryReplaysOnErrorSampleRate,
