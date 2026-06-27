@@ -2,19 +2,33 @@ import { NgClass } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '@shared/infrastructure';
-import { ButtonComponent, IconComponent } from '@ui';
+import {
+  ButtonComponent,
+  IconComponent,
+  InputTextComponent,
+  SelectComponent,
+  TextareaComponent,
+} from '@ui';
 import {
   TemplatesService,
   WhatsAppTemplate,
 } from '../../../infrastructure/templates.service';
 
 /** Plantillas de mensajes de WhatsApp (HSM): listar las de la WABA y crear nuevas
- *  (necesario para iniciar conversaciones / responder fuera de la ventana de 24h
- *  y para el App Review de whatsapp_business_management). */
+ *  (para iniciar conversaciones / responder fuera de la ventana de 24h y para el
+ *  App Review de whatsapp_business_management). Vista en ./templates.html. */
 @Component({
   selector: 'lib-templates',
   standalone: true,
-  imports: [FormsModule, NgClass, IconComponent, ButtonComponent],
+  imports: [
+    FormsModule,
+    NgClass,
+    IconComponent,
+    ButtonComponent,
+    InputTextComponent,
+    SelectComponent,
+    TextareaComponent,
+  ],
   host: { class: 'flex-1 flex flex-col min-h-0 overflow-y-auto' },
   templateUrl: './templates.html',
 })
@@ -36,8 +50,18 @@ export class TemplatesComponent implements OnInit {
   protected readonly fLanguage = signal('es');
   protected readonly fBody = signal('');
 
-  protected readonly categories = ['UTILITY', 'MARKETING', 'AUTHENTICATION'];
-  protected readonly languages = ['es', 'es_MX', 'es_AR', 'en_US', 'pt_BR'];
+  protected readonly categories = [
+    { label: 'Utilidad', value: 'UTILITY' },
+    { label: 'Marketing', value: 'MARKETING' },
+    { label: 'Autenticación', value: 'AUTHENTICATION' },
+  ];
+  protected readonly languages = [
+    { label: 'Español', value: 'es' },
+    { label: 'Español (México)', value: 'es_MX' },
+    { label: 'Español (Argentina)', value: 'es_AR' },
+    { label: 'Inglés (EE. UU.)', value: 'en_US' },
+    { label: 'Portugués (Brasil)', value: 'pt_BR' },
+  ];
 
   ngOnInit(): void {
     this.load();
