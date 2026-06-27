@@ -2,6 +2,7 @@ import { PickerComponent } from '@ctrl/ngx-emoji-mart';
 import {
   Component,
   computed,
+  DestroyRef,
   effect,
   ElementRef,
   HostListener,
@@ -38,6 +39,7 @@ export class ConversationPanelComponent {
   protected readonly chatStore = inject(ChatStore);
   protected readonly teamStore = inject(TeamStore);
   private readonly toast = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly messageInput = signal('');
 
   /** WhatsApp Cloud API text body limit. */
@@ -72,22 +74,51 @@ export class ConversationPanelComponent {
     if (c) this.chatStore.assignChat(c.id, userId);
   }
 
+  /** Whether the view is pinned to the bottom (so new content auto-scrolls). */
+  private stickToBottom = true;
+  private listenersAttached = false;
+
   constructor() {
     this.teamStore.load();
 
+    // New message → scroll to the bottom if we're pinned there.
     effect(() => {
       const msgs = this.chatStore.messages();
-      if (msgs.length > 0) {
+      if (msgs.length > 0 && this.stickToBottom) {
         setTimeout(() => this.scrollToBottom(), 0);
       }
     });
+
+    // Attach scroll/load listeners once the container exists. The 'load' (capture)
+    // re-scrolls when an image finishes loading — its height isn't known when the
+    // message is appended, so a single scroll would stop short of the bottom.
+    effect(() => {
+      const el = this.messagesContainer()?.nativeElement;
+      if (!el || this.listenersAttached) return;
+      this.listenersAttached = true;
+      el.addEventListener('scroll', this.onScroll, { passive: true });
+      el.addEventListener('load', this.onMediaLoad, true);
+      this.destroyRef.onDestroy(() => {
+        el.removeEventListener('scroll', this.onScroll);
+        el.removeEventListener('load', this.onMediaLoad, true);
+      });
+    });
   }
+
+  private readonly onScroll = (): void => {
+    const el = this.messagesContainer()?.nativeElement;
+    if (!el) return;
+    this.stickToBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  };
+
+  /** When an image finishes loading and we were pinned to the bottom, re-scroll. */
+  private readonly onMediaLoad = (): void => {
+    if (this.stickToBottom) this.scrollToBottom();
+  };
 
   private scrollToBottom() {
     const el = this.messagesContainer()?.nativeElement;
-    if (el) {
-      el.scrollTop = el.scrollHeight;
-    }
+    if (el) el.scrollTop = el.scrollHeight;
   }
 
   onKeydown(event: KeyboardEvent) {
@@ -98,6 +129,8 @@ export class ConversationPanelComponent {
   }
 
   send() {
+    // Al enviar siempre volvemos al fondo.
+    this.stickToBottom = true;
     if (this.chatStore.isSendingMessage() || this.overLimit()) return;
     const file = this.pendingFile();
     const content = this.messageInput().trim();
