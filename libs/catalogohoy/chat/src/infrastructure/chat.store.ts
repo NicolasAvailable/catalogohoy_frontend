@@ -20,6 +20,8 @@ type ChatState = {
   searchQuery: string;
   pipelineStatuses: PipelineStatus[];
   quickReplies: QuickReply[];
+  /** Message the agent is composing a quoted reply to (null = none). */
+  replyingTo: ChatMessage | null;
 };
 
 const initialState: ChatState = {
@@ -32,6 +34,7 @@ const initialState: ChatState = {
   searchQuery: '',
   pipelineStatuses: [],
   quickReplies: [],
+  replyingTo: null,
 };
 
 /** Newest activity first; conversations without activity sink to the bottom. */
@@ -112,10 +115,19 @@ export const ChatStore = signalStore(
         });
       },
 
+      /** Set (or clear) the message the agent is quoting in their next reply. */
+      setReplyingTo(msg: ChatMessage | null) {
+        patchState(store, { replyingTo: msg });
+      },
+
       async sendMessage(content: string) {
         const chatId = store.selectedChatId();
         const text = content.trim();
         if (!chatId || !text) return;
+
+        // Respuesta citada (sólo a mensajes ya persistidos = id positivo).
+        const replyTo = store.replyingTo();
+        const replyToId = replyTo && replyTo.id > 0 ? replyTo.id : null;
 
         // Render optimista: la burbuja aparece YA (con id temporal negativo y
         // estado 'sending'), sin esperar el round-trip de wa-send (cold start +
@@ -129,16 +141,18 @@ export const ChatStore = signalStore(
           isMine: true,
           createdAt: now,
           status: 'sending',
+          replyToMessageId: replyToId,
         };
         patchState(store, {
           messages: [...store.messages(), optimistic],
           isSendingMessage: true,
+          replyingTo: null,
           chats: store.chats().map((c) =>
             c.id === chatId ? { ...c, lastMessage: text, lastMessageAt: now } : c
           ),
         });
 
-        const result = await chatService.sendMessage(chatId, text, true);
+        const result = await chatService.sendMessage(chatId, text, true, replyToId);
 
         result.fold(
           () =>
@@ -176,6 +190,9 @@ export const ChatStore = signalStore(
         const chatId = store.selectedChatId();
         if (!chat || !chatId) return;
 
+        const replyTo = store.replyingTo();
+        const replyToId = replyTo && replyTo.id > 0 ? replyTo.id : null;
+
         const cap = caption.trim();
         const tempId = -Date.now();
         const now = new Date().toISOString();
@@ -189,10 +206,12 @@ export const ChatStore = signalStore(
           status: 'sending',
           type: 'image',
           mediaUrl: localUrl,
+          replyToMessageId: replyToId,
         };
         patchState(store, {
           messages: [...store.messages(), optimistic],
           isSendingMessage: true,
+          replyingTo: null,
           chats: store.chats().map((c) =>
             c.id === chatId
               ? { ...c, lastMessage: cap || '📷 Imagen', lastMessageAt: now }
@@ -214,7 +233,7 @@ export const ChatStore = signalStore(
           return;
         }
 
-        const result = await chatService.sendMedia(chatId, up.value.url, 'image', cap);
+        const result = await chatService.sendMedia(chatId, up.value.url, 'image', cap, replyToId);
         result.fold(
           () => markFailed(),
           (msg) => {

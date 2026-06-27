@@ -89,13 +89,14 @@ export class ChatService {
   async sendMessage(
     chatId: number,
     content: string,
-    isMine: boolean
+    isMine: boolean,
+    replyToId: number | null = null
   ): Promise<E.Either<Error, ChatMessage>> {
     // Respuesta del agente → intentar enviarla de verdad por WhatsApp. `wa-send`
     // envía con el token del comerciante y persiste el mensaje server-side.
     if (isMine) {
       const { data, error } = await this.client.functions.invoke('wa-send', {
-        body: { chatId, text: content },
+        body: { chatId, text: content, replyToMessageId: replyToId ?? undefined },
       });
 
       if (!error && data?.success && data?.message) {
@@ -125,7 +126,12 @@ export class ChatService {
     // Inserción directa: modo demo (agente) o mensaje entrante (is_mine=false).
     const { data: msgData, error: msgError } = await this.client
       .from('chat_messages')
-      .insert({ chat_id: chatId, content, is_mine: isMine })
+      .insert({
+        chat_id: chatId,
+        content,
+        is_mine: isMine,
+        reply_to_message_id: replyToId,
+      })
       .select()
       .single();
 
@@ -175,11 +181,18 @@ export class ChatService {
     chatId: number,
     mediaUrl: string,
     mediaType: 'image' | 'document',
-    caption: string
+    caption: string,
+    replyToId: number | null = null
   ): Promise<E.Either<Error, ChatMessage>> {
     const label = mediaType === 'document' ? '📎 Documento' : '📷 Imagen';
     const { data, error } = await this.client.functions.invoke('wa-send', {
-      body: { chatId, mediaUrl, mediaType, text: caption },
+      body: {
+        chatId,
+        mediaUrl,
+        mediaType,
+        text: caption,
+        replyToMessageId: replyToId ?? undefined,
+      },
     });
 
     if (!error && data?.success && data?.message) {
@@ -210,6 +223,7 @@ export class ChatService {
         is_mine: true,
         message_type: mediaType,
         media_url: mediaUrl,
+        reply_to_message_id: replyToId,
       })
       .select()
       .single();

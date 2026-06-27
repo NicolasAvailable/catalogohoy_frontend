@@ -252,6 +252,41 @@ export class ConversationPanelComponent {
     }
   }
 
+  // ------------------------------------------------------ quoted replies ---
+
+  /** Resolve the message a given message is replying to (from the loaded set). */
+  quotedOf(msg: ChatMessage): ChatMessage | undefined {
+    if (!msg.replyToMessageId) return undefined;
+    return this.chatStore
+      .messages()
+      .find((m) => m.id === msg.replyToMessageId);
+  }
+
+  /** Label for the quoted message's author. */
+  quotedAuthor(q: ChatMessage): string {
+    return q.isMine
+      ? 'Tú'
+      : this.chatStore.selectedChat()?.customerName || 'Cliente';
+  }
+
+  /** Short preview text for a quoted message. */
+  quotedText(q: ChatMessage): string {
+    if (q.type === 'image') {
+      return q.content && q.content !== '📷 Imagen' ? q.content : '📷 Imagen';
+    }
+    return q.content;
+  }
+
+  /** Start composing a quoted reply to a (persisted) message. */
+  startReply(msg: ChatMessage): void {
+    if (msg.id <= 0) return;
+    this.chatStore.setReplyingTo(msg);
+  }
+
+  cancelReply(): void {
+    this.chatStore.setReplyingTo(null);
+  }
+
   /** Adjuntar imagen: valida (imagen, ≤5 MB) y la envía vía el store (optimista
    *  → sube a storage → wa-send con type:image). */
   onAttachFile(event: Event): void {

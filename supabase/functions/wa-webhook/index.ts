@@ -217,12 +217,28 @@ async function handleIncoming(body: unknown): Promise<void> {
         if (!chat) continue;
         const chatId = chat.id;
 
+        // Respuesta citada: el cliente respondió a un mensaje → mapeamos el wamid
+        // citado (m.context.id) al mensaje local correspondiente.
+        const waMessageId = (m.id as string) ?? null;
+        const ctxId = (m.context as { id?: string } | undefined)?.id;
+        let replyToMessageId: number | null = null;
+        if (ctxId) {
+          const { data: quoted } = await admin
+            .from("chat_messages")
+            .select("id")
+            .eq("wa_message_id", ctxId)
+            .maybeSingle();
+          replyToMessageId = quoted?.id ?? null;
+        }
+
         await admin.from("chat_messages").insert({
           chat_id: chatId,
           content: text,
           is_mine: false,
           message_type: messageType,
           media_url: mediaUrl,
+          wa_message_id: waMessageId,
+          reply_to_message_id: replyToMessageId,
         });
 
         const chatUpdate: Record<string, unknown> = {

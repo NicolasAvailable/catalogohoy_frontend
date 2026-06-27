@@ -39,6 +39,10 @@ export interface ChatMessage {
   type?: 'text' | 'image' | 'document' | 'video' | 'audio';
   /** Public URL of the attached media (image/document), when type !== 'text'. */
   mediaUrl?: string | null;
+  /** WhatsApp message id (wamid) — used to map quoted replies. */
+  waMessageId?: string | null;
+  /** Local id of the message this one replies to (quoted reply), if any. */
+  replyToMessageId?: number | null;
 }
 
 /** A configurable kanban/pipeline stage for the tenant's CRM. */

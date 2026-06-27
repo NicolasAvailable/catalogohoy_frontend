@@ -46,6 +46,7 @@ type Payload = {
   text?: string;
   mediaUrl?: string;
   mediaType?: "image" | "document";
+  replyToMessageId?: number;
 };
 
 Deno.serve(async (req) => {
@@ -123,25 +124,32 @@ Deno.serve(async (req) => {
     );
   }
 
+  // Respuesta citada: resolvemos el wamid del mensaje al que se responde.
+  const replyToId = Number(body.replyToMessageId) || null;
+  let contextWamid: string | null = null;
+  if (replyToId) {
+    const { data: quoted } = await admin
+      .from("chat_messages")
+      .select("wa_message_id")
+      .eq("id", replyToId)
+      .maybeSingle();
+    contextWamid = quoted?.wa_message_id ?? null;
+  }
+
   // 3) Enviar por la Cloud API con el token del comerciante: texto libre, o
-  //    imagen/documento por `link` (con caption opcional = text).
+  //    imagen/documento por `link` (con caption opcional = text). Si hay cita,
+  //    se agrega `context.message_id`.
   const metaUrl =
     `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${phoneNumberId}/messages`;
-  const metaPayload: Record<string, unknown> = mediaUrl
-    ? {
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to,
-      type: mediaType,
-      [mediaType]: { link: mediaUrl, ...(text ? { caption: text } : {}) },
-    }
-    : {
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to,
-      type: "text",
-      text: { body: text },
-    };
+  const metaPayload: Record<string, unknown> = {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to,
+    ...(contextWamid ? { context: { message_id: contextWamid } } : {}),
+    ...(mediaUrl
+      ? { type: mediaType, [mediaType]: { link: mediaUrl, ...(text ? { caption: text } : {}) } }
+      : { type: "text", text: { body: text } }),
+  };
 
   let messageId: string | null = null;
   try {
@@ -179,6 +187,8 @@ Deno.serve(async (req) => {
       is_mine: true,
       message_type: mediaUrl ? mediaType : "text",
       media_url: mediaUrl || null,
+      wa_message_id: messageId,
+      reply_to_message_id: replyToId,
     })
     .select()
     .single();
