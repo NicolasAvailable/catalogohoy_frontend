@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { AccordionModule } from 'primeng/accordion';
 import { ProfileStore } from '@catalogohoy/profile';
 import { TeamStore } from '@catalogohoy/teams';
 import {
@@ -24,6 +25,7 @@ import { ChatStore } from '../../../infrastructure/chat.store';
   imports: [
     CommonModule,
     FormsModule,
+    AccordionModule,
     IconComponent,
     SelectComponent,
     SelectItemDirective,
@@ -41,6 +43,9 @@ export class CustomerPanelComponent {
   protected readonly chat = this.chatStore.selectedChat;
   protected readonly orders = signal<CustomerOrderSummary[]>([]);
   protected readonly noteDraft = signal('');
+
+  /** Collapsible ficha sections that start open (PrimeNG accordion, multiple). */
+  protected accordionValue: string[] = ['info', 'orders', 'notes'];
 
   protected readonly statusOptions = computed(() =>
     this.chatStore.pipelineStatuses().map((s) => ({ label: s.name, value: s.key }))

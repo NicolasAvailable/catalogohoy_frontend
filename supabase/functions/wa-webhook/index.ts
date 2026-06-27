@@ -84,29 +84,35 @@ async function tenantForPhoneNumberId(
   return data?.tenant_id ?? null;
 }
 
-/** Find-or-create the conversation for (tenant, customer phone). */
+/** Find-or-create the conversation for (tenant, customer phone). Returns whether
+ *  the matched chat already had a name (so we don't clobber a registered alias). */
 async function findOrCreateChat(
   tenantId: number,
   phone: string,
   name: string | null,
-): Promise<number | null> {
+): Promise<{ id: number; hasName: boolean } | null> {
   const { data: existing } = await admin
     .from("chats")
-    .select("id, customer_phone")
+    .select("id, customer_phone, customer_name")
     .eq("tenant_id", tenantId);
 
   const match = (existing ?? []).find(
     (c: { customer_phone: string | null }) =>
       digits(c.customer_phone ?? "") === digits(phone),
   );
-  if (match) return match.id;
+  if (match) {
+    return {
+      id: match.id,
+      hasName: !!String(match.customer_name ?? "").trim(),
+    };
+  }
 
   const { data: created } = await admin
     .from("chats")
     .insert({ tenant_id: tenantId, customer_phone: phone, customer_name: name })
     .select("id")
     .single();
-  return created?.id ?? null;
+  return created ? { id: created.id, hasName: !!name } : null;
 }
 
 async function handleIncoming(body: unknown): Promise<void> {
@@ -134,8 +140,9 @@ async function handleIncoming(body: unknown): Promise<void> {
         const text = describeMessage(m);
         if (!from || !text) continue;
 
-        const chatId = await findOrCreateChat(tenantId, from, profileName);
-        if (!chatId) continue;
+        const chat = await findOrCreateChat(tenantId, from, profileName);
+        if (!chat) continue;
+        const chatId = chat.id;
 
         await admin
           .from("chat_messages")
@@ -145,9 +152,9 @@ async function handleIncoming(body: unknown): Promise<void> {
           last_message: text,
           last_message_at: new Date().toISOString(),
         };
-        // Mostrar el nombre de perfil de WhatsApp del que escribe (no el de una
-        // orden vieja con el mismo teléfono).
-        if (profileName) chatUpdate.customer_name = profileName;
+        // Sólo usar el nombre de perfil de WhatsApp si el contacto NO tiene un
+        // nombre registrado (respeta el alias del módulo de clientes / órdenes).
+        if (profileName && !chat.hasName) chatUpdate.customer_name = profileName;
         await admin.from("chats").update(chatUpdate).eq("id", chatId);
         // unread_count increment is handled by a trigger in prod; kept simple here.
       }

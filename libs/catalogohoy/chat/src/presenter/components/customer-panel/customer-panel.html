@@ -18,17 +18,6 @@
     </div>
   </div>
 
-  <!-- Información básica -->
-  <div class="ficha__section">
-    <span class="ficha__section-title">Información básica</span>
-    <dl class="ficha__info">
-      <dt>Fecha de creación</dt>
-      <dd>{{ formatDateTime(c.createdAt) }}</dd>
-      <dt>Teléfono</dt>
-      <dd>{{ c.customerPhone || '—' }}</dd>
-    </dl>
-  </div>
-
   <!-- Pipeline status -->
   <div class="ficha__field">
     <span class="ficha__label">Estado</span>
@@ -87,61 +76,85 @@
     </ui-select>
   </div>
 
-  <!-- Past orders -->
-  <div class="ficha__section">
-    <span class="ficha__section-title">
-      Órdenes ({{ orders().length }})
-    </span>
-    @if (orders().length) {
-    <div class="ficha__orders">
-      @for (o of orders(); track o.id) {
-      <div class="ficha__order">
-        <span class="ficha__order-num">#{{ o.orderNumber ?? o.id }}</span>
-        <span class="ficha__order-meta">
-          {{ formatDate(o.createdAt) }} · {{ orderStatusLabel(o.status) }}
-        </span>
-        <span class="ficha__order-total">${{ o.totalUsd }}</span>
-      </div>
-      }
-    </div>
-    } @else {
-    <p class="ficha__hint">Sin órdenes registradas.</p>
-    }
-  </div>
+  <!-- Collapsible sections -->
+  <p-accordion [multiple]="true" [(value)]="accordionValue" styleClass="ficha__accordion">
+    <!-- Información básica -->
+    <p-accordion-panel value="info">
+      <p-accordion-header>
+        <span class="ficha__section-title">Información básica</span>
+      </p-accordion-header>
+      <p-accordion-content>
+        <dl class="ficha__info">
+          <dt>Fecha de creación</dt>
+          <dd>{{ formatDateTime(c.createdAt) }}</dd>
+          <dt>Teléfono</dt>
+          <dd>{{ c.customerPhone || '—' }}</dd>
+        </dl>
+      </p-accordion-content>
+    </p-accordion-panel>
 
-  <!-- Internal notes -->
-  <div class="ficha__section ficha__section--notes">
-    <span class="ficha__section-title">Notas internas</span>
-    <div class="ficha__notes">
-      @for (n of c.internalNotes; track $index) {
-      <div class="ficha__note">
-        <div class="ficha__note-head">
-          <span class="ficha__note-author">{{ n.author }}</span>
-          <span class="ficha__note-date">{{ formatDate(n.createdAt) }}</span>
+    <!-- Órdenes -->
+    <p-accordion-panel value="orders">
+      <p-accordion-header>
+        <span class="ficha__section-title">Órdenes ({{ orders().length }})</span>
+      </p-accordion-header>
+      <p-accordion-content>
+        @if (orders().length) {
+        <div class="ficha__orders">
+          @for (o of orders(); track o.id) {
+          <div class="ficha__order">
+            <span class="ficha__order-num">#{{ o.orderNumber ?? o.id }}</span>
+            <span class="ficha__order-meta">
+              {{ formatDate(o.createdAt) }} · {{ orderStatusLabel(o.status) }}
+            </span>
+            <span class="ficha__order-total">${{ o.totalUsd }}</span>
+          </div>
+          }
         </div>
-        <p class="ficha__note-text">{{ n.text }}</p>
-      </div>
-      } @empty {
-      <p class="ficha__hint">Solo el equipo ve estas notas.</p>
-      }
-    </div>
-    <div class="ficha__note-composer">
-      <textarea
-        class="ficha__note-input"
-        rows="2"
-        placeholder="Agregar nota..."
-        [ngModel]="noteDraft()"
-        (ngModelChange)="noteDraft.set($event)"
-        (keydown)="onNoteKeydown($event)"
-      ></textarea>
-      <button
-        class="ficha__note-add"
-        [disabled]="!noteDraft().trim()"
-        (click)="addNote()"
-      >
-        <ui-icon name="plus" size="14" /> Agregar nota
-      </button>
-    </div>
-  </div>
+        } @else {
+        <p class="ficha__hint">Sin órdenes registradas.</p>
+        }
+      </p-accordion-content>
+    </p-accordion-panel>
+
+    <!-- Notas internas -->
+    <p-accordion-panel value="notes">
+      <p-accordion-header>
+        <span class="ficha__section-title">Notas internas</span>
+      </p-accordion-header>
+      <p-accordion-content>
+        <div class="ficha__notes">
+          @for (n of c.internalNotes; track $index) {
+          <div class="ficha__note">
+            <div class="ficha__note-head">
+              <span class="ficha__note-author">{{ n.author }}</span>
+              <span class="ficha__note-date">{{ formatDate(n.createdAt) }}</span>
+            </div>
+            <p class="ficha__note-text">{{ n.text }}</p>
+          </div>
+          } @empty {
+          <p class="ficha__hint">Solo el equipo ve estas notas.</p>
+          }
+        </div>
+        <div class="ficha__note-composer">
+          <textarea
+            class="ficha__note-input"
+            rows="2"
+            placeholder="Agregar nota..."
+            [ngModel]="noteDraft()"
+            (ngModelChange)="noteDraft.set($event)"
+            (keydown)="onNoteKeydown($event)"
+          ></textarea>
+          <button
+            class="ficha__note-add"
+            [disabled]="!noteDraft().trim()"
+            (click)="addNote()"
+          >
+            <ui-icon name="plus" size="14" /> Agregar nota
+          </button>
+        </div>
+      </p-accordion-content>
+    </p-accordion-panel>
+  </p-accordion>
 </div>
 }
