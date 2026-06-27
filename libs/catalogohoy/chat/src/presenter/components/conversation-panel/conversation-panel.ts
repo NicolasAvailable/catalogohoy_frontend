@@ -48,9 +48,11 @@ export class ConversationPanelComponent {
     () => this.messageInput().length > this.maxChars
   );
 
-  /** Imagen adjunta pendiente de enviar (preview en el composer). */
-  protected readonly pendingFile = signal<File | null>(null);
-  protected readonly pendingPreview = signal<string | null>(null);
+  /** Imágenes adjuntas pendientes de enviar (preview en el composer). Cada una se
+   *  envía como un mensaje separado: la Cloud API es 1 archivo por mensaje (igual
+   *  que WhatsApp, que agrupa varios mensajes como "álbum"). */
+  protected readonly pendingMedia = signal<{ file: File; preview: string }[]>([]);
+  protected readonly maxAttachments = 10;
 
   /** Team members for the header "Asignar a" control (mirrors the ficha). */
   protected readonly assigneeOptions = computed(() => [
@@ -132,12 +134,14 @@ export class ConversationPanelComponent {
     // Al enviar siempre volvemos al fondo.
     this.stickToBottom = true;
     if (this.chatStore.isSendingMessage() || this.overLimit()) return;
-    const file = this.pendingFile();
+    const media = this.pendingMedia();
     const content = this.messageInput().trim();
-    if (file) {
-      // Envía la imagen adjunta con el texto como caption.
-      this.chatStore.sendMedia(file, content);
-      this.clearAttachment();
+    if (media.length) {
+      // Cada imagen es un mensaje aparte; el caption (si hay) va en la primera.
+      media.forEach((m, i) =>
+        this.chatStore.sendMedia(m.file, i === 0 ? content : '')
+      );
+      this.clearAttachments();
       this.messageInput.set('');
       return;
     }
@@ -146,12 +150,17 @@ export class ConversationPanelComponent {
     this.messageInput.set('');
   }
 
-  /** Descarta la imagen adjunta antes de enviarla. */
-  clearAttachment(): void {
-    const url = this.pendingPreview();
-    if (url) URL.revokeObjectURL(url);
-    this.pendingFile.set(null);
-    this.pendingPreview.set(null);
+  /** Quita una imagen adjunta (antes de enviar). */
+  removeAttachment(index: number): void {
+    const list = this.pendingMedia();
+    const item = list[index];
+    if (item) URL.revokeObjectURL(item.preview);
+    this.pendingMedia.set(list.filter((_, i) => i !== index));
+  }
+
+  private clearAttachments(): void {
+    for (const m of this.pendingMedia()) URL.revokeObjectURL(m.preview);
+    this.pendingMedia.set([]);
   }
 
   /** Quick-reply popover state + insertion. */
@@ -291,20 +300,33 @@ export class ConversationPanelComponent {
    *  → sube a storage → wa-send con type:image). */
   onAttachFile(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
+    const files = Array.from(input.files ?? []);
     input.value = '';
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      this.toast.warning('Por ahora solo se pueden enviar imágenes (JPG/PNG).');
+    if (!files.length) return;
+
+    const current = this.pendingMedia();
+    const room = this.maxAttachments - current.length;
+    if (room <= 0) {
+      this.toast.warning(`Máximo ${this.maxAttachments} imágenes.`);
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      this.toast.warning('La imagen supera el máximo de 5 MB.');
-      return;
+
+    const added: { file: File; preview: string }[] = [];
+    let skipped = false;
+    for (const file of files) {
+      if (added.length >= room) {
+        skipped = true;
+        break;
+      }
+      if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+        skipped = true;
+        continue;
+      }
+      added.push({ file, preview: URL.createObjectURL(file) });
     }
-    // Adjuntar (preview); se envía al pulsar "Enviar".
-    this.clearAttachment();
-    this.pendingFile.set(file);
-    this.pendingPreview.set(URL.createObjectURL(file));
+    if (added.length) this.pendingMedia.set([...current, ...added]);
+    if (skipped) {
+      this.toast.warning('Algunas imágenes se omitieron (solo JPG/PNG ≤ 5 MB).');
+    }
   }
 }

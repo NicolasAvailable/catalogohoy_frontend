@@ -42,6 +42,13 @@ function byLastMessageDesc(a: Chat, b: Chat): number {
   return (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? '');
 }
 
+/** Monotonic negative ids for optimistic messages (unique even when several are
+ *  created in the same tick, e.g. sending multiple images at once). */
+let tempIdSeq = 0;
+function nextTempId(): number {
+  return -++tempIdSeq;
+}
+
 export const ChatStore = signalStore(
   { providedIn: 'root' },
   withState(initialState),
@@ -132,7 +139,7 @@ export const ChatStore = signalStore(
         // Render optimista: la burbuja aparece YA (con id temporal negativo y
         // estado 'sending'), sin esperar el round-trip de wa-send (cold start +
         // DB + Meta). Se reconcilia cuando responde.
-        const tempId = -Date.now();
+        const tempId = nextTempId();
         const now = new Date().toISOString();
         const optimistic: ChatMessage = {
           id: tempId,
@@ -194,7 +201,7 @@ export const ChatStore = signalStore(
         const replyToId = replyTo && replyTo.id > 0 ? replyTo.id : null;
 
         const cap = caption.trim();
-        const tempId = -Date.now();
+        const tempId = nextTempId();
         const now = new Date().toISOString();
         const localUrl = URL.createObjectURL(file);
         const optimistic: ChatMessage = {

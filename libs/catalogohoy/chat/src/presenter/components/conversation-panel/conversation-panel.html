@@ -192,22 +192,24 @@
           </button>
         </div>
         }
-        @if (pendingPreview(); as preview) {
-        <div class="flex items-start gap-2 px-3 pt-3">
+        @if (pendingMedia().length) {
+        <div class="flex items-start gap-2 px-3 pt-3 flex-wrap">
+          @for (m of pendingMedia(); track m.preview; let idx = $index) {
           <div class="relative">
             <img
-              [src]="preview"
+              [src]="m.preview"
               alt="Adjunto"
               class="w-20 h-20 rounded-lg object-cover border border-grey-100"
             />
             <button
-              (click)="clearAttachment()"
+              (click)="removeAttachment(idx)"
               class="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-grey-800 text-white flex items-center justify-center cursor-pointer hover:bg-grey-900"
               title="Quitar"
             >
               <ui-icon name="x" size="12" />
             </button>
           </div>
+          }
         </div>
         }
         <textarea
@@ -280,6 +282,7 @@
               type="file"
               class="hidden"
               accept="image/*"
+              multiple
               (change)="onAttachFile($event)"
             />
             <button
@@ -303,7 +306,7 @@
             </span>
             <button
               class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
-              [disabled]="(!messageInput().trim() && !pendingFile()) || chatStore.isSendingMessage() || overLimit()"
+              [disabled]="(!messageInput().trim() && !pendingMedia().length) || chatStore.isSendingMessage() || overLimit()"
               (click)="send()"
             >
               Enviar <ui-icon name="send" size="14" />
