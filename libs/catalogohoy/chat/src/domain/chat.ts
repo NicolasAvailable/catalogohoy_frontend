@@ -31,6 +31,10 @@ export interface ChatMessage {
   content: string;
   isMine: boolean;
   createdAt: string;
+  /** Optimistic delivery state for outgoing messages (only set client-side):
+   *  'sending' while wa-send is in flight, 'failed' if it errored. Real persisted
+   *  messages leave it undefined. */
+  status?: 'sending' | 'failed';
 }
 
 /** A configurable kanban/pipeline stage for the tenant's CRM. */

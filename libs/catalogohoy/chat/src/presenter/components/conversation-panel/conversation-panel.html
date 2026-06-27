@@ -101,15 +101,20 @@
                 [class.shadow-sm]="!msg.isMine"
               >
                 <p class="text-sm whitespace-pre-wrap break-words">{{ msg.content }}</p>
-                @if (isGroupEnd(group.msgs, i)) {
-                <p
-                  class="text-[10px] mt-1 -mb-0.5"
+                @if (isGroupEnd(group.msgs, i) || msg.status) {
+                <div
+                  class="text-[10px] mt-1 -mb-0.5 flex items-center gap-1"
+                  [class.justify-end]="msg.isMine"
                   [class.text-primary-100]="msg.isMine"
                   [class.text-grey-300]="!msg.isMine"
-                  [class.text-right]="msg.isMine"
                 >
-                  {{ formatTime(msg.createdAt) }}
-                </p>
+                  <span>{{ formatTime(msg.createdAt) }}</span>
+                  @if (msg.status === 'sending') {
+                  <ui-icon name="clock" size="11" />
+                  } @else if (msg.status === 'failed') {
+                  <span class="text-red-200 font-medium">· No enviado</span>
+                  }
+                </div>
                 }
               </div>
             </div>

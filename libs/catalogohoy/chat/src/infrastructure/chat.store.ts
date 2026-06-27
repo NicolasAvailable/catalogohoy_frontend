@@ -114,21 +114,54 @@ export const ChatStore = signalStore(
 
       async sendMessage(content: string) {
         const chatId = store.selectedChatId();
-        if (!chatId || !content.trim()) return;
+        const text = content.trim();
+        if (!chatId || !text) return;
 
-        patchState(store, { isSendingMessage: true });
+        // Render optimista: la burbuja aparece YA (con id temporal negativo y
+        // estado 'sending'), sin esperar el round-trip de wa-send (cold start +
+        // DB + Meta). Se reconcilia cuando responde.
+        const tempId = -Date.now();
+        const now = new Date().toISOString();
+        const optimistic: ChatMessage = {
+          id: tempId,
+          chatId,
+          content: text,
+          isMine: true,
+          createdAt: now,
+          status: 'sending',
+        };
+        patchState(store, {
+          messages: [...store.messages(), optimistic],
+          isSendingMessage: true,
+          chats: store.chats().map((c) =>
+            c.id === chatId ? { ...c, lastMessage: text, lastMessageAt: now } : c
+          ),
+        });
 
-        const result = await chatService.sendMessage(chatId, content.trim(), true);
+        const result = await chatService.sendMessage(chatId, text, true);
 
         result.fold(
-          () => patchState(store, { isSendingMessage: false }),
-          (msg) => {
+          () =>
+            // Falló: marcar la burbuja optimista como 'failed' (no la borramos
+            // para no perder lo escrito).
             patchState(store, {
-              messages: [...store.messages(), msg],
+              isSendingMessage: false,
+              messages: store
+                .messages()
+                .map((m) => (m.id === tempId ? { ...m, status: 'failed' } : m)),
+            }),
+          (msg) => {
+            // OK: reemplazar la temporal por la persistida (deduplicando si el
+            // canal realtime ya la insertó).
+            const cleaned = store
+              .messages()
+              .filter((m) => m.id !== tempId && m.id !== msg.id);
+            patchState(store, {
+              messages: [...cleaned, msg],
               isSendingMessage: false,
               chats: store.chats().map((c) =>
                 c.id === chatId
-                  ? { ...c, lastMessage: content.trim(), lastMessageAt: msg.createdAt }
+                  ? { ...c, lastMessage: msg.content, lastMessageAt: msg.createdAt }
                   : c
               ),
             });
