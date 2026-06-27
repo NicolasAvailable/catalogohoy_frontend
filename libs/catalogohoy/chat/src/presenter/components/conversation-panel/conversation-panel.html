@@ -119,78 +119,94 @@
       </div>
     </div>
 
-    <!-- Input area -->
-    <div class="relative flex items-end gap-2 px-4 py-3 bg-white border-t border-grey-50 shrink-0">
-      <!-- Quick replies -->
-      @if (chatStore.quickReplies().length) {
-      <div class="relative shrink-0">
-        <button
-          (click)="toggleQuickReplies($event)"
-          class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 mb-1.5"
-          title="Respuestas rápidas"
-        >
-          <ui-icon name="zap" size="18" styleClass="text-grey-400" />
-        </button>
-        @if (quickRepliesOpen()) {
-        <div
-          class="absolute bottom-10 left-0 z-10 w-72 max-h-64 overflow-y-auto bg-white border border-grey-100 rounded-xl shadow-lg p-1"
-        >
-          @for (qr of chatStore.quickReplies(); track qr.id) {
+    <!-- Input area (estilo Tikket: textarea grande + toolbar inferior) -->
+    <div class="px-4 py-3 bg-white border-t border-grey-50 shrink-0">
+      <div
+        class="rounded-xl border border-grey-100 bg-white transition-colors focus-within:border-primary-300 focus-within:ring-2 focus-within:ring-primary-100"
+      >
+        <textarea
+          [ngModel]="messageInput()"
+          (ngModelChange)="messageInput.set($event)"
+          (keydown)="onKeydown($event)"
+          placeholder="Escribe una respuesta..."
+          class="w-full resize-none bg-transparent px-4 py-3 text-sm leading-relaxed text-grey-700 placeholder:text-grey-300 focus:outline-none min-h-[5rem] max-h-48 overflow-y-auto"
+        ></textarea>
+
+        <!-- Toolbar -->
+        <div class="flex items-center justify-between gap-2 px-2 py-1.5 border-t border-grey-50">
+          <div class="flex items-center gap-0.5">
+            <!-- Quick replies -->
+            @if (chatStore.quickReplies().length) {
+            <div class="relative">
+              <button
+                (click)="toggleQuickReplies($event)"
+                class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50"
+                title="Respuestas rápidas"
+              >
+                <ui-icon name="zap" size="18" styleClass="text-grey-400" />
+              </button>
+              @if (quickRepliesOpen()) {
+              <div
+                class="absolute bottom-10 left-0 z-10 w-72 max-h-64 overflow-y-auto bg-white border border-grey-100 rounded-xl shadow-lg p-1"
+              >
+                @for (qr of chatStore.quickReplies(); track qr.id) {
+                <button
+                  (click)="insertQuickReply(qr.content)"
+                  class="w-full text-left px-3 py-2 rounded-lg hover:bg-grey-50"
+                >
+                  <span class="block text-xs font-semibold text-primary-600">/{{ qr.shortcut }}</span>
+                  <span class="block text-xs text-grey-500 truncate">{{ qr.content }}</span>
+                </button>
+                }
+              </div>
+              }
+            </div>
+            }
+
+            <!-- Emoji picker (Apple set) -->
+            <div class="relative">
+              <button
+                (click)="toggleEmojiPicker($event)"
+                class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50"
+                title="Emojis"
+              >
+                <ui-icon name="smile" size="18" styleClass="text-grey-400" />
+              </button>
+              @if (emojiPickerOpen()) {
+              <div
+                class="absolute bottom-10 left-0 z-20 shadow-xl rounded-xl overflow-hidden"
+              >
+                <emoji-mart
+                  set="apple"
+                  [emojiSize]="20"
+                  [perLine]="8"
+                  [showPreview]="false"
+                  [isNative]="false"
+                  (emojiSelect)="addEmoji($event)"
+                ></emoji-mart>
+              </div>
+              }
+            </div>
+
+            <!-- Adjuntar -->
+            <button
+              class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50"
+              title="Adjuntar archivo"
+            >
+              <ui-icon name="paperclip" size="18" styleClass="text-grey-400" />
+            </button>
+          </div>
+
+          <!-- Enviar -->
           <button
-            (click)="insertQuickReply(qr.content)"
-            class="w-full text-left px-3 py-2 rounded-lg hover:bg-grey-50"
+            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            [disabled]="!messageInput().trim() || chatStore.isSendingMessage()"
+            (click)="send()"
           >
-            <span class="block text-xs font-semibold text-primary-600">/{{ qr.shortcut }}</span>
-            <span class="block text-xs text-grey-500 truncate">{{ qr.content }}</span>
+            Enviar <ui-icon name="send" size="14" />
           </button>
-          }
         </div>
-        }
       </div>
-      }
-
-      <!-- Emoji picker (Apple set) -->
-      <div class="relative shrink-0">
-        <button
-          (click)="toggleEmojiPicker($event)"
-          class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 mb-1.5"
-          title="Emojis"
-        >
-          <ui-icon name="smile" size="18" styleClass="text-grey-400" />
-        </button>
-        @if (emojiPickerOpen()) {
-        <div
-          class="absolute bottom-10 left-0 z-20 shadow-xl rounded-xl overflow-hidden"
-        >
-          <emoji-mart
-            set="apple"
-            [emojiSize]="20"
-            [perLine]="8"
-            [showPreview]="false"
-            [isNative]="false"
-            (emojiSelect)="addEmoji($event)"
-          ></emoji-mart>
-        </div>
-        }
-      </div>
-
-      <ui-icon name="paperclip" size="18" styleClass="text-grey-300 mb-2 cursor-pointer shrink-0" />
-      <textarea
-        [ngModel]="messageInput()"
-        (ngModelChange)="messageInput.set($event)"
-        (keydown)="onKeydown($event)"
-        placeholder="Escribe un mensaje..."
-        rows="2"
-        class="flex-1 resize-none bg-lino-400 rounded-xl px-3 py-2.5 text-sm leading-snug text-grey-700 placeholder:text-grey-300 focus:outline-none focus:ring-2 focus:ring-primary-200 min-h-[2.75rem] max-h-40 overflow-y-auto"
-        style="field-sizing: content"
-      ></textarea>
-      <ui-button
-        icon="send"
-        size="small"
-        styleClass="shrink-0 mb-0.5"
-        [disabled]="!messageInput().trim() || chatStore.isSendingMessage()"
-        (click)="send()"
-      />
     </div>
   </div>
 }
