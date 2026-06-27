@@ -46,17 +46,33 @@
 }
 .ficha__info dt {
   font-size: 0.6875rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--color-grey-400, #94a3b8);
+  color: var(--color-grey-500, #64748b);
   margin-bottom: 0.125rem;
 }
 .ficha__info dd {
   margin: 0;
   font-size: 0.8125rem;
-  color: var(--color-grey-700, #334155);
+  font-weight: 600;
+  color: var(--color-grey-800, #1e293b);
   word-break: break-word;
+}
+
+/* Avatar circular del responsable en el select "Asignado a". */
+.ficha-assignee-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  background: var(--color-primary-100, #d1fae5);
+  color: var(--color-primary-700, #15803d);
+  font-size: 0.625rem;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 .ficha__avatar {
   width: 2.75rem;
@@ -237,4 +253,16 @@
 .ficha__note-add:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* PrimeNG accordion dentro de la ficha: padding propio del header y el
+   contenido (por defecto venía sin espaciado y se veía apretado) + separador. */
+:host ::ng-deep .ficha__accordion .p-accordionpanel {
+  border-top: 0.0625rem solid var(--color-grey-100, #e5e7eb);
+}
+:host ::ng-deep .ficha__accordion .p-accordionheader {
+  padding: 0.875rem 0.25rem;
+}
+:host ::ng-deep .ficha__accordion .p-accordioncontent-content {
+  padding: 0.25rem 0.25rem 1rem;
 }

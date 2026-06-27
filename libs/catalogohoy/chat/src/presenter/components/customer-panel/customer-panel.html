@@ -65,12 +65,22 @@
     >
       <ng-template selectSelectedItem let-s>
         <span class="ficha-opt">
-          <ui-icon name="user" size="13" styleClass="text-grey-400" /> {{ s?.label }}
+          @if (s?.value != null) {
+          <span class="ficha-assignee-avatar">{{ initial(s?.label) }}</span>
+          } @else {
+          <ui-icon name="user" size="13" styleClass="text-grey-400" />
+          }
+          {{ s?.label }}
         </span>
       </ng-template>
       <ng-template selectItem let-item>
         <span class="ficha-opt">
-          <ui-icon name="user" size="13" styleClass="text-grey-400" /> {{ item?.label }}
+          @if (item?.value != null) {
+          <span class="ficha-assignee-avatar">{{ initial(item?.label) }}</span>
+          } @else {
+          <ui-icon name="user" size="13" styleClass="text-grey-400" />
+          }
+          {{ item?.label }}
         </span>
       </ng-template>
     </ui-select>
