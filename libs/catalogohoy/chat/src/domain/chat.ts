@@ -35,6 +35,8 @@ export interface ChatMessage {
    *  'sending' while wa-send is in flight, 'failed' if it errored. Real persisted
    *  messages leave it undefined. */
   status?: 'sending' | 'failed';
+  /** Reason a 'failed' message couldn't be sent (shown on hover). Client-only. */
+  error?: string;
   /** Message kind. 'text' (default) or a media type. */
   type?: 'text' | 'image' | 'document' | 'video' | 'audio';
   /** Public URL of the attached media (image/document), when type !== 'text'. */

@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TooltipModule } from 'primeng/tooltip';
 import { TeamStore } from '@catalogohoy/teams';
 import { ToastService } from '@shared/infrastructure';
 import {
@@ -27,6 +28,7 @@ import { ChatStore } from '../../../infrastructure/chat.store';
   standalone: true,
   imports: [
     FormsModule,
+    TooltipModule,
     IconComponent,
     ButtonComponent,
     ImageComponent,

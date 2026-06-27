@@ -156,7 +156,13 @@
                   @if (msg.status === 'sending') {
                   <ui-icon name="clock" size="11" />
                   } @else if (msg.status === 'failed') {
-                  <span class="text-red-200 font-medium">· No enviado</span>
+                  <span
+                    class="text-red-400 font-medium inline-flex items-center gap-1 cursor-help"
+                    [pTooltip]="msg.error || 'No se pudo enviar. Intentá de nuevo.'"
+                    tooltipPosition="top"
+                  >
+                    <ui-icon name="triangle-alert" size="12" /> No enviado
+                  </span>
                   }
                 </div>
                 }
@@ -196,15 +202,17 @@
         <div class="flex items-start gap-2 px-3 pt-3 flex-wrap">
           @for (m of pendingMedia(); track m.preview; let idx = $index) {
           <div class="relative">
-            <img
+            <ui-image
               [src]="m.preview"
               alt="Adjunto"
-              class="w-20 h-20 rounded-lg object-cover border border-grey-100"
+              styleClass="w-20 h-20 block rounded-lg overflow-hidden border border-grey-100 cursor-zoom-in"
+              imageClass="w-full h-full object-cover"
             />
             <button
               (click)="removeAttachment(idx)"
-              class="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-grey-800 text-white flex items-center justify-center cursor-pointer hover:bg-grey-900"
-              title="Quitar"
+              class="absolute -top-2 -right-2 z-10 w-5 h-5 rounded-full bg-grey-800 text-white flex items-center justify-center cursor-pointer hover:bg-grey-900"
+              pTooltip="Quitar"
+              tooltipPosition="top"
             >
               <ui-icon name="x" size="12" />
             </button>
@@ -229,7 +237,8 @@
               <button
                 (click)="toggleQuickReplies($event)"
                 class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
-                title="Respuestas rápidas"
+                pTooltip="Respuestas rápidas"
+                tooltipPosition="top"
               >
                 <ui-icon name="zap" size="18" styleClass="text-grey-400" />
               </button>
@@ -256,7 +265,8 @@
               <button
                 (click)="toggleEmojiPicker($event)"
                 class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
-                title="Emojis"
+                pTooltip="Emojis"
+                tooltipPosition="top"
               >
                 <ui-icon name="smile" size="18" styleClass="text-grey-400" />
               </button>
@@ -288,7 +298,8 @@
             <button
               (click)="fileInput.click()"
               class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
-              title="Adjuntar archivo"
+              pTooltip="Adjuntar imágenes"
+              tooltipPosition="top"
             >
               <ui-icon name="paperclip" size="18" styleClass="text-grey-400" />
             </button>

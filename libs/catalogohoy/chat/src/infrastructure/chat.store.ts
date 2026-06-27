@@ -162,14 +162,16 @@ export const ChatStore = signalStore(
         const result = await chatService.sendMessage(chatId, text, true, replyToId);
 
         result.fold(
-          () =>
+          (err) =>
             // Falló: marcar la burbuja optimista como 'failed' (no la borramos
-            // para no perder lo escrito).
+            // para no perder lo escrito) y guardar el motivo.
             patchState(store, {
               isSendingMessage: false,
-              messages: store
-                .messages()
-                .map((m) => (m.id === tempId ? { ...m, status: 'failed' } : m)),
+              messages: store.messages().map((m) =>
+                m.id === tempId
+                  ? { ...m, status: 'failed' as const, error: err.message }
+                  : m
+              ),
             }),
           (msg) => {
             // OK: reemplazar la temporal por la persistida (deduplicando si el
@@ -226,23 +228,25 @@ export const ChatStore = signalStore(
           ),
         });
 
-        const markFailed = () =>
+        const markFailed = (reason?: string) =>
           patchState(store, {
             isSendingMessage: false,
-            messages: store
-              .messages()
-              .map((m) => (m.id === tempId ? { ...m, status: 'failed' as const } : m)),
+            messages: store.messages().map((m) =>
+              m.id === tempId
+                ? { ...m, status: 'failed' as const, error: reason }
+                : m
+            ),
           });
 
         const up = await chatService.uploadMedia(file, chat.tenantId);
         if (up.isLeft()) {
-          markFailed();
+          markFailed('No se pudo subir la imagen al servidor.');
           return;
         }
 
         const result = await chatService.sendMedia(chatId, up.value.url, 'image', cap, replyToId);
         result.fold(
-          () => markFailed(),
+          (err) => markFailed(err.message),
           (msg) => {
             const cleaned = store
               .messages()
