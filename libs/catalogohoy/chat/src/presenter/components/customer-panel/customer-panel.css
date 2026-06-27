@@ -49,14 +49,15 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--color-grey-500, #64748b);
+  /* Sólo los labels van en negro; los valores quedan en gris. */
+  color: var(--color-grey-900, #0f172a);
   margin-bottom: 0.125rem;
 }
 .ficha__info dd {
   margin: 0;
   font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-grey-800, #1e293b);
+  font-weight: 400;
+  color: var(--color-grey-500, #64748b);
   word-break: break-word;
 }
 
@@ -159,11 +160,20 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
+  text-align: left;
   padding: 0.5rem 0.625rem;
   background: #fff;
   border: 0.0625rem solid var(--color-grey-100, #e5e7eb);
   border-radius: 0.5rem;
   font-size: 0.8125rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ficha__order:hover {
+  background: var(--color-grey-25, #fafafa);
+  border-color: var(--color-grey-200, #e2e8f0);
 }
 .ficha__order-num {
   font-weight: 700;
@@ -255,12 +265,21 @@
   cursor: not-allowed;
 }
 
-/* PrimeNG accordion dentro de la ficha: padding propio del header y el
-   contenido (por defecto venía sin espaciado y se veía apretado) + separador. */
+/* PrimeNG accordion dentro de la ficha: quitamos los bordes/fondos por defecto
+   de PrimeNG y dejamos sólo un separador superior limpio por sección. */
+:host ::ng-deep .ficha__accordion,
+:host ::ng-deep .ficha__accordion .p-accordioncontent,
+:host ::ng-deep .ficha__accordion .p-accordioncontent-content {
+  border: none;
+  background: transparent;
+}
 :host ::ng-deep .ficha__accordion .p-accordionpanel {
+  border: none;
   border-top: 0.0625rem solid var(--color-grey-100, #e5e7eb);
 }
 :host ::ng-deep .ficha__accordion .p-accordionheader {
+  border: none;
+  background: transparent;
   padding: 1rem 0.75rem;
 }
 :host ::ng-deep .ficha__accordion .p-accordioncontent-content {

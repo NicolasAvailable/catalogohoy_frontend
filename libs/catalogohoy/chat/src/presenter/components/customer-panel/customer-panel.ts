@@ -4,7 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { AccordionModule } from 'primeng/accordion';
 import { ProfileStore } from '@catalogohoy/profile';
 import { TeamStore } from '@catalogohoy/teams';
+import { OrderDetailModal, OrderStore } from '@catalogohoy/order';
+import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import {
+  DialogService,
+  dialogConfig,
   IconComponent,
   SelectComponent,
   SelectItemDirective,
@@ -39,6 +43,10 @@ export class CustomerPanelComponent {
   protected readonly teamStore = inject(TeamStore);
   private readonly chatService = inject(ChatService);
   private readonly profileStore = inject(ProfileStore);
+  private readonly orderStore = inject(OrderStore);
+  private readonly tenantCurrency = inject(TenantCurrencyStore);
+  private readonly dialogService = inject(DialogService);
+  private currencyLoaded = false;
 
   protected readonly chat = this.chatStore.selectedChat;
   protected readonly orders = signal<CustomerOrderSummary[]>([]);
@@ -76,10 +84,33 @@ export class CustomerPanelComponent {
         this.orders.set([]);
         return;
       }
+      if (!this.currencyLoaded) {
+        this.tenantCurrency.load(c.tenantId);
+        this.currencyLoaded = true;
+      }
       this.chatService
         .getCustomerOrders(c.tenantId, c.customerPhone)
         .then((res) => this.orders.set(res.isRight() ? res.value : []));
     });
+  }
+
+  /** Open the shared order-detail modal (same one as the Ordenes module). */
+  async openOrder(orderId: number): Promise<void> {
+    const order = await this.orderStore.getOrderById(orderId);
+    if (!order) return;
+    this.dialogService.open(
+      OrderDetailModal,
+      dialogConfig({
+        data: {
+          order,
+          currencySymbol: this.tenantCurrency.displaySymbol() || '$',
+          showDualBs: this.tenantCurrency.showDualCurrency(),
+        },
+        showHeader: false,
+        style: { width: '72rem', maxWidth: '95vw' },
+        contentStyle: { padding: '0', overflow: 'hidden' },
+      })
+    );
   }
 
   onStatusChange(key: string | null): void {

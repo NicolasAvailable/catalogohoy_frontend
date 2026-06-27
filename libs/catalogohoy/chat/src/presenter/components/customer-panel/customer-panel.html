@@ -65,7 +65,7 @@
     >
       <ng-template selectSelectedItem let-s>
         <span class="ficha-opt">
-          @if (s?.value != null) {
+          @if (s?.value !== null) {
           <span class="ficha-assignee-avatar">{{ initial(s?.label) }}</span>
           } @else {
           <ui-icon name="user" size="13" styleClass="text-grey-400" />
@@ -75,7 +75,7 @@
       </ng-template>
       <ng-template selectItem let-item>
         <span class="ficha-opt">
-          @if (item?.value != null) {
+          @if (item?.value !== null) {
           <span class="ficha-assignee-avatar">{{ initial(item?.label) }}</span>
           } @else {
           <ui-icon name="user" size="13" styleClass="text-grey-400" />
@@ -112,13 +112,13 @@
         @if (orders().length) {
         <div class="ficha__orders">
           @for (o of orders(); track o.id) {
-          <div class="ficha__order">
+          <button type="button" class="ficha__order" (click)="openOrder(o.id)">
             <span class="ficha__order-num">#{{ o.orderNumber ?? o.id }}</span>
             <span class="ficha__order-meta">
               {{ formatDate(o.createdAt) }} · {{ orderStatusLabel(o.status) }}
             </span>
             <span class="ficha__order-total">${{ o.totalUsd }}</span>
-          </div>
+          </button>
           }
         </div>
         } @else {
