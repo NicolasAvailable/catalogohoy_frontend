@@ -104,12 +104,23 @@
                 class="max-w-[75%] px-3.5 py-2 rounded-2xl leading-snug"
                 [class.rounded-br-md]="msg.isMine"
                 [class.rounded-bl-md]="!msg.isMine"
-                [class.bg-primary-500]="msg.isMine"
-                [class.text-white]="msg.isMine"
+                [class.bg-primary-500]="msg.isMine && !msg.isInternal"
+                [class.text-white]="msg.isMine && !msg.isInternal"
                 [class.bg-white]="!msg.isMine"
                 [class.text-grey-700]="!msg.isMine"
                 [class.shadow-sm]="!msg.isMine"
+                [class.bg-amber-100]="msg.isInternal"
+                [class.text-amber-900]="msg.isInternal"
+                [class.border]="msg.isInternal"
+                [class.border-amber-200]="msg.isInternal"
               >
+                @if (msg.isInternal) {
+                <div
+                  class="flex items-center gap-1 text-[10px] font-semibold text-amber-700 mb-1"
+                >
+                  <ui-icon name="eye-off" size="11" /> Nota interna · solo el equipo
+                </div>
+                }
                 @if (quotedOf(msg); as q) {
                 <div
                   class="mb-1 rounded-md px-2 py-1 text-xs border-l-2 max-w-full"
@@ -149,7 +160,8 @@
                 <div
                   class="text-[10px] mt-1 -mb-0.5 flex items-center gap-1"
                   [class.justify-end]="msg.isMine"
-                  [class.text-primary-100]="msg.isMine"
+                  [class.text-primary-100]="msg.isMine && !msg.isInternal"
+                  [class.text-amber-600]="msg.isInternal"
                   [class.text-grey-300]="!msg.isMine"
                 >
                   <span>{{ formatTime(msg.createdAt) }}</span>
@@ -174,10 +186,38 @@
       </div>
     </div>
 
-    <!-- Input area (estilo Tikket: textarea grande + toolbar inferior) -->
+    <!-- Input area (estilo Tikket: pestañas Mensaje/Susurro + composer) -->
     <div class="px-4 py-3 bg-white border-t border-grey-50 shrink-0">
+      <div class="flex items-center gap-5 mb-2 px-1">
+        <button
+          (click)="setComposerMode('message')"
+          class="text-sm pb-1.5 -mb-px border-b-2 cursor-pointer transition-colors"
+          [class.border-primary-500]="composerMode() === 'message'"
+          [class.text-primary-600]="composerMode() === 'message'"
+          [class.font-semibold]="composerMode() === 'message'"
+          [class.border-transparent]="composerMode() !== 'message'"
+          [class.text-grey-400]="composerMode() !== 'message'"
+        >
+          Mensaje
+        </button>
+        <button
+          (click)="setComposerMode('whisper')"
+          class="text-sm pb-1.5 -mb-px border-b-2 cursor-pointer transition-colors inline-flex items-center gap-1"
+          [class.border-amber-500]="composerMode() === 'whisper'"
+          [class.text-amber-600]="composerMode() === 'whisper'"
+          [class.font-semibold]="composerMode() === 'whisper'"
+          [class.border-transparent]="composerMode() !== 'whisper'"
+          [class.text-grey-400]="composerMode() !== 'whisper'"
+        >
+          <ui-icon name="eye-off" size="14" /> Susurro
+        </button>
+      </div>
       <div
-        class="rounded-xl border border-grey-100 bg-white transition-colors focus-within:border-primary-300 focus-within:ring-2 focus-within:ring-primary-100"
+        [ngClass]="
+          composerMode() === 'whisper'
+            ? 'rounded-xl border bg-amber-50 border-amber-300 transition-colors focus-within:ring-2 focus-within:ring-amber-100'
+            : 'rounded-xl border bg-white border-grey-100 transition-colors focus-within:border-primary-300 focus-within:ring-2 focus-within:ring-primary-100'
+        "
       >
         @if (chatStore.replyingTo(); as r) {
         <div class="flex items-center gap-2 px-3 pt-3">
@@ -202,7 +242,11 @@
           [ngModel]="messageInput()"
           (ngModelChange)="messageInput.set($event)"
           (keydown)="onKeydown($event)"
-          placeholder="Escribe una respuesta..."
+          [placeholder]="
+            composerMode() === 'whisper'
+              ? 'Nota interna para el equipo (no la ve el cliente)…'
+              : 'Escribe una respuesta...'
+          "
           class="w-full resize-none bg-transparent px-4 py-3 text-sm leading-relaxed text-grey-700 placeholder:text-grey-300 focus:outline-none min-h-[5rem] max-h-48 overflow-y-auto"
         ></textarea>
 
@@ -273,6 +317,7 @@
               multiple
               (change)="onAttachFile($event)"
             />
+            @if (composerMode() !== 'whisper') {
             <button
               (click)="fileInput.click()"
               class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
@@ -281,6 +326,7 @@
             >
               <ui-icon name="paperclip" size="18" styleClass="text-grey-400" />
             </button>
+            }
           </div>
 
           <!-- Contador + Enviar -->
@@ -294,7 +340,12 @@
               {{ messageInput().length }} / {{ maxChars }}
             </span>
             <button
-              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              [ngClass]="
+                composerMode() === 'whisper'
+                  ? 'bg-amber-500 hover:bg-amber-600'
+                  : 'bg-primary-500 hover:bg-primary-600'
+              "
               [disabled]="(!messageInput().trim() && !pendingMedia().length) || chatStore.isSendingMessage() || overLimit()"
               (click)="send()"
             >

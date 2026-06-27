@@ -1,3 +1,4 @@
+import { NgClass } from '@angular/common';
 import { PickerComponent } from '@ctrl/ngx-emoji-mart';
 import {
   Component,
@@ -28,6 +29,7 @@ import { ChatStore } from '../../../infrastructure/chat.store';
   standalone: true,
   imports: [
     FormsModule,
+    NgClass,
     TooltipModule,
     IconComponent,
     ButtonComponent,
@@ -49,6 +51,13 @@ export class ConversationPanelComponent {
   protected readonly overLimit = computed(
     () => this.messageInput().length > this.maxChars
   );
+
+  /** Composer mode: 'message' (al cliente) o 'whisper' (nota interna del equipo). */
+  protected readonly composerMode = signal<'message' | 'whisper'>('message');
+
+  setComposerMode(mode: 'message' | 'whisper'): void {
+    this.composerMode.set(mode);
+  }
 
   /** Imágenes adjuntas pendientes de enviar, cada una con su propio caption
    *  (estilo WhatsApp Web). Cada una se envía como un mensaje separado: la Cloud
@@ -143,6 +152,16 @@ export class ConversationPanelComponent {
     // Al enviar siempre volvemos al fondo.
     this.stickToBottom = true;
     if (this.chatStore.isSendingMessage() || this.overLimit()) return;
+
+    // Susurro: nota interna del equipo (solo texto, no se envía al cliente).
+    if (this.composerMode() === 'whisper') {
+      const note = this.messageInput().trim();
+      if (!note) return;
+      this.chatStore.sendInternalNote(note);
+      this.messageInput.set('');
+      return;
+    }
+
     const media = this.pendingMedia();
     if (media.length) {
       // Cada imagen es un mensaje aparte, con su propio caption.

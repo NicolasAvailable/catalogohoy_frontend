@@ -192,6 +192,51 @@ export const ChatStore = signalStore(
         );
       },
 
+      /** Add an internal note ("susurro") to the thread — team-only, optimistic. */
+      async sendInternalNote(content: string) {
+        const chatId = store.selectedChatId();
+        const text = content.trim();
+        if (!chatId || !text) return;
+
+        const tempId = nextTempId();
+        const now = new Date().toISOString();
+        const optimistic: ChatMessage = {
+          id: tempId,
+          chatId,
+          content: text,
+          isMine: true,
+          createdAt: now,
+          status: 'sending',
+          isInternal: true,
+        };
+        patchState(store, {
+          messages: [...store.messages(), optimistic],
+          isSendingMessage: true,
+        });
+
+        const result = await chatService.sendInternalNote(chatId, text);
+        result.fold(
+          (err) =>
+            patchState(store, {
+              isSendingMessage: false,
+              messages: store.messages().map((m) =>
+                m.id === tempId
+                  ? { ...m, status: 'failed' as const, error: err.message }
+                  : m
+              ),
+            }),
+          (msg) => {
+            const cleaned = store
+              .messages()
+              .filter((m) => m.id !== tempId && m.id !== msg.id);
+            patchState(store, {
+              messages: [...cleaned, msg],
+              isSendingMessage: false,
+            });
+          }
+        );
+      },
+
       /** Send an image: optimistic bubble with a local preview, then upload to
        *  storage + wa-send, reconciling with the persisted message. */
       async sendMedia(file: File, caption = '') {

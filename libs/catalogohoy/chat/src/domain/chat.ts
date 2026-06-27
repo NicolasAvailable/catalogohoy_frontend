@@ -45,6 +45,8 @@ export interface ChatMessage {
   waMessageId?: string | null;
   /** Local id of the message this one replies to (quoted reply), if any. */
   replyToMessageId?: number | null;
+  /** Internal team note ("susurro") — not sent to the customer. */
+  isInternal?: boolean;
 }
 
 /** A configurable kanban/pipeline stage for the tenant's CRM. */

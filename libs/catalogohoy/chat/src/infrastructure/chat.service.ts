@@ -237,6 +237,21 @@ export class ChatService {
     return E.right(ChatMessageMapper.toDomain(msgData));
   }
 
+  /** Add an internal team note ("susurro") to the thread — NOT sent to WhatsApp.
+   *  No actualiza el preview del chat (es una anotación del equipo). */
+  async sendInternalNote(
+    chatId: number,
+    content: string
+  ): Promise<E.Either<Error, ChatMessage>> {
+    const { data, error } = await this.client
+      .from('chat_messages')
+      .insert({ chat_id: chatId, content, is_mine: true, is_internal: true })
+      .select()
+      .single();
+    if (error) return E.left(new Error(error.message));
+    return E.right(ChatMessageMapper.toDomain(data));
+  }
+
   async markAsRead(chatId: number): Promise<E.Either<Error, void>> {
     const { error } = await this.client
       .from('chats')
