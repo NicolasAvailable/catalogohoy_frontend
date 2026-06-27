@@ -17,7 +17,12 @@ import {
   PanelMenuItem,
 } from '@ui';
 import { TooltipModule } from 'primeng/tooltip';
-import { CATALOG_MENU, PRODUCTS_MENU, TEAMS_MENU } from './sidebar.constants';
+import {
+  CATALOG_MENU,
+  CHAT_MENU,
+  PRODUCTS_MENU,
+  TEAMS_MENU,
+} from './sidebar.constants';
 
 @Component({
   selector: 'app-sidebar',
@@ -98,6 +103,7 @@ export class Sidebar {
   public readonly productsMenu: PanelMenuItem[] = PRODUCTS_MENU;
   public readonly catalogMenu: PanelMenuItem[] = CATALOG_MENU;
   public readonly teamsMenu: PanelMenuItem[] = TEAMS_MENU;
+  public readonly chatMenu: PanelMenuItem[] = CHAT_MENU;
 
   constructor() {
     this.router.events.subscribe((event) => {

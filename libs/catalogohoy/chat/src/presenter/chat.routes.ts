@@ -13,4 +13,9 @@ export const CHAT_ROUTES: Route[] = [
         (c) => c.ConversationsComponent
       ),
   },
+  {
+    path: 'templates',
+    loadComponent: () =>
+      import('./views/templates/templates').then((c) => c.TemplatesComponent),
+  },
 ];

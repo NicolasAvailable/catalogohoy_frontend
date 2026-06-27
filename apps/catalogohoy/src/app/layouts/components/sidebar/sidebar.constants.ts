@@ -27,11 +27,17 @@ export const CHAT_MENU: PanelMenuItem[] = [
     label: 'Chats',
     icon: 'message-square',
     iconNext: 'chevron-right',
-    state: { isOpen: false },
+    expanded: true,
+    state: { isOpen: true },
     items: [
       {
-        label: 'Conversaciones',
+        label: 'Mensajes',
         routerLink: '/admin/chat/conversations',
+        routerLinkActiveOptions: { exact: true },
+      },
+      {
+        label: 'Plantillas',
+        routerLink: '/admin/chat/templates',
         routerLinkActiveOptions: { exact: true },
       },
     ],

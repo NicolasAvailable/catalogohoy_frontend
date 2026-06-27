@@ -202,15 +202,32 @@
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
       }
     </li>
-    <li
-      routerLink="/admin/chat"
-      routerLinkActive="bg-primary-50"
-      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out cursor-pointer"
-    >
-      <div class="flex items-center gap-2">
-        <ui-icon name="message-square" size="16" />
-        <a class="font-base font-semibold text-grey-700 mt-0.5">Chats</a>
-      </div>
+    <li>
+      <ui-panel-menu
+        [items]="chatMenu"
+        [transitionOptions]="transitionOptions"
+        class="w-full"
+        styleClass="w-full"
+      >
+        <ng-template #item let-item>
+          <div
+            (click)="toggle(item)"
+            [routerLink]="item.routerLink"
+            [ngClass]="{ 'bg-primary-50': isActive(item) }"
+            class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+          >
+            <div class="flex items-center gap-2">
+              @if (item?.icon) {
+              <ui-icon [name]="item?.icon" size="16" styleClass="text-grey-700" />
+              }
+              <a [ngClass]="{ 'ml-2': !item?.icon }" class="font-base font-semibold text-grey-700 mt-0.5">{{item.label}}</a>
+            </div>
+            @if (item?.iconNext) {
+            <ui-icon [name]="item?.iconNext" [ngClass]="{ 'rotate-90': item?.state?.isOpen }" size="16" class="transition-transform duration-200 ease-in-out" styleClass="text-grey-700" />
+            }
+          </div>
+        </ng-template>
+      </ui-panel-menu>
     </li>
     <li
       [routerLink]="(analyticsLocked() || !canViewAnalytics()) ? null : '/admin/analytics'"
