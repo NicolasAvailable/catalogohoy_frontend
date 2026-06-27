@@ -58,29 +58,30 @@ export class WhatsAppService {
     return E.right(WhatsAppAccountMapper.toDomain(data));
   }
 
+  /** Completa el alta del número del comerciante vía la edge function `wa-onboard`:
+   *  el intercambio del authCode por el token + la suscripción de la app a la WABA
+   *  ocurren server-side (el token jamás pasa por el front). */
   async createAccountFromSignup(
     tenantId: number,
     payload: EmbeddedSignupPayload
   ): Promise<E.Either<Error, WhatsAppAccount>> {
-    const { data, error } = await this.client
-      .from('whatsapp_accounts')
-      .insert({
-        tenant_id: tenantId,
-        phone_number: '',
-        waba_id: payload.wabaId,
-        phone_number_id: payload.phoneNumberId,
-        status: 'active',
-      })
-      .select(
-        'id, tenant_id, phone_number, display_name, waba_id, phone_number_id, status, created_at, updated_at'
-      )
-      .single();
+    const { data, error } = await this.client.functions.invoke('wa-onboard', {
+      body: {
+        tenantId,
+        wabaId: payload.wabaId,
+        phoneNumberId: payload.phoneNumberId,
+        authCode: payload.authCode,
+      },
+    });
 
     if (error) {
       return E.left(new Error(error.message));
     }
+    if (!data?.success || !data?.account) {
+      return E.left(new Error(data?.error ?? 'No se pudo conectar WhatsApp'));
+    }
 
-    return E.right(WhatsAppAccountMapper.toDomain(data));
+    return E.right(WhatsAppAccountMapper.toDomain(data.account));
   }
 
   async updateAccount(

@@ -27,13 +27,20 @@ export class WhatsAppSetupComponent implements OnInit {
 
   private removeMessageListener?: () => void;
 
+  // El Embedded Signup entrega el `code` por el callback de FB.login y el
+  // `waba_id`/`phone_number_id` por un postMessage (orden no garantizado). Los
+  // juntamos acá y recién con ambos completamos el alta.
+  private pendingCode: string | null = null;
+  private pendingData: EmbeddedSignupData | null = null;
+
   ngOnInit(): void {
     this.facebookSdk.loadSdk().then(() => this.sdkReady.set(true));
 
     this.removeMessageListener = this.facebookSdk.onEmbeddedSignupMessage(
       (event) => {
         if (event.event === 'FINISH') {
-          this.handleSignupFinish(event.data);
+          this.pendingData = event.data;
+          this.tryComplete();
         }
       }
     );
@@ -42,14 +49,17 @@ export class WhatsAppSetupComponent implements OnInit {
   }
 
   async connectWithFacebook(): Promise<void> {
+    this.pendingCode = null;
+    this.pendingData = null;
+
     const response = await this.facebookSdk.launchEmbeddedSignup();
 
     if (response.status !== 'connected' || !response.authResponse?.code) {
       return;
     }
 
-    // The auth code will be used by the backend to exchange for a long-lived token.
-    // The waba_id and phone_number_id come from the message event listener.
+    this.pendingCode = response.authResponse.code;
+    this.tryComplete();
   }
 
   /** Connect a demo account so the inbox unlocks without the real Meta API. */
@@ -61,11 +71,20 @@ export class WhatsAppSetupComponent implements OnInit {
     }
   }
 
-  private async handleSignupFinish(data: EmbeddedSignupData): Promise<void> {
+  /** Cuando ya tenemos el `code` Y los ids de la WABA, completa el alta vía
+   *  `wa-onboard` (el backend intercambia el code por el token). */
+  private async tryComplete(): Promise<void> {
+    if (!this.pendingCode || !this.pendingData) return;
+
+    const data = this.pendingData;
+    const code = this.pendingCode;
+    this.pendingCode = null;
+    this.pendingData = null;
+
     const account = await this.whatsAppStore.registerFromEmbeddedSignup({
       wabaId: data.waba_id,
       phoneNumberId: data.phone_number_id,
-      authCode: '',
+      authCode: code,
     });
 
     if (account) {

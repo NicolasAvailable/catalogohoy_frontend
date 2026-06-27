@@ -17,11 +17,58 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const VERIFY_TOKEN = Deno.env.get("WA_WEBHOOK_VERIFY_TOKEN") ?? "catalogohoy-wa";
+const APP_SECRET = Deno.env.get("WA_APP_SECRET");
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 function digits(s: string): string {
   return (s ?? "").replace(/\D/g, "");
+}
+
+/** Verify Meta's X-Hub-Signature-256 (HMAC SHA256 del raw body con el app secret).
+ *  Si no hay APP_SECRET configurado todavía, se omite (dev). */
+async function isValidSignature(raw: string, header: string | null): Promise<boolean> {
+  if (!APP_SECRET) return true; // aún sin secret (dev) → no bloquear
+  if (!header?.startsWith("sha256=")) return false;
+  const expected = header.slice("sha256=".length);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(APP_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(raw));
+  const hex = [...new Uint8Array(sig)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return hex === expected;
+}
+
+/** Texto a mostrar en el inbox para mensajes que no son de texto plano. */
+function describeMessage(m: Record<string, unknown>): string {
+  if ((m.text as { body?: string })?.body) return (m.text as { body: string }).body;
+  switch (m.type) {
+    case "image": return "📷 Imagen";
+    case "video": return "🎥 Video";
+    case "audio": return "🎤 Audio";
+    case "document": return "📎 Documento";
+    case "sticker": return "Sticker";
+    case "location": return "📍 Ubicación";
+    case "contacts": return "👤 Contacto";
+    default: break;
+  }
+  const btn = (m.button as { text?: string })?.text;
+  if (btn) return btn;
+  const interactive = m.interactive as {
+    button_reply?: { title?: string };
+    list_reply?: { title?: string };
+  } | undefined;
+  return (
+    interactive?.button_reply?.title ??
+    interactive?.list_reply?.title ??
+    ""
+  );
 }
 
 /** Resolve the tenant that owns the WhatsApp phone_number_id the message hit. */
@@ -82,9 +129,9 @@ async function handleIncoming(body: unknown): Promise<void> {
       const contacts = (value.contacts as { profile?: { name?: string } }[]) ?? [];
       const profileName = contacts[0]?.profile?.name ?? null;
 
-      for (const m of messages as { from?: string; text?: { body?: string } }[]) {
-        const from = m.from ?? "";
-        const text = m.text?.body ?? "";
+      for (const m of messages as Record<string, unknown>[]) {
+        const from = (m.from as string) ?? "";
+        const text = describeMessage(m);
         if (!from || !text) continue;
 
         const chatId = await findOrCreateChat(tenantId, from, profileName);
@@ -123,9 +170,14 @@ Deno.serve(async (req: Request) => {
 
   // 2) Incoming messages (POST). Always 200 quickly so Meta doesn't retry.
   if (req.method === "POST") {
+    const raw = await req.text();
+    const valid = await isValidSignature(raw, req.headers.get("x-hub-signature-256"));
+    if (!valid) {
+      console.error("[wa-webhook] invalid signature");
+      return new Response("Forbidden", { status: 403 });
+    }
     try {
-      const body = await req.json();
-      await handleIncoming(body);
+      await handleIncoming(JSON.parse(raw));
     } catch (err) {
       console.error("[wa-webhook] error", err);
     }

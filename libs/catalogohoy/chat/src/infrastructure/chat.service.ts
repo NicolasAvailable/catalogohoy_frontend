@@ -78,6 +78,38 @@ export class ChatService {
     content: string,
     isMine: boolean
   ): Promise<E.Either<Error, ChatMessage>> {
+    // Respuesta del agente → intentar enviarla de verdad por WhatsApp. `wa-send`
+    // envía con el token del comerciante y persiste el mensaje server-side.
+    if (isMine) {
+      const { data, error } = await this.client.functions.invoke('wa-send', {
+        body: { chatId, text: content },
+      });
+
+      if (!error && data?.success && data?.message) {
+        return E.right(ChatMessageMapper.toDomain(data.message));
+      }
+
+      // 409 = el tenant no tiene número real conectado (modo demo) → cae al insert
+      // directo de abajo. Cualquier otro error (p.ej. ventana de 24h) se propaga.
+      const ctx = (error as { context?: Response } | null)?.context;
+      if (ctx && ctx.status !== 409) {
+        let message = 'No se pudo enviar el mensaje';
+        try {
+          const b = await ctx.clone().json();
+          if (b?.error) {
+            message =
+              typeof b.error === 'string'
+                ? b.error
+                : (b.error?.message ?? message);
+          }
+        } catch {
+          /* sin cuerpo legible */
+        }
+        return E.left(new Error(message));
+      }
+    }
+
+    // Inserción directa: modo demo (agente) o mensaje entrante (is_mine=false).
     const { data: msgData, error: msgError } = await this.client
       .from('chat_messages')
       .insert({ chat_id: chatId, content, is_mine: isMine })
