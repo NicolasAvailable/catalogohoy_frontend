@@ -35,6 +35,10 @@ export interface ChatMessage {
    *  'sending' while wa-send is in flight, 'failed' if it errored. Real persisted
    *  messages leave it undefined. */
   status?: 'sending' | 'failed';
+  /** Message kind. 'text' (default) or a media type. */
+  type?: 'text' | 'image' | 'document' | 'video' | 'audio';
+  /** Public URL of the attached media (image/document), when type !== 'text'. */
+  mediaUrl?: string | null;
 }
 
 /** A configurable kanban/pipeline stage for the tenant's CRM. */

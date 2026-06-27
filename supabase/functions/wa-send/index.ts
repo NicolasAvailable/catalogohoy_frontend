@@ -41,7 +41,12 @@ function toE164Digits(raw: string): string {
   return (raw ?? "").replace(/\D/g, "");
 }
 
-type Payload = { chatId: number; text: string };
+type Payload = {
+  chatId: number;
+  text?: string;
+  mediaUrl?: string;
+  mediaType?: "image" | "document";
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -65,8 +70,10 @@ Deno.serve(async (req) => {
 
   const chatId = Number(body.chatId);
   const text = (body.text ?? "").trim();
-  if (!chatId || !text) {
-    return jsonResponse({ success: false, error: "Missing chatId or text" }, 400);
+  const mediaUrl = (body.mediaUrl ?? "").trim();
+  const mediaType = body.mediaType === "document" ? "document" : "image";
+  if (!chatId || (!text && !mediaUrl)) {
+    return jsonResponse({ success: false, error: "Missing chatId or content" }, 400);
   }
 
   // 1) Autorización: cliente con el JWT del agente. RLS sólo deja leer el chat si
@@ -116,16 +123,25 @@ Deno.serve(async (req) => {
     );
   }
 
-  // 3) Enviar texto libre por la Cloud API con el token del comerciante.
+  // 3) Enviar por la Cloud API con el token del comerciante: texto libre, o
+  //    imagen/documento por `link` (con caption opcional = text).
   const metaUrl =
     `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${phoneNumberId}/messages`;
-  const metaPayload = {
-    messaging_product: "whatsapp",
-    recipient_type: "individual",
-    to,
-    type: "text",
-    text: { body: text },
-  };
+  const metaPayload: Record<string, unknown> = mediaUrl
+    ? {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: mediaType,
+      [mediaType]: { link: mediaUrl, ...(text ? { caption: text } : {}) },
+    }
+    : {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "text",
+      text: { body: text },
+    };
 
   let messageId: string | null = null;
   try {
@@ -153,9 +169,17 @@ Deno.serve(async (req) => {
   }
 
   // 4) Persistir el mensaje enviado + actualizar el chat (service role).
+  const persistContent = text ||
+    (mediaUrl ? (mediaType === "document" ? "📎 Documento" : "📷 Imagen") : "");
   const { data: inserted, error: insErr } = await admin
     .from("chat_messages")
-    .insert({ chat_id: chatId, content: text, is_mine: true })
+    .insert({
+      chat_id: chatId,
+      content: persistContent,
+      is_mine: true,
+      message_type: mediaUrl ? mediaType : "text",
+      media_url: mediaUrl || null,
+    })
     .select()
     .single();
 
@@ -170,7 +194,7 @@ Deno.serve(async (req) => {
 
   await admin
     .from("chats")
-    .update({ last_message: text, last_message_at: new Date().toISOString() })
+    .update({ last_message: persistContent, last_message_at: new Date().toISOString() })
     .eq("id", chatId);
 
   return jsonResponse({ success: true, messageId, message: inserted });

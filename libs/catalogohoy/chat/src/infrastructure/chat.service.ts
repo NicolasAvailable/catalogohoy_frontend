@@ -152,6 +152,77 @@ export class ChatService {
     return E.right(ChatMessageMapper.toDomain(msgData));
   }
 
+  /** Upload an image/file to the public `catalogohoy` bucket and return its URL. */
+  async uploadMedia(
+    file: File,
+    tenantId: number
+  ): Promise<E.Either<Error, { url: string; mime: string }>> {
+    const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+    const path = `chat-media/${tenantId}/${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}.${ext}`;
+    const { error } = await this.client.storage
+      .from('catalogohoy')
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (error) return E.left(new Error(error.message));
+    const { data } = this.client.storage.from('catalogohoy').getPublicUrl(path);
+    return E.right({ url: data.publicUrl, mime: file.type });
+  }
+
+  /** Send a media message (image/document) via wa-send, with a demo fallback
+   *  (direct insert) when the tenant has no real WhatsApp token (409). */
+  async sendMedia(
+    chatId: number,
+    mediaUrl: string,
+    mediaType: 'image' | 'document',
+    caption: string
+  ): Promise<E.Either<Error, ChatMessage>> {
+    const label = mediaType === 'document' ? '📎 Documento' : '📷 Imagen';
+    const { data, error } = await this.client.functions.invoke('wa-send', {
+      body: { chatId, mediaUrl, mediaType, text: caption },
+    });
+
+    if (!error && data?.success && data?.message) {
+      return E.right(ChatMessageMapper.toDomain(data.message));
+    }
+
+    const ctx = (error as { context?: Response } | null)?.context;
+    if (ctx && ctx.status !== 409) {
+      let message = 'No se pudo enviar el archivo';
+      try {
+        const b = await ctx.clone().json();
+        if (b?.error) {
+          message =
+            typeof b.error === 'string' ? b.error : (b.error?.message ?? message);
+        }
+      } catch {
+        /* sin cuerpo legible */
+      }
+      return E.left(new Error(message));
+    }
+
+    // Demo (sin token real): insertar directo con la media.
+    const { data: msgData, error: msgError } = await this.client
+      .from('chat_messages')
+      .insert({
+        chat_id: chatId,
+        content: caption || label,
+        is_mine: true,
+        message_type: mediaType,
+        media_url: mediaUrl,
+      })
+      .select()
+      .single();
+    if (msgError) return E.left(new Error(msgError.message));
+
+    await this.client
+      .from('chats')
+      .update({ last_message: caption || label, last_message_at: new Date().toISOString() })
+      .eq('id', chatId);
+
+    return E.right(ChatMessageMapper.toDomain(msgData));
+  }
+
   async markAsRead(chatId: number): Promise<E.Either<Error, void>> {
     const { error } = await this.client
       .from('chats')

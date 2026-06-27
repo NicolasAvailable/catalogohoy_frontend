@@ -100,7 +100,21 @@
                 [class.text-grey-700]="!msg.isMine"
                 [class.shadow-sm]="!msg.isMine"
               >
+                @if (msg.type === 'image' && msg.mediaUrl) {
+                <a [href]="msg.mediaUrl" target="_blank" rel="noopener" class="block">
+                  <img
+                    [src]="msg.mediaUrl"
+                    alt="Imagen"
+                    class="rounded-lg max-w-full max-h-64 object-cover"
+                    [class.opacity-60]="msg.status === 'sending'"
+                  />
+                </a>
+                @if (msg.content && msg.content !== '📷 Imagen') {
+                <p class="text-sm whitespace-pre-wrap break-words mt-1">{{ msg.content }}</p>
+                }
+                } @else {
                 <p class="text-sm whitespace-pre-wrap break-words">{{ msg.content }}</p>
+                }
                 @if (isGroupEnd(group.msgs, i) || msg.status) {
                 <div
                   class="text-[10px] mt-1 -mb-0.5 flex items-center gap-1"
@@ -198,7 +212,7 @@
               #fileInput
               type="file"
               class="hidden"
-              accept="image/*,application/pdf"
+              accept="image/*"
               (change)="onAttachFile($event)"
             />
             <button

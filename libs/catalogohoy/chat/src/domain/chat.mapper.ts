@@ -74,6 +74,8 @@ export class ChatMessageMapper {
       content: raw['content'] as string,
       isMine: raw['is_mine'] as boolean,
       createdAt: raw['created_at'] as string,
+      type: (raw['message_type'] as ChatMessage['type']) ?? 'text',
+      mediaUrl: (raw['media_url'] as string | null) ?? null,
     };
   }
 

@@ -18,6 +18,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const VERIFY_TOKEN = Deno.env.get("WA_WEBHOOK_VERIFY_TOKEN") ?? "catalogohoy-wa";
 const APP_SECRET = Deno.env.get("WA_APP_SECRET");
+const API_VERSION = Deno.env.get("WHATSAPP_API_VERSION") ?? "v21.0";
+const MEDIA_TYPES = ["image", "video", "audio", "document", "sticker"];
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
@@ -71,17 +73,61 @@ function describeMessage(m: Record<string, unknown>): string {
   );
 }
 
-/** Resolve the tenant that owns the WhatsApp phone_number_id the message hit. */
-async function tenantForPhoneNumberId(
+/** Resolve the tenant + access token for the WhatsApp phone_number_id hit. The
+ *  token is needed to download inbound media from Meta. */
+async function accountForPhoneNumberId(
   phoneNumberId: string,
-): Promise<number | null> {
+): Promise<{ tenantId: number; token: string | null } | null> {
   const { data } = await admin
     .from("whatsapp_accounts")
-    .select("tenant_id")
+    .select("tenant_id, access_token")
     .eq("phone_number_id", phoneNumberId)
     .eq("status", "active")
     .maybeSingle();
-  return data?.tenant_id ?? null;
+  if (!data) return null;
+  return { tenantId: data.tenant_id, token: data.access_token ?? null };
+}
+
+/** Download an inbound media file from Meta (needs the tenant token) and re-host
+ *  it in the public `catalogohoy` bucket. Returns the public URL or null. */
+async function downloadAndStore(
+  mediaId: string,
+  token: string,
+  tenantId: number,
+  mime: string,
+): Promise<string | null> {
+  try {
+    const metaRes = await fetch(
+      `https://graph.facebook.com/${API_VERSION}/${mediaId}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!metaRes.ok) return null;
+    const meta = await metaRes.json();
+    if (!meta?.url) return null;
+
+    const fileRes = await fetch(meta.url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!fileRes.ok) return null;
+    const bytes = new Uint8Array(await fileRes.arrayBuffer());
+
+    const ext = ((mime || meta.mime_type || "application/octet-stream").split("/")[1] ?? "bin")
+      .split(";")[0];
+    const path = `chat-media/${tenantId}/in-${Date.now()}-${
+      Math.random().toString(36).slice(2)
+    }.${ext}`;
+    const { error } = await admin.storage
+      .from("catalogohoy")
+      .upload(path, bytes, { contentType: mime || meta.mime_type, upsert: true });
+    if (error) {
+      console.error("[wa-webhook] storage upload error", error.message);
+      return null;
+    }
+    return admin.storage.from("catalogohoy").getPublicUrl(path).data.publicUrl;
+  } catch (err) {
+    console.error("[wa-webhook] downloadAndStore error", err);
+    return null;
+  }
 }
 
 /** Find-or-create the conversation for (tenant, customer phone). Returns whether
@@ -129,24 +175,55 @@ async function handleIncoming(body: unknown): Promise<void> {
       const messages = (value.messages as unknown[]) ?? [];
       if (!phoneNumberId || messages.length === 0) continue;
 
-      const tenantId = await tenantForPhoneNumberId(phoneNumberId);
-      if (!tenantId) continue;
+      const account = await accountForPhoneNumberId(phoneNumberId);
+      if (!account) continue;
+      const tenantId = account.tenantId;
 
       const contacts = (value.contacts as { profile?: { name?: string } }[]) ?? [];
       const profileName = contacts[0]?.profile?.name ?? null;
 
       for (const m of messages as Record<string, unknown>[]) {
         const from = (m.from as string) ?? "";
-        const text = describeMessage(m);
-        if (!from || !text) continue;
+        if (!from) continue;
+
+        let text = describeMessage(m);
+        let messageType = "text";
+        let mediaUrl: string | null = null;
+
+        // Media entrante: la descargamos de Meta (con el token del comerciante) y
+        // la re-hosteamos en el bucket para poder mostrarla en la burbuja.
+        const mtype = m.type as string;
+        if (MEDIA_TYPES.includes(mtype) && account.token) {
+          const media = m[mtype] as
+            | { id?: string; mime_type?: string; caption?: string }
+            | undefined;
+          if (media?.id) {
+            const url = await downloadAndStore(
+              media.id,
+              account.token,
+              tenantId,
+              media.mime_type ?? "",
+            );
+            if (url) {
+              mediaUrl = url;
+              messageType = mtype === "sticker" ? "image" : mtype;
+              text = (media.caption ?? "").trim() || describeMessage(m);
+            }
+          }
+        }
+        if (!text && !mediaUrl) continue;
 
         const chat = await findOrCreateChat(tenantId, from, profileName);
         if (!chat) continue;
         const chatId = chat.id;
 
-        await admin
-          .from("chat_messages")
-          .insert({ chat_id: chatId, content: text, is_mine: false });
+        await admin.from("chat_messages").insert({
+          chat_id: chatId,
+          content: text,
+          is_mine: false,
+          message_type: messageType,
+          media_url: mediaUrl,
+        });
 
         const chatUpdate: Record<string, unknown> = {
           last_message: text,

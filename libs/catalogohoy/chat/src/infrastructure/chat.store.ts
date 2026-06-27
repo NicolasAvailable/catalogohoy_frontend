@@ -169,6 +169,68 @@ export const ChatStore = signalStore(
         );
       },
 
+      /** Send an image: optimistic bubble with a local preview, then upload to
+       *  storage + wa-send, reconciling with the persisted message. */
+      async sendMedia(file: File) {
+        const chat = store.selectedChat();
+        const chatId = store.selectedChatId();
+        if (!chat || !chatId) return;
+
+        const tempId = -Date.now();
+        const now = new Date().toISOString();
+        const localUrl = URL.createObjectURL(file);
+        const optimistic: ChatMessage = {
+          id: tempId,
+          chatId,
+          content: '',
+          isMine: true,
+          createdAt: now,
+          status: 'sending',
+          type: 'image',
+          mediaUrl: localUrl,
+        };
+        patchState(store, {
+          messages: [...store.messages(), optimistic],
+          isSendingMessage: true,
+          chats: store.chats().map((c) =>
+            c.id === chatId ? { ...c, lastMessage: '📷 Imagen', lastMessageAt: now } : c
+          ),
+        });
+
+        const markFailed = () =>
+          patchState(store, {
+            isSendingMessage: false,
+            messages: store
+              .messages()
+              .map((m) => (m.id === tempId ? { ...m, status: 'failed' as const } : m)),
+          });
+
+        const up = await chatService.uploadMedia(file, chat.tenantId);
+        if (up.isLeft()) {
+          markFailed();
+          return;
+        }
+
+        const result = await chatService.sendMedia(chatId, up.value.url, 'image', '');
+        result.fold(
+          () => markFailed(),
+          (msg) => {
+            const cleaned = store
+              .messages()
+              .filter((m) => m.id !== tempId && m.id !== msg.id);
+            patchState(store, {
+              messages: [...cleaned, msg],
+              isSendingMessage: false,
+              chats: store.chats().map((c) =>
+                c.id === chatId
+                  ? { ...c, lastMessage: msg.content, lastMessageAt: msg.createdAt }
+                  : c
+              ),
+            });
+          }
+        );
+      },
+
       /** Append a message that arrived via realtime (from the customer or another
        *  agent). Updates the conversation IN PLACE — moves it to the top, refreshes
        *  preview/unread — WITHOUT reloading the whole list. If the message belongs

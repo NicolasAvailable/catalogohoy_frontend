@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TeamStore } from '@catalogohoy/teams';
+import { ToastService } from '@shared/infrastructure';
 import { ButtonComponent, IconComponent, SelectComponent } from '@ui';
 import { ChatMessage } from '../../../domain';
 import { ChatStore } from '../../../infrastructure/chat.store';
@@ -30,6 +31,7 @@ import { ChatStore } from '../../../infrastructure/chat.store';
 export class ConversationPanelComponent {
   protected readonly chatStore = inject(ChatStore);
   protected readonly teamStore = inject(TeamStore);
+  private readonly toast = inject(ToastService);
   protected readonly messageInput = signal('');
 
   /** WhatsApp Cloud API text body limit. */
@@ -190,14 +192,21 @@ export class ConversationPanelComponent {
     }
   }
 
-  /** Adjuntar archivo. El envío real de multimedia por WhatsApp (subida a
-   *  storage + API de media + render en la burbuja) es una feature aparte; por
-   *  ahora abrimos el selector y dejamos el archivo listo para esa etapa. */
+  /** Adjuntar imagen: valida (imagen, ≤5 MB) y la envía vía el store (optimista
+   *  → sube a storage → wa-send con type:image). */
   onAttachFile(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    // TODO(multimedia): subir a storage y enviar vía wa-send (image/document).
+    if (!file.type.startsWith('image/')) {
+      this.toast.warning('Por ahora solo se pueden enviar imágenes (JPG/PNG).');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      this.toast.warning('La imagen supera el máximo de 5 MB.');
+      return;
+    }
+    this.chatStore.sendMedia(file);
   }
 }
