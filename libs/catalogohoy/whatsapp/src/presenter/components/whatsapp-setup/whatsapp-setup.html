@@ -4,39 +4,44 @@
     : 'flex flex-col w-full p-4'"
 >
   @if (!signupComplete()) {
-  <div class="flex flex-col items-center max-w-lg w-full mx-auto gap-6">
-    <img
-      src="/images/whatsapp.svg"
-      alt="WhatsApp"
-      width="80"
-      height="80"
-      class="w-20 h-20"
-    />
+  <div class="flex flex-col items-center max-w-md w-full mx-auto gap-6 text-center">
+    <!-- Gráfico: WhatsApp → bandeja única -->
+    <div
+      class="flex items-center justify-center gap-1 rounded-2xl bg-primary-50 px-10 py-9 w-full max-w-sm"
+    >
+      <div
+        class="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0"
+      >
+        <img src="/images/whatsapp.svg" alt="WhatsApp" class="w-9 h-9" />
+      </div>
+      <span class="w-10 border-t-2 border-dashed border-grey-300"></span>
+      <div
+        class="w-16 h-16 rounded-full bg-grey-800 flex items-center justify-center shrink-0"
+      >
+        <ui-icon name="message-circle" size="28" styleClass="text-white" />
+      </div>
+    </div>
 
-    <div class="text-center">
-      <h2 class="text-xl font-bold text-grey-800">
-        Conectar a WhatsApp Business
+    <div>
+      <h2 class="text-2xl font-bold text-grey-800 leading-tight">
+        Administra todos tus mensajes en una sola bandeja de entrada
       </h2>
-      <p class="text-sm text-grey-500 mt-2 max-w-sm">
-        Conecta tu cuenta de WhatsApp Business para enviar y recibir mensajes
-        directamente desde tu catálogo.
+      <p class="text-sm text-grey-500 mt-3 max-w-sm mx-auto">
+        Conecta tu número de WhatsApp Business para atender a tus clientes desde
+        aquí. Con <strong>coexistencia</strong>: sigues usando tu app de
+        WhatsApp normal en el teléfono al mismo tiempo.
       </p>
     </div>
 
-    <div class="flex flex-col gap-3 w-full max-w-xs">
+    <div class="flex flex-col gap-3 w-full max-w-sm">
       <ui-button
-        label="Conectar con Facebook"
+        label="Conectar a WhatsApp Business"
         icon="log-in"
         [isLoading]="whatsAppStore.isConnecting()"
         [disabled]="!sdkReady()"
         (click)="connectWithFacebook()"
-        styleClass="w-full !bg-[#1877F2] !border-[#1877F2] hover:!bg-[#166FE5]"
+        styleClass="w-full !bg-[#25D366] !border-[#25D366] hover:!bg-[#1FB855]"
       />
-
-      <p class="text-xs text-grey-400 text-center">
-        Serás redirigido a Facebook para conectar tu cuenta de WhatsApp Business
-        API.
-      </p>
 
       <!-- Demo: probar el inbox en tiempo real sin la aprobación de Meta. -->
       <div class="flex items-center gap-3 my-1">
@@ -53,9 +58,9 @@
         (click)="connectDemo()"
         styleClass="w-full"
       />
-      <p class="text-xs text-grey-400 text-center">
-        Conecta una cuenta de prueba para chatear en tiempo real con el
-        simulador de cliente, sin esperar a Meta.
+      <p class="text-xs text-grey-400">
+        Prueba el inbox en tiempo real con el simulador de cliente, sin esperar
+        a la aprobación de Meta.
       </p>
     </div>
   </div>
