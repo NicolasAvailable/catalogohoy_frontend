@@ -32,6 +32,12 @@ export class ConversationPanelComponent {
   protected readonly teamStore = inject(TeamStore);
   protected readonly messageInput = signal('');
 
+  /** WhatsApp Cloud API text body limit. */
+  protected readonly maxChars = 4096;
+  protected readonly overLimit = computed(
+    () => this.messageInput().length > this.maxChars
+  );
+
   /** Team members for the header "Asignar a" control (mirrors the ficha). */
   protected readonly assigneeOptions = computed(() => [
     { label: 'Sin asignar', value: null as number | null },
@@ -81,7 +87,7 @@ export class ConversationPanelComponent {
 
   send() {
     const content = this.messageInput().trim();
-    if (!content || this.chatStore.isSendingMessage()) return;
+    if (!content || this.chatStore.isSendingMessage() || this.overLimit()) return;
     this.chatStore.sendMessage(content);
     this.messageInput.set('');
   }
