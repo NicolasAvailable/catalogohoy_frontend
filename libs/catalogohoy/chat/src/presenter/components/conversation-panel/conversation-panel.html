@@ -137,10 +137,10 @@
           <div class="flex items-center gap-0.5">
             <!-- Quick replies -->
             @if (chatStore.quickReplies().length) {
-            <div class="relative">
+            <div class="relative qr-popover-wrap">
               <button
                 (click)="toggleQuickReplies($event)"
-                class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50"
+                class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
                 title="Respuestas rápidas"
               >
                 <ui-icon name="zap" size="18" styleClass="text-grey-400" />
@@ -164,10 +164,10 @@
             }
 
             <!-- Emoji picker (Apple set) -->
-            <div class="relative">
+            <div class="relative emoji-popover-wrap">
               <button
                 (click)="toggleEmojiPicker($event)"
-                class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50"
+                class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
                 title="Emojis"
               >
                 <ui-icon name="smile" size="18" styleClass="text-grey-400" />
@@ -189,8 +189,16 @@
             </div>
 
             <!-- Adjuntar -->
+            <input
+              #fileInput
+              type="file"
+              class="hidden"
+              accept="image/*,application/pdf"
+              (change)="onAttachFile($event)"
+            />
             <button
-              class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50"
+              (click)="fileInput.click()"
+              class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
               title="Adjuntar archivo"
             >
               <ui-icon name="paperclip" size="18" styleClass="text-grey-400" />
@@ -199,7 +207,7 @@
 
           <!-- Enviar -->
           <button
-            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
             [disabled]="!messageInput().trim() || chatStore.isSendingMessage()"
             (click)="send()"
           >

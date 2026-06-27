@@ -171,13 +171,27 @@ export class ConversationPanelComponent {
     this.messageInput.update((v) => v + (event.emoji?.native ?? ''));
   }
 
-  private readonly host = inject(ElementRef<HTMLElement>);
-
-  /** Close popovers when clicking outside this conversation panel. */
+  /** Close each popover when the click lands outside *its own* wrapper (not just
+   *  outside the whole panel) so clicking the messages/area also dismisses it. */
   @HostListener('document:click', ['$event'])
   closePopovers(event: MouseEvent): void {
-    if (this.host.nativeElement.contains(event.target as Node)) return;
-    if (this.emojiPickerOpen()) this.emojiPickerOpen.set(false);
-    if (this.quickRepliesOpen()) this.quickRepliesOpen.set(false);
+    const target = event.target as HTMLElement;
+    if (this.emojiPickerOpen() && !target.closest('.emoji-popover-wrap')) {
+      this.emojiPickerOpen.set(false);
+    }
+    if (this.quickRepliesOpen() && !target.closest('.qr-popover-wrap')) {
+      this.quickRepliesOpen.set(false);
+    }
+  }
+
+  /** Adjuntar archivo. El envío real de multimedia por WhatsApp (subida a
+   *  storage + API de media + render en la burbuja) es una feature aparte; por
+   *  ahora abrimos el selector y dejamos el archivo listo para esa etapa. */
+  onAttachFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    // TODO(multimedia): subir a storage y enviar vía wa-send (image/document).
   }
 }
