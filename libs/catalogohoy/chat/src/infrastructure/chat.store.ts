@@ -171,18 +171,19 @@ export const ChatStore = signalStore(
 
       /** Send an image: optimistic bubble with a local preview, then upload to
        *  storage + wa-send, reconciling with the persisted message. */
-      async sendMedia(file: File) {
+      async sendMedia(file: File, caption = '') {
         const chat = store.selectedChat();
         const chatId = store.selectedChatId();
         if (!chat || !chatId) return;
 
+        const cap = caption.trim();
         const tempId = -Date.now();
         const now = new Date().toISOString();
         const localUrl = URL.createObjectURL(file);
         const optimistic: ChatMessage = {
           id: tempId,
           chatId,
-          content: '',
+          content: cap,
           isMine: true,
           createdAt: now,
           status: 'sending',
@@ -193,7 +194,9 @@ export const ChatStore = signalStore(
           messages: [...store.messages(), optimistic],
           isSendingMessage: true,
           chats: store.chats().map((c) =>
-            c.id === chatId ? { ...c, lastMessage: '📷 Imagen', lastMessageAt: now } : c
+            c.id === chatId
+              ? { ...c, lastMessage: cap || '📷 Imagen', lastMessageAt: now }
+              : c
           ),
         });
 
@@ -211,7 +214,7 @@ export const ChatStore = signalStore(
           return;
         }
 
-        const result = await chatService.sendMedia(chatId, up.value.url, 'image', '');
+        const result = await chatService.sendMedia(chatId, up.value.url, 'image', cap);
         result.fold(
           () => markFailed(),
           (msg) => {

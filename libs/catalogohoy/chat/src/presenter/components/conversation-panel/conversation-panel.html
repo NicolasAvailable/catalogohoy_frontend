@@ -101,14 +101,12 @@
                 [class.shadow-sm]="!msg.isMine"
               >
                 @if (msg.type === 'image' && msg.mediaUrl) {
-                <a [href]="msg.mediaUrl" target="_blank" rel="noopener" class="block">
-                  <img
-                    [src]="msg.mediaUrl"
-                    alt="Imagen"
-                    class="rounded-lg max-w-full max-h-64 object-cover"
-                    [class.opacity-60]="msg.status === 'sending'"
-                  />
-                </a>
+                <ui-image
+                  [src]="msg.mediaUrl"
+                  alt="Imagen"
+                  styleClass="block rounded-lg overflow-hidden max-w-[15rem] cursor-zoom-in"
+                  imageClass="w-full max-h-64 object-cover"
+                />
                 @if (msg.content && msg.content !== '📷 Imagen') {
                 <p class="text-sm whitespace-pre-wrap break-words mt-1">{{ msg.content }}</p>
                 }
@@ -143,6 +141,24 @@
       <div
         class="rounded-xl border border-grey-100 bg-white transition-colors focus-within:border-primary-300 focus-within:ring-2 focus-within:ring-primary-100"
       >
+        @if (pendingPreview(); as preview) {
+        <div class="flex items-start gap-2 px-3 pt-3">
+          <div class="relative">
+            <img
+              [src]="preview"
+              alt="Adjunto"
+              class="w-20 h-20 rounded-lg object-cover border border-grey-100"
+            />
+            <button
+              (click)="clearAttachment()"
+              class="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-grey-800 text-white flex items-center justify-center cursor-pointer hover:bg-grey-900"
+              title="Quitar"
+            >
+              <ui-icon name="x" size="12" />
+            </button>
+          </div>
+        </div>
+        }
         <textarea
           [ngModel]="messageInput()"
           (ngModelChange)="messageInput.set($event)"
@@ -236,7 +252,7 @@
             </span>
             <button
               class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
-              [disabled]="!messageInput().trim() || chatStore.isSendingMessage() || overLimit()"
+              [disabled]="(!messageInput().trim() && !pendingFile()) || chatStore.isSendingMessage() || overLimit()"
               (click)="send()"
             >
               Enviar <ui-icon name="send" size="14" />

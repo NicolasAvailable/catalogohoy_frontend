@@ -12,7 +12,12 @@ import {
 import { FormsModule } from '@angular/forms';
 import { TeamStore } from '@catalogohoy/teams';
 import { ToastService } from '@shared/infrastructure';
-import { ButtonComponent, IconComponent, SelectComponent } from '@ui';
+import {
+  ButtonComponent,
+  IconComponent,
+  ImageComponent,
+  SelectComponent,
+} from '@ui';
 import { ChatMessage } from '../../../domain';
 import { ChatStore } from '../../../infrastructure/chat.store';
 
@@ -23,6 +28,7 @@ import { ChatStore } from '../../../infrastructure/chat.store';
     FormsModule,
     IconComponent,
     ButtonComponent,
+    ImageComponent,
     SelectComponent,
     PickerComponent,
   ],
@@ -39,6 +45,10 @@ export class ConversationPanelComponent {
   protected readonly overLimit = computed(
     () => this.messageInput().length > this.maxChars
   );
+
+  /** Imagen adjunta pendiente de enviar (preview en el composer). */
+  protected readonly pendingFile = signal<File | null>(null);
+  protected readonly pendingPreview = signal<string | null>(null);
 
   /** Team members for the header "Asignar a" control (mirrors the ficha). */
   protected readonly assigneeOptions = computed(() => [
@@ -88,10 +98,27 @@ export class ConversationPanelComponent {
   }
 
   send() {
+    if (this.chatStore.isSendingMessage() || this.overLimit()) return;
+    const file = this.pendingFile();
     const content = this.messageInput().trim();
-    if (!content || this.chatStore.isSendingMessage() || this.overLimit()) return;
+    if (file) {
+      // Envía la imagen adjunta con el texto como caption.
+      this.chatStore.sendMedia(file, content);
+      this.clearAttachment();
+      this.messageInput.set('');
+      return;
+    }
+    if (!content) return;
     this.chatStore.sendMessage(content);
     this.messageInput.set('');
+  }
+
+  /** Descarta la imagen adjunta antes de enviarla. */
+  clearAttachment(): void {
+    const url = this.pendingPreview();
+    if (url) URL.revokeObjectURL(url);
+    this.pendingFile.set(null);
+    this.pendingPreview.set(null);
   }
 
   /** Quick-reply popover state + insertion. */
@@ -207,6 +234,9 @@ export class ConversationPanelComponent {
       this.toast.warning('La imagen supera el máximo de 5 MB.');
       return;
     }
-    this.chatStore.sendMedia(file);
+    // Adjuntar (preview); se envía al pulsar "Enviar".
+    this.clearAttachment();
+    this.pendingFile.set(file);
+    this.pendingPreview.set(URL.createObjectURL(file));
   }
 }
