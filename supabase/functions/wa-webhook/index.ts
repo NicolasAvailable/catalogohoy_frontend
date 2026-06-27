@@ -141,13 +141,14 @@ async function handleIncoming(body: unknown): Promise<void> {
           .from("chat_messages")
           .insert({ chat_id: chatId, content: text, is_mine: false });
 
-        await admin
-          .from("chats")
-          .update({
-            last_message: text,
-            last_message_at: new Date().toISOString(),
-          })
-          .eq("id", chatId);
+        const chatUpdate: Record<string, unknown> = {
+          last_message: text,
+          last_message_at: new Date().toISOString(),
+        };
+        // Mostrar el nombre de perfil de WhatsApp del que escribe (no el de una
+        // orden vieja con el mismo teléfono).
+        if (profileName) chatUpdate.customer_name = profileName;
+        await admin.from("chats").update(chatUpdate).eq("id", chatId);
         // unread_count increment is handled by a trigger in prod; kept simple here.
       }
     }

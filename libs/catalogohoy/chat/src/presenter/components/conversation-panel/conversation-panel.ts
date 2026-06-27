@@ -12,6 +12,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { TeamStore } from '@catalogohoy/teams';
 import { ButtonComponent, IconComponent, SelectComponent } from '@ui';
+import { ChatMessage } from '../../../domain';
 import { ChatStore } from '../../../infrastructure/chat.store';
 
 @Component({
@@ -101,9 +102,35 @@ export class ConversationPanelComponent {
 
   formatTime(dateStr: string): string {
     return new Date(dateStr).toLocaleTimeString('es', {
-      hour: '2-digit',
+      hour: 'numeric',
       minute: '2-digit',
+      hour12: true,
     });
+  }
+
+  /** WhatsApp-style grouping: a message starts a new group when the previous one
+   *  is from a different sender or >3 min earlier; it ends a group when the next
+   *  one differs likewise. Only group-end bubbles show the time. */
+  private gapMin(a: string, b: string): number {
+    return Math.abs(new Date(b).getTime() - new Date(a).getTime()) / 60000;
+  }
+
+  isGroupStart(msgs: ChatMessage[], i: number): boolean {
+    if (i === 0) return true;
+    const prev = msgs[i - 1];
+    const cur = msgs[i];
+    return (
+      prev.isMine !== cur.isMine || this.gapMin(prev.createdAt, cur.createdAt) > 3
+    );
+  }
+
+  isGroupEnd(msgs: ChatMessage[], i: number): boolean {
+    if (i === msgs.length - 1) return true;
+    const next = msgs[i + 1];
+    const cur = msgs[i];
+    return (
+      next.isMine !== cur.isMine || this.gapMin(cur.createdAt, next.createdAt) > 3
+    );
   }
 
   formatDayLabel(day: string): string {

@@ -57,6 +57,19 @@ export class ChatService {
     return E.right(ChatMapper.toDomainList(data || []));
   }
 
+  /** Single conversation by id — used by realtime to add a brand-new chat to the
+   *  inbox incrementally (without reloading the whole list). */
+  async getChatById(id: number): Promise<E.Either<Error, Chat | null>> {
+    const { data, error } = await this.client
+      .from('chats')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) return E.left(new Error(error.message));
+    return E.right(data ? ChatMapper.toDomain(data) : null);
+  }
+
   async getMessagesByChatId(
     chatId: number
   ): Promise<E.Either<Error, ChatMessage[]>> {

@@ -34,6 +34,11 @@ const initialState: ChatState = {
   quickReplies: [],
 };
 
+/** Newest activity first; conversations without activity sink to the bottom. */
+function byLastMessageDesc(a: Chat, b: Chat): number {
+  return (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? '');
+}
+
 export const ChatStore = signalStore(
   { providedIn: 'root' },
   withState(initialState),
@@ -131,9 +136,11 @@ export const ChatStore = signalStore(
         );
       },
 
-      /** Append a message that arrived via realtime (from the customer or
-       *  another agent). Deduped by id so our own optimistic sends don't double
-       *  up. Updates the conversation's preview/unread in the list too. */
+      /** Append a message that arrived via realtime (from the customer or another
+       *  agent). Updates the conversation IN PLACE — moves it to the top, refreshes
+       *  preview/unread — WITHOUT reloading the whole list. If the message belongs
+       *  to a conversation not yet in the inbox (brand-new contact), fetches just
+       *  that chat and inserts it. Deduped by id so optimistic sends don't double up. */
       applyIncomingMessage(msg: ChatMessage) {
         const isSelected = store.selectedChatId() === msg.chatId;
 
@@ -141,30 +148,84 @@ export const ChatStore = signalStore(
           patchState(store, { messages: [...store.messages(), msg] });
         }
 
-        patchState(store, {
-          chats: store
-            .chats()
-            .map((c) =>
-              c.id === msg.chatId
-                ? {
-                    ...c,
-                    lastMessage: msg.content,
-                    lastMessageAt: msg.createdAt,
-                    unreadCount:
-                      !msg.isMine && !isSelected
-                        ? c.unreadCount + 1
-                        : c.unreadCount,
-                  }
-                : c
+        const known = store.chats().some((c) => c.id === msg.chatId);
+        if (known) {
+          patchState(store, {
+            chats: store
+              .chats()
+              .map((c) =>
+                c.id === msg.chatId
+                  ? {
+                      ...c,
+                      lastMessage: msg.content,
+                      lastMessageAt: msg.createdAt,
+                      unreadCount:
+                        !msg.isMine && !isSelected
+                          ? c.unreadCount + 1
+                          : c.unreadCount,
+                    }
+                  : c
+              )
+              .sort(byLastMessageDesc),
+          });
+        } else {
+          // Conversación nueva que aún no está en la bandeja → traerla sola.
+          chatService.getChatById(msg.chatId).then((res) =>
+            res.fold(
+              () => undefined,
+              (chat) => {
+                if (!chat || store.chats().some((c) => c.id === chat.id)) return;
+                const merged: Chat = {
+                  ...chat,
+                  lastMessage: msg.content,
+                  lastMessageAt: msg.createdAt,
+                  unreadCount:
+                    !msg.isMine && !isSelected
+                      ? Math.max(chat.unreadCount, 1)
+                      : chat.unreadCount,
+                };
+                patchState(store, {
+                  chats: [merged, ...store.chats()].sort(byLastMessageDesc),
+                });
+              }
             )
-            .sort((a, b) =>
-              (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? '')
-            ),
-        });
+          );
+        }
 
         if (isSelected && !msg.isMine) {
           chatService.markAsRead(msg.chatId);
         }
+      },
+
+      /** Add a brand-new conversation to the inbox (from a realtime `chats`
+       *  INSERT) without reloading the list. No-op if it's already there. */
+      addChatIfNew(chat: Chat) {
+        if (store.chats().some((c) => c.id === chat.id)) return;
+        patchState(store, {
+          chats: [chat, ...store.chats()].sort(byLastMessageDesc),
+        });
+      },
+
+      /** Sync a chat's metadata (name, pipeline, assignee, mute, tags) from a
+       *  realtime `chats` UPDATE, WITHOUT touching the locally-tracked activity
+       *  fields (lastMessage/unread) — so the name updates live but we don't
+       *  double-count unread nor reload the list. */
+      updateChatFields(incoming: Chat) {
+        if (!store.chats().some((c) => c.id === incoming.id)) return;
+        patchState(store, {
+          chats: store.chats().map((c) =>
+            c.id === incoming.id
+              ? {
+                  ...c,
+                  customerName: incoming.customerName,
+                  pipelineStatus: incoming.pipelineStatus,
+                  assignedToUserId: incoming.assignedToUserId,
+                  muted: incoming.muted,
+                  tags: incoming.tags,
+                }
+              : c
+          ),
+        });
       },
 
       /** Deselect the open conversation (mobile back button). */
