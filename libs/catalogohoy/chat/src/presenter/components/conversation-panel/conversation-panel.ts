@@ -50,11 +50,18 @@ export class ConversationPanelComponent {
     () => this.messageInput().length > this.maxChars
   );
 
-  /** Imágenes adjuntas pendientes de enviar (preview en el composer). Cada una se
-   *  envía como un mensaje separado: la Cloud API es 1 archivo por mensaje (igual
-   *  que WhatsApp, que agrupa varios mensajes como "álbum"). */
-  protected readonly pendingMedia = signal<{ file: File; preview: string }[]>([]);
+  /** Imágenes adjuntas pendientes de enviar, cada una con su propio caption
+   *  (estilo WhatsApp Web). Cada una se envía como un mensaje separado: la Cloud
+   *  API es 1 archivo por mensaje (WhatsApp agrupa varios mensajes como "álbum"). */
+  protected readonly pendingMedia = signal<
+    { file: File; preview: string; caption: string }[]
+  >([]);
   protected readonly maxAttachments = 10;
+  /** Imagen mostrada en grande en el overlay de preview. */
+  protected readonly activeIndex = signal(0);
+  protected readonly activeItem = computed(
+    () => this.pendingMedia()[this.activeIndex()] ?? null
+  );
 
   /** Team members for the header "Asignar a" control (mirrors the ficha). */
   protected readonly assigneeOptions = computed(() => [
@@ -137,32 +144,45 @@ export class ConversationPanelComponent {
     this.stickToBottom = true;
     if (this.chatStore.isSendingMessage() || this.overLimit()) return;
     const media = this.pendingMedia();
-    const content = this.messageInput().trim();
     if (media.length) {
-      // Cada imagen es un mensaje aparte; el caption (si hay) va en la primera.
-      media.forEach((m, i) =>
-        this.chatStore.sendMedia(m.file, i === 0 ? content : '')
-      );
+      // Cada imagen es un mensaje aparte, con su propio caption.
+      media.forEach((m) => this.chatStore.sendMedia(m.file, m.caption.trim()));
       this.clearAttachments();
-      this.messageInput.set('');
       return;
     }
+    const content = this.messageInput().trim();
     if (!content) return;
     this.chatStore.sendMessage(content);
     this.messageInput.set('');
   }
 
-  /** Quita una imagen adjunta (antes de enviar). */
-  removeAttachment(index: number): void {
-    const list = this.pendingMedia();
-    const item = list[index];
+  /** Caption de la imagen activa en el overlay. */
+  setActiveCaption(text: string): void {
+    const idx = this.activeIndex();
+    this.pendingMedia.update((list) =>
+      list.map((m, i) => (i === idx ? { ...m, caption: text } : m))
+    );
+  }
+
+  /** Quita la imagen activa del overlay. */
+  removeActive(): void {
+    const idx = this.activeIndex();
+    const item = this.pendingMedia()[idx];
     if (item) URL.revokeObjectURL(item.preview);
-    this.pendingMedia.set(list.filter((_, i) => i !== index));
+    this.pendingMedia.update((list) => list.filter((_, i) => i !== idx));
+    const len = this.pendingMedia().length;
+    if (idx >= len) this.activeIndex.set(Math.max(0, len - 1));
+  }
+
+  /** Descarta todos los adjuntos (cerrar el overlay sin enviar). */
+  closePreview(): void {
+    this.clearAttachments();
   }
 
   private clearAttachments(): void {
     for (const m of this.pendingMedia()) URL.revokeObjectURL(m.preview);
     this.pendingMedia.set([]);
+    this.activeIndex.set(0);
   }
 
   /** Quick-reply popover state + insertion. */
@@ -313,7 +333,7 @@ export class ConversationPanelComponent {
       return;
     }
 
-    const added: { file: File; preview: string }[] = [];
+    const added: { file: File; preview: string; caption: string }[] = [];
     let skipped = false;
     for (const file of files) {
       if (added.length >= room) {
@@ -324,9 +344,13 @@ export class ConversationPanelComponent {
         skipped = true;
         continue;
       }
-      added.push({ file, preview: URL.createObjectURL(file) });
+      added.push({ file, preview: URL.createObjectURL(file), caption: '' });
     }
-    if (added.length) this.pendingMedia.set([...current, ...added]);
+    if (added.length) {
+      const wasEmpty = current.length === 0;
+      this.pendingMedia.set([...current, ...added]);
+      if (wasEmpty) this.activeIndex.set(0);
+    }
     if (skipped) {
       this.toast.warning('Algunas imágenes se omitieron (solo JPG/PNG ≤ 5 MB).');
     }
