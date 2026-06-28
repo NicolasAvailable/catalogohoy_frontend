@@ -7,6 +7,7 @@ import {
   IconComponent,
   InputTextComponent,
   SelectComponent,
+  SkeletonDirective,
   TextareaComponent,
 } from '@ui';
 import {
@@ -27,6 +28,7 @@ import {
     ButtonComponent,
     InputTextComponent,
     SelectComponent,
+    SkeletonDirective,
     TextareaComponent,
   ],
   host: { class: 'flex-1 flex flex-col min-h-0 overflow-y-auto' },
