@@ -22,6 +22,28 @@ export const PRODUCTS_MENU: PanelMenuItem[] = [
   },
 ];
 
+export const CHAT_MENU: PanelMenuItem[] = [
+  {
+    label: 'Chats',
+    icon: 'message-square',
+    iconNext: 'chevron-right',
+    expanded: true,
+    state: { isOpen: true },
+    items: [
+      {
+        label: 'Mensajes',
+        routerLink: '/admin/chat/conversations',
+        routerLinkActiveOptions: { exact: true },
+      },
+      {
+        label: 'Plantillas',
+        routerLink: '/admin/chat/templates',
+        routerLinkActiveOptions: { exact: true },
+      },
+    ],
+  },
+];
+
 export const TEAMS_MENU: PanelMenuItem[] = [
   {
     label: 'Equipo',

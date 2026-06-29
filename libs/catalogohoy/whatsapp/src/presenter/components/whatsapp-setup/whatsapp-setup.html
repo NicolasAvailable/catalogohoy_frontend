@@ -1,0 +1,92 @@
+<div
+  [class]="mode() === 'fullpage'
+    ? 'flex flex-col items-center justify-center w-full h-full p-6'
+    : 'flex flex-col w-full p-4'"
+>
+  @if (!signupComplete()) {
+  <div class="flex flex-col items-center max-w-md w-full mx-auto gap-6 text-center">
+    <!-- Gráfico: WhatsApp → bandeja única -->
+    <div
+      class="flex items-center justify-center gap-1 rounded-2xl bg-primary-50 px-10 py-9 w-full max-w-sm"
+    >
+      <div
+        class="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0"
+      >
+        <img src="/images/whatsapp.svg" alt="WhatsApp" class="w-9 h-9" />
+      </div>
+      <span class="w-10 border-t-2 border-dashed border-grey-300"></span>
+      <div
+        class="w-16 h-16 rounded-full bg-grey-800 flex items-center justify-center shrink-0"
+      >
+        <ui-icon name="message-circle" size="28" styleClass="text-white" />
+      </div>
+    </div>
+
+    <div>
+      <h2 class="text-2xl font-bold text-grey-800 leading-tight">
+        Administra todos tus mensajes en una sola bandeja de entrada
+      </h2>
+      <p class="text-sm text-grey-500 mt-3 max-w-sm mx-auto">
+        Conecta tu número de WhatsApp Business para atender a tus clientes desde
+        aquí. Con <strong>coexistencia</strong>: sigues usando tu app de
+        WhatsApp normal en el teléfono al mismo tiempo.
+      </p>
+    </div>
+
+    <div class="flex flex-col gap-3 w-full max-w-sm">
+      <ui-button
+        label="Conectar a WhatsApp Business"
+        icon="log-in"
+        [isLoading]="whatsAppStore.isConnecting()"
+        [disabled]="!sdkReady()"
+        (click)="connectWithFacebook()"
+        styleClass="w-full !bg-[#25D366] !border-[#25D366] hover:!bg-[#1FB855]"
+      />
+
+      <!-- Demo: probar el inbox en tiempo real sin la aprobación de Meta. -->
+      <div class="flex items-center gap-3 my-1">
+        <span class="flex-1 h-px bg-grey-100"></span>
+        <span class="text-xs text-grey-400">o</span>
+        <span class="flex-1 h-px bg-grey-100"></span>
+      </div>
+
+      <ui-button
+        label="Probar en modo demo"
+        icon="sparkles"
+        severity="secondary"
+        [isLoading]="whatsAppStore.isConnecting()"
+        (click)="connectDemo()"
+        styleClass="w-full"
+      />
+      <p class="text-xs text-grey-400">
+        Prueba el inbox en tiempo real con el simulador de cliente, sin esperar
+        a la aprobación de Meta.
+      </p>
+    </div>
+  </div>
+  } @else {
+  <div class="flex flex-col items-center max-w-lg w-full mx-auto gap-6">
+    <div
+      class="flex items-center justify-center w-20 h-20 rounded-full bg-green-50"
+    >
+      <ui-icon name="check-circle" size="40" styleClass="text-green-600" />
+    </div>
+
+    <div class="text-center">
+      <h2 class="text-xl font-bold text-grey-800">
+        WhatsApp Business conectado
+      </h2>
+      <p class="text-sm text-grey-500 mt-2">
+        Tu cuenta de WhatsApp Business ha sido conectada exitosamente. Ya puedes
+        recibir y enviar mensajes desde tu catálogo.
+      </p>
+    </div>
+  </div>
+  }
+
+  @if (whatsAppStore.error()) {
+  <p class="text-sm text-red-500 mt-4 text-center">
+    {{ whatsAppStore.error() }}
+  </p>
+  }
+</div>

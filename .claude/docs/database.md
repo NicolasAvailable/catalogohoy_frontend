@@ -16,6 +16,7 @@ tenants (slug → unique)
   ├── products                 (tenant_id → tenants.id, auth_user_id → users.auth_user_id)
   │     └── product_categories (product_id + category_id  junction)
   ├── orders                   (tenant_id → tenants.id)
+  ├── whatsapp_accounts        (tenant_id → tenants.id)
   └── users_tenants            (tenant_id + user_id  junction, role, is_default)
         └── users              (auth_user_id → Supabase auth.users.id)
 
@@ -415,6 +416,35 @@ await supabase.from('tenant_business_hours')
   .eq('tenant_id', tenant.id)
   .eq('day_of_week', dayOfWeek)
   .single();
+```
+
+---
+
+### `whatsapp_accounts`
+
+WhatsApp Business API accounts per tenant. RLS: tenant member check via `users_tenants` join.
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | identity | PK |
+| tenant_id | int8 | — | FK → tenants.id, ON DELETE CASCADE |
+| phone_number | text | — | WhatsApp phone number |
+| display_name | text | null | Business display name |
+| waba_id | text | null | WhatsApp Business Account ID (Meta) |
+| phone_number_id | text | null | Meta phone number ID |
+| access_token | text | null | API access token (sensitive, excluded from frontend queries) |
+| status | text | `'active'` | CHECK: `active` or `inactive` |
+| created_at | timestamptz | `now()` | |
+| updated_at | timestamptz | `now()` | |
+
+**RLS Policies:** SELECT / INSERT / UPDATE / DELETE — all require authenticated user to be a tenant member.
+
+**Frontend query pattern:**
+```ts
+this.client
+  .from('whatsapp_accounts')
+  .select('id, tenant_id, phone_number, display_name, waba_id, phone_number_id, status, created_at, updated_at')
+  .eq('tenant_id', tenantId)
 ```
 
 ---

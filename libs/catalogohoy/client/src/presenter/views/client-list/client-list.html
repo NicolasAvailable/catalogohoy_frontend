@@ -186,6 +186,14 @@
               [fluid]="false"
               (click)="openEdit(client, $event)"
             />
+            <ui-button
+              icon="trash"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+              [fluid]="false"
+              (click)="onDeleteClient(client, $event)"
+            />
           </div>
         </div>
         } @empty {
@@ -317,6 +325,16 @@
                       tooltip="Editar"
                       tooltipPosition="bottom"
                       (click)="openEdit(client, $event)"
+                    />
+                    <ui-button
+                      icon="trash"
+                      variant="outlined"
+                      severity="contrast"
+                      size="small"
+                      [fluid]="false"
+                      tooltip="Eliminar"
+                      tooltipPosition="bottom"
+                      (click)="onDeleteClient(client, $event)"
                     />
                   </div>
                 </td>

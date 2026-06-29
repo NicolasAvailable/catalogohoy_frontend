@@ -1,0 +1,287 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  width: 20rem;
+  flex-shrink: 0;
+  border-left: 0.0625rem solid var(--color-grey-100, #e5e7eb);
+  background: var(--color-grey-25, #fafafa);
+  overflow-y: auto;
+}
+.ficha {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 1rem;
+}
+
+.ficha__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.ficha__collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--color-grey-400, #94a3b8);
+  cursor: pointer;
+}
+.ficha__collapse:hover {
+  background: var(--color-grey-100, #f1f5f9);
+  color: var(--color-grey-600, #475569);
+}
+
+/* Información básica */
+.ficha__info {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.625rem;
+  margin: 0;
+}
+.ficha__info dt {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  /* Sólo los labels van en negro; los valores quedan en gris. */
+  color: var(--color-grey-900, #0f172a);
+  margin-bottom: 0.125rem;
+}
+.ficha__info dd {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--color-grey-500, #64748b);
+  word-break: break-word;
+}
+
+/* Avatar circular del responsable en el select "Asignado a". */
+.ficha-assignee-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  background: var(--color-primary-100, #d1fae5);
+  color: var(--color-primary-700, #15803d);
+  font-size: 0.625rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.ficha__avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  background: #25d366;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.ficha__id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ficha__name {
+  font-weight: 600;
+  color: var(--color-grey-900, #0f172a);
+}
+.ficha__phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--color-grey-500, #64748b);
+}
+
+.ficha__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+/* Compact option rows (status / assignee) with an icon, matching the ficha's
+   text scale — projected into the ui-select trigger and panel. */
+.ficha-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-grey-700, #334155);
+}
+.ficha-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  background: var(--color-grey-300, #cbd5e1);
+}
+.ficha__label,
+.ficha__section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-grey-400, #94a3b8);
+}
+.ficha__hint {
+  font-size: 0.8125rem;
+  color: var(--color-grey-400, #94a3b8);
+}
+
+.ficha__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-top: 0.0625rem solid var(--color-grey-100, #e5e7eb);
+  padding-top: 1rem;
+}
+
+.ficha__orders {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  /* Las órdenes pueden crecer mucho → limitar el alto y dejar scroll interno. */
+  max-height: 13.5rem;
+  overflow-y: auto;
+}
+.ficha__order {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.625rem;
+  background: #fff;
+  border: 0.0625rem solid var(--color-grey-100, #e5e7eb);
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ficha__order:hover {
+  background: var(--color-grey-25, #fafafa);
+  border-color: var(--color-grey-200, #e2e8f0);
+}
+.ficha__order-num {
+  font-weight: 700;
+  color: var(--color-grey-800, #1e293b);
+}
+.ficha__order-meta {
+  color: var(--color-grey-500, #64748b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ficha__order-total {
+  font-weight: 600;
+  color: var(--color-grey-800, #1e293b);
+}
+
+.ficha__notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.ficha__note {
+  background: #fff;
+  border: 0.0625rem solid var(--color-grey-100, #e5e7eb);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.625rem;
+}
+.ficha__note-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.125rem;
+}
+.ficha__note-author {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-grey-700, #334155);
+}
+.ficha__note-date {
+  font-size: 0.6875rem;
+  color: var(--color-grey-400, #94a3b8);
+}
+.ficha__note-text {
+  font-size: 0.8125rem;
+  color: var(--color-grey-700, #334155);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ficha__note-composer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+.ficha__note-input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem 0.625rem;
+  border: 0.0625rem solid var(--color-grey-200, #e2e8f0);
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.4;
+}
+.ficha__note-input:focus {
+  outline: none;
+  border-color: var(--color-primary-400, #34d399);
+}
+.ficha__note-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  padding: 0.4375rem 0.75rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--color-primary-500, #16a34a);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ficha__note-add:hover:not(:disabled) {
+  background: var(--color-primary-600, #15803d);
+}
+.ficha__note-add:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* PrimeNG accordion dentro de la ficha: quitamos los bordes/fondos por defecto
+   de PrimeNG y dejamos sólo un separador superior limpio por sección. */
+:host ::ng-deep .ficha__accordion,
+:host ::ng-deep .ficha__accordion .p-accordioncontent,
+:host ::ng-deep .ficha__accordion .p-accordioncontent-content {
+  border: none;
+  background: transparent;
+}
+:host ::ng-deep .ficha__accordion .p-accordionpanel {
+  border: none;
+  border-top: 0.0625rem solid var(--color-grey-100, #e5e7eb);
+}
+:host ::ng-deep .ficha__accordion .p-accordionheader {
+  border: none;
+  background: transparent;
+  padding: 1rem 0.75rem;
+}
+:host ::ng-deep .ficha__accordion .p-accordioncontent-content {
+  padding: 0.5rem 0.75rem 1.25rem;
+}

@@ -1,5 +1,6 @@
 import { Route } from '@angular/router';
 import { teamPermissionGuard, TEAMS_ROUTES } from '@catalogohoy/teams';
+import { chatEnabledGuard } from './chat-enabled.guard';
 
 export const adminRoutes: Route[] = [
   {
@@ -82,5 +83,10 @@ export const adminRoutes: Route[] = [
     // disabled and empty state nudges them to upgrade.
     canActivate: [teamPermissionGuard('equipo', 'view')],
     children: TEAMS_ROUTES,
+  },
+  {
+    path: 'chat',
+    canActivate: [chatEnabledGuard],
+    loadChildren: () => import('@catalogohoy/chat').then((m) => m.CHAT_ROUTES),
   },
 ];
