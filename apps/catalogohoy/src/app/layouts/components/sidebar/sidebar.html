@@ -202,6 +202,7 @@
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
       }
     </li>
+    @if (canViewChat()) {
     <li>
       <ui-panel-menu
         [items]="chatMenu"
@@ -229,6 +230,7 @@
         </ng-template>
       </ui-panel-menu>
     </li>
+    }
     <li
       [routerLink]="(analyticsLocked() || !canViewAnalytics()) ? null : '/admin/analytics'"
       [routerLinkActive]="(analyticsLocked() || !canViewAnalytics()) ? '' : 'bg-primary-50'"

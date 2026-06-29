@@ -23,6 +23,7 @@ import {
   PRODUCTS_MENU,
   TEAMS_MENU,
 } from './sidebar.constants';
+import { CHAT_ENABLED_SLUGS } from '../../../modules/admin/chat-enabled.guard';
 
 @Component({
   selector: 'app-sidebar',
@@ -140,6 +141,14 @@ export class Sidebar {
 
   public readonly currentTenantSlug = computed(() =>
     getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || ''
+  );
+
+  /** Chats / CRM de WhatsApp: liberado por catálogo mientras Meta revisa la
+   *  app (App Review). Solo los slugs de {@link CHAT_ENABLED_SLUGS} ven el
+   *  módulo; el resto de los comerciantes no lo ve hasta el lanzamiento
+   *  general. La misma lista gatea la ruta (chatEnabledGuard). */
+  public readonly canViewChat = computed(() =>
+    CHAT_ENABLED_SLUGS.includes(this.currentTenantSlug())
   );
 
   public readonly currentTenant = computed(() => {

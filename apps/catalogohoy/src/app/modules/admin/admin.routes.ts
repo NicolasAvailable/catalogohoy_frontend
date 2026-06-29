@@ -1,5 +1,6 @@
 import { Route } from '@angular/router';
 import { teamPermissionGuard, TEAMS_ROUTES } from '@catalogohoy/teams';
+import { chatEnabledGuard } from './chat-enabled.guard';
 
 export const adminRoutes: Route[] = [
   {
@@ -85,6 +86,7 @@ export const adminRoutes: Route[] = [
   },
   {
     path: 'chat',
+    canActivate: [chatEnabledGuard],
     loadChildren: () => import('@catalogohoy/chat').then((m) => m.CHAT_ROUTES),
   },
 ];
