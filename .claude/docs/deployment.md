@@ -60,6 +60,23 @@ cd - && git worktree remove /tmp/x --force && git branch -D tmp
   Nx puede compilar el repo PRINCIPAL. Fix: `npm install` en el worktree **o** symlink de
   node_modules + `NX_WORKSPACE_ROOT_PATH="$(pwd)"` en el comando. (Ver gotchas.)
 
+## Source maps de Sentry
+
+- Las apps `catalogohoy` y `authentication` generan source maps **hidden** en prod
+  (`project.json` → `configurations.production.sourceMap.hidden=true`) y los suben a Sentry
+  vía `scripts/sentry-sourcemaps.mjs` (postbuild encadenado en `build:catalogohoy` /
+  `build:authentication`). El script **inyecta debug ids**, **sube** los `.map` (org
+  `catalogohoy`, proyectos `admin-dashboard` / `authentication`) y **los borra del output**
+  para no publicarlos. Es fail-safe: sin `SENTRY_AUTH_TOKEN` no sube nada y borra los maps igual.
+- **Requisitos en Vercel** (ambos proyectos, `catalogohoy-dashboard` y `catalogohoy-authentication`):
+  - Env var **`SENTRY_AUTH_TOKEN`** (Organization Auth Token de Sentry) en Production.
+  - **Build Command** debe ser **`npm run build:catalogohoy`** / **`npm run build:authentication`**
+    (NO `nx build …` pelado, porque entonces no corre el postbuild y los `.map` quedarían sin
+    borrar → se filtrarían).
+- Los `.map` **nunca** se publican (solo viven en Sentry). El frontend no tiene secretos
+  (solo claves públicas: supabase publishable, posthog, stripe `pk_live`), así que subir maps
+  no expone nada nuevo.
+
 ## Env / secrets
 
 - Frontend: `libs/catalogohoy/environments/src/...` (supabase url + **publishable** key,
