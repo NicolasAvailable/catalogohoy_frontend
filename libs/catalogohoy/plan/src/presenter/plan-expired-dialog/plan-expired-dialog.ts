@@ -62,8 +62,17 @@ export class PlanExpiredDialogComponent {
   }
 
   public payPlan(): void {
-    if (this.hasStripeHistory()) {
-      this.goToCheckout();
+    // Renovar el MISMO plan: vamos directo al checkout. La lista de planes
+    // deshabilita el botón del plan actual, así que navegar a /admin/plans no
+    // sirve para re-pagarlo. El edge function manda previous_subscription_id →
+    // el webhook extiende el plan y cancela la suscripción anterior. Los de
+    // pago manual (VE, sin Stripe) siguen yendo a WhatsApp.
+    const planId = this.planStore.currentPlan()?.id;
+    if (this.hasStripeHistory() && planId && planId !== 'gratis') {
+      this.dialog.hide();
+      this.router.navigate(['/admin/plans/checkout', planId], {
+        queryParams: { period: 'monthly' },
+      });
       return;
     }
     const planName = this.planStore.currentPlan()?.name ?? 'mi plan';
