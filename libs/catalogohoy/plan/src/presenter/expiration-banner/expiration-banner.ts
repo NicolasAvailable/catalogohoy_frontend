@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { PlanStore } from '../../infrastructure/plan.store';
 
@@ -147,6 +148,7 @@ export class ExpirationBannerComponent {
   private static readonly DISMISS_KEY = 'expiration_banner_dismissed_at';
 
   private readonly _planStore = inject(PlanStore);
+  private readonly _router = inject(Router);
   public readonly dismissed = signal(this.isDismissedRecently());
 
   public readonly isGrace = computed(() => this._planStore.inGracePeriod());
@@ -178,6 +180,20 @@ export class ExpirationBannerComponent {
   }
 
   public renewPlan(): void {
+    // Los catálogos con suscripción de Stripe (los que NO son de Venezuela /
+    // pago móvil) renuevan por el checkout de Stripe in-app: el edge function
+    // manda `previous_subscription_id`, así el webhook extiende el plan y
+    // cancela la suscripción anterior (sin cobro doble). El resto (pago móvil
+    // VE / sin Stripe) sigue yendo a WhatsApp para coordinar el pago manual.
+    const hasStripe = this._planStore.tenantPlanUsage()?.hasStripeSubscription ?? false;
+    const planId = this._planStore.currentPlan()?.id;
+    if (hasStripe && planId && planId !== 'gratis') {
+      this._router.navigate(['/admin/plans/checkout', planId], {
+        queryParams: { period: 'monthly' },
+      });
+      return;
+    }
+
     const planName = this.planName() || 'mi plan';
     const message = encodeURIComponent(
       `Hola, quiero renovar mi plan ${planName} en CatalogoHoy.`
