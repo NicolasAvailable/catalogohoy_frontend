@@ -11,12 +11,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import {
-  ButtonComponent,
-  DialogComponent,
-  IconComponent,
-  SelectComponent,
-} from '@ui';
+import { DialogComponent, IconComponent, SelectComponent } from '@ui';
 import { AiImageService } from '../../../infrastructure';
 
 export type AspectRatio = 'auto' | 'square' | 'landscape' | 'portrait';
@@ -39,13 +34,7 @@ const STYLE_OPTIONS: { value: string; label: string }[] = [
  */
 @Component({
   selector: 'lib-image-generator',
-  imports: [
-    FormsModule,
-    IconComponent,
-    DialogComponent,
-    ButtonComponent,
-    SelectComponent,
-  ],
+  imports: [FormsModule, IconComponent, DialogComponent, SelectComponent],
   templateUrl: './image-generator.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

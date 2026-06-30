@@ -150,13 +150,18 @@
       </div>
 
       @if (generatedUrl() && !processing()) {
-      <ui-button
-        label="Usar esta imagen"
-        icon="check"
-        [fluid]="true"
-        size="small"
+      <button
+        type="button"
         (click)="useImage()"
-      />
+        class="w-full rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer"
+      >
+        <span
+          class="flex w-full items-center justify-center gap-2 rounded-[0.4375rem] bg-white px-5 py-2.5 text-sm font-semibold text-violet-700"
+        >
+          <ui-icon name="check" styleClass="w-[1.125rem] h-[1.125rem]" />
+          Usar esta imagen
+        </span>
+      </button>
       }
     </div>
   </div>
