@@ -8,6 +8,9 @@ import { Image } from "https://deno.land/x/imagescript@1.2.15/mod.ts";
 //     point_prompts). Devuelve una máscara que componemos con el original
 //     (alpha=máscara) → deja solo lo seleccionado sobre fondo transparente.
 //   - "generate": crea una imagen desde un prompt de texto (modelo FLUX schnell).
+//   - "edit": edita una imagen existente según una instrucción de texto
+//     ("cambiá el color a rojo", "fondo blanco") conservando el resto
+//     (imagen→imagen, modelo FLUX Kontext).
 // La función la llama el frontend con el JWT del usuario (igual que
 // `send-whatsapp-test`). La FAL_KEY nunca sale del servidor. El resultado de
 // fal.ai vive en una URL temporal, así que lo descargamos y lo persistimos en
@@ -18,6 +21,10 @@ const FAL_KEY = Deno.env.get("FAL_KEY");
 // Modelos fal.ai (síncronos: fal.run bloquea hasta terminar, ~2-6s).
 const BIREFNET_MODEL = "fal-ai/birefnet";
 const FLUX_MODEL = "fal-ai/flux/schnell";
+// Edición por instrucción (imagen→imagen): toma una imagen y la modifica según
+// el texto, conservando lo demás. FLUX Kontext está pensado para edición guiada
+// por instrucciones ("cambiá el color a rojo", "ponelo sobre fondo blanco").
+const FLUX_KONTEXT_MODEL = "fal-ai/flux-pro/kontext";
 // Segmentación interactiva por puntos/clics (SAM-2): el usuario marca el objeto.
 // label 1 = conservar (foreground), 0 = quitar (background). Campo `prompts`.
 // (SAM-3 es por concepto/texto, no sirve para clics → devolvía máscara vacía.)
@@ -46,6 +53,16 @@ const GEN_STYLE_DESCRIPTOR: Record<string, string> = {
     "minimalist aesthetic, simple uncluttered background, plenty of negative space",
   threeD: "high quality 3D render, soft global illumination, subtle reflections",
 };
+
+// Reglas de texto en la imagen (generate + edit):
+//  - Por defecto NO agregar palabras/letras (salvo que el usuario lo pida
+//    explícitamente en su descripción/instrucción).
+//  - Si SÍ se pide texto, debe ir en español, bien escrito.
+const TEXT_RULES =
+  "Do NOT add any text, words, letters, captions, labels, logos or " +
+  "watermarks to the image, UNLESS the description explicitly asks for " +
+  "text. If (and only if) text is explicitly requested, it must be " +
+  "written in Spanish, correctly spelled, with no other languages.";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -279,10 +296,13 @@ Deno.serve(async (req) => {
   }
 
   // Costo por acción ("borrar a mano" no pasa por aquí: es local, gratis).
+  // `edit` (FLUX Kontext) cuesta un poco más que `generate` porque el modelo
+  // de edición es más caro que el de generación rápida (schnell).
   const COST: Record<string, number> = {
     "remove-background": 1,
     "segment-points": 1,
     "generate": 3,
+    "edit": 4,
   };
   const cost = COST[body.action ?? ""] ?? 0;
   if (cost === 0) {
@@ -293,6 +313,17 @@ Deno.serve(async (req) => {
   if (body.action === "generate") {
     if ((body.prompt ?? "").trim().length < 3) {
       return jsonResponse({ success: false, error: "Prompt demasiado corto" }, 400);
+    }
+  } else if (body.action === "edit") {
+    // edit necesita AMBOS: la imagen de origen y la instrucción de edición.
+    if (!(body.imageUrl ?? "").trim()) {
+      return jsonResponse({ success: false, error: "Falta la imagen" }, 400);
+    }
+    if ((body.prompt ?? "").trim().length < 3) {
+      return jsonResponse(
+        { success: false, error: "Instrucción de edición demasiado corta" },
+        400,
+      );
     }
   } else {
     if (!(body.imageUrl ?? "").trim()) {
@@ -400,15 +431,6 @@ Deno.serve(async (req) => {
         "square_hd";
       // Estilo elegido → descriptor que se suma al prompt.
       const styleDesc = GEN_STYLE_DESCRIPTOR[body.style ?? "default"] ?? "";
-      // Reglas de texto en la imagen:
-      //  - Por defecto NO agregar palabras/letras (salvo que el usuario lo pida
-      //    explícitamente en su descripción).
-      //  - Si SÍ se pide texto, debe ir en español, bien escrito.
-      const TEXT_RULES =
-        "Do NOT add any text, words, letters, captions, labels, logos or " +
-        "watermarks to the image, UNLESS the description explicitly asks for " +
-        "text. If (and only if) text is explicitly requested, it must be " +
-        "written in Spanish, correctly spelled, with no other languages.";
       const finalPrompt = [prompt, styleDesc, TEXT_RULES]
         .filter((s) => s && s.trim())
         .join(". ");
@@ -425,6 +447,41 @@ Deno.serve(async (req) => {
       }
       const publicUrl = await persistToStorage(admin, resultUrl, "gen");
       await logAiUsage(admin, ownerId, "image_generate", prompt, cost);
+      return jsonResponse({ success: true, url: publicUrl });
+    }
+
+    if (body.action === "edit") {
+      // Edición por instrucción: parte de una imagen y la modifica según el
+      // texto, conservando el resto (FLUX Kontext, imagen→imagen).
+      const imageUrl = (body.imageUrl ?? "").trim();
+      const instruction = (body.prompt ?? "").trim();
+      if (!imageUrl) {
+        return jsonResponse({ success: false, error: "Falta la imagen" }, 400);
+      }
+      if (instruction.length < 3) {
+        return jsonResponse(
+          { success: false, error: "Instrucción de edición demasiado corta" },
+          400,
+        );
+      }
+      // Misma regla de no-texto que generate (no meter palabras salvo que se pida).
+      const finalPrompt = [instruction, TEXT_RULES]
+        .filter((s) => s && s.trim())
+        .join(". ");
+      const out = await callFal(FLUX_KONTEXT_MODEL, {
+        prompt: finalPrompt,
+        image_url: imageUrl,
+        num_images: 1,
+        safety_tolerance: "2",
+        output_format: "png",
+      });
+      const resultUrl =
+        (out as { images?: { url?: string }[] }).images?.[0]?.url;
+      if (!resultUrl) {
+        throw new Error("fal.ai no devolvió imagen");
+      }
+      const publicUrl = await persistToStorage(admin, resultUrl, "gen");
+      await logAiUsage(admin, ownerId, "image_edit", instruction, cost);
       return jsonResponse({ success: true, url: publicUrl });
     }
 

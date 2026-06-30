@@ -18,6 +18,11 @@ export interface BaseAiImageService {
     opts?: { aspectRatio?: string; style?: string }
   ): Promise<E.Either<Error, string>>;
 
+  // Edita una imagen existente según una instrucción de texto, conservando el
+  // resto (imagen→imagen, FLUX Kontext). `imageUrl` es la URL pública de la
+  // imagen de origen (p. ej. la recién generada). Devuelve la nueva URL.
+  edit(imageUrl: string, instruction: string): Promise<E.Either<Error, string>>;
+
   // Mejora/alarga/acorta una descripción de producto (Claude Haiku). Devuelve
   // HTML simple listo para el editor.
   improveText(
