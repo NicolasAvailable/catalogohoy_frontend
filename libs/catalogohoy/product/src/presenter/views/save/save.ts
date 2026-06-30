@@ -810,7 +810,12 @@ export default class Save implements OnInit {
     if (this.isCreate()) {
       const product = await this.productFacade.create(body);
       product
-        .mapRight(() => this.router.navigate(['/admin/products']))
+        .mapRight(() => {
+          // El conteo del plan subió: re-consultar para que el límite quede
+          // sincronizado al volver al listado (el PlanStore está cacheado).
+          this.planStore.refreshUsage();
+          this.router.navigate(['/admin/products']);
+        })
         .mapLeft((error) => {
           this.isSubmitting.set(false);
           if (error.message?.includes('PLAN_LIMIT_EXCEEDED')) {
