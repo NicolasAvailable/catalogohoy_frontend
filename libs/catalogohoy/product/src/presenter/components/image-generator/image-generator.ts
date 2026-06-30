@@ -8,20 +8,44 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { ButtonComponent, DialogComponent, IconComponent } from '@ui';
+import {
+  ButtonComponent,
+  DialogComponent,
+  IconComponent,
+  SelectComponent,
+} from '@ui';
 import { AiImageService } from '../../../infrastructure';
+
+export type AspectRatio = 'auto' | 'square' | 'landscape' | 'portrait';
+
+/** Estilos de imagen. El `value` se manda a la edge function, que lo traduce a
+ *  un descriptor del prompt (la lógica de IA vive server-side). */
+const STYLE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'default', label: 'Predeterminado' },
+  { value: 'product', label: 'Foto de producto' },
+  { value: 'studio', label: 'Estudio (fondo blanco)' },
+  { value: 'lifestyle', label: 'Estilo de vida' },
+  { value: 'minimal', label: 'Minimalista' },
+  { value: 'threeD', label: 'Render 3D' },
+];
 
 /**
  * Modal para generar una imagen de producto con IA (FLUX vía la Edge Function).
- * El usuario escribe un prompt y puede insertar el título/descripción del
- * producto como base. Al generar, sube el resultado a Storage y emite la URL.
- * Usa el ui-dialog compartido (PrimeNG) para verse nativo como el resto.
+ * Permite elegir proporción y estilo, escribir un prompt (con el título/desc del
+ * producto como base) y previsualizar el resultado antes de usarlo.
  */
 @Component({
   selector: 'lib-image-generator',
-  imports: [IconComponent, DialogComponent, ButtonComponent],
+  imports: [
+    FormsModule,
+    IconComponent,
+    DialogComponent,
+    ButtonComponent,
+    SelectComponent,
+  ],
   templateUrl: './image-generator.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -39,6 +63,18 @@ export class ImageGeneratorComponent implements AfterViewInit {
 
   public readonly prompt = signal<string>('');
   public readonly processing = signal<boolean>(false);
+  /** URL de la imagen generada (preview). Null hasta que se genere una. */
+  public readonly generatedUrl = signal<string | null>(null);
+
+  public readonly aspectRatio = signal<AspectRatio>('auto');
+  public readonly style = signal<string>('default');
+  public readonly styleOptions = STYLE_OPTIONS;
+  public readonly aspectOptions: { value: AspectRatio; label: string }[] = [
+    { value: 'auto', label: 'Auto' },
+    { value: 'square', label: 'Cuadrada' },
+    { value: 'landscape', label: 'Horizontal' },
+    { value: 'portrait', label: 'Vertical' },
+  ];
 
   ngAfterViewInit(): void {
     // El componente se crea cuando el padre lo abre (@if): mostramos el diálogo.
@@ -47,6 +83,14 @@ export class ImageGeneratorComponent implements AfterViewInit {
 
   public setPrompt(value: string): void {
     this.prompt.set(value);
+  }
+
+  public setAspect(ratio: AspectRatio): void {
+    if (!this.processing()) this.aspectRatio.set(ratio);
+  }
+
+  public setStyle(value: string | null): void {
+    this.style.set(value ?? 'default');
   }
 
   public insertTitle(): void {
@@ -72,18 +116,27 @@ export class ImageGeneratorComponent implements AfterViewInit {
     if (!this.processing()) this.dialog()?.hide();
   }
 
+  /** Confirma el uso de la imagen generada: el padre la agrega y cierra. */
+  public useImage(): void {
+    const url = this.generatedUrl();
+    if (url && !this.processing()) this.generated.emit(url);
+  }
+
   public async generate(): Promise<void> {
     const prompt = this.prompt().trim();
     if (prompt.length < 3 || this.processing()) return;
     this.processing.set(true);
     this.toast.wait('Generando imagen con IA…');
     try {
-      const result = await this.ai.generate(prompt);
+      const result = await this.ai.generate(prompt, {
+        aspectRatio: this.aspectRatio(),
+        style: this.style(),
+      });
       result
         .mapRight((url) => {
           this.toast.success('Imagen generada con IA');
+          this.generatedUrl.set(url);
           this.processing.set(false);
-          this.generated.emit(url);
         })
         .mapLeft((e) => {
           this.toast.error(new Exception(e.message));

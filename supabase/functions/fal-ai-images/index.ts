@@ -25,6 +25,28 @@ const SAM2_MODEL = "fal-ai/sam2/image";
 
 const STORAGE_BUCKET = "catalogohoy";
 
+// Proporción de imagen (UI) → tamaño preset de FLUX.
+const GEN_IMAGE_SIZE: Record<string, string> = {
+  auto: "square_hd",
+  square: "square_hd",
+  landscape: "landscape_4_3",
+  portrait: "portrait_4_3",
+};
+
+// Estilo de imagen (UI) → descriptor que se suma al prompt del usuario.
+const GEN_STYLE_DESCRIPTOR: Record<string, string> = {
+  default: "",
+  product:
+    "professional commercial product photography, clean and appealing composition",
+  studio:
+    "studio product shot on a seamless plain white background, soft even studio lighting",
+  lifestyle:
+    "lifestyle product photo in a realistic everyday setting, natural light",
+  minimal:
+    "minimalist aesthetic, simple uncluttered background, plenty of negative space",
+  threeD: "high quality 3D render, soft global illumination, subtle reflections",
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -228,6 +250,8 @@ Deno.serve(async (req) => {
     imageUrl?: string;
     prompt?: string;
     points?: { x: number; y: number; label: number }[];
+    aspectRatio?: string;
+    style?: string;
   };
   try {
     body = await req.json();
@@ -371,15 +395,26 @@ Deno.serve(async (req) => {
       if (prompt.length < 3) {
         return jsonResponse({ success: false, error: "Prompt demasiado corto" }, 400);
       }
-      // Si la imagen incluye texto, debe estar SIEMPRE en español (catálogos
-      // hispanohablantes). Se lo indicamos explícitamente al modelo.
-      const finalPrompt =
-        `${prompt}. Si la imagen incluye texto o palabras, TODO el texto debe ` +
-        `estar en español, correctamente escrito y sin faltas de ortografía. ` +
-        `No uses inglés ni otros idiomas en el texto.`;
+      // Proporción elegida por el usuario → tamaño FLUX (default cuadrado).
+      const imageSize = GEN_IMAGE_SIZE[body.aspectRatio ?? "auto"] ??
+        "square_hd";
+      // Estilo elegido → descriptor que se suma al prompt.
+      const styleDesc = GEN_STYLE_DESCRIPTOR[body.style ?? "default"] ?? "";
+      // Reglas de texto en la imagen:
+      //  - Por defecto NO agregar palabras/letras (salvo que el usuario lo pida
+      //    explícitamente en su descripción).
+      //  - Si SÍ se pide texto, debe ir en español, bien escrito.
+      const TEXT_RULES =
+        "Do NOT add any text, words, letters, captions, labels, logos or " +
+        "watermarks to the image, UNLESS the description explicitly asks for " +
+        "text. If (and only if) text is explicitly requested, it must be " +
+        "written in Spanish, correctly spelled, with no other languages.";
+      const finalPrompt = [prompt, styleDesc, TEXT_RULES]
+        .filter((s) => s && s.trim())
+        .join(". ");
       const out = await callFal(FLUX_MODEL, {
         prompt: finalPrompt,
-        image_size: "square_hd",
+        image_size: imageSize,
         num_images: 1,
         enable_safety_checker: true,
       });
