@@ -1,67 +1,110 @@
 <ui-dialog
   #genDialog
-  headerTitle="🪄 Generar imagen con IA"
+  headerTitle="✨ Generador de imágenes de IA"
   [closable]="!processing()"
   [dismissableMask]="!processing()"
   [closeOnEscape]="!processing()"
-  styleClass="w-[32rem]! max-w-[92vw]!"
+  styleClass="w-[56rem]! max-w-[95vw]!"
   (close)="onDialogClose()"
 >
-  <div class="flex flex-col gap-4 pt-1">
-    <p class="text-sm text-grey-400">
-      Describe la imagen que quieres. Podés usar el título y la descripción del
-      producto como base.
-    </p>
+  <!-- Dos columnas en desktop: controles a la izquierda, preview a la derecha. -->
+  <div class="flex flex-col md:flex-row gap-5 pt-1">
+    <!-- ── Controles ── -->
+    <div class="flex flex-col gap-4 md:w-1/2">
+      <!-- Proporción de imagen -->
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-semibold text-grey-600">Proporción de imagen</label>
+        <div class="flex items-center gap-2">
+          @for (opt of aspectOptions; track opt.value) {
+          <button
+            type="button"
+            (click)="setAspect(opt.value)"
+            [disabled]="processing()"
+            [title]="opt.label"
+            class="flex items-center justify-center min-w-[3rem] h-10 px-3 rounded-lg border text-sm font-medium cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            [class.border-violet-500]="aspectRatio() === opt.value"
+            [class.text-violet-600]="aspectRatio() === opt.value"
+            [class.bg-violet-50]="aspectRatio() === opt.value"
+            [class.border-grey-200]="aspectRatio() !== opt.value"
+            [class.text-grey-500]="aspectRatio() !== opt.value"
+          >
+            @switch (opt.value) {
+              @case ('auto') { Auto }
+              @case ('square') {
+                <span class="w-4 h-4 border-2 border-current rounded-sm"></span>
+              }
+              @case ('landscape') {
+                <span class="w-5 h-3.5 border-2 border-current rounded-sm"></span>
+              }
+              @case ('portrait') {
+                <span class="w-3.5 h-5 border-2 border-current rounded-sm"></span>
+              }
+            }
+          </button>
+          }
+        </div>
+      </div>
 
-    <textarea
-      #promptBox
-      [value]="prompt()"
-      (input)="setPrompt(promptBox.value)"
-      [disabled]="processing()"
-      rows="4"
-      placeholder="Ej: gorra roja de béisbol sobre fondo blanco, foto de producto profesional, luz suave"
-      class="w-full rounded-lg border border-grey-200 p-3 text-sm text-grey-700 placeholder:text-grey-300 outline-none focus:border-violet-400 resize-none disabled:opacity-60"
-    ></textarea>
+      <!-- Estilo de imagen -->
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-semibold text-grey-600">Estilo de imagen</label>
+        <ui-select
+          [options]="styleOptions"
+          [ngModel]="style()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="setStyle($event)"
+          optionLabel="label"
+          optionValue="value"
+          [disabled]="processing()"
+          appendTo="body"
+          styleClass="w-full"
+        />
+      </div>
 
-    <!-- Insertar título / descripción del producto como base del prompt -->
-    @if (title().trim() || description().trim()) {
-    <div class="flex flex-wrap items-center gap-2">
-      <span class="text-xs text-grey-400">Insertar:</span>
-      @if (title().trim()) {
-      <button
-        type="button"
-        (click)="insertTitle()"
-        [disabled]="processing()"
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-grey-200 text-xs font-medium text-grey-600 hover:border-violet-300 hover:text-violet-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        <ui-icon name="plus" styleClass="w-3.5 h-3.5" />
-        Título
-      </button>
-      }
-      @if (description().trim()) {
-      <button
-        type="button"
-        (click)="insertDescription()"
-        [disabled]="processing()"
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-grey-200 text-xs font-medium text-grey-600 hover:border-violet-300 hover:text-violet-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        <ui-icon name="plus" styleClass="w-3.5 h-3.5" />
-        Descripción
-      </button>
-      }
-    </div>
-    }
+      <!-- Describe tu imagen -->
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-semibold text-grey-600">Describe tu imagen</label>
+        <textarea
+          #promptBox
+          [value]="prompt()"
+          (input)="setPrompt(promptBox.value)"
+          [disabled]="processing()"
+          rows="4"
+          placeholder="Ej: gorra roja de béisbol sobre fondo blanco, foto de producto profesional, luz suave"
+          class="w-full rounded-lg border border-grey-200 p-3 text-sm text-grey-700 placeholder:text-grey-300 outline-none focus:border-violet-400 resize-none disabled:opacity-60"
+        ></textarea>
 
-    <div class="flex items-center justify-end gap-2 mt-1">
-      <ui-button
-        label="Cancelar"
-        variant="outlined"
-        severity="contrast"
-        [fluid]="false"
-        size="small"
-        [disabled]="processing()"
-        (click)="cancel()"
-      />
+        <!-- Insertar título / descripción del producto como base del prompt -->
+        @if (title().trim() || description().trim()) {
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs text-grey-400">Insertar:</span>
+          @if (title().trim()) {
+          <button
+            type="button"
+            (click)="insertTitle()"
+            [disabled]="processing()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-grey-200 text-xs font-medium text-grey-600 hover:border-violet-300 hover:text-violet-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <ui-icon name="plus" styleClass="w-3.5 h-3.5" />
+            Título
+          </button>
+          }
+          @if (description().trim()) {
+          <button
+            type="button"
+            (click)="insertDescription()"
+            [disabled]="processing()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-grey-200 text-xs font-medium text-grey-600 hover:border-violet-300 hover:text-violet-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <ui-icon name="plus" styleClass="w-3.5 h-3.5" />
+            Descripción
+          </button>
+          }
+        </div>
+        }
+      </div>
+
+      <!-- Botón generar -->
       <button
         type="button"
         (click)="generate()"
@@ -69,17 +112,52 @@
         class="rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <span
-          class="flex items-center gap-2 rounded-[0.4375rem] bg-white px-5 py-2.5 text-sm font-semibold text-violet-700"
+          class="flex items-center justify-center gap-2 rounded-[0.4375rem] bg-white px-5 py-2.5 text-sm font-semibold text-violet-700"
         >
           @if (processing()) {
           <ui-icon name="loader-circle" styleClass="w-[1.125rem] h-[1.125rem] animate-spin" />
           Generando…
           } @else {
-          <ui-icon name="sparkles" styleClass="w-[1.125rem] h-[1.125rem]" />
-          Generar
+          <ui-icon name="wand-sparkles" styleClass="w-[1.125rem] h-[1.125rem]" />
+          Generar imagen con IA
           }
         </span>
       </button>
+    </div>
+
+    <!-- ── Preview ── -->
+    <div class="flex flex-col gap-3 md:w-1/2">
+      <div
+        class="relative aspect-square w-full rounded-xl border-2 border-dashed border-grey-200 bg-grey-50 flex items-center justify-center overflow-hidden"
+      >
+        @if (processing()) {
+        <div class="flex flex-col items-center gap-2 text-grey-400">
+          <ui-icon name="loader-circle" styleClass="w-8 h-8 animate-spin text-violet-500" />
+          <span class="text-xs">Generando tu imagen…</span>
+        </div>
+        } @else if (generatedUrl()) {
+        <img
+          [src]="generatedUrl()"
+          alt="Imagen generada con IA"
+          class="w-full h-full object-contain"
+        />
+        } @else {
+        <div class="flex flex-col items-center gap-2 text-grey-300">
+          <ui-icon name="image" styleClass="w-10 h-10" />
+          <span class="text-xs">Acá vas a ver tu imagen</span>
+        </div>
+        }
+      </div>
+
+      @if (generatedUrl() && !processing()) {
+      <ui-button
+        label="Usar esta imagen"
+        icon="check"
+        [fluid]="true"
+        size="small"
+        (click)="useImage()"
+      />
+      }
     </div>
   </div>
 </ui-dialog>
