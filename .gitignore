@@ -48,3 +48,6 @@ Thumbs.db
 .vercel
 
 .playwright-mcp
+
+# Local git worktrees (not part of the repo)
+.claude/worktrees/

@@ -87,6 +87,17 @@ export const EcommerceStore = signalStore(
       }
       return store.catalogInfo()?.showLocalCurrencyPrice ?? true;
     }),
+    // Separadores de miles/decimales del tenant (de tenant_currency_config).
+    // Los usa el pipe `tenantPrice` para formatear precios según el país:
+    // "1.234,50" (VE/AR) vs "1,234.50" (GT/MX/US). Default ',' decimal / '.'
+    // miles (mismo default que el mapeo del service).
+    numberFormat: computed(() => {
+      const cfg = store.catalogInfo()?.currencyConfig;
+      return {
+        decimalSeparator: cfg?.decimalSeparator || ',',
+        thousandSeparator: cfg?.thousandSeparator || '.',
+      };
+    }),
     // Dual-currency display (Bs. prices alongside USD/EUR) is a
     // Venezuela-specific concept tied to the BCV exchange rate. For every
     // other country, the public catalog must only show the single price.

@@ -11,10 +11,11 @@ import { Order, OrderPdfService } from '@catalogohoy/order';
 import { IconComponent } from '@ui';
 import { PublicOrder } from '../../../domain';
 import { EcommerceService, EcommerceStore } from '../../../infrastructure';
+import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 
 @Component({
   selector: 'lib-invoice',
-  imports: [DecimalPipe, DatePipe, IconComponent],
+  imports: [DecimalPipe, DatePipe, IconComponent, TenantPricePipe],
   templateUrl: './invoice.html',
   styleUrl: './invoice.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

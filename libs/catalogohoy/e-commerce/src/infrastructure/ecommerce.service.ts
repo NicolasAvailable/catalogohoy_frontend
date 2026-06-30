@@ -140,6 +140,42 @@ export class EcommerceService implements BaseEcommerceService {
         }
       : null;
 
+    // ── Símbolo de moneda del catálogo ──────────────────────────────────────
+    // Hay DOS fuentes posibles de símbolo en la respuesta del RPC:
+    //   - config.currency_symbol  → de `tenant_ecommerce_config` (suele estar
+    //     stale, normalmente '$').
+    //   - cc.currency_symbol      → de `tenant_currency_config`, lo que el
+    //     tenant elige en "Tasas del día" (autoritativo: Q, S/, R$, €, RD$, Bs.…).
+    //
+    // ⚠️ CASO ESPECIAL VENEZUELA (country_code === 'VE') — NO TOCAR sin pensar:
+    //   En VE el precio BASE que se muestra es la moneda de REFERENCIA ($ o €),
+    //   NO la moneda local (Bs.). La línea en Bs. se muestra APARTE y se controla
+    //   con el toggle `showLocalCurrencyPrice` (+ `showReferencePrice` para el $).
+    //   En VE `cc.currency_symbol` casi siempre es 'Bs.' (la moneda local), así
+    //   que si lo usáramos como símbolo base, el precio saldría "Bs.18" aunque el
+    //   usuario tenga el Bs. APAGADO y quiera ver solo $. Eso fue un bug real
+    //   (catálogo `dicenorepostero`: config '$' + cc 'Bs.' → mostraba 'Bs.'
+    //   siempre). Por eso para VE mantenemos la lógica histórica:
+    //     config.currency_symbol → derivado del país → '$'.
+    //
+    // RESTO DE PAÍSES (GT, BR, DO, PE, ES…):
+    //   `cc.currency_symbol` es la fuente autoritativa. Usar config primero hacía
+    //   que GT/BR/DO… mostraran '$' aunque la moneda fuera GTQ/BRL/DOP.
+    const symbolFromCountry = (() => {
+      const country = findCountryByCode(data.tenant.country_code);
+      const currency = country
+        ? findCurrencyByCode(country.defaultCurrency)
+        : null;
+      return currency?.symbol ?? null;
+    })();
+    const currencySymbol =
+      data.tenant.country_code === 'VE'
+        ? config?.currency_symbol ?? symbolFromCountry ?? '$'
+        : cc?.currency_symbol?.trim() ||
+          symbolFromCountry ||
+          config?.currency_symbol?.trim() ||
+          '$';
+
     const catalogInfo: CatalogInfo = {
       id: data.tenant.id,
       name: data.tenant.name,
@@ -170,18 +206,8 @@ export class EcommerceService implements BaseEcommerceService {
         config?.show_payment_methods_section ?? true,
       socialLinks: (config?.social_links as SocialLinks) ?? DEFAULT_SOCIAL_LINKS,
       template: (config?.template as CatalogTemplate) ?? 'banner-centered',
-      // Si el config no fijó un símbolo explícito, derivarlo del country_code
-      // del tenant. Sin esto los catálogos de PE/CL/BR/EUR muestran '$' por
-      // default aunque la moneda real sea S/, CLP, R$ o €.
-      currencySymbol:
-        config?.currency_symbol ??
-        (() => {
-          const country = findCountryByCode(data.tenant.country_code);
-          const currency = country
-            ? findCurrencyByCode(country.defaultCurrency)
-            : null;
-          return currency?.symbol ?? '$';
-        })(),
+      // Símbolo de moneda (ver el bloque de arriba para la lógica VE vs resto).
+      currencySymbol,
       showReferencePrice: config?.show_reference_price ?? true,
       showLocalCurrencyPrice: config?.show_local_currency_price ?? true,
       whatsappOrderMessage: config?.whatsapp_order_message ?? null,

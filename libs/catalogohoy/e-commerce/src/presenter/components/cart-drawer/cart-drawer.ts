@@ -5,10 +5,11 @@ import { StripHtmlPipe } from '@shared/presenter';
 import { IconComponent } from '@ui';
 import { CartItem } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
+import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 
 @Component({
   selector: 'lib-cart-drawer',
-  imports: [DecimalPipe, IconComponent, StripHtmlPipe],
+  imports: [DecimalPipe, IconComponent, StripHtmlPipe, TenantPricePipe],
   templateUrl: './cart-drawer.html',
   styleUrl: './cart-drawer.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

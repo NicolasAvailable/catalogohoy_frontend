@@ -317,6 +317,9 @@ export default class List implements OnInit, OnDestroy {
     result.mapRight(() => {
       this.toastService.success('Producto duplicado correctamente');
       this.refreshList();
+      // El conteo del plan subió: re-consultar para que el límite/modal
+      // refleje el nuevo uso (el PlanStore está cacheado).
+      this.planStore.refreshUsage();
     });
     this.isProcessing.set(false);
   }
@@ -352,7 +355,13 @@ export default class List implements OnInit, OnDestroy {
       const product = this.selectedProduct();
       if (product) {
         const result = await this.productFacade.delete(String(product.id));
-        result.mapRight(() => this.refreshList());
+        result.mapRight(() => {
+          this.refreshList();
+          // Al borrar se libera cupo del plan: re-consultar el uso para que
+          // `canCreateProduct` se actualice y no siga apareciendo el modal de
+          // límite (el PlanStore queda cacheado si no se refresca).
+          this.planStore.refreshUsage();
+        });
       }
     } else {
       const ids = Array.from(this.selectedIds());
@@ -361,6 +370,7 @@ export default class List implements OnInit, OnDestroy {
         result.mapRight(() => {
           this.clearSelection();
           this.refreshList();
+          this.planStore.refreshUsage();
         });
       }
     }

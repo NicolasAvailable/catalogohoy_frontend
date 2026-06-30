@@ -38,6 +38,11 @@ export const internalRoutes: Route[] = [
       ),
   },
   {
+    path: 'ai-usage',
+    loadChildren: () =>
+      import('./ai-usage/ai-usage.routes').then((m) => m.aiUsageRoutes),
+  },
+  {
     path: 'coupons',
     loadChildren: () =>
       import('./coupons/coupons.routes').then((m) => m.couponsRoutes),

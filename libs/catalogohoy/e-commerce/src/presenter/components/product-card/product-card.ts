@@ -16,11 +16,18 @@ import {
   dialogConfig,
 } from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
+import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 import { ProductDetailModal } from '../product-detail-modal/product-detail-modal';
 
 @Component({
   selector: 'lib-product-card',
-  imports: [DecimalPipe, IconComponent, ProductMediaComponent, StripHtmlPipe],
+  imports: [
+    DecimalPipe,
+    IconComponent,
+    ProductMediaComponent,
+    StripHtmlPipe,
+    TenantPricePipe,
+  ],
   templateUrl: './product-card.html',
   styleUrl: './product-card.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

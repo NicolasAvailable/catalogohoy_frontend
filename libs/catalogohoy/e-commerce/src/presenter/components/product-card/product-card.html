@@ -55,15 +55,15 @@
         @for (tier of product().wholesaleTiers.slice(0, 3); track $index) {
         <div class="product-card__wholesale-tier">
           <span class="product-card__wholesale-tier-title">{{ tier.title }}</span>
-          <span class="product-card__wholesale-tier-price">{{ cs() }}{{ tier.price }}</span>
+          <span class="product-card__wholesale-tier-price">{{ cs() }}{{ tier.price | tenantPrice }}</span>
         </div>
         }
       </div>
       } @else if (isVariant()) {
       @if (showReferencePrice()) {
       <span class="product-card__price-current">
-        {{ cs() }}{{ variantPriceRange().min }}@if (variantPriceRange().min !==
-        variantPriceRange().max) { - {{ cs() }}{{ variantPriceRange().max }}}
+        {{ cs() }}{{ variantPriceRange().min | tenantPrice }}@if (variantPriceRange().min !==
+        variantPriceRange().max) { - {{ cs() }}{{ variantPriceRange().max | tenantPrice }}}
       </span>
       }
       @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
@@ -75,9 +75,9 @@
       }
       } @else if (product().pricePromotional > 0) {
       @if (showReferencePrice()) {
-      <span class="product-card__price-original">{{ cs() }}{{ product().price }}</span>
+      <span class="product-card__price-original">{{ cs() }}{{ product().price | tenantPrice }}</span>
       <span class="product-card__price-promo"
-        >{{ cs() }}{{ product().pricePromotional }}</span
+        >{{ cs() }}{{ product().pricePromotional | tenantPrice }}</span
       >
       }
       @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
@@ -85,7 +85,7 @@
       }
       } @else {
       @if (showReferencePrice()) {
-      <span class="product-card__price-current">{{ cs() }}{{ product().price }}</span>
+      <span class="product-card__price-current">{{ cs() }}{{ product().price | tenantPrice }}</span>
       }
       @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
       <span class="product-card__price-bs">Bs. {{ product().price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>

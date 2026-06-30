@@ -35,8 +35,12 @@ edites a ciegas**; el repo puede estar atrás de prod.
   no alcanza), `refund_ai_credits`, `add_purchased_credits`, `reset_due_ai_credits` (cron
   diario), `sync_ai_credits_on_plan_change` (trigger en `tenants` AFTER UPDATE OF plan_id →
   acredita al subir de plan; defensivo, nunca bloquea el cambio de plan).
-- **Anuncios por cuenta**: `users.seen_announcements text[]` + `has_seen_announcement` /
-  `mark_announcement_seen` (el modal de IA en Home usa la clave `ai_v1`).
+- **Anuncios por usuario autenticado**: tabla `user_announcement_views(auth_user_id,
+  announcement_key)` + `has_seen_announcement` / `mark_announcement_seen` (SECURITY DEFINER,
+  keyean por `auth.uid()`). El modal de IA en Home usa la clave `ai_v1`. **Antes** se guardaba
+  en `users.seen_announcements text[]`, pero eso dejaba fuera a los miembros de equipo (no
+  tienen fila en `public.users`) → el modal les reaparecía siempre. La migración
+  `announcement_views_by_auth_uid` backfilleó los vistos previos.
 - **Discord lead on verify**: `notify_new_lead` (trigger en `users_tenants`, solo si el correo
   ya está confirmado) + `notify_lead_on_email_confirm` (trigger en `auth.users` AFTER UPDATE
   OF email_confirmed_at). Así notifica una sola vez, en el momento correcto según el toggle.
@@ -51,7 +55,25 @@ edites a ciegas**; el repo puede estar atrás de prod.
 | **fal.ai** | Generar/quitar fondo/segmentar imágenes | `fal-ai-images` · `FAL_KEY` |
 | **PostHog** | Analíticas (HogQL) | `core/providers/posthog` + `posthog-analytics` |
 | **Meta Pixel** | Tracking (solo prod) | `core/providers/meta-pixel` |
+| **Sentry** | Errores + performance (tracing) + session replay | `core/providers/sentry` (`initSentry`/`provideSentry`) · DSN en `env/sentry`. MCP en `.mcp.json`. |
 | **WhatsApp (Meta Cloud API)** | Notificaciones de órdenes/plan | `send-whatsapp-*` · `WHATSAPP_*` |
 | **Discord** | Webhooks de eventos internos (leads, checkout, pagos) | `notify-checkout-intent`, `stripe-webhook`, `new-lead-discord` |
 | **Resend** | Email transaccional (recibos de pago, reportes semanales) | `stripe-webhook`, `send-weekly-report` |
 | **countriesnow.space** | Estados/ciudades por país | `countries-proxy` |
+
+## Sentry (errores + performance + replay)
+
+- **Dos proyectos** (un DSN por app): `sentryDsnCatalogohoy` y `sentryDsnAuth` en
+  `libs/catalogohoy/environments/src/sentry/sentry.ts`. Los DSN son **públicos** (van en el
+  bundle, como la key de PostHog) — no son secretos.
+- **Init**: `initSentry({ dsn, appName })` en cada `apps/*/src/main.ts` **antes** de
+  `bootstrapApplication` (captura errores tempranos). **No corre en dev** ni si el DSN está vacío.
+- **Providers**: `...provideSentry()` en cada `app.config.ts` → `ErrorHandler` de Sentry +
+  `TraceService` (instrumenta el routing para performance). Vive en `core/providers/sentry`.
+- **Muestreo**: `tracesSampleRate 0.1`, replay `0.1` sesiones / `1.0` con error
+  (configurable en el env). Inputs enmascarados en el replay (`maskAllInputs: true`).
+- **`tracePropagationTargets`**: dominios `*.catalogohoy.com` + el proyecto Supabase (para
+  distributed tracing front↔backend).
+- **MCP**: `sentry` (remoto, OAuth) en `.mcp.json` → `https://mcp.sentry.dev/mcp`.
+- **Pendiente (opcional)**: subir **source maps** en el build de prod para stack traces legibles
+  (necesita auth token + org/project slugs; `@sentry/cli` o el plugin de esbuild como postbuild).

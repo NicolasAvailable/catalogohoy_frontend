@@ -88,7 +88,7 @@
         <p class="checkout__item-name">
           {{ item.name }}@if (item.variantName) { <span class="checkout__item-size">· {{ item.variantName }}</span> }@if (item.size) { <span class="checkout__item-size">· {{ item.size }}</span> }
         </p>
-        <p class="checkout__item-price">{{ cs() }}{{ item.total }}</p>
+        <p class="checkout__item-price">{{ cs() }}{{ item.total | tenantPrice }}</p>
         <div class="checkout__stepper">
           <button type="button" (click)="onDecrement(item)" aria-label="Quitar uno">
             <ui-icon name="minus" size="14" />
@@ -184,18 +184,18 @@
     <h2 class="checkout__card-title">Resumen del pedido</h2>
     <div class="checkout__summary-row">
       <span>Artículos ({{ cartStore.totalItems() }})</span>
-      <span>{{ cs() }}{{ subtotal() }}</span>
+      <span>{{ cs() }}{{ subtotal() | tenantPrice }}</span>
     </div>
     @if (selectedShipping()) {
     <div class="checkout__summary-row">
       <span>{{ selectedShipping()?.name }}</span>
-      <span>{{ shippingFee() > 0 ? cs() + shippingFee() : 'Gratis' }}</span>
+      <span>@if (shippingFee() > 0) { {{ cs() }}{{ shippingFee() | tenantPrice }} } @else { Gratis }</span>
     </div>
     }
     <div class="checkout__summary-total">
       <span>Total</span>
       <span>
-        {{ cs() }}{{ total() }}
+        {{ cs() }}{{ total() | tenantPrice }}
         @if (showBs()) {
         <small>Bs. {{ totalBs() | number:'1.2-2' }}</small>
         }

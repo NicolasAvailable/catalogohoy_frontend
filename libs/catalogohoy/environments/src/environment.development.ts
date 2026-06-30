@@ -2,6 +2,7 @@ import { authenticationEnvironment } from './authentication/environment.developm
 import { globalEnvironment } from './global/global.development';
 import { metaPixelEnvironment } from './meta-pixel/meta-pixel';
 import { posthogEnvironment } from './posthog/posthog';
+import { sentryEnvironment } from './sentry/sentry';
 import { supabaseEnvironment } from './supabase/supabase.development';
 import { whatsappEnvironment } from './whatsapp/whatsapp';
 
@@ -12,5 +13,6 @@ export const environment = {
   ...supabaseEnvironment,
   ...posthogEnvironment,
   ...metaPixelEnvironment,
+  ...sentryEnvironment,
   ...whatsappEnvironment,
 };

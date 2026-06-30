@@ -147,6 +147,18 @@ Deno.serve(async (req) => {
     const data = await res.json();
     const improved = (data?.content?.[0]?.text ?? "").trim();
     if (!improved) throw new Error("empty result");
+    // Registra la generación exitosa en ai_usage_log (panel internal "Uso de
+    // IA"). Best-effort: no debe romper la respuesta.
+    try {
+      await admin.from("ai_usage_log").insert({
+        user_id: ownerId,
+        feature: "improve_text",
+        prompt: text?.trim() ? text.trim() : null,
+        credits: COST,
+      });
+    } catch (e) {
+      console.error("ai_usage_log insert failed:", e);
+    }
     return json({ success: true, text: improved, credits: balance });
   } catch (err) {
     await admin.rpc("refund_ai_credits", { p_user_id: ownerId, p_cost: COST });

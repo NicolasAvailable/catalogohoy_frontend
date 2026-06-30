@@ -2,6 +2,59 @@
 
 > Lo que te hace perder tiempo si no lo sabés. Agregá acá cada nueva trampa.
 
+## "Failed to fetch dynamically imported module" (chunk viejo tras deploy)
+
+- SPA con lazy-loading (`loadChildren`/`import()`): si el usuario tiene la app abierta durante
+  un **deploy**, su `index.html` viejo referencia `chunk-XXXX.js` que el deploy nuevo ya
+  reemplazó → el import dinámico falla con `TypeError: Failed to fetch dynamically imported
+  module`. **No es un bug de la app**, es inherente a deployar un SPA.
+- Variantes por navegador (todas las cubre `isChunkLoadError`): Chrome/Firefox "Failed to
+  fetch dynamically imported module"; **Safari/iOS "'text/html' is not a valid JavaScript MIME
+  type" / "Importing a module script failed"** (el host devuelve el index.html en vez del .js).
+- Mitigación en código: `ChunkAwareErrorHandler` (en `core/providers/sentry/sentry.ts`)
+  detecta el error de chunk y **recarga la página una vez** (guard anti-loop por
+  `sessionStorage`) para traer la versión nueva; el resto de errores van a Sentry normal.
+- Prevención a nivel plataforma: **Vercel Skew Protection** (mantiene los assets de deploys
+  viejos disponibles para clientes con la versión anterior) — evita que el error ocurra.
+
+## Ruido de terceros en Sentry (`ignoreErrors`)
+
+- Errores que NO son de la app y se descartan en `Sentry.init.ignoreErrors`
+  (`core/providers/sentry/sentry.ts`): navegadores in-app (Instagram/FB/TikTok WebView) →
+  `"Java object is gone"` / `"Error invoking postMessage"` (stack con `iabjs://…`); y el ruido
+  benigno de `ResizeObserver loop…`. Agregá ahí nuevos patrones de ruido de terceros.
+
+## Sentry `tracePropagationTargets` rompe las Edge Functions (CORS)
+
+- El **browser tracing** de Sentry adjunta headers `sentry-trace` y `baggage` a
+  cada request cuyo URL matchee `tracePropagationTargets`. Las **Edge Functions
+  de Supabase** tienen un `Access-Control-Allow-Headers` **fijo** en el código
+  (`authorization, x-client-info, apikey, content-type`) que **no** incluye esos
+  headers → el browser **bloquea el POST en el preflight** (se ve `OPTIONS 200`
+  en los logs pero **nunca un POST**) y el cliente recibe *"Failed to send a
+  request to the Edge Function"* (`FunctionsFetchError`, un `fetch` rechazado).
+- Sucede para **todas** las funciones llamadas desde el browser (checkout/pagos,
+  IA, créditos…), en todos los países. Síntoma en DevTools: la request a la
+  función en rojo, "No data found for resource", y no llega nada al backend.
+- **Regla**: NO poner el dominio de Supabase (ni terceros con CORS estricto) en
+  `tracePropagationTargets`. Está en `[]` (no propagar a nada). El backend no
+  continúa la traza igual, así que no se pierde nada útil.
+- Si en el futuro hiciera falta propagar, primero agregá `sentry-trace, baggage`
+  al `Access-Control-Allow-Headers` de **todas** las edge functions invocadas
+  desde el browser.
+
+## `environment.production` es SIEMPRE false — usar `isDevMode()`
+
+- El barrel `@catalogohoy/env` (`libs/catalogohoy/environments/src/index.ts`) hace
+  `export * from './environment.development'` (production:false). El `fileReplacements` de la
+  config `development` reemplaza `environment.ts` → `environment.development.ts`, pero el barrel
+  **no importa `environment.ts`**, así que el reemplazo no aplica y **`environment.production`
+  queda en false en TODOS los builds** (`environment.ts` con production:true es código muerto).
+- Para detectar producción usá **`isDevMode()`** (false en builds prod), como ya hacen PostHog,
+  MetaPixel, Supabase y los guards. No te fíes de `environment.production`.
+- Esto tuvo a Sentry sin inicializar en prod (el DSN estaba en el bundle pero `init()` salía
+  por el guard `!environment.production`). Fix: guard con `isDevMode()`.
+
 ## Deploy / ramas
 
 - **Cada app deploya de una rama distinta** (`main` / `authentication` / `landing`). Un
@@ -71,6 +124,30 @@
   overlay `fixed inset-0` propio. Se abre con `show()` (viewChild) en `ngAfterViewInit`
   cuando el padre lo monta con `@if`. `closable`/`dismissableMask`/`closeOnEscape` =
   `!processing()` para no cerrar mientras procesa.
+
+## Moneda del catálogo público
+
+- Hay **dos** símbolos de moneda en la respuesta de `get_public_catalog`:
+  `config.currency_symbol` (de `tenant_ecommerce_config`, **suele estar stale en `'$'`**)
+  y `currency_config.currency_symbol` (de `tenant_currency_config`, el que el tenant
+  realmente elige en "Tasas del día" → **autoritativo**: Q, S/, R$, €, RD$…).
+- `CatalogInfo.currencySymbol` (en `ecommerce.service.ts`) tiene **dos ramas**:
+  - **Venezuela (`country_code === 'VE'`)** → caso especial: el precio base mostrado es la
+    moneda de **referencia** (`$`/`€`), NO la local (Bs.). El Bs. se muestra aparte con el
+    toggle `showLocalCurrencyPrice`. En VE `currency_config.currency_symbol` suele ser `'Bs.'`,
+    así que **NO** se usa; se mantiene la lógica histórica `config.currency_symbol` → país →
+    `'$'`. (Bug real: usar `cc` en VE hizo que un catálogo con config `'$'` y cc `'Bs.'`
+    —`dicenorepostero`— mostrara `'Bs.'` siempre aunque el Bs. estuviera apagado.)
+  - **Resto de países** → `currency_config.currency_symbol` es la fuente autoritativa
+    (`Q`/`R$`/`RD$`/`S/`/`€`…) → país → `config.currency_symbol` → `'$'`. Usar `config` primero
+    hacía que GT/BR/DO… mostraran `'$'` aunque la moneda fuera GTQ/BRL/DOP.
+- **Separadores de miles/decimales**: los precios del storefront se formatean con el pipe
+  `tenantPrice` (`e-commerce/.../presenter/pipes/tenant-price.pipe.ts`), que lee
+  `EcommerceStore.numberFormat()` (de `currency_config.decimal_separator` /
+  `thousand_separator`). Así un precio sale `1.234,50` (VE/AR) o `1,234.50` (GT/MX/US). Agrupa
+  miles siempre; muestra 2 decimales solo si hay fracción (no llena de `,00`). **NO** antepone
+  el símbolo (ese va aparte con `currencySymbol`). Las líneas de **Bs.** (VE) siguen con
+  `| number:'1.2-2'` (es-locale ya coincide con la convención venezolana).
 
 ## Supabase / datos
 

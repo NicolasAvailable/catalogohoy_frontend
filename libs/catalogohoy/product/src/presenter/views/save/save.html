@@ -7,6 +7,17 @@
     </h1>
     <div class="flex gap-2 items-center">
       <!-- Mobile buttons -->
+      @if (!isCreate()) {
+      <ui-button
+        class="sm:hidden"
+        (click)="onShare()"
+        icon="share2"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        size="small"
+      />
+      }
       <ui-button
         class="sm:hidden"
         routerLink="/admin/products"

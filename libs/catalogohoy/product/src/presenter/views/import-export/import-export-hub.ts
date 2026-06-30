@@ -209,6 +209,9 @@ export class ImportExportHubComponent {
     });
     this.view.set('import-done');
     this.productStore.productList$();
+    // El import creó productos: re-consultar el uso del plan para sincronizar
+    // el límite (el PlanStore está cacheado).
+    this.planStore.refreshUsage();
   }
 
   public downloadTemplate(): void {
