@@ -62,7 +62,7 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
       { text: 'Todos los módulos disponibles' },
       { text: 'Analíticas del catálogo' },
       { text: 'Hasta 10 reportes por mes' },
-      { text: '200 créditos de IA por mes' },
+      { text: '15 créditos de IA por mes' },
       { text: 'Diseño personalizable' },
       { text: 'Soporte prioritario' },
     ],

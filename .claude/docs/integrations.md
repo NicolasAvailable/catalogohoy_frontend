@@ -7,7 +7,7 @@
 
 | Función | Qué hace | Trigger | verify_jwt | Externos / secrets |
 |---|---|---|---|---|
-| **fal-ai-images** | Quitar fondo (BiRefNet), segmentar (SAM-2), generar (FLUX schnell). Gateada por créditos (1/1/3). Persiste a Storage. `generate` acepta `aspectRatio` (auto/square/landscape/portrait → image_size FLUX) y `style` (default/product/studio/lifestyle/minimal/threeD → descriptor del prompt). **No agrega texto a la imagen salvo que el prompt lo pida; si lo pide, va en español.** | front invoke | sí | fal.ai · `FAL_KEY` |
+| **fal-ai-images** | Quitar fondo (BiRefNet), segmentar (SAM-2), generar + editar imagen (Gemini 2.5 Flash Image / "Nano Banana"). Gateada por créditos (1/1/3/4). Persiste a Storage. `generate` acepta `aspectRatio` (auto/square/landscape/portrait → aspect_ratio de Gemini) y `style` (default/product/studio/lifestyle/minimal/threeD → descriptor del prompt); `edit` (img→img) toma `imageUrl` + instrucción en `prompt`. **No agrega texto a la imagen salvo que el prompt lo pida; si lo pide, va en español.** | front invoke | sí | fal.ai · `FAL_KEY` |
 | **improve-text** | Mejora/alarga/acorta descripción (Claude Haiku). Gateada (1). Anti prompt-injection. | front invoke | sí | Anthropic · `ANTHROPIC_API_KEY` |
 | **get-credits** | Saldo de créditos del owner (mensual+comprado); `ensure_ai_credits` primero. | front invoke | sí | `SERVICE_ROLE` |
 | **create-credit-checkout** | Stripe Checkout de créditos (cantidad libre, precio server-side con descuento por volumen). | front invoke | sí | Stripe · `STRIPE_SECRET_KEY` |
