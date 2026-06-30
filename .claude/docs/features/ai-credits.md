@@ -8,7 +8,7 @@
   `ai_credits(user_id PK, monthly_balance, monthly_allowance, purchased_balance, reset_at, updated_at)`.
   **Dos cubetas**: mensual (se resetea) + comprada (persiste). Se gasta primero la mensual.
 - RLS: el owner solo **lee** su fila; nadie escribe desde el cliente.
-- **Allowance** = mayor plan entre los catálogos del owner: gratis 10 · básico 15 · avanzado 500.
+- **Allowance** = mayor plan entre los catálogos del owner: gratis 15 · básico 200 · avanzado 500.
 
 ### RPCs (SECURITY DEFINER, execute solo service_role)
 

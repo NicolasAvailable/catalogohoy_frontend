@@ -44,7 +44,7 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
       { text: '1 catálogo' },
       { text: 'Edición limitada del catálogo' },
       { text: '1 reporte por mes' },
-      { text: '10 créditos de IA por mes' },
+      { text: '15 créditos de IA por mes' },
       // Negatives stay grouped at the end so the cross icons render
       // together as a "what you don't get" block instead of being
       // sprinkled between checks.
@@ -62,7 +62,7 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
       { text: 'Todos los módulos disponibles' },
       { text: 'Analíticas del catálogo' },
       { text: 'Hasta 10 reportes por mes' },
-      { text: '15 créditos de IA por mes' },
+      { text: '200 créditos de IA por mes' },
       { text: 'Diseño personalizable' },
       { text: 'Soporte prioritario' },
     ],
