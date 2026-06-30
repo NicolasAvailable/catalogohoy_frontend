@@ -11,20 +11,26 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { DialogComponent, IconComponent, SelectComponent } from '@ui';
+import {
+  DialogComponent,
+  IconComponent,
+  SelectComponent,
+  SelectItemDirective,
+  SelectSelectedItemDirective,
+} from '@ui';
 import { AiImageService } from '../../../infrastructure';
 
 export type AspectRatio = 'auto' | 'square' | 'landscape' | 'portrait';
 
 /** Estilos de imagen. El `value` se manda a la edge function, que lo traduce a
  *  un descriptor del prompt (la lógica de IA vive server-side). */
-const STYLE_OPTIONS: { value: string; label: string }[] = [
-  { value: 'default', label: 'Predeterminado' },
-  { value: 'product', label: 'Foto de producto' },
-  { value: 'studio', label: 'Estudio (fondo blanco)' },
-  { value: 'lifestyle', label: 'Estilo de vida' },
-  { value: 'minimal', label: 'Minimalista' },
-  { value: 'threeD', label: 'Render 3D' },
+const STYLE_OPTIONS: { value: string; label: string; icon: string }[] = [
+  { value: 'default', label: 'Predeterminado', icon: 'sparkles' },
+  { value: 'product', label: 'Foto de producto', icon: 'camera' },
+  { value: 'studio', label: 'Estudio (fondo blanco)', icon: 'lightbulb' },
+  { value: 'lifestyle', label: 'Estilo de vida', icon: 'home' },
+  { value: 'minimal', label: 'Minimalista', icon: 'minus' },
+  { value: 'threeD', label: 'Render 3D', icon: 'package' },
 ];
 
 /**
@@ -34,7 +40,14 @@ const STYLE_OPTIONS: { value: string; label: string }[] = [
  */
 @Component({
   selector: 'lib-image-generator',
-  imports: [FormsModule, IconComponent, DialogComponent, SelectComponent],
+  imports: [
+    FormsModule,
+    IconComponent,
+    DialogComponent,
+    SelectComponent,
+    SelectItemDirective,
+    SelectSelectedItemDirective,
+  ],
   templateUrl: './image-generator.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

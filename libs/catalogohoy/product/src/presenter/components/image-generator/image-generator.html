@@ -58,7 +58,20 @@
           [disabled]="processing()"
           appendTo="body"
           styleClass="w-full"
-        />
+        >
+          <ng-template selectSelectedItem let-opt>
+            <span class="flex items-center gap-2 text-grey-700">
+              <ui-icon [name]="opt.icon" styleClass="w-4 h-4 text-violet-600" />
+              {{ opt.label }}
+            </span>
+          </ng-template>
+          <ng-template selectItem let-opt>
+            <span class="flex items-center gap-2 text-grey-700">
+              <ui-icon [name]="opt.icon" styleClass="w-4 h-4 text-violet-600" />
+              {{ opt.label }}
+            </span>
+          </ng-template>
+        </ui-select>
       </div>
 
       <!-- Describe tu imagen -->
