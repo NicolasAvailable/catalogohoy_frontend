@@ -8,11 +8,21 @@
   un **deploy**, su `index.html` viejo referencia `chunk-XXXX.js` que el deploy nuevo ya
   reemplazó → el import dinámico falla con `TypeError: Failed to fetch dynamically imported
   module`. **No es un bug de la app**, es inherente a deployar un SPA.
+- Variantes por navegador (todas las cubre `isChunkLoadError`): Chrome/Firefox "Failed to
+  fetch dynamically imported module"; **Safari/iOS "'text/html' is not a valid JavaScript MIME
+  type" / "Importing a module script failed"** (el host devuelve el index.html en vez del .js).
 - Mitigación en código: `ChunkAwareErrorHandler` (en `core/providers/sentry/sentry.ts`)
   detecta el error de chunk y **recarga la página una vez** (guard anti-loop por
   `sessionStorage`) para traer la versión nueva; el resto de errores van a Sentry normal.
 - Prevención a nivel plataforma: **Vercel Skew Protection** (mantiene los assets de deploys
   viejos disponibles para clientes con la versión anterior) — evita que el error ocurra.
+
+## Ruido de terceros en Sentry (`ignoreErrors`)
+
+- Errores que NO son de la app y se descartan en `Sentry.init.ignoreErrors`
+  (`core/providers/sentry/sentry.ts`): navegadores in-app (Instagram/FB/TikTok WebView) →
+  `"Java object is gone"` / `"Error invoking postMessage"` (stack con `iabjs://…`); y el ruido
+  benigno de `ResizeObserver loop…`. Agregá ahí nuevos patrones de ruido de terceros.
 
 ## Sentry `tracePropagationTargets` rompe las Edge Functions (CORS)
 

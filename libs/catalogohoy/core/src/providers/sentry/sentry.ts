@@ -35,6 +35,18 @@ export function initSentry({ dsn, appName }: InitSentryOptions): void {
     environment: 'production',
     // Enviar logs a Sentry (feature "Logs").
     enableLogs: true,
+    // Ruido que NO es de la app (terceros/navegadores in-app): se descarta para
+    // no ensuciar Sentry. Matchea por substring del mensaje del error.
+    ignoreErrors: [
+      // Navegadores in-app (Instagram/Facebook/TikTok WebView): su propia
+      // instrumentación (`iabjs://…navigation_performance_logger`) falla al hacer
+      // postMessage cuando el WebView se destruye. No es un error nuestro.
+      'Java object is gone',
+      'Error invoking postMessage',
+      // ResizeObserver: bucle benigno, ruido universal de Chrome.
+      'ResizeObserver loop completed with undelivered notifications',
+      'ResizeObserver loop limit exceeded',
+    ],
     integrations: [
       Sentry.browserTracingIntegration(),
       Sentry.replayIntegration({
@@ -67,10 +79,15 @@ export function initSentry({ dsn, appName }: InitSentryOptions): void {
  * usuario tenía la app abierta durante un deploy: el index.html viejo referencia
  * `chunk-XXXX.js` que el deploy nuevo ya reemplazó → el import() dinámico falla.
  * No es un bug de la app; se recupera recargando para traer la versión nueva.
+ *
+ * Cubre las distintas variantes según el navegador:
+ * - Chrome/Firefox: "Failed to fetch dynamically imported module"
+ * - Safari/iOS: "'text/html' is not a valid JavaScript MIME type" / "Importing a
+ *   module script failed" (el host devuelve el index.html en vez del .js).
  */
 function isChunkLoadError(error: unknown): boolean {
   const msg = (error as { message?: string })?.message ?? String(error ?? '');
-  return /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk [\w-]+ failed/i.test(
+  return /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|is not a valid JavaScript MIME type|Expected a JavaScript module script but the server responded with|ChunkLoadError|Loading chunk [\w-]+ failed/i.test(
     msg
   );
 }
