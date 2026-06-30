@@ -63,14 +63,61 @@ export function initSentry({ dsn, appName }: InitSentryOptions): void {
 }
 
 /**
- * Providers de Sentry para el `appConfig`: enchufa el ErrorHandler de Sentry y
- * el TraceService (instrumentación de routing para performance).
+ * ¿Es un error de carga de un chunk lazy que ya no existe? Pasa cuando el
+ * usuario tenía la app abierta durante un deploy: el index.html viejo referencia
+ * `chunk-XXXX.js` que el deploy nuevo ya reemplazó → el import() dinámico falla.
+ * No es un bug de la app; se recupera recargando para traer la versión nueva.
+ */
+function isChunkLoadError(error: unknown): boolean {
+  const msg = (error as { message?: string })?.message ?? String(error ?? '');
+  return /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk [\w-]+ failed/i.test(
+    msg
+  );
+}
+
+const CHUNK_RELOAD_KEY = 'chunk-reload-at';
+
+/**
+ * Recarga la página UNA vez para traer assets frescos. Devuelve `true` si
+ * disparó la recarga; `false` si ya recargamos hace <10s (anti-loop: si tras
+ * recargar sigue fallando, dejamos que se reporte a Sentry en vez de loopear).
+ */
+function reloadForFreshAssets(): boolean {
+  try {
+    const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) ?? 0);
+    if (Date.now() - last < 10_000) return false;
+    sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
+    location.reload();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * ErrorHandler que primero intenta **recuperar** los errores de chunk lazy
+ * (típicos tras un deploy) recargando la página, y delega todo lo demás al
+ * ErrorHandler de Sentry para que se reporte normal.
+ */
+class ChunkAwareErrorHandler implements ErrorHandler {
+  private readonly sentry = Sentry.createErrorHandler();
+
+  handleError(error: unknown): void {
+    if (isChunkLoadError(error) && reloadForFreshAssets()) return;
+    this.sentry.handleError(error);
+  }
+}
+
+/**
+ * Providers de Sentry para el `appConfig`: enchufa el ErrorHandler (con
+ * recuperación de chunks lazy + reporte a Sentry) y el TraceService
+ * (instrumentación de routing para performance).
  */
 export function provideSentry(): (Provider | EnvironmentProviders)[] {
   return [
     {
       provide: ErrorHandler,
-      useValue: Sentry.createErrorHandler(),
+      useClass: ChunkAwareErrorHandler,
     },
     {
       provide: Sentry.TraceService,

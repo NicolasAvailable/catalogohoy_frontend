@@ -2,6 +2,18 @@
 
 > Lo que te hace perder tiempo si no lo sabés. Agregá acá cada nueva trampa.
 
+## "Failed to fetch dynamically imported module" (chunk viejo tras deploy)
+
+- SPA con lazy-loading (`loadChildren`/`import()`): si el usuario tiene la app abierta durante
+  un **deploy**, su `index.html` viejo referencia `chunk-XXXX.js` que el deploy nuevo ya
+  reemplazó → el import dinámico falla con `TypeError: Failed to fetch dynamically imported
+  module`. **No es un bug de la app**, es inherente a deployar un SPA.
+- Mitigación en código: `ChunkAwareErrorHandler` (en `core/providers/sentry/sentry.ts`)
+  detecta el error de chunk y **recarga la página una vez** (guard anti-loop por
+  `sessionStorage`) para traer la versión nueva; el resto de errores van a Sentry normal.
+- Prevención a nivel plataforma: **Vercel Skew Protection** (mantiene los assets de deploys
+  viejos disponibles para clientes con la versión anterior) — evita que el error ocurra.
+
 ## Sentry `tracePropagationTargets` rompe las Edge Functions (CORS)
 
 - El **browser tracing** de Sentry adjunta headers `sentry-trace` y `baggage` a
