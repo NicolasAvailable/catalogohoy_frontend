@@ -7,7 +7,11 @@ import { Image } from "https://deno.land/x/imagescript@1.2.15/mod.ts";
 //   - "segment-points": el usuario marca con clics qué conservar/quitar (SAM-3,
 //     point_prompts). Devuelve una máscara que componemos con el original
 //     (alpha=máscara) → deja solo lo seleccionado sobre fondo transparente.
-//   - "generate": crea una imagen desde un prompt de texto (modelo FLUX schnell).
+//   - "generate": crea una imagen desde un prompt de texto (Gemini 2.5 Flash
+//     Image, alias "Nano Banana").
+//   - "edit": edita una imagen existente según una instrucción de texto
+//     ("cambiá el color a rojo", "fondo blanco") conservando el resto
+//     (imagen→imagen, mismo modelo Gemini 2.5 Flash Image edit).
 // La función la llama el frontend con el JWT del usuario (igual que
 // `send-whatsapp-test`). La FAL_KEY nunca sale del servidor. El resultado de
 // fal.ai vive en una URL temporal, así que lo descargamos y lo persistimos en
@@ -17,7 +21,12 @@ const FAL_KEY = Deno.env.get("FAL_KEY");
 
 // Modelos fal.ai (síncronos: fal.run bloquea hasta terminar, ~2-6s).
 const BIREFNET_MODEL = "fal-ai/birefnet";
-const FLUX_MODEL = "fal-ai/flux/schnell";
+// Generación y edición de imágenes con Gemini 2.5 Flash Image ("Nano Banana"):
+// entiende mejor la intención (menos literal que FLUX) y respeta bien la regla
+// de no-texto. El endpoint `.../edit` recibe una o más imágenes de origen
+// (campo `image_urls`, en plural) y la instrucción de edición en `prompt`.
+const GEMINI_MODEL = "fal-ai/gemini-25-flash-image";
+const GEMINI_EDIT_MODEL = "fal-ai/gemini-25-flash-image/edit";
 // Segmentación interactiva por puntos/clics (SAM-2): el usuario marca el objeto.
 // label 1 = conservar (foreground), 0 = quitar (background). Campo `prompts`.
 // (SAM-3 es por concepto/texto, no sirve para clics → devolvía máscara vacía.)
@@ -25,12 +34,12 @@ const SAM2_MODEL = "fal-ai/sam2/image";
 
 const STORAGE_BUCKET = "catalogohoy";
 
-// Proporción de imagen (UI) → tamaño preset de FLUX.
-const GEN_IMAGE_SIZE: Record<string, string> = {
-  auto: "square_hd",
-  square: "square_hd",
-  landscape: "landscape_4_3",
-  portrait: "portrait_4_3",
+// Proporción de imagen (UI) → aspect_ratio de Gemini (enum del modelo).
+const GEN_ASPECT_RATIO: Record<string, string> = {
+  auto: "1:1",
+  square: "1:1",
+  landscape: "4:3",
+  portrait: "3:4",
 };
 
 // Estilo de imagen (UI) → descriptor que se suma al prompt del usuario.
@@ -46,6 +55,16 @@ const GEN_STYLE_DESCRIPTOR: Record<string, string> = {
     "minimalist aesthetic, simple uncluttered background, plenty of negative space",
   threeD: "high quality 3D render, soft global illumination, subtle reflections",
 };
+
+// Reglas de texto en la imagen (generate + edit):
+//  - Por defecto NO agregar palabras/letras (salvo que el usuario lo pida
+//    explícitamente en su descripción/instrucción).
+//  - Si SÍ se pide texto, debe ir en español, bien escrito.
+const TEXT_RULES =
+  "Do NOT add any text, words, letters, captions, labels, logos or " +
+  "watermarks to the image, UNLESS the description explicitly asks for " +
+  "text. If (and only if) text is explicitly requested, it must be " +
+  "written in Spanish, correctly spelled, with no other languages.";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -279,10 +298,13 @@ Deno.serve(async (req) => {
   }
 
   // Costo por acción ("borrar a mano" no pasa por aquí: es local, gratis).
+  // generate y edit usan el mismo modelo (Gemini 2.5 Flash Image); edit cuesta
+  // 1 crédito más por ser una acción iterativa sobre una imagen ya generada.
   const COST: Record<string, number> = {
     "remove-background": 1,
     "segment-points": 1,
     "generate": 3,
+    "edit": 4,
   };
   const cost = COST[body.action ?? ""] ?? 0;
   if (cost === 0) {
@@ -293,6 +315,17 @@ Deno.serve(async (req) => {
   if (body.action === "generate") {
     if ((body.prompt ?? "").trim().length < 3) {
       return jsonResponse({ success: false, error: "Prompt demasiado corto" }, 400);
+    }
+  } else if (body.action === "edit") {
+    // edit necesita AMBOS: la imagen de origen y la instrucción de edición.
+    if (!(body.imageUrl ?? "").trim()) {
+      return jsonResponse({ success: false, error: "Falta la imagen" }, 400);
+    }
+    if ((body.prompt ?? "").trim().length < 3) {
+      return jsonResponse(
+        { success: false, error: "Instrucción de edición demasiado corta" },
+        400,
+      );
     }
   } else {
     if (!(body.imageUrl ?? "").trim()) {
@@ -395,28 +428,18 @@ Deno.serve(async (req) => {
       if (prompt.length < 3) {
         return jsonResponse({ success: false, error: "Prompt demasiado corto" }, 400);
       }
-      // Proporción elegida por el usuario → tamaño FLUX (default cuadrado).
-      const imageSize = GEN_IMAGE_SIZE[body.aspectRatio ?? "auto"] ??
-        "square_hd";
+      // Proporción elegida por el usuario → aspect_ratio de Gemini (default 1:1).
+      const aspectRatio = GEN_ASPECT_RATIO[body.aspectRatio ?? "auto"] ?? "1:1";
       // Estilo elegido → descriptor que se suma al prompt.
       const styleDesc = GEN_STYLE_DESCRIPTOR[body.style ?? "default"] ?? "";
-      // Reglas de texto en la imagen:
-      //  - Por defecto NO agregar palabras/letras (salvo que el usuario lo pida
-      //    explícitamente en su descripción).
-      //  - Si SÍ se pide texto, debe ir en español, bien escrito.
-      const TEXT_RULES =
-        "Do NOT add any text, words, letters, captions, labels, logos or " +
-        "watermarks to the image, UNLESS the description explicitly asks for " +
-        "text. If (and only if) text is explicitly requested, it must be " +
-        "written in Spanish, correctly spelled, with no other languages.";
       const finalPrompt = [prompt, styleDesc, TEXT_RULES]
         .filter((s) => s && s.trim())
         .join(". ");
-      const out = await callFal(FLUX_MODEL, {
+      const out = await callFal(GEMINI_MODEL, {
         prompt: finalPrompt,
-        image_size: imageSize,
+        aspect_ratio: aspectRatio,
         num_images: 1,
-        enable_safety_checker: true,
+        output_format: "png",
       });
       const resultUrl =
         (out as { images?: { url?: string }[] }).images?.[0]?.url;
@@ -425,6 +448,40 @@ Deno.serve(async (req) => {
       }
       const publicUrl = await persistToStorage(admin, resultUrl, "gen");
       await logAiUsage(admin, ownerId, "image_generate", prompt, cost);
+      return jsonResponse({ success: true, url: publicUrl });
+    }
+
+    if (body.action === "edit") {
+      // Edición por instrucción: parte de una imagen y la modifica según el
+      // texto, conservando el resto (Gemini 2.5 Flash Image, imagen→imagen).
+      const imageUrl = (body.imageUrl ?? "").trim();
+      const instruction = (body.prompt ?? "").trim();
+      if (!imageUrl) {
+        return jsonResponse({ success: false, error: "Falta la imagen" }, 400);
+      }
+      if (instruction.length < 3) {
+        return jsonResponse(
+          { success: false, error: "Instrucción de edición demasiado corta" },
+          400,
+        );
+      }
+      // Misma regla de no-texto que generate (no meter palabras salvo que se pida).
+      const finalPrompt = [instruction, TEXT_RULES]
+        .filter((s) => s && s.trim())
+        .join(". ");
+      const out = await callFal(GEMINI_EDIT_MODEL, {
+        prompt: finalPrompt,
+        image_urls: [imageUrl],
+        num_images: 1,
+        output_format: "png",
+      });
+      const resultUrl =
+        (out as { images?: { url?: string }[] }).images?.[0]?.url;
+      if (!resultUrl) {
+        throw new Error("fal.ai no devolvió imagen");
+      }
+      const publicUrl = await persistToStorage(admin, resultUrl, "gen");
+      await logAiUsage(admin, ownerId, "image_edit", instruction, cost);
       return jsonResponse({ success: true, url: publicUrl });
     }
 

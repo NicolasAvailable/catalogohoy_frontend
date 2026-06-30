@@ -27,6 +27,13 @@ export class AiImageService implements BaseAiImageService {
     });
   }
 
+  edit(
+    imageUrl: string,
+    instruction: string
+  ): Promise<E.Either<Error, string>> {
+    return this.invoke({ action: 'edit', imageUrl, prompt: instruction });
+  }
+
   async improveText(
     text: string,
     mode: 'improve' | 'expand' | 'shorten'

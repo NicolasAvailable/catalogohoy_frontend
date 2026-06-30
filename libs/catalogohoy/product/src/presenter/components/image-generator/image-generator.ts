@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   input,
   output,
@@ -68,6 +69,13 @@ export class ImageGeneratorComponent implements AfterViewInit {
   /** URL de la imagen generada (preview). Null hasta que se genere una. */
   public readonly generatedUrl = signal<string | null>(null);
 
+  /** Instrucción para editar la imagen ya generada (imagen→imagen). */
+  public readonly editInstruction = signal<string>('');
+  /** Una edición (FLUX Kontext) está en curso. */
+  public readonly editing = signal<boolean>(false);
+  /** Hay una operación de IA en curso (generar o editar): bloquea el modal. */
+  public readonly busy = computed(() => this.processing() || this.editing());
+
   public readonly aspectRatio = signal<AspectRatio>('auto');
   public readonly style = signal<string>('default');
   public readonly styleOptions = STYLE_OPTIONS;
@@ -88,7 +96,11 @@ export class ImageGeneratorComponent implements AfterViewInit {
   }
 
   public setAspect(ratio: AspectRatio): void {
-    if (!this.processing()) this.aspectRatio.set(ratio);
+    if (!this.busy()) this.aspectRatio.set(ratio);
+  }
+
+  public setEditInstruction(value: string): void {
+    this.editInstruction.set(value);
   }
 
   public setStyle(value: string | null): void {
@@ -115,18 +127,18 @@ export class ImageGeneratorComponent implements AfterViewInit {
   }
 
   public cancel(): void {
-    if (!this.processing()) this.dialog()?.hide();
+    if (!this.busy()) this.dialog()?.hide();
   }
 
   /** Confirma el uso de la imagen generada: el padre la agrega y cierra. */
   public useImage(): void {
     const url = this.generatedUrl();
-    if (url && !this.processing()) this.generated.emit(url);
+    if (url && !this.busy()) this.generated.emit(url);
   }
 
   public async generate(): Promise<void> {
     const prompt = this.prompt().trim();
-    if (prompt.length < 3 || this.processing()) return;
+    if (prompt.length < 3 || this.busy()) return;
     this.processing.set(true);
     this.toast.wait('Generando imagen con IA…');
     try {
@@ -150,6 +162,39 @@ export class ImageGeneratorComponent implements AfterViewInit {
         new Exception(e instanceof Error ? e.message : 'Error al generar')
       );
       this.processing.set(false);
+    }
+  }
+
+  /**
+   * Edita la imagen ya generada según la instrucción de texto (imagen→imagen,
+   * FLUX Kontext). Reemplaza el preview por el resultado para poder seguir
+   * iterando sobre él.
+   */
+  public async editImage(): Promise<void> {
+    const url = this.generatedUrl();
+    const instruction = this.editInstruction().trim();
+    if (!url || instruction.length < 3 || this.busy()) return;
+    this.editing.set(true);
+    this.toast.wait('Editando imagen con IA…');
+    try {
+      const result = await this.ai.edit(url, instruction);
+      result
+        .mapRight((newUrl) => {
+          this.toast.success('Imagen editada con IA');
+          this.generatedUrl.set(newUrl);
+          this.editInstruction.set('');
+          this.editing.set(false);
+        })
+        .mapLeft((e) => {
+          this.toast.error(new Exception(e.message));
+          this.editing.set(false);
+        });
+    } catch (e) {
+      this.toast.dismissWait();
+      this.toast.error(
+        new Exception(e instanceof Error ? e.message : 'Error al editar')
+      );
+      this.editing.set(false);
     }
   }
 }

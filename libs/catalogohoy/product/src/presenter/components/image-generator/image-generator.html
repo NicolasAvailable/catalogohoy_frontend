@@ -1,9 +1,9 @@
 <ui-dialog
   #genDialog
   headerTitle="✨ Generador de imágenes de IA"
-  [closable]="!processing()"
-  [dismissableMask]="!processing()"
-  [closeOnEscape]="!processing()"
+  [closable]="!busy()"
+  [dismissableMask]="!busy()"
+  [closeOnEscape]="!busy()"
   styleClass="w-[56rem]! max-w-[95vw]!"
   (close)="onDialogClose()"
 >
@@ -19,7 +19,7 @@
           <button
             type="button"
             (click)="setAspect(opt.value)"
-            [disabled]="processing()"
+            [disabled]="busy()"
             [title]="opt.label"
             class="flex items-center justify-center min-w-[3rem] h-10 px-3 rounded-lg border text-sm font-medium cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             [class.border-violet-500]="aspectRatio() === opt.value"
@@ -55,7 +55,7 @@
           (ngModelChange)="setStyle($event)"
           optionLabel="label"
           optionValue="value"
-          [disabled]="processing()"
+          [disabled]="busy()"
           appendTo="body"
           styleClass="w-full"
         >
@@ -81,7 +81,7 @@
           #promptBox
           [value]="prompt()"
           (input)="setPrompt(promptBox.value)"
-          [disabled]="processing()"
+          [disabled]="busy()"
           rows="4"
           placeholder="Ej: gorra roja de béisbol sobre fondo blanco, foto de producto profesional, luz suave"
           class="w-full rounded-lg border border-grey-200 p-3 text-sm text-grey-700 placeholder:text-grey-300 outline-none focus:border-violet-400 resize-none disabled:opacity-60"
@@ -95,7 +95,7 @@
           <button
             type="button"
             (click)="insertTitle()"
-            [disabled]="processing()"
+            [disabled]="busy()"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-grey-200 text-xs font-medium text-grey-600 hover:border-violet-300 hover:text-violet-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <ui-icon name="plus" styleClass="w-3.5 h-3.5" />
@@ -106,7 +106,7 @@
           <button
             type="button"
             (click)="insertDescription()"
-            [disabled]="processing()"
+            [disabled]="busy()"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-grey-200 text-xs font-medium text-grey-600 hover:border-violet-300 hover:text-violet-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <ui-icon name="plus" styleClass="w-3.5 h-3.5" />
@@ -121,7 +121,7 @@
       <button
         type="button"
         (click)="generate()"
-        [disabled]="processing() || prompt().trim().length < 3"
+        [disabled]="busy() || prompt().trim().length < 3"
         class="rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <span
@@ -130,6 +130,9 @@
           @if (processing()) {
           <ui-icon name="loader-circle" styleClass="w-[1.125rem] h-[1.125rem] animate-spin" />
           Generando…
+          } @else if (generatedUrl()) {
+          <ui-icon name="refresh-cw" styleClass="w-[1.125rem] h-[1.125rem]" />
+          Generar otra
           } @else {
           <ui-icon name="wand-sparkles" styleClass="w-[1.125rem] h-[1.125rem]" />
           Generar imagen con IA
@@ -143,10 +146,12 @@
       <div
         class="relative aspect-square w-full rounded-xl border-2 border-dashed border-grey-200 bg-grey-50 flex items-center justify-center overflow-hidden"
       >
-        @if (processing()) {
+        @if (busy()) {
         <div class="flex flex-col items-center gap-2 text-grey-400">
           <ui-icon name="loader-circle" styleClass="w-8 h-8 animate-spin text-violet-500" />
-          <span class="text-xs">Generando tu imagen…</span>
+          <span class="text-xs">{{
+            editing() ? 'Editando tu imagen…' : 'Generando tu imagen…'
+          }}</span>
         </div>
         } @else if (generatedUrl()) {
         <img
@@ -162,7 +167,36 @@
         }
       </div>
 
-      @if (generatedUrl() && !processing()) {
+      @if (generatedUrl() && !busy()) {
+      <!-- Editar la imagen generada con una instrucción (imagen→imagen, Kontext).
+           El resultado reemplaza el preview para poder seguir iterando sobre él. -->
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-semibold text-grey-600">Editar esta imagen</label>
+        <div class="flex items-center gap-2">
+          <input
+            #editBox
+            [value]="editInstruction()"
+            (input)="setEditInstruction(editBox.value)"
+            (keydown.enter)="editImage()"
+            type="text"
+            placeholder="Ej: cambiá el fondo a blanco, hacelo rojo…"
+            class="flex-1 min-w-0 rounded-lg border border-grey-200 px-3 py-2.5 text-sm text-grey-700 placeholder:text-grey-300 outline-none focus:border-violet-400"
+          />
+          <button
+            type="button"
+            (click)="editImage()"
+            [disabled]="editInstruction().trim().length < 3"
+            class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg border border-violet-300 text-sm font-semibold text-violet-700 hover:bg-violet-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            <ui-icon name="pencil" styleClass="w-4 h-4" />
+            Editar
+          </button>
+        </div>
+        <span class="text-xs text-grey-400">
+          Describe el cambio y la IA edita la imagen actual.
+        </span>
+      </div>
+
       <button
         type="button"
         (click)="useImage()"

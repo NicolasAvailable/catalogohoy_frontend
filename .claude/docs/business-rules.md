@@ -6,8 +6,8 @@
 
 | Plan | Precio (mes) | Productos | Catálogos | Miembros equipo | Variantes/producto | Créditos IA/mes |
 |---|---|---|---|---|---|---|
-| **gratis** | $0 | 1 (visible en catálogo público) | 1 | 0 | 1 | **5** |
-| **basico** | $9.99 | hasta 100 | 1 | 1 | 3 | **150** |
+| **gratis** | $0 | 1 (visible en catálogo público) | 1 | 0 | 1 | **15** |
+| **basico** | $9.99 | hasta 100 | 1 | 1 | 3 | **200** |
 | **avanzado** | $19.99 | ilimitados | hasta 2–3 | hasta 5–10 | 15 | **500** |
 
 - **Sentinela "ilimitado"**: `max_products = 0` significa ilimitado (no -1 ni flag aparte).
@@ -22,8 +22,9 @@
 
 ## Créditos de IA  (detalle en `features/ai-credits.md`)
 
-- Asignación mensual por plan: **gratis 5 · básico 150 · avanzado 500** (subido desde 100/400
-  el 2026-06-21). El allowance del owner = **mayor plan** entre sus catálogos.
+- Asignación mensual por plan: **gratis 15 · básico 200 · avanzado 500** (subido el 2026-06-30
+  desde 5/150; histórico: 100/400 → 150/500 el 2026-06-21). El allowance del owner = **mayor
+  plan** entre sus catálogos.
 - **Costo por acción**: quitar fondo 1 · segmentar 1 · generar imagen 3 · mejorar texto 1 ·
   borrador a mano **0** (es canvas local, no pasa por edge function).
 - Dos cubetas: **mensual** (se resetea, `reset_due_ai_credits` cron diario) + **comprada**
