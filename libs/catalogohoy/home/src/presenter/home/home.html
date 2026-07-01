@@ -8,6 +8,31 @@
     <h1 class="text-3xl font-bold text-slate-800">{{ greeting() }} 🪄</h1>
   </div>
 
+  <!-- Chips de accesos rápidos (estilo TakeApp) -->
+  <div class="flex flex-wrap items-center gap-2 -mt-1">
+    <a
+      routerLink="products"
+      class="inline-flex items-center gap-2 pl-3 pr-4 py-2 rounded-full border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
+    >
+      <ui-icon name="package" [size]="16" class="text-slate-500" />
+      Productos
+    </a>
+    <a
+      routerLink="orders"
+      class="inline-flex items-center gap-2 pl-3 pr-4 py-2 rounded-full border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
+    >
+      <ui-icon name="clipboard-list" [size]="16" class="text-slate-500" />
+      Órdenes
+    </a>
+    <a
+      routerLink="catalog/edit"
+      class="inline-flex items-center gap-2 pl-3 pr-4 py-2 rounded-full border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
+    >
+      <ui-icon name="settings" [size]="16" class="text-slate-500" />
+      Editar catálogo
+    </a>
+  </div>
+
   <!-- Stats Cards -->
   @if (isLoading()) {
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
