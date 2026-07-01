@@ -225,16 +225,6 @@ export class Home implements OnInit {
     window.open(`https://wa.me/?text=${text}`, '_blank');
   }
 
-  shareX(): void {
-    const url = this.catalogUrl();
-    if (!url) return;
-    const text = encodeURIComponent('Mirá mi catálogo online');
-    window.open(
-      `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`,
-      '_blank'
-    );
-  }
-
   shareFacebook(): void {
     const url = this.catalogUrl();
     if (!url) return;
@@ -242,6 +232,41 @@ export class Home implements OnInit {
       `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
       '_blank'
     );
+  }
+
+  shareTelegram(): void {
+    const url = this.catalogUrl();
+    if (!url) return;
+    const text = encodeURIComponent('Mirá mi catálogo online');
+    window.open(
+      `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${text}`,
+      '_blank'
+    );
+  }
+
+  // Instagram / YouTube / TikTok no tienen "share intent" web para un link →
+  // copiamos el link y avisamos dónde pegarlo.
+  shareInstagram(): void {
+    this.copyForNetwork('tu bio o historia de Instagram');
+  }
+
+  shareYoutube(): void {
+    this.copyForNetwork('la descripción de tu canal de YouTube');
+  }
+
+  shareTiktok(): void {
+    this.copyForNetwork('tu bio de TikTok');
+  }
+
+  private async copyForNetwork(where: string): Promise<void> {
+    const url = this.catalogUrl();
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      this.toast.success(`Link copiado — pegalo en ${where}`);
+    } catch {
+      this.toast.warning('No se pudo copiar el link');
+    }
   }
 
   async downloadQr(): Promise<void> {
