@@ -25,6 +25,13 @@
       Órdenes
     </a>
     <a
+      routerLink="clients"
+      class="hidden md:inline-flex items-center gap-2 pl-3 pr-4 py-2 rounded-full border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
+    >
+      <ui-icon name="users" [size]="16" class="text-slate-500" />
+      Clientes
+    </a>
+    <a
       routerLink="catalog/edit"
       class="inline-flex items-center gap-2 pl-3 pr-4 py-2 rounded-full border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
     >
@@ -33,7 +40,7 @@
     </a>
     <a
       routerLink="referrals"
-      class="inline-flex items-center gap-2 pl-3 pr-4 py-2 rounded-full border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
+      class="hidden md:inline-flex items-center gap-2 pl-3 pr-4 py-2 rounded-full border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
     >
       <ui-icon name="gift" [size]="16" class="text-slate-500" />
       Referidos
