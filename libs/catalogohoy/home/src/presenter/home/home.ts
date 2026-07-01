@@ -11,6 +11,8 @@ import { RouterLink } from '@angular/router';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
+import { qr } from '@shared/domain';
+import { ToastService } from '@shared/infrastructure';
 import {
   AccordionComponent,
   AccordionHeaderDirective,
@@ -44,6 +46,12 @@ export class Home implements OnInit {
   private readonly tenantStore = inject(TenantStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly permissionsStore = inject(TeamPermissionsStore);
+  private readonly toast = inject(ToastService);
+
+  /** URL pública del catálogo del tenant, para los chips de compartir. */
+  public readonly catalogUrl = computed(
+    () => this.tenantStore.defaultTenant()?.url ?? ''
+  );
 
   public readonly showDashboard = computed(() => {
     return this.permissionsStore.isOwner() || this.permissionsStore.can()('ordenes', 'view');
@@ -191,6 +199,84 @@ export class Home implements OnInit {
 
   setCurrency(currency: Currency): void {
     this.activeCurrency.set(currency);
+  }
+
+  // ── Chips de compartir el catálogo ─────────────────────────────────────
+  openCatalog(): void {
+    const url = this.catalogUrl();
+    if (url) window.open(url, '_blank');
+  }
+
+  async copyLink(): Promise<void> {
+    const url = this.catalogUrl();
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      this.toast.success('Link copiado');
+    } catch {
+      this.toast.warning('No se pudo copiar el link');
+    }
+  }
+
+  shareWhatsapp(): void {
+    const url = this.catalogUrl();
+    if (!url) return;
+    const text = encodeURIComponent(`Mirá mi catálogo online: ${url}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  }
+
+  shareFacebook(): void {
+    const url = this.catalogUrl();
+    if (!url) return;
+    window.open(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+      '_blank'
+    );
+  }
+
+  shareTelegram(): void {
+    const url = this.catalogUrl();
+    if (!url) return;
+    const text = encodeURIComponent('Mirá mi catálogo online');
+    window.open(
+      `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${text}`,
+      '_blank'
+    );
+  }
+
+  // Instagram / YouTube / TikTok no tienen "share intent" web para un link →
+  // copiamos el link y avisamos dónde pegarlo.
+  shareInstagram(): void {
+    this.copyForNetwork('tu bio o historia de Instagram');
+  }
+
+  shareYoutube(): void {
+    this.copyForNetwork('la descripción de tu canal de YouTube');
+  }
+
+  shareTiktok(): void {
+    this.copyForNetwork('tu bio de TikTok');
+  }
+
+  private async copyForNetwork(where: string): Promise<void> {
+    const url = this.catalogUrl();
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      this.toast.success(`Link copiado — pegalo en ${where}`);
+    } catch {
+      this.toast.warning('No se pudo copiar el link');
+    }
+  }
+
+  async downloadQr(): Promise<void> {
+    const tenant = this.tenantStore.defaultTenant();
+    if (!tenant?.url) return;
+    try {
+      await qr.to.pdf(tenant.url, `QR-${tenant.slug}`, tenant.name);
+    } catch {
+      this.toast.warning('No se pudo generar el QR');
+    }
   }
 }
 
