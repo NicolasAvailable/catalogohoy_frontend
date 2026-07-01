@@ -204,6 +204,16 @@ export class PlanCheckout implements OnInit {
     () => this.planStore.currentPlan()?.name ?? ''
   );
 
+  /** Renovación: el tenant ya tiene ESTE mismo plan con una suscripción de
+   *  Stripe. El checkout cobra el plan completo y el webhook cancela la
+   *  suscripción anterior (previous_subscription_id). Sirve para mostrar copy
+   *  de "renovación" en vez de "compra". */
+  public readonly isRenewal = computed(() => {
+    const current = this.planStore.currentPlan();
+    const hasStripe = this.planStore.tenantPlanUsage()?.hasStripeSubscription ?? false;
+    return hasStripe && !!current && !current.isFree && current.id === this.planId();
+  });
+
   public readonly currentPlanPrice = computed(() => {
     const current = this.planStore.currentPlan();
     if (!current) return 0;
