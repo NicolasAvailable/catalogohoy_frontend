@@ -28,6 +28,11 @@
   padding: 0.25rem 0.5rem;
   overflow-x: auto;
   scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+/* Contenedor de la barra de tabs: sostiene el sticky + posiciona las flechas. */
+.config-tabs-wrap {
   position: sticky;
   top: 0;
   z-index: 5;
@@ -36,13 +41,44 @@
   flex-shrink: 0;
 }
 
+/* Flechas de scroll de los tabs (solo visibles cuando la barra desborda). */
+.config-tabs-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 0.0625rem solid var(--color-grey-100, #e2e8f0);
+  color: var(--color-grey-600, #475569);
+  box-shadow: 0 0.0625rem 0.25rem rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+}
+
+.config-tabs-arrow:hover {
+  background: var(--color-grey-25, #f8fafc);
+}
+
+.config-tabs-arrow--left {
+  left: 0.25rem;
+}
+
+.config-tabs-arrow--right {
+  right: 0.25rem;
+}
+
 /* Tab content wrappers — direct flex children of .main-column.
  * Without `flex-shrink: 0` they collapse under their content because
  * `.main-column` is `flex-direction: column` with `overflow-y: auto`,
  * making cards inside the wrapper overlap. We also stack the cards inside
  * the wrapper with the same gap the parent uses for top-level items, so the
  * vertical rhythm stays intact when several cards live in one tab. */
-.main-column > div:not(.config-tabs):not(.unsaved-banner):not(.header-section):not(.bottom-save-section):not([hidden]) {
+.main-column > div:not(.config-tabs):not(.config-tabs-wrap):not(.unsaved-banner):not(.header-section):not(.bottom-save-section):not([hidden]) {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
