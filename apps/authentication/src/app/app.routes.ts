@@ -1,4 +1,5 @@
 import { Route } from '@angular/router';
+import { alreadyAuthenticatedGuard } from '@catalogohoy/auth';
 
 export const appRoutes: Route[] = [
   {
@@ -12,10 +13,12 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'login',
+        canActivate: [alreadyAuthenticatedGuard],
         loadComponent: () => import('@catalogohoy/auth').then((m) => m.Login),
       },
       {
         path: 'signup',
+        canActivate: [alreadyAuthenticatedGuard],
         loadComponent: () => import('@catalogohoy/auth').then((m) => m.Signup),
       },
       {
