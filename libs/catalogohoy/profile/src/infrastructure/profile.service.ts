@@ -93,7 +93,27 @@ export class ProfileService implements BaseProfileService {
   public async deleteAccount(): Promise<Either<Error, void>> {
     const { error } = await this.client.functions.invoke('delete-account');
 
-    if (error) return E.left(new Error(error.message));
+    if (error) {
+      // `functions.invoke` devuelve un error genérico ("Edge Function returned
+      // a non-2xx status code") cuando la función responde 4xx/5xx. El motivo
+      // real (p. ej. una violación de foreign key en el borrado) viaja en el
+      // body de la respuesta, accesible vía `error.context` (una Response).
+      // Lo extraemos para mostrar la causa concreta en el toast.
+      let detail = error.message;
+      try {
+        const ctx = (error as { context?: Response }).context;
+        const body = await ctx?.json?.();
+        if (body?.error) {
+          detail = body.error;
+          if (Array.isArray(body.cleanupErrors) && body.cleanupErrors.length) {
+            detail += ` (${body.cleanupErrors.join('; ')})`;
+          }
+        }
+      } catch {
+        /* si el body no es JSON, dejamos el mensaje genérico */
+      }
+      return E.left(new Error(detail));
+    }
 
     await this.client.auth.signOut();
     window.location.href = 'https://auth.catalogohoy.com';
