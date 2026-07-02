@@ -42,7 +42,24 @@
       }
 
       <!-- Tabs -->
-      <nav class="config-tabs" role="tablist" aria-label="Secciones de configuración">
+      <div class="config-tabs-wrap">
+        @if (canScrollTabsLeft()) {
+        <button
+          type="button"
+          class="config-tabs-arrow config-tabs-arrow--left"
+          (click)="scrollTabs(-1)"
+          aria-label="Ver secciones anteriores"
+        >
+          <ui-icon name="chevron-left" styleClass="size-5"></ui-icon>
+        </button>
+        }
+        <nav
+          #tabsNav
+          class="config-tabs"
+          (scroll)="updateTabScroll()"
+          role="tablist"
+          aria-label="Secciones de configuración"
+        >
         @for (tab of tabs; track tab.id) {
           <button
             type="button"
@@ -59,7 +76,18 @@
             }
           </button>
         }
-      </nav>
+        </nav>
+        @if (canScrollTabsRight()) {
+        <button
+          type="button"
+          class="config-tabs-arrow config-tabs-arrow--right"
+          (click)="scrollTabs(1)"
+          aria-label="Ver más secciones"
+        >
+          <ui-icon name="chevron-right" styleClass="size-5"></ui-icon>
+        </button>
+        }
+      </div>
 
       <!-- ===== TAB: GENERAL ===== -->
       <div [hidden]="activeTab() !== 'general'">

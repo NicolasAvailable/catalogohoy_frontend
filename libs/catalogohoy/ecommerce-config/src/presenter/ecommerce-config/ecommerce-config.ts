@@ -146,6 +146,28 @@ export class EcommerceConfigComponent implements OnInit {
     });
   }
 
+  /** Recalcula si la barra de tabs puede scrollear a izquierda/derecha (para
+   *  mostrar u ocultar las flechas). Se llama al montar, al scrollear y al
+   *  cambiar el ancho. */
+  updateTabScroll(): void {
+    const el = this.tabsNav()?.nativeElement;
+    if (!el) return;
+    this.canScrollTabsLeft.set(el.scrollLeft > 2);
+    this.canScrollTabsRight.set(
+      Math.ceil(el.scrollLeft + el.clientWidth) < el.scrollWidth - 2
+    );
+  }
+
+  /** Desplaza la barra de tabs (−1 izquierda, +1 derecha). */
+  scrollTabs(direction: number): void {
+    const el = this.tabsNav()?.nativeElement;
+    if (!el) return;
+    el.scrollBy({
+      left: direction * Math.max(140, el.clientWidth * 0.6),
+      behavior: 'smooth',
+    });
+  }
+
   /** Re-push the latest preview state after the iframe (re)loads — switching to
    *  the Envío tab swaps the frame to the public checkout, which boots fresh and
    *  must immediately reflect the current draft (shipping methods, fields…). */
@@ -411,6 +433,10 @@ export class EcommerceConfigComponent implements OnInit {
   private readonly topSaveAnchor = viewChild<ElementRef>('topSaveAnchor');
   private readonly bottomSaveAnchor = viewChild<ElementRef>('bottomSaveAnchor');
   private readonly mainColumn = viewChild<ElementRef>('mainColumn');
+  // Scroll horizontal de los tabs: flechas cuando la barra desborda (mobile).
+  private readonly tabsNav = viewChild<ElementRef<HTMLElement>>('tabsNav');
+  public readonly canScrollTabsLeft = signal(false);
+  public readonly canScrollTabsRight = signal(false);
   private readonly isTopSaveVisible = signal(true);
   private readonly isBottomSaveVisible = signal(false);
   public readonly showStickyBanner = computed(
@@ -454,6 +480,17 @@ export class EcommerceConfigComponent implements OnInit {
       if (topEl) observer.observe(topEl);
       if (bottomEl) observer.observe(bottomEl);
       onCleanup(() => observer.disconnect());
+    });
+
+    // Flechas de scroll de los tabs: recalcular al montar y cuando cambia el
+    // ancho de la barra (ResizeObserver). El scroll manual dispara (scroll).
+    effect((onCleanup) => {
+      const nav = this.tabsNav()?.nativeElement;
+      if (!nav) return;
+      this.updateTabScroll();
+      const ro = new ResizeObserver(() => this.updateTabScroll());
+      ro.observe(nav);
+      onCleanup(() => ro.disconnect());
     });
 
     // Sync drafts from server config (selective: preserves user-modified fields)

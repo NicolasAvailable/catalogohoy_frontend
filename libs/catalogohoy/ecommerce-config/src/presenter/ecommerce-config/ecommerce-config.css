@@ -28,6 +28,11 @@
   padding: 0.25rem 0.5rem;
   overflow-x: auto;
   scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+/* Contenedor de la barra de tabs: sostiene el sticky + posiciona las flechas. */
+.config-tabs-wrap {
   position: sticky;
   top: 0;
   z-index: 5;
@@ -36,13 +41,57 @@
   flex-shrink: 0;
 }
 
+/* Flechas de scroll de los tabs (solo visibles cuando la barra desborda).
+ * Un degradado blanco→transparente desvanece los tabs bajo el borde y el
+ * chevron va en un botoncito redondo, para que se vea integrado y prolijo. */
+.config-tabs-arrow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  width: 2.75rem;
+  padding: 0;
+  border: none;
+  color: var(--color-grey-400, #94a3b8);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.config-tabs-arrow--left {
+  left: 0;
+  justify-content: flex-start;
+  padding-left: 0.5rem;
+  background: linear-gradient(
+    to right,
+    #ffffff 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+.config-tabs-arrow--right {
+  right: 0;
+  justify-content: flex-end;
+  padding-right: 0.5rem;
+  background: linear-gradient(
+    to left,
+    #ffffff 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+.config-tabs-arrow:hover {
+  color: var(--color-grey-700, #334155);
+}
+
 /* Tab content wrappers — direct flex children of .main-column.
  * Without `flex-shrink: 0` they collapse under their content because
  * `.main-column` is `flex-direction: column` with `overflow-y: auto`,
  * making cards inside the wrapper overlap. We also stack the cards inside
  * the wrapper with the same gap the parent uses for top-level items, so the
  * vertical rhythm stays intact when several cards live in one tab. */
-.main-column > div:not(.config-tabs):not(.unsaved-banner):not(.header-section):not(.bottom-save-section):not([hidden]) {
+.main-column > div:not(.config-tabs):not(.config-tabs-wrap):not(.unsaved-banner):not(.header-section):not(.bottom-save-section):not([hidden]) {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
