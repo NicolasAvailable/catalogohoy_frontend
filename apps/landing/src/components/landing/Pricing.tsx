@@ -352,7 +352,7 @@ const Pricing = () => {
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="inline-flex items-center px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]">
-                        Tarjeta internacional
+                        Tarjeta
                       </span>
                       <span className="inline-flex items-center px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]">
                         Pago móvil
