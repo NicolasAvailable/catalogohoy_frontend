@@ -526,7 +526,7 @@ export class PlanCheckout implements OnInit {
 
     const referral = this.referralInfo();
 
-    let msg = `Hola! Quiero adquirir el *${planName}* en CatálogoHoy\n\n`;
+    let msg = `Hola! Quiero adquirir el *${planName}* en CatalogoHoy\n\n`;
     msg += `- *Plan:* ${planName}\n`;
     msg += `- *Periodo:* ${periodStr}\n`;
     if (catalogs > 0) {
