@@ -512,6 +512,8 @@ export class EcommerceService implements BaseEcommerceService {
           shipping_address: order.shipping_address ?? null,
           shipping_fee: order.shipping_fee ?? 0,
           status: 'pending',
+          // Orden del catálogo público: sí dispara notificaciones (WhatsApp/email).
+          source: 'public',
         },
       ])
       .select('id')
