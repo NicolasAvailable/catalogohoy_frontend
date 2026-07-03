@@ -1,4 +1,18 @@
-import { ImagePlus, Scissors, Eraser, Wand2, Sparkles } from "lucide-react";
+import {
+  ImagePlus,
+  Scissors,
+  Eraser,
+  Wand2,
+  Sparkles,
+  ChevronDown,
+  Plus,
+  X,
+  Square,
+  RectangleHorizontal,
+  RectangleVertical,
+  ImageIcon,
+  WandSparkles,
+} from "lucide-react";
 import { motion } from "framer-motion";
 
 const items = [
@@ -40,13 +54,106 @@ const AiFeatures = () => {
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6 }}
           >
-            <div className="rounded-2xl border border-border/60 shadow-xl shadow-primary/10 overflow-hidden bg-white">
-              <img
-                src="/ai-generate-preview.png"
-                alt="Generar imagen de producto con IA"
-                className="w-full h-auto block"
-                loading="lazy"
+            {/* Mockup del modal real del editor (Generador de imágenes de IA).
+                Reconstruido en JSX para que quede nítido y siga al modal si
+                cambia. Acentos en violeta como en la app. */}
+            <div
+              role="img"
+              aria-label="Generador de imágenes de IA en el editor de Catálogo Hoy"
+              className="relative"
+            >
+              {/* Halo suave: da la sensación de modal flotante. */}
+              <div
+                aria-hidden="true"
+                className="absolute -inset-4 rounded-[2rem] bg-gradient-to-tr from-violet-200/50 via-primary/5 to-transparent blur-2xl"
               />
+              <div className="relative rounded-2xl border border-border/70 bg-white shadow-2xl shadow-primary/10 p-5 sm:p-6">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-violet-500" />
+                    <span className="font-display font-bold text-sm sm:text-base text-foreground">
+                      Generador de imágenes de IA
+                    </span>
+                  </div>
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </div>
+
+                {/* Cuerpo: controles (izq.) + preview (der.) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {/* Controles */}
+                  <div className="flex flex-col gap-4">
+                    {/* Proporción */}
+                    <div>
+                      <p className="text-xs font-semibold text-foreground mb-1.5">
+                        Proporción de imagen
+                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-9 px-3 inline-flex items-center rounded-lg border border-violet-300 bg-violet-50 text-violet-600 text-xs font-semibold">
+                          Auto
+                        </span>
+                        <span className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border text-muted-foreground">
+                          <Square className="h-4 w-4" />
+                        </span>
+                        <span className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border text-muted-foreground">
+                          <RectangleHorizontal className="h-4 w-4" />
+                        </span>
+                        <span className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border text-muted-foreground">
+                          <RectangleVertical className="h-4 w-4" />
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Estilo */}
+                    <div>
+                      <p className="text-xs font-semibold text-foreground mb-1.5">
+                        Estilo de imagen
+                      </p>
+                      <div className="h-10 px-3 flex items-center justify-between rounded-lg border border-border bg-white">
+                        <span className="inline-flex items-center gap-1.5 text-sm text-foreground">
+                          <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+                          Predeterminado
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+
+                    {/* Describe */}
+                    <div>
+                      <p className="text-xs font-semibold text-foreground mb-1.5">
+                        Describe tu imagen
+                      </p>
+                      <div className="h-[4.25rem] rounded-lg border border-border bg-white px-3 py-2 text-xs leading-relaxed text-muted-foreground/70">
+                        Ej: gorra roja de béisbol sobre fondo blanco, foto de
+                        producto profesional, luz suave
+                      </div>
+                    </div>
+
+                    {/* Insertar */}
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-muted-foreground">Insertar:</span>
+                      <span className="inline-flex items-center gap-1 h-6 px-2 rounded-full border border-border text-foreground">
+                        <Plus className="h-3 w-3" /> Título
+                      </span>
+                      <span className="inline-flex items-center gap-1 h-6 px-2 rounded-full border border-border text-foreground">
+                        <Plus className="h-3 w-3" /> Descripción
+                      </span>
+                    </div>
+
+                    {/* CTA */}
+                    <div className="mt-0.5 h-11 inline-flex items-center justify-center gap-2 rounded-lg border-2 border-violet-300 bg-violet-50/40 text-violet-600 text-sm font-semibold">
+                      <WandSparkles className="h-4 w-4" />
+                      Generar imagen con IA
+                    </div>
+                  </div>
+
+                  {/* Preview */}
+                  <div className="rounded-xl border-2 border-dashed border-border bg-muted/40 min-h-[15rem] flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                    <ImageIcon className="h-9 w-9" strokeWidth={1.5} />
+                    <span className="text-xs">Acá vas a ver tu imagen</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </motion.div>
 
