@@ -1,6 +1,37 @@
 <ui-menu #profileMenu [items]="[]" styleClass="profile-menu">
   <ng-template #end>
     <div class="pm-list">
+      <!-- ── Identidad: avatar + nombre + email ── -->
+      <div class="pm-identity">
+        @if (profileStore.profile().photo; as photo) {
+          <img
+            [src]="photo"
+            alt=""
+            referrerpolicy="no-referrer"
+            class="pm-identity__avatar"
+          />
+        } @else {
+          <span
+            class="pm-identity__avatar pm-identity__avatar--initial"
+            [style.background]="palette().bg"
+            [style.color]="palette().color"
+          >
+            {{ initial() }}
+          </span>
+        }
+        <div class="pm-identity__text">
+          <span class="pm-identity__name">
+            {{ profileStore.profile().name || 'Mi cuenta' }}
+          </span>
+          @if (profileStore.profile().email) {
+            <span class="pm-identity__email">
+              {{ profileStore.profile().email }}
+            </span>
+          }
+        </div>
+      </div>
+
+      <!-- ── Resumen del plan (linkea a Suscripción) ── -->
       @if (summary(); as s) {
         <a
           routerLink="profile"
@@ -25,9 +56,13 @@
               }
             </span>
           </div>
+          <ui-icon name="chevron-right" size="15" styleClass="pm-summary__chevron" />
         </a>
-        <div class="pm-divider"></div>
       }
+
+      <div class="pm-divider"></div>
+
+      <!-- ── Cuenta ── -->
       <!-- Créditos de IA: solo en móvil (en desktop está el chip del navbar). -->
       <button type="button" class="pm-item sm:hidden" (click)="onBuyCredits()">
         <ui-icon name="sparkles" size="16" styleClass="pm-item__icon" />
@@ -39,12 +74,34 @@
       </button>
       <a routerLink="plans" class="pm-item" (click)="close()">
         <ui-icon name="crown" size="16" styleClass="pm-item__icon" />
-        <span class="pm-item__label">Planes</span>
+        <span class="pm-item__label">Planes y pagos</span>
       </a>
-      <a routerLink="profile" class="pm-item" (click)="close()">
+      <a
+        routerLink="profile"
+        [queryParams]="{ tab: 'general' }"
+        class="pm-item"
+        (click)="close()"
+      >
         <ui-icon name="user" size="16" styleClass="pm-item__icon" />
-        <span class="pm-item__label">Mi Cuenta</span>
+        <span class="pm-item__label">Datos de la cuenta</span>
       </a>
+      <a
+        routerLink="profile"
+        [queryParams]="{ tab: 'notifications' }"
+        class="pm-item"
+        (click)="close()"
+      >
+        <ui-icon name="mail" size="16" styleClass="pm-item__icon" />
+        <span class="pm-item__label">Notificaciones</span>
+      </a>
+
+      <div class="pm-divider"></div>
+
+      <!-- ── Cerrar sesión ── -->
+      <button type="button" class="pm-item pm-item--danger" (click)="logout()">
+        <ui-icon name="log-out" size="16" styleClass="pm-item__icon" />
+        <span class="pm-item__label">Cerrar sesión</span>
+      </button>
     </div>
   </ng-template>
 </ui-menu>

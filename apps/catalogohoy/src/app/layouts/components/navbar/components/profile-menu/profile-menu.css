@@ -16,7 +16,58 @@
   gap: 0.125rem;
 }
 
-/* ── Plan summary (top block) ──
+/* ── Identidad: avatar + nombre + email (bloque superior) ── */
+.pm-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem 0.625rem;
+}
+
+.pm-identity__avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.pm-identity__avatar--initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.pm-identity__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+}
+
+.pm-identity__name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pm-identity__email {
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Plan summary (bloque de plan) ──
  * Background + icon color come inline from PlanStore.currentPlanPalette
  * so the dropdown matches the navbar badge exactly. The --expired modifier
  * overrides everything because it represents state, not plan brand. */
@@ -79,7 +130,16 @@
   font-weight: 600;
 }
 
-/* ── Item row (Planes / Mi Cuenta) ── */
+::ng-deep .pm-summary__chevron {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.pm-summary--expired ::ng-deep .pm-summary__chevron {
+  color: #dc2626;
+}
+
+/* ── Item row (Planes / Datos de la cuenta / …) ── */
 .pm-item {
   display: flex;
   align-items: center;
@@ -89,6 +149,10 @@
   text-decoration: none;
   cursor: pointer;
   transition: background 0.12s ease;
+  width: 100%;
+  background: transparent;
+  border: none;
+  text-align: left;
 }
 
 .pm-item:hover {
@@ -105,6 +169,20 @@
   font-weight: 500;
   color: #1e293b;
   line-height: 1.2;
+}
+
+/* ── Cerrar sesión (danger) ── */
+.pm-item--danger:hover {
+  background: #fef2f2;
+}
+
+.pm-item--danger .pm-item__label {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+::ng-deep .pm-item--danger .pm-item__icon {
+  color: #dc2626;
 }
 
 /* ── Divider ── */

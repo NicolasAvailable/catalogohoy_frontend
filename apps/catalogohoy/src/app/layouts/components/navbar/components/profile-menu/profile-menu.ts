@@ -7,9 +7,16 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AuthenticationService } from '@catalogohoy/auth';
+import { PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { CreditsStore } from '@catalogohoy/product';
-import { IconComponent, MenuComponent } from '@ui';
+import { ProfileStore } from '@catalogohoy/profile';
+import {
+  ConfirmDialogService,
+  IconComponent,
+  MenuComponent,
+} from '@ui';
 
 @Component({
   selector: 'app-profile-menu',
@@ -23,6 +30,11 @@ export class ProfileMenu {
   protected readonly palette = this.planStore.currentPlanPalette;
   /** Saldo de créditos de IA (para mostrarlo en el dropdown en móvil). */
   protected readonly credits = inject(CreditsStore);
+  /** Datos del usuario (nombre, email, foto) para el bloque de identidad. */
+  protected readonly profileStore = inject(ProfileStore);
+  private readonly auth = inject(AuthenticationService);
+  private readonly posthog = inject(PosthogService);
+  private readonly confirm = inject(ConfirmDialogService);
   /** El navbar conecta esto con el diálogo de compra del CreditsWidget. */
   public readonly buyCredits = output<void>();
 
@@ -51,6 +63,12 @@ export class ProfileMenu {
     return { label: `Plan ${plan.name}`, sub, state: 'active' as const, expiresAt };
   });
 
+  /** Inicial para el avatar cuando el usuario no tiene foto. */
+  protected readonly initial = computed(() => {
+    const name = this.profileStore.profile().name?.trim();
+    return (name?.[0] ?? '?').toUpperCase();
+  });
+
   public close(): void {
     this.menu()?.hide();
   }
@@ -59,5 +77,25 @@ export class ProfileMenu {
   public onBuyCredits(): void {
     this.close();
     this.buyCredits.emit();
+  }
+
+  /** Cierra sesión (mismo flujo que el sidebar: confirma → limpia → redirige). */
+  public logout(): void {
+    this.close();
+    this.confirm
+      .warning({
+        headerLabel: '¿Cerrar sesión?',
+        contentLabel: '¿Estás seguro que deseas cerrar sesión?',
+        acceptLabel: 'Cerrar sesión',
+        rejectLabel: 'Cancelar',
+      })
+      .subscribe((result) => {
+        if (result.isRight()) {
+          this.posthog.reset();
+          this.auth.logout().then(() => {
+            window.location.href = 'https://auth.catalogohoy.com';
+          });
+        }
+      });
   }
 }
