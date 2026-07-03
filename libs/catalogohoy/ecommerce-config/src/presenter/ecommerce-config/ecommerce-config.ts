@@ -595,6 +595,11 @@ export class EcommerceConfigComponent implements OnInit {
       const shippingMethods = this.draftShippingMethods();
       const showShippingSection = this.draftShowShippingSection();
       const customerFields = this.draftCustomerFields();
+      // Métodos de pago activos (con sus datos) — para que la preview del
+      // checkout refleje en vivo los datos al elegir un método, sin recargar.
+      const paymentMethods = this.configStore
+        .paymentMethodsList()
+        .filter((m) => m.isActive);
 
       const message = {
         type: 'PREVIEW_UPDATE' as const,
@@ -620,6 +625,9 @@ export class EcommerceConfigComponent implements OnInit {
           shippingMethods,
           showShippingSection,
           customerFields,
+          // Solo overrideamos si hay métodos activos cargados; si la lista aún
+          // no cargó (vacía), la preview usa los del catálogo real.
+          ...(paymentMethods.length ? { paymentMethods } : {}),
         },
         source: 'catalogohoy-admin' as const,
       };
