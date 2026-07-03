@@ -299,7 +299,9 @@ export class EcommerceService implements BaseEcommerceService {
       .eq('is_hidden', false);
 
     if (search && search.trim().length > 0) {
-      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+      // Igual que el admin: busca contra search_blob (nombre + descripción +
+      // SKU top-level + nombre/SKU de tallas y variantes).
+      query = query.ilike('search_blob', `%${search.trim()}%`);
     }
 
     if (categoryId) {
