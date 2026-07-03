@@ -28,8 +28,8 @@
 
 | Acción | Modelo / función | Costo | Notas |
 |---|---|---|---|
-| **Generar imagen** | Gemini 2.5 Flash Image / "Nano Banana" (`fal-ai-images` action `generate`) | 3 | Modal con proporción + estilo + preview. Regla de **no-texto** (salvo que se pida); si se pide, en español. |
-| **Editar imagen** | Gemini 2.5 Flash Image edit (`fal-ai-images` action `edit`, img→img) | 4 | Instrucción de texto que modifica la imagen ya generada conservando el resto ("sacá el texto", "fondo blanco"). El resultado reemplaza el preview para iterar. |
+| **Generar imagen** | Gemini 2.5 Flash Image / "Nano Banana" (`fal-ai-images` action `generate`) | 5 | Modal con proporción + estilo + preview. Regla de **no-texto** (salvo que se pida); si se pide, en español. Nano Banana es más caro → 5 créditos. |
+| **Editar imagen** | Gemini 2.5 Flash Image edit (`fal-ai-images` action `edit`, img→img) | 5 | Instrucción de texto que modifica la imagen ya generada conservando el resto ("sacá el texto", "fondo blanco"). El resultado reemplaza el preview para iterar. Mismo modelo Nano Banana → 5 créditos. |
 | **Quitar fondo** | BiRefNet (`remove-background`) | 1 | Botón sobre cada imagen. |
 | **Borrador a mano** | Canvas local (pincel, estilo Canva) + `uploadPng` | **0** | No pasa por edge function (no consume créditos). |
 | **Mejorar descripción** | Claude Haiku 4.5 (`improve-text`) | 1 | `ui-select` con modos mejorar/alargar/acortar (≥15 chars). Anti prompt-injection (texto = datos, delimitado). |

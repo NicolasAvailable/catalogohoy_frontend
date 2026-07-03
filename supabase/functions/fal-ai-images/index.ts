@@ -298,13 +298,13 @@ Deno.serve(async (req) => {
   }
 
   // Costo por acción ("borrar a mano" no pasa por aquí: es local, gratis).
-  // generate y edit usan el mismo modelo (Gemini 2.5 Flash Image); edit cuesta
-  // 1 crédito más por ser una acción iterativa sobre una imagen ya generada.
+  // generate y edit usan Gemini 2.5 Flash Image ("Nano Banana"), un modelo más
+  // caro que quitar-fondo/segmentar → cuestan 5 créditos cada uno.
   const COST: Record<string, number> = {
     "remove-background": 1,
     "segment-points": 1,
-    "generate": 3,
-    "edit": 4,
+    "generate": 5,
+    "edit": 5,
   };
   const cost = COST[body.action ?? ""] ?? 0;
   if (cost === 0) {
