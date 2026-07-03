@@ -59,7 +59,7 @@ const AiFeatures = () => {
                 cambia. Acentos en violeta como en la app. */}
             <div
               role="img"
-              aria-label="Generador de imágenes de IA en el editor de Catálogo Hoy"
+              aria-label="Generador de imágenes de IA en el editor de CatalogoHoy"
               className="relative"
             >
               {/* Halo suave: da la sensación de modal flotante. */}

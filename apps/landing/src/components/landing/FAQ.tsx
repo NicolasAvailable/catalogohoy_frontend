@@ -6,7 +6,7 @@ const faqs = [
   {
     question: "¿Es gratis crear un catálogo digital?",
     answer:
-      "Sí, Catálogo Hoy ofrece un plan gratuito para siempre que incluye hasta 10 productos y 1 catálogo. Puedes empezar sin tarjeta de crédito.",
+      "Sí, CatalogoHoy ofrece un plan gratuito para siempre que incluye hasta 10 productos y 1 catálogo. Puedes empezar sin tarjeta de crédito.",
   },
   {
     question: "¿Puedo compartir mi catálogo por WhatsApp?",
@@ -14,9 +14,9 @@ const faqs = [
       "Sí, cada catálogo tiene un enlace único que puedes compartir directamente por WhatsApp, redes sociales o cualquier medio digital. Tus clientes pueden ver tus productos sin necesidad de descargar ninguna app.",
   },
   {
-    question: "¿Qué tipo de negocios pueden usar Catálogo Hoy?",
+    question: "¿Qué tipo de negocios pueden usar CatalogoHoy?",
     answer:
-      "Catálogo Hoy es ideal para tiendas de ropa, zapaterías, joyerías, restaurantes, ferreterías y cualquier negocio que quiera mostrar sus productos de forma profesional en línea.",
+      "CatalogoHoy es ideal para tiendas de ropa, zapaterías, joyerías, restaurantes, ferreterías y cualquier negocio que quiera mostrar sus productos de forma profesional en línea.",
   },
   {
     question: "¿Puedo cambiar de plan en cualquier momento?",

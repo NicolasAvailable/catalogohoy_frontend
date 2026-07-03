@@ -165,7 +165,7 @@ function handleSelectPlan(plan: PlanData, period: BillingPeriod): void {
   const price = getPeriodPrice(plan, period);
   const periodLabel = getPeriodLabel(period, false);
   const message = encodeURIComponent(
-    `Hola, me interesa adquirir el plan *${plan.name}* ($${price}${periodLabel} USD) de Catálogo Hoy. ¿Me pueden dar más información?`
+    `Hola, me interesa adquirir el plan *${plan.name}* ($${price}${periodLabel} USD) de CatalogoHoy. ¿Me pueden dar más información?`
   );
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, "_blank");
 }

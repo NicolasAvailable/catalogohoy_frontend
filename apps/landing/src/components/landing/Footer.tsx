@@ -14,8 +14,8 @@ const Footer = () => {
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="Catálogo Hoy" className="h-7 w-7" />
-            <span className="font-display font-bold text-lg text-foreground">Catálogo Hoy</span>
+            <img src={logo} alt="CatalogoHoy" className="h-7 w-7" />
+            <span className="font-display font-bold text-lg text-foreground">CatalogoHoy</span>
           </div>
           <nav aria-label="Navegación del pie de página" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Características</a>
@@ -26,7 +26,7 @@ const Footer = () => {
             <Link to="/data-deletion" className="hover:text-foreground transition-colors">Eliminación de Datos</Link>
           </nav>
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Catálogo Hoy. Todos los derechos reservados.
+            © {new Date().getFullYear()} CatalogoHoy. Todos los derechos reservados.
           </p>
         </div>
       </div>

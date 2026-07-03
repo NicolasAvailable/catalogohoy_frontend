@@ -133,7 +133,7 @@ const Hero = () => {
               </div>
               <p className="text-sm text-muted-foreground">
                 <span className="font-semibold text-foreground">+500 negocios</span>{" "}
-                ya usan Catálogo Hoy
+                ya usan CatalogoHoy
               </p>
             </motion.div>
           </div>
@@ -158,7 +158,7 @@ const Hero = () => {
               {/* Photo (overlaid on top of circle, head pokes out) */}
               <img
                 src="/hero-photo.png"
-                alt="Persona usando Catálogo Hoy"
+                alt="Persona usando CatalogoHoy"
                 className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-auto pointer-events-none select-none"
                 draggable={false}
               />
