@@ -88,7 +88,11 @@ export class ProductService implements BaseProductService {
       .order('position', { ascending: true });
 
     if (search && search.trim().length > 0) {
-      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+      // Busca por nombre, descripción y SKU (top-level del producto). El mismo
+      // input del listado sirve para los tres — el usuario no elige el campo.
+      query = query.or(
+        `name.ilike.%${search}%,description.ilike.%${search}%,sku.ilike.%${search}%`
+      );
     }
 
     if (page !== undefined && pageSize !== undefined) {
