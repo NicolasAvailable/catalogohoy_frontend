@@ -36,6 +36,8 @@ export interface AiUsageLog {
   userId: number | null;
   userName: string | null;
   userEmail: string | null;
+  /** Catálogo default del owner (el log solo guarda el dueño, no el tenant puntual). */
+  catalogName: string | null;
   feature: string;
   prompt: string | null;
   credits: number;

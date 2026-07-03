@@ -28,6 +28,7 @@ interface LogRow {
   user_id: number | null;
   user_name: string | null;
   user_email: string | null;
+  catalog_name: string | null;
   feature: string;
   prompt: string | null;
   credits: number;
@@ -90,6 +91,7 @@ export class AiUsageService {
       userId: row.user_id,
       userName: row.user_name,
       userEmail: row.user_email,
+      catalogName: row.catalog_name,
       feature: row.feature,
       prompt: row.prompt,
       credits: row.credits,
