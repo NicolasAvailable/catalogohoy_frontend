@@ -88,11 +88,10 @@ export class ProductService implements BaseProductService {
       .order('position', { ascending: true });
 
     if (search && search.trim().length > 0) {
-      // Busca por nombre, descripción y SKU (top-level del producto). El mismo
-      // input del listado sirve para los tres — el usuario no elige el campo.
-      query = query.or(
-        `name.ilike.%${search}%,description.ilike.%${search}%,sku.ilike.%${search}%`
-      );
+      // Busca contra search_blob (columna generada en la DB): nombre +
+      // descripción + SKU top-level + nombre/SKU de cada talla y variante. Un
+      // solo input del listado cubre todo, sin que el usuario elija el campo.
+      query = query.ilike('search_blob', `%${search.trim()}%`);
     }
 
     if (page !== undefined && pageSize !== undefined) {
