@@ -36,7 +36,7 @@ export class AiImageService implements BaseAiImageService {
 
   async improveText(
     text: string,
-    mode: 'improve' | 'expand' | 'shorten'
+    mode: 'improve' | 'expand' | 'shorten' | 'professional' | 'spelling'
   ): Promise<E.Either<Error, string>> {
     try {
       const { data, error } = await this.client.functions.invoke(

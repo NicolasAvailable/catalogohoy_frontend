@@ -27,6 +27,6 @@ export interface BaseAiImageService {
   // HTML simple listo para el editor.
   improveText(
     text: string,
-    mode: 'improve' | 'expand' | 'shorten'
+    mode: 'improve' | 'expand' | 'shorten' | 'professional' | 'spelling'
   ): Promise<E.Either<Error, string>>;
 }

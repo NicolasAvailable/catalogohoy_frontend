@@ -414,26 +414,7 @@
                     {{ photos().length >= maxPhotos() ? photosLimitMessage() :
                     'Arrastrá, soltá o subí fotos o videos del producto' }}
                   </p>
-                  @if (photos().length < maxPhotos()) {
-                  <p class="text-sm text-grey-300 mt-1">
-                    También podés pegar (Ctrl+V) o usar el botón de abajo
-                  </p>
-                  }
                 </button>
-
-                <!-- Mobile-friendly paste button. Hidden on browsers that
-                     don't expose `navigator.clipboard.read()` (older Firefox
-                     etc.) where the user must use Subir or Ctrl+V instead. -->
-                @if (canPaste && photos().length < maxPhotos()) {
-                <button
-                  type="button"
-                  (click)="paste()"
-                  class="self-stretch sm:self-center inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-grey-100 bg-white hover:bg-primary-50/30 hover:border-primary-300 transition-colors text-sm font-semibold text-grey-700 cursor-pointer"
-                >
-                  <ui-icon name="copy" size="16" styleClass="text-primary-500" />
-                  Pegar imagen del portapapeles
-                </button>
-                }
               </div>
             </ng-template>
           </ui-uploader>
@@ -446,21 +427,31 @@
             </p>
           </div>
 
-          <!-- Generar imagen con IA: abre un modal con un prompt (puede usar el
-               título/descripción del producto). -->
-          <button
-            type="button"
-            (click)="openGenerator()"
-            [disabled]="photos().length >= maxPhotos()"
-            class="self-start rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer transition-transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span
-              class="flex items-center gap-2 rounded-[0.4375rem] bg-white px-4 py-2.5 text-sm font-semibold text-violet-700"
+          <!-- Acciones de imagen: generar con IA + galería, en una fila. -->
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              (click)="openGenerator()"
+              [disabled]="photos().length >= maxPhotos()"
+              class="rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer transition-transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ui-icon name="sparkles" styleClass="w-[1.125rem] h-[1.125rem]" />
-              Generar imagen con IA
-            </span>
-          </button>
+              <span
+                class="flex items-center gap-2 rounded-[0.4375rem] bg-white px-4 py-2.5 text-sm font-semibold text-violet-700"
+              >
+                <ui-icon name="sparkles" styleClass="w-[1.125rem] h-[1.125rem]" />
+                Generar imagen con IA
+              </span>
+            </button>
+            <ui-button
+              label="Galería"
+              icon="book-image"
+              variant="outlined"
+              severity="contrast"
+              [fluid]="false"
+              [disabled]="photos().length >= maxPhotos()"
+              (click)="openGallery()"
+            />
+          </div>
 
           @if (photos().length > 0) {
           @if (photos().length > 1) {
@@ -1048,6 +1039,15 @@
     [description]="descriptionPlain()"
     (generated)="onGenerated($event)"
     (closed)="closeGenerator()"
+  />
+  }
+
+  <!-- Galería de imágenes para reusar (fotos de productos + subidas). -->
+  @if (galleryOpen()) {
+  <lib-image-gallery
+    [tenantId]="tenantId()"
+    (selected)="onGallerySelected($event)"
+    (closed)="closeGallery()"
   />
   }
 </section>
