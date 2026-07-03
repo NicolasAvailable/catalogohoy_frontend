@@ -393,25 +393,84 @@
           <!-- Payment methods list -->
           <div class="payment-methods-list">
             @for (method of configStore.paymentMethodsList(); track method.id) {
-            <div class="payment-method-row">
-              <div class="payment-method-info">
-                <ui-icon [name]="method.icon" styleClass="size-5 text-grey-500"></ui-icon>
-                <span class="payment-method-name">{{ method.name }}</span>
+            <div class="payment-method-item">
+              <div class="payment-method-row">
+                <div class="payment-method-info">
+                  <ui-icon [name]="method.icon" styleClass="size-5 text-grey-500"></ui-icon>
+                  <span class="payment-method-name">{{ method.name }}</span>
+                </div>
+                <div class="payment-method-actions">
+                  <button
+                    type="button"
+                    class="payment-method-detailsbtn"
+                    [class.payment-method-detailsbtn--open]="expandedMethodId() === method.id"
+                    (click)="toggleMethodDetails(method)"
+                    title="Datos del método"
+                  >
+                    <ui-icon name="pencil" styleClass="size-4"></ui-icon>
+                    <span class="hidden sm:inline">Datos</span>
+                  </button>
+                  <ui-toggle
+                    [ngModel]="method.isActive"
+                    (ngModelChange)="toggleMethodActive(method.id, $event)"
+                  ></ui-toggle>
+                  <button
+                    type="button"
+                    class="payment-method-delete"
+                    (click)="deleteMethod(method.id, method.name)"
+                    title="Eliminar"
+                  >
+                    <ui-icon name="trash" styleClass="size-4"></ui-icon>
+                  </button>
+                </div>
               </div>
-              <div class="payment-method-actions">
-                <ui-toggle
-                  [ngModel]="method.isActive"
-                  (ngModelChange)="toggleMethodActive(method.id, $event)"
-                ></ui-toggle>
-                <button
-                  type="button"
-                  class="payment-method-delete"
-                  (click)="deleteMethod(method.id, method.name)"
-                  title="Eliminar"
-                >
-                  <ui-icon name="trash" styleClass="size-4"></ui-icon>
-                </button>
+
+              <!-- Form de datos del método (banco, cuenta, etc.) -->
+              @if (expandedMethodId() === method.id) {
+              <div class="payment-method-details">
+                <p class="payment-method-details-hint">
+                  Estos datos se le muestran al cliente en el checkout cuando elige
+                  <strong>{{ method.name }}</strong>.
+                </p>
+                @for (field of fieldsFor(method.name); track field.key) {
+                <div class="payment-method-field">
+                  <label class="payment-method-field-label">{{ field.label }}</label>
+                  @if (field.multiline) {
+                  <ui-textarea
+                    [ngModel]="detailsDraft()[field.key] || ''"
+                    (ngModelChange)="setDetailField(field.key, $event)"
+                    [placeholder]="field.placeholder || ''"
+                    [rows]="2"
+                    styleClass="w-full"
+                  ></ui-textarea>
+                  } @else {
+                  <ui-input-text
+                    [ngModel]="detailsDraft()[field.key] || ''"
+                    (ngModelChange)="setDetailField(field.key, $event)"
+                    [placeholder]="field.placeholder || ''"
+                    styleClass="w-full"
+                  ></ui-input-text>
+                  }
+                </div>
+                }
+                <div class="payment-method-details-actions">
+                  <ui-button
+                    label="Cancelar"
+                    variant="outlined"
+                    severity="contrast"
+                    size="small"
+                    [fluid]="false"
+                    (click)="expandedMethodId.set(null)"
+                  ></ui-button>
+                  <ui-button
+                    label="Guardar datos"
+                    size="small"
+                    [fluid]="false"
+                    (click)="saveMethodDetails(method)"
+                  ></ui-button>
+                </div>
               </div>
+              }
             </div>
             } @empty {
             <div class="payment-methods-empty">

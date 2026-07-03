@@ -611,5 +611,27 @@ export const EcommerceConfigStore = signalStore(
         }
       );
     },
+
+    /** Guarda los datos (banco, cuenta, etc.) de un método de pago. */
+    async savePaymentMethodDetails(
+      id: number,
+      details: Record<string, string>
+    ) {
+      const loadingId = toast.loading('Guardando datos...');
+      const result = await service.updatePaymentMethod(id, { details });
+      toast.dismiss(loadingId);
+      result.fold(
+        () => {
+          toast.error('Error al guardar los datos del método');
+        },
+        () => {
+          const updated = store
+            .paymentMethodsList()
+            .map((m) => (m.id === id ? { ...m, details } : m));
+          patchState(store, { paymentMethodsList: updated });
+          toast.success('Datos guardados');
+        }
+      );
+    },
   }))
 );

@@ -63,6 +63,9 @@ import {
   WHATSAPP_MESSAGE_MAX_LENGTH,
   WHATSAPP_MESSAGE_VARIABLES,
   WhatsappButton,
+  PaymentFieldDef,
+  PaymentMethodEntity,
+  paymentMethodFields,
 } from '../../domain';
 import {
   EcommerceConfigService,
@@ -1131,6 +1134,36 @@ export class EcommerceConfigComponent implements OnInit {
           () => this.configStore.removePaymentMethod(id)
         );
       });
+  }
+
+  // --- Datos del método (banco, cuenta, etc.) ---
+  /** Id del método cuyo form de datos está abierto (null = ninguno). */
+  public readonly expandedMethodId = signal<number | null>(null);
+  /** Borrador de los datos que se están editando. */
+  public readonly detailsDraft = signal<Record<string, string>>({});
+
+  /** Campos configurables de un método según su nombre (tipo inferido). */
+  public fieldsFor(name: string): PaymentFieldDef[] {
+    return paymentMethodFields(name);
+  }
+
+  /** Abre/cierra el form de datos de un método (precarga el borrador). */
+  public toggleMethodDetails(method: PaymentMethodEntity): void {
+    if (this.expandedMethodId() === method.id) {
+      this.expandedMethodId.set(null);
+      return;
+    }
+    this.detailsDraft.set({ ...(method.details ?? {}) });
+    this.expandedMethodId.set(method.id);
+  }
+
+  public setDetailField(key: string, value: string): void {
+    this.detailsDraft.update((d) => ({ ...d, [key]: value }));
+  }
+
+  public saveMethodDetails(method: PaymentMethodEntity): void {
+    this.configStore.savePaymentMethodDetails(method.id, this.detailsDraft());
+    this.expandedMethodId.set(null);
   }
 
   // --- WhatsApp Section ---

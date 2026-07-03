@@ -167,6 +167,28 @@
       </button>
       }
     </div>
+
+    <!-- Datos del método elegido (banco, cuenta, etc.) -->
+    @if (selectedPaymentInfo().length) {
+    <div class="checkout__pay-info">
+      <div class="checkout__pay-info-rows">
+        @for (row of selectedPaymentInfo(); track row.label) {
+        <div class="checkout__pay-info-row">
+          <span class="checkout__pay-info-label">{{ row.label }}</span>
+          <span class="checkout__pay-info-value">{{ row.value }}</span>
+        </div>
+        }
+      </div>
+      <button
+        type="button"
+        class="checkout__pay-info-copy"
+        (click)="copyPaymentInfo()"
+      >
+        <ui-icon [name]="paymentInfoCopied() ? 'check' : 'copy'" size="14" />
+        {{ paymentInfoCopied() ? 'Copiado' : 'Copiar datos' }}
+      </button>
+    </div>
+    }
   </section>
   }
 

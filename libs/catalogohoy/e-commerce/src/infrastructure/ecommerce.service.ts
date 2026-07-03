@@ -201,6 +201,7 @@ export class EcommerceService implements BaseEcommerceService {
         icon: pm.icon,
         isActive: pm.is_active,
         createdAt: pm.created_at,
+        details: pm.details ?? {},
       })),
       showPaymentMethodsSection:
         config?.show_payment_methods_section ?? true,

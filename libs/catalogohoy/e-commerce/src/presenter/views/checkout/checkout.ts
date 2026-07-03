@@ -13,6 +13,7 @@ import { Router } from '@angular/router';
 import { MetaPixelService } from '@catalogohoy/core';
 import {
   flagEmoji,
+  paymentMethodFields,
   ShippingMethod,
   SUPPORTED_COUNTRIES,
 } from '@catalogohoy/ecommerce-config';
@@ -135,6 +136,31 @@ export default class Checkout {
     if (this.ecommerceStore.isVenezuela()) return i.paymentMethods;
     return i.paymentMethods.filter((m) => !isPagoMovil(m.name));
   });
+
+  /** Datos (banco, cuenta, etc.) del método de pago elegido, listos para
+   *  mostrar en el checkout. Solo campos con valor. */
+  public readonly selectedPaymentInfo = computed(() => {
+    const name = this.selectedPaymentMethod();
+    if (!name) return [];
+    const method = this.availablePaymentMethods().find((m) => m.name === name);
+    const details = method?.details ?? {};
+    return paymentMethodFields(name)
+      .map((f) => ({ label: f.label, value: (details[f.key] ?? '').trim() }))
+      .filter((f) => f.value.length > 0);
+  });
+
+  /** Feedback transitorio del botón "Copiar datos". */
+  public readonly paymentInfoCopied = signal(false);
+
+  public copyPaymentInfo(): void {
+    const info = this.selectedPaymentInfo();
+    if (!info.length) return;
+    const text = info.map((f) => `${f.label}: ${f.value}`).join('\n');
+    navigator.clipboard?.writeText(text).then(() => {
+      this.paymentInfoCopied.set(true);
+      setTimeout(() => this.paymentInfoCopied.set(false), 1800);
+    });
+  }
 
   /** WhatsApp seller button to send the order to (first configured one). */
   public readonly whatsappButton = computed(

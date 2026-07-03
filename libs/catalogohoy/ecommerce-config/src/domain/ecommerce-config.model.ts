@@ -84,6 +84,82 @@ export interface PaymentMethodEntity {
   icon: string;
   isActive: boolean;
   createdAt: string;
+  /** Datos del método (banco, cuenta, titular…) keyed por campo. Se muestran
+   *  en el checkout cuando el cliente elige ese método. */
+  details: Record<string, string>;
+}
+
+/** Un campo configurable de un método de pago. */
+export interface PaymentFieldDef {
+  key: string;
+  label: string;
+  placeholder?: string;
+  multiline?: boolean;
+}
+
+/**
+ * Campos por "tipo" de método de pago. Los métodos se crean con nombre libre,
+ * así que el tipo se infiere del nombre (ver detectPaymentMethodType). Los
+ * métodos que no matchean ningún tipo conocido usan 'otro' (texto libre).
+ */
+export const PAYMENT_METHOD_FIELDS: Record<string, PaymentFieldDef[]> = {
+  transferencia: [
+    { key: 'banco', label: 'Banco', placeholder: 'Ej: Mercantil' },
+    { key: 'numeroCuenta', label: 'Número de cuenta', placeholder: 'Ej: 0105-1234-56-7890123456' },
+    { key: 'tipoCuenta', label: 'Tipo de cuenta', placeholder: 'Corriente / Ahorro' },
+    { key: 'titular', label: 'Titular', placeholder: 'Nombre del titular' },
+    { key: 'documento', label: 'Cédula / RIF', placeholder: 'Ej: V-12.345.678' },
+  ],
+  pago_movil: [
+    { key: 'telefono', label: 'Teléfono', placeholder: 'Ej: 0414-1234567' },
+    { key: 'banco', label: 'Banco', placeholder: 'Ej: Banesco' },
+    { key: 'documento', label: 'Cédula', placeholder: 'Ej: V-12.345.678' },
+  ],
+  zelle: [
+    { key: 'email', label: 'Correo (email)', placeholder: 'Ej: pagos@tienda.com' },
+    { key: 'titular', label: 'Titular', placeholder: 'Nombre del titular' },
+  ],
+  binance: [
+    { key: 'email', label: 'Correo / Pay ID', placeholder: 'Email o ID de Binance Pay' },
+    { key: 'titular', label: 'Titular', placeholder: 'Nombre (opcional)' },
+  ],
+  paypal: [
+    { key: 'email', label: 'Correo / Enlace', placeholder: 'Email o paypal.me/tutienda' },
+    { key: 'titular', label: 'Titular', placeholder: 'Nombre (opcional)' },
+  ],
+  efectivo: [
+    { key: 'instrucciones', label: 'Instrucciones', placeholder: 'Ej: Pagás al recibir el pedido', multiline: true },
+  ],
+  tarjeta_credito: [
+    { key: 'instrucciones', label: 'Instrucciones', placeholder: 'Cómo pagar con tarjeta', multiline: true },
+  ],
+  otro: [
+    { key: 'instrucciones', label: 'Datos / instrucciones', placeholder: 'Datos que el cliente necesita para pagar', multiline: true },
+  ],
+};
+
+/** Infiere el "tipo" de un método a partir de su nombre (nombres libres). */
+export function detectPaymentMethodType(name: string): string {
+  const n = (name ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  if (n.includes('transferencia')) return 'transferencia';
+  if (n.includes('pago movil') || n.includes('pagomovil')) return 'pago_movil';
+  if (n.includes('zelle')) return 'zelle';
+  if (n.includes('binance')) return 'binance';
+  if (n.includes('paypal')) return 'paypal';
+  if (n.includes('efectivo')) return 'efectivo';
+  if (n.includes('tarjeta')) return 'tarjeta_credito';
+  return 'otro';
+}
+
+/** Campos configurables de un método según su nombre. */
+export function paymentMethodFields(name: string): PaymentFieldDef[] {
+  return (
+    PAYMENT_METHOD_FIELDS[detectPaymentMethodType(name)] ??
+    PAYMENT_METHOD_FIELDS['otro']
+  );
 }
 
 export interface SocialLink {

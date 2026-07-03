@@ -365,6 +365,7 @@ export class EcommerceConfigService {
         icon: row.icon,
         isActive: row.is_active,
         createdAt: row.created_at,
+        details: row.details ?? {},
       }))
     );
   }
@@ -389,12 +390,18 @@ export class EcommerceConfigService {
       icon: data.icon,
       isActive: data.is_active,
       createdAt: data.created_at,
+      details: data.details ?? {},
     });
   }
 
   async updatePaymentMethod(
     id: number,
-    updates: { name?: string; icon?: string; is_active?: boolean }
+    updates: {
+      name?: string;
+      icon?: string;
+      is_active?: boolean;
+      details?: Record<string, string>;
+    }
   ): Promise<E.Either<Error, void>> {
     const { error } = await this.client
       .from('payment_methods')
