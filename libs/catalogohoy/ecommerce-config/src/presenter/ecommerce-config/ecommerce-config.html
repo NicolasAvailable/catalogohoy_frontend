@@ -400,16 +400,15 @@
                   <span class="payment-method-name">{{ method.name }}</span>
                 </div>
                 <div class="payment-method-actions">
-                  <button
-                    type="button"
-                    class="payment-method-detailsbtn"
-                    [class.payment-method-detailsbtn--open]="expandedMethodId() === method.id"
+                  <ui-button
+                    label="Datos"
+                    icon="pencil"
+                    variant="outlined"
+                    severity="contrast"
+                    size="small"
+                    [fluid]="false"
                     (click)="toggleMethodDetails(method)"
-                    title="Datos del método"
-                  >
-                    <ui-icon name="pencil" styleClass="size-4"></ui-icon>
-                    <span class="hidden sm:inline">Datos</span>
-                  </button>
+                  ></ui-button>
                   <ui-toggle
                     [ngModel]="method.isActive"
                     (ngModelChange)="toggleMethodActive(method.id, $event)"

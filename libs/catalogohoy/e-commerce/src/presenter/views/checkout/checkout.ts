@@ -144,7 +144,7 @@ export default class Checkout {
     if (!name) return [];
     const method = this.availablePaymentMethods().find((m) => m.name === name);
     const details = method?.details ?? {};
-    return paymentMethodFields(name)
+    return paymentMethodFields(name, this.ecommerceStore.isVenezuela())
       .map((f) => ({ label: f.label, value: (details[f.key] ?? '').trim() }))
       .filter((f) => f.value.length > 0);
   });

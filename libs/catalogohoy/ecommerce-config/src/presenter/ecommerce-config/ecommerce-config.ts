@@ -1142,9 +1142,10 @@ export class EcommerceConfigComponent implements OnInit {
   /** Borrador de los datos que se están editando. */
   public readonly detailsDraft = signal<Record<string, string>>({});
 
-  /** Campos configurables de un método según su nombre (tipo inferido). */
+  /** Campos configurables de un método según su nombre (tipo inferido). Para
+   *  transferencia, el país (Venezuela o no) cambia el set de campos. */
   public fieldsFor(name: string): PaymentFieldDef[] {
-    return paymentMethodFields(name);
+    return paymentMethodFields(name, this.isVenezuela());
   }
 
   /** Abre/cierra el form de datos de un método (precarga el borrador). */

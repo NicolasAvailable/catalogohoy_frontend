@@ -110,6 +110,12 @@ export const PAYMENT_METHOD_FIELDS: Record<string, PaymentFieldDef[]> = {
     { key: 'titular', label: 'Titular', placeholder: 'Nombre del titular' },
     { key: 'documento', label: 'Cédula / RIF', placeholder: 'Ej: V-12.345.678' },
   ],
+  // Transferencia fuera de Venezuela: solo titular, cuenta e instrucciones.
+  transferencia_intl: [
+    { key: 'titular', label: 'Titular', placeholder: 'Nombre del titular' },
+    { key: 'numeroCuenta', label: 'Número de cuenta', placeholder: 'Ej: IBAN / número de cuenta' },
+    { key: 'instrucciones', label: 'Instrucciones', placeholder: 'Datos adicionales para la transferencia', multiline: true },
+  ],
   pago_movil: [
     { key: 'telefono', label: 'Teléfono', placeholder: 'Ej: 0414-1234567' },
     { key: 'banco', label: 'Banco', placeholder: 'Ej: Banesco' },
@@ -154,12 +160,19 @@ export function detectPaymentMethodType(name: string): string {
   return 'otro';
 }
 
-/** Campos configurables de un método según su nombre. */
-export function paymentMethodFields(name: string): PaymentFieldDef[] {
-  return (
-    PAYMENT_METHOD_FIELDS[detectPaymentMethodType(name)] ??
-    PAYMENT_METHOD_FIELDS['otro']
-  );
+/**
+ * Campos configurables de un método según su nombre. Para transferencia, fuera
+ * de Venezuela se usa un set reducido (titular, cuenta, instrucciones).
+ */
+export function paymentMethodFields(
+  name: string,
+  isVenezuela = true
+): PaymentFieldDef[] {
+  const type = detectPaymentMethodType(name);
+  if (type === 'transferencia' && !isVenezuela) {
+    return PAYMENT_METHOD_FIELDS['transferencia_intl'];
+  }
+  return PAYMENT_METHOD_FIELDS[type] ?? PAYMENT_METHOD_FIELDS['otro'];
 }
 
 export interface SocialLink {
