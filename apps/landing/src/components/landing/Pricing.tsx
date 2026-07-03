@@ -1,4 +1,4 @@
-import { Check, X, PlusCircle } from "lucide-react";
+import { Check, X, PlusCircle, CreditCard, Smartphone } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { isVenezuela, useVisitorCountry } from "@/hooks/use-visitor-country";
@@ -351,10 +351,12 @@ const Pricing = () => {
                 {!plan.isFree && (
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]">
+                      <span className="inline-flex items-center gap-1 px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]">
+                        <CreditCard className="h-3.5 w-3.5 shrink-0" />
                         Tarjeta
                       </span>
-                      <span className="inline-flex items-center px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]">
+                      <span className="inline-flex items-center gap-1 px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]">
+                        <Smartphone className="h-3.5 w-3.5 shrink-0" />
                         Pago móvil
                       </span>
                     </div>
