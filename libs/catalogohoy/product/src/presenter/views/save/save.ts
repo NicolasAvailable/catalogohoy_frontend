@@ -165,7 +165,7 @@ export default class Save implements OnInit {
   // valor seleccionado (se resetea tras elegir) y flag de procesando.
   public readonly improveModes = [
     { label: 'Mejorar redacción', value: 'improve', icon: 'wand-sparkles' },
-    { label: 'Alargar', value: 'expand', icon: 'plus' },
+    { label: 'Extender', value: 'expand', icon: 'plus' },
     { label: 'Acortar', value: 'shorten', icon: 'minus' },
   ];
   public readonly improveModeValue = signal<string | null>(null);
