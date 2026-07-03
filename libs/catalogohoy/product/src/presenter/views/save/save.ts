@@ -165,6 +165,8 @@ export default class Save implements OnInit {
   // valor seleccionado (se resetea tras elegir) y flag de procesando.
   public readonly improveModes = [
     { label: 'Mejorar redacción', value: 'improve', icon: 'wand-sparkles' },
+    { label: 'Ficha profesional', value: 'professional', icon: 'sparkles' },
+    { label: 'Corregir ortografía', value: 'spelling', icon: 'check' },
     { label: 'Extender', value: 'expand', icon: 'plus' },
     { label: 'Acortar', value: 'shorten', icon: 'minus' },
   ];
@@ -744,10 +746,10 @@ export default class Save implements OnInit {
   public onImproveMode(mode: string | null) {
     if (!mode) return;
     this.improveModeValue.set(null);
-    this.improveDescription(mode as 'improve' | 'expand' | 'shorten');
+    this.improveDescription(mode as 'improve' | 'expand' | 'shorten' | 'professional' | 'spelling');
   }
 
-  public async improveDescription(mode: 'improve' | 'expand' | 'shorten') {
+  public async improveDescription(mode: 'improve' | 'expand' | 'shorten' | 'professional' | 'spelling') {
     const text = this.descriptionPlain();
     if (text.length < 15 || this.improvingDesc()) return;
     this.improvingDesc.set(true);

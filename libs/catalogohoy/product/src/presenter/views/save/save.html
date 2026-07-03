@@ -414,26 +414,7 @@
                     {{ photos().length >= maxPhotos() ? photosLimitMessage() :
                     'Arrastrá, soltá o subí fotos o videos del producto' }}
                   </p>
-                  @if (photos().length < maxPhotos()) {
-                  <p class="text-sm text-grey-300 mt-1">
-                    También podés pegar (Ctrl+V) o usar el botón de abajo
-                  </p>
-                  }
                 </button>
-
-                <!-- Mobile-friendly paste button. Hidden on browsers that
-                     don't expose `navigator.clipboard.read()` (older Firefox
-                     etc.) where the user must use Subir or Ctrl+V instead. -->
-                @if (canPaste && photos().length < maxPhotos()) {
-                <button
-                  type="button"
-                  (click)="paste()"
-                  class="self-stretch sm:self-center inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-grey-100 bg-white hover:bg-primary-50/30 hover:border-primary-300 transition-colors text-sm font-semibold text-grey-700 cursor-pointer"
-                >
-                  <ui-icon name="copy" size="16" styleClass="text-primary-500" />
-                  Pegar imagen del portapapeles
-                </button>
-                }
               </div>
             </ng-template>
           </ui-uploader>
