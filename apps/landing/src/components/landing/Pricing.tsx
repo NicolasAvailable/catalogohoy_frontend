@@ -21,7 +21,7 @@ const PLAN_BASE_PRICES: Record<string, number> = {
   avanzado: 19.99,
 };
 
-const CATALOG_ADDON_PRICE = 5.99;
+const CATALOG_ADDON_PRICE = 4.99;
 
 const billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
   { key: "monthly",   label: "Mensual" },
