@@ -17,7 +17,7 @@ export const PLAN_BASE_PRICES: Record<string, number> = {
 /** Catalog addon monthly price (USD). Mirror this in Stripe — the actual
  *  charge comes from the price IDs configured in the
  *  `create-checkout-session` / `update-catalog-slots` edge functions. */
-export const CATALOG_ADDON_PRICE = 3.99;
+export const CATALOG_ADDON_PRICE = 4.99;
 
 // Mirrors the Stripe edge function FX_RATES map. Used client-side so the plans
 // page can preview the local amount without a Stripe round-trip. Stripe remains
