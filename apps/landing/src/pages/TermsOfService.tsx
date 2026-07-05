@@ -241,10 +241,10 @@ const TermsOfService = () => {
                 Puedes cancelar tu cuenta en cualquier momento desde la configuración de tu perfil o
                 contactándonos a{" "}
                 <a
-                  href="mailto:catalogohoy@outlook.com"
+                  href="mailto:nicolas@catalogohoy.com"
                   className="text-primary hover:underline"
                 >
-                  catalogohoy@outlook.com
+                  nicolas@catalogohoy.com
                 </a>
                 .
               </li>
@@ -311,10 +311,10 @@ const TermsOfService = () => {
               <li>
                 <strong>Email:</strong>{" "}
                 <a
-                  href="mailto:catalogohoy@outlook.com"
+                  href="mailto:nicolas@catalogohoy.com"
                   className="text-primary hover:underline"
                 >
-                  catalogohoy@outlook.com
+                  nicolas@catalogohoy.com
                 </a>
               </li>
               <li>

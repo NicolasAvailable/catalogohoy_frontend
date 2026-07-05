@@ -256,10 +256,10 @@ const PrivacyPolicy = () => {
             <p className="mt-3">
               Para ejercer cualquiera de estos derechos, escríbenos a{" "}
               <a
-                href="mailto:catalogohoy@outlook.com"
+                href="mailto:nicolas@catalogohoy.com"
                 className="text-primary hover:underline"
               >
-                catalogohoy@outlook.com
+                nicolas@catalogohoy.com
               </a>
               . Responderemos a tu solicitud en un plazo máximo de 30 días. El ejercicio de estos
               derechos es completamente gratuito.
@@ -341,10 +341,10 @@ const PrivacyPolicy = () => {
               <li>
                 <strong>Email:</strong>{" "}
                 <a
-                  href="mailto:catalogohoy@outlook.com"
+                  href="mailto:nicolas@catalogohoy.com"
                   className="text-primary hover:underline"
                 >
-                  catalogohoy@outlook.com
+                  nicolas@catalogohoy.com
                 </a>
               </li>
               <li>
