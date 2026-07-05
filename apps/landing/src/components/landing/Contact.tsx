@@ -3,7 +3,7 @@ import { Instagram, ShieldCheck } from "lucide-react";
 
 const WHATSAPP_NUMBER = "584220240947";
 const INSTAGRAM_URL = "https://www.instagram.com/catalogohoy/";
-const EMAIL = "catalogohoy@outlook.com";
+const EMAIL = "nicolas@catalogohoy.com";
 
 const Contact = () => {
   return (
