@@ -149,6 +149,14 @@ export default class Checkout {
       .filter((f) => f.value.length > 0);
   });
 
+  /** True si el método tiene datos cargados (muestra el chevron en su fila). */
+  public hasPaymentInfo(pm: { name: string; details?: Record<string, string> | null }): boolean {
+    const details = pm.details ?? {};
+    return paymentMethodFields(pm.name, this.ecommerceStore.isVenezuela()).some(
+      (f) => (details[f.key] ?? '').trim().length > 0
+    );
+  }
+
   /** Feedback transitorio del botón "Copiar datos". */
   public readonly paymentInfoCopied = signal(false);
 

@@ -340,37 +340,11 @@
   display: block;
 }
 
-/* Payment grid */
-.checkout__pay-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.625rem;
-}
-.checkout__pay {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  border: 0.0625rem solid var(--color-grey-200, #d1d5db);
-  border-radius: 0.625rem;
-  background: white;
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: var(--color-grey-700, #334155);
-}
-.checkout__pay--active {
-  border-color: var(--color-primary-500, #3b82f6);
-  background: var(--color-primary-50, #eff6ff);
-  color: var(--color-primary-700, #1d4ed8);
-}
-
-/* Datos del método de pago elegido */
-.checkout__pay-info {
-  margin-top: 0.75rem;
-  padding: 0.875rem;
-  border: 0.0625rem solid var(--color-primary-200, #bfdbfe);
-  background: var(--color-primary-50, #eff6ff);
-  border-radius: 0.625rem;
+/* Datos del método de pago elegido (acordeón bajo su fila).
+   A lo ancho, sin la sangría del radio: las filas label/valor aprovechan
+   todo el ancho de la tarjeta. */
+.checkout__pay-body {
+  padding: 0 1rem 0.875rem;
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
