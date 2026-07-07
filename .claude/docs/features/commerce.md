@@ -27,8 +27,13 @@
   wholesaleTiers[], isSoldOut, isHidden, isSized + sizes[] (stock por talla), isVariant +
   variants[] (precio/foto propia, tallas propias opcionales).
 - **Stores/serv**: `ProductStore` (list + loading), `ProductService` (CRUD, search, duplicar,
-  borrar, `isLockedByFreePlan()`). `ProductExcelService` (export/import). `AiImageService`
-  (fal.ai, ver ai-credits) y `CreditsStore` (saldo de créditos) viven acá.
+  borrar, `isLockedByFreePlan()`). `ProductExcelService` (import + plantilla; su `exportToExcel`
+  ya no se usa desde la UI). `AiImageService` (fal.ai, ver ai-credits) y `CreditsStore`
+  (saldo de créditos) viven acá.
+- **Exportar productos**: ya **no** se genera el Excel en el navegador. El tile "Exportar" del
+  hub (`import-export-hub`) abre WhatsApp de soporte (`wa.me/584220240947`, mismo número que
+  usa el módulo plan) con mensaje prellenado que incluye el slug del tenant; el equipo envía el
+  archivo manualmente. Sigue gateado a planes pagos (free = tile deshabilitado con badge Pro).
 - **Reglas**: `isHidden` → fuera del catálogo público pero visible en admin. Variantes y tallas
   son conceptos distintos (una variante puede tener tallas). Duplicar **no** clona imágenes
   (referencia las mismas URLs). `position` = orden en el catálogo.

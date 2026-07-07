@@ -11,7 +11,7 @@
     <div class="text-center">
       <h2 class="text-2xl font-bold text-gray-900">Exportar / Importar productos</h2>
       <p class="text-gray-500 mt-2">
-        Descargá tus productos en Excel o importá nuevos desde un archivo.
+        Pedinos la exportación de tus productos por WhatsApp o importá nuevos desde un archivo.
       </p>
     </div>
 
@@ -37,17 +37,17 @@
         </span>
         }
         <div class="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center">
-          <ui-icon name="download" styleClass="size-7 text-green-600" />
+          <ui-icon name="whatsapp$" styleClass="size-7 text-green-600" />
         </div>
         <h3 class="text-lg font-bold text-gray-900">Exportar</h3>
         <p class="text-sm text-gray-500 text-center">
-          {{ isFreePlan() ? 'Disponible en planes pagos' : 'Descargá todos tus productos en un archivo de Excel' }}
+          {{ isFreePlan() ? 'Disponible en planes pagos' : 'Escribinos por WhatsApp y te enviamos todos tus productos en un archivo de Excel' }}
         </p>
         <span
           class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-green-50 border border-green-200 text-green-700 text-xs font-semibold"
         >
-          <ui-icon name="file-spreadsheet" styleClass="size-3.5 text-green-600" />
-          Excel (.xlsx)
+          <ui-icon name="whatsapp$" styleClass="size-3.5 text-green-600" />
+          Solicitar por WhatsApp
         </span>
       </button>
 
@@ -72,23 +72,6 @@
         </span>
       </button>
     </div>
-  </section>
-  }
-
-  <!-- EXPORT PROGRESS VIEW -->
-  @if (view() === 'export') {
-  <section class="flex flex-col items-center gap-6 p-12">
-    @if (isExporting()) {
-    <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center">
-      <ui-icon name="loader-circle" styleClass="size-8 text-blue-500 animate-spin" />
-    </div>
-    <p class="text-lg font-semibold text-gray-700">Exportando productos...</p>
-    } @else {
-    <div class="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center">
-      <ui-icon name="check-circle" styleClass="size-8 text-green-500" />
-    </div>
-    <p class="text-lg font-semibold text-gray-700">Exportación completada</p>
-    }
   </section>
   }
 
