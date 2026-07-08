@@ -1,3 +1,4 @@
+export * from './app-version/app-version.service';
 export * from './discord/discord-webhook';
 export * from './icons/icons.provider';
 export * from './meta-pixel/meta-pixel.provider';

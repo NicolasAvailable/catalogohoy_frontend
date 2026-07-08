@@ -1,0 +1,29 @@
+@if (version.updateAvailable()) {
+  <div class="update-banner" role="status" aria-live="polite">
+    <button
+      type="button"
+      class="update-banner__close"
+      aria-label="Cerrar"
+      (click)="version.dismiss()"
+    >
+      <ui-icon name="x" styleClass="size-4" />
+    </button>
+
+    <div class="update-banner__body">
+      <div class="update-banner__icon">
+        <ui-icon name="refresh-cw" styleClass="size-5" />
+      </div>
+      <div class="update-banner__text">
+        <strong>Hay una nueva versión disponible</strong>
+        <p>Recarga para acceder a las últimas mejoras y correcciones.</p>
+      </div>
+    </div>
+
+    <div class="update-banner__actions">
+      <button type="button" class="update-banner__reload" (click)="version.reload()">
+        <ui-icon name="refresh-cw" styleClass="size-3.5" />
+        Recargar ahora
+      </button>
+    </div>
+  </div>
+}
