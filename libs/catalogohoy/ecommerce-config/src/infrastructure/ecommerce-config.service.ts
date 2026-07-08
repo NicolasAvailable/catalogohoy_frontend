@@ -176,6 +176,49 @@ export class EcommerceConfigService {
     }
   }
 
+  /** Cambia el slug del catálogo vía RPC. El servidor valida owner, formato,
+   *  unicidad y el límite de 2 cambios por cada 30 días; los códigos de error
+   *  (limit_reached, slug_taken, …) llegan en error.message. */
+  async changeTenantSlug(
+    tenantId: string,
+    newSlug: string
+  ): Promise<E.Either<Error, { slug: string; remaining: number }>> {
+    try {
+      const { data, error } = await this.client.rpc('change_tenant_slug', {
+        p_tenant_id: Number(tenantId),
+        p_new_slug: newSlug,
+      });
+
+      if (error) return E.left(new Error(error.message));
+      const payload = data as { slug: string; remaining: number };
+      return E.right({ slug: payload.slug, remaining: payload.remaining });
+    } catch (error) {
+      return E.left(error as Error);
+    }
+  }
+
+  /** Cambios de slug hechos en los últimos 30 días (la RLS de
+   *  tenant_slug_changes deja leer solo a miembros del tenant). */
+  async getSlugChangesLast30Days(
+    tenantId: string
+  ): Promise<E.Either<Error, number>> {
+    try {
+      const since = new Date(
+        Date.now() - 30 * 24 * 60 * 60 * 1000
+      ).toISOString();
+      const { count, error } = await this.client
+        .from('tenant_slug_changes')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .gt('changed_at', since);
+
+      if (error) return E.left(new Error(error.message));
+      return E.right(count ?? 0);
+    } catch (error) {
+      return E.left(error as Error);
+    }
+  }
+
   async updateConfig(
     config: Partial<EcommerceConfig> & { tenantId: string }
   ): Promise<E.Either<Error, void>> {

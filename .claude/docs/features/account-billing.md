@@ -76,3 +76,11 @@
   `tenant_ecommerce_config` hay que agregarlas también ahí; la migración del repo está atrás de prod.
 - Editor tiene preview en vivo del catálogo vía `postMessage` (`PreviewMessage`) +
   `unsaved-changes.guard`.
+- **Cambio de slug** (tab General → "Dirección de tu catálogo"): RPC `change_tenant_slug`
+  (security definer) valida owner, formato, unicidad, subdominios reservados y **máx 2 cambios
+  por ventana rodante de 30 días** (historial en `tenant_slug_changes`, RLS de lectura para
+  miembros). Al guardar con slug cambiado, el admin redirige a
+  `https://<nuevo>.catalogohoy.com/admin/catalog/edit?sb-…-auth-token=<token>` — el mismo
+  hand-off de sesión por query param que usa el login (AppComponent lo persiste a localStorage
+  del origen nuevo). En dev o custom domain solo recarga. Los links/QR viejos con el slug
+  anterior dejan de funcionar (no hay redirect del slug viejo).

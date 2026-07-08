@@ -840,6 +840,29 @@
   color: var(--text-color-secondary);
 }
 
+/* Campo de dirección (slug): input + sufijo .catalogohoy.com en una fila */
+.slug-field-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.slug-field-row ui-input-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.slug-field-suffix {
+  color: var(--text-color-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.slug-field-error {
+  color: #ef4444;
+}
+
 /* ===== WhatsApp Buttons ===== */
 .whatsapp-buttons-list {
   display: flex;

@@ -15,8 +15,10 @@ import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DatePickerModule } from 'primeng/datepicker';
+import { isDevMode } from '@catalogohoy/core';
+import { environment } from '@catalogohoy/env';
 import { PlanStore } from '@catalogohoy/plan';
-import { TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
+import { TenantStore, getTenantSlugFromUrl, isCustomDomain } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import {
   ButtonComponent,
@@ -78,6 +80,20 @@ import { TemplateSelectorComponent } from '../components/template-selector/templ
 
 export type TabId = 'general' | 'location' | 'shipping' | 'payments' | 'social' | 'notifications';
 const VALID_TABS: TabId[] = ['general', 'location', 'shipping', 'payments', 'social', 'notifications'];
+
+/** Máximo de cambios de slug por ventana rodante de 30 días (lo aplica la
+ *  RPC change_tenant_slug; acá solo se usa para la UI). */
+const SLUG_CHANGES_PER_MONTH = 2;
+
+/** Códigos de error de la RPC change_tenant_slug → mensaje para el usuario. */
+const SLUG_ERROR_MESSAGES: Record<string, string> = {
+  limit_reached: 'Ya usaste los 2 cambios de dirección de este mes. Vas a poder cambiarla de nuevo más adelante.',
+  slug_taken: 'Esa dirección ya está en uso por otro catálogo.',
+  invalid_slug: 'La dirección solo puede tener minúsculas, números y guiones (3 a 40 caracteres).',
+  reserved_slug: 'Esa dirección está reservada por la plataforma.',
+  same_slug: 'Esa ya es la dirección actual de tu catálogo.',
+  not_authorized: 'Solo el dueño del catálogo puede cambiar la dirección.',
+};
 
 @Component({
   selector: 'lib-ecommerce-config',
@@ -360,6 +376,34 @@ export class EcommerceConfigComponent implements OnInit {
     this.updateDayCloseTime(dayOfWeek, time);
   }
 
+  // --- Slug del catálogo (tenants.slug — define la URL pública y del admin) ---
+  /** Slug actual confirmado en el servidor. Vacío hasta que carga el tenant. */
+  public readonly currentSlug = signal('');
+  public readonly draftSlug = signal('');
+  /** Cambios de slug usados en los últimos 30 días. Null = aún no cargó. */
+  public readonly slugChangesUsed = signal<number | null>(null);
+  public readonly slugChangesRemaining = computed(() =>
+    Math.max(0, SLUG_CHANGES_PER_MONTH - (this.slugChangesUsed() ?? 0))
+  );
+  public readonly isSlugDirty = computed(
+    () => this.currentSlug() !== '' && this.draftSlug() !== this.currentSlug()
+  );
+  public readonly slugFormatError = computed(() => {
+    if (!this.isSlugDirty()) return false;
+    const slug = this.draftSlug();
+    return (
+      !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) ||
+      slug.length < 3 ||
+      slug.length > 40
+    );
+  });
+  public readonly isOwner = computed(() => this.permissions.isOwner());
+
+  /** Normaliza mientras escribe: minúsculas y espacios → guiones. */
+  public onSlugInput(value: string): void {
+    this.draftSlug.set(value.toLowerCase().replace(/\s+/g, '-'));
+  }
+
   // Currency config drafts — TenantCurrencyConfig shape
   public readonly draftCurrency = signal<TenantCurrencyConfig>({ ...DEFAULT_CURRENCY_CONFIG });
   public readonly isVenezuela = computed(
@@ -377,6 +421,9 @@ export class EcommerceConfigComponent implements OnInit {
 
     // Country (lives on tenants)
     if (this.draftCountryCode() !== (config.countryCode ?? null)) return true;
+
+    // Slug (vive en tenants; se guarda vía RPC change_tenant_slug)
+    if (this.isSlugDirty()) return true;
 
     // Business hours (lives on tenant_business_hours, one row per day)
     if (this.hasUnsavedHours()) return true;
@@ -824,7 +871,39 @@ export class EcommerceConfigComponent implements OnInit {
       this.configStore.loadCurrencyConfig(String(tenantId));
       this.loadBusinessHours(String(tenantId));
       this.loadWhatsappNotifySettings(String(tenantId));
+      this.loadSlugChanges(String(tenantId));
+
+      // El slug del store es el confirmado en DB (en dev el de la URL
+      // puede ser el path del admin, no el slug real).
+      const tenantSlug = this.tenantStore.tenantSlug();
+      if (tenantSlug) {
+        this.currentSlug.set(tenantSlug);
+        this.draftSlug.set(tenantSlug);
+      }
     }
+  }
+
+  private async loadSlugChanges(tenantId: string): Promise<void> {
+    const result = await this.configService.getSlugChangesLast30Days(tenantId);
+    result.mapRight((count) => this.slugChangesUsed.set(count));
+  }
+
+  /** Tras cambiar el slug, el subdominio actual del admin deja de existir:
+   *  redirigimos al nuevo pasando el token de sesión por query param — el
+   *  mismo hand-off que usa el login (AppComponent lo persiste a localStorage
+   *  en el bootstrap del origen nuevo, así no se pierde la sesión). */
+  private redirectToNewSlug(newSlug: string): void {
+    if (isDevMode() || isCustomDomain()) {
+      // En dev el host no depende del slug; con dominio propio el admin
+      // vive en el custom domain. En ambos casos basta recargar.
+      window.location.reload();
+      return;
+    }
+    const projectRef = new URL(environment.supabaseUrl).hostname.split('.')[0];
+    const tokenKey = `sb-${projectRef}-auth-token`;
+    const token = localStorage.getItem(tokenKey);
+    const session = token ? `?${tokenKey}=${encodeURIComponent(token)}` : '';
+    window.location.href = `https://${newSlug}.catalogohoy.com/admin/catalog/edit${session}`;
   }
 
   private async loadWhatsappNotifySettings(tenantId: string): Promise<void> {
@@ -1042,6 +1121,30 @@ export class EcommerceConfigComponent implements OnInit {
         showDualCurrency: cc.showDualCurrency,
         countryCode: finalCode,
       });
+    }
+
+    // 5. Slug del catálogo (tenants.slug, vía RPC) — al final a propósito:
+    //    si cambió, la URL actual del admin deja de existir y redirigimos
+    //    al subdominio nuevo, así que todo lo demás debe estar guardado ya.
+    if (this.isSlugDirty() && !this.slugFormatError() && tenantId) {
+      const result = await this.configService.changeTenantSlug(
+        tenantId,
+        this.draftSlug()
+      );
+      result.fold(
+        (err) => {
+          toast.error(
+            SLUG_ERROR_MESSAGES[err.message] ??
+              'No se pudo cambiar la dirección del catálogo.'
+          );
+          // Refresca el contador por si el error fue limit_reached.
+          this.loadSlugChanges(tenantId);
+        },
+        ({ slug }) => {
+          toast.success('Dirección actualizada. Te llevamos a tu nueva URL…');
+          setTimeout(() => this.redirectToNewSlug(slug), 1200);
+        }
+      );
     }
   }
 
