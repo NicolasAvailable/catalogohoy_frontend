@@ -34,6 +34,34 @@
   </header>
 
   <div class="plans-grid">
+    <!-- Skeletons: los planes vienen de Supabase; sin esto la card Enterprise
+         (estática) aparece sola mientras el resto carga. -->
+    @if (isLoadingPlans()) {
+      @for (i of skeletonCards; track i) {
+        <div class="plan-card plan-card--skeleton">
+          <div class="plan-card__content">
+            <div class="plan-card__header">
+              <p-skeleton width="6rem" height="1.2rem" borderRadius="9999px" />
+              <p-skeleton width="100%" height="0.75rem" borderRadius="9999px" />
+            </div>
+            <div class="plan-card__price">
+              <p-skeleton width="7.5rem" height="2.25rem" borderRadius="0.5rem" />
+              <p-skeleton width="5rem" height="0.7rem" borderRadius="9999px" />
+            </div>
+            <p-skeleton width="100%" height="2.5rem" borderRadius="0.625rem" />
+            <hr class="plan-card__divider" />
+            <ul class="plan-card__features">
+              @for (width of skeletonFeatureWidths; track $index) {
+                <li class="plan-card__feature">
+                  <p-skeleton shape="circle" size="1rem" styleClass="shrink-0" />
+                  <p-skeleton [width]="width" height="0.7rem" borderRadius="9999px" />
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      }
+    } @else {
     @for (plan of plans(); track plan.id) {
     <div
       class="plan-card"
@@ -221,6 +249,7 @@
         </ul>
       </div>
     </div>
+    }
   </div>
 
   <lib-enterprise-contact-dialog />

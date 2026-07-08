@@ -7,6 +7,7 @@ import {
   TenantCurrencyStore,
 } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
+import { SkeletonModule } from 'primeng/skeleton';
 import { IconComponent } from '@ui';
 import {
   BillingPeriod,
@@ -132,7 +133,7 @@ function toPlanDisplay(plan: Plan, currentPlanPosition: number, rateType: string
 
 @Component({
   selector: 'lib-plans',
-  imports: [IconComponent, DecimalPipe, EnterpriseContactDialog],
+  imports: [IconComponent, DecimalPipe, EnterpriseContactDialog, SkeletonModule],
   templateUrl: './plans.html',
   styleUrl: './plans.css',
   host: {
@@ -204,6 +205,18 @@ export class Plans implements OnInit {
   public readonly isEnterpriseCurrent = computed(
     () => this.planStore.currentPlan()?.id === ENTERPRISE_PLAN_ID
   );
+
+  /** Mientras los planes cargan desde Supabase mostramos skeletons en el grid
+   *  completo (incluida la posición de Enterprise) — si no, la card Enterprise
+   *  estática aparece sola. Si la carga falla, plans queda vacío e isLoading
+   *  en false, así que caemos al grid real y no dejamos skeletons eternos. */
+  public readonly isLoadingPlans = computed(
+    () => this.planStore.isLoading() && this.plans().length === 0
+  );
+
+  // 3 planes + Enterprise = 4 posiciones del grid.
+  public readonly skeletonCards = [0, 1, 2, 3];
+  public readonly skeletonFeatureWidths = ['85%', '70%', '75%', '60%', '80%'];
 
   private readonly enterpriseDialog = viewChild.required(EnterpriseContactDialog);
 

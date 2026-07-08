@@ -152,6 +152,15 @@
   box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.1);
 }
 
+.plan-card--skeleton {
+  pointer-events: none;
+}
+
+.plan-card--skeleton:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 .plan-card--popular {
   border: 2px solid #6366f1;
   box-shadow: 0 8px 30px -6px rgba(99, 102, 241, 0.25);
