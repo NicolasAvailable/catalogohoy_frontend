@@ -69,8 +69,8 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
       { text: 'Soporte prioritario' },
     ],
     buttonLabel: 'Comenzar ahora',
-    buttonSeverity: 'primary',
-    isPopular: true,
+    buttonSeverity: 'secondary',
+    isPopular: false,
     color: '#6366f1',
   },
   avanzado: {
@@ -85,8 +85,8 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
       { text: 'Soporte dedicado' },
     ],
     buttonLabel: 'Comenzar ahora',
-    buttonSeverity: 'secondary',
-    isPopular: false,
+    buttonSeverity: 'primary',
+    isPopular: true,
     color: '#7c3aed',
   },
 };

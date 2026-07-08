@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
   findCountryByCode,
+  SUPPORTED_COUNTRIES,
   TenantCurrencyStore,
 } from '@catalogohoy/ecommerce-config';
 import { ProfileStore } from '@catalogohoy/profile';
@@ -11,7 +12,11 @@ import {
   ButtonComponent,
   DialogComponent,
   IconComponent,
+  InputPhoneComponent,
   InputTextComponent,
+  SelectComponent,
+  SelectItemDirective,
+  SelectSelectedItemDirective,
 } from '@ui';
 import {
   buildCalendlyUrl,
@@ -42,6 +47,10 @@ const RESULT_STEP = 5;
     ButtonComponent,
     IconComponent,
     InputTextComponent,
+    InputPhoneComponent,
+    SelectComponent,
+    SelectItemDirective,
+    SelectSelectedItemDirective,
   ],
   templateUrl: './enterprise-contact-dialog.html',
   styleUrl: './enterprise-contact-dialog.css',
@@ -59,12 +68,15 @@ export class EnterpriseContactDialog {
   public readonly catalogOptions = ENTERPRISE_CATALOG_OPTIONS;
   public readonly teamOptions = ENTERPRISE_TEAM_OPTIONS;
   public readonly needOptions = ENTERPRISE_NEED_OPTIONS;
+  /** Mismo selector de país (con banderas) que la ubicación del editor. */
+  public readonly supportedCountries = SUPPORTED_COUNTRIES;
 
   public readonly step = signal(0);
   public readonly resultStep = RESULT_STEP;
 
   // Respuestas del funnel
   public readonly businessName = signal('');
+  /** Código ISO del país (VE, AR…) — se persiste el label en español. */
   public readonly country = signal('');
   public readonly website = signal('');
   public readonly productsRange = signal<EnterpriseRange | null>(null);
@@ -102,6 +114,14 @@ export class EnterpriseContactDialog {
     buildCalendlyUrl(this.name().trim(), this.email().trim())
   );
 
+  public readonly phoneDefaultIso = computed(() =>
+    (this.country() || 've').toLowerCase()
+  );
+
+  public flagUrl(code: string): string {
+    return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
+  }
+
   public show(): void {
     this.step.set(0);
     this.submitState.set('idle');
@@ -110,7 +130,7 @@ export class EnterpriseContactDialog {
     // Prefill con lo que ya sabemos del tenant/usuario logueado.
     this.businessName.set(this.tenantStore.tenantName() ?? '');
     this.country.set(
-      findCountryByCode(this.tenantCurrency.countryCode())?.name ?? ''
+      findCountryByCode(this.tenantCurrency.countryCode())?.code ?? ''
     );
     const profile = this.profileStore.profile();
     this.name.set(profile.name ?? '');
@@ -173,7 +193,9 @@ export class EnterpriseContactDialog {
   private collectAnswers(): EnterpriseFunnelAnswers {
     return {
       businessName: this.businessName().trim(),
-      country: this.country().trim(),
+      country:
+        this.supportedCountries.find((c) => c.code === this.country())?.label ??
+        '',
       website: this.website().trim(),
       // canContinue garantiza que los selects no son null al llegar acá
       productsRange: this.productsRange() ?? 'lt_100',

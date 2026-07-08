@@ -25,14 +25,40 @@
               (ngModelChange)="businessName.set($event)"
             />
           </label>
-          <label class="ecd__field">
+          <div class="ecd__field">
             <span class="ecd__label">País</span>
-            <ui-input-text
-              placeholder="Venezuela"
+            <ui-select
+              [options]="supportedCountries"
               [ngModel]="country()"
               (ngModelChange)="country.set($event)"
-            />
-          </label>
+              optionLabel="label"
+              optionValue="code"
+              placeholder="Selecciona un país"
+              [filter]="true"
+              styleClass="w-full"
+            >
+              <ng-template selectSelectedItem let-selected>
+                <div class="ecd__country">
+                  <img
+                    [src]="flagUrl(selected.code)"
+                    [alt]="selected.label"
+                    class="ecd__flag"
+                  />
+                  <span class="text-sm">{{ selected.label }}</span>
+                </div>
+              </ng-template>
+              <ng-template selectItem let-item>
+                <div class="ecd__country">
+                  <img
+                    [src]="flagUrl(item.code)"
+                    [alt]="item.label"
+                    class="ecd__flag"
+                  />
+                  <span>{{ item.label }}</span>
+                </div>
+              </ng-template>
+            </ui-select>
+          </div>
           <label class="ecd__field">
             <span class="ecd__label">Sitio web o Instagram (opcional)</span>
             <ui-input-text
@@ -152,14 +178,14 @@
               (ngModelChange)="email.set($event)"
             />
           </label>
-          <label class="ecd__field">
+          <div class="ecd__field">
             <span class="ecd__label">WhatsApp (opcional)</span>
-            <ui-input-text
-              placeholder="+58 412 000 0000"
+            <ui-input-phone
               [ngModel]="phone()"
-              (ngModelChange)="phone.set($event)"
+              (ngModelChange)="phone.set($event ?? '')"
+              [defaultCountry]="phoneDefaultIso()"
             />
-          </label>
+          </div>
         </div>
       }
 

@@ -5,6 +5,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // (la publishable key no es un JWT). A cambio: validación estricta del
 // payload + honeypot. La tabla enterprise_leads tiene RLS sin policies,
 // solo este service role escribe.
+// ⚠️ La versión deployada en prod difiere acá: tiene el webhook del canal
+// #sales hardcodeado como fallback (el secret DISCORD_ENTERPRISE_LEADS_WEBHOOK
+// no se pudo setear por CLI). Si se redeploya desde el repo sin setear el
+// secret, los leads vuelven a caer al canal de checkout-intent.
 const DISCORD_WEBHOOK_URL =
   Deno.env.get("DISCORD_ENTERPRISE_LEADS_WEBHOOK") ??
   Deno.env.get("DISCORD_CHECKOUT_INTENT_WEBHOOK");

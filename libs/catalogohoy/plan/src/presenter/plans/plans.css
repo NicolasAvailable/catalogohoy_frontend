@@ -1,7 +1,8 @@
 /* ── Wrapper ── */
 .plans-wrapper {
   padding: 1rem 2rem;
-  max-width: 1200px;
+  /* 4 cards necesitan más aire que el grid original de 3 */
+  max-width: 93.75rem;
   margin: 0 auto;
   height: 100%;
   display: flex;
@@ -131,7 +132,7 @@
 .plans-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1.25rem;
+  gap: 1.5rem;
   align-items: stretch;
 }
 
@@ -499,9 +500,3 @@
   }
 }
 
-/* 4 columnas apretadas: contenido un poco más compacto */
-@media (min-width: 1201px) {
-  .plan-card__content {
-    padding: 1.5rem 1.25rem;
-  }
-}

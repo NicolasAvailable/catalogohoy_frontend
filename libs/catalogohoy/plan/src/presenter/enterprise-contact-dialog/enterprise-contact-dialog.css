@@ -67,6 +67,21 @@
   color: #475569;
 }
 
+/* Selector de país — mismas banderas que la ubicación del editor */
+.ecd__country {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ecd__flag {
+  width: 1.25rem;
+  height: 0.9375rem;
+  object-fit: cover;
+  border-radius: 0.125rem;
+  flex-shrink: 0;
+}
+
 /* ── Grupos de opciones ── */
 .ecd__group {
   display: flex;
