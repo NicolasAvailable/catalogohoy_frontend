@@ -370,6 +370,60 @@ const Pricing = () => {
             </motion.div>
           ))}
         </motion.div>
+
+        {/* ═══ ENTERPRISE BAND ═══ */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5 }}
+          className="mt-6 max-w-[420px] lg:max-w-none mx-auto"
+        >
+          <div className="bg-white rounded-[1.25rem] border border-amber-200 p-7 flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-10">
+            <div className="flex-1 flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <h3 className="text-[1.2rem] font-bold text-amber-800">
+                  Enterprise
+                </h3>
+                <span className="inline-flex items-center px-3 py-[0.2rem] rounded-full text-[0.72rem] font-semibold whitespace-nowrap bg-amber-50 text-amber-700 border border-amber-200">
+                  A medida
+                </span>
+              </div>
+              <p className="text-[#64748b] text-[0.85rem] leading-relaxed max-w-xl">
+                Para negocios con operaciones a gran escala: límites, precio y
+                acompañamiento hechos a tu medida.
+              </p>
+              <ul className="flex flex-wrap gap-x-6 gap-y-2 mt-2 list-none p-0 m-0">
+                {[
+                  "Catálogos y límites a medida",
+                  "Equipos grandes con permisos",
+                  "Migración asistida de tus datos",
+                  "Soporte dedicado",
+                  "2000 créditos de IA por mes",
+                ].map((feature) => (
+                  <li
+                    key={feature}
+                    className="flex items-center gap-[0.6rem] text-sm text-[#334155]"
+                  >
+                    <Check className="h-4 w-4 shrink-0 text-amber-600" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="flex flex-col items-stretch lg:items-center gap-2.5 shrink-0">
+              <span className="text-[1.75rem] font-extrabold text-[#0f172a] leading-none text-center">
+                Hablemos
+              </span>
+              <a
+                href="/ventas"
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-700 px-6 py-[0.65rem] text-sm font-semibold text-white hover:bg-amber-800 transition-colors whitespace-nowrap"
+              >
+                Contactar ventas
+              </a>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </section>
   );
