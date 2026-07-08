@@ -1,5 +1,6 @@
 @if (version.updateAvailable()) {
-  <div class="update-banner" role="status" aria-live="polite">
+  <!-- Desktop: card flotante abajo a la izquierda -->
+  <div class="update-banner update-banner--card" role="status" aria-live="polite">
     <button
       type="button"
       class="update-banner__close"
@@ -24,6 +25,29 @@
         <ui-icon name="refresh-cw" styleClass="size-3.5" />
         Recargar ahora
       </button>
+    </div>
+  </div>
+
+  <!-- Mobile: barra fija arriba, mismo formato que el banner de vencimiento -->
+  <div class="update-bar" role="status" aria-live="polite">
+    <div class="update-bar__content">
+      <span class="update-bar__text">
+        <ui-icon name="refresh-cw" styleClass="size-4 shrink-0" />
+        Hay una <strong>nueva versión</strong> disponible
+      </span>
+      <div class="update-bar__actions">
+        <button type="button" class="update-bar__cta" (click)="version.reload()">
+          Recargar
+        </button>
+        <button
+          type="button"
+          class="update-bar__close"
+          aria-label="Cerrar"
+          (click)="version.dismiss()"
+        >
+          <ui-icon name="x" styleClass="size-4" />
+        </button>
+      </div>
     </div>
   </div>
 }

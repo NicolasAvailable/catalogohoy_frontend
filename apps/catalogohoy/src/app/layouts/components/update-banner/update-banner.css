@@ -1,4 +1,7 @@
-.update-banner {
+/* ── Desktop: card flotante abajo-izquierda (referencia SocialGest) ──
+   Dos tonos: cuerpo celeste + fila de acciones blanca, separadas por un
+   borde que diferencia los colores. */
+.update-banner--card {
   position: fixed;
   bottom: 1.25rem;
   left: 1.25rem;
@@ -6,7 +9,7 @@
   width: 20.5rem;
   max-width: calc(100vw - 2.5rem);
   background: #ffffff;
-  border: 1px solid #dbeafe;
+  border: 1px solid #dbe4f5;
   border-radius: 0.875rem;
   box-shadow: 0 0.75rem 2rem -0.5rem rgba(15, 23, 42, 0.25);
   overflow: hidden;
@@ -43,8 +46,8 @@
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  padding: 1rem 2.25rem 0.75rem 1rem;
-  background: #eff4ff;
+  padding: 1rem 2.25rem 1rem 1rem;
+  background: #eef4fe;
 }
 
 .update-banner__icon {
@@ -74,11 +77,13 @@
   line-height: 1.4;
 }
 
+/* Fila de acciones blanca con el borde separador. */
 .update-banner__actions {
   display: flex;
   justify-content: flex-end;
   padding: 0.6rem 0.75rem;
-  background: #eff4ff;
+  background: #ffffff;
+  border-top: 1px solid #dbe4f5;
 }
 
 .update-banner__reload {
@@ -97,4 +102,94 @@
 
 .update-banner__reload:hover {
   background: #1d4ed8;
+}
+
+/* ── Mobile: barra fija arriba (mismo formato que expiration-banner) ── */
+.update-bar {
+  display: none;
+  position: fixed;
+  top: 0.5rem;
+  left: 0.75rem;
+  right: 0.75rem;
+  z-index: 1100;
+  background: #2563eb;
+  color: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1.5rem -0.5rem rgba(15, 23, 42, 0.35);
+  animation: update-bar-in 0.25s ease-out;
+}
+
+@keyframes update-bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.update-bar__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+}
+
+.update-bar__text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.update-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.update-bar__cta {
+  background: #ffffff;
+  color: #2563eb;
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.update-bar__cta:hover {
+  background: #eff6ff;
+}
+
+.update-bar__close {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem;
+  color: #ffffff;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.update-bar__close:hover {
+  opacity: 1;
+}
+
+/* Un solo formato por viewport: card en desktop, barra en mobile. */
+@media (max-width: 640px) {
+  .update-banner--card {
+    display: none;
+  }
+
+  .update-bar {
+    display: block;
+  }
 }
