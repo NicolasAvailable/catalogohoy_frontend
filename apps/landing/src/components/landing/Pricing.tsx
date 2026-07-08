@@ -370,10 +370,11 @@ const Pricing = () => {
             </motion.div>
           ))}
 
-          {/* ═══ ENTERPRISE CARD (sin precio, CTA a /ventas) ═══ */}
+          {/* ═══ ENTERPRISE CARD (sin precio, CTA a /ventas) ═══
+              min-h solo en móvil: con 3 features queda muy corta apilada. */}
           <motion.div
             variants={cardVariants}
-            className="relative bg-white rounded-[1.25rem] flex flex-col transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.1)] border border-[#e2e8f0]"
+            className="relative bg-white rounded-[1.25rem] flex flex-col transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.1)] border border-[#e2e8f0] min-h-[30rem] md:min-h-0"
           >
             <div className="p-7 flex flex-col gap-4 flex-1">
               <div className="flex flex-col gap-1">
