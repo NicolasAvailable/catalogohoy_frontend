@@ -5,6 +5,10 @@
 ## plan (`@catalogohoy/plan`)
 
 - **Rol**: planes (gratis/basico/avanzado/enterprise), límites, expiración/gracia, checkout Stripe.
+- **Card Enterprise OCULTA** (2026-07-08): `ENTERPRISE_CARD_VISIBLE = false` en `plans.ts` (app)
+  y `Pricing.tsx` (landing) — el grid volvió a 3 columnas. Un tenant que YA es enterprise sí ve
+  su card (`plans-grid--four`). El funnel (dialog, edge function, /ventas, panel interno) sigue
+  vivo; para re-mostrarla, flip del flag en ambos lados.
 - **`PlanStore`** (computed clave): `canCreateProduct/Catalog`, `remainingProducts/catalogs`,
   `currentPlan`, `maxVariants/maxTeamMembers`, `isPlanExpired`, `inGracePeriod`,
   `daysUntilExpiration`, `showExpirationBanner` (≤6 días **y sin auto-renovación**: si
