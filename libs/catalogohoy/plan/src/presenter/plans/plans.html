@@ -172,4 +172,59 @@
     </div>
     }
   </div>
+
+  <!-- Enterprise: banda aparte del grid — sin precio ni checkout self-service,
+       se contrata hablando con ventas (funnel en el dialog). -->
+  <div class="plan-band" [class.plan-band--current]="isEnterpriseCurrent()">
+    <div class="plan-band__info">
+      <div class="plan-band__name-row">
+        <h2 class="plan-band__name">Enterprise</h2>
+        @if (isEnterpriseCurrent()) {
+          <span class="badge-inline badge-inline--current">Actual</span>
+        } @else {
+          <span class="badge-inline badge-inline--enterprise">A medida</span>
+        }
+      </div>
+      <p class="plan-band__description">
+        Para negocios con operaciones a gran escala: límites, precio y
+        acompañamiento hechos a tu medida.
+      </p>
+      <ul class="plan-band__features">
+        <li class="plan-card__feature">
+          <ui-icon name="check" styleClass="size-4 shrink-0 text-amber-600" />
+          <span>Catálogos y límites a medida</span>
+        </li>
+        <li class="plan-card__feature">
+          <ui-icon name="check" styleClass="size-4 shrink-0 text-amber-600" />
+          <span>Equipos grandes con permisos</span>
+        </li>
+        <li class="plan-card__feature">
+          <ui-icon name="check" styleClass="size-4 shrink-0 text-amber-600" />
+          <span>Migración asistida de tus datos</span>
+        </li>
+        <li class="plan-card__feature">
+          <ui-icon name="check" styleClass="size-4 shrink-0 text-amber-600" />
+          <span>Soporte dedicado</span>
+        </li>
+        <li class="plan-card__feature">
+          <ui-icon name="check" styleClass="size-4 shrink-0 text-amber-600" />
+          <span>2000 créditos de IA por mes</span>
+        </li>
+      </ul>
+    </div>
+    <div class="plan-band__cta">
+      <span class="plan-band__price">Hablemos</span>
+      @if (!isEnterpriseCurrent()) {
+        <button class="plan-band__button" (click)="openEnterpriseDialog()">
+          Contactar ventas
+        </button>
+      } @else {
+        <button class="plan-card__button plan-card__button--current" disabled>
+          Plan actual
+        </button>
+      }
+    </div>
+  </div>
+
+  <lib-enterprise-contact-dialog />
 </section>

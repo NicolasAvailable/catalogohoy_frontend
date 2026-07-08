@@ -14,9 +14,10 @@ import { PlanService } from './plan.service';
 // Per-plan brand palette. Same source of truth for the navbar badge,
 // the avatar dropdown summary, and any future plan-aware accent.
 const PLAN_PALETTE: Record<string, { color: string; bg: string }> = {
-  gratis:   { color: '#64748b', bg: '#f1f5f9' },
-  basico:   { color: '#6366f1', bg: '#eef2ff' },
-  avanzado: { color: '#7c3aed', bg: '#f5f3ff' },
+  gratis:     { color: '#64748b', bg: '#f1f5f9' },
+  basico:     { color: '#6366f1', bg: '#eef2ff' },
+  avanzado:   { color: '#7c3aed', bg: '#f5f3ff' },
+  enterprise: { color: '#b45309', bg: '#fffbeb' },
 };
 const DEFAULT_PALETTE = PLAN_PALETTE['basico'];
 

@@ -1,0 +1,248 @@
+<ui-dialog headerTitle="Plan Enterprise" styleClass="w-full max-w-lg">
+  <div class="ecd">
+    @if (step() < resultStep) {
+      <!-- Progreso -->
+      <div class="ecd__progress">
+        <span class="ecd__progress-label">Paso {{ step() + 1 }} de 5</span>
+        <div class="ecd__progress-track">
+          <div
+            class="ecd__progress-fill"
+            [style.width.%]="((step() + 1) / 5) * 100"
+          ></div>
+        </div>
+      </div>
+    }
+
+    @switch (step()) {
+      @case (0) {
+        <h3 class="ecd__title">Cuéntanos de tu negocio</h3>
+        <div class="ecd__fields">
+          <label class="ecd__field">
+            <span class="ecd__label">Nombre del negocio *</span>
+            <ui-input-text
+              placeholder="Mi empresa"
+              [ngModel]="businessName()"
+              (ngModelChange)="businessName.set($event)"
+            />
+          </label>
+          <label class="ecd__field">
+            <span class="ecd__label">País</span>
+            <ui-input-text
+              placeholder="Venezuela"
+              [ngModel]="country()"
+              (ngModelChange)="country.set($event)"
+            />
+          </label>
+          <label class="ecd__field">
+            <span class="ecd__label">Sitio web o Instagram (opcional)</span>
+            <ui-input-text
+              placeholder="miempresa.com"
+              [ngModel]="website()"
+              (ngModelChange)="website.set($event)"
+            />
+          </label>
+        </div>
+      }
+
+      @case (1) {
+        <h3 class="ecd__title">¿Qué tamaño tiene tu operación?</h3>
+        <div class="ecd__group">
+          <span class="ecd__label">¿Cuántos productos manejas?</span>
+          <div class="ecd__options">
+            @for (option of rangeOptions; track option.value) {
+              <button
+                type="button"
+                class="ecd__option"
+                [class.ecd__option--selected]="productsRange() === option.value"
+                (click)="productsRange.set(option.value)"
+              >
+                {{ option.label }}
+              </button>
+            }
+          </div>
+        </div>
+        <div class="ecd__group">
+          <span class="ecd__label">¿Cuántos pedidos recibes al mes?</span>
+          <div class="ecd__options">
+            @for (option of rangeOptions; track option.value) {
+              <button
+                type="button"
+                class="ecd__option"
+                [class.ecd__option--selected]="ordersRange() === option.value"
+                (click)="ordersRange.set(option.value)"
+              >
+                {{ option.label }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @case (2) {
+        <h3 class="ecd__title">¿Qué estructura necesitas?</h3>
+        <div class="ecd__group">
+          <span class="ecd__label">¿Cuántos catálogos o tiendas necesitas?</span>
+          <div class="ecd__options">
+            @for (option of catalogOptions; track option.value) {
+              <button
+                type="button"
+                class="ecd__option"
+                [class.ecd__option--selected]="catalogsNeeded() === option.value"
+                (click)="catalogsNeeded.set(option.value)"
+              >
+                {{ option.label }}
+              </button>
+            }
+          </div>
+        </div>
+        <div class="ecd__group">
+          <span class="ecd__label">¿Cuántas personas trabajan contigo?</span>
+          <div class="ecd__options">
+            @for (option of teamOptions; track option.value) {
+              <button
+                type="button"
+                class="ecd__option"
+                [class.ecd__option--selected]="teamSize() === option.value"
+                (click)="teamSize.set(option.value)"
+              >
+                {{ option.label }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @case (3) {
+        <h3 class="ecd__title">¿Qué buscas en CatalogoHoy?</h3>
+        <p class="ecd__hint">Selecciona todo lo que aplique.</p>
+        <div class="ecd__options ecd__options--needs">
+          @for (option of needOptions; track option.value) {
+            <button
+              type="button"
+              class="ecd__option ecd__option--need"
+              [class.ecd__option--selected]="isNeedSelected(option.value)"
+              (click)="toggleNeed(option.value)"
+            >
+              <ui-icon [name]="option.icon" styleClass="size-4 shrink-0" />
+              {{ option.label }}
+              @if (isNeedSelected(option.value)) {
+                <ui-icon name="check" styleClass="size-4 shrink-0 ecd__option-check" />
+              }
+            </button>
+          }
+        </div>
+      }
+
+      @case (4) {
+        <h3 class="ecd__title">¿Cómo te contactamos?</h3>
+        <div class="ecd__fields">
+          <label class="ecd__field">
+            <span class="ecd__label">Tu nombre *</span>
+            <ui-input-text
+              placeholder="Nombre y apellido"
+              [ngModel]="name()"
+              (ngModelChange)="name.set($event)"
+            />
+          </label>
+          <label class="ecd__field">
+            <span class="ecd__label">Email *</span>
+            <ui-input-text
+              placeholder="tu@empresa.com"
+              [ngModel]="email()"
+              (ngModelChange)="email.set($event)"
+            />
+          </label>
+          <label class="ecd__field">
+            <span class="ecd__label">WhatsApp (opcional)</span>
+            <ui-input-text
+              placeholder="+58 412 000 0000"
+              [ngModel]="phone()"
+              (ngModelChange)="phone.set($event)"
+            />
+          </label>
+        </div>
+      }
+
+      @case (5) {
+        @if (result()?.qualified) {
+          <div class="ecd__result">
+            <div class="ecd__result-icon ecd__result-icon--qualified">
+              <ui-icon name="calendar-check" styleClass="size-8" />
+            </div>
+            <h3 class="ecd__title">¡Perfecto! Hablemos</h3>
+            <p class="ecd__hint">
+              Tu operación encaja con Enterprise. Agenda una reunión con
+              nuestro equipo y armamos un plan a la medida de tu negocio.
+            </p>
+            <ui-button
+              label="Agendar reunión"
+              icon="calendar"
+              [fluid]="true"
+              (click)="openCalendly()"
+            />
+          </div>
+        } @else {
+          <div class="ecd__result">
+            <div class="ecd__result-icon ecd__result-icon--advanced">
+              <ui-icon name="sparkles" styleClass="size-8" />
+            </div>
+            <h3 class="ecd__title">El plan Avanzado te queda perfecto</h3>
+            <p class="ecd__hint">
+              Por lo que nos contaste, el plan Avanzado cubre lo que necesitas:
+              productos ilimitados, hasta 2 catálogos (ampliables), equipo de
+              hasta 10 personas y 500 créditos de IA al mes.
+            </p>
+            <ui-button
+              label="Ver plan Avanzado"
+              icon="crown"
+              [fluid]="true"
+              (click)="goToAvanzado()"
+            />
+            <button type="button" class="ecd__link" (click)="openCalendly()">
+              Igual quiero hablar con ventas
+            </button>
+          </div>
+        }
+        @if (submitState() === 'error') {
+          <div class="ecd__error">
+            <ui-icon name="triangle-alert" styleClass="size-4 shrink-0" />
+            <span>No pudimos registrar tus datos.</span>
+            <button type="button" class="ecd__link" (click)="retrySend()">
+              Reintentar
+            </button>
+          </div>
+        }
+      }
+    }
+
+    <!-- Navegación -->
+    @if (step() < resultStep) {
+      <div class="ecd__nav">
+        @if (step() > 0) {
+          <ui-button
+            label="Atrás"
+            variant="outlined"
+            severity="contrast"
+            (click)="back()"
+          />
+        }
+        <ui-button
+          [label]="step() === 4 ? 'Ver resultado' : 'Continuar'"
+          icon="arrow-right"
+          iconPos="right"
+          [disabled]="!canContinue()"
+          (click)="next()"
+        />
+      </div>
+    } @else {
+      <div class="ecd__nav ecd__nav--end">
+        <ui-button
+          label="Cerrar"
+          variant="outlined"
+          severity="contrast"
+          (click)="close()"
+        />
+      </div>
+    }
+  </div>
+</ui-dialog>

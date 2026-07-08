@@ -481,6 +481,36 @@ await supabase.from('exchange_rates')
 
 ---
 
+### `enterprise_leads`
+
+Leads del funnel "Contactar ventas" del plan Enterprise (2026-07-07). **RLS ON sin policies**
+= anon/authenticated denegados; solo escribe/lee la edge function `enterprise-lead` (service role).
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | identity | |
+| source | text | — | `'landing'` \| `'admin'` (CHECK) |
+| tenant_slug | text | NULL | Solo cuando viene del admin |
+| business_name / country / website | text | — | country/website opcionales |
+| name / email / phone | text | — | Contacto (phone opcional) |
+| products_range / orders_range | text | — | `lt_100\|100_500\|500_2000\|gt_2000` |
+| catalogs_needed | text | — | `1\|2_3\|4_10\|gt_10` |
+| team_size | text | — | `solo\|2_5\|6_15\|gt_15` |
+| needs | text[] | `{}` | Whitelist de 8 necesidades |
+| score / qualified | int / bool | — | Re-calculados server-side (≥4 = qualified) |
+| status | text | `'new'` | `new\|contacted\|demo_scheduled\|won\|lost` (CHECK) |
+| answers | jsonb | NULL | Payload crudo (future-proof) |
+
+Índices: `created_at desc`, `status`.
+
+**RPCs con planes hardcodeados** (actualizados 2026-07-07 para incluir `'enterprise'`):
+`assign_tenant_plan_admin` (2 overloads, valida `p_tier IN (...)`), `list_paying_clients_admin`
+(`WHERE plan_id IN (...)`), y el CASE de créditos IA en `ensure_ai_credits` /
+`reset_due_ai_credits` / `sync_ai_credits_on_plan_change` (`WHEN 'enterprise' THEN 2000`).
+Si se agrega otro plan pago, tocar TODOS estos.
+
+---
+
 ## RLS Summary
 
 | Table | RLS | Public SELECT | Auth INSERT | Auth UPDATE | Auth DELETE | Notes |
@@ -496,6 +526,7 @@ await supabase.from('exchange_rates')
 | tenant_currency_config | ON | `true` | tenant member | tenant member | tenant member | |
 | tenant_business_hours | ON | `true` | tenant member | tenant member | tenant member | |
 | exchange_rates | OFF | — | — | — | — | Singleton, no RLS |
+| enterprise_leads | ON | **none** | **none** | **none** | **none** | Solo service role (edge fn `enterprise-lead`) |
 
 **"Tenant member" check pattern:**
 ```sql

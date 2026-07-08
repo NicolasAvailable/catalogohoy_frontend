@@ -8,7 +8,9 @@
   `ai_credits(user_id PK, monthly_balance, monthly_allowance, purchased_balance, reset_at, updated_at)`.
   **Dos cubetas**: mensual (se resetea) + comprada (persiste). Se gasta primero la mensual.
 - RLS: el owner solo **lee** su fila; nadie escribe desde el cliente.
-- **Allowance** = mayor plan entre los catálogos del owner: gratis 15 · básico 200 · avanzado 500.
+- **Allowance** = mayor plan entre los catálogos del owner: gratis 15 · básico 200 · avanzado 500 ·
+  enterprise 2000. El CASE vive en `ensure_ai_credits`, `reset_due_ai_credits` y
+  `sync_ai_credits_on_plan_change` (los 3 hay que tocar si cambia).
 
 ### RPCs (SECURITY DEFINER, execute solo service_role)
 

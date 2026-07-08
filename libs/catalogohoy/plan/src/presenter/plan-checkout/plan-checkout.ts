@@ -363,6 +363,13 @@ export class PlanCheckout implements OnInit {
     const planId = this.route.snapshot.paramMap.get('planId') ?? '';
     const period = (this.route.snapshot.queryParamMap.get('period') as BillingPeriod) ?? 'monthly';
 
+    // Solo los planes con precio tienen checkout self-service (cubre
+    // 'gratis' y 'enterprise', que se contrata vía ventas).
+    if (!PLAN_BASE_PRICES[planId]) {
+      this.router.navigate(['/admin/plans']);
+      return;
+    }
+
     this.planId.set(planId);
     this.billingPeriod.set(period);
 

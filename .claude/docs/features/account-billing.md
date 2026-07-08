@@ -4,7 +4,7 @@
 
 ## plan (`@catalogohoy/plan`)
 
-- **Rol**: planes (gratis/basico/avanzado), límites, expiración/gracia, checkout Stripe.
+- **Rol**: planes (gratis/basico/avanzado/enterprise), límites, expiración/gracia, checkout Stripe.
 - **`PlanStore`** (computed clave): `canCreateProduct/Catalog`, `remainingProducts/catalogs`,
   `currentPlan`, `maxVariants/maxTeamMembers`, `isPlanExpired`, `inGracePeriod`,
   `daysUntilExpiration`, `showExpirationBanner` (≤6 días **y sin auto-renovación**: si
@@ -15,7 +15,15 @@
   (⚠️ **no está deployada en prod** — ese flujo falla hoy), `create-catalog-checkout`,
   `update-catalog-slots`, `validate-promotion-code`.
 - **Presenter**: `plans` (cards con features; `negative:true` = lo que NO incluye, con X),
-  `plan-checkout`, `plan-success`, `expiration-banner`, `plan-expired-dialog`, `plan-limit-dialog`.
+  `plan-checkout`, `plan-success`, `expiration-banner`, `plan-expired-dialog`, `plan-limit-dialog`,
+  `enterprise-contact-dialog` (funnel multi-step de "Contactar ventas").
+- **Enterprise (2026-07-07)**: la fila `enterprise` de la DB se **filtra** del grid de cards y se
+  renderiza como banda `.plan-band` debajo (estática). CTA abre `enterprise-contact-dialog`
+  (wizard de 5 pasos + resultado, prefill de TenantStore/ProfileStore/TenantCurrencyStore) →
+  `EnterpriseLeadService` (infra) → edge function `enterprise-lead`. Scoring/filtro suave y
+  Calendly en `domain/enterprise.model.ts` (`scoreEnterpriseLead`, `CALENDLY_ENTERPRISE_URL`).
+  `plan-checkout` redirige a `/admin/plans` si el plan no está en `PLAN_BASE_PRICES` (enterprise
+  y gratis no tienen checkout). Reglas de negocio y scoring: `business-rules.md → Planes`.
 - **Reglas clave**: `max_products = 0` = ilimitado. Catálogos extra son a nivel de **owner**
   (agregados desde cualquier tenant). Expiración = flag **Y** fecha pasada (gracia ~3 días).
   La **mención de créditos** está en `plans.ts` (features de cada plan: 5/150/500).

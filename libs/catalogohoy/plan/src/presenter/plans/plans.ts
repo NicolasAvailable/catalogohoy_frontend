@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { DiscordWebhookService, SupabaseClientProvider } from '@catalogohoy/core';
 import {
@@ -13,6 +13,7 @@ import {
   CATALOG_ADDON_PRICE,
   convertUsdToLocal,
   CURRENCY_SYMBOLS,
+  ENTERPRISE_PLAN_ID,
   PaymentCurrency,
   Plan,
   PLAN_BASE_PRICES,
@@ -21,6 +22,7 @@ import {
   resolveCheckoutCurrency,
 } from '../../domain';
 import { PlanStore } from '../../infrastructure';
+import { EnterpriseContactDialog } from '../enterprise-contact-dialog/enterprise-contact-dialog';
 
 const BILLING_CONFIG: Record<BillingPeriod, { label: string; months: number; discount: number }> = {
   monthly:   { label: 'Mensual',     months: 1,  discount: 0    },
@@ -130,7 +132,7 @@ function toPlanDisplay(plan: Plan, currentPlanPosition: number, rateType: string
 
 @Component({
   selector: 'lib-plans',
-  imports: [IconComponent, DecimalPipe],
+  imports: [IconComponent, DecimalPipe, EnterpriseContactDialog],
   templateUrl: './plans.html',
   styleUrl: './plans.css',
   host: {
@@ -190,11 +192,24 @@ export class Plans implements OnInit {
    *  Null = no aplica (sin referido o ya pagó antes). */
   public readonly referralDiscountPct = signal<number | null>(null);
 
+  // Enterprise no se renderiza como card del grid: tiene su propia banda
+  // debajo (sin precio ni checkout self-service).
   public readonly plans = computed<PlanDisplay[]>(() =>
     this.planStore
       .plans()
+      .filter((plan) => plan.id !== ENTERPRISE_PLAN_ID)
       .map((plan) => toPlanDisplay(plan, this.currentPlanPosition(), this.currencyCode()))
   );
+
+  public readonly isEnterpriseCurrent = computed(
+    () => this.planStore.currentPlan()?.id === ENTERPRISE_PLAN_ID
+  );
+
+  private readonly enterpriseDialog = viewChild.required(EnterpriseContactDialog);
+
+  public openEnterpriseDialog(): void {
+    this.enterpriseDialog().show();
+  }
 
   async ngOnInit(): Promise<void> {
     this.planStore.loadPlans();
