@@ -42,6 +42,53 @@ export interface EnterpriseOption<T extends string> {
   label: string;
 }
 
+/** Sincronizada con SUPPORTED_COUNTRIES del admin
+ *  (libs/catalogohoy/ecommerce-config/src/domain/country.model.ts). */
+export interface CountryOption {
+  label: string;
+  code: string;
+  dialCode: string;
+}
+
+export const COUNTRY_OPTIONS: CountryOption[] = [
+  { label: "Venezuela", code: "VE", dialCode: "+58" },
+  { label: "Argentina", code: "AR", dialCode: "+54" },
+  { label: "Bahamas", code: "BS", dialCode: "+1242" },
+  { label: "Barbados", code: "BB", dialCode: "+1246" },
+  { label: "Belice", code: "BZ", dialCode: "+501" },
+  { label: "Bolivia", code: "BO", dialCode: "+591" },
+  { label: "Brasil", code: "BR", dialCode: "+55" },
+  { label: "Canadá", code: "CA", dialCode: "+1" },
+  { label: "Chile", code: "CL", dialCode: "+56" },
+  { label: "Colombia", code: "CO", dialCode: "+57" },
+  { label: "Costa Rica", code: "CR", dialCode: "+506" },
+  { label: "Cuba", code: "CU", dialCode: "+53" },
+  { label: "Ecuador", code: "EC", dialCode: "+593" },
+  { label: "El Salvador", code: "SV", dialCode: "+503" },
+  { label: "España", code: "ES", dialCode: "+34" },
+  { label: "Estados Unidos", code: "US", dialCode: "+1" },
+  { label: "Guatemala", code: "GT", dialCode: "+502" },
+  { label: "Guyana", code: "GY", dialCode: "+592" },
+  { label: "Haití", code: "HT", dialCode: "+509" },
+  { label: "Honduras", code: "HN", dialCode: "+504" },
+  { label: "Jamaica", code: "JM", dialCode: "+1876" },
+  { label: "México", code: "MX", dialCode: "+52" },
+  { label: "Nicaragua", code: "NI", dialCode: "+505" },
+  { label: "Panamá", code: "PA", dialCode: "+507" },
+  { label: "Paraguay", code: "PY", dialCode: "+595" },
+  { label: "Perú", code: "PE", dialCode: "+51" },
+  { label: "Puerto Rico", code: "PR", dialCode: "+1787" },
+  { label: "República Dominicana", code: "DO", dialCode: "+1809" },
+  { label: "Surinam", code: "SR", dialCode: "+597" },
+  { label: "Trinidad y Tobago", code: "TT", dialCode: "+1868" },
+  { label: "Uruguay", code: "UY", dialCode: "+598" },
+];
+
+/** Mismas banderas que los selectores del admin. */
+export function flagUrl(code: string): string {
+  return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
+}
+
 export const RANGE_OPTIONS: EnterpriseOption<EnterpriseRange>[] = [
   { value: "lt_100", label: "Menos de 100" },
   { value: "100_500", label: "100 – 500" },

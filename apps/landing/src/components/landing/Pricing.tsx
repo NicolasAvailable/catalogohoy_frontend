@@ -84,7 +84,7 @@ const plans: PlanData[] = [
       { label: "Soporte prioritario" },
     ],
     buttonLabel: "Comenzar ahora",
-    isPopular: true,
+    isPopular: false,
     color: "#6366f1",
   },
   {
@@ -105,7 +105,7 @@ const plans: PlanData[] = [
       { label: "Soporte dedicado" },
     ],
     buttonLabel: "Comenzar ahora",
-    isPopular: false,
+    isPopular: true,
     color: "#7c3aed",
   },
 ];
@@ -206,7 +206,7 @@ const Pricing = () => {
       <div className="absolute top-10 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-300/20 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="mx-auto px-6 max-w-[1200px] relative z-10">
+      <div className="mx-auto px-6 max-w-[1500px] relative z-10">
 
         {/* ═══ HEADER ═══ */}
         <motion.header
@@ -257,7 +257,7 @@ const Pricing = () => {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 max-w-[420px] md:max-w-none mx-auto items-stretch"
+          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-[420px] md:max-w-none mx-auto items-stretch"
         >
           {plans.map((plan) => (
             <motion.div
@@ -410,12 +410,9 @@ const Pricing = () => {
 
               <ul className="flex flex-col gap-[0.55rem] flex-1 list-none p-0 m-0">
                 {[
-                  "Todo del plan Avanzado",
-                  "Catálogos y límites a medida",
-                  "Equipos grandes con permisos",
-                  "Migración asistida de tus datos",
-                  "Soporte dedicado",
-                  "2000 créditos de IA por mes",
+                  "Todo lo del plan Avanzado",
+                  "Administrador de cuenta dedicado",
+                  "Planes y precios personalizados",
                 ].map((feature) => (
                   <li
                     key={feature}

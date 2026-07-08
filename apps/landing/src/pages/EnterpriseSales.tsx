@@ -10,8 +10,17 @@ import {
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   buildCalendlyUrl,
   CATALOG_OPTIONS,
+  COUNTRY_OPTIONS,
+  flagUrl,
   EnterpriseCatalogs,
   EnterpriseFunnelAnswers,
   EnterpriseLeadResult,
@@ -85,7 +94,9 @@ const EnterpriseSales = () => {
   const [step, setStep] = useState(0);
 
   const [businessName, setBusinessName] = useState("");
+  // Código ISO (VE, AR…) — al enviar se persiste el label en español.
   const [country, setCountry] = useState("");
+  const [phoneDial, setPhoneDial] = useState("VE");
   const [website, setWebsite] = useState("");
   const [productsRange, setProductsRange] = useState<EnterpriseRange | null>(null);
   const [ordersRange, setOrdersRange] = useState<EnterpriseRange | null>(null);
@@ -127,7 +138,7 @@ const EnterpriseSales = () => {
 
   const collectAnswers = (): EnterpriseFunnelAnswers => ({
     businessName: businessName.trim(),
-    country: country.trim(),
+    country: COUNTRY_OPTIONS.find((c) => c.code === country)?.label ?? "",
     website: website.trim(),
     productsRange: productsRange ?? "lt_100",
     ordersRange: ordersRange ?? "lt_100",
@@ -136,8 +147,18 @@ const EnterpriseSales = () => {
     needs,
     name: name.trim(),
     email: email.trim(),
-    phone: phone.trim(),
+    phone: buildPhone(),
   });
+
+  // Igual que ui-input-phone del admin: dial + dígitos (VE pierde el 0 inicial).
+  const buildPhone = (): string => {
+    let digits = phone.replace(/[^0-9]/g, "");
+    if (!digits) return "";
+    if (phoneDial === "VE" && digits.startsWith("0")) digits = digits.slice(1);
+    const dial =
+      COUNTRY_OPTIONS.find((c) => c.code === phoneDial)?.dialCode ?? "+58";
+    return `${dial}${digits}`;
+  };
 
   const sendLead = async (answers: EnterpriseFunnelAnswers) => {
     setSendFailed(false);
@@ -218,12 +239,37 @@ const EnterpriseSales = () => {
                 onChange={setBusinessName}
                 placeholder="Mi empresa"
               />
-              <Field
-                label="País"
-                value={country}
-                onChange={setCountry}
-                placeholder="Venezuela"
-              />
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-semibold text-[#475569]">
+                  País
+                </span>
+                <Select
+                  value={country}
+                  onValueChange={(code) => {
+                    setCountry(code);
+                    setPhoneDial(code);
+                  }}
+                >
+                  <SelectTrigger className="rounded-xl border-[#e2e8f0] text-sm h-auto py-2.5">
+                    <SelectValue placeholder="Selecciona un país" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {COUNTRY_OPTIONS.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        <span className="flex items-center gap-2">
+                          <img
+                            src={flagUrl(c.code)}
+                            alt=""
+                            className="w-5 h-[0.9375rem] rounded-sm object-cover"
+                            loading="lazy"
+                          />
+                          {c.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Field
                 label="Sitio web o Instagram (opcional)"
                 value={website}
@@ -361,13 +407,40 @@ const EnterpriseSales = () => {
                 placeholder="tu@empresa.com"
                 type="email"
               />
-              <Field
-                label="WhatsApp (opcional)"
-                value={phone}
-                onChange={setPhone}
-                placeholder="+58 412 000 0000"
-                type="tel"
-              />
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-semibold text-[#475569]">
+                  WhatsApp (opcional)
+                </span>
+                <div className="flex gap-2">
+                  <Select value={phoneDial} onValueChange={setPhoneDial}>
+                    <SelectTrigger className="w-32 shrink-0 rounded-xl border-[#e2e8f0] text-sm h-auto py-2.5">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {COUNTRY_OPTIONS.map((c) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          <span className="flex items-center gap-2">
+                            <img
+                              src={flagUrl(c.code)}
+                              alt=""
+                              className="w-5 h-[0.9375rem] rounded-sm object-cover"
+                              loading="lazy"
+                            />
+                            <span className="font-semibold">{c.dialCode}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="412 000 0000"
+                    className="flex-1 min-w-0 rounded-xl border border-[#e2e8f0] px-3.5 py-2.5 text-sm text-[#1e293b] outline-none transition-colors focus:border-[#6366f1]"
+                  />
+                </div>
+              </div>
             </div>
           )}
 
