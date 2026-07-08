@@ -257,7 +257,7 @@ const Pricing = () => {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-[420px] lg:max-w-none mx-auto items-stretch"
+          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 max-w-[420px] md:max-w-none mx-auto items-stretch"
         >
           {plans.map((plan) => (
             <motion.div
@@ -369,32 +369,48 @@ const Pricing = () => {
               </div>
             </motion.div>
           ))}
-        </motion.div>
 
-        {/* ═══ ENTERPRISE BAND ═══ */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.5 }}
-          className="mt-6 max-w-[420px] lg:max-w-none mx-auto"
-        >
-          <div className="bg-white rounded-[1.25rem] border border-amber-200 p-7 flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-10">
-            <div className="flex-1 flex flex-col gap-2">
-              <div className="flex items-center gap-3">
-                <h3 className="text-[1.2rem] font-bold text-amber-800">
-                  Enterprise
-                </h3>
-                <span className="inline-flex items-center px-3 py-[0.2rem] rounded-full text-[0.72rem] font-semibold whitespace-nowrap bg-amber-50 text-amber-700 border border-amber-200">
-                  A medida
-                </span>
+          {/* ═══ ENTERPRISE CARD (sin precio, CTA a /ventas) ═══ */}
+          <motion.div
+            variants={cardVariants}
+            className="relative bg-white rounded-[1.25rem] flex flex-col transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.1)] border border-[#e2e8f0]"
+          >
+            <div className="p-7 flex flex-col gap-4 flex-1">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-[1.2rem] font-bold text-[#1e293b]">
+                    Enterprise
+                  </h3>
+                  <span className="inline-flex items-center px-3 py-[0.2rem] rounded-full text-[0.72rem] font-semibold whitespace-nowrap bg-[#f8fafc] text-[#475569] border border-[#e2e8f0]">
+                    A medida
+                  </span>
+                </div>
+                <p className="text-[#64748b] text-[0.85rem] leading-relaxed">
+                  Para negocios con operaciones a gran escala.
+                </p>
               </div>
-              <p className="text-[#64748b] text-[0.85rem] leading-relaxed max-w-xl">
-                Para negocios con operaciones a gran escala: límites, precio y
-                acompañamiento hechos a tu medida.
-              </p>
-              <ul className="flex flex-wrap gap-x-6 gap-y-2 mt-2 list-none p-0 m-0">
+
+              <div>
+                <span className="block text-[2.1rem] font-extrabold text-[#0f172a] leading-tight">
+                  Hablemos
+                </span>
+                <p className="text-[0.78rem] text-[#94a3b8] mt-1">
+                  precio a tu medida
+                </p>
+              </div>
+
+              <a
+                href="/ventas"
+                className="flex items-center justify-center gap-1.5 w-full py-[0.65rem] px-4 rounded-xl text-sm font-semibold cursor-pointer transition-all duration-200 bg-[#0f172a] text-white hover:bg-[#1e293b]"
+              >
+                Contactar ventas
+              </a>
+
+              <hr className="border-0 h-px bg-[#f1f5f9] m-0" />
+
+              <ul className="flex flex-col gap-[0.55rem] flex-1 list-none p-0 m-0">
                 {[
+                  "Todo del plan Avanzado",
                   "Catálogos y límites a medida",
                   "Equipos grandes con permisos",
                   "Migración asistida de tus datos",
@@ -405,24 +421,13 @@ const Pricing = () => {
                     key={feature}
                     className="flex items-center gap-[0.6rem] text-sm text-[#334155]"
                   >
-                    <Check className="h-4 w-4 shrink-0 text-amber-600" />
+                    <Check className="h-4 w-4 shrink-0 text-green-500" />
                     <span>{feature}</span>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="flex flex-col items-stretch lg:items-center gap-2.5 shrink-0">
-              <span className="text-[1.75rem] font-extrabold text-[#0f172a] leading-none text-center">
-                Hablemos
-              </span>
-              <a
-                href="/ventas"
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-700 px-6 py-[0.65rem] text-sm font-semibold text-white hover:bg-amber-800 transition-colors whitespace-nowrap"
-              >
-                Contactar ventas
-              </a>
-            </div>
-          </div>
+          </motion.div>
         </motion.div>
       </div>
     </section>

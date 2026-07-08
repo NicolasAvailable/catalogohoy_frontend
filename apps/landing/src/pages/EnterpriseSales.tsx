@@ -44,12 +44,12 @@ function OptionPill({
       onClick={onClick}
       className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-all ${
         selected
-          ? "border-amber-600 bg-amber-50 text-amber-800 font-semibold"
+          ? "border-[#6366f1] bg-[#eef2ff] text-[#4338ca] font-semibold"
           : "border-[#e2e8f0] bg-white text-[#334155] hover:border-[#cbd5e1] hover:bg-[#f8fafc]"
       }`}
     >
       {label}
-      {selected && <Check className="h-4 w-4 shrink-0 text-amber-600" />}
+      {selected && <Check className="h-4 w-4 shrink-0 text-[#6366f1]" />}
     </button>
   );
 }
@@ -75,7 +75,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="rounded-xl border border-[#e2e8f0] px-3.5 py-2.5 text-sm text-[#1e293b] outline-none transition-colors focus:border-amber-500"
+        className="rounded-xl border border-[#e2e8f0] px-3.5 py-2.5 text-sm text-[#1e293b] outline-none transition-colors focus:border-[#6366f1]"
       />
     </label>
   );
@@ -183,7 +183,7 @@ const EnterpriseSales = () => {
 
       <main className="container mx-auto px-4 py-10 md:py-16 max-w-xl">
         <div className="text-center mb-8">
-          <span className="inline-block text-[0.8rem] font-semibold text-amber-700 uppercase tracking-[0.05em] mb-2">
+          <span className="inline-block text-[0.8rem] font-semibold text-[#6366f1] uppercase tracking-[0.05em] mb-2">
             Plan Enterprise
           </span>
           <h1 className="font-display font-extrabold text-2xl md:text-3xl text-foreground leading-tight">
@@ -202,7 +202,7 @@ const EnterpriseSales = () => {
               </span>
               <div className="h-1.5 rounded-full bg-[#f1f5f9] overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-amber-600 transition-all duration-300"
+                  className="h-full rounded-full bg-[#6366f1] transition-all duration-300"
                   style={{ width: `${((step + 1) / 5) * 100}%` }}
                 />
               </div>
@@ -375,7 +375,7 @@ const EnterpriseSales = () => {
             <div className="flex flex-col items-center text-center gap-4 py-2">
               {result.qualified ? (
                 <>
-                  <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-2xl bg-[#eef2ff] text-[#6366f1] flex items-center justify-center">
                     <CalendarCheck className="h-8 w-8" />
                   </div>
                   <h2 className="text-xl font-bold text-[#1e293b]">
@@ -389,7 +389,7 @@ const EnterpriseSales = () => {
                     href={calendlyUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-700 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-800 transition-colors"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0f172a] px-4 py-3 text-sm font-semibold text-white hover:bg-[#1e293b] transition-colors"
                   >
                     <CalendarCheck className="h-4 w-4" />
                     Agendar reunión
@@ -451,7 +451,7 @@ const EnterpriseSales = () => {
                 type="button"
                 onClick={next}
                 disabled={!canContinue}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#0f172a] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1e293b] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {step === 4 ? "Ver resultado" : "Continuar"}
                 <ArrowRight className="h-4 w-4" />
