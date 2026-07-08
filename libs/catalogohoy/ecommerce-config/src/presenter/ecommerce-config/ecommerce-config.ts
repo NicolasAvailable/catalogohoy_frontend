@@ -422,11 +422,6 @@ export class EcommerceConfigComponent implements OnInit {
     // Country (lives on tenants)
     if (this.draftCountryCode() !== (config.countryCode ?? null)) return true;
 
-    // Slug (vive en tenants; se guarda vía RPC change_tenant_slug).
-    // Un slug inválido no cuenta como cambio guardable: el error inline ya
-    // lo señala y ofrecer "Guardar" para algo que no se va a guardar confunde.
-    if (this.isSlugDirty() && !this.slugFormatError()) return true;
-
     // Business hours (lives on tenant_business_hours, one row per day)
     if (this.hasUnsavedHours()) return true;
 
@@ -1125,34 +1120,74 @@ export class EcommerceConfigComponent implements OnInit {
       });
     }
 
-    // 5. Slug del catálogo (tenants.slug, vía RPC) — al final a propósito:
-    //    si cambió, la URL actual del admin deja de existir y redirigimos
-    //    al subdominio nuevo, así que todo lo demás debe estar guardado ya.
-    if (this.isSlugDirty() && this.slugFormatError()) {
-      // Guardado disparado por otros cambios: avisamos que la dirección
-      // quedó afuera en vez de saltearla en silencio.
-      toast.error('La dirección del catálogo no es válida, no se guardó.');
-    }
-    if (this.isSlugDirty() && !this.slugFormatError() && tenantId) {
-      const result = await this.configService.changeTenantSlug(
-        tenantId,
-        this.draftSlug()
-      );
-      result.fold(
-        (err) => {
-          toast.error(
-            SLUG_ERROR_MESSAGES[err.message] ??
-              'No se pudo cambiar la dirección del catálogo.'
-          );
-          // Refresca el contador por si el error fue limit_reached.
-          this.loadSlugChanges(tenantId);
-        },
-        ({ slug }) => {
-          toast.success('Dirección actualizada. Te llevamos a tu nueva URL…');
-          setTimeout(() => this.redirectToNewSlug(slug), 1200);
-        }
-      );
-    }
+  }
+
+  // --- Cambio de slug: flujo propio, fuera de "Guardar cambios" ---
+  // La dirección redirige el admin al subdominio nuevo al aplicarse, así
+  // que tiene su botón y confirmación aparte en vez del guardado unificado.
+
+  public readonly isChangingSlug = signal(false);
+
+  public readonly canSubmitSlug = computed(
+    () =>
+      this.isSlugDirty() &&
+      !this.slugFormatError() &&
+      this.isOwner() &&
+      this.slugChangesRemaining() > 0 &&
+      !this.isChangingSlug()
+  );
+
+  public confirmSlugChange(): void {
+    if (!this.canSubmitSlug()) return;
+    const remaining = this.slugChangesRemaining();
+    this.confirmDialogService
+      .info({
+        headerLabel: 'Cambiar la dirección del catálogo',
+        contentLabel:
+          `Tu catálogo pasará a ${this.draftSlug()}.catalogohoy.com. ` +
+          'Los enlaces y códigos QR con la dirección anterior dejarán de funcionar. ' +
+          (remaining === 1
+            ? 'Este es tu último cambio disponible del mes.'
+            : `Te quedan ${remaining} cambios este mes.`),
+        acceptLabel: 'Cambiar dirección',
+        rejectLabel: 'Cancelar',
+        closable: true,
+        dismissableMask: true,
+      })
+      .subscribe((result) => {
+        result.fold(
+          () => undefined,
+          () => this.changeSlug()
+        );
+      });
+  }
+
+  private async changeSlug(): Promise<void> {
+    const tenantId = this.configStore.config()?.tenantId;
+    if (!tenantId) return;
+
+    this.isChangingSlug.set(true);
+    const result = await this.configService.changeTenantSlug(
+      tenantId,
+      this.draftSlug()
+    );
+    result.fold(
+      (err) => {
+        this.isChangingSlug.set(false);
+        toast.error(
+          SLUG_ERROR_MESSAGES[err.message] ??
+            'No se pudo cambiar la dirección del catálogo.'
+        );
+        // Refresca el contador por si el error fue limit_reached.
+        this.loadSlugChanges(tenantId);
+      },
+      ({ slug }) => {
+        // isChangingSlug queda en true a propósito: el spinner del botón
+        // cubre la espera hasta el redirect.
+        toast.success('Dirección actualizada. Te llevamos a tu nueva URL…');
+        setTimeout(() => this.redirectToNewSlug(slug), 1200);
+      }
+    );
   }
 
   private draftCurrencyCode(): string | null {

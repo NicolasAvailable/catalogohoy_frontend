@@ -76,7 +76,9 @@
   `tenant_ecommerce_config` hay que agregarlas también ahí; la migración del repo está atrás de prod.
 - Editor tiene preview en vivo del catálogo vía `postMessage` (`PreviewMessage`) +
   `unsaved-changes.guard`.
-- **Cambio de slug** (tab General → "Dirección de tu catálogo"): RPC `change_tenant_slug`
+- **Cambio de slug** (tab General → card propia "Dirección del catálogo", al final, debajo de
+  Comportamiento — botón "Cambiar dirección" con confirm dialog, a propósito FUERA del
+  "Guardar cambios" unificado): RPC `change_tenant_slug`
   (security definer) valida owner, formato, unicidad, subdominios reservados y **máx 2 cambios
   por ventana rodante de 30 días** (historial en `tenant_slug_changes`, RLS de lectura para
   miembros). Al guardar con slug cambiado, el admin redirige a

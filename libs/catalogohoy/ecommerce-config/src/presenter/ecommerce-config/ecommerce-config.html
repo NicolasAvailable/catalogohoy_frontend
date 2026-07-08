@@ -157,42 +157,6 @@
             >
           </div>
 
-          <div class="form-field">
-            <label for="shop-slug">Dirección de tu catálogo</label>
-            <div class="slug-field-row">
-              <ui-input-text
-                inputId="shop-slug"
-                [ngModel]="draftSlug()"
-                (ngModelChange)="onSlugInput($event)"
-                placeholder="mi-tienda"
-                [disabled]="configStore.isSaving() || !isOwner() || slugChangesRemaining() === 0"
-                styleClass="w-full"
-              ></ui-input-text>
-              <span class="slug-field-suffix">.catalogohoy.com</span>
-            </div>
-            @if (slugFormatError()) {
-              <small class="field-hint slug-field-error">
-                Solo minúsculas, números y guiones, de 3 a 40 caracteres (ej:
-                mi-tienda).
-              </small>
-            } @else if (!isOwner()) {
-              <small class="field-hint">
-                Solo el dueño del catálogo puede cambiar la dirección.
-              </small>
-            } @else if (slugChangesUsed() !== null && slugChangesRemaining() === 0) {
-              <small class="field-hint">
-                Ya usaste los <strong>2 cambios</strong> de este mes. Vas a
-                poder cambiarla de nuevo más adelante.
-              </small>
-            } @else {
-              <small class="field-hint">
-                Podés cambiarla hasta <strong>2 veces por mes</strong>
-                ({{ slugChangesRemaining() === 1 ? 'te queda 1 cambio' : 'te quedan ' + slugChangesRemaining() + ' cambios' }}).
-                Al guardar, te llevamos a la nueva dirección.
-              </small>
-            }
-          </div>
-
         </div>
       </ui-card>
 
@@ -1277,6 +1241,68 @@
               (ngModelChange)="onToggleOrders($event)"
               [disabled]="configStore.isSaving()"
             ></ui-toggle>
+          </div>
+        </div>
+      </ui-card>
+
+      <!-- Card 9: Dirección del catálogo — guardado propio (RPC + redirect),
+           a propósito FUERA del flujo de "Guardar cambios". -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon slug-icon">
+              <ui-icon name="link" styleClass="size-5"></ui-icon>
+            </div>
+            <h2 class="card-title">Dirección del catálogo</h2>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <div class="form-field">
+            <label for="shop-slug">Dirección de tu catálogo</label>
+            <div class="slug-field-row">
+              <ui-input-text
+                inputId="shop-slug"
+                [ngModel]="draftSlug()"
+                (ngModelChange)="onSlugInput($event)"
+                placeholder="mi-tienda"
+                [disabled]="isChangingSlug() || !isOwner() || slugChangesRemaining() === 0"
+                styleClass="w-full"
+              ></ui-input-text>
+              <span class="slug-field-suffix">.catalogohoy.com</span>
+            </div>
+            @if (slugFormatError()) {
+              <small class="field-hint slug-field-error">
+                Solo minúsculas, números y guiones, de 3 a 40 caracteres (ej:
+                mi-tienda).
+              </small>
+            } @else if (!isOwner()) {
+              <small class="field-hint">
+                Solo el dueño del catálogo puede cambiar la dirección.
+              </small>
+            } @else if (slugChangesUsed() !== null && slugChangesRemaining() === 0) {
+              <small class="field-hint">
+                Ya usaste los <strong>2 cambios</strong> de este mes. Vas a
+                poder cambiarla de nuevo más adelante.
+              </small>
+            } @else {
+              <small class="field-hint">
+                Podés cambiarla hasta <strong>2 veces por mes</strong>
+                ({{ slugChangesRemaining() === 1 ? 'te queda 1 cambio' : 'te quedan ' + slugChangesRemaining() + ' cambios' }}).
+                Los enlaces y QR con la dirección anterior dejarán de funcionar.
+              </small>
+            }
+          </div>
+
+          <div class="slug-actions">
+            <ui-button
+              label="Cambiar dirección"
+              icon="link"
+              [fluid]="false"
+              [isLoading]="isChangingSlug()"
+              [disabled]="!canSubmitSlug()"
+              (click)="confirmSlugChange()"
+            ></ui-button>
           </div>
         </div>
       </ui-card>
