@@ -7,8 +7,8 @@
 const SUPABASE_URL = "https://yvkurjivijnhliofmfmj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_yYkWS23HI8l698Fl-sK12w_FcqIggPs";
 
-/** Placeholder hasta tener la cuenta real de Calendly. */
-export const CALENDLY_ENTERPRISE_URL = "https://calendly.com/catalogohoy/enterprise";
+export const CALENDLY_ENTERPRISE_URL =
+  "https://calendly.com/nicolas-catalogohoy/enterprise-catalogohoy";
 
 export type EnterpriseRange = "lt_100" | "100_500" | "500_2000" | "gt_2000";
 export type EnterpriseCatalogs = "1" | "2_3" | "4_10" | "gt_10";
