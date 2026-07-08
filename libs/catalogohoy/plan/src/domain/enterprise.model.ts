@@ -4,10 +4,10 @@ import { E } from '@shared/domain';
  *  (se renderiza como banda aparte) y no tiene checkout self-service. */
 export const ENTERPRISE_PLAN_ID = 'enterprise';
 
-/** Link de agenda de ventas. Placeholder hasta tener la cuenta real de
- *  Calendly — cambiarlo acá actualiza toda la app (la landing tiene su
- *  propia copia en apps/landing/src/lib/enterprise-lead.ts). */
-export const CALENDLY_ENTERPRISE_URL = 'https://calendly.com/catalogohoy/enterprise';
+/** Link de agenda de ventas. Cambiarlo acá actualiza toda la app (la landing
+ *  tiene su propia copia en apps/landing/src/lib/enterprise-lead.ts). */
+export const CALENDLY_ENTERPRISE_URL =
+  'https://calendly.com/nicolas-catalogohoy/enterprise-catalogohoy';
 
 export type EnterpriseRange = 'lt_100' | '100_500' | '500_2000' | 'gt_2000';
 export type EnterpriseCatalogs = '1' | '2_3' | '4_10' | 'gt_10';

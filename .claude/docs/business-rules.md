@@ -20,7 +20,8 @@
   escala, estructura, necesidades, contacto) → lead a `enterprise_leads` + Discord (edge function
   `enterprise-lead`). **Filtro suave**: scoring (catálogos 0/1/4/5 · equipo 0/0/2/3 · productos y
   pedidos 0/0/1/2 · necesidades api 2 / otras 1, cap 4); **calificado si score ≥ 4** → link
-  Calendly (`CALENDLY_ENTERPRISE_URL`, placeholder hasta tener cuenta); si no → recomendación del
+  Calendly (`CALENDLY_ENTERPRISE_URL` = calendly.com/nicolas-catalogohoy/enterprise-catalogohoy,
+  duplicada en admin y landing); si no → recomendación del
   plan Avanzado con Calendly secundario. El scoring vive en 3 copias que deben ir en sync:
   `enterprise.model.ts` (admin), `apps/landing/src/lib/enterprise-lead.ts` (landing) y la edge
   function (fuente de verdad de lo persistido). Se asigna manualmente desde el panel interno
