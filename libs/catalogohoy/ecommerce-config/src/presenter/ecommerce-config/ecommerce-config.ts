@@ -382,8 +382,10 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftSlug = signal('');
   /** Cambios de slug usados en los últimos 30 días. Null = aún no cargó. */
   public readonly slugChangesUsed = signal<number | null>(null);
+  /** Límite del tenant (tenants.slug_change_limit, default 2). */
+  public readonly slugChangeLimit = signal(SLUG_CHANGES_PER_MONTH);
   public readonly slugChangesRemaining = computed(() =>
-    Math.max(0, SLUG_CHANGES_PER_MONTH - (this.slugChangesUsed() ?? 0))
+    Math.max(0, this.slugChangeLimit() - (this.slugChangesUsed() ?? 0))
   );
   public readonly isSlugDirty = computed(
     () => this.currentSlug() !== '' && this.draftSlug() !== this.currentSlug()
@@ -881,8 +883,11 @@ export class EcommerceConfigComponent implements OnInit {
   }
 
   private async loadSlugChanges(tenantId: string): Promise<void> {
-    const result = await this.configService.getSlugChangesLast30Days(tenantId);
-    result.mapRight((count) => this.slugChangesUsed.set(count));
+    const result = await this.configService.getSlugChangeStatus(tenantId);
+    result.mapRight(({ used, limit }) => {
+      this.slugChangesUsed.set(used);
+      this.slugChangeLimit.set(limit);
+    });
   }
 
   /** Tras cambiar el slug, el subdominio actual del admin deja de existir:

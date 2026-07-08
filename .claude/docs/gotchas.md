@@ -92,7 +92,9 @@
 - `ui-icon name="..."` usa **kebab-case** (`loader-circle`, `wand-sparkles`, `sparkles`,
   `plus`, `eraser`, `bot`, `x`, `minus`). El icono debe estar **registrado** en
   `libs/catalogohoy/core/.../providers/icons/providers/lucide.provide.ts` (import + pick).
-  Si no está registrado, se ve en blanco.
+  Si no está registrado, se ve en blanco. **Aplica también a `ui-button [icon]`** (renderiza
+  vía `ui-icon` → lucide, no PrimeIcons). Íconos custom de marca (sufijo `$`: `facebook$`,
+  `whatsapp$`…) viven en `custom.provide.ts` del mismo dir como SVG inline.
 
 ## Estilos
 

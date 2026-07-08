@@ -69,10 +69,11 @@ tenant (vía `users_tenants` + `users.auth_user_id`).
 
 **RPC `change_tenant_slug(p_tenant_id, p_new_slug)`** → jsonb `{slug, remaining}`.
 Valida: sesión, rol `owner`, formato `^[a-z0-9]+(-[a-z0-9]+)*$` (3–40), lista de
-subdominios reservados (www/api/auth/admin/…), unicidad, y **máx 2 cambios por
-30 días rodantes**. Errores por `raise exception`: `not_authorized`,
+subdominios reservados (www/api/auth/admin/…), unicidad, y **máx
+`coalesce(tenants.slug_change_limit, 2)` cambios por 30 días rodantes** (override
+por tenant; el demo tenant 6 tiene 100). Errores por `raise exception`: `not_authorized`,
 `invalid_slug`, `reserved_slug`, `same_slug`, `slug_taken`, `limit_reached`.
-Solo `authenticated` puede ejecutarla. Migración: `20260708_tenant_slug_change.sql`.
+Solo `authenticated` puede ejecutarla. Migraciones: `20260708_tenant_slug_change.sql` + `20260708_tenant_slug_change_limit_override.sql` (columna `tenants.slug_change_limit`).
 
 ---
 

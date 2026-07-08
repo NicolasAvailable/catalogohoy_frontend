@@ -197,23 +197,36 @@ export class EcommerceConfigService {
     }
   }
 
-  /** Cambios de slug hechos en los últimos 30 días (la RLS de
-   *  tenant_slug_changes deja leer solo a miembros del tenant). */
-  async getSlugChangesLast30Days(
+  /** Estado del límite de cambios de slug: usados en los últimos 30 días
+   *  (RLS: solo miembros del tenant) + límite del tenant
+   *  (tenants.slug_change_limit, default 2 — override para demos/internos). */
+  async getSlugChangeStatus(
     tenantId: string
-  ): Promise<E.Either<Error, number>> {
+  ): Promise<E.Either<Error, { used: number; limit: number }>> {
     try {
       const since = new Date(
         Date.now() - 30 * 24 * 60 * 60 * 1000
       ).toISOString();
-      const { count, error } = await this.client
-        .from('tenant_slug_changes')
-        .select('id', { count: 'exact', head: true })
-        .eq('tenant_id', tenantId)
-        .gt('changed_at', since);
+      const [countRes, tenantRes] = await Promise.all([
+        this.client
+          .from('tenant_slug_changes')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', tenantId)
+          .gt('changed_at', since),
+        this.client
+          .from('tenants')
+          .select('slug_change_limit')
+          .eq('id', tenantId)
+          .single(),
+      ]);
 
-      if (error) return E.left(new Error(error.message));
-      return E.right(count ?? 0);
+      if (countRes.error) return E.left(new Error(countRes.error.message));
+      if (tenantRes.error) return E.left(new Error(tenantRes.error.message));
+      return E.right({
+        used: countRes.count ?? 0,
+        limit:
+          (tenantRes.data?.slug_change_limit as number | null) ?? 2,
+      });
     } catch (error) {
       return E.left(error as Error);
     }

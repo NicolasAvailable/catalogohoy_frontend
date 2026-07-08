@@ -1282,12 +1282,12 @@
               </small>
             } @else if (slugChangesUsed() !== null && slugChangesRemaining() === 0) {
               <small class="field-hint">
-                Ya usaste los <strong>2 cambios</strong> de este mes. Vas a
+                Ya usaste los <strong>{{ slugChangeLimit() }} cambios</strong> de este mes. Vas a
                 poder cambiarla de nuevo más adelante.
               </small>
             } @else {
               <small class="field-hint">
-                Podés cambiarla hasta <strong>2 veces por mes</strong>
+                Podés cambiarla hasta <strong>{{ slugChangeLimit() }} veces por mes</strong>
                 ({{ slugChangesRemaining() === 1 ? 'te queda 1 cambio' : 'te quedan ' + slugChangesRemaining() + ' cambios' }}).
                 Los enlaces y QR con la dirección anterior dejarán de funcionar.
               </small>
