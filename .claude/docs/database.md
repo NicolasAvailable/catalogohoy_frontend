@@ -503,6 +503,10 @@ Leads del funnel "Contactar ventas" del plan Enterprise (2026-07-07). **RLS ON s
 
 Índices: `created_at desc`, `status`.
 
+RPCs admin (SECURITY DEFINER + `_assert_internal_admin`): `list_enterprise_leads_admin()`
+y `update_enterprise_lead_status_admin(id, status)` — las usa el módulo "Leads Enterprise"
+del panel interno (tabla con filtros, detalle expandible y pipeline de estado).
+
 **RPCs con planes hardcodeados** (actualizados 2026-07-07 para incluir `'enterprise'`):
 `assign_tenant_plan_admin` (2 overloads, valida `p_tier IN (...)`), `list_paying_clients_admin`
 (`WHERE plan_id IN (...)`), y el CASE de créditos IA en `ensure_ai_credits` /

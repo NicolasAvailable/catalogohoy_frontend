@@ -487,6 +487,11 @@
     max-width: 420px;
     margin: 0 auto;
   }
+
+  /* Con solo 3 features la card queda muy corta apilada en una columna. */
+  .plan-card--enterprise {
+    min-height: 30rem;
+  }
 }
 
 @media (min-width: 1025px) and (max-width: 1200px) {

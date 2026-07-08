@@ -31,6 +31,13 @@ export const internalRoutes: Route[] = [
       ),
   },
   {
+    path: 'enterprise-leads',
+    loadChildren: () =>
+      import('./enterprise-leads/enterprise-leads.routes').then(
+        (m) => m.enterpriseLeadsRoutes
+      ),
+  },
+  {
     path: 'whatsapp-logs',
     loadChildren: () =>
       import('./whatsapp-logs/whatsapp-logs.routes').then(
