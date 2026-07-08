@@ -29,7 +29,7 @@
 
 .ecd__progress-fill {
   height: 100%;
-  background: #b45309;
+  background: #6366f1;
   border-radius: 999px;
   transition: width 0.25s ease;
 }
@@ -102,9 +102,9 @@
 }
 
 .ecd__option--selected {
-  border-color: #b45309;
-  background: #fffbeb;
-  color: #92400e;
+  border-color: #6366f1;
+  background: #eef2ff;
+  color: #4338ca;
   font-weight: 600;
 }
 
@@ -115,7 +115,7 @@
 
 .ecd__option-check {
   margin-left: auto;
-  color: #b45309;
+  color: #6366f1;
 }
 
 /* ── Resultado ── */
@@ -141,8 +141,8 @@
 }
 
 .ecd__result-icon--qualified {
-  background: #fffbeb;
-  color: #b45309;
+  background: #eef2ff;
+  color: #6366f1;
 }
 
 .ecd__result-icon--advanced {

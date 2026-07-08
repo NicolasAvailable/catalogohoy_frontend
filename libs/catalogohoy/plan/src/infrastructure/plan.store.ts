@@ -17,7 +17,7 @@ const PLAN_PALETTE: Record<string, { color: string; bg: string }> = {
   gratis:     { color: '#64748b', bg: '#f1f5f9' },
   basico:     { color: '#6366f1', bg: '#eef2ff' },
   avanzado:   { color: '#7c3aed', bg: '#f5f3ff' },
-  enterprise: { color: '#b45309', bg: '#fffbeb' },
+  enterprise: { color: '#0f172a', bg: '#f1f5f9' },
 };
 const DEFAULT_PALETTE = PLAN_PALETTE['basico'];
 
