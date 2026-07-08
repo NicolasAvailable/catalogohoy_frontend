@@ -186,6 +186,10 @@ const cardVariants = {
 /* ═══════════════════════════════════════
    COMPONENT
    ═══════════════════════════════════════ */
+/** Card Enterprise oculta del grid (dejaba las 3 cards muy angostas).
+ *  Flip a true para volver al grid de 4. /ventas y el funnel siguen vivos. */
+const ENTERPRISE_CARD_VISIBLE = false;
+
 const Pricing = () => {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
   // Mostramos "a tasa BCV" solo cuando el visitante (por geo-IP) está en
@@ -257,7 +261,11 @@ const Pricing = () => {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-[420px] md:max-w-none mx-auto items-stretch"
+          className={`grid grid-cols-1 gap-6 max-w-[420px] mx-auto items-stretch ${
+            ENTERPRISE_CARD_VISIBLE
+              ? "md:grid-cols-2 xl:grid-cols-4 md:max-w-none"
+              : "lg:grid-cols-3 lg:max-w-none"
+          }`}
         >
           {plans.map((plan) => (
             <motion.div
@@ -371,7 +379,10 @@ const Pricing = () => {
           ))}
 
           {/* ═══ ENTERPRISE CARD (sin precio, CTA a /ventas) ═══
-              min-h solo en móvil: con 3 features queda muy corta apilada. */}
+              min-h solo en móvil: con 3 features queda muy corta apilada.
+              Oculta por ahora (ENTERPRISE_CARD_VISIBLE) para que las 3 cards
+              mantengan su tamaño; /ventas y el funnel siguen vivos. */}
+          {ENTERPRISE_CARD_VISIBLE && (
           <motion.div
             variants={cardVariants}
             className="relative bg-white rounded-[1.25rem] flex flex-col transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.1)] border border-[#e2e8f0] min-h-[30rem] md:min-h-0"
@@ -426,6 +437,7 @@ const Pricing = () => {
               </ul>
             </div>
           </motion.div>
+          )}
         </motion.div>
       </div>
     </section>
