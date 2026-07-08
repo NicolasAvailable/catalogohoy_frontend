@@ -422,8 +422,10 @@ export class EcommerceConfigComponent implements OnInit {
     // Country (lives on tenants)
     if (this.draftCountryCode() !== (config.countryCode ?? null)) return true;
 
-    // Slug (vive en tenants; se guarda vía RPC change_tenant_slug)
-    if (this.isSlugDirty()) return true;
+    // Slug (vive en tenants; se guarda vía RPC change_tenant_slug).
+    // Un slug inválido no cuenta como cambio guardable: el error inline ya
+    // lo señala y ofrecer "Guardar" para algo que no se va a guardar confunde.
+    if (this.isSlugDirty() && !this.slugFormatError()) return true;
 
     // Business hours (lives on tenant_business_hours, one row per day)
     if (this.hasUnsavedHours()) return true;
@@ -1126,6 +1128,11 @@ export class EcommerceConfigComponent implements OnInit {
     // 5. Slug del catálogo (tenants.slug, vía RPC) — al final a propósito:
     //    si cambió, la URL actual del admin deja de existir y redirigimos
     //    al subdominio nuevo, así que todo lo demás debe estar guardado ya.
+    if (this.isSlugDirty() && this.slugFormatError()) {
+      // Guardado disparado por otros cambios: avisamos que la dirección
+      // quedó afuera en vez de saltearla en silencio.
+      toast.error('La dirección del catálogo no es válida, no se guardó.');
+    }
     if (this.isSlugDirty() && !this.slugFormatError() && tenantId) {
       const result = await this.configService.changeTenantSlug(
         tenantId,
