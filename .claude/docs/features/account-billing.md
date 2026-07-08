@@ -7,10 +7,13 @@
 - **Rol**: planes (gratis/basico/avanzado), límites, expiración/gracia, checkout Stripe.
 - **`PlanStore`** (computed clave): `canCreateProduct/Catalog`, `remainingProducts/catalogs`,
   `currentPlan`, `maxVariants/maxTeamMembers`, `isPlanExpired`, `inGracePeriod`,
-  `daysUntilExpiration`, `showExpirationBanner` (≤6 días), `currentPlanPalette` (colores por plan).
-  `loadTenantPlanUsage()` se cachea (singleton).
-- **`CheckoutService`** invoca edge functions: `create-checkout-session`, `cancel-subscription`,
-  `create-catalog-checkout`, `update-catalog-slots`, `validate-promotion-code`.
+  `daysUntilExpiration`, `showExpirationBanner` (≤6 días **y sin auto-renovación**: si
+  `tenants.stripe_subscription_status = 'active'` el banner se oculta — Stripe renueva solo;
+  solo los planes manuales (pago móvil VE / WhatsApp) ven el banner con "Renovar plan"),
+  `currentPlanPalette` (colores por plan). `loadTenantPlanUsage()` se cachea (singleton).
+- **`CheckoutService`** invoca edge functions: `create-checkout-session`, `cancel-subscription`
+  (⚠️ **no está deployada en prod** — ese flujo falla hoy), `create-catalog-checkout`,
+  `update-catalog-slots`, `validate-promotion-code`.
 - **Presenter**: `plans` (cards con features; `negative:true` = lo que NO incluye, con X),
   `plan-checkout`, `plan-success`, `expiration-banner`, `plan-expired-dialog`, `plan-limit-dialog`.
 - **Reglas clave**: `max_products = 0` = ilimitado. Catálogos extra son a nivel de **owner**

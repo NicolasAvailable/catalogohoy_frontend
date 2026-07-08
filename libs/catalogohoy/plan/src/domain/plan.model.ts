@@ -48,6 +48,10 @@ export interface TenantPlanUsage {
   /** True when the tenant has (or had) a Stripe subscription — used to route
    *  the expired-plan dialog to a Stripe checkout instead of WhatsApp. */
   hasStripeSubscription: boolean;
+  /** True cuando la suscripción Stripe está `active`: Stripe cobra la
+   *  renovación solo, así que no corresponde pedir renovación manual (eso
+   *  aplica únicamente a los planes sin Stripe, p. ej. pago móvil VE). */
+  autoRenews: boolean;
 }
 
 export interface TenantPlanExpiration {
@@ -55,6 +59,7 @@ export interface TenantPlanExpiration {
   planExpiresAt: string | null;
   planExpired: boolean;
   stripeSubscriptionId: string | null;
+  stripeSubscriptionStatus: string | null;
 }
 
 export interface TenantPlanPublicInfo {

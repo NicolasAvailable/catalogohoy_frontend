@@ -107,6 +107,10 @@ export const PlanStore = signalStore(
     showExpirationBanner: computed(() => {
       const expiresAt = store.planExpiresAt();
       if (!expiresAt || store.isFreePlan() || store.planExpired()) return false;
+      // Una suscripción Stripe activa se renueva sola: pedir "Renovar plan"
+      // lleva a un checkout que crea una suscripción duplicada. El banner de
+      // vencimiento es solo para renovación manual (pago móvil VE / WhatsApp).
+      if (store.tenantPlanUsage()?.autoRenews) return false;
       const diff = new Date(expiresAt).getTime() - Date.now();
       const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
       return days >= 0 && days <= 6;
