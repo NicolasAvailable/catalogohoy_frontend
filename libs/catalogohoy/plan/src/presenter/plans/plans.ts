@@ -216,7 +216,8 @@ export class Plans implements OnInit {
 
   // 3 planes + Enterprise = 4 posiciones del grid.
   public readonly skeletonCards = [0, 1, 2, 3];
-  public readonly skeletonFeatureWidths = ['85%', '70%', '75%', '60%', '80%'];
+  // 9 filas ≈ las features del plan Avanzado, la card más alta del grid.
+  public readonly skeletonFeatureWidths = ['80%', '65%', '75%', '60%', '85%', '70%', '75%', '65%', '55%'];
 
   private readonly enterpriseDialog = viewChild.required(EnterpriseContactDialog);
 

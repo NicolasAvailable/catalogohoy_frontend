@@ -154,6 +154,9 @@
 
 .plan-card--skeleton {
   pointer-events: none;
+  /* Aproxima la altura de las cards reales cargadas para que el grid no
+     pegue un salto cuando llegan los planes. */
+  min-height: 36rem;
 }
 
 .plan-card--skeleton:hover {
