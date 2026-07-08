@@ -33,7 +33,7 @@
     </div>
   </header>
 
-  <div class="plans-grid">
+  <div class="plans-grid" [class.plans-grid--four]="showEnterpriseCard()">
     <!-- Skeletons: los planes vienen de Supabase; sin esto la card Enterprise
          (estática) aparece sola mientras el resto carga. -->
     @if (isLoadingPlans()) {
@@ -208,7 +208,10 @@
     }
 
     <!-- Enterprise: card estática (sin precio ni checkout self-service,
-         se contrata hablando con ventas — funnel en el dialog). -->
+         se contrata hablando con ventas — funnel en el dialog). Oculta por
+         defecto (ENTERPRISE_CARD_VISIBLE); solo aparece para tenants que ya
+         son enterprise. -->
+    @if (showEnterpriseCard()) {
     <div class="plan-card plan-card--enterprise" [class.plan-card--current]="isEnterpriseCurrent()">
       <div class="plan-card__content">
         <div class="plan-card__header">
@@ -256,6 +259,7 @@
         </ul>
       </div>
     </div>
+    }
     }
   </div>
 

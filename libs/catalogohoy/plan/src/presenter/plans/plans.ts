@@ -25,6 +25,11 @@ import {
 import { PlanStore } from '../../infrastructure';
 import { EnterpriseContactDialog } from '../enterprise-contact-dialog/enterprise-contact-dialog';
 
+/** Card Enterprise ("Hablemos") oculta del grid por ahora — dejaba las cards
+ *  de los 3 planes muy angostas. Flip a true para volver al grid de 4.
+ *  El funnel (dialog + edge function + panel interno) sigue intacto. */
+const ENTERPRISE_CARD_VISIBLE = false;
+
 const BILLING_CONFIG: Record<BillingPeriod, { label: string; months: number; discount: number }> = {
   monthly:   { label: 'Mensual',     months: 1,  discount: 0    },
   quarterly: { label: 'Trimestral',  months: 3,  discount: 0.10 },
@@ -206,6 +211,13 @@ export class Plans implements OnInit {
     () => this.planStore.currentPlan()?.id === ENTERPRISE_PLAN_ID
   );
 
+  /** La card Enterprise solo se muestra si el flag está activo o si el tenant
+   *  YA es enterprise (asignado por el panel interno) — a ese no se le puede
+   *  esconder su plan actual. */
+  public readonly showEnterpriseCard = computed(
+    () => ENTERPRISE_CARD_VISIBLE || this.isEnterpriseCurrent()
+  );
+
   /** Mientras los planes cargan desde Supabase mostramos skeletons en el grid
    *  completo (incluida la posición de Enterprise) — si no, la card Enterprise
    *  estática aparece sola. Si la carga falla, plans queda vacío e isLoading
@@ -214,8 +226,8 @@ export class Plans implements OnInit {
     () => this.planStore.isLoading() && this.plans().length === 0
   );
 
-  // 3 planes + Enterprise = 4 posiciones del grid.
-  public readonly skeletonCards = [0, 1, 2, 3];
+  // 3 planes (Enterprise oculta — ver ENTERPRISE_CARD_VISIBLE).
+  public readonly skeletonCards = [0, 1, 2];
   // 9 filas ≈ las features del plan Avanzado, la card más alta del grid.
   public readonly skeletonFeatureWidths = ['95%', '80%', '90%', '75%', '100%', '85%', '90%', '80%', '70%'];
 
