@@ -173,7 +173,8 @@
                     appendTo="body"
                     [selectId]="'product-' + $index"
                     [filter]="true"
-                    filterPlaceholder="Buscar producto..."
+                    filterBy="name,sku,description"
+                    filterPlaceholder="Buscar por nombre o SKU..."
                   >
                     <ng-template selectSelectedItem let-selected>
                       <div class="flex items-center gap-3">

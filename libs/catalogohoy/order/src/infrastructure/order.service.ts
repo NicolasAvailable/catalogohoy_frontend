@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { ActivityLogService } from '@catalogohoy/teams';
 import { E } from '@shared/domain';
+import { ToastService } from '@shared/infrastructure';
 import {
   InternalNote,
   Order,
@@ -53,6 +54,7 @@ export interface UpdateOrderInput extends CreateOrderInput {
 export class OrderService {
   private readonly client = SupabaseClientProvider.getInstance();
   private readonly activityLog = inject(ActivityLogService);
+  private readonly toast = inject(ToastService);
 
   async getOrdersByTenant(
     tenantId: number,
@@ -208,6 +210,12 @@ export class OrderService {
       return E.left(new Error(error.message));
     }
 
+    // Una orden que NACE completada también mueve inventario (misma regla
+    // que updateOrderStatus: el stock se descuenta al cruzar a completed).
+    if (input.status === 'completed') {
+      await this.deductStock(input.tenantId, input.products ?? []);
+    }
+
     this.activityLog.log({
       action: 'order.create',
       entityType: 'order',
@@ -219,10 +227,10 @@ export class OrderService {
   }
 
   async updateOrder(input: UpdateOrderInput): Promise<E.Either<Error, Order>> {
-    // Snapshot before for diff
+    // Snapshot before for diff (+ products para cuadrar inventario)
     const { data: before } = await this.client
       .from('orders')
-      .select('name, status, delivery_date')
+      .select('name, status, delivery_date, products')
       .eq('id', input.id)
       .single();
 
@@ -248,6 +256,27 @@ export class OrderService {
 
     if (error) {
       return E.left(new Error(error.message));
+    }
+
+    // Editar una orden también puede cruzar la frontera `completed` (el form
+    // de edición cambia el status sin pasar por updateOrderStatus). Misma
+    // regla: entrar a completed descuenta, salir restaura; y si una orden ya
+    // completada cambia sus items, se repone lo viejo y se descuenta lo nuevo
+    // para que el inventario quede cuadrado.
+    const beforeStatus = before?.status as OrderStatus | undefined;
+    const beforeProducts = Array.isArray(before?.products) ? before.products : [];
+    const newProducts = Array.isArray(input.products) ? input.products : [];
+    if (beforeStatus !== 'completed' && input.status === 'completed') {
+      await this.deductStock(input.tenantId, newProducts);
+    } else if (beforeStatus === 'completed' && input.status !== 'completed') {
+      await this.restoreStock(input.tenantId, beforeProducts);
+    } else if (
+      beforeStatus === 'completed' &&
+      input.status === 'completed' &&
+      JSON.stringify(beforeProducts) !== JSON.stringify(newProducts)
+    ) {
+      await this.restoreStock(input.tenantId, beforeProducts);
+      await this.deductStock(input.tenantId, newProducts);
     }
 
     if (before) {
@@ -378,6 +407,9 @@ export class OrderService {
     });
     if (error) {
       console.warn('[increment_product_stock] failed', error);
+      this.toast.warning(
+        'La orden se actualizó, pero no se pudo reponer el stock. Revisa el inventario.'
+      );
     }
   }
 
@@ -401,6 +433,9 @@ export class OrderService {
     });
     if (error) {
       console.warn('[decrement_product_stock] failed', error);
+      this.toast.warning(
+        'La orden se actualizó, pero no se pudo descontar el stock. Revisa el inventario.'
+      );
     }
   }
 

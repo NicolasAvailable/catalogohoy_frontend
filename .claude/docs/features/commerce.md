@@ -53,6 +53,16 @@
   `OrderPdfService` (PDF). El select de productos al crear orden tiene **buscador** (`[filter]`).
 - **Reglas**: orderNumber lo asigna el server al insertar. Status no cascadea. Realtime requiere
   auth activa (si deslogueás, la suscripción puede caer en silencio).
+- **Stock (fix 2026-07-09)**: el inventario se mueve al cruzar la frontera `completed`
+  (entrar descuenta, salir repone) vía RPCs `decrement/increment_product_stock`
+  (SECURITY DEFINER). Cubre los TRES caminos: cambio de status (lista/modal),
+  **crear una orden ya completada** y **editar una orden cambiando su status**
+  (estos dos últimos no descontaban antes). Editar los items de una orden ya
+  completada repone lo viejo y descuenta lo nuevo. Semántica de variantes: la
+  variante SIN talla descuenta el **stock del producto** (las variantes comparten
+  stock, solo sus tallas tienen stock propio); antes la RPC las salteaba (bug).
+  `stock NULL` = sin control de inventario (se saltea a propósito). Si el RPC
+  falla, ahora sale un toast de aviso (antes se tragaba en console.warn).
 
 ## category (`@catalogohoy/category`)
 
