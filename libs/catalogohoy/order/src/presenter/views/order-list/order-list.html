@@ -183,10 +183,11 @@
                       >
                       <span class="text-xs font-medium text-grey-800 leading-snug">{{ item.name }}</span>
                     </div>
-                    @if (item.variantName || item.size || item.sku) {
+                    @if (item.variantName || item.size || item.sku || item.tierTitle) {
                     <div class="flex items-center gap-x-2 gap-y-0.5 flex-wrap text-[0.625rem] text-grey-400 mt-0.5">
                       @if (item.variantName) { <span>{{ item.variantName }}</span> }
                       @if (item.size) { <span>Talla {{ item.size }}</span> }
+                      @if (item.tierTitle) { <span>Al mayor: {{ item.tierTitle }}</span> }
                       @if (item.sku) { <span>sku: {{ item.sku }}</span> }
                     </div>
                     }
@@ -374,10 +375,11 @@
                       >
                       <span class="text-sm font-medium text-grey-800 leading-snug">{{ item.name }}</span>
                     </div>
-                    @if (item.variantName || item.size || item.sku) {
+                    @if (item.variantName || item.size || item.sku || item.tierTitle) {
                     <div class="flex items-center gap-x-2 gap-y-0.5 flex-wrap text-[0.6875rem] text-grey-400 mt-0.5">
                       @if (item.variantName) { <span>{{ item.variantName }}</span> }
                       @if (item.size) { <span>Talla {{ item.size }}</span> }
+                      @if (item.tierTitle) { <span>Al mayor: {{ item.tierTitle }}</span> }
                       @if (item.sku) { <span>sku: {{ item.sku }}</span> }
                     </div>
                     }
