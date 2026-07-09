@@ -149,23 +149,35 @@ export default async function middleware(request: Request): Promise<Response | u
 
   try {
     const host = request.headers.get('host') || '';
-    const slug = extractSlugFromHost(host);
     const url = new URL(request.url);
     const pathname = url.pathname;
 
-    if (!slug) {
-      return new Response(buildHtml(defaultMeta), {
-        status: 200,
-        headers: { 'Content-Type': 'text/html; charset=utf-8' },
-      });
+    const hostname = host.split(':')[0].toLowerCase();
+    let baseUrl: string;
+    let tenant: { id: number; name: string } | null;
+
+    if (hostname.endsWith('.catalogohoy.com')) {
+      const slug = extractSlugFromHost(hostname);
+      if (!slug) {
+        return new Response(buildHtml(defaultMeta), {
+          status: 200,
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        });
+      }
+      baseUrl = `https://${slug}.catalogohoy.com`;
+      tenant = await supabaseGet<{ id: number; name: string }>(
+        `tenants?slug=eq.${encodeURIComponent(slug)}&select=id,name`
+      );
+    } else {
+      // Dominio personalizado (ej. 3sxpress.com): el tenant se resuelve por
+      // custom_domain, igual que hace el guard del frontend (www se ignora
+      // porque en la columna se guarda siempre el apex).
+      const domain = hostname.replace(/^www\./, '');
+      baseUrl = `https://${domain}`;
+      tenant = await supabaseGet<{ id: number; name: string }>(
+        `tenants?custom_domain=eq.${encodeURIComponent(domain)}&select=id,name`
+      );
     }
-
-    const baseUrl = `https://${slug}.catalogohoy.com`;
-
-    // Fetch tenant by slug
-    const tenant = await supabaseGet<{ id: number; name: string }>(
-      `tenants?slug=eq.${encodeURIComponent(slug)}&select=id,name`
-    );
 
     if (!tenant) {
       return new Response(buildHtml({ ...defaultMeta, url: baseUrl }), {
