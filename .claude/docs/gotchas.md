@@ -158,3 +158,11 @@
   `ai_credit_purchases.stripe_session_id`.
 - Edge functions: para deployar payloads grandes vía MCP sin errores de escape, generar el
   JSON con `python3 -c "import json; print(json.dumps(open(...).read()))"` y leerlo.
+- **WhatsApp cachea los previews de links por dispositivo/chat durante días**: tras cambiar
+  los OG tags (middleware.ts), el preview viejo persiste donde ya se compartió el link.
+  Para revalidar: compartir con un sufijo (`?v=2`) o en un chat nuevo. Si "funciona en
+  iPhone pero no en Android", casi siempre es este caché, no el servidor.
+- **PostgREST no da error en UPDATE que matchea 0 filas** → "éxito" silencioso. Mordió el
+  2026-07-09: cuentas nuevas sin fila en `tenant_ecommerce_config` "guardaban" la config
+  sin persistir nada. Fix: trigger `trg_seed_ecommerce_config` siembra la fila al crear el
+  tenant (+ backfill). Patrón a evitar: `.update().eq()` asumiendo que la fila existe.

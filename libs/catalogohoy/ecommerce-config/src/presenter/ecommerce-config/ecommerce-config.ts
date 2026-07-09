@@ -132,6 +132,16 @@ export class EcommerceConfigComponent implements OnInit {
   private readonly planStore = inject(PlanStore);
   public readonly isWhatsappLocked = computed(() => this.planStore.currentPlan()?.isFree ?? false);
 
+  /** Dominio personalizado del tenant actual (null si usa slug.catalogohoy.com).
+   *  Con dominio propio vinculado, el cambio de dirección se deshabilita: la
+   *  URL que difunde el cliente es su dominio y el mapeo se gestiona con soporte. */
+  public readonly tenantCustomDomain = computed(() => {
+    const id = this.tenantStore.tenantId();
+    if (id === null) return null;
+    const current = this.tenantStore.tenants().find((t) => t.id === id);
+    return current?.customDomain ?? null;
+  });
+
   public readonly themeColors = THEME_COLORS;
   public readonly supportedCountries = SUPPORTED_COUNTRIES;
   public readonly supportedCurrencies = SUPPORTED_CURRENCIES;
