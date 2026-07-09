@@ -1,8 +1,8 @@
 <section class="container flex flex-col gap-4 max-w-2xl mx-auto px-4 py-2 sm:px-0 sm:py-0">
-  <h1 class="text-4xl font-bold">Perfil</h1>
+  <h1 class="text-4xl font-bold">{{ 'Perfil' | transloco }}</h1>
 
   <!-- Tabs -->
-  <nav class="profile-tabs" role="tablist" aria-label="Secciones del perfil">
+  <nav class="profile-tabs" role="tablist" [attr.aria-label]="'Secciones del perfil' | transloco">
     @for (tab of tabs; track tab.id) {
     <button
       type="button"
@@ -14,7 +14,7 @@
       (click)="setActiveTab(tab.id)"
     >
       <ui-icon [name]="tab.icon" styleClass="size-4 shrink-0"></ui-icon>
-      <span>{{ tab.label }}</span>
+      <span>{{ tab.label | transloco }}</span>
     </button>
     }
   </nav>
@@ -23,10 +23,10 @@
   <div class="profile-tab-content" [hidden]="activeTab() !== 'general'">
     <ui-card>
       <form [formGroup]="profileForm" class="flex flex-col gap-3">
-        <h2 class="text-2xl font-bold">Datos personales</h2>
+        <h2 class="text-2xl font-bold">{{ 'Datos personales' | transloco }}</h2>
 
         <div class="flex flex-col gap-1.5">
-          <label for="name" class="text-sm font-medium text-grey-700">Nombre</label>
+          <label for="name" class="text-sm font-medium text-grey-700">{{ 'Nombre' | transloco }}</label>
           <ui-input-text formControlName="name" inputId="name"></ui-input-text>
           <ui-input-message
             [control]="profileForm.get('name')"
@@ -45,7 +45,7 @@
           />
         </div>
         <div class="flex flex-col gap-1.5">
-          <label for="email" class="text-sm font-medium text-grey-700">E-mail</label>
+          <label for="email" class="text-sm font-medium text-grey-700">{{ 'E-mail' | transloco }}</label>
           <ui-input-text formControlName="email" inputId="email"></ui-input-text>
         </div>
 
@@ -62,9 +62,9 @@
 
     <ui-card>
       <form [formGroup]="passwordForm" class="flex flex-col gap-3">
-        <h2 class="text-2xl font-bold">Contraseña</h2>
+        <h2 class="text-2xl font-bold">{{ 'Contraseña' | transloco }}</h2>
         <div class="flex flex-col gap-1.5">
-          <label for="password" class="text-sm font-medium text-grey-700">Nueva contraseña</label>
+          <label for="password" class="text-sm font-medium text-grey-700">{{ 'Nueva contraseña' | transloco }}</label>
           <ui-input-password
             [feedback]="false"
             formControlName="password"
@@ -87,7 +87,7 @@
           />
         </div>
         <div class="flex flex-col gap-1.5">
-          <label for="passwordConfirmed" class="text-sm font-medium text-grey-700">Confirmar contraseña</label>
+          <label for="passwordConfirmed" class="text-sm font-medium text-grey-700">{{ 'Confirmar contraseña' | transloco }}</label>
           <ui-input-password
             [feedback]="false"
             formControlName="passwordConfirmed"
@@ -133,7 +133,7 @@
     <ui-card>
       <div class="flex flex-col gap-4">
         <div class="flex items-center justify-between gap-3">
-          <h2 class="text-2xl font-bold">Detalles del plan</h2>
+          <h2 class="text-2xl font-bold">{{ 'Detalles del plan' | transloco }}</h2>
           <span
             class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0"
             [class.bg-primary]="planStatus() === 'active'"
@@ -146,33 +146,33 @@
             [class.text-grey-700]="planStatus() === 'free'"
           >
             @switch (planStatus()) {
-              @case ('active') { Activo }
-              @case ('expiring') { Por vencer }
-              @case ('expired') { Vencido }
-              @case ('free') { Gratis }
+              @case ('active') { {{ 'Activo' | transloco }} }
+              @case ('expiring') { {{ 'Por vencer' | transloco }} }
+              @case ('expired') { {{ 'Vencido' | transloco }} }
+              @case ('free') { {{ 'Gratis' | transloco }} }
             }
           </span>
         </div>
 
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
           <div class="flex flex-col">
-            <dt class="text-grey-400 text-xs uppercase tracking-wide">Plan</dt>
+            <dt class="text-grey-400 text-xs uppercase tracking-wide">{{ 'Plan' | transloco }}</dt>
             <dd class="font-semibold text-grey-800">{{ plan.name }}</dd>
           </div>
           @if (planStore.planStartedAtDate(); as started) {
           <div class="flex flex-col">
-            <dt class="text-grey-400 text-xs uppercase tracking-wide">Inicio</dt>
+            <dt class="text-grey-400 text-xs uppercase tracking-wide">{{ 'Inicio' | transloco }}</dt>
             <dd class="font-semibold text-grey-800">{{ started | date: 'd MMM yyyy' }}</dd>
           </div>
           }
           @if (planStore.planExpiresAtDate(); as expires) {
           <div class="flex flex-col">
-            <dt class="text-grey-400 text-xs uppercase tracking-wide">Vencimiento</dt>
+            <dt class="text-grey-400 text-xs uppercase tracking-wide">{{ 'Vencimiento' | transloco }}</dt>
             <dd class="font-semibold text-grey-800">
               {{ expires | date: 'd MMM yyyy' }}
               @if (planStore.daysUntilExpiration(); as days) {
                 @if (days > 0) {
-                  <span class="text-xs text-grey-400 font-normal">(en {{ days }} {{ days === 1 ? 'día' : 'días' }})</span>
+                  <span class="text-xs text-grey-400 font-normal">{{ (days === 1 ? '(en {days} día)' : '(en {days} días)') | transloco: { days: days } }}</span>
                 }
               }
             </dd>
@@ -180,7 +180,7 @@
           }
           @if (latestBillingEntry(); as last) {
           <div class="flex flex-col">
-            <dt class="text-grey-400 text-xs uppercase tracking-wide">Método de pago</dt>
+            <dt class="text-grey-400 text-xs uppercase tracking-wide">{{ 'Método de pago' | transloco }}</dt>
             <dd class="font-semibold text-grey-800 inline-flex items-center gap-1.5">
               <ui-icon [name]="last.source === 'stripe' ? 'credit-card' : 'wallet'" size="14" />
               {{ last.methodLabel }}
@@ -188,7 +188,7 @@
           </div>
           @if (last.invoiceNumber || last.reference) {
           <div class="flex flex-col">
-            <dt class="text-grey-400 text-xs uppercase tracking-wide">Última factura</dt>
+            <dt class="text-grey-400 text-xs uppercase tracking-wide">{{ 'Última factura' | transloco }}</dt>
             <dd class="font-semibold text-grey-800 font-mono text-xs">
               {{ last.invoiceNumber ?? last.reference }}
             </dd>
@@ -196,8 +196,8 @@
           }
           } @else if (isLoadingBilling()) {
           <div class="flex flex-col">
-            <dt class="text-grey-400 text-xs uppercase tracking-wide">Método de pago</dt>
-            <dd class="text-grey-400 text-xs">Cargando...</dd>
+            <dt class="text-grey-400 text-xs uppercase tracking-wide">{{ 'Método de pago' | transloco }}</dt>
+            <dd class="text-grey-400 text-xs">{{ 'Cargando...' | transloco }}</dd>
           </div>
           }
         </dl>
@@ -210,8 +210,8 @@
       <div class="flex flex-col gap-4">
         <div class="flex items-center justify-between gap-3">
           <h2 class="text-2xl font-bold">
-            Suscripción
-            <span class="text-base font-normal text-grey-400">(pago con tarjeta)</span>
+            {{ 'Suscripción' | transloco }}
+            <span class="text-base font-normal text-grey-400">{{ '(pago con tarjeta)' | transloco }}</span>
           </h2>
           @if (planStore.currentPlan(); as plan) {
           <span
@@ -224,8 +224,7 @@
         </div>
 
         <p class="text-sm text-grey-400">
-          Seguirás teniendo acceso a todas las funciones premium hasta el final
-          del período de facturación actual.
+          {{ 'Seguirás teniendo acceso a todas las funciones premium hasta el final del período de facturación actual.' | transloco }}
         </p>
 
         <div
@@ -233,7 +232,7 @@
         >
           <div class="flex items-center gap-2 text-sm text-grey-400">
             <ui-icon name="circle-alert" size="15" styleClass="text-amber-400" />
-            Esta acción puede revertirse antes del próximo cobro.
+            {{ 'Esta acción puede revertirse antes del próximo cobro.' | transloco }}
           </div>
           <ui-button
             label="Cancelar suscripción"
@@ -252,9 +251,9 @@
         <span class="flex items-center justify-center w-12 h-12 rounded-xl bg-grey-50">
           <ui-icon name="credit-card" size="22" styleClass="text-grey-400" />
         </span>
-        <h2 class="text-xl font-bold">No tenés suscripción activa</h2>
+        <h2 class="text-xl font-bold">{{ 'No tenés suscripción activa' | transloco }}</h2>
         <p class="text-sm text-grey-400 max-w-sm">
-          Explorá los planes disponibles y desbloqueá funcionalidades premium para tu catálogo.
+          {{ 'Explorá los planes disponibles y desbloqueá funcionalidades premium para tu catálogo.' | transloco }}
         </p>
       </div>
     </ui-card>
@@ -265,9 +264,9 @@
       <div class="flex flex-col gap-4">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <h3 class="text-lg font-bold">Historial de pagos</h3>
+            <h3 class="text-lg font-bold">{{ 'Historial de pagos' | transloco }}</h3>
             <p class="text-xs text-grey-400">
-              Incluye cobros con tarjeta y pagos manuales (Pago Móvil, transferencia, etc.).
+              {{ 'Incluye cobros con tarjeta y pagos manuales (Pago Móvil, transferencia, etc.).' | transloco }}
             </p>
           </div>
           <ui-button
@@ -285,18 +284,18 @@
         @if (isLoadingBilling() && !hasBillingHistory()) {
         <div class="flex items-center gap-2 text-sm text-grey-400 py-4">
           <ui-icon name="loader-circle" styleClass="size-4 animate-spin" />
-          Cargando historial...
+          {{ 'Cargando historial...' | transloco }}
         </div>
         } @else if (billingError()) {
         <div class="flex items-center gap-2 text-sm text-red-500 py-2">
           <ui-icon name="circle-alert" styleClass="size-4" />
-          {{ billingError() }}
+          {{ billingError() | transloco }}
         </div>
         } @else if (!hasBillingHistory()) {
         <div class="flex flex-col items-center gap-2 py-6 text-center">
           <ui-icon name="file-spreadsheet" styleClass="size-7 text-grey-300" />
           <p class="text-sm text-grey-400">
-            Todavía no hay pagos registrados.
+            {{ 'Todavía no hay pagos registrados.' | transloco }}
           </p>
         </div>
         } @else {
@@ -304,21 +303,21 @@
           <table class="billing-table">
             <thead>
               <tr>
-                <th>Fecha</th>
-                <th>Concepto</th>
-                <th>Método</th>
-                <th class="right">Monto</th>
-                <th>Estado</th>
-                <th class="right">Factura</th>
+                <th>{{ 'Fecha' | transloco }}</th>
+                <th>{{ 'Concepto' | transloco }}</th>
+                <th>{{ 'Método' | transloco }}</th>
+                <th class="right">{{ 'Monto' | transloco }}</th>
+                <th>{{ 'Estado' | transloco }}</th>
+                <th class="right">{{ 'Factura' | transloco }}</th>
               </tr>
             </thead>
             <tbody>
               @for (entry of billingEntries(); track entry.id) {
               <tr>
-                <td data-label="Fecha" class="whitespace-nowrap">
+                <td [attr.data-label]="'Fecha' | transloco" class="whitespace-nowrap">
                   {{ entry.date | date: 'dd MMM yyyy' }}
                 </td>
-                <td data-label="Concepto">
+                <td [attr.data-label]="'Concepto' | transloco">
                   <div class="flex flex-col">
                     <span class="text-sm font-semibold text-grey-700">{{ entry.description }}</span>
                     @if (entry.reference) {
@@ -329,7 +328,7 @@
                     }
                   </div>
                 </td>
-                <td data-label="Método">
+                <td [attr.data-label]="'Método' | transloco">
                   <span class="inline-flex items-center gap-1 text-sm text-grey-700">
                     <ui-icon
                       [name]="entry.source === 'stripe' ? 'credit-card' : 'wallet'"
@@ -338,22 +337,22 @@
                     {{ entry.methodLabel }}
                   </span>
                 </td>
-                <td data-label="Monto" class="right whitespace-nowrap font-semibold">
+                <td [attr.data-label]="'Monto' | transloco" class="right whitespace-nowrap font-semibold">
                   $ {{ entry.amountUsd | number: '1.2-2' }}
                 </td>
-                <td data-label="Estado">
+                <td [attr.data-label]="'Estado' | transloco">
                   <span
                     class="inline-flex px-2 py-0.5 rounded-full text-[0.6875rem] font-semibold uppercase tracking-wide"
                     [class]="statusBadgeClass(entry.status)"
                   >
-                    {{ statusLabel(entry.status) }}
+                    {{ statusLabel(entry.status) | transloco }}
                   </span>
                 </td>
-                <td data-label="Factura" class="right">
+                <td [attr.data-label]="'Factura' | transloco" class="right">
                   <button
                     type="button"
                     class="invoice-action invoice-action--primary"
-                    title="Descargar PDF"
+                    [title]="'Descargar PDF' | transloco"
                     [disabled]="busyInvoiceId() === entry.id"
                     (click)="downloadPdf(entry)"
                   >
@@ -380,19 +379,19 @@
     <ui-card>
       <div class="flex flex-col gap-4">
         <div>
-          <h2 class="text-2xl font-bold">Notificaciones</h2>
+          <h2 class="text-2xl font-bold">{{ 'Notificaciones' | transloco }}</h2>
           <p class="text-sm text-grey-400">
-            Configurá los avisos por email que recibís sobre tu cuenta y tu plan.
+            {{ 'Configurá los avisos por email que recibís sobre tu cuenta y tu plan.' | transloco }}
           </p>
         </div>
 
         <div class="flex items-start justify-between gap-3 pt-4 border-t border-grey-100">
           <div class="flex flex-col gap-1 min-w-0">
             <span class="text-sm font-semibold text-grey-700">
-              Avisos de expiración de plan
+              {{ 'Avisos de expiración de plan' | transloco }}
             </span>
             <p class="text-xs text-grey-400">
-              Te avisamos por email cuando faltan 6, 4, 2 y 0 días para que tu plan venza, así no perdés acceso por descuido.
+              {{ 'Te avisamos por email cuando faltan 6, 4, 2 y 0 días para que tu plan venza, así no perdés acceso por descuido.' | transloco }}
             </p>
           </div>
           <ui-toggle
@@ -425,16 +424,15 @@
             <ui-icon name="triangle-alert" size="17" styleClass="text-red-500" />
           </span>
           <div>
-            <h2 class="text-2xl font-bold">Eliminar cuenta</h2>
-            <p class="text-xs text-red-400 font-medium">Zona de peligro</p>
+            <h2 class="text-2xl font-bold">{{ 'Eliminar cuenta' | transloco }}</h2>
+            <p class="text-xs text-red-400 font-medium">{{ 'Zona de peligro' | transloco }}</p>
           </div>
         </div>
 
         <p class="text-sm text-grey-400">
-          Esta acción es
-          <strong class="text-grey-600">permanente e irreversible</strong>. Se
-          eliminarán todos tus datos, productos y catálogos. No podrás recuperar
-          tu cuenta una vez confirmada la eliminación.
+          {{ 'Esta acción es' | transloco }}
+          <strong class="text-grey-600">{{ 'permanente e irreversible' | transloco }}</strong>.
+          {{ 'Se eliminarán todos tus datos, productos y catálogos. No podrás recuperar tu cuenta una vez confirmada la eliminación.' | transloco }}
         </p>
 
         <div class="flex justify-end pt-4 border-t border-red-100">

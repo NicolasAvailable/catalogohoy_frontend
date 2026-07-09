@@ -21,7 +21,7 @@
         }
         <div class="pm-identity__text">
           <span class="pm-identity__name">
-            {{ profileStore.profile().name || 'Mi cuenta' }}
+            {{ profileStore.profile().name || ('Mi cuenta' | transloco) }}
           </span>
           @if (profileStore.profile().email) {
             <span class="pm-identity__email">
@@ -48,9 +48,9 @@
             [style.color]="s.state === 'expired' ? null : palette().color"
           />
           <div class="pm-summary__text">
-            <span class="pm-summary__label">{{ s.label }}</span>
+            <span class="pm-summary__label">{{ s.label | transloco: s.labelParams }}</span>
             <span class="pm-summary__sub">
-              {{ s.sub }}
+              {{ s.sub | transloco: s.subParams }}
               @if (s.expiresAt && s.state === 'active') {
                 · {{ s.expiresAt | date: 'd MMM' }}
               }
@@ -67,14 +67,14 @@
       <button type="button" class="pm-item sm:hidden" (click)="onBuyCredits()">
         <ui-icon name="sparkles" size="16" styleClass="pm-item__icon" />
         <span class="pm-item__label">
-          Créditos de IA@if (credits.balance() !== null) {
+          {{ 'Créditos de IA' | transloco }}@if (credits.balance() !== null) {
             · {{ credits.balance() }}
           }
         </span>
       </button>
       <a routerLink="plans" class="pm-item" (click)="close()">
         <ui-icon name="crown" size="16" styleClass="pm-item__icon" />
-        <span class="pm-item__label">Planes y pagos</span>
+        <span class="pm-item__label">{{ 'Planes y pagos' | transloco }}</span>
       </a>
       <a
         routerLink="profile"
@@ -83,7 +83,7 @@
         (click)="close()"
       >
         <ui-icon name="user" size="16" styleClass="pm-item__icon" />
-        <span class="pm-item__label">Datos de la cuenta</span>
+        <span class="pm-item__label">{{ 'Datos de la cuenta' | transloco }}</span>
       </a>
       <a
         routerLink="profile"
@@ -92,7 +92,7 @@
         (click)="close()"
       >
         <ui-icon name="mail" size="16" styleClass="pm-item__icon" />
-        <span class="pm-item__label">Notificaciones</span>
+        <span class="pm-item__label">{{ 'Notificaciones' | transloco }}</span>
       </a>
 
       <div class="pm-divider"></div>
@@ -100,7 +100,7 @@
       <!-- ── Cerrar sesión ── -->
       <button type="button" class="pm-item pm-item--danger" (click)="logout()">
         <ui-icon name="log-out" size="16" styleClass="pm-item__icon" />
-        <span class="pm-item__label">Cerrar sesión</span>
+        <span class="pm-item__label">{{ 'Cerrar sesión' | transloco }}</span>
       </button>
     </div>
   </ng-template>

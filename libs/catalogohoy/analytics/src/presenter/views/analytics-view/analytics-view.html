@@ -6,10 +6,10 @@
         <h1
           class="text-2xl font-semibold text-grey-800 tracking-tight leading-tight"
         >
-          Analíticas
+          {{ 'Analíticas' | transloco }}
         </h1>
         <p class="text-sm text-grey-400 mt-1">
-          Monitorea las visitas y actividad de tu catálogo
+          {{ 'Monitorea las visitas y actividad de tu catálogo' | transloco }}
         </p>
       </div>
     </div>
@@ -17,8 +17,8 @@
     @if (planStore.isFreePlan()) {
     <ui-premium-upgrade-prompt
       icon="bar-chart-3"
-      title="Entiende el comportamiento de tus clientes"
-      description="Mejora tu plan para acceder a métricas de visitas, horarios pico, productos más vistos y analíticas en tiempo real."
+      [title]="'Entiende el comportamiento de tus clientes' | transloco"
+      [description]="'Mejora tu plan para acceder a métricas de visitas, horarios pico, productos más vistos y analíticas en tiempo real.' | transloco"
     />
     } @else if (analyticsStore.isLoading()) {
     <!-- ─── SKELETON ─────────────────────────────────────────── -->
@@ -50,9 +50,9 @@
         <div class="flex items-center justify-between px-6 pt-6 pb-2">
           <div>
             <h2 class="text-xl font-semibold text-white tracking-tight">
-              Visitas en tu catálogo
+              {{ 'Visitas en tu catálogo' | transloco }}
             </h2>
-            <p class="text-sm text-slate-400 mt-0.5">Clientes que ingresaron a ver tu catálogo público</p>
+            <p class="text-sm text-slate-400 mt-0.5">{{ 'Clientes que ingresaron a ver tu catálogo público' | transloco }}</p>
           </div>
           <div class="flex items-center gap-1 bg-slate-800 rounded-lg p-1">
             <button
@@ -62,7 +62,7 @@
               [class.text-white]="pageViewsPeriod() === 'today'"
               [class.text-slate-400]="pageViewsPeriod() !== 'today'"
             >
-              Hoy
+              {{ 'Hoy' | transloco }}
             </button>
             <button
               (click)="pageViewsPeriod.set('one-month')"
@@ -71,7 +71,7 @@
               [class.text-white]="pageViewsPeriod() === 'one-month'"
               [class.text-slate-400]="pageViewsPeriod() !== 'one-month'"
             >
-              Un mes
+              {{ 'Un mes' | transloco }}
             </button>
             <button
               (click)="pageViewsPeriod.set('one-year')"
@@ -80,7 +80,7 @@
               [class.text-white]="pageViewsPeriod() === 'one-year'"
               [class.text-slate-400]="pageViewsPeriod() !== 'one-year'"
             >
-              Un año
+              {{ 'Un año' | transloco }}
             </button>
           </div>
         </div>
@@ -108,7 +108,7 @@
       >
         <span
           class="text-xs font-semibold uppercase tracking-widest text-grey-400"
-          >Vistas de página</span
+          >{{ 'Vistas de página' | transloco }}</span
         >
         <span class="text-5xl font-bold text-grey-800 tracking-tight"
           >{{ data.pageViewsMetric.amount | number }}</span
@@ -121,7 +121,7 @@
       >
         <span
           class="text-xs font-semibold uppercase tracking-widest text-grey-400"
-          >Visitantes únicos</span
+          >{{ 'Visitantes únicos' | transloco }}</span
         >
         <span class="text-5xl font-bold text-grey-800 tracking-tight"
           >{{ data.users.amount | number }}</span
@@ -136,10 +136,10 @@
       <div class="flex items-center justify-between px-6 pt-5 pb-2">
         <div>
           <span class="text-base font-semibold text-grey-700"
-            >Horas activas</span
+            >{{ 'Horas activas' | transloco }}</span
           >
           <p class="text-xs text-grey-400 mt-0.5">
-            Actividad por día y hora · últimos 30 días
+            {{ 'Actividad por día y hora · últimos 30 días' | transloco }}
           </p>
         </div>
         <div class="flex items-center gap-1 bg-grey-50 rounded-lg p-1">
@@ -151,7 +151,7 @@
             [class.shadow-sm]="activeHoursMode() === 'unique-users'"
             [class.text-grey-400]="activeHoursMode() !== 'unique-users'"
           >
-            Usuarios únicos
+            {{ 'Usuarios únicos' | transloco }}
           </button>
           <button
             (click)="activeHoursMode.set('pageviews')"
@@ -161,7 +161,7 @@
             [class.shadow-sm]="activeHoursMode() === 'pageviews'"
             [class.text-grey-400]="activeHoursMode() !== 'pageviews'"
           >
-            Vistas de página
+            {{ 'Vistas de página' | transloco }}
           </button>
         </div>
       </div>
@@ -185,19 +185,19 @@
 
     <!-- ─── ROW 3: 4 Donut charts ────────────────────────────── -->
     <div>
-      <h3 class="text-lg font-semibold text-grey-800">Métricas de sesión</h3>
+      <h3 class="text-lg font-semibold text-grey-800">{{ 'Métricas de sesión' | transloco }}</h3>
       <p class="text-sm text-grey-400 mt-0.5">
-        Propiedades técnicas de las visitas al catálogo público
+        {{ 'Propiedades técnicas de las visitas al catálogo público' | transloco }}
       </p>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       <!-- Browser donut — blue -->
       <div class="flex flex-col bg-white border border-grey-50 rounded-xl p-5">
         <div class="flex items-center justify-between">
-          <span class="text-sm font-semibold text-grey-700">Navegador</span>
+          <span class="text-sm font-semibold text-grey-700">{{ 'Navegador' | transloco }}</span>
           <span
             class="text-xs text-grey-400 bg-grey-50 px-2 py-0.5 rounded-full"
-            >30 días</span
+            >{{ '30 días' | transloco }}</span
           >
         </div>
         <div class="h-44 mt-4">
@@ -238,11 +238,11 @@
       <div class="flex flex-col bg-white border border-grey-50 rounded-xl p-5">
         <div class="flex items-center justify-between">
           <span class="text-sm font-semibold text-grey-700"
-            >Sistema operativo</span
+            >{{ 'Sistema operativo' | transloco }}</span
           >
           <span
             class="text-xs text-grey-400 bg-grey-50 px-2 py-0.5 rounded-full"
-            >30 días</span
+            >{{ '30 días' | transloco }}</span
           >
         </div>
         <div class="h-44 mt-4">
@@ -282,10 +282,10 @@
       <!-- Device donut — orange -->
       <div class="flex flex-col bg-white border border-grey-50 rounded-xl p-5">
         <div class="flex items-center justify-between">
-          <span class="text-sm font-semibold text-grey-700">Dispositivo</span>
+          <span class="text-sm font-semibold text-grey-700">{{ 'Dispositivo' | transloco }}</span>
           <span
             class="text-xs text-grey-400 bg-grey-50 px-2 py-0.5 rounded-full"
-            >30 días</span
+            >{{ '30 días' | transloco }}</span
           >
         </div>
         <div class="h-44 mt-4">
@@ -325,10 +325,10 @@
       <!-- Language donut — purple -->
       <div class="flex flex-col bg-white border border-grey-50 rounded-xl p-5">
         <div class="flex items-center justify-between">
-          <span class="text-sm font-semibold text-grey-700">Idioma</span>
+          <span class="text-sm font-semibold text-grey-700">{{ 'Idioma' | transloco }}</span>
           <span
             class="text-xs text-grey-400 bg-grey-50 px-2 py-0.5 rounded-full"
-            >30 días</span
+            >{{ '30 días' | transloco }}</span
           >
         </div>
         <div class="h-44 mt-4">
@@ -386,9 +386,9 @@
 
       <!-- Text -->
       <div class="flex flex-col items-center gap-2 max-w-sm text-center">
-        <h3 class="text-lg font-semibold text-grey-700">Aún no hay datos</h3>
+        <h3 class="text-lg font-semibold text-grey-700">{{ 'Aún no hay datos' | transloco }}</h3>
         <p class="text-sm text-grey-400 leading-relaxed">
-          Las analíticas aparecerán cuando los clientes comiencen a visitar tu catálogo público. Comparte el enlace de tu tienda para empezar a recibir visitas.
+          {{ 'Las analíticas aparecerán cuando los clientes comiencen a visitar tu catálogo público. Comparte el enlace de tu tienda para empezar a recibir visitas.' | transloco }}
         </p>
       </div>
 
@@ -396,7 +396,7 @@
       <div class="flex items-center gap-3 bg-indigo-50 rounded-xl px-5 py-3.5">
         <ui-icon name="share-2" size="18" styleClass="text-indigo-500 shrink-0" />
         <p class="text-sm text-indigo-600">
-          Usa el botón <span class="font-medium">Compartir</span> en la barra superior para enviar el enlace de tu catálogo.
+          {{ 'Usa el botón' | transloco }} <span class="font-medium">{{ 'Compartir' | transloco }}</span> {{ 'en la barra superior para enviar el enlace de tu catálogo.' | transloco }}
         </p>
       </div>
     </div>

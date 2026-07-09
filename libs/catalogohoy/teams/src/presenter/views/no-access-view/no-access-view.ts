@@ -1,4 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
 import { ButtonComponent } from '@ui';
 import { TenantStore } from '@catalogohoy/tenant';
@@ -6,7 +7,7 @@ import { TenantStore } from '@catalogohoy/tenant';
 @Component({
   selector: 'lib-no-access-view',
   standalone: true,
-  imports: [LucideAngularModule, ButtonComponent],
+  imports: [LucideAngularModule, ButtonComponent, TranslocoPipe],
   templateUrl: './no-access-view.html',
   host: { class: 'flex items-center justify-center p-6 min-h-dvh' },
 })

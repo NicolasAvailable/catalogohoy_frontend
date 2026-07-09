@@ -10,7 +10,7 @@
         type="button"
         (click)="toggleTag(tag, $event)"
         class="flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-black/10 cursor-pointer"
-        title="Quitar etiqueta"
+        [title]="'Quitar etiqueta' | transloco"
       >
         <ui-icon name="x" styleClass="size-2.5" />
       </button>
@@ -22,7 +22,7 @@
       type="button"
       (click)="$event.stopPropagation(); op.toggle($event)"
       class="inline-flex items-center px-2 py-0.5 rounded-full text-[0.6875rem] font-semibold bg-primary-50 text-primary-600 hover:bg-primary-100 cursor-pointer shrink-0"
-      title="Ver todas las etiquetas"
+      [title]="'Ver todas las etiquetas' | transloco"
     >
       +{{ extraCount() }}
     </button>
@@ -32,7 +32,7 @@
     type="button"
     (click)="$event.stopPropagation(); op.toggle($event)"
     class="flex items-center justify-center w-6 h-6 rounded-full border border-dashed border-grey-300 text-grey-400 hover:border-primary-400 hover:text-primary-500 transition-colors cursor-pointer shrink-0"
-    title="Agregar etiqueta"
+    [title]="'Agregar etiqueta' | transloco"
   >
     <ui-icon name="plus" styleClass="size-3.5" />
   </button>
@@ -63,7 +63,7 @@
           </button>
         } @empty {
           <p class="px-3 py-2 text-xs text-grey-400">
-            Aún no hay etiquetas. Créala abajo 👇
+            {{ 'Aún no hay etiquetas. Créala abajo 👇' | transloco }}
           </p>
         }
       </div>

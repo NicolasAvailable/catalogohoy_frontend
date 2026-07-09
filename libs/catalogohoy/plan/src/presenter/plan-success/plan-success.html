@@ -24,13 +24,13 @@
     <!-- Texts -->
     <div class="flex flex-col gap-3">
       <h1 class="text-4xl sm:text-5xl font-bold text-grey-800 leading-tight">
-        ¡Pago exitoso!
+        {{ '¡Pago exitoso!' | transloco }}
       </h1>
       <p class="text-lg text-grey-500 leading-relaxed">
-        Tu suscripción está siendo activada. En unos segundos tu plan estará disponible.
+        {{ 'Tu suscripción está siendo activada. En unos segundos tu plan estará disponible.' | transloco }}
       </p>
       <p class="text-sm text-grey-300 leading-relaxed max-w-sm mx-auto">
-        Recibirás acceso completo a todas las funciones de tu nuevo plan de inmediato.
+        {{ 'Recibirás acceso completo a todas las funciones de tu nuevo plan de inmediato.' | transloco }}
       </p>
     </div>
 
@@ -41,14 +41,14 @@
         class="flex-1 flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white font-semibold text-base transition-colors cursor-pointer shadow-lg shadow-primary-200"
       >
         <ui-icon name="home" styleClass="size-5" />
-        Ir al inicio
+        {{ 'Ir al inicio' | transloco }}
       </button>
       <button
         (click)="goPlans()"
         class="flex-1 flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl border-2 border-grey-100 hover:bg-grey-50 active:bg-grey-100 text-grey-600 font-semibold text-base transition-colors cursor-pointer"
       >
         <ui-icon name="crown" styleClass="size-5 text-yellow-500" />
-        Ver mi plan
+        {{ 'Ver mi plan' | transloco }}
       </button>
     </div>
 

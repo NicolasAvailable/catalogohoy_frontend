@@ -7,6 +7,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthenticationService } from '@catalogohoy/auth';
 import { PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
@@ -20,7 +21,7 @@ import {
 
 @Component({
   selector: 'app-profile-menu',
-  imports: [DatePipe, RouterLink, MenuComponent, IconComponent],
+  imports: [DatePipe, RouterLink, MenuComponent, IconComponent, TranslocoPipe],
   templateUrl: './profile-menu.html',
   styleUrl: './profile-menu.css',
 })
@@ -46,11 +47,15 @@ export class ProfileMenu {
     const expiresAt = this.planStore.planExpiresAt();
 
     if (!plan) return null;
+    // El label/sub son keys de transloco (convención key-as-text); el template
+    // las traduce con `| transloco: params` — las partes dinámicas van en params.
+    const label = 'Plan {name}';
+    const labelParams = { name: plan.name };
     if (isFree) {
-      return { label: `Plan ${plan.name}`, sub: 'Mejorá tu plan', state: 'free' as const, expiresAt: null };
+      return { label, labelParams, sub: 'Mejorá tu plan', subParams: {}, state: 'free' as const, expiresAt: null };
     }
     if (expired) {
-      return { label: `Plan ${plan.name}`, sub: 'Vencido', state: 'expired' as const, expiresAt };
+      return { label, labelParams, sub: 'Vencido', subParams: {}, state: 'expired' as const, expiresAt };
     }
     const sub =
       days === null
@@ -59,8 +64,8 @@ export class ProfileMenu {
           ? 'Vence hoy'
           : days === 1
             ? 'Vence mañana'
-            : `Vence en ${days} días`;
-    return { label: `Plan ${plan.name}`, sub, state: 'active' as const, expiresAt };
+            : 'Vence en {days} días';
+    return { label, labelParams, sub, subParams: { days }, state: 'active' as const, expiresAt };
   });
 
   /** Inicial para el avatar cuando el usuario no tiene foto. */

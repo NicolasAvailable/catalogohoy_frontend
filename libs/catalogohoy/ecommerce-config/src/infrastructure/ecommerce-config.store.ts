@@ -1,6 +1,16 @@
 import { inject } from '@angular/core';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
-import { toast } from 'ngx-sonner';
+import { translate } from '@jsverse/transloco';
+import { toast as sonnerToast } from 'ngx-sonner';
+
+// key-as-text: los mensajes son keys de transloco y ngx-sonner no traduce
+// solo, así que este alias traduce antes de mostrar (mismo rol que ToastService).
+const toast = {
+  success: (msg: string) => sonnerToast.success(translate(msg)),
+  error: (msg: string) => sonnerToast.error(translate(msg)),
+  loading: (msg: string) => sonnerToast.loading(translate(msg)),
+  dismiss: (id?: string | number) => sonnerToast.dismiss(id),
+};
 import {
   CatalogTemplate,
   DEFAULT_CURRENCY_CONFIG,

@@ -2,14 +2,14 @@
   class="container flex flex-col flex-1 max-w-7xl mx-auto px-1 overflow-hidden"
 >
   <header class="flex justify-between items-center gap-2 py-4">
-    <h1 class="text-2xl sm:text-4xl font-bold shrink-0">Productos</h1>
+    <h1 class="text-2xl sm:text-4xl font-bold shrink-0">{{ 'Productos' | transloco }}</h1>
     <div class="flex gap-2 items-center justify-end">
       @if (hasSelection()) {
       <!-- Mobile selection buttons -->
       <ui-button
         class="sm:hidden"
         (click)="onAssignCategories()"
-        [label]="'Categorías (' + selectedIds().size + ')'"
+        [label]="'Categorías ({n})' | transloco: { n: selectedIds().size }"
         icon="tag"
         severity="primary"
         variant="outlined"
@@ -21,7 +21,7 @@
       <ui-button
         class="sm:hidden"
         (click)="onDeleteSelected()"
-        [label]="'Eliminar (' + selectedIds().size + ')'"
+        [label]="'Eliminar ({n})' | transloco: { n: selectedIds().size }"
         icon="trash"
         severity="danger"
         [fluid]="false"
@@ -32,7 +32,7 @@
       <ui-button
         class="sm:hidden"
         (click)="clearSelection()"
-        label="Cancelar"
+        [label]="'Cancelar' | transloco"
         variant="outlined"
         severity="contrast"
         [fluid]="false"
@@ -43,7 +43,7 @@
       <ui-button
         class="hidden sm:block"
         (click)="onAssignCategories()"
-        [label]="'Asignar categorías (' + selectedIds().size + ')'"
+        [label]="'Asignar categorías ({n})' | transloco: { n: selectedIds().size }"
         icon="tag"
         severity="primary"
         variant="outlined"
@@ -54,7 +54,7 @@
       <ui-button
         class="hidden sm:block"
         (click)="onDeleteSelected()"
-        [label]="'Eliminar (' + selectedIds().size + ')'"
+        [label]="'Eliminar ({n})' | transloco: { n: selectedIds().size }"
         icon="trash"
         severity="danger"
         [fluid]="false"
@@ -64,7 +64,7 @@
       <ui-button
         class="hidden sm:block"
         (click)="clearSelection()"
-        label="Cancelar"
+        [label]="'Cancelar' | transloco"
         variant="outlined"
         severity="contrast"
         [fluid]="false"
@@ -75,7 +75,7 @@
       <ui-button
         class="sm:hidden"
         (click)="openImportExport()"
-        label="Exportar/Importar"
+        [label]="'Exportar/Importar' | transloco"
         icon="arrow-up-down"
         variant="outlined"
         severity="contrast"
@@ -86,7 +86,7 @@
       <ui-button
         class="sm:hidden"
         (click)="onCreateProduct()"
-        label="Crear"
+        [label]="'Crear' | transloco"
         icon="circle-plus"
         [fluid]="false"
         size="small"
@@ -96,7 +96,7 @@
       <ui-button
         class="hidden sm:block"
         (click)="openImportExport()"
-        label="Exportar/Importar"
+        [label]="'Exportar/Importar' | transloco"
         icon="arrow-up-down"
         variant="outlined"
         severity="contrast"
@@ -106,7 +106,7 @@
       <ui-button
         class="hidden sm:block"
         (click)="onCreateProduct()"
-        label="Crear producto"
+        [label]="'Crear producto' | transloco"
         icon="circle-plus"
         [fluid]="false"
       />
@@ -117,7 +117,7 @@
   <form [formGroup]="searchForm" class="flex gap-2 py-2">
     <ui-input-text
       formControlName="search"
-      placeholder="Buscar por nombre, descripción o SKU..."
+      [placeholder]="'Buscar por nombre, descripción o SKU...' | transloco"
       class="flex-1"
       styleClass="w-full"
     />
@@ -128,11 +128,11 @@
       (ngModelChange)="onCategoryFilterChange($event)"
       optionLabel="name"
       optionValue="id"
-      placeholder="Categoría"
+      [placeholder]="'Categoría' | transloco"
       [clearable]="true"
       [filter]="true"
-      emptyMessage="No hay categorías creadas"
-      emptyFilterMessage="No se encontró la categoría"
+      [emptyMessage]="'No hay categorías creadas' | transloco"
+      [emptyFilterMessage]="'No se encontró la categoría' | transloco"
       styleClass="w-full"
       class="w-36 sm:w-56 shrink-0"
     />
@@ -149,14 +149,14 @@
       <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
         <ui-icon name="package" styleClass="size-8 text-primary-400" />
       </div>
-      <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes productos todavía</h3>
+      <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes productos todavía' | transloco }}</h3>
       <p class="text-grey-300 text-sm mb-6 max-w-sm">
-        Empieza creando tu primer producto para que aparezca en tu catálogo online.
+        {{ 'Empieza creando tu primer producto para que aparezca en tu catálogo online.' | transloco }}
       </p>
       @if (canCreateProduct()) {
       <ui-button
         (click)="onCreateProduct()"
-        label="Crear mi primer producto"
+        [label]="'Crear mi primer producto' | transloco"
         icon="circle-plus"
         [fluid]="false"
       />
@@ -172,28 +172,28 @@
         />
         <span class="w-7 text-center text-sm font-semibold text-grey-400">#</span>
         <h4 class="flex items-center text-base font-semibold">
-          Producto
+          {{ 'Producto' | transloco }}
         </h4>
       </div>
       <h4
         class="flex-1 flex items-center justify-center text-base font-semibold"
       >
-        Stock
+        {{ 'Stock' | transloco }}
       </h4>
       <h4
         class="flex-1 flex items-center justify-center text-base font-semibold"
       >
-        Precio
+        {{ 'Precio' | transloco }}
       </h4>
       <h4
         class="flex-1 flex items-center justify-center text-base font-semibold"
       >
-        Promocional
+        {{ 'Promocional' | transloco }}
       </h4>
       <h4
         class="flex-1 flex items-center justify-center text-base font-semibold"
       >
-        Acciones
+        {{ 'Acciones' | transloco }}
       </h4>
     </div>
 
@@ -251,31 +251,31 @@
                   {{item.name}}
                 </h2>
                 @if (item.sku) {
-                <span class="text-xs text-grey-400 break-all">SKU: {{ item.sku }}</span>
+                <span class="text-xs text-grey-400 break-all">{{ 'SKU: {sku}' | transloco: { sku: item.sku } }}</span>
                 }
                 <div class="flex flex-wrap items-center gap-1">
                   @if (item.isWholesale) {
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 w-fit">
                     <ui-icon name="package" size="10" />
-                    Al mayor
+                    {{ 'Al mayor' | transloco }}
                   </span>
                   }
                   @if (item.isSoldOut) {
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-red-100 text-red-600 w-fit">
                     <ui-icon name="package-x" size="10" />
-                    Agotado
+                    {{ 'Agotado' | transloco }}
                   </span>
                   }
                   @if (item.isHidden) {
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-slate-200 text-slate-700 w-fit">
                     <ui-icon name="eye-off" size="10" />
-                    Oculto
+                    {{ 'Oculto' | transloco }}
                   </span>
                   }
                   @if (isLocked(item)) {
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 w-fit">
                     <ui-icon name="lock" size="10" />
-                    Oculto · plan gratis
+                    {{ 'Oculto · plan gratis' | transloco }}
                   </span>
                   }
                 </div>
@@ -286,10 +286,10 @@
             class="flex-1 flex items-center justify-center overflow-hidden"
           >
             @if (!item.stock) {
-            <span class="line-clamp-1 break-all text-sm">∞ Infinito</span>
+            <span class="line-clamp-1 break-all text-sm">{{ '∞ Infinito' | transloco }}</span>
             } @else if (+item.stock <= 0) {
             <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-red-100 text-red-600">
-              Agotado
+              {{ 'Agotado' | transloco }}
             </span>
             } @else {
             <span class="line-clamp-1 break-all text-sm">{{ item.stock }}</span>
@@ -300,8 +300,8 @@
           >
             @if (item.isWholesale && item.wholesaleTiers.length > 0) {
             <div class="flex flex-col items-center gap-0.5 text-sm">
-              <span class="font-medium text-amber-700">{{ item.wholesaleTiers.length }} escalas</span>
-              <span class="text-grey-400 text-xs">Desde {{ cs() }}{{ item.wholesaleTiers[item.wholesaleTiers.length - 1].price }}</span>
+              <span class="font-medium text-amber-700">{{ '{n} escalas' | transloco: { n: item.wholesaleTiers.length } }}</span>
+              <span class="text-grey-400 text-xs">{{ 'Desde {price}' | transloco: { price: cs() + item.wholesaleTiers[item.wholesaleTiers.length - 1].price } }}</span>
             </div>
             } @else {
             <div
@@ -338,7 +338,7 @@
               variant="outlined"
               severity="contrast"
               size="small"
-              [tooltip]="isLocked(item) ? 'Mejora tu plan para editar' : 'Editar'"
+              [tooltip]="(isLocked(item) ? 'Mejora tu plan para editar' : 'Editar') | transloco"
               tooltipPosition="bottom"
             />
             @if (canCreateProduct()) {
@@ -348,7 +348,7 @@
               variant="outlined"
               severity="contrast"
               size="small"
-              tooltip="Duplicar"
+              [tooltip]="'Duplicar' | transloco"
               tooltipPosition="bottom"
             />
             }
@@ -358,7 +358,7 @@
               variant="outlined"
               severity="contrast"
               size="small"
-              [tooltip]="copiedId() === ('' + item.id) ? '¡Link copiado!' : 'Compartir'"
+              [tooltip]="(copiedId() === ('' + item.id) ? '¡Link copiado!' : 'Compartir') | transloco"
               tooltipPosition="bottom"
             />
             @if (canDeleteProduct()) {
@@ -368,7 +368,7 @@
               variant="outlined"
               severity="contrast"
               size="small"
-              tooltip="Eliminar"
+              [tooltip]="'Eliminar' | transloco"
               tooltipPosition="bottom"
             />
             }
@@ -411,23 +411,23 @@
                 {{item.name}}
               </h2>
               @if (item.sku) {
-              <span class="text-[0.6875rem] text-grey-400 truncate">SKU: {{ item.sku }}</span>
+              <span class="text-[0.6875rem] text-grey-400 truncate">{{ 'SKU: {sku}' | transloco: { sku: item.sku } }}</span>
               }
               @if (item.isSoldOut || item.isHidden || isLocked(item)) {
               <div class="flex flex-wrap items-center gap-1">
                 @if (item.isSoldOut) {
                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-red-100 text-red-600 w-fit">
-                  Agotado
+                  {{ 'Agotado' | transloco }}
                 </span>
                 }
                 @if (item.isHidden) {
                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-slate-200 text-slate-700 w-fit">
-                  Oculto
+                  {{ 'Oculto' | transloco }}
                 </span>
                 }
                 @if (isLocked(item)) {
                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 w-fit">
-                  Plan gratis
+                  {{ 'Plan gratis' | transloco }}
                 </span>
                 }
               </div>
@@ -435,9 +435,9 @@
               @if (item.isWholesale && item.wholesaleTiers.length > 0) {
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700">
-                  Al mayor
+                  {{ 'Al mayor' | transloco }}
                 </span>
-                <span class="text-xs text-grey-400">Desde {{ cs() }}{{ item.wholesaleTiers[item.wholesaleTiers.length - 1].price }}</span>
+                <span class="text-xs text-grey-400">{{ 'Desde {price}' | transloco: { price: cs() + item.wholesaleTiers[item.wholesaleTiers.length - 1].price } }}</span>
               </div>
               } @else if (item.pricePromotional > 0) {
               <div class="flex items-center gap-2">
@@ -487,7 +487,7 @@
       [totalRecords]="filteredProducts().length"
       [rowsPerPageOptions]="[10, 25, 50]"
       [showCurrentPageReport]="true"
-      currentPageReportTemplate="{totalRecords} productos — Pág. {currentPage} de {totalPages}"
+      [currentPageReportTemplate]="'{totalRecords} productos — Pág. {currentPage} de {totalPages}' | transloco"
       (onPageChange)="onPageChange($event)"
     />
     }
@@ -495,22 +495,22 @@
 
   <ui-confirm-dialog
     (confirm)="onConfirmDelete()"
-    headerLabel="Eliminar producto"
-    [contentLabel]="getDeleteDialogContent()"
-    acceptLabel="Eliminar"
-    rejectLabel="Cancelar"
+    [headerLabel]="'Eliminar producto' | transloco"
+    [contentLabel]="getDeleteDialogContent() | transloco"
+    [acceptLabel]="'Eliminar' | transloco"
+    [rejectLabel]="'Cancelar' | transloco"
   />
 
   <!-- Dialog: asignación masiva de categorías -->
   <ui-dialog
     #categoryDialog
-    headerTitle="Asignar categorías"
+    [headerTitle]="'Asignar categorías' | transloco"
     styleClass="w-[32rem]"
   >
     <div class="flex flex-col gap-4 pt-2">
       <p class="text-sm text-grey-400">
-        Se reemplazarán las categorías de los
-        <strong>{{ selectedIds().size }} productos</strong> seleccionados por las que elijas aquí.
+        {{ 'Se reemplazarán las categorías de los' | transloco }}
+        <strong>{{ '{n} productos' | transloco: { n: selectedIds().size } }}</strong> {{ 'seleccionados por las que elijas aquí.' | transloco }}
       </p>
       <ui-multi-select
         [options]="categoryStore.categoryList().categories"
@@ -519,7 +519,7 @@
         optionLabel="name"
         optionValue="id"
         display="chip"
-        placeholder="Seleccionar categorías..."
+        [placeholder]="'Seleccionar categorías...' | transloco"
         styleClass="w-full"
         appendTo="body"
         [showToggleAll]="categoryStore.categoryList().categories.length > 0"
@@ -527,7 +527,7 @@
         <ng-template #footer>
           <div class="flex flex-col gap-2 p-2 border-t border-grey-100">
             <ui-input-text
-              placeholder="Nueva categoría..."
+              [placeholder]="'Nueva categoría...' | transloco"
               size="small"
               styleClass="w-full"
               [ngModel]="newCategoryName()"
@@ -536,7 +536,7 @@
             />
             <ui-button
               icon="plus"
-              label="Crear categoría"
+              [label]="'Crear categoría' | transloco"
               size="small"
               [disabled]="!newCategoryName().trim()"
               [isLoading]="creatingCategory()"
@@ -547,7 +547,7 @@
       </ui-multi-select>
       <div class="flex justify-end gap-3 pt-2">
         <ui-button
-          label="Cancelar"
+          [label]="'Cancelar' | transloco"
           variant="outlined"
           severity="contrast"
           [fluid]="false"
@@ -555,7 +555,7 @@
           (click)="categoryDialog.hide()"
         />
         <ui-button
-          label="Asignar"
+          [label]="'Asignar' | transloco"
           icon="check"
           [fluid]="false"
           [disabled]="isProcessing()"

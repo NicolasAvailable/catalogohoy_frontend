@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, SkeletonListComponent } from '@ui';
 import { PublicReport } from '../../domain';
 import { ReportService } from '../../infrastructure';
@@ -9,7 +10,7 @@ import { ReportContent } from '../components/report-content';
 @Component({
   selector: 'lib-public-report',
   standalone: true,
-  imports: [CommonModule, IconComponent, ReportContent, SkeletonListComponent],
+  imports: [CommonModule, IconComponent, ReportContent, SkeletonListComponent, TranslocoPipe],
   templateUrl: './public-detail.html',
   styleUrl: './public-detail.css',
 })

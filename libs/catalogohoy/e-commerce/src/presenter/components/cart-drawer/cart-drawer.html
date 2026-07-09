@@ -14,10 +14,10 @@
       <button class="cart-drawer__back" (click)="onClose()">
         <ui-icon name="arrowLeft" styleClass="size-6.5" />
       </button>
-      <h2 class="cart-drawer__title">Carrito de Compras</h2>
+      <h2 class="cart-drawer__title">{{ 'Carrito de Compras' | transloco }}</h2>
       @if (!cartStore.isEmpty()) {
       <button class="cart-drawer__clear" (click)="onClearCart()">
-        Vaciar Carrito
+        {{ 'Vaciar Carrito' | transloco }}
       </button>
       }
     </header>
@@ -28,9 +28,11 @@
         <div class="cart-drawer__empty-bubble" aria-hidden="true">
           <ui-icon name="shoppingCart" styleClass="size-12 text-primary-500" />
         </div>
-        <h3 class="cart-drawer__empty-title">Tu carrito está vacío</h3>
+        <h3 class="cart-drawer__empty-title">
+          {{ 'Tu carrito está vacío' | transloco }}
+        </h3>
         <p class="cart-drawer__empty-subtitle">
-          Agrega productos del catálogo para empezar tu compra.
+          {{ 'Agrega productos del catálogo para empezar tu compra.' | transloco }}
         </p>
         <button
           type="button"
@@ -38,7 +40,7 @@
           (click)="onClose()"
         >
           <ui-icon name="arrowLeft" styleClass="size-4" />
-          Seguir explorando
+          {{ 'Seguir explorando' | transloco }}
         </button>
       </div>
       } @else {
@@ -56,8 +58,8 @@
             @if (item.variantName || item.size) {
             <span class="cart-item__size">
               @if (item.variantName) {<strong>{{ item.variantName }}</strong>}@if
-              (item.variantName && item.size) { · }@if (item.size) {Talla:
-              <strong>{{ item.size }}</strong>}
+              (item.variantName && item.size) { · }@if (item.size) {
+              {{ 'Talla:' | transloco }} <strong>{{ item.size }}</strong>}
             </span>
             }
             <p class="cart-item__description">{{ item.description | stripHtml }}</p>
@@ -88,7 +90,7 @@
         <div class="cart-drawer__checkout-count">
           {{ cartStore.totalItems() }}
         </div>
-        <span>Ir a pagar</span>
+        <span>{{ 'Ir a pagar' | transloco }}</span>
         <div class="cart-drawer__checkout-price">
           <span>
             {{ cs() }}{{ cartStore.totalPrice() | tenantPrice }}

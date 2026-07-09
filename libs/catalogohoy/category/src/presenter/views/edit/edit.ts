@@ -6,6 +6,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import {
   ButtonComponent,
   CardComponent,
@@ -22,6 +23,7 @@ import { CategoryService } from '../../../infrastructure/category.service';
   imports: [
     RouterLink,
     ReactiveFormsModule,
+    TranslocoPipe,
     ButtonComponent,
     InputTextComponent,
     TextareaComponent,

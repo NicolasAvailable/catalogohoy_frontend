@@ -4,7 +4,7 @@
     <button
       type="button"
       class="update-banner__close"
-      aria-label="Cerrar"
+      [attr.aria-label]="'Cerrar' | transloco"
       (click)="version.dismiss()"
     >
       <ui-icon name="x" styleClass="size-4" />
@@ -15,15 +15,15 @@
         <ui-icon name="refresh-cw" styleClass="size-5" />
       </div>
       <div class="update-banner__text">
-        <strong>Hay una nueva versión disponible</strong>
-        <p>Recarga para acceder a las últimas mejoras y correcciones.</p>
+        <strong>{{ 'Hay una nueva versión disponible' | transloco }}</strong>
+        <p>{{ 'Recarga para acceder a las últimas mejoras y correcciones.' | transloco }}</p>
       </div>
     </div>
 
     <div class="update-banner__actions">
       <button type="button" class="update-banner__reload" (click)="version.reload()">
         <ui-icon name="refresh-cw" styleClass="size-3.5" />
-        Recargar ahora
+        {{ 'Recargar ahora' | transloco }}
       </button>
     </div>
   </div>
@@ -33,16 +33,16 @@
     <div class="update-bar__content">
       <span class="update-bar__text">
         <ui-icon name="refresh-cw" styleClass="size-4 shrink-0" />
-        Hay una <strong>nueva versión</strong> disponible
+        {{ 'Hay una' | transloco }} <strong>{{ 'nueva versión' | transloco }}</strong> {{ 'disponible' | transloco }}
       </span>
       <div class="update-bar__actions">
         <button type="button" class="update-bar__cta" (click)="version.reload()">
-          Recargar
+          {{ 'Recargar' | transloco }}
         </button>
         <button
           type="button"
           class="update-bar__close"
-          aria-label="Cerrar"
+          [attr.aria-label]="'Cerrar' | transloco"
           (click)="version.dismiss()"
         >
           <ui-icon name="x" styleClass="size-4" />

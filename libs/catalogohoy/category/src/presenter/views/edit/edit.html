@@ -3,17 +3,17 @@
 >
   <header class="flex justify-between items-center">
     <div class="flex items-center gap-4">
-      <h1 class="text-3xl font-bold">Editar categoría</h1>
+      <h1 class="text-3xl font-bold">{{ 'Editar categoría' | transloco }}</h1>
     </div>
     <div class="flex gap-3">
       <ui-button
         routerLink="/admin/categories"
-        label="Cancelar"
+        [label]="'Cancelar' | transloco"
         variant="outlined"
         severity="contrast"
         [disabled]="isSaving()"
       />
-      <ui-button label="Guardar cambios" (click)="onSave()" [disabled]="form.invalid || isSaving()" />
+      <ui-button [label]="'Guardar cambios' | transloco" (click)="onSave()" [disabled]="form.invalid || isSaving()" />
     </div>
   </header>
 
@@ -22,7 +22,7 @@
       <!-- Info Card -->
       <div class="flex flex-col gap-6">
         <div class="flex flex-col gap-2">
-          <label for="name" class="text-base text-grey-400 font-semibold">Nombre</label>
+          <label for="name" class="text-base text-grey-400 font-semibold">{{ 'Nombre' | transloco }}</label>
           <ui-input-text formControlName="name" inputId="name" class="w-full" />
         </div>
 
@@ -30,7 +30,7 @@
           <div class="flex items-center gap-2 justify-between">
             <div class="flex items-center gap-2">
               <label for="description" class="text-base text-grey-400 font-semibold"
-                >Descripción (opcional)</label
+                >{{ 'Descripción (opcional)' | transloco }}</label
               >
             </div>
             <span class="text-xs text-gray-400"
@@ -43,7 +43,7 @@
             textareaId="description"
             class="w-full"
             [rows]="4"
-            placeholder="Contale a tus clientes lo que van a encontrar en esta categoría."
+            [placeholder]="'Contale a tus clientes lo que van a encontrar en esta categoría.' | transloco"
           />
         </div>
 
@@ -54,9 +54,9 @@
   @if (totalCategories() > 1) {
     <ui-card>
       <form [formGroup]="form" class="flex flex-col gap-2">
-        <h2 class="text-xl font-bold">Posición en el catálogo</h2>
+        <h2 class="text-xl font-bold">{{ 'Posición en el catálogo' | transloco }}</h2>
         <p class="text-sm text-grey-300">
-          Elegí en qué lugar aparece esta categoría dentro de tu catálogo.
+          {{ 'Elegí en qué lugar aparece esta categoría dentro de tu catálogo.' | transloco }}
         </p>
         <ui-select
           formControlName="position"
@@ -70,15 +70,14 @@
 
   <ui-card>
     <form [formGroup]="form" class="flex flex-col gap-2">
-      <h2 class="text-xl font-bold">Visibilidad</h2>
+      <h2 class="text-xl font-bold">{{ 'Visibilidad' | transloco }}</h2>
       <p class="text-sm text-grey-300">
-        Si lo desactivás, esta categoría no aparecerá en los filtros de tu
-        catálogo público.
+        {{ 'Si lo desactivás, esta categoría no aparecerá en los filtros de tu catálogo público.' | transloco }}
       </p>
       <div class="flex items-center gap-2 mt-2">
         <ui-checkbox
           formControlName="isVisible"
-          label="Mostrar esta categoría en la tienda"
+          [label]="'Mostrar esta categoría en la tienda' | transloco"
         />
       </div>
     </form>

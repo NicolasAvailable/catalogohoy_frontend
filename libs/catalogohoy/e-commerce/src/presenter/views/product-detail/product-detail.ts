@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { isVideoUrl } from '@shared/domain';
 import { SafeDescriptionHtmlPipe, StripHtmlPipe } from '@shared/presenter';
 import { IconComponent, ProductMediaComponent } from '@ui';
@@ -25,6 +26,7 @@ import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
     ProductMediaComponent,
     SafeDescriptionHtmlPipe,
     TenantPricePipe,
+    TranslocoPipe,
   ],
   templateUrl: './product-detail.html',
   styleUrl: './product-detail.css',

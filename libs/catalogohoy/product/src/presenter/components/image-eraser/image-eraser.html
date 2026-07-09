@@ -3,13 +3,13 @@
   <div class="flex items-center justify-between gap-2 p-3 text-white">
     <div class="flex items-center gap-2">
       <ui-icon name="eraser" styleClass="w-[1.125rem] h-[1.125rem]" />
-      <span class="font-semibold text-sm">Borrar a mano</span>
+      <span class="font-semibold text-sm">{{ 'Borrar a mano' | transloco }}</span>
     </div>
     <button
       type="button"
       (click)="cancel()"
       [disabled]="processing()"
-      aria-label="Cerrar"
+      [attr.aria-label]="'Cerrar' | transloco"
       class="p-1.5 rounded-md hover:bg-white/10 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
     >
       <ui-icon name="x" styleClass="w-5 h-5" />
@@ -17,7 +17,7 @@
   </div>
 
   <p class="text-center text-white/80 text-[0.6875rem] px-4">
-    Arrastra el pincel sobre lo que quieres quitar — se borra al instante.
+    {{ 'Arrastra el pincel sobre lo que quieres quitar — se borra al instante.' | transloco }}
   </p>
 
   <!-- lienzo con fondo de cuadros (transparencia visible) -->
@@ -70,7 +70,7 @@
     <!-- tamaño del pincel -->
     <div class="flex items-center gap-2 text-white text-[0.6875rem]">
       <ui-icon name="eraser" styleClass="w-3.5 h-3.5" />
-      <span>Pincel</span>
+      <span>{{ 'Pincel' | transloco }}</span>
       <input
         #brushInput
         type="range"
@@ -91,7 +91,7 @@
         class="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <ui-icon name="arrow-left" styleClass="w-4 h-4" />
-        Deshacer
+        {{ 'Deshacer' | transloco }}
       </button>
       <button
         type="button"
@@ -100,7 +100,7 @@
         class="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <ui-icon name="refresh-cw" styleClass="w-4 h-4" />
-        Restablecer
+        {{ 'Restablecer' | transloco }}
       </button>
       <button
         type="button"
@@ -113,10 +113,10 @@
         >
           @if (processing()) {
           <ui-icon name="loader-circle" styleClass="w-[1.125rem] h-[1.125rem] animate-spin" />
-          Aplicando…
+          {{ 'Aplicando…' | transloco }}
           } @else {
           <ui-icon name="eraser" styleClass="w-[1.125rem] h-[1.125rem]" />
-          Aplicar
+          {{ 'Aplicar' | transloco }}
           }
         </span>
       </button>

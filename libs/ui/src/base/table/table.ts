@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, contentChild, input, output, TemplateRef } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { TableModule, TablePageEvent } from 'primeng/table';
 
 @Component({
   selector: 'ui-table',
-  imports: [CommonModule, TableModule],
+  imports: [CommonModule, TableModule, TranslocoPipe],
   host: {
     class: 'block w-full h-full',
   },
@@ -30,7 +31,7 @@ import { TableModule, TablePageEvent } from 'primeng/table';
         [rows]="rows()"
         [pageLinks]="pageLinks()"
         [showCurrentPageReport]="showCurrentPageReport()"
-        [currentPageReportTemplate]="currentPageReportTemplate()"
+        [currentPageReportTemplate]="currentPageReportTemplate() | transloco"
         (onPage)="pageChange.emit($event)"
       >
         <ng-template pTemplate="header">

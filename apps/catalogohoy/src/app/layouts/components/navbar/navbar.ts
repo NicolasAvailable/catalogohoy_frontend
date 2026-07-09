@@ -1,7 +1,9 @@
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Component, inject, OnInit, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { LanguageSelectorComponent } from '@catalogohoy/core';
 import { environment } from '@catalogohoy/env';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { PlanStore } from '@catalogohoy/plan';
 import { CreditsWidgetComponent } from '@catalogohoy/product';
 import { ProfileStore } from '@catalogohoy/profile';
@@ -22,7 +24,9 @@ import { ProfileMenu } from './components';
     ButtonComponent,
     CreditsWidgetComponent,
     IconComponent,
+    LanguageSelectorComponent,
     TooltipDirective,
+    TranslocoPipe,
     ProfileMenu,
     RouterLink,
   ],

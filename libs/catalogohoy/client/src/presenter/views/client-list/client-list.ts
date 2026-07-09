@@ -25,6 +25,7 @@ import {
   InputSearchComponent,
   SelectComponent,
 } from '@ui';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { debounceTime, distinctUntilChanged, Subject, Subscription } from 'rxjs';
 import { Client } from '../../../domain/client.model';
@@ -53,6 +54,7 @@ import { ClientTagCreateRowComponent } from '../../components/client-tag-create-
     ClientTagCreateRowComponent,
     ClientRowTagsComponent,
     PaginatorModule,
+    TranslocoPipe,
   ],
   templateUrl: './client-list.html',
   host: { class: 'flex-1 flex flex-col min-h-0' },

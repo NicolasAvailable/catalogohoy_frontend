@@ -9,6 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { IconComponent } from '@ui';
@@ -24,7 +25,7 @@ import { AiImageService } from '../../../infrastructure';
  */
 @Component({
   selector: 'lib-image-eraser',
-  imports: [IconComponent],
+  imports: [IconComponent, TranslocoPipe],
   templateUrl: './image-eraser.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

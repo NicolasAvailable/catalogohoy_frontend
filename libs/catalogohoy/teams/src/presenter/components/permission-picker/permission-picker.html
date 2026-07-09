@@ -8,7 +8,7 @@
       (valueChange)="toggleAll()"
       [disabled]="disabled()"
     />
-    <span>Seleccionar todos</span>
+    <span>{{ 'Seleccionar todos' | transloco }}</span>
   </label>
 
   @for (mod of modules; track mod) {
@@ -27,7 +27,7 @@
         />
       </div>
       <span class="permission-picker__module-label"
-        >{{ MODULE_LABELS[mod] }}</span
+        >{{ MODULE_LABELS[mod] | transloco }}</span
       >
       @if (isModulePartiallySelected(mod)) {
       <span class="permission-picker__partial-dot"></span>
@@ -36,7 +36,7 @@
         class="permission-picker__module-badge"
         [class.permission-picker__module-badge--active]="moduleCount()(mod) > 0"
       >
-        {{ moduleCount()(mod) }} de {{ MODULE_ACTIONS[mod].length }}
+        {{ '{count} de {total}' | transloco: { count: moduleCount()(mod), total: MODULE_ACTIONS[mod].length } }}
       </span>
       <lucide-icon
         name="chevron-down"
@@ -56,7 +56,7 @@
           (valueChange)="togglePermission(mod, action)"
           [size]="'small'"
         />
-        <span>{{ ACTION_LABELS[action] }}</span>
+        <span>{{ ACTION_LABELS[action] | transloco }}</span>
       </label>
       }
     </div>

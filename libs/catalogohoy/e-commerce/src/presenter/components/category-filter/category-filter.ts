@@ -5,6 +5,7 @@ import {
   input,
   output,
 } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '@ui';
 import { TabsModule } from 'primeng/tabs';
 
@@ -20,7 +21,7 @@ const ALL_TAB = '__all__';
 
 @Component({
   selector: 'lib-category-filter',
-  imports: [TabsModule, IconComponent],
+  imports: [TabsModule, IconComponent, TranslocoPipe],
   templateUrl: './category-filter.html',
   styleUrl: './category-filter.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -2,6 +2,7 @@ import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { Component, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import {
   ButtonComponent,
   CardComponent,
@@ -24,6 +25,7 @@ import { CategoryService } from '../../../infrastructure/category.service';
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    TranslocoPipe,
     ButtonComponent,
     InputTextComponent,
     IconComponent,

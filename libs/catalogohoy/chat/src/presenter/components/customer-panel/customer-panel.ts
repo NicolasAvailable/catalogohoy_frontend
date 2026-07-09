@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AccordionModule } from 'primeng/accordion';
 import { ProfileStore } from '@catalogohoy/profile';
 import { TeamStore } from '@catalogohoy/teams';
@@ -34,6 +35,7 @@ import { ChatStore } from '../../../infrastructure/chat.store';
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
+    TranslocoPipe,
   ],
   templateUrl: './customer-panel.html',
   styleUrl: './customer-panel.css',

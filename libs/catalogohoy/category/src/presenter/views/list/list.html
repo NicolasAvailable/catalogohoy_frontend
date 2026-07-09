@@ -3,10 +3,10 @@
 >
   <header class="flex justify-between items-center py-4">
     <div>
-      <h1 class="text-4xl font-bold">Categorías</h1>
+      <h1 class="text-4xl font-bold">{{ 'Categorías' | transloco }}</h1>
     </div>
     <ui-button
-      label="Crear categoría"
+      [label]="'Crear categoría' | transloco"
       icon="circle-plus"
       (click)="toggleCreate()"
       [disabled]="isCreating()"
@@ -30,7 +30,7 @@
         [formControl]="createControl"
         class="flex-1"
         styleClass="w-full border-none focus:ring-0 bg-transparent text-lg"
-        placeholder="Nombre de la categoría"
+        [placeholder]="'Nombre de la categoría' | transloco"
         (keydown.enter)="saveCreate()"
       />
       <div class="flex gap-2">
@@ -70,7 +70,7 @@
             size="small"
             (click)="onShare(category)"
             [disabled]="category.isViewAll || isCreating()"
-            [tooltip]="copiedCategoryId() === ('' + category.id) ? '¡Link copiado!' : 'Compartir categoría'"
+            [tooltip]="copiedCategoryId() === ('' + category.id) ? ('¡Link copiado!' | transloco) : ('Compartir categoría' | transloco)"
             tooltipPosition="bottom"
           />
           <ui-button
@@ -80,7 +80,7 @@
             size="small"
             [routerLink]="category.isViewAll || isCreating() ? null : ['edit', category.id]"
             [disabled]="category.isViewAll || isCreating()"
-            tooltip="Editar"
+            [tooltip]="'Editar' | transloco"
             tooltipPosition="bottom"
           />
           <ui-button
@@ -90,7 +90,7 @@
             size="small"
             (click)="onToggleVisibility(category)"
             [disabled]="isTogglingVisibility() === category.id || isCreating()"
-            [tooltip]="category.isVisible ? 'Ocultar del catálogo' : 'Mostrar en el catálogo'"
+            [tooltip]="category.isVisible ? ('Ocultar del catálogo' | transloco) : ('Mostrar en el catálogo' | transloco)"
             tooltipPosition="bottom"
           />
           <ui-button
@@ -100,7 +100,7 @@
             size="small"
             (click)="onDelete(category)"
             [disabled]="category.isViewAll || isCreating()"
-            tooltip="Eliminar"
+            [tooltip]="'Eliminar' | transloco"
             tooltipPosition="bottom"
           />
         </div>
@@ -113,12 +113,12 @@
       <div class="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center mb-4">
         <ui-icon name="tag" styleClass="size-8 text-purple-400" />
       </div>
-      <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes categorias todavia</h3>
+      <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes categorias todavia' | transloco }}</h3>
       <p class="text-grey-300 text-sm mb-6 max-w-sm">
-        Organiza tus productos creando categorias para facilitar la navegacion de tu catalogo.
+        {{ 'Organiza tus productos creando categorias para facilitar la navegacion de tu catalogo.' | transloco }}
       </p>
       <ui-button
-        label="Crear mi primera categoria"
+        [label]="'Crear mi primera categoria' | transloco"
         icon="circle-plus"
         [fluid]="false"
         (click)="toggleCreate()"
@@ -135,7 +135,7 @@
       [rows]="rows"
       [totalRecords]="categoryStore.total()"
       [showCurrentPageReport]="true"
-      currentPageReportTemplate="{currentPage} de {totalPages}"
+      [currentPageReportTemplate]="'{currentPage} de {totalPages}' | transloco: { currentPage: '{currentPage}', totalPages: '{totalPages}' }"
     ></p-paginator>
   </ui-card>
 

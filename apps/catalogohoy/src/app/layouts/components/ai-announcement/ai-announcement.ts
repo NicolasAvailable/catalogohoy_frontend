@@ -6,6 +6,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { SupabaseClientProvider } from '@catalogohoy/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent, DialogComponent, IconComponent } from '@ui';
 
 // Clave del anuncio (por usuario autenticado, vía RPC has/mark_announcement_seen
@@ -22,7 +23,7 @@ const ANNOUNCEMENT_KEY = 'ai_v1';
 @Component({
   selector: 'app-ai-announcement',
   standalone: true,
-  imports: [IconComponent, ButtonComponent, DialogComponent],
+  imports: [IconComponent, ButtonComponent, DialogComponent, TranslocoPipe],
   templateUrl: './ai-announcement.html',
 })
 export class AiAnnouncement implements AfterViewInit {

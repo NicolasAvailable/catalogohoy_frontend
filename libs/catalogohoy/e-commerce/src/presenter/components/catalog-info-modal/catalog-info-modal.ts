@@ -6,6 +6,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '@ui';
 import { SafeDescriptionHtmlPipe } from '@shared/presenter';
 import { EcommerceStore } from '../../../infrastructure';
@@ -23,7 +24,7 @@ const DAY_LABELS_ES = [
 @Component({
   selector: 'lib-catalog-info-modal',
   standalone: true,
-  imports: [IconComponent, SafeDescriptionHtmlPipe],
+  imports: [IconComponent, SafeDescriptionHtmlPipe, TranslocoPipe],
   templateUrl: './catalog-info-modal.html',
   styleUrl: './catalog-info-modal.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

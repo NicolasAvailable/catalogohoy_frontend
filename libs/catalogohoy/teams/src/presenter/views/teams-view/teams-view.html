@@ -2,9 +2,9 @@
   <!-- Header -->
   <header class="flex justify-between items-center gap-2 py-4">
     <div>
-      <h1 class="text-2xl sm:text-4xl font-bold shrink-0">Equipo</h1>
+      <h1 class="text-2xl sm:text-4xl font-bold shrink-0">{{ 'Equipo' | transloco }}</h1>
       <p class="teams-view__subtitle">
-        {{ teamStore.memberCount() }} de {{ planStore.maxTeamMembers() }} miembros activos
+        {{ '{count} de {max} miembros activos' | transloco: { count: teamStore.memberCount(), max: planStore.maxTeamMembers() } }}
       </p>
     </div>
     @if (canInvite()) {
@@ -58,7 +58,7 @@
   } @else {
     <!-- Miembros activos -->
     <section class="teams-view__section">
-      <h2 class="teams-view__section-title">Miembros activos</h2>
+      <h2 class="teams-view__section-title">{{ 'Miembros activos' | transloco }}</h2>
       <div class="teams-view__members">
         <!-- Owner cards (a tenant can have multiple co-owners) -->
         @for (owner of teamStore.owners(); track owner.email) {
@@ -71,7 +71,7 @@
                   </div>
                   <span
                     class="teams-view__status-badge teams-view__status-badge--accepted"
-                    pTooltip="Administrador"
+                    [pTooltip]="'Administrador' | transloco"
                     tooltipPosition="top"
                   >
                     <lucide-icon name="crown" [size]="9" />
@@ -82,18 +82,18 @@
                     <p class="teams-view__member-email">
                       {{ owner.name }}
                       @if (isCurrentUser(owner.email)) {
-                        <span class="text-xs font-semibold ml-1">(tú)</span>
+                        <span class="text-xs font-semibold ml-1">{{ '(tú)' | transloco }}</span>
                       }
                     </p>
-                    <p class="teams-view__member-status">{{ owner.email }} · Administrador</p>
+                    <p class="teams-view__member-status">{{ owner.email }} · {{ 'Administrador' | transloco }}</p>
                   } @else {
                     <p class="teams-view__member-email">
                       {{ owner.email }}
                       @if (isCurrentUser(owner.email)) {
-                        <span class="text-xs font-semibold ml-1">(tú)</span>
+                        <span class="text-xs font-semibold ml-1">{{ '(tú)' | transloco }}</span>
                       }
                     </p>
-                    <p class="teams-view__member-status">Administrador</p>
+                    <p class="teams-view__member-status">{{ 'Administrador' | transloco }}</p>
                   }
                 </div>
               </div>
@@ -101,7 +101,7 @@
               <div class="teams-view__member-actions">
                 <div class="teams-view__permission-count">
                   <lucide-icon name="shield" [size]="13" />
-                  <span>Permisos</span>
+                  <span>{{ 'Permisos' | transloco }}</span>
                   <span class="teams-view__permission-count-badge">{{ totalPermissions }}/{{ totalPermissions }}</span>
                 </div>
               </div>
@@ -115,7 +115,7 @@
               <div
                 class="teams-view__member-header"
                 [class.teams-view__member-header--clickable]="canEditMember(member)"
-                [pTooltip]="canEditPermissions() && !canEditMember(member) ? 'No puedes editar tus propios permisos' : ''"
+                [pTooltip]="canEditPermissions() && !canEditMember(member) ? ('No puedes editar tus propios permisos' | transloco) : ''"
                 tooltipPosition="top"
                 (click)="canEditMember(member) ? togglePermissions(member) : null"
               >
@@ -126,7 +126,7 @@
                     </div>
                     <span
                       class="teams-view__status-badge teams-view__status-badge--accepted"
-                      pTooltip="Miembro activo"
+                      [pTooltip]="'Miembro activo' | transloco"
                       tooltipPosition="top"
                     >
                       <lucide-icon name="check" [size]="9" />
@@ -137,18 +137,18 @@
                       <p class="teams-view__member-email">
                         {{ getMemberDisplayName(member) }}
                         @if (isCurrentUser(member.invitedEmail)) {
-                          <span class="text-xs font-semibold ml-1">(tú)</span>
+                          <span class="text-xs font-semibold ml-1">{{ '(tú)' | transloco }}</span>
                         }
                       </p>
-                      <p class="teams-view__member-status">{{ member.invitedEmail }} · Miembro activo</p>
+                      <p class="teams-view__member-status">{{ member.invitedEmail }} · {{ 'Miembro activo' | transloco }}</p>
                     } @else {
                       <p class="teams-view__member-email">
                         {{ member.invitedEmail }}
                         @if (isCurrentUser(member.invitedEmail)) {
-                          <span class="text-xs font-semibold ml-1">(tú)</span>
+                          <span class="text-xs font-semibold ml-1">{{ '(tú)' | transloco }}</span>
                         }
                       </p>
-                      <p class="teams-view__member-status">Miembro activo</p>
+                      <p class="teams-view__member-status">{{ 'Miembro activo' | transloco }}</p>
                     }
                   </div>
                 </div>
@@ -159,7 +159,7 @@
                       [class.teams-view__permission-count--active]="expandedMemberId() === member.id"
                     >
                       <lucide-icon name="shield" [size]="13" />
-                      <span>Permisos</span>
+                      <span>{{ 'Permisos' | transloco }}</span>
                       <span class="teams-view__permission-count-badge">{{ (memberPermissionsCache()[member.id] ?? []).length }}/{{ totalPermissions }}</span>
                       <lucide-icon
                         [name]="expandedMemberId() === member.id ? 'chevron-up' : 'chevron-down'"
@@ -171,7 +171,7 @@
                     <button
                       type="button"
                       class="teams-view__btn-remove"
-                      pTooltip="Eliminar miembro"
+                      [pTooltip]="'Eliminar miembro' | transloco"
                       tooltipPosition="top"
                       (click)="$event.stopPropagation(); removeMember(member.id)"
                     >
@@ -200,7 +200,7 @@
     <!-- Invitaciones pendientes -->
     @if (teamStore.pendingInvites().length > 0) {
       <section class="teams-view__section">
-        <h2 class="teams-view__section-title">Invitaciones pendientes</h2>
+        <h2 class="teams-view__section-title">{{ 'Invitaciones pendientes' | transloco }}</h2>
         <div class="teams-view__members">
           @for (member of teamStore.pendingInvites(); track member.id) {
             <div class="teams-view__member-card teams-view__member-card--pending">
@@ -211,7 +211,7 @@
                   </div>
                   <span
                     class="teams-view__status-badge teams-view__status-badge--pending"
-                    pTooltip="Pendiente por aceptar la invitación"
+                    [pTooltip]="'Pendiente por aceptar la invitación' | transloco"
                     tooltipPosition="top"
                   >
                     <lucide-icon name="clock" [size]="9" />
@@ -219,14 +219,14 @@
                 </div>
                 <div>
                   <p class="teams-view__member-email">{{ member.invitedEmail }}</p>
-                  <p class="teams-view__member-status">Invitación enviada</p>
+                  <p class="teams-view__member-status">{{ 'Invitación enviada' | transloco }}</p>
                 </div>
               </div>
               @if (canRemove()) {
                 <button
                   type="button"
                   class="teams-view__btn-remove"
-                  pTooltip="Cancelar invitación"
+                  [pTooltip]="'Cancelar invitación' | transloco"
                   tooltipPosition="top"
                   (click)="removeMember(member.id)"
                 >
@@ -244,8 +244,8 @@
       @if (planStore.isFreePlan()) {
         <ui-premium-upgrade-prompt
           icon="users-round"
-          title="Invita a tu equipo a gestionar el catálogo"
-          description="Mejora tu plan para invitar miembros, asignarles permisos por módulo y controlar qué puede hacer cada uno."
+          [title]="'Invita a tu equipo a gestionar el catálogo' | transloco"
+          [description]="'Mejora tu plan para invitar miembros, asignarles permisos por módulo y controlar qué puede hacer cada uno.' | transloco"
         />
       } @else {
         <div class="teams-view__empty">
@@ -253,23 +253,23 @@
             <lucide-icon name="users" [size]="32" />
           </div>
           <div class="teams-view__empty-body">
-            <h2 class="teams-view__empty-title">Construye tu equipo</h2>
+            <h2 class="teams-view__empty-title">{{ 'Construye tu equipo' | transloco }}</h2>
             <p class="teams-view__empty-text">
-              Invita personas para que gestionen tu catálogo junto a ti. Asígnales permisos por módulo y controla exactamente qué pueden hacer.
+              {{ 'Invita personas para que gestionen tu catálogo junto a ti. Asígnales permisos por módulo y controla exactamente qué pueden hacer.' | transloco }}
             </p>
           </div>
           <div class="teams-view__empty-features">
             <div class="teams-view__empty-feature">
               <lucide-icon name="shield-check" [size]="15" />
-              <span>Permisos granulares por módulo</span>
+              <span>{{ 'Permisos granulares por módulo' | transloco }}</span>
             </div>
             <div class="teams-view__empty-feature">
               <lucide-icon name="mail" [size]="15" />
-              <span>Invitación por correo electrónico</span>
+              <span>{{ 'Invitación por correo electrónico' | transloco }}</span>
             </div>
             <div class="teams-view__empty-feature">
               <lucide-icon name="users-round" [size]="15" />
-              <span>Hasta {{ planStore.maxTeamMembers() }} miembros en tu plan</span>
+              <span>{{ 'Hasta {max} miembros en tu plan' | transloco: { max: planStore.maxTeamMembers() } }}</span>
             </div>
           </div>
           @if (teamStore.canInviteMore() && canInvite()) {
@@ -286,7 +286,7 @@
   }
 
   @if (teamStore.error()) {
-    <p class="teams-view__error">{{ teamStore.error() }}</p>
+    <p class="teams-view__error">{{ teamStore.error() | transloco }}</p>
   }
 
     </ng-template>
@@ -311,8 +311,8 @@
           <lucide-icon name="clock" [size]="28" />
         </div>
         <div>
-          <h3 class="text-lg font-semibold text-grey-700">Sin actividad registrada</h3>
-          <p class="text-sm text-grey-400 mt-1">Las acciones de los miembros del equipo aparecerán aquí.</p>
+          <h3 class="text-lg font-semibold text-grey-700">{{ 'Sin actividad registrada' | transloco }}</h3>
+          <p class="text-sm text-grey-400 mt-1">{{ 'Las acciones de los miembros del equipo aparecerán aquí.' | transloco }}</p>
         </div>
       </div>
     } @else {
@@ -333,7 +333,7 @@
               <div class="flex-1 min-w-0">
                 <p class="text-sm text-grey-800">
                   <span class="font-semibold">{{ entry.userName ?? entry.userEmail }}</span>
-                  {{ getActionLabel(entry.action) }}
+                  {{ getActionLabel(entry.action) | transloco }}
                   @if (entry.entityName) {
                     <span class="font-medium">"{{ entry.entityName }}"</span>
                   }
@@ -343,7 +343,7 @@
                   <div class="mt-2 flex flex-col gap-1">
                     @for (change of entry.changes; track change.field) {
                       <div class="text-xs text-grey-500 flex items-center gap-1.5 flex-wrap">
-                        <span class="font-medium text-grey-600">{{ getFieldLabel(change.field) }}:</span>
+                        <span class="font-medium text-grey-600">{{ getFieldLabel(change.field) | transloco }}:</span>
                         <span class="line-through text-red-400">{{ formatValue(change.from) }}</span>
                         <lucide-icon name="arrow-right" [size]="11" class="text-grey-300" />
                         <span class="text-green-600 font-medium">{{ formatValue(change.to) }}</span>
@@ -371,79 +371,79 @@
                 @if (isCacheLoading(entry.id)) {
                   <p class="text-grey-400 flex items-center gap-2">
                     <lucide-icon name="loader-circle" [size]="14" class="animate-spin" />
-                    Cargando detalle...
+                    {{ 'Cargando detalle...' | transloco }}
                   </p>
                 } @else if (isCacheMissing(entry.id)) {
                   <p class="text-grey-400 italic">
-                    El elemento ya no existe. Último nombre registrado: <strong>{{ entry.entityName ?? '—' }}</strong>
+                    {{ 'El elemento ya no existe. Último nombre registrado:' | transloco }} <strong>{{ entry.entityName ?? '—' }}</strong>
                   </p>
                 } @else if (entry.entityType === 'product' && getCachedProduct(entry.id); as product) {
                   <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3">
-                    <span class="text-grey-500 font-medium">Nombre</span>
+                    <span class="text-grey-500 font-medium">{{ 'Nombre' | transloco }}</span>
                     <span class="text-grey-800">{{ product.name }}</span>
 
                     @if (product.description) {
-                      <span class="text-grey-500 font-medium">Descripción</span>
+                      <span class="text-grey-500 font-medium">{{ 'Descripción' | transloco }}</span>
                       <span class="text-grey-800">{{ product.description }}</span>
                     }
 
-                    <span class="text-grey-500 font-medium">Precio</span>
+                    <span class="text-grey-500 font-medium">{{ 'Precio' | transloco }}</span>
                     <span class="text-grey-800">${{ product.price }}</span>
 
                     @if (product.pricePromotional) {
-                      <span class="text-grey-500 font-medium">Precio promocional</span>
+                      <span class="text-grey-500 font-medium">{{ 'Precio promocional' | transloco }}</span>
                       <span class="text-grey-800">${{ product.pricePromotional }}</span>
                     }
 
-                    <span class="text-grey-500 font-medium">Stock</span>
-                    <span class="text-grey-800">{{ product.stock ?? 'Sin límite' }}</span>
+                    <span class="text-grey-500 font-medium">{{ 'Stock' | transloco }}</span>
+                    <span class="text-grey-800">{{ product.stock ?? ('Sin límite' | transloco) }}</span>
 
                     @if (product.sku) {
-                      <span class="text-grey-500 font-medium">SKU</span>
+                      <span class="text-grey-500 font-medium">{{ 'SKU' | transloco }}</span>
                       <span class="text-grey-800">{{ product.sku }}</span>
                     }
 
                     @if (product.isWholesale) {
-                      <span class="text-grey-500 font-medium">Venta al mayor</span>
-                      <span class="text-grey-800">Sí ({{ product.wholesaleTiers.length }} escalas)</span>
+                      <span class="text-grey-500 font-medium">{{ 'Venta al mayor' | transloco }}</span>
+                      <span class="text-grey-800">{{ 'Sí ({n} escalas)' | transloco: { n: product.wholesaleTiers.length } }}</span>
                     }
 
-                    <span class="text-grey-500 font-medium">Agotado</span>
-                    <span class="text-grey-800">{{ product.isSoldOut ? 'Sí' : 'No' }}</span>
+                    <span class="text-grey-500 font-medium">{{ 'Agotado' | transloco }}</span>
+                    <span class="text-grey-800">{{ (product.isSoldOut ? 'Sí' : 'No') | transloco }}</span>
 
-                    <span class="text-grey-500 font-medium">Oculto</span>
-                    <span class="text-grey-800">{{ product.isHidden ? 'Sí' : 'No' }}</span>
+                    <span class="text-grey-500 font-medium">{{ 'Oculto' | transloco }}</span>
+                    <span class="text-grey-800">{{ (product.isHidden ? 'Sí' : 'No') | transloco }}</span>
                   </div>
                 } @else if (entry.entityType === 'order' && getCachedOrder(entry.id); as order) {
                   <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3">
-                    <span class="text-grey-500 font-medium">Cliente</span>
+                    <span class="text-grey-500 font-medium">{{ 'Cliente' | transloco }}</span>
                     <span class="text-grey-800">{{ order.name }}</span>
 
                     @if (order.phone) {
-                      <span class="text-grey-500 font-medium">Teléfono</span>
+                      <span class="text-grey-500 font-medium">{{ 'Teléfono' | transloco }}</span>
                       <span class="text-grey-800">{{ order.phone }}</span>
                     }
 
-                    <span class="text-grey-500 font-medium">Estado</span>
+                    <span class="text-grey-500 font-medium">{{ 'Estado' | transloco }}</span>
                     <span class="text-grey-800">{{ order.status }}</span>
 
-                    <span class="text-grey-500 font-medium">Total USD</span>
+                    <span class="text-grey-500 font-medium">{{ 'Total USD' | transloco }}</span>
                     <span class="text-grey-800">${{ order.totalUsd }}</span>
 
                     @if (order.totalBs) {
-                      <span class="text-grey-500 font-medium">Total Bs</span>
+                      <span class="text-grey-500 font-medium">{{ 'Total Bs' | transloco }}</span>
                       <span class="text-grey-800">Bs. {{ order.totalBs }}</span>
                     }
 
-                    <span class="text-grey-500 font-medium">Fecha de entrega</span>
+                    <span class="text-grey-500 font-medium">{{ 'Fecha de entrega' | transloco }}</span>
                     <span class="text-grey-800">{{ order.deliveryDate }}</span>
 
                     @if (order.comments) {
-                      <span class="text-grey-500 font-medium">Comentarios</span>
+                      <span class="text-grey-500 font-medium">{{ 'Comentarios' | transloco }}</span>
                       <span class="text-grey-800">{{ order.comments }}</span>
                     }
 
-                    <span class="text-grey-500 font-medium">Productos</span>
+                    <span class="text-grey-500 font-medium">{{ 'Productos' | transloco }}</span>
                     <ul class="list-disc list-inside text-grey-800">
                       @for (item of order.products; track $index) {
                         <li>{{ item.quantity }}x {{ item.name }} — ${{ item.price }}</li>
@@ -451,7 +451,7 @@
                     </ul>
                   </div>
                 } @else {
-                  <p class="text-grey-400 italic">Sin detalle adicional para este tipo de acción.</p>
+                  <p class="text-grey-400 italic">{{ 'Sin detalle adicional para este tipo de acción.' | transloco }}</p>
                 }
               </div>
             }

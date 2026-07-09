@@ -8,6 +8,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { CategoryStore } from '@catalogohoy/category';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { PlanStore } from '@catalogohoy/plan';
 import {
@@ -49,6 +50,7 @@ const AI_STATUS_MESSAGES = [
     ButtonComponent,
     IconComponent,
     ProgressBarComponent,
+    TranslocoPipe,
   ],
   templateUrl: './import-export-hub.html',
   styles: [`

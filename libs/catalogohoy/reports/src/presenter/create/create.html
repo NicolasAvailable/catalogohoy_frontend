@@ -2,10 +2,10 @@
   class="container flex flex-col flex-1 max-w-5xl mx-auto px-1 pt-4 overflow-hidden"
 >
   <header class="flex justify-between items-center gap-2 pb-6">
-    <h1 class="text-2xl sm:text-4xl font-bold shrink truncate">Nuevo reporte</h1>
+    <h1 class="text-2xl sm:text-4xl font-bold shrink truncate">{{ 'Nuevo reporte' | transloco }}</h1>
     <div class="flex gap-2 items-center">
       <ui-button
-        label="Volver"
+        [label]="'Volver' | transloco"
         variant="outlined"
         severity="contrast"
         [fluid]="false"
@@ -13,7 +13,7 @@
         [disabled]="store.isGenerating()"
       />
       <ui-button
-        label="Generar reporte"
+        [label]="'Generar reporte' | transloco"
         icon="sparkles"
         severity="primary"
         [fluid]="false"
@@ -25,20 +25,20 @@
 
   <div class="flex flex-col gap-3 flex-1 overflow-y-auto min-h-0 pb-4">
     <ui-card>
-      <h2 class="report-create__section-title">Información básica</h2>
+      <h2 class="report-create__section-title">{{ 'Información básica' | transloco }}</h2>
       <div class="report-create__field">
-        <label for="title">Título</label>
+        <label for="title">{{ 'Título' | transloco }}</label>
         <ui-input-text
           [ngModel]="title()"
           (ngModelChange)="title.set($event)"
-          placeholder="Reporte mensual del catálogo"
+          [placeholder]="'Reporte mensual del catálogo' | transloco"
           styleClass="w-full"
         />
       </div>
     </ui-card>
 
     <ui-card>
-      <h2 class="report-create__section-title">Periodo</h2>
+      <h2 class="report-create__section-title">{{ 'Periodo' | transloco }}</h2>
       <div class="report-create__presets">
         @for (p of presets; track p.key) {
           <button
@@ -47,7 +47,7 @@
             [class.preset--active]="preset() === p.key"
             (click)="selectPreset(p.key)"
           >
-            {{ p.label }}
+            {{ p.label | transloco }}
           </button>
         }
       </div>
@@ -55,10 +55,10 @@
       @if (preset() === 'custom') {
         <div class="report-create__custom-range">
           <div class="report-create__field">
-            <label for="customStart">Desde</label>
+            <label for="customStart">{{ 'Desde' | transloco }}</label>
             <ui-datepicker
               inputId="customStart"
-              placeholder="Selecciona una fecha"
+              [placeholder]="'Selecciona una fecha' | transloco"
               dateFormat="dd/mm/yy"
               mode="single"
               [ngModel]="customStart()"
@@ -67,10 +67,10 @@
             />
           </div>
           <div class="report-create__field">
-            <label for="customEnd">Hasta</label>
+            <label for="customEnd">{{ 'Hasta' | transloco }}</label>
             <ui-datepicker
               inputId="customEnd"
-              placeholder="Selecciona una fecha"
+              [placeholder]="'Selecciona una fecha' | transloco"
               dateFormat="dd/mm/yy"
               mode="single"
               [ngModel]="customEnd()"
@@ -84,16 +84,16 @@
     </ui-card>
 
     <ui-card>
-      <h2 class="report-create__section-title">¿Qué incluir?</h2>
+      <h2 class="report-create__section-title">{{ '¿Qué incluir?' | transloco }}</h2>
       <p class="report-create__hint">
-        Seleccioná las métricas que querés que aparezcan en este reporte.
+        {{ 'Seleccioná las métricas que querés que aparezcan en este reporte.' | transloco }}
       </p>
 
       <ul class="report-create__metrics">
         <li>
           <div>
-            <strong>Órdenes</strong>
-            <small>Total de órdenes y distribución por estado</small>
+            <strong>{{ 'Órdenes' | transloco }}</strong>
+            <small>{{ 'Total de órdenes y distribución por estado' | transloco }}</small>
           </div>
           <ui-toggle
             [ngModel]="metrics().orders"
@@ -102,8 +102,8 @@
         </li>
         <li>
           <div>
-            <strong>Ventas</strong>
-            <small>Total del periodo y evolución día a día</small>
+            <strong>{{ 'Ventas' | transloco }}</strong>
+            <small>{{ 'Total del periodo y evolución día a día' | transloco }}</small>
           </div>
           <ui-toggle
             [ngModel]="metrics().sales"
@@ -112,8 +112,8 @@
         </li>
         <li>
           <div>
-            <strong>Productos más vendidos</strong>
-            <small>Top 10 por unidades e ingresos generados</small>
+            <strong>{{ 'Productos más vendidos' | transloco }}</strong>
+            <small>{{ 'Top 10 por unidades e ingresos generados' | transloco }}</small>
           </div>
           <ui-toggle
             [ngModel]="metrics().topProducts"
@@ -122,8 +122,8 @@
         </li>
         <li>
           <div>
-            <strong>Mejores clientes</strong>
-            <small>Top 10 por gasto total</small>
+            <strong>{{ 'Mejores clientes' | transloco }}</strong>
+            <small>{{ 'Top 10 por gasto total' | transloco }}</small>
           </div>
           <ui-toggle
             [ngModel]="metrics().topCustomers"

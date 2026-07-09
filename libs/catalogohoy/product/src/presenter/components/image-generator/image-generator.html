@@ -1,6 +1,6 @@
 <ui-dialog
   #genDialog
-  headerTitle="✨ Generador de imágenes de IA"
+  [headerTitle]="'✨ Generador de imágenes de IA' | transloco"
   [closable]="!busy()"
   [dismissableMask]="!busy()"
   [closeOnEscape]="!busy()"
@@ -13,14 +13,14 @@
     <div class="flex flex-col gap-4 md:w-1/2">
       <!-- Proporción de imagen -->
       <div class="flex flex-col gap-2">
-        <label class="text-sm font-semibold text-grey-600">Proporción de imagen</label>
+        <label class="text-sm font-semibold text-grey-600">{{ 'Proporción de imagen' | transloco }}</label>
         <div class="flex items-center gap-2">
           @for (opt of aspectOptions; track opt.value) {
           <button
             type="button"
             (click)="setAspect(opt.value)"
             [disabled]="busy()"
-            [title]="opt.label"
+            [title]="opt.label | transloco"
             class="flex items-center justify-center min-w-[3rem] h-10 px-3 rounded-lg border text-sm font-medium cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             [class.border-violet-500]="aspectRatio() === opt.value"
             [class.text-violet-600]="aspectRatio() === opt.value"
@@ -29,7 +29,7 @@
             [class.text-grey-500]="aspectRatio() !== opt.value"
           >
             @switch (opt.value) {
-              @case ('auto') { Auto }
+              @case ('auto') { {{ 'Auto' | transloco }} }
               @case ('square') {
                 <span class="w-4 h-4 border-2 border-current rounded-sm"></span>
               }
@@ -47,7 +47,7 @@
 
       <!-- Estilo de imagen -->
       <div class="flex flex-col gap-2">
-        <label class="text-sm font-semibold text-grey-600">Estilo de imagen</label>
+        <label class="text-sm font-semibold text-grey-600">{{ 'Estilo de imagen' | transloco }}</label>
         <ui-select
           [options]="styleOptions"
           [ngModel]="style()"
@@ -62,13 +62,13 @@
           <ng-template selectSelectedItem let-opt>
             <span class="flex items-center gap-2 text-grey-700">
               <ui-icon [name]="opt.icon" styleClass="w-4 h-4 text-violet-600" />
-              {{ opt.label }}
+              {{ opt.label | transloco }}
             </span>
           </ng-template>
           <ng-template selectItem let-opt>
             <span class="flex items-center gap-2 text-grey-700">
               <ui-icon [name]="opt.icon" styleClass="w-4 h-4 text-violet-600" />
-              {{ opt.label }}
+              {{ opt.label | transloco }}
             </span>
           </ng-template>
         </ui-select>
@@ -76,21 +76,21 @@
 
       <!-- Describe tu imagen -->
       <div class="flex flex-col gap-2">
-        <label class="text-sm font-semibold text-grey-600">Describe tu imagen</label>
+        <label class="text-sm font-semibold text-grey-600">{{ 'Describe tu imagen' | transloco }}</label>
         <textarea
           #promptBox
           [value]="prompt()"
           (input)="setPrompt(promptBox.value)"
           [disabled]="busy()"
           rows="4"
-          placeholder="Ej: gorra roja de béisbol sobre fondo blanco, foto de producto profesional, luz suave"
+          [placeholder]="'Ej: gorra roja de béisbol sobre fondo blanco, foto de producto profesional, luz suave' | transloco"
           class="w-full rounded-lg border border-grey-200 p-3 text-sm text-grey-700 placeholder:text-grey-300 outline-none focus:border-violet-400 resize-none disabled:opacity-60"
         ></textarea>
 
         <!-- Insertar título / descripción del producto como base del prompt -->
         @if (title().trim() || description().trim()) {
         <div class="flex flex-wrap items-center gap-2">
-          <span class="text-xs text-grey-400">Insertar:</span>
+          <span class="text-xs text-grey-400">{{ 'Insertar:' | transloco }}</span>
           @if (title().trim()) {
           <button
             type="button"
@@ -99,7 +99,7 @@
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-grey-200 text-xs font-medium text-grey-600 hover:border-violet-300 hover:text-violet-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <ui-icon name="plus" styleClass="w-3.5 h-3.5" />
-            Título
+            {{ 'Título' | transloco }}
           </button>
           }
           @if (description().trim()) {
@@ -110,7 +110,7 @@
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-grey-200 text-xs font-medium text-grey-600 hover:border-violet-300 hover:text-violet-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <ui-icon name="plus" styleClass="w-3.5 h-3.5" />
-            Descripción
+            {{ 'Descripción' | transloco }}
           </button>
           }
         </div>
@@ -129,13 +129,13 @@
         >
           @if (processing()) {
           <ui-icon name="loader-circle" styleClass="w-[1.125rem] h-[1.125rem] animate-spin" />
-          Generando…
+          {{ 'Generando…' | transloco }}
           } @else if (generatedUrl()) {
           <ui-icon name="refresh-cw" styleClass="w-[1.125rem] h-[1.125rem]" />
-          Generar otra
+          {{ 'Generar otra' | transloco }}
           } @else {
           <ui-icon name="wand-sparkles" styleClass="w-[1.125rem] h-[1.125rem]" />
-          Generar imagen con IA
+          {{ 'Generar imagen con IA' | transloco }}
           }
         </span>
       </button>
@@ -150,19 +150,19 @@
         <div class="flex flex-col items-center gap-2 text-grey-400">
           <ui-icon name="loader-circle" styleClass="w-8 h-8 animate-spin text-violet-500" />
           <span class="text-xs">{{
-            editing() ? 'Editando tu imagen…' : 'Generando tu imagen…'
+            (editing() ? 'Editando tu imagen…' : 'Generando tu imagen…') | transloco
           }}</span>
         </div>
         } @else if (generatedUrl()) {
         <img
           [src]="generatedUrl()"
-          alt="Imagen generada con IA"
+          [alt]="'Imagen generada con IA' | transloco"
           class="w-full h-full object-contain"
         />
         } @else {
         <div class="flex flex-col items-center gap-2 text-grey-300">
           <ui-icon name="image" styleClass="w-10 h-10" />
-          <span class="text-xs">Acá vas a ver tu imagen</span>
+          <span class="text-xs">{{ 'Acá vas a ver tu imagen' | transloco }}</span>
         </div>
         }
       </div>
@@ -171,7 +171,7 @@
       <!-- Editar la imagen generada con una instrucción (imagen→imagen, Kontext).
            El resultado reemplaza el preview para poder seguir iterando sobre él. -->
       <div class="flex flex-col gap-2">
-        <label class="text-sm font-semibold text-grey-600">Editar esta imagen</label>
+        <label class="text-sm font-semibold text-grey-600">{{ 'Editar esta imagen' | transloco }}</label>
         <div class="flex items-center gap-2">
           <input
             #editBox
@@ -179,7 +179,7 @@
             (input)="setEditInstruction(editBox.value)"
             (keydown.enter)="editImage()"
             type="text"
-            placeholder="Ej: cambiá el fondo a blanco, hacelo rojo…"
+            [placeholder]="'Ej: cambiá el fondo a blanco, hacelo rojo…' | transloco"
             class="flex-1 min-w-0 rounded-lg border border-grey-200 px-3 py-2.5 text-sm text-grey-700 placeholder:text-grey-300 outline-none focus:border-violet-400"
           />
           <button
@@ -189,11 +189,11 @@
             class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg border border-violet-300 text-sm font-semibold text-violet-700 hover:bg-violet-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
           >
             <ui-icon name="pencil" styleClass="w-4 h-4" />
-            Editar
+            {{ 'Editar' | transloco }}
           </button>
         </div>
         <span class="text-xs text-grey-400">
-          Describe el cambio y la IA edita la imagen actual.
+          {{ 'Describe el cambio y la IA edita la imagen actual.' | transloco }}
         </span>
       </div>
 
@@ -206,7 +206,7 @@
           class="flex w-full items-center justify-center gap-2 rounded-[0.4375rem] bg-white px-5 py-2.5 text-sm font-semibold text-violet-700"
         >
           <ui-icon name="check" styleClass="w-[1.125rem] h-[1.125rem]" />
-          Usar esta imagen
+          {{ 'Usar esta imagen' | transloco }}
         </span>
       </button>
       }

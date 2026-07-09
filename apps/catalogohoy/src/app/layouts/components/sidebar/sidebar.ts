@@ -1,6 +1,7 @@
 import { NgClass } from '@angular/common';
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthenticationService } from '@catalogohoy/auth';
 import { PosthogService } from '@catalogohoy/core';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
@@ -36,6 +37,7 @@ import { CHAT_ENABLED_SLUGS } from '../../../modules/admin/chat-enabled.guard';
     IconComponent,
     AvatarComponent,
     TooltipModule,
+    TranslocoPipe,
   ],
   templateUrl: './sidebar.html',
 })

@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
 import { IconComponent } from '@ui';
 import { ChatMessage } from '../../../domain';
@@ -24,7 +25,7 @@ const LS_KEY = 'wa-demo-customer';
 @Component({
   selector: 'lib-customer-simulator',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent],
+  imports: [CommonModule, FormsModule, IconComponent, TranslocoPipe],
   templateUrl: './customer-simulator.html',
   styleUrl: './customer-simulator.css',
 })

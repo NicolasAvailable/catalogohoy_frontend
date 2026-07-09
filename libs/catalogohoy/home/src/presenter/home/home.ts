@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
@@ -37,6 +38,7 @@ type Currency = 'bs' | 'usd';
     AccordionHeaderDirective,
     AccordionPanelDirective,
     DecimalPipe,
+    TranslocoPipe,
   ],
   templateUrl: './home.html',
   styleUrls: ['./home.css'],
@@ -60,11 +62,6 @@ export class Home implements OnInit {
   public readonly tenantName = computed(() => this.tenantStore.tenantName());
   public readonly stats = computed(() => this.homeStore.stats());
   public readonly isLoading = computed(() => this.homeStore.isLoading());
-
-  public readonly greeting = computed(() => {
-    const name = this.tenantName();
-    return name ? `Hola, ${name}` : 'Hola';
-  });
 
   public activeChartTab = signal<ChartTab>('ventas');
   // For VE: user toggles between 'bs' and 'usd'. For non-VE: always 'usd'

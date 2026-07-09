@@ -1,6 +1,7 @@
 import { NgClass } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ToastService } from '@shared/infrastructure';
 import {
   ButtonComponent,
@@ -30,6 +31,7 @@ import {
     SelectComponent,
     SkeletonDirective,
     TextareaComponent,
+    TranslocoPipe,
   ],
   host: { class: 'flex-1 flex flex-col min-h-0 overflow-y-auto' },
   templateUrl: './templates.html',

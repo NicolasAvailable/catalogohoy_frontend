@@ -1,5 +1,6 @@
 import { Component, computed, inject, output, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent, DialogComponent, IconComponent } from '@ui';
 import { ToastService } from '@shared/infrastructure';
 import { TeamStore } from '../../../infrastructure';
@@ -9,7 +10,7 @@ import { PermissionPickerComponent } from '../permission-picker/permission-picke
 @Component({
   selector: 'lib-invite-member-dialog',
   standalone: true,
-  imports: [DialogComponent, ButtonComponent, IconComponent, FormsModule, PermissionPickerComponent],
+  imports: [DialogComponent, ButtonComponent, IconComponent, FormsModule, PermissionPickerComponent, TranslocoPipe],
   templateUrl: './invite-member-dialog.html',
 })
 export class InviteMemberDialogComponent {

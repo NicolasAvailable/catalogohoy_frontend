@@ -9,9 +9,9 @@
   @if (view() === 'hub') {
   <section class="flex flex-col gap-6 p-8">
     <div class="text-center">
-      <h2 class="text-2xl font-bold text-gray-900">Exportar / Importar productos</h2>
+      <h2 class="text-2xl font-bold text-gray-900">{{ 'Exportar / Importar productos' | transloco }}</h2>
       <p class="text-gray-500 mt-2">
-        Pedinos la exportación de tus productos por WhatsApp o importá nuevos desde un archivo.
+        {{ 'Pedinos la exportación de tus productos por WhatsApp o importá nuevos desde un archivo.' | transloco }}
       </p>
     </div>
 
@@ -33,21 +33,21 @@
           class="absolute top-3 right-3 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none"
         >
           <ui-icon name="crown" styleClass="size-3 text-indigo-500" />
-          Pro
+          {{ 'Pro' | transloco }}
         </span>
         }
         <div class="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center">
           <img src="/images/whatsapp.svg" alt="WhatsApp" class="w-8 h-8" />
         </div>
-        <h3 class="text-lg font-bold text-gray-900">Exportar</h3>
+        <h3 class="text-lg font-bold text-gray-900">{{ 'Exportar' | transloco }}</h3>
         <p class="text-sm text-gray-500 text-center">
-          {{ isFreePlan() ? 'Disponible en planes pagos' : 'Escribinos por WhatsApp y te enviamos todos tus productos en un archivo de Excel' }}
+          {{ (isFreePlan() ? 'Disponible en planes pagos' : 'Escribinos por WhatsApp y te enviamos todos tus productos en un archivo de Excel') | transloco }}
         </p>
         <span
           class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-green-50 border border-green-200 text-green-700 text-xs font-semibold"
         >
           <img src="/images/whatsapp.svg" alt="" class="w-3.5 h-3.5" />
-          Solicitar por WhatsApp
+          {{ 'Solicitar por WhatsApp' | transloco }}
         </span>
       </button>
 
@@ -60,9 +60,9 @@
         <div class="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center">
           <ui-icon name="upload" styleClass="size-7 text-blue-600" />
         </div>
-        <h3 class="text-lg font-bold text-gray-900">Importar</h3>
+        <h3 class="text-lg font-bold text-gray-900">{{ 'Importar' | transloco }}</h3>
         <p class="text-sm text-gray-500 text-center">
-          Subí un archivo de Excel con productos para agregarlos a tu catálogo.
+          {{ 'Subí un archivo de Excel con productos para agregarlos a tu catálogo.' | transloco }}
         </p>
         <span
           class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold"
@@ -79,10 +79,10 @@
   @if (view() === 'import-upload') {
   <section class="flex flex-col gap-6 p-8">
     <div class="flex items-center gap-3">
-      <h2 class="text-2xl font-bold text-gray-900">Importar productos</h2>
+      <h2 class="text-2xl font-bold text-gray-900">{{ 'Importar productos' | transloco }}</h2>
     </div>
     <p class="text-sm text-gray-500 -mt-3">
-      Sube un archivo Excel y la IA mapeará tus productos automáticamente.
+      {{ 'Sube un archivo Excel y la IA mapeará tus productos automáticamente.' | transloco }}
     </p>
 
     <!-- Drop zone -->
@@ -99,9 +99,9 @@
       />
       <div class="text-center">
         <p class="text-base font-semibold text-gray-700">
-          Arrastra y suelta tu archivo .xlsx aqui
+          {{ 'Arrastra y suelta tu archivo .xlsx aqui' | transloco }}
         </p>
-        <p class="text-sm text-gray-400 mt-1">o</p>
+        <p class="text-sm text-gray-400 mt-1">{{ 'o' | transloco }}</p>
       </div>
       <label class="cursor-pointer mt-1">
         <input
@@ -114,7 +114,7 @@
           class="inline-block px-6 py-2.5 bg-blue-500 text-white rounded-lg font-medium
                  hover:bg-blue-600 transition-colors"
         >
-          Seleccionar archivo
+          {{ 'Seleccionar archivo' | transloco }}
         </span>
       </label>
     </div>
@@ -122,12 +122,12 @@
     <!-- Template download -->
     <div class="flex items-center gap-2 text-sm text-gray-400">
       <ui-icon name="info" styleClass="w-4 h-4" />
-      <span>No tienes una plantilla?</span>
+      <span>{{ 'No tienes una plantilla?' | transloco }}</span>
       <button
         (click)="downloadTemplate()"
         class="text-blue-500 font-medium hover:underline cursor-pointer"
       >
-        Descargar plantilla
+        {{ 'Descargar plantilla' | transloco }}
       </button>
     </div>
   </section>
@@ -146,10 +146,10 @@
     </div>
     <div class="text-center">
       <p class="text-lg font-semibold text-gray-700">
-        {{ aiStatusMessage().text }}
+        {{ aiStatusMessage().text | transloco }}
       </p>
       <p class="text-sm text-gray-400 mt-2">
-        Esto puede tardar unos segundos
+        {{ 'Esto puede tardar unos segundos' | transloco }}
       </p>
     </div>
     <div class="w-full max-w-xs">
@@ -175,10 +175,10 @@
           <ui-icon name="arrow-left" styleClass="w-5 h-5" />
         </button>
         <h2 class="text-xl font-bold text-gray-900">
-          Vista previa ({{ parsedRows().length }} productos)
+          {{ 'Vista previa ({n} productos)' | transloco: { n: parsedRows().length } }}
         </h2>
       </div>
-      <ui-button label="Importar" icon="upload" (click)="startImport()" />
+      <ui-button [label]="'Importar' | transloco" icon="upload" (click)="startImport()" />
     </div>
 
     <div
@@ -188,12 +188,12 @@
         <thead class="bg-gray-50 sticky top-0 z-10">
           <tr>
             <th class="p-3 text-left font-semibold text-gray-600">#</th>
-            <th class="p-3 text-left font-semibold text-gray-600">Nombre</th>
-            <th class="p-3 text-left font-semibold text-gray-600">Precio</th>
-            <th class="p-3 text-left font-semibold text-gray-600">Stock</th>
+            <th class="p-3 text-left font-semibold text-gray-600">{{ 'Nombre' | transloco }}</th>
+            <th class="p-3 text-left font-semibold text-gray-600">{{ 'Precio' | transloco }}</th>
+            <th class="p-3 text-left font-semibold text-gray-600">{{ 'Stock' | transloco }}</th>
             <th class="p-3 text-left font-semibold text-gray-600">SKU</th>
             <th class="p-3 text-left font-semibold text-gray-600">
-              Categorias
+              {{ 'Categorias' | transloco }}
             </th>
           </tr>
         </thead>
@@ -203,7 +203,7 @@
             <td class="p-3 text-gray-400">{{ $index + 1 }}</td>
             <td class="p-3 font-medium text-gray-900">{{ row.name }}</td>
             <td class="p-3 text-gray-700">{{ cs() }}{{ row.price }}</td>
-            <td class="p-3 text-gray-700">{{ row.stock ?? 'Sin limite' }}</td>
+            <td class="p-3 text-gray-700">{{ row.stock ?? ('Sin limite' | transloco) }}</td>
             <td class="p-3 text-gray-500">{{ row.sku ?? '-' }}</td>
             <td class="p-3 text-gray-500">{{ row.categories || '-' }}</td>
           </tr>
@@ -217,7 +217,7 @@
   <!-- IMPORT PROGRESS VIEW -->
   @if (view() === 'import-progress') {
   <section class="flex flex-col gap-4 p-8">
-    <h2 class="text-xl font-bold text-gray-900">Importando productos...</h2>
+    <h2 class="text-xl font-bold text-gray-900">{{ 'Importando productos...' | transloco }}</h2>
     <ui-progress-bar [value]="importProgress()" />
 
     <div
@@ -227,10 +227,10 @@
         <thead class="bg-gray-50 sticky top-0 z-10">
           <tr>
             <th class="p-3 text-left font-semibold text-gray-600 w-12">
-              Estado
+              {{ 'Estado' | transloco }}
             </th>
-            <th class="p-3 text-left font-semibold text-gray-600">Nombre</th>
-            <th class="p-3 text-left font-semibold text-gray-600">Detalle</th>
+            <th class="p-3 text-left font-semibold text-gray-600">{{ 'Nombre' | transloco }}</th>
+            <th class="p-3 text-left font-semibold text-gray-600">{{ 'Detalle' | transloco }}</th>
           </tr>
         </thead>
         <tbody>
@@ -258,11 +258,11 @@
             </td>
             <td class="p-3">
               @if (result.status === 'pending') {
-              <span class="text-gray-400">Pendiente</span>
+              <span class="text-gray-400">{{ 'Pendiente' | transloco }}</span>
               } @else if (result.status === 'importing') {
-              <span class="text-blue-500">Importando...</span>
+              <span class="text-blue-500">{{ 'Importando...' | transloco }}</span>
               } @else if (result.status === 'success') {
-              <span class="text-green-600">Importado correctamente</span>
+              <span class="text-green-600">{{ 'Importado correctamente' | transloco }}</span>
               } @else if (result.status === 'error') {
               <span class="text-red-500">{{ result.errorMessage }}</span>
               }
@@ -286,10 +286,10 @@
 
     <div class="text-center">
       <h2 class="text-2xl font-bold text-gray-900">
-        Importacion completada
+        {{ 'Importacion completada' | transloco }}
       </h2>
       <p class="text-gray-500 mt-1">
-        Se procesaron {{ importSummary()?.total }} productos
+        {{ 'Se procesaron {n} productos' | transloco: { n: importSummary()?.total } }}
       </p>
     </div>
 
@@ -299,21 +299,21 @@
         <span class="text-4xl font-bold text-green-600">{{
           summary.success
         }}</span>
-        <span class="text-sm text-gray-500 mt-1">Importados</span>
+        <span class="text-sm text-gray-500 mt-1">{{ 'Importados' | transloco }}</span>
       </div>
       @if (summary.errors > 0) {
       <div class="flex flex-col items-center">
         <span class="text-4xl font-bold text-red-500">{{
           summary.errors
         }}</span>
-        <span class="text-sm text-gray-500 mt-1">Errores</span>
+        <span class="text-sm text-gray-500 mt-1">{{ 'Errores' | transloco }}</span>
       </div>
       }
     </div>
     }
 
     <ui-button
-      label="Cerrar"
+      [label]="'Cerrar' | transloco"
       (click)="close()"
       variant="outlined"
       severity="contrast"

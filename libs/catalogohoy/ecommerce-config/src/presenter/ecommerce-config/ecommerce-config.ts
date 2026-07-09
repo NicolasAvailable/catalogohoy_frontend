@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DatePickerModule } from 'primeng/datepicker';
 import { isDevMode } from '@catalogohoy/core';
@@ -37,7 +38,17 @@ import {
 } from '@ui';
 import { HtmlSanitizerService } from '@shared/infrastructure';
 import { EditorModule } from 'primeng/editor';
-import { toast } from 'ngx-sonner';
+import { translate } from '@jsverse/transloco';
+import { toast as sonnerToast } from 'ngx-sonner';
+
+// key-as-text: los mensajes son keys de transloco y ngx-sonner no traduce
+// solo, así que este alias traduce antes de mostrar (mismo rol que ToastService).
+const toast = {
+  success: (msg: string) => sonnerToast.success(translate(msg)),
+  error: (msg: string) => sonnerToast.error(translate(msg)),
+  loading: (msg: string) => sonnerToast.loading(translate(msg)),
+  dismiss: (id?: string | number) => sonnerToast.dismiss(id),
+};
 import { Observable } from 'rxjs';
 import {
   BusinessHoursWeek,
@@ -115,6 +126,7 @@ const SLUG_ERROR_MESSAGES: Record<string, string> = {
     PhoneMockupComponent,
     TemplateSelectorComponent,
     DatePickerModule,
+    TranslocoPipe,
   ],
   templateUrl: './ecommerce-config.html',
   styleUrl: './ecommerce-config.css',

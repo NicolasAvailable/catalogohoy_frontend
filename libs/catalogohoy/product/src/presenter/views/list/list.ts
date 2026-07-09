@@ -11,6 +11,7 @@ import {
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { CategoryStore } from '@catalogohoy/category';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
@@ -59,6 +60,7 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
     DialogComponent,
     MultiSelectComponent,
     ProductMediaComponent,
+    TranslocoPipe,
   ],
   templateUrl: './list.html',
   styleUrl: './list.css',

@@ -35,8 +35,8 @@
     @if (step() === 1) {
       <div class="step-enter flex flex-col gap-6">
       <div class="flex flex-col gap-1">
-        <h1 class="text-3xl sm:text-4xl lg:text-3xl font-semibold text-grey-700">Crea tu catálogo</h1>
-        <p class="text-base text-grey-400">Elige cómo quieres registrarte para comenzar.</p>
+        <h1 class="text-3xl sm:text-4xl lg:text-3xl font-semibold text-grey-700">{{ 'Crea tu catálogo' | transloco }}</h1>
+        <p class="text-base text-grey-400">{{ 'Elige cómo quieres registrarte para comenzar.' | transloco }}</p>
       </div>
 
       <div class="flex flex-col gap-3">
@@ -49,13 +49,13 @@
           <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
           </svg>
-          Continuar con el email
+          {{ 'Continuar con el email' | transloco }}
         </button>
 
         <!-- Divider -->
         <div class="flex items-center gap-3">
           <div class="flex-1 h-px bg-grey-200"></div>
-          <span class="text-xs text-grey-400 font-medium">o</span>
+          <span class="text-xs text-grey-400 font-medium">{{ 'o' | transloco }}</span>
           <div class="flex-1 h-px bg-grey-200"></div>
         </div>
 
@@ -68,7 +68,7 @@
         >
           @if (isGoogleLoading()) {
             <ui-icon name="loader-circle" styleClass="w-6 h-6 animate-spin text-grey-400" />
-            Conectando con Google...
+            {{ 'Conectando con Google...' | transloco }}
           } @else {
             <svg class="w-6 h-6 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -76,18 +76,18 @@
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            Continuar con Google
+            {{ 'Continuar con Google' | transloco }}
           }
         </button>
 
         @if (googleAccountExistsError()) {
-          <p class="text-sm text-red-500 text-center">Este correo de Google ya está registrado. <a routerLink="/login" class="font-semibold text-blue-500">Inicia sesión</a></p>
+          <p class="text-sm text-red-500 text-center">{{ 'Este correo de Google ya está registrado.' | transloco }} <a routerLink="/login" class="font-semibold text-blue-500">{{ 'Inicia sesión' | transloco }}</a></p>
         }
       </div>
 
       <div class="flex justify-center gap-1 text-base text-center mt-2">
-        <p class="font-semibold text-grey-400">¿Ya tienes una cuenta?</p>
-        <a routerLink="/login" class="font-semibold text-blue-500">Inicia sesión</a>
+        <p class="font-semibold text-grey-400">{{ '¿Ya tienes una cuenta?' | transloco }}</p>
+        <a routerLink="/login" class="font-semibold text-blue-500">{{ 'Inicia sesión' | transloco }}</a>
       </div>
       </div>
     }
@@ -103,48 +103,48 @@
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
               </svg>
-              Volver
+              {{ 'Volver' | transloco }}
             </button>
           }
           <h2 class="text-2xl font-semibold text-grey-700">
-            @if (isInviteMode()) { Crea tu cuenta } @else { Tus credenciales }
+            @if (isInviteMode()) { {{ 'Crea tu cuenta' | transloco }} } @else { {{ 'Tus credenciales' | transloco }} }
           </h2>
           <p class="text-sm text-grey-400 mt-1">
             @if (isInviteMode()) {
               @if (invitedTenantName(); as tenantName) {
-                Fuiste invitado a <span class="font-semibold text-grey-700">{{ tenantName }}</span>. Elige una contraseña para aceptar la invitación.
+                {{ 'Fuiste invitado a' | transloco }} <span class="font-semibold text-grey-700">{{ tenantName }}</span>. {{ 'Elige una contraseña para aceptar la invitación.' | transloco }}
               } @else {
-                Elige una contraseña para aceptar la invitación.
+                {{ 'Elige una contraseña para aceptar la invitación.' | transloco }}
               }
-            } @else { Con estas podrás ingresar a tu catálogo. }
+            } @else { {{ 'Con estas podrás ingresar a tu catálogo.' | transloco }} }
           </p>
         </div>
 
         <form [formGroup]="credentialsForm" (keyup.enter)="nextStep()">
           <div class="mb-4">
-            <label class="block font-medium text-base text-grey-400 mb-1">Email</label>
-            <ui-input-text size="large" formControlName="email" placeholder="tu@correo.com" />
+            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'Email' | transloco }}</label>
+            <ui-input-text size="large" formControlName="email" [placeholder]="'tu@correo.com' | transloco" />
             @if (isInviteMode()) {
-              <p class="text-xs text-grey-400 mt-1">Este es el correo al que enviaron la invitación y no se puede cambiar.</p>
+              <p class="text-xs text-grey-400 mt-1">{{ 'Este es el correo al que enviaron la invitación y no se puede cambiar.' | transloco }}</p>
             }
-            <ui-input-message [control]="credentialsForm.get('email')" error="required" text="El campo es obligatorio" />
-            <ui-input-message [control]="credentialsForm.get('email')" error="email" text="El formato no es válido" />
-            <ui-input-message [control]="credentialsForm.get('email')" error="whitespace" text="No puede contener espacios en blanco" />
+            <ui-input-message [control]="credentialsForm.get('email')" error="required" [text]="'El campo es obligatorio' | transloco" />
+            <ui-input-message [control]="credentialsForm.get('email')" error="email" [text]="'El formato no es válido' | transloco" />
+            <ui-input-message [control]="credentialsForm.get('email')" error="whitespace" [text]="'No puede contener espacios en blanco' | transloco" />
             @if (emailExistsError()) {
-              <p class="text-xs text-red-500 mt-1">Este correo ya está registrado. <a routerLink="/login" class="font-semibold text-blue-500">Inicia sesión</a></p>
+              <p class="text-xs text-red-500 mt-1">{{ 'Este correo ya está registrado.' | transloco }} <a routerLink="/login" class="font-semibold text-blue-500">{{ 'Inicia sesión' | transloco }}</a></p>
             }
           </div>
           <div class="mb-6">
-            <label class="block font-medium text-base text-grey-400 mb-1">Contraseña</label>
-            <ui-input-password size="large" [feedback]="false" formControlName="password" placeholder="Mínimo 6 caracteres" />
-            <ui-input-message [control]="credentialsForm.get('password')" error="required" text="El campo es obligatorio" />
-            <ui-input-message [control]="credentialsForm.get('password')" error="minlength" text="Debe tener mínimo 6 caracteres" />
-            <ui-input-message [control]="credentialsForm.get('password')" error="whitespace" text="No puede contener espacios en blanco" />
+            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'Contraseña' | transloco }}</label>
+            <ui-input-password size="large" [feedback]="false" formControlName="password" [placeholder]="'Mínimo 6 caracteres' | transloco" />
+            <ui-input-message [control]="credentialsForm.get('password')" error="required" [text]="'El campo es obligatorio' | transloco" />
+            <ui-input-message [control]="credentialsForm.get('password')" error="minlength" [text]="'Debe tener mínimo 6 caracteres' | transloco" />
+            <ui-input-message [control]="credentialsForm.get('password')" error="whitespace" [text]="'No puede contener espacios en blanco' | transloco" />
           </div>
           <ui-button
             (click)="nextStep()"
             [disabled]="credentialsForm.invalid || isCheckingEmail()"
-            [label]="isCheckingEmail() ? 'Procesando...' : (isInviteMode() ? 'Crear cuenta' : 'Siguiente')"
+            [label]="(isCheckingEmail() ? 'Procesando...' : (isInviteMode() ? 'Crear cuenta' : 'Siguiente')) | transloco"
             severity="primary"
             styleClass="!py-4 !text-base"
           />
@@ -163,52 +163,52 @@
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
               </svg>
-              Volver
+              {{ 'Volver' | transloco }}
             </button>
           }
-          <h2 class="text-2xl font-semibold text-grey-700">Datos de tu tienda</h2>
+          <h2 class="text-2xl font-semibold text-grey-700">{{ 'Datos de tu tienda' | transloco }}</h2>
           <p class="text-sm text-grey-400 mt-1">
             @if (method() === 'google') {
-              Conectado con Google. Ahora cuéntanos sobre tu tienda.
+              {{ 'Conectado con Google. Ahora cuéntanos sobre tu tienda.' | transloco }}
             } @else {
-              Ya casi terminas. ¿Cómo se llama tu tienda?
+              {{ 'Ya casi terminas. ¿Cómo se llama tu tienda?' | transloco }}
             }
           </p>
         </div>
 
         <form [formGroup]="profileForm" (keyup.enter)="submit()">
           <div class="mb-4">
-            <label class="block font-medium text-base text-grey-400 mb-1">Tu nombre completo</label>
-            <ui-input-text size="large" formControlName="name" placeholder="María González" />
-            <ui-input-message [control]="profileForm.get('name')" error="required" text="El campo es obligatorio" />
-            <ui-input-message [control]="profileForm.get('name')" error="minlength" text="Debe tener mínimo 4 caracteres" />
-            <ui-input-message [control]="profileForm.get('name')" error="whitespace" text="No puede contener espacios en blanco" />
+            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'Tu nombre completo' | transloco }}</label>
+            <ui-input-text size="large" formControlName="name" [placeholder]="'María González' | transloco" />
+            <ui-input-message [control]="profileForm.get('name')" error="required" [text]="'El campo es obligatorio' | transloco" />
+            <ui-input-message [control]="profileForm.get('name')" error="minlength" [text]="'Debe tener mínimo 4 caracteres' | transloco" />
+            <ui-input-message [control]="profileForm.get('name')" error="whitespace" [text]="'No puede contener espacios en blanco' | transloco" />
           </div>
           <div class="mb-4">
-            <label class="block font-medium text-base text-grey-400 mb-1">Nombre de la tienda</label>
-            <ui-input-text size="large" formControlName="storeName" placeholder="Mi Tienda Génova" />
-            <ui-input-message [control]="profileForm.get('storeName')" error="required" text="El campo es obligatorio" />
-            <ui-input-message [control]="profileForm.get('storeName')" error="minlength" text="Debe tener mínimo 3 caracteres" />
+            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'Nombre de la tienda' | transloco }}</label>
+            <ui-input-text size="large" formControlName="storeName" [placeholder]="'Mi Tienda Génova' | transloco" />
+            <ui-input-message [control]="profileForm.get('storeName')" error="required" [text]="'El campo es obligatorio' | transloco" />
+            <ui-input-message [control]="profileForm.get('storeName')" error="minlength" [text]="'Debe tener mínimo 3 caracteres' | transloco" />
             <!-- URL preview -->
             @if (slugPreview()) {
               <p class="text-xs text-grey-400 mt-1.5 break-words leading-relaxed">
                 <svg class="inline w-3.5 h-3.5 mr-1 align-[-0.15em]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
                 </svg>
-                Tu catálogo estará en:
+                {{ 'Tu catálogo estará en:' | transloco }}
                 <span class="font-medium text-primary-500">{{ slugPreview() }}.catalogohoy.com</span>
               </p>
             }
           </div>
           <div class="mb-6">
-            <label class="block font-medium text-base text-grey-400 mb-1">País</label>
+            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'País' | transloco }}</label>
             <ui-select
               size="large"
               [options]="supportedCountries"
               formControlName="country"
               optionLabel="label"
               optionValue="code"
-              placeholder="Selecciona tu país"
+              [placeholder]="'Selecciona tu país' | transloco"
               [filter]="true"
               styleClass="w-full"
             >
@@ -225,22 +225,22 @@
                 </div>
               </ng-template>
             </ui-select>
-            <ui-input-message [control]="profileForm.get('country')" error="required" text="Selecciona tu país" />
-            <p class="text-xs text-grey-400 mt-3">La moneda de tu catálogo se configurará automáticamente.</p>
+            <ui-input-message [control]="profileForm.get('country')" error="required" [text]="'Selecciona tu país' | transloco" />
+            <p class="text-xs text-grey-400 mt-3">{{ 'La moneda de tu catálogo se configurará automáticamente.' | transloco }}</p>
           </div>
 
           <!-- Código de referido (opcional). Si llegó desde catalogohoy.com/?ref=XXX
                la cookie chy_ref pre-llena este campo automáticamente. -->
           <div class="mb-6">
             <label class="block font-medium text-base text-grey-400 mb-1">
-              Código de referido <span class="text-grey-300 font-normal">(opcional)</span>
+              {{ 'Código de referido' | transloco }} <span class="text-grey-300 font-normal">{{ '(opcional)' | transloco }}</span>
             </label>
             <ui-input-text
               size="large"
               formControlName="referralCode"
-              placeholder="Si alguien te invitó, pega su código acá"
+              [placeholder]="'Si alguien te invitó, pega su código acá' | transloco"
             />
-            <p class="text-xs text-grey-400 mt-1.5">Te aplicamos un descuento en tu primer pago.</p>
+            <p class="text-xs text-grey-400 mt-1.5">{{ 'Te aplicamos un descuento en tu primer pago.' | transloco }}</p>
           </div>
 
           <!-- Aceptación de términos + privacidad — obligatorio. Reconoce el
@@ -254,31 +254,31 @@
                 class="mt-0.5 shrink-0"
               />
               <label for="accept-terms-checkbox" class="text-xs text-grey-500 leading-relaxed cursor-pointer select-none">
-                He leído y acepto los
+                {{ 'He leído y acepto los' | transloco }}
                 <a
                   href="https://catalogohoy.com/terms-of-service"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="text-primary-600 hover:text-primary-700 underline font-medium"
-                >Términos y Condiciones</a>
-                y la
+                >{{ 'Términos y Condiciones' | transloco }}</a>
+                {{ 'y la' | transloco }}
                 <a
                   href="https://catalogohoy.com/privacy-policy"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="text-primary-600 hover:text-primary-700 underline font-medium"
-                >Política de Privacidad</a>.
+                >{{ 'Política de Privacidad' | transloco }}</a>.
               </label>
             </div>
             @if (profileForm.controls.acceptedTerms.touched && profileForm.controls.acceptedTerms.invalid) {
-              <p class="text-xs text-red-500 mt-1.5 ml-7">Debés aceptar los términos y la política para continuar.</p>
+              <p class="text-xs text-red-500 mt-1.5 ml-7">{{ 'Debés aceptar los términos y la política para continuar.' | transloco }}</p>
             }
           </div>
 
           <ui-button
             (click)="submit()"
             [disabled]="profileForm.invalid || loaderStore.isEnable()"
-            label="Crear catálogo"
+            [label]="'Crear catálogo' | transloco"
             severity="primary"
             styleClass="!py-4 !text-base"
           />
@@ -299,7 +299,7 @@
       />
       <img
         src="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing-hero/hero-2x.webp"
-        alt="Empieza a vender hoy con CatalogoHoy"
+        [alt]="'Empieza a vender hoy con CatalogoHoy' | transloco"
         class="object-cover w-full h-full"
         fetchpriority="high"
       />
@@ -325,12 +325,11 @@
 
     <div class="flex flex-col gap-5 w-full lg:max-w-md lg:bg-white lg:rounded-3xl lg:p-12 items-center lg:items-start text-center lg:text-left">
       <h1 class="text-3xl sm:text-4xl lg:text-[2rem] font-bold text-grey-700 leading-tight">
-        ¡Ya está todo listo!
+        {{ '¡Ya está todo listo!' | transloco }}
       </h1>
 
       <p class="text-base text-grey-500 leading-relaxed">
-        Solo falta <strong class="font-semibold text-grey-700">verificar tu
-        correo</strong>. Te enviamos un enlace de confirmación a:
+        {{ 'Solo falta' | transloco }} <strong class="font-semibold text-grey-700">{{ 'verificar tu correo' | transloco }}</strong>. {{ 'Te enviamos un enlace de confirmación a:' | transloco }}
       </p>
 
       <p class="text-lg font-bold text-grey-800 break-all">
@@ -338,20 +337,20 @@
       </p>
 
       <p class="text-base text-grey-500 leading-relaxed">
-        Revisá tu bandeja y hacé clic en el enlace para empezar.
+        {{ 'Revisá tu bandeja y hacé clic en el enlace para empezar.' | transloco }}
       </p>
 
       <div class="w-full h-px bg-grey-100"></div>
 
       <p class="text-sm text-grey-400">
-        ¿No lo ves? Revisá la carpeta de
-        <span class="font-medium text-grey-500">spam</span> o
-        <span class="font-medium text-grey-500">promociones</span>.
+        {{ '¿No lo ves? Revisá la carpeta de' | transloco }}
+        <span class="font-medium text-grey-500">{{ 'spam' | transloco }}</span> {{ 'o' | transloco }}
+        <span class="font-medium text-grey-500">{{ 'promociones' | transloco }}</span>.
       </p>
 
       <div class="w-full flex justify-center lg:justify-end">
         <ui-button
-          label="Ir a iniciar sesión"
+          [label]="'Ir a iniciar sesión' | transloco"
           [fluid]="false"
           (click)="goToLogin()"
         />
@@ -368,7 +367,7 @@
       />
       <img
         src="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing-hero/hero-2x.webp"
-        alt="Empieza a vender hoy con CatalogoHoy"
+        [alt]="'Empieza a vender hoy con CatalogoHoy' | transloco"
         class="object-cover w-full h-full"
       />
     </picture>

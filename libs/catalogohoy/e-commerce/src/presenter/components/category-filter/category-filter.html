@@ -3,7 +3,7 @@
     type="button"
     class="category-filter-icon-btn"
     (click)="searchClick.emit()"
-    aria-label="Buscar"
+    [attr.aria-label]="'Buscar' | transloco"
   >
     <ui-icon name="search" styleClass="size-5" />
   </button>
@@ -11,7 +11,7 @@
     type="button"
     class="category-filter-icon-btn"
     (click)="filterClick.emit()"
-    aria-label="Filtros"
+    [attr.aria-label]="'Filtros' | transloco"
   >
     <ui-icon name="slidersHorizontal" styleClass="size-5" />
   </button>
@@ -24,7 +24,7 @@
   >
     <p-tablist>
       @if (!hasViewAllCategory()) {
-        <p-tab [value]="allTabValue">Ver todos</p-tab>
+        <p-tab [value]="allTabValue">{{ 'Ver todos' | transloco }}</p-tab>
       }
       @for (category of categories(); track category.id) {
         <p-tab [value]="category.isViewAll ? allTabValue : category.id">

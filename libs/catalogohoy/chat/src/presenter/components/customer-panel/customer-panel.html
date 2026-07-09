@@ -4,7 +4,7 @@
   <div class="ficha__head">
     <div class="ficha__avatar">{{ initial(c.customerName) }}</div>
     <div class="ficha__id">
-      <span class="ficha__name">{{ c.customerName || 'Cliente' }}</span>
+      <span class="ficha__name">{{ c.customerName || ('Cliente' | transloco) }}</span>
       @if (c.customerPhone) {
       <a
         class="ficha__phone"
@@ -20,13 +20,13 @@
 
   <!-- Pipeline status -->
   <div class="ficha__field">
-    <span class="ficha__label">Estado</span>
+    <span class="ficha__label">{{ 'Estado' | transloco }}</span>
     @if (statusOptions().length) {
     <ui-select
       [options]="statusOptions()"
       optionLabel="label"
       optionValue="value"
-      placeholder="Sin estado"
+      [placeholder]="'Sin estado' | transloco"
       size="small"
       [ngModel]="c.pipelineStatus"
       (ngModelChange)="onStatusChange($event)"
@@ -46,19 +46,19 @@
     </ui-select>
     } @else {
     <p class="ficha__hint">
-      Crea estados del pipeline en la configuración del CRM.
+      {{ 'Crea estados del pipeline en la configuración del CRM.' | transloco }}
     </p>
     }
   </div>
 
   <!-- Assignment -->
   <div class="ficha__field">
-    <span class="ficha__label">Asignado a</span>
+    <span class="ficha__label">{{ 'Asignado a' | transloco }}</span>
     <ui-select
       [options]="assigneeOptions()"
       optionLabel="label"
       optionValue="value"
-      placeholder="Sin asignar"
+      [placeholder]="'Sin asignar' | transloco"
       size="small"
       [ngModel]="c.assignedToUserId"
       (ngModelChange)="onAssigneeChange($event)"
@@ -70,7 +70,7 @@
           } @else {
           <ui-icon name="user" size="13" styleClass="text-grey-400" />
           }
-          {{ s?.label }}
+          {{ s?.value === null ? (s?.label | transloco) : s?.label }}
         </span>
       </ng-template>
       <ng-template selectItem let-item>
@@ -80,7 +80,7 @@
           } @else {
           <ui-icon name="user" size="13" styleClass="text-grey-400" />
           }
-          {{ item?.label }}
+          {{ item?.value === null ? (item?.label | transloco) : item?.label }}
         </span>
       </ng-template>
     </ui-select>
@@ -91,13 +91,13 @@
     <!-- Información básica -->
     <p-accordion-panel value="info">
       <p-accordion-header>
-        <span class="ficha__section-title">Información básica</span>
+        <span class="ficha__section-title">{{ 'Información básica' | transloco }}</span>
       </p-accordion-header>
       <p-accordion-content>
         <dl class="ficha__info">
-          <dt>Fecha de creación</dt>
+          <dt>{{ 'Fecha de creación' | transloco }}</dt>
           <dd>{{ formatDateTime(c.createdAt) }}</dd>
-          <dt>Teléfono</dt>
+          <dt>{{ 'Teléfono' | transloco }}</dt>
           <dd>{{ c.customerPhone || '—' }}</dd>
         </dl>
       </p-accordion-content>
@@ -106,7 +106,7 @@
     <!-- Órdenes -->
     <p-accordion-panel value="orders">
       <p-accordion-header>
-        <span class="ficha__section-title">Órdenes ({{ orders().length }})</span>
+        <span class="ficha__section-title">{{ 'Órdenes ({count})' | transloco: { count: orders().length } }}</span>
       </p-accordion-header>
       <p-accordion-content>
         @if (orders().length) {
@@ -115,14 +115,14 @@
           <button type="button" class="ficha__order" (click)="openOrder(o.id)">
             <span class="ficha__order-num">#{{ o.orderNumber ?? o.id }}</span>
             <span class="ficha__order-meta">
-              {{ formatDate(o.createdAt) }} · {{ orderStatusLabel(o.status) }}
+              {{ formatDate(o.createdAt) }} · {{ orderStatusLabel(o.status) | transloco }}
             </span>
             <span class="ficha__order-total">${{ o.totalUsd }}</span>
           </button>
           }
         </div>
         } @else {
-        <p class="ficha__hint">Sin órdenes registradas.</p>
+        <p class="ficha__hint">{{ 'Sin órdenes registradas.' | transloco }}</p>
         }
       </p-accordion-content>
     </p-accordion-panel>
@@ -130,7 +130,7 @@
     <!-- Notas internas -->
     <p-accordion-panel value="notes">
       <p-accordion-header>
-        <span class="ficha__section-title">Notas internas</span>
+        <span class="ficha__section-title">{{ 'Notas internas' | transloco }}</span>
       </p-accordion-header>
       <p-accordion-content>
         <div class="ficha__notes">
@@ -143,14 +143,14 @@
             <p class="ficha__note-text">{{ n.text }}</p>
           </div>
           } @empty {
-          <p class="ficha__hint">Solo el equipo ve estas notas.</p>
+          <p class="ficha__hint">{{ 'Solo el equipo ve estas notas.' | transloco }}</p>
           }
         </div>
         <div class="ficha__note-composer">
           <textarea
             class="ficha__note-input"
             rows="2"
-            placeholder="Agregar nota..."
+            [placeholder]="'Agregar nota...' | transloco"
             [ngModel]="noteDraft()"
             (ngModelChange)="noteDraft.set($event)"
             (keydown)="onNoteKeydown($event)"
@@ -160,7 +160,7 @@
             [disabled]="!noteDraft().trim()"
             (click)="addNote()"
           >
-            <ui-icon name="plus" size="14" /> Agregar nota
+            <ui-icon name="plus" size="14" /> {{ 'Agregar nota' | transloco }}
           </button>
         </div>
       </p-accordion-content>

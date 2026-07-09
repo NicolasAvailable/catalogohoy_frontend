@@ -7,18 +7,18 @@
   type="button"
   (click)="open()"
   class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors cursor-pointer mr-1"
-  title="Créditos de IA"
+  [title]="'Créditos de IA' | transloco"
 >
   <ui-icon name="sparkles" size="16" />
   <span class="text-sm font-semibold">{{ credits.balance() }}</span>
-  <span class="hidden sm:inline text-sm font-semibold">créditos</span>
+  <span class="hidden sm:inline text-sm font-semibold">{{ 'créditos' | transloco }}</span>
 </button>
 }
 
 <!-- Diálogo: armar paquete de créditos (cantidad libre + descuento por volumen). -->
 <ui-dialog
   #buyDialog
-  headerTitle="Comprar créditos de IA"
+  [headerTitle]="'Comprar créditos de IA' | transloco"
   [closable]="!busy()"
   [dismissableMask]="!busy()"
   [closeOnEscape]="!busy()"
@@ -26,8 +26,7 @@
 >
   <div class="flex flex-col gap-5 pt-1">
     <p class="text-sm text-grey-400">
-      Armá tu paquete. Los créditos comprados no vencen y se suman a tu saldo
-      mensual. Mientras más agregás, mayor el descuento.
+      {{ 'Armá tu paquete. Los créditos comprados no vencen y se suman a tu saldo mensual. Mientras más agregás, mayor el descuento.' | transloco }}
     </p>
 
     <!-- Presets rápidos -->
@@ -55,20 +54,20 @@
           type="button"
           (click)="dec()"
           [disabled]="amount() <= min"
-          aria-label="Quitar créditos"
+          [attr.aria-label]="'Quitar créditos' | transloco"
           class="w-9 h-9 shrink-0 inline-flex items-center justify-center rounded-lg border border-grey-200 text-grey-600 hover:border-violet-300 hover:text-violet-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <ui-icon name="minus" styleClass="w-5 h-5" />
         </button>
         <div class="flex flex-col items-center leading-tight">
           <span class="text-2xl font-bold text-grey-800">{{ amount() }}</span>
-          <span class="text-xs text-grey-400">créditos</span>
+          <span class="text-xs text-grey-400">{{ 'créditos' | transloco }}</span>
         </div>
         <button
           type="button"
           (click)="inc()"
           [disabled]="amount() >= max"
-          aria-label="Agregar créditos"
+          [attr.aria-label]="'Agregar créditos' | transloco"
           class="w-9 h-9 shrink-0 inline-flex items-center justify-center rounded-lg border border-grey-200 text-grey-600 hover:border-violet-300 hover:text-violet-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <ui-icon name="plus" styleClass="w-5 h-5" />
@@ -88,7 +87,7 @@
     <!-- Resumen de precio + descuento -->
     <div class="flex items-end justify-between gap-3">
       <div class="flex flex-col leading-tight">
-        <span class="text-sm text-grey-400">Total</span>
+        <span class="text-sm text-grey-400">{{ 'Total' | transloco }}</span>
         <span class="text-3xl font-extrabold text-grey-800">
           ${{ totalLabel() }}
         </span>
@@ -98,7 +97,7 @@
         class="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-700 px-3 py-1 text-sm font-semibold"
       >
         <ui-icon name="sparkles" styleClass="w-4 h-4" />
-        −{{ discountPct() }}% por volumen
+        {{ '−{pct}% por volumen' | transloco: { pct: discountPct() } }}
       </span>
       }
     </div>
@@ -112,9 +111,9 @@
     >
       @if (busy()) {
       <ui-icon name="loader-circle" styleClass="w-5 h-5 animate-spin" />
-      Redirigiendo…
+      {{ 'Redirigiendo…' | transloco }}
       } @else {
-      Continuar al pago · ${{ totalLabel() }}
+      {{ 'Continuar al pago · ${total}' | transloco: { total: totalLabel() } }}
       }
     </button>
   </div>

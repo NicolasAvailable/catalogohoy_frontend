@@ -25,7 +25,7 @@
                 class="hero__card-more"
                 (click)="ecommerceStore.openInfoModal()"
               >
-                Ver Más
+                {{ 'Ver Más' | transloco }}
               </button>
             }
 
@@ -46,12 +46,12 @@
 
               <p class="hero__subtitle">
                 @if (info.isOpen) {
-                  <span class="hero__status hero__status--open">Abierto</span>
+                  <span class="hero__status hero__status--open">{{ 'Abierto' | transloco }}</span>
                   @if (info.openTime && info.closeTime) {
                     <span class="hero__hours">· {{ formatHourAmPm(info.openTime) }} - {{ formatHourAmPm(info.closeTime) }}</span>
                   }
                 } @else {
-                  <span class="hero__status hero__status--closed">Cerrado</span>
+                  <span class="hero__status hero__status--closed">{{ 'Cerrado' | transloco }}</span>
                 }
               </p>
 
@@ -66,7 +66,7 @@
                       type="button"
                       class="hero__description-toggle"
                       (click)="toggleDetails()"
-                    >{{ showDetails() ? 'Mostrar menos' : 'Mostrar más' }}</button>
+                    >{{ (showDetails() ? 'Mostrar menos' : 'Mostrar más') | transloco }}</button>
                   }
                 </div>
               }
@@ -89,7 +89,7 @@
                 class="hero__card-more"
                 (click)="ecommerceStore.openInfoModal()"
               >
-                Ver Más
+                {{ 'Ver Más' | transloco }}
               </button>
             }
 
@@ -110,12 +110,12 @@
 
               <p class="hero__subtitle">
                 @if (info.isOpen) {
-                  <span class="hero__status hero__status--open">Abierto</span>
+                  <span class="hero__status hero__status--open">{{ 'Abierto' | transloco }}</span>
                   @if (info.openTime && info.closeTime) {
                     <span class="hero__hours">· {{ formatHourAmPm(info.openTime) }} - {{ formatHourAmPm(info.closeTime) }}</span>
                   }
                 } @else {
-                  <span class="hero__status hero__status--closed">Cerrado</span>
+                  <span class="hero__status hero__status--closed">{{ 'Cerrado' | transloco }}</span>
                 }
               </p>
 
@@ -130,7 +130,7 @@
                       type="button"
                       class="hero__description-toggle"
                       (click)="toggleDetails()"
-                    >{{ showDetails() ? 'Mostrar menos' : 'Mostrar más' }}</button>
+                    >{{ (showDetails() ? 'Mostrar menos' : 'Mostrar más') | transloco }}</button>
                   }
                 </div>
               }

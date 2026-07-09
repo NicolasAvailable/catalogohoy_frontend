@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Product, ProductVariant, WholesaleTier } from '@catalogohoy/product';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { isVideoUrl } from '@shared/domain';
 import { SafeDescriptionHtmlPipe } from '@shared/presenter';
 import {
@@ -29,6 +30,7 @@ import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
     ProductMediaComponent,
     SafeDescriptionHtmlPipe,
     TenantPricePipe,
+    TranslocoPipe,
   ],
   templateUrl: './product-detail-modal.html',
   styleUrl: './product-detail-modal.css',
@@ -80,6 +82,11 @@ export class ProductDetailModal {
 
   /** Sentinel id for the synthetic "Producto original" option. */
   private static readonly BASE_ID = '__base__';
+
+  /** Exposed for the template: the base option's label ('Producto original')
+   *  is app copy and gets translated at render; real variant names are tenant
+   *  data and render as-is. */
+  public readonly baseOptionId = ProductDetailModal.BASE_ID;
 
   /** Options shown in the public selector: the base/original product ALWAYS
    *  first, followed by the real variants. The base uses the product's own

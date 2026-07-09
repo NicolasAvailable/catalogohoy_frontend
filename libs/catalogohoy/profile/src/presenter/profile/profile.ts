@@ -4,6 +4,7 @@ import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angu
 import { ActivatedRoute, Router } from '@angular/router';
 import { CheckoutService, PlanStore } from '@catalogohoy/plan';
 import { TenantStore } from '@catalogohoy/tenant';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import {
@@ -46,6 +47,7 @@ const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'notifications', 
     ConfirmDialogComponent,
     IconComponent,
     ToggleComponent,
+    TranslocoPipe,
   ],
   templateUrl: './profile.html',
   styleUrl: './profile.css',

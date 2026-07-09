@@ -1,4 +1,5 @@
-import { computed } from '@angular/core';
+import { computed, inject } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { Product, ProductVariant, WholesaleTier } from '@catalogohoy/product';
 import {
   patchState,
@@ -59,6 +60,18 @@ const initialState: CartState = {
   isCheckoutOpen: false,
 };
 
+/** Resolves Transloco for the buyer-facing stock toasts (key-as-text). Falls
+ *  back to identity (the Spanish key itself) when the store is instantiated
+ *  outside an Angular injection context — e.g. jest.isolateModules re-requires
+ *  the module with a fresh @angular/core whose inject() has no context. */
+function injectTranslator(): { translate: (key: string) => string } {
+  try {
+    return inject(TranslocoService);
+  } catch {
+    return { translate: (key: string) => key };
+  }
+}
+
 export const CartStore = signalStore(
   { providedIn: 'root' },
   withState(initialState),
@@ -68,7 +81,7 @@ export const CartStore = signalStore(
     isEmpty: computed(() => store.cart().isEmpty),
     items: computed(() => store.cart().items),
   })),
-  withMethods((store) => ({
+  withMethods((store, transloco = injectTranslator()) => ({
     addProduct(
       product: Product,
       options?: { size?: string | null; variant?: ProductVariant | null }
@@ -92,7 +105,7 @@ export const CartStore = signalStore(
 
       if (effectiveStock !== null) {
         if (effectiveStock <= 0) {
-          toast.error('Este producto está agotado');
+          toast.error(transloco.translate('Este producto está agotado'));
           return;
         }
         const currentInCart = store
@@ -104,7 +117,9 @@ export const CartStore = signalStore(
           )
           .reduce((sum, i) => sum + i.quantity, 0);
         if (currentInCart >= effectiveStock) {
-          toast.error('No hay más stock disponible de este producto');
+          toast.error(
+            transloco.translate('No hay más stock disponible de este producto')
+          );
           return;
         }
       }
@@ -141,7 +156,7 @@ export const CartStore = signalStore(
       if (product.stock !== null) {
         const stock = Number(product.stock);
         if (stock <= 0) {
-          toast.error('Este producto está agotado');
+          toast.error(transloco.translate('Este producto está agotado'));
           return;
         }
         const currentInCart = store
@@ -149,7 +164,9 @@ export const CartStore = signalStore(
           .items.filter((i) => i.productId === String(product.id))
           .reduce((sum, i) => sum + i.quantity, 0);
         if (currentInCart >= stock) {
-          toast.error('No hay más stock disponible de este producto');
+          toast.error(
+            transloco.translate('No hay más stock disponible de este producto')
+          );
           return;
         }
       }

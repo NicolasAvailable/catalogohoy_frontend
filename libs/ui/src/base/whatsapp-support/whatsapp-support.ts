@@ -2,11 +2,12 @@ import { Component, computed, inject, input, signal, ViewEncapsulation } from '@
 import { NavigationEnd, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'ui-whatsapp-support',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, TranslocoPipe],
   template: `
     @if (!isHidden()) {
     @if (isOpen()) {
@@ -18,7 +19,7 @@ import { LucideAngularModule } from 'lucide-angular';
       >
         <div class="flex items-center gap-3">
           <lucide-angular name="headset" class="text-white header-icon" />
-          <span class="font-semibold text-lg">Soporte</span>
+          <span class="font-semibold text-lg">{{ 'Soporte' | transloco }}</span>
         </div>
         <button
           (click)="toggle()"
@@ -30,8 +31,7 @@ import { LucideAngularModule } from 'lucide-angular';
 
       <div class="p-6 pb-8">
         <p class="text-gray-700 text-base leading-relaxed mb-6">
-          ¡Hola! Si tienes una duda o necesitas apoyo en algo en particular haz
-          click en el botón de abajo para comunicarte con nosotros.
+          {{ '¡Hola! Si tienes una duda o necesitas apoyo en algo en particular haz click en el botón de abajo para comunicarte con nosotros.' | transloco }}
         </p>
 
         <button
@@ -39,7 +39,7 @@ import { LucideAngularModule } from 'lucide-angular';
           class="mt-4 w-full flex items-center justify-center gap-3 bg-[#25D366] hover:bg-[#1fb855] text-white font-semibold py-3.5 px-5 rounded-xl transition-colors cursor-pointer text-base"
         >
           <img src="images/whatsapp.svg" alt="WhatsApp" class="size-7" />
-          Continuar en WhatsApp
+          {{ 'Continuar en WhatsApp' | transloco }}
         </button>
 
         @if (guideUrl()) {
@@ -48,7 +48,7 @@ import { LucideAngularModule } from 'lucide-angular';
           class="mt-3 w-full flex items-center justify-center gap-3 bg-primary-50 hover:bg-primary-100 text-primary-600 font-semibold py-3.5 px-5 rounded-xl transition-colors cursor-pointer text-base"
         >
           <lucide-angular name="headset" class="size-6 shrink-0" />
-          Guía de ayuda
+          {{ 'Guía de ayuda' | transloco }}
         </button>
         }
       </div>

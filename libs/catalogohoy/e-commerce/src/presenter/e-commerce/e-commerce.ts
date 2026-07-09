@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { StripHtmlPipe } from '@shared/presenter';
 import { PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
@@ -39,6 +40,7 @@ const DEFAULT_FAVICON =
     CatalogFooter,
     CartDrawer,
     CatalogInfoModal,
+    TranslocoPipe,
   ],
   templateUrl: './e-commerce.html',
   styleUrl: './e-commerce.css',

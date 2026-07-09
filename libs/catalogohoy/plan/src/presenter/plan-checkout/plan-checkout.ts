@@ -6,6 +6,7 @@ import {
   findCountryByCode,
   TenantCurrencyStore,
 } from '@catalogohoy/ecommerce-config';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '@ui';
 import {
   BillingPeriod,
@@ -98,7 +99,7 @@ const WHATSAPP_NUMBER = '584220240947';
 
 @Component({
   selector: 'lib-plan-checkout',
-  imports: [IconComponent, DecimalPipe, FormsModule],
+  imports: [IconComponent, DecimalPipe, FormsModule, TranslocoPipe],
   templateUrl: './plan-checkout.html',
   styleUrl: './plan-checkout.css',
   host: { class: 'flex-1 flex flex-col min-h-0' },

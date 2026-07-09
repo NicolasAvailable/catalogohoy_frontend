@@ -25,7 +25,7 @@
       </div>
       @if (createdAt()) {
         <small class="report__generated">
-          Generado {{ createdAt() | date:'d MMM y, HH:mm':'':'es-ES' }}
+          {{ 'Generado' | transloco }} {{ createdAt() | date:'d MMM y, HH:mm':'':'es-ES' }}
         </small>
       }
     </div>
@@ -35,7 +35,7 @@
   <section class="report__kpis">
     @if (metrics().orders) {
       <div class="kpi">
-        <span class="kpi__label">Total de pedidos</span>
+        <span class="kpi__label">{{ 'Total de pedidos' | transloco }}</span>
         <span class="kpi__value">{{ snapshot().orders.total }}</span>
       </div>
     }
@@ -43,27 +43,27 @@
     @if (metrics().sales) {
       @if (isVenezuela()) {
         <div class="kpi">
-          <span class="kpi__label">Ventas en USD</span>
+          <span class="kpi__label">{{ 'Ventas en USD' | transloco }}</span>
           <span class="kpi__value">
             ${{ snapshot().sales.total | number:'1.2-2' }}
           </span>
         </div>
         <div class="kpi">
-          <span class="kpi__label">Ventas en Bs</span>
+          <span class="kpi__label">{{ 'Ventas en Bs' | transloco }}</span>
           <span class="kpi__value">
             Bs.{{ snapshot().sales.totalBs | number:'1.2-2' }}
           </span>
         </div>
       } @else {
         <div class="kpi">
-          <span class="kpi__label">Ventas en el periodo</span>
+          <span class="kpi__label">{{ 'Ventas en el periodo' | transloco }}</span>
           <span class="kpi__value">
             {{ branding().currencySymbol }}{{ snapshot().sales.total | number:'1.2-2' }}
           </span>
         </div>
       }
       <div class="kpi">
-        <span class="kpi__label">Ticket promedio</span>
+        <span class="kpi__label">{{ 'Ticket promedio' | transloco }}</span>
         <span class="kpi__value">
           ${{ snapshot().sales.avgTicket | number:'1.2-2' }}
         </span>
@@ -76,9 +76,9 @@
     <section class="report__card report__card--area">
       <header class="report__card-header">
         <div>
-          <h2>Evolución de ventas</h2>
+          <h2>{{ 'Evolución de ventas' | transloco }}</h2>
           <span class="report__card-sub">
-            Total ${{ snapshot().sales.total | number:'1.2-2' }}
+            {{ 'Total' | transloco }} ${{ snapshot().sales.total | number:'1.2-2' }}
             @if (isVenezuela()) {
               · Bs.{{ snapshot().sales.totalBs | number:'1.2-2' }}
             }
@@ -102,7 +102,7 @@
           ></apx-chart>
         </div>
       } @else {
-        <p class="report__empty">Sin ventas registradas en este periodo.</p>
+        <p class="report__empty">{{ 'Sin ventas registradas en este periodo.' | transloco }}</p>
       }
     </section>
   }
@@ -111,9 +111,9 @@
   @if (paymentMethods().length > 0) {
     <section class="report__card">
       <header class="report__card-header">
-        <h2>Métodos de pago</h2>
+        <h2>{{ 'Métodos de pago' | transloco }}</h2>
         <span class="report__card-sub">
-          {{ paymentMethods().length }} {{ paymentMethods().length === 1 ? 'método' : 'métodos' }} usados
+          {{ (paymentMethods().length === 1 ? '{n} método usado' : '{n} métodos usados') | transloco: { n: paymentMethods().length } }}
         </span>
       </header>
 
@@ -137,9 +137,9 @@
               ></div>
             </div>
             <div class="pm-item__foot">
-              <span>{{ m.ordersCount }} {{ m.ordersCount === 1 ? 'orden' : 'órdenes' }}</span>
+              <span>{{ (m.ordersCount === 1 ? '{n} orden' : '{n} órdenes') | transloco: { n: m.ordersCount } }}</span>
               @if ($first) {
-                <span class="pm-item__tag">Más usado</span>
+                <span class="pm-item__tag">{{ 'Más usado' | transloco }}</span>
               }
             </div>
           </li>
@@ -152,8 +152,8 @@
   @if (metrics().orders && snapshot().orders.total > 0) {
     <section class="report__card">
       <header class="report__card-header">
-        <h2>Órdenes por estado</h2>
-        <span class="report__card-sub">{{ snapshot().orders.total }} órdenes</span>
+        <h2>{{ 'Órdenes por estado' | transloco }}</h2>
+        <span class="report__card-sub">{{ '{n} órdenes' | transloco: { n: snapshot().orders.total } }}</span>
       </header>
 
       <div class="status-chart">
@@ -175,7 +175,7 @@
           @for (bar of statusBars(); track bar.key) {
             <div class="status-chart__label">
               <span class="status-chart__dot" [style.background]="bar.color"></span>
-              <span>{{ bar.label }}</span>
+              <span>{{ bar.label | transloco }}</span>
             </div>
           }
         </div>
@@ -187,7 +187,7 @@
   @if (metrics().topProducts && snapshot().topProducts.length > 0) {
     <section class="report__card">
       <header class="report__card-header">
-        <h2>Top 10 productos más vendidos</h2>
+        <h2>{{ 'Top 10 productos más vendidos' | transloco }}</h2>
       </header>
       <ul class="report__products">
         @for (p of snapshot().topProducts; track p.productId; let i = $index) {
@@ -202,7 +202,7 @@
             }
             <div class="report__products-body">
               <strong>{{ p.name }}</strong>
-              <small>{{ p.quantity }} unidades</small>
+              <small>{{ '{n} unidades' | transloco: { n: p.quantity } }}</small>
             </div>
             <span class="report__products-amount">
               ${{ p.revenue | number:'1.2-2' }}
@@ -217,14 +217,14 @@
   @if (metrics().topCustomers && snapshot().topCustomers.length > 0) {
     <section class="report__card">
       <header class="report__card-header">
-        <h2>Top 10 clientes</h2>
+        <h2>{{ 'Top 10 clientes' | transloco }}</h2>
       </header>
       <div class="customers">
         <div class="customers__header">
-          <span class="customers__col customers__col--name">Cliente</span>
-          <span class="customers__col customers__col--phone">Teléfono</span>
-          <span class="customers__col customers__col--orders">Pedidos</span>
-          <span class="customers__col customers__col--total">Total gastado</span>
+          <span class="customers__col customers__col--name">{{ 'Cliente' | transloco }}</span>
+          <span class="customers__col customers__col--phone">{{ 'Teléfono' | transloco }}</span>
+          <span class="customers__col customers__col--orders">{{ 'Pedidos' | transloco }}</span>
+          <span class="customers__col customers__col--total">{{ 'Total gastado' | transloco }}</span>
         </div>
 
         @for (c of snapshot().topCustomers; track c.phone; let i = $index) {
@@ -263,6 +263,6 @@
   }
 
   <footer class="report__footer">
-    <p>Reporte generado por <strong>{{ branding().name }}</strong> · catalogohoy.com</p>
+    <p>{{ 'Reporte generado por' | transloco }} <strong>{{ branding().name }}</strong> · catalogohoy.com</p>
   </footer>
 </article>

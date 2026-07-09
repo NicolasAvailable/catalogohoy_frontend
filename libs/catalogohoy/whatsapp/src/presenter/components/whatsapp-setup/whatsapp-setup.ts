@@ -1,4 +1,5 @@
 import { Component, DestroyRef, inject, input, OnInit, output, signal } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent, IconComponent } from '@ui';
 import { WhatsAppAccount } from '../../../domain';
 import {
@@ -10,7 +11,7 @@ import {
 @Component({
   selector: 'lib-whatsapp-setup',
   standalone: true,
-  imports: [ButtonComponent, IconComponent],
+  imports: [ButtonComponent, IconComponent, TranslocoPipe],
   templateUrl: './whatsapp-setup.html',
   host: { class: 'flex-1 flex min-h-0 min-w-0' },
 })

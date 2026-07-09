@@ -7,12 +7,12 @@
   } @else {
     <!-- Top floating action buttons (Fatness-style) -->
     <nav class="ecommerce__top-actions">
-      <button class="ecommerce__action-btn" aria-label="Favorito" type="button">
+      <button class="ecommerce__action-btn" [attr.aria-label]="'Favorito' | transloco" type="button">
         <ui-icon name="heart" styleClass="size-5" />
       </button>
       <button
         class="ecommerce__action-btn"
-        aria-label="Compartir"
+        [attr.aria-label]="'Compartir' | transloco"
         type="button"
         (click)="onShare()"
       >
@@ -48,11 +48,11 @@
     <button
       class="ecommerce__cart-pill"
       (click)="cartStore.openCart()"
-      aria-label="Ver carrito"
+      [attr.aria-label]="'Ver carrito' | transloco"
       type="button"
     >
       <ui-icon name="shoppingCart" styleClass="size-5" />
-      <span>Ver Carrito ({{ cartStore.totalItems() }})</span>
+      <span>{{ 'Ver Carrito ({n})' | transloco: { n: cartStore.totalItems() } }}</span>
     </button>
   }
 

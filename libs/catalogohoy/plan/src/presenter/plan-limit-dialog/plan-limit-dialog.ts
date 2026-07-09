@@ -1,12 +1,13 @@
 import { Component, inject, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent, DialogComponent, IconComponent } from '@ui';
 import { PlanStore } from '../../infrastructure';
 
 @Component({
   selector: 'lib-plan-limit-dialog',
   standalone: true,
-  imports: [DialogComponent, ButtonComponent, IconComponent],
+  imports: [DialogComponent, ButtonComponent, IconComponent, TranslocoPipe],
   template: `
     <ui-dialog styleClass="max-w-md w-full">
       <div class="flex flex-col items-center text-center gap-4 p-2">
@@ -16,18 +17,18 @@ import { PlanStore } from '../../infrastructure';
           <ui-icon name="triangle-alert" styleClass="size-8 text-amber-500" />
         </div>
 
-        <h3 class="text-lg font-bold">Límite de productos alcanzado</h3>
+        <h3 class="text-lg font-bold">{{ 'Límite de productos alcanzado' | transloco }}</h3>
 
         <p class="text-grey-300 text-sm">
-          Tu plan
+          {{ 'Tu plan' | transloco }}
           <strong class="text-grey-700">{{
             planStore.currentPlan()?.name
           }}</strong>
-          permite un máximo de
+          {{ 'permite un máximo de' | transloco }}
           <strong class="text-grey-700">{{
             planStore.maxProducts() > 0 ? planStore.maxProducts() : '∞'
           }}</strong>
-          productos. Actualmente tienes
+          {{ 'productos. Actualmente tienes' | transloco }}
           <strong class="text-grey-700">{{
             planStore.currentProductCount()
           }}</strong
@@ -35,19 +36,19 @@ import { PlanStore } from '../../infrastructure';
         </p>
 
         <p class="text-grey-300 text-sm">
-          Mejora tu plan para agregar más productos a tu catálogo.
+          {{ 'Mejora tu plan para agregar más productos a tu catálogo.' | transloco }}
         </p>
 
         <div class="flex gap-2 w-full">
           <ui-button
-            label="Cerrar"
+            [label]="'Cerrar' | transloco"
             variant="outlined"
             severity="contrast"
             (click)="close()"
             [fluid]="true"
           />
           <ui-button
-            label="Ver planes"
+            [label]="'Ver planes' | transloco"
             icon="crown"
             (click)="goToPlans()"
             [fluid]="true"

@@ -1,10 +1,10 @@
 <div class="pdm" [class.pdm--wholesale]="isWholesale">
   <!-- Drag handle estilo iOS sheet — visible solo en mobile. Da el affordance
        de "deslizar hacia abajo para cerrar" sin tapar el media con una X. -->
-  <button type="button" class="pdm__handle" (click)="close()" aria-label="Cerrar">
+  <button type="button" class="pdm__handle" (click)="close()" [attr.aria-label]="'Cerrar' | transloco">
     <span class="pdm__handle-bar"></span>
   </button>
-  <button type="button" class="pdm__close" (click)="close()" aria-label="Cerrar">
+  <button type="button" class="pdm__close" (click)="close()" [attr.aria-label]="'Cerrar' | transloco">
     <ui-icon name="x" styleClass="size-5" />
   </button>
 
@@ -32,9 +32,9 @@
       </div>
       }
       @if (isOutOfStock) {
-      <span class="pdm__sold-out-badge">Agotado</span>
+      <span class="pdm__sold-out-badge">{{ 'Agotado' | transloco }}</span>
       } @else if (hasDiscount) {
-      <span class="pdm__discount-badge">Oferta</span>
+      <span class="pdm__discount-badge">{{ 'Oferta' | transloco }}</span>
       }
     </div>
     } @else {
@@ -111,10 +111,10 @@
     >
       <div #descriptionEl class="pdm__description pdm__prose" [innerHTML]="product.description | safeDescriptionHtml"></div>
       @if (shouldClampDescription && descriptionExpanded()) {
-      <button type="button" class="pdm__inline-less" (click)="toggleDescription(); $event.stopPropagation()">Ver menos</button>
+      <button type="button" class="pdm__inline-less" (click)="toggleDescription(); $event.stopPropagation()">{{ 'Ver menos' | transloco }}</button>
       }
       @if (isClamped()) {
-      <span class="pdm__overlay-more">… Ver más</span>
+      <span class="pdm__overlay-more">… {{ 'Ver más' | transloco }}</span>
       }
     </div>
     }
@@ -124,8 +124,8 @@
          Without variants the size selector stays in the footer (see below). -->
     @if (!isOutOfStock && !isWholesale && isVariant) {
     <div class="flex flex-col gap-2 mt-4 mb-1">
-      <span class="text-sm font-semibold text-grey-500">Selecciona una opción</span>
-      <div class="flex flex-col gap-2" role="radiogroup" aria-label="Variante">
+      <span class="text-sm font-semibold text-grey-500">{{ 'Selecciona una opción' | transloco }}</span>
+      <div class="flex flex-col gap-2" role="radiogroup" [attr.aria-label]="'Variante' | transloco">
         @for (variant of selectorOptions; track variant.id) {
         <button
           type="button"
@@ -154,12 +154,12 @@
           @if (variant.photos?.length) {
           <ui-product-media
             [url]="variant.photos![0]"
-            [alt]="variant.name"
+            [alt]="variant.id === baseOptionId ? ('Producto original' | transloco) : variant.name"
             [controls]="false"
             styleClass="w-10 h-10 rounded-lg object-cover shrink-0"
           />
           }
-          <span class="flex-1 font-medium text-grey-700">{{ variant.name }}</span>
+          <span class="flex-1 font-medium text-grey-700">{{ variant.id === baseOptionId ? ('Producto original' | transloco) : variant.name }}</span>
           <span class="font-bold text-grey-900">{{ cs() }}{{ variant.price | tenantPrice }}</span>
         </button>
         }
@@ -167,8 +167,8 @@
     </div>
     @if (availableSizes().length) {
     <div class="pdm__sizes pdm__sizes--info">
-      <span class="pdm__sizes-label">Selecciona una talla</span>
-      <div class="pdm__sizes-grid" role="radiogroup" aria-label="Talla">
+      <span class="pdm__sizes-label">{{ 'Selecciona una talla' | transloco }}</span>
+      <div class="pdm__sizes-grid" role="radiogroup" [attr.aria-label]="'Talla' | transloco">
         @for (size of availableSizes(); track size.name) {
         <button
           type="button"
@@ -193,11 +193,11 @@
       @if (isOutOfStock) {
       <button type="button" class="pdm__add-btn pdm__add-btn--disabled" disabled>
         <ui-icon name="package-x" styleClass="size-5" />
-        <span>Agotado</span>
+        <span>{{ 'Agotado' | transloco }}</span>
       </button>
       } @else if (isWholesale) {
       <div class="pdm__tiers">
-        <span class="pdm__tiers-label">Precios al mayor</span>
+        <span class="pdm__tiers-label">{{ 'Precios al mayor' | transloco }}</span>
         @for (tier of product.wholesaleTiers; track $index) {
         <div class="pdm__tier">
           <div class="pdm__tier-info">
@@ -215,7 +215,7 @@
             (click)="onAddTierToCart(tier)"
           >
             <ui-icon name="shoppingCart" styleClass="size-4" />
-            Agregar
+            {{ 'Agregar' | transloco }}
           </button>
         </div>
         }
@@ -223,8 +223,8 @@
       } @else {
       @if (!isVariant && availableSizes().length) {
       <div class="pdm__sizes">
-        <span class="pdm__sizes-label">Selecciona una talla</span>
-        <div class="pdm__sizes-grid" role="radiogroup" aria-label="Talla">
+        <span class="pdm__sizes-label">{{ 'Selecciona una talla' | transloco }}</span>
+        <div class="pdm__sizes-grid" role="radiogroup" [attr.aria-label]="'Talla' | transloco">
           @for (size of availableSizes(); track size.name) {
           <button
             type="button"
@@ -244,7 +244,7 @@
       }
 
       <div class="pdm__quantity-row">
-        <span class="pdm__qty-label">Cantidad</span>
+        <span class="pdm__qty-label">{{ 'Cantidad' | transloco }}</span>
         <div class="pdm__quantity-selector">
           <button
             type="button"
@@ -274,7 +274,7 @@
         (click)="onAddToCart()"
       >
         <ui-icon name="shoppingCart" styleClass="size-5" />
-        <span>{{ availableSizes().length && !selectedSize() ? 'Selecciona una talla' : 'Agregar al carrito' }}</span>
+        <span>{{ (availableSizes().length && !selectedSize() ? 'Selecciona una talla' : 'Agregar al carrito') | transloco }}</span>
         <span class="pdm__total">
           @if (showReferencePrice()) {
           {{ cs() }}{{ displayPrice * quantity() | tenantPrice }}

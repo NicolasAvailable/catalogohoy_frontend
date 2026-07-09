@@ -9,6 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import {
@@ -29,7 +30,7 @@ type GalleryTab = 'products' | 'uploads';
  */
 @Component({
   selector: 'lib-image-gallery',
-  imports: [ButtonComponent, DialogComponent, IconComponent],
+  imports: [ButtonComponent, DialogComponent, IconComponent, TranslocoPipe],
   templateUrl: './image-gallery.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

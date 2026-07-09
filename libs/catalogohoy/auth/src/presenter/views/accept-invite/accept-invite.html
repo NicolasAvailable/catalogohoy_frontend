@@ -2,7 +2,7 @@
   @if (isLoading()) {
     <div class="flex flex-col items-center gap-3 text-center">
       <lucide-icon name="loader-circle" [size]="32" class="animate-spin text-violet-500" />
-      <p class="text-grey-500 text-sm">Verificando tu invitación...</p>
+      <p class="text-grey-500 text-sm">{{ 'Verificando tu invitación...' | transloco }}</p>
     </div>
 
   } @else if (errorMessage()) {
@@ -11,8 +11,8 @@
         <lucide-icon name="circle-x" [size]="32" class="text-red-500" />
       </div>
       <div>
-        <h2 class="text-lg font-semibold text-grey-700">Invitación inválida</h2>
-        <p class="text-sm text-grey-400 mt-1">{{ errorMessage() }}</p>
+        <h2 class="text-lg font-semibold text-grey-700">{{ 'Invitación inválida' | transloco }}</h2>
+        <p class="text-sm text-grey-400 mt-1">{{ errorMessage() | transloco }}</p>
       </div>
     </div>
 
@@ -31,11 +31,11 @@
 
       <!-- Texto principal -->
       <div class="flex flex-col gap-2">
-        <h1 class="text-2xl font-bold text-grey-800">¡Te invitaron a un equipo!</h1>
+        <h1 class="text-2xl font-bold text-grey-800">{{ '¡Te invitaron a un equipo!' | transloco }}</h1>
         <p class="text-grey-500 text-sm leading-relaxed">
-          Fuiste invitado a unirte al equipo de
+          {{ 'Fuiste invitado a unirte al equipo de' | transloco }}
           <span class="font-semibold text-violet-600">{{ info.tenantName }}</span>.
-          Acepta la invitación para empezar a colaborar.
+          {{ 'Acepta la invitación para empezar a colaborar.' | transloco }}
         </p>
       </div>
 
@@ -51,10 +51,10 @@
           (click)="onAccept()"
           class="w-full bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white font-semibold py-3 px-6 rounded-xl transition-colors cursor-pointer"
         >
-          {{ info.isRegistered ? 'Iniciar sesión y aceptar' : 'Crear cuenta y aceptar' }}
+          {{ (info.isRegistered ? 'Iniciar sesión y aceptar' : 'Crear cuenta y aceptar') | transloco }}
         </button>
         <p class="text-xs text-grey-400">
-          Al {{ info.isRegistered ? 'iniciar sesión' : 'registrarte' }} serás parte del equipo de
+          {{ (info.isRegistered ? 'Al iniciar sesión serás parte del equipo de' : 'Al registrarte serás parte del equipo de') | transloco }}
           <span class="font-medium text-grey-500">{{ info.tenantName }}</span>
         </p>
       </div>

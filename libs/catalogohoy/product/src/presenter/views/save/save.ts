@@ -24,6 +24,7 @@ import {
   moveItemInArray,
 } from '@angular/cdk/drag-drop';
 import { Router, RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { CategoryStore } from '@catalogohoy/category';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
@@ -87,6 +88,7 @@ import { ImageGeneratorComponent } from '../../components/image-generator/image-
     SelectComponent,
     SelectItemDirective,
     ToggleComponent,
+    TranslocoPipe,
   ],
   templateUrl: './save.html',
   styleUrl: './save.css',

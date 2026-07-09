@@ -7,6 +7,7 @@ import {
   OnInit,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
@@ -29,6 +30,7 @@ import { RateStore } from '../../../infrastructure/rate.store';
     ButtonComponent,
     InputNumberComponent,
     CheckboxComponent,
+    TranslocoPipe,
   ],
   templateUrl: './rate-view.html',
   styleUrl: './rate-view.css',

@@ -8,18 +8,18 @@
   } @else if (canCreate()) {
   <div class="create-catalog-card">
     <div>
-      <h1 class="create-catalog__title">Crear nuevo catálogo</h1>
+      <h1 class="create-catalog__title">{{ 'Crear nuevo catálogo' | transloco }}</h1>
       <p class="create-catalog__subtitle">
-        Ingresa el nombre de tu tienda para crear un nuevo catálogo.
+        {{ 'Ingresa el nombre de tu tienda para crear un nuevo catálogo.' | transloco }}
       </p>
     </div>
 
     <div class="form-field">
-      <label class="form-field__label">Nombre de la tienda</label>
+      <label class="form-field__label">{{ 'Nombre de la tienda' | transloco }}</label>
       <input
         type="text"
         class="form-field__input"
-        placeholder="Ej: Mi tienda de ropa"
+        [placeholder]="'Ej: Mi tienda de ropa' | transloco"
         [value]="name()"
         (input)="onNameChange($event)"
       />
@@ -27,22 +27,22 @@
 
     @if (slug().length > 0) {
     <div class="slug-preview">
-      <span class="slug-preview__label">Tu catálogo estará en:</span>
+      <span class="slug-preview__label">{{ 'Tu catálogo estará en:' | transloco }}</span>
       <span class="slug-preview__url">{{ slug() }}.catalogohoy.com</span>
       @if (slugStatus() === 'checking') {
       <span class="slug-status slug-status--checking">
         <ui-icon name="loader-circle" size="14" styleClass="animate-spin" />
-        Verificando...
+        {{ 'Verificando...' | transloco }}
       </span>
       } @else if (slugStatus() === 'available') {
       <span class="slug-status slug-status--available">
         <ui-icon name="check-circle" size="14" />
-        Disponible
+        {{ 'Disponible' | transloco }}
       </span>
       } @else if (slugStatus() === 'taken') {
       <span class="slug-status slug-status--taken">
         <ui-icon name="x-circle" size="14" />
-        Este nombre ya está en uso
+        {{ 'Este nombre ya está en uso' | transloco }}
       </span>
       }
     </div>
@@ -55,9 +55,9 @@
     >
       @if (isSubmitting()) {
       <ui-icon name="loader-circle" size="18" styleClass="animate-spin inline-block mr-2" />
-      Creando...
+      {{ 'Creando...' | transloco }}
       } @else {
-      Crear catálogo
+      {{ 'Crear catálogo' | transloco }}
       }
     </button>
   </div>
@@ -70,12 +70,12 @@
     <!-- Success state -->
     <div class="slots-success">
       <ui-icon name="check-circle" size="48" styleClass="text-green-500" />
-      <h2 class="slots-success__title">¡Catálogos agregados!</h2>
+      <h2 class="slots-success__title">{{ '¡Catálogos agregados!' | transloco }}</h2>
       <p class="slots-success__desc">
-        Tu suscripción ha sido actualizada. Ya puedes crear un nuevo catálogo.
+        {{ 'Tu suscripción ha sido actualizada. Ya puedes crear un nuevo catálogo.' | transloco }}
       </p>
       <button class="create-catalog__button" (click)="addSlotsSuccess.set(false)">
-        Crear catálogo ahora
+        {{ 'Crear catálogo ahora' | transloco }}
       </button>
     </div>
     } @else {
@@ -83,9 +83,9 @@
     <div class="slots-header">
       <ui-icon name="folder-plus" size="36" styleClass="text-violet-500" />
       <div>
-        <h2 class="slots-header__title">Agregar catálogos adicionales</h2>
+        <h2 class="slots-header__title">{{ 'Agregar catálogos adicionales' | transloco }}</h2>
         <p class="slots-header__desc">
-          Usas {{ currentCatalogCount() }} de {{ totalSlots() }} catálogos disponibles.
+          {{ 'Usas {used} de {total} catálogos disponibles.' | transloco: { used: currentCatalogCount(), total: totalSlots() } }}
         </p>
       </div>
     </div>
@@ -93,8 +93,8 @@
     <!-- Stepper -->
     <div class="slots-stepper-row">
       <div class="slots-stepper-info">
-        <span class="slots-stepper-info__label">Catálogos a agregar</span>
-        <span class="slots-stepper-info__price">${{ catalogAddonPrice }} / mes c/u</span>
+        <span class="slots-stepper-info__label">{{ 'Catálogos a agregar' | transloco }}</span>
+        <span class="slots-stepper-info__price">{{ '${price} / mes c/u' | transloco: { price: catalogAddonPrice } }}</span>
       </div>
       <div class="slots-stepper-controls">
         <button
@@ -109,8 +109,8 @@
 
     <!-- Total -->
     <div class="slots-total">
-      <span class="slots-total__label">Total mensual adicional</span>
-      <span class="slots-total__amount">${{ addonCost() }}/mes</span>
+      <span class="slots-total__label">{{ 'Total mensual adicional' | transloco }}</span>
+      <span class="slots-total__amount">{{ '${cost}/mes' | transloco: { cost: addonCost() } }}</span>
     </div>
 
     @if (addSlotsError()) {
@@ -127,13 +127,13 @@
     >
       @if (isAddingSlots()) {
       <ui-icon name="loader-circle" size="18" styleClass="animate-spin inline-block mr-2" />
-      Procesando...
+      {{ 'Procesando...' | transloco }}
       } @else {
-      Agregar {{ addonQty() }} catálogo{{ addonQty() > 1 ? 's' : '' }}
+      {{ (addonQty() > 1 ? 'Agregar {n} catálogos' : 'Agregar {n} catálogo') | transloco: { n: addonQty() } }}
       }
     </button>
     <p class="slots-note">
-      El cargo se aplicará de forma prorrateada en tu próxima factura de Stripe.
+      {{ 'El cargo se aplicará de forma prorrateada en tu próxima factura de Stripe.' | transloco }}
     </p>
     }
   </div>
@@ -144,13 +144,13 @@
   <div class="create-catalog-card">
     <div class="no-slots">
       <ui-icon name="package-x" size="56" styleClass="text-slate-300" />
-      <h2 class="no-slots__title">Necesitas un plan activo</h2>
+      <h2 class="no-slots__title">{{ 'Necesitas un plan activo' | transloco }}</h2>
       <p class="no-slots__description">
-        Para crear catálogos primero debes adquirir un plan.
+        {{ 'Para crear catálogos primero debes adquirir un plan.' | transloco }}
       </p>
       <button class="no-slots__button" (click)="goToPlans()">
         <ui-icon name="arrow-right" size="18" />
-        Ver planes
+        {{ 'Ver planes' | transloco }}
       </button>
     </div>
   </div>

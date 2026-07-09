@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { StripHtmlPipe } from '@shared/presenter';
 import { IconComponent } from '@ui';
 import { CartItem } from '../../../domain';
@@ -9,7 +10,13 @@ import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 
 @Component({
   selector: 'lib-cart-drawer',
-  imports: [DecimalPipe, IconComponent, StripHtmlPipe, TenantPricePipe],
+  imports: [
+    DecimalPipe,
+    IconComponent,
+    StripHtmlPipe,
+    TenantPricePipe,
+    TranslocoPipe,
+  ],
   templateUrl: './cart-drawer.html',
   styleUrl: './cart-drawer.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

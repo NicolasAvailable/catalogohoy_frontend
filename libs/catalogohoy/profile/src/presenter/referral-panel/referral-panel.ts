@@ -2,6 +2,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { TenantStore } from '@catalogohoy/tenant';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent, CardComponent, IconComponent } from '@ui';
 
 interface ReferralListItem {
@@ -18,7 +19,7 @@ interface ReferralListItem {
 @Component({
   selector: 'lib-referral-panel',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, CardComponent, IconComponent, ButtonComponent],
+  imports: [DatePipe, DecimalPipe, CardComponent, IconComponent, ButtonComponent, TranslocoPipe],
   templateUrl: './referral-panel.html',
 })
 export class ReferralPanel implements OnInit {

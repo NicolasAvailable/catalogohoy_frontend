@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { MetaPixelService } from '@catalogohoy/core';
 import {
   flagEmoji,
@@ -47,6 +48,7 @@ type CheckoutPhase = 'form' | 'confirm' | 'sent';
     TextareaComponent,
     QrCodeComponent,
     TenantPricePipe,
+    TranslocoPipe,
   ],
   templateUrl: './checkout.html',
   styleUrl: './checkout.css',
@@ -58,6 +60,7 @@ export default class Checkout {
   public readonly cs = this.ecommerceStore.currencySymbol;
   private readonly metaPixel = inject(MetaPixelService);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
 
   /** Rendered inside the catalog-editor preview iframe (?preview=true). In that
    *  mode there's no real cart, so the empty-cart guard must not bounce out —
@@ -282,7 +285,11 @@ export default class Checkout {
     // first configured one when no specific seller is passed.
     const seller = button ?? this.whatsappButton();
     if (!seller?.number) {
-      alert('Este catálogo no tiene un número de WhatsApp configurado.');
+      alert(
+        this.transloco.translate(
+          'Este catálogo no tiene un número de WhatsApp configurado.'
+        )
+      );
       return;
     }
 
@@ -326,7 +333,11 @@ export default class Checkout {
 
     if (!orderResult || orderResult.isLeft()) {
       this.isSubmitting.set(false);
-      alert('Hubo un error al procesar tu pedido. Por favor intenta de nuevo.');
+      alert(
+        this.transloco.translate(
+          'Hubo un error al procesar tu pedido. Por favor intenta de nuevo.'
+        )
+      );
       return;
     }
 

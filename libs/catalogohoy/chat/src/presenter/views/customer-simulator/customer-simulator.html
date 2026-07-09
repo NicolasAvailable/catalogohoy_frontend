@@ -4,8 +4,8 @@
     <div class="sim__header">
       <img src="/images/whatsapp.svg" alt="WhatsApp" class="sim__header-logo" />
       <div class="sim__header-text">
-        <span class="sim__header-title">Chat de prueba</span>
-        <span class="sim__header-sub">simulador de cliente</span>
+        <span class="sim__header-title">{{ 'Chat de prueba' | transloco }}</span>
+        <span class="sim__header-sub">{{ 'simulador de cliente' | transloco }}</span>
       </div>
       <span class="sim__demo-pill">DEMO</span>
     </div>
@@ -14,25 +14,24 @@
     <!-- Identify gate -->
     <div class="sim__gate">
       <img src="/images/whatsapp.svg" alt="" class="sim__gate-logo" />
-      <h1 class="sim__gate-title">Escríbele al negocio</h1>
+      <h1 class="sim__gate-title">{{ 'Escríbele al negocio' | transloco }}</h1>
       <p class="sim__gate-sub">
-        Simula ser un cliente. Tus mensajes llegan al inbox del comercio en
-        tiempo real.
+        {{ 'Simula ser un cliente. Tus mensajes llegan al inbox del comercio en tiempo real.' | transloco }}
       </p>
       <input
         class="sim__input-field"
-        placeholder="Tu nombre"
+        [placeholder]="'Tu nombre' | transloco"
         [ngModel]="name()"
         (ngModelChange)="name.set($event)"
       />
       <input
         class="sim__input-field"
-        placeholder="Tu teléfono (ej: +58 412 1234567)"
+        [placeholder]="'Tu teléfono (ej: +58 412 1234567)' | transloco"
         [ngModel]="phone()"
         (ngModelChange)="phone.set($event)"
       />
       <button class="sim__start" [disabled]="!canStart()" (click)="start()">
-        Iniciar chat
+        {{ 'Iniciar chat' | transloco }}
       </button>
     </div>
     } @else {
@@ -48,7 +47,7 @@
         <span class="sim__bubble-time">{{ formatTime(msg.createdAt) }}</span>
       </div>
       } @empty {
-      <p class="sim__empty">Envía el primer mensaje para empezar 👋</p>
+      <p class="sim__empty">{{ 'Envía el primer mensaje para empezar 👋' | transloco }}</p>
       }
     </div>
 
@@ -57,7 +56,7 @@
       <textarea
         class="sim__composer-input"
         rows="1"
-        placeholder="Escribe un mensaje"
+        [placeholder]="'Escribe un mensaje' | transloco"
         [ngModel]="draft()"
         (ngModelChange)="draft.set($event)"
         (keydown)="onKeydown($event)"
@@ -66,7 +65,7 @@
         class="sim__send"
         [disabled]="!draft().trim() || isSending()"
         (click)="send()"
-        aria-label="Enviar"
+        [attr.aria-label]="'Enviar' | transloco"
       >
         <ui-icon name="send" size="20" />
       </button>

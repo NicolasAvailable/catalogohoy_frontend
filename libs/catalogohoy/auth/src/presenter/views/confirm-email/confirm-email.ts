@@ -1,5 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent } from '@ui';
 import { AuthenticationFacade } from '../../../application';
 
@@ -10,7 +11,7 @@ import { AuthenticationFacade } from '../../../application';
  */
 @Component({
   selector: 'app-confirm-email',
-  imports: [ButtonComponent],
+  imports: [ButtonComponent, TranslocoPipe],
   templateUrl: './confirm-email.html',
 })
 export class ConfirmEmail implements OnInit {

@@ -68,8 +68,8 @@
     </div>
 
     <div class="template-info">
-      <span class="template-name">{{ tpl.name }}</span>
-      <span class="template-desc">{{ tpl.description }}</span>
+      <span class="template-name">{{ tpl.name | transloco }}</span>
+      <span class="template-desc">{{ tpl.description | transloco }}</span>
     </div>
 
     @if (selected() === tpl.id) {

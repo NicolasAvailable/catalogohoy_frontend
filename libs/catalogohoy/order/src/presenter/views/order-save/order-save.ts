@@ -18,6 +18,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ProductStore } from '@catalogohoy/product';
 import { RateStore, RateType } from '@catalogohoy/rate';
 import { Exception } from '@shared/domain';
@@ -47,6 +48,7 @@ import { OrderStore } from '../../../infrastructure/order.store';
     ReactiveFormsModule,
     FormsModule,
     RouterLink,
+    TranslocoPipe,
     CardComponent,
     InputTextComponent,
     TextareaComponent,

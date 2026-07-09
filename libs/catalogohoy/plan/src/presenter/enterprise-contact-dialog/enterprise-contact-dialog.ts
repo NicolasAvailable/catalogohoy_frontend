@@ -8,6 +8,7 @@ import {
 } from '@catalogohoy/ecommerce-config';
 import { ProfileStore } from '@catalogohoy/profile';
 import { TenantStore } from '@catalogohoy/tenant';
+import { TranslocoPipe } from '@jsverse/transloco';
 import {
   ButtonComponent,
   DialogComponent,
@@ -51,6 +52,7 @@ const RESULT_STEP = 5;
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
+    TranslocoPipe,
   ],
   templateUrl: './enterprise-contact-dialog.html',
   styleUrl: './enterprise-contact-dialog.css',

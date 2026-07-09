@@ -7,6 +7,7 @@ import { OrderService, Order } from '@catalogohoy/order';
 import { PlanStore } from '@catalogohoy/plan';
 import { Product, ProductService } from '@catalogohoy/product';
 import { TenantStore } from '@catalogohoy/tenant';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import {
@@ -58,6 +59,7 @@ type TabKey = 'members' | 'history';
     TabsComponent,
     TabPanelDirective,
     PremiumUpgradePromptComponent,
+    TranslocoPipe,
   ],
   templateUrl: './teams-view.html',
   styleUrl: './teams-view.css',

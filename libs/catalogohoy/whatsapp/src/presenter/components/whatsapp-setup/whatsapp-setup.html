@@ -24,12 +24,12 @@
 
     <div>
       <h2 class="text-2xl font-bold text-grey-800 leading-tight">
-        Administra todos tus mensajes en una sola bandeja de entrada
+        {{ 'Administra todos tus mensajes en una sola bandeja de entrada' | transloco }}
       </h2>
       <p class="text-sm text-grey-500 mt-3 max-w-sm mx-auto">
-        Conecta tu número de WhatsApp Business para atender a tus clientes desde
-        aquí. Con <strong>coexistencia</strong>: sigues usando tu app de
-        WhatsApp normal en el teléfono al mismo tiempo.
+        {{ 'Conecta tu número de WhatsApp Business para atender a tus clientes desde aquí. Con' | transloco }}
+        <strong>{{ 'coexistencia' | transloco }}</strong>:
+        {{ 'sigues usando tu app de WhatsApp normal en el teléfono al mismo tiempo.' | transloco }}
       </p>
     </div>
 
@@ -46,7 +46,7 @@
       <!-- Demo: probar el inbox en tiempo real sin la aprobación de Meta. -->
       <div class="flex items-center gap-3 my-1">
         <span class="flex-1 h-px bg-grey-100"></span>
-        <span class="text-xs text-grey-400">o</span>
+        <span class="text-xs text-grey-400">{{ 'o' | transloco }}</span>
         <span class="flex-1 h-px bg-grey-100"></span>
       </div>
 
@@ -59,8 +59,7 @@
         styleClass="w-full"
       />
       <p class="text-xs text-grey-400">
-        Prueba el inbox en tiempo real con el simulador de cliente, sin esperar
-        a la aprobación de Meta.
+        {{ 'Prueba el inbox en tiempo real con el simulador de cliente, sin esperar a la aprobación de Meta.' | transloco }}
       </p>
     </div>
   </div>
@@ -74,11 +73,10 @@
 
     <div class="text-center">
       <h2 class="text-xl font-bold text-grey-800">
-        WhatsApp Business conectado
+        {{ 'WhatsApp Business conectado' | transloco }}
       </h2>
       <p class="text-sm text-grey-500 mt-2">
-        Tu cuenta de WhatsApp Business ha sido conectada exitosamente. Ya puedes
-        recibir y enviar mensajes desde tu catálogo.
+        {{ 'Tu cuenta de WhatsApp Business ha sido conectada exitosamente. Ya puedes recibir y enviar mensajes desde tu catálogo.' | transloco }}
       </p>
     </div>
   </div>

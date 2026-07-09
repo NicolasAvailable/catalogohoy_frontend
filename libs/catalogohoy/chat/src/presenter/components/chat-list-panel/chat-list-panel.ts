@@ -1,11 +1,12 @@
 import { Component, inject } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, InputSearchComponent } from '@ui';
 import { ChatStore } from '../../../infrastructure/chat.store';
 
 @Component({
   selector: 'lib-chat-list-panel',
   standalone: true,
-  imports: [IconComponent, InputSearchComponent],
+  imports: [IconComponent, InputSearchComponent, TranslocoPipe],
   templateUrl: './chat-list-panel.html',
 })
 export class ChatListPanelComponent {

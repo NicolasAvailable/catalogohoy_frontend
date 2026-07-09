@@ -5,8 +5,13 @@ import {
   provideAppInitializer,
   Provider,
 } from '@angular/core';
-import { provideTransloco, TranslocoService } from '@jsverse/transloco';
+import {
+  provideTransloco,
+  provideTranslocoTranspiler,
+  TranslocoService,
+} from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
+import { KeepParamsTranspiler } from './keep-params.transpiler';
 import { APP_LANGUAGES } from './language.const';
 import { LanguageService } from './language.service';
 import { TranslocoHttpLoader } from './transloco.http-loader';
@@ -32,6 +37,8 @@ export const provideTranslation = (): Array<
       },
       loader: TranslocoHttpLoader,
     }),
+    // Conserva placeholders sin resolver (paginador PrimeNG, params olvidados).
+    provideTranslocoTranspiler(KeepParamsTranspiler),
     provideAppInitializer(() => {
       const initializerFn = (() => {
         const language = inject(LanguageService);

@@ -1,10 +1,11 @@
 import { Component } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '@ui';
 
 @Component({
   selector: 'lib-catalog-expired',
   standalone: true,
-  imports: [IconComponent],
+  imports: [IconComponent, TranslocoPipe],
   template: `
     <div
       class="fixed inset-0 z-50 bg-white flex items-center justify-center p-6"
@@ -17,12 +18,14 @@ import { IconComponent } from '@ui';
         </div>
 
         <h1 class="text-2xl font-bold text-grey-700 mb-3">
-          Catálogo no disponible
+          {{ 'Catálogo no disponible' | transloco }}
         </h1>
 
         <p class="text-grey-300 text-base leading-relaxed">
-          Este catálogo se encuentra temporalmente fuera de servicio. Por favor,
-          intenta más tarde.
+          {{
+            'Este catálogo se encuentra temporalmente fuera de servicio. Por favor, intenta más tarde.'
+              | transloco
+          }}
         </p>
 
         <div
@@ -33,7 +36,7 @@ import { IconComponent } from '@ui';
             styleClass="size-4 text-primary-500"
           />
           <span class="text-sm text-primary-600 font-medium"
-            >Catálogo suspendido</span
+            >{{ 'Catálogo suspendido' | transloco }}</span
           >
         </div>
       </div>

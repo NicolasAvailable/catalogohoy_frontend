@@ -1,12 +1,19 @@
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { LanguageSelectorComponent } from '@catalogohoy/core';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, InputSearchComponent } from '@ui';
 import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 
 @Component({
   selector: 'lib-catalog-header',
-  imports: [IconComponent, InputSearchComponent],
+  imports: [
+    IconComponent,
+    InputSearchComponent,
+    LanguageSelectorComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './catalog-header.html',
   styleUrl: './catalog-header.css',
 })

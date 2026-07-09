@@ -8,13 +8,14 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { SafeDescriptionHtmlPipe, StripHtmlPipe } from '@shared/presenter';
 import { EcommerceStore } from '../../../infrastructure';
 
 @Component({
   selector: 'lib-catalog-hero',
   standalone: true,
-  imports: [SafeDescriptionHtmlPipe],
+  imports: [SafeDescriptionHtmlPipe, TranslocoPipe],
   templateUrl: './catalog-hero.html',
   styleUrl: './catalog-hero.css',
 })

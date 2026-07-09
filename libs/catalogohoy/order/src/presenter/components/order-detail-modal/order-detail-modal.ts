@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import {
@@ -35,6 +36,7 @@ import { OrderStore } from '../../../infrastructure/order.store';
   imports: [
     CommonModule,
     FormsModule,
+    TranslocoPipe,
     IconComponent,
     ImageComponent,
     SelectComponent,

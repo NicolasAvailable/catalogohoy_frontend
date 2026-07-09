@@ -27,6 +27,7 @@ jest.mock('@catalogohoy/core', () => ({
 }));
 
 import { TestBed } from '@angular/core/testing';
+import { TranslocoTestingModule } from '@jsverse/transloco';
 import {
   Product,
   ProductPrimitives,
@@ -38,6 +39,15 @@ import { CartItem } from '../domain';
 import { CartStore } from './cart.store';
 
 const CART_KEY = 'catalogohoy_cart';
+
+// The store injects TranslocoService (key-as-text: missing keys resolve to the
+// Spanish key itself, so assertions keep using the raw Spanish strings).
+const translocoTestingImports = [
+  TranslocoTestingModule.forRoot({
+    langs: {},
+    translocoConfig: { availableLangs: ['es'], defaultLang: 'es' },
+  }),
+];
 
 function buildProduct(overrides: Partial<ProductPrimitives> = {}): Product {
   return Product.fromPrimitives({
@@ -70,7 +80,7 @@ describe('CartStore', () => {
   beforeEach(() => {
     localStorage.clear();
     (toast.error as jest.Mock).mockClear();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ imports: translocoTestingImports });
     store = TestBed.inject(CartStore);
   });
 
@@ -260,7 +270,7 @@ describe('CartStore', () => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { CartStore: FreshCartStore } = require('./cart.store');
         TestBed.resetTestingModule();
-        TestBed.configureTestingModule({});
+        TestBed.configureTestingModule({ imports: translocoTestingImports });
         const rehydrated = TestBed.inject(FreshCartStore) as InstanceType<
           typeof CartStore
         >;
@@ -276,7 +286,7 @@ describe('CartStore', () => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { CartStore: FreshCartStore } = require('./cart.store');
         TestBed.resetTestingModule();
-        TestBed.configureTestingModule({});
+        TestBed.configureTestingModule({ imports: translocoTestingImports });
         const rehydrated = TestBed.inject(FreshCartStore) as InstanceType<
           typeof CartStore
         >;

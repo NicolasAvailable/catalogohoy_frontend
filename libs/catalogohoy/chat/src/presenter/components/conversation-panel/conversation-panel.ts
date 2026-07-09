@@ -12,6 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { TooltipModule } from 'primeng/tooltip';
 import { TeamStore } from '@catalogohoy/teams';
 import { ToastService } from '@shared/infrastructure';
@@ -36,6 +37,7 @@ import { ChatStore } from '../../../infrastructure/chat.store';
     ImageComponent,
     SelectComponent,
     PickerComponent,
+    TranslocoPipe,
   ],
   templateUrl: './conversation-panel.html',
 })

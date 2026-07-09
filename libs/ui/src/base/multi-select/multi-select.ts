@@ -35,8 +35,8 @@ import { MultiSelectModule } from 'primeng/multiselect';
       [fluid]="true"
       [filter]="filter()"
       [inputId]="inputId()"
-      [emptyMessage]="emptyMessage()"
-      [emptyFilterMessage]="emptyFilterMessage()"
+      [emptyMessage]="emptyMessage() | translate"
+      [emptyFilterMessage]="emptyFilterMessage() | translate"
       [filterPlaceHolder]="filterPlaceHolder()"
       [showToggleAll]="showToggleAll()"
     >

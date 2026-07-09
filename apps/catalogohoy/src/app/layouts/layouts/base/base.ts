@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { environment } from '@catalogohoy/env';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ExpirationBannerComponent, PlanStore } from '@catalogohoy/plan';
 import { WhatsappSupportComponent } from '@ui';
 import { AiAnnouncement, Navbar, Sidebar, UpdateBanner } from '../../components';
@@ -15,6 +16,7 @@ import { AiAnnouncement, Navbar, Sidebar, UpdateBanner } from '../../components'
     ExpirationBannerComponent,
     AiAnnouncement,
     UpdateBanner,
+    TranslocoPipe,
   ],
   templateUrl: './base.html',
 })

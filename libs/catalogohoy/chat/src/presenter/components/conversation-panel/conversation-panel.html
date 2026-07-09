@@ -2,7 +2,7 @@
   <!-- Empty state -->
   <div class="flex-1 flex flex-col items-center justify-center gap-3 bg-lino-400">
     <ui-icon name="message-square" size="48" styleClass="text-grey-100" />
-    <p class="text-sm text-grey-300">Selecciona una conversación para comenzar</p>
+    <p class="text-sm text-grey-300">{{ 'Selecciona una conversación para comenzar' | transloco }}</p>
   </div>
 } @else {
   <div class="flex flex-col h-full bg-lino-400 min-w-0">
@@ -12,7 +12,7 @@
       <button
         (click)="chatStore.closeChat()"
         class="lg:hidden -ml-1 w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 shrink-0"
-        title="Volver"
+        [title]="'Volver' | transloco"
       >
         <ui-icon name="chevron-left" size="20" styleClass="text-grey-500" />
       </button>
@@ -37,7 +37,7 @@
           [options]="assigneeOptions()"
           optionLabel="label"
           optionValue="value"
-          placeholder="Asignar a"
+          [placeholder]="'Asignar a' | transloco"
           size="small"
           [ngModel]="chatStore.selectedChat()!.assignedToUserId"
           (ngModelChange)="onAssign($event)"
@@ -47,7 +47,7 @@
       <button
         (click)="chatStore.toggleMute(chatStore.selectedChat()!.id)"
         class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 transition-colors shrink-0"
-        [title]="chatStore.selectedChat()!.muted ? 'Activar notificaciones' : 'Silenciar'"
+        [title]="(chatStore.selectedChat()!.muted ? 'Activar notificaciones' : 'Silenciar') | transloco"
       >
         @if (chatStore.selectedChat()!.muted) {
           <ui-icon name="volume-x" size="16" styleClass="text-primary-500" />
@@ -95,7 +95,7 @@
                 (click)="startReply(msg)"
                 class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-grey-400 hover:bg-grey-100 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
                 [class.order-2]="!msg.isMine"
-                title="Responder"
+                [title]="'Responder' | transloco"
               >
                 <ui-icon name="reply" size="14" />
               </button>
@@ -118,7 +118,7 @@
                 <div
                   class="flex items-center gap-1 text-[10px] font-semibold text-amber-700 mb-1"
                 >
-                  <ui-icon name="eye-off" size="11" /> Nota interna · solo el equipo
+                  <ui-icon name="eye-off" size="11" /> {{ 'Nota interna · solo el equipo' | transloco }}
                 </div>
                 }
                 @if (quotedOf(msg); as q) {
@@ -146,7 +146,7 @@
                 @if (msg.type === 'image' && msg.mediaUrl) {
                 <ui-image
                   [src]="msg.mediaUrl"
-                  alt="Imagen"
+                  [alt]="'Imagen' | transloco"
                   styleClass="block rounded-lg overflow-hidden max-w-[15rem] cursor-zoom-in"
                   imageClass="w-full max-h-64 object-cover"
                 />
@@ -170,10 +170,10 @@
                   } @else if (msg.status === 'failed') {
                   <span
                     class="text-red-400 font-medium inline-flex items-center gap-1 cursor-help"
-                    [pTooltip]="msg.error || 'No se pudo enviar. Intentá de nuevo.'"
+                    [pTooltip]="msg.error || ('No se pudo enviar. Intentá de nuevo.' | transloco)"
                     tooltipPosition="top"
                   >
-                    <ui-icon name="triangle-alert" size="12" /> No enviado
+                    <ui-icon name="triangle-alert" size="12" /> {{ 'No enviado' | transloco }}
                   </span>
                   }
                 </div>
@@ -198,7 +198,7 @@
           [class.border-transparent]="composerMode() !== 'message'"
           [class.text-grey-400]="composerMode() !== 'message'"
         >
-          Mensaje
+          {{ 'Mensaje' | transloco }}
         </button>
         <button
           (click)="setComposerMode('whisper')"
@@ -209,7 +209,7 @@
           [class.border-transparent]="composerMode() !== 'whisper'"
           [class.text-grey-400]="composerMode() !== 'whisper'"
         >
-          <ui-icon name="eye-off" size="14" /> Susurro
+          <ui-icon name="eye-off" size="14" /> {{ 'Susurro' | transloco }}
         </button>
       </div>
       <div
@@ -225,14 +225,14 @@
             class="flex-1 min-w-0 border-l-2 border-primary-400 bg-grey-50 rounded-md px-2 py-1"
           >
             <span class="block text-xs font-semibold text-primary-600">
-              Respondiendo a {{ quotedAuthor(r) }}
+              {{ 'Respondiendo a {name}' | transloco: { name: quotedAuthor(r) } }}
             </span>
             <span class="block text-xs text-grey-500 truncate">{{ quotedText(r) }}</span>
           </div>
           <button
             (click)="cancelReply()"
             class="shrink-0 w-6 h-6 rounded-full hover:bg-grey-100 flex items-center justify-center text-grey-400 cursor-pointer"
-            title="Cancelar"
+            [title]="'Cancelar' | transloco"
           >
             <ui-icon name="x" size="14" />
           </button>
@@ -243,9 +243,9 @@
           (ngModelChange)="messageInput.set($event)"
           (keydown)="onKeydown($event)"
           [placeholder]="
-            composerMode() === 'whisper'
+            (composerMode() === 'whisper'
               ? 'Nota interna para el equipo (no la ve el cliente)…'
-              : 'Escribe una respuesta...'
+              : 'Escribe una respuesta...') | transloco
           "
           class="w-full resize-none bg-transparent px-4 py-3 text-sm leading-relaxed text-grey-700 placeholder:text-grey-300 focus:outline-none min-h-[5rem] max-h-48 overflow-y-auto"
         ></textarea>
@@ -259,7 +259,7 @@
               <button
                 (click)="toggleQuickReplies($event)"
                 class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
-                pTooltip="Respuestas rápidas"
+                [pTooltip]="'Respuestas rápidas' | transloco"
                 tooltipPosition="top"
               >
                 <ui-icon name="zap" size="18" styleClass="text-grey-400" />
@@ -287,7 +287,7 @@
               <button
                 (click)="toggleEmojiPicker($event)"
                 class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
-                pTooltip="Emojis"
+                [pTooltip]="'Emojis' | transloco"
                 tooltipPosition="top"
               >
                 <ui-icon name="smile" size="18" styleClass="text-grey-400" />
@@ -321,7 +321,7 @@
             <button
               (click)="fileInput.click()"
               class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
-              pTooltip="Adjuntar imágenes"
+              [pTooltip]="'Adjuntar imágenes' | transloco"
               tooltipPosition="top"
             >
               <ui-icon name="paperclip" size="18" styleClass="text-grey-400" />
@@ -349,7 +349,7 @@
               [disabled]="(!messageInput().trim() && !pendingMedia().length) || chatStore.isSendingMessage() || overLimit()"
               (click)="send()"
             >
-              Enviar <ui-icon name="send" size="14" />
+              {{ 'Enviar' | transloco }} <ui-icon name="send" size="14" />
             </button>
           </div>
         </div>
@@ -365,13 +365,13 @@
       <button
         (click)="closePreview()"
         class="w-9 h-9 flex items-center justify-center rounded-full text-white hover:bg-white/10 cursor-pointer"
-        pTooltip="Descartar"
+        [pTooltip]="'Descartar' | transloco"
         tooltipPosition="right"
       >
         <ui-icon name="x" size="20" />
       </button>
       <span class="text-sm text-white/80 truncate">
-        {{ chatStore.selectedChat()?.customerName || 'Cliente' }}
+        {{ chatStore.selectedChat()?.customerName || ('Cliente' | transloco) }}
       </span>
       <span class="w-9"></span>
     </div>
@@ -380,7 +380,7 @@
     <div class="flex-1 min-h-0 flex items-center justify-center px-6">
       <img
         [src]="active.preview"
-        alt="Adjunto"
+        [alt]="'Adjunto' | transloco"
         class="max-h-full max-w-full object-contain rounded-lg"
       />
     </div>
@@ -407,7 +407,7 @@
       <button
         (click)="fileInput.click()"
         class="w-14 h-14 rounded-lg border-2 border-dashed border-white/30 text-white/60 flex items-center justify-center hover:bg-white/10 cursor-pointer shrink-0"
-        pTooltip="Agregar"
+        [pTooltip]="'Agregar' | transloco"
         tooltipPosition="top"
       >
         <ui-icon name="plus" size="20" />
@@ -423,7 +423,7 @@
             [ngModel]="active.caption"
             (ngModelChange)="setActiveCaption($event)"
             (keydown.enter)="send()"
-            placeholder="Añade un comentario..."
+            [placeholder]="'Añade un comentario...' | transloco"
             class="w-full bg-transparent text-white placeholder:text-white/40 text-sm focus:outline-none"
           />
         </div>
@@ -431,7 +431,7 @@
           (click)="send()"
           [disabled]="chatStore.isSendingMessage()"
           class="w-11 h-11 rounded-full bg-primary-500 hover:bg-primary-600 text-white flex items-center justify-center cursor-pointer disabled:opacity-50 shrink-0"
-          pTooltip="Enviar"
+          [pTooltip]="'Enviar' | transloco"
           tooltipPosition="top"
         >
           <ui-icon name="send" size="18" />

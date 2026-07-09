@@ -19,8 +19,8 @@
   } @else if (notFound()) {
     <div class="public-report__not-found">
       <ui-icon name="triangle-alert" styleClass="size-10 text-amber-500" />
-      <h1>Reporte no encontrado</h1>
-      <p>Este link ya no está disponible o fue eliminado por el administrador del catálogo.</p>
+      <h1>{{ 'Reporte no encontrado' | transloco }}</h1>
+      <p>{{ 'Este link ya no está disponible o fue eliminado por el administrador del catálogo.' | transloco }}</p>
     </div>
   } @else if (report(); as r) {
     <lib-report-content

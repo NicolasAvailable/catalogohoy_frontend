@@ -7,6 +7,7 @@ import {
   TenantCurrencyStore,
 } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { SkeletonModule } from 'primeng/skeleton';
 import { IconComponent } from '@ui';
 import {
@@ -138,7 +139,7 @@ function toPlanDisplay(plan: Plan, currentPlanPosition: number, rateType: string
 
 @Component({
   selector: 'lib-plans',
-  imports: [IconComponent, DecimalPipe, EnterpriseContactDialog, SkeletonModule],
+  imports: [IconComponent, DecimalPipe, EnterpriseContactDialog, SkeletonModule, TranslocoPipe],
   templateUrl: './plans.html',
   styleUrl: './plans.css',
   host: {

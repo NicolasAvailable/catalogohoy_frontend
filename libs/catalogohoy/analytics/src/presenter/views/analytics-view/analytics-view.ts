@@ -5,6 +5,7 @@ import { PlanStore } from '@catalogohoy/plan';
 import { AnalyticsStore } from '../../../infrastructure';
 import { PageViewsPeriod } from '../../../domain';
 import { IconComponent, PremiumUpgradePromptComponent } from '@ui';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
 
 @Component({
@@ -15,6 +16,7 @@ import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
     DecimalPipe,
     IconComponent,
     PremiumUpgradePromptComponent,
+    TranslocoPipe,
   ],
   templateUrl: './analytics-view.html',
 })

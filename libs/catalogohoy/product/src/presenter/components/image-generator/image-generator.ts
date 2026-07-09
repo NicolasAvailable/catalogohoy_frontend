@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import {
@@ -48,6 +49,7 @@ const STYLE_OPTIONS: { value: string; label: string; icon: string }[] = [
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
+    TranslocoPipe,
   ],
   templateUrl: './image-generator.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -8,6 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { DialogComponent, IconComponent } from '@ui';
@@ -29,7 +30,7 @@ const PRESETS = [150, 500, 1000, 2000];
  */
 @Component({
   selector: 'lib-credits-widget',
-  imports: [IconComponent, DialogComponent],
+  imports: [IconComponent, DialogComponent, TranslocoPipe],
   templateUrl: './credits-widget.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
