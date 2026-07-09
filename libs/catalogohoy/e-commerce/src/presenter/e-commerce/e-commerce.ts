@@ -76,9 +76,11 @@ export class ECommerce implements OnInit, OnDestroy {
 
   public async onShare(): Promise<void> {
     const info = this.ecommerceStore.effectiveCatalogInfo();
+    // La descripción viene del editor rich-text como HTML; sin limpiar, el
+    // Web Share API pega los <p> literales en WhatsApp/Telegram (Android).
     const shareData = {
       title: info?.name ?? 'Catálogo',
-      text: info?.description ?? '',
+      text: new StripHtmlPipe().transform(info?.description),
       url: window.location.href,
     };
     if (navigator.share) {
