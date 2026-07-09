@@ -55,6 +55,13 @@ export const internalRoutes: Route[] = [
       import('./coupons/coupons.routes').then((m) => m.couponsRoutes),
   },
   {
+    path: 'expenses',
+    loadChildren: () =>
+      import('./business-expenses/business-expenses.routes').then(
+        (m) => m.businessExpensesRoutes
+      ),
+  },
+  {
     path: 'orders',
     loadChildren: () =>
       import('./platform-orders/platform-orders.routes').then(

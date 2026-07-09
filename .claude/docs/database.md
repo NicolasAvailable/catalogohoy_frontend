@@ -542,6 +542,24 @@ para que "Catálogos activos" del panel interno muestre el estado **"En gracia"*
 (`past_due` = la renovación ya extendió `plan_expires_at` — el webhook lo trata como
 válido — pero Stripe sigue reintentando el cobro; por fechas solas parecerían activos).
 
+### `business_expenses`
+
+Gastos del negocio (2026-07-09): suscripciones/servicios que paga la empresa (Supabase,
+Vercel, Google Workspace, …), administrados desde la sección "Gastos" del panel interno.
+**RLS ON sin policies** = acceso solo vía RPCs.
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | identity | |
+| name / company | text | — | Nombre del servicio y de la empresa |
+| amount_usd | numeric(10,2) | — | CHECK ≥ 0 |
+| period | text | `'monthly'` | `monthly\|yearly` (CHECK) |
+| created_at / updated_at | timestamptz | `now()` | |
+
+RPCs admin (SECURITY DEFINER + `_assert_internal_admin`): `list_business_expenses_admin()`,
+`save_business_expense_admin(id, name, company, amount_usd, period)` (id NULL = insert) y
+`delete_business_expense_admin(id)`. El panel normaliza totales (anual/12 para el mensual).
+
 ---
 
 ## RLS Summary

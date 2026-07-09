@@ -53,6 +53,11 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     routerLink: '/coupons',
   },
   {
+    label: 'Gastos',
+    icon: 'wallet',
+    routerLink: '/expenses',
+  },
+  {
     label: 'Uso de IA',
     icon: 'sparkles',
     routerLink: '/ai-usage',
