@@ -166,3 +166,8 @@
   2026-07-09: cuentas nuevas sin fila en `tenant_ecommerce_config` "guardaban" la config
   sin persistir nada. Fix: trigger `trg_seed_ecommerce_config` siembra la fila al crear el
   tenant (+ backfill). Patrón a evitar: `.update().eq()` asumiendo que la fila existe.
+- **Dirty-checks: comparar lo NORMALIZADO, no el draft crudo**: si un campo se transforma
+  al guardar (ej. descripción pasa por `sanitizeRichText`, que colapsa los nbsp de Quill),
+  el dirty-check debe comparar `transform(draft) !== guardado` — comparar el draft crudo
+  deja el banner "cambios sin guardar" encendido para siempre tras guardar (bug 2026-07-09,
+  reproducido y verificado con Playwright E2E contra prod con sesión inyectada).
