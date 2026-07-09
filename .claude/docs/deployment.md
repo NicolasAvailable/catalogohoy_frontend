@@ -10,7 +10,7 @@
 | **`main`** | app **catalogohoy** (admin + storefront) | Acá va todo lo del panel y los libs `@catalogohoy/*` compartidos. |
 | **`authentication`** | app **authentication** (`auth.catalogohoy.com`) | login/signup/verificación. **Divergida de main** (tiene commits propios) y suele estar atrás. |
 | **`landing`** | app **landing** (marketing) | React/Vite, **Tailwind v3** (¡no v4!). Tiene commits propios. |
-| **`internal`** | app **internal** (panel interno de soporte) | Divergida de main con commits propios. Sync: merge de la rama con los cambios (mismo patrón que authentication: worktree temporal + build + push `HEAD:internal`). |
+| **`main`** | app **internal** (panel interno, proyecto Vercel `catalogohoy-internal`) | ⚠️ **Deploya desde `main`, NO desde la rama `internal`** (verificado 2026-07-09: los 20 últimos deploys salen de `main`). La rama `internal` existe pero es **legacy/stale** — pushearle no deploya nada. |
 
 Un cambio que toca varias apps hay que llevarlo a **varias ramas**. Ejemplo real:
 créditos de IA en planes → `main` (página de planes) **y** `landing` (Pricing.tsx).
