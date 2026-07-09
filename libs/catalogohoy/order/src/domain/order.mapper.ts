@@ -41,6 +41,7 @@ export class OrderMapper {
       size: i.size ?? null,
       variantId: i.variantId ?? null,
       variantName: i.variantName ?? null,
+      tierTitle: i.tierTitle ?? null,
     };
   }
 

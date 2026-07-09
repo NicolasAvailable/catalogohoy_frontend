@@ -264,6 +264,35 @@
                       </div>
                     </ng-template>
                   </ui-select>
+
+                  <!-- Escala de mayoreo (visible solo para productos al mayor) -->
+                  @if (getWholesaleTiers(product.productId).length) {
+                  <label
+                    class="text-sm text-grey-400 mt-2"
+                    [attr.for]="'tier-' + $index"
+                    >Escala (al mayor)</label
+                  >
+                  <ui-select
+                    [options]="getWholesaleTiers(product.productId)"
+                    optionLabel="title"
+                    optionValue="title"
+                    placeholder="Seleccionar escala"
+                    [ngModel]="product.tierTitle"
+                    (ngModelChange)="onTierSelect($index, $event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    appendTo="body"
+                    [selectId]="'tier-' + $index"
+                  >
+                    <ng-template selectItem let-tier>
+                      <div class="flex items-center justify-between gap-4 py-1">
+                        <span class="text-grey-800">{{ tier.title }}</span>
+                        <span class="text-xs text-grey-400"
+                          >{{ cs() }} {{ tier.price.toFixed(2) }} c/u</span
+                        >
+                      </div>
+                    </ng-template>
+                  </ui-select>
+                  }
                 </div>
                 } @else {
                 <!-- Campos custom (visible cuando ES custom) -->

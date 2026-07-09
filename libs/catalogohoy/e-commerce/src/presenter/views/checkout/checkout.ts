@@ -312,6 +312,9 @@ export default class Checkout {
         size: item.size ?? null,
         variantId: item.variantId ?? null,
         variantName: item.variantName ?? null,
+        // Snapshot del tramo de mayoreo elegido (el precio unitario ya lo
+        // refleja); antes se perdía al crear la orden.
+        tierTitle: item.tierTitle ?? null,
       })),
       total,
       payment_method: this.selectedPaymentMethod() || undefined,
