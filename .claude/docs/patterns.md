@@ -166,20 +166,41 @@ export const ecommerceRoutes: Route[] = [
 
 ---
 
-## i18n — Transloco Usage
+## i18n — Transloco (key-as-text, 4 idiomas)
+
+**Convención: la key ES el texto en español** (estilo gettext) — NO keys semánticas.
+Idiomas: `es` (fuente) / `en` / `fr` / `pt` (pt-BR). Implementado 2026-07-09 (CAT-6).
 
 ```typescript
-// In template
-{{ 'feature.key' | transloco }}
-{{ 'feature.greeting' | transloco: { name: user().name } }}
-
-// Programmatically
-import { TranslocoService } from '@jsverse/transloco';
-private readonly t = inject(TranslocoService);
-const label = this.t.translate('feature.key');
+// Template: texto visible
+{{ 'Guardar cambios' | transloco }}
+// Atributos
+[placeholder]="'Buscar producto' | transloco"
+// Con parámetros: UNA llave {param} (interpolation: ['{','}'] — con {{ }} la key
+// rompería el parser de templates de Angular)
+{{ 'Vence en {days} días' | transloco: { days: days() } }}
+// TS
+import { translate } from '@jsverse/transloco';
+const label = translate('Guardar cambios');
 ```
 
-Translation files live in `public/i18n/en.json` and `public/i18n/es.json`.
+Reglas clave:
+- Cada componente standalone que use el pipe necesita `TranslocoPipe` en `imports`.
+- **Toasts (`ToastService`/sonner), `ConfirmDialogService` y varios @ui (`ui-button`
+  label, `ui-input-text`/`ui-input-search` placeholder, `ui-tabs`, `ui-dialog`
+  headerTitle) traducen SOLOS sus textos** → los call sites pasan español plano;
+  solo hay que asegurarse de que el texto exista como key en los JSON.
+- Key faltante ⇒ transloco devuelve la key ⇒ se ve español (degradación segura).
+- `KeepParamsTranspiler` (core) conserva placeholders sin resolver — no borrar
+  (lo necesita el paginador de PrimeNG).
+- Selector de idioma: `<lib-language-selector />` (`@catalogohoy/core`), persiste
+  en localStorage (`catalogohoy_lang`) + auto-detección `navigator.language`.
+  `LOCALE_ID` se resuelve al bootstrap con el mismo valor (fechas/números).
+- Los 4 JSON viven en `apps/<app>/public/i18n/*.json` y **deben mantenerse
+  iguales entre las 3 apps** (hoy: copiar el de catalogohoy). Paridad de keys:
+  `node scripts/i18n-check.mjs` (falla si en/fr/pt driftean de es.json).
+- Al agregar texto nuevo: agregar la key (=texto es) a `es.json` + su traducción
+  en `en/fr/pt.json` de las 3 apps. Contenido del tenant NO se traduce.
 
 ---
 
