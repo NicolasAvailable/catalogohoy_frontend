@@ -537,6 +537,11 @@ del panel interno (tabla con filtros, detalle expandible y pipeline de estado).
 `reset_due_ai_credits` / `sync_ai_credits_on_plan_change` (`WHEN 'enterprise' THEN 2000`).
 Si se agrega otro plan pago, tocar TODOS estos.
 
+**`list_paying_clients_admin`** (2026-07-09): devuelve también `stripe_subscription_status`
+para que "Catálogos activos" del panel interno muestre el estado **"En gracia"**
+(`past_due` = la renovación ya extendió `plan_expires_at` — el webhook lo trata como
+válido — pero Stripe sigue reintentando el cobro; por fechas solas parecerían activos).
+
 ---
 
 ## RLS Summary

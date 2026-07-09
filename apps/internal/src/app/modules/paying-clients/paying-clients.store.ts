@@ -42,13 +42,18 @@ export const PayingClientsStore = signalStore(
       let active = 0;
       let expiring = 0;
       let expired = 0;
+      let grace = 0;
       for (const c of list) {
-        const status = computeStatus(c.daysUntilExpiry);
+        const status = computeStatus(
+          c.daysUntilExpiry,
+          c.stripeSubscriptionStatus
+        );
         if (status === 'active') active++;
         else if (status === 'expiring') expiring++;
+        else if (status === 'grace') grace++;
         else expired++;
       }
-      return { active, expiring, expired, total: list.length };
+      return { active, expiring, expired, grace, total: list.length };
     }),
     selectedClient: computed(
       () =>

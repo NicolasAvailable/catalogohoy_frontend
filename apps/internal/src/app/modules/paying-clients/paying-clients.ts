@@ -49,7 +49,7 @@ type StatusFilter = 'all' | PayingClientStatus;
         </p>
       </header>
 
-      <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 shrink-0">
+      <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 shrink-0">
         <article
           class="flex items-center gap-3 p-4 bg-white rounded-xl border border-grey-50"
         >
@@ -81,6 +81,25 @@ type StatusFilter = 'all' | PayingClientStatus;
             <span class="text-xs text-grey-400">Por vencer (≤7 días)</span>
             <strong class="text-xl font-bold text-grey-700">
               {{ store.counts().expiring }}
+            </strong>
+          </div>
+        </article>
+        <article
+          class="flex items-center gap-3 p-4 bg-white rounded-xl border border-grey-50"
+        >
+          <div
+            class="flex items-center justify-center w-10 h-10 rounded-lg bg-violet-50"
+          >
+            <ui-icon
+              name="hourglass"
+              size="18"
+              styleClass="text-violet-500"
+            />
+          </div>
+          <div class="flex flex-col">
+            <span class="text-xs text-grey-400">En gracia (reintentando cobro)</span>
+            <strong class="text-xl font-bold text-grey-700">
+              {{ store.counts().grace }}
             </strong>
           </div>
         </article>
@@ -317,7 +336,10 @@ type StatusFilter = 'all' | PayingClientStatus;
                       }
                     </td>
                     <td class="px-4 py-3 border-b border-grey-50">
-                      @let status = computeStatus(client.daysUntilExpiry);
+                      @let status = computeStatus(
+                        client.daysUntilExpiry,
+                        client.stripeSubscriptionStatus
+                      );
                       <span
                         class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold"
                         [class.bg-emerald-50]="status === 'active'"
@@ -326,7 +348,17 @@ type StatusFilter = 'all' | PayingClientStatus;
                         [class.text-amber-600]="status === 'expiring'"
                         [class.bg-red-50]="status === 'expired'"
                         [class.text-red-600]="status === 'expired'"
+                        [class.bg-violet-50]="status === 'grace'"
+                        [class.text-violet-600]="status === 'grace'"
+                        [title]="
+                          status === 'grace'
+                            ? 'Renovación activada, Stripe está reintentando el cobro'
+                            : ''
+                        "
                       >
+                        @if (status === 'grace') {
+                          <ui-icon name="hourglass" size="12" />
+                        }
                         {{ statusLabel(status) }}
                       </span>
                     </td>
@@ -421,6 +453,7 @@ export class PayingClients implements OnInit {
     { value: 'all', label: 'Todos' },
     { value: 'active', label: 'Activos' },
     { value: 'expiring', label: 'Por vencer' },
+    { value: 'grace', label: 'En gracia' },
     { value: 'expired', label: 'Vencidos' },
   ];
 
@@ -438,7 +471,8 @@ export class PayingClients implements OnInit {
         (c.ownerName ?? '').toLowerCase().includes(term) ||
         (c.ownerEmail ?? '').toLowerCase().includes(term);
       const matchesStatus =
-        status === 'all' || computeStatus(c.daysUntilExpiry) === status;
+        status === 'all' ||
+        computeStatus(c.daysUntilExpiry, c.stripeSubscriptionStatus) === status;
       return matchesTerm && matchesStatus;
     });
   });
@@ -566,6 +600,8 @@ export class PayingClients implements OnInit {
         return 'Activo';
       case 'expiring':
         return 'Por vencer';
+      case 'grace':
+        return 'En gracia';
       case 'expired':
         return 'Vencido';
     }

@@ -19,6 +19,7 @@ interface PayingClientRow {
   expires_at: string | null;
   days_until_expiry: number | null;
   country_code: string | null;
+  stripe_subscription_status: string | null;
 }
 
 interface HistoryRow {
@@ -67,6 +68,7 @@ export class PayingClientsService {
         daysUntilExpiry:
           row.days_until_expiry === null ? null : Number(row.days_until_expiry),
         countryCode: row.country_code ?? null,
+        stripeSubscriptionStatus: row.stripe_subscription_status ?? null,
       })
     );
 
