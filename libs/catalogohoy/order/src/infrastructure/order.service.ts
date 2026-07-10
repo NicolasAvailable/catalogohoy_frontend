@@ -528,6 +528,15 @@ export class OrderService {
     id: number,
     tenantId: number
   ): Promise<E.Either<Error, void>> {
+    // Snapshot antes de borrar: una orden completada descontó stock al cruzar
+    // a completed, y una vez borrada ya no queda forma de recuperarlo.
+    const { data: before } = await this.client
+      .from('orders')
+      .select('status, products')
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .single();
+
     const { error } = await this.client
       .from('orders')
       .delete()
@@ -536,6 +545,16 @@ export class OrderService {
 
     if (error) {
       return E.left(new Error(error.message));
+    }
+
+    // Borrar una orden completada también la saca de completed: se repone lo
+    // que descontó (misma regla que updateOrder / updateOrderStatus). Las
+    // órdenes en pending/confirmed/cancelled nunca descontaron, no reponen.
+    if (before?.status === 'completed') {
+      await this.restoreStock(
+        tenantId,
+        Array.isArray(before.products) ? before.products : []
+      );
     }
 
     return E.right(undefined);
