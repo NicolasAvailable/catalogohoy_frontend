@@ -203,6 +203,147 @@
         </dl>
       </div>
     </ui-card>
+
+    <!-- Uso de tu cuenta: límites del plan vs consumo real (estilo "Mi Plan") -->
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <h3 class="text-lg font-bold">{{ 'Uso de tu cuenta' | transloco }}</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Productos -->
+          <div class="flex flex-col gap-2 p-4 rounded-xl border border-grey-100">
+            <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-grey-400">
+              <ui-icon name="package" size="15" />
+              {{ 'Productos' | transloco }}
+            </div>
+            @if (planStore.maxProducts() > 0) {
+            <strong class="text-xl font-bold text-grey-800">
+              {{ planStore.currentProductCount() }} / {{ planStore.maxProducts() }}
+            </strong>
+            <div class="h-1.5 rounded-full bg-grey-100 overflow-hidden">
+              <div
+                class="h-full rounded-full"
+                [class.bg-primary-500]="usagePct(planStore.currentProductCount(), planStore.maxProducts()) < 90"
+                [class.bg-amber-500]="usagePct(planStore.currentProductCount(), planStore.maxProducts()) >= 90"
+                [style.width.%]="usagePct(planStore.currentProductCount(), planStore.maxProducts())"
+              ></div>
+            </div>
+            } @else {
+            <strong class="text-xl font-bold text-grey-800">{{ planStore.currentProductCount() }}</strong>
+            <span class="text-xs text-grey-400">{{ 'Ilimitados' | transloco }}</span>
+            }
+          </div>
+
+          <!-- Catálogos -->
+          <div class="flex flex-col gap-2 p-4 rounded-xl border border-grey-100">
+            <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-grey-400">
+              <ui-icon name="store" size="15" />
+              {{ 'Catálogos' | transloco }}
+            </div>
+            <strong class="text-xl font-bold text-grey-800">
+              {{ planStore.currentCatalogCount() }} / {{ totalCatalogSlots() }}
+            </strong>
+            <div class="h-1.5 rounded-full bg-grey-100 overflow-hidden">
+              <div
+                class="h-full rounded-full bg-primary-500"
+                [style.width.%]="usagePct(planStore.currentCatalogCount(), totalCatalogSlots())"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Créditos IA -->
+          <div class="flex flex-col gap-2 p-4 rounded-xl border border-grey-100">
+            <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-grey-400">
+              <ui-icon name="sparkles" size="15" />
+              {{ 'Créditos IA' | transloco }}
+            </div>
+            @if (creditsStore.balance() !== null) {
+            <strong class="text-xl font-bold text-grey-800">
+              {{ creditsStore.balance() | number }}@if (creditsStore.allowance(); as allowance) { / {{ allowance | number }} }
+            </strong>
+            @if (creditsStore.allowance(); as allowance) {
+            <div class="h-1.5 rounded-full bg-grey-100 overflow-hidden">
+              <div
+                class="h-full rounded-full bg-primary-500"
+                [style.width.%]="usagePct(creditsStore.balance() ?? 0, allowance)"
+              ></div>
+            </div>
+            }
+            @if (creditsStore.resetAt(); as resetAt) {
+            <span class="text-xs text-grey-400">
+              {{ 'Se reinician el' | transloco }} {{ resetAt | date: 'd MMM' }}
+            </span>
+            }
+            } @else {
+            <span class="text-sm text-grey-400">{{ 'Cargando...' | transloco }}</span>
+            }
+          </div>
+
+          <!-- Equipo -->
+          <div class="flex flex-col gap-2 p-4 rounded-xl border border-grey-100">
+            <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-grey-400">
+              <ui-icon name="users" size="15" />
+              {{ 'Miembros de equipo' | transloco }}
+            </div>
+            @if (planStore.maxTeamMembers() > 0) {
+            <strong class="text-xl font-bold text-grey-800">
+              {{ 'Hasta {n}' | transloco: { n: planStore.maxTeamMembers() } }}
+            </strong>
+            } @else {
+            <span class="text-sm text-grey-400 font-semibold">{{ 'Sin equipo de trabajo' | transloco }}</span>
+            }
+          </div>
+
+          <!-- Variantes -->
+          <div class="flex flex-col gap-2 p-4 rounded-xl border border-grey-100">
+            <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-grey-400">
+              <ui-icon name="layout-grid" size="15" />
+              {{ 'Variantes por producto' | transloco }}
+            </div>
+            <strong class="text-xl font-bold text-grey-800">
+              {{ 'Hasta {n}' | transloco: { n: planStore.maxVariants() } }}
+            </strong>
+          </div>
+        </div>
+      </div>
+    </ui-card>
+
+    <!-- Tu plan incluye: lista colapsable, misma fuente que la página de planes -->
+    <ui-card>
+      <button
+        type="button"
+        class="flex w-full items-center justify-between cursor-pointer"
+        (click)="planIncludesOpen.set(!planIncludesOpen())"
+        [attr.aria-expanded]="planIncludesOpen()"
+      >
+        <span class="inline-flex items-center gap-2">
+          <ui-icon name="check-circle" size="17" styleClass="text-primary-500" />
+          <h3 class="text-lg font-bold">{{ 'Tu plan incluye' | transloco }}</h3>
+        </span>
+        <ui-icon
+          [name]="planIncludesOpen() ? 'chevron-up' : 'chevron-down'"
+          size="18"
+          styleClass="text-grey-400"
+        />
+      </button>
+      @if (planIncludesOpen()) {
+      <ul class="flex flex-col gap-2.5 pt-4">
+        @for (feature of planFeatures(); track feature.text) {
+        <li
+          class="flex items-center gap-2.5 text-sm"
+          [class.text-grey-400]="feature.negative"
+          [class.text-grey-700]="!feature.negative"
+        >
+          <ui-icon
+            [name]="feature.negative ? 'x' : 'check'"
+            size="15"
+            [styleClass]="feature.negative ? 'text-grey-300' : 'text-emerald-500'"
+          />
+          {{ feature.text | transloco }}
+        </li>
+        }
+      </ul>
+      }
+    </ui-card>
     }
 
     @if (!planStore.isFreePlan()) {
@@ -226,6 +367,26 @@
         <p class="text-sm text-grey-400">
           {{ 'Seguirás teniendo acceso a todas las funciones premium hasta el final del período de facturación actual.' | transloco }}
         </p>
+
+        @if (hasStripeSubscription()) {
+        <div
+          class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-grey-100"
+        >
+          <div class="flex items-center gap-2 text-sm text-grey-400">
+            <ui-icon name="credit-card" size="15" styleClass="text-grey-400" />
+            {{ '¿Tarjeta nueva o vencida? Actualizá tu método de pago sin perder la suscripción.' | transloco }}
+          </div>
+          <ui-button
+            [label]="'Cambiar tarjeta' | transloco"
+            severity="secondary"
+            variant="outlined"
+            icon="credit-card"
+            [fluid]="false"
+            [isLoading]="isOpeningPortal()"
+            (click)="onChangeCard()"
+          />
+        </div>
+        }
 
         <div
           class="flex items-center justify-between gap-4 pt-4 border-t border-grey-100"

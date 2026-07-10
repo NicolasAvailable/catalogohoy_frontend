@@ -19,6 +19,7 @@ import {
   PaymentCurrency,
   Plan,
   PLAN_BASE_PRICES,
+  PLAN_FEATURES,
   PlanDisplay,
   PlanFeature,
   resolveCheckoutCurrency,
@@ -46,19 +47,12 @@ type PlanUIConfig = {
   color: string;
 };
 
+// Los features viven en PLAN_FEATURES (domain) — misma fuente que la sección
+// "Tu plan incluye" de Mi Perfil.
 const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   gratis: {
     period: 'por siempre',
-    features: [
-      { text: '1 catálogo' },
-      { text: 'Edición limitada del catálogo' },
-      { text: '1 reporte por mes' },
-      { text: '15 créditos de IA por mes' },
-      // Negatives stay grouped at the end so the cross icons render
-      // together as a "what you don't get" block instead of being
-      // sprinkled between checks.
-      { text: 'Sin analíticas del catálogo', negative: true },
-    ],
+    features: PLAN_FEATURES['gratis'],
     buttonLabel: 'Empezar gratis',
     buttonSeverity: 'secondary',
     isPopular: false,
@@ -66,15 +60,7 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   },
   basico: {
     period: '/mes',
-    features: [
-      { text: '1 catálogo' },
-      { text: 'Todos los módulos disponibles' },
-      { text: 'Analíticas del catálogo' },
-      { text: 'Hasta 10 reportes por mes' },
-      { text: '200 créditos de IA por mes' },
-      { text: 'Diseño personalizable' },
-      { text: 'Soporte prioritario' },
-    ],
+    features: PLAN_FEATURES['basico'],
     buttonLabel: 'Comenzar ahora',
     buttonSeverity: 'secondary',
     isPopular: false,
@@ -82,15 +68,7 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   },
   avanzado: {
     period: '/mes',
-    features: [
-      { text: '2 catálogos' },
-      { text: 'Todo del plan Básico' },
-      { text: 'Analíticas del catálogo' },
-      { text: 'Hasta 30 reportes por mes' },
-      { text: '500 créditos de IA por mes' },
-      { text: 'Vinculación de dominio personalizado (dominio aparte)' },
-      { text: 'Soporte dedicado' },
-    ],
+    features: PLAN_FEATURES['avanzado'],
     buttonLabel: 'Comenzar ahora',
     buttonSeverity: 'primary',
     isPopular: true,

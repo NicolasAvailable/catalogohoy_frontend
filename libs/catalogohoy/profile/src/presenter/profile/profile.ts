@@ -2,9 +2,10 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, effect, inject, signal, ViewChild } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CheckoutService, PlanStore } from '@catalogohoy/plan';
+import { CheckoutService, PLAN_FEATURES, PlanFeature, PlanStore } from '@catalogohoy/plan';
+import { CreditsStore } from '@catalogohoy/product';
 import { TenantStore } from '@catalogohoy/tenant';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import {
@@ -63,9 +64,12 @@ export class Profile {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   public readonly planStore = inject(PlanStore);
+  public readonly creditsStore = inject(CreditsStore);
+  private readonly transloco = inject(TranslocoService);
 
   public readonly isCancelling = signal(false);
   public readonly isDeleting = signal(false);
+  public readonly isOpeningPortal = signal(false);
 
   // ── Tabs ──────────────────────────────────────────────────────────────
   public readonly tabs: { id: ProfileTabId; label: string; icon: string }[] = [
@@ -115,6 +119,33 @@ export class Profile {
     if (days !== null && days <= 6) return 'expiring';
     return 'active';
   });
+
+  // ── "Tu plan" — uso y features (Suscripción tab) ────────────────────
+  /** Solo los suscriptores Stripe tienen tarjeta que cambiar; los de pago
+   *  manual (pago móvil/transferencia) no ven el botón del portal. */
+  public readonly hasStripeSubscription = computed(
+    () => this.planStore.tenantPlanUsage()?.hasStripeSubscription ?? false
+  );
+
+  /** Tope real de catálogos = límite del plan + slots extra comprados. */
+  public readonly totalCatalogSlots = computed(
+    () => this.planStore.maxCatalogs() + this.planStore.extraCatalogs()
+  );
+
+  /** Features que promete el plan actual (misma fuente que la página de
+   *  planes). Fallback a gratis mientras carga. */
+  public readonly planFeatures = computed<PlanFeature[]>(() => {
+    const id = this.planStore.currentPlan()?.id ?? 'gratis';
+    return PLAN_FEATURES[id] ?? PLAN_FEATURES['gratis'];
+  });
+
+  public readonly planIncludesOpen = signal(false);
+
+  /** % de una barra de uso, clampeado para no desbordar el track. */
+  public usagePct(current: number, max: number): number {
+    if (max <= 0) return 0;
+    return Math.min(100, Math.round((current / max) * 100));
+  }
 
   // ── Notifications draft (Phase 3) ──────────────────────────────────
   // Mirrors the column we'll add to `users.notify_plan_expiry`. Persisted
@@ -177,6 +208,16 @@ export class Profile {
       if (this.billingEntries() !== null) return; // already loaded
       if (this.isLoadingBilling()) return;
       this.loadBillingHistory();
+    });
+
+    // La sección "Tu plan" necesita el uso del plan y el saldo de créditos.
+    // Ambas cargas son no-op si ya están en memoria.
+    effect(() => {
+      if (this.activeTab() !== 'subscription') return;
+      this.planStore.loadTenantPlanUsage();
+      if (this.creditsStore.balance() === null && !this.creditsStore.loading()) {
+        this.creditsStore.load();
+      }
     });
   }
 
@@ -251,6 +292,31 @@ export class Profile {
       }
     );
     this.isSavingNotifications.set(false);
+  }
+
+  /** Abre el Stripe Billing Portal para actualizar la tarjeta. Redirige en la
+   *  misma pestaña; el portal vuelve al perfil con su return_url. */
+  public async onChangeCard(): Promise<void> {
+    const tenantId = this.tenantStore.tenant().tenantId;
+    if (!tenantId || this.isOpeningPortal()) return;
+
+    this.isOpeningPortal.set(true);
+    const result = await this.billingService.createBillingPortalSession(
+      tenantId,
+      this.transloco.getActiveLang()
+    );
+    result.fold(
+      (err) => {
+        this.isOpeningPortal.set(false);
+        this.toaster.error(
+          new Exception('No se pudo abrir el portal de pago: ' + (err.message || ''))
+        );
+      },
+      (url) => {
+        // Se mantiene el spinner: la página entera navega al portal.
+        window.location.href = url;
+      }
+    );
   }
 
   public onCancelSubscription(): void {

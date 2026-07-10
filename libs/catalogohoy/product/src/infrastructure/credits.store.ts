@@ -43,6 +43,10 @@ export class CreditsStore {
   private readonly client = SupabaseClientProvider.getInstance();
 
   public readonly balance = signal<number | null>(null);
+  /** Asignación mensual del plan (para mostrar "X / Y" en Mi Perfil). */
+  public readonly allowance = signal<number | null>(null);
+  /** Próximo reset mensual de los créditos del plan. */
+  public readonly resetAt = signal<string | null>(null);
   public readonly loading = signal<boolean>(false);
 
   /** Carga el saldo del owner (la edge function crea el pozo si no existe). */
@@ -56,6 +60,8 @@ export class CreditsStore {
       const parsed = typeof data === 'string' ? JSON.parse(data) : data;
       if (parsed?.success && typeof parsed.credits === 'number') {
         this.balance.set(parsed.credits);
+        if (typeof parsed.allowance === 'number') this.allowance.set(parsed.allowance);
+        if (typeof parsed.resetAt === 'string') this.resetAt.set(parsed.resetAt);
       }
     } finally {
       this.loading.set(false);
