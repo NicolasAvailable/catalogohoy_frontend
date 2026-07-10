@@ -25,6 +25,10 @@ export class LanguageService {
   public readonly languages = APP_LANGUAGES;
   public readonly current = signal<AppLanguage>(resolveInitialLanguage());
 
+  /** True si el usuario tocó el selector en ESTA visita (no un valor viejo
+   *  de localStorage) — regula qué puede pisar al perfil en flushToProfile. */
+  private changedThisSession = false;
+
   /** Aplica el idioma inicial; lo llama el app initializer de transloco. */
   public init(): void {
     this.apply(this.current());
@@ -40,7 +44,29 @@ export class LanguageService {
     }
     this.current.set(lang);
     this.apply(lang);
+    this.changedThisSession = true;
     this.persistToProfile(lang);
+  }
+
+  /** Empuja el idioma actual al perfil apenas EXISTE sesión (post-login):
+   *  en el login no hay usuario, así que la elección solo vive en el
+   *  localStorage de auth.catalogohoy.com (otro origen que el admin); este
+   *  flush la hace viajar por la cuenta. Regla anti-pisadas: solo escribe si
+   *  el usuario eligió en esta visita, o si el perfil aún no tiene idioma. */
+  public async flushToProfile(): Promise<void> {
+    try {
+      const client = SupabaseClientProvider.getInstance();
+      if (this.changedThisSession) {
+        this.persistToProfile(this.current());
+        return;
+      }
+      const { data } = await client.auth.getUser();
+      if (!data.user?.user_metadata?.['language']) {
+        this.persistToProfile(this.current());
+      }
+    } catch {
+      // sin sesión/cliente: no hay perfil al que empujar
+    }
   }
 
   /** Elección del visitante en el catálogo público: persiste en su propia

@@ -1,5 +1,5 @@
 import { isDevMode, Injectable, inject } from '@angular/core';
-import { SupabaseClientProvider } from '@catalogohoy/core';
+import { LanguageService, SupabaseClientProvider } from '@catalogohoy/core';
 import {
   findCountryByCode,
   SUPPORTED_CURRENCIES,
@@ -32,6 +32,7 @@ export class AuthenticationService implements BaseAuthenticationService {
   private readonly client = SupabaseClientProvider.getInstance();
   private readonly authenticationTokenService = authenticationTokenService;
   private readonly locationService = inject(LocationService);
+  private readonly language = inject(LanguageService);
   private readonly tenantCurrency = inject(TenantCurrencyStore);
 
   /**
@@ -336,6 +337,9 @@ export class AuthenticationService implements BaseAuthenticationService {
   }
 
   private _buildRedirectUrl(slug: string, customDomain?: string | null): string {
+    // Con la sesión ya creada, el idioma elegido en el login viaja al perfil
+    // (user_metadata) para que el admin (otro origen) lo sincronice al abrir.
+    void this.language.flushToProfile();
     const key = this.authenticationTokenService.AUTH_CONFIG_KEY;
     const value = encodeURIComponent(this.authenticationTokenService.authConfigValue ?? '');
     if (isDevMode()) {
