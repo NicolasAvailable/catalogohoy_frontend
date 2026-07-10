@@ -62,9 +62,12 @@
 - **Landing = Tailwind v3; resto del monorepo = Tailwind v4.** Mergear `main` a `landing`
   rompe el build (PostCSS: "tailwindcss as a PostCSS plugin... moved to @tailwindcss/postcss").
   → No mergear main entero a landing; aplicar solo el cambio puntual.
-- La **landing no buildea localmente** con el `npm install` del worktree (dep git privada
-  falla la instalación). Cambios triviales se pushean y Vercel valida; un build fallido en
-  Vercel no tumba el prod actual.
+- La **landing SÍ buildea localmente desde 2026-07-09** (la dep git privada `falso` fue
+  eliminada de sus package.json). Receta: dentro de `apps/landing`,
+  `npm install --workspaces=false` (sin el flag, npm la trata como workspace del monorepo
+  y el hoisting a la raíz rompe la resolución de plugins de Tailwind v3) y buildear con
+  `./node_modules/.bin/vite build` (no `npm run build`). Un build fallido en Vercel
+  igual no tumba el prod actual.
 
 ## Nx + worktrees
 
