@@ -378,7 +378,14 @@ export const EcommerceConfigStore = signalStore(
       result.fold(
         (error: Error) => {
           patchState(store, { isSaving: false, error: error.message });
-          toast.error('Error al guardar la configuración');
+          // 42501 (RLS) con upsert = el request salió sin sesión válida: el
+          // token no pudo refrescarse (pestaña vieja). Decir la verdad ayuda
+          // más que un "error al guardar" genérico.
+          toast.error(
+            error.message.includes('row-level security')
+              ? 'Tu sesión expiró. Recargá la página o volvé a iniciar sesión e intentá de nuevo.'
+              : 'Error al guardar la configuración'
+          );
         },
         () => {
           patchState(store, {
