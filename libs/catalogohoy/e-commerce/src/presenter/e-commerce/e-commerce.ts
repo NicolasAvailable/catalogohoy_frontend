@@ -64,7 +64,15 @@ export class ECommerce implements OnInit, OnDestroy {
   private tenantLanguageApplied = false;
   private readonly applyTenantLanguage = effect(() => {
     const info = this.ecommerceStore.effectiveCatalogInfo();
-    if (!info || this.tenantLanguageApplied) return;
+    if (!info) return;
+    // En modo preview (iframe del editor) el idioma refleja EN VIVO el draft
+    // del tenant, ignorando la preferencia local del admin: el comerciante
+    // está viendo lo que verá un visitante nuevo.
+    if (this.ecommerceStore.isPreviewMode()) {
+      this.language.setSession(info.defaultLanguage as AppLanguage);
+      return;
+    }
+    if (this.tenantLanguageApplied) return;
     this.tenantLanguageApplied = true;
     let stored: string | null = null;
     try {

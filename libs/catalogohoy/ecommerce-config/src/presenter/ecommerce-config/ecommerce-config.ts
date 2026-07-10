@@ -652,6 +652,8 @@ export class EcommerceConfigComponent implements OnInit {
       const city = this.draftCity();
       const showLocationSection = this.draftShowLocationSection();
       const showCategoriesSection = this.draftShowCategoriesSection();
+      // Idioma default del catálogo — la preview lo aplica en vivo.
+      const defaultLanguage = this.draftDefaultLanguage();
       // Shipping drafts — so the checkout preview reflects them live.
       const shippingMethods = this.draftShippingMethods();
       const showShippingSection = this.draftShowShippingSection();
@@ -683,6 +685,7 @@ export class EcommerceConfigComponent implements OnInit {
           state,
           city,
           showLocationSection,
+          defaultLanguage,
           shippingMethods,
           showShippingSection,
           customerFields,
