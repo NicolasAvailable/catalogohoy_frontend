@@ -16,5 +16,22 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/precios",
+      "destination": "/pricing",
+      "permanent": true
+    },
+    {
+      "source": "/funciones",
+      "destination": "/features",
+      "permanent": true
+    },
+    {
+      "source": "/preguntas-frecuentes",
+      "destination": "/faq",
+      "permanent": true
+    }
   ]
 }

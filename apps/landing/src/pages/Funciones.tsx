@@ -11,7 +11,7 @@ const Funciones = () => {
     title: "Funciones — CatalogoHoy | Catálogo digital, WhatsApp e IA",
     description:
       "Descubre todo lo que puedes hacer con CatalogoHoy: catálogo digital personalizable, pedidos por WhatsApp, gestión de órdenes y clientes, precios en dos monedas e inteligencia artificial para tus fotos.",
-    path: "/funciones",
+    path: "/features",
   });
 
   return (

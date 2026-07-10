@@ -38,9 +38,9 @@ const App = () => {
             <Route path="/data-deletion" element={<DataDeletion />} />
             <Route path="/o/:orderId" element={<OrderRedirect />} />
             <Route path="/ventas" element={<EnterpriseSales />} />
-            <Route path="/precios" element={<Precios />} />
-            <Route path="/preguntas-frecuentes" element={<PreguntasFrecuentes />} />
-            <Route path="/funciones" element={<Funciones />} />
+            <Route path="/pricing" element={<Precios />} />
+            <Route path="/faq" element={<PreguntasFrecuentes />} />
+            <Route path="/features" element={<Funciones />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

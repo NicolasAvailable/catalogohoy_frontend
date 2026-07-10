@@ -7,9 +7,9 @@ import { motion, AnimatePresence } from "framer-motion";
 // anclas ancladas a la raíz para que funcionen desde cualquier ruta.
 const navLinks = [
   { href: "/#how-it-works", label: "Cómo funciona" },
-  { href: "/funciones", label: "Funciones" },
-  { href: "/precios", label: "Precios" },
-  { href: "/preguntas-frecuentes", label: "FAQ" },
+  { href: "/features", label: "Funciones" },
+  { href: "/pricing", label: "Precios" },
+  { href: "/faq", label: "FAQ" },
   { href: "/#contact", label: "Contacto" },
 ];
 

@@ -40,7 +40,7 @@ const Precios = () => {
     title: "Precios y planes — CatalogoHoy | Empieza gratis",
     description:
       "Planes de CatalogoHoy: empieza gratis y crece con los planes Básico y Avanzado. Catálogo digital, pedidos por WhatsApp, IA para tus fotos y más. Sin permanencia.",
-    path: "/precios",
+    path: "/pricing",
     jsonLd: JSON_LD,
   });
 
