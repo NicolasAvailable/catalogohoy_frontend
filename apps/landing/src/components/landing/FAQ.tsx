@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 
-const faqs = [
+export const faqs = [
   {
     question: "¿Es gratis crear un catálogo digital?",
     answer:

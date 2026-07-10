@@ -11,6 +11,9 @@ import TermsOfService from "./pages/TermsOfService";
 import DataDeletion from "./pages/DataDeletion";
 import OrderRedirect from "./pages/OrderRedirect";
 import EnterpriseSales from "./pages/EnterpriseSales";
+import Precios from "./pages/Precios";
+import PreguntasFrecuentes from "./pages/PreguntasFrecuentes";
+import Funciones from "./pages/Funciones";
 import NotFound from "./pages/NotFound";
 import { captureReferralFromUrl } from "@/lib/referral-cookie";
 
@@ -35,6 +38,9 @@ const App = () => {
             <Route path="/data-deletion" element={<DataDeletion />} />
             <Route path="/o/:orderId" element={<OrderRedirect />} />
             <Route path="/ventas" element={<EnterpriseSales />} />
+            <Route path="/precios" element={<Precios />} />
+            <Route path="/preguntas-frecuentes" element={<PreguntasFrecuentes />} />
+            <Route path="/funciones" element={<Funciones />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

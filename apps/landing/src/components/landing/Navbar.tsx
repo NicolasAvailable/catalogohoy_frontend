@@ -3,12 +3,14 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Links reales a páginas (crawleables, habilitan sitelinks en Google) +
+// anclas ancladas a la raíz para que funcionen desde cualquier ruta.
 const navLinks = [
-  { href: "#how-it-works", label: "Cómo funciona" },
-  { href: "#features", label: "Características" },
-  { href: "#pricing", label: "Precios" },
-  { href: "#faq", label: "FAQ" },
-  { href: "#contact", label: "Contacto" },
+  { href: "/#how-it-works", label: "Cómo funciona" },
+  { href: "/funciones", label: "Funciones" },
+  { href: "/precios", label: "Precios" },
+  { href: "/preguntas-frecuentes", label: "FAQ" },
+  { href: "/#contact", label: "Contacto" },
 ];
 
 const Navbar = () => {
