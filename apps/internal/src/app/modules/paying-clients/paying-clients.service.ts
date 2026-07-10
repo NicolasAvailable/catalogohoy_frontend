@@ -52,27 +52,42 @@ export class PayingClientsService {
       return E.left(new Error(error.message));
     }
 
-    const clients: PayingClient[] = ((data as PayingClientRow[]) ?? []).map(
-      (row) => ({
-        tenantId: row.tenant_id,
-        tenantName: row.tenant_name,
-        tenantSlug: row.tenant_slug,
-        tenantLogo: row.tenant_logo,
-        ownerName: row.owner_name,
-        ownerEmail: row.owner_email,
-        ownerAvatarUrl: row.owner_avatar_url,
-        tier: row.tier,
-        cycle: row.cycle,
-        startedAt: row.started_at,
-        expiresAt: row.expires_at,
-        daysUntilExpiry:
-          row.days_until_expiry === null ? null : Number(row.days_until_expiry),
-        countryCode: row.country_code ?? null,
-        stripeSubscriptionStatus: row.stripe_subscription_status ?? null,
-      })
+    return E.right(this.mapClients(data as PayingClientRow[]));
+  }
+
+  /** All catalogs that ever had a paid plan and no longer have a current one,
+   *  including tenants already downgraded to `gratis` (their tier/dates come
+   *  from the last `tenant_subscriptions` row). Same row shape as `list()`. */
+  async listExpired(): Promise<Either<Error, PayingClient[]>> {
+    const { data, error } = await this.client.rpc(
+      'list_expired_clients_admin'
     );
 
-    return E.right(clients);
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    return E.right(this.mapClients(data as PayingClientRow[]));
+  }
+
+  private mapClients(rows: PayingClientRow[] | null): PayingClient[] {
+    return (rows ?? []).map((row) => ({
+      tenantId: row.tenant_id,
+      tenantName: row.tenant_name,
+      tenantSlug: row.tenant_slug,
+      tenantLogo: row.tenant_logo,
+      ownerName: row.owner_name,
+      ownerEmail: row.owner_email,
+      ownerAvatarUrl: row.owner_avatar_url,
+      tier: row.tier,
+      cycle: row.cycle,
+      startedAt: row.started_at,
+      expiresAt: row.expires_at,
+      daysUntilExpiry:
+        row.days_until_expiry === null ? null : Number(row.days_until_expiry),
+      countryCode: row.country_code ?? null,
+      stripeSubscriptionStatus: row.stripe_subscription_status ?? null,
+    }));
   }
 
   /** Reads the catalog's configured WhatsApp buttons so the admin can reach

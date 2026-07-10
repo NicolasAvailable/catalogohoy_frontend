@@ -8,7 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { IconComponent } from '@ui';
+import { DatepickerComponent, IconComponent } from '@ui';
 import { cycleLabel, tierLabel } from '../shared/plan-cycle.model';
 import { countryLabel } from '../shared/country.util';
 import {
@@ -33,6 +33,7 @@ type StatusFilter = 'all' | PayingClientStatus;
   standalone: true,
   imports: [
     IconComponent,
+    DatepickerComponent,
     FormsModule,
     DatePipe,
     ClientDetailDialog,
@@ -116,7 +117,7 @@ type StatusFilter = 'all' | PayingClientStatus;
             />
           </div>
           <div class="flex flex-col">
-            <span class="text-xs text-grey-400">Vencidos</span>
+            <span class="text-xs text-grey-400">Vencidos (histórico)</span>
             <strong class="text-xl font-bold text-grey-700">
               {{ store.counts().expired }}
             </strong>
@@ -156,6 +157,17 @@ type StatusFilter = 'all' | PayingClientStatus;
             </button>
           }
         </div>
+        @if (statusFilter() === 'expired') {
+          <ui-datepicker
+            mode="range"
+            [showClear]="true"
+            dateFormat="dd/mm/yy"
+            size="small"
+            placeholder="Venció entre..."
+            styleClass="w-56"
+            [(ngModel)]="expiredRange"
+          />
+        }
         <button
           type="button"
           (click)="store.load()"
@@ -336,10 +348,16 @@ type StatusFilter = 'all' | PayingClientStatus;
                       }
                     </td>
                     <td class="px-4 py-3 border-b border-grey-50">
-                      @let status = computeStatus(
-                        client.daysUntilExpiry,
-                        client.stripeSubscriptionStatus
-                      );
+                      <!-- En el tab Vencidos todo el listado histórico es
+                        vencido por definición; computeStatus no aplica a los
+                        degradados (sus fechas vienen del último período). -->
+                      @let status =
+                        statusFilter() === 'expired'
+                          ? 'expired'
+                          : computeStatus(
+                              client.daysUntilExpiry,
+                              client.stripeSubscriptionStatus
+                            );
                       <span
                         class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold"
                         [class.bg-emerald-50]="status === 'active'"
@@ -412,8 +430,12 @@ type StatusFilter = 'all' | PayingClientStatus;
                           styleClass="text-grey-300"
                         />
                         <p class="text-sm text-grey-400">
-                          Todavía no hay catálogos con plan activo. Asigná un
-                          plan desde la sección Catálogos.
+                          @if (statusFilter() === 'expired') {
+                            No hay catálogos vencidos en este período.
+                          } @else {
+                            Todavía no hay catálogos con plan activo. Asigná
+                            un plan desde la sección Catálogos.
+                          }
                         </p>
                       </div>
                     </td>
@@ -460,10 +482,18 @@ export class PayingClients implements OnInit {
   private readonly detailDialog = viewChild.required(ClientDetailDialog);
   private readonly assignDialog = viewChild.required(AssignPlanDialog);
 
+  /** Rango [desde, hasta] del datepicker del tab Vencidos; hasta puede venir
+   *  null mientras el usuario todavía no eligió la segunda fecha. */
+  protected readonly expiredRange = signal<(Date | null)[] | null>(null);
+
   protected readonly filteredClients = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
     const status = this.statusFilter();
-    return this.store.clients().filter((c) => {
+    // El tab Vencidos muestra el histórico completo (RPC dedicado); el resto
+    // de tabs sigue trabajando sobre los planes vigentes.
+    const source =
+      status === 'expired' ? this.store.expiredClients() : this.store.clients();
+    return source.filter((c) => {
       const matchesTerm =
         !term ||
         (c.tenantName ?? '').toLowerCase().includes(term) ||
@@ -472,10 +502,26 @@ export class PayingClients implements OnInit {
         (c.ownerEmail ?? '').toLowerCase().includes(term);
       const matchesStatus =
         status === 'all' ||
+        status === 'expired' ||
         computeStatus(c.daysUntilExpiry, c.stripeSubscriptionStatus) === status;
-      return matchesTerm && matchesStatus;
+      return matchesTerm && matchesStatus && this.matchesExpiredRange(c);
     });
   });
+
+  private matchesExpiredRange(client: PayingClient): boolean {
+    if (this.statusFilter() !== 'expired') return true;
+    const range = this.expiredRange();
+    const from = range?.[0] ?? null;
+    if (!from) return true;
+    if (!client.expiresAt) return false;
+    const expiredAt = new Date(client.expiresAt).getTime();
+    const start = new Date(from);
+    start.setHours(0, 0, 0, 0);
+    // Sin segunda fecha aún, el rango se trata como "solo ese día".
+    const end = new Date(range?.[1] ?? from);
+    end.setHours(23, 59, 59, 999);
+    return expiredAt >= start.getTime() && expiredAt <= end.getTime();
+  }
 
   ngOnInit(): void {
     this.store.load();

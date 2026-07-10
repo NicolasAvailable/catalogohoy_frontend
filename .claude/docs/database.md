@@ -533,14 +533,22 @@ del panel interno (tabla con filtros, detalle expandible y pipeline de estado).
 
 **RPCs con planes hardcodeados** (actualizados 2026-07-07 para incluir `'enterprise'`):
 `assign_tenant_plan_admin` (2 overloads, valida `p_tier IN (...)`), `list_paying_clients_admin`
-(`WHERE plan_id IN (...)`), y el CASE de créditos IA en `ensure_ai_credits` /
-`reset_due_ai_credits` / `sync_ai_credits_on_plan_change` (`WHEN 'enterprise' THEN 2000`).
-Si se agrega otro plan pago, tocar TODOS estos.
+y `list_expired_clients_admin` (`plan_id IN (...)`), y el CASE de créditos IA en
+`ensure_ai_credits` / `reset_due_ai_credits` / `sync_ai_credits_on_plan_change`
+(`WHEN 'enterprise' THEN 2000`). Si se agrega otro plan pago, tocar TODOS estos.
 
 **`list_paying_clients_admin`** (2026-07-09): devuelve también `stripe_subscription_status`
 para que "Catálogos activos" del panel interno muestre el estado **"En gracia"**
 (`past_due` = la renovación ya extendió `plan_expires_at` — el webhook lo trata como
 válido — pero Stripe sigue reintentando el cobro; por fechas solas parecerían activos).
+
+**`list_expired_clients_admin`** (2026-07-10): histórico completo de vencidos para el tab
+"Vencidos" — todos los que tuvieron plan pago y hoy no tienen uno vigente. Une (A) plan_id
+pago con `plan_expires_at` pasado (sin degradar aún, excluye `past_due`) y (B) degradados
+a gratis con historial en `tenant_subscriptions` o `previous_plan_id` (al degradar se
+nullea `plan_expires_at`, así que tier/ciclo/fechas salen de la última suscripción).
+Excluye checkouts que nunca pagaron (`incomplete_expired` sin historial). Mismo shape que
+`list_paying_clients_admin`; el filtro por rango de fechas se hace client-side en la UI.
 
 ### `business_expenses`
 
