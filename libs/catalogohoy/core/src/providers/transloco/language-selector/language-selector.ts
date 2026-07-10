@@ -49,6 +49,10 @@ export class LanguageSelectorComponent {
   /** Clases extra para adaptar el botón al contexto (navbar vs storefront). */
   public readonly styleClass = input('');
 
+  /** 'platform' persiste la preferencia del panel; 'catalog' la del visitante
+   *  del catálogo público (llaves de localStorage separadas). */
+  public readonly scope = input<'platform' | 'catalog'>('platform');
+
   protected readonly items: MenuItem[] = this.language.languages.map((l) => ({
     id: l.code,
     label: l.label,
@@ -56,7 +60,9 @@ export class LanguageSelectorComponent {
   }));
 
   protected select(item: MenuItem): void {
-    this.language.set(item.id as AppLanguage);
+    const lang = item.id as AppLanguage;
+    if (this.scope() === 'catalog') this.language.setCatalog(lang);
+    else this.language.set(lang);
     this.menu()?.hide();
   }
 }

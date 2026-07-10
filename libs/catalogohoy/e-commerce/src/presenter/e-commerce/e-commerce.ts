@@ -16,7 +16,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { StripHtmlPipe } from '@shared/presenter';
 import {
   AppLanguage,
-  LANGUAGE_STORAGE_KEY,
   LanguageService,
   PosthogService,
 } from '@catalogohoy/core';
@@ -74,13 +73,10 @@ export class ECommerce implements OnInit, OnDestroy {
     }
     if (this.tenantLanguageApplied) return;
     this.tenantLanguageApplied = true;
-    let stored: string | null = null;
-    try {
-      stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    } catch {
-      // localStorage bloqueado: aplicamos igual el default del tenant
-    }
-    if (!stored) this.language.setSession(info.defaultLanguage as AppLanguage);
+    // Prioridad del visitante: su elección en el catálogo > default del
+    // tenant. La preferencia del PANEL (otra llave) no aplica acá.
+    const stored = this.language.getStoredCatalogLanguage();
+    this.language.setSession(stored ?? (info.defaultLanguage as AppLanguage));
   });
   private readonly titleService = inject(Title);
   private readonly metaService = inject(Meta);

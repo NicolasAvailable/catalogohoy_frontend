@@ -5,6 +5,7 @@ import { PRIMENG_TRANSLATIONS } from '../primeng/primeng.i18n';
 import {
   APP_LANGUAGES,
   AppLanguage,
+  CATALOG_LANGUAGE_STORAGE_KEY,
   LANGUAGE_STORAGE_KEY,
   resolveInitialLanguage,
 } from './language.const';
@@ -37,6 +38,29 @@ export class LanguageService {
     }
     this.current.set(lang);
     this.apply(lang);
+  }
+
+  /** Elección del visitante en el catálogo público: persiste en su propia
+   *  llave (no pisa la preferencia del panel) y aplica en vivo. */
+  public setCatalog(lang: AppLanguage): void {
+    try {
+      localStorage.setItem(CATALOG_LANGUAGE_STORAGE_KEY, lang);
+    } catch {
+      // sin persistencia: el cambio vale solo para esta sesión
+    }
+    this.setSession(lang);
+  }
+
+  /** Idioma que el visitante eligió en el catálogo (null si nunca eligió). */
+  public getStoredCatalogLanguage(): AppLanguage | null {
+    try {
+      const stored = localStorage.getItem(CATALOG_LANGUAGE_STORAGE_KEY);
+      return APP_LANGUAGES.some((l) => l.code === stored)
+        ? (stored as AppLanguage)
+        : null;
+    } catch {
+      return null;
+    }
   }
 
   /** Aplica un idioma SOLO para esta sesión, sin persistir la elección.

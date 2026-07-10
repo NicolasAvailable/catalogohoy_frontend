@@ -15,6 +15,12 @@ export const APP_LANGUAGES: ReadonlyArray<{
 
 export const LANGUAGE_STORAGE_KEY = 'catalogohoy_lang';
 
+/** Elección de idioma del VISITANTE en el catálogo público. Separada de la
+ *  del panel: el admin y el storefront comparten origen/localStorage, y sin
+ *  esto la preferencia del panel del comerciante pisaba el idioma default
+ *  del catálogo en su propio navegador. */
+export const CATALOG_LANGUAGE_STORAGE_KEY = 'catalogohoy_catalog_lang';
+
 const CODES: string[] = APP_LANGUAGES.map((l) => l.code);
 
 /**
