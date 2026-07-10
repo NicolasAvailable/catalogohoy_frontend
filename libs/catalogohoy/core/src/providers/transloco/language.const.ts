@@ -3,12 +3,14 @@ export type AppLanguage = 'es' | 'en' | 'fr' | 'pt';
 export const APP_LANGUAGES: ReadonlyArray<{
   code: AppLanguage;
   label: string;
+  /** Bandera circular (SVG local, set open-source circle-flags). Los assets
+   *  viven en public/images/flags/ de cada app que usa el selector. */
   flag: string;
 }> = [
-  { code: 'es', label: 'Español', flag: '🇪🇸' },
-  { code: 'en', label: 'English', flag: '🇺🇸' },
-  { code: 'fr', label: 'Français', flag: '🇫🇷' },
-  { code: 'pt', label: 'Português', flag: '🇧🇷' },
+  { code: 'es', label: 'Español', flag: '/images/flags/es.svg' },
+  { code: 'en', label: 'English', flag: '/images/flags/us.svg' },
+  { code: 'fr', label: 'Français', flag: '/images/flags/fr.svg' },
+  { code: 'pt', label: 'Português', flag: '/images/flags/br.svg' },
 ];
 
 export const LANGUAGE_STORAGE_KEY = 'catalogohoy_lang';

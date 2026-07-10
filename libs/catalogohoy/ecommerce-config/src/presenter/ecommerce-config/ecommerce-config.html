@@ -769,13 +769,13 @@
             >
               <ng-template selectItem let-lang>
                 <div class="flex items-center gap-2 py-1">
-                  <span class="text-base leading-none">{{ lang.flag }}</span>
+                  <img [src]="lang.flag" [alt]="lang.label" class="w-5 h-5 rounded-full shrink-0" />
                   <span>{{ lang.label }}</span>
                 </div>
               </ng-template>
               <ng-template selectSelectedItem let-lang>
                 <div class="flex items-center gap-2">
-                  <span class="text-base leading-none">{{ lang.flag }}</span>
+                  <img [src]="lang.flag" [alt]="lang.label" class="w-5 h-5 rounded-full shrink-0" />
                   <span>{{ lang.label }}</span>
                 </div>
               </ng-template>
