@@ -62,9 +62,12 @@
 - **Landing = Tailwind v3; resto del monorepo = Tailwind v4.** Mergear `main` a `landing`
   rompe el build (PostCSS: "tailwindcss as a PostCSS plugin... moved to @tailwindcss/postcss").
   → No mergear main entero a landing; aplicar solo el cambio puntual.
-- La **landing no buildea localmente** con el `npm install` del worktree (dep git privada
-  falla la instalación). Cambios triviales se pushean y Vercel valida; un build fallido en
-  Vercel no tumba el prod actual.
+- La **landing SÍ buildea localmente desde 2026-07-09** (la dep git privada `falso` fue
+  eliminada de sus package.json). Receta: dentro de `apps/landing`,
+  `npm install --workspaces=false` (sin el flag, npm la trata como workspace del monorepo
+  y el hoisting a la raíz rompe la resolución de plugins de Tailwind v3) y buildear con
+  `./node_modules/.bin/vite build` (no `npm run build`). Un build fallido en Vercel
+  igual no tumba el prod actual.
 
 ## Nx + worktrees
 
@@ -158,3 +161,16 @@
   `ai_credit_purchases.stripe_session_id`.
 - Edge functions: para deployar payloads grandes vía MCP sin errores de escape, generar el
   JSON con `python3 -c "import json; print(json.dumps(open(...).read()))"` y leerlo.
+- **WhatsApp cachea los previews de links por dispositivo/chat durante días**: tras cambiar
+  los OG tags (middleware.ts), el preview viejo persiste donde ya se compartió el link.
+  Para revalidar: compartir con un sufijo (`?v=2`) o en un chat nuevo. Si "funciona en
+  iPhone pero no en Android", casi siempre es este caché, no el servidor.
+- **PostgREST no da error en UPDATE que matchea 0 filas** → "éxito" silencioso. Mordió el
+  2026-07-09: cuentas nuevas sin fila en `tenant_ecommerce_config` "guardaban" la config
+  sin persistir nada. Fix: trigger `trg_seed_ecommerce_config` siembra la fila al crear el
+  tenant (+ backfill). Patrón a evitar: `.update().eq()` asumiendo que la fila existe.
+- **Dirty-checks: comparar lo NORMALIZADO, no el draft crudo**: si un campo se transforma
+  al guardar (ej. descripción pasa por `sanitizeRichText`, que colapsa los nbsp de Quill),
+  el dirty-check debe comparar `transform(draft) !== guardado` — comparar el draft crudo
+  deja el banner "cambios sin guardar" encendido para siempre tras guardar (bug 2026-07-09,
+  reproducido y verificado con Playwright E2E contra prod con sesión inyectada).

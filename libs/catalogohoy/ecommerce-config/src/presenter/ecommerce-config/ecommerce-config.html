@@ -1316,12 +1316,17 @@
                 [ngModel]="draftSlug()"
                 (ngModelChange)="onSlugInput($event)"
                 placeholder="mi-tienda"
-                [disabled]="isChangingSlug() || !isOwner() || slugChangesRemaining() === 0"
+                [disabled]="!!tenantCustomDomain() || isChangingSlug() || !isOwner() || slugChangesRemaining() === 0"
                 styleClass="w-full"
               ></ui-input-text>
               <span class="slug-field-suffix">.catalogohoy.com</span>
             </div>
-            @if (slugFormatError()) {
+            @if (tenantCustomDomain(); as domain) {
+              <small class="field-hint">
+                {{ 'Tu catálogo usa el dominio personalizado' | transloco }}
+                <strong>{{ domain }}</strong>{{ ', así que la dirección .catalogohoy.com está deshabilitada: tus clientes siempre entran por tu dominio. Si necesitás cambiarla, escribinos a soporte.' | transloco }}
+              </small>
+            } @else if (slugFormatError()) {
               <small class="field-hint slug-field-error">
                 {{ 'Solo minúsculas, números y guiones, de 3 a 40 caracteres (ej: mi-tienda).' | transloco }}
               </small>
@@ -1348,7 +1353,7 @@
               icon="link"
               [fluid]="false"
               [isLoading]="isChangingSlug()"
-              [disabled]="!canSubmitSlug()"
+              [disabled]="!!tenantCustomDomain() || !canSubmitSlug()"
               (click)="confirmSlugChange()"
             ></ui-button>
           </div>

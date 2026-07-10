@@ -1759,5 +1759,11 @@
   "📭 Todavía no tenés categorías. ¡Creá una en la caja de texto de abajo y guardala! ✨": "📭 Todavía no tenés categorías. ¡Creá una en la caja de texto de abajo y guardala! ✨",
   "🔄 Estás renovando tu plan {plan} por {months}": "🔄 Estás renovando tu plan {plan} por {months}",
   "🔍 No se encontraron categorías con ese nombre": "🔍 No se encontraron categorías con ese nombre",
-  "🖼️ Galería de imágenes": "🖼️ Galería de imágenes"
+  "🖼️ Galería de imágenes": "🖼️ Galería de imágenes",
+  "Al mayor: {title}": "Al mayor: {title}",
+  "Buscar por nombre o SKU...": "Buscar por nombre o SKU...",
+  "Escala (al mayor)": "Escala (al mayor)",
+  "Seleccionar escala": "Seleccionar escala",
+  "Tu catálogo usa el dominio personalizado": "Tu catálogo usa el dominio personalizado",
+  ", así que la dirección .catalogohoy.com está deshabilitada: tus clientes siempre entran por tu dominio. Si necesitás cambiarla, escribinos a soporte.": ", así que la dirección .catalogohoy.com está deshabilitada: tus clientes siempre entran por tu dominio. Si necesitás cambiarla, escribinos a soporte."
 }

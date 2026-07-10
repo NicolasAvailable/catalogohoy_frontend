@@ -11,6 +11,9 @@ export interface OrderItem {
   variantId?: string | null;
   /** Variant label snapshot, shown next to the product name. */
   variantName?: string | null;
+  /** Wholesale tier (escala) chosen at order time — its per-unit price is
+   *  what `price` reflects. Snapshot del título del tramo (ej. "12+ unidades"). */
+  tierTitle?: string | null;
   isCustom?: boolean;
   description?: string;
 }

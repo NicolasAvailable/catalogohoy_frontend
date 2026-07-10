@@ -34,6 +34,7 @@ export class SelectItemDirective {}
       [optionValue]="optionValue()"
       [disabled]="disabled()"
       [filter]="filter()"
+      [filterBy]="filterBy()"
       [filterPlaceholder]="filterPlaceholder() | transloco"
       [variant]="variant()"
       [attr.mode]="mode()"
@@ -84,6 +85,9 @@ export class SelectComponent<T>
   public readonly height = _.input<string>('12rem');
   public readonly clearable = _.input(false);
   public readonly filter = _.input(false);
+  /** Campos (separados por coma) sobre los que busca el filtro; si se omite,
+   *  PrimeNG usa el optionLabel. Ej: "name,sku,description". */
+  public readonly filterBy = _.input<string | undefined>(undefined);
   public readonly variant = _.input<'filled' | 'outlined'>('outlined');
   public readonly mode = _.input<'text' | 'normal'>('normal');
   public readonly size = _.input<'small' | 'large' | undefined>(undefined);

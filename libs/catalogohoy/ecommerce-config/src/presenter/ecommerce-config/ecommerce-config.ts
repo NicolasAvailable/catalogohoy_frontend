@@ -144,6 +144,16 @@ export class EcommerceConfigComponent implements OnInit {
   private readonly planStore = inject(PlanStore);
   public readonly isWhatsappLocked = computed(() => this.planStore.currentPlan()?.isFree ?? false);
 
+  /** Dominio personalizado del tenant actual (null si usa slug.catalogohoy.com).
+   *  Con dominio propio vinculado, el cambio de dirección se deshabilita: la
+   *  URL que difunde el cliente es su dominio y el mapeo se gestiona con soporte. */
+  public readonly tenantCustomDomain = computed(() => {
+    const id = this.tenantStore.tenantId();
+    if (id === null) return null;
+    const current = this.tenantStore.tenants().find((t) => t.id === id);
+    return current?.customDomain ?? null;
+  });
+
   public readonly themeColors = THEME_COLORS;
   public readonly supportedCountries = SUPPORTED_COUNTRIES;
   public readonly supportedCurrencies = SUPPORTED_CURRENCIES;
@@ -978,7 +988,13 @@ export class EcommerceConfigComponent implements OnInit {
     const changes: Partial<EcommerceConfig> = {};
 
     if (this.draftName() !== (config.name ?? '')) changes.name = this.draftName();
-    if (this.draftDescription() !== (config.description ?? '')) changes.description = this.htmlSanitizer.sanitizeRichText(this.draftDescription());
+    // La descripción se compara SANITIZADA (lo mismo que se persiste). Quill
+    // emite nbsp/párrafos vacíos que el sanitizador normaliza al guardar; si
+    // se compara el draft crudo contra lo guardado, tras guardar nunca vuelven
+    // a ser iguales → el banner "cambios sin guardar" quedaba encendido para
+    // siempre (bug 2026-07-09, reproducido con E2E).
+    const draftDescriptionSanitized = this.htmlSanitizer.sanitizeRichText(this.draftDescription());
+    if (draftDescriptionSanitized !== (config.description ?? '')) changes.description = draftDescriptionSanitized;
     if (this.draftTemplate() !== (config.template ?? 'banner-centered')) changes.template = this.draftTemplate();
     if (this.draftDefaultLanguage() !== (config.defaultLanguage ?? 'es')) changes.defaultLanguage = this.draftDefaultLanguage();
     if (this.draftThemeColor() !== (config.themeColor ?? '#10b981')) changes.themeColor = this.draftThemeColor();

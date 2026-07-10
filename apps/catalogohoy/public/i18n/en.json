@@ -1759,5 +1759,11 @@
   "📭 Todavía no tenés categorías. ¡Creá una en la caja de texto de abajo y guardala! ✨": "📭 You don't have any categories yet. Create one in the text box below and save it! ✨",
   "🔄 Estás renovando tu plan {plan} por {months}": "🔄 You're renewing your {plan} plan for {months}",
   "🔍 No se encontraron categorías con ese nombre": "🔍 No categories found with that name",
-  "🖼️ Galería de imágenes": "🖼️ Image gallery"
+  "🖼️ Galería de imágenes": "🖼️ Image gallery",
+  "Al mayor: {title}": "Wholesale: {title}",
+  "Buscar por nombre o SKU...": "Search by name or SKU...",
+  "Escala (al mayor)": "Tier (wholesale)",
+  "Seleccionar escala": "Select a tier",
+  "Tu catálogo usa el dominio personalizado": "Your catalog uses the custom domain",
+  ", así que la dirección .catalogohoy.com está deshabilitada: tus clientes siempre entran por tu dominio. Si necesitás cambiarla, escribinos a soporte.": ", so the .catalogohoy.com address is disabled: your customers always enter through your domain. If you need to change it, contact support."
 }

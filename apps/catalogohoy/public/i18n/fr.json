@@ -1759,5 +1759,11 @@
   "📭 Todavía no tenés categorías. ¡Creá una en la caja de texto de abajo y guardala! ✨": "📭 Vous n'avez pas encore de catégories. Créez-en une dans la zone de texte ci-dessous et enregistrez-la ! ✨",
   "🔄 Estás renovando tu plan {plan} por {months}": "🔄 Vous renouvelez votre plan {plan} pour {months}",
   "🔍 No se encontraron categorías con ese nombre": "🔍 Aucune catégorie trouvée avec ce nom",
-  "🖼️ Galería de imágenes": "🖼️ Galerie d'images"
+  "🖼️ Galería de imágenes": "🖼️ Galerie d'images",
+  "Al mayor: {title}": "En gros : {title}",
+  "Buscar por nombre o SKU...": "Rechercher par nom ou SKU...",
+  "Escala (al mayor)": "Palier (gros)",
+  "Seleccionar escala": "Sélectionner un palier",
+  "Tu catálogo usa el dominio personalizado": "Votre catalogue utilise le domaine personnalisé",
+  ", así que la dirección .catalogohoy.com está deshabilitada: tus clientes siempre entran por tu dominio. Si necesitás cambiarla, escribinos a soporte.": ", donc l'adresse .catalogohoy.com est désactivée : vos clients passent toujours par votre domaine. Pour la modifier, écrivez au support."
 }
