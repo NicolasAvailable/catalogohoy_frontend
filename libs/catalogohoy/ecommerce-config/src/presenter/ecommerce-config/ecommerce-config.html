@@ -737,6 +737,53 @@
         </div>
       </ui-card>
 
+      <!-- Card: Idioma del catálogo (default para visitantes) -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon">
+              <ui-icon name="globe" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ 'Idioma del catálogo' | transloco }}</h2>
+              <p class="card-subtitle">
+                {{ 'Idioma en el que tus clientes verán el catálogo. Cada visitante puede cambiarlo desde el catálogo.' | transloco }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <div class="form-field max-w-xs">
+            <label for="default-language">{{ 'Idioma por defecto' | transloco }}</label>
+            <ui-select
+              [options]="appLanguages"
+              optionLabel="label"
+              optionValue="code"
+              [ngModel]="draftDefaultLanguage()"
+              (ngModelChange)="draftDefaultLanguage.set($event)"
+              [ngModelOptions]="{ standalone: true }"
+              appendTo="body"
+              selectId="default-language"
+              [disabled]="!canEditCatalog()"
+            >
+              <ng-template selectItem let-lang>
+                <div class="flex items-center gap-2 py-1">
+                  <span class="text-base leading-none">{{ lang.flag }}</span>
+                  <span>{{ lang.label }}</span>
+                </div>
+              </ng-template>
+              <ng-template selectSelectedItem let-lang>
+                <div class="flex items-center gap-2">
+                  <span class="text-base leading-none">{{ lang.flag }}</span>
+                  <span>{{ lang.label }}</span>
+                </div>
+              </ng-template>
+            </ui-select>
+          </div>
+        </div>
+      </ui-card>
+
       </div> <!-- /TAB LOCATION -->
 
       <!-- ===== TAB: SHIPPING (Envío) ===== -->
@@ -1141,7 +1188,7 @@
             ></ui-toggle>
           </div>
           <ui-input-text
-            [label]="'Enlace de Instagram' | transloco"
+            [attr.label]="'Enlace de Instagram' | transloco"
             placeholder="https://instagram.com/tu_tienda"
             [ngModel]="draftSocialLinks().instagram.url"
             (ngModelChange)="updateSocialLinkUrl('instagram', $event)"
@@ -1162,7 +1209,7 @@
             ></ui-toggle>
           </div>
           <ui-input-text
-            [label]="'Enlace de Facebook' | transloco"
+            [attr.label]="'Enlace de Facebook' | transloco"
             placeholder="https://facebook.com/tu_tienda"
             [ngModel]="draftSocialLinks().facebook.url"
             (ngModelChange)="updateSocialLinkUrl('facebook', $event)"
@@ -1183,7 +1230,7 @@
             ></ui-toggle>
           </div>
           <ui-input-text
-            [label]="'Enlace de TikTok' | transloco"
+            [attr.label]="'Enlace de TikTok' | transloco"
             placeholder="https://tiktok.com/@tu_tienda"
             [ngModel]="draftSocialLinks().tiktok.url"
             (ngModelChange)="updateSocialLinkUrl('tiktok', $event)"

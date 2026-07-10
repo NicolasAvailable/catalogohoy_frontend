@@ -24,6 +24,7 @@ import {
   IconComponent,
   InputSearchComponent,
   SelectComponent,
+  TooltipDirective,
 } from '@ui';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
@@ -55,6 +56,7 @@ import { ClientTagCreateRowComponent } from '../../components/client-tag-create-
     ClientRowTagsComponent,
     PaginatorModule,
     TranslocoPipe,
+    TooltipDirective,
   ],
   templateUrl: './client-list.html',
   host: { class: 'flex-1 flex flex-col min-h-0' },

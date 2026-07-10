@@ -14,7 +14,12 @@ import { Meta, Title } from '@angular/platform-browser';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { StripHtmlPipe } from '@shared/presenter';
-import { PosthogService } from '@catalogohoy/core';
+import {
+  AppLanguage,
+  LANGUAGE_STORAGE_KEY,
+  LanguageService,
+  PosthogService,
+} from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
 import { DialogService, IconComponent, dialogConfig } from '@ui';
@@ -51,6 +56,24 @@ export class ECommerce implements OnInit, OnDestroy {
   public readonly cartStore = inject(CartStore);
   public readonly planStore = inject(PlanStore);
   private readonly posthogService = inject(PosthogService);
+  private readonly language = inject(LanguageService);
+
+  /** Idioma default del tenant: se aplica UNA vez al cargar el catálogo y
+   *  solo si el visitante no eligió idioma con el switcher (localStorage).
+   *  setSession no persiste, así que la elección explícita siempre manda. */
+  private tenantLanguageApplied = false;
+  private readonly applyTenantLanguage = effect(() => {
+    const info = this.ecommerceStore.effectiveCatalogInfo();
+    if (!info || this.tenantLanguageApplied) return;
+    this.tenantLanguageApplied = true;
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    } catch {
+      // localStorage bloqueado: aplicamos igual el default del tenant
+    }
+    if (!stored) this.language.setSession(info.defaultLanguage as AppLanguage);
+  });
   private readonly titleService = inject(Title);
   private readonly metaService = inject(Meta);
   private readonly stripHtmlPipe = new StripHtmlPipe();

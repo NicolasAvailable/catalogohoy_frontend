@@ -46,9 +46,6 @@ export const PRIMENG_TRANSLATIONS: Record<AppLanguage, Translation> = {
     searchMessage: '{0} resultados disponibles',
     selectionMessage: '{0} elementos seleccionados',
     pending: 'Pendiente',
-    chooseLabel: 'Elegir',
-    uploadLabel: 'Subir',
-    cancelLabel: 'Cancelar',
   },
   en: {
     accept: 'Yes',
@@ -89,9 +86,6 @@ export const PRIMENG_TRANSLATIONS: Record<AppLanguage, Translation> = {
     searchMessage: '{0} results are available',
     selectionMessage: '{0} items selected',
     pending: 'Pending',
-    chooseLabel: 'Choose',
-    uploadLabel: 'Upload',
-    cancelLabel: 'Cancel',
   },
   fr: {
     accept: 'Oui',
@@ -132,9 +126,6 @@ export const PRIMENG_TRANSLATIONS: Record<AppLanguage, Translation> = {
     searchMessage: '{0} résultats disponibles',
     selectionMessage: '{0} éléments sélectionnés',
     pending: 'En attente',
-    chooseLabel: 'Choisir',
-    uploadLabel: 'Téléverser',
-    cancelLabel: 'Annuler',
   },
   pt: {
     accept: 'Sim',
@@ -175,8 +166,5 @@ export const PRIMENG_TRANSLATIONS: Record<AppLanguage, Translation> = {
     searchMessage: '{0} resultados disponíveis',
     selectionMessage: '{0} itens selecionados',
     pending: 'Pendente',
-    chooseLabel: 'Escolher',
-    uploadLabel: 'Enviar',
-    cancelLabel: 'Cancelar',
   },
 };

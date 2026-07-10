@@ -5,8 +5,9 @@ import { AppLanguage } from '../language.const';
 import { LanguageService } from '../language.service';
 
 /**
- * Selector compacto de idioma (globo + código). Se usa en el navbar del
- * admin y en el header del catálogo público.
+ * Selector de idioma estilo "ES ▾": el trigger muestra el código actual y el
+ * menú lista cada idioma con su bandera y nombre nativo. Se usa en el navbar
+ * del admin, el header del catálogo público y el login.
  */
 @Component({
   selector: 'lib-language-selector',
@@ -19,19 +20,20 @@ import { LanguageService } from '../language.service';
       [class]="styleClass()"
       [attr.aria-label]="'Cambiar idioma' | transloco"
     >
-      <ui-icon name="globe" styleClass="w-5 h-5" />
-      <span class="text-xs font-semibold uppercase leading-none">
+      <span class="text-sm font-semibold uppercase leading-none">
         {{ language.current() }}
       </span>
+      <ui-icon name="chevron-down" styleClass="w-4 h-4" />
     </button>
     <ui-menu #langMenu [items]="items" [autoClose]="false">
       <ng-template #item let-item>
         <button
           type="button"
           (click)="select(item)"
-          class="w-full flex items-center justify-between gap-6 px-3 py-2 cursor-pointer text-sm text-grey-700 hover:bg-primary-50 rounded-md"
+          class="w-full flex items-center gap-3 px-3 py-2 cursor-pointer text-sm text-grey-700 hover:bg-primary-50 rounded-md"
         >
-          <span>{{ item.label }}</span>
+          <span class="text-base leading-none">{{ item.icon }}</span>
+          <span class="flex-1 text-left">{{ item.label }}</span>
           @if (item.id === language.current()) {
             <ui-icon name="check" styleClass="w-4 h-4 text-primary-500" />
           }
@@ -50,6 +52,7 @@ export class LanguageSelectorComponent {
   protected readonly items: MenuItem[] = this.language.languages.map((l) => ({
     id: l.code,
     label: l.label,
+    icon: l.flag,
   }));
 
   protected select(item: MenuItem): void {

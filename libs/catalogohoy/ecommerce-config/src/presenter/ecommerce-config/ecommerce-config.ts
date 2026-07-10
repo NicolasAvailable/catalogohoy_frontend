@@ -16,7 +16,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DatePickerModule } from 'primeng/datepicker';
-import { isDevMode } from '@catalogohoy/core';
+import { APP_LANGUAGES, isDevMode } from '@catalogohoy/core';
 import { environment } from '@catalogohoy/env';
 import { PlanStore } from '@catalogohoy/plan';
 import { TenantStore, getTenantSlugFromUrl, isCustomDomain } from '@catalogohoy/tenant';
@@ -256,6 +256,8 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftShowCategoriesSection = signal(true);
   public readonly draftSocialLinks = signal<SocialLinks>({ ...DEFAULT_SOCIAL_LINKS });
   public readonly draftTemplate = signal<CatalogTemplate>('banner-centered');
+  public readonly draftDefaultLanguage = signal<string>('es');
+  public readonly appLanguages = [...APP_LANGUAGES];
   public readonly draftCurrencySymbol = signal('$');
   public readonly draftShowReferencePrice = signal(true);
   public readonly draftShowLocalCurrencyPrice = signal(true);
@@ -599,6 +601,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftShowPaymentMethodsSection, prev?.showPaymentMethodsSection ?? true, config.showPaymentMethodsSection ?? true);
       syncField(this.draftShowCategoriesSection, prev?.showCategoriesSection ?? true, config.showCategoriesSection ?? true);
       syncField(this.draftTemplate, prev?.template ?? 'banner-centered' as CatalogTemplate, config.template ?? 'banner-centered' as CatalogTemplate);
+      syncField(this.draftDefaultLanguage, prev?.defaultLanguage ?? 'es', config.defaultLanguage ?? 'es');
       syncField(this.draftCurrencySymbol, prev?.currencySymbol ?? '$', config.currencySymbol ?? '$');
       syncField(this.draftShowReferencePrice, prev?.showReferencePrice ?? true, config.showReferencePrice ?? true);
       syncField(this.draftShowLocalCurrencyPrice, prev?.showLocalCurrencyPrice ?? true, config.showLocalCurrencyPrice ?? true);
@@ -974,6 +977,7 @@ export class EcommerceConfigComponent implements OnInit {
     if (this.draftName() !== (config.name ?? '')) changes.name = this.draftName();
     if (this.draftDescription() !== (config.description ?? '')) changes.description = this.htmlSanitizer.sanitizeRichText(this.draftDescription());
     if (this.draftTemplate() !== (config.template ?? 'banner-centered')) changes.template = this.draftTemplate();
+    if (this.draftDefaultLanguage() !== (config.defaultLanguage ?? 'es')) changes.defaultLanguage = this.draftDefaultLanguage();
     if (this.draftThemeColor() !== (config.themeColor ?? '#10b981')) changes.themeColor = this.draftThemeColor();
     if (this.draftState() !== (config.state ?? null)) changes.state = this.draftState();
     if (this.draftCity() !== (config.city ?? null)) changes.city = this.draftCity();

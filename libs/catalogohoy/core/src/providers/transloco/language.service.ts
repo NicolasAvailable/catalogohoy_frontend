@@ -39,6 +39,16 @@ export class LanguageService {
     this.apply(lang);
   }
 
+  /** Aplica un idioma SOLO para esta sesión, sin persistir la elección.
+   *  Lo usa el storefront para el idioma default del tenant: si el visitante
+   *  después elige uno con el switcher (set), esa elección sí manda. */
+  public setSession(lang: AppLanguage): void {
+    if (!APP_LANGUAGES.some((l) => l.code === lang) || lang === this.current())
+      return;
+    this.current.set(lang);
+    this.apply(lang);
+  }
+
   private apply(lang: AppLanguage): void {
     this.transloco.setActiveLang(lang);
     this.primeng.setTranslation(PRIMENG_TRANSLATIONS[lang]);

@@ -29,6 +29,8 @@ export interface CatalogInfo {
   isOpen: boolean;
   businessHoursWeek: BusinessHoursDay[];
   themeColor: string;
+  /** Idioma default del catálogo (es/en/fr/pt) configurado por el tenant. */
+  defaultLanguage: string;
   showDesignSection: boolean;
   paymentMethods: PaymentMethodEntity[];
   showPaymentMethodsSection: boolean;

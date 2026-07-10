@@ -193,6 +193,7 @@ export class EcommerceService implements BaseEcommerceService {
       isOpen,
       businessHoursWeek,
       themeColor: config?.theme_color ?? '#10b981',
+      defaultLanguage: (config?.default_language as string) ?? 'es',
       showDesignSection: config?.show_design_section ?? true,
       paymentMethods: (data.payment_methods ?? []).map((pm: any) => ({
         id: pm.id,

@@ -3,11 +3,12 @@ export type AppLanguage = 'es' | 'en' | 'fr' | 'pt';
 export const APP_LANGUAGES: ReadonlyArray<{
   code: AppLanguage;
   label: string;
+  flag: string;
 }> = [
-  { code: 'es', label: 'Español' },
-  { code: 'en', label: 'English' },
-  { code: 'fr', label: 'Français' },
-  { code: 'pt', label: 'Português' },
+  { code: 'es', label: 'Español', flag: '🇪🇸' },
+  { code: 'en', label: 'English', flag: '🇺🇸' },
+  { code: 'fr', label: 'Français', flag: '🇫🇷' },
+  { code: 'pt', label: 'Português', flag: '🇧🇷' },
 ];
 
 export const LANGUAGE_STORAGE_KEY = 'catalogohoy_lang';

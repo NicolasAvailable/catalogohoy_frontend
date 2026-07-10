@@ -336,6 +336,9 @@ export interface EcommerceConfig {
   showCategoriesSection: boolean;
   socialLinks: SocialLinks;
   template: CatalogTemplate;
+  /** Idioma default del catálogo público (es/en/fr/pt). El visitante puede
+   *  cambiarlo con el switcher del catálogo; esto define el inicial. */
+  defaultLanguage: string;
   whatsappOrderMessage: string | null;
   /** When true, new orders trigger an email to the owner + team members
    *  with the `ordenes:view` permission. Toggled from the catalog editor
