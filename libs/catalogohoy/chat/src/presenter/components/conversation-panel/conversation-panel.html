@@ -1,0 +1,443 @@
+@if (!chatStore.selectedChat()) {
+  <!-- Empty state -->
+  <div class="flex-1 flex flex-col items-center justify-center gap-3 bg-lino-400">
+    <ui-icon name="message-square" size="48" styleClass="text-grey-100" />
+    <p class="text-sm text-grey-300">{{ 'Selecciona una conversación para comenzar' | transloco }}</p>
+  </div>
+} @else {
+  <div class="flex flex-col h-full bg-lino-400 min-w-0">
+    <!-- Header -->
+    <div class="flex items-center gap-3 px-4 py-3 bg-white border-b border-grey-50 h-16 shrink-0">
+      <!-- Back (mobile only) -->
+      <button
+        (click)="chatStore.closeChat()"
+        class="lg:hidden -ml-1 w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 shrink-0"
+        [title]="'Volver' | transloco"
+      >
+        <ui-icon name="chevron-left" size="20" styleClass="text-grey-500" />
+      </button>
+      <div class="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
+        <span class="text-xs font-bold text-primary-600">{{ initials(chatStore.selectedChat()!.customerName) }}</span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-grey-700 truncate">{{ chatStore.selectedChat()!.customerName }}</p>
+        @if (chatStore.selectedChat()!.customerPhone) {
+          <a
+            [href]="'tel:' + chatStore.selectedChat()!.customerPhone"
+            class="text-xs text-primary-500 hover:underline"
+          >
+            {{ chatStore.selectedChat()!.customerPhone }}
+          </a>
+        }
+      </div>
+
+      <!-- Assign (also available here, not just in the ficha) -->
+      <div class="hidden sm:block w-44 shrink-0">
+        <ui-select
+          [options]="assigneeOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [placeholder]="'Asignar a' | transloco"
+          size="small"
+          [ngModel]="chatStore.selectedChat()!.assignedToUserId"
+          (ngModelChange)="onAssign($event)"
+        />
+      </div>
+
+      <button
+        (click)="chatStore.toggleMute(chatStore.selectedChat()!.id)"
+        class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 transition-colors shrink-0"
+        [title]="(chatStore.selectedChat()!.muted ? 'Activar notificaciones' : 'Silenciar') | transloco"
+      >
+        @if (chatStore.selectedChat()!.muted) {
+          <ui-icon name="volume-x" size="16" styleClass="text-primary-500" />
+        } @else {
+          <ui-icon name="volume-2" size="16" styleClass="text-grey-400" />
+        }
+      </button>
+    </div>
+
+    <!-- Messages (scroll container has no padding so the scrollbar hugs the
+         edge; an inner wrapper holds the spacing — Fuse pattern) -->
+    <div #messagesContainer class="flex-1 overflow-y-auto">
+      <div class="flex w-full flex-auto flex-col gap-1 px-6 py-6">
+      @if (chatStore.isLoadingMessages()) {
+        <div class="flex flex-col gap-3 animate-pulse">
+          <div class="flex justify-start">
+            <div class="h-9 w-48 bg-grey-100 rounded-2xl rounded-tl-sm"></div>
+          </div>
+          <div class="flex justify-end">
+            <div class="h-9 w-36 bg-primary-100 rounded-2xl rounded-tr-sm"></div>
+          </div>
+          <div class="flex justify-start">
+            <div class="h-9 w-56 bg-grey-100 rounded-2xl rounded-tl-sm"></div>
+          </div>
+        </div>
+      } @else {
+        @for (group of chatStore.messagesByDay(); track group.date) {
+          <!-- Date separator -->
+          <div class="flex items-center gap-3 my-3">
+            <div class="flex-1 h-px bg-grey-100"></div>
+            <span class="text-xs font-medium text-grey-300 px-2">{{ formatDayLabel(group.date) }}</span>
+            <div class="flex-1 h-px bg-grey-100"></div>
+          </div>
+
+          @for (msg of group.msgs; track msg.id; let i = $index; let first = $first) {
+            <div
+              class="flex group items-end gap-1.5"
+              [class.justify-end]="msg.isMine"
+              [class.justify-start]="!msg.isMine"
+              [class.mt-3]="!first && isGroupStart(group.msgs, i)"
+              [class.mt-0.5]="!first && !isGroupStart(group.msgs, i)"
+            >
+              @if (msg.id > 0) {
+              <button
+                (click)="startReply(msg)"
+                class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-grey-400 hover:bg-grey-100 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                [class.order-2]="!msg.isMine"
+                [title]="'Responder' | transloco"
+              >
+                <ui-icon name="reply" size="14" />
+              </button>
+              }
+              <div
+                class="max-w-[75%] px-3.5 py-2 rounded-2xl leading-snug"
+                [class.rounded-br-md]="msg.isMine"
+                [class.rounded-bl-md]="!msg.isMine"
+                [class.bg-primary-500]="msg.isMine && !msg.isInternal"
+                [class.text-white]="msg.isMine && !msg.isInternal"
+                [class.bg-white]="!msg.isMine"
+                [class.text-grey-700]="!msg.isMine"
+                [class.shadow-sm]="!msg.isMine"
+                [class.bg-amber-100]="msg.isInternal"
+                [class.text-amber-900]="msg.isInternal"
+                [class.border]="msg.isInternal"
+                [class.border-amber-200]="msg.isInternal"
+              >
+                @if (msg.isInternal) {
+                <div
+                  class="flex items-center gap-1 text-[10px] font-semibold text-amber-700 mb-1"
+                >
+                  <ui-icon name="eye-off" size="11" /> {{ 'Nota interna · solo el equipo' | transloco }}
+                </div>
+                }
+                @if (quotedOf(msg); as q) {
+                <div
+                  class="mb-1 rounded-md px-2 py-1 text-xs border-l-2 max-w-full"
+                  [class.border-primary-300]="msg.isMine"
+                  [class.bg-primary-600]="msg.isMine"
+                  [class.border-primary-400]="!msg.isMine"
+                  [class.bg-grey-50]="!msg.isMine"
+                >
+                  <span
+                    class="block font-semibold truncate"
+                    [class.text-white]="msg.isMine"
+                    [class.text-primary-600]="!msg.isMine"
+                    >{{ quotedAuthor(q) }}</span
+                  >
+                  <span
+                    class="block truncate"
+                    [class.text-primary-100]="msg.isMine"
+                    [class.text-grey-500]="!msg.isMine"
+                    >{{ quotedText(q) }}</span
+                  >
+                </div>
+                }
+                @if (msg.type === 'image' && msg.mediaUrl) {
+                <ui-image
+                  [src]="msg.mediaUrl"
+                  [alt]="'Imagen' | transloco"
+                  styleClass="block rounded-lg overflow-hidden max-w-[15rem] cursor-zoom-in"
+                  imageClass="w-full max-h-64 object-cover"
+                />
+                @if (msg.content && msg.content !== '📷 Imagen') {
+                <p class="text-sm whitespace-pre-wrap break-words mt-1">{{ msg.content }}</p>
+                }
+                } @else {
+                <p class="text-sm whitespace-pre-wrap break-words">{{ msg.content }}</p>
+                }
+                @if (isGroupEnd(group.msgs, i) || msg.status) {
+                <div
+                  class="text-[10px] mt-1 -mb-0.5 flex items-center gap-1"
+                  [class.justify-end]="msg.isMine"
+                  [class.text-primary-100]="msg.isMine && !msg.isInternal"
+                  [class.text-amber-600]="msg.isInternal"
+                  [class.text-grey-300]="!msg.isMine"
+                >
+                  <span>{{ formatTime(msg.createdAt) }}</span>
+                  @if (msg.status === 'sending') {
+                  <ui-icon name="clock" size="11" />
+                  } @else if (msg.status === 'failed') {
+                  <span
+                    class="text-red-400 font-medium inline-flex items-center gap-1 cursor-help"
+                    [pTooltip]="msg.error || ('No se pudo enviar. Intentá de nuevo.' | transloco)"
+                    tooltipPosition="top"
+                  >
+                    <ui-icon name="triangle-alert" size="12" /> {{ 'No enviado' | transloco }}
+                  </span>
+                  }
+                </div>
+                }
+              </div>
+            </div>
+          }
+        }
+      }
+      </div>
+    </div>
+
+    <!-- Input area (estilo Tikket: pestañas Mensaje/Susurro + composer) -->
+    <div class="px-4 py-3 bg-white border-t border-grey-50 shrink-0">
+      <div class="flex items-center gap-5 mb-2 px-1">
+        <button
+          (click)="setComposerMode('message')"
+          class="text-sm pb-1.5 -mb-px border-b-2 cursor-pointer transition-colors"
+          [class.border-primary-500]="composerMode() === 'message'"
+          [class.text-primary-600]="composerMode() === 'message'"
+          [class.font-semibold]="composerMode() === 'message'"
+          [class.border-transparent]="composerMode() !== 'message'"
+          [class.text-grey-400]="composerMode() !== 'message'"
+        >
+          {{ 'Mensaje' | transloco }}
+        </button>
+        <button
+          (click)="setComposerMode('whisper')"
+          class="text-sm pb-1.5 -mb-px border-b-2 cursor-pointer transition-colors inline-flex items-center gap-1"
+          [class.border-amber-500]="composerMode() === 'whisper'"
+          [class.text-amber-600]="composerMode() === 'whisper'"
+          [class.font-semibold]="composerMode() === 'whisper'"
+          [class.border-transparent]="composerMode() !== 'whisper'"
+          [class.text-grey-400]="composerMode() !== 'whisper'"
+        >
+          <ui-icon name="eye-off" size="14" /> {{ 'Susurro' | transloco }}
+        </button>
+      </div>
+      <div
+        [ngClass]="
+          composerMode() === 'whisper'
+            ? 'rounded-xl border bg-amber-50 border-amber-300 transition-colors focus-within:ring-2 focus-within:ring-amber-100'
+            : 'rounded-xl border bg-white border-grey-100 transition-colors focus-within:border-primary-300 focus-within:ring-2 focus-within:ring-primary-100'
+        "
+      >
+        @if (chatStore.replyingTo(); as r) {
+        <div class="flex items-center gap-2 px-3 pt-3">
+          <div
+            class="flex-1 min-w-0 border-l-2 border-primary-400 bg-grey-50 rounded-md px-2 py-1"
+          >
+            <span class="block text-xs font-semibold text-primary-600">
+              {{ 'Respondiendo a {name}' | transloco: { name: quotedAuthor(r) } }}
+            </span>
+            <span class="block text-xs text-grey-500 truncate">{{ quotedText(r) }}</span>
+          </div>
+          <button
+            (click)="cancelReply()"
+            class="shrink-0 w-6 h-6 rounded-full hover:bg-grey-100 flex items-center justify-center text-grey-400 cursor-pointer"
+            [title]="'Cancelar' | transloco"
+          >
+            <ui-icon name="x" size="14" />
+          </button>
+        </div>
+        }
+        <textarea
+          [ngModel]="messageInput()"
+          (ngModelChange)="messageInput.set($event)"
+          (keydown)="onKeydown($event)"
+          [placeholder]="
+            (composerMode() === 'whisper'
+              ? 'Nota interna para el equipo (no la ve el cliente)…'
+              : 'Escribe una respuesta...') | transloco
+          "
+          class="w-full resize-none bg-transparent px-4 py-3 text-sm leading-relaxed text-grey-700 placeholder:text-grey-300 focus:outline-none min-h-[5rem] max-h-48 overflow-y-auto"
+        ></textarea>
+
+        <!-- Toolbar -->
+        <div class="flex items-center justify-between gap-2 px-2 py-1.5 border-t border-grey-50">
+          <div class="flex items-center gap-0.5">
+            <!-- Quick replies -->
+            @if (chatStore.quickReplies().length) {
+            <div class="relative qr-popover-wrap">
+              <button
+                (click)="toggleQuickReplies($event)"
+                class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
+                [pTooltip]="'Respuestas rápidas' | transloco"
+                tooltipPosition="top"
+              >
+                <ui-icon name="zap" size="18" styleClass="text-grey-400" />
+              </button>
+              @if (quickRepliesOpen()) {
+              <div
+                class="absolute bottom-10 left-0 z-10 w-72 max-h-64 overflow-y-auto bg-white border border-grey-100 rounded-xl shadow-lg p-1"
+              >
+                @for (qr of chatStore.quickReplies(); track qr.id) {
+                <button
+                  (click)="insertQuickReply(qr.content)"
+                  class="w-full text-left px-3 py-2 rounded-lg hover:bg-grey-50"
+                >
+                  <span class="block text-xs font-semibold text-primary-600">/{{ qr.shortcut }}</span>
+                  <span class="block text-xs text-grey-500 truncate">{{ qr.content }}</span>
+                </button>
+                }
+              </div>
+              }
+            </div>
+            }
+
+            <!-- Emoji picker (Apple set) -->
+            <div class="relative emoji-popover-wrap">
+              <button
+                (click)="toggleEmojiPicker($event)"
+                class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
+                [pTooltip]="'Emojis' | transloco"
+                tooltipPosition="top"
+              >
+                <ui-icon name="smile" size="18" styleClass="text-grey-400" />
+              </button>
+              @if (emojiPickerOpen()) {
+              <div
+                class="absolute bottom-10 left-0 z-20 shadow-xl rounded-xl overflow-hidden"
+              >
+                <emoji-mart
+                  set="apple"
+                  [emojiSize]="20"
+                  [perLine]="8"
+                  [showPreview]="false"
+                  [isNative]="false"
+                  (emojiSelect)="addEmoji($event)"
+                ></emoji-mart>
+              </div>
+              }
+            </div>
+
+            <!-- Adjuntar -->
+            <input
+              #fileInput
+              type="file"
+              class="hidden"
+              accept="image/*"
+              multiple
+              (change)="onAttachFile($event)"
+            />
+            @if (composerMode() !== 'whisper') {
+            <button
+              (click)="fileInput.click()"
+              class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
+              [pTooltip]="'Adjuntar imágenes' | transloco"
+              tooltipPosition="top"
+            >
+              <ui-icon name="paperclip" size="18" styleClass="text-grey-400" />
+            </button>
+            }
+          </div>
+
+          <!-- Contador + Enviar -->
+          <div class="flex items-center gap-2.5">
+            <span
+              class="text-[11px] tabular-nums select-none"
+              [class.text-grey-300]="!overLimit()"
+              [class.text-red-500]="overLimit()"
+              [class.font-semibold]="overLimit()"
+            >
+              {{ messageInput().length }} / {{ maxChars }}
+            </span>
+            <button
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              [ngClass]="
+                composerMode() === 'whisper'
+                  ? 'bg-amber-500 hover:bg-amber-600'
+                  : 'bg-primary-500 hover:bg-primary-600'
+              "
+              [disabled]="(!messageInput().trim() && !pendingMedia().length) || chatStore.isSendingMessage() || overLimit()"
+              (click)="send()"
+            >
+              {{ 'Enviar' | transloco }} <ui-icon name="send" size="14" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay de preview multimedia (estilo WhatsApp Web) -->
+  @if (pendingMedia().length && activeItem(); as active) {
+  <div class="fixed inset-0 z-50 flex flex-col bg-grey-900/95">
+    <!-- Header -->
+    <div class="flex items-center justify-between px-5 py-4 shrink-0">
+      <button
+        (click)="closePreview()"
+        class="w-9 h-9 flex items-center justify-center rounded-full text-white hover:bg-white/10 cursor-pointer"
+        [pTooltip]="'Descartar' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="x" size="20" />
+      </button>
+      <span class="text-sm text-white/80 truncate">
+        {{ chatStore.selectedChat()?.customerName || ('Cliente' | transloco) }}
+      </span>
+      <span class="w-9"></span>
+    </div>
+
+    <!-- Imagen activa -->
+    <div class="flex-1 min-h-0 flex items-center justify-center px-6">
+      <img
+        [src]="active.preview"
+        [alt]="'Adjunto' | transloco"
+        class="max-h-full max-w-full object-contain rounded-lg"
+      />
+    </div>
+
+    <!-- Filmstrip: cambiar de imagen; la activa muestra papelera para quitarla -->
+    <div class="flex items-center justify-center gap-2 px-6 py-4 shrink-0">
+      @for (m of pendingMedia(); track m.preview; let idx = $index) {
+      <button
+        (click)="idx === activeIndex() ? removeActive() : activeIndex.set(idx)"
+        class="relative w-14 h-14 rounded-lg overflow-hidden cursor-pointer shrink-0 border-2 transition-colors"
+        [class.border-primary-500]="idx === activeIndex()"
+        [class.border-transparent]="idx !== activeIndex()"
+      >
+        <img [src]="m.preview" alt="" class="w-full h-full object-cover" />
+        @if (idx === activeIndex()) {
+        <span
+          class="absolute inset-0 bg-grey-900/50 flex items-center justify-center"
+        >
+          <ui-icon name="trash" size="16" styleClass="text-white" />
+        </span>
+        }
+      </button>
+      }
+      <button
+        (click)="fileInput.click()"
+        class="w-14 h-14 rounded-lg border-2 border-dashed border-white/30 text-white/60 flex items-center justify-center hover:bg-white/10 cursor-pointer shrink-0"
+        [pTooltip]="'Agregar' | transloco"
+        tooltipPosition="top"
+      >
+        <ui-icon name="plus" size="20" />
+      </button>
+    </div>
+
+    <!-- Caption de la imagen activa + enviar -->
+    <div class="px-6 pb-6 shrink-0">
+      <div class="max-w-2xl mx-auto flex items-center gap-2">
+        <div class="flex-1 rounded-xl bg-white/10 px-4 py-3">
+          <input
+            type="text"
+            [ngModel]="active.caption"
+            (ngModelChange)="setActiveCaption($event)"
+            (keydown.enter)="send()"
+            [placeholder]="'Añade un comentario...' | transloco"
+            class="w-full bg-transparent text-white placeholder:text-white/40 text-sm focus:outline-none"
+          />
+        </div>
+        <button
+          (click)="send()"
+          [disabled]="chatStore.isSendingMessage()"
+          class="w-11 h-11 rounded-full bg-primary-500 hover:bg-primary-600 text-white flex items-center justify-center cursor-pointer disabled:opacity-50 shrink-0"
+          [pTooltip]="'Enviar' | transloco"
+          tooltipPosition="top"
+        >
+          <ui-icon name="send" size="18" />
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+}

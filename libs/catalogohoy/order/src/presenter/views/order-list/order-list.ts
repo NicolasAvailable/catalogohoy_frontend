@@ -12,6 +12,7 @@ import { TenantStore } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import {
@@ -56,6 +57,7 @@ type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
   imports: [
     CommonModule,
     FormsModule,
+    TranslocoPipe,
     IconComponent,
     ButtonComponent,
     DatepickerComponent,

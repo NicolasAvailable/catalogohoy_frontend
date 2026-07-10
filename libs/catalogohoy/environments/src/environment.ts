@@ -5,6 +5,7 @@ import { posthogEnvironment } from './posthog/posthog';
 import { sentryEnvironment } from './sentry/sentry';
 import { stripeEnvironment } from './stripe/stripe';
 import { supabaseEnvironment } from './supabase/supabase';
+import { whatsappEnvironment } from './whatsapp/whatsapp';
 
 export const environment = {
   production: true,
@@ -15,4 +16,5 @@ export const environment = {
   ...stripeEnvironment,
   ...metaPixelEnvironment,
   ...sentryEnvironment,
+  ...whatsappEnvironment,
 };

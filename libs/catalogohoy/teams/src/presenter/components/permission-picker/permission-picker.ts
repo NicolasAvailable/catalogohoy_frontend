@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
 import { ButtonComponent, CheckboxComponent } from '@ui';
 import {
@@ -22,7 +23,7 @@ import {
 @Component({
   selector: 'lib-permission-picker',
   standalone: true,
-  imports: [NgClass, LucideAngularModule, FormsModule, CheckboxComponent, ButtonComponent],
+  imports: [NgClass, LucideAngularModule, FormsModule, CheckboxComponent, ButtonComponent, TranslocoPipe],
   templateUrl: './permission-picker.html',
   styleUrl: './permission-picker.css',
 })

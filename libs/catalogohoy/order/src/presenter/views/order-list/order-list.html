@@ -2,9 +2,9 @@
   <!-- Header -->
   <header class="flex items-start justify-between gap-4">
     <div>
-      <h1 class="text-2xl sm:text-3xl font-bold text-grey-800 mb-1">Órdenes</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold text-grey-800 mb-1">{{ 'Órdenes' | transloco }}</h1>
       <p class="text-sm sm:text-base text-grey-400">
-        Gestiona los pedidos y el estado de ventas de tu catálogo
+        {{ 'Gestiona los pedidos y el estado de ventas de tu catálogo' | transloco }}
       </p>
     </div>
     @if (canCreateOrder()) {
@@ -12,7 +12,7 @@
       class="sm:hidden shrink-0"
       (click)="onCreateOrder()"
       [fluid]="false"
-      label="Crear"
+      [label]="'Crear' | transloco"
       icon="circle-plus"
       size="small"
     />
@@ -20,7 +20,7 @@
       class="hidden sm:block shrink-0"
       (click)="onCreateOrder()"
       [fluid]="false"
-      label="Crear orden manual"
+      [label]="'Crear orden manual' | transloco"
       icon="circle-plus"
       styleClass="shadow-sm"
     />
@@ -38,7 +38,7 @@
       <!-- Search -->
       <div class="relative flex-1 max-w-md">
         <ui-input-search
-          placeholder="Buscar por nombre..."
+          [placeholder]="'Buscar por nombre...' | transloco"
           [ngModel]="searchQuery()"
           (ngModelChange)="onSearch($event)"
           size="small"
@@ -61,7 +61,7 @@
           @if (tab.dotClass) {
             <span [class]="'w-1.5 h-1.5 rounded-full shrink-0 ' + tab.dotClass"></span>
           }
-          {{ tab.label }}
+          {{ tab.label | transloco }}
         </button>
         }
         <div class="w-px h-6 bg-grey-100 mx-1"></div>
@@ -81,13 +81,13 @@
                 [name]="selected.icon"
                 styleClass="size-4 text-grey-400"
               />
-              <span class="text-grey-300 font-bold">{{ selected.label }}</span>
+              <span class="text-grey-300 font-bold">{{ selected.label | transloco }}</span>
             </div>
           </ng-template>
           <ng-template selectItem let-item>
             <div class="flex items-center gap-2">
               <ui-icon [name]="item.icon" styleClass="size-4 text-grey-400" />
-              <span class="text-grey-300 font-bold">{{ item.label }}</span>
+              <span class="text-grey-300 font-bold">{{ item.label | transloco }}</span>
             </div>
           </ng-template>
         </ui-select>
@@ -102,7 +102,7 @@
             dateFormat="dd/mm/yy"
             mode="single"
             size="small"
-            placeholder="Seleccionar fecha"
+            [placeholder]="'Seleccionar fecha' | transloco"
             styleClass="w-40 order-filter-datepicker"
           />
         </div>
@@ -126,15 +126,15 @@
           <!-- Info -->
           <div class="flex-1 flex flex-col gap-1 min-w-0 text-xs">
             <span class="text-grey-300 font-medium">#{{ order.orderNumber ?? order.id }}</span>
-            <div><span class="text-grey-800 font-bold">Nombre: </span><span class="text-grey-700">{{ order.name }}</span></div>
+            <div><span class="text-grey-800 font-bold">{{ 'Nombre:' | transloco }} </span><span class="text-grey-700">{{ order.name }}</span></div>
             @if (order.phone) {
             <div>
-              <span class="text-grey-800 font-bold">Número: </span>
+              <span class="text-grey-800 font-bold">{{ 'Número:' | transloco }} </span>
               <a [href]="getWhatsAppLink(order.phone)" target="_blank" class="text-green-600 font-medium">{{ order.phone }}</a>
             </div>
             }
             <div class="flex items-center gap-1">
-              <span class="text-grey-800 font-bold">Estado: </span>
+              <span class="text-grey-800 font-bold">{{ 'Estado:' | transloco }} </span>
               <ui-select
                 [options]="statusOptions"
                 [ngModel]="order.status"
@@ -147,19 +147,19 @@
                 <ng-template selectSelectedItem let-selected>
                   <span [class]="getStatusBadgeClass(selected.value)">
                     <span [class]="getStatusDotClass(selected.value)"></span>
-                    {{ selected.label }}
+                    {{ selected.label | transloco }}
                   </span>
                 </ng-template>
                 <ng-template selectItem let-item>
                   <span [class]="getStatusBadgeClass(item.value)">
                     <span [class]="getStatusDotClass(item.value)"></span>
-                    {{ item.label }}
+                    {{ item.label | transloco }}
                   </span>
                 </ng-template>
               </ui-select>
             </div>
             <div>
-              <span class="text-grey-800 font-bold">Productos:</span>
+              <span class="text-grey-800 font-bold">{{ 'Productos:' | transloco }}</span>
               <div class="flex flex-col gap-2 mt-1.5">
                 @for (item of visibleProducts(order); track $index) {
                 <div class="flex items-start gap-2.5">
@@ -183,10 +183,11 @@
                       >
                       <span class="text-xs font-medium text-grey-800 leading-snug">{{ item.name }}</span>
                     </div>
-                    @if (item.variantName || item.size || item.sku) {
+                    @if (item.variantName || item.size || item.sku || item.tierTitle) {
                     <div class="flex items-center gap-x-2 gap-y-0.5 flex-wrap text-[0.625rem] text-grey-400 mt-0.5">
                       @if (item.variantName) { <span>{{ item.variantName }}</span> }
-                      @if (item.size) { <span>Talla {{ item.size }}</span> }
+                      @if (item.size) { <span>{{ 'Talla {size}' | transloco: { size: item.size } }}</span> }
+                      @if (item.tierTitle) { <span>{{ 'Al mayor: {title}' | transloco: { title: item.tierTitle } }}</span> }
                       @if (item.sku) { <span>sku: {{ item.sku }}</span> }
                     </div>
                     }
@@ -199,17 +200,17 @@
                   (click)="toggleProductsExpanded(order.id)"
                   class="self-start text-xs font-semibold text-primary-600 hover:text-primary-700 cursor-pointer"
                 >
-                  @if (isProductsExpanded(order.id)) { Ver menos } @else { Ver {{ order.products.length - PRODUCTS_PREVIEW }} más }
+                  @if (isProductsExpanded(order.id)) { {{ 'Ver menos' | transloco }} } @else { {{ 'Ver {count} más' | transloco: { count: order.products.length - PRODUCTS_PREVIEW } }} }
                 </button>
                 }
               </div>
             </div>
-            <div><span class="text-grey-800 font-bold">Total: </span><span class="font-bold text-primary-600">{{ cs() }}{{ order.totalUsd | number:'1.2-2' }}</span></div>
+            <div><span class="text-grey-800 font-bold">{{ 'Total:' | transloco }} </span><span class="font-bold text-primary-600">{{ cs() }}{{ order.totalUsd | number:'1.2-2' }}</span></div>
             @if (showBs() && order.totalBs) {
-            <div><span class="text-grey-800 font-bold">Total Bs: </span><span class="font-bold text-primary-600">Bs. {{ order.totalBs | number:'1.2-2' }}</span></div>
+            <div><span class="text-grey-800 font-bold">{{ 'Total Bs:' | transloco }} </span><span class="font-bold text-primary-600">Bs. {{ order.totalBs | number:'1.2-2' }}</span></div>
             }
             @if (order.shippingMethod) {
-            <div><span class="text-grey-800 font-bold">Envío: </span><span class="text-grey-700">{{ order.shippingMethod.name }}</span></div>
+            <div><span class="text-grey-800 font-bold">{{ 'Envío:' | transloco }} </span><span class="text-grey-700">{{ order.shippingMethod.name }}</span></div>
             }
             <span class="text-grey-300">{{ order.createdAt | date: 'dd/MM/yy hh:mm a' }}</span>
           </div>
@@ -257,14 +258,14 @@
           <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
             <ui-icon name="notepad-text" styleClass="size-8 text-primary-400" />
           </div>
-          <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes órdenes todavía</h3>
+          <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes órdenes todavía' | transloco }}</h3>
           <p class="text-grey-300 text-sm mb-6 max-w-sm">
-            Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente.
+            {{ 'Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente.' | transloco }}
           </p>
           @if (canCreateOrder()) {
           <ui-button
             (click)="onCreateOrder()"
-            label="Crear orden manual"
+            [label]="'Crear orden manual' | transloco"
             icon="circle-plus"
             [fluid]="false"
           />
@@ -282,20 +283,20 @@
             class="bg-grey-25 text-grey-400 text-[11px] uppercase tracking-wider font-bold"
           >
             <th class="px-6 py-3 border-b border-grey-50">ID</th>
-            <th class="px-6 py-3 border-b border-grey-50">Nombre</th>
-            <th class="px-6 py-3 border-b border-grey-50">Productos</th>
+            <th class="px-6 py-3 border-b border-grey-50">{{ 'Nombre' | transloco }}</th>
+            <th class="px-6 py-3 border-b border-grey-50">{{ 'Productos' | transloco }}</th>
             <th class="px-6 py-3 border-b border-grey-50 text-center">
-              Estado
+              {{ 'Estado' | transloco }}
             </th>
             <th class="px-6 py-3 border-b border-grey-50">WhatsApp</th>
-            <th class="px-6 py-3 border-b border-grey-50">Fecha de creación</th>
-            <th class="px-6 py-3 border-b border-grey-50">Envío</th>
-            <th class="px-6 py-3 border-b border-grey-50">Total</th>
+            <th class="px-6 py-3 border-b border-grey-50">{{ 'Fecha de creación' | transloco }}</th>
+            <th class="px-6 py-3 border-b border-grey-50">{{ 'Envío' | transloco }}</th>
+            <th class="px-6 py-3 border-b border-grey-50">{{ 'Total' | transloco }}</th>
             @if (showBs()) {
-            <th class="px-6 py-3 border-b border-grey-50">Total Bs</th>
+            <th class="px-6 py-3 border-b border-grey-50">{{ 'Total Bs' | transloco }}</th>
             }
             <th class="px-6 py-3 border-b border-grey-50 text-right">
-              Acciones
+              {{ 'Acciones' | transloco }}
             </th>
           </tr>
         </thead>
@@ -374,10 +375,11 @@
                       >
                       <span class="text-sm font-medium text-grey-800 leading-snug">{{ item.name }}</span>
                     </div>
-                    @if (item.variantName || item.size || item.sku) {
+                    @if (item.variantName || item.size || item.sku || item.tierTitle) {
                     <div class="flex items-center gap-x-2 gap-y-0.5 flex-wrap text-[0.6875rem] text-grey-400 mt-0.5">
                       @if (item.variantName) { <span>{{ item.variantName }}</span> }
-                      @if (item.size) { <span>Talla {{ item.size }}</span> }
+                      @if (item.size) { <span>{{ 'Talla {size}' | transloco: { size: item.size } }}</span> }
+                      @if (item.tierTitle) { <span>{{ 'Al mayor: {title}' | transloco: { title: item.tierTitle } }}</span> }
                       @if (item.sku) { <span>sku: {{ item.sku }}</span> }
                     </div>
                     }
@@ -390,7 +392,7 @@
                   (click)="toggleProductsExpanded(order.id)"
                   class="self-start text-xs font-semibold text-primary-600 hover:text-primary-700 cursor-pointer"
                 >
-                  @if (isProductsExpanded(order.id)) { Ver menos } @else { Ver {{ order.products.length - PRODUCTS_PREVIEW }} más }
+                  @if (isProductsExpanded(order.id)) { {{ 'Ver menos' | transloco }} } @else { {{ 'Ver {count} más' | transloco: { count: order.products.length - PRODUCTS_PREVIEW } }} }
                 </button>
                 }
               </div>
@@ -409,13 +411,13 @@
                   <ng-template selectSelectedItem let-selected>
                     <span [class]="getStatusBadgeClass(selected.value)">
                       <span [class]="getStatusDotClass(selected.value)"></span>
-                      {{ selected.label }}
+                      {{ selected.label | transloco }}
                     </span>
                   </ng-template>
                   <ng-template selectItem let-item>
                     <span [class]="getStatusBadgeClass(item.value)">
                       <span [class]="getStatusDotClass(item.value)"></span>
-                      {{ item.label }}
+                      {{ item.label | transloco }}
                     </span>
                   </ng-template>
                 </ui-select>
@@ -466,7 +468,7 @@
                   variant="outlined"
                   severity="contrast"
                   size="small"
-                  tooltip="Ver detalle"
+                  [tooltip]="'Ver detalle' | transloco"
                   tooltipPosition="bottom"
                 />
                 <ui-button
@@ -475,7 +477,7 @@
                   variant="outlined"
                   severity="contrast"
                   size="small"
-                  tooltip="Descargar PDF"
+                  [tooltip]="'Descargar PDF' | transloco"
                   tooltipPosition="bottom"
                 />
                 @if (canEditOrder()) {
@@ -486,7 +488,7 @@
                   severity="contrast"
                   size="small"
                   [disabled]="isProcessing()"
-                  tooltip="Editar"
+                  [tooltip]="'Editar' | transloco"
                   tooltipPosition="bottom"
                 />
                 }
@@ -498,7 +500,7 @@
                   severity="contrast"
                   size="small"
                   [disabled]="isProcessing()"
-                  tooltip="Eliminar"
+                  [tooltip]="'Eliminar' | transloco"
                   tooltipPosition="bottom"
                 />
                 }
@@ -512,14 +514,14 @@
                 <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
                   <ui-icon name="notepad-text" styleClass="size-8 text-primary-400" />
                 </div>
-                <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes órdenes todavía</h3>
+                <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes órdenes todavía' | transloco }}</h3>
                 <p class="text-grey-300 text-sm mb-6 max-w-sm">
-                  Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente.
+                  {{ 'Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente.' | transloco }}
                 </p>
                 @if (canCreateOrder()) {
                 <ui-button
                   (click)="onCreateOrder()"
-                  label="Crear orden manual"
+                  [label]="'Crear orden manual' | transloco"
                   icon="circle-plus"
                   [fluid]="false"
                 />
@@ -537,7 +539,7 @@
       class="p-4 bg-grey-25 border-t border-grey-50 flex items-center justify-between gap-2 flex-wrap"
     >
       <span class="text-xs text-grey-400 font-medium">
-        Mostrando {{ paginatedOrders().length }} · Total: {{ orderStore.grandTotalCount() }} órdenes
+        {{ 'Mostrando {shown} · Total: {total} órdenes' | transloco: { shown: paginatedOrders().length, total: orderStore.grandTotalCount() } }}
       </span>
       <p-paginator
         [first]="pageFirst()"
@@ -562,7 +564,7 @@
       </div>
       <div>
         <p class="text-grey-400 text-xs font-medium uppercase tracking-wider">
-          Ventas hoy
+          {{ 'Ventas hoy' | transloco }}
         </p>
         <p class="text-xl font-bold text-grey-800">
           {{ cs() }}{{ getTodaySales() | number:'1.2-2' }}
@@ -579,10 +581,10 @@
       </div>
       <div>
         <p class="text-grey-400 text-xs font-medium uppercase tracking-wider">
-          Pendientes
+          {{ 'Pendientes' | transloco }}
         </p>
         <p class="text-xl font-bold text-grey-800">
-          {{ getPendingCount() }} órdenes
+          {{ '{count} órdenes' | transloco: { count: getPendingCount() } }}
         </p>
       </div>
     </div>
@@ -596,10 +598,10 @@
       </div>
       <div>
         <p class="text-grey-400 text-xs font-medium uppercase tracking-wider">
-          Completadas
+          {{ 'Completadas' | transloco }}
         </p>
         <p class="text-xl font-bold text-grey-800">
-          {{ getCompletedCount() }} órdenes
+          {{ '{count} órdenes' | transloco: { count: getCompletedCount() } }}
         </p>
       </div>
     </div>
@@ -613,10 +615,10 @@
       </div>
       <div>
         <p class="text-grey-400 text-xs font-medium uppercase tracking-wider">
-          Canceladas
+          {{ 'Canceladas' | transloco }}
         </p>
         <p class="text-xl font-bold text-grey-800">
-          {{ getCancelledCount() }} órdenes
+          {{ '{count} órdenes' | transloco: { count: getCancelledCount() } }}
         </p>
       </div>
     </div>

@@ -38,12 +38,23 @@ const BASE =
   "original; NO inventes datos, precios ni especificaciones que no estén; tono " +
   "claro y vendedor, sin exageraciones falsas. Devolvé SOLO la descripción en " +
   "HTML simple (usa <p>, y <strong> o <ul><li> si ayuda), sin estilos inline, " +
-  "sin ```html, sin comentarios ni texto extra.";
+  "sin comentarios ni texto extra. IMPORTANTE: tu respuesta debe EMPEZAR " +
+  "directamente con un tag HTML ('<'), NUNCA con ```html, ni con la palabra " +
+  "'html', ni con una frase introductoria como 'Aquí está'.";
 
 const MODE_INSTRUCTION: Record<string, string> = {
   improve: "Mejorá la redacción: corregí ortografía y gramática, hacela más clara y atractiva.",
   expand: "Ampliá la descripción con detalles persuasivos coherentes con lo que dice (sin inventar especificaciones).",
   shorten: "Acortá la descripción a lo esencial, conservando lo más claro y vendedor.",
+  professional:
+    "Reescribí como una FICHA DE PRODUCTO profesional y atractiva: una frase " +
+    "inicial en <strong>, luego una <ul><li> con las características o " +
+    "beneficios principales, y si hay especificaciones ponelas con la etiqueta " +
+    "en <strong> (ej: <strong>Material:</strong> algodón). No inventes datos.",
+  spelling:
+    "Corregí SOLO la ortografía, gramática y puntuación. NO reescribas, no " +
+    "cambies el tono, el estilo ni el contenido, no agregues ni quites nada. " +
+    "Devolvé el MISMO texto corregido, respetando su estructura, en HTML simple.",
 };
 
 Deno.serve(async (req) => {
@@ -145,7 +156,24 @@ Deno.serve(async (req) => {
       throw new Error("anthropic error");
     }
     const data = await res.json();
-    const improved = (data?.content?.[0]?.text ?? "").trim();
+    let improved = (data?.content?.[0]?.text ?? "").trim();
+    // El modelo a veces envuelve la respuesta en un code fence (```html … ```)
+    // o antepone una frase/etiqueta ("Aquí está:", "html"). Eso aparecía como
+    // texto literal al comienzo de la descripción. Lo limpiamos sin regex:
+    if (improved.startsWith("```")) {
+      improved = improved.slice(3);
+      if (improved.toLowerCase().startsWith("html")) {
+        improved = improved.slice(4);
+      }
+      improved = improved.trimStart();
+    }
+    if (improved.endsWith("```")) {
+      improved = improved.slice(0, -3).trimEnd();
+    }
+    // Si quedó un preámbulo antes del primer tag HTML, recortamos hasta el '<'.
+    const firstTag = improved.indexOf("<");
+    if (firstTag > 0) improved = improved.slice(firstTag);
+    improved = improved.trim();
     if (!improved) throw new Error("empty result");
     // Registra la generación exitosa en ai_usage_log (panel internal "Uso de
     // IA"). Best-effort: no debe romper la respuesta.

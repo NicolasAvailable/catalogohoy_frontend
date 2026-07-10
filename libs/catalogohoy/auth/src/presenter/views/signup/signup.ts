@@ -2,6 +2,7 @@ import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular
 import { Subscription } from 'rxjs';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { MetaPixelService, SupabaseClientProvider } from '@catalogohoy/core';
 import { SUPPORTED_COUNTRIES } from '@catalogohoy/ecommerce-config';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
@@ -53,6 +54,7 @@ type Step = 1 | 2 | 3;
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
+    TranslocoPipe,
   ],
   templateUrl: './signup.html',
   styleUrl: './signup.css',

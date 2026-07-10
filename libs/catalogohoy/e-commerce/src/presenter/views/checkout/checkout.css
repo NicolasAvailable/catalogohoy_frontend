@@ -340,28 +340,54 @@
   display: block;
 }
 
-/* Payment grid */
-.checkout__pay-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+/* Datos del método de pago elegido (acordeón bajo su fila).
+   A lo ancho, sin la sangría del radio: las filas label/valor aprovechan
+   todo el ancho de la tarjeta. */
+.checkout__pay-body {
+  padding: 0 1rem 0.875rem;
+  display: flex;
+  flex-direction: column;
   gap: 0.625rem;
 }
-.checkout__pay {
+.checkout__pay-info-rows {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  border: 0.0625rem solid var(--color-grey-200, #d1d5db);
-  border-radius: 0.625rem;
-  background: white;
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: var(--color-grey-700, #334155);
+  flex-direction: column;
+  gap: 0.375rem;
 }
-.checkout__pay--active {
-  border-color: var(--color-primary-500, #3b82f6);
-  background: var(--color-primary-50, #eff6ff);
+.checkout__pay-info-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+}
+.checkout__pay-info-label {
+  color: var(--color-grey-500, #64748b);
+  flex-shrink: 0;
+}
+.checkout__pay-info-value {
+  font-weight: 600;
+  color: var(--color-grey-800, #1e293b);
+  text-align: right;
+  word-break: break-word;
+  user-select: all;
+}
+.checkout__pay-info-copy {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border: 0.0625rem solid var(--color-primary-300, #93c5fd);
+  border-radius: 0.5rem;
+  background: white;
   color: var(--color-primary-700, #1d4ed8);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.checkout__pay-info-copy:hover {
+  background: var(--color-primary-50, #eff6ff);
 }
 
 /* Summary */

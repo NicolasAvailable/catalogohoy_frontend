@@ -24,6 +24,7 @@ import {
   moveItemInArray,
 } from '@angular/cdk/drag-drop';
 import { Router, RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { CategoryStore } from '@catalogohoy/category';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
@@ -53,8 +54,13 @@ import {
 } from '@ui';
 import { ProductFacade } from '../../../application';
 import { Product } from '../../../domain';
-import { AiImageService, ProductService } from '../../../infrastructure';
+import {
+  AiImageService,
+  ImageGalleryService,
+  ProductService,
+} from '../../../infrastructure';
 import { ImageEraserComponent } from '../../components/image-eraser/image-eraser';
+import { ImageGalleryComponent } from '../../components/image-gallery/image-gallery';
 import { ImageGeneratorComponent } from '../../components/image-generator/image-generator';
 
 @Component({
@@ -72,6 +78,7 @@ import { ImageGeneratorComponent } from '../../components/image-generator/image-
     IconComponent,
     ImageComponent,
     ImageEraserComponent,
+    ImageGalleryComponent,
     ImageGeneratorComponent,
     InputNumberComponent,
     RadioButtonComponent,
@@ -81,6 +88,7 @@ import { ImageGeneratorComponent } from '../../components/image-generator/image-
     SelectComponent,
     SelectItemDirective,
     ToggleComponent,
+    TranslocoPipe,
   ],
   templateUrl: './save.html',
   styleUrl: './save.css',
@@ -92,6 +100,7 @@ export default class Save implements OnInit {
   private readonly productFacade = inject(ProductFacade);
   private readonly productService = inject(ProductService);
   private readonly aiImageService = inject(AiImageService);
+  private readonly galleryService = inject(ImageGalleryService);
   public readonly categoryStore = inject(CategoryStore);
   public readonly planStore = inject(PlanStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
@@ -161,11 +170,16 @@ export default class Save implements OnInit {
   public readonly eraserPhoto = signal<string | null>(null);
   // Generador de imagen con IA: si el modal está abierto.
   public readonly generatorOpen = signal<boolean>(false);
+  public readonly galleryOpen = signal<boolean>(false);
+  /** Tenant actual, para registrar/leer la galería de imágenes. */
+  public readonly tenantId = signal<number | null>(null);
   // Mejorar descripción con IA: opciones del ui-select (cada una con su icono),
   // valor seleccionado (se resetea tras elegir) y flag de procesando.
   public readonly improveModes = [
     { label: 'Mejorar redacción', value: 'improve', icon: 'wand-sparkles' },
-    { label: 'Alargar', value: 'expand', icon: 'plus' },
+    { label: 'Ficha profesional', value: 'professional', icon: 'sparkles' },
+    { label: 'Corregir ortografía', value: 'spelling', icon: 'check' },
+    { label: 'Extender', value: 'expand', icon: 'plus' },
     { label: 'Acortar', value: 'shorten', icon: 'minus' },
   ];
   public readonly improveModeValue = signal<string | null>(null);
@@ -261,6 +275,7 @@ export default class Save implements OnInit {
     this.categoryStore.categoryList$(1, 100);
     this.planStore.loadTenantPlanUsage();
     this.tenantStore.getTenantIdAsync().then((tid) => {
+      this.tenantId.set(tid ?? null);
       if (tid) this.tenantCurrency.load(tid);
     });
     is.affirmative(this.id())
@@ -651,6 +666,10 @@ export default class Save implements OnInit {
 
     this.photos.update((photos) => [...photos, ...toAdd]);
     this.form.controls.photos.setValue(this.photos());
+
+    // Registrar en la galería del tenant ("Todas las subidas"). Best-effort.
+    const tid = this.tenantId();
+    if (tid) toAdd.forEach((url) => this.galleryService.registerUpload(tid, url));
   }
 
   public removePhoto(url: string) {
@@ -738,16 +757,32 @@ export default class Save implements OnInit {
     this.closeGenerator();
   }
 
+  // ───── Galería de imágenes (reusar fotos ya subidas) ─────
+  public openGallery() {
+    this.galleryOpen.set(true);
+  }
+
+  public closeGallery() {
+    this.galleryOpen.set(false);
+  }
+
+  /** El usuario eligió una imagen de la galería: la agregamos (setPhoto respeta
+   *  el límite del plan y evita duplicados) y cerramos el modal. */
+  public onGallerySelected(url: string) {
+    this.setPhoto(url);
+    this.closeGallery();
+  }
+
   // ───── Mejorar descripción con IA (Claude Haiku) ─────
 
   /** El ui-select emite el modo elegido; lo reseteamos a placeholder y mejoramos. */
   public onImproveMode(mode: string | null) {
     if (!mode) return;
     this.improveModeValue.set(null);
-    this.improveDescription(mode as 'improve' | 'expand' | 'shorten');
+    this.improveDescription(mode as 'improve' | 'expand' | 'shorten' | 'professional' | 'spelling');
   }
 
-  public async improveDescription(mode: 'improve' | 'expand' | 'shorten') {
+  public async improveDescription(mode: 'improve' | 'expand' | 'shorten' | 'professional' | 'spelling') {
     const text = this.descriptionPlain();
     if (text.length < 15 || this.improvingDesc()) return;
     this.improvingDesc.set(true);
@@ -810,7 +845,12 @@ export default class Save implements OnInit {
     if (this.isCreate()) {
       const product = await this.productFacade.create(body);
       product
-        .mapRight(() => this.router.navigate(['/admin/products']))
+        .mapRight(() => {
+          // El conteo del plan subió: re-consultar para que el límite quede
+          // sincronizado al volver al listado (el PlanStore está cacheado).
+          this.planStore.refreshUsage();
+          this.router.navigate(['/admin/products']);
+        })
         .mapLeft((error) => {
           this.isSubmitting.set(false);
           if (error.message?.includes('PLAN_LIMIT_EXCEEDED')) {

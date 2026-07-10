@@ -1,6 +1,16 @@
 import { inject } from '@angular/core';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
-import { toast } from 'ngx-sonner';
+import { translate } from '@jsverse/transloco';
+import { toast as sonnerToast } from 'ngx-sonner';
+
+// key-as-text: los mensajes son keys de transloco y ngx-sonner no traduce
+// solo, así que este alias traduce antes de mostrar (mismo rol que ToastService).
+const toast = {
+  success: (msg: string) => sonnerToast.success(translate(msg)),
+  error: (msg: string) => sonnerToast.error(translate(msg)),
+  loading: (msg: string) => sonnerToast.loading(translate(msg)),
+  dismiss: (id?: string | number) => sonnerToast.dismiss(id),
+};
 import {
   CatalogTemplate,
   DEFAULT_CURRENCY_CONFIG,
@@ -368,7 +378,14 @@ export const EcommerceConfigStore = signalStore(
       result.fold(
         (error: Error) => {
           patchState(store, { isSaving: false, error: error.message });
-          toast.error('Error al guardar la configuración');
+          // 42501 (RLS) con upsert = el request salió sin sesión válida: el
+          // token no pudo refrescarse (pestaña vieja). Decir la verdad ayuda
+          // más que un "error al guardar" genérico.
+          toast.error(
+            error.message.includes('row-level security')
+              ? 'Tu sesión expiró. Recargá la página o volvé a iniciar sesión e intentá de nuevo.'
+              : 'Error al guardar la configuración'
+          );
         },
         () => {
           patchState(store, {
@@ -608,6 +625,28 @@ export const EcommerceConfigStore = signalStore(
             .filter((m) => m.id !== id);
           patchState(store, { paymentMethodsList: filtered });
           toast.success('Método de pago eliminado');
+        }
+      );
+    },
+
+    /** Guarda los datos (banco, cuenta, etc.) de un método de pago. */
+    async savePaymentMethodDetails(
+      id: number,
+      details: Record<string, string>
+    ) {
+      const loadingId = toast.loading('Guardando datos...');
+      const result = await service.updatePaymentMethod(id, { details });
+      toast.dismiss(loadingId);
+      result.fold(
+        () => {
+          toast.error('Error al guardar los datos del método');
+        },
+        () => {
+          const updated = store
+            .paymentMethodsList()
+            .map((m) => (m.id === id ? { ...m, details } : m));
+          patchState(store, { paymentMethodsList: updated });
+          toast.success('Datos guardados');
         }
       );
     },

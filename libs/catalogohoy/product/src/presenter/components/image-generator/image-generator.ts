@@ -2,26 +2,55 @@ import {
   AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   input,
   output,
   signal,
   viewChild,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { ButtonComponent, DialogComponent, IconComponent } from '@ui';
+import {
+  DialogComponent,
+  IconComponent,
+  SelectComponent,
+  SelectItemDirective,
+  SelectSelectedItemDirective,
+} from '@ui';
 import { AiImageService } from '../../../infrastructure';
+
+export type AspectRatio = 'auto' | 'square' | 'landscape' | 'portrait';
+
+/** Estilos de imagen. El `value` se manda a la edge function, que lo traduce a
+ *  un descriptor del prompt (la lógica de IA vive server-side). */
+const STYLE_OPTIONS: { value: string; label: string; icon: string }[] = [
+  { value: 'default', label: 'Predeterminado', icon: 'sparkles' },
+  { value: 'product', label: 'Foto de producto', icon: 'camera' },
+  { value: 'studio', label: 'Estudio (fondo blanco)', icon: 'lightbulb' },
+  { value: 'lifestyle', label: 'Estilo de vida', icon: 'home' },
+  { value: 'minimal', label: 'Minimalista', icon: 'minus' },
+  { value: 'threeD', label: 'Render 3D', icon: 'package' },
+];
 
 /**
  * Modal para generar una imagen de producto con IA (FLUX vía la Edge Function).
- * El usuario escribe un prompt y puede insertar el título/descripción del
- * producto como base. Al generar, sube el resultado a Storage y emite la URL.
- * Usa el ui-dialog compartido (PrimeNG) para verse nativo como el resto.
+ * Permite elegir proporción y estilo, escribir un prompt (con el título/desc del
+ * producto como base) y previsualizar el resultado antes de usarlo.
  */
 @Component({
   selector: 'lib-image-generator',
-  imports: [IconComponent, DialogComponent, ButtonComponent],
+  imports: [
+    FormsModule,
+    IconComponent,
+    DialogComponent,
+    SelectComponent,
+    SelectItemDirective,
+    SelectSelectedItemDirective,
+    TranslocoPipe,
+  ],
   templateUrl: './image-generator.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -39,6 +68,25 @@ export class ImageGeneratorComponent implements AfterViewInit {
 
   public readonly prompt = signal<string>('');
   public readonly processing = signal<boolean>(false);
+  /** URL de la imagen generada (preview). Null hasta que se genere una. */
+  public readonly generatedUrl = signal<string | null>(null);
+
+  /** Instrucción para editar la imagen ya generada (imagen→imagen). */
+  public readonly editInstruction = signal<string>('');
+  /** Una edición (FLUX Kontext) está en curso. */
+  public readonly editing = signal<boolean>(false);
+  /** Hay una operación de IA en curso (generar o editar): bloquea el modal. */
+  public readonly busy = computed(() => this.processing() || this.editing());
+
+  public readonly aspectRatio = signal<AspectRatio>('auto');
+  public readonly style = signal<string>('default');
+  public readonly styleOptions = STYLE_OPTIONS;
+  public readonly aspectOptions: { value: AspectRatio; label: string }[] = [
+    { value: 'auto', label: 'Auto' },
+    { value: 'square', label: 'Cuadrada' },
+    { value: 'landscape', label: 'Horizontal' },
+    { value: 'portrait', label: 'Vertical' },
+  ];
 
   ngAfterViewInit(): void {
     // El componente se crea cuando el padre lo abre (@if): mostramos el diálogo.
@@ -47,6 +95,18 @@ export class ImageGeneratorComponent implements AfterViewInit {
 
   public setPrompt(value: string): void {
     this.prompt.set(value);
+  }
+
+  public setAspect(ratio: AspectRatio): void {
+    if (!this.busy()) this.aspectRatio.set(ratio);
+  }
+
+  public setEditInstruction(value: string): void {
+    this.editInstruction.set(value);
+  }
+
+  public setStyle(value: string | null): void {
+    this.style.set(value ?? 'default');
   }
 
   public insertTitle(): void {
@@ -69,21 +129,30 @@ export class ImageGeneratorComponent implements AfterViewInit {
   }
 
   public cancel(): void {
-    if (!this.processing()) this.dialog()?.hide();
+    if (!this.busy()) this.dialog()?.hide();
+  }
+
+  /** Confirma el uso de la imagen generada: el padre la agrega y cierra. */
+  public useImage(): void {
+    const url = this.generatedUrl();
+    if (url && !this.busy()) this.generated.emit(url);
   }
 
   public async generate(): Promise<void> {
     const prompt = this.prompt().trim();
-    if (prompt.length < 3 || this.processing()) return;
+    if (prompt.length < 3 || this.busy()) return;
     this.processing.set(true);
     this.toast.wait('Generando imagen con IA…');
     try {
-      const result = await this.ai.generate(prompt);
+      const result = await this.ai.generate(prompt, {
+        aspectRatio: this.aspectRatio(),
+        style: this.style(),
+      });
       result
         .mapRight((url) => {
           this.toast.success('Imagen generada con IA');
+          this.generatedUrl.set(url);
           this.processing.set(false);
-          this.generated.emit(url);
         })
         .mapLeft((e) => {
           this.toast.error(new Exception(e.message));
@@ -95,6 +164,39 @@ export class ImageGeneratorComponent implements AfterViewInit {
         new Exception(e instanceof Error ? e.message : 'Error al generar')
       );
       this.processing.set(false);
+    }
+  }
+
+  /**
+   * Edita la imagen ya generada según la instrucción de texto (imagen→imagen,
+   * FLUX Kontext). Reemplaza el preview por el resultado para poder seguir
+   * iterando sobre él.
+   */
+  public async editImage(): Promise<void> {
+    const url = this.generatedUrl();
+    const instruction = this.editInstruction().trim();
+    if (!url || instruction.length < 3 || this.busy()) return;
+    this.editing.set(true);
+    this.toast.wait('Editando imagen con IA…');
+    try {
+      const result = await this.ai.edit(url, instruction);
+      result
+        .mapRight((newUrl) => {
+          this.toast.success('Imagen editada con IA');
+          this.generatedUrl.set(newUrl);
+          this.editInstruction.set('');
+          this.editing.set(false);
+        })
+        .mapLeft((e) => {
+          this.toast.error(new Exception(e.message));
+          this.editing.set(false);
+        });
+    } catch (e) {
+      this.toast.dismissWait();
+      this.toast.error(
+        new Exception(e instanceof Error ? e.message : 'Error al editar')
+      );
+      this.editing.set(false);
     }
   }
 }

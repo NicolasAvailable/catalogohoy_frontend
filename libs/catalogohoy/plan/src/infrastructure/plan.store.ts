@@ -14,9 +14,10 @@ import { PlanService } from './plan.service';
 // Per-plan brand palette. Same source of truth for the navbar badge,
 // the avatar dropdown summary, and any future plan-aware accent.
 const PLAN_PALETTE: Record<string, { color: string; bg: string }> = {
-  gratis:   { color: '#64748b', bg: '#f1f5f9' },
-  basico:   { color: '#6366f1', bg: '#eef2ff' },
-  avanzado: { color: '#7c3aed', bg: '#f5f3ff' },
+  gratis:     { color: '#64748b', bg: '#f1f5f9' },
+  basico:     { color: '#6366f1', bg: '#eef2ff' },
+  avanzado:   { color: '#7c3aed', bg: '#f5f3ff' },
+  enterprise: { color: '#0f172a', bg: '#f1f5f9' },
 };
 const DEFAULT_PALETTE = PLAN_PALETTE['basico'];
 
@@ -107,6 +108,10 @@ export const PlanStore = signalStore(
     showExpirationBanner: computed(() => {
       const expiresAt = store.planExpiresAt();
       if (!expiresAt || store.isFreePlan() || store.planExpired()) return false;
+      // Una suscripción Stripe activa se renueva sola: pedir "Renovar plan"
+      // lleva a un checkout que crea una suscripción duplicada. El banner de
+      // vencimiento es solo para renovación manual (pago móvil VE / WhatsApp).
+      if (store.tenantPlanUsage()?.autoRenews) return false;
       const diff = new Date(expiresAt).getTime() - Date.now();
       const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
       return days >= 0 && days <= 6;

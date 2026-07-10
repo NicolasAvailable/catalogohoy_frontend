@@ -13,6 +13,7 @@ import {
   FormsModule,
   NG_VALUE_ACCESSOR,
 } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 
@@ -82,7 +83,7 @@ const NATIONAL_PLACEHOLDER_BY_ISO: Record<string, string> = {
 @Component({
   selector: 'ui-input-phone',
   standalone: true,
-  imports: [CommonModule, FormsModule, SelectModule, InputTextModule],
+  imports: [CommonModule, FormsModule, SelectModule, InputTextModule, TranslocoPipe],
   encapsulation: ViewEncapsulation.None,
   providers: [
     {
@@ -99,7 +100,7 @@ const NATIONAL_PLACEHOLDER_BY_ISO: Record<string, string> = {
         (ngModelChange)="onCountryChange($event)"
         optionLabel="name"
         [filter]="true"
-        filterPlaceholder="Buscar país..."
+        [filterPlaceholder]="'Buscar país...' | transloco"
         scrollHeight="15rem"
         [disabled]="disabled()"
         appendTo="body"

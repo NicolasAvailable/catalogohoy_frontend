@@ -24,7 +24,9 @@ import {
   IconComponent,
   InputSearchComponent,
   SelectComponent,
+  TooltipDirective,
 } from '@ui';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { debounceTime, distinctUntilChanged, Subject, Subscription } from 'rxjs';
 import { Client } from '../../../domain/client.model';
@@ -53,6 +55,8 @@ import { ClientTagCreateRowComponent } from '../../components/client-tag-create-
     ClientTagCreateRowComponent,
     ClientRowTagsComponent,
     PaginatorModule,
+    TranslocoPipe,
+    TooltipDirective,
   ],
   templateUrl: './client-list.html',
   host: { class: 'flex-1 flex flex-col min-h-0' },
@@ -89,8 +93,9 @@ export default class ClientListComponent implements OnInit, OnDestroy {
   public readonly selectedTagId = signal<number | null>(null);
   public readonly selectedIds = signal<Set<number>>(new Set());
   public readonly bulkTagId = signal<number | null>(null);
-  public readonly confirmMode = signal<'clients' | 'tag'>('clients');
+  public readonly confirmMode = signal<'clients' | 'tag' | 'client'>('clients');
   public readonly pendingTagId = signal<number | null>(null);
+  public readonly pendingClientId = signal<number | null>(null);
 
   public readonly filteredClients = computed(() => {
     let clients = [...this.clientStore.clientList().items];
@@ -254,6 +259,14 @@ export default class ClientListComponent implements OnInit, OnDestroy {
     this.formDialog.open(client);
   }
 
+  onDeleteClient(client: Client, event?: Event) {
+    event?.stopPropagation();
+    if (client.id === null) return;
+    this.confirmMode.set('client');
+    this.pendingClientId.set(client.id);
+    this.confirmDialog.warning();
+  }
+
   onSaved() {
     this.clearSelection();
   }
@@ -271,7 +284,12 @@ export default class ClientListComponent implements OnInit, OnDestroy {
       await this.confirmDeleteTag();
       return;
     }
-    const ids = Array.from(this.selectedIds());
+    const single = this.confirmMode() === 'client';
+    const ids = single
+      ? this.pendingClientId() !== null
+        ? [this.pendingClientId() as number]
+        : []
+      : Array.from(this.selectedIds());
     if (!ids.length) return;
     this.toast.wait(ids.length === 1 ? 'Eliminando cliente...' : 'Eliminando clientes...');
     const ok = await this.clientStore.removeClients(ids);
@@ -282,19 +300,25 @@ export default class ClientListComponent implements OnInit, OnDestroy {
           ? 'Cliente eliminado exitosamente'
           : `${ids.length} clientes eliminados exitosamente`
       );
-      this.clearSelection();
+      if (single) this.pendingClientId.set(null);
+      else this.clearSelection();
     } else {
       this.toast.warning('No se pudieron eliminar los clientes');
     }
   }
 
   confirmHeader(): string {
-    return this.confirmMode() === 'tag' ? 'Eliminar etiqueta' : 'Eliminar clientes';
+    if (this.confirmMode() === 'tag') return 'Eliminar etiqueta';
+    if (this.confirmMode() === 'client') return 'Eliminar cliente';
+    return 'Eliminar clientes';
   }
 
   deleteDialogContent(): string {
     if (this.confirmMode() === 'tag') {
       return 'Se eliminará la etiqueta y se desvinculará de todos los clientes. Esta acción no se puede deshacer.';
+    }
+    if (this.confirmMode() === 'client') {
+      return '¿Seguro que quieres eliminar este cliente? Esta acción no se puede deshacer.';
     }
     const n = this.selectedCount();
     return n === 1

@@ -11,13 +11,22 @@ export interface BaseAiImageService {
   // manual) a Storage y devuelve su URL pública. Conserva la transparencia.
   uploadPng(blob: Blob): Promise<E.Either<Error, string>>;
 
-  // Genera una imagen nueva a partir de un prompt de texto (FLUX).
-  generate(prompt: string): Promise<E.Either<Error, string>>;
+  // Genera una imagen nueva a partir de un prompt de texto (FLUX). `opts`
+  // permite elegir proporción (auto/square/landscape/portrait) y estilo.
+  generate(
+    prompt: string,
+    opts?: { aspectRatio?: string; style?: string }
+  ): Promise<E.Either<Error, string>>;
+
+  // Edita una imagen existente según una instrucción de texto, conservando el
+  // resto (imagen→imagen, FLUX Kontext). `imageUrl` es la URL pública de la
+  // imagen de origen (p. ej. la recién generada). Devuelve la nueva URL.
+  edit(imageUrl: string, instruction: string): Promise<E.Either<Error, string>>;
 
   // Mejora/alarga/acorta una descripción de producto (Claude Haiku). Devuelve
   // HTML simple listo para el editor.
   improveText(
     text: string,
-    mode: 'improve' | 'expand' | 'shorten'
+    mode: 'improve' | 'expand' | 'shorten' | 'professional' | 'spelling'
   ): Promise<E.Either<Error, string>>;
 }

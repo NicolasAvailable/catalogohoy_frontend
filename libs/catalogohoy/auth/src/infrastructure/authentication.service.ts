@@ -1,5 +1,5 @@
 import { isDevMode, Injectable, inject } from '@angular/core';
-import { SupabaseClientProvider } from '@catalogohoy/core';
+import { LanguageService, SupabaseClientProvider } from '@catalogohoy/core';
 import {
   findCountryByCode,
   SUPPORTED_CURRENCIES,
@@ -32,6 +32,7 @@ export class AuthenticationService implements BaseAuthenticationService {
   private readonly client = SupabaseClientProvider.getInstance();
   private readonly authenticationTokenService = authenticationTokenService;
   private readonly locationService = inject(LocationService);
+  private readonly language = inject(LanguageService);
   private readonly tenantCurrency = inject(TenantCurrencyStore);
 
   /**
@@ -164,7 +165,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
+    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
   public async signup(
@@ -217,7 +218,7 @@ export class AuthenticationService implements BaseAuthenticationService {
     const tenant = TenantMapper.toDomain(tenantRows[0]);
     await this.setupTenantLocale(credentials.countryCode);
     await this._tryRegisterReferral(Number(tenant.id), credentials.referralCode);
-    return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
+    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
   /** Best-effort: si el usuario llegó por un link `?ref=` (o tipeó un código
@@ -273,7 +274,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
+    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
   public async resetPassword(
@@ -328,10 +329,21 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (error) return E.left(new Error(error.message));
     if (!tenantRows?.length) return E.left(new Error('no_tenant'));
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
+    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
   public buildTenantAdminUrl(slug: string, customDomain?: string | null): string {
+    return this._buildRedirectUrl(slug, customDomain);
+  }
+
+  /** Redirect post-login: ANTES de navegar (la navegación mata requests en
+   *  vuelo) espera que el idioma elegido en el login viaje al perfil
+   *  (user_metadata) para que el admin —otro origen— lo sincronice al abrir. */
+  private async _authRedirectUrl(
+    slug: string,
+    customDomain?: string | null
+  ): Promise<string> {
+    await this.language.flushToProfile();
     return this._buildRedirectUrl(slug, customDomain);
   }
 

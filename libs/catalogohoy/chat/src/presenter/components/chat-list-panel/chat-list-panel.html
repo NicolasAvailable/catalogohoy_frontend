@@ -1,0 +1,81 @@
+<div class="flex flex-col h-full border-r border-grey-50 bg-white">
+  <!-- Header: title + search (Fuse-style) -->
+  <div class="flex flex-col gap-3 px-4 pt-5 pb-3 shrink-0">
+    <div class="flex items-center justify-between">
+      <h2 class="text-2xl font-extrabold text-grey-800 leading-none">{{ 'Chats' | transloco }}</h2>
+      <ui-icon name="ellipsis-vertical" size="18" styleClass="text-grey-400 cursor-pointer shrink-0" />
+    </div>
+    <ui-input-search
+      placeholder="Buscar o iniciar un chat"
+      (valueChange)="onSearch($event)"
+    />
+  </div>
+
+  <!-- Chat list.
+       TODO(whatsapp-integration): reintroducir cdk-virtual-scroll-viewport +
+       infinite scroll (loadMoreChats paginado en ChatService/ChatStore) cuando
+       conectemos la WhatsApp Cloud API y el volumen de conversaciones sea real.
+       Se quitó por ahora porque el realtime + el re-render hacían "saltar" el
+       scroll en el mock. -->
+  <div class="flex-1 overflow-y-auto">
+    @if (chatStore.isLoading()) {
+      <div class="flex flex-col gap-1 px-2 pt-1">
+        @for (_ of [1,2,3,4,5]; track $index) {
+          <div class="flex items-center gap-3 px-2 py-2.5 rounded-lg animate-pulse">
+            <div class="w-10 h-10 rounded-full bg-grey-50 shrink-0"></div>
+            <div class="flex-1 flex flex-col gap-1.5">
+              <div class="h-3 w-24 bg-grey-50 rounded"></div>
+              <div class="h-2.5 w-36 bg-grey-50 rounded"></div>
+            </div>
+          </div>
+        }
+      </div>
+    } @else if (chatStore.filteredChats().length === 0) {
+      <div class="flex flex-col items-center justify-center h-full gap-3 text-grey-300 py-16">
+        <ui-icon name="message-circle" size="40" styleClass="text-grey-100" />
+        <span class="text-sm text-grey-300">{{ 'No hay conversaciones' | transloco }}</span>
+      </div>
+    } @else {
+      <ul class="flex flex-col py-1">
+        @for (chat of chatStore.filteredChats(); track chat.id) {
+          <li
+            (click)="chatStore.selectChat(chat.id)"
+            (keyup.enter)="chatStore.selectChat(chat.id)"
+            tabindex="0"
+            role="button"
+            class="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-lino-400 transition-colors duration-100"
+            [class.bg-primary-50]="chatStore.selectedChatId() === chat.id"
+          >
+            <!-- Avatar -->
+            <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
+              <span class="text-xs font-bold text-primary-600">{{ initials(chat.customerName) }}</span>
+            </div>
+
+            <!-- Info -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-sm font-semibold text-grey-700 truncate">{{ chat.customerName }}</span>
+                <span class="text-xs text-grey-300 shrink-0">{{ formatDate(chat.lastMessageAt) }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-1 mt-0.5">
+                <span class="text-xs text-grey-300 truncate">
+                  {{ chat.lastMessage ?? ('Nueva conversación' | transloco) }}
+                </span>
+                <div class="flex items-center gap-1 shrink-0">
+                  @if (chat.muted) {
+                    <ui-icon name="volume-x" size="12" styleClass="text-grey-300" />
+                  }
+                  @if (chat.unreadCount > 0) {
+                    <span class="w-4.5 h-4.5 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center">
+                      {{ chat.unreadCount > 9 ? '9+' : chat.unreadCount }}
+                    </span>
+                  }
+                </div>
+              </div>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</div>

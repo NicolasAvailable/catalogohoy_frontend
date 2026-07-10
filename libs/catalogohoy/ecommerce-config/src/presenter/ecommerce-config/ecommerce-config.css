@@ -28,6 +28,11 @@
   padding: 0.25rem 0.5rem;
   overflow-x: auto;
   scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+/* Contenedor de la barra de tabs: sostiene el sticky + posiciona las flechas. */
+.config-tabs-wrap {
   position: sticky;
   top: 0;
   z-index: 5;
@@ -36,13 +41,57 @@
   flex-shrink: 0;
 }
 
+/* Flechas de scroll de los tabs (solo visibles cuando la barra desborda).
+ * Un degradado blanco→transparente desvanece los tabs bajo el borde y el
+ * chevron va en un botoncito redondo, para que se vea integrado y prolijo. */
+.config-tabs-arrow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  width: 2.75rem;
+  padding: 0;
+  border: none;
+  color: var(--color-grey-400, #94a3b8);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.config-tabs-arrow--left {
+  left: 0;
+  justify-content: flex-start;
+  padding-left: 0.5rem;
+  background: linear-gradient(
+    to right,
+    #ffffff 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+.config-tabs-arrow--right {
+  right: 0;
+  justify-content: flex-end;
+  padding-right: 0.5rem;
+  background: linear-gradient(
+    to left,
+    #ffffff 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+.config-tabs-arrow:hover {
+  color: var(--color-grey-700, #334155);
+}
+
 /* Tab content wrappers — direct flex children of .main-column.
  * Without `flex-shrink: 0` they collapse under their content because
  * `.main-column` is `flex-direction: column` with `overflow-y: auto`,
  * making cards inside the wrapper overlap. We also stack the cards inside
  * the wrapper with the same gap the parent uses for top-level items, so the
  * vertical rhythm stays intact when several cards live in one tab. */
-.main-column > div:not(.config-tabs):not(.unsaved-banner):not(.header-section):not(.bottom-save-section):not([hidden]) {
+.main-column > div:not(.config-tabs):not(.config-tabs-wrap):not(.unsaved-banner):not(.header-section):not(.bottom-save-section):not([hidden]) {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -439,6 +488,7 @@
 .whatsapp-icon { background: #dcfce7; color: #22c55e; }
 .social-icon { background: #fce7f3; color: #ec4899; }
 .behavior-icon { background: #f1f5f9; color: #64748b; }
+.slug-icon { background: #eef2ff; color: #6366f1; }
 
 .card-title {
   font-size: 1.05rem;
@@ -680,6 +730,62 @@
   font-size: 0.9rem;
 }
 
+/* ── Datos del método (form expandible) ── */
+.payment-method-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.payment-method-details {
+  margin-top: 0.5rem;
+  padding: 1rem;
+  background: #ffffff;
+  border: 0.0625rem solid #e2e8f0;
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: hidden;
+  transform-origin: top;
+  animation: pm-details-slidedown 0.22s ease;
+}
+
+@keyframes pm-details-slidedown {
+  from {
+    opacity: 0;
+    transform: translateY(-0.375rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.payment-method-details-hint {
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+  margin: 0;
+}
+
+.payment-method-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.payment-method-field-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-color-secondary);
+}
+
+.payment-method-details-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
 .add-method-form {
   display: flex;
   flex-direction: column;
@@ -733,6 +839,34 @@
 .field-hint {
   font-size: 0.8rem;
   color: var(--text-color-secondary);
+}
+
+/* Campo de dirección (slug): input + sufijo .catalogohoy.com en una fila */
+.slug-field-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.slug-field-row ui-input-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.slug-field-suffix {
+  color: var(--text-color-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.slug-field-error {
+  color: #ef4444;
+}
+
+.slug-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* ===== WhatsApp Buttons ===== */
@@ -1008,6 +1142,44 @@
 
   .add-method-fields {
     grid-template-columns: 1fr;
+  }
+
+  /* Fila de método de pago: se mantiene en una sola línea compacta — el
+     botón Datos queda solo con el lápiz y el nombre trunca con ellipsis. */
+  .payment-method-row {
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .payment-method-info {
+    min-width: 0;
+    gap: 0.5rem;
+  }
+
+  .payment-method-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .payment-method-actions {
+    flex: none;
+    gap: 0.5rem;
+  }
+
+  .payment-method-actions ::ng-deep .pm-datos-btn .p-button-label {
+    display: none;
+  }
+
+  .payment-method-actions ::ng-deep .pm-datos-btn {
+    padding: 0.3125rem 0.375rem;
+  }
+
+  /* Le gana al size-4! (1rem) que ui-button le pone al ícono. */
+  .payment-method-actions ::ng-deep .pm-datos-btn lucide-angular,
+  .payment-method-actions ::ng-deep .pm-datos-btn svg {
+    width: 0.875rem !important;
+    height: 0.875rem !important;
   }
 }
 

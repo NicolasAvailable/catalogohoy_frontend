@@ -36,6 +36,8 @@ export interface AiUsageLog {
   userId: number | null;
   userName: string | null;
   userEmail: string | null;
+  /** Catálogo default del owner (el log solo guarda el dueño, no el tenant puntual). */
+  catalogName: string | null;
   feature: string;
   prompt: string | null;
   credits: number;
@@ -47,6 +49,8 @@ export function featureLabel(feature: string): string {
   switch (feature) {
     case 'image_generate':
       return 'Generar imagen';
+    case 'image_edit':
+      return 'Editar imagen';
     case 'image_remove_bg':
       return 'Quitar fondo';
     case 'image_segment':
@@ -62,6 +66,7 @@ export function featureLabel(feature: string): string {
 export function featureIcon(feature: string): string {
   switch (feature) {
     case 'image_generate':
+    case 'image_edit':
       return 'sparkles';
     case 'image_remove_bg':
     case 'image_segment':
@@ -76,6 +81,7 @@ export function featureIcon(feature: string): string {
 export const FEATURE_FILTERS: { value: string | null; label: string }[] = [
   { value: null, label: 'Todas' },
   { value: 'image_generate', label: 'Generar imagen' },
+  { value: 'image_edit', label: 'Editar imagen' },
   { value: 'image_remove_bg', label: 'Quitar fondo' },
   { value: 'image_segment', label: 'Recorte manual' },
   { value: 'improve_text', label: 'Mejorar texto' },

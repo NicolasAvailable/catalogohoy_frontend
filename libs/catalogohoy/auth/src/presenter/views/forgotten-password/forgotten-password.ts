@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import {
   ButtonComponent,
@@ -18,6 +19,7 @@ import { ForgottenPasswordCredentials } from '../../../domain';
     InputTextComponent,
     InputMessageComponent,
     ButtonComponent,
+    TranslocoPipe,
   ],
   templateUrl: './forgotten-password.html',
 })

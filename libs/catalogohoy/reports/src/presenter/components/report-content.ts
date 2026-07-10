@@ -5,6 +5,7 @@ import {
   computed,
   input,
 } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '@ui';
 import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
 import { MetricsConfig, ReportSnapshot } from '../../domain';
@@ -63,6 +64,7 @@ interface ReportBranding {
     DecimalPipe,
     IconComponent,
     NgApexchartsModule,
+    TranslocoPipe,
   ],
   templateUrl: './report-content.html',
   styleUrl: './report-content.css',

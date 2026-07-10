@@ -1,5 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthenticationFacade } from '../../../application';
 
@@ -8,7 +9,7 @@ type InviteInfo = { email: string; tenantName: string; isRegistered: boolean };
 @Component({
   selector: 'app-accept-invite',
   standalone: true,
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, TranslocoPipe],
   templateUrl: './accept-invite.html',
 })
 export class AcceptInviteComponent implements OnInit {

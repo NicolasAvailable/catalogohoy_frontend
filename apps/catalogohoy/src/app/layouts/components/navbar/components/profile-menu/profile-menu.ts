@@ -7,13 +7,21 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { AuthenticationService } from '@catalogohoy/auth';
+import { PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { CreditsStore } from '@catalogohoy/product';
-import { IconComponent, MenuComponent } from '@ui';
+import { ProfileStore } from '@catalogohoy/profile';
+import {
+  ConfirmDialogService,
+  IconComponent,
+  MenuComponent,
+} from '@ui';
 
 @Component({
   selector: 'app-profile-menu',
-  imports: [DatePipe, RouterLink, MenuComponent, IconComponent],
+  imports: [DatePipe, RouterLink, MenuComponent, IconComponent, TranslocoPipe],
   templateUrl: './profile-menu.html',
   styleUrl: './profile-menu.css',
 })
@@ -23,6 +31,11 @@ export class ProfileMenu {
   protected readonly palette = this.planStore.currentPlanPalette;
   /** Saldo de créditos de IA (para mostrarlo en el dropdown en móvil). */
   protected readonly credits = inject(CreditsStore);
+  /** Datos del usuario (nombre, email, foto) para el bloque de identidad. */
+  protected readonly profileStore = inject(ProfileStore);
+  private readonly auth = inject(AuthenticationService);
+  private readonly posthog = inject(PosthogService);
+  private readonly confirm = inject(ConfirmDialogService);
   /** El navbar conecta esto con el diálogo de compra del CreditsWidget. */
   public readonly buyCredits = output<void>();
 
@@ -34,11 +47,15 @@ export class ProfileMenu {
     const expiresAt = this.planStore.planExpiresAt();
 
     if (!plan) return null;
+    // El label/sub son keys de transloco (convención key-as-text); el template
+    // las traduce con `| transloco: params` — las partes dinámicas van en params.
+    const label = 'Plan {name}';
+    const labelParams = { name: plan.name };
     if (isFree) {
-      return { label: `Plan ${plan.name}`, sub: 'Mejorá tu plan', state: 'free' as const, expiresAt: null };
+      return { label, labelParams, sub: 'Mejorá tu plan', subParams: {}, state: 'free' as const, expiresAt: null };
     }
     if (expired) {
-      return { label: `Plan ${plan.name}`, sub: 'Vencido', state: 'expired' as const, expiresAt };
+      return { label, labelParams, sub: 'Vencido', subParams: {}, state: 'expired' as const, expiresAt };
     }
     const sub =
       days === null
@@ -47,8 +64,14 @@ export class ProfileMenu {
           ? 'Vence hoy'
           : days === 1
             ? 'Vence mañana'
-            : `Vence en ${days} días`;
-    return { label: `Plan ${plan.name}`, sub, state: 'active' as const, expiresAt };
+            : 'Vence en {days} días';
+    return { label, labelParams, sub, subParams: { days }, state: 'active' as const, expiresAt };
+  });
+
+  /** Inicial para el avatar cuando el usuario no tiene foto. */
+  protected readonly initial = computed(() => {
+    const name = this.profileStore.profile().name?.trim();
+    return (name?.[0] ?? '?').toUpperCase();
   });
 
   public close(): void {
@@ -59,5 +82,25 @@ export class ProfileMenu {
   public onBuyCredits(): void {
     this.close();
     this.buyCredits.emit();
+  }
+
+  /** Cierra sesión (mismo flujo que el sidebar: confirma → limpia → redirige). */
+  public logout(): void {
+    this.close();
+    this.confirm
+      .warning({
+        headerLabel: '¿Cerrar sesión?',
+        contentLabel: '¿Estás seguro que deseas cerrar sesión?',
+        acceptLabel: 'Cerrar sesión',
+        rejectLabel: 'Cancelar',
+      })
+      .subscribe((result) => {
+        if (result.isRight()) {
+          this.posthog.reset();
+          this.auth.logout().then(() => {
+            window.location.href = 'https://auth.catalogohoy.com';
+          });
+        }
+      });
   }
 }

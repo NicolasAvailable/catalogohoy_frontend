@@ -46,10 +46,10 @@ const DataDeletion = () => {
                   <p className="mt-1">
                     Envía un correo electrónico a{" "}
                     <a
-                      href="mailto:catalogohoy@outlook.com?subject=Solicitud de eliminación de datos"
+                      href="mailto:nicolas@catalogohoy.com?subject=Solicitud de eliminación de datos"
                       className="text-primary hover:underline font-medium"
                     >
-                      catalogohoy@outlook.com
+                      nicolas@catalogohoy.com
                     </a>{" "}
                     con el asunto <strong>"Solicitud de eliminación de datos"</strong>. Incluye en
                     el correo:
@@ -187,10 +187,10 @@ const DataDeletion = () => {
               <li>
                 <strong>Email:</strong>{" "}
                 <a
-                  href="mailto:catalogohoy@outlook.com"
+                  href="mailto:nicolas@catalogohoy.com"
                   className="text-primary hover:underline"
                 >
-                  catalogohoy@outlook.com
+                  nicolas@catalogohoy.com
                 </a>
               </li>
               <li>

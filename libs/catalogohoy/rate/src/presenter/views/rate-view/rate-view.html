@@ -7,10 +7,9 @@
           <ui-icon name="trending-up" size="22" />
         </div>
         <div>
-          <h1 class="header-title">Tasas del día</h1>
+          <h1 class="header-title">{{ 'Tasas del día' | transloco }}</h1>
           <p class="header-subtitle">
-            Configura la tasa de cambio activa para el cálculo automático de
-            precios en tu catálogo.
+            {{ 'Configura la tasa de cambio activa para el cálculo automático de precios en tu catálogo.' | transloco }}
           </p>
         </div>
       </div>
@@ -76,7 +75,7 @@
               <ui-icon name="dollar-sign" size="22" />
             </div>
             <div>
-              <h3 class="currency-name">Dólar BCV</h3>
+              <h3 class="currency-name">{{ 'Dólar BCV' | transloco }}</h3>
               <span class="currency-pair">USD / VES</span>
             </div>
           </div>
@@ -84,7 +83,7 @@
           <div class="card-badges">
             <span class="badge badge-official">
               <ui-icon name="shield-check" size="12" />
-              Oficial
+              {{ 'Oficial' | transloco }}
             </span>
           </div>
         </div>
@@ -107,7 +106,7 @@
         </div>
 
         <div class="card-selector" (click)="$event.stopPropagation()">
-          <span class="selector-label">Seleccionar:</span>
+          <span class="selector-label">{{ 'Seleccionar' | transloco }}:</span>
           <ui-checkbox
             [ngModel]="activeRate() === 'bcv_usd'"
             (ngModelChange)="setActiveRate('bcv_usd')"
@@ -137,7 +136,7 @@
               <ui-icon name="euro" size="22" />
             </div>
             <div>
-              <h3 class="currency-name">Euro BCV</h3>
+              <h3 class="currency-name">{{ 'Euro BCV' | transloco }}</h3>
               <span class="currency-pair">EUR / VES</span>
             </div>
           </div>
@@ -145,7 +144,7 @@
           <div class="card-badges">
             <span class="badge badge-official">
               <ui-icon name="shield-check" size="12" />
-              Oficial
+              {{ 'Oficial' | transloco }}
             </span>
           </div>
         </div>
@@ -168,7 +167,7 @@
         </div>
 
         <div class="card-selector" (click)="$event.stopPropagation()">
-          <span class="selector-label">Seleccionar:</span>
+          <span class="selector-label">{{ 'Seleccionar' | transloco }}:</span>
           <ui-checkbox
             [ngModel]="activeRate() === 'bcv_eur'"
             (ngModelChange)="setActiveRate('bcv_eur')"
@@ -198,15 +197,15 @@
               <ui-icon name="pencil-line" size="22" />
             </div>
             <div>
-              <h3 class="currency-name">Tasa personalizada</h3>
-              <span class="currency-pair">Tasa de venta</span>
+              <h3 class="currency-name">{{ 'Tasa personalizada' | transloco }}</h3>
+              <span class="currency-pair">{{ 'Tasa de venta' | transloco }}</span>
             </div>
           </div>
 
           <div class="card-badges">
             <span class="badge badge-editable">
               <ui-icon name="settings-2" size="12" />
-              Editable
+              {{ 'Editable' | transloco }}
             </span>
           </div>
         </div>
@@ -229,7 +228,7 @@
         </div>
 
         <div class="card-selector" (click)="$event.stopPropagation()">
-          <span class="selector-label">Seleccionar:</span>
+          <span class="selector-label">{{ 'Seleccionar' | transloco }}:</span>
           <ui-checkbox
             [ngModel]="activeRate() === 'custom'"
             (ngModelChange)="setActiveRate('custom')"
@@ -240,7 +239,7 @@
         <!-- Custom rate editor - stop click propagation to avoid toggling selection -->
         @if (canEditRates()) {
         <div class="custom-rate-editor" (click)="$event.stopPropagation()">
-          <label class="editor-label">Ajustar tasa manualmente</label>
+          <label class="editor-label">{{ 'Ajustar tasa manualmente' | transloco }}</label>
           <div class="editor-row">
             <div class="input-wrapper">
               <ui-input-number
@@ -272,8 +271,7 @@
   <div class="info-footer">
     <ui-icon name="info" size="15" />
     <span>
-      Las tasas BCV se sincronizan automáticamente cada 4 horas. La tasa activa
-      se usa para convertir los precios de tu catálogo a bolívares.
+      {{ 'Las tasas BCV se sincronizan automáticamente cada 4 horas. La tasa activa se usa para convertir los precios de tu catálogo a bolívares.' | transloco }}
     </span>
   </div>
 </div>

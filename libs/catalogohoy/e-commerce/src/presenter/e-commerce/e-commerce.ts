@@ -12,8 +12,13 @@ import {
 } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { StripHtmlPipe } from '@shared/presenter';
-import { PosthogService } from '@catalogohoy/core';
+import {
+  AppLanguage,
+  LanguageService,
+  PosthogService,
+} from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
 import { DialogService, IconComponent, dialogConfig } from '@ui';
@@ -39,6 +44,7 @@ const DEFAULT_FAVICON =
     CatalogFooter,
     CartDrawer,
     CatalogInfoModal,
+    TranslocoPipe,
   ],
   templateUrl: './e-commerce.html',
   styleUrl: './e-commerce.css',
@@ -49,6 +55,29 @@ export class ECommerce implements OnInit, OnDestroy {
   public readonly cartStore = inject(CartStore);
   public readonly planStore = inject(PlanStore);
   private readonly posthogService = inject(PosthogService);
+  private readonly language = inject(LanguageService);
+
+  /** Idioma default del tenant: se aplica UNA vez al cargar el catálogo y
+   *  solo si el visitante no eligió idioma con el switcher (localStorage).
+   *  setSession no persiste, así que la elección explícita siempre manda. */
+  private tenantLanguageApplied = false;
+  private readonly applyTenantLanguage = effect(() => {
+    const info = this.ecommerceStore.effectiveCatalogInfo();
+    if (!info) return;
+    // En modo preview (iframe del editor) el idioma refleja EN VIVO el draft
+    // del tenant, ignorando la preferencia local del admin: el comerciante
+    // está viendo lo que verá un visitante nuevo.
+    if (this.ecommerceStore.isPreviewMode()) {
+      this.language.setSession(info.defaultLanguage as AppLanguage);
+      return;
+    }
+    if (this.tenantLanguageApplied) return;
+    this.tenantLanguageApplied = true;
+    // Prioridad del visitante: su elección en el catálogo > default del
+    // tenant. La preferencia del PANEL (otra llave) no aplica acá.
+    const stored = this.language.getStoredCatalogLanguage();
+    this.language.setSession(stored ?? (info.defaultLanguage as AppLanguage));
+  });
   private readonly titleService = inject(Title);
   private readonly metaService = inject(Meta);
   private readonly stripHtmlPipe = new StripHtmlPipe();
@@ -76,9 +105,11 @@ export class ECommerce implements OnInit, OnDestroy {
 
   public async onShare(): Promise<void> {
     const info = this.ecommerceStore.effectiveCatalogInfo();
+    // La descripción viene del editor rich-text como HTML; sin limpiar, el
+    // Web Share API pega los <p> literales en WhatsApp/Telegram (Android).
     const shareData = {
       title: info?.name ?? 'Catálogo',
-      text: info?.description ?? '',
+      text: new StripHtmlPipe().transform(info?.description),
       url: window.location.href,
     };
     if (navigator.share) {

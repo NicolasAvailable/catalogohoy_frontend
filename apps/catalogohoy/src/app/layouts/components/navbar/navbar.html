@@ -30,7 +30,7 @@
         severity="primary"
         variant="outlined"
         styleClass="!border-none !text-grey-700"
-        tooltip="Compartir catálogo"
+        [tooltip]="'Compartir catálogo' | transloco"
         tooltipPosition="bottom"
         tooltipStyleClass="text-sm"
       />
@@ -45,7 +45,7 @@
         severity="primary"
         variant="outlined"
         styleClass="!border-none !text-grey-700"
-        tooltip="Generar QR"
+        [tooltip]="'Generar QR' | transloco"
         tooltipPosition="bottom"
         tooltipStyleClass="text-sm"
       />
@@ -73,11 +73,12 @@
         severity="primary"
         variant="outlined"
         styleClass="!border-none !text-grey-700"
-        tooltip="Guía de ayuda"
+        [tooltip]="'Guía de ayuda' | transloco"
         tooltipPosition="bottom"
         tooltipStyleClass="text-sm"
       />
     }
+    <lib-language-selector styleClass="text-grey-700" />
     @if (!profileStore.profile().name) {
       <div class="flex items-center gap-2 rounded-lg py-1 px-2">
         <div class="w-8 h-8 rounded-full bg-grey-100 animate-pulse"></div>

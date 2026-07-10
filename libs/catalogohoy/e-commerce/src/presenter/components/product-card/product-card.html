@@ -29,10 +29,10 @@
       @if (isWholesale() || isOutOfStock()) {
       <div class="product-card__tags">
         @if (isWholesale()) {
-        <span class="product-card__wholesale-tag">Al mayor</span>
+        <span class="product-card__wholesale-tag">{{ 'Al mayor' | transloco }}</span>
         }
         @if (isOutOfStock()) {
-        <span class="product-card__sold-out-tag">Agotado</span>
+        <span class="product-card__sold-out-tag">{{ 'Agotado' | transloco }}</span>
         }
       </div>
       }
@@ -95,7 +95,7 @@
 
     @if (isSized() && availableSizes().length) {
     <div class="product-card__sizes">
-      <span class="product-card__sizes-label">Tallas:</span>
+      <span class="product-card__sizes-label">{{ 'Tallas:' | transloco }}</span>
       @for (size of visibleSizes(); track size) {
       <span class="product-card__size-chip">{{ size }}</span>
       }
@@ -115,7 +115,7 @@
         disabled
       >
         <ui-icon name="package-x" styleClass="size-5" />
-        Agotado
+        {{ 'Agotado' | transloco }}
       </button>
       } @else if (isWholesale() || isSized() || isVariant()) {
       <button
@@ -124,7 +124,7 @@
         (click)="openModal($event)"
       >
         <ui-icon name="eye" styleClass="size-5" />
-        Ver más
+        {{ 'Ver más' | transloco }}
       </button>
       } @else if (cartQuantity() === 0) {
       <button
@@ -133,7 +133,7 @@
         (click)="onAddToCart($event)"
       >
         <ui-icon name="circle-plus" styleClass="size-5" />
-        Agregar
+        {{ 'Agregar' | transloco }}
       </button>
       } @else {
       <div class="product-card__quantity">

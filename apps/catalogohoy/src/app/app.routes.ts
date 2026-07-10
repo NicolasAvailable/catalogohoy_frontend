@@ -34,6 +34,13 @@ export const appRoutes: Route[] = [
       import('@catalogohoy/reports').then((m) => m.REPORTS_PUBLIC_ROUTES),
   },
   {
+    // Public "customer" side of the WhatsApp chat demo — anon-accessible so it
+    // can be opened on a phone to chat live against the tenant's inbox.
+    path: 'public/chat-demo',
+    loadComponent: () =>
+      import('@catalogohoy/chat').then((m) => m.CustomerSimulatorComponent),
+  },
+  {
     path: 'no-access',
     canActivate: [authenticationGuard],
     resolve: {

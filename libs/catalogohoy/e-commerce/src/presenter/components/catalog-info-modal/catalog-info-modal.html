@@ -1,13 +1,13 @@
 @if (isOpen() && ecommerceStore.effectiveCatalogInfo(); as info) {
   <div class="info-modal__backdrop" (click)="close()"></div>
-  <div class="info-modal" role="dialog" aria-modal="true" [attr.aria-label]="'Más sobre ' + info.name">
+  <div class="info-modal" role="dialog" aria-modal="true" [attr.aria-label]="'Más sobre {name}' | transloco: { name: info.name }">
     <header class="info-modal__header">
-      <h2 class="info-modal__title">Más sobre {{ info.name }}</h2>
+      <h2 class="info-modal__title">{{ 'Más sobre {name}' | transloco: { name: info.name } }}</h2>
       <button
         type="button"
         class="info-modal__close"
         (click)="close()"
-        aria-label="Cerrar"
+        [attr.aria-label]="'Cerrar' | transloco"
       >
         <ui-icon name="x" styleClass="size-5" />
       </button>
@@ -17,9 +17,9 @@
       <!-- Status banner — current open/closed state at a glance -->
       @if (info.openTime || hasHours()) {
         <p class="info-modal__status">
-          {{ info.name }} está
+          {{ '{name} está' | transloco: { name: info.name } }}
           <strong [class.info-modal__status--open]="info.isOpen" [class.info-modal__status--closed]="!info.isOpen">
-            {{ info.isOpen ? 'Abierto' : 'Cerrado' }}
+            {{ (info.isOpen ? 'Abierto' : 'Cerrado') | transloco }}
           </strong>
           @if (info.openTime && info.closeTime) {
             · {{ formatHourAmPm(info.openTime) }} - {{ formatHourAmPm(info.closeTime) }}
@@ -39,7 +39,7 @@
           >
             <span class="info-modal__panel-title">
               <ui-icon name="clock" styleClass="size-5" />
-              Horario
+              {{ 'Horario' | transloco }}
             </span>
             <ui-icon
               name="chevronDown"
@@ -52,14 +52,14 @@
                 <tbody>
                   @for (day of orderedHours(); track day.dayOfWeek) {
                     <tr [class.info-modal__hours-row--today]="day.dayOfWeek === todayIndex">
-                      <td class="info-modal__hours-day">{{ dayLabel(day.dayOfWeek) }}</td>
+                      <td class="info-modal__hours-day">{{ dayLabel(day.dayOfWeek) | transloco }}</td>
                       <td class="info-modal__hours-status">
                         <span
                           class="info-modal__day-badge"
                           [class.info-modal__day-badge--open]="day.isOpen"
                           [class.info-modal__day-badge--closed]="!day.isOpen"
                         >
-                          {{ day.isOpen ? 'Abierto' : 'Cerrado' }}
+                          {{ (day.isOpen ? 'Abierto' : 'Cerrado') | transloco }}
                         </span>
                       </td>
                       <td class="info-modal__hours-time">
@@ -90,7 +90,7 @@
           >
             <span class="info-modal__panel-title">
               <ui-icon name="info" styleClass="size-5" />
-              Descripción
+              {{ 'Descripción' | transloco }}
             </span>
             <ui-icon
               name="chevronDown"
@@ -117,7 +117,7 @@
           >
             <span class="info-modal__panel-title">
               <ui-icon name="share2" styleClass="size-5" />
-              Redes sociales
+              {{ 'Redes sociales' | transloco }}
             </span>
             <ui-icon
               name="chevronDown"
@@ -184,7 +184,7 @@
       }
 
       @if (!hasHours() && !hasDescription() && !hasSocial()) {
-        <p class="info-modal__empty">No hay información adicional disponible.</p>
+        <p class="info-modal__empty">{{ 'No hay información adicional disponible.' | transloco }}</p>
       }
     </div>
   </div>

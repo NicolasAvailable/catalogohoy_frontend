@@ -1,5 +1,6 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { CATALOG_ADDON_PRICE, PlanStore } from '@catalogohoy/plan';
 import { TenantService } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
@@ -10,7 +11,7 @@ type SlugStatus = 'idle' | 'checking' | 'available' | 'taken';
 @Component({
   selector: 'lib-create-catalog',
   standalone: true,
-  imports: [IconComponent],
+  imports: [IconComponent, TranslocoPipe],
   templateUrl: './create-catalog.html',
   styleUrl: './create-catalog.css',
   host: {

@@ -17,7 +17,7 @@ Nx monorepo with two Angular applications and feature libraries organized by dom
 
 **Library namespaces:**
 
-- `@catalogohoy/*` — Feature libs: auth, profile, tenant, e-commerce, product, category, order, rate, home, ecommerce-config, core, environments
+- `@catalogohoy/*` — Feature libs: auth, profile, tenant, e-commerce, product, category, order, rate, home, ecommerce-config, core, environments, analytics, chat, client, plan, teams, whatsapp
 - `@shared/*` — Cross-cutting: domain, application, infrastructure, presenter
 - `@ui` — Shared UI components
 

@@ -1,11 +1,12 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '@ui';
 import { PlanStore } from '../../infrastructure';
 
 @Component({
   selector: 'lib-plan-success',
-  imports: [IconComponent],
+  imports: [IconComponent, TranslocoPipe],
   templateUrl: './plan-success.html',
   host: { class: 'flex-1 flex flex-col min-h-0' },
 })

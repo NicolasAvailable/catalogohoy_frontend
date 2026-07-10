@@ -11,7 +11,7 @@
   } @else if (product) {
   <button class="product-detail__back" (click)="goBack()">
     <ui-icon name="arrowLeft" styleClass="size-5" />
-    <span>Volver</span>
+    <span>{{ 'Volver' | transloco }}</span>
   </button>
 
   <div class="product-detail__container">
@@ -25,7 +25,7 @@
           [lazy]="false"
         />
         @if (hasDiscount) {
-        <span class="product-detail__discount-badge">Oferta</span>
+        <span class="product-detail__discount-badge">{{ 'Oferta' | transloco }}</span>
         }
       </div>
 
@@ -72,19 +72,19 @@
       </div>
       } @if (product.description) {
       <div class="product-detail__description">
-        <h3>Descripción</h3>
+        <h3>{{ 'Descripción' | transloco }}</h3>
         <div class="product-detail__description-body product-detail__prose" [innerHTML]="product.description | safeDescriptionHtml"></div>
       </div>
       } @if (product.stock) {
       <div class="product-detail__stock">
         <ui-icon name="package" styleClass="size-5" />
-        <span>Stock: {{ product.stock }}</span>
+        <span>{{ 'Stock: {n}' | transloco: { n: product.stock } }}</span>
       </div>
       }
 
       <div class="product-detail__actions">
         <div class="product-detail__quantity">
-          <span class="product-detail__quantity-label">Cantidad:</span>
+          <span class="product-detail__quantity-label">{{ 'Cantidad:' | transloco }}</span>
           <div class="product-detail__quantity-controls">
             <button
               class="product-detail__qty-btn"
@@ -104,7 +104,7 @@
 
         <button class="product-detail__add-btn" (click)="onAddToCart()">
           <ui-icon name="shoppingCart" styleClass="size-5" />
-          <span>Agregar</span>
+          <span>{{ 'Agregar' | transloco }}</span>
           <span>
             {{ cs() }}{{ totalPrice | tenantPrice }}
             @if (ecommerceStore.isVenezuela() && ecommerceStore.showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
@@ -118,8 +118,8 @@
   } @else {
   <div class="product-detail__not-found">
     <ui-icon name="packageSearch" styleClass="size-16 text-gray-300" />
-    <p>Producto no encontrado</p>
-    <a routerLink="/" class="product-detail__back-link">Volver al catálogo</a>
+    <p>{{ 'Producto no encontrado' | transloco }}</p>
+    <a routerLink="/" class="product-detail__back-link">{{ 'Volver al catálogo' | transloco }}</a>
   </div>
   }
 </div>

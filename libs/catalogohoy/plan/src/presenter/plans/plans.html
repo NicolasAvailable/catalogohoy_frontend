@@ -2,14 +2,14 @@
   @if (referralDiscountPct(); as pct) {
     <div class="plans-referral-banner">
       <ui-icon name="gift" styleClass="size-4 shrink-0" />
-      <span>Tenés <strong>{{ pct }}% off</strong> en tu primer pago por venir con código de referido.</span>
+      <span>{{ 'Tenés' | transloco }} <strong>{{ '{pct}% off' | transloco: { pct: pct } }}</strong> {{ 'en tu primer pago por venir con código de referido.' | transloco }}</span>
     </div>
   }
   <header class="plans-header">
-    <span class="plans-eyebrow">Planes</span>
-    <h1 class="plans-title">El plan perfecto para tu negocio</h1>
+    <span class="plans-eyebrow">{{ 'Planes' | transloco }}</span>
+    <h1 class="plans-title">{{ 'El plan perfecto para tu negocio' | transloco }}</h1>
     <p class="plans-subtitle">
-      Elige el plan que mejor se adapte y escala cuando lo necesites.
+      {{ 'Elige el plan que mejor se adapte y escala cuando lo necesites.' | transloco }}
     </p>
 
     <!-- Controles: periodo -->
@@ -23,9 +23,9 @@
             [class.billing-toggle__btn--active]="billingPeriod() === option.key"
             (click)="billingPeriod.set(option.key)"
           >
-            {{ option.label }}
+            {{ option.label | transloco }}
             @if (option.savingsLabel) {
-              <span class="billing-toggle__savings">{{ option.savingsLabel }}</span>
+              <span class="billing-toggle__savings">{{ option.savingsLabel | transloco }}</span>
             }
           </button>
         }
@@ -33,7 +33,42 @@
     </div>
   </header>
 
-  <div class="plans-grid">
+  <div class="plans-grid" [class.plans-grid--four]="showEnterpriseCard()">
+    <!-- Skeletons: los planes vienen de Supabase; sin esto la card Enterprise
+         (estática) aparece sola mientras el resto carga. -->
+    @if (isLoadingPlans()) {
+      @for (i of skeletonCards; track i) {
+        <div class="plan-card plan-card--skeleton">
+          <div class="plan-card__content">
+            <div class="plan-card__header">
+              <p-skeleton width="55%" height="1.4rem" borderRadius="9999px" />
+              <p-skeleton width="100%" height="0.85rem" borderRadius="9999px" />
+            </div>
+            <div class="plan-card__price">
+              <p-skeleton width="65%" height="2.75rem" borderRadius="0.5rem" />
+              <p-skeleton width="45%" height="0.85rem" borderRadius="9999px" />
+            </div>
+            <p-skeleton width="100%" height="2.6rem" borderRadius="0.75rem" />
+            <hr class="plan-card__divider" />
+            <ul class="plan-card__features">
+              @for (width of skeletonFeatureWidths; track $index) {
+                <li class="plan-card__feature">
+                  <p-skeleton shape="circle" size="1.1rem" styleClass="shrink-0" />
+                  <p-skeleton [width]="width" height="0.85rem" borderRadius="9999px" />
+                </li>
+              }
+            </ul>
+            <div class="plan-card__footer">
+              <div class="flex flex-wrap gap-2">
+                <p-skeleton width="5.5rem" height="1.6rem" borderRadius="9999px" />
+                <p-skeleton width="6.5rem" height="1.6rem" borderRadius="9999px" />
+              </div>
+              <p-skeleton width="90%" height="0.8rem" borderRadius="9999px" />
+            </div>
+          </div>
+        </div>
+      }
+    } @else {
     @for (plan of plans(); track plan.id) {
     <div
       class="plan-card"
@@ -47,9 +82,9 @@
           <div class="plan-card__name-row">
             <h2 class="plan-card__name" [class.plan-card__name--popular]="plan.isPopular && !plan.isCurrent">{{ plan.name }}</h2>
             @if (plan.isCurrent) {
-              <span class="badge-inline badge-inline--current">Actual</span>
+              <span class="badge-inline badge-inline--current">{{ 'Actual' | transloco }}</span>
             } @else if (plan.isPopular) {
-              <span class="badge-inline badge-inline--popular">Más popular</span>
+              <span class="badge-inline badge-inline--popular">{{ 'Más popular' | transloco }}</span>
             }
           </div>
           <p class="plan-card__description">{{ plan.description }}</p>
@@ -59,25 +94,25 @@
         <div class="plan-card__price">
           @if (plan.isFree) {
             <span class="plan-card__price-amount">{{ currencySymbol() }}0</span>
-            <span class="plan-card__price-period">por siempre</span>
+            <span class="plan-card__price-period">{{ 'por siempre' | transloco }}</span>
           } @else if (isUpgradePlan(plan)) {
             <!-- Upgrade desde plan pago actual: el precio que mostramos es la
                  diferencia prorrateada, NO el precio absoluto del nuevo plan.
                  Por eso lo etiquetamos explícito para no confundir. -->
-            <span class="plan-card__price-tag">Solo pagás esta diferencia para mejorar el plan</span>
+            <span class="plan-card__price-tag">{{ 'Solo pagás esta diferencia para mejorar el plan' | transloco }}</span>
             <div class="plan-card__price-main">
               <span class="plan-card__price-currency">{{ currencySymbol() }}</span>
               <span class="plan-card__price-amount">{{ getUpgradePrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
             </div>
-            <span class="plan-card__price-period">{{ currencyCode() }} · una vez</span>
+            <span class="plan-card__price-period">{{ currencyCode() }} · {{ 'una vez' | transloco }}</span>
             <p class="plan-card__upgrade-renewal">
-              A partir de tu próxima renovación: <strong>{{ currencySymbol() }}{{ getPeriodPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}{{ getPeriodLabel(plan) }}</strong>
+              {{ 'A partir de tu próxima renovación:' | transloco }} <strong>{{ currencySymbol() }}{{ getPeriodPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}{{ getPeriodLabel(plan) | transloco }}</strong>
             </p>
             <p class="plan-card__upgrade-hint">
-              Solo cobramos la diferencia prorrateada hasta el final de tu período actual.
+              {{ 'Solo cobramos la diferencia prorrateada hasta el final de tu período actual.' | transloco }}
             </p>
           } @else if (hasReferralDiscount(plan)) {
-            <span class="plan-card__price-tag plan-card__price-tag--referral">🎁 {{ referralDiscountPct() }}% off referido aplicado</span>
+            <span class="plan-card__price-tag plan-card__price-tag--referral">{{ '🎁 {pct}% off referido aplicado' | transloco: { pct: referralDiscountPct() } }}</span>
             <div class="plan-card__price-row">
               <span class="plan-card__price-original">{{ currencySymbol() }}{{ getPeriodPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
               <div class="plan-card__price-main">
@@ -85,18 +120,18 @@
                 <span class="plan-card__price-amount">{{ getReferralDiscountedPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
               </div>
             </div>
-            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }} · {{ currencyCode() }}</span>
+            <span class="plan-card__price-period">{{ getPeriodLabel(plan) | transloco }} · {{ currencyCode() }}</span>
           } @else {
             <div class="plan-card__price-main">
               <span class="plan-card__price-currency">{{ currencySymbol() }}</span>
               <span class="plan-card__price-amount">{{ getPeriodPrice(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
             </div>
-            <span class="plan-card__price-period">{{ getPeriodLabel(plan) }} · {{ currencyCode() }}</span>
+            <span class="plan-card__price-period">{{ getPeriodLabel(plan) | transloco }} · {{ currencyCode() }}</span>
           }
         </div>
         @if (!plan.isFree && billingPeriod() !== 'monthly') {
           <p class="plan-card__monthly-equiv">
-            {{ currencySymbol() }}{{ getMonthlyEquivalent(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}/mes
+            {{ currencySymbol() }}{{ getMonthlyEquivalent(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}{{ '/mes' | transloco }}
           </p>
         }
 
@@ -113,7 +148,7 @@
           @if (hasPaidPlan() && !plan.isCurrent && !plan.isFree && plan.position > currentPlanPosition()) {
           <ui-icon name="zap" styleClass="size-4" />
           }
-          {{ plan.buttonLabel }}
+          {{ plan.buttonLabel | transloco }}
         </button>
 
         <hr class="plan-card__divider" />
@@ -126,7 +161,7 @@
         <ul class="plan-card__features">
           <li class="plan-card__feature">
             <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
-            <span>{{ plan.maxProductsLabel }}</span>
+            <span>{{ plan.maxProducts <= 0 ? ('∞ productos' | transloco) : ('Hasta {n} productos' | transloco: { n: plan.maxProducts }) }}</span>
           </li>
           @for (feature of plan.features; track feature.text) {
           <li class="plan-card__feature">
@@ -136,12 +171,20 @@
                 ? 'size-4 shrink-0 text-gray-300'
                 : 'size-4 shrink-0 text-green-500'"
             />
-            <span>{{ feature.text }}</span>
+            <span>{{ feature.text | transloco }}</span>
           </li>
           }
           <li class="plan-card__feature">
             <ui-icon name="{{ plan.maxTeamMembers > 0 ? 'check' : 'x' }}" styleClass="size-4 shrink-0 {{ plan.maxTeamMembers > 0 ? 'text-green-500' : 'text-gray-300' }}" />
-            <span>{{ plan.teamMembersLabel }}</span>
+            <span>
+              @if (plan.maxTeamMembers === 0) {
+                {{ 'Sin equipo de trabajo' | transloco }}
+              } @else if (plan.maxTeamMembers === 1) {
+                {{ '1 miembro de equipo' | transloco }}
+              } @else {
+                {{ 'Hasta {n} miembros de equipo' | transloco: { n: plan.maxTeamMembers } }}
+              }
+            </span>
           </li>
         </ul>
 
@@ -151,12 +194,12 @@
             <div class="flex flex-wrap gap-2">
               <span class="badge badge--usd">
                 <ui-icon name="credit-card" styleClass="size-3.5" />
-                Tarjeta internacional
+                {{ 'Tarjeta' | transloco }}
               </span>
               @if (isVenezuela()) {
                 <span class="badge badge--usd">
                   <ui-icon name="smartphone" styleClass="size-3.5" />
-                  Pago móvil
+                  {{ 'Pago móvil' | transloco }}
                 </span>
               }
             </div>
@@ -164,12 +207,69 @@
           @if (!plan.isFree) {
             <p class="plan-card__extra-catalog">
               <ui-icon name="plus-circle" styleClass="size-3.5 shrink-0" />
-              Catálogo adicional {{ currencySymbol() }}{{ getCatalogAddonPrice() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}/mes
+              {{ 'Catálogo adicional' | transloco }} {{ currencySymbol() }}{{ getCatalogAddonPrice() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}{{ '/mes' | transloco }}
             </p>
           }
         </div>
       </div>
     </div>
     }
+
+    <!-- Enterprise: card estática (sin precio ni checkout self-service,
+         se contrata hablando con ventas — funnel en el dialog). Oculta por
+         defecto (ENTERPRISE_CARD_VISIBLE); solo aparece para tenants que ya
+         son enterprise. -->
+    @if (showEnterpriseCard()) {
+    <div class="plan-card plan-card--enterprise" [class.plan-card--current]="isEnterpriseCurrent()">
+      <div class="plan-card__content">
+        <div class="plan-card__header">
+          <div class="plan-card__name-row">
+            <h2 class="plan-card__name">Enterprise</h2>
+            @if (isEnterpriseCurrent()) {
+              <span class="badge-inline badge-inline--current">{{ 'Actual' | transloco }}</span>
+            } @else {
+              <span class="badge-inline badge-inline--enterprise">{{ 'A medida' | transloco }}</span>
+            }
+          </div>
+          <p class="plan-card__description">{{ 'Para negocios con operaciones a gran escala.' | transloco }}</p>
+        </div>
+
+        <div class="plan-card__price">
+          <span class="plan-card__price-amount plan-card__price-amount--enterprise">{{ 'Hablemos' | transloco }}</span>
+          <span class="plan-card__price-period">{{ 'precio a tu medida' | transloco }}</span>
+        </div>
+
+        @if (!isEnterpriseCurrent()) {
+          <button class="plan-card__button plan-card__button--enterprise" (click)="openEnterpriseDialog()">
+            {{ 'Contactar ventas' | transloco }}
+          </button>
+        } @else {
+          <button class="plan-card__button plan-card__button--current" disabled>
+            {{ 'Plan actual' | transloco }}
+          </button>
+        }
+
+        <hr class="plan-card__divider" />
+
+        <ul class="plan-card__features">
+          <li class="plan-card__feature">
+            <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
+            <span>{{ 'Todo lo del plan Avanzado' | transloco }}</span>
+          </li>
+          <li class="plan-card__feature">
+            <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
+            <span>{{ 'Administrador de cuenta dedicado' | transloco }}</span>
+          </li>
+          <li class="plan-card__feature">
+            <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
+            <span>{{ 'Planes y precios personalizados' | transloco }}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+    }
+    }
   </div>
+
+  <lib-enterprise-contact-dialog />
 </section>

@@ -16,6 +16,7 @@ tenants (slug → unique)
   ├── products                 (tenant_id → tenants.id, auth_user_id → users.auth_user_id)
   │     └── product_categories (product_id + category_id  junction)
   ├── orders                   (tenant_id → tenants.id)
+  ├── whatsapp_accounts        (tenant_id → tenants.id)
   └── users_tenants            (tenant_id + user_id  junction, role, is_default)
         └── users              (auth_user_id → Supabase auth.users.id)
 
@@ -49,6 +50,30 @@ exchange_rates                 (singleton id=1 · UNRESTRICTED · no RLS)
 ```typescript
 await supabase.from('tenants').select('id, name').eq('slug', slug).single();
 ```
+
+---
+
+### `tenant_slug_changes` (2026-07-08)
+
+Historial de cambios de slug (auditoría + rate limit). Solo la RPC
+`change_tenant_slug` escribe (security definer); RLS SELECT para miembros del
+tenant (vía `users_tenants` + `users.auth_user_id`).
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| id | int8 | PK identity |
+| tenant_id | int8 | FK → tenants (cascade) |
+| old_slug / new_slug | text | |
+| changed_by | uuid | auth.uid() del owner |
+| changed_at | timestamptz | default now() |
+
+**RPC `change_tenant_slug(p_tenant_id, p_new_slug)`** → jsonb `{slug, remaining}`.
+Valida: sesión, rol `owner`, formato `^[a-z0-9]+(-[a-z0-9]+)*$` (3–40), lista de
+subdominios reservados (www/api/auth/admin/…), unicidad, y **máx
+`coalesce(tenants.slug_change_limit, 2)` cambios por 30 días rodantes** (override
+por tenant; el demo tenant 6 tiene 100). Errores por `raise exception`: `not_authorized`,
+`invalid_slug`, `reserved_slug`, `same_slug`, `slug_taken`, `limit_reached`.
+Solo `authenticated` puede ejecutarla. Migraciones: `20260708_tenant_slug_change.sql` + `20260708_tenant_slug_change_limit_override.sql` (columna `tenants.slug_change_limit`).
 
 ---
 
@@ -419,6 +444,35 @@ await supabase.from('tenant_business_hours')
 
 ---
 
+### `whatsapp_accounts`
+
+WhatsApp Business API accounts per tenant. RLS: tenant member check via `users_tenants` join.
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | identity | PK |
+| tenant_id | int8 | — | FK → tenants.id, ON DELETE CASCADE |
+| phone_number | text | — | WhatsApp phone number |
+| display_name | text | null | Business display name |
+| waba_id | text | null | WhatsApp Business Account ID (Meta) |
+| phone_number_id | text | null | Meta phone number ID |
+| access_token | text | null | API access token (sensitive, excluded from frontend queries) |
+| status | text | `'active'` | CHECK: `active` or `inactive` |
+| created_at | timestamptz | `now()` | |
+| updated_at | timestamptz | `now()` | |
+
+**RLS Policies:** SELECT / INSERT / UPDATE / DELETE — all require authenticated user to be a tenant member.
+
+**Frontend query pattern:**
+```ts
+this.client
+  .from('whatsapp_accounts')
+  .select('id, tenant_id, phone_number, display_name, waba_id, phone_number_id, status, created_at, updated_at')
+  .eq('tenant_id', tenantId)
+```
+
+---
+
 ### `exchange_rates`
 
 Singleton — always `id = 1`. **UNRESTRICTED** (no Row Level Security).
@@ -451,6 +505,71 @@ await supabase.from('exchange_rates')
 
 ---
 
+### `enterprise_leads`
+
+Leads del funnel "Contactar ventas" del plan Enterprise (2026-07-07). **RLS ON sin policies**
+= anon/authenticated denegados; solo escribe/lee la edge function `enterprise-lead` (service role).
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | identity | |
+| source | text | — | `'landing'` \| `'admin'` (CHECK) |
+| tenant_slug | text | NULL | Solo cuando viene del admin |
+| business_name / country / website | text | — | country/website opcionales |
+| name / email / phone | text | — | Contacto (phone opcional) |
+| products_range / orders_range | text | — | `lt_100\|100_500\|500_2000\|gt_2000` |
+| catalogs_needed | text | — | `1\|2_3\|4_10\|gt_10` |
+| team_size | text | — | `solo\|2_5\|6_15\|gt_15` |
+| needs | text[] | `{}` | Whitelist de 8 necesidades |
+| score / qualified | int / bool | — | Re-calculados server-side (≥4 = qualified) |
+| status | text | `'new'` | `new\|contacted\|demo_scheduled\|won\|lost` (CHECK) |
+| answers | jsonb | NULL | Payload crudo (future-proof) |
+
+Índices: `created_at desc`, `status`.
+
+RPCs admin (SECURITY DEFINER + `_assert_internal_admin`): `list_enterprise_leads_admin()`
+y `update_enterprise_lead_status_admin(id, status)` — las usa el módulo "Leads Enterprise"
+del panel interno (tabla con filtros, detalle expandible y pipeline de estado).
+
+**RPCs con planes hardcodeados** (actualizados 2026-07-07 para incluir `'enterprise'`):
+`assign_tenant_plan_admin` (2 overloads, valida `p_tier IN (...)`), `list_paying_clients_admin`
+y `list_expired_clients_admin` (`plan_id IN (...)`), y el CASE de créditos IA en
+`ensure_ai_credits` / `reset_due_ai_credits` / `sync_ai_credits_on_plan_change`
+(`WHEN 'enterprise' THEN 2000`). Si se agrega otro plan pago, tocar TODOS estos.
+
+**`list_paying_clients_admin`** (2026-07-09): devuelve también `stripe_subscription_status`
+para que "Catálogos activos" del panel interno muestre el estado **"En gracia"**
+(`past_due` = la renovación ya extendió `plan_expires_at` — el webhook lo trata como
+válido — pero Stripe sigue reintentando el cobro; por fechas solas parecerían activos).
+
+**`list_expired_clients_admin`** (2026-07-10): histórico completo de vencidos para el tab
+"Vencidos" — todos los que tuvieron plan pago y hoy no tienen uno vigente. Une (A) plan_id
+pago con `plan_expires_at` pasado (sin degradar aún, excluye `past_due`) y (B) degradados
+a gratis con historial en `tenant_subscriptions` o `previous_plan_id` (al degradar se
+nullea `plan_expires_at`, así que tier/ciclo/fechas salen de la última suscripción).
+Excluye checkouts que nunca pagaron (`incomplete_expired` sin historial). Mismo shape que
+`list_paying_clients_admin`; el filtro por rango de fechas se hace client-side en la UI.
+
+### `business_expenses`
+
+Gastos del negocio (2026-07-09): suscripciones/servicios que paga la empresa (Supabase,
+Vercel, Google Workspace, …), administrados desde la sección "Gastos" del panel interno.
+**RLS ON sin policies** = acceso solo vía RPCs.
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | identity | |
+| name / company | text | — | Nombre del servicio y de la empresa |
+| amount_usd | numeric(10,2) | — | CHECK ≥ 0 |
+| period | text | `'monthly'` | `monthly\|yearly` (CHECK) |
+| created_at / updated_at | timestamptz | `now()` | |
+
+RPCs admin (SECURITY DEFINER + `_assert_internal_admin`): `list_business_expenses_admin()`,
+`save_business_expense_admin(id, name, company, amount_usd, period)` (id NULL = insert) y
+`delete_business_expense_admin(id)`. El panel normaliza totales (anual/12 para el mensual).
+
+---
+
 ## RLS Summary
 
 | Table | RLS | Public SELECT | Auth INSERT | Auth UPDATE | Auth DELETE | Notes |
@@ -466,6 +585,7 @@ await supabase.from('exchange_rates')
 | tenant_currency_config | ON | `true` | tenant member | tenant member | tenant member | |
 | tenant_business_hours | ON | `true` | tenant member | tenant member | tenant member | |
 | exchange_rates | OFF | — | — | — | — | Singleton, no RLS |
+| enterprise_leads | ON | **none** | **none** | **none** | **none** | Solo service role (edge fn `enterprise-lead`) |
 
 **"Tenant member" check pattern:**
 ```sql

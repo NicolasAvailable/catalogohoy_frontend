@@ -1,5 +1,6 @@
 import { Injectable, ComponentRef, ApplicationRef, inject, createComponent, EnvironmentInjector } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
+import { TranslocoService } from '@jsverse/transloco';
 import { Observable, Subject } from 'rxjs';
 import { E } from '@shared/domain';
 import { ConfirmDialogComponent } from './confirm';
@@ -25,6 +26,9 @@ export class ConfirmDialogService {
   private readonly applicationRef = inject(ApplicationRef);
   private readonly environmentInjector = inject(EnvironmentInjector);
   private readonly document = inject(DOCUMENT);
+  // Igual que el toaster: los labels se traducen acá (key-as-text), así los
+  // call sites siguen pasando el texto en español sin tocar nada.
+  private readonly transloco = inject(TranslocoService);
 
   private activeDialog?: ComponentRef<ConfirmDialogComponent>;
 
@@ -53,11 +57,11 @@ export class ConfirmDialogService {
     this.activeDialog = this.createDialogComponent();
     const dialogInstance = this.activeDialog.instance;
 
-    config.headerLabel && this.activeDialog.setInput('headerLabel', config.headerLabel);
+    config.headerLabel && this.activeDialog.setInput('headerLabel', this.transloco.translate(config.headerLabel));
     config.target && this.activeDialog.setInput('target', config.target);
-    config.acceptLabel && this.activeDialog.setInput('acceptLabel', config.acceptLabel);
-    config.rejectLabel && this.activeDialog.setInput('rejectLabel', config.rejectLabel);
-    config.contentLabel && this.activeDialog.setInput('contentLabel', config.contentLabel);
+    config.acceptLabel && this.activeDialog.setInput('acceptLabel', this.transloco.translate(config.acceptLabel));
+    config.rejectLabel && this.activeDialog.setInput('rejectLabel', this.transloco.translate(config.rejectLabel));
+    config.contentLabel && this.activeDialog.setInput('contentLabel', this.transloco.translate(config.contentLabel));
     config.showAccept !== undefined && this.activeDialog.setInput('showAccept', config.showAccept);
     config.dismissableMask !== undefined && this.activeDialog.setInput('dismissableMask', config.dismissableMask);
     config.closable !== undefined && this.activeDialog.setInput('closable', config.closable);

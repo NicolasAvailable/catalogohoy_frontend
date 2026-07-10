@@ -10,15 +10,14 @@
   </div>
   <div class="flex flex-col gap-2">
     <h1 class="text-xl font-bold text-grey-800">
-      No pudimos cargar el catálogo
+      {{ 'No pudimos cargar el catálogo' | transloco }}
     </h1>
     <p class="text-sm text-grey-500">
-      Hubo un problema al verificar este catálogo. Suele ser temporal —
-      intenta de nuevo en unos segundos.
+      {{ 'Hubo un problema al verificar este catálogo. Suele ser temporal — intenta de nuevo en unos segundos.' | transloco }}
     </p>
     @if (detail()) {
     <p class="mt-1 text-xs text-grey-400 break-words">
-      Detalle: {{ detail() }}
+      {{ 'Detalle:' | transloco }} {{ detail() | transloco }}
     </p>
     }
   </div>
@@ -31,7 +30,7 @@
     />
     <ui-button
       class="w-full"
-      label="Ir a Catálogo Hoy"
+      label="Ir a CatalogoHoy"
       variant="outlined"
       (click)="goHome()"
     />
@@ -44,21 +43,20 @@
     <lucide-angular name="store" class="size-7" />
   </div>
   <div class="flex flex-col gap-2">
-    <h1 class="text-xl font-bold text-grey-800">Este catálogo no existe</h1>
+    <h1 class="text-xl font-bold text-grey-800">{{ 'Este catálogo no existe' | transloco }}</h1>
     <p class="text-sm text-grey-500">
       @if (slug()) {
-      No encontramos un catálogo en
-      <span class="font-semibold text-grey-700">{{ slug() }}</span>. Puede que
-      el enlace esté mal escrito o que el catálogo ya no esté disponible.
+      {{ 'No encontramos un catálogo en' | transloco }}
+      <span class="font-semibold text-grey-700">{{ slug() }}</span>.
+      {{ 'Puede que el enlace esté mal escrito o que el catálogo ya no esté disponible.' | transloco }}
       } @else {
-      No encontramos el catálogo que buscas. Puede que el enlace esté mal
-      escrito o que ya no esté disponible.
+      {{ 'No encontramos el catálogo que buscas. Puede que el enlace esté mal escrito o que ya no esté disponible.' | transloco }}
       }
     </p>
   </div>
   <ui-button
     class="w-full"
-    label="Ir a Catálogo Hoy"
+    label="Ir a CatalogoHoy"
     icon="arrow-right"
     (click)="goHome()"
   />

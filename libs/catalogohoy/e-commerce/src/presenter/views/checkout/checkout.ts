@@ -10,9 +10,11 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { MetaPixelService } from '@catalogohoy/core';
 import {
   flagEmoji,
+  paymentMethodFields,
   ShippingMethod,
   SUPPORTED_COUNTRIES,
 } from '@catalogohoy/ecommerce-config';
@@ -46,6 +48,7 @@ type CheckoutPhase = 'form' | 'confirm' | 'sent';
     TextareaComponent,
     QrCodeComponent,
     TenantPricePipe,
+    TranslocoPipe,
   ],
   templateUrl: './checkout.html',
   styleUrl: './checkout.css',
@@ -57,6 +60,7 @@ export default class Checkout {
   public readonly cs = this.ecommerceStore.currencySymbol;
   private readonly metaPixel = inject(MetaPixelService);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
 
   /** Rendered inside the catalog-editor preview iframe (?preview=true). In that
    *  mode there's no real cart, so the empty-cart guard must not bounce out —
@@ -135,6 +139,39 @@ export default class Checkout {
     if (this.ecommerceStore.isVenezuela()) return i.paymentMethods;
     return i.paymentMethods.filter((m) => !isPagoMovil(m.name));
   });
+
+  /** Datos (banco, cuenta, etc.) del método de pago elegido, listos para
+   *  mostrar en el checkout. Solo campos con valor. */
+  public readonly selectedPaymentInfo = computed(() => {
+    const name = this.selectedPaymentMethod();
+    if (!name) return [];
+    const method = this.availablePaymentMethods().find((m) => m.name === name);
+    const details = method?.details ?? {};
+    return paymentMethodFields(name, this.ecommerceStore.isVenezuela())
+      .map((f) => ({ label: f.label, value: (details[f.key] ?? '').trim() }))
+      .filter((f) => f.value.length > 0);
+  });
+
+  /** True si el método tiene datos cargados (muestra el chevron en su fila). */
+  public hasPaymentInfo(pm: { name: string; details?: Record<string, string> | null }): boolean {
+    const details = pm.details ?? {};
+    return paymentMethodFields(pm.name, this.ecommerceStore.isVenezuela()).some(
+      (f) => (details[f.key] ?? '').trim().length > 0
+    );
+  }
+
+  /** Feedback transitorio del botón "Copiar datos". */
+  public readonly paymentInfoCopied = signal(false);
+
+  public copyPaymentInfo(): void {
+    const info = this.selectedPaymentInfo();
+    if (!info.length) return;
+    const text = info.map((f) => `${f.label}: ${f.value}`).join('\n');
+    navigator.clipboard?.writeText(text).then(() => {
+      this.paymentInfoCopied.set(true);
+      setTimeout(() => this.paymentInfoCopied.set(false), 1800);
+    });
+  }
 
   /** WhatsApp seller button to send the order to (first configured one). */
   public readonly whatsappButton = computed(
@@ -248,7 +285,11 @@ export default class Checkout {
     // first configured one when no specific seller is passed.
     const seller = button ?? this.whatsappButton();
     if (!seller?.number) {
-      alert('Este catálogo no tiene un número de WhatsApp configurado.');
+      alert(
+        this.transloco.translate(
+          'Este catálogo no tiene un número de WhatsApp configurado.'
+        )
+      );
       return;
     }
 
@@ -278,6 +319,9 @@ export default class Checkout {
         size: item.size ?? null,
         variantId: item.variantId ?? null,
         variantName: item.variantName ?? null,
+        // Snapshot del tramo de mayoreo elegido (el precio unitario ya lo
+        // refleja); antes se perdía al crear la orden.
+        tierTitle: item.tierTitle ?? null,
       })),
       total,
       payment_method: this.selectedPaymentMethod() || undefined,
@@ -292,7 +336,11 @@ export default class Checkout {
 
     if (!orderResult || orderResult.isLeft()) {
       this.isSubmitting.set(false);
-      alert('Hubo un error al procesar tu pedido. Por favor intenta de nuevo.');
+      alert(
+        this.transloco.translate(
+          'Hubo un error al procesar tu pedido. Por favor intenta de nuevo.'
+        )
+      );
       return;
     }
 

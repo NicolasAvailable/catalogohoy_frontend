@@ -8,6 +8,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { PlanStore } from '@catalogohoy/plan';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
@@ -40,6 +41,7 @@ const REPORTS_LIMIT_BY_PLAN: Record<string, number> = {
     ConfirmDialogComponent,
     IconComponent,
     SkeletonListComponent,
+    TranslocoPipe,
   ],
   templateUrl: './list.html',
   styleUrl: './list.css',

@@ -15,13 +15,20 @@ export interface PayingClient {
   expiresAt: string | null;
   daysUntilExpiry: number | null;
   countryCode: string | null;
+  /** Raw Stripe subscription status from `tenants`; null for manual plans. */
+  stripeSubscriptionStatus: string | null;
 }
 
-export type PayingClientStatus = 'active' | 'expiring' | 'expired';
+export type PayingClientStatus = 'active' | 'expiring' | 'expired' | 'grace';
 
 export const computeStatus = (
-  daysUntilExpiry: number | null
+  daysUntilExpiry: number | null,
+  stripeSubscriptionStatus?: string | null
 ): PayingClientStatus => {
+  // Grace period: the renewal already extended plan_expires_at (the webhook
+  // treats past_due as valid) but Stripe is still retrying the charge, so by
+  // dates alone these clients would look "active".
+  if (stripeSubscriptionStatus === 'past_due') return 'grace';
   if (daysUntilExpiry === null) return 'active';
   if (daysUntilExpiry < 0) return 'expired';
   if (daysUntilExpiry <= 7) return 'expiring';

@@ -58,6 +58,7 @@ function buildUsage(overrides: Partial<TenantPlanUsage> = {}): TenantPlanUsage {
     planStartedAt: null,
     planExpiresAt: null,
     hasStripeSubscription: false,
+    autoRenews: false,
     ...overrides,
   };
 }
@@ -200,6 +201,33 @@ describe('PlanStore', () => {
       );
       await store.loadTenantPlanUsage();
       expect(store.daysUntilExpiration()).toBe(4);
+      expect(store.showExpirationBanner()).toBe(true);
+    });
+
+    it('hides the banner when the Stripe subscription auto-renews', async () => {
+      const expiresAt = new Date('2026-04-22').toISOString(); // 4 days out
+      planService.getTenantPlanUsage.mockResolvedValue(
+        E.right(
+          buildUsage({
+            plan: paidPlan,
+            planExpiresAt: expiresAt,
+            hasStripeSubscription: true,
+            autoRenews: true,
+          })
+        )
+      );
+      await store.loadTenantPlanUsage();
+      expect(store.showExpirationBanner()).toBe(false);
+    });
+
+    it('keeps the banner for manual-renewal plans (VE / WhatsApp) near expiration', async () => {
+      const expiresAt = new Date('2026-04-22').toISOString(); // 4 days out
+      planService.getTenantPlanUsage.mockResolvedValue(
+        E.right(
+          buildUsage({ plan: paidPlan, planExpiresAt: expiresAt, autoRenews: false })
+        )
+      );
+      await store.loadTenantPlanUsage();
       expect(store.showExpirationBanner()).toBe(true);
     });
 

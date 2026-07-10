@@ -12,10 +12,10 @@
       </div>
       <div>
         <h3 class="font-semibold text-grey-700">
-          {{ isEditing ? 'Editar cliente' : 'Añadir cliente' }}
+          {{ (isEditing ? 'Editar cliente' : 'Añadir cliente') | transloco }}
         </h3>
         <p class="text-sm text-grey-300">
-          {{ isEditing ? 'Actualiza los datos del cliente' : 'Registra un cliente manualmente' }}
+          {{ (isEditing ? 'Actualiza los datos del cliente' : 'Registra un cliente manualmente') | transloco }}
         </p>
       </div>
     </div>
@@ -24,32 +24,32 @@
       <!-- Nombre + Teléfono -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium text-grey-700">Nombre *</label>
+          <label class="text-sm font-medium text-grey-700">{{ 'Nombre' | transloco }} *</label>
           <ui-input-text
             placeholder="Nombre del cliente"
             [ngModel]="name()"
             (ngModelChange)="name.set($event)"
           />
           @if (submitted() && !name().trim()) {
-            <p class="text-xs text-red-500">El nombre es obligatorio</p>
+            <p class="text-xs text-red-500">{{ 'El nombre es obligatorio' | transloco }}</p>
           }
         </div>
         <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium text-grey-700">Teléfono *</label>
+          <label class="text-sm font-medium text-grey-700">{{ 'Teléfono' | transloco }} *</label>
           <ui-input-text
             placeholder="+58 4141234567"
             [ngModel]="phone()"
             (ngModelChange)="phone.set($event)"
           />
           @if (submitted() && !phone().trim()) {
-            <p class="text-xs text-red-500">El teléfono es obligatorio</p>
+            <p class="text-xs text-red-500">{{ 'El teléfono es obligatorio' | transloco }}</p>
           }
         </div>
       </div>
 
       <!-- Correo -->
       <div class="flex flex-col gap-1.5">
-        <label class="text-sm font-medium text-grey-700">Correo electrónico</label>
+        <label class="text-sm font-medium text-grey-700">{{ 'Correo electrónico' | transloco }}</label>
         <ui-input-text
           placeholder="correo@ejemplo.com"
           [ngModel]="email()"
@@ -59,7 +59,7 @@
 
       <!-- Dirección -->
       <div class="flex flex-col gap-1.5">
-        <label class="text-sm font-medium text-grey-700">Dirección</label>
+        <label class="text-sm font-medium text-grey-700">{{ 'Dirección' | transloco }}</label>
         <ui-input-text
           placeholder="Dirección del cliente"
           [ngModel]="address()"
@@ -69,7 +69,7 @@
 
       <!-- Etiquetas -->
       <div class="flex flex-col gap-1.5">
-        <label class="text-sm font-medium text-grey-700">Etiquetas</label>
+        <label class="text-sm font-medium text-grey-700">{{ 'Etiquetas' | transloco }}</label>
         <ui-multi-select
           [options]="clientStore.tags()"
           [ngModel]="tagIds()"
@@ -77,10 +77,10 @@
           optionLabel="name"
           optionValue="id"
           display="chip"
-          placeholder="Seleccionar etiquetas..."
+          [placeholder]="'Seleccionar etiquetas...' | transloco"
           styleClass="w-full"
           appendTo="body"
-          emptyMessage="Aún no hay etiquetas. Créala abajo 👇"
+          [emptyMessage]="'Aún no hay etiquetas. Créala abajo 👇' | transloco"
           [showToggleAll]="clientStore.tags().length > 0"
         >
           <ng-template #footer>
@@ -91,7 +91,7 @@
 
       <!-- Código de referencia -->
       <div class="flex flex-col gap-1.5">
-        <label class="text-sm font-medium text-grey-700">Código de referencia</label>
+        <label class="text-sm font-medium text-grey-700">{{ 'Código de referencia' | transloco }}</label>
         <ui-input-text
           placeholder="Ej: REF-001"
           [ngModel]="referralCode()"
@@ -101,10 +101,10 @@
 
       <!-- Notas -->
       <div class="flex flex-col gap-1.5">
-        <label class="text-sm font-medium text-grey-700">Notas</label>
+        <label class="text-sm font-medium text-grey-700">{{ 'Notas' | transloco }}</label>
         <ui-textarea
           [rows]="3"
-          placeholder="Notas internas sobre el cliente"
+          [placeholder]="'Notas internas sobre el cliente' | transloco"
           [ngModel]="notes()"
           (ngModelChange)="notes.set($event)"
         />

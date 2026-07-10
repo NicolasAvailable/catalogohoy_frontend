@@ -1,4 +1,5 @@
 import { Component, computed, inject, input } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { PopoverModule } from 'primeng/popover';
 import { ToastService } from '@shared/infrastructure';
 import { IconComponent } from '@ui';
@@ -15,7 +16,7 @@ import { ClientTagCreateRowComponent } from '../client-tag-create-row/client-tag
 @Component({
   selector: 'lib-client-row-tags',
   standalone: true,
-  imports: [PopoverModule, IconComponent, ClientTagCreateRowComponent],
+  imports: [PopoverModule, IconComponent, ClientTagCreateRowComponent, TranslocoPipe],
   templateUrl: './client-row-tags.html',
 })
 export class ClientRowTagsComponent {

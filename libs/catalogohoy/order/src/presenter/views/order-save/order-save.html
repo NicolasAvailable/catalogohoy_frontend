@@ -3,12 +3,12 @@
 >
   <header class="flex justify-between items-center py-4">
     <h1 class="text-2xl sm:text-4xl font-bold">
-      {{ isCreate() ? 'Crear orden' : 'Editar orden' }}
+      {{ (isCreate() ? 'Crear orden' : 'Editar orden') | transloco }}
     </h1>
     <div class="flex gap-3 items-center">
       <ui-button
         routerLink="/admin/orders"
-        label="Cancelar"
+        [label]="'Cancelar' | transloco"
         variant="outlined"
         severity="contrast"
         [disabled]="isSubmitting()"
@@ -17,7 +17,7 @@
       <ui-button
         (click)="save()"
         [disabled]="form.invalid || isSubmitting()"
-        [label]="'Guardar'"
+        [label]="'Guardar' | transloco"
       />
       }
     </div>
@@ -29,24 +29,24 @@
     <!-- Cliente Info -->
     <ui-card>
       <div class="flex flex-col gap-4">
-        <h2 class="text-xl font-bold">Información del cliente</h2>
+        <h2 class="text-xl font-bold">{{ 'Información del cliente' | transloco }}</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="flex flex-col gap-2">
             <label class="text-base text-grey-400 font-semibold" for="name"
-              >Nombre del cliente</label
+              >{{ 'Nombre del cliente' | transloco }}</label
             >
             <ui-input-text
               formControlName="name"
-              placeholder="Juan Pérez"
+              [placeholder]="'Juan Pérez' | transloco"
               inputId="name"
             />
           </div>
           <div class="flex flex-col gap-2">
             <div class="flex items-center gap-3">
               <label class="text-base text-grey-400 font-semibold" for="phone"
-                >Teléfono</label
+                >{{ 'Teléfono' | transloco }}</label
               >
-              <span class="text-sm text-grey-400">(Opcional)</span>
+              <span class="text-sm text-grey-400">{{ '(Opcional)' | transloco }}</span>
             </div>
             <ui-input-phone
               formControlName="phone"
@@ -57,26 +57,26 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="flex flex-col gap-2">
             <label class="text-base text-grey-400 font-semibold" for="deliveryDate"
-              >Fecha de entrega</label
+              >{{ 'Fecha de entrega' | transloco }}</label
             >
             <ui-datepicker
               formControlName="deliveryDate"
               inputId="deliveryDate"
-              placeholder="Selecciona una fecha"
+              [placeholder]="'Selecciona una fecha' | transloco"
               dateFormat="dd/mm/yy"
               mode="single"
               styleClass="w-full border! border-grey-100! rounded-xl!"
             />
             <span class="text-sm text-grey-300">
-              Por defecto es hoy. Puedes cambiarla si la orden se entrega otro día.
+              {{ 'Por defecto es hoy. Puedes cambiarla si la orden se entrega otro día.' | transloco }}
             </span>
           </div>
           <div class="flex flex-col gap-2">
             <div class="flex items-center gap-3">
               <label class="text-base text-grey-400 font-semibold" for="payment-method"
-                >Método de pago</label
+                >{{ 'Método de pago' | transloco }}</label
               >
-              <span class="text-sm text-grey-400">(Opcional)</span>
+              <span class="text-sm text-grey-400">{{ '(Opcional)' | transloco }}</span>
             </div>
             @if (orderPaymentMethods().length > 0) {
               <ui-select
@@ -84,7 +84,7 @@
                 formControlName="paymentMethod"
                 optionLabel="name"
                 optionValue="name"
-                placeholder="Selecciona el método de pago"
+                [placeholder]="'Selecciona el método de pago' | transloco"
                 [clearable]="true"
                 styleClass="w-full"
               >
@@ -103,8 +103,8 @@
               </ui-select>
             } @else {
               <span class="text-sm text-grey-400">
-                No tienes métodos de pago configurados. Configúralos en
-                <a routerLink="/admin/catalog/edit" [queryParams]="{tab: 'payments'}" class="text-primary-500 hover:underline">Editar catálogo → Pagos</a>.
+                {{ 'No tienes métodos de pago configurados. Configúralos en' | transloco }}
+                <a routerLink="/admin/catalog/edit" [queryParams]="{tab: 'payments'}" class="text-primary-500 hover:underline">{{ 'Editar catálogo → Pagos' | transloco }}</a>.
               </span>
             }
           </div>
@@ -112,13 +112,13 @@
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-3">
             <label class="text-base text-grey-400 font-semibold" for="comments"
-              >Comentarios</label
+              >{{ 'Comentarios' | transloco }}</label
             >
-            <span class="text-sm text-grey-400">(Opcional)</span>
+            <span class="text-sm text-grey-400">{{ '(Opcional)' | transloco }}</span>
           </div>
           <ui-textarea
             formControlName="comments"
-            placeholder="Notas adicionales sobre la orden..."
+            [placeholder]="'Notas adicionales sobre la orden...' | transloco"
             textareaId="comments"
             [rows]="3"
           />
@@ -130,10 +130,10 @@
     <ui-card>
       <div class="flex flex-col gap-4">
         <div class="flex justify-between items-center">
-          <h2 class="text-xl font-bold">Productos</h2>
+          <h2 class="text-xl font-bold">{{ 'Productos' | transloco }}</h2>
           <ui-button
             icon="plus"
-            label="Agregar producto"
+            [label]="'Agregar producto' | transloco"
             variant="outlined"
             severity="primary"
             (click)="addProduct()"
@@ -145,8 +145,8 @@
           class="flex flex-col items-center justify-center py-8 text-grey-300"
         >
           <ui-icon name="package" size="48" styleClass="mb-3" />
-          <p class="text-base">No hay productos agregados</p>
-          <p class="text-sm">Haz clic en "Agregar producto" para comenzar</p>
+          <p class="text-base">{{ 'No hay productos agregados' | transloco }}</p>
+          <p class="text-sm">{{ 'Haz clic en "Agregar producto" para comenzar' | transloco }}</p>
         </div>
         } @else {
         <div class="flex flex-col gap-3">
@@ -160,20 +160,21 @@
                   <label
                     class="text-sm text-grey-400"
                     [attr.for]="'product-' + $index"
-                    >Producto</label
+                    >{{ 'Producto' | transloco }}</label
                   >
                   <ui-select
                     [options]="selectableProducts()"
                     optionLabel="name"
                     optionValue="id"
-                    placeholder="Seleccionar producto"
+                    [placeholder]="'Seleccionar producto' | transloco"
                     [ngModel]="product.productId"
                     (ngModelChange)="onProductSelect($index, $event)"
                     [ngModelOptions]="{ standalone: true }"
                     appendTo="body"
                     [selectId]="'product-' + $index"
                     [filter]="true"
-                    filterPlaceholder="Buscar producto..."
+                    filterBy="name,sku,description"
+                    [filterPlaceholder]="'Buscar por nombre o SKU...' | transloco"
                   >
                     <ng-template selectSelectedItem let-selected>
                       <div class="flex items-center gap-3">
@@ -201,7 +202,7 @@
                           >
                         </div>
                         } @else {
-                        <span class="text-grey-400">Seleccionar producto</span>
+                        <span class="text-grey-400">{{ 'Seleccionar producto' | transloco }}</span>
                         }
                       </div>
                     </ng-template>
@@ -218,8 +219,8 @@
                           />
                         </div>
                         <div class="flex flex-col">
-                          <span class="text-primary-600 font-medium">Otros</span>
-                          <span class="text-xs text-grey-400">Producto personalizado</span>
+                          <span class="text-primary-600 font-medium">{{ 'Otros' | transloco }}</span>
+                          <span class="text-xs text-grey-400">{{ 'Producto personalizado' | transloco }}</span>
                         </div>
                         } @else {
                         @if (item.photos?.length) {
@@ -246,7 +247,7 @@
                           >
                           @if (item.isWholesale && item.wholesaleTiers?.length) {
                           <span class="text-xs text-amber-600"
-                            >Al mayor · Desde {{ cs() }}{{ item.wholesaleTiers[0].price.toFixed(2) }}</span
+                            >{{ 'Al mayor · Desde' | transloco }} {{ cs() }}{{ item.wholesaleTiers[0].price.toFixed(2) }}</span
                           >
                           } @else if (item.pricePromotional > 0) {
                           <span class="text-xs text-grey-400">
@@ -263,6 +264,35 @@
                       </div>
                     </ng-template>
                   </ui-select>
+
+                  <!-- Escala de mayoreo (visible solo para productos al mayor) -->
+                  @if (getWholesaleTiers(product.productId).length) {
+                  <label
+                    class="text-sm text-grey-400 mt-2"
+                    [attr.for]="'tier-' + $index"
+                    >{{ 'Escala (al mayor)' | transloco }}</label
+                  >
+                  <ui-select
+                    [options]="getWholesaleTiers(product.productId)"
+                    optionLabel="title"
+                    optionValue="title"
+                    [placeholder]="'Seleccionar escala' | transloco"
+                    [ngModel]="product.tierTitle"
+                    (ngModelChange)="onTierSelect($index, $event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    appendTo="body"
+                    [selectId]="'tier-' + $index"
+                  >
+                    <ng-template selectItem let-tier>
+                      <div class="flex items-center justify-between gap-4 py-1">
+                        <span class="text-grey-800">{{ tier.title }}</span>
+                        <span class="text-xs text-grey-400"
+                          >{{ cs() }} {{ tier.price.toFixed(2) }} c/u</span
+                        >
+                      </div>
+                    </ng-template>
+                  </ui-select>
+                  }
                 </div>
                 } @else {
                 <!-- Campos custom (visible cuando ES custom) -->
@@ -278,27 +308,27 @@
                           styleClass="text-primary-500"
                         />
                       </div>
-                      <span class="text-xs font-medium text-primary-600">Producto adicional</span>
+                      <span class="text-xs font-medium text-primary-600">{{ 'Producto adicional' | transloco }}</span>
                     </div>
                     <button
                       type="button"
                       class="text-xs text-grey-400 hover:text-grey-600 transition-colors cursor-pointer underline"
                       (click)="cancelCustomProduct($index)"
                     >
-                      Cambiar a producto
+                      {{ 'Cambiar a producto' | transloco }}
                     </button>
                   </div>
                   <div class="flex flex-col gap-1">
                     <label
                       class="text-sm text-grey-400"
                       [attr.for]="'custom-name-' + $index"
-                      >Nombre</label
+                      >{{ 'Nombre' | transloco }}</label
                     >
                     <ui-input-text
                       [ngModel]="product.name"
                       (ngModelChange)="onCustomNameChange($index, $event)"
                       [ngModelOptions]="{ standalone: true }"
-                      placeholder="Ej: Anillo, Nota, Tarjeta..."
+                      [placeholder]="'Ej: Anillo, Nota, Tarjeta...' | transloco"
                       [inputId]="'custom-name-' + $index"
                     />
                   </div>
@@ -307,15 +337,15 @@
                       <label
                         class="text-sm text-grey-400"
                         [attr.for]="'custom-desc-' + $index"
-                        >Descripción</label
+                        >{{ 'Descripción' | transloco }}</label
                       >
-                      <span class="text-xs text-grey-300">(Opcional)</span>
+                      <span class="text-xs text-grey-300">{{ '(Opcional)' | transloco }}</span>
                     </div>
                     <ui-input-text
                       [ngModel]="product.description ?? ''"
                       (ngModelChange)="onCustomDescriptionChange($index, $event)"
                       [ngModelOptions]="{ standalone: true }"
-                      placeholder="Detalle del producto..."
+                      [placeholder]="'Detalle del producto...' | transloco"
                       [inputId]="'custom-desc-' + $index"
                     />
                   </div>
@@ -323,7 +353,7 @@
                     <label
                       class="text-sm text-grey-400"
                       [attr.for]="'custom-price-' + $index"
-                      >Precio ({{ cs() }})</label
+                      >{{ 'Precio ({symbol})' | transloco: { symbol: cs() } }}</label
                     >
                     <ui-input-number
                       [ngModel]="product.price"
@@ -344,7 +374,7 @@
                     <label
                       class="text-sm text-grey-400"
                       [attr.for]="'quantity-' + $index"
-                      >Cantidad</label
+                      >{{ 'Cantidad' | transloco }}</label
                     >
                     <ui-input-number
                       [ngModel]="product.quantity"
@@ -356,7 +386,7 @@
                     />
                   </div>
                   <div class="flex flex-col gap-1">
-                    <span class="text-sm text-grey-400">Subtotal</span>
+                    <span class="text-sm text-grey-400">{{ 'Subtotal' | transloco }}</span>
                     <p class="text-lg font-semibold text-grey-800 sm:pt-2">
                       {{ cs() }} {{ product.total.toFixed(2) }}
                     </p>
@@ -381,11 +411,11 @@
     <!-- Estado -->
     <ui-card>
       <div class="flex flex-col gap-4">
-        <h2 class="text-xl font-bold">Estado de la orden</h2>
+        <h2 class="text-xl font-bold">{{ 'Estado de la orden' | transloco }}</h2>
         <div
           class="flex flex-col sm:flex-row gap-4"
           role="radiogroup"
-          aria-label="Estado de la orden"
+          [attr.aria-label]="'Estado de la orden' | transloco"
         >
           <div
             role="radio"
@@ -410,8 +440,8 @@
               }
             </div>
             <div class="flex-1">
-              <span class="font-medium">Pendiente</span>
-              <p class="text-sm text-grey-300">La orden está en proceso</p>
+              <span class="font-medium">{{ 'Pendiente' | transloco }}</span>
+              <p class="text-sm text-grey-300">{{ 'La orden está en proceso' | transloco }}</p>
             </div>
           </div>
           <div
@@ -437,8 +467,8 @@
               }
             </div>
             <div class="flex-1">
-              <span class="font-medium">Completada</span>
-              <p class="text-sm text-grey-300">La orden ha sido entregada</p>
+              <span class="font-medium">{{ 'Completada' | transloco }}</span>
+              <p class="text-sm text-grey-300">{{ 'La orden ha sido entregada' | transloco }}</p>
             </div>
           </div>
           <div
@@ -464,8 +494,8 @@
               }
             </div>
             <div class="flex-1">
-              <span class="font-medium">Cancelada</span>
-              <p class="text-sm text-grey-300">La orden fue cancelada</p>
+              <span class="font-medium">{{ 'Cancelada' | transloco }}</span>
+              <p class="text-sm text-grey-300">{{ 'La orden fue cancelada' | transloco }}</p>
             </div>
           </div>
         </div>
@@ -475,13 +505,13 @@
     <!-- Totales -->
     <ui-card>
       <div class="flex flex-col gap-4">
-        <h2 class="text-xl font-bold">Resumen</h2>
+        <h2 class="text-xl font-bold">{{ 'Resumen' | transloco }}</h2>
 
         <!-- Total -->
         <div
           class="flex justify-between items-center py-4 border-t border-grey-100"
         >
-          <span class="text-lg text-grey-400 font-semibold">Total</span>
+          <span class="text-lg text-grey-400 font-semibold">{{ 'Total' | transloco }}</span>
           <span class="text-2xl font-bold text-primary-600"
             >{{ cs() }} {{ calculateTotal().toFixed(2) }}</span
           >
@@ -491,7 +521,7 @@
         <!-- Tasa de cambio -->
         <div class="flex flex-col gap-3 py-4 border-t border-grey-100">
           <div class="flex items-center justify-between">
-            <span class="text-lg text-grey-400 font-semibold">Tasa de cambio</span>
+            <span class="text-lg text-grey-400 font-semibold">{{ 'Tasa de cambio' | transloco }}</span>
             <span class="text-sm text-grey-400 font-medium"
               >{{ exchangeRate() | number:'1.2-2' }} Bs.</span
             >
@@ -508,7 +538,7 @@
                   : 'border-grey-200 text-grey-400 hover:border-primary-300')"
             >
               <ui-icon [name]="option.icon" size="16" />
-              {{ option.label }}
+              {{ option.label | transloco }}
             </button>
             }
           </div>
@@ -519,11 +549,11 @@
           class="flex justify-between items-center py-4 border-t border-grey-100"
         >
           <div class="flex items-center gap-3">
-            <span class="text-lg text-grey-400 font-semibold">Total Bs</span>
+            <span class="text-lg text-grey-400 font-semibold">{{ 'Total Bs' | transloco }}</span>
             <ui-button
               (click)="recalculateTotalBs()"
               icon="refresh-cw"
-              label="Recalcular"
+              [label]="'Recalcular' | transloco"
               variant="outlined"
               severity="primary"
               size="small"

@@ -193,6 +193,7 @@ export class EcommerceService implements BaseEcommerceService {
       isOpen,
       businessHoursWeek,
       themeColor: config?.theme_color ?? '#10b981',
+      defaultLanguage: (config?.default_language as string) ?? 'es',
       showDesignSection: config?.show_design_section ?? true,
       paymentMethods: (data.payment_methods ?? []).map((pm: any) => ({
         id: pm.id,
@@ -201,6 +202,7 @@ export class EcommerceService implements BaseEcommerceService {
         icon: pm.icon,
         isActive: pm.is_active,
         createdAt: pm.created_at,
+        details: pm.details ?? {},
       })),
       showPaymentMethodsSection:
         config?.show_payment_methods_section ?? true,
@@ -298,7 +300,9 @@ export class EcommerceService implements BaseEcommerceService {
       .eq('is_hidden', false);
 
     if (search && search.trim().length > 0) {
-      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+      // Igual que el admin: busca contra search_blob (nombre + descripción +
+      // SKU top-level + nombre/SKU de tallas y variantes).
+      query = query.ilike('search_blob', `%${search.trim()}%`);
     }
 
     if (categoryId) {
@@ -512,6 +516,8 @@ export class EcommerceService implements BaseEcommerceService {
           shipping_address: order.shipping_address ?? null,
           shipping_fee: order.shipping_fee ?? 0,
           status: 'pending',
+          // Orden del catálogo público: sí dispara notificaciones (WhatsApp/email).
+          source: 'public',
         },
       ])
       .select('id')

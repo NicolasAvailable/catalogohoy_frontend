@@ -37,7 +37,7 @@ export class EcommerceConfigService {
       const { data: config } = await this.client
         .from('tenant_ecommerce_config')
         .select(
-          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message, notify_new_orders, notify_weekly_report, shipping_methods, show_shipping_section, customer_fields'
+          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message, notify_new_orders, notify_weekly_report, shipping_methods, show_shipping_section, customer_fields, default_language'
         )
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -76,6 +76,7 @@ export class EcommerceConfigService {
         showCategoriesSection: config?.show_categories_section ?? true,
         socialLinks: (config?.social_links as SocialLinks) ?? DEFAULT_SOCIAL_LINKS,
         template: (config?.template as CatalogTemplate) ?? 'banner-centered',
+        defaultLanguage: (config?.default_language as string) ?? 'es',
         whatsappOrderMessage: config?.whatsapp_order_message ?? null,
         notifyNewOrders: config?.notify_new_orders ?? true,
         notifyWeeklyReport: config?.notify_weekly_report ?? true,
@@ -176,6 +177,62 @@ export class EcommerceConfigService {
     }
   }
 
+  /** Cambia el slug del catálogo vía RPC. El servidor valida owner, formato,
+   *  unicidad y el límite de 2 cambios por cada 30 días; los códigos de error
+   *  (limit_reached, slug_taken, …) llegan en error.message. */
+  async changeTenantSlug(
+    tenantId: string,
+    newSlug: string
+  ): Promise<E.Either<Error, { slug: string; remaining: number }>> {
+    try {
+      const { data, error } = await this.client.rpc('change_tenant_slug', {
+        p_tenant_id: Number(tenantId),
+        p_new_slug: newSlug,
+      });
+
+      if (error) return E.left(new Error(error.message));
+      const payload = data as { slug: string; remaining: number };
+      return E.right({ slug: payload.slug, remaining: payload.remaining });
+    } catch (error) {
+      return E.left(error as Error);
+    }
+  }
+
+  /** Estado del límite de cambios de slug: usados en los últimos 30 días
+   *  (RLS: solo miembros del tenant) + límite del tenant
+   *  (tenants.slug_change_limit, default 2 — override para demos/internos). */
+  async getSlugChangeStatus(
+    tenantId: string
+  ): Promise<E.Either<Error, { used: number; limit: number }>> {
+    try {
+      const since = new Date(
+        Date.now() - 30 * 24 * 60 * 60 * 1000
+      ).toISOString();
+      const [countRes, tenantRes] = await Promise.all([
+        this.client
+          .from('tenant_slug_changes')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', tenantId)
+          .gt('changed_at', since),
+        this.client
+          .from('tenants')
+          .select('slug_change_limit')
+          .eq('id', tenantId)
+          .single(),
+      ]);
+
+      if (countRes.error) return E.left(new Error(countRes.error.message));
+      if (tenantRes.error) return E.left(new Error(tenantRes.error.message));
+      return E.right({
+        used: countRes.count ?? 0,
+        limit:
+          (tenantRes.data?.slug_change_limit as number | null) ?? 2,
+      });
+    } catch (error) {
+      return E.left(error as Error);
+    }
+  }
+
   async updateConfig(
     config: Partial<EcommerceConfig> & { tenantId: string }
   ): Promise<E.Either<Error, void>> {
@@ -227,6 +284,8 @@ export class EcommerceConfigService {
         updateData['social_links'] = config.socialLinks;
       if (config.template !== undefined)
         updateData['template'] = config.template;
+      if (config.defaultLanguage !== undefined)
+        updateData['default_language'] = config.defaultLanguage;
       if (config.whatsappOrderMessage !== undefined)
         updateData['whatsapp_order_message'] = config.whatsappOrderMessage;
       if (config.notifyNewOrders !== undefined)
@@ -365,6 +424,7 @@ export class EcommerceConfigService {
         icon: row.icon,
         isActive: row.is_active,
         createdAt: row.created_at,
+        details: row.details ?? {},
       }))
     );
   }
@@ -389,12 +449,18 @@ export class EcommerceConfigService {
       icon: data.icon,
       isActive: data.is_active,
       createdAt: data.created_at,
+      details: data.details ?? {},
     });
   }
 
   async updatePaymentMethod(
     id: number,
-    updates: { name?: string; icon?: string; is_active?: boolean }
+    updates: {
+      name?: string;
+      icon?: string;
+      is_active?: boolean;
+      details?: Record<string, string>;
+    }
   ): Promise<E.Either<Error, void>> {
     const { error } = await this.client
       .from('payment_methods')

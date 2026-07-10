@@ -1,10 +1,10 @@
 <div class="checkout">
   <!-- Header -->
   <header class="checkout__topbar">
-    <button type="button" class="checkout__back" (click)="goToStore()" aria-label="Volver atrás">
+    <button type="button" class="checkout__back" (click)="goToStore()" [attr.aria-label]="'Volver atrás' | transloco">
       <ui-icon name="arrow-left" size="22" />
     </button>
-    <h1 class="checkout__heading">Checkout</h1>
+    <h1 class="checkout__heading">{{ 'Checkout' | transloco }}</h1>
     @if (info()?.logo) {
     <img class="checkout__logo" [src]="info()?.logo" [alt]="info()?.name" />
     } @else {
@@ -18,11 +18,11 @@
   @if (phase() === 'form') {
   <!-- ===== Cliente ===== -->
   <section class="checkout__card">
-    <h2 class="checkout__card-title">Cliente</h2>
+    <h2 class="checkout__card-title">{{ 'Cliente' | transloco }}</h2>
 
     <!-- Name is always shown and always required. -->
     <label class="checkout__field">
-      <span class="checkout__label">Nombre <span class="checkout__req">*</span></span>
+      <span class="checkout__label">{{ 'Nombre' | transloco }} <span class="checkout__req">*</span></span>
       <ui-input-text [ngModel]="name()" (ngModelChange)="name.set($event)"
         placeholder="Tu nombre" styleClass="w-full"></ui-input-text>
     </label>
@@ -30,7 +30,7 @@
     @if (customerFields().phone.visible) {
     <label class="checkout__field">
       <span class="checkout__label">
-        Número de WhatsApp @if (customerFields().phone.required) { <span class="checkout__req">*</span> }
+        {{ 'Número de WhatsApp' | transloco }} @if (customerFields().phone.required) { <span class="checkout__req">*</span> }
       </span>
       <div class="checkout__phone">
         <button type="button" class="checkout__country" (click)="toggleCountryDropdown($event)">
@@ -43,7 +43,7 @@
           @for (c of countryCodes; track c.iso) {
           <button type="button" class="checkout__country-item" (click)="selectCountry(c)">
             <span>{{ c.flag }}</span>
-            <span class="checkout__country-label">{{ c.label }}</span>
+            <span class="checkout__country-label">{{ c.label | transloco }}</span>
             <span class="checkout__country-code">{{ c.code }}</span>
           </button>
           }
@@ -60,7 +60,7 @@
     @if (customerFields().email.visible) {
     <label class="checkout__field">
       <span class="checkout__label">
-        Correo electrónico @if (customerFields().email.required) { <span class="checkout__req">*</span> }
+        {{ 'Correo electrónico' | transloco }} @if (customerFields().email.required) { <span class="checkout__req">*</span> }
       </span>
       <ui-input-text [ngModel]="email()" (ngModelChange)="email.set($event)"
         placeholder="tucorreo@ejemplo.com" styleClass="w-full"></ui-input-text>
@@ -71,8 +71,8 @@
   <!-- ===== Artículos ===== -->
   <section class="checkout__card">
     <div class="checkout__card-head">
-      <h2 class="checkout__card-title">Artículos</h2>
-      <button type="button" class="checkout__link" (click)="goToStore()">Añadir artículo</button>
+      <h2 class="checkout__card-title">{{ 'Artículos' | transloco }}</h2>
+      <button type="button" class="checkout__link" (click)="goToStore()">{{ 'Añadir artículo' | transloco }}</button>
     </div>
 
     @for (item of cartStore.items(); track item.id) {
@@ -90,28 +90,28 @@
         </p>
         <p class="checkout__item-price">{{ cs() }}{{ item.total | tenantPrice }}</p>
         <div class="checkout__stepper">
-          <button type="button" (click)="onDecrement(item)" aria-label="Quitar uno">
+          <button type="button" (click)="onDecrement(item)" [attr.aria-label]="'Quitar uno' | transloco">
             <ui-icon name="minus" size="14" />
           </button>
           <span>{{ item.quantity }}</span>
-          <button type="button" (click)="onIncrement(item)" aria-label="Agregar uno">
+          <button type="button" (click)="onIncrement(item)" [attr.aria-label]="'Agregar uno' | transloco">
             <ui-icon name="plus" size="14" />
           </button>
         </div>
       </div>
-      <button type="button" class="checkout__item-remove" (click)="onRemove(item)" aria-label="Eliminar">
+      <button type="button" class="checkout__item-remove" (click)="onRemove(item)" [attr.aria-label]="'Eliminar' | transloco">
         <ui-icon name="x" size="16" />
       </button>
     </div>
     } @empty {
-    <p class="checkout__empty">Tu carrito está vacío.</p>
+    <p class="checkout__empty">{{ 'Tu carrito está vacío.' | transloco }}</p>
     }
   </section>
 
   <!-- ===== Envío ===== -->
   @if (hasShipping()) {
   <section class="checkout__card">
-    <h2 class="checkout__card-title">Envío <span class="checkout__req">*</span></h2>
+    <h2 class="checkout__card-title">{{ 'Envío' | transloco }} <span class="checkout__req">*</span></h2>
 
     @for (method of shippingMethods(); track method.id) {
     <div class="checkout__ship-item"
@@ -119,7 +119,7 @@
       <button type="button" class="checkout__ship" (click)="selectShipping(method.id)">
         <span class="checkout__radio" [class.checkout__radio--on]="selectedShippingId() === method.id"></span>
         <span class="checkout__ship-name">{{ method.name }}</span>
-        <span class="checkout__ship-fee">{{ method.fee > 0 ? cs() + method.fee : 'Gratis' }}</span>
+        <span class="checkout__ship-fee">{{ method.fee > 0 ? cs() + method.fee : ('Gratis' | transloco) }}</span>
         @if (method.instructions) {
         <span class="checkout__ship-chevron"
           [class.checkout__ship-chevron--open]="selectedShippingId() === method.id">
@@ -145,9 +145,9 @@
     <!-- Customer address input -->
     @if (selectedShipping()?.requestCustomerAddress) {
     <label class="checkout__field">
-      <span class="checkout__label">Dirección de entrega <span class="checkout__req">*</span></span>
+      <span class="checkout__label">{{ 'Dirección de entrega' | transloco }} <span class="checkout__req">*</span></span>
       <ui-textarea [ngModel]="customerAddress()" (ngModelChange)="customerAddress.set($event)"
-        placeholder="Calle, número, referencia..." [rows]="2" styleClass="w-full"></ui-textarea>
+        [placeholder]="'Calle, número, referencia...' | transloco" [rows]="2" styleClass="w-full"></ui-textarea>
     </label>
     }
   </section>
@@ -156,44 +156,74 @@
   <!-- ===== Método de pago ===== -->
   @if (availablePaymentMethods().length) {
   <section class="checkout__card">
-    <h2 class="checkout__card-title">Método de pago <span class="checkout__req">*</span></h2>
-    <div class="checkout__pay-grid">
-      @for (pm of availablePaymentMethods(); track pm.id) {
-      <button type="button" class="checkout__pay"
-        [class.checkout__pay--active]="selectedPaymentMethod() === pm.name"
-        (click)="selectedPaymentMethod.set(pm.name)">
+    <h2 class="checkout__card-title">{{ 'Método de pago' | transloco }} <span class="checkout__req">*</span></h2>
+
+    <!-- Mismo patrón de filas radio + acordeón que la sección Envío -->
+    @for (pm of availablePaymentMethods(); track pm.id) {
+    <div class="checkout__ship-item"
+      [class.checkout__ship-item--active]="selectedPaymentMethod() === pm.name">
+      <button type="button" class="checkout__ship" (click)="selectedPaymentMethod.set(pm.name)">
+        <span class="checkout__radio" [class.checkout__radio--on]="selectedPaymentMethod() === pm.name"></span>
         <ui-icon [name]="pm.icon" size="16" />
-        <span>{{ pm.name }}</span>
+        <span class="checkout__ship-name">{{ pm.name }}</span>
+        @if (hasPaymentInfo(pm)) {
+        <span class="checkout__ship-chevron"
+          [class.checkout__ship-chevron--open]="selectedPaymentMethod() === pm.name">
+          <ui-icon name="chevron-down" size="16" />
+        </span>
+        }
       </button>
+
+      <!-- Datos del método elegido (banco, cuenta, etc.) -->
+      @if (selectedPaymentMethod() === pm.name && selectedPaymentInfo().length) {
+      <div class="checkout__pay-body">
+        <div class="checkout__pay-info-rows">
+          @for (row of selectedPaymentInfo(); track row.label) {
+          <div class="checkout__pay-info-row">
+            <span class="checkout__pay-info-label">{{ row.label | transloco }}</span>
+            <span class="checkout__pay-info-value">{{ row.value }}</span>
+          </div>
+          }
+        </div>
+        <button
+          type="button"
+          class="checkout__pay-info-copy"
+          (click)="copyPaymentInfo()"
+        >
+          <ui-icon [name]="paymentInfoCopied() ? 'check' : 'copy'" size="14" />
+          {{ (paymentInfoCopied() ? 'Copiado' : 'Copiar datos') | transloco }}
+        </button>
+      </div>
       }
     </div>
+    }
   </section>
   }
 
   <!-- ===== Comentarios ===== -->
   <section class="checkout__card">
     <label class="checkout__field">
-      <span class="checkout__label">Comentarios (opcional)</span>
+      <span class="checkout__label">{{ 'Comentarios (opcional)' | transloco }}</span>
       <ui-textarea [ngModel]="comments()" (ngModelChange)="comments.set($event)"
-        placeholder="Notas para tu pedido" [rows]="2" styleClass="w-full"></ui-textarea>
+        [placeholder]="'Notas para tu pedido' | transloco" [rows]="2" styleClass="w-full"></ui-textarea>
     </label>
   </section>
 
   <!-- ===== Resumen ===== -->
   <section class="checkout__card checkout__summary">
-    <h2 class="checkout__card-title">Resumen del pedido</h2>
+    <h2 class="checkout__card-title">{{ 'Resumen del pedido' | transloco }}</h2>
     <div class="checkout__summary-row">
-      <span>Artículos ({{ cartStore.totalItems() }})</span>
+      <span>{{ 'Artículos ({n})' | transloco: { n: cartStore.totalItems() } }}</span>
       <span>{{ cs() }}{{ subtotal() | tenantPrice }}</span>
     </div>
     @if (selectedShipping()) {
     <div class="checkout__summary-row">
       <span>{{ selectedShipping()?.name }}</span>
-      <span>@if (shippingFee() > 0) { {{ cs() }}{{ shippingFee() | tenantPrice }} } @else { Gratis }</span>
+      <span>@if (shippingFee() > 0) { {{ cs() }}{{ shippingFee() | tenantPrice }} } @else { {{ 'Gratis' | transloco }} }</span>
     </div>
     }
     <div class="checkout__summary-total">
-      <span>Total</span>
+      <span>{{ 'Total' | transloco }}</span>
       <span>
         {{ cs() }}{{ total() | tenantPrice }}
         @if (showBs()) {
@@ -204,20 +234,20 @@
   </section>
 
   @if (whatsappButtons().length > 1) {
-  <p class="checkout__submit-hint">Envía tu pedido al vendedor que prefieras:</p>
+  <p class="checkout__submit-hint">{{ 'Envía tu pedido al vendedor que prefieras:' | transloco }}</p>
   }
   <div class="checkout__submit-group">
     @if (whatsappButtons().length > 0) {
     @for (seller of whatsappButtons(); track seller.number) {
     <button type="button" class="checkout__submit" [disabled]="!isValid || isSubmitting()" (click)="onSubmit(seller)">
-      @if (isSubmitting()) { Procesando... } @else {
-        Realizar pedido@if (seller.name?.trim()) { ({{ seller.name }}) }
+      @if (isSubmitting()) { {{ 'Procesando...' | transloco }} } @else {
+        {{ 'Realizar pedido' | transloco }}@if (seller.name?.trim()) { ({{ seller.name }}) }
       }
     </button>
     }
     } @else {
     <button type="button" class="checkout__submit" [disabled]="!isValid || isSubmitting()" (click)="onSubmit()">
-      @if (isSubmitting()) { Procesando... } @else { Realizar pedido }
+      @if (isSubmitting()) { {{ 'Procesando...' | transloco }} } @else { {{ 'Realizar pedido' | transloco }} }
     </button>
     }
   </div>
@@ -229,12 +259,12 @@
     <div class="checkout__success-icon">
       <ui-icon name="check-circle" size="64" />
     </div>
-    <h2 class="checkout__post-title">¡Pedido realizado!</h2>
+    <h2 class="checkout__post-title">{{ '¡Pedido realizado!' | transloco }}</h2>
     <p class="checkout__post-subtitle">
-      Envíanos los detalles por WhatsApp para confirmarlo con la tienda.
+      {{ 'Envíanos los detalles por WhatsApp para confirmarlo con la tienda.' | transloco }}
     </p>
     <button type="button" class="checkout__wa" (click)="sendWhatsapp()">
-      <ui-icon name="message-circle" size="18" /> Enviar WhatsApp
+      <ui-icon name="message-circle" size="18" /> {{ 'Enviar WhatsApp' | transloco }}
     </button>
   </div>
   }
@@ -245,38 +275,38 @@
     <div class="checkout__success-icon">
       <ui-icon name="check-circle" size="56" />
     </div>
-    <h2 class="checkout__post-title">¡Pedido realizado!</h2>
-    <button type="button" class="checkout__post-primary" (click)="viewInvoice()">Ver factura</button>
-    <button type="button" class="checkout__post-secondary" (click)="backToStore()">Volver a la tienda</button>
+    <h2 class="checkout__post-title">{{ '¡Pedido realizado!' | transloco }}</h2>
+    <button type="button" class="checkout__post-primary" (click)="viewInvoice()">{{ 'Ver factura' | transloco }}</button>
+    <button type="button" class="checkout__post-secondary" (click)="backToStore()">{{ 'Volver a la tienda' | transloco }}</button>
     <button type="button" class="checkout__wa checkout__wa--outline" (click)="sendWhatsapp()">
-      <ui-icon name="message-circle" size="18" /> Enviar WhatsApp
+      <ui-icon name="message-circle" size="18" /> {{ 'Enviar WhatsApp' | transloco }}
     </button>
 
     <!-- ¿WhatsApp no abre? -->
     <div class="checkout__fallback">
-      <p class="checkout__fallback-title">¿WhatsApp no abre?</p>
+      <p class="checkout__fallback-title">{{ '¿WhatsApp no abre?' | transloco }}</p>
 
       <details class="checkout__fallback-item">
-        <summary>Abrir en el navegador externo <ui-icon name="chevron-down" size="14" /></summary>
+        <summary>{{ 'Abrir en el navegador externo' | transloco }} <ui-icon name="chevron-down" size="14" /></summary>
         <div class="checkout__fallback-body">
           <a [href]="pendingWhatsappUrl()" target="_blank" rel="noopener" class="checkout__fallback-link">
-            Abrir enlace de WhatsApp
+            {{ 'Abrir enlace de WhatsApp' | transloco }}
           </a>
         </div>
       </details>
 
       <details class="checkout__fallback-item">
-        <summary>Enviar los detalles del pedido manualmente <ui-icon name="chevron-down" size="14" /></summary>
+        <summary>{{ 'Enviar los detalles del pedido manualmente' | transloco }} <ui-icon name="chevron-down" size="14" /></summary>
         <div class="checkout__fallback-body">
           <textarea class="checkout__fallback-msg" rows="6" readonly>{{ pendingMessage() }}</textarea>
           <button type="button" class="checkout__post-secondary" (click)="copyMessage()">
-            {{ copied() ? '¡Copiado!' : 'Copiar mensaje' }}
+            {{ (copied() ? '¡Copiado!' : 'Copiar mensaje') | transloco }}
           </button>
         </div>
       </details>
 
       <details class="checkout__fallback-item">
-        <summary>Escanear código QR para abrir esta página en el móvil <ui-icon name="chevron-down" size="14" /></summary>
+        <summary>{{ 'Escanear código QR para abrir esta página en el móvil' | transloco }} <ui-icon name="chevron-down" size="14" /></summary>
         <div class="checkout__fallback-body checkout__fallback-qr">
           @if (pendingWhatsappUrl(); as url) {
           <qrcode [qrdata]="url" [width]="180" [margin]="1" errorCorrectionLevel="M"></qrcode>

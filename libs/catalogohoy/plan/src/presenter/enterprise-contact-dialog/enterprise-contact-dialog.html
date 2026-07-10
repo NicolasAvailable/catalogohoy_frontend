@@ -1,0 +1,271 @@
+<ui-dialog [headerTitle]="'Plan Enterprise' | transloco" styleClass="w-full max-w-lg">
+  <div class="ecd">
+    @if (step() < resultStep) {
+      <!-- Progreso -->
+      <div class="ecd__progress">
+        <span class="ecd__progress-label">{{ 'Paso {step} de 5' | transloco: { step: step() + 1 } }}</span>
+        <div class="ecd__progress-track">
+          <div
+            class="ecd__progress-fill"
+            [style.width.%]="((step() + 1) / 5) * 100"
+          ></div>
+        </div>
+      </div>
+    }
+
+    @switch (step()) {
+      @case (0) {
+        <h3 class="ecd__title">{{ 'Cuéntanos de tu negocio' | transloco }}</h3>
+        <div class="ecd__fields">
+          <label class="ecd__field">
+            <span class="ecd__label">{{ 'Nombre del negocio *' | transloco }}</span>
+            <ui-input-text
+              [placeholder]="'Mi empresa' | transloco"
+              [ngModel]="businessName()"
+              (ngModelChange)="businessName.set($event)"
+            />
+          </label>
+          <div class="ecd__field">
+            <span class="ecd__label">{{ 'País' | transloco }}</span>
+            <ui-select
+              [options]="supportedCountries"
+              [ngModel]="country()"
+              (ngModelChange)="country.set($event)"
+              optionLabel="label"
+              optionValue="code"
+              [placeholder]="'Selecciona un país' | transloco"
+              [filter]="true"
+              styleClass="w-full"
+            >
+              <ng-template selectSelectedItem let-selected>
+                <div class="ecd__country">
+                  <img
+                    [src]="flagUrl(selected.code)"
+                    [alt]="selected.label"
+                    class="ecd__flag"
+                  />
+                  <span class="text-sm">{{ selected.label }}</span>
+                </div>
+              </ng-template>
+              <ng-template selectItem let-item>
+                <div class="ecd__country">
+                  <img
+                    [src]="flagUrl(item.code)"
+                    [alt]="item.label"
+                    class="ecd__flag"
+                  />
+                  <span>{{ item.label }}</span>
+                </div>
+              </ng-template>
+            </ui-select>
+          </div>
+          <label class="ecd__field">
+            <span class="ecd__label">{{ 'Sitio web o Instagram (opcional)' | transloco }}</span>
+            <ui-input-text
+              placeholder="miempresa.com"
+              [ngModel]="website()"
+              (ngModelChange)="website.set($event)"
+            />
+          </label>
+        </div>
+      }
+
+      @case (1) {
+        <h3 class="ecd__title">{{ '¿Qué tamaño tiene tu operación?' | transloco }}</h3>
+        <div class="ecd__group">
+          <span class="ecd__label">{{ '¿Cuántos productos manejas?' | transloco }}</span>
+          <div class="ecd__options">
+            @for (option of rangeOptions; track option.value) {
+              <button
+                type="button"
+                class="ecd__option"
+                [class.ecd__option--selected]="productsRange() === option.value"
+                (click)="productsRange.set(option.value)"
+              >
+                {{ option.label | transloco }}
+              </button>
+            }
+          </div>
+        </div>
+        <div class="ecd__group">
+          <span class="ecd__label">{{ '¿Cuántos pedidos recibes al mes?' | transloco }}</span>
+          <div class="ecd__options">
+            @for (option of rangeOptions; track option.value) {
+              <button
+                type="button"
+                class="ecd__option"
+                [class.ecd__option--selected]="ordersRange() === option.value"
+                (click)="ordersRange.set(option.value)"
+              >
+                {{ option.label | transloco }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @case (2) {
+        <h3 class="ecd__title">{{ '¿Qué estructura necesitas?' | transloco }}</h3>
+        <div class="ecd__group">
+          <span class="ecd__label">{{ '¿Cuántos catálogos o tiendas necesitas?' | transloco }}</span>
+          <div class="ecd__options">
+            @for (option of catalogOptions; track option.value) {
+              <button
+                type="button"
+                class="ecd__option"
+                [class.ecd__option--selected]="catalogsNeeded() === option.value"
+                (click)="catalogsNeeded.set(option.value)"
+              >
+                {{ option.label | transloco }}
+              </button>
+            }
+          </div>
+        </div>
+        <div class="ecd__group">
+          <span class="ecd__label">{{ '¿Cuántas personas trabajan contigo?' | transloco }}</span>
+          <div class="ecd__options">
+            @for (option of teamOptions; track option.value) {
+              <button
+                type="button"
+                class="ecd__option"
+                [class.ecd__option--selected]="teamSize() === option.value"
+                (click)="teamSize.set(option.value)"
+              >
+                {{ option.label | transloco }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @case (3) {
+        <h3 class="ecd__title">{{ '¿Qué buscas en CatalogoHoy?' | transloco }}</h3>
+        <p class="ecd__hint">{{ 'Selecciona todo lo que aplique.' | transloco }}</p>
+        <div class="ecd__options ecd__options--needs">
+          @for (option of needOptions; track option.value) {
+            <button
+              type="button"
+              class="ecd__option ecd__option--need"
+              [class.ecd__option--selected]="isNeedSelected(option.value)"
+              (click)="toggleNeed(option.value)"
+            >
+              <ui-icon [name]="option.icon" styleClass="size-4 shrink-0" />
+              {{ option.label | transloco }}
+              @if (isNeedSelected(option.value)) {
+                <ui-icon name="check" styleClass="size-4 shrink-0 ecd__option-check" />
+              }
+            </button>
+          }
+        </div>
+      }
+
+      @case (4) {
+        <h3 class="ecd__title">{{ '¿Cómo te contactamos?' | transloco }}</h3>
+        <div class="ecd__fields">
+          <label class="ecd__field">
+            <span class="ecd__label">{{ 'Tu nombre *' | transloco }}</span>
+            <ui-input-text
+              [placeholder]="'Nombre y apellido' | transloco"
+              [ngModel]="name()"
+              (ngModelChange)="name.set($event)"
+            />
+          </label>
+          <label class="ecd__field">
+            <span class="ecd__label">{{ 'Email *' | transloco }}</span>
+            <ui-input-text
+              [placeholder]="'tu@empresa.com' | transloco"
+              [ngModel]="email()"
+              (ngModelChange)="email.set($event)"
+            />
+          </label>
+          <div class="ecd__field">
+            <span class="ecd__label">{{ 'WhatsApp (opcional)' | transloco }}</span>
+            <ui-input-phone
+              [ngModel]="phone()"
+              (ngModelChange)="phone.set($event ?? '')"
+              [defaultCountry]="phoneDefaultIso()"
+            />
+          </div>
+        </div>
+      }
+
+      @case (5) {
+        @if (result()?.qualified) {
+          <div class="ecd__result">
+            <div class="ecd__result-icon ecd__result-icon--qualified">
+              <ui-icon name="calendar-check" styleClass="size-8" />
+            </div>
+            <h3 class="ecd__title">{{ '¡Perfecto! Hablemos' | transloco }}</h3>
+            <p class="ecd__hint">
+              {{ 'Tu operación encaja con Enterprise. Agenda una reunión con nuestro equipo y armamos un plan a la medida de tu negocio.' | transloco }}
+            </p>
+            <ui-button
+              [label]="'Agendar reunión' | transloco"
+              icon="calendar"
+              [fluid]="true"
+              (click)="openCalendly()"
+            />
+          </div>
+        } @else {
+          <div class="ecd__result">
+            <div class="ecd__result-icon ecd__result-icon--advanced">
+              <ui-icon name="sparkles" styleClass="size-8" />
+            </div>
+            <h3 class="ecd__title">{{ 'El plan Avanzado te queda perfecto' | transloco }}</h3>
+            <p class="ecd__hint">
+              {{ 'Por lo que nos contaste, el plan Avanzado cubre lo que necesitas: productos ilimitados, hasta 2 catálogos (ampliables), equipo de hasta 10 personas y 500 créditos de IA al mes.' | transloco }}
+            </p>
+            <ui-button
+              [label]="'Ver plan Avanzado' | transloco"
+              icon="crown"
+              [fluid]="true"
+              (click)="goToAvanzado()"
+            />
+            <button type="button" class="ecd__link" (click)="openCalendly()">
+              {{ 'Igual quiero hablar con ventas' | transloco }}
+            </button>
+          </div>
+        }
+        @if (submitState() === 'error') {
+          <div class="ecd__error">
+            <ui-icon name="triangle-alert" styleClass="size-4 shrink-0" />
+            <span>{{ 'No pudimos registrar tus datos.' | transloco }}</span>
+            <button type="button" class="ecd__link" (click)="retrySend()">
+              {{ 'Reintentar' | transloco }}
+            </button>
+          </div>
+        }
+      }
+    }
+
+    <!-- Navegación -->
+    @if (step() < resultStep) {
+      <div class="ecd__nav">
+        @if (step() > 0) {
+          <ui-button
+            [label]="'Atrás' | transloco"
+            variant="outlined"
+            severity="contrast"
+            (click)="back()"
+          />
+        }
+        <ui-button
+          [label]="(step() === 4 ? 'Ver resultado' : 'Continuar') | transloco"
+          icon="arrow-right"
+          iconPos="right"
+          [disabled]="!canContinue()"
+          (click)="next()"
+        />
+      </div>
+    } @else {
+      <div class="ecd__nav ecd__nav--end">
+        <ui-button
+          [label]="'Cerrar' | transloco"
+          variant="outlined"
+          severity="contrast"
+          (click)="close()"
+        />
+      </div>
+    }
+  </div>
+</ui-dialog>

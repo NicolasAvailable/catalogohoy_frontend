@@ -6,6 +6,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ToastService } from '@shared/infrastructure';
 import {
   ButtonComponent,
@@ -31,6 +32,7 @@ import { ClientTagCreateRowComponent } from '../client-tag-create-row/client-tag
     ButtonComponent,
     IconComponent,
     ClientTagCreateRowComponent,
+    TranslocoPipe,
   ],
   templateUrl: './client-form-dialog.html',
 })

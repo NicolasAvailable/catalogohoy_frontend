@@ -1,12 +1,13 @@
 import { Component, inject, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent, DialogComponent, IconComponent } from '@ui';
 import { PlanStore } from '../../infrastructure';
 
 @Component({
   selector: 'lib-plan-expired-dialog',
   standalone: true,
-  imports: [DialogComponent, ButtonComponent, IconComponent],
+  imports: [DialogComponent, ButtonComponent, IconComponent, TranslocoPipe],
   template: `
     <ui-dialog
       [closable]="false"
@@ -21,26 +22,25 @@ import { PlanStore } from '../../infrastructure';
           <ui-icon name="circle-alert" styleClass="size-8 text-red-500" />
         </div>
 
-        <h3 class="text-lg font-bold text-grey-700">Tu plan ha expirado</h3>
+        <h3 class="text-lg font-bold text-grey-700">{{ 'Tu plan ha expirado' | transloco }}</h3>
 
         <p class="text-grey-300 text-sm">
-          Tu plan
+          {{ 'Tu plan' | transloco }}
           <strong class="text-grey-700">{{
             planStore.currentPlan()?.name
           }}</strong>
-          ha vencido. Para continuar usando el panel de administración, renueva o
-          mejora tu plan.
+          {{ 'ha vencido. Para continuar usando el panel de administración, renueva o mejora tu plan.' | transloco }}
         </p>
 
         <div class="flex flex-col gap-2 w-full mt-2">
           <ui-button
-            label="Pagar mi plan"
+            [label]="'Pagar mi plan' | transloco"
             icon="credit-card"
             (click)="payPlan()"
             [fluid]="true"
           />
           <ui-button
-            label="Mejorar plan"
+            [label]="'Mejorar plan' | transloco"
             icon="crown"
             variant="outlined"
             (click)="upgradePlan()"
@@ -62,8 +62,17 @@ export class PlanExpiredDialogComponent {
   }
 
   public payPlan(): void {
-    if (this.hasStripeHistory()) {
-      this.goToCheckout();
+    // Renovar el MISMO plan: vamos directo al checkout. La lista de planes
+    // deshabilita el botón del plan actual, así que navegar a /admin/plans no
+    // sirve para re-pagarlo. El edge function manda previous_subscription_id →
+    // el webhook extiende el plan y cancela la suscripción anterior. Los de
+    // pago manual (VE, sin Stripe) siguen yendo a WhatsApp.
+    const planId = this.planStore.currentPlan()?.id;
+    if (this.hasStripeHistory() && planId && planId !== 'gratis') {
+      this.dialog.hide();
+      this.router.navigate(['/admin/plans/checkout', planId], {
+        queryParams: { period: 'monthly' },
+      });
       return;
     }
     const planName = this.planStore.currentPlan()?.name ?? 'mi plan';

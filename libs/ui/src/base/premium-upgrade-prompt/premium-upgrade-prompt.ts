@@ -1,5 +1,6 @@
 import { Component, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
 import { ButtonComponent } from '../button';
 
@@ -11,7 +12,7 @@ import { ButtonComponent } from '../button';
 @Component({
   selector: 'ui-premium-upgrade-prompt',
   standalone: true,
-  imports: [LucideAngularModule, ButtonComponent],
+  imports: [LucideAngularModule, ButtonComponent, TranslocoPipe],
   template: `
     <div
       class="flex flex-col items-center justify-center gap-6 py-20 px-6 text-center"
@@ -22,11 +23,11 @@ import { ButtonComponent } from '../button';
         <lucide-icon [name]="icon()" [size]="36" />
       </div>
       <div class="flex flex-col gap-2 max-w-md">
-        <h2 class="text-2xl font-bold text-grey-800">{{ title() }}</h2>
-        <p class="text-base text-grey-400">{{ description() }}</p>
+        <h2 class="text-2xl font-bold text-grey-800">{{ title() | transloco }}</h2>
+        <p class="text-base text-grey-400">{{ description() | transloco }}</p>
       </div>
       <ui-button
-        label="Mejorar plan"
+        [label]="'Mejorar plan' | transloco"
         icon="sparkles"
         severity="primary"
         [fluid]="false"

@@ -7,13 +7,14 @@ import {
   viewChild,
 } from '@angular/core';
 import { SafeResourceUrl } from '@angular/platform-browser';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '@ui';
 import { PreviewMessage } from '../../../domain';
 
 @Component({
   selector: 'lib-phone-mockup',
   standalone: true,
-  imports: [IconComponent],
+  imports: [IconComponent, TranslocoPipe],
   templateUrl: './phone-mockup.html',
   styleUrl: './phone-mockup.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

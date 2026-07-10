@@ -1,7 +1,8 @@
 /* ── Wrapper ── */
 .plans-wrapper {
   padding: 1rem 2rem;
-  max-width: 1200px;
+  /* Grid de 3 planes (Enterprise oculta). Con --four el grid pasa a 4. */
+  max-width: 75rem;
   margin: 0 auto;
   height: 100%;
   display: flex;
@@ -135,6 +136,11 @@
   align-items: stretch;
 }
 
+/* Con la card Enterprise visible (tenant enterprise) el grid pasa a 4. */
+.plans-grid--four {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 /* ── Card ── */
 .plan-card {
   position: relative;
@@ -149,6 +155,18 @@
 .plan-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.1);
+}
+
+.plan-card--skeleton {
+  pointer-events: none;
+  /* Aproxima la altura de las cards reales cargadas para que el grid no
+     pegue un salto cuando llegan los planes. */
+  min-height: 36rem;
+}
+
+.plan-card--skeleton:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 .plan-card--popular {
@@ -457,6 +475,28 @@
   cursor: default;
 }
 
+/* ── Card Enterprise (4ta card, sin precio) ── */
+.badge-inline--enterprise {
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* "Hablemos" es más largo que un precio: baja el cuerpo para que no desborde. */
+.plan-card__price-amount--enterprise {
+  font-size: 2.1rem;
+  line-height: 1.2;
+}
+
+.plan-card__button--enterprise {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.plan-card__button--enterprise:hover {
+  background: #1e293b;
+}
+
 /* ── Responsive ── */
 @media (max-width: 1024px) {
   .plans-grid {
@@ -464,14 +504,22 @@
     max-width: 420px;
     margin: 0 auto;
   }
+
+  /* Con solo 3 features la card queda muy corta apilada en una columna. */
+  .plan-card--enterprise {
+    min-height: 30rem;
+  }
 }
 
+/* Solo con 4 cards (tenant enterprise): a este ancho van mejor 2x2. */
 @media (min-width: 1025px) and (max-width: 1200px) {
-  .plans-grid {
+  .plans-grid--four {
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
   }
 
-  .plan-card__content {
+  .plans-grid--four .plan-card__content {
     padding: 1.5rem;
   }
 }
+

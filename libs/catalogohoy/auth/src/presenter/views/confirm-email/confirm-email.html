@@ -3,11 +3,11 @@
   <div
     class="w-10 h-10 rounded-full border-2 border-primary-500 border-t-transparent animate-spin"
   ></div>
-  <p class="text-grey-600">{{ message() }}</p>
+  <p class="text-grey-600">{{ message() | transloco }}</p>
   } @else {
-  <p class="text-lg font-semibold text-grey-800">{{ message() }}</p>
+  <p class="text-lg font-semibold text-grey-800">{{ message() | transloco }}</p>
   <ui-button
-    label="Ir a iniciar sesión"
+    [label]="'Ir a iniciar sesión' | transloco"
     [fluid]="false"
     (click)="goToLogin()"
   />

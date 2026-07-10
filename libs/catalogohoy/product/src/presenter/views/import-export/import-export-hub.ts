@@ -8,6 +8,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { CategoryStore } from '@catalogohoy/category';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { PlanStore } from '@catalogohoy/plan';
 import {
@@ -27,7 +28,6 @@ import { ProductAiExcelService, ProductExcelService, ProductStore } from '../../
 
 type View =
   | 'hub'
-  | 'export'
   | 'import-upload'
   | 'import-preview'
   | 'import-progress'
@@ -50,6 +50,7 @@ const AI_STATUS_MESSAGES = [
     ButtonComponent,
     IconComponent,
     ProgressBarComponent,
+    TranslocoPipe,
   ],
   templateUrl: './import-export-hub.html',
   styles: [`
@@ -79,7 +80,6 @@ export class ImportExportHubComponent {
   public readonly view = signal<View>('hub');
   /** Export is a paid-plan feature; free plans see it disabled with a Pro hint. */
   public readonly isFreePlan = computed(() => this.planStore.isFreePlan());
-  public readonly isExporting = signal(false);
   public readonly parsedRows = signal<ProductExcelRow[]>([]);
   public readonly importResults = signal<ImportRowResult[]>([]);
   public readonly importSummary = signal<ImportSummary | null>(null);
@@ -97,7 +97,6 @@ export class ImportExportHubComponent {
     this.importResults.set([]);
     this.importSummary.set(null);
     this.importProgress.set(0);
-    this.isExporting.set(false);
     this.categoryStore.categoryList$(1, 100);
     // Refrescamos el uso del plan para que el tile de Exportar muestre el
     // estado correcto (bloqueado + "Pro" en planes gratis) desde el inicio.
@@ -110,31 +109,21 @@ export class ImportExportHubComponent {
     this.view.set('import-upload');
   }
 
-  /** From the hub, export all products to .xlsx. Paid plans only. */
-  public async onExport(): Promise<void> {
-    // Revalidamos el plan contra el backend antes de exportar, por si el uso
-    // aún no estaba cargado al abrir el modal (evita que un plan gratis
-    // exporte aprovechando un estado por defecto).
-    await this.planStore.refreshUsage();
+  /** From the hub, request the export via WhatsApp. Paid plans only.
+   *  Ya no se genera el Excel en el navegador: el equipo lo envía manualmente. */
+  public onExport(): void {
     if (this.isFreePlan()) {
       toast.error('La exportación de productos está disponible en los planes pagos.');
       return;
     }
-    const products = this.productStore.productList().products;
-    if (products.length === 0) {
-      toast.error('No hay productos para exportar');
-      return;
-    }
-    this.view.set('export');
-    this.isExporting.set(true);
-    // Small delay so the "Exportando…" state is perceivable.
-    await new Promise((r) => setTimeout(r, 300));
-    this.excelService
-      .exportToExcel(products)
-      .mapRight(() => toast.success('Productos exportados correctamente'))
-      .mapLeft((err) => toast.error(err.message));
-    this.isExporting.set(false);
-    setTimeout(() => this.dialog.hide(), 1200);
+    const slug = localStorage.getItem('slug') ?? '';
+    const message = encodeURIComponent(
+      `Hola, quiero exportar los productos de mi catálogo${slug ? ` (${slug})` : ''} a Excel.`
+    );
+    // window.open debe ejecutarse síncrono dentro del click: un await previo
+    // hace que Safari lo bloquee como popup.
+    window.open(`https://wa.me/584220240947?text=${message}`, '_blank');
+    this.dialog.hide();
   }
 
   public async onFileSelected(event: Event): Promise<void> {
@@ -209,6 +198,9 @@ export class ImportExportHubComponent {
     });
     this.view.set('import-done');
     this.productStore.productList$();
+    // El import creó productos: re-consultar el uso del plan para sincronizar
+    // el límite (el PlanStore está cacheado).
+    this.planStore.refreshUsage();
   }
 
   public downloadTemplate(): void {

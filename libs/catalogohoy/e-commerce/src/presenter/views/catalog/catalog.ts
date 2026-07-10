@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, InputSearchComponent } from '@ui';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
@@ -24,6 +25,7 @@ import { ProductCard } from '../../components/product-card/product-card';
     ProductCard,
     CategoryFilter,
     InputSearchComponent,
+    TranslocoPipe,
   ],
   templateUrl: './catalog.html',
   styleUrl: './catalog.css',

@@ -2,6 +2,47 @@
 
 > Lo que te hace perder tiempo si no lo sabés. Agregá acá cada nueva trampa.
 
+## "Failed to fetch dynamically imported module" (chunk viejo tras deploy)
+
+- SPA con lazy-loading (`loadChildren`/`import()`): si el usuario tiene la app abierta durante
+  un **deploy**, su `index.html` viejo referencia `chunk-XXXX.js` que el deploy nuevo ya
+  reemplazó → el import dinámico falla con `TypeError: Failed to fetch dynamically imported
+  module`. **No es un bug de la app**, es inherente a deployar un SPA.
+- Variantes por navegador (todas las cubre `isChunkLoadError`): Chrome/Firefox "Failed to
+  fetch dynamically imported module"; **Safari/iOS "'text/html' is not a valid JavaScript MIME
+  type" / "Importing a module script failed"** (el host devuelve el index.html en vez del .js).
+- Mitigación en código: `ChunkAwareErrorHandler` (en `core/providers/sentry/sentry.ts`)
+  detecta el error de chunk y **recarga la página una vez** (guard anti-loop por
+  `sessionStorage`) para traer la versión nueva; el resto de errores van a Sentry normal.
+- Prevención a nivel plataforma: **Vercel Skew Protection** (mantiene los assets de deploys
+  viejos disponibles para clientes con la versión anterior) — evita que el error ocurra.
+
+## Ruido de terceros en Sentry (`ignoreErrors`)
+
+- Errores que NO son de la app y se descartan en `Sentry.init.ignoreErrors`
+  (`core/providers/sentry/sentry.ts`): navegadores in-app (Instagram/FB/TikTok WebView) →
+  `"Java object is gone"` / `"Error invoking postMessage"` (stack con `iabjs://…`); y el ruido
+  benigno de `ResizeObserver loop…`. Agregá ahí nuevos patrones de ruido de terceros.
+
+## Sentry `tracePropagationTargets` rompe las Edge Functions (CORS)
+
+- El **browser tracing** de Sentry adjunta headers `sentry-trace` y `baggage` a
+  cada request cuyo URL matchee `tracePropagationTargets`. Las **Edge Functions
+  de Supabase** tienen un `Access-Control-Allow-Headers` **fijo** en el código
+  (`authorization, x-client-info, apikey, content-type`) que **no** incluye esos
+  headers → el browser **bloquea el POST en el preflight** (se ve `OPTIONS 200`
+  en los logs pero **nunca un POST**) y el cliente recibe *"Failed to send a
+  request to the Edge Function"* (`FunctionsFetchError`, un `fetch` rechazado).
+- Sucede para **todas** las funciones llamadas desde el browser (checkout/pagos,
+  IA, créditos…), en todos los países. Síntoma en DevTools: la request a la
+  función en rojo, "No data found for resource", y no llega nada al backend.
+- **Regla**: NO poner el dominio de Supabase (ni terceros con CORS estricto) en
+  `tracePropagationTargets`. Está en `[]` (no propagar a nada). El backend no
+  continúa la traza igual, así que no se pierde nada útil.
+- Si en el futuro hiciera falta propagar, primero agregá `sentry-trace, baggage`
+  al `Access-Control-Allow-Headers` de **todas** las edge functions invocadas
+  desde el browser.
+
 ## `environment.production` es SIEMPRE false — usar `isDevMode()`
 
 - El barrel `@catalogohoy/env` (`libs/catalogohoy/environments/src/index.ts`) hace
@@ -21,9 +62,12 @@
 - **Landing = Tailwind v3; resto del monorepo = Tailwind v4.** Mergear `main` a `landing`
   rompe el build (PostCSS: "tailwindcss as a PostCSS plugin... moved to @tailwindcss/postcss").
   → No mergear main entero a landing; aplicar solo el cambio puntual.
-- La **landing no buildea localmente** con el `npm install` del worktree (dep git privada
-  falla la instalación). Cambios triviales se pushean y Vercel valida; un build fallido en
-  Vercel no tumba el prod actual.
+- La **landing SÍ buildea localmente desde 2026-07-09** (la dep git privada `falso` fue
+  eliminada de sus package.json). Receta: dentro de `apps/landing`,
+  `npm install --workspaces=false` (sin el flag, npm la trata como workspace del monorepo
+  y el hoisting a la raíz rompe la resolución de plugins de Tailwind v3) y buildear con
+  `./node_modules/.bin/vite build` (no `npm run build`). Un build fallido en Vercel
+  igual no tumba el prod actual.
 
 ## Nx + worktrees
 
@@ -51,7 +95,9 @@
 - `ui-icon name="..."` usa **kebab-case** (`loader-circle`, `wand-sparkles`, `sparkles`,
   `plus`, `eraser`, `bot`, `x`, `minus`). El icono debe estar **registrado** en
   `libs/catalogohoy/core/.../providers/icons/providers/lucide.provide.ts` (import + pick).
-  Si no está registrado, se ve en blanco.
+  Si no está registrado, se ve en blanco. **Aplica también a `ui-button [icon]`** (renderiza
+  vía `ui-icon` → lucide, no PrimeIcons). Íconos custom de marca (sufijo `$`: `facebook$`,
+  `whatsapp$`…) viven en `custom.provide.ts` del mismo dir como SVG inline.
 
 ## Estilos
 
@@ -115,3 +161,16 @@
   `ai_credit_purchases.stripe_session_id`.
 - Edge functions: para deployar payloads grandes vía MCP sin errores de escape, generar el
   JSON con `python3 -c "import json; print(json.dumps(open(...).read()))"` y leerlo.
+- **WhatsApp cachea los previews de links por dispositivo/chat durante días**: tras cambiar
+  los OG tags (middleware.ts), el preview viejo persiste donde ya se compartió el link.
+  Para revalidar: compartir con un sufijo (`?v=2`) o en un chat nuevo. Si "funciona en
+  iPhone pero no en Android", casi siempre es este caché, no el servidor.
+- **PostgREST no da error en UPDATE que matchea 0 filas** → "éxito" silencioso. Mordió el
+  2026-07-09: cuentas nuevas sin fila en `tenant_ecommerce_config` "guardaban" la config
+  sin persistir nada. Fix: trigger `trg_seed_ecommerce_config` siembra la fila al crear el
+  tenant (+ backfill). Patrón a evitar: `.update().eq()` asumiendo que la fila existe.
+- **Dirty-checks: comparar lo NORMALIZADO, no el draft crudo**: si un campo se transforma
+  al guardar (ej. descripción pasa por `sanitizeRichText`, que colapsa los nbsp de Quill),
+  el dirty-check debe comparar `transform(draft) !== guardado` — comparar el draft crudo
+  deja el banner "cambios sin guardar" encendido para siempre tras guardar (bug 2026-07-09,
+  reproducido y verificado con Playwright E2E contra prod con sesión inyectada).

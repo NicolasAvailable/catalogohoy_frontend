@@ -2,19 +2,30 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // -----------------------------------------------------------------------------
-// delete-account — hard-delete the authenticated user's account
+// delete-account — hard-delete the authenticated user's account.
 //
 // Invoked from profile.service.ts:
 //   await supabase.functions.invoke('delete-account')
 //
-// Flow:
-//   1. Resolve caller via Authorization JWT (anon client).
-//   2. Best-effort cleanup of `public.*` rows owned by this user:
-//      - tenants where the user is the SOLE owner (avoids wiping catalogs
-//        shared with team members).
-//      - users_tenants links for this user.
-//      - public.users row.
-//   3. Hard-delete auth.users via service-role admin API.
+// Debe desplegarse con verify_jwt: FALSE — la función hace su propia auth
+// (getUser sobre el JWT) y responde el preflight OPTIONS ella misma. Con
+// verify_jwt: true la plataforma rechaza el OPTIONS (que va sin Authorization)
+// y el browser reporta "Failed to send a request to the Edge Function".
+//
+// Orden de borrado (respetando las foreign keys):
+//   1. Resolver el usuario desde el JWT (anon client).
+//   2. Por cada tenant donde el usuario es ÚNICO owner (no rompemos catálogos
+//      compartidos con el equipo):
+//        a. Borrar referrals que referencian el tenant (FK NO ACTION).
+//        b. Null a tenants.referred_by_tenant_id que apunten al tenant (self-FK).
+//        c. Borrar users_tenants del tenant (FK NO ACTION) ANTES del tenant.
+//        d. Borrar el tenant → el resto de hijos caen por ON DELETE CASCADE
+//           (products, categories, orders, config, subscriptions, chats, …).
+//   3. Borrar los users_tenants restantes del usuario + su fila public.users.
+//   4. Best-effort: null a las columnas nullable que apuntan a auth.users desde
+//      datos que hayan quedado (products/categories.auth_user_id,
+//      tenant_subscriptions.created_by) → así deleteUser no falla por FK.
+//   5. Hard-delete auth.users vía service-role admin API.
 // -----------------------------------------------------------------------------
 
 const corsHeaders = {
@@ -55,7 +66,6 @@ Deno.serve(async (req: Request) => {
     }
 
     const admin = createClient(supabaseUrl, serviceKey);
-
     const cleanupErrors: string[] = [];
 
     const { data: userRow, error: userRowError } = await admin
@@ -77,24 +87,65 @@ Deno.serve(async (req: Request) => {
 
       for (const o of ownerships ?? []) {
         const tenantId = (o as { tenant_id: number }).tenant_id;
+
+        // Solo borrar el tenant si el usuario es el ÚNICO owner.
         const { count } = await admin
           .from("users_tenants")
           .select("id", { count: "exact", head: true })
           .eq("tenant_id", tenantId)
           .eq("role", "owner");
-        if (count === 1) {
-          const { error } = await admin.from("tenants").delete().eq(
-            "id",
-            tenantId,
-          );
+        if (count !== 1) continue;
+
+        // a. Referrals que apuntan al tenant (FK NO ACTION).
+        {
+          const { error } = await admin
+            .from("referrals")
+            .delete()
+            .or(
+              `referrer_tenant_id.eq.${tenantId},referred_tenant_id.eq.${tenantId}`,
+            );
+          if (error) {
+            cleanupErrors.push(`referrals ${tenantId}: ${error.message}`);
+          }
+        }
+
+        // b. Otros tenants referidos POR este tenant (self-FK NO ACTION).
+        {
+          const { error } = await admin
+            .from("tenants")
+            .update({ referred_by_tenant_id: null })
+            .eq("referred_by_tenant_id", tenantId);
+          if (error) {
+            cleanupErrors.push(`referred_by ${tenantId}: ${error.message}`);
+          }
+        }
+
+        // c. Links del tenant (FK NO ACTION) ANTES de borrar el tenant.
+        {
+          const { error } = await admin
+            .from("users_tenants")
+            .delete()
+            .eq("tenant_id", tenantId);
           if (error) {
             cleanupErrors.push(
-              `delete tenant ${tenantId}: ${error.message}`,
+              `users_tenants(tenant ${tenantId}): ${error.message}`,
             );
+          }
+        }
+
+        // d. Borrar el tenant → cascada sobre el resto de hijos.
+        {
+          const { error } = await admin
+            .from("tenants")
+            .delete()
+            .eq("id", tenantId);
+          if (error) {
+            cleanupErrors.push(`delete tenant ${tenantId}: ${error.message}`);
           }
         }
       }
 
+      // Links restantes del usuario (a tenants compartidos) + su fila.
       const { error: utError } = await admin
         .from("users_tenants")
         .delete()
@@ -108,6 +159,24 @@ Deno.serve(async (req: Request) => {
         .delete()
         .eq("id", userRow.id);
       if (uError) cleanupErrors.push(`delete users: ${uError.message}`);
+    }
+
+    // Best-effort: limpiar refs NO ACTION a auth.users que hayan quedado (datos
+    // en tenants compartidos que no borramos). Columnas nullable → van a null.
+    for (
+      const [table, column] of [
+        ["products", "auth_user_id"],
+        ["categories", "auth_user_id"],
+        ["tenant_subscriptions", "created_by"],
+      ] as const
+    ) {
+      const { error } = await admin
+        .from(table)
+        .update({ [column]: null })
+        .eq(column, user.id);
+      if (error) {
+        cleanupErrors.push(`null ${table}.${column}: ${error.message}`);
+      }
     }
 
     const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);

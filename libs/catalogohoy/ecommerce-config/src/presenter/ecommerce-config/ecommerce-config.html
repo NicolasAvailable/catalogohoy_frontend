@@ -4,12 +4,12 @@
     <div class="main-column" #mainColumn>
       <div class="header-section">
         <div class="header-title-row">
-          <h1 class="page-title">Editar Catálogo</h1>
+          <h1 class="page-title">{{ 'Editar Catálogo' | transloco }}</h1>
           @if (canEditCatalog()) {
           <div #topSaveAnchor>
             <ui-button
               class="save-btn-top"
-              [label]="saveButtonTopLabel()"
+              [label]="saveButtonTopLabel() | transloco"
               (click)="saveAllChanges()"
               [isLoading]="configStore.isSaving()"
               [disabled]="!hasUnsavedChanges()"
@@ -19,8 +19,7 @@
           }
         </div>
         <p class="page-description">
-          Gestiona la identidad visual y el comportamiento de tu catálogo
-          online.
+          {{ 'Gestiona la identidad visual y el comportamiento de tu catálogo online.' | transloco }}
         </p>
       </div>
 
@@ -29,10 +28,10 @@
       <div class="unsaved-banner">
         <div class="unsaved-banner-content">
           <ui-icon name="circle-alert" styleClass="size-5"></ui-icon>
-          <span>Tienes cambios sin guardar</span>
+          <span>{{ 'Tienes cambios sin guardar' | transloco }}</span>
         </div>
         <ui-button
-          label="Guardar"
+          [label]="'Guardar' | transloco"
           (click)="saveAllChanges()"
           [isLoading]="configStore.isSaving()"
           icon="save"
@@ -42,7 +41,24 @@
       }
 
       <!-- Tabs -->
-      <nav class="config-tabs" role="tablist" aria-label="Secciones de configuración">
+      <div class="config-tabs-wrap">
+        @if (canScrollTabsLeft()) {
+        <button
+          type="button"
+          class="config-tabs-arrow config-tabs-arrow--left"
+          (click)="scrollTabs(-1)"
+          [attr.aria-label]="'Ver secciones anteriores' | transloco"
+        >
+          <ui-icon name="chevron-left" styleClass="size-5"></ui-icon>
+        </button>
+        }
+        <nav
+          #tabsNav
+          class="config-tabs"
+          (scroll)="updateTabScroll()"
+          role="tablist"
+          [attr.aria-label]="'Secciones de configuración' | transloco"
+        >
         @for (tab of tabs; track tab.id) {
           <button
             type="button"
@@ -53,13 +69,24 @@
             (click)="setActiveTab(tab.id)"
           >
             <ui-icon [name]="tab.icon" styleClass="size-4 shrink-0"></ui-icon>
-            <span>{{ tab.label }}</span>
+            <span>{{ tab.label | transloco }}</span>
             @if (tab.badge) {
-            <span class="config-tab__badge">{{ tab.badge }}</span>
+            <span class="config-tab__badge">{{ tab.badge | transloco }}</span>
             }
           </button>
         }
-      </nav>
+        </nav>
+        @if (canScrollTabsRight()) {
+        <button
+          type="button"
+          class="config-tabs-arrow config-tabs-arrow--right"
+          (click)="scrollTabs(1)"
+          [attr.aria-label]="'Ver más secciones' | transloco"
+        >
+          <ui-icon name="chevron-right" styleClass="size-5"></ui-icon>
+        </button>
+        }
+      </div>
 
       <!-- ===== TAB: GENERAL ===== -->
       <div [hidden]="activeTab() !== 'general'">
@@ -70,62 +97,61 @@
             <div class="card-icon identity-icon">
               <ui-icon name="store" styleClass="size-5"></ui-icon>
             </div>
-            <h2 class="card-title">Identidad de la Marca</h2>
+            <h2 class="card-title">{{ 'Identidad de la Marca' | transloco }}</h2>
           </div>
         </div>
 
         <div class="card-content">
           <div class="form-field">
-            <label for="shop-name">Nombre Comercial</label>
+            <label for="shop-name">{{ 'Nombre Comercial' | transloco }}</label>
             <ui-input-text
               inputId="shop-name"
               [ngModel]="draftName()"
               (ngModelChange)="draftName.set($event)"
-              placeholder="Ej: Mi Tienda Increíble"
+              [placeholder]="'Ej: Mi Tienda Increíble' | transloco"
               [disabled]="configStore.isSaving()"
               styleClass="w-full"
             ></ui-input-text>
             <small class="field-hint"
-              >Este nombre se usará en el título de la página y
-              comunicaciones.</small
+              >{{ 'Este nombre se usará en el título de la página y comunicaciones.' | transloco }}</small
             >
           </div>
 
           <div class="form-field">
-            <label for="shop-description">Descripción del Catálogo</label>
+            <label for="shop-description">{{ 'Descripción del Catálogo' | transloco }}</label>
             <p-editor
               [ngModel]="draftDescription()"
               (ngModelChange)="draftDescription.set($event)"
-              placeholder="Cuenta un poco sobre tu tienda..."
+              [placeholder]="'Cuenta un poco sobre tu tienda...' | transloco"
               [readonly]="configStore.isSaving()"
               [style]="{ height: '10rem' }"
               styleClass="catalog-description-editor"
             >
               <ng-template #header>
                 <span class="ql-formats">
-                  <button type="button" class="ql-bold" aria-label="Negrita"></button>
-                  <button type="button" class="ql-italic" aria-label="Itálica"></button>
-                  <button type="button" class="ql-underline" aria-label="Subrayado"></button>
+                  <button type="button" class="ql-bold" [attr.aria-label]="'Negrita' | transloco"></button>
+                  <button type="button" class="ql-italic" [attr.aria-label]="'Itálica' | transloco"></button>
+                  <button type="button" class="ql-underline" [attr.aria-label]="'Subrayado' | transloco"></button>
                 </span>
                 <span class="ql-formats">
-                  <select class="ql-header" aria-label="Encabezado">
+                  <select class="ql-header" [attr.aria-label]="'Encabezado' | transloco">
                     <option value="2"></option>
                     <option value="3"></option>
                     <option selected></option>
                   </select>
                 </span>
                 <span class="ql-formats">
-                  <button type="button" class="ql-list" value="ordered" aria-label="Lista numerada"></button>
-                  <button type="button" class="ql-list" value="bullet" aria-label="Lista con viñetas"></button>
+                  <button type="button" class="ql-list" value="ordered" [attr.aria-label]="'Lista numerada' | transloco"></button>
+                  <button type="button" class="ql-list" value="bullet" [attr.aria-label]="'Lista con viñetas' | transloco"></button>
                 </span>
                 <span class="ql-formats">
-                  <button type="button" class="ql-link" aria-label="Enlace"></button>
-                  <button type="button" class="ql-clean" aria-label="Quitar formato"></button>
+                  <button type="button" class="ql-link" [attr.aria-label]="'Enlace' | transloco"></button>
+                  <button type="button" class="ql-clean" [attr.aria-label]="'Quitar formato' | transloco"></button>
                 </span>
               </ng-template>
             </p-editor>
             <small class="field-hint"
-              >Aparecerá como resumen al compartir tu enlace.</small
+              >{{ 'Aparecerá como resumen al compartir tu enlace.' | transloco }}</small
             >
           </div>
 
@@ -139,7 +165,7 @@
             <div class="card-icon template-icon">
               <ui-icon name="layout-template" styleClass="size-5"></ui-icon>
             </div>
-            <h2 class="card-title">Plantilla del Catálogo</h2>
+            <h2 class="card-title">{{ 'Plantilla del Catálogo' | transloco }}</h2>
           </div>
         </div>
 
@@ -159,7 +185,7 @@
             <div class="card-icon design-icon">
               <ui-icon name="palette" styleClass="size-5"></ui-icon>
             </div>
-            <h2 class="card-title">Diseño de tu catálogo</h2>
+            <h2 class="card-title">{{ 'Diseño de tu catálogo' | transloco }}</h2>
           </div>
           <ui-toggle
             [ngModel]="draftShowDesignSection()"
@@ -174,7 +200,7 @@
           <div class="upload-row">
             <!-- Logo Upload -->
             <div class="upload-item">
-              <label class="upload-label">Logo (opcional)</label>
+              <label class="upload-label">{{ 'Logo (opcional)' | transloco }}</label>
               <ui-uploader
                 (valueChange)="onLogoUrlChange($event)"
                 [disabled]="configStore.isSaving()"
@@ -186,7 +212,7 @@
                       <img
                         class="upload-preview"
                         [src]="configStore.config()?.logo"
-                        alt="Logo"
+                        [alt]="'Logo' | transloco"
                       />
                       } @else {
                       <div class="upload-placeholder">
@@ -202,14 +228,14 @@
                       type="button"
                       class="upload-remove-btn"
                       (click)="removeLogo()"
-                      title="Eliminar logo"
+                      [title]="'Eliminar logo' | transloco"
                     >
                       <ui-icon name="x" styleClass="size-3.5"></ui-icon>
                     </button>
                     }
                   </div>
                   <ui-button
-                    label="Subir Logo"
+                    [label]="'Subir Logo' | transloco"
                     [variant]="'outlined'"
                     severity="secondary"
                     size="small"
@@ -220,13 +246,13 @@
                 </ng-template>
               </ui-uploader>
               <small class="field-hint"
-                >Recomendado: 200x200px, PNG o JPG. Máx 2MB.</small
+                >{{ 'Recomendado: 200x200px, PNG o JPG. Máx 2MB.' | transloco }}</small
               >
             </div>
 
             <!-- Banner Upload -->
             <div class="upload-item">
-              <label class="upload-label">Banner (opcional)</label>
+              <label class="upload-label">{{ 'Banner (opcional)' | transloco }}</label>
               <ui-uploader
                 (valueChange)="onBannerUrlChange($event)"
                 [disabled]="configStore.isSaving()"
@@ -238,7 +264,7 @@
                       <img
                         class="upload-preview-banner"
                         [src]="configStore.config()?.banner"
-                        alt="Banner"
+                        [alt]="'Banner' | transloco"
                       />
                       } @else {
                       <div class="upload-placeholder">
@@ -254,14 +280,14 @@
                       type="button"
                       class="upload-remove-btn"
                       (click)="removeBanner()"
-                      title="Eliminar banner"
+                      [title]="'Eliminar banner' | transloco"
                     >
                       <ui-icon name="x" styleClass="size-3.5"></ui-icon>
                     </button>
                     }
                   </div>
                   <ui-button
-                    label="Subir Banner"
+                    [label]="'Subir Banner' | transloco"
                     [variant]="'outlined'"
                     severity="secondary"
                     size="small"
@@ -272,7 +298,7 @@
                 </ng-template>
               </ui-uploader>
               <small class="field-hint"
-                >Recomendado: 1200x400px, PNG o JPG. Máx 5MB.</small
+                >{{ 'Recomendado: 1200x400px, PNG o JPG. Máx 5MB.' | transloco }}</small
               >
             </div>
           </div>
@@ -286,7 +312,7 @@
             <div class="card-icon color-icon">
               <ui-icon name="droplets" styleClass="size-5"></ui-icon>
             </div>
-            <h2 class="card-title">Color del tema</h2>
+            <h2 class="card-title">{{ 'Color del tema' | transloco }}</h2>
           </div>
         </div>
 
@@ -299,7 +325,7 @@
               [style.background]="color.value"
               [class.selected]="draftThemeColor() === color.value"
               (click)="selectThemeColor(color.value)"
-              [title]="color.name"
+              [title]="color.name | transloco"
             >
               @if (draftThemeColor() === color.value) {
               <ui-icon name="check" styleClass="size-4 text-white"></ui-icon>
@@ -319,7 +345,7 @@
                   class="color-circle selected"
                   [style.background]="draftThemeColor()"
                   (click)="pick($event)"
-                  title="Color personalizado"
+                  [title]="'Color personalizado' | transloco"
                 >
                   <ui-icon name="check" styleClass="size-4 text-white"></ui-icon>
                 </button>
@@ -328,7 +354,7 @@
                   type="button"
                   class="color-circle color-circle--add"
                   (click)="pick($event)"
-                  title="Agregar color personalizado"
+                  [title]="'Agregar color personalizado' | transloco"
                 >
                   <ui-icon name="plus" styleClass="size-4"></ui-icon>
                 </button>
@@ -350,7 +376,7 @@
             <div class="card-icon payment-icon">
               <ui-icon name="credit-card" styleClass="size-5"></ui-icon>
             </div>
-            <h2 class="card-title">Métodos de pago</h2>
+            <h2 class="card-title">{{ 'Métodos de pago' | transloco }}</h2>
           </div>
           <ui-toggle
             [ngModel]="draftShowPaymentMethodsSection()"
@@ -365,30 +391,89 @@
           <!-- Payment methods list -->
           <div class="payment-methods-list">
             @for (method of configStore.paymentMethodsList(); track method.id) {
-            <div class="payment-method-row">
-              <div class="payment-method-info">
-                <ui-icon [name]="method.icon" styleClass="size-5 text-grey-500"></ui-icon>
-                <span class="payment-method-name">{{ method.name }}</span>
+            <div class="payment-method-item">
+              <div class="payment-method-row">
+                <div class="payment-method-info">
+                  <ui-icon [name]="method.icon" styleClass="size-5 text-grey-500"></ui-icon>
+                  <span class="payment-method-name">{{ method.name }}</span>
+                </div>
+                <div class="payment-method-actions">
+                  <ui-button
+                    [label]="'Datos' | transloco"
+                    icon="pencil"
+                    variant="outlined"
+                    severity="contrast"
+                    size="small"
+                    [fluid]="false"
+                    styleClass="pm-datos-btn"
+                    (click)="toggleMethodDetails(method)"
+                  ></ui-button>
+                  <ui-toggle
+                    [ngModel]="method.isActive"
+                    (ngModelChange)="toggleMethodActive(method.id, $event)"
+                  ></ui-toggle>
+                  <button
+                    type="button"
+                    class="payment-method-delete"
+                    (click)="deleteMethod(method.id, method.name)"
+                    [title]="'Eliminar' | transloco"
+                  >
+                    <ui-icon name="trash" styleClass="size-4"></ui-icon>
+                  </button>
+                </div>
               </div>
-              <div class="payment-method-actions">
-                <ui-toggle
-                  [ngModel]="method.isActive"
-                  (ngModelChange)="toggleMethodActive(method.id, $event)"
-                ></ui-toggle>
-                <button
-                  type="button"
-                  class="payment-method-delete"
-                  (click)="deleteMethod(method.id, method.name)"
-                  title="Eliminar"
-                >
-                  <ui-icon name="trash" styleClass="size-4"></ui-icon>
-                </button>
+
+              <!-- Form de datos del método (banco, cuenta, etc.) -->
+              @if (expandedMethodId() === method.id) {
+              <div class="payment-method-details">
+                <p class="payment-method-details-hint">
+                  {{ 'Estos datos se le muestran al cliente en el checkout cuando elige' | transloco }}
+                  <strong>{{ method.name }}</strong>.
+                </p>
+                @for (field of fieldsFor(method.name); track field.key) {
+                <div class="payment-method-field">
+                  <label class="payment-method-field-label">{{ field.label | transloco }}</label>
+                  @if (field.multiline) {
+                  <ui-textarea
+                    [ngModel]="detailsDraft()[field.key] || ''"
+                    (ngModelChange)="setDetailField(field.key, $event)"
+                    [placeholder]="(field.placeholder || '') | transloco"
+                    [rows]="2"
+                    styleClass="w-full"
+                  ></ui-textarea>
+                  } @else {
+                  <ui-input-text
+                    [ngModel]="detailsDraft()[field.key] || ''"
+                    (ngModelChange)="setDetailField(field.key, $event)"
+                    [placeholder]="(field.placeholder || '') | transloco"
+                    styleClass="w-full"
+                  ></ui-input-text>
+                  }
+                </div>
+                }
+                <div class="payment-method-details-actions">
+                  <ui-button
+                    [label]="'Cancelar' | transloco"
+                    variant="outlined"
+                    severity="contrast"
+                    size="small"
+                    [fluid]="false"
+                    (click)="expandedMethodId.set(null)"
+                  ></ui-button>
+                  <ui-button
+                    [label]="'Guardar datos' | transloco"
+                    size="small"
+                    [fluid]="false"
+                    (click)="saveMethodDetails(method)"
+                  ></ui-button>
+                </div>
               </div>
+              }
             </div>
             } @empty {
             <div class="payment-methods-empty">
               <ui-icon name="credit-card" styleClass="size-6 text-grey-300"></ui-icon>
-              <span>No hay métodos de pago configurados</span>
+              <span>{{ 'No hay métodos de pago configurados' | transloco }}</span>
             </div>
             }
           </div>
@@ -397,44 +482,44 @@
 
           <!-- Add new payment method -->
           <div class="add-method-form">
-            <span class="add-method-title">Agregar método de pago</span>
+            <span class="add-method-title">{{ 'Agregar método de pago' | transloco }}</span>
             <div class="add-method-fields">
               <div class="add-method-field">
-                <label class="add-method-label">Nombre</label>
+                <label class="add-method-label">{{ 'Nombre' | transloco }}</label>
                 <ui-input-text
                   [ngModel]="newMethodName()"
                   (ngModelChange)="newMethodName.set($event)"
-                  placeholder="Ej: Zelle, Binance..."
+                  [placeholder]="'Ej: Zelle, Binance...' | transloco"
                   styleClass="w-full"
                 ></ui-input-text>
               </div>
               <div class="add-method-field">
-                <label class="add-method-label">Icono</label>
+                <label class="add-method-label">{{ 'Icono' | transloco }}</label>
               <ui-select
                 [options]="iconOptions"
                 [ngModel]="newMethodIcon()"
                 (ngModelChange)="newMethodIcon.set($event)"
                 optionLabel="label"
                 optionValue="value"
-                placeholder="Icono"
+                [placeholder]="'Icono' | transloco"
               >
                 <ng-template selectSelectedItem let-selected>
                   <div class="flex items-center gap-2">
                     <ui-icon [name]="selected.value" styleClass="size-4" />
-                    <span class="text-sm">{{ selected.label }}</span>
+                    <span class="text-sm">{{ selected.label | transloco }}</span>
                   </div>
                 </ng-template>
                 <ng-template selectItem let-item>
                   <div class="flex items-center gap-2.5 py-0.5">
                     <ui-icon [name]="item.value" styleClass="size-4 text-grey-500" />
-                    <span>{{ item.label }}</span>
+                    <span>{{ item.label | transloco }}</span>
                   </div>
                 </ng-template>
               </ui-select>
               </div>
             </div>
             <ui-button
-              label="Agregar"
+              [label]="'Agregar' | transloco"
               icon="plus"
               size="small"
               (click)="addPaymentMethod()"
@@ -458,9 +543,9 @@
               <ui-icon name="tag" styleClass="size-5"></ui-icon>
             </div>
             <div>
-              <h2 class="card-title">Categorías</h2>
+              <h2 class="card-title">{{ 'Categorías' | transloco }}</h2>
               <small class="card-subtitle">
-                Muestra u oculta la barra de categorías en el catálogo.
+                {{ 'Muestra u oculta la barra de categorías en el catálogo.' | transloco }}
               </small>
             </div>
           </div>
@@ -482,7 +567,7 @@
             <div class="card-icon location-icon">
               <ui-icon name="map-pin" styleClass="size-5"></ui-icon>
             </div>
-            <h2 class="card-title">Ubicación</h2>
+            <h2 class="card-title">{{ 'Ubicación' | transloco }}</h2>
           </div>
           <ui-toggle
             [ngModel]="draftShowLocationSection()"
@@ -496,14 +581,14 @@
         >
           <div class="form-row">
             <div class="form-field">
-              <label>País</label>
+              <label>{{ 'País' | transloco }}</label>
               <ui-select
                 [options]="supportedCountries"
                 [ngModel]="draftCountryCode()"
                 (ngModelChange)="onCountryChange($event)"
                 optionLabel="label"
                 optionValue="code"
-                placeholder="Selecciona un país"
+                [placeholder]="'Selecciona un país' | transloco"
                 [filter]="true"
                 styleClass="w-full"
               >
@@ -531,7 +616,7 @@
             </div>
             <div class="form-field">
               <div class="flex items-center gap-2">
-                <label>Estado / Provincia</label>
+                <label>{{ 'Estado / Provincia' | transloco }}</label>
                 @if (isLoadingStates()) {
                   <ui-icon name="loader" styleClass="size-4 text-primary-500 animate-spin" />
                 }
@@ -540,7 +625,7 @@
                 [options]="availableStates()"
                 [ngModel]="draftState()"
                 (ngModelChange)="onStateChange($event)"
-                [placeholder]="isLoadingStates() ? 'Cargando estados...' : (draftCountryCode() ? 'Selecciona un estado' : 'Primero selecciona un país')"
+                [placeholder]="isLoadingStates() ? ('Cargando estados...' | transloco) : (draftCountryCode() ? ('Selecciona un estado' | transloco) : ('Primero selecciona un país' | transloco))"
                 [filter]="true"
                 [disabled]="!draftCountryCode() || isLoadingStates()"
                 styleClass="w-full"
@@ -550,7 +635,7 @@
           <div class="form-row">
             <div class="form-field">
               <div class="flex items-center gap-2">
-                <label>Ciudad</label>
+                <label>{{ 'Ciudad' | transloco }}</label>
                 @if (isLoadingCities()) {
                   <ui-icon name="loader" styleClass="size-4 text-primary-500 animate-spin" />
                 }
@@ -560,7 +645,7 @@
                   [options]="availableCities()"
                   [ngModel]="draftCity()"
                   (ngModelChange)="onCityChange($event)"
-                  [placeholder]="isLoadingCities() ? 'Cargando ciudades...' : 'Selecciona una ciudad'"
+                  [placeholder]="isLoadingCities() ? ('Cargando ciudades...' | transloco) : ('Selecciona una ciudad' | transloco)"
                   [filter]="true"
                   [disabled]="isLoadingCities()"
                   styleClass="w-full"
@@ -569,7 +654,7 @@
                 <ui-input-text
                   [ngModel]="draftCity()"
                   (ngModelChange)="onCityChange($event)"
-                  [placeholder]="isLoadingCities() ? 'Cargando ciudades...' : (draftState() ? 'Escribe la ciudad' : 'Primero selecciona un estado')"
+                  [placeholder]="isLoadingCities() ? ('Cargando ciudades...' | transloco) : (draftState() ? ('Escribe la ciudad' | transloco) : ('Primero selecciona un estado' | transloco))"
                   [disabled]="!draftState() || isLoadingCities()"
                   styleClass="w-full"
                 ></ui-input-text>
@@ -588,9 +673,9 @@
               <ui-icon name="clock" styleClass="size-5 text-green-600"></ui-icon>
             </div>
             <div>
-              <h2 class="card-title">Horario de atención</h2>
+              <h2 class="card-title">{{ 'Horario de atención' | transloco }}</h2>
               <small class="card-subtitle">
-                Define los días que abres y la hora de apertura/cierre. Los días marcados como cerrados no se mostrarán como disponibles en el catálogo.
+                {{ 'Define los días que abres y la hora de apertura/cierre. Los días marcados como cerrados no se mostrarán como disponibles en el catálogo.' | transloco }}
               </small>
             </div>
           </div>
@@ -604,13 +689,13 @@
                 [class.schedule-row--closed]="!day.isOpen"
               >
                 <div class="schedule-row__day">
-                  <span class="schedule-row__day-name">{{ day.label }}</span>
+                  <span class="schedule-row__day-name">{{ day.label | transloco }}</span>
                   <span
                     class="schedule-row__badge"
                     [class.schedule-row__badge--open]="day.isOpen"
                     [class.schedule-row__badge--closed]="!day.isOpen"
                   >
-                    {{ day.isOpen ? 'Abierto' : 'Cerrado' }}
+                    {{ (day.isOpen ? 'Abierto' : 'Cerrado') | transloco }}
                   </span>
                 </div>
                 <div class="schedule-row__times">
@@ -625,7 +710,7 @@
                     [disabled]="!day.isOpen"
                     [ngModel]="day.openDate"
                     (ngModelChange)="setDayOpenDate(day.dayOfWeek, $event)"
-                    placeholder="Apertura"
+                    [placeholder]="'Apertura' | transloco"
                   ></p-datepicker>
                   <span class="schedule-row__sep">—</span>
                   <p-datepicker
@@ -639,7 +724,7 @@
                     [disabled]="!day.isOpen"
                     [ngModel]="day.closeDate"
                     (ngModelChange)="setDayCloseDate(day.dayOfWeek, $event)"
-                    placeholder="Cierre"
+                    [placeholder]="'Cierre' | transloco"
                   ></p-datepicker>
                 </div>
                 <ui-toggle
@@ -648,6 +733,53 @@
                 ></ui-toggle>
               </div>
             }
+          </div>
+        </div>
+      </ui-card>
+
+      <!-- Card: Idioma del catálogo (default para visitantes) -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon">
+              <ui-icon name="globe" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ 'Idioma del catálogo' | transloco }}</h2>
+              <p class="card-subtitle">
+                {{ 'Idioma en el que tus clientes verán el catálogo. Cada visitante puede cambiarlo desde el catálogo.' | transloco }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <div class="form-field max-w-xs">
+            <label for="default-language">{{ 'Idioma por defecto' | transloco }}</label>
+            <ui-select
+              [options]="appLanguages"
+              optionLabel="label"
+              optionValue="code"
+              [ngModel]="draftDefaultLanguage()"
+              (ngModelChange)="draftDefaultLanguage.set($event)"
+              [ngModelOptions]="{ standalone: true }"
+              appendTo="body"
+              selectId="default-language"
+              [disabled]="!canEditCatalog()"
+            >
+              <ng-template selectItem let-lang>
+                <div class="flex items-center gap-2 py-1">
+                  <img [src]="lang.flag" [alt]="lang.label" class="w-5 h-5 rounded-full shrink-0" />
+                  <span>{{ lang.label }}</span>
+                </div>
+              </ng-template>
+              <ng-template selectSelectedItem let-lang>
+                <div class="flex items-center gap-2">
+                  <img [src]="lang.flag" [alt]="lang.label" class="w-5 h-5 rounded-full shrink-0" />
+                  <span>{{ lang.label }}</span>
+                </div>
+              </ng-template>
+            </ui-select>
           </div>
         </div>
       </ui-card>
@@ -665,9 +797,9 @@
               <ui-icon name="user" styleClass="size-5"></ui-icon>
             </div>
             <div>
-              <h2 class="card-title">Datos del cliente</h2>
+              <h2 class="card-title">{{ 'Datos del cliente' | transloco }}</h2>
               <small class="card-subtitle">
-                Elige qué datos pedir al hacer el pedido y cuáles son obligatorios.
+                {{ 'Elige qué datos pedir al hacer el pedido y cuáles son obligatorios.' | transloco }}
               </small>
             </div>
           </div>
@@ -676,17 +808,17 @@
           <div class="customer-fields">
             <div class="customer-field-row customer-field-head">
               <span></span>
-              <span>Pedir</span>
-              <span>Obligatorio</span>
+              <span>{{ 'Pedir' | transloco }}</span>
+              <span>{{ 'Obligatorio' | transloco }}</span>
             </div>
             <!-- Name: always requested AND always required — not configurable. -->
             <div class="customer-field-row">
-              <span class="customer-field-label">Nombre</span>
-              <span class="customer-field-locked">Siempre</span>
-              <span class="customer-field-locked">Siempre</span>
+              <span class="customer-field-label">{{ 'Nombre' | transloco }}</span>
+              <span class="customer-field-locked">{{ 'Siempre' | transloco }}</span>
+              <span class="customer-field-locked">{{ 'Siempre' | transloco }}</span>
             </div>
             <div class="customer-field-row">
-              <span class="customer-field-label">Número de WhatsApp</span>
+              <span class="customer-field-label">{{ 'Número de WhatsApp' | transloco }}</span>
               <ui-toggle
                 [ngModel]="draftCustomerFields().phone.visible"
                 (ngModelChange)="updateCustomerField('phone', 'visible', $event)"
@@ -698,7 +830,7 @@
               ></ui-toggle>
             </div>
             <div class="customer-field-row">
-              <span class="customer-field-label">Correo electrónico</span>
+              <span class="customer-field-label">{{ 'Correo electrónico' | transloco }}</span>
               <ui-toggle
                 [ngModel]="draftCustomerFields().email.visible"
                 (ngModelChange)="updateCustomerField('email', 'visible', $event)"
@@ -721,9 +853,9 @@
               <ui-icon name="truck" styleClass="size-5"></ui-icon>
             </div>
             <div>
-              <h2 class="card-title">Métodos de envío</h2>
+              <h2 class="card-title">{{ 'Métodos de envío' | transloco }}</h2>
               <small class="card-subtitle">
-                Define cómo el cliente recibe su pedido (retiro, entrega o envío).
+                {{ 'Define cómo el cliente recibe su pedido (retiro, entrega o envío).' | transloco }}
               </small>
             </div>
           </div>
@@ -739,58 +871,65 @@
             <div class="shipping-method">
               <div class="shipping-method-toprow">
                 <div class="shipping-method-reorder">
-                  <button type="button" class="reorder-btn" title="Subir"
+                  <button type="button" class="reorder-btn" [title]="'Subir' | transloco"
                     [disabled]="i === 0" (click)="moveShippingMethod(method.id, -1)">
                     <ui-icon name="chevron-up" styleClass="size-4"></ui-icon>
                   </button>
-                  <button type="button" class="reorder-btn" title="Bajar"
+                  <button type="button" class="reorder-btn" [title]="'Bajar' | transloco"
                     [disabled]="i === draftShippingMethods().length - 1"
                     (click)="moveShippingMethod(method.id, 1)">
                     <ui-icon name="chevron-down" styleClass="size-4"></ui-icon>
                   </button>
                 </div>
-                <button type="button" class="payment-method-delete" title="Eliminar"
+                <button type="button" class="payment-method-delete" [title]="'Eliminar' | transloco"
                   (click)="removeShippingMethod(method.id)">
                   <ui-icon name="trash" styleClass="size-4"></ui-icon>
                 </button>
               </div>
 
               <label class="shipping-field">
-                <span class="shipping-field-label">Nombre</span>
+                <span class="shipping-field-label">{{ 'Nombre' | transloco }}</span>
                 <ui-input-text
                   [ngModel]="method.name"
                   (ngModelChange)="updateShippingMethodField(method.id, 'name', $event)"
-                  placeholder="Ej: Retiro en local"
+                  [placeholder]="'Ej: Retiro en local' | transloco"
                   styleClass="w-full"
                 ></ui-input-text>
               </label>
 
               <div class="shipping-method-grid">
                 <label class="shipping-field">
-                  <span class="shipping-field-label">Tipo</span>
+                  <span class="shipping-field-label">{{ 'Tipo' | transloco }}</span>
                   <ui-select
                     [options]="shippingTypeOptions"
                     [ngModel]="method.type"
                     (ngModelChange)="updateShippingMethodField(method.id, 'type', $event)"
                     optionLabel="label"
                     optionValue="value"
-                  ></ui-select>
+                  >
+                    <ng-template selectSelectedItem let-selected>
+                      <span class="text-sm">{{ selected.label | transloco }}</span>
+                    </ng-template>
+                    <ng-template selectItem let-item>
+                      <span>{{ item.label | transloco }}</span>
+                    </ng-template>
+                  </ui-select>
                 </label>
                 <label class="shipping-field">
-                  <span class="shipping-field-label">Costo ({{ draftCurrencySymbol() }})</span>
+                  <span class="shipping-field-label">{{ 'Costo ({symbol})' | transloco: { symbol: draftCurrencySymbol() } }}</span>
                   <input type="number" min="0" step="0.01" class="shipping-num"
                     [ngModel]="method.fee"
                     (ngModelChange)="updateShippingMethodNumber(method.id, 'fee', $event)"
-                    placeholder="0 = gratis" />
+                    [placeholder]="'0 = gratis' | transloco" />
                 </label>
               </div>
 
               <label class="shipping-field">
-                <span class="shipping-field-label">Instrucciones (opcional)</span>
+                <span class="shipping-field-label">{{ 'Instrucciones (opcional)' | transloco }}</span>
                 <ui-textarea
                   [ngModel]="method.instructions"
                   (ngModelChange)="updateShippingMethodField(method.id, 'instructions', $event)"
-                  placeholder="Ej: Solo se realizan entregas en Las Delicias"
+                  [placeholder]="'Ej: Solo se realizan entregas en Las Delicias' | transloco"
                   [rows]="2"
                   styleClass="w-full"
                 ></ui-textarea>
@@ -798,19 +937,19 @@
 
               @if (method.type === 'pickup') {
               <label class="shipping-field">
-                <span class="shipping-field-label">Dirección del local</span>
+                <span class="shipping-field-label">{{ 'Dirección del local' | transloco }}</span>
                 <ui-input-text
                   [ngModel]="method.address"
                   (ngModelChange)="updateShippingMethodField(method.id, 'address', $event)"
-                  placeholder="Ej: Av. Bolívar 123, Maracay"
+                  [placeholder]="'Ej: Av. Bolívar 123, Maracay' | transloco"
                   styleClass="w-full"
                 ></ui-input-text>
               </label>
               } @else {
               <label class="shipping-toggle-row">
                 <div class="shipping-toggle-text">
-                  <span>Pedir la dirección al cliente</span>
-                  <small>El cliente escribe su dirección de entrega en el checkout.</small>
+                  <span>{{ 'Pedir la dirección al cliente' | transloco }}</span>
+                  <small>{{ 'El cliente escribe su dirección de entrega en el checkout.' | transloco }}</small>
                 </div>
                 <ui-toggle
                   [ngModel]="method.requestCustomerAddress"
@@ -822,8 +961,8 @@
               <div class="shipping-method-footer">
                 <label class="shipping-toggle-row">
                   <div class="shipping-toggle-text">
-                    <span>Activo</span>
-                    <small>Se muestra como opción de envío en el checkout.</small>
+                    <span>{{ 'Activo' | transloco }}</span>
+                    <small>{{ 'Se muestra como opción de envío en el checkout.' | transloco }}</small>
                   </div>
                   <ui-toggle
                     [ngModel]="method.isActive"
@@ -832,8 +971,8 @@
                 </label>
                 <label class="shipping-toggle-row">
                   <div class="shipping-toggle-text">
-                    <span>Predeterminado</span>
-                    <small>Viene seleccionado por defecto al iniciar el pedido.</small>
+                    <span>{{ 'Predeterminado' | transloco }}</span>
+                    <small>{{ 'Viene seleccionado por defecto al iniciar el pedido.' | transloco }}</small>
                   </div>
                   <ui-toggle
                     [ngModel]="method.isDefault"
@@ -845,7 +984,7 @@
             } @empty {
             <div class="payment-methods-empty">
               <ui-icon name="truck" styleClass="size-6 text-grey-300"></ui-icon>
-              <span>Aún no agregaste métodos de envío</span>
+              <span>{{ 'Aún no agregaste métodos de envío' | transloco }}</span>
             </div>
             }
           </div>
@@ -853,7 +992,7 @@
           <div class="divider"></div>
 
           <ui-button
-            label="Agregar método de envío"
+            [label]="'Agregar método de envío' | transloco"
             icon="plus"
             size="small"
             (click)="addShippingMethod()"
@@ -872,24 +1011,24 @@
             <div class="card-icon" style="background: #eff6ff;">
               <ui-icon name="coins" styleClass="size-5 text-blue-500"></ui-icon>
             </div>
-            <h2 class="card-title">Monedas del catálogo</h2>
+            <h2 class="card-title">{{ 'Monedas del catálogo' | transloco }}</h2>
           </div>
         </div>
         <div class="card-content">
           <p class="text-sm text-grey-300 mb-4">
-            Configura la moneda local en la que precias tus productos.
+            {{ 'Configura la moneda local en la que precias tus productos.' | transloco }}
           </p>
 
           <div class="form-row">
             <div class="form-field">
-              <label>Moneda local</label>
+              <label>{{ 'Moneda local' | transloco }}</label>
               <ui-select
                 [options]="supportedCurrencies"
                 [ngModel]="draftCurrency().productCurrency"
                 (ngModelChange)="updateCurrencyField('productCurrency', $event)"
                 optionLabel="name"
                 optionValue="code"
-                placeholder="Selecciona una moneda"
+                [placeholder]="'Selecciona una moneda' | transloco"
                 [filter]="true"
                 styleClass="w-full"
               ></ui-select>
@@ -899,9 +1038,9 @@
           @if (isVenezuela()) {
             <div class="divider"></div>
             <div>
-              <h3 class="text-base font-semibold">Moneda de referencia</h3>
+              <h3 class="text-base font-semibold">{{ 'Moneda de referencia' | transloco }}</h3>
               <p class="text-sm text-grey-300 mb-3">
-                Elige la moneda en la que quieres mostrar el precio de referencia usando la tasa BCV.
+                {{ 'Elige la moneda en la que quieres mostrar el precio de referencia usando la tasa BCV.' | transloco }}
               </p>
               <div class="flex gap-2 flex-wrap">
                 <button
@@ -910,7 +1049,7 @@
                   [class]="draftCurrency().displayCurrency === 'USD' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-grey-500 border-grey-200 hover:border-grey-300'"
                   (click)="setReferenceCurrency('USD')"
                 >
-                  $ Dólar
+                  {{ '$ Dólar' | transloco }}
                 </button>
                 <button
                   type="button"
@@ -918,7 +1057,7 @@
                   [class]="draftCurrency().displayCurrency === 'EUR' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-grey-500 border-grey-200 hover:border-grey-300'"
                   (click)="setReferenceCurrency('EUR')"
                 >
-                  € Euro
+                  {{ '€ Euro' | transloco }}
                 </button>
               </div>
             </div>
@@ -927,10 +1066,10 @@
               <div class="price-visibility-toggle">
                 <div class="price-visibility-toggle__text">
                   <span class="price-visibility-toggle__title">
-                    Mostrar precio de referencia
+                    {{ 'Mostrar precio de referencia' | transloco }}
                   </span>
                   <small class="price-visibility-toggle__hint">
-                    Muestra el precio en {{ draftCurrencySymbol() }} en el catálogo público.
+                    {{ 'Muestra el precio en {symbol} en el catálogo público.' | transloco: { symbol: draftCurrencySymbol() } }}
                   </small>
                 </div>
                 <ui-toggle
@@ -942,10 +1081,10 @@
               <div class="price-visibility-toggle">
                 <div class="price-visibility-toggle__text">
                   <span class="price-visibility-toggle__title">
-                    Mostrar precio en moneda local
+                    {{ 'Mostrar precio en moneda local' | transloco }}
                   </span>
                   <small class="price-visibility-toggle__hint">
-                    Muestra el precio convertido (Bs.) según la tasa de cambio configurada.
+                    {{ 'Muestra el precio convertido (Bs.) según la tasa de cambio configurada.' | transloco }}
                   </small>
                 </div>
                 <ui-toggle
@@ -965,27 +1104,26 @@
             <div class="card-icon whatsapp-icon">
               <ui-icon name="message-circle" styleClass="size-5"></ui-icon>
             </div>
-            <h2 class="card-title">Vendedores WhatsApp</h2>
+            <h2 class="card-title">{{ 'Vendedores WhatsApp' | transloco }}</h2>
           </div>
         </div>
 
         <div class="card-content">
           <small class="field-hint">
-            Cada vendedor aparecerá como un botón de pago en el checkout. Máximo
-            3.
+            {{ 'Cada vendedor aparecerá como un botón de pago en el checkout. Máximo 3.' | transloco }}
           </small>
 
           <div class="whatsapp-buttons-list">
             @for (button of draftWhatsappButtons(); track $index) {
             <div class="whatsapp-button-item">
               <span class="whatsapp-button-label"
-                >Botón {{ $index + 1 }}</span
+                >{{ 'Botón {n}' | transloco: { n: $index + 1 } }}</span
               >
               <div class="whatsapp-button-fields">
                 <ui-input-text
                   [ngModel]="button.name"
                   (ngModelChange)="updateButtonName($index, $event)"
-                  placeholder="Nombre (Ej: Juan)"
+                  [placeholder]="'Nombre (Ej: Juan)' | transloco"
                   [disabled]="configStore.isSaving()"
                   styleClass="w-full"
                 ></ui-input-text>
@@ -1000,7 +1138,7 @@
                 class="whatsapp-button-remove"
                 (click)="removeWhatsappButton($index)"
                 [disabled]="configStore.isSaving()"
-                title="Eliminar vendedor"
+                [title]="'Eliminar vendedor' | transloco"
               >
                 <ui-icon name="trash" styleClass="size-4"></ui-icon>
               </button>
@@ -1010,7 +1148,7 @@
 
           @if (draftWhatsappButtons().length < 3) {
           <ui-button
-            label="Agregar vendedor"
+            [label]="'Agregar vendedor' | transloco"
             icon="plus"
             size="small"
             (click)="addWhatsappButton()"
@@ -1032,7 +1170,7 @@
             <div class="card-icon social-icon">
               <ui-icon name="share2" styleClass="size-5"></ui-icon>
             </div>
-            <h2 class="card-title">Redes Sociales</h2>
+            <h2 class="card-title">{{ 'Redes Sociales' | transloco }}</h2>
           </div>
         </div>
 
@@ -1041,7 +1179,7 @@
           <div class="action-toggle">
             <div class="toggle-info">
               <label>Instagram</label>
-              <p>Mostrar enlace a Instagram en el footer del catálogo.</p>
+              <p>{{ 'Mostrar enlace a Instagram en el footer del catálogo.' | transloco }}</p>
             </div>
             <ui-toggle
               [ngModel]="draftSocialLinks().instagram.visible"
@@ -1050,7 +1188,7 @@
             ></ui-toggle>
           </div>
           <ui-input-text
-            label="Enlace de Instagram"
+            [attr.label]="'Enlace de Instagram' | transloco"
             placeholder="https://instagram.com/tu_tienda"
             [ngModel]="draftSocialLinks().instagram.url"
             (ngModelChange)="updateSocialLinkUrl('instagram', $event)"
@@ -1062,7 +1200,7 @@
           <div class="action-toggle">
             <div class="toggle-info">
               <label>Facebook</label>
-              <p>Mostrar enlace a Facebook en el footer del catálogo.</p>
+              <p>{{ 'Mostrar enlace a Facebook en el footer del catálogo.' | transloco }}</p>
             </div>
             <ui-toggle
               [ngModel]="draftSocialLinks().facebook.visible"
@@ -1071,7 +1209,7 @@
             ></ui-toggle>
           </div>
           <ui-input-text
-            label="Enlace de Facebook"
+            [attr.label]="'Enlace de Facebook' | transloco"
             placeholder="https://facebook.com/tu_tienda"
             [ngModel]="draftSocialLinks().facebook.url"
             (ngModelChange)="updateSocialLinkUrl('facebook', $event)"
@@ -1083,7 +1221,7 @@
           <div class="action-toggle">
             <div class="toggle-info">
               <label>TikTok</label>
-              <p>Mostrar enlace a TikTok en el footer del catálogo.</p>
+              <p>{{ 'Mostrar enlace a TikTok en el footer del catálogo.' | transloco }}</p>
             </div>
             <ui-toggle
               [ngModel]="draftSocialLinks().tiktok.visible"
@@ -1092,7 +1230,7 @@
             ></ui-toggle>
           </div>
           <ui-input-text
-            label="Enlace de TikTok"
+            [attr.label]="'Enlace de TikTok' | transloco"
             placeholder="https://tiktok.com/@tu_tienda"
             [ngModel]="draftSocialLinks().tiktok.url"
             (ngModelChange)="updateSocialLinkUrl('tiktok', $event)"
@@ -1112,7 +1250,7 @@
             <div class="card-icon behavior-icon">
               <ui-icon name="settings" styleClass="size-5"></ui-icon>
             </div>
-            <h2 class="card-title">Comportamiento</h2>
+            <h2 class="card-title">{{ 'Comportamiento' | transloco }}</h2>
           </div>
         </div>
 
@@ -1126,27 +1264,26 @@
             </div>
             <div class="status-text">
               <strong
-                >Ventas
+                >{{ 'Ventas' | transloco }}
                 {{
-                  configStore.config()?.isAcceptingOrders
+                  (configStore.config()?.isAcceptingOrders
                     ? 'Activas'
-                    : 'Pausadas'
+                    : 'Pausadas') | transloco
                 }}</strong
               >
               <span>{{
-                configStore.config()?.isAcceptingOrders
+                (configStore.config()?.isAcceptingOrders
                   ? 'Tus clientes pueden pagar'
-                  : 'Botón de pago oculto'
+                  : 'Botón de pago oculto') | transloco
               }}</span>
             </div>
           </div>
 
           <div class="action-toggle">
             <div class="toggle-info">
-              <label>Botón "Ir a pagar"</label>
+              <label>{{ 'Botón "Ir a pagar"' | transloco }}</label>
               <p>
-                Habilita la opción de finalizar compra y enviar pedido por
-                WhatsApp.
+                {{ 'Habilita la opción de finalizar compra y enviar pedido por WhatsApp.' | transloco }}
               </p>
             </div>
             <ui-toggle
@@ -1154,6 +1291,71 @@
               (ngModelChange)="onToggleOrders($event)"
               [disabled]="configStore.isSaving()"
             ></ui-toggle>
+          </div>
+        </div>
+      </ui-card>
+
+      <!-- Card 9: Dirección del catálogo — guardado propio (RPC + redirect),
+           a propósito FUERA del flujo de "Guardar cambios". -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon slug-icon">
+              <ui-icon name="link" styleClass="size-5"></ui-icon>
+            </div>
+            <h2 class="card-title">{{ 'Dirección del catálogo' | transloco }}</h2>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <div class="form-field">
+            <label for="shop-slug">{{ 'Dirección de tu catálogo' | transloco }}</label>
+            <div class="slug-field-row">
+              <ui-input-text
+                inputId="shop-slug"
+                [ngModel]="draftSlug()"
+                (ngModelChange)="onSlugInput($event)"
+                placeholder="mi-tienda"
+                [disabled]="!!tenantCustomDomain() || isChangingSlug() || !isOwner() || slugChangesRemaining() === 0"
+                styleClass="w-full"
+              ></ui-input-text>
+              <span class="slug-field-suffix">.catalogohoy.com</span>
+            </div>
+            @if (tenantCustomDomain(); as domain) {
+              <small class="field-hint">
+                {{ 'Tu catálogo usa el dominio personalizado' | transloco }}
+                <strong>{{ domain }}</strong>{{ ', así que la dirección .catalogohoy.com está deshabilitada: tus clientes siempre entran por tu dominio. Si necesitás cambiarla, escribinos a soporte.' | transloco }}
+              </small>
+            } @else if (slugFormatError()) {
+              <small class="field-hint slug-field-error">
+                {{ 'Solo minúsculas, números y guiones, de 3 a 40 caracteres (ej: mi-tienda).' | transloco }}
+              </small>
+            } @else if (!isOwner()) {
+              <small class="field-hint">
+                {{ 'Solo el dueño del catálogo puede cambiar la dirección.' | transloco }}
+              </small>
+            } @else if (slugChangesUsed() !== null && slugChangesRemaining() === 0) {
+              <small class="field-hint">
+                {{ 'Ya usaste los' | transloco }} <strong>{{ '{n} cambios' | transloco: { n: slugChangeLimit() } }}</strong> {{ 'de este mes. Vas a poder cambiarla de nuevo más adelante.' | transloco }}
+              </small>
+            } @else {
+              <small class="field-hint">
+                {{ 'Podés cambiarla hasta' | transloco }} <strong>{{ '{n} veces por mes' | transloco: { n: slugChangeLimit() } }}</strong>
+                ({{ slugChangesRemaining() === 1 ? ('te queda 1 cambio' | transloco) : ('te quedan {n} cambios' | transloco: { n: slugChangesRemaining() }) }}).
+                {{ 'Los enlaces y QR con la dirección anterior dejarán de funcionar.' | transloco }}
+              </small>
+            }
+          </div>
+
+          <div class="slug-actions">
+            <ui-button
+              [label]="'Cambiar dirección' | transloco"
+              icon="link"
+              [fluid]="false"
+              [isLoading]="isChangingSlug()"
+              [disabled]="!!tenantCustomDomain() || !canSubmitSlug()"
+              (click)="confirmSlugChange()"
+            ></ui-button>
           </div>
         </div>
       </ui-card>
@@ -1170,7 +1372,7 @@
               <ui-icon name="message-circle" size="20" styleClass="text-green-600" />
             </div>
             <div class="flex items-center gap-2">
-              <h2 class="card-title">Mensaje de WhatsApp</h2>
+              <h2 class="card-title">{{ 'Mensaje de WhatsApp' | transloco }}</h2>
               @if (isWhatsappLocked()) {
               <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none">
                 <ui-icon name="crown" size="10" styleClass="text-indigo-500" />
@@ -1180,14 +1382,12 @@
             </div>
           </div>
           <p class="card-subtitle">
-            Personalizá el mensaje que se envía al WhatsApp cuando un cliente
-            confirma un pedido. Usá las variables disponibles para incluir los
-            datos de la orden automáticamente.
+            {{ 'Personalizá el mensaje que se envía al WhatsApp cuando un cliente confirma un pedido. Usá las variables disponibles para incluir los datos de la orden automáticamente.' | transloco }}
           </p>
 
           <div class="flex flex-col gap-3 mt-4">
             <span class="text-xs font-semibold text-grey-400 uppercase tracking-wide">
-              Variables disponibles
+              {{ 'Variables disponibles' | transloco }}
             </span>
             <div class="flex flex-wrap gap-1.5">
               @for (v of whatsappMessageVariables; track v.key) {
@@ -1195,15 +1395,14 @@
                   type="button"
                   class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-primary-50 text-xs font-semibold text-primary-600 hover:bg-primary-100 transition-colors cursor-pointer border border-primary-100"
                   (click)="insertVariable(v.key)"
-                  [title]="'Click para insertar: ' + v.key"
+                  [title]="'Click para insertar: {key}' | transloco: { key: v.key }"
                 >
-                  {{ v.label }}
+                  {{ v.label | transloco }}
                 </button>
               }
             </div>
             <p class="text-xs text-grey-300">
-              Hacé click en una variable para insertarla donde tengas el cursor.
-              Si quitás una variable del mensaje, ese dato no se incluirá.
+              {{ 'Hacé click en una variable para insertarla donde tengas el cursor. Si quitás una variable del mensaje, ese dato no se incluirá.' | transloco }}
             </p>
 
             <div class="relative">
@@ -1213,7 +1412,7 @@
                 [ngModel]="draftWhatsappOrderMessage() ?? defaultWhatsappMessage"
                 (ngModelChange)="draftWhatsappOrderMessage.set($event)"
                 [maxlength]="whatsappMaxLength"
-                placeholder="Escribí el mensaje que se enviará al WhatsApp..."
+                [placeholder]="'Escribí el mensaje que se enviará al WhatsApp...' | transloco"
               ></textarea>
               <span
                 class="absolute bottom-2 right-3 text-[10px] font-medium"
@@ -1232,7 +1431,7 @@
                 (click)="resetWhatsappMessage()"
               >
                 <ui-icon name="refresh-cw" size="12" />
-                Restaurar mensaje predeterminado
+                {{ 'Restaurar mensaje predeterminado' | transloco }}
               </button>
             }
           </div>
@@ -1250,9 +1449,9 @@
                 <ui-icon name="mail" styleClass="size-5"></ui-icon>
               </div>
               <div>
-                <h2 class="card-title">Avisos de pedidos por email</h2>
+                <h2 class="card-title">{{ 'Avisos de pedidos por email' | transloco }}</h2>
                 <small class="card-subtitle">
-                  Recibí un correo cada vez que un cliente confirma un pedido en tu catálogo.
+                  {{ 'Recibí un correo cada vez que un cliente confirma un pedido en tu catálogo.' | transloco }}
                 </small>
               </div>
             </div>
@@ -1268,20 +1467,17 @@
           >
             <ul class="notifications-list">
               <li>
-                El correo lo recibe el <strong>dueño del catálogo</strong> y los
-                <strong>miembros del equipo con permiso "Ver órdenes"</strong>.
+                {{ 'El correo lo recibe el' | transloco }} <strong>{{ 'dueño del catálogo' | transloco }}</strong> {{ 'y los' | transloco }}
+                <strong>{{ 'miembros del equipo con permiso "Ver órdenes"' | transloco }}</strong>.
               </li>
               <li>
-                Aplica tanto a pedidos hechos desde el catálogo público como a las
-                órdenes manuales que creás vos en el panel.
+                {{ 'Aplica tanto a pedidos hechos desde el catálogo público como a las órdenes manuales que creás vos en el panel.' | transloco }}
               </li>
               <li>
-                El email viene desde <strong>noreply&#64;catalogohoy.com</strong> con tu
-                logo y color de marca, e incluye un botón directo al pedido.
+                {{ 'El email viene desde' | transloco }} <strong>noreply&#64;catalogohoy.com</strong> {{ 'con tu logo y color de marca, e incluye un botón directo al pedido.' | transloco }}
               </li>
               <li>
-                Para cambiar quién recibe los correos, ajustá los permisos de cada
-                miembro en la sección <strong>Equipo</strong> del menú lateral.
+                {{ 'Para cambiar quién recibe los correos, ajustá los permisos de cada miembro en la sección' | transloco }} <strong>{{ 'Equipo' | transloco }}</strong> {{ 'del menú lateral.' | transloco }}
               </li>
             </ul>
           </div>
@@ -1295,9 +1491,9 @@
                 <ui-icon name="bar-chart-3" styleClass="size-5"></ui-icon>
               </div>
               <div>
-                <h2 class="card-title">Reporte semanal por email</h2>
+                <h2 class="card-title">{{ 'Reporte semanal por email' | transloco }}</h2>
                 <small class="card-subtitle">
-                  Cada domingo recibí un resumen de cómo fue tu semana en tu catálogo.
+                  {{ 'Cada domingo recibí un resumen de cómo fue tu semana en tu catálogo.' | transloco }}
                 </small>
               </div>
             </div>
@@ -1313,17 +1509,17 @@
           >
             <ul class="notifications-list">
               <li>
-                Lo recibe el <strong>dueño del catálogo</strong> y los
-                <strong>miembros del equipo con permiso "Ver órdenes"</strong>.
+                {{ 'Lo recibe el' | transloco }} <strong>{{ 'dueño del catálogo' | transloco }}</strong> {{ 'y los' | transloco }}
+                <strong>{{ 'miembros del equipo con permiso "Ver órdenes"' | transloco }}</strong>.
               </li>
               <li>
-                Incluye <strong>ventas de la semana</strong>, comparativa con la
-                semana anterior, <strong>top productos</strong>, clientes nuevos
-                y <strong>visitas al catálogo</strong>.
+                {{ 'Incluye' | transloco }} <strong>{{ 'ventas de la semana' | transloco }}</strong>, {{ 'comparativa con la semana anterior' | transloco }},
+                <strong>{{ 'top productos' | transloco }}</strong>, {{ 'clientes nuevos y' | transloco }}
+                <strong>{{ 'visitas al catálogo' | transloco }}</strong>.
               </li>
               <li>
-                Disponible en <strong>planes pagos</strong>. Se envía los
-                <strong>domingos</strong>.
+                {{ 'Disponible en' | transloco }} <strong>{{ 'planes pagos' | transloco }}</strong>. {{ 'Se envía los' | transloco }}
+                <strong>{{ 'domingos' | transloco }}</strong>.
               </li>
             </ul>
           </div>
@@ -1342,8 +1538,8 @@
               </div>
               <div>
                 <h2 class="card-title">
-                  Notificaciones por WhatsApp
-                  <span class="config-tab__badge align-middle">Nuevo</span>
+                  {{ 'Notificaciones por WhatsApp' | transloco }}
+                  <span class="config-tab__badge align-middle">{{ 'Nuevo' | transloco }}</span>
                   @if (isWhatsappLocked()) {
                   <span
                     class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none align-middle"
@@ -1354,7 +1550,7 @@
                   }
                 </h2>
                 <small class="card-subtitle">
-                  Avisá por WhatsApp (desde el número de CatalogoHoy) cuando entra una orden o cuando el pedido está listo.
+                  {{ 'Avisá por WhatsApp (desde el número de CatalogoHoy) cuando entra una orden o cuando el pedido está listo.' | transloco }}
                 </small>
               </div>
             </div>
@@ -1365,9 +1561,9 @@
             <div class="flex flex-col gap-3">
               <div class="flex items-start justify-between gap-3">
                 <div class="flex flex-col gap-1 min-w-0">
-                  <span class="text-sm font-semibold text-grey-700">Nueva orden recibida</span>
+                  <span class="text-sm font-semibold text-grey-700">{{ 'Nueva orden recibida' | transloco }}</span>
                   <small class="card-subtitle">
-                    Te avisamos por WhatsApp cada vez que entra una orden en tu catálogo.
+                    {{ 'Te avisamos por WhatsApp cada vez que entra una orden en tu catálogo.' | transloco }}
                   </small>
                 </div>
                 <ui-toggle
@@ -1378,7 +1574,7 @@
 
               @if (draftNotifyOrderReceived()) {
               <div class="form-field flex flex-col gap-2">
-                <label>¿A qué número enviar el aviso?</label>
+                <label>{{ '¿A qué número enviar el aviso?' | transloco }}</label>
                 @if (draftWhatsappNotifyNumber() || showRecipientNumberInput()) {
                 <div class="flex flex-col gap-2">
                   <div class="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -1392,14 +1588,14 @@
                         type="button"
                         class="whatsapp-button-remove"
                         (click)="draftWhatsappNotifyNumber.set(null); showRecipientNumberInput.set(false)"
-                        title="Quitar número"
+                        [title]="'Quitar número' | transloco"
                       >
                         <ui-icon name="trash" styleClass="size-4"></ui-icon>
                       </button>
                     </div>
                     @if (draftWhatsappNotifyNumber()) {
                     <ui-button
-                      label="Probar"
+                      [label]="'Probar' | transloco"
                       icon="send"
                       size="small"
                       [fluid]="false"
@@ -1409,18 +1605,18 @@
                     }
                   </div>
                   @if (draftWhatsappNotifyNumber()) {
-                  <small class="field-hint">Te mandamos un WhatsApp de ejemplo a ese número.</small>
+                  <small class="field-hint">{{ 'Te mandamos un WhatsApp de ejemplo a ese número.' | transloco }}</small>
                   }
                 </div>
                 } @else {
                 <ui-button
-                  label="Agregar número"
+                  [label]="'Agregar número' | transloco"
                   icon="plus"
                   size="small"
                   [fluid]="false"
                   (click)="showRecipientNumberInput.set(true)"
                 ></ui-button>
-                <small class="field-hint">El aviso de nueva orden llega a este número.</small>
+                <small class="field-hint">{{ 'El aviso de nueva orden llega a este número.' | transloco }}</small>
                 }
               </div>
               }
@@ -1431,9 +1627,9 @@
             @if (false) {
             <div class="flex items-start justify-between gap-3 pt-4 border-t border-grey-100">
               <div class="flex flex-col gap-1 min-w-0">
-                <span class="text-sm font-semibold text-grey-700">Pedido listo para el cliente</span>
+                <span class="text-sm font-semibold text-grey-700">{{ 'Pedido listo para el cliente' | transloco }}</span>
                 <small class="card-subtitle">
-                  Le avisamos al cliente cuando marcás su orden como completada, si dejó su número y aceptó recibir avisos en el checkout.
+                  {{ 'Le avisamos al cliente cuando marcás su orden como completada, si dejó su número y aceptó recibir avisos en el checkout.' | transloco }}
                 </small>
               </div>
               <ui-toggle
@@ -1450,7 +1646,7 @@
       @if (canEditCatalog()) {
       <div class="bottom-save-section" #bottomSaveAnchor>
         <ui-button
-          label="Guardar cambios"
+          [label]="'Guardar cambios' | transloco"
           (click)="saveAllChanges()"
           [isLoading]="configStore.isSaving()"
           [disabled]="!hasUnsavedChanges()"
@@ -1474,7 +1670,7 @@
   </div>
 
   <!-- FAB for mobile preview -->
-  <button class="fab-preview" (click)="openMockup()" title="Vista previa">
+  <button class="fab-preview" (click)="openMockup()" [title]="'Vista previa' | transloco">
     <ui-icon name="eye" styleClass="size-7"></ui-icon>
   </button>
 
@@ -1495,7 +1691,7 @@
   <div class="error-alert">
     <ui-icon name="alert-triangle" styleClass="size-5"></ui-icon>
     <div class="alert-content">
-      <strong>Error al guardar</strong>
+      <strong>{{ 'Error al guardar' | transloco }}</strong>
       <span>{{ configStore.error() }}</span>
     </div>
   </div>

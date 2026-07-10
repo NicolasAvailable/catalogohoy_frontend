@@ -4,6 +4,8 @@ import { definePreset } from '@primeuix/themes';
 import Lara from '@primeuix/themes/lara';
 import { providePrimeNG as providePrimeNgImpl } from 'primeng/config';
 import { DialogService } from 'primeng/dynamicdialog';
+import { resolveInitialLanguage } from '../transloco/language.const';
+import { PRIMENG_TRANSLATIONS } from './primeng.i18n';
 import {
   accordion,
   avatar,
@@ -78,6 +80,9 @@ export const providePrimeNG = (): Array<Provider | EnvironmentProviders> => {
     provideAnimationsAsync(),
     providePrimeNgImpl({
       ripple: false,
+      // Textos internos (datepicker, filtros…) en el idioma inicial; los
+      // cambios en vivo los aplica LanguageService via setTranslation().
+      translation: PRIMENG_TRANSLATIONS[resolveInitialLanguage()],
       theme: {
         preset,
         options: {

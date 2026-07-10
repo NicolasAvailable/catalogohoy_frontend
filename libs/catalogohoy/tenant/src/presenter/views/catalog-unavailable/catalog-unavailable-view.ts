@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
 import { ButtonComponent } from '@ui';
 
@@ -13,7 +14,7 @@ import { ButtonComponent } from '@ui';
 @Component({
   selector: 'lib-catalog-unavailable-view',
   standalone: true,
-  imports: [LucideAngularModule, ButtonComponent],
+  imports: [LucideAngularModule, ButtonComponent, TranslocoPipe],
   templateUrl: './catalog-unavailable-view.html',
   host: { class: 'flex items-center justify-center p-6 min-h-dvh bg-grey-25' },
 })

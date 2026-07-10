@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import {
   BaseComponent,
   confirmPasswordValidator,
@@ -21,6 +22,7 @@ import { ResetPasswordCredentials } from '../../../domain';
     InputPasswordComponent,
     InputMessageComponent,
     ButtonComponent,
+    TranslocoPipe,
   ],
   templateUrl: './reset-password.html',
 })

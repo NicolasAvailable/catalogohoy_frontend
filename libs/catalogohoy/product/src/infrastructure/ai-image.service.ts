@@ -15,13 +15,28 @@ export class AiImageService implements BaseAiImageService {
     return this.invoke({ action: 'remove-background', imageUrl });
   }
 
-  generate(prompt: string): Promise<E.Either<Error, string>> {
-    return this.invoke({ action: 'generate', prompt });
+  generate(
+    prompt: string,
+    opts?: { aspectRatio?: string; style?: string }
+  ): Promise<E.Either<Error, string>> {
+    return this.invoke({
+      action: 'generate',
+      prompt,
+      aspectRatio: opts?.aspectRatio ?? 'auto',
+      style: opts?.style ?? 'default',
+    });
+  }
+
+  edit(
+    imageUrl: string,
+    instruction: string
+  ): Promise<E.Either<Error, string>> {
+    return this.invoke({ action: 'edit', imageUrl, prompt: instruction });
   }
 
   async improveText(
     text: string,
-    mode: 'improve' | 'expand' | 'shorten'
+    mode: 'improve' | 'expand' | 'shorten' | 'professional' | 'spelling'
   ): Promise<E.Either<Error, string>> {
     try {
       const { data, error } = await this.client.functions.invoke(

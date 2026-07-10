@@ -13,9 +13,10 @@
 </main>
 <ui-whatsapp-support
   phoneNumber="584220240947"
-  defaultMessage="Hola, tengo una consulta sobre CatalogoHoy y necesito ayuda."
+  [defaultMessage]="'Hola, tengo una consulta sobre CatalogoHoy y necesito ayuda.' | transloco"
   [guideUrl]="helpGuideUrl"
   [hiddenRoutes]="['/admin/catalog']"
 />
 <app-ai-announcement />
+<app-update-banner />
 

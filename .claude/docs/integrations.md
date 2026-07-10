@@ -7,7 +7,7 @@
 
 | Función | Qué hace | Trigger | verify_jwt | Externos / secrets |
 |---|---|---|---|---|
-| **fal-ai-images** | Quitar fondo (BiRefNet), segmentar (SAM-2), generar (FLUX schnell). Gateada por créditos (1/1/3). Persiste a Storage. Genera con texto en español. | front invoke | sí | fal.ai · `FAL_KEY` |
+| **fal-ai-images** | Quitar fondo (BiRefNet), segmentar (SAM-2), generar + editar imagen (Gemini 2.5 Flash Image / "Nano Banana"). Gateada por créditos (1/1/5/5: quitar-fondo 1, segmentar 1, generar 5, editar 5). Persiste a Storage. `generate` acepta `aspectRatio` (auto/square/landscape/portrait → aspect_ratio de Gemini) y `style` (default/product/studio/lifestyle/minimal/threeD → descriptor del prompt); `edit` (img→img) toma `imageUrl` + instrucción en `prompt`. **No agrega texto a la imagen salvo que el prompt lo pida; si lo pide, va en español.** | front invoke | sí | fal.ai · `FAL_KEY` |
 | **improve-text** | Mejora/alarga/acorta descripción (Claude Haiku). Gateada (1). Anti prompt-injection. | front invoke | sí | Anthropic · `ANTHROPIC_API_KEY` |
 | **get-credits** | Saldo de créditos del owner (mensual+comprado); `ensure_ai_credits` primero. | front invoke | sí | `SERVICE_ROLE` |
 | **create-credit-checkout** | Stripe Checkout de créditos (cantidad libre, precio server-side con descuento por volumen). | front invoke | sí | Stripe · `STRIPE_SECRET_KEY` |
@@ -19,6 +19,7 @@
 | **posthog-analytics** | Query a PostHog (HogQL) para el dashboard de analíticas por `tenant_slug`. | front invoke | sí | PostHog · `POSTHOG_PERSONAL_KEY` |
 | **countries-proxy** | Proxy + cache 24h de countriesnow.space (estados/ciudades). | front invoke | no | countriesnow.space |
 | **notify-checkout-intent** | Discord embed cuando el user inicia checkout de plan. | front invoke | sí | Discord · `DISCORD_CHECKOUT_INTENT_WEBHOOK` |
+| **enterprise-lead** | Lead del funnel "Contactar ventas" (plan Enterprise): valida payload (enums whitelist, email, caps, honeypot `company_hp`), re-puntúa el scoring server-side, inserta en `enterprise_leads` (service role) y notifica a Discord. La llama el admin (`functions.invoke`) y la landing (fetch crudo, sin sesión). | front invoke + landing | **no** (la publishable key no es JWT) | Discord · `DISCORD_ENTERPRISE_LEADS_WEBHOOK` (fallback `DISCORD_CHECKOUT_INTENT_WEBHOOK`) · `SERVICE_ROLE` |
 | **send-whatsapp-notification** | Templates de WhatsApp (order_received, order_completed, plan_expiring, payment_failed) vía Meta Cloud API. Auth server-to-server por `x-webhook-secret`. Loguea a `whatsapp_notification_logs`. | cron/server | no (webhook-secret) | Meta · `WHATSAPP_*` |
 | **send-whatsapp-test** | Test de WhatsApp desde el front (template hardcodeado). | front invoke | sí | Meta · `WHATSAPP_*` |
 | **stripe-webhook** | Webhook de Stripe (firma verificada): checkout completado (alta/upgrade), subscription updated/deleted, invoice succeeded/failed (retries + emails). Aplica rewards de referidos, manda Discord + Resend. **Crítico — no editar a ciegas.** | webhook Stripe | no (firma) | Stripe · Resend · Discord · `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `DISCORD_PAYMENTS_WEBHOOK_URL` |

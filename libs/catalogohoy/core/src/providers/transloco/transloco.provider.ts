@@ -5,8 +5,15 @@ import {
   provideAppInitializer,
   Provider,
 } from '@angular/core';
-import { provideTransloco, TranslocoService } from '@jsverse/transloco';
+import {
+  provideTransloco,
+  provideTranslocoTranspiler,
+  TranslocoService,
+} from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
+import { KeepParamsTranspiler } from './keep-params.transpiler';
+import { APP_LANGUAGES } from './language.const';
+import { LanguageService } from './language.service';
 import { TranslocoHttpLoader } from './transloco.http-loader';
 
 export const provideTranslation = (): Array<
@@ -15,21 +22,31 @@ export const provideTranslation = (): Array<
   const providers: Array<Provider | EnvironmentProviders> = [
     provideTransloco({
       config: {
-        availableLangs: ['en', 'es'],
+        availableLangs: APP_LANGUAGES.map((l) => l.code),
         defaultLang: 'es',
+        // La convención es key-as-text (la key ES el texto en español), así
+        // que una key faltante devuelve español por construcción; el fallback
+        // queda como red de seguridad.
         fallbackLang: 'es',
         reRenderOnLangChange: true,
+        // Llaves SIMPLES para parámetros ('Vence en {days} días'): con las
+        // {{ }} default, una key con parámetros rompería el parser de
+        // templates de Angular al usarla inline con el pipe.
+        interpolation: ['{', '}'],
         prodMode: !isDevMode(),
       },
       loader: TranslocoHttpLoader,
     }),
+    // Conserva placeholders sin resolver (paginador PrimeNG, params olvidados).
+    provideTranslocoTranspiler(KeepParamsTranspiler),
     provideAppInitializer(() => {
       const initializerFn = (() => {
+        const language = inject(LanguageService);
         const translocoService = inject(TranslocoService);
-        const defaultLang = translocoService.getDefaultLang();
-        translocoService.setActiveLang(defaultLang);
+        // Aplica idioma guardado/navegador y sincroniza PrimeNG.
+        language.init();
         return () =>
-          firstValueFrom(translocoService.load(defaultLang), {
+          firstValueFrom(translocoService.load(language.current()), {
             defaultValue: {},
           });
       })();

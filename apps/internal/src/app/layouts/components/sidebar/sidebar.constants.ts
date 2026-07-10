@@ -33,6 +33,11 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     routerLink: '/paying-accounts',
   },
   {
+    label: 'Leads Enterprise',
+    icon: 'building-2',
+    routerLink: '/enterprise-leads',
+  },
+  {
     label: 'WhatsApp',
     icon: 'message-circle',
     routerLink: '/whatsapp-logs',
@@ -46,6 +51,11 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     label: 'Cupones',
     icon: 'ticket-percent',
     routerLink: '/coupons',
+  },
+  {
+    label: 'Gastos',
+    icon: 'wallet',
+    routerLink: '/expenses',
   },
   {
     label: 'Uso de IA',

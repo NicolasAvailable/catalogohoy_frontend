@@ -1,25 +1,25 @@
 <div class="invoice">
   @if (isLoading()) {
-  <div class="invoice__state">Cargando factura...</div>
+  <div class="invoice__state">{{ 'Cargando factura...' | transloco }}</div>
   } @else if (error()) {
   <div class="invoice__state">
     <ui-icon name="circle-alert" size="28" />
-    <p>{{ error() }}</p>
-    <button type="button" class="invoice__btn-outline" (click)="backToStore()">Volver a la tienda</button>
+    <p>{{ error() | transloco }}</p>
+    <button type="button" class="invoice__btn-outline" (click)="backToStore()">{{ 'Volver a la tienda' | transloco }}</button>
   </div>
   } @else if (order(); as o) {
 
   <!-- Actions (hidden on print) -->
   <div class="invoice__actions">
-    <button type="button" class="invoice__icon-btn invoice__back" (click)="goBack()" title="Volver atrás">
+    <button type="button" class="invoice__icon-btn invoice__back" (click)="goBack()" [title]="'Volver atrás' | transloco">
       <ui-icon name="arrow-left" size="18" />
     </button>
     <div class="invoice__actions-right">
-      <button type="button" class="invoice__icon-btn" (click)="print()" title="Imprimir">
+      <button type="button" class="invoice__icon-btn" (click)="print()" [title]="'Imprimir' | transloco">
         <ui-icon name="printer" size="18" />
       </button>
       <button type="button" class="invoice__icon-btn" (click)="downloadPdf()"
-        [disabled]="isGeneratingPdf()" title="Descargar PDF">
+        [disabled]="isGeneratingPdf()" [title]="'Descargar PDF' | transloco">
         <ui-icon name="download" size="18" />
       </button>
     </div>
@@ -35,13 +35,13 @@
     </header>
 
     <div class="invoice__meta">
-      <div><span>Núm. de factura</span><strong>#{{ displayNumber() }}</strong></div>
-      <div><span>Fecha de pedido</span><strong>{{ o.createdAt | date:'dd MMM yyyy HH:mm' }}</strong></div>
+      <div><span>{{ 'Núm. de factura' | transloco }}</span><strong>#{{ displayNumber() }}</strong></div>
+      <div><span>{{ 'Fecha de pedido' | transloco }}</span><strong>{{ o.createdAt | date:'dd MMM yyyy HH:mm' }}</strong></div>
     </div>
 
     <hr class="invoice__hr" />
 
-    <h2 class="invoice__section">Artículos</h2>
+    <h2 class="invoice__section">{{ 'Artículos' | transloco }}</h2>
     @for (p of o.products; track $index) {
     <div class="invoice__item">
       <span class="invoice__item-qty">{{ p.quantity }}x</span>
@@ -55,16 +55,16 @@
     <hr class="invoice__hr" />
 
     <div class="invoice__row">
-      <span>Subtotal</span><span>{{ cs() }}{{ subtotal() | tenantPrice }}</span>
+      <span>{{ 'Subtotal' | transloco }}</span><span>{{ cs() }}{{ subtotal() | tenantPrice }}</span>
     </div>
     @if (o.shippingMethod) {
     <div class="invoice__row">
-      <span>{{ o.shippingMethod.name || 'Envío' }}</span>
-      <span>@if (o.shippingFee > 0) { {{ cs() }}{{ o.shippingFee | tenantPrice }} } @else { Gratis }</span>
+      <span>{{ o.shippingMethod.name || ('Envío' | transloco) }}</span>
+      <span>@if (o.shippingFee > 0) { {{ cs() }}{{ o.shippingFee | tenantPrice }} } @else { {{ 'Gratis' | transloco }} }</span>
     </div>
     }
     <div class="invoice__row invoice__row--total">
-      <span>Total</span>
+      <span>{{ 'Total' | transloco }}</span>
       <span>
         {{ cs() }}{{ o.totalUsd | tenantPrice }}
         @if (showBs()) { <small>Bs. {{ o.totalBs | number:'1.2-2' }}</small> }
@@ -73,29 +73,29 @@
 
     <hr class="invoice__hr" />
 
-    <h2 class="invoice__section">Detalles del pedido</h2>
+    <h2 class="invoice__section">{{ 'Detalles del pedido' | transloco }}</h2>
     <dl class="invoice__details">
-      <dt>Cliente</dt>
+      <dt>{{ 'Cliente' | transloco }}</dt>
       <dd>{{ o.name }}@if (o.phone) { / {{ o.phone }} }</dd>
-      @if (o.email) { <dt>Correo</dt><dd>{{ o.email }}</dd> }
+      @if (o.email) { <dt>{{ 'Correo' | transloco }}</dt><dd>{{ o.email }}</dd> }
       @if (o.shippingMethod) {
-      <dt>Envío</dt>
+      <dt>{{ 'Envío' | transloco }}</dt>
       <dd>
         {{ o.shippingMethod.name }}
         @if (o.shippingAddress) { <br />{{ o.shippingAddress }} }
       </dd>
       }
-      @if (o.paymentMethod) { <dt>Pago</dt><dd>{{ o.paymentMethod }}</dd> }
-      @if (o.comments) { <dt>Comentarios</dt><dd>{{ o.comments }}</dd> }
+      @if (o.paymentMethod) { <dt>{{ 'Pago' | transloco }}</dt><dd>{{ o.paymentMethod }}</dd> }
+      @if (o.comments) { <dt>{{ 'Comentarios' | transloco }}</dt><dd>{{ o.comments }}</dd> }
     </dl>
   </div>
 
   <div class="invoice__footer">
     <button type="button" class="invoice__btn-primary" (click)="downloadPdf()" [disabled]="isGeneratingPdf()">
       <ui-icon name="download" size="16" />
-      {{ isGeneratingPdf() ? 'Generando...' : 'Descargar PDF' }}
+      {{ (isGeneratingPdf() ? 'Generando...' : 'Descargar PDF') | transloco }}
     </button>
-    <button type="button" class="invoice__btn-outline" (click)="backToStore()">Volver a la tienda</button>
+    <button type="button" class="invoice__btn-outline" (click)="backToStore()">{{ 'Volver a la tienda' | transloco }}</button>
   </div>
   }
 </div>

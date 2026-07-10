@@ -4,10 +4,10 @@
   <header class="checkout-header">
     <div class="checkout-header__brand">
       <ui-icon name="shopping-cart" styleClass="size-6 text-primary" />
-      <h1 class="checkout-header__title">Pagar orden</h1>
+      <h1 class="checkout-header__title">{{ (isRenewal() ? 'Renovar plan' : 'Pagar orden') | transloco }}</h1>
     </div>
     <button class="checkout-header__cancel" (click)="cancel()">
-      Cancelar
+      {{ 'Cancelar' | transloco }}
     </button>
   </header>
 
@@ -18,8 +18,12 @@
     <section class="checkout-plan">
       <div class="checkout-plan__top">
         <div>
-          <h2 class="checkout-plan__name">Plan {{ plan()?.name ?? '' }}</h2>
-          <span class="checkout-plan__subtitle">{{ maxProductsLabel() }}</span>
+          <h2 class="checkout-plan__name">{{ 'Plan' | transloco }} {{ plan()?.name ?? '' }}</h2>
+          <span class="checkout-plan__subtitle">
+            @if (plan(); as p) {
+              {{ p.maxProducts <= 0 ? ('∞ productos' | transloco) : ('Hasta {n} productos' | transloco: { n: p.maxProducts }) }}
+            }
+          </span>
         </div>
       </div>
 
@@ -31,15 +35,15 @@
             [class.checkout-billing-toggle__btn--active]="billingPeriod() === option.key"
             (click)="billingPeriod.set(option.key)"
           >
-            {{ option.label }}
+            {{ option.label | transloco }}
             @if (option.savingsLabel) {
-              <span class="checkout-billing-toggle__savings">{{ option.savingsLabel }}</span>
+              <span class="checkout-billing-toggle__savings">{{ option.savingsLabel | transloco }}</span>
             }
           </button>
         }
       </div>
 
-      <p class="checkout-plan__section-label">¿Qué incluye este plan?</p>
+      <p class="checkout-plan__section-label">{{ '¿Qué incluye este plan?' | transloco }}</p>
 
       @if (!plan()) {
         <div class="checkout-plan__skeleton">
@@ -51,11 +55,11 @@
         <div class="checkout-plan__features-grid">
           @for (section of planSections(); track section.title) {
             <div class="feature-section">
-              <h3 class="feature-section__title">{{ section.title }}</h3>
+              <h3 class="feature-section__title">{{ section.title | transloco }}</h3>
               @for (item of section.items; track item) {
                 <div class="feature-section__item">
                   <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
-                  <span>{{ item }}</span>
+                  <span>{{ item | transloco }}</span>
                 </div>
               }
             </div>
@@ -66,17 +70,17 @@
 
     <!-- ── Right: Payment summary ── -->
     <aside class="checkout-summary">
-      <h2 class="checkout-summary__title">A Pagar</h2>
+      <h2 class="checkout-summary__title">{{ 'A Pagar' | transloco }}</h2>
 
       <!-- BCV rate info — only relevant for VE (charged in USD with Bs. hint) -->
       @if (isVenezuela()) {
         <div class="ves-rate-info">
           @if (isFetchingRate()) {
             <ui-icon name="loader-circle" styleClass="size-3.5 shrink-0 animate-spin text-slate-400" />
-            <span>Cargando tasa...</span>
+            <span>{{ 'Cargando tasa...' | transloco }}</span>
           } @else if (bcvUsdRate()) {
             <ui-icon name="trending-up" styleClass="size-3.5 shrink-0 text-amber-500" />
-            <span>Tasa BCV: <strong>Bs. {{ bcvUsdRate() | number:'1.2-2' }}</strong> / USD</span>
+            <span>{{ 'Tasa BCV:' | transloco }} <strong>Bs. {{ bcvUsdRate() | number:'1.2-2' }}</strong> / USD</span>
           }
         </div>
 
@@ -86,26 +90,32 @@
       <!-- Breakdown -->
       <div class="summary-breakdown">
         <div class="summary-line">
-          <span>Costo del plan x {{ monthsLabel() }}</span>
+          <span>{{ 'Costo del plan x {months}' | transloco: { months: (monthsLabel() | transloco) } }}</span>
           <span>{{ currencySymbol() }}{{ baseCost() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
         </div>
 
         @if (discountAmount() > 0) {
           <div class="summary-line summary-line--discount">
-            <span>Descuento ({{ discountPercent() }}%)</span>
+            <span>{{ 'Descuento ({pct}%)' | transloco: { pct: discountPercent() } }}</span>
             <span>-{{ currencySymbol() }}{{ discountAmount() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
           </div>
         }
         @if (catalogAddonQuantity() > 0) {
           <div class="summary-line">
-            <span>{{ catalogAddonQuantity() }} catálogo{{ catalogAddonQuantity() > 1 ? 's' : '' }} adicional{{ catalogAddonQuantity() > 1 ? 'es' : '' }} x {{ monthsLabel() }}</span>
+            <span>
+              @if (catalogAddonQuantity() > 1) {
+                {{ '{n} catálogos adicionales x {months}' | transloco: { n: catalogAddonQuantity(), months: (monthsLabel() | transloco) } }}
+              } @else {
+                {{ '1 catálogo adicional x {months}' | transloco: { months: (monthsLabel() | transloco) } }}
+              }
+            </span>
             <span>+{{ currencySymbol() }}{{ catalogAddonCost() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
           </div>
         }
         @if (appliedCoupon(); as coupon) {
           <div class="summary-line summary-line--discount">
             <span>
-              Cupón {{ coupon.code }}@if (couponDiscountPercent() != null) { ({{ couponDiscountPercent() }}%) }
+              {{ 'Cupón' | transloco }} {{ coupon.code }}@if (couponDiscountPercent() != null) { ({{ couponDiscountPercent() }}%) }
             </span>
             <span>-{{ currencySymbol() }}{{ couponDiscountAmount() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
           </div>
@@ -113,14 +123,14 @@
         @if (referralInfo(); as ref) {
           <div class="summary-line summary-line--discount">
             <span>
-              🎁 Referido por {{ ref.referrerName ?? ref.referrerSlug }} ({{ ref.discountPct }}%)
+              {{ '🎁 Referido por {name} ({pct}%)' | transloco: { name: ref.referrerName ?? ref.referrerSlug, pct: ref.discountPct } }}
             </span>
             <span>-{{ currencySymbol() }}{{ referralDiscountAmount() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
           </div>
         }
         @if (creditUsedUsd() > 0) {
           <div class="summary-line summary-line--discount">
-            <span>💰 Crédito de referidos aplicado</span>
+            <span>{{ '💰 Crédito de referidos aplicado' | transloco }}</span>
             <span>-{{ currencySymbol() }}{{ creditUsedAmount() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
           </div>
         }
@@ -131,8 +141,8 @@
         <div class="catalog-addon-stepper__info">
           <ui-icon name="folder-plus" styleClass="size-4 shrink-0 text-violet-500" />
           <div class="catalog-addon-stepper__text">
-            <span class="catalog-addon-stepper__label">Catálogos adicionales</span>
-            <span class="catalog-addon-stepper__unit-price">+{{ currencySymbol() }}{{ catalogAddonDisplayCost() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}/{{ periodLabel() }} c/u</span>
+            <span class="catalog-addon-stepper__label">{{ 'Catálogos adicionales' | transloco }}</span>
+            <span class="catalog-addon-stepper__unit-price">+{{ currencySymbol() }}{{ catalogAddonDisplayCost() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}/{{ periodLabel() | transloco }} {{ 'c/u' | transloco }}</span>
           </div>
         </div>
         <div class="catalog-addon-stepper__controls">
@@ -157,14 +167,14 @@
         <input
           class="coupon-input"
           type="text"
-          placeholder="¿Cupón o código de referido?"
+          [placeholder]="'¿Cupón o código de referido?' | transloco"
           [ngModel]="couponInput()"
           (ngModelChange)="couponInput.set($event); couponError.set(null)"
           [disabled]="!!appliedCoupon() || isApplyingCoupon()"
           (keydown.enter)="applyCoupon()"
         />
         @if (appliedCoupon()) {
-          <button class="coupon-apply-btn" (click)="removeCoupon()">Quitar</button>
+          <button class="coupon-apply-btn" (click)="removeCoupon()">{{ 'Quitar' | transloco }}</button>
         } @else {
           <button
             class="coupon-apply-btn"
@@ -174,15 +184,15 @@
             @if (isApplyingCoupon()) {
               <ui-icon name="loader-circle" styleClass="size-4 animate-spin" />
             } @else {
-              Aplicar
+              {{ 'Aplicar' | transloco }}
             }
           </button>
         }
       </div>
-      @if (couponError()) {
+      @if (couponError(); as couponErrorMsg) {
         <p class="coupon-error">
           <ui-icon name="circle-alert" styleClass="size-3.5 shrink-0" />
-          {{ couponError() }}
+          {{ couponErrorMsg | transloco }}
         </p>
       }
 
@@ -195,17 +205,17 @@
           />
           <div class="referral-credit-row__text">
             <span class="referral-credit-row__title">
-              🎁 Aplicar mi crédito de referidos
+              {{ '🎁 Aplicar mi crédito de referidos' | transloco }}
             </span>
             <span class="referral-credit-row__subtitle">
-              Tenés ${{ availableCreditUsd() | number: '1.2-2' }} USD disponibles. Se descuentan automáticamente del total.
+              {{ 'Tenés ${amount} USD disponibles. Se descuentan automáticamente del total.' | transloco: { amount: (availableCreditUsd() | number: '1.2-2') } }}
             </span>
           </div>
         </label>
         @if (useReferralCredit() && paymentMethod() === 'card') {
           <p class="referral-credit-notice">
             <ui-icon name="info" styleClass="size-3.5 shrink-0 text-amber-500" />
-            Por ahora el crédito de referidos se aplica solo pagando por Pago Móvil. Cambiá el método de pago para continuar.
+            {{ 'Por ahora el crédito de referidos se aplica solo pagando por Pago Móvil. Cambiá el método de pago para continuar.' | transloco }}
           </p>
         }
       }
@@ -214,7 +224,7 @@
 
       <!-- Payment method -->
       <div class="payment-method-section">
-        <span class="payment-method-section__label">Método de pago</span>
+        <span class="payment-method-section__label">{{ 'Método de pago' | transloco }}</span>
         <div class="payment-method-toggle">
           <button
             class="payment-method-toggle__btn"
@@ -222,7 +232,7 @@
             (click)="paymentMethod.set('card')"
           >
             <ui-icon name="credit-card" styleClass="size-4 shrink-0" />
-            Tarjeta internacional
+            {{ 'Tarjeta' | transloco }}
           </button>
           @if (isVenezuela()) {
             <button
@@ -231,14 +241,14 @@
               (click)="paymentMethod.set('mobile')"
             >
               <ui-icon name="smartphone" styleClass="size-4 shrink-0" />
-              Pago móvil
+              {{ 'Pago móvil' | transloco }}
             </button>
           }
         </div>
         @if (isVenezuela() && paymentMethod() === 'mobile') {
           <div class="ves-payment-note">
             <ui-icon name="info" styleClass="size-4 shrink-0 text-amber-500" />
-            <span>El pago es por transferencia bancaria o Pago Móvil. Al confirmar te enviaremos al WhatsApp del administrador para coordinar el pago.</span>
+            <span>{{ 'El pago es por transferencia bancaria o Pago Móvil. Al confirmar te enviaremos al WhatsApp del administrador para coordinar el pago.' | transloco }}</span>
           </div>
         }
       </div>
@@ -247,13 +257,17 @@
 
       @if (isUpgrade()) {
       <div class="summary-line summary-line--info" style="margin-bottom: 0.5rem;">
-        <span>💡 Ya tienes el plan {{ currentPlanName() }} — solo pagas la diferencia</span>
+        <span>{{ '💡 Ya tienes el plan {plan} — solo pagas la diferencia' | transloco: { plan: currentPlanName() } }}</span>
+      </div>
+      } @else if (isRenewal()) {
+      <div class="summary-line summary-line--info" style="margin-bottom: 0.5rem;">
+        <span>{{ '🔄 Estás renovando tu plan {plan} por {months}' | transloco: { plan: currentPlanName(), months: (monthsLabel() | transloco) } }}</span>
       </div>
       }
 
       <!-- Total -->
       <div class="summary-total">
-        <span class="summary-total__label">Total a pagar</span>
+        <span class="summary-total__label">{{ 'Total a pagar' | transloco }}</span>
         <div class="summary-total__amounts">
           <span class="summary-total__amount">{{ currencySymbol() }}{{ total() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }} {{ currencyCode() }}</span>
           @if (isVenezuela() && totalVes()) {
@@ -263,10 +277,10 @@
       </div>
 
       <!-- Error -->
-      @if (error()) {
+      @if (error(); as errorMsg) {
         <p class="checkout-error">
           <ui-icon name="circle-alert" styleClass="size-4 shrink-0" />
-          {{ error() }}
+          {{ errorMsg | transloco }}
         </p>
       }
 
@@ -278,7 +292,7 @@
           }
         </div>
         <span>
-          He leído, comprendo y acepto los
+          {{ 'He leído, comprendo y acepto los' | transloco }}
           <a
             class="terms-link"
             href="/admin/plans/terms"
@@ -286,7 +300,7 @@
             rel="noopener noreferrer"
             (click)="$event.stopPropagation()"
           >
-            términos y condiciones de servicio
+            {{ 'términos y condiciones de servicio' | transloco }}
           </a>
         </span>
       </label>
@@ -301,13 +315,13 @@
       >
         @if (isLoading()) {
           <ui-icon name="loader-circle" styleClass="size-5 animate-spin" />
-          Procesando...
+          {{ 'Procesando...' | transloco }}
         } @else if (paymentMethod() === 'card') {
           <ui-icon name="credit-card" styleClass="size-5" />
-          Pagar con tarjeta
+          {{ (isRenewal() ? 'Renovar con tarjeta' : 'Pagar con tarjeta') | transloco }}
         } @else {
           <ui-icon name="message-circle" styleClass="size-5" />
-          Coordinar pago por WhatsApp
+          {{ 'Coordinar pago por WhatsApp' | transloco }}
         }
       </button>
     </aside>

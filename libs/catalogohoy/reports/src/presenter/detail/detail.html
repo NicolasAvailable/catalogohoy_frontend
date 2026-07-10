@@ -1,7 +1,7 @@
 <section class="report-detail">
   <header class="report-detail__header">
     <h1 class="text-2xl sm:text-4xl font-bold shrink truncate">
-      {{ report()?.title ?? 'Reporte' }}
+      {{ report()?.title ?? ('Reporte' | transloco) }}
     </h1>
     @if (report()) {
       <div class="flex gap-2 items-center flex-wrap justify-end">
@@ -21,7 +21,7 @@
         />
         <ui-button
           class="hidden sm:block"
-          label="Abrir público"
+          [label]="'Abrir público' | transloco"
           icon="external-link"
           variant="outlined"
           severity="contrast"
@@ -29,7 +29,7 @@
           (click)="openPublicLink()"
         />
         <ui-button
-          label="Descargar PDF"
+          [label]="'Descargar PDF' | transloco"
           icon="download"
           severity="primary"
           [fluid]="false"

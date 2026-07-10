@@ -48,7 +48,7 @@
       <button
         (click)="toggleCatalogSwitcher()"
         class="shrink-0 w-7 h-7 flex items-center justify-center rounded-md hover:bg-primary-50 transition-colors cursor-pointer"
-        title="Gestionar catálogos"
+        [title]="'Gestionar catálogos' | transloco"
       >
         <ui-icon
           name="chevrons-up-down"
@@ -98,7 +98,7 @@
             class="flex items-center gap-2 px-3 py-2.5 hover:bg-primary-50 transition-colors w-full text-left"
           >
             <ui-icon name="plus" size="16" styleClass="text-primary-500 shrink-0" />
-            <span class="text-sm font-medium text-primary-600">Crear catálogo</span>
+            <span class="text-sm font-medium text-primary-600">{{ 'Crear catálogo' | transloco }}</span>
           </button>
         </div>
       </div>
@@ -113,18 +113,18 @@
       class="flex items-center gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
     >
       <ui-icon name="home" size="16" />
-      <a class="font-base font-semibold text-grey-700 mt-0.5">Inicio</a>
+      <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Inicio' | transloco }}</a>
     </li>
     <li class="flex items-center gap-2 w-full rounded-md">
       @if (!canViewProducts()) {
         <div
           class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md opacity-50 cursor-not-allowed"
-          [pTooltip]="noPermissionTooltip"
+          [pTooltip]="noPermissionTooltip | transloco"
           tooltipPosition="right"
         >
           <div class="flex items-center gap-2">
             <ui-icon name="tag" size="16" styleClass="text-grey-700" />
-            <span class="font-base font-semibold text-grey-700 mt-0.5">Productos</span>
+            <span class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Productos' | transloco }}</span>
           </div>
           <ui-icon name="lock" size="12" styleClass="text-grey-400" />
         </div>
@@ -146,7 +146,7 @@
                 @if (item?.icon) {
                 <ui-icon [name]="item?.icon" size="16" styleClass="text-grey-700" />
                 }
-                <a [ngClass]="{ 'ml-2': !item?.icon }" class="font-base font-semibold text-grey-700 mt-0.5">{{item.label}}</a>
+                <a [ngClass]="{ 'ml-2': !item?.icon }" class="font-base font-semibold text-grey-700 mt-0.5">{{ item.label | transloco }}</a>
               </div>
               @if (item?.iconNext) {
               <ui-icon [name]="item?.iconNext" [ngClass]="{ 'rotate-90': item?.state?.isOpen }" size="16" class="transition-transform duration-200 ease-in-out" styleClass="text-grey-700" />
@@ -163,20 +163,20 @@
       [class.opacity-50]="!canViewOrders()"
       [class.cursor-not-allowed]="!canViewOrders()"
       [class.cursor-pointer]="canViewOrders()"
-      [pTooltip]="!canViewOrders() ? noPermissionTooltip : ''"
+      [pTooltip]="!canViewOrders() ? (noPermissionTooltip | transloco) : ''"
       tooltipPosition="right"
       class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
     >
       <div class="flex items-center gap-2">
         <ui-icon name="notepad-text" size="16" />
-        <a class="font-base font-semibold text-grey-700 mt-0.5">Ordenes</a>
+        <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Ordenes' | transloco }}</a>
       </div>
       @if (!canViewOrders()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
       } @else if (pendingOrdersCount() > 0) {
         <span
           class="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-primary-500 text-white text-[11px] font-bold leading-none"
-          [pTooltip]="pendingOrdersCount() === 1 ? '1 pedido pendiente' : pendingOrdersCount() + ' pedidos pendientes'"
+          [pTooltip]="pendingOrdersCount() === 1 ? ('1 pedido pendiente' | transloco) : ('{count} pedidos pendientes' | transloco: { count: pendingOrdersCount() })"
           tooltipPosition="right"
         >
           {{ pendingOrdersCount() > 99 ? '99+' : pendingOrdersCount() }}
@@ -190,18 +190,47 @@
       [class.opacity-50]="!canViewClients()"
       [class.cursor-not-allowed]="!canViewClients()"
       [class.cursor-pointer]="canViewClients()"
-      [pTooltip]="!canViewClients() ? noPermissionTooltip : ''"
+      [pTooltip]="!canViewClients() ? (noPermissionTooltip | transloco) : ''"
       tooltipPosition="right"
       class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
     >
       <div class="flex items-center gap-2">
         <ui-icon name="contact" size="16" />
-        <a class="font-base font-semibold text-grey-700 mt-0.5">Clientes</a>
+        <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Clientes' | transloco }}</a>
       </div>
       @if (!canViewClients()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
       }
     </li>
+    @if (canViewChat()) {
+    <li>
+      <ui-panel-menu
+        [items]="chatMenu"
+        [transitionOptions]="transitionOptions"
+        class="w-full"
+        styleClass="w-full"
+      >
+        <ng-template #item let-item>
+          <div
+            (click)="toggle(item)"
+            [routerLink]="item.routerLink"
+            [ngClass]="{ 'bg-primary-50': isActive(item) }"
+            class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+          >
+            <div class="flex items-center gap-2">
+              @if (item?.icon) {
+              <ui-icon [name]="item?.icon" size="16" styleClass="text-grey-700" />
+              }
+              <a [ngClass]="{ 'ml-2': !item?.icon }" class="font-base font-semibold text-grey-700 mt-0.5">{{ item.label | transloco }}</a>
+            </div>
+            @if (item?.iconNext) {
+            <ui-icon [name]="item?.iconNext" [ngClass]="{ 'rotate-90': item?.state?.isOpen }" size="16" class="transition-transform duration-200 ease-in-out" styleClass="text-grey-700" />
+            }
+          </div>
+        </ng-template>
+      </ui-panel-menu>
+    </li>
+    }
     <li
       [routerLink]="(analyticsLocked() || !canViewAnalytics()) ? null : '/admin/analytics'"
       [routerLinkActive]="(analyticsLocked() || !canViewAnalytics()) ? '' : 'bg-primary-50'"
@@ -209,18 +238,18 @@
       [class.opacity-60]="analyticsLocked() || !canViewAnalytics()"
       [class.cursor-not-allowed]="analyticsLocked() || !canViewAnalytics()"
       [class.cursor-pointer]="!analyticsLocked() && canViewAnalytics()"
-      [pTooltip]="(!canViewAnalytics() && !analyticsLocked()) ? noPermissionTooltip : ''"
+      [pTooltip]="(!canViewAnalytics() && !analyticsLocked()) ? (noPermissionTooltip | transloco) : ''"
       tooltipPosition="right"
       class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
     >
       <div class="flex items-center gap-2">
         <ui-icon name="bar-chart-3" size="16" />
-        <a class="font-base font-semibold text-grey-700 mt-0.5">Analíticas</a>
+        <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Analíticas' | transloco }}</a>
       </div>
       @if (analyticsLocked()) {
         <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none">
           <ui-icon name="crown" size="10" styleClass="text-indigo-500" />
-          Pro
+          {{ 'Pro' | transloco }}
         </span>
       } @else if (!canViewAnalytics()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
@@ -233,19 +262,19 @@
       [class.opacity-50]="!canViewReports()"
       [class.cursor-not-allowed]="!canViewReports()"
       [class.cursor-pointer]="canViewReports()"
-      [pTooltip]="!canViewReports() ? noPermissionTooltip : ''"
+      [pTooltip]="!canViewReports() ? (noPermissionTooltip | transloco) : ''"
       tooltipPosition="right"
       class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
     >
       <div class="flex items-center gap-2">
         <ui-icon name="clipboard-list" size="16" />
-        <a class="font-base font-semibold text-grey-700 mt-0.5">Reportes</a>
+        <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Reportes' | transloco }}</a>
       </div>
       @if (!canViewReports()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
       } @else {
         <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
-          Nuevo
+          {{ 'Nuevo' | transloco }}
         </span>
       }
     </li>
@@ -259,13 +288,13 @@
         [class.opacity-50]="!canViewRates()"
         [class.cursor-not-allowed]="!canViewRates()"
         [class.cursor-pointer]="canViewRates()"
-        [pTooltip]="!canViewRates() ? noPermissionTooltip : ''"
+        [pTooltip]="!canViewRates() ? (noPermissionTooltip | transloco) : ''"
         tooltipPosition="right"
         class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
       >
         <div class="flex items-center gap-2">
           <ui-icon name="dollar-sign" size="16" />
-          <a class="font-base font-semibold text-grey-700 mt-0.5">Tasas del día</a>
+          <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Tasas del día' | transloco }}</a>
         </div>
         @if (!canViewRates()) {
           <ui-icon name="lock" size="12" styleClass="text-grey-400" />
@@ -279,18 +308,18 @@
       [class.opacity-60]="teamsLocked() || !canViewTeam()"
       [class.cursor-not-allowed]="teamsLocked() || !canViewTeam()"
       [class.cursor-pointer]="!teamsLocked() && canViewTeam()"
-      [pTooltip]="(!canViewTeam() && !teamsLocked()) ? noPermissionTooltip : ''"
+      [pTooltip]="(!canViewTeam() && !teamsLocked()) ? (noPermissionTooltip | transloco) : ''"
       tooltipPosition="right"
       class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
     >
       <div class="flex items-center gap-2">
         <ui-icon name="users" size="16" />
-        <a class="font-base font-semibold text-grey-700 mt-0.5">Equipo</a>
+        <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Equipo' | transloco }}</a>
       </div>
       @if (teamsLocked()) {
         <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none">
           <ui-icon name="crown" size="10" styleClass="text-indigo-500" />
-          Pro
+          {{ 'Pro' | transloco }}
         </span>
       } @else if (!canViewTeam()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
@@ -304,22 +333,22 @@
     >
       <div class="flex items-center gap-2">
         <ui-icon name="gift" size="16" />
-        <a class="font-base font-semibold text-grey-700 mt-0.5">Referidos</a>
+        <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Referidos' | transloco }}</a>
       </div>
       <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
-        Nuevo
+        {{ 'Nuevo' | transloco }}
       </span>
     </li>
     <li class="flex items-center gap-2 w-full rounded-md">
       @if (!canViewCatalog()) {
         <div
           class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md opacity-50 cursor-not-allowed"
-          [pTooltip]="noPermissionTooltip"
+          [pTooltip]="noPermissionTooltip | transloco"
           tooltipPosition="right"
         >
           <div class="flex items-center gap-2">
             <ui-icon name="store" size="16" styleClass="text-grey-700" />
-            <span class="font-base font-semibold text-grey-700 mt-0.5">Mi catálogo</span>
+            <span class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Mi catálogo' | transloco }}</span>
           </div>
           <ui-icon name="lock" size="12" styleClass="text-grey-400" />
         </div>
@@ -341,7 +370,7 @@
                 @if (item?.icon) {
                 <ui-icon [name]="item?.icon" size="16" styleClass="text-grey-700" />
                 }
-                <a [ngClass]="{ 'ml-2': !item?.icon }" class="font-base font-semibold text-grey-700 mt-0.5">{{item.label}}</a>
+                <a [ngClass]="{ 'ml-2': !item?.icon }" class="font-base font-semibold text-grey-700 mt-0.5">{{ item.label | transloco }}</a>
               </div>
               @if (item?.iconNext) {
               <ui-icon [name]="item?.iconNext" [ngClass]="{ 'rotate-90': item?.state?.isOpen }" size="16" class="transition-transform duration-200 ease-in-out" styleClass="text-grey-700" />
@@ -359,7 +388,7 @@
         class="flex items-center gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-red-50 transition-colors duration-100 ease-in-out"
       >
         <ui-icon name="log-out" size="16" styleClass="text-red-400" />
-        <h4 class="text-base font-semibold text-red-400">Cerrar sesión</h4>
+        <h4 class="text-base font-semibold text-red-400">{{ 'Cerrar sesión' | transloco }}</h4>
       </div>
     </div>
   </div>

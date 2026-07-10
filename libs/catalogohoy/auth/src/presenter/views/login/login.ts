@@ -1,6 +1,8 @@
 import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { LanguageSelectorComponent } from '@catalogohoy/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import {
   ButtonComponent,
@@ -22,6 +24,8 @@ import { LoginCredentials } from '../../../domain';
     InputPasswordComponent,
     ButtonComponent,
     IconComponent,
+    LanguageSelectorComponent,
+    TranslocoPipe,
   ],
   templateUrl: './login.html',
 })

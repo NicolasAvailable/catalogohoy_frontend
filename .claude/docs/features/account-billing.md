@@ -4,15 +4,30 @@
 
 ## plan (`@catalogohoy/plan`)
 
-- **Rol**: planes (gratis/basico/avanzado), límites, expiración/gracia, checkout Stripe.
+- **Rol**: planes (gratis/basico/avanzado/enterprise), límites, expiración/gracia, checkout Stripe.
+- **Card Enterprise OCULTA** (2026-07-08): `ENTERPRISE_CARD_VISIBLE = false` en `plans.ts` (app)
+  y `Pricing.tsx` (landing) — el grid volvió a 3 columnas. Un tenant que YA es enterprise sí ve
+  su card (`plans-grid--four`). El funnel (dialog, edge function, /ventas, panel interno) sigue
+  vivo; para re-mostrarla, flip del flag en ambos lados.
 - **`PlanStore`** (computed clave): `canCreateProduct/Catalog`, `remainingProducts/catalogs`,
   `currentPlan`, `maxVariants/maxTeamMembers`, `isPlanExpired`, `inGracePeriod`,
-  `daysUntilExpiration`, `showExpirationBanner` (≤6 días), `currentPlanPalette` (colores por plan).
-  `loadTenantPlanUsage()` se cachea (singleton).
-- **`CheckoutService`** invoca edge functions: `create-checkout-session`, `cancel-subscription`,
-  `create-catalog-checkout`, `update-catalog-slots`, `validate-promotion-code`.
+  `daysUntilExpiration`, `showExpirationBanner` (≤6 días **y sin auto-renovación**: si
+  `tenants.stripe_subscription_status = 'active'` el banner se oculta — Stripe renueva solo;
+  solo los planes manuales (pago móvil VE / WhatsApp) ven el banner con "Renovar plan"),
+  `currentPlanPalette` (colores por plan). `loadTenantPlanUsage()` se cachea (singleton).
+- **`CheckoutService`** invoca edge functions: `create-checkout-session`, `cancel-subscription`
+  (⚠️ **no está deployada en prod** — ese flujo falla hoy), `create-catalog-checkout`,
+  `update-catalog-slots`, `validate-promotion-code`.
 - **Presenter**: `plans` (cards con features; `negative:true` = lo que NO incluye, con X),
-  `plan-checkout`, `plan-success`, `expiration-banner`, `plan-expired-dialog`, `plan-limit-dialog`.
+  `plan-checkout`, `plan-success`, `expiration-banner`, `plan-expired-dialog`, `plan-limit-dialog`,
+  `enterprise-contact-dialog` (funnel multi-step de "Contactar ventas").
+- **Enterprise (2026-07-07)**: la fila `enterprise` de la DB se **filtra** del grid de cards y se
+  renderiza como banda `.plan-band` debajo (estática). CTA abre `enterprise-contact-dialog`
+  (wizard de 5 pasos + resultado, prefill de TenantStore/ProfileStore/TenantCurrencyStore) →
+  `EnterpriseLeadService` (infra) → edge function `enterprise-lead`. Scoring/filtro suave y
+  Calendly en `domain/enterprise.model.ts` (`scoreEnterpriseLead`, `CALENDLY_ENTERPRISE_URL`).
+  `plan-checkout` redirige a `/admin/plans` si el plan no está en `PLAN_BASE_PRICES` (enterprise
+  y gratis no tienen checkout). Reglas de negocio y scoring: `business-rules.md → Planes`.
 - **Reglas clave**: `max_products = 0` = ilimitado. Catálogos extra son a nivel de **owner**
   (agregados desde cualquier tenant). Expiración = flag **Y** fecha pasada (gracia ~3 días).
   La **mención de créditos** está en `plans.ts` (features de cada plan: 5/150/500).
@@ -65,3 +80,13 @@
   `tenant_ecommerce_config` hay que agregarlas también ahí; la migración del repo está atrás de prod.
 - Editor tiene preview en vivo del catálogo vía `postMessage` (`PreviewMessage`) +
   `unsaved-changes.guard`.
+- **Cambio de slug** (tab General → card propia "Dirección del catálogo", al final, debajo de
+  Comportamiento — botón "Cambiar dirección" con confirm dialog, a propósito FUERA del
+  "Guardar cambios" unificado): RPC `change_tenant_slug`
+  (security definer) valida owner, formato, unicidad, subdominios reservados y **máx 2 cambios
+  por ventana rodante de 30 días** (historial en `tenant_slug_changes`, RLS de lectura para
+  miembros). Al guardar con slug cambiado, el admin redirige a
+  `https://<nuevo>.catalogohoy.com/admin/catalog/edit?sb-…-auth-token=<token>` — el mismo
+  hand-off de sesión por query param que usa el login (AppComponent lo persiste a localStorage
+  del origen nuevo). En dev o custom domain solo recarga. Los links/QR viejos con el slug
+  anterior dejan de funcionar (no hay redirect del slug viejo).

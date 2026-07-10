@@ -5,6 +5,7 @@ import {
   FormsModule,
   NG_VALUE_ACCESSOR,
 } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { SelectModule } from 'primeng/select';
 
 @_.Directive({ selector: '[selectSelectedItem]', standalone: true })
@@ -15,7 +16,7 @@ export class SelectItemDirective {}
 
 @_.Component({
   selector: 'ui-select',
-  imports: [CommonModule, FormsModule, SelectModule],
+  imports: [CommonModule, FormsModule, SelectModule, TranslocoPipe],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -33,7 +34,8 @@ export class SelectItemDirective {}
       [optionValue]="optionValue()"
       [disabled]="disabled()"
       [filter]="filter()"
-      [filterPlaceholder]="filterPlaceholder()"
+      [filterBy]="filterBy()"
+      [filterPlaceholder]="filterPlaceholder() | transloco"
       [variant]="variant()"
       [attr.mode]="mode()"
       [virtualScroll]="virtualScroll()"
@@ -46,8 +48,8 @@ export class SelectItemDirective {}
       [appendTo]="appendTo()"
       [id]="selectId()"
       [panelStyleClass]="panelStyleClass()"
-      [emptyMessage]="emptyMessage()"
-      [emptyFilterMessage]="emptyFilterMessage()"
+      [emptyMessage]="emptyMessage() | transloco"
+      [emptyFilterMessage]="emptyFilterMessage() | transloco"
     >
       <ng-template #selectedItem let-selected>
         @if(selectedItemTemplate()) {
@@ -83,6 +85,9 @@ export class SelectComponent<T>
   public readonly height = _.input<string>('12rem');
   public readonly clearable = _.input(false);
   public readonly filter = _.input(false);
+  /** Campos (separados por coma) sobre los que busca el filtro; si se omite,
+   *  PrimeNG usa el optionLabel. Ej: "name,sku,description". */
+  public readonly filterBy = _.input<string | undefined>(undefined);
   public readonly variant = _.input<'filled' | 'outlined'>('outlined');
   public readonly mode = _.input<'text' | 'normal'>('normal');
   public readonly size = _.input<'small' | 'large' | undefined>(undefined);

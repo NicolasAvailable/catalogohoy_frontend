@@ -31,6 +31,13 @@ export const internalRoutes: Route[] = [
       ),
   },
   {
+    path: 'enterprise-leads',
+    loadChildren: () =>
+      import('./enterprise-leads/enterprise-leads.routes').then(
+        (m) => m.enterpriseLeadsRoutes
+      ),
+  },
+  {
     path: 'whatsapp-logs',
     loadChildren: () =>
       import('./whatsapp-logs/whatsapp-logs.routes').then(
@@ -46,6 +53,13 @@ export const internalRoutes: Route[] = [
     path: 'coupons',
     loadChildren: () =>
       import('./coupons/coupons.routes').then((m) => m.couponsRoutes),
+  },
+  {
+    path: 'expenses',
+    loadChildren: () =>
+      import('./business-expenses/business-expenses.routes').then(
+        (m) => m.businessExpensesRoutes
+      ),
   },
   {
     path: 'orders',

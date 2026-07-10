@@ -6,6 +6,7 @@ import {
   findCountryByCode,
   TenantCurrencyStore,
 } from '@catalogohoy/ecommerce-config';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '@ui';
 import {
   BillingPeriod,
@@ -98,7 +99,7 @@ const WHATSAPP_NUMBER = '584220240947';
 
 @Component({
   selector: 'lib-plan-checkout',
-  imports: [IconComponent, DecimalPipe, FormsModule],
+  imports: [IconComponent, DecimalPipe, FormsModule, TranslocoPipe],
   templateUrl: './plan-checkout.html',
   styleUrl: './plan-checkout.css',
   host: { class: 'flex-1 flex flex-col min-h-0' },
@@ -203,6 +204,16 @@ export class PlanCheckout implements OnInit {
   public readonly currentPlanName = computed(
     () => this.planStore.currentPlan()?.name ?? ''
   );
+
+  /** Renovación: el tenant ya tiene ESTE mismo plan con una suscripción de
+   *  Stripe. El checkout cobra el plan completo y el webhook cancela la
+   *  suscripción anterior (previous_subscription_id). Sirve para mostrar copy
+   *  de "renovación" en vez de "compra". */
+  public readonly isRenewal = computed(() => {
+    const current = this.planStore.currentPlan();
+    const hasStripe = this.planStore.tenantPlanUsage()?.hasStripeSubscription ?? false;
+    return hasStripe && !!current && !current.isFree && current.id === this.planId();
+  });
 
   public readonly currentPlanPrice = computed(() => {
     const current = this.planStore.currentPlan();
@@ -352,6 +363,13 @@ export class PlanCheckout implements OnInit {
   async ngOnInit(): Promise<void> {
     const planId = this.route.snapshot.paramMap.get('planId') ?? '';
     const period = (this.route.snapshot.queryParamMap.get('period') as BillingPeriod) ?? 'monthly';
+
+    // Solo los planes con precio tienen checkout self-service (cubre
+    // 'gratis' y 'enterprise', que se contrata vía ventas).
+    if (!PLAN_BASE_PRICES[planId]) {
+      this.router.navigate(['/admin/plans']);
+      return;
+    }
 
     this.planId.set(planId);
     this.billingPeriod.set(period);
@@ -516,7 +534,7 @@ export class PlanCheckout implements OnInit {
 
     const referral = this.referralInfo();
 
-    let msg = `Hola! Quiero adquirir el *${planName}* en CatálogoHoy\n\n`;
+    let msg = `Hola! Quiero adquirir el *${planName}* en CatalogoHoy\n\n`;
     msg += `- *Plan:* ${planName}\n`;
     msg += `- *Periodo:* ${periodStr}\n`;
     if (catalogs > 0) {

@@ -2,15 +2,15 @@
   <!-- Header -->
   <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
     <div>
-      <h1 class="text-2xl sm:text-3xl font-bold text-grey-800 mb-1">Clientes</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold text-grey-800 mb-1">{{ 'Clientes' | transloco }}</h1>
       <p class="text-sm sm:text-base text-grey-400">
-        Gestiona tus clientes: etiquétalos, edítalos o créalos manualmente
+        {{ 'Gestiona tus clientes: etiquétalos, edítalos o créalos manualmente' | transloco }}
       </p>
     </div>
     <div class="flex items-center gap-2 flex-wrap justify-end">
       @if (selectedCount() > 0) {
         <span class="text-sm font-semibold text-primary-700 mr-1">
-          {{ selectedCount() }} seleccionado{{ selectedCount() === 1 ? '' : 's' }}
+          {{ (selectedCount() === 1 ? '{n} seleccionado' : '{n} seleccionados') | transloco: { n: selectedCount() } }}
         </span>
         <ui-button
           label="Añadir etiqueta"
@@ -79,7 +79,7 @@
             [class.text-grey-500]="selectedTagId() !== null"
             [class.border-grey-200]="selectedTagId() !== null"
           >
-            Todas
+            {{ 'Todas' | transloco }}
           </button>
           @for (tag of clientStore.tags(); track tag.id) {
             <span
@@ -101,7 +101,7 @@
                 type="button"
                 (click)="onDeleteTag(tag.id, $event)"
                 class="flex items-center justify-center w-4 h-4 rounded-full hover:bg-black/10 cursor-pointer"
-                title="Eliminar etiqueta"
+                [title]="'Eliminar etiqueta' | transloco"
               >
                 <ui-icon name="x" styleClass="size-3" />
               </button>
@@ -150,7 +150,7 @@
               <lib-client-row-tags [client]="client" />
             </div>
             <div>
-              <span class="text-grey-800 font-bold">Teléfono: </span>
+              <span class="text-grey-800 font-bold">{{ 'Teléfono' | transloco }}: </span>
               <a
                 [href]="getWhatsAppLink(client.phone)"
                 target="_blank"
@@ -160,7 +160,7 @@
             </div>
             @if (client.email) {
             <div>
-              <span class="text-grey-800 font-bold">Correo: </span>
+              <span class="text-grey-800 font-bold">{{ 'Correo' | transloco }}: </span>
               <a
                 [href]="'mailto:' + client.email"
                 (click)="$event.stopPropagation()"
@@ -169,11 +169,11 @@
             </div>
             }
             <div>
-              <span class="text-grey-800 font-bold">Pedidos: </span>
+              <span class="text-grey-800 font-bold">{{ 'Pedidos' | transloco }}: </span>
               <span class="text-primary-600 font-bold">{{ client.totalOrders }}</span>
             </div>
             <div>
-              <span class="text-grey-800 font-bold">Total: </span>
+              <span class="text-grey-800 font-bold">{{ 'Total' | transloco }}: </span>
               <span class="font-bold text-primary-600">{{ cs() }}{{ client.totalSpentUsd | number:'1.2-2' }}</span>
             </div>
           </div>
@@ -186,6 +186,14 @@
               [fluid]="false"
               (click)="openEdit(client, $event)"
             />
+            <ui-button
+              icon="trash"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+              [fluid]="false"
+              (click)="onDeleteClient(client, $event)"
+            />
           </div>
         </div>
         } @empty {
@@ -193,9 +201,9 @@
           <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
             <ui-icon name="users" styleClass="size-8 text-primary-400" />
           </div>
-          <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes clientes todavía</h3>
+          <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes clientes todavía' | transloco }}</h3>
           <p class="text-grey-300 text-sm mb-6 max-w-sm">
-            Crea uno manualmente o aparecerán automáticamente cuando recibas pedidos.
+            {{ 'Crea uno manualmente o aparecerán automáticamente cuando recibas pedidos.' | transloco }}
           </p>
         </div>
         }
@@ -215,13 +223,13 @@
                 (valueChange)="toggleAllVisible()"
               />
             </th>
-            <th class="px-6 py-3 border-b border-grey-50">Cliente</th>
-            <th class="px-6 py-3 border-b border-grey-50">Etiquetas</th>
-            <th class="px-6 py-3 border-b border-grey-50">Teléfono</th>
-            <th class="px-6 py-3 border-b border-grey-50">Correo</th>
-            <th class="px-6 py-3 border-b border-grey-50 text-center">Pedidos</th>
-            <th class="px-6 py-3 border-b border-grey-50">Total gastado</th>
-            <th class="px-6 py-3 border-b border-grey-50 text-right">Acciones</th>
+            <th class="px-6 py-3 border-b border-grey-50">{{ 'Cliente' | transloco }}</th>
+            <th class="px-6 py-3 border-b border-grey-50">{{ 'Etiquetas' | transloco }}</th>
+            <th class="px-6 py-3 border-b border-grey-50">{{ 'Teléfono' | transloco }}</th>
+            <th class="px-6 py-3 border-b border-grey-50">{{ 'Correo' | transloco }}</th>
+            <th class="px-6 py-3 border-b border-grey-50 text-center">{{ 'Pedidos' | transloco }}</th>
+            <th class="px-6 py-3 border-b border-grey-50">{{ 'Total gastado' | transloco }}</th>
+            <th class="px-6 py-3 border-b border-grey-50 text-right">{{ 'Acciones' | transloco }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-grey-50">
@@ -314,9 +322,19 @@
                       severity="contrast"
                       size="small"
                       [fluid]="false"
-                      tooltip="Editar"
+                      [tooltip]="'Editar' | transloco"
                       tooltipPosition="bottom"
                       (click)="openEdit(client, $event)"
+                    />
+                    <ui-button
+                      icon="trash"
+                      variant="outlined"
+                      severity="contrast"
+                      size="small"
+                      [fluid]="false"
+                      [tooltip]="'Eliminar' | transloco"
+                      tooltipPosition="bottom"
+                      (click)="onDeleteClient(client, $event)"
                     />
                   </div>
                 </td>
@@ -328,9 +346,9 @@
                     <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
                       <ui-icon name="users" styleClass="size-8 text-primary-400" />
                     </div>
-                    <h3 class="text-lg font-bold text-grey-700 mb-1">No tienes clientes todavía</h3>
+                    <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes clientes todavía' | transloco }}</h3>
                     <p class="text-grey-300 text-sm mb-6 max-w-sm">
-                      Crea uno manualmente o aparecerán automáticamente cuando recibas pedidos.
+                      {{ 'Crea uno manualmente o aparecerán automáticamente cuando recibas pedidos.' | transloco }}
                     </p>
                     <ui-button label="Añadir cliente" icon="user-plus" [fluid]="false" (click)="openAdd()" />
                   </div>
@@ -347,7 +365,7 @@
       class="p-4 sm:pr-16 bg-grey-25 border-t border-grey-50 flex items-center justify-between gap-2 flex-wrap"
     >
       <span class="text-xs text-grey-400 font-medium">
-        Mostrando {{ currentPageClients().length }} · Total: {{ filteredClients().length }} clientes
+        {{ 'Mostrando {shown} · Total: {total} clientes' | transloco: { shown: currentPageClients().length, total: filteredClients().length } }}
       </span>
       <p-paginator
         [first]="pageFirst()"
@@ -378,8 +396,8 @@
 <ui-dialog #assignDialog headerTitle="Añadir etiqueta" styleClass="max-w-md w-full">
   <div class="flex flex-col gap-4 pt-1">
     <p class="text-sm text-grey-400">
-      Se asignará la etiqueta a los
-      <strong>{{ selectedCount() }}</strong> clientes seleccionados.
+      {{ 'Se asignará la etiqueta a los' | transloco }}
+      <strong>{{ selectedCount() }}</strong> {{ 'clientes seleccionados.' | transloco }}
     </p>
     <ui-select
       [options]="clientStore.tags()"
@@ -387,10 +405,10 @@
       (ngModelChange)="bulkTagId.set($event)"
       optionLabel="name"
       optionValue="id"
-      placeholder="Seleccionar etiqueta..."
+      [placeholder]="'Seleccionar etiqueta...' | transloco"
       styleClass="w-full"
       appendTo="body"
-      emptyMessage="Aún no hay etiquetas. Créala abajo 👇"
+      [emptyMessage]="'Aún no hay etiquetas. Créala abajo 👇' | transloco"
     >
       <ng-template #footer>
         <lib-client-tag-create-row (created)="bulkTagId.set($event.id)" />

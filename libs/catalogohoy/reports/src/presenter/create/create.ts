@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantStore } from '@catalogohoy/tenant';
 import { ToastService } from '@shared/infrastructure';
 import {
@@ -32,6 +33,7 @@ import { ReportStore } from '../../infrastructure';
     IconComponent,
     InputTextComponent,
     ToggleComponent,
+    TranslocoPipe,
   ],
   templateUrl: './create.html',
   styleUrl: './create.css',

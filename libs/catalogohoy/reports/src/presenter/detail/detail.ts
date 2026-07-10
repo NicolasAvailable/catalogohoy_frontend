@@ -9,6 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
 import { ToastService } from '@shared/infrastructure';
@@ -27,6 +28,7 @@ import { ReportContent } from '../components/report-content';
     IconComponent,
     ReportContent,
     SkeletonListComponent,
+    TranslocoPipe,
   ],
   templateUrl: './detail.html',
   styleUrl: './detail.css',

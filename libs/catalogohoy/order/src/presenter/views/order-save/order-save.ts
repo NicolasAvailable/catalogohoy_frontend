@@ -18,6 +18,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ProductStore } from '@catalogohoy/product';
 import { RateStore, RateType } from '@catalogohoy/rate';
 import { Exception } from '@shared/domain';
@@ -47,6 +48,7 @@ import { OrderStore } from '../../../infrastructure/order.store';
     ReactiveFormsModule,
     FormsModule,
     RouterLink,
+    TranslocoPipe,
     CardComponent,
     InputTextComponent,
     TextareaComponent,
@@ -295,7 +297,9 @@ export default class OrderSave implements OnInit {
       .products.find((p) => p.id === productId);
 
     if (selectedProduct) {
-      const price = selectedProduct.isWholesale && selectedProduct.wholesaleTiers.length > 0
+      const isWholesale =
+        selectedProduct.isWholesale && selectedProduct.wholesaleTiers.length > 0;
+      const price = isWholesale
         ? selectedProduct.wholesaleTiers[0].price
         : selectedProduct.pricePromotional > 0
           ? selectedProduct.pricePromotional
@@ -311,10 +315,42 @@ export default class OrderSave implements OnInit {
           photo: selectedProduct.photos?.[0],
           total: price * updated[index].quantity,
           isCustom: false,
+          // Al mayor arranca en el primer tramo; el select de escala permite
+          // cambiarlo (onTierSelect). Producto normal no lleva tramo.
+          tierTitle: isWholesale ? selectedProduct.wholesaleTiers[0].title : null,
         };
         return updated;
       });
     }
+  }
+
+  /** Tramos de mayoreo del producto de la fila (vacío si no es al mayor). */
+  public getWholesaleTiers(
+    productId: string | number
+  ): { title: string; price: number }[] {
+    const product = this.productStore
+      .productList()
+      .products.find((p) => p.id === productId);
+    return product?.isWholesale ? product.wholesaleTiers ?? [] : [];
+  }
+
+  /** Cambia el tramo de mayoreo de la fila: actualiza precio y snapshot. */
+  public onTierSelect(index: number, tierTitle: string) {
+    const row = this.products()[index];
+    const tier = this.getWholesaleTiers(row.productId).find(
+      (t) => t.title === tierTitle
+    );
+    if (!tier) return;
+    this.products.update((products) => {
+      const updated = [...products];
+      updated[index] = {
+        ...updated[index],
+        price: tier.price,
+        tierTitle: tier.title,
+        total: tier.price * updated[index].quantity,
+      };
+      return updated;
+    });
   }
 
   public onCustomNameChange(index: number, name: string) {

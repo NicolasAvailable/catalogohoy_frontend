@@ -1,10 +1,12 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
 import { PlanStore } from '../../infrastructure/plan.store';
 
 @Component({
   selector: 'lib-expiration-banner',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, TranslocoPipe],
   template: `
     @if (showBanner() && !dismissed()) {
     <div class="expiration-banner" [class.expiration-banner--grace]="isGrace()">
@@ -12,28 +14,28 @@ import { PlanStore } from '../../infrastructure/plan.store';
         <div class="expiration-banner__text">
           @if (isGrace()) {
           <span>
-            ⚠️ Tu plan <strong>{{ planName() }}</strong> venció.
+            ⚠️ {{ 'Tu plan' | transloco }} <strong>{{ planName() }}</strong> {{ 'venció.' | transloco }}
             @if (graceDays() <= 1) {
-            Renuévalo <strong>hoy</strong> para no pasar al plan Gratis.
+            {{ 'Renuévalo' | transloco }} <strong>{{ 'hoy' | transloco }}</strong> {{ 'para no pasar al plan Gratis.' | transloco }}
             } @else {
-            Tenés <strong>{{ graceDays() }} días</strong> para renovar antes de
-            pasar al plan Gratis.
+            {{ 'Tenés' | transloco }} <strong>{{ '{days} días' | transloco: { days: graceDays() } }}</strong>
+            {{ 'para renovar antes de pasar al plan Gratis.' | transloco }}
             }
           </span>
           } @else {
           <span>
-            ⏳ Tu plan <strong>{{ planName() }}</strong> vence
+            ⏳ {{ 'Tu plan' | transloco }} <strong>{{ planName() }}</strong> {{ 'vence' | transloco }}
             @if (days() === 0) {
-            <strong>hoy</strong>
-            } @else if (days() === 1) { en <strong>1 día</strong> } @else { en
-            <strong>{{ days() }} días</strong>
+            <strong>{{ 'hoy' | transloco }}</strong>
+            } @else if (days() === 1) { {{ 'en' | transloco }} <strong>{{ '1 día' | transloco }}</strong> } @else { {{ 'en' | transloco }}
+            <strong>{{ '{days} días' | transloco: { days: days() } }}</strong>
             }
           </span>
           }
         </div>
         <div class="expiration-banner__actions">
           <button class="expiration-banner__cta" (click)="renewPlan()">
-            Renovar plan
+            {{ 'Renovar plan' | transloco }}
           </button>
           <button class="expiration-banner__close" (click)="dismiss()">
             <lucide-angular name="x" [size]="16" />
@@ -147,6 +149,7 @@ export class ExpirationBannerComponent {
   private static readonly DISMISS_KEY = 'expiration_banner_dismissed_at';
 
   private readonly _planStore = inject(PlanStore);
+  private readonly _router = inject(Router);
   public readonly dismissed = signal(this.isDismissedRecently());
 
   public readonly isGrace = computed(() => this._planStore.inGracePeriod());
@@ -178,6 +181,20 @@ export class ExpirationBannerComponent {
   }
 
   public renewPlan(): void {
+    // Los catálogos con suscripción de Stripe (los que NO son de Venezuela /
+    // pago móvil) renuevan por el checkout de Stripe in-app: el edge function
+    // manda `previous_subscription_id`, así el webhook extiende el plan y
+    // cancela la suscripción anterior (sin cobro doble). El resto (pago móvil
+    // VE / sin Stripe) sigue yendo a WhatsApp para coordinar el pago manual.
+    const hasStripe = this._planStore.tenantPlanUsage()?.hasStripeSubscription ?? false;
+    const planId = this._planStore.currentPlan()?.id;
+    if (hasStripe && planId && planId !== 'gratis') {
+      this._router.navigate(['/admin/plans/checkout', planId], {
+        queryParams: { period: 'monthly' },
+      });
+      return;
+    }
+
     const planName = this.planName() || 'mi plan';
     const message = encodeURIComponent(
       `Hola, quiero renovar mi plan ${planName} en CatalogoHoy.`

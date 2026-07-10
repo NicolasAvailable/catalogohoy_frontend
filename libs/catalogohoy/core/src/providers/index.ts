@@ -1,3 +1,4 @@
+export * from './app-version/app-version.service';
 export * from './discord/discord-webhook';
 export * from './icons/icons.provider';
 export * from './meta-pixel/meta-pixel.provider';
@@ -5,5 +6,8 @@ export * from './posthog/posthog.provider';
 export * from './primeng/primeng.provider';
 export * from './sentry/sentry.provider';
 export * from './supabase/supabase.provider';
+export * from './transloco/language.const';
+export * from './transloco/language.service';
+export * from './transloco/language-selector/language-selector';
 export * from './transloco/transloco.provider';
 export * from './ui/ui.provider';

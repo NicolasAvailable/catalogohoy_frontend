@@ -128,7 +128,7 @@ import { AiUsageStore } from './ai-usage.store';
           <ui-icon name="search" size="16" styleClass="text-grey-400" />
           <input
             type="text"
-            placeholder="Buscar por usuario o prompt..."
+            placeholder="Buscar por usuario, catálogo o prompt..."
             class="flex-1 outline-none text-sm text-grey-700 placeholder:text-grey-300 bg-transparent"
             [ngModel]="searchTerm()"
             (ngModelChange)="searchTerm.set($event)"
@@ -173,6 +173,7 @@ import { AiUsageStore } from './ai-usage.store';
             <thead>
               <tr>
                 <th class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100">Usuario</th>
+                <th class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100">Catálogo</th>
                 <th class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100">Herramienta</th>
                 <th class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100">Prompt</th>
                 <th class="sticky top-0 z-10 text-right text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100">Créditos</th>
@@ -182,7 +183,7 @@ import { AiUsageStore } from './ai-usage.store';
             <tbody>
               @if (store.isLoading()) {
                 <tr>
-                  <td colspan="5" class="px-4 py-12 text-center">
+                  <td colspan="6" class="px-4 py-12 text-center">
                     <div class="flex flex-col items-center gap-2">
                       <ui-icon name="loader-circle" size="24" styleClass="text-grey-300 animate-spin" />
                       <p class="text-sm text-grey-400">Cargando uso de IA...</p>
@@ -199,6 +200,13 @@ import { AiUsageStore } from './ai-usage.store';
                           <span class="text-xs text-grey-400 truncate">{{ log.userEmail }}</span>
                         }
                       </div>
+                    </td>
+                    <td class="px-4 py-3 border-b border-grey-50">
+                      @if (log.catalogName) {
+                        <span class="block text-grey-700 truncate max-w-[12rem]" [title]="log.catalogName">{{ log.catalogName }}</span>
+                      } @else {
+                        <span class="text-grey-300">—</span>
+                      }
                     </td>
                     <td class="px-4 py-3 border-b border-grey-50 whitespace-nowrap">
                       <span class="inline-flex items-center gap-1.5 text-grey-700">
@@ -224,7 +232,7 @@ import { AiUsageStore } from './ai-usage.store';
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="5" class="px-4 py-12 text-center">
+                    <td colspan="6" class="px-4 py-12 text-center">
                       <div class="flex flex-col items-center gap-2">
                         <ui-icon name="sparkles" size="28" styleClass="text-grey-300" />
                         <p class="text-sm text-grey-400">No hay registros de uso que coincidan.</p>
@@ -256,6 +264,7 @@ export class AiUsage implements OnInit {
         !term ||
         (log.userName ?? '').toLowerCase().includes(term) ||
         (log.userEmail ?? '').toLowerCase().includes(term) ||
+        (log.catalogName ?? '').toLowerCase().includes(term) ||
         (log.prompt ?? '').toLowerCase().includes(term);
       return matchesFeature && matchesTerm;
     });

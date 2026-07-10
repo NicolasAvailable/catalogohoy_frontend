@@ -3,18 +3,18 @@
 >
   <header class="flex justify-between items-center gap-2 pb-6">
     <div class="flex items-center gap-3 flex-wrap min-w-0">
-      <h1 class="text-2xl sm:text-4xl font-bold shrink-0">Reportes</h1>
+      <h1 class="text-2xl sm:text-4xl font-bold shrink-0">{{ 'Reportes' | transloco }}</h1>
       @if (!store.isLoading() || store.reports().length > 0) {
         <span
           class="reports-usage"
           [class.reports-usage--full]="limitReached()"
         >
-          {{ reportsThisMonth() }} / {{ monthlyLimit() }} este mes
+          {{ '{used} / {limit} este mes' | transloco: { used: reportsThisMonth(), limit: monthlyLimit() } }}
         </span>
       }
     </div>
     <ui-button
-      label="Crear reporte"
+      [label]="'Crear reporte' | transloco"
       icon="circle-plus"
       severity="primary"
       [fluid]="false"
@@ -46,9 +46,9 @@
           <div class="reports-empty__spark reports-empty__spark--3"></div>
         </div>
 
-        <h2 class="reports-empty__title">Todavía no generaste reportes</h2>
+        <h2 class="reports-empty__title">{{ 'Todavía no generaste reportes' | transloco }}</h2>
         <p class="reports-empty__subtitle">
-          Generá un resumen con las métricas de tu catálogo y compartilo como link público o descargalo en PDF con tu logo y tu nombre.
+          {{ 'Generá un resumen con las métricas de tu catálogo y compartilo como link público o descargalo en PDF con tu logo y tu nombre.' | transloco }}
         </p>
 
         <ul class="reports-empty__features">
@@ -57,8 +57,8 @@
               <ui-icon name="trendingUp" styleClass="size-4" />
             </div>
             <div>
-              <strong>Ventas y órdenes</strong>
-              <small>Totales del periodo + evolución día a día</small>
+              <strong>{{ 'Ventas y órdenes' | transloco }}</strong>
+              <small>{{ 'Totales del periodo + evolución día a día' | transloco }}</small>
             </div>
           </li>
           <li>
@@ -66,8 +66,8 @@
               <ui-icon name="tag" styleClass="size-4" />
             </div>
             <div>
-              <strong>Top 10 productos</strong>
-              <small>Los más vendidos por unidades e ingresos</small>
+              <strong>{{ 'Top 10 productos' | transloco }}</strong>
+              <small>{{ 'Los más vendidos por unidades e ingresos' | transloco }}</small>
             </div>
           </li>
           <li>
@@ -75,8 +75,8 @@
               <ui-icon name="users" styleClass="size-4" />
             </div>
             <div>
-              <strong>Top 10 clientes</strong>
-              <small>Los que más gastan en tu catálogo</small>
+              <strong>{{ 'Top 10 clientes' | transloco }}</strong>
+              <small>{{ 'Los que más gastan en tu catálogo' | transloco }}</small>
             </div>
           </li>
           <li>
@@ -84,15 +84,15 @@
               <ui-icon name="share2" styleClass="size-4" />
             </div>
             <div>
-              <strong>Link público o PDF</strong>
-              <small>Compartí el reporte por link o descargalo en PDF con tu logo</small>
+              <strong>{{ 'Link público o PDF' | transloco }}</strong>
+              <small>{{ 'Compartí el reporte por link o descargalo en PDF con tu logo' | transloco }}</small>
             </div>
           </li>
         </ul>
 
         <div class="reports-empty__cta">
           <ui-button
-            label="Crear mi primer reporte"
+            [label]="'Crear mi primer reporte' | transloco"
             icon="sparkles"
             severity="primary"
             [fluid]="false"
@@ -104,10 +104,10 @@
     } @else {
       <div class="reports-table">
         <div class="reports-table__header">
-          <span class="reports-table__col reports-table__col--title">Título</span>
-          <span class="reports-table__col reports-table__col--period">Periodo</span>
-          <span class="reports-table__col reports-table__col--generated">Generado</span>
-          <span class="reports-table__col reports-table__col--actions">Acciones</span>
+          <span class="reports-table__col reports-table__col--title">{{ 'Título' | transloco }}</span>
+          <span class="reports-table__col reports-table__col--period">{{ 'Periodo' | transloco }}</span>
+          <span class="reports-table__col reports-table__col--generated">{{ 'Generado' | transloco }}</span>
+          <span class="reports-table__col reports-table__col--actions">{{ 'Acciones' | transloco }}</span>
         </div>
 
         @for (report of store.reports(); track report.id) {

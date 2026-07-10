@@ -14,6 +14,7 @@ import { PayingClientsStore } from '../paying-clients/paying-clients.store';
 import { TIER_MONTHLY_PRICE_USD } from '../shared/plan-cycle.model';
 import { TenantsStore } from '../tenants/tenants.store';
 import { UsersStore } from '../users/users.store';
+import { ChurnStore } from './churn.store';
 import { RevenuePoint } from './revenue.service';
 import { RevenueStore } from './revenue.store';
 
@@ -185,6 +186,77 @@ type ChartType = 'bar' | 'area';
                 [tooltip]="arrOptions().tooltip!"
                 [xaxis]="arrOptions().xaxis!"
                 [dataLabels]="arrOptions().dataLabels!"
+              />
+            }
+          </div>
+        </article>
+      </section>
+
+      <!-- Churn: clientes de pago que se dan de baja -->
+      <section class="grid grid-cols-1">
+        <article
+          class="flex flex-col bg-white rounded-xl border border-grey-50 overflow-hidden"
+        >
+          <div class="flex flex-col p-5 pb-3 gap-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex flex-col">
+                <span class="text-sm font-medium text-grey-400">Churn</span>
+                <span class="text-xs text-grey-300">
+                  Clientes de pago que se dieron de baja por mes
+                </span>
+              </div>
+              <div
+                class="flex items-center justify-center w-9 h-9 rounded-lg bg-red-50 shrink-0"
+              >
+                <ui-icon
+                  name="trending-down"
+                  size="18"
+                  styleClass="text-red-500"
+                />
+              </div>
+            </div>
+            <div class="flex items-end gap-3 flex-wrap">
+              <strong
+                class="text-3xl md:text-4xl font-bold text-grey-700 tracking-tight leading-none"
+              >
+                {{ churn.currentChurned() }}
+              </strong>
+              <span class="text-xs text-grey-400 pb-1">
+                {{ churn.currentChurned() === 1 ? 'cliente' : 'clientes' }} este
+                mes
+              </span>
+              <span
+                class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded"
+                [class.bg-red-50]="churn.churnRateDelta() > 0"
+                [class.text-red-600]="churn.churnRateDelta() > 0"
+                [class.bg-emerald-50]="churn.churnRateDelta() <= 0"
+                [class.text-emerald-600]="churn.churnRateDelta() <= 0"
+              >
+                <ui-icon
+                  [name]="churn.churnRateDelta() > 0 ? 'arrow-up-right' : 'arrow-down-right'"
+                  size="12"
+                  [styleClass]="churn.churnRateDelta() > 0 ? 'text-red-500' : 'text-emerald-500'"
+                />
+                {{ churn.currentChurnRate() | number: '1.1-1' }}% churn
+              </span>
+              <span class="text-xs text-grey-400 pb-1">
+                prom. {{ churn.avgChurnRate() | number: '1.1-1' }}% · {{ churn.totalChurned() }} bajas (12m)
+              </span>
+            </div>
+          </div>
+          <div class="flex-1 min-h-40">
+            @if (hasChurnSeries()) {
+              <apx-chart
+                class="block w-full h-44"
+                [chart]="churnOptions().chart!"
+                [colors]="churnOptions().colors!"
+                [fill]="churnOptions().fill!"
+                [series]="churnOptions().series!"
+                [stroke]="churnOptions().stroke!"
+                [plotOptions]="churnOptions().plotOptions!"
+                [tooltip]="churnOptions().tooltip!"
+                [xaxis]="churnOptions().xaxis!"
+                [dataLabels]="churnOptions().dataLabels!"
               />
             }
           </div>
@@ -401,6 +473,7 @@ type ChartType = 'bar' | 'area';
 })
 export class Dashboard implements OnInit {
   protected readonly revenue = inject(RevenueStore);
+  protected readonly churn = inject(ChurnStore);
   protected readonly users = inject(UsersStore);
   protected readonly tenants = inject(TenantsStore);
   protected readonly payingClients = inject(PayingClientsStore);
@@ -428,6 +501,58 @@ export class Dashboard implements OnInit {
   protected readonly hasSeries = computed(
     () => this.revenue.points().length > 0
   );
+
+  protected readonly hasChurnSeries = computed(
+    () => this.churn.points().length > 0
+  );
+
+  /** Bar chart de clientes perdidos por mes (rojo). El tooltip muestra el conteo
+   *  + la tasa de churn de ese mes. */
+  protected readonly churnOptions = computed<ApexOptions>(() => {
+    const points = this.churn.points();
+    const data = points.map((p) => ({
+      x: new Date(p.monthStart).getTime(),
+      y: p.churned,
+    }));
+    return {
+      chart: {
+        type: 'bar',
+        height: '100%',
+        width: '100%',
+        fontFamily: 'inherit',
+        foreColor: 'inherit',
+        toolbar: { show: false },
+        sparkline: { enabled: true },
+        animations: { speed: 400, animateGradually: { enabled: false } },
+      },
+      colors: ['#EF4444'],
+      fill: { colors: ['#EF4444'], opacity: 0.9, type: 'solid' },
+      dataLabels: { enabled: false },
+      series: [{ name: 'Bajas', data }],
+      stroke: { show: true, width: 1, colors: ['#EF4444'] },
+      plotOptions: {
+        bar: {
+          columnWidth: '55%',
+          borderRadius: 3,
+          borderRadiusApplication: 'end',
+        },
+      },
+      tooltip: {
+        followCursor: true,
+        theme: 'dark',
+        x: { format: 'MMM yyyy' },
+        y: {
+          formatter: (value: number, opts?: { dataPointIndex?: number }): string => {
+            const i = opts?.dataPointIndex ?? -1;
+            const rate = i >= 0 && points[i] ? points[i].churnRate : 0;
+            const n = Math.round(value);
+            return `${n} ${n === 1 ? 'baja' : 'bajas'} · ${rate}% churn`;
+          },
+        },
+      },
+      xaxis: { type: 'datetime' },
+    };
+  });
 
   protected readonly usersCount = computed(() => this.users.users().length);
 
@@ -550,6 +675,7 @@ export class Dashboard implements OnInit {
 
   ngOnInit(): void {
     this.revenue.load(12);
+    this.churn.load(12);
     this.users.load();
     this.tenants.load();
     this.payingClients.load();

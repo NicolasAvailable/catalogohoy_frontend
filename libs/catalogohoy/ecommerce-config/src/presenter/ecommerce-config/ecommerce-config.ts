@@ -13,10 +13,13 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DatePickerModule } from 'primeng/datepicker';
+import { APP_LANGUAGES, isDevMode } from '@catalogohoy/core';
+import { environment } from '@catalogohoy/env';
 import { PlanStore } from '@catalogohoy/plan';
-import { TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
+import { TenantStore, getTenantSlugFromUrl, isCustomDomain } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import {
   ButtonComponent,
@@ -35,7 +38,17 @@ import {
 } from '@ui';
 import { HtmlSanitizerService } from '@shared/infrastructure';
 import { EditorModule } from 'primeng/editor';
-import { toast } from 'ngx-sonner';
+import { translate } from '@jsverse/transloco';
+import { toast as sonnerToast } from 'ngx-sonner';
+
+// key-as-text: los mensajes son keys de transloco y ngx-sonner no traduce
+// solo, así que este alias traduce antes de mostrar (mismo rol que ToastService).
+const toast = {
+  success: (msg: string) => sonnerToast.success(translate(msg)),
+  error: (msg: string) => sonnerToast.error(translate(msg)),
+  loading: (msg: string) => sonnerToast.loading(translate(msg)),
+  dismiss: (id?: string | number) => sonnerToast.dismiss(id),
+};
 import { Observable } from 'rxjs';
 import {
   BusinessHoursWeek,
@@ -63,6 +76,9 @@ import {
   WHATSAPP_MESSAGE_MAX_LENGTH,
   WHATSAPP_MESSAGE_VARIABLES,
   WhatsappButton,
+  PaymentFieldDef,
+  PaymentMethodEntity,
+  paymentMethodFields,
 } from '../../domain';
 import {
   EcommerceConfigService,
@@ -75,6 +91,20 @@ import { TemplateSelectorComponent } from '../components/template-selector/templ
 
 export type TabId = 'general' | 'location' | 'shipping' | 'payments' | 'social' | 'notifications';
 const VALID_TABS: TabId[] = ['general', 'location', 'shipping', 'payments', 'social', 'notifications'];
+
+/** Máximo de cambios de slug por ventana rodante de 30 días (lo aplica la
+ *  RPC change_tenant_slug; acá solo se usa para la UI). */
+const SLUG_CHANGES_PER_MONTH = 2;
+
+/** Códigos de error de la RPC change_tenant_slug → mensaje para el usuario. */
+const SLUG_ERROR_MESSAGES: Record<string, string> = {
+  limit_reached: 'Ya usaste los 2 cambios de dirección de este mes. Vas a poder cambiarla de nuevo más adelante.',
+  slug_taken: 'Esa dirección ya está en uso por otro catálogo.',
+  invalid_slug: 'La dirección solo puede tener minúsculas, números y guiones (3 a 40 caracteres).',
+  reserved_slug: 'Esa dirección está reservada por la plataforma.',
+  same_slug: 'Esa ya es la dirección actual de tu catálogo.',
+  not_authorized: 'Solo el dueño del catálogo puede cambiar la dirección.',
+};
 
 @Component({
   selector: 'lib-ecommerce-config',
@@ -96,6 +126,7 @@ const VALID_TABS: TabId[] = ['general', 'location', 'shipping', 'payments', 'soc
     PhoneMockupComponent,
     TemplateSelectorComponent,
     DatePickerModule,
+    TranslocoPipe,
   ],
   templateUrl: './ecommerce-config.html',
   styleUrl: './ecommerce-config.css',
@@ -112,6 +143,16 @@ export class EcommerceConfigComponent implements OnInit {
   protected readonly canEditCatalog = computed(() => this.permissions.isOwner() || this.permissions.can()('catalogo', 'edit'));
   private readonly planStore = inject(PlanStore);
   public readonly isWhatsappLocked = computed(() => this.planStore.currentPlan()?.isFree ?? false);
+
+  /** Dominio personalizado del tenant actual (null si usa slug.catalogohoy.com).
+   *  Con dominio propio vinculado, el cambio de dirección se deshabilita: la
+   *  URL que difunde el cliente es su dominio y el mapeo se gestiona con soporte. */
+  public readonly tenantCustomDomain = computed(() => {
+    const id = this.tenantStore.tenantId();
+    if (id === null) return null;
+    const current = this.tenantStore.tenants().find((t) => t.id === id);
+    return current?.customDomain ?? null;
+  });
 
   public readonly themeColors = THEME_COLORS;
   public readonly supportedCountries = SUPPORTED_COUNTRIES;
@@ -143,6 +184,28 @@ export class EcommerceConfigComponent implements OnInit {
     // Reset scroll to the top of the form column whenever the tab changes
     queueMicrotask(() => {
       this.mainColumn()?.nativeElement?.scrollTo?.({ top: 0, behavior: 'auto' });
+    });
+  }
+
+  /** Recalcula si la barra de tabs puede scrollear a izquierda/derecha (para
+   *  mostrar u ocultar las flechas). Se llama al montar, al scrollear y al
+   *  cambiar el ancho. */
+  updateTabScroll(): void {
+    const el = this.tabsNav()?.nativeElement;
+    if (!el) return;
+    this.canScrollTabsLeft.set(el.scrollLeft > 2);
+    this.canScrollTabsRight.set(
+      Math.ceil(el.scrollLeft + el.clientWidth) < el.scrollWidth - 2
+    );
+  }
+
+  /** Desplaza la barra de tabs (−1 izquierda, +1 derecha). */
+  scrollTabs(direction: number): void {
+    const el = this.tabsNav()?.nativeElement;
+    if (!el) return;
+    el.scrollBy({
+      left: direction * Math.max(140, el.clientWidth * 0.6),
+      behavior: 'smooth',
     });
   }
 
@@ -203,6 +266,8 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftShowCategoriesSection = signal(true);
   public readonly draftSocialLinks = signal<SocialLinks>({ ...DEFAULT_SOCIAL_LINKS });
   public readonly draftTemplate = signal<CatalogTemplate>('banner-centered');
+  public readonly draftDefaultLanguage = signal<string>('es');
+  public readonly appLanguages = [...APP_LANGUAGES];
   public readonly draftCurrencySymbol = signal('$');
   public readonly draftShowReferencePrice = signal(true);
   public readonly draftShowLocalCurrencyPrice = signal(true);
@@ -335,6 +400,36 @@ export class EcommerceConfigComponent implements OnInit {
     this.updateDayCloseTime(dayOfWeek, time);
   }
 
+  // --- Slug del catálogo (tenants.slug — define la URL pública y del admin) ---
+  /** Slug actual confirmado en el servidor. Vacío hasta que carga el tenant. */
+  public readonly currentSlug = signal('');
+  public readonly draftSlug = signal('');
+  /** Cambios de slug usados en los últimos 30 días. Null = aún no cargó. */
+  public readonly slugChangesUsed = signal<number | null>(null);
+  /** Límite del tenant (tenants.slug_change_limit, default 2). */
+  public readonly slugChangeLimit = signal(SLUG_CHANGES_PER_MONTH);
+  public readonly slugChangesRemaining = computed(() =>
+    Math.max(0, this.slugChangeLimit() - (this.slugChangesUsed() ?? 0))
+  );
+  public readonly isSlugDirty = computed(
+    () => this.currentSlug() !== '' && this.draftSlug() !== this.currentSlug()
+  );
+  public readonly slugFormatError = computed(() => {
+    if (!this.isSlugDirty()) return false;
+    const slug = this.draftSlug();
+    return (
+      !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) ||
+      slug.length < 3 ||
+      slug.length > 40
+    );
+  });
+  public readonly isOwner = computed(() => this.permissions.isOwner());
+
+  /** Normaliza mientras escribe: minúsculas y espacios → guiones. */
+  public onSlugInput(value: string): void {
+    this.draftSlug.set(value.toLowerCase().replace(/\s+/g, '-'));
+  }
+
   // Currency config drafts — TenantCurrencyConfig shape
   public readonly draftCurrency = signal<TenantCurrencyConfig>({ ...DEFAULT_CURRENCY_CONFIG });
   public readonly isVenezuela = computed(
@@ -411,6 +506,10 @@ export class EcommerceConfigComponent implements OnInit {
   private readonly topSaveAnchor = viewChild<ElementRef>('topSaveAnchor');
   private readonly bottomSaveAnchor = viewChild<ElementRef>('bottomSaveAnchor');
   private readonly mainColumn = viewChild<ElementRef>('mainColumn');
+  // Scroll horizontal de los tabs: flechas cuando la barra desborda (mobile).
+  private readonly tabsNav = viewChild<ElementRef<HTMLElement>>('tabsNav');
+  public readonly canScrollTabsLeft = signal(false);
+  public readonly canScrollTabsRight = signal(false);
   private readonly isTopSaveVisible = signal(true);
   private readonly isBottomSaveVisible = signal(false);
   public readonly showStickyBanner = computed(
@@ -454,6 +553,17 @@ export class EcommerceConfigComponent implements OnInit {
       if (topEl) observer.observe(topEl);
       if (bottomEl) observer.observe(bottomEl);
       onCleanup(() => observer.disconnect());
+    });
+
+    // Flechas de scroll de los tabs: recalcular al montar y cuando cambia el
+    // ancho de la barra (ResizeObserver). El scroll manual dispara (scroll).
+    effect((onCleanup) => {
+      const nav = this.tabsNav()?.nativeElement;
+      if (!nav) return;
+      this.updateTabScroll();
+      const ro = new ResizeObserver(() => this.updateTabScroll());
+      ro.observe(nav);
+      onCleanup(() => ro.disconnect());
     });
 
     // Sync drafts from server config (selective: preserves user-modified fields)
@@ -501,6 +611,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftShowPaymentMethodsSection, prev?.showPaymentMethodsSection ?? true, config.showPaymentMethodsSection ?? true);
       syncField(this.draftShowCategoriesSection, prev?.showCategoriesSection ?? true, config.showCategoriesSection ?? true);
       syncField(this.draftTemplate, prev?.template ?? 'banner-centered' as CatalogTemplate, config.template ?? 'banner-centered' as CatalogTemplate);
+      syncField(this.draftDefaultLanguage, prev?.defaultLanguage ?? 'es', config.defaultLanguage ?? 'es');
       syncField(this.draftCurrencySymbol, prev?.currencySymbol ?? '$', config.currencySymbol ?? '$');
       syncField(this.draftShowReferencePrice, prev?.showReferencePrice ?? true, config.showReferencePrice ?? true);
       syncField(this.draftShowLocalCurrencyPrice, prev?.showLocalCurrencyPrice ?? true, config.showLocalCurrencyPrice ?? true);
@@ -551,10 +662,17 @@ export class EcommerceConfigComponent implements OnInit {
       const city = this.draftCity();
       const showLocationSection = this.draftShowLocationSection();
       const showCategoriesSection = this.draftShowCategoriesSection();
+      // Idioma default del catálogo — la preview lo aplica en vivo.
+      const defaultLanguage = this.draftDefaultLanguage();
       // Shipping drafts — so the checkout preview reflects them live.
       const shippingMethods = this.draftShippingMethods();
       const showShippingSection = this.draftShowShippingSection();
       const customerFields = this.draftCustomerFields();
+      // Métodos de pago activos (con sus datos) — para que la preview del
+      // checkout refleje en vivo los datos al elegir un método, sin recargar.
+      const paymentMethods = this.configStore
+        .paymentMethodsList()
+        .filter((m) => m.isActive);
 
       const message = {
         type: 'PREVIEW_UPDATE' as const,
@@ -577,9 +695,13 @@ export class EcommerceConfigComponent implements OnInit {
           state,
           city,
           showLocationSection,
+          defaultLanguage,
           shippingMethods,
           showShippingSection,
           customerFields,
+          // Solo overrideamos si hay métodos activos cargados; si la lista aún
+          // no cargó (vacía), la preview usa los del catálogo real.
+          ...(paymentMethods.length ? { paymentMethods } : {}),
         },
         source: 'catalogohoy-admin' as const,
       };
@@ -776,7 +898,42 @@ export class EcommerceConfigComponent implements OnInit {
       this.configStore.loadCurrencyConfig(String(tenantId));
       this.loadBusinessHours(String(tenantId));
       this.loadWhatsappNotifySettings(String(tenantId));
+      this.loadSlugChanges(String(tenantId));
+
+      // El slug del store es el confirmado en DB (en dev el de la URL
+      // puede ser el path del admin, no el slug real).
+      const tenantSlug = this.tenantStore.tenantSlug();
+      if (tenantSlug) {
+        this.currentSlug.set(tenantSlug);
+        this.draftSlug.set(tenantSlug);
+      }
     }
+  }
+
+  private async loadSlugChanges(tenantId: string): Promise<void> {
+    const result = await this.configService.getSlugChangeStatus(tenantId);
+    result.mapRight(({ used, limit }) => {
+      this.slugChangesUsed.set(used);
+      this.slugChangeLimit.set(limit);
+    });
+  }
+
+  /** Tras cambiar el slug, el subdominio actual del admin deja de existir:
+   *  redirigimos al nuevo pasando el token de sesión por query param — el
+   *  mismo hand-off que usa el login (AppComponent lo persiste a localStorage
+   *  en el bootstrap del origen nuevo, así no se pierde la sesión). */
+  private redirectToNewSlug(newSlug: string): void {
+    if (isDevMode() || isCustomDomain()) {
+      // En dev el host no depende del slug; con dominio propio el admin
+      // vive en el custom domain. En ambos casos basta recargar.
+      window.location.reload();
+      return;
+    }
+    const projectRef = new URL(environment.supabaseUrl).hostname.split('.')[0];
+    const tokenKey = `sb-${projectRef}-auth-token`;
+    const token = localStorage.getItem(tokenKey);
+    const session = token ? `?${tokenKey}=${encodeURIComponent(token)}` : '';
+    window.location.href = `https://${newSlug}.catalogohoy.com/admin/catalog/edit${session}`;
   }
 
   private async loadWhatsappNotifySettings(tenantId: string): Promise<void> {
@@ -831,8 +988,15 @@ export class EcommerceConfigComponent implements OnInit {
     const changes: Partial<EcommerceConfig> = {};
 
     if (this.draftName() !== (config.name ?? '')) changes.name = this.draftName();
-    if (this.draftDescription() !== (config.description ?? '')) changes.description = this.htmlSanitizer.sanitizeRichText(this.draftDescription());
+    // La descripción se compara SANITIZADA (lo mismo que se persiste). Quill
+    // emite nbsp/párrafos vacíos que el sanitizador normaliza al guardar; si
+    // se compara el draft crudo contra lo guardado, tras guardar nunca vuelven
+    // a ser iguales → el banner "cambios sin guardar" quedaba encendido para
+    // siempre (bug 2026-07-09, reproducido con E2E).
+    const draftDescriptionSanitized = this.htmlSanitizer.sanitizeRichText(this.draftDescription());
+    if (draftDescriptionSanitized !== (config.description ?? '')) changes.description = draftDescriptionSanitized;
     if (this.draftTemplate() !== (config.template ?? 'banner-centered')) changes.template = this.draftTemplate();
+    if (this.draftDefaultLanguage() !== (config.defaultLanguage ?? 'es')) changes.defaultLanguage = this.draftDefaultLanguage();
     if (this.draftThemeColor() !== (config.themeColor ?? '#10b981')) changes.themeColor = this.draftThemeColor();
     if (this.draftState() !== (config.state ?? null)) changes.state = this.draftState();
     if (this.draftCity() !== (config.city ?? null)) changes.city = this.draftCity();
@@ -995,6 +1159,75 @@ export class EcommerceConfigComponent implements OnInit {
         countryCode: finalCode,
       });
     }
+
+  }
+
+  // --- Cambio de slug: flujo propio, fuera de "Guardar cambios" ---
+  // La dirección redirige el admin al subdominio nuevo al aplicarse, así
+  // que tiene su botón y confirmación aparte en vez del guardado unificado.
+
+  public readonly isChangingSlug = signal(false);
+
+  public readonly canSubmitSlug = computed(
+    () =>
+      this.isSlugDirty() &&
+      !this.slugFormatError() &&
+      this.isOwner() &&
+      this.slugChangesRemaining() > 0 &&
+      !this.isChangingSlug()
+  );
+
+  public confirmSlugChange(): void {
+    if (!this.canSubmitSlug()) return;
+    const remaining = this.slugChangesRemaining();
+    this.confirmDialogService
+      .info({
+        headerLabel: 'Cambiar la dirección del catálogo',
+        contentLabel:
+          `Tu catálogo pasará a ${this.draftSlug()}.catalogohoy.com. ` +
+          'Los enlaces y códigos QR con la dirección anterior dejarán de funcionar. ' +
+          (remaining === 1
+            ? 'Este es tu último cambio disponible del mes.'
+            : `Te quedan ${remaining} cambios este mes.`),
+        acceptLabel: 'Cambiar dirección',
+        rejectLabel: 'Cancelar',
+        closable: true,
+        dismissableMask: true,
+      })
+      .subscribe((result) => {
+        result.fold(
+          () => undefined,
+          () => this.changeSlug()
+        );
+      });
+  }
+
+  private async changeSlug(): Promise<void> {
+    const tenantId = this.configStore.config()?.tenantId;
+    if (!tenantId) return;
+
+    this.isChangingSlug.set(true);
+    const result = await this.configService.changeTenantSlug(
+      tenantId,
+      this.draftSlug()
+    );
+    result.fold(
+      (err) => {
+        this.isChangingSlug.set(false);
+        toast.error(
+          SLUG_ERROR_MESSAGES[err.message] ??
+            'No se pudo cambiar la dirección del catálogo.'
+        );
+        // Refresca el contador por si el error fue limit_reached.
+        this.loadSlugChanges(tenantId);
+      },
+      ({ slug }) => {
+        // isChangingSlug queda en true a propósito: el spinner del botón
+        // cubre la espera hasta el redirect.
+        toast.success('Dirección actualizada. Te llevamos a tu nueva URL…');
+        setTimeout(() => this.redirectToNewSlug(slug), 1200);
+      }
+    );
   }
 
   private draftCurrencyCode(): string | null {
@@ -1094,6 +1327,37 @@ export class EcommerceConfigComponent implements OnInit {
           () => this.configStore.removePaymentMethod(id)
         );
       });
+  }
+
+  // --- Datos del método (banco, cuenta, etc.) ---
+  /** Id del método cuyo form de datos está abierto (null = ninguno). */
+  public readonly expandedMethodId = signal<number | null>(null);
+  /** Borrador de los datos que se están editando. */
+  public readonly detailsDraft = signal<Record<string, string>>({});
+
+  /** Campos configurables de un método según su nombre (tipo inferido). Para
+   *  transferencia, el país (Venezuela o no) cambia el set de campos. */
+  public fieldsFor(name: string): PaymentFieldDef[] {
+    return paymentMethodFields(name, this.isVenezuela());
+  }
+
+  /** Abre/cierra el form de datos de un método (precarga el borrador). */
+  public toggleMethodDetails(method: PaymentMethodEntity): void {
+    if (this.expandedMethodId() === method.id) {
+      this.expandedMethodId.set(null);
+      return;
+    }
+    this.detailsDraft.set({ ...(method.details ?? {}) });
+    this.expandedMethodId.set(method.id);
+  }
+
+  public setDetailField(key: string, value: string): void {
+    this.detailsDraft.update((d) => ({ ...d, [key]: value }));
+  }
+
+  public saveMethodDetails(method: PaymentMethodEntity): void {
+    this.configStore.savePaymentMethodDetails(method.id, this.detailsDraft());
+    this.expandedMethodId.set(null);
   }
 
   // --- WhatsApp Section ---

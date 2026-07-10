@@ -8,7 +8,9 @@
   `ai_credits(user_id PK, monthly_balance, monthly_allowance, purchased_balance, reset_at, updated_at)`.
   **Dos cubetas**: mensual (se resetea) + comprada (persiste). Se gasta primero la mensual.
 - RLS: el owner solo **lee** su fila; nadie escribe desde el cliente.
-- **Allowance** = mayor plan entre los catálogos del owner: gratis 5 · básico 150 · avanzado 500.
+- **Allowance** = mayor plan entre los catálogos del owner: gratis 15 · básico 200 · avanzado 500 ·
+  enterprise 2000. El CASE vive en `ensure_ai_credits`, `reset_due_ai_credits` y
+  `sync_ai_credits_on_plan_change` (los 3 hay que tocar si cambia).
 
 ### RPCs (SECURITY DEFINER, execute solo service_role)
 
@@ -28,7 +30,8 @@
 
 | Acción | Modelo / función | Costo | Notas |
 |---|---|---|---|
-| **Generar imagen** | FLUX schnell (`fal-ai-images` action `generate`) | 3 | Prompt fuerza **texto en español** en la imagen. Modal `ui-dialog` "🪄 Generar imagen con IA". |
+| **Generar imagen** | Gemini 2.5 Flash Image / "Nano Banana" (`fal-ai-images` action `generate`) | 5 | Modal con proporción + estilo + preview. Regla de **no-texto** (salvo que se pida); si se pide, en español. Nano Banana es más caro → 5 créditos. |
+| **Editar imagen** | Gemini 2.5 Flash Image edit (`fal-ai-images` action `edit`, img→img) | 5 | Instrucción de texto que modifica la imagen ya generada conservando el resto ("sacá el texto", "fondo blanco"). El resultado reemplaza el preview para iterar. Mismo modelo Nano Banana → 5 créditos. |
 | **Quitar fondo** | BiRefNet (`remove-background`) | 1 | Botón sobre cada imagen. |
 | **Borrador a mano** | Canvas local (pincel, estilo Canva) + `uploadPng` | **0** | No pasa por edge function (no consume créditos). |
 | **Mejorar descripción** | Claude Haiku 4.5 (`improve-text`) | 1 | `ui-select` con modos mejorar/alargar/acortar (≥15 chars). Anti prompt-injection (texto = datos, delimitado). |

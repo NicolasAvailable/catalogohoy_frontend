@@ -3,7 +3,7 @@
 >
   <header class="flex justify-between items-center gap-2 py-4">
     <h1 class="text-2xl sm:text-4xl font-bold shrink-0">
-      {{isCreate() ? 'Crear producto' : 'Editar producto'}}
+      {{ (isCreate() ? 'Crear producto' : 'Editar producto') | transloco }}
     </h1>
     <div class="flex gap-2 items-center">
       <!-- Mobile buttons -->
@@ -21,7 +21,7 @@
       <ui-button
         class="sm:hidden"
         routerLink="/admin/products"
-        label="Cancelar"
+        [label]="'Cancelar' | transloco"
         variant="outlined"
         severity="contrast"
         [fluid]="false"
@@ -33,7 +33,7 @@
         class="sm:hidden"
         (click)="create()"
         [disabled]="form.invalid || isSubmitting()"
-        label="Guardar"
+        [label]="'Guardar' | transloco"
         [fluid]="false"
         size="small"
       />
@@ -42,7 +42,7 @@
       <ui-button
         class="hidden sm:block"
         routerLink="/admin/products"
-        label="Cancelar"
+        [label]="'Cancelar' | transloco"
         variant="outlined"
         severity="contrast"
         [fluid]="false"
@@ -53,7 +53,7 @@
         class="hidden sm:block"
         (click)="create()"
         [disabled]="form.invalid || isSubmitting()"
-        label="Guardar cambios"
+        [label]="'Guardar cambios' | transloco"
         [fluid]="false"
       />
       }
@@ -65,12 +65,12 @@
   >
     <ui-card>
       <div class="flex flex-col gap-4">
-        <h2 class="text-xl font-bold">Nombre y Descripción</h2>
+        <h2 class="text-xl font-bold">{{ 'Nombre y Descripción' | transloco }}</h2>
         <div class="flex flex-col gap-2">
-          <label class="text-base text-grey-400 font-semibold" for="name">Nombre<span class="text-red-500 ml-0.5">*</span></label>
+          <label class="text-base text-grey-400 font-semibold" for="name">{{ 'Nombre' | transloco }}<span class="text-red-500 ml-0.5">*</span></label>
           <ui-input-text
             formControlName="name"
-            placeholder="Franela de manga corta"
+            [placeholder]="'Franela de manga corta' | transloco"
             inputId="name"
           />
         </div>
@@ -81,9 +81,9 @@
               <label
                 class="text-base text-grey-400 font-semibold"
                 for="description"
-                >Descripción</label
+                >{{ 'Descripción' | transloco }}</label
               >
-              <span class="text-sm text-grey-400 font-semibold">(Opcional)</span>
+              <span class="text-sm text-grey-400 font-semibold">{{ '(Opcional)' | transloco }}</span>
             </div>
 
             <!-- Mejorar con IA: ui-select skineado como los botones de IA
@@ -115,7 +115,7 @@
                   optionLabel="label"
                   optionValue="value"
                   [placeholder]="
-                    improvingDesc() ? 'Mejorando…' : 'Mejorar con IA'
+                    (improvingDesc() ? 'Mejorando…' : 'Mejorar con IA') | transloco
                   "
                   [ngModel]="improveModeValue()"
                   [ngModelOptions]="{ standalone: true }"
@@ -128,7 +128,7 @@
                         [name]="opt.icon"
                         styleClass="w-4 h-4 text-violet-600"
                       />
-                      {{ opt.label }}
+                      {{ opt.label | transloco }}
                     </span>
                   </ng-template>
                 </ui-select>
@@ -138,30 +138,30 @@
 
           <p-editor
             formControlName="description"
-            placeholder="Es una franela de manga corta perfecta para..."
+            [placeholder]="'Es una franela de manga corta perfecta para...' | transloco"
             [style]="{ height: '12rem' }"
             styleClass="product-description-editor"
           >
             <ng-template #header>
               <span class="ql-formats">
-                <button type="button" class="ql-bold" aria-label="Negrita"></button>
-                <button type="button" class="ql-italic" aria-label="Itálica"></button>
-                <button type="button" class="ql-underline" aria-label="Subrayado"></button>
+                <button type="button" class="ql-bold" [attr.aria-label]="'Negrita' | transloco"></button>
+                <button type="button" class="ql-italic" [attr.aria-label]="'Itálica' | transloco"></button>
+                <button type="button" class="ql-underline" [attr.aria-label]="'Subrayado' | transloco"></button>
               </span>
               <span class="ql-formats">
-                <select class="ql-header" aria-label="Encabezado">
+                <select class="ql-header" [attr.aria-label]="'Encabezado' | transloco">
                   <option value="2"></option>
                   <option value="3"></option>
                   <option selected></option>
                 </select>
               </span>
               <span class="ql-formats">
-                <button type="button" class="ql-list" value="ordered" aria-label="Lista numerada"></button>
-                <button type="button" class="ql-list" value="bullet" aria-label="Lista con viñetas"></button>
+                <button type="button" class="ql-list" value="ordered" [attr.aria-label]="'Lista numerada' | transloco"></button>
+                <button type="button" class="ql-list" value="bullet" [attr.aria-label]="'Lista con viñetas' | transloco"></button>
               </span>
               <span class="ql-formats">
-                <button type="button" class="ql-link" aria-label="Enlace"></button>
-                <button type="button" class="ql-clean" aria-label="Quitar formato"></button>
+                <button type="button" class="ql-link" [attr.aria-label]="'Enlace' | transloco"></button>
+                <button type="button" class="ql-clean" [attr.aria-label]="'Quitar formato' | transloco"></button>
               </span>
             </ng-template>
           </p-editor>
@@ -177,10 +177,10 @@
     </ui-card>
     <ui-card>
       <form [formGroup]="form" class="flex flex-col gap-4">
-        <h2 class="text-xl font-bold">Categorías</h2>
+        <h2 class="text-xl font-bold">{{ 'Categorías' | transloco }}</h2>
         <div class="flex flex-col gap-2">
           <label for="categoryIds" class="text-base text-grey-400 font-semibold"
-            >Seleccionar categorías</label
+            >{{ 'Seleccionar categorías' | transloco }}</label
           >
           <ui-multi-select
             [options]="selectableCategories()"
@@ -191,18 +191,18 @@
             optionLabel="name"
             optionValue="id"
             display="chip"
-            placeholder="Seleccionar categorías"
+            [placeholder]="'Seleccionar categorías' | transloco"
             styleClass="w-full"
             appendTo="body"
             inputId="categoryIds"
-            emptyMessage="📭 Todavía no tenés categorías. ¡Creá una en la caja de texto de abajo y guardala! ✨"
-            emptyFilterMessage="🔍 No se encontraron categorías con ese nombre"
-            filterPlaceHolder="Buscar categoría"
+            [emptyMessage]="'📭 Todavía no tenés categorías. ¡Creá una en la caja de texto de abajo y guardala! ✨' | transloco"
+            [emptyFilterMessage]="'🔍 No se encontraron categorías con ese nombre' | transloco"
+            [filterPlaceHolder]="'Buscar categoría' | transloco"
           >
             <ng-template #footer>
               <div class="px-4 py-3 border-t border-grey-50 flex gap-2">
                 <ui-input-text
-                  [placeholder]="'Crear nueva categoría...'"
+                  [placeholder]="'Crear nueva categoría...' | transloco"
                   [ngModel]="newCategoryName()"
                   (ngModelChange)="onNewCategoryNameChange($event)"
                   [ngModelOptions]="{ standalone: true }"
@@ -224,9 +224,9 @@
       <div class="flex flex-col gap-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <h2 class="text-xl font-bold">Venta al mayor</h2>
+            <h2 class="text-xl font-bold">{{ 'Venta al mayor' | transloco }}</h2>
             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-500 text-white">
-              Nuevo
+              {{ 'Nuevo' | transloco }}
             </span>
           </div>
           <ui-toggle
@@ -237,11 +237,11 @@
         </div>
         @if (form.controls.isSized.value) {
         <p class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
-          Por los momentos no es posible combinar ventas al mayor con tallas.
+          {{ 'Por los momentos no es posible combinar ventas al mayor con tallas.' | transloco }}
         </p>
         }
         <p class="text-sm text-grey-300">
-          Activa esta opción si vendes este producto por cantidades.
+          {{ 'Activa esta opción si vendes este producto por cantidades.' | transloco }}
         </p>
 
         @if (form.controls.isWholesale.value) {
@@ -250,14 +250,14 @@
           @for (tier of wholesaleTiersArray.controls; track $index) {
           <div [formGroupName]="$index" class="flex items-end gap-3">
             <div class="flex flex-col gap-2 flex-1">
-              <label class="text-sm text-grey-400 font-semibold">Etiqueta<span class="text-red-500 ml-0.5">*</span></label>
+              <label class="text-sm text-grey-400 font-semibold">{{ 'Etiqueta' | transloco }}<span class="text-red-500 ml-0.5">*</span></label>
               <ui-input-text
                 formControlName="title"
-                placeholder="Ej: A partir de 30 piezas"
+                [placeholder]="'Ej: A partir de 30 piezas' | transloco"
               />
             </div>
             <div class="flex flex-col gap-2 flex-1">
-              <label class="text-sm text-grey-400 font-semibold">Precio unitario<span class="text-red-500 ml-0.5">*</span></label>
+              <label class="text-sm text-grey-400 font-semibold">{{ 'Precio unitario' | transloco }}<span class="text-red-500 ml-0.5">*</span></label>
               <ui-input-number
                 formControlName="price"
                 mode="decimal"
@@ -280,7 +280,7 @@
           }
           <div class="flex">
             <ui-button
-              label="Agregar escala de precio"
+              [label]="'Agregar escala de precio' | transloco"
               icon="circle-plus"
               [fluid]="false"
               (click)="addTier()"
@@ -294,9 +294,9 @@
       <div class="flex flex-col gap-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <h2 class="text-xl font-bold">¿Vendes por tallas?</h2>
+            <h2 class="text-xl font-bold">{{ '¿Vendes por tallas?' | transloco }}</h2>
             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-500 text-white">
-              Nuevo
+              {{ 'Nuevo' | transloco }}
             </span>
           </div>
           <ui-toggle
@@ -307,11 +307,11 @@
         </div>
         @if (form.controls.isWholesale.value) {
         <p class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
-          Por los momentos no es posible combinar tallas con ventas al mayor.
+          {{ 'Por los momentos no es posible combinar tallas con ventas al mayor.' | transloco }}
         </p>
         }
         <p class="text-sm text-grey-300">
-          Activa esta opción si tu producto viene en diferentes tallas o tamaños (S, M, L, 42, 44, etc.).
+          {{ 'Activa esta opción si tu producto viene en diferentes tallas o tamaños (S, M, L, 42, 44, etc.).' | transloco }}
         </p>
 
         @if (form.controls.isSized.value) {
@@ -319,33 +319,32 @@
         <div formArrayName="sizes" class="flex flex-col gap-4">
           @if (form.controls.isVariant.value) {
           <p class="text-xs text-grey-400 -mt-2">
-            Estas son las tallas del <strong>Producto original</strong>. Cada
-            variante tiene sus propias tallas más abajo.
+            {{ 'Estas son las tallas del' | transloco }} <strong>{{ 'Producto original' | transloco }}</strong>{{ '. Cada variante tiene sus propias tallas más abajo.' | transloco }}
           </p>
           }
           @for (size of sizesArray.controls; track $index) {
           <div [formGroupName]="$index" class="flex items-end gap-3">
             <div class="flex flex-col gap-2 flex-1">
-              <label class="text-sm text-grey-400 font-semibold">Talla / Tamaño<span class="text-red-500 ml-0.5">*</span></label>
+              <label class="text-sm text-grey-400 font-semibold">{{ 'Talla / Tamaño' | transloco }}<span class="text-red-500 ml-0.5">*</span></label>
               <ui-input-text
                 formControlName="name"
-                placeholder="Ej: M o Talla 32"
+                [placeholder]="'Ej: M o Talla 32' | transloco"
               />
             </div>
             <div class="flex flex-col gap-2 flex-1">
-              <label class="text-sm text-grey-400 font-semibold">Stock (opcional)</label>
+              <label class="text-sm text-grey-400 font-semibold">{{ 'Stock (opcional)' | transloco }}</label>
               <ui-input-number
                 formControlName="stock"
                 mode="decimal"
                 [minFractionDigits]="0"
                 [maxFractionDigits]="0"
                 [showButtons]="false"
-                placeholder="Sin límite"
+                [placeholder]="'Sin límite' | transloco"
               />
             </div>
             <div class="flex flex-col gap-2 flex-1">
-              <label class="text-sm text-grey-400 font-semibold">SKU (opcional)</label>
-              <ui-input-text formControlName="sku" placeholder="CAM-M-1234" />
+              <label class="text-sm text-grey-400 font-semibold">{{ 'SKU (opcional)' | transloco }}</label>
+              <ui-input-text formControlName="sku" [placeholder]="'CAM-M-1234' | transloco" />
             </div>
             <button
               type="button"
@@ -361,16 +360,16 @@
           }
           <div class="flex">
             <ui-button
-              label="Agregar talla"
+              [label]="'Agregar talla' | transloco"
               icon="circle-plus"
               [fluid]="false"
               (click)="addSize()"
             />
           </div>
           <div class="flex items-center justify-between text-sm bg-grey-50 rounded-lg px-3 py-2">
-            <span class="text-grey-500 font-semibold">Stock total</span>
+            <span class="text-grey-500 font-semibold">{{ 'Stock total' | transloco }}</span>
             <span class="text-grey-700 font-bold">
-              {{ totalSizedStock() === null ? 'Sin límite' : (totalSizedStock() + ' unidades') }}
+              {{ totalSizedStock() === null ? ('Sin límite' | transloco) : ('{n} unidades' | transloco: { n: totalSizedStock() }) }}
             </span>
           </div>
         </div>
@@ -379,7 +378,7 @@
     </ui-card>
     <ui-card>
       <div class="flex flex-col gap-4">
-        <h2 class="text-xl font-bold">Fotos y multimedia</h2>
+        <h2 class="text-xl font-bold">{{ 'Fotos y multimedia' | transloco }}</h2>
         <div class="flex flex-col gap-4">
           <ui-uploader
             (valueChange)="setPhoto($event)"
@@ -411,28 +410,9 @@
                       (photos().length >= maxPhotos() ? 'text-grey-400' : 'text-primary-500')
                     "
                   >
-                    {{ photos().length >= maxPhotos() ? photosLimitMessage() :
-                    'Arrastrá, soltá o subí fotos o videos del producto' }}
+                    {{ (photos().length >= maxPhotos() ? photosLimitMessage() :
+                    'Arrastrá, soltá o subí fotos o videos del producto') | transloco }}
                   </p>
-                  <p
-                    *ngIf="photos().length < maxPhotos()"
-                    class="text-sm text-grey-300 mt-1"
-                  >
-                    También podés pegar (Ctrl+V) o usar el botón de abajo
-                  </p>
-                </button>
-
-                <!-- Mobile-friendly paste button. Hidden on browsers that
-                     don't expose `navigator.clipboard.read()` (older Firefox
-                     etc.) where the user must use Subir or Ctrl+V instead. -->
-                <button
-                  *ngIf="canPaste && photos().length < maxPhotos()"
-                  type="button"
-                  (click)="paste()"
-                  class="self-stretch sm:self-center inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-grey-100 bg-white hover:bg-primary-50/30 hover:border-primary-300 transition-colors text-sm font-semibold text-grey-700 cursor-pointer"
-                >
-                  <ui-icon name="copy" size="16" styleClass="text-primary-500" />
-                  Pegar imagen del portapapeles
                 </button>
               </div>
             </ng-template>
@@ -441,32 +421,41 @@
           <div class="flex items-center gap-2 text-grey-300 text-sm">
             <ui-icon name="book-image" size="18" />
             <p>
-              Imágenes: WEBP, PNG o JPEG (mín. 1024px) &middot; Videos: MP4 o
-              WEBM (hasta 40 MB)
+              {{ 'Imágenes: WEBP, PNG o JPEG (mín. 1024px) · Videos: MP4 o WEBM (hasta 40 MB)' | transloco }}
             </p>
           </div>
 
-          <!-- Generar imagen con IA: abre un modal con un prompt (puede usar el
-               título/descripción del producto). -->
-          <button
-            type="button"
-            (click)="openGenerator()"
-            [disabled]="photos().length >= maxPhotos()"
-            class="self-start rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer transition-transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span
-              class="flex items-center gap-2 rounded-[0.4375rem] bg-white px-4 py-2.5 text-sm font-semibold text-violet-700"
+          <!-- Acciones de imagen: generar con IA + galería, en una fila. -->
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              (click)="openGenerator()"
+              [disabled]="photos().length >= maxPhotos()"
+              class="rounded-lg p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 cursor-pointer transition-transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ui-icon name="sparkles" styleClass="w-[1.125rem] h-[1.125rem]" />
-              Generar imagen con IA
-            </span>
-          </button>
+              <span
+                class="flex items-center gap-2 rounded-[0.4375rem] bg-white px-4 py-2.5 text-sm font-semibold text-violet-700"
+              >
+                <ui-icon name="sparkles" styleClass="w-[1.125rem] h-[1.125rem]" />
+                {{ 'Generar imagen con IA' | transloco }}
+              </span>
+            </button>
+            <ui-button
+              [label]="'Galería' | transloco"
+              icon="book-image"
+              variant="outlined"
+              severity="contrast"
+              [fluid]="false"
+              [disabled]="photos().length >= maxPhotos()"
+              (click)="openGallery()"
+            />
+          </div>
 
           @if (photos().length > 0) {
           @if (photos().length > 1) {
           <div class="flex items-center gap-2 text-grey-300 text-sm mt-2">
             <ui-icon name="grip-vertical" size="16" />
-            <p>Arrastrá las imágenes para reordenarlas · la primera es la portada del producto.</p>
+            <p>{{ 'Arrastrá las imágenes para reordenarlas · la primera es la portada del producto.' | transloco }}</p>
           </div>
           }
           <div
@@ -492,7 +481,7 @@
                 <span
                   class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-primary-500 text-white text-[0.6875rem] font-bold shadow-sm"
                 >
-                  Portada
+                  {{ 'Portada' | transloco }}
                 </span>
                 }
 
@@ -501,7 +490,7 @@
                   type="button"
                   cdkDragHandle
                   class="absolute bottom-2 left-2 z-10 p-1.5 bg-white/90 rounded-md cursor-move text-grey-500 hover:text-grey-800 shadow-sm transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                  aria-label="Arrastrar para reordenar"
+                  [attr.aria-label]="'Arrastrar para reordenar' | transloco"
                 >
                   <ui-icon name="grip-vertical" size="18" />
                 </button>
@@ -510,7 +499,7 @@
                 @if (isVideo(photo)) {
                 <ui-product-media
                   [url]="photo"
-                  alt="Media del producto"
+                  [alt]="'Media del producto' | transloco"
                   [controls]="true"
                   styleClass="w-full h-auto object-contain"
                 />
@@ -519,7 +508,7 @@
                      p-image que las órdenes). -->
                 <ui-image
                   [src]="photo"
-                  alt="Imagen del producto"
+                  [alt]="'Imagen del producto' | transloco"
                   styleClass="w-full block cursor-zoom-in"
                   imageClass="w-full h-auto object-contain"
                 />
@@ -551,10 +540,10 @@
                   >
                     @if (isAiProcessing(photo)) {
                     <ui-icon name="loader-circle" styleClass="w-4 h-4 sm:w-3.5 sm:h-3.5 animate-spin" />
-                    Quitando fondo…
+                    {{ 'Quitando fondo…' | transloco }}
                     } @else {
                     <ui-icon name="bot" styleClass="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    Quitar fondo
+                    {{ 'Quitar fondo' | transloco }}
                     }
                   </span>
                 </button>
@@ -568,7 +557,7 @@
                     class="flex items-center justify-center gap-1.5 rounded-[0.4375rem] bg-white px-2 py-2.5 sm:py-1.5 text-sm sm:text-[0.6875rem] font-semibold text-violet-700"
                   >
                     <ui-icon name="eraser" styleClass="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    Borrar a mano
+                    {{ 'Borrar a mano' | transloco }}
                   </span>
                 </button>
               </div>
@@ -583,18 +572,16 @@
     @if (!form.controls.isWholesale.value) {
     <ui-card>
       <div class="flex flex-col gap-4">
-        <h2 class="text-xl font-bold">Precios</h2>
+        <h2 class="text-xl font-bold">{{ 'Precios' | transloco }}</h2>
         @if (form.controls.isVariant.value) {
         <p class="text-xs text-grey-400 -mt-2">
-          Este es el precio del <strong>Producto original</strong>: se usa para
-          las tallas que asignes a "Producto original". Cada variante tiene su
-          propio precio arriba.
+          {{ 'Este es el precio del' | transloco }} <strong>{{ 'Producto original' | transloco }}</strong>{{ ': se usa para las tallas que asignes a "Producto original". Cada variante tiene su propio precio arriba.' | transloco }}
         </p>
         }
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="flex flex-col gap-2">
             <label class="text-base text-grey-400 font-semibold" for="price"
-              >Precio de venta<span class="text-red-500 ml-0.5">*</span></label
+              >{{ 'Precio de venta' | transloco }}<span class="text-red-500 ml-0.5">*</span></label
             >
             <ui-input-number
               formControlName="price"
@@ -610,7 +597,7 @@
           </div>
           <div class="flex flex-col gap-2">
             <label class="text-base text-grey-400 font-semibold" for="pricePromotional"
-              >Precio promocional</label
+              >{{ 'Precio promocional' | transloco }}</label
             >
             <ui-input-number
               formControlName="pricePromotional"
@@ -629,9 +616,9 @@
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-3">
             <label class="text-base text-grey-400 font-semibold" for="productionCost"
-              >Costo de producción</label
+              >{{ 'Costo de producción' | transloco }}</label
             >
-            <span class="text-sm text-grey-400 font-semibold">(Opcional)</span>
+            <span class="text-sm text-grey-400 font-semibold">{{ '(Opcional)' | transloco }}</span>
           </div>
           <ui-input-number
             formControlName="productionCost"
@@ -645,7 +632,7 @@
             inputId="productionCost"
           />
           <p class="text-sm text-grey-300">
-            Información interna — no visible para los clientes.
+            {{ 'Información interna — no visible para los clientes.' | transloco }}
           </p>
         </div>
       </div>
@@ -653,22 +640,22 @@
     }
     <ui-card>
       <div class="flex flex-col gap-4">
-        <h2 class="text-xl font-bold">Identificación</h2>
+        <h2 class="text-xl font-bold">{{ 'Identificación' | transloco }}</h2>
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-3">
             <label class="text-base text-grey-400 font-semibold" for="sku">SKU</label>
-            <span class="text-sm text-grey-400 font-semibold">(Opcional)</span>
+            <span class="text-sm text-grey-400 font-semibold">{{ '(Opcional)' | transloco }}</span>
           </div>
           <div class="flex gap-2">
             <ui-input-text
               formControlName="sku"
-              placeholder="CAM-AZU-1234"
+              [placeholder]="'CAM-AZU-1234' | transloco"
               inputId="sku"
               class="flex-1"
             />
             <ui-button
               type="button"
-              label="Autogenerar"
+              [label]="'Autogenerar' | transloco"
               icon="wand-sparkles"
               variant="outlined"
               severity="contrast"
@@ -677,8 +664,7 @@
             />
           </div>
           <p class="text-sm text-grey-300">
-            Código único para identificar el producto. Se genera automáticamente
-            a partir del nombre o puedes escribir uno manualmente.
+            {{ 'Código único para identificar el producto. Se genera automáticamente a partir del nombre o puedes escribir uno manualmente.' | transloco }}
           </p>
         </div>
       </div>
@@ -686,9 +672,9 @@
     @if (!isCreate()) {
     <ui-card>
       <div class="flex flex-col gap-4">
-        <h2 class="text-xl font-bold">Orden en el catálogo</h2>
+        <h2 class="text-xl font-bold">{{ 'Orden en el catálogo' | transloco }}</h2>
         <div class="flex flex-col gap-2">
-          <label class="text-base text-grey-400 font-semibold" for="position">Posición</label>
+          <label class="text-base text-grey-400 font-semibold" for="position">{{ 'Posición' | transloco }}</label>
           <ui-input-number
             formControlName="position"
             inputId="position"
@@ -697,7 +683,7 @@
             placeholder="0"
           />
           <p class="text-sm text-grey-300">
-            Define el orden en que aparece este producto en el catálogo. Los productos con menor número aparecen primero.
+            {{ 'Define el orden en que aparece este producto en el catálogo. Los productos con menor número aparecen primero.' | transloco }}
           </p>
         </div>
       </div>
@@ -706,15 +692,13 @@
     <ui-card>
       <div class="flex flex-col gap-4">
         <div class="flex items-center gap-3">
-          <h2 class="text-xl font-bold">Variantes</h2>
+          <h2 class="text-xl font-bold">{{ 'Variantes' | transloco }}</h2>
           <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-500 text-white">
-            Nuevo
+            {{ 'Nuevo' | transloco }}
           </span>
         </div>
         <p class="text-sm text-grey-300">
-          Agregá versiones del producto con distinto precio (colores, modelos,
-          etc.). Cada variante puede tener su propio precio e imagen, y podés
-          combinarla con tallas.
+          {{ 'Agregá versiones del producto con distinto precio (colores, modelos, etc.). Cada variante puede tener su propio precio e imagen, y podés combinarla con tallas.' | transloco }}
         </p>
 
         @if (variantsArray.length > 0) {
@@ -727,7 +711,7 @@
           >
             <div class="flex items-center justify-between">
               <span class="text-sm font-bold text-grey-500"
-                >Variante {{ $index + 1 }}</span
+                >{{ 'Variante {n}' | transloco: { n: $index + 1 } }}</span
               >
               <button
                 type="button"
@@ -739,17 +723,17 @@
             </div>
             <div class="flex flex-col gap-2">
               <label class="text-sm text-grey-400 font-semibold"
-                >Nombre<span class="text-red-500 ml-0.5">*</span></label
+                >{{ 'Nombre' | transloco }}<span class="text-red-500 ml-0.5">*</span></label
               >
               <ui-input-text
                 formControlName="name"
-                placeholder="Ej: Verde futbol"
+                [placeholder]="'Ej: Verde futbol' | transloco"
               />
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div class="flex flex-col gap-2">
                 <label class="text-sm text-grey-400 font-semibold"
-                  >Precio<span class="text-red-500 ml-0.5">*</span></label
+                  >{{ 'Precio' | transloco }}<span class="text-red-500 ml-0.5">*</span></label
                 >
                 <ui-input-number
                   formControlName="price"
@@ -764,7 +748,7 @@
               </div>
               <div class="flex flex-col gap-2">
                 <label class="text-sm text-grey-400 font-semibold"
-                  >Precio original (opcional)</label
+                  >{{ 'Precio original (opcional)' | transloco }}</label
                 >
                 <ui-input-number
                   formControlName="originalPrice"
@@ -780,14 +764,13 @@
             </div>
             <div class="flex flex-col gap-2">
               <label class="text-sm text-grey-400 font-semibold"
-                >SKU (opcional)</label
+                >{{ 'SKU (opcional)' | transloco }}</label
               >
-              <ui-input-text formControlName="sku" placeholder="CAM-VER-1234" />
+              <ui-input-text formControlName="sku" [placeholder]="'CAM-VER-1234' | transloco" />
             </div>
             <div class="flex flex-col gap-2">
               <label class="text-sm text-grey-400 font-semibold"
-                >Imágenes y videos ({{ (variant.get('photos')?.value?.length) ||
-                0 }}/{{ maxPhotos() }})</label
+                >{{ 'Imágenes y videos ({n}/{max})' | transloco: { n: (variant.get('photos')?.value?.length) || 0, max: maxPhotos() } }}</label
               >
               @if (!variantPhotosFull($index)) {
               <ui-uploader
@@ -808,7 +791,7 @@
                       styleClass="text-primary-500 mb-1"
                     />
                     <span class="text-sm font-semibold text-primary-500"
-                      >Arrastrá, soltá o subí imágenes o videos</span
+                      >{{ 'Arrastrá, soltá o subí imágenes o videos' | transloco }}</span
                     >
                   </button>
                 </ng-template>
@@ -817,7 +800,7 @@
               <p
                 class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2"
               >
-                Llegaste al límite de {{ maxPhotos() }} imágenes de tu plan.
+                {{ 'Llegaste al límite de {n} imágenes de tu plan.' | transloco: { n: maxPhotos() } }}
               </p>
               }
               @if (variant.get('photos')?.value?.length) {
@@ -847,14 +830,14 @@
             <!-- Tallas de esta variante -->
             <div formArrayName="sizes" class="flex flex-col gap-2">
               <label class="text-sm text-grey-400 font-semibold"
-                >Tallas de esta variante (opcional)</label
+                >{{ 'Tallas de esta variante (opcional)' | transloco }}</label
               >
               @for (vsize of variantSizesArray(vIndex).controls; track $index) {
               <div [formGroupName]="$index" class="flex items-end gap-3">
                 <div class="flex flex-col gap-2 flex-1">
                   <ui-input-text
                     formControlName="name"
-                    placeholder="Ej: M o Talla 32"
+                    [placeholder]="'Ej: M o Talla 32' | transloco"
                   />
                 </div>
                 <div class="flex flex-col gap-2 flex-1">
@@ -864,13 +847,13 @@
                     [minFractionDigits]="0"
                     [maxFractionDigits]="0"
                     [showButtons]="false"
-                    placeholder="Stock (sin límite)"
+                    [placeholder]="'Stock (sin límite)' | transloco"
                   />
                 </div>
                 <div class="flex flex-col gap-2 flex-1">
                   <ui-input-text
                     formControlName="sku"
-                    placeholder="SKU (opcional)"
+                    [placeholder]="'SKU (opcional)' | transloco"
                   />
                 </div>
                 <button
@@ -884,7 +867,7 @@
               }
               <div class="flex">
                 <ui-button
-                  label="Agregar talla"
+                  [label]="'Agregar talla' | transloco"
                   icon="circle-plus"
                   variant="outlined"
                   severity="contrast"
@@ -900,7 +883,7 @@
         }
         <div class="flex items-center gap-2">
           <ui-button
-            label="Agregar variante"
+            [label]="'Agregar variante' | transloco"
             icon="circle-plus"
             [fluid]="false"
             [disabled]="!canAddVariant()"
@@ -912,12 +895,11 @@
           class="flex items-center justify-between text-sm bg-grey-50 rounded-lg px-3 py-2"
         >
           <span class="text-grey-500 font-semibold"
-            >Variantes ({{ variantsArray.length }} /
-            {{ planStore.maxVariants() }})</span
+            >{{ 'Variantes ({n} / {max})' | transloco: { n: variantsArray.length, max: planStore.maxVariants() } }}</span
           >
           @if (!canAddVariant()) {
           <span class="text-grey-400"
-            >Límite del plan alcanzado — mejorá tu plan para más</span
+            >{{ 'Límite del plan alcanzado — mejorá tu plan para más' | transloco }}</span
           >
           }
         </div>
@@ -927,15 +909,15 @@
     @if (!isCreate()) {
     <ui-card>
       <div class="flex flex-col gap-4">
-        <h2 class="text-xl font-bold">Disponibilidad</h2>
+        <h2 class="text-xl font-bold">{{ 'Disponibilidad' | transloco }}</h2>
         <div class="flex items-center justify-between gap-4">
           <div class="flex flex-col gap-1">
             <span class="text-base text-grey-400 font-semibold inline-flex items-center gap-2">
-              Marcar como agotado
+              {{ 'Marcar como agotado' | transloco }}
               <ui-icon name="package-x" size="16" styleClass="text-grey-400" />
             </span>
             <span class="text-sm text-grey-300">
-              El producto se mostrará como no disponible en el catálogo.
+              {{ 'El producto se mostrará como no disponible en el catálogo.' | transloco }}
             </span>
           </div>
           <ui-toggle formControlName="isSoldOut" />
@@ -944,11 +926,11 @@
         <div class="flex items-center justify-between gap-4">
           <div class="flex flex-col gap-1">
             <span class="text-base text-grey-400 font-semibold inline-flex items-center gap-2">
-              Ocultar del catálogo
+              {{ 'Ocultar del catálogo' | transloco }}
               <ui-icon name="eye-off" size="16" styleClass="text-grey-400" />
             </span>
             <span class="text-sm text-grey-300">
-              El producto no será visible para los clientes temporalmente.
+              {{ 'El producto no será visible para los clientes temporalmente.' | transloco }}
             </span>
           </div>
           <ui-toggle formControlName="isHidden" />
@@ -959,10 +941,10 @@
     @if (!form.controls.isSized.value) {
     <ui-card>
       <div class="flex flex-col gap-4">
-        <h2 class="text-xl font-bold">Inventario</h2>
+        <h2 class="text-xl font-bold">{{ 'Inventario' | transloco }}</h2>
 
         <div class="flex flex-col gap-3">
-          <span class="text-base text-grey-400 font-semibold">Stock</span>
+          <span class="text-base text-grey-400 font-semibold">{{ 'Stock' | transloco }}</span>
 
           <div class="flex flex-col gap-3">
             <!-- Infinito Option -->
@@ -982,7 +964,7 @@
                 optionValue="unlimited"
               />
               <label for="stock-unlimited" class="cursor-pointer flex-1 pt-0.5">
-                Infinito
+                {{ 'Infinito' | transloco }}
               </label>
             </div>
 
@@ -1004,14 +986,14 @@
                   optionValue="limited"
                 />
                 <label for="stock-limited" class="cursor-pointer flex-1 pt-0.5">
-                  Limitado
+                  {{ 'Limitado' | transloco }}
                 </label>
               </div>
 
               @if (stockMode() === 'limited') {
               <div class="flex flex-col gap-2 pl-8">
                 <label class="text-sm text-grey-400 font-semibold" for="stockQuantity">
-                  Cantidad
+                  {{ 'Cantidad' | transloco }}
                 </label>
                 <ui-input-number
                   formControlName="stock"
@@ -1048,6 +1030,15 @@
     [description]="descriptionPlain()"
     (generated)="onGenerated($event)"
     (closed)="closeGenerator()"
+  />
+  }
+
+  <!-- Galería de imágenes para reusar (fotos de productos + subidas). -->
+  @if (galleryOpen()) {
+  <lib-image-gallery
+    [tenantId]="tenantId()"
+    (selected)="onGallerySelected($event)"
+    (closed)="closeGallery()"
   />
   }
 </section>

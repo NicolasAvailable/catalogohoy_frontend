@@ -6,11 +6,26 @@
 
 | Plan | Precio (mes) | Productos | Catálogos | Miembros equipo | Variantes/producto | Créditos IA/mes |
 |---|---|---|---|---|---|---|
-| **gratis** | $0 | 1 (visible en catálogo público) | 1 | 0 | 1 | **5** |
-| **basico** | $9.99 | hasta 100 | 1 | 1 | 3 | **150** |
+| **gratis** | $0 | 1 (visible en catálogo público) | 1 | 0 | 1 | **15** |
+| **basico** | $9.99 | hasta 100 | 1 | 1 | 3 | **200** |
 | **avanzado** | $19.99 | ilimitados | hasta 2–3 | hasta 5–10 | 15 | **500** |
+| **enterprise** | a medida (sin checkout) | ilimitados | 10 | 50 | 100 | **2000** |
 
 - **Sentinela "ilimitado"**: `max_products = 0` significa ilimitado (no -1 ni flag aparte).
+  ⚠️ Aplica SOLO a productos: `max_catalogs = 0` daría CERO slots (por eso enterprise usa 10/50/100).
+- **Enterprise (agregado 2026-07-07)**: fila real en `plans` (`price 0`, `is_free false`, pos 3,
+  `stripe_price_id_* NULL`) pero **sin checkout self-service** — `plan-checkout` redirige si el plan
+  no está en `PLAN_BASE_PRICES`. Se muestra como **banda** debajo del grid (admin `plans.html` +
+  landing `Pricing.tsx`), CTA "Contactar ventas" → **funnel de calificación** multi-step (negocio,
+  escala, estructura, necesidades, contacto) → lead a `enterprise_leads` + Discord (edge function
+  `enterprise-lead`). **Filtro suave**: scoring (catálogos 0/1/4/5 · equipo 0/0/2/3 · productos y
+  pedidos 0/0/1/2 · necesidades api 2 / otras 1, cap 4); **calificado si score ≥ 4** → link
+  Calendly (`CALENDLY_ENTERPRISE_URL` = calendly.com/nicolas-catalogohoy/enterprise-catalogohoy,
+  duplicada en admin y landing); si no → recomendación del
+  plan Avanzado con Calendly secundario. El scoring vive en 3 copias que deben ir en sync:
+  `enterprise.model.ts` (admin), `apps/landing/src/lib/enterprise-lead.ts` (landing) y la edge
+  function (fuente de verdad de lo persistido). Se asigna manualmente desde el panel interno
+  (tier con precio sugerido $99.99 SIEMPRE ajustable al deal).
 - **Billing**: mensual / trimestral (10% off) / anual (15% off). Stripe multi-moneda con FX
   de display; los **edge functions de Stripe son la fuente de verdad** del cobro.
 - **Add-on de catálogo**: ~$3.99–$5.99/mes; los slots extra son **a nivel de cuenta** (owner),
@@ -22,8 +37,9 @@
 
 ## Créditos de IA  (detalle en `features/ai-credits.md`)
 
-- Asignación mensual por plan: **gratis 5 · básico 150 · avanzado 500** (subido desde 100/400
-  el 2026-06-21). El allowance del owner = **mayor plan** entre sus catálogos.
+- Asignación mensual por plan: **gratis 15 · básico 200 · avanzado 500 · enterprise 2000**
+  (enterprise agregado 2026-07-07; 15/200/500 subidos el 2026-06-30 desde 5/150; histórico:
+  100/400 → 150/500 el 2026-06-21). El allowance del owner = **mayor plan** entre sus catálogos.
 - **Costo por acción**: quitar fondo 1 · segmentar 1 · generar imagen 3 · mejorar texto 1 ·
   borrador a mano **0** (es canvas local, no pasa por edge function).
 - Dos cubetas: **mensual** (se resetea, `reset_due_ai_credits` cron diario) + **comprada**
@@ -44,7 +60,8 @@
 ## Reportes semanales (email)
 
 - Se envían **solo a planes pagos** (`plan_id IS DISTINCT FROM 'gratis'`) con el toggle
-  `notify_weekly_report` ON (default ON). Hoy en prod = básico + avanzado (gratis excluido).
+  `notify_weekly_report` ON (default ON). Hoy en prod = básico + avanzado + enterprise
+  (gratis excluido; enterprise entra solo por el filtro "no gratis").
 - ⚠️ El filtro es *"no gratis"* (no *"is pago"*): si un tenant queda con `plan_id = NULL` o
   un plan nuevo, se colaría. Hoy no hay NULLs. Cron domingos vía `send-weekly-report` (deployada,
   no en repo) → RPC `weekly_report_candidates` / `build_report_snapshot` / `weekly_report_recipients`.

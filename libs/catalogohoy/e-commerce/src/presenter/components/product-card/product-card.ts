@@ -7,6 +7,7 @@ import {
   input,
 } from '@angular/core';
 import { Product } from '@catalogohoy/product';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { firstImageUrl, isVideoUrl } from '@shared/domain';
 import { StripHtmlPipe } from '@shared/presenter';
 import {
@@ -27,6 +28,7 @@ import { ProductDetailModal } from '../product-detail-modal/product-detail-modal
     ProductMediaComponent,
     StripHtmlPipe,
     TenantPricePipe,
+    TranslocoPipe,
   ],
   templateUrl: './product-card.html',
   styleUrl: './product-card.css',

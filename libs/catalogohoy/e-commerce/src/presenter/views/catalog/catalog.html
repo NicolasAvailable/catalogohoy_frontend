@@ -64,10 +64,14 @@
       <div class="catalog__empty-bubble" aria-hidden="true">
         <ui-icon name="packageSearch" styleClass="size-12 text-primary-500" />
       </div>
-      <h3 class="catalog__empty-title">No hay productos para mostrar</h3>
+      <h3 class="catalog__empty-title">
+        {{ 'No hay productos para mostrar' | transloco }}
+      </h3>
       <p class="catalog__empty-subtitle">
-        Aún no se han publicado productos en este catálogo. Vuelve más tarde
-        para descubrir las novedades.
+        {{
+          'Aún no se han publicado productos en este catálogo. Vuelve más tarde para descubrir las novedades.'
+            | transloco
+        }}
       </p>
     </div>
     }
@@ -98,9 +102,9 @@
   <!-- Categories bottom sheet -->
   @if (showCategoriesSheet()) {
     <div class="cat-sheet__backdrop" (click)="closeCategoriesSheet()"></div>
-    <div class="cat-sheet" role="dialog" aria-label="Categorías">
-      <h3 class="cat-sheet__title">Categorías</h3>
-      <p class="cat-sheet__hint">Puedes presionar sobre cada una para deslizarte rápidamente</p>
+    <div class="cat-sheet" role="dialog" [attr.aria-label]="'Categorías' | transloco">
+      <h3 class="cat-sheet__title">{{ 'Categorías' | transloco }}</h3>
+      <p class="cat-sheet__hint">{{ 'Puedes presionar sobre cada una para deslizarte rápidamente' | transloco }}</p>
       <ul class="cat-sheet__list">
         @for (cat of ecommerceStore.categories(); track cat.id) {
           <li>
@@ -116,7 +120,7 @@
         }
       </ul>
       <button type="button" class="cat-sheet__close" (click)="closeCategoriesSheet()">
-        Cerrar
+        {{ 'Cerrar' | transloco }}
       </button>
     </div>
   }

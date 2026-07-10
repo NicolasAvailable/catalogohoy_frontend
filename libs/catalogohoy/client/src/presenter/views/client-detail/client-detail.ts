@@ -15,6 +15,7 @@ import {
   IconComponent,
   TooltipDirective,
 } from '@ui';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { Order, OrderStatus } from '@catalogohoy/order';
 import { TenantStore } from '@catalogohoy/tenant';
@@ -30,6 +31,7 @@ import { ClientFormDialogComponent } from '../../components/client-form-dialog/c
     TooltipDirective,
     ButtonComponent,
     ClientFormDialogComponent,
+    TranslocoPipe,
   ],
   templateUrl: './client-detail.html',
   host: { class: 'flex-1 flex flex-col min-h-0 overflow-y-auto lg:overflow-hidden' },

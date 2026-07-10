@@ -39,7 +39,7 @@ export const PLAN_CYCLES: PlanCycleOption[] = [
  * stored in `tenant_subscriptions` and *not* something that can be assigned
  * from the dialog (use "Quitar plan" to revert to gratis instead).
  */
-export type PlanTier = 'gratis' | 'basico' | 'avanzado';
+export type PlanTier = 'gratis' | 'basico' | 'avanzado' | 'enterprise';
 
 export interface PlanTierOption {
   tier: PlanTier;
@@ -59,6 +59,11 @@ export const PLAN_TIERS: PlanTierOption[] = [
     label: 'Avanzado',
     description: 'Productos ilimitados, dominio y analíticas',
   },
+  {
+    tier: 'enterprise',
+    label: 'Enterprise',
+    description: 'Límites ampliados · precio a medida (vía ventas)',
+  },
 ];
 
 /** Display labels for *all* tiers, including the implicit `gratis`. */
@@ -66,6 +71,7 @@ export const TIER_LABELS: Record<PlanTier, string> = {
   gratis: 'Gratis',
   basico: 'Básico',
   avanzado: 'Avanzado',
+  enterprise: 'Enterprise',
 };
 
 export const tierLabel = (tier: PlanTier | string): string =>
@@ -82,6 +88,9 @@ export const cycleLabel = (cycle: PlanCycle | string): string =>
 export const TIER_MONTHLY_PRICE_USD: Record<Exclude<PlanTier, 'gratis'>, number> = {
   basico: 9.99,
   avanzado: 19.99,
+  // Enterprise no tiene precio de lista: es un default sugerido que el
+  // operador SIEMPRE debe ajustar al monto negociado del deal.
+  enterprise: 99.99,
 };
 
 /** Discount applied to the list price for each billing cycle. */

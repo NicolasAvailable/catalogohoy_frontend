@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { DiscordWebhookService, SupabaseClientProvider } from '@catalogohoy/core';
 import {
@@ -7,12 +7,15 @@ import {
   TenantCurrencyStore,
 } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { SkeletonModule } from 'primeng/skeleton';
 import { IconComponent } from '@ui';
 import {
   BillingPeriod,
   CATALOG_ADDON_PRICE,
   convertUsdToLocal,
   CURRENCY_SYMBOLS,
+  ENTERPRISE_PLAN_ID,
   PaymentCurrency,
   Plan,
   PLAN_BASE_PRICES,
@@ -21,6 +24,12 @@ import {
   resolveCheckoutCurrency,
 } from '../../domain';
 import { PlanStore } from '../../infrastructure';
+import { EnterpriseContactDialog } from '../enterprise-contact-dialog/enterprise-contact-dialog';
+
+/** Card Enterprise ("Hablemos") oculta del grid por ahora — dejaba las cards
+ *  de los 3 planes muy angostas. Flip a true para volver al grid de 4.
+ *  El funnel (dialog + edge function + panel interno) sigue intacto. */
+const ENTERPRISE_CARD_VISIBLE = false;
 
 const BILLING_CONFIG: Record<BillingPeriod, { label: string; months: number; discount: number }> = {
   monthly:   { label: 'Mensual',     months: 1,  discount: 0    },
@@ -44,7 +53,7 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
       { text: '1 catálogo' },
       { text: 'Edición limitada del catálogo' },
       { text: '1 reporte por mes' },
-      { text: '5 créditos de IA por mes' },
+      { text: '15 créditos de IA por mes' },
       // Negatives stay grouped at the end so the cross icons render
       // together as a "what you don't get" block instead of being
       // sprinkled between checks.
@@ -62,13 +71,13 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
       { text: 'Todos los módulos disponibles' },
       { text: 'Analíticas del catálogo' },
       { text: 'Hasta 10 reportes por mes' },
-      { text: '150 créditos de IA por mes' },
+      { text: '200 créditos de IA por mes' },
       { text: 'Diseño personalizable' },
       { text: 'Soporte prioritario' },
     ],
     buttonLabel: 'Comenzar ahora',
-    buttonSeverity: 'primary',
-    isPopular: true,
+    buttonSeverity: 'secondary',
+    isPopular: false,
     color: '#6366f1',
   },
   avanzado: {
@@ -83,8 +92,8 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
       { text: 'Soporte dedicado' },
     ],
     buttonLabel: 'Comenzar ahora',
-    buttonSeverity: 'secondary',
-    isPopular: false,
+    buttonSeverity: 'primary',
+    isPopular: true,
     color: '#7c3aed',
   },
 };
@@ -130,7 +139,7 @@ function toPlanDisplay(plan: Plan, currentPlanPosition: number, rateType: string
 
 @Component({
   selector: 'lib-plans',
-  imports: [IconComponent, DecimalPipe],
+  imports: [IconComponent, DecimalPipe, EnterpriseContactDialog, SkeletonModule, TranslocoPipe],
   templateUrl: './plans.html',
   styleUrl: './plans.css',
   host: {
@@ -190,11 +199,44 @@ export class Plans implements OnInit {
    *  Null = no aplica (sin referido o ya pagó antes). */
   public readonly referralDiscountPct = signal<number | null>(null);
 
+  // Enterprise no se renderiza como card del grid: tiene su propia banda
+  // debajo (sin precio ni checkout self-service).
   public readonly plans = computed<PlanDisplay[]>(() =>
     this.planStore
       .plans()
+      .filter((plan) => plan.id !== ENTERPRISE_PLAN_ID)
       .map((plan) => toPlanDisplay(plan, this.currentPlanPosition(), this.currencyCode()))
   );
+
+  public readonly isEnterpriseCurrent = computed(
+    () => this.planStore.currentPlan()?.id === ENTERPRISE_PLAN_ID
+  );
+
+  /** La card Enterprise solo se muestra si el flag está activo o si el tenant
+   *  YA es enterprise (asignado por el panel interno) — a ese no se le puede
+   *  esconder su plan actual. */
+  public readonly showEnterpriseCard = computed(
+    () => ENTERPRISE_CARD_VISIBLE || this.isEnterpriseCurrent()
+  );
+
+  /** Mientras los planes cargan desde Supabase mostramos skeletons en el grid
+   *  completo (incluida la posición de Enterprise) — si no, la card Enterprise
+   *  estática aparece sola. Si la carga falla, plans queda vacío e isLoading
+   *  en false, así que caemos al grid real y no dejamos skeletons eternos. */
+  public readonly isLoadingPlans = computed(
+    () => this.planStore.isLoading() && this.plans().length === 0
+  );
+
+  // 3 planes (Enterprise oculta — ver ENTERPRISE_CARD_VISIBLE).
+  public readonly skeletonCards = [0, 1, 2];
+  // 9 filas ≈ las features del plan Avanzado, la card más alta del grid.
+  public readonly skeletonFeatureWidths = ['95%', '80%', '90%', '75%', '100%', '85%', '90%', '80%', '70%'];
+
+  private readonly enterpriseDialog = viewChild.required(EnterpriseContactDialog);
+
+  public openEnterpriseDialog(): void {
+    this.enterpriseDialog().show();
+  }
 
   async ngOnInit(): Promise<void> {
     this.planStore.loadPlans();

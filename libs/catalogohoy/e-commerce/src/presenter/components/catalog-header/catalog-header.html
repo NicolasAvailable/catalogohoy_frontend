@@ -13,7 +13,7 @@
           </div>
         }
         <h1 class="catalog-header__title">
-          {{ ecommerceStore.effectiveCatalogInfo()?.name || 'Catálogo' }}
+          {{ ecommerceStore.effectiveCatalogInfo()?.name || ('Catálogo' | transloco) }}
         </h1>
       }
     </div>
@@ -31,6 +31,8 @@
             iconStyleClass="size-5!"
           />
         </div>
+
+        <lib-language-selector scope="catalog" />
 
         <button class="catalog-header__cart" (click)="cartStore.openCart()">
           <ui-icon name="shoppingCart" styleClass="size-6" />

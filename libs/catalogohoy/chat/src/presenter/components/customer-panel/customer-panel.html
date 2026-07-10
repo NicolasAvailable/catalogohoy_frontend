@@ -1,0 +1,170 @@
+@if (chat(); as c) {
+<div class="ficha">
+  <!-- Customer header -->
+  <div class="ficha__head">
+    <div class="ficha__avatar">{{ initial(c.customerName) }}</div>
+    <div class="ficha__id">
+      <span class="ficha__name">{{ c.customerName || ('Cliente' | transloco) }}</span>
+      @if (c.customerPhone) {
+      <a
+        class="ficha__phone"
+        [href]="waLink(c.customerPhone)"
+        target="_blank"
+        rel="noopener"
+      >
+        <ui-icon name="phone" size="13" /> {{ c.customerPhone }}
+      </a>
+      }
+    </div>
+  </div>
+
+  <!-- Pipeline status -->
+  <div class="ficha__field">
+    <span class="ficha__label">{{ 'Estado' | transloco }}</span>
+    @if (statusOptions().length) {
+    <ui-select
+      [options]="statusOptions()"
+      optionLabel="label"
+      optionValue="value"
+      [placeholder]="'Sin estado' | transloco"
+      size="small"
+      [ngModel]="c.pipelineStatus"
+      (ngModelChange)="onStatusChange($event)"
+    >
+      <ng-template selectSelectedItem let-s>
+        <span class="ficha-opt">
+          <span class="ficha-dot" [style.background]="statusColor(s?.value)"></span>
+          {{ s?.label }}
+        </span>
+      </ng-template>
+      <ng-template selectItem let-item>
+        <span class="ficha-opt">
+          <span class="ficha-dot" [style.background]="statusColor(item?.value)"></span>
+          {{ item?.label }}
+        </span>
+      </ng-template>
+    </ui-select>
+    } @else {
+    <p class="ficha__hint">
+      {{ 'Crea estados del pipeline en la configuración del CRM.' | transloco }}
+    </p>
+    }
+  </div>
+
+  <!-- Assignment -->
+  <div class="ficha__field">
+    <span class="ficha__label">{{ 'Asignado a' | transloco }}</span>
+    <ui-select
+      [options]="assigneeOptions()"
+      optionLabel="label"
+      optionValue="value"
+      [placeholder]="'Sin asignar' | transloco"
+      size="small"
+      [ngModel]="c.assignedToUserId"
+      (ngModelChange)="onAssigneeChange($event)"
+    >
+      <ng-template selectSelectedItem let-s>
+        <span class="ficha-opt">
+          @if (s?.value !== null) {
+          <span class="ficha-assignee-avatar">{{ initial(s?.label) }}</span>
+          } @else {
+          <ui-icon name="user" size="13" styleClass="text-grey-400" />
+          }
+          {{ s?.value === null ? (s?.label | transloco) : s?.label }}
+        </span>
+      </ng-template>
+      <ng-template selectItem let-item>
+        <span class="ficha-opt">
+          @if (item?.value !== null) {
+          <span class="ficha-assignee-avatar">{{ initial(item?.label) }}</span>
+          } @else {
+          <ui-icon name="user" size="13" styleClass="text-grey-400" />
+          }
+          {{ item?.value === null ? (item?.label | transloco) : item?.label }}
+        </span>
+      </ng-template>
+    </ui-select>
+  </div>
+
+  <!-- Collapsible sections -->
+  <p-accordion [multiple]="true" [(value)]="accordionValue" styleClass="ficha__accordion">
+    <!-- Información básica -->
+    <p-accordion-panel value="info">
+      <p-accordion-header>
+        <span class="ficha__section-title">{{ 'Información básica' | transloco }}</span>
+      </p-accordion-header>
+      <p-accordion-content>
+        <dl class="ficha__info">
+          <dt>{{ 'Fecha de creación' | transloco }}</dt>
+          <dd>{{ formatDateTime(c.createdAt) }}</dd>
+          <dt>{{ 'Teléfono' | transloco }}</dt>
+          <dd>{{ c.customerPhone || '—' }}</dd>
+        </dl>
+      </p-accordion-content>
+    </p-accordion-panel>
+
+    <!-- Órdenes -->
+    <p-accordion-panel value="orders">
+      <p-accordion-header>
+        <span class="ficha__section-title">{{ 'Órdenes ({count})' | transloco: { count: orders().length } }}</span>
+      </p-accordion-header>
+      <p-accordion-content>
+        @if (orders().length) {
+        <div class="ficha__orders">
+          @for (o of orders(); track o.id) {
+          <button type="button" class="ficha__order" (click)="openOrder(o.id)">
+            <span class="ficha__order-num">#{{ o.orderNumber ?? o.id }}</span>
+            <span class="ficha__order-meta">
+              {{ formatDate(o.createdAt) }} · {{ orderStatusLabel(o.status) | transloco }}
+            </span>
+            <span class="ficha__order-total">${{ o.totalUsd }}</span>
+          </button>
+          }
+        </div>
+        } @else {
+        <p class="ficha__hint">{{ 'Sin órdenes registradas.' | transloco }}</p>
+        }
+      </p-accordion-content>
+    </p-accordion-panel>
+
+    <!-- Notas internas -->
+    <p-accordion-panel value="notes">
+      <p-accordion-header>
+        <span class="ficha__section-title">{{ 'Notas internas' | transloco }}</span>
+      </p-accordion-header>
+      <p-accordion-content>
+        <div class="ficha__notes">
+          @for (n of c.internalNotes; track $index) {
+          <div class="ficha__note">
+            <div class="ficha__note-head">
+              <span class="ficha__note-author">{{ n.author }}</span>
+              <span class="ficha__note-date">{{ formatDate(n.createdAt) }}</span>
+            </div>
+            <p class="ficha__note-text">{{ n.text }}</p>
+          </div>
+          } @empty {
+          <p class="ficha__hint">{{ 'Solo el equipo ve estas notas.' | transloco }}</p>
+          }
+        </div>
+        <div class="ficha__note-composer">
+          <textarea
+            class="ficha__note-input"
+            rows="2"
+            [placeholder]="'Agregar nota...' | transloco"
+            [ngModel]="noteDraft()"
+            (ngModelChange)="noteDraft.set($event)"
+            (keydown)="onNoteKeydown($event)"
+          ></textarea>
+          <button
+            class="ficha__note-add"
+            [disabled]="!noteDraft().trim()"
+            (click)="addNote()"
+          >
+            <ui-icon name="plus" size="14" /> {{ 'Agregar nota' | transloco }}
+          </button>
+        </div>
+      </p-accordion-content>
+    </p-accordion-panel>
+  </p-accordion>
+</div>
+}

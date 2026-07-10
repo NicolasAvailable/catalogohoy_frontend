@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { Order, OrderPdfService } from '@catalogohoy/order';
 import { IconComponent } from '@ui';
 import { PublicOrder } from '../../../domain';
@@ -15,7 +16,7 @@ import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 
 @Component({
   selector: 'lib-invoice',
-  imports: [DecimalPipe, DatePipe, IconComponent, TenantPricePipe],
+  imports: [DecimalPipe, DatePipe, IconComponent, TenantPricePipe, TranslocoPipe],
   templateUrl: './invoice.html',
   styleUrl: './invoice.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -118,23 +118,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Crawlers get dynamic OG meta tags
   try {
     const host = (req.headers['host'] || req.headers['x-forwarded-host'] || '') as string;
-    const slug = extractSlugFromHost(host);
     const path = (req.query['path'] as string) || '';
 
-    if (!slug) {
-      return res.status(200).send(buildHtml(defaultMeta));
+    const hostname = host.split(':')[0].toLowerCase();
+    let baseUrl: string;
+    let tenant: { id: number; name: string } | null = null;
+
+    if (hostname.endsWith('.catalogohoy.com')) {
+      const slug = extractSlugFromHost(hostname);
+      if (!slug) {
+        return res.status(200).send(buildHtml(defaultMeta));
+      }
+      baseUrl = `https://${slug}.catalogohoy.com`;
+      const { data } = await supabase
+        .from('tenants')
+        .select('id, name')
+        .eq('slug', slug)
+        .single();
+      tenant = data;
+    } else {
+      // Dominio personalizado: se resuelve por custom_domain (www se ignora
+      // porque en la columna se guarda siempre el apex).
+      const domain = hostname.replace(/^www\./, '');
+      baseUrl = `https://${domain}`;
+      const { data } = await supabase
+        .from('tenants')
+        .select('id, name')
+        .eq('custom_domain', domain)
+        .single();
+      tenant = data;
     }
 
-    const baseUrl = `https://${slug}.catalogohoy.com`;
-
-    // Fetch tenant by slug
-    const { data: tenant, error: tenantError } = await supabase
-      .from('tenants')
-      .select('id, name')
-      .eq('slug', slug)
-      .single();
-
-    if (tenantError || !tenant) {
+    if (!tenant) {
       return res.status(200).send(buildHtml({ ...defaultMeta, url: baseUrl }));
     }
 
