@@ -165,7 +165,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
+    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
   public async signup(
@@ -218,7 +218,7 @@ export class AuthenticationService implements BaseAuthenticationService {
     const tenant = TenantMapper.toDomain(tenantRows[0]);
     await this.setupTenantLocale(credentials.countryCode);
     await this._tryRegisterReferral(Number(tenant.id), credentials.referralCode);
-    return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
+    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
   /** Best-effort: si el usuario llegó por un link `?ref=` (o tipeó un código
@@ -274,7 +274,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
+    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
   public async resetPassword(
@@ -329,17 +329,25 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (error) return E.left(new Error(error.message));
     if (!tenantRows?.length) return E.left(new Error('no_tenant'));
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    return E.right(this._buildRedirectUrl(tenant.slug, tenant.customDomain));
+    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
   public buildTenantAdminUrl(slug: string, customDomain?: string | null): string {
     return this._buildRedirectUrl(slug, customDomain);
   }
 
+  /** Redirect post-login: ANTES de navegar (la navegación mata requests en
+   *  vuelo) espera que el idioma elegido en el login viaje al perfil
+   *  (user_metadata) para que el admin —otro origen— lo sincronice al abrir. */
+  private async _authRedirectUrl(
+    slug: string,
+    customDomain?: string | null
+  ): Promise<string> {
+    await this.language.flushToProfile();
+    return this._buildRedirectUrl(slug, customDomain);
+  }
+
   private _buildRedirectUrl(slug: string, customDomain?: string | null): string {
-    // Con la sesión ya creada, el idioma elegido en el login viaja al perfil
-    // (user_metadata) para que el admin (otro origen) lo sincronice al abrir.
-    void this.language.flushToProfile();
     const key = this.authenticationTokenService.AUTH_CONFIG_KEY;
     const value = encodeURIComponent(this.authenticationTokenService.authConfigValue ?? '');
     if (isDevMode()) {

@@ -45,7 +45,7 @@ export class LanguageService {
     this.current.set(lang);
     this.apply(lang);
     this.changedThisSession = true;
-    this.persistToProfile(lang);
+    void this.persistToProfile(lang);
   }
 
   /** Empuja el idioma actual al perfil apenas EXISTE sesión (post-login):
@@ -57,12 +57,12 @@ export class LanguageService {
     try {
       const client = SupabaseClientProvider.getInstance();
       if (this.changedThisSession) {
-        this.persistToProfile(this.current());
+        await this.persistToProfile(this.current());
         return;
       }
       const { data } = await client.auth.getUser();
       if (!data.user?.user_metadata?.['language']) {
-        this.persistToProfile(this.current());
+        await this.persistToProfile(this.current());
       }
     } catch {
       // sin sesión/cliente: no hay perfil al que empujar
@@ -106,12 +106,10 @@ export class LanguageService {
    *  Supabase Auth): así viaja con la CUENTA y no con el navegador — otros
    *  dispositivos y las futuras apps móviles la comparten con el mismo login.
    *  Best-effort: sin sesión (catálogo público, login) no hace nada. */
-  private persistToProfile(lang: AppLanguage): void {
+  private async persistToProfile(lang: AppLanguage): Promise<void> {
     try {
       const client = SupabaseClientProvider.getInstance();
-      void client.auth
-        .updateUser({ data: { language: lang } })
-        .catch(() => undefined);
+      await client.auth.updateUser({ data: { language: lang } });
     } catch {
       // sin cliente/sesión: queda solo en localStorage
     }
