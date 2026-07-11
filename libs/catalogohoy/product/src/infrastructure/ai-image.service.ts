@@ -50,7 +50,18 @@ export class AiImageService implements BaseAiImageService {
             new Error('No se pudo conectar con la IA. Verifica tu conexión.')
           );
         }
-        return E.left(new Error(msg || 'Error al conectar con la IA de texto'));
+        const backend = await this.readInvokeError(error);
+        if (backend.code === 'no_credits') {
+          this.credits.setBalance(0);
+          return E.left(
+            new Error('No te quedan créditos de IA. Compra más o sube de plan.')
+          );
+        }
+        return E.left(
+          new Error(
+            backend.message || msg || 'Error al conectar con la IA de texto'
+          )
+        );
       }
       const parsed = typeof data === 'string' ? JSON.parse(data) : data;
       if (!parsed?.success || !parsed?.text) {
@@ -66,6 +77,23 @@ export class AiImageService implements BaseAiImageService {
     } catch (e) {
       console.error('[AI Text] unexpected error:', e);
       return E.left(new Error('Error de conexión con la IA de texto.'));
+    }
+  }
+
+  /** `functions.invoke()` convierte cualquier non-2xx en un error genérico
+   *  ("Edge Function returned a non-2xx status code") y esconde el body real
+   *  en `error.context` (Response). Acá lo leemos para recuperar el
+   *  code/mensaje del backend — p. ej. el 402 de créditos agotados. */
+  private async readInvokeError(
+    error: unknown
+  ): Promise<{ code?: string; message?: string }> {
+    const ctx = (error as { context?: Response }).context;
+    if (!ctx || typeof ctx.clone !== 'function') return {};
+    try {
+      const body = await ctx.clone().json();
+      return { code: body?.code, message: body?.error };
+    } catch {
+      return {};
     }
   }
 
@@ -106,7 +134,18 @@ export class AiImageService implements BaseAiImageService {
             )
           );
         }
-        return E.left(new Error(msg || 'Error al conectar con el servicio de IA'));
+        const backend = await this.readInvokeError(error);
+        if (backend.code === 'no_credits') {
+          this.credits.setBalance(0);
+          return E.left(
+            new Error('No te quedan créditos de IA. Compra más o sube de plan.')
+          );
+        }
+        return E.left(
+          new Error(
+            backend.message || msg || 'Error al conectar con el servicio de IA'
+          )
+        );
       }
 
       // supabase.functions.invoke puede devolver data como string u objeto.
