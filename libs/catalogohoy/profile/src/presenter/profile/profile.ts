@@ -2,7 +2,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, effect, inject, signal, ViewChild } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CheckoutService, PLAN_FEATURES, PlanFeature, PlanStore } from '@catalogohoy/plan';
+import { CheckoutService, PLAN_FEATURES_DETAILED, PlanFeature, PlanStore } from '@catalogohoy/plan';
 import { CreditsStore } from '@catalogohoy/product';
 import { TenantStore } from '@catalogohoy/tenant';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -132,11 +132,11 @@ export class Profile {
     () => this.planStore.maxCatalogs() + this.planStore.extraCatalogs()
   );
 
-  /** Features que promete el plan actual (misma fuente que la página de
-   *  planes). Fallback a gratis mientras carga. */
+  /** Features del plan actual, versión detallada (cada límite con su número,
+   *  sin atajos "Todo del plan X"). Fallback a gratis mientras carga. */
   public readonly planFeatures = computed<PlanFeature[]>(() => {
     const id = this.planStore.currentPlan()?.id ?? 'gratis';
-    return PLAN_FEATURES[id] ?? PLAN_FEATURES['gratis'];
+    return PLAN_FEATURES_DETAILED[id] ?? PLAN_FEATURES_DETAILED['gratis'];
   });
 
   public readonly planIncludesOpen = signal(false);

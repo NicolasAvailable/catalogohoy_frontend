@@ -38,3 +38,60 @@ export const PLAN_FEATURES: Record<string, PlanFeature[]> = {
     { text: 'Soporte dedicado' },
   ],
 };
+
+/** Versión DETALLADA por plan — sin atajos tipo "Todo del plan Básico":
+ *  enumera cada límite con su número real (fuente: tabla `plans` +
+ *  asignaciones de créditos IA). La usa "Tu plan incluye" en Mi Perfil;
+ *  las cards de la página de planes siguen usando la versión compacta. */
+export const PLAN_FEATURES_DETAILED: Record<string, PlanFeature[]> = {
+  gratis: [
+    { text: '1 catálogo' },
+    { text: 'Hasta 10 productos' },
+    { text: '1 variante por producto' },
+    { text: '1 reporte por mes' },
+    { text: '15 créditos de IA por mes' },
+    { text: 'Edición limitada del catálogo' },
+    { text: 'Sin analíticas del catálogo', negative: true },
+    { text: 'Sin equipo de trabajo', negative: true },
+    { text: 'Sin notificaciones por WhatsApp', negative: true },
+  ],
+  basico: [
+    { text: '1 catálogo' },
+    { text: 'Hasta 100 productos' },
+    { text: 'Hasta 3 variantes por producto' },
+    { text: '1 miembro de equipo' },
+    { text: 'Hasta 10 reportes por mes' },
+    { text: '200 créditos de IA por mes' },
+    { text: 'Todos los módulos disponibles' },
+    { text: 'Analíticas del catálogo' },
+    { text: 'Notificaciones de órdenes por WhatsApp' },
+    { text: 'Diseño personalizable' },
+    { text: 'Soporte prioritario' },
+  ],
+  avanzado: [
+    { text: '2 catálogos (ampliable con catálogos extra)' },
+    { text: 'Productos ilimitados' },
+    { text: 'Hasta 15 variantes por producto' },
+    { text: 'Hasta 10 miembros de equipo' },
+    { text: 'Hasta 30 reportes por mes' },
+    { text: '500 créditos de IA por mes' },
+    { text: 'Todos los módulos disponibles' },
+    { text: 'Analíticas del catálogo' },
+    { text: 'Notificaciones de órdenes por WhatsApp' },
+    { text: 'Diseño personalizable' },
+    { text: 'Vinculación de dominio personalizado (dominio aparte)' },
+    { text: 'Soporte dedicado' },
+  ],
+  enterprise: [
+    { text: 'Hasta 10 catálogos' },
+    { text: 'Productos ilimitados' },
+    { text: 'Hasta 100 variantes por producto' },
+    { text: 'Hasta 50 miembros de equipo' },
+    { text: '2000 créditos de IA por mes' },
+    { text: 'Todos los módulos disponibles' },
+    { text: 'Analíticas del catálogo' },
+    { text: 'Notificaciones de órdenes por WhatsApp' },
+    { text: 'Vinculación de dominio personalizado (dominio aparte)' },
+    { text: 'Soporte dedicado' },
+  ],
+};

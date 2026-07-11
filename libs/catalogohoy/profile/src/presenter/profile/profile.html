@@ -370,20 +370,30 @@
 
         @if (hasStripeSubscription()) {
         <div
-          class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-grey-100"
+          class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-grey-50 border border-grey-100"
         >
-          <div class="flex items-center gap-2 text-sm text-grey-400">
-            <ui-icon name="credit-card" size="15" styleClass="text-grey-400" />
-            {{ '¿Tarjeta nueva o vencida? Actualizá tu método de pago sin perder la suscripción.' | transloco }}
+          <div class="flex items-center gap-3 min-w-0">
+            <span
+              class="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-50 shrink-0"
+            >
+              <ui-icon name="credit-card" size="18" styleClass="text-primary-500" />
+            </span>
+            <div class="flex flex-col min-w-0">
+              <strong class="text-sm font-semibold text-grey-800">
+                {{ 'Método de pago' | transloco }}
+              </strong>
+              <span class="text-xs text-grey-400">
+                {{ '¿Tarjeta nueva o vencida? Actualizá tu método de pago sin perder la suscripción.' | transloco }}
+              </span>
+            </div>
           </div>
           <ui-button
             [label]="'Cambiar tarjeta' | transloco"
-            severity="secondary"
-            variant="outlined"
-            icon="credit-card"
+            severity="primary"
             [fluid]="false"
             [isLoading]="isOpeningPortal()"
             (click)="onChangeCard()"
+            styleClass="whitespace-nowrap shrink-0"
           />
         </div>
         }

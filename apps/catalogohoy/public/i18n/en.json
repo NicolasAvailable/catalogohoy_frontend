@@ -1778,5 +1778,17 @@
   "Tu plan incluye": "Your plan includes",
   "Todo del plan Avanzado": "Everything in the Advanced plan",
   "Límites ampliados según acuerdo": "Extended limits per agreement",
-  "Catálogos": "Catalogs"
+  "Catálogos": "Catalogs",
+  "Hasta 10 productos": "Up to 10 products",
+  "Productos ilimitados": "Unlimited products",
+  "1 variante por producto": "1 variant per product",
+  "Hasta 3 variantes por producto": "Up to 3 variants per product",
+  "Hasta 15 variantes por producto": "Up to 15 variants per product",
+  "Hasta 100 variantes por producto": "Up to 100 variants per product",
+  "Hasta 50 miembros de equipo": "Up to 50 team members",
+  "Sin notificaciones por WhatsApp": "No WhatsApp notifications",
+  "Notificaciones de órdenes por WhatsApp": "Order notifications via WhatsApp",
+  "Hasta 10 catálogos": "Up to 10 catalogs",
+  "2000 créditos de IA por mes": "2000 AI credits per month",
+  "2 catálogos (ampliable con catálogos extra)": "2 catalogs (expandable with extra catalogs)"
 }
