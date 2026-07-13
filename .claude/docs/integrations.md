@@ -136,8 +136,9 @@ edites a ciegas**; el repo puede estar atrás de prod.
 
 ### Google Analytics 4
 
+- Propiedad GA4 creada 2026-07-13 — **ID de medición `G-TL9DYGTFED`**.
 - Snippet gtag en `apps/catalogohoy/src/index.html` (guard: **no** carga en `/admin` ni en
-  localhost) — `GA_ID` vacío hasta crear la propiedad GA4 (buscar `TODO: G-XXXXXXXXXX`).
-  Los page_view de navegación SPA los cubre la "medición mejorada" de GA4 (history changes).
-- Landing: pendiente de agregar el mismo snippet en la **rama `landing`** cuando exista el ID.
+  localhost). Los page_view de navegación SPA los cubre la "medición mejorada" de GA4
+  (history changes).
+- Landing: snippet estándar de gtag en `apps/landing/index.html` (**rama `landing`**).
 - Convive con PostHog (producto) y Meta Pixel (ads); GA4 es para adquisición/SEO/Google Ads.
