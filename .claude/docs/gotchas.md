@@ -81,8 +81,10 @@
 - **El sitemap/robots de la landing viven en la rama `landing`** — la copia de
   `apps/landing/` en `main` está desactualizada (rutas viejas). Editar siempre sobre la rama.
 - **Googlebot no ve la SPA del storefront**: `middleware.ts` intercepta crawlers (regex
-  incluye Googlebot/bingbot) y sirve el HTML mínimo con meta OG. Indexa título/descripción/
-  canonical por tenant y por `/product/:id`, no el contenido renderizado.
+  incluye Googlebot/bingbot) y sirve HTML estático por tenant. Desde 2026-07-13 va
+  enriquecido (lista de productos + JSON-LD Store/ItemList/Product) — si se agrega un campo
+  del catálogo que deba indexarse, hay que sumarlo ahí, no solo a la SPA. Los crawlers
+  sociales solo leen los meta OG, así que el cuerpo extra no cambia los previews de WhatsApp.
 
 ## Nx + worktrees
 

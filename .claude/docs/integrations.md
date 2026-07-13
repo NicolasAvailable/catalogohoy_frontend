@@ -121,9 +121,14 @@ edites a ciegas**; el repo puede estar atrás de prod.
     (`tenant_ecommerce_config.is_visible=false`) o el **plan vencido** → solo la portada.
     robots deshabilita `/admin/`, `/checkout`, `/order/`, `/public/`, etc.
   - Usa la **anon key** por REST (todas las tablas necesarias tienen SELECT público).
-- **Crawlers** (Googlebot incluido) reciben el HTML mínimo de `middleware.ts` (meta OG por
-  tenant/producto, matcher `/` y `/product/:path*`) — la SPA no se les sirve. Mejora futura
-  posible: dejar pasar a Googlebot a la SPA (renderiza JS) para indexar contenido completo.
+- **Crawlers** (Googlebot incluido) reciben el HTML de `middleware.ts` (matcher `/` y
+  `/product/:path*`) — la SPA no se les sirve. Desde 2026-07-13 ese HTML va **enriquecido
+  para SEO**: portada con lista real de productos (nombre, precio, link a `/product/{id}`,
+  máx 60) + JSON-LD `Store`/`ItemList`; producto con descripción/foto/precio + JSON-LD
+  `Product` con `Offer` (precio, moneda, disponibilidad según `is_sold_out`) → habilita
+  resultados enriquecidos en Google. Moneda del JSON-LD: `product_currency`, salvo **VE**
+  donde los precios se guardan en la referencia → `display_currency` (ver gotcha de
+  moneda). Precio 0 = "sin precio": no se muestra ni lleva Offer.
 
 ### Google Search Console
 
