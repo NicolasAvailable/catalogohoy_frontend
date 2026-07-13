@@ -105,16 +105,18 @@ export class ProductCard {
     () => this.product().isVariant && this.product().variants.length > 0
   );
 
-  /** Min/max price across variants — the card shows a range like TakeApp.
-   *  Includes the base/original price too: the modal always offers
-   *  "Producto original" as a purchasable option, so the range must cover it.
-   *  The base price is optional for variant products (variants carry the
-   *  price then), so 0 stays out of the range. */
+  /** Price shown on the card for variant products: only the base/original
+   *  price (the modal's default selection) — variant prices are seen inside
+   *  the modal when picking an option. The base price is optional for
+   *  variant products (variants carry the price then), so it falls back to
+   *  the variants' min-max range when empty. */
   public readonly variantPriceRange = computed(() => {
     const p = this.product();
-    const prices = p.variants.map((v) => v.price);
     const basePrice = p.pricePromotional > 0 ? p.pricePromotional : p.price;
-    if (basePrice > 0) prices.push(basePrice);
+    if (basePrice > 0) {
+      return { min: basePrice, max: basePrice };
+    }
+    const prices = p.variants.map((v) => v.price);
     if (!prices.length) {
       return { min: p.price, max: p.price };
     }
