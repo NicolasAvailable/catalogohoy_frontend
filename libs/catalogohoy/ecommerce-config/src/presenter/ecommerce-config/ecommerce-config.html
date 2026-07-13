@@ -1619,6 +1619,57 @@
                 <small class="field-hint">{{ 'El aviso de nueva orden llega a este número.' | transloco }}</small>
                 }
               </div>
+
+              <!-- 2º número destinatario: solo tenants con cupo habilitado
+                   (tenants.whatsapp_notify_numbers_limit >= 2). -->
+              @if (whatsappNotifyMaxRecipients() > 1 && draftWhatsappNotifyNumber()) {
+              <div class="form-field flex flex-col gap-2">
+                @if (draftWhatsappNotifyNumber2() || showRecipientNumber2Input()) {
+                <label>{{ 'Segundo número (opcional)' | transloco }}</label>
+                <div class="flex flex-col gap-2">
+                  <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div class="flex items-center gap-2">
+                      <ui-input-phone
+                        [ngModel]="draftWhatsappNotifyNumber2()"
+                        (ngModelChange)="draftWhatsappNotifyNumber2.set($event)"
+                        [defaultCountry]="draftCountryCode() ?? 've'"
+                      ></ui-input-phone>
+                      <button
+                        type="button"
+                        class="whatsapp-button-remove"
+                        (click)="draftWhatsappNotifyNumber2.set(null); showRecipientNumber2Input.set(false)"
+                        [title]="'Quitar número' | transloco"
+                      >
+                        <ui-icon name="trash" styleClass="size-4"></ui-icon>
+                      </button>
+                    </div>
+                    @if (draftWhatsappNotifyNumber2()) {
+                    <ui-button
+                      [label]="'Probar' | transloco"
+                      icon="send"
+                      size="small"
+                      [fluid]="false"
+                      [isLoading]="isTestingWhatsapp2()"
+                      (click)="testWhatsappNotification(2)"
+                    ></ui-button>
+                    }
+                  </div>
+                  @if (draftWhatsappNotifyNumber2()) {
+                  <small class="field-hint">{{ 'El aviso de nueva orden también llega a este número.' | transloco }}</small>
+                  }
+                </div>
+                } @else {
+                <ui-button
+                  [label]="'Agregar segundo número' | transloco"
+                  icon="plus"
+                  size="small"
+                  [fluid]="false"
+                  (click)="showRecipientNumber2Input.set(true)"
+                ></ui-button>
+                <small class="field-hint">{{ 'Tu cuenta puede recibir el aviso en hasta 2 números.' | transloco }}</small>
+                }
+              </div>
+              }
               }
             </div>
 

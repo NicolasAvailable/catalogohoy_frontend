@@ -293,15 +293,28 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftNotifyOrderReceived = signal<boolean>(true);
   public readonly draftNotifyOrderCompleted = signal<boolean>(false);
   public readonly draftWhatsappNotifyNumber = signal<string | null>(null);
+  public readonly draftWhatsappNotifyNumber2 = signal<string | null>(null);
+  /** Cuántos números puede configurar el tenant (tenants.
+   *  whatsapp_notify_numbers_limit, default 1). Solo tenants habilitados a
+   *  mano ven el bloque del 2º número. */
+  public readonly whatsappNotifyMaxRecipients = signal<number>(1);
   /** Progressive disclosure: mostrar el input de número recién al hacer click
    *  en "Agregar número". */
   public readonly showRecipientNumberInput = signal<boolean>(false);
+  public readonly showRecipientNumber2Input = signal<boolean>(false);
   public readonly isTestingWhatsapp = signal<boolean>(false);
+  public readonly isTestingWhatsapp2 = signal<boolean>(false);
   private readonly lastSyncedWhatsappNotify = signal<{
     orderReceived: boolean;
     orderCompleted: boolean;
     recipientNumber: string | null;
-  }>({ orderReceived: true, orderCompleted: false, recipientNumber: null });
+    recipientNumber2: string | null;
+  }>({
+    orderReceived: true,
+    orderCompleted: false,
+    recipientNumber: null,
+    recipientNumber2: null,
+  });
 
   // Business hours editor (one row per day, Sunday → Saturday)
   public readonly dayLabels = DAY_LABELS_ES;
@@ -456,7 +469,8 @@ export class EcommerceConfigComponent implements OnInit {
     if (
       this.draftNotifyOrderReceived() !== wn.orderReceived ||
       this.draftNotifyOrderCompleted() !== wn.orderCompleted ||
-      (this.draftWhatsappNotifyNumber() ?? null) !== (wn.recipientNumber ?? null)
+      (this.draftWhatsappNotifyNumber() ?? null) !== (wn.recipientNumber ?? null) ||
+      (this.draftWhatsappNotifyNumber2() ?? null) !== (wn.recipientNumber2 ?? null)
     ) {
       return true;
     }
@@ -942,16 +956,27 @@ export class EcommerceConfigComponent implements OnInit {
       this.draftNotifyOrderReceived.set(s.orderReceived);
       this.draftNotifyOrderCompleted.set(s.orderCompleted);
       this.draftWhatsappNotifyNumber.set(s.recipientNumber);
-      this.lastSyncedWhatsappNotify.set({ ...s });
+      this.draftWhatsappNotifyNumber2.set(s.recipientNumber2);
+      this.whatsappNotifyMaxRecipients.set(s.maxRecipients);
+      this.lastSyncedWhatsappNotify.set({
+        orderReceived: s.orderReceived,
+        orderCompleted: s.orderCompleted,
+        recipientNumber: s.recipientNumber,
+        recipientNumber2: s.recipientNumber2,
+      });
     });
   }
 
   /** Envía un WhatsApp de prueba al número que se está configurando (sin
-   *  necesidad de guardar primero). */
-  public async testWhatsappNotification(): Promise<void> {
-    const number = this.draftWhatsappNotifyNumber();
+   *  necesidad de guardar primero). `which` elige cuál de los dos inputs. */
+  public async testWhatsappNotification(which: 1 | 2 = 1): Promise<void> {
+    const number =
+      which === 2
+        ? this.draftWhatsappNotifyNumber2()
+        : this.draftWhatsappNotifyNumber();
     if (!number) return;
-    this.isTestingWhatsapp.set(true);
+    const loading = which === 2 ? this.isTestingWhatsapp2 : this.isTestingWhatsapp;
+    loading.set(true);
     const result = await this.configService.sendTestWhatsapp(
       number,
       this.draftName(),
@@ -962,7 +987,7 @@ export class EcommerceConfigComponent implements OnInit {
         toast.error('No se pudo enviar la prueba: ' + (err.message || '')),
       () => toast.success('¡Te enviamos un WhatsApp de prueba a ese número!')
     );
-    this.isTestingWhatsapp.set(false);
+    loading.set(false);
   }
 
   private async loadBusinessHours(tenantId: string): Promise<void> {
@@ -1114,13 +1139,15 @@ export class EcommerceConfigComponent implements OnInit {
     const whatsappNotifyChanged =
       this.draftNotifyOrderReceived() !== wn.orderReceived ||
       this.draftNotifyOrderCompleted() !== wn.orderCompleted ||
-      (this.draftWhatsappNotifyNumber() ?? null) !== (wn.recipientNumber ?? null);
+      (this.draftWhatsappNotifyNumber() ?? null) !== (wn.recipientNumber ?? null) ||
+      (this.draftWhatsappNotifyNumber2() ?? null) !== (wn.recipientNumber2 ?? null);
     if (whatsappNotifyChanged && config?.tenantId) {
       didSilentOp = true;
       const next = {
         orderReceived: this.draftNotifyOrderReceived(),
         orderCompleted: this.draftNotifyOrderCompleted(),
         recipientNumber: this.draftWhatsappNotifyNumber(),
+        recipientNumber2: this.draftWhatsappNotifyNumber2(),
       };
       const result = await this.configService.saveWhatsappNotifySettings(
         config.tenantId,

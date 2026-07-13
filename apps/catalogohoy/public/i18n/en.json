@@ -1791,5 +1791,9 @@
   "Hasta 10 catálogos": "Up to 10 catalogs",
   "2000 créditos de IA por mes": "2000 AI credits per month",
   "2 catálogos (ampliable con catálogos extra)": "2 catalogs (expandable with extra catalogs)",
-  "No te quedan créditos de IA. Compra más o sube de plan.": "You're out of AI credits. Buy more or upgrade your plan."
+  "No te quedan créditos de IA. Compra más o sube de plan.": "You're out of AI credits. Buy more or upgrade your plan.",
+  "Segundo número (opcional)": "Second number (optional)",
+  "El aviso de nueva orden también llega a este número.": "The new-order alert also goes to this number.",
+  "Agregar segundo número": "Add second number",
+  "Tu cuenta puede recibir el aviso en hasta 2 números.": "Your account can receive the alert on up to 2 numbers."
 }

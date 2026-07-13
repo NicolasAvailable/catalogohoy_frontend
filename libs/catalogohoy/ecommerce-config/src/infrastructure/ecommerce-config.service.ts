@@ -318,26 +318,43 @@ export class EcommerceConfigService {
     }
   }
 
-  /** Lee los toggles de notificaciones WhatsApp + el número destinatario del
-   *  aviso de nueva orden, desde `whatsapp_notification_settings`. */
+  /** Lee los toggles de notificaciones WhatsApp + los números destinatarios
+   *  del aviso de nueva orden, desde `whatsapp_notification_settings`.
+   *  `maxRecipients` sale de `tenants.whatsapp_notify_numbers_limit` (default
+   *  1) — solo tenants habilitados a mano pueden configurar un 2º número. */
   async getWhatsappNotifySettings(tenantId: string): Promise<
     E.Either<
       Error,
-      { orderReceived: boolean; orderCompleted: boolean; recipientNumber: string | null }
+      {
+        orderReceived: boolean;
+        orderCompleted: boolean;
+        recipientNumber: string | null;
+        recipientNumber2: string | null;
+        maxRecipients: number;
+      }
     >
   > {
     const { data, error } = await this.client
       .from('whatsapp_notification_settings')
-      .select('type, enabled, recipient_number')
+      .select('type, enabled, recipient_number, recipient_number_2')
       .eq('tenant_id', Number(tenantId));
     if (error) return E.left(new Error(error.message));
 
+    const { data: tenant, error: tenantError } = await this.client
+      .from('tenants')
+      .select('whatsapp_notify_numbers_limit')
+      .eq('id', Number(tenantId))
+      .single();
+    if (tenantError) return E.left(new Error(tenantError.message));
+
     const byType = new Map(
       (data ?? []).map(
-        (r: { type: string; enabled: boolean; recipient_number: string | null }) => [
-          r.type,
-          r,
-        ]
+        (r: {
+          type: string;
+          enabled: boolean;
+          recipient_number: string | null;
+          recipient_number_2: string | null;
+        }) => [r.type, r]
       )
     );
     const received = byType.get('order_received');
@@ -347,17 +364,22 @@ export class EcommerceConfigService {
       orderReceived: received?.enabled ?? true,
       orderCompleted: completed?.enabled ?? false,
       recipientNumber: received?.recipient_number ?? null,
+      recipientNumber2: received?.recipient_number_2 ?? null,
+      maxRecipients: tenant?.whatsapp_notify_numbers_limit ?? 1,
     });
   }
 
-  /** Upsert de los toggles + número destinatario. El template y el idioma los
-   *  fija la plataforma; el tenant solo togglea y elige a qué número avisar. */
+  /** Upsert de los toggles + números destinatarios. El template y el idioma
+   *  los fija la plataforma; el tenant solo togglea y elige a qué números
+   *  avisar. El 2º número solo lo usa el trigger si el tenant tiene cupo
+   *  (`whatsapp_notify_numbers_limit >= 2`). */
   async saveWhatsappNotifySettings(
     tenantId: string,
     settings: {
       orderReceived: boolean;
       orderCompleted: boolean;
       recipientNumber: string | null;
+      recipientNumber2: string | null;
     }
   ): Promise<E.Either<Error, void>> {
     const tenantIdNum = Number(tenantId);
@@ -367,6 +389,7 @@ export class EcommerceConfigService {
         type: 'order_received',
         enabled: settings.orderReceived,
         recipient_number: settings.recipientNumber,
+        recipient_number_2: settings.recipientNumber2,
         meta_template_name: 'order_received',
         language_code: 'es',
       },
@@ -375,6 +398,7 @@ export class EcommerceConfigService {
         type: 'order_completed',
         enabled: settings.orderCompleted,
         recipient_number: null,
+        recipient_number_2: null,
         meta_template_name: 'order_completed',
         language_code: 'es',
       },
