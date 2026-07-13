@@ -82,6 +82,12 @@
       }
       <h2 class="pdm__name">{{ product.name }}</h2>
 
+      @if (selectedOptionName) {
+      <div class="pdm__selected-option">
+        {{ 'Opción' | transloco }}: <strong>{{ selectedOptionName }}</strong>
+      </div>
+      }
+
       @if (!isWholesale) {
       @if (showReferencePrice()) {
       <div class="pdm__prices">

@@ -123,6 +123,15 @@ export class ProductDetailModal {
     return id === ProductDetailModal.BASE_ID ? null : id;
   }
 
+  /** Name of the REAL variant selected (null for the base/original product).
+   *  Shown under the title so the buyer sees they're purchasing that option,
+   *  not the whole original product at the variant's price. */
+  get selectedOptionName(): string | null {
+    const v = this.selectedVariant();
+    if (!v || v.id === ProductDetailModal.BASE_ID) return null;
+    return v.name;
+  }
+
   selectVariant(variant: ProductVariant): void {
     this.selectedVariant.set(variant);
     // The available sizes change per variant, so drop the size selection.

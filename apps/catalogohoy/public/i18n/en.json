@@ -1795,5 +1795,6 @@
   "Segundo número (opcional)": "Second number (optional)",
   "El aviso de nueva orden también llega a este número.": "The new-order alert also goes to this number.",
   "Agregar segundo número": "Add second number",
-  "Tu cuenta puede recibir el aviso en hasta 2 números.": "Your account can receive the alert on up to 2 numbers."
+  "Tu cuenta puede recibir el aviso en hasta 2 números.": "Your account can receive the alert on up to 2 numbers.",
+  "Opción": "Option"
 }
