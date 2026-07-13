@@ -61,6 +61,7 @@ edites a ciegas**; el repo puede estar atrás de prod.
 | **Discord** | Webhooks de eventos internos (leads, checkout, pagos) | `notify-checkout-intent`, `stripe-webhook`, `new-lead-discord` |
 | **Resend** | Email transaccional (recibos de pago, reportes semanales) | `stripe-webhook`, `send-weekly-report` |
 | **countriesnow.space** | Estados/ciudades por país | `countries-proxy` |
+| **Google** | Workspace (correo @catalogohoy.com), OAuth (login), Search Console (SEO), GA4 (pendiente ID) | ver sección "Google" abajo · DNS en Vercel |
 
 ## Sentry (errores + performance + replay)
 
@@ -78,3 +79,65 @@ edites a ciegas**; el repo puede estar atrás de prod.
 - **MCP**: `sentry` (remoto, OAuth) en `.mcp.json` → `https://mcp.sentry.dev/mcp`.
 - **Pendiente (opcional)**: subir **source maps** en el build de prod para stack traces legibles
   (necesita auth token + org/project slugs; `@sentry/cli` o el plugin de esbuild como postbuild).
+
+## Google (correo, login, SEO, analytics) — estado 2026-07-13
+
+> El **DNS de `catalogohoy.com` se maneja en Vercel** (`vercel dns ls catalogohoy.com`).
+> Nameservers de Vercel; los registros de Google se agregaron el 2026-07-05.
+
+### Google Workspace (correo @catalogohoy.com)
+
+- DNS ya configurado en Vercel: **MX** `1 smtp.google.com`, **DKIM** `google._domainkey`,
+  **TXT** `google-site-verification=pN6QMx…` (verificación del dominio ante Google).
+- ⚠️ **SPF pendiente**: el TXT actual es `v=spf1 include:zohomail.com ~all` (resto de la
+  config vieja de Zoho) — **no incluye a Google**. Correos enviados por Workspace pueden
+  fallar SPF (los salva DKIM, pero conviene arreglarlo): cambiar a
+  `v=spf1 include:_spf.google.com include:zohomail.com ~all` (o quitar Zoho si ya no se usa).
+  Se puede hacer por CLI: `vercel dns` (rm + add).
+
+### Google OAuth (login/signup)
+
+- Vía Supabase Auth (provider Google). Frontend en `libs/catalogohoy/auth`
+  (`complete-google-signup.usecase.ts`, botones en login/signup). Config del provider en el
+  dashboard de Supabase (Client ID/Secret de Google Cloud Console).
+
+### SEO / Search Console — quién sirve cada robots/sitemap
+
+| Superficie | robots.txt | sitemap.xml |
+|---|---|---|
+| **Landing** (`catalogohoy.com`) | estático en `apps/landing/public/` (**rama `landing`**) | estático en `apps/landing/public/` (**rama `landing`**, actualizado 2026-07-09: `/`, `/pricing`, `/features`, `/faq`) |
+| **Help** (`help.catalogohoy.com`) | estático en `apps/help/public/` | **autogenerado en build** por `apps/help/scripts/gen-sitemap.mjs` (escanea el `dist/` del SSG). No editar a mano. |
+| **Storefronts** (`{slug}.catalogohoy.com` + dominios custom) | **dinámico**: `api/robots.ts` | **dinámico**: `api/sitemap.ts` |
+
+- **Storefronts** (funciones Vercel del proyecto `catalogohoy-dashboard`, rama `main`):
+  - `vercel.json` (raíz) reescribe `/sitemap.xml → /api/sitemap` y `/robots.txt → /api/robots`
+    (antes del catch-all de la SPA). El robots.txt estático de `apps/catalogohoy/public/` se
+    **eliminó** — si se recrea, el filesystem le gana al rewrite y mata la versión dinámica.
+  - Resolución de tenant igual que `middleware.ts`: subdominio → slug; otro host →
+    `tenants.custom_domain` (apex, sin `www.`). Hosts reservados (`www/auth/help/internal/api/mail`)
+    o desconocidos (previews `*.vercel.app`) → robots `Disallow: /` y sitemap 404.
+  - Sitemap por tenant: portada + `/product/{id}` de productos **no ocultos**
+    (`is_hidden`), con `lastmod` = created_at. Si el catálogo está **cerrado**
+    (`tenant_ecommerce_config.is_visible=false`) o el **plan vencido** → solo la portada.
+    robots deshabilita `/admin/`, `/checkout`, `/order/`, `/public/`, etc.
+  - Usa la **anon key** por REST (todas las tablas necesarias tienen SELECT público).
+- **Crawlers** (Googlebot incluido) reciben el HTML mínimo de `middleware.ts` (meta OG por
+  tenant/producto, matcher `/` y `/product/:path*`) — la SPA no se les sirve. Mejora futura
+  posible: dejar pasar a Googlebot a la SPA (renderiza JS) para indexar contenido completo.
+
+### Google Search Console
+
+- La verificación **ya está** a nivel dominio (TXT en el DNS) → una propiedad de dominio
+  `catalogohoy.com` cubre apex + **todos** los subdominios (storefronts incluidos).
+- Sitemaps a enviar en la propiedad: `https://catalogohoy.com/sitemap.xml`,
+  `https://help.catalogohoy.com/sitemap.xml` y los de tenants clave
+  (ej. `https://catalogohoy.catalogohoy.com/sitemap.xml`). Los dominios custom de clientes
+  (ej. `3sxpress.com`) necesitarían su propia propiedad — es del cliente, no nuestra.
+
+### Google Analytics 4
+
+- Snippet gtag en `apps/catalogohoy/src/index.html` (guard: **no** carga en `/admin` ni en
+  localhost) — `GA_ID` vacío hasta crear la propiedad GA4 (buscar `TODO: G-XXXXXXXXXX`).
+  Los page_view de navegación SPA los cubre la "medición mejorada" de GA4 (history changes).
+- Landing: pendiente de agregar el mismo snippet en la **rama `landing`** cuando exista el ID.
+- Convive con PostHog (producto) y Meta Pixel (ads); GA4 es para adquisición/SEO/Google Ads.

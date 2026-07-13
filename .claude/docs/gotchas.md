@@ -69,6 +69,21 @@
   `./node_modules/.bin/vite build` (no `npm run build`). Un build fallido en Vercel
   igual no tumba el prod actual.
 
+## SEO / sitemaps / robots (2026-07-13)
+
+- **robots.txt y sitemap.xml del storefront son funciones Vercel** (`api/robots.ts`,
+  `api/sitemap.ts`) vía rewrites del `vercel.json` raíz. **NO crear** `robots.txt` /
+  `sitemap.xml` estáticos en `apps/catalogohoy/public/` — en Vercel el filesystem le gana
+  al rewrite y apagaría la versión dinámica sin error visible.
+- **El sitemap del help se autogenera en build** (`apps/help/scripts/gen-sitemap.mjs`
+  escanea el `dist/` del SSG). No editar `public/sitemap.xml` a mano (el residuo viejo que
+  apuntaba a `catalogohoy.com` se borró el 2026-07-13; el build lo pisaba igual).
+- **El sitemap/robots de la landing viven en la rama `landing`** — la copia de
+  `apps/landing/` en `main` está desactualizada (rutas viejas). Editar siempre sobre la rama.
+- **Googlebot no ve la SPA del storefront**: `middleware.ts` intercepta crawlers (regex
+  incluye Googlebot/bingbot) y sirve el HTML mínimo con meta OG. Indexa título/descripción/
+  canonical por tenant y por `/product/:id`, no el contenido renderizado.
+
 ## Nx + worktrees
 
 - Servir/buildear desde un worktree **sin su `node_modules`** + `NX_WORKSPACE_ROOT_PATH`

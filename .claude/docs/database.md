@@ -217,6 +217,13 @@ await Promise.all(
 | auth_user_id | uuid | `gen_random_uuid()` | FK → users.auth_user_id |
 | tenant_id | int8 | NULL | FK → tenants.id |
 | created_at | timestamp | `now()` | |
+| position | int4 | NULL | Orden manual en el catálogo |
+| is_hidden | bool | `false` | Oculto del storefront (el sitemap dinámico `api/sitemap.ts` lo excluye) |
+| is_sold_out | bool | — | Agotado (se sigue mostrando) |
+| is_wholesale / wholesale_tiers | bool / jsonb | — | Precios de mayoreo |
+| is_sized / sizes | bool / jsonb | — | Tallas |
+| is_variant / variants | bool / jsonb | — | Variantes |
+| search_blob | text | NULL | Texto plano para búsqueda |
 
 **RLS:** Enabled
 
