@@ -189,3 +189,14 @@
   el dirty-check debe comparar `transform(draft) !== guardado` — comparar el draft crudo
   deja el banner "cambios sin guardar" encendido para siempre tras guardar (bug 2026-07-09,
   reproducido y verificado con Playwright E2E contra prod con sesión inyectada).
+
+## Verificar el storefront local contra cualquier tenant de prod
+
+- El storefront público **no necesita sesión** y el dev server usa el Supabase de prod, así
+  que se puede verificar un fix con los datos reales de cualquier cliente.
+- En dev el slug **no** sale del path de forma confiable (la app redirige a `/` y usa
+  `DEV_TENANT_SLUG`): cambiar temporalmente `DEV_TENANT_SLUG` en
+  `libs/catalogohoy/core/src/constants/tenant.constant.ts` al slug del tenant (el propio
+  archivo lo documenta) y **revertirlo antes de commitear**.
+- El catálogo **carga productos de forma perezosa**: con Playwright hay que scrollear
+  (`page.mouse.wheel`) hasta que la card objetivo entre al DOM antes de asertar sobre ella.
