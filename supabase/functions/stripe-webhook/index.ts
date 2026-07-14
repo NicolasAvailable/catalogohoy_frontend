@@ -25,21 +25,53 @@ function stripeAmountToNumber(amount: number | null | undefined, currency: strin
   return amount / divisor;
 }
 
+// Convierte el color numérico (0xRRGGBB) de los antiguos embeds de Discord a
+// un hex CSS para la barra lateral del attachment de Slack.
+function hexColor(color: number): string {
+  return "#" + color.toString(16).padStart(6, "0");
+}
+
+// Notifica al canal #pagos de Slack. Mantiene la misma firma que el helper
+// anterior (title/description/color/fields) para no tocar las llamadas.
+// Los `fields` se renderizan en sections de dos columnas (Block Kit soporta
+// hasta 10 fields por section, así que se parten en tandas).
 async function notifyDiscord(embed: {
   title: string;
   description: string;
   color: number;
   fields?: { name: string; value: string; inline?: boolean }[];
 }): Promise<void> {
-  const url = Deno.env.get("DISCORD_PAYMENTS_WEBHOOK_URL");
+  const url = Deno.env.get("SLACK_PAYMENTS_WEBHOOK_URL");
   if (!url) return;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const blocks: any[] = [
+    { type: "header", text: { type: "plain_text", text: embed.title, emoji: true } },
+  ];
+  if (embed.description) {
+    blocks.push({ type: "section", text: { type: "mrkdwn", text: embed.description } });
+  }
+  const fields = embed.fields ?? [];
+  for (let i = 0; i < fields.length; i += 10) {
+    blocks.push({
+      type: "section",
+      fields: fields.slice(i, i + 10).map((f) => ({
+        type: "mrkdwn",
+        text: `*${f.name}:*\n${f.value}`,
+      })),
+    });
+  }
+  blocks.push({
+    type: "context",
+    elements: [{ type: "mrkdwn", text: `Stripe · CatálogoHoy · ${new Date().toISOString()}` }],
+  });
+
   await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       username: "CatálogoHoy Payments",
-      avatar_url: "https://catalogohoy.com/favicon.ico",
-      embeds: [{ ...embed, footer: { text: "Stripe · CatálogoHoy" }, timestamp: new Date().toISOString() }],
+      attachments: [{ color: hexColor(embed.color), blocks }],
     }),
   }).catch(() => {});
 }

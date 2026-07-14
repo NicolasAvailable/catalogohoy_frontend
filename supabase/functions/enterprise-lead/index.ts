@@ -5,13 +5,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // (la publishable key no es un JWT). A cambio: validación estricta del
 // payload + honeypot. La tabla enterprise_leads tiene RLS sin policies,
 // solo este service role escribe.
-// ⚠️ La versión deployada en prod difiere acá: tiene el webhook del canal
-// #sales hardcodeado como fallback (el secret DISCORD_ENTERPRISE_LEADS_WEBHOOK
-// no se pudo setear por CLI). Si se redeploya desde el repo sin setear el
-// secret, los leads vuelven a caer al canal de checkout-intent.
-const DISCORD_WEBHOOK_URL =
-  Deno.env.get("DISCORD_ENTERPRISE_LEADS_WEBHOOK") ??
-  Deno.env.get("DISCORD_CHECKOUT_INTENT_WEBHOOK");
+// Notificaciones a Slack (#leads). El secret SLACK_ENTERPRISE_LEADS_WEBHOOK
+// se setea vía Supabase CLI.
+const SLACK_WEBHOOK_URL = Deno.env.get("SLACK_ENTERPRISE_LEADS_WEBHOOK");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -154,63 +150,67 @@ const NEED_LABELS: Record<Need, string> = {
   other: "Otro",
 };
 
-async function notifyDiscord(
+async function notifySlack(
   answers: Answers,
   source: string,
   tenantSlug: string | null,
   score: number,
   qualified: boolean,
 ): Promise<void> {
-  if (!DISCORD_WEBHOOK_URL) {
-    console.error("Discord webhook for enterprise leads not configured");
+  if (!SLACK_WEBHOOK_URL) {
+    console.error("Slack webhook for enterprise leads not configured");
     return;
   }
   const now = new Date().toLocaleString("es-VE", {
     timeZone: "America/Caracas",
   });
-  const embed = {
-    title: `🏢 Lead Enterprise ${qualified ? "✅ calificado" : "— no calificado"}`,
-    color: qualified ? 0xb45309 : 0x64748b,
-    fields: [
-      { name: "Negocio", value: answers.businessName, inline: true },
-      { name: "Nombre", value: answers.name, inline: true },
-      { name: "Email", value: answers.email, inline: true },
-      { name: "Teléfono", value: answers.phone || "—", inline: true },
-      { name: "País", value: answers.country || "—", inline: true },
+  const fuente =
+    source === "admin" ? `admin (${tenantSlug ?? "?"})` : "landing";
+  const necesidades =
+    answers.needs.map((n) => NEED_LABELS[n]).join(", ") || "—";
+
+  const payload = {
+    attachments: [
       {
-        name: "Fuente",
-        value: source === "admin" ? `admin (${tenantSlug ?? "?"})` : "landing",
-        inline: true,
+        color: qualified ? "#b45309" : "#64748b",
+        blocks: [
+          {
+            type: "header",
+            text: {
+              type: "plain_text",
+              text: `🏢 Lead Enterprise ${qualified ? "✅ calificado" : "— no calificado"}`,
+              emoji: true,
+            },
+          },
+          {
+            type: "section",
+            fields: [
+              { type: "mrkdwn", text: `*Negocio:*\n${answers.businessName}` },
+              { type: "mrkdwn", text: `*Nombre:*\n${answers.name}` },
+              { type: "mrkdwn", text: `*Email:*\n${answers.email}` },
+              { type: "mrkdwn", text: `*Teléfono:*\n${answers.phone || "—"}` },
+              { type: "mrkdwn", text: `*País:*\n${answers.country || "—"}` },
+              { type: "mrkdwn", text: `*Fuente:*\n${fuente}` },
+              { type: "mrkdwn", text: `*Productos:*\n${RANGE_LABELS[answers.productsRange]}` },
+              { type: "mrkdwn", text: `*Pedidos/mes:*\n${RANGE_LABELS[answers.ordersRange]}` },
+              { type: "mrkdwn", text: `*Catálogos:*\n${CATALOG_LABELS[answers.catalogsNeeded]}` },
+              { type: "mrkdwn", text: `*Equipo:*\n${TEAM_LABELS[answers.teamSize]}` },
+              { type: "mrkdwn", text: `*Score:*\n${score}` },
+              { type: "mrkdwn", text: `*Fecha:*\n${now}` },
+            ],
+          },
+          {
+            type: "section",
+            text: { type: "mrkdwn", text: `*Necesidades:*\n${necesidades}` },
+          },
+        ],
       },
-      {
-        name: "Productos",
-        value: RANGE_LABELS[answers.productsRange],
-        inline: true,
-      },
-      {
-        name: "Pedidos/mes",
-        value: RANGE_LABELS[answers.ordersRange],
-        inline: true,
-      },
-      {
-        name: "Catálogos",
-        value: CATALOG_LABELS[answers.catalogsNeeded],
-        inline: true,
-      },
-      { name: "Equipo", value: TEAM_LABELS[answers.teamSize], inline: true },
-      {
-        name: "Necesidades",
-        value: answers.needs.map((n) => NEED_LABELS[n]).join(", ") || "—",
-        inline: false,
-      },
-      { name: "Score", value: String(score), inline: true },
-      { name: "Fecha", value: now, inline: true },
     ],
   };
-  await fetch(DISCORD_WEBHOOK_URL, {
+  await fetch(SLACK_WEBHOOK_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ embeds: [embed] }),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -276,9 +276,9 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: false, error: "Could not save lead" }, 500);
   }
 
-  // Fire-and-forget: Discord caído no debe romper el lead ya guardado.
-  notifyDiscord(answers, source, tenantSlug, score, qualified).catch((err) =>
-    console.error("enterprise-lead discord error:", err),
+  // Fire-and-forget: Slack caído no debe romper el lead ya guardado.
+  notifySlack(answers, source, tenantSlug, score, qualified).catch((err) =>
+    console.error("enterprise-lead slack error:", err),
   );
 
   return jsonResponse({ success: true, qualified, score });
