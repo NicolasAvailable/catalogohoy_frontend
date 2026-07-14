@@ -1,4 +1,4 @@
-import { Check, X, PlusCircle, CreditCard, Smartphone } from "lucide-react";
+import { Check, X, PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { isVenezuela, useVisitorCountry } from "@/hooks/use-visitor-country";
@@ -60,7 +60,7 @@ const plans: PlanData[] = [
       { label: "1 catálogo" },
       { label: "Edición limitada del catálogo" },
       { label: "1 reporte por mes" },
-      { label: "15 créditos de IA por mes" },
+      { label: "5 créditos de IA por mes" },
       { label: "Sin analíticas del catálogo", negative: true },
     ],
     buttonLabel: "Empezar gratis",
@@ -79,12 +79,12 @@ const plans: PlanData[] = [
       { label: "Todos los módulos disponibles" },
       { label: "Analíticas del catálogo" },
       { label: "Hasta 10 reportes por mes" },
-      { label: "200 créditos de IA por mes" },
+      { label: "150 créditos de IA por mes" },
       { label: "Diseño personalizable" },
       { label: "Soporte prioritario" },
     ],
     buttonLabel: "Comenzar ahora",
-    isPopular: false,
+    isPopular: true,
     color: "#6366f1",
   },
   {
@@ -105,7 +105,7 @@ const plans: PlanData[] = [
       { label: "Soporte dedicado" },
     ],
     buttonLabel: "Comenzar ahora",
-    isPopular: true,
+    isPopular: false,
     color: "#7c3aed",
   },
 ];
@@ -143,20 +143,6 @@ function getTeamLabel(members: number): string {
   return `Hasta ${members} miembros de equipo`;
 }
 
-// Arma la lista de features del plan (productos + equipo + extras) y deja los
-// negativos ("Sin...") agrupados al final, para que se vea claro qué SÍ incluye.
-function planItems(plan: PlanData): Feature[] {
-  const items: Feature[] = [
-    { label: plan.productsLabel ?? `Hasta ${plan.maxProducts} productos` },
-    { label: getTeamLabel(plan.maxTeamMembers), negative: plan.maxTeamMembers === 0 },
-    ...plan.features,
-  ];
-  return [
-    ...items.filter((f) => !f.negative),
-    ...items.filter((f) => f.negative),
-  ];
-}
-
 function handleSelectPlan(plan: PlanData, period: BillingPeriod): void {
   if (plan.isFree) {
     window.open("https://auth.catalogohoy.com/signup", "_blank");
@@ -165,7 +151,7 @@ function handleSelectPlan(plan: PlanData, period: BillingPeriod): void {
   const price = getPeriodPrice(plan, period);
   const periodLabel = getPeriodLabel(period, false);
   const message = encodeURIComponent(
-    `Hola, me interesa adquirir el plan *${plan.name}* ($${price}${periodLabel} USD) de CatalogoHoy. ¿Me pueden dar más información?`
+    `Hola, me interesa adquirir el plan *${plan.name}* ($${price}${periodLabel} USD) de Catálogo Hoy. ¿Me pueden dar más información?`
   );
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, "_blank");
 }
@@ -186,10 +172,6 @@ const cardVariants = {
 /* ═══════════════════════════════════════
    COMPONENT
    ═══════════════════════════════════════ */
-/** Card Enterprise oculta del grid (dejaba las 3 cards muy angostas).
- *  Flip a true para volver al grid de 4. /ventas y el funnel siguen vivos. */
-const ENTERPRISE_CARD_VISIBLE = false;
-
 const Pricing = () => {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
   // Mostramos "a tasa BCV" solo cuando el visitante (por geo-IP) está en
@@ -210,7 +192,7 @@ const Pricing = () => {
       <div className="absolute top-10 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-300/20 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="mx-auto px-6 max-w-[1500px] relative z-10">
+      <div className="mx-auto px-6 max-w-[1200px] relative z-10">
 
         {/* ═══ HEADER ═══ */}
         <motion.header
@@ -261,11 +243,7 @@ const Pricing = () => {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className={`grid grid-cols-1 gap-6 max-w-[420px] mx-auto items-stretch ${
-            ENTERPRISE_CARD_VISIBLE
-              ? "md:grid-cols-2 xl:grid-cols-4 md:max-w-none"
-              : "lg:grid-cols-3 lg:max-w-none"
-          }`}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-[26.25rem] lg:max-w-[72rem] mx-auto items-stretch"
         >
           {plans.map((plan) => (
             <motion.div
@@ -343,7 +321,19 @@ const Pricing = () => {
 
                 {/* ── Features ── */}
                 <ul className="flex flex-col gap-[0.55rem] flex-1 list-none p-0 m-0">
-                  {planItems(plan).map((feature, j) => (
+                  <li className="flex items-center gap-[0.6rem] text-sm text-[#334155]">
+                    <Check className="h-4 w-4 shrink-0 text-green-500" />
+                    <span>{plan.productsLabel ?? `Hasta ${plan.maxProducts} productos`}</span>
+                  </li>
+                  <li className="flex items-center gap-[0.6rem] text-sm text-[#334155]">
+                    {plan.maxTeamMembers > 0 ? (
+                      <Check className="h-4 w-4 shrink-0 text-green-500" />
+                    ) : (
+                      <X className="h-4 w-4 shrink-0 text-gray-300" />
+                    )}
+                    <span>{getTeamLabel(plan.maxTeamMembers)}</span>
+                  </li>
+                  {plan.features.map((feature, j) => (
                     <li key={j} className="flex items-center gap-[0.6rem] text-sm text-[#334155]">
                       {feature.negative ? (
                         <X className="h-4 w-4 shrink-0 text-gray-300" />
@@ -359,12 +349,10 @@ const Pricing = () => {
                 {!plan.isFree && (
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1 px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]">
-                        <CreditCard className="h-3.5 w-3.5 shrink-0" />
-                        Tarjeta
+                      <span className="inline-flex items-center px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]">
+                        Tarjeta internacional
                       </span>
-                      <span className="inline-flex items-center gap-1 px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]">
-                        <Smartphone className="h-3.5 w-3.5 shrink-0" />
+                      <span className="inline-flex items-center px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]">
                         Pago móvil
                       </span>
                     </div>
@@ -377,67 +365,6 @@ const Pricing = () => {
               </div>
             </motion.div>
           ))}
-
-          {/* ═══ ENTERPRISE CARD (sin precio, CTA a /ventas) ═══
-              min-h solo en móvil: con 3 features queda muy corta apilada.
-              Oculta por ahora (ENTERPRISE_CARD_VISIBLE) para que las 3 cards
-              mantengan su tamaño; /ventas y el funnel siguen vivos. */}
-          {ENTERPRISE_CARD_VISIBLE && (
-          <motion.div
-            variants={cardVariants}
-            className="relative bg-white rounded-[1.25rem] flex flex-col transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.1)] border border-[#e2e8f0] min-h-[30rem] md:min-h-0"
-          >
-            <div className="p-7 flex flex-col gap-4 flex-1">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-[1.2rem] font-bold text-[#1e293b]">
-                    Enterprise
-                  </h3>
-                  <span className="inline-flex items-center px-3 py-[0.2rem] rounded-full text-[0.72rem] font-semibold whitespace-nowrap bg-[#f8fafc] text-[#475569] border border-[#e2e8f0]">
-                    A medida
-                  </span>
-                </div>
-                <p className="text-[#64748b] text-[0.85rem] leading-relaxed">
-                  Para negocios con operaciones a gran escala.
-                </p>
-              </div>
-
-              <div>
-                <span className="block text-[2.1rem] font-extrabold text-[#0f172a] leading-tight">
-                  Hablemos
-                </span>
-                <p className="text-[0.78rem] text-[#94a3b8] mt-1">
-                  precio a tu medida
-                </p>
-              </div>
-
-              <a
-                href="/ventas"
-                className="flex items-center justify-center gap-1.5 w-full py-[0.65rem] px-4 rounded-xl text-sm font-semibold cursor-pointer transition-all duration-200 bg-[#0f172a] text-white hover:bg-[#1e293b]"
-              >
-                Contactar ventas
-              </a>
-
-              <hr className="border-0 h-px bg-[#f1f5f9] m-0" />
-
-              <ul className="flex flex-col gap-[0.55rem] flex-1 list-none p-0 m-0">
-                {[
-                  "Todo lo del plan Avanzado",
-                  "Administrador de cuenta dedicado",
-                  "Planes y precios personalizados",
-                ].map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-center gap-[0.6rem] text-sm text-[#334155]"
-                  >
-                    <Check className="h-4 w-4 shrink-0 text-green-500" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </motion.div>
-          )}
         </motion.div>
       </div>
     </section>
