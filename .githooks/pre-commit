@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+# Chequeo de paridad de keys i18n antes de cada commit.
+# Evita que se suba un idioma con keys de menos/de más/vacías respecto a es.json.
+# Para saltarlo puntualmente: git commit --no-verify
+
+echo "→ Verificando paridad de traducciones (i18n)…"
+node scripts/i18n-check.mjs
+status=$?
+if [ $status -ne 0 ]; then
+  echo ""
+  echo "✗ Hay traducciones desincronizadas. Corrige los archivos i18n antes de commitear."
+  echo "  (o usa 'git commit --no-verify' para saltar este chequeo)"
+  exit 1
+fi
+echo "✓ i18n OK"
+exit 0
