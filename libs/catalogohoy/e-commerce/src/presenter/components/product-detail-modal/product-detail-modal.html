@@ -193,6 +193,58 @@
     </div>
     }
     }
+
+    <!-- Adicionales (multi-select): extras opcionales que SUMAN al precio. A
+         diferencia de las variantes (elige una, reemplaza precio), aquí el
+         cliente marca los que quiera con checkbox y el total se acumula. Vive
+         en el info scrollable para no chocar con el footer sticky en mobile. -->
+    @if (!isOutOfStock && !isWholesale && hasAddons) {
+    <div class="flex flex-col gap-2 mt-4 mb-1">
+      <span class="text-sm font-semibold text-grey-500">{{ 'Agrega adicionales' | transloco }}</span>
+      <div class="flex flex-col gap-2">
+        @for (addon of addons; track addon.id) {
+        <button
+          type="button"
+          [attr.aria-pressed]="isAddonSelected(addon.id)"
+          (click)="toggleAddon(addon)"
+          [class]="
+            'flex items-center gap-3 p-2.5 rounded-xl border transition-colors text-left w-full cursor-pointer ' +
+            (isAddonSelected(addon.id)
+              ? 'border-primary-500 bg-primary-50/10'
+              : 'border-grey-200 hover:border-primary-300')
+          "
+        >
+          <span
+            [class]="
+              'flex items-center justify-center w-5 h-5 rounded-md border shrink-0 transition-colors ' +
+              (isAddonSelected(addon.id)
+                ? 'border-primary-500 bg-primary-500 text-white'
+                : 'border-grey-300')
+            "
+          >
+            @if (isAddonSelected(addon.id)) {
+            <ui-icon name="check" styleClass="size-3.5" />
+            }
+          </span>
+          @if (addon.photo) {
+          <ui-product-media
+            [url]="addon.photo"
+            [alt]="addon.name"
+            [controls]="false"
+            styleClass="w-10 h-10 rounded-lg object-cover shrink-0"
+          />
+          }
+          <span class="flex-1 font-medium text-grey-700">{{ addon.name }}</span>
+          @if (addon.price > 0) {
+          <span class="font-bold text-grey-900">+{{ cs() }}{{ addon.price | tenantPrice }}</span>
+          } @else {
+          <span class="font-semibold text-grey-300">{{ 'Gratis' | transloco }}</span>
+          }
+        </button>
+        }
+      </div>
+    </div>
+    }
   </div>
 
   <div class="pdm__footer">

@@ -142,6 +142,7 @@ export default class Save implements OnInit {
     sizes: this.fb.array([]),
     isVariant: [false],
     variants: this.fb.array([]),
+    addons: this.fb.array([]),
   });
 
   private readonly descriptionValue = toSignal(
@@ -504,6 +505,55 @@ export default class Save implements OnInit {
     this.updatePriceValidator();
   }
 
+  // ── Adicionales (add-ons) ──────────────────────────────────────────────
+  // Extras opcionales que SUMAN al precio (multi-select en el catálogo).
+  // Independientes de las variantes. Límite por plan igual que variantes:
+  // planStore.maxAddons() (gratis 2 · basico 5 · avanzado 15 · enterprise 0=∞).
+  get addonsArray(): FormArray {
+    return this.form.get('addons') as FormArray;
+  }
+
+  /** True while the current plan still allows adding another addon.
+   *  `maxAddons() <= 0` is the unlimited sentinel (enterprise). */
+  public canAddAddon(): boolean {
+    const max = this.planStore.maxAddons();
+    if (max <= 0) return true;
+    return this.addonsArray.length < max;
+  }
+
+  public addAddon(): void {
+    if (!this.canAddAddon()) {
+      this.toastService.error(
+        (`Tu plan permite hasta ${this.planStore.maxAddons()} ` +
+          'adicionales por producto. Mejora tu plan para agregar más.') as unknown as Exception
+      );
+      return;
+    }
+    this.addonsArray.push(
+      this.fb.group({
+        id: [crypto.randomUUID() as string | null],
+        name: ['', Validators.required],
+        price: ['', Validators.required],
+        photo: [null as string | null],
+        isDefault: [false],
+      })
+    );
+  }
+
+  public removeAddon(index: number): void {
+    this.addonsArray.removeAt(index);
+  }
+
+  /** Uploader for an addon thumbnail — single image. */
+  public setAddonPhoto(index: number, url: string | string[]): void {
+    const first = Array.isArray(url) ? url[0] : url;
+    this.addonsArray.at(index).get('photo')?.setValue(first ?? null);
+  }
+
+  public removeAddonPhoto(index: number): void {
+    this.addonsArray.at(index).get('photo')?.setValue(null);
+  }
+
   /** Variant uploader is multiple — append the uploaded media (images/videos)
    *  to the variant's own gallery, just like the product media uploader. */
   public addVariantPhotos(index: number, url: string | string[]): void {
@@ -634,6 +684,20 @@ export default class Save implements OnInit {
               })
             )
           ),
+        })
+      );
+    });
+
+    // Adicionales (add-ons) — hidratar el FormArray al editar.
+    this.addonsArray.clear();
+    (product.addons ?? []).forEach((addon) => {
+      this.addonsArray.push(
+        this.fb.group({
+          id: [addon.id ?? null],
+          name: [addon.name, Validators.required],
+          price: [String(addon.price), Validators.required],
+          photo: [addon.photo ?? null],
+          isDefault: [addon.isDefault ?? false],
         })
       );
     });
@@ -841,6 +905,13 @@ export default class Save implements OnInit {
       sizes: this.sizesArray.value ?? [],
       isVariant: this.form.controls.isVariant.value ?? false,
       variants: this.variantsArray.value ?? [],
+      addons: (this.addonsArray.value ?? []).map((a: any) => ({
+        id: a.id ?? crypto.randomUUID(),
+        name: a.name,
+        price: Number(a.price) || 0,
+        photo: a.photo ?? null,
+        isDefault: !!a.isDefault,
+      })),
     };
     if (this.isCreate()) {
       const product = await this.productFacade.create(body);

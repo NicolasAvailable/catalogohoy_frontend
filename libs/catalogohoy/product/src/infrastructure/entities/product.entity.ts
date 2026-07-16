@@ -30,4 +30,11 @@ export interface ProductEntity {
     photos: string[];
     sizes?: { name: string; stock: number | null; sku?: string | null }[];
   }[];
+  addons?: {
+    id: string;
+    name: string;
+    price: number;
+    photo?: string | null;
+    isDefault?: boolean;
+  }[];
 }

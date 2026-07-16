@@ -34,6 +34,24 @@ export interface ProductVariant {
   sizes: ProductSize[];
 }
 
+/**
+ * Optional paid extra a buyer can ADD to a product. Unlike a variant (which
+ * REPLACES the base price and is single-select), addons are multi-select and
+ * their prices SUM on top of the selected variant/base price.
+ */
+export interface ProductAddon {
+  /** Stable id used as the cart/order line identity and for de-dup. */
+  id: string;
+  /** Label shown to the buyer, e.g. "Corona Mediana", "Tarjeta". */
+  name: string;
+  /** Amount added to the price when selected. `0` = free extra. */
+  price: number;
+  /** Optional thumbnail. Empty = no image (a placeholder tile is shown). */
+  photo?: string | null;
+  /** Pre-checked when the modal opens. */
+  isDefault?: boolean;
+}
+
 export class Product extends Entity {
   constructor(
     public readonly name: string,
@@ -55,7 +73,8 @@ export class Product extends Entity {
     public readonly isSized: boolean,
     public readonly sizes: ProductSize[],
     public readonly isVariant: boolean = false,
-    public readonly variants: ProductVariant[] = []
+    public readonly variants: ProductVariant[] = [],
+    public readonly addons: ProductAddon[] = []
   ) {
     super();
   }
@@ -81,7 +100,8 @@ export class Product extends Entity {
       primitives.isSized,
       primitives.sizes,
       primitives.isVariant ?? false,
-      primitives.variants ?? []
+      primitives.variants ?? [],
+      primitives.addons ?? []
     ).withId(primitives.id);
   }
 }
@@ -108,4 +128,5 @@ export interface ProductPrimitives {
   sizes: ProductSize[];
   isVariant?: boolean;
   variants?: ProductVariant[];
+  addons?: ProductAddon[];
 }

@@ -217,6 +217,13 @@ export class ProductService implements BaseProductService {
               sizes: (v.sizes ?? []).map(mapSize),
             }))
           : [],
+        addons: (input.addons ?? []).map((a) => ({
+          id: a.id || crypto.randomUUID(),
+          name: a.name,
+          price: a.price === '' ? 0 : Number(a.price),
+          photo: a.photo ?? null,
+          isDefault: !!a.isDefault,
+        })),
       })
       .select('*');
 
@@ -288,6 +295,13 @@ export class ProductService implements BaseProductService {
             sizes: (v.sizes ?? []).map(mapSize),
           }))
         : [],
+      addons: (input.addons ?? []).map((a) => ({
+        id: a.id || crypto.randomUUID(),
+        name: a.name,
+        price: a.price === '' ? 0 : Number(a.price),
+        photo: a.photo ?? null,
+        isDefault: !!a.isDefault,
+      })),
     };
 
     if (input.position !== undefined) {

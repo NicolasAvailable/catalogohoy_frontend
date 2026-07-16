@@ -9,7 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { Product, ProductVariant, WholesaleTier } from '@catalogohoy/product';
+import { Product, ProductAddon, ProductVariant, WholesaleTier } from '@catalogohoy/product';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { isVideoUrl } from '@shared/domain';
 import { SafeDescriptionHtmlPipe } from '@shared/presenter';
@@ -50,6 +50,42 @@ export class ProductDetailModal {
   public readonly quantity = signal(1);
   public readonly descriptionExpanded = signal(false);
   public readonly selectedSize = signal<string | null>(null);
+
+  /** Optional paid extras the buyer can add. Multi-select: their prices sum
+   *  on top of the selected variant/base price. */
+  public readonly addons: ProductAddon[] = this.product.addons ?? [];
+  public readonly hasAddons = this.addons.length > 0;
+
+  /** Ids of the addons currently checked. Seeded with any default-on addons. */
+  public readonly selectedAddonIds = signal<Set<string>>(
+    new Set(this.addons.filter((a) => a.isDefault).map((a) => a.id))
+  );
+
+  public isAddonSelected(id: string): boolean {
+    return this.selectedAddonIds().has(id);
+  }
+
+  toggleAddon(addon: ProductAddon): void {
+    this.selectedAddonIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(addon.id)) next.delete(addon.id);
+      else next.add(addon.id);
+      return next;
+    });
+  }
+
+  /** Sum of the prices of the currently-selected addons (per unit). */
+  public readonly addonsTotal = computed(() => {
+    const ids = this.selectedAddonIds();
+    return this.addons
+      .filter((a) => ids.has(a.id))
+      .reduce((sum, a) => sum + a.price, 0);
+  });
+
+  public readonly selectedAddons = computed(() => {
+    const ids = this.selectedAddonIds();
+    return this.addons.filter((a) => ids.has(a.id));
+  });
 
   /** Aspect ratios reportados por cada slide cuando carga la imagen o el
    *  video (clave = índice del slide en `product.photos`, valor = w/h).
@@ -257,13 +293,19 @@ export class ProductDetailModal {
     this.quantity.set(1);
   }
 
-  get displayPrice(): number {
+  /** Base/variant price for the current selection, WITHOUT addons. */
+  get basePrice(): number {
     if (this.isVariant) {
       return this.selectedVariant()?.price ?? this.product.price;
     }
     return this.product.pricePromotional > 0
       ? this.product.pricePromotional
       : this.product.price;
+  }
+
+  /** Price shown/charged per unit = base/variant price + selected addons. */
+  get displayPrice(): number {
+    return this.basePrice + this.addonsTotal();
   }
 
   /** Struck-through "before" price for the current selection. */
@@ -346,10 +388,12 @@ export class ProductDetailModal {
     const sel = this.selectedVariant();
     // The base/original option carries no real variant — add at the base price.
     const variant = sel && sel.id !== ProductDetailModal.BASE_ID ? sel : null;
+    const addons = this.selectedAddons();
     for (let i = 0; i < this.quantity(); i++) {
       this.cartStore.addProduct(this.product, {
         size: this.selectedSize(),
         variant,
+        addons,
       });
     }
     this.cartStore.openCart();

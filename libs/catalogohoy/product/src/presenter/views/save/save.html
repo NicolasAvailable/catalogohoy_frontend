@@ -906,6 +906,84 @@
         }
       </div>
     </ui-card>
+
+    <!-- ── Adicionales (add-ons) ─────────────────────────────────────────
+         Extras opcionales que SUMAN al precio (checkbox multi-select en el
+         catálogo). Independientes de variantes. Límite por plan. -->
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+          <h2 class="text-xl font-bold">{{ 'Adicionales' | transloco }}</h2>
+          <span class="text-sm text-grey-300">
+            {{ 'Extras opcionales que el cliente puede sumar al producto (ej. corona, lazo, tarjeta). Se cobran aparte del precio base.' | transloco }}
+          </span>
+        </div>
+
+        @if (addonsArray.length > 0) {
+        <div formArrayName="addons" class="flex flex-col gap-3">
+          @for (addon of addonsArray.controls; track $index; let aIndex = $index) {
+          <div [formGroupName]="aIndex" class="flex items-start gap-3 border border-grey-200 rounded-xl p-3">
+            <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1">
+                <label class="text-sm font-semibold text-grey-500">{{ 'Nombre' | transloco }}</label>
+                <input
+                  type="text"
+                  formControlName="name"
+                  [placeholder]="'Ej. Corona Mediana' | transloco"
+                  class="border border-grey-200 rounded-lg px-3 py-2 text-grey-700 focus:border-primary-500 outline-none"
+                />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-sm font-semibold text-grey-500">{{ 'Precio' | transloco }}</label>
+                <input
+                  type="number"
+                  formControlName="price"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  class="border border-grey-200 rounded-lg px-3 py-2 text-grey-700 focus:border-primary-500 outline-none"
+                />
+              </div>
+              <label class="flex items-center gap-2 text-sm text-grey-500 sm:col-span-2">
+                <input type="checkbox" formControlName="isDefault" class="accent-primary-500" />
+                {{ 'Marcado por defecto al abrir el producto' | transloco }}
+              </label>
+            </div>
+            <ui-button
+              icon="trash-2"
+              severity="danger"
+              variant="outlined"
+              [fluid]="false"
+              (click)="removeAddon($index)"
+            />
+          </div>
+          }
+        </div>
+        }
+
+        <div class="flex items-center gap-2">
+          <ui-button
+            [label]="'Agregar adicional' | transloco"
+            icon="circle-plus"
+            [fluid]="false"
+            [disabled]="!canAddAddon()"
+            (click)="addAddon()"
+          />
+        </div>
+        @if (addonsArray.length > 0) {
+        <div class="flex items-center justify-between text-sm bg-grey-50 rounded-lg px-3 py-2">
+          <span class="text-grey-500 font-semibold"
+            >{{ 'Adicionales ({n} / {max})' | transloco: { n: addonsArray.length, max: planStore.maxAddons() <= 0 ? '∞' : planStore.maxAddons() } }}</span
+          >
+          @if (!canAddAddon()) {
+          <span class="text-grey-400"
+            >{{ 'Límite del plan alcanzado — mejorá tu plan para más' | transloco }}</span
+          >
+          }
+        </div>
+        }
+      </div>
+    </ui-card>
     @if (!isCreate()) {
     <ui-card>
       <div class="flex flex-col gap-4">
