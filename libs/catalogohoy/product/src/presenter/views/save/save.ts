@@ -544,14 +544,21 @@ export default class Save implements OnInit {
     this.addonsArray.removeAt(index);
   }
 
-  /** Uploader for an addon thumbnail — single image. */
+  /** Uploader for an addon thumbnail — single image (tomamos la primera si
+   *  suben varias). */
   public setAddonPhoto(index: number, url: string | string[]): void {
     const first = Array.isArray(url) ? url[0] : url;
-    this.addonsArray.at(index).get('photo')?.setValue(first ?? null);
+    if (!first) return;
+    this.addonsArray.at(index).get('photo')?.setValue(first);
   }
 
   public removeAddonPhoto(index: number): void {
     this.addonsArray.at(index).get('photo')?.setValue(null);
+  }
+
+  /** Foto actual del addon (o null). */
+  public addonPhoto(index: number): string | null {
+    return (this.addonsArray.at(index).get('photo')?.value as string) ?? null;
   }
 
   /** Variant uploader is multiple — append the uploaded media (images/videos)

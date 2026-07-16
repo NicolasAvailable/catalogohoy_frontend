@@ -922,40 +922,76 @@
         @if (addonsArray.length > 0) {
         <div formArrayName="addons" class="flex flex-col gap-3">
           @for (addon of addonsArray.controls; track $index; let aIndex = $index) {
-          <div [formGroupName]="aIndex" class="flex items-start gap-3 border border-grey-200 rounded-xl p-3">
-            <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div class="flex flex-col gap-1">
-                <label class="text-sm font-semibold text-grey-500">{{ 'Nombre' | transloco }}</label>
-                <input
-                  type="text"
-                  formControlName="name"
-                  [placeholder]="'Ej. Corona Mediana' | transloco"
-                  class="border border-grey-200 rounded-lg px-3 py-2 text-grey-700 focus:border-primary-500 outline-none"
-                />
-              </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-sm font-semibold text-grey-500">{{ 'Precio' | transloco }}</label>
-                <input
-                  type="number"
-                  formControlName="price"
-                  placeholder="0.00"
-                  min="0"
-                  step="0.01"
-                  class="border border-grey-200 rounded-lg px-3 py-2 text-grey-700 focus:border-primary-500 outline-none"
-                />
-              </div>
-              <label class="flex items-center gap-2 text-sm text-grey-500 sm:col-span-2">
-                <input type="checkbox" formControlName="isDefault" class="accent-primary-500" />
-                {{ 'Marcado por defecto al abrir el producto' | transloco }}
-              </label>
+          <div [formGroupName]="aIndex" class="flex flex-col gap-3 border border-grey-200 rounded-xl p-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-semibold text-grey-500">{{ 'Adicional' | transloco }} {{ aIndex + 1 }}</span>
+              <ui-button
+                [label]="'Quitar' | transloco"
+                icon="trash-2"
+                severity="danger"
+                variant="outlined"
+                [fluid]="false"
+                (click)="removeAddon($index)"
+              />
             </div>
-            <ui-button
-              icon="trash-2"
-              severity="danger"
-              variant="outlined"
-              [fluid]="false"
-              (click)="removeAddon($index)"
-            />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="flex flex-col gap-2">
+                <label class="text-sm text-grey-400 font-semibold">{{ 'Nombre' | transloco }}<span class="text-red-500 ml-0.5">*</span></label>
+                <ui-input-text formControlName="name" [placeholder]="'Ej. Corona Mediana' | transloco" />
+              </div>
+              <div class="flex flex-col gap-2">
+                <label class="text-sm text-grey-400 font-semibold">{{ 'Precio' | transloco }}<span class="text-red-500 ml-0.5">*</span></label>
+                <ui-input-number
+                  formControlName="price"
+                  mode="decimal"
+                  [prefix]="cs() + ' '"
+                  [min]="0"
+                  [minFractionDigits]="2"
+                  [maxFractionDigits]="2"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <!-- Imagen del adicional (opcional, una sola) -->
+            <div class="flex flex-col gap-2">
+              <label class="text-sm text-grey-400 font-semibold">{{ 'Imagen (opcional)' | transloco }}</label>
+              @if (!addonPhoto(aIndex)) {
+              <ui-uploader
+                (valueChange)="setAddonPhoto(aIndex, $event)"
+                [accept]="'image/*'"
+                [max]="{ mb: 40 }"
+                [multiple]="false"
+              >
+                <ng-template #picker let-pick="pick">
+                  <button
+                    type="button"
+                    (click)="pick()"
+                    class="flex flex-col items-center justify-center w-full border-2 border-dashed border-primary-500 bg-primary-50/10 rounded-xl py-6 cursor-pointer hover:bg-primary-50/20 transition-colors"
+                  >
+                    <ui-icon name="circle-plus" size="22" styleClass="text-primary-500 mb-1" />
+                    <span class="text-sm font-semibold text-primary-500">{{ 'Arrastrá, soltá o subí una imagen' | transloco }}</span>
+                  </button>
+                </ng-template>
+              </ui-uploader>
+              } @else {
+              <div class="relative w-20 h-20 rounded-lg overflow-hidden border border-grey-200">
+                <ui-product-media [url]="addonPhoto(aIndex)!" [controls]="false" styleClass="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  (click)="removeAddonPhoto(aIndex)"
+                  class="absolute top-1 right-1 p-1 bg-white/80 rounded-sm cursor-pointer hover:bg-white text-grey-500"
+                >
+                  <ui-icon name="trash" size="14" />
+                </button>
+              </div>
+              }
+            </div>
+
+            <label class="flex items-center gap-2 text-sm text-grey-500">
+              <input type="checkbox" formControlName="isDefault" class="accent-primary-500" />
+              {{ 'Marcado por defecto al abrir el producto' | transloco }}
+            </label>
           </div>
           }
         </div>
@@ -973,7 +1009,7 @@
         @if (addonsArray.length > 0) {
         <div class="flex items-center justify-between text-sm bg-grey-50 rounded-lg px-3 py-2">
           <span class="text-grey-500 font-semibold"
-            >{{ 'Adicionales ({n} / {max})' | transloco: { n: addonsArray.length, max: planStore.maxAddons() <= 0 ? '∞' : planStore.maxAddons() } }}</span
+            >{{ 'Adicionales' | transloco }} ({{ addonsArray.length }} / {{ planStore.maxAddons() <= 0 ? '∞' : planStore.maxAddons() }})</span
           >
           @if (!canAddAddon()) {
           <span class="text-grey-400"
