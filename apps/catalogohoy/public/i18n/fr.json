@@ -1796,5 +1796,20 @@
   "El aviso de nueva orden también llega a este número.": "L'alerte de nouvelle commande arrive aussi à ce numéro.",
   "Agregar segundo número": "Ajouter un deuxième numéro",
   "Tu cuenta puede recibir el aviso en hasta 2 números.": "Votre compte peut recevoir l'alerte sur jusqu'à 2 numéros.",
-  "Opción": "Option"
+  "Opción": "Option",
+  "Ver imagen completa": "Voir l'image complète",
+  "Agrega adicionales": "Ajoutez des extras",
+  "Adicionales": "Extras",
+  "Extras opcionales que el cliente puede sumar al producto (ej. corona, lazo, tarjeta). Se cobran aparte del precio base.": "Extras optionnels que le client peut ajouter au produit (ex. couronne, ruban, carte). Facturés en plus du prix de base.",
+  "Adicional": "Extra",
+  "Ej. Corona Mediana": "Ex. Couronne moyenne",
+  "Imagen (opcional)": "Image (optionnelle)",
+  "Arrastrá, soltá o subí una imagen": "Glissez, déposez ou téléversez une image",
+  "Marcado por defecto al abrir el producto": "Coché par défaut à l'ouverture du produit",
+  "Agregar adicional": "Ajouter un extra",
+  "Adicionales:": "Extras :",
+  "Variante:": "Variante :",
+  "El correo es obligatorio": "L'e-mail est obligatoire",
+  "Ingresa un correo válido": "Saisissez un e-mail valide",
+  "Al mayor:": "En gros :"
 }
