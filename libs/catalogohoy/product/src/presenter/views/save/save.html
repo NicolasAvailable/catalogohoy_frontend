@@ -223,12 +223,7 @@
     <ui-card>
       <div class="flex flex-col gap-4">
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <h2 class="text-xl font-bold">{{ 'Venta al mayor' | transloco }}</h2>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-500 text-white">
-              {{ 'Nuevo' | transloco }}
-            </span>
-          </div>
+          <h2 class="text-xl font-bold">{{ 'Venta al mayor' | transloco }}</h2>
           <ui-toggle
             formControlName="isWholesale"
             (enable)="onWholesaleToggle()"
@@ -914,7 +909,12 @@
     <ui-card>
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-1">
-          <h2 class="text-xl font-bold">{{ 'Adicionales' | transloco }}</h2>
+          <div class="flex items-center gap-3">
+            <h2 class="text-xl font-bold">{{ 'Adicionales' | transloco }}</h2>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-500 text-white">
+              {{ 'Nuevo' | transloco }}
+            </span>
+          </div>
           <span class="text-sm text-grey-300">
             {{ 'Extras opcionales que el cliente puede sumar al producto (ej. corona, lazo, tarjeta). Se cobran aparte del precio base.' | transloco }}
           </span>
