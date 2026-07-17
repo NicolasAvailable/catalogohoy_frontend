@@ -150,7 +150,7 @@
         </div>
         } @else {
         <div class="flex flex-col gap-3">
-          @for (product of products(); track $index) {
+          @for (product of products(); track $index; let pIndex = $index) {
           <div class="p-4 border border-grey-200 rounded-lg">
             <div class="flex flex-col sm:flex-row sm:items-start gap-4">
               <div class="flex-1 flex flex-col sm:grid sm:grid-cols-4 gap-4">
@@ -265,6 +265,68 @@
                     </ng-template>
                   </ui-select>
 
+                  <!-- Variante (visible solo para productos con variantes).
+                       Sin selección = Producto original (precio base). -->
+                  @if (getVariants(product.productId).length) {
+                  <label
+                    class="text-sm text-grey-400 mt-2"
+                    [attr.for]="'variant-' + $index"
+                    >{{ 'Variante' | transloco }}</label
+                  >
+                  <ui-select
+                    [options]="getVariants(product.productId)"
+                    optionLabel="name"
+                    optionValue="id"
+                    [placeholder]="'Producto original' | transloco"
+                    [clearable]="true"
+                    [ngModel]="product.variantId"
+                    (ngModelChange)="onVariantSelect($index, $event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    appendTo="body"
+                    [selectId]="'variant-' + $index"
+                  >
+                    <ng-template selectSelectedItem let-selected>
+                      <div class="flex items-center gap-2">
+                        @if (selected.photo) {
+                        <img
+                          [src]="selected.photo"
+                          [alt]="selected.name"
+                          loading="lazy"
+                          class="w-6 h-6 rounded object-cover"
+                        />
+                        }
+                        <span class="text-sm">{{ selected.name }}</span>
+                      </div>
+                    </ng-template>
+                    <ng-template selectItem let-variant>
+                      <div class="flex items-center gap-3 py-1">
+                        @if (variant.photo) {
+                        <img
+                          [src]="variant.photo"
+                          [alt]="variant.name"
+                          loading="lazy"
+                          class="w-8 h-8 rounded object-cover"
+                        />
+                        } @else {
+                        <div
+                          class="w-8 h-8 rounded bg-grey-100 flex items-center justify-center"
+                        >
+                          <ui-icon
+                            name="package"
+                            size="16"
+                            styleClass="text-grey-300"
+                          />
+                        </div>
+                        }
+                        <span class="flex-1 text-grey-800">{{ variant.name }}</span>
+                        <span class="text-xs text-grey-400"
+                          >{{ cs() }} {{ variant.price.toFixed(2) }}</span
+                        >
+                      </div>
+                    </ng-template>
+                  </ui-select>
+                  }
+
                   <!-- Escala de mayoreo (visible solo para productos al mayor) -->
                   @if (getWholesaleTiers(product.productId).length) {
                   <label
@@ -292,6 +354,31 @@
                       </div>
                     </ng-template>
                   </ui-select>
+                  }
+
+                  <!-- Adicionales (visible solo si el producto tiene). Su
+                       precio se suma al unitario de la fila, igual que en el
+                       storefront. -->
+                  @if (getAddons(product.productId).length) {
+                  <span class="text-sm text-grey-400 mt-2">{{ 'Adicionales' | transloco }}</span>
+                  <div class="flex flex-col gap-1.5">
+                    @for (addon of getAddons(product.productId); track addon.id) {
+                    <div class="flex items-center gap-2">
+                      <ui-checkbox
+                        [ngModel]="isAddonSelected(pIndex, addon.id)"
+                        (valueChange)="onAddonToggle(pIndex, addon)"
+                        [ngModelOptions]="{ standalone: true }"
+                        [checkboxId]="'addon-' + pIndex + '-' + addon.id"
+                      />
+                      <label
+                        [for]="'addon-' + pIndex + '-' + addon.id"
+                        class="text-sm text-grey-700 cursor-pointer select-none"
+                      >
+                        {{ addon.name }}@if (addon.price > 0) { <span class="text-grey-400">(+{{ cs() }}{{ addon.price.toFixed(2) }})</span> }
+                      </label>
+                    </div>
+                    }
+                  </div>
                   }
                 </div>
                 } @else {

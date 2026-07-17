@@ -42,6 +42,7 @@ export class OrderMapper {
       variantId: i.variantId ?? null,
       variantName: i.variantName ?? null,
       tierTitle: i.tierTitle ?? null,
+      addons: Array.isArray(i.addons) && i.addons.length ? i.addons : null,
     };
   }
 

@@ -14,6 +14,9 @@ export interface OrderItem {
   /** Wholesale tier (escala) chosen at order time — its per-unit price is
    *  what `price` reflects. Snapshot del título del tramo (ej. "12+ unidades"). */
   tierTitle?: string | null;
+  /** Adicionales (add-ons) elegidos — su precio ya está sumado en `price`;
+   *  el snapshot permite itemizarlos en tabla/detalle/PDF. */
+  addons?: { id: string; name: string; price: number }[] | null;
   isCustom?: boolean;
   description?: string;
 }

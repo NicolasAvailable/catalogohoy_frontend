@@ -246,7 +246,21 @@ export class OrderPdfService {
       const item: OrderItem = order.products[i];
       const imgData = imageMap.get(i);
       const hasSku = !!item.sku;
-      const rowH = Math.max(hasSku ? 12 : 8, imgData ? imgSize + 2 : 0);
+      // Línea de detalle bajo el nombre: variante/talla/tramo/adicionales.
+      // El precio unitario ya incluye los adicionales; acá solo se itemizan.
+      const detailParts = [
+        item.variantName,
+        item.size ? `Talla ${item.size}` : null,
+        item.tierTitle ? `Al mayor: ${item.tierTitle}` : null,
+        ...(item.addons ?? []).map((a) =>
+          a.price > 0 ? `+ ${a.name} (${cs}${a.price.toFixed(2)})` : `+ ${a.name}`
+        ),
+      ].filter(Boolean) as string[];
+      const hasDetail = detailParts.length > 0;
+      const rowH = Math.max(
+        8 + (hasDetail ? 4 : 0) + (hasSku ? 4 : 0),
+        imgData ? imgSize + 2 : 0
+      );
       const textY = y + (imgData ? imgSize / 2 + 1 : 4);
 
       // Product image
@@ -267,11 +281,20 @@ export class OrderPdfService {
       ) as string[];
       doc.text(nameLines[0], descX, textY);
 
-      // SKU below name
-      if (hasSku) {
+      // Detalle (variante/talla/tramo/adicionales) y SKU bajo el nombre
+      if (hasDetail || hasSku) {
         doc.setFontSize(7);
         doc.setTextColor(...GREY);
-        doc.text(`SKU: ${item.sku}`, descX, textY + 4);
+        if (hasDetail) {
+          const detailLine = doc.splitTextToSize(
+            detailParts.join(' · '),
+            qtyX - descX - 6
+          ) as string[];
+          doc.text(detailLine[0], descX, textY + 4);
+        }
+        if (hasSku) {
+          doc.text(`SKU: ${item.sku}`, descX, textY + (hasDetail ? 8 : 4));
+        }
         doc.setFontSize(9);
         doc.setTextColor(...BLACK);
       }
