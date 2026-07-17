@@ -57,9 +57,17 @@
             <h4 class="cart-item__name">{{ item.name }}</h4>
             @if (item.variantName || item.size) {
             <span class="cart-item__size">
-              @if (item.variantName) {<strong>{{ item.variantName }}</strong>}@if
+              @if (item.variantName) {<strong>{{ 'Variante:' | transloco }}</strong> {{ item.variantName }}}@if
               (item.variantName && item.size) { · }@if (item.size) {
-              {{ 'Talla:' | transloco }} <strong>{{ item.size }}</strong>}
+              <strong>{{ 'Talla:' | transloco }}</strong> {{ item.size }}}
+            </span>
+            }
+            @if (item.addons.length) {
+            <span class="cart-item__size">
+              <strong>{{ 'Adicionales:' | transloco }}</strong>
+              @for (addon of item.addons; track addon.id) {
+              {{ addon.name }}@if (addon.price > 0) { ({{ cs() }}{{ addon.price | tenantPrice }})}@if (!$last) { · }
+              }
             </span>
             }
             <p class="cart-item__description">{{ item.description | stripHtml }}</p>

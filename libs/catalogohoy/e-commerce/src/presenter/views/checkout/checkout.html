@@ -24,7 +24,11 @@
     <label class="checkout__field">
       <span class="checkout__label">{{ 'Nombre' | transloco }} <span class="checkout__req">*</span></span>
       <ui-input-text [ngModel]="name()" (ngModelChange)="name.set($event)"
+        (inputBlur)="nameTouched.set(true)" [invalid]="!!nameError()"
         placeholder="Tu nombre" styleClass="w-full"></ui-input-text>
+      @if (nameError(); as err) {
+      <p class="text-xs text-red-500 mt-1">{{ err | transloco }}</p>
+      }
     </label>
 
     @if (customerFields().phone.visible) {
@@ -51,9 +55,14 @@
         }
         <div class="checkout__input--phone">
           <ui-input-text [ngModel]="phone()" (ngModelChange)="phone.set($event)"
+            (inputBlur)="phoneTouched.set(true)" [invalid]="!!phoneError()"
+            [digitsOnly]="true"
             placeholder="4121234567" styleClass="w-full"></ui-input-text>
         </div>
       </div>
+      @if (phoneError(); as err) {
+      <p class="text-xs text-red-500 mt-1">{{ err | transloco }}</p>
+      }
     </label>
     }
 
@@ -63,7 +72,11 @@
         {{ 'Correo electrónico' | transloco }} @if (customerFields().email.required) { <span class="checkout__req">*</span> }
       </span>
       <ui-input-text [ngModel]="email()" (ngModelChange)="email.set($event)"
+        (inputBlur)="emailTouched.set(true)" [invalid]="!!emailError()"
         placeholder="tucorreo@ejemplo.com" styleClass="w-full"></ui-input-text>
+      @if (emailError(); as err) {
+      <p class="text-xs text-red-500 mt-1">{{ err | transloco }}</p>
+      }
     </label>
     }
   </section>
@@ -85,9 +98,24 @@
       </div>
       }
       <div class="checkout__item-main">
+        <p class="checkout__item-name">{{ item.name }}</p>
+        @if (item.variantName || item.size) {
         <p class="checkout__item-name">
-          {{ item.name }}@if (item.variantName) { <span class="checkout__item-size">· {{ item.variantName }}</span> }@if (item.size) { <span class="checkout__item-size">· {{ item.size }}</span> }
+          <span class="checkout__item-size">
+            @if (item.variantName) {<strong>{{ 'Variante:' | transloco }}</strong> {{ item.variantName }}}@if
+            (item.variantName && item.size) { · }@if (item.size) {
+            <strong>{{ 'Talla:' | transloco }}</strong> {{ item.size }}}
+          </span>
         </p>
+        }
+        @if (item.addons.length) {
+        <p class="checkout__item-name">
+          <span class="checkout__item-size"><strong>{{ 'Adicionales:' | transloco }}</strong>
+          @for (addon of item.addons; track addon.id) {
+          {{ addon.name }}@if (addon.price > 0) { ({{ cs() }}{{ addon.price | tenantPrice }})}@if (!$last) { · }
+          }</span>
+        </p>
+        }
         <p class="checkout__item-price">{{ cs() }}{{ item.total | tenantPrice }}</p>
         <div class="checkout__stepper">
           <button type="button" (click)="onDecrement(item)" [attr.aria-label]="'Quitar uno' | transloco">
