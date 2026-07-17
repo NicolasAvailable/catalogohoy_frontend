@@ -17,6 +17,7 @@ import {
   DynamicDialogConfig,
   DynamicDialogRef,
   IconComponent,
+  ImageComponent,
   ProductMediaComponent,
 } from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
@@ -27,6 +28,7 @@ import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
   imports: [
     DecimalPipe,
     IconComponent,
+    ImageComponent,
     ProductMediaComponent,
     SafeDescriptionHtmlPipe,
     TenantPricePipe,
@@ -110,6 +112,23 @@ export class ProductDetailModal {
       return next;
     });
   }
+
+  /** Los slides de imagen renderizan via ui-image (p-image no expone load),
+   *  así que las dimensiones para `--media-aspect` se miden acá preloadeando.
+   *  El browser cachea, no hay fetch duplicado. Videos siguen reportando por
+   *  (aspectChange) de ui-product-media. */
+  private readonly preloadAspects = effect(() => {
+    this.galleryMedia().forEach((url, index) => {
+      if (isVideoUrl(url)) return;
+      const img = new Image();
+      img.onload = () => {
+        if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+          this.setSlideAspect(index, img.naturalWidth / img.naturalHeight);
+        }
+      };
+      img.src = url;
+    });
+  });
 
   public readonly isSized = this.product.isSized && this.product.sizes.length > 0;
 
@@ -303,8 +322,14 @@ export class ProductDetailModal {
       : this.product.price;
   }
 
-  /** Price shown/charged per unit = base/variant price + selected addons. */
+  /** Header price = base/variant price. Addons never alter it; they only
+   *  show in the footer total (unitTotal). */
   get displayPrice(): number {
+    return this.basePrice;
+  }
+
+  /** Charged per unit = base/variant price + selected addons. */
+  get unitTotal(): number {
     return this.basePrice + this.addonsTotal();
   }
 
@@ -333,6 +358,37 @@ export class ProductDetailModal {
 
   get currentIsVideo(): boolean {
     return isVideoUrl(this.currentImage);
+  }
+
+  /** Feedback del botón compartir: el icono pasa a check ~2s tras copiar. */
+  public readonly linkCopied = signal(false);
+
+  /** Copia el link directo del producto (`?product={id}`, el mismo patrón
+   *  que el botón compartir del listado de productos del admin). Se parte de
+   *  la URL actual para preservar el slug del tenant en dev y subdominios. */
+  async shareProduct(): Promise<void> {
+    const url = new URL(window.location.href);
+    url.searchParams.set('product', String(this.product.id));
+    try {
+      await navigator.clipboard?.writeText(url.toString());
+      this.linkCopied.set(true);
+      setTimeout(() => this.linkCopied.set(false), 1800);
+    } catch {
+      /* clipboard puede no estar disponible en navegadores muy viejos */
+    }
+  }
+
+  /** Abre el preview fullscreen del slide visible. p-image no expone API
+   *  programática, así que se dispara su botón interno (.p-image-preview-mask,
+   *  el mismo que se clickea con el hover en desktop). */
+  openImagePreview(): void {
+    const slides = this.carouselEl()?.nativeElement.querySelectorAll(
+      '.pdm__carousel-slide'
+    );
+    const slide = slides?.[this.currentImageIndex()];
+    slide
+      ?.querySelector<HTMLButtonElement>('.p-image-preview-mask')
+      ?.click();
   }
 
   isVideoUrl(url: string): boolean {
