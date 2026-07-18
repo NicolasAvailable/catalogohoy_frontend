@@ -246,27 +246,49 @@ export class OrderPdfService {
       const item: OrderItem = order.products[i];
       const imgData = imageMap.get(i);
       const hasSku = !!item.sku;
-      // Línea de detalle bajo el nombre: variante/talla/tramo/adicionales.
+
+      // Sub-líneas bajo el nombre, prolijas y en orden:
+      //   1) atributos del producto (variante · talla · tramo) en una línea,
+      //   2) cada adicional en su PROPIA línea ("+ Nombre ×N (monto)"),
+      //   3) el SKU.
       // El precio unitario ya incluye los adicionales; acá solo se itemizan.
-      const detailParts = [
+      const attrs = [
         item.variantName,
         item.size ? `Talla ${item.size}` : null,
         item.tierTitle ? `Al mayor: ${item.tierTitle}` : null,
-        ...(item.addons ?? []).map((a) => {
-          const q = a.quantity ?? 1;
-          const label = q > 1 ? `${a.name} ×${q}` : a.name;
-          const amount = a.price * q;
-          return amount > 0
-            ? `+ ${label} (${cs}${amount.toFixed(2)})`
-            : `+ ${label}`;
-        }),
       ].filter(Boolean) as string[];
-      const hasDetail = detailParts.length > 0;
+
+      const addonLines = (item.addons ?? []).map((a) => {
+        const q = a.quantity ?? 1;
+        const label = q > 1 ? `${a.name} ×${q}` : a.name;
+        const amount = a.price * q;
+        return amount > 0
+          ? `+ ${label} (${cs}${amount.toFixed(2)})`
+          : `+ ${label}`;
+      });
+
+      const rawSubLines = [
+        attrs.length ? attrs.join(' · ') : null,
+        ...addonLines,
+        hasSku ? `SKU: ${item.sku}` : null,
+      ].filter(Boolean) as string[];
+
+      // Ajusta cada sub-línea al ancho de la columna (medido a 7pt) y las
+      // aplana, para que nada se salga ni se trunque a una sola línea.
+      doc.setFontSize(7);
+      const subLines = rawSubLines.flatMap(
+        (l) => doc.splitTextToSize(l, qtyX - descX - 6) as string[]
+      );
+      doc.setFontSize(9);
+
       const rowH = Math.max(
-        8 + (hasDetail ? 4 : 0) + (hasSku ? 4 : 0),
+        8 + subLines.length * 4,
         imgData ? imgSize + 2 : 0
       );
-      const textY = y + (imgData ? imgSize / 2 + 1 : 4);
+      // Centra el nombre con la imagen solo si no hay sub-líneas; si las hay,
+      // alinea arriba para que el bloque de texto no quede desbalanceado.
+      const textY =
+        y + (imgData && subLines.length === 0 ? imgSize / 2 + 1 : 4);
 
       // Product image
       if (imgData) {
@@ -286,19 +308,14 @@ export class OrderPdfService {
       ) as string[];
       doc.text(nameLines[0], descX, textY);
 
-      // Detalle (variante/talla/tramo/adicionales) y SKU bajo el nombre
-      if (hasDetail || hasSku) {
+      // Sub-líneas (atributos / adicionales / SKU) bajo el nombre
+      if (subLines.length) {
         doc.setFontSize(7);
         doc.setTextColor(...GREY);
-        if (hasDetail) {
-          const detailLine = doc.splitTextToSize(
-            detailParts.join(' · '),
-            qtyX - descX - 6
-          ) as string[];
-          doc.text(detailLine[0], descX, textY + 4);
-        }
-        if (hasSku) {
-          doc.text(`SKU: ${item.sku}`, descX, textY + (hasDetail ? 8 : 4));
+        let subY = textY;
+        for (const line of subLines) {
+          subY += 4;
+          doc.text(line, descX, subY);
         }
         doc.setFontSize(9);
         doc.setTextColor(...BLACK);
