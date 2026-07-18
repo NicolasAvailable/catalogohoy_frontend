@@ -277,6 +277,8 @@ export default class Save implements OnInit {
   ngOnInit(): void {
     this.categoryStore.categoryList$(1, 100);
     this.planStore.loadTenantPlanUsage();
+    // Pool de adicionales existentes (de otros productos) para reusar.
+    this.loadCatalogAddons();
     this.tenantStore.getTenantIdAsync().then((tid) => {
       this.tenantId.set(tid ?? null);
       if (tid) this.tenantCurrency.load(tid);
@@ -561,6 +563,90 @@ export default class Save implements OnInit {
   /** Foto actual del addon (o null). */
   public addonPhoto(index: number): string | null {
     return (this.addonsArray.at(index).get('photo')?.value as string) ?? null;
+  }
+
+  // ── Reusar adicionales existentes ──────────────────────────────────────
+  // Pool de adicionales ya creados en CUALQUIER producto del catálogo, para
+  // reusarlos aquí sin recrearlos desde cero. Se carga una vez en ngOnInit.
+  public readonly catalogAddons = signal<
+    { id: string; name: string; price: number; photo: string | null }[]
+  >([]);
+
+  /** Clave de deduplicación: mismo nombre + precio = el mismo adicional. */
+  private addonKey(a: { name: string | number; price: string | number }): string {
+    return `${String(a.name).trim().toLowerCase()}|${Number(a.price)}`;
+  }
+
+  /** Carga el pool global de adicionales (unión de todos los productos,
+   *  deduplicado por nombre+precio). */
+  private async loadCatalogAddons(): Promise<void> {
+    const result = await this.productService.getAll();
+    result.mapRight((list) => {
+      const seen = new Map<
+        string,
+        { id: string; name: string; price: number; photo: string | null }
+      >();
+      for (const product of list.products) {
+        for (const a of product.addons ?? []) {
+          const key = this.addonKey(a);
+          if (!seen.has(key)) {
+            seen.set(key, {
+              id: a.id,
+              name: a.name,
+              price: a.price,
+              photo: a.photo ?? null,
+            });
+          }
+        }
+      }
+      this.catalogAddons.set(
+        [...seen.values()].sort((x, y) => x.name.localeCompare(y.name))
+      );
+    });
+  }
+
+  /** Adicionales existentes que este producto AÚN no tiene (por nombre+precio),
+   *  para ofrecerlos en el selector "Reusar adicional existente". */
+  public availableCatalogAddons(): {
+    id: string;
+    name: string;
+    price: number;
+    photo: string | null;
+  }[] {
+    const current = new Set(
+      (this.addonsArray.value ?? []).map((a: { name: string; price: string }) =>
+        this.addonKey(a)
+      )
+    );
+    return this.catalogAddons().filter((a) => !current.has(this.addonKey(a)));
+  }
+
+  /** Reusa un adicional existente: lo agrega pre-llenado (nombre/precio/foto)
+   *  con un id propio, sin recrearlo desde cero. Respeta el límite del plan. */
+  public reuseAddon(addonId: string | null): void {
+    if (!addonId) return;
+    if (!this.canAddAddon()) {
+      this.toastService.error(
+        (`Tu plan permite hasta ${this.planStore.maxAddons()} ` +
+          'adicionales por producto. Mejora tu plan para agregar más.') as unknown as Exception
+      );
+      return;
+    }
+    const addon = this.catalogAddons().find((a) => a.id === addonId);
+    if (!addon) return;
+    const key = this.addonKey(addon);
+    if ((this.addonsArray.value ?? []).some((a: { name: string; price: string }) => this.addonKey(a) === key)) {
+      return;
+    }
+    this.addonsArray.push(
+      this.fb.group({
+        id: [crypto.randomUUID() as string | null],
+        name: [addon.name, Validators.required],
+        price: [String(addon.price), Validators.required],
+        photo: [addon.photo as string | null],
+        isDefault: [false],
+      })
+    );
   }
 
   /** Variant uploader is multiple — append the uploaded media (images/videos)
