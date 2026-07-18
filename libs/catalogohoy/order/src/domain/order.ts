@@ -1,3 +1,12 @@
+/** A paid extra chosen for a line at order time. `price` is per-unit; it's
+ *  already folded into the line's unit `price`, but kept here so the receipt
+ *  and invoice can itemise what the customer added. */
+export interface OrderItemAddon {
+  id?: string;
+  name: string;
+  price: number;
+}
+
 export interface OrderItem {
   productId: string | number;
   name: string;
@@ -7,6 +16,8 @@ export interface OrderItem {
   photo?: string;
   sku?: string | null;
   size?: string | null;
+  /** Paid extras added to this line (snapshot). Shown under the product name. */
+  addons?: OrderItemAddon[] | null;
   /** Variant id chosen at order time (when the product has variants). */
   variantId?: string | null;
   /** Variant label snapshot, shown next to the product name. */

@@ -153,6 +153,26 @@
   </section>
   }
 
+  <!-- ===== Fecha de entrega ===== -->
+  @if (deliveryDateEnabled()) {
+  <section class="checkout__card">
+    <h2 class="checkout__card-title">{{ 'Fecha de entrega' | transloco }} <span class="checkout__req">*</span></h2>
+    <label class="checkout__field">
+      <span class="checkout__label">{{ 'Elige la fecha en que quieres recibir tu pedido' | transloco }}</span>
+      <input
+        type="date"
+        class="checkout__date"
+        [min]="todayIso()"
+        [ngModel]="deliveryDate()"
+        (ngModelChange)="deliveryDate.set($event)"
+      />
+      @if (deliveryDateIsBlocked()) {
+      <span class="checkout__date-error">{{ 'No hacemos entregas ese día. Elige otra fecha.' | transloco }}</span>
+      }
+    </label>
+  </section>
+  }
+
   <!-- ===== Método de pago ===== -->
   @if (availablePaymentMethods().length) {
   <section class="checkout__card">

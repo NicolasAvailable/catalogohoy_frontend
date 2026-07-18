@@ -225,6 +225,18 @@ export class EcommerceService implements BaseEcommerceService {
       customerFields:
         (config?.customer_fields as CustomerFieldsConfig) ??
         DEFAULT_CUSTOMER_FIELDS,
+      // Delivery-date settings live inside the `customer_fields` jsonb (no
+      // dedicated DB column); the RPC returns that column verbatim.
+      deliveryDateEnabled:
+        (config?.customer_fields as { deliveryDateEnabled?: boolean })
+          ?.deliveryDateEnabled ?? false,
+      deliveryBlockedWeekdays: Array.isArray(
+        (config?.customer_fields as { deliveryBlockedWeekdays?: number[] })
+          ?.deliveryBlockedWeekdays
+      )
+        ? ((config?.customer_fields as { deliveryBlockedWeekdays?: number[] })
+            .deliveryBlockedWeekdays as number[])
+        : [],
     };
 
     const categories: Category[] = (data.categories ?? []).map((cat: any) => ({
@@ -495,6 +507,10 @@ export class EcommerceService implements BaseEcommerceService {
     } | null;
     shipping_address?: string | null;
     shipping_fee?: number;
+    /** Customer-chosen delivery date (YYYY-MM-DD). Only sent when the catalog
+     *  has the delivery-date feature enabled and the customer picked one; when
+     *  omitted the DB uses its default (CURRENT_DATE). */
+    delivery_date?: string;
   }): Promise<E.Either<Error, { id: number }>> {
     const exchangeRate = await this.getExchangeRate(order.tenant_id);
     const totalBs = order.total_usd * exchangeRate;
@@ -515,6 +531,11 @@ export class EcommerceService implements BaseEcommerceService {
           shipping_method: order.shipping_method ?? null,
           shipping_address: order.shipping_address ?? null,
           shipping_fee: order.shipping_fee ?? 0,
+          // Solo se envía cuando el cliente eligió fecha; si es undefined el
+          // servidor usa su default (CURRENT_DATE).
+          ...(order.delivery_date
+            ? { delivery_date: order.delivery_date }
+            : {}),
           status: 'pending',
           // Orden del catálogo público: sí dispara notificaciones (WhatsApp/email).
           source: 'public',
@@ -569,6 +590,13 @@ export class EcommerceService implements BaseEcommerceService {
             size: p.size ?? null,
             sku: p.sku ?? null,
             photo: p.photo,
+            addons: Array.isArray(p.addons)
+              ? p.addons.map((a: any) => ({
+                  id: a.id ?? undefined,
+                  name: a.name,
+                  price: Number(a.price) || 0,
+                }))
+              : null,
           }))
         : [],
       totalUsd: Number(data.total_usd) || 0,

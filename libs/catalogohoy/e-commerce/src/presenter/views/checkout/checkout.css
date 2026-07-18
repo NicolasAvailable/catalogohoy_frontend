@@ -585,3 +585,23 @@
   margin: -0.25rem 0 0.5rem;
   max-width: 22rem;
 }
+
+/* ── Fecha de entrega ──────────────────────────────────────────────────── */
+.checkout__date {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 0.0625rem solid var(--color-grey-200, #d1d5db);
+  border-radius: 0.625rem;
+  font-size: 0.9375rem;
+  color: var(--color-grey-900, #0f172a);
+  background: white;
+  font-family: inherit;
+}
+.checkout__date:focus {
+  outline: none;
+  border-color: var(--color-primary-500, #3b82f6);
+}
+.checkout__date-error {
+  font-size: 0.75rem;
+  color: var(--color-red-500, #ef4444);
+}

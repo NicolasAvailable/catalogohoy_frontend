@@ -299,6 +299,22 @@ export const DEFAULT_CUSTOMER_FIELDS: CustomerFieldsConfig = {
   email: { visible: false, required: false },
 };
 
+/** Default weekdays with no delivery. Empty = deliveries every day. Values
+ *  follow JS convention (0 = Sunday … 6 = Saturday). */
+export const DEFAULT_DELIVERY_BLOCKED_WEEKDAYS: number[] = [];
+
+/** Weekday options for the "días bloqueados" selector in the editor. Ordered
+ *  Monday → Sunday for display but keyed with the JS day number. */
+export const DELIVERY_WEEKDAY_OPTIONS: { day: number; label: string }[] = [
+  { day: 1, label: 'Lunes' },
+  { day: 2, label: 'Martes' },
+  { day: 3, label: 'Miércoles' },
+  { day: 4, label: 'Jueves' },
+  { day: 5, label: 'Viernes' },
+  { day: 6, label: 'Sábado' },
+  { day: 0, label: 'Domingo' },
+];
+
 export type CatalogTemplate = 'classic' | 'banner-centered' | 'minimal';
 
 export const CATALOG_TEMPLATES: {
@@ -354,6 +370,16 @@ export interface EcommerceConfig {
   showShippingSection: boolean;
   /** Which customer fields to request at checkout and whether each is required. */
   customerFields: CustomerFieldsConfig;
+  /** When true, the public checkout shows a delivery-date picker so the
+   *  customer chooses the desired delivery date (persisted as `delivery_date`
+   *  on the order). Otherwise the server default (CURRENT_DATE) is used.
+   *  NOTE: persisted inside the `customer_fields` jsonb column (no dedicated
+   *  DB column), see EcommerceConfigService. */
+  deliveryDateEnabled: boolean;
+  /** Weekdays with no delivery (JS convention 0 = Sunday … 6 = Saturday). The
+   *  checkout date picker skips/blocks these days. Persisted inside the
+   *  `customer_fields` jsonb column alongside `deliveryDateEnabled`. */
+  deliveryBlockedWeekdays: number[];
 }
 
 /** Business hours for a single day. `dayOfWeek` follows JS convention:

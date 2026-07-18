@@ -1000,6 +1000,48 @@
         </div>
       </ui-card>
 
+      <!-- Card: Fecha de entrega -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon location-icon">
+              <ui-icon name="calendar" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ 'Fecha de entrega' | transloco }}</h2>
+              <small class="card-subtitle">
+                {{ 'Deja que el cliente elija la fecha de entrega en el checkout.' | transloco }}
+              </small>
+            </div>
+          </div>
+          <ui-toggle
+            [ngModel]="draftDeliveryDateEnabled()"
+            (ngModelChange)="draftDeliveryDateEnabled.set($event)"
+          ></ui-toggle>
+        </div>
+
+        <div class="card-content" [class.section-disabled]="!draftDeliveryDateEnabled()">
+          <p class="text-sm text-grey-300 mb-4">
+            {{ 'Marca los días de la semana en los que NO haces entregas. El calendario del checkout deshabilitará esos días.' | transloco }}
+          </p>
+          <div class="delivery-weekdays">
+            @for (opt of deliveryWeekdayOptions; track opt.day) {
+            <button
+              type="button"
+              class="delivery-weekday-chip"
+              [class.delivery-weekday-chip--blocked]="isDeliveryWeekdayBlocked(opt.day)"
+              (click)="toggleDeliveryBlockedWeekday(opt.day)"
+            >
+              {{ opt.label | transloco }}
+            </button>
+            }
+          </div>
+          <small class="delivery-weekdays-hint">
+            {{ 'Los días resaltados están bloqueados (sin entregas).' | transloco }}
+          </small>
+        </div>
+      </ui-card>
+
       </div> <!-- /TAB SHIPPING -->
 
       <!-- ===== TAB: PAYMENTS (block 2) ===== -->

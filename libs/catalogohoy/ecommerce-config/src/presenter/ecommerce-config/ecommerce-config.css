@@ -1349,3 +1349,38 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Fecha de entrega: selector de días bloqueados ─────────────────────── */
+.delivery-weekdays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.delivery-weekday-chip {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 0.0625rem solid var(--color-grey-100, #c3c3c3);
+  background: var(--color-lino-400, #f7f7f5);
+  color: var(--color-grey-500, #3d3d3d);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.delivery-weekday-chip:hover {
+  border-color: var(--color-primary-300, #7ea6ff);
+}
+
+.delivery-weekday-chip--blocked {
+  background: var(--color-red-500, #fc3e3e);
+  border-color: var(--color-red-600, #e53838);
+  color: #fff;
+}
+
+.delivery-weekdays-hint {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--color-grey-300, #7d7d7d);
+  font-size: 0.75rem;
+}

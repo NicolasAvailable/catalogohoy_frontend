@@ -42,6 +42,13 @@ export class OrderMapper {
       variantId: i.variantId ?? null,
       variantName: i.variantName ?? null,
       tierTitle: i.tierTitle ?? null,
+      addons: Array.isArray(i.addons)
+        ? i.addons.map((a: any) => ({
+            id: a.id ?? undefined,
+            name: a.name,
+            price: Number(a.price) || 0,
+          }))
+        : null,
     };
   }
 

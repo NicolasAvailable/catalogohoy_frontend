@@ -297,6 +297,8 @@ export const EcommerceStore = signalStore(
       } | null;
       shipping_address?: string | null;
       shipping_fee?: number;
+      /** Fecha de entrega elegida por el cliente (YYYY-MM-DD). Opcional. */
+      delivery_date?: string;
     }) {
       const catalogInfo = store.catalogInfo();
       if (!catalogInfo) return;
@@ -315,6 +317,7 @@ export const EcommerceStore = signalStore(
         shipping_method: order.shipping_method,
         shipping_address: order.shipping_address,
         shipping_fee: order.shipping_fee,
+        delivery_date: order.delivery_date,
       });
 
       patchState(store, () => ({ isLoading: false }));

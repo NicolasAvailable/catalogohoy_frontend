@@ -246,7 +246,13 @@ export class OrderPdfService {
       const item: OrderItem = order.products[i];
       const imgData = imageMap.get(i);
       const hasSku = !!item.sku;
-      const rowH = Math.max(hasSku ? 12 : 8, imgData ? imgSize + 2 : 0);
+      const addons = (item.addons ?? []).filter((a) => a && a.name);
+      // Each addon adds ~4mm of height under the name/SKU block.
+      const addonsH = addons.length * 4;
+      const rowH = Math.max(
+        (hasSku ? 12 : 8) + addonsH,
+        imgData ? imgSize + 2 : 0
+      );
       const textY = y + (imgData ? imgSize / 2 + 1 : 4);
 
       // Product image
@@ -268,10 +274,25 @@ export class OrderPdfService {
       doc.text(nameLines[0], descX, textY);
 
       // SKU below name
+      let subY = textY;
       if (hasSku) {
+        subY += 4;
         doc.setFontSize(7);
         doc.setTextColor(...GREY);
-        doc.text(`SKU: ${item.sku}`, descX, textY + 4);
+        doc.text(`SKU: ${item.sku}`, descX, subY);
+        doc.setFontSize(9);
+        doc.setTextColor(...BLACK);
+      }
+
+      // Addons (paid extras) itemised under the product.
+      if (addons.length) {
+        doc.setFontSize(8);
+        doc.setTextColor(...GREY);
+        for (const a of addons) {
+          subY += 4;
+          const priceStr = a.price > 0 ? `  (+${cs}${a.price.toFixed(2)})` : '';
+          doc.text(`+ ${a.name}${priceStr}`, descX, subY);
+        }
         doc.setFontSize(9);
         doc.setTextColor(...BLACK);
       }

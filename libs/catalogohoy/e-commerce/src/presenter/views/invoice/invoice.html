@@ -45,9 +45,23 @@
     @for (p of o.products; track $index) {
     <div class="invoice__item">
       <span class="invoice__item-qty">{{ p.quantity }}x</span>
-      <span class="invoice__item-name">
-        {{ p.name }}@if (p.size) { <small class="invoice__item-size">{{ p.size }}</small> }
-      </span>
+      <div class="invoice__item-body">
+        <span class="invoice__item-name">
+          {{ p.name }}@if (p.size) { <small class="invoice__item-size">{{ p.size }}</small> }
+        </span>
+        @if (p.addons?.length) {
+        <ul class="invoice__addons">
+          @for (a of p.addons; track $index) {
+          <li class="invoice__addon">
+            <span class="invoice__addon-name">+ {{ a.name }}</span>
+            @if (a.price > 0) {
+            <span class="invoice__addon-price">{{ cs() }}{{ a.price | tenantPrice }}</span>
+            }
+          </li>
+          }
+        </ul>
+        }
+      </div>
       <span class="invoice__item-total">{{ cs() }}{{ p.total | tenantPrice }}</span>
     </div>
     }

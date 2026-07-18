@@ -122,6 +122,7 @@ export default class Invoice {
         photo: p.photo,
         sku: p.sku ?? null,
         size: p.size ?? null,
+        addons: p.addons ?? null,
       })),
       status: (o.status as Order['status']) ?? 'pending',
       tenantId: Number(this.info()?.id) || 0,

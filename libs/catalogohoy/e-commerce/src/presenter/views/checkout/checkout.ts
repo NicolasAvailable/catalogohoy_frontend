@@ -82,6 +82,10 @@ export default class Checkout {
   public readonly selectedShippingId = signal<string | null>(null);
   public readonly customerAddress = signal('');
 
+  // --- Delivery date ---
+  /** Customer-chosen delivery date (YYYY-MM-DD). Empty until picked. */
+  public readonly deliveryDate = signal<string>('');
+
   // --- Post-order flow ---
   public readonly phase = signal<CheckoutPhase>('form');
   public readonly isSubmitting = signal(false);
@@ -111,6 +115,39 @@ export default class Checkout {
   });
 
   public readonly hasShipping = computed(() => this.shippingMethods().length > 0);
+
+  // --- Delivery date ---
+  /** Whether the merchant enabled the delivery-date picker for this catalog. */
+  public readonly deliveryDateEnabled = computed(
+    () => this.info()?.deliveryDateEnabled ?? false
+  );
+
+  /** Weekdays with no delivery (JS: 0 = Sunday … 6 = Saturday). */
+  public readonly deliveryBlockedWeekdays = computed<number[]>(
+    () => this.info()?.deliveryBlockedWeekdays ?? []
+  );
+
+  /** Local `YYYY-MM-DD` for today — used as the date input `min`. */
+  public readonly todayIso = computed(() => this.toIsoDate(new Date()));
+
+  private toIsoDate(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  /** True when the chosen date falls on a blocked weekday (used to flag the
+   *  input and to block submit). Parses the ISO string as a local date to
+   *  avoid the UTC off-by-one that `new Date('YYYY-MM-DD')` introduces. */
+  public readonly deliveryDateIsBlocked = computed(() => {
+    const iso = this.deliveryDate();
+    if (!iso) return false;
+    const [y, m, d] = iso.split('-').map((n) => Number(n));
+    if (!y || !m || !d) return false;
+    const weekday = new Date(y, m - 1, d).getDay();
+    return this.deliveryBlockedWeekdays().includes(weekday);
+  });
 
   public readonly selectedShipping = computed<ShippingMethod | null>(
     () =>
@@ -269,6 +306,15 @@ export default class Checkout {
     const sel = this.selectedShipping();
     if (sel?.requestCustomerAddress && !this.customerAddress().trim()) return false;
 
+    // Delivery date: required when the feature is on, must not be in the past
+    // and must not land on a blocked weekday.
+    if (this.deliveryDateEnabled()) {
+      const iso = this.deliveryDate();
+      if (!iso) return false;
+      if (iso < this.todayIso()) return false;
+      if (this.deliveryDateIsBlocked()) return false;
+    }
+
     return !this.cartStore.isEmpty();
   }
 
@@ -322,6 +368,10 @@ export default class Checkout {
         // Snapshot del tramo de mayoreo elegido (el precio unitario ya lo
         // refleja); antes se perdía al crear la orden.
         tierTitle: item.tierTitle ?? null,
+        // Adicionales elegidos (nombre + precio unitario). Su precio ya está
+        // sumado en `item.price`, pero se guardan para itemizarlos en la
+        // factura/recibo (antes no se mostraban).
+        addons: item.addons ?? [],
       })),
       total,
       payment_method: this.selectedPaymentMethod() || undefined,
@@ -332,6 +382,12 @@ export default class Checkout {
         ? this.customerAddress().trim() || null
         : null,
       shipping_fee: fee,
+      // Only send when the feature is on and the customer picked a date; else
+      // the server keeps its default (CURRENT_DATE).
+      delivery_date:
+        this.deliveryDateEnabled() && this.deliveryDate()
+          ? this.deliveryDate()
+          : undefined,
     });
 
     if (!orderResult || orderResult.isLeft()) {

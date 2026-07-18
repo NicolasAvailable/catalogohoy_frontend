@@ -60,6 +60,8 @@ import {
   DEFAULT_BUSINESS_HOURS_WEEK,
   DEFAULT_CURRENCY_CONFIG,
   DEFAULT_CUSTOMER_FIELDS,
+  DEFAULT_DELIVERY_BLOCKED_WEEKDAYS,
+  DELIVERY_WEEKDAY_OPTIONS,
   DEFAULT_SOCIAL_LINKS,
   DEFAULT_WHATSAPP_ORDER_MESSAGE,
   EcommerceConfig,
@@ -284,6 +286,27 @@ export class EcommerceConfigComponent implements OnInit {
     email: { ...DEFAULT_CUSTOMER_FIELDS.email },
   });
   public readonly shippingTypeOptions = SHIPPING_METHOD_TYPE_OPTIONS;
+
+  // --- Delivery date (Envío tab) drafts ---
+  /** Whether the checkout shows a delivery-date picker to the customer. */
+  public readonly draftDeliveryDateEnabled = signal<boolean>(false);
+  /** Weekdays with no delivery (JS: 0 = Sunday … 6 = Saturday). */
+  public readonly draftDeliveryBlockedWeekdays = signal<number[]>([]);
+  public readonly deliveryWeekdayOptions = DELIVERY_WEEKDAY_OPTIONS;
+
+  /** Toggle a weekday in/out of the blocked list. */
+  toggleDeliveryBlockedWeekday(day: number): void {
+    const current = this.draftDeliveryBlockedWeekdays();
+    this.draftDeliveryBlockedWeekdays.set(
+      current.includes(day)
+        ? current.filter((d) => d !== day)
+        : [...current, day].sort((a, b) => a - b)
+    );
+  }
+
+  isDeliveryWeekdayBlocked(day: number): boolean {
+    return this.draftDeliveryBlockedWeekdays().includes(day);
+  }
 
   // WhatsApp notifications (tabla whatsapp_notification_settings). Se cargan
   // y guardan aparte del config del catálogo (otra tabla). El número
@@ -642,6 +665,8 @@ export class EcommerceConfigComponent implements OnInit {
       const newMethods = config.shippingMethods?.length ? config.shippingMethods : createDefaultShippingMethods();
       syncFieldJson(this.draftShippingMethods, prevMethods, newMethods);
       syncFieldJson(this.draftCustomerFields, prev?.customerFields ?? DEFAULT_CUSTOMER_FIELDS, config.customerFields ?? DEFAULT_CUSTOMER_FIELDS);
+      syncField(this.draftDeliveryDateEnabled, prev?.deliveryDateEnabled ?? false, config.deliveryDateEnabled ?? false);
+      syncFieldJson(this.draftDeliveryBlockedWeekdays, prev?.deliveryBlockedWeekdays ?? DEFAULT_DELIVERY_BLOCKED_WEEKDAYS, config.deliveryBlockedWeekdays ?? DEFAULT_DELIVERY_BLOCKED_WEEKDAYS);
 
       this.lastSyncedConfig = { ...config };
     });
@@ -682,6 +707,8 @@ export class EcommerceConfigComponent implements OnInit {
       const shippingMethods = this.draftShippingMethods();
       const showShippingSection = this.draftShowShippingSection();
       const customerFields = this.draftCustomerFields();
+      const deliveryDateEnabled = this.draftDeliveryDateEnabled();
+      const deliveryBlockedWeekdays = this.draftDeliveryBlockedWeekdays();
       // Métodos de pago activos (con sus datos) — para que la preview del
       // checkout refleje en vivo los datos al elegir un método, sin recargar.
       const paymentMethods = this.configStore
@@ -713,6 +740,8 @@ export class EcommerceConfigComponent implements OnInit {
           shippingMethods,
           showShippingSection,
           customerFields,
+          deliveryDateEnabled,
+          deliveryBlockedWeekdays,
           // Solo overrideamos si hay métodos activos cargados; si la lista aún
           // no cargó (vacía), la preview usa los del catálogo real.
           ...(paymentMethods.length ? { paymentMethods } : {}),
@@ -1057,7 +1086,27 @@ export class EcommerceConfigComponent implements OnInit {
       changes.shippingMethods = this.draftShippingMethods();
     }
     const serverCustomerFields = config.customerFields ?? DEFAULT_CUSTOMER_FIELDS;
-    if (JSON.stringify(this.draftCustomerFields()) !== JSON.stringify(serverCustomerFields)) {
+    const customerFieldsChanged =
+      JSON.stringify(this.draftCustomerFields()) !==
+      JSON.stringify(serverCustomerFields);
+
+    // Delivery-date settings persist inside the `customer_fields` jsonb (no
+    // dedicated DB column). When either delivery setting changes we must also
+    // send `customerFields` so the service has the full base to merge into,
+    // otherwise it would fall back to defaults and clobber the tenant's fields.
+    const deliveryEnabledChanged =
+      this.draftDeliveryDateEnabled() !== (config.deliveryDateEnabled ?? false);
+    const deliveryDaysChanged =
+      JSON.stringify(this.draftDeliveryBlockedWeekdays()) !==
+      JSON.stringify(config.deliveryBlockedWeekdays ?? []);
+
+    if (deliveryEnabledChanged) {
+      changes.deliveryDateEnabled = this.draftDeliveryDateEnabled();
+    }
+    if (deliveryDaysChanged) {
+      changes.deliveryBlockedWeekdays = this.draftDeliveryBlockedWeekdays();
+    }
+    if (customerFieldsChanged || deliveryEnabledChanged || deliveryDaysChanged) {
       changes.customerFields = this.draftCustomerFields();
     }
 

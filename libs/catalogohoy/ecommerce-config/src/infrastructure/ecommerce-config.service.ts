@@ -9,6 +9,7 @@ import {
   CustomerFieldsConfig,
   DEFAULT_BUSINESS_HOURS_WEEK,
   DEFAULT_CUSTOMER_FIELDS,
+  DEFAULT_DELIVERY_BLOCKED_WEEKDAYS,
   DEFAULT_SOCIAL_LINKS,
   EcommerceConfig,
   ExchangeRateType,
@@ -87,6 +88,19 @@ export class EcommerceConfigService {
         customerFields:
           (config?.customer_fields as CustomerFieldsConfig) ??
           DEFAULT_CUSTOMER_FIELDS,
+        // Delivery-date settings live inside the `customer_fields` jsonb column
+        // (no dedicated DB column) so they flow through the public RPC (which
+        // returns customer_fields verbatim) with no migration.
+        deliveryDateEnabled:
+          (config?.customer_fields as { deliveryDateEnabled?: boolean })
+            ?.deliveryDateEnabled ?? false,
+        deliveryBlockedWeekdays: Array.isArray(
+          (config?.customer_fields as { deliveryBlockedWeekdays?: number[] })
+            ?.deliveryBlockedWeekdays
+        )
+          ? ((config?.customer_fields as { deliveryBlockedWeekdays?: number[] })
+              .deliveryBlockedWeekdays as number[])
+          : DEFAULT_DELIVERY_BLOCKED_WEEKDAYS,
       });
     } catch (error) {
       return E.left(error as Error);
@@ -296,8 +310,29 @@ export class EcommerceConfigService {
         updateData['shipping_methods'] = config.shippingMethods;
       if (config.showShippingSection !== undefined)
         updateData['show_shipping_section'] = config.showShippingSection;
-      if (config.customerFields !== undefined)
-        updateData['customer_fields'] = config.customerFields;
+      // `customer_fields` also carries the delivery-date settings (no dedicated
+      // DB column). Merge them into the same jsonb so a change to either the
+      // fields OR the delivery settings persists the combined object. When only
+      // the delivery settings changed we still need to write the fields shape,
+      // so fall back to the passed customerFields (already synced with server).
+      if (
+        config.customerFields !== undefined ||
+        config.deliveryDateEnabled !== undefined ||
+        config.deliveryBlockedWeekdays !== undefined
+      ) {
+        const base =
+          config.customerFields ??
+          (DEFAULT_CUSTOMER_FIELDS as CustomerFieldsConfig);
+        updateData['customer_fields'] = {
+          ...base,
+          ...(config.deliveryDateEnabled !== undefined
+            ? { deliveryDateEnabled: config.deliveryDateEnabled }
+            : {}),
+          ...(config.deliveryBlockedWeekdays !== undefined
+            ? { deliveryBlockedWeekdays: config.deliveryBlockedWeekdays }
+            : {}),
+        };
+      }
 
       if (Object.keys(updateData).length > 0) {
         const tenantIdNum = Number(config.tenantId);
