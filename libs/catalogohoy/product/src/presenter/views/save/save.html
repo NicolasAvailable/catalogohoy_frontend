@@ -935,6 +935,50 @@
                 (click)="removeAddon($index)"
               />
             </div>
+
+            <!-- Reusar un adicional ya creado en otro producto: llena ESTE card
+                 (nombre/precio/imagen). Visible solo mientras está en blanco. -->
+            @if (!addon.get('name')?.value && availableCatalogAddons().length) {
+            <ui-select
+              styleClass="w-full"
+              [options]="availableCatalogAddons()"
+              optionLabel="name"
+              optionValue="id"
+              [placeholder]="'Reusar un adicional existente' | transloco"
+              [filter]="true"
+              filterBy="name"
+              [ngModel]="addonSelectModel()"
+              (ngModelChange)="fillAddonFromCatalog(aIndex, $event)"
+              [ngModelOptions]="{ standalone: true }"
+              appendTo="body"
+            >
+              <ng-template selectItem let-opt>
+                <div class="flex items-center gap-3 py-1">
+                  @if (opt.photo) {
+                  <img
+                    [src]="opt.photo"
+                    [alt]="opt.name"
+                    loading="lazy"
+                    class="w-8 h-8 rounded object-cover"
+                  />
+                  } @else {
+                  <div
+                    class="w-8 h-8 rounded bg-grey-100 flex items-center justify-center"
+                  >
+                    <ui-icon name="package" size="16" styleClass="text-grey-300" />
+                  </div>
+                  }
+                  <span class="flex-1 text-grey-800">{{ opt.name }}</span>
+                  @if (opt.price > 0) {
+                  <span class="text-xs text-grey-400"
+                    >+{{ cs() }} {{ opt.price.toFixed(2) }}</span
+                  >
+                  }
+                </div>
+              </ng-template>
+            </ui-select>
+            }
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div class="flex flex-col gap-2">
                 <label class="text-sm text-grey-400 font-semibold">{{ 'Nombre' | transloco }}<span class="text-red-500 ml-0.5">*</span></label>
@@ -1006,8 +1050,8 @@
         </div>
         }
 
-        <!-- Sin adicionales: botón simple para crear el primero. -->
-        @if (addonsArray.length === 0) {
+        <!-- Agrega un card de adicional en blanco (el reuso vive DENTRO del
+             card, arriba de los inputs). -->
         <div class="flex items-center gap-2">
           <ui-button
             [label]="'Agregar adicional' | transloco"
@@ -1017,68 +1061,6 @@
             (click)="addAddon()"
           />
         </div>
-        } @else {
-        <!-- Con ≥1 adicional: select para crear uno nuevo O reusar uno ya
-             creado en otro producto (mismo patrón que el select de producto en
-             el alta de órdenes, con "Crear personalizado" como primera opción). -->
-        <div class="flex flex-col gap-1.5">
-          <span class="text-sm text-grey-400">{{ 'Agregar adicional' | transloco }}</span>
-          <ui-select
-            styleClass="w-full"
-            [options]="addAddonOptions()"
-            optionLabel="name"
-            optionValue="id"
-            [placeholder]="'Crear nuevo o reusar existente' | transloco"
-            [filter]="true"
-            filterBy="name"
-            [disabled]="!canAddAddon()"
-            [ngModel]="addonSelectModel()"
-            (ngModelChange)="onAddAddonSelect($event)"
-            [ngModelOptions]="{ standalone: true }"
-            appendTo="body"
-          >
-            <ng-template selectItem let-opt>
-              @if (opt.isNew) {
-              <div class="flex items-center gap-3 py-1">
-                <div
-                  class="w-8 h-8 rounded bg-primary-50 flex items-center justify-center"
-                >
-                  <ui-icon
-                    name="plus-circle"
-                    size="16"
-                    styleClass="text-primary-500"
-                  />
-                </div>
-                <span class="text-primary-600 font-medium">{{ 'Crear adicional nuevo' | transloco }}</span>
-              </div>
-              } @else {
-              <div class="flex items-center gap-3 py-1">
-                @if (opt.photo) {
-                <img
-                  [src]="opt.photo"
-                  [alt]="opt.name"
-                  loading="lazy"
-                  class="w-8 h-8 rounded object-cover"
-                />
-                } @else {
-                <div
-                  class="w-8 h-8 rounded bg-grey-100 flex items-center justify-center"
-                >
-                  <ui-icon name="package" size="16" styleClass="text-grey-300" />
-                </div>
-                }
-                <span class="flex-1 text-grey-800">{{ opt.name }}</span>
-                @if (opt.price > 0) {
-                <span class="text-xs text-grey-400"
-                  >+{{ cs() }} {{ opt.price.toFixed(2) }}</span
-                >
-                }
-              </div>
-              }
-            </ng-template>
-          </ui-select>
-        </div>
-        }
         @if (addonsArray.length > 0) {
         <div class="flex items-center justify-between text-sm bg-grey-50 rounded-lg px-3 py-2">
           <span class="text-grey-500 font-semibold"

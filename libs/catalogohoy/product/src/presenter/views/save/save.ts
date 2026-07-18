@@ -621,69 +621,22 @@ export default class Save implements OnInit {
     return this.catalogAddons().filter((a) => !current.has(this.addonKey(a)));
   }
 
-  /** Reusa un adicional existente: lo agrega pre-llenado (nombre/precio/foto)
-   *  con un id propio, sin recrearlo desde cero. Respeta el límite del plan. */
-  public reuseAddon(addonId: string | null): void {
-    if (!addonId) return;
-    if (!this.canAddAddon()) {
-      this.toastService.error(
-        (`Tu plan permite hasta ${this.planStore.maxAddons()} ` +
-          'adicionales por producto. Mejora tu plan para agregar más.') as unknown as Exception
-      );
-      return;
-    }
-    const addon = this.catalogAddons().find((a) => a.id === addonId);
-    if (!addon) return;
-    const key = this.addonKey(addon);
-    if ((this.addonsArray.value ?? []).some((a: { name: string; price: string }) => this.addonKey(a) === key)) {
-      return;
-    }
-    this.addonsArray.push(
-      this.fb.group({
-        id: [crypto.randomUUID() as string | null],
-        name: [addon.name, Validators.required],
-        price: [String(addon.price), Validators.required],
-        photo: [addon.photo as string | null],
-        isDefault: [false],
-      })
-    );
-  }
-
-  // Select "agregar adicional" (visible cuando ya hay ≥1): primera opción
-  // "Crear nuevo" (como el "Producto personalizado" del select de productos en
-  // el alta de órdenes), seguida de los adicionales existentes para reusar.
-  static readonly NEW_ADDON_ID = '__new_addon__';
+  // Reset del select "reusar adicional existente" que vive dentro de cada card
+  // (se comparte: al elegir se vuelve a null y todos muestran su placeholder).
   public readonly addonSelectModel = signal<string | null>(null);
 
-  /** Opciones del select: "Crear nuevo" arriba + adicionales existentes. */
-  public addAddonOptions(): {
-    id: string;
-    name: string;
-    price: number;
-    photo: string | null;
-    isNew: boolean;
-  }[] {
-    return [
-      {
-        id: Save.NEW_ADDON_ID,
-        name: 'Crear adicional nuevo',
-        price: 0,
-        photo: null,
-        isNew: true,
-      },
-      ...this.availableCatalogAddons().map((a) => ({ ...a, isNew: false })),
-    ];
-  }
-
-  /** Maneja la elección del select: crear uno nuevo en blanco o reusar uno
-   *  existente. Luego resetea el select a su placeholder. */
-  public onAddAddonSelect(value: string | null): void {
-    if (!value) return;
-    if (value === Save.NEW_ADDON_ID) {
-      this.addAddon();
-    } else {
-      this.reuseAddon(value);
-    }
+  /** Llena el card `cardIndex` con un adicional ya creado en otro producto
+   *  (nombre/precio/foto), sin recrearlo desde cero. Mantiene el id propio del
+   *  card. Resetea el select a su placeholder. */
+  public fillAddonFromCatalog(cardIndex: number, addonId: string | null): void {
+    if (!addonId) return;
+    const addon = this.catalogAddons().find((a) => a.id === addonId);
+    if (!addon) return;
+    this.addonsArray.at(cardIndex).patchValue({
+      name: addon.name,
+      price: String(addon.price),
+      photo: addon.photo ?? null,
+    });
     // Reset a placeholder (mismo patrón que onImproveMode).
     this.addonSelectModel.set(null);
   }
