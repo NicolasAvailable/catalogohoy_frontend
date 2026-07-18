@@ -20,7 +20,7 @@ const JSON_LD = {
 
 const Index = () => {
   usePageMeta({
-    title: "Catálogo Hoy — Crea tu catálogo digital gratis en minutos",
+    title: "CatalogoHoy — Crea tu catálogo digital gratis en minutos",
     description:
       "Crea catálogos digitales profesionales para tu tienda de ropa o negocio. Sube productos, personaliza el diseño, comparte por WhatsApp y recibe órdenes. Empieza gratis hoy.",
     path: "/",
