@@ -1017,8 +1017,9 @@
         </div>
 
         <!-- Reusar un adicional ya creado en otro producto (sin recrearlo).
-             En su propia fila, full-width, como los demás selects del form. -->
-        @if (availableCatalogAddons().length && canAddAddon()) {
+             Solo se muestra una vez que hay al menos un adicional en el form
+             (aparece al tocar "Agregar adicional"), para no ensuciar la UI. -->
+        @if (addonsArray.length > 0 && availableCatalogAddons().length && canAddAddon()) {
         <div class="flex flex-col gap-1.5 rounded-xl border border-dashed border-grey-100 bg-grey-50 p-3">
           <span class="text-sm font-medium text-grey-600">
             {{ '¿Ya lo creaste en otro producto?' | transloco }}
