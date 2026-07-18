@@ -1796,5 +1796,20 @@
   "El aviso de nueva orden también llega a este número.": "The new-order alert also goes to this number.",
   "Agregar segundo número": "Add second number",
   "Tu cuenta puede recibir el aviso en hasta 2 números.": "Your account can receive the alert on up to 2 numbers.",
-  "Opción": "Option"
+  "Opción": "Option",
+  "Ver imagen completa": "View full image",
+  "Agrega adicionales": "Add extras",
+  "Adicionales": "Extras",
+  "Extras opcionales que el cliente puede sumar al producto (ej. corona, lazo, tarjeta). Se cobran aparte del precio base.": "Optional extras the customer can add to the product (e.g. crown, ribbon, card). Charged on top of the base price.",
+  "Adicional": "Extra",
+  "Ej. Corona Mediana": "E.g. Medium Crown",
+  "Imagen (opcional)": "Image (optional)",
+  "Arrastrá, soltá o subí una imagen": "Drag, drop or upload an image",
+  "Marcado por defecto al abrir el producto": "Checked by default when the product opens",
+  "Agregar adicional": "Add extra",
+  "Adicionales:": "Extras:",
+  "Variante:": "Variant:",
+  "El correo es obligatorio": "Email is required",
+  "Ingresa un correo válido": "Enter a valid email",
+  "Al mayor:": "Wholesale:"
 }

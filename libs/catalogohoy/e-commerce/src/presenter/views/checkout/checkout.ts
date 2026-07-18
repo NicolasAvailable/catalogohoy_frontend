@@ -295,6 +295,36 @@ export default class Checkout {
   }
 
   // --- Validation ---
+  /** Touched por campo (blur): el submit vive deshabilitado mientras el form
+   *  es inválido, así que los errores se muestran al salir de cada campo. */
+  readonly nameTouched = signal(false);
+  readonly phoneTouched = signal(false);
+  readonly emailTouched = signal(false);
+
+  readonly nameError = computed(() =>
+    this.nameTouched() && !this.name().trim()
+      ? 'El nombre es obligatorio'
+      : null
+  );
+
+  readonly phoneError = computed(() => {
+    const f = this.customerFields();
+    return this.phoneTouched() &&
+      f.phone.visible &&
+      f.phone.required &&
+      !this.phone().trim()
+      ? 'El teléfono es obligatorio'
+      : null;
+  });
+
+  readonly emailError = computed(() => {
+    const f = this.customerFields();
+    if (!f.email.visible || !this.emailTouched()) return null;
+    const v = this.email().trim();
+    if (!v) return f.email.required ? 'El correo es obligatorio' : null;
+    return this.isValidEmail(v) ? null : 'Ingresa un correo válido';
+  });
+
   get isValid(): boolean {
     const f = this.customerFields();
     // Name is always required, regardless of config.
@@ -373,10 +403,11 @@ export default class Checkout {
         // Snapshot del tramo de mayoreo elegido (el precio unitario ya lo
         // refleja); antes se perdía al crear la orden.
         tierTitle: item.tierTitle ?? null,
-        // Adicionales elegidos (nombre + precio unitario). Su precio ya está
-        // sumado en `item.price`, pero se guardan para itemizarlos en la
-        // factura/recibo (antes no se mostraban).
-        addons: item.addons ?? [],
+        // Snapshot de adicionales elegidos (el precio unitario ya los suma);
+        // se guardan para itemizarlos en admin/PDF/notificaciones.
+        addons: item.addons.length
+          ? item.addons.map((a) => ({ id: a.id, name: a.name, price: a.price }))
+          : null,
       })),
       total,
       payment_method: this.selectedPaymentMethod() || undefined,
@@ -441,6 +472,12 @@ export default class Checkout {
       const sizeLabel = item.size ? ` (Talla ${item.size})` : '';
       const variantLabel = item.variantName ? ` (${item.variantName})` : '';
       productsList += `• ${item.name}${variantLabel}${sizeLabel} x${item.quantity} - ${symbol}${item.total}\n`;
+      // Adicionales elegidos, indentados bajo su producto. El precio del ítem
+      // ya los incluye; acá solo se detallan.
+      item.addons.forEach((addon) => {
+        const addonPrice = addon.price > 0 ? ` (+${symbol}${addon.price})` : '';
+        productsList += `   ↳ ${addon.name}${addonPrice}\n`;
+      });
     });
 
     const totalBsStr = this.showBs()

@@ -27,6 +27,7 @@ import { whiteSpacesValidator } from '@shared/presenter';
 import {
   ButtonComponent,
   CardComponent,
+  CheckboxComponent,
   DatepickerComponent,
   IconComponent,
   InputNumberComponent,
@@ -50,6 +51,7 @@ import { OrderStore } from '../../../infrastructure/order.store';
     RouterLink,
     TranslocoPipe,
     CardComponent,
+    CheckboxComponent,
     InputTextComponent,
     TextareaComponent,
     ButtonComponent,
@@ -163,6 +165,9 @@ export default class OrderSave implements OnInit {
       if (tid) {
         this.tenantCurrency.load(tid);
         this.configStore.loadPaymentMethods(String(tid));
+        // Config del catálogo: de acá sale countryCode para preseleccionar
+        // el país del input de teléfono (sin esto queda el fallback VE).
+        this.configStore.loadConfig(String(tid));
       }
     });
 
@@ -318,6 +323,10 @@ export default class OrderSave implements OnInit {
           // Al mayor arranca en el primer tramo; el select de escala permite
           // cambiarlo (onTierSelect). Producto normal no lleva tramo.
           tierTitle: isWholesale ? selectedProduct.wholesaleTiers[0].title : null,
+          // Cambiar de producto descarta variante y adicionales del anterior.
+          variantId: null,
+          variantName: null,
+          addons: null,
         };
         return updated;
       });
@@ -334,7 +343,8 @@ export default class OrderSave implements OnInit {
     return product?.isWholesale ? product.wholesaleTiers ?? [] : [];
   }
 
-  /** Cambia el tramo de mayoreo de la fila: actualiza precio y snapshot. */
+  /** Cambia el tramo de mayoreo de la fila: actualiza precio y snapshot.
+   *  Preserva los adicionales elegidos (su suma va encima del tramo). */
   public onTierSelect(index: number, tierTitle: string) {
     const row = this.products()[index];
     const tier = this.getWholesaleTiers(row.productId).find(
@@ -343,14 +353,142 @@ export default class OrderSave implements OnInit {
     if (!tier) return;
     this.products.update((products) => {
       const updated = [...products];
+      const addonsSum = (updated[index].addons ?? []).reduce(
+        (sum, a) => sum + a.price,
+        0
+      );
+      const price = tier.price + addonsSum;
       updated[index] = {
         ...updated[index],
-        price: tier.price,
+        price,
         tierTitle: tier.title,
-        total: tier.price * updated[index].quantity,
+        total: price * updated[index].quantity,
       };
       return updated;
     });
+  }
+
+  /** Variantes del producto de la fila (vacío si no tiene). */
+  public getVariants(
+    productId: string | number
+  ): { id: string; name: string; price: number; photo: string | null }[] {
+    const product = this.productStore
+      .productList()
+      .products.find((p) => p.id === productId);
+    if (!product?.isVariant) return [];
+    return (product.variants ?? []).map((v) => ({
+      id: v.id,
+      name: v.name,
+      price: v.price,
+      photo: v.photos?.[0] ?? null,
+    }));
+  }
+
+  /** Cambia la variante de la fila (null = Producto original): actualiza
+   *  snapshot, foto y unitario (variante + adicionales elegidos). */
+  public onVariantSelect(index: number, variantId: string | null) {
+    const row = this.products()[index];
+    const product = this.productStore
+      .productList()
+      .products.find((p) => p.id === row.productId);
+    if (!product) return;
+    const variant = variantId
+      ? product.variants?.find((v) => v.id === variantId) ?? null
+      : null;
+    this.products.update((products) => {
+      const updated = [...products];
+      const addonsSum = (updated[index].addons ?? []).reduce(
+        (sum, a) => sum + a.price,
+        0
+      );
+      const base = variant
+        ? variant.price
+        : product.pricePromotional > 0
+          ? product.pricePromotional
+          : product.price;
+      const price = base + addonsSum;
+      updated[index] = {
+        ...updated[index],
+        variantId: variant?.id ?? null,
+        variantName: variant?.name ?? null,
+        photo: variant?.photos?.[0] ?? product.photos?.[0],
+        price,
+        total: price * updated[index].quantity,
+      };
+      return updated;
+    });
+  }
+
+  /** Adicionales del producto de la fila (vacío si no tiene). */
+  public getAddons(
+    productId: string | number
+  ): { id: string; name: string; price: number }[] {
+    const product = this.productStore
+      .productList()
+      .products.find((p) => p.id === productId);
+    return (product?.addons ?? []).map((a) => ({
+      id: a.id,
+      name: a.name,
+      price: a.price,
+    }));
+  }
+
+  public isAddonSelected(index: number, addonId: string): boolean {
+    return !!this.products()[index]?.addons?.some((a) => a.id === addonId);
+  }
+
+  /** Marca/desmarca un adicional de la fila: actualiza el snapshot y
+   *  recalcula el unitario como base (tramo o precio/promo) + adicionales —
+   *  el mismo criterio que el checkout del storefront. */
+  public onAddonToggle(
+    index: number,
+    addon: { id: string; name: string; price: number }
+  ) {
+    this.products.update((products) => {
+      const updated = [...products];
+      const row = updated[index];
+      const current = row.addons ?? [];
+      const addons = current.some((a) => a.id === addon.id)
+        ? current.filter((a) => a.id !== addon.id)
+        : [...current, addon];
+      const price =
+        this.rowBaseUnitPrice(row) +
+        addons.reduce((sum, a) => sum + a.price, 0);
+      updated[index] = {
+        ...row,
+        addons: addons.length ? addons : null,
+        price,
+        total: price * row.quantity,
+      };
+      return updated;
+    });
+  }
+
+  /** Precio unitario de la fila SIN adicionales: variante o tramo elegido,
+   *  o el precio (promo) actual del producto. Si el producto ya no está en
+   *  el store, se deduce restando los adicionales del precio guardado. */
+  private rowBaseUnitPrice(row: OrderItem): number {
+    const product = this.productStore
+      .productList()
+      .products.find((p) => p.id === row.productId);
+    if (!product) {
+      return (
+        row.price - (row.addons ?? []).reduce((sum, a) => sum + a.price, 0)
+      );
+    }
+    if (row.variantId) {
+      const variant = product.variants?.find((v) => v.id === row.variantId);
+      if (variant) return variant.price;
+    }
+    if (row.tierTitle) {
+      const tier = product.wholesaleTiers?.find(
+        (t) => t.title === row.tierTitle
+      );
+      if (tier) return tier.price;
+    }
+    return product.pricePromotional > 0
+      ? product.pricePromotional
+      : product.price;
   }
 
   public onCustomNameChange(index: number, name: string) {

@@ -20,13 +20,24 @@ export class Cart {
     return this._items.length === 0;
   }
 
+  /** Firma del set de adicionales de una línea: mismo producto con distintos
+   *  adicionales son líneas distintas (si no, el merge descartaría los addons
+   *  y su precio de la línea nueva). */
+  private static addonsKey(item: CartItem): string {
+    return (item.addons ?? [])
+      .map((a) => a.id)
+      .sort()
+      .join('|');
+  }
+
   public addItem(item: CartItem): Cart {
     const existingIndex = this._items.findIndex(
       (i) =>
         i.productId === item.productId &&
         i.tierTitle === item.tierTitle &&
         i.size === item.size &&
-        i.variantId === item.variantId
+        i.variantId === item.variantId &&
+        Cart.addonsKey(i) === Cart.addonsKey(item)
     );
 
     if (existingIndex >= 0) {

@@ -40,6 +40,7 @@ import {
 import {
   ButtonComponent,
   CardComponent,
+  CheckboxComponent,
   IconComponent,
   ImageComponent,
   InputNumberComponent,
@@ -75,6 +76,7 @@ import { ImageGeneratorComponent } from '../../components/image-generator/image-
     InputTextComponent,
     EditorModule,
     ButtonComponent,
+    CheckboxComponent,
     IconComponent,
     ImageComponent,
     ImageEraserComponent,

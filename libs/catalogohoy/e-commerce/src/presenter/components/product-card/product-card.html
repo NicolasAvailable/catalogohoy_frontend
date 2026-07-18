@@ -10,11 +10,15 @@
   >
     <div class="product-card__image">
       @if (product().photos.length) {
+      <!-- Sizing via Tailwind (global): el CSS encapsulado de la card no
+           alcanza el <img>/<video> interno de ui-product-media. `contain`
+           sobre fondo blanco = la foto vertical se ve completa en el frame
+           fijo (1:1 / 4:5) en vez de recortada por abajo. -->
       <ui-product-media
         [url]="coverUrl()"
         [alt]="product().name"
         [controls]="false"
-        styleClass="product-card__media"
+        styleClass="w-full h-full object-contain bg-white"
       />
       @if (hasVideo()) {
       <span class="product-card__play-badge" aria-hidden="true">
