@@ -14,6 +14,7 @@ import EnterpriseSales from "./pages/EnterpriseSales";
 import Precios from "./pages/Precios";
 import PreguntasFrecuentes from "./pages/PreguntasFrecuentes";
 import Funciones from "./pages/Funciones";
+import VenderPorWhatsapp from "./pages/VenderPorWhatsapp";
 import NotFound from "./pages/NotFound";
 import { captureReferralFromUrl } from "@/lib/referral-cookie";
 
@@ -41,6 +42,7 @@ const App = () => {
             <Route path="/pricing" element={<Precios />} />
             <Route path="/faq" element={<PreguntasFrecuentes />} />
             <Route path="/features" element={<Funciones />} />
+            <Route path="/vender-por-whatsapp" element={<VenderPorWhatsapp />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -21,6 +21,7 @@ const Footer = () => {
             <Link to="/features" className="hover:text-foreground transition-colors">Funciones</Link>
             <Link to="/pricing" className="hover:text-foreground transition-colors">Precios</Link>
             <Link to="/faq" className="hover:text-foreground transition-colors">Preguntas frecuentes</Link>
+            <Link to="/vender-por-whatsapp" className="hover:text-foreground transition-colors">Vender por WhatsApp</Link>
             <Link to="/privacy-policy" className="hover:text-foreground transition-colors">Privacidad</Link>
             <Link to="/terms-of-service" className="hover:text-foreground transition-colors">Términos</Link>
             <Link to="/data-deletion" className="hover:text-foreground transition-colors">Eliminación de Datos</Link>
