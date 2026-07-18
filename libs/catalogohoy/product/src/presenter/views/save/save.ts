@@ -605,22 +605,6 @@ export default class Save implements OnInit {
     });
   }
 
-  /** Adicionales existentes que este producto AÚN no tiene (por nombre+precio),
-   *  para ofrecerlos en el selector "Reusar adicional existente". */
-  public availableCatalogAddons(): {
-    id: string;
-    name: string;
-    price: number;
-    photo: string | null;
-  }[] {
-    const current = new Set(
-      (this.addonsArray.value ?? []).map((a: { name: string; price: string }) =>
-        this.addonKey(a)
-      )
-    );
-    return this.catalogAddons().filter((a) => !current.has(this.addonKey(a)));
-  }
-
   // Reset del select "reusar adicional existente" que vive dentro de cada card
   // (se comparte: al elegir se vuelve a null y todos muestran su placeholder).
   public readonly addonSelectModel = signal<string | null>(null);

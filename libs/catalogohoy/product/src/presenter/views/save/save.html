@@ -937,11 +937,12 @@
             </div>
 
             <!-- Reusar un adicional ya creado en otro producto: llena ESTE card
-                 (nombre/precio/imagen). Visible solo mientras está en blanco. -->
-            @if (!addon.get('name')?.value && availableCatalogAddons().length) {
+                 (nombre/precio/imagen). Visible solo mientras está en blanco.
+                 Muestra TODO el catálogo (sin excluir) para poder reusar varios. -->
+            @if (!addon.get('name')?.value && catalogAddons().length) {
             <ui-select
               styleClass="w-full"
-              [options]="availableCatalogAddons()"
+              [options]="catalogAddons()"
               optionLabel="name"
               optionValue="id"
               [placeholder]="'Reusar un adicional existente' | transloco"
