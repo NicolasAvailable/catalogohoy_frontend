@@ -1811,5 +1811,11 @@
   "Variante:": "Variante:",
   "El correo es obligatorio": "El correo es obligatorio",
   "Ingresa un correo válido": "Ingresa un correo válido",
-  "Al mayor:": "Al mayor:"
+  "Al mayor:": "Al mayor:",
+  "Deja que el cliente elija la fecha de entrega en el checkout.": "Deja que el cliente elija la fecha de entrega en el checkout.",
+  "Elige la fecha en que quieres recibir tu pedido": "Elige la fecha en que quieres recibir tu pedido",
+  "Los días resaltados están bloqueados (sin entregas).": "Los días resaltados están bloqueados (sin entregas).",
+  "Marca los días de la semana en los que NO haces entregas. El calendario del checkout deshabilitará esos días.": "Marca los días de la semana en los que NO haces entregas. El calendario del checkout deshabilitará esos días.",
+  "No hay más adicionales": "No hay más adicionales",
+  "Reusar un adicional existente": "Reusar un adicional existente"
 }

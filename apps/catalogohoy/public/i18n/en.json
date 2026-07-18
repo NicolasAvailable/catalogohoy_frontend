@@ -1811,5 +1811,11 @@
   "Variante:": "Variant:",
   "El correo es obligatorio": "Email is required",
   "Ingresa un correo válido": "Enter a valid email",
-  "Al mayor:": "Wholesale:"
+  "Al mayor:": "Wholesale:",
+  "Deja que el cliente elija la fecha de entrega en el checkout.": "Let the customer choose the delivery date at checkout.",
+  "Elige la fecha en que quieres recibir tu pedido": "Choose the date you want to receive your order",
+  "Los días resaltados están bloqueados (sin entregas).": "Highlighted days are blocked (no deliveries).",
+  "Marca los días de la semana en los que NO haces entregas. El calendario del checkout deshabilitará esos días.": "Mark the weekdays when you do NOT make deliveries. The checkout calendar will disable those days.",
+  "No hay más adicionales": "No more extras",
+  "Reusar un adicional existente": "Reuse an existing extra"
 }
