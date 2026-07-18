@@ -586,22 +586,30 @@
   max-width: 22rem;
 }
 
-/* ── Fecha de entrega ──────────────────────────────────────────────────── */
-.checkout__date {
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  border: 0.0625rem solid var(--color-grey-200, #d1d5db);
-  border-radius: 0.625rem;
-  font-size: 0.9375rem;
-  color: var(--color-grey-900, #0f172a);
-  background: white;
-  font-family: inherit;
+/* ── Fecha de entrega (ui-datepicker) ──────────────────────────────────────
+ * The shared date-picker.css sets its border with an undefined var (no
+ * fallback), so it renders borderless here. Scope a border to THIS checkout's
+ * datepicker only (via the `checkout-datepicker` styleClass) so it matches the
+ * other fields without touching the datepicker anywhere else it's used. */
+:host ::ng-deep .checkout-datepicker .p-datepicker-input {
+  border: 0.0625rem solid var(--color-grey-200, #d1d5db) !important;
+  border-radius: 0.625rem !important;
+  padding: 0.625rem 0.75rem !important;
 }
-.checkout__date:focus {
-  outline: none;
-  border-color: var(--color-primary-500, #3b82f6);
+:host ::ng-deep .checkout-datepicker .p-datepicker-input:hover,
+:host ::ng-deep .checkout-datepicker .p-datepicker-input:focus,
+:host ::ng-deep .checkout-datepicker .p-datepicker-input:focus-visible {
+  border-color: var(--color-primary-400, #60a5fa) !important;
 }
-.checkout__date-error {
-  font-size: 0.75rem;
-  color: var(--color-red-500, #ef4444);
+
+/* Blocked/disabled delivery days in the calendar (blocked weekdays + past
+ * dates). The panel is appended to <body> (outside :host), so this rule is
+ * intentionally global but scoped to this checkout's panel via the
+ * `checkout-datepicker-panel` panelStyleClass — it never touches the datepicker
+ * anywhere else. Clearly muted so the customer reads them as unavailable. */
+::ng-deep .checkout-datepicker-panel .p-datepicker-day.p-disabled {
+  color: var(--color-grey-400, #94a3b8) !important;
+  background: var(--color-grey-100, #f1f5f9) !important;
+  opacity: 1 !important;
+  cursor: not-allowed !important;
 }

@@ -34,6 +34,7 @@ import { DatePickerModule } from 'primeng/datepicker';
     [selectionMode]="mode()"
     [minDate]="minDate()"
     [maxDate]="maxDate()"
+    [disabledDays]="disabledDays()"
     [showTime]="showTime()"
     [hourFormat]="'12'"
     [iconDisplay]="'input'"
@@ -57,6 +58,8 @@ export class DatepickerComponent implements ControlValueAccessor {
   public readonly mode = input<'single' | 'multiple' | 'range'>('single');
   public readonly minDate = model<Date | null>(null);
   public readonly maxDate = input<Date | null>(null);
+  /** Weekdays that can't be selected (JS convention: 0 = Sunday … 6 = Saturday). */
+  public readonly disabledDays = input<number[]>([]);
   public readonly restrict = input(false);
   public readonly size = input<'small' | 'large' | undefined>(undefined);
   public readonly showClear = input(false);

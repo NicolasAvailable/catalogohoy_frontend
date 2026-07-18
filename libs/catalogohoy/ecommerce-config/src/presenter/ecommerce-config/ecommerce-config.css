@@ -1373,9 +1373,10 @@
 }
 
 .delivery-weekday-chip--blocked {
-  background: var(--color-red-500, #fc3e3e);
-  border-color: var(--color-red-600, #e53838);
-  color: #fff;
+  background: var(--color-primary-50, #eaf1ff);
+  border-color: var(--color-primary-300, #7ea6ff);
+  color: var(--color-primary-700, #214da8);
+  font-weight: 600;
 }
 
 .delivery-weekdays-hint {

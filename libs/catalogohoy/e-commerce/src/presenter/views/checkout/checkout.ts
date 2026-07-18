@@ -19,6 +19,7 @@ import {
   SUPPORTED_COUNTRIES,
 } from '@catalogohoy/ecommerce-config';
 import {
+  DatepickerComponent,
   IconComponent,
   InputTextComponent,
   QrCodeComponent,
@@ -43,6 +44,7 @@ type CheckoutPhase = 'form' | 'confirm' | 'sent';
   imports: [
     DecimalPipe,
     FormsModule,
+    DatepickerComponent,
     IconComponent,
     InputTextComponent,
     TextareaComponent,
@@ -83,8 +85,9 @@ export default class Checkout {
   public readonly customerAddress = signal('');
 
   // --- Delivery date ---
-  /** Customer-chosen delivery date (YYYY-MM-DD). Empty until picked. */
-  public readonly deliveryDate = signal<string>('');
+  /** Customer-chosen delivery date. Null until picked. Held as a `Date` for the
+   *  PrimeNG datepicker; serialised to `YYYY-MM-DD` (local) only on submit. */
+  public readonly deliveryDate = signal<Date | null>(null);
 
   // --- Post-order flow ---
   public readonly phase = signal<CheckoutPhase>('form');
@@ -127,8 +130,12 @@ export default class Checkout {
     () => this.info()?.deliveryBlockedWeekdays ?? []
   );
 
-  /** Local `YYYY-MM-DD` for today — used as the date input `min`. */
-  public readonly todayIso = computed(() => this.toIsoDate(new Date()));
+  /** Local midnight today — used as the datepicker `minDate` so past dates
+   *  can't be picked. */
+  public readonly todayDate = computed(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  });
 
   private toIsoDate(d: Date): string {
     const y = d.getFullYear();
@@ -137,16 +144,13 @@ export default class Checkout {
     return `${y}-${m}-${day}`;
   }
 
-  /** True when the chosen date falls on a blocked weekday (used to flag the
-   *  input and to block submit). Parses the ISO string as a local date to
-   *  avoid the UTC off-by-one that `new Date('YYYY-MM-DD')` introduces. */
+  /** True when the chosen date falls on a blocked weekday. The datepicker
+   *  already disables those days (`disabledDays`); this is a submit-time guard
+   *  in case a stale value slips through. */
   public readonly deliveryDateIsBlocked = computed(() => {
-    const iso = this.deliveryDate();
-    if (!iso) return false;
-    const [y, m, d] = iso.split('-').map((n) => Number(n));
-    if (!y || !m || !d) return false;
-    const weekday = new Date(y, m - 1, d).getDay();
-    return this.deliveryBlockedWeekdays().includes(weekday);
+    const date = this.deliveryDate();
+    if (!date) return false;
+    return this.deliveryBlockedWeekdays().includes(date.getDay());
   });
 
   public readonly selectedShipping = computed<ShippingMethod | null>(
@@ -307,11 +311,12 @@ export default class Checkout {
     if (sel?.requestCustomerAddress && !this.customerAddress().trim()) return false;
 
     // Delivery date: required when the feature is on, must not be in the past
-    // and must not land on a blocked weekday.
+    // and must not land on a blocked weekday (the picker enforces both, this
+    // guards submit).
     if (this.deliveryDateEnabled()) {
-      const iso = this.deliveryDate();
-      if (!iso) return false;
-      if (iso < this.todayIso()) return false;
+      const date = this.deliveryDate();
+      if (!date) return false;
+      if (this.toIsoDate(date) < this.toIsoDate(this.todayDate())) return false;
       if (this.deliveryDateIsBlocked()) return false;
     }
 
@@ -383,10 +388,11 @@ export default class Checkout {
         : null,
       shipping_fee: fee,
       // Only send when the feature is on and the customer picked a date; else
-      // the server keeps its default (CURRENT_DATE).
+      // the server keeps its default (CURRENT_DATE). Serialise as local ISO to
+      // avoid the UTC off-by-one that `toISOString()` would introduce.
       delivery_date:
         this.deliveryDateEnabled() && this.deliveryDate()
-          ? this.deliveryDate()
+          ? this.toIsoDate(this.deliveryDate() as Date)
           : undefined,
     });
 

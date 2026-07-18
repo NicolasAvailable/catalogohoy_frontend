@@ -157,19 +157,18 @@
   @if (deliveryDateEnabled()) {
   <section class="checkout__card">
     <h2 class="checkout__card-title">{{ 'Fecha de entrega' | transloco }} <span class="checkout__req">*</span></h2>
-    <label class="checkout__field">
+    <div class="checkout__field">
       <span class="checkout__label">{{ 'Elige la fecha en que quieres recibir tu pedido' | transloco }}</span>
-      <input
-        type="date"
-        class="checkout__date"
-        [min]="todayIso()"
+      <ui-datepicker
+        styleClass="checkout-datepicker"
+        panelStyleClass="checkout-datepicker-panel"
+        [placeholder]="'dd/mm/aaaa'"
+        [restrict]="true"
+        [disabledDays]="deliveryBlockedWeekdays()"
         [ngModel]="deliveryDate()"
         (ngModelChange)="deliveryDate.set($event)"
-      />
-      @if (deliveryDateIsBlocked()) {
-      <span class="checkout__date-error">{{ 'No hacemos entregas ese día. Elige otra fecha.' | transloco }}</span>
-      }
-    </label>
+      ></ui-datepicker>
+    </div>
   </section>
   }
 
