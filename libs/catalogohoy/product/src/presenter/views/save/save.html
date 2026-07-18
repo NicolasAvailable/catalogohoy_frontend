@@ -1006,7 +1006,7 @@
         </div>
         }
 
-        <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-center gap-2">
           <ui-button
             [label]="'Agregar adicional' | transloco"
             icon="circle-plus"
@@ -1014,54 +1014,56 @@
             [disabled]="!canAddAddon()"
             (click)="addAddon()"
           />
-          <!-- Reusar un adicional ya creado en otro producto (sin recrearlo). -->
-          @if (availableCatalogAddons().length && canAddAddon()) {
-          <div class="w-72 max-w-full">
-            <ui-select
-              [options]="availableCatalogAddons()"
-              optionLabel="name"
-              optionValue="id"
-              [placeholder]="'Reusar adicional existente' | transloco"
-              [filter]="true"
-              filterBy="name"
-              [ngModel]="null"
-              (ngModelChange)="reuseAddon($event)"
-              [ngModelOptions]="{ standalone: true }"
-              appendTo="body"
-              [emptyMessage]="'No hay adicionales para reusar' | transloco"
-            >
-              <ng-template selectItem let-addon>
-                <div class="flex items-center gap-3 py-1">
-                  @if (addon.photo) {
-                  <img
-                    [src]="addon.photo"
-                    [alt]="addon.name"
-                    loading="lazy"
-                    class="w-8 h-8 rounded object-cover"
-                  />
-                  } @else {
-                  <div
-                    class="w-8 h-8 rounded bg-grey-100 flex items-center justify-center"
-                  >
-                    <ui-icon
-                      name="package"
-                      size="16"
-                      styleClass="text-grey-300"
-                    />
-                  </div>
-                  }
-                  <span class="flex-1 text-grey-800">{{ addon.name }}</span>
-                  @if (addon.price > 0) {
-                  <span class="text-xs text-grey-400"
-                    >+{{ cs() }} {{ addon.price.toFixed(2) }}</span
-                  >
-                  }
-                </div>
-              </ng-template>
-            </ui-select>
-          </div>
-          }
         </div>
+
+        <!-- Reusar un adicional ya creado en otro producto (sin recrearlo).
+             En su propia fila, full-width, como los demás selects del form. -->
+        @if (availableCatalogAddons().length && canAddAddon()) {
+        <div class="flex flex-col gap-1.5 rounded-xl border border-dashed border-grey-100 bg-grey-50 p-3">
+          <span class="text-sm font-medium text-grey-600">
+            {{ '¿Ya lo creaste en otro producto?' | transloco }}
+          </span>
+          <ui-select
+            styleClass="w-full"
+            [options]="availableCatalogAddons()"
+            optionLabel="name"
+            optionValue="id"
+            [placeholder]="'Buscar y reusar un adicional existente' | transloco"
+            [filter]="true"
+            filterBy="name"
+            [ngModel]="null"
+            (ngModelChange)="reuseAddon($event)"
+            [ngModelOptions]="{ standalone: true }"
+            appendTo="body"
+            [emptyMessage]="'No hay adicionales para reusar' | transloco"
+          >
+            <ng-template selectItem let-addon>
+              <div class="flex items-center gap-3 py-1">
+                @if (addon.photo) {
+                <img
+                  [src]="addon.photo"
+                  [alt]="addon.name"
+                  loading="lazy"
+                  class="w-8 h-8 rounded object-cover"
+                />
+                } @else {
+                <div
+                  class="w-8 h-8 rounded bg-grey-100 flex items-center justify-center"
+                >
+                  <ui-icon name="package" size="16" styleClass="text-grey-300" />
+                </div>
+                }
+                <span class="flex-1 text-grey-800">{{ addon.name }}</span>
+                @if (addon.price > 0) {
+                <span class="text-xs text-grey-400"
+                  >+{{ cs() }} {{ addon.price.toFixed(2) }}</span
+                >
+                }
+              </div>
+            </ng-template>
+          </ui-select>
+        </div>
+        }
         @if (addonsArray.length > 0) {
         <div class="flex items-center justify-between text-sm bg-grey-50 rounded-lg px-3 py-2">
           <span class="text-grey-500 font-semibold"
