@@ -252,9 +252,14 @@ export class OrderPdfService {
         item.variantName,
         item.size ? `Talla ${item.size}` : null,
         item.tierTitle ? `Al mayor: ${item.tierTitle}` : null,
-        ...(item.addons ?? []).map((a) =>
-          a.price > 0 ? `+ ${a.name} (${cs}${a.price.toFixed(2)})` : `+ ${a.name}`
-        ),
+        ...(item.addons ?? []).map((a) => {
+          const q = a.quantity ?? 1;
+          const label = q > 1 ? `${a.name} ×${q}` : a.name;
+          const amount = a.price * q;
+          return amount > 0
+            ? `+ ${label} (${cs}${amount.toFixed(2)})`
+            : `+ ${label}`;
+        }),
       ].filter(Boolean) as string[];
       const hasDetail = detailParts.length > 0;
       const rowH = Math.max(

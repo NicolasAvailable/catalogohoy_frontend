@@ -78,8 +78,11 @@ export interface PublicOrder {
     size?: string | null;
     sku?: string | null;
     photo?: string;
-    /** Paid extras added to this line at checkout (name + per-unit price). */
-    addons?: { id?: string; name: string; price: number }[] | null;
+    /** Paid extras added to this line at checkout (name + per-unit price +
+     *  quantity; quantity absent = 1). */
+    addons?:
+      | { id?: string; name: string; price: number; quantity?: number }[]
+      | null;
   }[];
   totalUsd: number;
   totalBs: number | null;

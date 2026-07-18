@@ -438,6 +438,28 @@
                       <span class="text-sm text-grey-800"
                         >{{ addon.name }}@if (addon.price > 0) { <span class="text-grey-400">(+{{ cs() }}{{ addon.price.toFixed(2) }})</span> }</span
                       >
+                      <!-- Cantidad de este adicional (ej. 3 pulseras) -->
+                      <span
+                        class="inline-flex items-center rounded-md border border-grey-100 overflow-hidden"
+                      >
+                        <button
+                          type="button"
+                          class="px-1.5 py-0.5 text-grey-500 hover:bg-grey-50"
+                          (click)="changeAddonQty(pIndex, addon.id, -1)"
+                          [attr.aria-label]="'Quitar uno' | transloco"
+                        >
+                          <ui-icon name="minus" size="12" />
+                        </button>
+                        <span class="w-5 text-center text-sm text-grey-800">{{ addonQty(addon) }}</span>
+                        <button
+                          type="button"
+                          class="px-1.5 py-0.5 text-grey-500 hover:bg-grey-50"
+                          (click)="changeAddonQty(pIndex, addon.id, 1)"
+                          [attr.aria-label]="'Agregar uno' | transloco"
+                        >
+                          <ui-icon name="plus" size="12" />
+                        </button>
+                      </span>
                       <button
                         type="button"
                         class="text-grey-300 hover:text-grey-600"

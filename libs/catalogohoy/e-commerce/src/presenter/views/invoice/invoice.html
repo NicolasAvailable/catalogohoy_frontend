@@ -53,9 +53,9 @@
         <ul class="invoice__addons">
           @for (a of p.addons; track $index) {
           <li class="invoice__addon">
-            <span class="invoice__addon-name">+ {{ a.name }}</span>
+            <span class="invoice__addon-name">+ {{ a.name }}@if (a.quantity && a.quantity > 1) { ×{{ a.quantity }}}</span>
             @if (a.price > 0) {
-            <span class="invoice__addon-price">{{ cs() }}{{ a.price | tenantPrice }}</span>
+            <span class="invoice__addon-price">{{ cs() }}{{ (a.price * (a.quantity || 1)) | tenantPrice }}</span>
             }
           </li>
           }

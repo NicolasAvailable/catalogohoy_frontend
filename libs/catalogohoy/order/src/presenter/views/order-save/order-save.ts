@@ -365,11 +365,7 @@ export default class OrderSave implements OnInit {
     if (!tier) return;
     this.products.update((products) => {
       const updated = [...products];
-      const addonsSum = (updated[index].addons ?? []).reduce(
-        (sum, a) => sum + a.price,
-        0
-      );
-      const price = tier.price + addonsSum;
+      const price = tier.price + this.addonsSum(updated[index].addons);
       updated[index] = {
         ...updated[index],
         price,
@@ -409,10 +405,7 @@ export default class OrderSave implements OnInit {
       : null;
     this.products.update((products) => {
       const updated = [...products];
-      const addonsSum = (updated[index].addons ?? []).reduce(
-        (sum, a) => sum + a.price,
-        0
-      );
+      const addonsSum = this.addonsSum(updated[index].addons);
       const base = variant
         ? variant.price
         : product.pricePromotional > 0
@@ -487,9 +480,19 @@ export default class OrderSave implements OnInit {
     this.onAddonToggle(index, addon);
   }
 
+  /** Contribución de los adicionales al unitario: Σ precio × cantidad (la
+   *  cantidad ausente cuenta como 1). */
+  private addonsSum(addons: OrderItemAddon[] | null | undefined): number {
+    return (addons ?? []).reduce(
+      (sum, a) => sum + a.price * (a.quantity ?? 1),
+      0
+    );
+  }
+
   /** Marca/desmarca un adicional de la fila: actualiza el snapshot y
    *  recalcula el unitario como base (tramo o precio/promo) + adicionales —
-   *  el mismo criterio que el checkout del storefront. */
+   *  el mismo criterio que el checkout del storefront. Al agregar arranca en
+   *  cantidad 1. */
   public onAddonToggle(index: number, addon: OrderItemAddon) {
     this.products.update((products) => {
       const updated = [...products];
@@ -497,10 +500,34 @@ export default class OrderSave implements OnInit {
       const current = row.addons ?? [];
       const addons = current.some((a) => a.id === addon.id)
         ? current.filter((a) => a.id !== addon.id)
-        : [...current, addon];
-      const price =
-        this.rowBaseUnitPrice(row) +
-        addons.reduce((sum, a) => sum + a.price, 0);
+        : [...current, { ...addon, quantity: addon.quantity ?? 1 }];
+      const price = this.rowBaseUnitPrice(row) + this.addonsSum(addons);
+      updated[index] = {
+        ...row,
+        addons: addons.length ? addons : null,
+        price,
+        total: price * row.quantity,
+      };
+      return updated;
+    });
+  }
+
+  /** Cantidad actual de un adicional en la fila (1 por defecto). */
+  public addonQty(addon: OrderItemAddon): number {
+    return addon.quantity ?? 1;
+  }
+
+  /** Cambia la cantidad de un adicional (+1 / -1). Bajar de 1 lo quita. */
+  public changeAddonQty(index: number, addonId: string | undefined, delta: number) {
+    this.products.update((products) => {
+      const updated = [...products];
+      const row = updated[index];
+      const addons = (row.addons ?? [])
+        .map((a) =>
+          a.id === addonId ? { ...a, quantity: (a.quantity ?? 1) + delta } : a
+        )
+        .filter((a) => (a.quantity ?? 1) > 0);
+      const price = this.rowBaseUnitPrice(row) + this.addonsSum(addons);
       updated[index] = {
         ...row,
         addons: addons.length ? addons : null,
@@ -519,9 +546,7 @@ export default class OrderSave implements OnInit {
       .productList()
       .products.find((p) => p.id === row.productId);
     if (!product) {
-      return (
-        row.price - (row.addons ?? []).reduce((sum, a) => sum + a.price, 0)
-      );
+      return row.price - this.addonsSum(row.addons);
     }
     if (row.variantId) {
       const variant = product.variants?.find((v) => v.id === row.variantId);

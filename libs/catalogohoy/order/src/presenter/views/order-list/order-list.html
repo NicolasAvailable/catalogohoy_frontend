@@ -190,7 +190,7 @@
                       @if (item.tierTitle) { <span><strong>{{ 'Al mayor:' | transloco }}</strong> {{ item.tierTitle }}</span> }
                       @if (item.addons?.length) {
                       <span><strong>{{ 'Adicionales:' | transloco }}</strong>
-                        @for (addon of item.addons; track addon.id) {{{ addon.name }}@if (!$last) { · }}
+                        @for (addon of item.addons; track addon.id) {{{ addon.name }}@if (addon.quantity && addon.quantity > 1) { ×{{ addon.quantity }}}@if (!$last) { · }}
                       </span>
                       }
                       @if (item.sku) { <span><strong>SKU:</strong> {{ item.sku }}</span> }
@@ -387,7 +387,7 @@
                       @if (item.tierTitle) { <span><strong>{{ 'Al mayor:' | transloco }}</strong> {{ item.tierTitle }}</span> }
                       @if (item.addons?.length) {
                       <span><strong>{{ 'Adicionales:' | transloco }}</strong>
-                        @for (addon of item.addons; track addon.id) {{{ addon.name }}@if (!$last) { · }}
+                        @for (addon of item.addons; track addon.id) {{{ addon.name }}@if (addon.quantity && addon.quantity > 1) { ×{{ addon.quantity }}}@if (!$last) { · }}
                       </span>
                       }
                       @if (item.sku) { <span><strong>SKU:</strong> {{ item.sku }}</span> }

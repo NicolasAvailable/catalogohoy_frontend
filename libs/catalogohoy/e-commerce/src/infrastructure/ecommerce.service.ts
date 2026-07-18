@@ -595,6 +595,7 @@ export class EcommerceService implements BaseEcommerceService {
                   id: a.id ?? undefined,
                   name: a.name,
                   price: Number(a.price) || 0,
+                  quantity: Number(a.quantity) || 1,
                 }))
               : null,
           }))

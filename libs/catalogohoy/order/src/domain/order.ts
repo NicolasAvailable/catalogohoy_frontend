@@ -1,10 +1,13 @@
-/** A paid extra chosen for a line at order time. `price` is per-unit; it's
- *  already folded into the line's unit `price`, but kept here so the receipt
- *  and invoice can itemise what the customer added. */
+/** A paid extra chosen for a line at order time. `price` is per-unit of the
+ *  addon; its contribution to the line is `price * quantity` and is already
+ *  folded into the line's unit `price`. Kept here so the receipt/invoice can
+ *  itemise what was added (with its quantity). */
 export interface OrderItemAddon {
   id?: string;
   name: string;
   price: number;
+  /** How many of this addon. Absent = 1 (storefront checkout only adds 1). */
+  quantity?: number;
 }
 
 export interface OrderItem {
