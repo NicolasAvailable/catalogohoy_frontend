@@ -649,6 +649,45 @@ export default class Save implements OnInit {
     );
   }
 
+  // Select "agregar adicional" (visible cuando ya hay ≥1): primera opción
+  // "Crear nuevo" (como el "Producto personalizado" del select de productos en
+  // el alta de órdenes), seguida de los adicionales existentes para reusar.
+  static readonly NEW_ADDON_ID = '__new_addon__';
+  public readonly addonSelectModel = signal<string | null>(null);
+
+  /** Opciones del select: "Crear nuevo" arriba + adicionales existentes. */
+  public addAddonOptions(): {
+    id: string;
+    name: string;
+    price: number;
+    photo: string | null;
+    isNew: boolean;
+  }[] {
+    return [
+      {
+        id: Save.NEW_ADDON_ID,
+        name: 'Crear adicional nuevo',
+        price: 0,
+        photo: null,
+        isNew: true,
+      },
+      ...this.availableCatalogAddons().map((a) => ({ ...a, isNew: false })),
+    ];
+  }
+
+  /** Maneja la elección del select: crear uno nuevo en blanco o reusar uno
+   *  existente. Luego resetea el select a su placeholder. */
+  public onAddAddonSelect(value: string | null): void {
+    if (!value) return;
+    if (value === Save.NEW_ADDON_ID) {
+      this.addAddon();
+    } else {
+      this.reuseAddon(value);
+    }
+    // Reset a placeholder (mismo patrón que onImproveMode).
+    this.addonSelectModel.set(null);
+  }
+
   /** Variant uploader is multiple — append the uploaded media (images/videos)
    *  to the variant's own gallery, just like the product media uploader. */
   public addVariantPhotos(index: number, url: string | string[]): void {
