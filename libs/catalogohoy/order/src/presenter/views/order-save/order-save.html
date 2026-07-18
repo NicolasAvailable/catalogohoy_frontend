@@ -380,8 +380,26 @@
                     [emptyMessage]="'No hay más adicionales' | transloco"
                   >
                     <ng-template selectItem let-addon>
-                      <div class="flex items-center justify-between gap-4 py-1">
-                        <span class="text-grey-800">{{ addon.name }}</span>
+                      <div class="flex items-center gap-3 py-1">
+                        @if (addon.photo) {
+                        <img
+                          [src]="addon.photo"
+                          [alt]="addon.name"
+                          loading="lazy"
+                          class="w-8 h-8 rounded object-cover"
+                        />
+                        } @else {
+                        <div
+                          class="w-8 h-8 rounded bg-grey-100 flex items-center justify-center"
+                        >
+                          <ui-icon
+                            name="package"
+                            size="16"
+                            styleClass="text-grey-300"
+                          />
+                        </div>
+                        }
+                        <span class="flex-1 text-grey-800">{{ addon.name }}</span>
                         @if (addon.price > 0) {
                         <span class="text-xs text-grey-400"
                           >+{{ cs() }} {{ addon.price.toFixed(2) }}</span
@@ -391,23 +409,42 @@
                     </ng-template>
                   </ui-select>
 
-                  <!-- Adicionales ya elegidos (chips con ✕ para quitar) -->
+                  <!-- Adicionales ya elegidos: chips tipo mini-producto (imagen
+                       + nombre + precio) con ✕ para quitar. -->
                   @if (product.addons?.length) {
-                  <div class="flex flex-wrap gap-1.5 mt-1">
+                  <div class="flex flex-wrap gap-2 mt-1">
                     @for (addon of product.addons; track addon.id) {
                     <span
-                      class="inline-flex items-center gap-1 rounded-full bg-primary-50 text-primary-700 text-xs px-2 py-1"
+                      class="inline-flex items-center gap-2 rounded-lg border border-grey-100 bg-white pl-1 pr-2 py-1"
                     >
-                      <span
-                        >{{ addon.name }}@if (addon.price > 0) { (+{{ cs() }}{{ addon.price.toFixed(2) }})}</span
+                      @if (addonPhoto(addon); as photo) {
+                      <img
+                        [src]="photo"
+                        [alt]="addon.name"
+                        loading="lazy"
+                        class="w-7 h-7 rounded object-cover"
+                      />
+                      } @else {
+                      <div
+                        class="w-7 h-7 rounded bg-grey-100 flex items-center justify-center"
+                      >
+                        <ui-icon
+                          name="package"
+                          size="14"
+                          styleClass="text-grey-300"
+                        />
+                      </div>
+                      }
+                      <span class="text-sm text-grey-800"
+                        >{{ addon.name }}@if (addon.price > 0) { <span class="text-grey-400">(+{{ cs() }}{{ addon.price.toFixed(2) }})</span> }</span
                       >
                       <button
                         type="button"
-                        class="hover:text-primary-900"
+                        class="text-grey-300 hover:text-grey-600"
                         (click)="onAddonToggle(pIndex, addon)"
                         [attr.aria-label]="'Quitar' | transloco"
                       >
-                        <ui-icon name="x" size="12" />
+                        <ui-icon name="x" size="14" />
                       </button>
                     </span>
                     }

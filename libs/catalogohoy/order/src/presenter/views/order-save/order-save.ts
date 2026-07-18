@@ -45,6 +45,15 @@ import {
 } from '../../../domain/order';
 import { OrderStore } from '../../../infrastructure/order.store';
 
+/** Un adicional del catálogo (pool global), con su foto para mostrarlo como
+ *  mini-producto en el selector y los chips del alta manual de órdenes. */
+interface CatalogAddon {
+  id: string;
+  name: string;
+  price: number;
+  photo: string | null;
+}
+
 @Component({
   selector: 'lib-order-save',
   standalone: true,
@@ -431,16 +440,19 @@ export default class OrderSave implements OnInit {
   /** Pool global de adicionales: unión de los adicionales de TODOS los productos
    *  del catálogo, deduplicados por nombre+precio y ordenados por nombre. Permite
    *  agregar a una orden manual cualquier adicional, no solo los del producto de
-   *  la fila. */
-  public readonly allAddons = computed<
-    { id: string; name: string; price: number }[]
-  >(() => {
-    const seen = new Map<string, { id: string; name: string; price: number }>();
+   *  la fila. Conserva la foto para mostrarlo como un mini-producto. */
+  public readonly allAddons = computed<CatalogAddon[]>(() => {
+    const seen = new Map<string, CatalogAddon>();
     for (const product of this.productStore.productList().products) {
       for (const a of product.addons ?? []) {
         const key = this.addonKey(a);
         if (!seen.has(key)) {
-          seen.set(key, { id: a.id, name: a.name, price: a.price });
+          seen.set(key, {
+            id: a.id,
+            name: a.name,
+            price: a.price,
+            photo: a.photo ?? null,
+          });
         }
       }
     }
@@ -450,13 +462,20 @@ export default class OrderSave implements OnInit {
   /** Adicionales del pool global que la fila aún NO tiene (opciones del
    *  selector "Agregar adicional"). Se compara por nombre+precio para que un
    *  adicional ya agregado no vuelva a ofrecerse. */
-  public availableAddons(
-    index: number
-  ): { id: string; name: string; price: number }[] {
+  public availableAddons(index: number): CatalogAddon[] {
     const selected = new Set(
       (this.products()[index]?.addons ?? []).map((a) => this.addonKey(a))
     );
     return this.allAddons().filter((a) => !selected.has(this.addonKey(a)));
+  }
+
+  /** Foto del adicional para mostrar en el chip. El snapshot de la orden solo
+   *  guarda nombre+precio, así que la imagen se resuelve del pool global. */
+  public addonPhoto(addon: { name: string; price: number }): string | null {
+    return (
+      this.allAddons().find((a) => this.addonKey(a) === this.addonKey(addon))
+        ?.photo ?? null
+    );
   }
 
   /** Agrega a la fila un adicional elegido en el selector del pool global. */
