@@ -27,7 +27,6 @@ import { whiteSpacesValidator } from '@shared/presenter';
 import {
   ButtonComponent,
   CardComponent,
-  CheckboxComponent,
   DatepickerComponent,
   IconComponent,
   InputNumberComponent,
@@ -38,7 +37,12 @@ import {
   SelectSelectedItemDirective,
   TextareaComponent,
 } from '@ui';
-import { Order, OrderItem, OrderStatus } from '../../../domain/order';
+import {
+  Order,
+  OrderItem,
+  OrderItemAddon,
+  OrderStatus,
+} from '../../../domain/order';
 import { OrderStore } from '../../../infrastructure/order.store';
 
 @Component({
@@ -51,7 +55,6 @@ import { OrderStore } from '../../../infrastructure/order.store';
     RouterLink,
     TranslocoPipe,
     CardComponent,
-    CheckboxComponent,
     InputTextComponent,
     TextareaComponent,
     ButtonComponent,
@@ -419,31 +422,56 @@ export default class OrderSave implements OnInit {
     });
   }
 
-  /** Adicionales del producto de la fila (vacío si no tiene). */
-  public getAddons(
-    productId: string | number
-  ): { id: string; name: string; price: number }[] {
-    const product = this.productStore
-      .productList()
-      .products.find((p) => p.id === productId);
-    return (product?.addons ?? []).map((a) => ({
-      id: a.id,
-      name: a.name,
-      price: a.price,
-    }));
+  /** Clave de deduplicación de un adicional: mismo nombre + precio = el mismo
+   *  adicional (aunque esté definido en productos distintos con ids propios). */
+  private addonKey(a: { name: string; price: number }): string {
+    return `${a.name.trim().toLowerCase()}|${a.price}`;
   }
 
-  public isAddonSelected(index: number, addonId: string): boolean {
-    return !!this.products()[index]?.addons?.some((a) => a.id === addonId);
+  /** Pool global de adicionales: unión de los adicionales de TODOS los productos
+   *  del catálogo, deduplicados por nombre+precio y ordenados por nombre. Permite
+   *  agregar a una orden manual cualquier adicional, no solo los del producto de
+   *  la fila. */
+  public readonly allAddons = computed<
+    { id: string; name: string; price: number }[]
+  >(() => {
+    const seen = new Map<string, { id: string; name: string; price: number }>();
+    for (const product of this.productStore.productList().products) {
+      for (const a of product.addons ?? []) {
+        const key = this.addonKey(a);
+        if (!seen.has(key)) {
+          seen.set(key, { id: a.id, name: a.name, price: a.price });
+        }
+      }
+    }
+    return [...seen.values()].sort((x, y) => x.name.localeCompare(y.name));
+  });
+
+  /** Adicionales del pool global que la fila aún NO tiene (opciones del
+   *  selector "Agregar adicional"). Se compara por nombre+precio para que un
+   *  adicional ya agregado no vuelva a ofrecerse. */
+  public availableAddons(
+    index: number
+  ): { id: string; name: string; price: number }[] {
+    const selected = new Set(
+      (this.products()[index]?.addons ?? []).map((a) => this.addonKey(a))
+    );
+    return this.allAddons().filter((a) => !selected.has(this.addonKey(a)));
+  }
+
+  /** Agrega a la fila un adicional elegido en el selector del pool global. */
+  public onAddonAdd(index: number, addonId: string | null): void {
+    if (!addonId) return;
+    const addon = this.allAddons().find((a) => a.id === addonId);
+    if (!addon) return;
+    if (this.products()[index]?.addons?.some((a) => a.id === addon.id)) return;
+    this.onAddonToggle(index, addon);
   }
 
   /** Marca/desmarca un adicional de la fila: actualiza el snapshot y
    *  recalcula el unitario como base (tramo o precio/promo) + adicionales —
    *  el mismo criterio que el checkout del storefront. */
-  public onAddonToggle(
-    index: number,
-    addon: { id: string; name: string; price: number }
-  ) {
+  public onAddonToggle(index: number, addon: OrderItemAddon) {
     this.products.update((products) => {
       const updated = [...products];
       const row = updated[index];

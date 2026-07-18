@@ -356,29 +356,63 @@
                   </ui-select>
                   }
 
-                  <!-- Adicionales (visible solo si el producto tiene). Su
-                       precio se suma al unitario de la fila, igual que en el
-                       storefront. -->
-                  @if (getAddons(product.productId).length) {
-                  <span class="text-sm text-grey-400 mt-2">{{ 'Adicionales' | transloco }}</span>
-                  <div class="flex flex-col gap-1.5">
-                    @for (addon of getAddons(product.productId); track addon.id) {
-                    <div class="flex items-center gap-2">
-                      <ui-checkbox
-                        [ngModel]="isAddonSelected(pIndex, addon.id)"
-                        (valueChange)="onAddonToggle(pIndex, addon)"
-                        [ngModelOptions]="{ standalone: true }"
-                        [checkboxId]="'addon-' + pIndex + '-' + addon.id"
-                      />
-                      <label
-                        [for]="'addon-' + pIndex + '-' + addon.id"
-                        class="text-sm text-grey-700 cursor-pointer select-none"
+                  <!-- Adicionales: se puede agregar CUALQUIER adicional del
+                       catálogo (pool global deduplicado), no solo los del
+                       producto de la fila. Su precio se suma al unitario. -->
+                  @if (allAddons().length) {
+                  <label
+                    class="text-sm text-grey-400 mt-2"
+                    [attr.for]="'addon-add-' + pIndex"
+                    >{{ 'Adicionales' | transloco }}</label
+                  >
+                  <ui-select
+                    [options]="availableAddons(pIndex)"
+                    optionLabel="name"
+                    optionValue="id"
+                    [placeholder]="'Agregar adicional' | transloco"
+                    [filter]="true"
+                    filterBy="name"
+                    [ngModel]="null"
+                    (ngModelChange)="onAddonAdd(pIndex, $event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    appendTo="body"
+                    [selectId]="'addon-add-' + pIndex"
+                    [emptyMessage]="'No hay más adicionales' | transloco"
+                  >
+                    <ng-template selectItem let-addon>
+                      <div class="flex items-center justify-between gap-4 py-1">
+                        <span class="text-grey-800">{{ addon.name }}</span>
+                        @if (addon.price > 0) {
+                        <span class="text-xs text-grey-400"
+                          >+{{ cs() }} {{ addon.price.toFixed(2) }}</span
+                        >
+                        }
+                      </div>
+                    </ng-template>
+                  </ui-select>
+
+                  <!-- Adicionales ya elegidos (chips con ✕ para quitar) -->
+                  @if (product.addons?.length) {
+                  <div class="flex flex-wrap gap-1.5 mt-1">
+                    @for (addon of product.addons; track addon.id) {
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full bg-primary-50 text-primary-700 text-xs px-2 py-1"
+                    >
+                      <span
+                        >{{ addon.name }}@if (addon.price > 0) { (+{{ cs() }}{{ addon.price.toFixed(2) }})}</span
                       >
-                        {{ addon.name }}@if (addon.price > 0) { <span class="text-grey-400">(+{{ cs() }}{{ addon.price.toFixed(2) }})</span> }
-                      </label>
-                    </div>
+                      <button
+                        type="button"
+                        class="hover:text-primary-900"
+                        (click)="onAddonToggle(pIndex, addon)"
+                        [attr.aria-label]="'Quitar' | transloco"
+                      >
+                        <ui-icon name="x" size="12" />
+                      </button>
+                    </span>
                     }
                   </div>
+                  }
                   }
                 </div>
                 } @else {
