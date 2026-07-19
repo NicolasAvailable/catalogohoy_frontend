@@ -13,6 +13,7 @@ import {
   IconComponent,
   InputMessageComponent,
   InputPasswordComponent,
+  InputPhoneComponent,
   InputTextComponent,
   SelectComponent,
   SelectItemDirective,
@@ -48,6 +49,7 @@ type Step = 1 | 2 | 3;
     InputTextComponent,
     InputPasswordComponent,
     InputMessageComponent,
+    InputPhoneComponent,
     ButtonComponent,
     CheckboxComponent,
     IconComponent,
@@ -76,6 +78,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   private googlePopup: Window | null = null;
   private popupPollId: ReturnType<typeof setInterval> | null = null;
   private slugSub?: Subscription;
+  private countrySub?: Subscription;
   private inviteToken: string | null = null;
 
   readonly isInviteMode = signal(false);
@@ -99,12 +102,18 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     name: ['', [Validators.required, Validators.minLength(4), whiteSpacesValidator()]],
     storeName: ['', [Validators.required, Validators.minLength(3)]],
     country: ['', [Validators.required]],
+    // WhatsApp personal del vendedor — obligatorio: es donde va a recibir los
+    // pedidos de sus clientes. Emite E.164 desde ui-input-phone.
+    whatsapp: ['', [Validators.required]],
     referralCode: [''],
     acceptedTerms: [false, [Validators.requiredTrue]],
   });
 
   readonly slugPreview = signal('');
   readonly supportedCountries = SUPPORTED_COUNTRIES;
+  /** ISO2 (minúscula) del país elegido — alimenta `defaultCountry` del
+   *  ui-input-phone para que al cambiar el país cambie el código del número. */
+  readonly phoneCountryIso = signal('ve');
 
   /** Flag CDN URL — ISO2 lowercase. Used in country select templates. */
   flagUrl(code: string | null | undefined): string {
@@ -134,6 +143,12 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
       (value) => this.slugPreview.set(slugify(value ?? ''))
     );
 
+    // Al elegir país, movemos el código del número de WhatsApp (hasta que el
+    // usuario tipee y ui-input-phone quede fijado a su país parseado).
+    this.countrySub = this.profileForm.controls.country.valueChanges.subscribe(
+      (iso) => this.phoneCountryIso.set((iso || 've').toLowerCase())
+    );
+
     // Pre-llenar el campo de código de referido con la cookie `chy_ref`
     // que vino de la landing (catalogohoy.com/?ref=XXX). Si no hay cookie
     // el campo queda vacío y el usuario puede tipear a mano.
@@ -151,6 +166,10 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
       this.isInviteMode.set(true);
       this.profileForm.controls.storeName.clearValidators();
       this.profileForm.controls.storeName.updateValueAndValidity();
+      // El invitado se suma a la tienda de quien lo invitó: no crea catálogo,
+      // así que no le pedimos WhatsApp de vendedor.
+      this.profileForm.controls.whatsapp.clearValidators();
+      this.profileForm.controls.whatsapp.updateValueAndValidity();
       this.method.set('email');
       this.step.set(2);
 
@@ -252,6 +271,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.clearGooglePolling();
     this.slugSub?.unsubscribe();
+    this.countrySub?.unsubscribe();
   }
 
   async nextStep() {
@@ -317,13 +337,16 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     }
     if (this.loaderStore.isEnable()) return;
 
-    const { name, storeName, country, referralCode } = this.profileForm.value as {
+    const { name, storeName, country, whatsapp, referralCode } = this.profileForm
+      .value as {
       name: string;
       storeName: string;
       country: string;
+      whatsapp?: string;
       referralCode?: string | null;
     };
     const normalizedRef = (referralCode ?? '').trim() || null;
+    const normalizedWhatsapp = (whatsapp ?? '').trim() || undefined;
 
     if (this.isInviteMode() && this.inviteToken) {
       const { email, password } = this.credentialsForm.getRawValue() as {
@@ -369,6 +392,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
         storeName,
         password,
         countryCode: country,
+        whatsapp: normalizedWhatsapp,
         referralCode: normalizedRef,
       } as SignUpCredentials);
       result.mapRight(async (url) => {
