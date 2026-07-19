@@ -193,9 +193,10 @@ export class AuthenticationService implements BaseAuthenticationService {
           store_name: credentials.storeName,
           store_country_code: selectedCountry?.code ?? null,
           store_country: selectedCountry?.label ?? null,
-          // WhatsApp del vendedor (E.164). Queda en el metadata del usuario; el
-          // hook `handle_new_user` puede leerlo para sembrar el botón de
-          // WhatsApp del catálogo (pendiente de actualizar el trigger en DB).
+          // WhatsApp del vendedor (E.164) para notificaciones del catálogo.
+          // Queda en el metadata del usuario; persistirlo a la config de
+          // notificaciones requiere actualizar el trigger `handle_new_user`
+          // (pendiente en DB).
           store_whatsapp: credentials.whatsapp ?? null,
         },
       },
