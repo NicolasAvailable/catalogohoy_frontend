@@ -229,6 +229,21 @@
             <p class="text-xs text-grey-400 mt-3">{{ 'La moneda de tu catálogo se configurará automáticamente.' | transloco }}</p>
           </div>
 
+          <!-- WhatsApp del vendedor (obligatorio). Va debajo del país: al elegir
+               país se mueve el código del número. Mismo componente (ui-input-phone)
+               que el teléfono del cliente en el alta de órdenes. -->
+          <div class="mb-6">
+            <label class="block font-medium text-base text-grey-400 mb-1">
+              {{ 'Tu WhatsApp' | transloco }}
+            </label>
+            <ui-input-phone
+              formControlName="whatsapp"
+              [defaultCountry]="phoneCountryIso()"
+            ></ui-input-phone>
+            <ui-input-message [control]="profileForm.get('whatsapp')" error="required" [text]="'Ingresá tu número de WhatsApp' | transloco" />
+            <p class="text-xs text-grey-400 mt-3">{{ 'Aquí vas a recibir los pedidos de tus clientes.' | transloco }}</p>
+          </div>
+
           <!-- Código de referido (opcional). Si llegó desde catalogohoy.com/?ref=XXX
                la cookie chy_ref pre-llena este campo automáticamente. -->
           <div class="mb-6">
