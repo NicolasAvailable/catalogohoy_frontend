@@ -98,6 +98,13 @@ export class ImportExportHubComponent {
   public readonly aiStatusMessage = signal(AI_STATUS_MESSAGES[0]);
   private aiMessageInterval: ReturnType<typeof setInterval> | null = null;
 
+  /** Cancela el resto del import en curso (se muestra cuando ya hubo algún
+   *  error, para no seguir procesando una lista que está fallando). */
+  public readonly cancelRequested = signal(false);
+  public readonly hasImportErrors = computed(() =>
+    this.importResults().some((r) => r.status === 'error')
+  );
+
   // ── Backups ──────────────────────────────────────────────────────────────
   public readonly backups = signal<ProductBackup[]>([]);
   public readonly loadingBackups = signal(false);
@@ -115,6 +122,7 @@ export class ImportExportHubComponent {
     this.importResults.set([]);
     this.importSummary.set(null);
     this.importProgress.set(0);
+    this.cancelRequested.set(false);
     this.categoryStore.categoryList$(1, 100);
     // Refrescamos el uso del plan para que el tile de Exportar muestre el
     // estado correcto (bloqueado + "Pro" en planes gratis) desde el inicio.
@@ -169,6 +177,12 @@ export class ImportExportHubComponent {
     this.view.set('import-confirm');
   }
 
+  /** Pide cancelar el import en curso: el loop corta antes de la próxima fila
+   *  (lo ya importado/actualizado queda; el backup previo permite restaurar). */
+  public cancelImport(): void {
+    this.cancelRequested.set(true);
+  }
+
   /** Confirma el import: 1) crea un backup de seguridad (si falla, no toca
    *  nada), 2) valida el límite del plan SOLO sobre los productos nuevos (los
    *  existentes se actualizan y no consumen cupo), 3) corre el import con
@@ -202,6 +216,7 @@ export class ImportExportHubComponent {
 
     // 3) Import con upsert.
     this.view.set('import-progress');
+    this.cancelRequested.set(false);
     const results: ImportRowResult[] = rows.map((data, i) => ({
       rowIndex: i,
       data,
@@ -213,6 +228,12 @@ export class ImportExportHubComponent {
     let errorCount = 0;
 
     for (let i = 0; i < rows.length; i++) {
+      if (this.cancelRequested()) {
+        toast.info(
+          `Importación cancelada: se procesaron ${i} de ${rows.length} filas.`
+        );
+        break;
+      }
       results[i] = { ...results[i], status: 'importing' };
       this.importResults.set([...results]);
       this.importProgress.set(Math.round((i / rows.length) * 100));

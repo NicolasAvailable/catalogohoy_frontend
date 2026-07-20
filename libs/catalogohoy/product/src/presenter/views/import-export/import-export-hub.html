@@ -227,7 +227,22 @@
   <!-- IMPORT PROGRESS VIEW -->
   @if (view() === 'import-progress') {
   <section class="flex flex-col gap-4 p-8">
-    <h2 class="text-xl font-bold text-gray-900">{{ 'Importando productos...' | transloco }}</h2>
+    <div class="flex items-center justify-between gap-3">
+      <h2 class="text-xl font-bold text-gray-900">{{ 'Importando productos...' | transloco }}</h2>
+      <!-- Cancelar: visible solo cuando ya hubo errores, para cortar el resto
+           de una lista que está fallando. Lo procesado queda (hay backup). -->
+      @if (hasImportErrors() && !cancelRequested()) {
+      <ui-button
+        [label]="'Cancelar importación' | transloco"
+        icon="x-circle"
+        severity="danger"
+        variant="outlined"
+        size="small"
+        [fluid]="false"
+        (click)="cancelImport()"
+      />
+      }
+    </div>
     <ui-progress-bar [value]="importProgress()" />
 
     <div

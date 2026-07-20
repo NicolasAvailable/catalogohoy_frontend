@@ -396,14 +396,23 @@ export class ProductService implements BaseProductService {
 
     const trimmedName = name?.trim();
     if (trimmedName) {
+      // Case-insensitive y tolerante a espacios al final (los nombres
+      // importados de Excel suelen traer trailing spaces en la DB). Se traen
+      // candidatos por prefijo y se verifica igualdad exacta tras trim.
+      const pattern = trimmedName.replace(/[\\%_]/g, (m) => `\\${m}`);
       const { data } = await this.client
         .from('products')
-        .select('id')
+        .select('id, name')
         .eq('tenant_id', tenantId)
-        .eq('name', trimmedName)
-        .limit(1)
-        .maybeSingle();
-      if (data?.id) return String(data.id);
+        .ilike('name', `${pattern}%`)
+        .limit(10);
+      const match = (data ?? []).find(
+        (p) =>
+          String(p.name ?? '')
+            .trim()
+            .toLowerCase() === trimmedName.toLowerCase()
+      );
+      if (match?.id) return String(match.id);
     }
 
     return null;
