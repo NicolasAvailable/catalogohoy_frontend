@@ -8,6 +8,7 @@ import {
   signal,
   ViewChild,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { CategoryStore } from '@catalogohoy/category';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
@@ -17,7 +18,12 @@ import {
   DialogComponent,
   IconComponent,
   ProgressBarComponent,
+  SelectComponent,
+  SelectItemDirective,
+  SelectSelectedItemDirective,
+  UploaderService,
 } from '@ui';
+import { firstValueFrom } from 'rxjs';
 import { toast } from 'ngx-sonner';
 import {
   ImportRowResult,
@@ -31,6 +37,7 @@ import {
   ProductAiExcelService,
   ProductBackupService,
   ProductExcelService,
+  ProductService,
   ProductStore,
 } from '../../../infrastructure';
 
@@ -45,7 +52,27 @@ type View =
   | 'import-done'
   | 'ai-analyzing'
   | 'backups'
-  | 'backup-view';
+  | 'backup-view'
+  | 'photos-upload'
+  | 'photos-review'
+  | 'photos-progress'
+  | 'photos-done';
+
+/** Una foto del import masivo: archivo local + producto asignado (o null). */
+interface PhotoImportItem {
+  file: File;
+  previewUrl: string;
+  productId: string | null;
+  method: 'sku' | 'nombre' | 'manual' | null;
+}
+
+/** Opción de producto para asignar fotos (con miniatura actual). */
+interface PhotoProductOption {
+  id: string;
+  name: string;
+  sku: string | null;
+  photo: string | null;
+}
 
 const AI_STATUS_MESSAGES = [
   { text: 'Analizando tu archivo...', icon: 'sparkles' },
@@ -60,10 +87,14 @@ const AI_STATUS_MESSAGES = [
   standalone: true,
   imports: [
     DatePipe,
+    FormsModule,
     DialogComponent,
     ButtonComponent,
     IconComponent,
     ProgressBarComponent,
+    SelectComponent,
+    SelectItemDirective,
+    SelectSelectedItemDirective,
     TranslocoPipe,
   ],
   templateUrl: './import-export-hub.html',
@@ -81,9 +112,11 @@ const AI_STATUS_MESSAGES = [
 })
 export class ImportExportHubComponent {
   private readonly productStore = inject(ProductStore);
+  private readonly productService = inject(ProductService);
   private readonly excelService = inject(ProductExcelService);
   private readonly aiExcelService = inject(ProductAiExcelService);
   private readonly backupService = inject(ProductBackupService);
+  private readonly uploaderService = inject(UploaderService);
   private readonly categoryStore = inject(CategoryStore);
   private readonly planStore = inject(PlanStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
@@ -134,6 +167,34 @@ export class ImportExportHubComponent {
   public readonly backupRows = signal<ProductBackupSnapshotRow[]>([]);
   public readonly loadingBackupRows = signal(false);
 
+  // ── Import masivo de fotos ────────────────────────────────────────────────
+  public readonly photoItems = signal<PhotoImportItem[]>([]);
+  public readonly photoProducts = signal<PhotoProductOption[]>([]);
+  public readonly loadingPhotoProducts = signal(false);
+  public readonly photosProgress = signal(0);
+  public readonly photosCurrentLabel = signal('');
+  public readonly isApplyingPhotos = signal(false);
+  public readonly photosApplied = signal(0);
+  public readonly photosSkippedCap = signal(0);
+  public readonly photosFailed = signal(0);
+  public readonly photoAssignedCount = computed(
+    () => this.photoItems().filter((i) => i.productId !== null).length
+  );
+  public readonly photoUnassignedCount = computed(
+    () => this.photoItems().length - this.photoAssignedCount()
+  );
+  /** Cap de fotos por producto según el plan (mismo criterio que el editor). */
+  private readonly photosLimitByPlan: Record<string, number> = {
+    gratis: 3,
+    basico: 10,
+    avanzado: 50,
+    enterprise: 0, // 0 = ilimitado
+  };
+  private maxPhotosPerProduct(): number {
+    const planId = this.planStore.currentPlan()?.id ?? 'gratis';
+    return this.photosLimitByPlan[planId] ?? 3;
+  }
+
   constructor() {
     this.destroyRef.onDestroy(() => this.stopAiMessages());
   }
@@ -146,6 +207,7 @@ export class ImportExportHubComponent {
     this.importProgress.set(0);
     this.cancelRequested.set(false);
     this.isPaused.set(false);
+    this.clearPhotoItems();
     this.categoryStore.categoryList$(1, 100);
     // Refrescamos el uso del plan para que el tile de Exportar muestre el
     // estado correcto (bloqueado + "Pro" en planes gratis) desde el inicio.
@@ -446,6 +508,222 @@ export class ImportExportHubComponent {
 
   public close(): void {
     this.dialog.hide();
+  }
+
+  // ── Import masivo de fotos ────────────────────────────────────────────────
+  /** Abre el flujo de fotos: carga los productos del tenant para el matching
+   *  y el selector de asignación. */
+  public async openPhotosImport(): Promise<void> {
+    this.clearPhotoItems();
+    this.view.set('photos-upload');
+    this.loadingPhotoProducts.set(true);
+    await this.productStore.productList$();
+    this.photoProducts.set(
+      this.productStore.productList().products.map((p) => ({
+        id: String(p.id),
+        name: p.name,
+        sku: p.sku ?? null,
+        photo: p.photos?.[0] ?? null,
+      }))
+    );
+    this.loadingPhotoProducts.set(false);
+  }
+
+  public onPhotoFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.addPhotoFiles(Array.from(input.files ?? []));
+    input.value = '';
+  }
+
+  public onPhotoDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.addPhotoFiles(Array.from(event.dataTransfer?.files ?? []));
+  }
+
+  /** Agrega archivos al lote, corre el auto-match por nombre de archivo
+   *  (SKU exacto → nombre normalizado → substring único) y pasa a revisión. */
+  private addPhotoFiles(files: File[]): void {
+    const images = files.filter((f) =>
+      (f.type || '').toLowerCase().startsWith('image/')
+    );
+    if (!images.length) return;
+
+    const options = this.photoProducts();
+    const items: PhotoImportItem[] = images.map((file) => {
+      const match = this.matchPhotoToProduct(file.name, options);
+      return {
+        file,
+        previewUrl: URL.createObjectURL(file),
+        productId: match?.productId ?? null,
+        method: match?.method ?? null,
+      };
+    });
+    this.photoItems.update((cur) => [...cur, ...items]);
+    this.view.set('photos-review');
+  }
+
+  /** Matching en cascada. Ambigüedad (varios candidatos) => null → a revisar. */
+  private matchPhotoToProduct(
+    fileName: string,
+    options: PhotoProductOption[]
+  ): { productId: string; method: 'sku' | 'nombre' } | null {
+    const base = fileName.replace(/\.[^.]+$/, '').trim();
+    // Variantes del nombre: tal cual y sin sufijo de copia ("-1", " (2)", "_3").
+    const candidates = [
+      base,
+      base.replace(/[\s_-]*\(?\d+\)?$/, '').trim(),
+    ].filter((c, i, arr) => c && arr.indexOf(c) === i);
+
+    // 1) SKU exacto (case-insensitive; conserva guiones).
+    for (const c of candidates) {
+      const lower = c.toLowerCase();
+      const bySku = options.filter((o) => o.sku?.toLowerCase() === lower);
+      if (bySku.length === 1) {
+        return { productId: bySku[0].id, method: 'sku' };
+      }
+    }
+
+    // 2) Nombre normalizado (sin acentos/símbolos) exacto, luego substring
+    //    único. Con más de un candidato NO se asigna (queda a revisar).
+    for (const c of candidates) {
+      const norm = this.normalizePhotoText(c);
+      if (!norm) continue;
+      const exact = options.filter(
+        (o) => this.normalizePhotoText(o.name) === norm
+      );
+      if (exact.length === 1) {
+        return { productId: exact[0].id, method: 'nombre' };
+      }
+      const contains = options.filter((o) => {
+        const on = this.normalizePhotoText(o.name);
+        return on.includes(norm) || norm.includes(on);
+      });
+      if (contains.length === 1) {
+        return { productId: contains[0].id, method: 'nombre' };
+      }
+    }
+
+    return null;
+  }
+
+  private normalizePhotoText(s: string): string {
+    return s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+
+  /** Asigna/corrige el producto de una foto desde el selector (null = quitar). */
+  public assignPhoto(index: number, productId: string | null): void {
+    this.photoItems.update((items) => {
+      const next = [...items];
+      next[index] = {
+        ...next[index],
+        productId,
+        method: productId ? 'manual' : null,
+      };
+      return next;
+    });
+  }
+
+  public removePhotoItem(index: number): void {
+    this.photoItems.update((items) => {
+      const next = [...items];
+      URL.revokeObjectURL(next[index]?.previewUrl ?? '');
+      next.splice(index, 1);
+      return next;
+    });
+  }
+
+  public photoProductLabel(productId: string | null): string {
+    if (!productId) return '';
+    return this.photoProducts().find((o) => o.id === productId)?.name ?? '';
+  }
+
+  private clearPhotoItems(): void {
+    for (const item of this.photoItems()) {
+      URL.revokeObjectURL(item.previewUrl);
+    }
+    this.photoItems.set([]);
+    this.photosProgress.set(0);
+    this.photosCurrentLabel.set('');
+    this.photosApplied.set(0);
+    this.photosSkippedCap.set(0);
+    this.photosFailed.set(0);
+  }
+
+  /** Aplica: respaldo previo → sube cada foto asignada (comprimida, a Storage)
+   *  → append a las fotos del producto respetando el cap del plan. Las fotos
+   *  sin asignar NO se suben (no gastan storage). */
+  public async applyPhotos(): Promise<void> {
+    if (this.isApplyingPhotos()) return;
+    const assigned = this.photoItems().filter((i) => i.productId !== null);
+    if (!assigned.length) return;
+
+    this.isApplyingPhotos.set(true);
+    const backup = await this.backupService.createBackup('fotos');
+    if (backup.isLeft()) {
+      toast.error('No se pudo crear el respaldo. No se realizó ningún cambio.');
+      this.isApplyingPhotos.set(false);
+      return;
+    }
+
+    this.photosApplied.set(0);
+    this.photosSkippedCap.set(0);
+    this.photosFailed.set(0);
+    this.photosProgress.set(0);
+    this.view.set('photos-progress');
+
+    // Agrupar por producto para hacer un solo update por producto.
+    const groups = new Map<string, PhotoImportItem[]>();
+    for (const item of assigned) {
+      const key = item.productId as string;
+      groups.set(key, [...(groups.get(key) ?? []), item]);
+    }
+
+    const maxPhotos = this.maxPhotosPerProduct();
+    let processed = 0;
+
+    for (const [productId, groupItems] of groups) {
+      const urls: string[] = [];
+      for (const item of groupItems) {
+        this.photosCurrentLabel.set(item.file.name);
+        try {
+          const output = await firstValueFrom(
+            this.uploaderService.upload(item.file)
+          );
+          const result = await output.complete();
+          result
+            .mapRight((url: string) => urls.push(url))
+            .mapLeft(() => this.photosFailed.update((n) => n + 1));
+        } catch {
+          this.photosFailed.update((n) => n + 1);
+        }
+        processed++;
+        this.photosProgress.set(Math.round((processed / assigned.length) * 100));
+      }
+
+      if (urls.length) {
+        const result = await this.productService.appendPhotos(
+          productId,
+          urls,
+          maxPhotos
+        );
+        result
+          .mapRight(({ added, skipped }) => {
+            this.photosApplied.update((n) => n + added);
+            this.photosSkippedCap.update((n) => n + skipped);
+          })
+          .mapLeft(() => this.photosFailed.update((n) => n + urls.length));
+      }
+    }
+
+    this.photosProgress.set(100);
+    this.isApplyingPhotos.set(false);
+    this.view.set('photos-done');
+    this.productStore.productList$();
   }
 
   /** Entra al preview: setea las filas y calcula (en background) qué filas ya
