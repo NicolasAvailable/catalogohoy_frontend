@@ -418,6 +418,36 @@ export class ProductService implements BaseProductService {
     return null;
   }
 
+  /** Claves de matching del import (SKUs y nombres del tenant, normalizados)
+   *  en una consulta paginada — permite pre-contar los productos NUEVOS de un
+   *  Excel sin hacer un SELECT por fila. */
+  public async listImportKeys(): Promise<{
+    skus: Set<string>;
+    names: Set<string>;
+  }> {
+    const skus = new Set<string>();
+    const names = new Set<string>();
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return { skus, names };
+
+    // Paginado: Supabase capea cada SELECT a 1000 filas.
+    const pageSize = 1000;
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await this.client
+        .from('products')
+        .select('sku, name')
+        .eq('tenant_id', tenantId)
+        .range(from, from + pageSize - 1);
+      if (error || !data?.length) break;
+      for (const r of data) {
+        if (r.sku) skus.add(String(r.sku).trim().toLowerCase());
+        if (r.name) names.add(String(r.name).trim().toLowerCase());
+      }
+      if (data.length < pageSize) break;
+    }
+    return { skus, names };
+  }
+
   /** Actualización PARCIAL desde el import: solo toca los campos del Excel
    *  (nombre/descripción/precio/promo/stock/sku/costo) + categorías. Preserva a
    *  propósito fotos, variantes, tallas, mayoreo y adicionales — que el Excel no

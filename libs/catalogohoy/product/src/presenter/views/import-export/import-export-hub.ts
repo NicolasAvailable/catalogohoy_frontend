@@ -170,7 +170,12 @@ export class ImportExportHubComponent {
       const file = new File([text], 'google-sheet.csv', { type: 'text/csv' });
       await this.processFile(file, 'import-gsheet');
     } catch {
-      toast.error('No pudimos conectar con Google Sheets. Intenta de nuevo.');
+      // Una hoja privada redirige (302) al login de Google y el navegador lo
+      // bloquea por CORS → el fetch LANZA. La causa más común de caer acá es
+      // que la hoja no está compartida, no un problema de conexión.
+      toast.error(
+        'No pudimos leer la hoja. Verifica que esté compartida como "Cualquier persona con el enlace" (Compartir → Acceso general) e intenta de nuevo.'
+      );
     } finally {
       this.isFetchingSheet.set(false);
     }
@@ -231,22 +236,23 @@ export class ImportExportHubComponent {
   public async confirmImport(): Promise<void> {
     const rows = this.parsedRows();
 
-    // 1) Backup de seguridad — bloqueante: sin backup no importamos.
+    // 1) Backup de seguridad — bloqueante: sin backup no importamos. El spinner
+    //    del botón cubre TODO el pre-proceso (backup + chequeo del plan), no
+    //    solo el backup, para que nunca parezca colgado.
     this.isCreatingBackup.set(true);
     const backup = await this.backupService.createBackup('import');
-    this.isCreatingBackup.set(false);
     if (backup.isLeft()) {
+      this.isCreatingBackup.set(false);
       toast.error('No se pudo crear el backup. No se realizó ningún cambio.');
       return;
     }
+    toast.success('Respaldo creado');
 
-    // 2) Límite del plan solo sobre los NUEVOS.
+    // 2) Límite del plan solo sobre los NUEVOS (una consulta batcheada).
     await this.planStore.refreshUsage();
     const remaining = this.planStore.remainingProducts();
-    const existsFlags = await Promise.all(
-      rows.map((r) => this.excelService.rowExists(r))
-    );
-    const newCount = existsFlags.filter((exists) => !exists).length;
+    const newCount = await this.excelService.countNewRows(rows);
+    this.isCreatingBackup.set(false);
     if (newCount > remaining) {
       toast.error(
         `La lista trae ${newCount} productos nuevos y tu plan permite ${remaining} más. Mejora tu plan para continuar.`

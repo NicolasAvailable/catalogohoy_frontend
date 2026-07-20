@@ -321,15 +321,18 @@ export class ProductExcelService {
     return created.mapRight(() => 'created' as const);
   }
 
-  /** True si la fila del Excel corresponde a un producto que YA existe (por SKU
-   *  o nombre). Se usa antes del import para contar cuántos son NUEVOS y validar
-   *  el límite del plan solo sobre esos (los updates no consumen cupo). */
-  public async rowExists(row: ProductExcelRow): Promise<boolean> {
-    const id = await this.productService.findProductIdForImport(
-      row.sku,
-      row.name
-    );
-    return id !== null;
+  /** Cuenta cuántas filas del Excel son productos NUEVOS (no matchean por SKU
+   *  ni nombre) — con UNA consulta batcheada de claves, no un SELECT por fila.
+   *  Se usa para validar el límite del plan solo sobre los nuevos. */
+  public async countNewRows(rows: ProductExcelRow[]): Promise<number> {
+    const { skus, names } = await this.productService.listImportKeys();
+    return rows.filter((r) => {
+      const sku = r.sku?.trim().toLowerCase();
+      if (sku && skus.has(sku)) return false;
+      const name = r.name?.trim().toLowerCase();
+      if (name && names.has(name)) return false;
+      return true;
+    }).length;
   }
 
   public downloadTemplate(): void {
