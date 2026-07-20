@@ -321,18 +321,19 @@ export class ProductExcelService {
     return created.mapRight(() => 'created' as const);
   }
 
-  /** Cuenta cuántas filas del Excel son productos NUEVOS (no matchean por SKU
-   *  ni nombre) — con UNA consulta batcheada de claves, no un SELECT por fila.
-   *  Se usa para validar el límite del plan solo sobre los nuevos. */
-  public async countNewRows(rows: ProductExcelRow[]): Promise<number> {
+  /** Flag por fila: true = el producto YA existe (matchea por SKU o nombre) y
+   *  el import lo ACTUALIZARÁ; false = es nuevo. Una consulta batcheada de
+   *  claves, no un SELECT por fila. Alimenta los badges del preview y el
+   *  chequeo del límite del plan (solo los nuevos consumen cupo). */
+  public async markExistingRows(rows: ProductExcelRow[]): Promise<boolean[]> {
     const { skus, names } = await this.productService.listImportKeys();
-    return rows.filter((r) => {
+    return rows.map((r) => {
       const sku = r.sku?.trim().toLowerCase();
-      if (sku && skus.has(sku)) return false;
+      if (sku && skus.has(sku)) return true;
       const name = r.name?.trim().toLowerCase();
-      if (name && names.has(name)) return false;
-      return true;
-    }).length;
+      if (name && names.has(name)) return true;
+      return false;
+    });
   }
 
   public downloadTemplate(): void {

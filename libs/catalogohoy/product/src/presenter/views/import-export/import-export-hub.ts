@@ -94,6 +94,18 @@ export class ImportExportHubComponent {
   /** Export is a paid-plan feature; free plans see it disabled with a Pro hint. */
   public readonly isFreePlan = computed(() => this.planStore.isFreePlan());
   public readonly parsedRows = signal<ProductExcelRow[]>([]);
+  /** Por fila del preview: true = ya existe (se ACTUALIZARÁ), false = nuevo.
+   *  Vacío mientras se calcula o si el chequeo falló. */
+  public readonly existingFlags = signal<boolean[]>([]);
+  public readonly updateCount = computed(
+    () => this.existingFlags().filter(Boolean).length
+  );
+  public readonly newCount = computed(
+    () => this.parsedRows().length - this.updateCount()
+  );
+  public readonly flagsReady = computed(
+    () => this.existingFlags().length === this.parsedRows().length
+  );
   public readonly importResults = signal<ImportRowResult[]>([]);
   public readonly importSummary = signal<ImportSummary | null>(null);
   public readonly importProgress = signal(0);
@@ -248,10 +260,20 @@ export class ImportExportHubComponent {
     }
     toast.success('Respaldo creado');
 
-    // 2) Límite del plan solo sobre los NUEVOS (una consulta batcheada).
+    // 2) Límite del plan solo sobre los NUEVOS. Reusa los flags calculados al
+    //    entrar al preview; si no llegaron (falló/no terminó), recalcula.
     await this.planStore.refreshUsage();
     const remaining = this.planStore.remainingProducts();
-    const newCount = await this.excelService.countNewRows(rows);
+    let flags = this.existingFlags();
+    if (flags.length !== rows.length) {
+      flags = await this.excelService
+        .markExistingRows(rows)
+        .catch(() => [] as boolean[]);
+    }
+    const newCount =
+      flags.length === rows.length
+        ? flags.filter((exists) => !exists).length
+        : rows.length; // sin flags: conservador, todos cuentan como nuevos
     this.isCreatingBackup.set(false);
     if (newCount > remaining) {
       toast.error(
@@ -386,6 +408,18 @@ export class ImportExportHubComponent {
     this.dialog.hide();
   }
 
+  /** Entra al preview: setea las filas y calcula (en background) qué filas ya
+   *  existen para los badges "Nuevo"/"Se actualizará" y el chequeo del plan. */
+  private enterPreview(rows: ProductExcelRow[]): void {
+    this.parsedRows.set(rows);
+    this.existingFlags.set([]);
+    this.view.set('import-preview');
+    this.excelService
+      .markExistingRows(rows)
+      .then((flags) => this.existingFlags.set(flags))
+      .catch(() => this.existingFlags.set([]));
+  }
+
   private async processFile(
     file: File,
     returnView: View = 'import-upload'
@@ -393,8 +427,7 @@ export class ImportExportHubComponent {
     const result = await this.excelService.parseExcelFile(file);
 
     if (result.isRight()) {
-      this.parsedRows.set(result.value);
-      this.view.set('import-preview');
+      this.enterPreview(result.value);
       return;
     }
 
@@ -417,8 +450,7 @@ export class ImportExportHubComponent {
     this.stopAiMessages();
 
     if (aiResult.isRight()) {
-      this.parsedRows.set(aiResult.value);
-      this.view.set('import-preview');
+      this.enterPreview(aiResult.value);
       toast.success('Archivo analizado con IA correctamente');
     } else {
       toast.error(aiResult.value.message);

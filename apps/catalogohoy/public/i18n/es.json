@@ -1840,5 +1840,10 @@
   "Restaurando respaldo...": "Restaurando respaldo...",
   "Descargar": "Descargar",
   "Restaurar": "Restaurar",
-  "productos": "productos"
+  "productos": "productos",
+  "{n} nuevos": "{n} nuevos",
+  "{n} se actualizarán": "{n} se actualizarán",
+  "Acción": "Acción",
+  "Se actualizará": "Se actualizará",
+  "Se crearán {n} productos nuevos y se actualizarán {u} existentes.": "Se crearán {n} productos nuevos y se actualizarán {u} existentes."
 }

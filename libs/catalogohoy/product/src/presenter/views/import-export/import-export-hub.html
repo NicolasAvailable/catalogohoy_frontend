@@ -290,6 +290,18 @@
       <ui-button [label]="'Importar' | transloco" icon="upload" (click)="askImportConfirm()" />
     </div>
 
+    <!-- Resumen: qué hará el import con esta lista -->
+    @if (flagsReady()) {
+    <div class="flex items-center gap-2 -mt-1">
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-green-50 border border-green-200 text-green-700 text-xs font-semibold">
+        {{ '{n} nuevos' | transloco: { n: newCount() } }}
+      </span>
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
+        {{ '{n} se actualizarán' | transloco: { n: updateCount() } }}
+      </span>
+    </div>
+    }
+
     <div
       class="max-h-96 overflow-auto border border-gray-100 rounded-xl"
     >
@@ -304,6 +316,7 @@
             <th class="p-3 text-left font-semibold text-gray-600">
               {{ 'Categorias' | transloco }}
             </th>
+            <th class="p-3 text-left font-semibold text-gray-600">{{ 'Acción' | transloco }}</th>
           </tr>
         </thead>
         <tbody>
@@ -315,6 +328,19 @@
             <td class="p-3 text-gray-700">{{ row.stock ?? ('Sin limite' | transloco) }}</td>
             <td class="p-3 text-gray-500">{{ row.sku ?? '-' }}</td>
             <td class="p-3 text-gray-500">{{ row.categories || '-' }}</td>
+            <td class="p-3">
+              @if (flagsReady()) {
+                @if (existingFlags()[$index]) {
+                <span class="inline-flex px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold whitespace-nowrap">
+                  {{ 'Se actualizará' | transloco }}
+                </span>
+                } @else {
+                <span class="inline-flex px-2 py-0.5 rounded-md bg-green-50 border border-green-200 text-green-700 text-xs font-semibold">
+                  {{ 'Nuevo' | transloco }}
+                </span>
+                }
+              }
+            </td>
           </tr>
           }
         </tbody>
@@ -460,7 +486,11 @@
       </p>
     </div>
     <p class="text-sm text-gray-400 max-w-md">
+      @if (flagsReady()) {
+      {{ 'Se crearán {n} productos nuevos y se actualizarán {u} existentes.' | transloco: { n: newCount(), u: updateCount() } }}
+      } @else {
       {{ 'Los productos que ya existan (por SKU o nombre) se actualizarán; los nuevos se agregarán.' | transloco }}
+      }
     </p>
     <div class="flex gap-3">
       <ui-button
