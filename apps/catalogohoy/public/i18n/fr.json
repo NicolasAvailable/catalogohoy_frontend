@@ -1845,5 +1845,8 @@
   "{n} se actualizarán": "{n} seront mis à jour",
   "Acción": "Action",
   "Se actualizará": "Sera mis à jour",
-  "Se crearán {n} productos nuevos y se actualizarán {u} existentes.": "{n} nouveaux produits seront créés et {u} existants mis à jour."
+  "Se crearán {n} productos nuevos y se actualizarán {u} existentes.": "{n} nouveaux produits seront créés et {u} existants mis à jour.",
+  "Pausar": "Mettre en pause",
+  "Reanudar": "Reprendre",
+  "Importación en pausa": "Importation en pause"
 }

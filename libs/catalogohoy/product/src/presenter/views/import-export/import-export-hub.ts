@@ -113,8 +113,10 @@ export class ImportExportHubComponent {
   private aiMessageInterval: ReturnType<typeof setInterval> | null = null;
 
   /** Cancela el resto del import en curso (se muestra cuando ya hubo algún
-   *  error, para no seguir procesando una lista que está fallando). */
+   *  error o está en pausa, para no seguir procesando una lista que falla). */
   public readonly cancelRequested = signal(false);
+  /** Pausa el import entre fila y fila; Reanudar continúa donde quedó. */
+  public readonly isPaused = signal(false);
   public readonly hasImportErrors = computed(() =>
     this.importResults().some((r) => r.status === 'error')
   );
@@ -137,6 +139,7 @@ export class ImportExportHubComponent {
     this.importSummary.set(null);
     this.importProgress.set(0);
     this.cancelRequested.set(false);
+    this.isPaused.set(false);
     this.categoryStore.categoryList$(1, 100);
     // Refrescamos el uso del plan para que el tile de Exportar muestre el
     // estado correcto (bloqueado + "Pro" en planes gratis) desde el inicio.
@@ -239,6 +242,16 @@ export class ImportExportHubComponent {
    *  (lo ya importado/actualizado queda; el backup previo permite restaurar). */
   public cancelImport(): void {
     this.cancelRequested.set(true);
+    this.isPaused.set(false);
+  }
+
+  /** Pausa/reanuda el import (el loop espera entre fila y fila). */
+  public togglePause(): void {
+    this.isPaused.update((p) => !p);
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /** Confirma el import: 1) crea un backup de seguridad (si falla, no toca
@@ -286,6 +299,7 @@ export class ImportExportHubComponent {
     // 3) Import con upsert.
     this.view.set('import-progress');
     this.cancelRequested.set(false);
+    this.isPaused.set(false);
     const results: ImportRowResult[] = rows.map((data, i) => ({
       rowIndex: i,
       data,
@@ -297,6 +311,10 @@ export class ImportExportHubComponent {
     let errorCount = 0;
 
     for (let i = 0; i < rows.length; i++) {
+      // Pausa: espera entre fila y fila hasta Reanudar (o Cancelar).
+      while (this.isPaused() && !this.cancelRequested()) {
+        await this.sleep(200);
+      }
       if (this.cancelRequested()) {
         toast.info(
           `Importación cancelada: se procesaron ${i} de ${rows.length} filas.`

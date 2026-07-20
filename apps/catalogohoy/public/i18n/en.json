@@ -1845,5 +1845,8 @@
   "{n} se actualizarán": "{n} will be updated",
   "Acción": "Action",
   "Se actualizará": "Will update",
-  "Se crearán {n} productos nuevos y se actualizarán {u} existentes.": "{n} new products will be created and {u} existing ones updated."
+  "Se crearán {n} productos nuevos y se actualizarán {u} existentes.": "{n} new products will be created and {u} existing ones updated.",
+  "Pausar": "Pause",
+  "Reanudar": "Resume",
+  "Importación en pausa": "Import paused"
 }

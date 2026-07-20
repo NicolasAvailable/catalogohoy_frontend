@@ -1845,5 +1845,8 @@
   "{n} se actualizarán": "{n} se actualizarán",
   "Acción": "Acción",
   "Se actualizará": "Se actualizará",
-  "Se crearán {n} productos nuevos y se actualizarán {u} existentes.": "Se crearán {n} productos nuevos y se actualizarán {u} existentes."
+  "Se crearán {n} productos nuevos y se actualizarán {u} existentes.": "Se crearán {n} productos nuevos y se actualizarán {u} existentes.",
+  "Pausar": "Pausar",
+  "Reanudar": "Reanudar",
+  "Importación en pausa": "Importación en pausa"
 }

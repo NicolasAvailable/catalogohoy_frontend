@@ -353,20 +353,36 @@
   @if (view() === 'import-progress') {
   <section class="flex flex-col gap-4 p-8">
     <div class="flex items-center justify-between gap-3">
-      <h2 class="text-xl font-bold text-gray-900">{{ 'Importando productos...' | transloco }}</h2>
-      <!-- Cancelar: visible solo cuando ya hubo errores, para cortar el resto
-           de una lista que está fallando. Lo procesado queda (hay backup). -->
-      @if (hasImportErrors() && !cancelRequested()) {
-      <ui-button
-        [label]="'Cancelar importación' | transloco"
-        icon="x-circle"
-        severity="danger"
-        variant="outlined"
-        size="small"
-        [fluid]="false"
-        (click)="cancelImport()"
-      />
-      }
+      <h2 class="text-xl font-bold text-gray-900">
+        {{ (isPaused() ? 'Importación en pausa' : 'Importando productos...') | transloco }}
+      </h2>
+      <div class="flex items-center gap-2">
+        <!-- Pausar/Reanudar: siempre disponible durante el import. -->
+        @if (!cancelRequested()) {
+        <ui-button
+          [label]="(isPaused() ? 'Reanudar' : 'Pausar') | transloco"
+          [icon]="isPaused() ? 'play' : 'pause'"
+          variant="outlined"
+          severity="contrast"
+          size="small"
+          [fluid]="false"
+          (click)="togglePause()"
+        />
+        }
+        <!-- Cancelar: cuando ya hubo errores o está en pausa. Lo procesado
+             queda (hay backup). -->
+        @if ((hasImportErrors() || isPaused()) && !cancelRequested()) {
+        <ui-button
+          [label]="'Cancelar importación' | transloco"
+          icon="x-circle"
+          severity="danger"
+          variant="outlined"
+          size="small"
+          [fluid]="false"
+          (click)="cancelImport()"
+        />
+        }
+      </div>
     </div>
     <ui-progress-bar [value]="importProgress()" />
 
