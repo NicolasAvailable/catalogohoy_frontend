@@ -135,6 +135,9 @@ export class ProductExcelService {
         sku: p.sku ?? '',
         costo_produccion: p.production_cost ?? '',
         categorias: (p.categories ?? []).join(', '),
+        // URLs de las imágenes del producto — el respaldo las guarda; acá se
+        // exportan para poder re-vincularlas o auditarlas.
+        fotos: (p.photos ?? []).join(' | '),
         tallas: p.is_sized ? this.formatSizes(p.sizes) : '',
         mayoreo: p.is_wholesale
           ? (p.wholesale_tiers ?? [])

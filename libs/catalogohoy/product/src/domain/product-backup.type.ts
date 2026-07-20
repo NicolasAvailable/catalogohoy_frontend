@@ -12,6 +12,7 @@ export interface ProductBackup {
 export interface ProductBackupSnapshotRow {
   name?: string;
   description?: string | null;
+  photos?: string[] | null;
   price?: number | string;
   price_promotional?: number | string | null;
   stock?: number | string | null;
