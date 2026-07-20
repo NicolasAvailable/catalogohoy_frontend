@@ -1848,5 +1848,8 @@
   "Se crearán {n} productos nuevos y se actualizarán {u} existentes.": "{n} produtos novos serão criados e {u} existentes serão atualizados.",
   "Pausar": "Pausar",
   "Reanudar": "Retomar",
-  "Importación en pausa": "Importação pausada"
+  "Importación en pausa": "Importação pausada",
+  "Respaldos": "Backups",
+  "Mira, descarga o restaura versiones anteriores de tus productos.": "Veja, baixe ou restaure versões anteriores dos seus produtos.",
+  "Respaldo del": "Backup de"
 }

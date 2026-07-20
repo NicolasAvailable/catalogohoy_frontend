@@ -24,6 +24,7 @@ import {
   ImportRowStatus,
   ImportSummary,
   ProductBackup,
+  ProductBackupSnapshotRow,
   ProductExcelRow,
 } from '../../../domain';
 import {
@@ -43,7 +44,8 @@ type View =
   | 'import-progress'
   | 'import-done'
   | 'ai-analyzing'
-  | 'backups';
+  | 'backups'
+  | 'backup-view';
 
 const AI_STATUS_MESSAGES = [
   { text: 'Analizando tu archivo...', icon: 'sparkles' },
@@ -127,6 +129,10 @@ export class ImportExportHubComponent {
   public readonly isCreatingBackup = signal(false);
   public readonly isRestoring = signal(false);
   public readonly restoreProgress = signal(0);
+  /** Backup abierto en el visor (vista tipo planilla) + sus filas. */
+  public readonly viewingBackup = signal<ProductBackup | null>(null);
+  public readonly backupRows = signal<ProductBackupSnapshotRow[]>([]);
+  public readonly loadingBackupRows = signal(false);
 
   constructor() {
     this.destroyRef.onDestroy(() => this.stopAiMessages());
@@ -364,6 +370,22 @@ export class ImportExportHubComponent {
       .mapRight((list) => this.backups.set(list))
       .mapLeft((e) => toast.error(e.message));
     this.loadingBackups.set(false);
+  }
+
+  /** Abre un backup en el visor (tabla tipo planilla, como en Excel). */
+  public async viewBackup(backup: ProductBackup): Promise<void> {
+    this.viewingBackup.set(backup);
+    this.backupRows.set([]);
+    this.view.set('backup-view');
+    this.loadingBackupRows.set(true);
+    const result = await this.backupService.getSnapshot(backup.id);
+    result
+      .mapRight((snapshot) => this.backupRows.set(snapshot))
+      .mapLeft((e) => {
+        toast.error(e.message);
+        this.view.set('backups');
+      });
+    this.loadingBackupRows.set(false);
   }
 
   /** Descarga un backup como Excel. */

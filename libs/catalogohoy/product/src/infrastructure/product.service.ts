@@ -465,34 +465,48 @@ export class ProductService implements BaseProductService {
       categoryIds: string[];
     }
   ): Promise<E.Either<Error, void>> {
+    const payload: Record<string, unknown> = {
+      name: input.name,
+      price: input.price === '' ? 0 : input.price,
+      price_promotional:
+        !input.pricePromotional || input.pricePromotional.length === 0
+          ? null
+          : input.pricePromotional,
+      stock: input.stock,
+      sku: input.sku || null,
+      production_cost: input.productionCost
+        ? Number(input.productionCost)
+        : null,
+    };
+    // La descripción solo se pisa si el Excel trae una: una columna vacía no
+    // debe borrar la descripción enriquecida en la app.
+    if (input.description && input.description.trim()) {
+      payload['description'] = this.htmlSanitizer.sanitizeRichText(
+        input.description
+      );
+    }
+
     const { error } = await this.client
       .from('products')
-      .update({
-        name: input.name,
-        description: this.htmlSanitizer.sanitizeRichText(input.description),
-        price: input.price === '' ? 0 : input.price,
-        price_promotional:
-          !input.pricePromotional || input.pricePromotional.length === 0
-            ? null
-            : input.pricePromotional,
-        stock: input.stock,
-        sku: input.sku || null,
-        production_cost: input.productionCost
-          ? Number(input.productionCost)
-          : null,
-      })
+      .update(payload)
       .eq('id', id);
 
     if (error) {
       return E.left(new Error(error.message));
     }
 
-    // Reemplazar las categorías del producto (borrar + insertar las del Excel).
-    await this.client.from('product_categories').delete().eq('product_id', id);
-    for (const categoryId of input.categoryIds) {
+    // Categorías: solo se reemplazan si el Excel trae alguna — una columna
+    // vacía no debe quitar las categorías ya asignadas.
+    if (input.categoryIds.length > 0) {
       await this.client
         .from('product_categories')
-        .insert({ product_id: id, category_id: categoryId });
+        .delete()
+        .eq('product_id', id);
+      for (const categoryId of input.categoryIds) {
+        await this.client
+          .from('product_categories')
+          .insert({ product_id: id, category_id: categoryId });
+      }
     }
 
     this.activityLog.log({

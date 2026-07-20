@@ -1848,5 +1848,8 @@
   "Se crearán {n} productos nuevos y se actualizarán {u} existentes.": "Se crearán {n} productos nuevos y se actualizarán {u} existentes.",
   "Pausar": "Pausar",
   "Reanudar": "Reanudar",
-  "Importación en pausa": "Importación en pausa"
+  "Importación en pausa": "Importación en pausa",
+  "Respaldos": "Respaldos",
+  "Mira, descarga o restaura versiones anteriores de tus productos.": "Mira, descarga o restaura versiones anteriores de tus productos.",
+  "Respaldo del": "Respaldo del"
 }
