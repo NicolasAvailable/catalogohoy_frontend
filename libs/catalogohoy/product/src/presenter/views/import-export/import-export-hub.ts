@@ -35,7 +35,9 @@ import {
 
 type View =
   | 'hub'
+  | 'import-source'
   | 'import-upload'
+  | 'import-gsheet'
   | 'import-preview'
   | 'import-confirm'
   | 'import-progress'
@@ -130,9 +132,48 @@ export class ImportExportHubComponent {
     this.dialog.show();
   }
 
-  /** From the hub, go to the import flow. */
+  /** From the hub, go to the source picker (Excel / Google Sheets). */
   public onImport(): void {
-    this.view.set('import-upload');
+    this.view.set('import-source');
+  }
+
+  // ── Google Sheets ────────────────────────────────────────────────────────
+  public readonly gsheetUrl = signal('');
+  public readonly isFetchingSheet = signal(false);
+
+  /** Importa desde un link de Google Sheets (compartido como "cualquiera con
+   *  el enlace"). Se baja como CSV vía el endpoint gviz (soporta CORS) y entra
+   *  al MISMO pipeline que un archivo subido (parseo normal + fallback IA). */
+  public async importGoogleSheet(): Promise<void> {
+    const url = this.gsheetUrl().trim();
+    const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    if (!match) {
+      toast.error('El link no parece ser de Google Sheets.');
+      return;
+    }
+    const gid = url.match(/[#&?]gid=(\d+)/)?.[1];
+    const csvUrl =
+      `https://docs.google.com/spreadsheets/d/${match[1]}/gviz/tq?tqx=out:csv` +
+      (gid ? `&gid=${gid}` : '');
+
+    this.isFetchingSheet.set(true);
+    try {
+      const res = await fetch(csvUrl);
+      const text = await res.text();
+      // Si la hoja no es pública, Google devuelve HTML (página de login).
+      if (!res.ok || text.trimStart().startsWith('<')) {
+        toast.error(
+          'No pudimos leer la hoja. En Google Sheets: Compartir → "Cualquier persona con el enlace".'
+        );
+        return;
+      }
+      const file = new File([text], 'google-sheet.csv', { type: 'text/csv' });
+      await this.processFile(file, 'import-gsheet');
+    } catch {
+      toast.error('No pudimos conectar con Google Sheets. Intenta de nuevo.');
+    } finally {
+      this.isFetchingSheet.set(false);
+    }
   }
 
   /** From the hub, request the export via WhatsApp. Paid plans only.
@@ -339,7 +380,10 @@ export class ImportExportHubComponent {
     this.dialog.hide();
   }
 
-  private async processFile(file: File): Promise<void> {
+  private async processFile(
+    file: File,
+    returnView: View = 'import-upload'
+  ): Promise<void> {
     const result = await this.excelService.parseExcelFile(file);
 
     if (result.isRight()) {
@@ -357,7 +401,7 @@ export class ImportExportHubComponent {
     if (rawResult.isLeft()) {
       this.stopAiMessages();
       toast.error(rawResult.value.message);
-      this.view.set('import-upload');
+      this.view.set(returnView);
       return;
     }
 
@@ -372,7 +416,7 @@ export class ImportExportHubComponent {
       toast.success('Archivo analizado con IA correctamente');
     } else {
       toast.error(aiResult.value.message);
-      this.view.set('import-upload');
+      this.view.set(returnView);
     }
   }
 

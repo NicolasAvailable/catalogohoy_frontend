@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Google Sheets (simplificado) -->
+  <path d="M8 2h12l8 8v18a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#0f9d58"/>
+  <path d="M20 2l8 8h-8z" fill="#87ceac"/>
+  <path d="M11 14h10v10H11zm2 2v1.6h2.5V16zm4.5 0v1.6H21V16zM13 19.2v1.6h2.5v-1.6zm4.5 0v1.6H21v-1.6zM13 22.4V24h2.5v-1.6zm4.5 0V24H21v-1.6z" fill="#ffffff"/>
+</svg>

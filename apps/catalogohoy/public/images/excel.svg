@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Microsoft Excel (simplificado) -->
+  <rect x="7" y="3" width="22" height="26" rx="2" fill="#ffffff" stroke="#21a366" stroke-width="1"/>
+  <rect x="18" y="3" width="11" height="26" rx="2" fill="#e8f5ee"/>
+  <path d="M18 3h9a2 2 0 0 1 2 2v4h-11z" fill="#21a366"/>
+  <path d="M18 9h11v6.5H18z" fill="#107c41"/>
+  <path d="M18 15.5h11V22H18z" fill="#185c37"/>
+  <path d="M18 22h11v5a2 2 0 0 1-2 2h-9z" fill="#0e4d2c"/>
+  <rect x="2" y="8" width="16" height="16" rx="2" fill="#107c41"/>
+  <path d="M6 12l2.6 4L6 20h2.2l1.6-2.7L11.4 20h2.2l-2.6-4 2.6-4h-2.2l-1.6 2.7L8.2 12z" fill="#ffffff"/>
+</svg>
