@@ -72,6 +72,16 @@
         </span>
       </button>
     </div>
+
+    <!-- Historial de respaldos -->
+    <button
+      type="button"
+      (click)="openBackups()"
+      class="flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
+    >
+      <ui-icon name="history" styleClass="w-4 h-4" />
+      {{ 'Ver historial de respaldos' | transloco }}
+    </button>
   </section>
   }
 
@@ -178,7 +188,7 @@
           {{ 'Vista previa ({n} productos)' | transloco: { n: parsedRows().length } }}
         </h2>
       </div>
-      <ui-button [label]="'Importar' | transloco" icon="upload" (click)="startImport()" />
+      <ui-button [label]="'Importar' | transloco" icon="upload" (click)="askImportConfirm()" />
     </div>
 
     <div
@@ -318,6 +328,115 @@
       variant="outlined"
       severity="contrast"
     />
+  </section>
+  }
+
+  <!-- IMPORT CONFIRM VIEW (aviso de backup antes de actualizar) -->
+  @if (view() === 'import-confirm') {
+  <section class="flex flex-col items-center gap-6 p-10 text-center">
+    <div class="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center">
+      <ui-icon name="shield-check" styleClass="w-8 h-8 text-amber-500" />
+    </div>
+    <div>
+      <h2 class="text-xl font-bold text-gray-900">
+        {{ 'Antes de actualizar, creamos un respaldo' | transloco }}
+      </h2>
+      <p class="text-gray-500 mt-2 max-w-md">
+        {{ 'Guardaremos una copia de seguridad de tus productos actuales. Si algo no queda como esperabas, vas a poder restaurarla o descargarla.' | transloco }}
+      </p>
+    </div>
+    <p class="text-sm text-gray-400 max-w-md">
+      {{ 'Los productos que ya existan (por SKU o nombre) se actualizarán; los nuevos se agregarán.' | transloco }}
+    </p>
+    <div class="flex gap-3">
+      <ui-button
+        [label]="'Cancelar' | transloco"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        [disabled]="isCreatingBackup()"
+        (click)="view.set('import-preview')"
+      />
+      <ui-button
+        [label]="(isCreatingBackup() ? 'Creando respaldo...' : 'Crear respaldo e importar') | transloco"
+        icon="shield-check"
+        [fluid]="false"
+        [isLoading]="isCreatingBackup()"
+        [disabled]="isCreatingBackup()"
+        (click)="confirmImport()"
+      />
+    </div>
+  </section>
+  }
+
+  <!-- BACKUPS VIEW (historial: descargar / restaurar) -->
+  @if (view() === 'backups') {
+  <section class="flex flex-col gap-4 p-8">
+    <div class="flex items-center gap-3">
+      <button
+        (click)="view.set('hub')"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+      >
+        <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+      </button>
+      <h2 class="text-xl font-bold text-gray-900">{{ 'Respaldos de productos' | transloco }}</h2>
+    </div>
+    <p class="text-sm text-gray-500 -mt-2">
+      {{ 'Copias creadas antes de cada importación. Descargá o restaurá una versión anterior.' | transloco }}
+    </p>
+
+    @if (isRestoring()) {
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-gray-600">{{ 'Restaurando respaldo...' | transloco }}</span>
+      <ui-progress-bar [value]="restoreProgress()" />
+    </div>
+    }
+
+    @if (loadingBackups()) {
+    <div class="flex items-center justify-center py-12 text-gray-400">
+      <ui-icon name="loader-circle" styleClass="w-6 h-6 animate-spin" />
+    </div>
+    } @else if (backups().length === 0) {
+    <div class="flex flex-col items-center gap-2 py-12 text-center text-gray-400">
+      <ui-icon name="history" styleClass="w-8 h-8" />
+      <p>{{ 'Todavía no hay respaldos. Se crean automáticamente al importar.' | transloco }}</p>
+    </div>
+    } @else {
+    <div class="max-h-96 overflow-auto border border-gray-100 rounded-xl divide-y divide-gray-50">
+      @for (backup of backups(); track backup.id) {
+      <div class="flex items-center justify-between gap-3 p-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center shrink-0">
+            <ui-icon name="history" styleClass="w-5 h-5 text-gray-400" />
+          </div>
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold text-gray-800">{{ backup.createdAt | date: 'medium' }}</span>
+            <span class="text-xs text-gray-400">{{ backup.productCount }} {{ 'productos' | transloco }}</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <ui-button
+            [label]="'Descargar' | transloco"
+            icon="download"
+            variant="outlined"
+            severity="contrast"
+            size="small"
+            [fluid]="false"
+            (click)="downloadBackup(backup)"
+          />
+          <ui-button
+            [label]="'Restaurar' | transloco"
+            icon="refresh-cw"
+            size="small"
+            [fluid]="false"
+            [disabled]="isRestoring()"
+            (click)="restoreBackup(backup)"
+          />
+        </div>
+      </div>
+      }
+    </div>
+    }
   </section>
   }
 </ui-dialog>

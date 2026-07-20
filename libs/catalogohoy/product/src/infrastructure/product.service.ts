@@ -372,6 +372,100 @@ export class ProductService implements BaseProductService {
     return E.right(undefined);
   }
 
+  /** Busca un producto EXISTENTE del tenant para el import (upsert). Primero por
+   *  SKU (si viene), si no por nombre exacto. Devuelve el id o null. Permite que
+   *  re-importar la lista ACTUALICE en vez de fallar por SKU duplicado. */
+  public async findProductIdForImport(
+    sku: string | null,
+    name: string
+  ): Promise<string | null> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return null;
+
+    const trimmedSku = sku?.trim();
+    if (trimmedSku) {
+      const { data } = await this.client
+        .from('products')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('sku', trimmedSku)
+        .limit(1)
+        .maybeSingle();
+      if (data?.id) return String(data.id);
+    }
+
+    const trimmedName = name?.trim();
+    if (trimmedName) {
+      const { data } = await this.client
+        .from('products')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('name', trimmedName)
+        .limit(1)
+        .maybeSingle();
+      if (data?.id) return String(data.id);
+    }
+
+    return null;
+  }
+
+  /** Actualización PARCIAL desde el import: solo toca los campos del Excel
+   *  (nombre/descripción/precio/promo/stock/sku/costo) + categorías. Preserva a
+   *  propósito fotos, variantes, tallas, mayoreo y adicionales — que el Excel no
+   *  trae y no queremos borrar al re-importar. */
+  public async updateFromImport(
+    id: string,
+    input: {
+      name: string;
+      description: string | null;
+      price: string;
+      pricePromotional: string;
+      stock: string | null;
+      sku: string | null;
+      productionCost: string | null;
+      categoryIds: string[];
+    }
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('products')
+      .update({
+        name: input.name,
+        description: this.htmlSanitizer.sanitizeRichText(input.description),
+        price: input.price === '' ? 0 : input.price,
+        price_promotional:
+          !input.pricePromotional || input.pricePromotional.length === 0
+            ? null
+            : input.pricePromotional,
+        stock: input.stock,
+        sku: input.sku || null,
+        production_cost: input.productionCost
+          ? Number(input.productionCost)
+          : null,
+      })
+      .eq('id', id);
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    // Reemplazar las categorías del producto (borrar + insertar las del Excel).
+    await this.client.from('product_categories').delete().eq('product_id', id);
+    for (const categoryId of input.categoryIds) {
+      await this.client
+        .from('product_categories')
+        .insert({ product_id: id, category_id: categoryId });
+    }
+
+    this.activityLog.log({
+      action: 'product.update',
+      entityType: 'product',
+      entityId: Number(id),
+      entityName: input.name,
+    });
+
+    return E.right(undefined);
+  }
+
   /** Duplica un producto: inserta una nueva fila con los mismos campos +
    *  sufijo "(copia)" en el nombre, posición al final, y re-linkea las
    *  categorías al nuevo id. Todo lo que vive en la fila (sizes, wholesale

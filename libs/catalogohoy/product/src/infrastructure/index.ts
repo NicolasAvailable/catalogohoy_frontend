@@ -3,6 +3,7 @@ export * from './credits.store';
 export * from './image-gallery.service';
 export * from './mappers';
 export * from './product-ai-excel.service';
+export * from './product-backup.service';
 export * from './product-excel.service';
 export * from './product.service';
 export * from './product.store';

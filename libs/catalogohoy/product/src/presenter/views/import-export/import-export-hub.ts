@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -22,17 +23,25 @@ import {
   ImportRowResult,
   ImportRowStatus,
   ImportSummary,
+  ProductBackup,
   ProductExcelRow,
 } from '../../../domain';
-import { ProductAiExcelService, ProductExcelService, ProductStore } from '../../../infrastructure';
+import {
+  ProductAiExcelService,
+  ProductBackupService,
+  ProductExcelService,
+  ProductStore,
+} from '../../../infrastructure';
 
 type View =
   | 'hub'
   | 'import-upload'
   | 'import-preview'
+  | 'import-confirm'
   | 'import-progress'
   | 'import-done'
-  | 'ai-analyzing';
+  | 'ai-analyzing'
+  | 'backups';
 
 const AI_STATUS_MESSAGES = [
   { text: 'Analizando tu archivo...', icon: 'sparkles' },
@@ -46,6 +55,7 @@ const AI_STATUS_MESSAGES = [
   selector: 'lib-import-export-hub',
   standalone: true,
   imports: [
+    DatePipe,
     DialogComponent,
     ButtonComponent,
     IconComponent,
@@ -69,6 +79,7 @@ export class ImportExportHubComponent {
   private readonly productStore = inject(ProductStore);
   private readonly excelService = inject(ProductExcelService);
   private readonly aiExcelService = inject(ProductAiExcelService);
+  private readonly backupService = inject(ProductBackupService);
   private readonly categoryStore = inject(CategoryStore);
   private readonly planStore = inject(PlanStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
@@ -86,6 +97,13 @@ export class ImportExportHubComponent {
   public readonly importProgress = signal(0);
   public readonly aiStatusMessage = signal(AI_STATUS_MESSAGES[0]);
   private aiMessageInterval: ReturnType<typeof setInterval> | null = null;
+
+  // ── Backups ──────────────────────────────────────────────────────────────
+  public readonly backups = signal<ProductBackup[]>([]);
+  public readonly loadingBackups = signal(false);
+  public readonly isCreatingBackup = signal(false);
+  public readonly isRestoring = signal(false);
+  public readonly restoreProgress = signal(0);
 
   constructor() {
     this.destroyRef.onDestroy(() => this.stopAiMessages());
@@ -145,18 +163,44 @@ export class ImportExportHubComponent {
     event.preventDefault();
   }
 
-  public async startImport(): Promise<void> {
-    await this.planStore.refreshUsage();
-    const remaining = this.planStore.remainingProducts();
+  /** Desde la preview: muestra el aviso de que se creará un backup antes de
+   *  actualizar (no importa todavía). */
+  public askImportConfirm(): void {
+    this.view.set('import-confirm');
+  }
+
+  /** Confirma el import: 1) crea un backup de seguridad (si falla, no toca
+   *  nada), 2) valida el límite del plan SOLO sobre los productos nuevos (los
+   *  existentes se actualizan y no consumen cupo), 3) corre el import con
+   *  upsert (actualiza existentes por SKU/nombre, crea los nuevos). */
+  public async confirmImport(): Promise<void> {
     const rows = this.parsedRows();
 
-    if (rows.length > remaining) {
-      toast.error(
-        `No puedes importar ${rows.length} productos. Tu plan solo permite ${remaining} más. Mejora tu plan para continuar.`
-      );
+    // 1) Backup de seguridad — bloqueante: sin backup no importamos.
+    this.isCreatingBackup.set(true);
+    const backup = await this.backupService.createBackup('import');
+    this.isCreatingBackup.set(false);
+    if (backup.isLeft()) {
+      toast.error('No se pudo crear el backup. No se realizó ningún cambio.');
       return;
     }
 
+    // 2) Límite del plan solo sobre los NUEVOS.
+    await this.planStore.refreshUsage();
+    const remaining = this.planStore.remainingProducts();
+    const existsFlags = await Promise.all(
+      rows.map((r) => this.excelService.rowExists(r))
+    );
+    const newCount = existsFlags.filter((exists) => !exists).length;
+    if (newCount > remaining) {
+      toast.error(
+        `La lista trae ${newCount} productos nuevos y tu plan permite ${remaining} más. Mejora tu plan para continuar.`
+      );
+      this.view.set('import-preview');
+      return;
+    }
+
+    // 3) Import con upsert.
     this.view.set('import-progress');
     const results: ImportRowResult[] = rows.map((data, i) => ({
       rowIndex: i,
@@ -198,9 +242,72 @@ export class ImportExportHubComponent {
     });
     this.view.set('import-done');
     this.productStore.productList$();
-    // El import creó productos: re-consultar el uso del plan para sincronizar
-    // el límite (el PlanStore está cacheado).
+    // El import pudo crear productos: re-consultar el uso del plan (cacheado).
     this.planStore.refreshUsage();
+  }
+
+  // ── Backups: listar / descargar / restaurar ────────────────────────────
+  /** Abre la vista de backups y los carga. */
+  public async openBackups(): Promise<void> {
+    this.view.set('backups');
+    this.loadingBackups.set(true);
+    const result = await this.backupService.listBackups();
+    result
+      .mapRight((list) => this.backups.set(list))
+      .mapLeft((e) => toast.error(e.message));
+    this.loadingBackups.set(false);
+  }
+
+  /** Descarga un backup como Excel. */
+  public async downloadBackup(backup: ProductBackup): Promise<void> {
+    const result = await this.backupService.getSnapshot(backup.id);
+    result
+      .mapRight((snapshot) =>
+        this.excelService.exportSnapshotToExcel(
+          snapshot,
+          backup.createdAt.slice(0, 10)
+        )
+      )
+      .mapLeft((e) => toast.error(e.message));
+  }
+
+  /** Restaura un backup: re-aplica el snapshot por upsert (actualiza los
+   *  existentes a esa versión, re-crea los que falten). */
+  public async restoreBackup(backup: ProductBackup): Promise<void> {
+    if (this.isRestoring()) return;
+    const confirmed = confirm(
+      `¿Restaurar el respaldo del ${backup.createdAt.slice(0, 10)} (${backup.productCount} productos)? Tus productos volverán a esa versión.`
+    );
+    if (!confirmed) return;
+
+    this.isRestoring.set(true);
+    this.restoreProgress.set(0);
+
+    const snapshotResult = await this.backupService.getSnapshot(backup.id);
+    if (snapshotResult.isLeft()) {
+      toast.error(snapshotResult.value.message);
+      this.isRestoring.set(false);
+      return;
+    }
+    const snapshot = snapshotResult.value;
+
+    let fail = 0;
+    for (let i = 0; i < snapshot.length; i++) {
+      this.restoreProgress.set(Math.round((i / snapshot.length) * 100));
+      const excelRow = this.excelService.snapshotRowToExcelRow(snapshot[i]);
+      const r = await this.excelService.importRow(excelRow);
+      r.mapLeft(() => fail++);
+    }
+    this.restoreProgress.set(100);
+    this.isRestoring.set(false);
+    this.productStore.productList$();
+    this.planStore.refreshUsage();
+
+    if (fail === 0) {
+      toast.success(`Respaldo restaurado (${snapshot.length} productos).`);
+    } else {
+      toast.error(`Restaurado con ${fail} errores de ${snapshot.length}.`);
+    }
   }
 
   public downloadTemplate(): void {
