@@ -6,6 +6,7 @@ import { PlanFeature } from './plan.model';
 export const PLAN_FEATURES: Record<string, PlanFeature[]> = {
   gratis: [
     { text: '1 catálogo' },
+    { text: 'Hasta 25 órdenes por mes' },
     { text: 'Edición limitada del catálogo' },
     { text: '1 reporte por mes' },
     { text: '15 créditos de IA por mes' },
@@ -16,6 +17,7 @@ export const PLAN_FEATURES: Record<string, PlanFeature[]> = {
   ],
   basico: [
     { text: '1 catálogo' },
+    { text: 'Órdenes ilimitadas' },
     { text: 'Todos los módulos disponibles' },
     { text: 'Analíticas del catálogo' },
     { text: 'Hasta 10 reportes por mes' },
@@ -56,6 +58,7 @@ export const PLAN_FEATURES_DETAILED: Record<string, PlanFeature[]> = {
   gratis: [
     { text: '1 catálogo' },
     { text: 'Hasta 10 productos' },
+    { text: 'Hasta 25 órdenes por mes' },
     { text: '1 variante por producto' },
     { text: 'Hasta 2 adicionales por producto' },
     { text: '1 reporte por mes' },
@@ -68,6 +71,7 @@ export const PLAN_FEATURES_DETAILED: Record<string, PlanFeature[]> = {
   basico: [
     { text: '1 catálogo' },
     { text: 'Hasta 100 productos' },
+    { text: 'Órdenes ilimitadas' },
     { text: 'Hasta 3 variantes por producto' },
     { text: 'Hasta 5 adicionales por producto' },
     { text: '1 miembro de equipo' },
@@ -82,6 +86,7 @@ export const PLAN_FEATURES_DETAILED: Record<string, PlanFeature[]> = {
   pro: [
     { text: '1 catálogo' },
     { text: 'Hasta 500 productos' },
+    { text: 'Órdenes ilimitadas' },
     { text: 'Hasta 10 variantes por producto' },
     { text: 'Hasta 10 adicionales por producto' },
     { text: 'Hasta 2 miembros de equipo' },
@@ -96,6 +101,7 @@ export const PLAN_FEATURES_DETAILED: Record<string, PlanFeature[]> = {
   avanzado: [
     { text: '2 catálogos (ampliable con catálogos extra)' },
     { text: 'Productos ilimitados' },
+    { text: 'Órdenes ilimitadas' },
     { text: 'Hasta 15 variantes por producto' },
     { text: 'Hasta 15 adicionales por producto' },
     { text: 'Hasta 10 miembros de equipo' },
