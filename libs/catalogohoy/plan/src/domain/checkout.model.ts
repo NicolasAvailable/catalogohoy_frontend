@@ -17,7 +17,7 @@ export type PaymentCurrency =
 export const PLAN_BASE_PRICES: Record<string, number> = {
   basico: 9.99,
   pro: 19.99,
-  avanzado: 19.99,
+  avanzado: 29.99,
 };
 
 /** Catalog addon monthly price (USD). Mirror this in Stripe — the actual
