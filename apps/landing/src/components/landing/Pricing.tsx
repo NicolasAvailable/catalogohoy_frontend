@@ -2,6 +2,7 @@ import { Check, X, PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { isVenezuela, useVisitorCountry } from "@/hooks/use-visitor-country";
+import PlanComparison from "@/components/landing/PlanComparison";
 
 /* ═══════════════════════════════════════
    TYPES & CONFIG
@@ -18,7 +19,8 @@ const BILLING_CONFIG: Record<BillingPeriod, { months: number; discount: number }
 
 const PLAN_BASE_PRICES: Record<string, number> = {
   basico: 9.99,
-  avanzado: 19.99,
+  pro: 19.99,
+  avanzado: 29.99,
 };
 
 const CATALOG_ADDON_PRICE = 4.99;
@@ -58,9 +60,8 @@ const plans: PlanData[] = [
     maxTeamMembers: 0,
     features: [
       { label: "1 catálogo" },
-      { label: "Edición limitada del catálogo" },
+      { label: "15 créditos de IA por mes" },
       { label: "1 reporte por mes" },
-      { label: "5 créditos de IA por mes" },
       { label: "Sin analíticas del catálogo", negative: true },
     ],
     buttonLabel: "Empezar gratis",
@@ -75,12 +76,28 @@ const plans: PlanData[] = [
     maxProducts: 100,
     maxTeamMembers: 1,
     features: [
-      { label: "1 catálogo" },
-      { label: "Todos los módulos disponibles" },
       { label: "Analíticas del catálogo" },
-      { label: "Hasta 10 reportes por mes" },
-      { label: "150 créditos de IA por mes" },
+      { label: "Notificaciones WhatsApp de órdenes" },
+      { label: "200 créditos de IA por mes" },
       { label: "Diseño personalizable" },
+      { label: "Soporte prioritario" },
+    ],
+    buttonLabel: "Comenzar ahora",
+    isPopular: false,
+    color: "#6366f1",
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    isFree: false,
+    description: "Para tiendas grandes que venden todos los días.",
+    maxProducts: 500,
+    maxTeamMembers: 2,
+    features: [
+      { label: "Todo lo del plan Básico" },
+      { label: "350 créditos de IA por mes" },
+      { label: "Hasta 20 reportes por mes" },
+      { label: "10 variantes y 10 adicionales por producto" },
       { label: "Soporte prioritario" },
     ],
     buttonLabel: "Comenzar ahora",
@@ -96,12 +113,10 @@ const plans: PlanData[] = [
     productsLabel: "Productos ilimitados",
     maxTeamMembers: 10,
     features: [
-      { label: "Hasta 2 catálogos" },
-      { label: "Todo del plan Básico" },
-      { label: "Analíticas del catálogo" },
-      { label: "Hasta 30 reportes por mes" },
+      { label: "Hasta 2 catálogos (ampliable con extras)" },
+      { label: "Todo lo del plan Pro" },
       { label: "500 créditos de IA por mes" },
-      { label: "Vinculación de dominio personalizado (dominio aparte)" },
+      { label: "Dominio propio" },
       { label: "Soporte dedicado" },
     ],
     buttonLabel: "Comenzar ahora",
@@ -130,6 +145,10 @@ function getMonthlyEquivalent(plan: PlanData, period: BillingPeriod): number {
   return Math.round(getBasePrice(plan) * (1 - discount) * 100) / 100;
 }
 
+function formatPrice(value: number): string {
+  return Number.isInteger(value) ? `${value}` : value.toFixed(2);
+}
+
 function getPeriodLabel(period: BillingPeriod, isFree: boolean): string {
   if (isFree) return "por siempre";
   if (period === "monthly") return "/mes";
@@ -148,10 +167,10 @@ function handleSelectPlan(plan: PlanData, period: BillingPeriod): void {
     window.open("https://auth.catalogohoy.com/signup", "_blank");
     return;
   }
-  const price = getPeriodPrice(plan, period);
+  const price = formatPrice(getPeriodPrice(plan, period));
   const periodLabel = getPeriodLabel(period, false);
   const message = encodeURIComponent(
-    `Hola, me interesa adquirir el plan *${plan.name}* ($${price}${periodLabel} USD) de Catálogo Hoy. ¿Me pueden dar más información?`
+    `Hola, me interesa adquirir el plan *${plan.name}* ($${price}${periodLabel} USD) de CatalogoHoy. ¿Me pueden dar más información?`
   );
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, "_blank");
 }
@@ -243,7 +262,7 @@ const Pricing = () => {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-[26.25rem] lg:max-w-[72rem] mx-auto items-stretch"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-4 xl:gap-6 max-w-[26.25rem] sm:max-w-[56rem] lg:max-w-none mx-auto items-stretch"
         >
           {plans.map((plan) => (
             <motion.div
@@ -255,7 +274,7 @@ const Pricing = () => {
                   : "border border-[#e2e8f0]"
               }`}
             >
-              <div className="p-7 flex flex-col gap-4 flex-1">
+              <div className="p-7 lg:p-5 xl:p-6 flex flex-col gap-4 flex-1">
 
                 {/* ── Header ── */}
                 <div className="flex flex-col gap-1">
@@ -274,18 +293,18 @@ const Pricing = () => {
 
                 {/* ── Price ── */}
                 <div>
-                  <div className="flex items-baseline gap-[0.25rem]">
+                  <div className="flex items-baseline flex-wrap gap-[0.25rem]">
                     {plan.isFree ? (
                       <>
-                        <span className="text-[2.75rem] font-extrabold text-[#0f172a] leading-none">$0</span>
+                        <span className="text-[2.75rem] lg:text-[2.25rem] xl:text-[2.5rem] font-extrabold text-[#0f172a] leading-none">$0</span>
                         <span className="text-[0.9rem] text-[#94a3b8] ml-1">por siempre</span>
                       </>
                     ) : (
                       <>
                         <div className="flex items-baseline gap-[0.1rem]">
-                          <span className="text-[1.5rem] font-bold text-[#0f172a]">$</span>
-                          <span className="text-[2.75rem] font-extrabold text-[#0f172a] leading-none">
-                            {getPeriodPrice(plan, billingPeriod)}
+                          <span className="text-[1.5rem] lg:text-[1.25rem] font-bold text-[#0f172a]">$</span>
+                          <span className="text-[2.75rem] lg:text-[2.25rem] xl:text-[2.5rem] font-extrabold text-[#0f172a] leading-none">
+                            {formatPrice(getPeriodPrice(plan, billingPeriod))}
                           </span>
                         </div>
                         <span className="text-[0.9rem] text-[#94a3b8] ml-1">
@@ -296,7 +315,7 @@ const Pricing = () => {
                   </div>
                   {!plan.isFree && billingPeriod !== "monthly" && (
                     <p className="text-[0.78rem] text-[#94a3b8] mt-1">
-                      ${getMonthlyEquivalent(plan, billingPeriod)}/mes
+                      ${formatPrice(getMonthlyEquivalent(plan, billingPeriod))}/mes
                     </p>
                   )}
                   {!plan.isFree && showBcv && (
@@ -366,6 +385,9 @@ const Pricing = () => {
             </motion.div>
           ))}
         </motion.div>
+
+        {/* ═══ COMPARISON TABLE ═══ */}
+        <PlanComparison />
       </div>
     </section>
   );
