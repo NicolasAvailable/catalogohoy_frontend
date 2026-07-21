@@ -5,6 +5,7 @@ import { CATALOG_ADDON_PRICE, PlanStore } from '@catalogohoy/plan';
 import { TenantService } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { IconComponent } from '@ui';
+import { toast } from 'ngx-sonner';
 
 type SlugStatus = 'idle' | 'checking' | 'available' | 'taken';
 
@@ -110,7 +111,20 @@ export class CreateCatalog implements OnInit {
       .mapRight((catalog) => {
         window.location.href = `https://${catalog.slug}.catalogohoy.com/admin`;
       })
-      .mapLeft(() => {
+      .mapLeft((error) => {
+        // Nunca fallar en silencio: el error de la RPC llega con un código
+        // conocido (no_remaining_catalogs / slug_taken) o es inesperado.
+        const msg = error.message ?? '';
+        if (msg.includes('no_remaining_catalogs')) {
+          toast.error(
+            'Alcanzaste el límite de catálogos de tu plan. Compra un catálogo extra o mejora tu plan.'
+          );
+        } else if (msg.includes('slug_taken')) {
+          toast.error('Esa dirección de catálogo ya está ocupada. Prueba con otro nombre.');
+          this.slugStatus.set('taken');
+        } else {
+          toast.error('No se pudo crear el catálogo. Intenta de nuevo en unos minutos.');
+        }
         this.isSubmitting.set(false);
       });
   }

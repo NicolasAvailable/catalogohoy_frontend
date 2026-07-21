@@ -3,6 +3,8 @@ export * from './product-ai-excel.service';
 export * from './product-backup.type';
 export * from './product-import-export.type';
 export * from './product-list.model';
+export * from './product-pdf-import.type';
+export * from './product-pdf.service';
 export * from './product.model';
 export * from './product.service';
 export * from './product.type';
