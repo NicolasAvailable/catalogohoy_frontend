@@ -34,14 +34,14 @@ const PRICE_MAP: Record<string, Record<string, string>> = {
     annual:    "price_1TGfmg85rys2QLXdxnVflylM",
   },
   pro: {
-    monthly:   "__PRICE_PRO_MONTHLY__",
-    quarterly: "__PRICE_PRO_QUARTERLY__",
-    annual:    "__PRICE_PRO_ANNUAL__",
+    monthly:   "price_1Tvg9h85rys2QLXd18YBSdOk",
+    quarterly: "price_1Tvg9u85rys2QLXdaDdgvbii",
+    annual:    "price_1TvgA385rys2QLXdZTw9tolK",
   },
   avanzado: {
-    monthly:   "__PRICE_AVANZADO_MONTHLY__",
-    quarterly: "__PRICE_AVANZADO_QUARTERLY__",
-    annual:    "__PRICE_AVANZADO_ANNUAL__",
+    monthly:   "price_1TvgAE85rys2QLXdoNMJFJ6O",
+    quarterly: "price_1TvgAO85rys2QLXdfdTCu165",
+    annual:    "price_1TvgAZ85rys2QLXdhNuebVOL",
   },
 };
 

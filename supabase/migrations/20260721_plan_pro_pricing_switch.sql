@@ -2,11 +2,19 @@
 -- SWITCH DE PRICING: plan Pro $19.99 + Avanzado $29.99 + límite de órdenes
 -- del plan Gratis (Linear CAT-32 / CAT-35)
 --
--- ⚠️ EJECUTAR SOLO EN EL MOMENTO DEL SWITCH, coordinado con:
---   1. Precios creados en Stripe (CAT-33) → rellenar los __PRICE_*__ de abajo
---   2. Redeploy de supabase/functions/create-checkout-session (PRICE_MAP nuevo,
---      misma edición: los price IDs de ese archivo son los que REALMENTE cobran)
---   3. Deploy del commit "avanzado a 29.99" en la app (rama feat/plan-pro-switch)
+-- ⚠️ EJECUTAR SOLO EN EL MOMENTO DEL SWITCH. Runbook completo:
+--   1. ✅ Precios creados en Stripe (CAT-33, 2026-07-21) — IDs ya rellenados abajo.
+--   2. Ejecutar esta migración (dry-run BEGIN…ROLLBACK primero).
+--   3. Redeploy de supabase/functions/create-checkout-session (PRICE_MAP nuevo,
+--      misma edición: los price IDs de ese archivo son los que REALMENTE cobran).
+--   4. Mergear PR #3 (app: avanzado a 29.99) y PR #4 (landing 4 planes).
+--   5. RECIÉN DESPUÉS del redeploy de la función: archivar en Stripe los
+--      precios viejos de avanzado (price_1TGfmg…uNXYy9h3 / …H8DRmSqH /
+--      …BW7wZB1U, active=false). ⚠️ NO antes: un precio archivado rechaza
+--      checkouts nuevos y la función vieja aún los usa. Las suscripciones
+--      grandfathered siguen renovando sobre precios archivados sin problema.
+--   6. Actualizar el PRICE_MAP de setup-plan-currency-options (herramienta de
+--      mantenimiento de FX) con pro + los IDs nuevos de avanzado.
 --
 -- Grandfathering: NO se toca tenants.plan_id de nadie. Los avanzado existentes
 -- conservan ilimitado a $19.99 (Stripe ancla el precio viejo a sus subs; el
@@ -38,7 +46,7 @@ insert into public.plans (
 ) values (
   'pro', 'Pro', 'Para tiendas grandes que venden todos los días.', 19.99, 500, false, 2,
   1, 2, 10, 10, 0,
-  '__PRICE_PRO_MONTHLY__', '__PRICE_PRO_QUARTERLY__', '__PRICE_PRO_ANNUAL__'
+  'price_1Tvg9h85rys2QLXd18YBSdOk', 'price_1Tvg9u85rys2QLXdaDdgvbii', 'price_1TvgA385rys2QLXdZTw9tolK'
 );
 
 -- ─── 3) Avanzado a $29.99 (solo compras nuevas) ─────────────────────────────
@@ -48,9 +56,9 @@ insert into public.plans (
 -- create-checkout-session.
 update public.plans set
   price = 29.99,
-  stripe_price_id_monthly   = '__PRICE_AVANZADO_MONTHLY__',
-  stripe_price_id_quarterly = '__PRICE_AVANZADO_QUARTERLY__',
-  stripe_price_id_annual    = '__PRICE_AVANZADO_ANNUAL__'
+  stripe_price_id_monthly   = 'price_1TvgAE85rys2QLXdoNMJFJ6O',
+  stripe_price_id_quarterly = 'price_1TvgAO85rys2QLXdfdTCu165',
+  stripe_price_id_annual    = 'price_1TvgAZ85rys2QLXdhNuebVOL'
 where id = 'avanzado';
 
 -- ─── 4) Enforcement del límite de órdenes (trigger BEFORE INSERT) ───────────
