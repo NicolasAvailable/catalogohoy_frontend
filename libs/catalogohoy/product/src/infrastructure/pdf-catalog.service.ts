@@ -51,6 +51,16 @@ export class PdfCatalogService implements BaseProductPdfCatalogService {
    *  el builder de Angular no resuelve new URL() hacia node_modules. */
   private loadPdfJs(): Promise<PdfJsModule> {
     if (!this.pdfjsPromise) {
+      // zone.js reemplaza window.Promise por ZoneAwarePromise, que no trae
+      // Promise.try (ES2025); pdf.js v6 lo usa en el canal de mensajes con su
+      // worker y revienta con TypeError aunque el navegador sí lo soporte.
+      const P = Promise as unknown as {
+        try?: (fn: (...a: unknown[]) => unknown, ...args: unknown[]) => Promise<unknown>;
+      };
+      if (typeof P.try !== 'function') {
+        P.try = (fn, ...args) =>
+          new Promise((resolve) => resolve(fn(...args)));
+      }
       this.pdfjsPromise = import('pdfjs-dist').then((pdfjs) => {
         if (!pdfjs.GlobalWorkerOptions.workerSrc) {
           pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
