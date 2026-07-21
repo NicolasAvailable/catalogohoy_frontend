@@ -205,7 +205,11 @@ Deno.serve(async (req) => {
 
   await admin
     .from("chats")
-    .update({ last_message: persistContent, last_message_at: new Date().toISOString() })
+    .update({
+      last_message: persistContent,
+      last_message_at: new Date().toISOString(),
+      last_message_is_mine: true,
+    })
     .eq("id", chatId);
 
   return jsonResponse({ success: true, messageId, message: inserted });

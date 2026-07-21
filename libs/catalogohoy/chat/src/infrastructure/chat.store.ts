@@ -164,7 +164,9 @@ export const ChatStore = signalStore(
           isSendingMessage: true,
           replyingTo: null,
           chats: store.chats().map((c) =>
-            c.id === chatId ? { ...c, lastMessage: text, lastMessageAt: now } : c
+            c.id === chatId
+              ? { ...c, lastMessage: text, lastMessageAt: now, lastMessageIsMine: true }
+              : c
           ),
         });
 
@@ -193,7 +195,12 @@ export const ChatStore = signalStore(
               isSendingMessage: false,
               chats: store.chats().map((c) =>
                 c.id === chatId
-                  ? { ...c, lastMessage: msg.content, lastMessageAt: msg.createdAt }
+                  ? {
+                      ...c,
+                      lastMessage: msg.content,
+                      lastMessageAt: msg.createdAt,
+                      lastMessageIsMine: true,
+                    }
                   : c
               ),
             });
@@ -277,7 +284,12 @@ export const ChatStore = signalStore(
           replyingTo: null,
           chats: store.chats().map((c) =>
             c.id === chatId
-              ? { ...c, lastMessage: cap || '📷 Imagen', lastMessageAt: now }
+              ? {
+              ...c,
+              lastMessage: cap || '📷 Imagen',
+              lastMessageAt: now,
+              lastMessageIsMine: true,
+            }
               : c
           ),
         });
@@ -310,7 +322,12 @@ export const ChatStore = signalStore(
               isSendingMessage: false,
               chats: store.chats().map((c) =>
                 c.id === chatId
-                  ? { ...c, lastMessage: msg.content, lastMessageAt: msg.createdAt }
+                  ? {
+                      ...c,
+                      lastMessage: msg.content,
+                      lastMessageAt: msg.createdAt,
+                      lastMessageIsMine: true,
+                    }
                   : c
               ),
             });
@@ -390,6 +407,7 @@ export const ChatStore = signalStore(
                       ...c,
                       lastMessage: msg.content,
                       lastMessageAt: msg.createdAt,
+                      lastMessageIsMine: msg.isMine,
                       unreadCount:
                         !msg.isMine && !isSelected
                           ? c.unreadCount + 1

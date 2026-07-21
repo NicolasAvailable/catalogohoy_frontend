@@ -16,6 +16,7 @@ export class ChatMapper {
       customerPhone: raw['customer_phone'] as string | null,
       lastMessage: raw['last_message'] as string | null,
       lastMessageAt: raw['last_message_at'] as string | null,
+      lastMessageIsMine: (raw['last_message_is_mine'] as boolean | null) ?? null,
       unreadCount: (raw['unread_count'] as number) ?? 0,
       muted: (raw['muted'] as boolean) ?? false,
       createdAt: raw['created_at'] as string,

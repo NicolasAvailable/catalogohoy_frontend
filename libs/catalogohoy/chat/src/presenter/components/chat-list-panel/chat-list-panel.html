@@ -59,7 +59,16 @@
               </div>
               <div class="flex items-center justify-between gap-1 mt-1">
                 <span class="text-sm text-grey-400 truncate">
-                  {{ chat.lastMessage ?? ('Nueva conversación' | transloco) }}
+                  @if (chat.lastMessage) {
+                    @if (chat.lastMessageIsMine === true) {
+                      <span class="font-medium text-grey-500">{{ 'Tú' | transloco }}:</span>
+                    } @else if (chat.lastMessageIsMine === false && firstName(chat.customerName)) {
+                      <span class="font-medium text-grey-500">{{ firstName(chat.customerName) }}:</span>
+                    }
+                    {{ chat.lastMessage }}
+                  } @else {
+                    {{ 'Nueva conversación' | transloco }}
+                  }
                 </span>
                 <div class="flex items-center gap-1 shrink-0">
                   @if (chat.muted) {

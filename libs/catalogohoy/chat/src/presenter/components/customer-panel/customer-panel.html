@@ -12,7 +12,7 @@
         target="_blank"
         rel="noopener"
       >
-        <ui-icon name="phone" size="13" /> {{ c.customerPhone }}
+        <ui-icon name="phone" size="13" /> {{ c.customerPhone | phonePlus }}
       </a>
       }
     </div>
@@ -98,7 +98,7 @@
           <dt>{{ 'Fecha de creación' | transloco }}</dt>
           <dd>{{ formatDateTime(c.createdAt) }}</dd>
           <dt>{{ 'Teléfono' | transloco }}</dt>
-          <dd>{{ c.customerPhone || '—' }}</dd>
+          <dd>{{ c.customerPhone ? (c.customerPhone | phonePlus) : '—' }}</dd>
         </dl>
       </p-accordion-content>
     </p-accordion-panel>

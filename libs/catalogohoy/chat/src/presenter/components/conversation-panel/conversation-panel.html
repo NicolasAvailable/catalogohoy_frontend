@@ -23,10 +23,10 @@
         <p class="text-sm font-semibold text-grey-700 truncate">{{ chatStore.selectedChat()!.customerName }}</p>
         @if (chatStore.selectedChat()!.customerPhone) {
           <a
-            [href]="'tel:' + chatStore.selectedChat()!.customerPhone"
+            [href]="'tel:' + (chatStore.selectedChat()!.customerPhone | phonePlus)"
             class="text-xs text-primary-500 hover:underline"
           >
-            {{ chatStore.selectedChat()!.customerPhone }}
+            {{ chatStore.selectedChat()!.customerPhone | phonePlus }}
           </a>
         }
       </div>

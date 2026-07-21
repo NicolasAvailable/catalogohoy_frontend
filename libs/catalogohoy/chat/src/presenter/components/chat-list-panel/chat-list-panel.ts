@@ -37,6 +37,11 @@ export class ChatListPanelComponent {
     return date.toLocaleDateString('es', { day: '2-digit', month: '2-digit' });
   }
 
+  /** Primer nombre del contacto para el prefijo del preview ("Gaby: …"). */
+  firstName(name: string): string {
+    return (name ?? '').trim().split(/\s+/)[0] ?? '';
+  }
+
   initials(name: string): string {
     return name
       .split(' ')
