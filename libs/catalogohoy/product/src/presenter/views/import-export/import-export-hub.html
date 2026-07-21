@@ -812,6 +812,25 @@
       }
     </div>
 
+    <!-- IA: identificar las fotos sin asignar (opt-in, cobra créditos) -->
+    @if (photoUnassignedCount() > 0) {
+    <div class="flex items-center justify-between gap-3 rounded-xl border border-purple-200 bg-purple-50/50 px-3 py-2">
+      <div class="flex items-center gap-2 text-sm text-purple-700 min-w-0">
+        <ui-icon name="sparkles" styleClass="w-4 h-4 shrink-0" />
+        <span class="truncate">{{ 'La IA puede identificar a qué producto pertenece cada foto (1 crédito por foto).' | transloco }}</span>
+      </div>
+      <ui-button
+        [label]="('Identificar con IA' | transloco) + ' (' + photoUnassignedCount() + ')'"
+        icon="sparkles"
+        size="small"
+        [fluid]="false"
+        [isLoading]="aiIdentifying()"
+        [disabled]="aiIdentifying()"
+        (click)="identifyWithAi()"
+      />
+    </div>
+    }
+
     <div class="max-h-96 overflow-auto border border-gray-100 rounded-xl divide-y divide-gray-50">
       @for (item of photoItems(); track item.previewUrl; let i = $index) {
       <div class="flex items-center gap-3 p-3">
@@ -826,6 +845,8 @@
           <span class="text-[11px] font-semibold text-green-600">{{ 'Match por SKU' | transloco }}</span>
           } @else if (item.method === 'nombre') {
           <span class="text-[11px] font-semibold text-blue-600">{{ 'Match por nombre' | transloco }}</span>
+          } @else if (item.method === 'ia') {
+          <span class="text-[11px] font-semibold text-purple-600">{{ 'Identificada con IA' | transloco }}</span>
           } @else if (item.method === 'manual') {
           <span class="text-[11px] font-semibold text-gray-500">{{ 'Asignación manual' | transloco }}</span>
           } @else {

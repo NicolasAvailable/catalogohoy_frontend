@@ -1871,5 +1871,8 @@
   "Subiendo fotos...": "Uploading photos...",
   "Fotos aplicadas": "Photos applied",
   "Aplicadas": "Applied",
-  "Por límite del plan": "Over plan limit"
+  "Por límite del plan": "Over plan limit",
+  "La IA puede identificar a qué producto pertenece cada foto (1 crédito por foto).": "AI can identify which product each photo belongs to (1 credit per photo).",
+  "Identificar con IA": "Identify with AI",
+  "Identificada con IA": "Identified by AI"
 }

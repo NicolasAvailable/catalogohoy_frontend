@@ -34,6 +34,7 @@ import {
   ProductExcelRow,
 } from '../../../domain';
 import {
+  AiImageService,
   ProductAiExcelService,
   ProductBackupService,
   ProductExcelService,
@@ -63,7 +64,7 @@ interface PhotoImportItem {
   file: File;
   previewUrl: string;
   productId: string | null;
-  method: 'sku' | 'nombre' | 'manual' | null;
+  method: 'sku' | 'nombre' | 'ia' | 'manual' | null;
 }
 
 /** Opción de producto para asignar fotos (con miniatura actual). */
@@ -116,6 +117,7 @@ export class ImportExportHubComponent {
   private readonly excelService = inject(ProductExcelService);
   private readonly aiExcelService = inject(ProductAiExcelService);
   private readonly backupService = inject(ProductBackupService);
+  private readonly aiImageService = inject(AiImageService);
   private readonly uploaderService = inject(UploaderService);
   private readonly categoryStore = inject(CategoryStore);
   private readonly planStore = inject(PlanStore);
@@ -634,6 +636,102 @@ export class ImportExportHubComponent {
       URL.revokeObjectURL(next[index]?.previewUrl ?? '');
       next.splice(index, 1);
       return next;
+    });
+  }
+
+  // ── Identificación con IA (Fase 2) ───────────────────────────────────────
+  public readonly aiIdentifying = signal(false);
+
+  /** Manda las fotos SIN asignar a la IA (miniaturas + lista de productos del
+   *  tenant) para que identifique a qué producto pertenece cada una. Cobra
+   *  1 crédito de IA por foto. Lotes de a 20. */
+  public async identifyWithAi(): Promise<void> {
+    if (this.aiIdentifying()) return;
+    const unassigned = this.photoItems()
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.productId === null);
+    if (!unassigned.length) return;
+
+    this.aiIdentifying.set(true);
+    const products = this.photoProducts().map((o) => ({
+      id: o.id,
+      name: o.name,
+      sku: o.sku,
+    }));
+    let identified = 0;
+
+    for (let start = 0; start < unassigned.length; start += 20) {
+      const batch = unassigned.slice(start, start + 20);
+      const images: { id: string; data: string }[] = [];
+      const indexById = new Map<string, number>();
+      for (let b = 0; b < batch.length; b++) {
+        const data = await this.photoThumbnailB64(batch[b].item.file);
+        if (!data) continue;
+        const id = `p${start + b}`;
+        images.push({ id, data });
+        indexById.set(id, batch[b].index);
+      }
+      if (!images.length) continue;
+
+      const result = await this.aiImageService.matchPhotos(images, products);
+      if (result.isLeft()) {
+        // Cortar (no quemar más lotes si p. ej. se acabaron los créditos).
+        toast.error(result.value.message);
+        break;
+      }
+      this.photoItems.update((items) => {
+        const next = [...items];
+        for (const m of result.value) {
+          const idx = indexById.get(m.id);
+          if (idx === undefined || !m.productId) continue;
+          // No pisar una asignación hecha a mano mientras corría la IA.
+          if (next[idx].productId !== null) continue;
+          next[idx] = { ...next[idx], productId: m.productId, method: 'ia' };
+          identified++;
+        }
+        return next;
+      });
+    }
+
+    this.aiIdentifying.set(false);
+    if (identified > 0) {
+      toast.success(`La IA identificó ${identified} foto(s)`);
+    } else {
+      toast.info('La IA no pudo identificar ninguna foto con seguridad.');
+    }
+  }
+
+  /** Miniatura JPEG base64 (sin prefijo) para mandar a la IA — chica y barata
+   *  en tokens; no hace falta subir la foto original para identificarla. */
+  private photoThumbnailB64(file: File, maxSide = 384): Promise<string | null> {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.width * scale));
+          canvas.height = Math.max(1, Math.round(img.height * scale));
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(null);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          resolve(dataUrl.split(',')[1] ?? null);
+        } catch {
+          resolve(null);
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+      img.src = url;
     });
   }
 
