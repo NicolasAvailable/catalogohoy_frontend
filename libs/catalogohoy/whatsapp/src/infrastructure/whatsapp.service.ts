@@ -6,6 +6,7 @@ import {
   EmbeddedSignupPayload,
   WhatsAppAccount,
   WhatsAppAccountMapper,
+  WhatsAppConnectChecklist,
 } from '../domain';
 
 @Injectable({
@@ -82,6 +83,41 @@ export class WhatsAppService {
     }
 
     return E.right(WhatsAppAccountMapper.toDomain(data.account));
+  }
+
+  /** Lista de verificación previa a conectar: Meta puede revisar el negocio
+   *  durante el onboarding, así que chequeamos que el catálogo esté
+   *  presentable. `is_hidden` puede ser null en filas viejas → `not is true`. */
+  async getConnectChecklist(
+    tenantId: number
+  ): Promise<E.Either<Error, WhatsAppConnectChecklist>> {
+    const [products, config, tenant] = await Promise.all([
+      this.client
+        .from('products')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .not('is_hidden', 'is', true),
+      this.client
+        .from('tenant_ecommerce_config')
+        .select('is_visible')
+        .eq('tenant_id', tenantId)
+        .maybeSingle(),
+      this.client
+        .from('tenants')
+        .select('custom_domain')
+        .eq('id', tenantId)
+        .maybeSingle(),
+    ]);
+
+    if (products.error) {
+      return E.left(new Error(products.error.message));
+    }
+
+    return E.right({
+      visibleProducts: products.count ?? 0,
+      isCatalogPublic: config.data?.is_visible ?? true,
+      hasCustomDomain: !!tenant.data?.custom_domain,
+    });
   }
 
   async updateAccount(

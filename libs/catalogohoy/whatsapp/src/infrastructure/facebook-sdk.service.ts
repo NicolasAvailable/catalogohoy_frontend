@@ -36,12 +36,30 @@ export interface EmbeddedSignupData {
 
 export interface EmbeddedSignupEvent {
   type: 'WA_EMBEDDED_SIGNUP';
-  event: 'FINISH' | 'FINISH_ONLY_WABA' | 'CANCEL' | 'ERROR';
+  event:
+    | 'FINISH'
+    | 'FINISH_ONLY_WABA'
+    | 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'
+    | 'CANCEL'
+    | 'ERROR';
   data: EmbeddedSignupData & {
     current_step?: string;
     error_message?: string;
   };
 }
+
+/** Cómo se conecta el número del comerciante:
+ *  - `coexistence`: conserva su app WhatsApp Business en el teléfono y los
+ *    mensajes se espejan con el CRM (flujo con QR; requiere app 2.24.17+ y
+ *    número con 7+ días de actividad).
+ *  - `dedicated`: el número pasa a ser exclusivo de la Cloud API (flujo
+ *    estándar de Embedded Signup). */
+export type WhatsAppConnectMode = 'coexistence' | 'dedicated';
+
+/** Literal del flujo de coexistencia (doc Meta "Onboarding WhatsApp Business
+ *  app users"). ⚠️ Verificar en el primer test real: si Meta lo renombró, el
+ *  popup abre el flujo estándar en vez del de coexistencia. */
+const COEXISTENCE_FEATURE_TYPE = 'whatsapp_business_app_onboarding';
 
 @Injectable({ providedIn: 'root' })
 export class FacebookSdkService {
@@ -78,11 +96,21 @@ export class FacebookSdkService {
     });
   }
 
-  launchEmbeddedSignup(): Promise<FacebookLoginResponse> {
+  launchEmbeddedSignup(
+    mode: WhatsAppConnectMode = 'dedicated'
+  ): Promise<FacebookLoginResponse> {
     return new Promise((resolve, reject) => {
       if (!window.FB) {
         reject(new Error('Facebook SDK not loaded'));
         return;
+      }
+
+      const extras: Record<string, unknown> = {
+        setup: {},
+        sessionInfoVersion: '3',
+      };
+      if (mode === 'coexistence') {
+        extras['featureType'] = COEXISTENCE_FEATURE_TYPE;
       }
 
       window.FB.login(
@@ -91,9 +119,7 @@ export class FacebookSdkService {
           config_id: environment.whatsapp.facebookConfigId,
           response_type: 'code',
           override_default_response_type: true,
-          extras: {
-            sessionInfoVersion: '3',
-          },
+          extras,
         }
       );
     });

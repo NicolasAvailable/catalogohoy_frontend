@@ -38,8 +38,7 @@
         label="Conectar a WhatsApp Business"
         icon="log-in"
         [isLoading]="whatsAppStore.isConnecting()"
-        [disabled]="!sdkReady()"
-        (click)="connectWithFacebook()"
+        (click)="goToConnect()"
         styleClass="w-full !bg-[#25D366] !border-[#25D366] hover:!bg-[#1FB855]"
       />
 

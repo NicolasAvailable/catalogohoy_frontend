@@ -1,0 +1,262 @@
+<div class="w-full max-w-3xl mx-auto p-4 md:p-6 flex flex-col gap-5">
+  <!-- ═══ Header ═══ -->
+  <div class="flex items-center gap-3">
+    <button
+      type="button"
+      class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-grey-50 transition-colors shrink-0"
+      (click)="goBack()"
+    >
+      <ui-icon name="arrow-left" size="20" styleClass="text-grey-600" />
+    </button>
+    <h1 class="text-xl md:text-2xl font-bold text-grey-800">
+      {{ 'Conectar a WhatsApp Business' | transloco }}
+    </h1>
+  </div>
+
+  <!-- ═══ Card: modo de conexión ═══ -->
+  <div class="bg-white rounded-2xl border border-grey-100 p-5">
+    <h2 class="text-base font-semibold text-grey-800 mb-4">
+      {{ '¿Cómo quieres chatear con tus clientes?' | transloco }}
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <!-- Coexistencia (recomendada, preseleccionada) -->
+      <button
+        type="button"
+        class="text-left rounded-xl border-2 p-4 transition-colors"
+        [class.border-grey-800]="mode() === 'coexistence'"
+        [class.border-grey-100]="mode() !== 'coexistence'"
+        [class.hover:border-grey-300]="mode() !== 'coexistence'"
+        (click)="setMode('coexistence')"
+      >
+        <div class="flex items-start gap-3">
+          <span
+            class="mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0"
+            [class.border-grey-800]="mode() === 'coexistence'"
+            [class.border-grey-300]="mode() !== 'coexistence'"
+          >
+            @if (mode() === 'coexistence') {
+            <span class="w-2.5 h-2.5 rounded-full bg-grey-800"></span>
+            }
+          </span>
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-grey-800 leading-snug">
+              {{ 'Ambos: mi teléfono y la bandeja de CatalogoHoy' | transloco }}
+            </p>
+            <ul class="mt-2 flex flex-col gap-1">
+              <li class="flex items-center gap-1.5 text-xs text-grey-500">
+                <ui-icon name="check" size="14" styleClass="text-green-600 shrink-0" />
+                {{ 'Bandeja de entrada de CatalogoHoy' | transloco }}
+              </li>
+              <li class="flex items-center gap-1.5 text-xs text-grey-500">
+                <ui-icon name="check" size="14" styleClass="text-green-600 shrink-0" />
+                {{ 'Aplicación de WhatsApp en tu teléfono' | transloco }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </button>
+
+      <!-- Solo API -->
+      <button
+        type="button"
+        class="text-left rounded-xl border-2 p-4 transition-colors"
+        [class.border-grey-800]="mode() === 'dedicated'"
+        [class.border-grey-100]="mode() !== 'dedicated'"
+        [class.hover:border-grey-300]="mode() !== 'dedicated'"
+        (click)="setMode('dedicated')"
+      >
+        <div class="flex items-start gap-3">
+          <span
+            class="mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0"
+            [class.border-grey-800]="mode() === 'dedicated'"
+            [class.border-grey-300]="mode() !== 'dedicated'"
+          >
+            @if (mode() === 'dedicated') {
+            <span class="w-2.5 h-2.5 rounded-full bg-grey-800"></span>
+            }
+          </span>
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-grey-800 leading-snug">
+              {{ 'Solo la bandeja de CatalogoHoy' | transloco }}
+            </p>
+            <ul class="mt-2 flex flex-col gap-1">
+              <li class="flex items-center gap-1.5 text-xs text-grey-500">
+                <ui-icon name="check" size="14" styleClass="text-green-600 shrink-0" />
+                {{ 'Bandeja de entrada de CatalogoHoy' | transloco }}
+              </li>
+              <li class="flex items-center gap-1.5 text-xs text-grey-500">
+                <ui-icon name="x" size="14" styleClass="text-red-400 shrink-0" />
+                {{ 'Aplicación de WhatsApp en tu teléfono' | transloco }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </button>
+    </div>
+
+    @if (mode() === 'coexistence') {
+    <!-- Aviso: requisitos de coexistencia -->
+    <div class="mt-4 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
+      <p class="text-xs text-amber-800 leading-relaxed">
+        <strong>{{ '¿Usas WhatsApp personal?' | transloco }}</strong>
+        {{ 'Convierte tu cuenta a WhatsApp Business antes de continuar.' | transloco }}
+        {{ 'Necesitas la app WhatsApp Business actualizada (2.24.17 o superior) y que tu número tenga al menos 7 días de actividad en ella.' | transloco }}
+      </p>
+    </div>
+    }
+  </div>
+
+  <!-- ═══ Card: lista de verificación ═══ -->
+  <div class="bg-white rounded-2xl border border-grey-100 p-5">
+    <h2 class="text-base font-semibold text-grey-800 mb-1">
+      {{ 'Lista de verificación' | transloco }}
+    </h2>
+    <p class="text-xs text-grey-400 mb-4">
+      {{ 'Meta puede revisar tu negocio durante la conexión. Deja tu catálogo presentable para que pase sin problemas.' | transloco }}
+    </p>
+
+    <div class="flex flex-col divide-y divide-grey-50">
+      <!-- 1. Productos visibles -->
+      <div class="flex items-start gap-3 py-4 first:pt-0">
+        @if ((checklist()?.visibleProducts ?? 0) >= minProducts) {
+        <ui-icon name="check-circle" size="20" styleClass="text-green-600 shrink-0 mt-0.5" />
+        } @else {
+        <ui-icon name="circle-alert" size="20" styleClass="text-amber-500 shrink-0 mt-0.5" />
+        }
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold text-grey-800">
+            {{ 'Ten al menos 3 productos visibles' | transloco }}
+          </p>
+          <p class="text-xs text-grey-500 mt-1 leading-relaxed">
+            {{ 'Meta revisa tu tienda pública durante la incorporación.' | transloco }}
+            @if (!isLoadingChecklist()) {
+            {{ 'Actualmente tienes' | transloco }}
+            <strong>{{ checklist()?.visibleProducts ?? 0 }}</strong>
+            {{ 'productos visibles.' | transloco }}
+            }
+          </p>
+          @if ((checklist()?.visibleProducts ?? 0) < minProducts) {
+          <ui-button
+            label="Añadir productos"
+            severity="secondary"
+            size="small"
+            styleClass="mt-2"
+            (click)="goToProducts()"
+          />
+          }
+        </div>
+      </div>
+
+      <!-- 2. Catálogo público -->
+      <div class="flex items-start gap-3 py-4">
+        @if (checklist()?.isCatalogPublic) {
+        <ui-icon name="check-circle" size="20" styleClass="text-green-600 shrink-0 mt-0.5" />
+        } @else {
+        <ui-icon name="circle-alert" size="20" styleClass="text-amber-500 shrink-0 mt-0.5" />
+        }
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold text-grey-800">
+            {{ 'Haz tu catálogo público' | transloco }}
+          </p>
+          <p class="text-xs text-grey-500 mt-1 leading-relaxed">
+            {{ 'Meta necesita poder ver tu catálogo durante la revisión. Los catálogos ocultos no pueden continuar.' | transloco }}
+          </p>
+          @if (checklist() && !checklist()?.isCatalogPublic) {
+          <ui-button
+            label="Ir a configuración"
+            severity="secondary"
+            size="small"
+            styleClass="mt-2"
+            (click)="goToCatalogConfig()"
+          />
+          }
+        </div>
+      </div>
+
+      <!-- 3. Dominio personalizado (opcional) -->
+      <div class="flex items-start gap-3 py-4">
+        @if (checklist()?.hasCustomDomain) {
+        <ui-icon name="check-circle" size="20" styleClass="text-green-600 shrink-0 mt-0.5" />
+        } @else {
+        <ui-icon name="circle" size="20" styleClass="text-grey-300 shrink-0 mt-0.5" />
+        }
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold text-grey-800">
+            {{ 'Añade un dominio personalizado (opcional)' | transloco }}
+          </p>
+          <p class="text-xs text-grey-500 mt-1 leading-relaxed">
+            {{ 'Un dominio propio ayuda a Meta a asociar tu tienda con la identidad de tu negocio y puede agilizar la revisión.' | transloco }}
+          </p>
+        </div>
+      </div>
+
+      <!-- 4. Políticas de Meta -->
+      <div class="flex items-start gap-3 py-4 last:pb-0">
+        @if (policiesAccepted()) {
+        <ui-icon name="check-circle" size="20" styleClass="text-green-600 shrink-0 mt-0.5" />
+        } @else {
+        <ui-icon name="circle" size="20" styleClass="text-grey-300 shrink-0 mt-0.5" />
+        }
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold text-grey-800">
+            {{ 'Revisa las políticas de Meta' | transloco }}
+          </p>
+          <p class="text-xs text-grey-500 mt-1 leading-relaxed">
+            {{ 'Meta puede revisar tu cuenta de WhatsApp Business y tu catálogo durante la incorporación. Verifica que tu negocio cumpla sus políticas antes de continuar.' | transloco }}
+          </p>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+            <a
+              href="https://www.facebook.com/policies_center/commerce"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              {{ 'Política comercial de Meta' | transloco }}
+              <ui-icon name="external-link" size="12" />
+            </a>
+            <a
+              href="https://business.whatsapp.com/policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              {{ 'Política de WhatsApp Business' | transloco }}
+              <ui-icon name="external-link" size="12" />
+            </a>
+          </div>
+          <label class="flex items-center gap-2 mt-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              class="w-4 h-4 rounded border-grey-300 accent-grey-800"
+              [checked]="policiesAccepted()"
+              (change)="togglePolicies()"
+            />
+            <span class="text-xs text-grey-600">
+              {{ 'Confirmo que mi negocio cumple las políticas de Meta' | transloco }}
+            </span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Footer: conectar ═══ -->
+  <div class="flex flex-col items-end gap-2 pb-6">
+    <ui-button
+      label="Conectar con Facebook"
+      icon="log-in"
+      [isLoading]="whatsAppStore.isConnecting()"
+      [disabled]="!canConnect()"
+      (click)="connect()"
+    />
+    @if (!policiesAccepted()) {
+    <p class="text-xs text-grey-400">
+      {{ 'Confirma las políticas de Meta para continuar.' | transloco }}
+    </p>
+    }
+    @if (whatsAppStore.error()) {
+    <p class="text-sm text-red-500">{{ whatsAppStore.error() }}</p>
+    }
+  </div>
+</div>
