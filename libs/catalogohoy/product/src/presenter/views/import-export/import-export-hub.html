@@ -3,7 +3,7 @@
   [closable]="true"
   [dismissableMask]="true"
   (close)="close()"
-  styleClass="w-full max-w-3xl rounded-2xl! overflow-hidden"
+  styleClass="w-full max-w-4xl rounded-2xl! overflow-hidden"
 >
   <!-- HUB VIEW (export + import) -->
   @if (view() === 'hub') {
@@ -21,7 +21,7 @@
         type="button"
         (click)="onExport()"
         [disabled]="isFreePlan()"
-        class="relative flex flex-col items-center gap-3 p-8 border-2 border-gray-100 rounded-2xl transition-all"
+        class="relative flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl transition-all"
         [class.cursor-pointer]="!isFreePlan()"
         [class.hover:border-primary-400]="!isFreePlan()"
         [class.hover:bg-primary-50]="!isFreePlan()"
@@ -44,9 +44,9 @@
           {{ (isFreePlan() ? 'Disponible en planes pagos' : 'Escribinos por WhatsApp y te enviamos todos tus productos en un archivo de Excel') | transloco }}
         </p>
         <span
-          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold"
+          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold whitespace-nowrap"
         >
-          <img src="/images/whatsapp.svg" alt="" class="w-3.5 h-3.5" />
+          <img src="/images/whatsapp.svg" alt="" class="w-3.5 h-3.5 shrink-0" />
           {{ 'Solicitar por WhatsApp' | transloco }}
         </span>
       </button>
@@ -55,7 +55,7 @@
       <button
         type="button"
         (click)="onImport()"
-        class="flex flex-col items-center gap-3 p-8 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
       >
         <div class="w-14 h-14 bg-primary-50 rounded-full flex items-center justify-center">
           <ui-icon name="upload" styleClass="size-7 text-primary-600" />
@@ -65,15 +65,15 @@
           {{ 'Trae tus productos desde Excel, Google Sheets o un catálogo en PDF.' | transloco }}
         </p>
         <span
-          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold"
+          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold whitespace-nowrap"
         >
-          <img src="/images/excel.svg" alt="Excel" class="w-3.5 h-3.5" />
+          <img src="/images/excel.svg" alt="Excel" class="w-3.5 h-3.5 shrink-0" />
           Excel
           <span class="text-primary-300">·</span>
-          <img src="/images/google-sheets.svg" alt="Google Sheets" class="w-3.5 h-3.5" />
+          <img src="/images/google-sheets.svg" alt="Google Sheets" class="w-3.5 h-3.5 shrink-0" />
           Sheets
           <span class="text-primary-300">·</span>
-          <ui-icon name="file-text" styleClass="w-3.5 h-3.5 text-primary-500" />
+          <img src="/images/pdf.svg" alt="PDF" class="w-3.5 h-3.5 shrink-0" />
           PDF
         </span>
       </button>
@@ -82,7 +82,7 @@
       <button
         type="button"
         (click)="openPhotosImport()"
-        class="flex flex-col items-center gap-3 p-8 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
       >
         <div class="w-14 h-14 bg-primary-50 rounded-full flex items-center justify-center">
           <ui-icon name="image" styleClass="size-7 text-primary-600" />
@@ -92,7 +92,7 @@
           {{ 'Sube muchas fotos de una vez y asígnalas a tus productos.' | transloco }}
         </p>
         <span
-          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold"
+          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold whitespace-nowrap"
         >
           <ui-icon name="image" styleClass="size-3.5 text-primary-600" />
           JPG · PNG
@@ -141,7 +141,7 @@
       <button
         type="button"
         (click)="view.set('import-upload')"
-        class="flex flex-col items-center gap-3 p-8 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
       >
         <img src="/images/excel.svg" alt="Microsoft Excel" class="w-14 h-14" />
         <h3 class="text-lg font-bold text-gray-900">Microsoft Excel</h3>
@@ -154,7 +154,7 @@
       <button
         type="button"
         (click)="view.set('import-gsheet')"
-        class="flex flex-col items-center gap-3 p-8 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
       >
         <img src="/images/google-sheets.svg" alt="Google Sheets" class="w-14 h-14" />
         <h3 class="text-lg font-bold text-gray-900">Google Sheets</h3>
@@ -167,7 +167,7 @@
       <button
         type="button"
         (click)="view.set('pdf-upload')"
-        class="relative flex flex-col items-center gap-3 p-8 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+        class="relative flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
       >
         <span
           class="absolute top-3 right-3 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-500 text-[10px] font-semibold leading-none"
@@ -175,9 +175,7 @@
           <ui-icon name="sparkles" styleClass="size-3 text-primary-500" />
           IA
         </span>
-        <div class="w-14 h-14 bg-primary-50 rounded-full flex items-center justify-center">
-          <ui-icon name="file-text" styleClass="size-7 text-primary-500" />
-        </div>
+        <img src="/images/pdf.svg" alt="PDF" class="w-14 h-14" />
         <h3 class="text-lg font-bold text-gray-900">{{ 'Catálogo en PDF' | transloco }}</h3>
         <p class="text-sm text-gray-500 text-center">
           {{ 'La IA lee tu catálogo: productos, precios y hasta las fotos.' | transloco }}
@@ -197,9 +195,7 @@
       >
         <ui-icon name="arrow-left" styleClass="w-5 h-5" />
       </button>
-      <div class="w-8 h-8 bg-primary-50 rounded-lg flex items-center justify-center">
-        <ui-icon name="file-text" styleClass="w-5 h-5 text-primary-500" />
-      </div>
+      <img src="/images/pdf.svg" alt="PDF" class="w-8 h-8" />
       <h2 class="text-2xl font-bold text-gray-900">{{ 'Catálogo en PDF' | transloco }}</h2>
     </div>
     <p class="text-sm text-gray-500 -mt-3">
@@ -249,9 +245,7 @@
   <!-- PDF CONFIRM VIEW (costo antes de llamar a la IA) -->
   @if (view() === 'pdf-confirm') {
   <section class="flex flex-col items-center gap-6 p-10 text-center">
-    <div class="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center">
-      <ui-icon name="file-text" styleClass="w-8 h-8 text-primary-500" />
-    </div>
+    <img src="/images/pdf.svg" alt="PDF" class="w-14 h-14" />
     <div>
       <h2 class="text-xl font-bold text-gray-900">{{ pdfFileName() }}</h2>
       <p class="text-gray-500 mt-2 max-w-md">
