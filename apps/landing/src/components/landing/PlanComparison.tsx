@@ -20,6 +20,7 @@ const planColumns = [
 
 const rows: ComparisonRow[] = [
   { label: "Productos", values: ["10", "100", "500", "Ilimitados"] },
+  { label: "Órdenes por mes", values: ["25", "Ilimitadas", "Ilimitadas", "Ilimitadas"] },
   { label: "Catálogos", values: ["1", "1", "1", "2 (ampliable con extras)"] },
   { label: "Miembros de equipo", values: ["0", "1", "2", "10"] },
   { label: "Variantes por producto", values: ["1", "3", "10", "15"] },

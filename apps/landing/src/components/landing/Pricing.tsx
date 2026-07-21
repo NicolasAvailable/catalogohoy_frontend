@@ -60,6 +60,7 @@ const plans: PlanData[] = [
     maxTeamMembers: 0,
     features: [
       { label: "1 catálogo" },
+      { label: "Hasta 25 órdenes por mes" },
       { label: "15 créditos de IA por mes" },
       { label: "1 reporte por mes" },
       { label: "Sin analíticas del catálogo", negative: true },
@@ -76,6 +77,7 @@ const plans: PlanData[] = [
     maxProducts: 100,
     maxTeamMembers: 1,
     features: [
+      { label: "Órdenes ilimitadas" },
       { label: "Analíticas del catálogo" },
       { label: "Notificaciones WhatsApp de órdenes" },
       { label: "200 créditos de IA por mes" },
