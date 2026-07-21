@@ -1,0 +1,60 @@
+<audio
+  #audioEl
+  [src]="src()"
+  preload="metadata"
+  (loadedmetadata)="onLoadedMetadata()"
+  (timeupdate)="onTimeUpdate()"
+  (play)="playing.set(true)"
+  (pause)="playing.set(false)"
+  (ended)="onEnded()"
+  class="hidden"
+></audio>
+
+<div class="flex items-center gap-2 w-64 max-w-full select-none">
+  <!-- Play / pausa -->
+  <button
+    type="button"
+    (click)="toggle()"
+    class="w-8 h-8 -ml-1 flex items-center justify-center shrink-0 cursor-pointer transition-opacity hover:opacity-80"
+    [class]="onPrimary() ? 'text-white' : 'text-grey-500'"
+  >
+    @if (playing()) {
+    <ui-icon name="pause" size="22" />
+    } @else {
+    <ui-icon name="play" size="22" />
+    }
+  </button>
+
+  <!-- Progreso + tiempo -->
+  <div class="flex-1 min-w-0 flex flex-col gap-1.5 pt-1">
+    <input
+      type="range"
+      class="track"
+      [class.track-light]="onPrimary()"
+      min="0"
+      [max]="duration() || 0.1"
+      step="0.05"
+      [value]="currentTime()"
+      [style.--p]="progress() + '%'"
+      (input)="seek($event)"
+    />
+    <div
+      class="flex items-center justify-between leading-none"
+      [class]="onPrimary() ? 'text-primary-100' : 'text-grey-400'"
+    >
+      <span class="text-[0.625rem] tabular-nums">{{ format(displayTime()) }}</span>
+      <button
+        type="button"
+        (click)="cycleRate()"
+        class="text-[0.625rem] font-bold cursor-pointer rounded-full px-1.5 py-0.5 transition-colors"
+        [class]="
+          onPrimary()
+            ? 'bg-white/20 text-white hover:bg-white/30'
+            : 'bg-grey-100 text-grey-600 hover:bg-grey-200'
+        "
+      >
+        {{ rate() }}×
+      </button>
+    </div>
+  </div>
+</div>
