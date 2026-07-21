@@ -8,9 +8,15 @@ export type PaymentCurrency =
   | 'dop' | 'gtq' | 'gyd' | 'htg' | 'hnl' | 'jmd' | 'mxn' | 'nio' | 'pen'
   | 'pyg' | 'uyu' | 'bsd' | 'bbd' | 'bzd' | 'srd' | 'ttd';
 
-/** Base monthly price per plan (USD) */
+/** Base monthly price per plan (USD).
+ *  ⚠️ Display/gate only — el cobro real sale del PRICE_MAP hardcodeado en la
+ *  edge function `create-checkout-session`. Cambios de precio = actualizar
+ *  AMBOS y deployarlos juntos.
+ *  Nota switch pricing 2026-07: avanzado pasa a 29.99 en el commit del switch
+ *  (junto con la fila `pro` en DB + redeploy de la edge function). */
 export const PLAN_BASE_PRICES: Record<string, number> = {
   basico: 9.99,
+  pro: 19.99,
   avanzado: 19.99,
 };
 

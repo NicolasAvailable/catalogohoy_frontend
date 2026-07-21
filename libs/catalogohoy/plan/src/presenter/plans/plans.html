@@ -33,7 +33,7 @@
     </div>
   </header>
 
-  <div class="plans-grid" [class.plans-grid--four]="showEnterpriseCard()">
+  <div class="plans-grid" [class.plans-grid--four]="gridCardCount() >= 4">
     <!-- Skeletons: los planes vienen de Supabase; sin esto la card Enterprise
          (estática) aparece sola mientras el resto carga. -->
     @if (isLoadingPlans()) {

@@ -64,13 +64,42 @@ const CHECKOUT_FEATURES: Record<string, FeatureSection[]> = {
       items: ['Soporte prioritario', 'Actualizaciones incluidas'],
     },
   ],
-  avanzado: [
+  pro: [
     {
       title: 'Tu catálogo',
       items: [
         '1 catálogo digital',
-        '∞ productos (ilimitados)',
+        'Hasta 500 productos',
         'Todo lo del Plan Básico',
+        'Código QR descargable',
+        'Compartir por WhatsApp',
+        'Todos los módulos disponibles',
+      ],
+    },
+    {
+      title: 'Equipo',
+      items: ['Hasta 2 miembros de equipo', 'Permisos por módulo'],
+    },
+    {
+      title: 'Analíticas',
+      items: [
+        'Analíticas avanzadas',
+        'Visitas al catálogo',
+        'Hasta 20 reportes por mes',
+      ],
+    },
+    {
+      title: 'Soporte',
+      items: ['Soporte prioritario', 'Actualizaciones incluidas'],
+    },
+  ],
+  avanzado: [
+    {
+      title: 'Tu catálogo',
+      items: [
+        '2 catálogos digitales',
+        '∞ productos (ilimitados)',
+        'Todo lo del Plan Pro',
         'Vinculación de dominio personalizado (el dominio se adquiere por separado)',
         'Código QR descargable',
         'Compartir por WhatsApp',
