@@ -24,7 +24,7 @@ import {
   PRODUCTS_MENU,
   TEAMS_MENU,
 } from './sidebar.constants';
-import { CHAT_ENABLED_SLUGS } from '../../../modules/admin/chat-enabled.guard';
+import { CHAT_ENABLED_PLANS, CHAT_ENABLED_SLUGS, CHAT_PLAN_GATING_LIVE } from '../../../modules/admin/chat-enabled.guard';
 
 @Component({
   selector: 'app-sidebar',
@@ -145,13 +145,17 @@ export class Sidebar {
     getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || ''
   );
 
-  /** Chats / CRM de WhatsApp: liberado por catálogo mientras Meta revisa la
-   *  app (App Review). Solo los slugs de {@link CHAT_ENABLED_SLUGS} ven el
-   *  módulo; el resto de los comerciantes no lo ve hasta el lanzamiento
-   *  general. La misma lista gatea la ruta (chatEnabledGuard). */
-  public readonly canViewChat = computed(() =>
-    CHAT_ENABLED_SLUGS.includes(this.currentTenantSlug())
-  );
+  /** Chats / CRM de WhatsApp: visible para la allowlist interna
+   *  ({@link CHAT_ENABLED_SLUGS}) o para los planes incluidos
+   *  ({@link CHAT_ENABLED_PLANS}, Pro/Avanzado/Enterprise) con plan vigente.
+   *  El guard de la ruta (chatEnabledGuard) aplica la misma regla. */
+  public readonly canViewChat = computed(() => {
+    if (CHAT_ENABLED_SLUGS.includes(this.currentTenantSlug())) return true;
+    if (!CHAT_PLAN_GATING_LIVE) return false;
+    const plan = this.planStore.currentPlan();
+    if (!plan || !CHAT_ENABLED_PLANS.includes(plan.id)) return false;
+    return !(this.planStore.tenantPlanUsage()?.planExpired ?? false);
+  });
 
   public readonly currentTenant = computed(() => {
     const slug = this.currentTenantSlug();

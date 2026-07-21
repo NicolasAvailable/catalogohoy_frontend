@@ -18,4 +18,10 @@ export const CHAT_ROUTES: Route[] = [
     loadComponent: () =>
       import('./views/templates/templates').then((c) => c.TemplatesComponent),
   },
+  {
+    // Página "Conectar a WhatsApp Business" (coexistencia / solo API).
+    path: 'connect',
+    loadComponent: () =>
+      import('@catalogohoy/whatsapp').then((m) => m.WhatsAppConnectComponent),
+  },
 ];
