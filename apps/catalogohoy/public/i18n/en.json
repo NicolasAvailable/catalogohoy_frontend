@@ -1886,5 +1886,9 @@
   "Completá un ejemplo para cada variable.": "Fill in an example for each variable.",
   "¿Eliminar plantilla?": "Delete template?",
   "La plantilla se eliminará de Meta en todos sus idiomas. Esta acción no se puede deshacer.": "The template will be deleted from Meta in all its languages. This action cannot be undone.",
-  "Plantilla eliminada.": "Template deleted."
+  "Plantilla eliminada.": "Template deleted.",
+  "Transcribir": "Transcribe",
+  "Transcribiendo…": "Transcribing…",
+  "Convierte la nota de voz en texto (1 crédito de IA)": "Convert the voice note to text (1 AI credit)",
+  "Ver documento": "View document"
 }

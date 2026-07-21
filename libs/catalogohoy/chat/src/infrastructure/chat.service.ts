@@ -237,6 +237,36 @@ export class ChatService {
     return E.right(ChatMessageMapper.toDomain(msgData));
   }
 
+  /** Transcribe a voice note with AI (wa-transcribe → Whisper, 1 crédito).
+   *  Idempotente: si el mensaje ya tiene transcript, el backend lo devuelve
+   *  sin cobrar. */
+  async transcribeAudio(messageId: number): Promise<E.Either<Error, string>> {
+    const { data, error } = await this.client.functions.invoke('wa-transcribe', {
+      body: { messageId },
+    });
+
+    if (!error && data?.success && data?.transcript) {
+      return E.right(data.transcript as string);
+    }
+
+    let message = 'No se pudo transcribir el audio';
+    const ctx = (error as { context?: Response } | null)?.context;
+    if (ctx) {
+      try {
+        const b = await ctx.clone().json();
+        if (b?.error) {
+          message =
+            typeof b.error === 'string' ? b.error : (b.error?.message ?? message);
+        }
+      } catch {
+        /* sin cuerpo legible */
+      }
+    } else if (data?.error) {
+      message = typeof data.error === 'string' ? data.error : message;
+    }
+    return E.left(new Error(message));
+  }
+
   /** Add an internal team note ("susurro") to the thread — NOT sent to WhatsApp.
    *  No actualiza el preview del chat (es una anotación del equipo). */
   async sendInternalNote(
