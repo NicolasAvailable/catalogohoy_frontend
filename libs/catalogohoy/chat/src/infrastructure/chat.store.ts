@@ -22,6 +22,10 @@ type ChatState = {
   quickReplies: QuickReply[];
   /** Message the agent is composing a quoted reply to (null = none). */
   replyingTo: ChatMessage | null;
+  /** Id of the voice note being transcribed with AI (null = none). */
+  transcribingMessageId: number | null;
+  /** Error de la última transcripción, anclado al mensaje que falló. */
+  transcribeError: { messageId: number; message: string } | null;
 };
 
 const initialState: ChatState = {
@@ -35,6 +39,8 @@ const initialState: ChatState = {
   pipelineStatuses: [],
   quickReplies: [],
   replyingTo: null,
+  transcribingMessageId: null,
+  transcribeError: null,
 };
 
 /** Newest activity first; conversations without activity sink to the bottom. */
@@ -306,6 +312,32 @@ export const ChatStore = signalStore(
               ),
             });
           }
+        );
+      },
+
+      /** Transcribe una nota de voz con IA (1 crédito) y guarda el texto en el
+       *  mensaje. El backend es idempotente: re-pedir una ya transcrita es gratis. */
+      async transcribeMessage(messageId: number) {
+        if (store.transcribingMessageId()) return;
+        patchState(store, {
+          transcribingMessageId: messageId,
+          transcribeError: null,
+        });
+
+        const result = await chatService.transcribeAudio(messageId);
+        result.fold(
+          (err) =>
+            patchState(store, {
+              transcribingMessageId: null,
+              transcribeError: { messageId, message: err.message },
+            }),
+          (transcript) =>
+            patchState(store, {
+              transcribingMessageId: null,
+              messages: store
+                .messages()
+                .map((m) => (m.id === messageId ? { ...m, transcript } : m)),
+            })
         );
       },
 

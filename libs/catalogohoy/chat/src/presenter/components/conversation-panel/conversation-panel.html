@@ -153,6 +153,71 @@
                 @if (msg.content && msg.content !== '📷 Imagen') {
                 <p class="text-sm whitespace-pre-wrap break-words mt-1">{{ msg.content }}</p>
                 }
+                } @else if (msg.type === 'audio' && msg.mediaUrl) {
+                <!-- Nota de voz: reproductor nativo + transcripción IA on-demand -->
+                <audio
+                  controls
+                  preload="metadata"
+                  [src]="msg.mediaUrl"
+                  class="block w-64 max-w-full h-12"
+                ></audio>
+                @if (msg.transcript) {
+                <p
+                  class="text-xs italic mt-1.5 whitespace-pre-wrap break-words max-w-64"
+                  [class.text-primary-100]="msg.isMine"
+                  [class.text-grey-500]="!msg.isMine"
+                >
+                  {{ msg.transcript }}
+                </p>
+                } @else if (msg.id > 0) {
+                <button
+                  (click)="chatStore.transcribeMessage(msg.id)"
+                  [disabled]="chatStore.transcribingMessageId() !== null"
+                  class="mt-1.5 inline-flex items-center gap-1 text-xs font-medium cursor-pointer hover:underline disabled:opacity-60 disabled:cursor-wait"
+                  [class.text-primary-100]="msg.isMine"
+                  [class.text-primary-600]="!msg.isMine"
+                  [pTooltip]="'Convierte la nota de voz en texto (1 crédito de IA)' | transloco"
+                  tooltipPosition="top"
+                >
+                  <ui-icon name="sparkles" size="12" />
+                  {{
+                    (chatStore.transcribingMessageId() === msg.id
+                      ? 'Transcribiendo…'
+                      : 'Transcribir') | transloco
+                  }}
+                </button>
+                @if (chatStore.transcribeError()?.messageId === msg.id) {
+                <p class="text-xs text-red-400 mt-1 max-w-64">
+                  {{ chatStore.transcribeError()?.message }}
+                </p>
+                }
+                }
+                } @else if (msg.type === 'video' && msg.mediaUrl) {
+                <video
+                  controls
+                  preload="metadata"
+                  [src]="msg.mediaUrl"
+                  class="block rounded-lg max-w-[15rem] max-h-64"
+                ></video>
+                @if (msg.content && msg.content !== '🎥 Video') {
+                <p class="text-sm whitespace-pre-wrap break-words mt-1">{{ msg.content }}</p>
+                }
+                } @else if (msg.type === 'document' && msg.mediaUrl) {
+                <a
+                  [href]="msg.mediaUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1.5 text-sm font-medium underline underline-offset-2"
+                  [class.text-white]="msg.isMine && !msg.isInternal"
+                  [class.text-primary-600]="!msg.isMine || msg.isInternal"
+                >
+                  <ui-icon name="paperclip" size="14" />
+                  @if (msg.content && msg.content !== '📎 Documento') {
+                  {{ msg.content }}
+                  } @else {
+                  {{ 'Ver documento' | transloco }}
+                  }
+                </a>
                 } @else {
                 <p class="text-sm whitespace-pre-wrap break-words">{{ msg.content }}</p>
                 }

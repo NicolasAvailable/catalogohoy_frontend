@@ -1886,5 +1886,9 @@
   "Completá un ejemplo para cada variable.": "Renseigne un exemple pour chaque variable.",
   "¿Eliminar plantilla?": "Supprimer le modèle ?",
   "La plantilla se eliminará de Meta en todos sus idiomas. Esta acción no se puede deshacer.": "Le modèle sera supprimé de Meta dans toutes ses langues. Cette action est irréversible.",
-  "Plantilla eliminada.": "Modèle supprimé."
+  "Plantilla eliminada.": "Modèle supprimé.",
+  "Transcribir": "Transcrire",
+  "Transcribiendo…": "Transcription…",
+  "Convierte la nota de voz en texto (1 crédito de IA)": "Convertit la note vocale en texte (1 crédit IA)",
+  "Ver documento": "Voir le document"
 }
