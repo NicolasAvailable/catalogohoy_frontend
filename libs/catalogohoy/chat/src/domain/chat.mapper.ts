@@ -77,6 +77,8 @@ export class ChatMessageMapper {
       type: (raw['message_type'] as ChatMessage['type']) ?? 'text',
       mediaUrl: (raw['media_url'] as string | null) ?? null,
       transcript: (raw['transcript'] as string | null) ?? null,
+      deliveryStatus:
+        (raw['delivery_status'] as ChatMessage['deliveryStatus']) ?? null,
       waMessageId: (raw['wa_message_id'] as string | null) ?? null,
       replyToMessageId: (raw['reply_to_message_id'] as number | null) ?? null,
       isInternal: (raw['is_internal'] as boolean) ?? false,

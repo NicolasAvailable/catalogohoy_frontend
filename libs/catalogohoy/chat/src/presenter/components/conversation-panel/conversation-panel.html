@@ -147,8 +147,8 @@
                 <ui-image
                   [src]="msg.mediaUrl"
                   [alt]="'Imagen' | transloco"
-                  styleClass="block rounded-lg overflow-hidden max-w-[15rem] cursor-zoom-in"
-                  imageClass="w-full max-h-64 object-cover"
+                  styleClass="block rounded-xl overflow-hidden w-64 max-w-full cursor-zoom-in"
+                  imageClass="w-full max-h-80 object-cover"
                 />
                 @if (msg.content && msg.content !== '📷 Imagen') {
                 <p class="text-sm whitespace-pre-wrap break-words mt-1">{{ msg.content }}</p>
@@ -192,12 +192,16 @@
                 }
                 }
                 } @else if (msg.type === 'video' && msg.mediaUrl) {
-                <video
-                  controls
-                  preload="metadata"
-                  [src]="msg.mediaUrl"
-                  class="block rounded-lg max-w-[15rem] max-h-64"
-                ></video>
+                <!-- Contenedor oscuro: el letterboxing se ve intencional y el
+                     primer frame (preload=metadata) hace de miniatura. -->
+                <div class="rounded-xl overflow-hidden bg-grey-900 w-64 max-w-full">
+                  <video
+                    controls
+                    preload="metadata"
+                    [src]="msg.mediaUrl"
+                    class="block w-full max-h-80"
+                  ></video>
+                </div>
                 @if (msg.content && msg.content !== '🎥 Video') {
                 <p class="text-sm whitespace-pre-wrap break-words mt-1">{{ msg.content }}</p>
                 }
@@ -239,6 +243,15 @@
                   >
                     <ui-icon name="triangle-alert" size="12" /> {{ 'No enviado' | transloco }}
                   </span>
+                  } @else if (msg.isMine && !msg.isInternal && msg.deliveryStatus) {
+                  <!-- Acuses estilo WhatsApp: ✓ enviado · ✓✓ entregado · ✓✓ azul leído -->
+                  @if (msg.deliveryStatus === 'read') {
+                  <ui-icon name="check-check" size="14" styleClass="text-sky-300" />
+                  } @else if (msg.deliveryStatus === 'delivered') {
+                  <ui-icon name="check-check" size="14" />
+                  } @else {
+                  <ui-icon name="check" size="14" />
+                  }
                   }
                 </div>
                 }

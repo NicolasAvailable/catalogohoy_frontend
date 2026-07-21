@@ -3,6 +3,7 @@ import { Component, computed, effect, inject, input, output, signal } from '@ang
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthenticationService } from '@catalogohoy/auth';
+import { ChatBadgeRealtimeService, ChatStore } from '@catalogohoy/chat';
 import { PosthogService } from '@catalogohoy/core';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { OrderBadgeRealtimeService, OrderStore } from '@catalogohoy/order';
@@ -55,6 +56,8 @@ export class Sidebar {
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   public readonly orderStore = inject(OrderStore);
   private readonly orderBadge = inject(OrderBadgeRealtimeService);
+  public readonly chatStore = inject(ChatStore);
+  private readonly chatBadge = inject(ChatBadgeRealtimeService);
 
   private readonly permissionsStore = inject(TeamPermissionsStore);
 
@@ -64,6 +67,12 @@ export class Sidebar {
 
   /** Guard so the always-on badge subscription is started exactly once. */
   private badgeStarted = false;
+
+  /** Same guard for the unread-chats badge. */
+  private chatBadgeStarted = false;
+
+  /** Total de mensajes de WhatsApp sin leer — badge junto a "Mensajes". */
+  public readonly unreadChatsCount = computed(() => this.chatStore.unreadTotal());
 
   /** "Tasas del día" only makes sense for Venezuelan catalogs (BCV rate is
    *  Venezuela-specific). The sidebar lazy-loads the currency store so the
@@ -133,6 +142,16 @@ export class Sidebar {
       if (tid && this.canViewOrders() && !this.badgeStarted) {
         this.badgeStarted = true;
         this.orderBadge.start();
+      }
+    });
+
+    // Badge de chats sin leer: misma mecánica que el de órdenes, solo para
+    // quienes ven el módulo de Chats (allowlist o plan incluido).
+    effect(() => {
+      const tid = this.tenantStore.tenantId();
+      if (tid && this.canViewChat() && !this.chatBadgeStarted) {
+        this.chatBadgeStarted = true;
+        this.chatBadge.start();
       }
     });
   }

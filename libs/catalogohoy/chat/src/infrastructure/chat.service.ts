@@ -237,6 +237,22 @@ export class ChatService {
     return E.right(ChatMessageMapper.toDomain(msgData));
   }
 
+  /** Total de mensajes sin leer del tenant (suma de unread_count de sus
+   *  chats) — alimenta el badge "Mensajes" del sidebar. */
+  async getUnreadTotal(tenantId: number): Promise<E.Either<Error, number>> {
+    const { data, error } = await this.client
+      .from('chats')
+      .select('unread_count')
+      .eq('tenant_id', tenantId)
+      .gt('unread_count', 0);
+    if (error) return E.left(new Error(error.message));
+    const total = (data ?? []).reduce(
+      (acc, row) => acc + ((row['unread_count'] as number) ?? 0),
+      0
+    );
+    return E.right(total);
+  }
+
   /** Transcribe a voice note with AI (wa-transcribe → Whisper, 1 crédito).
    *  Idempotente: si el mensaje ya tiene transcript, el backend lo devuelve
    *  sin cobrar. */

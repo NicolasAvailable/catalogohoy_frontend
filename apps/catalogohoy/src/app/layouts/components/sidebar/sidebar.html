@@ -223,7 +223,15 @@
               }
               <a [ngClass]="{ 'ml-2': !item?.icon }" class="font-base font-semibold text-grey-700 mt-0.5">{{ item.label | transloco }}</a>
             </div>
-            @if (item?.iconNext) {
+            @if (item.label === 'Mensajes' && unreadChatsCount() > 0) {
+            <span
+              class="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-primary-500 text-white text-[11px] font-bold leading-none"
+              [pTooltip]="unreadChatsCount() === 1 ? ('1 mensaje sin leer' | transloco) : ('{count} mensajes sin leer' | transloco: { count: unreadChatsCount() })"
+              tooltipPosition="right"
+            >
+              {{ unreadChatsCount() > 99 ? '99+' : unreadChatsCount() }}
+            </span>
+            } @else if (item?.iconNext) {
             <ui-icon [name]="item?.iconNext" [ngClass]="{ 'rotate-90': item?.state?.isOpen }" size="16" class="transition-transform duration-200 ease-in-out" styleClass="text-grey-700" />
             }
           </div>
