@@ -113,6 +113,14 @@ const PDF_AI_MESSAGES = [
   { text: 'Preparando vista previa...', icon: 'eye' },
 ];
 
+/** Mensajes mientras la IA identifica las fotos del PDF. */
+const PDF_MATCH_MESSAGES = [
+  { text: 'La IA está identificando las fotos...', icon: 'image' },
+  { text: 'Comparando cada foto con los productos de su página...', icon: 'search' },
+  { text: 'Asignando fotos a los productos...', icon: 'wand-sparkles' },
+  { text: 'Ya casi terminamos...', icon: 'sparkles' },
+];
+
 // Topes anti-espera-eterna: si algo se cuelga, el flujo muestra un toast y
 // vuelve a una vista estable en vez de dejar al cliente mirando el spinner.
 /** Watchdog del parseo local del PDF: máximo sin avanzar de página. */
@@ -213,6 +221,8 @@ export class ImportExportHubComponent {
   public readonly pdfFileName = signal('');
   public readonly isMatchingPdfPhotos = signal(false);
   public readonly pdfMatchProgress = signal(0);
+  public readonly pdfMatchDone = signal(0);
+  public readonly pdfMatchTotal = signal(0);
   /** Invalida resultados tardíos del parseo cuando el watchdog abortó. */
   private pdfOpToken = 0;
   /** Costo del análisis con IA: 1 crédito por página con texto. */
@@ -1068,7 +1078,10 @@ export class ImportExportHubComponent {
 
     this.isMatchingPdfPhotos.set(true);
     this.pdfMatchProgress.set(0);
+    this.pdfMatchDone.set(0);
+    this.pdfMatchTotal.set(images.length);
     this.view.set('pdf-photos-matching');
+    this.startAiMessages(PDF_MATCH_MESSAGES);
 
     // Lista fresca del tenant (incluye lo recién importado): alimenta el
     // selector de la revisión y resuelve nombre → id de lo parseado.
@@ -1117,6 +1130,7 @@ export class ImportExportHubComponent {
       const candidates = productsByPage.get(page) ?? [];
       if (!candidates.length) {
         done += indices.length;
+        this.pdfMatchDone.set(done);
         this.pdfMatchProgress.set(Math.round((done / images.length) * 100));
         continue;
       }
@@ -1149,10 +1163,12 @@ export class ImportExportHubComponent {
           }
         }
         done += batch.length;
+        this.pdfMatchDone.set(done);
         this.pdfMatchProgress.set(Math.round((done / images.length) * 100));
       }
     }
 
+    this.stopAiMessages();
     this.photoItems.set(items);
     // La propiedad de los object URLs pasa a photoItems (clearPhotoItems los
     // revoca); vaciamos sin revocar para no matar los previews.

@@ -287,18 +287,24 @@
   @if (view() === 'pdf-photos-matching') {
   <section class="flex flex-col items-center gap-6 p-12">
     <div class="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center">
-      <ui-icon name="image" styleClass="w-10 h-10 text-primary-500 animate-pulse" />
+      <ui-icon
+        [name]="aiStatusMessage().icon"
+        styleClass="w-10 h-10 text-primary-500 animate-pulse"
+      />
     </div>
     <div class="text-center">
       <p class="text-lg font-semibold text-gray-700">
-        {{ 'La IA está identificando las fotos...' | transloco }}
+        {{ aiStatusMessage().text | transloco }}
       </p>
       <p class="text-sm text-gray-400 mt-2">
         {{ 'Comparamos cada foto con los productos de su misma página del PDF.' | transloco }}
       </p>
     </div>
-    <div class="w-full max-w-xs">
+    <div class="flex flex-col items-center gap-2 w-full max-w-xs">
       <ui-progress-bar [value]="pdfMatchProgress()" />
+      <span class="text-xs text-gray-400">
+        {{ '{n} de {t} fotos' | transloco: { n: pdfMatchDone(), t: pdfMatchTotal() } }}
+      </span>
     </div>
   </section>
   }
@@ -935,24 +941,14 @@
   <!-- PHOTOS REVIEW VIEW -->
   @if (view() === 'photos-review') {
   <section class="flex flex-col gap-4 p-8">
-    <div class="flex items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <button
-          (click)="view.set('photos-upload')"
-          class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-        >
-          <ui-icon name="arrow-left" styleClass="w-5 h-5" />
-        </button>
-        <h2 class="text-xl font-bold text-gray-900">{{ 'Revisar fotos' | transloco }}</h2>
-      </div>
-      <ui-button
-        [label]="'Aplicar fotos' | transloco"
-        icon="check"
-        [fluid]="false"
-        [disabled]="photoAssignedCount() === 0 || isApplyingPhotos()"
-        [isLoading]="isApplyingPhotos()"
-        (click)="applyPhotos()"
-      />
+    <div class="flex items-center gap-3">
+      <button
+        (click)="view.set('photos-upload')"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+      >
+        <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+      </button>
+      <h2 class="text-xl font-bold text-gray-900">{{ 'Revisar fotos' | transloco }}</h2>
     </div>
 
     <div class="flex items-center gap-2 -mt-1">
@@ -1059,9 +1055,20 @@
       }
     </div>
 
-    <div class="flex items-center gap-2 text-xs text-gray-400">
-      <ui-icon name="info" styleClass="w-4 h-4 shrink-0" />
-      <span>{{ 'Las fotos sin asignar no se subirán. Antes de aplicar se crea un respaldo de tus productos.' | transloco }}</span>
+    <!-- Barra inferior: nota + acción principal (Aplicar) -->
+    <div class="flex items-center justify-between gap-4 pt-1">
+      <div class="flex items-center gap-2 text-xs text-gray-400 min-w-0">
+        <ui-icon name="info" styleClass="w-4 h-4 shrink-0" />
+        <span>{{ 'Las fotos sin asignar no se subirán. Antes de aplicar se crea un respaldo de tus productos.' | transloco }}</span>
+      </div>
+      <ui-button
+        [label]="'Aplicar fotos' | transloco"
+        icon="check"
+        [fluid]="false"
+        [disabled]="photoAssignedCount() === 0 || isApplyingPhotos()"
+        [isLoading]="isApplyingPhotos()"
+        (click)="applyPhotos()"
+      />
     </div>
   </section>
   }
