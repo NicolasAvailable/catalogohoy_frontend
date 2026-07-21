@@ -418,6 +418,52 @@ export class ProductService implements BaseProductService {
     return null;
   }
 
+  /** Agrega fotos a un producto (append, sin reemplazar) respetando el cap de
+   *  fotos por plan (`maxPhotos <= 0` = ilimitado). Dedupe por URL. Devuelve
+   *  cuántas se agregaron y cuántas se omitieron por el límite. */
+  public async appendPhotos(
+    productId: string,
+    urls: string[],
+    maxPhotos: number
+  ): Promise<E.Either<Error, { added: number; skipped: number }>> {
+    const { data, error } = await this.client
+      .from('products')
+      .select('photos, name')
+      .eq('id', productId)
+      .single();
+    if (error) return E.left(new Error(error.message));
+
+    const next: string[] = [...((data?.photos as string[]) ?? [])];
+    let added = 0;
+    let skipped = 0;
+    for (const url of urls) {
+      if (!url || next.includes(url)) continue;
+      if (maxPhotos > 0 && next.length >= maxPhotos) {
+        skipped++;
+        continue;
+      }
+      next.push(url);
+      added++;
+    }
+
+    if (added > 0) {
+      const { error: updateError } = await this.client
+        .from('products')
+        .update({ photos: next })
+        .eq('id', productId);
+      if (updateError) return E.left(new Error(updateError.message));
+
+      this.activityLog.log({
+        action: 'product.update',
+        entityType: 'product',
+        entityId: Number(productId),
+        entityName: (data?.name as string) ?? '',
+      });
+    }
+
+    return E.right({ added, skipped });
+  }
+
   /** Claves de matching del import (SKUs y nombres del tenant, normalizados)
    *  en una consulta paginada — permite pre-contar los productos NUEVOS de un
    *  Excel sin hacer un SELECT por fila. */
