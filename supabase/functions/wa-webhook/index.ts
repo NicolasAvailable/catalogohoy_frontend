@@ -9,7 +9,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //   • POST with message payloads → we map them into chats/chat_messages.
 //
 // Campos soportados (suscribir TODOS en la app de Meta → WhatsApp → Webhooks):
-//   • messages            → mensajes del CLIENTE (is_mine=false)
+//   • messages            → mensajes del CLIENTE (is_mine=false) + statuses
+//                           (acuses sent/delivered/read de lo enviado)
 //   • smb_message_echoes  → COEXISTENCIA: lo que el comerciante manda desde su
 //                           app de WhatsApp en el teléfono (is_mine=true)
 //   • history             → COEXISTENCIA: historial sincronizado al conectar
@@ -419,6 +420,34 @@ async function processCustomerMessages(
   }
 }
 
+/** Acuses de entrega de mensajes ENVIADOS (value.statuses, llega junto al
+ *  field `messages`): sent → delivered → read. Solo se sube de nivel (los
+ *  eventos pueden llegar desordenados y un `read` nunca vuelve a `delivered`). */
+const STATUS_RANK: Record<string, number> = { sent: 1, delivered: 2, read: 3 };
+
+async function processStatuses(value: Record<string, unknown>): Promise<void> {
+  const statuses = (value.statuses as Record<string, unknown>[]) ?? [];
+  for (const s of statuses) {
+    const wamid = (s.id as string) ?? "";
+    const status = (s.status as string) ?? "";
+    if (!wamid || !STATUS_RANK[status]) continue;
+
+    const { data: row } = await admin
+      .from("chat_messages")
+      .select("id, delivery_status")
+      .eq("wa_message_id", wamid)
+      .maybeSingle();
+    if (!row) continue;
+    if ((STATUS_RANK[row.delivery_status as string] ?? 0) >= STATUS_RANK[status]) {
+      continue;
+    }
+    await admin
+      .from("chat_messages")
+      .update({ delivery_status: status })
+      .eq("id", row.id);
+  }
+}
+
 async function handleIncoming(body: unknown): Promise<void> {
   // Meta payload: entry[].changes[].{ field, value }. El field decide el flujo:
   // messages (cliente) · smb_message_echoes / history / smb_app_state_sync
@@ -441,6 +470,7 @@ async function handleIncoming(body: unknown): Promise<void> {
       switch (field) {
         case "messages":
           await processCustomerMessages(account, value);
+          await processStatuses(value);
           break;
         case "smb_message_echoes":
           await processEchoes(account, value);

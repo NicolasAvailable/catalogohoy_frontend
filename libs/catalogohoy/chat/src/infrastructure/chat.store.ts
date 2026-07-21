@@ -26,6 +26,8 @@ type ChatState = {
   transcribingMessageId: number | null;
   /** Error de la última transcripción, anclado al mensaje que falló. */
   transcribeError: { messageId: number; message: string } | null;
+  /** Total de mensajes sin leer del tenant (badge del sidebar, app-wide). */
+  unreadTotal: number;
 };
 
 const initialState: ChatState = {
@@ -41,6 +43,7 @@ const initialState: ChatState = {
   replyingTo: null,
   transcribingMessageId: null,
   transcribeError: null,
+  unreadTotal: 0,
 };
 
 /** Newest activity first; conversations without activity sink to the bottom. */
@@ -313,6 +316,29 @@ export const ChatStore = signalStore(
             });
           }
         );
+      },
+
+      /** Recalcula el total de no-leídos del tenant (badge del sidebar). Lo
+       *  dispara ChatBadgeRealtimeService en cada cambio de `chats`. */
+      async loadUnreadTotal() {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return;
+        const result = await chatService.getUnreadTotal(tenantId);
+        result.fold(
+          () => undefined,
+          (total) => patchState(store, { unreadTotal: total })
+        );
+      },
+
+      /** Aplica un UPDATE de un mensaje llegado por realtime (acuse de entrega,
+       *  transcripción hecha por otro agente…) sobre la conversación abierta. */
+      applyMessageUpdate(msg: ChatMessage) {
+        if (store.selectedChatId() !== msg.chatId) return;
+        patchState(store, {
+          messages: store
+            .messages()
+            .map((m) => (m.id === msg.id ? { ...m, ...msg } : m)),
+        });
       },
 
       /** Transcribe una nota de voz con IA (1 crédito) y guarda el texto en el

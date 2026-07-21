@@ -189,6 +189,7 @@ Deno.serve(async (req) => {
       media_url: mediaUrl || null,
       wa_message_id: messageId,
       reply_to_message_id: replyToId,
+      delivery_status: "sent",
     })
     .select()
     .single();

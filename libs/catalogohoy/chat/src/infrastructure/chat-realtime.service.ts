@@ -42,6 +42,18 @@ export class ChatRealtimeService {
       )
       .on(
         'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'chat_messages' },
+        // Acuses de entrega (✓→✓✓→✓✓ azul), transcripciones hechas por otro
+        // agente, etc. — se pisa el mensaje en la conversación abierta.
+        (payload) => {
+          const msg = ChatMessageMapper.toDomain(
+            payload.new as Record<string, unknown>
+          );
+          this.zone.run(() => this.chatStore.applyMessageUpdate(msg));
+        }
+      )
+      .on(
+        'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
