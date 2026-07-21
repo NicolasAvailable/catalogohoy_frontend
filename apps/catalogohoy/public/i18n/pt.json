@@ -1878,5 +1878,13 @@
   "Política de WhatsApp Business": "Política do WhatsApp Business",
   "Confirmo que mi negocio cumple las políticas de Meta": "Confirmo que meu negócio cumpre as políticas da Meta",
   "Conectar con Facebook": "Conectar com o Facebook",
-  "Confirma las políticas de Meta para continuar.": "Confirme as políticas da Meta para continuar."
+  "Confirma las políticas de Meta para continuar.": "Confirme as políticas da Meta para continuar.",
+  "Ejemplos para las variables": "Exemplos para as variáveis",
+  "Meta necesita un ejemplo de cada variable para aprobar la plantilla.": "A Meta precisa de um exemplo de cada variável para aprovar o modelo.",
+  "Ej: María": "Ex.: Maria",
+  "Las variables deben empezar en {{1}} y ser consecutivas.": "As variáveis devem começar em {{1}} e ser consecutivas.",
+  "Completá un ejemplo para cada variable.": "Preencha um exemplo para cada variável.",
+  "¿Eliminar plantilla?": "Excluir modelo?",
+  "La plantilla se eliminará de Meta en todos sus idiomas. Esta acción no se puede deshacer.": "O modelo será excluído da Meta em todos os idiomas. Esta ação não pode ser desfeita.",
+  "Plantilla eliminada.": "Modelo excluído."
 }

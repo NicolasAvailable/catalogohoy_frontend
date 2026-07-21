@@ -7,9 +7,18 @@
         {{ 'Plantillas de WhatsApp (HSM) para iniciar conversaciones o responder fuera de la ventana de 24 h. Meta debe aprobarlas antes de usarlas.' | transloco }}
       </p>
     </div>
-    @if (!showForm()) {
-    <ui-button label="Crear plantilla" icon="plus" (click)="openForm()" />
-    }
+    <div class="flex items-center gap-2 shrink-0">
+      <ui-button
+        icon="refresh-cw"
+        severity="contrast"
+        variant="outlined"
+        [isLoading]="loading()"
+        (click)="load()"
+      />
+      @if (!showForm()) {
+      <ui-button label="Crear plantilla" icon="plus" (click)="openForm()" />
+      }
+    </div>
   </div>
 
   <!-- Formulario de creación -->
@@ -68,6 +77,30 @@
       </span>
     </div>
 
+    <!-- Ejemplos por variable: Meta los exige para aprobar la plantilla. -->
+    @if (bodyVars().length) {
+    <div class="flex flex-col gap-2 rounded-xl bg-grey-25 border border-grey-100 p-4">
+      <span class="text-sm font-medium text-grey-700">
+        {{ 'Ejemplos para las variables' | transloco }}
+      </span>
+      <span class="text-[11px] text-grey-400 -mt-1">
+        {{ 'Meta necesita un ejemplo de cada variable para aprobar la plantilla.' | transloco }}
+      </span>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+        @for (v of bodyVars(); track v) {
+        <div class="flex flex-col gap-1">
+          <span class="text-xs font-medium text-grey-600">{{ varToken(v) }}</span>
+          <ui-input-text
+            [placeholder]="'Ej: María' | transloco"
+            [ngModel]="exampleOf(v)"
+            (ngModelChange)="setExample(v, $event)"
+          />
+        </div>
+        }
+      </div>
+    </div>
+    }
+
     <div class="flex items-center justify-end gap-2">
       <ui-button
         label="Cancelar"
@@ -120,7 +153,17 @@
       <p class="text-sm text-grey-600 whitespace-pre-wrap break-words">
         {{ bodyOf(t) }}
       </p>
-      <span class="text-[11px] text-grey-400">{{ t.category }}</span>
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-[11px] text-grey-400">{{ t.category }}</span>
+        <ui-button
+          icon="trash"
+          severity="danger"
+          variant="text"
+          size="small"
+          [isLoading]="deletingName() === t.name"
+          (click)="deleteTemplate(t)"
+        />
+      </div>
     </div>
     }
   </div>

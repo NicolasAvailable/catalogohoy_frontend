@@ -18,6 +18,9 @@ export interface CreateTemplateInput {
   category: string;
   language: string;
   body: string;
+  /** Un ejemplo por variable {{n}} del body, en orden ({{1}} primero). Meta
+   *  los exige para aprobar plantillas con variables. */
+  examples?: string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -42,6 +45,17 @@ export class TemplatesService {
     if (!tenantId) return E.left(new Error('Sin tenant activo'));
     const { data, error } = await this.client.functions.invoke('wa-templates', {
       body: { tenantId, action: 'create', template: input },
+    });
+    if (!error && data?.success) return E.right(undefined);
+    return E.left(new Error(await this.parseError(error, data)));
+  }
+
+  /** Elimina la plantilla por nombre (Meta la borra en todos sus idiomas). */
+  async delete(name: string): Promise<E.Either<Error, void>> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return E.left(new Error('Sin tenant activo'));
+    const { data, error } = await this.client.functions.invoke('wa-templates', {
+      body: { tenantId, action: 'delete', name },
     });
     if (!error && data?.success) return E.right(undefined);
     return E.left(new Error(await this.parseError(error, data)));
