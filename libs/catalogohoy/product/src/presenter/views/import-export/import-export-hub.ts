@@ -29,13 +29,17 @@ import {
   ImportRowResult,
   ImportRowStatus,
   ImportSummary,
+  PdfCatalogPage,
+  PdfParsedProduct,
   ProductBackup,
   ProductBackupSnapshotRow,
   ProductExcelRow,
 } from '../../../domain';
 import {
   AiImageService,
+  PdfCatalogService,
   ProductAiExcelService,
+  ProductAiPdfService,
   ProductBackupService,
   ProductExcelService,
   ProductService,
@@ -52,6 +56,9 @@ type View =
   | 'import-progress'
   | 'import-done'
   | 'ai-analyzing'
+  | 'pdf-upload'
+  | 'pdf-confirm'
+  | 'pdf-photos-matching'
   | 'backups'
   | 'backup-view'
   | 'photos-upload'
@@ -75,11 +82,33 @@ interface PhotoProductOption {
   photo: string | null;
 }
 
+/** Foto recortada del PDF, lista para el flujo de asignación. */
+interface PdfImageItem {
+  page: number;
+  file: File;
+  previewUrl: string;
+}
+
 const AI_STATUS_MESSAGES = [
   { text: 'Analizando tu archivo...', icon: 'sparkles' },
   { text: 'Identificando columnas...', icon: 'search' },
   { text: 'Mapeando datos...', icon: 'arrow-up-down' },
   { text: 'Normalizando informacion...', icon: 'wand-sparkles' },
+  { text: 'Preparando vista previa...', icon: 'eye' },
+];
+
+/** Mensajes del parseo LOCAL del PDF (pdf.js — no consume créditos). */
+const PDF_READ_MESSAGES = [
+  { text: 'Leyendo tu PDF...', icon: 'file-text' },
+  { text: 'Extrayendo el texto de cada página...', icon: 'search' },
+  { text: 'Detectando las fotos de productos...', icon: 'image' },
+];
+
+/** Mensajes mientras la IA estructura los productos. */
+const PDF_AI_MESSAGES = [
+  { text: 'La IA está leyendo tu catálogo...', icon: 'sparkles' },
+  { text: 'Detectando productos y precios...', icon: 'search' },
+  { text: 'Armando la lista de productos...', icon: 'wand-sparkles' },
   { text: 'Preparando vista previa...', icon: 'eye' },
 ];
 
@@ -118,6 +147,8 @@ export class ImportExportHubComponent {
   private readonly aiExcelService = inject(ProductAiExcelService);
   private readonly backupService = inject(ProductBackupService);
   private readonly aiImageService = inject(AiImageService);
+  private readonly pdfCatalogService = inject(PdfCatalogService);
+  private readonly aiPdfService = inject(ProductAiPdfService);
   private readonly uploaderService = inject(UploaderService);
   private readonly categoryStore = inject(CategoryStore);
   private readonly planStore = inject(PlanStore);
@@ -157,6 +188,21 @@ export class ImportExportHubComponent {
   public readonly hasImportErrors = computed(() =>
     this.importResults().some((r) => r.status === 'error')
   );
+
+  // ── Importar catálogo desde PDF (IA) ─────────────────────────────────────
+  /** Texto por página del PDF parseado localmente (aún sin gastar créditos). */
+  public readonly pdfPages = signal<PdfCatalogPage[]>([]);
+  /** Fotos recortadas del PDF, con su página (para el matching). */
+  public readonly pdfImageItems = signal<PdfImageItem[]>([]);
+  /** Productos estructurados por la IA (conservan la página). */
+  public readonly pdfParsed = signal<PdfParsedProduct[]>([]);
+  /** true cuando el import en curso vino de un PDF (habilita el paso de fotos). */
+  public readonly isPdfRun = signal(false);
+  public readonly pdfFileName = signal('');
+  public readonly isMatchingPdfPhotos = signal(false);
+  public readonly pdfMatchProgress = signal(0);
+  /** Costo del análisis con IA: 1 crédito por página con texto. */
+  public readonly pdfAnalyzeCost = computed(() => this.pdfPages().length);
 
   // ── Backups ──────────────────────────────────────────────────────────────
   public readonly backups = signal<ProductBackup[]>([]);
@@ -210,6 +256,7 @@ export class ImportExportHubComponent {
     this.cancelRequested.set(false);
     this.isPaused.set(false);
     this.clearPhotoItems();
+    this.clearPdfState();
     this.categoryStore.categoryList$(1, 100);
     // Refrescamos el uso del plan para que el tile de Exportar muestre el
     // estado correcto (bloqueado + "Pro" en planes gratis) desde el inicio.
@@ -824,6 +871,212 @@ export class ImportExportHubComponent {
     this.productStore.productList$();
   }
 
+  // ── Importar catálogo desde PDF (IA) ─────────────────────────────────────
+  public async onPdfSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    await this.processPdfFile(file);
+    input.value = '';
+  }
+
+  public async onPdfDrop(event: DragEvent): Promise<void> {
+    event.preventDefault();
+    const file = event.dataTransfer?.files[0];
+    if (!file) return;
+    await this.processPdfFile(file);
+  }
+
+  /** Parsea el PDF localmente (texto + fotos, sin gastar créditos) y muestra
+   *  la confirmación con el costo del análisis antes de llamar a la IA. */
+  private async processPdfFile(file: File): Promise<void> {
+    const isPdf =
+      file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    if (!isPdf) {
+      toast.error('El archivo debe ser un PDF.');
+      return;
+    }
+    if (file.size > 30 * 1024 * 1024) {
+      toast.error('El PDF supera los 30 MB. Divide el catálogo e intenta de nuevo.');
+      return;
+    }
+
+    this.clearPdfState();
+    this.pdfFileName.set(file.name);
+    this.view.set('ai-analyzing');
+    this.startAiMessages(PDF_READ_MESSAGES);
+
+    const result = await this.pdfCatalogService.parse(file);
+    this.stopAiMessages();
+
+    if (result.isLeft()) {
+      toast.error(result.value.message);
+      this.view.set('pdf-upload');
+      return;
+    }
+
+    const { pages, images } = result.value;
+    this.pdfPages.set(pages);
+    this.pdfImageItems.set(
+      images.map((img, i) => ({
+        page: img.page,
+        file: new File([img.blob], `pagina-${img.page}-foto-${i + 1}.jpg`, {
+          type: 'image/jpeg',
+        }),
+        previewUrl: URL.createObjectURL(img.blob),
+      }))
+    );
+    this.view.set('pdf-confirm');
+  }
+
+  /** Manda el texto por página a la IA (cobra 1 crédito/página) y entra al
+   *  MISMO preview del import de Excel: backup + límite del plan + upsert. */
+  public async analyzePdf(): Promise<void> {
+    const pages = this.pdfPages();
+    if (!pages.length) return;
+
+    this.view.set('ai-analyzing');
+    this.startAiMessages(PDF_AI_MESSAGES);
+    const result = await this.aiPdfService.parsePages(pages);
+    this.stopAiMessages();
+
+    if (result.isLeft()) {
+      toast.error(result.value.message);
+      this.view.set('pdf-confirm');
+      return;
+    }
+
+    const products = result.value;
+    this.pdfParsed.set(products);
+    this.isPdfRun.set(true);
+    const rows: ProductExcelRow[] = products.map((p) => ({
+      name: p.name,
+      description: '',
+      price: p.price,
+      pricePromotional: null,
+      stock: null,
+      sku: null,
+      productionCost: null,
+      categories: '',
+    }));
+    this.enterPreview(rows);
+    toast.success(`La IA encontró ${products.length} productos en el PDF`);
+  }
+
+  /** Tras importar: asigna las fotos del PDF a los productos. El matching es
+   *  por página (la IA solo elige entre los productos de ESA página — más
+   *  barato y preciso). Cobra 1 crédito por foto. Después cae en la revisión
+   *  normal de fotos y aplica con el mismo pipeline (backup + cap del plan). */
+  public async assignPdfPhotos(): Promise<void> {
+    const images = this.pdfImageItems();
+    if (!images.length || this.isMatchingPdfPhotos()) return;
+
+    this.isMatchingPdfPhotos.set(true);
+    this.pdfMatchProgress.set(0);
+    this.view.set('pdf-photos-matching');
+
+    // Lista fresca del tenant (incluye lo recién importado): alimenta el
+    // selector de la revisión y resuelve nombre → id de lo parseado.
+    await this.productStore.productList$();
+    const options: PhotoProductOption[] = this.productStore
+      .productList()
+      .products.map((p) => ({
+        id: String(p.id),
+        name: p.name,
+        sku: p.sku ?? null,
+        photo: p.photos?.[0] ?? null,
+      }));
+    this.photoProducts.set(options);
+
+    const idByName = new Map<string, string>();
+    for (const o of options) {
+      idByName.set(this.normalizePhotoText(o.name), o.id);
+    }
+    const productsByPage = new Map<
+      number,
+      { id: string; name: string; sku: string | null }[]
+    >();
+    for (const parsed of this.pdfParsed()) {
+      const id = idByName.get(this.normalizePhotoText(parsed.name));
+      if (!id) continue;
+      const list = productsByPage.get(parsed.page) ?? [];
+      if (!list.some((x) => x.id === id)) {
+        list.push({ id, name: parsed.name, sku: null });
+      }
+      productsByPage.set(parsed.page, list);
+    }
+
+    const items: PhotoImportItem[] = images.map((img) => ({
+      file: img.file,
+      previewUrl: img.previewUrl,
+      productId: null,
+      method: null,
+    }));
+    const indicesByPage = new Map<number, number[]>();
+    images.forEach((img, i) => {
+      indicesByPage.set(img.page, [...(indicesByPage.get(img.page) ?? []), i]);
+    });
+
+    let done = 0;
+    outer: for (const [page, indices] of indicesByPage) {
+      const candidates = productsByPage.get(page) ?? [];
+      if (!candidates.length) {
+        done += indices.length;
+        this.pdfMatchProgress.set(Math.round((done / images.length) * 100));
+        continue;
+      }
+      for (let start = 0; start < indices.length; start += 20) {
+        const batch = indices.slice(start, start + 20);
+        const payload: { id: string; data: string }[] = [];
+        const indexById = new Map<string, number>();
+        for (const idx of batch) {
+          const data = await this.photoThumbnailB64(items[idx].file);
+          if (!data) continue;
+          const id = `img${idx}`;
+          payload.push({ id, data });
+          indexById.set(id, idx);
+        }
+        if (payload.length) {
+          const result = await this.aiImageService.matchPhotos(
+            payload,
+            candidates
+          );
+          if (result.isLeft()) {
+            // Cortar (p. ej. créditos agotados): lo matcheado hasta acá queda.
+            toast.error(result.value.message);
+            break outer;
+          }
+          for (const m of result.value) {
+            const idx = indexById.get(m.id);
+            if (idx === undefined || !m.productId) continue;
+            items[idx] = { ...items[idx], productId: m.productId, method: 'ia' };
+          }
+        }
+        done += batch.length;
+        this.pdfMatchProgress.set(Math.round((done / images.length) * 100));
+      }
+    }
+
+    this.photoItems.set(items);
+    // La propiedad de los object URLs pasa a photoItems (clearPhotoItems los
+    // revoca); vaciamos sin revocar para no matar los previews.
+    this.pdfImageItems.set([]);
+    this.isMatchingPdfPhotos.set(false);
+    this.view.set('photos-review');
+  }
+
+  private clearPdfState(): void {
+    for (const item of this.pdfImageItems()) {
+      URL.revokeObjectURL(item.previewUrl);
+    }
+    this.pdfPages.set([]);
+    this.pdfImageItems.set([]);
+    this.pdfParsed.set([]);
+    this.pdfFileName.set('');
+    this.isPdfRun.set(false);
+    this.pdfMatchProgress.set(0);
+  }
+
   /** Entra al preview: setea las filas y calcula (en background) qué filas ya
    *  existen para los badges "Nuevo"/"Se actualizará" y el chequeo del plan. */
   private enterPreview(rows: ProductExcelRow[]): void {
@@ -840,6 +1093,8 @@ export class ImportExportHubComponent {
     file: File,
     returnView: View = 'import-upload'
   ): Promise<void> {
+    // Un import de Excel/Sheets no habilita el paso de fotos del PDF.
+    this.isPdfRun.set(false);
     const result = await this.excelService.parseExcelFile(file);
 
     if (result.isRight()) {
@@ -874,12 +1129,12 @@ export class ImportExportHubComponent {
     }
   }
 
-  private startAiMessages(): void {
+  private startAiMessages(messages = AI_STATUS_MESSAGES): void {
     let index = 0;
-    this.aiStatusMessage.set(AI_STATUS_MESSAGES[0]);
+    this.aiStatusMessage.set(messages[0]);
     this.aiMessageInterval = setInterval(() => {
-      index = (index + 1) % AI_STATUS_MESSAGES.length;
-      this.aiStatusMessage.set(AI_STATUS_MESSAGES[index]);
+      index = (index + 1) % messages.length;
+      this.aiStatusMessage.set(messages[index]);
     }, 3000);
   }
 

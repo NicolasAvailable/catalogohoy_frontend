@@ -62,7 +62,7 @@
         </div>
         <h3 class="text-lg font-bold text-gray-900">{{ 'Importar' | transloco }}</h3>
         <p class="text-sm text-gray-500 text-center">
-          {{ 'Trae tus productos desde Excel o Google Sheets a tu catálogo.' | transloco }}
+          {{ 'Trae tus productos desde Excel, Google Sheets o un catálogo en PDF.' | transloco }}
         </p>
         <span
           class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold"
@@ -72,6 +72,9 @@
           <span class="text-blue-300">·</span>
           <img src="/images/google-sheets.svg" alt="Google Sheets" class="w-3.5 h-3.5" />
           Sheets
+          <span class="text-blue-300">·</span>
+          <ui-icon name="file-text" styleClass="w-3.5 h-3.5 text-rose-500" />
+          PDF
         </span>
       </button>
 
@@ -133,7 +136,7 @@
       {{ 'Elige la app donde tienes tu lista de productos.' | transloco }}
     </p>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <!-- Microsoft Excel -->
       <button
         type="button"
@@ -159,6 +162,149 @@
           {{ 'Pega el link de tu hoja de cálculo, sin descargar nada.' | transloco }}
         </p>
       </button>
+
+      <!-- Catálogo en PDF (IA) -->
+      <button
+        type="button"
+        (click)="view.set('pdf-upload')"
+        class="relative flex flex-col items-center gap-3 p-8 border-2 border-gray-100 rounded-2xl hover:border-rose-400 hover:bg-rose-50/40 transition-all cursor-pointer"
+      >
+        <span
+          class="absolute top-3 right-3 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-violet-50 border border-violet-200 text-violet-500 text-[10px] font-semibold leading-none"
+        >
+          <ui-icon name="sparkles" styleClass="size-3 text-violet-500" />
+          IA
+        </span>
+        <div class="w-14 h-14 bg-rose-50 rounded-full flex items-center justify-center">
+          <ui-icon name="file-text" styleClass="size-7 text-rose-500" />
+        </div>
+        <h3 class="text-lg font-bold text-gray-900">{{ 'Catálogo en PDF' | transloco }}</h3>
+        <p class="text-sm text-gray-500 text-center">
+          {{ 'La IA lee tu catálogo: productos, precios y hasta las fotos.' | transloco }}
+        </p>
+      </button>
+    </div>
+  </section>
+  }
+
+  <!-- PDF UPLOAD VIEW -->
+  @if (view() === 'pdf-upload') {
+  <section class="flex flex-col gap-6 p-8">
+    <div class="flex items-center gap-3">
+      <button
+        (click)="view.set('import-source')"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+      >
+        <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+      </button>
+      <div class="w-8 h-8 bg-rose-50 rounded-lg flex items-center justify-center">
+        <ui-icon name="file-text" styleClass="w-5 h-5 text-rose-500" />
+      </div>
+      <h2 class="text-2xl font-bold text-gray-900">{{ 'Catálogo en PDF' | transloco }}</h2>
+    </div>
+    <p class="text-sm text-gray-500 -mt-3">
+      {{ 'Sube el PDF de tu catálogo: la IA detecta los productos con sus precios y puede asignarles las fotos del propio PDF.' | transloco }}
+    </p>
+
+    <!-- Drop zone -->
+    <div
+      (drop)="onPdfDrop($event)"
+      (dragover)="onDragOver($event)"
+      class="flex flex-col items-center justify-center gap-4 p-16
+             border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50
+             hover:border-rose-400 hover:bg-rose-50/10 transition-all"
+    >
+      <ui-icon name="file-text" styleClass="w-12 h-12 text-gray-300" />
+      <div class="text-center">
+        <p class="text-base font-semibold text-gray-700">
+          {{ 'Arrastra y suelta tu archivo .pdf aqui' | transloco }}
+        </p>
+        <p class="text-sm text-gray-400 mt-1">{{ 'o' | transloco }}</p>
+      </div>
+      <label class="cursor-pointer mt-1">
+        <input
+          type="file"
+          accept=".pdf,application/pdf"
+          (change)="onPdfSelected($event)"
+          class="hidden"
+        />
+        <span
+          class="inline-block px-6 py-2.5 bg-rose-500 text-white rounded-lg font-medium
+                 hover:bg-rose-600 transition-colors"
+        >
+          {{ 'Seleccionar archivo' | transloco }}
+        </span>
+      </label>
+    </div>
+
+    <div class="flex items-start gap-2 text-xs text-gray-400">
+      <ui-icon name="sparkles" styleClass="w-4 h-4 shrink-0" />
+      <span>
+        {{ 'El análisis usa créditos de IA: 1 por página del PDF, y 1 por foto si luego eliges asignar las fotos. Antes de gastar nada te mostramos el costo.' | transloco }}
+      </span>
+    </div>
+  </section>
+  }
+
+  <!-- PDF CONFIRM VIEW (costo antes de llamar a la IA) -->
+  @if (view() === 'pdf-confirm') {
+  <section class="flex flex-col items-center gap-6 p-10 text-center">
+    <div class="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center">
+      <ui-icon name="file-text" styleClass="w-8 h-8 text-rose-500" />
+    </div>
+    <div>
+      <h2 class="text-xl font-bold text-gray-900">{{ pdfFileName() }}</h2>
+      <p class="text-gray-500 mt-2 max-w-md">
+        {{ 'Leímos tu PDF. Ahora la IA va a detectar los productos con sus precios para que los revises antes de importar.' | transloco }}
+      </p>
+    </div>
+    <div class="flex gap-10">
+      <div class="flex flex-col items-center">
+        <span class="text-3xl font-bold text-gray-900">{{ pdfPages().length }}</span>
+        <span class="text-sm text-gray-500 mt-1">{{ 'Páginas con texto' | transloco }}</span>
+      </div>
+      <div class="flex flex-col items-center">
+        <span class="text-3xl font-bold text-gray-900">{{ pdfImageItems().length }}</span>
+        <span class="text-sm text-gray-500 mt-1">{{ 'Fotos detectadas' | transloco }}</span>
+      </div>
+    </div>
+    <p class="text-sm text-gray-400 max-w-md">
+      {{ 'El análisis usará {n} créditos de IA (1 por página).' | transloco: { n: pdfAnalyzeCost() } }}
+    </p>
+    <div class="flex gap-3">
+      <ui-button
+        [label]="'Cancelar' | transloco"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        (click)="view.set('pdf-upload')"
+      />
+      <ui-button
+        [label]="'Analizar con IA' | transloco"
+        icon="sparkles"
+        [fluid]="false"
+        (click)="analyzePdf()"
+      />
+    </div>
+  </section>
+  }
+
+  <!-- PDF PHOTOS MATCHING VIEW (IA asignando fotos por página) -->
+  @if (view() === 'pdf-photos-matching') {
+  <section class="flex flex-col items-center gap-6 p-12">
+    <div class="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center">
+      <ui-icon name="image" styleClass="w-10 h-10 text-purple-500 animate-pulse" />
+    </div>
+    <div class="text-center">
+      <p class="text-lg font-semibold text-gray-700">
+        {{ 'La IA está identificando las fotos...' | transloco }}
+      </p>
+      <p class="text-sm text-gray-400 mt-2">
+        {{ 'Comparamos cada foto con los productos de su misma página del PDF.' | transloco }}
+      </p>
+    </div>
+    <div class="w-full max-w-xs">
+      <ui-progress-bar [value]="pdfMatchProgress()" />
     </div>
   </section>
   }
@@ -504,6 +650,20 @@
         <span class="text-sm text-gray-500 mt-1">{{ 'Errores' | transloco }}</span>
       </div>
       }
+    </div>
+    }
+
+    @if (isPdfRun() && pdfImageItems().length > 0) {
+    <div class="flex flex-col items-center gap-3 -mt-2">
+      <p class="text-sm text-gray-500 max-w-md text-center">
+        {{ 'Tu PDF trae {n} fotos: la IA puede asignarlas a los productos importados (1 crédito por foto).' | transloco: { n: pdfImageItems().length } }}
+      </p>
+      <ui-button
+        [label]="'Asignar fotos del PDF' | transloco"
+        icon="image"
+        [fluid]="false"
+        (click)="assignPdfPhotos()"
+      />
     </div>
     }
 
