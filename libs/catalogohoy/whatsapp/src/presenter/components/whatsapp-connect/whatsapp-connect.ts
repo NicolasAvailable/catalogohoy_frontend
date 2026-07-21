@@ -6,10 +6,11 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantStore } from '@catalogohoy/tenant';
-import { ButtonComponent, IconComponent } from '@ui';
+import { ButtonComponent, CheckboxComponent, IconComponent } from '@ui';
 import { WhatsAppConnectChecklist } from '../../../domain';
 import {
   EmbeddedSignupData,
@@ -26,7 +27,7 @@ import {
 @Component({
   selector: 'lib-whatsapp-connect',
   standalone: true,
-  imports: [ButtonComponent, IconComponent, TranslocoPipe],
+  imports: [ButtonComponent, CheckboxComponent, FormsModule, IconComponent, TranslocoPipe],
   templateUrl: './whatsapp-connect.html',
   host: { class: 'flex-1 flex flex-col min-h-0 overflow-y-auto' },
 })
@@ -87,10 +88,6 @@ export class WhatsAppConnectComponent implements OnInit {
 
   setMode(mode: WhatsAppConnectMode): void {
     this.mode.set(mode);
-  }
-
-  togglePolicies(): void {
-    this.policiesAccepted.set(!this.policiesAccepted());
   }
 
   goBack(): void {

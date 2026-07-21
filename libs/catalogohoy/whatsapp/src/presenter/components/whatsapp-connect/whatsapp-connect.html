@@ -23,7 +23,7 @@
       <!-- Coexistencia (recomendada, preseleccionada) -->
       <button
         type="button"
-        class="text-left rounded-xl border-2 p-4 transition-colors"
+        class="text-left rounded-xl border-2 p-4 transition-colors cursor-pointer"
         [class.border-grey-800]="mode() === 'coexistence'"
         [class.border-grey-100]="mode() !== 'coexistence'"
         [class.hover:border-grey-300]="mode() !== 'coexistence'"
@@ -60,7 +60,7 @@
       <!-- Solo API -->
       <button
         type="button"
-        class="text-left rounded-xl border-2 p-4 transition-colors"
+        class="text-left rounded-xl border-2 p-4 transition-colors cursor-pointer"
         [class.border-grey-800]="mode() === 'dedicated'"
         [class.border-grey-100]="mode() !== 'dedicated'"
         [class.hover:border-grey-300]="mode() !== 'dedicated'"
@@ -225,17 +225,20 @@
               <ui-icon name="external-link" size="12" />
             </a>
           </div>
-          <label class="flex items-center gap-2 mt-3 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              class="w-4 h-4 rounded border-grey-300 accent-grey-800"
-              [checked]="policiesAccepted()"
-              (change)="togglePolicies()"
+          <div class="flex items-center gap-2 mt-3">
+            <ui-checkbox
+              checkboxId="wa-policies"
+              size="small"
+              [ngModel]="policiesAccepted()"
+              (valueChange)="policiesAccepted.set($event)"
             />
-            <span class="text-xs text-grey-600">
+            <label
+              for="wa-policies"
+              class="text-xs text-grey-600 cursor-pointer select-none"
+            >
               {{ 'Confirmo que mi negocio cumple las políticas de Meta' | transloco }}
-            </span>
-          </label>
+            </label>
+          </div>
         </div>
       </div>
     </div>
