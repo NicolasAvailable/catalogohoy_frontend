@@ -1892,5 +1892,6 @@
   "Convierte la nota de voz en texto (1 crédito de IA)": "Convertit la note vocale en texte (1 crédit IA)",
   "Ver documento": "Voir le document",
   "1 mensaje sin leer": "1 message non lu",
-  "{count} mensajes sin leer": "{count} messages non lus"
+  "{count} mensajes sin leer": "{count} messages non lus",
+  "Tú": "Vous"
 }

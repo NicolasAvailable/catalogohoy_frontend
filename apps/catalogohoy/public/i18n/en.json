@@ -1892,5 +1892,6 @@
   "Convierte la nota de voz en texto (1 crédito de IA)": "Convert the voice note to text (1 AI credit)",
   "Ver documento": "View document",
   "1 mensaje sin leer": "1 unread message",
-  "{count} mensajes sin leer": "{count} unread messages"
+  "{count} mensajes sin leer": "{count} unread messages",
+  "Tú": "You"
 }

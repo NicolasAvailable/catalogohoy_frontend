@@ -142,6 +142,7 @@ export class ChatService {
     const updatePayload: Record<string, unknown> = {
       last_message: content,
       last_message_at: new Date().toISOString(),
+      last_message_is_mine: isMine,
     };
 
     if (!isMine) {
@@ -231,7 +232,11 @@ export class ChatService {
 
     await this.client
       .from('chats')
-      .update({ last_message: caption || label, last_message_at: new Date().toISOString() })
+      .update({
+        last_message: caption || label,
+        last_message_at: new Date().toISOString(),
+        last_message_is_mine: true,
+      })
       .eq('id', chatId);
 
     return E.right(ChatMessageMapper.toDomain(msgData));

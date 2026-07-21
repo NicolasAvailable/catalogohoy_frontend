@@ -184,7 +184,7 @@ async function messageExists(waMessageId: string): Promise<boolean> {
 async function refreshChatLastMessage(chatId: number): Promise<void> {
   const { data } = await admin
     .from("chat_messages")
-    .select("content, created_at")
+    .select("content, created_at, is_mine")
     .eq("chat_id", chatId)
     .not("is_internal", "is", true)
     .order("created_at", { ascending: false })
@@ -193,7 +193,11 @@ async function refreshChatLastMessage(chatId: number): Promise<void> {
   if (!last) return;
   await admin
     .from("chats")
-    .update({ last_message: last.content, last_message_at: last.created_at })
+    .update({
+      last_message: last.content,
+      last_message_at: last.created_at,
+      last_message_is_mine: last.is_mine ?? null,
+    })
     .eq("id", chatId);
 }
 
@@ -252,7 +256,11 @@ async function processEchoes(
     });
     await admin
       .from("chats")
-      .update({ last_message: text, last_message_at: new Date().toISOString() })
+      .update({
+        last_message: text,
+        last_message_at: new Date().toISOString(),
+        last_message_is_mine: true,
+      })
       .eq("id", chat.id);
   }
 }
@@ -411,6 +419,7 @@ async function processCustomerMessages(
         const chatUpdate: Record<string, unknown> = {
           last_message: text,
           last_message_at: new Date().toISOString(),
+          last_message_is_mine: false,
         };
         // Sólo usar el nombre de perfil de WhatsApp si el contacto NO tiene un
         // nombre registrado (respeta el alias del módulo de clientes / órdenes).

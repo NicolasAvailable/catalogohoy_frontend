@@ -10,7 +10,10 @@ import { IconComponent } from '@ui';
 
 /** Reproductor de notas de voz estilo WhatsApp: play/pausa, barra de progreso
  *  con seek, tiempo y velocidad (1×/1.5×/2×). Variante clara (`onPrimary`)
- *  para burbujas del agente sobre fondo primary. */
+ *  para burbujas del agente sobre fondo primary.
+ *
+ *  El progreso se anima con requestAnimationFrame mientras suena — el evento
+ *  `timeupdate` del navegador dispara ~4 veces/seg y la barra se veía a saltos. */
 @Component({
   selector: 'lib-chat-audio-player',
   standalone: true,
@@ -29,6 +32,8 @@ export class ChatAudioPlayerComponent {
   readonly currentTime = signal(0);
   readonly duration = signal(0);
   readonly rate = signal(1);
+
+  private rafId: number | null = null;
 
   readonly progress = computed(() =>
     this.duration() > 0
@@ -53,6 +58,46 @@ export class ChatAudioPlayerComponent {
     }
   }
 
+  onPlay(): void {
+    this.playing.set(true);
+    this.stopTicker();
+    this.rafId = requestAnimationFrame(this.tick);
+  }
+
+  onPause(): void {
+    this.playing.set(false);
+    this.stopTicker();
+    this.syncTime();
+  }
+
+  onEnded(): void {
+    this.playing.set(false);
+    this.stopTicker();
+    this.currentTime.set(0);
+  }
+
+  /** Avance a 60fps mientras suena — barra fluida, sin saltos. */
+  private readonly tick = (): void => {
+    this.syncTime();
+    if (!this.audioRef().nativeElement.paused) {
+      this.rafId = requestAnimationFrame(this.tick);
+    }
+  };
+
+  private stopTicker(): void {
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+  }
+
+  private syncTime(): void {
+    const audio = this.audioRef().nativeElement;
+    if (!isFinite(audio.duration)) return;
+    this.currentTime.set(audio.currentTime);
+    this.duration.set(audio.duration);
+  }
+
   onLoadedMetadata(): void {
     const audio = this.audioRef().nativeElement;
     if (isFinite(audio.duration)) {
@@ -70,18 +115,6 @@ export class ChatAudioPlayerComponent {
     };
     audio.addEventListener('durationchange', onChange);
     audio.currentTime = 1e101;
-  }
-
-  onTimeUpdate(): void {
-    const audio = this.audioRef().nativeElement;
-    if (!isFinite(audio.duration)) return;
-    this.currentTime.set(audio.currentTime);
-    this.duration.set(audio.duration);
-  }
-
-  onEnded(): void {
-    this.playing.set(false);
-    this.currentTime.set(0);
   }
 
   seek(event: Event): void {

@@ -6,6 +6,8 @@ export interface Chat {
   customerPhone: string | null;
   lastMessage: string | null;
   lastMessageAt: string | null;
+  /** true si el último mensaje lo mandó el negocio (preview "Tú: …"). */
+  lastMessageIsMine: boolean | null;
   unreadCount: number;
   muted: boolean;
   createdAt: string;
