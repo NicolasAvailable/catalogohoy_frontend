@@ -9,6 +9,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { E } from '@shared/domain';
 import { CategoryStore } from '@catalogohoy/category';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
@@ -112,6 +113,17 @@ const PDF_AI_MESSAGES = [
   { text: 'Preparando vista previa...', icon: 'eye' },
 ];
 
+// Topes anti-espera-eterna: si algo se cuelga, el flujo muestra un toast y
+// vuelve a una vista estable en vez de dejar al cliente mirando el spinner.
+/** Watchdog del parseo local del PDF: máximo sin avanzar de página. */
+const PDF_PARSE_IDLE_MS = 45_000;
+/** Llamadas a la IA (las edge functions cortan alrededor de los 150s). */
+const AI_CALL_TIMEOUT_MS = 150_000;
+const AI_MATCH_TIMEOUT_MS = 90_000;
+const UPLOAD_TIMEOUT_MS = 60_000;
+const DB_ROW_TIMEOUT_MS = 30_000;
+const BACKUP_TIMEOUT_MS = 45_000;
+
 @Component({
   selector: 'lib-import-export-hub',
   standalone: true,
@@ -201,6 +213,8 @@ export class ImportExportHubComponent {
   public readonly pdfFileName = signal('');
   public readonly isMatchingPdfPhotos = signal(false);
   public readonly pdfMatchProgress = signal(0);
+  /** Invalida resultados tardíos del parseo cuando el watchdog abortó. */
+  private pdfOpToken = 0;
   /** Costo del análisis con IA: 1 crédito por página con texto. */
   public readonly pdfAnalyzeCost = computed(() => this.pdfPages().length);
 
@@ -371,6 +385,21 @@ export class ImportExportHubComponent {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  /** Race con timeout para promesas Either: si no resuelve a tiempo devuelve
+   *  Left, así el caller muestra su toast y sale del estado de carga. */
+  private withEitherTimeout<R>(
+    promise: Promise<E.Either<Error, R>>,
+    ms: number,
+    message: string
+  ): Promise<E.Either<Error, R>> {
+    return Promise.race([
+      promise,
+      new Promise<E.Either<Error, R>>((resolve) =>
+        setTimeout(() => resolve(E.left(new Error(message))), ms)
+      ),
+    ]);
+  }
+
   /** Confirma el import: 1) crea un backup de seguridad (si falla, no toca
    *  nada), 2) valida el límite del plan SOLO sobre los productos nuevos (los
    *  existentes se actualizan y no consumen cupo), 3) corre el import con
@@ -382,7 +411,11 @@ export class ImportExportHubComponent {
     //    del botón cubre TODO el pre-proceso (backup + chequeo del plan), no
     //    solo el backup, para que nunca parezca colgado.
     this.isCreatingBackup.set(true);
-    const backup = await this.backupService.createBackup('import');
+    const backup = await this.withEitherTimeout(
+      this.backupService.createBackup('import'),
+      BACKUP_TIMEOUT_MS,
+      'El respaldo tardó demasiado. Intenta de nuevo.'
+    );
     if (backup.isLeft()) {
       this.isCreatingBackup.set(false);
       toast.error('No se pudo crear el backup. No se realizó ningún cambio.');
@@ -442,7 +475,11 @@ export class ImportExportHubComponent {
       this.importResults.set([...results]);
       this.importProgress.set(Math.round((i / rows.length) * 100));
 
-      const result = await this.excelService.importRow(rows[i]);
+      const result = await this.withEitherTimeout(
+        this.excelService.importRow(rows[i]),
+        DB_ROW_TIMEOUT_MS,
+        'La fila tardó demasiado en procesarse.'
+      );
       result
         .mapRight(() => {
           results[i] = { ...results[i], status: 'success' };
@@ -476,7 +513,11 @@ export class ImportExportHubComponent {
   public async openBackups(): Promise<void> {
     this.view.set('backups');
     this.loadingBackups.set(true);
-    const result = await this.backupService.listBackups();
+    const result = await this.withEitherTimeout(
+      this.backupService.listBackups(),
+      DB_ROW_TIMEOUT_MS,
+      'Los respaldos tardaron demasiado en cargar. Intenta de nuevo.'
+    );
     result
       .mapRight((list) => this.backups.set(list))
       .mapLeft((e) => toast.error(e.message));
@@ -489,7 +530,11 @@ export class ImportExportHubComponent {
     this.backupRows.set([]);
     this.view.set('backup-view');
     this.loadingBackupRows.set(true);
-    const result = await this.backupService.getSnapshot(backup.id);
+    const result = await this.withEitherTimeout(
+      this.backupService.getSnapshot(backup.id),
+      DB_ROW_TIMEOUT_MS,
+      'El respaldo tardó demasiado en cargar. Intenta de nuevo.'
+    );
     result
       .mapRight((snapshot) => this.backupRows.set(snapshot))
       .mapLeft((e) => {
@@ -501,7 +546,11 @@ export class ImportExportHubComponent {
 
   /** Descarga un backup como Excel. */
   public async downloadBackup(backup: ProductBackup): Promise<void> {
-    const result = await this.backupService.getSnapshot(backup.id);
+    const result = await this.withEitherTimeout(
+      this.backupService.getSnapshot(backup.id),
+      DB_ROW_TIMEOUT_MS,
+      'El respaldo tardó demasiado en cargar. Intenta de nuevo.'
+    );
     result
       .mapRight((snapshot) =>
         this.excelService.exportSnapshotToExcel(
@@ -524,7 +573,11 @@ export class ImportExportHubComponent {
     this.isRestoring.set(true);
     this.restoreProgress.set(0);
 
-    const snapshotResult = await this.backupService.getSnapshot(backup.id);
+    const snapshotResult = await this.withEitherTimeout(
+      this.backupService.getSnapshot(backup.id),
+      DB_ROW_TIMEOUT_MS,
+      'El respaldo tardó demasiado en cargar. Intenta de nuevo.'
+    );
     if (snapshotResult.isLeft()) {
       toast.error(snapshotResult.value.message);
       this.isRestoring.set(false);
@@ -536,7 +589,11 @@ export class ImportExportHubComponent {
     for (let i = 0; i < snapshot.length; i++) {
       this.restoreProgress.set(Math.round((i / snapshot.length) * 100));
       const excelRow = this.excelService.snapshotRowToExcelRow(snapshot[i]);
-      const r = await this.excelService.importRow(excelRow);
+      const r = await this.withEitherTimeout(
+        this.excelService.importRow(excelRow),
+        DB_ROW_TIMEOUT_MS,
+        'La fila tardó demasiado en procesarse.'
+      );
       r.mapLeft(() => fail++);
     }
     this.restoreProgress.set(100);
@@ -720,7 +777,11 @@ export class ImportExportHubComponent {
       }
       if (!images.length) continue;
 
-      const result = await this.aiImageService.matchPhotos(images, products);
+      const result = await this.withEitherTimeout(
+        this.aiImageService.matchPhotos(images, products),
+        AI_MATCH_TIMEOUT_MS,
+        'La IA está tardando demasiado en identificar las fotos. Intenta de nuevo.'
+      );
       if (result.isLeft()) {
         // Cortar (no quemar más lotes si p. ej. se acabaron los créditos).
         toast.error(result.value.message);
@@ -808,7 +869,11 @@ export class ImportExportHubComponent {
     if (!assigned.length) return;
 
     this.isApplyingPhotos.set(true);
-    const backup = await this.backupService.createBackup('fotos');
+    const backup = await this.withEitherTimeout(
+      this.backupService.createBackup('fotos'),
+      BACKUP_TIMEOUT_MS,
+      'El respaldo tardó demasiado. Intenta de nuevo.'
+    );
     if (backup.isLeft()) {
       toast.error('No se pudo crear el respaldo. No se realizó ningún cambio.');
       this.isApplyingPhotos.set(false);
@@ -839,7 +904,11 @@ export class ImportExportHubComponent {
           const output = await firstValueFrom(
             this.uploaderService.upload(item.file)
           );
-          const result = await output.complete();
+          const result = await this.withEitherTimeout(
+            output.complete(),
+            UPLOAD_TIMEOUT_MS,
+            'La subida de la foto tardó demasiado.'
+          );
           result
             .mapRight((url: string) => urls.push(url))
             .mapLeft(() => this.photosFailed.update((n) => n + 1));
@@ -906,7 +975,29 @@ export class ImportExportHubComponent {
     this.view.set('ai-analyzing');
     this.startAiMessages(PDF_READ_MESSAGES);
 
-    const result = await this.pdfCatalogService.parse(file);
+    // Watchdog: pdf.js puede colgarse sin rechazar la promesa (p. ej. si el
+    // worker muere). Si no avanza de página en PDF_PARSE_IDLE_MS, cortamos
+    // con toast en vez de dejar el spinner eterno; el token descarta un
+    // resultado que llegue tarde.
+    const token = ++this.pdfOpToken;
+    let lastProgress = Date.now();
+    const watchdog = setInterval(() => {
+      if (Date.now() - lastProgress < PDF_PARSE_IDLE_MS) return;
+      clearInterval(watchdog);
+      if (token !== this.pdfOpToken) return;
+      this.pdfOpToken++;
+      this.stopAiMessages();
+      toast.error(
+        'La lectura del PDF está tardando demasiado. Prueba con un archivo más liviano.'
+      );
+      this.view.set('pdf-upload');
+    }, 5000);
+
+    const result = await this.pdfCatalogService.parse(file, () => {
+      lastProgress = Date.now();
+    });
+    clearInterval(watchdog);
+    if (token !== this.pdfOpToken) return; // abortado por el watchdog
     this.stopAiMessages();
 
     if (result.isLeft()) {
@@ -937,7 +1028,11 @@ export class ImportExportHubComponent {
 
     this.view.set('ai-analyzing');
     this.startAiMessages(PDF_AI_MESSAGES);
-    const result = await this.aiPdfService.parsePages(pages);
+    const result = await this.withEitherTimeout(
+      this.aiPdfService.parsePages(pages),
+      AI_CALL_TIMEOUT_MS,
+      'La IA está tardando demasiado en leer el catálogo. Intenta de nuevo.'
+    );
     this.stopAiMessages();
 
     if (result.isLeft()) {
@@ -1037,9 +1132,10 @@ export class ImportExportHubComponent {
           indexById.set(id, idx);
         }
         if (payload.length) {
-          const result = await this.aiImageService.matchPhotos(
-            payload,
-            candidates
+          const result = await this.withEitherTimeout(
+            this.aiImageService.matchPhotos(payload, candidates),
+            AI_MATCH_TIMEOUT_MS,
+            'La IA está tardando demasiado en identificar las fotos. Intenta de nuevo.'
           );
           if (result.isLeft()) {
             // Cortar (p. ej. créditos agotados): lo matcheado hasta acá queda.
@@ -1116,7 +1212,11 @@ export class ImportExportHubComponent {
     }
 
     const { headers, rows } = rawResult.value;
-    const aiResult = await this.aiExcelService.aiParse(headers, rows);
+    const aiResult = await this.withEitherTimeout(
+      this.aiExcelService.aiParse(headers, rows),
+      AI_CALL_TIMEOUT_MS,
+      'La IA está tardando demasiado en analizar el archivo. Intenta de nuevo.'
+    );
 
     this.stopAiMessages();
 
