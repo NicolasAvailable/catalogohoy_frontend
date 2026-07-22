@@ -1967,5 +1967,14 @@
   "🔄 Estás renovando tu plan {plan} por {months}": "🔄 You're renewing your {plan} plan for {months}",
   "🔍 No se encontraron categorías con ese nombre": "🔍 No categories found with that name",
   "🖼️ Galería de imágenes": "🖼️ Image gallery",
-  "Este enlace debe abrirse desde tu panel de CatalogoHoy. Entra a tu catálogo → Chats → Conectar a WhatsApp Business y pulsa \"Conectar con Facebook\".": "This link must be opened from your CatalogoHoy dashboard. Go to your catalog → Chats → Connect to WhatsApp Business and press \"Connect with Facebook\"."
+  "Este enlace debe abrirse desde tu panel de CatalogoHoy. Entra a tu catálogo → Chats → Conectar a WhatsApp Business y pulsa \"Conectar con Facebook\".": "This link must be opened from your CatalogoHoy dashboard. Go to your catalog → Chats → Connect to WhatsApp Business and press \"Connect with Facebook\".",
+  "Conectar a Instagram": "Connect to Instagram",
+  "Los mensajes directos de tu Instagram ya llegan a tu bandeja de CatalogoHoy.": "Your Instagram direct messages already arrive in your CatalogoHoy inbox.",
+  "Recibe y responde los mensajes directos de tu Instagram en la misma bandeja donde atiendes WhatsApp.": "Receive and reply to your Instagram direct messages in the same inbox where you handle WhatsApp.",
+  "Abrir la bandeja": "Open inbox",
+  "Antes de conectar": "Before connecting",
+  "Tu cuenta de Instagram debe ser profesional (Empresa o Creador).": "Your Instagram account must be professional (Business or Creator).",
+  "Activa el acceso a mensajes en Instagram: Configuración → Mensajes y respuestas a historias → Herramientas conectadas → Permitir acceso a mensajes.": "Enable message access on Instagram: Settings → Messages and story replies → Connected tools → Allow message access.",
+  "Seguirás usando tu app de Instagram con normalidad: los mensajes se espejan en la bandeja.": "You will keep using your Instagram app as usual: messages are mirrored to the inbox.",
+  "Administrar": "Manage"
 }
