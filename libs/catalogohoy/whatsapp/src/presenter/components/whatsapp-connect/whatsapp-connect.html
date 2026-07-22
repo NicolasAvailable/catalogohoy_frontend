@@ -225,20 +225,6 @@
               <ui-icon name="external-link" size="12" />
             </a>
           </div>
-          <div class="flex items-center gap-2 mt-3">
-            <ui-checkbox
-              checkboxId="wa-policies"
-              size="small"
-              [ngModel]="policiesAccepted()"
-              (valueChange)="policiesAccepted.set($event)"
-            />
-            <label
-              for="wa-policies"
-              class="text-xs text-grey-600 cursor-pointer select-none"
-            >
-              {{ 'Confirmo que mi negocio cumple las políticas de Meta' | transloco }}
-            </label>
-          </div>
         </div>
       </div>
     </div>
@@ -290,8 +276,29 @@
     }
   </div>
 
-  <!-- ═══ Footer: conectar ═══ -->
-  <div class="flex flex-col items-end gap-2 pb-6">
+  <!-- ═══ Footer: confirmación de políticas + conectar ═══ -->
+  <div class="flex flex-col gap-3 pb-6">
+    <div
+      class="flex items-center gap-2.5 rounded-xl border px-4 py-3 transition-colors"
+      [class.border-grey-200]="!policiesAccepted()"
+      [class.bg-white]="!policiesAccepted()"
+      [class.border-green-200]="policiesAccepted()"
+      [class.bg-green-50]="policiesAccepted()"
+    >
+      <ui-checkbox
+        checkboxId="wa-policies"
+        size="small"
+        [ngModel]="policiesAccepted()"
+        (valueChange)="policiesAccepted.set($event)"
+      />
+      <label
+        for="wa-policies"
+        class="text-sm text-grey-700 cursor-pointer select-none"
+      >
+        {{ 'Confirmo que mi negocio cumple las políticas de Meta' | transloco }}
+      </label>
+    </div>
+    <div class="flex flex-col items-end gap-2">
     @if (waStatus() === 'connected') {
     <p class="text-sm text-green-600 font-medium">
       {{ '¡WhatsApp conectado! Tus mensajes ya llegan a la bandeja.' | transloco }}
@@ -312,5 +319,6 @@
     @if (whatsAppStore.error()) {
     <p class="text-sm text-red-500">{{ whatsAppStore.error() }}</p>
     }
+    </div>
   </div>
 </div>
