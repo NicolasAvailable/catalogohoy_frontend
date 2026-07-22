@@ -1,6 +1,7 @@
 export * from './ai-image.service';
 export * from './credits.store';
 export * from './image-gallery.service';
+export * from './import-events.service';
 export * from './mappers';
 export * from './pdf-catalog.service';
 export * from './product-ai-excel.service';

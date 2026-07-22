@@ -38,6 +38,8 @@ import {
 } from '../../../domain';
 import {
   AiImageService,
+  CreditsStore,
+  ImportEventsService,
   PdfCatalogService,
   ProductAiExcelService,
   ProductAiPdfService,
@@ -169,6 +171,8 @@ export class ImportExportHubComponent {
   private readonly aiImageService = inject(AiImageService);
   private readonly pdfCatalogService = inject(PdfCatalogService);
   private readonly aiPdfService = inject(ProductAiPdfService);
+  private readonly importEvents = inject(ImportEventsService);
+  public readonly credits = inject(CreditsStore);
   private readonly uploaderService = inject(UploaderService);
   private readonly categoryStore = inject(CategoryStore);
   private readonly planStore = inject(PlanStore);
@@ -227,6 +231,11 @@ export class ImportExportHubComponent {
   private pdfOpToken = 0;
   /** Costo del análisis con IA: 1 crédito por página con texto. */
   public readonly pdfAnalyzeCost = computed(() => this.pdfPages().length);
+  /** true si el saldo cargado no cubre el análisis completo del PDF. */
+  public readonly pdfInsufficientCredits = computed(() => {
+    const balance = this.credits.balance();
+    return balance !== null && balance < this.pdfAnalyzeCost();
+  });
 
   // ── Backups ──────────────────────────────────────────────────────────────
   public readonly backups = signal<ProductBackup[]>([]);
@@ -429,6 +438,7 @@ export class ImportExportHubComponent {
     if (backup.isLeft()) {
       this.isCreatingBackup.set(false);
       toast.error('No se pudo crear el backup. No se realizó ningún cambio.');
+      this.importEvents.notify('backup-error', backup.value.message);
       return;
     }
     toast.success('Respaldo creado');
@@ -512,6 +522,17 @@ export class ImportExportHubComponent {
       success: successCount,
       errors: errorCount,
     });
+    if (errorCount > 0) {
+      this.importEvents.notify(
+        'import-rows-error',
+        `${errorCount} de ${rows.length} filas fallaron${this.isPdfRun() ? ' (fuente: PDF)' : ''}`
+      );
+    } else if (this.isPdfRun()) {
+      this.importEvents.notify(
+        'pdf-import-ok',
+        `${successCount} productos importados desde ${this.pdfFileName()}`
+      );
+    }
     this.view.set('import-done');
     this.productStore.productList$();
     // El import pudo crear productos: re-consultar el uso del plan (cacheado).
@@ -795,6 +816,7 @@ export class ImportExportHubComponent {
       if (result.isLeft()) {
         // Cortar (no quemar más lotes si p. ej. se acabaron los créditos).
         toast.error(result.value.message);
+        this.importEvents.notify('fotos-ia-error', result.value.message);
         break;
       }
       this.photoItems.update((items) => {
@@ -886,6 +908,7 @@ export class ImportExportHubComponent {
     );
     if (backup.isLeft()) {
       toast.error('No se pudo crear el respaldo. No se realizó ningún cambio.');
+      this.importEvents.notify('backup-error', backup.value.message);
       this.isApplyingPhotos.set(false);
       return;
     }
@@ -946,6 +969,12 @@ export class ImportExportHubComponent {
 
     this.photosProgress.set(100);
     this.isApplyingPhotos.set(false);
+    if (this.photosFailed() > 0) {
+      this.importEvents.notify(
+        'fotos-error',
+        `${this.photosFailed()} foto(s) fallaron al subir/aplicar`
+      );
+    }
     this.view.set('photos-done');
     this.productStore.productList$();
   }
@@ -1000,6 +1029,7 @@ export class ImportExportHubComponent {
       toast.error(
         'La lectura del PDF está tardando demasiado. Prueba con un archivo más liviano.'
       );
+      this.importEvents.notify('pdf-import-timeout', this.pdfFileName());
       this.view.set('pdf-upload');
     }, 5000);
 
@@ -1012,6 +1042,10 @@ export class ImportExportHubComponent {
 
     if (result.isLeft()) {
       toast.error(result.value.message);
+      this.importEvents.notify(
+        'pdf-import-error',
+        `${this.pdfFileName()}: ${result.value.message}`
+      );
       this.view.set('pdf-upload');
       return;
     }
@@ -1027,6 +1061,8 @@ export class ImportExportHubComponent {
         previewUrl: URL.createObjectURL(img.blob),
       }))
     );
+    // Saldo fresco para mostrar "tienes N créditos" junto al costo.
+    void this.credits.load();
     this.view.set('pdf-confirm');
   }
 
@@ -1038,20 +1074,49 @@ export class ImportExportHubComponent {
 
     this.view.set('ai-analyzing');
     this.startAiMessages(PDF_AI_MESSAGES);
-    const result = await this.withEitherTimeout(
-      this.aiPdfService.parsePages(pages),
-      AI_CALL_TIMEOUT_MS,
-      'La IA está tardando demasiado en leer el catálogo. Intenta de nuevo.'
-    );
+
+    // PDFs grandes de un solo golpe: se analiza en lotes de 40 páginas en
+    // serie (la edge function acepta hasta 80 por llamada). El costo total ya
+    // se mostró en pdf-confirm; cada lote cobra solo sus páginas, así que si
+    // uno falla a mitad de camino seguimos con lo ya analizado (y cobrado).
+    const products: PdfParsedProduct[] = [];
+    let analyzedPages = 0;
+    let failure: Error | null = null;
+    for (let start = 0; start < pages.length; start += 40) {
+      const chunk = pages.slice(start, start + 40);
+      const result = await this.withEitherTimeout(
+        this.aiPdfService.parsePages(chunk),
+        AI_CALL_TIMEOUT_MS,
+        'La IA está tardando demasiado en leer el catálogo. Intenta de nuevo.'
+      );
+      if (result.isLeft()) {
+        failure = result.value;
+        break;
+      }
+      products.push(...result.value);
+      analyzedPages += chunk.length;
+    }
     this.stopAiMessages();
 
-    if (result.isLeft()) {
-      toast.error(result.value.message);
+    if (!products.length) {
+      toast.error(failure?.message ?? 'La IA no encontró productos en el PDF.');
+      this.importEvents.notify(
+        'pdf-ia-error',
+        `${this.pdfFileName()} (${pages.length} págs): ${failure?.message ?? 'sin productos'}`
+      );
       this.view.set('pdf-confirm');
       return;
     }
+    if (failure) {
+      toast.info(
+        `Se analizaron ${analyzedPages} de ${pages.length} páginas (${failure.message}). Puedes importar lo detectado y repetir luego con el resto.`
+      );
+      this.importEvents.notify(
+        'pdf-ia-error',
+        `${this.pdfFileName()}: lote falló tras ${analyzedPages}/${pages.length} págs — ${failure.message}`
+      );
+    }
 
-    const products = result.value;
     this.pdfParsed.set(products);
     this.isPdfRun.set(true);
     const rows: ProductExcelRow[] = products.map((p) => ({
@@ -1154,6 +1219,7 @@ export class ImportExportHubComponent {
           if (result.isLeft()) {
             // Cortar (p. ej. créditos agotados): lo matcheado hasta acá queda.
             toast.error(result.value.message);
+            this.importEvents.notify('fotos-ia-error', result.value.message);
             break outer;
           }
           for (const m of result.value) {
@@ -1223,6 +1289,10 @@ export class ImportExportHubComponent {
     if (rawResult.isLeft()) {
       this.stopAiMessages();
       toast.error(rawResult.value.message);
+      this.importEvents.notify(
+        'excel-parse-error',
+        `${file.name}: ${rawResult.value.message}`
+      );
       this.view.set(returnView);
       return;
     }
@@ -1241,6 +1311,10 @@ export class ImportExportHubComponent {
       toast.success('Archivo analizado con IA correctamente');
     } else {
       toast.error(aiResult.value.message);
+      this.importEvents.notify(
+        'excel-ia-error',
+        `${file.name}: ${aiResult.value.message}`
+      );
       this.view.set(returnView);
     }
   }

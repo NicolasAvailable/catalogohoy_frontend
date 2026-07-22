@@ -11,7 +11,9 @@ import {
 // inicial: solo paga el costo quien entra al flujo de importar PDF.
 type PdfJsModule = typeof import('pdfjs-dist');
 
-const MAX_PAGES = 80;
+// El front parte el análisis en lotes de 40 páginas (la edge function acepta
+// hasta 80 por llamada), así que este tope es solo un límite sano de UX/memoria.
+const MAX_PAGES = 200;
 const MAX_TEXT_PER_PAGE = 4000;
 const MAX_IMAGES = 300;
 /** Lado mayor del render de página: suficiente para leer empaques sin
