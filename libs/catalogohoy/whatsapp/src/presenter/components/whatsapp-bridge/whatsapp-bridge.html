@@ -7,7 +7,13 @@
       {{ 'Conectar a WhatsApp Business' | transloco }}
     </h1>
 
-    @if (status() === 'done') {
+    @if (missingState()) {
+    <div class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+      <p class="text-xs text-amber-800 leading-relaxed">
+        {{ 'Este enlace debe abrirse desde tu panel de CatalogoHoy. Entra a tu catálogo → Chats → Conectar a WhatsApp Business y pulsa "Conectar con Facebook".' | transloco }}
+      </p>
+    </div>
+    } @else if (status() === 'done') {
     <p class="text-sm text-green-600 font-medium">
       {{ '¡Conectado! Volviendo a tu panel…' | transloco }}
     </p>
@@ -20,7 +26,7 @@
     <ui-button
       label="Conectar con Facebook"
       icon="log-in"
-      [disabled]="!sdkReady()"
+      [disabled]="!sdkReady() || missingState()"
       [isLoading]="status() === 'connecting'"
       (click)="connect()"
     />
