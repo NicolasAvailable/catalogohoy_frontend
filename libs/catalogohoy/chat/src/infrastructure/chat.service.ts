@@ -90,8 +90,14 @@ export class ChatService {
     chatId: number,
     content: string,
     isMine: boolean,
-    replyToId: number | null = null
+    replyToId: number | null = null,
+    channel: Chat['channel'] = 'whatsapp'
   ): Promise<E.Either<Error, ChatMessage>> {
+    // Instagram: siempre por ig-send (sin fallback demo — la ventana de 24h y
+    // los errores de Meta deben llegarle claros al agente).
+    if (isMine && channel === 'instagram') {
+      return this.invokeSend('ig-send', { chatId, text: content });
+    }
     // Respuesta del agente → intentar enviarla de verdad por WhatsApp. `wa-send`
     // envía con el token del comerciante y persiste el mensaje server-side.
     if (isMine) {
@@ -183,8 +189,19 @@ export class ChatService {
     mediaUrl: string,
     mediaType: 'image' | 'document',
     caption: string,
-    replyToId: number | null = null
+    replyToId: number | null = null,
+    channel: Chat['channel'] = 'whatsapp'
   ): Promise<E.Either<Error, ChatMessage>> {
+    if (channel === 'instagram') {
+      if (mediaType !== 'image') {
+        return E.left(new Error('Instagram solo permite enviar imágenes desde la bandeja'));
+      }
+      // IG no soporta caption en attachments: la imagen va primero y el texto
+      // como mensaje aparte.
+      const sent = await this.invokeSend('ig-send', { chatId, mediaUrl });
+      if (sent.isLeft() || !caption.trim()) return sent;
+      return this.invokeSend('ig-send', { chatId, text: caption.trim() });
+    }
     const label = mediaType === 'document' ? '📎 Documento' : '📷 Imagen';
     const { data, error } = await this.client.functions.invoke('wa-send', {
       body: {
@@ -240,6 +257,33 @@ export class ChatService {
       .eq('id', chatId);
 
     return E.right(ChatMessageMapper.toDomain(msgData));
+  }
+
+  /** Invoca una función de envío (wa-send / ig-send) y mapea la respuesta
+   *  {success, message} | {error} al Either del dominio. */
+  private async invokeSend(
+    fn: 'wa-send' | 'ig-send',
+    body: Record<string, unknown>
+  ): Promise<E.Either<Error, ChatMessage>> {
+    const { data, error } = await this.client.functions.invoke(fn, { body });
+    if (!error && data?.success && data?.message) {
+      return E.right(ChatMessageMapper.toDomain(data.message));
+    }
+    let message = 'No se pudo enviar el mensaje';
+    const ctx = (error as { context?: Response } | null)?.context;
+    if (ctx) {
+      try {
+        const b = await ctx.clone().json();
+        if (b?.error) {
+          message = typeof b.error === 'string' ? b.error : (b.error?.message ?? message);
+        }
+      } catch {
+        /* sin cuerpo legible */
+      }
+    } else if (data?.error) {
+      message = typeof data.error === 'string' ? data.error : message;
+    }
+    return E.left(new Error(message));
   }
 
   /** Total de mensajes sin leer del tenant (suma de unread_count de sus

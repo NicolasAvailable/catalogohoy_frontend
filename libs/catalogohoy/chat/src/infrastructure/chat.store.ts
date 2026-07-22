@@ -170,7 +170,13 @@ export const ChatStore = signalStore(
           ),
         });
 
-        const result = await chatService.sendMessage(chatId, text, true, replyToId);
+        const result = await chatService.sendMessage(
+          chatId,
+          text,
+          true,
+          replyToId,
+          store.selectedChat()?.channel ?? 'whatsapp'
+        );
 
         result.fold(
           (err) =>
@@ -310,7 +316,14 @@ export const ChatStore = signalStore(
           return;
         }
 
-        const result = await chatService.sendMedia(chatId, up.value.url, 'image', cap, replyToId);
+        const result = await chatService.sendMedia(
+          chatId,
+          up.value.url,
+          'image',
+          cap,
+          replyToId,
+          store.selectedChat()?.channel ?? 'whatsapp'
+        );
         result.fold(
           (err) => markFailed(err.message),
           (msg) => {
