@@ -566,6 +566,40 @@ export const ChatStore = signalStore(
           patchState(store, { quickReplies: replies.value });
       },
 
+      /** Crea/edita una respuesta rápida y refresca la lista. */
+      async saveQuickReply(payload: {
+        id: number | null;
+        shortcut: string;
+        content: string;
+      }): Promise<boolean> {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return false;
+        const result = await chatService.saveQuickReply(tenantId, payload);
+        if (result.isLeft()) return false;
+        const replies = await chatService.getQuickReplies(tenantId);
+        if (replies.isRight()) patchState(store, { quickReplies: replies.value });
+        return true;
+      },
+
+      /** Renombra el contacto (optimista) — se refleja en lista + header. */
+      async renameChat(chatId: number, name: string) {
+        patchState(store, {
+          chats: store
+            .chats()
+            .map((c) => (c.id === chatId ? { ...c, customerName: name } : c)),
+        });
+        await chatService.updateCustomerName(chatId, name);
+      },
+
+      async deleteQuickReply(id: number) {
+        const result = await chatService.deleteQuickReply(id);
+        if (result.isRight()) {
+          patchState(store, {
+            quickReplies: store.quickReplies().filter((q) => q.id !== id),
+          });
+        }
+      },
+
       async setStatus(chatId: number, status: string | null) {
         patchState(store, {
           chats: store

@@ -342,8 +342,7 @@
         <!-- Toolbar -->
         <div class="flex items-center justify-between gap-2 px-2 py-1.5 border-t border-grey-50">
           <div class="flex items-center gap-0.5">
-            <!-- Quick replies -->
-            @if (chatStore.quickReplies().length) {
+            <!-- Quick replies: insertar + crear/editar/eliminar -->
             <div class="relative qr-popover-wrap">
               <button
                 (click)="toggleQuickReplies($event)"
@@ -355,21 +354,99 @@
               </button>
               @if (quickRepliesOpen()) {
               <div
-                class="absolute bottom-10 left-0 z-10 w-72 max-h-64 overflow-y-auto bg-white border border-grey-100 rounded-xl shadow-lg p-1"
+                class="absolute bottom-10 left-0 z-10 w-80 bg-white border border-grey-100 rounded-xl shadow-lg"
+                (click)="$event.stopPropagation()"
               >
-                @for (qr of chatStore.quickReplies(); track qr.id) {
-                <button
-                  (click)="insertQuickReply(qr.content)"
-                  class="w-full text-left px-3 py-2 rounded-lg hover:bg-grey-50"
-                >
-                  <span class="block text-xs font-semibold text-primary-600">/{{ qr.shortcut }}</span>
-                  <span class="block text-xs text-grey-500 truncate">{{ qr.content }}</span>
-                </button>
+                @if (qrForm(); as form) {
+                <!-- Crear / editar -->
+                <div class="p-3 flex flex-col gap-2">
+                  <span class="text-xs font-semibold text-grey-700">
+                    {{ (form.id ? 'Editar respuesta rápida' : 'Nueva respuesta rápida') | transloco }}
+                  </span>
+                  <div
+                    class="flex items-center gap-1 rounded-lg border border-grey-100 px-2 py-1.5 focus-within:border-primary-300"
+                  >
+                    <span class="text-xs font-semibold text-primary-600">/</span>
+                    <input
+                      type="text"
+                      [ngModel]="form.shortcut"
+                      (ngModelChange)="setQrField('shortcut', $event)"
+                      [placeholder]="'atajo' | transloco"
+                      class="flex-1 text-xs text-grey-700 focus:outline-none bg-transparent"
+                    />
+                  </div>
+                  <textarea
+                    rows="3"
+                    [ngModel]="form.content"
+                    (ngModelChange)="setQrField('content', $event)"
+                    [placeholder]="'Texto de la respuesta…' | transloco"
+                    class="w-full text-xs text-grey-700 rounded-lg border border-grey-100 px-2 py-1.5 resize-none focus:outline-none focus:border-primary-300"
+                  ></textarea>
+                  <div class="flex items-center justify-end gap-2">
+                    <button
+                      (click)="qrForm.set(null)"
+                      class="text-xs text-grey-500 hover:text-grey-700 px-2 py-1 cursor-pointer"
+                    >
+                      {{ 'Cancelar' | transloco }}
+                    </button>
+                    <button
+                      (click)="saveQuickReply()"
+                      [disabled]="qrSaving() || !form.shortcut.trim() || !form.content.trim()"
+                      class="text-xs font-semibold text-white bg-primary-500 hover:bg-primary-600 rounded-lg px-3 py-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {{ 'Guardar' | transloco }}
+                    </button>
+                  </div>
+                </div>
+                } @else {
+                <div class="flex items-center justify-between px-3 pt-2.5 pb-1.5">
+                  <span class="text-xs font-semibold text-grey-700">{{ 'Respuestas rápidas' | transloco }}</span>
+                  <button
+                    (click)="startNewQuickReply()"
+                    class="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:underline cursor-pointer"
+                  >
+                    <ui-icon name="plus" size="12" /> {{ 'Nueva' | transloco }}
+                  </button>
+                </div>
+                <div class="max-h-64 overflow-y-auto p-1">
+                  @for (qr of chatStore.quickReplies(); track qr.id) {
+                  <div class="group/qr flex items-start gap-1 rounded-lg hover:bg-grey-50">
+                    <button
+                      (click)="insertQuickReply(qr.content)"
+                      class="flex-1 min-w-0 text-left px-3 py-2 cursor-pointer"
+                    >
+                      <span class="block text-xs font-semibold text-primary-600">/{{ qr.shortcut }}</span>
+                      <span class="block text-xs text-grey-500 truncate">{{ qr.content }}</span>
+                    </button>
+                    <div
+                      class="flex items-center gap-0.5 pt-2 pr-2 opacity-0 group-hover/qr:opacity-100 transition-opacity"
+                    >
+                      <button
+                        (click)="editQuickReply(qr, $event)"
+                        class="w-6 h-6 rounded-md hover:bg-grey-100 flex items-center justify-center cursor-pointer"
+                        [title]="'Editar' | transloco"
+                      >
+                        <ui-icon name="pencil" size="12" styleClass="text-grey-400" />
+                      </button>
+                      <button
+                        (click)="removeQuickReply(qr.id, $event)"
+                        class="w-6 h-6 rounded-md hover:bg-red-50 flex items-center justify-center cursor-pointer"
+                        [title]="'Eliminar' | transloco"
+                      >
+                        <ui-icon name="trash" size="12" styleClass="text-red-400" />
+                      </button>
+                    </div>
+                  </div>
+                  } @empty {
+                  <p class="text-xs text-grey-400 px-3 py-3">
+                    {{ 'Crea atajos para responder en un clic (ej: /saludo).' | transloco }}
+                  </p>
+                  }
+                </div>
                 }
               </div>
               }
             </div>
-            }
 
             <!-- Emoji picker (Apple set) -->
             <div class="relative emoji-popover-wrap">
