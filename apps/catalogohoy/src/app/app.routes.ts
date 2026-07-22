@@ -41,6 +41,14 @@ export const appRoutes: Route[] = [
       import('@catalogohoy/chat').then((m) => m.CustomerSimulatorComponent),
   },
   {
+    // Puente de conexión de WhatsApp en dominio fijo (conectar.catalogohoy.com):
+    // el SDK JS de Facebook exige dominios exactos → los clientes llegan aquí
+    // con un state firmado (wa-onboard) y vuelven a su admin al terminar.
+    path: 'conectar/whatsapp',
+    loadComponent: () =>
+      import('@catalogohoy/whatsapp').then((m) => m.WhatsAppBridgeComponent),
+  },
+  {
     path: 'no-access',
     canActivate: [authenticationGuard],
     resolve: {

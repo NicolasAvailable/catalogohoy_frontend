@@ -1959,5 +1959,10 @@
   "Crea atajos para responder en un clic (ej: /saludo).": "Create shortcuts to reply in one click (e.g. /hello).",
   "Renombrar contacto": "Rename contact",
   "Abrir conversación": "Open conversation",
-  "Todavía no hay conversaciones con este cliente.": "No conversations with this customer yet."
+  "Todavía no hay conversaciones con este cliente.": "No conversations with this customer yet.",
+  "¡Conectado! Volviendo a tu panel…": "Connected! Taking you back to your dashboard…",
+  "Guardando la conexión…": "Saving the connection…",
+  "Continúa con Facebook para conectar el WhatsApp de tu negocio a tu bandeja de CatalogoHoy.": "Continue with Facebook to connect your business WhatsApp to your CatalogoHoy inbox.",
+  "Al terminar volverás automáticamente a tu catálogo.": "You will be automatically returned to your catalog when done.",
+  "¡WhatsApp conectado! Tus mensajes ya llegan a la bandeja.": "WhatsApp connected! Your messages now arrive in your inbox."
 }

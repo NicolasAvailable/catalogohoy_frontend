@@ -52,11 +52,12 @@ export class WhatsAppConnectComponent implements OnInit {
   /** Resultado del retorno del OAuth (?ig=connected | ?ig=error). */
   readonly igStatus = signal<'connected' | 'error' | null>(null);
 
+  /** Estado del retorno del puente (?wa=connected). */
+  readonly waStatus = signal<'connected' | null>(null);
+  readonly isStarting = signal(false);
+
   readonly canConnect = computed(
-    () =>
-      this.sdkReady() &&
-      this.policiesAccepted() &&
-      !this.whatsAppStore.isConnecting()
+    () => this.policiesAccepted() && !this.isStarting()
   );
 
   /** Mínimo de productos visibles que sugerimos antes de conectar (Meta puede
@@ -76,9 +77,14 @@ export class WhatsAppConnectComponent implements OnInit {
     this.loadChecklist();
     this.loadIgAccount();
 
-    const igParam = new URLSearchParams(window.location.search).get('ig');
+    const query = new URLSearchParams(window.location.search);
+    const igParam = query.get('ig');
     if (igParam === 'connected' || igParam === 'error') {
       this.igStatus.set(igParam);
+    }
+    if (query.get('wa') === 'connected') {
+      this.waStatus.set('connected');
+      this.whatsAppStore.loadAccounts();
     }
 
     this.removeMessageListener = this.facebookSdk.onEmbeddedSignupMessage(
@@ -114,20 +120,31 @@ export class WhatsAppConnectComponent implements OnInit {
     this.router.navigate(['/admin/e-commerce']);
   }
 
+  /** El Embedded Signup corre en el dominio puente (conectar.catalogohoy.com):
+   *  el SDK JS de Facebook exige dominios exactos y los catálogos viven en
+   *  subdominios/dominios propios. wa-onboard firma el state (tenant+retorno). */
   async connect(): Promise<void> {
     if (!this.canConnect()) return;
+    this.isStarting.set(true);
 
-    this.pendingCode = null;
-    this.pendingData = null;
-
-    const response = await this.facebookSdk.launchEmbeddedSignup(this.mode());
-
-    if (response.status !== 'connected' || !response.authResponse?.code) {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) {
+      this.isStarting.set(false);
       return;
     }
 
-    this.pendingCode = response.authResponse.code;
-    this.tryComplete();
+    const returnUrl = `${window.location.origin}/admin/chat/connect`;
+    const result = await this.whatsAppService.startWhatsAppConnect(
+      tenantId,
+      returnUrl,
+      this.mode()
+    );
+    result.fold(
+      () => this.isStarting.set(false),
+      (url) => {
+        window.location.href = url;
+      }
+    );
   }
 
   private async loadIgAccount(): Promise<void> {
