@@ -40,8 +40,13 @@ export class ChatLayoutComponent implements OnInit, OnDestroy {
       }
       if (chats.length === 0) return;
       this.firstSelectionDone = true;
-      const wanted = Number(this.route.snapshot.queryParamMap.get('chat'));
-      const target = chats.find((c) => c.id === wanted) ?? chats[0];
+      const query = this.route.snapshot.queryParamMap;
+      // Recién conectado Instagram → abrir su conversación más reciente.
+      const igConnected = query.get('ig') === 'connected';
+      const wanted = Number(query.get('chat'));
+      const target = igConnected
+        ? chats.find((c) => c.channel === 'instagram') ?? chats[0]
+        : chats.find((c) => c.id === wanted) ?? chats[0];
       this.chatStore.selectChat(target.id);
     });
 
@@ -51,7 +56,7 @@ export class ChatLayoutComponent implements OnInit, OnDestroy {
       if (id == null) return;
       this.router.navigate([], {
         relativeTo: this.route,
-        queryParams: { chat: id },
+        queryParams: { chat: id, ig: null },
         queryParamsHandling: 'merge',
         replaceUrl: true,
       });

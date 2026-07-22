@@ -169,7 +169,9 @@ export class WhatsAppConnectComponent implements OnInit {
       return;
     }
 
-    const returnUrl = `${window.location.origin}/admin/chat/connect`;
+    // Al volver del login aterriza en la bandeja con la conversación de IG
+    // abierta (chat-layout selecciona el chat de Instagram con ?ig=connected).
+    const returnUrl = `${window.location.origin}/admin/chat/conversations`;
     const result = await this.whatsAppService.startInstagramConnect(tenantId, returnUrl);
     result.fold(
       () => {
