@@ -38,6 +38,7 @@ import {
 } from '../../../domain';
 import {
   AiImageService,
+  ImportEventsService,
   PdfCatalogService,
   ProductAiExcelService,
   ProductAiPdfService,
@@ -169,6 +170,7 @@ export class ImportExportHubComponent {
   private readonly aiImageService = inject(AiImageService);
   private readonly pdfCatalogService = inject(PdfCatalogService);
   private readonly aiPdfService = inject(ProductAiPdfService);
+  private readonly importEvents = inject(ImportEventsService);
   private readonly uploaderService = inject(UploaderService);
   private readonly categoryStore = inject(CategoryStore);
   private readonly planStore = inject(PlanStore);
@@ -429,6 +431,7 @@ export class ImportExportHubComponent {
     if (backup.isLeft()) {
       this.isCreatingBackup.set(false);
       toast.error('No se pudo crear el backup. No se realizó ningún cambio.');
+      this.importEvents.notify('backup-error', backup.value.message);
       return;
     }
     toast.success('Respaldo creado');
@@ -512,6 +515,17 @@ export class ImportExportHubComponent {
       success: successCount,
       errors: errorCount,
     });
+    if (errorCount > 0) {
+      this.importEvents.notify(
+        'import-rows-error',
+        `${errorCount} de ${rows.length} filas fallaron${this.isPdfRun() ? ' (fuente: PDF)' : ''}`
+      );
+    } else if (this.isPdfRun()) {
+      this.importEvents.notify(
+        'pdf-import-ok',
+        `${successCount} productos importados desde ${this.pdfFileName()}`
+      );
+    }
     this.view.set('import-done');
     this.productStore.productList$();
     // El import pudo crear productos: re-consultar el uso del plan (cacheado).
@@ -795,6 +809,7 @@ export class ImportExportHubComponent {
       if (result.isLeft()) {
         // Cortar (no quemar más lotes si p. ej. se acabaron los créditos).
         toast.error(result.value.message);
+        this.importEvents.notify('fotos-ia-error', result.value.message);
         break;
       }
       this.photoItems.update((items) => {
@@ -886,6 +901,7 @@ export class ImportExportHubComponent {
     );
     if (backup.isLeft()) {
       toast.error('No se pudo crear el respaldo. No se realizó ningún cambio.');
+      this.importEvents.notify('backup-error', backup.value.message);
       this.isApplyingPhotos.set(false);
       return;
     }
@@ -946,6 +962,12 @@ export class ImportExportHubComponent {
 
     this.photosProgress.set(100);
     this.isApplyingPhotos.set(false);
+    if (this.photosFailed() > 0) {
+      this.importEvents.notify(
+        'fotos-error',
+        `${this.photosFailed()} foto(s) fallaron al subir/aplicar`
+      );
+    }
     this.view.set('photos-done');
     this.productStore.productList$();
   }
@@ -1000,6 +1022,7 @@ export class ImportExportHubComponent {
       toast.error(
         'La lectura del PDF está tardando demasiado. Prueba con un archivo más liviano.'
       );
+      this.importEvents.notify('pdf-import-timeout', this.pdfFileName());
       this.view.set('pdf-upload');
     }, 5000);
 
@@ -1012,6 +1035,10 @@ export class ImportExportHubComponent {
 
     if (result.isLeft()) {
       toast.error(result.value.message);
+      this.importEvents.notify(
+        'pdf-import-error',
+        `${this.pdfFileName()}: ${result.value.message}`
+      );
       this.view.set('pdf-upload');
       return;
     }
@@ -1047,6 +1074,10 @@ export class ImportExportHubComponent {
 
     if (result.isLeft()) {
       toast.error(result.value.message);
+      this.importEvents.notify(
+        'pdf-ia-error',
+        `${this.pdfFileName()} (${pages.length} págs): ${result.value.message}`
+      );
       this.view.set('pdf-confirm');
       return;
     }
@@ -1154,6 +1185,7 @@ export class ImportExportHubComponent {
           if (result.isLeft()) {
             // Cortar (p. ej. créditos agotados): lo matcheado hasta acá queda.
             toast.error(result.value.message);
+            this.importEvents.notify('fotos-ia-error', result.value.message);
             break outer;
           }
           for (const m of result.value) {
@@ -1223,6 +1255,10 @@ export class ImportExportHubComponent {
     if (rawResult.isLeft()) {
       this.stopAiMessages();
       toast.error(rawResult.value.message);
+      this.importEvents.notify(
+        'excel-parse-error',
+        `${file.name}: ${rawResult.value.message}`
+      );
       this.view.set(returnView);
       return;
     }
@@ -1241,6 +1277,10 @@ export class ImportExportHubComponent {
       toast.success('Archivo analizado con IA correctamente');
     } else {
       toast.error(aiResult.value.message);
+      this.importEvents.notify(
+        'excel-ia-error',
+        `${file.name}: ${aiResult.value.message}`
+      );
       this.view.set(returnView);
     }
   }
