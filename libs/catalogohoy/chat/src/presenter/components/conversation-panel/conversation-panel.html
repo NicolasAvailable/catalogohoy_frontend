@@ -235,7 +235,9 @@
                 } @else {
                 <p class="text-sm whitespace-pre-wrap break-words wa-rich" [innerHTML]="msg.content | waFormat"></p>
                 }
-                @if (isGroupEnd(group.msgs, i) || msg.status) {
+                <!-- Hora + acuses en CADA burbuja (como WhatsApp) — antes solo
+                     el último mensaje del grupo la mostraba y al mandar otro
+                     seguido el anterior "perdía" su check. -->
                 <div
                   class="text-[10px] mt-1 -mb-0.5 flex items-center gap-1"
                   [class.justify-end]="msg.isMine"
@@ -265,7 +267,6 @@
                   }
                   }
                 </div>
-                }
               </div>
             </div>
           }
