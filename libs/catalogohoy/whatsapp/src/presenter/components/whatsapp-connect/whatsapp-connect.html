@@ -292,10 +292,15 @@
 
   <!-- ═══ Footer: conectar ═══ -->
   <div class="flex flex-col items-end gap-2 pb-6">
+    @if (waStatus() === 'connected') {
+    <p class="text-sm text-green-600 font-medium">
+      {{ '¡WhatsApp conectado! Tus mensajes ya llegan a la bandeja.' | transloco }}
+    </p>
+    }
     <ui-button
       label="Conectar con Facebook"
       icon="log-in"
-      [isLoading]="whatsAppStore.isConnecting()"
+      [isLoading]="isStarting()"
       [disabled]="!canConnect()"
       (click)="connect()"
     />

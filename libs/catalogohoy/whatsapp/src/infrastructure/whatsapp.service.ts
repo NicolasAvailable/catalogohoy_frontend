@@ -111,6 +111,25 @@ export class WhatsAppService {
     );
   }
 
+  /** Pide a wa-onboard la URL del puente de conexión de WhatsApp
+   *  (conectar.catalogohoy.com) con el state firmado del tenant. */
+  async startWhatsAppConnect(
+    tenantId: number,
+    returnUrl: string,
+    mode: 'coexistence' | 'dedicated'
+  ): Promise<E.Either<Error, string>> {
+    const { data, error } = await this.client.functions.invoke('wa-onboard', {
+      body: { action: 'start', tenantId, returnUrl, mode },
+    });
+    if (!error && data?.success && data?.url) {
+      return E.right(data.url as string);
+    }
+    const message =
+      (typeof data?.error === 'string' && data.error) ||
+      'No se pudo iniciar la conexión con WhatsApp';
+    return E.left(new Error(message));
+  }
+
   /** Pide a ig-oauth la URL de autorización de Instagram Login (state firmado
    *  server-side que amarra tenant + returnUrl). */
   async startInstagramConnect(

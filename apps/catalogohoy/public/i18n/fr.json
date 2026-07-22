@@ -1959,5 +1959,10 @@
   "Crea atajos para responder en un clic (ej: /saludo).": "Créez des raccourcis pour répondre en un clic (ex. : /bonjour).",
   "Renombrar contacto": "Renommer le contact",
   "Abrir conversación": "Ouvrir la conversation",
-  "Todavía no hay conversaciones con este cliente.": "Pas encore de conversations avec ce client."
+  "Todavía no hay conversaciones con este cliente.": "Pas encore de conversations avec ce client.",
+  "¡Conectado! Volviendo a tu panel…": "Connecté ! Retour à votre panneau…",
+  "Guardando la conexión…": "Enregistrement de la connexion…",
+  "Continúa con Facebook para conectar el WhatsApp de tu negocio a tu bandeja de CatalogoHoy.": "Continuez avec Facebook pour connecter le WhatsApp de votre entreprise à votre boîte CatalogoHoy.",
+  "Al terminar volverás automáticamente a tu catálogo.": "Vous serez automatiquement redirigé vers votre catalogue à la fin.",
+  "¡WhatsApp conectado! Tus mensajes ya llegan a la bandeja.": "WhatsApp connecté ! Vos messages arrivent maintenant dans votre boîte."
 }
