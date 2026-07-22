@@ -112,16 +112,53 @@ Deno.serve(async (req: Request) => {
         stripe_subscription_status: "canceled",
       })
       .eq("id", tenantId);
-    return json({ success: true, mode: "manual", canceled: true });
+    return json({
+      success: true,
+      mode: "manual",
+      canceled: true,
+      immediate: true,
+      active_until: null,
+    });
   }
 
   // ── Caso 1: pago con Stripe ────────────────────────────────────────
   if (!stripeKey) return json({ error: "Stripe no configurado" }, 500);
   const stripe = new Stripe(stripeKey);
 
+  // Suscripciones EN MORA (el cobro de renovación falló y Stripe la está
+  // reintentando): el período ya venció, así que "cancelar al final del
+  // período" no detiene los reintentos ni cambia el estado visible — el
+  // cliente sigue viendo past_due y cree que no se canceló. En estos estados
+  // cancelamos de INMEDIATO. Con suscripciones al día se respeta el período
+  // ya pagado (cancel_at_period_end).
+  const DUNNING_STATUSES = new Set([
+    "past_due",
+    "unpaid",
+    "incomplete",
+    "incomplete_expired",
+  ]);
+  const cancelNow = DUNNING_STATUSES.has(tenant.stripe_subscription_status ?? "");
+
   try {
-    // Cancelar al final del período ya pagado — el tenant conserva su plan
-    // hasta la fecha que ya pagó, y no se le cobra la próxima renovación.
+    if (cancelNow) {
+      await stripe.subscriptions.cancel(subId);
+      // Cortamos el acceso ya. El webhook (customer.subscription.deleted)
+      // confirmará el mismo estado — idempotente.
+      await admin
+        .from("tenants")
+        .update({ plan_expired: true, stripe_subscription_status: "canceled" })
+        .eq("id", tenantId);
+      return json({
+        success: true,
+        mode: "stripe",
+        canceled: true,
+        immediate: true,
+        active_until: null,
+      });
+    }
+
+    // Al día: cancelar al final del período ya pagado — el tenant conserva su
+    // plan hasta la fecha que ya pagó, y no se le cobra la próxima renovación.
     const updated = await stripe.subscriptions.update(subId, {
       cancel_at_period_end: true,
     });
@@ -151,6 +188,7 @@ Deno.serve(async (req: Request) => {
       success: true,
       mode: "stripe",
       canceled: true,
+      immediate: false,
       cancel_at_period_end: true,
       active_until: cancelAtIso,
     });

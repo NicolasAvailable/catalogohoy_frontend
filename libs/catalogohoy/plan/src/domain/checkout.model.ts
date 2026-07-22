@@ -91,6 +91,16 @@ export interface CheckoutSession {
   currency?: PaymentCurrency;
 }
 
+export interface CancelSubscriptionResult {
+  /** 'stripe' = cancelación en Stripe · 'manual' = plan manual/Venezuela. */
+  mode: 'stripe' | 'manual';
+  /** true si se canceló al instante (past_due/unpaid o plan manual);
+   *  false si quedó programada para el fin del período ya pagado. */
+  immediate: boolean;
+  /** Fecha (ISO) hasta la que el plan sigue activo, cuando aplica. */
+  activeUntil: string | null;
+}
+
 export interface PromotionCodeValidation {
   promotionCodeId: string;
   code: string;

@@ -328,8 +328,33 @@ export class Profile {
     if (!tenantId) return;
 
     this.isCancelling.set(true);
-    await this.checkoutService.cancelSubscription(tenantId);
+    const result = await this.checkoutService.cancelSubscription(tenantId);
     this.isCancelling.set(false);
+
+    // Antes el resultado se descartaba: si fallaba, el usuario solo veía el
+    // spinner parar y creía que "no lo dejó cancelar" (mismo bug que tenía
+    // eliminar cuenta). Ahora se le confirma el resultado y se refresca el plan.
+    result.fold(
+      (err) => {
+        this.toaster.error(
+          new Exception(
+            'No se pudo cancelar la suscripción: ' + (err.message || '')
+          )
+        );
+      },
+      (info) => {
+        const until = info.activeUntil
+          ? new Date(info.activeUntil).toLocaleDateString('es-ES')
+          : null;
+        this.toaster.success(
+          info.immediate || !until
+            ? 'Tu suscripción fue cancelada.'
+            : `Tu suscripción se canceló. Tu plan sigue activo hasta el ${until}.`
+        );
+        // Refrescar el estado del plan para que la UI deje de ofrecer cancelar.
+        this.planStore.loadTenantPlanUsage();
+      }
+    );
   }
 
   public onDeleteAccount(): void {
