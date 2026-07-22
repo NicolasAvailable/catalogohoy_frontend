@@ -470,6 +470,26 @@ WhatsApp Business API accounts per tenant. RLS: tenant member check via `users_t
 
 **RLS Policies:** SELECT / INSERT / UPDATE / DELETE — all require authenticated user to be a tenant member.
 
+### `social_accounts` (fundación omnicanal, 2026-07-22)
+
+Cuentas conectadas de redes sociales por tenant — Instagram / TikTok / Messenger (WhatsApp se queda en `whatsapp_accounts` porque las funciones en prod dependen de ella). Migración `20260722_omnichannel_inbox_foundation.sql`, proyecto Linear "Bandeja omnicanal" (CAT-38..44).
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | identity | PK |
+| tenant_id | int8 | — | FK → tenants.id, ON DELETE CASCADE |
+| channel | text | — | CHECK: `instagram` / `tiktok` / `messenger` |
+| external_account_id | text | — | IG user id / TikTok business id; UNIQUE (channel, external_account_id) |
+| username / display_name | text | null | |
+| access_token / refresh_token | text | null | ⚠️ IG vence a los 60 días → cron de refresh (CAT-40) |
+| token_expires_at | timestamptz | null | |
+| status | text | `'active'` | |
+| metadata | jsonb | `{}` | |
+
+**RLS + privilegios por columna:** SELECT solo para miembros del tenant y **sin** las columnas de tokens (`revoke all` + `grant select` de columnas públicas); las edge functions leen tokens con service role.
+
+La bandeja también es omnicanal: `chats.channel` (default `'whatsapp'`), `chats.external_user_id` (IGSID/open_id — ruteo en redes sin teléfono) y `chats.customer_username`, con unique parcial `(tenant_id, channel, external_user_id)`.
+
 **Frontend query pattern:**
 ```ts
 this.client
