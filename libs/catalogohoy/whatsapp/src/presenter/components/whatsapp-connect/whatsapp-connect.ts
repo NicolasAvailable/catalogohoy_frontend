@@ -46,6 +46,12 @@ export class WhatsAppConnectComponent implements OnInit {
   readonly checklist = signal<WhatsAppConnectChecklist | null>(null);
   readonly isLoadingChecklist = signal(true);
 
+  // ── Instagram (bandeja omnicanal) ──
+  readonly igAccount = signal<{ username: string | null; displayName: string | null } | null>(null);
+  readonly isConnectingIg = signal(false);
+  /** Resultado del retorno del OAuth (?ig=connected | ?ig=error). */
+  readonly igStatus = signal<'connected' | 'error' | null>(null);
+
   readonly canConnect = computed(
     () =>
       this.sdkReady() &&
@@ -68,6 +74,12 @@ export class WhatsAppConnectComponent implements OnInit {
   ngOnInit(): void {
     this.facebookSdk.loadSdk().then(() => this.sdkReady.set(true));
     this.loadChecklist();
+    this.loadIgAccount();
+
+    const igParam = new URLSearchParams(window.location.search).get('ig');
+    if (igParam === 'connected' || igParam === 'error') {
+      this.igStatus.set(igParam);
+    }
 
     this.removeMessageListener = this.facebookSdk.onEmbeddedSignupMessage(
       (event) => {
@@ -116,6 +128,41 @@ export class WhatsAppConnectComponent implements OnInit {
 
     this.pendingCode = response.authResponse.code;
     this.tryComplete();
+  }
+
+  private async loadIgAccount(): Promise<void> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return;
+    const result = await this.whatsAppService.getInstagramAccount(tenantId);
+    result.fold(
+      () => undefined,
+      (account) => this.igAccount.set(account)
+    );
+  }
+
+  /** Abre el Instagram Login (redirect server-side vía ig-oauth — funciona
+   *  desde cualquier dominio del cliente, sin lista de dominios del SDK). */
+  async connectInstagram(): Promise<void> {
+    if (this.isConnectingIg()) return;
+    this.isConnectingIg.set(true);
+
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) {
+      this.isConnectingIg.set(false);
+      return;
+    }
+
+    const returnUrl = `${window.location.origin}/admin/chat/connect`;
+    const result = await this.whatsAppService.startInstagramConnect(tenantId, returnUrl);
+    result.fold(
+      () => {
+        this.igStatus.set('error');
+        this.isConnectingIg.set(false);
+      },
+      (url) => {
+        window.location.href = url;
+      }
+    );
   }
 
   private async loadChecklist(): Promise<void> {

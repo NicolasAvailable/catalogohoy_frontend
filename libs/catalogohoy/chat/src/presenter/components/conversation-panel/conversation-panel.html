@@ -21,7 +21,18 @@
       </div>
       <div class="flex-1 min-w-0">
         <p class="text-sm font-semibold text-grey-700 truncate">{{ chatStore.selectedChat()!.customerName }}</p>
-        @if (chatStore.selectedChat()!.customerPhone) {
+        @if (chatStore.selectedChat()!.channel === 'instagram') {
+          @if (chatStore.selectedChat()!.customerUsername; as igUser) {
+          <a
+            [href]="'https://instagram.com/' + igUser"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1 text-xs text-pink-600 hover:underline"
+          >
+            <ui-icon name="instagram" size="11" /> &#64;{{ igUser }}
+          </a>
+          }
+        } @else if (chatStore.selectedChat()!.customerPhone) {
           <a
             [href]="'tel:' + (chatStore.selectedChat()!.customerPhone | phonePlus)"
             class="text-xs text-primary-500 hover:underline"

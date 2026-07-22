@@ -244,6 +244,52 @@
     </div>
   </div>
 
+  <!-- ═══ Card: Instagram DMs (bandeja omnicanal) ═══ -->
+  <div class="bg-white rounded-2xl border border-grey-100 p-5">
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <span
+          class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600 flex items-center justify-center shrink-0"
+        >
+          <ui-icon name="instagram" size="20" styleClass="text-white" />
+        </span>
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-grey-800">{{ 'DMs de Instagram' | transloco }}</p>
+          @if (igAccount(); as ig) {
+          <p class="text-xs text-green-600 font-medium">
+            &#64;{{ ig.username }} · {{ 'conectado' | transloco }}
+          </p>
+          } @else {
+          <p class="text-xs text-grey-400">
+            {{ 'Recibe y responde los mensajes directos de tu Instagram en esta misma bandeja.' | transloco }}
+          </p>
+          }
+        </div>
+      </div>
+      <ui-button
+        [label]="igAccount() ? 'Reconectar' : 'Conectar Instagram'"
+        severity="secondary"
+        size="small"
+        [isLoading]="isConnectingIg()"
+        (click)="connectInstagram()"
+      />
+    </div>
+    @if (!igAccount()) {
+    <p class="text-xs text-grey-400 mt-3">
+      {{ 'Necesitas una cuenta de Instagram profesional (Empresa o Creador) con el acceso a mensajes activado en Configuración → Mensajes y respuestas a historias → Herramientas conectadas.' | transloco }}
+    </p>
+    }
+    @if (igStatus() === 'connected') {
+    <p class="text-xs text-green-600 mt-2 font-medium">
+      {{ '¡Instagram conectado! Los mensajes nuevos aparecerán en tu bandeja.' | transloco }}
+    </p>
+    } @else if (igStatus() === 'error') {
+    <p class="text-xs text-red-500 mt-2">
+      {{ 'No se pudo conectar Instagram. Intenta de nuevo.' | transloco }}
+    </p>
+    }
+  </div>
+
   <!-- ═══ Footer: conectar ═══ -->
   <div class="flex flex-col items-end gap-2 pb-6">
     <ui-button

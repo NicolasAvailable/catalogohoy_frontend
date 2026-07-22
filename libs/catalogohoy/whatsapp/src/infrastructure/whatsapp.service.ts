@@ -88,6 +88,47 @@ export class WhatsAppService {
   /** Lista de verificación previa a conectar: Meta puede revisar el negocio
    *  durante el onboarding, así que chequeamos que el catálogo esté
    *  presentable. `is_hidden` puede ser null en filas viejas → `not is true`. */
+  /** Cuenta de Instagram conectada del tenant (columnas públicas — los
+   *  tokens no son visibles para el navegador por privilegios de columna). */
+  async getInstagramAccount(
+    tenantId: number
+  ): Promise<E.Either<Error, { username: string | null; displayName: string | null } | null>> {
+    const { data, error } = await this.client
+      .from('social_accounts')
+      .select('id, username, display_name, status')
+      .eq('tenant_id', tenantId)
+      .eq('channel', 'instagram')
+      .eq('status', 'active')
+      .maybeSingle();
+    if (error) return E.left(new Error(error.message));
+    return E.right(
+      data
+        ? {
+            username: (data['username'] as string | null) ?? null,
+            displayName: (data['display_name'] as string | null) ?? null,
+          }
+        : null
+    );
+  }
+
+  /** Pide a ig-oauth la URL de autorización de Instagram Login (state firmado
+   *  server-side que amarra tenant + returnUrl). */
+  async startInstagramConnect(
+    tenantId: number,
+    returnUrl: string
+  ): Promise<E.Either<Error, string>> {
+    const { data, error } = await this.client.functions.invoke('ig-oauth', {
+      body: { tenantId, returnUrl },
+    });
+    if (!error && data?.success && data?.url) {
+      return E.right(data.url as string);
+    }
+    const message =
+      (typeof data?.error === 'string' && data.error) ||
+      'No se pudo iniciar la conexión con Instagram';
+    return E.left(new Error(message));
+  }
+
   async getConnectChecklist(
     tenantId: number
   ): Promise<E.Either<Error, WhatsAppConnectChecklist>> {

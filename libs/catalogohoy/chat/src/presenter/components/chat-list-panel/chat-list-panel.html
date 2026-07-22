@@ -46,9 +46,20 @@
             class="flex items-center gap-3.5 px-4 py-3.5 cursor-pointer hover:bg-lino-400 transition-colors duration-100"
             [class.bg-primary-50]="chatStore.selectedChatId() === chat.id"
           >
-            <!-- Avatar -->
-            <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
-              <span class="text-sm font-bold text-primary-600">{{ initials(chat.customerName) }}</span>
+            <!-- Avatar + logo del canal sobrepuesto en diagonal -->
+            <div class="relative shrink-0">
+              <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
+                <span class="text-sm font-bold text-primary-600">{{ initials(chat.customerName) }}</span>
+              </div>
+              <span
+                class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-white shadow-sm ring-1 ring-grey-100 flex items-center justify-center"
+              >
+                @if (chat.channel === 'instagram') {
+                <ui-icon name="instagram" size="12" styleClass="text-pink-600" />
+                } @else {
+                <img src="/images/whatsapp.svg" alt="WhatsApp" class="w-3.5 h-3.5" />
+                }
+              </span>
             </div>
 
             <!-- Info -->

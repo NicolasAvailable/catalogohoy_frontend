@@ -1,9 +1,18 @@
+/** Canal por el que entra la conversación (bandeja omnicanal). */
+export type ChatChannel = 'whatsapp' | 'instagram' | 'tiktok' | 'messenger';
+
 export interface Chat {
   id: number;
   tenantId: number;
   orderId: number | null;
   customerName: string;
   customerPhone: string | null;
+  /** Canal de la conversación (default whatsapp). */
+  channel: ChatChannel;
+  /** Id del cliente en redes sin teléfono (IGSID de IG / open_id de TikTok). */
+  externalUserId: string | null;
+  /** Username visible del cliente en la red (sin @). */
+  customerUsername: string | null;
   lastMessage: string | null;
   lastMessageAt: string | null;
   /** true si el último mensaje lo mandó el negocio (preview "Tú: …"). */
