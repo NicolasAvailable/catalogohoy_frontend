@@ -6,9 +6,11 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // (señal de adopción). Fire-and-forget desde el front: NUNCA debe romper
 // el flujo del cliente; si el webhook no está configurado, no-op.
 //
-// Secret: SLACK_IMPORT_EVENTS_WEBHOOK (incoming webhook del canal).
+// Webhook del canal: env SLACK_IMPORT_EVENTS_WEBHOOK (override) o el secret
+// `slack_import_events_webhook` en Supabase Vault (vía RPC internal_get_secret,
+// solo service_role) — mismo patrón que whatsapp_webhook_secret.
 
-const WEBHOOK = Deno.env.get("SLACK_IMPORT_EVENTS_WEBHOOK");
+const WEBHOOK_ENV = Deno.env.get("SLACK_IMPORT_EVENTS_WEBHOOK");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,8 +63,20 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: false, error: "Unauthorized" }, 401);
   }
 
-  if (!WEBHOOK) {
-    console.log("SLACK_IMPORT_EVENTS_WEBHOOK no configurado; evento ignorado");
+  const admin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  let webhook = WEBHOOK_ENV ?? null;
+  if (!webhook) {
+    const { data } = await admin.rpc("internal_get_secret", {
+      p_name: "slack_import_events_webhook",
+    });
+    webhook = (data as string | null) ?? null;
+  }
+  if (!webhook) {
+    console.log("webhook de Slack no configurado (env ni Vault); evento ignorado");
     return jsonResponse({ success: true, skipped: true });
   }
 
@@ -87,7 +101,7 @@ Deno.serve(async (req: Request) => {
   ];
 
   try {
-    const res = await fetch(WEBHOOK, {
+    const res = await fetch(webhook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
