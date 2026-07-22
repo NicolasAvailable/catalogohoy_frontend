@@ -29,7 +29,7 @@
             rel="noopener noreferrer"
             class="inline-flex items-center gap-1 text-xs text-pink-600 hover:underline"
           >
-            <ui-icon name="instagram" size="11" /> &#64;{{ igUser }}
+            <img src="/images/instagram.svg" alt="Instagram" class="w-3 h-3" /> &#64;{{ igUser }}
           </a>
           }
         } @else if (chatStore.selectedChat()!.customerPhone) {
@@ -101,7 +101,7 @@
               [class.mt-3]="!first && isGroupStart(group.msgs, i)"
               [class.mt-0.5]="!first && !isGroupStart(group.msgs, i)"
             >
-              @if (msg.id > 0) {
+              @if (msg.id > 0 && chatStore.selectedChat()!.channel !== 'instagram') {
               <button
                 (click)="startReply(msg)"
                 class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-grey-400 hover:bg-grey-100 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
