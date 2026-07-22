@@ -19,11 +19,34 @@ export class ChatRealtimeService {
   private channel: RealtimeChannel | null = null;
   private audioCtx: AudioContext | null = null;
 
+  // ── Reconexión: los navegadores estrangulan los websockets de pestañas en
+  // segundo plano y el canal muere en silencio. Guardamos el tenant para poder
+  // reabrir el canal (backoff) y recargar lo perdido al volver.
+  private tenantId: number | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempts = 0;
+  private wasDown = false;
+  private lifecycleAttached = false;
+  private hiddenAt: number | null = null;
+
   async subscribe(): Promise<void> {
     this.unsubscribe();
 
     const tenantId = await this.tenantStore.getTenantIdAsync();
     if (!tenantId) return;
+    this.tenantId = tenantId;
+    this.attachLifecycleListeners();
+    this.openChannel();
+  }
+
+  /** Abre (o reabre) el canal del tenant. */
+  private openChannel(): void {
+    const tenantId = this.tenantId;
+    if (!tenantId) return;
+    if (this.channel) {
+      this.client.removeChannel(this.channel);
+      this.channel = null;
+    }
 
     this.channel = this.client
       .channel(`chat-tenant-${tenantId}`)
@@ -82,14 +105,89 @@ export class ChatRealtimeService {
           this.zone.run(() => this.chatStore.updateChatFields(chat));
         }
       )
-      .subscribe();
+      .subscribe((status) => this.zone.run(() => this.onChannelStatus(status)));
+  }
+
+  /** SUBSCRIBED tras una caída → recargar lo perdido; error/cierre → banner +
+   *  reintento con backoff (2s, 4s, 8s… máx 30s). */
+  private onChannelStatus(status: string): void {
+    if (status === 'SUBSCRIBED') {
+      this.reconnectAttempts = 0;
+      if (this.wasDown) {
+        this.wasDown = false;
+        this.chatStore.setRealtimeDown(false);
+        this.chatStore.refreshAfterReconnect();
+      }
+      return;
+    }
+    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      if (!this.tenantId) return; // unsubscribe() intencional
+      this.wasDown = true;
+      this.chatStore.setRealtimeDown(true);
+      this.scheduleReconnect();
+    }
+  }
+
+  private scheduleReconnect(): void {
+    if (this.reconnectTimer) return;
+    const delay = Math.min(30_000, 2_000 * Math.pow(2, this.reconnectAttempts++));
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.openChannel();
+    }, delay);
+  }
+
+  /** Al volver a la pestaña: si el canal murió, reabrir; si estuvo oculta un
+   *  rato, recargar por si el socket "vivo" igual se perdió eventos. */
+  private readonly onVisibility = (): void => {
+    if (document.hidden) {
+      this.hiddenAt = Date.now();
+      return;
+    }
+    const hiddenFor = this.hiddenAt ? Date.now() - this.hiddenAt : 0;
+    this.hiddenAt = null;
+    if (!this.tenantId) return;
+
+    if (this.channel?.state !== 'joined') {
+      this.wasDown = true;
+      this.chatStore.setRealtimeDown(true);
+      this.openChannel();
+    } else if (hiddenFor > 60_000) {
+      this.zone.run(() => this.chatStore.refreshAfterReconnect());
+    }
+  };
+
+  private readonly onOnline = (): void => {
+    if (!this.tenantId) return;
+    this.wasDown = true;
+    this.openChannel();
+  };
+
+  private attachLifecycleListeners(): void {
+    if (this.lifecycleAttached) return;
+    this.lifecycleAttached = true;
+    document.addEventListener('visibilitychange', this.onVisibility);
+    window.addEventListener('online', this.onOnline);
   }
 
   unsubscribe(): void {
+    this.tenantId = null;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.channel) {
       this.client.removeChannel(this.channel);
       this.channel = null;
     }
+    if (this.lifecycleAttached) {
+      document.removeEventListener('visibilitychange', this.onVisibility);
+      window.removeEventListener('online', this.onOnline);
+      this.lifecycleAttached = false;
+    }
+    this.wasDown = false;
+    this.reconnectAttempts = 0;
+    this.chatStore.setRealtimeDown(false);
   }
 
   /** Ping + (si está permitida) notificación del navegador al llegar un mensaje
