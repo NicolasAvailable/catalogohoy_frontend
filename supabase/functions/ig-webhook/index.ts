@@ -24,27 +24,40 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const VERIFY_TOKEN = Deno.env.get("IG_WEBHOOK_VERIFY_TOKEN") ?? "catalogohoy-ig";
-const APP_SECRET = Deno.env.get("IG_APP_SECRET");
+// El caso de uso de Instagram vive DENTRO de la app CatalogoHoy: según el
+// origen del evento, Meta puede firmar con el secret de la app de Instagram
+// (IG_APP_SECRET) o con el de la app principal (WA_APP_SECRET) → se aceptan
+// ambas firmas.
+const SECRETS = [
+  Deno.env.get("IG_APP_SECRET")?.trim(),
+  Deno.env.get("WA_APP_SECRET")?.trim(),
+].filter((s): s is string => !!s);
 const GRAPH = "https://graph.instagram.com/v23.0";
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-async function isValidSignature(raw: string, header: string | null): Promise<boolean> {
-  if (!APP_SECRET) return true; // sin secret configurado (dev) → no bloquear
-  if (!header?.startsWith("sha256=")) return false;
-  const expected = header.slice("sha256=".length);
+async function hmacHex(secret: string, raw: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(APP_SECRET),
+    new TextEncoder().encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
   );
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(raw));
-  const hex = [...new Uint8Array(sig)]
+  return [...new Uint8Array(sig)]
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
-  return hex === expected;
+}
+
+async function isValidSignature(raw: string, header: string | null): Promise<boolean> {
+  if (SECRETS.length === 0) return true; // sin secrets (dev) → no bloquear
+  if (!header?.startsWith("sha256=")) return false;
+  const expected = header.slice("sha256=".length);
+  for (const secret of SECRETS) {
+    if ((await hmacHex(secret, raw)) === expected) return true;
+  }
+  return false;
 }
 
 type IgAccount = { tenantId: number; token: string | null };

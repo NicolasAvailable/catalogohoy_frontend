@@ -438,6 +438,45 @@ export class ChatService {
     return E.right(QuickReplyMapper.toDomainList(data || []));
   }
 
+  /** Crea o actualiza una respuesta rápida del tenant (RLS: miembros). */
+  async saveQuickReply(
+    tenantId: number,
+    payload: { id: number | null; shortcut: string; content: string }
+  ): Promise<E.Either<Error, QuickReply>> {
+    const shortcut = payload.shortcut.trim().replace(/^\/+/, '').toLowerCase();
+    const content = payload.content.trim();
+    const query = payload.id
+      ? this.client
+          .from('quick_replies')
+          .update({ shortcut, content })
+          .eq('id', payload.id)
+      : this.client
+          .from('quick_replies')
+          .insert({ tenant_id: tenantId, shortcut, content });
+    const { data, error } = await query.select().single();
+    if (error) return E.left(new Error(error.message));
+    return E.right(QuickReplyMapper.toDomain(data));
+  }
+
+  /** Renombra el contacto/lead de la conversación. */
+  async updateCustomerName(
+    chatId: number,
+    name: string
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('chats')
+      .update({ customer_name: name })
+      .eq('id', chatId);
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  async deleteQuickReply(id: number): Promise<E.Either<Error, void>> {
+    const { error } = await this.client.from('quick_replies').delete().eq('id', id);
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
   /** Past orders for the customer phone, for the ficha. Matches on digits so a
    *  "+58 412…" order links to a "0412…" chat. */
   async getCustomerOrders(

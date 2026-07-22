@@ -215,9 +215,48 @@ export class ConversationPanelComponent {
   /** Quick-reply popover state + insertion. */
   protected readonly quickRepliesOpen = signal(false);
 
+  /** Formulario de crear/editar respuesta rápida (null = viendo la lista). */
+  protected readonly qrForm = signal<{
+    id: number | null;
+    shortcut: string;
+    content: string;
+  } | null>(null);
+  protected readonly qrSaving = signal(false);
+
+  startNewQuickReply(): void {
+    this.qrForm.set({ id: null, shortcut: '', content: '' });
+  }
+
+  editQuickReply(qr: { id: number; shortcut: string; content: string }, event: Event): void {
+    event.stopPropagation();
+    this.qrForm.set({ id: qr.id, shortcut: qr.shortcut, content: qr.content });
+  }
+
+  setQrField(field: 'shortcut' | 'content', value: string): void {
+    const form = this.qrForm();
+    if (form) this.qrForm.set({ ...form, [field]: value });
+  }
+
+  async saveQuickReply(): Promise<void> {
+    const form = this.qrForm();
+    if (!form || !form.shortcut.trim() || !form.content.trim() || this.qrSaving()) {
+      return;
+    }
+    this.qrSaving.set(true);
+    const ok = await this.chatStore.saveQuickReply(form);
+    this.qrSaving.set(false);
+    if (ok) this.qrForm.set(null);
+  }
+
+  removeQuickReply(id: number, event: Event): void {
+    event.stopPropagation();
+    this.chatStore.deleteQuickReply(id);
+  }
+
   toggleQuickReplies(event: Event): void {
     event.stopPropagation();
     this.emojiPickerOpen.set(false);
+    this.qrForm.set(null);
     this.quickRepliesOpen.update((v) => !v);
   }
 

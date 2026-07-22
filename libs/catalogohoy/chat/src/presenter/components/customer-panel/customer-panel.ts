@@ -56,6 +56,22 @@ export class CustomerPanelComponent {
   protected readonly orders = signal<CustomerOrderSummary[]>([]);
   protected readonly noteDraft = signal('');
 
+  /** Renombrar el contacto/lead desde la ficha. */
+  protected readonly renaming = signal(false);
+  protected readonly nameDraft = signal('');
+
+  startRename(current: string): void {
+    this.nameDraft.set(current ?? '');
+    this.renaming.set(true);
+  }
+
+  saveRename(chatId: number): void {
+    const name = this.nameDraft().trim();
+    if (!name) return;
+    this.chatStore.renameChat(chatId, name);
+    this.renaming.set(false);
+  }
+
   /** Collapsible ficha sections that start open (PrimeNG accordion, multiple). */
   protected accordionValue: string[] = ['info', 'orders', 'notes'];
 
