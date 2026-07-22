@@ -32,6 +32,8 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
     'idle'
   );
   readonly errorMsg = signal<string | null>(null);
+  /** true si llegaron sin el `state` firmado (URL abierta a mano o vencida). */
+  readonly missingState = signal(false);
 
   private state = '';
   private mode: WhatsAppConnectMode = 'coexistence';
@@ -43,6 +45,7 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const params = new URLSearchParams(window.location.search);
     this.state = params.get('state') ?? '';
+    this.missingState.set(!this.state);
     this.mode = params.get('mode') === 'dedicated' ? 'dedicated' : 'coexistence';
     this.returnUrl = params.get('return') || this.returnUrl;
 
