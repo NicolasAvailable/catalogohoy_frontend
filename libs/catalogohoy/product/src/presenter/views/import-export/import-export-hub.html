@@ -265,6 +265,18 @@
     <p class="text-sm text-gray-400 max-w-md">
       {{ 'El análisis usará {n} créditos de IA (1 por página).' | transloco: { n: pdfAnalyzeCost() } }}
     </p>
+    @if (credits.balance() !== null) {
+    <p
+      class="text-xs max-w-md -mt-3"
+      [class.text-gray-400]="!pdfInsufficientCredits()"
+      [class.text-red-500]="pdfInsufficientCredits()"
+    >
+      {{ 'Tienes {n} créditos disponibles.' | transloco: { n: credits.balance() } }}
+      @if (pdfInsufficientCredits()) {
+      {{ 'No te alcanzan: compra más créditos desde tu perfil o mejora tu plan.' | transloco }}
+      }
+    </p>
+    }
     <div class="flex gap-3">
       <ui-button
         [label]="'Cancelar' | transloco"

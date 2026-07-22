@@ -38,6 +38,7 @@ import {
 } from '../../../domain';
 import {
   AiImageService,
+  CreditsStore,
   ImportEventsService,
   PdfCatalogService,
   ProductAiExcelService,
@@ -171,6 +172,7 @@ export class ImportExportHubComponent {
   private readonly pdfCatalogService = inject(PdfCatalogService);
   private readonly aiPdfService = inject(ProductAiPdfService);
   private readonly importEvents = inject(ImportEventsService);
+  public readonly credits = inject(CreditsStore);
   private readonly uploaderService = inject(UploaderService);
   private readonly categoryStore = inject(CategoryStore);
   private readonly planStore = inject(PlanStore);
@@ -229,6 +231,11 @@ export class ImportExportHubComponent {
   private pdfOpToken = 0;
   /** Costo del análisis con IA: 1 crédito por página con texto. */
   public readonly pdfAnalyzeCost = computed(() => this.pdfPages().length);
+  /** true si el saldo cargado no cubre el análisis completo del PDF. */
+  public readonly pdfInsufficientCredits = computed(() => {
+    const balance = this.credits.balance();
+    return balance !== null && balance < this.pdfAnalyzeCost();
+  });
 
   // ── Backups ──────────────────────────────────────────────────────────────
   public readonly backups = signal<ProductBackup[]>([]);
@@ -1054,6 +1061,8 @@ export class ImportExportHubComponent {
         previewUrl: URL.createObjectURL(img.blob),
       }))
     );
+    // Saldo fresco para mostrar "tienes N créditos" junto al costo.
+    void this.credits.load();
     this.view.set('pdf-confirm');
   }
 
@@ -1065,24 +1074,49 @@ export class ImportExportHubComponent {
 
     this.view.set('ai-analyzing');
     this.startAiMessages(PDF_AI_MESSAGES);
-    const result = await this.withEitherTimeout(
-      this.aiPdfService.parsePages(pages),
-      AI_CALL_TIMEOUT_MS,
-      'La IA está tardando demasiado en leer el catálogo. Intenta de nuevo.'
-    );
+
+    // PDFs grandes de un solo golpe: se analiza en lotes de 40 páginas en
+    // serie (la edge function acepta hasta 80 por llamada). El costo total ya
+    // se mostró en pdf-confirm; cada lote cobra solo sus páginas, así que si
+    // uno falla a mitad de camino seguimos con lo ya analizado (y cobrado).
+    const products: PdfParsedProduct[] = [];
+    let analyzedPages = 0;
+    let failure: Error | null = null;
+    for (let start = 0; start < pages.length; start += 40) {
+      const chunk = pages.slice(start, start + 40);
+      const result = await this.withEitherTimeout(
+        this.aiPdfService.parsePages(chunk),
+        AI_CALL_TIMEOUT_MS,
+        'La IA está tardando demasiado en leer el catálogo. Intenta de nuevo.'
+      );
+      if (result.isLeft()) {
+        failure = result.value;
+        break;
+      }
+      products.push(...result.value);
+      analyzedPages += chunk.length;
+    }
     this.stopAiMessages();
 
-    if (result.isLeft()) {
-      toast.error(result.value.message);
+    if (!products.length) {
+      toast.error(failure?.message ?? 'La IA no encontró productos en el PDF.');
       this.importEvents.notify(
         'pdf-ia-error',
-        `${this.pdfFileName()} (${pages.length} págs): ${result.value.message}`
+        `${this.pdfFileName()} (${pages.length} págs): ${failure?.message ?? 'sin productos'}`
       );
       this.view.set('pdf-confirm');
       return;
     }
+    if (failure) {
+      toast.info(
+        `Se analizaron ${analyzedPages} de ${pages.length} páginas (${failure.message}). Puedes importar lo detectado y repetir luego con el resto.`
+      );
+      this.importEvents.notify(
+        'pdf-ia-error',
+        `${this.pdfFileName()}: lote falló tras ${analyzedPages}/${pages.length} págs — ${failure.message}`
+      );
+    }
 
-    const products = result.value;
     this.pdfParsed.set(products);
     this.isPdfRun.set(true);
     const rows: ProductExcelRow[] = products.map((p) => ({
