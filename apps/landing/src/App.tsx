@@ -10,6 +10,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import DataDeletion from "./pages/DataDeletion";
 import OrderRedirect from "./pages/OrderRedirect";
+import PlanRedirect from "./pages/PlanRedirect";
 import EnterpriseSales from "./pages/EnterpriseSales";
 import Precios from "./pages/Precios";
 import PreguntasFrecuentes from "./pages/PreguntasFrecuentes";
@@ -37,6 +38,7 @@ const App = () => {
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/data-deletion" element={<DataDeletion />} />
             <Route path="/o/:orderId" element={<OrderRedirect />} />
+            <Route path="/r/plan/:slug" element={<PlanRedirect />} />
             <Route path="/ventas" element={<EnterpriseSales />} />
             <Route path="/pricing" element={<Precios />} />
             <Route path="/faq" element={<PreguntasFrecuentes />} />
