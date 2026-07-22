@@ -41,7 +41,13 @@ export class ChatBadgeRealtimeService {
         },
         () => this.zone.run(() => this.chatStore.loadUnreadTotal())
       )
-      .subscribe();
+      // Cada (re)suscripción re-cuenta: supabase-js reintenta el socket solo y
+      // así el badge se pone al día tras una caída sin lógica extra.
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          this.zone.run(() => this.chatStore.loadUnreadTotal());
+        }
+      });
   }
 
   stop(): void {

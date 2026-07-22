@@ -1949,5 +1949,6 @@
   "Reconectar": "Reconectar",
   "Necesitas una cuenta de Instagram profesional (Empresa o Creador) con el acceso a mensajes activado en Configuración → Mensajes y respuestas a historias → Herramientas conectadas.": "Necesitas una cuenta de Instagram profesional (Empresa o Creador) con el acceso a mensajes activado en Configuración → Mensajes y respuestas a historias → Herramientas conectadas.",
   "¡Instagram conectado! Los mensajes nuevos aparecerán en tu bandeja.": "¡Instagram conectado! Los mensajes nuevos aparecerán en tu bandeja.",
-  "No se pudo conectar Instagram. Intenta de nuevo.": "No se pudo conectar Instagram. Intenta de nuevo."
+  "No se pudo conectar Instagram. Intenta de nuevo.": "No se pudo conectar Instagram. Intenta de nuevo.",
+  "Se perdió la conexión en tiempo real. Reconectando…": "Se perdió la conexión en tiempo real. Reconectando…"
 }

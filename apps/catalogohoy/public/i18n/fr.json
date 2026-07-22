@@ -1949,5 +1949,6 @@
   "Reconectar": "Reconnecter",
   "Necesitas una cuenta de Instagram profesional (Empresa o Creador) con el acceso a mensajes activado en Configuración → Mensajes y respuestas a historias → Herramientas conectadas.": "Vous avez besoin d'un compte Instagram professionnel (Entreprise ou Créateur) avec l'accès aux messages activé dans Paramètres → Messages et réponses aux stories → Outils connectés.",
   "¡Instagram conectado! Los mensajes nuevos aparecerán en tu bandeja.": "Instagram connecté ! Les nouveaux messages apparaîtront dans votre boîte de réception.",
-  "No se pudo conectar Instagram. Intenta de nuevo.": "Impossible de connecter Instagram. Réessayez."
+  "No se pudo conectar Instagram. Intenta de nuevo.": "Impossible de connecter Instagram. Réessayez.",
+  "Se perdió la conexión en tiempo real. Reconectando…": "Connexion en temps réel perdue. Reconnexion…"
 }

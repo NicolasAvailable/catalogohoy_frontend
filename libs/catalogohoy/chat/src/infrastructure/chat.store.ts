@@ -28,6 +28,8 @@ type ChatState = {
   transcribeError: { messageId: number; message: string } | null;
   /** Total de mensajes sin leer del tenant (badge del sidebar, app-wide). */
   unreadTotal: number;
+  /** true mientras el canal realtime está caído (banner "reconectando"). */
+  realtimeDown: boolean;
 };
 
 const initialState: ChatState = {
@@ -44,6 +46,7 @@ const initialState: ChatState = {
   transcribingMessageId: null,
   transcribeError: null,
   unreadTotal: 0,
+  realtimeDown: false,
 };
 
 /** Newest activity first; conversations without activity sink to the bottom. */
@@ -345,6 +348,42 @@ export const ChatStore = signalStore(
               ),
             });
           }
+        );
+      },
+
+      setRealtimeDown(down: boolean) {
+        patchState(store, { realtimeDown: down });
+      },
+
+      /** Recarga SILENCIOSA tras recuperar la conexión realtime (o tras volver
+       *  de una pestaña dormida): trae lo que se haya perdido sin spinners ni
+       *  parpadeos — lista de chats, mensajes del chat abierto y no-leídos. */
+      async refreshAfterReconnect() {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return;
+
+        const chatsResult = await chatService.getChatsByTenant(
+          tenantId,
+          store.searchQuery()
+        );
+        chatsResult.fold(
+          () => undefined,
+          (chats) => patchState(store, { chats })
+        );
+
+        const chatId = store.selectedChatId();
+        if (chatId != null) {
+          const msgs = await chatService.getMessagesByChatId(chatId);
+          msgs.fold(
+            () => undefined,
+            (messages) => patchState(store, { messages })
+          );
+        }
+
+        const unread = await chatService.getUnreadTotal(tenantId);
+        unread.fold(
+          () => undefined,
+          (total) => patchState(store, { unreadTotal: total })
         );
       },
 

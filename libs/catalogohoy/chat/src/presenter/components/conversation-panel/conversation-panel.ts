@@ -26,6 +26,7 @@ import { ChatMessage } from '../../../domain';
 import { ChatStore } from '../../../infrastructure/chat.store';
 import { ChatAudioPlayerComponent } from '../audio-player/audio-player';
 import { PhonePlusPipe } from '../phone-plus.pipe';
+import { WaFormatPipe } from '../wa-format.pipe';
 
 @Component({
   selector: 'lib-conversation-panel',
@@ -42,6 +43,7 @@ import { PhonePlusPipe } from '../phone-plus.pipe';
     TranslocoPipe,
     ChatAudioPlayerComponent,
     PhonePlusPipe,
+    WaFormatPipe,
   ],
   templateUrl: './conversation-panel.html',
 })

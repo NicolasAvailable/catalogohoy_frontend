@@ -1,4 +1,6 @@
 import { Component, effect, inject, OnDestroy, OnInit } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { IconComponent } from '@ui';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ChatRealtimeService } from '../../../infrastructure/chat-realtime.service';
 import { ChatStore } from '../../../infrastructure/chat.store';
@@ -13,6 +15,8 @@ import { CustomerPanelComponent } from '../../components/customer-panel/customer
     ChatListPanelComponent,
     ConversationPanelComponent,
     CustomerPanelComponent,
+    IconComponent,
+    TranslocoPipe,
   ],
   host: { class: 'flex-1 flex min-h-0 overflow-hidden' },
   templateUrl: './chat-layout.html',
@@ -52,6 +56,10 @@ export class ChatLayoutComponent implements OnInit, OnDestroy {
         replaceUrl: true,
       });
     });
+  }
+
+  reloadApp(): void {
+    window.location.reload();
   }
 
   ngOnInit() {

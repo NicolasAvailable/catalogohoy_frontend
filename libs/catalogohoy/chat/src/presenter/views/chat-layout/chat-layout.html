@@ -1,4 +1,22 @@
-<div class="flex h-full w-full overflow-hidden">
+<div class="relative flex h-full w-full overflow-hidden">
+  <!-- Conexión realtime caída: aviso flotante mientras se reintenta solo. -->
+  @if (chatStore.realtimeDown()) {
+  <div
+    class="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 rounded-full bg-amber-100 border border-amber-300 pl-4 pr-1.5 py-1.5 shadow-md"
+  >
+    <ui-icon name="triangle-alert" size="14" styleClass="text-amber-600 shrink-0" />
+    <span class="text-xs font-medium text-amber-800">
+      {{ 'Se perdió la conexión en tiempo real. Reconectando…' | transloco }}
+    </span>
+    <button
+      type="button"
+      (click)="reloadApp()"
+      class="text-xs font-semibold text-amber-900 bg-amber-200 hover:bg-amber-300 rounded-full px-2.5 py-1 cursor-pointer transition-colors"
+    >
+      {{ 'Recargar' | transloco }}
+    </button>
+  </div>
+  }
   <!-- List: full-width on mobile, fixed column on lg. Hidden on mobile once a
        conversation is open so the thread takes the whole screen (Fuse pattern). -->
   <lib-chat-list-panel
