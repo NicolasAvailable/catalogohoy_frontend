@@ -253,11 +253,10 @@
         </div>
       </div>
       <ui-button
-        [label]="igAccount() ? 'Reconectar' : 'Conectar Instagram'"
+        [label]="igAccount() ? 'Administrar' : 'Conectar Instagram'"
         severity="secondary"
         size="small"
-        [isLoading]="isConnectingIg()"
-        (click)="connectInstagram()"
+        (click)="goToInstagram()"
       />
     </div>
     @if (!igAccount()) {

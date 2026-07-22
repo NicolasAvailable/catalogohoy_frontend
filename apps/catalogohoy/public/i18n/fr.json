@@ -1967,5 +1967,14 @@
   "🔄 Estás renovando tu plan {plan} por {months}": "🔄 Vous renouvelez votre plan {plan} pour {months}",
   "🔍 No se encontraron categorías con ese nombre": "🔍 Aucune catégorie trouvée avec ce nom",
   "🖼️ Galería de imágenes": "🖼️ Galerie d'images",
-  "Este enlace debe abrirse desde tu panel de CatalogoHoy. Entra a tu catálogo → Chats → Conectar a WhatsApp Business y pulsa \"Conectar con Facebook\".": "Ce lien doit être ouvert depuis votre panneau CatalogoHoy. Allez dans votre catalogue → Chats → Connecter à WhatsApp Business et appuyez sur « Connecter avec Facebook »."
+  "Este enlace debe abrirse desde tu panel de CatalogoHoy. Entra a tu catálogo → Chats → Conectar a WhatsApp Business y pulsa \"Conectar con Facebook\".": "Ce lien doit être ouvert depuis votre panneau CatalogoHoy. Allez dans votre catalogue → Chats → Connecter à WhatsApp Business et appuyez sur « Connecter avec Facebook ».",
+  "Conectar a Instagram": "Connecter à Instagram",
+  "Los mensajes directos de tu Instagram ya llegan a tu bandeja de CatalogoHoy.": "Les messages directs de votre Instagram arrivent déjà dans votre boîte CatalogoHoy.",
+  "Recibe y responde los mensajes directos de tu Instagram en la misma bandeja donde atiendes WhatsApp.": "Recevez et répondez aux messages directs de votre Instagram dans la même boîte que WhatsApp.",
+  "Abrir la bandeja": "Ouvrir la boîte",
+  "Antes de conectar": "Avant de connecter",
+  "Tu cuenta de Instagram debe ser profesional (Empresa o Creador).": "Votre compte Instagram doit être professionnel (Entreprise ou Créateur).",
+  "Activa el acceso a mensajes en Instagram: Configuración → Mensajes y respuestas a historias → Herramientas conectadas → Permitir acceso a mensajes.": "Activez l'accès aux messages sur Instagram : Paramètres → Messages et réponses aux stories → Outils connectés → Autoriser l'accès aux messages.",
+  "Seguirás usando tu app de Instagram con normalidad: los mensajes se espejan en la bandeja.": "Vous continuerez à utiliser votre app Instagram normalement : les messages sont reflétés dans la boîte.",
+  "Administrar": "Gérer"
 }

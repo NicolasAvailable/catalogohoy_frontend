@@ -112,6 +112,10 @@ export class WhatsAppConnectComponent implements OnInit {
     this.router.navigate(['/admin/chat/conversations']);
   }
 
+  goToInstagram(): void {
+    this.router.navigate(['/admin/chat/connect/instagram']);
+  }
+
   goToProducts(): void {
     this.router.navigate(['/admin/products']);
   }
