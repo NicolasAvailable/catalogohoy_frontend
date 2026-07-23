@@ -117,6 +117,39 @@ export class Sidebar {
   public readonly teamsMenu: PanelMenuItem[] = TEAMS_MENU;
   public readonly chatMenu: PanelMenuItem[] = CHAT_MENU;
 
+  // ------------------------------------------- sidebar colapsable (desktop) ---
+  /** Raíces de los menús con submenú, para los flyouts del modo rail. */
+  public readonly productsRoot = PRODUCTS_MENU[0];
+  public readonly chatRoot = CHAT_MENU[0];
+  public readonly catalogRoot = CATALOG_MENU[0];
+
+  private static readonly COLLAPSED_KEY = 'sidebar-collapsed';
+
+  /** Sidebar colapsado a un rail de íconos (solo desktop, persistido). */
+  public readonly collapsed = signal(
+    localStorage.getItem(Sidebar.COLLAPSED_KEY) === '1'
+  );
+
+  /** Rail solo aplica en el aside estático de desktop: el drawer móvil
+   *  (visible()) siempre muestra el menú completo. */
+  public readonly railMode = computed(() => this.collapsed() && !this.visible());
+
+  /** Flyout de submenú abierto en modo rail (label del menú raíz). */
+  public readonly openFlyout = signal<string | null>(null);
+
+  public setCollapsed(value: boolean): void {
+    this.collapsed.set(value);
+    this.openFlyout.set(null);
+    localStorage.setItem(Sidebar.COLLAPSED_KEY, value ? '1' : '0');
+  }
+
+  /** Click en un hijo del flyout: cierra el flyout y resuelve el caso especial
+   *  "Ver mi catálogo" (link externo al storefront). */
+  public onFlyoutChild(item: PanelMenuItem): void {
+    this.openFlyout.set(null);
+    if (item['data']?.['externalUrl']) this.toggle(item);
+  }
+
   constructor() {
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd && this.visible()) {
@@ -181,13 +214,6 @@ export class Sidebar {
     const tenants = this.profileStore.profile().tenantList.tenants;
     return tenants.find((t) => t.slug === slug) ?? this.profileStore.profile().tenantList.first;
   });
-
-  /** Muestra hasta 20 caracteres del nombre del catálogo; si es más largo, lo
-   *  corta y agrega "...". El nombre completo queda en el tooltip (title). */
-  protected truncateName(name: string | null | undefined): string {
-    const n = (name ?? '').trim();
-    return n.length > 20 ? `${n.slice(0, 20)}...` : n;
-  }
 
   public toggleCatalogSwitcher() {
     this.showCatalogSwitcher.update((v) => !v);

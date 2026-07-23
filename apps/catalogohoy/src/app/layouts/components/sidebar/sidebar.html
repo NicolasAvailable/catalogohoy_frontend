@@ -6,9 +6,297 @@
 }
 
 <aside
-  class="flex flex-col gap-2 h-full w-3/4 sm:w-72 bg-white py-5 border-r border-grey-50 fixed inset-y-0 left-0 z-50 transition-transform duration-300 sm:translate-x-0 sm:static"
-  [ngClass]="{ 'translate-x-0': visible(), '-translate-x-full': !visible() }"
+  class="flex flex-col gap-2 h-full w-3/4 bg-white py-5 border-r border-grey-50 fixed inset-y-0 left-0 z-50 transition-[transform,width] duration-300 sm:translate-x-0 sm:relative"
+  [ngClass]="{
+    'translate-x-0': visible(),
+    '-translate-x-full': !visible(),
+    'sm:w-72': !railMode(),
+    'sm:w-[4.75rem]': railMode()
+  }"
 >
+  @if (railMode()) {
+  <!-- ============== RAIL (desktop colapsado, estilo Tiendanube) ============== -->
+  <div class="w-full px-3">
+    @if (currentTenant(); as tenant) {
+    <!-- Hover sobre el logo → botón "Abrir menú lateral" -->
+    <button
+      type="button"
+      (click)="setCollapsed(false)"
+      class="relative w-10 h-10 mx-auto flex items-center justify-center group cursor-pointer"
+      [pTooltip]="'Abrir menú lateral' | transloco"
+      tooltipPosition="right"
+    >
+      @if (tenant.logo) {
+      <img
+        [src]="tenant.logo"
+        [alt]="tenant.name"
+        class="w-10 h-10 rounded-xl object-cover group-hover:opacity-0 transition-opacity"
+      />
+      } @else {
+      <ui-avatar
+        [label]="tenant.name"
+        size="normal"
+        shape="square"
+        styleClass="!bg-primary-100 !text-primary-600 !rounded-xl group-hover:opacity-0 transition-opacity"
+      />
+      }
+      <span
+        class="absolute inset-0 rounded-xl bg-primary-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+      >
+        <ui-icon name="panel-left" size="18" styleClass="text-primary-600" />
+      </span>
+    </button>
+    }
+  </div>
+
+  <ul class="flex flex-col gap-1.5 w-full h-full px-3 pt-2">
+    <li>
+      <a
+        routerLink="/admin"
+        routerLinkActive="bg-primary-50"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Inicio' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="home" size="18" styleClass="text-grey-700" />
+      </a>
+    </li>
+
+    <!-- Productos (flyout) -->
+    @if (canViewProducts()) {
+    <li
+      class="relative"
+      (mouseenter)="openFlyout.set('products')"
+      (mouseleave)="openFlyout.set(null)"
+    >
+      <div
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [class.bg-primary-50]="isActive(productsRoot)"
+      >
+        <ui-icon name="tag" size="18" styleClass="text-grey-700" />
+      </div>
+      @if (openFlyout() === 'products') {
+      <div class="absolute left-full top-0 pl-2 z-50">
+        <div class="min-w-48 bg-white border border-grey-100 rounded-xl shadow-lg py-2 flex flex-col">
+          <span class="px-3 pb-1.5 text-xs font-bold text-grey-400 uppercase tracking-wide">{{ 'Productos' | transloco }}</span>
+          @for (child of productsRoot.items; track child.label) {
+          <a
+            [routerLink]="child.routerLink"
+            (click)="openFlyout.set(null)"
+            class="px-3 py-2 text-sm font-medium text-grey-700 hover:bg-primary-50 cursor-pointer whitespace-nowrap"
+            [class.text-primary-600]="isActive(child)"
+          >{{ child.label | transloco }}</a>
+          }
+        </div>
+      </div>
+      }
+    </li>
+    }
+
+    <!-- Ordenes -->
+    @if (canViewOrders()) {
+    <li>
+      <a
+        routerLink="/admin/orders"
+        routerLinkActive="bg-primary-50"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="relative flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Ordenes' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="notepad-text" size="18" styleClass="text-grey-700" />
+        @if (pendingOrdersCount() > 0) {
+        <span class="absolute -top-1 -right-1 flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold leading-none">
+          {{ pendingOrdersCount() > 99 ? '99+' : pendingOrdersCount() }}
+        </span>
+        }
+      </a>
+    </li>
+    }
+
+    <!-- Clientes -->
+    @if (canViewClients()) {
+    <li>
+      <a
+        routerLink="/admin/clients"
+        routerLinkActive="bg-primary-50"
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Clientes' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="contact" size="18" styleClass="text-grey-700" />
+      </a>
+    </li>
+    }
+
+    <!-- Chats (flyout) -->
+    @if (canViewChat()) {
+    <li
+      class="relative"
+      (mouseenter)="openFlyout.set('chats')"
+      (mouseleave)="openFlyout.set(null)"
+    >
+      <div
+        class="relative flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [class.bg-primary-50]="isActive(chatRoot)"
+      >
+        <ui-icon name="message-square" size="18" styleClass="text-grey-700" />
+        @if (unreadChatsCount() > 0) {
+        <span class="absolute -top-1 -right-1 flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold leading-none">
+          {{ unreadChatsCount() > 99 ? '99+' : unreadChatsCount() }}
+        </span>
+        }
+      </div>
+      @if (openFlyout() === 'chats') {
+      <div class="absolute left-full top-0 pl-2 z-50">
+        <div class="min-w-48 bg-white border border-grey-100 rounded-xl shadow-lg py-2 flex flex-col">
+          <span class="px-3 pb-1.5 text-xs font-bold text-grey-400 uppercase tracking-wide">{{ 'Chats' | transloco }}</span>
+          @for (child of chatRoot.items; track child.label) {
+          <a
+            [routerLink]="child.routerLink"
+            (click)="openFlyout.set(null)"
+            class="flex items-center justify-between gap-3 px-3 py-2 text-sm font-medium text-grey-700 hover:bg-primary-50 cursor-pointer whitespace-nowrap"
+            [class.text-primary-600]="isActive(child)"
+          >
+            {{ child.label | transloco }}
+            @if (child.label === 'Mensajes' && unreadChatsCount() > 0) {
+            <span class="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-primary-500 text-white text-[11px] font-bold leading-none">
+              {{ unreadChatsCount() > 99 ? '99+' : unreadChatsCount() }}
+            </span>
+            }
+          </a>
+          }
+        </div>
+      </div>
+      }
+    </li>
+    }
+
+    <!-- Analíticas -->
+    @if (canViewAnalytics()) {
+    <li>
+      <a
+        routerLink="/admin/analytics"
+        routerLinkActive="bg-primary-50"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Analíticas' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="bar-chart-3" size="18" styleClass="text-grey-700" />
+      </a>
+    </li>
+    }
+
+    <!-- Reportes -->
+    @if (canViewReports()) {
+    <li>
+      <a
+        routerLink="/admin/reports"
+        routerLinkActive="bg-primary-50"
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Reportes' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="clipboard-list" size="18" styleClass="text-grey-700" />
+      </a>
+    </li>
+    }
+
+    <!-- Tasas del día (solo Venezuela) -->
+    @if (isVenezuela() && canViewRates()) {
+    <li>
+      <a
+        routerLink="/admin/exchange-rates"
+        routerLinkActive="bg-primary-50"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Tasas del día' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="dollar-sign" size="18" styleClass="text-grey-700" />
+      </a>
+    </li>
+    }
+
+    <!-- Equipo -->
+    @if (canViewTeam()) {
+    <li>
+      <a
+        routerLink="/admin/teams"
+        routerLinkActive="bg-primary-50"
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Equipo' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="users" size="18" styleClass="text-grey-700" />
+      </a>
+    </li>
+    }
+
+    <!-- Referidos -->
+    <li>
+      <a
+        routerLink="/admin/referrals"
+        routerLinkActive="bg-primary-50"
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Referidos' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="gift" size="18" styleClass="text-grey-700" />
+      </a>
+    </li>
+
+    <!-- Mi catálogo (flyout) -->
+    @if (canViewCatalog()) {
+    <li
+      class="relative"
+      (mouseenter)="openFlyout.set('catalog')"
+      (mouseleave)="openFlyout.set(null)"
+    >
+      <div
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [class.bg-primary-50]="isActive(catalogRoot)"
+      >
+        <ui-icon name="store" size="18" styleClass="text-grey-700" />
+      </div>
+      @if (openFlyout() === 'catalog') {
+      <div class="absolute left-full top-0 pl-2 z-50">
+        <div class="min-w-48 bg-white border border-grey-100 rounded-xl shadow-lg py-2 flex flex-col">
+          <span class="px-3 pb-1.5 text-xs font-bold text-grey-400 uppercase tracking-wide">{{ 'Mi catálogo' | transloco }}</span>
+          @for (child of catalogRoot.items; track child.label) {
+          <a
+            [routerLink]="child['data']?.['externalUrl'] ? null : child.routerLink"
+            (click)="onFlyoutChild(child)"
+            class="flex items-center justify-between gap-3 px-3 py-2 text-sm font-medium text-grey-700 hover:bg-primary-50 cursor-pointer whitespace-nowrap"
+            [class.text-primary-600]="isActive(child)"
+          >
+            {{ child.label | transloco }}
+            @if (child['data']?.['externalUrl']) {
+            <ui-icon name="square-arrow-out-up-right" size="12" styleClass="text-grey-300" />
+            }
+          </a>
+          }
+        </div>
+      </div>
+      }
+    </li>
+    }
+  </ul>
+
+  <div class="w-full h-auto border-t border-grey-50 pt-5 px-3">
+    <button
+      type="button"
+      (click)="logout()"
+      class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-red-50 transition-colors"
+      [pTooltip]="'Cerrar sesión' | transloco"
+      tooltipPosition="right"
+    >
+      <ui-icon name="log-out" size="18" styleClass="text-red-400" />
+    </button>
+  </div>
+  } @else {
   <div class="w-full px-3">
     @if (profileStore.isLoading()) {
     <div class="flex items-center gap-3 h-16 animate-pulse">
@@ -19,42 +307,51 @@
       </div>
     </div>
     } @else if (currentTenant(); as tenant) {
-    <div class="flex items-center gap-3 h-16">
-      @if (tenant.logo) {
-      <img
-        [src]="tenant.logo"
-        [alt]="tenant.name"
-        class="w-10 h-10 rounded-xl object-cover shrink-0"
-      />
-      } @else {
-      <ui-avatar
-        [label]="tenant.name"
-        size="normal"
-        shape="square"
-        styleClass="!bg-primary-100 !text-primary-600 !rounded-xl shrink-0"
-      />
-      }
-      <div class="flex flex-col min-w-0 flex-1">
-        <span
-          class="text-base font-bold text-grey-700 truncate"
-          [title]="tenant.name"
-        >
-          {{ truncateName(tenant.name) }}
-        </span>
-        <span class="text-xs text-grey-300 truncate">
-          {{ tenant.slug }}.catalogohoy.com
-        </span>
-      </div>
+    <div class="flex items-center gap-1 h-16">
+      <!-- Switcher de catálogos: TODO el bloque (logo + nombre + chevron) es el
+           botón, con hover — patrón workspace switcher para que se descubra. -->
       <button
+        type="button"
         (click)="toggleCatalogSwitcher()"
-        class="shrink-0 w-7 h-7 flex items-center justify-center rounded-md hover:bg-primary-50 transition-colors cursor-pointer"
-        [title]="'Gestionar catálogos' | transloco"
+        class="flex items-center gap-2.5 flex-1 min-w-0 px-1.5 py-1.5 -ml-1.5 rounded-lg hover:bg-grey-50 transition-colors cursor-pointer text-left"
+        [class.bg-grey-50]="showCatalogSwitcher()"
+        [pTooltip]="'Cambiar o crear catálogo' | transloco"
+        tooltipPosition="bottom"
       >
-        <ui-icon
-          name="chevrons-up-down"
-          size="14"
-          styleClass="text-grey-400"
+        @if (tenant.logo) {
+        <img
+          [src]="tenant.logo"
+          [alt]="tenant.name"
+          class="w-10 h-10 rounded-xl object-cover shrink-0"
         />
+        } @else {
+        <ui-avatar
+          [label]="tenant.name"
+          size="normal"
+          shape="square"
+          styleClass="!bg-primary-100 !text-primary-600 !rounded-xl shrink-0"
+        />
+        }
+        <div class="flex flex-col min-w-0 flex-1">
+          <span
+            class="text-base font-bold text-grey-700 truncate"
+            [title]="tenant.name"
+          >
+            {{ tenant.name }}
+          </span>
+          <span class="text-xs text-grey-300 truncate">
+            {{ tenant.slug }}
+          </span>
+        </div>
+      </button>
+      <!-- Colapsar a rail (solo desktop; en móvil el drawer se cierra solo) -->
+      <button
+        (click)="setCollapsed(true)"
+        class="hidden sm:flex shrink-0 w-7 h-7 items-center justify-center rounded-md hover:bg-primary-50 transition-colors cursor-pointer"
+        [pTooltip]="'Cerrar menú lateral' | transloco"
+        tooltipPosition="bottom"
+      >
+        <ui-icon name="panel-left" size="14" styleClass="text-grey-400" />
       </button>
     </div>
     <div
@@ -400,4 +697,5 @@
       </div>
     </div>
   </div>
+  }
 </aside>
