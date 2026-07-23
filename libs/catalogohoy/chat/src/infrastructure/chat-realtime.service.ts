@@ -28,6 +28,11 @@ export class ChatRealtimeService {
   private wasDown = false;
   private lifecycleAttached = false;
   private hiddenAt: number | null = null;
+  // Cada openChannel() incrementa la generación; los callbacks de estado de
+  // canales reemplazados (removeChannel dispara su CLOSED) se ignoran para no
+  // confundirlos con una caída real.
+  private channelGen = 0;
+  private bannerTimer: ReturnType<typeof setTimeout> | null = null;
 
   async subscribe(): Promise<void> {
     this.unsubscribe();
@@ -43,6 +48,11 @@ export class ChatRealtimeService {
   private openChannel(): void {
     const tenantId = this.tenantId;
     if (!tenantId) return;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    const gen = ++this.channelGen;
     if (this.channel) {
       this.client.removeChannel(this.channel);
       this.channel = null;
@@ -105,7 +115,10 @@ export class ChatRealtimeService {
           this.zone.run(() => this.chatStore.updateChatFields(chat));
         }
       )
-      .subscribe((status) => this.zone.run(() => this.onChannelStatus(status)));
+      .subscribe((status) => {
+        if (gen !== this.channelGen) return; // canal viejo reemplazado
+        this.zone.run(() => this.onChannelStatus(status));
+      });
   }
 
   /** SUBSCRIBED tras una caída → recargar lo perdido; error/cierre → banner +
@@ -113,18 +126,39 @@ export class ChatRealtimeService {
   private onChannelStatus(status: string): void {
     if (status === 'SUBSCRIBED') {
       this.reconnectAttempts = 0;
+      this.clearBannerTimer();
+      this.chatStore.setRealtimeDown(false);
       if (this.wasDown) {
         this.wasDown = false;
-        this.chatStore.setRealtimeDown(false);
         this.chatStore.refreshAfterReconnect();
       }
       return;
     }
     if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
       if (!this.tenantId) return; // unsubscribe() intencional
-      this.wasDown = true;
-      this.chatStore.setRealtimeDown(true);
+      this.markDown();
       this.scheduleReconnect();
+    }
+  }
+
+  /** Marca la caída pero muestra el banner solo si sigue caído unos segundos
+   *  después — las reconexiones rápidas (p. ej. al volver a la pestaña) no
+   *  parpadean la alerta. */
+  private markDown(): void {
+    this.wasDown = true;
+    if (this.bannerTimer || this.chatStore.realtimeDown()) return;
+    this.bannerTimer = setTimeout(() => {
+      this.bannerTimer = null;
+      if (this.wasDown) {
+        this.zone.run(() => this.chatStore.setRealtimeDown(true));
+      }
+    }, 4_000);
+  }
+
+  private clearBannerTimer(): void {
+    if (this.bannerTimer) {
+      clearTimeout(this.bannerTimer);
+      this.bannerTimer = null;
     }
   }
 
@@ -149,8 +183,7 @@ export class ChatRealtimeService {
     if (!this.tenantId) return;
 
     if (this.channel?.state !== 'joined') {
-      this.wasDown = true;
-      this.chatStore.setRealtimeDown(true);
+      this.markDown();
       this.openChannel();
     } else if (hiddenFor > 60_000) {
       this.zone.run(() => this.chatStore.refreshAfterReconnect());
@@ -159,7 +192,7 @@ export class ChatRealtimeService {
 
   private readonly onOnline = (): void => {
     if (!this.tenantId) return;
-    this.wasDown = true;
+    this.markDown();
     this.openChannel();
   };
 
@@ -172,6 +205,8 @@ export class ChatRealtimeService {
 
   unsubscribe(): void {
     this.tenantId = null;
+    this.channelGen++;
+    this.clearBannerTimer();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
