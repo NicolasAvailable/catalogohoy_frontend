@@ -47,6 +47,16 @@
         </div>
       </div>
 
+      <!-- Apodo -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-grey-700">{{ 'Apodo' | transloco }}</label>
+        <ui-input-text
+          placeholder="Ej: La señora de las tortas"
+          [ngModel]="nickname()"
+          (ngModelChange)="nickname.set($event)"
+        />
+      </div>
+
       <!-- Correo -->
       <div class="flex flex-col gap-1.5">
         <label class="text-sm font-medium text-grey-700">{{ 'Correo electrónico' | transloco }}</label>

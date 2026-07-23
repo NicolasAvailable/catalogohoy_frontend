@@ -3,7 +3,7 @@
   <div class="flex items-center gap-3">
     <button
       type="button"
-      class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-grey-50 transition-colors shrink-0"
+      class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-grey-50 transition-colors shrink-0 cursor-pointer"
       (click)="goBack()"
     >
       <ui-icon name="arrow-left" size="20" styleClass="text-grey-600" />
@@ -229,89 +229,6 @@
       </div>
     </div>
   </div>
-
-  <!-- ═══ Card: Instagram DMs (bandeja omnicanal) ═══ -->
-  <div class="bg-white rounded-2xl border border-grey-100 p-5">
-    <div class="flex items-center justify-between gap-3">
-      <div class="flex items-center gap-3 min-w-0">
-        <img
-          src="/images/instagram.svg"
-          alt="Instagram"
-          class="w-10 h-10 rounded-xl shrink-0"
-        />
-        <div class="min-w-0">
-          <p class="text-sm font-semibold text-grey-800">{{ 'DMs de Instagram' | transloco }}</p>
-          @if (igAccount(); as ig) {
-          <p class="text-xs text-green-600 font-medium">
-            &#64;{{ ig.username }} · {{ 'conectado' | transloco }}
-          </p>
-          } @else {
-          <p class="text-xs text-grey-400">
-            {{ 'Recibe y responde los mensajes directos de tu Instagram en esta misma bandeja.' | transloco }}
-          </p>
-          }
-        </div>
-      </div>
-      <ui-button
-        [label]="igAccount() ? 'Administrar' : 'Conectar Instagram'"
-        severity="secondary"
-        size="small"
-        (click)="goToInstagram()"
-      />
-    </div>
-    @if (!igAccount()) {
-    <p class="text-xs text-grey-400 mt-3">
-      {{ 'Necesitas una cuenta de Instagram profesional (Empresa o Creador) con el acceso a mensajes activado en Configuración → Mensajes y respuestas a historias → Herramientas conectadas.' | transloco }}
-    </p>
-    }
-    @if (igStatus() === 'connected') {
-    <p class="text-xs text-green-600 mt-2 font-medium">
-      {{ '¡Instagram conectado! Los mensajes nuevos aparecerán en tu bandeja.' | transloco }}
-    </p>
-    } @else if (igStatus() === 'error') {
-    <p class="text-xs text-red-500 mt-2">
-      {{ 'No se pudo conectar Instagram. Intenta de nuevo.' | transloco }}
-    </p>
-    }
-  </div>
-
-  <!-- ═══ Card: TikTok DMs (oculta hasta que TikTok apruebe el acceso beta) ═══ -->
-  @if (tiktokCardVisible) {
-  <div class="bg-white rounded-2xl border border-grey-100 p-5">
-    <div class="flex items-center justify-between gap-3">
-      <div class="flex items-center gap-3 min-w-0">
-        <img
-          src="/images/tiktok.svg"
-          alt="TikTok"
-          class="w-10 h-10 rounded-xl shrink-0"
-        />
-        <div class="min-w-0">
-          <p class="text-sm font-semibold text-grey-800">{{ 'DMs de TikTok' | transloco }}</p>
-          @if (ttAccount(); as tt) {
-          <p class="text-xs text-green-600 font-medium">
-            &#64;{{ tt.username }} · {{ 'conectado' | transloco }}
-          </p>
-          } @else {
-          <p class="text-xs text-grey-400">
-            {{ 'Recibe y responde los mensajes directos de tu TikTok en esta misma bandeja.' | transloco }}
-          </p>
-          }
-        </div>
-      </div>
-      <ui-button
-        [label]="ttAccount() ? 'Administrar' : 'Conectar TikTok'"
-        severity="secondary"
-        size="small"
-        (click)="goToTikTok()"
-      />
-    </div>
-    @if (!ttAccount()) {
-    <p class="text-xs text-grey-400 mt-3">
-      {{ 'Necesitas una cuenta de TikTok Empresa (Business). Tus clientes te escriben primero y tienes 48 horas para responder cada mensaje.' | transloco }}
-    </p>
-    }
-  </div>
-  }
 
   <!-- ═══ Footer: confirmación de políticas + conectar ═══ -->
   <div class="flex flex-col gap-3 pb-6">

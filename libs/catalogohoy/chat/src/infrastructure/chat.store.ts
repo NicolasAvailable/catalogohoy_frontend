@@ -1,4 +1,6 @@
 import { computed, inject } from '@angular/core';
+import { ProfileStore } from '@catalogohoy/profile';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
 import {
   patchState,
@@ -8,7 +10,7 @@ import {
   withState,
 } from '@ngrx/signals';
 import { Chat, ChatMessage, ChatNote, PipelineStatus, QuickReply } from '../domain';
-import { ChatService } from './chat.service';
+import { ChatService, SavedCustomer } from './chat.service';
 
 type ChatState = {
   chats: Chat[];
@@ -30,6 +32,9 @@ type ChatState = {
   unreadTotal: number;
   /** true mientras el canal realtime está caído (banner "reconectando"). */
   realtimeDown: boolean;
+  /** Clientes guardados del tenant (caché única) — resuelve apodos por
+   *  teléfono en toda la bandeja. null = aún no cargó. */
+  savedCustomers: SavedCustomer[] | null;
 };
 
 const initialState: ChatState = {
@@ -47,6 +52,7 @@ const initialState: ChatState = {
   transcribeError: null,
   unreadTotal: 0,
   realtimeDown: false,
+  savedCustomers: null,
 };
 
 /** Newest activity first; conversations without activity sink to the bottom. */
@@ -86,13 +92,73 @@ export const ChatStore = signalStore(
       }
       return Object.entries(groups).map(([date, msgs]) => ({ date, msgs }));
     }),
+    /** Cliente guardado por teléfono normalizado a dígitos (lookup O(1)). */
+    savedCustomerByDigits: computed(() => {
+      const map = new Map<string, SavedCustomer>();
+      for (const c of store.savedCustomers() ?? []) {
+        const digits = c.phone.replace(/\D/g, '');
+        if (digits) map.set(digits, c);
+      }
+      return map;
+    }),
   })),
   withMethods(
     (
       store,
       chatService = inject(ChatService),
-      tenantStore = inject(TenantStore)
-    ) => ({
+      tenantStore = inject(TenantStore),
+      permissionsStore = inject(TeamPermissionsStore),
+      profileStore = inject(ProfileStore)
+    ) => {
+      /** Un chat recién llegado sin responsable se autoasigna al owner del
+       *  catálogo. Corre en la sesión del owner (la del comerciante, el caso
+       *  normal); el UPDATE viaja por realtime al resto del equipo. Devuelve
+       *  el chat ya asignado para pintarlo de una en la bandeja. */
+      const autoAssignToOwner = (chat: Chat): Chat => {
+        if (chat.assignedToUserId != null) return chat;
+        if (!permissionsStore.isOwner()) return chat;
+        const myId = profileStore.profile().id;
+        if (typeof myId !== 'number') return chat;
+        chatService.assign(chat.id, myId);
+        return { ...chat, assignedToUserId: myId };
+      };
+
+      /** Evita fetches duplicados mientras la primera carga está en vuelo. */
+      let savedCustomersRequested = false;
+
+      return {
+      /** Carga los clientes guardados del tenant — apodos para la lista, el
+       *  header y la ficha. Con force=true refresca aunque ya haya caché (se
+       *  usa al entrar al módulo, por si editaron apodos desde Clientes). */
+      async loadSavedCustomers(force = false) {
+        if (!force && (savedCustomersRequested || store.savedCustomers() !== null)) return;
+        savedCustomersRequested = true;
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) {
+          savedCustomersRequested = false;
+          return;
+        }
+        const result = await chatService.getSavedCustomers(tenantId);
+        patchState(store, {
+          savedCustomers: result.isRight() ? result.value : [],
+        });
+      },
+
+      /** Suma un cliente recién guardado a la caché (sin refetch). */
+      addSavedCustomer(customer: SavedCustomer) {
+        patchState(store, {
+          savedCustomers: [...(store.savedCustomers() ?? []), customer],
+        });
+      },
+
+      /** Apodo del cliente guardado con ese teléfono, o null. */
+      nicknameFor(phone: string | null): string | null {
+        if (!phone) return null;
+        const digits = phone.replace(/\D/g, '');
+        if (!digits) return null;
+        return store.savedCustomerByDigits().get(digits)?.nickname ?? null;
+      },
+
       // TODO(whatsapp-integration): paginar + loadMoreChats (infinite scroll con
       // cdk-virtual-scroll) cuando el volumen de conversaciones sea real. Por
       // ahora carga todo (mock).
@@ -132,6 +198,31 @@ export const ChatStore = signalStore(
             c.id === id ? { ...c, unreadCount: 0 } : c
           ),
         });
+      },
+
+      /** Inicia (o reabre) una conversación de WhatsApp con un teléfono: si el
+       *  tenant ya tiene chat con ese número lo devuelve; si no, lo crea y lo
+       *  agrega a la bandeja. Devuelve el id listo para selectChat(), o null. */
+      async startChat(name: string, phone: string): Promise<number | null> {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return null;
+
+        const found = await chatService.findWhatsAppChatByPhone(tenantId, phone);
+        if (found.isLeft()) return null;
+
+        let chat = found.value;
+        if (!chat) {
+          const created = await chatService.createChat(tenantId, name, phone);
+          if (created.isLeft()) return null;
+          chat = created.value;
+        }
+
+        if (!store.chats().some((c) => c.id === chat.id)) {
+          patchState(store, {
+            chats: [chat, ...store.chats()].sort(byLastMessageDesc),
+          });
+        }
+        return chat.id;
       },
 
       /** Set (or clear) the message the agent is quoting in their next reply. */
@@ -476,7 +567,7 @@ export const ChatStore = signalStore(
               () => undefined,
               (chat) => {
                 if (!chat || store.chats().some((c) => c.id === chat.id)) return;
-                const merged: Chat = {
+                const merged: Chat = autoAssignToOwner({
                   ...chat,
                   lastMessage: msg.content,
                   lastMessageAt: msg.createdAt,
@@ -484,7 +575,7 @@ export const ChatStore = signalStore(
                     !msg.isMine && !isSelected
                       ? Math.max(chat.unreadCount, 1)
                       : chat.unreadCount,
-                };
+                });
                 patchState(store, {
                   chats: [merged, ...store.chats()].sort(byLastMessageDesc),
                 });
@@ -503,7 +594,7 @@ export const ChatStore = signalStore(
       addChatIfNew(chat: Chat) {
         if (store.chats().some((c) => c.id === chat.id)) return;
         patchState(store, {
-          chats: [chat, ...store.chats()].sort(byLastMessageDesc),
+          chats: [autoAssignToOwner(chat), ...store.chats()].sort(byLastMessageDesc),
         });
       },
 
@@ -631,6 +722,7 @@ export const ChatStore = signalStore(
         });
         await chatService.saveNotes(chatId, notes);
       },
-    })
+      };
+    }
   )
 );

@@ -16,6 +16,10 @@ import {
   TemplatesService,
   WhatsAppTemplate,
 } from '../../../infrastructure/templates.service';
+import {
+  SUGGESTED_TEMPLATES,
+  SuggestedTemplate,
+} from './suggested-templates';
 
 /** Plantillas de mensajes de WhatsApp (HSM): listar las de la WABA y crear nuevas
  *  (para iniciar conversaciones / responder fuera de la ventana de 24h y para el
@@ -47,10 +51,85 @@ export class TemplatesComponent implements OnInit {
 
   protected readonly templates = signal<WhatsAppTemplate[]>([]);
   protected readonly loading = signal(false);
+
+  /** Idiomas que maneja la plataforma (es/en/fr/pt + variantes regionales):
+   *  las plantillas heredadas en otros idiomas (ar, id…) no se muestran. */
+  private static readonly PLATFORM_LANGS = ['es', 'en', 'fr', 'pt'];
+
+  protected readonly visibleTemplates = computed(() =>
+    this.templates().filter((t) =>
+      TemplatesComponent.PLATFORM_LANGS.includes(
+        (t.language || '').split('_')[0].toLowerCase()
+      )
+    )
+  );
+  /** Cuántas quedaron ocultas por idioma (nota al pie del listado). */
+  protected readonly hiddenByLanguage = computed(
+    () => this.templates().length - this.visibleTemplates().length
+  );
+
+  /** Título legible para el comerciante: el curado si es una sugerida nuestra;
+   *  si no, el nombre técnico humanizado (guiones bajos → espacios). */
+  titleOf(t: WhatsAppTemplate): string {
+    const suggested = SUGGESTED_TEMPLATES.find((s) => s.key === t.name);
+    if (suggested) return suggested.title;
+    const words = t.name.replace(/_/g, ' ').trim();
+    return words.charAt(0).toUpperCase() + words.slice(1);
+  }
   protected readonly creating = signal(false);
   protected readonly showForm = signal(false);
   /** Nombre de la plantilla que se está eliminando (spinner por card). */
   protected readonly deletingName = signal<string | null>(null);
+
+  // ------------------------------------------------ plantillas sugeridas ---
+  /** Galería colapsable de plantillas listas de CatalogoHoy. */
+  protected readonly showSuggestions = signal(true);
+  /** Key de la sugerida que se está enviando a revisión (spinner por card). */
+  protected readonly submittingKey = signal<string | null>(null);
+
+  /** Sugeridas que el comerciante todavía no tiene en su WABA (por nombre). */
+  protected readonly availableSuggestions = computed(() => {
+    const existing = new Set(this.templates().map((t) => t.name));
+    return SUGGESTED_TEMPLATES.filter((s) => !existing.has(s.key));
+  });
+
+  /** Crea la sugerida tal cual en la WABA del comerciante (revisión de Meta). */
+  async submitSuggestion(s: SuggestedTemplate): Promise<void> {
+    if (this.submittingKey()) return;
+    this.submittingKey.set(s.key);
+    // El wait lo cierra el propio toast de éxito/aviso (dismissWait interno).
+    this.toast.wait('Enviando plantilla a revisión...');
+    const res = await this.service.create({
+      name: s.key,
+      category: s.category,
+      language: 'es',
+      body: s.body,
+      examples: s.examples,
+    });
+    this.submittingKey.set(null);
+    if (res.isRight()) {
+      this.toast.success('Plantilla enviada a revisión de Meta.');
+      this.load();
+    } else {
+      this.toast.warning(res.value.message);
+    }
+  }
+
+  /** Precarga la sugerida en el formulario para ajustarla antes de enviarla. */
+  editSuggestion(s: SuggestedTemplate): void {
+    this.fName.set(s.key);
+    this.fCategory.set(s.category);
+    this.fLanguage.set('es');
+    this.fBody.set(s.body);
+    this.fExamples.set(
+      Object.fromEntries(s.examples.map((example, i) => [i + 1, example]))
+    );
+    this.showForm.set(true);
+  }
+
+  categoryLabel(category: string): string {
+    return category === 'UTILITY' ? 'Utilidad' : 'Marketing';
+  }
 
   // Formulario de creación.
   protected readonly fName = signal('');
@@ -152,6 +231,7 @@ export class TemplatesComponent implements OnInit {
     }
 
     this.creating.set(true);
+    this.toast.wait('Creando plantilla...');
     const res = await this.service.create({
       name,
       category: this.fCategory(),
@@ -199,7 +279,7 @@ export class TemplatesComponent implements OnInit {
 
   statusClass(status: string): string {
     const s = (status || '').toUpperCase();
-    if (s === 'APPROVED') return 'bg-primary-50 text-primary-700';
+    if (s === 'APPROVED') return 'bg-green-50 text-green-700';
     if (s === 'REJECTED' || s === 'DISABLED') return 'bg-red-50 text-red-600';
     return 'bg-amber-50 text-amber-700';
   }

@@ -22,6 +22,22 @@ export interface CustomerOrderSummary {
   createdAt: string;
 }
 
+/** Cliente guardado (fila en `customers`) — para iniciar chats y para el
+ *  badge "Cliente guardado" de la ficha. */
+export interface SavedCustomer {
+  id: number;
+  name: string;
+  /** Apodo con el que el comerciante reconoce al cliente (opcional). */
+  nickname: string | null;
+  phone: string;
+}
+
+/** Igualdad de teléfonos por dígitos, ignorando formato (+58 412… ≡ 0412…). */
+const sameDigits = (a: string | null, b: string | null): boolean => {
+  const da = (a ?? '').replace(/\D/g, '');
+  return da.length > 0 && da === (b ?? '').replace(/\D/g, '');
+};
+
 @Injectable({
   providedIn: 'root',
 })
@@ -55,6 +71,109 @@ export class ChatService {
     }
 
     return E.right(ChatMapper.toDomainList(data || []));
+  }
+
+  /** Chat de WhatsApp del tenant con ese teléfono (comparado por dígitos), si
+   *  existe — para reabrirlo en vez de duplicarlo al "iniciar" una conversación. */
+  async findWhatsAppChatByPhone(
+    tenantId: number,
+    phone: string
+  ): Promise<E.Either<Error, Chat | null>> {
+    const { data, error } = await this.client
+      .from('chats')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .not('customer_phone', 'is', null);
+    if (error) return E.left(new Error(error.message));
+
+    const row = (data ?? []).find(
+      (r: { channel: string | null; customer_phone: string | null }) =>
+        (r.channel ?? 'whatsapp') === 'whatsapp' &&
+        sameDigits(r.customer_phone, phone)
+    );
+    return E.right(row ? ChatMapper.toDomain(row) : null);
+  }
+
+  /** Crea una conversación de WhatsApp vacía con un contacto (número nuevo o
+   *  cliente guardado). El primer mensaje sale después por el composer normal. */
+  async createChat(
+    tenantId: number,
+    name: string,
+    phone: string
+  ): Promise<E.Either<Error, Chat>> {
+    // Mismo formato que los chats creados por el webhook: wa_id = dígitos sin '+'.
+    const waPhone = phone.replace(/\D/g, '');
+    const { data, error } = await this.client
+      .from('chats')
+      .insert({
+        tenant_id: tenantId,
+        customer_name: name.trim() || `+${waPhone}`,
+        customer_phone: waPhone,
+        channel: 'whatsapp',
+      })
+      .select()
+      .single();
+    if (error) return E.left(new Error(error.message));
+    return E.right(ChatMapper.toDomain(data));
+  }
+
+  /** Clientes guardados del tenant con teléfono (tabla `customers`), para el
+   *  diálogo de nuevo chat y el lookup de la ficha. */
+  async getSavedCustomers(
+    tenantId: number
+  ): Promise<E.Either<Error, SavedCustomer[]>> {
+    const { data, error } = await this.client
+      .from('customers')
+      .select('id, name, nickname, phone')
+      .eq('tenant_id', tenantId)
+      .order('name', { ascending: true });
+    if (error) return E.left(new Error(error.message));
+    return E.right(
+      ((data ?? []) as {
+        id: number;
+        name: string | null;
+        nickname?: string | null;
+        phone: string | null;
+      }[])
+        .filter((r) => (r.phone ?? '').replace(/\D/g, '').length > 0)
+        .map((r) => ({
+          id: r.id,
+          name: r.name ?? 'Cliente',
+          nickname: r.nickname ?? null,
+          phone: r.phone as string,
+        }))
+    );
+  }
+
+  /** Guarda el contacto del chat como cliente (fila mínima en `customers`). */
+  async saveCustomerFromChat(
+    tenantId: number,
+    name: string,
+    phone: string,
+    nickname: string | null = null
+  ): Promise<E.Either<Error, SavedCustomer>> {
+    // En customers el teléfono se guarda legible, con '+' internacional.
+    const clean = phone.trim();
+    const withPlus = clean.startsWith('+')
+      ? clean
+      : `+${clean.replace(/\D/g, '')}`;
+    const { data, error } = await this.client
+      .from('customers')
+      .insert({
+        tenant_id: tenantId,
+        name: name.trim() || 'Cliente',
+        nickname: (nickname ?? '').trim() || null,
+        phone: withPlus,
+      })
+      .select('id, name, nickname, phone')
+      .single();
+    if (error) return E.left(new Error(error.message));
+    return E.right({
+      id: data.id as number,
+      name: (data.name as string) ?? 'Cliente',
+      nickname: (data.nickname as string | null) ?? null,
+      phone: (data.phone as string) ?? phone,
+    });
   }
 
   /** Single conversation by id — used by realtime to add a brand-new chat to the

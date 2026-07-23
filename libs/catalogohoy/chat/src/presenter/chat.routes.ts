@@ -19,8 +19,22 @@ export const CHAT_ROUTES: Route[] = [
       import('./views/templates/templates').then((c) => c.TemplatesComponent),
   },
   {
-    // Página "Conectar a WhatsApp Business" (coexistencia / solo API).
+    // Hub "Conectar": galería de canales (WhatsApp / Instagram / TikTok).
     path: 'connect',
+    loadComponent: () =>
+      import('./views/connect-channels/connect-channels').then(
+        (c) => c.ConnectChannelsComponent
+      ),
+  },
+  {
+    // Alias legacy del hub (primera iteración lo publicó como /channels).
+    path: 'channels',
+    redirectTo: 'connect',
+    pathMatch: 'full',
+  },
+  {
+    // Página "Conectar a WhatsApp Business" (coexistencia / solo API).
+    path: 'connect/whatsapp',
     loadComponent: () =>
       import('@catalogohoy/whatsapp').then((m) => m.WhatsAppConnectComponent),
   },

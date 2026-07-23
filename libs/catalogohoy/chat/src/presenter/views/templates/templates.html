@@ -118,6 +118,70 @@
   </div>
   }
 
+  <!-- Plantillas sugeridas por CatalogoHoy: listas para enviar a revisión. -->
+  @if (availableSuggestions().length) {
+  <div class="rounded-xl border border-grey-100 bg-white p-5 flex flex-col gap-3">
+    <button
+      type="button"
+      class="flex items-center justify-between gap-2 cursor-pointer text-left"
+      (click)="showSuggestions.set(!showSuggestions())"
+    >
+      <div>
+        <h2 class="font-semibold text-grey-800">{{ 'Plantillas sugeridas' | transloco }}</h2>
+        <p class="text-xs text-grey-400 mt-0.5">
+          {{ 'Listas para usar: se crean en tu cuenta de WhatsApp y Meta las revisa (suele tardar minutos).' | transloco }}
+        </p>
+      </div>
+      <ui-icon
+        name="chevron-down"
+        size="18"
+        [styleClass]="'text-grey-400 transition-transform ' + (showSuggestions() ? 'rotate-180' : '')"
+      />
+    </button>
+
+    @if (showSuggestions()) {
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      @for (s of availableSuggestions(); track s.key) {
+      <div class="rounded-xl border border-grey-100 bg-grey-25 p-4 flex flex-col gap-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-semibold text-sm text-grey-800">{{ s.title | transloco }}</span>
+          <span
+            class="text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+            [ngClass]="s.category === 'UTILITY' ? 'bg-sky-50 text-sky-700' : 'bg-violet-50 text-violet-700'"
+          >
+            {{ categoryLabel(s.category) | transloco }}
+          </span>
+        </div>
+        <p class="text-xs text-grey-400">{{ s.description | transloco }}</p>
+        <p class="text-sm text-grey-600 whitespace-pre-wrap break-words bg-white border border-grey-100 rounded-lg p-3 flex-1">
+          {{ s.body }}
+        </p>
+        <div class="flex items-center justify-end gap-2 mt-1">
+          <ui-button
+            label="Editar"
+            icon="pencil"
+            severity="contrast"
+            variant="outlined"
+            size="small"
+            [fluid]="false"
+            (click)="editSuggestion(s)"
+          />
+          <ui-button
+            label="Enviar a revisión"
+            icon="send"
+            size="small"
+            [fluid]="false"
+            [isLoading]="submittingKey() === s.key"
+            (click)="submitSuggestion(s)"
+          />
+        </div>
+      </div>
+      }
+    </div>
+    }
+  </div>
+  }
+
   <!-- Lista -->
   @if (loading()) {
   <div class="flex flex-col gap-2">
@@ -134,14 +198,16 @@
     </div>
     }
   </div>
-  } @else if (templates().length) {
+  } @else if (visibleTemplates().length) {
   <div class="flex flex-col gap-2">
-    @for (t of templates(); track t.name + t.language) {
+    @for (t of visibleTemplates(); track t.name + t.language) {
     <div class="rounded-xl border border-grey-100 bg-white p-4 flex flex-col gap-2">
       <div class="flex items-center justify-between gap-2">
-        <div class="flex items-center gap-2 min-w-0">
-          <span class="font-semibold text-grey-800 truncate">{{ t.name }}</span>
-          <span class="text-[11px] text-grey-400 uppercase">{{ t.language }}</span>
+        <div class="flex flex-col min-w-0">
+          <span class="font-semibold text-grey-800 truncate">{{ titleOf(t) }}</span>
+          <span class="text-[11px] text-grey-400 truncate">
+            {{ t.name }} · <span class="uppercase">{{ t.language }}</span>
+          </span>
         </div>
         <span
           class="text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0"
@@ -167,12 +233,22 @@
     </div>
     }
   </div>
+  @if (hiddenByLanguage() > 0) {
+  <p class="text-[11px] text-grey-300 text-center">
+    {{ 'Se ocultan {count} plantillas en idiomas que la plataforma no usa.' | transloco: { count: hiddenByLanguage() } }}
+  </p>
+  }
   } @else {
   <div
     class="flex flex-col items-center justify-center text-center gap-3 py-16 text-grey-400"
   >
     <ui-icon name="layout-template" size="36" styleClass="text-grey-200" />
     <p class="text-sm">{{ 'Todavía no tenés plantillas. Creá la primera.' | transloco }}</p>
+    @if (hiddenByLanguage() > 0) {
+    <p class="text-[11px] text-grey-300">
+      {{ 'Se ocultan {count} plantillas en idiomas que la plataforma no usa.' | transloco: { count: hiddenByLanguage() } }}
+    </p>
+    }
   </div>
   }
 </div>

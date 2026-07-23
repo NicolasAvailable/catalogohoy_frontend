@@ -46,18 +46,6 @@ export class WhatsAppConnectComponent implements OnInit {
   readonly checklist = signal<WhatsAppConnectChecklist | null>(null);
   readonly isLoadingChecklist = signal(true);
 
-  // ── Instagram (bandeja omnicanal) ──
-  readonly igAccount = signal<{ username: string | null; displayName: string | null } | null>(null);
-  readonly isConnectingIg = signal(false);
-  /** Resultado del retorno del OAuth (?ig=connected | ?ig=error). */
-  readonly igStatus = signal<'connected' | 'error' | null>(null);
-
-  // ── TikTok (Business Messaging, beta) ──
-  /** Oculta la card hasta que TikTok apruebe el acceso a la Business
-   *  Messaging API (mismo patrón que ENTERPRISE_CARD_VISIBLE). */
-  readonly tiktokCardVisible = false;
-  readonly ttAccount = signal<{ username: string | null; displayName: string | null } | null>(null);
-
   /** Estado del retorno del puente (?wa=connected). */
   readonly waStatus = signal<'connected' | null>(null);
   readonly isStarting = signal(false);
@@ -81,14 +69,8 @@ export class WhatsAppConnectComponent implements OnInit {
   ngOnInit(): void {
     this.facebookSdk.loadSdk().then(() => this.sdkReady.set(true));
     this.loadChecklist();
-    this.loadIgAccount();
-    if (this.tiktokCardVisible) this.loadTtAccount();
 
     const query = new URLSearchParams(window.location.search);
-    const igParam = query.get('ig');
-    if (igParam === 'connected' || igParam === 'error') {
-      this.igStatus.set(igParam);
-    }
     if (query.get('wa') === 'connected') {
       this.waStatus.set('connected');
       this.whatsAppStore.loadAccounts();
@@ -116,15 +98,8 @@ export class WhatsAppConnectComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/admin/chat/conversations']);
-  }
-
-  goToInstagram(): void {
-    this.router.navigate(['/admin/chat/connect/instagram']);
-  }
-
-  goToTikTok(): void {
-    this.router.navigate(['/admin/chat/connect/tiktok']);
+    // De vuelta al hub de canales (la vista "Conectar" del CRM).
+    this.router.navigate(['/admin/chat/connect']);
   }
 
   goToProducts(): void {
@@ -148,7 +123,8 @@ export class WhatsAppConnectComponent implements OnInit {
       return;
     }
 
-    const returnUrl = `${window.location.origin}/admin/chat/connect`;
+    // Volver del puente al detalle de WhatsApp (no al hub de canales).
+    const returnUrl = `${window.location.origin}/admin/chat/connect/whatsapp`;
     const result = await this.whatsAppService.startWhatsAppConnect(
       tenantId,
       returnUrl,
@@ -156,53 +132,6 @@ export class WhatsAppConnectComponent implements OnInit {
     );
     result.fold(
       () => this.isStarting.set(false),
-      (url) => {
-        window.location.href = url;
-      }
-    );
-  }
-
-  private async loadIgAccount(): Promise<void> {
-    const tenantId = await this.tenantStore.getTenantIdAsync();
-    if (!tenantId) return;
-    const result = await this.whatsAppService.getInstagramAccount(tenantId);
-    result.fold(
-      () => undefined,
-      (account) => this.igAccount.set(account)
-    );
-  }
-
-  private async loadTtAccount(): Promise<void> {
-    const tenantId = await this.tenantStore.getTenantIdAsync();
-    if (!tenantId) return;
-    const result = await this.whatsAppService.getTikTokAccount(tenantId);
-    result.fold(
-      () => undefined,
-      (account) => this.ttAccount.set(account)
-    );
-  }
-
-  /** Abre el Instagram Login (redirect server-side vía ig-oauth — funciona
-   *  desde cualquier dominio del cliente, sin lista de dominios del SDK). */
-  async connectInstagram(): Promise<void> {
-    if (this.isConnectingIg()) return;
-    this.isConnectingIg.set(true);
-
-    const tenantId = await this.tenantStore.getTenantIdAsync();
-    if (!tenantId) {
-      this.isConnectingIg.set(false);
-      return;
-    }
-
-    // Al volver del login aterriza en la bandeja con la conversación de IG
-    // abierta (chat-layout selecciona el chat de Instagram con ?ig=connected).
-    const returnUrl = `${window.location.origin}/admin/chat/conversations`;
-    const result = await this.whatsAppService.startInstagramConnect(tenantId, returnUrl);
-    result.fold(
-      () => {
-        this.igStatus.set('error');
-        this.isConnectingIg.set(false);
-      },
       (url) => {
         window.location.href = url;
       }

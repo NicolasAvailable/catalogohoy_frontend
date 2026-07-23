@@ -106,6 +106,7 @@ export default class ClientListComponent implements OnInit, OnDestroy {
       clients = clients.filter(
         (c) =>
           c.name.toLowerCase().includes(query) ||
+          (c.nickname?.toLowerCase().includes(query) ?? false) ||
           c.phone.toLowerCase().includes(query) ||
           (c.email?.toLowerCase().includes(query) ?? false)
       );

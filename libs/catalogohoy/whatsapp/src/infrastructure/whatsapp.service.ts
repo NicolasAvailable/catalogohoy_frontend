@@ -125,6 +125,22 @@ export class WhatsAppService {
     );
   }
 
+  /** Desvincula la cuenta de IG/TikTok del tenant: solo marca status inactive
+   *  (RLS permite tocar únicamente esa columna). Los chats y datos quedan. */
+  async disconnectSocialAccount(
+    tenantId: number,
+    channel: 'instagram' | 'tiktok'
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('social_accounts')
+      .update({ status: 'inactive' })
+      .eq('tenant_id', tenantId)
+      .eq('channel', channel)
+      .eq('status', 'active');
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
   /** Pide a wa-onboard la URL del puente de conexión de WhatsApp
    *  (conectar.catalogohoy.com) con el state firmado del tenant. */
   async startWhatsAppConnect(

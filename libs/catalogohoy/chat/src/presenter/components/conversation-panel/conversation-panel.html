@@ -20,7 +20,12 @@
         <span class="text-xs font-bold text-primary-600">{{ initials(chatStore.selectedChat()!.customerName) }}</span>
       </div>
       <div class="flex-1 min-w-0">
-        <p class="text-sm font-semibold text-grey-700 truncate">{{ chatStore.selectedChat()!.customerName }}</p>
+        <p class="text-sm font-semibold text-grey-700 truncate">
+          {{ chatStore.selectedChat()!.customerName }}
+          @if (chatStore.nicknameFor(chatStore.selectedChat()!.customerPhone); as nick) {
+          <span class="font-normal text-grey-400">{{ nick }}</span>
+          }
+        </p>
         @if (chatStore.selectedChat()!.channel === 'instagram') {
           @if (chatStore.selectedChat()!.customerUsername; as igUser) {
           <a
@@ -53,29 +58,37 @@
         }
       </div>
 
-      <!-- Assign (also available here, not just in the ficha) -->
-      <div class="hidden sm:block w-44 shrink-0">
-        <ui-select
-          [options]="assigneeOptions()"
-          optionLabel="label"
-          optionValue="value"
-          [placeholder]="'Asignar a' | transloco"
-          size="small"
-          [ngModel]="chatStore.selectedChat()!.assignedToUserId"
-          (ngModelChange)="onAssign($event)"
-        />
-      </div>
+      <!-- Ficha del cliente (mobile only): abre el overlay. -->
+      <button
+        (click)="infoClick.emit()"
+        class="lg:hidden w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 transition-colors shrink-0 cursor-pointer"
+        [title]="'Información del cliente' | transloco"
+      >
+        <ui-icon name="info" size="16" styleClass="text-grey-400" />
+      </button>
 
       <button
         (click)="chatStore.toggleMute(chatStore.selectedChat()!.id)"
-        class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 transition-colors shrink-0"
-        [title]="(chatStore.selectedChat()!.muted ? 'Activar notificaciones' : 'Silenciar') | transloco"
+        class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 transition-colors shrink-0 cursor-pointer"
+        [pTooltip]="(chatStore.selectedChat()!.muted ? 'Activar notificaciones' : 'Silenciar') | transloco"
+        tooltipPosition="bottom"
       >
         @if (chatStore.selectedChat()!.muted) {
           <ui-icon name="volume-x" size="16" styleClass="text-primary-500" />
         } @else {
           <ui-icon name="volume-2" size="16" styleClass="text-grey-400" />
         }
+      </button>
+
+      <!-- Ficha del cliente (desktop): colapsa/expande la columna derecha. -->
+      <button
+        (click)="toggleFicha.emit()"
+        class="hidden lg:flex w-8 h-8 items-center justify-center rounded-md hover:bg-grey-50 transition-colors shrink-0 cursor-pointer"
+        [ngClass]="fichaVisible() ? 'text-primary-600' : 'text-grey-400'"
+        [pTooltip]="(fichaVisible() ? 'Ocultar información del cliente' : 'Mostrar información del cliente') | transloco"
+        tooltipPosition="bottom"
+      >
+        <ui-icon name="panel-right" size="16" />
       </button>
     </div>
 
@@ -84,18 +97,38 @@
     <div #messagesContainer class="flex-1 overflow-y-auto">
       <div class="flex w-full flex-auto flex-col gap-1 px-6 py-6">
       @if (chatStore.isLoadingMessages()) {
-        <div class="flex flex-col gap-3 animate-pulse">
+        <!-- Skeleton con forma de conversación real: separador de día +
+             burbujas de anchos/alturas variados a ambos lados. -->
+        <div class="flex flex-col gap-1.5 animate-pulse" aria-hidden="true">
+          <div class="flex items-center gap-3 my-3">
+            <div class="flex-1 h-px bg-grey-100"></div>
+            <div class="h-4 w-16 bg-grey-100 rounded-full"></div>
+            <div class="flex-1 h-px bg-grey-100"></div>
+          </div>
           <div class="flex justify-start">
-            <div class="h-9 w-48 bg-grey-100 rounded-2xl rounded-tl-sm"></div>
+            <div class="h-9 w-52 max-w-[75%] bg-grey-100 rounded-2xl rounded-bl-md"></div>
+          </div>
+          <div class="flex justify-start">
+            <div class="h-14 w-64 max-w-[80%] bg-grey-100 rounded-2xl rounded-bl-md"></div>
+          </div>
+          <div class="flex justify-end mt-3">
+            <div class="h-9 w-40 max-w-[70%] bg-primary-100 rounded-2xl rounded-br-md"></div>
           </div>
           <div class="flex justify-end">
-            <div class="h-9 w-36 bg-primary-100 rounded-2xl rounded-tr-sm"></div>
+            <div class="h-9 w-56 max-w-[75%] bg-primary-100 rounded-2xl rounded-br-md"></div>
+          </div>
+          <div class="flex justify-start mt-3">
+            <div class="h-9 w-44 max-w-[70%] bg-grey-100 rounded-2xl rounded-bl-md"></div>
           </div>
           <div class="flex justify-start">
-            <div class="h-9 w-56 bg-grey-100 rounded-2xl rounded-tl-sm"></div>
+            <div class="h-20 w-60 max-w-[80%] bg-grey-100 rounded-2xl rounded-bl-md"></div>
+          </div>
+          <div class="flex justify-end mt-3">
+            <div class="h-9 w-48 max-w-[70%] bg-primary-100 rounded-2xl rounded-br-md"></div>
           </div>
         </div>
       } @else {
+        <div class="flex flex-col gap-1 thread-enter">
         @for (group of chatStore.messagesByDay(); track group.date) {
           <!-- Date separator -->
           <div class="flex items-center gap-3 my-3">
@@ -171,6 +204,7 @@
                   [alt]="'Imagen' | transloco"
                   styleClass="block rounded-xl overflow-hidden w-64 max-w-full cursor-zoom-in"
                   imageClass="w-full max-h-80 object-cover"
+                  [downloadable]="true"
                 />
                 @if (msg.content && msg.content !== '📷 Imagen') {
                 <p class="text-sm whitespace-pre-wrap break-words mt-1 wa-rich" [innerHTML]="msg.content | waFormat"></p>
@@ -282,11 +316,35 @@
             </div>
           }
         }
+        </div>
       }
       </div>
     </div>
 
+    <!-- Input file compartido por el composer y el overlay de multimedia:
+         vive fuera de los @if para que la referencia #fileInput alcance ambos. -->
+    <input
+      #fileInput
+      type="file"
+      class="hidden"
+      accept="image/*"
+      multiple
+      (change)="onAttachFile($event)"
+    />
+
     <!-- Input area (estilo Tikket: pestañas Mensaje/Susurro + composer) -->
+    @if (channelDisconnected()) {
+    <!-- Canal desvinculado: historial visible, respuestas bloqueadas. -->
+    <div class="px-4 py-4 bg-white border-t border-grey-50 shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1.5 text-center">
+      <ui-icon name="info" size="15" styleClass="text-amber-500 shrink-0" />
+      <span class="text-sm text-grey-500">
+        {{ 'Este canal está desvinculado: puedes leer la conversación, pero no responder.' | transloco }}
+      </span>
+      <a routerLink="/admin/chat/connect" class="text-sm font-semibold text-primary-600 hover:underline">
+        {{ 'Volver a conectar' | transloco }}
+      </a>
+    </div>
+    } @else {
     <div class="px-4 py-3 bg-white border-t border-grey-50 shrink-0">
       <div class="flex items-center gap-5 mb-2 px-1">
         <button
@@ -486,14 +544,6 @@
             </div>
 
             <!-- Adjuntar -->
-            <input
-              #fileInput
-              type="file"
-              class="hidden"
-              accept="image/*"
-              multiple
-              (change)="onAttachFile($event)"
-            />
             @if (composerMode() !== 'whisper') {
             <button
               (click)="fileInput.click()"
@@ -532,6 +582,7 @@
         </div>
       </div>
     </div>
+    }
   </div>
 
   <!-- Overlay de preview multimedia (estilo WhatsApp Web) -->
@@ -550,7 +601,14 @@
       <span class="text-sm text-white/80 truncate">
         {{ chatStore.selectedChat()?.customerName || ('Cliente' | transloco) }}
       </span>
-      <span class="w-9"></span>
+      <button
+        (click)="downloadActive()"
+        class="w-9 h-9 flex items-center justify-center rounded-full text-white hover:bg-white/10 cursor-pointer"
+        [pTooltip]="'Descargar' | transloco"
+        tooltipPosition="left"
+      >
+        <ui-icon name="download" size="18" />
+      </button>
     </div>
 
     <!-- Imagen activa -->

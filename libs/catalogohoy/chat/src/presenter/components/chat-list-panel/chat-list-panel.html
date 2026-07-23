@@ -6,7 +6,8 @@
       <ui-icon name="ellipsis-vertical" size="18" styleClass="text-grey-400 cursor-pointer shrink-0" />
     </div>
     <ui-input-search
-      placeholder="Buscar o iniciar un chat"
+      placeholder="Buscar un chat"
+      iconStyleClass="size-4!"
       (valueChange)="onSearch($event)"
     />
   </div>
@@ -67,7 +68,12 @@
             <!-- Info -->
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between gap-1">
-                <span class="text-base font-semibold text-grey-700 truncate">{{ chat.customerName }}</span>
+                <span class="text-base font-semibold text-grey-700 truncate">
+                  {{ chat.customerName }}
+                  @if (chatStore.nicknameFor(chat.customerPhone); as nick) {
+                  <span class="text-sm font-normal text-grey-400">{{ nick }}</span>
+                  }
+                </span>
                 <span class="text-xs text-grey-300 shrink-0">{{ formatDate(chat.lastMessageAt) }}</span>
               </div>
               <div class="flex items-center justify-between gap-1 mt-1">

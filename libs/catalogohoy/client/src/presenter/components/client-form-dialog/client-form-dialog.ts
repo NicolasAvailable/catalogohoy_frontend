@@ -46,6 +46,7 @@ export class ClientFormDialogComponent {
 
   public readonly editingId = signal<number | null>(null);
   public readonly name = signal('');
+  public readonly nickname = signal('');
   public readonly phone = signal('');
   public readonly email = signal('');
   public readonly address = signal('');
@@ -60,6 +61,7 @@ export class ClientFormDialogComponent {
     if (client) {
       this.editingId.set(client.id);
       this.name.set(client.name);
+      this.nickname.set(client.nickname ?? '');
       this.phone.set(client.phone);
       this.email.set(client.email ?? '');
       this.address.set(client.address ?? '');
@@ -69,6 +71,7 @@ export class ClientFormDialogComponent {
     } else {
       this.editingId.set(null);
       this.name.set('');
+      this.nickname.set('');
       this.phone.set('');
       this.email.set('');
       this.address.set('');
@@ -99,6 +102,7 @@ export class ClientFormDialogComponent {
 
     const input: ClientInput = {
       name: this.name().trim(),
+      nickname: this.nickname().trim() || null,
       phone: this.phone().trim(),
       email: this.email().trim() || null,
       birthday: null,

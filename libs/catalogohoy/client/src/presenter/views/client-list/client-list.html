@@ -144,7 +144,12 @@
               <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
                 <span class="text-xs font-bold text-primary-600">{{ client.name.charAt(0).toUpperCase() }}</span>
               </div>
-              <span class="font-semibold text-grey-800 text-sm truncate">{{ client.name }}</span>
+              <div class="flex flex-col min-w-0">
+                <span class="font-semibold text-grey-800 text-sm truncate">{{ client.name }}</span>
+                @if (client.nickname) {
+                <span class="text-[11px] text-grey-400 truncate">{{ client.nickname }}</span>
+                }
+              </div>
             </div>
             <div (click)="$event.stopPropagation()">
               <lib-client-row-tags [client]="client" />
@@ -267,7 +272,12 @@
                         {{ client.name.charAt(0).toUpperCase() }}
                       </span>
                     </div>
-                    <span class="font-semibold text-grey-800">{{ client.name }}</span>
+                    <div class="flex flex-col min-w-0">
+                      <span class="font-semibold text-grey-800">{{ client.name }}</span>
+                      @if (client.nickname) {
+                      <span class="text-xs text-grey-400 truncate">{{ client.nickname }}</span>
+                      }
+                    </div>
                   </div>
                 </td>
                 <td class="px-6 py-3.5">

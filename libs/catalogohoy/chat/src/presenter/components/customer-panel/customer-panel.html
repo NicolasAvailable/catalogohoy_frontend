@@ -3,6 +3,15 @@
   <!-- Customer header -->
   <div class="ficha__head">
     <div class="ficha__avatar">{{ initial(c.customerName) }}</div>
+    <!-- Cerrar overlay (solo móvil): en desktop la ficha es columna fija. -->
+    <button
+      type="button"
+      (click)="closed.emit()"
+      class="lg:hidden order-last ml-auto w-8 h-8 rounded-md hover:bg-grey-100 flex items-center justify-center shrink-0 self-start cursor-pointer"
+      [title]="'Cerrar' | transloco"
+    >
+      <ui-icon name="x" size="18" styleClass="text-grey-500" />
+    </button>
     <div class="ficha__id">
       @if (renaming()) {
       <span class="flex items-center gap-1">
@@ -32,6 +41,11 @@
       } @else {
       <span class="ficha__name group/name inline-flex items-center gap-1.5">
         {{ c.customerName || ('Cliente' | transloco) }}
+        @if (savedCustomer()) {
+        <span class="inline-flex shrink-0" [title]="'Cliente guardado' | transloco">
+          <ui-icon name="user-check" size="14" styleClass="text-green-600" />
+        </span>
+        }
         <button
           (click)="startRename(c.customerName)"
           class="w-5 h-5 rounded-md hover:bg-grey-100 items-center justify-center cursor-pointer opacity-0 group-hover/name:opacity-100 transition-opacity inline-flex shrink-0"
@@ -40,6 +54,9 @@
           <ui-icon name="pencil" size="12" styleClass="text-grey-400" />
         </button>
       </span>
+      }
+      @if (savedCustomer()?.nickname; as nick) {
+      <span class="ficha__nickname">{{ nick }}</span>
       }
       @if (c.customerPhone) {
       <a
@@ -62,6 +79,60 @@
       }
     </div>
   </div>
+
+  <!-- Guardar cliente: si ya existe, sólo el check junto al nombre (arriba);
+       si no, un dropdown con nombre + apodo que crea la fila mínima. -->
+  @if (c.customerPhone && customersLoaded() && !savedCustomer()) {
+  <div class="ficha__save">
+    <div class="relative">
+      <button type="button" class="ficha__save-btn" (click)="toggleSaveMenu(c.customerName)">
+        <ui-icon name="user-plus" size="14" />
+        {{ 'Guardar cliente' | transloco }}
+        <ui-icon
+          name="chevron-down"
+          size="14"
+          [styleClass]="'transition-transform ' + (saveMenuOpen() ? 'rotate-180' : '')"
+        />
+      </button>
+      @if (saveMenuOpen()) {
+      <div class="ficha__save-panel">
+        <label class="ficha__label" for="ficha-save-name">{{ 'Nombre' | transloco }}</label>
+        <input
+          id="ficha-save-name"
+          type="text"
+          class="ficha__save-input"
+          [placeholder]="'Nombre del cliente' | transloco"
+          [ngModel]="saveNameDraft()"
+          (ngModelChange)="saveNameDraft.set($event)"
+          (keydown.enter)="confirmSaveCustomer()"
+          (keydown.escape)="saveMenuOpen.set(false)"
+        />
+        <label class="ficha__label" for="ficha-save-nickname">{{ 'Apodo (opcional)' | transloco }}</label>
+        <input
+          id="ficha-save-nickname"
+          type="text"
+          class="ficha__save-input"
+          [placeholder]="'Ej: La señora de las tortas' | transloco"
+          [ngModel]="saveNicknameDraft()"
+          (ngModelChange)="saveNicknameDraft.set($event)"
+          (keydown.enter)="confirmSaveCustomer()"
+          (keydown.escape)="saveMenuOpen.set(false)"
+        />
+        <span class="ficha__save-phone">{{ c.customerPhone | phonePlus }}</span>
+        <button
+          type="button"
+          class="ficha__note-add ficha__save-confirm"
+          [disabled]="savingCustomer() || !saveNameDraft().trim()"
+          (click)="confirmSaveCustomer()"
+        >
+          <ui-icon name="check" size="14" />
+          {{ (savingCustomer() ? 'Guardando...' : 'Guardar cliente') | transloco }}
+        </button>
+      </div>
+      }
+    </div>
+  </div>
+  }
 
   <!-- Pipeline status -->
   <div class="ficha__field">

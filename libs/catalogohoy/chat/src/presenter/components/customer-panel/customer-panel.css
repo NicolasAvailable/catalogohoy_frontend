@@ -1,11 +1,53 @@
+/* El display se controla acá (y no con `hidden`/`lg:flex` en el host) porque
+   los estilos del componente pisan a las utilities del layout. En móvil la
+   ficha vive oculta y sólo aparece como overlay (clase ficha--mobile-open que
+   setea el chat-layout); en desktop (lg = 64rem) es la columna fija derecha. */
 :host {
-  display: flex;
+  display: none;
   flex-direction: column;
   width: 20rem;
   flex-shrink: 0;
   border-left: 0.0625rem solid var(--color-grey-100, #e5e7eb);
   background: var(--color-grey-25, #fafafa);
   overflow-y: auto;
+}
+@media (min-width: 64rem) {
+  :host {
+    display: flex;
+    transition: width 0.25s ease, opacity 0.2s ease;
+  }
+  /* Colapsada en desktop (toggle del header del chat): se desliza a ancho 0.
+     El contenido mantiene su ancho (min-width en .ficha) para que no se
+     reacomode durante la transición. */
+  :host(.ficha--desktop-collapsed) {
+    width: 0;
+    opacity: 0;
+    border-left-width: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+}
+.ficha {
+  min-width: 20rem;
+}
+@media (max-width: 63.9375rem) {
+  :host(.ficha--mobile-open) {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    z-index: 30;
+    border-left: none;
+    animation: ficha-slide-in 0.25s cubic-bezier(0.32, 0.72, 0.22, 1);
+  }
+}
+@keyframes ficha-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
 }
 .ficha {
   display: flex;
@@ -103,11 +145,76 @@
   font-size: 0.8125rem;
   color: var(--color-grey-500, #64748b);
 }
+.ficha__nickname {
+  font-size: 0.75rem;
+  color: var(--color-grey-400, #94a3b8);
+}
 
 .ficha__field {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
+}
+
+/* Guardar cliente (badge / dropdown) */
+.ficha__save {
+  display: flex;
+  flex-direction: column;
+}
+.ficha__save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  align-self: flex-start;
+  padding: 0.375rem 0.75rem;
+  border: 0.0625rem solid var(--color-grey-200, #e2e8f0);
+  border-radius: 0.5rem;
+  background: #fff;
+  color: var(--color-grey-700, #334155);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ficha__save-btn:hover {
+  background: var(--color-grey-25, #fafafa);
+  border-color: var(--color-grey-300, #cbd5e1);
+}
+.ficha__save-panel {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #fff;
+  border: 0.0625rem solid var(--color-grey-100, #e5e7eb);
+  border-radius: 0.625rem;
+  box-shadow: 0 0.5rem 1.5rem rgb(15 23 42 / 0.12);
+}
+.ficha__save-input {
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 0.0625rem solid var(--color-grey-200, #e2e8f0);
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+}
+.ficha__save-input:focus {
+  outline: none;
+  border-color: var(--color-primary-400, #34d399);
+}
+.ficha__save-phone {
+  font-size: 0.75rem;
+  color: var(--color-grey-400, #94a3b8);
+}
+.ficha__save-confirm {
+  justify-content: center;
+  width: 100%;
 }
 
 /* Compact option rows (status / assignee) with an icon, matching the ficha's

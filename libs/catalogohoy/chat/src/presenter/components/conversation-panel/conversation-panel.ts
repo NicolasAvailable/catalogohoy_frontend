@@ -8,19 +8,22 @@ import {
   ElementRef,
   HostListener,
   inject,
+  input,
+  output,
   signal,
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TooltipModule } from 'primeng/tooltip';
-import { TeamStore } from '@catalogohoy/teams';
+import { TenantStore } from '@catalogohoy/tenant';
+import { WhatsAppService, WhatsAppStore } from '@catalogohoy/whatsapp';
 import { ToastService } from '@shared/infrastructure';
 import {
   ButtonComponent,
   IconComponent,
   ImageComponent,
-  SelectComponent,
 } from '@ui';
 import { ChatMessage } from '../../../domain';
 import { ChatStore } from '../../../infrastructure/chat.store';
@@ -34,11 +37,11 @@ import { WaFormatPipe } from '../wa-format.pipe';
   imports: [
     FormsModule,
     NgClass,
+    RouterLink,
     TooltipModule,
     IconComponent,
     ButtonComponent,
     ImageComponent,
-    SelectComponent,
     PickerComponent,
     TranslocoPipe,
     ChatAudioPlayerComponent,
@@ -46,13 +49,44 @@ import { WaFormatPipe } from '../wa-format.pipe';
     WaFormatPipe,
   ],
   templateUrl: './conversation-panel.html',
+  styleUrl: './conversation-panel.css',
 })
 export class ConversationPanelComponent {
   protected readonly chatStore = inject(ChatStore);
-  protected readonly teamStore = inject(TeamStore);
   private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly messageInput = signal('');
+
+  /** Abrir la ficha del cliente como overlay (solo móvil, botón ⓘ del header). */
+  public readonly infoClick = output<void>();
+
+  /** Ficha del cliente visible en desktop (columna derecha) — el header pinta
+   *  el toggle activo/inactivo según esto. */
+  public readonly fichaVisible = input(true);
+  /** Colapsar/expandir la ficha en desktop (botón del header). */
+  public readonly toggleFicha = output<void>();
+
+  // -------------------------------------------- canal desvinculado (solo lectura) ---
+  private readonly whatsAppStore = inject(WhatsAppStore);
+  private readonly whatsAppService = inject(WhatsAppService);
+  private readonly tenantStore = inject(TenantStore);
+
+  /** Conexión de IG/TikTok (null = aún no consultado → no bloquear). */
+  private readonly igConnected = signal<boolean | null>(null);
+  private readonly ttConnected = signal<boolean | null>(null);
+
+  /** El canal del chat abierto está desvinculado: se puede leer el historial
+   *  pero no responder (el composer se reemplaza por un aviso). */
+  protected readonly channelDisconnected = computed(() => {
+    const chat = this.chatStore.selectedChat();
+    if (!chat) return false;
+    if (chat.channel === 'whatsapp') {
+      return !this.whatsAppStore.isLoading() && !this.whatsAppStore.hasActiveAccount();
+    }
+    if (chat.channel === 'instagram') return this.igConnected() === false;
+    if (chat.channel === 'tiktok') return this.ttConnected() === false;
+    return false;
+  });
 
   /** WhatsApp Cloud API text body limit. */
   protected readonly maxChars = 4096;
@@ -80,34 +114,24 @@ export class ConversationPanelComponent {
     () => this.pendingMedia()[this.activeIndex()] ?? null
   );
 
-  /** Team members for the header "Asignar a" control (mirrors the ficha). */
-  protected readonly assigneeOptions = computed(() => [
-    { label: 'Sin asignar', value: null as number | null },
-    ...this.teamStore
-      .acceptedMembers()
-      .filter((m) => m.userId !== null)
-      .map((m) => ({
-        label:
-          `${m.userName ?? ''} ${m.userLastName ?? ''}`.trim() ||
-          m.invitedEmail,
-        value: m.userId,
-      })),
-  ]);
-
   private readonly messagesContainer =
     viewChild<ElementRef<HTMLDivElement>>('messagesContainer');
-
-  onAssign(userId: number | null): void {
-    const c = this.chatStore.selectedChat();
-    if (c) this.chatStore.assignChat(c.id, userId);
-  }
 
   /** Whether the view is pinned to the bottom (so new content auto-scrolls). */
   private stickToBottom = true;
   private listenersAttached = false;
 
   constructor() {
-    this.teamStore.load();
+    // Estado de conexión de IG/TikTok (una consulta) para el modo solo lectura.
+    this.tenantStore.getTenantIdAsync().then(async (tenantId) => {
+      if (!tenantId) return;
+      const [ig, tt] = await Promise.all([
+        this.whatsAppService.getInstagramAccount(tenantId),
+        this.whatsAppService.getTikTokAccount(tenantId),
+      ]);
+      if (ig.isRight()) this.igConnected.set(ig.value !== null);
+      if (tt.isRight()) this.ttConnected.set(tt.value !== null);
+    });
 
     // New message → scroll to the bottom if we're pinned there.
     effect(() => {
@@ -157,6 +181,8 @@ export class ConversationPanelComponent {
   }
 
   send() {
+    // Canal desvinculado → conversación en solo lectura.
+    if (this.channelDisconnected()) return;
     // Al enviar siempre volvemos al fondo.
     this.stickToBottom = true;
     if (this.chatStore.isSendingMessage() || this.overLimit()) return;
@@ -189,6 +215,16 @@ export class ConversationPanelComponent {
     this.pendingMedia.update((list) =>
       list.map((m, i) => (i === idx ? { ...m, caption: text } : m))
     );
+  }
+
+  /** Descarga la imagen activa del overlay (es un object URL local). */
+  downloadActive(): void {
+    const item = this.activeItem();
+    if (!item) return;
+    const link = document.createElement('a');
+    link.href = item.preview;
+    link.download = item.file.name || 'imagen';
+    link.click();
   }
 
   /** Quita la imagen activa del overlay. */

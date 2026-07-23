@@ -13,6 +13,8 @@ interface RpcCustomerRow {
   id: number;
   phone: string;
   name: string;
+  /** Opcional hasta que el RPC get_customers_by_tenant incluya la columna. */
+  nickname?: string | null;
   email: string | null;
   birthday: string | null;
   address: string | null;
@@ -106,6 +108,7 @@ export class ClientService {
       id: row.id,
       phone: row.phone,
       name: row.name,
+      nickname: row.nickname ?? null,
       email: row.email ?? null,
       birthday: row.birthday ?? null,
       address: row.address ?? null,
@@ -178,6 +181,7 @@ export class ClientService {
     return {
       tenant_id: tenantId,
       name: input.name.trim() || 'Cliente',
+      nickname: clean(input.nickname),
       phone: input.phone.trim(),
       email: clean(input.email),
       birthday: clean(input.birthday),
