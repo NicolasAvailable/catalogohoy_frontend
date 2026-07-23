@@ -21,99 +21,155 @@
     </div>
   </div>
 
-  <!-- Formulario de creación -->
+  <!-- Editor de creación: formulario a la izquierda, vista previa (estilo Meta)
+       fija a la derecha. -->
   @if (showForm()) {
-  <div class="rounded-xl border border-grey-100 bg-white p-5 flex flex-col gap-4">
-    <h2 class="font-semibold text-grey-800">{{ 'Nueva plantilla' | transloco }}</h2>
+  <div class="rounded-xl border border-grey-100 bg-white overflow-hidden">
+    <div class="flex flex-col lg:flex-row">
+      <!-- ── Formulario ── -->
+      <div class="flex-1 p-5 flex flex-col gap-4 lg:border-r border-grey-100">
+        <h2 class="font-semibold text-grey-800">{{ 'Nueva plantilla' | transloco }}</h2>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div class="flex flex-col gap-1.5">
-        <span class="text-sm font-medium text-grey-700">{{ 'Nombre' | transloco }}</span>
-        <ui-input-text
-          placeholder="Ej: confirmacion_pedido"
-          [ngModel]="fName()"
-          (ngModelChange)="fName.set($event)"
-        />
-        @if (fName().trim()) {
-        <span class="text-[11px] text-grey-400">
-          {{ 'Se guardará como:' | transloco }} <b>{{ normalizedName() }}</b>
-        </span>
-        }
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <span class="text-sm font-medium text-grey-700">{{ 'Categoría' | transloco }}</span>
-        <ui-select
-          [options]="categories"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="fCategory()"
-          (ngModelChange)="fCategory.set($event)"
-          styleClass="w-full"
-        />
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <span class="text-sm font-medium text-grey-700">{{ 'Idioma' | transloco }}</span>
-        <ui-select
-          [options]="languages"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="fLanguage()"
-          (ngModelChange)="fLanguage.set($event)"
-          styleClass="w-full"
-        />
-      </div>
-    </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1.5">
+            <span class="text-sm font-medium text-grey-700">{{ 'Nombre' | transloco }}</span>
+            <ui-input-text
+              placeholder="Ej: confirmacion_pedido"
+              [ngModel]="fName()"
+              (ngModelChange)="fName.set($event)"
+            />
+            @if (fName().trim()) {
+            <span class="text-[11px] text-grey-400">
+              {{ 'Se guardará como:' | transloco }} <b>{{ normalizedName() }}</b>
+            </span>
+            }
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <span class="text-sm font-medium text-grey-700">{{ 'Idioma' | transloco }}</span>
+            <ui-select
+              [options]="languages"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="fLanguage()"
+              (ngModelChange)="fLanguage.set($event)"
+              styleClass="w-full"
+            />
+          </div>
+        </div>
 
-    <div class="flex flex-col gap-1.5">
-      <span class="text-sm font-medium text-grey-700">{{ 'Cuerpo del mensaje' | transloco }}</span>
-      <ui-textarea
-        [rows]="4"
-        [placeholder]="'Hola, gracias por tu compra. Tu pedido ya está en camino.' | transloco"
-        [ngModel]="fBody()"
-        (ngModelChange)="fBody.set($event)"
-      />
-      <span class="text-[11px] text-grey-400">
-        {{ 'Podés usar variables como {v} para personalizar.' | transloco: { v: varExample } }}
-      </span>
-    </div>
-
-    <!-- Ejemplos por variable: Meta los exige para aprobar la plantilla. -->
-    @if (bodyVars().length) {
-    <div class="flex flex-col gap-2 rounded-xl bg-grey-25 border border-grey-100 p-4">
-      <span class="text-sm font-medium text-grey-700">
-        {{ 'Ejemplos para las variables' | transloco }}
-      </span>
-      <span class="text-[11px] text-grey-400 -mt-1">
-        {{ 'Meta necesita un ejemplo de cada variable para aprobar la plantilla.' | transloco }}
-      </span>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
-        @for (v of bodyVars(); track v) {
-        <div class="flex flex-col gap-1">
-          <span class="text-xs font-medium text-grey-600">{{ varToken(v) }}</span>
-          <ui-input-text
-            [placeholder]="'Ej: María' | transloco"
-            [ngModel]="exampleOf(v)"
-            (ngModelChange)="setExample(v, $event)"
+        <div class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-grey-700">{{ 'Categoría' | transloco }}</span>
+          <ui-select
+            [options]="categories"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="fCategory()"
+            (ngModelChange)="fCategory.set($event)"
+            styleClass="w-full"
           />
         </div>
-        }
-      </div>
-    </div>
-    }
 
-    <div class="flex items-center justify-end gap-2">
-      <ui-button
-        label="Cancelar"
-        severity="contrast"
-        variant="outlined"
-        (click)="showForm.set(false)"
-      />
-      <ui-button
-        label="Crear"
-        icon="check"
-        [isLoading]="creating()"
-        (click)="create()"
-      />
+        <div class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-grey-700">
+            {{ 'Título' | transloco }}
+            <span class="text-grey-300 font-normal">· {{ 'opcional' | transloco }}</span>
+          </span>
+          <ui-input-text
+            [placeholder]="'Encabezado en negrita (sin variables)' | transloco"
+            [ngModel]="fHeader()"
+            (ngModelChange)="fHeader.set($event)"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-grey-700">{{ 'Cuerpo del mensaje' | transloco }}</span>
+          <ui-textarea
+            [rows]="4"
+            [placeholder]="'Hola, gracias por tu compra. Tu pedido ya está en camino.' | transloco"
+            [ngModel]="fBody()"
+            (ngModelChange)="fBody.set($event)"
+          />
+          <span class="text-[11px] text-grey-400">
+            {{ 'Podés usar variables como {v} para personalizar.' | transloco: { v: varExample } }}
+          </span>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-grey-700">
+            {{ 'Pie de página' | transloco }}
+            <span class="text-grey-300 font-normal">· {{ 'opcional' | transloco }}</span>
+          </span>
+          <ui-input-text
+            [placeholder]="'Ej: Responde STOP para no recibir más mensajes' | transloco"
+            [ngModel]="fFooter()"
+            (ngModelChange)="fFooter.set($event)"
+          />
+        </div>
+
+        <!-- Ejemplos por variable: Meta los exige para aprobar la plantilla. -->
+        @if (bodyVars().length) {
+        <div class="flex flex-col gap-2 rounded-xl bg-grey-25 border border-grey-100 p-4">
+          <span class="text-sm font-medium text-grey-700">
+            {{ 'Ejemplos para las variables' | transloco }}
+          </span>
+          <span class="text-[11px] text-grey-400 -mt-1">
+            {{ 'Meta necesita un ejemplo de cada variable para aprobar la plantilla.' | transloco }}
+          </span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+            @for (v of bodyVars(); track v) {
+            <div class="flex flex-col gap-1">
+              <span class="text-xs font-medium text-grey-600">{{ varToken(v) }}</span>
+              <ui-input-text
+                [placeholder]="'Ej: María' | transloco"
+                [ngModel]="exampleOf(v)"
+                (ngModelChange)="setExample(v, $event)"
+              />
+            </div>
+            }
+          </div>
+        </div>
+        }
+
+        <div class="flex items-center justify-end gap-2 pt-1">
+          <ui-button
+            label="Cancelar"
+            severity="contrast"
+            variant="outlined"
+            [fluid]="false"
+            (click)="showForm.set(false)"
+          />
+          <ui-button
+            label="Enviar a revisión"
+            icon="send"
+            [fluid]="false"
+            [isLoading]="creating()"
+            (click)="create()"
+          />
+        </div>
+      </div>
+
+      <!-- ── Vista previa (WhatsApp, estilo Meta) ── -->
+      <div class="lg:w-80 shrink-0 p-5 bg-grey-25 flex flex-col gap-3">
+        <span class="text-xs font-bold uppercase tracking-wide text-grey-400">
+          {{ 'Vista previa' | transloco }}
+        </span>
+        <div class="rounded-2xl p-4 bg-[#ece5dd] flex-1 flex flex-col">
+          <div class="max-w-[15rem] rounded-lg rounded-tl-none bg-white shadow-sm px-3 py-2 flex flex-col gap-1">
+            @if (fHeader().trim()) {
+            <p class="text-sm font-bold text-grey-800 whitespace-pre-wrap break-words">{{ fHeader() }}</p>
+            }
+            @if (previewBody().trim()) {
+            <p class="text-sm text-grey-700 whitespace-pre-wrap break-words">{{ previewBody() }}</p>
+            } @else {
+            <p class="text-sm text-grey-300 italic">{{ 'El cuerpo de tu mensaje aparecerá aquí.' | transloco }}</p>
+            }
+            @if (fFooter().trim()) {
+            <p class="text-xs text-grey-400 whitespace-pre-wrap break-words">{{ fFooter() }}</p>
+            }
+            <span class="text-[10px] text-grey-300 self-end">10:00 p. m.</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   }

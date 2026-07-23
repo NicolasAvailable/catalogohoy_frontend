@@ -355,6 +355,24 @@
       </a>
     </div>
     } @else {
+    <!-- Ventana de 24h cerrada: el texto libre no se entrega; se sugiere usar
+         una plantilla (Meta la exige fuera de la ventana de servicio). -->
+    @if (windowClosed() && composerMode() !== 'whisper') {
+    <div class="px-4 py-2.5 bg-amber-50 border-t border-amber-100 shrink-0 flex items-center gap-2.5">
+      <ui-icon name="info" size="16" styleClass="text-amber-500 shrink-0" />
+      <span class="text-xs text-amber-800 leading-snug flex-1">
+        {{ 'Pasaron más de 24 h desde el último mensaje del cliente. WhatsApp no entregará un texto libre; usá una plantilla aprobada para reabrir la conversación.' | transloco }}
+      </span>
+      <a
+        routerLink="/admin/chat/templates"
+        [queryParams]="{ new: 1 }"
+        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700 transition-colors"
+      >
+        <ui-icon name="plus" size="13" />
+        {{ 'Crear plantilla' | transloco }}
+      </a>
+    </div>
+    }
     <div class="px-4 py-3 bg-white border-t border-grey-50 shrink-0">
       <div class="flex items-center gap-5 mb-2 px-1">
         <button

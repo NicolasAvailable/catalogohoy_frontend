@@ -21,6 +21,10 @@ export interface CreateTemplateInput {
   /** Un ejemplo por variable {{n}} del body, en orden ({{1}} primero). Meta
    *  los exige para aprobar plantillas con variables. */
   examples?: string[];
+  /** Encabezado de texto (opcional, sin variables). */
+  header?: string;
+  /** Pie de página (opcional, texto plano). */
+  footer?: string;
 }
 
 @Injectable({ providedIn: 'root' })

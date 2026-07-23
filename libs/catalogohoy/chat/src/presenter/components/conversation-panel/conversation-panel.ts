@@ -75,6 +75,24 @@ export class ConversationPanelComponent {
   private readonly igConnected = signal<boolean | null>(null);
   private readonly ttConnected = signal<boolean | null>(null);
 
+  /** Ventana de servicio de WhatsApp (24h) cerrada: el último mensaje ENTRANTE
+   *  del cliente fue hace más de 24h (o no hay ninguno). Fuera de esa ventana
+   *  Meta rechaza el texto libre y hay que usar una plantilla. Solo aplica a
+   *  WhatsApp. */
+  protected readonly windowClosed = computed(() => {
+    const chat = this.chatStore.selectedChat();
+    if (!chat || chat.channel !== 'whatsapp') return false;
+    const lastInbound = this.chatStore
+      .messages()
+      .filter((m) => !m.isMine && !m.isInternal)
+      .reduce<string | null>(
+        (latest, m) => (!latest || m.createdAt > latest ? m.createdAt : latest),
+        null
+      );
+    if (!lastInbound) return true;
+    return Date.now() - new Date(lastInbound).getTime() > 24 * 60 * 60 * 1000;
+  });
+
   /** El canal del chat abierto está desvinculado: se puede leer el historial
    *  pero no responder (el composer se reemplaza por un aviso). */
   protected readonly channelDisconnected = computed(() => {

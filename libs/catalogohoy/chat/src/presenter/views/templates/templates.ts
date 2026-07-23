@@ -1,6 +1,7 @@
 import { NgClass } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ToastService } from '@shared/infrastructure';
 import {
@@ -48,6 +49,7 @@ export class TemplatesComponent implements OnInit {
   private readonly service = inject(TemplatesService);
   private readonly toast = inject(ToastService);
   private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly templates = signal<WhatsAppTemplate[]>([]);
   protected readonly loading = signal(false);
@@ -120,7 +122,9 @@ export class TemplatesComponent implements OnInit {
     this.fName.set(s.key);
     this.fCategory.set(s.category);
     this.fLanguage.set('es');
+    this.fHeader.set('');
     this.fBody.set(s.body);
+    this.fFooter.set('');
     this.fExamples.set(
       Object.fromEntries(s.examples.map((example, i) => [i + 1, example]))
     );
@@ -135,7 +139,9 @@ export class TemplatesComponent implements OnInit {
   protected readonly fName = signal('');
   protected readonly fCategory = signal('UTILITY');
   protected readonly fLanguage = signal('es');
+  protected readonly fHeader = signal('');
   protected readonly fBody = signal('');
+  protected readonly fFooter = signal('');
   /** Ejemplo por número de variable ({{1}} → fExamples()[1]). */
   protected readonly fExamples = signal<Record<number, string>>({});
 
@@ -147,6 +153,15 @@ export class TemplatesComponent implements OnInit {
     );
     return [...new Set(found)].sort((a, b) => a - b);
   });
+
+  /** Cuerpo con las {{n}} reemplazadas por su ejemplo (o el token si no hay),
+   *  para la vista previa estilo Meta. */
+  protected readonly previewBody = computed(() =>
+    this.fBody().replace(/\{\{(\d+)\}\}/g, (_m, n) => {
+      const ex = this.fExamples()[Number(n)]?.trim();
+      return ex || `{{${n}}}`;
+    })
+  );
 
   protected readonly categories = [
     { label: 'Utilidad', value: 'UTILITY' },
@@ -163,6 +178,9 @@ export class TemplatesComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+    // El banner "ventana cerrada" del chat linkea acá con ?new=1 para abrir
+    // directo el editor de creación.
+    if (this.route.snapshot.queryParamMap.get('new') === '1') this.openForm();
   }
 
   async load(): Promise<void> {
@@ -177,7 +195,9 @@ export class TemplatesComponent implements OnInit {
     this.fName.set('');
     this.fCategory.set('UTILITY');
     this.fLanguage.set('es');
+    this.fHeader.set('');
     this.fBody.set('');
+    this.fFooter.set('');
     this.fExamples.set({});
     this.showForm.set(true);
   }
@@ -238,6 +258,8 @@ export class TemplatesComponent implements OnInit {
       language: this.fLanguage(),
       body,
       examples,
+      header: this.fHeader().trim() || undefined,
+      footer: this.fFooter().trim() || undefined,
     });
     this.creating.set(false);
     if (res.isRight()) {

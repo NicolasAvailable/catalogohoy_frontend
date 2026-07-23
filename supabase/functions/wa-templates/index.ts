@@ -40,6 +40,10 @@ type CreateInput = {
   body: string;
   /** Un ejemplo por variable {{n}} del body, en orden ({{1}} primero). */
   examples?: string[];
+  /** Encabezado de texto (opcional, sin variables). */
+  header?: string;
+  /** Pie de página (opcional, texto plano). */
+  footer?: string;
 };
 type Payload = {
   tenantId: number;
@@ -151,18 +155,27 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: false, error: "Faltan datos de la plantilla" }, 400);
   }
   const examples = (t.examples ?? []).map((e) => String(e).trim()).filter(Boolean);
+  const header = (t.header ?? "").trim();
+  const footer = (t.footer ?? "").trim();
+  const components: Record<string, unknown>[] = [];
+  // Orden que espera Meta: HEADER → BODY → FOOTER.
+  if (header) {
+    components.push({ type: "HEADER", format: "TEXT", text: header });
+  }
+  components.push({
+    type: "BODY",
+    text: t.body,
+    // Meta exige un ejemplo por variable para revisar la plantilla.
+    ...(examples.length ? { example: { body_text: [examples] } } : {}),
+  });
+  if (footer) {
+    components.push({ type: "FOOTER", text: footer });
+  }
   const payload = {
     name: t.name,
     language: t.language,
     category: t.category,
-    components: [
-      {
-        type: "BODY",
-        text: t.body,
-        // Meta exige un ejemplo por variable para revisar la plantilla.
-        ...(examples.length ? { example: { body_text: [examples] } } : {}),
-      },
-    ],
+    components,
   };
   try {
     const res = await fetch(`${GRAPH}/${wabaId}/message_templates`, {
