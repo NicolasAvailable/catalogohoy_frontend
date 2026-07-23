@@ -83,6 +83,7 @@ export class ChatMessageMapper {
       transcript: (raw['transcript'] as string | null) ?? null,
       deliveryStatus:
         (raw['delivery_status'] as ChatMessage['deliveryStatus']) ?? null,
+      deliveryError: (raw['delivery_error'] as string | null) ?? null,
       waMessageId: (raw['wa_message_id'] as string | null) ?? null,
       replyToMessageId: (raw['reply_to_message_id'] as number | null) ?? null,
       isInternal: (raw['is_internal'] as boolean) ?? false,

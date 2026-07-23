@@ -54,9 +54,12 @@ export interface ChatMessage {
   mediaUrl?: string | null;
   /** AI transcript of a voice note (type 'audio'), generated on demand. */
   transcript?: string | null;
-  /** WhatsApp delivery receipt for outgoing messages (✓ / ✓✓ / ✓✓ azul).
-   *  Null para entrantes, notas internas y mensajes del modo demo. */
-  deliveryStatus?: 'sent' | 'delivered' | 'read' | null;
+  /** WhatsApp delivery receipt for outgoing messages (✓ / ✓✓ / ✓✓ azul, o
+   *  'failed' si Meta no lo pudo entregar). Null para entrantes, notas internas
+   *  y mensajes del modo demo. */
+  deliveryStatus?: 'sent' | 'delivered' | 'read' | 'failed' | null;
+  /** Motivo legible de una entrega fallida (delivery_status='failed'). */
+  deliveryError?: string | null;
   /** WhatsApp message id (wamid) — used to map quoted replies. */
   waMessageId?: string | null;
   /** Local id of the message this one replies to (quoted reply), if any. */

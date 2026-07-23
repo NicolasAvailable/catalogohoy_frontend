@@ -302,8 +302,18 @@
                     <ui-icon name="triangle-alert" size="12" /> {{ 'No enviado' | transloco }}
                   </span>
                   } @else if (msg.isMine && !msg.isInternal && msg.deliveryStatus) {
-                  <!-- Acuses estilo WhatsApp: ✓ enviado · ✓✓ entregado · ✓✓ azul leído -->
-                  @if (msg.deliveryStatus === 'read') {
+                  <!-- Acuses estilo WhatsApp: ✓ enviado · ✓✓ entregado · ✓✓ azul
+                       leído · ⓘ rojo NO entregado (Meta lo rechazó — motivo en
+                       el tooltip). -->
+                  @if (msg.deliveryStatus === 'failed') {
+                  <span
+                    class="text-red-400 font-medium inline-flex items-center gap-1 cursor-help"
+                    [pTooltip]="msg.deliveryError || ('No se pudo entregar el mensaje.' | transloco)"
+                    tooltipPosition="top"
+                  >
+                    <ui-icon name="info" size="13" /> {{ 'No entregado' | transloco }}
+                  </span>
+                  } @else if (msg.deliveryStatus === 'read') {
                   <ui-icon name="check-check" size="14" styleClass="text-sky-300" />
                   } @else if (msg.deliveryStatus === 'delivered') {
                   <ui-icon name="check-check" size="14" />

@@ -431,8 +431,37 @@ async function processCustomerMessages(
 
 /** Acuses de entrega de mensajes ENVIADOS (value.statuses, llega junto al
  *  field `messages`): sent → delivered → read. Solo se sube de nivel (los
- *  eventos pueden llegar desordenados y un `read` nunca vuelve a `delivered`). */
-const STATUS_RANK: Record<string, number> = { sent: 1, delivered: 2, read: 3 };
+ *  eventos pueden llegar desordenados y un `read` nunca vuelve a `delivered`).
+ *  `failed` (rank 4) SIEMPRE gana: Meta lo manda de forma asíncrona cuando el
+ *  envío se aceptó (200) pero no se pudo entregar (p.ej. ventana de 24h). */
+const STATUS_RANK: Record<string, number> = {
+  sent: 1,
+  delivered: 2,
+  read: 3,
+  failed: 4,
+};
+
+/** Traduce el código de error de Meta a un motivo accionable para el
+ *  comerciante; si no lo conocemos, usa el texto que manda Meta. */
+function friendlyDeliveryError(err: Record<string, unknown> | undefined): string {
+  const code = Number(err?.code ?? 0);
+  const known: Record<number, string> = {
+    131047:
+      "Pasaron más de 24 horas desde el último mensaje del cliente. Usá una plantilla aprobada para reabrir la conversación.",
+    131026:
+      "El mensaje no se pudo entregar. El número puede no tener WhatsApp o no poder recibir mensajes en este momento.",
+    131051: "Este tipo de mensaje no está soportado.",
+    131049:
+      "WhatsApp limitó este mensaje para cuidar la experiencia del cliente. Intentá más tarde.",
+    130472:
+      "El cliente forma parte de un experimento de Meta y no puede recibir este mensaje ahora.",
+  };
+  if (known[code]) return known[code];
+  const details = (err?.error_data as { details?: string } | undefined)?.details;
+  const title = (err?.title as string) || (err?.message as string) || "";
+  const text = details || title || "No se pudo entregar el mensaje.";
+  return code ? `[${code}] ${text}` : text;
+}
 
 async function processStatuses(value: Record<string, unknown>): Promise<void> {
   const statuses = (value.statuses as Record<string, unknown>[]) ?? [];
@@ -450,10 +479,13 @@ async function processStatuses(value: Record<string, unknown>): Promise<void> {
     if ((STATUS_RANK[row.delivery_status as string] ?? 0) >= STATUS_RANK[status]) {
       continue;
     }
-    await admin
-      .from("chat_messages")
-      .update({ delivery_status: status })
-      .eq("id", row.id);
+
+    const update: Record<string, unknown> = { delivery_status: status };
+    if (status === "failed") {
+      const errors = (s.errors as Record<string, unknown>[]) ?? [];
+      update.delivery_error = friendlyDeliveryError(errors[0]);
+    }
+    await admin.from("chat_messages").update(update).eq("id", row.id);
   }
 }
 
