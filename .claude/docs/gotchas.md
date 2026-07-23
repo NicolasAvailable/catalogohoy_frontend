@@ -171,6 +171,20 @@
   el símbolo (ese va aparte con `currencySymbol`). Las líneas de **Bs.** (VE) siguen con
   `| number:'1.2-2'` (es-locale ya coincide con la convención venezolana).
 
+## Supabase Realtime (websocket del chat)
+
+- **El heartbeat del realtime debe ir en Web Worker** (`realtime: { worker: true }` en
+  `createClient`, ver `supabase.ts` de core): los navegadores estrangulan los timers del
+  hilo principal en ventanas sin foco/tapadas → el heartbeat no salía → el servidor
+  cerraba el socket a los segundos de desatender la pestaña (bug 2026-07-22: banner
+  "reconectando" en loop en el chat).
+- **`removeChannel()` dispara `CLOSED` en el callback de `subscribe()` del canal
+  removido**: si ese callback trata `CLOSED` como caída real (banner + reconnect), reabrir
+  el canal entra en bucle infinito de flashes. `ChatRealtimeService` lo evita con una
+  generación de canal (`channelGen`) que ignora estados de canales reemplazados.
+- El banner de "se perdió la conexión" del chat tiene debounce de 4s (`markDown()`):
+  las reconexiones rápidas no deben parpadear la alerta.
+
 ## Supabase / datos
 
 - `users.id` (bigint) = owner; `users.auth_user_id` (uuid) = `auth.uid()`.
@@ -202,3 +216,15 @@
   archivo lo documenta) y **revertirlo antes de commitear**.
 - El catálogo **carga productos de forma perezosa**: con Playwright hay que scrollear
   (`page.mouse.wheel`) hasta que la card objetivo entre al DOM antes de asertar sobre ella.
+
+## Los estilos :host de un componente le ganan a las utilities del layout
+
+- Si un componente define `:host { display: ... }` en su CSS (ej. `customer-panel.css`),
+  las utilities Tailwind que el padre ponga en el tag (`hidden`, `lg:flex`) **no lo
+  ocultan**: los estilos del componente se inyectan después y pisan a las utilities con
+  la misma especificidad. Mordió el 2026-07-23: la ficha del CRM salía "aplastada" junto
+  al chat en móvil pese al `hidden lg:flex` del chat-layout.
+- Regla: si el componente controla su `display` en `:host`, la responsividad va en el
+  **CSS del propio componente** (media queries + clases modificadoras tipo
+  `:host(.ficha--mobile-open)`), no en utilities del padre. Igual para el slide-over del
+  conversation-panel (`chat-layout.css` usa el selector del tag, no utilities).
