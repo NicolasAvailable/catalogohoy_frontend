@@ -275,6 +275,44 @@
     }
   </div>
 
+  <!-- ═══ Card: TikTok DMs (oculta hasta que TikTok apruebe el acceso beta) ═══ -->
+  @if (tiktokCardVisible) {
+  <div class="bg-white rounded-2xl border border-grey-100 p-5">
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <img
+          src="/images/tiktok.svg"
+          alt="TikTok"
+          class="w-10 h-10 rounded-xl shrink-0"
+        />
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-grey-800">{{ 'DMs de TikTok' | transloco }}</p>
+          @if (ttAccount(); as tt) {
+          <p class="text-xs text-green-600 font-medium">
+            &#64;{{ tt.username }} · {{ 'conectado' | transloco }}
+          </p>
+          } @else {
+          <p class="text-xs text-grey-400">
+            {{ 'Recibe y responde los mensajes directos de tu TikTok en esta misma bandeja.' | transloco }}
+          </p>
+          }
+        </div>
+      </div>
+      <ui-button
+        [label]="ttAccount() ? 'Administrar' : 'Conectar TikTok'"
+        severity="secondary"
+        size="small"
+        (click)="goToTikTok()"
+      />
+    </div>
+    @if (!ttAccount()) {
+    <p class="text-xs text-grey-400 mt-3">
+      {{ 'Necesitas una cuenta de TikTok Empresa (Business). Tus clientes te escriben primero y tienes 48 horas para responder cada mensaje.' | transloco }}
+    </p>
+    }
+  </div>
+  }
+
   <!-- ═══ Footer: confirmación de políticas + conectar ═══ -->
   <div class="flex flex-col gap-3 pb-6">
     <div

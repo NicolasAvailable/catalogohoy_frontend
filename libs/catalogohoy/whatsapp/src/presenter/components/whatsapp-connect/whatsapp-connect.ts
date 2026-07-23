@@ -52,6 +52,12 @@ export class WhatsAppConnectComponent implements OnInit {
   /** Resultado del retorno del OAuth (?ig=connected | ?ig=error). */
   readonly igStatus = signal<'connected' | 'error' | null>(null);
 
+  // ── TikTok (Business Messaging, beta) ──
+  /** Oculta la card hasta que TikTok apruebe el acceso a la Business
+   *  Messaging API (mismo patrón que ENTERPRISE_CARD_VISIBLE). */
+  readonly tiktokCardVisible = false;
+  readonly ttAccount = signal<{ username: string | null; displayName: string | null } | null>(null);
+
   /** Estado del retorno del puente (?wa=connected). */
   readonly waStatus = signal<'connected' | null>(null);
   readonly isStarting = signal(false);
@@ -76,6 +82,7 @@ export class WhatsAppConnectComponent implements OnInit {
     this.facebookSdk.loadSdk().then(() => this.sdkReady.set(true));
     this.loadChecklist();
     this.loadIgAccount();
+    if (this.tiktokCardVisible) this.loadTtAccount();
 
     const query = new URLSearchParams(window.location.search);
     const igParam = query.get('ig');
@@ -114,6 +121,10 @@ export class WhatsAppConnectComponent implements OnInit {
 
   goToInstagram(): void {
     this.router.navigate(['/admin/chat/connect/instagram']);
+  }
+
+  goToTikTok(): void {
+    this.router.navigate(['/admin/chat/connect/tiktok']);
   }
 
   goToProducts(): void {
@@ -158,6 +169,16 @@ export class WhatsAppConnectComponent implements OnInit {
     result.fold(
       () => undefined,
       (account) => this.igAccount.set(account)
+    );
+  }
+
+  private async loadTtAccount(): Promise<void> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return;
+    const result = await this.whatsAppService.getTikTokAccount(tenantId);
+    result.fold(
+      () => undefined,
+      (account) => this.ttAccount.set(account)
     );
   }
 

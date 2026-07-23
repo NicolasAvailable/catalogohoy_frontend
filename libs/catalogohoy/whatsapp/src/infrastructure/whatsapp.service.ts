@@ -93,11 +93,25 @@ export class WhatsAppService {
   async getInstagramAccount(
     tenantId: number
   ): Promise<E.Either<Error, { username: string | null; displayName: string | null } | null>> {
+    return this.getSocialAccount(tenantId, 'instagram');
+  }
+
+  /** Cuenta de TikTok Business conectada del tenant (columnas públicas). */
+  async getTikTokAccount(
+    tenantId: number
+  ): Promise<E.Either<Error, { username: string | null; displayName: string | null } | null>> {
+    return this.getSocialAccount(tenantId, 'tiktok');
+  }
+
+  private async getSocialAccount(
+    tenantId: number,
+    channel: 'instagram' | 'tiktok'
+  ): Promise<E.Either<Error, { username: string | null; displayName: string | null } | null>> {
     const { data, error } = await this.client
       .from('social_accounts')
       .select('id, username, display_name, status')
       .eq('tenant_id', tenantId)
-      .eq('channel', 'instagram')
+      .eq('channel', channel)
       .eq('status', 'active')
       .maybeSingle();
     if (error) return E.left(new Error(error.message));
@@ -145,6 +159,25 @@ export class WhatsAppService {
     const message =
       (typeof data?.error === 'string' && data.error) ||
       'No se pudo iniciar la conexión con Instagram';
+    return E.left(new Error(message));
+  }
+
+  /** Pide a tiktok-oauth la URL de autorización de TikTok (state firmado
+   *  server-side que amarra tenant + returnUrl). La función se implementa
+   *  cuando TikTok apruebe el acceso a la Business Messaging API (beta). */
+  async startTikTokConnect(
+    tenantId: number,
+    returnUrl: string
+  ): Promise<E.Either<Error, string>> {
+    const { data, error } = await this.client.functions.invoke('tiktok-oauth', {
+      body: { tenantId, returnUrl },
+    });
+    if (!error && data?.success && data?.url) {
+      return E.right(data.url as string);
+    }
+    const message =
+      (typeof data?.error === 'string' && data.error) ||
+      'No se pudo iniciar la conexión con TikTok';
     return E.left(new Error(message));
   }
 
