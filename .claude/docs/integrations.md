@@ -31,6 +31,7 @@
 | **ig-webhook** | Webhook de Instagram (Instagram Login, app CatalogoHoy-IG 1454226360079154): DMs entrantes, `is_echo` (respuestas desde la app de IG), `read` (✓✓ azul). Rutea por IGSID → `social_accounts` → tenant; chats con `channel='instagram'`. Media re-hospedada en Storage. | webhook Meta | no (verify token + firma) | Meta · `IG_APP_SECRET`, `IG_WEBHOOK_VERIFY_TOKEN` |
 | **ig-send** | Respuesta del agente por Instagram DM con el token del tenant (`social_accounts`). Ventana 24h (sin plantillas), texto ≤1000 chars, imagen por URL. | front invoke | sí | Meta (token por tenant) |
 | **ig-oauth** | Conexión del comerciante vía Instagram Login: POST (JWT manual) devuelve la URL de autorización con `state` HMAC; GET (redirect de IG) cambia code→token largo (60 días), upsertea `social_accounts` y suscribe webhooks. Redirect fijo server-side → sin problema de dominios por cliente. | front invoke + redirect IG | no (JWT manual en POST) | Meta · `IG_APP_ID`, `IG_APP_SECRET` |
+| **tiktok-webhook** | **STUB (CAT-47)**: loguea eventos de TikTok Business Messaging y responde 200 + eco de challenge. Existe para registrar la URL durante la solicitud de acceso a la API (beta) y mapear el payload real. El front ya rutea `channel='tiktok'` a `tiktok-send`/`tiktok-oauth` (no existen aún); card de conexión oculta tras `tiktokCardVisible=false`. Reglas del canal: cliente escribe primero, ventana 48 h, máx 10 msgs/ventana, texto+imagen. | webhook TikTok | no (firma pendiente de doc) | TikTok Business API |
 
 ## Edge functions deployadas pero NO en el repo
 

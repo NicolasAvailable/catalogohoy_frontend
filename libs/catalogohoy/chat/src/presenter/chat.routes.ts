@@ -24,4 +24,16 @@ export const CHAT_ROUTES: Route[] = [
     loadComponent: () =>
       import('@catalogohoy/whatsapp').then((m) => m.WhatsAppConnectComponent),
   },
+  {
+    // Pantalla dedicada "Conectar a Instagram" (Instagram Login).
+    path: 'connect/instagram',
+    loadComponent: () =>
+      import('@catalogohoy/whatsapp').then((m) => m.InstagramConnectComponent),
+  },
+  {
+    // Pantalla dedicada "Conectar a TikTok" (Business Messaging, beta).
+    path: 'connect/tiktok',
+    loadComponent: () =>
+      import('@catalogohoy/whatsapp').then((m) => m.TikTokConnectComponent),
+  },
 ];

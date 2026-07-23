@@ -93,10 +93,12 @@ export class ChatService {
     replyToId: number | null = null,
     channel: Chat['channel'] = 'whatsapp'
   ): Promise<E.Either<Error, ChatMessage>> {
-    // Instagram: siempre por ig-send (sin fallback demo — la ventana de 24h y
-    // los errores de Meta deben llegarle claros al agente).
-    if (isMine && channel === 'instagram') {
-      return this.invokeSend('ig-send', { chatId, text: content });
+    // Instagram/TikTok: siempre por su función de envío (sin fallback demo —
+    // la ventana de mensajería y los errores de la plataforma deben llegarle
+    // claros al agente).
+    if (isMine && (channel === 'instagram' || channel === 'tiktok')) {
+      const fn = channel === 'instagram' ? 'ig-send' : 'tiktok-send';
+      return this.invokeSend(fn, { chatId, text: content });
     }
     // Respuesta del agente → intentar enviarla de verdad por WhatsApp. `wa-send`
     // envía con el token del comerciante y persiste el mensaje server-side.
@@ -192,15 +194,17 @@ export class ChatService {
     replyToId: number | null = null,
     channel: Chat['channel'] = 'whatsapp'
   ): Promise<E.Either<Error, ChatMessage>> {
-    if (channel === 'instagram') {
+    if (channel === 'instagram' || channel === 'tiktok') {
+      const fn = channel === 'instagram' ? 'ig-send' : 'tiktok-send';
+      const name = channel === 'instagram' ? 'Instagram' : 'TikTok';
       if (mediaType !== 'image') {
-        return E.left(new Error('Instagram solo permite enviar imágenes desde la bandeja'));
+        return E.left(new Error(`${name} solo permite enviar imágenes desde la bandeja`));
       }
-      // IG no soporta caption en attachments: la imagen va primero y el texto
-      // como mensaje aparte.
-      const sent = await this.invokeSend('ig-send', { chatId, mediaUrl });
+      // Ni IG ni TikTok soportan caption en attachments: la imagen va primero
+      // y el texto como mensaje aparte.
+      const sent = await this.invokeSend(fn, { chatId, mediaUrl });
       if (sent.isLeft() || !caption.trim()) return sent;
-      return this.invokeSend('ig-send', { chatId, text: caption.trim() });
+      return this.invokeSend(fn, { chatId, text: caption.trim() });
     }
     const label = mediaType === 'document' ? '📎 Documento' : '📷 Imagen';
     const { data, error } = await this.client.functions.invoke('wa-send', {
@@ -259,10 +263,10 @@ export class ChatService {
     return E.right(ChatMessageMapper.toDomain(msgData));
   }
 
-  /** Invoca una función de envío (wa-send / ig-send) y mapea la respuesta
-   *  {success, message} | {error} al Either del dominio. */
+  /** Invoca una función de envío (wa-send / ig-send / tiktok-send) y mapea la
+   *  respuesta {success, message} | {error} al Either del dominio. */
   private async invokeSend(
-    fn: 'wa-send' | 'ig-send',
+    fn: 'wa-send' | 'ig-send' | 'tiktok-send',
     body: Record<string, unknown>
   ): Promise<E.Either<Error, ChatMessage>> {
     const { data, error } = await this.client.functions.invoke(fn, { body });
