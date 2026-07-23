@@ -42,14 +42,29 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
   private pendingData: EmbeddedSignupData | null = null;
   private removeMessageListener?: () => void;
 
+  /** Abierto como popup desde el wizard: al terminar avisa por postMessage al
+   *  dashboard y se cierra, en vez de redirigir. */
+  private isPopup = false;
+  /** Auto-lanzar el Embedded Signup al cargar (el wizard manda &auto=1). Si el
+   *  navegador bloquea el diálogo sin gesto, el botón queda como fallback. */
+  private autoStart = false;
+
   ngOnInit(): void {
     const params = new URLSearchParams(window.location.search);
     this.state = params.get('state') ?? '';
     this.missingState.set(!this.state);
     this.mode = params.get('mode') === 'dedicated' ? 'dedicated' : 'coexistence';
     this.returnUrl = params.get('return') || this.returnUrl;
+    this.isPopup = params.get('popup') === '1';
+    this.autoStart = params.get('auto') === '1';
 
-    this.facebookSdk.loadSdk().then(() => this.sdkReady.set(true));
+    this.facebookSdk.loadSdk().then(() => {
+      this.sdkReady.set(true);
+      if (this.autoStart && this.state) {
+        this.autoStart = false;
+        this.connect();
+      }
+    });
 
     this.removeMessageListener = this.facebookSdk.onEmbeddedSignupMessage(
       (event) => {
@@ -120,6 +135,13 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
         );
       }
       this.status.set('done');
+      // Popup: avisar al dashboard (payload constante, sin datos sensibles) y
+      // cerrarse; el wizard escucha y navega al hub de canales conectados.
+      if (this.isPopup && window.opener) {
+        window.opener.postMessage('catalogohoy:wa-connected', '*');
+        setTimeout(() => window.close(), 600);
+        return;
+      }
       const target: string = json.returnUrl || this.returnUrl;
       window.location.href = `${target}${target.includes('?') ? '&' : '?'}wa=connected`;
     } catch (err) {

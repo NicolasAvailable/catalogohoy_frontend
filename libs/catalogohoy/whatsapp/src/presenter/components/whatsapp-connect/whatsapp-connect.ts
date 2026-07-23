@@ -112,7 +112,12 @@ export class WhatsAppConnectComponent implements OnInit {
 
   /** El Embedded Signup corre en el dominio puente (conectar.catalogohoy.com):
    *  el SDK JS de Facebook exige dominios exactos y los catálogos viven en
-   *  subdominios/dominios propios. wa-onboard firma el state (tenant+retorno). */
+   *  subdominios/dominios propios. wa-onboard firma el state (tenant+retorno).
+   *
+   *  El puente se abre como POPUP sobre el dashboard (&auto=1 intenta lanzar
+   *  el asistente de Facebook solo); al conectar avisa por postMessage y este
+   *  wizard navega al hub de canales. Si el navegador bloquea el popup, cae
+   *  al flujo de página completa. */
   async connect(): Promise<void> {
     if (!this.canConnect()) return;
     this.isStarting.set(true);
@@ -123,8 +128,8 @@ export class WhatsAppConnectComponent implements OnInit {
       return;
     }
 
-    // Volver del puente al detalle de WhatsApp (no al hub de canales).
-    const returnUrl = `${window.location.origin}/admin/chat/connect/whatsapp`;
+    // Retorno del flujo de página completa: el hub de canales conectados.
+    const returnUrl = `${window.location.origin}/admin/chat/connect`;
     const result = await this.whatsAppService.startWhatsAppConnect(
       tenantId,
       returnUrl,
@@ -132,11 +137,48 @@ export class WhatsAppConnectComponent implements OnInit {
     );
     result.fold(
       () => this.isStarting.set(false),
-      (url) => {
-        window.location.href = url;
-      }
+      (url) => this.openBridgePopup(`${url}&popup=1&auto=1`, url)
     );
   }
+
+  /** Popup centrado sobre el dashboard; fallback a redirect si lo bloquean. */
+  private openBridgePopup(popupUrl: string, fallbackUrl: string): void {
+    const width = 560;
+    const height = 760;
+    const left = Math.max(0, (window.screen.width - width) / 2);
+    const top = Math.max(0, (window.screen.height - height) / 2);
+    const popup = window.open(
+      popupUrl,
+      'catalogohoy-wa-bridge',
+      `popup=yes,width=${width},height=${height},left=${left},top=${top}`
+    );
+    if (!popup) {
+      window.location.href = fallbackUrl;
+      return;
+    }
+
+    window.addEventListener('message', this.onBridgeMessage);
+    // Si cierran el popup sin terminar, liberar el botón.
+    const watcher = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(watcher);
+        this.isStarting.set(false);
+      }
+    }, 800);
+    this.destroyRef.onDestroy(() => {
+      clearInterval(watcher);
+      window.removeEventListener('message', this.onBridgeMessage);
+    });
+  }
+
+  /** El puente avisa al conectar → refrescar cuentas e ir al hub de canales. */
+  private readonly onBridgeMessage = (event: MessageEvent): void => {
+    if (event.data !== 'catalogohoy:wa-connected') return;
+    window.removeEventListener('message', this.onBridgeMessage);
+    this.isStarting.set(false);
+    this.whatsAppStore.loadAccounts();
+    this.router.navigate(['/admin/chat/connect']);
+  };
 
   private async loadChecklist(): Promise<void> {
     this.isLoadingChecklist.set(true);
