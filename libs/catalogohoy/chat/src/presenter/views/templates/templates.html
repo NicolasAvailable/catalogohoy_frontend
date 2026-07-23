@@ -174,28 +174,44 @@
   </div>
   }
 
-  <!-- Plantillas sugeridas por CatalogoHoy: listas para enviar a revisión. -->
-  @if (availableSuggestions().length) {
-  <div class="rounded-xl border border-grey-100 bg-white p-5 flex flex-col gap-3">
+  <!-- Tabs: Sugeridas (galería CatalogoHoy) vs Mis plantillas (las propias). -->
+  @if (!showForm()) {
+  <div class="flex items-center gap-1 border-b border-grey-100">
     <button
       type="button"
-      class="flex items-center justify-between gap-2 cursor-pointer text-left"
-      (click)="showSuggestions.set(!showSuggestions())"
+      (click)="activeTab.set('suggested')"
+      class="px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors cursor-pointer"
+      [class.border-primary-500]="activeTab() === 'suggested'"
+      [class.text-primary-600]="activeTab() === 'suggested'"
+      [class.border-transparent]="activeTab() !== 'suggested'"
+      [class.text-grey-400]="activeTab() !== 'suggested'"
     >
-      <div>
-        <h2 class="font-semibold text-grey-800">{{ 'Plantillas sugeridas' | transloco }}</h2>
-        <p class="text-xs text-grey-400 mt-0.5">
-          {{ 'Listas para usar: se crean en tu cuenta de WhatsApp y Meta las revisa (suele tardar minutos).' | transloco }}
-        </p>
-      </div>
-      <ui-icon
-        name="chevron-down"
-        size="18"
-        [styleClass]="'text-grey-400 transition-transform ' + (showSuggestions() ? 'rotate-180' : '')"
-      />
+      {{ 'Plantillas sugeridas' | transloco }}
     </button>
+    <button
+      type="button"
+      (click)="activeTab.set('mine')"
+      class="px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors cursor-pointer inline-flex items-center gap-1.5"
+      [class.border-primary-500]="activeTab() === 'mine'"
+      [class.text-primary-600]="activeTab() === 'mine'"
+      [class.border-transparent]="activeTab() !== 'mine'"
+      [class.text-grey-400]="activeTab() !== 'mine'"
+    >
+      {{ 'Mis plantillas' | transloco }}
+      @if (visibleTemplates().length) {
+      <span class="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-grey-100 text-grey-500">{{ visibleTemplates().length }}</span>
+      }
+    </button>
+  </div>
+  }
 
-    @if (showSuggestions()) {
+  <!-- ── Tab Sugeridas ── -->
+  @if (!showForm() && activeTab() === 'suggested') {
+  @if (availableSuggestions().length) {
+  <div class="flex flex-col gap-3">
+    <p class="text-xs text-grey-400">
+      {{ 'Listas para usar: se crean en tu cuenta de WhatsApp y Meta las revisa (suele tardar minutos).' | transloco }}
+    </p>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       @for (s of availableSuggestions(); track s.key) {
       <div class="rounded-xl border border-grey-100 bg-grey-25 p-4 flex flex-col gap-2">
@@ -234,11 +250,18 @@
       </div>
       }
     </div>
-    }
+  </div>
+  } @else {
+  <!-- Todas las sugeridas ya están creadas. -->
+  <div class="flex flex-col items-center justify-center text-center gap-3 py-16 text-grey-400">
+    <ui-icon name="check-circle" size="36" styleClass="text-green-500" />
+    <p class="text-sm">{{ 'Ya agregaste todas las plantillas sugeridas. Mirá su estado en "Mis plantillas".' | transloco }}</p>
   </div>
   }
+  }
 
-  <!-- Lista -->
+  <!-- ── Tab Mis plantillas ── -->
+  @if (!showForm() && activeTab() === 'mine') {
   @if (loading()) {
   <div class="flex flex-col gap-2">
     @for (i of [1, 2, 3, 4]; track i) {
@@ -299,12 +322,14 @@
     class="flex flex-col items-center justify-center text-center gap-3 py-16 text-grey-400"
   >
     <ui-icon name="layout-template" size="36" styleClass="text-grey-200" />
-    <p class="text-sm">{{ 'Todavía no tenés plantillas. Creá la primera.' | transloco }}</p>
+    <p class="text-sm">{{ 'Todavía no creaste ninguna plantilla propia. Empezá desde las sugeridas o creá una nueva.' | transloco }}</p>
+    <ui-button label="Crear plantilla" icon="plus" [fluid]="false" (click)="openForm()" />
     @if (hiddenByLanguage() > 0) {
     <p class="text-[11px] text-grey-300">
       {{ 'Se ocultan {count} plantillas en idiomas que la plataforma no usa.' | transloco: { count: hiddenByLanguage() } }}
     </p>
     }
   </div>
+  }
   }
 </div>

@@ -83,9 +83,11 @@ export class TemplatesComponent implements OnInit {
   /** Nombre de la plantilla que se está eliminando (spinner por card). */
   protected readonly deletingName = signal<string | null>(null);
 
+  /** Tab activo: galería de sugeridas de CatalogoHoy vs las propias del
+   *  comerciante (con su estado en Meta). */
+  protected readonly activeTab = signal<'suggested' | 'mine'>('suggested');
+
   // ------------------------------------------------ plantillas sugeridas ---
-  /** Galería colapsable de plantillas listas de CatalogoHoy. */
-  protected readonly showSuggestions = signal(true);
   /** Key de la sugerida que se está enviando a revisión (spinner por card). */
   protected readonly submittingKey = signal<string | null>(null);
 
@@ -111,6 +113,7 @@ export class TemplatesComponent implements OnInit {
     this.submittingKey.set(null);
     if (res.isRight()) {
       this.toast.success('Plantilla enviada a revisión de Meta.');
+      this.activeTab.set('mine');
       this.load();
     } else {
       this.toast.warning(res.value.message);
@@ -265,6 +268,7 @@ export class TemplatesComponent implements OnInit {
     if (res.isRight()) {
       this.toast.success('Plantilla enviada a revisión de Meta.');
       this.showForm.set(false);
+      this.activeTab.set('mine');
       this.load();
     } else {
       this.toast.warning(res.value.message);
