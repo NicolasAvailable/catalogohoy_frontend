@@ -1,16 +1,48 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { TenantStore } from '@catalogohoy/tenant';
+import { WhatsAppService, WhatsAppStore } from '@catalogohoy/whatsapp';
 import { IconComponent, InputSearchComponent } from '@ui';
 import { ChatStore } from '../../../infrastructure/chat.store';
 
 @Component({
   selector: 'lib-chat-list-panel',
   standalone: true,
-  imports: [IconComponent, InputSearchComponent, TranslocoPipe],
+  imports: [IconComponent, InputSearchComponent, RouterLink, TranslocoPipe],
   templateUrl: './chat-list-panel.html',
 })
 export class ChatListPanelComponent {
   protected readonly chatStore = inject(ChatStore);
+  private readonly whatsAppStore = inject(WhatsAppStore);
+  private readonly whatsAppService = inject(WhatsAppService);
+  private readonly tenantStore = inject(TenantStore);
+
+  /** Conexión de IG/TikTok (null = aún no consultado → no mostrar banner). */
+  private readonly igConnected = signal<boolean | null>(null);
+  private readonly ttConnected = signal<boolean | null>(null);
+
+  /** Ningún canal conectado (pero hay historial, si no la vista sería el
+   *  empty state): banner de aviso con CTA a Conectar. */
+  protected readonly noChannelsConnected = computed(
+    () =>
+      !this.whatsAppStore.isLoading() &&
+      !this.whatsAppStore.hasActiveAccount() &&
+      this.igConnected() === false &&
+      this.ttConnected() === false
+  );
+
+  constructor() {
+    this.tenantStore.getTenantIdAsync().then(async (tenantId) => {
+      if (!tenantId) return;
+      const [ig, tt] = await Promise.all([
+        this.whatsAppService.getInstagramAccount(tenantId),
+        this.whatsAppService.getTikTokAccount(tenantId),
+      ]);
+      if (ig.isRight()) this.igConnected.set(ig.value !== null);
+      if (tt.isRight()) this.ttConnected.set(tt.value !== null);
+    });
+  }
 
   onSearch(query: string) {
     this.chatStore.setSearchQuery(query);

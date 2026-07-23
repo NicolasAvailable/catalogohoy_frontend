@@ -12,6 +12,25 @@
     />
   </div>
 
+  <!-- Sin canales conectados: historial en solo lectura + CTA a Conectar. -->
+  @if (noChannelsConnected()) {
+  <div class="mx-4 mb-2 rounded-xl border border-amber-200 bg-amber-50 p-3 flex flex-col gap-2.5 shrink-0">
+    <div class="flex items-start gap-2">
+      <ui-icon name="triangle-alert" size="15" styleClass="text-amber-600 shrink-0 mt-0.5" />
+      <p class="text-xs text-amber-800 leading-relaxed font-medium">
+        {{ 'No tienes ningún canal conectado: puedes leer tu historial, pero no recibir ni responder mensajes.' | transloco }}
+      </p>
+    </div>
+    <a
+      routerLink="/admin/chat/connect"
+      class="self-start inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700 transition-colors"
+    >
+      {{ 'Conectar canales' | transloco }}
+      <ui-icon name="arrow-right" size="12" />
+    </a>
+  </div>
+  }
+
   <!-- Chat list.
        TODO(whatsapp-integration): reintroducir cdk-virtual-scroll-viewport +
        infinite scroll (loadMoreChats paginado en ChatService/ChatStore) cuando

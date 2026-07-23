@@ -49,6 +49,11 @@ export class App implements OnInit {
   ]);
 
   private captureQueryParametersToLocalStorage(): void {
+    // El puente de conexión de WhatsApp vive de sus query params firmados
+    // (?state=&mode=&return=, los mintea wa-onboard): si se mueven a
+    // localStorage el puente queda muerto con "state faltante". No tocarlos.
+    if (window.location.pathname.startsWith('/conectar/')) return;
+
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.toString() === '') return;
 
