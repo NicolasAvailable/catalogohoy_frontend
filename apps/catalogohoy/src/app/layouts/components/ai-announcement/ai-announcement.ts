@@ -21,6 +21,10 @@ import {
 // sobre user_announcement_views). Cambiar la clave re-anuncia la feature a todos.
 const ANNOUNCEMENT_KEY = 'connect_channels_v1';
 
+// 🚦 Switch maestro: en false el modal NO se muestra a nadie (el CRM todavía no
+// se lanza a los clientes). Poner en true cuando se lance WhatsApp Business.
+const ANNOUNCEMENT_ENABLED = false;
+
 /**
  * Modal de anuncio "Conectá WhatsApp Business". Vive en el shell del admin
  * (`app-base`) para que aparezca en la primera vista que cargue el usuario.
@@ -55,6 +59,8 @@ export class AiAnnouncement implements AfterViewInit {
   });
 
   async ngAfterViewInit(): Promise<void> {
+    // Anuncio apagado hasta el lanzamiento del CRM (ver ANNOUNCEMENT_ENABLED).
+    if (!ANNOUNCEMENT_ENABLED) return;
     try {
       // Esperar a que la sesión esté hidratada: si la RPC sale con auth.uid()
       // null (carga en frío), devolvería false y el modal se mostraría aunque
