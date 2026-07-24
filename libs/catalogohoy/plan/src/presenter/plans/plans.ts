@@ -66,13 +66,23 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
     isPopular: false,
     color: '#6366f1',
   },
-  avanzado: {
+  // El badge "Más popular" vive en el Pro (ancla la decisión en el plan del
+  // medio); el Avanzado queda como tier premium sin badge.
+  pro: {
     period: '/mes',
-    features: PLAN_FEATURES['avanzado'],
+    features: PLAN_FEATURES['pro'],
     buttonLabel: 'Comenzar ahora',
     buttonSeverity: 'primary',
     isPopular: true,
     color: '#7c3aed',
+  },
+  avanzado: {
+    period: '/mes',
+    features: PLAN_FEATURES['avanzado'],
+    buttonLabel: 'Comenzar ahora',
+    buttonSeverity: 'secondary',
+    isPopular: false,
+    color: '#312e81',
   },
 };
 
@@ -205,8 +215,16 @@ export class Plans implements OnInit {
     () => this.planStore.isLoading() && this.plans().length === 0
   );
 
-  // 3 planes (Enterprise oculta — ver ENTERPRISE_CARD_VISIBLE).
-  public readonly skeletonCards = [0, 1, 2];
+  // 4 planes: gratis/básico/pro/avanzado (Enterprise oculta — ver ENTERPRISE_CARD_VISIBLE).
+  public readonly skeletonCards = [0, 1, 2, 3];
+
+  /** Cantidad de cards visibles (skeletons durante la carga) — decide si el
+   *  grid usa 3 o 4 columnas. */
+  public readonly gridCardCount = computed(() =>
+    this.isLoadingPlans()
+      ? this.skeletonCards.length
+      : this.plans().length + (this.showEnterpriseCard() ? 1 : 0)
+  );
   // 9 filas ≈ las features del plan Avanzado, la card más alta del grid.
   public readonly skeletonFeatureWidths = ['95%', '80%', '90%', '75%', '100%', '85%', '90%', '80%', '70%'];
 

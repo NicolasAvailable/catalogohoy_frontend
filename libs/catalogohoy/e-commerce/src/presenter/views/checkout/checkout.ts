@@ -429,9 +429,16 @@ export default class Checkout {
 
     if (!orderResult || orderResult.isLeft()) {
       this.isSubmitting.set(false);
+      // Trigger enforce_order_limit (DB): el catálogo del plan gratis alcanzó
+      // su tope mensual de pedidos — mensaje específico para el comprador.
+      const isOrderLimit =
+        orderResult?.isLeft() &&
+        orderResult.value.message.includes('order_limit_reached');
       alert(
         this.transloco.translate(
-          'Hubo un error al procesar tu pedido. Por favor intenta de nuevo.'
+          isOrderLimit
+            ? 'Este catálogo alcanzó su límite de pedidos de este mes. Contacta al negocio directamente para completar tu compra.'
+            : 'Hubo un error al procesar tu pedido. Por favor intenta de nuevo.'
         )
       );
       return;

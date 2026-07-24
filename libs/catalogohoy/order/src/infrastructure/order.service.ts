@@ -207,6 +207,15 @@ export class OrderService {
       .single();
 
     if (error) {
+      // Trigger enforce_order_limit (DB): el plan gratis tiene tope mensual
+      // de órdenes; los planes pagos son ilimitados.
+      if (error.message.includes('order_limit_reached')) {
+        return E.left(
+          new Error(
+            'Alcanzaste el límite de órdenes de tu plan este mes. Mejora tu plan para seguir registrando órdenes.'
+          )
+        );
+      }
       return E.left(new Error(error.message));
     }
 
