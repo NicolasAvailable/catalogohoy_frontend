@@ -16,7 +16,7 @@ export const CHAT_ENABLED_PLANS = ['pro', 'avanzado', 'enterprise'];
  *  false solo la allowlist ve el módulo — permite mergear/deployar y hacer el
  *  E2E real en prod sin exponerlo a los clientes. Flip a true = lanzamiento
  *  a los planes de CHAT_ENABLED_PLANS. */
-export const CHAT_PLAN_GATING_LIVE = false;
+export const CHAT_PLAN_GATING_LIVE = true;
 
 /** Permite entrar a `/admin/chat/**` si el catálogo está en la allowlist
  *  interna O su plan lo incluye (y no está vencido).

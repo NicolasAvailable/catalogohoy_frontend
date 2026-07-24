@@ -63,6 +63,23 @@ export class Home implements OnInit {
   public readonly stats = computed(() => this.homeStore.stats());
   public readonly isLoading = computed(() => this.homeStore.isLoading());
 
+  /** Promo de lanzamiento del CRM: "Conectá tu WhatsApp". Se puede descartar
+   *  (persistido en localStorage). El gate real por plan lo aplica la pantalla
+   *  de conexión (connect-channels), así que acá solo mostramos el aviso. */
+  public readonly whatsappPromoDismissed = signal(
+    typeof localStorage !== 'undefined' &&
+      localStorage.getItem('wa_connect_promo_dismissed') === '1'
+  );
+
+  public dismissWhatsappPromo(): void {
+    this.whatsappPromoDismissed.set(true);
+    try {
+      localStorage.setItem('wa_connect_promo_dismissed', '1');
+    } catch {
+      /* localStorage no disponible → no persiste, sin drama */
+    }
+  }
+
   public activeChartTab = signal<ChartTab>('ventas');
   // For VE: user toggles between 'bs' and 'usd'. For non-VE: always 'usd'
   // (prices are stored in USD internally; symbol comes from the tenant currency).
