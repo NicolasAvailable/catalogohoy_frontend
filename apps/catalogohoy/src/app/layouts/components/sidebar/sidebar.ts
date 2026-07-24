@@ -25,7 +25,7 @@ import {
   PRODUCTS_MENU,
   TEAMS_MENU,
 } from './sidebar.constants';
-import { CHAT_ENABLED_PLANS, CHAT_ENABLED_SLUGS, CHAT_PLAN_GATING_LIVE } from '../../../modules/admin/chat-enabled.guard';
+import { CHAT_ENABLED_SLUGS, CHAT_PLAN_GATING_LIVE } from '../../../modules/admin/chat-enabled.guard';
 
 @Component({
   selector: 'app-sidebar',
@@ -197,15 +197,14 @@ export class Sidebar {
     getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || ''
   );
 
-  /** ¿El catálogo tiene el módulo Chats? Allowlist interna
-   *  ({@link CHAT_ENABLED_SLUGS}) o planes incluidos ({@link CHAT_ENABLED_PLANS},
-   *  Pro/Avanzado/Enterprise) con plan vigente. */
+  /** ¿Se muestra el módulo Chats en el sidebar? Cuando el CRM está lanzado
+   *  ({@link CHAT_PLAN_GATING_LIVE}) es visible para TODOS los catálogos: la
+   *  validación por plan se aplica al CONECTAR un canal (connect-channels), no
+   *  a la visibilidad. {@link CHAT_ENABLED_SLUGS} lo fuerza aunque no esté
+   *  lanzado. */
   private readonly tenantHasChat = computed(() => {
     if (CHAT_ENABLED_SLUGS.includes(this.currentTenantSlug())) return true;
-    if (!CHAT_PLAN_GATING_LIVE) return false;
-    const plan = this.planStore.currentPlan();
-    if (!plan || !CHAT_ENABLED_PLANS.includes(plan.id)) return false;
-    return !(this.planStore.tenantPlanUsage()?.planExpired ?? false);
+    return CHAT_PLAN_GATING_LIVE;
   });
 
   /** Chats / CRM de WhatsApp en el sidebar: el catálogo debe tener el módulo Y

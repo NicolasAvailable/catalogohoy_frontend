@@ -8,9 +8,11 @@ import { TenantStore } from '@catalogohoy/tenant';
  *  hiciera falta un piloto puntual en el futuro. */
 export const CHAT_ENABLED_SLUGS: string[] = [];
 
-/** Planes con acceso al CRM de WhatsApp (decisión 2026-07-24: solo Avanzado;
- *  enterprise incluido por estar por encima). Pro NO incluye el CRM. El sidebar
- *  usa la misma lista para mostrar/ocultar el menú. */
+/** Planes que pueden CONECTAR un canal (decisión 2026-07-24: solo Avanzado;
+ *  enterprise por estar por encima; Pro NO). Ojo: la VISIBILIDAD del módulo ya
+ *  NO depende de esto — todos los catálogos ven la sección cuando el CRM está
+ *  lanzado. El gate por plan vive en connect-channels (copia local de esta
+ *  lista) y se dispara al intentar conectar. */
 export const CHAT_ENABLED_PLANS = ['avanzado', 'enterprise'];
 
 /** 🚦 Switch de LANZAMIENTO del CRM (patrón ENTERPRISE_CARD_VISIBLE): en
@@ -36,16 +38,15 @@ export const chatEnabledGuard: CanActivateFn = async () => {
 
   const { data } = await SupabaseClientProvider.getInstance()
     .from('tenants')
-    .select('slug, plan_id, plan_expired')
+    .select('slug')
     .eq('id', tenantId)
     .maybeSingle();
   if (!data) return router.createUrlTree(['/admin']);
 
   if (CHAT_ENABLED_SLUGS.includes(data.slug ?? '')) return true;
 
-  const allowed =
-    CHAT_PLAN_GATING_LIVE &&
-    !data.plan_expired &&
-    CHAT_ENABLED_PLANS.includes(data.plan_id ?? '');
-  return allowed ? true : router.createUrlTree(['/admin']);
+  // Todos los catálogos pueden VER/ENTRAR al módulo cuando el CRM está lanzado;
+  // la validación por plan (Avanzado/Enterprise) se aplica al CONECTAR un canal
+  // (canConnect en connect-channels), no al entrar a la sección.
+  return CHAT_PLAN_GATING_LIVE ? true : router.createUrlTree(['/admin']);
 };

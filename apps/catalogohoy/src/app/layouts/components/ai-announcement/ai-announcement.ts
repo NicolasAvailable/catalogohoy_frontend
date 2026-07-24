@@ -7,12 +7,10 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { SupabaseClientProvider } from '@catalogohoy/core';
-import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl, TenantStore } from '@catalogohoy/tenant';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent, DialogComponent, IconComponent } from '@ui';
 import {
-  CHAT_ENABLED_PLANS,
   CHAT_ENABLED_SLUGS,
   CHAT_PLAN_GATING_LIVE,
 } from '../../../modules/admin/chat-enabled.guard';
@@ -42,20 +40,18 @@ const ANNOUNCEMENT_ENABLED = true;
 export class AiAnnouncement implements AfterViewInit {
   private readonly router = inject(Router);
   private readonly supabase = SupabaseClientProvider.getInstance();
-  private readonly planStore = inject(PlanStore);
   private readonly tenantStore = inject(TenantStore);
 
   private readonly aiAnnounce = viewChild<DialogComponent>('aiAnnounce');
 
-  /** El catálogo tiene el módulo de Chats disponible (allowlist o plan incluido
-   *  con el gating live). Misma regla que el sidebar / guard. */
+  /** Se muestra el anuncio a TODOS los catálogos cuando el CRM está lanzado
+   *  ({@link CHAT_PLAN_GATING_LIVE}); la validación por plan se aplica al
+   *  conectar, no en el anuncio. {@link CHAT_ENABLED_SLUGS} lo fuerza aunque no
+   *  esté lanzado. */
   private readonly tenantHasChat = computed(() => {
     const slug = getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || '';
     if (CHAT_ENABLED_SLUGS.includes(slug)) return true;
-    if (!CHAT_PLAN_GATING_LIVE) return false;
-    const plan = this.planStore.currentPlan();
-    if (!plan || !CHAT_ENABLED_PLANS.includes(plan.id)) return false;
-    return !(this.planStore.tenantPlanUsage()?.planExpired ?? false);
+    return CHAT_PLAN_GATING_LIVE;
   });
 
   async ngAfterViewInit(): Promise<void> {
