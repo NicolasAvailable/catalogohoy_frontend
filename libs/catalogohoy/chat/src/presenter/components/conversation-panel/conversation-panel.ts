@@ -119,13 +119,23 @@ export class ConversationPanelComponent {
     this.composerMode.set(mode);
   }
 
-  /** Imágenes adjuntas pendientes de enviar, cada una con su propio caption
-   *  (estilo WhatsApp Web). Cada una se envía como un mensaje separado: la Cloud
-   *  API es 1 archivo por mensaje (WhatsApp agrupa varios mensajes como "álbum"). */
+  /** Adjuntos pendientes de enviar (imágenes o documentos), cada uno con su
+   *  caption (estilo WhatsApp Web). Cada uno se manda como un mensaje separado:
+   *  la Cloud API es 1 archivo por mensaje. */
   protected readonly pendingMedia = signal<
-    { file: File; preview: string; caption: string }[]
+    {
+      file: File;
+      preview: string;
+      caption: string;
+      kind: 'image' | 'document';
+      name: string;
+    }[]
   >([]);
   protected readonly maxAttachments = 10;
+  /** Overlay "soltá el archivo" mientras se arrastra algo sobre el composer. */
+  protected readonly isDraggingFile = signal(false);
+  private readonly maxImageBytes = 5 * 1024 * 1024;
+  private readonly maxDocBytes = 25 * 1024 * 1024;
   /** Imagen mostrada en grande en el overlay de preview. */
   protected readonly activeIndex = signal(0);
   protected readonly activeItem = computed(
@@ -438,33 +448,73 @@ export class ConversationPanelComponent {
     this.chatStore.setReplyingTo(null);
   }
 
-  /** Adjuntar imagen: valida (imagen, ≤5 MB) y la envía vía el store (optimista
-   *  → sube a storage → wa-send con type:image). */
+  /** Adjuntar desde el selector de archivos (imágenes o documentos). */
   onAttachFile(event: Event): void {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
     input.value = '';
-    if (!files.length) return;
+    this.addFiles(files);
+  }
 
+  /** Adjuntar archivos soltados desde el escritorio (drag & drop). */
+  onDropFiles(event: DragEvent): void {
+    event.preventDefault();
+    this.isDraggingFile.set(false);
+    if (this.composerMode() === 'whisper') return;
+    this.addFiles(Array.from(event.dataTransfer?.files ?? []));
+  }
+
+  onDragOverComposer(event: DragEvent): void {
+    if (this.composerMode() === 'whisper') return;
+    event.preventDefault();
+    this.isDraggingFile.set(true);
+  }
+
+  onDragLeaveComposer(event: DragEvent): void {
+    event.preventDefault();
+    this.isDraggingFile.set(false);
+  }
+
+  /** Valida y agrega adjuntos: imágenes (≤5 MB) o documentos (≤25 MB). El tipo
+   *  real (image/document) lo resuelve el store al enviar según el mime. */
+  private addFiles(files: File[]): void {
+    if (!files.length) return;
     const current = this.pendingMedia();
     const room = this.maxAttachments - current.length;
     if (room <= 0) {
-      this.toast.warning(`Máximo ${this.maxAttachments} imágenes.`);
+      this.toast.warning(`Máximo ${this.maxAttachments} archivos.`);
       return;
     }
 
-    const added: { file: File; preview: string; caption: string }[] = [];
+    const added: {
+      file: File;
+      preview: string;
+      caption: string;
+      kind: 'image' | 'document';
+      name: string;
+    }[] = [];
     let skipped = false;
     for (const file of files) {
       if (added.length >= room) {
         skipped = true;
         break;
       }
-      if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+      const isImage = file.type.startsWith('image/');
+      // Video/audio no se envían desde el composer (WhatsApp usa otro tipo).
+      const isAvMedia =
+        file.type.startsWith('video/') || file.type.startsWith('audio/');
+      const limit = isImage ? this.maxImageBytes : this.maxDocBytes;
+      if (isAvMedia || file.size > limit) {
         skipped = true;
         continue;
       }
-      added.push({ file, preview: URL.createObjectURL(file), caption: '' });
+      added.push({
+        file,
+        preview: URL.createObjectURL(file),
+        caption: '',
+        kind: isImage ? 'image' : 'document',
+        name: file.name,
+      });
     }
     if (added.length) {
       const wasEmpty = current.length === 0;
@@ -472,7 +522,43 @@ export class ConversationPanelComponent {
       if (wasEmpty) this.activeIndex.set(0);
     }
     if (skipped) {
-      this.toast.warning('Algunas imágenes se omitieron (solo JPG/PNG ≤ 5 MB).');
+      this.toast.warning(
+        'Algunos archivos se omitieron (imágenes ≤ 5 MB o documentos ≤ 25 MB).'
+      );
     }
+  }
+
+  /** Icono + etiqueta + colores de un documento según su extensión (nombre o
+   *  URL de storage). Se usa en el preview del composer y en las burbujas. */
+  protected docMeta(nameOrUrl: string | null | undefined): {
+    icon: string;
+    label: string;
+    color: string;
+    bg: string;
+  } {
+    // Sirve tanto para nombres reales (productos.xlsx) como para URLs de
+    // storage donde el "tail" es el mime de WhatsApp (…spreadsheetml.sheet).
+    const clean = (nameOrUrl ?? '').toLowerCase().split('?')[0].split('#')[0];
+    const ext = clean.includes('.') ? clean.split('.').pop()! : '';
+    const has = (s: string) => clean.includes(s);
+    if (['xlsx', 'xls', 'xlsm', 'ods', 'sheet'].includes(ext) || has('spreadsheetml') || has('ms-excel'))
+      return { icon: 'file-spreadsheet', label: 'Excel', color: 'text-emerald-600', bg: 'bg-emerald-50' };
+    if (ext === 'csv')
+      return { icon: 'file-spreadsheet', label: 'CSV', color: 'text-emerald-600', bg: 'bg-emerald-50' };
+    if (ext === 'pdf' || has('/pdf'))
+      return { icon: 'file-text', label: 'PDF', color: 'text-red-600', bg: 'bg-red-50' };
+    if (['doc', 'docx', 'odt', 'rtf'].includes(ext) || has('wordprocessingml') || has('msword'))
+      return { icon: 'file-text', label: 'Word', color: 'text-blue-600', bg: 'bg-blue-50' };
+    if (['ppt', 'pptx', 'odp'].includes(ext) || has('presentationml') || has('powerpoint'))
+      return { icon: 'file-text', label: 'PowerPoint', color: 'text-orange-600', bg: 'bg-orange-50' };
+    return { icon: 'file-text', label: 'Documento', color: 'text-grey-500', bg: 'bg-grey-100' };
+  }
+
+  /** Tamaño legible (KB/MB) para el preview de documentos. */
+  protected formatBytes(bytes: number): string {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 }

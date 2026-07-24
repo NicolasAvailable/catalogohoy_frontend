@@ -364,6 +364,12 @@ export const ChatStore = signalStore(
         const replyToId = replyTo && replyTo.id > 0 ? replyTo.id : null;
 
         const cap = caption.trim();
+        // El tipo lo define el archivo: imagen vs. documento (Excel, PDF, etc.).
+        const isImageFile = file.type.startsWith('image/');
+        const mediaType: 'image' | 'document' = isImageFile
+          ? 'image'
+          : 'document';
+        const mediaLabel = isImageFile ? '📷 Imagen' : '📎 Documento';
         const tempId = nextTempId();
         const now = new Date().toISOString();
         const localUrl = URL.createObjectURL(file);
@@ -374,7 +380,7 @@ export const ChatStore = signalStore(
           isMine: true,
           createdAt: now,
           status: 'sending',
-          type: 'image',
+          type: mediaType,
           mediaUrl: localUrl,
           replyToMessageId: replyToId,
         };
@@ -386,7 +392,7 @@ export const ChatStore = signalStore(
             c.id === chatId
               ? {
               ...c,
-              lastMessage: cap || '📷 Imagen',
+              lastMessage: cap || mediaLabel,
               lastMessageAt: now,
               lastMessageIsMine: true,
             }
@@ -406,14 +412,14 @@ export const ChatStore = signalStore(
 
         const up = await chatService.uploadMedia(file, chat.tenantId);
         if (up.isLeft()) {
-          markFailed('No se pudo subir la imagen al servidor.');
+          markFailed('No se pudo subir el archivo al servidor.');
           return;
         }
 
         const result = await chatService.sendMedia(
           chatId,
           up.value.url,
-          'image',
+          mediaType,
           cap,
           replyToId,
           store.selectedChat()?.channel ?? 'whatsapp'
