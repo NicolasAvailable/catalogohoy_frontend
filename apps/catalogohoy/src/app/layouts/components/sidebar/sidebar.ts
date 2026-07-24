@@ -197,17 +197,26 @@ export class Sidebar {
     getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || ''
   );
 
-  /** Chats / CRM de WhatsApp: visible para la allowlist interna
-   *  ({@link CHAT_ENABLED_SLUGS}) o para los planes incluidos
-   *  ({@link CHAT_ENABLED_PLANS}, Pro/Avanzado/Enterprise) con plan vigente.
-   *  El guard de la ruta (chatEnabledGuard) aplica la misma regla. */
-  public readonly canViewChat = computed(() => {
+  /** ¿El catálogo tiene el módulo Chats? Allowlist interna
+   *  ({@link CHAT_ENABLED_SLUGS}) o planes incluidos ({@link CHAT_ENABLED_PLANS},
+   *  Pro/Avanzado/Enterprise) con plan vigente. */
+  private readonly tenantHasChat = computed(() => {
     if (CHAT_ENABLED_SLUGS.includes(this.currentTenantSlug())) return true;
     if (!CHAT_PLAN_GATING_LIVE) return false;
     const plan = this.planStore.currentPlan();
     if (!plan || !CHAT_ENABLED_PLANS.includes(plan.id)) return false;
     return !(this.planStore.tenantPlanUsage()?.planExpired ?? false);
   });
+
+  /** Chats / CRM de WhatsApp en el sidebar: el catálogo debe tener el módulo Y
+   *  el usuario debe poder verlo (owner siempre; miembro con permiso
+   *  `chats:view`). */
+  public readonly canViewChat = computed(
+    () =>
+      this.tenantHasChat() &&
+      (this.permissionsStore.isOwner() ||
+        this.permissionsStore.can()('chats', 'view'))
+  );
 
   public readonly currentTenant = computed(() => {
     const slug = this.currentTenantSlug();
