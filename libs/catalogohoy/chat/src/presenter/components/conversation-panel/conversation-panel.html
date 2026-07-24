@@ -270,12 +270,7 @@
                   class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 min-w-[12rem] max-w-[16rem] transition-colors"
                   [ngClass]="(msg.isMine && !msg.isInternal) ? 'bg-white/15 hover:bg-white/25' : 'bg-black/5 hover:bg-black/10'"
                 >
-                  <span
-                    class="shrink-0 w-9 h-9 rounded-lg inline-flex items-center justify-center"
-                    [ngClass]="dmeta.bg"
-                  >
-                    <ui-icon [name]="dmeta.icon" size="18" [styleClass]="dmeta.color" />
-                  </span>
+                  <img [src]="dmeta.logo" [alt]="dmeta.label" class="shrink-0 w-9 h-9" />
                   <span class="flex-1 min-w-0">
                     <span
                       class="block text-sm font-medium truncate"
@@ -678,12 +673,7 @@
       } @else {
       @let dm = docMeta(active.name);
       <div class="flex flex-col items-center gap-4 text-center px-4">
-        <span
-          class="w-28 h-28 rounded-3xl inline-flex items-center justify-center"
-          [ngClass]="dm.bg"
-        >
-          <ui-icon [name]="dm.icon" size="56" [styleClass]="dm.color" />
-        </span>
+        <img [src]="dm.logo" [alt]="dm.label" class="w-24 h-24" />
         <div>
           <p class="text-white font-semibold break-all max-w-md">{{ active.name }}</p>
           <p class="text-white/60 text-sm mt-1">{{ dm.label }} · {{ formatBytes(active.file.size) }}</p>
@@ -705,8 +695,8 @@
         <img [src]="m.preview" alt="" class="w-full h-full object-cover" />
         } @else {
         @let fm = docMeta(m.name);
-        <span class="w-full h-full flex items-center justify-center" [ngClass]="fm.bg">
-          <ui-icon [name]="fm.icon" size="22" [styleClass]="fm.color" />
+        <span class="w-full h-full flex items-center justify-center bg-white">
+          <img [src]="fm.logo" [alt]="fm.label" class="w-8 h-8" />
         </span>
         }
         @if (idx === activeIndex()) {

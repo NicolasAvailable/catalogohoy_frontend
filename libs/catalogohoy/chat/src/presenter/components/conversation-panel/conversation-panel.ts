@@ -528,30 +528,28 @@ export class ConversationPanelComponent {
     }
   }
 
-  /** Icono + etiqueta + colores de un documento según su extensión (nombre o
-   *  URL de storage). Se usa en el preview del composer y en las burbujas. */
+  /** Logo oficial (SVG) + etiqueta de un documento según su extensión (nombre o
+   *  URL de storage). Sirve tanto para nombres reales (productos.xlsx) como para
+   *  URLs donde el "tail" es el mime de WhatsApp (…spreadsheetml.sheet). Se usa
+   *  en el preview del composer y en las burbujas. */
   protected docMeta(nameOrUrl: string | null | undefined): {
-    icon: string;
+    logo: string;
     label: string;
-    color: string;
-    bg: string;
   } {
-    // Sirve tanto para nombres reales (productos.xlsx) como para URLs de
-    // storage donde el "tail" es el mime de WhatsApp (…spreadsheetml.sheet).
     const clean = (nameOrUrl ?? '').toLowerCase().split('?')[0].split('#')[0];
     const ext = clean.includes('.') ? clean.split('.').pop()! : '';
     const has = (s: string) => clean.includes(s);
-    if (['xlsx', 'xls', 'xlsm', 'ods', 'sheet'].includes(ext) || has('spreadsheetml') || has('ms-excel'))
-      return { icon: 'file-spreadsheet', label: 'Excel', color: 'text-emerald-600', bg: 'bg-emerald-50' };
-    if (ext === 'csv')
-      return { icon: 'file-spreadsheet', label: 'CSV', color: 'text-emerald-600', bg: 'bg-emerald-50' };
-    if (ext === 'pdf' || has('/pdf'))
-      return { icon: 'file-text', label: 'PDF', color: 'text-red-600', bg: 'bg-red-50' };
+    const base = '/images/filetypes/';
+    if (['xlsx', 'xls', 'xlsm', 'sheet'].includes(ext) || has('spreadsheetml') || has('ms-excel'))
+      return { logo: base + 'excel.svg', label: 'Excel' };
+    if (ext === 'csv') return { logo: base + 'sheets.svg', label: 'CSV' };
+    if (ext === 'ods') return { logo: base + 'sheets.svg', label: 'Hoja de cálculo' };
+    if (ext === 'pdf' || has('/pdf')) return { logo: base + 'pdf.svg', label: 'PDF' };
     if (['doc', 'docx', 'odt', 'rtf'].includes(ext) || has('wordprocessingml') || has('msword'))
-      return { icon: 'file-text', label: 'Word', color: 'text-blue-600', bg: 'bg-blue-50' };
+      return { logo: base + 'word.svg', label: 'Word' };
     if (['ppt', 'pptx', 'odp'].includes(ext) || has('presentationml') || has('powerpoint'))
-      return { icon: 'file-text', label: 'PowerPoint', color: 'text-orange-600', bg: 'bg-orange-50' };
-    return { icon: 'file-text', label: 'Documento', color: 'text-grey-500', bg: 'bg-grey-100' };
+      return { logo: base + 'ppt.svg', label: 'PowerPoint' };
+    return { logo: base + 'doc.svg', label: 'Documento' };
   }
 
   /** Tamaño legible (KB/MB) para el preview de documentos. */
