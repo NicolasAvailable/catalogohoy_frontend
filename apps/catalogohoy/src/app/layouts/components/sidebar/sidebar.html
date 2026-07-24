@@ -522,11 +522,6 @@
               <ui-icon [name]="item?.icon" size="16" styleClass="text-grey-700" />
               }
               <a [ngClass]="{ 'ml-2': !item?.icon }" class="font-base font-semibold text-grey-700 mt-0.5">{{ item.label | transloco }}</a>
-              @if (item.label === 'Chats') {
-              <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
-                {{ 'Nuevo' | transloco }}
-              </span>
-              }
             </div>
             @if (item.label === 'Mensajes' && unreadChatsCount() > 0) {
             <span
@@ -537,7 +532,15 @@
               {{ unreadChatsCount() > 99 ? '99+' : unreadChatsCount() }}
             </span>
             } @else if (item?.iconNext) {
-            <ui-icon [name]="item?.iconNext" [ngClass]="{ 'rotate-90': item?.state?.isOpen }" size="16" class="transition-transform duration-200 ease-in-out" styleClass="text-grey-700" />
+            <!-- Badge "Nuevo" pegado al chevron de desplegar (solo la raíz Chats). -->
+            <div class="flex items-center gap-1.5">
+              @if (item.label === 'Chats') {
+              <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
+                {{ 'Nuevo' | transloco }}
+              </span>
+              }
+              <ui-icon [name]="item?.iconNext" [ngClass]="{ 'rotate-90': item?.state?.isOpen }" size="16" class="transition-transform duration-200 ease-in-out" styleClass="text-grey-700" />
+            </div>
             }
           </div>
         </ng-template>
