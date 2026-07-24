@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { DiscordWebhookService, SupabaseClientProvider } from '@catalogohoy/core';
 import {
@@ -143,6 +143,19 @@ export class Plans implements OnInit {
   private readonly supabase = SupabaseClientProvider.getInstance();
 
   public readonly billingPeriod = signal<BillingPeriod>('monthly');
+
+  /** Contenedor scrolleable de las cards, para las flechas del carousel en
+   *  laptops chicas (768–1279 px). */
+  private readonly plansGrid = viewChild<ElementRef<HTMLElement>>('plansGrid');
+
+  /** Desplaza el carousel ~una card en la dirección dada (-1 izq / 1 der). */
+  public scrollPlans(dir: -1 | 1): void {
+    const el = this.plansGrid()?.nativeElement;
+    if (!el) return;
+    const card = el.querySelector('.plan-card') as HTMLElement | null;
+    const amount = card ? card.offsetWidth + 20 : el.clientWidth * 0.8;
+    el.scrollBy({ left: dir * amount, behavior: 'smooth' });
+  }
 
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },

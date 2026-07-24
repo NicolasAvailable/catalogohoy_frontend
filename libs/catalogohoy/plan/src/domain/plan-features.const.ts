@@ -104,7 +104,7 @@ export const PLAN_FEATURES_DETAILED: Record<string, PlanFeature[]> = {
     { text: 'Órdenes ilimitadas' },
     { text: 'Hasta 15 variantes por producto' },
     { text: 'Hasta 15 adicionales por producto' },
-    { text: 'Hasta 10 miembros de equipo' },
+    { text: 'Hasta 3 miembros de equipo' },
     { text: 'Hasta 30 reportes por mes' },
     { text: '500 créditos de IA por mes' },
     { text: 'Todos los módulos disponibles' },

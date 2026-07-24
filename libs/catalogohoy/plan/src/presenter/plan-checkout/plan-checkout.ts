@@ -110,7 +110,7 @@ const CHECKOUT_FEATURES: Record<string, FeatureSection[]> = {
     },
     {
       title: 'Equipo',
-      items: ['Hasta 10 miembros de equipo', 'Permisos por módulo'],
+      items: ['Hasta 3 miembros de equipo', 'Permisos por módulo'],
     },
     {
       title: 'Analíticas',

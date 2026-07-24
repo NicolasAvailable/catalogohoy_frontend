@@ -2,7 +2,7 @@
 .plans-wrapper {
   padding: 1rem 2rem;
   /* Grid de 3 planes (Enterprise oculta). Con --four el grid pasa a 4. */
-  max-width: 75rem;
+  max-width: 84rem;
   margin: 0 auto;
   height: 100%;
   display: flex;
@@ -139,6 +139,14 @@
 /* Con la card Enterprise visible (tenant enterprise) el grid pasa a 4. */
 .plans-grid--four {
   grid-template-columns: repeat(4, 1fr);
+}
+
+/* ── Carousel (laptops chicas): flechas para navegar entre planes ── */
+.plans-carousel {
+  position: relative;
+}
+.plans-carousel__arrow {
+  display: none; /* solo visible en el rango carousel (ver responsive) */
 }
 
 /* ── Card ── */
@@ -498,10 +506,14 @@
 }
 
 /* ── Responsive ── */
-@media (max-width: 1024px) {
-  .plans-grid {
-    grid-template-columns: 1fr;
-    max-width: 420px;
+/* Móvil: apilado, una card debajo de otra. */
+@media (max-width: 767px) {
+  .plans-grid,
+  .plans-grid--four {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+    max-width: 26rem;
     margin: 0 auto;
   }
 
@@ -511,15 +523,56 @@
   }
 }
 
-/* Solo con 4 cards (tenant enterprise): a este ancho van mejor 2x2. */
-@media (min-width: 1025px) and (max-width: 1200px) {
+/* Laptops chicas / tablets: carousel horizontal con flechas. */
+@media (min-width: 768px) and (max-width: 1279px) {
+  .plans-grid,
   .plans-grid--four {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+    display: flex;
+    flex-direction: row;
+    grid-template-columns: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 1.25rem;
+    padding: 0.25rem 0.25rem 0.75rem;
+    scrollbar-width: none; /* Firefox */
+  }
+  .plans-grid::-webkit-scrollbar {
+    display: none; /* WebKit */
+  }
+  .plan-card {
+    flex: 0 0 19.5rem;
+    scroll-snap-align: center;
   }
 
-  .plans-grid--four .plan-card__content {
-    padding: 1.5rem;
+  .plans-carousel__arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 45%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 9999px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.25);
+    color: #334155;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .plans-carousel__arrow:hover {
+    background: #f8fafc;
+  }
+  .plans-carousel__arrow:active {
+    transform: translateY(-50%) scale(0.94);
+  }
+  .plans-carousel__arrow--prev {
+    left: -0.75rem;
+  }
+  .plans-carousel__arrow--next {
+    right: -0.75rem;
   }
 }
 
