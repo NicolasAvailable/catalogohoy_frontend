@@ -7,10 +7,10 @@ import { TenantStore } from '@catalogohoy/tenant';
  *  su plan (nuestro tenant demo + pilotos que se agreguen a mano). */
 export const CHAT_ENABLED_SLUGS = ['catalogohoy'];
 
-/** Planes con acceso al CRM de WhatsApp (decisión 2026-07-21: Pro y Avanzado;
- *  enterprise incluido por estar por encima). El sidebar usa la misma lista
- *  para mostrar/ocultar el menú. */
-export const CHAT_ENABLED_PLANS = ['pro', 'avanzado', 'enterprise'];
+/** Planes con acceso al CRM de WhatsApp (decisión 2026-07-24: solo Avanzado;
+ *  enterprise incluido por estar por encima). Pro NO incluye el CRM. El sidebar
+ *  usa la misma lista para mostrar/ocultar el menú. */
+export const CHAT_ENABLED_PLANS = ['avanzado', 'enterprise'];
 
 /** 🚦 Switch de LANZAMIENTO del CRM (patrón ENTERPRISE_CARD_VISIBLE): en
  *  false solo la allowlist ve el módulo — permite mergear/deployar y hacer el

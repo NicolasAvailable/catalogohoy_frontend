@@ -16,9 +16,9 @@ import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { ConfirmDialogService, DialogComponent, IconComponent } from '@ui';
 
-/** Planes con acceso al CRM/conexión de canales (Pro/Avanzado; enterprise por
- *  estar por encima). Debe coincidir con CHAT_ENABLED_PLANS del guard. */
-const CHAT_ENABLED_PLANS = ['pro', 'avanzado', 'enterprise'];
+/** Planes con acceso al CRM/conexión de canales (solo Avanzado; enterprise por
+ *  estar por encima). Pro NO. Debe coincidir con CHAT_ENABLED_PLANS del guard. */
+const CHAT_ENABLED_PLANS = ['avanzado', 'enterprise'];
 /** Catálogos internos que pueden conectar sin importar su plan (demo/pilotos). */
 const CHAT_ENABLED_SLUGS = ['catalogohoy'];
 
