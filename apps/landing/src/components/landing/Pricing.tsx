@@ -117,6 +117,7 @@ const plans: PlanData[] = [
     features: [
       { label: "Hasta 2 catálogos (ampliable con extras)" },
       { label: "Todo lo del plan Pro" },
+      { label: "CRM de chats: WhatsApp, Instagram y TikTok" },
       { label: "500 créditos de IA por mes" },
       { label: "Dominio propio" },
       { label: "Soporte dedicado" },
