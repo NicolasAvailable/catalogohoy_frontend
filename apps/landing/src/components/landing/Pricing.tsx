@@ -1,4 +1,4 @@
-import { Check, X, PlusCircle } from "lucide-react";
+import { Check, X, PlusCircle, CreditCard, Smartphone } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { isVenezuela, useVisitorCountry } from "@/hooks/use-visitor-country";
@@ -113,7 +113,7 @@ const plans: PlanData[] = [
     description: "Para negocios con muchos productos.",
     maxProducts: 0,
     productsLabel: "Productos ilimitados",
-    maxTeamMembers: 10,
+    maxTeamMembers: 3,
     features: [
       { label: "Hasta 2 catálogos (ampliable con extras)" },
       { label: "Todo lo del plan Pro" },
@@ -213,7 +213,7 @@ const Pricing = () => {
       <div className="absolute top-10 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-300/20 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="mx-auto px-6 max-w-[1200px] relative z-10">
+      <div className="mx-auto px-6 max-w-[84rem] relative z-10">
 
         {/* ═══ HEADER ═══ */}
         <motion.header
@@ -370,12 +370,16 @@ const Pricing = () => {
                 {!plan.isFree && (
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]">
+                      <span className="inline-flex items-center gap-1 px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]">
+                        <CreditCard className="h-3.5 w-3.5 shrink-0" />
                         Tarjeta internacional
                       </span>
-                      <span className="inline-flex items-center px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]">
-                        Pago móvil
-                      </span>
+                      {showBcv && (
+                        <span className="inline-flex items-center gap-1 px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]">
+                          <Smartphone className="h-3.5 w-3.5 shrink-0" />
+                          Pago móvil
+                        </span>
+                      )}
                     </div>
                     <p className="flex items-center gap-[0.35rem] text-xs text-[#94a3b8]">
                       <PlusCircle className="h-3.5 w-3.5 shrink-0" />
