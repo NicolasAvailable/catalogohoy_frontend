@@ -1,197 +1,139 @@
 <ui-dialog
   #aiAnnounce
-  [headerTitle]="'✨ Llegó la IA a CatalogoHoy' | transloco"
-  styleClass="w-[54rem]! max-w-[95vw]!"
+  [headerTitle]="'💬 Conectá WhatsApp Business a CatalogoHoy' | transloco"
+  styleClass="w-[52rem]! max-w-[95vw]!"
   (close)="onAnnouncementClose()"
 >
-  <!-- Dos columnas en desktop (imagen izquierda · texto derecha); apilado en
-       móvil con la imagen arriba. -->
+  <!-- Dos columnas en desktop (mockup izquierda · texto derecha); apilado en
+       móvil con el mockup arriba. -->
   <div class="flex flex-col md:flex-row gap-5 pt-1">
-    <!-- Mockup del Generador de imágenes de IA (refleja el modal actual del
-         editor). Estático: solo la vista, sin bindings. -->
+    <!-- Mockup del hub "Conectar canales" (refleja la vista real). Estático. -->
     <div
       role="img"
-      [attr.aria-label]="'Generador de imágenes de IA' | transloco"
-      class="w-full md:w-1/2 self-start rounded-xl border border-grey-100 shadow-sm bg-white p-4"
+      [attr.aria-label]="'Conectar canales' | transloco"
+      class="w-full md:w-1/2 self-start rounded-xl border border-grey-100 shadow-sm bg-grey-25 p-4"
     >
-      <!-- Header -->
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2">
-          <ui-icon name="sparkles" styleClass="w-4 h-4 text-violet-500" />
-          <span class="font-bold text-sm text-grey-800">
-            {{ 'Generador de imágenes de IA' | transloco }}
-          </span>
-        </div>
-        <span class="text-grey-300 text-base leading-none">&times;</span>
+      <div class="flex items-center gap-2 mb-3">
+        <ui-icon name="message-square" styleClass="w-4 h-4 text-primary-600" />
+        <span class="font-bold text-sm text-grey-800">
+          {{ 'Conectar canales' | transloco }}
+        </span>
       </div>
 
-      <!-- Cuerpo: controles + preview -->
-      <div class="grid grid-cols-2 gap-3">
-        <!-- Controles -->
-        <div class="flex flex-col gap-3">
-          <!-- Proporción -->
-          <div class="flex flex-col gap-1.5">
-            <span class="text-[0.7rem] font-semibold text-grey-600">
-              {{ 'Proporción de imagen' | transloco }}
-            </span>
-            <div class="flex items-center gap-1">
-              <span
-                class="h-7 px-2 inline-flex items-center rounded-md border border-violet-500 bg-violet-50 text-violet-600 text-[0.65rem] font-semibold"
-              >
-                {{ 'Auto' | transloco }}
-              </span>
-              <span
-                class="h-7 w-7 inline-flex items-center justify-center rounded-md border border-grey-200 text-grey-400"
-              >
-                <span class="w-3 h-3 border-2 border-current rounded-[0.1875rem]"></span>
-              </span>
-              <span
-                class="h-7 w-7 inline-flex items-center justify-center rounded-md border border-grey-200 text-grey-400"
-              >
-                <span class="w-3.5 h-2.5 border-2 border-current rounded-[0.1875rem]"></span>
-              </span>
-              <span
-                class="h-7 w-7 inline-flex items-center justify-center rounded-md border border-grey-200 text-grey-400"
-              >
-                <span class="w-2.5 h-3.5 border-2 border-current rounded-[0.1875rem]"></span>
-              </span>
-            </div>
+      <div class="flex flex-col gap-2.5">
+        <!-- WhatsApp: disponible -->
+        <div class="flex items-center gap-3 rounded-xl border border-grey-100 bg-white px-3 py-2.5">
+          <img src="/images/whatsapp.svg" alt="WhatsApp" class="w-8 h-8 shrink-0" />
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-grey-800 leading-tight">WhatsApp Business</p>
+            <p class="text-[0.7rem] text-grey-400 leading-tight">
+              {{ 'Recibí y respondé los chats de tu negocio.' | transloco }}
+            </p>
           </div>
-
-          <!-- Estilo -->
-          <div class="flex flex-col gap-1.5">
-            <span class="text-[0.7rem] font-semibold text-grey-600">
-              {{ 'Estilo de imagen' | transloco }}
-            </span>
-            <div
-              class="h-8 px-2 flex items-center justify-between rounded-md border border-grey-200 bg-white"
-            >
-              <span class="inline-flex items-center gap-1 text-xs text-grey-700">
-                <ui-icon name="sparkles" styleClass="w-3 h-3 text-violet-600" />
-                {{ 'Predeterminado' | transloco }}
-              </span>
-              <ui-icon name="chevron-down" styleClass="w-3.5 h-3.5 text-grey-400" />
-            </div>
-          </div>
-
-          <!-- Describe -->
-          <div class="flex flex-col gap-1.5">
-            <span class="text-[0.7rem] font-semibold text-grey-600">
-              {{ 'Describe tu imagen' | transloco }}
-            </span>
-            <div
-              class="h-14 rounded-md border border-grey-200 bg-white px-2 py-1.5 text-[0.65rem] leading-snug text-grey-300"
-            >
-              {{ 'Ej: gorra roja de béisbol sobre fondo blanco, foto de producto profesional, luz suave' | transloco }}
-            </div>
-          </div>
-
-          <!-- Generar (borde gradiente, igual que el modal real) -->
-          <div
-            class="rounded-md p-[0.09375rem] bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400"
-          >
-            <span
-              class="flex items-center justify-center gap-1.5 rounded-[0.3125rem] bg-white px-3 py-2 text-xs font-semibold text-violet-700"
-            >
-              <ui-icon name="wand-sparkles" styleClass="w-3.5 h-3.5" />
-              {{ 'Generar imagen con IA' | transloco }}
-            </span>
-          </div>
+          <span class="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-primary-500 text-white text-[0.65rem] font-semibold">
+            {{ 'Conectar' | transloco }}
+          </span>
         </div>
 
-        <!-- Preview -->
-        <div
-          class="aspect-square rounded-lg border-2 border-dashed border-grey-200 bg-grey-50 flex flex-col items-center justify-center gap-1.5 text-grey-300"
-        >
-          <ui-icon name="image" styleClass="w-8 h-8" />
-          <span class="text-[0.65rem]">{{ 'Acá vas a ver tu imagen' | transloco }}</span>
+        <!-- Instagram: próximamente -->
+        <div class="flex items-center gap-3 rounded-xl border border-grey-100 bg-white px-3 py-2.5 opacity-80">
+          <img src="/images/instagram.svg" alt="Instagram" class="w-8 h-8 shrink-0" />
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-grey-800 leading-tight">Instagram</p>
+            <p class="text-[0.7rem] text-grey-400 leading-tight">
+              {{ 'Mensajes directos en tu bandeja.' | transloco }}
+            </p>
+          </div>
+          <span class="shrink-0 px-2 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[0.6rem] font-semibold">
+            {{ 'Próximamente' | transloco }}
+          </span>
+        </div>
+
+        <!-- TikTok: próximamente -->
+        <div class="flex items-center gap-3 rounded-xl border border-grey-100 bg-white px-3 py-2.5 opacity-80">
+          <img src="/images/tiktok-logo.svg" alt="TikTok" class="w-8 h-8 shrink-0" />
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-grey-800 leading-tight">TikTok</p>
+            <p class="text-[0.7rem] text-grey-400 leading-tight">
+              {{ 'Mensajería para empresas.' | transloco }}
+            </p>
+          </div>
+          <span class="shrink-0 px-2 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[0.6rem] font-semibold">
+            {{ 'Próximamente' | transloco }}
+          </span>
         </div>
       </div>
     </div>
 
     <div class="flex flex-col gap-5 md:w-1/2">
       <p class="text-sm text-grey-500">
-        {{ 'Ya podés crear y mejorar tus productos con inteligencia artificial, directo desde el editor de productos:' | transloco }}
+        {{ 'Ya podés integrar tu WhatsApp Business a CatalogoHoy y responder los mensajes de tus clientes sin salir de la plataforma. Próximamente vas a sumar Instagram y TikTok al mismo embudo.' | transloco }}
       </p>
 
       <ul class="flex flex-col gap-4">
-      <li class="flex items-start gap-3">
-        <span
-          class="shrink-0 w-9 h-9 rounded-lg bg-violet-50 text-violet-600 inline-flex items-center justify-center"
-        >
-          <ui-icon name="sparkles" styleClass="w-5 h-5" />
-        </span>
-        <div class="leading-tight">
-          <span class="font-semibold text-grey-800">{{ 'Generar imágenes con IA' | transloco }}</span>
-          <p class="text-sm text-grey-400">
-            {{ 'Creá fotos de producto a partir de un texto.' | transloco }}
-          </p>
-        </div>
-      </li>
-      <li class="flex items-start gap-3">
-        <span
-          class="shrink-0 w-9 h-9 rounded-lg bg-violet-50 text-violet-600 inline-flex items-center justify-center"
-        >
-          <ui-icon name="bot" styleClass="w-5 h-5" />
-        </span>
-        <div class="leading-tight">
-          <span class="font-semibold text-grey-800">{{ 'Quitar el fondo con IA' | transloco }}</span>
-          <p class="text-sm text-grey-400">
-            {{ 'Dejá tus fotos con un fondo limpio en un clic.' | transloco }}
-          </p>
-        </div>
-      </li>
-      <li class="flex items-start gap-3">
-        <span
-          class="shrink-0 w-9 h-9 rounded-lg bg-violet-50 text-violet-600 inline-flex items-center justify-center"
-        >
-          <ui-icon name="eraser" styleClass="w-5 h-5" />
-        </span>
-        <div class="leading-tight">
-          <span class="font-semibold text-grey-800">{{ 'Borrador a mano' | transloco }}</span>
-          <p class="text-sm text-grey-400">
-            {{ 'Borrá lo que sobra de la imagen, estilo Canva.' | transloco }}
-          </p>
-        </div>
-      </li>
-      <li class="flex items-start gap-3">
-        <span
-          class="shrink-0 w-9 h-9 rounded-lg bg-violet-50 text-violet-600 inline-flex items-center justify-center"
-        >
-          <ui-icon name="wand-sparkles" styleClass="w-5 h-5" />
-        </span>
-        <div class="leading-tight">
-          <span class="font-semibold text-grey-800"
-            >{{ 'Mejorar la descripción con IA' | transloco }}</span
-          >
-          <p class="text-sm text-grey-400">
-            {{ 'Redacción más clara y vendedora en un toque.' | transloco }}
-          </p>
-        </div>
-      </li>
-    </ul>
+        <li class="flex items-start gap-3">
+          <span class="shrink-0 w-9 h-9 rounded-lg bg-primary-50 text-primary-600 inline-flex items-center justify-center">
+            <ui-icon name="message-square" styleClass="w-5 h-5" />
+          </span>
+          <div class="leading-tight">
+            <span class="font-semibold text-grey-800">{{ 'Bandeja unificada' | transloco }}</span>
+            <p class="text-sm text-grey-400">
+              {{ 'Recibí y respondé los chats de tu WhatsApp desde tu panel.' | transloco }}
+            </p>
+          </div>
+        </li>
+        <li class="flex items-start gap-3">
+          <span class="shrink-0 w-9 h-9 rounded-lg bg-primary-50 text-primary-600 inline-flex items-center justify-center">
+            <ui-icon name="users" styleClass="w-5 h-5" />
+          </span>
+          <div class="leading-tight">
+            <span class="font-semibold text-grey-800">{{ 'CRM de conversaciones' | transloco }}</span>
+            <p class="text-sm text-grey-400">
+              {{ 'Asigná chats a tu equipo, agregá notas y estados a cada cliente.' | transloco }}
+            </p>
+          </div>
+        </li>
+        <li class="flex items-start gap-3">
+          <span class="shrink-0 w-9 h-9 rounded-lg bg-primary-50 text-primary-600 inline-flex items-center justify-center">
+            <ui-icon name="zap" styleClass="w-5 h-5" />
+          </span>
+          <div class="leading-tight">
+            <span class="font-semibold text-grey-800">{{ 'Plantillas de mensajes' | transloco }}</span>
+            <p class="text-sm text-grey-400">
+              {{ 'Respondé rápido con mensajes listos, aprobados por Meta.' | transloco }}
+            </p>
+          </div>
+        </li>
+        <li class="flex items-start gap-3">
+          <span class="shrink-0 w-9 h-9 rounded-lg bg-primary-50 text-primary-600 inline-flex items-center justify-center">
+            <ui-icon name="sparkles" styleClass="w-5 h-5" />
+          </span>
+          <div class="leading-tight">
+            <span class="font-semibold text-grey-800">{{ 'Instagram y TikTok, en camino' | transloco }}</span>
+            <p class="text-sm text-grey-400">
+              {{ 'Pronto vas a responder todas tus redes desde un solo lugar.' | transloco }}
+            </p>
+          </div>
+        </li>
+      </ul>
 
-    <p class="text-xs text-grey-400">
-      {{ 'Cada cuenta incluye créditos de IA mensuales según su plan.' | transloco }}
-    </p>
-
-    <div class="flex items-center justify-end gap-2 mt-1">
-      <ui-button
-        [label]="'Cerrar' | transloco"
-        variant="outlined"
-        severity="contrast"
-        [fluid]="false"
-        size="small"
-        (click)="closeAnnouncement()"
-      />
-      <button
-        type="button"
-        (click)="exploreAi()"
-        class="inline-flex items-center gap-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2 transition-colors cursor-pointer"
-      >
-        <ui-icon name="sparkles" styleClass="w-4 h-4" />
-        {{ 'Explorar' | transloco }}
-      </button>
+      <div class="flex items-center justify-end gap-2 mt-1">
+        <ui-button
+          [label]="'Ahora no' | transloco"
+          variant="outlined"
+          severity="contrast"
+          [fluid]="false"
+          size="small"
+          (click)="closeAnnouncement()"
+        />
+        <button
+          type="button"
+          (click)="goToConnect()"
+          class="inline-flex items-center gap-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold px-4 py-2 transition-colors cursor-pointer"
+        >
+          <ui-icon name="message-square" styleClass="w-4 h-4" />
+          {{ 'Conectar canales' | transloco }}
+        </button>
       </div>
     </div>
   </div>
