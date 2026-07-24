@@ -8,45 +8,6 @@
     <h1 class="text-3xl font-bold text-slate-800">{{ tenantName() ? ('Hola, {name}' | transloco: { name: tenantName() }) : ('Hola' | transloco) }} 🪄</h1>
   </div>
 
-  <!-- Promo lanzamiento CRM: conectar WhatsApp (descartable) -->
-  @if (!whatsappPromoDismissed()) {
-  <div
-    class="relative overflow-hidden rounded-2xl p-5 md:p-6 bg-gradient-to-br from-emerald-500 to-green-600 shadow-sm"
-  >
-    <button
-      type="button"
-      (click)="dismissWhatsappPromo()"
-      class="absolute top-3 right-3 inline-flex items-center justify-center w-7 h-7 rounded-full text-white/80 hover:text-white hover:bg-white/15 transition-colors cursor-pointer"
-      [attr.aria-label]="'Descartar' | transloco"
-    >
-      <ui-icon name="x" [size]="16" />
-    </button>
-
-    <div class="flex flex-col md:flex-row md:items-center gap-4 md:pr-8">
-      <div
-        class="shrink-0 w-12 h-12 rounded-xl bg-white/20 inline-flex items-center justify-center"
-      >
-        <ui-icon name="message-circle" [size]="26" class="text-white" />
-      </div>
-      <div class="flex-1 min-w-0">
-        <h2 class="text-lg md:text-xl font-bold text-white leading-tight">
-          {{ 'Conectá tu WhatsApp y empezá a hablar con tus clientes' | transloco }}
-        </h2>
-        <p class="text-sm text-white/85 mt-1">
-          {{ 'Recibí y respondé los mensajes de tu negocio desde tu panel, con plantillas y CRM de conversaciones.' | transloco }}
-        </p>
-      </div>
-      <a
-        routerLink="/admin/chat/connect"
-        class="shrink-0 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white text-emerald-700 text-sm font-semibold hover:bg-emerald-50 transition-colors cursor-pointer"
-      >
-        <ui-icon name="message-circle" [size]="16" />
-        {{ 'Conectar WhatsApp' | transloco }}
-      </a>
-    </div>
-  </div>
-  }
-
   <!-- Chips de accesos rápidos (estilo TakeApp) -->
   <div class="flex flex-wrap items-center gap-2 -mt-1">
     <a
@@ -85,6 +46,37 @@
       {{ 'Referidos' | transloco }}
     </a>
   </div>
+
+  <!-- Promo: conectar WhatsApp (card blanca compacta, descartable) -->
+  @if (!whatsappPromoDismissed()) {
+  <div
+    class="flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-4 shadow-sm -mt-1"
+  >
+    <img src="/images/whatsapp.svg" alt="WhatsApp" class="shrink-0 w-9 h-9" />
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-semibold text-slate-800 leading-tight">
+        {{ 'Conectá tu WhatsApp y empezá a hablar con tus clientes' | transloco }}
+      </p>
+      <p class="hidden sm:block text-xs text-slate-500 mt-0.5 leading-snug">
+        {{ 'Recibí y respondé los mensajes de tu negocio desde tu panel.' | transloco }}
+      </p>
+    </div>
+    <a
+      routerLink="/admin/chat/connect"
+      class="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white text-sm font-semibold transition-colors cursor-pointer"
+    >
+      {{ 'Conectar' | transloco }}
+    </a>
+    <button
+      type="button"
+      (click)="dismissWhatsappPromo()"
+      class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+      [attr.aria-label]="'Descartar' | transloco"
+    >
+      <ui-icon name="x" [size]="16" />
+    </button>
+  </div>
+  }
 
   <!-- Stats Cards -->
   @if (isLoading()) {
