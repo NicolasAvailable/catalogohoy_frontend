@@ -11,7 +11,8 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     @for (channel of channels; track channel.key) {
     <a
-      [routerLink]="channel.comingSoon ? null : channel.route"
+      [routerLink]="routeFor(channel)"
+      (click)="onChannelClick(channel, $event)"
       class="group flex flex-col items-center text-center gap-3 rounded-2xl border border-grey-100 bg-white px-6 py-8 transition-all"
       [ngClass]="channel.comingSoon ? 'opacity-70 cursor-default' : 'cursor-pointer hover:border-primary-300 hover:shadow-md'"
     >
@@ -54,3 +55,35 @@
     }
   </div>
 </div>
+
+<!-- Modal: conectar canales es una función de los planes avanzados. -->
+<ui-dialog #upgradeDialog [showHeader]="false" styleClass="w-[26rem] max-w-[95vw]">
+  <div class="flex flex-col items-center text-center gap-4 p-2">
+    <div class="w-16 h-16 rounded-full bg-linear-to-br from-primary-50 to-violet-50 flex items-center justify-center text-primary-500">
+      <ui-icon name="crown" size="30" />
+    </div>
+    <h2 class="text-xl font-bold text-grey-800">
+      {{ 'Una función de los planes avanzados' | transloco }}
+    </h2>
+    <p class="text-sm text-grey-500 leading-relaxed">
+      {{ 'Conectar WhatsApp, Instagram y TikTok en una sola bandeja está disponible en los planes Pro y Avanzado. Mejorá tu plan para responderle a tus clientes desde CatalogoHoy.' | transloco }}
+    </p>
+    <div class="flex items-center gap-2 mt-1">
+      <button
+        type="button"
+        (click)="closeUpgrade()"
+        class="px-4 py-2.5 rounded-xl border border-grey-200 text-sm font-semibold text-grey-600 hover:bg-grey-50 transition-colors cursor-pointer"
+      >
+        {{ 'Ahora no' | transloco }}
+      </button>
+      <a
+        routerLink="/admin/plans"
+        (click)="closeUpgrade()"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors"
+      >
+        <ui-icon name="sparkles" size="15" />
+        {{ 'Mejorar plan' | transloco }}
+      </a>
+    </div>
+  </div>
+</ui-dialog>

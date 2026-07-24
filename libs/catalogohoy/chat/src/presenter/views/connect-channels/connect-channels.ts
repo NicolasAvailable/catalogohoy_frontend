@@ -1,12 +1,26 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { TenantStore } from '@catalogohoy/tenant';
+import { PlanStore } from '@catalogohoy/plan';
+import { getTenantSlugFromUrl, TenantStore } from '@catalogohoy/tenant';
 import { WhatsAppService, WhatsAppStore } from '@catalogohoy/whatsapp';
 import { NgClass } from '@angular/common';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { ConfirmDialogService, IconComponent } from '@ui';
+import { ConfirmDialogService, DialogComponent, IconComponent } from '@ui';
+
+/** Planes con acceso al CRM/conexión de canales (Pro/Avanzado; enterprise por
+ *  estar por encima). Debe coincidir con CHAT_ENABLED_PLANS del guard. */
+const CHAT_ENABLED_PLANS = ['pro', 'avanzado', 'enterprise'];
+/** Catálogos internos que pueden conectar sin importar su plan (demo/pilotos). */
+const CHAT_ENABLED_SLUGS = ['catalogohoy'];
 
 /** Canal conectable desde el hub (estilo galería de SocialGest). */
 interface ConnectableChannel {
@@ -27,7 +41,7 @@ type SocialAccount = { username: string | null; displayName: string | null };
 @Component({
   selector: 'lib-connect-channels',
   standalone: true,
-  imports: [NgClass, RouterLink, IconComponent, TranslocoPipe],
+  imports: [NgClass, RouterLink, DialogComponent, IconComponent, TranslocoPipe],
   host: { class: 'flex-1 flex flex-col min-h-0 overflow-y-auto' },
   templateUrl: './connect-channels.html',
 })
@@ -35,8 +49,24 @@ export class ConnectChannelsComponent implements OnInit {
   protected readonly whatsAppStore = inject(WhatsAppStore);
   private readonly whatsAppService = inject(WhatsAppService);
   private readonly tenantStore = inject(TenantStore);
+  private readonly planStore = inject(PlanStore);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly toast = inject(ToastService);
+
+  /** Conectar canales es una función de los planes avanzados. Los catálogos
+   *  internos (allowlist) pueden conectar igual para demo / App Review. */
+  protected readonly canConnect = computed(() => {
+    const slug = getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || '';
+    if (CHAT_ENABLED_SLUGS.includes(slug)) return true;
+    const planId = this.planStore.currentPlan()?.id ?? '';
+    return CHAT_ENABLED_PLANS.includes(planId);
+  });
+
+  /** Modal "función premium" al intentar conectar sin plan avanzado. */
+  private readonly upgradeDialog = viewChild<DialogComponent>('upgradeDialog');
+  protected closeUpgrade(): void {
+    this.upgradeDialog()?.hide();
+  }
 
   /** Canal cuya desvinculación está en vuelo (spinner por card). */
   protected readonly disconnectingKey = signal<string | null>(null);
@@ -79,6 +109,28 @@ export class ConnectChannelsComponent implements OnInit {
   ngOnInit(): void {
     this.whatsAppStore.loadAccounts();
     this.loadSocialAccounts();
+  }
+
+  /** Click en una card: los canales "Próximamente" no hacen nada; si el plan
+   *  no incluye conexión de canales, muestra el modal premium; si no, navega a
+   *  la pantalla de conexión del canal. */
+  protected onChannelClick(channel: ConnectableChannel, event: Event): void {
+    if (channel.comingSoon) return;
+    if (!this.canConnect()) {
+      event.preventDefault();
+      this.upgradeDialog()?.show();
+    }
+    // Con plan válido, el routerLink de la card navega normalmente.
+  }
+
+  /** Destino del routerLink de la card: null si es "Próximamente" o el plan no
+   *  habilita; si ya está conectado, a la bandeja de mensajes; si no, a la
+   *  pantalla de conexión del canal. */
+  protected routeFor(channel: ConnectableChannel): string | null {
+    if (channel.comingSoon || !this.canConnect()) return null;
+    return this.isConnected(channel)
+      ? '/admin/chat/conversations'
+      : channel.route;
   }
 
   protected isConnected(channel: ConnectableChannel): boolean {
