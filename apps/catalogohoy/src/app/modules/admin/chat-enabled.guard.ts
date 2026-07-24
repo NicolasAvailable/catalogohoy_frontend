@@ -3,9 +3,10 @@ import { CanActivateFn, Router } from '@angular/router';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { TenantStore } from '@catalogohoy/tenant';
 
-/** Override interno: catálogos con el módulo de Chats habilitado sin importar
- *  su plan (nuestro tenant demo + pilotos que se agreguen a mano). */
-export const CHAT_ENABLED_SLUGS = ['catalogohoy'];
+/** Override interno por slug: VACÍO desde 2026-07-24 (decisión de Nicolás: sin
+ *  allowlist, el acceso al CRM se decide SOLO por plan). Se deja el array por si
+ *  hiciera falta un piloto puntual en el futuro. */
+export const CHAT_ENABLED_SLUGS: string[] = [];
 
 /** Planes con acceso al CRM de WhatsApp (decisión 2026-07-24: solo Avanzado;
  *  enterprise incluido por estar por encima). Pro NO incluye el CRM. El sidebar
