@@ -35,7 +35,7 @@ const BILLING_CONFIG: Record<
 > = {
   monthly:   { label: 'mes',       months: 1,  discount: 0    },
   quarterly: { label: 'trimestre', months: 3,  discount: 0.10 },
-  annual:    { label: 'año',       months: 12, discount: 0.15 },
+  annual:    { label: 'año',       months: 12, discount: 0.25 },
 };
 
 const CHECKOUT_FEATURES: Record<string, FeatureSection[]> = {
@@ -149,7 +149,7 @@ export class PlanCheckout implements OnInit {
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
     { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '15% off' },
+    { key: 'annual',    label: 'Anual',      savingsLabel: '25% off' },
   ];
 
   public readonly planId               = signal<string>('');

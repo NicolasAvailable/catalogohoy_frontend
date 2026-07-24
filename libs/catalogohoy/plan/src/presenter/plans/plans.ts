@@ -35,7 +35,7 @@ const ENTERPRISE_CARD_VISIBLE = false;
 const BILLING_CONFIG: Record<BillingPeriod, { label: string; months: number; discount: number }> = {
   monthly:   { label: 'Mensual',     months: 1,  discount: 0    },
   quarterly: { label: 'Trimestral',  months: 3,  discount: 0.10 },
-  annual:    { label: 'Anual',       months: 12, discount: 0.15 },
+  annual:    { label: 'Anual',       months: 12, discount: 0.25 },
 };
 
 type PlanUIConfig = {
@@ -147,7 +147,7 @@ export class Plans implements OnInit {
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
     { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '15% off' },
+    { key: 'annual',    label: 'Anual',      savingsLabel: '25% off' },
   ];
 
   // Resolve the currency we'll charge in, driven by the tenant's country.

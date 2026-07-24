@@ -46,7 +46,7 @@ insert into public.plans (
 ) values (
   'pro', 'Pro', 'Para tiendas grandes que venden todos los días.', 19.99, 500, false, 2,
   1, 2, 10, 10, 0,
-  'price_1Tvg9h85rys2QLXd18YBSdOk', 'price_1Tvg9u85rys2QLXdaDdgvbii', 'price_1TvgA385rys2QLXdZTw9tolK'
+  'price_1Tvg9h85rys2QLXd18YBSdOk', 'price_1Tvg9u85rys2QLXdaDdgvbii', 'price_1Twl8D85rys2QLXdriJD6mKz'
 );
 
 -- ─── 3) Avanzado a $29.99 (solo compras nuevas) ─────────────────────────────
@@ -58,8 +58,17 @@ update public.plans set
   price = 29.99,
   stripe_price_id_monthly   = 'price_1TvgAE85rys2QLXdoNMJFJ6O',
   stripe_price_id_quarterly = 'price_1TvgAO85rys2QLXdfdTCu165',
-  stripe_price_id_annual    = 'price_1TvgAZ85rys2QLXdhNuebVOL'
+  stripe_price_id_annual    = 'price_1Twl8E85rys2QLXdOAhiu0kx'
 where id = 'avanzado';
+
+-- ─── 3b) Anual con 25% de descuento (nuevos price IDs 2026-07 · CAT-35) ──────
+-- El anual pasó de 15% a 25% off: se crearon precios nuevos en Stripe y el
+-- PRICE_MAP de create-checkout-session apunta a ellos (fuente de verdad del
+-- cobro). Acá solo se actualiza el ID anual de básico por higiene (pro/avanzado
+-- ya quedaron con el suyo arriba).
+update public.plans set
+  stripe_price_id_annual = 'price_1Twl8B85rys2QLXdPxrTsKgi'
+where id = 'basico';
 
 -- ─── 4) Enforcement del límite de órdenes (trigger BEFORE INSERT) ───────────
 -- Único choke point: cubre el checkout público (anon), el alta manual del admin

@@ -15,8 +15,10 @@
 //   quarterly price_1TGfmh85rys2QLXdH8DRmSqH
 //   annual   price_1TGfmh85rys2QLXdBW7wZB1U
 //
-// Versionado a partir de la v37 deployada (2026-07-21). Cambios respecto a esa
-// versión: solo el PRICE_MAP (pro agregado + avanzado con precios nuevos).
+// Versionado a partir de la v38 deployada. Cambios respecto a esa versión:
+// solo el PRICE_MAP — pro agregado, avanzado a $29.99 y el ANUAL con 25% off
+// (precios nuevos price_1Twl8*, creados 2026-07; antes era 15% off). El
+// quarterly sigue en 10%.
 // ═══════════════════════════════════════════════════════════════════════════
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@17";
@@ -31,17 +33,17 @@ const PRICE_MAP: Record<string, Record<string, string>> = {
   basico: {
     monthly:   "price_1TGfmg85rys2QLXdofh9ytbw",
     quarterly: "price_1TGfmg85rys2QLXdjyfHoGWn",
-    annual:    "price_1TGfmg85rys2QLXdxnVflylM",
+    annual:    "price_1Twl8B85rys2QLXdPxrTsKgi",
   },
   pro: {
     monthly:   "price_1Tvg9h85rys2QLXd18YBSdOk",
     quarterly: "price_1Tvg9u85rys2QLXdaDdgvbii",
-    annual:    "price_1TvgA385rys2QLXdZTw9tolK",
+    annual:    "price_1Twl8D85rys2QLXdriJD6mKz",
   },
   avanzado: {
     monthly:   "price_1TvgAE85rys2QLXdoNMJFJ6O",
     quarterly: "price_1TvgAO85rys2QLXdfdTCu165",
-    annual:    "price_1TvgAZ85rys2QLXdhNuebVOL",
+    annual:    "price_1Twl8E85rys2QLXdOAhiu0kx",
   },
 };
 
