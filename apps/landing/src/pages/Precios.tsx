@@ -17,19 +17,32 @@ const JSON_LD = {
     {
       "@type": "Offer",
       name: "Plan Gratis",
+      description: "Hasta 10 productos, 1 catálogo",
       price: "0",
       priceCurrency: "USD",
     },
     {
       "@type": "Offer",
       name: "Plan Básico",
+      description:
+        "Hasta 100 productos, analíticas, notificaciones WhatsApp y diseño personalizable",
       price: "9.99",
       priceCurrency: "USD",
     },
     {
       "@type": "Offer",
-      name: "Plan Avanzado",
+      name: "Plan Pro",
+      description:
+        "Hasta 500 productos, 2 miembros de equipo y 350 créditos de IA por mes",
       price: "19.99",
+      priceCurrency: "USD",
+    },
+    {
+      "@type": "Offer",
+      name: "Plan Avanzado",
+      description:
+        "Productos ilimitados, dominio propio, hasta 10 miembros de equipo y soporte dedicado",
+      price: "29.99",
       priceCurrency: "USD",
     },
   ],
@@ -39,7 +52,7 @@ const Precios = () => {
   usePageMeta({
     title: "Precios y planes — CatalogoHoy | Empieza gratis",
     description:
-      "Planes de CatalogoHoy: empieza gratis y crece con los planes Básico y Avanzado. Catálogo digital, pedidos por WhatsApp, IA para tus fotos y más. Sin permanencia.",
+      "Planes de CatalogoHoy: empieza gratis y crece con los planes Básico, Pro y Avanzado. Catálogo digital, pedidos por WhatsApp, IA para tus fotos y más. Sin permanencia.",
     path: "/pricing",
     jsonLd: JSON_LD,
   });
