@@ -1,18 +1,54 @@
-<div class="flex h-full w-full overflow-hidden">
-  <!-- List: full-width on mobile, fixed column on lg. Hidden on mobile once a
-       conversation is open so the thread takes the whole screen (Fuse pattern). -->
+<div
+  class="relative flex h-full w-full overflow-hidden"
+  [class.select-none]="resizingList()"
+  [class.chat-open]="chatStore.selectedChat()"
+  [style.--chat-list-w]="listWidthRem()"
+>
+  <!-- Conexión realtime caída: aviso flotante mientras se reintenta solo. -->
+  @if (chatStore.realtimeDown()) {
+  <div
+    class="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 rounded-full bg-amber-100 border border-amber-300 pl-4 pr-1.5 py-1.5 shadow-md"
+  >
+    <ui-icon name="triangle-alert" size="14" styleClass="text-amber-600 shrink-0" />
+    <span class="text-xs font-medium text-amber-800">
+      {{ 'Se perdió la conexión en tiempo real. Reconectando…' | transloco }}
+    </span>
+    <button
+      type="button"
+      (click)="reloadApp()"
+      class="text-xs font-semibold text-amber-900 bg-amber-200 hover:bg-amber-300 rounded-full px-2.5 py-1 cursor-pointer transition-colors"
+    >
+      {{ 'Recargar' | transloco }}
+    </button>
+  </div>
+  }
+  <!-- List: full-width on mobile, fixed column on lg. On mobile the
+       conversation slides OVER it (see chat-layout.css), so it stays mounted. -->
   <lib-chat-list-panel
-    class="w-full lg:w-[360px] shrink-0 flex-col h-full lg:flex"
-    [class.flex]="!chatStore.selectedChat()"
-    [class.hidden]="chatStore.selectedChat()"
+    class="w-full lg:w-[var(--chat-list-w)] shrink-0 flex flex-col h-full"
   />
-  <!-- Conversation: only shown on mobile when a chat is selected; always on lg. -->
+  <!-- Divisor arrastrable (solo desktop): redimensiona la lista de chats.
+       Se superpone al borde derecho de la lista; min/max en ChatLayoutComponent. -->
+  <div
+    class="hidden lg:block w-1.5 -ml-1.5 shrink-0 self-stretch cursor-col-resize z-20 touch-none transition-colors hover:bg-primary-200/70"
+    [class.bg-primary-300]="resizingList()"
+    (pointerdown)="startListResize($event)"
+  ></div>
+  <!-- Conversation: fixed column on lg; slide-over overlay on mobile (css). -->
   <lib-conversation-panel
-    class="flex-1 flex-col h-full min-w-0 lg:flex"
-    [class.flex]="chatStore.selectedChat()"
-    [class.hidden]="!chatStore.selectedChat()"
+    class="flex flex-1 flex-col h-full min-w-0"
+    [fichaVisible]="!fichaDesktopCollapsed()"
+    (infoClick)="mobileFichaOpen.set(true)"
+    (toggleFicha)="toggleFichaDesktop()"
   />
+  <!-- Ficha: columna fija en desktop; overlay a pantalla completa en móvil
+       (su propio CSS decide el display — ver customer-panel.css). -->
   @if (chatStore.selectedChat()) {
-  <lib-customer-panel class="hidden lg:flex h-full" />
+  <lib-customer-panel
+    class="h-full"
+    [class.ficha--mobile-open]="mobileFichaOpen()"
+    [class.ficha--desktop-collapsed]="fichaDesktopCollapsed()"
+    (closed)="mobileFichaOpen.set(false)"
+  />
   }
 </div>

@@ -3,6 +3,7 @@ import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
 import {
   BaseCheckoutService,
+  CancelSubscriptionResult,
   CatalogCheckoutRequest,
   CheckoutRequest,
   CheckoutSession,
@@ -30,14 +31,25 @@ export class CheckoutService implements BaseCheckoutService {
 
   public async cancelSubscription(
     tenantId: number
-  ): Promise<E.Either<Error, void>> {
-    const { error } = await this.client.functions.invoke(
+  ): Promise<E.Either<Error, CancelSubscriptionResult>> {
+    const { data, error } = await this.client.functions.invoke(
       'cancel-subscription',
       { body: { tenantId } }
     );
 
     if (error) return E.left(new Error(error.message));
-    return E.right(undefined);
+
+    const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+    if (!parsed?.success) {
+      return E.left(
+        new Error(parsed?.error ?? 'No se pudo cancelar la suscripción')
+      );
+    }
+    return E.right({
+      mode: parsed.mode === 'manual' ? 'manual' : 'stripe',
+      immediate: parsed.immediate === true,
+      activeUntil: parsed.active_until ?? null,
+    });
   }
 
   public async createCatalogCheckout(

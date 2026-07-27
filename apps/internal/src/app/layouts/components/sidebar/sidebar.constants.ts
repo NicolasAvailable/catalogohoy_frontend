@@ -43,6 +43,11 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     routerLink: '/whatsapp-logs',
   },
   {
+    label: 'Canales conectados',
+    icon: 'link-2',
+    routerLink: '/channel-connections',
+  },
+  {
     label: 'Órdenes',
     icon: 'shopping-bag',
     routerLink: '/orders',

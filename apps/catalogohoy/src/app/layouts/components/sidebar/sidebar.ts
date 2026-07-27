@@ -3,6 +3,7 @@ import { Component, computed, effect, inject, input, output, signal } from '@ang
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthenticationService } from '@catalogohoy/auth';
+import { ChatBadgeRealtimeService, ChatStore } from '@catalogohoy/chat';
 import { PosthogService } from '@catalogohoy/core';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { OrderBadgeRealtimeService, OrderStore } from '@catalogohoy/order';
@@ -24,7 +25,7 @@ import {
   PRODUCTS_MENU,
   TEAMS_MENU,
 } from './sidebar.constants';
-import { CHAT_ENABLED_SLUGS } from '../../../modules/admin/chat-enabled.guard';
+import { CHAT_ENABLED_SLUGS, CHAT_PLAN_GATING_LIVE } from '../../../modules/admin/chat-enabled.guard';
 
 @Component({
   selector: 'app-sidebar',
@@ -55,6 +56,8 @@ export class Sidebar {
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   public readonly orderStore = inject(OrderStore);
   private readonly orderBadge = inject(OrderBadgeRealtimeService);
+  public readonly chatStore = inject(ChatStore);
+  private readonly chatBadge = inject(ChatBadgeRealtimeService);
 
   private readonly permissionsStore = inject(TeamPermissionsStore);
 
@@ -64,6 +67,12 @@ export class Sidebar {
 
   /** Guard so the always-on badge subscription is started exactly once. */
   private badgeStarted = false;
+
+  /** Same guard for the unread-chats badge. */
+  private chatBadgeStarted = false;
+
+  /** Total de mensajes de WhatsApp sin leer — badge junto a "Mensajes". */
+  public readonly unreadChatsCount = computed(() => this.chatStore.unreadTotal());
 
   /** "Tasas del día" only makes sense for Venezuelan catalogs (BCV rate is
    *  Venezuela-specific). The sidebar lazy-loads the currency store so the
@@ -108,6 +117,39 @@ export class Sidebar {
   public readonly teamsMenu: PanelMenuItem[] = TEAMS_MENU;
   public readonly chatMenu: PanelMenuItem[] = CHAT_MENU;
 
+  // ------------------------------------------- sidebar colapsable (desktop) ---
+  /** Raíces de los menús con submenú, para los flyouts del modo rail. */
+  public readonly productsRoot = PRODUCTS_MENU[0];
+  public readonly chatRoot = CHAT_MENU[0];
+  public readonly catalogRoot = CATALOG_MENU[0];
+
+  private static readonly COLLAPSED_KEY = 'sidebar-collapsed';
+
+  /** Sidebar colapsado a un rail de íconos (solo desktop, persistido). */
+  public readonly collapsed = signal(
+    localStorage.getItem(Sidebar.COLLAPSED_KEY) === '1'
+  );
+
+  /** Rail solo aplica en el aside estático de desktop: el drawer móvil
+   *  (visible()) siempre muestra el menú completo. */
+  public readonly railMode = computed(() => this.collapsed() && !this.visible());
+
+  /** Flyout de submenú abierto en modo rail (label del menú raíz). */
+  public readonly openFlyout = signal<string | null>(null);
+
+  public setCollapsed(value: boolean): void {
+    this.collapsed.set(value);
+    this.openFlyout.set(null);
+    localStorage.setItem(Sidebar.COLLAPSED_KEY, value ? '1' : '0');
+  }
+
+  /** Click en un hijo del flyout: cierra el flyout y resuelve el caso especial
+   *  "Ver mi catálogo" (link externo al storefront). */
+  public onFlyoutChild(item: PanelMenuItem): void {
+    this.openFlyout.set(null);
+    if (item['data']?.['externalUrl']) this.toggle(item);
+  }
+
   constructor() {
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd && this.visible()) {
@@ -135,6 +177,16 @@ export class Sidebar {
         this.orderBadge.start();
       }
     });
+
+    // Badge de chats sin leer: misma mecánica que el de órdenes, solo para
+    // quienes ven el módulo de Chats (allowlist o plan incluido).
+    effect(() => {
+      const tid = this.tenantStore.tenantId();
+      if (tid && this.canViewChat() && !this.chatBadgeStarted) {
+        this.chatBadgeStarted = true;
+        this.chatBadge.start();
+      }
+    });
   }
 
   public readonly showCatalogSwitcher = signal(false);
@@ -145,12 +197,24 @@ export class Sidebar {
     getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || ''
   );
 
-  /** Chats / CRM de WhatsApp: liberado por catálogo mientras Meta revisa la
-   *  app (App Review). Solo los slugs de {@link CHAT_ENABLED_SLUGS} ven el
-   *  módulo; el resto de los comerciantes no lo ve hasta el lanzamiento
-   *  general. La misma lista gatea la ruta (chatEnabledGuard). */
-  public readonly canViewChat = computed(() =>
-    CHAT_ENABLED_SLUGS.includes(this.currentTenantSlug())
+  /** ¿Se muestra el módulo Chats en el sidebar? Cuando el CRM está lanzado
+   *  ({@link CHAT_PLAN_GATING_LIVE}) es visible para TODOS los catálogos: la
+   *  validación por plan se aplica al CONECTAR un canal (connect-channels), no
+   *  a la visibilidad. {@link CHAT_ENABLED_SLUGS} lo fuerza aunque no esté
+   *  lanzado. */
+  private readonly tenantHasChat = computed(() => {
+    if (CHAT_ENABLED_SLUGS.includes(this.currentTenantSlug())) return true;
+    return CHAT_PLAN_GATING_LIVE;
+  });
+
+  /** Chats / CRM de WhatsApp en el sidebar: el catálogo debe tener el módulo Y
+   *  el usuario debe poder verlo (owner siempre; miembro con permiso
+   *  `chats:view`). */
+  public readonly canViewChat = computed(
+    () =>
+      this.tenantHasChat() &&
+      (this.permissionsStore.isOwner() ||
+        this.permissionsStore.can()('chats', 'view'))
   );
 
   public readonly currentTenant = computed(() => {
@@ -158,13 +222,6 @@ export class Sidebar {
     const tenants = this.profileStore.profile().tenantList.tenants;
     return tenants.find((t) => t.slug === slug) ?? this.profileStore.profile().tenantList.first;
   });
-
-  /** Muestra hasta 20 caracteres del nombre del catálogo; si es más largo, lo
-   *  corta y agrega "...". El nombre completo queda en el tooltip (title). */
-  protected truncateName(name: string | null | undefined): string {
-    const n = (name ?? '').trim();
-    return n.length > 20 ? `${n.slice(0, 20)}...` : n;
-  }
 
   public toggleCatalogSwitcher() {
     this.showCatalogSwitcher.update((v) => !v);

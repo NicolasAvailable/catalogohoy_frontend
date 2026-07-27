@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { DiscordWebhookService, SupabaseClientProvider } from '@catalogohoy/core';
 import {
@@ -35,7 +35,7 @@ const ENTERPRISE_CARD_VISIBLE = false;
 const BILLING_CONFIG: Record<BillingPeriod, { label: string; months: number; discount: number }> = {
   monthly:   { label: 'Mensual',     months: 1,  discount: 0    },
   quarterly: { label: 'Trimestral',  months: 3,  discount: 0.10 },
-  annual:    { label: 'Anual',       months: 12, discount: 0.15 },
+  annual:    { label: 'Anual',       months: 12, discount: 0.25 },
 };
 
 type PlanUIConfig = {
@@ -66,13 +66,23 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
     isPopular: false,
     color: '#6366f1',
   },
-  avanzado: {
+  // El badge "Más popular" vive en el Pro (ancla la decisión en el plan del
+  // medio); el Avanzado queda como tier premium sin badge.
+  pro: {
     period: '/mes',
-    features: PLAN_FEATURES['avanzado'],
+    features: PLAN_FEATURES['pro'],
     buttonLabel: 'Comenzar ahora',
     buttonSeverity: 'primary',
     isPopular: true,
     color: '#7c3aed',
+  },
+  avanzado: {
+    period: '/mes',
+    features: PLAN_FEATURES['avanzado'],
+    buttonLabel: 'Comenzar ahora',
+    buttonSeverity: 'secondary',
+    isPopular: false,
+    color: '#312e81',
   },
 };
 
@@ -134,10 +144,23 @@ export class Plans implements OnInit {
 
   public readonly billingPeriod = signal<BillingPeriod>('monthly');
 
+  /** Contenedor scrolleable de las cards, para las flechas del carousel en
+   *  laptops chicas (768–1279 px). */
+  private readonly plansGrid = viewChild<ElementRef<HTMLElement>>('plansGrid');
+
+  /** Desplaza el carousel ~una card en la dirección dada (-1 izq / 1 der). */
+  public scrollPlans(dir: -1 | 1): void {
+    const el = this.plansGrid()?.nativeElement;
+    if (!el) return;
+    const card = el.querySelector('.plan-card') as HTMLElement | null;
+    const amount = card ? card.offsetWidth + 20 : el.clientWidth * 0.8;
+    el.scrollBy({ left: dir * amount, behavior: 'smooth' });
+  }
+
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
     { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '15% off' },
+    { key: 'annual',    label: 'Anual',      savingsLabel: '25% off' },
   ];
 
   // Resolve the currency we'll charge in, driven by the tenant's country.
@@ -205,8 +228,16 @@ export class Plans implements OnInit {
     () => this.planStore.isLoading() && this.plans().length === 0
   );
 
-  // 3 planes (Enterprise oculta — ver ENTERPRISE_CARD_VISIBLE).
-  public readonly skeletonCards = [0, 1, 2];
+  // 4 planes: gratis/básico/pro/avanzado (Enterprise oculta — ver ENTERPRISE_CARD_VISIBLE).
+  public readonly skeletonCards = [0, 1, 2, 3];
+
+  /** Cantidad de cards visibles (skeletons durante la carga) — decide si el
+   *  grid usa 3 o 4 columnas. */
+  public readonly gridCardCount = computed(() =>
+    this.isLoadingPlans()
+      ? this.skeletonCards.length
+      : this.plans().length + (this.showEnterpriseCard() ? 1 : 0)
+  );
   // 9 filas ≈ las features del plan Avanzado, la card más alta del grid.
   public readonly skeletonFeatureWidths = ['95%', '80%', '90%', '75%', '100%', '85%', '90%', '80%', '70%'];
 

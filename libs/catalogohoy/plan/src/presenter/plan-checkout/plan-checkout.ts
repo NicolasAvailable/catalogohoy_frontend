@@ -35,7 +35,7 @@ const BILLING_CONFIG: Record<
 > = {
   monthly:   { label: 'mes',       months: 1,  discount: 0    },
   quarterly: { label: 'trimestre', months: 3,  discount: 0.10 },
-  annual:    { label: 'año',       months: 12, discount: 0.15 },
+  annual:    { label: 'año',       months: 12, discount: 0.25 },
 };
 
 const CHECKOUT_FEATURES: Record<string, FeatureSection[]> = {
@@ -45,6 +45,7 @@ const CHECKOUT_FEATURES: Record<string, FeatureSection[]> = {
       items: [
         '1 catálogo digital',
         'Hasta 100 productos',
+        'Órdenes ilimitadas',
         'Diseño personalizable',
         'Código QR descargable',
         'Compartir por WhatsApp',
@@ -64,13 +65,44 @@ const CHECKOUT_FEATURES: Record<string, FeatureSection[]> = {
       items: ['Soporte prioritario', 'Actualizaciones incluidas'],
     },
   ],
-  avanzado: [
+  pro: [
     {
       title: 'Tu catálogo',
       items: [
         '1 catálogo digital',
-        '∞ productos (ilimitados)',
+        'Hasta 500 productos',
+        'Órdenes ilimitadas',
         'Todo lo del Plan Básico',
+        'Código QR descargable',
+        'Compartir por WhatsApp',
+        'Todos los módulos disponibles',
+      ],
+    },
+    {
+      title: 'Equipo',
+      items: ['Hasta 2 miembros de equipo', 'Permisos por módulo'],
+    },
+    {
+      title: 'Analíticas',
+      items: [
+        'Analíticas avanzadas',
+        'Visitas al catálogo',
+        'Hasta 20 reportes por mes',
+      ],
+    },
+    {
+      title: 'Soporte',
+      items: ['Soporte prioritario', 'Actualizaciones incluidas'],
+    },
+  ],
+  avanzado: [
+    {
+      title: 'Tu catálogo',
+      items: [
+        '2 catálogos digitales',
+        '∞ productos (ilimitados)',
+        'Órdenes ilimitadas',
+        'Todo lo del Plan Pro',
         'Vinculación de dominio personalizado (el dominio se adquiere por separado)',
         'Código QR descargable',
         'Compartir por WhatsApp',
@@ -78,7 +110,7 @@ const CHECKOUT_FEATURES: Record<string, FeatureSection[]> = {
     },
     {
       title: 'Equipo',
-      items: ['Hasta 10 miembros de equipo', 'Permisos por módulo'],
+      items: ['Hasta 3 miembros de equipo', 'Permisos por módulo'],
     },
     {
       title: 'Analíticas',
@@ -117,7 +149,7 @@ export class PlanCheckout implements OnInit {
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
     { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '15% off' },
+    { key: 'annual',    label: 'Anual',      savingsLabel: '25% off' },
   ];
 
   public readonly planId               = signal<string>('');

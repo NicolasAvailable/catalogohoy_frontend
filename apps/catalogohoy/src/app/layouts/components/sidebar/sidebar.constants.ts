@@ -31,6 +31,11 @@ export const CHAT_MENU: PanelMenuItem[] = [
     state: { isOpen: true },
     items: [
       {
+        label: 'Conectar',
+        routerLink: '/admin/chat/connect',
+        routerLinkActiveOptions: { exact: true },
+      },
+      {
         label: 'Mensajes',
         routerLink: '/admin/chat/conversations',
         routerLinkActiveOptions: { exact: true },

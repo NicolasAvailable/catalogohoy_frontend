@@ -6,6 +6,7 @@ import {
   EmbeddedSignupPayload,
   WhatsAppAccount,
   WhatsAppAccountMapper,
+  WhatsAppConnectChecklist,
 } from '../domain';
 
 @Injectable({
@@ -82,6 +83,150 @@ export class WhatsAppService {
     }
 
     return E.right(WhatsAppAccountMapper.toDomain(data.account));
+  }
+
+  /** Lista de verificación previa a conectar: Meta puede revisar el negocio
+   *  durante el onboarding, así que chequeamos que el catálogo esté
+   *  presentable. `is_hidden` puede ser null en filas viejas → `not is true`. */
+  /** Cuenta de Instagram conectada del tenant (columnas públicas — los
+   *  tokens no son visibles para el navegador por privilegios de columna). */
+  async getInstagramAccount(
+    tenantId: number
+  ): Promise<E.Either<Error, { username: string | null; displayName: string | null } | null>> {
+    return this.getSocialAccount(tenantId, 'instagram');
+  }
+
+  /** Cuenta de TikTok Business conectada del tenant (columnas públicas). */
+  async getTikTokAccount(
+    tenantId: number
+  ): Promise<E.Either<Error, { username: string | null; displayName: string | null } | null>> {
+    return this.getSocialAccount(tenantId, 'tiktok');
+  }
+
+  private async getSocialAccount(
+    tenantId: number,
+    channel: 'instagram' | 'tiktok'
+  ): Promise<E.Either<Error, { username: string | null; displayName: string | null } | null>> {
+    const { data, error } = await this.client
+      .from('social_accounts')
+      .select('id, username, display_name, status')
+      .eq('tenant_id', tenantId)
+      .eq('channel', channel)
+      .eq('status', 'active')
+      .maybeSingle();
+    if (error) return E.left(new Error(error.message));
+    return E.right(
+      data
+        ? {
+            username: (data['username'] as string | null) ?? null,
+            displayName: (data['display_name'] as string | null) ?? null,
+          }
+        : null
+    );
+  }
+
+  /** Desvincula la cuenta de IG/TikTok del tenant: solo marca status inactive
+   *  (RLS permite tocar únicamente esa columna). Los chats y datos quedan. */
+  async disconnectSocialAccount(
+    tenantId: number,
+    channel: 'instagram' | 'tiktok'
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('social_accounts')
+      .update({ status: 'inactive' })
+      .eq('tenant_id', tenantId)
+      .eq('channel', channel)
+      .eq('status', 'active');
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  /** Pide a wa-onboard la URL del puente de conexión de WhatsApp
+   *  (conectar.catalogohoy.com) con el state firmado del tenant. */
+  async startWhatsAppConnect(
+    tenantId: number,
+    returnUrl: string,
+    mode: 'coexistence' | 'dedicated'
+  ): Promise<E.Either<Error, string>> {
+    const { data, error } = await this.client.functions.invoke('wa-onboard', {
+      body: { action: 'start', tenantId, returnUrl, mode },
+    });
+    if (!error && data?.success && data?.url) {
+      return E.right(data.url as string);
+    }
+    const message =
+      (typeof data?.error === 'string' && data.error) ||
+      'No se pudo iniciar la conexión con WhatsApp';
+    return E.left(new Error(message));
+  }
+
+  /** Pide a ig-oauth la URL de autorización de Instagram Login (state firmado
+   *  server-side que amarra tenant + returnUrl). */
+  async startInstagramConnect(
+    tenantId: number,
+    returnUrl: string
+  ): Promise<E.Either<Error, string>> {
+    const { data, error } = await this.client.functions.invoke('ig-oauth', {
+      body: { tenantId, returnUrl },
+    });
+    if (!error && data?.success && data?.url) {
+      return E.right(data.url as string);
+    }
+    const message =
+      (typeof data?.error === 'string' && data.error) ||
+      'No se pudo iniciar la conexión con Instagram';
+    return E.left(new Error(message));
+  }
+
+  /** Pide a tiktok-oauth la URL de autorización de TikTok (state firmado
+   *  server-side que amarra tenant + returnUrl). La función se implementa
+   *  cuando TikTok apruebe el acceso a la Business Messaging API (beta). */
+  async startTikTokConnect(
+    tenantId: number,
+    returnUrl: string
+  ): Promise<E.Either<Error, string>> {
+    const { data, error } = await this.client.functions.invoke('tiktok-oauth', {
+      body: { tenantId, returnUrl },
+    });
+    if (!error && data?.success && data?.url) {
+      return E.right(data.url as string);
+    }
+    const message =
+      (typeof data?.error === 'string' && data.error) ||
+      'No se pudo iniciar la conexión con TikTok';
+    return E.left(new Error(message));
+  }
+
+  async getConnectChecklist(
+    tenantId: number
+  ): Promise<E.Either<Error, WhatsAppConnectChecklist>> {
+    const [products, config, tenant] = await Promise.all([
+      this.client
+        .from('products')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .not('is_hidden', 'is', true),
+      this.client
+        .from('tenant_ecommerce_config')
+        .select('is_visible')
+        .eq('tenant_id', tenantId)
+        .maybeSingle(),
+      this.client
+        .from('tenants')
+        .select('custom_domain')
+        .eq('id', tenantId)
+        .maybeSingle(),
+    ]);
+
+    if (products.error) {
+      return E.left(new Error(products.error.message));
+    }
+
+    return E.right({
+      visibleProducts: products.count ?? 0,
+      isCatalogPublic: config.data?.is_visible ?? true,
+      hasCustomDomain: !!tenant.data?.custom_domain,
+    });
   }
 
   async updateAccount(

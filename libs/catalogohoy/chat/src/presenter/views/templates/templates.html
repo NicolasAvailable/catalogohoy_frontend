@@ -7,85 +7,261 @@
         {{ 'Plantillas de WhatsApp (HSM) para iniciar conversaciones o responder fuera de la ventana de 24 h. Meta debe aprobarlas antes de usarlas.' | transloco }}
       </p>
     </div>
-    @if (!showForm()) {
-    <ui-button label="Crear plantilla" icon="plus" (click)="openForm()" />
-    }
-  </div>
-
-  <!-- Formulario de creación -->
-  @if (showForm()) {
-  <div class="rounded-xl border border-grey-100 bg-white p-5 flex flex-col gap-4">
-    <h2 class="font-semibold text-grey-800">{{ 'Nueva plantilla' | transloco }}</h2>
-
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div class="flex flex-col gap-1.5">
-        <span class="text-sm font-medium text-grey-700">{{ 'Nombre' | transloco }}</span>
-        <ui-input-text
-          placeholder="Ej: confirmacion_pedido"
-          [ngModel]="fName()"
-          (ngModelChange)="fName.set($event)"
-        />
-        @if (fName().trim()) {
-        <span class="text-[11px] text-grey-400">
-          {{ 'Se guardará como:' | transloco }} <b>{{ normalizedName() }}</b>
-        </span>
-        }
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <span class="text-sm font-medium text-grey-700">{{ 'Categoría' | transloco }}</span>
-        <ui-select
-          [options]="categories"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="fCategory()"
-          (ngModelChange)="fCategory.set($event)"
-          styleClass="w-full"
-        />
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <span class="text-sm font-medium text-grey-700">{{ 'Idioma' | transloco }}</span>
-        <ui-select
-          [options]="languages"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="fLanguage()"
-          (ngModelChange)="fLanguage.set($event)"
-          styleClass="w-full"
-        />
-      </div>
-    </div>
-
-    <div class="flex flex-col gap-1.5">
-      <span class="text-sm font-medium text-grey-700">{{ 'Cuerpo del mensaje' | transloco }}</span>
-      <ui-textarea
-        [rows]="4"
-        [placeholder]="'Hola, gracias por tu compra. Tu pedido ya está en camino.' | transloco"
-        [ngModel]="fBody()"
-        (ngModelChange)="fBody.set($event)"
-      />
-      <span class="text-[11px] text-grey-400">
-        {{ 'Podés usar variables como {v} para personalizar.' | transloco: { v: varExample } }}
-      </span>
-    </div>
-
-    <div class="flex items-center justify-end gap-2">
+    <div class="flex items-center gap-2 shrink-0">
       <ui-button
-        label="Cancelar"
+        icon="refresh-cw"
         severity="contrast"
         variant="outlined"
-        (click)="showForm.set(false)"
+        [isLoading]="loading()"
+        (click)="load()"
       />
-      <ui-button
-        label="Crear"
-        icon="check"
-        [isLoading]="creating()"
-        (click)="create()"
-      />
+      @if (!showForm()) {
+      <ui-button label="Crear plantilla" icon="plus" (click)="openForm()" />
+      }
+    </div>
+  </div>
+
+  <!-- Editor de creación: formulario a la izquierda, vista previa (estilo Meta)
+       fija a la derecha. -->
+  @if (showForm()) {
+  <div class="rounded-xl border border-grey-100 bg-white overflow-hidden">
+    <div class="flex flex-col lg:flex-row">
+      <!-- ── Formulario ── -->
+      <div class="flex-1 p-5 flex flex-col gap-4 lg:border-r border-grey-100">
+        <h2 class="font-semibold text-grey-800">{{ 'Nueva plantilla' | transloco }}</h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1.5">
+            <span class="text-sm font-medium text-grey-700">{{ 'Nombre' | transloco }}</span>
+            <ui-input-text
+              placeholder="Ej: confirmacion_pedido"
+              [ngModel]="fName()"
+              (ngModelChange)="fName.set($event)"
+            />
+            @if (fName().trim()) {
+            <span class="text-[11px] text-grey-400">
+              {{ 'Se guardará como:' | transloco }} <b>{{ normalizedName() }}</b>
+            </span>
+            }
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <span class="text-sm font-medium text-grey-700">{{ 'Idioma' | transloco }}</span>
+            <ui-select
+              [options]="languages"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="fLanguage()"
+              (ngModelChange)="fLanguage.set($event)"
+              styleClass="w-full"
+            />
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-grey-700">{{ 'Categoría' | transloco }}</span>
+          <ui-select
+            [options]="categories"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="fCategory()"
+            (ngModelChange)="fCategory.set($event)"
+            styleClass="w-full"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-grey-700">
+            {{ 'Título' | transloco }}
+            <span class="text-grey-300 font-normal">· {{ 'opcional' | transloco }}</span>
+          </span>
+          <ui-input-text
+            [placeholder]="'Encabezado en negrita (sin variables)' | transloco"
+            [ngModel]="fHeader()"
+            (ngModelChange)="fHeader.set($event)"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-grey-700">{{ 'Cuerpo del mensaje' | transloco }}</span>
+          <ui-textarea
+            [rows]="4"
+            [placeholder]="'Hola, gracias por tu compra. Tu pedido ya está en camino.' | transloco"
+            [ngModel]="fBody()"
+            (ngModelChange)="fBody.set($event)"
+          />
+          <span class="text-[11px] text-grey-400">
+            {{ 'Podés usar variables como {v} para personalizar.' | transloco: { v: varExample } }}
+          </span>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-grey-700">
+            {{ 'Pie de página' | transloco }}
+            <span class="text-grey-300 font-normal">· {{ 'opcional' | transloco }}</span>
+          </span>
+          <ui-input-text
+            [placeholder]="'Ej: Responde STOP para no recibir más mensajes' | transloco"
+            [ngModel]="fFooter()"
+            (ngModelChange)="fFooter.set($event)"
+          />
+        </div>
+
+        <!-- Ejemplos por variable: Meta los exige para aprobar la plantilla. -->
+        @if (bodyVars().length) {
+        <div class="flex flex-col gap-2 rounded-xl bg-grey-25 border border-grey-100 p-4">
+          <span class="text-sm font-medium text-grey-700">
+            {{ 'Ejemplos para las variables' | transloco }}
+          </span>
+          <span class="text-[11px] text-grey-400 -mt-1">
+            {{ 'Meta necesita un ejemplo de cada variable para aprobar la plantilla.' | transloco }}
+          </span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+            @for (v of bodyVars(); track v) {
+            <div class="flex flex-col gap-1">
+              <span class="text-xs font-medium text-grey-600">{{ varToken(v) }}</span>
+              <ui-input-text
+                [placeholder]="'Ej: María' | transloco"
+                [ngModel]="exampleOf(v)"
+                (ngModelChange)="setExample(v, $event)"
+              />
+            </div>
+            }
+          </div>
+        </div>
+        }
+
+        <div class="flex items-center justify-end gap-2 pt-1">
+          <ui-button
+            label="Cancelar"
+            severity="contrast"
+            variant="outlined"
+            [fluid]="false"
+            (click)="showForm.set(false)"
+          />
+          <ui-button
+            label="Enviar a revisión"
+            icon="send"
+            [fluid]="false"
+            [isLoading]="creating()"
+            (click)="create()"
+          />
+        </div>
+      </div>
+
+      <!-- ── Vista previa (WhatsApp, estilo Meta) ── -->
+      <div class="lg:w-80 shrink-0 p-5 bg-grey-25 flex flex-col gap-3">
+        <span class="text-xs font-bold uppercase tracking-wide text-grey-400">
+          {{ 'Vista previa' | transloco }}
+        </span>
+        <div class="rounded-2xl p-4 bg-[#ece5dd] flex-1 flex flex-col">
+          <div class="max-w-[15rem] rounded-lg rounded-tl-none bg-white shadow-sm px-3 py-2 flex flex-col gap-1">
+            @if (fHeader().trim()) {
+            <p class="text-sm font-bold text-grey-800 whitespace-pre-wrap break-words">{{ fHeader() }}</p>
+            }
+            @if (previewBody().trim()) {
+            <p class="text-sm text-grey-700 whitespace-pre-wrap break-words">{{ previewBody() }}</p>
+            } @else {
+            <p class="text-sm text-grey-300 italic">{{ 'El cuerpo de tu mensaje aparecerá aquí.' | transloco }}</p>
+            }
+            @if (fFooter().trim()) {
+            <p class="text-xs text-grey-400 whitespace-pre-wrap break-words">{{ fFooter() }}</p>
+            }
+            <span class="text-[10px] text-grey-300 self-end">10:00 p. m.</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   }
 
-  <!-- Lista -->
+  <!-- Tabs: Sugeridas (galería CatalogoHoy) vs Mis plantillas (las propias). -->
+  @if (!showForm()) {
+  <div class="flex items-center gap-1 border-b border-grey-100">
+    <button
+      type="button"
+      (click)="activeTab.set('suggested')"
+      class="px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors cursor-pointer"
+      [class.border-primary-500]="activeTab() === 'suggested'"
+      [class.text-primary-600]="activeTab() === 'suggested'"
+      [class.border-transparent]="activeTab() !== 'suggested'"
+      [class.text-grey-400]="activeTab() !== 'suggested'"
+    >
+      {{ 'Plantillas sugeridas' | transloco }}
+    </button>
+    <button
+      type="button"
+      (click)="activeTab.set('mine')"
+      class="px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors cursor-pointer inline-flex items-center gap-1.5"
+      [class.border-primary-500]="activeTab() === 'mine'"
+      [class.text-primary-600]="activeTab() === 'mine'"
+      [class.border-transparent]="activeTab() !== 'mine'"
+      [class.text-grey-400]="activeTab() !== 'mine'"
+    >
+      {{ 'Mis plantillas' | transloco }}
+      @if (visibleTemplates().length) {
+      <span class="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-grey-100 text-grey-500">{{ visibleTemplates().length }}</span>
+      }
+    </button>
+  </div>
+  }
+
+  <!-- ── Tab Sugeridas ── -->
+  @if (!showForm() && activeTab() === 'suggested') {
+  @if (availableSuggestions().length) {
+  <div class="flex flex-col gap-3">
+    <p class="text-xs text-grey-400">
+      {{ 'Listas para usar: se crean en tu cuenta de WhatsApp y Meta las revisa (suele tardar minutos).' | transloco }}
+    </p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      @for (s of availableSuggestions(); track s.key) {
+      <div class="rounded-xl border border-grey-100 bg-grey-25 p-4 flex flex-col gap-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-semibold text-sm text-grey-800">{{ s.title | transloco }}</span>
+          <span
+            class="text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+            [ngClass]="s.category === 'UTILITY' ? 'bg-sky-50 text-sky-700' : 'bg-violet-50 text-violet-700'"
+          >
+            {{ categoryLabel(s.category) | transloco }}
+          </span>
+        </div>
+        <p class="text-xs text-grey-400">{{ s.description | transloco }}</p>
+        <p class="text-sm text-grey-600 whitespace-pre-wrap break-words bg-white border border-grey-100 rounded-lg p-3 flex-1">
+          {{ s.body }}
+        </p>
+        <div class="flex items-center justify-end gap-2 mt-1">
+          <ui-button
+            label="Editar"
+            icon="pencil"
+            severity="contrast"
+            variant="outlined"
+            size="small"
+            [fluid]="false"
+            (click)="editSuggestion(s)"
+          />
+          <ui-button
+            label="Enviar a revisión"
+            icon="send"
+            size="small"
+            [fluid]="false"
+            [isLoading]="submittingKey() === s.key"
+            (click)="submitSuggestion(s)"
+          />
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+  } @else {
+  <!-- Todas las sugeridas ya están creadas. -->
+  <div class="flex flex-col items-center justify-center text-center gap-3 py-16 text-grey-400">
+    <ui-icon name="check-circle" size="36" styleClass="text-green-500" />
+    <p class="text-sm">{{ 'Ya agregaste todas las plantillas sugeridas. Mirá su estado en "Mis plantillas".' | transloco }}</p>
+  </div>
+  }
+  }
+
+  <!-- ── Tab Mis plantillas ── -->
+  @if (!showForm() && activeTab() === 'mine') {
   @if (loading()) {
   <div class="flex flex-col gap-2">
     @for (i of [1, 2, 3, 4]; track i) {
@@ -101,14 +277,16 @@
     </div>
     }
   </div>
-  } @else if (templates().length) {
+  } @else if (visibleTemplates().length) {
   <div class="flex flex-col gap-2">
-    @for (t of templates(); track t.name + t.language) {
+    @for (t of visibleTemplates(); track t.name + t.language) {
     <div class="rounded-xl border border-grey-100 bg-white p-4 flex flex-col gap-2">
       <div class="flex items-center justify-between gap-2">
-        <div class="flex items-center gap-2 min-w-0">
-          <span class="font-semibold text-grey-800 truncate">{{ t.name }}</span>
-          <span class="text-[11px] text-grey-400 uppercase">{{ t.language }}</span>
+        <div class="flex flex-col min-w-0">
+          <span class="font-semibold text-grey-800 truncate">{{ titleOf(t) }}</span>
+          <span class="text-[11px] text-grey-400 truncate">
+            {{ t.name }} · <span class="uppercase">{{ t.language }}</span>
+          </span>
         </div>
         <span
           class="text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0"
@@ -120,16 +298,38 @@
       <p class="text-sm text-grey-600 whitespace-pre-wrap break-words">
         {{ bodyOf(t) }}
       </p>
-      <span class="text-[11px] text-grey-400">{{ t.category }}</span>
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-[11px] text-grey-400">{{ t.category }}</span>
+        <ui-button
+          icon="trash"
+          severity="danger"
+          variant="text"
+          size="small"
+          [isLoading]="deletingName() === t.name"
+          (click)="deleteTemplate(t)"
+        />
+      </div>
     </div>
     }
   </div>
+  @if (hiddenByLanguage() > 0) {
+  <p class="text-[11px] text-grey-300 text-center">
+    {{ 'Se ocultan {count} plantillas en idiomas que la plataforma no usa.' | transloco: { count: hiddenByLanguage() } }}
+  </p>
+  }
   } @else {
   <div
     class="flex flex-col items-center justify-center text-center gap-3 py-16 text-grey-400"
   >
     <ui-icon name="layout-template" size="36" styleClass="text-grey-200" />
-    <p class="text-sm">{{ 'Todavía no tenés plantillas. Creá la primera.' | transloco }}</p>
+    <p class="text-sm">{{ 'Todavía no creaste ninguna plantilla propia. Empezá desde las sugeridas o creá una nueva.' | transloco }}</p>
+    <ui-button label="Crear plantilla" icon="plus" [fluid]="false" (click)="openForm()" />
+    @if (hiddenByLanguage() > 0) {
+    <p class="text-[11px] text-grey-300">
+      {{ 'Se ocultan {count} plantillas en idiomas que la plataforma no usa.' | transloco: { count: hiddenByLanguage() } }}
+    </p>
+    }
   </div>
+  }
   }
 </div>

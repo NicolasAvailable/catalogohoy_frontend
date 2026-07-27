@@ -8,10 +8,17 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //   • GET  with hub.mode/hub.verify_token/hub.challenge → must echo challenge.
 //   • POST with message payloads → we map them into chats/chat_messages.
 //
-// This is the REAL inbound path for when Meta approves the app. Until then the
-// public `post_demo_customer_message` RPC (see migration) stands in for it so
-// the inbox can be tested with the customer simulator. Deploy with
-// verify_jwt=false (Meta can't send a Supabase JWT).
+// Campos soportados (suscribir TODOS en la app de Meta → WhatsApp → Webhooks):
+//   • messages            → mensajes del CLIENTE (is_mine=false) + statuses
+//                           (acuses sent/delivered/read de lo enviado)
+//   • smb_message_echoes  → COEXISTENCIA: lo que el comerciante manda desde su
+//                           app de WhatsApp en el teléfono (is_mine=true)
+//   • history             → COEXISTENCIA: historial sincronizado al conectar
+//                           (dedupe por wamid, respeta timestamps originales)
+//   • smb_app_state_sync  → COEXISTENCIA: contactos del teléfono (solo se usan
+//                           para nombrar chats sin nombre)
+//
+// Deploy with verify_jwt=false (Meta can't send a Supabase JWT).
 // =============================================================================
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -161,28 +168,196 @@ async function findOrCreateChat(
   return created ? { id: created.id, hasName: !!name } : null;
 }
 
-async function handleIncoming(body: unknown): Promise<void> {
-  // Meta payload: entry[].changes[].value.{ metadata.phone_number_id, contacts[], messages[] }
-  const entries = (body as { entry?: unknown[] })?.entry ?? [];
-  for (const entry of entries) {
-    const changes = (entry as { changes?: unknown[] })?.changes ?? [];
-    for (const change of changes) {
-      const value = (change as { value?: Record<string, unknown> })?.value;
-      if (!value) continue;
+/** ¿Ya ingresamos este wamid? Dedupe para echoes/history (Meta reintenta y el
+ *  historial puede solapar con mensajes ya recibidos en vivo). */
+async function messageExists(waMessageId: string): Promise<boolean> {
+  const { data } = await admin
+    .from("chat_messages")
+    .select("id")
+    .eq("wa_message_id", waMessageId)
+    .limit(1);
+  return (data ?? []).length > 0;
+}
 
-      const phoneNumberId = (value.metadata as { phone_number_id?: string })
-        ?.phone_number_id;
-      const messages = (value.messages as unknown[]) ?? [];
-      if (!phoneNumberId || messages.length === 0) continue;
+/** Refresca last_message/last_message_at del chat con su mensaje más reciente
+ *  (tras ingerir historial, que llega desordenado y con timestamps viejos). */
+async function refreshChatLastMessage(chatId: number): Promise<void> {
+  const { data } = await admin
+    .from("chat_messages")
+    .select("content, created_at, is_mine")
+    .eq("chat_id", chatId)
+    .not("is_internal", "is", true)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const last = (data ?? [])[0];
+  if (!last) return;
+  await admin
+    .from("chats")
+    .update({
+      last_message: last.content,
+      last_message_at: last.created_at,
+      last_message_is_mine: last.is_mine ?? null,
+    })
+    .eq("id", chatId);
+}
 
-      const account = await accountForPhoneNumberId(phoneNumberId);
-      if (!account) continue;
-      const tenantId = account.tenantId;
+type Account = { tenantId: number; token: string | null };
 
-      const contacts = (value.contacts as { profile?: { name?: string } }[]) ?? [];
-      const profileName = contacts[0]?.profile?.name ?? null;
+/** COEXISTENCIA — smb_message_echoes: mensajes que el comerciante envió desde
+ *  su app de WhatsApp en el teléfono. Se insertan como is_mine=true para que
+ *  el CRM muestre la conversación completa. */
+async function processEchoes(
+  account: Account,
+  value: Record<string, unknown>,
+): Promise<void> {
+  const echoes = (value.message_echoes as Record<string, unknown>[]) ?? [];
+  for (const m of echoes) {
+    const to = (m.to as string) ?? "";
+    if (!to) continue;
 
-      for (const m of messages as Record<string, unknown>[]) {
+    const waMessageId = (m.id as string) ?? null;
+    if (waMessageId && (await messageExists(waMessageId))) continue;
+
+    let text = describeMessage(m);
+    let messageType = "text";
+    let mediaUrl: string | null = null;
+
+    const mtype = m.type as string;
+    if (MEDIA_TYPES.includes(mtype) && account.token) {
+      const media = m[mtype] as
+        | { id?: string; mime_type?: string; caption?: string }
+        | undefined;
+      if (media?.id) {
+        const url = await downloadAndStore(
+          media.id,
+          account.token,
+          account.tenantId,
+          media.mime_type ?? "",
+        );
+        if (url) {
+          mediaUrl = url;
+          messageType = mtype === "sticker" ? "image" : mtype;
+          text = (media.caption ?? "").trim() || describeMessage(m);
+        }
+      }
+    }
+    if (!text && !mediaUrl) continue;
+
+    const chat = await findOrCreateChat(account.tenantId, to, null);
+    if (!chat) continue;
+
+    await admin.from("chat_messages").insert({
+      chat_id: chat.id,
+      content: text,
+      is_mine: true,
+      message_type: messageType,
+      media_url: mediaUrl,
+      wa_message_id: waMessageId,
+    });
+    await admin
+      .from("chats")
+      .update({
+        last_message: text,
+        last_message_at: new Date().toISOString(),
+        last_message_is_mine: true,
+      })
+      .eq("id", chat.id);
+  }
+}
+
+/** COEXISTENCIA — history: historial de conversaciones sincronizado al conectar
+ *  (si el comerciante lo autorizó). Llega en chunks con threads por cliente.
+ *  Dirección: el mensaje es del cliente si `from` coincide con el wa_id del
+ *  thread; si no, lo envió el negocio. Media histórica: solo placeholder (los
+ *  media ids del historial suelen estar vencidos). */
+async function processHistory(
+  account: Account,
+  value: Record<string, unknown>,
+): Promise<void> {
+  const batches = (value.history as Record<string, unknown>[]) ?? [];
+  for (const batch of batches) {
+    const threads = (batch.threads as Record<string, unknown>[]) ?? [];
+    for (const t of threads) {
+      const customerWaId = (t.id as string) ?? "";
+      if (!customerWaId) continue;
+
+      const chat = await findOrCreateChat(account.tenantId, customerWaId, null);
+      if (!chat) continue;
+
+      let inserted = false;
+      const msgs = (t.messages as Record<string, unknown>[]) ?? [];
+      for (const m of msgs) {
+        const waMessageId = (m.id as string) ?? null;
+        if (waMessageId && (await messageExists(waMessageId))) continue;
+
+        const text = describeMessage(m);
+        if (!text) continue;
+
+        const isMine = digits((m.from as string) ?? "") !== digits(customerWaId);
+        const ts = m.timestamp
+          ? new Date(Number(m.timestamp) * 1000).toISOString()
+          : null;
+
+        await admin.from("chat_messages").insert({
+          chat_id: chat.id,
+          content: text,
+          is_mine: isMine,
+          message_type: "text",
+          wa_message_id: waMessageId,
+          ...(ts ? { created_at: ts } : {}),
+        });
+        inserted = true;
+      }
+      if (inserted) await refreshChatLastMessage(chat.id);
+    }
+  }
+}
+
+/** COEXISTENCIA — smb_app_state_sync: contactos de la agenda del comerciante.
+ *  Solo se usan para ponerle nombre a chats existentes que no lo tienen (no
+ *  creamos chats por contacto: sería ruido). */
+async function processStateSync(
+  account: Account,
+  value: Record<string, unknown>,
+): Promise<void> {
+  const syncs = (value.state_sync as Record<string, unknown>[]) ?? [];
+  for (const s of syncs) {
+    if ((s.type as string) !== "contact") continue;
+    const action = (s.action as string) ?? "add";
+    if (action !== "add") continue;
+
+    const contact = s.contact as
+      | { phone_number?: string; full_name?: string; first_name?: string }
+      | undefined;
+    const phone = contact?.phone_number ?? "";
+    const name = (contact?.full_name ?? contact?.first_name ?? "").trim();
+    if (!phone || !name) continue;
+
+    const { data: existing } = await admin
+      .from("chats")
+      .select("id, customer_phone, customer_name")
+      .eq("tenant_id", account.tenantId);
+    const match = (existing ?? []).find(
+      (c: { customer_phone: string | null }) =>
+        digits(c.customer_phone ?? "") === digits(phone),
+    );
+    if (match && !String(match.customer_name ?? "").trim()) {
+      await admin.from("chats").update({ customer_name: name }).eq("id", match.id);
+    }
+  }
+}
+
+/** Mensajes del CLIENTE (campo `messages`) — flujo original. */
+async function processCustomerMessages(
+  account: Account,
+  value: Record<string, unknown>,
+): Promise<void> {
+  const tenantId = account.tenantId;
+  const messages = (value.messages as unknown[]) ?? [];
+  const contacts = (value.contacts as { profile?: { name?: string } }[]) ?? [];
+  const profileName = contacts[0]?.profile?.name ?? null;
+
+  for (const m of messages as Record<string, unknown>[]) {
         const from = (m.from as string) ?? "";
         if (!from) continue;
 
@@ -244,12 +419,111 @@ async function handleIncoming(body: unknown): Promise<void> {
         const chatUpdate: Record<string, unknown> = {
           last_message: text,
           last_message_at: new Date().toISOString(),
+          last_message_is_mine: false,
         };
         // Sólo usar el nombre de perfil de WhatsApp si el contacto NO tiene un
         // nombre registrado (respeta el alias del módulo de clientes / órdenes).
         if (profileName && !chat.hasName) chatUpdate.customer_name = profileName;
         await admin.from("chats").update(chatUpdate).eq("id", chatId);
         // unread_count increment is handled by a trigger in prod; kept simple here.
+  }
+}
+
+/** Acuses de entrega de mensajes ENVIADOS (value.statuses, llega junto al
+ *  field `messages`): sent → delivered → read. Solo se sube de nivel (los
+ *  eventos pueden llegar desordenados y un `read` nunca vuelve a `delivered`).
+ *  `failed` (rank 4) SIEMPRE gana: Meta lo manda de forma asíncrona cuando el
+ *  envío se aceptó (200) pero no se pudo entregar (p.ej. ventana de 24h). */
+const STATUS_RANK: Record<string, number> = {
+  sent: 1,
+  delivered: 2,
+  read: 3,
+  failed: 4,
+};
+
+/** Traduce el código de error de Meta a un motivo accionable para el
+ *  comerciante; si no lo conocemos, usa el texto que manda Meta. */
+function friendlyDeliveryError(err: Record<string, unknown> | undefined): string {
+  const code = Number(err?.code ?? 0);
+  const known: Record<number, string> = {
+    131047:
+      "Pasaron más de 24 horas desde el último mensaje del cliente. Usá una plantilla aprobada para reabrir la conversación.",
+    131026:
+      "El mensaje no se pudo entregar. El número puede no tener WhatsApp o no poder recibir mensajes en este momento.",
+    131051: "Este tipo de mensaje no está soportado.",
+    131049:
+      "WhatsApp limitó este mensaje para cuidar la experiencia del cliente. Intentá más tarde.",
+    130472:
+      "El cliente forma parte de un experimento de Meta y no puede recibir este mensaje ahora.",
+  };
+  if (known[code]) return known[code];
+  const details = (err?.error_data as { details?: string } | undefined)?.details;
+  const title = (err?.title as string) || (err?.message as string) || "";
+  const text = details || title || "No se pudo entregar el mensaje.";
+  return code ? `[${code}] ${text}` : text;
+}
+
+async function processStatuses(value: Record<string, unknown>): Promise<void> {
+  const statuses = (value.statuses as Record<string, unknown>[]) ?? [];
+  for (const s of statuses) {
+    const wamid = (s.id as string) ?? "";
+    const status = (s.status as string) ?? "";
+    if (!wamid || !STATUS_RANK[status]) continue;
+
+    const { data: row } = await admin
+      .from("chat_messages")
+      .select("id, delivery_status")
+      .eq("wa_message_id", wamid)
+      .maybeSingle();
+    if (!row) continue;
+    if ((STATUS_RANK[row.delivery_status as string] ?? 0) >= STATUS_RANK[status]) {
+      continue;
+    }
+
+    const update: Record<string, unknown> = { delivery_status: status };
+    if (status === "failed") {
+      const errors = (s.errors as Record<string, unknown>[]) ?? [];
+      update.delivery_error = friendlyDeliveryError(errors[0]);
+    }
+    await admin.from("chat_messages").update(update).eq("id", row.id);
+  }
+}
+
+async function handleIncoming(body: unknown): Promise<void> {
+  // Meta payload: entry[].changes[].{ field, value }. El field decide el flujo:
+  // messages (cliente) · smb_message_echoes / history / smb_app_state_sync
+  // (coexistencia). Todos rutean por metadata.phone_number_id → tenant.
+  const entries = (body as { entry?: unknown[] })?.entry ?? [];
+  for (const entry of entries) {
+    const changes = (entry as { changes?: unknown[] })?.changes ?? [];
+    for (const change of changes) {
+      const field = ((change as { field?: string })?.field ?? "messages") as string;
+      const value = (change as { value?: Record<string, unknown> })?.value;
+      if (!value) continue;
+
+      const phoneNumberId = (value.metadata as { phone_number_id?: string })
+        ?.phone_number_id;
+      if (!phoneNumberId) continue;
+
+      const account = await accountForPhoneNumberId(phoneNumberId);
+      if (!account) continue;
+
+      switch (field) {
+        case "messages":
+          await processCustomerMessages(account, value);
+          await processStatuses(value);
+          break;
+        case "smb_message_echoes":
+          await processEchoes(account, value);
+          break;
+        case "history":
+          await processHistory(account, value);
+          break;
+        case "smb_app_state_sync":
+          await processStateSync(account, value);
+          break;
+        default:
+          break;
       }
     }
   }

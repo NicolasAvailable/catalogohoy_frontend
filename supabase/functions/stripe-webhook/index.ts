@@ -372,6 +372,32 @@ async function emailPaymentFailed(admin: ReturnType<typeof createClient>, owner:
   await sendResendEmail(admin, owner.email, subject, html, text);
 }
 
+// WhatsApp de billing (template payment_failed, aprobado en la WABA de la
+// plataforma): variables [nombre, plan] + botón URL cuyo parámetro es el slug
+// (base fija catalogohoy.com/r/plan/{{1}}). Best-effort: jamás rompe el webhook.
+async function sendWhatsAppPaymentFailed(admin: ReturnType<typeof createClient>, tenantId: number, owner: OwnerInfo | null): Promise<void> {
+  try {
+    const waSecret = Deno.env.get("WHATSAPP_WEBHOOK_SECRET");
+    if (!waSecret || !owner) return;
+    const { data: recipient } = await admin.rpc("resolve_billing_wa_recipient", { p_tenant_id: tenantId, p_type: "payment_failed" });
+    if (!recipient) return;
+    const firstName = (owner.name ?? "").trim().split(" ")[0] || owner.tenantName;
+    await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-whatsapp-notification`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-webhook-secret": waSecret },
+      body: JSON.stringify({
+        tenantId,
+        to: recipient,
+        templateType: "payment_failed",
+        variables: [firstName, planLabel(owner.planId)],
+        urlButtonParam: owner.slug,
+      }),
+    });
+  } catch (err) {
+    await logDebug(admin, `whatsapp payment_failed error: ${(err as Error).message}`);
+  }
+}
+
 async function applyPlanUpdate(admin: ReturnType<typeof createClient>, primaryTenantId: number, full: Record<string, unknown>, shared: Record<string, unknown>): Promise<void> {
   await admin.from("tenants").update(full).eq("id", primaryTenantId);
   const { data: ownerLink } = await admin.from("users_tenants").select("user_id").eq("tenant_id", primaryTenantId).eq("role", "owner").maybeSingle();
@@ -668,6 +694,7 @@ Deno.serve(async (req: Request) => {
         ],
       });
       if (owner) await emailPaymentFailed(admin, owner, amountStr, attempt, nextAttemptStr, reason, planLbl);
+      await sendWhatsAppPaymentFailed(admin, Number(tenantId), owner);
     }
 
     if (event.type === "customer.subscription.deleted") {

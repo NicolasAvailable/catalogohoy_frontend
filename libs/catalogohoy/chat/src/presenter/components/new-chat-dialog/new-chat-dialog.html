@@ -1,0 +1,90 @@
+<ui-dialog [headerTitle]="'Nuevo chat'" styleClass="w-[26rem] max-w-[95vw]">
+  <div class="flex flex-col gap-4">
+    <!-- Número nuevo -->
+    <div class="flex flex-col gap-2">
+      <span class="text-xs font-semibold uppercase tracking-wide text-grey-400">
+        {{ 'Enviar a un número nuevo' | transloco }}
+      </span>
+      <ui-input-phone [ngModel]="newPhone()" (ngModelChange)="newPhone.set($event)" />
+      <ui-input-text
+        [placeholder]="'Nombre del contacto (opcional)'"
+        [ngModel]="newName()"
+        (ngModelChange)="newName.set($event)"
+      />
+      <ui-button
+        [label]="'Iniciar chat'"
+        icon="message-circle"
+        [disabled]="!newPhoneValid()"
+        [isLoading]="startingPhone() === newPhone()"
+        (click)="startWithNewNumber()"
+      />
+    </div>
+
+    <!-- Separador -->
+    <div class="flex items-center gap-3">
+      <span class="flex-1 h-px bg-grey-100"></span>
+      <span class="text-xs text-grey-300 font-medium">{{ 'o elige un cliente guardado' | transloco }}</span>
+      <span class="flex-1 h-px bg-grey-100"></span>
+    </div>
+
+    <!-- Clientes guardados -->
+    <div class="flex flex-col gap-2">
+      <ui-input-search
+        placeholder="Buscar cliente por nombre o teléfono"
+        (valueChange)="search.set($event)"
+      />
+      <div class="max-h-64 overflow-y-auto -mx-1">
+        @if (loadingCustomers()) {
+          <div class="flex flex-col gap-1 px-1">
+            @for (_ of [1, 2, 3]; track $index) {
+              <div class="flex items-center gap-3 px-2 py-2.5 rounded-lg animate-pulse">
+                <div class="w-9 h-9 rounded-full bg-grey-50 shrink-0"></div>
+                <div class="flex-1 flex flex-col gap-1.5">
+                  <div class="h-3 w-28 bg-grey-50 rounded"></div>
+                  <div class="h-2.5 w-20 bg-grey-50 rounded"></div>
+                </div>
+              </div>
+            }
+          </div>
+        } @else if (filteredCustomers().length === 0) {
+          <p class="text-sm text-grey-300 text-center py-6">
+            {{ customers().length === 0
+              ? ('Aún no tienes clientes guardados' | transloco)
+              : ('Sin resultados' | transloco) }}
+          </p>
+        } @else {
+          <ul class="flex flex-col">
+            @for (customer of filteredCustomers(); track customer.id) {
+              <li>
+                <button
+                  type="button"
+                  class="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-lino-400 transition-colors cursor-pointer text-left disabled:opacity-50 disabled:cursor-wait"
+                  [disabled]="startingPhone() !== null"
+                  (click)="startWith(customer.name, customer.phone)"
+                >
+                  <span class="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
+                    <span class="text-xs font-bold text-primary-600">{{ initials(customer.name) }}</span>
+                  </span>
+                  <span class="flex-1 min-w-0 flex flex-col">
+                    <span class="text-sm font-semibold text-grey-700 truncate">
+                      {{ customer.name }}
+                      @if (customer.nickname) {
+                        <span class="font-normal text-grey-400">{{ customer.nickname }}</span>
+                      }
+                    </span>
+                    <span class="text-xs text-grey-400">{{ customer.phone | phonePlus }}</span>
+                  </span>
+                  @if (startingPhone() === customer.phone) {
+                    <ui-icon name="loaderCircle" size="16" styleClass="text-primary-500 animate-spin shrink-0" />
+                  } @else {
+                    <ui-icon name="message-circle" size="16" styleClass="text-grey-200 shrink-0" />
+                  }
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  </div>
+</ui-dialog>

@@ -277,27 +277,52 @@
           </div>
         </div>
 
-        <!-- Messages placeholder -->
+        <!-- Últimos mensajes del chat del cliente -->
         <div
           class="bg-white border border-grey-100 rounded-xl shadow-sm overflow-hidden"
         >
           <div class="px-5 py-4 border-b border-grey-50 flex items-center justify-between">
             <h3 class="text-base font-bold text-grey-800">{{ 'Mensajes' | transloco }}</h3>
-            <span
-              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-600 text-[10px] font-semibold leading-none"
+            @if (recentChat()) {
+            <button
+              (click)="openConversation()"
+              class="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:underline cursor-pointer"
             >
-              {{ 'Próximamente' | transloco }}
-            </span>
+              {{ 'Abrir conversación' | transloco }}
+              <ui-icon name="arrow-right" size="12" />
+            </button>
+            }
           </div>
+          @if (recentChat(); as chat) {
+          <div class="p-3 flex flex-col gap-1">
+            @for (m of chat.messages; track $index) {
+            <button
+              (click)="openConversation()"
+              class="w-full text-left rounded-lg px-3 py-2 hover:bg-grey-50 cursor-pointer"
+            >
+              <span class="flex items-center justify-between gap-2">
+                <span class="text-xs text-grey-600 truncate">
+                  @if (m.isMine) {
+                  <span class="font-semibold text-grey-500">{{ 'Tú' | transloco }}:</span>
+                  }
+                  {{ m.content }}
+                </span>
+                <span class="text-[10px] text-grey-300 shrink-0">{{ formatMsgTime(m.createdAt) }}</span>
+              </span>
+            </button>
+            }
+          </div>
+          } @else {
           <div class="p-8 text-center">
             <ui-icon
               name="message-circle"
               styleClass="size-10 text-grey-200 mx-auto"
             />
             <p class="text-grey-400 mt-2 text-sm">
-              {{ 'La integración con WhatsApp estará disponible próximamente' | transloco }}
+              {{ 'Todavía no hay conversaciones con este cliente.' | transloco }}
             </p>
           </div>
+          }
         </div>
       </div>
     </div>

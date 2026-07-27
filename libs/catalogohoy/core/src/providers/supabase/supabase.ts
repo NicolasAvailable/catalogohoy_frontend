@@ -23,11 +23,17 @@ export class SupabaseClientProvider {
   private static client: SupabaseClient;
 
   private static build(): SupabaseClient {
-    return createClient(
-      environment.supabaseUrl,
-      environment.supabaseKey,
-      isDevMode() ? { auth: { storage: devStorage } } : {}
-    );
+    return createClient(environment.supabaseUrl, environment.supabaseKey, {
+      // Heartbeat del realtime en un Web Worker (blob inline de realtime-js):
+      // los navegadores estrangulan los timers del hilo principal en ventanas
+      // sin foco/tapadas y el heartbeat dejaba de llegar → el servidor cerraba
+      // el websocket a los pocos segundos de desatender la pestaña.
+      realtime: {
+        worker: typeof Worker !== 'undefined',
+        heartbeatIntervalMs: 15_000,
+      },
+      ...(isDevMode() ? { auth: { storage: devStorage } } : {}),
+    });
   }
 
   static getInstance() {

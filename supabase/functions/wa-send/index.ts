@@ -189,6 +189,7 @@ Deno.serve(async (req) => {
       media_url: mediaUrl || null,
       wa_message_id: messageId,
       reply_to_message_id: replyToId,
+      delivery_status: "sent",
     })
     .select()
     .single();
@@ -204,7 +205,11 @@ Deno.serve(async (req) => {
 
   await admin
     .from("chats")
-    .update({ last_message: persistContent, last_message_at: new Date().toISOString() })
+    .update({
+      last_message: persistContent,
+      last_message_at: new Date().toISOString(),
+      last_message_is_mine: true,
+    })
     .eq("id", chatId);
 
   return jsonResponse({ success: true, messageId, message: inserted });

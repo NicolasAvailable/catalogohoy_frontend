@@ -1,11 +1,22 @@
+/** Canal por el que entra la conversación (bandeja omnicanal). */
+export type ChatChannel = 'whatsapp' | 'instagram' | 'tiktok' | 'messenger';
+
 export interface Chat {
   id: number;
   tenantId: number;
   orderId: number | null;
   customerName: string;
   customerPhone: string | null;
+  /** Canal de la conversación (default whatsapp). */
+  channel: ChatChannel;
+  /** Id del cliente en redes sin teléfono (IGSID de IG / open_id de TikTok). */
+  externalUserId: string | null;
+  /** Username visible del cliente en la red (sin @). */
+  customerUsername: string | null;
   lastMessage: string | null;
   lastMessageAt: string | null;
+  /** true si el último mensaje lo mandó el negocio (preview "Tú: …"). */
+  lastMessageIsMine: boolean | null;
   unreadCount: number;
   muted: boolean;
   createdAt: string;
@@ -41,6 +52,14 @@ export interface ChatMessage {
   type?: 'text' | 'image' | 'document' | 'video' | 'audio';
   /** Public URL of the attached media (image/document), when type !== 'text'. */
   mediaUrl?: string | null;
+  /** AI transcript of a voice note (type 'audio'), generated on demand. */
+  transcript?: string | null;
+  /** WhatsApp delivery receipt for outgoing messages (✓ / ✓✓ / ✓✓ azul, o
+   *  'failed' si Meta no lo pudo entregar). Null para entrantes, notas internas
+   *  y mensajes del modo demo. */
+  deliveryStatus?: 'sent' | 'delivered' | 'read' | 'failed' | null;
+  /** Motivo legible de una entrega fallida (delivery_status='failed'). */
+  deliveryError?: string | null;
   /** WhatsApp message id (wamid) — used to map quoted replies. */
   waMessageId?: string | null;
   /** Local id of the message this one replies to (quoted reply), if any. */

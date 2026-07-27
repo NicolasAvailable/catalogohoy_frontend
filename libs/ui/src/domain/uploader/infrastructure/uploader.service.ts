@@ -50,9 +50,29 @@ export class UploaderService implements BaseUploaderService {
 
           const path = `multimedia/${Date.now()}_${baseName}.${ext}`;
 
-          const { error } = await client.storage
-            .from('catalogohoy')
-            .upload(path, body, { contentType });
+          const attempt = () =>
+            client.storage
+              .from('catalogohoy')
+              .upload(path, body, { contentType });
+
+          let { error } = await attempt();
+
+          // "new row violates row-level security policy" en Storage casi
+          // siempre significa que el access token EXPIRÓ y el request llegó
+          // como anónimo (incidente drogueria-el-paisano 2026-07-21).
+          // Refrescamos la sesión una vez y reintentamos; si persiste,
+          // mensaje claro en vez del error crudo de RLS.
+          if (error && /row-level security/i.test(error.message ?? '')) {
+            await client.auth.refreshSession();
+            ({ error } = await attempt());
+            if (error && /row-level security/i.test(error.message ?? '')) {
+              return E.left(
+                new Error(
+                  'Tu sesión expiró. Recarga la página e intenta de nuevo.'
+                )
+              );
+            }
+          }
 
           if (error) {
             const userMessage = error.message?.includes('Invalid key')

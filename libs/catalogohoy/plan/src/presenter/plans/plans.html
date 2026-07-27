@@ -33,7 +33,16 @@
     </div>
   </header>
 
-  <div class="plans-grid" [class.plans-grid--four]="showEnterpriseCard()">
+  <div class="plans-carousel">
+    <button
+      type="button"
+      class="plans-carousel__arrow plans-carousel__arrow--prev"
+      (click)="scrollPlans(-1)"
+      [attr.aria-label]="'Anterior' | transloco"
+    >
+      <ui-icon name="chevron-left" styleClass="size-5" />
+    </button>
+    <div #plansGrid class="plans-grid" [class.plans-grid--four]="gridCardCount() >= 4">
     <!-- Skeletons: los planes vienen de Supabase; sin esto la card Enterprise
          (estática) aparece sola mientras el resto carga. -->
     @if (isLoadingPlans()) {
@@ -269,6 +278,15 @@
     </div>
     }
     }
+    </div>
+    <button
+      type="button"
+      class="plans-carousel__arrow plans-carousel__arrow--next"
+      (click)="scrollPlans(1)"
+      [attr.aria-label]="'Siguiente' | transloco"
+    >
+      <ui-icon name="chevron-right" styleClass="size-5" />
+    </button>
   </div>
 
   <lib-enterprise-contact-dialog />

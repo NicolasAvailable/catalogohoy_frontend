@@ -1,0 +1,19 @@
+/* Móvil (<lg): la conversación es un overlay que se desliza sobre la lista al
+   abrir/cerrar un chat (estilo WhatsApp). En desktop el layout es de columnas
+   fijas y no se anima. El display/posición viven acá y no en utilities para
+   que la transición aplique aunque el chat no esté seleccionado. */
+@media (max-width: 63.9375rem) {
+  lib-conversation-panel {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-lino-400, #f6f5f2);
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0.22, 1);
+  }
+  .chat-open lib-conversation-panel {
+    transform: translateX(0);
+  }
+}

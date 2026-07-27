@@ -22,6 +22,22 @@ export interface CustomerOrderSummary {
   createdAt: string;
 }
 
+/** Cliente guardado (fila en `customers`) — para iniciar chats y para el
+ *  badge "Cliente guardado" de la ficha. */
+export interface SavedCustomer {
+  id: number;
+  name: string;
+  /** Apodo con el que el comerciante reconoce al cliente (opcional). */
+  nickname: string | null;
+  phone: string;
+}
+
+/** Igualdad de teléfonos por dígitos, ignorando formato (+58 412… ≡ 0412…). */
+const sameDigits = (a: string | null, b: string | null): boolean => {
+  const da = (a ?? '').replace(/\D/g, '');
+  return da.length > 0 && da === (b ?? '').replace(/\D/g, '');
+};
+
 @Injectable({
   providedIn: 'root',
 })
@@ -57,6 +73,109 @@ export class ChatService {
     return E.right(ChatMapper.toDomainList(data || []));
   }
 
+  /** Chat de WhatsApp del tenant con ese teléfono (comparado por dígitos), si
+   *  existe — para reabrirlo en vez de duplicarlo al "iniciar" una conversación. */
+  async findWhatsAppChatByPhone(
+    tenantId: number,
+    phone: string
+  ): Promise<E.Either<Error, Chat | null>> {
+    const { data, error } = await this.client
+      .from('chats')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .not('customer_phone', 'is', null);
+    if (error) return E.left(new Error(error.message));
+
+    const row = (data ?? []).find(
+      (r: { channel: string | null; customer_phone: string | null }) =>
+        (r.channel ?? 'whatsapp') === 'whatsapp' &&
+        sameDigits(r.customer_phone, phone)
+    );
+    return E.right(row ? ChatMapper.toDomain(row) : null);
+  }
+
+  /** Crea una conversación de WhatsApp vacía con un contacto (número nuevo o
+   *  cliente guardado). El primer mensaje sale después por el composer normal. */
+  async createChat(
+    tenantId: number,
+    name: string,
+    phone: string
+  ): Promise<E.Either<Error, Chat>> {
+    // Mismo formato que los chats creados por el webhook: wa_id = dígitos sin '+'.
+    const waPhone = phone.replace(/\D/g, '');
+    const { data, error } = await this.client
+      .from('chats')
+      .insert({
+        tenant_id: tenantId,
+        customer_name: name.trim() || `+${waPhone}`,
+        customer_phone: waPhone,
+        channel: 'whatsapp',
+      })
+      .select()
+      .single();
+    if (error) return E.left(new Error(error.message));
+    return E.right(ChatMapper.toDomain(data));
+  }
+
+  /** Clientes guardados del tenant con teléfono (tabla `customers`), para el
+   *  diálogo de nuevo chat y el lookup de la ficha. */
+  async getSavedCustomers(
+    tenantId: number
+  ): Promise<E.Either<Error, SavedCustomer[]>> {
+    const { data, error } = await this.client
+      .from('customers')
+      .select('id, name, nickname, phone')
+      .eq('tenant_id', tenantId)
+      .order('name', { ascending: true });
+    if (error) return E.left(new Error(error.message));
+    return E.right(
+      ((data ?? []) as {
+        id: number;
+        name: string | null;
+        nickname?: string | null;
+        phone: string | null;
+      }[])
+        .filter((r) => (r.phone ?? '').replace(/\D/g, '').length > 0)
+        .map((r) => ({
+          id: r.id,
+          name: r.name ?? 'Cliente',
+          nickname: r.nickname ?? null,
+          phone: r.phone as string,
+        }))
+    );
+  }
+
+  /** Guarda el contacto del chat como cliente (fila mínima en `customers`). */
+  async saveCustomerFromChat(
+    tenantId: number,
+    name: string,
+    phone: string,
+    nickname: string | null = null
+  ): Promise<E.Either<Error, SavedCustomer>> {
+    // En customers el teléfono se guarda legible, con '+' internacional.
+    const clean = phone.trim();
+    const withPlus = clean.startsWith('+')
+      ? clean
+      : `+${clean.replace(/\D/g, '')}`;
+    const { data, error } = await this.client
+      .from('customers')
+      .insert({
+        tenant_id: tenantId,
+        name: name.trim() || 'Cliente',
+        nickname: (nickname ?? '').trim() || null,
+        phone: withPlus,
+      })
+      .select('id, name, nickname, phone')
+      .single();
+    if (error) return E.left(new Error(error.message));
+    return E.right({
+      id: data.id as number,
+      name: (data.name as string) ?? 'Cliente',
+      nickname: (data.nickname as string | null) ?? null,
+      phone: (data.phone as string) ?? phone,
+    });
+  }
+
   /** Single conversation by id — used by realtime to add a brand-new chat to the
    *  inbox incrementally (without reloading the whole list). */
   async getChatById(id: number): Promise<E.Either<Error, Chat | null>> {
@@ -90,8 +209,16 @@ export class ChatService {
     chatId: number,
     content: string,
     isMine: boolean,
-    replyToId: number | null = null
+    replyToId: number | null = null,
+    channel: Chat['channel'] = 'whatsapp'
   ): Promise<E.Either<Error, ChatMessage>> {
+    // Instagram/TikTok: siempre por su función de envío (sin fallback demo —
+    // la ventana de mensajería y los errores de la plataforma deben llegarle
+    // claros al agente).
+    if (isMine && (channel === 'instagram' || channel === 'tiktok')) {
+      const fn = channel === 'instagram' ? 'ig-send' : 'tiktok-send';
+      return this.invokeSend(fn, { chatId, text: content });
+    }
     // Respuesta del agente → intentar enviarla de verdad por WhatsApp. `wa-send`
     // envía con el token del comerciante y persiste el mensaje server-side.
     if (isMine) {
@@ -142,6 +269,7 @@ export class ChatService {
     const updatePayload: Record<string, unknown> = {
       last_message: content,
       last_message_at: new Date().toISOString(),
+      last_message_is_mine: isMine,
     };
 
     if (!isMine) {
@@ -182,8 +310,21 @@ export class ChatService {
     mediaUrl: string,
     mediaType: 'image' | 'document',
     caption: string,
-    replyToId: number | null = null
+    replyToId: number | null = null,
+    channel: Chat['channel'] = 'whatsapp'
   ): Promise<E.Either<Error, ChatMessage>> {
+    if (channel === 'instagram' || channel === 'tiktok') {
+      const fn = channel === 'instagram' ? 'ig-send' : 'tiktok-send';
+      const name = channel === 'instagram' ? 'Instagram' : 'TikTok';
+      if (mediaType !== 'image') {
+        return E.left(new Error(`${name} solo permite enviar imágenes desde la bandeja`));
+      }
+      // Ni IG ni TikTok soportan caption en attachments: la imagen va primero
+      // y el texto como mensaje aparte.
+      const sent = await this.invokeSend(fn, { chatId, mediaUrl });
+      if (sent.isLeft() || !caption.trim()) return sent;
+      return this.invokeSend(fn, { chatId, text: caption.trim() });
+    }
     const label = mediaType === 'document' ? '📎 Documento' : '📷 Imagen';
     const { data, error } = await this.client.functions.invoke('wa-send', {
       body: {
@@ -231,10 +372,87 @@ export class ChatService {
 
     await this.client
       .from('chats')
-      .update({ last_message: caption || label, last_message_at: new Date().toISOString() })
+      .update({
+        last_message: caption || label,
+        last_message_at: new Date().toISOString(),
+        last_message_is_mine: true,
+      })
       .eq('id', chatId);
 
     return E.right(ChatMessageMapper.toDomain(msgData));
+  }
+
+  /** Invoca una función de envío (wa-send / ig-send / tiktok-send) y mapea la
+   *  respuesta {success, message} | {error} al Either del dominio. */
+  private async invokeSend(
+    fn: 'wa-send' | 'ig-send' | 'tiktok-send',
+    body: Record<string, unknown>
+  ): Promise<E.Either<Error, ChatMessage>> {
+    const { data, error } = await this.client.functions.invoke(fn, { body });
+    if (!error && data?.success && data?.message) {
+      return E.right(ChatMessageMapper.toDomain(data.message));
+    }
+    let message = 'No se pudo enviar el mensaje';
+    const ctx = (error as { context?: Response } | null)?.context;
+    if (ctx) {
+      try {
+        const b = await ctx.clone().json();
+        if (b?.error) {
+          message = typeof b.error === 'string' ? b.error : (b.error?.message ?? message);
+        }
+      } catch {
+        /* sin cuerpo legible */
+      }
+    } else if (data?.error) {
+      message = typeof data.error === 'string' ? data.error : message;
+    }
+    return E.left(new Error(message));
+  }
+
+  /** Total de mensajes sin leer del tenant (suma de unread_count de sus
+   *  chats) — alimenta el badge "Mensajes" del sidebar. */
+  async getUnreadTotal(tenantId: number): Promise<E.Either<Error, number>> {
+    const { data, error } = await this.client
+      .from('chats')
+      .select('unread_count')
+      .eq('tenant_id', tenantId)
+      .gt('unread_count', 0);
+    if (error) return E.left(new Error(error.message));
+    const total = (data ?? []).reduce(
+      (acc, row) => acc + ((row['unread_count'] as number) ?? 0),
+      0
+    );
+    return E.right(total);
+  }
+
+  /** Transcribe a voice note with AI (wa-transcribe → Whisper, 1 crédito).
+   *  Idempotente: si el mensaje ya tiene transcript, el backend lo devuelve
+   *  sin cobrar. */
+  async transcribeAudio(messageId: number): Promise<E.Either<Error, string>> {
+    const { data, error } = await this.client.functions.invoke('wa-transcribe', {
+      body: { messageId },
+    });
+
+    if (!error && data?.success && data?.transcript) {
+      return E.right(data.transcript as string);
+    }
+
+    let message = 'No se pudo transcribir el audio';
+    const ctx = (error as { context?: Response } | null)?.context;
+    if (ctx) {
+      try {
+        const b = await ctx.clone().json();
+        if (b?.error) {
+          message =
+            typeof b.error === 'string' ? b.error : (b.error?.message ?? message);
+        }
+      } catch {
+        /* sin cuerpo legible */
+      }
+    } else if (data?.error) {
+      message = typeof data.error === 'string' ? data.error : message;
+    }
+    return E.left(new Error(message));
   }
 
   /** Add an internal team note ("susurro") to the thread — NOT sent to WhatsApp.
@@ -341,6 +559,45 @@ export class ChatService {
       .order('position', { ascending: true });
     if (error) return E.left(new Error(error.message));
     return E.right(QuickReplyMapper.toDomainList(data || []));
+  }
+
+  /** Crea o actualiza una respuesta rápida del tenant (RLS: miembros). */
+  async saveQuickReply(
+    tenantId: number,
+    payload: { id: number | null; shortcut: string; content: string }
+  ): Promise<E.Either<Error, QuickReply>> {
+    const shortcut = payload.shortcut.trim().replace(/^\/+/, '').toLowerCase();
+    const content = payload.content.trim();
+    const query = payload.id
+      ? this.client
+          .from('quick_replies')
+          .update({ shortcut, content })
+          .eq('id', payload.id)
+      : this.client
+          .from('quick_replies')
+          .insert({ tenant_id: tenantId, shortcut, content });
+    const { data, error } = await query.select().single();
+    if (error) return E.left(new Error(error.message));
+    return E.right(QuickReplyMapper.toDomain(data));
+  }
+
+  /** Renombra el contacto/lead de la conversación. */
+  async updateCustomerName(
+    chatId: number,
+    name: string
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('chats')
+      .update({ customer_name: name })
+      .eq('id', chatId);
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  async deleteQuickReply(id: number): Promise<E.Either<Error, void>> {
+    const { error } = await this.client.from('quick_replies').delete().eq('id', id);
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
   }
 
   /** Past orders for the customer phone, for the ficha. Matches on digits so a

@@ -372,6 +372,199 @@ export class ProductService implements BaseProductService {
     return E.right(undefined);
   }
 
+  /** Busca un producto EXISTENTE del tenant para el import (upsert). Primero por
+   *  SKU (si viene), si no por nombre exacto. Devuelve el id o null. Permite que
+   *  re-importar la lista ACTUALICE en vez de fallar por SKU duplicado. */
+  public async findProductIdForImport(
+    sku: string | null,
+    name: string
+  ): Promise<string | null> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return null;
+
+    const trimmedSku = sku?.trim();
+    if (trimmedSku) {
+      const { data } = await this.client
+        .from('products')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('sku', trimmedSku)
+        .limit(1)
+        .maybeSingle();
+      if (data?.id) return String(data.id);
+    }
+
+    const trimmedName = name?.trim();
+    if (trimmedName) {
+      // Case-insensitive y tolerante a espacios al final (los nombres
+      // importados de Excel suelen traer trailing spaces en la DB). Se traen
+      // candidatos por prefijo y se verifica igualdad exacta tras trim.
+      const pattern = trimmedName.replace(/[\\%_]/g, (m) => `\\${m}`);
+      const { data } = await this.client
+        .from('products')
+        .select('id, name')
+        .eq('tenant_id', tenantId)
+        .ilike('name', `${pattern}%`)
+        .limit(10);
+      const match = (data ?? []).find(
+        (p) =>
+          String(p.name ?? '')
+            .trim()
+            .toLowerCase() === trimmedName.toLowerCase()
+      );
+      if (match?.id) return String(match.id);
+    }
+
+    return null;
+  }
+
+  /** Agrega fotos a un producto (append, sin reemplazar) respetando el cap de
+   *  fotos por plan (`maxPhotos <= 0` = ilimitado). Dedupe por URL. Devuelve
+   *  cuántas se agregaron y cuántas se omitieron por el límite. */
+  public async appendPhotos(
+    productId: string,
+    urls: string[],
+    maxPhotos: number
+  ): Promise<E.Either<Error, { added: number; skipped: number }>> {
+    const { data, error } = await this.client
+      .from('products')
+      .select('photos, name')
+      .eq('id', productId)
+      .single();
+    if (error) return E.left(new Error(error.message));
+
+    const next: string[] = [...((data?.photos as string[]) ?? [])];
+    let added = 0;
+    let skipped = 0;
+    for (const url of urls) {
+      if (!url || next.includes(url)) continue;
+      if (maxPhotos > 0 && next.length >= maxPhotos) {
+        skipped++;
+        continue;
+      }
+      next.push(url);
+      added++;
+    }
+
+    if (added > 0) {
+      const { error: updateError } = await this.client
+        .from('products')
+        .update({ photos: next })
+        .eq('id', productId);
+      if (updateError) return E.left(new Error(updateError.message));
+
+      this.activityLog.log({
+        action: 'product.update',
+        entityType: 'product',
+        entityId: Number(productId),
+        entityName: (data?.name as string) ?? '',
+      });
+    }
+
+    return E.right({ added, skipped });
+  }
+
+  /** Claves de matching del import (SKUs y nombres del tenant, normalizados)
+   *  en una consulta paginada — permite pre-contar los productos NUEVOS de un
+   *  Excel sin hacer un SELECT por fila. */
+  public async listImportKeys(): Promise<{
+    skus: Set<string>;
+    names: Set<string>;
+  }> {
+    const skus = new Set<string>();
+    const names = new Set<string>();
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return { skus, names };
+
+    // Paginado: Supabase capea cada SELECT a 1000 filas.
+    const pageSize = 1000;
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await this.client
+        .from('products')
+        .select('sku, name')
+        .eq('tenant_id', tenantId)
+        .range(from, from + pageSize - 1);
+      if (error || !data?.length) break;
+      for (const r of data) {
+        if (r.sku) skus.add(String(r.sku).trim().toLowerCase());
+        if (r.name) names.add(String(r.name).trim().toLowerCase());
+      }
+      if (data.length < pageSize) break;
+    }
+    return { skus, names };
+  }
+
+  /** Actualización PARCIAL desde el import: solo toca los campos del Excel
+   *  (nombre/descripción/precio/promo/stock/sku/costo) + categorías. Preserva a
+   *  propósito fotos, variantes, tallas, mayoreo y adicionales — que el Excel no
+   *  trae y no queremos borrar al re-importar. */
+  public async updateFromImport(
+    id: string,
+    input: {
+      name: string;
+      description: string | null;
+      price: string;
+      pricePromotional: string;
+      stock: string | null;
+      sku: string | null;
+      productionCost: string | null;
+      categoryIds: string[];
+    }
+  ): Promise<E.Either<Error, void>> {
+    const payload: Record<string, unknown> = {
+      name: input.name,
+      price: input.price === '' ? 0 : input.price,
+      price_promotional:
+        !input.pricePromotional || input.pricePromotional.length === 0
+          ? null
+          : input.pricePromotional,
+      stock: input.stock,
+      sku: input.sku || null,
+      production_cost: input.productionCost
+        ? Number(input.productionCost)
+        : null,
+    };
+    // La descripción solo se pisa si el Excel trae una: una columna vacía no
+    // debe borrar la descripción enriquecida en la app.
+    if (input.description && input.description.trim()) {
+      payload['description'] = this.htmlSanitizer.sanitizeRichText(
+        input.description
+      );
+    }
+
+    const { error } = await this.client
+      .from('products')
+      .update(payload)
+      .eq('id', id);
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    // Categorías: solo se reemplazan si el Excel trae alguna — una columna
+    // vacía no debe quitar las categorías ya asignadas.
+    if (input.categoryIds.length > 0) {
+      await this.client
+        .from('product_categories')
+        .delete()
+        .eq('product_id', id);
+      for (const categoryId of input.categoryIds) {
+        await this.client
+          .from('product_categories')
+          .insert({ product_id: id, category_id: categoryId });
+      }
+    }
+
+    this.activityLog.log({
+      action: 'product.update',
+      entityType: 'product',
+      entityId: Number(id),
+      entityName: input.name,
+    });
+
+    return E.right(undefined);
+  }
+
   /** Duplica un producto: inserta una nueva fila con los mismos campos +
    *  sufijo "(copia)" en el nombre, posición al final, y re-linkea las
    *  categorías al nuevo id. Todo lo que vive en la fila (sizes, wholesale

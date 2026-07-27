@@ -23,11 +23,14 @@ import {
 import { Report } from '../../domain';
 import { ReportStore } from '../../infrastructure';
 
-/** Maximum reports a tenant can generate per calendar month, by plan id. */
+/** Maximum reports a tenant can generate per calendar month, by plan id.
+ *  Debe coincidir con lo prometido en PLAN_FEATURES (plan lib). */
 const REPORTS_LIMIT_BY_PLAN: Record<string, number> = {
-  gratis:   1,
-  basico:   10,
-  avanzado: 20,
+  gratis:     1,
+  basico:     10,
+  pro:        20,
+  avanzado:   30,
+  enterprise: 100,
 };
 
 @Component({

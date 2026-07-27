@@ -160,6 +160,17 @@
         icon="circle-plus"
         [fluid]="false"
       />
+      <span class="text-grey-300 text-xs font-semibold uppercase my-3">
+        {{ 'o' | transloco }}
+      </span>
+      <ui-button
+        (click)="openImportExport()"
+        [label]="'Importar productos' | transloco"
+        icon="upload"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+      />
       }
     </div>
     } @else {
