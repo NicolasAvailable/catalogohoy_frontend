@@ -269,13 +269,13 @@ const Pricing = () => {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-4 xl:gap-6 max-w-[26.25rem] sm:max-w-[56rem] lg:max-w-none mx-auto items-stretch"
+          className="flex snap-x snap-mandatory overflow-x-auto pb-4 -mx-6 px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 sm:overflow-visible sm:mx-auto sm:px-0 sm:pb-0 lg:grid-cols-4 gap-6 lg:gap-4 xl:gap-6 max-w-none sm:max-w-[56rem] lg:max-w-none mx-auto items-stretch"
         >
           {plans.map((plan) => (
             <motion.div
               key={plan.id}
               variants={cardVariants}
-              className={`relative bg-white rounded-[1.25rem] flex flex-col transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.1)] ${
+              className={`relative snap-center shrink-0 basis-[82%] sm:basis-auto sm:shrink bg-white rounded-[1.25rem] flex flex-col transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.1)] ${
                 plan.isPopular
                   ? "border-2 border-[#6366f1] shadow-[0_8px_30px_-6px_rgba(99,102,241,0.25)]"
                   : "border border-[#e2e8f0]"
