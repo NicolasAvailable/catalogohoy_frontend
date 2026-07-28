@@ -510,20 +510,32 @@
 }
 
 /* ── Responsive ── */
-/* Móvil: apilado, una card debajo de otra. */
+/* Móvil: carousel horizontal con snap (sin flechas, se desliza). */
 @media (max-width: 767px) {
   .plans-grid,
   .plans-grid--four {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     grid-template-columns: none;
-    max-width: 26rem;
-    margin: 0 auto;
+    overflow-x: auto;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    scroll-snap-type: x mandatory;
+    gap: 1rem;
+    padding: 0.25rem 0.25rem 0.75rem;
+    scrollbar-width: none; /* Firefox */
+    -webkit-overflow-scrolling: touch;
   }
-
-  /* Con solo 3 features la card queda muy corta apilada en una columna. */
+  .plans-grid::-webkit-scrollbar {
+    display: none; /* WebKit */
+  }
+  .plan-card,
   .plan-card--enterprise {
-    min-height: 30rem;
+    flex: 0 0 86%;
+    max-width: 22rem;
+    min-height: 0;
+    scroll-snap-align: center;
   }
 }
 
