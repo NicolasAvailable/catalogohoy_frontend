@@ -1,8 +1,5 @@
 import { ArrowRight } from "lucide-react";
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-
-const rotatingWords = ["minutos", "segundos", "un clic"];
+import { motion } from "framer-motion";
 
 type SocialBrand = { name: string; logo: string };
 const socialBrands: SocialBrand[] = [
@@ -26,87 +23,60 @@ const socialBrands: SocialBrand[] = [
     name: "Detalles CECY",
     logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1775702729444_WhatsApp_Image_2026-04-03_at_3.15.13_PM.jpeg",
   },
-  {
-    name: "Essence Royale",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1776826276480_1000275966.jpeg",
-  },
 ];
 
 const Hero = () => {
-  const [wordIndex, setWordIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setWordIndex((prev) => (prev + 1) % rotatingWords.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
-    <section
-      className="min-h-screen flex flex-col justify-center relative overflow-hidden pt-20 pb-12 lg:py-0"
-      style={{ background: "linear-gradient(180deg, #ffffff 0%, #f8faff 40%, #eef4ff 70%, #dbeafe 100%)" }}
-    >
-      {/* Decorative blurred circles */}
-      <div className="absolute top-20 left-1/4 w-72 h-72 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-indigo-200/20 rounded-full blur-3xl pointer-events-none" />
+    <section className="relative overflow-hidden bg-white pt-40 pb-16 lg:pt-48 lg:pb-20">
+      {/* Halo suave detrás del contenido */}
+      <div className="pointer-events-none absolute -top-24 left-1/2 h-[32rem] w-[52rem] -translate-x-1/2 rounded-full bg-primary/5 blur-3xl" />
 
-      <div className="container mx-auto px-6 relative z-10 max-w-6xl">
-        <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_1fr] gap-10 lg:gap-12 items-center">
-
+      <div className="container relative z-10 mx-auto max-w-6xl px-6">
+        <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-12">
           {/* ═══ LEFT: Copy ═══ */}
           <div className="text-center lg:text-left">
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="font-display font-extrabold text-4xl sm:text-5xl md:text-6xl lg:text-6xl xl:text-7xl text-foreground leading-[1.1] tracking-tight"
+              className="font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-foreground sm:text-5xl md:text-6xl xl:text-[4.2rem]"
             >
-              Crea tu catálogo digital en{" "}
-              <span className="relative inline-block">
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={rotatingWords[wordIndex]}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.4 }}
-                    className="text-primary inline-block"
-                  >
-                    {rotatingWords[wordIndex]}
-                  </motion.span>
-                </AnimatePresence>
-              </span>
+              Crea tu catálogo
+              <br />
+              digital en <span className="text-primary">minutos</span>
             </motion.h1>
 
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="mt-6 text-lg md:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed"
+              className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground md:text-xl lg:mx-0"
             >
               Diseña, organiza y comparte catálogos profesionales para tu tienda.
-              Ideal para tiendas de ropa y cualquier tipo de negocio.
+              Publica tus productos y recibe pedidos por WhatsApp, Instagram y
+              más — sin conocimientos técnicos.
             </motion.p>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="mt-8 flex flex-col sm:flex-row items-center lg:items-start lg:justify-start justify-center gap-4"
+              className="mt-9 flex flex-col items-center gap-4 sm:flex-row lg:items-start lg:justify-start"
             >
               <a
-                href="https://auth.catalogohoy.com/signup" target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-3.5 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary-700 transition-all hover:shadow-xl hover:shadow-primary/30 hover:scale-105"
+                href="https://auth.catalogohoy.com/signup"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-3.5 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary/30"
               >
                 Comenzar gratis
                 <ArrowRight className="h-4 w-4" />
               </a>
               <a
                 href="#features"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-8 py-3.5 text-base font-semibold text-foreground hover:bg-muted transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-white px-8 py-3.5 text-base font-semibold text-foreground transition-colors hover:bg-muted"
               >
-                Ver características
+                Ver funciones
               </a>
             </motion.div>
 
@@ -115,7 +85,7 @@ const Hero = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
-              className="mt-8 flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-3 sm:gap-4"
+              className="mt-9 flex flex-col items-center gap-3 sm:flex-row sm:gap-4 lg:justify-start"
             >
               <div className="flex -space-x-2">
                 {socialBrands.map((brand, i) => (
@@ -124,50 +94,50 @@ const Hero = () => {
                     src={brand.logo}
                     alt={brand.name}
                     loading="lazy"
-                    className="w-10 h-10 rounded-full ring-2 ring-white object-cover bg-white shadow-sm"
+                    className="h-10 w-10 rounded-full bg-white object-cover shadow-sm ring-2 ring-white"
                   />
                 ))}
-                <div className="w-10 h-10 rounded-full ring-2 ring-white bg-foreground text-white text-[0.65rem] font-bold flex items-center justify-center shadow-sm">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-[0.65rem] font-bold text-white shadow-sm ring-2 ring-white">
                   +500
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">+500 negocios</span>{" "}
+                <span className="font-semibold text-foreground">
+                  +500 negocios
+                </span>{" "}
                 ya usan CatalogoHoy
               </p>
             </motion.div>
           </div>
 
-          {/* ═══ RIGHT: Photo ═══ */}
+          {/* ═══ RIGHT: Foto ═══ */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
-            className="relative hidden lg:flex justify-end order-last"
+            className="relative order-last hidden justify-end lg:flex"
           >
             <div className="relative w-[280px] sm:w-[340px] lg:w-[420px]">
-              {/* Circular indigo background */}
+              {/* Círculo de fondo */}
               <div
-                className="rounded-full aspect-square"
+                className="aspect-square rounded-full"
                 style={{
                   background:
                     "radial-gradient(circle at 30% 30%, #818cf8 0%, #6366f1 55%, #4f46e5 100%)",
                   boxShadow: "0 30px 60px -20px rgba(79, 70, 229, 0.45)",
                 }}
               />
-              {/* Photo (overlaid on top of circle, head pokes out) */}
+              {/* Foto (sobre el círculo, la cabeza sobresale) */}
               <img
                 src="/hero-photo.png"
                 alt="Persona usando CatalogoHoy"
-                className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-auto pointer-events-none select-none"
+                className="pointer-events-none absolute bottom-0 left-1/2 h-auto w-full -translate-x-1/2 select-none"
                 draggable={false}
               />
             </div>
           </motion.div>
-
         </div>
       </div>
-
     </section>
   );
 };

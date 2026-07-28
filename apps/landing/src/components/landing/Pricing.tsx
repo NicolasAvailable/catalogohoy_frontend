@@ -1,4 +1,4 @@
-import { Check, X, PlusCircle, CreditCard, Smartphone } from "lucide-react";
+import { Check, X, PlusCircle, CreditCard, Smartphone, Gift } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { isVenezuela, useVisitorCountry } from "@/hooks/use-visitor-country";
@@ -11,10 +11,11 @@ const WHATSAPP_NUMBER = "584220240947";
 
 type BillingPeriod = "monthly" | "quarterly" | "annual";
 
-const BILLING_CONFIG: Record<BillingPeriod, { months: number; discount: number }> = {
-  monthly:   { months: 1,  discount: 0 },
-  quarterly: { months: 3,  discount: 0.10 },
-  annual:    { months: 12, discount: 0.25 },
+// quarterly: 10% off. annual: 1 mes gratis (se paga 11 de 12 meses).
+const BILLING_CONFIG: Record<BillingPeriod, { months: number; discount: number; freeMonths: number }> = {
+  monthly:   { months: 1,  discount: 0,    freeMonths: 0 },
+  quarterly: { months: 3,  discount: 0.10, freeMonths: 0 },
+  annual:    { months: 12, discount: 0,    freeMonths: 1 },
 };
 
 const PLAN_BASE_PRICES: Record<string, number> = {
@@ -28,7 +29,7 @@ const CATALOG_ADDON_PRICE = 4.99;
 const billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
   { key: "monthly",   label: "Mensual" },
   { key: "quarterly", label: "Trimestral", savingsLabel: "10% off" },
-  { key: "annual",    label: "Anual",      savingsLabel: "25% off" },
+  { key: "annual",    label: "Anual",      savingsLabel: "1 mes gratis" },
 ];
 
 /* ═══════════════════════════════════════
@@ -136,16 +137,19 @@ function getBasePrice(plan: PlanData): number {
   return PLAN_BASE_PRICES[plan.id] ?? 0;
 }
 
-function getPeriodPrice(plan: PlanData, period: BillingPeriod): number {
+/** Total que se paga por el período completo (con descuento / mes gratis aplicado). */
+function getPeriodTotal(plan: PlanData, period: BillingPeriod): number {
   if (plan.isFree) return 0;
-  const { months, discount } = BILLING_CONFIG[period];
-  return Math.round(getBasePrice(plan) * months * (1 - discount) * 100) / 100;
+  const { months, discount, freeMonths } = BILLING_CONFIG[period];
+  const paidMonths = (months - freeMonths) * (1 - discount);
+  return Math.round(getBasePrice(plan) * paidMonths * 100) / 100;
 }
 
-function getMonthlyEquivalent(plan: PlanData, period: BillingPeriod): number {
+/** Precio mensual efectivo (total del período dividido entre los meses del período). */
+function getMonthlyEffective(plan: PlanData, period: BillingPeriod): number {
   if (plan.isFree) return 0;
-  const { discount } = BILLING_CONFIG[period];
-  return Math.round(getBasePrice(plan) * (1 - discount) * 100) / 100;
+  const { months } = BILLING_CONFIG[period];
+  return Math.round((getPeriodTotal(plan, period) / months) * 100) / 100;
 }
 
 function formatPrice(value: number): string {
@@ -170,7 +174,7 @@ function handleSelectPlan(plan: PlanData, period: BillingPeriod): void {
     window.open("https://auth.catalogohoy.com/signup", "_blank");
     return;
   }
-  const price = formatPrice(getPeriodPrice(plan, period));
+  const price = formatPrice(getPeriodTotal(plan, period));
   const periodLabel = getPeriodLabel(period, false);
   const message = encodeURIComponent(
     `Hola, me interesa adquirir el plan *${plan.name}* ($${price}${periodLabel} USD) de CatalogoHoy. ¿Me pueden dar más información?`
@@ -307,22 +311,36 @@ const Pricing = () => {
                         <div className="flex items-baseline gap-[0.1rem]">
                           <span className="text-[1.5rem] lg:text-[1.25rem] font-bold text-[#0f172a]">$</span>
                           <span className="text-[2.75rem] lg:text-[2.25rem] xl:text-[2.5rem] font-extrabold text-[#0f172a] leading-none">
-                            {formatPrice(getPeriodPrice(plan, billingPeriod))}
+                            {formatPrice(getMonthlyEffective(plan, billingPeriod))}
                           </span>
                         </div>
-                        <span className="text-[0.9rem] text-[#94a3b8] ml-1">
-                          {getPeriodLabel(billingPeriod, false)} · USD
-                        </span>
+                        <span className="text-[0.9rem] text-[#94a3b8] ml-1">/mes · USD</span>
                       </>
                     )}
                   </div>
+
+                  {/* Total del período + gancho de ahorro (trimestral / anual) */}
                   {!plan.isFree && billingPeriod !== "monthly" && (
-                    <p className="text-[0.78rem] text-[#94a3b8] mt-1">
-                      ${formatPrice(getMonthlyEquivalent(plan, billingPeriod))}/mes
-                    </p>
+                    <div className="mt-1 flex flex-col gap-[0.15rem]">
+                      <p className="text-[0.78rem] text-[#94a3b8]">
+                        Facturado ${formatPrice(getPeriodTotal(plan, billingPeriod))}
+                        {getPeriodLabel(billingPeriod, false)}
+                      </p>
+                      <p className="inline-flex items-center gap-1 text-[0.78rem] font-semibold text-[#16a34a]">
+                        {billingPeriod === "annual" ? (
+                          <>
+                            <Gift className="h-3.5 w-3.5 shrink-0" />
+                            1 mes gratis
+                          </>
+                        ) : (
+                          "Ahorras 10%"
+                        )}
+                      </p>
+                    </div>
                   )}
+
                   {!plan.isFree && showBcv && (
-                    <p className="text-sm font-medium text-[#1e293b] mt-0.5">a tasa BCV</p>
+                    <p className="text-sm font-medium text-[#1e293b] mt-1">a tasa BCV</p>
                   )}
                 </div>
 
