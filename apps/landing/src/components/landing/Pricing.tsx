@@ -275,7 +275,7 @@ const Pricing = () => {
             <motion.div
               key={plan.id}
               variants={cardVariants}
-              className={`relative snap-center shrink-0 basis-[82%] sm:basis-auto sm:shrink bg-white rounded-[1.25rem] flex flex-col transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.1)] ${
+              className={`relative snap-center shrink-0 basis-[86%] sm:basis-auto sm:shrink bg-white rounded-[1.25rem] flex flex-col transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.1)] ${
                 plan.isPopular
                   ? "border-2 border-[#6366f1] shadow-[0_8px_30px_-6px_rgba(99,102,241,0.25)]"
                   : "border border-[#e2e8f0]"
