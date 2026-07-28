@@ -66,6 +66,7 @@ import {
   DEFAULT_WHATSAPP_ORDER_MESSAGE,
   EcommerceConfig,
   ExchangeRateType,
+  NO_CURRENCY_SYMBOL,
   PreviewMessage,
   findCountryByCode,
   ShippingMethod,
@@ -271,6 +272,9 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftDefaultLanguage = signal<string>('es');
   public readonly appLanguages = [...APP_LANGUAGES];
   public readonly draftCurrencySymbol = signal('$');
+  /** "Mostrar precios sin símbolo de moneda" — persiste el centinela
+   *  NO_CURRENCY_SYMBOL en `currency_symbol`. Ver onToggleHideCurrencySymbol. */
+  public readonly draftHideCurrencySymbol = signal(false);
   public readonly draftShowReferencePrice = signal(true);
   public readonly draftShowLocalCurrencyPrice = signal(true);
   public readonly draftWhatsappOrderMessage = signal<string | null>(null);
@@ -799,6 +803,11 @@ export class EcommerceConfigComponent implements OnInit {
       const exists = this.configStore.currencyConfigExists();
       const countryCode = this.configStore.config()?.countryCode ?? null;
       untracked(() => {
+        // Estado del toggle "sin símbolo": el centinela persistido es la fuente
+        // de verdad. Sin fila (seed) => símbolo real por país => false.
+        this.draftHideCurrencySymbol.set(
+          cc.currencySymbol === NO_CURRENCY_SYMBOL
+        );
         // Seed from country defaults when:
         // - No persisted row yet, OR
         // - VE tenant still has the old USD default that should be VES
@@ -918,6 +927,33 @@ export class EcommerceConfigComponent implements OnInit {
     value: TenantCurrencyConfig[K]
   ) {
     this.draftCurrency.set({ ...this.draftCurrency(), [key]: value });
+  }
+
+  /**
+   * Toggle "Mostrar precios sin símbolo de moneda". Al activarlo persiste el
+   * centinela NO_CURRENCY_SYMBOL en `currency_symbol` de AMBAS tablas
+   * (tenant_ecommerce_config vía draftCurrencySymbol, tenant_currency_config vía
+   * draftCurrency) para que el catálogo público oculte el símbolo sea cual sea
+   * el país. Al desactivarlo restaura el símbolo derivado del país.
+   */
+  onToggleHideCurrencySymbol(hide: boolean) {
+    this.draftHideCurrencySymbol.set(hide);
+    const symbol = hide ? NO_CURRENCY_SYMBOL : this.defaultCurrencySymbol();
+    this.draftCurrencySymbol.set(symbol);
+    this.updateCurrencyField('currencySymbol', symbol);
+  }
+
+  /** Símbolo por defecto según el país/moneda (para restaurar al desactivar
+   *  "sin símbolo"). Misma lógica que el seed de país. */
+  private defaultCurrencySymbol(): string {
+    const cc = this.draftCurrency();
+    if (this.draftCountryCode() === 'VE') {
+      return cc.displayCurrency === 'EUR' ? '€' : '$';
+    }
+    return (
+      SUPPORTED_CURRENCIES.find((c) => c.code === cc.productCurrency)?.symbol ??
+      '$'
+    );
   }
 
   async ngOnInit() {

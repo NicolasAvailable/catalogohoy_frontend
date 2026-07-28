@@ -14,6 +14,7 @@ import {
   ExchangeRateType,
   findCountryByCode,
   findCurrencyByCode,
+  NO_CURRENCY_SYMBOL,
   ShippingMethod,
   ShippingMethodType,
   SocialLinks,
@@ -134,7 +135,12 @@ export class EcommerceService implements BaseEcommerceService {
           exchangeRateType: (cc.exchange_rate_type as ExchangeRateType) ?? 'none',
           customRate: cc.custom_rate ?? null,
           showDualCurrency: cc.show_dual_currency ?? false,
-          currencySymbol: cc.currency_symbol ?? '$',
+          // El centinela "sin símbolo" se mapea a '' para que nada downstream
+          // renderice el espacio de ancho cero.
+          currencySymbol:
+            cc.currency_symbol === NO_CURRENCY_SYMBOL
+              ? ''
+              : cc.currency_symbol ?? '$',
           decimalSeparator: cc.decimal_separator ?? ',',
           thousandSeparator: cc.thousand_separator ?? '.',
         }
@@ -168,8 +174,16 @@ export class EcommerceService implements BaseEcommerceService {
         : null;
       return currency?.symbol ?? null;
     })();
-    const currencySymbol =
-      data.tenant.country_code === 'VE'
+    // "Sin símbolo de moneda": el tenant lo activa desde el editor y se persiste
+    // como centinela (NO_CURRENCY_SYMBOL) en `currency_symbol`. Se chequea ANTES
+    // del split VE/resto para que aplique en cualquier país. La línea en Bs. de
+    // VE usa el literal "Bs." aparte, así que no se ve afectada.
+    const symbolHidden =
+      cc?.currency_symbol === NO_CURRENCY_SYMBOL ||
+      config?.currency_symbol === NO_CURRENCY_SYMBOL;
+    const currencySymbol = symbolHidden
+      ? ''
+      : data.tenant.country_code === 'VE'
         ? config?.currency_symbol ?? symbolFromCountry ?? '$'
         : cc?.currency_symbol?.trim() ||
           symbolFromCountry ||

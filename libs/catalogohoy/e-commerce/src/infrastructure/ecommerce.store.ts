@@ -1,4 +1,5 @@
 import { computed, inject } from '@angular/core';
+import { NO_CURRENCY_SYMBOL } from '@catalogohoy/ecommerce-config';
 import { Product, ProductList } from '@catalogohoy/product';
 import {
   patchState,
@@ -68,8 +69,13 @@ export const EcommerceStore = signalStore(
     }),
     currencySymbol: computed(() => {
       const overrides = store.previewOverrides();
-      if (store.isPreviewMode() && overrides?.currencySymbol) {
-        return overrides.currencySymbol;
+      // En preview el editor manda el símbolo en cada update; con `!== undefined`
+      // un símbolo vacío (o el centinela "sin símbolo") también se aplica, para
+      // reflejar en vivo el toggle "mostrar precios sin símbolo de moneda".
+      if (store.isPreviewMode() && overrides?.currencySymbol !== undefined) {
+        return overrides.currencySymbol === NO_CURRENCY_SYMBOL
+          ? ''
+          : overrides.currencySymbol;
       }
       return store.catalogInfo()?.currencySymbol ?? '$';
     }),

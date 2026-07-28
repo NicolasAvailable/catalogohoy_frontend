@@ -78,6 +78,17 @@
   (`none`/`bcv_usd`/`bcv_eur`/`custom`). Plantilla de WhatsApp con 9 variables (máx 1000 chars).
 - **Gotcha**: `get_public_catalog` (RPC) tiene un SELECT estático → columnas nuevas de
   `tenant_ecommerce_config` hay que agregarlas también ahí; la migración del repo está atrás de prod.
+- **Precios sin símbolo de moneda** (2026-07-28): toggle "Mostrar precios sin símbolo de moneda"
+  (tab Pagos → card "Monedas del catálogo", visible para TODOS los países, fuera del bloque
+  `@if (isVenezuela())`). No agrega columna ni toca el RPC: reusa la columna `currency_symbol`
+  guardando el centinela `NO_CURRENCY_SYMBOL` (`'\u200B'`, zero-width space, en
+  `ecommerce-config.model.ts`) en **ambas** tablas (`tenant_ecommerce_config` vía
+  `draftCurrencySymbol` + `tenant_currency_config` vía `draftCurrency`). El storefront
+  (`ecommerce.service.ts`) intercepta el centinela ANTES del split VE/resto y lo mapea a `''`
+  (la línea en Bs. de VE usa el literal `"Bs."` aparte, no se afecta). Preview en vivo: el store
+  (`ecommerce.store.ts`) mapea el centinela a `''` en modo preview. Los decimales YA se ocultan
+  solos en precios enteros (`tenant-price.pipe.ts`), así que no hubo cambio ahí. Default = símbolo
+  visible (cero impacto salvo opt-in).
 - Editor tiene preview en vivo del catálogo vía `postMessage` (`PreviewMessage`) +
   `unsaved-changes.guard`.
 - **Cambio de slug** (tab General → card propia "Dirección del catálogo", al final, debajo de

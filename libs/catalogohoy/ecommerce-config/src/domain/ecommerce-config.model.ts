@@ -417,6 +417,21 @@ export const DEFAULT_BUSINESS_HOURS_WEEK: BusinessHoursWeek = [
   { dayOfWeek: 6, openTime: '08:00', closeTime: '20:00', isOpen: true },
 ];
 
+/**
+ * Centinela guardado en `currency_symbol` (en `tenant_currency_config` y en
+ * `tenant_ecommerce_config`) que significa "mostrar los precios SIN símbolo de
+ * moneda" (ej: `700.000` en vez de `$700.000`).
+ *
+ * Reusa la columna de texto existente a propósito: así el RPC público
+ * `get_public_catalog` no necesita cambios ni columnas nuevas. Es un espacio de
+ * ancho cero (U+200B): es a prueba de fallos (invisible si algún camino lo
+ * renderiza sin interceptar) y NO lo elimina `String.trim()` (a diferencia de
+ * `''` o `' '`), por lo que la cadena de fallback del símbolo puede detectarlo
+ * en vez de caer al símbolo default del país (`$`). El servicio del catálogo
+ * público lo mapea a `''` antes de renderizar.
+ */
+export const NO_CURRENCY_SYMBOL = '\u200B';
+
 export type ExchangeRateType = 'none' | 'bcv_usd' | 'bcv_eur' | 'custom';
 
 export interface TenantCurrencyConfig {

@@ -1077,6 +1077,23 @@
             </div>
           </div>
 
+          <div class="price-visibility-toggles">
+            <div class="price-visibility-toggle">
+              <div class="price-visibility-toggle__text">
+                <span class="price-visibility-toggle__title">
+                  {{ 'Mostrar precios sin símbolo de moneda' | transloco }}
+                </span>
+                <small class="price-visibility-toggle__hint">
+                  {{ 'Los precios se muestran solo con el número, sin el signo de moneda (ej: 700.000 en vez de $700.000).' | transloco }}
+                </small>
+              </div>
+              <ui-toggle
+                [ngModel]="draftHideCurrencySymbol()"
+                (ngModelChange)="onToggleHideCurrencySymbol($event)"
+              ></ui-toggle>
+            </div>
+          </div>
+
           @if (isVenezuela()) {
             <div class="divider"></div>
             <div>
