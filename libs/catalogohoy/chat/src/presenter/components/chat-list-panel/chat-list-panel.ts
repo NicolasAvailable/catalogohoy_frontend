@@ -18,9 +18,10 @@ export class ChatListPanelComponent {
   private readonly whatsAppService = inject(WhatsAppService);
   private readonly tenantStore = inject(TenantStore);
 
-  /** Conexión de IG/TikTok (null = aún no consultado → no mostrar banner). */
+  /** Conexión de IG/TikTok/Messenger (null = aún no consultado → no banner). */
   private readonly igConnected = signal<boolean | null>(null);
   private readonly ttConnected = signal<boolean | null>(null);
+  private readonly fbConnected = signal<boolean | null>(null);
 
   /** Ningún canal conectado (pero hay historial, si no la vista sería el
    *  empty state): banner de aviso con CTA a Conectar. */
@@ -29,18 +30,21 @@ export class ChatListPanelComponent {
       !this.whatsAppStore.isLoading() &&
       !this.whatsAppStore.hasActiveAccount() &&
       this.igConnected() === false &&
-      this.ttConnected() === false
+      this.ttConnected() === false &&
+      this.fbConnected() === false
   );
 
   constructor() {
     this.tenantStore.getTenantIdAsync().then(async (tenantId) => {
       if (!tenantId) return;
-      const [ig, tt] = await Promise.all([
+      const [ig, tt, fb] = await Promise.all([
         this.whatsAppService.getInstagramAccount(tenantId),
         this.whatsAppService.getTikTokAccount(tenantId),
+        this.whatsAppService.getMessengerAccount(tenantId),
       ]);
       if (ig.isRight()) this.igConnected.set(ig.value !== null);
       if (tt.isRight()) this.ttConnected.set(tt.value !== null);
+      if (fb.isRight()) this.fbConnected.set(fb.value !== null);
     });
   }
 

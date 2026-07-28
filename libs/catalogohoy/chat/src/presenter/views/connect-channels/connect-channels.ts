@@ -24,7 +24,7 @@ const CHAT_ENABLED_SLUGS: string[] = [];
 
 /** Canal conectable desde el hub (estilo galería de SocialGest). */
 interface ConnectableChannel {
-  key: 'whatsapp' | 'instagram' | 'tiktok';
+  key: 'whatsapp' | 'instagram' | 'messenger' | 'tiktok';
   name: string;
   logo: string;
   description: string;
@@ -73,6 +73,7 @@ export class ConnectChannelsComponent implements OnInit {
 
   protected readonly igAccount = signal<SocialAccount | null>(null);
   protected readonly ttAccount = signal<SocialAccount | null>(null);
+  protected readonly fbAccount = signal<SocialAccount | null>(null);
 
   protected readonly channels: ConnectableChannel[] = [
     {
@@ -88,6 +89,14 @@ export class ConnectChannelsComponent implements OnInit {
       logo: '/images/instagram.svg',
       description: 'Responde los mensajes directos de tu cuenta profesional.',
       route: '/admin/chat/connect/instagram',
+      comingSoon: true,
+    },
+    {
+      key: 'messenger',
+      name: 'Messenger',
+      logo: '/images/messenger.svg',
+      description: 'Responde los mensajes de Messenger de tu página de Facebook.',
+      route: '/admin/chat/connect/messenger',
       comingSoon: true,
     },
     {
@@ -127,15 +136,17 @@ export class ConnectChannelsComponent implements OnInit {
    *  habilita; si ya está conectado, a la bandeja de mensajes; si no, a la
    *  pantalla de conexión del canal. */
   protected routeFor(channel: ConnectableChannel): string | null {
+    // Un canal ya conectado (incluido el demo) lleva a la bandeja aunque siga
+    // marcado "Próximamente" para el resto de los usuarios.
+    if (this.isConnected(channel)) return '/admin/chat/conversations';
     if (channel.comingSoon || !this.canConnect()) return null;
-    return this.isConnected(channel)
-      ? '/admin/chat/conversations'
-      : channel.route;
+    return channel.route;
   }
 
   protected isConnected(channel: ConnectableChannel): boolean {
     if (channel.key === 'whatsapp') return this.waConnected();
     if (channel.key === 'instagram') return this.igAccount() !== null;
+    if (channel.key === 'messenger') return this.fbAccount() !== null;
     return this.ttAccount() !== null;
   }
 
@@ -154,7 +165,11 @@ export class ConnectChannelsComponent implements OnInit {
       return account.displayName?.trim() || withPlus;
     }
     const account =
-      channel.key === 'instagram' ? this.igAccount() : this.ttAccount();
+      channel.key === 'instagram'
+        ? this.igAccount()
+        : channel.key === 'messenger'
+          ? this.fbAccount()
+          : this.ttAccount();
     if (!account) return null;
     return account.username
       ? `@${account.username}`
@@ -164,12 +179,14 @@ export class ConnectChannelsComponent implements OnInit {
   private async loadSocialAccounts(): Promise<void> {
     const tenantId = await this.tenantStore.getTenantIdAsync();
     if (!tenantId) return;
-    const [ig, tt] = await Promise.all([
+    const [ig, tt, fb] = await Promise.all([
       this.whatsAppService.getInstagramAccount(tenantId),
       this.whatsAppService.getTikTokAccount(tenantId),
+      this.whatsAppService.getMessengerAccount(tenantId),
     ]);
     if (ig.isRight()) this.igAccount.set(ig.value);
     if (tt.isRight()) this.ttAccount.set(tt.value);
+    if (fb.isRight()) this.fbAccount.set(fb.value);
   }
 
   /** Desvincular con confirmación: la cuenta pasa a inactiva pero los chats y
@@ -233,6 +250,7 @@ export class ConnectChannelsComponent implements OnInit {
       return;
     }
     if (channel.key === 'instagram') this.igAccount.set(null);
+    else if (channel.key === 'messenger') this.fbAccount.set(null);
     else this.ttAccount.set(null);
     this.toast.success('Cuenta desvinculada. Tus chats quedan guardados.');
   }

@@ -71,9 +71,10 @@ export class ConversationPanelComponent {
   private readonly whatsAppService = inject(WhatsAppService);
   private readonly tenantStore = inject(TenantStore);
 
-  /** Conexión de IG/TikTok (null = aún no consultado → no bloquear). */
+  /** Conexión de IG/TikTok/Messenger (null = aún no consultado → no bloquear). */
   private readonly igConnected = signal<boolean | null>(null);
   private readonly ttConnected = signal<boolean | null>(null);
+  private readonly fbConnected = signal<boolean | null>(null);
 
   /** Ventana de servicio de WhatsApp (24h) cerrada: el último mensaje ENTRANTE
    *  del cliente fue hace más de 24h (o no hay ninguno). Fuera de esa ventana
@@ -103,6 +104,7 @@ export class ConversationPanelComponent {
     }
     if (chat.channel === 'instagram') return this.igConnected() === false;
     if (chat.channel === 'tiktok') return this.ttConnected() === false;
+    if (chat.channel === 'messenger') return this.fbConnected() === false;
     return false;
   });
 
@@ -153,12 +155,14 @@ export class ConversationPanelComponent {
     // Estado de conexión de IG/TikTok (una consulta) para el modo solo lectura.
     this.tenantStore.getTenantIdAsync().then(async (tenantId) => {
       if (!tenantId) return;
-      const [ig, tt] = await Promise.all([
+      const [ig, tt, fb] = await Promise.all([
         this.whatsAppService.getInstagramAccount(tenantId),
         this.whatsAppService.getTikTokAccount(tenantId),
+        this.whatsAppService.getMessengerAccount(tenantId),
       ]);
       if (ig.isRight()) this.igConnected.set(ig.value !== null);
       if (tt.isRight()) this.ttConnected.set(tt.value !== null);
+      if (fb.isRight()) this.fbConnected.set(fb.value !== null);
     });
 
     // New message → scroll to the bottom if we're pinned there.

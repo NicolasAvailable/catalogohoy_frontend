@@ -1,0 +1,85 @@
+<div class="w-full max-w-3xl mx-auto p-4 md:p-6 flex flex-col gap-5">
+  <!-- ═══ Header ═══ -->
+  <div class="flex items-center gap-3">
+    <button
+      type="button"
+      class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-grey-50 transition-colors shrink-0 cursor-pointer"
+      (click)="goBack()"
+    >
+      <ui-icon name="arrow-left" size="20" styleClass="text-grey-600" />
+    </button>
+    <h1 class="text-xl md:text-2xl font-bold text-grey-800">
+      {{ 'Conectar a Messenger' | transloco }}
+    </h1>
+  </div>
+
+  <!-- ═══ Card principal ═══ -->
+  <div
+    class="bg-white rounded-2xl border border-grey-100 p-8 flex flex-col items-center gap-4 text-center"
+  >
+    <img src="/images/messenger.svg" alt="Messenger" class="w-14 h-14 rounded-2xl" />
+
+    @if (fbAccount(); as fb) {
+    <div class="flex flex-col items-center gap-1">
+      <p class="text-base font-semibold text-grey-800">{{ fb.displayName || fb.username }}</p>
+      <p class="text-sm text-green-600 font-medium">{{ 'conectado' | transloco }} ✓</p>
+    </div>
+    <p class="text-sm text-grey-500 leading-relaxed max-w-md">
+      {{ 'Los mensajes de Messenger de tu página de Facebook ya llegan a tu bandeja de CatalogoHoy.' | transloco }}
+    </p>
+    <div class="flex items-center gap-2">
+      <ui-button
+        label="Abrir la bandeja"
+        icon="message-circle"
+        (click)="goToInbox()"
+      />
+      <ui-button
+        label="Reconectar"
+        severity="secondary"
+        [isLoading]="isStarting()"
+        (click)="connect()"
+      />
+    </div>
+    } @else {
+    <p class="text-sm text-grey-500 leading-relaxed max-w-md">
+      {{ 'Recibe y responde los mensajes de Messenger de tu página de Facebook en la misma bandeja donde atiendes WhatsApp.' | transloco }}
+    </p>
+    <ui-button
+      label="Conectar Messenger"
+      icon="log-in"
+      [isLoading]="isStarting()"
+      [disabled]="isLoading()"
+      (click)="connect()"
+    />
+    }
+
+    @if (hasError()) {
+    <p class="text-xs text-red-500">
+      {{ 'No se pudo conectar Messenger. Intenta de nuevo.' | transloco }}
+    </p>
+    }
+  </div>
+
+  <!-- ═══ Requisitos ═══ -->
+  @if (!fbAccount()) {
+  <div class="bg-white rounded-2xl border border-grey-100 p-5">
+    <h2 class="text-base font-semibold text-grey-800 mb-3">
+      {{ 'Antes de conectar' | transloco }}
+    </h2>
+    <ul class="flex flex-col gap-2.5">
+      <li class="flex items-start gap-2 text-sm text-grey-600">
+        <ui-icon name="check-circle" size="16" styleClass="text-green-600 shrink-0 mt-0.5" />
+        {{ 'Debes administrar una página de Facebook (no un perfil personal).' | transloco }}
+      </li>
+      <li class="flex items-start gap-2 text-sm text-grey-600">
+        <ui-icon name="check-circle" size="16" styleClass="text-green-600 shrink-0 mt-0.5" />
+        {{ 'Al conectar, autoriza el acceso a los mensajes de tu página para que lleguen a la bandeja.' | transloco }}
+      </li>
+      <li class="flex items-start gap-2 text-sm text-grey-600">
+        <ui-icon name="check-circle" size="16" styleClass="text-green-600 shrink-0 mt-0.5" />
+        {{ 'Seguirás usando Messenger con normalidad: los mensajes se espejan en la bandeja.' | transloco }}
+      </li>
+    </ul>
+  </div>
+  }
+</div>

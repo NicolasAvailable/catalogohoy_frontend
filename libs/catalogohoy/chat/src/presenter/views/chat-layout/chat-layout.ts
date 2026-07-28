@@ -68,10 +68,13 @@ export class ChatLayoutComponent implements OnInit, OnDestroy {
       const query = this.route.snapshot.queryParamMap;
       // Recién conectado Instagram → abrir su conversación más reciente.
       const igConnected = query.get('ig') === 'connected';
+      const fbConnected = query.get('fb') === 'connected';
       const wanted = Number(query.get('chat'));
       const target = igConnected
         ? chats.find((c) => c.channel === 'instagram') ?? chats[0]
-        : chats.find((c) => c.id === wanted) ?? chats[0];
+        : fbConnected
+          ? chats.find((c) => c.channel === 'messenger') ?? chats[0]
+          : chats.find((c) => c.id === wanted) ?? chats[0];
       this.chatStore.selectChat(target.id);
     });
 
@@ -81,7 +84,7 @@ export class ChatLayoutComponent implements OnInit, OnDestroy {
       if (id == null) return;
       this.router.navigate([], {
         relativeTo: this.route,
-        queryParams: { chat: id, ig: null },
+        queryParams: { chat: id, ig: null, fb: null },
         queryParamsHandling: 'merge',
         replaceUrl: true,
       });

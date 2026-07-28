@@ -58,16 +58,7 @@
       @if (savedCustomer()?.nickname; as nick) {
       <span class="ficha__nickname">{{ nick }}</span>
       }
-      @if (c.customerPhone) {
-      <a
-        class="ficha__phone"
-        [href]="waLink(c.customerPhone)"
-        target="_blank"
-        rel="noopener"
-      >
-        <ui-icon name="phone" size="13" /> {{ c.customerPhone | phonePlus }}
-      </a>
-      } @else if (c.customerUsername) {
+      @if (c.customerUsername) {
       <a
         class="ficha__phone"
         [href]="'https://instagram.com/' + c.customerUsername"
@@ -211,10 +202,14 @@
       </p-accordion-header>
       <p-accordion-content>
         <dl class="ficha__info">
-          <dt>{{ 'Fecha de creación' | transloco }}</dt>
-          <dd>{{ formatDateTime(c.createdAt) }}</dd>
+          <dt>{{ 'Nombre' | transloco }}</dt>
+          <dd>{{ c.customerName || '—' }}</dd>
+          <dt>{{ 'Apodo' | transloco }}</dt>
+          <dd>{{ savedCustomer()?.nickname || '—' }}</dd>
           <dt>{{ 'Teléfono' | transloco }}</dt>
           <dd>{{ c.customerPhone ? (c.customerPhone | phonePlus) : '—' }}</dd>
+          <dt>{{ 'Fecha de creación' | transloco }}</dt>
+          <dd>{{ formatDateTime(c.createdAt) }}</dd>
         </dl>
       </p-accordion-content>
     </p-accordion-panel>

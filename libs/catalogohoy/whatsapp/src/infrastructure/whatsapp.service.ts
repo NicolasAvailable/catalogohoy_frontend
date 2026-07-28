@@ -103,9 +103,16 @@ export class WhatsAppService {
     return this.getSocialAccount(tenantId, 'tiktok');
   }
 
+  /** Página de Facebook (Messenger) conectada del tenant (columnas públicas). */
+  async getMessengerAccount(
+    tenantId: number
+  ): Promise<E.Either<Error, { username: string | null; displayName: string | null } | null>> {
+    return this.getSocialAccount(tenantId, 'messenger');
+  }
+
   private async getSocialAccount(
     tenantId: number,
-    channel: 'instagram' | 'tiktok'
+    channel: 'instagram' | 'tiktok' | 'messenger'
   ): Promise<E.Either<Error, { username: string | null; displayName: string | null } | null>> {
     const { data, error } = await this.client
       .from('social_accounts')
@@ -129,7 +136,7 @@ export class WhatsAppService {
    *  (RLS permite tocar únicamente esa columna). Los chats y datos quedan. */
   async disconnectSocialAccount(
     tenantId: number,
-    channel: 'instagram' | 'tiktok'
+    channel: 'instagram' | 'tiktok' | 'messenger'
   ): Promise<E.Either<Error, void>> {
     const { error } = await this.client
       .from('social_accounts')
@@ -175,6 +182,25 @@ export class WhatsAppService {
     const message =
       (typeof data?.error === 'string' && data.error) ||
       'No se pudo iniciar la conexión con Instagram';
+    return E.left(new Error(message));
+  }
+
+  /** Pide a fb-oauth la URL de autorización de Facebook Login (state firmado
+   *  server-side que amarra tenant + returnUrl). Al autorizar, la Página de
+   *  Facebook queda conectada y sus mensajes de Messenger llegan a la bandeja. */
+  async startMessengerConnect(
+    tenantId: number,
+    returnUrl: string
+  ): Promise<E.Either<Error, string>> {
+    const { data, error } = await this.client.functions.invoke('fb-oauth', {
+      body: { tenantId, returnUrl },
+    });
+    if (!error && data?.success && data?.url) {
+      return E.right(data.url as string);
+    }
+    const message =
+      (typeof data?.error === 'string' && data.error) ||
+      'No se pudo iniciar la conexión con Messenger';
     return E.left(new Error(message));
   }
 

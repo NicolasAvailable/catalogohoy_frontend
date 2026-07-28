@@ -215,8 +215,16 @@ export class ChatService {
     // Instagram/TikTok: siempre por su función de envío (sin fallback demo —
     // la ventana de mensajería y los errores de la plataforma deben llegarle
     // claros al agente).
-    if (isMine && (channel === 'instagram' || channel === 'tiktok')) {
-      const fn = channel === 'instagram' ? 'ig-send' : 'tiktok-send';
+    if (
+      isMine &&
+      (channel === 'instagram' || channel === 'tiktok' || channel === 'messenger')
+    ) {
+      const fn =
+        channel === 'instagram'
+          ? 'ig-send'
+          : channel === 'tiktok'
+            ? 'tiktok-send'
+            : 'fb-send';
       return this.invokeSend(fn, { chatId, text: content });
     }
     // Respuesta del agente → intentar enviarla de verdad por WhatsApp. `wa-send`
@@ -313,9 +321,19 @@ export class ChatService {
     replyToId: number | null = null,
     channel: Chat['channel'] = 'whatsapp'
   ): Promise<E.Either<Error, ChatMessage>> {
-    if (channel === 'instagram' || channel === 'tiktok') {
-      const fn = channel === 'instagram' ? 'ig-send' : 'tiktok-send';
-      const name = channel === 'instagram' ? 'Instagram' : 'TikTok';
+    if (channel === 'instagram' || channel === 'tiktok' || channel === 'messenger') {
+      const fn =
+        channel === 'instagram'
+          ? 'ig-send'
+          : channel === 'tiktok'
+            ? 'tiktok-send'
+            : 'fb-send';
+      const name =
+        channel === 'instagram'
+          ? 'Instagram'
+          : channel === 'tiktok'
+            ? 'TikTok'
+            : 'Messenger';
       if (mediaType !== 'image') {
         return E.left(new Error(`${name} solo permite enviar imágenes desde la bandeja`));
       }
@@ -385,7 +403,7 @@ export class ChatService {
   /** Invoca una función de envío (wa-send / ig-send / tiktok-send) y mapea la
    *  respuesta {success, message} | {error} al Either del dominio. */
   private async invokeSend(
-    fn: 'wa-send' | 'ig-send' | 'tiktok-send',
+    fn: 'wa-send' | 'ig-send' | 'tiktok-send' | 'fb-send',
     body: Record<string, unknown>
   ): Promise<E.Either<Error, ChatMessage>> {
     const { data, error } = await this.client.functions.invoke(fn, { body });

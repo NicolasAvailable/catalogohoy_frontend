@@ -62,6 +62,9 @@ import { ChatLayoutComponent } from '../chat-layout/chat-layout';
           <span class="w-24 h-24 rounded-full bg-white border border-grey-100 shadow-md flex items-center justify-center z-10">
             <img src="/images/instagram.svg" alt="Instagram" class="w-12 h-12" />
           </span>
+          <span class="w-20 h-20 rounded-full bg-white border border-grey-100 shadow-sm flex items-center justify-center rotate-3">
+            <img src="/images/messenger.svg" alt="Messenger" class="w-10 h-10" />
+          </span>
           <span class="w-20 h-20 rounded-full bg-white border border-grey-100 shadow-sm flex items-center justify-center rotate-6">
             <img src="/images/tiktok-logo.svg" alt="TikTok" class="w-10 h-10" />
           </span>

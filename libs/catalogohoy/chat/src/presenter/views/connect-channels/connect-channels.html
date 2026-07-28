@@ -24,11 +24,7 @@
       <span class="font-semibold text-grey-800">{{ channel.name }}</span>
       <span class="text-xs text-grey-400 leading-relaxed">{{ channel.description | transloco }}</span>
 
-      @if (channel.comingSoon) {
-      <span class="inline-flex items-center px-3 py-1 mt-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
-        {{ 'Próximamente' | transloco }}
-      </span>
-      } @else if (isConnected(channel)) {
+      @if (isConnected(channel)) {
       <span
         class="inline-flex items-center gap-1.5 mt-1"
         [title]="'Conectado' | transloco"
@@ -45,6 +41,10 @@
       >
         {{ disconnectingKey() === channel.key ? 'Desvinculando...' : ('Desvincular' | transloco) }}
       </button>
+      } @else if (channel.comingSoon) {
+      <span class="inline-flex items-center px-3 py-1 mt-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
+        {{ 'Próximamente' | transloco }}
+      </span>
       } @else {
       <span class="inline-flex items-center gap-2 px-5 py-2.5 mt-1 rounded-xl bg-primary-500 text-white text-sm font-semibold group-hover:bg-primary-600 transition-colors">
         {{ 'Conectar' | transloco }}
