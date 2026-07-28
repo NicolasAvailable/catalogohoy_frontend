@@ -72,6 +72,19 @@ export class AuthenticationFacade {
     return this.authenticationService.confirmEmail(accessToken, refreshToken);
   }
 
+  public verifySignupOtp(input: {
+    email: string;
+    token: string;
+    countryCode?: string;
+    referralCode?: string | null;
+  }) {
+    return this.authenticationService.verifySignupOtp(input);
+  }
+
+  public resendSignupOtp(email: string) {
+    return this.authenticationService.resendSignupOtp(email);
+  }
+
   public resetPassword(input: ResetPasswordCredentials) {
     return new ResetPasswordUseCase(this.authenticationService).execute(input);
   }
