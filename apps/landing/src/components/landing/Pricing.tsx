@@ -11,11 +11,11 @@ const WHATSAPP_NUMBER = "584220240947";
 
 type BillingPeriod = "monthly" | "quarterly" | "annual";
 
-// quarterly: 10% off. annual: 1 mes gratis (se paga 11 de 12 meses).
-const BILLING_CONFIG: Record<BillingPeriod, { months: number; discount: number; freeMonths: number }> = {
-  monthly:   { months: 1,  discount: 0,    freeMonths: 0 },
-  quarterly: { months: 3,  discount: 0.10, freeMonths: 0 },
-  annual:    { months: 12, discount: 0,    freeMonths: 1 },
+// quarterly: 10% off. annual: meses gratis por plan (ver ANNUAL_FREE_MONTHS).
+const BILLING_CONFIG: Record<BillingPeriod, { months: number; discount: number }> = {
+  monthly:   { months: 1,  discount: 0    },
+  quarterly: { months: 3,  discount: 0.10 },
+  annual:    { months: 12, discount: 0    },
 };
 
 const PLAN_BASE_PRICES: Record<string, number> = {
@@ -24,12 +24,16 @@ const PLAN_BASE_PRICES: Record<string, number> = {
   avanzado: 29.99,
 };
 
+// Meses gratis del plan ANUAL, por plan: Básico 1, Pro/Avanzado 2.
+const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 1, pro: 2, avanzado: 2 };
+const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 1;
+
 const CATALOG_ADDON_PRICE = 4.99;
 
 const billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
   { key: "monthly",   label: "Mensual" },
   { key: "quarterly", label: "Trimestral", savingsLabel: "10% off" },
-  { key: "annual",    label: "Anual",      savingsLabel: "1 mes gratis" },
+  { key: "annual",    label: "Anual",      savingsLabel: "hasta 2 meses gratis" },
 ];
 
 /* ═══════════════════════════════════════
@@ -137,12 +141,18 @@ function getBasePrice(plan: PlanData): number {
   return PLAN_BASE_PRICES[plan.id] ?? 0;
 }
 
+/** Meses que se pagan en el período. En anual, los meses gratis dependen del
+ *  plan (Básico 1, Pro/Avanzado 2). */
+function paidMonthsFor(planId: string, period: BillingPeriod): number {
+  if (period === "annual") return 12 - annualFreeMonthsFor(planId);
+  const { months, discount } = BILLING_CONFIG[period];
+  return months * (1 - discount);
+}
+
 /** Total que se paga por el período completo (con descuento / mes gratis aplicado). */
 function getPeriodTotal(plan: PlanData, period: BillingPeriod): number {
   if (plan.isFree) return 0;
-  const { months, discount, freeMonths } = BILLING_CONFIG[period];
-  const paidMonths = (months - freeMonths) * (1 - discount);
-  return Math.round(getBasePrice(plan) * paidMonths * 100) / 100;
+  return Math.round(getBasePrice(plan) * paidMonthsFor(plan.id, period) * 100) / 100;
 }
 
 /** Precio mensual efectivo (total del período dividido entre los meses del período). */
@@ -154,6 +164,12 @@ function getMonthlyEffective(plan: PlanData, period: BillingPeriod): number {
 
 function formatPrice(value: number): string {
   return Number.isInteger(value) ? `${value}` : value.toFixed(2);
+}
+
+/** Gancho anual por plan: "1 mes gratis" / "2 meses gratis". */
+function annualFreeLabel(planId: string): string {
+  const n = annualFreeMonthsFor(planId);
+  return n === 1 ? "1 mes gratis" : `${n} meses gratis`;
 }
 
 function getPeriodLabel(period: BillingPeriod, isFree: boolean): string {
@@ -330,7 +346,7 @@ const Pricing = () => {
                         {billingPeriod === "annual" ? (
                           <>
                             <Gift className="h-3.5 w-3.5 shrink-0" />
-                            1 mes gratis
+                            {annualFreeLabel(plan.id)}
                           </>
                         ) : (
                           "Ahorras 10%"
