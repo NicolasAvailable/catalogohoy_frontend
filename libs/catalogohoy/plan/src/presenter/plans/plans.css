@@ -347,6 +347,13 @@
   margin-top: -0.5rem;
 }
 
+.plan-card__free-months {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #16a34a;
+  margin: -0.25rem 0 0;
+}
+
 /* ── Divider ── */
 .plan-card__divider {
   border: none;

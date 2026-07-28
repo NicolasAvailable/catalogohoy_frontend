@@ -32,11 +32,16 @@ import { EnterpriseContactDialog } from '../enterprise-contact-dialog/enterprise
  *  El funnel (dialog + edge function + panel interno) sigue intacto. */
 const ENTERPRISE_CARD_VISIBLE = false;
 
+// quarterly: 10% off. annual: meses gratis por plan (ver ANNUAL_FREE_MONTHS).
 const BILLING_CONFIG: Record<BillingPeriod, { label: string; months: number; discount: number }> = {
   monthly:   { label: 'Mensual',     months: 1,  discount: 0    },
   quarterly: { label: 'Trimestral',  months: 3,  discount: 0.10 },
-  annual:    { label: 'Anual',       months: 12, discount: 0.25 },
+  annual:    { label: 'Anual',       months: 12, discount: 0    },
 };
+
+// Meses gratis del plan ANUAL, por plan: Básico 1, Pro/Avanzado 2.
+const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 1, pro: 2, avanzado: 2 };
+const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 1;
 
 type PlanUIConfig = {
   period: string;
@@ -160,7 +165,7 @@ export class Plans implements OnInit {
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
     { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '25% off' },
+    { key: 'annual',    label: 'Anual',      savingsLabel: 'hasta 2 meses gratis' },
   ];
 
   // Resolve the currency we'll charge in, driven by the tenant's country.
@@ -304,18 +309,37 @@ export class Plans implements OnInit {
     return PLAN_BASE_PRICES[plan.id] ?? plan.price;
   }
 
+  /** Meses que se pagan en el período. En anual, los meses gratis dependen del
+   *  plan (Básico 1, Pro/Avanzado 2). */
+  private paidMonths(planId: string): number {
+    const period = this.billingPeriod();
+    if (period === 'annual') return 12 - annualFreeMonthsFor(planId);
+    const { months, discount } = BILLING_CONFIG[period];
+    return months * (1 - discount);
+  }
+
   public getPeriodPrice(plan: PlanDisplay): number {
     if (plan.isFree) return 0;
-    const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
-    const baseUsd = this.getBasePrice(plan) * months * (1 - discount);
+    const baseUsd = this.getBasePrice(plan) * this.paidMonths(plan.id);
     return convertUsdToLocal(baseUsd, this.displayCurrency());
   }
 
   public getMonthlyEquivalent(plan: PlanDisplay): number {
     if (plan.isFree) return 0;
-    const { discount } = BILLING_CONFIG[this.billingPeriod()];
-    const baseUsd = this.getBasePrice(plan) * (1 - discount);
+    const { months } = BILLING_CONFIG[this.billingPeriod()];
+    const baseUsd = (this.getBasePrice(plan) * this.paidMonths(plan.id)) / months;
     return convertUsdToLocal(baseUsd, this.displayCurrency());
+  }
+
+  /** Es el período anual (para mostrar el gancho "N meses gratis" por card). */
+  public isAnnual(): boolean {
+    return this.billingPeriod() === 'annual';
+  }
+
+  /** Label del gancho anual por plan: "1 mes gratis" / "2 meses gratis". */
+  public annualFreeLabel(plan: PlanDisplay): string {
+    const n = annualFreeMonthsFor(plan.id);
+    return n === 1 ? '1 mes gratis' : `${n} meses gratis`;
   }
 
   public isUpgradePlan(plan: PlanDisplay): boolean {
@@ -326,8 +350,7 @@ export class Plans implements OnInit {
     const currentPrice = PLAN_BASE_PRICES[this.planStore.currentPlan()?.id ?? ''] ?? 0;
     const targetPrice = PLAN_BASE_PRICES[plan.id] ?? 0;
     const diffUsd = targetPrice - currentPrice;
-    const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
-    return convertUsdToLocal(diffUsd * months * (1 - discount), this.displayCurrency());
+    return convertUsdToLocal(diffUsd * this.paidMonths(plan.id), this.displayCurrency());
   }
 
   public getPeriodLabel(plan: PlanDisplay): string {

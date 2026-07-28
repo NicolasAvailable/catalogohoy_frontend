@@ -29,14 +29,26 @@ type FeatureSection = {
   items: string[];
 };
 
+// quarterly: 10% off. annual: meses gratis por plan (ver ANNUAL_FREE_MONTHS).
 const BILLING_CONFIG: Record<
   BillingPeriod,
   { label: string; months: number; discount: number }
 > = {
   monthly:   { label: 'mes',       months: 1,  discount: 0    },
   quarterly: { label: 'trimestre', months: 3,  discount: 0.10 },
-  annual:    { label: 'año',       months: 12, discount: 0.25 },
+  annual:    { label: 'año',       months: 12, discount: 0    },
 };
+
+// Meses gratis del plan ANUAL, por plan: Básico 1, Pro/Avanzado 2.
+const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 1, pro: 2, avanzado: 2 };
+const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 1;
+
+/** Meses efectivamente pagados. En anual, los meses gratis dependen del plan. */
+function paidMonthsFor(period: BillingPeriod, planId: string): number {
+  if (period === 'annual') return 12 - annualFreeMonthsFor(planId);
+  const { months, discount } = BILLING_CONFIG[period];
+  return months * (1 - discount);
+}
 
 const CHECKOUT_FEATURES: Record<string, FeatureSection[]> = {
   basico: [
@@ -149,7 +161,7 @@ export class PlanCheckout implements OnInit {
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
     { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '25% off' },
+    { key: 'annual',    label: 'Anual',      savingsLabel: '1 mes gratis' },
   ];
 
   public readonly planId               = signal<string>('');
@@ -267,8 +279,10 @@ export class PlanCheckout implements OnInit {
   });
 
   public readonly discountAmount = computed(() => {
-    const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
-    return convertUsdToLocal(this.monthlyBasePriceUsd() * months * discount, this.chargeCurrency());
+    const period = this.billingPeriod();
+    const { months } = BILLING_CONFIG[period];
+    const savedMonths = months - paidMonthsFor(period, this.planId()); // trimestral: 0.3 · anual: 1 o 2 meses gratis
+    return convertUsdToLocal(this.monthlyBasePriceUsd() * savedMonths, this.chargeCurrency());
   });
 
   public readonly catalogAddonDisplayCost = computed(() => {
@@ -289,8 +303,9 @@ export class PlanCheckout implements OnInit {
    *  billing-period discount baked in). Used as the base for both the visual
    *  coupon-discount line and the final totals. */
   private readonly preCouponTotalUsd = computed(() => {
-    const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
-    const baseUsd = this.monthlyBasePriceUsd() * months * (1 - discount);
+    const period = this.billingPeriod();
+    const { months } = BILLING_CONFIG[period];
+    const baseUsd = this.monthlyBasePriceUsd() * paidMonthsFor(period, this.planId());
     const addonUsd =
       CATALOG_ADDON_PRICE * months * this.catalogAddonQuantity();
     return baseUsd + addonUsd;
@@ -391,6 +406,15 @@ export class PlanCheckout implements OnInit {
   public readonly discountPercent = computed(
     () => BILLING_CONFIG[this.billingPeriod()].discount * 100
   );
+
+  /** El anual no es "% off" sino "N meses gratis" → el desglose usa otro label. */
+  public readonly isAnnual = computed(() => this.billingPeriod() === 'annual');
+
+  /** Meses gratis del anual para este plan: "1 mes gratis" / "2 meses gratis". */
+  public readonly annualFreeLabel = computed(() => {
+    const n = annualFreeMonthsFor(this.planId());
+    return n === 1 ? '1 mes gratis' : `${n} meses gratis`;
+  });
 
   async ngOnInit(): Promise<void> {
     const planId = this.route.snapshot.paramMap.get('planId') ?? '';

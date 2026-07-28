@@ -15,10 +15,14 @@
 //   quarterly price_1TGfmh85rys2QLXdH8DRmSqH
 //   annual   price_1TGfmh85rys2QLXdBW7wZB1U
 //
-// Versionado a partir de la v38 deployada. Cambios respecto a esa versión:
-// solo el PRICE_MAP — pro agregado, avanzado a $29.99 y el ANUAL con 25% off
-// (precios nuevos price_1Twl8*, creados 2026-07; antes era 15% off). El
-// quarterly sigue en 10%.
+// Versionado a partir de la v38 deployada.
+// Switch 2026-07-28: precios NUEVOS (regen batch parallel-freemonth). Cambios:
+//   - Anual = meses gratis por plan: Básico 1 mes (11/12), Pro y Avanzado 2
+//     meses (10/12). Reemplaza el 25% off.
+//   - ARS y BOB pasan a tasa PARALELA (1550 / 12.5) en todos los períodos.
+//   - Anual ahora es multi-moneda (antes era USD-only).
+// El quarterly sigue en 10% off. Precios viejos (25% off / tasas viejas) quedan
+// inertes para las subs grandfathered (precio anclado en Stripe).
 // ═══════════════════════════════════════════════════════════════════════════
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@17";
@@ -31,19 +35,19 @@ const CORS = {
 
 const PRICE_MAP: Record<string, Record<string, string>> = {
   basico: {
-    monthly:   "price_1TGfmg85rys2QLXdofh9ytbw",
-    quarterly: "price_1TGfmg85rys2QLXdjyfHoGWn",
-    annual:    "price_1Twl8B85rys2QLXdPxrTsKgi",
+    monthly:   "price_1TyBl485rys2QLXd8LCfn4PZ",
+    quarterly: "price_1TyBl485rys2QLXdPdkMqstS",
+    annual:    "price_1TyBl585rys2QLXdrlplXJzX",
   },
   pro: {
-    monthly:   "price_1Tvg9h85rys2QLXd18YBSdOk",
-    quarterly: "price_1Tvg9u85rys2QLXdaDdgvbii",
-    annual:    "price_1Twl8D85rys2QLXdriJD6mKz",
+    monthly:   "price_1TyBl585rys2QLXdc1GUWVJh",
+    quarterly: "price_1TyBl585rys2QLXdKk3w7yGm",
+    annual:    "price_1TyBrh85rys2QLXd7Q9EPKKF", // 2 meses gratis ($199.90)
   },
   avanzado: {
-    monthly:   "price_1TvgAE85rys2QLXdoNMJFJ6O",
-    quarterly: "price_1TvgAO85rys2QLXdfdTCu165",
-    annual:    "price_1Twl8E85rys2QLXdOAhiu0kx",
+    monthly:   "price_1TyBl785rys2QLXd08l8YOs7",
+    quarterly: "price_1TyBl785rys2QLXdp7nbigVf",
+    annual:    "price_1TyBrh85rys2QLXdtGFJFkPf", // 2 meses gratis ($299.90)
   },
 };
 

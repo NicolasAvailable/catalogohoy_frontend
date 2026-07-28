@@ -143,6 +143,9 @@
             {{ currencySymbol() }}{{ getMonthlyEquivalent(plan) | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}{{ '/mes' | transloco }}
           </p>
         }
+        @if (!plan.isFree && isAnnual()) {
+          <p class="plan-card__free-months">🎁 {{ annualFreeLabel(plan) | transloco }}</p>
+        }
 
         <!-- Botón CTA -->
         <button

@@ -96,7 +96,11 @@
 
         @if (discountAmount() > 0) {
           <div class="summary-line summary-line--discount">
-            <span>{{ 'Descuento ({pct}%)' | transloco: { pct: discountPercent() } }}</span>
+            @if (isAnnual()) {
+              <span>🎁 {{ annualFreeLabel() | transloco }}</span>
+            } @else {
+              <span>{{ 'Descuento ({pct}%)' | transloco: { pct: discountPercent() } }}</span>
+            }
             <span>-{{ currencySymbol() }}{{ discountAmount() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
           </div>
         }
