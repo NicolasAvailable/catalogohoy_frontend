@@ -67,15 +67,18 @@ const PlanComparison = () => {
         <p className="text-white/80 mt-2 text-[0.95rem] max-w-[480px] mx-auto">
           Todos los límites de cada plan, lado a lado.
         </p>
+        <p className="sm:hidden mt-3 inline-flex items-center gap-1 text-[0.8rem] font-medium text-white/70">
+          Deslizá para ver los 4 planes →
+        </p>
       </header>
 
-      <div className="bg-white rounded-[1.25rem] border border-[#e2e8f0] shadow-[0_8px_30px_-6px_rgba(0,0,0,0.15)] overflow-x-auto">
-        <table className="w-full min-w-[44rem] border-separate border-spacing-0 text-sm text-[#334155]">
+      <div className="bg-white rounded-[1.25rem] border border-[#e2e8f0] shadow-[0_8px_30px_-6px_rgba(0,0,0,0.15)] overflow-x-auto overscroll-x-contain [scrollbar-width:thin]">
+        <table className="w-full min-w-[32rem] sm:min-w-[44rem] border-separate border-spacing-0 text-sm text-[#334155]">
           <thead>
             <tr>
               <th
                 scope="col"
-                className="sticky left-0 z-10 bg-white w-[14rem] px-5 py-4 text-left text-[0.72rem] font-semibold uppercase tracking-[0.05em] text-[#94a3b8] border-b border-b-[#e2e8f0]"
+                className="sticky left-0 z-10 bg-white w-[9rem] sm:w-[14rem] px-3 sm:px-5 py-4 text-left text-[0.72rem] font-semibold uppercase tracking-[0.05em] text-[#94a3b8] border-b border-b-[#e2e8f0]"
               >
                 Límites
               </th>
@@ -83,7 +86,7 @@ const PlanComparison = () => {
                 <th
                   key={plan.id}
                   scope="col"
-                  className={`px-4 py-4 text-center align-bottom ${
+                  className={`px-2.5 sm:px-4 py-4 text-center align-bottom ${
                     plan.isPopular
                       ? "bg-[#eef2ff] border-x border-t border-x-[#c7d2fe] border-t-[#c7d2fe] border-b border-b-[#c7d2fe] rounded-t-xl"
                       : "border-b border-b-[#e2e8f0]"
@@ -117,7 +120,7 @@ const PlanComparison = () => {
                 <tr key={row.label}>
                   <th
                     scope="row"
-                    className={`sticky left-0 z-10 bg-white px-5 py-3 text-left text-sm font-medium text-[#334155] ${
+                    className={`sticky left-0 z-10 bg-white px-3 sm:px-5 py-3 text-left text-[0.8rem] sm:text-sm font-medium text-[#334155] ${
                       isLast ? "" : "border-b border-b-[#f1f5f9]"
                     }`}
                   >
@@ -128,7 +131,7 @@ const PlanComparison = () => {
                     return (
                       <td
                         key={plan.id}
-                        className={`px-4 py-3 text-center ${
+                        className={`px-2.5 sm:px-4 py-3 text-center ${
                           plan.isPopular
                             ? `bg-[#eef2ff] border-x border-x-[#c7d2fe] ${
                                 isLast
