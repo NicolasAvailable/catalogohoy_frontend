@@ -287,6 +287,28 @@ type FbFeedValue = {
   post?: { permalink_url?: string };
 };
 
+/** Detalles del post para anclarlo como "mensaje" — best-effort. */
+async function fetchFbPostInfo(
+  postId: string,
+  token: string | null,
+): Promise<{ caption: string | null; thumbnail: string | null; permalink: string | null }> {
+  if (!postId || !token) return { caption: null, thumbnail: null, permalink: null };
+  try {
+    const res = await fetch(
+      `${GRAPH}/${postId}?fields=message,full_picture,permalink_url&access_token=${token}`,
+    );
+    if (!res.ok) return { caption: null, thumbnail: null, permalink: null };
+    const p = await res.json();
+    return {
+      caption: (p?.message ?? "").trim() || null,
+      thumbnail: p?.full_picture ?? null,
+      permalink: p?.permalink_url ?? null,
+    };
+  } catch {
+    return { caption: null, thumbnail: null, permalink: null };
+  }
+}
+
 async function processFbComment(
   pageId: string,
   account: FbAccount,
@@ -301,6 +323,7 @@ async function processFbComment(
   const parent = value.parent_id && value.parent_id !== value.post_id
     ? value.parent_id
     : null;
+  const post = await fetchFbPostInfo(value.post_id ?? "", account.token);
   await admin.from("social_comments").upsert(
     {
       tenant_id: account.tenantId,
@@ -308,7 +331,9 @@ async function processFbComment(
       external_comment_id: commentId,
       parent_comment_id: parent,
       post_id: value.post_id ?? null,
-      post_permalink: value.post?.permalink_url ?? null,
+      post_permalink: post.permalink ?? value.post?.permalink_url ?? null,
+      post_caption: post.caption,
+      post_thumbnail_url: post.thumbnail,
       author_id: fromId || null,
       author_name: value.from?.name ?? null,
       text: (value.message ?? "").trim() || null,

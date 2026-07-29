@@ -288,6 +288,28 @@ type IgCommentValue = {
   media?: { id?: string };
 };
 
+/** Detalles del post (media) para anclarlo como "mensaje" — best-effort. */
+async function fetchIgPostInfo(
+  mediaId: string,
+  token: string | null,
+): Promise<{ caption: string | null; thumbnail: string | null; permalink: string | null }> {
+  if (!mediaId || !token) return { caption: null, thumbnail: null, permalink: null };
+  try {
+    const res = await fetch(
+      `${GRAPH}/${mediaId}?fields=caption,media_url,thumbnail_url,permalink&access_token=${token}`,
+    );
+    if (!res.ok) return { caption: null, thumbnail: null, permalink: null };
+    const p = await res.json();
+    return {
+      caption: (p?.caption ?? "").trim() || null,
+      thumbnail: p?.thumbnail_url ?? p?.media_url ?? null,
+      permalink: p?.permalink ?? null,
+    };
+  } catch {
+    return { caption: null, thumbnail: null, permalink: null };
+  }
+}
+
 async function processIgComment(
   businessIgId: string,
   account: IgAccount,
@@ -298,6 +320,7 @@ async function processIgComment(
   const fromId = value.from?.id ?? "";
   const isMine = !!fromId && fromId === businessIgId; // comentario/respuesta del negocio
   const username = value.from?.username ?? null;
+  const post = await fetchIgPostInfo(value.media?.id ?? "", account.token);
   await admin.from("social_comments").upsert(
     {
       tenant_id: account.tenantId,
@@ -305,6 +328,9 @@ async function processIgComment(
       external_comment_id: commentId,
       parent_comment_id: value.parent_id ?? null,
       post_id: value.media?.id ?? null,
+      post_permalink: post.permalink,
+      post_caption: post.caption,
+      post_thumbnail_url: post.thumbnail,
       author_id: fromId || null,
       author_username: username,
       author_name: username ? `@${username}` : null,

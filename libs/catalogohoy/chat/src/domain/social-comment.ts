@@ -13,6 +13,10 @@ export interface SocialComment {
   /** Media id (IG) / post_id (FB) del post comentado. */
   postId: string | null;
   postPermalink: string | null;
+  /** Caption/texto del post (para anclarlo arriba como "mensaje original"). */
+  postCaption: string | null;
+  /** Miniatura del post. */
+  postThumbnailUrl: string | null;
   authorId: string | null;
   authorName: string | null;
   authorUsername: string | null;
@@ -33,6 +37,8 @@ interface SocialCommentRow {
   parent_comment_id: string | null;
   post_id: string | null;
   post_permalink: string | null;
+  post_caption: string | null;
+  post_thumbnail_url: string | null;
   author_id: string | null;
   author_name: string | null;
   author_username: string | null;
@@ -53,6 +59,8 @@ export class SocialCommentMapper {
       parentCommentId: row.parent_comment_id ?? null,
       postId: row.post_id ?? null,
       postPermalink: row.post_permalink ?? null,
+      postCaption: row.post_caption ?? null,
+      postThumbnailUrl: row.post_thumbnail_url ?? null,
       authorId: row.author_id ?? null,
       authorName: row.author_name ?? null,
       authorUsername: row.author_username ?? null,

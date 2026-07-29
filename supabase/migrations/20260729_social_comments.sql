@@ -15,6 +15,8 @@ create table if not exists public.social_comments (
   parent_comment_id text,                -- id del comentario padre (null = top-level)
   post_id text,                          -- media id (IG) / post_id (FB)
   post_permalink text,
+  post_caption text,                     -- caption/texto del post (para anclarlo como "mensaje")
+  post_thumbnail_url text,               -- miniatura del post
   author_id text,                        -- IGSID / user id del autor
   author_name text,
   author_username text,
