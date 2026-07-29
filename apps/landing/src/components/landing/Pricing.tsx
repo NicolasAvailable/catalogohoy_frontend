@@ -410,18 +410,20 @@ const Pricing = () => {
                 {/* ── Footer ── */}
                 {!plan.isFree && (
                   <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1 px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]">
-                        <CreditCard className="h-3.5 w-3.5 shrink-0" />
-                        Tarjeta internacional
-                      </span>
-                      {showBcv && (
+                    {/* Métodos de pago: solo se muestran cuando el visitante está
+                        en Venezuela (geo-IP). Fuera de VE no aplican. */}
+                    {showBcv && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="inline-flex items-center gap-1 px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]">
+                          <CreditCard className="h-3.5 w-3.5 shrink-0" />
+                          Tarjeta internacional
+                        </span>
                         <span className="inline-flex items-center gap-1 px-[0.7rem] py-1 rounded-full text-xs font-medium border bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]">
                           <Smartphone className="h-3.5 w-3.5 shrink-0" />
                           Pago móvil
                         </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                     <p className="flex items-center gap-[0.35rem] text-xs text-[#94a3b8]">
                       <PlusCircle className="h-3.5 w-3.5 shrink-0" />
                       Catálogo adicional ${CATALOG_ADDON_PRICE}/mes
