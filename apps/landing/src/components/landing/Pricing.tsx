@@ -30,12 +30,12 @@ const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planI
 
 const CATALOG_ADDON_PRICE = 4.99;
 
-// El gancho del anual ("2 meses gratis") va como badge FLOTANTE sobre el toggle
-// (estilo postbridge), no inline — por eso "annual" no lleva savingsLabel.
+// Los ganchos de ahorro ("10% off", "2 meses gratis") se renderizan como badges
+// FLOTANTES sobrepuestos sobre cada tab (estilo postbridge), no inline.
 const billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
   { key: "monthly",   label: "Mensual" },
   { key: "quarterly", label: "Trimestral", savingsLabel: "10% off" },
-  { key: "annual",    label: "Anual" },
+  { key: "annual",    label: "Anual",      savingsLabel: "2 meses gratis" },
 ];
 
 /* ═══════════════════════════════════════
@@ -258,24 +258,26 @@ const Pricing = () => {
 
           {/* Billing period toggle */}
           <div className="flex items-center justify-center mt-6">
-            <div className="relative inline-flex items-center gap-0.5 bg-[#f1f5f9] rounded-full p-[0.25rem]">
-              {/* Badge flotante del anual (sobrepuesto, estilo postbridge) */}
-              <span className="absolute -top-2.5 -right-1.5 sm:-right-3 z-10 bg-[#f97316] text-white text-[0.6rem] sm:text-[0.65rem] font-bold px-2 py-[0.15rem] rounded-full shadow-sm whitespace-nowrap pointer-events-none">
-                2 meses gratis
-              </span>
+            <div className="inline-flex items-center gap-0.5 bg-[#f1f5f9] rounded-full p-[0.25rem]">
               {billingOptions.map((opt) => (
                 <button
                   key={opt.key}
                   onClick={() => setBillingPeriod(opt.key)}
-                  className={`inline-flex items-center gap-1 sm:gap-2 px-2.5 sm:px-[1.1rem] py-1.5 sm:py-[0.45rem] rounded-full text-xs sm:text-sm font-medium border-none cursor-pointer transition-all duration-200 whitespace-nowrap ${
+                  className={`relative inline-flex items-center justify-center px-2.5 sm:px-[1.1rem] py-1.5 sm:py-[0.45rem] rounded-full text-xs sm:text-sm font-medium border-none cursor-pointer transition-all duration-200 whitespace-nowrap ${
                     billingPeriod === opt.key
                       ? "bg-white text-[#1e293b] font-semibold shadow-[0_1px_4px_rgba(0,0,0,0.08)]"
                       : "bg-transparent text-[#64748b]"
                   }`}
                 >
                   {opt.label}
+                  {/* Badge de ahorro sobrepuesto (flotante) sobre cada tab. El
+                      del anual se ancla a la derecha para no pisar el "10% off". */}
                   {opt.savingsLabel && (
-                    <span className="bg-[#dcfce7] text-[#16a34a] text-[0.6rem] sm:text-[0.68rem] font-semibold px-1.5 sm:px-2 py-[0.1rem] rounded-full">
+                    <span
+                      className={`absolute -top-2.5 z-10 bg-[#dcfce7] text-[#16a34a] text-[0.6rem] sm:text-[0.65rem] font-bold px-1.5 sm:px-2 py-[0.1rem] rounded-full shadow-sm whitespace-nowrap pointer-events-none ${
+                        opt.key === "annual" ? "right-0 translate-x-[30%]" : "left-1/2 -translate-x-1/2"
+                      }`}
+                    >
                       {opt.savingsLabel}
                     </span>
                   )}
