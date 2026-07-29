@@ -147,6 +147,10 @@ export class ConversationPanelComponent {
   private readonly messagesContainer =
     viewChild<ElementRef<HTMLDivElement>>('messagesContainer');
 
+  /** Textarea del composer — auto-alto (crece con el texto). */
+  private readonly composerTextarea =
+    viewChild<ElementRef<HTMLTextAreaElement>>('composerTextarea');
+
   /** Whether the view is pinned to the bottom (so new content auto-scrolls). */
   private stickToBottom = true;
   private listenersAttached = false;
@@ -171,6 +175,20 @@ export class ConversationPanelComponent {
       if (msgs.length > 0 && this.stickToBottom) {
         setTimeout(() => this.scrollToBottom(), 0);
       }
+    });
+
+    // Auto-alto del composer: crece con el texto hasta el máximo del CSS
+    // (min-h-[5rem] / max-h-40); de ahí el scroll interno toma el resto. Se
+    // re-mide al escribir, al insertar una respuesta rápida y al limpiar tras
+    // enviar (todo pasa por el signal messageInput).
+    effect(() => {
+      this.messageInput();
+      const el = this.composerTextarea()?.nativeElement;
+      if (!el) return;
+      requestAnimationFrame(() => {
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+      });
     });
 
     // Attach scroll/load listeners once the container exists. The 'load' (capture)
