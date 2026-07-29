@@ -202,18 +202,17 @@
 
         <!-- Footer: método de pago + addon -->
         <div class="plan-card__footer">
-          @if (!plan.isFree) {
+          <!-- Badges de método de pago: solo en Venezuela (fuera de VE no aplican). -->
+          @if (!plan.isFree && isVenezuela()) {
             <div class="flex flex-wrap gap-2">
               <span class="badge badge--usd">
                 <ui-icon name="credit-card" styleClass="size-3.5" />
                 {{ 'Tarjeta' | transloco }}
               </span>
-              @if (isVenezuela()) {
-                <span class="badge badge--usd">
-                  <ui-icon name="smartphone" styleClass="size-3.5" />
-                  {{ 'Pago móvil' | transloco }}
-                </span>
-              }
+              <span class="badge badge--usd">
+                <ui-icon name="smartphone" styleClass="size-3.5" />
+                {{ 'Pago móvil' | transloco }}
+              </span>
             </div>
           }
           @if (!plan.isFree) {
