@@ -274,9 +274,57 @@ async function processMessaging(
     .eq("id", chat.id);
 }
 
+// ── Comentarios de posts (field 'feed' del webhook de la Página) ────────────
+type FbFeedValue = {
+  item?: string;      // 'comment' | 'post' | 'reaction' | ...
+  verb?: string;      // 'add' | 'edited' | 'remove' | 'hide'
+  comment_id?: string;
+  post_id?: string;
+  parent_id?: string;
+  message?: string;
+  from?: { id?: string; name?: string };
+  created_time?: number;
+  post?: { permalink_url?: string };
+};
+
+async function processFbComment(
+  pageId: string,
+  account: FbAccount,
+  value: FbFeedValue,
+): Promise<void> {
+  if (value.item !== "comment") return;
+  if (value.verb && !["add", "edited"].includes(value.verb)) return;
+  const commentId = value.comment_id ?? "";
+  if (!commentId) return;
+  const fromId = value.from?.id ?? "";
+  const isMine = !!fromId && fromId === pageId; // respuesta de la Página
+  const parent = value.parent_id && value.parent_id !== value.post_id
+    ? value.parent_id
+    : null;
+  await admin.from("social_comments").upsert(
+    {
+      tenant_id: account.tenantId,
+      channel: "facebook",
+      external_comment_id: commentId,
+      parent_comment_id: parent,
+      post_id: value.post_id ?? null,
+      post_permalink: value.post?.permalink_url ?? null,
+      author_id: fromId || null,
+      author_name: value.from?.name ?? null,
+      text: (value.message ?? "").trim() || null,
+      is_mine: isMine,
+      status: isMine ? "replied" : "open",
+      ...(value.created_time
+        ? { created_at: new Date(value.created_time * 1000).toISOString() }
+        : {}),
+    },
+    { onConflict: "channel,external_comment_id", ignoreDuplicates: true },
+  );
+}
+
 async function handleIncoming(body: unknown): Promise<void> {
   const b = body as { object?: string; entry?: unknown[] };
-  // Solo eventos de Página (Messenger). Los de Instagram los toma ig-webhook.
+  // Solo eventos de Página (Messenger + feed). Los de Instagram los toma ig-webhook.
   if (b?.object && b.object !== "page") return;
   const entries = b?.entry ?? [];
   for (const entry of entries) {
@@ -286,12 +334,24 @@ async function handleIncoming(body: unknown): Promise<void> {
     const account = await accountForPageId(pageId);
     if (!account) continue;
 
+    // DMs (entry.messaging[]).
     const messaging = ((entry as { messaging?: Messaging[] })?.messaging ?? []);
     for (const m of messaging) {
       try {
         await processMessaging(pageId, account, m);
       } catch (err) {
         console.error("[fb-webhook] processMessaging error", err);
+      }
+    }
+
+    // Comentarios (entry.changes[] con field 'feed', item 'comment').
+    const changes = ((entry as { changes?: { field?: string; value?: FbFeedValue }[] })?.changes ?? []);
+    for (const ch of changes) {
+      if (ch?.field !== "feed" || !ch.value) continue;
+      try {
+        await processFbComment(pageId, account, ch.value);
+      } catch (err) {
+        console.error("[fb-webhook] processFbComment error", err);
       }
     }
   }

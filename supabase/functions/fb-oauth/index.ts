@@ -35,6 +35,8 @@ const SCOPES = [
   "pages_show_list",
   "pages_messaging",
   "pages_manage_metadata",
+  "pages_read_engagement",   // leer comentarios de los posts de la Página
+  "pages_manage_engagement", // responder/ocultar comentarios
   "business_management",
 ].join(",");
 
@@ -214,10 +216,10 @@ async function handleCallback(req: Request): Promise<Response> {
       { onConflict: "channel,external_account_id" },
     );
 
-    // 5) Suscribir la Página a los webhooks de mensajes de la app.
+    // 5) Suscribir la Página a los webhooks de mensajes + comentarios (feed).
     await fetch(
       `${GRAPH}/${page.id}/subscribed_apps` +
-        `?subscribed_fields=messages,messaging_postbacks,message_echoes,message_reads` +
+        `?subscribed_fields=messages,messaging_postbacks,message_echoes,message_reads,feed` +
         `&access_token=${page.access_token}`,
       { method: "POST" },
     );

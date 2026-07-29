@@ -279,6 +279,43 @@ async function processMessaging(
     .eq("id", chat.id);
 }
 
+// ── Comentarios de posts (field 'comments' del webhook de IG) ───────────────
+type IgCommentValue = {
+  id?: string;
+  text?: string;
+  parent_id?: string;
+  from?: { id?: string; username?: string };
+  media?: { id?: string };
+};
+
+async function processIgComment(
+  businessIgId: string,
+  account: IgAccount,
+  value: IgCommentValue,
+): Promise<void> {
+  const commentId = value.id ?? "";
+  if (!commentId) return;
+  const fromId = value.from?.id ?? "";
+  const isMine = !!fromId && fromId === businessIgId; // comentario/respuesta del negocio
+  const username = value.from?.username ?? null;
+  await admin.from("social_comments").upsert(
+    {
+      tenant_id: account.tenantId,
+      channel: "instagram",
+      external_comment_id: commentId,
+      parent_comment_id: value.parent_id ?? null,
+      post_id: value.media?.id ?? null,
+      author_id: fromId || null,
+      author_username: username,
+      author_name: username ? `@${username}` : null,
+      text: (value.text ?? "").trim() || null,
+      is_mine: isMine,
+      status: isMine ? "replied" : "open",
+    },
+    { onConflict: "channel,external_comment_id", ignoreDuplicates: true },
+  );
+}
+
 async function handleIncoming(body: unknown): Promise<void> {
   const entries = (body as { entry?: unknown[] })?.entry ?? [];
   for (const entry of entries) {
@@ -288,12 +325,24 @@ async function handleIncoming(body: unknown): Promise<void> {
     const account = await accountForIgId(businessIgId);
     if (!account) continue;
 
+    // DMs (Messenger-style entry.messaging[]).
     const messaging = ((entry as { messaging?: Messaging[] })?.messaging ?? []);
     for (const m of messaging) {
       try {
         await processMessaging(businessIgId, account, m);
       } catch (err) {
         console.error("[ig-webhook] processMessaging error", err);
+      }
+    }
+
+    // Comentarios (entry.changes[] con field 'comments').
+    const changes = ((entry as { changes?: { field?: string; value?: IgCommentValue }[] })?.changes ?? []);
+    for (const ch of changes) {
+      if (ch?.field !== "comments" || !ch.value) continue;
+      try {
+        await processIgComment(businessIgId, account, ch.value);
+      } catch (err) {
+        console.error("[ig-webhook] processIgComment error", err);
       }
     }
   }

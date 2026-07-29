@@ -204,9 +204,9 @@ async function handleCallback(req: Request): Promise<Response> {
       { onConflict: "channel,external_account_id" },
     );
 
-    // 5) Suscribir la cuenta a los webhooks de mensajes.
+    // 5) Suscribir la cuenta a los webhooks de mensajes + comentarios.
     await fetch(
-      `${GRAPH}/v23.0/${igUserId}/subscribed_apps?subscribed_fields=messages&access_token=${accessToken}`,
+      `${GRAPH}/v23.0/${igUserId}/subscribed_apps?subscribed_fields=messages,comments&access_token=${accessToken}`,
       { method: "POST" },
     );
 
