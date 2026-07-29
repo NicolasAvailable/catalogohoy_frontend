@@ -14,3 +14,35 @@
     transform: none;
   }
 }
+
+/* Enlaces detectados dentro de una burbuja: hipervínculo subrayado + botón para
+   copiar. El color hereda del texto de la burbuja (blanco en las propias, gris
+   en las entrantes), así se lee bien de los dos lados. */
+.wa-rich .wa-link {
+  text-decoration: underline;
+  text-underline-offset: 0.125rem;
+  font-weight: 500;
+  word-break: break-all;
+}
+.wa-rich .wa-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  margin-left: 0.25rem;
+  vertical-align: -0.15rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+}
+.wa-rich .wa-copy:hover {
+  opacity: 1;
+}
+.wa-rich .wa-copy svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}

@@ -66,6 +66,11 @@ export interface ChatMessage {
   replyToMessageId?: number | null;
   /** Internal team note ("susurro") — not sent to the customer. */
   isInternal?: boolean;
+  /** Identidad estable para el `@for` del hilo, sólo cliente. El mensaje
+   *  optimista nace con una clientKey y la conserva al reconciliarse con el
+   *  persistido (cuyo `id` cambia de temporal negativo a real), evitando que
+   *  Angular destruya y recree la burbuja al pasar de "enviando" a "enviado". */
+  clientKey?: string;
 }
 
 /** A configurable kanban/pipeline stage for the tenant's CRM. */

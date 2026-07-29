@@ -243,9 +243,11 @@ export const ChatStore = signalStore(
         // estado 'sending'), sin esperar el round-trip de wa-send (cold start +
         // DB + Meta). Se reconcilia cuando responde.
         const tempId = nextTempId();
+        const clientKey = 'opt' + tempId;
         const now = new Date().toISOString();
         const optimistic: ChatMessage = {
           id: tempId,
+          clientKey,
           chatId,
           content: text,
           isMine: true,
@@ -286,12 +288,13 @@ export const ChatStore = signalStore(
             }),
           (msg) => {
             // OK: reemplazar la temporal por la persistida (deduplicando si el
-            // canal realtime ya la insertó).
+            // canal realtime ya la insertó). Conservamos la clientKey del
+            // optimista para que el `@for` no recree la burbuja (sin parpadeo).
             const cleaned = store
               .messages()
               .filter((m) => m.id !== tempId && m.id !== msg.id);
             patchState(store, {
-              messages: [...cleaned, msg],
+              messages: [...cleaned, { ...msg, clientKey }],
               isSendingMessage: false,
               chats: store.chats().map((c) =>
                 c.id === chatId
@@ -315,9 +318,11 @@ export const ChatStore = signalStore(
         if (!chatId || !text) return;
 
         const tempId = nextTempId();
+        const clientKey = 'opt' + tempId;
         const now = new Date().toISOString();
         const optimistic: ChatMessage = {
           id: tempId,
+          clientKey,
           chatId,
           content: text,
           isMine: true,
@@ -346,7 +351,7 @@ export const ChatStore = signalStore(
               .messages()
               .filter((m) => m.id !== tempId && m.id !== msg.id);
             patchState(store, {
-              messages: [...cleaned, msg],
+              messages: [...cleaned, { ...msg, clientKey }],
               isSendingMessage: false,
             });
           }
@@ -371,10 +376,12 @@ export const ChatStore = signalStore(
           : 'document';
         const mediaLabel = isImageFile ? '📷 Imagen' : '📎 Documento';
         const tempId = nextTempId();
+        const clientKey = 'opt' + tempId;
         const now = new Date().toISOString();
         const localUrl = URL.createObjectURL(file);
         const optimistic: ChatMessage = {
           id: tempId,
+          clientKey,
           chatId,
           content: cap,
           isMine: true,
@@ -431,7 +438,7 @@ export const ChatStore = signalStore(
               .messages()
               .filter((m) => m.id !== tempId && m.id !== msg.id);
             patchState(store, {
-              messages: [...cleaned, msg],
+              messages: [...cleaned, { ...msg, clientKey }],
               isSendingMessage: false,
               chats: store.chats().map((c) =>
                 c.id === chatId

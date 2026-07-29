@@ -200,9 +200,11 @@ export class ConversationPanelComponent {
       this.listenersAttached = true;
       el.addEventListener('scroll', this.onScroll, { passive: true });
       el.addEventListener('load', this.onMediaLoad, true);
+      el.addEventListener('click', this.onThreadClick);
       this.destroyRef.onDestroy(() => {
         el.removeEventListener('scroll', this.onScroll);
         el.removeEventListener('load', this.onMediaLoad, true);
+        el.removeEventListener('click', this.onThreadClick);
       });
     });
   }
@@ -216,6 +218,21 @@ export class ConversationPanelComponent {
   /** When an image finishes loading and we were pinned to the bottom, re-scroll. */
   private readonly onMediaLoad = (): void => {
     if (this.stickToBottom) this.scrollToBottom();
+  };
+
+  /** Copiar al portapapeles el enlace del botón "copiar" que acompaña a cada URL
+   *  detectada en un mensaje. El <a> abre solo; el botón necesita este handler
+   *  (delegado) porque el contenido de la burbuja se pinta vía [innerHTML]. */
+  private readonly onThreadClick = (event: Event): void => {
+    const btn = (event.target as HTMLElement).closest<HTMLElement>('.wa-copy');
+    if (!btn) return;
+    event.preventDefault();
+    const url = btn.dataset['url'];
+    if (!url) return;
+    navigator.clipboard?.writeText(url).then(
+      () => this.toast.success('Enlace copiado'),
+      () => this.toast.warning('No se pudo copiar el enlace')
+    );
   };
 
   private scrollToBottom() {

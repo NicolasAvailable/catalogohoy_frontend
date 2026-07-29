@@ -134,7 +134,7 @@
             <div class="flex-1 h-px bg-grey-100"></div>
           </div>
 
-          @for (msg of group.msgs; track msg.id; let i = $index; let first = $first) {
+          @for (msg of group.msgs; track msg.clientKey || msg.id; let i = $index; let first = $first) {
             <div
               class="flex group items-end gap-1.5"
               [class.justify-end]="msg.isMine"
