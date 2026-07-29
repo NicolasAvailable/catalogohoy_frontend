@@ -19,6 +19,12 @@ export const CHAT_ROUTES: Route[] = [
       import('./views/templates/templates').then((c) => c.TemplatesComponent),
   },
   {
+    // Bandeja de comentarios de posts (Instagram + Facebook).
+    path: 'comments',
+    loadComponent: () =>
+      import('./views/comments/comments').then((c) => c.CommentsComponent),
+  },
+  {
     // Hub "Conectar": galería de canales (WhatsApp / Instagram / TikTok).
     path: 'connect',
     loadComponent: () =>
