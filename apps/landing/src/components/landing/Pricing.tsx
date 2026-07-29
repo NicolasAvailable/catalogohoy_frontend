@@ -274,7 +274,7 @@ const Pricing = () => {
                       del anual se ancla a la derecha para no pisar el "10% off". */}
                   {opt.savingsLabel && (
                     <span
-                      className={`absolute -top-2.5 z-10 bg-[#dcfce7] text-[#16a34a] text-[0.6rem] sm:text-[0.65rem] font-bold px-1.5 sm:px-2 py-[0.1rem] rounded-full shadow-sm whitespace-nowrap pointer-events-none ${
+                      className={`absolute -top-4 z-10 bg-[#dcfce7] text-[#16a34a] text-[0.6rem] sm:text-[0.65rem] font-bold px-1.5 sm:px-2 py-[0.1rem] rounded-full shadow-sm whitespace-nowrap pointer-events-none ${
                         opt.key === "annual" ? "right-0 translate-x-[30%]" : "left-1/2 -translate-x-1/2"
                       }`}
                     >
