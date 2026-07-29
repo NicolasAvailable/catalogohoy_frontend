@@ -20,8 +20,9 @@ export interface PayingAccount {
 const TIER_RANK: Record<PlanTier, number> = {
   gratis: 0,
   basico: 1,
-  avanzado: 2,
-  enterprise: 3,
+  pro: 2,
+  avanzado: 3,
+  enterprise: 4,
 };
 
 /**
