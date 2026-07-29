@@ -22,6 +22,27 @@ const mapSize = (s: { name: string; stock: string | null; sku?: string | null })
   sku: s.sku?.trim() ? s.sku.trim() : null,
 });
 
+/**
+ * Traduce los errores crudos de Postgres/Supabase al guardar un producto a un
+ * mensaje entendible para el comerciante. Sin esto el toaster mostraba textos
+ * como `duplicate key value violates unique constraint "products_sku_unique_per_tenant"`.
+ */
+const friendlyProductError = (
+  error: { code?: string; message?: string } | null | undefined
+): string => {
+  const raw = error?.message?.trim() || 'No se pudo guardar el producto.';
+  const isUniqueViolation =
+    error?.code === '23505' ||
+    /duplicate key value violates unique constraint/i.test(raw);
+  if (isUniqueViolation) {
+    if (/sku/i.test(raw)) {
+      return 'Ya existe otro producto con ese SKU en tu catálogo. Usá un SKU distinto o dejá el campo vacío.';
+    }
+    return 'Ese dato ya está registrado en tu catálogo (valor duplicado).';
+  }
+  return raw;
+};
+
 @Injectable({
   providedIn: 'root',
 })
@@ -228,7 +249,7 @@ export class ProductService implements BaseProductService {
       .select('*');
 
     if (error) {
-      return E.left(new Error(error.message));
+      return E.left(new Error(friendlyProductError(error)));
     }
 
     input.categoryIds.forEach(async (categoryId) => {
@@ -315,7 +336,7 @@ export class ProductService implements BaseProductService {
       .select('*');
 
     if (error) {
-      return E.left(new Error(error.message));
+      return E.left(new Error(friendlyProductError(error)));
     }
 
     const { error: deleteError } = await this.client
