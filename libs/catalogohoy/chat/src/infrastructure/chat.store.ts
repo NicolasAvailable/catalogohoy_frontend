@@ -84,8 +84,24 @@ export const ChatStore = signalStore(
       return store.chats().find((c) => c.id === id) ?? null;
     }),
     messagesByDay: computed(() => {
+      // Dedup defensivo por id: una carrera entre el render optimista, su
+      // reconciliación y el INSERT que llega por realtime puede dejar dos
+      // entradas del MISMO mensaje persistido (incluso con el id como number vs
+      // string). Las colapsamos —conservando la clientKey para no recrear la
+      // burbuja— antes de agrupar por día. El id se normaliza a string en la
+      // clave para que number 812 y string "812" caigan en el mismo bucket.
+      const canonical = new Map<string, ChatMessage>();
+      for (const m of store.messages()) {
+        const key = m.id > 0 ? `id:${m.id}` : `opt:${m.id}`;
+        const prev = canonical.get(key);
+        canonical.set(
+          key,
+          prev ? { ...prev, ...m, clientKey: prev.clientKey ?? m.clientKey } : m
+        );
+      }
+
       const groups: Record<string, ChatMessage[]> = {};
-      for (const msg of store.messages()) {
+      for (const msg of canonical.values()) {
         const day = msg.createdAt.slice(0, 10);
         if (!groups[day]) groups[day] = [];
         groups[day].push(msg);
