@@ -30,10 +30,12 @@ const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planI
 
 const CATALOG_ADDON_PRICE = 4.99;
 
+// El gancho del anual ("2 meses gratis") va como badge FLOTANTE sobre el toggle
+// (estilo postbridge), no inline — por eso "annual" no lleva savingsLabel.
 const billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
   { key: "monthly",   label: "Mensual" },
   { key: "quarterly", label: "Trimestral", savingsLabel: "10% off" },
-  { key: "annual",    label: "Anual",      savingsLabel: "hasta 2 meses gratis" },
+  { key: "annual",    label: "Anual" },
 ];
 
 /* ═══════════════════════════════════════
@@ -234,7 +236,7 @@ const Pricing = () => {
       <div className="absolute top-10 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-300/20 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="mx-auto px-6 max-w-[84rem] relative z-10">
+      <div className="mx-auto px-4 sm:px-6 max-w-[84rem] relative z-10">
 
         {/* ═══ HEADER ═══ */}
         <motion.header
@@ -256,7 +258,11 @@ const Pricing = () => {
 
           {/* Billing period toggle */}
           <div className="flex items-center justify-center mt-6">
-            <div className="inline-flex items-center gap-0.5 bg-[#f1f5f9] rounded-full p-[0.25rem]">
+            <div className="relative inline-flex items-center gap-0.5 bg-[#f1f5f9] rounded-full p-[0.25rem]">
+              {/* Badge flotante del anual (sobrepuesto, estilo postbridge) */}
+              <span className="absolute -top-2.5 -right-1.5 sm:-right-3 z-10 bg-[#f97316] text-white text-[0.6rem] sm:text-[0.65rem] font-bold px-2 py-[0.15rem] rounded-full shadow-sm whitespace-nowrap pointer-events-none">
+                2 meses gratis
+              </span>
               {billingOptions.map((opt) => (
                 <button
                   key={opt.key}
@@ -285,13 +291,13 @@ const Pricing = () => {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="flex snap-x snap-mandatory overflow-x-auto pb-4 -mx-6 px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 sm:overflow-visible sm:mx-auto sm:px-0 sm:pb-0 lg:grid-cols-4 gap-6 lg:gap-4 xl:gap-6 max-w-none sm:max-w-[56rem] lg:max-w-none mx-auto items-stretch"
+          className="flex snap-x snap-mandatory overflow-x-auto pb-4 -mx-4 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 sm:overflow-visible sm:mx-auto sm:px-0 sm:pb-0 lg:grid-cols-4 gap-6 lg:gap-4 xl:gap-6 max-w-none sm:max-w-[56rem] lg:max-w-none mx-auto items-stretch"
         >
           {plans.map((plan) => (
             <motion.div
               key={plan.id}
               variants={cardVariants}
-              className={`relative snap-center shrink-0 basis-[86%] sm:basis-auto sm:shrink bg-white rounded-[1.25rem] flex flex-col transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.1)] ${
+              className={`relative snap-center shrink-0 basis-[90%] sm:basis-auto sm:shrink bg-white rounded-[1.25rem] flex flex-col transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.1)] ${
                 plan.isPopular
                   ? "border-2 border-[#6366f1] shadow-[0_8px_30px_-6px_rgba(99,102,241,0.25)]"
                   : "border border-[#e2e8f0]"
