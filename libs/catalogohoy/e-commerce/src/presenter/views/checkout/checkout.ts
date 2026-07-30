@@ -479,6 +479,8 @@ export default class Checkout {
       const sizeLabel = item.size ? ` (Talla ${item.size})` : '';
       const variantLabel = item.variantName ? ` (${item.variantName})` : '';
       productsList += `• ${item.name}${variantLabel}${sizeLabel} x${item.quantity} - ${symbol}${item.total}\n`;
+      // SKU indentado bajo el producto (solo si el producto tiene uno).
+      if (item.sku) productsList += `   SKU: ${item.sku}\n`;
       // Adicionales elegidos, indentados bajo su producto. El precio del ítem
       // ya los incluye; acá solo se detallan.
       item.addons.forEach((addon) => {
