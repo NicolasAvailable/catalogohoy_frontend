@@ -4,6 +4,7 @@ import { environment } from '@catalogohoy/env';
 import { ButtonComponent } from '@ui';
 import {
   EmbeddedSignupData,
+  FacebookLoginResponse,
   FacebookSdkService,
   WhatsAppConnectMode,
 } from '../../../infrastructure';
@@ -45,9 +46,6 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
   /** Abierto como popup desde el wizard: al terminar avisa por postMessage al
    *  dashboard y se cierra, en vez de redirigir. */
   private isPopup = false;
-  /** Auto-lanzar el Embedded Signup al cargar (el wizard manda &auto=1). Si el
-   *  navegador bloquea el diálogo sin gesto, el botón queda como fallback. */
-  private autoStart = false;
 
   ngOnInit(): void {
     const params = new URLSearchParams(window.location.search);
@@ -56,15 +54,12 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
     this.mode = params.get('mode') === 'dedicated' ? 'dedicated' : 'coexistence';
     this.returnUrl = params.get('return') || this.returnUrl;
     this.isPopup = params.get('popup') === '1';
-    this.autoStart = params.get('auto') === '1';
 
-    this.facebookSdk.loadSdk().then(() => {
-      this.sdkReady.set(true);
-      if (this.autoStart && this.state) {
-        this.autoStart = false;
-        this.connect();
-      }
-    });
+    // SIN auto-lanzamiento: el Embedded Signup se dispara con el CLICK del
+    // usuario en el botón. Abrir el popup de Facebook sin un gesto del usuario
+    // (y encima desde una ventana que ya es popup) el navegador lo bloquea y el
+    // SDK no vuelve a llamar → antes quedaba "cargando" para siempre.
+    this.initSdk();
 
     this.removeMessageListener = this.facebookSdk.onEmbeddedSignupMessage(
       (event) => {
@@ -77,6 +72,28 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
         }
       }
     );
+  }
+
+  /** Carga el SDK y habilita el botón; si falla, muestra el error en pantalla y
+   *  ofrece reintentar. */
+  private initSdk(): void {
+    this.status.set('idle');
+    this.errorMsg.set(null);
+    this.facebookSdk.loadSdk().then(
+      () => this.sdkReady.set(true),
+      (err) => {
+        this.sdkReady.set(false);
+        this.status.set('error');
+        this.errorMsg.set(
+          err instanceof Error ? err.message : 'No se pudo cargar Facebook.'
+        );
+      }
+    );
+  }
+
+  /** Botón "Reintentar" del estado de error: recarga el SDK. */
+  retry(): void {
+    this.initSdk();
   }
 
   ngOnDestroy(): void {
@@ -92,7 +109,35 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
     this.pendingCode = null;
     this.pendingData = null;
 
-    const response = await this.facebookSdk.launchEmbeddedSignup(this.mode);
+    // Red de seguridad: si el diálogo de Facebook nunca responde (bloqueo raro
+    // aun con el click), liberar el botón en vez de quedar "cargando" para
+    // siempre. Es holgado para no cortar un alta en curso; si el flujo termina
+    // igual, tryComplete() lo retoma (se dispara por el postMessage FINISH).
+    let settled = false;
+    const watchdog = setTimeout(() => {
+      if (!settled && this.status() === 'connecting') {
+        this.status.set('idle');
+        this.errorMsg.set(
+          'No se abrió la ventana de Facebook. Permití las ventanas emergentes para este sitio y volvé a pulsar "Conectar con Facebook".'
+        );
+      }
+    }, 120000);
+
+    let response: FacebookLoginResponse;
+    try {
+      response = await this.facebookSdk.launchEmbeddedSignup(this.mode);
+    } catch (err) {
+      settled = true;
+      clearTimeout(watchdog);
+      this.status.set('error');
+      this.errorMsg.set(
+        err instanceof Error ? err.message : 'No se pudo abrir Facebook.'
+      );
+      return;
+    }
+    settled = true;
+    clearTimeout(watchdog);
+
     if (response.status !== 'connected' || !response.authResponse?.code) {
       this.status.set('idle');
       return;

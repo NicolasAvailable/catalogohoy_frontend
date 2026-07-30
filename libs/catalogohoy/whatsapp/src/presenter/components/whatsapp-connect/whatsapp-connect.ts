@@ -67,7 +67,12 @@ export class WhatsAppConnectComponent implements OnInit {
   private pendingData: EmbeddedSignupData | null = null;
 
   ngOnInit(): void {
-    this.facebookSdk.loadSdk().then(() => this.sdkReady.set(true));
+    // El alta real corre en el puente; acá el SDK es opcional. Si no carga
+    // (bloqueador/red), no romper la página: el error se muestra en el puente.
+    this.facebookSdk.loadSdk().then(
+      () => this.sdkReady.set(true),
+      () => this.sdkReady.set(false)
+    );
     this.loadChecklist();
 
     const query = new URLSearchParams(window.location.search);
@@ -114,10 +119,11 @@ export class WhatsAppConnectComponent implements OnInit {
    *  el SDK JS de Facebook exige dominios exactos y los catálogos viven en
    *  subdominios/dominios propios. wa-onboard firma el state (tenant+retorno).
    *
-   *  El puente se abre como POPUP sobre el dashboard (&auto=1 intenta lanzar
-   *  el asistente de Facebook solo); al conectar avisa por postMessage y este
-   *  wizard navega al hub de canales. Si el navegador bloquea el popup, cae
-   *  al flujo de página completa. */
+   *  El puente se abre como POPUP sobre el dashboard; el usuario pulsa ahí
+   *  "Conectar con Facebook" (ese click es el gesto que el navegador exige para
+   *  abrir el diálogo de Meta — por eso NO se auto-lanza). Al conectar avisa por
+   *  postMessage y este wizard navega al hub. Si bloquean el popup del puente,
+   *  cae al flujo de página completa. */
   async connect(): Promise<void> {
     if (!this.canConnect()) return;
     this.isStarting.set(true);
@@ -137,7 +143,7 @@ export class WhatsAppConnectComponent implements OnInit {
     );
     result.fold(
       () => this.isStarting.set(false),
-      (url) => this.openBridgePopup(`${url}&popup=1&auto=1`, url)
+      (url) => this.openBridgePopup(`${url}&popup=1`, url)
     );
   }
 
