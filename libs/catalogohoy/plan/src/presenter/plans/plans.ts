@@ -39,8 +39,8 @@ const BILLING_CONFIG: Record<BillingPeriod, { label: string; months: number; dis
   annual:    { label: 'Anual',       months: 12, discount: 0    },
 };
 
-// Meses gratis del plan ANUAL, por plan: Básico 1, Pro/Avanzado 2.
-const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 1, pro: 2, avanzado: 2 };
+// Meses gratis del plan ANUAL: 2 meses en todos los planes.
+const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 2, pro: 2, avanzado: 2 };
 const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 1;
 
 type PlanUIConfig = {

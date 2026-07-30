@@ -39,8 +39,8 @@ const BILLING_CONFIG: Record<
   annual:    { label: 'año',       months: 12, discount: 0    },
 };
 
-// Meses gratis del plan ANUAL, por plan: Básico 1, Pro/Avanzado 2.
-const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 1, pro: 2, avanzado: 2 };
+// Meses gratis del plan ANUAL: 2 meses en todos los planes.
+const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 2, pro: 2, avanzado: 2 };
 const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 1;
 
 /** Meses efectivamente pagados. En anual, los meses gratis dependen del plan. */
@@ -161,7 +161,7 @@ export class PlanCheckout implements OnInit {
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
     { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '1 mes gratis' },
+    { key: 'annual',    label: 'Anual',      savingsLabel: '2 meses gratis' },
   ];
 
   public readonly planId               = signal<string>('');
