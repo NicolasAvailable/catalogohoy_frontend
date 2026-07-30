@@ -19,9 +19,10 @@ import {
  *  devuelve el navegador al admin del cliente. Página pública: en este dominio
  *  no existe la sesión del comerciante (localStorage es por origen).
  *
- *  Instrumentado: captura y muestra en pantalla lo que devuelve Meta (respuesta
- *  de FB.login + cada postMessage) para diagnosticar el flujo de coexistencia,
- *  que entrega el `code` y los ids de la WABA por dos canales distintos. */
+ *  Instrumentado: captura y muestra EN PANTALLA lo que devuelve Meta (respuesta
+ *  de FB.login + cada postMessage) para diagnosticar el flujo de coexistencia
+ *  junto al cliente en una llamada. Nada sale del navegador (ni el `code` ni la
+ *  bitácora se envían a ningún lado) — solo se muestra localmente. */
 @Component({
   selector: 'lib-whatsapp-bridge',
   standalone: true,
@@ -40,8 +41,9 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
   /** true si llegaron sin el `state` firmado (URL abierta a mano o vencida). */
   readonly missingState = signal(false);
 
-  /** Bitácora visible en pantalla (para que el cliente la capture) de lo que va
-   *  entregando Meta. Es la clave para diagnosticar dónde se corta el alta. */
+  /** Bitácora visible en pantalla (solo local) de lo que va entregando Meta. Es
+   *  la clave para diagnosticar dónde se corta el alta, mirándola con el cliente
+   *  en una llamada. */
   readonly debug = signal<string[]>([]);
   /** Ids capturados de la WABA/número — si el alta automática falla, con esto se
    *  puede completar a mano. */
@@ -58,40 +60,10 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
    *  dashboard y se cierra, en vez de redirigir. */
   private isPopup = false;
 
+  /** Agrega una línea a la bitácora en pantalla (y a la consola). Solo local. */
   private note(line: string): void {
     this.debug.update((lines) => [...lines, line]);
-    // También a la consola por si hace falta el detalle completo en DevTools.
     console.log('[wa-bridge]', line);
-  }
-
-  /** true si Facebook devolvió el `code` (necesario para el token). */
-  private hadCode = false;
-
-  /** Estado terminal → Slack (vía wa-onboard action=report). SIEMPRE, con éxito
-   *  o falla: toda la info de la conexión + su status + la bitácora. `keepalive`
-   *  para que llegue aunque la página redirija o se cierre al terminar. */
-  private sendReport(outcome: string): void {
-    this.note(`Enviando diagnóstico a soporte (${outcome})…`);
-    try {
-      fetch(`${environment.supabaseUrl}/functions/v1/wa-onboard`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        keepalive: true,
-        body: JSON.stringify({
-          action: 'report',
-          state: this.state,
-          outcome,
-          hasCode: this.hadCode,
-          waba: this.waInfo()?.waba ?? null,
-          phone: this.waInfo()?.phone ?? null,
-          mode: this.mode,
-          userAgent: navigator.userAgent,
-          log: this.debug(),
-        }),
-      }).catch(() => undefined);
-    } catch {
-      /* diagnóstico best-effort */
-    }
   }
 
   ngOnInit(): void {
@@ -137,7 +109,6 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
             event.data?.error_message ||
               'Facebook canceló o falló el proceso. Reintentá y completá todos los pasos.'
           );
-          this.sendReport('meta-' + event.event.toLowerCase());
         }
       }
     );
@@ -159,7 +130,6 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
         this.errorMsg.set(
           err instanceof Error ? err.message : 'No se pudo cargar Facebook.'
         );
-        this.sendReport('sdk-no-carga');
       }
     );
   }
@@ -181,7 +151,6 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
     this.errorMsg.set(null);
     this.pendingCode = null;
     this.pendingData = null;
-    this.hadCode = false;
     this.note('Abriendo el asistente de Facebook…');
 
     // Red de seguridad: si el diálogo de Facebook nunca responde (bloqueo raro
@@ -194,7 +163,6 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
         this.errorMsg.set(
           'No se abrió la ventana de Facebook. Permití las ventanas emergentes para este sitio y volvé a pulsar "Conectar con Facebook".'
         );
-        this.sendReport('timeout-sin-datos');
       }
     }, 120000);
 
@@ -208,7 +176,6 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
       this.errorMsg.set(
         err instanceof Error ? err.message : 'No se pudo abrir Facebook.'
       );
-      this.sendReport('error-fb-login');
       return;
     }
     settled = true;
@@ -225,7 +192,6 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
     // postMessage, tryComplete() ya está guardando; si no, esperamos ese mensaje.
     const code = response.authResponse?.code;
     if (code) {
-      this.hadCode = true;
       this.pendingCode = code;
       this.tryComplete();
       if (this.status() === 'connecting') {
@@ -241,7 +207,6 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
         ? 'Facebook devolvió los datos de la cuenta pero NO el código de autorización, así que no se pudo terminar la conexión. Reintentá y completá TODO el asistente dentro de esta ventana (sin cerrarla ni terminar en el teléfono).'
         : 'Facebook cerró sin devolver el código de autorización. Reintentá y completá todos los pasos dentro de esta ventana.'
     );
-    this.sendReport('sin-code');
   }
 
   /** Con code + ids de la WABA, completa el alta server-side (el `state`
@@ -284,7 +249,6 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
       }
       this.note('Alta guardada en CatalogoHoy. ✓');
       this.status.set('done');
-      this.sendReport('exito');
       // Popup: avisar al dashboard (payload constante, sin datos sensibles) y
       // cerrarse; el wizard escucha y navega al hub de canales conectados.
       if (this.isPopup && window.opener) {
@@ -298,7 +262,6 @@ export class WhatsAppBridgeComponent implements OnInit, OnDestroy {
       this.note(`Error al guardar: ${err instanceof Error ? err.message : err}`);
       this.errorMsg.set(err instanceof Error ? err.message : String(err));
       this.status.set('error');
-      this.sendReport('error-guardar');
     }
   }
 }
