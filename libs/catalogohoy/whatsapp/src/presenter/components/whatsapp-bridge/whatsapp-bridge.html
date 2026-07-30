@@ -51,5 +51,29 @@
     <p class="text-[11px] text-grey-300">
       {{ 'Al terminar volverás automáticamente a tu catálogo.' | transloco }}
     </p>
+
+    <!-- Datos capturados de la WABA (útiles si el alta automática falla → se
+         completa a mano con estos ids). -->
+    @if (waInfo(); as info) {
+    <div class="w-full rounded-lg bg-grey-50 border border-grey-100 px-3 py-2 text-left">
+      <p class="text-[10px] font-mono text-grey-600 break-all">WABA: {{ info.waba || '—' }}</p>
+      <p class="text-[10px] font-mono text-grey-600 break-all">Phone ID: {{ info.phone || '—' }}</p>
+    </div>
+    }
+
+    <!-- Bitácora de diagnóstico: qué fue entregando Meta. El cliente puede
+         capturarla si algo falla. -->
+    @if (debug().length) {
+    <details class="w-full text-left" [open]="status() === 'error'">
+      <summary class="text-[11px] text-grey-400 cursor-pointer select-none">
+        {{ 'Detalles técnicos (para soporte)' | transloco }}
+      </summary>
+      <div class="mt-1 max-h-44 overflow-auto rounded-lg bg-grey-50 border border-grey-100 p-2">
+        @for (line of debug(); track $index) {
+        <p class="text-[10px] font-mono text-grey-600 break-all leading-snug">{{ line }}</p>
+        }
+      </div>
+    </details>
+    }
   </div>
 </div>

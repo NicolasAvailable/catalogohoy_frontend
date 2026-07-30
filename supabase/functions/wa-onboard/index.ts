@@ -12,7 +12,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //   • action=start    (JWT verificado a mano): { tenantId, returnUrl, mode }
 //                     → valida membresía y devuelve la URL del puente con un
 //                     `state` firmado (HMAC WA_APP_SECRET) que amarra
-//                     tenant + retorno + modo (30 min).
+//                     tenant + retorno + modo (2 h — el alta primeriza es lenta).
 //   • action=complete (sin JWT — la llama el puente): { state, wabaId,
 //                     phoneNumberId, authCode } → verifica el state y completa
 //                     el alta (token del comerciante, suscripción, upsert).
@@ -76,7 +76,7 @@ async function makeState(
   mode: string,
   returnUrl: string,
 ): Promise<string> {
-  const exp = Math.floor(Date.now() / 1000) + 1800; // 30 min
+  const exp = Math.floor(Date.now() / 1000) + 7200; // 2 h (alta primeriza lenta)
   const payload = `${tenantId}|${exp}|${mode}|${returnUrl}`;
   return `${b64urlEncode(payload)}.${await hmac(payload)}`;
 }
