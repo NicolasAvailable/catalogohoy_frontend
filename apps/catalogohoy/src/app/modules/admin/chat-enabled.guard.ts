@@ -6,7 +6,7 @@ import { TenantStore } from '@catalogohoy/tenant';
 /** Override interno por slug: VACÍO desde 2026-07-24 (decisión de Nicolás: sin
  *  allowlist, el acceso al CRM se decide SOLO por plan). Se deja el array por si
  *  hiciera falta un piloto puntual en el futuro. */
-export const CHAT_ENABLED_SLUGS: string[] = [];
+export const CHAT_ENABLED_SLUGS: string[] = ['andes-4x4'];
 
 /** Planes que pueden CONECTAR un canal (decisión 2026-07-24: solo Avanzado;
  *  enterprise por estar por encima; Pro NO). Ojo: la VISIBILIDAD del módulo ya

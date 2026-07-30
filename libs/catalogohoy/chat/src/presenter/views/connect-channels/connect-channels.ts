@@ -19,8 +19,10 @@ import { ConfirmDialogService, DialogComponent, IconComponent } from '@ui';
 /** Planes con acceso al CRM/conexión de canales (solo Avanzado; enterprise por
  *  estar por encima). Pro NO. Debe coincidir con CHAT_ENABLED_PLANS del guard. */
 const CHAT_ENABLED_PLANS = ['avanzado', 'enterprise'];
-/** Sin allowlist por slug (2026-07-24): el acceso se decide solo por plan. */
-const CHAT_ENABLED_SLUGS: string[] = [];
+/** Override interno por slug: acceso al CRM aunque el plan no lo incluya.
+ *  andes-4x4 (2026-07-30): habilitado como gesto por info errada (modal decía
+ *  Pro). Debe coincidir con CHAT_ENABLED_SLUGS del guard. */
+const CHAT_ENABLED_SLUGS: string[] = ['andes-4x4'];
 
 /** Canal conectable desde el hub (estilo galería de SocialGest). */
 interface ConnectableChannel {
