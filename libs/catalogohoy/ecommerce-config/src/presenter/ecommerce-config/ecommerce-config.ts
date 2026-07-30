@@ -250,7 +250,13 @@ export class EcommerceConfigComponent implements OnInit {
   ];
 
   // WhatsApp message template
-  public readonly whatsappMessageVariables = WHATSAPP_MESSAGE_VARIABLES;
+  // El chip {totalBs} solo aplica a catálogos de Venezuela (fuera de VE renderiza
+  // vacío), así que se oculta para el resto.
+  public readonly whatsappMessageVariables = computed(() =>
+    this.isVenezuela()
+      ? WHATSAPP_MESSAGE_VARIABLES
+      : WHATSAPP_MESSAGE_VARIABLES.filter((v) => v.key !== '{totalBs}')
+  );
   public readonly defaultWhatsappMessage = DEFAULT_WHATSAPP_ORDER_MESSAGE;
   public readonly whatsappMaxLength = WHATSAPP_MESSAGE_MAX_LENGTH;
   public readonly whatsappMessageTextarea = viewChild<ElementRef>('whatsappMessageTextarea');
