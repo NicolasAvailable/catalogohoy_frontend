@@ -449,6 +449,7 @@
           [ngModel]="messageInput()"
           (ngModelChange)="messageInput.set($event)"
           (keydown)="onKeydown($event)"
+          (paste)="onPasteComposer($event)"
           [placeholder]="
             (composerMode() === 'whisper'
               ? 'Nota interna para el equipo (no la ve el cliente)…'

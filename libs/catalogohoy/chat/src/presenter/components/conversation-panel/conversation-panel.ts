@@ -503,6 +503,20 @@ export class ConversationPanelComponent {
     this.addFiles(Array.from(event.dataTransfer?.files ?? []));
   }
 
+  /** Pegar (Ctrl/Cmd+V) una imagen o archivo en el composer lo adjunta como
+   *  multimedia — igual que arrastrarlo o usar el clip. Si el portapapeles trae
+   *  solo texto, se deja el pegado normal. */
+  onPasteComposer(event: ClipboardEvent): void {
+    if (this.composerMode() === 'whisper') return;
+    const files = Array.from(event.clipboardData?.items ?? [])
+      .filter((it) => it.kind === 'file')
+      .map((it) => it.getAsFile())
+      .filter((f): f is File => f !== null);
+    if (!files.length) return;
+    event.preventDefault();
+    this.addFiles(files);
+  }
+
   onDragOverComposer(event: DragEvent): void {
     if (this.composerMode() === 'whisper') return;
     event.preventDefault();
