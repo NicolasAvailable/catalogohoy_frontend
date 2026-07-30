@@ -24,8 +24,8 @@ const PLAN_BASE_PRICES: Record<string, number> = {
   avanzado: 29.99,
 };
 
-// Meses gratis del plan ANUAL, por plan: Básico 1, Pro/Avanzado 2.
-const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 1, pro: 2, avanzado: 2 };
+// Meses gratis del plan ANUAL: 2 meses en todos los planes.
+const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 2, pro: 2, avanzado: 2 };
 const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 1;
 
 const CATALOG_ADDON_PRICE = 4.99;
@@ -144,7 +144,7 @@ function getBasePrice(plan: PlanData): number {
 }
 
 /** Meses que se pagan en el período. En anual, los meses gratis dependen del
- *  plan (Básico 1, Pro/Avanzado 2). */
+ *  plan (2 meses gratis en todos los planes). */
 function paidMonthsFor(planId: string, period: BillingPeriod): number {
   if (period === "annual") return 12 - annualFreeMonthsFor(planId);
   const { months, discount } = BILLING_CONFIG[period];
