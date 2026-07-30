@@ -25,7 +25,10 @@
           >
             {{ option.label | transloco }}
             @if (option.savingsLabel) {
-              <span class="billing-toggle__savings">{{ option.savingsLabel | transloco }}</span>
+              <span
+                class="billing-toggle__savings"
+                [class.billing-toggle__savings--annual]="option.key === 'annual'"
+              >{{ option.savingsLabel | transloco }}</span>
             }
           </button>
         }

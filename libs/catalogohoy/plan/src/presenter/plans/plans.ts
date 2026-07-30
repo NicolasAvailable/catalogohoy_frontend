@@ -165,7 +165,7 @@ export class Plans implements OnInit {
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
     { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: 'hasta 2 meses gratis' },
+    { key: 'annual',    label: 'Anual',      savingsLabel: '2 meses gratis' },
   ];
 
   // Resolve the currency we'll charge in, driven by the tenant's country.

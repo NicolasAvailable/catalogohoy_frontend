@@ -98,6 +98,7 @@
 }
 
 .billing-toggle__btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -120,13 +121,29 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
+/* Badge de ahorro FLOTANTE (sobrepuesto) sobre cada tab, como en la landing. */
 .billing-toggle__savings {
+  position: absolute;
+  top: -0.85rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
   background: #dcfce7;
   color: #16a34a;
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 0.15rem 0.5rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
   border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* El del anual (más ancho) se ancla a la derecha para no pisar el "10% off". */
+.billing-toggle__savings--annual {
+  left: auto;
+  right: 0;
+  transform: translateX(30%);
 }
 
 /* ── Grid — equal height cards ── */
@@ -517,32 +534,24 @@
 }
 
 /* ── Responsive ── */
-/* Móvil: carousel horizontal con snap (sin flechas, se desliza). */
+/* Móvil: planes apilados uno debajo del otro (stack vertical, sin carousel). */
 @media (max-width: 767px) {
   .plans-grid,
   .plans-grid--four {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     grid-template-columns: none;
-    overflow-x: auto;
     min-width: 0;
     max-width: 100%;
     margin: 0;
-    scroll-snap-type: x mandatory;
     gap: 1rem;
-    padding: 0.25rem 0.25rem 0.75rem;
-    scrollbar-width: none; /* Firefox */
-    -webkit-overflow-scrolling: touch;
-  }
-  .plans-grid::-webkit-scrollbar {
-    display: none; /* WebKit */
+    padding: 0.25rem 0 0.75rem;
   }
   .plan-card,
   .plan-card--enterprise {
-    flex: 0 0 86%;
-    max-width: 22rem;
+    width: 100%;
+    max-width: 100%;
     min-height: 0;
-    scroll-snap-align: center;
   }
 }
 
