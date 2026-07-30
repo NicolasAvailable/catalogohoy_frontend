@@ -16,6 +16,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //   • action=complete (sin JWT — la llama el puente): { state, wabaId,
 //                     phoneNumberId, authCode } → verifica el state y completa
 //                     el alta (token del comerciante, suscripción, upsert).
+//   • action=report   (sin JWT — la llama el puente): reenvía su bitácora a
+//                     Slack para diagnóstico (state con firma válida requerido).
 //   • legacy (sin action, JWT a mano): { tenantId, wabaId, phoneNumberId,
 //                     authCode } — flujo directo original.
 //
@@ -50,7 +52,7 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-// ── State firmado (mismo patrón que ig-oauth) ───────────────────────────────
+// State firmado (mismo patrón que ig-oauth)
 async function hmac(data: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -98,7 +100,95 @@ async function parseState(
   return { tenantId: Number(tenantId), mode, returnUrl: rest.join("|") };
 }
 
-// ── Autorización manual por JWT (start / legacy) ────────────────────────────
+// Como parseState pero IGNORA el vencimiento: sirve para el diagnóstico
+// (action=report), que igual queremos recibir aunque el `state` haya expirado.
+// Sigue exigiendo la firma HMAC válida → sólo un alta legítima puede reportar.
+async function parseStateLoose(
+  state: string,
+): Promise<{ tenantId: number; mode: string } | null> {
+  const [encoded, sig] = (state ?? "").split(".");
+  if (!encoded || !sig) return null;
+  let payload: string;
+  try {
+    payload = b64urlDecode(encoded);
+  } catch {
+    return null;
+  }
+  if ((await hmac(payload)) !== sig) return null;
+  const [tenantId, , mode] = payload.split("|");
+  return { tenantId: Number(tenantId), mode };
+}
+
+// Reenvía la bitácora del puente a Slack para diagnosticar el alta sin depender
+// de una captura del cliente. Best-effort: nunca rompe el flujo.
+async function reportToSlack(
+  tenantId: number,
+  body: {
+    outcome?: string;
+    hasCode?: boolean;
+    waba?: string | null;
+    phone?: string | null;
+    mode?: string;
+    userAgent?: string;
+    log?: unknown;
+  },
+): Promise<void> {
+  // El webhook vive como SECRETO (SLACK_WA_WEBHOOK), con fallback a #leads.
+  // NUNCA hardcodear la URL acá: es un secreto y GitHub push protection la
+  // bloquea. (La versión desplegada trae la URL directa hasta setear el secreto.)
+  const slackUrl = Deno.env.get("SLACK_WA_WEBHOOK") ??
+    Deno.env.get("SLACK_LEADS_WEBHOOK");
+  if (!slackUrl) return;
+
+  const lines = Array.isArray(body.log) ? body.log.map(String) : [];
+  const logText = (lines.join("\n").slice(0, 2600)) || "(sin bitácora)";
+  const fields = [
+    `*Tenant:* ${tenantId}`,
+    `*Resultado:* ${body.outcome ?? "?"}`,
+    `*Modo:* ${body.mode ?? "?"}`,
+    `*¿code de Facebook?:* ${body.hasCode ? "sí" : "no"}`,
+    `*WABA:* ${body.waba ?? "—"}`,
+    `*Phone ID:* ${body.phone ?? "—"}`,
+  ].join("\n");
+
+  await fetch(slackUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      attachments: [
+        {
+          color: body.outcome === "exito" ? "#22c55e" : "#ef4444",
+          blocks: [
+            {
+              type: "header",
+              text: {
+                type: "plain_text",
+                text: "Conexion WhatsApp (diagnostico)",
+                emoji: true,
+              },
+            },
+            { type: "section", text: { type: "mrkdwn", text: fields } },
+            {
+              type: "section",
+              text: { type: "mrkdwn", text: "```" + logText + "```" },
+            },
+            {
+              type: "context",
+              elements: [
+                {
+                  type: "mrkdwn",
+                  text: (body.userAgent ?? "CatalogoHoy - WA onboarding").slice(0, 300),
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }),
+  }).catch(() => {});
+}
+
+// Autorización manual por JWT (start / legacy)
 async function assertTenantMember(
   authHeader: string,
   tenantId: number,
@@ -120,7 +210,7 @@ async function assertTenantMember(
   return !!membership;
 }
 
-// ── Alta del número (flujo original: token → suscripción → upsert) ──────────
+// Alta del número (flujo original: token -> suscripción -> upsert)
 async function completeOnboarding(
   tenantId: number,
   wabaId: string,
@@ -218,7 +308,7 @@ async function completeOnboarding(
 }
 
 type Payload = {
-  action?: "start" | "complete";
+  action?: "start" | "complete" | "report";
   tenantId?: number;
   wabaId?: string;
   phoneNumberId?: string;
@@ -226,6 +316,13 @@ type Payload = {
   returnUrl?: string;
   mode?: string;
   state?: string;
+  // action=report (diagnóstico -> Slack)
+  outcome?: string;
+  hasCode?: boolean;
+  waba?: string | null;
+  phone?: string | null;
+  userAgent?: string;
+  log?: unknown;
 };
 
 Deno.serve(async (req) => {
@@ -249,7 +346,18 @@ Deno.serve(async (req) => {
 
   const authHeader = req.headers.get("Authorization") ?? "";
 
-  // ── start: minta el state y devuelve la URL del puente ──
+  // report: el puente reenvía su bitácora a Slack (diagnóstico). Exige un state
+  // con firma válida (aunque esté vencido) para no ser un relay abierto.
+  if (body.action === "report") {
+    const st = await parseStateLoose(body.state ?? "");
+    if (!st) {
+      return jsonResponse({ success: false, error: "bad state" }, 400);
+    }
+    await reportToSlack(st.tenantId, body);
+    return jsonResponse({ success: true });
+  }
+
+  // start: minta el state y devuelve la URL del puente
   if (body.action === "start") {
     const tenantId = Number(body.tenantId);
     const returnUrl = (body.returnUrl ?? "").trim();
@@ -267,7 +375,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: true, url });
   }
 
-  // ── complete: el puente termina el alta con el state firmado ──
+  // complete: el puente termina el alta con el state firmado
   if (body.action === "complete") {
     const state = await parseState(body.state ?? "");
     if (!state) {
@@ -295,7 +403,7 @@ Deno.serve(async (req) => {
     return res;
   }
 
-  // ── legacy: flujo directo (JWT + membresía) ──
+  // legacy: flujo directo (JWT + membresía)
   const { tenantId, wabaId, phoneNumberId, authCode } = body;
   if (!tenantId || !wabaId || !phoneNumberId || !authCode) {
     return jsonResponse(
