@@ -11,6 +11,7 @@ import {
   input,
   output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -56,6 +57,10 @@ export class ConversationPanelComponent {
   private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly messageInput = signal('');
+
+  /** Conversación cuyo borrador está cargado en el composer ahora mismo. */
+  private draftChatId: number | null = null;
+  private readonly DRAFT_PREFIX = 'catalogohoy:chat-draft:';
 
   /** Abrir la ficha del cliente como overlay (solo móvil, botón ⓘ del header). */
   public readonly infoClick = output<void>();
@@ -207,6 +212,54 @@ export class ConversationPanelComponent {
         el.removeEventListener('click', this.onThreadClick);
       });
     });
+
+    // Borrador por conversación: guarda lo que estás escribiendo (por chatId, en
+    // localStorage) y lo restaura al volver — aunque cambies de chat o salgas del
+    // módulo. Al cambiar de chat: guarda el del anterior y carga el del nuevo.
+    effect(() => {
+      const chatId = this.chatStore.selectedChat()?.id ?? null;
+      if (chatId === this.draftChatId) return;
+      if (this.draftChatId != null) {
+        this.persistDraft(this.draftChatId, untracked(() => this.messageInput()));
+      }
+      this.draftChatId = chatId;
+      this.messageInput.set(chatId != null ? this.readDraft(chatId) : '');
+    });
+
+    // Guarda en vivo mientras escribís (así sobrevive salir del módulo sin
+    // cambiar de chat). Al enviar deja '' → borra el borrador.
+    effect(() => {
+      const text = this.messageInput();
+      if (this.draftChatId != null) this.persistDraft(this.draftChatId, text);
+    });
+
+    // Guardado final al destruirse (salir del módulo), por las dudas.
+    this.destroyRef.onDestroy(() => {
+      if (this.draftChatId != null) {
+        this.persistDraft(this.draftChatId, this.messageInput());
+      }
+    });
+  }
+
+  private draftKey(chatId: number): string {
+    return `${this.DRAFT_PREFIX}${chatId}`;
+  }
+  /** Lee el borrador guardado de una conversación (vacío si no hay). */
+  private readDraft(chatId: number): string {
+    try {
+      return localStorage.getItem(this.draftKey(chatId)) ?? '';
+    } catch {
+      return '';
+    }
+  }
+  /** Guarda (o borra, si quedó vacío) el borrador de una conversación. */
+  private persistDraft(chatId: number, text: string): void {
+    try {
+      if (text.trim()) localStorage.setItem(this.draftKey(chatId), text);
+      else localStorage.removeItem(this.draftKey(chatId));
+    } catch {
+      /* localStorage lleno/bloqueado — no romper el chat */
+    }
   }
 
   private readonly onScroll = (): void => {
