@@ -67,4 +67,9 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     icon: 'sparkles',
     routerLink: '/ai-usage',
   },
+  {
+    label: 'Emails',
+    icon: 'mail',
+    routerLink: '/emails',
+  },
 ];

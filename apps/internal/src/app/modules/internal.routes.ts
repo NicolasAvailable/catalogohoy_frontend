@@ -75,4 +75,9 @@ export const internalRoutes: Route[] = [
         (m) => m.platformOrdersRoutes
       ),
   },
+  {
+    path: 'emails',
+    loadChildren: () =>
+      import('./email-ses/email-ses.routes').then((m) => m.emailSesRoutes),
+  },
 ];
