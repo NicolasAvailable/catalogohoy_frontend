@@ -36,6 +36,10 @@ type GalleryTab = 'products' | 'uploads';
 })
 export class ImageGalleryComponent implements AfterViewInit {
   public readonly tenantId = input<number | null>(null);
+  /** Cuando es false oculta el botón de eliminar: la galería queda en modo
+   *  "solo elegir" (p. ej. reusada como picker en el chat, donde el agente no
+   *  debe borrar imágenes de producto). */
+  public readonly allowDelete = input<boolean>(true);
   public readonly closed = output<void>();
   public readonly selected = output<string>();
 

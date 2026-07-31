@@ -471,6 +471,84 @@ export const ChatStore = signalStore(
         );
       },
 
+      /** Envía una imagen YA hosteada (elegida de la galería de la app: fotos de
+       *  productos o subidas del tenant) SIN re-subirla — usa la URL pública
+       *  directo. Render optimista + reconciliación igual que sendMedia. */
+      async sendMediaFromUrl(url: string, caption = '') {
+        const chatId = store.selectedChatId();
+        const link = (url ?? '').trim();
+        if (!chatId || !link) return;
+
+        const replyTo = store.replyingTo();
+        const replyToId = replyTo && replyTo.id > 0 ? replyTo.id : null;
+
+        const cap = caption.trim();
+        const tempId = nextTempId();
+        const clientKey = 'opt' + tempId;
+        const now = new Date().toISOString();
+        const optimistic: ChatMessage = {
+          id: tempId,
+          clientKey,
+          chatId,
+          content: cap,
+          isMine: true,
+          createdAt: now,
+          status: 'sending',
+          type: 'image',
+          mediaUrl: link,
+          replyToMessageId: replyToId,
+        };
+        patchState(store, {
+          messages: [...store.messages(), optimistic],
+          isSendingMessage: true,
+          replyingTo: null,
+          chats: store.chats().map((c) =>
+            c.id === chatId
+              ? { ...c, lastMessage: cap || '📷 Imagen', lastMessageAt: now, lastMessageIsMine: true }
+              : c
+          ),
+        });
+
+        const result = await chatService.sendMedia(
+          chatId,
+          link,
+          'image',
+          cap,
+          replyToId,
+          store.selectedChat()?.channel ?? 'whatsapp'
+        );
+        result.fold(
+          (err) =>
+            patchState(store, {
+              isSendingMessage: false,
+              messages: store.messages().map((m) =>
+                m.id === tempId
+                  ? { ...m, status: 'failed' as const, error: err.message }
+                  : m
+              ),
+            }),
+          (msg) => {
+            const cleaned = store
+              .messages()
+              .filter((m) => m.id !== tempId && m.id !== msg.id);
+            patchState(store, {
+              messages: [...cleaned, { ...msg, clientKey }],
+              isSendingMessage: false,
+              chats: store.chats().map((c) =>
+                c.id === chatId
+                  ? {
+                      ...c,
+                      lastMessage: msg.content,
+                      lastMessageAt: msg.createdAt,
+                      lastMessageIsMine: true,
+                    }
+                  : c
+              ),
+            });
+          }
+        );
+      },
+
       setRealtimeDown(down: boolean) {
         patchState(store, { realtimeDown: down });
       },

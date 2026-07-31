@@ -593,16 +593,42 @@
               }
             </div>
 
-            <!-- Adjuntar -->
+            <!-- Adjuntar: menú único (estilo "+") con dos opciones -->
             @if (composerMode() !== 'whisper') {
-            <button
-              (click)="fileInput.click()"
-              class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
-              [pTooltip]="'Adjuntar imágenes o documentos' | transloco"
-              tooltipPosition="top"
-            >
-              <ui-icon name="paperclip" size="18" styleClass="text-grey-400" />
-            </button>
+            <div class="relative attach-popover-wrap">
+              <button
+                (click)="toggleAttachMenu($event)"
+                class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
+                [class.bg-grey-100]="attachMenuOpen()"
+                [pTooltip]="'Adjuntar' | transloco"
+                tooltipPosition="top"
+              >
+                <ui-icon name="plus" size="20" styleClass="text-grey-400" />
+              </button>
+
+              @if (attachMenuOpen()) {
+              <div
+                class="absolute bottom-10 left-0 z-20 w-60 bg-white border border-grey-100 rounded-xl shadow-lg py-1.5"
+              >
+                <button
+                  type="button"
+                  (click)="attachMenuOpen.set(false); fileInput.click()"
+                  class="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm text-grey-700 hover:bg-grey-50 cursor-pointer"
+                >
+                  <ui-icon name="upload" size="18" styleClass="text-grey-400" />
+                  {{ 'Subir desde el dispositivo' | transloco }}
+                </button>
+                <button
+                  type="button"
+                  (click)="attachMenuOpen.set(false); galleryOpen.set(true)"
+                  class="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm text-grey-700 hover:bg-grey-50 cursor-pointer"
+                >
+                  <ui-icon name="image" size="18" styleClass="text-grey-400" />
+                  {{ 'Elegir de la galería' | transloco }}
+                </button>
+              </div>
+              }
+            </div>
             }
           </div>
 
@@ -742,5 +768,17 @@
       </div>
     </div>
   </div>
+  }
+
+  <!-- Picker: galería de la app (fotos de productos / subidas del tenant) para
+       enviar una imagen YA hosteada sin re-subirla. Modo solo-elegir (sin
+       botón de borrar). Reusa el mismo componente de crear/editar producto. -->
+  @if (galleryOpen()) {
+  <lib-image-gallery
+    [tenantId]="galleryTenantId()"
+    [allowDelete]="false"
+    (selected)="onGallerySelected($event)"
+    (closed)="galleryOpen.set(false)"
+  />
   }
 }

@@ -18,6 +18,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TooltipModule } from 'primeng/tooltip';
+import { ImageGalleryComponent } from '@catalogohoy/product';
 import { TenantStore } from '@catalogohoy/tenant';
 import { WhatsAppService, WhatsAppStore } from '@catalogohoy/whatsapp';
 import { ToastService } from '@shared/infrastructure';
@@ -43,6 +44,7 @@ import { WaFormatPipe } from '../wa-format.pipe';
     IconComponent,
     ButtonComponent,
     ImageComponent,
+    ImageGalleryComponent,
     PickerComponent,
     TranslocoPipe,
     ChatAudioPlayerComponent,
@@ -139,6 +141,13 @@ export class ConversationPanelComponent {
     }[]
   >([]);
   protected readonly maxAttachments = 10;
+  /** Galería de la app (fotos de productos / subidas) abierta como picker para
+   *  enviar una imagen ya hosteada, sin re-subirla. */
+  protected readonly galleryOpen = signal(false);
+  /** Tenant del chat abierto — para que la galería liste SUS imágenes. */
+  protected readonly galleryTenantId = computed(
+    () => this.chatStore.selectedChat()?.tenantId ?? null
+  );
   /** Overlay "soltá el archivo" mientras se arrastra algo sobre el composer. */
   protected readonly isDraggingFile = signal(false);
   private readonly maxImageBytes = 5 * 1024 * 1024;
@@ -362,6 +371,13 @@ export class ConversationPanelComponent {
     this.clearAttachments();
   }
 
+  /** Imagen elegida de la galería de la app → se envía directo (ya está
+   *  hosteada, no se re-sube). Cierra el picker. */
+  onGallerySelected(url: string): void {
+    this.galleryOpen.set(false);
+    this.chatStore.sendMediaFromUrl(url);
+  }
+
   private clearAttachments(): void {
     for (const m of this.pendingMedia()) URL.revokeObjectURL(m.preview);
     this.pendingMedia.set([]);
@@ -492,6 +508,17 @@ export class ConversationPanelComponent {
     this.messageInput.update((v) => v + (event.emoji?.native ?? ''));
   }
 
+  /** Menú "+" de adjuntar (estilo Claude): elegir entre subir un archivo del
+   *  dispositivo o buscar en la galería de la app. */
+  protected readonly attachMenuOpen = signal(false);
+
+  toggleAttachMenu(event: Event): void {
+    event.stopPropagation();
+    this.emojiPickerOpen.set(false);
+    this.quickRepliesOpen.set(false);
+    this.attachMenuOpen.update((v) => !v);
+  }
+
   /** Close each popover when the click lands outside *its own* wrapper (not just
    *  outside the whole panel) so clicking the messages/area also dismisses it. */
   @HostListener('document:click', ['$event'])
@@ -502,6 +529,9 @@ export class ConversationPanelComponent {
     }
     if (this.quickRepliesOpen() && !target.closest('.qr-popover-wrap')) {
       this.quickRepliesOpen.set(false);
+    }
+    if (this.attachMenuOpen() && !target.closest('.attach-popover-wrap')) {
+      this.attachMenuOpen.set(false);
     }
   }
 

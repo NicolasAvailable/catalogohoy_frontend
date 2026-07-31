@@ -12,6 +12,7 @@ import {
   DialogService,
   dialogConfig,
   IconComponent,
+  ImageComponent,
   SelectComponent,
   SelectItemDirective,
   SelectSelectedItemDirective,
@@ -35,6 +36,7 @@ import { ChatStore } from '../../../infrastructure/chat.store';
     FormsModule,
     AccordionModule,
     IconComponent,
+    ImageComponent,
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
@@ -134,7 +136,28 @@ export class CustomerPanelComponent {
   }
 
   /** Collapsible ficha sections that start open (PrimeNG accordion, multiple). */
-  protected accordionValue: string[] = ['info', 'orders', 'notes'];
+  protected accordionValue: string[] = ['info', 'orders', 'media', 'notes'];
+
+  /** Toda la multimedia (imágenes, videos, documentos) intercambiada en la
+   *  conversación abierta — para la sección "Multimedia" de la ficha. Se deriva
+   *  de los mensajes ya cargados; más recientes primero. */
+  protected readonly chatMedia = computed(() =>
+    this.chatStore
+      .messages()
+      .filter(
+        (m) =>
+          !!m.mediaUrl &&
+          (m.type === 'image' || m.type === 'video' || m.type === 'document')
+      )
+      .map((m) => ({
+        id: m.id,
+        url: m.mediaUrl as string,
+        type: m.type as 'image' | 'video' | 'document',
+        name: (m.content ?? '').trim(),
+        createdAt: m.createdAt,
+      }))
+      .reverse()
+  );
 
   protected readonly statusOptions = computed(() =>
     this.chatStore.pipelineStatuses().map((s) => ({ label: s.name, value: s.key }))

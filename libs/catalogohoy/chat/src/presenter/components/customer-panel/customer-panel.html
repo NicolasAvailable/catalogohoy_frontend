@@ -238,6 +238,54 @@
       </p-accordion-content>
     </p-accordion-panel>
 
+    <!-- Multimedia de la conversación (imágenes, videos, documentos) -->
+    <p-accordion-panel value="media">
+      <p-accordion-header>
+        <span class="ficha__section-title">{{ 'Multimedia' | transloco }} ({{ chatMedia().length }})</span>
+      </p-accordion-header>
+      <p-accordion-content>
+        @if (chatMedia().length) {
+        <div class="grid grid-cols-3 gap-1.5">
+          @for (m of chatMedia(); track m.id) {
+            @if (m.type === 'image') {
+            <ui-image
+              [src]="m.url"
+              [downloadable]="true"
+              styleClass="block aspect-square rounded-lg overflow-hidden cursor-zoom-in bg-grey-50"
+              imageClass="w-full h-full object-cover"
+            />
+            } @else if (m.type === 'video') {
+            <a
+              [href]="m.url"
+              target="_blank"
+              rel="noopener"
+              class="relative flex items-center justify-center aspect-square rounded-lg overflow-hidden bg-grey-900/5 hover:bg-grey-900/10 transition-colors"
+              [title]="'Ver video' | transloco"
+            >
+              <video [src]="m.url" class="w-full h-full object-cover" preload="metadata" muted></video>
+              <span class="absolute inset-0 flex items-center justify-center bg-grey-900/25">
+                <ui-icon name="play" size="18" styleClass="text-white" />
+              </span>
+            </a>
+            } @else {
+            <a
+              [href]="m.url"
+              target="_blank"
+              rel="noopener"
+              class="flex items-center justify-center aspect-square rounded-lg bg-grey-50 hover:bg-grey-100 transition-colors"
+              [title]="m.name || ('Documento' | transloco)"
+            >
+              <ui-icon name="file-text" size="22" styleClass="text-grey-400" />
+            </a>
+            }
+          }
+        </div>
+        } @else {
+        <p class="ficha__hint">{{ 'Sin multimedia en esta conversación.' | transloco }}</p>
+        }
+      </p-accordion-content>
+    </p-accordion-panel>
+
     <!-- Notas internas -->
     <p-accordion-panel value="notes">
       <p-accordion-header>
