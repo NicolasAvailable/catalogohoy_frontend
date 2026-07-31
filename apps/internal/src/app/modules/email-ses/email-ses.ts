@@ -1,7 +1,13 @@
 import { DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@ui';
-import { SesDaily, SesStats } from './email-ses.model';
+import {
+  SES_STATUS_FILTERS,
+  SesDaily,
+  SesEmailRow,
+  SesStats,
+} from './email-ses.model';
 import { EmailSesService } from './email-ses.service';
 
 type Health = { label: string; tone: 'ok' | 'warn' | 'bad' };
@@ -9,7 +15,7 @@ type Health = { label: string; tone: 'ok' | 'warn' | 'bad' };
 @Component({
   selector: 'app-email-ses',
   standalone: true,
-  imports: [IconComponent, DecimalPipe, PercentPipe],
+  imports: [IconComponent, DecimalPipe, PercentPipe, FormsModule],
   host: { class: 'flex-1 min-h-0 flex flex-col' },
   template: `
     <div class="flex flex-col gap-6 h-full min-h-0 overflow-auto pb-2">
@@ -383,6 +389,191 @@ type Health = { label: string; tone: 'ok' | 'warn' | 'bad' };
           </section>
         }
       }
+
+      <!-- Log de correos enviados -->
+      <section class="flex flex-col gap-3 shrink-0">
+        <div
+          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+        >
+          <h2 class="text-sm font-semibold text-grey-600">Correos enviados</h2>
+          <div class="flex items-center gap-2 flex-wrap">
+            <div
+              class="flex items-center gap-2 px-3 py-2 bg-white border border-grey-50 rounded-md"
+            >
+              <ui-icon name="search" size="15" styleClass="text-grey-400" />
+              <input
+                type="text"
+                placeholder="Buscar por correo o asunto…"
+                class="outline-none text-sm text-grey-700 placeholder:text-grey-300 bg-transparent w-56 max-w-full"
+                [ngModel]="search()"
+                (ngModelChange)="onSearch($event)"
+              />
+            </div>
+            <button
+              type="button"
+              (click)="loadEmails()"
+              class="inline-flex items-center justify-center w-9 h-9 rounded-md bg-white border border-grey-50 hover:bg-grey-50 transition-colors cursor-pointer"
+              aria-label="Recargar correos"
+            >
+              <ui-icon
+                name="refresh-cw"
+                size="14"
+                [styleClass]="
+                  emailsLoading() ? 'text-grey-400 animate-spin' : 'text-grey-500'
+                "
+              />
+            </button>
+          </div>
+        </div>
+
+        <div
+          class="flex items-center gap-1 bg-white p-1 rounded-md border border-grey-50 flex-wrap self-start"
+        >
+          @for (f of statusFilters; track f.label) {
+            <button
+              type="button"
+              (click)="onStatusFilter(f.value)"
+              class="px-3 py-1.5 rounded text-xs font-semibold transition-colors cursor-pointer"
+              [class.bg-primary-500]="statusFilter() === f.value"
+              [class.text-white]="statusFilter() === f.value"
+              [class.text-grey-500]="statusFilter() !== f.value"
+              [class.hover:bg-grey-50]="statusFilter() !== f.value"
+            >
+              {{ f.label }}
+            </button>
+          }
+        </div>
+
+        <div class="bg-white rounded-xl border border-grey-50 overflow-hidden">
+          <div class="overflow-auto max-h-[32rem]">
+            <table class="w-full text-sm border-separate border-spacing-0">
+              <thead>
+                <tr>
+                  <th
+                    class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100"
+                  >
+                    A quién
+                  </th>
+                  <th
+                    class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100"
+                  >
+                    Estado
+                  </th>
+                  <th
+                    class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100"
+                  >
+                    Asunto
+                  </th>
+                  <th
+                    class="sticky top-0 z-10 text-right text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100"
+                  >
+                    Enviado
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (emailsLoading() && !emails().length) {
+                  <tr>
+                    <td colspan="4" class="px-4 py-12 text-center">
+                      <div class="flex flex-col items-center gap-2">
+                        <ui-icon
+                          name="loader-circle"
+                          size="24"
+                          styleClass="text-grey-300 animate-spin"
+                        />
+                        <p class="text-sm text-grey-400">Cargando correos…</p>
+                      </div>
+                    </td>
+                  </tr>
+                } @else {
+                  @for (m of emails(); track m.message_id) {
+                    <tr class="hover:bg-grey-25 transition-colors align-top">
+                      <td class="px-4 py-3 border-b border-grey-50">
+                        <span class="inline-flex items-center gap-2 text-grey-700">
+                          <span
+                            class="flex items-center justify-center w-7 h-7 rounded-md bg-grey-50 shrink-0"
+                          >
+                            <ui-icon
+                              name="mail"
+                              size="14"
+                              styleClass="text-grey-400"
+                            />
+                          </span>
+                          <span
+                            class="truncate max-w-[16rem]"
+                            [title]="m.recipient"
+                            >{{ m.recipient || '—' }}</span
+                          >
+                        </span>
+                      </td>
+                      <td class="px-4 py-3 border-b border-grey-50 whitespace-nowrap">
+                        <span
+                          class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold"
+                          [class]="statusClass(m.status)"
+                        >
+                          <span
+                            class="w-1.5 h-1.5 rounded-full"
+                            [class]="statusDot(m.status)"
+                          ></span>
+                          {{ statusLabel(m.status) }}
+                        </span>
+                        @if (
+                          m.diagnostic &&
+                          (m.status === 'bounced' ||
+                            m.status === 'complaint' ||
+                            m.status === 'rejected')
+                        ) {
+                          <span
+                            class="block text-[0.7rem] text-grey-400 mt-1 truncate max-w-[16rem]"
+                            [title]="m.diagnostic"
+                            >{{ m.diagnostic }}</span
+                          >
+                        }
+                      </td>
+                      <td class="px-4 py-3 border-b border-grey-50">
+                        <span
+                          class="block text-grey-700 truncate max-w-[22rem]"
+                          [title]="m.subject"
+                          >{{ m.subject || '—' }}</span
+                        >
+                      </td>
+                      <td
+                        class="px-4 py-3 text-right text-grey-500 border-b border-grey-50 whitespace-nowrap"
+                        [title]="m.sent_at || ''"
+                      >
+                        {{ timeAgo(m.sent_at) }}
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="4" class="px-4 py-12 text-center">
+                        <div class="flex flex-col items-center gap-2">
+                          <ui-icon
+                            name="mail"
+                            size="26"
+                            styleClass="text-grey-300"
+                          />
+                          <p class="text-sm text-grey-400">
+                            No hay correos que coincidan.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        @if (emailsError()) {
+          <p class="text-xs text-red-500">{{ emailsError() }}</p>
+        }
+        <p class="text-[0.7rem] text-grey-400">
+          Muestra los {{ emails().length }} correos más recientes. Las aperturas
+          y clics requieren activar el seguimiento (fase 2).
+        </p>
+      </section>
     </div>
   `,
 })
@@ -393,6 +584,14 @@ export class EmailSes implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly region = 'sa-east-1';
+
+  protected readonly emails = signal<SesEmailRow[]>([]);
+  protected readonly emailsLoading = signal(false);
+  protected readonly emailsError = signal<string | null>(null);
+  protected readonly search = signal('');
+  protected readonly statusFilter = signal<string | null>(null);
+  protected readonly statusFilters = SES_STATUS_FILTERS;
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly maxDaily = computed(() =>
     Math.max(1, ...(this.stats()?.daily.map((d) => d.attempts) ?? [1]))
@@ -476,7 +675,102 @@ export class EmailSes implements OnInit {
         : 'bg-emerald-500';
   }
 
+  // --- Log de correos ---
+
+  async loadEmails(): Promise<void> {
+    this.emailsLoading.set(true);
+    this.emailsError.set(null);
+    const res = await this.service.emails({
+      search: this.search(),
+      status: this.statusFilter(),
+    });
+    res.mapRight((rows) => this.emails.set(rows));
+    res.mapLeft((e) =>
+      this.emailsError.set(e.message || 'No se pudieron cargar los correos.')
+    );
+    this.emailsLoading.set(false);
+  }
+
+  protected onSearch(term: string): void {
+    this.search.set(term);
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.loadEmails(), 350);
+  }
+
+  protected onStatusFilter(value: string | null): void {
+    this.statusFilter.set(value);
+    this.loadEmails();
+  }
+
+  protected timeAgo(iso: string | null): string {
+    if (!iso) return '—';
+    const then = new Date(iso).getTime();
+    if (Number.isNaN(then)) return '—';
+    const min = Math.floor((Date.now() - then) / 60000);
+    if (min < 1) return 'recién';
+    if (min < 60) return `hace ${min} min`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `hace ${h} h`;
+    const d = Math.floor(h / 24);
+    if (d < 30) return `hace ${d} d`;
+    const mo = Math.floor(d / 30);
+    return `hace ${mo} mes${mo > 1 ? 'es' : ''}`;
+  }
+
+  protected statusLabel(s: string): string {
+    return (
+      {
+        delivered: 'Entregado',
+        sent: 'Enviado',
+        bounced: 'Rebotado',
+        complaint: 'Queja',
+        rejected: 'Rechazado',
+        opened: 'Abierto',
+        clicked: 'Clic',
+      }[s] ?? s
+    );
+  }
+
+  protected statusClass(s: string): string {
+    switch (s) {
+      case 'delivered':
+        return 'bg-emerald-50 text-emerald-600';
+      case 'opened':
+        return 'bg-sky-50 text-sky-600';
+      case 'clicked':
+        return 'bg-violet-50 text-violet-600';
+      case 'bounced':
+        return 'bg-red-50 text-red-600';
+      case 'complaint':
+        return 'bg-amber-50 text-amber-600';
+      case 'rejected':
+        return 'bg-grey-100 text-grey-500';
+      default:
+        return 'bg-primary-50 text-primary-600';
+    }
+  }
+
+  protected statusDot(s: string): string {
+    switch (s) {
+      case 'delivered':
+        return 'bg-emerald-500';
+      case 'opened':
+        return 'bg-sky-500';
+      case 'clicked':
+        return 'bg-violet-500';
+      case 'bounced':
+        return 'bg-red-500';
+      case 'complaint':
+        return 'bg-amber-500';
+      case 'rejected':
+        return 'bg-grey-400';
+      default:
+        return 'bg-primary-500';
+    }
+  }
+
   ngOnInit(): void {
     this.load();
+    this.loadEmails();
   }
 }

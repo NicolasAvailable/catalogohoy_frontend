@@ -43,3 +43,26 @@ export interface SesStats {
   /** Si el open/click tracking está activo (fase 2). */
   trackingEnabled: boolean;
 }
+
+/** Una fila del log por-correo (RPC list_ses_emails_admin). */
+export interface SesEmailRow {
+  message_id: string;
+  recipient: string | null;
+  subject: string | null;
+  /** sent | delivered | bounced | complaint | rejected | opened | clicked */
+  status: string;
+  sent_at: string | null;
+  last_event_at: string | null;
+  bounce_type: string | null;
+  diagnostic: string | null;
+}
+
+/** Filtros de estado disponibles para el log de correos. */
+export const SES_STATUS_FILTERS: { value: string | null; label: string }[] = [
+  { value: null, label: 'Todos' },
+  { value: 'delivered', label: 'Entregados' },
+  { value: 'sent', label: 'Enviados' },
+  { value: 'bounced', label: 'Rebotados' },
+  { value: 'complaint', label: 'Quejas' },
+  { value: 'rejected', label: 'Rechazados' },
+];
