@@ -192,6 +192,20 @@ export default class OrderSave implements OnInit {
     ];
   });
 
+  /** Opciones del envío para el selector de tarjetas (estilo "Estado de la
+   *  orden"): "Sin envío" + métodos del catálogo + monto manual. */
+  public readonly shippingChoices = computed<
+    { value: string; name: string; fee: number; kind: 'none' | 'catalog' | 'manual' }[]
+  >(() => [
+    { value: '', name: 'Sin envío', fee: 0, kind: 'none' },
+    ...this.shippingOptions().map((o) => ({
+      value: o.value,
+      name: o.name,
+      fee: o.fee,
+      kind: o.kind,
+    })),
+  ]);
+
   public readonly exchangeRate = computed(() => {
     const rate = this.rateStore.rate();
     if (!rate) return 0;

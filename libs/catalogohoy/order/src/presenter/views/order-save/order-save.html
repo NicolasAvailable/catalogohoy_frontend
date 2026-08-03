@@ -686,32 +686,43 @@
     <ui-card>
       <div class="flex flex-col gap-4">
         <h2 class="text-xl font-bold">{{ 'Envío' | transloco }}</h2>
-        <div class="flex flex-col gap-3">
-          <div class="flex flex-col gap-1 sm:max-w-md">
-            <ui-select
-              [options]="shippingOptions()"
-              [ngModel]="shippingSelection()"
-              (ngModelChange)="onShippingSelectionChange($event)"
-              [ngModelOptions]="{ standalone: true }"
-              optionLabel="name"
-              optionValue="value"
-              [placeholder]="'Sin envío' | transloco"
-              [clearable]="true"
-              styleClass="w-full"
+        <div class="flex flex-col gap-4">
+          <!-- Opciones de envío como tarjetas (Sin envío / métodos del catálogo /
+               monto manual), mismo estilo que "Estado de la orden". -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" [attr.aria-label]="'Envío' | transloco">
+            @for (opt of shippingChoices(); track opt.value) {
+            <button
+              type="button"
+              role="radio"
+              [attr.aria-checked]="shippingSelection() === opt.value"
+              (click)="onShippingSelectionChange(opt.value)"
+              [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer text-left w-full ' +
+                (shippingSelection() === opt.value
+                  ? 'border-primary-500 bg-primary-50/30'
+                  : 'border-grey-200 hover:border-primary-300')"
             >
-              <ng-template selectSelectedItem let-selected>
-                <span class="text-sm">{{ selected.name }}@if (selected.kind === 'catalog') {<span class="text-grey-400"> · {{ selected.fee > 0 ? cs() + (selected.fee | number:'1.2-2') : ('Gratis' | transloco) }}</span>}</span>
-              </ng-template>
-              <ng-template selectItem let-item>
-                <div class="flex items-center justify-between gap-3 w-full py-0.5">
-                  <span>{{ item.name }}</span>
-                  @if (item.kind === 'catalog') {
-                  <span class="text-grey-400 text-sm">{{ item.fee > 0 ? cs() + (item.fee | number:'1.2-2') : ('Gratis' | transloco) }}</span>
+              <div
+                [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ' +
+                  (shippingSelection() === opt.value ? 'border-primary-500' : 'border-grey-300')"
+              >
+                @if (shippingSelection() === opt.value) {
+                <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
+                }
+              </div>
+              <div class="flex-1 min-w-0">
+                <span class="font-medium block truncate">{{ opt.name }}</span>
+                <p class="text-sm text-grey-300">
+                  @if (opt.kind === 'none') {
+                  {{ 'El pedido no lleva envío' | transloco }}
+                  } @else if (opt.kind === 'manual') {
+                  {{ 'Flete, comisión u otro monto' | transloco }}
+                  } @else {
+                  {{ opt.fee > 0 ? cs() + (opt.fee | number:'1.2-2') : ('Gratis' | transloco) }}
                   }
-                </div>
-              </ng-template>
-            </ui-select>
-            <span class="text-xs text-grey-300">{{ 'Elegí un método de tu catálogo o cargá un monto manual (flete, comisión…).' | transloco }}</span>
+                </p>
+              </div>
+            </button>
+            }
           </div>
           @if (shippingSelection()) {
           <div class="flex flex-col gap-1 sm:max-w-xs">
