@@ -687,6 +687,66 @@
       <div class="flex flex-col gap-4">
         <h2 class="text-xl font-bold">{{ 'Resumen' | transloco }}</h2>
 
+        <!-- Subtotal productos -->
+        <div class="flex justify-between items-center">
+          <span class="text-base text-grey-400 font-medium">{{ 'Subtotal' | transloco }}</span>
+          <span class="text-base font-semibold text-grey-700"
+            >{{ cs() }} {{ productsSubtotal().toFixed(2) }}</span
+          >
+        </div>
+
+        <!-- Envío: método del catálogo o monto manual -->
+        <div class="flex flex-col gap-2.5">
+          <div class="flex items-center justify-between gap-4">
+            <label class="text-base text-grey-400 font-medium">{{ 'Envío' | transloco }}</label>
+            <div class="w-56 sm:w-72 shrink-0">
+              <ui-select
+                [options]="shippingOptions()"
+                [ngModel]="shippingSelection()"
+                (ngModelChange)="onShippingSelectionChange($event)"
+                [ngModelOptions]="{ standalone: true }"
+                optionLabel="name"
+                optionValue="value"
+                [placeholder]="'Sin envío' | transloco"
+                [clearable]="true"
+                styleClass="w-full"
+              >
+                <ng-template selectSelectedItem let-selected>
+                  <span class="text-sm">{{ selected.name }}@if (selected.kind === 'catalog') {<span class="text-grey-400"> · {{ selected.fee > 0 ? cs() + (selected.fee | number:'1.2-2') : ('Gratis' | transloco) }}</span>}</span>
+                </ng-template>
+                <ng-template selectItem let-item>
+                  <div class="flex items-center justify-between gap-3 w-full py-0.5">
+                    <span>{{ item.name }}</span>
+                    @if (item.kind === 'catalog') {
+                    <span class="text-grey-400 text-sm">{{ item.fee > 0 ? cs() + (item.fee | number:'1.2-2') : ('Gratis' | transloco) }}</span>
+                    }
+                  </div>
+                </ng-template>
+              </ui-select>
+            </div>
+          </div>
+          @if (shippingSelection()) {
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-xs text-grey-300">
+              {{ shippingSelection() === '__manual__' ? ('Flete, comisión u otro gasto adicional' | transloco) : ('Costo del envío (podés ajustarlo para esta orden)' | transloco) }}
+            </span>
+            <div class="w-40 sm:w-48 shrink-0">
+              <ui-input-number
+                [ngModel]="shippingFee()"
+                (ngModelChange)="onShippingFeeChange($event)"
+                [ngModelOptions]="{ standalone: true }"
+                [min]="0"
+                mode="decimal"
+                [prefix]="cs() + ' '"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="2"
+                inputId="shipping-fee"
+              />
+            </div>
+          </div>
+          }
+        </div>
+
         <!-- Total -->
         <div
           class="flex justify-between items-center py-4 border-t border-grey-100"
