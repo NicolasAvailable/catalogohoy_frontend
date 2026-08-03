@@ -212,8 +212,9 @@ export class OrderService {
     };
     if (input.deliveryDate) payload['delivery_date'] = input.deliveryDate;
     if (input.paymentMethod !== undefined) payload['payment_method'] = input.paymentMethod || null;
+    // shipping_fee es NOT NULL (default 0): sin envío = 0, nunca null.
     if (input.shippingFee !== undefined)
-      payload['shipping_fee'] = input.shippingFee > 0 ? input.shippingFee : null;
+      payload['shipping_fee'] = input.shippingFee ?? 0;
     if (input.shippingMethod !== undefined) payload['shipping_method'] = input.shippingMethod;
 
     const { data, error } = await this.client
@@ -270,8 +271,9 @@ export class OrderService {
     };
     if (input.deliveryDate) patch['delivery_date'] = input.deliveryDate;
     if (input.paymentMethod !== undefined) patch['payment_method'] = input.paymentMethod || null;
+    // shipping_fee es NOT NULL (default 0): sin envío = 0, nunca null.
     if (input.shippingFee !== undefined)
-      patch['shipping_fee'] = input.shippingFee > 0 ? input.shippingFee : null;
+      patch['shipping_fee'] = input.shippingFee ?? 0;
     if (input.shippingMethod !== undefined) patch['shipping_method'] = input.shippingMethod;
 
     const { data, error } = await this.client
