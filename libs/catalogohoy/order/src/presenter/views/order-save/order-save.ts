@@ -672,7 +672,7 @@ export default class OrderSave implements OnInit {
   }
 
   /** Costo de envío que efectivamente se suma al total (0 si no hay envío). */
-  private effectiveShippingFee(): number {
+  public effectiveShippingFee(): number {
     return this.shippingSelection() === '' ? 0 : this.shippingFee() || 0;
   }
 
