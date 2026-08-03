@@ -218,7 +218,17 @@
           />
           }
           <span class="flex-1 font-medium text-grey-700">{{ variant.id === baseOptionId ? ('Producto original' | transloco) : variant.name }}</span>
-          <span class="font-bold text-grey-900">{{ cs() }}{{ variant.price | tenantPrice }}</span>
+          <!-- Precio de la variante: respeta la configuración de moneda del
+               catálogo, igual que el precio principal (referencia solo si está
+               habilitada + Bs para catálogos de Venezuela). -->
+          <span class="flex flex-col items-end shrink-0 font-bold text-grey-900 leading-tight">
+            @if (showReferencePrice()) {
+            <span>{{ cs() }}{{ variant.price | tenantPrice }}</span>
+            }
+            @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
+            <span [class.text-sm]="showReferencePrice()">Bs. {{ variant.price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
+            }
+          </span>
         </button>
         }
       </div>
