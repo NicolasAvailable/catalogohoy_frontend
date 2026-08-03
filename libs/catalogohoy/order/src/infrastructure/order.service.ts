@@ -42,6 +42,19 @@ export interface CreateOrderInput {
    *  the public catalog checkout flow where the customer picks a method
    *  before sending the order via WhatsApp. */
   paymentMethod?: string;
+  /** Flat shipping/extra cost the admin adds on a manual order (flete,
+   *  comisión, u otro gasto). Se suma al `totalUsd` y se guarda en
+   *  `shipping_fee`. 0 / undefined = sin envío. */
+  shippingFee?: number;
+  /** Snapshot del envío para que la lista/detalle lo muestren (misma forma
+   *  que el checkout público). En órdenes manuales el nombre es "Envío"; al
+   *  editar una orden del catálogo se preserva su método original. null =
+   *  sin línea de envío. */
+  shippingMethod?: {
+    name: string;
+    type: 'pickup' | 'delivery' | 'shipping';
+    fee: number;
+  } | null;
 }
 
 export interface UpdateOrderInput extends CreateOrderInput {
@@ -199,6 +212,9 @@ export class OrderService {
     };
     if (input.deliveryDate) payload['delivery_date'] = input.deliveryDate;
     if (input.paymentMethod !== undefined) payload['payment_method'] = input.paymentMethod || null;
+    if (input.shippingFee !== undefined)
+      payload['shipping_fee'] = input.shippingFee > 0 ? input.shippingFee : null;
+    if (input.shippingMethod !== undefined) payload['shipping_method'] = input.shippingMethod;
 
     const { data, error } = await this.client
       .from('orders')
@@ -254,6 +270,9 @@ export class OrderService {
     };
     if (input.deliveryDate) patch['delivery_date'] = input.deliveryDate;
     if (input.paymentMethod !== undefined) patch['payment_method'] = input.paymentMethod || null;
+    if (input.shippingFee !== undefined)
+      patch['shipping_fee'] = input.shippingFee > 0 ? input.shippingFee : null;
+    if (input.shippingMethod !== undefined) patch['shipping_method'] = input.shippingMethod;
 
     const { data, error } = await this.client
       .from('orders')
@@ -459,8 +478,12 @@ export class OrderService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    // Weekly data: last 7 days (Mon-Sun or relative)
-    const dayLabels = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Hoy'];
+    // Weekly data: los últimos 7 días relativos a HOY. La etiqueta de cada
+    // barra es el día real de esa fecha (la última = "Hoy"). Antes estaban
+    // hardcodeadas ['Lun'..'Hoy'], que solo cuadraban si hoy era domingo → en
+    // cualquier otro día las barras salían desfasadas respecto al día real
+    // (una venta del jueves aparecía bajo otro día).
+    const WEEKDAY_SHORT = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
     const weekStart = new Date(now);
     weekStart.setDate(weekStart.getDate() - 6);
     weekStart.setHours(0, 0, 0, 0);
@@ -516,7 +539,9 @@ export class OrderService {
       });
 
       weeklyData.push({
-        label: dayLabels[i],
+        // i === 6 es siempre el día de hoy (weekStart + 6). El resto lleva su
+        // día de la semana real, derivado de la fecha (no de una posición fija).
+        label: i === 6 ? 'Hoy' : WEEKDAY_SHORT[day.getDay()],
         salesBs: dayOrders.reduce((sum, o) => sum + (o.total_bs || 0), 0),
         salesUsd: dayOrders.reduce((sum, o) => sum + (o.total_usd || 0), 0),
         orders: dayOrders.length,

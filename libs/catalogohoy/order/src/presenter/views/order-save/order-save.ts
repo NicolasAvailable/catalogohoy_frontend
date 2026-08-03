@@ -147,6 +147,50 @@ export default class OrderSave implements OnInit {
   public readonly isSubmitting = signal<boolean>(false);
   public readonly totalBs = signal<number>(0);
   public readonly selectedRateType = signal<RateType>('bcv_usd');
+  /** Envío/gasto adicional del alta manual (flete, comisión…). Se suma al total. */
+  public readonly shippingFee = signal<number>(0);
+  /** Método de envío original de la orden (si vino del checkout público), para
+   *  preservar su nombre al editar en vez de pisarlo con "Envío". */
+  private readonly originalShippingMethod = signal<{
+    name: string;
+    type: 'pickup' | 'delivery' | 'shipping';
+    fee: number;
+  } | null>(null);
+  /** Opción de envío elegida: '' = sin envío, un id de método del catálogo, o
+   *  '__manual__' para cargar un monto libre (flete/comisión). */
+  public readonly shippingSelection = signal<string>('');
+  /** Opciones del selector de envío: los métodos ACTIVOS del catálogo (Editar
+   *  catálogo → Envío, mismos que ve el checkout) + la opción de monto manual. */
+  public readonly shippingOptions = computed<
+    {
+      value: string;
+      name: string;
+      fee: number;
+      type: 'pickup' | 'delivery' | 'shipping';
+      kind: 'catalog' | 'manual';
+    }[]
+  >(() => {
+    const methods = (this.configStore.config()?.shippingMethods ?? []).filter(
+      (m) => m.isActive
+    );
+    const opts = methods.map((m) => ({
+      value: m.id,
+      name: m.name,
+      fee: m.fee ?? 0,
+      type: m.type,
+      kind: 'catalog' as const,
+    }));
+    return [
+      ...opts,
+      {
+        value: '__manual__',
+        name: 'Otro (monto manual)',
+        fee: 0,
+        type: 'shipping' as const,
+        kind: 'manual' as const,
+      },
+    ];
+  });
 
   public readonly exchangeRate = computed(() => {
     const rate = this.rateStore.rate();
@@ -240,6 +284,19 @@ export default class OrderSave implements OnInit {
       })
     );
     this.totalBs.set(order.totalBs ?? 0);
+    const sm = order.shippingMethod ?? null;
+    this.originalShippingMethod.set(sm);
+    this.shippingFee.set(order.shippingFee ?? sm?.fee ?? 0);
+    if (sm) {
+      // Mapear al método del catálogo por nombre; si no matchea (manual o
+      // método borrado), cae a "Otro" conservando el snapshot original.
+      const match = (this.configStore.config()?.shippingMethods ?? []).find(
+        (m) => m.isActive && m.name === sm.name
+      );
+      this.shippingSelection.set(match ? match.id : '__manual__');
+    } else {
+      this.shippingSelection.set('');
+    }
   }
 
   public addProduct() {
@@ -604,8 +661,67 @@ export default class OrderSave implements OnInit {
     });
   }
 
-  public calculateTotal(): number {
+  /** Suma de las líneas de producto (sin envío). */
+  public productsSubtotal(): number {
     return this.products().reduce((sum, product) => sum + product.total, 0);
+  }
+
+  /** Total de la orden = productos + envío. */
+  public calculateTotal(): number {
+    return this.productsSubtotal() + this.effectiveShippingFee();
+  }
+
+  /** Costo de envío que efectivamente se suma al total (0 si no hay envío). */
+  private effectiveShippingFee(): number {
+    return this.shippingSelection() === '' ? 0 : this.shippingFee() || 0;
+  }
+
+  /** Cambia la opción de envío. Un método del catálogo precarga su costo
+   *  (editable para esta orden); "Otro" deja el monto libre; vacío = sin envío. */
+  public onShippingSelectionChange(value: string | null): void {
+    const sel = value ?? '';
+    this.shippingSelection.set(sel);
+    if (sel === '') {
+      this.shippingFee.set(0);
+      return;
+    }
+    if (sel === '__manual__') return; // el admin escribe el monto
+    const method = (this.configStore.config()?.shippingMethods ?? []).find(
+      (m) => m.id === sel
+    );
+    if (method) this.shippingFee.set(method.fee ?? 0);
+  }
+
+  /** Actualiza el monto de envío (no baja de 0). El total en la moneda de
+   *  referencia se recalcula solo; el de Bs. se refresca con "Recalcular"
+   *  (igual que al cambiar cantidades). */
+  public onShippingFeeChange(value: number): void {
+    this.shippingFee.set(Math.max(0, value || 0));
+  }
+
+  /** Snapshot de envío para guardar según la opción elegida: vacío = null;
+   *  un método del catálogo = su nombre/tipo con el costo (posiblemente
+   *  ajustado); "Otro" con monto > 0 = etiqueta "Envío" (o el método original
+   *  al editar una orden del catálogo). */
+  private buildShippingMethod(): {
+    name: string;
+    type: 'pickup' | 'delivery' | 'shipping';
+    fee: number;
+  } | null {
+    const sel = this.shippingSelection();
+    if (sel === '') return null;
+    const fee = this.shippingFee() || 0;
+    if (sel === '__manual__') {
+      if (fee <= 0) return null;
+      const original = this.originalShippingMethod();
+      return original ? { ...original, fee } : { name: 'Envío', type: 'shipping', fee };
+    }
+    const method = (this.configStore.config()?.shippingMethods ?? []).find(
+      (m) => m.id === sel
+    );
+    if (method) return { name: method.name, type: method.type, fee };
+    const original = this.originalShippingMethod();
+    return original ? { ...original, fee } : null;
   }
 
   public recalculateTotalBs() {
@@ -658,6 +774,8 @@ export default class OrderSave implements OnInit {
       totalBs: this.totalBs(),
       deliveryDate: delivery ? this.toIsoDate(delivery) : undefined,
       paymentMethod: this.form.controls.paymentMethod.value || undefined,
+      shippingFee: this.effectiveShippingFee(),
+      shippingMethod: this.buildShippingMethod(),
     };
 
     try {

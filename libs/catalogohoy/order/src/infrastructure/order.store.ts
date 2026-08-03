@@ -125,6 +125,12 @@ export const OrderStore = signalStore(
         totalBs: number;
         deliveryDate?: string;
         paymentMethod?: string;
+        shippingFee?: number;
+        shippingMethod?: {
+          name: string;
+          type: 'pickup' | 'delivery' | 'shipping';
+          fee: number;
+        } | null;
       }): Promise<E.Either<string, Order>> {
         patchState(store, { isLoading: true, error: null });
 
@@ -170,6 +176,12 @@ export const OrderStore = signalStore(
         totalBs: number;
         deliveryDate?: string;
         paymentMethod?: string;
+        shippingFee?: number;
+        shippingMethod?: {
+          name: string;
+          type: 'pickup' | 'delivery' | 'shipping';
+          fee: number;
+        } | null;
       }): Promise<E.Either<string, Order>> {
         patchState(store, { isLoading: true, error: null });
 
