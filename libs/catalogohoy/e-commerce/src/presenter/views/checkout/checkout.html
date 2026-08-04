@@ -112,11 +112,18 @@
         <p class="checkout__item-name">
           <span class="checkout__item-size"><strong>{{ 'Adicionales:' | transloco }}</strong>
           @for (addon of item.addons; track addon.id) {
-          {{ addon.name }}@if (addon.price > 0) { ({{ cs() }}{{ addon.price | tenantPrice }})}@if (!$last) { · }
+          {{ addon.name }}@if (addon.price > 0) {@if (showReferencePrice()) { ({{ cs() }}{{ addon.price | tenantPrice }})}@else if (showBs()) { (Bs. {{ addon.price * ecommerceStore.exchangeRate() | number:'1.2-2' }})}}@if (!$last) { · }
           }</span>
         </p>
         }
-        <p class="checkout__item-price">{{ cs() }}{{ item.total | tenantPrice }}</p>
+        <p class="checkout__item-price">
+          @if (showReferencePrice()) {
+          {{ cs() }}{{ item.total | tenantPrice }}
+          @if (showBs()) { <small class="checkout__price-bs">Bs. {{ item.total * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
+          } @else if (showBs()) {
+          Bs. {{ item.total * ecommerceStore.exchangeRate() | number:'1.2-2' }}
+          }
+        </p>
         <div class="checkout__stepper">
           <button type="button" (click)="onDecrement(item)" [attr.aria-label]="'Quitar uno' | transloco">
             <ui-icon name="minus" size="14" />
@@ -147,7 +154,16 @@
       <button type="button" class="checkout__ship" (click)="selectShipping(method.id)">
         <span class="checkout__radio" [class.checkout__radio--on]="selectedShippingId() === method.id"></span>
         <span class="checkout__ship-name">{{ method.name }}</span>
-        <span class="checkout__ship-fee">{{ method.fee > 0 ? cs() + method.fee : ('Gratis' | transloco) }}</span>
+        <span class="checkout__ship-fee">
+          @if (method.fee > 0) {
+          @if (showReferencePrice()) {
+          {{ cs() }}{{ method.fee | tenantPrice }}
+          @if (showBs()) { <small class="checkout__price-bs">Bs. {{ method.fee * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
+          } @else if (showBs()) {
+          Bs. {{ method.fee * ecommerceStore.exchangeRate() | number:'1.2-2' }}
+          }
+          } @else { {{ 'Gratis' | transloco }} }
+        </span>
         @if (method.instructions) {
         <span class="checkout__ship-chevron"
           [class.checkout__ship-chevron--open]="selectedShippingId() === method.id">
@@ -261,20 +277,38 @@
     <h2 class="checkout__card-title">{{ 'Resumen del pedido' | transloco }}</h2>
     <div class="checkout__summary-row">
       <span>{{ 'Artículos ({n})' | transloco: { n: cartStore.totalItems() } }}</span>
-      <span>{{ cs() }}{{ subtotal() | tenantPrice }}</span>
+      <span>
+        @if (showReferencePrice()) {
+        {{ cs() }}{{ subtotal() | tenantPrice }}
+        @if (showBs()) { <small class="checkout__price-bs">Bs. {{ subtotal() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
+        } @else if (showBs()) {
+        Bs. {{ subtotal() * ecommerceStore.exchangeRate() | number:'1.2-2' }}
+        }
+      </span>
     </div>
     @if (selectedShipping()) {
     <div class="checkout__summary-row">
       <span>{{ selectedShipping()?.name }}</span>
-      <span>@if (shippingFee() > 0) { {{ cs() }}{{ shippingFee() | tenantPrice }} } @else { {{ 'Gratis' | transloco }} }</span>
+      <span>
+        @if (shippingFee() > 0) {
+        @if (showReferencePrice()) {
+        {{ cs() }}{{ shippingFee() | tenantPrice }}
+        @if (showBs()) { <small class="checkout__price-bs">Bs. {{ shippingFee() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
+        } @else if (showBs()) {
+        Bs. {{ shippingFee() * ecommerceStore.exchangeRate() | number:'1.2-2' }}
+        }
+        } @else { {{ 'Gratis' | transloco }} }
+      </span>
     </div>
     }
     <div class="checkout__summary-total">
       <span>{{ 'Total' | transloco }}</span>
       <span>
+        @if (showReferencePrice()) {
         {{ cs() }}{{ total() | tenantPrice }}
-        @if (showBs()) {
-        <small>Bs. {{ totalBs() | number:'1.2-2' }}</small>
+        @if (showBs()) { <small>Bs. {{ totalBs() | number:'1.2-2' }}</small> }
+        } @else if (showBs()) {
+        Bs. {{ totalBs() | number:'1.2-2' }}
         }
       </span>
     </div>

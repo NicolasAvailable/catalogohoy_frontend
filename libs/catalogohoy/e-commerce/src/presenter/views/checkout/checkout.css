@@ -414,6 +414,20 @@
   color: var(--color-grey-400, #94a3b8);
 }
 
+/* Bolívares mirror shown next to each price (items, envío, subtotal). Same
+   subtle treatment as the total's Bs line so the whole checkout stays uniform.
+   For solo-Bs catalogs (precio de referencia oculto) this becomes the only
+   price shown. */
+.checkout__price-bs {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-grey-400, #94a3b8);
+}
+.checkout__summary-row .checkout__price-bs {
+  text-align: right;
+}
+
 /* Submit */
 .checkout__submit-group {
   display: flex;

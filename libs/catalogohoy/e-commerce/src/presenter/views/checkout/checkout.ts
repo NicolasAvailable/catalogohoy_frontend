@@ -60,6 +60,10 @@ export default class Checkout {
   public readonly cartStore = inject(CartStore);
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cs = this.ecommerceStore.currencySymbol;
+  /** Whether to render the reference-currency price ($). Off for solo-Bs
+   *  catalogs (Venezuela) that only want bolívares — same flag the catalog
+   *  cards and product detail already honor. */
+  public readonly showReferencePrice = this.ecommerceStore.showReferencePrice;
   private readonly metaPixel = inject(MetaPixelService);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
@@ -166,9 +170,14 @@ export default class Checkout {
   public readonly subtotal = computed(() => this.cartStore.totalPrice());
   public readonly total = computed(() => this.subtotal() + this.shippingFee());
 
-  /** Bolívares mirror of the total — Venezuela only and only with a rate. */
+  /** Bolívares mirror of any price row — Venezuela only, honoring the
+   *  merchant's "show local currency" toggle, and only with a rate. Same
+   *  condition used by the catalog cards, so every surface stays in sync. */
   public readonly showBs = computed(
-    () => this.ecommerceStore.isVenezuela() && this.ecommerceStore.exchangeRate() > 0
+    () =>
+      this.ecommerceStore.isVenezuela() &&
+      this.ecommerceStore.showLocalCurrencyPrice() &&
+      this.ecommerceStore.exchangeRate() > 0
   );
   public readonly totalBs = computed(
     () => this.total() * this.ecommerceStore.exchangeRate()

@@ -66,13 +66,15 @@
             <span class="cart-item__size">
               <strong>{{ 'Adicionales:' | transloco }}</strong>
               @for (addon of item.addons; track addon.id) {
-              {{ addon.name }}@if (addon.price > 0) { ({{ cs() }}{{ addon.price | tenantPrice }})}@if (!$last) { · }
+              {{ addon.name }}@if (addon.price > 0) {@if (ecommerceStore.showReferencePrice()) { ({{ cs() }}{{ addon.price | tenantPrice }})}@else if (ecommerceStore.isVenezuela() && ecommerceStore.showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) { (Bs. {{ addon.price * ecommerceStore.exchangeRate() | number:'1.2-2' }})}}@if (!$last) { · }
               }
             </span>
             }
             <p class="cart-item__description">{{ item.description | stripHtml }}</p>
             <span class="cart-item__price">
+              @if (ecommerceStore.showReferencePrice()) {
               {{ cs() }}{{ item.price | tenantPrice }}
+              }
               @if (ecommerceStore.isVenezuela() && ecommerceStore.showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
               <span class="cart-item__price-bs">Bs. {{ item.price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
               }
@@ -101,7 +103,9 @@
         <span>{{ 'Ir a pagar' | transloco }}</span>
         <div class="cart-drawer__checkout-price">
           <span>
+            @if (ecommerceStore.showReferencePrice()) {
             {{ cs() }}{{ cartStore.totalPrice() | tenantPrice }}
+            }
             @if (ecommerceStore.isVenezuela() && ecommerceStore.showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
             <small class="cart-drawer__checkout-bs">Bs. {{ cartStore.totalPrice() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
             }
