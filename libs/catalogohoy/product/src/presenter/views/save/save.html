@@ -699,7 +699,7 @@
         @if (variantsArray.length > 0) {
         <hr class="border-grey-50" />
         <div formArrayName="variants" class="flex flex-col gap-4">
-          @for (variant of variantsArray.controls; track $index; let vIndex = $index) {
+          @for (variant of variantsArray.controls; track variant.get('id')?.value ?? $index; let vIndex = $index) {
           <div
             [formGroupName]="$index"
             class="flex flex-col gap-3 p-4 border border-grey-100 rounded-xl"
@@ -922,7 +922,7 @@
 
         @if (addonsArray.length > 0) {
         <div formArrayName="addons" class="flex flex-col gap-3">
-          @for (addon of addonsArray.controls; track $index; let aIndex = $index) {
+          @for (addon of addonsArray.controls; track addon.get('id')?.value ?? $index; let aIndex = $index) {
           <div [formGroupName]="aIndex" class="flex flex-col gap-3 border border-grey-200 rounded-xl p-3">
             <div class="flex items-center justify-between">
               <span class="text-sm font-semibold text-grey-500">{{ 'Adicional' | transloco }} {{ aIndex + 1 }}</span>
