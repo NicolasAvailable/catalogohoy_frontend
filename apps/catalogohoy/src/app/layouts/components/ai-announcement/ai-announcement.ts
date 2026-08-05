@@ -19,9 +19,10 @@ import {
 // sobre user_announcement_views). Cambiar la clave re-anuncia la feature a todos.
 const ANNOUNCEMENT_KEY = 'connect_channels_v1';
 
-// 🚦 Switch maestro: en false el modal NO se muestra a nadie (el CRM todavía no
-// se lanza a los clientes). Poner en true cuando se lance WhatsApp Business.
-const ANNOUNCEMENT_ENABLED = true;
+// 🚦 Switch maestro: en false el modal NO se muestra a nadie. Apagado por
+// decisión — ya no anunciamos la integración de WhatsApp con este modal.
+// Poner en true (o cambiar ANNOUNCEMENT_KEY) para volver a mostrarlo.
+const ANNOUNCEMENT_ENABLED = false;
 
 /**
  * Modal de anuncio "Conectá WhatsApp Business". Vive en el shell del admin
