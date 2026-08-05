@@ -474,6 +474,18 @@ export default class Checkout {
     this.isSubmitting.set(false);
   }
 
+  /** Formatea un monto para el mensaje de pedido por WhatsApp según la config
+   *  de moneda del catálogo: un catálogo solo-Bs (precio de referencia oculto)
+   *  muestra "Bs. X"; el resto muestra la moneda de referencia ("$X"). Espeja
+   *  el criterio de la pantalla del checkout para que el mensaje sea coherente
+   *  con lo que ve el cliente. */
+  private priceForMessage(amount: number): string {
+    if (!this.showReferencePrice() && this.showBs()) {
+      return `Bs. ${(amount * this.ecommerceStore.exchangeRate()).toFixed(2)}`;
+    }
+    return `${this.cs()}${amount}`;
+  }
+
   private buildWhatsappMessage(
     items: CartItem[],
     subtotal: number,
@@ -481,29 +493,31 @@ export default class Checkout {
     total: number,
     shipping: ShippingMethod | null
   ): string {
-    const symbol = this.cs();
-
     let productsList = '';
     items.forEach((item) => {
       const sizeLabel = item.size ? ` (Talla ${item.size})` : '';
       const variantLabel = item.variantName ? ` (${item.variantName})` : '';
-      productsList += `• ${item.name}${variantLabel}${sizeLabel} x${item.quantity} - ${symbol}${item.total}\n`;
+      productsList += `• ${item.name}${variantLabel}${sizeLabel} x${item.quantity} - ${this.priceForMessage(item.total)}\n`;
       // SKU indentado bajo el producto (solo si el producto tiene uno).
       if (item.sku) productsList += `   SKU: ${item.sku}\n`;
       // Adicionales elegidos, indentados bajo su producto. El precio del ítem
       // ya los incluye; acá solo se detallan.
       item.addons.forEach((addon) => {
-        const addonPrice = addon.price > 0 ? ` (+${symbol}${addon.price})` : '';
+        const addonPrice = addon.price > 0 ? ` (+${this.priceForMessage(addon.price)})` : '';
         productsList += `   ↳ ${addon.name}${addonPrice}\n`;
       });
     });
 
-    const totalBsStr = this.showBs()
-      ? ` (Bs. ${this.totalBs().toFixed(2)})`
-      : '';
+    // El Bs "espejo" del total solo cuando además se muestra la referencia
+    // (catálogos VE dual-moneda). En un catálogo solo-Bs el total ya sale en
+    // Bs vía priceForMessage, así que este mirror se omite para no duplicarlo.
+    const totalBsStr =
+      this.showReferencePrice() && this.showBs()
+        ? ` (Bs. ${this.totalBs().toFixed(2)})`
+        : '';
 
     const envioStr = shipping
-      ? `*Envío:* ${shipping.name}${fee > 0 ? ` (${symbol}${fee})` : ' (Gratis)'}\n`
+      ? `*Envío:* ${shipping.name}${fee > 0 ? ` (${this.priceForMessage(fee)})` : ' (Gratis)'}\n`
       : '';
     const direccionStr =
       shipping?.requestCustomerAddress && this.customerAddress().trim()
@@ -524,7 +538,7 @@ export default class Checkout {
         .replace(/\{nombre\}/g, this.name().trim() || 'Cliente')
         .replace(/\{telefono\}/g, phoneFull)
         .replace(/\{productos\}/g, productsList.trimEnd())
-        .replace(/\{total\}/g, `${symbol}${total}`)
+        .replace(/\{total\}/g, this.priceForMessage(total))
         .replace(/\{totalBs\}/g, totalBsStr)
         .replace(/\{envio\}/g, envioStr)
         .replace(/\{direccion\}/g, direccionStr)
@@ -536,8 +550,8 @@ export default class Checkout {
     message += `*Nombre:* ${this.name().trim() || 'Cliente'}\n`;
     if (phoneFull) message += `*Teléfono:* ${phoneFull}\n`;
     message += `\n*Productos:*\n${productsList}`;
-    if (fee > 0) message += `\n*Subtotal:* ${symbol}${subtotal}`;
-    message += `\n*Total:* ${symbol}${total}${totalBsStr}\n`;
+    if (fee > 0) message += `\n*Subtotal:* ${this.priceForMessage(subtotal)}`;
+    message += `\n*Total:* ${this.priceForMessage(total)}${totalBsStr}\n`;
     if (envioStr) message += `\n${envioStr.trimEnd()}`;
     if (direccionStr) message += `\n${direccionStr.trimEnd()}`;
     if (commentsStr) message += `\n\n${commentsStr}`;
