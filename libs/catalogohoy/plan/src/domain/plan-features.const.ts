@@ -27,7 +27,6 @@ export const PLAN_FEATURES: Record<string, PlanFeature[]> = {
   ],
   pro: [
     { text: '1 catálogo' },
-    { text: 'Hasta 500 productos' },
     { text: 'Todo del plan Básico' },
     { text: 'Analíticas del catálogo' },
     { text: 'Hasta 20 reportes por mes' },
@@ -36,7 +35,6 @@ export const PLAN_FEATURES: Record<string, PlanFeature[]> = {
   ],
   avanzado: [
     { text: '2 catálogos' },
-    { text: 'Productos ilimitados' },
     { text: 'Todo del plan Pro' },
     { text: 'Hasta 30 reportes por mes' },
     { text: '500 créditos de IA por mes' },
