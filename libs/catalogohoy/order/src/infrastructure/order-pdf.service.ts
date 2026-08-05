@@ -34,6 +34,9 @@ export interface OrderPdfContext {
   storeName: string;
   currencySymbol: string;
   showDualBs: boolean;
+  /** false = catálogo solo-Bs (precio de referencia oculto): el recibo se
+   *  renderiza en bolívares en vez de la moneda de referencia. Default true. */
+  showReference?: boolean;
   logoUrl: string | null;
 }
 
@@ -77,6 +80,16 @@ export class OrderPdfService {
       cs = this.tenantCurrency.displaySymbol() || config?.currencySymbol || '$';
       logoUrl = config?.logo ?? null;
     }
+
+    // Per-línea en Bs derivado del snapshot de la orden (rate = totalBs/totalUsd),
+    // para que los montos por línea cuadren con el total guardado. Un catálogo
+    // solo-Bs (showReference=false) renderiza todo el recibo en bolívares; el
+    // resto mantiene la moneda de referencia.
+    const rate =
+      order.totalBs && order.totalUsd > 0 ? order.totalBs / order.totalUsd : 0;
+    const soloBs = context?.showReference === false && rate > 0;
+    const money = (amount: number): string =>
+      soloBs ? `Bs. ${(amount * rate).toFixed(2)}` : `${cs}${amount.toFixed(2)}`;
 
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const pageW = 210;
@@ -187,7 +200,7 @@ export class OrderPdfService {
     doc.setFontSize(14);
     doc.setTextColor(...BLACK);
     doc.text(
-      `${cs}${order.totalUsd.toFixed(2)} — Orden #${order.orderNumber ?? order.id}`,
+      `${money(order.totalUsd)} — Orden #${order.orderNumber ?? order.id}`,
       margin,
       y
     );
@@ -263,7 +276,7 @@ export class OrderPdfService {
         const label = q > 1 ? `${a.name} ×${q}` : a.name;
         const amount = a.price * q;
         return amount > 0
-          ? `+ ${label} (${cs}${amount.toFixed(2)})`
+          ? `+ ${label} (${money(amount)})`
           : `+ ${label}`;
       });
 
@@ -322,8 +335,8 @@ export class OrderPdfService {
       }
 
       doc.text(String(item.quantity), qtyX, textY);
-      doc.text(`${cs}${item.price.toFixed(2)}`, priceX, textY);
-      doc.text(`${cs}${item.total.toFixed(2)}`, totalX, textY, {
+      doc.text(money(item.price), priceX, textY);
+      doc.text(money(item.total), totalX, textY, {
         align: 'right',
       });
 
@@ -342,12 +355,14 @@ export class OrderPdfService {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.text('Subtotal', labelX, y);
-    doc.text(`${cs}${order.totalUsd.toFixed(2)}`, valX, y, {
+    doc.text(money(order.totalUsd), valX, y, {
       align: 'right',
     });
     y += 5;
 
-    if (showDualBs && order.totalBs && order.totalBs > 0) {
+    // El mirror "Total en Bs." solo en catálogos dual-moneda (referencia + Bs);
+    // en un catálogo solo-Bs el total ya sale en bolívares vía money().
+    if (!soloBs && showDualBs && order.totalBs && order.totalBs > 0) {
       doc.text('Total en Bs.', labelX, y);
       doc.text(`Bs. ${order.totalBs.toFixed(2)}`, valX, y, {
         align: 'right',
@@ -357,7 +372,7 @@ export class OrderPdfService {
 
     doc.setFont('helvetica', 'bold');
     doc.text('Total', labelX, y);
-    doc.text(`${cs}${order.totalUsd.toFixed(2)}`, valX, y, {
+    doc.text(money(order.totalUsd), valX, y, {
       align: 'right',
     });
     y += 10;

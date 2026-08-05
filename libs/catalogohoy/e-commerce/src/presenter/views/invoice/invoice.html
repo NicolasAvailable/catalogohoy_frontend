@@ -55,33 +55,58 @@
           <li class="invoice__addon">
             <span class="invoice__addon-name">+ {{ a.name }}@if (a.quantity && a.quantity > 1) { ×{{ a.quantity }}}</span>
             @if (a.price > 0) {
-            <span class="invoice__addon-price">{{ cs() }}{{ (a.price * (a.quantity || 1)) | tenantPrice }}</span>
+            <span class="invoice__addon-price">
+              @if (showReferencePrice()) { {{ cs() }}{{ (a.price * (a.quantity || 1)) | tenantPrice }} }
+              @else if (showBs()) { Bs. {{ (a.price * (a.quantity || 1)) * orderRate() | number:'1.2-2' }} }
+              @else { {{ cs() }}{{ (a.price * (a.quantity || 1)) | tenantPrice }} }
+            </span>
             }
           </li>
           }
         </ul>
         }
       </div>
-      <span class="invoice__item-total">{{ cs() }}{{ p.total | tenantPrice }}</span>
+      <span class="invoice__item-total">
+        @if (showReferencePrice()) { {{ cs() }}{{ p.total | tenantPrice }} }
+        @else if (showBs()) { Bs. {{ p.total * orderRate() | number:'1.2-2' }} }
+        @else { {{ cs() }}{{ p.total | tenantPrice }} }
+      </span>
     </div>
     }
 
     <hr class="invoice__hr" />
 
     <div class="invoice__row">
-      <span>{{ 'Subtotal' | transloco }}</span><span>{{ cs() }}{{ subtotal() | tenantPrice }}</span>
+      <span>{{ 'Subtotal' | transloco }}</span>
+      <span>
+        @if (showReferencePrice()) { {{ cs() }}{{ subtotal() | tenantPrice }} }
+        @else if (showBs()) { Bs. {{ subtotal() * orderRate() | number:'1.2-2' }} }
+        @else { {{ cs() }}{{ subtotal() | tenantPrice }} }
+      </span>
     </div>
     @if (o.shippingMethod) {
     <div class="invoice__row">
       <span>{{ o.shippingMethod.name || ('Envío' | transloco) }}</span>
-      <span>@if (o.shippingFee > 0) { {{ cs() }}{{ o.shippingFee | tenantPrice }} } @else { {{ 'Gratis' | transloco }} }</span>
+      <span>
+        @if (o.shippingFee > 0) {
+        @if (showReferencePrice()) { {{ cs() }}{{ o.shippingFee | tenantPrice }} }
+        @else if (showBs()) { Bs. {{ o.shippingFee * orderRate() | number:'1.2-2' }} }
+        @else { {{ cs() }}{{ o.shippingFee | tenantPrice }} }
+        } @else { {{ 'Gratis' | transloco }} }
+      </span>
     </div>
     }
     <div class="invoice__row invoice__row--total">
       <span>{{ 'Total' | transloco }}</span>
       <span>
+        @if (showReferencePrice()) {
         {{ cs() }}{{ o.totalUsd | tenantPrice }}
         @if (showBs()) { <small>Bs. {{ o.totalBs | number:'1.2-2' }}</small> }
+        } @else if (showBs()) {
+        Bs. {{ o.totalBs | number:'1.2-2' }}
+        } @else {
+        {{ cs() }}{{ o.totalUsd | tenantPrice }}
+        }
       </span>
     </div>
 
