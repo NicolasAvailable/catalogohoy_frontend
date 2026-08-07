@@ -59,14 +59,25 @@
       <span class="ficha__nickname">{{ nick }}</span>
       }
       @if (c.customerUsername) {
-      <a
-        class="ficha__phone"
-        [href]="'https://instagram.com/' + c.customerUsername"
-        target="_blank"
-        rel="noopener"
-      >
-        <img src="/images/instagram.svg" alt="Instagram" class="w-3.5 h-3.5" /> &#64;{{ c.customerUsername }}
-      </a>
+        @if (c.channel === 'tiktok') {
+        <a
+          class="ficha__phone"
+          [href]="'https://www.tiktok.com/@' + c.customerUsername"
+          target="_blank"
+          rel="noopener"
+        >
+          <img src="/images/tiktok.svg" alt="TikTok" class="w-3.5 h-3.5 rounded-full" /> &#64;{{ c.customerUsername }}
+        </a>
+        } @else {
+        <a
+          class="ficha__phone"
+          [href]="'https://instagram.com/' + c.customerUsername"
+          target="_blank"
+          rel="noopener"
+        >
+          <img src="/images/instagram.svg" alt="Instagram" class="w-3.5 h-3.5" /> &#64;{{ c.customerUsername }}
+        </a>
+        }
       }
     </div>
   </div>
@@ -204,10 +215,16 @@
         <dl class="ficha__info">
           <dt>{{ 'Nombre' | transloco }}</dt>
           <dd>{{ c.customerName || '—' }}</dd>
+          @if (c.customerUsername) {
+          <!-- Canales sociales (TikTok/Instagram): usuario en vez de apodo/teléfono. -->
+          <dt>{{ 'Usuario' | transloco }}</dt>
+          <dd>&#64;{{ c.customerUsername }}</dd>
+          } @else {
           <dt>{{ 'Apodo' | transloco }}</dt>
           <dd>{{ savedCustomer()?.nickname || '—' }}</dd>
           <dt>{{ 'Teléfono' | transloco }}</dt>
           <dd>{{ c.customerPhone ? (c.customerPhone | phonePlus) : '—' }}</dd>
+          }
           <dt>{{ 'Fecha de creación' | transloco }}</dt>
           <dd>{{ formatDateTime(c.createdAt) }}</dd>
         </dl>
