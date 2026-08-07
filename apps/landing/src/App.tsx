@@ -16,6 +16,11 @@ import EnterpriseSales from "./pages/EnterpriseSales";
 import Precios from "./pages/Precios";
 import PreguntasFrecuentes from "./pages/PreguntasFrecuentes";
 import Funciones from "./pages/Funciones";
+import CatalogoPorWhatsapp from "./pages/CatalogoPorWhatsapp";
+import CatalogoDigital from "./pages/CatalogoDigital";
+import CrearCatalogoOnlineGratis from "./pages/CrearCatalogoOnlineGratis";
+import CatalogoParaTiendasDeRopa from "./pages/CatalogoParaTiendasDeRopa";
+import MenuDigitalRestaurantes from "./pages/MenuDigitalRestaurantes";
 import NotFound from "./pages/NotFound";
 import { captureReferralFromUrl } from "@/lib/referral-cookie";
 
@@ -47,6 +52,11 @@ const App = () => {
             <Route path="/pricing" element={<Precios />} />
             <Route path="/faq" element={<PreguntasFrecuentes />} />
             <Route path="/features" element={<Funciones />} />
+            <Route path="/catalogo-por-whatsapp" element={<CatalogoPorWhatsapp />} />
+            <Route path="/catalogo-digital" element={<CatalogoDigital />} />
+            <Route path="/crear-catalogo-online-gratis" element={<CrearCatalogoOnlineGratis />} />
+            <Route path="/catalogo-para-tiendas-de-ropa" element={<CatalogoParaTiendasDeRopa />} />
+            <Route path="/menu-digital-para-restaurantes" element={<MenuDigitalRestaurantes />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
