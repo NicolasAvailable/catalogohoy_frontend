@@ -1,8 +1,8 @@
 import { DatePipe } from '@angular/common';
 import {
   Component,
-  computed,
   inject,
+  OnDestroy,
   OnInit,
   signal,
   viewChild,
@@ -43,11 +43,11 @@ import { TenantsStore } from './tenants.store';
             placeholder="Buscar por nombre, slug o dueño..."
             class="flex-1 outline-none text-sm text-grey-700 placeholder:text-grey-300 bg-transparent"
             [ngModel]="searchTerm()"
-            (ngModelChange)="searchTerm.set($event)"
+            (ngModelChange)="onSearchChange($event)"
           />
         </div>
         <span class="text-sm text-grey-400">
-          {{ filteredTenants().length }} de {{ store.tenants().length }}
+          {{ store.tenants().length }} de {{ store.total() }}
         </span>
         <button
           type="button"
@@ -122,7 +122,7 @@ import { TenantsStore } from './tenants.store';
                   </td>
                 </tr>
               } @else {
-                @for (tenant of filteredTenants(); track tenant.id) {
+                @for (tenant of store.tenants(); track tenant.id) {
                   <tr class="hover:bg-grey-25 transition-colors">
                     <td class="px-4 py-3 border-b border-grey-50">
                       <div class="flex items-center gap-3">
@@ -265,6 +265,25 @@ import { TenantsStore } from './tenants.store';
             </tbody>
           </table>
         </div>
+
+        @if (!store.isLoading() && store.tenants().length < store.total()) {
+          <div class="shrink-0 border-t border-grey-50 p-3 flex justify-center">
+            <button
+              type="button"
+              (click)="store.loadMore()"
+              [disabled]="store.isLoadingMore()"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-white border border-grey-50 hover:bg-grey-50 transition-colors cursor-pointer text-sm font-semibold text-grey-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              @if (store.isLoadingMore()) {
+                <ui-icon name="loader-circle" size="14" styleClass="text-grey-400 animate-spin" />
+                Cargando...
+              } @else {
+                <ui-icon name="chevron-down" size="14" styleClass="text-grey-500" />
+                Cargar más ({{ store.tenants().length }} de {{ store.total() }})
+              }
+            </button>
+          </div>
+        }
       </section>
     </div>
 
@@ -274,33 +293,28 @@ import { TenantsStore } from './tenants.store';
     />
   `,
 })
-export class Tenants implements OnInit {
+export class Tenants implements OnInit, OnDestroy {
   protected readonly store = inject(TenantsStore);
 
   protected readonly searchTerm = signal('');
   protected readonly brokenLogos = signal<Set<number>>(new Set());
 
   private readonly dialog = viewChild.required(AssignPlanDialog);
-
-  protected readonly filteredTenants = computed(() => {
-    const term = this.searchTerm().trim().toLowerCase();
-    if (!term) return this.store.tenants();
-    return this.store.tenants().filter((t) => {
-      const name = (t.name ?? '').toLowerCase();
-      const slug = (t.slug ?? '').toLowerCase();
-      const owner = (t.ownerName ?? '').toLowerCase();
-      const email = (t.ownerEmail ?? '').toLowerCase();
-      return (
-        name.includes(term) ||
-        slug.includes(term) ||
-        owner.includes(term) ||
-        email.includes(term)
-      );
-    });
-  });
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.store.load();
+  }
+
+  ngOnDestroy(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+  }
+
+  /** Debounce keystrokes so search hits the server (not the loaded page). */
+  protected onSearchChange(term: string): void {
+    this.searchTerm.set(term);
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.store.setSearch(term), 300);
   }
 
   protected openAssignDialog(tenant: Tenant): void {
