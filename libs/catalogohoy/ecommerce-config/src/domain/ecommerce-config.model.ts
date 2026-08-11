@@ -139,7 +139,13 @@ export const PAYMENT_METHOD_FIELDS: Record<string, PaymentFieldDef[]> = {
   tarjeta_credito: [
     { key: 'instrucciones', label: 'Instrucciones', placeholder: 'Cómo pagar con tarjeta', multiline: true },
   ],
+  // Método libre: mismos campos que una transferencia (titular, cuenta e
+  // instrucciones). Todos opcionales — en el checkout solo se muestran los que
+  // el comerciante completa, así "otro" sirve tanto para un pago adelantado /
+  // transferencia como para métodos con una sola instrucción.
   otro: [
+    { key: 'titular', label: 'Titular', placeholder: 'Nombre del titular (opcional)' },
+    { key: 'numeroCuenta', label: 'Número de cuenta', placeholder: 'N° de cuenta / celular (opcional)' },
     { key: 'instrucciones', label: 'Datos / instrucciones', placeholder: 'Datos que el cliente necesita para pagar', multiline: true },
   ],
 };
