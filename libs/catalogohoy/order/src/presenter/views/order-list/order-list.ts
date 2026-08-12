@@ -39,6 +39,7 @@ import {
   Subscription,
 } from 'rxjs';
 import { Order, OrderItem, OrderStatus } from '../../../domain/order';
+import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import { OrderPdfService } from '../../../infrastructure/order-pdf.service';
 import { OrderRealtimeService } from '../../../infrastructure/order-realtime.service';
 import { OrderStore } from '../../../infrastructure/order.store';
@@ -106,6 +107,14 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private readonly orderRealtime = inject(OrderRealtimeService);
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canCreateOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'create'));
+  /** "Registrar venta" (venta en tienda) es solo para administradores (owner),
+   *  a diferencia de crear orden que también puede un miembro con permiso. */
+  protected readonly isAdmin = computed(() => this.permissions.isOwner());
+  /** Beta cerrada: la venta en tienda (recibo + evidencia de pago) solo está
+   *  habilitada para los tenants del allowlist mientras la validamos. */
+  protected readonly ventaFeatureEnabled = computed(() =>
+    isVentaFeatureEnabled(this.tenantStore.tenantId())
+  );
   protected readonly canEditOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'edit'));
   protected readonly canDeleteOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'delete'));
 
@@ -267,6 +276,12 @@ export class OrderListComponent implements OnInit, OnDestroy {
 
   onCreateOrder() {
     this.router.navigate(['/admin/orders/create']);
+  }
+
+  /** Venta en tienda: abre el alta de orden en modo "Registrar venta" (nace
+   *  completada → genera recibo/nota de entrega y descuenta stock). */
+  onRegisterSale() {
+    this.router.navigate(['/admin/orders/create-venta']);
   }
 
   onEditOrder(order: Order) {

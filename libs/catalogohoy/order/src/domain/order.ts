@@ -34,6 +34,14 @@ export interface OrderItem {
 
 export type OrderStatus = 'pending' | 'completed' | 'cancelled';
 
+/** Admin-only payment proof attached to a manual order/sale. */
+export interface PaymentEvidence {
+  /** Free-form note (e.g. reference number, bank, conditions). */
+  note?: string;
+  /** Uploaded image URLs (transfer screenshots, receipts). */
+  images: string[];
+}
+
 /** A single internal team note (chat-style). */
 export interface InternalNote {
   author: string;
@@ -62,6 +70,11 @@ export interface Order {
   phone?: string;
   email?: string;
   comments?: string;
+  /** Admin-only proof of payment for a manual sale/order: a free-form note plus
+   *  uploaded image URLs (transfer screenshots, etc.). Captured only from the
+   *  admin order form — never from the public catalog checkout — and never
+   *  printed on the customer receipt PDF. */
+  paymentEvidence?: PaymentEvidence | null;
   /** Internal team notes thread — admin-only, never shown to the customer. */
   internalNotes?: InternalNote[];
   paymentMethod?: string;

@@ -1,4 +1,4 @@
-import { Order, OrderItem, OrderStatus } from './order';
+import { Order, OrderItem, OrderStatus, PaymentEvidence } from './order';
 
 export class OrderMapper {
   static toDomain(entity: unknown): Order {
@@ -19,6 +19,7 @@ export class OrderMapper {
       phone: e.phone,
       email: e.email ?? undefined,
       comments: e.comments,
+      paymentEvidence: OrderMapper.toPaymentEvidence(e.payment_evidence),
       internalNotes: Array.isArray(e.internal_notes) ? e.internal_notes : [],
       paymentMethod: e.payment_method,
       shippingMethod: e.shipping_method ?? null,
@@ -26,6 +27,19 @@ export class OrderMapper {
       shippingFee: e.shipping_fee != null ? Number(e.shipping_fee) : undefined,
       deliveryDate: e.delivery_date,
     };
+  }
+
+  /** Normalizes the `payment_evidence` jsonb column into a domain shape.
+   *  Tolerates legacy/absent values → null. Images is always an array. */
+  private static toPaymentEvidence(raw: unknown): PaymentEvidence | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const e = raw as any;
+    const images = Array.isArray(e.images)
+      ? e.images.filter((u: unknown): u is string => typeof u === 'string')
+      : [];
+    const note = typeof e.note === 'string' ? e.note : undefined;
+    if (!note && images.length === 0) return null;
+    return { note, images };
   }
 
   private static toOrderItemDomain(item: unknown): OrderItem {

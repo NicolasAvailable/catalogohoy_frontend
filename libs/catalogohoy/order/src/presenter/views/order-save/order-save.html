@@ -3,7 +3,7 @@
 >
   <header class="flex justify-between items-center py-4">
     <h1 class="text-2xl sm:text-4xl font-bold">
-      {{ (isCreate() ? 'Crear orden' : 'Editar orden') | transloco }}
+      {{ (isVenta() ? 'Registrar venta' : isCreate() ? 'Crear orden' : 'Editar orden') | transloco }}
     </h1>
     <div class="flex gap-3 items-center">
       <ui-button
@@ -17,7 +17,7 @@
       <ui-button
         (click)="save()"
         [disabled]="form.invalid || isSubmitting()"
-        [label]="'Guardar' | transloco"
+        [label]="(isVenta() ? 'Cobrar' : 'Guardar') | transloco"
       />
       }
     </div>
@@ -55,6 +55,7 @@
           </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          @if (!isVenta()) {
           <div class="flex flex-col gap-2">
             <label class="text-base text-grey-400 font-semibold" for="deliveryDate"
               >{{ 'Fecha de entrega' | transloco }}</label
@@ -71,6 +72,7 @@
               {{ 'Por defecto es hoy. Puedes cambiarla si la orden se entrega otro día.' | transloco }}
             </span>
           </div>
+          }
           <div class="flex flex-col gap-2">
             <div class="flex items-center gap-3">
               <label class="text-base text-grey-400 font-semibold" for="payment-method"
@@ -112,19 +114,117 @@
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-3">
             <label class="text-base text-grey-400 font-semibold" for="comments"
-              >{{ 'Comentarios' | transloco }}</label
+              >{{ (isVenta() ? 'Notas / Garantía' : 'Comentarios') | transloco }}</label
             >
             <span class="text-sm text-grey-400">{{ '(Opcional)' | transloco }}</span>
           </div>
           <ui-textarea
             formControlName="comments"
-            [placeholder]="'Notas adicionales sobre la orden...' | transloco"
+            [placeholder]="(isVenta() ? 'Condiciones de garantía, notas para el cliente…' : 'Notas adicionales sobre la orden...') | transloco"
             textareaId="comments"
             [rows]="3"
           />
         </div>
       </div>
     </ui-card>
+
+    <!-- Evidencia de pago (SOLO admin — nunca en el catálogo público ni en el
+         recibo PDF del cliente; es respaldo interno del negocio). Beta cerrada:
+         solo visible para los tenants del allowlist (ventaFeatureEnabled). -->
+    @if (ventaFeatureEnabled()) {
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-3">
+          <h2 class="text-xl font-bold">{{ 'Evidencia de pago' | transloco }}</h2>
+          <span class="text-sm text-grey-400">{{ '(Opcional)' | transloco }}</span>
+        </div>
+        <p class="text-sm text-grey-400 -mt-2">
+          {{ 'Respaldo interno del pago (captura de transferencia, comprobante…). Solo lo ves en el panel; no aparece en el catálogo ni en el recibo del cliente.' | transloco }}
+        </p>
+
+        <ui-textarea
+          formControlName="paymentEvidenceNote"
+          [placeholder]="'N° de referencia, banco, notas del pago…' | transloco"
+          textareaId="payment-evidence-note"
+          [rows]="2"
+        />
+
+        <!-- Subir imágenes: mismo patrón que las fotos del producto. -->
+        <ui-uploader
+          (valueChange)="onEvidenceUploaded($event)"
+          [accept]="'image/*'"
+          [max]="{ mb: 15 }"
+          [multiple]="true"
+        >
+          <ng-template #picker let-pick="pick">
+            <button
+              type="button"
+              (click)="paymentEvidenceImages().length < evidenceMaxImages && pick()"
+              [class]="
+                'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl py-8 transition-colors ' +
+                (paymentEvidenceImages().length >= evidenceMaxImages
+                  ? 'border-grey-300 bg-grey-50 opacity-50 cursor-not-allowed'
+                  : 'border-primary-500 bg-primary-50/10 cursor-pointer hover:bg-primary-50/20')
+              "
+            >
+              <ui-icon
+                name="circle-plus"
+                size="22"
+                [styleClass]="paymentEvidenceImages().length >= evidenceMaxImages ? 'text-grey-400 mb-2' : 'text-primary-500 mb-2'"
+              />
+              <p
+                [class]="
+                  'font-semibold text-sm text-center px-4 ' +
+                  (paymentEvidenceImages().length >= evidenceMaxImages ? 'text-grey-400' : 'text-primary-500')
+                "
+              >
+                {{ (paymentEvidenceImages().length >= evidenceMaxImages
+                  ? 'Alcanzaste el máximo de imágenes'
+                  : 'Arrastrá, soltá o subí las imágenes del pago') | transloco }}
+              </p>
+            </button>
+          </ng-template>
+        </ui-uploader>
+
+        <!-- Miniaturas subidas (con quitar). -->
+        @if (paymentEvidenceImages().length > 0) {
+        <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+          @for (img of paymentEvidenceImages(); track img) {
+          <div
+            class="group relative aspect-square rounded-lg overflow-hidden border border-grey-100 bg-grey-50"
+          >
+            <img
+              [src]="img"
+              alt=""
+              loading="lazy"
+              class="w-full h-full object-cover"
+            />
+            <!-- Click (o hover en desktop) → abre el preview grande. El overlay
+                 cubre la miniatura: en desktop se ve al hacer hover; en mobile
+                 es transparente pero igual abre el preview al tocar. -->
+            <button
+              type="button"
+              (click)="openEvidencePreview(img)"
+              [title]="'Ver' | transloco"
+              class="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            >
+              <ui-icon name="eye" size="22" />
+            </button>
+            <button
+              type="button"
+              (click)="removeEvidenceImage(img)"
+              [title]="'Quitar' | transloco"
+              class="absolute top-1.5 right-1.5 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-white text-grey-400 shadow opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 cursor-pointer"
+            >
+              <ui-icon name="trash" size="15" />
+            </button>
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </ui-card>
+    }
 
     <!-- Productos -->
     <ui-card>
@@ -588,6 +688,7 @@
       </div>
     </ui-card>
 
+    @if (!isVenta()) {
     <!-- Estado -->
     <ui-card>
       <div class="flex flex-col gap-4">
@@ -745,6 +846,7 @@
         </div>
       </div>
     </ui-card>
+    }
 
     <!-- Totales -->
     <ui-card>
@@ -778,6 +880,36 @@
             >{{ cs() }} {{ calculateTotal().toFixed(2) }}</span
           >
         </div>
+
+        @if (isVenta()) {
+        <!-- Monto recibido → Cambio (POS) -->
+        <div class="flex flex-col gap-3 py-4 border-t border-grey-100">
+          <div class="flex flex-col gap-1 sm:max-w-xs">
+            <label for="amount-received" class="text-sm text-grey-400">
+              {{ 'Monto recibido' | transloco }}
+            </label>
+            <ui-input-number
+              [ngModel]="amountReceived()"
+              (ngModelChange)="amountReceived.set($event)"
+              [ngModelOptions]="{ standalone: true }"
+              [min]="0"
+              mode="decimal"
+              [prefix]="cs() + ' '"
+              [minFractionDigits]="2"
+              [maxFractionDigits]="2"
+              inputId="amount-received"
+            />
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-base text-grey-400 font-medium">{{ 'Cambio' | transloco }}</span>
+            <span
+              class="text-lg font-bold"
+              [class]="change() < 0 ? 'text-red-500' : 'text-green-600'"
+              >{{ change() < 0 ? ('Faltan ' | transloco) : '' }}{{ cs() }} {{ (change() < 0 ? -change() : change()).toFixed(2) }}</span
+            >
+          </div>
+        </div>
+        }
 
         @if (tenantCurrency.showDualCurrency()) {
         <!-- Tasa de cambio -->
@@ -830,3 +962,27 @@
     </ui-card>
   </form>
 </section>
+
+<!-- Lightbox de evidencia de pago: preview grande de la imagen. Click fuera o
+     en la X para cerrar. -->
+@if (evidencePreviewUrl(); as pv) {
+<div
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-6"
+  (click)="closeEvidencePreview()"
+>
+  <button
+    type="button"
+    (click)="closeEvidencePreview()"
+    class="absolute top-4 right-4 text-white/80 hover:text-white cursor-pointer"
+    [attr.aria-label]="'Cerrar' | transloco"
+  >
+    <ui-icon name="x" styleClass="w-7 h-7" />
+  </button>
+  <img
+    [src]="pv"
+    alt=""
+    class="max-w-full max-h-[85vh] rounded-lg object-contain"
+    (click)="$event.stopPropagation()"
+  />
+</div>
+}

@@ -9,6 +9,7 @@ import {
   OrderItem,
   OrderMapper,
   OrderStatus,
+  PaymentEvidence,
 } from '../domain';
 
 export interface WeekDayData {
@@ -31,6 +32,9 @@ export interface CreateOrderInput {
   name: string;
   phone?: string;
   comments?: string;
+  /** Admin-only proof of payment (note + image URLs). Only the admin order
+   *  form sends this; the public catalog checkout never does. */
+  paymentEvidence?: PaymentEvidence | null;
   status: OrderStatus;
   products: OrderItem[];
   totalUsd: number;
@@ -211,6 +215,8 @@ export class OrderService {
       source: 'manual',
     };
     if (input.deliveryDate) payload['delivery_date'] = input.deliveryDate;
+    if (input.paymentEvidence !== undefined)
+      payload['payment_evidence'] = input.paymentEvidence;
     if (input.paymentMethod !== undefined) payload['payment_method'] = input.paymentMethod || null;
     // shipping_fee es NOT NULL (default 0): sin envío = 0, nunca null.
     if (input.shippingFee !== undefined)
@@ -270,6 +276,8 @@ export class OrderService {
       total_bs: input.totalBs,
     };
     if (input.deliveryDate) patch['delivery_date'] = input.deliveryDate;
+    if (input.paymentEvidence !== undefined)
+      patch['payment_evidence'] = input.paymentEvidence;
     if (input.paymentMethod !== undefined) patch['payment_method'] = input.paymentMethod || null;
     // shipping_fee es NOT NULL (default 0): sin envío = 0, nunca null.
     if (input.shippingFee !== undefined)

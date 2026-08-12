@@ -17,7 +17,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ProductStore } from '@catalogohoy/product';
 import { RateStore, RateType } from '@catalogohoy/rate';
@@ -36,13 +36,16 @@ import {
   SelectItemDirective,
   SelectSelectedItemDirective,
   TextareaComponent,
+  UploaderComponent,
 } from '@ui';
 import {
   Order,
   OrderItem,
   OrderItemAddon,
   OrderStatus,
+  PaymentEvidence,
 } from '../../../domain/order';
+import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import { OrderStore } from '../../../infrastructure/order.store';
 
 /** Un adicional del catálogo (pool global), con su foto para mostrarlo como
@@ -74,6 +77,7 @@ interface CatalogAddon {
     SelectSelectedItemDirective,
     DatepickerComponent,
     InputPhoneComponent,
+    UploaderComponent,
   ],
   templateUrl: './order-save.html',
   styleUrl: './order-save.css',
@@ -81,6 +85,7 @@ interface CatalogAddon {
 })
 export default class OrderSave implements OnInit {
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
   public readonly productStore = inject(ProductStore);
@@ -104,6 +109,13 @@ export default class OrderSave implements OnInit {
    *  matching the catalog's configured country. Defaults to Venezuela. */
   protected readonly defaultPhoneCountry = computed(() =>
     (this.configStore.config()?.countryCode || 'VE').toLowerCase()
+  );
+
+  /** Beta cerrada: la tarjeta de "Evidencia de pago" (y el resto de la venta en
+   *  tienda) solo se muestra para los tenants del allowlist mientras la
+   *  validamos. Los demás catálogos ven el alta de orden sin cambios. */
+  protected readonly ventaFeatureEnabled = computed(() =>
+    isVentaFeatureEnabled(this.tenantStore.tenantId())
   );
 
   private static readonly CUSTOM_PRODUCT_ID = '__custom__';
@@ -131,6 +143,8 @@ export default class OrderSave implements OnInit {
     // Manual orders mirror the public-catalog checkout: the admin picks
     // which method the customer paid with so the order list shows it.
     paymentMethod: [''],
+    // Admin-only proof-of-payment note (goes with `paymentEvidenceImages`).
+    paymentEvidenceNote: [''],
   });
 
   /** Active payment methods from the catalog config — same source the
@@ -142,7 +156,30 @@ export default class OrderSave implements OnInit {
 
 
   public readonly id = input<string | undefined>(undefined);
+  /** When opened as "Registrar venta" (route query `?mode=venta`) the screen
+   *  defaults the order to `completed` (a closed in-store sale → genera recibo
+   *  y descuenta stock) and relabels the UI. Otherwise it's the normal manual
+   *  order flow. */
+  /** True when opened as "Registrar venta" (route `create?mode=venta`). Read
+   *  from the query param in ngOnInit (no componentInputBinding dependency). */
+  protected readonly isVenta = signal(false);
   public readonly products = signal<OrderItem[]>([]);
+  /** POS: monto en efectivo que entrega el cliente; el cambio se calcula solo.
+   *  Solo se usa en el form (calculadora para dar el vuelto); no se persiste. */
+  public readonly amountReceived = signal<number | null>(null);
+  public readonly change = computed(() => {
+    const r = this.amountReceived();
+    if (r == null || r === 0) return 0;
+    return r - this.calculateTotal();
+  });
+  /** Admin-only proof-of-payment images (transfer screenshots, receipts).
+   *  Uploaded via <ui-uploader> to the same storage the product gallery uses;
+   *  the note lives in the `paymentEvidenceNote` form control. */
+  public readonly paymentEvidenceImages = signal<string[]>([]);
+  /** Soft cap so a sale can't accumulate an unbounded gallery of proofs. */
+  public readonly evidenceMaxImages = 6;
+  /** Lightbox: which evidence image is open in the big preview (null = closed). */
+  public readonly evidencePreviewUrl = signal<string | null>(null);
   public readonly isCreate = signal<boolean>(true);
   public readonly isSubmitting = signal<boolean>(false);
   public readonly totalBs = signal<number>(0);
@@ -257,6 +294,17 @@ export default class OrderSave implements OnInit {
         this.loadOrder(orderId);
       }
     });
+
+    // Registrar venta: el modo lo indica el query param ?mode=venta. Una venta
+    // en tienda nace cerrada (completada) para generar el recibo y descontar
+    // stock de una vez.
+    this.isVenta.set(
+      this.route.snapshot.data['mode'] === 'venta' ||
+        this.route.snapshot.queryParamMap.get('mode') === 'venta'
+    );
+    if (this.isVenta() && !this.id()) {
+      this.form.controls.status.setValue('completed');
+    }
   }
 
   private async loadOrder(id: string) {
@@ -281,6 +329,10 @@ export default class OrderSave implements OnInit {
     this.form.controls.comments.setValue(order.comments || '');
     this.form.controls.status.setValue(order.status);
     this.form.controls.paymentMethod.setValue(order.paymentMethod || '');
+    this.form.controls.paymentEvidenceNote.setValue(
+      order.paymentEvidence?.note || ''
+    );
+    this.paymentEvidenceImages.set(order.paymentEvidence?.images ?? []);
     if (order.deliveryDate) {
       // Parse "YYYY-MM-DD" as local date (avoid the UTC-shift that new Date(iso) causes).
       const [y, m, d] = order.deliveryDate.split('-').map(Number);
@@ -760,6 +812,39 @@ export default class OrderSave implements OnInit {
     );
   }
 
+  /** <ui-uploader> finished uploading: append the new URL(s) up to the cap. */
+  public onEvidenceUploaded(value: string | string[]): void {
+    const incoming = Array.isArray(value) ? value : [value];
+    this.paymentEvidenceImages.update((imgs) => {
+      const room = this.evidenceMaxImages - imgs.length;
+      return room <= 0 ? imgs : [...imgs, ...incoming.slice(0, room)];
+    });
+  }
+
+  /** Remove one proof-of-payment image from the list. Does not delete the
+   *  uploaded file from storage (same behaviour as the product gallery). */
+  public removeEvidenceImage(url: string): void {
+    this.paymentEvidenceImages.update((imgs) => imgs.filter((u) => u !== url));
+  }
+
+  /** Open the big preview (lightbox) for a proof-of-payment image. */
+  public openEvidencePreview(url: string): void {
+    this.evidencePreviewUrl.set(url);
+  }
+
+  public closeEvidencePreview(): void {
+    this.evidencePreviewUrl.set(null);
+  }
+
+  /** Builds the PaymentEvidence to persist, or null when the admin left both
+   *  the note and the images empty (keeps the column null for plain orders). */
+  private buildPaymentEvidence(): PaymentEvidence | null {
+    const note = (this.form.controls.paymentEvidenceNote.value || '').trim();
+    const images = this.paymentEvidenceImages();
+    if (!note && images.length === 0) return null;
+    return { note: note || undefined, images };
+  }
+
   public async save() {
     if (this.form.invalid) {
       this.toastService.error(
@@ -788,6 +873,7 @@ export default class OrderSave implements OnInit {
       totalBs: this.totalBs(),
       deliveryDate: delivery ? this.toIsoDate(delivery) : undefined,
       paymentMethod: this.form.controls.paymentMethod.value || undefined,
+      paymentEvidence: this.buildPaymentEvidence(),
       shippingFee: this.effectiveShippingFee(),
       shippingMethod: this.buildShippingMethod(),
     };
@@ -801,7 +887,11 @@ export default class OrderSave implements OnInit {
             this.isSubmitting.set(false);
           },
           () => {
-            this.toastService.success('Orden creada exitosamente');
+            this.toastService.success(
+              this.isVenta()
+                ? 'Venta registrada exitosamente'
+                : 'Orden creada exitosamente'
+            );
             this.router.navigate(['/admin/orders']);
           }
         );

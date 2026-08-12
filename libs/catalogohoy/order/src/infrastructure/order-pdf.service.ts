@@ -5,7 +5,7 @@ import {
 } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
 import { jsPDF } from 'jspdf';
-import { Order, OrderItem } from '../domain';
+import { isVentaFeatureEnabled, Order, OrderItem } from '../domain';
 
 const PAYMENT_LABELS: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -119,12 +119,33 @@ export class OrderPdfService {
       }
     }
 
-    // Left: "Orden" title
+    // Left: title — a completed order is a closed sale, so it renders as a
+    // "Recibo de Venta / Nota de Entrega"; pending/cancelled stay as "Orden".
+    // Beta cerrada: solo los tenants del allowlist ven el PDF como "Recibo de
+    // Venta / Nota de Entrega"; el resto conserva el título "Orden".
+    const isReceipt =
+      order.status === 'completed' && isVentaFeatureEnabled(order.tenantId);
+    const docNoun = isReceipt ? 'Recibo' : 'Orden';
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(28);
     doc.setTextColor(...BLACK);
-    doc.text('Orden', margin, y + 8);
-    y += 18;
+    doc.text(isReceipt ? 'Recibo de Venta' : 'Orden', margin, y + 8);
+    y += 16;
+
+    if (isReceipt) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(...GREY);
+      doc.text(
+        `Nota de Entrega N° ${order.orderNumber ?? order.id}`,
+        margin,
+        y + 4
+      );
+      doc.setTextColor(...BLACK);
+      y += 8;
+    } else {
+      y += 2;
+    }
 
     // Order metadata
     doc.setFont('helvetica', 'normal');
@@ -138,6 +159,16 @@ export class OrderPdfService {
         month: 'long',
         day: 'numeric',
       });
+    // Receipts show the exact date AND time of the sale (needed for a
+    // "nota de entrega"); orders keep the date-only creation label.
+    const formatDateTime = (d: Date) =>
+      d.toLocaleString('es-VE', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
 
     // delivery_date is "YYYY-MM-DD"; parse as local to avoid UTC shift.
     let deliveryDate: Date | null = null;
@@ -147,8 +178,11 @@ export class OrderPdfService {
     }
 
     const meta: [string, string][] = [
-      ['Número de orden', `#${order.orderNumber ?? order.id}`],
-      ['Fecha de creación', formatLong(createdDate)],
+      [isReceipt ? 'Número de recibo' : 'Número de orden', `#${order.orderNumber ?? order.id}`],
+      [
+        isReceipt ? 'Fecha y hora' : 'Fecha de creación',
+        isReceipt ? formatDateTime(createdDate) : formatLong(createdDate),
+      ],
       [
         'Fecha de entrega',
         deliveryDate ? formatLong(deliveryDate) : formatLong(createdDate),
@@ -200,7 +234,7 @@ export class OrderPdfService {
     doc.setFontSize(14);
     doc.setTextColor(...BLACK);
     doc.text(
-      `${money(order.totalUsd)} — Orden #${order.orderNumber ?? order.id}`,
+      `${money(order.totalUsd)} — ${docNoun} #${order.orderNumber ?? order.id}`,
       margin,
       y
     );
@@ -386,7 +420,7 @@ export class OrderPdfService {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       doc.setTextColor(...GREY);
-      doc.text('Notas:', margin, y);
+      doc.text(isReceipt ? 'Notas / Garantía:' : 'Notas:', margin, y);
       y += 4;
 
       doc.setFont('helvetica', 'normal');
@@ -411,7 +445,9 @@ export class OrderPdfService {
       y
     );
 
-    doc.save(`orden-${order.orderNumber ?? order.id}.pdf`);
+    doc.save(
+      `${isReceipt ? 'recibo' : 'orden'}-${order.orderNumber ?? order.id}.pdf`
+    );
   }
 
   private blobToBase64(blob: Blob): Promise<string> {

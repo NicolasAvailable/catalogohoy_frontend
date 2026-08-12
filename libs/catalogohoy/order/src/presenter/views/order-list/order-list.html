@@ -7,24 +7,48 @@
         {{ 'Gestiona los pedidos y el estado de ventas de tu catálogo' | transloco }}
       </p>
     </div>
-    @if (canCreateOrder()) {
-    <ui-button
-      class="sm:hidden shrink-0"
-      (click)="onCreateOrder()"
-      [fluid]="false"
-      [label]="'Crear' | transloco"
-      icon="circle-plus"
-      size="small"
-    />
-    <ui-button
-      class="hidden sm:block shrink-0"
-      (click)="onCreateOrder()"
-      [fluid]="false"
-      [label]="'Crear orden manual' | transloco"
-      icon="circle-plus"
-      styleClass="shadow-sm"
-    />
-    }
+    <div class="flex gap-2 items-center shrink-0">
+      @if (isAdmin() && ventaFeatureEnabled()) {
+      <ui-button
+        class="sm:hidden"
+        (click)="onRegisterSale()"
+        [fluid]="false"
+        [label]="'Vender' | transloco"
+        icon="store"
+        size="small"
+      />
+      <ui-button
+        class="hidden sm:block"
+        (click)="onRegisterSale()"
+        [fluid]="false"
+        [label]="'Registrar venta' | transloco"
+        icon="store"
+        styleClass="shadow-sm"
+      />
+      }
+      @if (canCreateOrder()) {
+      <ui-button
+        class="sm:hidden"
+        (click)="onCreateOrder()"
+        [fluid]="false"
+        [label]="'Crear' | transloco"
+        icon="circle-plus"
+        variant="outlined"
+        severity="contrast"
+        size="small"
+      />
+      <ui-button
+        class="hidden sm:block"
+        (click)="onCreateOrder()"
+        [fluid]="false"
+        [label]="'Crear orden manual' | transloco"
+        icon="circle-plus"
+        variant="outlined"
+        severity="contrast"
+        styleClass="shadow-sm"
+      />
+      }
+    </div>
   </header>
 
   <!-- Main Card Container -->
