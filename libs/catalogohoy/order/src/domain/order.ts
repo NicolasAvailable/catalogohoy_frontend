@@ -93,6 +93,39 @@ export interface Order {
   deliveryDate: string;
 }
 
+/** One row of the per-status breakdown in {@link OrderMetrics}. */
+export interface OrderStatusMetric {
+  status: string;
+  count: number;
+  /** Sum of `total_usd` for the orders in this status (within the range). */
+  amount: number;
+}
+
+/** One day of the daily series in {@link OrderMetrics} (for the area chart). */
+export interface OrderDayMetric {
+  /** ISO timestamp at the start of the local day (used as the chart's x). */
+  date: string;
+  amount: number;
+  count: number;
+}
+
+/** Aggregated order metrics for the "Métricas" tab. Computed server-side by the
+ *  `order_metrics` RPC so the figures cover ALL matching orders — not just the
+ *  page currently loaded in the table. Amounts are in USD (the universal
+ *  currency across orders). */
+export interface OrderMetrics {
+  /** Sales for the admin's local "today" (independent of the selected range). */
+  todayAmount: number;
+  todayOrders: number;
+  /** Aggregates for the selected date range [start, end). */
+  rangeTotalOrders: number;
+  rangeTotalAmount: number;
+  rangeAvgTicket: number;
+  byStatus: OrderStatusMetric[];
+  /** One entry per day in the range (zero-filled), oldest first. */
+  byDay: OrderDayMetric[];
+}
+
 export class OrderList {
   constructor(public readonly items: Order[]) {}
 

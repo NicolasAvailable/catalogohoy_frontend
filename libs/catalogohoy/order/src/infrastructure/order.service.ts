@@ -8,6 +8,7 @@ import {
   Order,
   OrderItem,
   OrderMapper,
+  OrderMetrics,
   OrderStatus,
   PaymentEvidence,
 } from '../domain';
@@ -180,6 +181,50 @@ export class OrderService {
 
     if (error) return E.left(new Error(error.message));
     return E.right(count ?? 0);
+  }
+
+  /** Aggregated metrics for the "Métricas" tab, via the `order_metrics` RPC.
+   *  Boundaries are computed client-side (admin's local timezone): [start, end)
+   *  is the selected range and `todayStart` is local midnight. Amounts in USD. */
+  async getOrderMetrics(
+    tenantId: number,
+    start: string,
+    end: string,
+    todayStart: string,
+    useBs: boolean
+  ): Promise<E.Either<Error, OrderMetrics>> {
+    const { data, error } = await this.client.rpc('order_metrics', {
+      p_tenant_id: tenantId,
+      p_start: start,
+      p_end: end,
+      p_today_start: todayStart,
+      p_use_bs: useBs,
+    });
+
+    if (error) return E.left(new Error(error.message));
+
+    const d = (data ?? {}) as Record<string, unknown>;
+    return E.right({
+      todayAmount: Number(d['todayAmount']) || 0,
+      todayOrders: Number(d['todayOrders']) || 0,
+      rangeTotalOrders: Number(d['rangeTotalOrders']) || 0,
+      rangeTotalAmount: Number(d['rangeTotalAmount']) || 0,
+      rangeAvgTicket: Number(d['rangeAvgTicket']) || 0,
+      byStatus: Array.isArray(d['byStatus'])
+        ? (d['byStatus'] as Record<string, unknown>[]).map((s) => ({
+            status: String(s['status']),
+            count: Number(s['count']) || 0,
+            amount: Number(s['amount']) || 0,
+          }))
+        : [],
+      byDay: Array.isArray(d['byDay'])
+        ? (d['byDay'] as Record<string, unknown>[]).map((day) => ({
+            date: String(day['date']),
+            amount: Number(day['amount']) || 0,
+            count: Number(day['count']) || 0,
+          }))
+        : [],
+    });
   }
 
   async getOrderById(
