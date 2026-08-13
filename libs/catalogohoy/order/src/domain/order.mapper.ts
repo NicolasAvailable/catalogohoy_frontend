@@ -25,6 +25,7 @@ export class OrderMapper {
       shippingMethod: e.shipping_method ?? null,
       shippingAddress: e.shipping_address ?? null,
       shippingFee: e.shipping_fee != null ? Number(e.shipping_fee) : undefined,
+      commission: e.commission != null ? Number(e.commission) : undefined,
       deliveryDate: e.delivery_date,
     };
   }

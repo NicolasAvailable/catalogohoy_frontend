@@ -816,7 +816,7 @@
                   @if (opt.kind === 'none') {
                   {{ 'El pedido no lleva envío' | transloco }}
                   } @else if (opt.kind === 'manual') {
-                  {{ 'Flete, comisión u otro monto' | transloco }}
+                  {{ 'Flete u otro costo de envío' | transloco }}
                   } @else {
                   {{ opt.fee > 0 ? cs() + (opt.fee | number:'1.2-2') : ('Gratis' | transloco) }}
                   }
@@ -828,7 +828,7 @@
           @if (shippingSelection()) {
           <div class="flex flex-col gap-1 sm:max-w-xs">
             <label for="shipping-fee" class="text-sm text-grey-400">
-              {{ shippingSelection() === '__manual__' ? ('Monto del envío (flete, comisión…)' | transloco) : ('Costo del envío — podés ajustarlo para esta orden' | transloco) }}
+              {{ shippingSelection() === '__manual__' ? ('Monto del envío (flete u otro costo)' | transloco) : ('Costo del envío — podés ajustarlo para esta orden' | transloco) }}
             </label>
             <ui-input-number
               [ngModel]="shippingFee()"
@@ -867,6 +867,33 @@
           <span class="text-base text-grey-400 font-medium">{{ 'Envío' | transloco }}</span>
           <span class="text-base font-semibold text-grey-700"
             >{{ cs() }} {{ effectiveShippingFee().toFixed(2) }}</span
+          >
+        </div>
+        }
+
+        <!-- Comisión (opcional, admin): costo del VENDEDOR que se descuenta del
+             total y no se le muestra al cliente. -->
+        <div class="flex flex-col gap-1 sm:max-w-xs pt-1">
+          <label for="commission" class="text-sm text-grey-400">{{ 'Comisión (opcional)' | transloco }}</label>
+          <ui-input-number
+            [ngModel]="commission()"
+            (ngModelChange)="onCommissionChange($event)"
+            [ngModelOptions]="{ standalone: true }"
+            [min]="0"
+            mode="decimal"
+            [prefix]="cs() + ' '"
+            [minFractionDigits]="2"
+            [maxFractionDigits]="2"
+            inputId="commission"
+          />
+          <span class="text-xs text-grey-400">{{ 'Es un costo tuyo: se descuenta de tu total y no se le muestra al cliente.' | transloco }}</span>
+        </div>
+
+        @if (commission() > 0) {
+        <div class="flex justify-between items-center">
+          <span class="text-base text-grey-400 font-medium">{{ 'Comisión' | transloco }}</span>
+          <span class="text-base font-semibold text-red-500"
+            >− {{ cs() }} {{ commission().toFixed(2) }}</span
           >
         </div>
         }

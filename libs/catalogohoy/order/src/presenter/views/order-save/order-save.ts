@@ -170,7 +170,9 @@ export default class OrderSave implements OnInit {
   public readonly change = computed(() => {
     const r = this.amountReceived();
     if (r == null || r === 0) return 0;
-    return r - this.calculateTotal();
+    // El cliente paga el bruto (subtotal + envío); la comisión es un costo del
+    // vendedor, así que el vuelto se calcula sobre lo que el cliente entrega.
+    return r - this.grossTotal();
   });
   /** Admin-only proof-of-payment images (transfer screenshots, receipts).
    *  Uploaded via <ui-uploader> to the same storage the product gallery uses;
@@ -184,8 +186,11 @@ export default class OrderSave implements OnInit {
   public readonly isSubmitting = signal<boolean>(false);
   public readonly totalBs = signal<number>(0);
   public readonly selectedRateType = signal<RateType>('bcv_usd');
-  /** Envío/gasto adicional del alta manual (flete, comisión…). Se suma al total. */
+  /** Envío/flete del alta manual (lo paga el cliente). Se suma al total. */
   public readonly shippingFee = signal<number>(0);
+  /** Comisión (opcional) que paga el VENDEDOR. Se RESTA del total (es un costo
+   *  suyo) y no se le muestra al cliente. Distinta del envío, que suma. */
+  public readonly commission = signal<number>(0);
   /** Método de envío original de la orden (si vino del checkout público), para
    *  preservar su nombre al editar en vez de pisarlo con "Envío". */
   private readonly originalShippingMethod = signal<{
@@ -353,6 +358,7 @@ export default class OrderSave implements OnInit {
     const sm = order.shippingMethod ?? null;
     this.originalShippingMethod.set(sm);
     this.shippingFee.set(order.shippingFee ?? sm?.fee ?? 0);
+    this.commission.set(order.commission ?? 0);
     if (sm) {
       // Mapear al método del catálogo por nombre; si no matchea (manual o
       // método borrado), cae a "Otro" conservando el snapshot original.
@@ -733,13 +739,26 @@ export default class OrderSave implements OnInit {
   }
 
   /** Total de la orden = productos + envío. */
-  public calculateTotal(): number {
+  /** Lo que paga el cliente: subtotal + envío (antes de la comisión del
+   *  vendedor). Base del cálculo de cambio del POS. */
+  public grossTotal(): number {
     return this.productsSubtotal() + this.effectiveShippingFee();
+  }
+
+  /** Total neto que se guarda/muestra: lo que paga el cliente MENOS la comisión
+   *  que paga el vendedor (nunca baja de 0). */
+  public calculateTotal(): number {
+    return Math.max(0, this.grossTotal() - (this.commission() || 0));
   }
 
   /** Costo de envío que efectivamente se suma al total (0 si no hay envío). */
   public effectiveShippingFee(): number {
     return this.shippingSelection() === '' ? 0 : this.shippingFee() || 0;
+  }
+
+  /** Actualiza la comisión del vendedor (no baja de 0). */
+  public onCommissionChange(value: number): void {
+    this.commission.set(Math.max(0, value || 0));
   }
 
   /** Cambia la opción de envío. Un método del catálogo precarga su costo
@@ -875,6 +894,7 @@ export default class OrderSave implements OnInit {
       paymentMethod: this.form.controls.paymentMethod.value || undefined,
       paymentEvidence: this.buildPaymentEvidence(),
       shippingFee: this.effectiveShippingFee(),
+      commission: this.commission(),
       shippingMethod: this.buildShippingMethod(),
     };
 

@@ -89,6 +89,10 @@ export interface Order {
   shippingAddress?: string | null;
   /** Flat shipping fee added to the total. */
   shippingFee?: number;
+  /** Admin-only commission the SELLER pays on a manual order/sale. Subtracts
+   *  from the order total (net) and is never shown to the customer. Distinct
+   *  from `shippingFee`, which the customer pays and adds. */
+  commission?: number;
   /** ISO date "YYYY-MM-DD". Defaults to the creation date on the server. */
   deliveryDate: string;
 }

@@ -51,6 +51,9 @@ export interface CreateOrderInput {
    *  comisión, u otro gasto). Se suma al `totalUsd` y se guarda en
    *  `shipping_fee`. 0 / undefined = sin envío. */
   shippingFee?: number;
+  /** Comisión (opcional) que paga el vendedor: se RESTA del total (net) y es
+   *  interna (no se muestra al cliente). Distinta del envío, que suma. */
+  commission?: number;
   /** Snapshot del envío para que la lista/detalle lo muestren (misma forma
    *  que el checkout público). En órdenes manuales el nombre es "Envío"; al
    *  editar una orden del catálogo se preserva su método original. null =
@@ -266,6 +269,9 @@ export class OrderService {
     // shipping_fee es NOT NULL (default 0): sin envío = 0, nunca null.
     if (input.shippingFee !== undefined)
       payload['shipping_fee'] = input.shippingFee ?? 0;
+    // commission: costo del vendedor que resta del total (0 = sin comisión).
+    if (input.commission !== undefined)
+      payload['commission'] = input.commission ?? 0;
     if (input.shippingMethod !== undefined) payload['shipping_method'] = input.shippingMethod;
 
     const { data, error } = await this.client
@@ -327,6 +333,9 @@ export class OrderService {
     // shipping_fee es NOT NULL (default 0): sin envío = 0, nunca null.
     if (input.shippingFee !== undefined)
       patch['shipping_fee'] = input.shippingFee ?? 0;
+    // commission: costo del vendedor que resta del total (0 = sin comisión).
+    if (input.commission !== undefined)
+      patch['commission'] = input.commission ?? 0;
     if (input.shippingMethod !== undefined) patch['shipping_method'] = input.shippingMethod;
 
     const { data, error } = await this.client
