@@ -518,6 +518,31 @@
               </ui-select>
               </div>
             </div>
+
+            <!-- Datos del método (titular, cuenta, instrucciones…) cargables ya
+                 al crear, según el nombre. Mismo render que el botón "Datos". -->
+            @for (field of fieldsFor(newMethodName()); track field.key) {
+            <div class="payment-method-field">
+              <label class="payment-method-field-label">{{ field.label | transloco }}</label>
+              @if (field.multiline) {
+              <ui-textarea
+                [ngModel]="newMethodDetails()[field.key] || ''"
+                (ngModelChange)="setNewMethodDetailField(field.key, $event)"
+                [placeholder]="(field.placeholder || '') | transloco"
+                [rows]="2"
+                styleClass="w-full"
+              ></ui-textarea>
+              } @else {
+              <ui-input-text
+                [ngModel]="newMethodDetails()[field.key] || ''"
+                (ngModelChange)="setNewMethodDetailField(field.key, $event)"
+                [placeholder]="(field.placeholder || '') | transloco"
+                styleClass="w-full"
+              ></ui-input-text>
+              }
+            </div>
+            }
+
             <ui-button
               [label]="'Agregar' | transloco"
               icon="plus"

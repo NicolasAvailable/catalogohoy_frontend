@@ -572,7 +572,11 @@ export const EcommerceConfigStore = signalStore(
       );
     },
 
-    async addPaymentMethod(name: string, icon: string) {
+    async addPaymentMethod(
+      name: string,
+      icon: string,
+      details?: Record<string, string>
+    ) {
       const currentConfig = store.config();
       if (!currentConfig) return;
 
@@ -582,14 +586,29 @@ export const EcommerceConfigStore = signalStore(
         name,
         icon
       );
-      toast.dismiss(loadingId);
-      result.fold(
-        () => {
+      await result.fold(
+        async () => {
+          toast.dismiss(loadingId);
           toast.error('Error al crear método de pago');
         },
-        (newMethod: PaymentMethodEntity) => {
+        async (newMethod: PaymentMethodEntity) => {
+          let created = newMethod;
+          // ¿El alta trae datos (titular, cuenta, instrucciones…)? Solo si algún
+          // campo viene con contenido se persisten en el método recién creado.
+          if (
+            details &&
+            Object.values(details).some((v) => (v ?? '').trim() !== '')
+          ) {
+            const upd = await service.updatePaymentMethod(newMethod.id, {
+              details,
+            });
+            upd.mapRight(() => {
+              created = { ...newMethod, details };
+            });
+          }
+          toast.dismiss(loadingId);
           patchState(store, {
-            paymentMethodsList: [...store.paymentMethodsList(), newMethod],
+            paymentMethodsList: [...store.paymentMethodsList(), created],
           });
           toast.success('Método de pago creado');
         }

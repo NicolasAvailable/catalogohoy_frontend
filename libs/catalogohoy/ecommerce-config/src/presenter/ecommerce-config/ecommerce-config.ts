@@ -234,6 +234,9 @@ export class EcommerceConfigComponent implements OnInit {
   // New payment method form
   public readonly newMethodName = signal('');
   public readonly newMethodIcon = signal('wallet');
+  /** Datos (titular, cuenta, instrucciones…) cargados al crear un método nuevo,
+   *  para no tener que entrar a "Datos" después. Se resetean tras agregar. */
+  public readonly newMethodDetails = signal<Record<string, string>>({});
   public readonly isAddingMethod = signal(false);
 
   public readonly iconOptions: { label: string; value: string }[] = [
@@ -1421,10 +1424,20 @@ export class EcommerceConfigComponent implements OnInit {
     const name = this.newMethodName().trim();
     if (!name || this.isAddingMethod()) return;
     this.isAddingMethod.set(true);
-    await this.configStore.addPaymentMethod(name, this.newMethodIcon());
+    await this.configStore.addPaymentMethod(
+      name,
+      this.newMethodIcon(),
+      this.newMethodDetails()
+    );
     this.newMethodName.set('');
     this.newMethodIcon.set('wallet');
+    this.newMethodDetails.set({});
     this.isAddingMethod.set(false);
+  }
+
+  /** Setea un campo de los datos del método que se está por crear. */
+  public setNewMethodDetailField(key: string, value: string): void {
+    this.newMethodDetails.update((d) => ({ ...d, [key]: value }));
   }
 
   toggleMethodActive(id: number, isActive: boolean) {
