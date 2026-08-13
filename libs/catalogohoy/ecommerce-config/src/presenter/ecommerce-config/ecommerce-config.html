@@ -945,6 +945,7 @@
                   <input type="number" min="0" step="0.01" class="shipping-num"
                     [ngModel]="method.fee"
                     (ngModelChange)="updateShippingMethodNumber(method.id, 'fee', $event)"
+                    [ngModelOptions]="{ standalone: true, updateOn: 'blur' }"
                     [placeholder]="'0 = gratis' | transloco" />
                 </label>
               </div>
