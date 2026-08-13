@@ -163,9 +163,11 @@ export default class Checkout {
       null
   );
 
-  public readonly shippingFee = computed(
-    () => this.selectedShipping()?.fee ?? 0
-  );
+  public readonly shippingFee = computed(() => {
+    const s = this.selectedShipping();
+    // "A consultar": no suma nada al total (el vendedor cotiza el envío luego).
+    return s && !s.priceOnRequest ? s.fee ?? 0 : 0;
+  });
 
   public readonly subtotal = computed(() => this.cartStore.totalPrice());
   public readonly total = computed(() => this.subtotal() + this.shippingFee());
@@ -421,7 +423,12 @@ export default class Checkout {
       total,
       payment_method: this.selectedPaymentMethod() || undefined,
       shipping_method: sel
-        ? { name: sel.name, type: sel.type, fee: sel.fee }
+        ? {
+            name: sel.name,
+            type: sel.type,
+            fee: sel.priceOnRequest ? 0 : sel.fee,
+            priceOnRequest: !!sel.priceOnRequest,
+          }
         : null,
       shipping_address: sel?.requestCustomerAddress
         ? this.customerAddress().trim() || null
@@ -517,7 +524,13 @@ export default class Checkout {
         : '';
 
     const envioStr = shipping
-      ? `*Envío:* ${shipping.name}${fee > 0 ? ` (${this.priceForMessage(fee)})` : ' (Gratis)'}\n`
+      ? `*Envío:* ${shipping.name}${
+          shipping.priceOnRequest
+            ? ' (A consultar)'
+            : fee > 0
+            ? ` (${this.priceForMessage(fee)})`
+            : ' (Gratis)'
+        }\n`
       : '';
     const direccionStr =
       shipping?.requestCustomerAddress && this.customerAddress().trim()

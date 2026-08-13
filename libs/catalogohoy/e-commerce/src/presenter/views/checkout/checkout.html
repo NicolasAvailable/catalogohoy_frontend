@@ -155,7 +155,9 @@
         <span class="checkout__radio" [class.checkout__radio--on]="selectedShippingId() === method.id"></span>
         <span class="checkout__ship-name">{{ method.name }}</span>
         <span class="checkout__ship-fee">
-          @if (method.fee > 0) {
+          @if (method.priceOnRequest) {
+          {{ 'A consultar' | transloco }}
+          } @else if (method.fee > 0) {
           @if (showReferencePrice()) {
           {{ cs() }}{{ method.fee | tenantPrice }}
           @if (showBs()) { <small class="checkout__price-bs">Bs. {{ method.fee * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }

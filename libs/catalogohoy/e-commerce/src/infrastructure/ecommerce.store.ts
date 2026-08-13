@@ -300,6 +300,7 @@ export const EcommerceStore = signalStore(
         name: string;
         type: 'pickup' | 'delivery' | 'shipping';
         fee: number;
+        priceOnRequest?: boolean;
       } | null;
       shipping_address?: string | null;
       shipping_fee?: number;

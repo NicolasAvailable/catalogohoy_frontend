@@ -940,6 +940,7 @@
                     </ng-template>
                   </ui-select>
                 </label>
+                @if (!method.priceOnRequest) {
                 <label class="shipping-field">
                   <span class="shipping-field-label">{{ 'Costo ({symbol})' | transloco: { symbol: draftCurrencySymbol() } }}</span>
                   <input type="number" min="0" step="0.01" class="shipping-num"
@@ -948,7 +949,19 @@
                     [ngModelOptions]="{ standalone: true, updateOn: 'blur' }"
                     [placeholder]="'0 = gratis' | transloco" />
                 </label>
+                }
               </div>
+
+              <label class="shipping-toggle-row">
+                <div class="shipping-toggle-text">
+                  <span>{{ 'Precio a consultar' | transloco }}</span>
+                  <small>{{ 'El precio es variable: en el checkout se muestra “A consultar” y no se suma al total.' | transloco }}</small>
+                </div>
+                <ui-toggle
+                  [ngModel]="!!method.priceOnRequest"
+                  (ngModelChange)="updateShippingMethodField(method.id, 'priceOnRequest', $event)"
+                ></ui-toggle>
+              </label>
 
               <label class="shipping-field">
                 <span class="shipping-field-label">{{ 'Instrucciones (opcional)' | transloco }}</span>

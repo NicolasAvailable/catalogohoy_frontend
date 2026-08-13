@@ -209,6 +209,10 @@ export interface ShippingMethod {
   type: ShippingMethodType;
   /** Flat fee added to the order total. 0 = free. */
   fee: number;
+  /** Precio variable / "A consultar": el checkout muestra "A consultar" en vez
+   *  de un precio y no suma nada al total (el vendedor cotiza el envío luego).
+   *  `fee` se mantiene en 0. Ausente/false = precio normal. */
+  priceOnRequest?: boolean;
   instructions: string;
   /** delivery/shipping: ask the customer to type their address at checkout. */
   requestCustomerAddress: boolean;
