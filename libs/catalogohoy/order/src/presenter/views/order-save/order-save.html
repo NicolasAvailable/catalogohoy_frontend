@@ -848,6 +848,99 @@
     </ui-card>
     }
 
+    <!-- Comisión (opcional): costo del VENDEDOR que se descuenta del total y no
+         se le muestra al cliente. Puede ser un monto fijo o un porcentaje. -->
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-3">
+          <h2 class="text-xl font-bold">{{ 'Comisión' | transloco }}</h2>
+          <span class="text-sm text-grey-400">{{ '(Opcional)' | transloco }}</span>
+        </div>
+        <p class="text-sm text-grey-400 -mt-2">
+          {{ 'Un costo tuyo por la venta (por ejemplo la comisión de un vendedor o una pasarela). Se descuenta de tu total y no se le muestra al cliente.' | transloco }}
+        </p>
+
+        <!-- Tipo: monto fijo / porcentaje -->
+        <div
+          class="grid grid-cols-2 gap-3 sm:max-w-md"
+          role="radiogroup"
+          [attr.aria-label]="'Tipo de comisión' | transloco"
+        >
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="commissionMode() === 'fixed'"
+            (click)="setCommissionMode('fixed')"
+            [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer text-left w-full ' +
+              (commissionMode() === 'fixed' ? 'border-primary-500 bg-primary-50/30' : 'border-grey-200 hover:border-primary-300')"
+          >
+            <div
+              [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ' +
+                (commissionMode() === 'fixed' ? 'border-primary-500' : 'border-grey-300')"
+            >
+              @if (commissionMode() === 'fixed') {
+              <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
+              }
+            </div>
+            <span class="font-medium">{{ 'Monto fijo' | transloco }}</span>
+          </button>
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="commissionMode() === 'percent'"
+            (click)="setCommissionMode('percent')"
+            [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer text-left w-full ' +
+              (commissionMode() === 'percent' ? 'border-primary-500 bg-primary-50/30' : 'border-grey-200 hover:border-primary-300')"
+          >
+            <div
+              [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ' +
+                (commissionMode() === 'percent' ? 'border-primary-500' : 'border-grey-300')"
+            >
+              @if (commissionMode() === 'percent') {
+              <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
+              }
+            </div>
+            <span class="font-medium">{{ 'Porcentaje' | transloco }}</span>
+          </button>
+        </div>
+
+        @if (commissionMode() === 'fixed') {
+        <div class="flex flex-col gap-1 sm:max-w-xs">
+          <label for="commission-amount" class="text-sm text-grey-400">{{ 'Monto de la comisión' | transloco }}</label>
+          <ui-input-number
+            [ngModel]="commissionAmount()"
+            (ngModelChange)="onCommissionAmountChange($event)"
+            [ngModelOptions]="{ standalone: true }"
+            [min]="0"
+            mode="decimal"
+            [prefix]="cs() + ' '"
+            [minFractionDigits]="2"
+            [maxFractionDigits]="2"
+            inputId="commission-amount"
+          />
+        </div>
+        } @else {
+        <div class="flex flex-col gap-1 sm:max-w-xs">
+          <label for="commission-percent" class="text-sm text-grey-400">{{ 'Porcentaje de la comisión (%)' | transloco }}</label>
+          <ui-input-number
+            [ngModel]="commissionPercent()"
+            (ngModelChange)="onCommissionPercentChange($event)"
+            [ngModelOptions]="{ standalone: true }"
+            [min]="0"
+            mode="decimal"
+            [minFractionDigits]="0"
+            [maxFractionDigits]="2"
+            inputId="commission-percent"
+          />
+          <span class="text-xs text-grey-400">
+            {{ 'Se calcula sobre el subtotal de productos.' | transloco }}
+            @if (effectiveCommission() > 0) { — {{ 'Comisión:' | transloco }} {{ cs() }} {{ effectiveCommission().toFixed(2) }} }
+          </span>
+        </div>
+        }
+      </div>
+    </ui-card>
+
     <!-- Totales -->
     <ui-card>
       <div class="flex flex-col gap-4">
@@ -871,29 +964,11 @@
         </div>
         }
 
-        <!-- Comisión (opcional, admin): costo del VENDEDOR que se descuenta del
-             total y no se le muestra al cliente. -->
-        <div class="flex flex-col gap-1 sm:max-w-xs pt-1">
-          <label for="commission" class="text-sm text-grey-400">{{ 'Comisión (opcional)' | transloco }}</label>
-          <ui-input-number
-            [ngModel]="commission()"
-            (ngModelChange)="onCommissionChange($event)"
-            [ngModelOptions]="{ standalone: true }"
-            [min]="0"
-            mode="decimal"
-            [prefix]="cs() + ' '"
-            [minFractionDigits]="2"
-            [maxFractionDigits]="2"
-            inputId="commission"
-          />
-          <span class="text-xs text-grey-400">{{ 'Es un costo tuyo: se descuenta de tu total y no se le muestra al cliente.' | transloco }}</span>
-        </div>
-
-        @if (commission() > 0) {
+        @if (effectiveCommission() > 0) {
         <div class="flex justify-between items-center">
           <span class="text-base text-grey-400 font-medium">{{ 'Comisión' | transloco }}</span>
           <span class="text-base font-semibold text-red-500"
-            >− {{ cs() }} {{ commission().toFixed(2) }}</span
+            >− {{ cs() }} {{ effectiveCommission().toFixed(2) }}</span
           >
         </div>
         }
