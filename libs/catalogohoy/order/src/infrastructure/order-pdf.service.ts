@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import {
   EcommerceConfigStore,
+  NO_CURRENCY_SYMBOL,
   TenantCurrencyStore,
 } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
@@ -62,7 +63,9 @@ export class OrderPdfService {
     if (context) {
       storeName = context.storeName || 'Catálogo';
       showDualBs = context.showDualBs;
-      cs = context.currencySymbol || '$';
+      // `''` es un valor válido: el storefront ya mapeó el centinela "sin
+      // símbolo" a cadena vacía, así que no debe caer al '$' de fallback.
+      cs = context.currencySymbol ?? '$';
       logoUrl = context.logoUrl;
     } else {
       // Ensure the tenant currency is loaded (cache-first — typically a no-op
@@ -80,6 +83,9 @@ export class OrderPdfService {
       cs = this.tenantCurrency.displaySymbol() || config?.currencySymbol || '$';
       logoUrl = config?.logo ?? null;
     }
+    // El centinela zero-width "sin símbolo" se normaliza a '' — jsPDF con las
+    // fuentes estándar no sabe renderizar U+200B y pintaría un glifo basura.
+    if (cs === NO_CURRENCY_SYMBOL) cs = '';
 
     // Per-línea en Bs derivado del snapshot de la orden (rate = totalBs/totalUsd),
     // para que los montos por línea cuadren con el total guardado. Un catálogo
