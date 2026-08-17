@@ -113,6 +113,34 @@ describe('CartStore', () => {
       expect(store.totalPrice()).toBe(15);
     });
 
+    it('keeps separate lines for the same product with and without addons', () => {
+      const p = buildProduct();
+      const corona = { id: 'addon-1', name: 'Corona', price: 10 };
+
+      store.addProduct(p);
+      store.addProduct(p, { addons: [corona] });
+
+      expect(store.items()).toHaveLength(2);
+      const plain = store.items().find((i) => !i.addons.length)!;
+      const withAddon = store.items().find((i) => i.addons.length)!;
+      expect(plain.price).toBe(20);
+      expect(withAddon.price).toBe(30);
+      expect(withAddon.addons).toEqual([corona]);
+      expect(store.totalPrice()).toBe(50);
+    });
+
+    it('merges lines when the same product is added with the same addons', () => {
+      const p = buildProduct();
+      const corona = { id: 'addon-1', name: 'Corona', price: 10 };
+
+      store.addProduct(p, { addons: [corona] });
+      store.addProduct(p, { addons: [corona] });
+
+      expect(store.items()).toHaveLength(1);
+      expect(store.items()[0].quantity).toBe(2);
+      expect(store.totalPrice()).toBe(60);
+    });
+
     it('increments quantity when the same product+tier is added twice', () => {
       store.addProduct(buildProduct());
       store.addProduct(buildProduct());

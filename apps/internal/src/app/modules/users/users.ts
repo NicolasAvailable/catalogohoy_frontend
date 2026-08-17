@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@ui';
 import { PlatformUser } from './users.model';
@@ -30,11 +30,11 @@ import { UsersStore } from './users.store';
             placeholder="Buscar por nombre, email o teléfono..."
             class="flex-1 outline-none text-sm text-grey-700 placeholder:text-grey-300 bg-transparent"
             [ngModel]="searchTerm()"
-            (ngModelChange)="searchTerm.set($event)"
+            (ngModelChange)="onSearchChange($event)"
           />
         </div>
         <span class="text-sm text-grey-400">
-          {{ filteredUsers().length }} de {{ store.users().length }}
+          {{ store.users().length }} de {{ store.total() }}
         </span>
         <button
           type="button"
@@ -94,7 +94,7 @@ import { UsersStore } from './users.store';
                   </td>
                 </tr>
               } @else {
-                @for (user of filteredUsers(); track user.id) {
+                @for (user of store.users(); track user.id) {
                   <tr class="hover:bg-grey-25 transition-colors">
                     <td class="px-4 py-3 border-b border-grey-50">
                       <div class="flex items-center gap-3">
@@ -157,31 +157,50 @@ import { UsersStore } from './users.store';
             </tbody>
           </table>
         </div>
+
+        @if (!store.isLoading() && store.users().length < store.total()) {
+          <div class="shrink-0 border-t border-grey-50 p-3 flex justify-center">
+            <button
+              type="button"
+              (click)="store.loadMore()"
+              [disabled]="store.isLoadingMore()"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-white border border-grey-50 hover:bg-grey-50 transition-colors cursor-pointer text-sm font-semibold text-grey-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              @if (store.isLoadingMore()) {
+                <ui-icon name="loader-circle" size="14" styleClass="text-grey-400 animate-spin" />
+                Cargando...
+              } @else {
+                <ui-icon name="chevron-down" size="14" styleClass="text-grey-500" />
+                Cargar más ({{ store.users().length }} de {{ store.total() }})
+              }
+            </button>
+          </div>
+        }
       </section>
     </div>
   `,
 })
-export class Users implements OnInit {
+export class Users implements OnInit, OnDestroy {
   protected readonly store = inject(UsersStore);
 
   protected readonly searchTerm = signal('');
   protected readonly brokenAvatars = signal<Set<number>>(new Set());
 
-  protected readonly filteredUsers = computed(() => {
-    const term = this.searchTerm().trim().toLowerCase();
-    if (!term) return this.store.users();
-    return this.store.users().filter((u) => {
-      const name = this.displayName(u).toLowerCase();
-      const email = (u.email ?? '').toLowerCase();
-      const phone = (u.phone ?? '').toLowerCase();
-      return (
-        name.includes(term) || email.includes(term) || phone.includes(term)
-      );
-    });
-  });
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.store.load();
+  }
+
+  ngOnDestroy(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+  }
+
+  /** Debounce keystrokes so search hits the server (not the loaded page). */
+  protected onSearchChange(term: string): void {
+    this.searchTerm.set(term);
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.store.setSearch(term), 300);
   }
 
   protected onAvatarError(userId: number): void {

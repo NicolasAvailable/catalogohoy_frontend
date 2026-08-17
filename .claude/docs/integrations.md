@@ -20,9 +20,18 @@
 | **countries-proxy** | Proxy + cache 24h de countriesnow.space (estados/ciudades). | front invoke | no | countriesnow.space |
 | **notify-checkout-intent** | Discord embed cuando el user inicia checkout de plan. | front invoke | sí | Discord · `DISCORD_CHECKOUT_INTENT_WEBHOOK` |
 | **enterprise-lead** | Lead del funnel "Contactar ventas" (plan Enterprise): valida payload (enums whitelist, email, caps, honeypot `company_hp`), re-puntúa el scoring server-side, inserta en `enterprise_leads` (service role) y notifica a Discord. La llama el admin (`functions.invoke`) y la landing (fetch crudo, sin sesión). | front invoke + landing | **no** (la publishable key no es JWT) | Discord · `DISCORD_ENTERPRISE_LEADS_WEBHOOK` (fallback `DISCORD_CHECKOUT_INTENT_WEBHOOK`) · `SERVICE_ROLE` |
-| **send-whatsapp-notification** | Templates de WhatsApp (order_received, order_completed, plan_expiring, payment_failed) vía Meta Cloud API. Auth server-to-server por `x-webhook-secret`. Loguea a `whatsapp_notification_logs`. | cron/server | no (webhook-secret) | Meta · `WHATSAPP_*` |
+| **send-whatsapp-notification** | Templates de WhatsApp (order_received, order_completed, plan_expiring, payment_failed) vía Meta Cloud API. Auth server-to-server por `x-webhook-secret`. Loguea a `whatsapp_notification_logs`. El trigger `notify_order_whatsapp()` la llama **una vez por destinatario**: `order_received` soporta hasta 2 números (`whatsapp_notification_settings.recipient_number` + `recipient_number_2`), el 2º gateado por `tenants.whatsapp_notify_numbers_limit` (null = 1; patrón `slug_change_limit`; hoy solo tenant 149 detalles-cecy = 2). | cron/server | no (webhook-secret) | Meta · `WHATSAPP_*` |
 | **send-whatsapp-test** | Test de WhatsApp desde el front (template hardcodeado). | front invoke | sí | Meta · `WHATSAPP_*` |
 | **stripe-webhook** | Webhook de Stripe (firma verificada): checkout completado (alta/upgrade), subscription updated/deleted, invoice succeeded/failed (retries + emails). Aplica rewards de referidos, manda Discord + Resend. **Crítico — no editar a ciegas.** | webhook Stripe | no (firma) | Stripe · Resend · Discord · `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `DISCORD_PAYMENTS_WEBHOOK_URL` |
+| **wa-webhook** | Webhook del CRM de WhatsApp (modelo BSP): mensajes entrantes de clientes, `smb_message_echoes` (espejo de lo que el comerciante responde desde su app en coexistencia), `history` (importación del historial, dedupe por wamid) y `smb_app_state_sync` (nombres de contactos). Descarga media entrante a Storage (`chat-media/`). Rutea al tenant por `phone_number_id`. | webhook Meta | no (GET verify token) | Meta · `WA_WEBHOOK_VERIFY_TOKEN` |
+| **wa-onboard** | Cierra el Embedded Signup: intercambia el `code` por token del comerciante (server-side, `FB_APP_SECRET`), suscribe la app a la WABA y upsertea `whatsapp_accounts` (onConflict `phone_number_id`). | front invoke | sí | Meta · `FB_APP_SECRET` |
+| **wa-send** | Envía la respuesta del agente por Cloud API con el token DEL tenant (texto/imagen/documento, replies citadas). RLS del chat = autorización. 409 si el tenant no tiene número (modo demo → insert directo). | front invoke | sí | Meta (token por tenant en DB) |
+| **wa-templates** | CRUD de plantillas del tenant contra la Graph API (list/create con ejemplos de variables/delete). | front invoke | sí | Meta (token por tenant) |
+| **wa-transcribe** | Transcribe notas de voz del chat (Whisper vía fal.ai) → `chat_messages.transcript`. Idempotente (re-pedir es gratis). Gateada por créditos IA (1). | front invoke | sí | fal.ai · `FAL_KEY` |
+| **ig-webhook** | Webhook de Instagram (Instagram Login, app CatalogoHoy-IG 1454226360079154): DMs entrantes, `is_echo` (respuestas desde la app de IG), `read` (✓✓ azul). Rutea por IGSID → `social_accounts` → tenant; chats con `channel='instagram'`. Media re-hospedada en Storage. | webhook Meta | no (verify token + firma) | Meta · `IG_APP_SECRET`, `IG_WEBHOOK_VERIFY_TOKEN` |
+| **ig-send** | Respuesta del agente por Instagram DM con el token del tenant (`social_accounts`). Ventana 24h (sin plantillas), texto ≤1000 chars, imagen por URL. | front invoke | sí | Meta (token por tenant) |
+| **ig-oauth** | Conexión del comerciante vía Instagram Login: POST (JWT manual) devuelve la URL de autorización con `state` HMAC; GET (redirect de IG) cambia code→token largo (60 días), upsertea `social_accounts` y suscribe webhooks. Redirect fijo server-side → sin problema de dominios por cliente. | front invoke + redirect IG | no (JWT manual en POST) | Meta · `IG_APP_ID`, `IG_APP_SECRET` |
+| **tiktok-webhook** | **STUB (CAT-47)**: loguea eventos de TikTok Business Messaging y responde 200 + eco de challenge. Existe para registrar la URL durante la solicitud de acceso a la API (beta) y mapear el payload real. El front ya rutea `channel='tiktok'` a `tiktok-send`/`tiktok-oauth` (no existen aún); card de conexión oculta tras `tiktokCardVisible=false`. Reglas del canal: cliente escribe primero, ventana 48 h, máx 10 msgs/ventana, texto+imagen. | webhook TikTok | no (firma pendiente de doc) | TikTok Business API |
 
 ## Edge functions deployadas pero NO en el repo
 
@@ -61,6 +70,7 @@ edites a ciegas**; el repo puede estar atrás de prod.
 | **Discord** | Webhooks de eventos internos (leads, checkout, pagos) | `notify-checkout-intent`, `stripe-webhook`, `new-lead-discord` |
 | **Resend** | Email transaccional (recibos de pago, reportes semanales) | `stripe-webhook`, `send-weekly-report` |
 | **countriesnow.space** | Estados/ciudades por país | `countries-proxy` |
+| **Google** | Workspace (correo @catalogohoy.com), OAuth (login), Search Console (SEO), GA4 (pendiente ID) | ver sección "Google" abajo · DNS en Vercel |
 
 ## Sentry (errores + performance + replay)
 
@@ -78,3 +88,71 @@ edites a ciegas**; el repo puede estar atrás de prod.
 - **MCP**: `sentry` (remoto, OAuth) en `.mcp.json` → `https://mcp.sentry.dev/mcp`.
 - **Pendiente (opcional)**: subir **source maps** en el build de prod para stack traces legibles
   (necesita auth token + org/project slugs; `@sentry/cli` o el plugin de esbuild como postbuild).
+
+## Google (correo, login, SEO, analytics) — estado 2026-07-13
+
+> El **DNS de `catalogohoy.com` se maneja en Vercel** (`vercel dns ls catalogohoy.com`).
+> Nameservers de Vercel; los registros de Google se agregaron el 2026-07-05.
+
+### Google Workspace (correo @catalogohoy.com)
+
+- DNS ya configurado en Vercel: **MX** `1 smtp.google.com`, **DKIM** `google._domainkey`,
+  **TXT** `google-site-verification=pN6QMx…` (verificación del dominio ante Google).
+- ⚠️ **SPF pendiente**: el TXT actual es `v=spf1 include:zohomail.com ~all` (resto de la
+  config vieja de Zoho) — **no incluye a Google**. Correos enviados por Workspace pueden
+  fallar SPF (los salva DKIM, pero conviene arreglarlo): cambiar a
+  `v=spf1 include:_spf.google.com include:zohomail.com ~all` (o quitar Zoho si ya no se usa).
+  Se puede hacer por CLI: `vercel dns` (rm + add).
+
+### Google OAuth (login/signup)
+
+- Vía Supabase Auth (provider Google). Frontend en `libs/catalogohoy/auth`
+  (`complete-google-signup.usecase.ts`, botones en login/signup). Config del provider en el
+  dashboard de Supabase (Client ID/Secret de Google Cloud Console).
+
+### SEO / Search Console — quién sirve cada robots/sitemap
+
+| Superficie | robots.txt | sitemap.xml |
+|---|---|---|
+| **Landing** (`catalogohoy.com`) | estático en `apps/landing/public/` (**rama `landing`**) | estático en `apps/landing/public/` (**rama `landing`**, actualizado 2026-07-09: `/`, `/pricing`, `/features`, `/faq`) |
+| **Help** (`help.catalogohoy.com`) | estático en `apps/help/public/` | **autogenerado en build** por `apps/help/scripts/gen-sitemap.mjs` (escanea el `dist/` del SSG). No editar a mano. |
+| **Storefronts** (`{slug}.catalogohoy.com` + dominios custom) | **dinámico**: `api/robots.ts` | **dinámico**: `api/sitemap.ts` |
+
+- **Storefronts** (funciones Vercel del proyecto `catalogohoy-dashboard`, rama `main`):
+  - `vercel.json` (raíz) reescribe `/sitemap.xml → /api/sitemap` y `/robots.txt → /api/robots`
+    (antes del catch-all de la SPA). El robots.txt estático de `apps/catalogohoy/public/` se
+    **eliminó** — si se recrea, el filesystem le gana al rewrite y mata la versión dinámica.
+  - Resolución de tenant igual que `middleware.ts`: subdominio → slug; otro host →
+    `tenants.custom_domain` (apex, sin `www.`). Hosts reservados (`www/auth/help/internal/api/mail`)
+    o desconocidos (previews `*.vercel.app`) → robots `Disallow: /` y sitemap 404.
+  - Sitemap por tenant: portada + `/product/{id}` de productos **no ocultos**
+    (`is_hidden`), con `lastmod` = created_at. Si el catálogo está **cerrado**
+    (`tenant_ecommerce_config.is_visible=false`) o el **plan vencido** → solo la portada.
+    robots deshabilita `/admin/`, `/checkout`, `/order/`, `/public/`, etc.
+  - Usa la **anon key** por REST (todas las tablas necesarias tienen SELECT público).
+- **Crawlers** (Googlebot incluido) reciben el HTML de `middleware.ts` (matcher `/` y
+  `/product/:path*`) — la SPA no se les sirve. Desde 2026-07-13 ese HTML va **enriquecido
+  para SEO**: portada con lista real de productos (nombre, precio, link a `/product/{id}`,
+  máx 60) + JSON-LD `Store`/`ItemList`; producto con descripción/foto/precio + JSON-LD
+  `Product` con `Offer` (precio, moneda, disponibilidad según `is_sold_out`) → habilita
+  resultados enriquecidos en Google. Moneda del JSON-LD: `product_currency`, salvo **VE**
+  donde los precios se guardan en la referencia → `display_currency` (ver gotcha de
+  moneda). Precio 0 = "sin precio": no se muestra ni lleva Offer.
+
+### Google Search Console
+
+- La verificación **ya está** a nivel dominio (TXT en el DNS) → una propiedad de dominio
+  `catalogohoy.com` cubre apex + **todos** los subdominios (storefronts incluidos).
+- Sitemaps a enviar en la propiedad: `https://catalogohoy.com/sitemap.xml`,
+  `https://help.catalogohoy.com/sitemap.xml` y los de tenants clave
+  (ej. `https://catalogohoy.catalogohoy.com/sitemap.xml`). Los dominios custom de clientes
+  (ej. `3sxpress.com`) necesitarían su propia propiedad — es del cliente, no nuestra.
+
+### Google Analytics 4
+
+- Propiedad GA4 creada 2026-07-13 — **ID de medición `G-TL9DYGTFED`**.
+- Snippet gtag en `apps/catalogohoy/src/index.html` (guard: **no** carga en `/admin` ni en
+  localhost). Los page_view de navegación SPA los cubre la "medición mejorada" de GA4
+  (history changes).
+- Landing: snippet estándar de gtag en `apps/landing/index.html` (**rama `landing`**).
+- Convive con PostHog (producto) y Meta Pixel (ads); GA4 es para adquisición/SEO/Google Ads.

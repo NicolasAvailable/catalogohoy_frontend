@@ -53,6 +53,11 @@ export interface CatalogInfo {
   showShippingSection: boolean;
   /** Which customer fields to request and whether each is required. */
   customerFields: CustomerFieldsConfig;
+  /** When true, the checkout shows a delivery-date picker for the customer. */
+  deliveryDateEnabled: boolean;
+  /** Weekdays with no delivery (JS: 0 = Sunday … 6 = Saturday). The date
+   *  picker blocks these days. */
+  deliveryBlockedWeekdays: number[];
 }
 
 /** Invoice-safe view of an order, fetched by id for the public receipt. */
@@ -73,6 +78,11 @@ export interface PublicOrder {
     size?: string | null;
     sku?: string | null;
     photo?: string;
+    /** Paid extras added to this line at checkout (name + per-unit price +
+     *  quantity; quantity absent = 1). */
+    addons?:
+      | { id?: string; name: string; price: number; quantity?: number }[]
+      | null;
   }[];
   totalUsd: number;
   totalBs: number | null;

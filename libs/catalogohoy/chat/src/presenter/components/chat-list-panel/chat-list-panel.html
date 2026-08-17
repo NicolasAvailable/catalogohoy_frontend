@@ -6,10 +6,30 @@
       <ui-icon name="ellipsis-vertical" size="18" styleClass="text-grey-400 cursor-pointer shrink-0" />
     </div>
     <ui-input-search
-      placeholder="Buscar o iniciar un chat"
+      placeholder="Buscar un chat"
+      iconStyleClass="size-4!"
       (valueChange)="onSearch($event)"
     />
   </div>
+
+  <!-- Sin canales conectados: historial en solo lectura + CTA a Conectar. -->
+  @if (noChannelsConnected()) {
+  <div class="mx-4 mb-2 rounded-xl border border-amber-200 bg-amber-50 p-3 flex flex-col gap-2.5 shrink-0">
+    <div class="flex items-start gap-2">
+      <ui-icon name="triangle-alert" size="15" styleClass="text-amber-600 shrink-0 mt-0.5" />
+      <p class="text-xs text-amber-800 leading-relaxed font-medium">
+        {{ 'No tienes ningún canal conectado: puedes leer tu historial, pero no recibir ni responder mensajes.' | transloco }}
+      </p>
+    </div>
+    <a
+      routerLink="/admin/chat/connect"
+      class="self-start inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700 transition-colors"
+    >
+      {{ 'Conectar canales' | transloco }}
+      <ui-icon name="arrow-right" size="12" />
+    </a>
+  </div>
+  }
 
   <!-- Chat list.
        TODO(whatsapp-integration): reintroducir cdk-virtual-scroll-viewport +
@@ -21,11 +41,11 @@
     @if (chatStore.isLoading()) {
       <div class="flex flex-col gap-1 px-2 pt-1">
         @for (_ of [1,2,3,4,5]; track $index) {
-          <div class="flex items-center gap-3 px-2 py-2.5 rounded-lg animate-pulse">
-            <div class="w-10 h-10 rounded-full bg-grey-50 shrink-0"></div>
-            <div class="flex-1 flex flex-col gap-1.5">
-              <div class="h-3 w-24 bg-grey-50 rounded"></div>
-              <div class="h-2.5 w-36 bg-grey-50 rounded"></div>
+          <div class="flex items-center gap-3.5 px-2 py-3 rounded-lg animate-pulse">
+            <div class="w-12 h-12 rounded-full bg-grey-50 shrink-0"></div>
+            <div class="flex-1 flex flex-col gap-2">
+              <div class="h-3.5 w-28 bg-grey-50 rounded"></div>
+              <div class="h-3 w-40 bg-grey-50 rounded"></div>
             </div>
           </div>
         }
@@ -43,30 +63,59 @@
             (keyup.enter)="chatStore.selectChat(chat.id)"
             tabindex="0"
             role="button"
-            class="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-lino-400 transition-colors duration-100"
+            class="flex items-center gap-3.5 px-4 py-3.5 cursor-pointer hover:bg-lino-400 transition-colors duration-100"
             [class.bg-primary-50]="chatStore.selectedChatId() === chat.id"
           >
-            <!-- Avatar -->
-            <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
-              <span class="text-xs font-bold text-primary-600">{{ initials(chat.customerName) }}</span>
+            <!-- Avatar + logo del canal sobrepuesto en diagonal -->
+            <div class="relative shrink-0">
+              <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
+                <span class="text-sm font-bold text-primary-600">{{ initials(chat.customerName) }}</span>
+              </div>
+              <span
+                class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center drop-shadow-sm"
+              >
+                @if (chat.channel === 'instagram') {
+                <img src="/images/instagram.svg" alt="Instagram" class="w-4 h-4" />
+                } @else if (chat.channel === 'tiktok') {
+                <img src="/images/tiktok.svg" alt="TikTok" class="w-4 h-4 rounded-full" />
+                } @else if (chat.channel === 'messenger') {
+                <img src="/images/messenger.svg" alt="Messenger" class="w-[1.125rem] h-[1.125rem]" />
+                } @else {
+                <img src="/images/whatsapp.svg" alt="WhatsApp" class="w-[1.125rem] h-[1.125rem]" />
+                }
+              </span>
             </div>
 
             <!-- Info -->
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between gap-1">
-                <span class="text-sm font-semibold text-grey-700 truncate">{{ chat.customerName }}</span>
+                <span class="text-base font-semibold text-grey-700 truncate">
+                  {{ chat.customerName }}
+                  @if (chatStore.nicknameFor(chat.customerPhone); as nick) {
+                  <span class="text-sm font-normal text-grey-400">{{ nick }}</span>
+                  }
+                </span>
                 <span class="text-xs text-grey-300 shrink-0">{{ formatDate(chat.lastMessageAt) }}</span>
               </div>
-              <div class="flex items-center justify-between gap-1 mt-0.5">
-                <span class="text-xs text-grey-300 truncate">
-                  {{ chat.lastMessage ?? ('Nueva conversación' | transloco) }}
+              <div class="flex items-center justify-between gap-1 mt-1">
+                <span class="text-sm text-grey-400 truncate">
+                  @if (chat.lastMessage) {
+                    @if (chat.lastMessageIsMine === true) {
+                      <span class="font-medium text-grey-500">{{ 'Tú' | transloco }}:</span>
+                    } @else if (chat.lastMessageIsMine === false && firstName(chat.customerName)) {
+                      <span class="font-medium text-grey-500">{{ firstName(chat.customerName) }}:</span>
+                    }
+                    {{ chat.lastMessage }}
+                  } @else {
+                    {{ 'Nueva conversación' | transloco }}
+                  }
                 </span>
                 <div class="flex items-center gap-1 shrink-0">
                   @if (chat.muted) {
-                    <ui-icon name="volume-x" size="12" styleClass="text-grey-300" />
+                    <ui-icon name="volume-x" size="14" styleClass="text-grey-300" />
                   }
                   @if (chat.unreadCount > 0) {
-                    <span class="w-4.5 h-4.5 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    <span class="w-5 h-5 rounded-full bg-primary-500 text-white text-[11px] font-bold flex items-center justify-center">
                       {{ chat.unreadCount > 9 ? '9+' : chat.unreadCount }}
                     </span>
                   }

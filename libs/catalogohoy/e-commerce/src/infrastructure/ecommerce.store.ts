@@ -1,4 +1,5 @@
 import { computed, inject } from '@angular/core';
+import { NO_CURRENCY_SYMBOL } from '@catalogohoy/ecommerce-config';
 import { Product, ProductList } from '@catalogohoy/product';
 import {
   patchState,
@@ -68,8 +69,13 @@ export const EcommerceStore = signalStore(
     }),
     currencySymbol: computed(() => {
       const overrides = store.previewOverrides();
-      if (store.isPreviewMode() && overrides?.currencySymbol) {
-        return overrides.currencySymbol;
+      // En preview el editor manda el símbolo en cada update; con `!== undefined`
+      // un símbolo vacío (o el centinela "sin símbolo") también se aplica, para
+      // reflejar en vivo el toggle "mostrar precios sin símbolo de moneda".
+      if (store.isPreviewMode() && overrides?.currencySymbol !== undefined) {
+        return overrides.currencySymbol === NO_CURRENCY_SYMBOL
+          ? ''
+          : overrides.currencySymbol;
       }
       return store.catalogInfo()?.currencySymbol ?? '$';
     }),
@@ -294,9 +300,12 @@ export const EcommerceStore = signalStore(
         name: string;
         type: 'pickup' | 'delivery' | 'shipping';
         fee: number;
+        priceOnRequest?: boolean;
       } | null;
       shipping_address?: string | null;
       shipping_fee?: number;
+      /** Fecha de entrega elegida por el cliente (YYYY-MM-DD). Opcional. */
+      delivery_date?: string;
     }) {
       const catalogInfo = store.catalogInfo();
       if (!catalogInfo) return;
@@ -315,6 +324,7 @@ export const EcommerceStore = signalStore(
         shipping_method: order.shipping_method,
         shipping_address: order.shipping_address,
         shipping_fee: order.shipping_fee,
+        delivery_date: order.delivery_date,
       });
 
       patchState(store, () => ({ isLoading: false }));

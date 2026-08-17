@@ -106,6 +106,7 @@
           </div>
         </div>
         <!-- Eliminar del sistema -->
+        @if (allowDelete()) {
         <button
           type="button"
           (click)="remove(url, $event)"
@@ -119,6 +120,7 @@
           <ui-icon name="trash" size="16" />
           }
         </button>
+        }
       </div>
       }
     </div>

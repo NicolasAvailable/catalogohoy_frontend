@@ -40,6 +40,7 @@ import {
 import {
   ButtonComponent,
   CardComponent,
+  CheckboxComponent,
   IconComponent,
   ImageComponent,
   InputNumberComponent,
@@ -75,6 +76,7 @@ import { ImageGeneratorComponent } from '../../components/image-generator/image-
     InputTextComponent,
     EditorModule,
     ButtonComponent,
+    CheckboxComponent,
     IconComponent,
     ImageComponent,
     ImageEraserComponent,
@@ -142,6 +144,7 @@ export default class Save implements OnInit {
     sizes: this.fb.array([]),
     isVariant: [false],
     variants: this.fb.array([]),
+    addons: this.fb.array([]),
   });
 
   private readonly descriptionValue = toSignal(
@@ -274,6 +277,8 @@ export default class Save implements OnInit {
   ngOnInit(): void {
     this.categoryStore.categoryList$(1, 100);
     this.planStore.loadTenantPlanUsage();
+    // Pool de adicionales existentes (de otros productos) para reusar.
+    this.loadCatalogAddons();
     this.tenantStore.getTenantIdAsync().then((tid) => {
       this.tenantId.set(tid ?? null);
       if (tid) this.tenantCurrency.load(tid);
@@ -504,6 +509,122 @@ export default class Save implements OnInit {
     this.updatePriceValidator();
   }
 
+  // ── Adicionales (add-ons) ──────────────────────────────────────────────
+  // Extras opcionales que SUMAN al precio (multi-select en el catálogo).
+  // Independientes de las variantes. Límite por plan igual que variantes:
+  // planStore.maxAddons() (gratis 2 · basico 5 · avanzado 15 · enterprise 0=∞).
+  get addonsArray(): FormArray {
+    return this.form.get('addons') as FormArray;
+  }
+
+  /** True while the current plan still allows adding another addon.
+   *  `maxAddons() <= 0` is the unlimited sentinel (enterprise). */
+  public canAddAddon(): boolean {
+    const max = this.planStore.maxAddons();
+    if (max <= 0) return true;
+    return this.addonsArray.length < max;
+  }
+
+  public addAddon(): void {
+    if (!this.canAddAddon()) {
+      this.toastService.error(
+        (`Tu plan permite hasta ${this.planStore.maxAddons()} ` +
+          'adicionales por producto. Mejora tu plan para agregar más.') as unknown as Exception
+      );
+      return;
+    }
+    this.addonsArray.push(
+      this.fb.group({
+        id: [crypto.randomUUID() as string | null],
+        name: ['', Validators.required],
+        price: ['', Validators.required],
+        photo: [null as string | null],
+        isDefault: [false],
+      })
+    );
+  }
+
+  public removeAddon(index: number): void {
+    this.addonsArray.removeAt(index);
+  }
+
+  /** Uploader for an addon thumbnail — single image (tomamos la primera si
+   *  suben varias). */
+  public setAddonPhoto(index: number, url: string | string[]): void {
+    const first = Array.isArray(url) ? url[0] : url;
+    if (!first) return;
+    this.addonsArray.at(index).get('photo')?.setValue(first);
+  }
+
+  public removeAddonPhoto(index: number): void {
+    this.addonsArray.at(index).get('photo')?.setValue(null);
+  }
+
+  /** Foto actual del addon (o null). */
+  public addonPhoto(index: number): string | null {
+    return (this.addonsArray.at(index).get('photo')?.value as string) ?? null;
+  }
+
+  // ── Reusar adicionales existentes ──────────────────────────────────────
+  // Pool de adicionales ya creados en CUALQUIER producto del catálogo, para
+  // reusarlos aquí sin recrearlos desde cero. Se carga una vez en ngOnInit.
+  public readonly catalogAddons = signal<
+    { id: string; name: string; price: number; photo: string | null }[]
+  >([]);
+
+  /** Clave de deduplicación: mismo nombre + precio = el mismo adicional. */
+  private addonKey(a: { name: string | number; price: string | number }): string {
+    return `${String(a.name).trim().toLowerCase()}|${Number(a.price)}`;
+  }
+
+  /** Carga el pool global de adicionales (unión de todos los productos,
+   *  deduplicado por nombre+precio). */
+  private async loadCatalogAddons(): Promise<void> {
+    const result = await this.productService.getAll();
+    result.mapRight((list) => {
+      const seen = new Map<
+        string,
+        { id: string; name: string; price: number; photo: string | null }
+      >();
+      for (const product of list.products) {
+        for (const a of product.addons ?? []) {
+          const key = this.addonKey(a);
+          if (!seen.has(key)) {
+            seen.set(key, {
+              id: a.id,
+              name: a.name,
+              price: a.price,
+              photo: a.photo ?? null,
+            });
+          }
+        }
+      }
+      this.catalogAddons.set(
+        [...seen.values()].sort((x, y) => x.name.localeCompare(y.name))
+      );
+    });
+  }
+
+  // Reset del select "reusar adicional existente" que vive dentro de cada card
+  // (se comparte: al elegir se vuelve a null y todos muestran su placeholder).
+  public readonly addonSelectModel = signal<string | null>(null);
+
+  /** Llena el card `cardIndex` con un adicional ya creado en otro producto
+   *  (nombre/precio/foto), sin recrearlo desde cero. Mantiene el id propio del
+   *  card. Resetea el select a su placeholder. */
+  public fillAddonFromCatalog(cardIndex: number, addonId: string | null): void {
+    if (!addonId) return;
+    const addon = this.catalogAddons().find((a) => a.id === addonId);
+    if (!addon) return;
+    this.addonsArray.at(cardIndex).patchValue({
+      name: addon.name,
+      price: String(addon.price),
+      photo: addon.photo ?? null,
+    });
+    // Reset a placeholder (mismo patrón que onImproveMode).
+    this.addonSelectModel.set(null);
+  }
+
   /** Variant uploader is multiple — append the uploaded media (images/videos)
    *  to the variant's own gallery, just like the product media uploader. */
   public addVariantPhotos(index: number, url: string | string[]): void {
@@ -634,6 +755,20 @@ export default class Save implements OnInit {
               })
             )
           ),
+        })
+      );
+    });
+
+    // Adicionales (add-ons) — hidratar el FormArray al editar.
+    this.addonsArray.clear();
+    (product.addons ?? []).forEach((addon) => {
+      this.addonsArray.push(
+        this.fb.group({
+          id: [addon.id ?? null],
+          name: [addon.name, Validators.required],
+          price: [String(addon.price), Validators.required],
+          photo: [addon.photo ?? null],
+          isDefault: [addon.isDefault ?? false],
         })
       );
     });
@@ -841,6 +976,13 @@ export default class Save implements OnInit {
       sizes: this.sizesArray.value ?? [],
       isVariant: this.form.controls.isVariant.value ?? false,
       variants: this.variantsArray.value ?? [],
+      addons: (this.addonsArray.value ?? []).map((a: any) => ({
+        id: a.id ?? crypto.randomUUID(),
+        name: a.name,
+        price: Number(a.price) || 0,
+        photo: a.photo ?? null,
+        isDefault: !!a.isDefault,
+      })),
     };
     if (this.isCreate()) {
       const product = await this.productFacade.create(body);

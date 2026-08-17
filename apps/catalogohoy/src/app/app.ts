@@ -46,9 +46,19 @@ export class App implements OnInit {
     // /checkout?preview=true). Persisting it to localStorage would make it
     // sticky and wrongly flag a real customer's checkout as a preview.
     'preview',
+    // `order` is the deep-link of the order detail modal (/admin/orders?order=ID,
+    // target of the "Ver pedido" button in WhatsApp notifications). The order
+    // list reads it from the URL on load; moving it to localStorage would make
+    // the button land on the bare list.
+    'order',
   ]);
 
   private captureQueryParametersToLocalStorage(): void {
+    // El puente de conexión de WhatsApp vive de sus query params firmados
+    // (?state=&mode=&return=, los mintea wa-onboard): si se mueven a
+    // localStorage el puente queda muerto con "state faltante". No tocarlos.
+    if (window.location.pathname.startsWith('/conectar/')) return;
+
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.toString() === '') return;
 

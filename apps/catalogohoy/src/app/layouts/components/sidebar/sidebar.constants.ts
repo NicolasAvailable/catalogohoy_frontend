@@ -22,6 +22,10 @@ export const PRODUCTS_MENU: PanelMenuItem[] = [
   },
 ];
 
+// Bandeja de comentarios de posts (IG + FB): oculta hasta el App Review de
+// Meta (comments/feed). Flip a true para exponerla en el menú.
+export const COMMENTS_MENU_ENABLED = false;
+
 export const CHAT_MENU: PanelMenuItem[] = [
   {
     label: 'Chats',
@@ -31,10 +35,24 @@ export const CHAT_MENU: PanelMenuItem[] = [
     state: { isOpen: true },
     items: [
       {
+        label: 'Conectar',
+        routerLink: '/admin/chat/connect',
+        routerLinkActiveOptions: { exact: true },
+      },
+      {
         label: 'Mensajes',
         routerLink: '/admin/chat/conversations',
         routerLinkActiveOptions: { exact: true },
       },
+      ...(COMMENTS_MENU_ENABLED
+        ? [
+            {
+              label: 'Comentarios',
+              routerLink: '/admin/chat/comments',
+              routerLinkActiveOptions: { exact: true },
+            } as PanelMenuItem,
+          ]
+        : []),
       {
         label: 'Plantillas',
         routerLink: '/admin/chat/templates',

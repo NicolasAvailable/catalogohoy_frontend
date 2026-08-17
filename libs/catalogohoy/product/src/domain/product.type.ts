@@ -24,6 +24,13 @@ export type CreateProductInput = {
     photos: string[];
     sizes: { name: string; stock: string | null; sku?: string | null }[];
   }[];
+  addons?: {
+    id: string | null;
+    name: string;
+    price: string | number;
+    photo?: string | null;
+    isDefault?: boolean;
+  }[];
 };
 
 export type UpdateProductInput = CreateProductInput & { id: string; position?: number };

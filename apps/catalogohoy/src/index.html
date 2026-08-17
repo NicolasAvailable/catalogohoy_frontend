@@ -43,6 +43,27 @@
       fbq('track', 'PageView');
     </script>
     <!-- End Meta Pixel Code -->
+
+    <!-- Google Analytics 4 — solo storefront público (admin y localhost quedan fuera).
+         Los page_view de navegación SPA los cubre la "medición mejorada" de GA4
+         (cambios de historial), no hace falta integrar el Router. -->
+    <script>
+      (function () {
+        var GA_ID = 'G-TL9DYGTFED';
+        var isAdmin = /^\/admin(\/|$)/.test(window.location.pathname);
+        var isLocal = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+        if (!GA_ID || isAdmin || isLocal) return;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
+        document.head.appendChild(s);
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { window.dataLayer.push(arguments); }
+        window.gtag = gtag;
+        gtag('js', new Date());
+        gtag('config', GA_ID);
+      })();
+    </script>
   </head>
   <body class="overflow-y-auto">
     <!-- Meta Pixel noscript fallback -->

@@ -1,0 +1,79 @@
+<div class="min-h-screen w-full flex items-center justify-center bg-lino-400 p-4">
+  <div
+    class="w-full max-w-md bg-white rounded-2xl border border-grey-100 shadow-sm p-8 flex flex-col items-center gap-4 text-center"
+  >
+    <img src="/images/whatsapp.svg" alt="WhatsApp" class="w-14 h-14" />
+    <h1 class="text-lg font-bold text-grey-800">
+      {{ 'Conectar a WhatsApp Business' | transloco }}
+    </h1>
+
+    @if (missingState()) {
+    <div class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+      <p class="text-xs text-amber-800 leading-relaxed">
+        {{ 'Este enlace debe abrirse desde tu panel de CatalogoHoy. Entra a tu catálogo → Chats → Conectar a WhatsApp Business y pulsa "Conectar con Facebook".' | transloco }}
+      </p>
+    </div>
+    } @else if (status() === 'done') {
+    <p class="text-sm text-green-600 font-medium">
+      {{ '¡Conectado! Volviendo a tu panel…' | transloco }}
+    </p>
+    } @else if (status() === 'saving') {
+    <p class="text-sm text-grey-500">{{ 'Guardando la conexión…' | transloco }}</p>
+    } @else if (status() === 'error') {
+    <div class="w-full rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-left">
+      <p class="text-sm font-medium text-red-700 leading-relaxed">
+        {{ errorMsg() || ('No se pudo conectar con Facebook.' | transloco) }}
+      </p>
+    </div>
+    <ui-button label="Reintentar" (click)="retry()" />
+    <p class="text-[11px] text-grey-400 leading-relaxed">
+      {{ 'Si vuelve a fallar: desactivá bloqueadores de anuncios o extensiones de privacidad, revisá que la fecha y hora del equipo sean correctas, permití las ventanas emergentes, o probá en otro navegador o desde el celular.' | transloco }}
+    </p>
+    } @else {
+    <p class="text-sm text-grey-500 leading-relaxed">
+      {{ 'Continúa con Facebook para conectar el WhatsApp de tu negocio a tu bandeja de CatalogoHoy.' | transloco }}
+    </p>
+    <ui-button
+      label="Conectar con Facebook"
+      icon="log-in"
+      [disabled]="!sdkReady() || missingState()"
+      [isLoading]="status() === 'connecting'"
+      (click)="connect()"
+    />
+    @if (!sdkReady() && !missingState()) {
+    <p class="text-[11px] text-grey-400">{{ 'Cargando Facebook…' | transloco }}</p>
+    }
+    @if (errorMsg()) {
+    <p class="text-xs text-red-500">{{ errorMsg() }}</p>
+    }
+    }
+
+    <p class="text-[11px] text-grey-300">
+      {{ 'Al terminar volverás automáticamente a tu catálogo.' | transloco }}
+    </p>
+
+    <!-- Datos capturados de la WABA (útiles si el alta automática falla → se
+         completa a mano con estos ids). -->
+    @if (waInfo(); as info) {
+    <div class="w-full rounded-lg bg-grey-50 border border-grey-100 px-3 py-2 text-left">
+      <p class="text-[10px] font-mono text-grey-600 break-all">WABA: {{ info.waba || '—' }}</p>
+      <p class="text-[10px] font-mono text-grey-600 break-all">Phone ID: {{ info.phone || '—' }}</p>
+    </div>
+    }
+
+    <!-- Bitácora de diagnóstico: qué fue entregando Meta. El cliente puede
+         capturarla si algo falla. -->
+    @if (debug().length) {
+    <details class="w-full text-left" [open]="status() === 'error'">
+      <summary class="text-[11px] text-grey-400 cursor-pointer select-none">
+        {{ 'Detalles técnicos (para soporte)' | transloco }}
+      </summary>
+      <div class="mt-1 max-h-44 overflow-auto rounded-lg bg-grey-50 border border-grey-100 p-2">
+        @for (line of debug(); track $index) {
+        <p class="text-[10px] font-mono text-grey-600 break-all leading-snug">{{ line }}</p>
+        }
+      </div>
+    </details>
+    }
+  </div>
+</div>

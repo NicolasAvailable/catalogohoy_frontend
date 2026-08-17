@@ -17,7 +17,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ProductStore } from '@catalogohoy/product';
 import { RateStore, RateType } from '@catalogohoy/rate';
@@ -36,9 +36,26 @@ import {
   SelectItemDirective,
   SelectSelectedItemDirective,
   TextareaComponent,
+  UploaderComponent,
 } from '@ui';
-import { Order, OrderItem, OrderStatus } from '../../../domain/order';
+import {
+  Order,
+  OrderItem,
+  OrderItemAddon,
+  OrderStatus,
+  PaymentEvidence,
+} from '../../../domain/order';
+import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import { OrderStore } from '../../../infrastructure/order.store';
+
+/** Un adicional del catálogo (pool global), con su foto para mostrarlo como
+ *  mini-producto en el selector y los chips del alta manual de órdenes. */
+interface CatalogAddon {
+  id: string;
+  name: string;
+  price: number;
+  photo: string | null;
+}
 
 @Component({
   selector: 'lib-order-save',
@@ -60,6 +77,7 @@ import { OrderStore } from '../../../infrastructure/order.store';
     SelectSelectedItemDirective,
     DatepickerComponent,
     InputPhoneComponent,
+    UploaderComponent,
   ],
   templateUrl: './order-save.html',
   styleUrl: './order-save.css',
@@ -67,6 +85,7 @@ import { OrderStore } from '../../../infrastructure/order.store';
 })
 export default class OrderSave implements OnInit {
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
   public readonly productStore = inject(ProductStore);
@@ -90,6 +109,13 @@ export default class OrderSave implements OnInit {
    *  matching the catalog's configured country. Defaults to Venezuela. */
   protected readonly defaultPhoneCountry = computed(() =>
     (this.configStore.config()?.countryCode || 'VE').toLowerCase()
+  );
+
+  /** Beta cerrada: la tarjeta de "Evidencia de pago" (y el resto de la venta en
+   *  tienda) solo se muestra para los tenants del allowlist mientras la
+   *  validamos. Los demás catálogos ven el alta de orden sin cambios. */
+  protected readonly ventaFeatureEnabled = computed(() =>
+    isVentaFeatureEnabled(this.tenantStore.tenantId())
   );
 
   private static readonly CUSTOM_PRODUCT_ID = '__custom__';
@@ -117,6 +143,8 @@ export default class OrderSave implements OnInit {
     // Manual orders mirror the public-catalog checkout: the admin picks
     // which method the customer paid with so the order list shows it.
     paymentMethod: [''],
+    // Admin-only proof-of-payment note (goes with `paymentEvidenceImages`).
+    paymentEvidenceNote: [''],
   });
 
   /** Active payment methods from the catalog config — same source the
@@ -128,11 +156,108 @@ export default class OrderSave implements OnInit {
 
 
   public readonly id = input<string | undefined>(undefined);
+  /** When opened as "Registrar venta" (route query `?mode=venta`) the screen
+   *  defaults the order to `completed` (a closed in-store sale → genera recibo
+   *  y descuenta stock) and relabels the UI. Otherwise it's the normal manual
+   *  order flow. */
+  /** True when opened as "Registrar venta" (route `create?mode=venta`). Read
+   *  from the query param in ngOnInit (no componentInputBinding dependency). */
+  protected readonly isVenta = signal(false);
   public readonly products = signal<OrderItem[]>([]);
+  /** POS: monto en efectivo que entrega el cliente; el cambio se calcula solo.
+   *  Solo se usa en el form (calculadora para dar el vuelto); no se persiste. */
+  public readonly amountReceived = signal<number | null>(null);
+  public readonly change = computed(() => {
+    const r = this.amountReceived();
+    if (r == null || r === 0) return 0;
+    // El cliente paga el bruto (subtotal + envío); la comisión es un costo del
+    // vendedor, así que el vuelto se calcula sobre lo que el cliente entrega.
+    return r - this.grossTotal();
+  });
+  /** Admin-only proof-of-payment images (transfer screenshots, receipts).
+   *  Uploaded via <ui-uploader> to the same storage the product gallery uses;
+   *  the note lives in the `paymentEvidenceNote` form control. */
+  public readonly paymentEvidenceImages = signal<string[]>([]);
+  /** Soft cap so a sale can't accumulate an unbounded gallery of proofs. */
+  public readonly evidenceMaxImages = 6;
+  /** Lightbox: which evidence image is open in the big preview (null = closed). */
+  public readonly evidencePreviewUrl = signal<string | null>(null);
   public readonly isCreate = signal<boolean>(true);
   public readonly isSubmitting = signal<boolean>(false);
   public readonly totalBs = signal<number>(0);
   public readonly selectedRateType = signal<RateType>('bcv_usd');
+  /** Envío/flete del alta manual (lo paga el cliente). Se suma al total. */
+  public readonly shippingFee = signal<number>(0);
+  /** Comisión (opcional) que paga el VENDEDOR: un costo suyo que se RESTA del
+   *  total y no se le muestra al cliente. Puede cargarse como monto fijo o como
+   *  porcentaje sobre el subtotal de productos. */
+  public readonly commissionMode = signal<'fixed' | 'percent'>('fixed');
+  public readonly commissionAmount = signal<number>(0);
+  public readonly commissionPercent = signal<number>(0);
+  /** Monto resuelto de la comisión (lo que efectivamente se resta y se guarda). */
+  public readonly effectiveCommission = computed(() => {
+    if (this.commissionMode() === 'percent') {
+      const pct = Math.min(100, Math.max(0, this.commissionPercent() || 0));
+      return (this.productsSubtotal() * pct) / 100;
+    }
+    return Math.max(0, this.commissionAmount() || 0);
+  });
+  /** Método de envío original de la orden (si vino del checkout público), para
+   *  preservar su nombre al editar en vez de pisarlo con "Envío". */
+  private readonly originalShippingMethod = signal<{
+    name: string;
+    type: 'pickup' | 'delivery' | 'shipping';
+    fee: number;
+  } | null>(null);
+  /** Opción de envío elegida: '' = sin envío, un id de método del catálogo, o
+   *  '__manual__' para cargar un monto libre (flete/comisión). */
+  public readonly shippingSelection = signal<string>('');
+  /** Opciones del selector de envío: los métodos ACTIVOS del catálogo (Editar
+   *  catálogo → Envío, mismos que ve el checkout) + la opción de monto manual. */
+  public readonly shippingOptions = computed<
+    {
+      value: string;
+      name: string;
+      fee: number;
+      type: 'pickup' | 'delivery' | 'shipping';
+      kind: 'catalog' | 'manual';
+    }[]
+  >(() => {
+    const methods = (this.configStore.config()?.shippingMethods ?? []).filter(
+      (m) => m.isActive
+    );
+    const opts = methods.map((m) => ({
+      value: m.id,
+      name: m.name,
+      fee: m.fee ?? 0,
+      type: m.type,
+      kind: 'catalog' as const,
+    }));
+    return [
+      ...opts,
+      {
+        value: '__manual__',
+        name: 'Otro (monto manual)',
+        fee: 0,
+        type: 'shipping' as const,
+        kind: 'manual' as const,
+      },
+    ];
+  });
+
+  /** Opciones del envío para el selector de tarjetas (estilo "Estado de la
+   *  orden"): "Sin envío" + métodos del catálogo + monto manual. */
+  public readonly shippingChoices = computed<
+    { value: string; name: string; fee: number; kind: 'none' | 'catalog' | 'manual' }[]
+  >(() => [
+    { value: '', name: 'Sin envío', fee: 0, kind: 'none' },
+    ...this.shippingOptions().map((o) => ({
+      value: o.value,
+      name: o.name,
+      fee: o.fee,
+      kind: o.kind,
+    })),
+  ]);
 
   public readonly exchangeRate = computed(() => {
     const rate = this.rateStore.rate();
@@ -163,6 +288,9 @@ export default class OrderSave implements OnInit {
       if (tid) {
         this.tenantCurrency.load(tid);
         this.configStore.loadPaymentMethods(String(tid));
+        // Config del catálogo: de acá sale countryCode para preseleccionar
+        // el país del input de teléfono (sin esto queda el fallback VE).
+        this.configStore.loadConfig(String(tid));
       }
     });
 
@@ -182,6 +310,17 @@ export default class OrderSave implements OnInit {
         this.loadOrder(orderId);
       }
     });
+
+    // Registrar venta: el modo lo indica el query param ?mode=venta. Una venta
+    // en tienda nace cerrada (completada) para generar el recibo y descontar
+    // stock de una vez.
+    this.isVenta.set(
+      this.route.snapshot.data['mode'] === 'venta' ||
+        this.route.snapshot.queryParamMap.get('mode') === 'venta'
+    );
+    if (this.isVenta() && !this.id()) {
+      this.form.controls.status.setValue('completed');
+    }
   }
 
   private async loadOrder(id: string) {
@@ -206,6 +345,10 @@ export default class OrderSave implements OnInit {
     this.form.controls.comments.setValue(order.comments || '');
     this.form.controls.status.setValue(order.status);
     this.form.controls.paymentMethod.setValue(order.paymentMethod || '');
+    this.form.controls.paymentEvidenceNote.setValue(
+      order.paymentEvidence?.note || ''
+    );
+    this.paymentEvidenceImages.set(order.paymentEvidence?.images ?? []);
     if (order.deliveryDate) {
       // Parse "YYYY-MM-DD" as local date (avoid the UTC-shift that new Date(iso) causes).
       const [y, m, d] = order.deliveryDate.split('-').map(Number);
@@ -223,6 +366,24 @@ export default class OrderSave implements OnInit {
       })
     );
     this.totalBs.set(order.totalBs ?? 0);
+    const sm = order.shippingMethod ?? null;
+    this.originalShippingMethod.set(sm);
+    this.shippingFee.set(order.shippingFee ?? sm?.fee ?? 0);
+    // La comisión se guarda como monto resuelto: al editar se muestra en modo
+    // "monto fijo" con ese valor (el % es una comodidad al crear).
+    this.commissionMode.set('fixed');
+    this.commissionAmount.set(order.commission ?? 0);
+    this.commissionPercent.set(0);
+    if (sm) {
+      // Mapear al método del catálogo por nombre; si no matchea (manual o
+      // método borrado), cae a "Otro" conservando el snapshot original.
+      const match = (this.configStore.config()?.shippingMethods ?? []).find(
+        (m) => m.isActive && m.name === sm.name
+      );
+      this.shippingSelection.set(match ? match.id : '__manual__');
+    } else {
+      this.shippingSelection.set('');
+    }
   }
 
   public addProduct() {
@@ -318,6 +479,10 @@ export default class OrderSave implements OnInit {
           // Al mayor arranca en el primer tramo; el select de escala permite
           // cambiarlo (onTierSelect). Producto normal no lleva tramo.
           tierTitle: isWholesale ? selectedProduct.wholesaleTiers[0].title : null,
+          // Cambiar de producto descarta variante y adicionales del anterior.
+          variantId: null,
+          variantName: null,
+          addons: null,
         };
         return updated;
       });
@@ -334,7 +499,8 @@ export default class OrderSave implements OnInit {
     return product?.isWholesale ? product.wholesaleTiers ?? [] : [];
   }
 
-  /** Cambia el tramo de mayoreo de la fila: actualiza precio y snapshot. */
+  /** Cambia el tramo de mayoreo de la fila: actualiza precio y snapshot.
+   *  Preserva los adicionales elegidos (su suma va encima del tramo). */
   public onTierSelect(index: number, tierTitle: string) {
     const row = this.products()[index];
     const tier = this.getWholesaleTiers(row.productId).find(
@@ -343,14 +509,202 @@ export default class OrderSave implements OnInit {
     if (!tier) return;
     this.products.update((products) => {
       const updated = [...products];
+      const price = tier.price + this.addonsSum(updated[index].addons);
       updated[index] = {
         ...updated[index],
-        price: tier.price,
+        price,
         tierTitle: tier.title,
-        total: tier.price * updated[index].quantity,
+        total: price * updated[index].quantity,
       };
       return updated;
     });
+  }
+
+  /** Variantes del producto de la fila (vacío si no tiene). */
+  public getVariants(
+    productId: string | number
+  ): { id: string; name: string; price: number; photo: string | null }[] {
+    const product = this.productStore
+      .productList()
+      .products.find((p) => p.id === productId);
+    if (!product?.isVariant) return [];
+    return (product.variants ?? []).map((v) => ({
+      id: v.id,
+      name: v.name,
+      price: v.price,
+      photo: v.photos?.[0] ?? null,
+    }));
+  }
+
+  /** Cambia la variante de la fila (null = Producto original): actualiza
+   *  snapshot, foto y unitario (variante + adicionales elegidos). */
+  public onVariantSelect(index: number, variantId: string | null) {
+    const row = this.products()[index];
+    const product = this.productStore
+      .productList()
+      .products.find((p) => p.id === row.productId);
+    if (!product) return;
+    const variant = variantId
+      ? product.variants?.find((v) => v.id === variantId) ?? null
+      : null;
+    this.products.update((products) => {
+      const updated = [...products];
+      const addonsSum = this.addonsSum(updated[index].addons);
+      const base = variant
+        ? variant.price
+        : product.pricePromotional > 0
+          ? product.pricePromotional
+          : product.price;
+      const price = base + addonsSum;
+      updated[index] = {
+        ...updated[index],
+        variantId: variant?.id ?? null,
+        variantName: variant?.name ?? null,
+        photo: variant?.photos?.[0] ?? product.photos?.[0],
+        price,
+        total: price * updated[index].quantity,
+      };
+      return updated;
+    });
+  }
+
+  /** Clave de deduplicación de un adicional: mismo nombre + precio = el mismo
+   *  adicional (aunque esté definido en productos distintos con ids propios). */
+  private addonKey(a: { name: string; price: number }): string {
+    return `${a.name.trim().toLowerCase()}|${a.price}`;
+  }
+
+  /** Pool global de adicionales: unión de los adicionales de TODOS los productos
+   *  del catálogo, deduplicados por nombre+precio y ordenados por nombre. Permite
+   *  agregar a una orden manual cualquier adicional, no solo los del producto de
+   *  la fila. Conserva la foto para mostrarlo como un mini-producto. */
+  public readonly allAddons = computed<CatalogAddon[]>(() => {
+    const seen = new Map<string, CatalogAddon>();
+    for (const product of this.productStore.productList().products) {
+      for (const a of product.addons ?? []) {
+        const key = this.addonKey(a);
+        if (!seen.has(key)) {
+          seen.set(key, {
+            id: a.id,
+            name: a.name,
+            price: a.price,
+            photo: a.photo ?? null,
+          });
+        }
+      }
+    }
+    return [...seen.values()].sort((x, y) => x.name.localeCompare(y.name));
+  });
+
+  /** Adicionales del pool global que la fila aún NO tiene (opciones del
+   *  selector "Agregar adicional"). Se compara por nombre+precio para que un
+   *  adicional ya agregado no vuelva a ofrecerse. */
+  public availableAddons(index: number): CatalogAddon[] {
+    const selected = new Set(
+      (this.products()[index]?.addons ?? []).map((a) => this.addonKey(a))
+    );
+    return this.allAddons().filter((a) => !selected.has(this.addonKey(a)));
+  }
+
+  /** Foto del adicional para mostrar en el chip. El snapshot de la orden solo
+   *  guarda nombre+precio, así que la imagen se resuelve del pool global. */
+  public addonPhoto(addon: { name: string; price: number }): string | null {
+    return (
+      this.allAddons().find((a) => this.addonKey(a) === this.addonKey(addon))
+        ?.photo ?? null
+    );
+  }
+
+  /** Agrega a la fila un adicional elegido en el selector del pool global. */
+  public onAddonAdd(index: number, addonId: string | null): void {
+    if (!addonId) return;
+    const addon = this.allAddons().find((a) => a.id === addonId);
+    if (!addon) return;
+    if (this.products()[index]?.addons?.some((a) => a.id === addon.id)) return;
+    this.onAddonToggle(index, addon);
+  }
+
+  /** Contribución de los adicionales al unitario: Σ precio × cantidad (la
+   *  cantidad ausente cuenta como 1). */
+  private addonsSum(addons: OrderItemAddon[] | null | undefined): number {
+    return (addons ?? []).reduce(
+      (sum, a) => sum + a.price * (a.quantity ?? 1),
+      0
+    );
+  }
+
+  /** Marca/desmarca un adicional de la fila: actualiza el snapshot y
+   *  recalcula el unitario como base (tramo o precio/promo) + adicionales —
+   *  el mismo criterio que el checkout del storefront. Al agregar arranca en
+   *  cantidad 1. */
+  public onAddonToggle(index: number, addon: OrderItemAddon) {
+    this.products.update((products) => {
+      const updated = [...products];
+      const row = updated[index];
+      const current = row.addons ?? [];
+      const addons = current.some((a) => a.id === addon.id)
+        ? current.filter((a) => a.id !== addon.id)
+        : [...current, { ...addon, quantity: addon.quantity ?? 1 }];
+      const price = this.rowBaseUnitPrice(row) + this.addonsSum(addons);
+      updated[index] = {
+        ...row,
+        addons: addons.length ? addons : null,
+        price,
+        total: price * row.quantity,
+      };
+      return updated;
+    });
+  }
+
+  /** Cantidad actual de un adicional en la fila (1 por defecto). */
+  public addonQty(addon: OrderItemAddon): number {
+    return addon.quantity ?? 1;
+  }
+
+  /** Cambia la cantidad de un adicional (+1 / -1). Bajar de 1 lo quita. */
+  public changeAddonQty(index: number, addonId: string | undefined, delta: number) {
+    this.products.update((products) => {
+      const updated = [...products];
+      const row = updated[index];
+      const addons = (row.addons ?? [])
+        .map((a) =>
+          a.id === addonId ? { ...a, quantity: (a.quantity ?? 1) + delta } : a
+        )
+        .filter((a) => (a.quantity ?? 1) > 0);
+      const price = this.rowBaseUnitPrice(row) + this.addonsSum(addons);
+      updated[index] = {
+        ...row,
+        addons: addons.length ? addons : null,
+        price,
+        total: price * row.quantity,
+      };
+      return updated;
+    });
+  }
+
+  /** Precio unitario de la fila SIN adicionales: variante o tramo elegido,
+   *  o el precio (promo) actual del producto. Si el producto ya no está en
+   *  el store, se deduce restando los adicionales del precio guardado. */
+  private rowBaseUnitPrice(row: OrderItem): number {
+    const product = this.productStore
+      .productList()
+      .products.find((p) => p.id === row.productId);
+    if (!product) {
+      return row.price - this.addonsSum(row.addons);
+    }
+    if (row.variantId) {
+      const variant = product.variants?.find((v) => v.id === row.variantId);
+      if (variant) return variant.price;
+    }
+    if (row.tierTitle) {
+      const tier = product.wholesaleTiers?.find(
+        (t) => t.title === row.tierTitle
+      );
+      if (tier) return tier.price;
+    }
+    return product.pricePromotional > 0
+      ? product.pricePromotional
+      : product.price;
   }
 
   public onCustomNameChange(index: number, name: string) {
@@ -394,8 +748,89 @@ export default class OrderSave implements OnInit {
     });
   }
 
-  public calculateTotal(): number {
+  /** Suma de las líneas de producto (sin envío). */
+  public productsSubtotal(): number {
     return this.products().reduce((sum, product) => sum + product.total, 0);
+  }
+
+  /** Total de la orden = productos + envío. */
+  /** Lo que paga el cliente: subtotal + envío (antes de la comisión del
+   *  vendedor). Base del cálculo de cambio del POS. */
+  public grossTotal(): number {
+    return this.productsSubtotal() + this.effectiveShippingFee();
+  }
+
+  /** Total neto que se guarda/muestra: lo que paga el cliente MENOS la comisión
+   *  que paga el vendedor (nunca baja de 0). */
+  public calculateTotal(): number {
+    return Math.max(0, this.grossTotal() - this.effectiveCommission());
+  }
+
+  /** Costo de envío que efectivamente se suma al total (0 si no hay envío). */
+  public effectiveShippingFee(): number {
+    return this.shippingSelection() === '' ? 0 : this.shippingFee() || 0;
+  }
+
+  public setCommissionMode(mode: 'fixed' | 'percent'): void {
+    this.commissionMode.set(mode);
+  }
+
+  /** Monto fijo de la comisión (no baja de 0). */
+  public onCommissionAmountChange(value: number): void {
+    this.commissionAmount.set(Math.max(0, value || 0));
+  }
+
+  /** Porcentaje de la comisión (0–100). */
+  public onCommissionPercentChange(value: number): void {
+    this.commissionPercent.set(Math.min(100, Math.max(0, value || 0)));
+  }
+
+  /** Cambia la opción de envío. Un método del catálogo precarga su costo
+   *  (editable para esta orden); "Otro" deja el monto libre; vacío = sin envío. */
+  public onShippingSelectionChange(value: string | null): void {
+    const sel = value ?? '';
+    this.shippingSelection.set(sel);
+    if (sel === '') {
+      this.shippingFee.set(0);
+      return;
+    }
+    if (sel === '__manual__') return; // el admin escribe el monto
+    const method = (this.configStore.config()?.shippingMethods ?? []).find(
+      (m) => m.id === sel
+    );
+    if (method) this.shippingFee.set(method.fee ?? 0);
+  }
+
+  /** Actualiza el monto de envío (no baja de 0). El total en la moneda de
+   *  referencia se recalcula solo; el de Bs. se refresca con "Recalcular"
+   *  (igual que al cambiar cantidades). */
+  public onShippingFeeChange(value: number): void {
+    this.shippingFee.set(Math.max(0, value || 0));
+  }
+
+  /** Snapshot de envío para guardar según la opción elegida: vacío = null;
+   *  un método del catálogo = su nombre/tipo con el costo (posiblemente
+   *  ajustado); "Otro" con monto > 0 = etiqueta "Envío" (o el método original
+   *  al editar una orden del catálogo). */
+  private buildShippingMethod(): {
+    name: string;
+    type: 'pickup' | 'delivery' | 'shipping';
+    fee: number;
+  } | null {
+    const sel = this.shippingSelection();
+    if (sel === '') return null;
+    const fee = this.shippingFee() || 0;
+    if (sel === '__manual__') {
+      if (fee <= 0) return null;
+      const original = this.originalShippingMethod();
+      return original ? { ...original, fee } : { name: 'Envío', type: 'shipping', fee };
+    }
+    const method = (this.configStore.config()?.shippingMethods ?? []).find(
+      (m) => m.id === sel
+    );
+    if (method) return { name: method.name, type: method.type, fee };
+    const original = this.originalShippingMethod();
+    return original ? { ...original, fee } : null;
   }
 
   public recalculateTotalBs() {
@@ -418,6 +853,39 @@ export default class OrderSave implements OnInit {
         this.recalculateTotalBs();
       }
     );
+  }
+
+  /** <ui-uploader> finished uploading: append the new URL(s) up to the cap. */
+  public onEvidenceUploaded(value: string | string[]): void {
+    const incoming = Array.isArray(value) ? value : [value];
+    this.paymentEvidenceImages.update((imgs) => {
+      const room = this.evidenceMaxImages - imgs.length;
+      return room <= 0 ? imgs : [...imgs, ...incoming.slice(0, room)];
+    });
+  }
+
+  /** Remove one proof-of-payment image from the list. Does not delete the
+   *  uploaded file from storage (same behaviour as the product gallery). */
+  public removeEvidenceImage(url: string): void {
+    this.paymentEvidenceImages.update((imgs) => imgs.filter((u) => u !== url));
+  }
+
+  /** Open the big preview (lightbox) for a proof-of-payment image. */
+  public openEvidencePreview(url: string): void {
+    this.evidencePreviewUrl.set(url);
+  }
+
+  public closeEvidencePreview(): void {
+    this.evidencePreviewUrl.set(null);
+  }
+
+  /** Builds the PaymentEvidence to persist, or null when the admin left both
+   *  the note and the images empty (keeps the column null for plain orders). */
+  private buildPaymentEvidence(): PaymentEvidence | null {
+    const note = (this.form.controls.paymentEvidenceNote.value || '').trim();
+    const images = this.paymentEvidenceImages();
+    if (!note && images.length === 0) return null;
+    return { note: note || undefined, images };
   }
 
   public async save() {
@@ -448,6 +916,10 @@ export default class OrderSave implements OnInit {
       totalBs: this.totalBs(),
       deliveryDate: delivery ? this.toIsoDate(delivery) : undefined,
       paymentMethod: this.form.controls.paymentMethod.value || undefined,
+      paymentEvidence: this.buildPaymentEvidence(),
+      shippingFee: this.effectiveShippingFee(),
+      commission: this.effectiveCommission(),
+      shippingMethod: this.buildShippingMethod(),
     };
 
     try {
@@ -459,7 +931,11 @@ export default class OrderSave implements OnInit {
             this.isSubmitting.set(false);
           },
           () => {
-            this.toastService.success('Orden creada exitosamente');
+            this.toastService.success(
+              this.isVenta()
+                ? 'Venta registrada exitosamente'
+                : 'Orden creada exitosamente'
+            );
             this.router.navigate(['/admin/orders']);
           }
         );

@@ -1,6 +1,6 @@
 import { computed, inject } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
-import { Product, ProductVariant, WholesaleTier } from '@catalogohoy/product';
+import { Product, ProductAddon, ProductVariant, WholesaleTier } from '@catalogohoy/product';
 import {
   patchState,
   signalStore,
@@ -47,6 +47,7 @@ function saveCartToStorage(cart: Cart): void {
       size: item.size,
       variantId: item.variantId,
       variantName: item.variantName,
+      addons: item.addons,
     }));
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   } catch {
@@ -84,10 +85,15 @@ export const CartStore = signalStore(
   withMethods((store, transloco = injectTranslator()) => ({
     addProduct(
       product: Product,
-      options?: { size?: string | null; variant?: ProductVariant | null }
+      options?: {
+        size?: string | null;
+        variant?: ProductVariant | null;
+        addons?: ProductAddon[];
+      }
     ) {
       const size = options?.size ?? null;
       const variant = options?.variant ?? null;
+      const addons = options?.addons ?? [];
 
       // If the product is sized, prefer per-size stock; otherwise fall back
       // to the product-level stock. Variants share the product-level stock
@@ -130,7 +136,10 @@ export const CartStore = signalStore(
         product.pricePromotional > 0
           ? product.pricePromotional
           : product.price;
-      const price = variant ? variant.price : basePrice;
+      const variantPrice = variant ? variant.price : basePrice;
+      // Addons SUM on top of the variant/base price for this line's unit price.
+      const addonsTotal = addons.reduce((sum, a) => sum + a.price, 0);
+      const price = variantPrice + addonsTotal;
       const photo = (variant?.photos?.[0] || product.photos[0]) ?? '';
 
       const item = new CartItem(
@@ -145,7 +154,8 @@ export const CartStore = signalStore(
         product.sku ?? null,
         size,
         variant?.id ?? null,
-        variant?.name ?? null
+        variant?.name ?? null,
+        addons.map((a) => ({ id: a.id, name: a.name, price: a.price }))
       );
       const newCart = store.cart().addItem(item);
       saveCartToStorage(newCart);

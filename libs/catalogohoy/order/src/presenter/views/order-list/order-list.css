@@ -72,16 +72,6 @@ button {
   transition: all 0.15s ease-in-out;
 }
 
-/* Stats cards hover effect */
-.grid > div {
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-}
-
-.grid > div:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
 /* Ensure table shows enough rows */
 .order-table-wrapper {
   min-height: 31.25rem;
@@ -89,7 +79,17 @@ button {
 
 /* Mobile list: fits ~5 orders then scrolls internally */
 .mobile-order-list {
-  max-height: 31.25rem;
+  /* Aprovecha el alto del viewport para que la tabla móvil llene el espacio
+     inferior (dejando lugar a header + tabs + filtros + paginación). */
+  max-height: calc(100dvh - 16rem);
+}
+
+/* ApexCharts: el tooltip trae una transición de entrada que lo hace "subir" y
+   deslizarse en el hover. La anulamos para que aparezca instantáneo, en su
+   lugar (sin animación). */
+:host ::ng-deep .apexcharts-tooltip,
+:host ::ng-deep .apexcharts-tooltip.apexcharts-active {
+  transition: none !important;
 }
 
 /* Custom bg color for very light grey */

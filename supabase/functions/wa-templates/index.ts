@@ -2,10 +2,14 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // =============================================================================
-// wa-templates — listar / crear plantillas (HSM) de la WABA del comerciante.
+// wa-templates — listar / crear / eliminar plantillas (HSM) de la WABA del
+// comerciante.
 //
 // El token y el waba_id viven server-side (whatsapp_accounts). Verifica que el
 // usuario autenticado es miembro del tenant antes de tocar la Graph API.
+// Crear con variables {{n}} requiere `examples` (Meta exige un ejemplo por
+// variable para aprobar la plantilla). Eliminar borra la plantilla por nombre
+// (todos sus idiomas, semántica de la Graph API).
 // Deploy con verify_jwt=true (lo llama el agente autenticado desde el CRM).
 // =============================================================================
 
@@ -34,11 +38,19 @@ type CreateInput = {
   category: string;
   language: string;
   body: string;
+  /** Un ejemplo por variable {{n}} del body, en orden ({{1}} primero). */
+  examples?: string[];
+  /** Encabezado de texto (opcional, sin variables). */
+  header?: string;
+  /** Pie de página (opcional, texto plano). */
+  footer?: string;
 };
 type Payload = {
   tenantId: number;
-  action: "list" | "create";
+  action: "list" | "create" | "delete";
   template?: CreateInput;
+  /** Para action=delete: nombre de la plantilla a eliminar. */
+  name?: string;
 };
 
 Deno.serve(async (req) => {
@@ -59,7 +71,7 @@ Deno.serve(async (req) => {
 
   const tenantId = Number(body.tenantId);
   const action = body.action;
-  if (!tenantId || (action !== "list" && action !== "create")) {
+  if (!tenantId || !["list", "create", "delete"].includes(action)) {
     return jsonResponse({ success: false, error: "Missing tenantId or action" }, 400);
   }
 
@@ -116,16 +128,54 @@ Deno.serve(async (req) => {
     }
   }
 
+  // -------- Eliminar --------
+  if (action === "delete") {
+    const name = (body.name ?? "").trim();
+    if (!name) {
+      return jsonResponse({ success: false, error: "Falta el nombre de la plantilla" }, 400);
+    }
+    try {
+      const res = await fetch(
+        `${GRAPH}/${wabaId}/message_templates?name=${encodeURIComponent(name)}`,
+        { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
+      );
+      const json = await res.json();
+      if (!res.ok) {
+        return jsonResponse({ success: false, error: json?.error ?? json }, 502);
+      }
+      return jsonResponse({ success: true, result: json });
+    } catch (err) {
+      return jsonResponse({ success: false, error: String(err) }, 500);
+    }
+  }
+
   // -------- Crear --------
   const t = body.template;
   if (!t?.name || !t?.body || !t?.category || !t?.language) {
     return jsonResponse({ success: false, error: "Faltan datos de la plantilla" }, 400);
   }
+  const examples = (t.examples ?? []).map((e) => String(e).trim()).filter(Boolean);
+  const header = (t.header ?? "").trim();
+  const footer = (t.footer ?? "").trim();
+  const components: Record<string, unknown>[] = [];
+  // Orden que espera Meta: HEADER → BODY → FOOTER.
+  if (header) {
+    components.push({ type: "HEADER", format: "TEXT", text: header });
+  }
+  components.push({
+    type: "BODY",
+    text: t.body,
+    // Meta exige un ejemplo por variable para revisar la plantilla.
+    ...(examples.length ? { example: { body_text: [examples] } } : {}),
+  });
+  if (footer) {
+    components.push({ type: "FOOTER", text: footer });
+  }
   const payload = {
     name: t.name,
     language: t.language,
     category: t.category,
-    components: [{ type: "BODY", text: t.body }],
+    components,
   };
   try {
     const res = await fetch(`${GRAPH}/${wabaId}/message_templates`, {

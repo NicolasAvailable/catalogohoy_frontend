@@ -28,6 +28,8 @@ export default class Invoice {
   private readonly orderPdf = inject(OrderPdfService);
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cs = this.ecommerceStore.currencySymbol;
+  /** Solo-Bs (referencia oculta) => la factura se muestra en bolívares. */
+  public readonly showReferencePrice = this.ecommerceStore.showReferencePrice;
 
   public readonly order = signal<PublicOrder | null>(null);
   public readonly isLoading = signal(true);
@@ -52,6 +54,13 @@ export default class Invoice {
   public readonly showBs = computed(
     () => this.ecommerceStore.isVenezuela() && (this.order()?.totalBs ?? 0) > 0
   );
+
+  /** Tasa derivada del snapshot de la orden (totalBs/totalUsd), para que los
+   *  montos por línea en Bs cuadren con el total guardado. 0 si no aplica. */
+  public readonly orderRate = computed(() => {
+    const o = this.order();
+    return o && o.totalUsd > 0 && o.totalBs ? o.totalBs / o.totalUsd : 0;
+  });
 
   constructor() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -99,6 +108,7 @@ export default class Invoice {
         storeName: info?.name ?? 'Catálogo',
         currencySymbol: this.cs(),
         showDualBs: this.showBs(),
+        showReference: this.showReferencePrice(),
         logoUrl: info?.logo ?? null,
       });
     } finally {
@@ -122,6 +132,7 @@ export default class Invoice {
         photo: p.photo,
         sku: p.sku ?? null,
         size: p.size ?? null,
+        addons: p.addons ?? null,
       })),
       status: (o.status as Order['status']) ?? 'pending',
       tenantId: Number(this.info()?.id) || 0,

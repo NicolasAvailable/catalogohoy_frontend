@@ -1,11 +1,12 @@
 import { inject, Injectable } from '@angular/core';
 import {
   EcommerceConfigStore,
+  NO_CURRENCY_SYMBOL,
   TenantCurrencyStore,
 } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
 import { jsPDF } from 'jspdf';
-import { Order, OrderItem } from '../domain';
+import { isVentaFeatureEnabled, Order, OrderItem } from '../domain';
 
 const PAYMENT_LABELS: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -34,6 +35,9 @@ export interface OrderPdfContext {
   storeName: string;
   currencySymbol: string;
   showDualBs: boolean;
+  /** false = catálogo solo-Bs (precio de referencia oculto): el recibo se
+   *  renderiza en bolívares en vez de la moneda de referencia. Default true. */
+  showReference?: boolean;
   logoUrl: string | null;
 }
 
@@ -59,7 +63,9 @@ export class OrderPdfService {
     if (context) {
       storeName = context.storeName || 'Catálogo';
       showDualBs = context.showDualBs;
-      cs = context.currencySymbol || '$';
+      // `''` es un valor válido: el storefront ya mapeó el centinela "sin
+      // símbolo" a cadena vacía, así que no debe caer al '$' de fallback.
+      cs = context.currencySymbol ?? '$';
       logoUrl = context.logoUrl;
     } else {
       // Ensure the tenant currency is loaded (cache-first — typically a no-op
@@ -77,6 +83,19 @@ export class OrderPdfService {
       cs = this.tenantCurrency.displaySymbol() || config?.currencySymbol || '$';
       logoUrl = config?.logo ?? null;
     }
+    // El centinela zero-width "sin símbolo" se normaliza a '' — jsPDF con las
+    // fuentes estándar no sabe renderizar U+200B y pintaría un glifo basura.
+    if (cs === NO_CURRENCY_SYMBOL) cs = '';
+
+    // Per-línea en Bs derivado del snapshot de la orden (rate = totalBs/totalUsd),
+    // para que los montos por línea cuadren con el total guardado. Un catálogo
+    // solo-Bs (showReference=false) renderiza todo el recibo en bolívares; el
+    // resto mantiene la moneda de referencia.
+    const rate =
+      order.totalBs && order.totalUsd > 0 ? order.totalBs / order.totalUsd : 0;
+    const soloBs = context?.showReference === false && rate > 0;
+    const money = (amount: number): string =>
+      soloBs ? `Bs. ${(amount * rate).toFixed(2)}` : `${cs}${amount.toFixed(2)}`;
 
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const pageW = 210;
@@ -106,12 +125,33 @@ export class OrderPdfService {
       }
     }
 
-    // Left: "Orden" title
+    // Left: title — a completed order is a closed sale, so it renders as a
+    // "Recibo de Venta / Nota de Entrega"; pending/cancelled stay as "Orden".
+    // Beta cerrada: solo los tenants del allowlist ven el PDF como "Recibo de
+    // Venta / Nota de Entrega"; el resto conserva el título "Orden".
+    const isReceipt =
+      order.status === 'completed' && isVentaFeatureEnabled(order.tenantId);
+    const docNoun = isReceipt ? 'Recibo' : 'Orden';
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(28);
     doc.setTextColor(...BLACK);
-    doc.text('Orden', margin, y + 8);
-    y += 18;
+    doc.text(isReceipt ? 'Recibo de Venta' : 'Orden', margin, y + 8);
+    y += 16;
+
+    if (isReceipt) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(...GREY);
+      doc.text(
+        `Nota de Entrega N° ${order.orderNumber ?? order.id}`,
+        margin,
+        y + 4
+      );
+      doc.setTextColor(...BLACK);
+      y += 8;
+    } else {
+      y += 2;
+    }
 
     // Order metadata
     doc.setFont('helvetica', 'normal');
@@ -125,6 +165,16 @@ export class OrderPdfService {
         month: 'long',
         day: 'numeric',
       });
+    // Receipts show the exact date AND time of the sale (needed for a
+    // "nota de entrega"); orders keep the date-only creation label.
+    const formatDateTime = (d: Date) =>
+      d.toLocaleString('es-VE', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
 
     // delivery_date is "YYYY-MM-DD"; parse as local to avoid UTC shift.
     let deliveryDate: Date | null = null;
@@ -134,8 +184,11 @@ export class OrderPdfService {
     }
 
     const meta: [string, string][] = [
-      ['Número de orden', `#${order.orderNumber ?? order.id}`],
-      ['Fecha de creación', formatLong(createdDate)],
+      [isReceipt ? 'Número de recibo' : 'Número de orden', `#${order.orderNumber ?? order.id}`],
+      [
+        isReceipt ? 'Fecha y hora' : 'Fecha de creación',
+        isReceipt ? formatDateTime(createdDate) : formatLong(createdDate),
+      ],
       [
         'Fecha de entrega',
         deliveryDate ? formatLong(deliveryDate) : formatLong(createdDate),
@@ -187,7 +240,7 @@ export class OrderPdfService {
     doc.setFontSize(14);
     doc.setTextColor(...BLACK);
     doc.text(
-      `${cs}${order.totalUsd.toFixed(2)} — Orden #${order.orderNumber ?? order.id}`,
+      `${money(order.totalUsd)} — ${docNoun} #${order.orderNumber ?? order.id}`,
       margin,
       y
     );
@@ -246,8 +299,49 @@ export class OrderPdfService {
       const item: OrderItem = order.products[i];
       const imgData = imageMap.get(i);
       const hasSku = !!item.sku;
-      const rowH = Math.max(hasSku ? 12 : 8, imgData ? imgSize + 2 : 0);
-      const textY = y + (imgData ? imgSize / 2 + 1 : 4);
+
+      // Sub-líneas bajo el nombre, prolijas y en orden:
+      //   1) atributos del producto (variante · talla · tramo) en una línea,
+      //   2) cada adicional en su PROPIA línea ("+ Nombre ×N (monto)"),
+      //   3) el SKU.
+      // El precio unitario ya incluye los adicionales; acá solo se itemizan.
+      const attrs = [
+        item.variantName,
+        item.size ? `Talla ${item.size}` : null,
+        item.tierTitle ? `Al mayor: ${item.tierTitle}` : null,
+      ].filter(Boolean) as string[];
+
+      const addonLines = (item.addons ?? []).map((a) => {
+        const q = a.quantity ?? 1;
+        const label = q > 1 ? `${a.name} ×${q}` : a.name;
+        const amount = a.price * q;
+        return amount > 0
+          ? `+ ${label} (${money(amount)})`
+          : `+ ${label}`;
+      });
+
+      const rawSubLines = [
+        attrs.length ? attrs.join(' · ') : null,
+        ...addonLines,
+        hasSku ? `SKU: ${item.sku}` : null,
+      ].filter(Boolean) as string[];
+
+      // Ajusta cada sub-línea al ancho de la columna (medido a 7pt) y las
+      // aplana, para que nada se salga ni se trunque a una sola línea.
+      doc.setFontSize(7);
+      const subLines = rawSubLines.flatMap(
+        (l) => doc.splitTextToSize(l, qtyX - descX - 6) as string[]
+      );
+      doc.setFontSize(9);
+
+      const rowH = Math.max(
+        8 + subLines.length * 4,
+        imgData ? imgSize + 2 : 0
+      );
+      // Centra el nombre con la imagen solo si no hay sub-líneas; si las hay,
+      // alinea arriba para que el bloque de texto no quede desbalanceado.
+      const textY =
+        y + (imgData && subLines.length === 0 ? imgSize / 2 + 1 : 4);
 
       // Product image
       if (imgData) {
@@ -267,18 +361,22 @@ export class OrderPdfService {
       ) as string[];
       doc.text(nameLines[0], descX, textY);
 
-      // SKU below name
-      if (hasSku) {
+      // Sub-líneas (atributos / adicionales / SKU) bajo el nombre
+      if (subLines.length) {
         doc.setFontSize(7);
         doc.setTextColor(...GREY);
-        doc.text(`SKU: ${item.sku}`, descX, textY + 4);
+        let subY = textY;
+        for (const line of subLines) {
+          subY += 4;
+          doc.text(line, descX, subY);
+        }
         doc.setFontSize(9);
         doc.setTextColor(...BLACK);
       }
 
       doc.text(String(item.quantity), qtyX, textY);
-      doc.text(`${cs}${item.price.toFixed(2)}`, priceX, textY);
-      doc.text(`${cs}${item.total.toFixed(2)}`, totalX, textY, {
+      doc.text(money(item.price), priceX, textY);
+      doc.text(money(item.total), totalX, textY, {
         align: 'right',
       });
 
@@ -297,12 +395,14 @@ export class OrderPdfService {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.text('Subtotal', labelX, y);
-    doc.text(`${cs}${order.totalUsd.toFixed(2)}`, valX, y, {
+    doc.text(money(order.totalUsd), valX, y, {
       align: 'right',
     });
     y += 5;
 
-    if (showDualBs && order.totalBs && order.totalBs > 0) {
+    // El mirror "Total en Bs." solo en catálogos dual-moneda (referencia + Bs);
+    // en un catálogo solo-Bs el total ya sale en bolívares vía money().
+    if (!soloBs && showDualBs && order.totalBs && order.totalBs > 0) {
       doc.text('Total en Bs.', labelX, y);
       doc.text(`Bs. ${order.totalBs.toFixed(2)}`, valX, y, {
         align: 'right',
@@ -312,7 +412,7 @@ export class OrderPdfService {
 
     doc.setFont('helvetica', 'bold');
     doc.text('Total', labelX, y);
-    doc.text(`${cs}${order.totalUsd.toFixed(2)}`, valX, y, {
+    doc.text(money(order.totalUsd), valX, y, {
       align: 'right',
     });
     y += 10;
@@ -326,7 +426,7 @@ export class OrderPdfService {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       doc.setTextColor(...GREY);
-      doc.text('Notas:', margin, y);
+      doc.text(isReceipt ? 'Notas / Garantía:' : 'Notas:', margin, y);
       y += 4;
 
       doc.setFont('helvetica', 'normal');
@@ -351,7 +451,9 @@ export class OrderPdfService {
       y
     );
 
-    doc.save(`orden-${order.orderNumber ?? order.id}.pdf`);
+    doc.save(
+      `${isReceipt ? 'recibo' : 'orden'}-${order.orderNumber ?? order.id}.pdf`
+    );
   }
 
   private blobToBase64(blob: Blob): Promise<string> {

@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { DiscordWebhookService, SupabaseClientProvider } from '@catalogohoy/core';
 import {
@@ -19,6 +19,7 @@ import {
   PaymentCurrency,
   Plan,
   PLAN_BASE_PRICES,
+  PLAN_FEATURES,
   PlanDisplay,
   PlanFeature,
   resolveCheckoutCurrency,
@@ -31,11 +32,16 @@ import { EnterpriseContactDialog } from '../enterprise-contact-dialog/enterprise
  *  El funnel (dialog + edge function + panel interno) sigue intacto. */
 const ENTERPRISE_CARD_VISIBLE = false;
 
+// quarterly: 10% off. annual: meses gratis por plan (ver ANNUAL_FREE_MONTHS).
 const BILLING_CONFIG: Record<BillingPeriod, { label: string; months: number; discount: number }> = {
   monthly:   { label: 'Mensual',     months: 1,  discount: 0    },
   quarterly: { label: 'Trimestral',  months: 3,  discount: 0.10 },
-  annual:    { label: 'Anual',       months: 12, discount: 0.15 },
+  annual:    { label: 'Anual',       months: 12, discount: 0    },
 };
+
+// Meses gratis del plan ANUAL: 2 meses en todos los planes.
+const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 2, pro: 2, avanzado: 2 };
+const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 1;
 
 type PlanUIConfig = {
   period: string;
@@ -46,19 +52,12 @@ type PlanUIConfig = {
   color: string;
 };
 
+// Los features viven en PLAN_FEATURES (domain) — misma fuente que la sección
+// "Tu plan incluye" de Mi Perfil.
 const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   gratis: {
     period: 'por siempre',
-    features: [
-      { text: '1 catálogo' },
-      { text: 'Edición limitada del catálogo' },
-      { text: '1 reporte por mes' },
-      { text: '15 créditos de IA por mes' },
-      // Negatives stay grouped at the end so the cross icons render
-      // together as a "what you don't get" block instead of being
-      // sprinkled between checks.
-      { text: 'Sin analíticas del catálogo', negative: true },
-    ],
+    features: PLAN_FEATURES['gratis'],
     buttonLabel: 'Empezar gratis',
     buttonSeverity: 'secondary',
     isPopular: false,
@@ -66,35 +65,29 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
   },
   basico: {
     period: '/mes',
-    features: [
-      { text: '1 catálogo' },
-      { text: 'Todos los módulos disponibles' },
-      { text: 'Analíticas del catálogo' },
-      { text: 'Hasta 10 reportes por mes' },
-      { text: '200 créditos de IA por mes' },
-      { text: 'Diseño personalizable' },
-      { text: 'Soporte prioritario' },
-    ],
+    features: PLAN_FEATURES['basico'],
     buttonLabel: 'Comenzar ahora',
     buttonSeverity: 'secondary',
     isPopular: false,
     color: '#6366f1',
   },
-  avanzado: {
+  // El badge "Más popular" vive en el Pro (ancla la decisión en el plan del
+  // medio); el Avanzado queda como tier premium sin badge.
+  pro: {
     period: '/mes',
-    features: [
-      { text: '2 catálogos' },
-      { text: 'Todo del plan Básico' },
-      { text: 'Analíticas del catálogo' },
-      { text: 'Hasta 30 reportes por mes' },
-      { text: '500 créditos de IA por mes' },
-      { text: 'Vinculación de dominio personalizado (dominio aparte)' },
-      { text: 'Soporte dedicado' },
-    ],
+    features: PLAN_FEATURES['pro'],
     buttonLabel: 'Comenzar ahora',
     buttonSeverity: 'primary',
     isPopular: true,
     color: '#7c3aed',
+  },
+  avanzado: {
+    period: '/mes',
+    features: PLAN_FEATURES['avanzado'],
+    buttonLabel: 'Comenzar ahora',
+    buttonSeverity: 'secondary',
+    isPopular: false,
+    color: '#312e81',
   },
 };
 
@@ -156,10 +149,23 @@ export class Plans implements OnInit {
 
   public readonly billingPeriod = signal<BillingPeriod>('monthly');
 
+  /** Contenedor scrolleable de las cards, para las flechas del carousel en
+   *  laptops chicas (768–1279 px). */
+  private readonly plansGrid = viewChild<ElementRef<HTMLElement>>('plansGrid');
+
+  /** Desplaza el carousel ~una card en la dirección dada (-1 izq / 1 der). */
+  public scrollPlans(dir: -1 | 1): void {
+    const el = this.plansGrid()?.nativeElement;
+    if (!el) return;
+    const card = el.querySelector('.plan-card') as HTMLElement | null;
+    const amount = card ? card.offsetWidth + 20 : el.clientWidth * 0.8;
+    el.scrollBy({ left: dir * amount, behavior: 'smooth' });
+  }
+
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
     { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '15% off' },
+    { key: 'annual',    label: 'Anual',      savingsLabel: '2 meses gratis' },
   ];
 
   // Resolve the currency we'll charge in, driven by the tenant's country.
@@ -227,8 +233,16 @@ export class Plans implements OnInit {
     () => this.planStore.isLoading() && this.plans().length === 0
   );
 
-  // 3 planes (Enterprise oculta — ver ENTERPRISE_CARD_VISIBLE).
-  public readonly skeletonCards = [0, 1, 2];
+  // 4 planes: gratis/básico/pro/avanzado (Enterprise oculta — ver ENTERPRISE_CARD_VISIBLE).
+  public readonly skeletonCards = [0, 1, 2, 3];
+
+  /** Cantidad de cards visibles (skeletons durante la carga) — decide si el
+   *  grid usa 3 o 4 columnas. */
+  public readonly gridCardCount = computed(() =>
+    this.isLoadingPlans()
+      ? this.skeletonCards.length
+      : this.plans().length + (this.showEnterpriseCard() ? 1 : 0)
+  );
   // 9 filas ≈ las features del plan Avanzado, la card más alta del grid.
   public readonly skeletonFeatureWidths = ['95%', '80%', '90%', '75%', '100%', '85%', '90%', '80%', '70%'];
 
@@ -295,18 +309,37 @@ export class Plans implements OnInit {
     return PLAN_BASE_PRICES[plan.id] ?? plan.price;
   }
 
+  /** Meses que se pagan en el período. En anual, los meses gratis dependen del
+   *  plan (Básico 1, Pro/Avanzado 2). */
+  private paidMonths(planId: string): number {
+    const period = this.billingPeriod();
+    if (period === 'annual') return 12 - annualFreeMonthsFor(planId);
+    const { months, discount } = BILLING_CONFIG[period];
+    return months * (1 - discount);
+  }
+
   public getPeriodPrice(plan: PlanDisplay): number {
     if (plan.isFree) return 0;
-    const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
-    const baseUsd = this.getBasePrice(plan) * months * (1 - discount);
+    const baseUsd = this.getBasePrice(plan) * this.paidMonths(plan.id);
     return convertUsdToLocal(baseUsd, this.displayCurrency());
   }
 
   public getMonthlyEquivalent(plan: PlanDisplay): number {
     if (plan.isFree) return 0;
-    const { discount } = BILLING_CONFIG[this.billingPeriod()];
-    const baseUsd = this.getBasePrice(plan) * (1 - discount);
+    const { months } = BILLING_CONFIG[this.billingPeriod()];
+    const baseUsd = (this.getBasePrice(plan) * this.paidMonths(plan.id)) / months;
     return convertUsdToLocal(baseUsd, this.displayCurrency());
+  }
+
+  /** Es el período anual (para mostrar el gancho "N meses gratis" por card). */
+  public isAnnual(): boolean {
+    return this.billingPeriod() === 'annual';
+  }
+
+  /** Label del gancho anual por plan: "1 mes gratis" / "2 meses gratis". */
+  public annualFreeLabel(plan: PlanDisplay): string {
+    const n = annualFreeMonthsFor(plan.id);
+    return n === 1 ? '1 mes gratis' : `${n} meses gratis`;
   }
 
   public isUpgradePlan(plan: PlanDisplay): boolean {
@@ -317,8 +350,7 @@ export class Plans implements OnInit {
     const currentPrice = PLAN_BASE_PRICES[this.planStore.currentPlan()?.id ?? ''] ?? 0;
     const targetPrice = PLAN_BASE_PRICES[plan.id] ?? 0;
     const diffUsd = targetPrice - currentPrice;
-    const { months, discount } = BILLING_CONFIG[this.billingPeriod()];
-    return convertUsdToLocal(diffUsd * months * (1 - discount), this.displayCurrency());
+    return convertUsdToLocal(diffUsd * this.paidMonths(plan.id), this.displayCurrency());
   }
 
   public getPeriodLabel(plan: PlanDisplay): string {

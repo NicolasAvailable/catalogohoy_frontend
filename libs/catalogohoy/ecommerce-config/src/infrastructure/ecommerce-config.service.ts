@@ -9,6 +9,7 @@ import {
   CustomerFieldsConfig,
   DEFAULT_BUSINESS_HOURS_WEEK,
   DEFAULT_CUSTOMER_FIELDS,
+  DEFAULT_DELIVERY_BLOCKED_WEEKDAYS,
   DEFAULT_SOCIAL_LINKS,
   EcommerceConfig,
   ExchangeRateType,
@@ -87,6 +88,19 @@ export class EcommerceConfigService {
         customerFields:
           (config?.customer_fields as CustomerFieldsConfig) ??
           DEFAULT_CUSTOMER_FIELDS,
+        // Delivery-date settings live inside the `customer_fields` jsonb column
+        // (no dedicated DB column) so they flow through the public RPC (which
+        // returns customer_fields verbatim) with no migration.
+        deliveryDateEnabled:
+          (config?.customer_fields as { deliveryDateEnabled?: boolean })
+            ?.deliveryDateEnabled ?? false,
+        deliveryBlockedWeekdays: Array.isArray(
+          (config?.customer_fields as { deliveryBlockedWeekdays?: number[] })
+            ?.deliveryBlockedWeekdays
+        )
+          ? ((config?.customer_fields as { deliveryBlockedWeekdays?: number[] })
+              .deliveryBlockedWeekdays as number[])
+          : DEFAULT_DELIVERY_BLOCKED_WEEKDAYS,
       });
     } catch (error) {
       return E.left(error as Error);
@@ -296,8 +310,29 @@ export class EcommerceConfigService {
         updateData['shipping_methods'] = config.shippingMethods;
       if (config.showShippingSection !== undefined)
         updateData['show_shipping_section'] = config.showShippingSection;
-      if (config.customerFields !== undefined)
-        updateData['customer_fields'] = config.customerFields;
+      // `customer_fields` also carries the delivery-date settings (no dedicated
+      // DB column). Merge them into the same jsonb so a change to either the
+      // fields OR the delivery settings persists the combined object. When only
+      // the delivery settings changed we still need to write the fields shape,
+      // so fall back to the passed customerFields (already synced with server).
+      if (
+        config.customerFields !== undefined ||
+        config.deliveryDateEnabled !== undefined ||
+        config.deliveryBlockedWeekdays !== undefined
+      ) {
+        const base =
+          config.customerFields ??
+          (DEFAULT_CUSTOMER_FIELDS as CustomerFieldsConfig);
+        updateData['customer_fields'] = {
+          ...base,
+          ...(config.deliveryDateEnabled !== undefined
+            ? { deliveryDateEnabled: config.deliveryDateEnabled }
+            : {}),
+          ...(config.deliveryBlockedWeekdays !== undefined
+            ? { deliveryBlockedWeekdays: config.deliveryBlockedWeekdays }
+            : {}),
+        };
+      }
 
       if (Object.keys(updateData).length > 0) {
         const tenantIdNum = Number(config.tenantId);
@@ -318,26 +353,43 @@ export class EcommerceConfigService {
     }
   }
 
-  /** Lee los toggles de notificaciones WhatsApp + el número destinatario del
-   *  aviso de nueva orden, desde `whatsapp_notification_settings`. */
+  /** Lee los toggles de notificaciones WhatsApp + los números destinatarios
+   *  del aviso de nueva orden, desde `whatsapp_notification_settings`.
+   *  `maxRecipients` sale de `tenants.whatsapp_notify_numbers_limit` (default
+   *  1) — solo tenants habilitados a mano pueden configurar un 2º número. */
   async getWhatsappNotifySettings(tenantId: string): Promise<
     E.Either<
       Error,
-      { orderReceived: boolean; orderCompleted: boolean; recipientNumber: string | null }
+      {
+        orderReceived: boolean;
+        orderCompleted: boolean;
+        recipientNumber: string | null;
+        recipientNumber2: string | null;
+        maxRecipients: number;
+      }
     >
   > {
     const { data, error } = await this.client
       .from('whatsapp_notification_settings')
-      .select('type, enabled, recipient_number')
+      .select('type, enabled, recipient_number, recipient_number_2')
       .eq('tenant_id', Number(tenantId));
     if (error) return E.left(new Error(error.message));
 
+    const { data: tenant, error: tenantError } = await this.client
+      .from('tenants')
+      .select('whatsapp_notify_numbers_limit')
+      .eq('id', Number(tenantId))
+      .single();
+    if (tenantError) return E.left(new Error(tenantError.message));
+
     const byType = new Map(
       (data ?? []).map(
-        (r: { type: string; enabled: boolean; recipient_number: string | null }) => [
-          r.type,
-          r,
-        ]
+        (r: {
+          type: string;
+          enabled: boolean;
+          recipient_number: string | null;
+          recipient_number_2: string | null;
+        }) => [r.type, r]
       )
     );
     const received = byType.get('order_received');
@@ -347,17 +399,22 @@ export class EcommerceConfigService {
       orderReceived: received?.enabled ?? true,
       orderCompleted: completed?.enabled ?? false,
       recipientNumber: received?.recipient_number ?? null,
+      recipientNumber2: received?.recipient_number_2 ?? null,
+      maxRecipients: tenant?.whatsapp_notify_numbers_limit ?? 1,
     });
   }
 
-  /** Upsert de los toggles + número destinatario. El template y el idioma los
-   *  fija la plataforma; el tenant solo togglea y elige a qué número avisar. */
+  /** Upsert de los toggles + números destinatarios. El template y el idioma
+   *  los fija la plataforma; el tenant solo togglea y elige a qué números
+   *  avisar. El 2º número solo lo usa el trigger si el tenant tiene cupo
+   *  (`whatsapp_notify_numbers_limit >= 2`). */
   async saveWhatsappNotifySettings(
     tenantId: string,
     settings: {
       orderReceived: boolean;
       orderCompleted: boolean;
       recipientNumber: string | null;
+      recipientNumber2: string | null;
     }
   ): Promise<E.Either<Error, void>> {
     const tenantIdNum = Number(tenantId);
@@ -367,6 +424,7 @@ export class EcommerceConfigService {
         type: 'order_received',
         enabled: settings.orderReceived,
         recipient_number: settings.recipientNumber,
+        recipient_number_2: settings.recipientNumber2,
         meta_template_name: 'order_received',
         language_code: 'es',
       },
@@ -375,6 +433,7 @@ export class EcommerceConfigService {
         type: 'order_completed',
         enabled: settings.orderCompleted,
         recipient_number: null,
+        recipient_number_2: null,
         meta_template_name: 'order_completed',
         language_code: 'es',
       },

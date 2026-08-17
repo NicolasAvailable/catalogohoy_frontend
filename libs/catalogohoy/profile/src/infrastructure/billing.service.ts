@@ -49,6 +49,23 @@ export class BillingService {
     return E.right(data?.entries ?? []);
   }
 
+  /** Crea una sesión del Stripe Billing Portal (actualizar tarjeta + ver
+   *  facturas) y devuelve su URL. Solo funciona para el OWNER de un tenant
+   *  con `stripe_customer_id`; la edge function valida ambas cosas. */
+  public async createBillingPortalSession(
+    tenantId: number | string,
+    locale: string
+  ): Promise<E.Either<Error, string>> {
+    const { data, error } = await this.client.functions.invoke<{ url: string }>(
+      'create-billing-portal-session',
+      { body: { tenantId: Number(tenantId), locale } }
+    );
+
+    if (error) return E.left(new Error(error.message ?? 'No se pudo abrir el portal de pago'));
+    if (!data?.url) return E.left(new Error('No se pudo abrir el portal de pago'));
+    return E.right(data.url);
+  }
+
   /** Trigger a PDF download for the given manual invoice. */
   public async downloadInvoicePdf(invoiceNumber: string): Promise<E.Either<Error, void>> {
     const result = await this.fetchInvoice(invoiceNumber, 'pdf');

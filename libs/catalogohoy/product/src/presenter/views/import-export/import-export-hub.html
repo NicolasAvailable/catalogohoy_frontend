@@ -3,7 +3,7 @@
   [closable]="true"
   [dismissableMask]="true"
   (close)="close()"
-  styleClass="w-full max-w-3xl rounded-2xl! overflow-hidden"
+  styleClass="w-full max-w-4xl rounded-2xl! overflow-hidden"
 >
   <!-- HUB VIEW (export + import) -->
   @if (view() === 'hub') {
@@ -15,28 +15,28 @@
       </p>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <!-- Export tile (paid plans only) -->
       <button
         type="button"
         (click)="onExport()"
         [disabled]="isFreePlan()"
-        class="relative flex flex-col items-center gap-3 p-8 border-2 border-gray-100 rounded-2xl transition-all"
+        class="relative flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl transition-all"
         [class.cursor-pointer]="!isFreePlan()"
-        [class.hover:border-green-400]="!isFreePlan()"
-        [class.hover:bg-green-50]="!isFreePlan()"
+        [class.hover:border-primary-400]="!isFreePlan()"
+        [class.hover:bg-primary-50]="!isFreePlan()"
         [class.opacity-60]="isFreePlan()"
         [class.cursor-not-allowed]="isFreePlan()"
       >
         @if (isFreePlan()) {
         <span
-          class="absolute top-3 right-3 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none"
+          class="absolute top-3 right-3 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-500 text-[10px] font-semibold leading-none"
         >
-          <ui-icon name="crown" styleClass="size-3 text-indigo-500" />
+          <ui-icon name="crown" styleClass="size-3 text-primary-500" />
           {{ 'Pro' | transloco }}
         </span>
         }
-        <div class="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center">
+        <div class="w-14 h-14 bg-primary-50 rounded-full flex items-center justify-center">
           <img src="/images/whatsapp.svg" alt="WhatsApp" class="w-8 h-8" />
         </div>
         <h3 class="text-lg font-bold text-gray-900">{{ 'Exportar' | transloco }}</h3>
@@ -44,9 +44,9 @@
           {{ (isFreePlan() ? 'Disponible en planes pagos' : 'Escribinos por WhatsApp y te enviamos todos tus productos en un archivo de Excel') | transloco }}
         </p>
         <span
-          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-green-50 border border-green-200 text-green-700 text-xs font-semibold"
+          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold whitespace-nowrap"
         >
-          <img src="/images/whatsapp.svg" alt="" class="w-3.5 h-3.5" />
+          <img src="/images/whatsapp.svg" alt="" class="w-3.5 h-3.5 shrink-0" />
           {{ 'Solicitar por WhatsApp' | transloco }}
         </span>
       </button>
@@ -55,22 +55,311 @@
       <button
         type="button"
         (click)="onImport()"
-        class="flex flex-col items-center gap-3 p-8 border-2 border-gray-100 rounded-2xl hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer"
+        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
       >
-        <div class="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center">
-          <ui-icon name="upload" styleClass="size-7 text-blue-600" />
+        <div class="w-14 h-14 bg-primary-50 rounded-full flex items-center justify-center">
+          <ui-icon name="upload" styleClass="size-7 text-primary-600" />
         </div>
         <h3 class="text-lg font-bold text-gray-900">{{ 'Importar' | transloco }}</h3>
         <p class="text-sm text-gray-500 text-center">
-          {{ 'Subí un archivo de Excel con productos para agregarlos a tu catálogo.' | transloco }}
+          {{ 'Trae tus productos desde Excel, Google Sheets o un catálogo en PDF.' | transloco }}
         </p>
         <span
-          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold"
+          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold whitespace-nowrap"
         >
-          <ui-icon name="file-spreadsheet" styleClass="size-3.5 text-blue-600" />
-          Excel (.xlsx)
+          <img src="/images/excel.svg" alt="Excel" class="w-3.5 h-3.5 shrink-0" />
+          Excel
+          <span class="text-primary-300">·</span>
+          <img src="/images/google-sheets.svg" alt="Google Sheets" class="w-3.5 h-3.5 shrink-0" />
+          Sheets
+          <span class="text-primary-300">·</span>
+          <img src="/images/pdf.svg" alt="PDF" class="w-3.5 h-3.5 shrink-0" />
+          PDF
         </span>
       </button>
+
+      <!-- Photos tile -->
+      <button
+        type="button"
+        (click)="openPhotosImport()"
+        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+      >
+        <div class="w-14 h-14 bg-primary-50 rounded-full flex items-center justify-center">
+          <ui-icon name="image" styleClass="size-7 text-primary-600" />
+        </div>
+        <h3 class="text-lg font-bold text-gray-900">{{ 'Importar fotos' | transloco }}</h3>
+        <p class="text-sm text-gray-500 text-center">
+          {{ 'Sube muchas fotos de una vez y asígnalas a tus productos.' | transloco }}
+        </p>
+        <span
+          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold whitespace-nowrap"
+        >
+          <ui-icon name="image" styleClass="size-3.5 text-primary-600" />
+          JPG · PNG
+        </span>
+      </button>
+    </div>
+
+    <!-- Historial de respaldos (card prominente, mismo peso visual que los tiles) -->
+    <button
+      type="button"
+      (click)="openBackups()"
+      class="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer text-left"
+    >
+      <div class="w-11 h-11 bg-primary-50 rounded-full flex items-center justify-center shrink-0">
+        <ui-icon name="history" styleClass="w-5 h-5 text-primary-600" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <h3 class="text-base font-bold text-gray-900">{{ 'Respaldos' | transloco }}</h3>
+        <p class="text-sm text-gray-500">
+          {{ 'Mira, descarga o restaura versiones anteriores de tus productos.' | transloco }}
+        </p>
+      </div>
+      <ui-icon name="chevron-right" styleClass="w-5 h-5 text-gray-300 shrink-0" />
+    </button>
+  </section>
+  }
+
+  <!-- IMPORT SOURCE PICKER (Excel / Google Sheets) -->
+  @if (view() === 'import-source') {
+  <section class="flex flex-col gap-6 p-8">
+    <div class="flex items-center gap-3">
+      <button
+        (click)="view.set('hub')"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+      >
+        <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+      </button>
+      <h2 class="text-2xl font-bold text-gray-900">{{ '¿Desde dónde quieres importar?' | transloco }}</h2>
+    </div>
+    <p class="text-sm text-gray-500 -mt-3">
+      {{ 'Elige la app donde tienes tu lista de productos.' | transloco }}
+    </p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <!-- Microsoft Excel -->
+      <button
+        type="button"
+        (click)="view.set('import-upload')"
+        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+      >
+        <img src="/images/excel.svg" alt="Microsoft Excel" class="w-14 h-14" />
+        <h3 class="text-lg font-bold text-gray-900">Microsoft Excel</h3>
+        <p class="text-sm text-gray-500 text-center">
+          {{ 'Sube un archivo .xlsx o .xls desde tu computadora.' | transloco }}
+        </p>
+      </button>
+
+      <!-- Google Sheets -->
+      <button
+        type="button"
+        (click)="view.set('import-gsheet')"
+        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+      >
+        <img src="/images/google-sheets.svg" alt="Google Sheets" class="w-14 h-14" />
+        <h3 class="text-lg font-bold text-gray-900">Google Sheets</h3>
+        <p class="text-sm text-gray-500 text-center">
+          {{ 'Pega el link de tu hoja de cálculo, sin descargar nada.' | transloco }}
+        </p>
+      </button>
+
+      <!-- Catálogo en PDF (IA) -->
+      <button
+        type="button"
+        (click)="view.set('pdf-upload')"
+        class="relative flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+      >
+        <span
+          class="absolute top-3 right-3 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-500 text-[10px] font-semibold leading-none"
+        >
+          <ui-icon name="sparkles" styleClass="size-3 text-primary-500" />
+          IA
+        </span>
+        <img src="/images/pdf.svg" alt="PDF" class="w-14 h-14" />
+        <h3 class="text-lg font-bold text-gray-900">{{ 'Catálogo en PDF' | transloco }}</h3>
+        <p class="text-sm text-gray-500 text-center">
+          {{ 'La IA lee tu catálogo: productos, precios y hasta las fotos.' | transloco }}
+        </p>
+      </button>
+    </div>
+  </section>
+  }
+
+  <!-- PDF UPLOAD VIEW -->
+  @if (view() === 'pdf-upload') {
+  <section class="flex flex-col gap-6 p-8">
+    <div class="flex items-center gap-3">
+      <button
+        (click)="view.set('import-source')"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+      >
+        <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+      </button>
+      <img src="/images/pdf.svg" alt="PDF" class="w-8 h-8" />
+      <h2 class="text-2xl font-bold text-gray-900">{{ 'Catálogo en PDF' | transloco }}</h2>
+    </div>
+    <p class="text-sm text-gray-500 -mt-3">
+      {{ 'Sube el PDF de tu catálogo: la IA detecta los productos con sus precios y puede asignarles las fotos del propio PDF.' | transloco }}
+    </p>
+
+    <!-- Drop zone -->
+    <div
+      (drop)="onPdfDrop($event)"
+      (dragover)="onDragOver($event)"
+      class="flex flex-col items-center justify-center gap-4 p-16
+             border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50
+             hover:border-primary-400 hover:bg-primary-50/10 transition-all"
+    >
+      <ui-icon name="file-text" styleClass="w-12 h-12 text-gray-300" />
+      <div class="text-center">
+        <p class="text-base font-semibold text-gray-700">
+          {{ 'Arrastra y suelta tu archivo .pdf aqui' | transloco }}
+        </p>
+        <p class="text-sm text-gray-400 mt-1">{{ 'o' | transloco }}</p>
+      </div>
+      <label class="cursor-pointer mt-1">
+        <input
+          type="file"
+          accept=".pdf,application/pdf"
+          (change)="onPdfSelected($event)"
+          class="hidden"
+        />
+        <span
+          class="inline-block px-6 py-2.5 bg-primary-500 text-white rounded-lg font-medium
+                 hover:bg-primary-600 transition-colors"
+        >
+          {{ 'Seleccionar archivo' | transloco }}
+        </span>
+      </label>
+    </div>
+
+    <div class="flex items-start gap-2 text-xs text-gray-400">
+      <ui-icon name="sparkles" styleClass="w-4 h-4 shrink-0" />
+      <span>
+        {{ 'El análisis usa créditos de IA: 1 por página del PDF, y 1 por foto si luego eliges asignar las fotos. Antes de gastar nada te mostramos el costo.' | transloco }}
+      </span>
+    </div>
+  </section>
+  }
+
+  <!-- PDF CONFIRM VIEW (costo antes de llamar a la IA) -->
+  @if (view() === 'pdf-confirm') {
+  <section class="flex flex-col items-center gap-6 p-10 text-center">
+    <img src="/images/pdf.svg" alt="PDF" class="w-14 h-14" />
+    <div>
+      <h2 class="text-xl font-bold text-gray-900">{{ pdfFileName() }}</h2>
+      <p class="text-gray-500 mt-2 max-w-md">
+        {{ 'Leímos tu PDF. Ahora la IA va a detectar los productos con sus precios para que los revises antes de importar.' | transloco }}
+      </p>
+    </div>
+    <div class="flex gap-10">
+      <div class="flex flex-col items-center">
+        <span class="text-3xl font-bold text-gray-900">{{ pdfPages().length }}</span>
+        <span class="text-sm text-gray-500 mt-1">{{ 'Páginas con texto' | transloco }}</span>
+      </div>
+      <div class="flex flex-col items-center">
+        <span class="text-3xl font-bold text-gray-900">{{ pdfImageItems().length }}</span>
+        <span class="text-sm text-gray-500 mt-1">{{ 'Fotos detectadas' | transloco }}</span>
+      </div>
+    </div>
+    <p class="text-sm text-gray-400 max-w-md">
+      {{ 'El análisis usará {n} créditos de IA (1 por página).' | transloco: { n: pdfAnalyzeCost() } }}
+    </p>
+    @if (credits.balance() !== null) {
+    <p
+      class="text-xs max-w-md -mt-3"
+      [class.text-gray-400]="!pdfInsufficientCredits()"
+      [class.text-red-500]="pdfInsufficientCredits()"
+    >
+      {{ 'Tienes {n} créditos disponibles.' | transloco: { n: credits.balance() } }}
+      @if (pdfInsufficientCredits()) {
+      {{ 'No te alcanzan: compra más créditos desde tu perfil o mejora tu plan.' | transloco }}
+      }
+    </p>
+    }
+    <div class="flex gap-3">
+      <ui-button
+        [label]="'Cancelar' | transloco"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        (click)="view.set('pdf-upload')"
+      />
+      <ui-button
+        [label]="'Analizar con IA' | transloco"
+        icon="sparkles"
+        [fluid]="false"
+        (click)="analyzePdf()"
+      />
+    </div>
+  </section>
+  }
+
+  <!-- PDF PHOTOS MATCHING VIEW (IA asignando fotos por página) -->
+  @if (view() === 'pdf-photos-matching') {
+  <section class="flex flex-col items-center gap-6 p-12">
+    <div class="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center">
+      <ui-icon
+        [name]="aiStatusMessage().icon"
+        styleClass="w-10 h-10 text-primary-500 animate-pulse"
+      />
+    </div>
+    <div class="text-center">
+      <p class="text-lg font-semibold text-gray-700">
+        {{ aiStatusMessage().text | transloco }}
+      </p>
+      <p class="text-sm text-gray-400 mt-2">
+        {{ 'Comparamos cada foto con los productos de su misma página del PDF.' | transloco }}
+      </p>
+    </div>
+    <div class="flex flex-col items-center gap-2 w-full max-w-xs">
+      <ui-progress-bar [value]="pdfMatchProgress()" />
+      <span class="text-xs text-gray-400">
+        {{ '{n} de {t} fotos' | transloco: { n: pdfMatchDone(), t: pdfMatchTotal() } }}
+      </span>
+    </div>
+  </section>
+  }
+
+  <!-- IMPORT GOOGLE SHEETS VIEW -->
+  @if (view() === 'import-gsheet') {
+  <section class="flex flex-col gap-6 p-8">
+    <div class="flex items-center gap-3">
+      <button
+        (click)="view.set('import-source')"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+      >
+        <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+      </button>
+      <img src="/images/google-sheets.svg" alt="Google Sheets" class="w-8 h-8" />
+      <h2 class="text-2xl font-bold text-gray-900">Google Sheets</h2>
+    </div>
+    <p class="text-sm text-gray-500 -mt-3">
+      {{ 'Pega el link de tu hoja y la IA mapeará tus productos automáticamente.' | transloco }}
+    </p>
+
+    <div class="flex flex-col gap-3">
+      <input
+        type="url"
+        [value]="gsheetUrl()"
+        (input)="gsheetUrl.set($any($event.target).value)"
+        placeholder="https://docs.google.com/spreadsheets/d/..."
+        class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary-500"
+      />
+      <div class="flex items-start gap-2 text-xs text-gray-400">
+        <ui-icon name="info" styleClass="w-4 h-4 shrink-0" />
+        <span>
+          {{ 'La hoja debe estar compartida como "Cualquier persona con el enlace" (Compartir → Acceso general).' | transloco }}
+        </span>
+      </div>
+      <ui-button
+        [label]="(isFetchingSheet() ? 'Leyendo hoja...' : 'Importar hoja') | transloco"
+        icon="upload"
+        [fluid]="false"
+        [isLoading]="isFetchingSheet()"
+        [disabled]="!gsheetUrl().trim() || isFetchingSheet()"
+        (click)="importGoogleSheet()"
+      />
     </div>
   </section>
   }
@@ -79,7 +368,14 @@
   @if (view() === 'import-upload') {
   <section class="flex flex-col gap-6 p-8">
     <div class="flex items-center gap-3">
-      <h2 class="text-2xl font-bold text-gray-900">{{ 'Importar productos' | transloco }}</h2>
+      <button
+        (click)="view.set('import-source')"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+      >
+        <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+      </button>
+      <img src="/images/excel.svg" alt="Microsoft Excel" class="w-8 h-8" />
+      <h2 class="text-2xl font-bold text-gray-900">Microsoft Excel</h2>
     </div>
     <p class="text-sm text-gray-500 -mt-3">
       {{ 'Sube un archivo Excel y la IA mapeará tus productos automáticamente.' | transloco }}
@@ -91,7 +387,7 @@
       (dragover)="onDragOver($event)"
       class="flex flex-col items-center justify-center gap-4 p-16
              border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50
-             hover:border-blue-400 hover:bg-blue-50/10 transition-all"
+             hover:border-primary-400 hover:bg-primary-50/10 transition-all"
     >
       <ui-icon
         name="file-spreadsheet"
@@ -111,8 +407,8 @@
           class="hidden"
         />
         <span
-          class="inline-block px-6 py-2.5 bg-blue-500 text-white rounded-lg font-medium
-                 hover:bg-blue-600 transition-colors"
+          class="inline-block px-6 py-2.5 bg-primary-500 text-white rounded-lg font-medium
+                 hover:bg-primary-600 transition-colors"
         >
           {{ 'Seleccionar archivo' | transloco }}
         </span>
@@ -125,7 +421,7 @@
       <span>{{ 'No tienes una plantilla?' | transloco }}</span>
       <button
         (click)="downloadTemplate()"
-        class="text-blue-500 font-medium hover:underline cursor-pointer"
+        class="text-primary-500 font-medium hover:underline cursor-pointer"
       >
         {{ 'Descargar plantilla' | transloco }}
       </button>
@@ -137,11 +433,11 @@
   @if (view() === 'ai-analyzing') {
   <section class="flex flex-col items-center gap-6 p-12">
     <div
-      class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center"
+      class="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center"
     >
       <ui-icon
         [name]="aiStatusMessage().icon"
-        styleClass="w-10 h-10 text-blue-500 animate-pulse"
+        styleClass="w-10 h-10 text-primary-500 animate-pulse"
       />
     </div>
     <div class="text-center">
@@ -155,7 +451,7 @@
     <div class="w-full max-w-xs">
       <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
         <div
-          class="h-full bg-blue-500 rounded-full indeterminate-bar"
+          class="h-full bg-primary-500 rounded-full indeterminate-bar"
           style="width: 40%"
         ></div>
       </div>
@@ -169,7 +465,7 @@
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
         <button
-          (click)="view.set('import-upload')"
+          (click)="view.set('import-source')"
           class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
         >
           <ui-icon name="arrow-left" styleClass="w-5 h-5" />
@@ -178,8 +474,20 @@
           {{ 'Vista previa ({n} productos)' | transloco: { n: parsedRows().length } }}
         </h2>
       </div>
-      <ui-button [label]="'Importar' | transloco" icon="upload" (click)="startImport()" />
+      <ui-button [label]="'Importar' | transloco" icon="upload" (click)="askImportConfirm()" />
     </div>
+
+    <!-- Resumen: qué hará el import con esta lista -->
+    @if (flagsReady()) {
+    <div class="flex items-center gap-2 -mt-1">
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold">
+        {{ '{n} nuevos' | transloco: { n: newCount() } }}
+      </span>
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-50 border border-gray-200 text-gray-600 text-xs font-semibold">
+        {{ '{n} se actualizarán' | transloco: { n: updateCount() } }}
+      </span>
+    </div>
+    }
 
     <div
       class="max-h-96 overflow-auto border border-gray-100 rounded-xl"
@@ -195,6 +503,7 @@
             <th class="p-3 text-left font-semibold text-gray-600">
               {{ 'Categorias' | transloco }}
             </th>
+            <th class="p-3 text-left font-semibold text-gray-600">{{ 'Acción' | transloco }}</th>
           </tr>
         </thead>
         <tbody>
@@ -206,6 +515,19 @@
             <td class="p-3 text-gray-700">{{ row.stock ?? ('Sin limite' | transloco) }}</td>
             <td class="p-3 text-gray-500">{{ row.sku ?? '-' }}</td>
             <td class="p-3 text-gray-500">{{ row.categories || '-' }}</td>
+            <td class="p-3">
+              @if (flagsReady()) {
+                @if (existingFlags()[$index]) {
+                <span class="inline-flex px-2 py-0.5 rounded-md bg-gray-50 border border-gray-200 text-gray-600 text-xs font-semibold whitespace-nowrap">
+                  {{ 'Se actualizará' | transloco }}
+                </span>
+                } @else {
+                <span class="inline-flex px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold">
+                  {{ 'Nuevo' | transloco }}
+                </span>
+                }
+              }
+            </td>
           </tr>
           }
         </tbody>
@@ -217,7 +539,38 @@
   <!-- IMPORT PROGRESS VIEW -->
   @if (view() === 'import-progress') {
   <section class="flex flex-col gap-4 p-8">
-    <h2 class="text-xl font-bold text-gray-900">{{ 'Importando productos...' | transloco }}</h2>
+    <div class="flex items-center justify-between gap-3">
+      <h2 class="text-xl font-bold text-gray-900">
+        {{ (isPaused() ? 'Importación en pausa' : 'Importando productos...') | transloco }}
+      </h2>
+      <div class="flex items-center gap-2">
+        <!-- Pausar/Reanudar: siempre disponible durante el import. -->
+        @if (!cancelRequested()) {
+        <ui-button
+          [label]="(isPaused() ? 'Reanudar' : 'Pausar') | transloco"
+          [icon]="isPaused() ? 'play' : 'pause'"
+          variant="outlined"
+          severity="contrast"
+          size="small"
+          [fluid]="false"
+          (click)="togglePause()"
+        />
+        }
+        <!-- Cancelar: cuando ya hubo errores o está en pausa. Lo procesado
+             queda (hay backup). -->
+        @if ((hasImportErrors() || isPaused()) && !cancelRequested()) {
+        <ui-button
+          [label]="'Cancelar importación' | transloco"
+          icon="x-circle"
+          severity="danger"
+          variant="outlined"
+          size="small"
+          [fluid]="false"
+          (click)="cancelImport()"
+        />
+        }
+      </div>
+    </div>
     <ui-progress-bar [value]="importProgress()" />
 
     <div
@@ -242,7 +595,7 @@
               } @else if (result.status === 'importing') {
               <ui-icon
                 name="loader-circle"
-                styleClass="w-5 h-5 text-blue-500 animate-spin"
+                styleClass="w-5 h-5 text-primary-500 animate-spin"
               />
               } @else if (result.status === 'success') {
               <ui-icon
@@ -260,7 +613,7 @@
               @if (result.status === 'pending') {
               <span class="text-gray-400">{{ 'Pendiente' | transloco }}</span>
               } @else if (result.status === 'importing') {
-              <span class="text-blue-500">{{ 'Importando...' | transloco }}</span>
+              <span class="text-primary-500">{{ 'Importando...' | transloco }}</span>
               } @else if (result.status === 'success') {
               <span class="text-green-600">{{ 'Importado correctamente' | transloco }}</span>
               } @else if (result.status === 'error') {
@@ -279,9 +632,9 @@
   @if (view() === 'import-done') {
   <section class="flex flex-col items-center gap-8 p-12">
     <div
-      class="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center"
+      class="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center"
     >
-      <ui-icon name="check-circle" styleClass="w-10 h-10 text-green-500" />
+      <ui-icon name="check-circle" styleClass="w-10 h-10 text-primary-500" />
     </div>
 
     <div class="text-center">
@@ -296,7 +649,7 @@
     @if (importSummary(); as summary) {
     <div class="flex gap-12">
       <div class="flex flex-col items-center">
-        <span class="text-4xl font-bold text-green-600">{{
+        <span class="text-4xl font-bold text-primary-600">{{
           summary.success
         }}</span>
         <span class="text-sm text-gray-500 mt-1">{{ 'Importados' | transloco }}</span>
@@ -311,6 +664,467 @@
       }
     </div>
     }
+
+    @if (isPdfRun() && pdfImageItems().length > 0) {
+    <div class="flex flex-col items-center gap-3 -mt-2">
+      <p class="text-sm text-gray-500 max-w-md text-center">
+        {{ 'Tu PDF trae {n} fotos: la IA puede asignarlas a los productos importados (1 crédito por foto).' | transloco: { n: pdfImageItems().length } }}
+      </p>
+      <ui-button
+        [label]="'Asignar fotos del PDF' | transloco"
+        icon="image"
+        [fluid]="false"
+        (click)="assignPdfPhotos()"
+      />
+    </div>
+    }
+
+    <ui-button
+      [label]="'Cerrar' | transloco"
+      (click)="close()"
+      variant="outlined"
+      severity="contrast"
+    />
+  </section>
+  }
+
+  <!-- IMPORT CONFIRM VIEW (aviso de backup antes de actualizar) -->
+  @if (view() === 'import-confirm') {
+  <section class="flex flex-col items-center gap-6 p-10 text-center">
+    <div class="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center">
+      <ui-icon name="shield-check" styleClass="w-8 h-8 text-primary-500" />
+    </div>
+    <div>
+      <h2 class="text-xl font-bold text-gray-900">
+        {{ 'Antes de actualizar, creamos un respaldo' | transloco }}
+      </h2>
+      <p class="text-gray-500 mt-2 max-w-md">
+        {{ 'Guardaremos una copia de seguridad de tus productos actuales. Si algo no queda como esperabas, vas a poder restaurarla o descargarla.' | transloco }}
+      </p>
+    </div>
+    <p class="text-sm text-gray-400 max-w-md">
+      @if (flagsReady()) {
+      {{ 'Se crearán {n} productos nuevos y se actualizarán {u} existentes.' | transloco: { n: newCount(), u: updateCount() } }}
+      } @else {
+      {{ 'Los productos que ya existan (por SKU o nombre) se actualizarán; los nuevos se agregarán.' | transloco }}
+      }
+    </p>
+    <div class="flex gap-3">
+      <ui-button
+        [label]="'Cancelar' | transloco"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        [disabled]="isCreatingBackup()"
+        (click)="view.set('import-preview')"
+      />
+      <ui-button
+        [label]="(isCreatingBackup() ? 'Creando respaldo...' : 'Crear respaldo e importar') | transloco"
+        icon="shield-check"
+        [fluid]="false"
+        [isLoading]="isCreatingBackup()"
+        [disabled]="isCreatingBackup()"
+        (click)="confirmImport()"
+      />
+    </div>
+  </section>
+  }
+
+  <!-- BACKUPS VIEW (historial: descargar / restaurar) -->
+  @if (view() === 'backups') {
+  <section class="flex flex-col gap-4 p-8">
+    <div class="flex items-center gap-3">
+      <button
+        (click)="view.set('hub')"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+      >
+        <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+      </button>
+      <h2 class="text-xl font-bold text-gray-900">{{ 'Respaldos de productos' | transloco }}</h2>
+    </div>
+    <p class="text-sm text-gray-500 -mt-2">
+      {{ 'Copias creadas antes de cada importación. Descargá o restaurá una versión anterior.' | transloco }}
+    </p>
+
+    @if (isRestoring()) {
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-gray-600">{{ 'Restaurando respaldo...' | transloco }}</span>
+      <ui-progress-bar [value]="restoreProgress()" />
+    </div>
+    }
+
+    @if (loadingBackups()) {
+    <div class="flex items-center justify-center py-12 text-gray-400">
+      <ui-icon name="loader-circle" styleClass="w-6 h-6 animate-spin" />
+    </div>
+    } @else if (backups().length === 0) {
+    <div class="flex flex-col items-center gap-2 py-12 text-center text-gray-400">
+      <ui-icon name="history" styleClass="w-8 h-8" />
+      <p>{{ 'Todavía no hay respaldos. Se crean automáticamente al importar.' | transloco }}</p>
+    </div>
+    } @else {
+    <div class="max-h-96 overflow-auto border border-gray-100 rounded-xl divide-y divide-gray-50">
+      @for (backup of backups(); track backup.id) {
+      <div class="flex items-center justify-between gap-3 p-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center shrink-0">
+            <ui-icon name="history" styleClass="w-5 h-5 text-gray-400" />
+          </div>
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold text-gray-800">{{ backup.createdAt | date: 'medium' }}</span>
+            <span class="text-xs text-gray-400">{{ backup.productCount }} {{ 'productos' | transloco }}</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <ui-button
+            [label]="'Ver' | transloco"
+            icon="eye"
+            variant="outlined"
+            severity="contrast"
+            size="small"
+            [fluid]="false"
+            (click)="viewBackup(backup)"
+          />
+          <ui-button
+            [label]="'Descargar' | transloco"
+            icon="download"
+            variant="outlined"
+            severity="contrast"
+            size="small"
+            [fluid]="false"
+            (click)="downloadBackup(backup)"
+          />
+          <ui-button
+            [label]="'Restaurar' | transloco"
+            icon="refresh-cw"
+            size="small"
+            [fluid]="false"
+            [disabled]="isRestoring()"
+            (click)="restoreBackup(backup)"
+          />
+        </div>
+      </div>
+      }
+    </div>
+    }
+  </section>
+  }
+
+  <!-- BACKUP VIEW (contenido del respaldo, tipo planilla) -->
+  @if (view() === 'backup-view') {
+  <section class="flex flex-col gap-4 p-8">
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <button
+          (click)="view.set('backups')"
+          class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+        >
+          <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+        </button>
+        <div class="flex flex-col min-w-0">
+          <h2 class="text-xl font-bold text-gray-900 truncate">
+            {{ 'Respaldo del' | transloco }} {{ viewingBackup()?.createdAt | date: 'medium' }}
+          </h2>
+          <span class="text-xs text-gray-400">{{ viewingBackup()?.productCount }} {{ 'productos' | transloco }}</span>
+        </div>
+      </div>
+      @if (viewingBackup(); as backup) {
+      <div class="flex items-center gap-2 shrink-0">
+        <ui-button
+          [label]="'Descargar' | transloco"
+          icon="download"
+          variant="outlined"
+          severity="contrast"
+          size="small"
+          [fluid]="false"
+          (click)="downloadBackup(backup)"
+        />
+        <ui-button
+          [label]="'Restaurar' | transloco"
+          icon="refresh-cw"
+          size="small"
+          [fluid]="false"
+          [disabled]="isRestoring()"
+          (click)="restoreBackup(backup)"
+        />
+      </div>
+      }
+    </div>
+
+    @if (loadingBackupRows()) {
+    <div class="flex items-center justify-center py-12 text-gray-400">
+      <ui-icon name="loader-circle" styleClass="w-6 h-6 animate-spin" />
+    </div>
+    } @else {
+    <!-- Grilla tipo Excel: celdas con borde, columna de nº de fila, header sticky -->
+    <div class="max-h-96 overflow-auto border border-gray-200 rounded-xl">
+      <table class="w-full text-sm border-collapse">
+        <thead class="sticky top-0 z-10">
+          <tr class="bg-gray-100">
+            <th class="border border-gray-200 px-2 py-1.5 text-center font-semibold text-gray-400 w-10"></th>
+            <th class="border border-gray-200 px-3 py-1.5 text-left font-semibold text-gray-600">{{ 'Nombre' | transloco }}</th>
+            <th class="border border-gray-200 px-3 py-1.5 text-left font-semibold text-gray-600">{{ 'Precio' | transloco }}</th>
+            <th class="border border-gray-200 px-3 py-1.5 text-left font-semibold text-gray-600">{{ 'Promocional' | transloco }}</th>
+            <th class="border border-gray-200 px-3 py-1.5 text-left font-semibold text-gray-600">{{ 'Stock' | transloco }}</th>
+            <th class="border border-gray-200 px-3 py-1.5 text-left font-semibold text-gray-600">SKU</th>
+            <th class="border border-gray-200 px-3 py-1.5 text-left font-semibold text-gray-600">{{ 'Categorias' | transloco }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of backupRows(); track $index) {
+          <tr class="hover:bg-primary-50/30">
+            <td class="border border-gray-100 px-2 py-1.5 text-center text-xs text-gray-400 bg-gray-50">{{ $index + 1 }}</td>
+            <td class="border border-gray-100 px-3 py-1.5 font-medium text-gray-900">{{ row.name }}</td>
+            <td class="border border-gray-100 px-3 py-1.5 text-gray-700 whitespace-nowrap">{{ cs() }}{{ row.price }}</td>
+            <td class="border border-gray-100 px-3 py-1.5 text-gray-700 whitespace-nowrap">{{ row.price_promotional ? cs() + row.price_promotional : '-' }}</td>
+            <td class="border border-gray-100 px-3 py-1.5 text-gray-700">{{ row.stock ?? ('Sin limite' | transloco) }}</td>
+            <td class="border border-gray-100 px-3 py-1.5 text-gray-500 whitespace-nowrap">{{ row.sku || '-' }}</td>
+            <td class="border border-gray-100 px-3 py-1.5 text-gray-500">{{ row.categories?.length ? row.categories?.join(', ') : '-' }}</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    }
+  </section>
+  }
+
+  <!-- PHOTOS UPLOAD VIEW -->
+  @if (view() === 'photos-upload') {
+  <section class="flex flex-col gap-6 p-8">
+    <div class="flex items-center gap-3">
+      <button
+        (click)="view.set('hub')"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+      >
+        <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+      </button>
+      <h2 class="text-2xl font-bold text-gray-900">{{ 'Importar fotos' | transloco }}</h2>
+    </div>
+    <p class="text-sm text-gray-500 -mt-3">
+      {{ 'Sube tus fotos y las asignamos automáticamente por el nombre del archivo (SKU o nombre del producto).' | transloco }}
+    </p>
+
+    <div
+      (drop)="onPhotoDrop($event)"
+      (dragover)="onDragOver($event)"
+      class="flex flex-col items-center justify-center gap-4 p-16
+             border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50
+             hover:border-primary-400 hover:bg-primary-50/10 transition-all"
+    >
+      <ui-icon name="image" styleClass="w-12 h-12 text-gray-300" />
+      <div class="text-center">
+        <p class="text-base font-semibold text-gray-700">
+          {{ 'Arrastra y suelta tus fotos aquí' | transloco }}
+        </p>
+        <p class="text-sm text-gray-400 mt-1">{{ 'o' | transloco }}</p>
+      </div>
+      <label class="cursor-pointer mt-1">
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          (change)="onPhotoFilesSelected($event)"
+          class="hidden"
+        />
+        <span
+          class="inline-block px-6 py-2.5 bg-primary-500 text-white rounded-lg font-medium
+                 hover:bg-primary-600 transition-colors"
+        >
+          {{ 'Seleccionar fotos' | transloco }}
+        </span>
+      </label>
+    </div>
+
+    <div class="flex items-center gap-2 text-sm text-gray-400">
+      <ui-icon name="info" styleClass="w-4 h-4 shrink-0" />
+      <span>{{ 'Consejo: nombra cada archivo con el SKU (ej. SKU-006.jpg) o el nombre del producto (ej. gorra roja.jpg).' | transloco }}</span>
+    </div>
+
+    @if (loadingPhotoProducts()) {
+    <div class="flex items-center gap-2 text-sm text-gray-400">
+      <ui-icon name="loader-circle" styleClass="w-4 h-4 animate-spin" />
+      {{ 'Cargando tus productos...' | transloco }}
+    </div>
+    }
+  </section>
+  }
+
+  <!-- PHOTOS REVIEW VIEW -->
+  @if (view() === 'photos-review') {
+  <section class="flex flex-col gap-4 p-8">
+    <div class="flex items-center gap-3">
+      <button
+        (click)="view.set('photos-upload')"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+      >
+        <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+      </button>
+      <h2 class="text-xl font-bold text-gray-900">{{ 'Revisar fotos' | transloco }}</h2>
+    </div>
+
+    <div class="flex items-center gap-2 -mt-1">
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold">
+        {{ '{n} asignadas' | transloco: { n: photoAssignedCount() } }}
+      </span>
+      @if (photoUnassignedCount() > 0) {
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
+        {{ '{n} sin asignar' | transloco: { n: photoUnassignedCount() } }}
+      </span>
+      }
+    </div>
+
+    <!-- IA: identificar las fotos sin asignar (opt-in, cobra créditos) -->
+    @if (photoUnassignedCount() > 0) {
+    <div class="flex items-center justify-between gap-3 rounded-xl border border-primary-200 bg-primary-50/50 px-3 py-2">
+      <div class="flex items-center gap-2 text-sm text-primary-700 min-w-0">
+        <ui-icon name="sparkles" styleClass="w-4 h-4 shrink-0" />
+        <span class="truncate">{{ 'La IA puede identificar a qué producto pertenece cada foto (1 crédito por foto).' | transloco }}</span>
+      </div>
+      <ui-button
+        [label]="('Identificar con IA' | transloco) + ' (' + photoUnassignedCount() + ')'"
+        icon="sparkles"
+        size="small"
+        [fluid]="false"
+        [isLoading]="aiIdentifying()"
+        [disabled]="aiIdentifying()"
+        (click)="identifyWithAi()"
+      />
+    </div>
+    }
+
+    <div class="max-h-96 overflow-auto border border-gray-100 rounded-xl divide-y divide-gray-50">
+      @for (item of photoItems(); track item.previewUrl; let i = $index) {
+      <div class="flex items-center gap-3 p-3">
+        <img
+          [src]="item.previewUrl"
+          [alt]="item.file.name"
+          class="w-12 h-12 rounded-lg object-cover border border-gray-100 shrink-0"
+        />
+        <div class="flex flex-col min-w-0 w-44 shrink-0">
+          <span class="text-sm font-medium text-gray-800 truncate">{{ item.file.name }}</span>
+          @if (item.method === 'sku') {
+          <span class="text-[11px] font-semibold text-primary-600">{{ 'Match por SKU' | transloco }}</span>
+          } @else if (item.method === 'nombre') {
+          <span class="text-[11px] font-semibold text-primary-600">{{ 'Match por nombre' | transloco }}</span>
+          } @else if (item.method === 'ia') {
+          <span class="text-[11px] font-semibold text-primary-600">{{ 'Identificada con IA' | transloco }}</span>
+          } @else if (item.method === 'manual') {
+          <span class="text-[11px] font-semibold text-gray-500">{{ 'Asignación manual' | transloco }}</span>
+          } @else {
+          <span class="text-[11px] font-semibold text-amber-600">{{ 'Sin asignar' | transloco }}</span>
+          }
+        </div>
+        <div class="flex-1 min-w-0">
+          <ui-select
+            styleClass="w-full"
+            [options]="photoProducts()"
+            optionLabel="name"
+            optionValue="id"
+            [placeholder]="'Elegir producto' | transloco"
+            [filter]="true"
+            filterBy="name,sku"
+            [clearable]="true"
+            [ngModel]="item.productId"
+            (ngModelChange)="assignPhoto(i, $event)"
+            [ngModelOptions]="{ standalone: true }"
+            appendTo="body"
+          >
+            <ng-template selectSelectedItem let-selected>
+              <div class="flex items-center gap-2">
+                @if (selected.photo) {
+                <img [src]="selected.photo" [alt]="selected.name" loading="lazy" class="w-5 h-5 rounded object-cover" />
+                }
+                <span class="text-sm truncate">{{ selected.name }}</span>
+              </div>
+            </ng-template>
+            <ng-template selectItem let-opt>
+              <div class="flex items-center gap-3 py-1">
+                @if (opt.photo) {
+                <img [src]="opt.photo" [alt]="opt.name" loading="lazy" class="w-8 h-8 rounded object-cover" />
+                } @else {
+                <div class="w-8 h-8 rounded bg-grey-100 flex items-center justify-center">
+                  <ui-icon name="package" size="16" styleClass="text-grey-300" />
+                </div>
+                }
+                <span class="flex-1 text-grey-800 truncate">{{ opt.name }}</span>
+                @if (opt.sku) {
+                <span class="text-xs text-grey-400">{{ opt.sku }}</span>
+                }
+              </div>
+            </ng-template>
+          </ui-select>
+        </div>
+        <button
+          type="button"
+          class="p-1.5 text-gray-300 hover:text-gray-600 transition-colors cursor-pointer shrink-0"
+          (click)="removePhotoItem(i)"
+          [attr.aria-label]="'Quitar' | transloco"
+        >
+          <ui-icon name="x" styleClass="w-4 h-4" />
+        </button>
+      </div>
+      }
+    </div>
+
+    <!-- Barra inferior: nota + acción principal (Aplicar) -->
+    <div class="flex items-center justify-between gap-4 pt-1">
+      <div class="flex items-center gap-2 text-xs text-gray-400 min-w-0">
+        <ui-icon name="info" styleClass="w-4 h-4 shrink-0" />
+        <span>{{ 'Las fotos sin asignar no se subirán. Antes de aplicar se crea un respaldo de tus productos.' | transloco }}</span>
+      </div>
+      <ui-button
+        [label]="'Aplicar fotos' | transloco"
+        icon="check"
+        [fluid]="false"
+        [disabled]="photoAssignedCount() === 0 || isApplyingPhotos()"
+        [isLoading]="isApplyingPhotos()"
+        (click)="applyPhotos()"
+      />
+    </div>
+  </section>
+  }
+
+  <!-- PHOTOS PROGRESS VIEW -->
+  @if (view() === 'photos-progress') {
+  <section class="flex flex-col gap-4 p-8">
+    <h2 class="text-xl font-bold text-gray-900">{{ 'Subiendo fotos...' | transloco }}</h2>
+    <ui-progress-bar [value]="photosProgress()" />
+    @if (photosCurrentLabel()) {
+    <p class="text-sm text-gray-500 truncate">{{ photosCurrentLabel() }}</p>
+    }
+  </section>
+  }
+
+  <!-- PHOTOS DONE VIEW -->
+  @if (view() === 'photos-done') {
+  <section class="flex flex-col items-center gap-8 p-12">
+    <div class="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center">
+      <ui-icon name="check-circle" styleClass="w-10 h-10 text-primary-500" />
+    </div>
+
+    <div class="text-center">
+      <h2 class="text-2xl font-bold text-gray-900">{{ 'Fotos aplicadas' | transloco }}</h2>
+    </div>
+
+    <div class="flex gap-10">
+      <div class="flex flex-col items-center">
+        <span class="text-4xl font-bold text-primary-600">{{ photosApplied() }}</span>
+        <span class="text-sm text-gray-500 mt-1">{{ 'Aplicadas' | transloco }}</span>
+      </div>
+      @if (photosSkippedCap() > 0) {
+      <div class="flex flex-col items-center">
+        <span class="text-4xl font-bold text-amber-500">{{ photosSkippedCap() }}</span>
+        <span class="text-sm text-gray-500 mt-1">{{ 'Por límite del plan' | transloco }}</span>
+      </div>
+      }
+      @if (photosFailed() > 0) {
+      <div class="flex flex-col items-center">
+        <span class="text-4xl font-bold text-red-500">{{ photosFailed() }}</span>
+        <span class="text-sm text-gray-500 mt-1">{{ 'Errores' | transloco }}</span>
+      </div>
+      }
+    </div>
 
     <ui-button
       [label]="'Cerrar' | transloco"

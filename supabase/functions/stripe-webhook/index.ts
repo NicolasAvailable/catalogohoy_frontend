@@ -25,21 +25,53 @@ function stripeAmountToNumber(amount: number | null | undefined, currency: strin
   return amount / divisor;
 }
 
+// Convierte el color numérico (0xRRGGBB) de los antiguos embeds de Discord a
+// un hex CSS para la barra lateral del attachment de Slack.
+function hexColor(color: number): string {
+  return "#" + color.toString(16).padStart(6, "0");
+}
+
+// Notifica al canal #pagos de Slack. Mantiene la misma firma que el helper
+// anterior (title/description/color/fields) para no tocar las llamadas.
+// Los `fields` se renderizan en sections de dos columnas (Block Kit soporta
+// hasta 10 fields por section, así que se parten en tandas).
 async function notifyDiscord(embed: {
   title: string;
   description: string;
   color: number;
   fields?: { name: string; value: string; inline?: boolean }[];
 }): Promise<void> {
-  const url = Deno.env.get("DISCORD_PAYMENTS_WEBHOOK_URL");
+  const url = Deno.env.get("SLACK_PAYMENTS_WEBHOOK_URL");
   if (!url) return;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const blocks: any[] = [
+    { type: "header", text: { type: "plain_text", text: embed.title, emoji: true } },
+  ];
+  if (embed.description) {
+    blocks.push({ type: "section", text: { type: "mrkdwn", text: embed.description } });
+  }
+  const fields = embed.fields ?? [];
+  for (let i = 0; i < fields.length; i += 10) {
+    blocks.push({
+      type: "section",
+      fields: fields.slice(i, i + 10).map((f) => ({
+        type: "mrkdwn",
+        text: `*${f.name}:*\n${f.value}`,
+      })),
+    });
+  }
+  blocks.push({
+    type: "context",
+    elements: [{ type: "mrkdwn", text: `Stripe · CatálogoHoy · ${new Date().toISOString()}` }],
+  });
+
   await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       username: "CatálogoHoy Payments",
-      avatar_url: "https://catalogohoy.com/favicon.ico",
-      embeds: [{ ...embed, footer: { text: "Stripe · CatálogoHoy" }, timestamp: new Date().toISOString() }],
+      attachments: [{ color: hexColor(embed.color), blocks }],
     }),
   }).catch(() => {});
 }
@@ -340,6 +372,32 @@ async function emailPaymentFailed(admin: ReturnType<typeof createClient>, owner:
   await sendResendEmail(admin, owner.email, subject, html, text);
 }
 
+// WhatsApp de billing (template payment_failed, aprobado en la WABA de la
+// plataforma): variables [nombre, plan] + botón URL cuyo parámetro es el slug
+// (base fija catalogohoy.com/r/plan/{{1}}). Best-effort: jamás rompe el webhook.
+async function sendWhatsAppPaymentFailed(admin: ReturnType<typeof createClient>, tenantId: number, owner: OwnerInfo | null): Promise<void> {
+  try {
+    const waSecret = Deno.env.get("WHATSAPP_WEBHOOK_SECRET");
+    if (!waSecret || !owner) return;
+    const { data: recipient } = await admin.rpc("resolve_billing_wa_recipient", { p_tenant_id: tenantId, p_type: "payment_failed" });
+    if (!recipient) return;
+    const firstName = (owner.name ?? "").trim().split(" ")[0] || owner.tenantName;
+    await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-whatsapp-notification`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-webhook-secret": waSecret },
+      body: JSON.stringify({
+        tenantId,
+        to: recipient,
+        templateType: "payment_failed",
+        variables: [firstName, planLabel(owner.planId)],
+        urlButtonParam: owner.slug,
+      }),
+    });
+  } catch (err) {
+    await logDebug(admin, `whatsapp payment_failed error: ${(err as Error).message}`);
+  }
+}
+
 async function applyPlanUpdate(admin: ReturnType<typeof createClient>, primaryTenantId: number, full: Record<string, unknown>, shared: Record<string, unknown>): Promise<void> {
   await admin.from("tenants").update(full).eq("id", primaryTenantId);
   const { data: ownerLink } = await admin.from("users_tenants").select("user_id").eq("tenant_id", primaryTenantId).eq("role", "owner").maybeSingle();
@@ -636,6 +694,7 @@ Deno.serve(async (req: Request) => {
         ],
       });
       if (owner) await emailPaymentFailed(admin, owner, amountStr, attempt, nextAttemptStr, reason, planLbl);
+      await sendWhatsAppPaymentFailed(admin, Number(tenantId), owner);
     }
 
     if (event.type === "customer.subscription.deleted") {

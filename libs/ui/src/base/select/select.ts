@@ -52,7 +52,13 @@ export class SelectItemDirective {}
       [emptyFilterMessage]="emptyFilterMessage() | transloco"
     >
       <ng-template #selectedItem let-selected>
-        @if(selectedItemTemplate()) {
+        @if(selectedItemTemplate() && selected) {
+          <!-- Sólo pasamos el item al template custom cuando existe. PrimeNG puede
+               invocar este template con selected = undefined (valor de ngModel que
+               no matchea ninguna opción, o transitoriamente al abrir/actualizar el
+               overlay). Sin este guard, cualquier acceso a selected.x en el template
+               del consumidor tira un TypeError en change detection y tumba toda la
+               app (pantalla blanca). El fallback muestra el label de forma segura. -->
           <ng-container [ngTemplateOutlet]="selectedItemTemplate()!" [ngTemplateOutletContext]="{ $implicit: selected }"></ng-container>
         } @else {
           {{ getOptionLabel(selected) }}

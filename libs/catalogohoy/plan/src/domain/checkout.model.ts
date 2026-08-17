@@ -8,10 +8,16 @@ export type PaymentCurrency =
   | 'dop' | 'gtq' | 'gyd' | 'htg' | 'hnl' | 'jmd' | 'mxn' | 'nio' | 'pen'
   | 'pyg' | 'uyu' | 'bsd' | 'bbd' | 'bzd' | 'srd' | 'ttd';
 
-/** Base monthly price per plan (USD) */
+/** Base monthly price per plan (USD).
+ *  ⚠️ Display/gate only — el cobro real sale del PRICE_MAP hardcodeado en la
+ *  edge function `create-checkout-session`. Cambios de precio = actualizar
+ *  AMBOS y deployarlos juntos.
+ *  Nota switch pricing 2026-07: avanzado pasa a 29.99 en el commit del switch
+ *  (junto con la fila `pro` en DB + redeploy de la edge function). */
 export const PLAN_BASE_PRICES: Record<string, number> = {
   basico: 9.99,
-  avanzado: 19.99,
+  pro: 19.99,
+  avanzado: 29.99,
 };
 
 /** Catalog addon monthly price (USD). Mirror this in Stripe — the actual
@@ -22,8 +28,12 @@ export const CATALOG_ADDON_PRICE = 4.99;
 // Mirrors the Stripe edge function FX_RATES map. Used client-side so the plans
 // page can preview the local amount without a Stripe round-trip. Stripe remains
 // the source of truth at checkout; these are display-only.
+// ARS y BOB usan tasa PARALELA (no oficial): Argentina blue ~1550, Bolivia
+// paralelo ~12.5 (2026-07-28). Debe coincidir con los currency_options de
+// Stripe (mismos precios del regen batch parallel-freemonth). Revisar si el
+// paralelo se mueve mucho.
 export const CHECKOUT_FX_RATES: Record<PaymentCurrency, number> = {
-  usd: 1,    eur: 0.88, ars: 1300, bob: 6.9,  brl: 6.0,  cad: 1.4,
+  usd: 1,    eur: 0.88, ars: 1550, bob: 12.5, brl: 6.0,  cad: 1.4,
   clp: 990,  cop: 4200, crc: 520,  dop: 60,   gtq: 7.8,  gyd: 210,
   htg: 130,  hnl: 25,   jmd: 158,  mxn: 20.5, nio: 37,   pen: 3.75,
   pyg: 7800, uyu: 43,   bsd: 1,    bbd: 2,    bzd: 2,    srd: 38,
@@ -89,6 +99,16 @@ export interface CheckoutRequest {
 export interface CheckoutSession {
   url: string;
   currency?: PaymentCurrency;
+}
+
+export interface CancelSubscriptionResult {
+  /** 'stripe' = cancelación en Stripe · 'manual' = plan manual/Venezuela. */
+  mode: 'stripe' | 'manual';
+  /** true si se canceló al instante (past_due/unpaid o plan manual);
+   *  false si quedó programada para el fin del período ya pagado. */
+  immediate: boolean;
+  /** Fecha (ISO) hasta la que el plan sigue activo, cuando aplica. */
+  activeUntil: string | null;
 }
 
 export interface PromotionCodeValidation {

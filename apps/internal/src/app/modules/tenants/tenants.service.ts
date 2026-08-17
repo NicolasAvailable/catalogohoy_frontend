@@ -19,6 +19,19 @@ interface TenantRow {
   plan_expires_at: string | null;
   plan_expired: boolean;
   plan_cycle: PlanCycle | null;
+  total_count: number;
+}
+
+export interface TenantsQuery {
+  search?: string | null;
+  limit?: number;
+  offset?: number;
+}
+
+/** Page of tenants + the server-side total that matches the search. */
+export interface TenantsPage {
+  rows: Tenant[];
+  total: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -26,19 +39,30 @@ export class TenantsService {
   private readonly client = SupabaseClientProvider.getInstance();
 
   /**
-   * Fetches every tenant (catálogo) along with its e-commerce logo,
-   * primary owner and current plan. The plan is read directly from
-   * `tenants.plan_id` / `plan_started_at` / `plan_expires_at`, which
-   * is the source of truth shared with the public-facing app.
+   * Fetches a page of tenants (catálogos) matching an optional search term,
+   * along with each one's e-commerce logo, primary owner and current plan.
+   * The plan is read directly from `tenants.plan_id` / `plan_started_at` /
+   * `plan_expires_at`, which is the source of truth shared with the
+   * public-facing app.
+   *
+   * Search + pagination happen server-side in `list_all_tenants_admin`
+   * (PostgREST caps responses at 1000 rows, so client-side filtering could
+   * never see older tenants once the platform grew past that). Every row
+   * carries `total_count` = rows matching the search before LIMIT/OFFSET.
    */
-  async list(): Promise<Either<Error, Tenant[]>> {
-    const { data, error } = await this.client.rpc('list_all_tenants_admin');
+  async list(query: TenantsQuery = {}): Promise<Either<Error, TenantsPage>> {
+    const { data, error } = await this.client.rpc('list_all_tenants_admin', {
+      p_search: query.search?.trim() || null,
+      p_limit: query.limit ?? 100,
+      p_offset: query.offset ?? 0,
+    });
 
     if (error) {
       return E.left(new Error(error.message));
     }
 
-    const tenants: Tenant[] = ((data as TenantRow[]) ?? []).map((row) => ({
+    const rows = (data as TenantRow[]) ?? [];
+    const tenants: Tenant[] = rows.map((row) => ({
       id: row.id,
       name: row.name,
       slug: row.slug,
@@ -56,7 +80,7 @@ export class TenantsService {
       },
     }));
 
-    return E.right(tenants);
+    return E.right({ rows: tenants, total: Number(rows[0]?.total_count ?? 0) });
   }
 
   async assignPlan(

@@ -518,6 +518,31 @@
               </ui-select>
               </div>
             </div>
+
+            <!-- Datos del método (titular, cuenta, instrucciones…) cargables ya
+                 al crear, según el nombre. Mismo render que el botón "Datos". -->
+            @for (field of fieldsFor(newMethodName()); track field.key) {
+            <div class="payment-method-field">
+              <label class="payment-method-field-label">{{ field.label | transloco }}</label>
+              @if (field.multiline) {
+              <ui-textarea
+                [ngModel]="newMethodDetails()[field.key] || ''"
+                (ngModelChange)="setNewMethodDetailField(field.key, $event)"
+                [placeholder]="(field.placeholder || '') | transloco"
+                [rows]="2"
+                styleClass="w-full"
+              ></ui-textarea>
+              } @else {
+              <ui-input-text
+                [ngModel]="newMethodDetails()[field.key] || ''"
+                (ngModelChange)="setNewMethodDetailField(field.key, $event)"
+                [placeholder]="(field.placeholder || '') | transloco"
+                styleClass="w-full"
+              ></ui-input-text>
+              }
+            </div>
+            }
+
             <ui-button
               [label]="'Agregar' | transloco"
               icon="plus"
@@ -915,14 +940,28 @@
                     </ng-template>
                   </ui-select>
                 </label>
+                @if (!method.priceOnRequest) {
                 <label class="shipping-field">
                   <span class="shipping-field-label">{{ 'Costo ({symbol})' | transloco: { symbol: draftCurrencySymbol() } }}</span>
                   <input type="number" min="0" step="0.01" class="shipping-num"
                     [ngModel]="method.fee"
                     (ngModelChange)="updateShippingMethodNumber(method.id, 'fee', $event)"
+                    [ngModelOptions]="{ standalone: true, updateOn: 'blur' }"
                     [placeholder]="'0 = gratis' | transloco" />
                 </label>
+                }
               </div>
+
+              <label class="shipping-toggle-row">
+                <div class="shipping-toggle-text">
+                  <span>{{ 'Precio a consultar' | transloco }}</span>
+                  <small>{{ 'El precio es variable: en el checkout se muestra “A consultar” y no se suma al total.' | transloco }}</small>
+                </div>
+                <ui-toggle
+                  [ngModel]="!!method.priceOnRequest"
+                  (ngModelChange)="updateShippingMethodField(method.id, 'priceOnRequest', $event)"
+                ></ui-toggle>
+              </label>
 
               <label class="shipping-field">
                 <span class="shipping-field-label">{{ 'Instrucciones (opcional)' | transloco }}</span>
@@ -1000,6 +1039,48 @@
         </div>
       </ui-card>
 
+      <!-- Card: Fecha de entrega -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon location-icon">
+              <ui-icon name="calendar-days" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ 'Fecha de entrega' | transloco }}</h2>
+              <small class="card-subtitle">
+                {{ 'Deja que el cliente elija la fecha de entrega en el checkout.' | transloco }}
+              </small>
+            </div>
+          </div>
+          <ui-toggle
+            [ngModel]="draftDeliveryDateEnabled()"
+            (ngModelChange)="draftDeliveryDateEnabled.set($event)"
+          ></ui-toggle>
+        </div>
+
+        <div class="card-content" [class.section-disabled]="!draftDeliveryDateEnabled()">
+          <p class="text-sm text-grey-300 mb-4">
+            {{ 'Marca los días de la semana en los que NO haces entregas. El calendario del checkout deshabilitará esos días.' | transloco }}
+          </p>
+          <div class="delivery-weekdays">
+            @for (opt of deliveryWeekdayOptions; track opt.day) {
+            <button
+              type="button"
+              class="delivery-weekday-chip"
+              [class.delivery-weekday-chip--blocked]="isDeliveryWeekdayBlocked(opt.day)"
+              (click)="toggleDeliveryBlockedWeekday(opt.day)"
+            >
+              {{ opt.label | transloco }}
+            </button>
+            }
+          </div>
+          <small class="delivery-weekdays-hint">
+            {{ 'Los días resaltados están bloqueados (sin entregas).' | transloco }}
+          </small>
+        </div>
+      </ui-card>
+
       </div> <!-- /TAB SHIPPING -->
 
       <!-- ===== TAB: PAYMENTS (block 2) ===== -->
@@ -1032,6 +1113,23 @@
                 [filter]="true"
                 styleClass="w-full"
               ></ui-select>
+            </div>
+          </div>
+
+          <div class="price-visibility-toggles">
+            <div class="price-visibility-toggle">
+              <div class="price-visibility-toggle__text">
+                <span class="price-visibility-toggle__title">
+                  {{ 'Mostrar precios sin símbolo de moneda' | transloco }}
+                </span>
+                <small class="price-visibility-toggle__hint">
+                  {{ 'Los precios se muestran solo con el número, sin el signo de moneda (ej: 700.000 en vez de $700.000).' | transloco }}
+                </small>
+              </div>
+              <ui-toggle
+                [ngModel]="draftHideCurrencySymbol()"
+                (ngModelChange)="onToggleHideCurrencySymbol($event)"
+              ></ui-toggle>
             </div>
           </div>
 
@@ -1390,7 +1488,7 @@
               {{ 'Variables disponibles' | transloco }}
             </span>
             <div class="flex flex-wrap gap-1.5">
-              @for (v of whatsappMessageVariables; track v.key) {
+              @for (v of whatsappMessageVariables(); track v.key) {
                 <button
                   type="button"
                   class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-primary-50 text-xs font-semibold text-primary-600 hover:bg-primary-100 transition-colors cursor-pointer border border-primary-100"
@@ -1619,6 +1717,57 @@
                 <small class="field-hint">{{ 'El aviso de nueva orden llega a este número.' | transloco }}</small>
                 }
               </div>
+
+              <!-- 2º número destinatario: solo tenants con cupo habilitado
+                   (tenants.whatsapp_notify_numbers_limit >= 2). -->
+              @if (whatsappNotifyMaxRecipients() > 1 && draftWhatsappNotifyNumber()) {
+              <div class="form-field flex flex-col gap-2">
+                @if (draftWhatsappNotifyNumber2() || showRecipientNumber2Input()) {
+                <label>{{ 'Segundo número (opcional)' | transloco }}</label>
+                <div class="flex flex-col gap-2">
+                  <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div class="flex items-center gap-2">
+                      <ui-input-phone
+                        [ngModel]="draftWhatsappNotifyNumber2()"
+                        (ngModelChange)="draftWhatsappNotifyNumber2.set($event)"
+                        [defaultCountry]="draftCountryCode() ?? 've'"
+                      ></ui-input-phone>
+                      <button
+                        type="button"
+                        class="whatsapp-button-remove"
+                        (click)="draftWhatsappNotifyNumber2.set(null); showRecipientNumber2Input.set(false)"
+                        [title]="'Quitar número' | transloco"
+                      >
+                        <ui-icon name="trash" styleClass="size-4"></ui-icon>
+                      </button>
+                    </div>
+                    @if (draftWhatsappNotifyNumber2()) {
+                    <ui-button
+                      [label]="'Probar' | transloco"
+                      icon="send"
+                      size="small"
+                      [fluid]="false"
+                      [isLoading]="isTestingWhatsapp2()"
+                      (click)="testWhatsappNotification(2)"
+                    ></ui-button>
+                    }
+                  </div>
+                  @if (draftWhatsappNotifyNumber2()) {
+                  <small class="field-hint">{{ 'El aviso de nueva orden también llega a este número.' | transloco }}</small>
+                  }
+                </div>
+                } @else {
+                <ui-button
+                  [label]="'Agregar segundo número' | transloco"
+                  icon="plus"
+                  size="small"
+                  [fluid]="false"
+                  (click)="showRecipientNumber2Input.set(true)"
+                ></ui-button>
+                <small class="field-hint">{{ 'Tu cuenta puede recibir el aviso en hasta 2 números.' | transloco }}</small>
+                }
+              </div>
+              }
               }
             </div>
 

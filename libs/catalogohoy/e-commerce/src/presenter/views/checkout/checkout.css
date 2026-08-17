@@ -414,6 +414,20 @@
   color: var(--color-grey-400, #94a3b8);
 }
 
+/* Bolívares mirror shown next to each price (items, envío, subtotal). Same
+   subtle treatment as the total's Bs line so the whole checkout stays uniform.
+   For solo-Bs catalogs (precio de referencia oculto) this becomes the only
+   price shown. */
+.checkout__price-bs {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-grey-400, #94a3b8);
+}
+.checkout__summary-row .checkout__price-bs {
+  text-align: right;
+}
+
 /* Submit */
 .checkout__submit-group {
   display: flex;
@@ -427,6 +441,10 @@
   text-align: center;
 }
 .checkout__submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   width: 100%;
   padding: 0.9375rem;
   background: var(--color-grey-900, #111827);
@@ -440,6 +458,12 @@
 .checkout__submit:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+.checkout__submit-wa {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  color: currentColor;
 }
 
 /* Post-order (confirm / sent) */
@@ -574,4 +598,32 @@
   color: var(--color-grey-500, #64748b);
   margin: -0.25rem 0 0.5rem;
   max-width: 22rem;
+}
+
+/* ── Fecha de entrega (ui-datepicker) ──────────────────────────────────────
+ * The shared date-picker.css sets its border with an undefined var (no
+ * fallback), so it renders borderless here. Scope a border to THIS checkout's
+ * datepicker only (via the `checkout-datepicker` styleClass) so it matches the
+ * other fields without touching the datepicker anywhere else it's used. */
+:host ::ng-deep .checkout-datepicker .p-datepicker-input {
+  border: 0.0625rem solid var(--color-grey-200, #d1d5db) !important;
+  border-radius: 0.625rem !important;
+  padding: 0.625rem 0.75rem !important;
+}
+:host ::ng-deep .checkout-datepicker .p-datepicker-input:hover,
+:host ::ng-deep .checkout-datepicker .p-datepicker-input:focus,
+:host ::ng-deep .checkout-datepicker .p-datepicker-input:focus-visible {
+  border-color: var(--color-primary-400, #60a5fa) !important;
+}
+
+/* Blocked/disabled delivery days in the calendar (blocked weekdays + past
+ * dates). The panel is appended to <body> (outside :host), so this rule is
+ * intentionally global but scoped to this checkout's panel via the
+ * `checkout-datepicker-panel` panelStyleClass — it never touches the datepicker
+ * anywhere else. Clearly muted so the customer reads them as unavailable. */
+::ng-deep .checkout-datepicker-panel .p-datepicker-day.p-disabled {
+  color: var(--color-grey-400, #94a3b8) !important;
+  background: var(--color-grey-100, #f1f5f9) !important;
+  opacity: 1 !important;
+  cursor: not-allowed !important;
 }

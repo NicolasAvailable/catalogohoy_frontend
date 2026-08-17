@@ -15,6 +15,9 @@ export interface Plan {
   maxTeamMembers: number;
   /** Max variants allowed per product on this plan (gratis 1, basico 3, avanzado 15). */
   maxVariants: number;
+  /** Max addons (paid extras) allowed per product on this plan
+   *  (gratis 2, basico 5, avanzado 15, enterprise 0 = unlimited). */
+  maxAddons: number;
   isFree: boolean;
   position: number;
 }

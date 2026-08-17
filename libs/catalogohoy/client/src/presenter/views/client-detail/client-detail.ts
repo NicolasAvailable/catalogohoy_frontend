@@ -4,6 +4,7 @@ import {
   computed,
   inject,
   OnInit,
+  signal,
   ViewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -19,6 +20,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { Order, OrderStatus } from '@catalogohoy/order';
 import { TenantStore } from '@catalogohoy/tenant';
+import { ClientService } from '../../../infrastructure/client.service';
 import { ClientStore } from '../../../infrastructure/client.store';
 import { ClientFormDialogComponent } from '../../components/client-form-dialog/client-form-dialog';
 
@@ -43,6 +45,38 @@ export default class ClientDetailComponent extends BaseComponent implements OnIn
   public readonly clientStore = inject(ClientStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
+  private readonly clientService = inject(ClientService);
+
+  /** Últimos 5 mensajes del chat del cliente (null = sin chat todavía). */
+  public readonly recentChat = signal<{
+    chatId: number;
+    messages: { content: string; isMine: boolean; createdAt: string }[];
+  } | null>(null);
+
+  private async loadRecentChat(phone: string): Promise<void> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return;
+    const result = await this.clientService.getRecentChatMessages(tenantId, phone);
+    result.fold(
+      () => undefined,
+      (chat) => this.recentChat.set(chat)
+    );
+  }
+
+  openConversation(): void {
+    const chat = this.recentChat();
+    if (!chat) return;
+    this.router.navigate(['/admin/chat/conversations'], {
+      queryParams: { chat: chat.chatId },
+    });
+  }
+
+  formatMsgTime(dateStr: string): string {
+    return new Date(dateStr).toLocaleDateString('es', {
+      day: 'numeric',
+      month: 'short',
+    });
+  }
   public readonly cs = computed(() => this.tenantCurrency.localSymbol() || '$');
 
   @ViewChild(ClientFormDialogComponent)
@@ -61,6 +95,7 @@ export default class ClientDetailComponent extends BaseComponent implements OnIn
       return;
     }
     this.clientStore.loadClientByPhone(phone);
+    this.loadRecentChat(phone);
   }
 
   goBack() {

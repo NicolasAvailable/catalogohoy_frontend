@@ -10,7 +10,11 @@ export const authenticationGuard: CanActivateFn = async () => {
   if (data.user) {
     return true;
   } else {
-    window.location.href = 'https://auth.catalogohoy.com';
+    // returnUrl: tras el login volvemos al deep link que gatilló el guard
+    // (p.ej. /admin/orders?order=ID del botón "Ver pedido" de WhatsApp).
+    // El login solo lo honra si apunta al host del tenant logueado.
+    const returnUrl = encodeURIComponent(window.location.href);
+    window.location.href = `https://auth.catalogohoy.com/login?returnUrl=${returnUrl}`;
     return false;
   }
 };

@@ -8,22 +8,30 @@ import {
   ElementRef,
   HostListener,
   inject,
+  input,
+  output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TooltipModule } from 'primeng/tooltip';
-import { TeamStore } from '@catalogohoy/teams';
+import { ImageGalleryComponent } from '@catalogohoy/product';
+import { TenantStore } from '@catalogohoy/tenant';
+import { WhatsAppService, WhatsAppStore } from '@catalogohoy/whatsapp';
 import { ToastService } from '@shared/infrastructure';
 import {
   ButtonComponent,
   IconComponent,
   ImageComponent,
-  SelectComponent,
 } from '@ui';
 import { ChatMessage } from '../../../domain';
 import { ChatStore } from '../../../infrastructure/chat.store';
+import { ChatAudioPlayerComponent } from '../audio-player/audio-player';
+import { PhonePlusPipe } from '../phone-plus.pipe';
+import { WaFormatPipe } from '../wa-format.pipe';
 
 @Component({
   selector: 'lib-conversation-panel',
@@ -31,22 +39,81 @@ import { ChatStore } from '../../../infrastructure/chat.store';
   imports: [
     FormsModule,
     NgClass,
+    RouterLink,
     TooltipModule,
     IconComponent,
     ButtonComponent,
     ImageComponent,
-    SelectComponent,
+    ImageGalleryComponent,
     PickerComponent,
     TranslocoPipe,
+    ChatAudioPlayerComponent,
+    PhonePlusPipe,
+    WaFormatPipe,
   ],
   templateUrl: './conversation-panel.html',
+  styleUrl: './conversation-panel.css',
 })
 export class ConversationPanelComponent {
   protected readonly chatStore = inject(ChatStore);
-  protected readonly teamStore = inject(TeamStore);
   private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly messageInput = signal('');
+
+  /** Conversación cuyo borrador está cargado en el composer ahora mismo. */
+  private draftChatId: number | null = null;
+  private readonly DRAFT_PREFIX = 'catalogohoy:chat-draft:';
+
+  /** Abrir la ficha del cliente como overlay (solo móvil, botón ⓘ del header). */
+  public readonly infoClick = output<void>();
+
+  /** Ficha del cliente visible en desktop (columna derecha) — el header pinta
+   *  el toggle activo/inactivo según esto. */
+  public readonly fichaVisible = input(true);
+  /** Colapsar/expandir la ficha en desktop (botón del header). */
+  public readonly toggleFicha = output<void>();
+
+  // -------------------------------------------- canal desvinculado (solo lectura) ---
+  private readonly whatsAppStore = inject(WhatsAppStore);
+  private readonly whatsAppService = inject(WhatsAppService);
+  private readonly tenantStore = inject(TenantStore);
+
+  /** Conexión de IG/TikTok/Messenger (null = aún no consultado → no bloquear). */
+  private readonly igConnected = signal<boolean | null>(null);
+  private readonly ttConnected = signal<boolean | null>(null);
+  private readonly fbConnected = signal<boolean | null>(null);
+
+  /** Ventana de servicio de WhatsApp (24h) cerrada: el último mensaje ENTRANTE
+   *  del cliente fue hace más de 24h (o no hay ninguno). Fuera de esa ventana
+   *  Meta rechaza el texto libre y hay que usar una plantilla. Solo aplica a
+   *  WhatsApp. */
+  protected readonly windowClosed = computed(() => {
+    const chat = this.chatStore.selectedChat();
+    if (!chat || chat.channel !== 'whatsapp') return false;
+    const lastInbound = this.chatStore
+      .messages()
+      .filter((m) => !m.isMine && !m.isInternal)
+      .reduce<string | null>(
+        (latest, m) => (!latest || m.createdAt > latest ? m.createdAt : latest),
+        null
+      );
+    if (!lastInbound) return true;
+    return Date.now() - new Date(lastInbound).getTime() > 24 * 60 * 60 * 1000;
+  });
+
+  /** El canal del chat abierto está desvinculado: se puede leer el historial
+   *  pero no responder (el composer se reemplaza por un aviso). */
+  protected readonly channelDisconnected = computed(() => {
+    const chat = this.chatStore.selectedChat();
+    if (!chat) return false;
+    if (chat.channel === 'whatsapp') {
+      return !this.whatsAppStore.isLoading() && !this.whatsAppStore.hasActiveAccount();
+    }
+    if (chat.channel === 'instagram') return this.igConnected() === false;
+    if (chat.channel === 'tiktok') return this.ttConnected() === false;
+    if (chat.channel === 'messenger') return this.fbConnected() === false;
+    return false;
+  });
 
   /** WhatsApp Cloud API text body limit. */
   protected readonly maxChars = 4096;
@@ -61,47 +128,60 @@ export class ConversationPanelComponent {
     this.composerMode.set(mode);
   }
 
-  /** Imágenes adjuntas pendientes de enviar, cada una con su propio caption
-   *  (estilo WhatsApp Web). Cada una se envía como un mensaje separado: la Cloud
-   *  API es 1 archivo por mensaje (WhatsApp agrupa varios mensajes como "álbum"). */
+  /** Adjuntos pendientes de enviar (imágenes o documentos), cada uno con su
+   *  caption (estilo WhatsApp Web). Cada uno se manda como un mensaje separado:
+   *  la Cloud API es 1 archivo por mensaje. */
   protected readonly pendingMedia = signal<
-    { file: File; preview: string; caption: string }[]
+    {
+      file: File;
+      preview: string;
+      caption: string;
+      kind: 'image' | 'document';
+      name: string;
+    }[]
   >([]);
   protected readonly maxAttachments = 10;
+  /** Galería de la app (fotos de productos / subidas) abierta como picker para
+   *  enviar una imagen ya hosteada, sin re-subirla. */
+  protected readonly galleryOpen = signal(false);
+  /** Tenant del chat abierto — para que la galería liste SUS imágenes. */
+  protected readonly galleryTenantId = computed(
+    () => this.chatStore.selectedChat()?.tenantId ?? null
+  );
+  /** Overlay "soltá el archivo" mientras se arrastra algo sobre el composer. */
+  protected readonly isDraggingFile = signal(false);
+  private readonly maxImageBytes = 5 * 1024 * 1024;
+  private readonly maxDocBytes = 25 * 1024 * 1024;
   /** Imagen mostrada en grande en el overlay de preview. */
   protected readonly activeIndex = signal(0);
   protected readonly activeItem = computed(
     () => this.pendingMedia()[this.activeIndex()] ?? null
   );
 
-  /** Team members for the header "Asignar a" control (mirrors the ficha). */
-  protected readonly assigneeOptions = computed(() => [
-    { label: 'Sin asignar', value: null as number | null },
-    ...this.teamStore
-      .acceptedMembers()
-      .filter((m) => m.userId !== null)
-      .map((m) => ({
-        label:
-          `${m.userName ?? ''} ${m.userLastName ?? ''}`.trim() ||
-          m.invitedEmail,
-        value: m.userId,
-      })),
-  ]);
-
   private readonly messagesContainer =
     viewChild<ElementRef<HTMLDivElement>>('messagesContainer');
 
-  onAssign(userId: number | null): void {
-    const c = this.chatStore.selectedChat();
-    if (c) this.chatStore.assignChat(c.id, userId);
-  }
+  /** Textarea del composer — auto-alto (crece con el texto). */
+  private readonly composerTextarea =
+    viewChild<ElementRef<HTMLTextAreaElement>>('composerTextarea');
 
   /** Whether the view is pinned to the bottom (so new content auto-scrolls). */
   private stickToBottom = true;
   private listenersAttached = false;
 
   constructor() {
-    this.teamStore.load();
+    // Estado de conexión de IG/TikTok (una consulta) para el modo solo lectura.
+    this.tenantStore.getTenantIdAsync().then(async (tenantId) => {
+      if (!tenantId) return;
+      const [ig, tt, fb] = await Promise.all([
+        this.whatsAppService.getInstagramAccount(tenantId),
+        this.whatsAppService.getTikTokAccount(tenantId),
+        this.whatsAppService.getMessengerAccount(tenantId),
+      ]);
+      if (ig.isRight()) this.igConnected.set(ig.value !== null);
+      if (tt.isRight()) this.ttConnected.set(tt.value !== null);
+      if (fb.isRight()) this.fbConnected.set(fb.value !== null);
+    });
 
     // New message → scroll to the bottom if we're pinned there.
     effect(() => {
@@ -109,6 +189,20 @@ export class ConversationPanelComponent {
       if (msgs.length > 0 && this.stickToBottom) {
         setTimeout(() => this.scrollToBottom(), 0);
       }
+    });
+
+    // Auto-alto del composer: crece con el texto hasta el máximo del CSS
+    // (min-h-[5rem] / max-h-40); de ahí el scroll interno toma el resto. Se
+    // re-mide al escribir, al insertar una respuesta rápida y al limpiar tras
+    // enviar (todo pasa por el signal messageInput).
+    effect(() => {
+      this.messageInput();
+      const el = this.composerTextarea()?.nativeElement;
+      if (!el) return;
+      requestAnimationFrame(() => {
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+      });
     });
 
     // Attach scroll/load listeners once the container exists. The 'load' (capture)
@@ -120,11 +214,61 @@ export class ConversationPanelComponent {
       this.listenersAttached = true;
       el.addEventListener('scroll', this.onScroll, { passive: true });
       el.addEventListener('load', this.onMediaLoad, true);
+      el.addEventListener('click', this.onThreadClick);
       this.destroyRef.onDestroy(() => {
         el.removeEventListener('scroll', this.onScroll);
         el.removeEventListener('load', this.onMediaLoad, true);
+        el.removeEventListener('click', this.onThreadClick);
       });
     });
+
+    // Borrador por conversación: guarda lo que estás escribiendo (por chatId, en
+    // localStorage) y lo restaura al volver — aunque cambies de chat o salgas del
+    // módulo. Al cambiar de chat: guarda el del anterior y carga el del nuevo.
+    effect(() => {
+      const chatId = this.chatStore.selectedChat()?.id ?? null;
+      if (chatId === this.draftChatId) return;
+      if (this.draftChatId != null) {
+        this.persistDraft(this.draftChatId, untracked(() => this.messageInput()));
+      }
+      this.draftChatId = chatId;
+      this.messageInput.set(chatId != null ? this.readDraft(chatId) : '');
+    });
+
+    // Guarda en vivo mientras escribís (así sobrevive salir del módulo sin
+    // cambiar de chat). Al enviar deja '' → borra el borrador.
+    effect(() => {
+      const text = this.messageInput();
+      if (this.draftChatId != null) this.persistDraft(this.draftChatId, text);
+    });
+
+    // Guardado final al destruirse (salir del módulo), por las dudas.
+    this.destroyRef.onDestroy(() => {
+      if (this.draftChatId != null) {
+        this.persistDraft(this.draftChatId, this.messageInput());
+      }
+    });
+  }
+
+  private draftKey(chatId: number): string {
+    return `${this.DRAFT_PREFIX}${chatId}`;
+  }
+  /** Lee el borrador guardado de una conversación (vacío si no hay). */
+  private readDraft(chatId: number): string {
+    try {
+      return localStorage.getItem(this.draftKey(chatId)) ?? '';
+    } catch {
+      return '';
+    }
+  }
+  /** Guarda (o borra, si quedó vacío) el borrador de una conversación. */
+  private persistDraft(chatId: number, text: string): void {
+    try {
+      if (text.trim()) localStorage.setItem(this.draftKey(chatId), text);
+      else localStorage.removeItem(this.draftKey(chatId));
+    } catch {
+      /* localStorage lleno/bloqueado — no romper el chat */
+    }
   }
 
   private readonly onScroll = (): void => {
@@ -136,6 +280,21 @@ export class ConversationPanelComponent {
   /** When an image finishes loading and we were pinned to the bottom, re-scroll. */
   private readonly onMediaLoad = (): void => {
     if (this.stickToBottom) this.scrollToBottom();
+  };
+
+  /** Copiar al portapapeles el enlace del botón "copiar" que acompaña a cada URL
+   *  detectada en un mensaje. El <a> abre solo; el botón necesita este handler
+   *  (delegado) porque el contenido de la burbuja se pinta vía [innerHTML]. */
+  private readonly onThreadClick = (event: Event): void => {
+    const btn = (event.target as HTMLElement).closest<HTMLElement>('.wa-copy');
+    if (!btn) return;
+    event.preventDefault();
+    const url = btn.dataset['url'];
+    if (!url) return;
+    navigator.clipboard?.writeText(url).then(
+      () => this.toast.success('Enlace copiado'),
+      () => this.toast.warning('No se pudo copiar el enlace')
+    );
   };
 
   private scrollToBottom() {
@@ -151,6 +310,8 @@ export class ConversationPanelComponent {
   }
 
   send() {
+    // Canal desvinculado → conversación en solo lectura.
+    if (this.channelDisconnected()) return;
     // Al enviar siempre volvemos al fondo.
     this.stickToBottom = true;
     if (this.chatStore.isSendingMessage() || this.overLimit()) return;
@@ -185,6 +346,16 @@ export class ConversationPanelComponent {
     );
   }
 
+  /** Descarga la imagen activa del overlay (es un object URL local). */
+  downloadActive(): void {
+    const item = this.activeItem();
+    if (!item) return;
+    const link = document.createElement('a');
+    link.href = item.preview;
+    link.download = item.file.name || 'imagen';
+    link.click();
+  }
+
   /** Quita la imagen activa del overlay. */
   removeActive(): void {
     const idx = this.activeIndex();
@@ -200,6 +371,13 @@ export class ConversationPanelComponent {
     this.clearAttachments();
   }
 
+  /** Imagen elegida de la galería de la app → se envía directo (ya está
+   *  hosteada, no se re-sube). Cierra el picker. */
+  onGallerySelected(url: string): void {
+    this.galleryOpen.set(false);
+    this.chatStore.sendMediaFromUrl(url);
+  }
+
   private clearAttachments(): void {
     for (const m of this.pendingMedia()) URL.revokeObjectURL(m.preview);
     this.pendingMedia.set([]);
@@ -209,9 +387,48 @@ export class ConversationPanelComponent {
   /** Quick-reply popover state + insertion. */
   protected readonly quickRepliesOpen = signal(false);
 
+  /** Formulario de crear/editar respuesta rápida (null = viendo la lista). */
+  protected readonly qrForm = signal<{
+    id: number | null;
+    shortcut: string;
+    content: string;
+  } | null>(null);
+  protected readonly qrSaving = signal(false);
+
+  startNewQuickReply(): void {
+    this.qrForm.set({ id: null, shortcut: '', content: '' });
+  }
+
+  editQuickReply(qr: { id: number; shortcut: string; content: string }, event: Event): void {
+    event.stopPropagation();
+    this.qrForm.set({ id: qr.id, shortcut: qr.shortcut, content: qr.content });
+  }
+
+  setQrField(field: 'shortcut' | 'content', value: string): void {
+    const form = this.qrForm();
+    if (form) this.qrForm.set({ ...form, [field]: value });
+  }
+
+  async saveQuickReply(): Promise<void> {
+    const form = this.qrForm();
+    if (!form || !form.shortcut.trim() || !form.content.trim() || this.qrSaving()) {
+      return;
+    }
+    this.qrSaving.set(true);
+    const ok = await this.chatStore.saveQuickReply(form);
+    this.qrSaving.set(false);
+    if (ok) this.qrForm.set(null);
+  }
+
+  removeQuickReply(id: number, event: Event): void {
+    event.stopPropagation();
+    this.chatStore.deleteQuickReply(id);
+  }
+
   toggleQuickReplies(event: Event): void {
     event.stopPropagation();
     this.emojiPickerOpen.set(false);
+    this.qrForm.set(null);
     this.quickRepliesOpen.update((v) => !v);
   }
 
@@ -291,6 +508,17 @@ export class ConversationPanelComponent {
     this.messageInput.update((v) => v + (event.emoji?.native ?? ''));
   }
 
+  /** Menú "+" de adjuntar (estilo Claude): elegir entre subir un archivo del
+   *  dispositivo o buscar en la galería de la app. */
+  protected readonly attachMenuOpen = signal(false);
+
+  toggleAttachMenu(event: Event): void {
+    event.stopPropagation();
+    this.emojiPickerOpen.set(false);
+    this.quickRepliesOpen.set(false);
+    this.attachMenuOpen.update((v) => !v);
+  }
+
   /** Close each popover when the click lands outside *its own* wrapper (not just
    *  outside the whole panel) so clicking the messages/area also dismisses it. */
   @HostListener('document:click', ['$event'])
@@ -301,6 +529,9 @@ export class ConversationPanelComponent {
     }
     if (this.quickRepliesOpen() && !target.closest('.qr-popover-wrap')) {
       this.quickRepliesOpen.set(false);
+    }
+    if (this.attachMenuOpen() && !target.closest('.attach-popover-wrap')) {
+      this.attachMenuOpen.set(false);
     }
   }
 
@@ -339,33 +570,87 @@ export class ConversationPanelComponent {
     this.chatStore.setReplyingTo(null);
   }
 
-  /** Adjuntar imagen: valida (imagen, ≤5 MB) y la envía vía el store (optimista
-   *  → sube a storage → wa-send con type:image). */
+  /** Adjuntar desde el selector de archivos (imágenes o documentos). */
   onAttachFile(event: Event): void {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
     input.value = '';
-    if (!files.length) return;
+    this.addFiles(files);
+  }
 
+  /** Adjuntar archivos soltados desde el escritorio (drag & drop). */
+  onDropFiles(event: DragEvent): void {
+    event.preventDefault();
+    this.isDraggingFile.set(false);
+    if (this.composerMode() === 'whisper') return;
+    this.addFiles(Array.from(event.dataTransfer?.files ?? []));
+  }
+
+  /** Pegar (Ctrl/Cmd+V) una imagen o archivo en el composer lo adjunta como
+   *  multimedia — igual que arrastrarlo o usar el clip. Si el portapapeles trae
+   *  solo texto, se deja el pegado normal. */
+  onPasteComposer(event: ClipboardEvent): void {
+    if (this.composerMode() === 'whisper') return;
+    const files = Array.from(event.clipboardData?.items ?? [])
+      .filter((it) => it.kind === 'file')
+      .map((it) => it.getAsFile())
+      .filter((f): f is File => f !== null);
+    if (!files.length) return;
+    event.preventDefault();
+    this.addFiles(files);
+  }
+
+  onDragOverComposer(event: DragEvent): void {
+    if (this.composerMode() === 'whisper') return;
+    event.preventDefault();
+    this.isDraggingFile.set(true);
+  }
+
+  onDragLeaveComposer(event: DragEvent): void {
+    event.preventDefault();
+    this.isDraggingFile.set(false);
+  }
+
+  /** Valida y agrega adjuntos: imágenes (≤5 MB) o documentos (≤25 MB). El tipo
+   *  real (image/document) lo resuelve el store al enviar según el mime. */
+  private addFiles(files: File[]): void {
+    if (!files.length) return;
     const current = this.pendingMedia();
     const room = this.maxAttachments - current.length;
     if (room <= 0) {
-      this.toast.warning(`Máximo ${this.maxAttachments} imágenes.`);
+      this.toast.warning(`Máximo ${this.maxAttachments} archivos.`);
       return;
     }
 
-    const added: { file: File; preview: string; caption: string }[] = [];
+    const added: {
+      file: File;
+      preview: string;
+      caption: string;
+      kind: 'image' | 'document';
+      name: string;
+    }[] = [];
     let skipped = false;
     for (const file of files) {
       if (added.length >= room) {
         skipped = true;
         break;
       }
-      if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+      const isImage = file.type.startsWith('image/');
+      // Video/audio no se envían desde el composer (WhatsApp usa otro tipo).
+      const isAvMedia =
+        file.type.startsWith('video/') || file.type.startsWith('audio/');
+      const limit = isImage ? this.maxImageBytes : this.maxDocBytes;
+      if (isAvMedia || file.size > limit) {
         skipped = true;
         continue;
       }
-      added.push({ file, preview: URL.createObjectURL(file), caption: '' });
+      added.push({
+        file,
+        preview: URL.createObjectURL(file),
+        caption: '',
+        kind: isImage ? 'image' : 'document',
+        name: file.name,
+      });
     }
     if (added.length) {
       const wasEmpty = current.length === 0;
@@ -373,7 +658,41 @@ export class ConversationPanelComponent {
       if (wasEmpty) this.activeIndex.set(0);
     }
     if (skipped) {
-      this.toast.warning('Algunas imágenes se omitieron (solo JPG/PNG ≤ 5 MB).');
+      this.toast.warning(
+        'Algunos archivos se omitieron (imágenes ≤ 5 MB o documentos ≤ 25 MB).'
+      );
     }
+  }
+
+  /** Logo oficial (SVG) + etiqueta de un documento según su extensión (nombre o
+   *  URL de storage). Sirve tanto para nombres reales (productos.xlsx) como para
+   *  URLs donde el "tail" es el mime de WhatsApp (…spreadsheetml.sheet). Se usa
+   *  en el preview del composer y en las burbujas. */
+  protected docMeta(nameOrUrl: string | null | undefined): {
+    logo: string;
+    label: string;
+  } {
+    const clean = (nameOrUrl ?? '').toLowerCase().split('?')[0].split('#')[0];
+    const ext = clean.includes('.') ? clean.split('.').pop()! : '';
+    const has = (s: string) => clean.includes(s);
+    const base = '/images/filetypes/';
+    if (['xlsx', 'xls', 'xlsm', 'sheet'].includes(ext) || has('spreadsheetml') || has('ms-excel'))
+      return { logo: base + 'excel.svg', label: 'Excel' };
+    if (ext === 'csv') return { logo: base + 'sheets.svg', label: 'CSV' };
+    if (ext === 'ods') return { logo: base + 'sheets.svg', label: 'Hoja de cálculo' };
+    if (ext === 'pdf' || has('/pdf')) return { logo: base + 'pdf.svg', label: 'PDF' };
+    if (['doc', 'docx', 'odt', 'rtf'].includes(ext) || has('wordprocessingml') || has('msword'))
+      return { logo: base + 'word.svg', label: 'Word' };
+    if (['ppt', 'pptx', 'odp'].includes(ext) || has('presentationml') || has('powerpoint'))
+      return { logo: base + 'ppt.svg', label: 'PowerPoint' };
+    return { logo: base + 'doc.svg', label: 'Documento' };
+  }
+
+  /** Tamaño legible (KB/MB) para el preview de documentos. */
+  protected formatBytes(bytes: number): string {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 }

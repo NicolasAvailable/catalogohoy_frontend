@@ -1,3 +1,11 @@
+/** A paid extra attached to a cart line. `price` is already folded into the
+ *  line's unit price; kept here so the cart/order/WhatsApp can itemise it. */
+export interface CartItemAddon {
+  id: string;
+  name: string;
+  price: number;
+}
+
 export class CartItem {
   public readonly id: string;
 
@@ -13,7 +21,8 @@ export class CartItem {
     public readonly sku: string | null = null,
     public readonly size: string | null = null,
     public readonly variantId: string | null = null,
-    public readonly variantName: string | null = null
+    public readonly variantName: string | null = null,
+    public readonly addons: CartItemAddon[] = []
   ) {
     this.id = id || crypto.randomUUID();
   }
@@ -35,7 +44,8 @@ export class CartItem {
       this.sku,
       this.size,
       this.variantId,
-      this.variantName
+      this.variantName,
+      this.addons
     );
   }
 
@@ -53,7 +63,8 @@ export class CartItem {
       this.sku,
       this.size,
       this.variantId,
-      this.variantName
+      this.variantName,
+      this.addons
     );
   }
 
@@ -70,7 +81,8 @@ export class CartItem {
       primitives.sku ?? null,
       primitives.size ?? null,
       primitives.variantId ?? null,
-      primitives.variantName ?? null
+      primitives.variantName ?? null,
+      primitives.addons ?? []
     );
   }
 }
@@ -88,4 +100,5 @@ export interface CartItemPrimitives {
   size?: string | null;
   variantId?: string | null;
   variantName?: string | null;
+  addons?: CartItemAddon[];
 }

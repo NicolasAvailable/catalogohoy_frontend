@@ -13,7 +13,9 @@
     "serve:landing": "nx serve landing",
     "build:landing": "nx build landing",
     "serve:help": "nx serve help",
-    "build:help": "nx build help"
+    "build:help": "nx build help",
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "private": true,
   "dependencies": {
@@ -49,6 +51,7 @@
     "ngx-bootstrap": "^19.0.0",
     "ngx-intl-tel-input": "^17.0.0",
     "ngx-sonner": "^3.1.0",
+    "pdfjs-dist": "^6.1.200",
     "postcss": "^8.5.6",
     "posthog-js": "^1.356.1",
     "primeng": "^20.3.0",

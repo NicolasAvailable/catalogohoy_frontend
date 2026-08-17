@@ -123,10 +123,15 @@
                   <div class="flex flex-col">
                     <span class="font-semibold text-grey-800 text-sm">{{ item.name }}</span>
                     @if (item.variantName) {
-                    <span class="text-xs text-grey-400">{{ 'Variante seleccionada: {name}' | transloco: { name: item.variantName } }}</span>
+                    <span class="text-xs text-grey-400"><strong>{{ 'Variante:' | transloco }}</strong> {{ item.variantName }}</span>
                     }
                     @if (item.tierTitle) {
-                    <span class="text-xs text-grey-400">Al mayor: {{ item.tierTitle }}</span>
+                    <span class="text-xs text-grey-400"><strong>{{ 'Al mayor:' | transloco }}</strong> {{ item.tierTitle }}</span>
+                    }
+                    @if (item.addons?.length) {
+                    <span class="text-xs text-grey-400"><strong>{{ 'Adicionales:' | transloco }}</strong>
+                      @for (addon of item.addons; track addon.id) {{{ addon.name }}@if (addon.quantity && addon.quantity > 1) { ×{{ addon.quantity }}}@if (addon.price > 0) { ({{ cs }}{{ (addon.price * (addon.quantity || 1)) | number: '1.2-2' }})}@if (!$last) { · }}
+                    </span>
                     }
                   </div>
                 </div>

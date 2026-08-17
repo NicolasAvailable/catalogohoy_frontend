@@ -19,6 +19,7 @@ import {
   SUPPORTED_COUNTRIES,
 } from '@catalogohoy/ecommerce-config';
 import {
+  DatepickerComponent,
   IconComponent,
   InputTextComponent,
   QrCodeComponent,
@@ -43,6 +44,7 @@ type CheckoutPhase = 'form' | 'confirm' | 'sent';
   imports: [
     DecimalPipe,
     FormsModule,
+    DatepickerComponent,
     IconComponent,
     InputTextComponent,
     TextareaComponent,
@@ -58,6 +60,10 @@ export default class Checkout {
   public readonly cartStore = inject(CartStore);
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cs = this.ecommerceStore.currencySymbol;
+  /** Whether to render the reference-currency price ($). Off for solo-Bs
+   *  catalogs (Venezuela) that only want bolívares — same flag the catalog
+   *  cards and product detail already honor. */
+  public readonly showReferencePrice = this.ecommerceStore.showReferencePrice;
   private readonly metaPixel = inject(MetaPixelService);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
@@ -81,6 +87,11 @@ export default class Checkout {
   // --- Shipping ---
   public readonly selectedShippingId = signal<string | null>(null);
   public readonly customerAddress = signal('');
+
+  // --- Delivery date ---
+  /** Customer-chosen delivery date. Null until picked. Held as a `Date` for the
+   *  PrimeNG datepicker; serialised to `YYYY-MM-DD` (local) only on submit. */
+  public readonly deliveryDate = signal<Date | null>(null);
 
   // --- Post-order flow ---
   public readonly phase = signal<CheckoutPhase>('form');
@@ -112,22 +123,63 @@ export default class Checkout {
 
   public readonly hasShipping = computed(() => this.shippingMethods().length > 0);
 
+  // --- Delivery date ---
+  /** Whether the merchant enabled the delivery-date picker for this catalog. */
+  public readonly deliveryDateEnabled = computed(
+    () => this.info()?.deliveryDateEnabled ?? false
+  );
+
+  /** Weekdays with no delivery (JS: 0 = Sunday … 6 = Saturday). */
+  public readonly deliveryBlockedWeekdays = computed<number[]>(
+    () => this.info()?.deliveryBlockedWeekdays ?? []
+  );
+
+  /** Local midnight today — used as the datepicker `minDate` so past dates
+   *  can't be picked. */
+  public readonly todayDate = computed(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  });
+
+  private toIsoDate(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  /** True when the chosen date falls on a blocked weekday. The datepicker
+   *  already disables those days (`disabledDays`); this is a submit-time guard
+   *  in case a stale value slips through. */
+  public readonly deliveryDateIsBlocked = computed(() => {
+    const date = this.deliveryDate();
+    if (!date) return false;
+    return this.deliveryBlockedWeekdays().includes(date.getDay());
+  });
+
   public readonly selectedShipping = computed<ShippingMethod | null>(
     () =>
       this.shippingMethods().find((m) => m.id === this.selectedShippingId()) ??
       null
   );
 
-  public readonly shippingFee = computed(
-    () => this.selectedShipping()?.fee ?? 0
-  );
+  public readonly shippingFee = computed(() => {
+    const s = this.selectedShipping();
+    // "A consultar": no suma nada al total (el vendedor cotiza el envío luego).
+    return s && !s.priceOnRequest ? s.fee ?? 0 : 0;
+  });
 
   public readonly subtotal = computed(() => this.cartStore.totalPrice());
   public readonly total = computed(() => this.subtotal() + this.shippingFee());
 
-  /** Bolívares mirror of the total — Venezuela only and only with a rate. */
+  /** Bolívares mirror of any price row — Venezuela only, honoring the
+   *  merchant's "show local currency" toggle, and only with a rate. Same
+   *  condition used by the catalog cards, so every surface stays in sync. */
   public readonly showBs = computed(
-    () => this.ecommerceStore.isVenezuela() && this.ecommerceStore.exchangeRate() > 0
+    () =>
+      this.ecommerceStore.isVenezuela() &&
+      this.ecommerceStore.showLocalCurrencyPrice() &&
+      this.ecommerceStore.exchangeRate() > 0
   );
   public readonly totalBs = computed(
     () => this.total() * this.ecommerceStore.exchangeRate()
@@ -254,6 +306,36 @@ export default class Checkout {
   }
 
   // --- Validation ---
+  /** Touched por campo (blur): el submit vive deshabilitado mientras el form
+   *  es inválido, así que los errores se muestran al salir de cada campo. */
+  readonly nameTouched = signal(false);
+  readonly phoneTouched = signal(false);
+  readonly emailTouched = signal(false);
+
+  readonly nameError = computed(() =>
+    this.nameTouched() && !this.name().trim()
+      ? 'El nombre es obligatorio'
+      : null
+  );
+
+  readonly phoneError = computed(() => {
+    const f = this.customerFields();
+    return this.phoneTouched() &&
+      f.phone.visible &&
+      f.phone.required &&
+      !this.phone().trim()
+      ? 'El teléfono es obligatorio'
+      : null;
+  });
+
+  readonly emailError = computed(() => {
+    const f = this.customerFields();
+    if (!f.email.visible || !this.emailTouched()) return null;
+    const v = this.email().trim();
+    if (!v) return f.email.required ? 'El correo es obligatorio' : null;
+    return this.isValidEmail(v) ? null : 'Ingresa un correo válido';
+  });
+
   get isValid(): boolean {
     const f = this.customerFields();
     // Name is always required, regardless of config.
@@ -268,6 +350,16 @@ export default class Checkout {
     if (this.hasShipping() && !this.selectedShippingId()) return false;
     const sel = this.selectedShipping();
     if (sel?.requestCustomerAddress && !this.customerAddress().trim()) return false;
+
+    // Delivery date: required when the feature is on, must not be in the past
+    // and must not land on a blocked weekday (the picker enforces both, this
+    // guards submit).
+    if (this.deliveryDateEnabled()) {
+      const date = this.deliveryDate();
+      if (!date) return false;
+      if (this.toIsoDate(date) < this.toIsoDate(this.todayDate())) return false;
+      if (this.deliveryDateIsBlocked()) return false;
+    }
 
     return !this.cartStore.isEmpty();
   }
@@ -322,23 +414,47 @@ export default class Checkout {
         // Snapshot del tramo de mayoreo elegido (el precio unitario ya lo
         // refleja); antes se perdía al crear la orden.
         tierTitle: item.tierTitle ?? null,
+        // Snapshot de adicionales elegidos (el precio unitario ya los suma);
+        // se guardan para itemizarlos en admin/PDF/notificaciones.
+        addons: item.addons.length
+          ? item.addons.map((a) => ({ id: a.id, name: a.name, price: a.price }))
+          : null,
       })),
       total,
       payment_method: this.selectedPaymentMethod() || undefined,
       shipping_method: sel
-        ? { name: sel.name, type: sel.type, fee: sel.fee }
+        ? {
+            name: sel.name,
+            type: sel.type,
+            fee: sel.priceOnRequest ? 0 : sel.fee,
+            priceOnRequest: !!sel.priceOnRequest,
+          }
         : null,
       shipping_address: sel?.requestCustomerAddress
         ? this.customerAddress().trim() || null
         : null,
       shipping_fee: fee,
+      // Only send when the feature is on and the customer picked a date; else
+      // the server keeps its default (CURRENT_DATE). Serialise as local ISO to
+      // avoid the UTC off-by-one that `toISOString()` would introduce.
+      delivery_date:
+        this.deliveryDateEnabled() && this.deliveryDate()
+          ? this.toIsoDate(this.deliveryDate() as Date)
+          : undefined,
     });
 
     if (!orderResult || orderResult.isLeft()) {
       this.isSubmitting.set(false);
+      // Trigger enforce_order_limit (DB): el catálogo del plan gratis alcanzó
+      // su tope mensual de pedidos — mensaje específico para el comprador.
+      const isOrderLimit =
+        orderResult?.isLeft() &&
+        orderResult.value.message.includes('order_limit_reached');
       alert(
         this.transloco.translate(
-          'Hubo un error al procesar tu pedido. Por favor intenta de nuevo.'
+          isOrderLimit
+            ? 'Este catálogo alcanzó su límite de pedidos de este mes. Contacta al negocio directamente para completar tu compra.'
+            : 'Hubo un error al procesar tu pedido. Por favor intenta de nuevo.'
         )
       );
       return;
@@ -365,6 +481,18 @@ export default class Checkout {
     this.isSubmitting.set(false);
   }
 
+  /** Formatea un monto para el mensaje de pedido por WhatsApp según la config
+   *  de moneda del catálogo: un catálogo solo-Bs (precio de referencia oculto)
+   *  muestra "Bs. X"; el resto muestra la moneda de referencia ("$X"). Espeja
+   *  el criterio de la pantalla del checkout para que el mensaje sea coherente
+   *  con lo que ve el cliente. */
+  private priceForMessage(amount: number): string {
+    if (!this.showReferencePrice() && this.showBs()) {
+      return `Bs. ${(amount * this.ecommerceStore.exchangeRate()).toFixed(2)}`;
+    }
+    return `${this.cs()}${amount}`;
+  }
+
   private buildWhatsappMessage(
     items: CartItem[],
     subtotal: number,
@@ -372,21 +500,37 @@ export default class Checkout {
     total: number,
     shipping: ShippingMethod | null
   ): string {
-    const symbol = this.cs();
-
     let productsList = '';
     items.forEach((item) => {
       const sizeLabel = item.size ? ` (Talla ${item.size})` : '';
       const variantLabel = item.variantName ? ` (${item.variantName})` : '';
-      productsList += `• ${item.name}${variantLabel}${sizeLabel} x${item.quantity} - ${symbol}${item.total}\n`;
+      productsList += `• ${item.name}${variantLabel}${sizeLabel} x${item.quantity} - ${this.priceForMessage(item.total)}\n`;
+      // SKU indentado bajo el producto (solo si el producto tiene uno).
+      if (item.sku) productsList += `   SKU: ${item.sku}\n`;
+      // Adicionales elegidos, indentados bajo su producto. El precio del ítem
+      // ya los incluye; acá solo se detallan.
+      item.addons.forEach((addon) => {
+        const addonPrice = addon.price > 0 ? ` (+${this.priceForMessage(addon.price)})` : '';
+        productsList += `   ↳ ${addon.name}${addonPrice}\n`;
+      });
     });
 
-    const totalBsStr = this.showBs()
-      ? ` (Bs. ${this.totalBs().toFixed(2)})`
-      : '';
+    // El Bs "espejo" del total solo cuando además se muestra la referencia
+    // (catálogos VE dual-moneda). En un catálogo solo-Bs el total ya sale en
+    // Bs vía priceForMessage, así que este mirror se omite para no duplicarlo.
+    const totalBsStr =
+      this.showReferencePrice() && this.showBs()
+        ? ` (Bs. ${this.totalBs().toFixed(2)})`
+        : '';
 
     const envioStr = shipping
-      ? `*Envío:* ${shipping.name}${fee > 0 ? ` (${symbol}${fee})` : ' (Gratis)'}\n`
+      ? `*Envío:* ${shipping.name}${
+          shipping.priceOnRequest
+            ? ' (A consultar)'
+            : fee > 0
+            ? ` (${this.priceForMessage(fee)})`
+            : ' (Gratis)'
+        }\n`
       : '';
     const direccionStr =
       shipping?.requestCustomerAddress && this.customerAddress().trim()
@@ -407,7 +551,7 @@ export default class Checkout {
         .replace(/\{nombre\}/g, this.name().trim() || 'Cliente')
         .replace(/\{telefono\}/g, phoneFull)
         .replace(/\{productos\}/g, productsList.trimEnd())
-        .replace(/\{total\}/g, `${symbol}${total}`)
+        .replace(/\{total\}/g, this.priceForMessage(total))
         .replace(/\{totalBs\}/g, totalBsStr)
         .replace(/\{envio\}/g, envioStr)
         .replace(/\{direccion\}/g, direccionStr)
@@ -419,8 +563,8 @@ export default class Checkout {
     message += `*Nombre:* ${this.name().trim() || 'Cliente'}\n`;
     if (phoneFull) message += `*Teléfono:* ${phoneFull}\n`;
     message += `\n*Productos:*\n${productsList}`;
-    if (fee > 0) message += `\n*Subtotal:* ${symbol}${subtotal}`;
-    message += `\n*Total:* ${symbol}${total}${totalBsStr}\n`;
+    if (fee > 0) message += `\n*Subtotal:* ${this.priceForMessage(subtotal)}`;
+    message += `\n*Total:* ${this.priceForMessage(total)}${totalBsStr}\n`;
     if (envioStr) message += `\n${envioStr.trimEnd()}`;
     if (direccionStr) message += `\n${direccionStr.trimEnd()}`;
     if (commentsStr) message += `\n\n${commentsStr}`;

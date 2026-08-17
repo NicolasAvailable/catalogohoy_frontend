@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const DISCORD_WEBHOOK_URL = Deno.env.get("DISCORD_CHECKOUT_INTENT_WEBHOOK");
+const SLACK_WEBHOOK_URL = Deno.env.get("SLACK_CHECKOUT_INTENT_WEBHOOK");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -41,8 +41,8 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: false, error: "Unauthorized" }, 401);
   }
 
-  if (!DISCORD_WEBHOOK_URL) {
-    console.error("DISCORD_CHECKOUT_INTENT_WEBHOOK not configured");
+  if (!SLACK_WEBHOOK_URL) {
+    console.error("SLACK_CHECKOUT_INTENT_WEBHOOK not configured");
     return jsonResponse({ success: true });
   }
 
@@ -67,31 +67,38 @@ Deno.serve(async (req) => {
       annual: "Anual",
     };
 
-    const embed = {
-      title: "🔥 Checkout Intent",
-      color: 0x6366f1,
-      fields: [
-        { name: "Negocio", value: name, inline: true },
-        { name: "Slug", value: slug, inline: true },
-        { name: "Email", value: user.email ?? "—", inline: true },
+    const periodo = periodLabels[billingPeriod] ?? billingPeriod;
+
+    // Slack Block Kit: barra de color vía attachment, campos en dos columnas.
+    const payload = {
+      attachments: [
         {
-          name: "Plan",
-          value: `Plan ${planName}`,
-          inline: true,
+          color: "#6366f1",
+          blocks: [
+            {
+              type: "header",
+              text: { type: "plain_text", text: "🔥 Checkout Intent", emoji: true },
+            },
+            {
+              type: "section",
+              fields: [
+                { type: "mrkdwn", text: `*Negocio:*\n${name}` },
+                { type: "mrkdwn", text: `*Slug:*\n${slug}` },
+                { type: "mrkdwn", text: `*Email:*\n${user.email ?? "—"}` },
+                { type: "mrkdwn", text: `*Plan:*\nPlan ${planName}` },
+                { type: "mrkdwn", text: `*Periodo:*\n${periodo}` },
+                { type: "mrkdwn", text: `*Fecha:*\n${now}` },
+              ],
+            },
+          ],
         },
-        {
-          name: "Periodo",
-          value: periodLabels[billingPeriod] ?? billingPeriod,
-          inline: true,
-        },
-        { name: "Fecha", value: now, inline: false },
       ],
     };
 
-    await fetch(DISCORD_WEBHOOK_URL, {
+    await fetch(SLACK_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ embeds: [embed] }),
+      body: JSON.stringify(payload),
     });
 
     return jsonResponse({ success: true });

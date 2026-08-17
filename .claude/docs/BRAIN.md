@@ -26,7 +26,7 @@ público. Monetiza con planes (Stripe) + créditos de IA.
 | **`deployment.md`** | Ramas de deploy (main / authentication / landing), cómo deploya cada app, Tailwind v3 vs v4, secrets/env. |
 | **`gotchas.md`** | Trampas: worktree+Nx, Tailwind v3/v4, captura headless con sesión, ruteo multi-tenant, etc. |
 | **`business-rules.md`** | Planes y límites, asignación de créditos de IA, precios, packs, descuentos por volumen, reportes semanales. |
-| **`integrations.md`** | Edge functions (todas) + servicios externos (Stripe, Supabase, fal.ai, Anthropic, PostHog, Meta, WhatsApp, Discord, Resend). |
+| **`integrations.md`** | Edge functions (todas) + servicios externos (Stripe, Supabase, fal.ai, Anthropic, PostHog, Meta, WhatsApp, Discord, Resend, **Google**: Workspace/OAuth/Search Console/GA4 + sitemaps por app). |
 | **`features/commerce.md`** | e-commerce (catálogo público + checkout), product, order, category, client. |
 | **`features/account-billing.md`** | plan, payments, profile, tenant, teams, ecommerce-config. |
 | **`features/supporting.md`** | rate (tasas BCV), reports, analytics, home, core, environments. |

@@ -139,7 +139,13 @@ export const PAYMENT_METHOD_FIELDS: Record<string, PaymentFieldDef[]> = {
   tarjeta_credito: [
     { key: 'instrucciones', label: 'Instrucciones', placeholder: 'Cómo pagar con tarjeta', multiline: true },
   ],
+  // Método libre: mismos campos que una transferencia (titular, cuenta e
+  // instrucciones). Todos opcionales — en el checkout solo se muestran los que
+  // el comerciante completa, así "otro" sirve tanto para un pago adelantado /
+  // transferencia como para métodos con una sola instrucción.
   otro: [
+    { key: 'titular', label: 'Titular', placeholder: 'Nombre del titular (opcional)' },
+    { key: 'numeroCuenta', label: 'Número de cuenta', placeholder: 'N° de cuenta / celular (opcional)' },
     { key: 'instrucciones', label: 'Datos / instrucciones', placeholder: 'Datos que el cliente necesita para pagar', multiline: true },
   ],
 };
@@ -203,6 +209,10 @@ export interface ShippingMethod {
   type: ShippingMethodType;
   /** Flat fee added to the order total. 0 = free. */
   fee: number;
+  /** Precio variable / "A consultar": el checkout muestra "A consultar" en vez
+   *  de un precio y no suma nada al total (el vendedor cotiza el envío luego).
+   *  `fee` se mantiene en 0. Ausente/false = precio normal. */
+  priceOnRequest?: boolean;
   instructions: string;
   /** delivery/shipping: ask the customer to type their address at checkout. */
   requestCustomerAddress: boolean;
@@ -299,6 +309,22 @@ export const DEFAULT_CUSTOMER_FIELDS: CustomerFieldsConfig = {
   email: { visible: false, required: false },
 };
 
+/** Default weekdays with no delivery. Empty = deliveries every day. Values
+ *  follow JS convention (0 = Sunday … 6 = Saturday). */
+export const DEFAULT_DELIVERY_BLOCKED_WEEKDAYS: number[] = [];
+
+/** Weekday options for the "días bloqueados" selector in the editor. Ordered
+ *  Monday → Sunday for display but keyed with the JS day number. */
+export const DELIVERY_WEEKDAY_OPTIONS: { day: number; label: string }[] = [
+  { day: 1, label: 'Lunes' },
+  { day: 2, label: 'Martes' },
+  { day: 3, label: 'Miércoles' },
+  { day: 4, label: 'Jueves' },
+  { day: 5, label: 'Viernes' },
+  { day: 6, label: 'Sábado' },
+  { day: 0, label: 'Domingo' },
+];
+
 export type CatalogTemplate = 'classic' | 'banner-centered' | 'minimal';
 
 export const CATALOG_TEMPLATES: {
@@ -354,6 +380,16 @@ export interface EcommerceConfig {
   showShippingSection: boolean;
   /** Which customer fields to request at checkout and whether each is required. */
   customerFields: CustomerFieldsConfig;
+  /** When true, the public checkout shows a delivery-date picker so the
+   *  customer chooses the desired delivery date (persisted as `delivery_date`
+   *  on the order). Otherwise the server default (CURRENT_DATE) is used.
+   *  NOTE: persisted inside the `customer_fields` jsonb column (no dedicated
+   *  DB column), see EcommerceConfigService. */
+  deliveryDateEnabled: boolean;
+  /** Weekdays with no delivery (JS convention 0 = Sunday … 6 = Saturday). The
+   *  checkout date picker skips/blocks these days. Persisted inside the
+   *  `customer_fields` jsonb column alongside `deliveryDateEnabled`. */
+  deliveryBlockedWeekdays: number[];
 }
 
 /** Business hours for a single day. `dayOfWeek` follows JS convention:
@@ -390,6 +426,21 @@ export const DEFAULT_BUSINESS_HOURS_WEEK: BusinessHoursWeek = [
   { dayOfWeek: 5, openTime: '08:00', closeTime: '20:00', isOpen: true },
   { dayOfWeek: 6, openTime: '08:00', closeTime: '20:00', isOpen: true },
 ];
+
+/**
+ * Centinela guardado en `currency_symbol` (en `tenant_currency_config` y en
+ * `tenant_ecommerce_config`) que significa "mostrar los precios SIN símbolo de
+ * moneda" (ej: `700.000` en vez de `$700.000`).
+ *
+ * Reusa la columna de texto existente a propósito: así el RPC público
+ * `get_public_catalog` no necesita cambios ni columnas nuevas. Es un espacio de
+ * ancho cero (U+200B): es a prueba de fallos (invisible si algún camino lo
+ * renderiza sin interceptar) y NO lo elimina `String.trim()` (a diferencia de
+ * `''` o `' '`), por lo que la cadena de fallback del símbolo puede detectarlo
+ * en vez de caer al símbolo default del país (`$`). El servicio del catálogo
+ * público lo mapea a `''` antes de renderizar.
+ */
+export const NO_CURRENCY_SYMBOL = '\u200B';
 
 export type ExchangeRateType = 'none' | 'bcv_usd' | 'bcv_eur' | 'custom';
 

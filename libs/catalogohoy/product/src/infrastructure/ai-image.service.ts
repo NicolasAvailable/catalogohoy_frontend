@@ -50,7 +50,18 @@ export class AiImageService implements BaseAiImageService {
             new Error('No se pudo conectar con la IA. Verifica tu conexión.')
           );
         }
-        return E.left(new Error(msg || 'Error al conectar con la IA de texto'));
+        const backend = await this.readInvokeError(error);
+        if (backend.code === 'no_credits') {
+          this.credits.setBalance(0);
+          return E.left(
+            new Error('No te quedan créditos de IA. Compra más o sube de plan.')
+          );
+        }
+        return E.left(
+          new Error(
+            backend.message || msg || 'Error al conectar con la IA de texto'
+          )
+        );
       }
       const parsed = typeof data === 'string' ? JSON.parse(data) : data;
       if (!parsed?.success || !parsed?.text) {
@@ -66,6 +77,74 @@ export class AiImageService implements BaseAiImageService {
     } catch (e) {
       console.error('[AI Text] unexpected error:', e);
       return E.left(new Error('Error de conexión con la IA de texto.'));
+    }
+  }
+
+  /** Identifica a qué producto corresponde cada foto (import masivo). Manda
+   *  miniaturas base64 + la lista de productos del tenant a la edge function
+   *  `ai-image-matcher` (Claude visión). 1 crédito de IA por foto. */
+  async matchPhotos(
+    images: { id: string; data: string }[],
+    products: { id: string; name: string; sku: string | null }[]
+  ): Promise<
+    E.Either<Error, { id: string; productId: string | null; confidence: number }[]>
+  > {
+    try {
+      const { data, error } = await this.client.functions.invoke(
+        'ai-image-matcher',
+        { body: { images, products } }
+      );
+      if (error) {
+        const msg = error.message ?? '';
+        if (msg.includes('Failed to send')) {
+          return E.left(
+            new Error('No se pudo conectar con la IA. Verifica tu conexión.')
+          );
+        }
+        const backend = await this.readInvokeError(error);
+        if (backend.code === 'no_credits') {
+          this.credits.setBalance(0);
+          return E.left(
+            new Error('No te quedan créditos de IA. Compra más o sube de plan.')
+          );
+        }
+        return E.left(
+          new Error(
+            backend.message || msg || 'La IA no pudo identificar las fotos'
+          )
+        );
+      }
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+      if (!parsed?.success || !Array.isArray(parsed?.matches)) {
+        if (parsed?.code === 'no_credits') this.credits.setBalance(0);
+        return E.left(
+          new Error(parsed?.error ?? 'La IA no pudo identificar las fotos')
+        );
+      }
+      if (typeof parsed.balance === 'number') {
+        this.credits.setBalance(parsed.balance);
+      }
+      return E.right(parsed.matches);
+    } catch (e) {
+      console.error('[AI Match] unexpected error:', e);
+      return E.left(new Error('Error de conexión con la IA.'));
+    }
+  }
+
+  /** `functions.invoke()` convierte cualquier non-2xx en un error genérico
+   *  ("Edge Function returned a non-2xx status code") y esconde el body real
+   *  en `error.context` (Response). Acá lo leemos para recuperar el
+   *  code/mensaje del backend — p. ej. el 402 de créditos agotados. */
+  private async readInvokeError(
+    error: unknown
+  ): Promise<{ code?: string; message?: string }> {
+    const ctx = (error as { context?: Response }).context;
+    if (!ctx || typeof ctx.clone !== 'function') return {};
+    try {
+      const body = await ctx.clone().json();
+      return { code: body?.code, message: body?.error };
+    } catch {
+      return {};
     }
   }
 
@@ -106,7 +185,18 @@ export class AiImageService implements BaseAiImageService {
             )
           );
         }
-        return E.left(new Error(msg || 'Error al conectar con el servicio de IA'));
+        const backend = await this.readInvokeError(error);
+        if (backend.code === 'no_credits') {
+          this.credits.setBalance(0);
+          return E.left(
+            new Error('No te quedan créditos de IA. Compra más o sube de plan.')
+          );
+        }
+        return E.left(
+          new Error(
+            backend.message || msg || 'Error al conectar con el servicio de IA'
+          )
+        );
       }
 
       // supabase.functions.invoke puede devolver data como string u objeto.

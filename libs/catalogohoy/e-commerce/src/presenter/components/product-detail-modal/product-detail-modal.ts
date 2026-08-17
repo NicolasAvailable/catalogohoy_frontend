@@ -9,7 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { Product, ProductVariant, WholesaleTier } from '@catalogohoy/product';
+import { Product, ProductAddon, ProductVariant, WholesaleTier } from '@catalogohoy/product';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { isVideoUrl } from '@shared/domain';
 import { SafeDescriptionHtmlPipe } from '@shared/presenter';
@@ -17,6 +17,7 @@ import {
   DynamicDialogConfig,
   DynamicDialogRef,
   IconComponent,
+  ImageComponent,
   ProductMediaComponent,
 } from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
@@ -27,6 +28,7 @@ import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
   imports: [
     DecimalPipe,
     IconComponent,
+    ImageComponent,
     ProductMediaComponent,
     SafeDescriptionHtmlPipe,
     TenantPricePipe,
@@ -51,6 +53,42 @@ export class ProductDetailModal {
   public readonly descriptionExpanded = signal(false);
   public readonly selectedSize = signal<string | null>(null);
 
+  /** Optional paid extras the buyer can add. Multi-select: their prices sum
+   *  on top of the selected variant/base price. */
+  public readonly addons: ProductAddon[] = this.product.addons ?? [];
+  public readonly hasAddons = this.addons.length > 0;
+
+  /** Ids of the addons currently checked. Seeded with any default-on addons. */
+  public readonly selectedAddonIds = signal<Set<string>>(
+    new Set(this.addons.filter((a) => a.isDefault).map((a) => a.id))
+  );
+
+  public isAddonSelected(id: string): boolean {
+    return this.selectedAddonIds().has(id);
+  }
+
+  toggleAddon(addon: ProductAddon): void {
+    this.selectedAddonIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(addon.id)) next.delete(addon.id);
+      else next.add(addon.id);
+      return next;
+    });
+  }
+
+  /** Sum of the prices of the currently-selected addons (per unit). */
+  public readonly addonsTotal = computed(() => {
+    const ids = this.selectedAddonIds();
+    return this.addons
+      .filter((a) => ids.has(a.id))
+      .reduce((sum, a) => sum + a.price, 0);
+  });
+
+  public readonly selectedAddons = computed(() => {
+    const ids = this.selectedAddonIds();
+    return this.addons.filter((a) => ids.has(a.id));
+  });
+
   /** Aspect ratios reportados por cada slide cuando carga la imagen o el
    *  video (clave = índice del slide en `product.photos`, valor = w/h).
    *  El container del carrusel usa el ratio del slide actual para que cada
@@ -74,6 +112,23 @@ export class ProductDetailModal {
       return next;
     });
   }
+
+  /** Los slides de imagen renderizan via ui-image (p-image no expone load),
+   *  así que las dimensiones para `--media-aspect` se miden acá preloadeando.
+   *  El browser cachea, no hay fetch duplicado. Videos siguen reportando por
+   *  (aspectChange) de ui-product-media. */
+  private readonly preloadAspects = effect(() => {
+    this.galleryMedia().forEach((url, index) => {
+      if (isVideoUrl(url)) return;
+      const img = new Image();
+      img.onload = () => {
+        if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+          this.setSlideAspect(index, img.naturalWidth / img.naturalHeight);
+        }
+      };
+      img.src = url;
+    });
+  });
 
   public readonly isSized = this.product.isSized && this.product.sizes.length > 0;
 
@@ -121,6 +176,15 @@ export class ProductDetailModal {
   private selectedVariantId(): string | null {
     const id = this.selectedVariant()?.id ?? null;
     return id === ProductDetailModal.BASE_ID ? null : id;
+  }
+
+  /** Name of the REAL variant selected (null for the base/original product).
+   *  Shown under the title so the buyer sees they're purchasing that option,
+   *  not the whole original product at the variant's price. */
+  get selectedOptionName(): string | null {
+    const v = this.selectedVariant();
+    if (!v || v.id === ProductDetailModal.BASE_ID) return null;
+    return v.name;
   }
 
   selectVariant(variant: ProductVariant): void {
@@ -248,13 +312,25 @@ export class ProductDetailModal {
     this.quantity.set(1);
   }
 
-  get displayPrice(): number {
+  /** Base/variant price for the current selection, WITHOUT addons. */
+  get basePrice(): number {
     if (this.isVariant) {
       return this.selectedVariant()?.price ?? this.product.price;
     }
     return this.product.pricePromotional > 0
       ? this.product.pricePromotional
       : this.product.price;
+  }
+
+  /** Header price = base/variant price. Addons never alter it; they only
+   *  show in the footer total (unitTotal). */
+  get displayPrice(): number {
+    return this.basePrice;
+  }
+
+  /** Charged per unit = base/variant price + selected addons. */
+  get unitTotal(): number {
+    return this.basePrice + this.addonsTotal();
   }
 
   /** Struck-through "before" price for the current selection. */
@@ -282,6 +358,37 @@ export class ProductDetailModal {
 
   get currentIsVideo(): boolean {
     return isVideoUrl(this.currentImage);
+  }
+
+  /** Feedback del botón compartir: el icono pasa a check ~2s tras copiar. */
+  public readonly linkCopied = signal(false);
+
+  /** Copia el link directo del producto (`?product={id}`, el mismo patrón
+   *  que el botón compartir del listado de productos del admin). Se parte de
+   *  la URL actual para preservar el slug del tenant en dev y subdominios. */
+  async shareProduct(): Promise<void> {
+    const url = new URL(window.location.href);
+    url.searchParams.set('product', String(this.product.id));
+    try {
+      await navigator.clipboard?.writeText(url.toString());
+      this.linkCopied.set(true);
+      setTimeout(() => this.linkCopied.set(false), 1800);
+    } catch {
+      /* clipboard puede no estar disponible en navegadores muy viejos */
+    }
+  }
+
+  /** Abre el preview fullscreen del slide visible. p-image no expone API
+   *  programática, así que se dispara su botón interno (.p-image-preview-mask,
+   *  el mismo que se clickea con el hover en desktop). */
+  openImagePreview(): void {
+    const slides = this.carouselEl()?.nativeElement.querySelectorAll(
+      '.pdm__carousel-slide'
+    );
+    const slide = slides?.[this.currentImageIndex()];
+    slide
+      ?.querySelector<HTMLButtonElement>('.p-image-preview-mask')
+      ?.click();
   }
 
   isVideoUrl(url: string): boolean {
@@ -337,10 +444,12 @@ export class ProductDetailModal {
     const sel = this.selectedVariant();
     // The base/original option carries no real variant — add at the base price.
     const variant = sel && sel.id !== ProductDetailModal.BASE_ID ? sel : null;
+    const addons = this.selectedAddons();
     for (let i = 0; i < this.quantity(); i++) {
       this.cartStore.addProduct(this.product, {
         size: this.selectedSize(),
         variant,
+        addons,
       });
     }
     this.cartStore.openCart();

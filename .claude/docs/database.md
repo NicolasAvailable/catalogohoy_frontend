@@ -217,6 +217,13 @@ await Promise.all(
 | auth_user_id | uuid | `gen_random_uuid()` | FK → users.auth_user_id |
 | tenant_id | int8 | NULL | FK → tenants.id |
 | created_at | timestamp | `now()` | |
+| position | int4 | NULL | Orden manual en el catálogo |
+| is_hidden | bool | `false` | Oculto del storefront (el sitemap dinámico `api/sitemap.ts` lo excluye) |
+| is_sold_out | bool | — | Agotado (se sigue mostrando) |
+| is_wholesale / wholesale_tiers | bool / jsonb | — | Precios de mayoreo |
+| is_sized / sizes | bool / jsonb | — | Tallas |
+| is_variant / variants | bool / jsonb | — | Variantes |
+| search_blob | text | NULL | Texto plano para búsqueda |
 
 **RLS:** Enabled
 
@@ -462,6 +469,26 @@ WhatsApp Business API accounts per tenant. RLS: tenant member check via `users_t
 | updated_at | timestamptz | `now()` | |
 
 **RLS Policies:** SELECT / INSERT / UPDATE / DELETE — all require authenticated user to be a tenant member.
+
+### `social_accounts` (fundación omnicanal, 2026-07-22)
+
+Cuentas conectadas de redes sociales por tenant — Instagram / TikTok / Messenger (WhatsApp se queda en `whatsapp_accounts` porque las funciones en prod dependen de ella). Migración `20260722_omnichannel_inbox_foundation.sql`, proyecto Linear "Bandeja omnicanal" (CAT-38..44).
+
+| Column | Type | Default | Notes |
+| --- | --- | --- | --- |
+| id | int8 | identity | PK |
+| tenant_id | int8 | — | FK → tenants.id, ON DELETE CASCADE |
+| channel | text | — | CHECK: `instagram` / `tiktok` / `messenger` |
+| external_account_id | text | — | IG user id / TikTok business id; UNIQUE (channel, external_account_id) |
+| username / display_name | text | null | |
+| access_token / refresh_token | text | null | ⚠️ IG vence a los 60 días → cron de refresh (CAT-40) |
+| token_expires_at | timestamptz | null | |
+| status | text | `'active'` | |
+| metadata | jsonb | `{}` | |
+
+**RLS + privilegios por columna:** SELECT solo para miembros del tenant y **sin** las columnas de tokens (`revoke all` + `grant select` de columnas públicas); las edge functions leen tokens con service role.
+
+La bandeja también es omnicanal: `chats.channel` (default `'whatsapp'`), `chats.external_user_id` (IGSID/open_id — ruteo en redes sin teléfono) y `chats.customer_username`, con unique parcial `(tenant_id, channel, external_user_id)`.
 
 **Frontend query pattern:**
 ```ts

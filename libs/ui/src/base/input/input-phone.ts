@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import {
   Component,
   computed,
+  effect,
   forwardRef,
   input,
   OnInit,
@@ -234,6 +235,19 @@ export class InputPhoneComponent implements ControlValueAccessor, OnInit {
     /* overridden by registerOnTouched */
   };
 
+  /** Una vez que el usuario eligió país o llegó un valor con país parseado,
+   *  el defaultCountry ya no debe pisarlo. */
+  private countryLocked = false;
+
+  /** defaultCountry suele llegar async (ej. el countryCode del catálogo se
+   *  carga después del init): seguirlo mientras el input esté "virgen". */
+  private readonly followDefaultCountry = effect(() => {
+    const iso = (this.defaultCountry() ?? 've').toUpperCase();
+    if (this.countryLocked || this.nationalNumber().trim()) return;
+    const found = PHONE_COUNTRIES.find((c) => c.iso === iso);
+    if (found) this.selectedCountry.set(found);
+  });
+
   ngOnInit(): void {
     const iso = (this.defaultCountry() ?? 've').toUpperCase();
     const found = PHONE_COUNTRIES.find((c) => c.iso === iso);
@@ -248,6 +262,7 @@ export class InputPhoneComponent implements ControlValueAccessor, OnInit {
     const parsed = this.parse(value);
     if (parsed.country) {
       this.selectedCountry.set(parsed.country);
+      this.countryLocked = true;
     }
     this.nationalNumber.set(parsed.national);
   }
@@ -265,6 +280,7 @@ export class InputPhoneComponent implements ControlValueAccessor, OnInit {
   onCountryChange(country: PhoneCountry | null): void {
     if (!country) return;
     this.selectedCountry.set(country);
+    this.countryLocked = true;
     this.emit();
   }
 

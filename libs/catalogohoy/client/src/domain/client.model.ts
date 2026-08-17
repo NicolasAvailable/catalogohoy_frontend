@@ -14,6 +14,8 @@ export interface Client {
   id: number | null;
   phone: string;
   name: string;
+  /** Apodo con el que el comerciante reconoce al cliente (opcional). */
+  nickname: string | null;
   /** Most recent email the client provided, if any. */
   email: string | null;
   /** ISO date (YYYY-MM-DD) of the client's birthday, if known. */
@@ -41,6 +43,7 @@ export const emptyClientList = (): ClientList => ({ items: [] });
 /** Payload for creating/editing a client manually from the admin. */
 export interface ClientInput {
   name: string;
+  nickname: string | null;
   phone: string;
   email: string | null;
   birthday: string | null;

@@ -56,6 +56,12 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
       this.route.snapshot.queryParamMap.get('invite_token') ??
       sessionStorage.getItem('pending_invite_token');
 
+    // returnUrl (lo manda el authenticationGuard del admin): deep link al que
+    // volver tras el login. Persistido en sessionStorage porque el flujo de
+    // Google sin popup navega fuera y vuelve a /login sin query params.
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    if (returnUrl) sessionStorage.setItem('pending_return_url', returnUrl);
+
     const pending = sessionStorage.getItem('auth_pending');
     if (pending !== 'google_login') return;
 
@@ -97,7 +103,7 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
           await this.facade.acceptInvite(this.pendingInviteToken);
           sessionStorage.removeItem('pending_invite_token');
         }
-        window.location.href = url;
+        window.location.href = this.applyReturnUrl(url);
       }
     }
   }
@@ -138,6 +144,28 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     }, 500);
   }
 
+  /** Si hay un returnUrl pendiente (deep link del guard, p.ej. el botón
+   *  "Ver pedido" de WhatsApp → /admin/orders?order=ID), redirige ahí en vez
+   *  de al /admin pelado. Solo si apunta al MISMO origin que el redirect del
+   *  tenant logueado (corta open redirects y tenants ajenos), y conservando
+   *  los query params del login (traspaso de sesión entre subdominios). */
+  private applyReturnUrl(loginUrl: string): string {
+    const raw = sessionStorage.getItem('pending_return_url');
+    if (!raw) return loginUrl;
+    sessionStorage.removeItem('pending_return_url');
+    try {
+      const login = new URL(loginUrl);
+      const target = new URL(raw);
+      if (target.origin !== login.origin) return loginUrl;
+      login.searchParams.forEach((value, key) => {
+        target.searchParams.set(key, value);
+      });
+      return target.toString();
+    } catch {
+      return loginUrl;
+    }
+  }
+
   private async handlePostGoogleAuth() {
     if (this.pendingInviteToken) {
       await this.facade.acceptInvite(this.pendingInviteToken);
@@ -145,7 +173,7 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     }
     const result = await this.facade.getLoginRedirectUrl();
     if (result.isRight()) {
-      window.location.href = result.value as string;
+      window.location.href = this.applyReturnUrl(result.value as string);
       return;
     }
 

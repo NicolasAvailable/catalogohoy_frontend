@@ -20,40 +20,72 @@
         <span class="text-xs font-bold text-primary-600">{{ initials(chatStore.selectedChat()!.customerName) }}</span>
       </div>
       <div class="flex-1 min-w-0">
-        <p class="text-sm font-semibold text-grey-700 truncate">{{ chatStore.selectedChat()!.customerName }}</p>
-        @if (chatStore.selectedChat()!.customerPhone) {
+        <p class="text-sm font-semibold text-grey-700 truncate">
+          {{ chatStore.selectedChat()!.customerName }}
+          @if (chatStore.nicknameFor(chatStore.selectedChat()!.customerPhone); as nick) {
+          <span class="font-normal text-grey-400">{{ nick }}</span>
+          }
+        </p>
+        @if (chatStore.selectedChat()!.channel === 'instagram') {
+          @if (chatStore.selectedChat()!.customerUsername; as igUser) {
           <a
-            [href]="'tel:' + chatStore.selectedChat()!.customerPhone"
-            class="text-xs text-primary-500 hover:underline"
+            [href]="'https://instagram.com/' + igUser"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1 text-xs text-pink-600 hover:underline"
           >
-            {{ chatStore.selectedChat()!.customerPhone }}
+            <img src="/images/instagram.svg" alt="Instagram" class="w-3 h-3" /> &#64;{{ igUser }}
           </a>
+          }
+        } @else if (chatStore.selectedChat()!.channel === 'tiktok') {
+          @if (chatStore.selectedChat()!.customerUsername; as ttUser) {
+          <a
+            [href]="'https://www.tiktok.com/@' + ttUser"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1 text-xs text-grey-600 hover:underline"
+          >
+            <img src="/images/tiktok.svg" alt="TikTok" class="w-3 h-3" /> &#64;{{ ttUser }}
+          </a>
+          }
+        } @else if (chatStore.selectedChat()!.channel === 'messenger') {
+          <span class="inline-flex items-center gap-1 text-xs text-blue-600">
+            <img src="/images/messenger.svg" alt="Messenger" class="w-3 h-3" /> Messenger
+          </span>
         }
       </div>
 
-      <!-- Assign (also available here, not just in the ficha) -->
-      <div class="hidden sm:block w-44 shrink-0">
-        <ui-select
-          [options]="assigneeOptions()"
-          optionLabel="label"
-          optionValue="value"
-          [placeholder]="'Asignar a' | transloco"
-          size="small"
-          [ngModel]="chatStore.selectedChat()!.assignedToUserId"
-          (ngModelChange)="onAssign($event)"
-        />
-      </div>
+      <!-- Ficha del cliente (mobile only): abre el overlay. -->
+      <button
+        (click)="infoClick.emit()"
+        class="lg:hidden w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 transition-colors shrink-0 cursor-pointer"
+        [title]="'Información del cliente' | transloco"
+      >
+        <ui-icon name="info" size="16" styleClass="text-grey-400" />
+      </button>
 
       <button
         (click)="chatStore.toggleMute(chatStore.selectedChat()!.id)"
-        class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 transition-colors shrink-0"
-        [title]="(chatStore.selectedChat()!.muted ? 'Activar notificaciones' : 'Silenciar') | transloco"
+        class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 transition-colors shrink-0 cursor-pointer"
+        [pTooltip]="(chatStore.selectedChat()!.muted ? 'Activar notificaciones' : 'Silenciar') | transloco"
+        tooltipPosition="bottom"
       >
         @if (chatStore.selectedChat()!.muted) {
           <ui-icon name="volume-x" size="16" styleClass="text-primary-500" />
         } @else {
           <ui-icon name="volume-2" size="16" styleClass="text-grey-400" />
         }
+      </button>
+
+      <!-- Ficha del cliente (desktop): colapsa/expande la columna derecha. -->
+      <button
+        (click)="toggleFicha.emit()"
+        class="hidden lg:flex w-8 h-8 items-center justify-center rounded-md hover:bg-grey-50 transition-colors shrink-0 cursor-pointer"
+        [ngClass]="fichaVisible() ? 'text-primary-600' : 'text-grey-400'"
+        [pTooltip]="(fichaVisible() ? 'Ocultar información del cliente' : 'Mostrar información del cliente') | transloco"
+        tooltipPosition="bottom"
+      >
+        <ui-icon name="panel-right" size="16" />
       </button>
     </div>
 
@@ -62,18 +94,38 @@
     <div #messagesContainer class="flex-1 overflow-y-auto">
       <div class="flex w-full flex-auto flex-col gap-1 px-6 py-6">
       @if (chatStore.isLoadingMessages()) {
-        <div class="flex flex-col gap-3 animate-pulse">
+        <!-- Skeleton con forma de conversación real: separador de día +
+             burbujas de anchos/alturas variados a ambos lados. -->
+        <div class="flex flex-col gap-1.5 animate-pulse" aria-hidden="true">
+          <div class="flex items-center gap-3 my-3">
+            <div class="flex-1 h-px bg-grey-100"></div>
+            <div class="h-4 w-16 bg-grey-100 rounded-full"></div>
+            <div class="flex-1 h-px bg-grey-100"></div>
+          </div>
           <div class="flex justify-start">
-            <div class="h-9 w-48 bg-grey-100 rounded-2xl rounded-tl-sm"></div>
+            <div class="h-9 w-52 max-w-[75%] bg-grey-100 rounded-2xl rounded-bl-md"></div>
+          </div>
+          <div class="flex justify-start">
+            <div class="h-14 w-64 max-w-[80%] bg-grey-100 rounded-2xl rounded-bl-md"></div>
+          </div>
+          <div class="flex justify-end mt-3">
+            <div class="h-9 w-40 max-w-[70%] bg-primary-100 rounded-2xl rounded-br-md"></div>
           </div>
           <div class="flex justify-end">
-            <div class="h-9 w-36 bg-primary-100 rounded-2xl rounded-tr-sm"></div>
+            <div class="h-9 w-56 max-w-[75%] bg-primary-100 rounded-2xl rounded-br-md"></div>
+          </div>
+          <div class="flex justify-start mt-3">
+            <div class="h-9 w-44 max-w-[70%] bg-grey-100 rounded-2xl rounded-bl-md"></div>
           </div>
           <div class="flex justify-start">
-            <div class="h-9 w-56 bg-grey-100 rounded-2xl rounded-tl-sm"></div>
+            <div class="h-20 w-60 max-w-[80%] bg-grey-100 rounded-2xl rounded-bl-md"></div>
+          </div>
+          <div class="flex justify-end mt-3">
+            <div class="h-9 w-48 max-w-[70%] bg-primary-100 rounded-2xl rounded-br-md"></div>
           </div>
         </div>
       } @else {
+        <div class="flex flex-col gap-1 thread-enter">
         @for (group of chatStore.messagesByDay(); track group.date) {
           <!-- Date separator -->
           <div class="flex items-center gap-3 my-3">
@@ -82,7 +134,7 @@
             <div class="flex-1 h-px bg-grey-100"></div>
           </div>
 
-          @for (msg of group.msgs; track msg.id; let i = $index; let first = $first) {
+          @for (msg of group.msgs; track msg.clientKey || msg.id; let i = $index; let first = $first) {
             <div
               class="flex group items-end gap-1.5"
               [class.justify-end]="msg.isMine"
@@ -90,7 +142,7 @@
               [class.mt-3]="!first && isGroupStart(group.msgs, i)"
               [class.mt-0.5]="!first && !isGroupStart(group.msgs, i)"
             >
-              @if (msg.id > 0) {
+              @if (msg.id > 0 && chatStore.selectedChat()!.channel !== 'instagram' && chatStore.selectedChat()!.channel !== 'tiktok' && chatStore.selectedChat()!.channel !== 'messenger') {
               <button
                 (click)="startReply(msg)"
                 class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-grey-400 hover:bg-grey-100 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
@@ -147,16 +199,96 @@
                 <ui-image
                   [src]="msg.mediaUrl"
                   [alt]="'Imagen' | transloco"
-                  styleClass="block rounded-lg overflow-hidden max-w-[15rem] cursor-zoom-in"
-                  imageClass="w-full max-h-64 object-cover"
+                  styleClass="block rounded-xl overflow-hidden w-64 max-w-full cursor-zoom-in"
+                  imageClass="w-full max-h-80 object-cover"
+                  [downloadable]="true"
                 />
                 @if (msg.content && msg.content !== '📷 Imagen') {
-                <p class="text-sm whitespace-pre-wrap break-words mt-1">{{ msg.content }}</p>
+                <p class="text-sm whitespace-pre-wrap break-words mt-1 wa-rich" [innerHTML]="msg.content | waFormat"></p>
                 }
+                } @else if (msg.type === 'audio' && msg.mediaUrl) {
+                <!-- Nota de voz: reproductor propio + transcripción IA on-demand -->
+                <lib-chat-audio-player
+                  [src]="msg.mediaUrl"
+                  [onPrimary]="msg.isMine && !msg.isInternal"
+                />
+                @if (msg.transcript) {
+                <p
+                  class="text-xs italic mt-1.5 whitespace-pre-wrap break-words max-w-64"
+                  [class.text-primary-100]="msg.isMine"
+                  [class.text-grey-500]="!msg.isMine"
+                >
+                  {{ msg.transcript }}
+                </p>
+                } @else if (msg.id > 0) {
+                <button
+                  (click)="chatStore.transcribeMessage(msg.id)"
+                  [disabled]="chatStore.transcribingMessageId() !== null"
+                  class="mt-1.5 inline-flex items-center gap-1 text-xs font-medium cursor-pointer hover:underline disabled:opacity-60 disabled:cursor-wait"
+                  [class.text-primary-100]="msg.isMine"
+                  [class.text-primary-600]="!msg.isMine"
+                  [pTooltip]="'Convierte la nota de voz en texto (1 crédito de IA)' | transloco"
+                  tooltipPosition="top"
+                  tooltipStyleClass="tooltip-sm"
+                >
+                  <ui-icon name="sparkles" size="12" />
+                  {{
+                    (chatStore.transcribingMessageId() === msg.id
+                      ? 'Transcribiendo…'
+                      : 'Transcribir') | transloco
+                  }}
+                </button>
+                @if (chatStore.transcribeError()?.messageId === msg.id) {
+                <p class="text-xs text-red-400 mt-1 max-w-64">
+                  {{ chatStore.transcribeError()?.message }}
+                </p>
+                }
+                }
+                } @else if (msg.type === 'video' && msg.mediaUrl) {
+                <!-- Contenedor oscuro: el letterboxing se ve intencional y el
+                     primer frame (preload=metadata) hace de miniatura. -->
+                <div class="rounded-xl overflow-hidden bg-grey-900 w-64 max-w-full">
+                  <video
+                    controls
+                    preload="metadata"
+                    [src]="msg.mediaUrl"
+                    class="block w-full max-h-80"
+                  ></video>
+                </div>
+                @if (msg.content && msg.content !== '🎥 Video') {
+                <p class="text-sm whitespace-pre-wrap break-words mt-1 wa-rich" [innerHTML]="msg.content | waFormat"></p>
+                }
+                } @else if (msg.type === 'document' && msg.mediaUrl) {
+                @let dmeta = docMeta(msg.content && msg.content.includes('.') ? msg.content : msg.mediaUrl);
+                <a
+                  [href]="msg.mediaUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 min-w-[12rem] max-w-[16rem] transition-colors"
+                  [ngClass]="(msg.isMine && !msg.isInternal) ? 'bg-white/15 hover:bg-white/25' : 'bg-black/5 hover:bg-black/10'"
+                >
+                  <img [src]="dmeta.logo" [alt]="dmeta.label" class="shrink-0 w-9 h-9" />
+                  <span class="flex-1 min-w-0">
+                    <span
+                      class="block text-sm font-medium truncate"
+                      [ngClass]="(msg.isMine && !msg.isInternal) ? 'text-white' : 'text-grey-800'"
+                    >
+                      {{ (msg.content && msg.content !== '📎 Documento' && msg.content.includes('.')) ? msg.content : dmeta.label }}
+                    </span>
+                    <span
+                      class="mt-0.5 text-[0.7rem] inline-flex items-center gap-1"
+                      [ngClass]="(msg.isMine && !msg.isInternal) ? 'text-white/70' : 'text-grey-400'"
+                    >
+                      <ui-icon name="download" size="11" /> {{ 'Ver documento' | transloco }}
+                    </span>
+                  </span>
+                </a>
                 } @else {
-                <p class="text-sm whitespace-pre-wrap break-words">{{ msg.content }}</p>
+                <p class="text-sm whitespace-pre-wrap break-words wa-rich" [innerHTML]="msg.content | waFormat"></p>
                 }
-                @if (isGroupEnd(group.msgs, i) || msg.status) {
+                <!-- Hora + acuses en CADA burbuja (como WhatsApp) — antes solo
+                     el último mensaje del grupo la mostraba y al mandar otro
+                     seguido el anterior "perdía" su check. -->
                 <div
                   class="text-[10px] mt-1 -mb-0.5 flex items-center gap-1"
                   [class.justify-end]="msg.isMine"
@@ -175,19 +307,93 @@
                   >
                     <ui-icon name="triangle-alert" size="12" /> {{ 'No enviado' | transloco }}
                   </span>
+                  } @else if (msg.isMine && !msg.isInternal && msg.deliveryStatus) {
+                  <!-- Acuses estilo WhatsApp: ✓ enviado · ✓✓ entregado · ✓✓ azul
+                       leído · ⓘ rojo NO entregado (Meta lo rechazó — motivo en
+                       el tooltip). -->
+                  @if (msg.deliveryStatus === 'failed') {
+                  <span
+                    class="text-red-400 font-medium inline-flex items-center gap-1 cursor-help"
+                    [pTooltip]="msg.deliveryError || ('No se pudo entregar el mensaje.' | transloco)"
+                    tooltipPosition="top"
+                  >
+                    <ui-icon name="info" size="13" /> {{ 'No entregado' | transloco }}
+                  </span>
+                  } @else if (msg.deliveryStatus === 'read') {
+                  <ui-icon name="check-check" size="14" styleClass="text-sky-300" />
+                  } @else if (msg.deliveryStatus === 'delivered') {
+                  <ui-icon name="check-check" size="14" />
+                  } @else {
+                  <ui-icon name="check" size="14" />
+                  }
                   }
                 </div>
-                }
               </div>
             </div>
           }
         }
+        </div>
       }
       </div>
     </div>
 
+    <!-- Input file compartido por el composer y el overlay de multimedia:
+         vive fuera de los @if para que la referencia #fileInput alcance ambos. -->
+    <input
+      #fileInput
+      type="file"
+      class="hidden"
+      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.xlsm,.csv,.ods,.odt,.ppt,.pptx,.odp,.rtf,.txt,.zip"
+      multiple
+      (change)="onAttachFile($event)"
+    />
+
     <!-- Input area (estilo Tikket: pestañas Mensaje/Susurro + composer) -->
-    <div class="px-4 py-3 bg-white border-t border-grey-50 shrink-0">
+    @if (channelDisconnected()) {
+    <!-- Canal desvinculado: historial visible, respuestas bloqueadas. -->
+    <div class="px-4 py-4 bg-white border-t border-grey-50 shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1.5 text-center">
+      <ui-icon name="info" size="15" styleClass="text-amber-500 shrink-0" />
+      <span class="text-sm text-grey-500">
+        {{ 'Este canal está desvinculado: puedes leer la conversación, pero no responder.' | transloco }}
+      </span>
+      <a routerLink="/admin/chat/connect" class="text-sm font-semibold text-primary-600 hover:underline">
+        {{ 'Volver a conectar' | transloco }}
+      </a>
+    </div>
+    } @else {
+    <!-- Ventana de 24h cerrada: el texto libre no se entrega; se sugiere usar
+         una plantilla (Meta la exige fuera de la ventana de servicio). -->
+    @if (windowClosed() && composerMode() !== 'whisper') {
+    <div class="px-4 py-2.5 bg-amber-50 border-t border-amber-100 shrink-0 flex items-center gap-2.5">
+      <ui-icon name="info" size="16" styleClass="text-amber-500 shrink-0" />
+      <span class="text-xs text-amber-800 leading-snug flex-1">
+        {{ 'Pasaron más de 24 h desde el último mensaje del cliente. WhatsApp no entregará un texto libre; usá una plantilla aprobada para reabrir la conversación.' | transloco }}
+      </span>
+      <a
+        routerLink="/admin/chat/templates"
+        [queryParams]="{ new: 1 }"
+        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700 transition-colors"
+      >
+        <ui-icon name="plus" size="13" />
+        {{ 'Crear plantilla' | transloco }}
+      </a>
+    </div>
+    }
+    <div
+      class="relative px-4 py-3 bg-white border-t border-grey-50 shrink-0"
+      (dragover)="onDragOverComposer($event)"
+      (dragleave)="onDragLeaveComposer($event)"
+      (drop)="onDropFiles($event)"
+    >
+      @if (isDraggingFile()) {
+      <div
+        class="absolute inset-0 z-30 m-2 rounded-xl border-2 border-dashed border-primary-400 bg-primary-50/95 flex items-center justify-center pointer-events-none"
+      >
+        <span class="inline-flex items-center gap-2 text-sm font-semibold text-primary-600">
+          <ui-icon name="paperclip" size="18" /> {{ 'Soltá el archivo para adjuntarlo' | transloco }}
+        </span>
+      </div>
+      }
       <div class="flex items-center gap-5 mb-2 px-1">
         <button
           (click)="setComposerMode('message')"
@@ -239,22 +445,23 @@
         </div>
         }
         <textarea
+          #composerTextarea
           [ngModel]="messageInput()"
           (ngModelChange)="messageInput.set($event)"
           (keydown)="onKeydown($event)"
+          (paste)="onPasteComposer($event)"
           [placeholder]="
             (composerMode() === 'whisper'
               ? 'Nota interna para el equipo (no la ve el cliente)…'
               : 'Escribe una respuesta...') | transloco
           "
-          class="w-full resize-none bg-transparent px-4 py-3 text-sm leading-relaxed text-grey-700 placeholder:text-grey-300 focus:outline-none min-h-[5rem] max-h-48 overflow-y-auto"
+          class="w-full resize-none bg-transparent px-4 py-3 text-sm leading-relaxed text-grey-700 placeholder:text-grey-300 focus:outline-none min-h-[5rem] max-h-[11.5rem] overflow-y-auto"
         ></textarea>
 
         <!-- Toolbar -->
         <div class="flex items-center justify-between gap-2 px-2 py-1.5 border-t border-grey-50">
           <div class="flex items-center gap-0.5">
-            <!-- Quick replies -->
-            @if (chatStore.quickReplies().length) {
+            <!-- Quick replies: insertar + crear/editar/eliminar -->
             <div class="relative qr-popover-wrap">
               <button
                 (click)="toggleQuickReplies($event)"
@@ -266,21 +473,99 @@
               </button>
               @if (quickRepliesOpen()) {
               <div
-                class="absolute bottom-10 left-0 z-10 w-72 max-h-64 overflow-y-auto bg-white border border-grey-100 rounded-xl shadow-lg p-1"
+                class="absolute bottom-10 left-0 z-10 w-80 bg-white border border-grey-100 rounded-xl shadow-lg"
+                (click)="$event.stopPropagation()"
               >
-                @for (qr of chatStore.quickReplies(); track qr.id) {
-                <button
-                  (click)="insertQuickReply(qr.content)"
-                  class="w-full text-left px-3 py-2 rounded-lg hover:bg-grey-50"
-                >
-                  <span class="block text-xs font-semibold text-primary-600">/{{ qr.shortcut }}</span>
-                  <span class="block text-xs text-grey-500 truncate">{{ qr.content }}</span>
-                </button>
+                @if (qrForm(); as form) {
+                <!-- Crear / editar -->
+                <div class="p-3 flex flex-col gap-2">
+                  <span class="text-xs font-semibold text-grey-700">
+                    {{ (form.id ? 'Editar respuesta rápida' : 'Nueva respuesta rápida') | transloco }}
+                  </span>
+                  <div
+                    class="flex items-center gap-1 rounded-lg border border-grey-100 px-2 py-1.5 focus-within:border-primary-300"
+                  >
+                    <span class="text-xs font-semibold text-primary-600">/</span>
+                    <input
+                      type="text"
+                      [ngModel]="form.shortcut"
+                      (ngModelChange)="setQrField('shortcut', $event)"
+                      [placeholder]="'atajo' | transloco"
+                      class="flex-1 text-xs text-grey-700 focus:outline-none bg-transparent"
+                    />
+                  </div>
+                  <textarea
+                    rows="3"
+                    [ngModel]="form.content"
+                    (ngModelChange)="setQrField('content', $event)"
+                    [placeholder]="'Texto de la respuesta…' | transloco"
+                    class="w-full text-xs text-grey-700 rounded-lg border border-grey-100 px-2 py-1.5 resize-none focus:outline-none focus:border-primary-300"
+                  ></textarea>
+                  <div class="flex items-center justify-end gap-2">
+                    <button
+                      (click)="qrForm.set(null)"
+                      class="text-xs text-grey-500 hover:text-grey-700 px-2 py-1 cursor-pointer"
+                    >
+                      {{ 'Cancelar' | transloco }}
+                    </button>
+                    <button
+                      (click)="saveQuickReply()"
+                      [disabled]="qrSaving() || !form.shortcut.trim() || !form.content.trim()"
+                      class="text-xs font-semibold text-white bg-primary-500 hover:bg-primary-600 rounded-lg px-3 py-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {{ 'Guardar' | transloco }}
+                    </button>
+                  </div>
+                </div>
+                } @else {
+                <div class="flex items-center justify-between px-3 pt-2.5 pb-1.5">
+                  <span class="text-xs font-semibold text-grey-700">{{ 'Respuestas rápidas' | transloco }}</span>
+                  <button
+                    (click)="startNewQuickReply()"
+                    class="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:underline cursor-pointer"
+                  >
+                    <ui-icon name="plus" size="12" /> {{ 'Nueva' | transloco }}
+                  </button>
+                </div>
+                <div class="max-h-64 overflow-y-auto p-1">
+                  @for (qr of chatStore.quickReplies(); track qr.id) {
+                  <div class="group/qr flex items-start gap-1 rounded-lg hover:bg-grey-50">
+                    <button
+                      (click)="insertQuickReply(qr.content)"
+                      class="flex-1 min-w-0 text-left px-3 py-2 cursor-pointer"
+                    >
+                      <span class="block text-xs font-semibold text-primary-600">/{{ qr.shortcut }}</span>
+                      <span class="block text-xs text-grey-500 truncate">{{ qr.content }}</span>
+                    </button>
+                    <div
+                      class="flex items-center gap-0.5 pt-2 pr-2 opacity-0 group-hover/qr:opacity-100 transition-opacity"
+                    >
+                      <button
+                        (click)="editQuickReply(qr, $event)"
+                        class="w-6 h-6 rounded-md hover:bg-grey-100 flex items-center justify-center cursor-pointer"
+                        [title]="'Editar' | transloco"
+                      >
+                        <ui-icon name="pencil" size="12" styleClass="text-grey-400" />
+                      </button>
+                      <button
+                        (click)="removeQuickReply(qr.id, $event)"
+                        class="w-6 h-6 rounded-md hover:bg-red-50 flex items-center justify-center cursor-pointer"
+                        [title]="'Eliminar' | transloco"
+                      >
+                        <ui-icon name="trash" size="12" styleClass="text-red-400" />
+                      </button>
+                    </div>
+                  </div>
+                  } @empty {
+                  <p class="text-xs text-grey-400 px-3 py-3">
+                    {{ 'Crea atajos para responder en un clic (ej: /saludo).' | transloco }}
+                  </p>
+                  }
+                </div>
                 }
               </div>
               }
             </div>
-            }
 
             <!-- Emoji picker (Apple set) -->
             <div class="relative emoji-popover-wrap">
@@ -308,24 +593,42 @@
               }
             </div>
 
-            <!-- Adjuntar -->
-            <input
-              #fileInput
-              type="file"
-              class="hidden"
-              accept="image/*"
-              multiple
-              (change)="onAttachFile($event)"
-            />
+            <!-- Adjuntar: menú único (estilo "+") con dos opciones -->
             @if (composerMode() !== 'whisper') {
-            <button
-              (click)="fileInput.click()"
-              class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
-              [pTooltip]="'Adjuntar imágenes' | transloco"
-              tooltipPosition="top"
-            >
-              <ui-icon name="paperclip" size="18" styleClass="text-grey-400" />
-            </button>
+            <div class="relative attach-popover-wrap">
+              <button
+                (click)="toggleAttachMenu($event)"
+                class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-grey-50 cursor-pointer"
+                [class.bg-grey-100]="attachMenuOpen()"
+                [pTooltip]="'Adjuntar' | transloco"
+                tooltipPosition="top"
+              >
+                <ui-icon name="plus" size="20" styleClass="text-grey-400" />
+              </button>
+
+              @if (attachMenuOpen()) {
+              <div
+                class="absolute bottom-10 left-0 z-20 w-60 bg-white border border-grey-100 rounded-xl shadow-lg py-1.5"
+              >
+                <button
+                  type="button"
+                  (click)="attachMenuOpen.set(false); fileInput.click()"
+                  class="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm text-grey-700 hover:bg-grey-50 cursor-pointer"
+                >
+                  <ui-icon name="upload" size="18" styleClass="text-grey-400" />
+                  {{ 'Subir desde el dispositivo' | transloco }}
+                </button>
+                <button
+                  type="button"
+                  (click)="attachMenuOpen.set(false); galleryOpen.set(true)"
+                  class="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm text-grey-700 hover:bg-grey-50 cursor-pointer"
+                >
+                  <ui-icon name="image" size="18" styleClass="text-grey-400" />
+                  {{ 'Elegir de la galería' | transloco }}
+                </button>
+              </div>
+              }
+            </div>
             }
           </div>
 
@@ -355,6 +658,7 @@
         </div>
       </div>
     </div>
+    }
   </div>
 
   <!-- Overlay de preview multimedia (estilo WhatsApp Web) -->
@@ -373,16 +677,34 @@
       <span class="text-sm text-white/80 truncate">
         {{ chatStore.selectedChat()?.customerName || ('Cliente' | transloco) }}
       </span>
-      <span class="w-9"></span>
+      <button
+        (click)="downloadActive()"
+        class="w-9 h-9 flex items-center justify-center rounded-full text-white hover:bg-white/10 cursor-pointer"
+        [pTooltip]="'Descargar' | transloco"
+        tooltipPosition="left"
+      >
+        <ui-icon name="download" size="18" />
+      </button>
     </div>
 
-    <!-- Imagen activa -->
+    <!-- Preview del adjunto activo (imagen o documento) -->
     <div class="flex-1 min-h-0 flex items-center justify-center px-6">
+      @if (active.kind === 'image') {
       <img
         [src]="active.preview"
         [alt]="'Adjunto' | transloco"
         class="max-h-full max-w-full object-contain rounded-lg"
       />
+      } @else {
+      @let dm = docMeta(active.name);
+      <div class="flex flex-col items-center gap-4 text-center px-4">
+        <img [src]="dm.logo" [alt]="dm.label" class="w-24 h-24" />
+        <div>
+          <p class="text-white font-semibold break-all max-w-md">{{ active.name }}</p>
+          <p class="text-white/60 text-sm mt-1">{{ dm.label }} · {{ formatBytes(active.file.size) }}</p>
+        </div>
+      </div>
+      }
     </div>
 
     <!-- Filmstrip: cambiar de imagen; la activa muestra papelera para quitarla -->
@@ -394,7 +716,14 @@
         [class.border-primary-500]="idx === activeIndex()"
         [class.border-transparent]="idx !== activeIndex()"
       >
+        @if (m.kind === 'image') {
         <img [src]="m.preview" alt="" class="w-full h-full object-cover" />
+        } @else {
+        @let fm = docMeta(m.name);
+        <span class="w-full h-full flex items-center justify-center bg-white">
+          <img [src]="fm.logo" [alt]="fm.label" class="w-8 h-8" />
+        </span>
+        }
         @if (idx === activeIndex()) {
         <span
           class="absolute inset-0 bg-grey-900/50 flex items-center justify-center"
@@ -439,5 +768,17 @@
       </div>
     </div>
   </div>
+  }
+
+  <!-- Picker: galería de la app (fotos de productos / subidas del tenant) para
+       enviar una imagen YA hosteada sin re-subirla. Modo solo-elegir (sin
+       botón de borrar). Reusa el mismo componente de crear/editar producto. -->
+  @if (galleryOpen()) {
+  <lib-image-gallery
+    [tenantId]="galleryTenantId()"
+    [allowDelete]="false"
+    (selected)="onGallerySelected($event)"
+    (closed)="galleryOpen.set(false)"
+  />
   }
 }

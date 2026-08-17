@@ -1,0 +1,59 @@
+<audio
+  #audioEl
+  [src]="src()"
+  preload="metadata"
+  (loadedmetadata)="onLoadedMetadata()"
+  (play)="onPlay()"
+  (pause)="onPause()"
+  (ended)="onEnded()"
+  class="hidden"
+></audio>
+
+<div class="flex items-center gap-2.5 w-64 max-w-full select-none py-1">
+  <!-- Play / pausa (icono sólido, estilo WhatsApp) -->
+  <button
+    type="button"
+    (click)="toggle()"
+    class="w-8 h-8 -ml-0.5 flex items-center justify-center shrink-0 cursor-pointer transition-opacity hover:opacity-75"
+    [class]="onPrimary() ? 'text-white' : 'text-grey-400'"
+  >
+    @if (playing()) {
+    <ui-icon name="pause" size="24" styleClass="fill-current" />
+    } @else {
+    <ui-icon name="play" size="24" styleClass="fill-current" />
+    }
+  </button>
+
+  <!-- Progreso + tiempo + velocidad -->
+  <div class="flex-1 min-w-0 flex flex-col gap-1.5">
+    <input
+      type="range"
+      class="track"
+      [class.track-light]="onPrimary()"
+      min="0"
+      [max]="duration() || 0.1"
+      step="0.01"
+      [value]="currentTime()"
+      [style.--p]="progress() + '%'"
+      (input)="seek($event)"
+    />
+    <div
+      class="flex items-center justify-between leading-none"
+      [class]="onPrimary() ? 'text-primary-100' : 'text-grey-400'"
+    >
+      <span class="text-[0.625rem] tabular-nums">{{ format(displayTime()) }}</span>
+      <button
+        type="button"
+        (click)="cycleRate()"
+        class="text-[0.625rem] font-semibold cursor-pointer rounded-full px-1.5 py-0.5 transition-colors tabular-nums"
+        [class]="
+          onPrimary()
+            ? 'bg-white/20 text-white hover:bg-white/30'
+            : 'bg-grey-100 text-grey-500 hover:bg-grey-200'
+        "
+      >
+        {{ rate() }}×
+      </button>
+    </div>
+  </div>
+</div>

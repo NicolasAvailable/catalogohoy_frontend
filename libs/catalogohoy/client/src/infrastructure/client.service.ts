@@ -13,6 +13,8 @@ interface RpcCustomerRow {
   id: number;
   phone: string;
   name: string;
+  /** Opcional hasta que el RPC get_customers_by_tenant incluya la columna. */
+  nickname?: string | null;
   email: string | null;
   birthday: string | null;
   address: string | null;
@@ -29,6 +31,56 @@ interface RpcCustomerRow {
 
 @Injectable({ providedIn: 'root' })
 export class ClientService {
+  /** Últimos 5 mensajes del chat del cliente (match del teléfono por dígitos,
+   *  como el cruce de órdenes de la ficha del CRM). Null si no hay chat. */
+  async getRecentChatMessages(
+    tenantId: number,
+    phone: string
+  ): Promise<
+    E.Either<
+      Error,
+      {
+        chatId: number;
+        messages: { content: string; isMine: boolean; createdAt: string }[];
+      } | null
+    >
+  > {
+    const target = phone.replace(/\D/g, '');
+    if (!target) return E.right(null);
+
+    const { data: chats, error } = await this.client
+      .from('chats')
+      .select('id, customer_phone')
+      .eq('tenant_id', tenantId);
+    if (error) return E.left(new Error(error.message));
+
+    const match = (chats ?? []).find((c: { customer_phone: string | null }) => {
+      const d = String(c.customer_phone ?? '').replace(/\D/g, '');
+      return !!d && (d === target || d.endsWith(target) || target.endsWith(d));
+    });
+    if (!match) return E.right(null);
+
+    const { data: msgs, error: msgErr } = await this.client
+      .from('chat_messages')
+      .select('content, is_mine, created_at')
+      .eq('chat_id', match.id)
+      .not('is_internal', 'is', true)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    if (msgErr) return E.left(new Error(msgErr.message));
+
+    return E.right({
+      chatId: match.id,
+      messages: (msgs ?? [])
+        .reverse()
+        .map((m: { content: string; is_mine: boolean; created_at: string }) => ({
+          content: m.content,
+          isMine: !!m.is_mine,
+          createdAt: m.created_at,
+        })),
+    });
+  }
+
   private readonly client = SupabaseClientProvider.getInstance();
 
   // ----------------------------------------------------------------- list ---
@@ -56,6 +108,7 @@ export class ClientService {
       id: row.id,
       phone: row.phone,
       name: row.name,
+      nickname: row.nickname ?? null,
       email: row.email ?? null,
       birthday: row.birthday ?? null,
       address: row.address ?? null,
@@ -128,6 +181,7 @@ export class ClientService {
     return {
       tenant_id: tenantId,
       name: input.name.trim() || 'Cliente',
+      nickname: clean(input.nickname),
       phone: input.phone.trim(),
       email: clean(input.email),
       birthday: clean(input.birthday),

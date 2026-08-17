@@ -2,12 +2,13 @@
 .plans-wrapper {
   padding: 1rem 2rem;
   /* Grid de 3 planes (Enterprise oculta). Con --four el grid pasa a 4. */
-  max-width: 75rem;
+  max-width: 84rem;
   margin: 0 auto;
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  min-width: 0;
 }
 
 /* ── Header ── */
@@ -97,6 +98,7 @@
 }
 
 .billing-toggle__btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -119,13 +121,29 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
+/* Badge de ahorro FLOTANTE (sobrepuesto) sobre cada tab, como en la landing. */
 .billing-toggle__savings {
+  position: absolute;
+  top: -0.85rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
   background: #dcfce7;
   color: #16a34a;
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 0.15rem 0.5rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
   border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* El del anual (más ancho) se ancla a la derecha para no pisar el "10% off". */
+.billing-toggle__savings--annual {
+  left: auto;
+  right: 0;
+  transform: translateX(30%);
 }
 
 /* ── Grid — equal height cards ── */
@@ -139,6 +157,17 @@
 /* Con la card Enterprise visible (tenant enterprise) el grid pasa a 4. */
 .plans-grid--four {
   grid-template-columns: repeat(4, 1fr);
+}
+
+/* ── Carousel (laptops chicas): flechas para navegar entre planes ── */
+.plans-carousel {
+  position: relative;
+  /* Sin esto, el overflow-x del grid empuja el ancho hacia arriba y genera
+     scroll horizontal en toda la página. */
+  min-width: 0;
+}
+.plans-carousel__arrow {
+  display: none; /* solo visible en el rango carousel (ver responsive) */
 }
 
 /* ── Card ── */
@@ -335,6 +364,13 @@
   margin-top: -0.5rem;
 }
 
+.plan-card__free-months {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #16a34a;
+  margin: -0.25rem 0 0;
+}
+
 /* ── Divider ── */
 .plan-card__divider {
   border: none;
@@ -498,28 +534,79 @@
 }
 
 /* ── Responsive ── */
-@media (max-width: 1024px) {
-  .plans-grid {
-    grid-template-columns: 1fr;
-    max-width: 420px;
-    margin: 0 auto;
+/* Móvil: planes apilados uno debajo del otro (stack vertical, sin carousel). */
+@media (max-width: 767px) {
+  .plans-grid,
+  .plans-grid--four {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    gap: 1rem;
+    padding: 0.25rem 0 0.75rem;
   }
-
-  /* Con solo 3 features la card queda muy corta apilada en una columna. */
+  .plan-card,
   .plan-card--enterprise {
-    min-height: 30rem;
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
   }
 }
 
-/* Solo con 4 cards (tenant enterprise): a este ancho van mejor 2x2. */
-@media (min-width: 1025px) and (max-width: 1200px) {
+/* Laptops chicas / tablets: carousel horizontal con flechas. */
+@media (min-width: 768px) and (max-width: 1279px) {
+  .plans-grid,
   .plans-grid--four {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+    display: flex;
+    flex-direction: row;
+    grid-template-columns: none;
+    overflow-x: auto;
+    min-width: 0;
+    max-width: 100%;
+    scroll-snap-type: x mandatory;
+    gap: 1.25rem;
+    padding: 0.25rem 0.25rem 0.75rem;
+    scrollbar-width: none; /* Firefox */
+  }
+  .plans-grid::-webkit-scrollbar {
+    display: none; /* WebKit */
+  }
+  .plan-card {
+    flex: 0 0 19.5rem;
+    scroll-snap-align: center;
   }
 
-  .plans-grid--four .plan-card__content {
-    padding: 1.5rem;
+  .plans-carousel__arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 45%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 9999px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.25);
+    color: #334155;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .plans-carousel__arrow:hover {
+    background: #f8fafc;
+  }
+  .plans-carousel__arrow:active {
+    transform: translateY(-50%) scale(0.94);
+  }
+  .plans-carousel__arrow--prev {
+    left: -0.75rem;
+  }
+  .plans-carousel__arrow--next {
+    right: -0.75rem;
   }
 }
 

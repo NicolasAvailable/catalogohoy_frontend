@@ -69,6 +69,23 @@
   `./node_modules/.bin/vite build` (no `npm run build`). Un build fallido en Vercel
   igual no tumba el prod actual.
 
+## SEO / sitemaps / robots (2026-07-13)
+
+- **robots.txt y sitemap.xml del storefront son funciones Vercel** (`api/robots.ts`,
+  `api/sitemap.ts`) vía rewrites del `vercel.json` raíz. **NO crear** `robots.txt` /
+  `sitemap.xml` estáticos en `apps/catalogohoy/public/` — en Vercel el filesystem le gana
+  al rewrite y apagaría la versión dinámica sin error visible.
+- **El sitemap del help se autogenera en build** (`apps/help/scripts/gen-sitemap.mjs`
+  escanea el `dist/` del SSG). No editar `public/sitemap.xml` a mano (el residuo viejo que
+  apuntaba a `catalogohoy.com` se borró el 2026-07-13; el build lo pisaba igual).
+- **El sitemap/robots de la landing viven en la rama `landing`** — la copia de
+  `apps/landing/` en `main` está desactualizada (rutas viejas). Editar siempre sobre la rama.
+- **Googlebot no ve la SPA del storefront**: `middleware.ts` intercepta crawlers (regex
+  incluye Googlebot/bingbot) y sirve HTML estático por tenant. Desde 2026-07-13 va
+  enriquecido (lista de productos + JSON-LD Store/ItemList/Product) — si se agrega un campo
+  del catálogo que deba indexarse, hay que sumarlo ahí, no solo a la SPA. Los crawlers
+  sociales solo leen los meta OG, así que el cuerpo extra no cambia los previews de WhatsApp.
+
 ## Nx + worktrees
 
 - Servir/buildear desde un worktree **sin su `node_modules`** + `NX_WORKSPACE_ROOT_PATH`
@@ -154,6 +171,20 @@
   el símbolo (ese va aparte con `currencySymbol`). Las líneas de **Bs.** (VE) siguen con
   `| number:'1.2-2'` (es-locale ya coincide con la convención venezolana).
 
+## Supabase Realtime (websocket del chat)
+
+- **El heartbeat del realtime debe ir en Web Worker** (`realtime: { worker: true }` en
+  `createClient`, ver `supabase.ts` de core): los navegadores estrangulan los timers del
+  hilo principal en ventanas sin foco/tapadas → el heartbeat no salía → el servidor
+  cerraba el socket a los segundos de desatender la pestaña (bug 2026-07-22: banner
+  "reconectando" en loop en el chat).
+- **`removeChannel()` dispara `CLOSED` en el callback de `subscribe()` del canal
+  removido**: si ese callback trata `CLOSED` como caída real (banner + reconnect), reabrir
+  el canal entra en bucle infinito de flashes. `ChatRealtimeService` lo evita con una
+  generación de canal (`channelGen`) que ignora estados de canales reemplazados.
+- El banner de "se perdió la conexión" del chat tiene debounce de 4s (`markDown()`):
+  las reconexiones rápidas no deben parpadear la alerta.
+
 ## Supabase / datos
 
 - `users.id` (bigint) = owner; `users.auth_user_id` (uuid) = `auth.uid()`.
@@ -174,3 +205,26 @@
   el dirty-check debe comparar `transform(draft) !== guardado` — comparar el draft crudo
   deja el banner "cambios sin guardar" encendido para siempre tras guardar (bug 2026-07-09,
   reproducido y verificado con Playwright E2E contra prod con sesión inyectada).
+
+## Verificar el storefront local contra cualquier tenant de prod
+
+- El storefront público **no necesita sesión** y el dev server usa el Supabase de prod, así
+  que se puede verificar un fix con los datos reales de cualquier cliente.
+- En dev el slug **no** sale del path de forma confiable (la app redirige a `/` y usa
+  `DEV_TENANT_SLUG`): cambiar temporalmente `DEV_TENANT_SLUG` en
+  `libs/catalogohoy/core/src/constants/tenant.constant.ts` al slug del tenant (el propio
+  archivo lo documenta) y **revertirlo antes de commitear**.
+- El catálogo **carga productos de forma perezosa**: con Playwright hay que scrollear
+  (`page.mouse.wheel`) hasta que la card objetivo entre al DOM antes de asertar sobre ella.
+
+## Los estilos :host de un componente le ganan a las utilities del layout
+
+- Si un componente define `:host { display: ... }` en su CSS (ej. `customer-panel.css`),
+  las utilities Tailwind que el padre ponga en el tag (`hidden`, `lg:flex`) **no lo
+  ocultan**: los estilos del componente se inyectan después y pisan a las utilities con
+  la misma especificidad. Mordió el 2026-07-23: la ficha del CRM salía "aplastada" junto
+  al chat en móvil pese al `hidden lg:flex` del chat-layout.
+- Regla: si el componente controla su `display` en `:host`, la responsividad va en el
+  **CSS del propio componente** (media queries + clases modificadoras tipo
+  `:host(.ficha--mobile-open)`), no en utilities del padre. Igual para el slide-over del
+  conversation-panel (`chat-layout.css` usa el selector del tag, no utilities).

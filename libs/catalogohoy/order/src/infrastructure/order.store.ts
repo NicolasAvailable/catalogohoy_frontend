@@ -7,6 +7,7 @@ import {
   Order,
   OrderItem,
   OrderList,
+  OrderMetrics,
   OrderStatus,
 } from '../domain/order';
 import { OrderService } from './order.service';
@@ -23,6 +24,10 @@ type OrderState = {
   pendingCount: number;
   isLoading: boolean;
   error: string | null;
+  /** Aggregated metrics for the "Métricas" tab (server-side, covers all
+   *  matching orders — not just the loaded page). Null until first load. */
+  metrics: OrderMetrics | null;
+  isLoadingMetrics: boolean;
 };
 
 const initialState: OrderState = {
@@ -32,6 +37,8 @@ const initialState: OrderState = {
   pendingCount: 0,
   isLoading: false,
   error: null,
+  metrics: null,
+  isLoadingMetrics: false,
 };
 
 export const OrderStore = signalStore(
@@ -93,6 +100,30 @@ export const OrderStore = signalStore(
         );
       },
 
+      /** Load aggregated metrics for the "Métricas" tab. Boundaries are ISO
+       *  strings computed client-side (admin's local timezone). */
+      async loadOrderMetrics(range: {
+        start: string;
+        end: string;
+        todayStart: string;
+        useBs: boolean;
+      }) {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return;
+        patchState(store, { isLoadingMetrics: true });
+        const result = await orderService.getOrderMetrics(
+          tenantId,
+          range.start,
+          range.end,
+          range.todayStart,
+          range.useBs
+        );
+        result.fold(
+          () => patchState(store, { isLoadingMetrics: false }),
+          (metrics) => patchState(store, { metrics, isLoadingMetrics: false })
+        );
+      },
+
       /** Refresh the pending-order count for the sidebar badge. Cheap
        *  count-only query; called on init and on every realtime order change. */
       async loadPendingCount() {
@@ -125,6 +156,13 @@ export const OrderStore = signalStore(
         totalBs: number;
         deliveryDate?: string;
         paymentMethod?: string;
+        shippingFee?: number;
+        commission?: number;
+        shippingMethod?: {
+          name: string;
+          type: 'pickup' | 'delivery' | 'shipping';
+          fee: number;
+        } | null;
       }): Promise<E.Either<string, Order>> {
         patchState(store, { isLoading: true, error: null });
 
@@ -170,6 +208,13 @@ export const OrderStore = signalStore(
         totalBs: number;
         deliveryDate?: string;
         paymentMethod?: string;
+        shippingFee?: number;
+        commission?: number;
+        shippingMethod?: {
+          name: string;
+          type: 'pickup' | 'delivery' | 'shipping';
+          fee: number;
+        } | null;
       }): Promise<E.Either<string, Order>> {
         patchState(store, { isLoading: true, error: null });
 

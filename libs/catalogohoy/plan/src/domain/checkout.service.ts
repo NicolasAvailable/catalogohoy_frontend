@@ -1,5 +1,6 @@
 import { E } from '@shared/domain';
 import {
+  CancelSubscriptionResult,
   CatalogCheckoutRequest,
   CheckoutRequest,
   CheckoutSession,
@@ -14,7 +15,7 @@ export abstract class BaseCheckoutService {
 
   abstract cancelSubscription(
     tenantId: number
-  ): Promise<E.Either<Error, void>>;
+  ): Promise<E.Either<Error, CancelSubscriptionResult>>;
 
   abstract createCatalogCheckout(
     request: CatalogCheckoutRequest

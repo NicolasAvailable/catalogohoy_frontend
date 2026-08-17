@@ -57,14 +57,24 @@
             <h4 class="cart-item__name">{{ item.name }}</h4>
             @if (item.variantName || item.size) {
             <span class="cart-item__size">
-              @if (item.variantName) {<strong>{{ item.variantName }}</strong>}@if
+              @if (item.variantName) {<strong>{{ 'Variante:' | transloco }}</strong> {{ item.variantName }}}@if
               (item.variantName && item.size) { · }@if (item.size) {
-              {{ 'Talla:' | transloco }} <strong>{{ item.size }}</strong>}
+              <strong>{{ 'Talla:' | transloco }}</strong> {{ item.size }}}
+            </span>
+            }
+            @if (item.addons.length) {
+            <span class="cart-item__size">
+              <strong>{{ 'Adicionales:' | transloco }}</strong>
+              @for (addon of item.addons; track addon.id) {
+              {{ addon.name }}@if (addon.price > 0) {@if (ecommerceStore.showReferencePrice()) { ({{ cs() }}{{ addon.price | tenantPrice }})}@else if (ecommerceStore.isVenezuela() && ecommerceStore.showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) { (Bs. {{ addon.price * ecommerceStore.exchangeRate() | number:'1.2-2' }})}}@if (!$last) { · }
+              }
             </span>
             }
             <p class="cart-item__description">{{ item.description | stripHtml }}</p>
             <span class="cart-item__price">
+              @if (ecommerceStore.showReferencePrice()) {
               {{ cs() }}{{ item.price | tenantPrice }}
+              }
               @if (ecommerceStore.isVenezuela() && ecommerceStore.showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
               <span class="cart-item__price-bs">Bs. {{ item.price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
               }
@@ -93,7 +103,9 @@
         <span>{{ 'Ir a pagar' | transloco }}</span>
         <div class="cart-drawer__checkout-price">
           <span>
+            @if (ecommerceStore.showReferencePrice()) {
             {{ cs() }}{{ cartStore.totalPrice() | tenantPrice }}
+            }
             @if (ecommerceStore.isVenezuela() && ecommerceStore.showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
             <small class="cart-drawer__checkout-bs">Bs. {{ cartStore.totalPrice() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
             }

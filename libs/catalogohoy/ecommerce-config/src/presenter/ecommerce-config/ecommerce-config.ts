@@ -60,10 +60,13 @@ import {
   DEFAULT_BUSINESS_HOURS_WEEK,
   DEFAULT_CURRENCY_CONFIG,
   DEFAULT_CUSTOMER_FIELDS,
+  DEFAULT_DELIVERY_BLOCKED_WEEKDAYS,
+  DELIVERY_WEEKDAY_OPTIONS,
   DEFAULT_SOCIAL_LINKS,
   DEFAULT_WHATSAPP_ORDER_MESSAGE,
   EcommerceConfig,
   ExchangeRateType,
+  NO_CURRENCY_SYMBOL,
   PreviewMessage,
   findCountryByCode,
   ShippingMethod,
@@ -231,6 +234,9 @@ export class EcommerceConfigComponent implements OnInit {
   // New payment method form
   public readonly newMethodName = signal('');
   public readonly newMethodIcon = signal('wallet');
+  /** Datos (titular, cuenta, instrucciones…) cargados al crear un método nuevo,
+   *  para no tener que entrar a "Datos" después. Se resetean tras agregar. */
+  public readonly newMethodDetails = signal<Record<string, string>>({});
   public readonly isAddingMethod = signal(false);
 
   public readonly iconOptions: { label: string; value: string }[] = [
@@ -247,7 +253,13 @@ export class EcommerceConfigComponent implements OnInit {
   ];
 
   // WhatsApp message template
-  public readonly whatsappMessageVariables = WHATSAPP_MESSAGE_VARIABLES;
+  // El chip {totalBs} solo aplica a catálogos de Venezuela (fuera de VE renderiza
+  // vacío), así que se oculta para el resto.
+  public readonly whatsappMessageVariables = computed(() =>
+    this.isVenezuela()
+      ? WHATSAPP_MESSAGE_VARIABLES
+      : WHATSAPP_MESSAGE_VARIABLES.filter((v) => v.key !== '{totalBs}')
+  );
   public readonly defaultWhatsappMessage = DEFAULT_WHATSAPP_ORDER_MESSAGE;
   public readonly whatsappMaxLength = WHATSAPP_MESSAGE_MAX_LENGTH;
   public readonly whatsappMessageTextarea = viewChild<ElementRef>('whatsappMessageTextarea');
@@ -269,6 +281,9 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftDefaultLanguage = signal<string>('es');
   public readonly appLanguages = [...APP_LANGUAGES];
   public readonly draftCurrencySymbol = signal('$');
+  /** "Mostrar precios sin símbolo de moneda" — persiste el centinela
+   *  NO_CURRENCY_SYMBOL en `currency_symbol`. Ver onToggleHideCurrencySymbol. */
+  public readonly draftHideCurrencySymbol = signal(false);
   public readonly draftShowReferencePrice = signal(true);
   public readonly draftShowLocalCurrencyPrice = signal(true);
   public readonly draftWhatsappOrderMessage = signal<string | null>(null);
@@ -285,6 +300,27 @@ export class EcommerceConfigComponent implements OnInit {
   });
   public readonly shippingTypeOptions = SHIPPING_METHOD_TYPE_OPTIONS;
 
+  // --- Delivery date (Envío tab) drafts ---
+  /** Whether the checkout shows a delivery-date picker to the customer. */
+  public readonly draftDeliveryDateEnabled = signal<boolean>(false);
+  /** Weekdays with no delivery (JS: 0 = Sunday … 6 = Saturday). */
+  public readonly draftDeliveryBlockedWeekdays = signal<number[]>([]);
+  public readonly deliveryWeekdayOptions = DELIVERY_WEEKDAY_OPTIONS;
+
+  /** Toggle a weekday in/out of the blocked list. */
+  toggleDeliveryBlockedWeekday(day: number): void {
+    const current = this.draftDeliveryBlockedWeekdays();
+    this.draftDeliveryBlockedWeekdays.set(
+      current.includes(day)
+        ? current.filter((d) => d !== day)
+        : [...current, day].sort((a, b) => a - b)
+    );
+  }
+
+  isDeliveryWeekdayBlocked(day: number): boolean {
+    return this.draftDeliveryBlockedWeekdays().includes(day);
+  }
+
   // WhatsApp notifications (tabla whatsapp_notification_settings). Se cargan
   // y guardan aparte del config del catálogo (otra tabla). El número
   // destinatario de `order_received` sale de los whatsappButtons del catálogo.
@@ -293,15 +329,28 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftNotifyOrderReceived = signal<boolean>(true);
   public readonly draftNotifyOrderCompleted = signal<boolean>(false);
   public readonly draftWhatsappNotifyNumber = signal<string | null>(null);
+  public readonly draftWhatsappNotifyNumber2 = signal<string | null>(null);
+  /** Cuántos números puede configurar el tenant (tenants.
+   *  whatsapp_notify_numbers_limit, default 1). Solo tenants habilitados a
+   *  mano ven el bloque del 2º número. */
+  public readonly whatsappNotifyMaxRecipients = signal<number>(1);
   /** Progressive disclosure: mostrar el input de número recién al hacer click
    *  en "Agregar número". */
   public readonly showRecipientNumberInput = signal<boolean>(false);
+  public readonly showRecipientNumber2Input = signal<boolean>(false);
   public readonly isTestingWhatsapp = signal<boolean>(false);
+  public readonly isTestingWhatsapp2 = signal<boolean>(false);
   private readonly lastSyncedWhatsappNotify = signal<{
     orderReceived: boolean;
     orderCompleted: boolean;
     recipientNumber: string | null;
-  }>({ orderReceived: true, orderCompleted: false, recipientNumber: null });
+    recipientNumber2: string | null;
+  }>({
+    orderReceived: true,
+    orderCompleted: false,
+    recipientNumber: null,
+    recipientNumber2: null,
+  });
 
   // Business hours editor (one row per day, Sunday → Saturday)
   public readonly dayLabels = DAY_LABELS_ES;
@@ -456,7 +505,8 @@ export class EcommerceConfigComponent implements OnInit {
     if (
       this.draftNotifyOrderReceived() !== wn.orderReceived ||
       this.draftNotifyOrderCompleted() !== wn.orderCompleted ||
-      (this.draftWhatsappNotifyNumber() ?? null) !== (wn.recipientNumber ?? null)
+      (this.draftWhatsappNotifyNumber() ?? null) !== (wn.recipientNumber ?? null) ||
+      (this.draftWhatsappNotifyNumber2() ?? null) !== (wn.recipientNumber2 ?? null)
     ) {
       return true;
     }
@@ -628,6 +678,8 @@ export class EcommerceConfigComponent implements OnInit {
       const newMethods = config.shippingMethods?.length ? config.shippingMethods : createDefaultShippingMethods();
       syncFieldJson(this.draftShippingMethods, prevMethods, newMethods);
       syncFieldJson(this.draftCustomerFields, prev?.customerFields ?? DEFAULT_CUSTOMER_FIELDS, config.customerFields ?? DEFAULT_CUSTOMER_FIELDS);
+      syncField(this.draftDeliveryDateEnabled, prev?.deliveryDateEnabled ?? false, config.deliveryDateEnabled ?? false);
+      syncFieldJson(this.draftDeliveryBlockedWeekdays, prev?.deliveryBlockedWeekdays ?? DEFAULT_DELIVERY_BLOCKED_WEEKDAYS, config.deliveryBlockedWeekdays ?? DEFAULT_DELIVERY_BLOCKED_WEEKDAYS);
 
       this.lastSyncedConfig = { ...config };
     });
@@ -668,6 +720,8 @@ export class EcommerceConfigComponent implements OnInit {
       const shippingMethods = this.draftShippingMethods();
       const showShippingSection = this.draftShowShippingSection();
       const customerFields = this.draftCustomerFields();
+      const deliveryDateEnabled = this.draftDeliveryDateEnabled();
+      const deliveryBlockedWeekdays = this.draftDeliveryBlockedWeekdays();
       // Métodos de pago activos (con sus datos) — para que la preview del
       // checkout refleje en vivo los datos al elegir un método, sin recargar.
       const paymentMethods = this.configStore
@@ -699,6 +753,8 @@ export class EcommerceConfigComponent implements OnInit {
           shippingMethods,
           showShippingSection,
           customerFields,
+          deliveryDateEnabled,
+          deliveryBlockedWeekdays,
           // Solo overrideamos si hay métodos activos cargados; si la lista aún
           // no cargó (vacía), la preview usa los del catálogo real.
           ...(paymentMethods.length ? { paymentMethods } : {}),
@@ -756,6 +812,11 @@ export class EcommerceConfigComponent implements OnInit {
       const exists = this.configStore.currencyConfigExists();
       const countryCode = this.configStore.config()?.countryCode ?? null;
       untracked(() => {
+        // Estado del toggle "sin símbolo": el centinela persistido es la fuente
+        // de verdad. Sin fila (seed) => símbolo real por país => false.
+        this.draftHideCurrencySymbol.set(
+          cc.currencySymbol === NO_CURRENCY_SYMBOL
+        );
         // Seed from country defaults when:
         // - No persisted row yet, OR
         // - VE tenant still has the old USD default that should be VES
@@ -877,6 +938,33 @@ export class EcommerceConfigComponent implements OnInit {
     this.draftCurrency.set({ ...this.draftCurrency(), [key]: value });
   }
 
+  /**
+   * Toggle "Mostrar precios sin símbolo de moneda". Al activarlo persiste el
+   * centinela NO_CURRENCY_SYMBOL en `currency_symbol` de AMBAS tablas
+   * (tenant_ecommerce_config vía draftCurrencySymbol, tenant_currency_config vía
+   * draftCurrency) para que el catálogo público oculte el símbolo sea cual sea
+   * el país. Al desactivarlo restaura el símbolo derivado del país.
+   */
+  onToggleHideCurrencySymbol(hide: boolean) {
+    this.draftHideCurrencySymbol.set(hide);
+    const symbol = hide ? NO_CURRENCY_SYMBOL : this.defaultCurrencySymbol();
+    this.draftCurrencySymbol.set(symbol);
+    this.updateCurrencyField('currencySymbol', symbol);
+  }
+
+  /** Símbolo por defecto según el país/moneda (para restaurar al desactivar
+   *  "sin símbolo"). Misma lógica que el seed de país. */
+  private defaultCurrencySymbol(): string {
+    const cc = this.draftCurrency();
+    if (this.draftCountryCode() === 'VE') {
+      return cc.displayCurrency === 'EUR' ? '€' : '$';
+    }
+    return (
+      SUPPORTED_CURRENCIES.find((c) => c.code === cc.productCurrency)?.symbol ??
+      '$'
+    );
+  }
+
   async ngOnInit() {
     const slug = getTenantSlugFromUrl();
     if (slug) {
@@ -942,16 +1030,27 @@ export class EcommerceConfigComponent implements OnInit {
       this.draftNotifyOrderReceived.set(s.orderReceived);
       this.draftNotifyOrderCompleted.set(s.orderCompleted);
       this.draftWhatsappNotifyNumber.set(s.recipientNumber);
-      this.lastSyncedWhatsappNotify.set({ ...s });
+      this.draftWhatsappNotifyNumber2.set(s.recipientNumber2);
+      this.whatsappNotifyMaxRecipients.set(s.maxRecipients);
+      this.lastSyncedWhatsappNotify.set({
+        orderReceived: s.orderReceived,
+        orderCompleted: s.orderCompleted,
+        recipientNumber: s.recipientNumber,
+        recipientNumber2: s.recipientNumber2,
+      });
     });
   }
 
   /** Envía un WhatsApp de prueba al número que se está configurando (sin
-   *  necesidad de guardar primero). */
-  public async testWhatsappNotification(): Promise<void> {
-    const number = this.draftWhatsappNotifyNumber();
+   *  necesidad de guardar primero). `which` elige cuál de los dos inputs. */
+  public async testWhatsappNotification(which: 1 | 2 = 1): Promise<void> {
+    const number =
+      which === 2
+        ? this.draftWhatsappNotifyNumber2()
+        : this.draftWhatsappNotifyNumber();
     if (!number) return;
-    this.isTestingWhatsapp.set(true);
+    const loading = which === 2 ? this.isTestingWhatsapp2 : this.isTestingWhatsapp;
+    loading.set(true);
     const result = await this.configService.sendTestWhatsapp(
       number,
       this.draftName(),
@@ -962,7 +1061,7 @@ export class EcommerceConfigComponent implements OnInit {
         toast.error('No se pudo enviar la prueba: ' + (err.message || '')),
       () => toast.success('¡Te enviamos un WhatsApp de prueba a ese número!')
     );
-    this.isTestingWhatsapp.set(false);
+    loading.set(false);
   }
 
   private async loadBusinessHours(tenantId: string): Promise<void> {
@@ -1032,7 +1131,27 @@ export class EcommerceConfigComponent implements OnInit {
       changes.shippingMethods = this.draftShippingMethods();
     }
     const serverCustomerFields = config.customerFields ?? DEFAULT_CUSTOMER_FIELDS;
-    if (JSON.stringify(this.draftCustomerFields()) !== JSON.stringify(serverCustomerFields)) {
+    const customerFieldsChanged =
+      JSON.stringify(this.draftCustomerFields()) !==
+      JSON.stringify(serverCustomerFields);
+
+    // Delivery-date settings persist inside the `customer_fields` jsonb (no
+    // dedicated DB column). When either delivery setting changes we must also
+    // send `customerFields` so the service has the full base to merge into,
+    // otherwise it would fall back to defaults and clobber the tenant's fields.
+    const deliveryEnabledChanged =
+      this.draftDeliveryDateEnabled() !== (config.deliveryDateEnabled ?? false);
+    const deliveryDaysChanged =
+      JSON.stringify(this.draftDeliveryBlockedWeekdays()) !==
+      JSON.stringify(config.deliveryBlockedWeekdays ?? []);
+
+    if (deliveryEnabledChanged) {
+      changes.deliveryDateEnabled = this.draftDeliveryDateEnabled();
+    }
+    if (deliveryDaysChanged) {
+      changes.deliveryBlockedWeekdays = this.draftDeliveryBlockedWeekdays();
+    }
+    if (customerFieldsChanged || deliveryEnabledChanged || deliveryDaysChanged) {
       changes.customerFields = this.draftCustomerFields();
     }
 
@@ -1114,13 +1233,15 @@ export class EcommerceConfigComponent implements OnInit {
     const whatsappNotifyChanged =
       this.draftNotifyOrderReceived() !== wn.orderReceived ||
       this.draftNotifyOrderCompleted() !== wn.orderCompleted ||
-      (this.draftWhatsappNotifyNumber() ?? null) !== (wn.recipientNumber ?? null);
+      (this.draftWhatsappNotifyNumber() ?? null) !== (wn.recipientNumber ?? null) ||
+      (this.draftWhatsappNotifyNumber2() ?? null) !== (wn.recipientNumber2 ?? null);
     if (whatsappNotifyChanged && config?.tenantId) {
       didSilentOp = true;
       const next = {
         orderReceived: this.draftNotifyOrderReceived(),
         orderCompleted: this.draftNotifyOrderCompleted(),
         recipientNumber: this.draftWhatsappNotifyNumber(),
+        recipientNumber2: this.draftWhatsappNotifyNumber2(),
       };
       const result = await this.configService.saveWhatsappNotifySettings(
         config.tenantId,
@@ -1303,10 +1424,20 @@ export class EcommerceConfigComponent implements OnInit {
     const name = this.newMethodName().trim();
     if (!name || this.isAddingMethod()) return;
     this.isAddingMethod.set(true);
-    await this.configStore.addPaymentMethod(name, this.newMethodIcon());
+    await this.configStore.addPaymentMethod(
+      name,
+      this.newMethodIcon(),
+      this.newMethodDetails()
+    );
     this.newMethodName.set('');
     this.newMethodIcon.set('wallet');
+    this.newMethodDetails.set({});
     this.isAddingMethod.set(false);
+  }
+
+  /** Setea un campo de los datos del método que se está por crear. */
+  public setNewMethodDetailField(key: string, value: string): void {
+    this.newMethodDetails.update((d) => ({ ...d, [key]: value }));
   }
 
   toggleMethodActive(id: number, isActive: boolean) {

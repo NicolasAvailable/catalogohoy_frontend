@@ -1,0 +1,46 @@
+/* Barra de progreso estilo WhatsApp: pista fina redondeada; lo reproducido se
+   pinta con currentColor vía --p (animado por rAF desde el componente). */
+.track {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 0.1875rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  color: var(--p-primary-500, #22c55e);
+  background: linear-gradient(
+    to right,
+    currentColor var(--p, 0%),
+    color-mix(in srgb, currentColor 22%, transparent) var(--p, 0%)
+  );
+}
+
+.track::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0.6875rem;
+  height: 0.6875rem;
+  border-radius: 9999px;
+  background: currentColor;
+  border: none;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transition: transform 120ms ease;
+}
+.track:hover::-webkit-slider-thumb,
+.track:active::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+
+.track::-moz-range-thumb {
+  width: 0.6875rem;
+  height: 0.6875rem;
+  border-radius: 9999px;
+  background: currentColor;
+  border: none;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+/* Variante para burbujas del agente (fondo primary). */
+.track-light {
+  color: #fff;
+}

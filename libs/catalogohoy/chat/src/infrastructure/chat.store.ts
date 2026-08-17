@@ -1,4 +1,6 @@
 import { computed, inject } from '@angular/core';
+import { ProfileStore } from '@catalogohoy/profile';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
 import {
   patchState,
@@ -8,7 +10,7 @@ import {
   withState,
 } from '@ngrx/signals';
 import { Chat, ChatMessage, ChatNote, PipelineStatus, QuickReply } from '../domain';
-import { ChatService } from './chat.service';
+import { ChatService, SavedCustomer } from './chat.service';
 
 type ChatState = {
   chats: Chat[];
@@ -22,6 +24,17 @@ type ChatState = {
   quickReplies: QuickReply[];
   /** Message the agent is composing a quoted reply to (null = none). */
   replyingTo: ChatMessage | null;
+  /** Id of the voice note being transcribed with AI (null = none). */
+  transcribingMessageId: number | null;
+  /** Error de la última transcripción, anclado al mensaje que falló. */
+  transcribeError: { messageId: number; message: string } | null;
+  /** Total de mensajes sin leer del tenant (badge del sidebar, app-wide). */
+  unreadTotal: number;
+  /** true mientras el canal realtime está caído (banner "reconectando"). */
+  realtimeDown: boolean;
+  /** Clientes guardados del tenant (caché única) — resuelve apodos por
+   *  teléfono en toda la bandeja. null = aún no cargó. */
+  savedCustomers: SavedCustomer[] | null;
 };
 
 const initialState: ChatState = {
@@ -35,6 +48,11 @@ const initialState: ChatState = {
   pipelineStatuses: [],
   quickReplies: [],
   replyingTo: null,
+  transcribingMessageId: null,
+  transcribeError: null,
+  unreadTotal: 0,
+  realtimeDown: false,
+  savedCustomers: null,
 };
 
 /** Newest activity first; conversations without activity sink to the bottom. */
@@ -66,21 +84,97 @@ export const ChatStore = signalStore(
       return store.chats().find((c) => c.id === id) ?? null;
     }),
     messagesByDay: computed(() => {
+      // Dedup defensivo por id: una carrera entre el render optimista, su
+      // reconciliación y el INSERT que llega por realtime puede dejar dos
+      // entradas del MISMO mensaje persistido (incluso con el id como number vs
+      // string). Las colapsamos —conservando la clientKey para no recrear la
+      // burbuja— antes de agrupar por día. El id se normaliza a string en la
+      // clave para que number 812 y string "812" caigan en el mismo bucket.
+      const canonical = new Map<string, ChatMessage>();
+      for (const m of store.messages()) {
+        const key = m.id > 0 ? `id:${m.id}` : `opt:${m.id}`;
+        const prev = canonical.get(key);
+        canonical.set(
+          key,
+          prev ? { ...prev, ...m, clientKey: prev.clientKey ?? m.clientKey } : m
+        );
+      }
+
       const groups: Record<string, ChatMessage[]> = {};
-      for (const msg of store.messages()) {
+      for (const msg of canonical.values()) {
         const day = msg.createdAt.slice(0, 10);
         if (!groups[day]) groups[day] = [];
         groups[day].push(msg);
       }
       return Object.entries(groups).map(([date, msgs]) => ({ date, msgs }));
     }),
+    /** Cliente guardado por teléfono normalizado a dígitos (lookup O(1)). */
+    savedCustomerByDigits: computed(() => {
+      const map = new Map<string, SavedCustomer>();
+      for (const c of store.savedCustomers() ?? []) {
+        const digits = c.phone.replace(/\D/g, '');
+        if (digits) map.set(digits, c);
+      }
+      return map;
+    }),
   })),
   withMethods(
     (
       store,
       chatService = inject(ChatService),
-      tenantStore = inject(TenantStore)
-    ) => ({
+      tenantStore = inject(TenantStore),
+      permissionsStore = inject(TeamPermissionsStore),
+      profileStore = inject(ProfileStore)
+    ) => {
+      /** Un chat recién llegado sin responsable se autoasigna al owner del
+       *  catálogo. Corre en la sesión del owner (la del comerciante, el caso
+       *  normal); el UPDATE viaja por realtime al resto del equipo. Devuelve
+       *  el chat ya asignado para pintarlo de una en la bandeja. */
+      const autoAssignToOwner = (chat: Chat): Chat => {
+        if (chat.assignedToUserId != null) return chat;
+        if (!permissionsStore.isOwner()) return chat;
+        const myId = profileStore.profile().id;
+        if (typeof myId !== 'number') return chat;
+        chatService.assign(chat.id, myId);
+        return { ...chat, assignedToUserId: myId };
+      };
+
+      /** Evita fetches duplicados mientras la primera carga está en vuelo. */
+      let savedCustomersRequested = false;
+
+      return {
+      /** Carga los clientes guardados del tenant — apodos para la lista, el
+       *  header y la ficha. Con force=true refresca aunque ya haya caché (se
+       *  usa al entrar al módulo, por si editaron apodos desde Clientes). */
+      async loadSavedCustomers(force = false) {
+        if (!force && (savedCustomersRequested || store.savedCustomers() !== null)) return;
+        savedCustomersRequested = true;
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) {
+          savedCustomersRequested = false;
+          return;
+        }
+        const result = await chatService.getSavedCustomers(tenantId);
+        patchState(store, {
+          savedCustomers: result.isRight() ? result.value : [],
+        });
+      },
+
+      /** Suma un cliente recién guardado a la caché (sin refetch). */
+      addSavedCustomer(customer: SavedCustomer) {
+        patchState(store, {
+          savedCustomers: [...(store.savedCustomers() ?? []), customer],
+        });
+      },
+
+      /** Apodo del cliente guardado con ese teléfono, o null. */
+      nicknameFor(phone: string | null): string | null {
+        if (!phone) return null;
+        const digits = phone.replace(/\D/g, '');
+        if (!digits) return null;
+        return store.savedCustomerByDigits().get(digits)?.nickname ?? null;
+      },
+
       // TODO(whatsapp-integration): paginar + loadMoreChats (infinite scroll con
       // cdk-virtual-scroll) cuando el volumen de conversaciones sea real. Por
       // ahora carga todo (mock).
@@ -122,6 +216,31 @@ export const ChatStore = signalStore(
         });
       },
 
+      /** Inicia (o reabre) una conversación de WhatsApp con un teléfono: si el
+       *  tenant ya tiene chat con ese número lo devuelve; si no, lo crea y lo
+       *  agrega a la bandeja. Devuelve el id listo para selectChat(), o null. */
+      async startChat(name: string, phone: string): Promise<number | null> {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return null;
+
+        const found = await chatService.findWhatsAppChatByPhone(tenantId, phone);
+        if (found.isLeft()) return null;
+
+        let chat = found.value;
+        if (!chat) {
+          const created = await chatService.createChat(tenantId, name, phone);
+          if (created.isLeft()) return null;
+          chat = created.value;
+        }
+
+        if (!store.chats().some((c) => c.id === chat.id)) {
+          patchState(store, {
+            chats: [chat, ...store.chats()].sort(byLastMessageDesc),
+          });
+        }
+        return chat.id;
+      },
+
       /** Set (or clear) the message the agent is quoting in their next reply. */
       setReplyingTo(msg: ChatMessage | null) {
         patchState(store, { replyingTo: msg });
@@ -140,9 +259,11 @@ export const ChatStore = signalStore(
         // estado 'sending'), sin esperar el round-trip de wa-send (cold start +
         // DB + Meta). Se reconcilia cuando responde.
         const tempId = nextTempId();
+        const clientKey = 'opt' + tempId;
         const now = new Date().toISOString();
         const optimistic: ChatMessage = {
           id: tempId,
+          clientKey,
           chatId,
           content: text,
           isMine: true,
@@ -155,11 +276,19 @@ export const ChatStore = signalStore(
           isSendingMessage: true,
           replyingTo: null,
           chats: store.chats().map((c) =>
-            c.id === chatId ? { ...c, lastMessage: text, lastMessageAt: now } : c
+            c.id === chatId
+              ? { ...c, lastMessage: text, lastMessageAt: now, lastMessageIsMine: true }
+              : c
           ),
         });
 
-        const result = await chatService.sendMessage(chatId, text, true, replyToId);
+        const result = await chatService.sendMessage(
+          chatId,
+          text,
+          true,
+          replyToId,
+          store.selectedChat()?.channel ?? 'whatsapp'
+        );
 
         result.fold(
           (err) =>
@@ -175,16 +304,22 @@ export const ChatStore = signalStore(
             }),
           (msg) => {
             // OK: reemplazar la temporal por la persistida (deduplicando si el
-            // canal realtime ya la insertó).
+            // canal realtime ya la insertó). Conservamos la clientKey del
+            // optimista para que el `@for` no recree la burbuja (sin parpadeo).
             const cleaned = store
               .messages()
               .filter((m) => m.id !== tempId && m.id !== msg.id);
             patchState(store, {
-              messages: [...cleaned, msg],
+              messages: [...cleaned, { ...msg, clientKey }],
               isSendingMessage: false,
               chats: store.chats().map((c) =>
                 c.id === chatId
-                  ? { ...c, lastMessage: msg.content, lastMessageAt: msg.createdAt }
+                  ? {
+                      ...c,
+                      lastMessage: msg.content,
+                      lastMessageAt: msg.createdAt,
+                      lastMessageIsMine: true,
+                    }
                   : c
               ),
             });
@@ -199,9 +334,11 @@ export const ChatStore = signalStore(
         if (!chatId || !text) return;
 
         const tempId = nextTempId();
+        const clientKey = 'opt' + tempId;
         const now = new Date().toISOString();
         const optimistic: ChatMessage = {
           id: tempId,
+          clientKey,
           chatId,
           content: text,
           isMine: true,
@@ -230,7 +367,7 @@ export const ChatStore = signalStore(
               .messages()
               .filter((m) => m.id !== tempId && m.id !== msg.id);
             patchState(store, {
-              messages: [...cleaned, msg],
+              messages: [...cleaned, { ...msg, clientKey }],
               isSendingMessage: false,
             });
           }
@@ -248,17 +385,25 @@ export const ChatStore = signalStore(
         const replyToId = replyTo && replyTo.id > 0 ? replyTo.id : null;
 
         const cap = caption.trim();
+        // El tipo lo define el archivo: imagen vs. documento (Excel, PDF, etc.).
+        const isImageFile = file.type.startsWith('image/');
+        const mediaType: 'image' | 'document' = isImageFile
+          ? 'image'
+          : 'document';
+        const mediaLabel = isImageFile ? '📷 Imagen' : '📎 Documento';
         const tempId = nextTempId();
+        const clientKey = 'opt' + tempId;
         const now = new Date().toISOString();
         const localUrl = URL.createObjectURL(file);
         const optimistic: ChatMessage = {
           id: tempId,
+          clientKey,
           chatId,
           content: cap,
           isMine: true,
           createdAt: now,
           status: 'sending',
-          type: 'image',
+          type: mediaType,
           mediaUrl: localUrl,
           replyToMessageId: replyToId,
         };
@@ -268,7 +413,12 @@ export const ChatStore = signalStore(
           replyingTo: null,
           chats: store.chats().map((c) =>
             c.id === chatId
-              ? { ...c, lastMessage: cap || '📷 Imagen', lastMessageAt: now }
+              ? {
+              ...c,
+              lastMessage: cap || mediaLabel,
+              lastMessageAt: now,
+              lastMessageIsMine: true,
+            }
               : c
           ),
         });
@@ -285,11 +435,18 @@ export const ChatStore = signalStore(
 
         const up = await chatService.uploadMedia(file, chat.tenantId);
         if (up.isLeft()) {
-          markFailed('No se pudo subir la imagen al servidor.');
+          markFailed('No se pudo subir el archivo al servidor.');
           return;
         }
 
-        const result = await chatService.sendMedia(chatId, up.value.url, 'image', cap, replyToId);
+        const result = await chatService.sendMedia(
+          chatId,
+          up.value.url,
+          mediaType,
+          cap,
+          replyToId,
+          store.selectedChat()?.channel ?? 'whatsapp'
+        );
         result.fold(
           (err) => markFailed(err.message),
           (msg) => {
@@ -297,15 +454,183 @@ export const ChatStore = signalStore(
               .messages()
               .filter((m) => m.id !== tempId && m.id !== msg.id);
             patchState(store, {
-              messages: [...cleaned, msg],
+              messages: [...cleaned, { ...msg, clientKey }],
               isSendingMessage: false,
               chats: store.chats().map((c) =>
                 c.id === chatId
-                  ? { ...c, lastMessage: msg.content, lastMessageAt: msg.createdAt }
+                  ? {
+                      ...c,
+                      lastMessage: msg.content,
+                      lastMessageAt: msg.createdAt,
+                      lastMessageIsMine: true,
+                    }
                   : c
               ),
             });
           }
+        );
+      },
+
+      /** Envía una imagen YA hosteada (elegida de la galería de la app: fotos de
+       *  productos o subidas del tenant) SIN re-subirla — usa la URL pública
+       *  directo. Render optimista + reconciliación igual que sendMedia. */
+      async sendMediaFromUrl(url: string, caption = '') {
+        const chatId = store.selectedChatId();
+        const link = (url ?? '').trim();
+        if (!chatId || !link) return;
+
+        const replyTo = store.replyingTo();
+        const replyToId = replyTo && replyTo.id > 0 ? replyTo.id : null;
+
+        const cap = caption.trim();
+        const tempId = nextTempId();
+        const clientKey = 'opt' + tempId;
+        const now = new Date().toISOString();
+        const optimistic: ChatMessage = {
+          id: tempId,
+          clientKey,
+          chatId,
+          content: cap,
+          isMine: true,
+          createdAt: now,
+          status: 'sending',
+          type: 'image',
+          mediaUrl: link,
+          replyToMessageId: replyToId,
+        };
+        patchState(store, {
+          messages: [...store.messages(), optimistic],
+          isSendingMessage: true,
+          replyingTo: null,
+          chats: store.chats().map((c) =>
+            c.id === chatId
+              ? { ...c, lastMessage: cap || '📷 Imagen', lastMessageAt: now, lastMessageIsMine: true }
+              : c
+          ),
+        });
+
+        const result = await chatService.sendMedia(
+          chatId,
+          link,
+          'image',
+          cap,
+          replyToId,
+          store.selectedChat()?.channel ?? 'whatsapp'
+        );
+        result.fold(
+          (err) =>
+            patchState(store, {
+              isSendingMessage: false,
+              messages: store.messages().map((m) =>
+                m.id === tempId
+                  ? { ...m, status: 'failed' as const, error: err.message }
+                  : m
+              ),
+            }),
+          (msg) => {
+            const cleaned = store
+              .messages()
+              .filter((m) => m.id !== tempId && m.id !== msg.id);
+            patchState(store, {
+              messages: [...cleaned, { ...msg, clientKey }],
+              isSendingMessage: false,
+              chats: store.chats().map((c) =>
+                c.id === chatId
+                  ? {
+                      ...c,
+                      lastMessage: msg.content,
+                      lastMessageAt: msg.createdAt,
+                      lastMessageIsMine: true,
+                    }
+                  : c
+              ),
+            });
+          }
+        );
+      },
+
+      setRealtimeDown(down: boolean) {
+        patchState(store, { realtimeDown: down });
+      },
+
+      /** Recarga SILENCIOSA tras recuperar la conexión realtime (o tras volver
+       *  de una pestaña dormida): trae lo que se haya perdido sin spinners ni
+       *  parpadeos — lista de chats, mensajes del chat abierto y no-leídos. */
+      async refreshAfterReconnect() {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return;
+
+        const chatsResult = await chatService.getChatsByTenant(
+          tenantId,
+          store.searchQuery()
+        );
+        chatsResult.fold(
+          () => undefined,
+          (chats) => patchState(store, { chats })
+        );
+
+        const chatId = store.selectedChatId();
+        if (chatId != null) {
+          const msgs = await chatService.getMessagesByChatId(chatId);
+          msgs.fold(
+            () => undefined,
+            (messages) => patchState(store, { messages })
+          );
+        }
+
+        const unread = await chatService.getUnreadTotal(tenantId);
+        unread.fold(
+          () => undefined,
+          (total) => patchState(store, { unreadTotal: total })
+        );
+      },
+
+      /** Recalcula el total de no-leídos del tenant (badge del sidebar). Lo
+       *  dispara ChatBadgeRealtimeService en cada cambio de `chats`. */
+      async loadUnreadTotal() {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return;
+        const result = await chatService.getUnreadTotal(tenantId);
+        result.fold(
+          () => undefined,
+          (total) => patchState(store, { unreadTotal: total })
+        );
+      },
+
+      /** Aplica un UPDATE de un mensaje llegado por realtime (acuse de entrega,
+       *  transcripción hecha por otro agente…) sobre la conversación abierta. */
+      applyMessageUpdate(msg: ChatMessage) {
+        if (store.selectedChatId() !== msg.chatId) return;
+        patchState(store, {
+          messages: store
+            .messages()
+            .map((m) => (m.id === msg.id ? { ...m, ...msg } : m)),
+        });
+      },
+
+      /** Transcribe una nota de voz con IA (1 crédito) y guarda el texto en el
+       *  mensaje. El backend es idempotente: re-pedir una ya transcrita es gratis. */
+      async transcribeMessage(messageId: number) {
+        if (store.transcribingMessageId()) return;
+        patchState(store, {
+          transcribingMessageId: messageId,
+          transcribeError: null,
+        });
+
+        const result = await chatService.transcribeAudio(messageId);
+        result.fold(
+          (err) =>
+            patchState(store, {
+              transcribingMessageId: null,
+              transcribeError: { messageId, message: err.message },
+            }),
+          (transcript) =>
+            patchState(store, {
+              transcribingMessageId: null,
+              messages: store
+                .messages()
+                .map((m) => (m.id === messageId ? { ...m, transcript } : m)),
+            })
         );
       },
 
@@ -332,6 +657,7 @@ export const ChatStore = signalStore(
                       ...c,
                       lastMessage: msg.content,
                       lastMessageAt: msg.createdAt,
+                      lastMessageIsMine: msg.isMine,
                       unreadCount:
                         !msg.isMine && !isSelected
                           ? c.unreadCount + 1
@@ -348,7 +674,7 @@ export const ChatStore = signalStore(
               () => undefined,
               (chat) => {
                 if (!chat || store.chats().some((c) => c.id === chat.id)) return;
-                const merged: Chat = {
+                const merged: Chat = autoAssignToOwner({
                   ...chat,
                   lastMessage: msg.content,
                   lastMessageAt: msg.createdAt,
@@ -356,7 +682,7 @@ export const ChatStore = signalStore(
                     !msg.isMine && !isSelected
                       ? Math.max(chat.unreadCount, 1)
                       : chat.unreadCount,
-                };
+                });
                 patchState(store, {
                   chats: [merged, ...store.chats()].sort(byLastMessageDesc),
                 });
@@ -375,7 +701,7 @@ export const ChatStore = signalStore(
       addChatIfNew(chat: Chat) {
         if (store.chats().some((c) => c.id === chat.id)) return;
         patchState(store, {
-          chats: [chat, ...store.chats()].sort(byLastMessageDesc),
+          chats: [autoAssignToOwner(chat), ...store.chats()].sort(byLastMessageDesc),
         });
       },
 
@@ -438,6 +764,40 @@ export const ChatStore = signalStore(
           patchState(store, { quickReplies: replies.value });
       },
 
+      /** Crea/edita una respuesta rápida y refresca la lista. */
+      async saveQuickReply(payload: {
+        id: number | null;
+        shortcut: string;
+        content: string;
+      }): Promise<boolean> {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return false;
+        const result = await chatService.saveQuickReply(tenantId, payload);
+        if (result.isLeft()) return false;
+        const replies = await chatService.getQuickReplies(tenantId);
+        if (replies.isRight()) patchState(store, { quickReplies: replies.value });
+        return true;
+      },
+
+      /** Renombra el contacto (optimista) — se refleja en lista + header. */
+      async renameChat(chatId: number, name: string) {
+        patchState(store, {
+          chats: store
+            .chats()
+            .map((c) => (c.id === chatId ? { ...c, customerName: name } : c)),
+        });
+        await chatService.updateCustomerName(chatId, name);
+      },
+
+      async deleteQuickReply(id: number) {
+        const result = await chatService.deleteQuickReply(id);
+        if (result.isRight()) {
+          patchState(store, {
+            quickReplies: store.quickReplies().filter((q) => q.id !== id),
+          });
+        }
+      },
+
       async setStatus(chatId: number, status: string | null) {
         patchState(store, {
           chats: store
@@ -469,6 +829,7 @@ export const ChatStore = signalStore(
         });
         await chatService.saveNotes(chatId, notes);
       },
-    })
+      };
+    }
   )
 );

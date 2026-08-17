@@ -3,7 +3,7 @@
 >
   <header class="flex justify-between items-center py-4">
     <h1 class="text-2xl sm:text-4xl font-bold">
-      {{ (isCreate() ? 'Crear orden' : 'Editar orden') | transloco }}
+      {{ (isVenta() ? 'Registrar venta' : isCreate() ? 'Crear orden' : 'Editar orden') | transloco }}
     </h1>
     <div class="flex gap-3 items-center">
       <ui-button
@@ -17,7 +17,7 @@
       <ui-button
         (click)="save()"
         [disabled]="form.invalid || isSubmitting()"
-        [label]="'Guardar' | transloco"
+        [label]="(isVenta() ? 'Cobrar' : 'Guardar') | transloco"
       />
       }
     </div>
@@ -55,6 +55,7 @@
           </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          @if (!isVenta()) {
           <div class="flex flex-col gap-2">
             <label class="text-base text-grey-400 font-semibold" for="deliveryDate"
               >{{ 'Fecha de entrega' | transloco }}</label
@@ -71,6 +72,7 @@
               {{ 'Por defecto es hoy. Puedes cambiarla si la orden se entrega otro día.' | transloco }}
             </span>
           </div>
+          }
           <div class="flex flex-col gap-2">
             <div class="flex items-center gap-3">
               <label class="text-base text-grey-400 font-semibold" for="payment-method"
@@ -112,19 +114,117 @@
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-3">
             <label class="text-base text-grey-400 font-semibold" for="comments"
-              >{{ 'Comentarios' | transloco }}</label
+              >{{ (isVenta() ? 'Notas / Garantía' : 'Comentarios') | transloco }}</label
             >
             <span class="text-sm text-grey-400">{{ '(Opcional)' | transloco }}</span>
           </div>
           <ui-textarea
             formControlName="comments"
-            [placeholder]="'Notas adicionales sobre la orden...' | transloco"
+            [placeholder]="(isVenta() ? 'Condiciones de garantía, notas para el cliente…' : 'Notas adicionales sobre la orden...') | transloco"
             textareaId="comments"
             [rows]="3"
           />
         </div>
       </div>
     </ui-card>
+
+    <!-- Evidencia de pago (SOLO admin — nunca en el catálogo público ni en el
+         recibo PDF del cliente; es respaldo interno del negocio). Beta cerrada:
+         solo visible para los tenants del allowlist (ventaFeatureEnabled). -->
+    @if (ventaFeatureEnabled()) {
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-3">
+          <h2 class="text-xl font-bold">{{ 'Evidencia de pago' | transloco }}</h2>
+          <span class="text-sm text-grey-400">{{ '(Opcional)' | transloco }}</span>
+        </div>
+        <p class="text-sm text-grey-400 -mt-2">
+          {{ 'Respaldo interno del pago (captura de transferencia, comprobante…). Solo lo ves en el panel; no aparece en el catálogo ni en el recibo del cliente.' | transloco }}
+        </p>
+
+        <ui-textarea
+          formControlName="paymentEvidenceNote"
+          [placeholder]="'N° de referencia, banco, notas del pago…' | transloco"
+          textareaId="payment-evidence-note"
+          [rows]="2"
+        />
+
+        <!-- Subir imágenes: mismo patrón que las fotos del producto. -->
+        <ui-uploader
+          (valueChange)="onEvidenceUploaded($event)"
+          [accept]="'image/*'"
+          [max]="{ mb: 15 }"
+          [multiple]="true"
+        >
+          <ng-template #picker let-pick="pick">
+            <button
+              type="button"
+              (click)="paymentEvidenceImages().length < evidenceMaxImages && pick()"
+              [class]="
+                'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl py-8 transition-colors ' +
+                (paymentEvidenceImages().length >= evidenceMaxImages
+                  ? 'border-grey-300 bg-grey-50 opacity-50 cursor-not-allowed'
+                  : 'border-primary-500 bg-primary-50/10 cursor-pointer hover:bg-primary-50/20')
+              "
+            >
+              <ui-icon
+                name="circle-plus"
+                size="22"
+                [styleClass]="paymentEvidenceImages().length >= evidenceMaxImages ? 'text-grey-400 mb-2' : 'text-primary-500 mb-2'"
+              />
+              <p
+                [class]="
+                  'font-semibold text-sm text-center px-4 ' +
+                  (paymentEvidenceImages().length >= evidenceMaxImages ? 'text-grey-400' : 'text-primary-500')
+                "
+              >
+                {{ (paymentEvidenceImages().length >= evidenceMaxImages
+                  ? 'Alcanzaste el máximo de imágenes'
+                  : 'Arrastrá, soltá o subí las imágenes del pago') | transloco }}
+              </p>
+            </button>
+          </ng-template>
+        </ui-uploader>
+
+        <!-- Miniaturas subidas (con quitar). -->
+        @if (paymentEvidenceImages().length > 0) {
+        <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+          @for (img of paymentEvidenceImages(); track img) {
+          <div
+            class="group relative aspect-square rounded-lg overflow-hidden border border-grey-100 bg-grey-50"
+          >
+            <img
+              [src]="img"
+              alt=""
+              loading="lazy"
+              class="w-full h-full object-cover"
+            />
+            <!-- Click (o hover en desktop) → abre el preview grande. El overlay
+                 cubre la miniatura: en desktop se ve al hacer hover; en mobile
+                 es transparente pero igual abre el preview al tocar. -->
+            <button
+              type="button"
+              (click)="openEvidencePreview(img)"
+              [title]="'Ver' | transloco"
+              class="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            >
+              <ui-icon name="eye" size="22" />
+            </button>
+            <button
+              type="button"
+              (click)="removeEvidenceImage(img)"
+              [title]="'Quitar' | transloco"
+              class="absolute top-1.5 right-1.5 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-white text-grey-400 shadow opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 cursor-pointer"
+            >
+              <ui-icon name="trash" size="15" />
+            </button>
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </ui-card>
+    }
 
     <!-- Productos -->
     <ui-card>
@@ -150,7 +250,7 @@
         </div>
         } @else {
         <div class="flex flex-col gap-3">
-          @for (product of products(); track $index) {
+          @for (product of products(); track $index; let pIndex = $index) {
           <div class="p-4 border border-grey-200 rounded-lg">
             <div class="flex flex-col sm:flex-row sm:items-start gap-4">
               <div class="flex-1 flex flex-col sm:grid sm:grid-cols-4 gap-4">
@@ -265,6 +365,68 @@
                     </ng-template>
                   </ui-select>
 
+                  <!-- Variante (visible solo para productos con variantes).
+                       Sin selección = Producto original (precio base). -->
+                  @if (getVariants(product.productId).length) {
+                  <label
+                    class="text-sm text-grey-400 mt-2"
+                    [attr.for]="'variant-' + $index"
+                    >{{ 'Variante' | transloco }}</label
+                  >
+                  <ui-select
+                    [options]="getVariants(product.productId)"
+                    optionLabel="name"
+                    optionValue="id"
+                    [placeholder]="'Producto original' | transloco"
+                    [clearable]="true"
+                    [ngModel]="product.variantId"
+                    (ngModelChange)="onVariantSelect($index, $event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    appendTo="body"
+                    [selectId]="'variant-' + $index"
+                  >
+                    <ng-template selectSelectedItem let-selected>
+                      <div class="flex items-center gap-2">
+                        @if (selected.photo) {
+                        <img
+                          [src]="selected.photo"
+                          [alt]="selected.name"
+                          loading="lazy"
+                          class="w-6 h-6 rounded object-cover"
+                        />
+                        }
+                        <span class="text-sm">{{ selected.name }}</span>
+                      </div>
+                    </ng-template>
+                    <ng-template selectItem let-variant>
+                      <div class="flex items-center gap-3 py-1">
+                        @if (variant.photo) {
+                        <img
+                          [src]="variant.photo"
+                          [alt]="variant.name"
+                          loading="lazy"
+                          class="w-8 h-8 rounded object-cover"
+                        />
+                        } @else {
+                        <div
+                          class="w-8 h-8 rounded bg-grey-100 flex items-center justify-center"
+                        >
+                          <ui-icon
+                            name="package"
+                            size="16"
+                            styleClass="text-grey-300"
+                          />
+                        </div>
+                        }
+                        <span class="flex-1 text-grey-800">{{ variant.name }}</span>
+                        <span class="text-xs text-grey-400"
+                          >{{ cs() }} {{ variant.price.toFixed(2) }}</span
+                        >
+                      </div>
+                    </ng-template>
+                  </ui-select>
+                  }
+
                   <!-- Escala de mayoreo (visible solo para productos al mayor) -->
                   @if (getWholesaleTiers(product.productId).length) {
                   <label
@@ -292,6 +454,124 @@
                       </div>
                     </ng-template>
                   </ui-select>
+                  }
+
+                  <!-- Adicionales: se puede agregar CUALQUIER adicional del
+                       catálogo (pool global deduplicado), no solo los del
+                       producto de la fila. Su precio se suma al unitario. -->
+                  @if (allAddons().length) {
+                  <label
+                    class="text-sm text-grey-400 mt-2"
+                    [attr.for]="'addon-add-' + pIndex"
+                    >{{ 'Adicionales' | transloco }}</label
+                  >
+                  <ui-select
+                    [options]="availableAddons(pIndex)"
+                    optionLabel="name"
+                    optionValue="id"
+                    [placeholder]="'Agregar adicional' | transloco"
+                    [filter]="true"
+                    filterBy="name"
+                    [ngModel]="null"
+                    (ngModelChange)="onAddonAdd(pIndex, $event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    appendTo="body"
+                    [selectId]="'addon-add-' + pIndex"
+                    [emptyMessage]="'No hay más adicionales' | transloco"
+                  >
+                    <ng-template selectItem let-addon>
+                      <div class="flex items-center gap-3 py-1">
+                        @if (addon.photo) {
+                        <img
+                          [src]="addon.photo"
+                          [alt]="addon.name"
+                          loading="lazy"
+                          class="w-8 h-8 rounded object-cover"
+                        />
+                        } @else {
+                        <div
+                          class="w-8 h-8 rounded bg-grey-100 flex items-center justify-center"
+                        >
+                          <ui-icon
+                            name="package"
+                            size="16"
+                            styleClass="text-grey-300"
+                          />
+                        </div>
+                        }
+                        <span class="flex-1 text-grey-800">{{ addon.name }}</span>
+                        @if (addon.price > 0) {
+                        <span class="text-xs text-grey-400"
+                          >+{{ cs() }} {{ addon.price.toFixed(2) }}</span
+                        >
+                        }
+                      </div>
+                    </ng-template>
+                  </ui-select>
+
+                  <!-- Adicionales ya elegidos: chips tipo mini-producto (imagen
+                       + nombre + precio) con ✕ para quitar. -->
+                  @if (product.addons?.length) {
+                  <div class="flex flex-wrap gap-2 mt-1">
+                    @for (addon of product.addons; track addon.id) {
+                    <span
+                      class="inline-flex items-center gap-2 rounded-lg border border-grey-100 bg-white pl-1 pr-2 py-1"
+                    >
+                      @if (addonPhoto(addon); as photo) {
+                      <img
+                        [src]="photo"
+                        [alt]="addon.name"
+                        loading="lazy"
+                        class="w-7 h-7 rounded object-cover"
+                      />
+                      } @else {
+                      <div
+                        class="w-7 h-7 rounded bg-grey-100 flex items-center justify-center"
+                      >
+                        <ui-icon
+                          name="package"
+                          size="14"
+                          styleClass="text-grey-300"
+                        />
+                      </div>
+                      }
+                      <span class="text-sm text-grey-800"
+                        >{{ addon.name }}@if (addon.price > 0) { <span class="text-grey-400">(+{{ cs() }}{{ addon.price.toFixed(2) }})</span> }</span
+                      >
+                      <!-- Cantidad de este adicional (ej. 3 pulseras) -->
+                      <span
+                        class="inline-flex items-center rounded-md border border-grey-100 overflow-hidden"
+                      >
+                        <button
+                          type="button"
+                          class="px-1.5 py-0.5 text-grey-500 hover:bg-grey-50"
+                          (click)="changeAddonQty(pIndex, addon.id, -1)"
+                          [attr.aria-label]="'Quitar uno' | transloco"
+                        >
+                          <ui-icon name="minus" size="12" />
+                        </button>
+                        <span class="w-5 text-center text-sm text-grey-800">{{ addonQty(addon) }}</span>
+                        <button
+                          type="button"
+                          class="px-1.5 py-0.5 text-grey-500 hover:bg-grey-50"
+                          (click)="changeAddonQty(pIndex, addon.id, 1)"
+                          [attr.aria-label]="'Agregar uno' | transloco"
+                        >
+                          <ui-icon name="plus" size="12" />
+                        </button>
+                      </span>
+                      <button
+                        type="button"
+                        class="text-grey-300 hover:text-grey-600"
+                        (click)="onAddonToggle(pIndex, addon)"
+                        [attr.aria-label]="'Quitar' | transloco"
+                      >
+                        <ui-icon name="x" size="14" />
+                      </button>
+                    </span>
+                    }
+                  </div>
+                  }
                   }
                 </div>
                 } @else {
@@ -408,6 +688,7 @@
       </div>
     </ui-card>
 
+    @if (!isVenta()) {
     <!-- Estado -->
     <ui-card>
       <div class="flex flex-col gap-4">
@@ -502,10 +783,195 @@
       </div>
     </ui-card>
 
+    <!-- Envío -->
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <h2 class="text-xl font-bold">{{ 'Envío' | transloco }}</h2>
+        <div class="flex flex-col gap-4">
+          <!-- Opciones de envío como tarjetas (Sin envío / métodos del catálogo /
+               monto manual), mismo estilo que "Estado de la orden". -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" [attr.aria-label]="'Envío' | transloco">
+            @for (opt of shippingChoices(); track opt.value) {
+            <button
+              type="button"
+              role="radio"
+              [attr.aria-checked]="shippingSelection() === opt.value"
+              (click)="onShippingSelectionChange(opt.value)"
+              [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer text-left w-full ' +
+                (shippingSelection() === opt.value
+                  ? 'border-primary-500 bg-primary-50/30'
+                  : 'border-grey-200 hover:border-primary-300')"
+            >
+              <div
+                [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ' +
+                  (shippingSelection() === opt.value ? 'border-primary-500' : 'border-grey-300')"
+              >
+                @if (shippingSelection() === opt.value) {
+                <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
+                }
+              </div>
+              <div class="flex-1 min-w-0">
+                <span class="font-medium block truncate">{{ opt.name }}</span>
+                <p class="text-sm text-grey-300">
+                  @if (opt.kind === 'none') {
+                  {{ 'El pedido no lleva envío' | transloco }}
+                  } @else if (opt.kind === 'manual') {
+                  {{ 'Flete u otro costo de envío' | transloco }}
+                  } @else {
+                  {{ opt.fee > 0 ? cs() + (opt.fee | number:'1.2-2') : ('Gratis' | transloco) }}
+                  }
+                </p>
+              </div>
+            </button>
+            }
+          </div>
+          @if (shippingSelection()) {
+          <div class="flex flex-col gap-1 sm:max-w-xs">
+            <label for="shipping-fee" class="text-sm text-grey-400">
+              {{ shippingSelection() === '__manual__' ? ('Monto del envío (flete u otro costo)' | transloco) : ('Costo del envío — podés ajustarlo para esta orden' | transloco) }}
+            </label>
+            <ui-input-number
+              [ngModel]="shippingFee()"
+              (ngModelChange)="onShippingFeeChange($event)"
+              [ngModelOptions]="{ standalone: true }"
+              [min]="0"
+              mode="decimal"
+              [prefix]="cs() + ' '"
+              [minFractionDigits]="2"
+              [maxFractionDigits]="2"
+              inputId="shipping-fee"
+            />
+          </div>
+          }
+        </div>
+      </div>
+    </ui-card>
+    }
+
+    <!-- Comisión (opcional): costo del VENDEDOR que se descuenta del total y no
+         se le muestra al cliente. Puede ser un monto fijo o un porcentaje. -->
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-3">
+          <h2 class="text-xl font-bold">{{ 'Comisión' | transloco }}</h2>
+          <span class="text-sm text-grey-400">{{ '(Opcional)' | transloco }}</span>
+        </div>
+        <p class="text-sm text-grey-400 -mt-2">
+          {{ 'Un costo tuyo por la venta (por ejemplo la comisión de un vendedor o una pasarela). Se descuenta de tu total y no se le muestra al cliente.' | transloco }}
+        </p>
+
+        <!-- Tipo: monto fijo / porcentaje -->
+        <div
+          class="grid grid-cols-2 gap-3 sm:max-w-md"
+          role="radiogroup"
+          [attr.aria-label]="'Tipo de comisión' | transloco"
+        >
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="commissionMode() === 'fixed'"
+            (click)="setCommissionMode('fixed')"
+            [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer text-left w-full ' +
+              (commissionMode() === 'fixed' ? 'border-primary-500 bg-primary-50/30' : 'border-grey-200 hover:border-primary-300')"
+          >
+            <div
+              [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ' +
+                (commissionMode() === 'fixed' ? 'border-primary-500' : 'border-grey-300')"
+            >
+              @if (commissionMode() === 'fixed') {
+              <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
+              }
+            </div>
+            <span class="font-medium">{{ 'Monto fijo' | transloco }}</span>
+          </button>
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="commissionMode() === 'percent'"
+            (click)="setCommissionMode('percent')"
+            [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer text-left w-full ' +
+              (commissionMode() === 'percent' ? 'border-primary-500 bg-primary-50/30' : 'border-grey-200 hover:border-primary-300')"
+          >
+            <div
+              [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ' +
+                (commissionMode() === 'percent' ? 'border-primary-500' : 'border-grey-300')"
+            >
+              @if (commissionMode() === 'percent') {
+              <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
+              }
+            </div>
+            <span class="font-medium">{{ 'Porcentaje' | transloco }}</span>
+          </button>
+        </div>
+
+        @if (commissionMode() === 'fixed') {
+        <div class="flex flex-col gap-1 sm:max-w-xs">
+          <label for="commission-amount" class="text-sm text-grey-400">{{ 'Monto de la comisión' | transloco }}</label>
+          <ui-input-number
+            [ngModel]="commissionAmount()"
+            (ngModelChange)="onCommissionAmountChange($event)"
+            [ngModelOptions]="{ standalone: true }"
+            [min]="0"
+            mode="decimal"
+            [prefix]="cs() + ' '"
+            [minFractionDigits]="2"
+            [maxFractionDigits]="2"
+            inputId="commission-amount"
+          />
+        </div>
+        } @else {
+        <div class="flex flex-col gap-1 sm:max-w-xs">
+          <label for="commission-percent" class="text-sm text-grey-400">{{ 'Porcentaje de la comisión (%)' | transloco }}</label>
+          <ui-input-number
+            [ngModel]="commissionPercent()"
+            (ngModelChange)="onCommissionPercentChange($event)"
+            [ngModelOptions]="{ standalone: true }"
+            [min]="0"
+            mode="decimal"
+            [minFractionDigits]="0"
+            [maxFractionDigits]="2"
+            inputId="commission-percent"
+          />
+          <span class="text-xs text-grey-400">
+            {{ 'Se calcula sobre el subtotal de productos.' | transloco }}
+            @if (effectiveCommission() > 0) { — {{ 'Comisión:' | transloco }} {{ cs() }} {{ effectiveCommission().toFixed(2) }} }
+          </span>
+        </div>
+        }
+      </div>
+    </ui-card>
+
     <!-- Totales -->
     <ui-card>
       <div class="flex flex-col gap-4">
         <h2 class="text-xl font-bold">{{ 'Resumen' | transloco }}</h2>
+
+        <!-- Subtotal productos -->
+        <div class="flex justify-between items-center">
+          <span class="text-base text-grey-400 font-medium">{{ 'Subtotal' | transloco }}</span>
+          <span class="text-base font-semibold text-grey-700"
+            >{{ cs() }} {{ productsSubtotal().toFixed(2) }}</span
+          >
+        </div>
+
+        @if (shippingSelection()) {
+        <!-- Envío (se configura arriba, en la card de Envío) -->
+        <div class="flex justify-between items-center">
+          <span class="text-base text-grey-400 font-medium">{{ 'Envío' | transloco }}</span>
+          <span class="text-base font-semibold text-grey-700"
+            >{{ cs() }} {{ effectiveShippingFee().toFixed(2) }}</span
+          >
+        </div>
+        }
+
+        @if (effectiveCommission() > 0) {
+        <div class="flex justify-between items-center">
+          <span class="text-base text-grey-400 font-medium">{{ 'Comisión' | transloco }}</span>
+          <span class="text-base font-semibold text-red-500"
+            >− {{ cs() }} {{ effectiveCommission().toFixed(2) }}</span
+          >
+        </div>
+        }
 
         <!-- Total -->
         <div
@@ -516,6 +982,36 @@
             >{{ cs() }} {{ calculateTotal().toFixed(2) }}</span
           >
         </div>
+
+        @if (isVenta()) {
+        <!-- Monto recibido → Cambio (POS) -->
+        <div class="flex flex-col gap-3 py-4 border-t border-grey-100">
+          <div class="flex flex-col gap-1 sm:max-w-xs">
+            <label for="amount-received" class="text-sm text-grey-400">
+              {{ 'Monto recibido' | transloco }}
+            </label>
+            <ui-input-number
+              [ngModel]="amountReceived()"
+              (ngModelChange)="amountReceived.set($event)"
+              [ngModelOptions]="{ standalone: true }"
+              [min]="0"
+              mode="decimal"
+              [prefix]="cs() + ' '"
+              [minFractionDigits]="2"
+              [maxFractionDigits]="2"
+              inputId="amount-received"
+            />
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-base text-grey-400 font-medium">{{ 'Cambio' | transloco }}</span>
+            <span
+              class="text-lg font-bold"
+              [class]="change() < 0 ? 'text-red-500' : 'text-green-600'"
+              >{{ change() < 0 ? ('Faltan ' | transloco) : '' }}{{ cs() }} {{ (change() < 0 ? -change() : change()).toFixed(2) }}</span
+            >
+          </div>
+        </div>
+        }
 
         @if (tenantCurrency.showDualCurrency()) {
         <!-- Tasa de cambio -->
@@ -568,3 +1064,27 @@
     </ui-card>
   </form>
 </section>
+
+<!-- Lightbox de evidencia de pago: preview grande de la imagen. Click fuera o
+     en la X para cerrar. -->
+@if (evidencePreviewUrl(); as pv) {
+<div
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-6"
+  (click)="closeEvidencePreview()"
+>
+  <button
+    type="button"
+    (click)="closeEvidencePreview()"
+    class="absolute top-4 right-4 text-white/80 hover:text-white cursor-pointer"
+    [attr.aria-label]="'Cerrar' | transloco"
+  >
+    <ui-icon name="x" styleClass="w-7 h-7" />
+  </button>
+  <img
+    [src]="pv"
+    alt=""
+    class="max-w-full max-h-[85vh] rounded-lg object-contain"
+    (click)="$event.stopPropagation()"
+  />
+</div>
+}

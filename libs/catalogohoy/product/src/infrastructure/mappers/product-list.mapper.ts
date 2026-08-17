@@ -35,6 +35,7 @@ export class ProductListMapper {
             photos: v.photos ?? [],
             sizes: v.sizes ?? [],
           })),
+          addons: entity.addons ?? [],
         })
       )
     );

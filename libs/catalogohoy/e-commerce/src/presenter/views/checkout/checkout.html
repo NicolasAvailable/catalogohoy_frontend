@@ -24,7 +24,11 @@
     <label class="checkout__field">
       <span class="checkout__label">{{ 'Nombre' | transloco }} <span class="checkout__req">*</span></span>
       <ui-input-text [ngModel]="name()" (ngModelChange)="name.set($event)"
+        (inputBlur)="nameTouched.set(true)" [invalid]="!!nameError()"
         placeholder="Tu nombre" styleClass="w-full"></ui-input-text>
+      @if (nameError(); as err) {
+      <p class="text-xs text-red-500 mt-1">{{ err | transloco }}</p>
+      }
     </label>
 
     @if (customerFields().phone.visible) {
@@ -51,9 +55,14 @@
         }
         <div class="checkout__input--phone">
           <ui-input-text [ngModel]="phone()" (ngModelChange)="phone.set($event)"
+            (inputBlur)="phoneTouched.set(true)" [invalid]="!!phoneError()"
+            [digitsOnly]="true"
             placeholder="4121234567" styleClass="w-full"></ui-input-text>
         </div>
       </div>
+      @if (phoneError(); as err) {
+      <p class="text-xs text-red-500 mt-1">{{ err | transloco }}</p>
+      }
     </label>
     }
 
@@ -63,7 +72,11 @@
         {{ 'Correo electrónico' | transloco }} @if (customerFields().email.required) { <span class="checkout__req">*</span> }
       </span>
       <ui-input-text [ngModel]="email()" (ngModelChange)="email.set($event)"
+        (inputBlur)="emailTouched.set(true)" [invalid]="!!emailError()"
         placeholder="tucorreo@ejemplo.com" styleClass="w-full"></ui-input-text>
+      @if (emailError(); as err) {
+      <p class="text-xs text-red-500 mt-1">{{ err | transloco }}</p>
+      }
     </label>
     }
   </section>
@@ -85,10 +98,32 @@
       </div>
       }
       <div class="checkout__item-main">
+        <p class="checkout__item-name">{{ item.name }}</p>
+        @if (item.variantName || item.size) {
         <p class="checkout__item-name">
-          {{ item.name }}@if (item.variantName) { <span class="checkout__item-size">· {{ item.variantName }}</span> }@if (item.size) { <span class="checkout__item-size">· {{ item.size }}</span> }
+          <span class="checkout__item-size">
+            @if (item.variantName) {<strong>{{ 'Variante:' | transloco }}</strong> {{ item.variantName }}}@if
+            (item.variantName && item.size) { · }@if (item.size) {
+            <strong>{{ 'Talla:' | transloco }}</strong> {{ item.size }}}
+          </span>
         </p>
-        <p class="checkout__item-price">{{ cs() }}{{ item.total | tenantPrice }}</p>
+        }
+        @if (item.addons.length) {
+        <p class="checkout__item-name">
+          <span class="checkout__item-size"><strong>{{ 'Adicionales:' | transloco }}</strong>
+          @for (addon of item.addons; track addon.id) {
+          {{ addon.name }}@if (addon.price > 0) {@if (showReferencePrice()) { ({{ cs() }}{{ addon.price | tenantPrice }})}@else if (showBs()) { (Bs. {{ addon.price * ecommerceStore.exchangeRate() | number:'1.2-2' }})}}@if (!$last) { · }
+          }</span>
+        </p>
+        }
+        <p class="checkout__item-price">
+          @if (showReferencePrice()) {
+          {{ cs() }}{{ item.total | tenantPrice }}
+          @if (showBs()) { <small class="checkout__price-bs">Bs. {{ item.total * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
+          } @else if (showBs()) {
+          Bs. {{ item.total * ecommerceStore.exchangeRate() | number:'1.2-2' }}
+          }
+        </p>
         <div class="checkout__stepper">
           <button type="button" (click)="onDecrement(item)" [attr.aria-label]="'Quitar uno' | transloco">
             <ui-icon name="minus" size="14" />
@@ -119,7 +154,18 @@
       <button type="button" class="checkout__ship" (click)="selectShipping(method.id)">
         <span class="checkout__radio" [class.checkout__radio--on]="selectedShippingId() === method.id"></span>
         <span class="checkout__ship-name">{{ method.name }}</span>
-        <span class="checkout__ship-fee">{{ method.fee > 0 ? cs() + method.fee : ('Gratis' | transloco) }}</span>
+        <span class="checkout__ship-fee">
+          @if (method.priceOnRequest) {
+          {{ 'A consultar' | transloco }}
+          } @else if (method.fee > 0) {
+          @if (showReferencePrice()) {
+          {{ cs() }}{{ method.fee | tenantPrice }}
+          @if (showBs()) { <small class="checkout__price-bs">Bs. {{ method.fee * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
+          } @else if (showBs()) {
+          Bs. {{ method.fee * ecommerceStore.exchangeRate() | number:'1.2-2' }}
+          }
+          } @else { {{ 'Gratis' | transloco }} }
+        </span>
         @if (method.instructions) {
         <span class="checkout__ship-chevron"
           [class.checkout__ship-chevron--open]="selectedShippingId() === method.id">
@@ -150,6 +196,25 @@
         [placeholder]="'Calle, número, referencia...' | transloco" [rows]="2" styleClass="w-full"></ui-textarea>
     </label>
     }
+  </section>
+  }
+
+  <!-- ===== Fecha de entrega ===== -->
+  @if (deliveryDateEnabled()) {
+  <section class="checkout__card">
+    <h2 class="checkout__card-title">{{ 'Fecha de entrega' | transloco }} <span class="checkout__req">*</span></h2>
+    <div class="checkout__field">
+      <span class="checkout__label">{{ 'Elige la fecha en que quieres recibir tu pedido' | transloco }}</span>
+      <ui-datepicker
+        styleClass="checkout-datepicker"
+        panelStyleClass="checkout-datepicker-panel"
+        [placeholder]="'dd/mm/aaaa'"
+        [restrict]="true"
+        [disabledDays]="deliveryBlockedWeekdays()"
+        [ngModel]="deliveryDate()"
+        (ngModelChange)="deliveryDate.set($event)"
+      ></ui-datepicker>
+    </div>
   </section>
   }
 
@@ -214,20 +279,38 @@
     <h2 class="checkout__card-title">{{ 'Resumen del pedido' | transloco }}</h2>
     <div class="checkout__summary-row">
       <span>{{ 'Artículos ({n})' | transloco: { n: cartStore.totalItems() } }}</span>
-      <span>{{ cs() }}{{ subtotal() | tenantPrice }}</span>
+      <span>
+        @if (showReferencePrice()) {
+        {{ cs() }}{{ subtotal() | tenantPrice }}
+        @if (showBs()) { <small class="checkout__price-bs">Bs. {{ subtotal() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
+        } @else if (showBs()) {
+        Bs. {{ subtotal() * ecommerceStore.exchangeRate() | number:'1.2-2' }}
+        }
+      </span>
     </div>
     @if (selectedShipping()) {
     <div class="checkout__summary-row">
       <span>{{ selectedShipping()?.name }}</span>
-      <span>@if (shippingFee() > 0) { {{ cs() }}{{ shippingFee() | tenantPrice }} } @else { {{ 'Gratis' | transloco }} }</span>
+      <span>
+        @if (shippingFee() > 0) {
+        @if (showReferencePrice()) {
+        {{ cs() }}{{ shippingFee() | tenantPrice }}
+        @if (showBs()) { <small class="checkout__price-bs">Bs. {{ shippingFee() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
+        } @else if (showBs()) {
+        Bs. {{ shippingFee() * ecommerceStore.exchangeRate() | number:'1.2-2' }}
+        }
+        } @else { {{ 'Gratis' | transloco }} }
+      </span>
     </div>
     }
     <div class="checkout__summary-total">
       <span>{{ 'Total' | transloco }}</span>
       <span>
+        @if (showReferencePrice()) {
         {{ cs() }}{{ total() | tenantPrice }}
-        @if (showBs()) {
-        <small>Bs. {{ totalBs() | number:'1.2-2' }}</small>
+        @if (showBs()) { <small>Bs. {{ totalBs() | number:'1.2-2' }}</small> }
+        } @else if (showBs()) {
+        Bs. {{ totalBs() | number:'1.2-2' }}
         }
       </span>
     </div>
@@ -241,13 +324,13 @@
     @for (seller of whatsappButtons(); track seller.number) {
     <button type="button" class="checkout__submit" [disabled]="!isValid || isSubmitting()" (click)="onSubmit(seller)">
       @if (isSubmitting()) { {{ 'Procesando...' | transloco }} } @else {
-        {{ 'Realizar pedido' | transloco }}@if (seller.name?.trim()) { ({{ seller.name }}) }
+        <svg class="checkout__submit-wa" viewBox="-2 -2 28 28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" fill="currentColor"/></svg> {{ 'Realizar pedido' | transloco }}@if (seller.name?.trim()) { ({{ seller.name }}) }
       }
     </button>
     }
     } @else {
     <button type="button" class="checkout__submit" [disabled]="!isValid || isSubmitting()" (click)="onSubmit()">
-      @if (isSubmitting()) { {{ 'Procesando...' | transloco }} } @else { {{ 'Realizar pedido' | transloco }} }
+      @if (isSubmitting()) { {{ 'Procesando...' | transloco }} } @else { <svg class="checkout__submit-wa" viewBox="-2 -2 28 28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" fill="currentColor"/></svg> {{ 'Realizar pedido' | transloco }} }
     </button>
     }
   </div>

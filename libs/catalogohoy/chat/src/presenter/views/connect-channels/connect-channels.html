@@ -1,0 +1,89 @@
+<div class="w-full max-w-4xl mx-auto p-6 flex flex-col gap-6">
+  <!-- Header -->
+  <div>
+    <h1 class="text-2xl font-bold text-grey-800">{{ 'Conectar canales' | transloco }}</h1>
+    <p class="text-sm text-grey-500 mt-1 max-w-xl">
+      {{ 'Conecta tus redes para recibir y responder todos los mensajes desde una sola bandeja.' | transloco }}
+    </p>
+  </div>
+
+  <!-- Galería de canales (estilo SocialGest: una card por red) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    @for (channel of channels; track channel.key) {
+    <a
+      [routerLink]="routeFor(channel)"
+      (click)="onChannelClick(channel, $event)"
+      class="group flex flex-col items-center text-center gap-3 rounded-2xl border border-grey-100 bg-white px-6 py-8 transition-all"
+      [ngClass]="channel.comingSoon ? 'opacity-70 cursor-default' : 'cursor-pointer hover:border-primary-300 hover:shadow-md'"
+    >
+      <img
+        [src]="channel.logo"
+        [alt]="channel.name"
+        class="w-11 h-11 group-hover:scale-105 transition-transform"
+      />
+      <span class="font-semibold text-grey-800">{{ channel.name }}</span>
+      <span class="text-xs text-grey-400 leading-relaxed">{{ channel.description | transloco }}</span>
+
+      @if (isConnected(channel)) {
+      <span
+        class="inline-flex items-center gap-1.5 mt-1"
+        [title]="'Conectado' | transloco"
+      >
+        <ui-icon name="check-circle" size="22" styleClass="text-green-600 shrink-0" />
+        @if (identityOf(channel); as identity) {
+        <span class="text-sm font-semibold text-green-700 truncate max-w-44">{{ identity }}</span>
+        }
+      </span>
+      <button
+        type="button"
+        (click)="confirmDisconnect(channel, $event)"
+        class="text-xs font-medium text-grey-300 hover:text-red-500 transition-colors cursor-pointer"
+      >
+        {{ disconnectingKey() === channel.key ? 'Desvinculando...' : ('Desvincular' | transloco) }}
+      </button>
+      } @else if (channel.comingSoon) {
+      <span class="inline-flex items-center px-3 py-1 mt-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
+        {{ 'Próximamente' | transloco }}
+      </span>
+      } @else {
+      <span class="inline-flex items-center gap-2 px-5 py-2.5 mt-1 rounded-xl bg-primary-500 text-white text-sm font-semibold group-hover:bg-primary-600 transition-colors">
+        {{ 'Conectar' | transloco }}
+        <ui-icon name="arrow-right" size="14" />
+      </span>
+      }
+    </a>
+    }
+  </div>
+</div>
+
+<!-- Modal: conectar canales es una función de los planes avanzados. -->
+<ui-dialog #upgradeDialog [showHeader]="false" styleClass="w-[26rem] max-w-[95vw]">
+  <div class="flex flex-col items-center text-center gap-4 p-2">
+    <div class="w-16 h-16 rounded-full bg-linear-to-br from-primary-50 to-violet-50 flex items-center justify-center text-primary-500">
+      <ui-icon name="crown" size="30" />
+    </div>
+    <h2 class="text-xl font-bold text-grey-800">
+      {{ 'Una función del plan Avanzado' | transloco }}
+    </h2>
+    <p class="text-sm text-grey-500 leading-relaxed">
+      {{ 'Conectar WhatsApp, Instagram y TikTok en una sola bandeja está disponible en el plan Avanzado. Mejorá tu plan para responderle a tus clientes desde CatalogoHoy.' | transloco }}
+    </p>
+    <div class="flex items-center gap-2 mt-1">
+      <button
+        type="button"
+        (click)="closeUpgrade()"
+        class="px-4 py-2.5 rounded-xl border border-grey-200 text-sm font-semibold text-grey-600 hover:bg-grey-50 transition-colors cursor-pointer"
+      >
+        {{ 'Ahora no' | transloco }}
+      </button>
+      <a
+        routerLink="/admin/plans"
+        (click)="closeUpgrade()"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors"
+      >
+        <ui-icon name="sparkles" size="15" />
+        {{ 'Mejorar plan' | transloco }}
+      </a>
+    </div>
+  </div>
+</ui-dialog>

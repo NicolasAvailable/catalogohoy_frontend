@@ -45,6 +45,13 @@ export const internalRoutes: Route[] = [
       ),
   },
   {
+    path: 'channel-connections',
+    loadChildren: () =>
+      import('./channel-connections/channel-connections.routes').then(
+        (m) => m.channelConnectionsRoutes
+      ),
+  },
+  {
     path: 'ai-usage',
     loadChildren: () =>
       import('./ai-usage/ai-usage.routes').then((m) => m.aiUsageRoutes),
@@ -67,5 +74,10 @@ export const internalRoutes: Route[] = [
       import('./platform-orders/platform-orders.routes').then(
         (m) => m.platformOrdersRoutes
       ),
+  },
+  {
+    path: 'emails',
+    loadChildren: () =>
+      import('./email-ses/email-ses.routes').then((m) => m.emailSesRoutes),
   },
 ];

@@ -12,6 +12,10 @@ const DEFAULT_IMAGE =
 const CRAWLER_REGEX =
   /facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Pinterest|Discordbot|Baiduspider|Googlebot|bingbot|yandex|Applebot/i;
 
+/** Máximo de productos listados en el HTML para crawlers de la portada.
+ *  Suficiente para dar contenido y enlaces internos sin inflar la respuesta. */
+const HOME_PRODUCT_LIMIT = 60;
+
 function extractSlugFromHost(host: string): string | null {
   const hostname = host.split(':')[0];
   const parts = hostname.split('.');
@@ -75,13 +79,32 @@ interface OgMeta {
   siteName: string;
 }
 
-function buildHtml(meta: OgMeta): string {
+/** Contenido extra para buscadores: cuerpo indexable + datos estructurados
+ *  (JSON-LD). Los crawlers sociales (WhatsApp/FB) solo leen los meta tags,
+ *  así que agregar cuerpo no cambia los previews. */
+interface CrawlerExtras {
+  bodyHtml?: string;
+  jsonLd?: unknown[];
+}
+
+function buildHtml(meta: OgMeta, extras: CrawlerExtras = {}): string {
   const t = escapeHtml(stripHtml(meta.title));
   const d = escapeHtml(truncate(stripHtml(meta.description), 160));
   const i = escapeHtml(meta.image);
   const u = escapeHtml(meta.url);
   const ty = escapeHtml(meta.type);
   const sn = escapeHtml(meta.siteName);
+
+  // `</script>` dentro de un string del JSON rompería el documento.
+  const jsonLdBlocks = (extras.jsonLd ?? [])
+    .map(
+      (obj) =>
+        `  <script type="application/ld+json">${JSON.stringify(obj).replace(
+          /</g,
+          '\\u003c'
+        )}</script>`
+    )
+    .join('\n');
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -106,14 +129,15 @@ function buildHtml(meta: OgMeta): string {
   <meta name="twitter:image" content="${i}" />
 
   <link rel="canonical" href="${u}" />
+${jsonLdBlocks}
 </head>
 <body>
-  <p>${t}</p>
+${extras.bodyHtml ?? `  <p>${t}</p>`}
 </body>
 </html>`;
 }
 
-async function supabaseGet<T>(path: string): Promise<T | null> {
+async function supabaseGetAll<T>(path: string): Promise<T[]> {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
       headers: {
@@ -122,12 +146,40 @@ async function supabaseGet<T>(path: string): Promise<T | null> {
         Accept: 'application/json',
       },
     });
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const data = await res.json();
-    return Array.isArray(data) ? data[0] ?? null : data;
+    return Array.isArray(data) ? data : [];
   } catch {
-    return null;
+    return [];
   }
+}
+
+async function supabaseGet<T>(path: string): Promise<T | null> {
+  const rows = await supabaseGetAll<T>(path);
+  return rows[0] ?? null;
+}
+
+interface ProductRow {
+  id: number;
+  name: string;
+  description: string | null;
+  photos: string[] | null;
+  price: number | null;
+  price_promotional: number | null;
+  is_sold_out: boolean | null;
+}
+
+function effectivePrice(p: ProductRow): number | null {
+  if (p.price_promotional && p.price_promotional > 0) {
+    return Number(p.price_promotional);
+  }
+  // Precio 0 = "sin precio" (consultar por WhatsApp): no se muestra ni va al JSON-LD.
+  return p.price != null && Number(p.price) > 0 ? Number(p.price) : null;
+}
+
+function formatPrice(value: number | null, currency: string): string {
+  if (value == null) return '';
+  return `${value.toFixed(2)} ${currency}`;
 }
 
 const defaultMeta: OgMeta = {
@@ -154,7 +206,7 @@ export default async function middleware(request: Request): Promise<Response | u
 
     const hostname = host.split(':')[0].toLowerCase();
     let baseUrl: string;
-    let tenant: { id: number; name: string } | null;
+    let tenant: { id: number; name: string; country_code: string | null } | null;
 
     if (hostname.endsWith('.catalogohoy.com')) {
       const slug = extractSlugFromHost(hostname);
@@ -165,8 +217,8 @@ export default async function middleware(request: Request): Promise<Response | u
         });
       }
       baseUrl = `https://${slug}.catalogohoy.com`;
-      tenant = await supabaseGet<{ id: number; name: string }>(
-        `tenants?slug=eq.${encodeURIComponent(slug)}&select=id,name`
+      tenant = await supabaseGet<{ id: number; name: string; country_code: string | null }>(
+        `tenants?slug=eq.${encodeURIComponent(slug)}&select=id,name,country_code`
       );
     } else {
       // Dominio personalizado (ej. 3sxpress.com): el tenant se resuelve por
@@ -174,8 +226,8 @@ export default async function middleware(request: Request): Promise<Response | u
       // porque en la columna se guarda siempre el apex).
       const domain = hostname.replace(/^www\./, '');
       baseUrl = `https://${domain}`;
-      tenant = await supabaseGet<{ id: number; name: string }>(
-        `tenants?custom_domain=eq.${encodeURIComponent(domain)}&select=id,name`
+      tenant = await supabaseGet<{ id: number; name: string; country_code: string | null }>(
+        `tenants?custom_domain=eq.${encodeURIComponent(domain)}&select=id,name,country_code`
       );
     }
 
@@ -186,33 +238,44 @@ export default async function middleware(request: Request): Promise<Response | u
       });
     }
 
-    // Fetch ecommerce config
-    const config = await supabaseGet<{
-      logo: string | null;
-      banner: string | null;
-      description: string | null;
-    }>(
-      `tenant_ecommerce_config?tenant_id=eq.${tenant.id}&select=logo,banner,description`
-    );
+    // Config del catálogo + moneda de los precios (para el JSON-LD), en paralelo.
+    const [config, currency] = await Promise.all([
+      supabaseGet<{
+        logo: string | null;
+        banner: string | null;
+        description: string | null;
+      }>(
+        `tenant_ecommerce_config?tenant_id=eq.${tenant.id}&select=logo,banner,description`
+      ),
+      supabaseGet<{
+        product_currency: string | null;
+        display_currency: string | null;
+      }>(
+        `tenant_currency_config?tenant_id=eq.${tenant.id}&select=product_currency,display_currency`
+      ),
+    ]);
 
     const tenantLogo = config?.logo || config?.banner || DEFAULT_IMAGE;
     const tenantDescription =
       config?.description ||
       `Explora el catálogo de ${tenant.name} en CatalogoHoy.`;
+    // En Venezuela los precios se guardan en la moneda de REFERENCIA
+    // (display_currency, normalmente USD); product_currency ahí es la local
+    // (VES), que solo se muestra convertida por tasa. En el resto de países
+    // product_currency sí es la moneda real de los precios. (Ver gotcha
+    // "Moneda del catálogo público".)
+    const priceCurrency =
+      tenant.country_code === 'VE'
+        ? currency?.display_currency || 'USD'
+        : currency?.product_currency || 'USD';
 
     // Product page: /product/:id
     const productMatch = pathname.match(/^\/product\/(\d+)/);
 
     if (productMatch) {
       const productId = productMatch[1];
-      const product = await supabaseGet<{
-        name: string;
-        description: string | null;
-        photos: string[] | null;
-        price: number;
-        price_promotional: number | null;
-      }>(
-        `products?id=eq.${productId}&select=name,description,photos,price,price_promotional`
+      const product = await supabaseGet<ProductRow>(
+        `products?id=eq.${productId}&select=id,name,description,photos,price,price_promotional,is_sold_out`
       );
 
       if (product) {
@@ -223,20 +286,68 @@ export default async function middleware(request: Request): Promise<Response | u
         const productDescription =
           product.description ||
           `${product.name} disponible en ${tenant.name}`;
-        const price =
-          product.price_promotional && product.price_promotional > 0
-            ? product.price_promotional
-            : product.price;
+        const price = effectivePrice(product);
+        const productUrl = `${baseUrl}/product/${productId}`;
+
+        const name = escapeHtml(stripHtml(product.name));
+        const desc = escapeHtml(stripHtml(productDescription));
+        const bodyHtml = [
+          `  <main>`,
+          `    <h1>${name}</h1>`,
+          `    <img src="${escapeHtml(productImage)}" alt="${name}" width="400" />`,
+          price != null
+            ? `    <p><strong>${formatPrice(price, priceCurrency)}</strong>${
+                product.is_sold_out ? ' · Agotado' : ''
+              }</p>`
+            : '',
+          `    <p>${desc}</p>`,
+          `    <p><a href="${escapeHtml(baseUrl)}/">Ver todo el catálogo de ${escapeHtml(
+            stripHtml(tenant.name)
+          )}</a></p>`,
+          `  </main>`,
+        ]
+          .filter(Boolean)
+          .join('\n');
+
+        const jsonLd: unknown[] = [
+          {
+            '@context': 'https://schema.org',
+            '@type': 'Product',
+            name: stripHtml(product.name),
+            description: truncate(stripHtml(productDescription), 500),
+            image: product.photos?.length ? product.photos : [productImage],
+            url: productUrl,
+            ...(price != null
+              ? {
+                  offers: {
+                    '@type': 'Offer',
+                    price: price.toFixed(2),
+                    priceCurrency,
+                    availability: product.is_sold_out
+                      ? 'https://schema.org/OutOfStock'
+                      : 'https://schema.org/InStock',
+                    url: productUrl,
+                  },
+                }
+              : {}),
+          },
+        ];
 
         return new Response(
-          buildHtml({
-            title: `${product.name} — ${tenant.name}`,
-            description: `$${Number(price).toFixed(2)} · ${productDescription}`,
-            image: productImage,
-            url: `${baseUrl}/product/${productId}`,
-            type: 'product',
-            siteName: tenant.name,
-          }),
+          buildHtml(
+            {
+              title: `${product.name} — ${tenant.name}`,
+              description:
+                price != null
+                  ? `$${price.toFixed(2)} · ${productDescription}`
+                  : productDescription,
+              image: productImage,
+              url: productUrl,
+              type: 'product',
+              siteName: tenant.name,
+            },
+            { bodyHtml, jsonLd }
+          ),
           {
             status: 200,
             headers: { 'Content-Type': 'text/html; charset=utf-8' },
@@ -245,16 +356,76 @@ export default async function middleware(request: Request): Promise<Response | u
       }
     }
 
-    // Default: catalog home
-    return new Response(
-      buildHtml({
-        title: `${tenant.name} — Catálogo`,
-        description: tenantDescription,
+    // Default: catalog home — lista real de productos para que el buscador
+    // tenga contenido indexable y enlaces internos hacia /product/:id.
+    const products = await supabaseGetAll<ProductRow>(
+      `products?tenant_id=eq.${tenant.id}` +
+        `&or=(is_hidden.eq.false,is_hidden.is.null)` +
+        `&select=id,name,description,photos,price,price_promotional,is_sold_out` +
+        `&order=position.asc.nullslast,id.asc&limit=${HOME_PRODUCT_LIMIT}`
+    );
+
+    const storeName = escapeHtml(stripHtml(tenant.name));
+    const items = products
+      .map((p) => {
+        const price = effectivePrice(p);
+        const label =
+          price != null ? ` — ${formatPrice(price, priceCurrency)}` : '';
+        return `      <li><a href="${escapeHtml(baseUrl)}/product/${p.id}">${escapeHtml(
+          stripHtml(p.name)
+        )}</a>${label}</li>`;
+      })
+      .join('\n');
+
+    const bodyHtml = [
+      `  <main>`,
+      `    <h1>${storeName}</h1>`,
+      `    <p>${escapeHtml(truncate(stripHtml(tenantDescription), 300))}</p>`,
+      products.length
+        ? `    <h2>Productos</h2>\n    <ul>\n${items}\n    </ul>`
+        : '',
+      `  </main>`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const jsonLd: unknown[] = [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Store',
+        name: stripHtml(tenant.name),
+        description: truncate(stripHtml(tenantDescription), 500),
         image: tenantLogo,
         url: baseUrl,
-        type: 'website',
-        siteName: tenant.name,
-      }),
+      },
+      ...(products.length
+        ? [
+            {
+              '@context': 'https://schema.org',
+              '@type': 'ItemList',
+              itemListElement: products.map((p, idx) => ({
+                '@type': 'ListItem',
+                position: idx + 1,
+                name: stripHtml(p.name),
+                url: `${baseUrl}/product/${p.id}`,
+              })),
+            },
+          ]
+        : []),
+    ];
+
+    return new Response(
+      buildHtml(
+        {
+          title: `${tenant.name} — Catálogo`,
+          description: tenantDescription,
+          image: tenantLogo,
+          url: baseUrl,
+          type: 'website',
+          siteName: tenant.name,
+        },
+        { bodyHtml, jsonLd }
+      ),
       {
         status: 200,
         headers: { 'Content-Type': 'text/html; charset=utf-8' },

@@ -38,11 +38,26 @@ type Payload = {
     | "order_received"
     | "order_completed"
     | "plan_expiring"
-    | "payment_failed";
+    | "payment_failed"
+    // Customer success (CatalogoHoy → comerciante). No se configuran por tenant:
+    // el nombre del template es fijo en la WABA de la plataforma (ver CS_TEMPLATES).
+    | "order_pending_reminder"
+    | "activation_no_product"
+    | "setup_missing_whatsapp";
   // Parámetros posicionales del body del template aprobado ({{1}}, {{2}}, ...).
   variables?: string[];
   // Valor del botón URL dinámico (índice 0), p.ej. el order id para `/o/{{1}}`.
   urlButtonParam?: string | null;
+};
+
+// Templates de customer success propios de CatalogoHoy: su nombre en Meta es el
+// mismo para todos los tenants, así que se resuelven acá y NO por
+// whatsapp_notification_settings (que es para los avisos del comerciante a SUS
+// clientes). Siempre habilitados; el gate lo hace el cron que los dispara.
+const CS_TEMPLATES: Record<string, { name: string; lang: string }> = {
+  order_pending_reminder: { name: "order_pending_reminder", lang: "es" },
+  activation_no_product: { name: "activation_no_product", lang: "es" },
+  setup_missing_whatsapp: { name: "setup_missing_whatsapp", lang: "es" },
 };
 
 Deno.serve(async (req) => {
@@ -118,31 +133,44 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: false, error: "Invalid phone" }, 400);
   }
 
-  const { data: setting, error: settingError } = await admin
-    .from("whatsapp_notification_settings")
-    .select("enabled, meta_template_name, language_code")
-    .eq("tenant_id", tenantId)
-    .eq("type", templateType)
-    .maybeSingle();
+  // Customer success: template fijo de la plataforma (no per-tenant). El resto
+  // (avisos del comerciante) se resuelve por whatsapp_notification_settings.
+  const cs = CS_TEMPLATES[templateType];
+  let templateName: string;
+  let languageCode: string;
 
-  if (settingError) {
-    console.error("settings lookup error:", settingError.message);
-    await logAttempt({
-      status: "failed",
-      recipient: phone,
-      error: "settings lookup failed",
-    });
-    return jsonResponse({ success: false, error: "settings lookup failed" }, 500);
-  }
+  if (cs) {
+    templateName = cs.name;
+    languageCode = cs.lang;
+  } else {
+    const { data: setting, error: settingError } = await admin
+      .from("whatsapp_notification_settings")
+      .select("enabled, meta_template_name, language_code")
+      .eq("tenant_id", tenantId)
+      .eq("type", templateType)
+      .maybeSingle();
 
-  // Sin config o deshabilitado → skip silencioso (no es un error).
-  if (!setting || !setting.enabled) {
-    await logAttempt({
-      status: "skipped",
-      recipient: phone,
-      error: setting ? "notificación deshabilitada" : "sin configuración",
-    });
-    return jsonResponse({ success: true, skipped: true });
+    if (settingError) {
+      console.error("settings lookup error:", settingError.message);
+      await logAttempt({
+        status: "failed",
+        recipient: phone,
+        error: "settings lookup failed",
+      });
+      return jsonResponse({ success: false, error: "settings lookup failed" }, 500);
+    }
+
+    // Sin config o deshabilitado → skip silencioso (no es un error).
+    if (!setting || !setting.enabled) {
+      await logAttempt({
+        status: "skipped",
+        recipient: phone,
+        error: setting ? "notificación deshabilitada" : "sin configuración",
+      });
+      return jsonResponse({ success: true, skipped: true });
+    }
+    templateName = setting.meta_template_name;
+    languageCode = setting.language_code ?? "es";
   }
 
   // 3) Enviar el template vía Meta Cloud API.
@@ -171,8 +199,8 @@ Deno.serve(async (req) => {
     to: phone,
     type: "template",
     template: {
-      name: setting.meta_template_name,
-      language: { code: setting.language_code ?? "es" },
+      name: templateName,
+      language: { code: languageCode },
       components,
     },
   };

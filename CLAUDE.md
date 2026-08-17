@@ -13,7 +13,9 @@ rule/deploy/infra detail, **update the relevant doc in the same change** so the 
 
 Nx monorepo with two Angular applications and feature libraries organized by domain.
 
-**Apps:** `catalogohoy` (port 4200) · `authentication` (port 5200)
+**Apps:** `catalogohoy` (port 4200) · `authentication` (port 5200) · `landing` (marketing site, catalogohoy.com)
+
+> **Landing (catalogohoy.com):** el sitio de marketing vive en `apps/landing` (React/Vite + Tailwind v3, distinto al resto del monorepo que es Angular). Deploya desde la rama `landing`. Sección de precios: `apps/landing/src/components/landing/Pricing.tsx`.
 
 **Library namespaces:**
 

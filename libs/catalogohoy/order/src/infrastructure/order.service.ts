@@ -8,7 +8,9 @@ import {
   Order,
   OrderItem,
   OrderMapper,
+  OrderMetrics,
   OrderStatus,
+  PaymentEvidence,
 } from '../domain';
 
 export interface WeekDayData {
@@ -31,6 +33,9 @@ export interface CreateOrderInput {
   name: string;
   phone?: string;
   comments?: string;
+  /** Admin-only proof of payment (note + image URLs). Only the admin order
+   *  form sends this; the public catalog checkout never does. */
+  paymentEvidence?: PaymentEvidence | null;
   status: OrderStatus;
   products: OrderItem[];
   totalUsd: number;
@@ -42,6 +47,22 @@ export interface CreateOrderInput {
    *  the public catalog checkout flow where the customer picks a method
    *  before sending the order via WhatsApp. */
   paymentMethod?: string;
+  /** Flat shipping/extra cost the admin adds on a manual order (flete,
+   *  comisión, u otro gasto). Se suma al `totalUsd` y se guarda en
+   *  `shipping_fee`. 0 / undefined = sin envío. */
+  shippingFee?: number;
+  /** Comisión (opcional) que paga el vendedor: se RESTA del total (net) y es
+   *  interna (no se muestra al cliente). Distinta del envío, que suma. */
+  commission?: number;
+  /** Snapshot del envío para que la lista/detalle lo muestren (misma forma
+   *  que el checkout público). En órdenes manuales el nombre es "Envío"; al
+   *  editar una orden del catálogo se preserva su método original. null =
+   *  sin línea de envío. */
+  shippingMethod?: {
+    name: string;
+    type: 'pickup' | 'delivery' | 'shipping';
+    fee: number;
+  } | null;
 }
 
 export interface UpdateOrderInput extends CreateOrderInput {
@@ -165,6 +186,50 @@ export class OrderService {
     return E.right(count ?? 0);
   }
 
+  /** Aggregated metrics for the "Métricas" tab, via the `order_metrics` RPC.
+   *  Boundaries are computed client-side (admin's local timezone): [start, end)
+   *  is the selected range and `todayStart` is local midnight. Amounts in USD. */
+  async getOrderMetrics(
+    tenantId: number,
+    start: string,
+    end: string,
+    todayStart: string,
+    useBs: boolean
+  ): Promise<E.Either<Error, OrderMetrics>> {
+    const { data, error } = await this.client.rpc('order_metrics', {
+      p_tenant_id: tenantId,
+      p_start: start,
+      p_end: end,
+      p_today_start: todayStart,
+      p_use_bs: useBs,
+    });
+
+    if (error) return E.left(new Error(error.message));
+
+    const d = (data ?? {}) as Record<string, unknown>;
+    return E.right({
+      todayAmount: Number(d['todayAmount']) || 0,
+      todayOrders: Number(d['todayOrders']) || 0,
+      rangeTotalOrders: Number(d['rangeTotalOrders']) || 0,
+      rangeTotalAmount: Number(d['rangeTotalAmount']) || 0,
+      rangeAvgTicket: Number(d['rangeAvgTicket']) || 0,
+      byStatus: Array.isArray(d['byStatus'])
+        ? (d['byStatus'] as Record<string, unknown>[]).map((s) => ({
+            status: String(s['status']),
+            count: Number(s['count']) || 0,
+            amount: Number(s['amount']) || 0,
+          }))
+        : [],
+      byDay: Array.isArray(d['byDay'])
+        ? (d['byDay'] as Record<string, unknown>[]).map((day) => ({
+            date: String(day['date']),
+            amount: Number(day['amount']) || 0,
+            count: Number(day['count']) || 0,
+          }))
+        : [],
+    });
+  }
+
   async getOrderById(
     id: number,
     tenantId: number
@@ -198,7 +263,16 @@ export class OrderService {
       source: 'manual',
     };
     if (input.deliveryDate) payload['delivery_date'] = input.deliveryDate;
+    if (input.paymentEvidence !== undefined)
+      payload['payment_evidence'] = input.paymentEvidence;
     if (input.paymentMethod !== undefined) payload['payment_method'] = input.paymentMethod || null;
+    // shipping_fee es NOT NULL (default 0): sin envío = 0, nunca null.
+    if (input.shippingFee !== undefined)
+      payload['shipping_fee'] = input.shippingFee ?? 0;
+    // commission: costo del vendedor que resta del total (0 = sin comisión).
+    if (input.commission !== undefined)
+      payload['commission'] = input.commission ?? 0;
+    if (input.shippingMethod !== undefined) payload['shipping_method'] = input.shippingMethod;
 
     const { data, error } = await this.client
       .from('orders')
@@ -207,6 +281,15 @@ export class OrderService {
       .single();
 
     if (error) {
+      // Trigger enforce_order_limit (DB): el plan gratis tiene tope mensual
+      // de órdenes; los planes pagos son ilimitados.
+      if (error.message.includes('order_limit_reached')) {
+        return E.left(
+          new Error(
+            'Alcanzaste el límite de órdenes de tu plan este mes. Mejora tu plan para seguir registrando órdenes.'
+          )
+        );
+      }
       return E.left(new Error(error.message));
     }
 
@@ -244,7 +327,16 @@ export class OrderService {
       total_bs: input.totalBs,
     };
     if (input.deliveryDate) patch['delivery_date'] = input.deliveryDate;
+    if (input.paymentEvidence !== undefined)
+      patch['payment_evidence'] = input.paymentEvidence;
     if (input.paymentMethod !== undefined) patch['payment_method'] = input.paymentMethod || null;
+    // shipping_fee es NOT NULL (default 0): sin envío = 0, nunca null.
+    if (input.shippingFee !== undefined)
+      patch['shipping_fee'] = input.shippingFee ?? 0;
+    // commission: costo del vendedor que resta del total (0 = sin comisión).
+    if (input.commission !== undefined)
+      patch['commission'] = input.commission ?? 0;
+    if (input.shippingMethod !== undefined) patch['shipping_method'] = input.shippingMethod;
 
     const { data, error } = await this.client
       .from('orders')
@@ -450,8 +542,12 @@ export class OrderService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    // Weekly data: last 7 days (Mon-Sun or relative)
-    const dayLabels = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Hoy'];
+    // Weekly data: los últimos 7 días relativos a HOY. La etiqueta de cada
+    // barra es el día real de esa fecha (la última = "Hoy"). Antes estaban
+    // hardcodeadas ['Lun'..'Hoy'], que solo cuadraban si hoy era domingo → en
+    // cualquier otro día las barras salían desfasadas respecto al día real
+    // (una venta del jueves aparecía bajo otro día).
+    const WEEKDAY_SHORT = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
     const weekStart = new Date(now);
     weekStart.setDate(weekStart.getDate() - 6);
     weekStart.setHours(0, 0, 0, 0);
@@ -507,7 +603,9 @@ export class OrderService {
       });
 
       weeklyData.push({
-        label: dayLabels[i],
+        // i === 6 es siempre el día de hoy (weekStart + 6). El resto lleva su
+        // día de la semana real, derivado de la fecha (no de una posición fija).
+        label: i === 6 ? 'Hoy' : WEEKDAY_SHORT[day.getDay()],
         salesBs: dayOrders.reduce((sum, o) => sum + (o.total_bs || 0), 0),
         salesUsd: dayOrders.reduce((sum, o) => sum + (o.total_usd || 0), 0),
         orders: dayOrders.length,
@@ -528,6 +626,15 @@ export class OrderService {
     id: number,
     tenantId: number
   ): Promise<E.Either<Error, void>> {
+    // Snapshot antes de borrar: una orden completada descontó stock al cruzar
+    // a completed, y una vez borrada ya no queda forma de recuperarlo.
+    const { data: before } = await this.client
+      .from('orders')
+      .select('status, products')
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .single();
+
     const { error } = await this.client
       .from('orders')
       .delete()
@@ -536,6 +643,16 @@ export class OrderService {
 
     if (error) {
       return E.left(new Error(error.message));
+    }
+
+    // Borrar una orden completada también la saca de completed: se repone lo
+    // que descontó (misma regla que updateOrder / updateOrderStatus). Las
+    // órdenes en pending/confirmed/cancelled nunca descontaron, no reponen.
+    if (before?.status === 'completed') {
+      await this.restoreStock(
+        tenantId,
+        Array.isArray(before.products) ? before.products : []
+      );
     }
 
     return E.right(undefined);

@@ -28,10 +28,12 @@ import {
   SelectComponent,
   SelectItemDirective,
   SelectSelectedItemDirective,
+  TabHeader,
   TooltipDirective,
 } from '@ui';
 import { OrderDetailModal } from '../../components/order-detail-modal/order-detail-modal';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
+import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
 import {
   debounceTime,
   distinctUntilChanged,
@@ -39,6 +41,7 @@ import {
   Subscription,
 } from 'rxjs';
 import { Order, OrderItem, OrderStatus } from '../../../domain/order';
+import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import { OrderPdfService } from '../../../infrastructure/order-pdf.service';
 import { OrderRealtimeService } from '../../../infrastructure/order-realtime.service';
 import { OrderStore } from '../../../infrastructure/order.store';
@@ -50,6 +53,8 @@ type FilterTab = {
   dotClass?: string;
 };
 type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
+/** Presets del selector de rango del tab de Métricas. */
+type MetricsPreset = 'today' | 'last_7' | 'last_30' | 'last_90' | 'custom';
 
 @Component({
   selector: 'lib-order-list',
@@ -69,6 +74,7 @@ type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
     SelectSelectedItemDirective,
     TooltipDirective,
     PaginatorModule,
+    NgApexchartsModule,
   ],
   templateUrl: './order-list.html',
   styleUrl: './order-list.css',
@@ -103,9 +109,179 @@ export class OrderListComponent implements OnInit, OnDestroy {
   // dual-currency flag (true only for Venezuela-style catalogs), NOT the
   // country code — so a non-VE catalog never shows bolivars.
   public readonly showBs = computed(() => this.tenantCurrency.showDualCurrency());
+
+  /** Moneda de las métricas, según la config del catálogo (mismo criterio que la
+   *  factura): si muestra la referencia (USD/EUR o local) → montos en total_usd
+   *  con el símbolo de display; si es solo-bolívares (Venezuela con referencia
+   *  oculta) → montos en total_bs con "Bs.". */
+  protected readonly metricsUseBs = computed(
+    () => !(this.configStore.config()?.showReferencePrice ?? true)
+  );
+  protected readonly metricSymbol = computed(() => {
+    if (!this.metricsUseBs()) return this.cs();
+    const s = this.tenantCurrency.localSymbol() || 'Bs.';
+    return s.endsWith(' ') ? s : s + ' ';
+  });
   private readonly orderRealtime = inject(OrderRealtimeService);
   private readonly permissions = inject(TeamPermissionsStore);
   protected readonly canCreateOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'create'));
+  /** "Registrar venta" (venta en tienda) es solo para administradores (owner),
+   *  a diferencia de crear orden que también puede un miembro con permiso. */
+  protected readonly isAdmin = computed(() => this.permissions.isOwner());
+  /** Beta cerrada: la venta en tienda (recibo + evidencia de pago) solo está
+   *  habilitada para los tenants del allowlist mientras la validamos. */
+  protected readonly ventaFeatureEnabled = computed(() =>
+    isVentaFeatureEnabled(this.tenantStore.tenantId())
+  );
+
+  // ── Tabs: "Órdenes" (tabla) | "Métricas" (dashboard) ──────────────────────
+  protected readonly orderTabs: TabHeader[] = [
+    { ref: 'ordenes', label: 'Órdenes' },
+    { ref: 'metricas', label: 'Métricas' },
+  ];
+  protected readonly activeTab = signal<'ordenes' | 'metricas'>('ordenes');
+
+  // ── Métricas (agregados server-side sobre TODAS las órdenes) ──────────────
+  protected readonly metrics = this.orderStore.metrics;
+  protected readonly isLoadingMetrics = this.orderStore.isLoadingMetrics;
+  protected readonly metricsPresets: { key: MetricsPreset; label: string }[] = [
+    { key: 'today', label: 'Hoy' },
+    { key: 'last_7', label: '7 días' },
+    { key: 'last_30', label: '30 días' },
+    { key: 'last_90', label: '90 días' },
+    { key: 'custom', label: 'Personalizado' },
+  ];
+  protected readonly metricsPreset = signal<MetricsPreset>('last_30');
+  protected readonly customFrom = signal<Date | null>(null);
+  protected readonly customTo = signal<Date | null>(null);
+
+  /** Conteo + monto por estado, resueltos a las 3 categorías que mostramos. */
+  protected readonly metricByStatus = computed(() => {
+    const map: Record<string, { count: number; amount: number }> = {};
+    (this.orderStore.metrics()?.byStatus ?? []).forEach(
+      (s) => (map[s.status] = { count: s.count, amount: s.amount })
+    );
+    const zero = { count: 0, amount: 0 };
+    return {
+      completed: map['completed'] ?? zero,
+      pending: map['pending'] ?? zero,
+      cancelled: map['cancelled'] ?? zero,
+    };
+  });
+
+  /** Area chart "Ventas por día" — mismo estilo que los reports (gradiente real
+   *  + tokens del proyecto). Se recomputa cuando cambian las métricas/periodo. */
+  protected readonly salesAreaOptions = computed<ApexOptions>(() => {
+    const byDay = this.orderStore.metrics()?.byDay ?? [];
+    const symbol = this.metricSymbol();
+    return {
+      chart: {
+        type: 'area',
+        height: 260,
+        fontFamily: 'inherit',
+        foreColor: 'inherit',
+        toolbar: { show: false },
+        zoom: { enabled: false },
+        animations: { speed: 400, animateGradually: { enabled: false } },
+      },
+      colors: ['#6366f1'],
+      dataLabels: { enabled: false },
+      fill: {
+        type: 'gradient',
+        gradient: {
+          shade: 'light',
+          type: 'vertical',
+          shadeIntensity: 0.2,
+          opacityFrom: 0.55,
+          opacityTo: 0.05,
+          stops: [0, 100],
+        },
+      },
+      grid: {
+        borderColor: '#eef2ff',
+        strokeDashArray: 4,
+        padding: { left: 8, right: 8, top: 0, bottom: 0 },
+      },
+      series: [
+        {
+          name: 'Ventas',
+          data: byDay.map((d) => ({
+            x: new Date(d.date).getTime(),
+            y: d.amount,
+          })),
+        },
+      ],
+      stroke: { curve: 'smooth', width: 3 },
+      xaxis: {
+        type: 'datetime',
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+        // Sin la línea vertical ni el recuadro de la fecha que se deslizan con
+        // el cursor (era lo que "se movía" en el hover).
+        crosshairs: { show: false },
+        tooltip: { enabled: false },
+        labels: {
+          style: { colors: '#94a3b8', fontSize: '11px' },
+          datetimeFormatter: { day: 'dd MMM' },
+        },
+      },
+      yaxis: {
+        labels: {
+          style: { colors: '#94a3b8', fontSize: '11px' },
+          formatter: (v: number) => `${symbol}${Math.round(v)}`,
+        },
+      },
+      markers: { size: 0, hover: { size: 0, sizeOffset: 0 } },
+      // Sin efecto de hover que "mueva" la gráfica (ni marker que aparezca ni
+      // filtro de realce sobre la serie).
+      states: {
+        hover: { filter: { type: 'none' } },
+        active: { filter: { type: 'none' } },
+      },
+    };
+  });
+
+  /** Donut "Distribución por estado" (por monto facturado en el periodo). */
+  protected readonly statusDonutOptions = computed<ApexOptions>(() => {
+    const s = this.metricByStatus();
+    const symbol = this.metricSymbol();
+    const total = s.completed.amount + s.pending.amount + s.cancelled.amount;
+    return {
+      chart: {
+        type: 'donut',
+        height: 260,
+        fontFamily: 'inherit',
+        foreColor: 'inherit',
+      },
+      labels: ['Completadas', 'Pendientes', 'Canceladas'],
+      series: [s.completed.amount, s.pending.amount, s.cancelled.amount],
+      colors: ['#22c55e', '#f97316', '#ef4444'],
+      stroke: { width: 0 },
+      dataLabels: { enabled: false },
+      legend: { position: 'bottom', fontSize: '13px' },
+      plotOptions: {
+        pie: {
+          expandOnClick: false,
+          donut: {
+            size: '70%',
+            labels: {
+              show: true,
+              total: {
+                show: true,
+                label: 'Total',
+                formatter: () => `${symbol}${total.toFixed(2)}`,
+              },
+            },
+          },
+        },
+      },
+      // Sin realce/expansión de los segmentos al pasar el mouse.
+      states: {
+        hover: { filter: { type: 'none' } },
+        active: { filter: { type: 'none' } },
+      },
+    };
+  });
   protected readonly canEditOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'edit'));
   protected readonly canDeleteOrder = computed(() => this.permissions.isOwner() || this.permissions.can()('ordenes', 'delete'));
 
@@ -269,6 +445,97 @@ export class OrderListComponent implements OnInit, OnDestroy {
     this.router.navigate(['/admin/orders/create']);
   }
 
+  /** Venta en tienda: abre el alta de orden en modo "Registrar venta" (nace
+   *  completada → genera recibo/nota de entrega y descuenta stock). */
+  onRegisterSale() {
+    this.router.navigate(['/admin/orders/create-venta']);
+  }
+
+  // ── Métricas ──────────────────────────────────────────────────────────────
+  onTabChange(ref: string | number | undefined) {
+    const tab = ref === 'metricas' ? 'metricas' : 'ordenes';
+    this.activeTab.set(tab);
+    // Cargar (o refrescar) al entrar al tab de métricas: el RPC es barato y así
+    // los números reflejan cualquier orden creada desde que se abrió la vista.
+    if (tab === 'metricas') this.loadMetrics();
+  }
+
+  setMetricsPreset(preset: MetricsPreset) {
+    this.metricsPreset.set(preset);
+    if (preset !== 'custom') {
+      this.customFrom.set(null);
+      this.customTo.set(null);
+      this.loadMetrics();
+    }
+  }
+
+  onCustomFrom(d: Date | null) {
+    this.customFrom.set(d);
+    this.loadMetrics();
+  }
+
+  onCustomTo(d: Date | null) {
+    this.customTo.set(d);
+    this.loadMetrics();
+  }
+
+  private loadMetrics() {
+    const range = this.buildMetricsRange();
+    if (!range) return;
+    this.orderStore.loadOrderMetrics(range);
+  }
+
+  private startOfDay(d: Date): Date {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  private addDays(d: Date, n: number): Date {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  }
+
+  /** [start, end) + todayStart como ISO, calculados en la zona horaria local
+   *  del admin (mismo criterio que "Ventas hoy" del código anterior). */
+  private buildMetricsRange():
+    | { start: string; end: string; todayStart: string; useBs: boolean }
+    | null {
+    const today = this.startOfDay(new Date());
+    const todayStart = today.toISOString();
+    let start: Date;
+    let end = this.addDays(today, 1); // exclusivo: arranque de mañana
+
+    switch (this.metricsPreset()) {
+      case 'today':
+        start = today;
+        break;
+      case 'last_7':
+        start = this.addDays(today, -6);
+        break;
+      case 'last_30':
+        start = this.addDays(today, -29);
+        break;
+      case 'last_90':
+        start = this.addDays(today, -89);
+        break;
+      case 'custom': {
+        const from = this.customFrom();
+        const to = this.customTo();
+        if (!from || !to) return null; // esperar a que elija ambas fechas
+        start = this.startOfDay(from);
+        end = this.addDays(this.startOfDay(to), 1);
+        break;
+      }
+      default:
+        start = this.addDays(today, -29);
+    }
+
+    return {
+      start: start.toISOString(),
+      end: end.toISOString(),
+      todayStart,
+      useBs: this.metricsUseBs(),
+    };
+  }
+
   onEditOrder(order: Order) {
     this.router.navigate(['/admin/orders/edit', order.id]);
   }
@@ -368,38 +635,10 @@ export class OrderListComponent implements OnInit, OnDestroy {
     return colors[method] || 'text-grey-500';
   }
 
-  getTodaySales(): number {
-    const today = new Date().toDateString();
-    return this.orderStore
-      .orderList()
-      .items.filter(
-        (order) => new Date(order.createdAt).toDateString() === today
-      )
-      .reduce((sum, order) => sum + order.totalUsd, 0);
-  }
-
-  getPendingCount(): number {
-    return this.orderStore
-      .orderList()
-      .items.filter((order) => order.status === 'pending').length;
-  }
-
-  getCompletedCount(): number {
-    return this.orderStore
-      .orderList()
-      .items.filter((order) => order.status === 'completed').length;
-  }
-
   getWhatsAppLink(phone: string): string {
     // Remove all non-numeric characters except +
     const cleanPhone = phone.replace(/[^\d+]/g, '');
     return `https://wa.me/${cleanPhone}`;
-  }
-
-  getCancelledCount(): number {
-    return this.orderStore
-      .orderList()
-      .items.filter((order) => order.status === 'cancelled').length;
   }
 
   async onStatusChange(order: Order, newStatus: OrderStatus) {

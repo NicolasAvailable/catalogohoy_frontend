@@ -47,6 +47,37 @@
     </a>
   </div>
 
+  <!-- Promo: conectar WhatsApp (card blanca compacta, descartable) -->
+  @if (!whatsappPromoDismissed()) {
+  <div
+    class="flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-4 shadow-sm -mt-1"
+  >
+    <img src="/images/whatsapp.svg" alt="WhatsApp" class="shrink-0 w-9 h-9" />
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-semibold text-slate-800 leading-tight">
+        {{ 'Conectá tu WhatsApp y empezá a hablar con tus clientes' | transloco }}
+      </p>
+      <p class="hidden sm:block text-xs text-slate-500 mt-0.5 leading-snug">
+        {{ 'Recibí y respondé los mensajes de tu negocio desde tu panel.' | transloco }}
+      </p>
+    </div>
+    <a
+      routerLink="/admin/chat/connect"
+      class="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white text-sm font-semibold transition-colors cursor-pointer"
+    >
+      {{ 'Conectar' | transloco }}
+    </a>
+    <button
+      type="button"
+      (click)="dismissWhatsappPromo()"
+      class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+      [attr.aria-label]="'Descartar' | transloco"
+    >
+      <ui-icon name="x" [size]="16" />
+    </button>
+  </div>
+  }
+
   <!-- Stats Cards -->
   @if (isLoading()) {
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">

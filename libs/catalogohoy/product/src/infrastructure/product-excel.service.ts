@@ -2,7 +2,12 @@ import { inject, Injectable } from '@angular/core';
 import { CategoryStore } from '@catalogohoy/category';
 import { E } from '@shared/domain';
 import * as XLSX from 'xlsx';
-import { CreateProductInput, Product, ProductExcelRow } from '../domain';
+import {
+  CreateProductInput,
+  Product,
+  ProductBackupSnapshotRow,
+  ProductExcelRow,
+} from '../domain';
 import { ProductService } from './product.service';
 
 @Injectable({ providedIn: 'root' })
@@ -86,6 +91,82 @@ export class ProductExcelService {
     return sizes
       .map((s) => (s.stock != null ? `${s.name}: ${s.stock}` : s.name))
       .join(', ');
+  }
+
+  /** Convierte una fila del snapshot de un backup a una fila de Excel, para
+   *  RESTAURAR reusando el mismo upsert que el import (importRow). Trae los
+   *  campos del Excel; fotos/variantes de un producto que haya que RE-CREAR
+   *  (borrado entre el backup y la restauración) no se recuperan — caso borde. */
+  public snapshotRowToExcelRow(
+    row: ProductBackupSnapshotRow
+  ): ProductExcelRow {
+    return {
+      name: row.name ?? '',
+      description: typeof row.description === 'string' ? row.description : '',
+      price: Number(row.price) || 0,
+      pricePromotional:
+        row.price_promotional != null && row.price_promotional !== ''
+          ? Number(row.price_promotional)
+          : null,
+      stock: row.stock != null ? String(row.stock) : null,
+      sku: row.sku ?? null,
+      productionCost:
+        row.production_cost != null && row.production_cost !== ''
+          ? Number(row.production_cost)
+          : null,
+      categories: (row.categories ?? []).join(', '),
+    };
+  }
+
+  /** Descarga un backup (snapshot) a Excel, mismo formato que exportToExcel. */
+  public exportSnapshotToExcel(
+    snapshot: ProductBackupSnapshotRow[],
+    dateLabel: string
+  ): E.Either<Error, void> {
+    try {
+      const rows = snapshot.map((p) => ({
+        nombre: p.name ?? '',
+        descripcion: this.stripHtml(
+          typeof p.description === 'string' ? p.description : ''
+        ),
+        precio: Number(p.price) || 0,
+        precio_promocional: p.price_promotional ?? '',
+        stock: p.stock ?? '',
+        sku: p.sku ?? '',
+        costo_produccion: p.production_cost ?? '',
+        categorias: (p.categories ?? []).join(', '),
+        // URLs de las imágenes del producto — el respaldo las guarda; acá se
+        // exportan para poder re-vincularlas o auditarlas.
+        fotos: (p.photos ?? []).join(' | '),
+        tallas: p.is_sized ? this.formatSizes(p.sizes) : '',
+        mayoreo: p.is_wholesale
+          ? (p.wholesale_tiers ?? [])
+              .map((t) => `${t.title}: ${t.price}`)
+              .join(' | ')
+          : '',
+        variantes: p.is_variant
+          ? (p.variants ?? [])
+              .map((v) => {
+                const tallas = v.sizes?.length
+                  ? ` [tallas: ${this.formatSizes(v.sizes)}]`
+                  : '';
+                const original = v.originalPrice
+                  ? ` (antes ${v.originalPrice})`
+                  : '';
+                return `${v.name}: ${v.price}${original}${tallas}`;
+              })
+              .join(' | ')
+          : '',
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Productos');
+      XLSX.writeFile(workbook, `backup_productos_${dateLabel}.xlsx`);
+      return E.right(undefined);
+    } catch {
+      return E.left(new Error('Error al exportar el backup'));
+    }
   }
 
   public parseExcelFile(
@@ -187,8 +268,35 @@ export class ProductExcelService {
     });
   }
 
-  public async importRow(row: ProductExcelRow): Promise<E.Either<Error, void>> {
+  /** Importa una fila del Excel con semántica de UPSERT: si ya existe un
+   *  producto del tenant con ese SKU (o nombre), lo ACTUALIZA (precio, stock,
+   *  etc.) preservando fotos/variantes; si no existe, lo crea. Así re-subir la
+   *  lista deja de fallar por SKU duplicado. Devuelve si creó o actualizó. */
+  public async importRow(
+    row: ProductExcelRow
+  ): Promise<E.Either<Error, 'created' | 'updated'>> {
     const categoryIds = this.resolveCategoryIds(row.categories);
+
+    const existingId = await this.productService.findProductIdForImport(
+      row.sku,
+      row.name
+    );
+
+    if (existingId) {
+      const result = await this.productService.updateFromImport(existingId, {
+        name: row.name,
+        description: row.description || null,
+        price: String(row.price),
+        pricePromotional:
+          row.pricePromotional != null ? String(row.pricePromotional) : '',
+        stock: row.stock,
+        sku: row.sku,
+        productionCost:
+          row.productionCost != null ? String(row.productionCost) : null,
+        categoryIds,
+      });
+      return result.mapRight(() => 'updated' as const);
+    }
 
     const input: CreateProductInput = {
       name: row.name,
@@ -212,7 +320,23 @@ export class ProductExcelService {
       variants: [],
     };
 
-    return this.productService.create(input);
+    const created = await this.productService.create(input);
+    return created.mapRight(() => 'created' as const);
+  }
+
+  /** Flag por fila: true = el producto YA existe (matchea por SKU o nombre) y
+   *  el import lo ACTUALIZARÁ; false = es nuevo. Una consulta batcheada de
+   *  claves, no un SELECT por fila. Alimenta los badges del preview y el
+   *  chequeo del límite del plan (solo los nuevos consumen cupo). */
+  public async markExistingRows(rows: ProductExcelRow[]): Promise<boolean[]> {
+    const { skus, names } = await this.productService.listImportKeys();
+    return rows.map((r) => {
+      const sku = r.sku?.trim().toLowerCase();
+      if (sku && skus.has(sku)) return true;
+      const name = r.name?.trim().toLowerCase();
+      if (name && names.has(name)) return true;
+      return false;
+    });
   }
 
   public downloadTemplate(): void {

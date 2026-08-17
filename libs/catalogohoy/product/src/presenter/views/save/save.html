@@ -223,12 +223,7 @@
     <ui-card>
       <div class="flex flex-col gap-4">
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <h2 class="text-xl font-bold">{{ 'Venta al mayor' | transloco }}</h2>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-500 text-white">
-              {{ 'Nuevo' | transloco }}
-            </span>
-          </div>
+          <h2 class="text-xl font-bold">{{ 'Venta al mayor' | transloco }}</h2>
           <ui-toggle
             formControlName="isWholesale"
             (enable)="onWholesaleToggle()"
@@ -704,7 +699,7 @@
         @if (variantsArray.length > 0) {
         <hr class="border-grey-50" />
         <div formArrayName="variants" class="flex flex-col gap-4">
-          @for (variant of variantsArray.controls; track $index; let vIndex = $index) {
+          @for (variant of variantsArray.controls; track variant.get('id')?.value ?? $index; let vIndex = $index) {
           <div
             [formGroupName]="$index"
             class="flex flex-col gap-3 p-4 border border-grey-100 rounded-xl"
@@ -713,13 +708,14 @@
               <span class="text-sm font-bold text-grey-500"
                 >{{ 'Variante {n}' | transloco: { n: $index + 1 } }}</span
               >
-              <button
-                type="button"
+              <ui-button
+                [label]="'Quitar' | transloco"
+                icon="trash"
+                severity="danger"
+                variant="outlined"
+                [fluid]="false"
                 (click)="removeVariant($index)"
-                class="p-1.5 text-grey-400 hover:text-red-500 cursor-pointer"
-              >
-                <ui-icon name="trash" styleClass="size-5" />
-              </button>
+              />
             </div>
             <div class="flex flex-col gap-2">
               <label class="text-sm text-grey-400 font-semibold"
@@ -898,6 +894,180 @@
             >{{ 'Variantes ({n} / {max})' | transloco: { n: variantsArray.length, max: planStore.maxVariants() } }}</span
           >
           @if (!canAddVariant()) {
+          <span class="text-grey-400"
+            >{{ 'Límite del plan alcanzado — mejorá tu plan para más' | transloco }}</span
+          >
+          }
+        </div>
+        }
+      </div>
+    </ui-card>
+
+    <!-- ── Adicionales (add-ons) ─────────────────────────────────────────
+         Extras opcionales que SUMAN al precio (checkbox multi-select en el
+         catálogo). Independientes de variantes. Límite por plan. -->
+    <ui-card>
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center gap-3">
+            <h2 class="text-xl font-bold">{{ 'Adicionales' | transloco }}</h2>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-500 text-white">
+              {{ 'Nuevo' | transloco }}
+            </span>
+          </div>
+          <span class="text-sm text-grey-300">
+            {{ 'Extras opcionales que el cliente puede sumar al producto (ej. corona, lazo, tarjeta). Se cobran aparte del precio base.' | transloco }}
+          </span>
+        </div>
+
+        @if (addonsArray.length > 0) {
+        <div formArrayName="addons" class="flex flex-col gap-3">
+          @for (addon of addonsArray.controls; track addon.get('id')?.value ?? $index; let aIndex = $index) {
+          <div [formGroupName]="aIndex" class="flex flex-col gap-3 border border-grey-200 rounded-xl p-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-semibold text-grey-500">{{ 'Adicional' | transloco }} {{ aIndex + 1 }}</span>
+              <ui-button
+                [label]="'Quitar' | transloco"
+                icon="trash"
+                severity="danger"
+                variant="outlined"
+                [fluid]="false"
+                (click)="removeAddon($index)"
+              />
+            </div>
+
+            <!-- Reusar un adicional ya creado en otro producto: llena ESTE card
+                 (nombre/precio/imagen). Visible solo mientras está en blanco.
+                 Muestra TODO el catálogo (sin excluir) para poder reusar varios. -->
+            @if (!addon.get('name')?.value && catalogAddons().length) {
+            <ui-select
+              styleClass="w-full"
+              [options]="catalogAddons()"
+              optionLabel="name"
+              optionValue="id"
+              [placeholder]="'Reusar un adicional existente' | transloco"
+              [filter]="true"
+              filterBy="name"
+              [ngModel]="addonSelectModel()"
+              (ngModelChange)="fillAddonFromCatalog(aIndex, $event)"
+              [ngModelOptions]="{ standalone: true }"
+              appendTo="body"
+            >
+              <ng-template selectItem let-opt>
+                <div class="flex items-center gap-3 py-1">
+                  @if (opt.photo) {
+                  <img
+                    [src]="opt.photo"
+                    [alt]="opt.name"
+                    loading="lazy"
+                    class="w-8 h-8 rounded object-cover"
+                  />
+                  } @else {
+                  <div
+                    class="w-8 h-8 rounded bg-grey-100 flex items-center justify-center"
+                  >
+                    <ui-icon name="package" size="16" styleClass="text-grey-300" />
+                  </div>
+                  }
+                  <span class="flex-1 text-grey-800">{{ opt.name }}</span>
+                  @if (opt.price > 0) {
+                  <span class="text-xs text-grey-400"
+                    >+{{ cs() }} {{ opt.price.toFixed(2) }}</span
+                  >
+                  }
+                </div>
+              </ng-template>
+            </ui-select>
+            }
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="flex flex-col gap-2">
+                <label class="text-sm text-grey-400 font-semibold">{{ 'Nombre' | transloco }}<span class="text-red-500 ml-0.5">*</span></label>
+                <ui-input-text formControlName="name" [placeholder]="'Ej. Corona Mediana' | transloco" />
+              </div>
+              <div class="flex flex-col gap-2">
+                <label class="text-sm text-grey-400 font-semibold">{{ 'Precio' | transloco }}<span class="text-red-500 ml-0.5">*</span></label>
+                <ui-input-number
+                  formControlName="price"
+                  mode="decimal"
+                  [prefix]="cs() + ' '"
+                  [min]="0"
+                  [minFractionDigits]="2"
+                  [maxFractionDigits]="2"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <!-- Imagen del adicional (opcional, una sola) -->
+            <div class="flex flex-col gap-2">
+              <label class="text-sm text-grey-400 font-semibold">{{ 'Imagen (opcional)' | transloco }}</label>
+              @if (!addonPhoto(aIndex)) {
+              <ui-uploader
+                (valueChange)="setAddonPhoto(aIndex, $event)"
+                [accept]="'image/*'"
+                [max]="{ mb: 40 }"
+                [multiple]="false"
+              >
+                <ng-template #picker let-pick="pick">
+                  <button
+                    type="button"
+                    (click)="pick()"
+                    class="flex flex-col items-center justify-center w-full border-2 border-dashed border-primary-500 bg-primary-50/10 rounded-xl py-6 cursor-pointer hover:bg-primary-50/20 transition-colors"
+                  >
+                    <ui-icon name="circle-plus" size="22" styleClass="text-primary-500 mb-1" />
+                    <span class="text-sm font-semibold text-primary-500">{{ 'Arrastrá, soltá o subí una imagen' | transloco }}</span>
+                  </button>
+                </ng-template>
+              </ui-uploader>
+              } @else {
+              <div class="relative w-20 h-20 rounded-lg overflow-hidden border border-grey-200">
+                <ui-product-media [url]="addonPhoto(aIndex)!" [controls]="false" styleClass="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  (click)="removeAddonPhoto(aIndex)"
+                  class="absolute top-1 right-1 p-1 bg-white/80 rounded-sm cursor-pointer hover:bg-white text-grey-500"
+                >
+                  <ui-icon name="trash" size="14" />
+                </button>
+              </div>
+              }
+            </div>
+
+            <div class="flex items-center gap-2">
+              <ui-checkbox
+                formControlName="isDefault"
+                [checkboxId]="'addon-default-' + aIndex"
+              />
+              <label
+                [for]="'addon-default-' + aIndex"
+                class="text-sm text-grey-500 cursor-pointer select-none"
+              >
+                {{ 'Marcado por defecto al abrir el producto' | transloco }}
+              </label>
+            </div>
+          </div>
+          }
+        </div>
+        }
+
+        <!-- Agrega un card de adicional en blanco (el reuso vive DENTRO del
+             card, arriba de los inputs). -->
+        <div class="flex items-center gap-2">
+          <ui-button
+            [label]="'Agregar adicional' | transloco"
+            icon="circle-plus"
+            [fluid]="false"
+            [disabled]="!canAddAddon()"
+            (click)="addAddon()"
+          />
+        </div>
+        @if (addonsArray.length > 0) {
+        <div class="flex items-center justify-between text-sm bg-grey-50 rounded-lg px-3 py-2">
+          <span class="text-grey-500 font-semibold"
+            >{{ 'Adicionales' | transloco }} ({{ addonsArray.length }} / {{ planStore.maxAddons() <= 0 ? '∞' : planStore.maxAddons() }})</span
+          >
+          @if (!canAddAddon()) {
           <span class="text-grey-400"
             >{{ 'Límite del plan alcanzado — mejorá tu plan para más' | transloco }}</span
           >

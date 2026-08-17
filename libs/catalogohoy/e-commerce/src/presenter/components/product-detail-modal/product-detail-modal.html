@@ -1,4 +1,8 @@
-<div class="pdm" [class.pdm--wholesale]="isWholesale">
+<div
+  class="pdm"
+  [class.pdm--wholesale]="isWholesale"
+  [class.pdm--no-selectors]="!isVariant && !hasAddons"
+>
   <!-- Drag handle estilo iOS sheet — visible solo en mobile. Da el affordance
        de "deslizar hacia abajo para cerrar" sin tapar el media con una X. -->
   <button type="button" class="pdm__handle" (click)="close()" [attr.aria-label]="'Cerrar' | transloco">
@@ -11,6 +15,9 @@
   <!-- Gallery -->
   <div class="pdm__gallery">
     @if (galleryMedia().length) {
+    <!-- Wrapper posicionado: ancla el badge de zoom fuera del scroller para
+         que no se desplace con los swipes del carrusel. -->
+    <div class="pdm__carousel-wrap">
     <div
       #carousel
       class="pdm__carousel"
@@ -19,16 +26,37 @@
     >
       @for (photo of galleryMedia(); track photo) {
       <div class="pdm__carousel-slide">
+        @if (isVideoUrl(photo)) {
         <ui-product-media
           [url]="photo"
           [alt]="product.name"
           [controls]="true"
-          [autoplay]="currentImageIndex() === $index && isVideoUrl(photo)"
+          [autoplay]="currentImageIndex() === $index"
           [muted]="false"
           [lazy]="currentImageIndex() !== $index"
-          [styleClass]="'pdm__main-media ' + (isOutOfStock ? 'pdm__img--dimmed' : '')"
+          [styleClass]="
+            'w-full h-full object-contain bg-white' +
+            (isOutOfStock ? ' grayscale-[40%] opacity-70' : '')
+          "
           (aspectChange)="setSlideAspect($index, $event)"
         />
+        } @else {
+        <!-- Imágenes via ui-image: tap abre el preview fullscreen zoomable de
+             PrimeNG. El aspect ratio lo mide el componente (preloadAspects)
+             porque p-image no expone el evento load. El sizing va con
+             utilidades Tailwind (globales): el CSS del modal está encapsulado
+             y no alcanza el <img> interno de PrimeNG. -->
+        <ui-image
+          [src]="photo"
+          [alt]="product.name"
+          [lazy]="currentImageIndex() !== $index"
+          styleClass="block w-full h-full"
+          [imageClass]="
+            'w-full h-full object-contain bg-white' +
+            (isOutOfStock ? ' grayscale-[40%] opacity-70' : '')
+          "
+        />
+        }
       </div>
       }
       @if (isOutOfStock) {
@@ -36,6 +64,30 @@
       } @else if (hasDiscount) {
       <span class="pdm__discount-badge">{{ 'Oferta' | transloco }}</span>
       }
+    </div>
+    <!-- Acciones sobre el media (arriba-izquierda, lejos de la X): ver
+         completa + compartir link del producto. Siempre visibles porque en
+         mobile no hay hover que revele el indicador nativo de p-image. -->
+    @if (!currentIsVideo) {
+    <div class="pdm__media-actions">
+      <button
+        type="button"
+        class="pdm__media-btn"
+        (click)="openImagePreview()"
+        [attr.aria-label]="'Ver imagen completa' | transloco"
+      >
+        <ui-icon name="eye" styleClass="size-5" />
+      </button>
+      <button
+        type="button"
+        class="pdm__media-btn"
+        (click)="shareProduct()"
+        [attr.aria-label]="'Compartir' | transloco"
+      >
+        <ui-icon [name]="linkCopied() ? 'check' : 'share2'" styleClass="size-5" />
+      </button>
+    </div>
+    }
     </div>
     } @else {
     <div class="pdm__main-image">
@@ -81,6 +133,12 @@
       </div>
       }
       <h2 class="pdm__name">{{ product.name }}</h2>
+
+      @if (selectedOptionName) {
+      <div class="pdm__selected-option">
+        {{ 'Opción' | transloco }}: <strong>{{ selectedOptionName }}</strong>
+      </div>
+      }
 
       @if (!isWholesale) {
       @if (showReferencePrice()) {
@@ -160,7 +218,17 @@
           />
           }
           <span class="flex-1 font-medium text-grey-700">{{ variant.id === baseOptionId ? ('Producto original' | transloco) : variant.name }}</span>
-          <span class="font-bold text-grey-900">{{ cs() }}{{ variant.price | tenantPrice }}</span>
+          <!-- Precio de la variante: respeta la configuración de moneda del
+               catálogo, igual que el precio principal (referencia solo si está
+               habilitada + Bs para catálogos de Venezuela). -->
+          <span class="flex flex-col items-end shrink-0 font-bold text-grey-900 leading-tight">
+            @if (showReferencePrice()) {
+            <span>{{ cs() }}{{ variant.price | tenantPrice }}</span>
+            }
+            @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
+            <span [class.text-sm]="showReferencePrice()">Bs. {{ variant.price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
+            }
+          </span>
         </button>
         }
       </div>
@@ -186,6 +254,58 @@
       </div>
     </div>
     }
+    }
+
+    <!-- Adicionales (multi-select): extras opcionales que SUMAN al precio. A
+         diferencia de las variantes (elige una, reemplaza precio), aquí el
+         cliente marca los que quiera con checkbox y el total se acumula. Vive
+         en el info scrollable para no chocar con el footer sticky en mobile. -->
+    @if (!isOutOfStock && !isWholesale && hasAddons) {
+    <div class="flex flex-col gap-2 mt-4 mb-1">
+      <span class="text-sm font-semibold text-grey-500">{{ 'Agrega adicionales' | transloco }}</span>
+      <div class="flex flex-col gap-2">
+        @for (addon of addons; track addon.id) {
+        <button
+          type="button"
+          [attr.aria-pressed]="isAddonSelected(addon.id)"
+          (click)="toggleAddon(addon)"
+          [class]="
+            'flex items-center gap-3 p-2.5 rounded-xl border transition-colors text-left w-full cursor-pointer ' +
+            (isAddonSelected(addon.id)
+              ? 'border-primary-500 bg-primary-50/10'
+              : 'border-grey-200 hover:border-primary-300')
+          "
+        >
+          <span
+            [class]="
+              'flex items-center justify-center w-5 h-5 rounded-md border shrink-0 transition-colors ' +
+              (isAddonSelected(addon.id)
+                ? 'border-primary-500 bg-primary-500 text-white'
+                : 'border-grey-300')
+            "
+          >
+            @if (isAddonSelected(addon.id)) {
+            <ui-icon name="check" styleClass="size-3.5" />
+            }
+          </span>
+          @if (addon.photo) {
+          <ui-product-media
+            [url]="addon.photo"
+            [alt]="addon.name"
+            [controls]="false"
+            styleClass="w-10 h-10 rounded-lg object-cover shrink-0"
+          />
+          }
+          <span class="flex-1 font-medium text-grey-700">{{ addon.name }}</span>
+          @if (addon.price > 0) {
+          <span class="font-bold text-grey-900">+{{ cs() }}{{ addon.price | tenantPrice }}</span>
+          } @else {
+          <span class="font-semibold text-grey-300">{{ 'Gratis' | transloco }}</span>
+          }
+        </button>
+        }
+      </div>
+    </div>
     }
   </div>
 
@@ -277,10 +397,10 @@
         <span>{{ (availableSizes().length && !selectedSize() ? 'Selecciona una talla' : 'Agregar al carrito') | transloco }}</span>
         <span class="pdm__total">
           @if (showReferencePrice()) {
-          {{ cs() }}{{ displayPrice * quantity() | tenantPrice }}
+          {{ cs() }}{{ unitTotal * quantity() | tenantPrice }}
           }
           @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
-          <small class="pdm__total-bs">@if (showReferencePrice()) { / }Bs. {{ displayPrice * quantity() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
+          <small class="pdm__total-bs">@if (showReferencePrice()) { / }Bs. {{ unitTotal * quantity() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small>
           }
         </span>
       </button>
