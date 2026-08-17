@@ -46,6 +46,11 @@ export class App implements OnInit {
     // /checkout?preview=true). Persisting it to localStorage would make it
     // sticky and wrongly flag a real customer's checkout as a preview.
     'preview',
+    // `order` is the deep-link of the order detail modal (/admin/orders?order=ID,
+    // target of the "Ver pedido" button in WhatsApp notifications). The order
+    // list reads it from the URL on load; moving it to localStorage would make
+    // the button land on the bare list.
+    'order',
   ]);
 
   private captureQueryParametersToLocalStorage(): void {
