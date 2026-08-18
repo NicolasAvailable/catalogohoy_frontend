@@ -292,7 +292,9 @@
     <div class="checkout__summary-row">
       <span>{{ selectedShipping()?.name }}</span>
       <span>
-        @if (shippingFee() > 0) {
+        @if (selectedShipping()?.priceOnRequest) {
+        {{ 'A consultar' | transloco }}
+        } @else if (shippingFee() > 0) {
         @if (showReferencePrice()) {
         {{ cs() }}{{ shippingFee() | tenantPrice }}
         @if (showBs()) { <small class="checkout__price-bs">Bs. {{ shippingFee() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
