@@ -641,6 +641,9 @@ export class EcommerceService implements BaseEcommerceService {
           name: String(m?.name ?? ''),
           type,
           fee: Number(m?.fee) || 0,
+          // "A consultar": sin esto el flag se pierde al normalizar la
+          // respuesta del RPC y el checkout público muestra "Gratis".
+          priceOnRequest: !!m?.priceOnRequest,
           instructions: String(m?.instructions ?? ''),
           requestCustomerAddress: !!m?.requestCustomerAddress,
           address: m?.address ?? null,
