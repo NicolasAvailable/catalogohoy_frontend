@@ -27,7 +27,11 @@
         <p-tab [value]="allTabValue">{{ 'Ver todos' | transloco }}</p-tab>
       }
       @for (category of categories(); track category.id) {
-        <p-tab [value]="category.isViewAll ? allTabValue : category.id">
+        <p-tab
+          [value]="category.isViewAll ? allTabValue : category.id"
+          (pointerdown)="onTabPointerdown()"
+          (click)="onTabClick(category)"
+        >
           {{ category.name }}
         </p-tab>
       }

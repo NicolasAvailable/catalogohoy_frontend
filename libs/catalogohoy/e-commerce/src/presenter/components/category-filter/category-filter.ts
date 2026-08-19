@@ -52,6 +52,23 @@ export class CategoryFilter {
     return selected;
   });
 
+  /** Selección vigente ANTES del click en curso. Se captura en pointerdown
+   *  (antes de que PrimeNG procese el click y dispare valueChange) para poder
+   *  distinguir "re-tocó el tab ya activo" de un cambio normal de tab. */
+  private selectedBeforeClick: string | null = null;
+
+  onTabPointerdown(): void {
+    this.selectedBeforeClick = this.selectedCategoryId();
+  }
+
+  /** Sin tab "Ver todos" (suppressAllTab), re-tocar la categoría activa quita
+   *  el filtro — es la única vuelta a "todos los productos". Con all-tab
+   *  visible se mantiene el comportamiento clásico (no hace nada). */
+  onTabClick(category: CategoryPill): void {
+    if (!this.suppressAllTab() || category.isViewAll) return;
+    if (this.selectedBeforeClick === category.id) this.categorySelect.emit(null);
+  }
+
   onTabChange(value: string | number | undefined): void {
     if (!value || value === ALL_TAB) {
       this.categorySelect.emit(null);
