@@ -110,6 +110,11 @@ export interface PaginatedProductList {
 export interface PublicCatalogData {
   catalogInfo: CatalogInfo;
   categories: Category[];
+  /** True cuando el tenant OCULTÓ su categoría "Ver todos" (la fila is_view_all
+   *  existe pero is_visible=false): el catálogo no debe renderizar ningún tab
+   *  de "Ver todos" (ni el seedeado ni el sintético), pero sigue mostrando
+   *  todos los productos por defecto. */
+  viewAllHidden: boolean;
   exchangeRate: number;
   planExpired: boolean;
   isFreePlan: boolean;

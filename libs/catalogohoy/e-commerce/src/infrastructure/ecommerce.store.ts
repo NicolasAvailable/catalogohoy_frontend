@@ -18,6 +18,8 @@ type EcommerceState = {
   productList: ProductList;
   selectedProduct: Product | null;
   categories: { id: string; name: string }[];
+  /** El tenant ocultó su categoría "Ver todos" (no renderizar ningún all-tab). */
+  viewAllHidden: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
   searchTerm: string;
@@ -40,6 +42,7 @@ const initialState: EcommerceState = {
   productList: ProductList.empty(),
   selectedProduct: null,
   categories: [],
+  viewAllHidden: false,
   isLoading: true,
   isLoadingMore: false,
   searchTerm: '',
@@ -128,7 +131,7 @@ export const EcommerceStore = signalStore(
           return catalogResult;
         }
 
-        const { catalogInfo, categories, exchangeRate, planExpired, isFreePlan } =
+        const { catalogInfo, categories, viewAllHidden, exchangeRate, planExpired, isFreePlan } =
           catalogResult.value;
 
         // Free (incl. auto-downgraded) tenants only expose their first N products
@@ -141,6 +144,7 @@ export const EcommerceStore = signalStore(
         patchState(store, () => ({
           catalogInfo,
           categories,
+          viewAllHidden,
           exchangeRate,
           productCap,
         }));

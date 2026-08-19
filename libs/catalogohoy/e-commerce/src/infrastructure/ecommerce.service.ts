@@ -253,15 +253,26 @@ export class EcommerceService implements BaseEcommerceService {
         : [],
     };
 
-    const categories: Category[] = (data.categories ?? []).map((cat: any) => ({
-      id: String(cat.id),
-      name: cat.name,
-      isViewAll: cat.is_view_all ?? false,
-    }));
+    // El RPC devuelve solo categorías visibles, EXCEPTO la fila "Ver todos"
+    // (is_view_all) que viene siempre con su is_visible, para distinguir
+    // "no existe" (tenant legacy -> tab sintético) de "el tenant la ocultó"
+    // (-> ningún tab de Ver todos, pero se muestran todos los productos).
+    const rawCategories: any[] = data.categories ?? [];
+    const categories: Category[] = rawCategories
+      .filter((cat: any) => cat.is_visible !== false)
+      .map((cat: any) => ({
+        id: String(cat.id),
+        name: cat.name,
+        isViewAll: cat.is_view_all ?? false,
+      }));
+    const viewAllHidden = rawCategories.some(
+      (cat: any) => (cat.is_view_all ?? false) && cat.is_visible === false
+    );
 
     return E.right({
       catalogInfo,
       categories,
+      viewAllHidden,
       exchangeRate,
       planExpired: data.plan?.plan_expired ?? false,
       isFreePlan: data.plan?.is_free ?? true,

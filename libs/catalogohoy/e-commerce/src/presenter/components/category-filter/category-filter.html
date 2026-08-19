@@ -23,7 +23,7 @@
     (valueChange)="onTabChange($event)"
   >
     <p-tablist>
-      @if (!hasViewAllCategory()) {
+      @if (!hasViewAllCategory() && !suppressAllTab()) {
         <p-tab [value]="allTabValue">{{ 'Ver todos' | transloco }}</p-tab>
       }
       @for (category of categories(); track category.id) {

@@ -28,6 +28,9 @@ const ALL_TAB = '__all__';
 })
 export class CategoryFilter {
   public readonly categories = input<CategoryPill[]>([]);
+  /** True cuando el tenant ocultó su "Ver todos": suprime también el tab
+   *  sintético (que existe solo para tenants sin la fila seedeada). */
+  public readonly suppressAllTab = input<boolean>(false);
   public readonly selectedCategoryId = input<string | null>(null);
   public readonly categorySelect = output<string | null>();
   public readonly searchClick = output<void>();
