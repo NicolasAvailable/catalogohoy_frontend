@@ -1,0 +1,90 @@
+@if (visible()) {
+<div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+  <!-- Header: título + progreso + descartar -->
+  <div class="flex items-start justify-between gap-3 px-4 pt-4">
+    <div class="min-w-0">
+      <h2 class="text-base font-semibold text-slate-800 leading-tight">
+        {{ 'Deja tu catálogo listo para vender' | transloco }} 🚀
+      </h2>
+      <p class="text-xs text-slate-500 mt-0.5">
+        {{ '{done} de {total} pasos completados' | transloco: { done: doneCount(), total: totalCount() } }}
+      </p>
+    </div>
+    <button
+      type="button"
+      class="shrink-0 p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors"
+      (click)="dismiss()"
+      [attr.aria-label]="'Descartar' | transloco"
+    >
+      <ui-icon name="x" [size]="16" />
+    </button>
+  </div>
+
+  <!-- Barra de progreso -->
+  <div class="mx-4 mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+    <div
+      class="h-full bg-emerald-500 rounded-full transition-all duration-500"
+      [style.width.%]="progressPct()"
+    ></div>
+  </div>
+
+  <!-- Pasos -->
+  <ul class="mt-3 divide-y divide-slate-100">
+    @for (step of steps(); track step.id) {
+    <li>
+      <button
+        type="button"
+        class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors cursor-pointer"
+        (click)="toggle(step.id)"
+      >
+        @if (step.done) {
+        <span class="shrink-0 w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+          <ui-icon name="check" [size]="16" />
+        </span>
+        } @else {
+        <span class="shrink-0 w-8 h-8 rounded-full border-2 border-dashed border-slate-300 text-slate-400 flex items-center justify-center">
+          <ui-icon [name]="step.icon" [size]="15" />
+        </span>
+        }
+        <span
+          class="flex-1 min-w-0 text-sm font-medium truncate"
+          [class.line-through]="step.done"
+          [class.text-slate-400]="step.done"
+          [class.text-slate-800]="!step.done"
+        >
+          {{ step.title | transloco }}
+        </span>
+        @if (step.locked && !step.done) {
+        <span class="hidden sm:inline-flex items-center gap-1 shrink-0 text-[0.6875rem] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+          <ui-icon name="lock" [size]="10" />
+          {{ 'Planes pagos' | transloco }}
+        </span>
+        }
+        <ui-icon
+          name="chevron-down"
+          [size]="16"
+          class="shrink-0 text-slate-400 transition-transform"
+          [class.rotate-180]="expanded() === step.id"
+        />
+      </button>
+      @if (expanded() === step.id) {
+      <div class="px-4 pb-4 pl-[3.75rem]">
+        <p class="text-xs text-slate-500 leading-snug">
+          {{ step.description | transloco }}
+        </p>
+        @if (!step.done) {
+        <a
+          [routerLink]="step.link"
+          [queryParams]="step.queryParams"
+          class="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-slate-800 text-white text-sm font-medium hover:bg-slate-700 transition-colors"
+        >
+          {{ step.ctaLabel | transloco }}
+        </a>
+        }
+      </div>
+      }
+    </li>
+    }
+  </ul>
+</div>
+}

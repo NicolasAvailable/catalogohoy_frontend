@@ -2004,5 +2004,19 @@
   "Hasta 15 adicionales por producto": "Hasta 15 adicionales por producto",
   "Hasta 25 órdenes por mes": "Hasta 25 órdenes por mes",
   "Órdenes ilimitadas": "Órdenes ilimitadas",
-  "Este catálogo alcanzó su límite de pedidos de este mes. Contacta al negocio directamente para completar tu compra.": "Este catálogo alcanzó su límite de pedidos de este mes. Contacta al negocio directamente para completar tu compra."
+  "Este catálogo alcanzó su límite de pedidos de este mes. Contacta al negocio directamente para completar tu compra.": "Este catálogo alcanzó su límite de pedidos de este mes. Contacta al negocio directamente para completar tu compra.",
+  "Deja tu catálogo listo para vender": "Deja tu catálogo listo para vender",
+  "{done} de {total} pasos completados": "{done} de {total} pasos completados",
+  "Crea tu primer producto": "Crea tu primer producto",
+  "Sube tu primer producto con foto y precio para estrenar tu catálogo.": "Sube tu primer producto con foto y precio para estrenar tu catálogo.",
+  "Personaliza tu catálogo": "Personaliza tu catálogo",
+  "Sube tu logo, agrega una descripción y elige los colores que representan tu negocio.": "Sube tu logo, agrega una descripción y elige los colores que representan tu negocio.",
+  "Personalizar": "Personalizar",
+  "Agrega tus vendedores de WhatsApp": "Agrega tus vendedores de WhatsApp",
+  "Configura los números de WhatsApp que recibirán los pedidos del checkout.": "Configura los números de WhatsApp que recibirán los pedidos del checkout.",
+  "Agregar vendedores": "Agregar vendedores",
+  "Activa los avisos de órdenes por WhatsApp": "Activa los avisos de órdenes por WhatsApp",
+  "Recibe un WhatsApp cada vez que entra una orden nueva, además del correo.": "Recibe un WhatsApp cada vez que entra una orden nueva, además del correo.",
+  "Configurar avisos": "Configurar avisos",
+  "Planes pagos": "Planes pagos"
 }

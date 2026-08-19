@@ -22,6 +22,7 @@ import {
   IconComponent,
 } from '@ui';
 import { HomeStore } from '../../infrastructure/home.store';
+import { GettingStarted } from '../components/getting-started/getting-started';
 
 type ChartTab = 'ventas' | 'pedidos';
 type Currency = 'bs' | 'usd';
@@ -39,6 +40,7 @@ type Currency = 'bs' | 'usd';
     AccordionPanelDirective,
     DecimalPipe,
     TranslocoPipe,
+    GettingStarted,
   ],
   templateUrl: './home.html',
   styleUrls: ['./home.css'],
