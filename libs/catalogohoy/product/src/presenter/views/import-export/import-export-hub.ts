@@ -268,6 +268,7 @@ export class ImportExportHubComponent {
   private readonly photosLimitByPlan: Record<string, number> = {
     gratis: 3,
     basico: 10,
+    pro: 20,
     avanzado: 50,
     enterprise: 0, // 0 = ilimitado
   };
