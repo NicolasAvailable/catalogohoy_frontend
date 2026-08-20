@@ -105,6 +105,27 @@ Deno.serve(async (req: Request) => {
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!);
     const admin  = createClient(supabaseUrl, serviceKey);
 
+    // 1.b) El caller debe ser owner/admin DEL TENANT que quiere upgradear: esta
+    // función cobra la tarjeta guardada off-session, así que sin este check
+    // cualquier usuario autenticado podría forzar el cobro de otro tenant.
+    // users_tenants referencia users.id (bigint), no el uuid de auth.
+    const { data: internalUser } = await admin
+      .from("users")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+    const internalUserId = (internalUser as { id?: number } | null)?.id ?? null;
+    const { data: membership } = internalUserId === null
+      ? { data: null }
+      : await admin
+          .from("users_tenants")
+          .select("role")
+          .eq("tenant_id", tenantId)
+          .eq("user_id", internalUserId)
+          .in("role", ["owner", "admin"])
+          .maybeSingle();
+    if (!membership) return json({ success: false, error: "forbidden" }, 403);
+
     // 2) Suscripción actual del tenant.
     const { data: tenantRow } = await admin
       .from("tenants")
