@@ -125,6 +125,21 @@ export interface CatalogCheckoutRequest {
   cancelUrl: string;
 }
 
+/** Upgrade de plan con prorrateo (edge fn `change-plan`). Solo aplica cuando el
+ *  tenant ya tiene una suscripción de Stripe activa y sube a un plan más caro:
+ *  se cobra SOLO la diferencia prorrateada con la tarjeta guardada, sin pasar
+ *  por el checkout. Los demás casos siguen por `create-checkout-session`. */
+export interface ChangePlanRequest {
+  tenantId: number;
+  planId: string;
+  billingPeriod: BillingPeriod;
+}
+
+export interface ChangePlanResult {
+  success: boolean;
+  subscriptionId?: string;
+}
+
 export interface UpdateCatalogSlotsRequest {
   tenantId: number;
   additionalQuantity: number;

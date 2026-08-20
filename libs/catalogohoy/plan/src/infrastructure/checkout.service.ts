@@ -5,6 +5,8 @@ import {
   BaseCheckoutService,
   CancelSubscriptionResult,
   CatalogCheckoutRequest,
+  ChangePlanRequest,
+  ChangePlanResult,
   CheckoutRequest,
   CheckoutSession,
   PromotionCodeValidation,
@@ -27,6 +29,35 @@ export class CheckoutService implements BaseCheckoutService {
     if (!data?.url) return E.left(new Error('No se recibió URL de pago'));
 
     return E.right({ url: data.url, currency: data.currency });
+  }
+
+  public async changePlan(
+    request: ChangePlanRequest
+  ): Promise<E.Either<Error, ChangePlanResult>> {
+    const { data, error } = await this.client.functions.invoke('change-plan', {
+      body: request,
+    });
+
+    if (error) {
+      // FunctionsHttpError trae el body real en `context` — lo leemos para
+      // surfacear el motivo de Stripe (tarjeta rechazada, requiere 3DS, etc.).
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        try {
+          const body = await ctx.json();
+          if (body?.error) return E.left(new Error(body.error));
+        } catch {
+          // cae al error genérico
+        }
+      }
+      return E.left(new Error(error.message));
+    }
+
+    const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+    if (!parsed?.success) {
+      return E.left(new Error(parsed?.error ?? 'No se pudo cambiar el plan'));
+    }
+    return E.right({ success: true, subscriptionId: parsed.subscriptionId });
   }
 
   public async cancelSubscription(

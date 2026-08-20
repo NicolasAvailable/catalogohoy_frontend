@@ -619,6 +619,16 @@ export class PlanCheckout implements OnInit {
     window.open(url, '_blank');
   }
 
+  /** Códigos que devuelve `change-plan` cuando el caso NO es un upgrade
+   *  prorrateable (sin suscripción de Stripe, no es upgrade, sub inactiva…) →
+   *  caemos al checkout normal en vez de mostrar un error. */
+  private static readonly CHECKOUT_FALLBACK_CODES = new Set([
+    'no_active_subscription',
+    'not_an_upgrade',
+    'subscription_not_active',
+    'plan_item_not_found',
+  ]);
+
   public async pay(): Promise<void> {
     if (!this.termsAccepted() || this.isLoading()) return;
 
@@ -637,6 +647,48 @@ export class PlanCheckout implements OnInit {
       return;
     }
 
+    // Upgrade de un plan pago a otro más caro → cobrar SOLO la diferencia
+    // prorrateada sobre la suscripción existente (con la tarjeta guardada, sin
+    // redirect a Stripe). Antes esto creaba una suscripción nueva a precio
+    // completo: la pantalla mostraba la diferencia pero el cobro era el plan
+    // entero (bug de sobrecobro). Los adicionales de catálogo siguen por el
+    // checkout normal, así que si hay addons no tomamos este atajo.
+    if (this.isUpgrade() && this.catalogAddonQuantity() === 0) {
+      const changed = await this.checkoutService.changePlan({
+        tenantId,
+        planId:        this.planId(),
+        billingPeriod: this.billingPeriod(),
+      });
+
+      let fallBackToCheckout = false;
+      changed
+        .mapRight(() => {
+          this.metaPixel.trackEvent('InitiateCheckout', {
+            content_name: this.planId(),
+            currency: this.currencyCode(),
+            value: this.total(),
+          });
+          const slug = localStorage.getItem('slug') ?? '';
+          this.router.navigate(['/admin/plans/success'], { queryParams: { slug } });
+        })
+        .mapLeft((err) => {
+          if (PlanCheckout.CHECKOUT_FALLBACK_CODES.has(err.message)) {
+            fallBackToCheckout = true;
+            return;
+          }
+          this.error.set(err.message);
+          this.isLoading.set(false);
+        });
+
+      if (!fallBackToCheckout) return;
+    }
+
+    await this.startCheckoutSession(tenantId);
+  }
+
+  /** Flujo de checkout hospedado de Stripe (primera compra, renovación,
+   *  downgrade, o fallback del upgrade prorrateado). Redirige a la URL de pago. */
+  private async startCheckoutSession(tenantId: number): Promise<void> {
     const origin = window.location.origin;
     const slug   = localStorage.getItem('slug') ?? '';
     const request: CheckoutRequest = {
