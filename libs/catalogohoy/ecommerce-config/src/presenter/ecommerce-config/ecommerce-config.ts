@@ -190,6 +190,27 @@ export class EcommerceConfigComponent implements OnInit {
     });
   }
 
+  /** Scrollea (con reintentos cortos) hasta la card cuyo id llega por
+   *  ?section=… — el contenido del tab se pinta después del init, así que el
+   *  elemento puede no existir todavía en los primeros intentos. Al llegar,
+   *  se limpia el param para que un cambio de tab no lo arrastre. */
+  private scrollToSection(id: string, attempt = 0): void {
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { section: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+      } else if (attempt < 10) {
+        this.scrollToSection(id, attempt + 1);
+      }
+    }, attempt === 0 ? 150 : 200);
+  }
+
   /** Recalcula si la barra de tabs puede scrollear a izquierda/derecha (para
    *  mostrar u ocultar las flechas). Se llama al montar, al scrollear y al
    *  cambiar el ancho. */
@@ -977,6 +998,13 @@ export class EcommerceConfigComponent implements OnInit {
     const initialTab = this.route.snapshot.queryParamMap.get('tab') as TabId | null;
     if (initialTab && VALID_TABS.includes(initialTab)) {
       this.activeTab.set(initialTab);
+    }
+
+    // Deep link ?section=<id> (ej. el checklist del Inicio → whatsapp-sellers):
+    // scrollea hasta esa card dentro del tab activo.
+    const section = this.route.snapshot.queryParamMap.get('section');
+    if (section) {
+      this.scrollToSection(section);
     }
 
     const tenantId = await this.tenantStore.getTenantIdAsync();

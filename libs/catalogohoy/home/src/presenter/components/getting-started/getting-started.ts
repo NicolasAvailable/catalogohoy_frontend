@@ -68,7 +68,9 @@ export class GettingStarted implements OnInit {
     const config = this.configStore.config();
     const usage = this.planStore.tenantPlanUsage();
     const isFree = this.planStore.isFreePlan();
-    return [
+    // Tipado explícito: sin él TS unifica los literales y a los pasos sin
+    // `section` les infiere `section?: undefined`, rompiendo el Record.
+    const steps: ChecklistStep[] = [
       {
         id: 'product',
         icon: 'package',
@@ -105,7 +107,7 @@ export class GettingStarted implements OnInit {
           'Configura los números de WhatsApp que recibirán los pedidos del checkout.',
         ctaLabel: 'Agregar vendedores',
         link: '/admin/catalog/edit',
-        queryParams: { tab: 'payments' },
+        queryParams: { tab: 'payments', section: 'whatsapp-sellers' },
         done: (config?.whatsappButtons?.length ?? 0) > 0,
         locked: false,
       },
@@ -122,6 +124,7 @@ export class GettingStarted implements OnInit {
         locked: isFree,
       },
     ];
+    return steps;
   });
 
   /** Pasos que cuentan para ocultar el card (los locked son upsell, no meta). */
