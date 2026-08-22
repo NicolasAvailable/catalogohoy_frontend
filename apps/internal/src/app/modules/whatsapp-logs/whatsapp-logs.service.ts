@@ -2,7 +2,12 @@ import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
 import { Either } from '@sweet-monads/either';
-import { WhatsappLog, WhatsappLogStatus } from './whatsapp-logs.model';
+import {
+  WhatsappLog,
+  WhatsappLogStatus,
+  WhatsappMonthlyRow,
+  WhatsappStats,
+} from './whatsapp-logs.model';
 
 interface WhatsappLogRow {
   id: number;
@@ -68,5 +73,46 @@ export class WhatsappLogsService {
     );
 
     return E.right(logs);
+  }
+
+  /**
+   * Costo real facturado por Meta (pricing_analytics de la WABA de
+   * plataforma), por mes y categoría. Gated a admin interno en la edge
+   * function `whatsapp-stats`.
+   */
+  async stats(): Promise<Either<Error, WhatsappStats>> {
+    const { data, error } = await this.client.functions.invoke<WhatsappStats>(
+      'whatsapp-stats'
+    );
+    if (error) return E.left(new Error(error.message));
+    const payload = data as WhatsappStats & { error?: string };
+    if (payload?.error) return E.left(new Error(payload.error));
+    return E.right(payload);
+  }
+
+  /** Agregado mensual de envíos por plantilla. Gated en la RPC. */
+  async monthly(
+    months = 3
+  ): Promise<Either<Error, WhatsappMonthlyRow[]>> {
+    const { data, error } = await this.client.rpc(
+      'whatsapp_notification_stats_admin',
+      { p_months: months }
+    );
+    if (error) return E.left(new Error(error.message));
+    type Row = {
+      month: string;
+      template_type: string;
+      sent: number;
+      failed: number;
+      skipped: number;
+    };
+    const rows: WhatsappMonthlyRow[] = ((data as Row[]) ?? []).map((r) => ({
+      month: r.month,
+      templateType: r.template_type,
+      sent: Number(r.sent) || 0,
+      failed: Number(r.failed) || 0,
+      skipped: Number(r.skipped) || 0,
+    }));
+    return E.right(rows);
   }
 }

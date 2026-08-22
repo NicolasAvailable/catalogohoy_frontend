@@ -38,7 +38,7 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     routerLink: '/enterprise-leads',
   },
   {
-    label: 'WhatsApp',
+    label: 'Notificaciones WhatsApp',
     icon: 'message-circle',
     routerLink: '/whatsapp-logs',
   },

@@ -27,6 +27,58 @@ export interface WhatsappLogField {
   value: string;
 }
 
+/** Costo/volumen de un mes según Meta (pricing_analytics de la WABA). */
+export interface WhatsappMonthCost {
+  month: string; // YYYY-MM
+  categories: Record<string, { volume: number; cost: number }>;
+  volume: number;
+  cost: number;
+}
+
+/** Respuesta de la edge function `whatsapp-stats` (facturación real de Meta). */
+export interface WhatsappStats {
+  wabaId: string;
+  source: 'pricing' | 'conversation' | null;
+  months: WhatsappMonthCost[];
+  metaError: string | null;
+}
+
+/** Una fila del agregado mensual (RPC whatsapp_notification_stats_admin). */
+export interface WhatsappMonthlyRow {
+  month: string; // YYYY-MM
+  templateType: string;
+  sent: number;
+  failed: number;
+  skipped: number;
+}
+
+// Categoría de facturación de cada plantilla en Meta. Debe seguir las
+// recategorizaciones del WhatsApp Manager: plan_expiry_warning y
+// order_pending_reminder quedaron MARKETING el 14-ago-2026.
+export const TEMPLATE_CATEGORY: Record<string, 'MARKETING' | 'UTILITY'> = {
+  order_received: 'UTILITY',
+  order_completed: 'UTILITY',
+  payment_failed: 'UTILITY',
+  plan_expiring: 'MARKETING',
+  order_pending_reminder: 'MARKETING',
+};
+
+/** Etiqueta legible para la categoría de facturación de Meta. */
+export function categoryLabel(category: string): string {
+  switch (category) {
+    case 'MARKETING':
+      return 'Marketing';
+    case 'UTILITY':
+      return 'Utilidad';
+    case 'SERVICE':
+      return 'Servicio';
+    case 'AUTHENTICATION':
+      return 'Autenticación';
+    default:
+      return category;
+  }
+}
+
 // Las variables se mandan posicionalmente ({{1}}, {{2}}, ...). Estos son los
 // significados de cada posición por tipo de template (según el trigger
 // notify_order_whatsapp). Si el template cambia o no está mapeado, se cae a
@@ -64,6 +116,12 @@ export function templateLabel(type: string): string {
       return 'Plan por vencer';
     case 'payment_failed':
       return 'Cobro fallido';
+    case 'order_pending_reminder':
+      return 'Pedido sin atender';
+    case 'activation_no_product':
+      return 'Activación sin productos';
+    case 'setup_missing_whatsapp':
+      return 'Falta configurar WhatsApp';
     default:
       return type;
   }

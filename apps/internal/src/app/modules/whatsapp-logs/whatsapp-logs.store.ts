@@ -6,7 +6,12 @@ import {
   withMethods,
   withState,
 } from '@ngrx/signals';
-import { WhatsappLog, WhatsappLogStatus } from './whatsapp-logs.model';
+import {
+  WhatsappLog,
+  WhatsappLogStatus,
+  WhatsappMonthlyRow,
+  WhatsappStats,
+} from './whatsapp-logs.model';
 import {
   WhatsappLogsQuery,
   WhatsappLogsService,
@@ -14,12 +19,16 @@ import {
 
 type WhatsappLogsState = {
   logs: WhatsappLog[];
+  stats: WhatsappStats | null;
+  monthly: WhatsappMonthlyRow[];
   isLoading: boolean;
   error: string | null;
 };
 
 const initialState: WhatsappLogsState = {
   logs: [],
+  stats: null,
+  monthly: [],
   isLoading: false,
   error: null,
 };
@@ -43,10 +52,24 @@ export const WhatsappLogsStore = signalStore(
   withMethods((store, service = inject(WhatsappLogsService)) => ({
     async load(query: WhatsappLogsQuery = {}): Promise<void> {
       patchState(store, { isLoading: true, error: null });
-      const result = await service.list(query);
-      result.fold(
+      const [logsResult, statsResult, monthlyResult] = await Promise.all([
+        service.list(query),
+        service.stats(),
+        service.monthly(3),
+      ]);
+      logsResult.fold(
         (err) => patchState(store, { isLoading: false, error: err.message }),
         (logs) => patchState(store, { logs, isLoading: false })
+      );
+      // El costo es secundario: si Meta falla, el panel de logs sigue vivo y
+      // la card muestra el motivo (stats.metaError o null).
+      statsResult.fold(
+        () => patchState(store, { stats: null }),
+        (stats) => patchState(store, { stats })
+      );
+      monthlyResult.fold(
+        () => patchState(store, { monthly: [] }),
+        (monthly) => patchState(store, { monthly })
       );
     },
   }))
