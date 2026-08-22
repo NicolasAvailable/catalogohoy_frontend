@@ -347,9 +347,29 @@ export class EcommerceConfigService {
         if (configError) return E.left(new Error(configError.message));
       }
 
+      // Aviso EN VIVO al catálogo público: un visitante parado en el checkout
+      // refetchea la config al instante (p. ej. el botón de pedido se activa
+      // apenas el dueño agrega su vendedor de WhatsApp). Best-effort.
+      this.notifyPublicConfigChanged(config.tenantId);
+
       return E.right(undefined);
     } catch (error) {
       return E.left(error as Error);
+    }
+  }
+
+  /** Broadcast de Realtime (canal `public-config-<tenantId>`) que escucha el
+   *  storefront (CatalogConfigLiveService). `send` sobre un canal sin
+   *  suscribir sale por HTTP — no deja websocket abierto en el admin. */
+  private notifyPublicConfigChanged(tenantId: string): void {
+    try {
+      const channel = this.client.channel(`public-config-${Number(tenantId)}`);
+      void channel
+        .send({ type: 'broadcast', event: 'config-updated', payload: {} })
+        .catch(() => undefined)
+        .finally(() => void this.client.removeChannel(channel));
+    } catch {
+      // Best-effort: el fallback de visibilidad del storefront cubre.
     }
   }
 

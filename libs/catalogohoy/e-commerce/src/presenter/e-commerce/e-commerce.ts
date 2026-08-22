@@ -22,7 +22,12 @@ import {
 import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
 import { DialogService, IconComponent, dialogConfig } from '@ui';
-import { CartStore, EcommerceService, EcommerceStore } from '../../infrastructure';
+import {
+  CartStore,
+  CatalogConfigLiveService,
+  EcommerceService,
+  EcommerceStore,
+} from '../../infrastructure';
 import { ProductDetailModal } from '../components/product-detail-modal/product-detail-modal';
 import { CartDrawer } from '../components/cart-drawer/cart-drawer';
 import { CatalogFooter } from '../components/catalog-footer/catalog-footer';
@@ -55,6 +60,7 @@ export class ECommerce implements OnInit, OnDestroy {
   public readonly cartStore = inject(CartStore);
   public readonly planStore = inject(PlanStore);
   private readonly posthogService = inject(PosthogService);
+  private readonly configLive = inject(CatalogConfigLiveService);
   private readonly language = inject(LanguageService);
 
   /** Idioma default del tenant: se aplica UNA vez al cargar el catálogo y
@@ -242,6 +248,15 @@ export class ECommerce implements OnInit, OnDestroy {
     if (slug) {
       const result = await this.ecommerceStore.loadCatalog(slug);
 
+      // Config en vivo: si el comerciante guarda cambios en Editar catálogo
+      // (p. ej. agrega su vendedor de WhatsApp) mientras un visitante está en
+      // el checkout, la config se refresca sola y el botón de pedido se
+      // activa sin recargar.
+      const tenantId = this.ecommerceStore.catalogInfo()?.id;
+      if (tenantId && !this.ecommerceStore.isPreviewMode()) {
+        this.configLive.watch(slug, tenantId);
+      }
+
       // Plan status comes from the same RPC — no extra query needed
       if (result && 'planExpired' in result) {
         this.planStore.setPlanPublicStatus(result.planExpired, result.isFreePlan);
@@ -303,6 +318,7 @@ export class ECommerce implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.configLive.unwatch();
     window.removeEventListener('message', this.handlePreviewMessage);
     if (this.ecommerceStore.isPreviewMode()) {
       this.ecommerceStore.exitPreviewMode();

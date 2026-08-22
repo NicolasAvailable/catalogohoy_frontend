@@ -178,6 +178,29 @@ export const EcommerceStore = signalStore(
       }
     },
 
+    /** Refresca SOLO la config del catálogo (info + categorías + tasa) sin
+     *  tocar productos, carrito ni flags de loading — cero parpadeo. Lo
+     *  dispara el aviso realtime cuando el comerciante guarda en "Editar
+     *  catálogo" (p. ej. agrega su vendedor de WhatsApp) para que un
+     *  visitante que YA está en el checkout vea el botón activarse en vivo,
+     *  sin salir ni recargar. */
+    async refreshCatalogInfo(slug: string) {
+      try {
+        const result = await ecommerceService.getPublicCatalog(slug);
+        result.mapRight(
+          ({ catalogInfo, categories, viewAllHidden, exchangeRate }) =>
+            patchState(store, () => ({
+              catalogInfo,
+              categories,
+              viewAllHidden,
+              exchangeRate,
+            }))
+        );
+      } catch {
+        // Best-effort: si falla, la config cargada sigue siendo válida.
+      }
+    },
+
     async loadProducts(slug: string) {
       patchState(store, () => ({ isLoading: true }));
 
