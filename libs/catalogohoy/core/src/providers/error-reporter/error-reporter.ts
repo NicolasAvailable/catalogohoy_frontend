@@ -22,6 +22,30 @@ const reportedKeys = new Set<string>();
 let sentThisSession = 0;
 const MAX_REPORTS_PER_SESSION = 15;
 
+/** Ruido no accionable que NO va a Slack (Sentry lo sigue viendo por su
+ *  propio canal). "Script error." es el mensaje ENMASCARADO que da el
+ *  navegador para errores de scripts de otro origen sin CORS (pixels de
+ *  Meta/GA/TikTok en los storefronts): no trae información por diseño.
+ *  El resto es la misma lista que Sentry ignora en su init. */
+const NOISE_PATTERNS =
+  /Script error|Java object is gone|Error invoking postMessage|ResizeObserver loop/i;
+
+/** Fingerprint del build (main-XXXX.js) — mismo truco que AppVersionService.
+ *  Cambia con cada deploy: permite correlacionar errores con deploys. */
+let cachedVersion: string | null | undefined;
+function buildVersion(): string | null {
+  if (cachedVersion !== undefined) return cachedVersion;
+  try {
+    const script = document.querySelector<HTMLScriptElement>(
+      'script[src*="main-"]'
+    );
+    cachedVersion = script?.src.match(/main-[A-Z0-9]+\.js/)?.[0] ?? null;
+  } catch {
+    cachedVersion = null;
+  }
+  return cachedVersion;
+}
+
 export function reportErrorToSlack(
   source: 'toast' | 'uncaught' | string,
   message: string,
@@ -30,6 +54,7 @@ export function reportErrorToSlack(
   try {
     if (isDevMode()) return;
     const text = String(message ?? 'error desconocido').slice(0, 500);
+    if (source === 'uncaught' && NOISE_PATTERNS.test(text)) return;
     const key = `${source}:${text}`;
     if (reportedKeys.has(key) || sentThisSession >= MAX_REPORTS_PER_SESSION) {
       return;
@@ -46,6 +71,7 @@ export function reportErrorToSlack(
           detail: detail?.slice(0, 1000),
           slug,
           url: location.href.slice(0, 300),
+          version: buildVersion(),
         },
       })
       .catch(() => undefined);

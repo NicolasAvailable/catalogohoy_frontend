@@ -68,6 +68,7 @@ Deno.serve(async (req: Request) => {
     detail?: string;
     slug?: string;
     url?: string;
+    version?: string;
   };
   try {
     body = await req.json();
@@ -80,6 +81,7 @@ Deno.serve(async (req: Request) => {
   const detail = String(body.detail ?? "").slice(0, 1000);
   const slug = String(body.slug ?? "").slice(0, 80);
   const url = String(body.url ?? "").slice(0, 300);
+  const version = String(body.version ?? "").slice(0, 60);
   if (!message) {
     return jsonResponse({ success: false, error: "message requerido" }, 400);
   }
@@ -134,7 +136,7 @@ Deno.serve(async (req: Request) => {
             type: "context",
             elements: [{
               type: "mrkdwn",
-              text: `notify-error · ${new Date().toISOString()}`,
+              text: `notify-error · ${version || "sin versión"} · ${new Date().toISOString()}`,
             }],
           },
         ],
