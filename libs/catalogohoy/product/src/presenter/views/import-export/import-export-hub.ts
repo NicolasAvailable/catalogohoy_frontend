@@ -526,12 +526,14 @@ export class ImportExportHubComponent {
     if (errorCount > 0) {
       this.importEvents.notify(
         'import-rows-error',
-        `${errorCount} de ${rows.length} filas fallaron${this.isPdfRun() ? ' (fuente: PDF)' : ''}`
+        `${errorCount} de ${rows.length} filas fallaron${this.isPdfRun() ? ' (fuente: PDF)' : ''}`,
+        { products: successCount }
       );
     } else if (this.isPdfRun()) {
       this.importEvents.notify(
         'pdf-import-ok',
-        `${successCount} productos importados desde ${this.pdfFileName()}`
+        `${successCount} productos importados desde ${this.pdfFileName()}`,
+        { pages: this.pdfPages().length, products: successCount }
       );
     }
     this.view.set('import-done');
@@ -1012,6 +1014,9 @@ export class ImportExportHubComponent {
 
     this.clearPdfState();
     this.pdfFileName.set(file.name);
+    // Traza de soporte: si algo falla (o el import termina), el archivo
+    // fuente queda en el bucket + catalog_imports para reproducirlo.
+    this.importEvents.registerFile(file);
     this.view.set('ai-analyzing');
     this.startAiMessages(PDF_READ_MESSAGES);
 
@@ -1103,7 +1108,8 @@ export class ImportExportHubComponent {
       toast.error(failure?.message ?? 'La IA no encontró productos en el PDF.');
       this.importEvents.notify(
         'pdf-ia-error',
-        `${this.pdfFileName()} (${pages.length} págs): ${failure?.message ?? 'sin productos'}`
+        `${this.pdfFileName()} (${pages.length} págs): ${failure?.message ?? 'sin productos'}`,
+        { pages: pages.length }
       );
       this.view.set('pdf-confirm');
       return;
@@ -1114,7 +1120,8 @@ export class ImportExportHubComponent {
       );
       this.importEvents.notify(
         'pdf-ia-error',
-        `${this.pdfFileName()}: lote falló tras ${analyzedPages}/${pages.length} págs — ${failure.message}`
+        `${this.pdfFileName()}: lote falló tras ${analyzedPages}/${pages.length} págs — ${failure.message}`,
+        { pages: pages.length }
       );
     }
 
@@ -1274,6 +1281,9 @@ export class ImportExportHubComponent {
   ): Promise<void> {
     // Un import de Excel/Sheets no habilita el paso de fotos del PDF.
     this.isPdfRun.set(false);
+    // Traza de soporte: el archivo fuente queda registrado para que cualquier
+    // evento del import lo suba al bucket + catalog_imports.
+    this.importEvents.registerFile(file);
     const result = await this.excelService.parseExcelFile(file);
 
     if (result.isRight()) {
