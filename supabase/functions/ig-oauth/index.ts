@@ -204,6 +204,16 @@ async function handleCallback(req: Request): Promise<Response> {
       { onConflict: "channel,external_account_id" },
     );
 
+    // 4b) Una sola cuenta ACTIVA por tenant+canal: desactivar cualquier otra
+    //     (p. ej. la cuenta DEMO del catálogo de demostración, o una cuenta
+    //     anterior). Con 2 activas, ig-send hace .maybeSingle() y falla.
+    await admin
+      .from("social_accounts")
+      .update({ status: "inactive" })
+      .eq("tenant_id", state.tenantId)
+      .eq("channel", "instagram")
+      .neq("external_account_id", igUserId);
+
     // 5) Suscribir la cuenta a los webhooks de mensajes + comentarios.
     await fetch(
       `${GRAPH}/v23.0/${igUserId}/subscribed_apps?subscribed_fields=messages,comments&access_token=${accessToken}`,

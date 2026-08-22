@@ -9,7 +9,7 @@
 
   <!-- Galería de canales (estilo SocialGest: una card por red) -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    @for (channel of channels; track channel.key) {
+    @for (channel of channels(); track channel.key) {
     <a
       [routerLink]="routeFor(channel)"
       (click)="onChannelClick(channel, $event)"

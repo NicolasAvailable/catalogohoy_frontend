@@ -23,6 +23,11 @@ const CHAT_ENABLED_PLANS = ['avanzado', 'enterprise'];
  *  andes-4x4 (2026-07-30): habilitado como gesto por info errada (modal decía
  *  Pro). Debe coincidir con CHAT_ENABLED_SLUGS del guard. */
 const CHAT_ENABLED_SLUGS: string[] = ['andes-4x4'];
+/** Beta cerrada de Instagram/Messenger: mientras Meta no apruebe los permisos
+ *  (App Review), solo estos slugs ven las cards habilitadas — el flujo OAuth
+ *  igual solo funciona para cuentas con rol en la app de Meta. Para el resto
+ *  siguen "Próximamente". Quitar el gate al aprobarse la review. */
+const IG_FB_CONNECT_SLUGS: string[] = ['catalogohoy-demo', 'catalogohoy'];
 
 /** Canal conectable desde el hub (estilo galería de SocialGest). */
 interface ConnectableChannel {
@@ -77,41 +82,47 @@ export class ConnectChannelsComponent implements OnInit {
   protected readonly ttAccount = signal<SocialAccount | null>(null);
   protected readonly fbAccount = signal<SocialAccount | null>(null);
 
-  protected readonly channels: ConnectableChannel[] = [
-    {
-      key: 'whatsapp',
-      name: 'WhatsApp Business',
-      logo: '/images/whatsapp.svg',
-      description: 'Recibe y responde los chats de tu número de empresa.',
-      route: '/admin/chat/connect/whatsapp',
-    },
-    {
-      key: 'instagram',
-      name: 'Instagram',
-      logo: '/images/instagram.svg',
-      description: 'Responde los mensajes directos de tu cuenta profesional.',
-      route: '/admin/chat/connect/instagram',
-      comingSoon: true,
-    },
-    {
-      key: 'messenger',
-      name: 'Messenger',
-      logo: '/images/messenger.svg',
-      description: 'Responde los mensajes de Messenger de tu página de Facebook.',
-      route: '/admin/chat/connect/messenger',
-      comingSoon: true,
-    },
-    {
-      key: 'tiktok',
-      name: 'TikTok',
-      // Nota colorida sin fondo (tiktok.svg es la versión app-icon con fondo
-      // negro, para los badges chicos de la bandeja).
-      logo: '/images/tiktok-logo.svg',
-      description: 'Mensajería de TikTok para empresas (beta).',
-      route: '/admin/chat/connect/tiktok',
-      comingSoon: true,
-    },
-  ];
+  /** IG/Messenger dejan de ser "Próximamente" solo para la allowlist de la
+   *  beta cerrada (demo + catálogo interno, para el video de App Review). */
+  protected readonly channels = computed<ConnectableChannel[]>(() => {
+    const slug = getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || '';
+    const igFbUnlocked = IG_FB_CONNECT_SLUGS.includes(slug);
+    return [
+      {
+        key: 'whatsapp',
+        name: 'WhatsApp Business',
+        logo: '/images/whatsapp.svg',
+        description: 'Recibe y responde los chats de tu número de empresa.',
+        route: '/admin/chat/connect/whatsapp',
+      },
+      {
+        key: 'instagram',
+        name: 'Instagram',
+        logo: '/images/instagram.svg',
+        description: 'Responde los mensajes directos de tu cuenta profesional.',
+        route: '/admin/chat/connect/instagram',
+        comingSoon: !igFbUnlocked,
+      },
+      {
+        key: 'messenger',
+        name: 'Messenger',
+        logo: '/images/messenger.svg',
+        description: 'Responde los mensajes de Messenger de tu página de Facebook.',
+        route: '/admin/chat/connect/messenger',
+        comingSoon: !igFbUnlocked,
+      },
+      {
+        key: 'tiktok',
+        name: 'TikTok',
+        // Nota colorida sin fondo (tiktok.svg es la versión app-icon con fondo
+        // negro, para los badges chicos de la bandeja).
+        logo: '/images/tiktok-logo.svg',
+        description: 'Mensajería de TikTok para empresas (beta).',
+        route: '/admin/chat/connect/tiktok',
+        comingSoon: true,
+      },
+    ];
+  });
 
   protected readonly waConnected = computed(() =>
     this.whatsAppStore.hasActiveAccount()
