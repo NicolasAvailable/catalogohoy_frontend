@@ -9,6 +9,10 @@ import {
 import { Router } from '@angular/router';
 import { environment } from '@catalogohoy/env';
 import * as Sentry from '@sentry/angular';
+import {
+  patchToastErrorReporting,
+  reportErrorToSlack,
+} from '../error-reporter/error-reporter';
 
 interface InitSentryOptions {
   /** DSN del proyecto de Sentry de esta app (público; va en el bundle). */
@@ -122,6 +126,13 @@ class ChunkAwareErrorHandler implements ErrorHandler {
   handleError(error: unknown): void {
     if (isChunkLoadError(error) && reloadForFreshAssets()) return;
     this.sentry.handleError(error);
+    // Además de Sentry, al canal de Slack de errores (best-effort, dedupe).
+    const err = error as { message?: string; stack?: string } | null;
+    reportErrorToSlack(
+      'uncaught',
+      err?.message ?? String(error ?? 'error desconocido'),
+      err?.stack?.split('\n').slice(0, 5).join('\n')
+    );
   }
 }
 
@@ -142,6 +153,9 @@ export function provideSentry(): (Provider | EnvironmentProviders)[] {
     },
     provideAppInitializer(() => {
       inject(Sentry.TraceService);
+      // Todo toast.error (error mostrado al usuario) se reporta al canal
+      // de Slack de errores — un solo parche cubre todos los call sites.
+      patchToastErrorReporting();
     }),
   ];
 }

@@ -1,5 +1,6 @@
 export * from './app-version/app-version.service';
 export * from './discord/discord-webhook';
+export * from './error-reporter/error-reporter';
 export * from './icons/icons.provider';
 export * from './meta-pixel/meta-pixel.provider';
 export * from './posthog/posthog.provider';
