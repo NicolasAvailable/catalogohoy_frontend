@@ -49,7 +49,7 @@ try {
     const has = (name) => !!row.querySelector(`.lucide-${name}, svg.lucide-${name}`);
     return JSON.stringify({
       pencil: has('pencil'),
-      eyeOff: has('eye-off'),
+      eyeOff: has('eye'),
       share: has('share2') || has('share-2'),
       ellipsis: has('ellipsis-vertical'),
       copyStandalone: has('copy'),
@@ -58,6 +58,7 @@ try {
   });
   log(`layout fila 1: ${iconsOk}`);
   const layout = JSON.parse(iconsOk);
+  // Producto VISIBLE → ojo abierto (el ícono refleja el ESTADO).
   if (!layout.pencil || !layout.eyeOff || !layout.share || !layout.ellipsis) {
     throw new Error('faltan acciones en la fila');
   }
@@ -67,16 +68,16 @@ try {
   await page.screenshot({ path: `${SHOTS}/1-layout-acciones.png` });
 
   // ── 2. Toggle ocultar/mostrar sobre la primera fila ───────────────────
-  const eyeOffBtn = page.locator('button:has(.lucide-eye-off)').first();
-  await eyeOffBtn.click();
+  const eyeBtn0 = page.locator('button:has(svg.lucide-eye)').first();
+  await eyeBtn0.click();
   await page.waitForSelector('text=Producto oculto del catálogo', { timeout: 10000 });
   log('toggle: oculto ✅ (toast)');
   await page.waitForTimeout(2500); // refresh de la lista
   await page.waitForSelector('text=Oculto', { timeout: 10000 });
   await page.screenshot({ path: `${SHOTS}/2-producto-oculto.png` });
 
-  const eyeBtn = page.locator('button:has(.lucide-eye)').first();
-  await eyeBtn.click();
+  const eyeOffBtn = page.locator('button:has(svg.lucide-eye-off)').first();
+  await eyeOffBtn.click();
   await page.waitForSelector('text=Producto visible en el catálogo', { timeout: 10000 });
   log('toggle: visible de nuevo ✅ (toast)');
   await page.waitForTimeout(2500);
@@ -85,6 +86,18 @@ try {
   await page.locator('button:has(.lucide-ellipsis-vertical)').first().click();
   await page.waitForSelector('text=Duplicar', { timeout: 5000 });
   await page.screenshot({ path: `${SHOTS}/3-menu-abierto.png` });
+  // "Eliminar" es destructivo → texto/ícono en rojo (red-600).
+  const delColor = await page.evaluate(() => {
+    const el = [...document.querySelectorAll('.p-menu button')].find((b) => b.textContent?.includes('Eliminar'));
+    return el ? getComputedStyle(el).color : 'no-encontrado';
+  });
+  log(`color de Eliminar: ${delColor}`);
+  // Acepta cualquier rojo dominante (la paleta del proyecto redefine red-600
+  // al rojo de marca #E53838).
+  const rgb = delColor.match(/\d+/g)?.map(Number) ?? [0, 0, 0];
+  if (!(rgb[0] > 180 && rgb[1] < 110 && rgb[2] < 110)) {
+    throw new Error(`Eliminar no está en rojo: ${delColor}`);
+  }
   await page.getByText('Duplicar', { exact: true }).click();
   await page.waitForSelector('text=Producto duplicado correctamente', { timeout: 15000 });
   log('menú ⋯ → Duplicar ✅');

@@ -354,7 +354,7 @@
             />
             <ui-button
               (click)="onToggleHidden(item)"
-              [icon]="item.isHidden ? 'eye' : 'eye-off'"
+              [icon]="item.isHidden ? 'eye-off' : 'eye'"
               variant="outlined"
               severity="contrast"
               size="small"
@@ -469,7 +469,7 @@
             />
             <ui-button
               (click)="onToggleHidden(item)"
-              [icon]="item.isHidden ? 'eye' : 'eye-off'"
+              [icon]="item.isHidden ? 'eye-off' : 'eye'"
               variant="outlined"
               severity="contrast"
               size="small"
@@ -588,7 +588,8 @@
     <ng-template #item let-menuItem>
       <button
         type="button"
-        class="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-md cursor-pointer"
+        class="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-md cursor-pointer"
+        [class]="menuItem.styleClass === 'danger' ? 'text-red-600 hover:bg-red-50' : 'text-slate-700 hover:bg-slate-50'"
         (click)="onRowMenuSelect(menuItem, rowMenu)"
       >
         <ui-icon [name]="menuItem.icon ?? ''" styleClass="size-4" />

@@ -319,7 +319,7 @@ export default class List implements OnInit, OnDestroy {
         ? [{ label: 'Duplicar', icon: 'copy', command: () => this.onDuplicate(item) }]
         : []),
       ...(this.canDeleteProduct()
-        ? [{ label: 'Eliminar', icon: 'trash', command: () => this.onDelete(item) }]
+        ? [{ label: 'Eliminar', icon: 'trash', styleClass: 'danger', command: () => this.onDelete(item) }]
         : []),
     ]);
     menu.toggle(event);
