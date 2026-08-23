@@ -13,6 +13,8 @@ export interface BaseProductService {
   create(input: CreateProductInput): Promise<E.Either<Error, void>>;
   update(input: UpdateProductInput): Promise<E.Either<Error, void>>;
   duplicate(id: string): Promise<E.Either<Error, string>>;
+  /** Oculta/muestra el producto en el catálogo público (products.is_hidden). */
+  setHidden(id: string, hidden: boolean): Promise<E.Either<Error, void>>;
   delete(id: string): Promise<E.Either<Error, void>>;
   deleteMany(ids: string[]): Promise<E.Either<Error, void>>;
   replaceCategories(input: ReplaceCategoriesInput): Promise<E.Either<Error, void>>;

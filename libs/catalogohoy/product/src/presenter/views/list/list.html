@@ -352,17 +352,15 @@
               [tooltip]="(isLocked(item) ? 'Mejora tu plan para editar' : 'Editar') | transloco"
               tooltipPosition="bottom"
             />
-            @if (canCreateProduct()) {
             <ui-button
-              (click)="onDuplicate(item)"
-              icon="copy"
+              (click)="onToggleHidden(item)"
+              [icon]="item.isHidden ? 'eye' : 'eye-off'"
               variant="outlined"
               severity="contrast"
               size="small"
-              [tooltip]="'Duplicar' | transloco"
+              [tooltip]="(item.isHidden ? 'Mostrar en el catálogo' : 'Ocultar del catálogo') | transloco"
               tooltipPosition="bottom"
             />
-            }
             <ui-button
               (click)="onShare(item)"
               icon="share2"
@@ -372,14 +370,14 @@
               [tooltip]="(copiedId() === ('' + item.id) ? '¡Link copiado!' : 'Compartir') | transloco"
               tooltipPosition="bottom"
             />
-            @if (canDeleteProduct()) {
+            @if (canCreateProduct() || canDeleteProduct()) {
             <ui-button
-              (click)="onDelete(item)"
-              icon="trash"
+              (click)="openRowMenu($event, item, rowMenu)"
+              icon="ellipsis-vertical"
               variant="outlined"
               severity="contrast"
               size="small"
-              [tooltip]="'Eliminar' | transloco"
+              [tooltip]="'Más acciones' | transloco"
               tooltipPosition="bottom"
             />
             }
@@ -470,16 +468,23 @@
               size="small"
             />
             <ui-button
+              (click)="onToggleHidden(item)"
+              [icon]="item.isHidden ? 'eye' : 'eye-off'"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+            />
+            <ui-button
               (click)="onShare(item)"
               icon="share2"
               variant="outlined"
               severity="contrast"
               size="small"
             />
-            @if (canDeleteProduct()) {
+            @if (canCreateProduct() || canDeleteProduct()) {
             <ui-button
-              (click)="onDelete(item)"
-              icon="trash"
+              (click)="openRowMenu($event, item, rowMenu)"
+              icon="ellipsis-vertical"
               variant="outlined"
               severity="contrast"
               size="small"
@@ -575,6 +580,22 @@
       </div>
     </div>
   </ui-dialog>
+
+  <!-- Menú "más acciones" (⋯) compartido por todas las filas: los ítems se
+       reconstruyen al abrir según la fila y los permisos. autoClose off +
+       selección manual (mismo patrón que el language-selector). -->
+  <ui-menu #rowMenu [items]="rowMenuItems()" [autoClose]="false">
+    <ng-template #item let-menuItem>
+      <button
+        type="button"
+        class="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-md cursor-pointer"
+        (click)="onRowMenuSelect(menuItem, rowMenu)"
+      >
+        <ui-icon [name]="menuItem.icon ?? ''" styleClass="size-4" />
+        <span>{{ menuItem.label ?? '' | transloco }}</span>
+      </button>
+    </ng-template>
+  </ui-menu>
 
   <lib-import-export-hub />
   <lib-plan-limit-dialog />

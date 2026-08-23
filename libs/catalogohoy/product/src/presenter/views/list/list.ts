@@ -24,6 +24,8 @@ import {
   DialogComponent,
   IconComponent,
   InputTextComponent,
+  MenuComponent,
+  MenuItem,
   MultiSelectComponent,
   ProductMediaComponent,
   SelectComponent,
@@ -58,6 +60,7 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
     PlanLimitDialogComponent,
     TooltipDirective,
     DialogComponent,
+    MenuComponent,
     MultiSelectComponent,
     ProductMediaComponent,
     TranslocoPipe,
@@ -303,6 +306,49 @@ export default class List implements OnInit, OnDestroy {
       return;
     }
     this.router.navigate(['/admin/products/create']);
+  }
+
+  /** Ítems del menú "más acciones" (⋯) de la fila abierta. Se reconstruye
+   *  al abrir según los permisos del usuario (duplicar/eliminar). */
+  public readonly rowMenuItems = signal<MenuItem[]>([]);
+
+  /** Abre el menú ⋯ de una fila con las acciones secundarias. */
+  public openRowMenu(event: Event, item: Product, menu: MenuComponent): void {
+    this.rowMenuItems.set([
+      ...(this.canCreateProduct()
+        ? [{ label: 'Duplicar', icon: 'copy', command: () => this.onDuplicate(item) }]
+        : []),
+      ...(this.canDeleteProduct()
+        ? [{ label: 'Eliminar', icon: 'trash', command: () => this.onDelete(item) }]
+        : []),
+    ]);
+    menu.toggle(event);
+  }
+
+  /** Ejecuta la acción elegida del menú ⋯ y lo cierra (autoClose off). */
+  public onRowMenuSelect(item: MenuItem, menu: MenuComponent): void {
+    menu.hide();
+    item.command?.({} as never);
+  }
+
+  /** Oculta/muestra el producto en el catálogo público desde el listado —
+   *  antes solo se podía entrando al editor. */
+  public async onToggleHidden(item: Product): Promise<void> {
+    if (this.isLocked(item)) {
+      this.onLockedAttempt(item);
+      return;
+    }
+    if (this.isProcessing()) return;
+    this.isProcessing.set(true);
+    const hidden = !item.isHidden;
+    const result = await this.productFacade.setHidden(String(item.id), hidden);
+    result.mapRight(() => {
+      this.toastService.success(
+        hidden ? 'Producto oculto del catálogo' : 'Producto visible en el catálogo'
+      );
+      this.refreshList();
+    });
+    this.isProcessing.set(false);
   }
 
   /** Duplica un producto: crea una copia exacta con el sufijo "(copia)" y

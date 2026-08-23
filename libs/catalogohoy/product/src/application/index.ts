@@ -7,6 +7,7 @@ import { DeleteProductUseCase } from './delete-product/delete-product.usecase';
 import { DuplicateProductUseCase } from './duplicate-product/duplicate-product.usecase';
 import { GetByIdUseCase } from './get-by-id/get-by-id.usecase';
 import { ReplaceCategoriesUseCase } from './replace-categories/replace-categories.usecase';
+import { SetProductHiddenUseCase } from './set-product-hidden/set-product-hidden.usecase';
 import { UpdateProductUseCase } from './update-product/update-product.usecase';
 
 @Injectable({ providedIn: 'root' })
@@ -27,6 +28,10 @@ export class ProductFacade {
 
   public duplicate(id: string) {
     return new DuplicateProductUseCase(this.productService).execute(id);
+  }
+
+  public setHidden(id: string, hidden: boolean) {
+    return new SetProductHiddenUseCase(this.productService).execute({ id, hidden });
   }
 
   public delete(id: string) {

@@ -586,6 +586,20 @@ export class ProductService implements BaseProductService {
     return E.right(undefined);
   }
 
+  /** Oculta o muestra el producto en el catálogo público. Toque quirúrgico:
+   *  solo `is_hidden`, sin pasar por el payload completo del editor. */
+  public async setHidden(
+    id: string,
+    hidden: boolean
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('products')
+      .update({ is_hidden: hidden })
+      .eq('id', id);
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
   /** Duplica un producto: inserta una nueva fila con los mismos campos +
    *  sufijo "(copia)" en el nombre, posición al final, y re-linkea las
    *  categorías al nuevo id. Todo lo que vive en la fila (sizes, wholesale
@@ -621,8 +635,16 @@ export class ProductService implements BaseProductService {
       .single();
     const nextPosition = (maxData?.position ?? -1) + 1;
 
-    const { id: _omitId, created_at: _omitCreated, updated_at: _omitUpdated, ...rest } = src;
-    void _omitId; void _omitCreated; void _omitUpdated;
+    // OJO: `search_blob` es columna GENERADA — si viaja en el insert Postgres
+    // rechaza la fila entera (428C9). Se omite junto con id/timestamps.
+    const {
+      id: _omitId,
+      created_at: _omitCreated,
+      updated_at: _omitUpdated,
+      search_blob: _omitSearch,
+      ...rest
+    } = src;
+    void _omitId; void _omitCreated; void _omitUpdated; void _omitSearch;
 
     const { data: inserted, error: insErr } = await this.client
       .from('products')
