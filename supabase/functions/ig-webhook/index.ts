@@ -31,6 +31,9 @@ const VERIFY_TOKEN = Deno.env.get("IG_WEBHOOK_VERIFY_TOKEN") ?? "catalogohoy-ig"
 const SECRETS = [
   Deno.env.get("IG_APP_SECRET")?.trim(),
   Deno.env.get("WA_APP_SECRET")?.trim(),
+  // Secret histórico de la app (2026-03) — 3er candidato mientras se
+  // diagnostica con qué firma Meta estos eventos (modo permisivo igual).
+  Deno.env.get("FACEBOOK_APP_SECRET")?.trim(),
 ].filter((s): s is string => !!s);
 const GRAPH = "https://graph.instagram.com/v23.0";
 
