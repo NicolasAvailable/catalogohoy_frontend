@@ -32,6 +32,7 @@ import {
   ImportSummary,
   PdfCatalogPage,
   PdfParsedProduct,
+  Product,
   ProductBackup,
   ProductBackupSnapshotRow,
   ProductExcelRow,
@@ -349,19 +350,46 @@ export class ImportExportHubComponent {
 
   /** From the hub, request the export via WhatsApp. Paid plans only.
    *  Ya no se genera el Excel en el navegador: el equipo lo envía manualmente. */
-  public onExport(): void {
+  /** Exportación en curso (deshabilita el tile y muestra "Generando..."). */
+  public readonly isExporting = signal(false);
+
+  /** Descarga TODOS los productos del catálogo en un Excel con las mismas
+   *  columnas que entiende el import → el archivo es autogestionable: se
+   *  edita y se re-importa (upsert por SKU). Antes este tile pedía la
+   *  exportación por WhatsApp a soporte. */
+  public async onExport(): Promise<void> {
     if (this.isFreePlan()) {
       toast.error('La exportación de productos está disponible en los planes pagos.');
       return;
     }
-    const slug = localStorage.getItem('slug') ?? '';
-    const message = encodeURIComponent(
-      `Hola, quiero exportar los productos de mi catálogo${slug ? ` (${slug})` : ''} a Excel.`
-    );
-    // window.open debe ejecutarse síncrono dentro del click: un await previo
-    // hace que Safari lo bloquee como popup.
-    window.open(`https://wa.me/584220240947?text=${message}`, '_blank');
-    this.dialog.hide();
+    if (this.isExporting()) return;
+    this.isExporting.set(true);
+    try {
+      // Todas las páginas: PostgREST corta en 1000 filas por request, así
+      // que un catálogo grande no cabe en una sola llamada.
+      const PAGE_SIZE = 500;
+      const all: Product[] = [];
+      for (let page = 1; page <= 100; page++) {
+        const result = await this.productService.getAll(page, PAGE_SIZE);
+        if (result.isLeft()) {
+          toast.error('No se pudieron cargar tus productos. Intenta de nuevo.');
+          return;
+        }
+        const products = result.value.products;
+        all.push(...products);
+        if (products.length < PAGE_SIZE) break;
+      }
+      if (all.length === 0) {
+        toast.error('No tienes productos para exportar.');
+        return;
+      }
+      this.excelService
+        .exportToExcel(all)
+        .mapRight(() => toast.success(`Se descargó el Excel con tus ${all.length} productos`))
+        .mapLeft(() => toast.error('No se pudo generar el archivo. Intenta de nuevo.'));
+    } finally {
+      this.isExporting.set(false);
+    }
   }
 
   public async onFileSelected(event: Event): Promise<void> {
