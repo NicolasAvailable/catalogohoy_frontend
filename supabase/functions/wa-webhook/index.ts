@@ -162,6 +162,9 @@ const SUPPORT_BOT_PNID = Deno.env.get("WA_SUPPORT_BOT_PNID") ?? "101115763541569
 const SUPPORT_MENU_BODY = "¡Hola! 👋 Escribiste al soporte de CatalogoHoy.\n\n" +
   "Para ayudarte más rápido, elegí una opción:";
 const SUPPORT_MENU_FOOTER = "O escribí tu consulta directamente.";
+// ⚠️ Mantener sincronizado con CLOSE_PREFIX en wa-support-close: es el
+// marcador con el que reconocemos una conversación cerrada por inactividad.
+const SUPPORT_CLOSE_PREFIX = "Esta conversación se cerró por inactividad";
 // Títulos de botones: máx 20 caracteres (límite de la Cloud API).
 const SUPPORT_MENU_OPTIONS = [
   {
@@ -259,18 +262,23 @@ async function handleSupportBot(account, pnid, value) {
       return;
     }
 
-    // 2) Mensaje común → mandar el menú solo si el negocio no envió nada en
-    //    las últimas 24h en este chat (conversación no activa).
-    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-    const { data: recentMine } = await admin
+    // 2) Mensaje común → mandar el menú solo si la conversación NO está
+    //    activa: o el negocio no envió nada en las últimas 24h, o lo último
+    //    que envió fue el cierre por inactividad (wa-support-close) — en ese
+    //    caso el cliente está "reabriendo" y el menú arranca de nuevo.
+    const { data: lastMineRows } = await admin
       .from("chat_messages")
-      .select("id")
+      .select("content, created_at")
       .eq("chat_id", chat.id)
       .eq("is_mine", true)
       .not("is_internal", "is", true)
-      .gte("created_at", since)
+      .order("created_at", { ascending: false })
       .limit(1);
-    if ((recentMine ?? []).length > 0) return;
+    const lastMine = (lastMineRows ?? [])[0];
+    const sessionClosed = String(lastMine?.content ?? "").startsWith(SUPPORT_CLOSE_PREFIX);
+    const recentlyActive = lastMine &&
+      new Date(lastMine.created_at).getTime() >= Date.now() - 24 * 3600 * 1000;
+    if (recentlyActive && !sessionClosed) return;
 
     const wamid = await sendSupportBotPayload(account.token, pnid, {
       messaging_product: "whatsapp",
