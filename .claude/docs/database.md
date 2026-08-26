@@ -640,6 +640,23 @@ supabase.auth.getUser()
 - Default tenant: `users_tenants.is_default = true`
 - Fallback: first row in `users_tenants` for that user
 
+## RPCs del panel interno (SECURITY DEFINER + `_assert_internal_admin`)
+
+Los listados usan búsqueda+paginación server-side (`p_search/p_limit/p_offset` +
+`total_count`, migración `20260811_internal_lists_search_pagination.sql`):
+`list_all_tenants_admin`, `list_all_users_admin`, `list_paying_clients_admin`,
+`channel_connections_admin`, `list_enterprise_leads_admin`.
+
+**`get_tenant_detail_admin(p_tenant_id)` → jsonb** (2026-08-26, migración
+`20260826_internal_tenant_detail.sql`): detalle completo de un catálogo en un
+round-trip — tenant+config, plan, miembros, historial de `tenant_subscriptions`
+(pagos/renovaciones **manuales**; las renovaciones de Stripe NO están ahí, el
+webhook solo actualiza `tenants.plan_*`), órdenes (totales/30d/por mes últimos
+12), checklist de configuración inicial (mismos criterios que el card "primeros
+pasos" del Inicio), counts (productos/categorías/customers/chats/miembros),
+chats por canal, canales conectados y actividad. Lo consume la vista
+`/tenants/:id` del internal (`tenant-detail.ts`).
+
 ## Defaults & Conventions
 
 | Convention | Value |

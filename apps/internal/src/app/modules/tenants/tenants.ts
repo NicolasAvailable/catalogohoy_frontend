@@ -8,6 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { IconComponent } from '@ui';
 import { cycleLabel, tierLabel } from '../shared/plan-cycle.model';
 import { countryLabel } from '../shared/country.util';
@@ -28,8 +29,8 @@ import { TenantsStore } from './tenants.store';
       <header class="flex flex-col gap-1 shrink-0">
         <h1 class="text-2xl font-bold text-grey-700">Catálogos</h1>
         <p class="text-sm text-grey-400">
-          Todos los catálogos (tenants) registrados. Asigná un plan y la
-          frecuencia de cobro a cada catálogo.
+          Todos los catálogos (tenants) registrados. Hacé click en uno para ver
+          su detalle completo, o asignale un plan directo desde la lista.
         </p>
       </header>
 
@@ -123,7 +124,10 @@ import { TenantsStore } from './tenants.store';
                 </tr>
               } @else {
                 @for (tenant of store.tenants(); track tenant.id) {
-                  <tr class="hover:bg-grey-25 transition-colors">
+                  <tr
+                    class="hover:bg-grey-25 transition-colors cursor-pointer"
+                    (click)="openDetail(tenant)"
+                  >
                     <td class="px-4 py-3 border-b border-grey-50">
                       <div class="flex items-center gap-3">
                         @if (tenant.logo && !brokenLogos().has(tenant.id)) {
@@ -232,7 +236,7 @@ import { TenantsStore } from './tenants.store';
                     <td class="px-4 py-3 text-right border-b border-grey-50">
                       <button
                         type="button"
-                        (click)="openAssignDialog(tenant)"
+                        (click)="$event.stopPropagation(); openAssignDialog(tenant)"
                         [disabled]="store.isMutating()"
                         class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors cursor-pointer text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -295,6 +299,7 @@ import { TenantsStore } from './tenants.store';
 })
 export class Tenants implements OnInit, OnDestroy {
   protected readonly store = inject(TenantsStore);
+  private readonly router = inject(Router);
 
   protected readonly searchTerm = signal('');
   protected readonly brokenLogos = signal<Set<number>>(new Set());
@@ -315,6 +320,10 @@ export class Tenants implements OnInit, OnDestroy {
     this.searchTerm.set(term);
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => this.store.setSearch(term), 300);
+  }
+
+  protected openDetail(tenant: Tenant): void {
+    void this.router.navigate(['/tenants', tenant.id]);
   }
 
   protected openAssignDialog(tenant: Tenant): void {
