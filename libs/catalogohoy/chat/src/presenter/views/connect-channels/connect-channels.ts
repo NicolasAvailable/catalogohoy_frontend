@@ -7,7 +7,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { translate, TranslocoPipe } from '@jsverse/transloco';
 import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl, TenantStore } from '@catalogohoy/tenant';
 import { WhatsAppService, WhatsAppStore } from '@catalogohoy/whatsapp';
@@ -210,7 +210,7 @@ export class ConnectChannelsComponent implements OnInit {
     const identity = this.identityOf(channel) ?? channel.name;
     this.confirmDialog
       .warning({
-        headerLabel: '¿Desvincular ' + channel.name + '?',
+        headerLabel: translate('¿Desvincular {name}?', { name: channel.name }),
         target: identity,
         contentLabel:
           'Se desconectará la cuenta de tu bandeja. Tus chats y datos se conservan, y puedes volver a conectarla cuando quieras.',

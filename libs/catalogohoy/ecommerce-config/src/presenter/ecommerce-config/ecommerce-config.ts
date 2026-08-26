@@ -45,7 +45,8 @@ import { toast as sonnerToast } from 'ngx-sonner';
 // solo, así que este alias traduce antes de mostrar (mismo rol que ToastService).
 const toast = {
   success: (msg: string) => sonnerToast.success(translate(msg)),
-  error: (msg: string) => sonnerToast.error(translate(msg)),
+  error: (msg: string, params?: Record<string, unknown>) =>
+    sonnerToast.error(translate(msg, params)),
   loading: (msg: string) => sonnerToast.loading(translate(msg)),
   dismiss: (id?: string | number) => sonnerToast.dismiss(id),
 };
@@ -1086,7 +1087,9 @@ export class EcommerceConfigComponent implements OnInit {
     );
     result.fold(
       (err) =>
-        toast.error('No se pudo enviar la prueba: ' + (err.message || '')),
+        toast.error('No se pudo enviar la prueba: {error}', {
+          error: err.message || '',
+        }),
       () => toast.success('¡Te enviamos un WhatsApp de prueba a ese número!')
     );
     loading.set(false);
