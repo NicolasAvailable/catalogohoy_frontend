@@ -30,6 +30,24 @@ const CLOSE_PREFIX = "Esta conversación se cerró por inactividad";
 const CLOSE_BODY = CLOSE_PREFIX + " ⏳\n\n" +
   "Si necesitás algo más, escribí «hola» y arrancamos de nuevo. ¡Hasta pronto! 👋";
 
+// Prefijos de TODO lo que envía el bot de triaje (wa-webhook) — ⚠️ mantener
+// sincronizados con SUPPORT_MENU_BODY / SUPPORT_MENU_OPTIONS / flujo VE.
+// Un mensaje is_mine que NO empiece con uno de estos es de un agente HUMANO:
+// esa conversación está siendo atendida y NO se auto-cierra (feedback
+// 2026-08-26: el cierre interrumpía un caso en curso con moto Fox).
+const BOT_MESSAGE_PREFIXES = [
+  CLOSE_PREFIX,
+  "¡Hola! 👋 Escribiste al soporte de CatalogoHoy.",
+  "Contanos tu problema con el mayor detalle posible",
+  "Para pagar o renovar tu plan tenés dos caminos:",
+  "¡Dale! Contanos tu consulta",
+  "¡Excelente elección",
+  "Datos de *Pago móvil*",
+  "Datos de *Transferencia bancaria*",
+];
+const isBotMessage = (content: unknown): boolean =>
+  BOT_MESSAGE_PREFIXES.some((p) => String(content ?? "").startsWith(p));
+
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 function json(body: unknown, status = 200): Response {
@@ -96,13 +114,22 @@ Deno.serve(async (req) => {
     const latest = history[0];
     if (latest.is_mine && String(latest.content ?? "").startsWith(CLOSE_PREFIX)) continue;
 
+    // Solo se cierran sesiones donde el BOT tuvo la última palabra: si el
+    // último mensaje es del cliente, está esperando respuesta nuestra — un
+    // "cerrado por inactividad" ahí sería dejarlo plantado.
+    if (!latest.is_mine) continue;
+
     // El último mensaje del CLIENTE debe estar dentro de la ventana de envío.
     const lastCustomer = history.find((m) => !m.is_mine);
     if (!lastCustomer) continue;
     if (new Date(lastCustomer.created_at).getTime() < now - 20 * 3600 * 1000) continue;
 
-    // Solo cerramos conversaciones donde el negocio participó (bot o agente).
-    if (!history.some((m) => m.is_mine)) continue;
+    // Solo sesiones atendidas ÚNICAMENTE por el bot: si un agente humano
+    // escribió algo en la ventana, la conversación está siendo atendida y el
+    // cierre automático solo molesta.
+    const mineMsgs = history.filter((m) => m.is_mine);
+    if (!mineMsgs.length) continue;
+    if (!mineMsgs.every((m) => isBotMessage(m.content))) continue;
 
     candidates.push({ chatId: chat.id, phone: chat.customer_phone });
   }

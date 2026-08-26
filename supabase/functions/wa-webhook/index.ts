@@ -429,8 +429,11 @@ async function handleSupportBot(account, pnid, value) {
 
     // 3) Mensaje común → mandar el menú solo si la conversación NO está
     //    activa: o el negocio no envió nada en las últimas 24h, o lo último
-    //    que envió fue el cierre por inactividad (wa-support-close) — en ese
-    //    caso el cliente está "reabriendo" y el menú arranca de nuevo.
+    //    que envió fue el cierre por inactividad (wa-support-close). Tras un
+    //    cierre, el menú solo vuelve si el mensaje parece un ARRANQUE (saludo
+    //    corto, como pide el propio aviso de cierre: «escribí hola»); una
+    //    respuesta contextual ("está bien, avisas") sigue de largo al agente
+    //    sin bombardear con el menú de nuevo.
     const { data: lastMineRows } = await admin
       .from("chat_messages")
       .select("content, created_at")
@@ -444,6 +447,12 @@ async function handleSupportBot(account, pnid, value) {
     const recentlyActive = lastMine &&
       new Date(lastMine.created_at).getTime() >= Date.now() - 24 * 3600 * 1000;
     if (recentlyActive && !sessionClosed) return;
+    if (recentlyActive && sessionClosed) {
+      const t = inboundText.trim().toLowerCase();
+      const looksLikeGreeting = t.length <= 25 &&
+        /^(hola|holis|buenas|buenos|buen d[ií]a|hey|hi|hello|saludos|epale)\b/.test(t);
+      if (!looksLikeGreeting) return;
+    }
 
     const wamid = await sendSupportBotPayload(account.token, pnid, {
       messaging_product: "whatsapp",
