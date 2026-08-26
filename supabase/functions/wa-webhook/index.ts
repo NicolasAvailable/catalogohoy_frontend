@@ -147,6 +147,157 @@ async function handleNotifyNumberInbound(value, notifyToken, notifyPnid) {
   }
 }
 
+// ── Bot de triaje del número de SOPORTE ─────────────────────────────────────
+// Cuando un cliente escribe al número de soporte (tenant 6, CRM), se le manda
+// el menú de opciones (botones interactivos) para clasificar la consulta:
+// soporte / pagar-renovar / otra consulta. Al elegir, responde el mensaje
+// canónico de la opción + deja nota interna para el agente. El menú solo se
+// manda si el negocio no envió nada en las últimas 24h en ese chat: no
+// interrumpe conversaciones en curso y actúa de dedupe natural (el propio
+// menú es is_mine y bloquea el siguiente por 24h). Apagar: WA_SUPPORT_BOT=off.
+const SUPPORT_BOT_ENABLED = (Deno.env.get("WA_SUPPORT_BOT") ?? "on") !== "off";
+// phone_number_id del número de soporte +58 422-0240947 (whatsapp_accounts id 4).
+const SUPPORT_BOT_PNID = Deno.env.get("WA_SUPPORT_BOT_PNID") ?? "1011157635415699";
+
+const SUPPORT_MENU_BODY = "¡Hola! 👋 Escribiste al soporte de CatalogoHoy.\n\n" +
+  "Para ayudarte más rápido, elegí una opción:";
+const SUPPORT_MENU_FOOTER = "O escribí tu consulta directamente.";
+// Títulos de botones: máx 20 caracteres (límite de la Cloud API).
+const SUPPORT_MENU_OPTIONS = [
+  {
+    id: "bot_soporte",
+    title: "Tengo un problema",
+    reply: "Contanos tu problema con el mayor detalle posible (si podés, mandá capturas 📸) y el nombre de tu catálogo.\n\n" +
+      "Un agente del equipo te responde a la brevedad 🙌"
+  },
+  {
+    id: "bot_pagos",
+    title: "Pagar o renovar",
+    reply: "Para pagar o renovar tu plan tenés dos caminos:\n\n" +
+      "1️⃣ Con tarjeta: entrá a tu panel de CatalogoHoy → sección *Planes* y elegí tu plan.\n" +
+      "2️⃣ Por transferencia o pago móvil: escribinos acá el nombre de tu catálogo y te pasamos los datos.\n\n" +
+      "Cualquier duda un agente te ayuda en unos minutos 💳"
+  },
+  {
+    id: "bot_otro",
+    title: "Otra consulta",
+    reply: "¡Dale! Contanos tu consulta y en breve te responde alguien del equipo 🙌"
+  }
+];
+
+/** Envía un mensaje del bot por la Cloud API con el token del número de
+ *  soporte. Devuelve el wamid o null (nunca lanza). */
+async function sendSupportBotPayload(token, pnid, payload) {
+  try {
+    const res = await fetch(`https://graph.facebook.com/${API_VERSION}/${pnid}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok) {
+      console.error("[wa-webhook] support-bot send fallo", res.status, JSON.stringify(body)?.slice(0, 300));
+      return null;
+    }
+    return body?.messages?.[0]?.id ?? null;
+  } catch (e) {
+    console.error("[wa-webhook] support-bot send error", e instanceof Error ? e.message : String(e));
+    return null;
+  }
+}
+
+/** Registra un mensaje del bot en el chat (para que el CRM muestre lo que se
+ *  envió) y actualiza el resumen del chat. */
+async function recordSupportBotMessage(chatId, content, wamid) {
+  await admin.from("chat_messages").insert({
+    chat_id: chatId,
+    content,
+    is_mine: true,
+    message_type: "text",
+    wa_message_id: wamid
+  });
+  await admin.from("chats").update({
+    last_message: content,
+    last_message_at: new Date().toISOString(),
+    last_message_is_mine: true
+  }).eq("id", chatId);
+}
+
+/** Corre DESPUÉS de que processCustomerMessages ingirió el mensaje. Nunca
+ *  lanza: un fallo del bot no puede afectar la ingesta del CRM. */
+async function handleSupportBot(account, pnid, value) {
+  try {
+    if (!account.token) return;
+    const first = (value.messages ?? [])[0];
+    const from = first?.from ?? "";
+    if (!from) return;
+
+    const chat = await findOrCreateChat(account.tenantId, from, null);
+    if (!chat) return;
+
+    // 1) ¿Es la respuesta a un botón del menú? → contestar la opción.
+    const btnId = first.interactive?.button_reply?.id ?? "";
+    const option = SUPPORT_MENU_OPTIONS.find((o) => o.id === btnId);
+    if (option) {
+      const wamid = await sendSupportBotPayload(account.token, pnid, {
+        messaging_product: "whatsapp",
+        to: from,
+        type: "text",
+        text: { body: option.reply }
+      });
+      if (wamid) await recordSupportBotMessage(chat.id, option.reply, wamid);
+      await admin.from("chat_messages").insert({
+        chat_id: chat.id,
+        content: `🤖 Triaje: el cliente eligió «${option.title}».`,
+        is_mine: true,
+        is_internal: true,
+        message_type: "text"
+      });
+      return;
+    }
+
+    // 2) Mensaje común → mandar el menú solo si el negocio no envió nada en
+    //    las últimas 24h en este chat (conversación no activa).
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const { data: recentMine } = await admin
+      .from("chat_messages")
+      .select("id")
+      .eq("chat_id", chat.id)
+      .eq("is_mine", true)
+      .not("is_internal", "is", true)
+      .gte("created_at", since)
+      .limit(1);
+    if ((recentMine ?? []).length > 0) return;
+
+    const wamid = await sendSupportBotPayload(account.token, pnid, {
+      messaging_product: "whatsapp",
+      to: from,
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: { text: SUPPORT_MENU_BODY },
+        footer: { text: SUPPORT_MENU_FOOTER },
+        action: {
+          buttons: SUPPORT_MENU_OPTIONS.map((o) => ({
+            type: "reply",
+            reply: { id: o.id, title: o.title }
+          }))
+        }
+      }
+    });
+    if (wamid) {
+      const preview = `${SUPPORT_MENU_BODY}\n\n` +
+        SUPPORT_MENU_OPTIONS.map((o) => `▫️ ${o.title}`).join("\n");
+      await recordSupportBotMessage(chat.id, preview, wamid);
+    }
+  } catch (e) {
+    console.error("[wa-webhook] support-bot fallo", e instanceof Error ? e.message : String(e));
+  }
+}
+
 /** Resolve the tenant + access token for the WhatsApp phone_number_id hit. The
  *  token is needed to download inbound media from Meta. */ async function accountForPhoneNumberId(phoneNumberId) {
   const { data } = await admin.from("whatsapp_accounts").select("tenant_id, access_token").eq("phone_number_id", phoneNumberId).eq("status", "active").maybeSingle();
@@ -475,6 +626,10 @@ async function handleIncoming(body) {
       switch(field){
         case "messages":
           await processCustomerMessages(account, value);
+          // Bot de triaje: solo el número de soporte de la plataforma.
+          if (SUPPORT_BOT_ENABLED && phoneNumberId === SUPPORT_BOT_PNID && (value.messages ?? []).length > 0) {
+            await handleSupportBot(account, phoneNumberId, value);
+          }
           await processStatuses(value);
           break;
         case "smb_message_echoes":
