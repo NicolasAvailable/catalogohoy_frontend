@@ -13,7 +13,8 @@ export class PlatformOrdersService {
       'platform_orders_stats_admin'
     );
     if (error) return E.left(new Error(error.message));
-    return E.right(data as PlatformOrderStats);
+    const stats = data as PlatformOrderStats;
+    return E.right({ ...stats, revenueByCurrency: stats.revenueByCurrency ?? [] });
   }
 
   async listOrders(limit = 200): Promise<Either<Error, PlatformOrder[]>> {
@@ -34,6 +35,7 @@ export class PlatformOrdersService {
         status: (r['status'] as PlatformOrder['status']) ?? 'pending',
         totalUsd: Number(r['total_usd'] ?? 0),
         totalBs: Number(r['total_bs'] ?? 0),
+        currency: (r['currency'] as string) || 'USD',
         itemCount: Number(r['item_count'] ?? 0),
         createdAt: r['created_at'] as string,
       }))

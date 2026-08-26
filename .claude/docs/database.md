@@ -647,6 +647,14 @@ Los listados usan búsqueda+paginación server-side (`p_search/p_limit/p_offset`
 `list_all_tenants_admin`, `list_all_users_admin`, `list_paying_clients_admin`,
 `channel_connections_admin`, `list_enterprise_leads_admin`.
 
+**`platform_orders_stats_admin()` / `list_platform_orders_admin(p_limit)`**
+(fix 2026-08-26, migración `20260826_platform_orders_currency.sql`): ⚠️
+`orders.total_usd` guarda el monto en la **moneda del catálogo** (no siempre
+USD) — nunca sumar cross-tenant. Stats: `revenueUsd` = solo catálogos USD +
+`revenueByCurrency` [{currency, orders, total}]; el listado devuelve
+`currency` por fila (moneda = COALESCE(tcc.display_currency, tec.currency,
+'USD')).
+
 **`get_tenant_detail_admin(p_tenant_id)` → jsonb** (2026-08-26, migración
 `20260826_internal_tenant_detail.sql`): detalle completo de un catálogo en un
 round-trip — tenant+config, plan, miembros, historial de `tenant_subscriptions`
