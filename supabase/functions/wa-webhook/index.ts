@@ -84,9 +84,10 @@ function digits(s) {
 // UNA auto-respuesta (máx 1 cada 24h por teléfono, dedupe en
 // wa_notify_autoreplies) indicando que respondemos desde el número de soporte.
 const SUPPORT_TENANT_ID = 6;
-const NOTIFY_AUTO_REPLY = "🤖 Este número solo envía avisos automáticos de CatalogoHoy. " +
-  "Ya recibimos tu mensaje y te responderemos en breve desde nuestro número " +
-  "de soporte: +58 422-0240947. Guárdalo para próximas consultas 📌";
+const NOTIFY_AUTO_REPLY = "Este número solo envía avisos automáticos de CatalogoHoy.\n\n" +
+  "Para soporte escríbenos directamente aquí:\n" +
+  "https://wa.me/message/XDLRVIGXVUCSB1\n\n" +
+  "Guarda ese contacto para próximas consultas 📌";
 
 async function handleNotifyNumberInbound(value, notifyToken, notifyPnid) {
   try {
