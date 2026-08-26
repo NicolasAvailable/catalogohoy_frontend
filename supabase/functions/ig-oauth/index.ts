@@ -129,9 +129,13 @@ async function handleStart(req: Request): Promise<Response> {
   }
 
   const state = await makeState(tenantId, returnUrl);
+  // OJO: sin `force_reauth=true` — ese parámetro dispara un re-login interno
+  // que emite el code en un contexto de redirect distinto y el intercambio
+  // muere con "Error validating verification code" (y quema el code). La
+  // conexión de julio funcionaba sin él.
   const url =
-    `https://www.instagram.com/oauth/authorize?force_reauth=true` +
-    `&client_id=${IG_APP_ID}` +
+    `https://www.instagram.com/oauth/authorize` +
+    `?client_id=${IG_APP_ID}` +
     `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
     `&response_type=code&scope=${encodeURIComponent(SCOPES)}` +
     `&state=${encodeURIComponent(state)}`;
