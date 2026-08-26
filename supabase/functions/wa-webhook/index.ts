@@ -188,6 +188,105 @@ const SUPPORT_MENU_OPTIONS = [
   }
 ];
 
+// ── Flujo VE: "quiero adquirir el plan X" ───────────────────────────────────
+// Los CTA de la landing ("Hola, me interesa adquirir el plan *X* ($9.99/mes
+// USD)…") y del checkout de la app ("Hola! Quiero adquirir el *Plan X* …
+// - *Total:* $X USD …") llegan al número de soporte. Si el cliente es de
+// Venezuela (+58), en vez del menú de triaje se le ofrecen los métodos de
+// pago locales (pago móvil / transferencia) y al elegir se le mandan los
+// datos + el monto en Bs a la tasa BCV del día (tabla bcv_rates, cron 4h).
+// ⚠️ Datos validados de los chats reales de soporte (2026-08-26).
+const VE_PAGO_MOVIL = {
+  telefono: "0412-4807708",
+  cedula: "30.524.891",
+  banco: "0102 – Banco de Venezuela"
+};
+const VE_TRANSFERENCIA = {
+  banco: "Banco de Venezuela (0102)",
+  cuenta: "0102 0117 9600 0118 3900",
+  titular: "Nicolas Soto",
+  cedula: "V-30.524.891"
+};
+// Precios mensuales por plan (fallback si el CTA no trae monto explícito).
+const PLAN_PRICES_USD = { "Básico": 9.99, "Pro": 19.99, "Avanzado": 29.99 };
+
+/** Detecta la intención "adquirir plan" en un texto y extrae plan + total USD.
+ *  Devuelve null si el texto no es un CTA de adquisición. */
+function detectPlanIntent(text) {
+  const t = String(text ?? "");
+  if (!/\badquirir\b/i.test(t) || !/\bplan\b/i.test(t)) return null;
+  const plan = /b[aá]sico/i.test(t) ? "Básico"
+    : /avanzado/i.test(t) ? "Avanzado"
+    : /\bpro\b/i.test(t) ? "Pro"
+    : /enterprise/i.test(t) ? "Enterprise"
+    : null;
+  // Checkout de la app: "- *Total:* $19.99 USD (= Bs. …)" (incluye período,
+  // catálogos extra y descuentos — es el número correcto si está).
+  const total = t.match(/Total:\*?\s*\$\s*(\d+(?:[.,]\d{1,2})?)/i);
+  // Landing: "el plan *Básico* ($9.99/mes USD)".
+  const price = t.match(/\$\s*(\d+(?:[.,]\d{1,2})?)/);
+  const usd = total ? Number(total[1].replace(",", "."))
+    : price ? Number(price[1].replace(",", "."))
+    : plan ? (PLAN_PRICES_USD[plan] ?? null)
+    : null;
+  return { plan, usd };
+}
+
+/** Última tasa BCV USD→Bs (o null si no hay). */
+async function bcvUsdRate() {
+  const { data } = await admin
+    .from("bcv_rates")
+    .select("usd")
+    .order("fetched_at", { ascending: false })
+    .limit(1);
+  const rate = Number((data ?? [])[0]?.usd);
+  return Number.isFinite(rate) && rate > 0 ? rate : null;
+}
+
+/** 7867.12 → "7.867,12" (formato es-VE, sin depender de ICU). */
+function formatBs(n) {
+  const [ent, dec] = n.toFixed(2).split(".");
+  const miles = ent.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return dec === "00" ? miles : `${miles},${dec}`;
+}
+
+/** Busca el CTA de adquisición más reciente del cliente en el chat (para
+ *  recuperar plan/monto cuando toca un botón de método de pago). */
+async function findPlanIntentInChat(chatId) {
+  const { data } = await admin
+    .from("chat_messages")
+    .select("content, is_mine")
+    .eq("chat_id", chatId)
+    .not("is_internal", "is", true)
+    .order("created_at", { ascending: false })
+    .limit(30);
+  for (const m of data ?? []) {
+    if (m.is_mine) continue;
+    const intent = detectPlanIntent(m.content);
+    if (intent) return intent;
+  }
+  return null;
+}
+
+/** Arma el mensaje con los datos del método elegido + monto en Bs. */
+function vePaymentDetails(kind, intent, rate) {
+  const monto = intent?.usd && rate
+    ? `Monto: *${formatBs(intent.usd * rate)} Bs* (${intent.plan ? `plan ${intent.plan}, ` : ""}$${intent.usd} a tasa BCV del día)`
+    : "El monto exacto en bolívares te lo confirmamos enseguida a tasa BCV del día.";
+  const datos = kind === "bot_pm"
+    ? "Datos de *Pago móvil* 📲\n\n" +
+      `Teléfono: ${VE_PAGO_MOVIL.telefono}\n` +
+      `Cédula: ${VE_PAGO_MOVIL.cedula}\n` +
+      `Banco: ${VE_PAGO_MOVIL.banco}`
+    : "Datos de *Transferencia bancaria* 🏦\n\n" +
+      `Banco: ${VE_TRANSFERENCIA.banco}\n` +
+      `Cuenta: ${VE_TRANSFERENCIA.cuenta}\n` +
+      `Titular: ${VE_TRANSFERENCIA.titular}\n` +
+      `Cédula: ${VE_TRANSFERENCIA.cedula}`;
+  return `${datos}\n\n${monto}\n\n` +
+    "Cuando hagas el pago, envianos el comprobante por acá y activamos tu plan enseguida ✅";
+}
+
 /** Envía un mensaje del bot por la Cloud API con el token del número de
  *  soporte. Devuelve el wamid o null (nunca lanza). */
 async function sendSupportBotPayload(token, pnid, payload) {
@@ -241,8 +340,32 @@ async function handleSupportBot(account, pnid, value) {
     const chat = await findOrCreateChat(account.tenantId, from, null);
     if (!chat) return;
 
-    // 1) ¿Es la respuesta a un botón del menú? → contestar la opción.
+    // 1a) ¿Eligió un método de pago (flujo VE "adquirir plan")? → datos + monto.
     const btnId = first.interactive?.button_reply?.id ?? "";
+    if (btnId === "bot_pm" || btnId === "bot_transf") {
+      const intent = await findPlanIntentInChat(chat.id);
+      const rate = await bcvUsdRate();
+      const details = vePaymentDetails(btnId, intent, rate);
+      const wamid = await sendSupportBotPayload(account.token, pnid, {
+        messaging_product: "whatsapp",
+        to: from,
+        type: "text",
+        text: { body: details }
+      });
+      if (wamid) await recordSupportBotMessage(chat.id, details, wamid);
+      const metodo = btnId === "bot_pm" ? "Pago móvil" : "Transferencia";
+      await admin.from("chat_messages").insert({
+        chat_id: chat.id,
+        content: `🤖 Triaje: quiere adquirir ${intent?.plan ? `el plan ${intent.plan}` : "un plan"}` +
+          `${intent?.usd ? ` ($${intent.usd})` : ""} y eligió ${metodo}. Verificar comprobante y activar.`,
+        is_mine: true,
+        is_internal: true,
+        message_type: "text"
+      });
+      return;
+    }
+
+    // 1b) ¿Es la respuesta a un botón del menú? → contestar la opción.
     const option = SUPPORT_MENU_OPTIONS.find((o) => o.id === btnId);
     if (option) {
       const wamid = await sendSupportBotPayload(account.token, pnid, {
@@ -262,7 +385,49 @@ async function handleSupportBot(account, pnid, value) {
       return;
     }
 
-    // 2) Mensaje común → mandar el menú solo si la conversación NO está
+    // 2) CTA "quiero adquirir el plan X" de un número venezolano (+58) →
+    //    ofrecer métodos de pago locales EN VEZ del menú de triaje. Responde
+    //    siempre (sin guard de 24h): es una intención de compra explícita.
+    const inboundText = describeMessage(first);
+    const intent = from.startsWith("58") ? detectPlanIntent(inboundText) : null;
+    if (intent) {
+      const body = `¡Excelente elección${intent.plan ? `, el plan *${intent.plan}*` : ""}! 🎉\n\n` +
+        "¿Cómo preferís pagar?";
+      const wamid = await sendSupportBotPayload(account.token, pnid, {
+        messaging_product: "whatsapp",
+        to: from,
+        type: "interactive",
+        interactive: {
+          type: "button",
+          body: { text: body },
+          footer: { text: "También podés pagar con tarjeta desde la plataforma." },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "bot_pm", title: "Pago móvil" } },
+              { type: "reply", reply: { id: "bot_transf", title: "Transferencia" } }
+            ]
+          }
+        }
+      });
+      if (wamid) {
+        await recordSupportBotMessage(
+          chat.id,
+          `${body}\n\n▫️ Pago móvil\n▫️ Transferencia`,
+          wamid
+        );
+      }
+      await admin.from("chat_messages").insert({
+        chat_id: chat.id,
+        content: `🤖 Triaje: cliente VE quiere adquirir ${intent.plan ? `el plan ${intent.plan}` : "un plan"}` +
+          `${intent.usd ? ` ($${intent.usd})` : ""}; se le ofrecieron pago móvil / transferencia.`,
+        is_mine: true,
+        is_internal: true,
+        message_type: "text"
+      });
+      return;
+    }
+
+    // 3) Mensaje común → mandar el menú solo si la conversación NO está
     //    activa: o el negocio no envió nada en las últimas 24h, o lo último
     //    que envió fue el cierre por inactividad (wa-support-close) — en ese
     //    caso el cliente está "reabriendo" y el menú arranca de nuevo.
