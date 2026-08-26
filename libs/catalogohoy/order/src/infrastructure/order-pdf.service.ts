@@ -94,14 +94,37 @@ export class OrderPdfService {
     const rate =
       order.totalBs && order.totalUsd > 0 ? order.totalBs / order.totalUsd : 0;
     const soloBs = context?.showReference === false && rate > 0;
+    // Bolívares en formato es-VE: miles con punto, decimales con coma.
+    const fmtBs = (n: number): string => {
+      const [ent, dec] = n.toFixed(2).split('.');
+      return `${ent.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${dec}`;
+    };
     const money = (amount: number): string =>
-      soloBs ? `Bs. ${(amount * rate).toFixed(2)}` : `${cs}${amount.toFixed(2)}`;
+      soloBs ? `Bs. ${fmtBs(amount * rate)}` : `${cs}${amount.toFixed(2)}`;
+    // Catálogo dual (referencia + Bs): cada línea muestra además su
+    // equivalente en bolívares al rate del snapshot de la orden. Solo-Bs ya
+    // renderiza todo en Bs vía money(); el resto de países no muestra Bs.
+    const showBsPerLine = !soloBs && showDualBs && rate > 0;
+    const moneyBs = (amount: number): string => `Bs. ${fmtBs(amount * rate)}`;
 
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const pageW = 210;
+    const pageH = 297;
     const margin = 25;
     const contentW = pageW - margin * 2;
+    const bottom = pageH - margin;
     let y = margin;
+
+    // Salta a una página nueva si lo próximo a dibujar no entra en la actual
+    // (órdenes largas: sin esto todo lo que pasaba de ~272mm se dibujaba
+    // fuera de la hoja y el PDF salía cortado). `onNewPage` permite repetir
+    // encabezados (p.ej. el de la tabla de productos) al continuar.
+    const ensureSpace = (needed: number, onNewPage?: () => void): void => {
+      if (y + needed <= bottom) return;
+      doc.addPage();
+      y = margin;
+      onNewPage?.();
+    };
 
     // ── Try to load logo ──────────────────────────────────────
     let logoData: string | null = null;
@@ -278,22 +301,24 @@ export class OrderPdfService {
     const priceX = margin + contentW - 35;
     const totalX = pageW - margin;
 
-    // Table header
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(...GREY);
-    doc.text('Descripción', descX, y);
-    doc.text('Cant.', qtyX, y);
-    doc.text('P. unitario', priceX, y);
-    doc.text('Monto', totalX, y, { align: 'right' });
-    y += 3;
-
-    doc.line(margin, y, pageW - margin, y);
-    y += 4;
-
-    // Table rows
-    doc.setTextColor(...BLACK);
-    doc.setFontSize(9);
+    // Table header — función porque se repite en cada página en la que la
+    // tabla continúa. Deja el estado de fuente listo para las filas (9pt negro).
+    const drawTableHeader = (): void => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...GREY);
+      doc.text('Descripción', descX, y);
+      doc.text('Cant.', qtyX, y);
+      doc.text('P. unitario', priceX, y);
+      doc.text('Monto', totalX, y, { align: 'right' });
+      y += 3;
+      doc.setDrawColor(...LIGHT);
+      doc.line(margin, y, pageW - margin, y);
+      y += 4;
+      doc.setTextColor(...BLACK);
+      doc.setFontSize(9);
+    };
+    drawTableHeader();
 
     for (let i = 0; i < order.products.length; i++) {
       const item: OrderItem = order.products[i];
@@ -335,9 +360,12 @@ export class OrderPdfService {
       doc.setFontSize(9);
 
       const rowH = Math.max(
-        8 + subLines.length * 4,
+        (showBsPerLine ? 12 : 8) + subLines.length * 4,
         imgData ? imgSize + 2 : 0
       );
+      // Si la fila no entra en lo que queda de página, sigue en una nueva
+      // repitiendo el encabezado de la tabla.
+      ensureSpace(rowH + 4, drawTableHeader);
       // Centra el nombre con la imagen solo si no hay sub-líneas; si las hay,
       // alinea arriba para que el bloque de texto no quede desbalanceado.
       const textY =
@@ -380,6 +408,16 @@ export class OrderPdfService {
         align: 'right',
       });
 
+      // Equivalente en Bs por línea (solo catálogos dual referencia + Bs).
+      if (showBsPerLine) {
+        doc.setFontSize(7);
+        doc.setTextColor(...GREY);
+        doc.text(moneyBs(item.price), priceX, textY + 4);
+        doc.text(moneyBs(item.total), totalX, textY + 4, { align: 'right' });
+        doc.setFontSize(9);
+        doc.setTextColor(...BLACK);
+      }
+
       y += rowH;
 
       // Separator between rows
@@ -389,6 +427,8 @@ export class OrderPdfService {
     }
 
     // ── Totals ────────────────────────────────────────────────
+    // El bloque de totales no se parte: si no entra completo, página nueva.
+    ensureSpace(24);
     const labelX = margin + contentW - 55;
     const valX = totalX;
 
@@ -404,7 +444,7 @@ export class OrderPdfService {
     // en un catálogo solo-Bs el total ya sale en bolívares vía money().
     if (!soloBs && showDualBs && order.totalBs && order.totalBs > 0) {
       doc.text('Total en Bs.', labelX, y);
-      doc.text(`Bs. ${order.totalBs.toFixed(2)}`, valX, y, {
+      doc.text(`Bs. ${fmtBs(order.totalBs)}`, valX, y, {
         align: 'right',
       });
       y += 5;
@@ -419,6 +459,8 @@ export class OrderPdfService {
 
     // ── Comments ──────────────────────────────────────────────
     if (order.comments) {
+      // Que el título "Notas" no quede huérfano al fondo de la página.
+      ensureSpace(20);
       doc.setDrawColor(...LIGHT);
       doc.line(margin, y, pageW - margin, y);
       y += 6;
@@ -433,11 +475,17 @@ export class OrderPdfService {
       doc.setFontSize(9);
       doc.setTextColor(...BLACK);
       const lines = doc.splitTextToSize(order.comments, contentW) as string[];
-      doc.text(lines, margin, y);
-      y += lines.length * 4.5 + 6;
+      for (const line of lines) {
+        ensureSpace(4.5);
+        doc.text(line, margin, y);
+        y += 4.5;
+      }
+      y += 6;
     }
 
     // ── Footer ────────────────────────────────────────────────
+    // Anclado al pie de la ÚLTIMA página (con espacio garantizado).
+    ensureSpace(12);
     y = Math.max(y, 260);
     doc.setDrawColor(...LIGHT);
     doc.line(margin, y, pageW - margin, y);
