@@ -260,22 +260,19 @@ export class Onboarding implements OnInit {
   private lastPreviewMessage: PreviewMessage | null = null;
 
   /** URL del catálogo público dentro del mockup (igual que el editor). Usa el
-   *  slug ACTUAL del tenant (el temporal — el rename está diferido al final),
-   *  que es el host que resuelve mientras se navega el wizard. El cambio de
-   *  paso (onbStep) recarga el iframe, así lo creado en cada paso aparece
-   *  guardado al avanzar.
-   *  ⚠️ Dev: el storefront solo tiene ruta raíz (`path: '**' → ''`), así que
-   *  cualquier `/slug` redirige a `/` y el tenant cae al DEV_TENANT_SLUG. Por
-   *  eso EN LOCAL el preview siempre muestra el catálogo demo, no la tienda que
-   *  se está creando (limitación conocida, no arreglable sin agregar una ruta
-   *  `:slug` al storefront). En PROD cada tienda vive en su subdominio y
-   *  `getTenantSlugFromUrl` lo resuelve por hostname → muestra la tienda real. */
+   *  slug ACTUAL del tenant (el temporal — el rename está diferido al final).
+   *  La URL es CONSTANTE entre pasos: el iframe carga UNA sola vez y no se
+   *  recarga al avanzar (evita el parpadeo/estado roto de recargar el
+   *  storefront en cada paso). El nombre/logo/color se reflejan en vivo por
+   *  postMessage; el primer producto no aparece en el preview hasta recargar,
+   *  pero la estabilidad vale más que ese detalle.
+   *  `preview=true` hace que getTenantSlugFromUrl respete este slug (en dev y
+   *  prod) en vez del host/DEV_TENANT_SLUG → muestra la tienda real. */
   public readonly safeIframeUrl = computed<SafeResourceUrl | ''>(() => {
     const slug = this.slug();
     if (!slug) return '';
     const origin = window.location.origin;
-    const step = this.stepIndex();
-    const url = `${origin}/?slug=${slug}&preview=true&onbStep=${step}`;
+    const url = `${origin}/?slug=${slug}&preview=true`;
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   });
 
