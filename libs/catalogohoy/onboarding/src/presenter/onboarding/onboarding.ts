@@ -186,6 +186,10 @@ export class Onboarding implements OnInit {
   public readonly slugInput = signal('');
   private slugManuallyEdited = false;
   private initialSlug = '';
+  /** Slug deseado (validado en el paso 1). El rename se DIFIERE al final para
+   *  no romper el host/preview: hasta entonces this.slug() sigue siendo el
+   *  temporal y el usuario navega en el subdominio que aún resuelve. */
+  private desiredSlug = '';
 
   // ── Paso 2: primer producto (+ categorías inline) ───────────────────────
   public readonly newCategoryName = signal('');
@@ -251,14 +255,23 @@ export class Onboarding implements OnInit {
   /** Último PREVIEW_UPDATE enviado — se re-manda cuando el iframe (re)carga. */
   private lastPreviewMessage: PreviewMessage | null = null;
 
-  /** URL del catálogo público dentro del mockup (?slug&preview=true, igual que
-   *  el editor). Reacciona al slug actual (sigue funcionando tras el rename del
-   *  paso 1) y al paso — el cambio de query recarga el iframe, así lo creado en
-   *  cada paso (categorías/producto) aparece guardado al avanzar. */
+  /** URL del catálogo público dentro del mockup (igual que el editor). Usa el
+   *  slug ACTUAL del tenant (el temporal — el rename está diferido al final),
+   *  que es el host que resuelve mientras se navega el wizard. El cambio de
+   *  paso (onbStep) recarga el iframe, así lo creado en cada paso aparece
+   *  guardado al avanzar.
+   *  Dev vs prod: en dev el storefront resuelve el slug por el PATH
+   *  (getTenantSlugFromUrl → pathname), así que hay que ir a `/${slug}`; si no,
+   *  `/?slug=X` cae al DEV_TENANT_SLUG e ignora el tenant real. En prod manda
+   *  el hostname (subdominio), el `?slug` es inocuo. */
   public readonly safeIframeUrl = computed<SafeResourceUrl | ''>(() => {
     const slug = this.slug();
     if (!slug) return '';
-    const url = `${window.location.origin}/?slug=${slug}&preview=true&onbStep=${this.stepIndex()}`;
+    const origin = window.location.origin;
+    const step = this.stepIndex();
+    const url = isDevMode()
+      ? `${origin}/${slug}?preview=true&onbStep=${step}`
+      : `${origin}/?slug=${slug}&preview=true&onbStep=${step}`;
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   });
 
@@ -401,38 +414,34 @@ export class Onboarding implements OnInit {
     this.slugInput.set(sanitizeSlug(value));
   }
 
-  /** Paso 1 → renombra tienda/slug si aplica y guarda nombre/logo/color
-   *  (+ WhatsApp si aún no estaba en la config) en un solo update. */
+  /** Paso 1 → guarda nombre/logo/color (+ WhatsApp si faltaba) y RESERVA el
+   *  slug deseado, pero DIFIERE el rename al final: mientras se navega el
+   *  wizard el host sigue siendo el subdominio temporal (el único que resuelve)
+   *  y el preview/navegación no se rompen. */
   public async saveStore(): Promise<void> {
     if (!this.storeStepValid() || this.isSaving()) return;
     this.isSaving.set(true);
 
-    // Dirección editada ⇒ renameTenant (checkSlug adentro: si la dirección
-    // está ocupada muestra el error y no avanza). Sin cambio de slug, no-op.
+    // Dirección editada ⇒ solo VALIDAR disponibilidad (el rename real corre al
+    // completar). checkSlug distingue "ocupado" de "libre"; el UNIQUE de la DB
+    // es la última línea de defensa ante una carrera al hacer el rename final.
     const newSlug = this.finalSlug();
-    if (this.tenantId && newSlug !== this.initialSlug) {
-      const name = this.storeName().trim();
-      const renamed = await this.tenantService.renameTenant(
-        this.tenantId,
-        name,
-        newSlug
-      );
-      if (renamed.isLeft()) {
-        this.toast.error(renamed.value as unknown as Exception);
+    if (newSlug !== this.initialSlug) {
+      const check = await this.tenantService.checkSlug(newSlug);
+      if (check.status === 'valid') {
+        this.toast.error(
+          new Error(
+            'Esa dirección de catálogo ya está ocupada. Prueba con otro nombre.'
+          ) as unknown as Exception
+        );
         this.isSaving.set(false);
         return;
       }
-      // La multi-tenancy lee 'slug' de localStorage (AppComponent lo captura
-      // de los query params): reflejar el rename para las próximas queries.
-      try {
-        localStorage.setItem('slug', newSlug);
-      } catch {
-        /* ignore private-mode */
-      }
-      this.tenantStore.setTenantIdentity(name, newSlug);
-      this.slug.set(newSlug);
-      this.initialSlug = newSlug;
-      this.isTempSlug.set(isTempSlugValue(newSlug));
+      // 'not-found' = libre; 'error' = no se pudo verificar → dejamos pasar y
+      // el rename final (con su propio checkSlug + UNIQUE) decide.
+      this.desiredSlug = newSlug;
+    } else {
+      this.desiredSlug = '';
     }
 
     const partial: Partial<EcommerceConfig> = {
@@ -454,6 +463,40 @@ export class Onboarding implements OnInit {
     if (partial.whatsappButtons) this.hadConfigWhatsapp = true;
     this.isSaving.set(false);
     this.goNext();
+  }
+
+  /** Aplica el rename diferido (slug deseado del paso 1) justo antes de salir
+   *  del wizard. Devuelve false si el slug quedó ocupado en el ínterin: manda
+   *  al usuario de vuelta al paso 1 con el error y NO completa. */
+  private async applyDeferredRename(): Promise<boolean> {
+    const newSlug = this.desiredSlug;
+    if (!this.tenantId || !newSlug || newSlug === this.slug()) return true;
+
+    const name = this.storeName().trim();
+    const renamed = await this.tenantService.renameTenant(
+      this.tenantId,
+      name,
+      newSlug
+    );
+    if (renamed.isLeft()) {
+      this.toast.error(renamed.value as unknown as Exception);
+      this.stepIndex.set(this.stepIds.indexOf('store'));
+      return false;
+    }
+
+    // La multi-tenancy lee 'slug' de localStorage (AppComponent lo captura de
+    // los query params): reflejar el rename para las próximas queries.
+    try {
+      localStorage.setItem('slug', newSlug);
+    } catch {
+      /* ignore private-mode */
+    }
+    this.tenantStore.setTenantIdentity(name, newSlug);
+    this.slug.set(newSlug);
+    this.initialSlug = newSlug;
+    this.isTempSlug.set(isTempSlugValue(newSlug));
+    this.desiredSlug = '';
+    return true;
   }
 
   public onLogoUpload(url: string | string[]): void {
@@ -710,7 +753,8 @@ export class Onboarding implements OnInit {
     );
   }
 
-  /** Paso 3 (final) → guarda entrega + métodos de pago y termina el wizard. */
+  /** Paso 3 (final) → guarda entrega + métodos de pago, aplica el rename
+   *  diferido y termina el wizard. */
   public async finishSetup(): Promise<void> {
     if (this.isSaving()) return;
     this.isSaving.set(true);
@@ -723,8 +767,15 @@ export class Onboarding implements OnInit {
     this.existingShippingMethods = shippingMethods;
 
     const saved = await this.savePaymentMethods();
+    if (!saved) {
+      this.isSaving.set(false);
+      return;
+    }
+    // Rename diferido: si el slug quedó ocupado en el ínterin, vuelve al paso 1
+    // con el error y NO completa.
+    const renamed = await this.applyDeferredRename();
     this.isSaving.set(false);
-    if (!saved) return;
+    if (!renamed) return;
     this.toast.success('¡Tu tienda está lista!');
     this.complete();
   }
@@ -800,9 +851,15 @@ export class Onboarding implements OnInit {
     return false;
   }
 
-  /** "Saltar" del paso final: marca el flag y va al admin SIN guardar
-   *  entrega/pago ni toast — el checklist del Inicio queda de recordatorio. */
-  public skipAll(): void {
+  /** "Saltar" del paso final: aplica el rename diferido (la dirección elegida
+   *  en el paso 1 sí debe quedar) y va al admin SIN guardar entrega/pago ni
+   *  toast — el checklist del Inicio queda de recordatorio. */
+  public async skipAll(): Promise<void> {
+    if (this.isSaving()) return;
+    this.isSaving.set(true);
+    const renamed = await this.applyDeferredRename();
+    this.isSaving.set(false);
+    if (!renamed) return;
     this.complete();
   }
 
