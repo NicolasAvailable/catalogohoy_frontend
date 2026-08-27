@@ -453,116 +453,15 @@
       } }
     </section>
 
-    <!-- ==== PANEL DERECHO: réplica en miniatura del catálogo real ==== -->
+    <!-- ==== PANEL DERECHO: mockup real del editor de catálogo (iframe) ==== -->
     <aside class="onb__preview">
-      <div class="onb__store">
-        <!-- Toolbar real: lupa + filtros + tabs de categorías EN VIVO -->
-        <div class="onb__store-toolbar">
-          <span class="onb__store-tool">
-            <ui-icon name="search" size="14" styleClass="text-grey-500" />
-          </span>
-          <span class="onb__store-tool">
-            <ui-icon
-              name="sliders-horizontal"
-              size="14"
-              styleClass="text-grey-500"
-            />
-          </span>
-          <div class="onb__store-tabs">
-            <span
-              class="onb__store-tab onb__store-tab--active"
-              [style.color]="themeColor()"
-              [style.borderColor]="themeColor()"
-              >{{ 'Ver todos' | transloco }}</span
-            >
-            @for (cat of categories(); track cat.id) {
-            <span class="onb__store-tab">{{ cat.name }}</span>
-            }
-          </div>
-        </div>
-
-        <!-- Portada tintada + logo superpuesto (como el hero real) -->
-        <div class="onb__store-banner" [style.background]="bannerTint()"></div>
-        <div class="onb__store-logo">
-          @if (logoUrl()) {
-          <img [src]="logoUrl()" [alt]="storeName()" />
-          } @else {
-          <ui-icon name="store" size="22" styleClass="text-grey-300" />
-          }
-        </div>
-
-        <h2 class="onb__store-name">
-          {{ storeName() || ('Mi tienda' | transloco) }}
-        </h2>
-        @if (countryLabel()) {
-        <span class="onb__store-country">{{ countryLabel() }}</span>
-        }
-
-        <!-- Grid 2 columnas de cards como las reales; la primera se vuelve
-             real al tipear el producto en el paso 2 -->
-        <div class="onb__store-grid">
-          @if (productName().trim()) {
-          <div class="onb__store-card">
-            <div class="onb__store-card-img">
-              @if (productPhotos().length) {
-              <img [src]="productPhotos()[0]" alt="" />
-              } @else {
-              <ui-icon name="package" size="20" styleClass="text-grey-300" />
-              }
-            </div>
-            <span class="onb__store-card-name">{{ productName() }}</span>
-            <span class="onb__store-card-price"
-              >$ {{ (productPrice() || 0).toFixed(2) }}</span
-            >
-            <span
-              class="onb__store-card-btn"
-              [style.color]="themeColor()"
-              [style.borderColor]="themeColor()"
-              >{{ 'Ver más' | transloco }}</span
-            >
-          </div>
-          } @else {
-          <div class="onb__store-card">
-            <div class="onb__store-card-img"></div>
-            <span class="onb__store-bar"></span>
-            <span class="onb__store-bar onb__store-bar--short"></span>
-            <span class="onb__store-card-btn onb__store-card-btn--ghost">{{
-              'Ver más' | transloco
-            }}</span>
-          </div>
-          }
-          <div class="onb__store-card">
-            <div class="onb__store-card-img"></div>
-            <span class="onb__store-bar"></span>
-            <span class="onb__store-bar onb__store-bar--short"></span>
-            <span class="onb__store-card-btn onb__store-card-btn--ghost">{{
-              'Ver más' | transloco
-            }}</span>
-          </div>
-          <div class="onb__store-card">
-            <div class="onb__store-card-img"></div>
-            <span class="onb__store-bar"></span>
-            <span class="onb__store-bar onb__store-bar--short"></span>
-            <span class="onb__store-card-btn onb__store-card-btn--ghost">{{
-              'Ver más' | transloco
-            }}</span>
-          </div>
-          <div class="onb__store-card">
-            <div class="onb__store-card-img"></div>
-            <span class="onb__store-bar"></span>
-            <span class="onb__store-bar onb__store-bar--short"></span>
-            <span class="onb__store-card-btn onb__store-card-btn--ghost">{{
-              'Ver más' | transloco
-            }}</span>
-          </div>
-        </div>
-
-        <!-- Pill flotante de carrito (como la real) -->
-        <div class="onb__store-cart" [style.background]="themeColor()">
-          <ui-icon name="shopping-cart" size="13" />
-          <span>{{ 'Ver Carrito ({n})' | transloco: { n: 0 } }}</span>
-        </div>
-      </div>
+      @if (safeIframeUrl(); as url) {
+      <lib-phone-mockup
+        #phoneMockup
+        [iframeUrl]="url"
+        (loaded)="onPreviewIframeLoaded()"
+      ></lib-phone-mockup>
+      }
     </aside>
   </div>
 </div>

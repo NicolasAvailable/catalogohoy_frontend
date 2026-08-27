@@ -2,11 +2,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   isDevMode,
   OnInit,
   signal,
+  viewChild,
 } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { authenticationTokenService } from '@catalogohoy/auth';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -29,13 +32,14 @@ import {
   EcommerceConfig,
   EcommerceConfigService,
   EcommerceConfigStore,
+  PhoneMockupComponent,
+  PreviewMessage,
   detectPaymentMethodType,
   PaymentFieldDef,
   paymentMethodFields,
   PaymentMethodEntity,
   ShippingMethod,
   ShippingMethodType,
-  SUPPORTED_COUNTRIES,
   THEME_COLORS,
 } from '@catalogohoy/ecommerce-config';
 import { SupabaseClientProvider } from '@catalogohoy/core';
@@ -122,6 +126,7 @@ const SHIPPING_CARDS: {
     InputPhoneComponent,
     InputTextComponent,
     MultiSelectComponent,
+    PhoneMockupComponent,
     ToggleComponent,
     UploaderComponent,
   ],
@@ -235,19 +240,53 @@ export class Onboarding implements OnInit {
     return slug ? `${slug}.catalogohoy.com` : '';
   });
 
-  /** Franja del preview: degradé suave del color de marca (~15-20% s/ blanco). */
-  public readonly bannerTint = computed(() => {
-    const color = this.themeColor();
-    return `linear-gradient(135deg, color-mix(in srgb, ${color} 22%, white) 0%, color-mix(in srgb, ${color} 12%, white) 100%)`;
+  // ── Preview: mismo mockup (iframe del catálogo real) que Editar Catálogo ──
+  private readonly sanitizer = inject(DomSanitizer);
+  private readonly phoneMockup =
+    viewChild<PhoneMockupComponent>('phoneMockup');
+  /** Último PREVIEW_UPDATE enviado — se re-manda cuando el iframe (re)carga. */
+  private lastPreviewMessage: PreviewMessage | null = null;
+
+  /** URL del catálogo público dentro del mockup (?slug&preview=true, igual que
+   *  el editor). Reacciona al slug actual (sigue funcionando tras el rename del
+   *  paso 1) y al paso — el cambio de query recarga el iframe, así lo creado en
+   *  cada paso (categorías/producto) aparece guardado al avanzar. */
+  public readonly safeIframeUrl = computed<SafeResourceUrl | ''>(() => {
+    const slug = this.slug();
+    if (!slug) return '';
+    const url = `${window.location.origin}/?slug=${slug}&preview=true&onbStep=${this.stepIndex()}`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   });
 
-  /** País en español para la ficha del preview (como la ficha real). */
-  public readonly countryLabel = computed(
-    () =>
-      SUPPORTED_COUNTRIES.find(
-        (c) => c.code === this.countryIso().toUpperCase()
-      )?.label ?? ''
-  );
+  constructor() {
+    // Push en vivo al iframe (mismo canal postMessage del editor de catálogo):
+    // nombre, logo y color se reflejan mientras se tipea. Guard de boot para
+    // no pisar con nulls lo que el iframe cargó del RPC público.
+    effect(() => {
+      if (this.isBooting()) return;
+      if (!this.phoneMockup()) return;
+      const name = this.storeName().trim();
+      const message: PreviewMessage = {
+        type: 'PREVIEW_UPDATE',
+        payload: {
+          ...(name ? { name } : {}),
+          logo: this.logoUrl(),
+          themeColor: this.themeColor(),
+        },
+        source: 'catalogohoy-admin',
+      };
+      this.lastPreviewMessage = message;
+      this.phoneMockup()?.sendPreviewMessage(message);
+    });
+  }
+
+  /** Re-push del último estado al (re)cargar el iframe — igual que el editor:
+   *  el frame nuevo engancha su listener al iniciar; el tick evita la carrera. */
+  public onPreviewIframeLoaded(): void {
+    const msg = this.lastPreviewMessage;
+    if (!msg) return;
+    setTimeout(() => this.phoneMockup()?.sendPreviewMessage(msg), 250);
+  }
 
   async ngOnInit(): Promise<void> {
     const id = await this.tenantStore.getTenantIdAsync();
