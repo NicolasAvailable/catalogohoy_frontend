@@ -524,6 +524,9 @@ export class EcommerceService implements BaseEcommerceService {
     phone: string;
     comments: string;
     email?: string;
+    /** NIT del cliente (identificación tributaria). Solo lo envían los catálogos
+     *  con la feature NIT activa; el resto lo deja undefined. */
+    nit?: string;
     payment_method?: string;
     shipping_method?: {
       name: string;
@@ -553,6 +556,7 @@ export class EcommerceService implements BaseEcommerceService {
           phone: order.phone,
           comments: order.comments,
           email: order.email ?? null,
+          nit: order.nit ?? null,
           payment_method: order.payment_method ?? null,
           shipping_method: order.shipping_method ?? null,
           shipping_address: order.shipping_address ?? null,
@@ -591,7 +595,7 @@ export class EcommerceService implements BaseEcommerceService {
     const { data, error } = await this.client
       .from('orders')
       .select(
-        'id, order_number, status, name, phone, email, products, total_usd, total_bs, shipping_method, shipping_address, shipping_fee, payment_method, comments, created_at'
+        'id, order_number, status, name, phone, email, nit, products, total_usd, total_bs, shipping_method, shipping_address, shipping_fee, payment_method, comments, created_at'
       )
       .eq('id', id)
       .single();
@@ -606,6 +610,7 @@ export class EcommerceService implements BaseEcommerceService {
       name: data.name ?? '',
       phone: data.phone ?? null,
       email: data.email ?? null,
+      nit: data.nit ?? null,
       products: Array.isArray(data.products)
         ? data.products.map((p: any) => ({
             productId: p.productId,

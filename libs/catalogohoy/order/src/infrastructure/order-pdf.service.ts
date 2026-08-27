@@ -256,6 +256,13 @@ export class OrderPdfService {
       y += 5;
     }
 
+    // NIT (identificación tributaria) cuando la orden lo trae — dato fiscal
+    // que el cliente necesita en el recibo para facturar.
+    if (order.nit) {
+      doc.text(`NIT: ${order.nit}`, colR, y);
+      y += 5;
+    }
+
     y += 8;
 
     // ── Amount line ───────────────────────────────────────────

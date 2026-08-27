@@ -79,6 +79,18 @@
       }
     </label>
     }
+
+    @if (nitEnabled()) {
+    <label class="checkout__field">
+      <span class="checkout__label">{{ 'NIT' | transloco }} <span class="checkout__req">*</span></span>
+      <ui-input-text [ngModel]="nit()" (ngModelChange)="nit.set($event)"
+        (inputBlur)="nitTouched.set(true)" [invalid]="!!nitError()"
+        placeholder="Tu NIT" styleClass="w-full"></ui-input-text>
+      @if (nitError(); as err) {
+      <p class="text-xs text-red-500 mt-1">{{ err | transloco }}</p>
+      }
+    </label>
+    }
   </section>
 
   <!-- ===== Artículos ===== -->

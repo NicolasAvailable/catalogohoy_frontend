@@ -2153,5 +2153,7 @@
   "por orden": "par commande",
   "💬 Conectá WhatsApp Business a CatalogoHoy": "💬 Connectez WhatsApp Business à CatalogoHoy",
   "¿Desvincular {name}?": "Dissocier {name} ?",
-  "No se pudo enviar la prueba: {error}": "Impossible d'envoyer le test : {error}"
+  "No se pudo enviar la prueba: {error}": "Impossible d'envoyer le test : {error}",
+  "NIT": "NIT",
+  "El NIT es obligatorio": "Le NIT est obligatoire"
 }

@@ -322,6 +322,7 @@ export const EcommerceStore = signalStore(
       items: any[];
       total: number;
       email?: string;
+      nit?: string;
       payment_method?: string;
       shipping_method?: {
         name: string;
@@ -347,6 +348,7 @@ export const EcommerceStore = signalStore(
         phone: order.phone,
         comments: order.comments,
         email: order.email,
+        nit: order.nit,
         payment_method: order.payment_method,
         shipping_method: order.shipping_method,
         shipping_address: order.shipping_address,

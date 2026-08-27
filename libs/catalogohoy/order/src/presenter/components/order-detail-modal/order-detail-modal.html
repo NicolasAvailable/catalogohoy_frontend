@@ -205,6 +205,12 @@
           <ui-icon name="user" styleClass="size-4 text-grey-300" />
           <span class="font-semibold text-grey-800">{{ order.name }}</span>
         </div>
+        @if (order.nit) {
+        <div class="flex items-center gap-2 text-sm">
+          <ui-icon name="file-text" styleClass="size-4 text-grey-300" />
+          <span class="text-grey-700">{{ 'NIT' | transloco }}: {{ order.nit }}</span>
+        </div>
+        }
         @if (order.phone) {
         <a
           [href]="getWhatsAppLink(order.phone)"

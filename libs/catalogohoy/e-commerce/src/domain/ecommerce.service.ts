@@ -69,6 +69,8 @@ export interface PublicOrder {
   name: string;
   phone: string | null;
   email: string | null;
+  /** NIT del cliente (identificación tributaria). Null si el catálogo no lo pide. */
+  nit: string | null;
   products: {
     productId?: string | number;
     name: string;
@@ -146,6 +148,7 @@ export interface BaseEcommerceService {
     phone: string;
     comments: string;
     email?: string;
+    nit?: string;
     payment_method?: string;
     shipping_method?: {
       name: string;

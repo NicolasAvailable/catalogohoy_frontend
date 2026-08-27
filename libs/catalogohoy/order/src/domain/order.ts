@@ -69,6 +69,9 @@ export interface Order {
   updatedAt: string;
   phone?: string;
   email?: string;
+  /** NIT del cliente (identificación tributaria, Guatemala). Solo lo capturan
+   *  los catálogos con la feature NIT activa; el resto lo deja vacío. */
+  nit?: string;
   comments?: string;
   /** Admin-only proof of payment for a manual sale/order: a free-form note plus
    *  uploaded image URLs (transfer screenshots, etc.). Captured only from the

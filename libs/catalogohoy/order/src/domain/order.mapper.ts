@@ -18,6 +18,7 @@ export class OrderMapper {
       updatedAt: e.updated_at,
       phone: e.phone,
       email: e.email ?? undefined,
+      nit: e.nit ?? undefined,
       comments: e.comments,
       paymentEvidence: OrderMapper.toPaymentEvidence(e.payment_evidence),
       internalNotes: Array.isArray(e.internal_notes) ? e.internal_notes : [],
