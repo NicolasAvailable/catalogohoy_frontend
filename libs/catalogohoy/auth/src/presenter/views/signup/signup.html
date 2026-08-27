@@ -13,8 +13,10 @@
     <!-- Card (desktop only) -->
     <div class="flex flex-col gap-6 lg:gap-7 w-full lg:max-w-md lg:bg-white lg:rounded-3xl lg:p-12">
 
-    <!-- Step indicator (only when method is chosen and not invite mode) -->
-    @if (method() && !isInviteMode()) {
+    <!-- Step indicator (only when method is chosen and not invite mode).
+         El paso 4 (verificación OTP) es un gate condicional posterior, no un
+         paso de datos: sin contador ni barra de progreso. -->
+    @if (method() && !isInviteMode() && step() !== 4) {
       <div class="flex items-center gap-2">
         @for (i of [].constructor(totalSteps()); track $index) {
           <div

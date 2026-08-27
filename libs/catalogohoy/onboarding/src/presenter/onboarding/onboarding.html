@@ -72,11 +72,10 @@
           ></ui-input-text>
         </div>
 
-        <!-- WhatsApp: solo si no vino del signup ni estaba en la config -->
-        @if (!whatsappKnown()) {
+        <!-- WhatsApp de VENTAS: el vendedor del checkout (siempre visible) -->
         <div class="onb__field">
           <span class="onb__label"
-            >{{ 'Tu WhatsApp' | transloco }}
+            >{{ '¿A qué WhatsApp te hacen los pedidos?' | transloco }}
             <span class="onb__req">*</span></span
           >
           <ui-input-phone
@@ -85,10 +84,9 @@
             [defaultCountry]="countryIso()"
           ></ui-input-phone>
           <span class="onb__hint">
-            {{ 'Obligatorio — aquí te llegan las notificaciones de pedidos.' | transloco }}
+            {{ 'Aparece en tu catálogo para que tus clientes te escriban y te compren.' | transloco }}
           </span>
         </div>
-        }
 
         <!-- Dirección: SIEMPRE editable (autogenerada mientras el slug sea
              temporal y no la hayan tocado a mano) -->

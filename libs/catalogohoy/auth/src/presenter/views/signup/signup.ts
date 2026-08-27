@@ -121,8 +121,10 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     if (this.isInviteMode()) return 2;
     // Google viene con el correo ya verificado → sin paso de código.
     if (this.method() === 'google') return 2;
-    // Email: método → credenciales → datos → código.
-    return 4;
+    // Email: método → credenciales → datos. Con email confirmation OFF salta
+    // directo al onboarding (sin paso de código). El OTP (step 4) es un gate
+    // condicional posterior sin numeración, no un paso de datos → 3.
+    return 3;
   });
 
   readonly displayStep = computed(() => {

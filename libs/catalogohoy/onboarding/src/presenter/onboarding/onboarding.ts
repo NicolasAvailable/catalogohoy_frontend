@@ -167,10 +167,11 @@ export class Onboarding implements OnInit {
   private tenantId: string | null = null;
 
   // ── Paso 1: tu tienda ───────────────────────────────────────────────────
+  /** Número de VENTAS: el vendedor del checkout (whatsappButtons) que el
+   *  cliente toca para hacer el pedido. NO es el de notificaciones de la
+   *  plataforma (user_metadata.store_whatsapp), que el onboarding no gestiona. */
   public readonly whatsapp = signal('');
   public readonly countryIso = signal('ve');
-  /** true si el WhatsApp ya se conoce (config o signup): el campo no se pide. */
-  public readonly whatsappKnown = signal(false);
   /** true si la config ya tenía un botón de WhatsApp (no se re-guarda). */
   private hadConfigWhatsapp = false;
   private profileName = '';
@@ -353,28 +354,25 @@ export class Onboarding implements OnInit {
     // temporal, se autogenera desde el nombre hasta que la editen a mano.
     this.slugInput.set(currentSlug);
 
-    // ── WhatsApp ya conocido ⇒ el campo NO se vuelve a pedir ───────────────
-    // Fuentes: (1) config.whatsappButtons ya guardado; (2) el signup nuevo lo
-    // pide y lo deja en user_metadata.store_whatsapp (E.164) — en ese caso se
-    // persiste como botón recién al confirmar el paso 1.
+    // ── WhatsApp de VENTAS (whatsappButtons) — SIEMPRE se muestra/confirma ──
+    // Prefill por conveniencia: (1) el vendedor ya guardado en la config; si no
+    // (2) el store_whatsapp del signup como valor por defecto EDITABLE. Ese
+    // metadata es el número de NOTIFICACIONES de la plataforma; acá solo se usa
+    // como sugerencia para el número de ventas y NO se modifica.
     const configWhatsapp =
       config?.whatsappButtons?.find((b) => b.number?.trim())?.number ?? '';
     this.hadConfigWhatsapp = configWhatsapp.length > 0;
     if (configWhatsapp) {
       this.whatsapp.set(configWhatsapp);
-      this.whatsappKnown.set(true);
     } else {
       try {
         const { data } =
           await SupabaseClientProvider.getInstance().auth.getUser();
         const raw = data.user?.user_metadata?.['store_whatsapp'];
         const signupWhatsapp = typeof raw === 'string' ? raw.trim() : '';
-        if (signupWhatsapp) {
-          this.whatsapp.set(signupWhatsapp);
-          this.whatsappKnown.set(true);
-        }
+        if (signupWhatsapp) this.whatsapp.set(signupWhatsapp);
       } catch {
-        /* sin metadata/sesión: el campo WhatsApp se muestra en el paso 1 */
+        /* sin metadata/sesión: el campo arranca vacío, editable */
       }
     }
 
@@ -449,12 +447,13 @@ export class Onboarding implements OnInit {
       themeColor: this.themeColor(),
       logo: this.logoUrl(),
     };
-    // WhatsApp del vendedor: se guarda con este mismo update cuando vino del
-    // campo del paso 1 o del metadata del signup y la config aún no lo tenía.
+    // WhatsApp de VENTAS (vendedor del checkout): se guarda con este mismo
+    // update cuando la config aún no lo tenía. name = nombre de la tienda o,
+    // en su defecto, el del perfil.
     if (!this.hadConfigWhatsapp && this.whatsapp().trim()) {
       partial.whatsappButtons = [
         {
-          name: this.profileName || 'WhatsApp',
+          name: this.storeName().trim() || this.profileName || 'WhatsApp',
           number: this.whatsapp().trim(),
         },
       ];
