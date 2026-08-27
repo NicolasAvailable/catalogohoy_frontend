@@ -43,7 +43,7 @@ export const comoCobrarPorWhatsapp2026: BlogArticle = {
         ["Bolivia", "QR Simple", "QR interbancario unificado"],
       ],
     },
-    { type: "p", html: "Consejo: guarda los datos de cobro como <strong>respuesta rápida</strong> en WhatsApp Business (ej. atajo \"/pago\") con el titular, número y banco exactos — cero errores de tipeo, cero demoras." },
+    { type: "p", html: "Consejo: guarda los datos de cobro como <strong>respuesta rápida</strong> en WhatsApp Business (ej. atajo \"/pago\") con el titular, número y banco exactos — cero errores de tipeo, cero demoras. Si quieres el detalle de tu mercado, tenemos <a href=\"/blog/por-pais\">guías por país</a> con los métodos y couriers de cada uno." },
     {
       type: "img",
       src: "/blog/cobro-tarjeta.jpg",
@@ -89,7 +89,7 @@ export const comoCobrarPorWhatsapp2026: BlogArticle = {
       caption: "Pedido con total calculado desde el catálogo: tú solo verificas el abono y despachas.",
     },
 
-    { type: "p", html: "La mitad de los problemas de cobro nacen de pedidos confusos: monto hablado, cambios de último minuto, \"yo entendí otra cosa\". Con un catálogo con carrito, el pedido llega con <strong>total calculado</strong> (productos + envío) y el método de pago elegido — tú solo verificas el abono y despachas. Cobrar bien es consecuencia de pedir bien." },
+    { type: "p", html: "La mitad de los problemas de cobro nacen de pedidos confusos: monto hablado, cambios de último minuto, \"yo entendí otra cosa\". Con un catálogo con carrito, el pedido llega con <strong>total calculado</strong> (productos + envío) y el método de pago elegido — tú solo verificas el abono y despachas. Cobrar bien es consecuencia de pedir bien: el sistema completo está en la <a href=\"/blog/ventas-por-whatsapp/como-vender-por-whatsapp-guia-2026\">guía de cómo vender por WhatsApp</a>." },
     {
       type: "cta",
       title: "Pedidos calculados, cobros sin discusión",

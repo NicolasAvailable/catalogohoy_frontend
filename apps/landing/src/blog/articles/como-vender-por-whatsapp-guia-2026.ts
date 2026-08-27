@@ -65,7 +65,7 @@ export const comoVenderPorWhatsapp2026: BlogArticle = {
     { type: "h2", id: "catalogo", text: "Paso 2: crea un catálogo con enlace (y deja de reenviar fotos)" },
     {
       type: "p",
-      html: "Aquí es donde la mayoría de los negocios pierde tiempo y ventas. Mandar fotos sueltas con el precio en el texto funciona con 5 productos; con 50 es un caos: el cliente pregunta precios uno por uno, tú copias y pegas, y el pedido final nunca queda claro. La solución es un <strong>catálogo online con enlace propio</strong> que puedas mandar en un solo mensaje.",
+      html: "Aquí es donde la mayoría de los negocios pierde tiempo y ventas. Mandar fotos sueltas con el precio en el texto funciona con 5 productos; con 50 es un caos: el cliente pregunta precios uno por uno, tú copias y pegas, y el pedido final nunca queda claro. La solución es un <strong>catálogo online con enlace propio</strong> que puedas mandar en un solo mensaje (tenemos la <a href=\"/blog/catalogo-digital/como-crear-un-catalogo-digital-gratis-2026\">guía paso a paso para crearlo gratis</a>).",
     },
     {
       type: "p",
@@ -104,7 +104,7 @@ export const comoVenderPorWhatsapp2026: BlogArticle = {
     },
     {
       type: "p",
-      html: "Para cobrar, ofrece 2 o 3 métodos máximo y tenlos escritos como respuesta rápida: transferencia, pago móvil, efectivo contra entrega o el método local de tu país. Mientras menos fricción para pagar, más rápido se cierra.",
+      html: "Para cobrar, ofrece 2 o 3 métodos máximo y tenlos escritos como respuesta rápida: transferencia, pago móvil, efectivo contra entrega o el método local de tu país — en la <a href=\"/blog/ventas-por-whatsapp/como-cobrar-por-whatsapp-metodos-de-pago-2026\">guía de cómo cobrar por WhatsApp</a> están todos comparados, país por país. Mientras menos fricción para pagar, más rápido se cierra.",
     },
     {
       type: "img",

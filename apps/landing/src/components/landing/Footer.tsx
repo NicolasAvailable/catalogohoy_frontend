@@ -45,6 +45,8 @@ const Footer = () => {
             <Link to="/crear-catalogo-online-gratis" className={linkCls}>Crear catálogo gratis</Link>
             <Link to="/catalogo-para-tiendas-de-ropa" className={linkCls}>Catálogo para tiendas de ropa</Link>
             <Link to="/menu-digital-para-restaurantes" className={linkCls}>Menú digital para restaurantes</Link>
+            <Link to="/blog/ventas-por-whatsapp/como-vender-por-whatsapp-guia-2026" className={linkCls}>Cómo vender por WhatsApp</Link>
+            <Link to="/blog/por-pais" className={linkCls}>Guías por país</Link>
           </nav>
 
           {/* Legal */}

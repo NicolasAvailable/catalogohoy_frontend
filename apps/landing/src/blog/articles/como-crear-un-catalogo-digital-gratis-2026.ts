@@ -31,7 +31,7 @@ export const comoCrearCatalogoDigital2026: BlogArticle = {
     { type: "h2", id: "que-es", text: "Qué es (y qué no es) un catálogo digital" },
     {
       type: "p",
-      html: "Un catálogo digital es una <strong>página web de tus productos con un enlace único</strong> — por ejemplo <em>tunegocio.catalogohoy.com</em> — que se actualiza al instante cuando cambias un precio o agregas stock. No es un PDF (que pesa, no se puede buscar y queda viejo con el primer cambio), ni un álbum de WhatsApp (sin precios ni orden), ni una tienda online compleja que tarda semanas en configurarse.",
+      html: "Un catálogo digital es una <strong>página web de tus productos con un enlace único</strong> — por ejemplo <em>tunegocio.catalogohoy.com</em> — que se actualiza al instante cuando cambias un precio o agregas stock. No es un PDF (que pesa, no se puede buscar y queda viejo con el primer cambio — <a href=\"/blog/catalogo-digital/catalogo-pdf-vs-catalogo-online-2026\">aquí la comparativa completa</a>), ni un álbum de WhatsApp (sin precios ni orden), ni una tienda online compleja que tarda semanas en configurarse.",
     },
     {
       type: "table",
@@ -46,7 +46,7 @@ export const comoCrearCatalogoDigital2026: BlogArticle = {
     { type: "h2", id: "paso-1", text: "Paso 1: crea tu cuenta y tu catálogo (5 minutos)" },
     {
       type: "p",
-      html: "Regístrate gratis en <a href=\"https://catalogohoy.com\">CatalogoHoy</a> — sin tarjeta de crédito. Al crear la cuenta eliges el nombre de tu negocio y tu enlace queda reservado al instante: <em>tunegocio.catalogohoy.com</em>. El plan gratuito incluye hasta 10 productos, ideal para arrancar y probar con clientes reales hoy mismo.",
+      html: "Regístrate gratis en <a href=\"https://catalogohoy.com\">CatalogoHoy</a> — sin tarjeta de crédito. Al crear la cuenta eliges el nombre de tu negocio y tu enlace queda reservado al instante: <em>tunegocio.catalogohoy.com</em>. El plan gratuito incluye hasta 10 productos, ideal para arrancar y probar con clientes reales hoy mismo. Si quieres los métodos de pago y envíos de tu mercado, tenemos <a href=\"/blog/por-pais\">guías por país</a>.",
     },
     { type: "h2", id: "paso-2", text: "Paso 2: sube productos que venden" },
     {

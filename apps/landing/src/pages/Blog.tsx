@@ -83,6 +83,7 @@ const Blog = () => {
       ? category.description
       : "Consejos, guías y recursos para crear tu catálogo digital, vender por WhatsApp y hacer crecer tu negocio en Latinoamérica.",
     path: category ? `/blog/${category.slug}` : "/blog",
+    image: "/blog/og/og-blog-index.jpg",
   });
 
   if (categorySlug && !category) return <NotFound />;

@@ -8,6 +8,8 @@ interface PageMeta {
   description: string;
   /** Ruta canónica de la página, ej. "/precios". */
   path: string;
+  /** Ruta de la og:image propia de la página (en /public), ej. "/blog/og/x.jpg". */
+  image?: string;
   /**
    * Datos estructurados de la página. Definirlo a nivel de módulo (no inline
    * en el render) para que la referencia sea estable entre renders.
@@ -34,7 +36,7 @@ function upsertMeta(attr: "name" | "property", key: string, content: string) {
  * termina indexando). Sin canonical dinámico, todas las rutas se atribuirían
  * a la home.
  */
-export function usePageMeta({ title, description, path, jsonLd }: PageMeta) {
+export function usePageMeta({ title, description, path, image, jsonLd }: PageMeta) {
   useEffect(() => {
     const url = BASE_URL + (path === "/" ? "/" : path);
 
@@ -45,6 +47,10 @@ export function usePageMeta({ title, description, path, jsonLd }: PageMeta) {
     upsertMeta("property", "og:url", url);
     upsertMeta("name", "twitter:title", title);
     upsertMeta("name", "twitter:description", description);
+    if (image) {
+      upsertMeta("property", "og:image", BASE_URL + image);
+      upsertMeta("name", "twitter:image", BASE_URL + image);
+    }
 
     let canonical = document.head.querySelector<HTMLLinkElement>(
       'link[rel="canonical"]'
@@ -68,7 +74,7 @@ export function usePageMeta({ title, description, path, jsonLd }: PageMeta) {
     return () => {
       document.getElementById(JSON_LD_ID)?.remove();
     };
-  }, [title, description, path, jsonLd]);
+  }, [title, description, path, image, jsonLd]);
 
   // Al navegar entre páginas la SPA conserva el scroll (ej. venir desde el
   // footer dejaría la página nueva scrolleada al fondo). Con hash no se toca:

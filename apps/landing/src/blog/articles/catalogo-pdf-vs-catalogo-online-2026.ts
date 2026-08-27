@@ -91,7 +91,7 @@ export const catalogoPdfVsOnline2026: BlogArticle = {
     },
     {
       type: "p",
-      html: "Consejo final: no elimines tu PDF de un día para otro si tus clientes mayoristas lo piden — convive un mes con ambos y verás cómo los pedidos migran solos al enlace, porque pedir ahí es más fácil.",
+      html: "Consejo final: no elimines tu PDF de un día para otro si tus clientes mayoristas lo piden — convive un mes con ambos y verás cómo los pedidos migran solos al enlace, porque pedir ahí es más fácil. Cuando decidas, la <a href=\"/blog/catalogo-digital/como-crear-un-catalogo-digital-gratis-2026\">guía para crear tu catálogo gratis</a> te lleva de cero a publicado en media hora.",
     },
   ],
   faqs: [

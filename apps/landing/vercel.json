@@ -2,6 +2,18 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/blog",
+      "destination": "/blog/index.html"
+    },
+    {
+      "source": "/blog/:category",
+      "destination": "/blog/:category/index.html"
+    },
+    {
+      "source": "/blog/:category/:slug",
+      "destination": "/blog/:category/:slug/index.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

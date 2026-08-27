@@ -144,6 +144,7 @@ const BlogArticlePage = () => {
         "@type": "Article",
         headline: article.title,
         description: article.metaDescription,
+        image: `${BASE_URL}/blog/og/${article.slug}.jpg`,
         datePublished: article.date,
         dateModified: article.date,
         inLanguage: "es",
@@ -177,6 +178,7 @@ const BlogArticlePage = () => {
     title: article?.metaTitle ?? "Artículo no encontrado | CatalogoHoy",
     description: article?.metaDescription ?? "",
     path: article ? `/blog/${article.category}/${article.slug}` : "/blog",
+    image: article ? `/blog/og/${article.slug}.jpg` : undefined,
     jsonLd,
   });
 

@@ -26,7 +26,7 @@ export const comoMejorarLasVentas2026: BlogArticle = {
   blocks: [
     { type: "p", html: "No hay truco secreto: los negocios que venden más hacen bien un puñado de cosas simples, todas las semanas. Aquí están las 10 con mejor relación esfuerzo/resultado para un negocio que vende por WhatsApp y redes en 2026 — empezando por las gratis." },
     { type: "h2", id: "quitar-friccion", text: "1. Quita fricción: que pedir sea ridículamente fácil" },
-    { type: "p", html: "Cada paso extra entre \"me interesa\" y \"lo compro\" te cuesta ventas. Audita tu proceso: ¿el cliente ve el precio sin preguntar? ¿puede armar el pedido solo? ¿sabe cómo pagar y cuánto cuesta el envío antes de decidir? Un <strong>catálogo con enlace, precios visibles y carrito</strong> resuelve las tres de una vez — el pedido llega a tu WhatsApp armado y calculado." },
+    { type: "p", html: "Cada paso extra entre \"me interesa\" y \"lo compro\" te cuesta ventas. Audita tu proceso: ¿el cliente ve el precio sin preguntar? ¿puede armar el pedido solo? ¿sabe cómo pagar y cuánto cuesta el envío antes de decidir? Un <strong>catálogo con enlace, precios visibles y carrito</strong> resuelve las tres de una vez — el pedido llega a tu WhatsApp armado y calculado (aquí la <a href=\"/blog/catalogo-digital/como-crear-un-catalogo-digital-gratis-2026\">guía para crearlo gratis</a>)." },
     {
       type: "img",
       src: "/blog/catalogo-movil.jpg",
@@ -34,7 +34,7 @@ export const comoMejorarLasVentas2026: BlogArticle = {
       caption: "Estrategia #1 en acción: precio visible, carrito y pedido armado — cero fricción para comprar.",
     },
     { type: "h2", id: "responder-rapido", text: "2. Responde en menos de 5 minutos" },
-    { type: "p", html: "El comprador que escribe está caliente <em>ahora</em>. Responder a la hora es venderle al frío. Prepara respuestas rápidas para precio, envío, pagos y disponibilidad, y activa un mensaje de bienvenida con tu catálogo para que nadie quede esperando. Si tienes equipo, usen una bandeja compartida: cero chats huérfanos." },
+    { type: "p", html: "El comprador que escribe está caliente <em>ahora</em>. Responder a la hora es venderle al frío. Prepara respuestas rápidas para precio, envío, pagos y disponibilidad, y activa un mensaje de bienvenida con tu catálogo para que nadie quede esperando. Si tienes equipo, usen una bandeja compartida: cero chats huérfanos. El sistema completo de atención está en la <a href=\"/blog/ventas-por-whatsapp/como-vender-por-whatsapp-guia-2026\">guía de ventas por WhatsApp</a>." },
     { type: "h2", id: "precios-visibles", text: "3. Precios visibles, siempre" },
     { type: "p", html: "El \"precio por interno\" espanta a la mitad de los compradores y te llena el chat de la misma pregunta. El precio visible filtra curiosos, atrae decididos y te posiciona como negocio serio. Si te da miedo la competencia: ellos ya saben tus precios; el único que pierde con el misterio es tu cliente." },
     { type: "h2", id: "fotos", text: "4. Mejora tus fotos (tu vendedor silencioso)" },

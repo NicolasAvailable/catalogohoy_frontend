@@ -324,6 +324,10 @@ const buildCountryArticle = (c: CountryData, idx: number): BlogArticle => ({
       alt: `Negocio atendiendo y cobrando una venta en ${c.name}`,
       caption: "Publica tus métodos de pago en el catálogo y el cierre toma un solo mensaje.",
     },
+    {
+      type: "p",
+      html: `¿Dudas entre billetera, transferencia o contraentrega? Mira la <a href="/blog/ventas-por-whatsapp/como-cobrar-por-whatsapp-metodos-de-pago-2026">guía completa para cobrar por WhatsApp</a>: métodos de toda la región y cómo evitar las estafas más comunes.`,
+    },
     { type: "h2", id: "envios", text: "Envíos y entregas" },
     { type: "p", html: `${c.shipping} En tu catálogo puedes configurar tus zonas y tarifas de envío (o "a consultar" para cotizar por WhatsApp), y el costo se suma solo al pedido.` },
     { type: "h2", id: "despegar", text: "3 jugadas para despegar en tu primera semana" },
@@ -334,6 +338,10 @@ const buildCountryArticle = (c: CountryData, idx: number): BlogArticle => ({
         "<strong>Responde toda pregunta de precio con el enlace</strong> — entrenas a tus clientes a mirar el catálogo primero.",
         "<strong>Publica 2-3 estados por semana</strong> con productos del catálogo y su enlace directo (cada producto tiene el suyo).",
       ],
+    },
+    {
+      type: "p",
+      html: `Cuando lleguen las primeras ventas, sigue con las <a href="/blog/emprender/como-mejorar-las-ventas-de-tu-negocio-2026">10 estrategias para vender más</a> — recompra, combos y urgencia honesta.`,
     },
     {
       type: "cta",
