@@ -245,7 +245,10 @@ export class Onboarding implements OnInit {
 
   /** URL pública del catálogo (hint en vivo bajo el campo de dirección). */
   public readonly storeUrl = computed(() => {
-    const slug = this.finalSlug() || this.slug();
+    // Con slug temporal y sin dirección tipeada aún, no mostramos el slug
+    // aleatorio del trigger: el hint queda oculto hasta que el usuario escriba.
+    const fallback = this.isTempSlug() ? '' : this.slug();
+    const slug = this.finalSlug() || fallback;
     return slug ? `${slug}.catalogohoy.com` : '';
   });
 
@@ -350,9 +353,11 @@ export class Onboarding implements OnInit {
       rawName === currentSlug ||
       /^(mi-)?tienda-[a-z0-9-]+$/.test(rawName.toLowerCase());
     this.storeName.set(seededName ? '' : rawName);
-    // La dirección SIEMPRE es editable: prefill con el slug actual. Si es
-    // temporal, se autogenera desde el nombre hasta que la editen a mano.
-    this.slugInput.set(currentSlug);
+    // Dirección SIEMPRE editable. Si el slug es temporal (mi-tienda-XXXX del
+    // trigger de signup), el input arranca VACÍO con placeholder — el usuario
+    // no ve el slug aleatorio feo; se autogenera desde el nombre al tipear.
+    // Si ya es un slug real, se prefillea para que lo puedan editar.
+    this.slugInput.set(this.isTempSlug() ? '' : currentSlug);
 
     // ── WhatsApp de VENTAS (whatsappButtons) — SIEMPRE se muestra/confirma ──
     // Prefill por conveniencia: (1) el vendedor ya guardado en la config; si no
