@@ -235,7 +235,26 @@ const COUNTRIES: CountryData[] = [
   },
 ];
 
-const buildCountryArticle = (c: CountryData): BlogArticle => ({
+/** Fotos que rotan entre países (portada y cuerpo) para que las guías no se
+ *  vean clonadas. Los mockups del catálogo real van fijos en el paso a paso. */
+const PHOTO_POOL = [
+  "/blog/vendedor-mostrador.jpg",
+  "/blog/tienda-ropa.jpg",
+  "/blog/pago-pos.jpg",
+  "/blog/compras-bolsas.jpg",
+  "/blog/cliente-compras.jpg",
+  "/blog/rack-ropa.jpg",
+  "/blog/emprendedora.jpg",
+  "/blog/tablet-catalogo.jpg",
+  "/blog/tienda-abierta.jpg",
+  "/blog/cobro-tarjeta.jpg",
+  "/blog/equipo-computadora.jpg",
+  "/blog/bolsas-regalo.jpg",
+  "/blog/etiquetas-oferta.jpg",
+  "/blog/equipo-trabajando.jpg",
+];
+
+const buildCountryArticle = (c: CountryData, idx: number): BlogArticle => ({
   slug: `como-crear-un-catalogo-digital-gratis-en-${c.slug}-2026`,
   category: "por-pais",
   title: `Cómo crear un catálogo digital gratis en ${c.name} (2026)`,
@@ -248,6 +267,7 @@ const buildCountryArticle = (c: CountryData): BlogArticle => ({
   coverTitle: `Catálogo digital gratis en ${c.name}`,
   coverAccent: `en ${c.name}`,
   coverTagline: "Guía paso a paso 2026",
+  coverImage: PHOTO_POOL[idx % PHOTO_POOL.length],
   keyPoints: [
     `Un catálogo digital con enlace propio te permite vender por WhatsApp en ${c.name} sin invertir en una tienda online.`,
     `Puedes crearlo gratis hoy: hasta 10 productos con foto, precio en ${c.currency} y pedidos que llegan armados a tu WhatsApp.`,
@@ -278,6 +298,12 @@ const buildCountryArticle = (c: CountryData): BlogArticle => ({
         "<strong>Comparte el enlace</strong> por WhatsApp, estados, la bio de Instagram/TikTok y un QR en tu local.",
       ],
     },
+    {
+      type: "img",
+      src: "/blog/catalogo-movil.jpg",
+      alt: `Catálogo digital abierto en un teléfono, con productos, precios y botón de agregar al carrito`,
+      caption: "Así ven tus clientes un catálogo hecho con CatalogoHoy: productos, precios y pedido en el mismo enlace.",
+    },
     { type: "h2", id: "precios-moneda", text: `Precios en ${c.currency}: hazlo fácil para el cliente` },
     { type: "p", html: c.currencyNote },
     {
@@ -292,6 +318,12 @@ const buildCountryArticle = (c: CountryData): BlogArticle => ({
       html: `Configura tus métodos de pago en el catálogo para que el cliente sepa cómo pagar <em>antes</em> de confirmar el pedido — es la diferencia entre cerrar en un mensaje o en veinte. Los más usados por los negocios ${c.demonym}:`,
     },
     { type: "ul", items: c.payMethods.map(([name, how]) => `<strong>${name}:</strong> ${how}.`) },
+    {
+      type: "img",
+      src: PHOTO_POOL[(idx + 5) % PHOTO_POOL.length],
+      alt: `Negocio atendiendo y cobrando una venta en ${c.name}`,
+      caption: "Publica tus métodos de pago en el catálogo y el cierre toma un solo mensaje.",
+    },
     { type: "h2", id: "envios", text: "Envíos y entregas" },
     { type: "p", html: `${c.shipping} En tu catálogo puedes configurar tus zonas y tarifas de envío (o "a consultar" para cotizar por WhatsApp), y el costo se suma solo al pedido.` },
     { type: "h2", id: "despegar", text: "3 jugadas para despegar en tu primera semana" },
@@ -337,4 +369,6 @@ const buildCountryArticle = (c: CountryData): BlogArticle => ({
   ],
 });
 
-export const COUNTRY_ARTICLES: BlogArticle[] = COUNTRIES.map(buildCountryArticle);
+export const COUNTRY_ARTICLES: BlogArticle[] = COUNTRIES.map((c, i) =>
+  buildCountryArticle(c, i)
+);

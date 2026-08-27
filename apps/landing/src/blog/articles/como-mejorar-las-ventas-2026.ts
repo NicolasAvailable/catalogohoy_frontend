@@ -15,6 +15,7 @@ export const comoMejorarLasVentas2026: BlogArticle = {
   coverTitle: "10 estrategias para vender más",
   coverAccent: "para vender más",
   coverTagline: "Guía práctica 2026",
+  coverImage: "/blog/tienda-ropa.jpg",
   keyPoints: [
     "Vender más casi nunca requiere invertir más: requiere quitar fricción — precio visible, pedido fácil, respuesta rápida.",
     "La respuesta en menos de 5 minutos es la estrategia con mejor retorno de toda la lista.",
@@ -26,6 +27,12 @@ export const comoMejorarLasVentas2026: BlogArticle = {
     { type: "p", html: "No hay truco secreto: los negocios que venden más hacen bien un puñado de cosas simples, todas las semanas. Aquí están las 10 con mejor relación esfuerzo/resultado para un negocio que vende por WhatsApp y redes en 2026 — empezando por las gratis." },
     { type: "h2", id: "quitar-friccion", text: "1. Quita fricción: que pedir sea ridículamente fácil" },
     { type: "p", html: "Cada paso extra entre \"me interesa\" y \"lo compro\" te cuesta ventas. Audita tu proceso: ¿el cliente ve el precio sin preguntar? ¿puede armar el pedido solo? ¿sabe cómo pagar y cuánto cuesta el envío antes de decidir? Un <strong>catálogo con enlace, precios visibles y carrito</strong> resuelve las tres de una vez — el pedido llega a tu WhatsApp armado y calculado." },
+    {
+      type: "img",
+      src: "/blog/catalogo-movil.jpg",
+      alt: "Catálogo digital abierto en un teléfono con productos, precios y botón de agregar",
+      caption: "Estrategia #1 en acción: precio visible, carrito y pedido armado — cero fricción para comprar.",
+    },
     { type: "h2", id: "responder-rapido", text: "2. Responde en menos de 5 minutos" },
     { type: "p", html: "El comprador que escribe está caliente <em>ahora</em>. Responder a la hora es venderle al frío. Prepara respuestas rápidas para precio, envío, pagos y disponibilidad, y activa un mensaje de bienvenida con tu catálogo para que nadie quede esperando. Si tienes equipo, usen una bandeja compartida: cero chats huérfanos." },
     { type: "h2", id: "precios-visibles", text: "3. Precios visibles, siempre" },
@@ -47,6 +54,12 @@ export const comoMejorarLasVentas2026: BlogArticle = {
       title: "Ordena tu negocio y vende más",
       text: "Catálogo con precios visibles, pedidos calculados y registro de clientes para trabajar la recompra. Gratis para empezar.",
       button: "Crear mi catálogo gratis",
+    },
+    {
+      type: "img",
+      src: "/blog/cliente-compras.jpg",
+      alt: "Clienta feliz con sus bolsas de compra",
+      caption: "El cliente que ya te compró es tu venta más barata: trabájalo con mensajes post-venta y novedades.",
     },
     { type: "h2", id: "combos", text: "6. Sube el ticket con combos y \"llévate también\"" },
     { type: "p", html: "Es más fácil que un cliente gaste 20% más a conseguir un cliente 20% más. Arma <strong>combos con pequeño descuento</strong> (2x, kit completo) y ofrece el complemento natural en cada venta: el collar con los aros, la funda con el teléfono, la salsa con las empanadas. En el catálogo, los adicionales por producto hacen este trabajo solos." },

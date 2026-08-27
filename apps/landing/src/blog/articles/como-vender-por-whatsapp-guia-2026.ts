@@ -17,6 +17,7 @@ export const comoVenderPorWhatsapp2026: BlogArticle = {
   coverTitle: "Cómo vender por WhatsApp",
   coverAccent: "por WhatsApp",
   coverTagline: "Guía completa 2026",
+  coverImage: "/blog/vendedor-mostrador.jpg",
   keyPoints: [
     "En Latinoamérica, la mayoría de las ventas de pequeños negocios se cierran por WhatsApp — el canal ya lo tienes; lo que falta es ordenarlo.",
     "WhatsApp Business (la app verde) es gratis y te da perfil de empresa, respuestas rápidas y etiquetas.",
@@ -76,6 +77,12 @@ export const comoVenderPorWhatsapp2026: BlogArticle = {
       text: "Hasta 10 productos gratis, sin tarjeta de crédito. Comparte el enlace por WhatsApp y recibe pedidos ordenados hoy mismo.",
       button: "Crear mi catálogo gratis",
     },
+    {
+      type: "img",
+      src: "/blog/catalogo-movil.jpg",
+      alt: "Catálogo digital abierto en un teléfono con productos, precios y botón de agregar",
+      caption: "En vez de reenviar 40 fotos, mandas un enlace: el cliente ve productos y precios, y arma el pedido solo.",
+    },
     { type: "h2", id: "responder-rapido", text: "Paso 3: responde rápido (aquí se gana o se pierde la venta)" },
     {
       type: "p",
@@ -98,6 +105,12 @@ export const comoVenderPorWhatsapp2026: BlogArticle = {
     {
       type: "p",
       html: "Para cobrar, ofrece 2 o 3 métodos máximo y tenlos escritos como respuesta rápida: transferencia, pago móvil, efectivo contra entrega o el método local de tu país. Mientras menos fricción para pagar, más rápido se cierra.",
+    },
+    {
+      type: "img",
+      src: "/blog/cobro-tarjeta.jpg",
+      alt: "Clienta pagando una venta en el mostrador de un negocio",
+      caption: "El cierre profesional: total calculado, método de pago claro y confirmación en un mensaje.",
     },
     { type: "h2", id: "errores", text: "Los 5 errores que más ventas cuestan" },
     {

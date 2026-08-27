@@ -15,6 +15,7 @@ export const catalogoPdfVsOnline2026: BlogArticle = {
   coverTitle: "PDF vs catálogo online",
   coverAccent: "catálogo online",
   coverTagline: "Comparativa 2026",
+  coverImage: "/blog/rack-ropa.jpg",
   keyPoints: [
     "El PDF sigue siendo popular por costumbre, pero pesa, no se busca y queda desactualizado con el primer cambio de precio.",
     "El catálogo nativo de WhatsApp Business es útil pero limitado: sin variantes, sin categorías navegables y atado a un solo número.",
@@ -71,6 +72,12 @@ export const catalogoPdfVsOnline2026: BlogArticle = {
       title: "Convierte tu PDF en catálogo online en minutos",
       text: "Sube tu Excel o tu mismo PDF: la IA de CatalogoHoy crea los productos con nombre y precio automáticamente.",
       button: "Migrar mi catálogo gratis",
+    },
+    {
+      type: "img",
+      src: "/blog/catalogo-movil.jpg",
+      alt: "Catálogo digital abierto en un teléfono con productos, precios y botón de agregar",
+      caption: "El catálogo online se navega como una tienda: sin descargar nada y siempre con los precios al día.",
     },
     { type: "h2", id: "migrar", text: "Cómo migrar sin rehacer todo a mano" },
     {

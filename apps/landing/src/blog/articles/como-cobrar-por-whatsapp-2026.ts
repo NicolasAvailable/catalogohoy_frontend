@@ -15,6 +15,7 @@ export const comoCobrarPorWhatsapp2026: BlogArticle = {
   coverTitle: "Cómo cobrar por WhatsApp",
   coverAccent: "por WhatsApp",
   coverTagline: "Métodos de pago 2026",
+  coverImage: "/blog/pago-pos.jpg",
   keyPoints: [
     "Ofrece 2-3 métodos máximo: demasiadas opciones confunden y demoran el cierre.",
     "Cada país tiene su método rey — Nequi, Yape, SINPE, Pago Móvil, Mercado Pago, Yappy — úsalo como opción principal.",
@@ -43,6 +44,12 @@ export const comoCobrarPorWhatsapp2026: BlogArticle = {
       ],
     },
     { type: "p", html: "Consejo: guarda los datos de cobro como <strong>respuesta rápida</strong> en WhatsApp Business (ej. atajo \"/pago\") con el titular, número y banco exactos — cero errores de tipeo, cero demoras." },
+    {
+      type: "img",
+      src: "/blog/cobro-tarjeta.jpg",
+      alt: "Cliente pagando con tarjeta en el punto de venta de un negocio",
+      caption: "El método rey de tu país como opción principal + 1-2 alternativas: cierres rápidos y sin dudas.",
+    },
     { type: "h2", id: "transferencias", text: "Transferencias bancarias: para tickets altos" },
     { type: "p", html: "La transferencia tradicional sigue siendo la preferida para montos mayores y ventas al por mayor. Es confiable pero más lenta de verificar entre bancos distintos — deja claro que <strong>despachas al confirmar</strong>, no al recibir la captura." },
     {
@@ -75,6 +82,13 @@ export const comoCobrarPorWhatsapp2026: BlogArticle = {
       ],
     },
     { type: "h2", id: "orden", text: "El cobro empieza en el pedido ordenado" },
+    {
+      type: "img",
+      src: "/blog/catalogo-movil.jpg",
+      alt: "Catálogo digital abierto en un teléfono con productos, precios y botón de agregar",
+      caption: "Pedido con total calculado desde el catálogo: tú solo verificas el abono y despachas.",
+    },
+
     { type: "p", html: "La mitad de los problemas de cobro nacen de pedidos confusos: monto hablado, cambios de último minuto, \"yo entendí otra cosa\". Con un catálogo con carrito, el pedido llega con <strong>total calculado</strong> (productos + envío) y el método de pago elegido — tú solo verificas el abono y despachas. Cobrar bien es consecuencia de pedir bien." },
     {
       type: "cta",

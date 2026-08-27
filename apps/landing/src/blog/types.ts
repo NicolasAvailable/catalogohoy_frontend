@@ -18,7 +18,9 @@ export type ArticleBlock =
   | { type: "table"; headers: string[]; rows: string[][] }
   /** CTA embebido en el cuerpo (además del CTA global del final). */
   | { type: "cta"; title: string; text: string; button: string }
-  | { type: "quote"; text: string };
+  | { type: "quote"; text: string }
+  /** Imagen dentro del cuerpo (ruta en /public) con caption opcional. */
+  | { type: "img"; src: string; alt: string; caption?: string };
 
 export interface BlogFaq {
   q: string;

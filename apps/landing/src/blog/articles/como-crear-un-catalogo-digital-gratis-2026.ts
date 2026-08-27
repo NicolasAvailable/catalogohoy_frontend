@@ -15,6 +15,7 @@ export const comoCrearCatalogoDigital2026: BlogArticle = {
   coverTitle: "Crea tu catálogo digital gratis",
   coverAccent: "gratis",
   coverTagline: "Paso a paso 2026",
+  coverImage: "/blog/tablet-catalogo.jpg",
   keyPoints: [
     "Un catálogo digital es una página con tus productos, precios y un enlace propio — no un PDF ni una carpeta de fotos.",
     "Puedes crearlo gratis en menos de 30 minutos: cuenta, productos con foto y precio, personalización y a compartir.",
@@ -66,6 +67,12 @@ export const comoCrearCatalogoDigital2026: BlogArticle = {
       type: "p",
       html: "¿Ya tienes tus productos en Excel o en un catálogo PDF de tu proveedor? Impórtalos de una vez: CatalogoHoy lee el archivo y crea los productos automáticamente, con la IA leyendo hasta los PDF de listas de precios.",
     },
+    {
+      type: "img",
+      src: "/blog/catalogo-movil.jpg",
+      alt: "Catálogo digital abierto en un teléfono con productos, precios y botón de agregar",
+      caption: "Así queda tu catálogo en el teléfono de tus clientes: fotos, precios y botón de pedido.",
+    },
     { type: "h2", id: "paso-3", text: "Paso 3: organiza por categorías y personaliza" },
     {
       type: "p",
@@ -95,6 +102,12 @@ export const comoCrearCatalogoDigital2026: BlogArticle = {
     {
       type: "p",
       html: "Regla de oro: <strong>cada vez que alguien pregunte un precio, responde con el enlace</strong>. Así entrenas a tus clientes a mirar el catálogo primero — y tú dejas de repetir precios todo el día.",
+    },
+    {
+      type: "img",
+      src: "/blog/catalogo-laptop.jpg",
+      alt: "Catálogo digital con su grilla de productos abierto en una laptop",
+      caption: "El mismo catálogo en pantalla grande: la grilla completa de productos con precios y carrito.",
     },
     { type: "h2", id: "medir", text: "Bonus: mide y mejora cada semana" },
     {

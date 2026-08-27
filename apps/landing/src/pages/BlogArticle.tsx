@@ -108,6 +108,22 @@ const Block = ({ block, campaign }: { block: ArticleBlock; campaign: string }) =
           {block.text}
         </blockquote>
       );
+    case "img":
+      return (
+        <figure className="my-2">
+          <img
+            src={block.src}
+            alt={block.alt}
+            loading="lazy"
+            className="w-full rounded-2xl border border-border"
+          />
+          {block.caption && (
+            <figcaption className="mt-2 text-center text-xs text-muted-foreground">
+              {block.caption}
+            </figcaption>
+          )}
+        </figure>
+      );
     default:
       return null;
   }
