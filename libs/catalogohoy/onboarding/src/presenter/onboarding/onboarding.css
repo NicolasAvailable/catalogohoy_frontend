@@ -1,0 +1,438 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+  background: var(--color-lino-400, #f7f7f5);
+}
+
+.onb {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
+.onb__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: white;
+  border-bottom: 0.0625rem solid var(--color-grey-100, #eee);
+}
+.onb__brand {
+  font-weight: 800;
+  font-size: 1.125rem;
+  color: var(--color-grey-900, #0f172a);
+  letter-spacing: -0.01em;
+}
+.onb__exit {
+  font-size: 0.8125rem;
+  color: var(--color-grey-400, #94a3b8);
+  cursor: pointer;
+}
+.onb__exit:hover {
+  color: var(--color-grey-600, #475569);
+}
+
+/* ── Progreso ────────────────────────────────────────────────────────────── */
+.onb__progress {
+  height: 0.25rem;
+  background: var(--color-grey-100, #eee);
+}
+.onb__progress-fill {
+  height: 100%;
+  background: var(--color-primary-500, #3e7bfa);
+  transition: width 0.3s ease;
+}
+
+/* ── Layout 2 paneles ────────────────────────────────────────────────────── */
+.onb__body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 64rem;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  gap: 2rem;
+  align-items: stretch;
+}
+
+.onb__form {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 0.0625rem solid var(--color-grey-100, #eee);
+  border-radius: 1.25rem;
+  padding: 2rem;
+  min-width: 0;
+}
+.onb__step-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-grey-300, #cbd5e1);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.onb__title {
+  margin-top: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-grey-900, #0f172a);
+  letter-spacing: -0.01em;
+}
+.onb__subtitle {
+  margin-top: 0.375rem;
+  font-size: 0.9375rem;
+  color: var(--color-grey-400, #94a3b8);
+  line-height: 1.4;
+}
+
+.onb__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1.75rem;
+  flex: 1;
+}
+.onb__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.onb__field--logo {
+  align-items: flex-start;
+}
+.onb__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-grey-600, #475569);
+}
+.onb__req {
+  color: var(--color-red-500, #ef4444);
+}
+.onb__hint {
+  font-size: 0.75rem;
+  color: var(--color-grey-400, #94a3b8);
+}
+.onb__inline {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.onb__inline > :first-child {
+  flex: 1;
+}
+
+/* Link read-only */
+.onb__link {
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.625rem;
+  background: var(--color-grey-50, #f8fafc);
+  border: 0.0625rem solid var(--color-grey-100, #eee);
+  font-size: 0.875rem;
+  color: var(--color-grey-500, #64748b);
+}
+
+/* Logo uploader */
+.onb__logo {
+  position: relative;
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 0.0625rem solid var(--color-grey-100, #eee);
+}
+.onb__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.onb__logo--empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  background: var(--color-grey-50, #f8fafc);
+  border: 0.09375rem dashed var(--color-grey-200, #d1d5db);
+  cursor: pointer;
+  font-size: 0.6875rem;
+  color: var(--color-grey-400, #94a3b8);
+}
+.onb__logo--empty:hover {
+  border-color: var(--color-primary-400, #60a5fa);
+}
+.onb__logo-remove {
+  position: absolute;
+  top: 0.125rem;
+  right: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-grey-600, #475569);
+  cursor: pointer;
+}
+
+/* Swatches de color */
+.onb__colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.onb__swatch {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 0.125rem solid transparent;
+  box-shadow: 0 0 0 0.0625rem rgba(0, 0, 0, 0.06) inset;
+}
+.onb__swatch--active {
+  border-color: var(--color-grey-900, #0f172a);
+}
+.onb__swatch--custom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-grey-50, #f8fafc);
+  color: var(--color-grey-400, #94a3b8);
+  border: 0.09375rem dashed var(--color-grey-200, #d1d5db);
+}
+
+/* Chips de categorías */
+.onb__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.onb__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  background: var(--color-primary-50, #eaf1ff);
+  color: var(--color-primary-700, #214da8);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+.onb__empty {
+  font-size: 0.8125rem;
+  color: var(--color-grey-400, #94a3b8);
+}
+
+/* Fotos del producto */
+.onb__photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.onb__photo {
+  position: relative;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 0.625rem;
+  overflow: hidden;
+  border: 0.0625rem solid var(--color-grey-100, #eee);
+}
+.onb__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.onb__photo--add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-grey-50, #f8fafc);
+  border: 0.09375rem dashed var(--color-grey-200, #d1d5db);
+  cursor: pointer;
+}
+.onb__photo--add:hover {
+  border-color: var(--color-primary-400, #60a5fa);
+}
+.onb__photo-remove {
+  position: absolute;
+  top: 0.125rem;
+  right: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-grey-600, #475569);
+  cursor: pointer;
+}
+
+/* Acciones */
+.onb__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.75rem;
+  gap: 0.5rem;
+}
+.onb__actions-end {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ── Preview (panel derecho) ─────────────────────────────────────────────── */
+.onb__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #eef2ff 0%, #f5f3ff 100%);
+  border-radius: 1.25rem;
+  padding: 2rem;
+}
+.onb__phone {
+  position: relative;
+  width: 16rem;
+  background: white;
+  border-radius: 1.75rem;
+  border: 0.5rem solid #111827;
+  box-shadow: 0 1.25rem 3rem rgba(17, 24, 39, 0.18);
+  overflow: hidden;
+}
+.onb__phone-notch {
+  position: absolute;
+  top: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: #111827;
+  z-index: 2;
+}
+.onb__phone-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 30rem;
+  padding-bottom: 3.5rem;
+  position: relative;
+}
+.onb__phone-header {
+  width: 100%;
+  height: 4.5rem;
+  transition: background 0.2s ease;
+}
+.onb__phone-logo {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  margin-top: -2rem;
+  background: white;
+  border: 0.1875rem solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.onb__phone-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.onb__phone-name {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-grey-900, #0f172a);
+  text-align: center;
+  padding: 0 1rem;
+}
+.onb__phone-product {
+  display: flex;
+  gap: 0.625rem;
+  align-items: center;
+  width: calc(100% - 1.5rem);
+  margin-top: 1rem;
+  padding: 0.625rem;
+  border: 0.0625rem solid var(--color-grey-100, #eee);
+  border-radius: 0.75rem;
+}
+.onb__phone-product-img {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  background: var(--color-grey-100, #f1f5f9);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.onb__phone-product-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.onb__phone-product-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.onb__phone-product-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-grey-800, #1e293b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.onb__phone-product-price {
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+.onb__phone-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: calc(100% - 1.5rem);
+  margin-top: 1.25rem;
+}
+.onb__phone-sk-row {
+  height: 2.75rem;
+  border-radius: 0.5rem;
+  background: var(--color-grey-100, #f1f5f9);
+}
+.onb__phone-sk-row--short {
+  width: 60%;
+}
+.onb__phone-cart {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  color: white;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 48rem) {
+  .onb__body {
+    grid-template-columns: 1fr;
+  }
+  .onb__preview {
+    display: none;
+  }
+  .onb__form {
+    padding: 1.5rem;
+  }
+}

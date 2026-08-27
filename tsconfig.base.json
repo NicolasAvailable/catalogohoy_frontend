@@ -27,6 +27,7 @@
       "@catalogohoy/tenant": ["libs/catalogohoy/tenant/src/index.ts"],
       "@catalogohoy/e-commerce": ["libs/catalogohoy/e-commerce/src/index.ts"],
       "@catalogohoy/home": ["libs/catalogohoy/home/src/index.ts"],
+      "@catalogohoy/onboarding": ["libs/catalogohoy/onboarding/src/index.ts"],
       "@catalogohoy/product": ["libs/catalogohoy/product/src/index.ts"],
       "@catalogohoy/category": ["libs/catalogohoy/category/src/index.ts"],
       "@catalogohoy/order": ["libs/catalogohoy/order/src/index.ts"],

@@ -166,12 +166,12 @@
               {{ 'Volver' | transloco }}
             </button>
           }
-          <h2 class="text-2xl font-semibold text-grey-700">{{ 'Datos de tu tienda' | transloco }}</h2>
+          <h2 class="text-2xl font-semibold text-grey-700">{{ 'Creá tu cuenta' | transloco }}</h2>
           <p class="text-sm text-grey-400 mt-1">
             @if (method() === 'google') {
-              {{ 'Conectado con Google. Ahora cuéntanos sobre tu tienda.' | transloco }}
+              {{ 'Conectado con Google. Contanos quién sos.' | transloco }}
             } @else {
-              {{ 'Ya casi terminas. ¿Cómo se llama tu tienda?' | transloco }}
+              {{ 'Solo unos datos y ya casi estás.' | transloco }}
             }
           </p>
         </div>
@@ -183,22 +183,6 @@
             <ui-input-message [control]="profileForm.get('name')" error="required" [text]="'El campo es obligatorio' | transloco" />
             <ui-input-message [control]="profileForm.get('name')" error="minlength" [text]="'Debe tener mínimo 4 caracteres' | transloco" />
             <ui-input-message [control]="profileForm.get('name')" error="whitespace" [text]="'No puede contener espacios en blanco' | transloco" />
-          </div>
-          <div class="mb-4">
-            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'Nombre de la tienda' | transloco }}</label>
-            <ui-input-text size="large" formControlName="storeName" [placeholder]="'Mi Tienda Génova' | transloco" />
-            <ui-input-message [control]="profileForm.get('storeName')" error="required" [text]="'El campo es obligatorio' | transloco" />
-            <ui-input-message [control]="profileForm.get('storeName')" error="minlength" [text]="'Debe tener mínimo 3 caracteres' | transloco" />
-            <!-- URL preview -->
-            @if (slugPreview()) {
-              <p class="text-xs text-grey-400 mt-1.5 break-words leading-relaxed">
-                <svg class="inline w-3.5 h-3.5 mr-1 align-[-0.15em]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
-                </svg>
-                {{ 'Tu catálogo estará en:' | transloco }}
-                <span class="font-medium text-primary-500">{{ slugPreview() }}.catalogohoy.com</span>
-              </p>
-            }
           </div>
           <div class="mb-6">
             <label class="block font-medium text-base text-grey-400 mb-1">{{ 'País' | transloco }}</label>
@@ -227,6 +211,22 @@
             </ui-select>
             <ui-input-message [control]="profileForm.get('country')" error="required" [text]="'Selecciona tu país' | transloco" />
             <p class="text-xs text-grey-400 mt-3">{{ 'La moneda de tu catálogo se configurará automáticamente.' | transloco }}</p>
+          </div>
+
+          <!-- WhatsApp del vendedor (obligatorio). Va debajo del país: al elegir
+               país se mueve el código del número. Mismo componente (ui-input-phone)
+               que el teléfono del cliente en el alta de órdenes. Es el número de
+               notificaciones del catálogo (plan, avisos, etc.); no se le aclara
+               al usuario para qué es. -->
+          <div class="mb-6">
+            <label class="block font-medium text-base text-grey-400 mb-1">
+              {{ 'Tu WhatsApp' | transloco }}
+            </label>
+            <ui-input-phone
+              formControlName="whatsapp"
+              [defaultCountry]="phoneCountryIso()"
+            ></ui-input-phone>
+            <ui-input-message [control]="profileForm.get('whatsapp')" error="required" [text]="'Ingresá tu número de WhatsApp' | transloco" />
           </div>
 
           <!-- Código de referido (opcional). Si llegó desde catalogohoy.com/?ref=XXX
@@ -278,11 +278,70 @@
           <ui-button
             (click)="submit()"
             [disabled]="profileForm.invalid || loaderStore.isEnable()"
-            [label]="'Crear catálogo' | transloco"
+            [label]="(method() === 'google' ? 'Crear mi cuenta' : 'Continuar') | transloco"
             severity="primary"
             styleClass="!py-4 !text-base"
           />
         </form>
+      </div>
+    }
+
+    <!-- ══════════════════════════════════════════════════════
+         STEP 4 — Verificar el correo con código (solo email)
+    ══════════════════════════════════════════════════════ -->
+    @if (step() === 4) {
+      <div class="step-enter flex flex-col gap-6">
+        <div>
+          <h2 class="text-2xl font-semibold text-grey-700">{{ 'Verificá tu correo' | transloco }}</h2>
+          <p class="text-sm text-grey-400 mt-1">
+            {{ 'Te enviamos un código de 6 dígitos a' | transloco }}
+            <span class="font-semibold text-grey-700 break-all">{{ pendingEmail() }}</span>.
+            {{ 'Escribilo acá para activar tu cuenta.' | transloco }}
+          </p>
+        </div>
+
+        <form [formGroup]="otpForm" (keyup.enter)="verifyCode()">
+          <div class="mb-6">
+            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'Código de verificación' | transloco }}</label>
+            <ui-input-text
+              size="large"
+              formControlName="code"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              [placeholder]="'000000' | transloco"
+            />
+            <ui-input-message [control]="otpForm.get('code')" error="required" [text]="'Ingresá el código' | transloco" />
+            <ui-input-message [control]="otpForm.get('code')" error="minlength" [text]="'El código tiene 6 dígitos' | transloco" />
+            @if (otpError()) {
+              <p class="text-xs text-red-500 mt-1">{{ 'El código no es válido o expiró. Revisá el correo o pedí uno nuevo.' | transloco }}</p>
+            }
+          </div>
+
+          <ui-button
+            (click)="verifyCode()"
+            [disabled]="otpForm.invalid || isVerifyingCode()"
+            [label]="(isVerifyingCode() ? 'Verificando...' : 'Verificar y continuar') | transloco"
+            severity="primary"
+            styleClass="!py-4 !text-base"
+          />
+        </form>
+
+        <div class="flex flex-col items-center gap-1 text-sm text-center">
+          <p class="text-grey-400">{{ '¿No te llegó? Revisá spam o promociones.' | transloco }}</p>
+          @if (resendCooldown() > 0) {
+            <span class="text-grey-400">{{ 'Podés reenviar en' | transloco }} {{ resendCooldown() }}s</span>
+          } @else {
+            <button
+              type="button"
+              (click)="resendCode()"
+              [disabled]="isResending()"
+              class="font-semibold text-blue-500 hover:text-blue-600 disabled:opacity-60 cursor-pointer"
+            >
+              {{ (isResending() ? 'Reenviando...' : 'Reenviar código') | transloco }}
+            </button>
+          }
+        </div>
       </div>
     }
 
@@ -306,72 +365,4 @@
     </picture>
   </div>
 </div>
-
-<!-- Pantalla "revisá tu correo": mismo layout de dos paneles que login/signup
-     (logo + mensaje a la izquierda, hero a la derecha). Solo si la confirmación
-     de correo está activa (signUp no devolvió sesión). -->
-@if (confirmEmailSent(); as confirmEmail) {
-<div class="fixed inset-0 z-50 flex justify-center items-center h-screen bg-lino-500 overflow-hidden">
-
-  <!-- ── Mensaje (izquierda) ── -->
-  <div class="relative flex flex-col justify-center gap-6 w-full lg:w-1/2 h-full p-8 sm:p-20 md:p-44 lg:p-10 lg:items-center lg:bg-[#eceefb]">
-
-    <!-- Logo -->
-    <ui-icon
-      name="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg"
-      styleClass="h-14 lg:h-11 rounded-lg"
-      class="flex justify-center sm:justify-start lg:absolute lg:top-8 lg:left-8"
-    />
-
-    <div class="flex flex-col gap-5 w-full lg:max-w-md lg:bg-white lg:rounded-3xl lg:p-12 items-center lg:items-start text-center lg:text-left">
-      <h1 class="text-3xl sm:text-4xl lg:text-[2rem] font-bold text-grey-700 leading-tight">
-        {{ '¡Ya está todo listo!' | transloco }}
-      </h1>
-
-      <p class="text-base text-grey-500 leading-relaxed">
-        {{ 'Solo falta' | transloco }} <strong class="font-semibold text-grey-700">{{ 'verificar tu correo' | transloco }}</strong>. {{ 'Te enviamos un enlace de confirmación a:' | transloco }}
-      </p>
-
-      <p class="text-lg font-bold text-grey-800 break-all">
-        {{ confirmEmail }}
-      </p>
-
-      <p class="text-base text-grey-500 leading-relaxed">
-        {{ 'Revisá tu bandeja y hacé clic en el enlace para empezar.' | transloco }}
-      </p>
-
-      <div class="w-full h-px bg-grey-100"></div>
-
-      <p class="text-sm text-grey-400">
-        {{ '¿No lo ves? Revisá la carpeta de' | transloco }}
-        <span class="font-medium text-grey-500">{{ 'spam' | transloco }}</span> {{ 'o' | transloco }}
-        <span class="font-medium text-grey-500">{{ 'promociones' | transloco }}</span>.
-      </p>
-
-      <div class="w-full flex justify-center lg:justify-end">
-        <ui-button
-          [label]="'Ir a iniciar sesión' | transloco"
-          [fluid]="false"
-          (click)="goToLogin()"
-        />
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Imagen (derecha) ── -->
-  <div class="w-1/2 h-screen hidden lg:block">
-    <picture>
-      <source
-        srcset="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing-hero/hero-2x.avif"
-        type="image/avif"
-      />
-      <img
-        src="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/landing-hero/hero-2x.webp"
-        [alt]="'Empieza a vender hoy con CatalogoHoy' | transloco"
-        class="object-cover w-full h-full"
-      />
-    </picture>
-  </div>
-</div>
-}
 

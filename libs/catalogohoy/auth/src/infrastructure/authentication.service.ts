@@ -193,6 +193,11 @@ export class AuthenticationService implements BaseAuthenticationService {
           store_name: credentials.storeName,
           store_country_code: selectedCountry?.code ?? null,
           store_country: selectedCountry?.label ?? null,
+          // WhatsApp del vendedor (E.164) para notificaciones del catálogo.
+          // Queda en el metadata del usuario; persistirlo a la config de
+          // notificaciones requiere actualizar el trigger `handle_new_user`
+          // (pendiente en DB).
+          store_whatsapp: credentials.whatsapp ?? null,
         },
       },
     });
@@ -218,7 +223,53 @@ export class AuthenticationService implements BaseAuthenticationService {
     const tenant = TenantMapper.toDomain(tenantRows[0]);
     await this.setupTenantLocale(credentials.countryCode);
     await this._tryRegisterReferral(Number(tenant.id), credentials.referralCode);
-    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
+    // Confirmación de correo desactivada (hay sesión al toque): los signups
+    // nuevos también van al wizard de onboarding, no directo al admin.
+    return E.right(
+      await this._authRedirectUrl(tenant.slug, tenant.customDomain, '/onboarding')
+    );
+  }
+
+  /** Verifica el código OTP de 6 dígitos del correo de confirmación (paso 4 del
+   *  signup por email). `verifyOtp` establece la sesión; el tenant ya lo creó
+   *  `handle_new_user` en el signUp. Al confirmar, registramos el referral (que
+   *  no pudo correr en el signup porque no había sesión) y mandamos al usuario
+   *  al **wizard de onboarding**, no directo al admin. */
+  public async verifySignupOtp(input: {
+    email: string;
+    token: string;
+    countryCode?: string;
+    referralCode?: string | null;
+  }): Promise<E.Either<Error, string>> {
+    const { error } = await this.client.auth.verifyOtp({
+      email: input.email,
+      token: input.token.trim(),
+      type: 'signup',
+    });
+    if (error) {
+      return E.left(errorMapper(error as AuthApiError));
+    }
+    const { data: tenantRows, error: tenantError } = await this.client.rpc(
+      'get_my_tenant'
+    );
+    if (tenantError) {
+      return E.left(new Error(tenantError.message));
+    }
+    const tenant = TenantMapper.toDomain(tenantRows[0]);
+    await this.setupTenantLocale(input.countryCode);
+    await this._tryRegisterReferral(Number(tenant.id), input.referralCode);
+    return E.right(
+      await this._authRedirectUrl(tenant.slug, tenant.customDomain, '/onboarding')
+    );
+  }
+
+  /** Reenvía el correo de confirmación (con el código OTP) al mismo email. */
+  public async resendSignupOtp(email: string): Promise<E.Either<Error, void>> {
+    const { error } = await this.client.auth.resend({ type: 'signup', email });
+    if (error) {
+      return E.left(errorMapper(error as AuthApiError));
+    }
+    return E.right(undefined);
   }
 
   /** Best-effort: si el usuario llegó por un link `?ref=` (o tipeó un código
@@ -341,20 +392,25 @@ export class AuthenticationService implements BaseAuthenticationService {
    *  (user_metadata) para que el admin —otro origen— lo sincronice al abrir. */
   private async _authRedirectUrl(
     slug: string,
-    customDomain?: string | null
+    customDomain?: string | null,
+    path = '/admin'
   ): Promise<string> {
     await this.language.flushToProfile();
-    return this._buildRedirectUrl(slug, customDomain);
+    return this._buildRedirectUrl(slug, customDomain, path);
   }
 
-  private _buildRedirectUrl(slug: string, customDomain?: string | null): string {
+  private _buildRedirectUrl(
+    slug: string,
+    customDomain?: string | null,
+    path = '/admin'
+  ): string {
     const key = this.authenticationTokenService.AUTH_CONFIG_KEY;
     const value = encodeURIComponent(this.authenticationTokenService.authConfigValue ?? '');
     if (isDevMode()) {
-      return `http://localhost:4200/admin?${key}=${value}`;
+      return `http://localhost:4200${path}?${key}=${value}`;
     }
     const host = customDomain ?? `${slug}.catalogohoy.com`;
-    return `https://${host}/admin?${key}=${value}`;
+    return `https://${host}${path}?${key}=${value}`;
   }
 
   public async completeGoogleSignup(
@@ -391,6 +447,10 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (tenantRows?.length) {
       const tenant = TenantMapper.toDomain(tenantRows[0]);
       await this._tryRegisterReferral(Number(tenant.id), credentials.referralCode);
+      // Nuevos signups (también Google) van al wizard de onboarding.
+      return E.right(
+        await this._authRedirectUrl(tenant.slug, tenant.customDomain, '/onboarding')
+      );
     }
 
     return this.getLoginRedirectUrl();

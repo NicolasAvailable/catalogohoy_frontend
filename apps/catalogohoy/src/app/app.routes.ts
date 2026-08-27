@@ -24,6 +24,17 @@ export const appRoutes: Route[] = [
       import('./modules/admin/admin.routes').then((m) => m.adminRoutes),
   },
   {
+    // Onboarding wizard (full-screen, sin el layout admin). Mismos guards de
+    // auth + slug + perfil que el admin.
+    path: 'onboarding',
+    canActivate: [isValidSlugGuard, authenticationGuard],
+    resolve: {
+      profile: profileResolver,
+    },
+    loadChildren: () =>
+      import('@catalogohoy/onboarding').then((m) => m.onboardingRoutes),
+  },
+  {
     path: 'catalog-unavailable',
     loadComponent: () =>
       import('@catalogohoy/tenant').then((m) => m.CatalogUnavailableView),

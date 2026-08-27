@@ -13,6 +13,7 @@ import {
   IconComponent,
   InputMessageComponent,
   InputPasswordComponent,
+  InputPhoneComponent,
   InputTextComponent,
   SelectComponent,
   SelectItemDirective,
@@ -22,23 +23,8 @@ import { AuthenticationFacade } from '../../../application';
 import { SignUpCredentials } from '../../../domain';
 import { SIGNUP_CONFIRM_EMAIL } from '../../../infrastructure';
 
-function slugify(text: string): string {
-  const map: Record<string, string> = {
-    á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u',
-    Á: 'A', É: 'E', Í: 'I', Ó: 'O', Ú: 'U',
-    ñ: 'n', Ñ: 'N',
-  };
-  return text
-    .split('')
-    .map((c) => map[c] ?? c)
-    .join('')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
 type Method = 'email' | 'google' | null;
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 @Component({
   selector: 'app-signup',
@@ -48,6 +34,7 @@ type Step = 1 | 2 | 3;
     InputTextComponent,
     InputPasswordComponent,
     InputMessageComponent,
+    InputPhoneComponent,
     ButtonComponent,
     CheckboxComponent,
     IconComponent,
@@ -75,8 +62,9 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   private authSub: (() => void) | null = null;
   private googlePopup: Window | null = null;
   private popupPollId: ReturnType<typeof setInterval> | null = null;
-  private slugSub?: Subscription;
+  private countrySub?: Subscription;
   private inviteToken: string | null = null;
+  private resendIntervalId?: ReturnType<typeof setInterval>;
 
   readonly isInviteMode = signal(false);
   readonly step = signal<Step>(1);
@@ -86,25 +74,42 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   readonly emailExistsError = signal(false);
   readonly googleAccountExistsError = signal(false);
   readonly invitedTenantName = signal<string | null>(null);
-  /** Si la confirmación de correo está activa, guardamos el email para mostrar
-   *  la pantalla "revisá tu correo" en vez de redirigir. */
-  readonly confirmEmailSent = signal<string | null>(null);
+
+  // ── Paso 4: verificación por código (OTP) ──────────────────────────────
+  /** Email al que se mandó el código (se muestra en el paso 4). */
+  readonly pendingEmail = signal<string | null>(null);
+  readonly isVerifyingCode = signal(false);
+  readonly otpError = signal(false);
+  readonly isResending = signal(false);
+  /** Segundos restantes para poder reenviar el código (0 = habilitado). */
+  readonly resendCooldown = signal(0);
 
   readonly credentialsForm = this.fb.group({
     email: ['', [Validators.required, Validators.email, whiteSpacesValidator()]],
     password: ['', [Validators.required, Validators.minLength(6), whiteSpacesValidator()]],
   });
 
+  // Datos personales del vendedor. El nombre de la tienda YA NO se pide acá:
+  // se pide en el wizard de onboarding (que crea/renombra el catálogo). Al
+  // registrarse se crea el tenant con un slug temporal (ver `_tempStoreName`).
   readonly profileForm = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(4), whiteSpacesValidator()]],
-    storeName: ['', [Validators.required, Validators.minLength(3)]],
     country: ['', [Validators.required]],
+    // WhatsApp personal del vendedor — obligatorio: es donde va a recibir los
+    // pedidos de sus clientes. Emite E.164 desde ui-input-phone.
+    whatsapp: ['', [Validators.required]],
     referralCode: [''],
     acceptedTerms: [false, [Validators.requiredTrue]],
   });
 
-  readonly slugPreview = signal('');
+  readonly otpForm = this.fb.group({
+    code: ['', [Validators.required, Validators.minLength(6)]],
+  });
+
   readonly supportedCountries = SUPPORTED_COUNTRIES;
+  /** ISO2 (minúscula) del país elegido — alimenta `defaultCountry` del
+   *  ui-input-phone para que al cambiar el país cambie el código del número. */
+  readonly phoneCountryIso = signal('ve');
 
   /** Flag CDN URL — ISO2 lowercase. Used in country select templates. */
   flagUrl(code: string | null | undefined): string {
@@ -112,9 +117,13 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
   }
 
-  readonly totalSteps = computed(() =>
-    this.method() === 'google' || this.isInviteMode() ? 2 : 3
-  );
+  readonly totalSteps = computed(() => {
+    if (this.isInviteMode()) return 2;
+    // Google viene con el correo ya verificado → sin paso de código.
+    if (this.method() === 'google') return 2;
+    // Email: método → credenciales → datos → código.
+    return 4;
+  });
 
   readonly displayStep = computed(() => {
     const s = this.step();
@@ -130,8 +139,10 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
       console.warn('geo init failed:', err);
     });
 
-    this.slugSub = this.profileForm.controls.storeName.valueChanges.subscribe(
-      (value) => this.slugPreview.set(slugify(value ?? ''))
+    // Al elegir país, movemos el código del número de WhatsApp (hasta que el
+    // usuario tipee y ui-input-phone quede fijado a su país parseado).
+    this.countrySub = this.profileForm.controls.country.valueChanges.subscribe(
+      (iso) => this.phoneCountryIso.set((iso || 've').toLowerCase())
     );
 
     // Pre-llenar el campo de código de referido con la cookie `chy_ref`
@@ -149,8 +160,10 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
 
     if (skipStore && this.inviteToken) {
       this.isInviteMode.set(true);
-      this.profileForm.controls.storeName.clearValidators();
-      this.profileForm.controls.storeName.updateValueAndValidity();
+      // El invitado se suma a la tienda de quien lo invitó: no crea catálogo,
+      // así que no le pedimos WhatsApp de vendedor.
+      this.profileForm.controls.whatsapp.clearValidators();
+      this.profileForm.controls.whatsapp.updateValueAndValidity();
       this.method.set('email');
       this.step.set(2);
 
@@ -251,7 +264,8 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.clearGooglePolling();
-    this.slugSub?.unsubscribe();
+    this.countrySub?.unsubscribe();
+    if (this.resendIntervalId) clearInterval(this.resendIntervalId);
   }
 
   async nextStep() {
@@ -317,13 +331,17 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
     }
     if (this.loaderStore.isEnable()) return;
 
-    const { name, storeName, country, referralCode } = this.profileForm.value as {
+    const { name, country, whatsapp, referralCode } = this.profileForm.value as {
       name: string;
-      storeName: string;
       country: string;
+      whatsapp?: string;
       referralCode?: string | null;
     };
     const normalizedRef = (referralCode ?? '').trim() || null;
+    const normalizedWhatsapp = (whatsapp ?? '').trim() || undefined;
+    // Nombre de tienda temporal: el trigger `handle_new_user` crea el tenant +
+    // slug a partir de esto. El nombre real y su slug los setea el onboarding.
+    const storeName = this._tempStoreName();
 
     if (this.isInviteMode() && this.inviteToken) {
       const { email, password } = this.credentialsForm.getRawValue() as {
@@ -352,12 +370,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
         countryCode: country,
         referralCode: normalizedRef,
       });
-      result.mapRight(async (url) => {
-        this.metaPixel.trackEvent('CompleteRegistration', { content_name: storeName });
-        this._clearReferralCookie();
-        await this._recordTermsAcceptance();
-        window.location.href = url;
-      });
+      result.mapRight((url) => this._finishRegistration(url));
     } else {
       const { email, password } = this.credentialsForm.value as {
         email: string;
@@ -369,21 +382,90 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
         storeName,
         password,
         countryCode: country,
+        whatsapp: normalizedWhatsapp,
         referralCode: normalizedRef,
       } as SignUpCredentials);
       result.mapRight(async (url) => {
-        this.metaPixel.trackEvent('CompleteRegistration', { content_name: storeName });
-        this._clearReferralCookie();
-        // Confirmación de correo activa: sin sesión todavía. Mostramos la
-        // pantalla de "revisá tu correo" en vez de redirigir.
+        // Confirmación de correo activa (lo normal): sin sesión todavía → vamos
+        // al paso 4 a verificar el código de 6 dígitos que llegó por email.
         if (url === SIGNUP_CONFIRM_EMAIL) {
-          this.confirmEmailSent.set(email);
+          this.pendingEmail.set(email);
+          this.step.set(4);
+          this._startResendCooldown();
           return;
         }
-        await this._recordTermsAcceptance();
-        window.location.href = url;
+        // Confirmación desactivada: ya hay sesión → derecho al onboarding.
+        await this._finishRegistration(url);
       });
     }
+  }
+
+  /** Paso 4: verifica el código OTP del correo. Al confirmar, la sesión queda
+   *  lista y redirige al wizard de onboarding. */
+  async verifyCode() {
+    if (this.otpForm.invalid) {
+      this.otpForm.markAllAsTouched();
+      return;
+    }
+    const email = this.pendingEmail();
+    if (!email || this.isVerifyingCode()) return;
+
+    this.otpError.set(false);
+    this.isVerifyingCode.set(true);
+
+    const { country, referralCode } = this.profileForm.value as {
+      country: string;
+      referralCode?: string | null;
+    };
+    const result = await this.facade.verifySignupOtp({
+      email,
+      token: (this.otpForm.controls.code.value ?? '').trim(),
+      countryCode: country,
+      referralCode: (referralCode ?? '').trim() || null,
+    });
+    this.isVerifyingCode.set(false);
+    result.mapLeft(() => this.otpError.set(true));
+    result.mapRight((url) => this._finishRegistration(url));
+  }
+
+  /** Reenvía el correo con el código (respeta el cooldown de 60s). */
+  async resendCode() {
+    const email = this.pendingEmail();
+    if (!email || this.resendCooldown() > 0 || this.isResending()) return;
+    this.isResending.set(true);
+    this.otpError.set(false);
+    await this.facade.resendSignupOtp(email);
+    this.isResending.set(false);
+    this._startResendCooldown();
+  }
+
+  /** Cierre común del registro: pixel + limpiar cookie ref + registrar la
+   *  aceptación de términos y redirigir (al onboarding). */
+  private async _finishRegistration(url: string): Promise<void> {
+    this.metaPixel.trackEvent('CompleteRegistration');
+    this._clearReferralCookie();
+    await this._recordTermsAcceptance();
+    window.location.href = url;
+  }
+
+  private _startResendCooldown(seconds = 60): void {
+    if (this.resendIntervalId) clearInterval(this.resendIntervalId);
+    this.resendCooldown.set(seconds);
+    this.resendIntervalId = setInterval(() => {
+      const next = this.resendCooldown() - 1;
+      this.resendCooldown.set(next);
+      if (next <= 0 && this.resendIntervalId) {
+        clearInterval(this.resendIntervalId);
+        this.resendIntervalId = undefined;
+      }
+    }, 1000);
+  }
+
+  /** Nombre de tienda temporal (aleatorio para no colisionar el slug). El
+   *  wizard de onboarding lo reemplaza por el nombre real + regenera el slug. */
+  private _tempStoreName(): string {
+    const rand = Math.random().toString(36).slice(2, 8);
+    return `mi-tienda-${rand}`;
   }
 
   /** Best-effort: registra la fecha + versión de aceptación de Términos +
