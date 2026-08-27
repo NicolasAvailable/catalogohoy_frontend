@@ -2,12 +2,9 @@
 <div class="onb onb--boot">{{ 'Cargando...' | transloco }}</div>
 } @if (!isRedirecting() && !isBooting()) {
 <div class="onb">
-  <!-- ===== Top bar ===== -->
+  <!-- ===== Top bar (solo la marca; saltar vive en cada paso) ===== -->
   <header class="onb__topbar">
     <span class="onb__brand">CatalogoHoy</span>
-    <button type="button" class="onb__exit" (click)="skipAll()">
-      {{ 'Saltar por ahora' | transloco }}
-    </button>
   </header>
 
   <!-- ===== Progreso ===== -->
@@ -93,8 +90,8 @@
         </div>
         }
 
-        <!-- Dirección: editable con slug temporal, solo lectura si ya es real -->
-        @if (isTempSlug()) {
+        <!-- Dirección: SIEMPRE editable (autogenerada mientras el slug sea
+             temporal y no la hayan tocado a mano) -->
         <div class="onb__field">
           <span class="onb__label"
             >{{ 'Dirección de la tienda' | transloco }}
@@ -116,12 +113,6 @@
           </span>
           }
         </div>
-        } @else if (storeUrl()) {
-        <div class="onb__field">
-          <span class="onb__label">{{ 'Link de tu catálogo' | transloco }}</span>
-          <div class="onb__link">{{ storeUrl() }}</div>
-        </div>
-        }
 
         <!-- Color de marca -->
         <div class="onb__field">
@@ -288,8 +279,8 @@
         />
         <div class="onb__actions-end">
           <ui-button
-            [label]="'Omitir' | transloco"
-            variant="outlined"
+            [label]="'Saltar' | transloco"
+            variant="text"
             [fluid]="false"
             (click)="skipProduct()"
           />
@@ -441,14 +432,23 @@
           [fluid]="false"
           (click)="back()"
         />
-        <ui-button
-          [label]="'Finalizar' | transloco"
-          icon="check"
-          [fluid]="false"
-          [disabled]="isSaving()"
-          [isLoading]="isSaving()"
-          (click)="finishSetup()"
-        />
+        <div class="onb__actions-end">
+          <ui-button
+            [label]="'Saltar' | transloco"
+            variant="text"
+            [fluid]="false"
+            [disabled]="isSaving()"
+            (click)="skipAll()"
+          />
+          <ui-button
+            [label]="'Finalizar' | transloco"
+            icon="check"
+            [fluid]="false"
+            [disabled]="isSaving()"
+            [isLoading]="isSaving()"
+            (click)="finishSetup()"
+          />
+        </div>
       </div>
       } }
     </section>

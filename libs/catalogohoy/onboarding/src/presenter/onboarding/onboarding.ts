@@ -59,10 +59,14 @@ const STEP_IDS: StepId[] = ['store', 'product', 'setup'];
 export const onboardingDoneKey = (tenantId: string | number) =>
   `chy_onboarding_done_${tenantId}`;
 
-/** Prefijo del slug temporal que crea el trigger de signup (handle_new_user)
- *  cuando el registro no pidió nombre de tienda. El paso "Tu tienda" lo
- *  reemplaza por la dirección definitiva. */
-const TEMP_SLUG_PREFIX = 'tienda-';
+/** Prefijos de slug temporal que crea el trigger de signup (handle_new_user):
+ *  'tienda-XXXXXX' o 'mi-tienda-XXXXXX' según el seed. Mientras el slug sea
+ *  temporal, la dirección se autogenera desde el nombre; en el wizard el campo
+ *  es SIEMPRE editable sea cual sea el slug. */
+const TEMP_SLUG_PREFIXES = ['tienda-', 'mi-tienda-'];
+
+const isTempSlugValue = (slug: string): boolean =>
+  TEMP_SLUG_PREFIXES.some((p) => slug.startsWith(p));
 
 /** Draft de una card de entrega (paso Entrega y pago). */
 interface ShippingDraft {
@@ -175,12 +179,12 @@ export class Onboarding implements OnInit {
   public readonly logoUrl = signal<string | null>(null);
   public readonly themeColor = signal('#10b981');
   public readonly slug = signal('');
-  /** true si el tenant todavía tiene el slug temporal `tienda-XXXXXX`. */
+  /** true si el tenant todavía tiene un slug temporal (tienda-* / mi-tienda-*):
+   *  mientras lo sea, la dirección sigue al nombre al tipear. */
   public readonly isTempSlug = signal(false);
-  /** Dirección editable (solo con slug temporal). */
+  /** Dirección editable (siempre visible en el wizard). */
   public readonly slugInput = signal('');
   private slugManuallyEdited = false;
-  private initialStoreName = '';
   private initialSlug = '';
 
   // ── Paso 2: primer producto (+ categorías inline) ───────────────────────
@@ -227,16 +231,16 @@ export class Onboarding implements OnInit {
     () =>
       this.storeName().trim().length > 0 &&
       this.whatsapp().trim().length > 0 &&
-      (!this.isTempSlug() || this.finalSlug().length > 0)
+      this.finalSlug().length > 0
   );
   public readonly productValid = computed(
     () =>
       this.productName().trim().length > 0 && (this.productPrice() ?? 0) > 0
   );
 
-  /** URL pública del catálogo (para mostrar el link en el preview). */
+  /** URL pública del catálogo (hint en vivo bajo el campo de dirección). */
   public readonly storeUrl = computed(() => {
-    const slug = this.isTempSlug() ? this.finalSlug() : this.slug();
+    const slug = this.finalSlug() || this.slug();
     return slug ? `${slug}.catalogohoy.com` : '';
   });
 
@@ -320,20 +324,21 @@ export class Onboarding implements OnInit {
 
     const currentSlug = this.tenantStore.tenant().tenantSlug ?? '';
     this.slug.set(currentSlug);
-    this.isTempSlug.set(currentSlug.startsWith(TEMP_SLUG_PREFIX));
+    this.isTempSlug.set(isTempSlugValue(currentSlug));
     this.initialSlug = currentSlug;
-    this.initialStoreName = config?.name ?? '';
 
-    // Nombre: NO prefillear el sembrado por el trigger de signup ("Mi tienda"
-    // o el propio slug temporal tipo "mi-tienda-mmr0ps"): input vacío con
-    // placeholder y el preview cae al fallback 'Mi tienda'.
+    // Nombre: NO prefillear el sembrado por el trigger de signup ("Mi tienda",
+    // el propio slug o un nombre con pinta de slug temporal tipo
+    // "mi-tienda-mmr0ps"): input vacío con placeholder.
     const rawName = (config?.name ?? '').trim();
     const seededName =
-      rawName.toLowerCase() === 'mi tienda' || rawName === currentSlug;
+      rawName.toLowerCase() === 'mi tienda' ||
+      rawName === currentSlug ||
+      /^(mi-)?tienda-[a-z0-9-]+$/.test(rawName.toLowerCase());
     this.storeName.set(seededName ? '' : rawName);
-    if (this.isTempSlug()) {
-      this.slugInput.set(seededName ? '' : toSlug(rawName));
-    }
+    // La dirección SIEMPRE es editable: prefill con el slug actual. Si es
+    // temporal, se autogenera desde el nombre hasta que la editen a mano.
+    this.slugInput.set(currentSlug);
 
     // ── WhatsApp ya conocido ⇒ el campo NO se vuelve a pedir ───────────────
     // Fuentes: (1) config.whatsappButtons ya guardado; (2) el signup nuevo lo
@@ -402,36 +407,32 @@ export class Onboarding implements OnInit {
     if (!this.storeStepValid() || this.isSaving()) return;
     this.isSaving.set(true);
 
-    if (this.isTempSlug() && this.tenantId) {
+    // Dirección editada ⇒ renameTenant (checkSlug adentro: si la dirección
+    // está ocupada muestra el error y no avanza). Sin cambio de slug, no-op.
+    const newSlug = this.finalSlug();
+    if (this.tenantId && newSlug !== this.initialSlug) {
       const name = this.storeName().trim();
-      const newSlug = this.finalSlug();
-      const changed =
-        name !== this.initialStoreName || newSlug !== this.initialSlug;
-
-      if (changed) {
-        const renamed = await this.tenantService.renameTenant(
-          this.tenantId,
-          name,
-          newSlug
-        );
-        if (renamed.isLeft()) {
-          this.toast.error(renamed.value as unknown as Exception);
-          this.isSaving.set(false);
-          return;
-        }
-        // La multi-tenancy lee 'slug' de localStorage (AppComponent lo captura
-        // de los query params): reflejar el rename para las próximas queries.
-        try {
-          localStorage.setItem('slug', newSlug);
-        } catch {
-          /* ignore private-mode */
-        }
-        this.tenantStore.setTenantIdentity(name, newSlug);
-        this.slug.set(newSlug);
-        this.initialSlug = newSlug;
-        this.initialStoreName = name;
-        this.isTempSlug.set(newSlug.startsWith(TEMP_SLUG_PREFIX));
+      const renamed = await this.tenantService.renameTenant(
+        this.tenantId,
+        name,
+        newSlug
+      );
+      if (renamed.isLeft()) {
+        this.toast.error(renamed.value as unknown as Exception);
+        this.isSaving.set(false);
+        return;
       }
+      // La multi-tenancy lee 'slug' de localStorage (AppComponent lo captura
+      // de los query params): reflejar el rename para las próximas queries.
+      try {
+        localStorage.setItem('slug', newSlug);
+      } catch {
+        /* ignore private-mode */
+      }
+      this.tenantStore.setTenantIdentity(name, newSlug);
+      this.slug.set(newSlug);
+      this.initialSlug = newSlug;
+      this.isTempSlug.set(isTempSlugValue(newSlug));
     }
 
     const partial: Partial<EcommerceConfig> = {
@@ -799,7 +800,8 @@ export class Onboarding implements OnInit {
     return false;
   }
 
-  /** "Saltar por ahora" (top bar): marca el flag y va directo al admin. */
+  /** "Saltar" del paso final: marca el flag y va al admin SIN guardar
+   *  entrega/pago ni toast — el checklist del Inicio queda de recordatorio. */
   public skipAll(): void {
     this.complete();
   }

@@ -25,14 +25,6 @@
   color: var(--color-grey-900, #0f172a);
   letter-spacing: -0.01em;
 }
-.onb__exit {
-  font-size: 0.8125rem;
-  color: var(--color-grey-400, #94a3b8);
-  cursor: pointer;
-}
-.onb__exit:hover {
-  color: var(--color-grey-600, #475569);
-}
 
 /* ── Progreso ────────────────────────────────────────────────────────────── */
 .onb__progress {
@@ -122,16 +114,6 @@
 }
 .onb__inline > :first-child {
   flex: 1;
-}
-
-/* Link read-only */
-.onb__link {
-  padding: 0.625rem 0.75rem;
-  border-radius: 0.625rem;
-  background: var(--color-grey-50, #f8fafc);
-  border: 0.0625rem solid var(--color-grey-100, #eee);
-  font-size: 0.875rem;
-  color: var(--color-grey-500, #64748b);
 }
 
 /* Dirección con prefijo fijo (catalogohoy.com/ + slug) */
