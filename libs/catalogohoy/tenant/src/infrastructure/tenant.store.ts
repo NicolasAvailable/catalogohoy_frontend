@@ -213,6 +213,15 @@ export const TenantStore = signalStore(
         patchState(store, initialState);
       },
 
+      /** Refleja un rename hecho en DB (onboarding: nombre + slug definitivo)
+       *  sin recargar todo el tenant. La tenantList se refresca sola en la
+       *  próxima carga del perfil. */
+      setTenantIdentity(name: string, slug: string): void {
+        patchState(store, {
+          tenant: { ...store.tenant(), tenantName: name, tenantSlug: slug },
+        });
+      },
+
       // Métodos síncronos (solo usar si estás seguro que ya está cargado)
       getTenantId(): number | null {
         return store.tenant().tenantId;

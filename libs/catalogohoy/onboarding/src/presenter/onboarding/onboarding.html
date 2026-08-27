@@ -1,9 +1,12 @@
+@if (!isRedirecting() && isBooting()) {
+<div class="onb onb--boot">{{ 'Cargando...' | transloco }}</div>
+} @if (!isRedirecting() && !isBooting()) {
 <div class="onb">
   <!-- ===== Top bar ===== -->
   <header class="onb__topbar">
     <span class="onb__brand">CatalogoHoy</span>
-    <button type="button" class="onb__exit" (click)="skipProduct()">
-      {{ 'Completar más tarde' | transloco }}
+    <button type="button" class="onb__exit" (click)="skipAll()">
+      {{ 'Saltar por ahora' | transloco }}
     </button>
   </header>
 
@@ -121,7 +124,7 @@
           >
           <ui-input-text
             [ngModel]="storeName()"
-            (ngModelChange)="storeName.set($event)"
+            (ngModelChange)="onStoreNameChange($event)"
             [placeholder]="'Ej: Mi Tienda' | transloco"
             styleClass="w-full"
           ></ui-input-text>
@@ -159,8 +162,26 @@
           </div>
         </div>
 
-        <!-- Link (solo lectura en v1) -->
-        @if (storeUrl()) {
+        <!-- Dirección: editable con slug temporal, solo lectura si ya es real -->
+        @if (isTempSlug()) {
+        <div class="onb__field">
+          <span class="onb__label"
+            >{{ 'Dirección de tu catálogo' | transloco }}
+            <span class="onb__req">*</span></span
+          >
+          <ui-input-text
+            [ngModel]="slugInput()"
+            (ngModelChange)="onSlugInputChange($event)"
+            [placeholder]="'mi-tienda' | transloco"
+            styleClass="w-full"
+          ></ui-input-text>
+          @if (storeUrl()) {
+          <span class="onb__hint">
+            {{ 'Tu catálogo estará en {url}' | transloco: { url: storeUrl() } }}
+          </span>
+          }
+        </div>
+        } @else if (storeUrl()) {
         <div class="onb__field">
           <span class="onb__label">{{ 'Link de tu catálogo' | transloco }}</span>
           <div class="onb__link">{{ storeUrl() }}</div>
@@ -355,14 +376,172 @@
             (click)="skipProduct()"
           />
           <ui-button
-            [label]="'Finalizar' | transloco"
-            icon="check"
+            [label]="'Continuar' | transloco"
+            icon="arrow-right"
+            iconPos="right"
             [fluid]="false"
             [disabled]="!step4Valid() || isSaving()"
             [isLoading]="isSaving()"
-            (click)="finish()"
+            (click)="nextFromStep4()"
           />
         </div>
+      </div>
+      }
+
+      <!-- ============ PASO 5: Entrega ============ -->
+      @case (5) {
+      <h1 class="onb__title">{{ '¿Cómo entregas tus pedidos?' | transloco }}</h1>
+      <p class="onb__subtitle">
+        {{ 'Activa las opciones de entrega que ofreces. Las puedes cambiar cuando quieras.' | transloco }}
+      </p>
+
+      <div class="onb__fields">
+        @for (draft of shippingDrafts(); track draft.type) {
+        <div class="onb__option" [class.onb__option--active]="draft.active">
+          <button
+            type="button"
+            class="onb__option-head"
+            (click)="toggleShipping(draft.type)"
+          >
+            <span
+              class="onb__option-check"
+              [class.onb__option-check--on]="draft.active"
+            >
+              @if (draft.active) {
+              <ui-icon name="check" size="12" />
+              }
+            </span>
+            <ui-icon
+              [name]="draft.icon"
+              size="18"
+              styleClass="text-grey-400"
+            />
+            <span class="onb__option-info">
+              <span class="onb__option-title">{{ draft.label | transloco }}</span>
+              <span class="onb__option-hint">{{ draft.hint | transloco }}</span>
+            </span>
+          </button>
+
+          @if (draft.active) {
+          <div class="onb__option-body">
+            <div class="onb__field">
+              <span class="onb__label">{{ 'Costo' | transloco }}</span>
+              <ui-input-number
+                [ngModel]="draft.fee"
+                (ngModelChange)="setShippingFee(draft.type, $event)"
+                [disabled]="draft.priceOnRequest"
+                mode="decimal"
+                [min]="0"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="2"
+                [showButtons]="false"
+                prefix="$ "
+                placeholder="0.00"
+              ></ui-input-number>
+              <span class="onb__hint">{{ '0 = gratis' | transloco }}</span>
+            </div>
+
+            @if (draft.type !== 'pickup') {
+            <div class="onb__switch">
+              <ui-toggle
+                [ngModel]="draft.priceOnRequest"
+                (ngModelChange)="setShippingOnRequest(draft.type, $event)"
+              ></ui-toggle>
+              <span>{{ 'Precio a consultar' | transloco }}</span>
+            </div>
+            }
+          </div>
+          }
+        </div>
+        }
+      </div>
+
+      <div class="onb__actions">
+        <ui-button
+          [label]="'Atrás' | transloco"
+          variant="text"
+          [fluid]="false"
+          (click)="back()"
+        />
+        <ui-button
+          [label]="'Continuar' | transloco"
+          icon="arrow-right"
+          iconPos="right"
+          [fluid]="false"
+          [disabled]="isSaving()"
+          [isLoading]="isSaving()"
+          (click)="nextFromStep5()"
+        />
+      </div>
+      }
+
+      <!-- ============ PASO 6: Pago ============ -->
+      @case (6) {
+      <h1 class="onb__title">{{ '¿Cómo te pagan tus clientes?' | transloco }}</h1>
+      <p class="onb__subtitle">
+        {{ 'Activa tus métodos de pago y completa sus datos. El cliente los ve al hacer su pedido.' | transloco }}
+      </p>
+
+      <div class="onb__fields">
+        @for (draft of paymentDrafts(); track draft.name; let i = $index) {
+        <div class="onb__option" [class.onb__option--active]="draft.active">
+          <button
+            type="button"
+            class="onb__option-head"
+            (click)="togglePayment(i)"
+          >
+            <span
+              class="onb__option-check"
+              [class.onb__option-check--on]="draft.active"
+            >
+              @if (draft.active) {
+              <ui-icon name="check" size="12" />
+              }
+            </span>
+            <ui-icon
+              [name]="draft.icon"
+              size="18"
+              styleClass="text-grey-400"
+            />
+            <span class="onb__option-info">
+              <span class="onb__option-title">{{ draft.name | transloco }}</span>
+            </span>
+          </button>
+
+          @if (draft.active && draft.fields.length) {
+          <div class="onb__option-body">
+            @for (field of draft.fields; track field.key) {
+            <div class="onb__field">
+              <span class="onb__label">{{ field.label | transloco }}</span>
+              <ui-input-text
+                [ngModel]="draft.values[field.key]"
+                (ngModelChange)="setPaymentValue(i, field.key, $event)"
+                [placeholder]="(field.placeholder ?? '') | transloco"
+                styleClass="w-full"
+              ></ui-input-text>
+            </div>
+            }
+          </div>
+          }
+        </div>
+        }
+      </div>
+
+      <div class="onb__actions">
+        <ui-button
+          [label]="'Atrás' | transloco"
+          variant="text"
+          [fluid]="false"
+          (click)="back()"
+        />
+        <ui-button
+          [label]="'Finalizar' | transloco"
+          icon="check"
+          [fluid]="false"
+          [disabled]="isSaving()"
+          [isLoading]="isSaving()"
+          (click)="finishOnboarding()"
+        />
       </div>
       } }
     </section>
@@ -420,3 +599,4 @@
     </aside>
   </div>
 </div>
+}

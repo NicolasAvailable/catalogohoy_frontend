@@ -21,4 +21,11 @@ export interface BaseTenantService {
   checkSlug(slug: string): Promise<SlugCheck>;
   getSlugByCustomDomain(domain: string): Promise<string | null>;
   createCatalog(name: string, slug: string): Promise<E.Either<Error, CreateCatalogResult>>;
+  /** Renombra la tienda y su dirección (`tenants.name` + `tenants.slug`).
+   *  Left con mensaje amigable si el slug ya está ocupado. */
+  renameTenant(
+    tenantId: number | string,
+    name: string,
+    slug: string
+  ): Promise<E.Either<Error, void>>;
 }

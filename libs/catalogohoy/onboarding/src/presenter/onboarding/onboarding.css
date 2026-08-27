@@ -272,6 +272,75 @@
   cursor: pointer;
 }
 
+/* Cards toggleables (pasos Entrega y Pago) */
+.onb__option {
+  border: 0.0625rem solid var(--color-grey-100, #eee);
+  border-radius: 0.875rem;
+  background: white;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.onb__option--active {
+  border-color: var(--color-primary-500, #3e7bfa);
+  box-shadow: 0 0 0 0.0625rem var(--color-primary-500, #3e7bfa);
+}
+.onb__option-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  cursor: pointer;
+  text-align: left;
+}
+.onb__option-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.375rem;
+  border: 0.09375rem solid var(--color-grey-200, #d1d5db);
+  background: white;
+  color: white;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.onb__option-check--on {
+  background: var(--color-primary-500, #3e7bfa);
+  border-color: var(--color-primary-500, #3e7bfa);
+}
+.onb__option-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+.onb__option-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-grey-800, #1e293b);
+}
+.onb__option-hint {
+  font-size: 0.75rem;
+  color: var(--color-grey-400, #94a3b8);
+}
+.onb__option-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem 1rem;
+  border-top: 0.0625rem dashed var(--color-grey-100, #eee);
+}
+.onb__switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-grey-600, #475569);
+  cursor: pointer;
+}
+
 /* Acciones */
 .onb__actions {
   display: flex;
@@ -435,4 +504,14 @@
   .onb__form {
     padding: 1.5rem;
   }
+}
+
+/* Estado de carga inicial: centrado, mismo fondo que el wizard */
+.onb--boot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  color: var(--p-surface-500, #6b7280);
+  font-size: 0.875rem;
 }

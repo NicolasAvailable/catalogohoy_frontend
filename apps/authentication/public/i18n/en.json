@@ -1759,5 +1759,20 @@
   "📭 Todavía no tenés categorías. ¡Creá una en la caja de texto de abajo y guardala! ✨": "📭 You don't have any categories yet. Create one in the text box below and save it! ✨",
   "🔄 Estás renovando tu plan {plan} por {months}": "🔄 You're renewing your {plan} plan for {months}",
   "🔍 No se encontraron categorías con ese nombre": "🔍 No categories found with that name",
-  "🖼️ Galería de imágenes": "🖼️ Image gallery"
+  "🖼️ Galería de imágenes": "🖼️ Image gallery",
+  "000000": "000000",
+  "Conectado con Google. Contanos quién sos.": "Signed in with Google. Tell us who you are.",
+  "Creá tu cuenta": "Create your account",
+  "Código de verificación": "Verification code",
+  "El código no es válido o expiró. Revisá el correo o pedí uno nuevo.": "The code is invalid or expired. Check your email or request a new one.",
+  "El código tiene 6 dígitos": "The code has 6 digits",
+  "Escribilo acá para activar tu cuenta.": "Type it here to activate your account.",
+  "Ingresá el código": "Enter the code",
+  "Ingresá tu número de WhatsApp": "Enter your WhatsApp number",
+  "Podés reenviar en": "You can resend in",
+  "Solo unos datos y ya casi estás.": "Just a few details and you're almost there.",
+  "Te enviamos un código de 6 dígitos a": "We sent a 6-digit code to",
+  "Tu WhatsApp": "Your WhatsApp",
+  "Verificá tu correo": "Verify your email",
+  "¿No te llegó? Revisá spam o promociones.": "Didn't get it? Check spam or promotions."
 }
