@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowRight, CheckCircle2, Clock } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
+import BlogCover from "@/components/landing/BlogCover";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { categoryBySlug, findArticle, relatedArticles, signupUrl } from "@/blog";
 import type { ArticleBlock } from "@/blog/types";
@@ -16,11 +17,6 @@ const formatDate = (iso: string) =>
     month: "long",
     year: "numeric",
   });
-
-const COVER_GRADIENTS: Record<string, string> = {
-  "ventas-por-whatsapp": "from-emerald-500 to-teal-600",
-  "catalogo-digital": "from-primary to-indigo-600",
-};
 
 /** Render de cada bloque tipado del artículo (formato estilo vacantes.com). */
 const Block = ({ block, campaign }: { block: ArticleBlock; campaign: string }) => {
@@ -191,16 +187,12 @@ const BlogArticlePage = () => {
             </Link>
           </nav>
 
-          {/* Portada decorativa */}
-          <div
-            className={`mt-5 h-44 md:h-56 rounded-2xl bg-gradient-to-br ${COVER_GRADIENTS[article.category] ?? "from-primary to-indigo-600"} relative overflow-hidden`}
-          >
-            <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl" />
-            <div className="absolute bottom-0 left-0 w-56 h-56 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
-            <span className="absolute bottom-4 left-5 text-xs font-semibold text-white/90 bg-white/15 rounded-full px-3 py-1">
-              {category.name}
-            </span>
-          </div>
+          {/* Portada estilo vacantes (generada por CSS desde el título) */}
+          <BlogCover
+            article={article}
+            className="mt-5 h-48 md:h-64 rounded-2xl"
+            titleClass="text-2xl md:text-3xl"
+          />
 
           {/* Título + meta */}
           <h1 className="font-display font-extrabold text-3xl md:text-4xl leading-tight mt-6">

@@ -39,6 +39,16 @@ export interface BlogArticle {
   author: string;
   /** ISO yyyy-mm-dd. */
   date: string;
+  /** Título CORTO para la portada (2-6 palabras; se parte en dos tonos por
+   *  `coverAccent`). Si falta, se usa `title`. */
+  coverTitle?: string;
+  /** Palabra(s) del coverTitle a resaltar en tono claro (estilo vacantes). */
+  coverAccent?: string;
+  /** Chip pequeño bajo el título de la portada, ej. "Guía paso a paso 2026". */
+  coverTagline?: string;
+  /** Foto opcional para el lado izquierdo de la portada (ruta en /public).
+   *  Sin foto, se usa un patrón decorativo — la portada se genera por CSS. */
+  coverImage?: string;
   readMinutes: number;
   /** "Puntos clave" — resumen en bullets al inicio (formato vacantes). */
   keyPoints: string[];

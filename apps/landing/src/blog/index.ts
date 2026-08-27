@@ -2,6 +2,9 @@ import type { BlogArticle, BlogCategory } from "./types";
 import { comoVenderPorWhatsapp2026 } from "./articles/como-vender-por-whatsapp-guia-2026";
 import { comoCrearCatalogoDigital2026 } from "./articles/como-crear-un-catalogo-digital-gratis-2026";
 import { catalogoPdfVsOnline2026 } from "./articles/catalogo-pdf-vs-catalogo-online-2026";
+import { comoMejorarLasVentas2026 } from "./articles/como-mejorar-las-ventas-2026";
+import { comoCobrarPorWhatsapp2026 } from "./articles/como-cobrar-por-whatsapp-2026";
+import { COUNTRY_ARTICLES } from "./articles/paises";
 
 export const CATEGORIES: BlogCategory[] = [
   {
@@ -16,14 +19,36 @@ export const CATEGORIES: BlogCategory[] = [
     description:
       "Cómo crear, organizar y sacarle provecho a tu catálogo de productos online.",
   },
+  {
+    slug: "emprender",
+    name: "Emprender",
+    description:
+      "Estrategias de ventas, precios y crecimiento para tu negocio.",
+  },
+  {
+    slug: "por-pais",
+    name: "Guías por país",
+    description:
+      "Cómo crear tu catálogo y vender online en cada país de Latinoamérica.",
+  },
 ];
 
-/** Ordenados del más nuevo al más viejo (el índice los muestra en este orden). */
-export const ARTICLES: BlogArticle[] = [
+/** Registro editorial: a igual fecha manda este orden (el primero es el destacado). */
+const REGISTRY: BlogArticle[] = [
+  comoMejorarLasVentas2026,
+  comoCobrarPorWhatsapp2026,
   comoVenderPorWhatsapp2026,
   comoCrearCatalogoDigital2026,
   catalogoPdfVsOnline2026,
-].sort((a, b) => (a.date < b.date ? 1 : -1));
+  ...COUNTRY_ARTICLES,
+];
+
+/** Ordenados del más nuevo al más viejo, con desempate estable por el registro. */
+export const ARTICLES: BlogArticle[] = REGISTRY.map(
+  (article, i) => [article, i] as const
+)
+  .sort(([a, i], [b, j]) => (a.date !== b.date ? (a.date < b.date ? 1 : -1) : i - j))
+  .map(([article]) => article);
 
 export const categoryBySlug = (slug: string): BlogCategory | undefined =>
   CATEGORIES.find((c) => c.slug === slug);

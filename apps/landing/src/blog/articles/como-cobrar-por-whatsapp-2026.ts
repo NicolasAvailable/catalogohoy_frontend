@@ -1,0 +1,95 @@
+import type { BlogArticle } from "../types";
+
+export const comoCobrarPorWhatsapp2026: BlogArticle = {
+  slug: "como-cobrar-por-whatsapp-metodos-de-pago-2026",
+  category: "ventas-por-whatsapp",
+  title: "Cómo cobrar por WhatsApp: métodos de pago para tu negocio (2026)",
+  metaTitle: "Cómo cobrar por WhatsApp: métodos de pago 2026 | CatalogoHoy",
+  metaDescription:
+    "Los métodos para cobrar tus ventas por WhatsApp en Latinoamérica: billeteras, transferencias, contraentrega y links de pago. Cómo elegir y evitar estafas.",
+  excerpt:
+    "Billeteras, transferencias, contraentrega y links de pago: cómo cobrar tus ventas de WhatsApp sin fricción y sin sustos.",
+  author: "Equipo de CatalogoHoy",
+  date: "2026-08-27",
+  readMinutes: 8,
+  coverTitle: "Cómo cobrar por WhatsApp",
+  coverAccent: "por WhatsApp",
+  coverTagline: "Métodos de pago 2026",
+  keyPoints: [
+    "Ofrece 2-3 métodos máximo: demasiadas opciones confunden y demoran el cierre.",
+    "Cada país tiene su método rey — Nequi, Yape, SINPE, Pago Móvil, Mercado Pago, Yappy — úsalo como opción principal.",
+    "Publica tus métodos en el catálogo para que el cliente sepa cómo pagar antes de pedir.",
+    "Confirma SIEMPRE el comprobante antes de despachar: verificar en tu app bancaria, no solo la captura.",
+    "La contraentrega convierte más en primeras compras, pero protégete: confírmala solo para zonas y montos razonables.",
+  ],
+  blocks: [
+    { type: "p", html: "Cerraste la venta por WhatsApp… y ahora, ¿cómo te pagan? La respuesta correcta depende de tu país, tu ticket promedio y tu tolerancia al riesgo. Aquí está el mapa completo de métodos, cómo elegir los tuyos y cómo cobrarte sin sustos." },
+    { type: "h2", id: "regla-de-oro", text: "La regla de oro: pocos métodos, bien publicados" },
+    { type: "p", html: "El error clásico es responder \"¿cómo prefieres pagar?\" — abre una negociación innecesaria. Lo que funciona: <strong>2-3 métodos definidos por ti, publicados en tu catálogo</strong>, y una respuesta rápida con los datos exactos lista para pegar. El cliente decide entre tus opciones y el cierre toma un mensaje." },
+    { type: "h2", id: "billeteras", text: "Billeteras y pagos móviles: el estándar de la región" },
+    { type: "p", html: "Son el método rey en casi todos los países porque el dinero llega al instante y solo se necesita un número de teléfono o un QR:" },
+    {
+      type: "table",
+      headers: ["País", "Método más usado", "Cómo funciona"],
+      rows: [
+        ["Venezuela", "Pago Móvil", "Transferencia inmediata interbancaria con teléfono + cédula"],
+        ["Colombia", "Nequi / Daviplata", "Billeteras con transferencia al número de celular"],
+        ["Perú", "Yape / Plin", "QR o número de celular, acreditación instantánea"],
+        ["Costa Rica", "SINPE Móvil", "Transferencia inmediata con el número de teléfono"],
+        ["Panamá", "Yappy", "Billetera del Banco General, pago entre cuentas al instante"],
+        ["Argentina", "Mercado Pago", "Dinero en cuenta, QR y links de pago con tarjeta"],
+        ["México", "SPEI / Mercado Pago", "Transferencia interbancaria inmediata o link de pago"],
+        ["Bolivia", "QR Simple", "QR interbancario unificado"],
+      ],
+    },
+    { type: "p", html: "Consejo: guarda los datos de cobro como <strong>respuesta rápida</strong> en WhatsApp Business (ej. atajo \"/pago\") con el titular, número y banco exactos — cero errores de tipeo, cero demoras." },
+    { type: "h2", id: "transferencias", text: "Transferencias bancarias: para tickets altos" },
+    { type: "p", html: "La transferencia tradicional sigue siendo la preferida para montos mayores y ventas al por mayor. Es confiable pero más lenta de verificar entre bancos distintos — deja claro que <strong>despachas al confirmar</strong>, no al recibir la captura." },
+    {
+      type: "cta",
+      title: "Publica tus métodos de pago en tu catálogo",
+      text: "En CatalogoHoy configuras tus métodos (billetera, transferencia, efectivo) y el cliente los ve al hacer su pedido. Menos preguntas, cierres más rápidos.",
+      button: "Crear mi catálogo gratis",
+    },
+    { type: "h2", id: "contraentrega", text: "Contraentrega: el arma de la primera venta" },
+    { type: "p", html: "Pagar al recibir elimina el miedo del cliente nuevo y dispara la conversión — por eso es tan popular en Colombia, Ecuador y República Dominicana. El riesgo es tuyo: pedidos falsos y devoluciones. Protégete:" },
+    {
+      type: "ul",
+      items: [
+        "Ofrécela para <strong>zonas y montos razonables</strong> (tu ciudad, tickets bajos-medios).",
+        "<strong>Confirma por WhatsApp antes de despachar</strong>: nombre, dirección exacta y teléfono activo.",
+        "Para clientes nuevos con tickets altos, pide un <strong>abono parcial</strong> (30-50%) y el resto contra entrega.",
+        "Lleva registro de quién rechazó pedidos — a la segunda, solo pago anticipado.",
+      ],
+    },
+    { type: "h2", id: "links", text: "Links de pago con tarjeta: cuándo valen la pena" },
+    { type: "p", html: "Mercado Pago, y pasarelas locales permiten cobrar con tarjeta mandando un link por el chat. Cobran comisión (3-6%), pero abren dos puertas: clientes sin efectivo disponible que pagan en cuotas, y compradores de otras ciudades o países. Úsalos como opción secundaria y súmalos al precio si tu margen es corto." },
+    { type: "h2", id: "evitar-estafas", text: "Cómo evitar las estafas más comunes" },
+    {
+      type: "ol",
+      items: [
+        "<strong>Captura editada:</strong> nunca despaches por la imagen — verifica el abono en TU app bancaria.",
+        "<strong>\"Pagué de más, devuélveme la diferencia\":</strong> clásico con comprobantes falsos. Verifica antes de devolver un centavo.",
+        "<strong>Comprobante reciclado:</strong> mismos datos usados con varios vendedores. Revisa fecha, hora y monto exactos.",
+        "<strong>Presión de urgencia:</strong> \"despacha ya que lo necesito hoy\" + captura dudosa = bandera roja. La venta que se pierde por verificar 5 minutos no era venta.",
+      ],
+    },
+    { type: "h2", id: "orden", text: "El cobro empieza en el pedido ordenado" },
+    { type: "p", html: "La mitad de los problemas de cobro nacen de pedidos confusos: monto hablado, cambios de último minuto, \"yo entendí otra cosa\". Con un catálogo con carrito, el pedido llega con <strong>total calculado</strong> (productos + envío) y el método de pago elegido — tú solo verificas el abono y despachas. Cobrar bien es consecuencia de pedir bien." },
+    {
+      type: "cta",
+      title: "Pedidos calculados, cobros sin discusión",
+      text: "El cliente arma su pedido en tu catálogo, ve tus métodos de pago y te llega todo listo al WhatsApp.",
+      button: "Empezar gratis",
+    },
+  ],
+  faqs: [
+    { q: "¿Cuántos métodos de pago debo ofrecer?", a: "Dos o tres: el método rey de tu país como principal, transferencia bancaria para montos altos y, si tu mercado lo pide, contraentrega o link de pago con tarjeta. Más opciones no aumentan ventas, solo dudas." },
+    { q: "¿Despacho apenas me mandan la captura del pago?", a: "No. Verifica que el dinero esté acreditado en tu app bancaria o billetera. Las capturas se editan en segundos; tu saldo no." },
+    { q: "¿Cómo cobro a clientes de otro país?", a: "Links de pago con tarjeta (Mercado Pago o pasarelas locales), o métodos como Zelle donde aplique. Define el método antes de confirmar el pedido para evitar malentendidos con comisiones y tasas." },
+    { q: "¿La contraentrega no es muy riesgosa?", a: "Bien manejada, no: limítala a tu zona, confirma datos completos antes de despachar y pide abono parcial en tickets altos. Su poder de conversión en primeras compras suele compensar el riesgo." },
+  ],
+  sources: [
+    "Documentación pública de Nequi, Yape, SINPE Móvil, Yappy, Mercado Pago y Pago Móvil interbancario",
+  ],
+};

@@ -12,6 +12,9 @@ export const catalogoPdfVsOnline2026: BlogArticle = {
   author: "Equipo de CatalogoHoy",
   date: "2026-08-27",
   readMinutes: 7,
+  coverTitle: "PDF vs catálogo online",
+  coverAccent: "catálogo online",
+  coverTagline: "Comparativa 2026",
   keyPoints: [
     "El PDF sigue siendo popular por costumbre, pero pesa, no se busca y queda desactualizado con el primer cambio de precio.",
     "El catálogo nativo de WhatsApp Business es útil pero limitado: sin variantes, sin categorías navegables y atado a un solo número.",

@@ -12,6 +12,9 @@ export const comoCrearCatalogoDigital2026: BlogArticle = {
   author: "Equipo de CatalogoHoy",
   date: "2026-08-27",
   readMinutes: 8,
+  coverTitle: "Crea tu catálogo digital gratis",
+  coverAccent: "gratis",
+  coverTagline: "Paso a paso 2026",
   keyPoints: [
     "Un catálogo digital es una página con tus productos, precios y un enlace propio — no un PDF ni una carpeta de fotos.",
     "Puedes crearlo gratis en menos de 30 minutos: cuenta, productos con foto y precio, personalización y a compartir.",

@@ -14,6 +14,9 @@ export const comoVenderPorWhatsapp2026: BlogArticle = {
   author: "Equipo de CatalogoHoy",
   date: "2026-08-27",
   readMinutes: 9,
+  coverTitle: "Cómo vender por WhatsApp",
+  coverAccent: "por WhatsApp",
+  coverTagline: "Guía completa 2026",
   keyPoints: [
     "En Latinoamérica, la mayoría de las ventas de pequeños negocios se cierran por WhatsApp — el canal ya lo tienes; lo que falta es ordenarlo.",
     "WhatsApp Business (la app verde) es gratis y te da perfil de empresa, respuestas rápidas y etiquetas.",
