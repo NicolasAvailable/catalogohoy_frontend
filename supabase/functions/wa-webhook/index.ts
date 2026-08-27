@@ -84,30 +84,22 @@ function digits(s) {
 // UNA auto-respuesta (máx 1 cada 24h por teléfono, dedupe en
 // wa_notify_autoreplies) indicando que respondemos desde el número de soporte.
 const SUPPORT_TENANT_ID = 6;
-const NOTIFY_AUTO_REPLY = "Este número solo envía avisos automáticos de CatalogoHoy.\n\n" +
-  "Para soporte escríbenos directamente aquí:\n" +
-  "https://wa.me/message/XDLRVIGXVUCSB1\n\n" +
-  "Guarda ese contacto para próximas consultas 📌";
-
+const NOTIFY_AUTO_REPLY = "Este número solo envía avisos automáticos de CatalogoHoy.\n\n" + "Para soporte escríbenos directamente aquí:\n" + "https://wa.me/message/XDLRVIGXVUCSB1\n\n" + "Guarda ese contacto para próximas consultas 📌";
 async function handleNotifyNumberInbound(value, notifyToken, notifyPnid) {
   try {
     // 1) El mensaje entra al CRM de soporte por el pipeline normal (el token
     //    del número de avisos sirve para descargar media entrante).
-    await processCustomerMessages({ tenantId: SUPPORT_TENANT_ID, token: notifyToken }, value);
-
+    await processCustomerMessages({
+      tenantId: SUPPORT_TENANT_ID,
+      token: notifyToken
+    }, value);
     const first = (value.messages ?? [])[0];
     const from = first?.from ?? "";
     if (!from) return;
-
     // 2) Auto-respuesta con dedupe de 24h por teléfono.
-    const { data: dedupe } = await admin
-      .from("wa_notify_autoreplies")
-      .select("last_replied_at")
-      .eq("customer_phone", from)
-      .maybeSingle();
+    const { data: dedupe } = await admin.from("wa_notify_autoreplies").select("last_replied_at").eq("customer_phone", from).maybeSingle();
     const last = dedupe?.last_replied_at ? new Date(dedupe.last_replied_at).getTime() : 0;
     if (Date.now() - last < 24 * 3600 * 1000) return;
-
     if (notifyToken) {
       const res = await fetch(`https://graph.facebook.com/v23.0/${notifyPnid}/messages`, {
         method: "POST",
@@ -119,18 +111,21 @@ async function handleNotifyNumberInbound(value, notifyToken, notifyPnid) {
           messaging_product: "whatsapp",
           to: from,
           type: "text",
-          text: { body: NOTIFY_AUTO_REPLY }
+          text: {
+            body: NOTIFY_AUTO_REPLY
+          }
         })
       });
       if (!res.ok) {
         console.error("[wa-webhook] auto-reply avisos fallo", res.status, (await res.text()).slice(0, 300));
       }
     }
-    await admin.from("wa_notify_autoreplies").upsert(
-      { customer_phone: from, last_replied_at: new Date().toISOString() },
-      { onConflict: "customer_phone" }
-    );
-
+    await admin.from("wa_notify_autoreplies").upsert({
+      customer_phone: from,
+      last_replied_at: new Date().toISOString()
+    }, {
+      onConflict: "customer_phone"
+    });
     // 3) Nota interna en el chat de soporte para dar contexto al equipo.
     const chat = await findOrCreateChat(SUPPORT_TENANT_ID, from, null);
     if (chat) {
@@ -146,7 +141,6 @@ async function handleNotifyNumberInbound(value, notifyToken, notifyPnid) {
     console.error("[wa-webhook] notify-inbound fallo", e instanceof Error ? e.message : String(e));
   }
 }
-
 // ── Bot de triaje del número de SOPORTE ─────────────────────────────────────
 // Cuando un cliente escribe al número de soporte (tenant 6, CRM), se le manda
 // el menú de opciones (botones interactivos) para clasificar la consulta:
@@ -158,28 +152,44 @@ async function handleNotifyNumberInbound(value, notifyToken, notifyPnid) {
 const SUPPORT_BOT_ENABLED = (Deno.env.get("WA_SUPPORT_BOT") ?? "on") !== "off";
 // phone_number_id del número de soporte +58 422-0240947 (whatsapp_accounts id 4).
 const SUPPORT_BOT_PNID = Deno.env.get("WA_SUPPORT_BOT_PNID") ?? "1011157635415699";
-
-const SUPPORT_MENU_BODY = "¡Hola! 👋 Escribiste al soporte de CatalogoHoy.\n\n" +
-  "Para ayudarte más rápido, elegí una opción:";
+const SUPPORT_MENU_BODY = "¡Hola! 👋 Escribiste al soporte de CatalogoHoy.\n\n" + "Para ayudarte más rápido, elegí una opción:";
 const SUPPORT_MENU_FOOTER = "O escribí tu consulta directamente.";
 // ⚠️ Mantener sincronizado con CLOSE_PREFIX en wa-support-close: es el
 // marcador con el que reconocemos una conversación cerrada por inactividad.
 const SUPPORT_CLOSE_PREFIX = "Esta conversación se cerró por inactividad";
+/** Auto-respuestas de WhatsApp Business del OTRO lado (bienvenida/ausencia).
+ *  Pasa cuando NOSOTROS escribimos primero (ej. winback desde el teléfono,
+ *  cuyo echo puede no llegar si fue por lista de difusión): el bot del cliente
+ *  contesta solo y no hay que responderle con el menú — sería bot vs bot
+ *  (caso Garras Bonitas 2026-08-27). Falso positivo = inofensivo: el mensaje
+ *  igual queda en la bandeja para el agente; solo se omite el menú. */ function looksLikeAutoReply(text) {
+  const t = String(text ?? "").toLowerCase();
+  if (!t) return false;
+  return [
+    /gracias por (tu|su) mensaje/,
+    /bienvenid[oa@]/,
+    /estar(e|é|emos|á)\w* respondiendo/,
+    /(responderemos|te respondemos|le respondemos) (pronto|en breve|a la brevedad)/,
+    /horario de atenci(o|ó)n/,
+    /fuera de (horario|oficina|servicio)/,
+    /(mensaje|respuesta) autom(a|á)tic[oa]/,
+    /en (un momento|breve) (te|le|los) atendemos/,
+    /no (podemos|puedo) atender/,
+    /thanks? for your message/,
+    /we.ll get back to you/
+  ].some((rx)=>rx.test(t));
+}
 // Títulos de botones: máx 20 caracteres (límite de la Cloud API).
 const SUPPORT_MENU_OPTIONS = [
   {
     id: "bot_soporte",
     title: "Tengo un problema",
-    reply: "Contanos tu problema con el mayor detalle posible (si podés, mandá capturas 📸) y el nombre de tu catálogo.\n\n" +
-      "Un agente del equipo te responde a la brevedad 🙌"
+    reply: "Contanos tu problema con el mayor detalle posible (si podés, mandá capturas 📸) y el nombre de tu catálogo.\n\n" + "Un agente del equipo te responde a la brevedad 🙌"
   },
   {
     id: "bot_pagos",
     title: "Pagar o renovar",
-    reply: "Para pagar o renovar tu plan tenés dos caminos:\n\n" +
-      "1️⃣ Con tarjeta: entrá a tu panel de CatalogoHoy → sección *Planes* y elegí tu plan.\n" +
-      "2️⃣ Por transferencia o pago móvil: escribinos acá el nombre de tu catálogo y te pasamos los datos.\n\n" +
-      "Cualquier duda un agente te ayuda en unos minutos 💳"
+    reply: "Para pagar o renovar tu plan tenés dos caminos:\n\n" + "1️⃣ Con tarjeta: entrá a tu panel de CatalogoHoy → sección *Planes* y elegí tu plan.\n" + "2️⃣ Por transferencia o pago móvil: escribinos acá el nombre de tu catálogo y te pasamos los datos.\n\n" + "Cualquier duda un agente te ayuda en unos minutos 💳"
   },
   {
     id: "bot_otro",
@@ -187,7 +197,6 @@ const SUPPORT_MENU_OPTIONS = [
     reply: "¡Dale! Contanos tu consulta y en breve te responde alguien del equipo 🙌"
   }
 ];
-
 // ── Flujo VE: "quiero adquirir el plan X" ───────────────────────────────────
 // Los CTA de la landing ("Hola, me interesa adquirir el plan *X* ($9.99/mes
 // USD)…") y del checkout de la app ("Hola! Quiero adquirir el *Plan X* …
@@ -208,88 +217,58 @@ const VE_TRANSFERENCIA = {
   cedula: "V-30.524.891"
 };
 // Precios mensuales por plan (fallback si el CTA no trae monto explícito).
-const PLAN_PRICES_USD = { "Básico": 9.99, "Pro": 19.99, "Avanzado": 29.99 };
-
+const PLAN_PRICES_USD = {
+  "Básico": 9.99,
+  "Pro": 19.99,
+  "Avanzado": 29.99
+};
 /** Detecta la intención "adquirir plan" en un texto y extrae plan + total USD.
- *  Devuelve null si el texto no es un CTA de adquisición. */
-function detectPlanIntent(text) {
+ *  Devuelve null si el texto no es un CTA de adquisición. */ function detectPlanIntent(text) {
   const t = String(text ?? "");
   if (!/\badquirir\b/i.test(t) || !/\bplan\b/i.test(t)) return null;
-  const plan = /b[aá]sico/i.test(t) ? "Básico"
-    : /avanzado/i.test(t) ? "Avanzado"
-    : /\bpro\b/i.test(t) ? "Pro"
-    : /enterprise/i.test(t) ? "Enterprise"
-    : null;
+  const plan = /b[aá]sico/i.test(t) ? "Básico" : /avanzado/i.test(t) ? "Avanzado" : /\bpro\b/i.test(t) ? "Pro" : /enterprise/i.test(t) ? "Enterprise" : null;
   // Checkout de la app: "- *Total:* $19.99 USD (= Bs. …)" (incluye período,
   // catálogos extra y descuentos — es el número correcto si está).
   const total = t.match(/Total:\*?\s*\$\s*(\d+(?:[.,]\d{1,2})?)/i);
   // Landing: "el plan *Básico* ($9.99/mes USD)".
   const price = t.match(/\$\s*(\d+(?:[.,]\d{1,2})?)/);
-  const usd = total ? Number(total[1].replace(",", "."))
-    : price ? Number(price[1].replace(",", "."))
-    : plan ? (PLAN_PRICES_USD[plan] ?? null)
-    : null;
-  return { plan, usd };
+  const usd = total ? Number(total[1].replace(",", ".")) : price ? Number(price[1].replace(",", ".")) : plan ? PLAN_PRICES_USD[plan] ?? null : null;
+  return {
+    plan,
+    usd
+  };
 }
-
-/** Última tasa BCV USD→Bs (o null si no hay). */
-async function bcvUsdRate() {
-  const { data } = await admin
-    .from("bcv_rates")
-    .select("usd")
-    .order("fetched_at", { ascending: false })
-    .limit(1);
+/** Última tasa BCV USD→Bs (o null si no hay). */ async function bcvUsdRate() {
+  const { data } = await admin.from("bcv_rates").select("usd").order("fetched_at", {
+    ascending: false
+  }).limit(1);
   const rate = Number((data ?? [])[0]?.usd);
   return Number.isFinite(rate) && rate > 0 ? rate : null;
 }
-
-/** 7867.12 → "7.867,12" (formato es-VE, sin depender de ICU). */
-function formatBs(n) {
+/** 7867.12 → "7.867,12" (formato es-VE, sin depender de ICU). */ function formatBs(n) {
   const [ent, dec] = n.toFixed(2).split(".");
   const miles = ent.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return dec === "00" ? miles : `${miles},${dec}`;
 }
-
 /** Busca el CTA de adquisición más reciente del cliente en el chat (para
- *  recuperar plan/monto cuando toca un botón de método de pago). */
-async function findPlanIntentInChat(chatId) {
-  const { data } = await admin
-    .from("chat_messages")
-    .select("content, is_mine")
-    .eq("chat_id", chatId)
-    .not("is_internal", "is", true)
-    .order("created_at", { ascending: false })
-    .limit(30);
-  for (const m of data ?? []) {
+ *  recuperar plan/monto cuando toca un botón de método de pago). */ async function findPlanIntentInChat(chatId) {
+  const { data } = await admin.from("chat_messages").select("content, is_mine").eq("chat_id", chatId).not("is_internal", "is", true).order("created_at", {
+    ascending: false
+  }).limit(30);
+  for (const m of data ?? []){
     if (m.is_mine) continue;
     const intent = detectPlanIntent(m.content);
     if (intent) return intent;
   }
   return null;
 }
-
-/** Arma el mensaje con los datos del método elegido + monto en Bs. */
-function vePaymentDetails(kind, intent, rate) {
-  const monto = intent?.usd && rate
-    ? `Monto: *${formatBs(intent.usd * rate)} Bs* (${intent.plan ? `plan ${intent.plan}, ` : ""}$${intent.usd} a tasa BCV del día)`
-    : "El monto exacto en bolívares te lo confirmamos enseguida a tasa BCV del día.";
-  const datos = kind === "bot_pm"
-    ? "Datos de *Pago móvil* 📲\n\n" +
-      `Teléfono: ${VE_PAGO_MOVIL.telefono}\n` +
-      `Cédula: ${VE_PAGO_MOVIL.cedula}\n` +
-      `Banco: ${VE_PAGO_MOVIL.banco}`
-    : "Datos de *Transferencia bancaria* 🏦\n\n" +
-      `Banco: ${VE_TRANSFERENCIA.banco}\n` +
-      `Cuenta: ${VE_TRANSFERENCIA.cuenta}\n` +
-      `Titular: ${VE_TRANSFERENCIA.titular}\n` +
-      `Cédula: ${VE_TRANSFERENCIA.cedula}`;
-  return `${datos}\n\n${monto}\n\n` +
-    "Cuando hagas el pago, envianos el comprobante por acá y activamos tu plan enseguida ✅";
+/** Arma el mensaje con los datos del método elegido + monto en Bs. */ function vePaymentDetails(kind, intent, rate) {
+  const monto = intent?.usd && rate ? `Monto: *${formatBs(intent.usd * rate)} Bs* (${intent.plan ? `plan ${intent.plan}, ` : ""}$${intent.usd} a tasa BCV del día)` : "El monto exacto en bolívares te lo confirmamos enseguida a tasa BCV del día.";
+  const datos = kind === "bot_pm" ? "Datos de *Pago móvil* 📲\n\n" + `Teléfono: ${VE_PAGO_MOVIL.telefono}\n` + `Cédula: ${VE_PAGO_MOVIL.cedula}\n` + `Banco: ${VE_PAGO_MOVIL.banco}` : "Datos de *Transferencia bancaria* 🏦\n\n" + `Banco: ${VE_TRANSFERENCIA.banco}\n` + `Cuenta: ${VE_TRANSFERENCIA.cuenta}\n` + `Titular: ${VE_TRANSFERENCIA.titular}\n` + `Cédula: ${VE_TRANSFERENCIA.cedula}`;
+  return `${datos}\n\n${monto}\n\n` + "Cuando hagas el pago, envianos el comprobante por acá y activamos tu plan enseguida ✅";
 }
-
 /** Envía un mensaje del bot por la Cloud API con el token del número de
- *  soporte. Devuelve el wamid o null (nunca lanza). */
-async function sendSupportBotPayload(token, pnid, payload) {
+ *  soporte. Devuelve el wamid o null (nunca lanza). */ async function sendSupportBotPayload(token, pnid, payload) {
   try {
     const res = await fetch(`https://graph.facebook.com/${API_VERSION}/${pnid}/messages`, {
       method: "POST",
@@ -299,7 +278,7 @@ async function sendSupportBotPayload(token, pnid, payload) {
       },
       body: JSON.stringify(payload)
     });
-    const body = await res.json().catch(() => null);
+    const body = await res.json().catch(()=>null);
     if (!res.ok) {
       console.error("[wa-webhook] support-bot send fallo", res.status, JSON.stringify(body)?.slice(0, 300));
       return null;
@@ -310,10 +289,8 @@ async function sendSupportBotPayload(token, pnid, payload) {
     return null;
   }
 }
-
 /** Registra un mensaje del bot en el chat (para que el CRM muestre lo que se
- *  envió) y actualiza el resumen del chat. */
-async function recordSupportBotMessage(chatId, content, wamid) {
+ *  envió) y actualiza el resumen del chat. */ async function recordSupportBotMessage(chatId, content, wamid) {
   await admin.from("chat_messages").insert({
     chat_id: chatId,
     content,
@@ -327,19 +304,15 @@ async function recordSupportBotMessage(chatId, content, wamid) {
     last_message_is_mine: true
   }).eq("id", chatId);
 }
-
 /** Corre DESPUÉS de que processCustomerMessages ingirió el mensaje. Nunca
- *  lanza: un fallo del bot no puede afectar la ingesta del CRM. */
-async function handleSupportBot(account, pnid, value) {
+ *  lanza: un fallo del bot no puede afectar la ingesta del CRM. */ async function handleSupportBot(account, pnid, value) {
   try {
     if (!account.token) return;
     const first = (value.messages ?? [])[0];
     const from = first?.from ?? "";
     if (!from) return;
-
     const chat = await findOrCreateChat(account.tenantId, from, null);
     if (!chat) return;
-
     // 1a) ¿Eligió un método de pago (flujo VE "adquirir plan")? → datos + monto.
     const btnId = first.interactive?.button_reply?.id ?? "";
     if (btnId === "bot_pm" || btnId === "bot_transf") {
@@ -350,29 +323,31 @@ async function handleSupportBot(account, pnid, value) {
         messaging_product: "whatsapp",
         to: from,
         type: "text",
-        text: { body: details }
+        text: {
+          body: details
+        }
       });
       if (wamid) await recordSupportBotMessage(chat.id, details, wamid);
       const metodo = btnId === "bot_pm" ? "Pago móvil" : "Transferencia";
       await admin.from("chat_messages").insert({
         chat_id: chat.id,
-        content: `🤖 Triaje: quiere adquirir ${intent?.plan ? `el plan ${intent.plan}` : "un plan"}` +
-          `${intent?.usd ? ` ($${intent.usd})` : ""} y eligió ${metodo}. Verificar comprobante y activar.`,
+        content: `🤖 Triaje: quiere adquirir ${intent?.plan ? `el plan ${intent.plan}` : "un plan"}` + `${intent?.usd ? ` ($${intent.usd})` : ""} y eligió ${metodo}. Verificar comprobante y activar.`,
         is_mine: true,
         is_internal: true,
         message_type: "text"
       });
       return;
     }
-
     // 1b) ¿Es la respuesta a un botón del menú? → contestar la opción.
-    const option = SUPPORT_MENU_OPTIONS.find((o) => o.id === btnId);
+    const option = SUPPORT_MENU_OPTIONS.find((o)=>o.id === btnId);
     if (option) {
       const wamid = await sendSupportBotPayload(account.token, pnid, {
         messaging_product: "whatsapp",
         to: from,
         type: "text",
-        text: { body: option.reply }
+        text: {
+          body: option.reply
+        }
       });
       if (wamid) await recordSupportBotMessage(chat.id, option.reply, wamid);
       await admin.from("chat_messages").insert({
@@ -384,49 +359,57 @@ async function handleSupportBot(account, pnid, value) {
       });
       return;
     }
-
     // 2) CTA "quiero adquirir el plan X" de un número venezolano (+58) →
     //    ofrecer métodos de pago locales EN VEZ del menú de triaje. Responde
     //    siempre (sin guard de 24h): es una intención de compra explícita.
     const inboundText = describeMessage(first);
     const intent = from.startsWith("58") ? detectPlanIntent(inboundText) : null;
     if (intent) {
-      const body = `¡Excelente elección${intent.plan ? `, el plan *${intent.plan}*` : ""}! 🎉\n\n` +
-        "¿Cómo preferís pagar?";
+      const body = `¡Excelente elección${intent.plan ? `, el plan *${intent.plan}*` : ""}! 🎉\n\n` + "¿Cómo preferís pagar?";
       const wamid = await sendSupportBotPayload(account.token, pnid, {
         messaging_product: "whatsapp",
         to: from,
         type: "interactive",
         interactive: {
           type: "button",
-          body: { text: body },
-          footer: { text: "También podés pagar con tarjeta desde la plataforma." },
+          body: {
+            text: body
+          },
+          footer: {
+            text: "También podés pagar con tarjeta desde la plataforma."
+          },
           action: {
             buttons: [
-              { type: "reply", reply: { id: "bot_pm", title: "Pago móvil" } },
-              { type: "reply", reply: { id: "bot_transf", title: "Transferencia" } }
+              {
+                type: "reply",
+                reply: {
+                  id: "bot_pm",
+                  title: "Pago móvil"
+                }
+              },
+              {
+                type: "reply",
+                reply: {
+                  id: "bot_transf",
+                  title: "Transferencia"
+                }
+              }
             ]
           }
         }
       });
       if (wamid) {
-        await recordSupportBotMessage(
-          chat.id,
-          `${body}\n\n▫️ Pago móvil\n▫️ Transferencia`,
-          wamid
-        );
+        await recordSupportBotMessage(chat.id, `${body}\n\n▫️ Pago móvil\n▫️ Transferencia`, wamid);
       }
       await admin.from("chat_messages").insert({
         chat_id: chat.id,
-        content: `🤖 Triaje: cliente VE quiere adquirir ${intent.plan ? `el plan ${intent.plan}` : "un plan"}` +
-          `${intent.usd ? ` ($${intent.usd})` : ""}; se le ofrecieron pago móvil / transferencia.`,
+        content: `🤖 Triaje: cliente VE quiere adquirir ${intent.plan ? `el plan ${intent.plan}` : "un plan"}` + `${intent.usd ? ` ($${intent.usd})` : ""}; se le ofrecieron pago móvil / transferencia.`,
         is_mine: true,
         is_internal: true,
         message_type: "text"
       });
       return;
     }
-
     // 3) Mensaje común → mandar el menú solo si la conversación NO está
     //    activa: o el negocio no envió nada en las últimas 24h, o lo último
     //    que envió fue el cierre por inactividad (wa-support-close). Tras un
@@ -434,52 +417,64 @@ async function handleSupportBot(account, pnid, value) {
     //    corto, como pide el propio aviso de cierre: «escribí hola»); una
     //    respuesta contextual ("está bien, avisas") sigue de largo al agente
     //    sin bombardear con el menú de nuevo.
-    const { data: lastMineRows } = await admin
-      .from("chat_messages")
-      .select("content, created_at")
-      .eq("chat_id", chat.id)
-      .eq("is_mine", true)
-      .not("is_internal", "is", true)
-      .order("created_at", { ascending: false })
-      .limit(1);
+    if (looksLikeAutoReply(inboundText)) {
+      console.log("[wa-webhook] support-bot: auto-reply detectada, menú omitido", chat.id);
+      return;
+    }
+    const { data: lastMineRows } = await admin.from("chat_messages").select("content, created_at").eq("chat_id", chat.id).eq("is_mine", true).not("is_internal", "is", true).order("created_at", {
+      ascending: false
+    }).limit(1);
     const lastMine = (lastMineRows ?? [])[0];
     const sessionClosed = String(lastMine?.content ?? "").startsWith(SUPPORT_CLOSE_PREFIX);
-    const recentlyActive = lastMine &&
-      new Date(lastMine.created_at).getTime() >= Date.now() - 24 * 3600 * 1000;
+    const recentlyActive = lastMine && new Date(lastMine.created_at).getTime() >= Date.now() - 24 * 3600 * 1000;
     if (recentlyActive && !sessionClosed) return;
     if (recentlyActive && sessionClosed) {
       const t = inboundText.trim().toLowerCase();
-      const looksLikeGreeting = t.length <= 25 &&
-        /^(hola|holis|buenas|buenos|buen d[ií]a|hey|hi|hello|saludos|epale)\b/.test(t);
+      const looksLikeGreeting = t.length <= 25 && /^(hola|holis|buenas|buenos|buen d[ií]a|hey|hi|hello|saludos|epale)\b/.test(t);
       if (!looksLikeGreeting) return;
     }
-
+    // Dedupe atómico: el menú sale a lo sumo 1 vez por chat por día, aun con
+    // webhooks simultáneos (los 2 mensajes automáticos del cliente llegan con
+    // ms de diferencia y ambos pasaban el guard de 24h antes del INSERT).
+    const { error: dedupeErr } = await admin.from("wa_support_menu_sends").insert({
+      chat_id: chat.id,
+      sent_on: new Date().toISOString().slice(0, 10)
+    });
+    if (dedupeErr) {
+      if (dedupeErr.code !== "23505") console.error("[wa-webhook] menu-dedupe error", dedupeErr.message);
+      return;
+    }
     const wamid = await sendSupportBotPayload(account.token, pnid, {
       messaging_product: "whatsapp",
       to: from,
       type: "interactive",
       interactive: {
         type: "button",
-        body: { text: SUPPORT_MENU_BODY },
-        footer: { text: SUPPORT_MENU_FOOTER },
+        body: {
+          text: SUPPORT_MENU_BODY
+        },
+        footer: {
+          text: SUPPORT_MENU_FOOTER
+        },
         action: {
-          buttons: SUPPORT_MENU_OPTIONS.map((o) => ({
-            type: "reply",
-            reply: { id: o.id, title: o.title }
-          }))
+          buttons: SUPPORT_MENU_OPTIONS.map((o)=>({
+              type: "reply",
+              reply: {
+                id: o.id,
+                title: o.title
+              }
+            }))
         }
       }
     });
     if (wamid) {
-      const preview = `${SUPPORT_MENU_BODY}\n\n` +
-        SUPPORT_MENU_OPTIONS.map((o) => `▫️ ${o.title}`).join("\n");
+      const preview = `${SUPPORT_MENU_BODY}\n\n` + SUPPORT_MENU_OPTIONS.map((o)=>`▫️ ${o.title}`).join("\n");
       await recordSupportBotMessage(chat.id, preview, wamid);
     }
   } catch (e) {
     console.error("[wa-webhook] support-bot fallo", e instanceof Error ? e.message : String(e));
   }
 }
-
 /** Resolve the tenant + access token for the WhatsApp phone_number_id hit. The
  *  token is needed to download inbound media from Meta. */ async function accountForPhoneNumberId(phoneNumberId) {
   const { data } = await admin.from("whatsapp_accounts").select("tenant_id, access_token").eq("phone_number_id", phoneNumberId).eq("status", "active").maybeSingle();
