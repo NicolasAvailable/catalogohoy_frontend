@@ -39,6 +39,7 @@ const Footer = () => {
           {/* Guías */}
           <nav aria-label="Guías" className="flex flex-col gap-2 text-sm text-muted-foreground">
             <span className="font-semibold text-foreground">Guías</span>
+            <Link to="/blog" className={linkCls}>Blog</Link>
             <Link to="/catalogo-digital" className={linkCls}>Catálogo digital</Link>
             <Link to="/catalogo-por-whatsapp" className={linkCls}>Catálogo por WhatsApp</Link>
             <Link to="/crear-catalogo-online-gratis" className={linkCls}>Crear catálogo gratis</Link>

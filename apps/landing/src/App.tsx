@@ -21,6 +21,8 @@ import CatalogoDigital from "./pages/CatalogoDigital";
 import CrearCatalogoOnlineGratis from "./pages/CrearCatalogoOnlineGratis";
 import CatalogoParaTiendasDeRopa from "./pages/CatalogoParaTiendasDeRopa";
 import MenuDigitalRestaurantes from "./pages/MenuDigitalRestaurantes";
+import Blog from "./pages/Blog";
+import BlogArticle from "./pages/BlogArticle";
 import NotFound from "./pages/NotFound";
 import { captureReferralFromUrl } from "@/lib/referral-cookie";
 
@@ -40,6 +42,9 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:category" element={<Blog />} />
+            <Route path="/blog/:category/:slug" element={<BlogArticle />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/data-deletion" element={<DataDeletion />} />
