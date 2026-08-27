@@ -98,7 +98,6 @@
             <span class="onb__req">*</span></span
           >
           <div class="onb__slugbox">
-            <span class="onb__slugbox-prefix">catalogohoy.com/</span>
             <input
               type="text"
               class="onb__slugbox-input"
@@ -106,6 +105,7 @@
               (ngModelChange)="onSlugInputChange($event)"
               [placeholder]="'mi-tienda' | transloco"
             />
+            <span class="onb__slugbox-suffix">.catalogohoy.com</span>
           </div>
           @if (storeUrl()) {
           <span class="onb__hint">

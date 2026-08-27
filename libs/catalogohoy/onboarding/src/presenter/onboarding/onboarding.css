@@ -129,8 +129,8 @@
   border-color: var(--color-primary-500, #3e7bfa);
   box-shadow: 0 0 0 0.0625rem var(--color-primary-500, #3e7bfa);
 }
-.onb__slugbox-prefix {
-  padding: 0.625rem 0 0.625rem 0.75rem;
+.onb__slugbox-suffix {
+  padding: 0.625rem 0.75rem 0.625rem 0;
   font-size: 0.875rem;
   color: var(--color-grey-400, #94a3b8);
   white-space: nowrap;
@@ -139,12 +139,13 @@
 .onb__slugbox-input {
   flex: 1;
   min-width: 0;
-  padding: 0.625rem 0.75rem 0.625rem 0.125rem;
+  padding: 0.625rem 0.125rem 0.625rem 0.75rem;
   font-size: 0.875rem;
   color: var(--color-grey-800, #1e293b);
   border: none;
   outline: none;
   background: transparent;
+  text-align: right;
 }
 
 /* Logo circular (uploader con badge de cámara) */
