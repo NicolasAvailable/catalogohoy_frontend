@@ -26,6 +26,7 @@ import {
 } from '@ui';
 import { CategoryStore } from '@catalogohoy/category';
 import {
+  EcommerceConfig,
   EcommerceConfigService,
   EcommerceConfigStore,
   detectPaymentMethodType,
@@ -36,11 +37,17 @@ import {
   ShippingMethodType,
   THEME_COLORS,
 } from '@catalogohoy/ecommerce-config';
+import { SupabaseClientProvider } from '@catalogohoy/core';
 import { CreateProductInput, ProductService } from '@catalogohoy/product';
 import { ProfileStore } from '@catalogohoy/profile';
 import { TenantService, TenantStore } from '@catalogohoy/tenant';
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6;
+/** Los 3 pasos del wizard (estilo Take App):
+ *  tienda (datos + logo + color + dirección) → primer producto → entrega+pago.
+ *  Se navegan por índice sobre STEP_IDS (lista + índice, no números mágicos). */
+type StepId = 'store' | 'product' | 'setup';
+
+const STEP_IDS: StepId[] = ['store', 'product', 'setup'];
 
 /** Clave de localStorage que marca el onboarding como completado por tenant.
  *  Evita re-disparar el wizard (hasta tener un flag en DB). */
@@ -48,11 +55,11 @@ export const onboardingDoneKey = (tenantId: string | number) =>
   `chy_onboarding_done_${tenantId}`;
 
 /** Prefijo del slug temporal que crea el trigger de signup (handle_new_user)
- *  cuando el registro no pidió nombre de tienda. El paso "Tu catálogo" lo
+ *  cuando el registro no pidió nombre de tienda. El paso "Tu tienda" lo
  *  reemplaza por la dirección definitiva. */
 const TEMP_SLUG_PREFIX = 'tienda-';
 
-/** Draft de una card de entrega del paso 5. */
+/** Draft de una card de entrega (paso Entrega y pago). */
 interface ShippingDraft {
   type: ShippingMethodType;
   label: string;
@@ -63,7 +70,7 @@ interface ShippingDraft {
   priceOnRequest: boolean;
 }
 
-/** Draft de una card de método de pago del paso 6. */
+/** Draft de una card de método de pago (paso Entrega y pago). */
 interface PaymentDraft {
   name: string;
   icon: string;
@@ -133,8 +140,15 @@ export class Onboarding implements OnInit {
   private readonly productService = inject(ProductService);
 
   public readonly themeColors = THEME_COLORS;
-  public readonly totalSteps = 6;
-  public readonly step = signal<Step>(1);
+  /** Lista de pasos + índice actual: la numeración (Paso 1/3) sale de acá. */
+  public readonly stepIds = STEP_IDS;
+  public readonly totalSteps = STEP_IDS.length;
+  public readonly stepIndex = signal(0);
+  public readonly currentStep = computed<StepId>(
+    () => this.stepIds[this.stepIndex()]
+  );
+  /** Número humano del paso actual (Paso {stepNumber}/{totalSteps}). */
+  public readonly stepNumber = computed(() => this.stepIndex() + 1);
   /** true mientras redirige a /admin (onboarding ya completado): no renderiza. */
   public readonly isRedirecting = signal(false);
   /** El formulario no se muestra hasta aplicar los prefills (evita que el
@@ -142,12 +156,15 @@ export class Onboarding implements OnInit {
   public readonly isBooting = signal(true);
   private tenantId: string | null = null;
 
-  // ── Paso 1: tu información + WhatsApp (obligatorio) ─────────────────────
-  public readonly userName = signal('');
+  // ── Paso 1: tu tienda ───────────────────────────────────────────────────
   public readonly whatsapp = signal('');
   public readonly countryIso = signal('ve');
+  /** true si el WhatsApp ya se conoce (config o signup): el campo no se pide. */
+  public readonly whatsappKnown = signal(false);
+  /** true si la config ya tenía un botón de WhatsApp (no se re-guarda). */
+  private hadConfigWhatsapp = false;
+  private profileName = '';
 
-  // ── Paso 2: tu catálogo ─────────────────────────────────────────────────
   public readonly storeName = signal('');
   public readonly logoUrl = signal<string | null>(null);
   public readonly themeColor = signal('#10b981');
@@ -160,17 +177,15 @@ export class Onboarding implements OnInit {
   private initialStoreName = '';
   private initialSlug = '';
 
-  // ── Paso 3: categorías ──────────────────────────────────────────────────
+  // ── Paso 2: primer producto (+ categorías inline) ───────────────────────
   public readonly newCategoryName = signal('');
   public readonly creatingCategory = signal(false);
-
-  // ── Paso 4: primer producto ─────────────────────────────────────────────
   public readonly productName = signal('');
   public readonly productPrice = signal<number | null>(null);
   public readonly productPhotos = signal<string[]>([]);
   public readonly productCategoryIds = signal<string[]>([]);
 
-  // ── Paso 5: entrega ─────────────────────────────────────────────────────
+  // ── Paso 3: entrega y pago ──────────────────────────────────────────────
   public readonly shippingDrafts = signal<ShippingDraft[]>(
     SHIPPING_CARDS.map((card) => ({
       ...card,
@@ -181,7 +196,6 @@ export class Onboarding implements OnInit {
   );
   private existingShippingMethods: ShippingMethod[] = [];
 
-  // ── Paso 6: pago ────────────────────────────────────────────────────────
   public readonly paymentDrafts = signal<PaymentDraft[]>([]);
   private existingPaymentMethods: PaymentMethodEntity[] = [];
 
@@ -201,17 +215,15 @@ export class Onboarding implements OnInit {
     this.categories().map((c) => ({ id: c.id, name: c.name }))
   );
 
-  public readonly step1Valid = computed(
-    () => this.whatsapp().trim().length > 0
-  );
   /** Slug final del campo editable (slugificado + sin guiones en los bordes). */
   public readonly finalSlug = computed(() => toSlug(this.slugInput()));
-  public readonly step2Valid = computed(
+  public readonly storeStepValid = computed(
     () =>
       this.storeName().trim().length > 0 &&
+      this.whatsapp().trim().length > 0 &&
       (!this.isTempSlug() || this.finalSlug().length > 0)
   );
-  public readonly step4Valid = computed(
+  public readonly productValid = computed(
     () =>
       this.productName().trim().length > 0 && (this.productPrice() ?? 0) > 0
   );
@@ -220,6 +232,12 @@ export class Onboarding implements OnInit {
   public readonly storeUrl = computed(() => {
     const slug = this.isTempSlug() ? this.finalSlug() : this.slug();
     return slug ? `${slug}.catalogohoy.com` : '';
+  });
+
+  /** Franja del preview: degradé suave del color de marca (~15-20% s/ blanco). */
+  public readonly bannerTint = computed(() => {
+    const color = this.themeColor();
+    return `linear-gradient(135deg, color-mix(in srgb, ${color} 22%, white) 0%, color-mix(in srgb, ${color} 12%, white) 100%)`;
   });
 
   async ngOnInit(): Promise<void> {
@@ -247,7 +265,7 @@ export class Onboarding implements OnInit {
     const profile = this.profileStore.profile();
 
     // Prefills: nombre del perfil, nombre/color/logo del catálogo ya creado.
-    this.userName.set(profile?.name ?? '');
+    this.profileName = (profile?.name ?? '').trim();
     this.storeName.set(config?.name ?? '');
     this.themeColor.set(config?.themeColor || '#10b981');
     this.logoUrl.set(config?.logo ?? null);
@@ -262,8 +280,30 @@ export class Onboarding implements OnInit {
       this.slugInput.set(toSlug(config?.name ?? ''));
     }
 
-    const existing = config?.whatsappButtons?.[0]?.number;
-    if (existing) this.whatsapp.set(existing);
+    // ── WhatsApp ya conocido ⇒ el campo NO se vuelve a pedir ───────────────
+    // Fuentes: (1) config.whatsappButtons ya guardado; (2) el signup nuevo lo
+    // pide y lo deja en user_metadata.store_whatsapp (E.164) — en ese caso se
+    // persiste como botón recién al confirmar el paso 1.
+    const configWhatsapp =
+      config?.whatsappButtons?.find((b) => b.number?.trim())?.number ?? '';
+    this.hadConfigWhatsapp = configWhatsapp.length > 0;
+    if (configWhatsapp) {
+      this.whatsapp.set(configWhatsapp);
+      this.whatsappKnown.set(true);
+    } else {
+      try {
+        const { data } =
+          await SupabaseClientProvider.getInstance().auth.getUser();
+        const raw = data.user?.user_metadata?.['store_whatsapp'];
+        const signupWhatsapp = typeof raw === 'string' ? raw.trim() : '';
+        if (signupWhatsapp) {
+          this.whatsapp.set(signupWhatsapp);
+          this.whatsappKnown.set(true);
+        }
+      } catch {
+        /* sin metadata/sesión: el campo WhatsApp se muestra en el paso 1 */
+      }
+    }
 
     this.prefillShipping(config?.shippingMethods ?? []);
     await this.loadPaymentPrefill(this.tenantId);
@@ -275,25 +315,15 @@ export class Onboarding implements OnInit {
     this.isBooting.set(false);
   }
 
-  // ── Navegación ──────────────────────────────────────────────────────────
+  // ── Navegación (sobre la lista de pasos: nunca sale de rango) ───────────
   public back(): void {
-    if (this.step() > 1) this.step.update((s) => (s - 1) as Step);
+    if (this.stepIndex() > 0) this.stepIndex.update((i) => i - 1);
   }
 
-  /** Paso 1 → guarda el WhatsApp del vendedor (whatsappButtons) y avanza. */
-  public async nextFromStep1(): Promise<void> {
-    if (!this.step1Valid() || this.isSaving()) return;
-    this.isSaving.set(true);
-    await this.configStore.updatePartialConfig({
-      whatsappButtons: [
-        {
-          name: this.userName().trim() || 'WhatsApp',
-          number: this.whatsapp().trim(),
-        },
-      ],
-    });
-    this.isSaving.set(false);
-    this.step.set(2);
+  private goNext(): void {
+    if (this.stepIndex() < this.stepIds.length - 1) {
+      this.stepIndex.update((i) => i + 1);
+    }
   }
 
   public onStoreNameChange(value: string): void {
@@ -311,9 +341,10 @@ export class Onboarding implements OnInit {
     this.slugInput.set(sanitizeSlug(value));
   }
 
-  /** Paso 2 → renombra tienda/slug si aplica, guarda nombre/color/logo y avanza. */
-  public async nextFromStep2(): Promise<void> {
-    if (!this.step2Valid() || this.isSaving()) return;
+  /** Paso 1 → renombra tienda/slug si aplica y guarda nombre/logo/color
+   *  (+ WhatsApp si aún no estaba en la config) en un solo update. */
+  public async saveStore(): Promise<void> {
+    if (!this.storeStepValid() || this.isSaving()) return;
     this.isSaving.set(true);
 
     if (this.isTempSlug() && this.tenantId) {
@@ -348,17 +379,25 @@ export class Onboarding implements OnInit {
       }
     }
 
-    await this.configStore.updatePartialConfig({
+    const partial: Partial<EcommerceConfig> = {
       name: this.storeName().trim(),
       themeColor: this.themeColor(),
       logo: this.logoUrl(),
-    });
+    };
+    // WhatsApp del vendedor: se guarda con este mismo update cuando vino del
+    // campo del paso 1 o del metadata del signup y la config aún no lo tenía.
+    if (!this.hadConfigWhatsapp && this.whatsapp().trim()) {
+      partial.whatsappButtons = [
+        {
+          name: this.profileName || 'WhatsApp',
+          number: this.whatsapp().trim(),
+        },
+      ];
+    }
+    await this.configStore.updatePartialConfig(partial);
+    if (partial.whatsappButtons) this.hadConfigWhatsapp = true;
     this.isSaving.set(false);
-    this.step.set(3);
-  }
-
-  public nextFromStep3(): void {
-    this.step.set(4);
+    this.goNext();
   }
 
   public onLogoUpload(url: string | string[]): void {
@@ -366,15 +405,11 @@ export class Onboarding implements OnInit {
     if (first) this.logoUrl.set(first);
   }
 
-  public removeLogo(): void {
-    this.logoUrl.set(null);
-  }
-
   public selectColor(color: string): void {
     this.themeColor.set(color);
   }
 
-  // ── Categorías ──────────────────────────────────────────────────────────
+  // ── Paso 2: categorías inline ───────────────────────────────────────────
   public async createCategory(): Promise<void> {
     const name = this.newCategoryName().trim();
     if (!name || this.creatingCategory()) return;
@@ -389,7 +424,7 @@ export class Onboarding implements OnInit {
     this.creatingCategory.set(false);
   }
 
-  // ── Paso 4: producto ────────────────────────────────────────────────────
+  // ── Paso 2: producto ────────────────────────────────────────────────────
   public onProductPhoto(url: string | string[]): void {
     const urls = Array.isArray(url) ? url : [url];
     this.productPhotos.update((cur) => [...cur, ...urls.filter(Boolean)]);
@@ -399,9 +434,9 @@ export class Onboarding implements OnInit {
     this.productPhotos.update((cur) => cur.filter((u) => u !== url));
   }
 
-  /** Crea el primer producto y avanza al paso Entrega. */
-  public async nextFromStep4(): Promise<void> {
-    if (!this.step4Valid() || this.isSaving()) return;
+  /** Crea el primer producto y avanza al paso Entrega y pago. */
+  public async saveProduct(): Promise<void> {
+    if (!this.productValid() || this.isSaving()) return;
     this.isSaving.set(true);
 
     const input: CreateProductInput = {
@@ -435,7 +470,7 @@ export class Onboarding implements OnInit {
         this.productPhotos.set([]);
         this.productCategoryIds.set([]);
         this.isSaving.set(false);
-        this.step.set(5);
+        this.goNext();
       })
       .mapLeft((e: Error) => {
         this.toast.error(e as unknown as Exception);
@@ -443,12 +478,12 @@ export class Onboarding implements OnInit {
       });
   }
 
-  /** Salta el producto sin crear y avanza al paso Entrega. */
+  /** Salta el producto sin crear y avanza al paso Entrega y pago. */
   public skipProduct(): void {
-    this.step.set(5);
+    this.goNext();
   }
 
-  // ── Paso 5: entrega ─────────────────────────────────────────────────────
+  // ── Paso 3: entrega ─────────────────────────────────────────────────────
   private prefillShipping(methods: ShippingMethod[]): void {
     this.existingShippingMethods = methods;
     this.shippingDrafts.set(
@@ -487,20 +522,6 @@ export class Onboarding implements OnInit {
           : d
       )
     );
-  }
-
-  /** Paso 5 → persiste TODOS los métodos (los apagados con isActive=false). */
-  public async nextFromStep5(): Promise<void> {
-    if (this.isSaving()) return;
-    this.isSaving.set(true);
-    const shippingMethods = this.buildShippingMethods();
-    await this.configStore.updatePartialConfig({
-      shippingMethods,
-      showShippingSection: shippingMethods.some((m) => m.isActive),
-    });
-    this.existingShippingMethods = shippingMethods;
-    this.isSaving.set(false);
-    this.step.set(6);
   }
 
   private buildShippingMethods(): ShippingMethod[] {
@@ -558,7 +579,7 @@ export class Onboarding implements OnInit {
     });
   }
 
-  // ── Paso 6: pago ────────────────────────────────────────────────────────
+  // ── Paso 3: pago ────────────────────────────────────────────────────────
   private paymentPresets(): { name: string; icon: string }[] {
     return this.isVenezuela()
       ? [
@@ -633,10 +654,18 @@ export class Onboarding implements OnInit {
     );
   }
 
-  /** Paso 6 (final) → guarda los métodos de pago y termina el onboarding. */
-  public async finishOnboarding(): Promise<void> {
+  /** Paso 3 (final) → guarda entrega + métodos de pago y termina el wizard. */
+  public async finishSetup(): Promise<void> {
     if (this.isSaving()) return;
     this.isSaving.set(true);
+
+    const shippingMethods = this.buildShippingMethods();
+    await this.configStore.updatePartialConfig({
+      shippingMethods,
+      showShippingSection: shippingMethods.some((m) => m.isActive),
+    });
+    this.existingShippingMethods = shippingMethods;
+
     const saved = await this.savePaymentMethods();
     this.isSaving.set(false);
     if (!saved) return;
