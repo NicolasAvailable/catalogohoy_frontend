@@ -260,18 +260,18 @@ export class Onboarding implements OnInit {
    *  que es el host que resuelve mientras se navega el wizard. El cambio de
    *  paso (onbStep) recarga el iframe, así lo creado en cada paso aparece
    *  guardado al avanzar.
-   *  Dev vs prod: en dev el storefront resuelve el slug por el PATH
-   *  (getTenantSlugFromUrl → pathname), así que hay que ir a `/${slug}`; si no,
-   *  `/?slug=X` cae al DEV_TENANT_SLUG e ignora el tenant real. En prod manda
-   *  el hostname (subdominio), el `?slug` es inocuo. */
+   *  ⚠️ Dev: el storefront solo tiene ruta raíz (`path: '**' → ''`), así que
+   *  cualquier `/slug` redirige a `/` y el tenant cae al DEV_TENANT_SLUG. Por
+   *  eso EN LOCAL el preview siempre muestra el catálogo demo, no la tienda que
+   *  se está creando (limitación conocida, no arreglable sin agregar una ruta
+   *  `:slug` al storefront). En PROD cada tienda vive en su subdominio y
+   *  `getTenantSlugFromUrl` lo resuelve por hostname → muestra la tienda real. */
   public readonly safeIframeUrl = computed<SafeResourceUrl | ''>(() => {
     const slug = this.slug();
     if (!slug) return '';
     const origin = window.location.origin;
     const step = this.stepIndex();
-    const url = isDevMode()
-      ? `${origin}/${slug}?preview=true&onbStep=${step}`
-      : `${origin}/?slug=${slug}&preview=true&onbStep=${step}`;
+    const url = `${origin}/?slug=${slug}&preview=true&onbStep=${step}`;
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   });
 
