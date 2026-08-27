@@ -35,6 +35,7 @@ import {
   PaymentMethodEntity,
   ShippingMethod,
   ShippingMethodType,
+  SUPPORTED_COUNTRIES,
   THEME_COLORS,
 } from '@catalogohoy/ecommerce-config';
 import { SupabaseClientProvider } from '@catalogohoy/core';
@@ -240,6 +241,14 @@ export class Onboarding implements OnInit {
     return `linear-gradient(135deg, color-mix(in srgb, ${color} 22%, white) 0%, color-mix(in srgb, ${color} 12%, white) 100%)`;
   });
 
+  /** País en español para la ficha del preview (como la ficha real). */
+  public readonly countryLabel = computed(
+    () =>
+      SUPPORTED_COUNTRIES.find(
+        (c) => c.code === this.countryIso().toUpperCase()
+      )?.label ?? ''
+  );
+
   async ngOnInit(): Promise<void> {
     const id = await this.tenantStore.getTenantIdAsync();
     if (id == null) {
@@ -264,9 +273,8 @@ export class Onboarding implements OnInit {
     const config = this.configStore.config();
     const profile = this.profileStore.profile();
 
-    // Prefills: nombre del perfil, nombre/color/logo del catálogo ya creado.
+    // Prefills: nombre del perfil, color/logo del catálogo ya creado.
     this.profileName = (profile?.name ?? '').trim();
-    this.storeName.set(config?.name ?? '');
     this.themeColor.set(config?.themeColor || '#10b981');
     this.logoUrl.set(config?.logo ?? null);
     this.countryIso.set((config?.countryCode ?? 've').toLowerCase());
@@ -276,8 +284,16 @@ export class Onboarding implements OnInit {
     this.isTempSlug.set(currentSlug.startsWith(TEMP_SLUG_PREFIX));
     this.initialSlug = currentSlug;
     this.initialStoreName = config?.name ?? '';
+
+    // Nombre: NO prefillear el sembrado por el trigger de signup ("Mi tienda"
+    // o el propio slug temporal tipo "mi-tienda-mmr0ps"): input vacío con
+    // placeholder y el preview cae al fallback 'Mi tienda'.
+    const rawName = (config?.name ?? '').trim();
+    const seededName =
+      rawName.toLowerCase() === 'mi tienda' || rawName === currentSlug;
+    this.storeName.set(seededName ? '' : rawName);
     if (this.isTempSlug()) {
-      this.slugInput.set(toSlug(config?.name ?? ''));
+      this.slugInput.set(seededName ? '' : toSlug(rawName));
     }
 
     // ── WhatsApp ya conocido ⇒ el campo NO se vuelve a pedir ───────────────

@@ -453,22 +453,36 @@
       } }
     </section>
 
-    <!-- ============ PANEL DERECHO: preview storefront (los 3 pasos) ============ -->
+    <!-- ==== PANEL DERECHO: réplica en miniatura del catálogo real ==== -->
     <aside class="onb__preview">
       <div class="onb__store">
-        <!-- Mini header del storefront -->
-        <div class="onb__store-topbar">
-          <ui-icon name="menu" size="16" styleClass="text-grey-400" />
-          <span class="onb__store-topbar-end">
-            <ui-icon name="search" size="15" styleClass="text-grey-400" />
-            <ui-icon name="shopping-cart" size="15" styleClass="text-grey-400" />
+        <!-- Toolbar real: lupa + filtros + tabs de categorías EN VIVO -->
+        <div class="onb__store-toolbar">
+          <span class="onb__store-tool">
+            <ui-icon name="search" size="14" styleClass="text-grey-500" />
           </span>
+          <span class="onb__store-tool">
+            <ui-icon
+              name="sliders-horizontal"
+              size="14"
+              styleClass="text-grey-500"
+            />
+          </span>
+          <div class="onb__store-tabs">
+            <span
+              class="onb__store-tab onb__store-tab--active"
+              [style.color]="themeColor()"
+              [style.borderColor]="themeColor()"
+              >{{ 'Ver todos' | transloco }}</span
+            >
+            @for (cat of categories(); track cat.id) {
+            <span class="onb__store-tab">{{ cat.name }}</span>
+            }
+          </div>
         </div>
 
-        <!-- Banner tintado con el color de marca -->
+        <!-- Portada tintada + logo superpuesto (como el hero real) -->
         <div class="onb__store-banner" [style.background]="bannerTint()"></div>
-
-        <!-- Logo superpuesto mitad banner / mitad contenido -->
         <div class="onb__store-logo">
           @if (logoUrl()) {
           <img [src]="logoUrl()" [alt]="storeName()" />
@@ -480,57 +494,73 @@
         <h2 class="onb__store-name">
           {{ storeName() || ('Mi tienda' | transloco) }}
         </h2>
-        @if (storeUrl()) {
-        <span class="onb__store-link">{{ storeUrl() }}</span>
+        @if (countryLabel()) {
+        <span class="onb__store-country">{{ countryLabel() }}</span>
         }
 
-        <!-- Lista de productos: la primera fila se vuelve real con el paso 2 -->
-        <div class="onb__store-list">
+        <!-- Grid 2 columnas de cards como las reales; la primera se vuelve
+             real al tipear el producto en el paso 2 -->
+        <div class="onb__store-grid">
           @if (productName().trim()) {
-          <div class="onb__store-row">
-            <div class="onb__store-row-info">
-              <span class="onb__store-row-name">{{ productName() }}</span>
-              <span
-                class="onb__store-row-price"
-                [style.color]="themeColor()"
-                >$ {{ (productPrice() || 0).toFixed(2) }}</span
-              >
-            </div>
-            <div class="onb__store-thumb">
+          <div class="onb__store-card">
+            <div class="onb__store-card-img">
               @if (productPhotos().length) {
               <img [src]="productPhotos()[0]" alt="" />
+              } @else {
+              <ui-icon name="package" size="20" styleClass="text-grey-300" />
               }
             </div>
+            <span class="onb__store-card-name">{{ productName() }}</span>
+            <span class="onb__store-card-price"
+              >$ {{ (productPrice() || 0).toFixed(2) }}</span
+            >
+            <span
+              class="onb__store-card-btn"
+              [style.color]="themeColor()"
+              [style.borderColor]="themeColor()"
+              >{{ 'Ver más' | transloco }}</span
+            >
           </div>
           } @else {
-          <div class="onb__store-row">
-            <div class="onb__store-row-info">
-              <span class="onb__store-bar"></span>
-              <span class="onb__store-bar onb__store-bar--short"></span>
-            </div>
-            <div class="onb__store-thumb"></div>
+          <div class="onb__store-card">
+            <div class="onb__store-card-img"></div>
+            <span class="onb__store-bar"></span>
+            <span class="onb__store-bar onb__store-bar--short"></span>
+            <span class="onb__store-card-btn onb__store-card-btn--ghost">{{
+              'Ver más' | transloco
+            }}</span>
           </div>
           }
-          <div class="onb__store-row">
-            <div class="onb__store-row-info">
-              <span class="onb__store-bar"></span>
-              <span class="onb__store-bar onb__store-bar--short"></span>
-            </div>
-            <div class="onb__store-thumb"></div>
+          <div class="onb__store-card">
+            <div class="onb__store-card-img"></div>
+            <span class="onb__store-bar"></span>
+            <span class="onb__store-bar onb__store-bar--short"></span>
+            <span class="onb__store-card-btn onb__store-card-btn--ghost">{{
+              'Ver más' | transloco
+            }}</span>
           </div>
-          <div class="onb__store-row">
-            <div class="onb__store-row-info">
-              <span class="onb__store-bar"></span>
-              <span class="onb__store-bar onb__store-bar--short"></span>
-            </div>
-            <div class="onb__store-thumb"></div>
+          <div class="onb__store-card">
+            <div class="onb__store-card-img"></div>
+            <span class="onb__store-bar"></span>
+            <span class="onb__store-bar onb__store-bar--short"></span>
+            <span class="onb__store-card-btn onb__store-card-btn--ghost">{{
+              'Ver más' | transloco
+            }}</span>
+          </div>
+          <div class="onb__store-card">
+            <div class="onb__store-card-img"></div>
+            <span class="onb__store-bar"></span>
+            <span class="onb__store-bar onb__store-bar--short"></span>
+            <span class="onb__store-card-btn onb__store-card-btn--ghost">{{
+              'Ver más' | transloco
+            }}</span>
           </div>
         </div>
 
-        <!-- Pill flotante de carrito -->
-        <div class="onb__store-cart">
-          <span>{{ 'Carrito' | transloco }}</span>
-          <span>$ {{ (productPrice() || 0).toFixed(2) }}</span>
+        <!-- Pill flotante de carrito (como la real) -->
+        <div class="onb__store-cart" [style.background]="themeColor()">
+          <ui-icon name="shopping-cart" size="13" />
+          <span>{{ 'Ver Carrito ({n})' | transloco: { n: 0 } }}</span>
         </div>
       </div>
     </aside>
