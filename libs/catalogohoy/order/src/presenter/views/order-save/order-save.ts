@@ -184,7 +184,6 @@ export default class OrderSave implements OnInit {
   public readonly evidencePreviewUrl = signal<string | null>(null);
   public readonly isCreate = signal<boolean>(true);
   public readonly isSubmitting = signal<boolean>(false);
-  public readonly totalBs = signal<number>(0);
   public readonly selectedRateType = signal<RateType>('bcv_usd');
   /** Envío/flete del alta manual (lo paga el cliente). Se suma al total. */
   public readonly shippingFee = signal<number>(0);
@@ -269,6 +268,14 @@ export default class OrderSave implements OnInit {
     };
     return rateMap[this.selectedRateType()] ?? 0;
   });
+
+  /** Total en bolívares = total (USD) × tasa activa. Reactivo: se recalcula solo
+   *  al editar cantidades/precios/envío/comisión o cambiar la tasa (antes era un
+   *  signal que solo se refrescaba con un botón "Recalcular" → al editar un
+   *  pedido el USD se actualizaba pero el Bs quedaba viejo). */
+  public readonly totalBs = computed(
+    () => this.calculateTotal() * this.exchangeRate()
+  );
 
   public readonly rateOptions: {
     label: string;
@@ -365,7 +372,6 @@ export default class OrderSave implements OnInit {
         };
       })
     );
-    this.totalBs.set(order.totalBs ?? 0);
     const sm = order.shippingMethod ?? null;
     this.originalShippingMethod.set(sm);
     this.shippingFee.set(order.shippingFee ?? sm?.fee ?? 0);
@@ -801,9 +807,8 @@ export default class OrderSave implements OnInit {
     if (method) this.shippingFee.set(method.fee ?? 0);
   }
 
-  /** Actualiza el monto de envío (no baja de 0). El total en la moneda de
-   *  referencia se recalcula solo; el de Bs. se refresca con "Recalcular"
-   *  (igual que al cambiar cantidades). */
+  /** Actualiza el monto de envío (no baja de 0). Tanto el total en la moneda de
+   *  referencia como el de Bs. se recalculan solos (ambos son reactivos). */
   public onShippingFeeChange(value: number): void {
     this.shippingFee.set(Math.max(0, value || 0));
   }
@@ -833,16 +838,10 @@ export default class OrderSave implements OnInit {
     return original ? { ...original, fee } : null;
   }
 
-  public recalculateTotalBs() {
-    const totalUsd = this.calculateTotal();
-    const rate = this.exchangeRate();
-    this.totalBs.set(totalUsd * rate);
-  }
-
   public async onRateTypeChange(rateType: RateType) {
     this.selectedRateType.set(rateType);
-
-    // Actualizar la tasa activa globalmente
+    // `totalBs` es computed sobre `exchangeRate()` (que depende de
+    // `selectedRateType`), así que se recalcula solo al cambiar la tasa.
     const result = await this.rateStore.updateActiveRate(rateType);
     result.fold(
       (error: string) => {
@@ -850,7 +849,6 @@ export default class OrderSave implements OnInit {
       },
       () => {
         this.toastService.success('Tasa activa actualizada');
-        this.recalculateTotalBs();
       }
     );
   }

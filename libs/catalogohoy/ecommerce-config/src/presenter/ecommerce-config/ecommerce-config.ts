@@ -329,7 +329,10 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftDeliveryBlockedWeekdays = signal<number[]>([]);
   public readonly deliveryWeekdayOptions = DELIVERY_WEEKDAY_OPTIONS;
 
-  /** Toggle a weekday in/out of the blocked list. */
+  /** Alterna un día entre "despacha" y "no despacha". Se almacena como lista de
+   *  días BLOQUEADos (para no tocar el checkout ni migrar), pero la UI se expresa
+   *  en positivo ("días en los que SÍ despachas"): togglear un día = agregarlo o
+   *  quitarlo de la lista de bloqueados. */
   toggleDeliveryBlockedWeekday(day: number): void {
     const current = this.draftDeliveryBlockedWeekdays();
     this.draftDeliveryBlockedWeekdays.set(
@@ -339,8 +342,10 @@ export class EcommerceConfigComponent implements OnInit {
     );
   }
 
-  isDeliveryWeekdayBlocked(day: number): boolean {
-    return this.draftDeliveryBlockedWeekdays().includes(day);
+  /** True cuando el catálogo SÍ despacha ese día (no está en la lista de
+   *  bloqueados). Es lo que la UI resalta. */
+  isDeliveryWeekdayActive(day: number): boolean {
+    return !this.draftDeliveryBlockedWeekdays().includes(day);
   }
 
   // WhatsApp notifications (tabla whatsapp_notification_settings). Se cargan

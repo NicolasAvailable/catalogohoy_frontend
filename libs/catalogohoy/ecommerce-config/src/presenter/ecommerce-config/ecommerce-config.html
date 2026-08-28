@@ -1061,14 +1061,14 @@
 
         <div class="card-content" [class.section-disabled]="!draftDeliveryDateEnabled()">
           <p class="text-sm text-grey-300 mb-4">
-            {{ 'Marca los días de la semana en los que NO haces entregas. El calendario del checkout deshabilitará esos días.' | transloco }}
+            {{ 'Selecciona los días en los que SÍ despachas pedidos. Los demás se deshabilitarán en el calendario del checkout.' | transloco }}
           </p>
           <div class="delivery-weekdays">
             @for (opt of deliveryWeekdayOptions; track opt.day) {
             <button
               type="button"
               class="delivery-weekday-chip"
-              [class.delivery-weekday-chip--blocked]="isDeliveryWeekdayBlocked(opt.day)"
+              [class.delivery-weekday-chip--active]="isDeliveryWeekdayActive(opt.day)"
               (click)="toggleDeliveryBlockedWeekday(opt.day)"
             >
               {{ opt.label | transloco }}
@@ -1076,7 +1076,7 @@
             }
           </div>
           <small class="delivery-weekdays-hint">
-            {{ 'Los días resaltados están bloqueados (sin entregas).' | transloco }}
+            {{ 'Los días resaltados son los que despachas. Toca uno para activarlo o desactivarlo.' | transloco }}
           </small>
         </div>
       </ui-card>

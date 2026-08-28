@@ -1372,10 +1372,10 @@
   border-color: var(--color-primary-300, #7ea6ff);
 }
 
-.delivery-weekday-chip--blocked {
-  background: var(--color-primary-50, #eaf1ff);
-  border-color: var(--color-primary-300, #7ea6ff);
-  color: var(--color-primary-700, #214da8);
+.delivery-weekday-chip--active {
+  background: var(--color-green-50, #ecfdf3);
+  border-color: var(--color-green-400, #4ade80);
+  color: var(--color-green-700, #15803d);
   font-weight: 600;
 }
 
