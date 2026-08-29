@@ -84,7 +84,7 @@ function digits(s) {
 // UNA auto-respuesta (máx 1 cada 24h por teléfono, dedupe en
 // wa_notify_autoreplies) indicando que respondemos desde el número de soporte.
 const SUPPORT_TENANT_ID = 6;
-const NOTIFY_AUTO_REPLY = "Este número solo envía avisos automáticos de CatalogoHoy.\n\n" + "Para soporte escríbenos directamente aquí:\n" + "https://wa.me/message/XDLRVIGXVUCSB1\n\n" + "Guarda ese contacto para próximas consultas 📌";
+const NOTIFY_AUTO_REPLY = "¡Hola! 👋🏻 Este número es solo para *avisos automáticos* de CatalogoHoy.\n\n" + "Para hablar con soporte, escríbenos por aquí:\n" + "https://wa.me/message/XDLRVIGXVUCSB1\n\n" + "Guarda ese contacto y te atendemos enseguida ✅";
 async function handleNotifyNumberInbound(value, notifyToken, notifyPnid) {
   try {
     // 1) El mensaje entra al CRM de soporte por el pipeline normal (el token
@@ -119,13 +119,18 @@ async function handleNotifyNumberInbound(value, notifyToken, notifyPnid) {
       if (!res.ok) {
         console.error("[wa-webhook] auto-reply avisos fallo", res.status, (await res.text()).slice(0, 300));
       }
+      // Solo marcamos el dedupe si el envío SALIÓ bien. Si Meta falla
+      // (throttle/timeout), NO lo marcamos → el próximo mensaje reintenta
+      // (antes un fallo transitorio bloqueaba la respuesta por 24h).
+      if (res.ok) {
+        await admin.from("wa_notify_autoreplies").upsert({
+          customer_phone: from,
+          last_replied_at: new Date().toISOString()
+        }, {
+          onConflict: "customer_phone"
+        });
+      }
     }
-    await admin.from("wa_notify_autoreplies").upsert({
-      customer_phone: from,
-      last_replied_at: new Date().toISOString()
-    }, {
-      onConflict: "customer_phone"
-    });
     // 3) Nota interna en el chat de soporte para dar contexto al equipo.
     const chat = await findOrCreateChat(SUPPORT_TENANT_ID, from, null);
     if (chat) {
@@ -152,8 +157,8 @@ async function handleNotifyNumberInbound(value, notifyToken, notifyPnid) {
 const SUPPORT_BOT_ENABLED = (Deno.env.get("WA_SUPPORT_BOT") ?? "on") !== "off";
 // phone_number_id del número de soporte +58 422-0240947 (whatsapp_accounts id 4).
 const SUPPORT_BOT_PNID = Deno.env.get("WA_SUPPORT_BOT_PNID") ?? "1011157635415699";
-const SUPPORT_MENU_BODY = "¡Hola! 👋 Escribiste al soporte de CatalogoHoy.\n\n" + "Para ayudarte más rápido, elegí una opción:";
-const SUPPORT_MENU_FOOTER = "O escribí tu consulta directamente.";
+const SUPPORT_MENU_BODY = "¡Hola! 👋🏻 Gracias por escribir al soporte de CatalogoHoy.\n\n" + "Para ayudarte más rápido, elige una opción:";
+const SUPPORT_MENU_FOOTER = "O escríbenos tu consulta directamente.";
 // ⚠️ Mantener sincronizado con CLOSE_PREFIX en wa-support-close: es el
 // marcador con el que reconocemos una conversación cerrada por inactividad.
 const SUPPORT_CLOSE_PREFIX = "Esta conversación se cerró por inactividad";
@@ -184,18 +189,25 @@ const SUPPORT_MENU_OPTIONS = [
   {
     id: "bot_soporte",
     title: "Tengo un problema",
-    reply: "Contanos tu problema con el mayor detalle posible (si podés, mandá capturas 📸) y el nombre de tu catálogo.\n\n" + "Un agente del equipo te responde a la brevedad 🙌"
+    reply: "Cuéntanos tu problema con el mayor detalle posible (si puedes, envía capturas 📸) e incluye el nombre de tu catálogo.\n\n" + "Un agente del equipo te responde a la brevedad 🙌🏻"
   },
   {
     id: "bot_pagos",
     title: "Pagar o renovar",
-    reply: "Para pagar o renovar tu plan tenés dos caminos:\n\n" + "1️⃣ Con tarjeta: entrá a tu panel de CatalogoHoy → sección *Planes* y elegí tu plan.\n" + "2️⃣ Por transferencia o pago móvil: escribinos acá el nombre de tu catálogo y te pasamos los datos.\n\n" + "Cualquier duda un agente te ayuda en unos minutos 💳"
+    // El texto para clientes NO venezolanos (los +58 reciben los botones de
+    // pago móvil / transferencia, ver handleSupportBot).
+    reply: "Para pagar o renovar tu plan entra a tu panel de CatalogoHoy → sección *Planes* y elige tu plan con tarjeta.\n\n" + "Si prefieres otro método, escríbenos el nombre de tu catálogo y te ayudamos 💳"
   },
   {
     id: "bot_otro",
     title: "Otra consulta",
-    reply: "¡Dale! Contanos tu consulta y en breve te responde alguien del equipo 🙌"
+    reply: "¡Con gusto! Cuéntanos tu consulta y en breve te responde alguien del equipo 🙌🏻"
   }
+];
+// Botones de método de pago (flujo VE): pago móvil / transferencia.
+const VE_PAY_BUTTONS = [
+  { type: "reply", reply: { id: "bot_pm", title: "Pago móvil" } },
+  { type: "reply", reply: { id: "bot_transf", title: "Transferencia" } }
 ];
 // ── Flujo VE: "quiero adquirir el plan X" ───────────────────────────────────
 // Los CTA de la landing ("Hola, me interesa adquirir el plan *X* ($9.99/mes
@@ -265,7 +277,7 @@ const PLAN_PRICES_USD = {
 /** Arma el mensaje con los datos del método elegido + monto en Bs. */ function vePaymentDetails(kind, intent, rate) {
   const monto = intent?.usd && rate ? `Monto: *${formatBs(intent.usd * rate)} Bs* (${intent.plan ? `plan ${intent.plan}, ` : ""}$${intent.usd} a tasa BCV del día)` : "El monto exacto en bolívares te lo confirmamos enseguida a tasa BCV del día.";
   const datos = kind === "bot_pm" ? "Datos de *Pago móvil* 📲\n\n" + `Teléfono: ${VE_PAGO_MOVIL.telefono}\n` + `Cédula: ${VE_PAGO_MOVIL.cedula}\n` + `Banco: ${VE_PAGO_MOVIL.banco}` : "Datos de *Transferencia bancaria* 🏦\n\n" + `Banco: ${VE_TRANSFERENCIA.banco}\n` + `Cuenta: ${VE_TRANSFERENCIA.cuenta}\n` + `Titular: ${VE_TRANSFERENCIA.titular}\n` + `Cédula: ${VE_TRANSFERENCIA.cedula}`;
-  return `${datos}\n\n${monto}\n\n` + "Cuando hagas el pago, envianos el comprobante por acá y activamos tu plan enseguida ✅";
+  return `${datos}\n\n${monto}\n\n` + "Cuando hagas el pago, envíanos el comprobante por aquí y activamos tu plan enseguida ✅";
 }
 /** Envía un mensaje del bot por la Cloud API con el token del número de
  *  soporte. Devuelve el wamid o null (nunca lanza). */ async function sendSupportBotPayload(token, pnid, payload) {
@@ -304,6 +316,31 @@ const PLAN_PRICES_USD = {
     last_message_is_mine: true
   }).eq("id", chatId);
 }
+/** Envía los botones de método de pago (pago móvil / transferencia) al cliente
+ *  VE y registra el mensaje en el CRM. Reusado por el flujo "adquirir plan" y
+ *  por el botón "Pagar o renovar". Devuelve el wamid o null. */ async function sendPaymentMethodButtons(token, pnid, from, chatId, bodyText) {
+  const wamid = await sendSupportBotPayload(token, pnid, {
+    messaging_product: "whatsapp",
+    to: from,
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: {
+        text: bodyText
+      },
+      footer: {
+        text: "También puedes pagar con tarjeta desde tu panel."
+      },
+      action: {
+        buttons: VE_PAY_BUTTONS
+      }
+    }
+  });
+  if (wamid) {
+    await recordSupportBotMessage(chatId, `${bodyText}\n\n▫️ Pago móvil\n▫️ Transferencia`, wamid);
+  }
+  return wamid;
+}
 /** Corre DESPUÉS de que processCustomerMessages ingirió el mensaje. Nunca
  *  lanza: un fallo del bot no puede afectar la ingesta del CRM. */ async function handleSupportBot(account, pnid, value) {
   try {
@@ -338,7 +375,35 @@ const PLAN_PRICES_USD = {
       });
       return;
     }
-    // 1b) ¿Es la respuesta a un botón del menú? → contestar la opción.
+    // 1b) Botón "Pagar o renovar": para clientes VE (+58) mostramos los métodos
+    //    de pago locales (pago móvil / transferencia), igual que el flujo
+    //    "adquirir plan"; al elegir se envían los datos + monto en Bs. Para el
+    //    resto, el texto con el pago por tarjeta desde el panel.
+    if (btnId === "bot_pagos") {
+      if (from.startsWith("58")) {
+        await sendPaymentMethodButtons(account.token, pnid, from, chat.id, "Para renovar o adquirir tu plan, ¿cómo prefieres pagar?");
+      } else {
+        const pagos = SUPPORT_MENU_OPTIONS.find((o)=>o.id === "bot_pagos");
+        const wamid = await sendSupportBotPayload(account.token, pnid, {
+          messaging_product: "whatsapp",
+          to: from,
+          type: "text",
+          text: {
+            body: pagos.reply
+          }
+        });
+        if (wamid) await recordSupportBotMessage(chat.id, pagos.reply, wamid);
+      }
+      await admin.from("chat_messages").insert({
+        chat_id: chat.id,
+        content: "🤖 Triaje: el cliente eligió «Pagar o renovar».",
+        is_mine: true,
+        is_internal: true,
+        message_type: "text"
+      });
+      return;
+    }
+    // 1c) Otros botones del menú → contestar el texto canónico de la opción.
     const option = SUPPORT_MENU_OPTIONS.find((o)=>o.id === btnId);
     if (option) {
       const wamid = await sendSupportBotPayload(account.token, pnid, {
@@ -365,42 +430,8 @@ const PLAN_PRICES_USD = {
     const inboundText = describeMessage(first);
     const intent = from.startsWith("58") ? detectPlanIntent(inboundText) : null;
     if (intent) {
-      const body = `¡Excelente elección${intent.plan ? `, el plan *${intent.plan}*` : ""}! 🎉\n\n` + "¿Cómo preferís pagar?";
-      const wamid = await sendSupportBotPayload(account.token, pnid, {
-        messaging_product: "whatsapp",
-        to: from,
-        type: "interactive",
-        interactive: {
-          type: "button",
-          body: {
-            text: body
-          },
-          footer: {
-            text: "También podés pagar con tarjeta desde la plataforma."
-          },
-          action: {
-            buttons: [
-              {
-                type: "reply",
-                reply: {
-                  id: "bot_pm",
-                  title: "Pago móvil"
-                }
-              },
-              {
-                type: "reply",
-                reply: {
-                  id: "bot_transf",
-                  title: "Transferencia"
-                }
-              }
-            ]
-          }
-        }
-      });
-      if (wamid) {
-        await recordSupportBotMessage(chat.id, `${body}\n\n▫️ Pago móvil\n▫️ Transferencia`, wamid);
-      }
+      const body = `¡Excelente elección${intent.plan ? `, el plan *${intent.plan}*` : ""}! 🙌🏻\n\n` + "¿Cómo prefieres pagar?";
+      await sendPaymentMethodButtons(account.token, pnid, from, chat.id, body);
       await admin.from("chat_messages").insert({
         chat_id: chat.id,
         content: `🤖 Triaje: cliente VE quiere adquirir ${intent.plan ? `el plan ${intent.plan}` : "un plan"}` + `${intent.usd ? ` ($${intent.usd})` : ""}; se le ofrecieron pago móvil / transferencia.`,
@@ -470,6 +501,11 @@ const PLAN_PRICES_USD = {
     if (wamid) {
       const preview = `${SUPPORT_MENU_BODY}\n\n` + SUPPORT_MENU_OPTIONS.map((o)=>`▫️ ${o.title}`).join("\n");
       await recordSupportBotMessage(chat.id, preview, wamid);
+    } else {
+      // El envío a Meta falló (throttle/timeout): deshacemos el dedupe para que
+      // el próximo mensaje del cliente reintente el menú (si no, esa fila
+      // bloquearía la respuesta el resto del día → "a veces no llega").
+      await admin.from("wa_support_menu_sends").delete().eq("chat_id", chat.id).eq("sent_on", new Date().toISOString().slice(0, 10));
     }
   } catch (e) {
     console.error("[wa-webhook] support-bot fallo", e instanceof Error ? e.message : String(e));
