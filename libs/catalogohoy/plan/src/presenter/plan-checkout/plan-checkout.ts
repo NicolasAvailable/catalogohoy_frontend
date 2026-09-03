@@ -160,7 +160,7 @@ export class PlanCheckout implements OnInit {
 
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
-    { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
+    { key: 'quarterly', label: 'Trimestral', savingsLabel: '-10%' },
     { key: 'annual',    label: 'Anual',      savingsLabel: '-50%' },
   ];
 
