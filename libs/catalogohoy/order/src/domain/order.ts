@@ -32,7 +32,9 @@ export interface OrderItem {
   description?: string;
 }
 
-export type OrderStatus = 'pending' | 'completed' | 'cancelled';
+/** `credit` = entregada a crédito (salió del inventario) pero aún por cobrar:
+ *  descuenta stock como `completed`, pero NO cuenta como pagada. */
+export type OrderStatus = 'pending' | 'completed' | 'cancelled' | 'credit';
 
 /** Admin-only payment proof attached to a manual order/sale. */
 export interface PaymentEvidence {

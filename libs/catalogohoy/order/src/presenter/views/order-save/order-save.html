@@ -755,6 +755,33 @@
           <div
             role="radio"
             tabindex="0"
+            [attr.aria-checked]="form.get('status')?.value === 'credit'"
+            (click)="form.get('status')?.setValue('credit')"
+            (keydown.enter)="form.get('status')?.setValue('credit')"
+            (keydown.space)="form.get('status')?.setValue('credit'); $event.preventDefault()"
+            [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer flex-1 ' +
+              (form.get('status')?.value === 'credit'
+                ? 'border-blue-500 bg-blue-50/30'
+                : 'border-grey-200 hover:border-blue-300')"
+          >
+            <div
+              [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ' +
+                (form.get('status')?.value === 'credit'
+                  ? 'border-primary-500'
+                  : 'border-grey-300')"
+            >
+              @if (form.get('status')?.value === 'credit') {
+              <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
+              }
+            </div>
+            <div class="flex-1">
+              <span class="font-medium">{{ 'A crédito' | transloco }}</span>
+              <p class="text-sm text-grey-300">{{ 'Entregada a crédito (por cobrar)' | transloco }}</p>
+            </div>
+          </div>
+          <div
+            role="radio"
+            tabindex="0"
             [attr.aria-checked]="form.get('status')?.value === 'cancelled'"
             (click)="form.get('status')?.setValue('cancelled')"
             (keydown.enter)="form.get('status')?.setValue('cancelled')"

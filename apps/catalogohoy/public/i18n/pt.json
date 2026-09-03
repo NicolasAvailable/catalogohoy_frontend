@@ -2157,5 +2157,7 @@
   "NIT": "NIT",
   "El NIT es obligatorio": "O NIT é obrigatório",
   "Selecciona los días en los que SÍ despachas pedidos. Los demás se deshabilitarán en el calendario del checkout.": "Seleciona os dias em que você faz entregas. Os demais serão desabilitados no calendário do checkout.",
-  "Los días resaltados son los que despachas. Toca uno para activarlo o desactivarlo.": "Os dias destacados são os que você entrega. Toque em um para ativá-lo ou desativá-lo."
+  "Los días resaltados son los que despachas. Toca uno para activarlo o desactivarlo.": "Os dias destacados são os que você entrega. Toque em um para ativá-lo ou desativá-lo.",
+  "A crédito": "A prazo",
+  "Entregada a crédito (por cobrar)": "Entregue a prazo (a receber)"
 }

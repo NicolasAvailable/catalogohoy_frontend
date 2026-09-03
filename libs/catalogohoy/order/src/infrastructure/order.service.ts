@@ -293,9 +293,9 @@ export class OrderService {
       return E.left(new Error(error.message));
     }
 
-    // Una orden que NACE completada también mueve inventario (misma regla
-    // que updateOrderStatus: el stock se descuenta al cruzar a completed).
-    if (input.status === 'completed') {
+    // Una orden que NACE descontando inventario (completada o a crédito) mueve
+    // stock de una vez (misma regla que updateOrderStatus).
+    if (this.deductsStock(input.status)) {
       await this.deductStock(input.tenantId, input.products ?? []);
     }
 
@@ -358,13 +358,15 @@ export class OrderService {
     const beforeStatus = before?.status as OrderStatus | undefined;
     const beforeProducts = Array.isArray(before?.products) ? before.products : [];
     const newProducts = Array.isArray(input.products) ? input.products : [];
-    if (beforeStatus !== 'completed' && input.status === 'completed') {
+    const wasDeducted = this.deductsStock(beforeStatus);
+    const willDeduct = this.deductsStock(input.status);
+    if (!wasDeducted && willDeduct) {
       await this.deductStock(input.tenantId, newProducts);
-    } else if (beforeStatus === 'completed' && input.status !== 'completed') {
+    } else if (wasDeducted && !willDeduct) {
       await this.restoreStock(input.tenantId, beforeProducts);
     } else if (
-      beforeStatus === 'completed' &&
-      input.status === 'completed' &&
+      wasDeducted &&
+      willDeduct &&
       JSON.stringify(beforeProducts) !== JSON.stringify(newProducts)
     ) {
       await this.restoreStock(input.tenantId, beforeProducts);
@@ -421,13 +423,17 @@ export class OrderService {
 
     const products = Array.isArray(order.products) ? order.products : [];
 
-    // El stock se mueve únicamente cuando la orden cruza la frontera
-    // `completed`. Mientras está pending/cancelled no afecta inventario.
-    //   - cualquier estado → completed: descontar
-    //   - completed → cualquier otro: restaurar
-    if (oldStatus !== 'completed' && newStatus === 'completed') {
+    // El stock se mueve cuando la orden cruza la frontera de "descuenta
+    // inventario" (completed o credit). Mientras está pending/cancelled no
+    // afecta inventario.
+    //   - a un estado que descuenta (completed/credit): descontar
+    //   - de un estado que descontaba a uno que no: restaurar
+    //   - entre dos que descuentan (credit ↔ completed): no-op (ya está fuera)
+    const wasDeducted = this.deductsStock(oldStatus);
+    const willDeduct = this.deductsStock(newStatus);
+    if (!wasDeducted && willDeduct) {
       await this.deductStock(tenantId, products);
-    } else if (oldStatus === 'completed' && newStatus !== 'completed') {
+    } else if (wasDeducted && !willDeduct) {
       await this.restoreStock(tenantId, products);
     }
 
@@ -477,6 +483,14 @@ export class OrderService {
 
     if (error) return E.left(new Error(error.message));
     return E.right(OrderMapper.toDomain(data));
+  }
+
+  /** Estados en los que la orden YA salió del inventario (stock descontado):
+   *  `completed` (entregada/pagada) y `credit` (entregada a crédito, por
+   *  cobrar). `pending`/`cancelled` no tocan inventario. Centraliza la regla
+   *  para que create/update/status/delete la compartan. */
+  private deductsStock(status?: OrderStatus | null): boolean {
+    return status === 'completed' || status === 'credit';
   }
 
   /** Restaura stock vía RPC `increment_product_stock` (SECURITY DEFINER).
@@ -645,10 +659,10 @@ export class OrderService {
       return E.left(new Error(error.message));
     }
 
-    // Borrar una orden completada también la saca de completed: se repone lo
-    // que descontó (misma regla que updateOrder / updateOrderStatus). Las
-    // órdenes en pending/confirmed/cancelled nunca descontaron, no reponen.
-    if (before?.status === 'completed') {
+    // Borrar una orden que había descontado inventario (completed/credit) lo
+    // repone (misma regla que updateOrder / updateOrderStatus). Las órdenes en
+    // pending/cancelled nunca descontaron, no reponen.
+    if (before && this.deductsStock(before.status as OrderStatus)) {
       await this.restoreStock(
         tenantId,
         Array.isArray(before.products) ? before.products : []

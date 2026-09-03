@@ -165,6 +165,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
     return {
       completed: map['completed'] ?? zero,
       pending: map['pending'] ?? zero,
+      credit: map['credit'] ?? zero,
       cancelled: map['cancelled'] ?? zero,
     };
   });
@@ -245,7 +246,11 @@ export class OrderListComponent implements OnInit, OnDestroy {
   protected readonly statusDonutOptions = computed<ApexOptions>(() => {
     const s = this.metricByStatus();
     const symbol = this.metricSymbol();
-    const total = s.completed.amount + s.pending.amount + s.cancelled.amount;
+    const total =
+      s.completed.amount +
+      s.pending.amount +
+      s.credit.amount +
+      s.cancelled.amount;
     return {
       chart: {
         type: 'donut',
@@ -253,9 +258,14 @@ export class OrderListComponent implements OnInit, OnDestroy {
         fontFamily: 'inherit',
         foreColor: 'inherit',
       },
-      labels: ['Completadas', 'Pendientes', 'Canceladas'],
-      series: [s.completed.amount, s.pending.amount, s.cancelled.amount],
-      colors: ['#22c55e', '#f97316', '#ef4444'],
+      labels: ['Completadas', 'Pendientes', 'A crédito', 'Canceladas'],
+      series: [
+        s.completed.amount,
+        s.pending.amount,
+        s.credit.amount,
+        s.cancelled.amount,
+      ],
+      colors: ['#22c55e', '#f97316', '#3b82f6', '#ef4444'],
       stroke: { width: 0 },
       dataLabels: { enabled: false },
       legend: { position: 'bottom', fontSize: '13px' },
@@ -323,6 +333,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
     { label: 'Todas', value: 'all' },
     { label: 'Pendientes', value: 'pending', dotClass: 'bg-orange-500' },
     { label: 'Completadas', value: 'completed', dotClass: 'bg-green-500' },
+    { label: 'A crédito', value: 'credit', dotClass: 'bg-blue-500' },
     { label: 'Canceladas', value: 'cancelled', dotClass: 'bg-red-500' },
   ];
 
@@ -332,6 +343,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   }[] = [
     { label: 'Pendiente', value: 'pending' },
     { label: 'Completada', value: 'completed' },
+    { label: 'A crédito', value: 'credit' },
     { label: 'Cancelada', value: 'cancelled' },
   ];
 
@@ -580,6 +592,8 @@ export class OrderListComponent implements OnInit, OnDestroy {
         return 'success';
       case 'pending':
         return 'warn';
+      case 'credit':
+        return 'info';
       default:
         return 'secondary';
     }
@@ -589,6 +603,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
     const labels: Record<OrderStatus, string> = {
       pending: 'Pendiente',
       completed: 'Completada',
+      credit: 'A crédito',
       cancelled: 'Cancelada',
     };
     return labels[status] || status;
@@ -602,6 +617,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
     const colors: Record<OrderStatus, string> = {
       pending: 'bg-orange-400',
       completed: 'bg-green-500',
+      credit: 'bg-blue-500',
       cancelled: 'bg-red-500',
     };
     return `w-2 h-2 rounded-full shrink-0 ${colors[status] ?? 'bg-grey-400'}`;

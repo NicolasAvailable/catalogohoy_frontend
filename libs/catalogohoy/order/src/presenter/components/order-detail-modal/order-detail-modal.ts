@@ -210,6 +210,7 @@ export class OrderDetailModal {
   public readonly statusOptions: { label: string; value: OrderStatus }[] = [
     { label: 'Pendiente', value: 'pending' },
     { label: 'Completada', value: 'completed' },
+    { label: 'A crédito', value: 'credit' },
     { label: 'Cancelada', value: 'cancelled' },
   ];
 
@@ -243,6 +244,7 @@ export class OrderDetailModal {
     const labels: Record<OrderStatus, string> = {
       pending: 'Pendiente',
       completed: 'Completada',
+      credit: 'A crédito',
       cancelled: 'Cancelada',
     };
     return labels[status] ?? status;
@@ -256,6 +258,7 @@ export class OrderDetailModal {
     const colors: Record<OrderStatus, string> = {
       pending: 'bg-orange-400',
       completed: 'bg-green-500',
+      credit: 'bg-blue-500',
       cancelled: 'bg-red-500',
     };
     return `w-2 h-2 rounded-full shrink-0 ${colors[status] ?? 'bg-grey-400'}`;
