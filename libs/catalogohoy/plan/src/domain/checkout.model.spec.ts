@@ -92,8 +92,8 @@ describe('checkout.model — multi-currency helpers', () => {
     });
 
     it('plan base prices have the expected shape', () => {
-      expect(PLAN_BASE_PRICES['basico']).toBe(9.99);
-      expect(PLAN_BASE_PRICES['avanzado']).toBe(19.99);
+      expect(PLAN_BASE_PRICES['basico']).toBe(11.99);
+      expect(PLAN_BASE_PRICES['avanzado']).toBe(29.99);
       expect(CATALOG_ADDON_PRICE).toBe(4.99);
     });
   });

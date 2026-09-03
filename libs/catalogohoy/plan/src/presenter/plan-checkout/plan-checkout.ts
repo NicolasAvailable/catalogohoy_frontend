@@ -39,9 +39,9 @@ const BILLING_CONFIG: Record<
   annual:    { label: 'año',       months: 12, discount: 0    },
 };
 
-// Meses gratis del plan ANUAL: 2 meses en todos los planes.
-const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 2, pro: 2, avanzado: 2 };
-const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 1;
+// Anual: 50% de descuento — se paga la mitad del año (6 de 12 meses) en todos los planes.
+const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 6, pro: 6, avanzado: 6 };
+const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 6;
 
 /** Meses efectivamente pagados. En anual, los meses gratis dependen del plan. */
 function paidMonthsFor(period: BillingPeriod, planId: string): number {
@@ -161,7 +161,7 @@ export class PlanCheckout implements OnInit {
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
     { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '2 meses gratis' },
+    { key: 'annual',    label: 'Anual',      savingsLabel: '-50%' },
   ];
 
   public readonly planId               = signal<string>('');
@@ -410,11 +410,8 @@ export class PlanCheckout implements OnInit {
   /** El anual no es "% off" sino "N meses gratis" → el desglose usa otro label. */
   public readonly isAnnual = computed(() => this.billingPeriod() === 'annual');
 
-  /** Meses gratis del anual para este plan: "1 mes gratis" / "2 meses gratis". */
-  public readonly annualFreeLabel = computed(() => {
-    const n = annualFreeMonthsFor(this.planId());
-    return n === 1 ? '1 mes gratis' : `${n} meses gratis`;
-  });
+  /** Gancho anual: 50% de descuento (equivale a 6 meses pagos de 12). */
+  public readonly annualFreeLabel = computed(() => '50% de descuento');
 
   async ngOnInit(): Promise<void> {
     const planId = this.route.snapshot.paramMap.get('planId') ?? '';

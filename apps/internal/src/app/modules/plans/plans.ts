@@ -48,7 +48,7 @@ const toDraft = (plan: Plan): Draft => ({
           <h1 class="text-2xl font-bold text-grey-700">Planes</h1>
           <p class="text-sm text-grey-400">
             Editá nombre, descripción, precio mensual y límites de cada plan.
-            El precio mensual es la base: trimestral aplica 5% OFF y anual 15%
+            El precio mensual es la base: trimestral aplica 5% OFF y anual 50% OFF
             OFF automáticamente al asignar.
           </p>
         </div>

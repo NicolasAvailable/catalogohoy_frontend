@@ -27,7 +27,7 @@ export const PLAN_CYCLES: PlanCycleOption[] = [
     label: 'Anual',
     description: 'Cobro una vez al año',
     months: 12,
-    badge: '15% OFF',
+    badge: '50% OFF',
   },
 ];
 
@@ -92,7 +92,7 @@ export const cycleLabel = (cycle: PlanCycle | string): string =>
  * operator can override the value before saving.
  */
 export const TIER_MONTHLY_PRICE_USD: Record<Exclude<PlanTier, 'gratis'>, number> = {
-  basico: 9.99,
+  basico: 11.99,
   pro: 19.99,
   avanzado: 29.99,
   // Enterprise no tiene precio de lista: es un default sugerido que el
@@ -104,7 +104,7 @@ export const TIER_MONTHLY_PRICE_USD: Record<Exclude<PlanTier, 'gratis'>, number>
 const CYCLE_DISCOUNT: Record<PlanCycle, number> = {
   monthly: 0,
   quarterly: 0.05,
-  annual: 0.15,
+  annual: 0.5,
 };
 
 /**

@@ -37,19 +37,19 @@ const CORS = {
 // Mismos IDs que create-checkout-session (mantener sincronizados).
 const PRICE_MAP: Record<string, Record<string, string>> = {
   basico: {
-    monthly:   "price_1TyBl485rys2QLXd8LCfn4PZ",
-    quarterly: "price_1TyBl485rys2QLXdPdkMqstS",
-    annual:    "price_1TyBl585rys2QLXdrlplXJzX",
+    monthly:   "price_1UBcws85rys2QLXd2VNxshFD",
+    quarterly: "price_1UBcwt85rys2QLXd9plZqrRK",
+    annual:    "price_1UBcwt85rys2QLXdstJ7waFV",
   },
   pro: {
     monthly:   "price_1TyBl585rys2QLXdc1GUWVJh",
     quarterly: "price_1TyBl585rys2QLXdKk3w7yGm",
-    annual:    "price_1TyBrh85rys2QLXd7Q9EPKKF",
+    annual:    "price_1UBcwt85rys2QLXdqUs4wZKT",
   },
   avanzado: {
     monthly:   "price_1TyBl785rys2QLXd08l8YOs7",
     quarterly: "price_1TyBl785rys2QLXdp7nbigVf",
-    annual:    "price_1TyBrh85rys2QLXdtGFJFkPf",
+    annual:    "price_1UBcwu85rys2QLXdJVEue0XU",
   },
 };
 

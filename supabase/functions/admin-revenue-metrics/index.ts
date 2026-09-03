@@ -42,7 +42,7 @@ const SECRET = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
 
 // Precios de lista (fallback solo para manuales sin monto registrado).
 const LIST_PRICE_USD: Record<string, number> = {
-  basico: 9.99,
+  basico: 11.99,
   pro: 19.99,
   avanzado: 29.99,
   enterprise: 99.99,

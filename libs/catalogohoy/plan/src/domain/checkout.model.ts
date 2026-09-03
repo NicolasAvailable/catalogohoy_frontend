@@ -15,7 +15,7 @@ export type PaymentCurrency =
  *  Nota switch pricing 2026-07: avanzado pasa a 29.99 en el commit del switch
  *  (junto con la fila `pro` en DB + redeploy de la edge function). */
 export const PLAN_BASE_PRICES: Record<string, number> = {
-  basico: 9.99,
+  basico: 11.99,
   pro: 19.99,
   avanzado: 29.99,
 };

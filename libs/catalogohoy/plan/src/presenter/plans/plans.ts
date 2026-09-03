@@ -39,9 +39,9 @@ const BILLING_CONFIG: Record<BillingPeriod, { label: string; months: number; dis
   annual:    { label: 'Anual',       months: 12, discount: 0    },
 };
 
-// Meses gratis del plan ANUAL: 2 meses en todos los planes.
-const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 2, pro: 2, avanzado: 2 };
-const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 1;
+// Anual: 50% de descuento — se paga la mitad del año (6 de 12 meses) en todos los planes.
+const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 6, pro: 6, avanzado: 6 };
+const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 6;
 
 type PlanUIConfig = {
   period: string;
@@ -165,7 +165,7 @@ export class Plans implements OnInit {
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
     { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '2 meses gratis' },
+    { key: 'annual',    label: 'Anual',      savingsLabel: '-50%' },
   ];
 
   // Resolve the currency we'll charge in, driven by the tenant's country.
@@ -336,10 +336,9 @@ export class Plans implements OnInit {
     return this.billingPeriod() === 'annual';
   }
 
-  /** Label del gancho anual por plan: "1 mes gratis" / "2 meses gratis". */
+  /** Gancho anual: 50% de descuento (equivale a 6 meses pagos de 12). */
   public annualFreeLabel(plan: PlanDisplay): string {
-    const n = annualFreeMonthsFor(plan.id);
-    return n === 1 ? '1 mes gratis' : `${n} meses gratis`;
+    return plan.id === 'gratis' ? '' : '50% de descuento';
   }
 
   public isUpgradePlan(plan: PlanDisplay): boolean {
