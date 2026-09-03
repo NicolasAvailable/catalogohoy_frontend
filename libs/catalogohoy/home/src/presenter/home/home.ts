@@ -82,6 +82,21 @@ export class Home implements OnInit {
     }
   }
 
+  /** Promo de precios: "Planes anuales -50%". Descartable (localStorage). */
+  public readonly annualPromoDismissed = signal(
+    typeof localStorage !== 'undefined' &&
+      localStorage.getItem('annual_promo_dismissed') === '1'
+  );
+
+  public dismissAnnualPromo(): void {
+    this.annualPromoDismissed.set(true);
+    try {
+      localStorage.setItem('annual_promo_dismissed', '1');
+    } catch {
+      /* localStorage no disponible → no persiste, sin drama */
+    }
+  }
+
   public activeChartTab = signal<ChartTab>('ventas');
   // For VE: user toggles between 'bs' and 'usd'. For non-VE: always 'usd'
   // (prices are stored in USD internally; symbol comes from the tenant currency).
