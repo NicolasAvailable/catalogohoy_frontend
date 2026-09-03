@@ -7,8 +7,6 @@ import PlanComparison from "@/components/landing/PlanComparison";
 /* ═══════════════════════════════════════
    TYPES & CONFIG
    ═══════════════════════════════════════ */
-const WHATSAPP_NUMBER = "584220240947";
-
 type BillingPeriod = "monthly" | "quarterly" | "annual";
 
 // quarterly: 10% off. annual: meses gratis por plan (ver ANNUAL_FREE_MONTHS).
@@ -19,14 +17,14 @@ const BILLING_CONFIG: Record<BillingPeriod, { months: number; discount: number }
 };
 
 const PLAN_BASE_PRICES: Record<string, number> = {
-  basico: 9.99,
+  basico: 11.99,
   pro: 19.99,
   avanzado: 29.99,
 };
 
-// Meses gratis del plan ANUAL: 2 meses en todos los planes.
-const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 2, pro: 2, avanzado: 2 };
-const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 1;
+// Anual: 50% de descuento — se paga la mitad del año (6 de 12 meses) en todos los planes.
+const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 6, pro: 6, avanzado: 6 };
+const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 6;
 
 const CATALOG_ADDON_PRICE = 4.99;
 
@@ -35,7 +33,7 @@ const CATALOG_ADDON_PRICE = 4.99;
 const billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
   { key: "monthly",   label: "Mensual" },
   { key: "quarterly", label: "Trimestral", savingsLabel: "10% off" },
-  { key: "annual",    label: "Anual",      savingsLabel: "2 meses gratis" },
+  { key: "annual",    label: "Anual",      savingsLabel: "-50%" },
 ];
 
 /* ═══════════════════════════════════════
@@ -168,12 +166,6 @@ function formatPrice(value: number): string {
   return Number.isInteger(value) ? `${value}` : value.toFixed(2);
 }
 
-/** Gancho anual por plan: "1 mes gratis" / "2 meses gratis". */
-function annualFreeLabel(planId: string): string {
-  const n = annualFreeMonthsFor(planId);
-  return n === 1 ? "1 mes gratis" : `${n} meses gratis`;
-}
-
 function getPeriodLabel(period: BillingPeriod, isFree: boolean): string {
   if (isFree) return "por siempre";
   if (period === "monthly") return "/mes";
@@ -187,17 +179,10 @@ function getTeamLabel(members: number): string {
   return `Hasta ${members} miembros de equipo`;
 }
 
-function handleSelectPlan(plan: PlanData, period: BillingPeriod): void {
-  if (plan.isFree) {
-    window.open("https://auth.catalogohoy.com/signup", "_blank");
-    return;
-  }
-  const price = formatPrice(getPeriodTotal(plan, period));
-  const periodLabel = getPeriodLabel(period, false);
-  const message = encodeURIComponent(
-    `Hola, me interesa adquirir el plan *${plan.name}* ($${price}${periodLabel} USD) de CatalogoHoy. ¿Me pueden dar más información?`
-  );
-  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, "_blank");
+// El CTA de precios ("Comenzar ahora") lleva directo al registro en
+// auth.catalogohoy.com (antes abría WhatsApp con un mensaje pre-armado).
+function handleSelectPlan(): void {
+  window.open("https://auth.catalogohoy.com/signup", "_blank");
 }
 
 /* ═══════════════════════════════════════
@@ -354,7 +339,7 @@ const Pricing = () => {
                         {billingPeriod === "annual" ? (
                           <>
                             <Gift className="h-3.5 w-3.5 shrink-0" />
-                            {annualFreeLabel(plan.id)}
+                            50% de descuento
                           </>
                         ) : (
                           "Ahorras 10%"
@@ -370,7 +355,7 @@ const Pricing = () => {
 
                 {/* ── CTA Button ── */}
                 <button
-                  onClick={() => handleSelectPlan(plan, billingPeriod)}
+                  onClick={() => handleSelectPlan()}
                   className={`flex items-center justify-center gap-1.5 w-full py-[0.65rem] px-4 rounded-xl text-sm font-semibold cursor-pointer transition-all duration-200 ${
                     plan.isPopular
                       ? "bg-[#6366f1] text-white border-none hover:bg-[#4f46e5]"
