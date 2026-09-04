@@ -24,7 +24,13 @@ import {
 } from '@ui';
 import { ProfileStore } from '@catalogohoy/profile';
 import { SupabaseClientProvider } from '@catalogohoy/core';
-import { InternalNote, Order, OrderStatus } from '../../../domain/order';
+import { RateStore } from '@catalogohoy/rate';
+import {
+  effectiveOrderBs,
+  InternalNote,
+  Order,
+  OrderStatus,
+} from '../../../domain/order';
 import { OrderStore } from '../../../infrastructure/order.store';
 
 /** Modal de detalle de una orden. Se abre vía DialogService desde el listado
@@ -61,12 +67,19 @@ export class OrderDetailModal {
   public readonly cs: string = this.config.data.currencySymbol ?? '$';
   /** Show the bolivar total line — only for Venezuela-style dual catalogs. */
   public readonly showDualBs: boolean = this.config.data.showDualBs ?? false;
-  /** Exchange rate derived from the order snapshot, so per-line Bs amounts
-   *  match the order's stored total exactly. 0 when not applicable. */
-  public readonly bsRate: number =
-    this.order.totalUsd > 0 && this.order.totalBs
-      ? this.order.totalBs / this.order.totalUsd
-      : 0;
+  private readonly rateStore = inject(RateStore);
+
+  /** Bs efectivo de la orden: los PENDIENTES a la tasa ACTUAL del catálogo, el
+   *  resto su snapshot histórico. Ver {@link effectiveOrderBs}. */
+  public readonly effectiveBs = computed(() =>
+    effectiveOrderBs(this.order, this.rateStore.rateValue())
+  );
+
+  /** Tasa usada para el Bs por línea, coherente con {@link effectiveBs}:
+   *  la tasa actual en pendientes, o la del snapshot en el resto. */
+  public readonly bsRate = computed(() =>
+    this.order.totalUsd > 0 ? this.effectiveBs() / this.order.totalUsd : 0
+  );
 
   /** Live status — updated in place when the user changes it from the modal. */
   public readonly status = signal<OrderStatus>(this.order.status);

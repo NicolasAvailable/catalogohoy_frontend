@@ -1,5 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
+import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
+import { RateStore } from '@catalogohoy/rate';
 import { ActivityLogService } from '@catalogohoy/teams';
 import { E } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
@@ -76,6 +78,8 @@ export class OrderService {
   private readonly client = SupabaseClientProvider.getInstance();
   private readonly activityLog = inject(ActivityLogService);
   private readonly toast = inject(ToastService);
+  private readonly rateStore = inject(RateStore);
+  private readonly tenantCurrency = inject(TenantCurrencyStore);
 
   async getOrdersByTenant(
     tenantId: number,
@@ -409,9 +413,26 @@ export class OrderService {
       return E.left(new Error(fetchError.message));
     }
 
+    // Congelar el Bs a la tasa ACTUAL al SALIR de "pendiente": el pedido se
+    // cobra a la tasa del día en que se cierra (pagada/entregada). Mientras
+    // está pendiente el Bs se muestra en vivo; aquí queda el snapshot final.
+    // SOLO catálogos con doble moneda (Venezuela) — el resto no usa bolívares,
+    // así que no se les toca `total_bs` (mismo criterio que la visualización).
+    const patch: Record<string, unknown> = { status: newStatus };
+    const rate = this.rateStore.rateValue();
+    if (
+      this.tenantCurrency.showDualCurrency() &&
+      oldStatus === 'pending' &&
+      newStatus !== 'pending' &&
+      rate > 0 &&
+      Number(order.total_usd) > 0
+    ) {
+      patch['total_bs'] = Number(order.total_usd) * rate;
+    }
+
     const { data, error } = await this.client
       .from('orders')
-      .update({ status: newStatus })
+      .update(patch)
       .eq('id', id)
       .eq('tenant_id', tenantId)
       .select()

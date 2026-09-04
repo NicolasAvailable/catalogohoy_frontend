@@ -142,3 +142,18 @@ export class OrderList {
     return new OrderList([]);
   }
 }
+
+/** Bs a mostrar/facturar para una orden. Los pedidos **pendientes** se cobran a
+ *  la **tasa ACTUAL** del catálogo (`totalUsd × activeRate`), porque el pago
+ *  ocurre después; el resto de estados conservan su `total_bs` histórico
+ *  (snapshot congelado al salir de pendiente). Si no hay tasa cargada
+ *  (`activeRate <= 0`) cae al snapshot para no mostrar 0. */
+export function effectiveOrderBs(
+  order: Pick<Order, 'status' | 'totalUsd' | 'totalBs'>,
+  activeRate: number
+): number {
+  if (order.status === 'pending' && activeRate > 0 && order.totalUsd > 0) {
+    return order.totalUsd * activeRate;
+  }
+  return order.totalBs ?? 0;
+}

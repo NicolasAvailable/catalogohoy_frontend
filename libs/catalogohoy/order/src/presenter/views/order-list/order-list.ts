@@ -40,7 +40,13 @@ import {
   Subject,
   Subscription,
 } from 'rxjs';
-import { Order, OrderItem, OrderStatus } from '../../../domain/order';
+import { RateStore } from '@catalogohoy/rate';
+import {
+  effectiveOrderBs,
+  Order,
+  OrderItem,
+  OrderStatus,
+} from '../../../domain/order';
 import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import { OrderPdfService } from '../../../infrastructure/order-pdf.service';
 import { OrderRealtimeService } from '../../../infrastructure/order-realtime.service';
@@ -93,6 +99,13 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
   private readonly orderPdf = inject(OrderPdfService);
+  private readonly rateStore = inject(RateStore);
+
+  /** Bs a mostrar por orden: pendientes a la tasa ACTUAL, el resto su snapshot.
+   *  Ver {@link effectiveOrderBs}. */
+  public orderBs(order: Order): number {
+    return effectiveOrderBs(order, this.rateStore.rateValue());
+  }
   // Primary "Total" column symbol = the catalog's reference/display currency.
   // For Venezuela that's the chosen reference (USD '$' or EUR '€'); for every
   // other country it's the local currency (DOP 'RD$', MXN '$', COP '$'…),
@@ -381,6 +394,8 @@ export class OrderListComponent implements OnInit, OnDestroy {
     // Prime the tenant currency cache (localStorage → DB fallback).
     const tenantId = await this.tenantStore.getTenantIdAsync();
     if (tenantId) this.tenantCurrency.load(tenantId);
+    // Tasa activa: para mostrar el Bs de los pedidos pendientes a la tasa de hoy.
+    this.rateStore.loadRates();
 
     // Setup debounced search
     this.searchSubscription = this.searchSubject
@@ -728,6 +743,9 @@ export class OrderListComponent implements OnInit, OnDestroy {
   }
 
   downloadPdf(order: Order): void {
-    this.orderPdf.download(order);
+    // Pendientes: el recibo se emite a la tasa ACTUAL (mismo criterio que el
+    // listado/detalle). El PDF deriva el rate de totalBs/totalUsd, así que le
+    // pasamos el Bs efectivo; el resto de estados usa su snapshot congelado.
+    this.orderPdf.download({ ...order, totalBs: this.orderBs(order) });
   }
 }

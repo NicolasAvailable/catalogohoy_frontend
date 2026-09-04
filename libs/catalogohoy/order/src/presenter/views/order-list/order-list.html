@@ -255,8 +255,8 @@
               </div>
             </div>
             <div><span class="text-grey-800 font-bold">{{ 'Total:' | transloco }} </span><span class="font-bold text-primary-600">{{ cs() }}{{ order.totalUsd | number:'1.2-2' }}</span></div>
-            @if (showBs() && order.totalBs) {
-            <div><span class="text-grey-800 font-bold">{{ 'Total Bs:' | transloco }} </span><span class="font-bold text-primary-600">Bs. {{ order.totalBs | number:'1.2-2' }}</span></div>
+            @if (showBs() && orderBs(order)) {
+            <div><span class="text-grey-800 font-bold">{{ 'Total Bs:' | transloco }} </span><span class="font-bold text-primary-600">Bs. {{ orderBs(order) | number:'1.2-2' }}</span></div>
             }
             @if (order.shippingMethod) {
             <div><span class="text-grey-800 font-bold">{{ 'Envío:' | transloco }} </span><span class="text-grey-700">{{ order.shippingMethod.name }}</span></div>
@@ -510,7 +510,7 @@
             </td>
             @if (showBs()) {
             <td class="px-6 py-3.5 text-sm font-bold text-grey-700">
-              Bs. {{ order.totalBs | number:'1.2-2' }}
+              Bs. {{ orderBs(order) | number:'1.2-2' }}
             </td>
             }
             <td class="px-6 py-3.5">
