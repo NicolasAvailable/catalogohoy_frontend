@@ -2159,5 +2159,7 @@
   "Selecciona los días en los que SÍ despachas pedidos. Los demás se deshabilitarán en el calendario del checkout.": "Select the days you DO deliver orders. The rest will be disabled in the checkout calendar.",
   "Los días resaltados son los que despachas. Toca uno para activarlo o desactivarlo.": "Highlighted days are the ones you deliver. Tap one to turn it on or off.",
   "A crédito": "On credit",
-  "Entregada a crédito (por cobrar)": "Delivered on credit (to be collected)"
+  "Entregada a crédito (por cobrar)": "Delivered on credit (to be collected)",
+  "Stock de esta variante (opcional)": "Stock for this variant (optional)",
+  "Se descuenta al completar o entregar a crédito un pedido de esta variante. Dejalo vacío para stock ilimitado.": "Deducted when an order for this variant is completed or delivered on credit. Leave empty for unlimited stock."
 }

@@ -823,6 +823,26 @@
               }
             </div>
 
+            <!-- Stock de esta variante (solo si NO maneja tallas) -->
+            @if (variantSizesArray(vIndex).controls.length === 0) {
+            <div class="flex flex-col gap-2">
+              <label class="text-sm text-grey-400 font-semibold"
+                >{{ 'Stock de esta variante (opcional)' | transloco }}</label
+              >
+              <ui-input-number
+                formControlName="stock"
+                mode="decimal"
+                [minFractionDigits]="0"
+                [maxFractionDigits]="0"
+                [showButtons]="false"
+                [placeholder]="'Stock (sin límite)' | transloco"
+              />
+              <p class="text-xs text-grey-300">
+                {{ 'Se descuenta al completar o entregar a crédito un pedido de esta variante. Dejalo vacío para stock ilimitado.' | transloco }}
+              </p>
+            </div>
+            }
+
             <!-- Tallas de esta variante -->
             <div formArrayName="sizes" class="flex flex-col gap-2">
               <label class="text-sm text-grey-400 font-semibold"

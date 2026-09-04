@@ -2159,5 +2159,7 @@
   "Selecciona los días en los que SÍ despachas pedidos. Los demás se deshabilitarán en el calendario del checkout.": "Selecciona los días en los que SÍ despachas pedidos. Los demás se deshabilitarán en el calendario del checkout.",
   "Los días resaltados son los que despachas. Toca uno para activarlo o desactivarlo.": "Los días resaltados son los que despachas. Toca uno para activarlo o desactivarlo.",
   "A crédito": "A crédito",
-  "Entregada a crédito (por cobrar)": "Entregada a crédito (por cobrar)"
+  "Entregada a crédito (por cobrar)": "Entregada a crédito (por cobrar)",
+  "Stock de esta variante (opcional)": "Stock de esta variante (opcional)",
+  "Se descuenta al completar o entregar a crédito un pedido de esta variante. Dejalo vacío para stock ilimitado.": "Se descuenta al completar o entregar a crédito un pedido de esta variante. Dejalo vacío para stock ilimitado."
 }

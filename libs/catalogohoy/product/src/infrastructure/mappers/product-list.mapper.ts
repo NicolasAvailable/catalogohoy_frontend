@@ -33,6 +33,7 @@ export class ProductListMapper {
           variants: (entity.variants ?? []).map((v) => ({
             ...v,
             photos: v.photos ?? [],
+            stock: v.stock ?? null,
             sizes: v.sizes ?? [],
           })),
           addons: entity.addons ?? [],

@@ -2159,5 +2159,7 @@
   "Selecciona los días en los que SÍ despachas pedidos. Los demás se deshabilitarán en el calendario del checkout.": "Sélectionne les jours où tu effectues des livraisons. Les autres seront désactivés dans le calendrier du paiement.",
   "Los días resaltados son los que despachas. Toca uno para activarlo o desactivarlo.": "Les jours en surbrillance sont ceux où tu livres. Touche l'un d'eux pour l'activer ou le désactiver.",
   "A crédito": "À crédit",
-  "Entregada a crédito (por cobrar)": "Livrée à crédit (à encaisser)"
+  "Entregada a crédito (por cobrar)": "Livrée à crédit (à encaisser)",
+  "Stock de esta variante (opcional)": "Stock de cette variante (optionnel)",
+  "Se descuenta al completar o entregar a crédito un pedido de esta variante. Dejalo vacío para stock ilimitado.": "Déduit lorsqu’une commande de cette variante est complétée ou livrée à crédit. Laissez vide pour un stock illimité."
 }

@@ -235,6 +235,14 @@ export class ProductService implements BaseProductService {
                 v.originalPrice === '' ? 0 : Number(v.originalPrice),
               sku: v.sku?.trim() ? v.sku.trim() : null,
               photos: v.photos ?? [],
+              // Stock propio del variante SOLO cuando no maneja tallas (con
+              // tallas el stock vive en cada talla). '' / null = ilimitado.
+              stock:
+                v.sizes && v.sizes.length
+                  ? null
+                  : v.stock == null || v.stock === ''
+                    ? null
+                    : Number(v.stock),
               sizes: (v.sizes ?? []).map(mapSize),
             }))
           : [],
@@ -313,6 +321,13 @@ export class ProductService implements BaseProductService {
             originalPrice: v.originalPrice === '' ? 0 : Number(v.originalPrice),
             sku: v.sku?.trim() ? v.sku.trim() : null,
             photos: v.photos ?? [],
+            // Stock propio del variante SOLO cuando no maneja tallas.
+            stock:
+              v.sizes && v.sizes.length
+                ? null
+                : v.stock == null || v.stock === ''
+                  ? null
+                  : Number(v.stock),
             sizes: (v.sizes ?? []).map(mapSize),
           }))
         : [],

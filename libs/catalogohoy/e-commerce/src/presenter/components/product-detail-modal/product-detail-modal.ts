@@ -158,6 +158,9 @@ export class ProductDetailModal {
         price: hasPromo ? this.product.pricePromotional : this.product.price,
         originalPrice: hasPromo ? this.product.price : 0,
         photos: this.product.photos,
+        // La base (producto original) usa el stock a nivel de producto, para
+        // que effectiveStock lo respete al seleccionarla.
+        stock: this.product.stock !== null ? Number(this.product.stock) : null,
         sizes: this.product.sizes,
       });
     }
@@ -268,6 +271,13 @@ export class ProductDetailModal {
       if (!size) return null;
       const entry = this.availableSizes().find((s) => s.name === size);
       return entry?.stock ?? null;
+    }
+    // Variante sin tallas: usa el stock propio del variante cuando lo lleva
+    // (null = ilimitado). Antes caía siempre al stock del producto (compartido).
+    if (this.isVariant) {
+      const v = this.selectedVariant();
+      if (!v) return null;
+      return v.stock ?? null;
     }
     return this.availableStock;
   });

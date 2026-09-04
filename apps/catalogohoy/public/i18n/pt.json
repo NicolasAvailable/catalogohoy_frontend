@@ -2159,5 +2159,7 @@
   "Selecciona los días en los que SÍ despachas pedidos. Los demás se deshabilitarán en el calendario del checkout.": "Seleciona os dias em que você faz entregas. Os demais serão desabilitados no calendário do checkout.",
   "Los días resaltados son los que despachas. Toca uno para activarlo o desactivarlo.": "Os dias destacados são os que você entrega. Toque em um para ativá-lo ou desativá-lo.",
   "A crédito": "A prazo",
-  "Entregada a crédito (por cobrar)": "Entregue a prazo (a receber)"
+  "Entregada a crédito (por cobrar)": "Entregue a prazo (a receber)",
+  "Stock de esta variante (opcional)": "Estoque desta variante (opcional)",
+  "Se descuenta al completar o entregar a crédito un pedido de esta variante. Dejalo vacío para stock ilimitado.": "Descontado ao concluir ou entregar a prazo um pedido desta variante. Deixe vazio para estoque ilimitado."
 }
