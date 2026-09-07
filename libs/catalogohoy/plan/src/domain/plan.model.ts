@@ -54,6 +54,10 @@ export interface TenantPlanUsage {
   /** True when the tenant has (or had) a Stripe subscription — used to route
    *  the expired-plan dialog to a Stripe checkout instead of WhatsApp. */
   hasStripeSubscription: boolean;
+  /** Estado crudo de la suscripción Stripe (`active`, `past_due`, `unpaid`,
+   *  `canceled`…). `past_due`/`unpaid` = el último cobro falló → banner de
+   *  "actualizá tu pago". Null para planes sin Stripe (pago manual VE). */
+  stripeSubscriptionStatus: string | null;
   /** True cuando la suscripción Stripe está `active`: Stripe cobra la
    *  renovación solo, así que no corresponde pedir renovación manual (eso
    *  aplica únicamente a los planes sin Stripe, p. ej. pago móvil VE). */

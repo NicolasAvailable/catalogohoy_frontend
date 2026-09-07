@@ -137,4 +137,22 @@ export class CheckoutService implements BaseCheckoutService {
     }
     return E.right(data);
   }
+
+  /** Crea una sesión del Stripe Billing Portal (actualizar tarjeta) y devuelve
+   *  su URL. Solo el OWNER de un tenant con `stripe_customer_id`; la edge
+   *  function valida ambas cosas. Espeja `BillingService` (profile) — vive acá
+   *  para que el banner de pago (en plan) no cruce la dependencia plan → profile. */
+  public async createBillingPortalSession(
+    tenantId: number,
+    locale: string
+  ): Promise<E.Either<Error, string>> {
+    const { data, error } = await this.client.functions.invoke<{ url: string }>(
+      'create-billing-portal-session',
+      { body: { tenantId, locale } }
+    );
+
+    if (error) return E.left(new Error(error.message ?? 'No se pudo abrir el portal de pago'));
+    if (!data?.url) return E.left(new Error('No se pudo abrir el portal de pago'));
+    return E.right(data.url);
+  }
 }

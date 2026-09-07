@@ -1,18 +1,30 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TenantStore } from '@catalogohoy/tenant';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
+import { toast } from 'ngx-sonner';
+import { CheckoutService } from '../../infrastructure/checkout.service';
 import { PlanStore } from '../../infrastructure/plan.store';
 
 @Component({
   selector: 'lib-expiration-banner',
   imports: [LucideAngularModule, TranslocoPipe],
   template: `
-    @if (showBanner() && !dismissed()) {
-    <div class="expiration-banner" [class.expiration-banner--grace]="isGrace()">
+    @if (isPaymentFailed() || (showBanner() && !dismissed())) {
+    <div
+      class="expiration-banner"
+      [class.expiration-banner--grace]="isGrace() && !isPaymentFailed()"
+      [class.expiration-banner--payment]="isPaymentFailed()"
+    >
       <div class="expiration-banner__content">
         <div class="expiration-banner__text">
-          @if (isGrace()) {
+          @if (isPaymentFailed()) {
+          <span>
+            ⚠️ {{ 'No pudimos procesar tu último pago.' | transloco }}
+            {{ 'Actualizá tu método de pago para no perder tu plan.' | transloco }}
+          </span>
+          } @else if (isGrace()) {
           <span>
             ⚠️ {{ 'Tu plan' | transloco }} <strong>{{ planName() }}</strong> {{ 'venció.' | transloco }}
             @if (graceDays() <= 1) {
@@ -34,12 +46,18 @@ import { PlanStore } from '../../infrastructure/plan.store';
           }
         </div>
         <div class="expiration-banner__actions">
+          @if (isPaymentFailed()) {
+          <button class="expiration-banner__cta" (click)="openPortal()" [disabled]="isOpeningPortal()">
+            {{ 'Actualizar pago' | transloco }}
+          </button>
+          } @else {
           <button class="expiration-banner__cta" (click)="renewPlan()">
             {{ 'Renovar plan' | transloco }}
           </button>
           <button class="expiration-banner__close" (click)="dismiss()">
             <lucide-angular name="x" [size]="16" />
           </button>
+          }
         </div>
       </div>
     </div>
@@ -55,6 +73,15 @@ import { PlanStore } from '../../infrastructure/plan.store';
 
     .expiration-banner--grace {
       background: #dc2626;
+    }
+
+    .expiration-banner--payment {
+      background: #dc2626;
+    }
+
+    .expiration-banner__cta:disabled {
+      opacity: 0.6;
+      cursor: default;
     }
 
     .expiration-banner__content {
@@ -150,8 +177,17 @@ export class ExpirationBannerComponent {
 
   private readonly _planStore = inject(PlanStore);
   private readonly _router = inject(Router);
+  private readonly _tenant = inject(TenantStore);
+  private readonly _checkout = inject(CheckoutService);
+  private readonly _transloco = inject(TranslocoService);
   public readonly dismissed = signal(this.isDismissedRecently());
+  public readonly isOpeningPortal = signal(false);
 
+  /** El último cobro de Stripe falló (`past_due`/`unpaid`). Tiene prioridad
+   *  sobre el banner de vencimiento y NO es dismissable (es crítico). */
+  public readonly isPaymentFailed = computed(() =>
+    this._planStore.showPaymentFailedBanner()
+  );
   public readonly isGrace = computed(() => this._planStore.inGracePeriod());
   public readonly showBanner = computed(
     () => this._planStore.showExpirationBanner() || this.isGrace()
@@ -200,5 +236,27 @@ export class ExpirationBannerComponent {
       `Hola, quiero renovar mi plan ${planName} en CatalogoHoy.`
     );
     window.open(`https://wa.me/584220240947?text=${message}`, '_blank');
+  }
+
+  /** Abre el Stripe Billing Portal para actualizar la tarjeta. Redirige en la
+   *  misma pestaña; el portal vuelve a la app con su return_url. */
+  public async openPortal(): Promise<void> {
+    if (this.isOpeningPortal()) return;
+    const tenantId = await this._tenant.getTenantIdAsync();
+    if (!tenantId) return;
+    this.isOpeningPortal.set(true);
+    const result = await this._checkout.createBillingPortalSession(
+      tenantId,
+      this._transloco.getActiveLang()
+    );
+    result
+      .mapRight((url) => {
+        // La página entera navega al portal — se mantiene el spinner.
+        window.location.href = url;
+      })
+      .mapLeft((err) => {
+        this.isOpeningPortal.set(false);
+        toast.error(err.message || 'No se pudo abrir el portal de pago');
+      });
   }
 }
