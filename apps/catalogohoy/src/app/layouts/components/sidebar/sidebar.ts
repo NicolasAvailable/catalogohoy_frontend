@@ -4,7 +4,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/ro
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthenticationService } from '@catalogohoy/auth';
 import { ChatBadgeRealtimeService, ChatStore } from '@catalogohoy/chat';
-import { PosthogService } from '@catalogohoy/core';
+import { isNativeApp, PosthogService } from '@catalogohoy/core';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { OrderBadgeRealtimeService, OrderStore } from '@catalogohoy/order';
 import { PlanStore } from '@catalogohoy/plan';
@@ -212,6 +212,9 @@ export class Sidebar {
    *  `chats:view`). */
   public readonly canViewChat = computed(
     () =>
+      // El CRM de chats es solo para la web: en la app nativa (Capacitor) no se
+      // muestra el módulo (ni el badge realtime). Pedido explícito de producto.
+      !isNativeApp() &&
       this.tenantHasChat() &&
       (this.permissionsStore.isOwner() ||
         this.permissionsStore.can()('chats', 'view'))

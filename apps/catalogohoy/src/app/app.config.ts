@@ -22,6 +22,7 @@ import {
   provideUi,
   resolveInitialLanguage,
 } from '@catalogohoy/core';
+import { provideIonicAngular } from '@ionic/angular/provide';
 import { appRoutes } from './app.routes';
 
 // en viene incluido por defecto en Angular; se registran los otros 3 idiomas.
@@ -43,6 +44,10 @@ export const appConfig: ApplicationConfig = {
     provideTranslation(),
     provideUi(),
     provideIcons(),
+    // Ionic disponible para adopción progresiva (transiciones nativas,
+    // ion-refresher, safe-areas). No inyecta CSS global: cada componente
+    // Ionic standalone trae su estilo scopeado cuando lo usemos.
+    provideIonicAngular({ mode: 'ios' }),
     ...provideSentry(),
     // Mismo idioma guardado que usa Transloco → fechas/números coherentes.
     { provide: LOCALE_ID, useFactory: resolveInitialLanguage },

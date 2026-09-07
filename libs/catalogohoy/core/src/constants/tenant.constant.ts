@@ -1,8 +1,54 @@
+import { Capacitor } from '@capacitor/core';
+
 /**
  * Default tenant slug for local development.
  * Change this value to test with different tenants.
  */
-export const DEV_TENANT_SLUG = 'catalogohoy';
+export const DEV_TENANT_SLUG = 'catalogohoy-demo'; // TEMP: probar checklist del Inicio (revertir a 'catalogohoy')
+
+/**
+ * true cuando la app corre dentro del shell nativo (Capacitor, iOS/Android),
+ * false en el navegador. En nativo el hostname es `localhost`, por eso NO se
+ * puede usar `isDevMode()` para distinguir dev-vs-prod ni derivar el slug del
+ * subdominio: el slug se resuelve del perfil tras el login (ver getNativeSlug).
+ */
+export const isNativeApp = (): boolean => Capacitor.isNativePlatform();
+
+const NATIVE_SLUG_STORAGE_KEY = 'slug';
+let cachedNativeSlug: string | null = null;
+
+/**
+ * Slug del tenant activo en la app nativa. Se setea tras el login (o al arrancar
+ * con sesión existente) y lo consume `getTenantSlugFromUrl()`. Persiste en
+ * localStorage para sobrevivir el cold-start antes de que el bootstrap lo cachee.
+ */
+export const setNativeSlug = (slug: string): void => {
+  cachedNativeSlug = slug;
+  try {
+    localStorage.setItem(NATIVE_SLUG_STORAGE_KEY, slug);
+  } catch {
+    /* storage no disponible */
+  }
+};
+
+export const getNativeSlug = (): string | null => {
+  if (cachedNativeSlug) return cachedNativeSlug;
+  try {
+    cachedNativeSlug = localStorage.getItem(NATIVE_SLUG_STORAGE_KEY);
+  } catch {
+    cachedNativeSlug = null;
+  }
+  return cachedNativeSlug;
+};
+
+export const clearNativeSlug = (): void => {
+  cachedNativeSlug = null;
+  try {
+    localStorage.removeItem(NATIVE_SLUG_STORAGE_KEY);
+  } catch {
+    /* noop */
+  }
+};
 
 /**
  * Reserved subdomains that redirect to other apps instead of loading a catalog.

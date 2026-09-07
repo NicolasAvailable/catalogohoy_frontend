@@ -1,0 +1,93 @@
+@if (isNative) {
+<nav
+  class="native-tab-bar flex items-stretch w-full shrink-0 bg-white border-t border-grey-50"
+  role="navigation"
+  aria-label="Navegación principal"
+>
+  <!-- Inicio -->
+  <a
+    routerLink="/admin"
+    class="flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 active:bg-grey-25 transition-colors"
+  >
+    <ui-icon name="home" size="22" [styleClass]="homeActive() ? 'text-primary-600' : 'text-grey-400'" />
+    <span
+      class="text-[0.625rem] font-semibold leading-none"
+      [class.text-primary-600]="homeActive()"
+      [class.text-grey-400]="!homeActive()"
+      >{{ 'Inicio' | transloco }}</span
+    >
+  </a>
+
+  <!-- Productos -->
+  @if (canViewProducts()) {
+  <a
+    routerLink="/admin/products"
+    class="flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 active:bg-grey-25 transition-colors"
+  >
+    <ui-icon name="tag" size="22" [styleClass]="productsActive() ? 'text-primary-600' : 'text-grey-400'" />
+    <span
+      class="text-[0.625rem] font-semibold leading-none"
+      [class.text-primary-600]="productsActive()"
+      [class.text-grey-400]="!productsActive()"
+      >{{ 'Productos' | transloco }}</span
+    >
+  </a>
+  }
+
+  <!-- Ordenes (con badge de pedidos nuevos) -->
+  @if (canViewOrders()) {
+  <a
+    routerLink="/admin/orders"
+    class="flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 active:bg-grey-25 transition-colors"
+  >
+    <span class="relative">
+      <ui-icon name="notepad-text" size="22" [styleClass]="ordersActive() ? 'text-primary-600' : 'text-grey-400'" />
+      @if (pendingOrdersCount() > 0) {
+      <span
+        class="absolute -top-1.5 -right-2.5 flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-primary-500 text-white text-[0.625rem] font-bold leading-none"
+      >
+        {{ pendingOrdersCount() > 99 ? '99+' : pendingOrdersCount() }}
+      </span>
+      }
+    </span>
+    <span
+      class="text-[0.625rem] font-semibold leading-none"
+      [class.text-primary-600]="ordersActive()"
+      [class.text-grey-400]="!ordersActive()"
+      >{{ 'Ordenes' | transloco }}</span
+    >
+  </a>
+  }
+
+  <!-- Clientes -->
+  @if (canViewClients()) {
+  <a
+    routerLink="/admin/clients"
+    class="flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 active:bg-grey-25 transition-colors"
+  >
+    <ui-icon name="contact" size="22" [styleClass]="clientsActive() ? 'text-primary-600' : 'text-grey-400'" />
+    <span
+      class="text-[0.625rem] font-semibold leading-none"
+      [class.text-primary-600]="clientsActive()"
+      [class.text-grey-400]="!clientsActive()"
+      >{{ 'Clientes' | transloco }}</span
+    >
+  </a>
+  }
+
+  <!-- Más (⋯): abre el drawer derecho con el resto de opciones -->
+  <button
+    type="button"
+    (click)="openMenu.emit()"
+    class="flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 active:bg-grey-25 transition-colors"
+  >
+    <ui-icon name="ellipsis" size="22" [styleClass]="menuOpen() ? 'text-primary-600' : 'text-grey-400'" />
+    <span
+      class="text-[0.625rem] font-semibold leading-none"
+      [class.text-primary-600]="menuOpen()"
+      [class.text-grey-400]="!menuOpen()"
+      >{{ 'Más' | transloco }}</span
+    >
+  </button>
+</nav>
+}

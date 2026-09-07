@@ -1,4 +1,9 @@
-import { DEV_TENANT_SLUG, isDevMode } from '@catalogohoy/core';
+import {
+  DEV_TENANT_SLUG,
+  getNativeSlug,
+  isDevMode,
+  isNativeApp,
+} from '@catalogohoy/core';
 
 let cachedCustomDomainSlug: string | null = null;
 
@@ -17,6 +22,12 @@ export const isCustomDomain = (): boolean => {
 const RESERVED_PATH_SEGMENTS = ['checkout', 'order', 'product', 'admin'];
 
 export const getTenantSlugFromUrl = (): string | null => {
+  // En la app nativa no hay subdominio (hostname = localhost): el slug se
+  // resuelve del perfil tras el login y se cachea (ver setNativeSlug).
+  if (isNativeApp()) {
+    return getNativeSlug();
+  }
+
   if (isDevMode()) {
     const pathSlug = window.location.pathname.split('/')[1];
     if (pathSlug && !RESERVED_PATH_SEGMENTS.includes(pathSlug)) return pathSlug;

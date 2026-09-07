@@ -1,4 +1,4 @@
-<main class="flex w-full h-screen overflow-hidden">
+<main class="flex w-full h-screen overflow-hidden bg-white">
   <app-sidebar
     [visible]="sidebarOpen()"
     (closeSidebar)="sidebarOpen.set(false)"
@@ -6,11 +6,15 @@
   <section class="flex flex-auto flex-col bg-lino-500 overflow-hidden">
     <lib-expiration-banner />
     <app-navbar (toggleSidebar)="toggleSidebar()" />
-    <div class="flex w-full flex-auto flex-col overflow-y-auto px-4 py-4">
+    <div class="admin-scroll flex w-full flex-auto flex-col overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(1rem_+_var(--safe-area-bottom))]">
       <router-outlet />
     </div>
+    <!-- Bottom tab bar: solo en la app nativa (no renderiza nada en web). -->
+    <app-mobile-tab-bar [menuOpen]="moreOpen()" (openMenu)="moreOpen.set(true)" />
   </section>
 </main>
+<!-- Drawer "Más" (entra desde la derecha): solo en la app nativa. -->
+<app-mobile-more-drawer [open]="moreOpen()" (close)="moreOpen.set(false)" />
 <ui-whatsapp-support
   phoneNumber="584220240947"
   [defaultMessage]="'Hola, tengo una consulta sobre CatalogoHoy y necesito ayuda.' | transloco"

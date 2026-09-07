@@ -32,6 +32,7 @@ público. Monetiza con planes (Stripe) + créditos de IA.
 | **`features/supporting.md`** | rate (tasas BCV), reports, analytics, home, core, environments. |
 | **`features/ai-credits.md`** | Sistema de créditos de IA + features de IA (generar/quitar fondo/borrador/mejorar texto). |
 | **`features/auth-verification.md`** | Auth (login/signup/Google), verificación de correo, flujo cross-app. |
+| **`features/mobile-apps.md`** | Apps móviles iOS/Android (Ionic + Capacitor sobre `catalogohoy`); shell nativo, push FCM, entry-point por slug. |
 | **`database.md`** *(existente)* | Schema completo, RPCs, triggers, queries reales. |
 | **`patterns.md`** *(existente)* | Either monad, Signal Store, componentes standalone, routing, i18n. |
 

@@ -1,0 +1,152 @@
+@if (isNative) {
+<!-- Backdrop -->
+<div
+  class="fixed inset-0 z-40 bg-slate-900/30 transition-opacity duration-300"
+  [class.opacity-100]="open()"
+  [class.opacity-0]="!open()"
+  [class.pointer-events-none]="!open()"
+  (click)="close.emit()"
+></div>
+
+<!-- Panel: entra desde la DERECHA -->
+<aside
+  class="fixed inset-y-0 right-0 z-50 w-4/5 max-w-sm bg-white flex flex-col shadow-2xl transition-transform duration-300 ease-out pt-[calc(1rem_+_var(--safe-area-top))]"
+  [class.translate-x-0]="open()"
+  [class.translate-x-full]="!open()"
+>
+  <!-- Header -->
+  <div class="flex items-center justify-between px-4 pb-3 border-b border-grey-50">
+    <span class="text-lg font-bold text-grey-700">{{ 'Más' | transloco }}</span>
+    <button
+      type="button"
+      (click)="close.emit()"
+      class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-grey-50 transition-colors"
+      aria-label="Cerrar"
+    >
+      <ui-icon name="x" size="20" styleClass="text-grey-500" />
+    </button>
+  </div>
+
+  <!-- Secciones que no están en la barra inferior -->
+  <nav class="flex-1 overflow-y-auto overscroll-contain px-3 py-3 flex flex-col gap-1">
+    @if (canViewAnalytics()) {
+    <a
+      routerLink="/admin/analytics"
+      routerLinkActive="bg-primary-50"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors"
+    >
+      <ui-icon name="bar-chart-3" size="18" styleClass="text-grey-700" />
+      <span class="font-semibold text-grey-700">{{ 'Analíticas' | transloco }}</span>
+    </a>
+    }
+
+    @if (canViewReports()) {
+    <a
+      routerLink="/admin/reports"
+      routerLinkActive="bg-primary-50"
+      class="flex items-center justify-between gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors"
+    >
+      <span class="flex items-center gap-3">
+        <ui-icon name="clipboard-list" size="18" styleClass="text-grey-700" />
+        <span class="font-semibold text-grey-700">{{ 'Reportes' | transloco }}</span>
+      </span>
+      <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[0.625rem] font-semibold leading-none">
+        {{ 'Nuevo' | transloco }}
+      </span>
+    </a>
+    }
+
+    @if (isVenezuela() && canViewRates()) {
+    <a
+      routerLink="/admin/exchange-rates"
+      routerLinkActive="bg-primary-50"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors"
+    >
+      <ui-icon name="dollar-sign" size="18" styleClass="text-grey-700" />
+      <span class="font-semibold text-grey-700">{{ 'Tasas del día' | transloco }}</span>
+    </a>
+    }
+
+    @if (canViewTeam()) {
+    <a
+      routerLink="/admin/teams"
+      routerLinkActive="bg-primary-50"
+      class="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors"
+    >
+      <ui-icon name="users" size="18" styleClass="text-grey-700" />
+      <span class="font-semibold text-grey-700">{{ 'Equipo' | transloco }}</span>
+    </a>
+    }
+
+    <a
+      routerLink="/admin/referrals"
+      routerLinkActive="bg-primary-50"
+      class="flex items-center justify-between gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors"
+    >
+      <span class="flex items-center gap-3">
+        <ui-icon name="gift" size="18" styleClass="text-grey-700" />
+        <span class="font-semibold text-grey-700">{{ 'Referidos' | transloco }}</span>
+      </span>
+      <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[0.625rem] font-semibold leading-none">
+        {{ 'Nuevo' | transloco }}
+      </span>
+    </a>
+
+    @if (canViewCatalog()) {
+    <a
+      routerLink="/admin/catalog/edit"
+      routerLinkActive="bg-primary-50"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors"
+    >
+      <ui-icon name="store" size="18" styleClass="text-grey-700" />
+      <span class="font-semibold text-grey-700">{{ 'Editar catálogo' | transloco }}</span>
+    </a>
+    <button
+      type="button"
+      (click)="openStorefront()"
+      class="flex items-center justify-between gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors text-left w-full"
+    >
+      <span class="flex items-center gap-3">
+        <ui-icon name="store" size="18" styleClass="text-grey-700" />
+        <span class="font-semibold text-grey-700">{{ 'Ver mi catálogo' | transloco }}</span>
+      </span>
+      <ui-icon name="square-arrow-out-up-right" size="14" styleClass="text-grey-300" />
+    </button>
+    }
+  </nav>
+
+  <!-- Footer: idioma + ayuda + cerrar sesión -->
+  <div
+    class="border-t border-grey-50 px-3 pt-3 flex flex-col gap-1 pb-[calc(0.75rem_+_var(--safe-area-bottom))]"
+  >
+    <div class="flex items-center justify-between px-2 py-1.5">
+      <span class="flex items-center gap-3 font-semibold text-grey-700">
+        <ui-icon name="globe" size="18" styleClass="text-grey-700" />
+        {{ 'Idioma' | transloco }}
+      </span>
+      <lib-language-selector styleClass="text-grey-700" />
+    </div>
+
+    <button
+      type="button"
+      (click)="openGuide()"
+      class="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors text-left w-full"
+    >
+      <ui-icon name="message-circle-question" size="18" styleClass="text-grey-700" />
+      <span class="font-semibold text-grey-700">{{ 'Guía de ayuda' | transloco }}</span>
+    </button>
+
+    <button
+      type="button"
+      (click)="logout()"
+      class="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-red-50 transition-colors text-left w-full"
+    >
+      <ui-icon name="log-out" size="18" styleClass="text-red-400" />
+      <span class="font-semibold text-red-400">{{ 'Cerrar sesión' | transloco }}</span>
+    </button>
+  </div>
+</aside>
+}

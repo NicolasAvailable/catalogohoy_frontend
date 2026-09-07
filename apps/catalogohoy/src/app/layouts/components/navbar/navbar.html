@@ -1,5 +1,54 @@
+@if (isNative) {
+<!-- ── Navbar nativo (estilo Shopify): avatar → perfil · tienda · compartir/QR ── -->
 <nav
-  class="flex items-center justify-between h-16 w-full py-3 px-4 bg-white border-b border-grey-50"
+  class="flex items-center justify-between gap-3 min-h-14 w-full pb-2 pt-[calc(0.5rem_+_var(--safe-area-top))] px-4 bg-white border-b border-grey-50"
+>
+  <!-- Perfil (izquierda) → editar perfil -->
+  <a
+    [routerLink]="['/admin/profile']"
+    [queryParams]="{ tab: 'general' }"
+    class="shrink-0 rounded-full"
+    aria-label="Perfil"
+  >
+    <ui-avatar
+      size="large"
+      [label]="profileStore.profile().name"
+      [image]="profileStore.profile().photo ?? ''"
+      styleClass="!bg-[#8892F0] !text-lino-500"
+    />
+  </a>
+  <!-- Nombre de la tienda (centro) → Inicio -->
+  <a
+    routerLink="/admin"
+    class="flex-1 min-w-0 text-center text-base font-bold text-grey-700 truncate"
+  >
+    {{ currentTenant().name }}
+  </a>
+  <!-- Acciones (derecha): compartir + QR -->
+  <div class="flex items-center gap-1 shrink-0">
+    <ui-button
+      (click)="share()"
+      icon="share2"
+      severity="primary"
+      variant="outlined"
+      styleClass="!border-none !text-grey-700"
+      [tooltip]="'Compartir catálogo' | transloco"
+      tooltipPosition="bottom"
+    />
+    <ui-button
+      (click)="generateQR()"
+      icon="qr-code"
+      severity="primary"
+      variant="outlined"
+      styleClass="!border-none !text-grey-700"
+      [tooltip]="'Generar QR' | transloco"
+      tooltipPosition="bottom"
+    />
+  </div>
+</nav>
+} @else {
+<nav
+  class="flex items-center justify-between min-h-16 w-full pb-3 pt-[calc(0.75rem_+_var(--safe-area-top))] px-4 bg-white border-b border-grey-50"
 >
   <div class="flex items-center gap-2">
     <ui-button
@@ -107,3 +156,4 @@
     }
   </div>
 </nav>
+}

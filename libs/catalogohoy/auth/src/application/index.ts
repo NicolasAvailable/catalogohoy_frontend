@@ -50,6 +50,11 @@ export class AuthenticationFacade {
     return this.authenticationService.getLoginRedirectUrl();
   }
 
+  /** Slug del tenant del usuario logueado (flujo nativo). */
+  public getMyTenantSlug() {
+    return this.authenticationService.getMyTenantSlug();
+  }
+
   public checkEmailExists(email: string) {
     return this.authenticationService.checkEmailExists(email);
   }

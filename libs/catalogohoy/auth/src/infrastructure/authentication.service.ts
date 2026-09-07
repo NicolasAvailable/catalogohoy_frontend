@@ -332,6 +332,19 @@ export class AuthenticationService implements BaseAuthenticationService {
     return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
+  /**
+   * Slug del tenant del usuario logueado, sin construir la URL de redirect.
+   * Lo usa el flujo NATIVO: tras el login no navegamos a un subdominio, sino
+   * que cacheamos el slug (setNativeSlug) y ruteamos in-app a /admin.
+   */
+  public async getMyTenantSlug(): Promise<E.Either<Error, string>> {
+    const { data: tenantRows, error } = await this.client.rpc('get_my_tenant');
+    if (error) return E.left(new Error(error.message));
+    if (!tenantRows?.length) return E.left(new Error('no_tenant'));
+    const tenant = TenantMapper.toDomain(tenantRows[0]);
+    return E.right(tenant.slug);
+  }
+
   public buildTenantAdminUrl(slug: string, customDomain?: string | null): string {
     return this._buildRedirectUrl(slug, customDomain);
   }

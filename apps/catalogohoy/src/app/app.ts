@@ -7,6 +7,7 @@ import {
 } from '@catalogohoy/core';
 import { NgxSonnerToaster } from 'ngx-sonner';
 import { AppSubscriber } from './app.subscriber';
+import { NativePlatformService } from './mobile/native-platform.service';
 
 @Component({
   imports: [RouterModule, NgxSonnerToaster],
@@ -16,6 +17,7 @@ import { AppSubscriber } from './app.subscriber';
 })
 export class App implements OnInit {
   private readonly subscriber = inject(AppSubscriber);
+  private readonly nativePlatform = inject(NativePlatformService);
   // La inyección del servicio dispara su constructor (init + router tracking)
   readonly posthog = inject(PosthogService);
   readonly metaPixel = inject(MetaPixelService);
@@ -24,6 +26,8 @@ export class App implements OnInit {
     this.captureQueryParametersToLocalStorage();
     SupabaseClientProvider.create();
     this.subscriber.init();
+    // Shell nativo (Capacitor): status bar, splash, botón atrás. No-op en web.
+    void this.nativePlatform.init();
   }
 
   protected title = 'catalogohoy';
@@ -46,6 +50,11 @@ export class App implements OnInit {
     // /checkout?preview=true). Persisting it to localStorage would make it
     // sticky and wrongly flag a real customer's checkout as a preview.
     'preview',
+    // `order` is the deep-link of the order detail modal (/admin/orders?order=ID,
+    // target of the "Ver pedido" button in WhatsApp notifications). The order
+    // list reads it from the URL on load; moving it to localStorage would make
+    // the button land on the bare list.
+    'order',
   ]);
 
   private captureQueryParametersToLocalStorage(): void {

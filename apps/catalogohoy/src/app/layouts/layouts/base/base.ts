@@ -4,7 +4,14 @@ import { environment } from '@catalogohoy/env';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ExpirationBannerComponent, PlanStore } from '@catalogohoy/plan';
 import { WhatsappSupportComponent } from '@ui';
-import { AiAnnouncement, Navbar, Sidebar, UpdateBanner } from '../../components';
+import {
+  AiAnnouncement,
+  MobileMoreDrawer,
+  MobileTabBar,
+  Navbar,
+  Sidebar,
+  UpdateBanner,
+} from '../../components';
 
 @Component({
   selector: 'app-base',
@@ -12,6 +19,8 @@ import { AiAnnouncement, Navbar, Sidebar, UpdateBanner } from '../../components'
     RouterOutlet,
     Navbar,
     Sidebar,
+    MobileTabBar,
+    MobileMoreDrawer,
     WhatsappSupportComponent,
     ExpirationBannerComponent,
     AiAnnouncement,
@@ -24,6 +33,8 @@ export class Base implements OnInit {
   private readonly planStore = inject(PlanStore);
 
   public readonly sidebarOpen = signal(false);
+  /** Drawer "Más" de la app nativa (entra desde la derecha). */
+  public readonly moreOpen = signal(false);
   public readonly helpGuideUrl = environment.helpGuideUrl;
 
   ngOnInit() {

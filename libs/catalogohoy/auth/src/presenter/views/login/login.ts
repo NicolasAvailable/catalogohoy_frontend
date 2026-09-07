@@ -1,7 +1,11 @@
 import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { LanguageSelectorComponent } from '@catalogohoy/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import {
+  isNativeApp,
+  LanguageSelectorComponent,
+  setNativeSlug,
+} from '@catalogohoy/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import {
@@ -28,10 +32,33 @@ import { LoginCredentials } from '../../../domain';
     TranslocoPipe,
   ],
   templateUrl: './login.html',
+  // En la app nativa (clase `native-login`) agrandamos inputs, tipografía y
+  // botón para que se sientan cómodos en pantalla táctil. En web no aplica.
+  styles: [
+    `
+      :host ::ng-deep .native-login .p-inputtext {
+        padding-block: 1rem !important;
+        font-size: 1.0625rem !important;
+      }
+      .native-login h1 {
+        font-size: 2.25rem;
+        line-height: 2.5rem;
+      }
+      .native-login p {
+        font-size: 1.05rem;
+      }
+      .native-login label {
+        font-size: 1rem;
+      }
+    `,
+  ],
 })
 export class Login extends BaseComponent implements OnInit, OnDestroy {
   private readonly facade = inject(AuthenticationFacade);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  /** true en la app nativa (Capacitor): oculta Google y rutea in-app. */
+  readonly isNative = isNativeApp();
   private pendingInviteToken: string | null = null;
   public readonly form = inject(FormBuilder).group({
     email: [
@@ -55,6 +82,12 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     this.pendingInviteToken =
       this.route.snapshot.queryParamMap.get('invite_token') ??
       sessionStorage.getItem('pending_invite_token');
+
+    // returnUrl (lo manda el authenticationGuard del admin): deep link al que
+    // volver tras el login. Persistido en sessionStorage porque el flujo de
+    // Google sin popup navega fuera y vuelve a /login sin query params.
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    if (returnUrl) sessionStorage.setItem('pending_return_url', returnUrl);
 
     const pending = sessionStorage.getItem('auth_pending');
     if (pending !== 'google_login') return;
@@ -97,9 +130,30 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
           await this.facade.acceptInvite(this.pendingInviteToken);
           sessionStorage.removeItem('pending_invite_token');
         }
-        window.location.href = url;
+        // App nativa: no navegamos a un subdominio (sacaría del shell).
+        // Resolvemos el slug del tenant, lo cacheamos y ruteamos in-app a /admin.
+        if (this.isNative) {
+          await this.goToAdminNative();
+          return;
+        }
+        window.location.href = this.applyReturnUrl(url);
       }
     }
+  }
+
+  /** Post-login nativo: cachea el slug del tenant y navega in-app a /admin. */
+  private async goToAdminNative(): Promise<void> {
+    const result = await this.facade.getMyTenantSlug();
+    if (result.isRight()) {
+      setNativeSlug(result.value as string);
+      await this.router.navigateByUrl('/admin');
+      return;
+    }
+    // Sin catálogo asociado (o error): el registro se hace en la web.
+    this.googleError.set(
+      'No tienes un catálogo registrado. Regístrate en catalogohoy.com para usar la app.'
+    );
+    await this.facade.logout();
   }
 
   public async loginWithGoogle() {
@@ -138,6 +192,28 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     }, 500);
   }
 
+  /** Si hay un returnUrl pendiente (deep link del guard, p.ej. el botón
+   *  "Ver pedido" de WhatsApp → /admin/orders?order=ID), redirige ahí en vez
+   *  de al /admin pelado. Solo si apunta al MISMO origin que el redirect del
+   *  tenant logueado (corta open redirects y tenants ajenos), y conservando
+   *  los query params del login (traspaso de sesión entre subdominios). */
+  private applyReturnUrl(loginUrl: string): string {
+    const raw = sessionStorage.getItem('pending_return_url');
+    if (!raw) return loginUrl;
+    sessionStorage.removeItem('pending_return_url');
+    try {
+      const login = new URL(loginUrl);
+      const target = new URL(raw);
+      if (target.origin !== login.origin) return loginUrl;
+      login.searchParams.forEach((value, key) => {
+        target.searchParams.set(key, value);
+      });
+      return target.toString();
+    } catch {
+      return loginUrl;
+    }
+  }
+
   private async handlePostGoogleAuth() {
     if (this.pendingInviteToken) {
       await this.facade.acceptInvite(this.pendingInviteToken);
@@ -145,7 +221,7 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     }
     const result = await this.facade.getLoginRedirectUrl();
     if (result.isRight()) {
-      window.location.href = result.value as string;
+      window.location.href = this.applyReturnUrl(result.value as string);
       return;
     }
 

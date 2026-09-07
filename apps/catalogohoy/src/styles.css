@@ -1,6 +1,55 @@
 @import 'tailwindcss';
 @import '../../../libs/ui/src/styles/index.css';
 
+/* ── Shell nativo (Capacitor) ──────────────────────────────────────────────
+   Con viewport-fit=cover el contenido ocupa toda la pantalla (bajo el notch y
+   el home-indicator). Estas variables exponen los safe-area insets para
+   usarlos en layouts nativos (ej. header/footer del admin). En web valen 0. */
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+}
+
+/* Utilidades para respetar el safe-area sin repetir env() en cada componente. */
+.pt-safe { padding-top: var(--safe-area-top); }
+.pb-safe { padding-bottom: var(--safe-area-bottom); }
+
+/* App nativa (clase puesta por NativePlatformService): el scroll vive dentro
+   del contenido del admin, así que anulamos el rebote elástico del documento
+   que arrastraba la barra superior bajo la status bar ("el navbar sube demasiado"). */
+.native-app,
+.native-app body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* ── Bottom tab bar nativa ──────────────────────────────────────────────────
+   La barra inferior (app-mobile-tab-bar) absorbe el safe-area del home
+   indicator. Como se pinta DEBAJO del área scrolleable, esta ya no necesita el
+   inset inferior (lo tenía por env(); en nativo lo dueña la barra). En web la
+   barra no existe y --safe-area-bottom vale 0, así que esto no cambia nada. */
+.native-tab-bar {
+  padding-bottom: var(--safe-area-bottom);
+}
+
+.native-app .admin-scroll {
+  padding-bottom: 1rem;
+}
+
+/* El FAB de soporte (ui-whatsapp-support) es position:fixed abajo-derecha y
+   chocaría con la barra inferior: lo subimos por encima de ella (alto de la
+   barra + safe-area). El panel abierto sube en consecuencia. */
+.native-app ui-whatsapp-support > button {
+  bottom: calc(var(--safe-area-bottom) + 4.75rem);
+}
+
+.native-app ui-whatsapp-support > div {
+  bottom: calc(var(--safe-area-bottom) + 9.5rem);
+}
+
 /* CDK Drag & Drop */
 .cdk-drag-preview {
   background: white;

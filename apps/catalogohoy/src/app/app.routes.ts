@@ -3,13 +3,22 @@ import { authenticationGuard } from '@catalogohoy/auth';
 import { profileResolver } from '@catalogohoy/profile';
 import { isValidSlugGuard } from '@catalogohoy/tenant';
 import { hasAccessGuard, teamPermissionsResolver } from '@catalogohoy/teams';
+import { nativeEntryGuard } from './mobile/native-entry.guard';
 
 export const appRoutes: Route[] = [
   {
     path: '',
-    canActivate: [isValidSlugGuard],
+    // nativeEntryGuard: en la app nativa redirige la raíz a /admin o /login
+    // (no hay storefront en nativo). En web es no-op y sigue isValidSlugGuard.
+    canActivate: [nativeEntryGuard, isValidSlugGuard],
     loadChildren: () =>
       import('@catalogohoy/e-commerce').then((m) => m.ecommerceRoutes),
+  },
+  {
+    // Login in-app SOLO para el shell nativo (en web el login vive en
+    // auth.catalogohoy.com). Reusa el componente Login de @catalogohoy/auth.
+    path: 'login',
+    loadComponent: () => import('@catalogohoy/auth').then((m) => m.Login),
   },
   {
     path: 'admin',
