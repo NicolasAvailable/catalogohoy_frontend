@@ -367,11 +367,16 @@ export class Plans implements OnInit {
   public selectPlan(plan: PlanDisplay): void {
     if (plan.isCurrent || plan.isFree) return;
 
+    const countryCode = this.tenantCurrency.countryCode();
+    const countryName = findCountryByCode(countryCode)?.label ?? null;
+
     this.discord.notifyCheckoutIntent({
       tenantName: this.tenantStore.tenantName(),
       tenantSlug: this.tenantStore.tenantSlug(),
       planName: plan.name,
       billingPeriod: this.billingPeriod(),
+      countryName,
+      countryCode,
     });
 
     this.router.navigate(['/admin/plans/checkout', plan.id], {

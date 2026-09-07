@@ -10,6 +10,9 @@ export class DiscordWebhookService {
     tenantSlug: string | null;
     planName: string;
     billingPeriod: string;
+    /** País del catálogo (nombre en español + código ISO2) para el Slack. */
+    countryName?: string | null;
+    countryCode?: string | null;
   }): void {
     this.client.functions
       .invoke('notify-checkout-intent', { body: data })
