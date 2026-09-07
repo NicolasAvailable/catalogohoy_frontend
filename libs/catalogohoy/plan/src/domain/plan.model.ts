@@ -34,6 +34,9 @@ export interface PlanDisplay extends Plan {
   isPopular: boolean;
   isCurrent: boolean;
   color: string;
+  /** Cantidad de suscriptores para el badge de prueba social ("+N suscriptores").
+   *  Opcional: solo los planes que lo definen en la config lo muestran. */
+  socialProof?: number;
 }
 
 export interface TenantPlanUsage {

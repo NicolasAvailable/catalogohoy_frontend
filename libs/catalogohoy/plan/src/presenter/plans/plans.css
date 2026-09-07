@@ -265,6 +265,13 @@
   border: 1px solid #bbf7d0;
 }
 
+/* Prueba social ("⭐ +500 suscriptores") — tono cálido/dorado para destacar. */
+.badge-inline--social {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
 /* ── Precio ── */
 .plan-card__price {
   display: flex;

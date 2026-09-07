@@ -50,6 +50,9 @@ type PlanUIConfig = {
   buttonSeverity: 'primary' | 'secondary';
   isPopular: boolean;
   color: string;
+  /** Prueba social: cantidad de suscriptores a mostrar en un badge ("+N
+   *  suscriptores"). Solo los planes que lo definen lo muestran. */
+  socialProof?: number;
 };
 
 // Los features viven en PLAN_FEATURES (domain) — misma fuente que la sección
@@ -72,7 +75,7 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
     color: '#6366f1',
   },
   // El badge "Más popular" vive en el Pro (ancla la decisión en el plan del
-  // medio); el Avanzado queda como tier premium sin badge.
+  // medio); el Avanzado lleva un badge de prueba social ("+N suscriptores").
   pro: {
     period: '/mes',
     features: PLAN_FEATURES['pro'],
@@ -88,6 +91,7 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
     buttonSeverity: 'secondary',
     isPopular: false,
     color: '#312e81',
+    socialProof: 500,
   },
 };
 
@@ -127,6 +131,7 @@ function toPlanDisplay(plan: Plan, currentPlanPosition: number, rateType: string
     isPopular: config.isPopular,
     color: config.color,
     isCurrent,
+    socialProof: config.socialProof,
   };
 }
 

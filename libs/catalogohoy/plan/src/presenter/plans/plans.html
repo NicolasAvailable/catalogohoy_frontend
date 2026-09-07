@@ -97,6 +97,8 @@
               <span class="badge-inline badge-inline--current">{{ 'Actual' | transloco }}</span>
             } @else if (plan.isPopular) {
               <span class="badge-inline badge-inline--popular">{{ 'Más popular' | transloco }}</span>
+            } @else if (plan.socialProof) {
+              <span class="badge-inline badge-inline--social">⭐ {{ '+{n} suscriptores' | transloco: { n: plan.socialProof } }}</span>
             }
           </div>
           <p class="plan-card__description">{{ plan.description }}</p>
