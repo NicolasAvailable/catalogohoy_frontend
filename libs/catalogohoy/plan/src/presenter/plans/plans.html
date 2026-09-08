@@ -36,6 +36,12 @@
     </div>
   </header>
 
+  @if (isNative) {
+    <p class="plans-native-note">
+      {{ 'La gestión de planes está disponible en la versión web de CatalogoHoy.' | transloco }}
+    </p>
+  }
+
   <div class="plans-carousel">
     <button
       type="button"
@@ -150,7 +156,10 @@
           <p class="plan-card__free-months">🎁 {{ annualFreeLabel(plan) | transloco }}</p>
         }
 
-        <!-- Botón CTA -->
+        <!-- Botón CTA — oculto en la app nativa (la compra se gestiona en la web
+             por reglas de IAP de Apple/Google). El plan actual igual se indica
+             con el badge "Actual" del header de la card. -->
+        @if (!isNative) {
         <button
           class="plan-card__button"
           [class.plan-card__button--primary]="plan.isPopular && !plan.isCurrent"
@@ -165,6 +174,7 @@
           }
           {{ plan.buttonLabel | transloco }}
         </button>
+        }
 
         <hr class="plan-card__divider" />
 

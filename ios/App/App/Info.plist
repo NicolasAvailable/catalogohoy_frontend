@@ -66,5 +66,15 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>CatalogoHoy usa la cámara para que puedas tomar fotos de tus productos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>CatalogoHoy accede a tus fotos para agregar imágenes a tus productos y catálogo.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>CatalogoHoy guarda imágenes (como el QR de tu catálogo) en tu galería.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

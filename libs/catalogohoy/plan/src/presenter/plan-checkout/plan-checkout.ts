@@ -21,7 +21,7 @@ import {
   resolveCheckoutCurrency,
 } from '../../domain';
 import { CheckoutService, PlanStore } from '../../infrastructure';
-import { MetaPixelService, SupabaseClientProvider } from '@catalogohoy/core';
+import { isNativeApp, MetaPixelService, SupabaseClientProvider } from '@catalogohoy/core';
 import { TenantStore } from '@catalogohoy/tenant';
 
 type FeatureSection = {
@@ -417,6 +417,13 @@ export class PlanCheckout implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
+    // Compliance IAP: en la app nativa no se permite el checkout de suscripción
+    // (Apple/Google exigen su facturación). El plan se gestiona desde la web.
+    if (isNativeApp()) {
+      this.router.navigate(['/admin/plans']);
+      return;
+    }
+
     const planId = this.route.snapshot.paramMap.get('planId') ?? '';
     const period = (this.route.snapshot.queryParamMap.get('period') as BillingPeriod) ?? 'monthly';
 

@@ -1,6 +1,7 @@
 import { Component, inject, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { isNativeApp } from '@catalogohoy/core';
 import { ButtonComponent, DialogComponent, IconComponent } from '@ui';
 import { PlanStore } from '../../infrastructure';
 
@@ -33,6 +34,12 @@ import { PlanStore } from '../../infrastructure';
         </p>
 
         <div class="flex flex-col gap-2 w-full mt-2">
+          @if (isNative) {
+          <!-- Compliance IAP: en nativo no se ofrece la compra; se renueva en la web. -->
+          <p class="text-grey-400 text-sm bg-grey-50 border border-grey-100 rounded-xl px-4 py-3">
+            {{ 'La gestión de planes está disponible en la versión web de CatalogoHoy.' | transloco }}
+          </p>
+          } @else {
           <ui-button
             [label]="'Pagar mi plan' | transloco"
             icon="credit-card"
@@ -46,6 +53,7 @@ import { PlanStore } from '../../infrastructure';
             (click)="upgradePlan()"
             [fluid]="true"
           />
+          }
         </div>
       </div>
     </ui-dialog>
@@ -54,6 +62,8 @@ import { PlanStore } from '../../infrastructure';
 export class PlanExpiredDialogComponent {
   public readonly planStore = inject(PlanStore);
   private readonly router = inject(Router);
+  /** En nativo se muestra una nota (renovar en la web) en vez de CTAs de compra. */
+  public readonly isNative = isNativeApp();
 
   @ViewChild(DialogComponent) dialog!: DialogComponent;
 

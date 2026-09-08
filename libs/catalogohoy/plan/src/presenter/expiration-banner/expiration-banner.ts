@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
+import { isNativeApp } from '@catalogohoy/core';
 import { PlanStore } from '../../infrastructure/plan.store';
 
 @Component({
@@ -34,9 +35,11 @@ import { PlanStore } from '../../infrastructure/plan.store';
           }
         </div>
         <div class="expiration-banner__actions">
+          @if (!isNative) {
           <button class="expiration-banner__cta" (click)="renewPlan()">
             {{ 'Renovar plan' | transloco }}
           </button>
+          }
           <button class="expiration-banner__close" (click)="dismiss()">
             <lucide-angular name="x" [size]="16" />
           </button>
@@ -150,6 +153,8 @@ export class ExpirationBannerComponent {
 
   private readonly _planStore = inject(PlanStore);
   private readonly _router = inject(Router);
+  /** En nativo ocultamos el CTA de renovar (la compra se gestiona en la web). */
+  public readonly isNative = isNativeApp();
   public readonly dismissed = signal(this.isDismissedRecently());
 
   public readonly isGrace = computed(() => this._planStore.inGracePeriod());

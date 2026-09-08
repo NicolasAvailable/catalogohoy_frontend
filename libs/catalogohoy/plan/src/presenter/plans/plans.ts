@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
-import { DiscordWebhookService, SupabaseClientProvider } from '@catalogohoy/core';
+import { DiscordWebhookService, isNativeApp, SupabaseClientProvider } from '@catalogohoy/core';
 import {
   findCountryByCode,
   TenantCurrencyStore,
@@ -146,6 +146,11 @@ export class Plans implements OnInit {
   private readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly discord = inject(DiscordWebhookService);
   private readonly supabase = SupabaseClientProvider.getInstance();
+
+  /** En la app nativa (iOS/Android) NO se puede vender la suscripción dentro de
+   *  la app (reglas de IAP de Apple/Google). Ocultamos la compra/upgrade y el
+   *  checkout; el plan se gestiona desde la web. Ver selectPlan() + plans.html. */
+  public readonly isNative = isNativeApp();
 
   public readonly billingPeriod = signal<BillingPeriod>('monthly');
 
@@ -367,6 +372,8 @@ export class Plans implements OnInit {
 
   public selectPlan(plan: PlanDisplay): void {
     if (plan.isCurrent || plan.isFree) return;
+    // Compliance IAP: en nativo no se dispara checkout (se gestiona en la web).
+    if (this.isNative) return;
 
     this.discord.notifyCheckoutIntent({
       tenantName: this.tenantStore.tenantName(),
