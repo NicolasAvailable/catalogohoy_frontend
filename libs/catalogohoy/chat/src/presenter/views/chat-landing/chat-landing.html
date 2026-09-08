@@ -1,0 +1,49 @@
+<div class="w-full max-w-4xl mx-auto px-6 py-10 flex flex-col gap-10">
+  <!-- ═══ Hero ═══ -->
+  <div class="flex flex-col items-center text-center gap-5">
+    <!-- Cluster de canales disponibles hoy: WhatsApp Business + TikTok -->
+    <div class="flex items-center -space-x-3 mb-1">
+      <span class="w-16 h-16 rounded-2xl bg-white border border-grey-100 shadow-sm flex items-center justify-center -rotate-6">
+        <img src="/images/whatsapp.svg" alt="WhatsApp Business" class="w-9 h-9" />
+      </span>
+      <span class="w-16 h-16 rounded-2xl bg-white border border-grey-100 shadow-md flex items-center justify-center z-10 rotate-3">
+        <img src="/images/tiktok-logo.svg" alt="TikTok" class="w-8 h-8" />
+      </span>
+    </div>
+
+    <h1 class="text-2xl md:text-3xl font-bold text-grey-800 max-w-2xl leading-tight">
+      {{ 'Chatea con tus clientes desde CatalogoHoy' | transloco }}
+    </h1>
+    <p class="text-base text-grey-500 max-w-xl leading-relaxed">
+      {{ 'Administra a tus clientes en la misma plataforma. Conecta WhatsApp Business y TikTok y responde todos tus mensajes desde una sola bandeja.' | transloco }}
+    </p>
+
+    <a
+      routerLink="/admin/chat/connect"
+      class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary-500 text-white text-base font-semibold hover:bg-primary-600 transition-colors"
+    >
+      {{ 'Configurar Chat' | transloco }}
+      <ui-icon name="arrow-right" size="18" />
+    </a>
+
+    <p class="inline-flex items-center gap-1.5 text-xs text-grey-400">
+      <ui-icon name="sparkles" size="13" styleClass="text-grey-300" />
+      {{ 'La atención con inteligencia artificial llegará pronto.' | transloco }}
+    </p>
+  </div>
+
+  <!-- ═══ Qué puedes hacer ═══ -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    @for (feature of features; track feature.title) {
+    <div class="flex items-start gap-4 rounded-2xl border border-grey-100 bg-white px-5 py-5">
+      <span class="w-11 h-11 shrink-0 rounded-xl bg-primary-50 flex items-center justify-center">
+        <ui-icon [name]="feature.icon" size="20" styleClass="text-primary-600" />
+      </span>
+      <div class="min-w-0">
+        <p class="text-sm font-semibold text-grey-800">{{ feature.title | transloco }}</p>
+        <p class="text-xs text-grey-500 mt-1 leading-relaxed">{{ feature.description | transloco }}</p>
+      </div>
+    </div>
+    }
+  </div>
+</div>

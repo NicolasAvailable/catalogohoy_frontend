@@ -82,12 +82,14 @@ export class ConnectChannelsComponent implements OnInit {
   protected readonly ttAccount = signal<SocialAccount | null>(null);
   protected readonly fbAccount = signal<SocialAccount | null>(null);
 
-  /** IG/Messenger dejan de ser "Próximamente" solo para la allowlist de la
-   *  beta cerrada (demo + catálogo interno, para el video de App Review). */
+  /** Canales disponibles hoy: WhatsApp Business y TikTok (ambos conectables).
+   *  Instagram y Messenger solo aparecen para la allowlist de la beta cerrada
+   *  (demo + catálogo interno, para el video de App Review de Meta); para el
+   *  resto de los catálogos quedan fuera de la galería por ahora. */
   protected readonly channels = computed<ConnectableChannel[]>(() => {
     const slug = getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || '';
     const igFbUnlocked = IG_FB_CONNECT_SLUGS.includes(slug);
-    return [
+    const list: ConnectableChannel[] = [
       {
         key: 'whatsapp',
         name: 'WhatsApp Business',
@@ -96,32 +98,34 @@ export class ConnectChannelsComponent implements OnInit {
         route: '/admin/chat/connect/whatsapp',
       },
       {
-        key: 'instagram',
-        name: 'Instagram',
-        logo: '/images/instagram.svg',
-        description: 'Responde los mensajes directos de tu cuenta profesional.',
-        route: '/admin/chat/connect/instagram',
-        comingSoon: !igFbUnlocked,
-      },
-      {
-        key: 'messenger',
-        name: 'Messenger',
-        logo: '/images/messenger.svg',
-        description: 'Responde los mensajes de Messenger de tu página de Facebook.',
-        route: '/admin/chat/connect/messenger',
-        comingSoon: !igFbUnlocked,
-      },
-      {
         key: 'tiktok',
         name: 'TikTok',
         // Nota colorida sin fondo (tiktok.svg es la versión app-icon con fondo
         // negro, para los badges chicos de la bandeja).
         logo: '/images/tiktok-logo.svg',
-        description: 'Mensajería de TikTok para empresas (beta).',
+        description: 'Responde los mensajes directos de tu cuenta de empresa.',
         route: '/admin/chat/connect/tiktok',
-        comingSoon: true,
       },
     ];
+    if (igFbUnlocked) {
+      list.push(
+        {
+          key: 'instagram',
+          name: 'Instagram',
+          logo: '/images/instagram.svg',
+          description: 'Responde los mensajes directos de tu cuenta profesional.',
+          route: '/admin/chat/connect/instagram',
+        },
+        {
+          key: 'messenger',
+          name: 'Messenger',
+          logo: '/images/messenger.svg',
+          description: 'Responde los mensajes de Messenger de tu página de Facebook.',
+          route: '/admin/chat/connect/messenger',
+        }
+      );
+    }
+    return list;
   });
 
   protected readonly waConnected = computed(() =>
