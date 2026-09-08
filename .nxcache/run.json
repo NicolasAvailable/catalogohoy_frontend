@@ -1,8 +1,8 @@
 {
   "run": {
     "command": "nx build catalogohoy --skip-nx-cache",
-    "startTime": "2026-09-08T20:11:13.754Z",
-    "endTime": "2026-09-08T20:11:30.542Z",
+    "startTime": "2026-09-08T21:17:59.266Z",
+    "endTime": "2026-09-08T21:18:20.160Z",
     "inner": false
   },
   "tasks": [
@@ -10,9 +10,9 @@
       "taskId": "catalogohoy:build:production",
       "target": "build",
       "projectName": "catalogohoy",
-      "hash": "13323736203213981599",
-      "startTime": "2026-09-08T20:11:13.785Z",
-      "endTime": "2026-09-08T20:11:30.540Z",
+      "hash": "6925815843197250697",
+      "startTime": "2026-09-08T21:17:59.418Z",
+      "endTime": "2026-09-08T21:18:20.157Z",
       "params": "",
       "cacheStatus": "cache-miss",
       "status": 0

@@ -86,6 +86,23 @@ export class ECommerce implements OnInit, OnDestroy {
     const stored = this.language.getStoredCatalogLanguage();
     this.language.setSession(stored ?? (info.defaultLanguage as AppLanguage));
   });
+
+  /** El pixel del tenant se inicializa cuando (a) el gate de plan pago pasó
+   *  (`pixelGateOk`, seteado en ngOnInit con el resultado del RPC) Y (b)
+   *  catalogInfo() ya está poblado con el metaPixelId. Un effect (no un read
+   *  one-shot) para que no importe el orden en que se resuelven ambos: evita la
+   *  race donde el signal aún no reflejaba el pixel justo tras el await. No corre
+   *  en el preview del editor. */
+  public readonly pixelGateOk = signal(false);
+  private tenantPixelInited = false;
+  private readonly initTenantPixelEffect = effect(() => {
+    const info = this.ecommerceStore.effectiveCatalogInfo();
+    const gateOk = this.pixelGateOk();
+    if (this.tenantPixelInited || !gateOk || !info?.metaPixelId) return;
+    if (this.ecommerceStore.isPreviewMode()) return;
+    this.tenantPixelInited = true;
+    this.metaPixel.initTenantPixel(info.metaPixelId);
+  });
   private readonly titleService = inject(Title);
   private readonly metaService = inject(Meta);
   private readonly stripHtmlPipe = new StripHtmlPipe();
@@ -265,13 +282,14 @@ export class ECommerce implements OnInit, OnDestroy {
 
         if (!result.isFreePlan && !result.planExpired) {
           this.posthogService.enablePublicTracking(slug);
-          // Pixel de Meta del comerciante (solo planes pagos, no vencidos):
-          // inicializa SU pixel y dispara PageView. Los eventos de compra
-          // (ViewContent/AddToCart/InitiateCheckout/Lead) salen desde las
-          // vistas del catálogo con trackTenant, aislados del pixel propio.
-          this.metaPixel.initTenantPixel(
-            this.ecommerceStore.catalogInfo()?.metaPixelId
-          );
+          // Pixel de Meta del comerciante (solo planes pagos, no vencidos): el
+          // init lo dispara `initTenantPixelEffect` cuando catalogInfo() ya
+          // reflejó el pixel del RPC. Leerlo acá mismo era una race: el signal a
+          // veces todavía no estaba poblado justo tras el await → initTenantPixel
+          // recibía null y no hacía nada (~5 de 6 cargas). Con el effect es
+          // determinístico. Los eventos de compra (ViewContent/AddToCart/
+          // InitiateCheckout/Lead) salen de las vistas con trackActiveTenant.
+          this.pixelGateOk.set(true);
         }
       }
     }
