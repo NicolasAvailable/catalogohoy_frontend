@@ -1,5 +1,6 @@
 import { computed, inject } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
+import { MetaPixelService } from '@catalogohoy/core';
 import { Product, ProductAddon, ProductVariant, WholesaleTier } from '@catalogohoy/product';
 import {
   patchState,
@@ -73,6 +74,17 @@ function injectTranslator(): { translate: (key: string) => string } {
   }
 }
 
+/** Safe injector for the Meta Pixel (same fallback rationale as the translator:
+ *  the store may be instantiated outside an injection context in tests). The
+ *  no-op keeps AddToCart tracking best-effort. */
+function injectMetaPixel(): Pick<MetaPixelService, 'trackActiveTenant'> {
+  try {
+    return inject(MetaPixelService);
+  } catch {
+    return { trackActiveTenant: () => undefined };
+  }
+}
+
 export const CartStore = signalStore(
   { providedIn: 'root' },
   withState(initialState),
@@ -82,7 +94,7 @@ export const CartStore = signalStore(
     isEmpty: computed(() => store.cart().isEmpty),
     items: computed(() => store.cart().items),
   })),
-  withMethods((store, transloco = injectTranslator()) => ({
+  withMethods((store, transloco = injectTranslator(), metaPixel = injectMetaPixel()) => ({
     addProduct(
       product: Product,
       options?: {
@@ -160,6 +172,16 @@ export const CartStore = signalStore(
       const newCart = store.cart().addItem(item);
       saveCartToStorage(newCart);
       patchState(store, () => ({ cart: newCart }));
+
+      // Meta Pixel del catálogo (solo dispara si el tenant tiene pixel + plan
+      // pago; si no, es no-op). Aislado del pixel propio de CatalogoHoy.
+      metaPixel.trackActiveTenant('AddToCart', {
+        content_ids: [String(product.id)],
+        content_name: product.name,
+        content_type: 'product',
+        value: price,
+        currency: 'USD',
+      });
     },
 
     addWholesaleProduct(product: Product, tier: WholesaleTier) {
@@ -195,6 +217,13 @@ export const CartStore = signalStore(
       const newCart = store.cart().addItem(item);
       saveCartToStorage(newCart);
       patchState(store, () => ({ cart: newCart }));
+      metaPixel.trackActiveTenant('AddToCart', {
+        content_ids: [String(product.id)],
+        content_name: product.name,
+        content_type: 'product',
+        value: tier.price,
+        currency: 'USD',
+      });
     },
 
     removeItem(itemId: string) {

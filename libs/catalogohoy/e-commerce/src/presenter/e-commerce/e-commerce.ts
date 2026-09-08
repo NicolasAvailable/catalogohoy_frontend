@@ -17,6 +17,7 @@ import { StripHtmlPipe } from '@shared/presenter';
 import {
   AppLanguage,
   LanguageService,
+  MetaPixelService,
   PosthogService,
 } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
@@ -60,6 +61,7 @@ export class ECommerce implements OnInit, OnDestroy {
   public readonly cartStore = inject(CartStore);
   public readonly planStore = inject(PlanStore);
   private readonly posthogService = inject(PosthogService);
+  private readonly metaPixel = inject(MetaPixelService);
   private readonly configLive = inject(CatalogConfigLiveService);
   private readonly language = inject(LanguageService);
 
@@ -263,6 +265,13 @@ export class ECommerce implements OnInit, OnDestroy {
 
         if (!result.isFreePlan && !result.planExpired) {
           this.posthogService.enablePublicTracking(slug);
+          // Pixel de Meta del comerciante (solo planes pagos, no vencidos):
+          // inicializa SU pixel y dispara PageView. Los eventos de compra
+          // (ViewContent/AddToCart/InitiateCheckout/Lead) salen desde las
+          // vistas del catálogo con trackTenant, aislados del pixel propio.
+          this.metaPixel.initTenantPixel(
+            this.ecommerceStore.catalogInfo()?.metaPixelId
+          );
         }
       }
     }

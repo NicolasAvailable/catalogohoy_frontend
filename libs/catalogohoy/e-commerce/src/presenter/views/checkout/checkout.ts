@@ -491,6 +491,16 @@ export default class Checkout {
       num_items: items.length,
     });
 
+    // Conversión del catálogo (pixel del comerciante): el comprador inició su
+    // pedido por WhatsApp = Lead. event_id = order-<id> para que Meta lo
+    // deduplique con el mismo evento enviado server-side por la Conversions API
+    // (trigger de la orden). No-op si el catálogo no tiene pixel / plan no pago.
+    this.metaPixel.trackActiveTenant(
+      'Lead',
+      { currency: 'USD', value: total, num_items: items.length },
+      `order-${orderResult.value.id}`
+    );
+
     this.pendingMessage.set(message);
     this.pendingWhatsappUrl.set(whatsappUrl);
     // Flip the phase BEFORE clearing the cart so the empty-cart guard (which

@@ -2192,5 +2192,18 @@
   "Ve la ficha de cada cliente con su historial de pedidos mientras chateas.": "See each customer's profile with their order history while you chat.",
   "Asigna las conversaciones a tu equipo y deja notas internas en cada chat.": "Assign conversations to your team and leave internal notes on each chat.",
   "Envía texto, imágenes, audios y archivos, y usa plantillas para iniciar conversaciones.": "Send text, images, audio and files, and use templates to start conversations.",
-  "Puedes cambiarla gratis en la app de TikTok: Perfil → Menú → Ajustes y privacidad → Cuenta → Cambiar a cuenta de empresa.": "You can switch it for free in the TikTok app: Profile → Menu → Settings and privacy → Account → Switch to Business Account."
+  "Puedes cambiarla gratis en la app de TikTok: Perfil → Menú → Ajustes y privacidad → Cuenta → Cambiar a cuenta de empresa.": "You can switch it for free in the TikTok app: Profile → Menu → Settings and privacy → Account → Switch to Business Account.",
+  "Píxel de Meta": "Meta Pixel",
+  "Conectá tu Píxel de Meta para medir en tus campañas de Facebook e Instagram Ads las visitas, los productos vistos, los agregados al carrito y los pedidos iniciados en tu catálogo.": "Connect your Meta Pixel to measure — in your Facebook and Instagram Ads campaigns — the visits, product views, add-to-cart and orders started on your catalog.",
+  "ID del Píxel de Meta": "Meta Pixel ID",
+  "Lo encontrás en tu Meta Events Manager, en los datos del píxel. Dejá el campo vacío para desactivarlo.": "You'll find it in your Meta Events Manager, in the pixel details. Leave the field empty to turn it off.",
+  "Conversions API": "Conversions API",
+  "Conectada": "Connected",
+  "Enviá las conversiones también desde el servidor para una medición más precisa, aunque el cliente use bloqueadores de anuncios o un iOS con el rastreo limitado.": "Send conversions from the server too for more accurate measurement, even when the customer uses ad blockers or an iOS with limited tracking.",
+  "Token de acceso de la Conversions API": "Conversions API access token",
+  "Dejá vacío para mantener el token actual": "Leave empty to keep the current token",
+  "Generalo en Meta Events Manager → tu píxel → Configuración → API de conversiones → Generar token de acceso.": "Generate it in Meta Events Manager → your pixel → Settings → Conversions API → Generate access token.",
+  "Código de evento de prueba (opcional)": "Test event code (optional)",
+  "Con un código de prueba, los eventos aparecen solo en “Probar eventos” y no cuentan para tus anuncios. Dejalo vacío en producción.": "With a test code, events show only in “Test events” and don't count toward your ads. Leave it empty in production.",
+  "Desconectar Conversions API": "Disconnect Conversions API"
 }

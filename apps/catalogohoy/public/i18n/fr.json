@@ -2192,5 +2192,18 @@
   "Ve la ficha de cada cliente con su historial de pedidos mientras chateas.": "Consultez la fiche de chaque client avec son historique de commandes pendant que vous discutez.",
   "Asigna las conversaciones a tu equipo y deja notas internas en cada chat.": "Attribuez les conversations à votre équipe et laissez des notes internes sur chaque discussion.",
   "Envía texto, imágenes, audios y archivos, y usa plantillas para iniciar conversaciones.": "Envoyez du texte, des images, des audios et des fichiers, et utilisez des modèles pour démarrer des conversations.",
-  "Puedes cambiarla gratis en la app de TikTok: Perfil → Menú → Ajustes y privacidad → Cuenta → Cambiar a cuenta de empresa.": "Vous pouvez la changer gratuitement dans l’app TikTok : Profil → Menu → Paramètres et confidentialité → Compte → Passer à un compte Business."
+  "Puedes cambiarla gratis en la app de TikTok: Perfil → Menú → Ajustes y privacidad → Cuenta → Cambiar a cuenta de empresa.": "Vous pouvez la changer gratuitement dans l’app TikTok : Profil → Menu → Paramètres et confidentialité → Compte → Passer à un compte Business.",
+  "Píxel de Meta": "Pixel Meta",
+  "Conectá tu Píxel de Meta para medir en tus campañas de Facebook e Instagram Ads las visitas, los productos vistos, los agregados al carrito y los pedidos iniciados en tu catálogo.": "Connectez votre Pixel Meta pour mesurer — dans vos campagnes Facebook et Instagram Ads — les visites, les produits vus, les ajouts au panier et les commandes lancées sur votre catalogue.",
+  "ID del Píxel de Meta": "ID du Pixel Meta",
+  "Lo encontrás en tu Meta Events Manager, en los datos del píxel. Dejá el campo vacío para desactivarlo.": "Vous le trouverez dans votre Meta Events Manager, dans les détails du pixel. Laissez le champ vide pour le désactiver.",
+  "Conversions API": "API de conversions",
+  "Conectada": "Connectée",
+  "Enviá las conversiones también desde el servidor para una medición más precisa, aunque el cliente use bloqueadores de anuncios o un iOS con el rastreo limitado.": "Envoyez aussi les conversions depuis le serveur pour une mesure plus précise, même si le client utilise des bloqueurs de publicités ou un iOS au suivi limité.",
+  "Token de acceso de la Conversions API": "Jeton d'accès de l'API de conversions",
+  "Dejá vacío para mantener el token actual": "Laissez vide pour conserver le jeton actuel",
+  "Generalo en Meta Events Manager → tu píxel → Configuración → API de conversiones → Generar token de acceso.": "Générez-le dans Meta Events Manager → votre pixel → Paramètres → API de conversions → Générer un jeton d'accès.",
+  "Código de evento de prueba (opcional)": "Code d'événement de test (facultatif)",
+  "Con un código de prueba, los eventos aparecen solo en “Probar eventos” y no cuentan para tus anuncios. Dejalo vacío en producción.": "Avec un code de test, les événements n'apparaissent que dans « Tester les événements » et ne comptent pas pour vos publicités. Laissez-le vide en production.",
+  "Desconectar Conversions API": "Déconnecter l'API de conversions"
 }

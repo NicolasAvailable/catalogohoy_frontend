@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { Product, ProductAddon, ProductVariant, WholesaleTier } from '@catalogohoy/product';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { MetaPixelService } from '@catalogohoy/core';
 import { isVideoUrl } from '@shared/domain';
 import { SafeDescriptionHtmlPipe } from '@shared/presenter';
 import {
@@ -42,6 +43,7 @@ export class ProductDetailModal {
   private readonly ref = inject(DynamicDialogRef);
   private readonly config = inject(DynamicDialogConfig);
   private readonly cartStore = inject(CartStore);
+  private readonly metaPixel = inject(MetaPixelService);
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cs = this.ecommerceStore.currencySymbol;
   public readonly showReferencePrice = this.ecommerceStore.showReferencePrice;
@@ -62,6 +64,22 @@ export class ProductDetailModal {
   public readonly selectedAddonIds = signal<Set<string>>(
     new Set(this.addons.filter((a) => a.isDefault).map((a) => a.id))
   );
+
+  constructor() {
+    // Meta Pixel del catálogo: el comprador vio el detalle de un producto.
+    // No-op si el catálogo no tiene pixel o el plan no es pago.
+    const value =
+      this.product.pricePromotional > 0
+        ? this.product.pricePromotional
+        : this.product.price;
+    this.metaPixel.trackActiveTenant('ViewContent', {
+      content_ids: [String(this.product.id)],
+      content_name: this.product.name,
+      content_type: 'product',
+      value,
+      currency: 'USD',
+    });
+  }
 
   public isAddonSelected(id: string): boolean {
     return this.selectedAddonIds().has(id);

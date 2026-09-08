@@ -390,6 +390,12 @@ export interface EcommerceConfig {
    *  checkout date picker skips/blocks these days. Persisted inside the
    *  `customer_fields` jsonb column alongside `deliveryDateEnabled`. */
   deliveryBlockedWeekdays: number[];
+  /** Meta (Facebook) Pixel ID del dueño para medir su catálogo público en sus
+   *  campañas de Meta Ads. Es un dato PÚBLICO: viaja por el RPC público y se
+   *  inyecta en el storefront (dispara ViewContent/AddToCart/InitiateCheckout/
+   *  Lead con `trackSingle` a ESTE pixel). Null = sin pixel. El token secreto de
+   *  la Conversions API vive aparte (MetaCapiSettings), nunca en esta config. */
+  metaPixelId: string | null;
 }
 
 /** Business hours for a single day. `dayOfWeek` follows JS convention:

@@ -38,7 +38,7 @@ export class EcommerceConfigService {
       const { data: config } = await this.client
         .from('tenant_ecommerce_config')
         .select(
-          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message, notify_new_orders, notify_weekly_report, shipping_methods, show_shipping_section, customer_fields, default_language'
+          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message, notify_new_orders, notify_weekly_report, shipping_methods, show_shipping_section, customer_fields, default_language, meta_pixel_id'
         )
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -101,6 +101,7 @@ export class EcommerceConfigService {
           ? ((config?.customer_fields as { deliveryBlockedWeekdays?: number[] })
               .deliveryBlockedWeekdays as number[])
           : DEFAULT_DELIVERY_BLOCKED_WEEKDAYS,
+        metaPixelId: (config?.meta_pixel_id as string | null) ?? null,
       });
     } catch (error) {
       return E.left(error as Error);
@@ -310,6 +311,8 @@ export class EcommerceConfigService {
         updateData['shipping_methods'] = config.shippingMethods;
       if (config.showShippingSection !== undefined)
         updateData['show_shipping_section'] = config.showShippingSection;
+      if (config.metaPixelId !== undefined)
+        updateData['meta_pixel_id'] = config.metaPixelId;
       // `customer_fields` also carries the delivery-date settings (no dedicated
       // DB column). Merge them into the same jsonb so a change to either the
       // fields OR the delivery settings persists the combined object. When only
@@ -481,6 +484,59 @@ export class EcommerceConfigService {
     if (!data?.success) {
       return E.left(new Error(data?.error ?? 'No se pudo enviar la prueba'));
     }
+    return E.right(undefined);
+  }
+
+  // ─────────────── Conversions API de Meta (token secreto) ───────────────
+  /** Estado de la CAPI del tenant SIN traer el token al navegador: la sola
+   *  existencia de la fila implica que hay token (access_token es NOT NULL). */
+  async getMetaCapiStatus(
+    tenantId: string
+  ): Promise<
+    E.Either<Error, { configured: boolean; testEventCode: string | null; enabled: boolean }>
+  > {
+    const { data, error } = await this.client
+      .from('meta_capi_credentials')
+      .select('test_event_code, enabled')
+      .eq('tenant_id', Number(tenantId))
+      .maybeSingle();
+    if (error) return E.left(new Error(error.message));
+    return E.right({
+      configured: !!data,
+      testEventCode: data?.test_event_code ?? null,
+      enabled: data?.enabled ?? true,
+    });
+  }
+
+  /** Guarda/actualiza la credencial de CAPI. El access_token solo se escribe si
+   *  viene uno nuevo (no vacío): así el dueño puede cambiar el test_event_code
+   *  sin re-pegar el token. Crear la fila SÍ exige token (columna NOT NULL). */
+  async saveMetaCapi(
+    tenantId: string,
+    input: { accessToken?: string | null; testEventCode?: string | null; enabled?: boolean }
+  ): Promise<E.Either<Error, void>> {
+    const row: Record<string, unknown> = {
+      tenant_id: Number(tenantId),
+      test_event_code: input.testEventCode?.trim() || null,
+      enabled: input.enabled ?? true,
+      updated_at: new Date().toISOString(),
+    };
+    const token = input.accessToken?.trim();
+    if (token) row['access_token'] = token;
+    const { error } = await this.client
+      .from('meta_capi_credentials')
+      .upsert(row, { onConflict: 'tenant_id' });
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  /** Desconecta la CAPI: borra la credencial (el pixel del navegador sigue). */
+  async clearMetaCapi(tenantId: string): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('meta_capi_credentials')
+      .delete()
+      .eq('tenant_id', Number(tenantId));
+    if (error) return E.left(new Error(error.message));
     return E.right(undefined);
   }
 

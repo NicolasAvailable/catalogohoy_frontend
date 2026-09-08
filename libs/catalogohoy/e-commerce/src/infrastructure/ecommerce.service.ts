@@ -251,6 +251,7 @@ export class EcommerceService implements BaseEcommerceService {
         ? ((config?.customer_fields as { deliveryBlockedWeekdays?: number[] })
             .deliveryBlockedWeekdays as number[])
         : [],
+      metaPixelId: (config?.meta_pixel_id as string | null) ?? null,
     };
 
     // El RPC devuelve solo categorías visibles, EXCEPTO la fila "Ver todos"

@@ -147,6 +147,9 @@ export class EcommerceConfigComponent implements OnInit {
   protected readonly canEditCatalog = computed(() => this.permissions.isOwner() || this.permissions.can()('catalogo', 'edit'));
   private readonly planStore = inject(PlanStore);
   public readonly isWhatsappLocked = computed(() => this.planStore.currentPlan()?.isFree ?? false);
+  /** El Píxel de Meta + Conversions API son función de planes pagos: el plan
+   *  gratis ve el campo bloqueado con CTA a mejorar plan. */
+  public readonly isPixelLocked = computed(() => this.planStore.currentPlan()?.isFree ?? false);
 
   /** Dominio personalizado del tenant actual (null si usa slug.catalogohoy.com).
    *  Con dominio propio vinculado, el cambio de dirección se deshabilita: la
@@ -301,6 +304,33 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftSocialLinks = signal<SocialLinks>({ ...DEFAULT_SOCIAL_LINKS });
   public readonly draftTemplate = signal<CatalogTemplate>('banner-centered');
   public readonly draftDefaultLanguage = signal<string>('es');
+  /** Meta (Facebook) Pixel ID del comerciante (marketing). Solo planes pagos. */
+  public readonly draftMetaPixelId = signal<string | null>(null);
+  /** Token NUEVO de la Conversions API a setear ('' = no cambiar; el token real
+   *  nunca vuelve al navegador). test_event_code opcional para probar sin data
+   *  real. Snapshot de lo guardado para el dirty-check. */
+  public readonly draftMetaCapiToken = signal<string>('');
+  public readonly draftMetaCapiTestCode = signal<string | null>(null);
+  private readonly lastSyncedMetaCapi = signal<{
+    configured: boolean;
+    testEventCode: string | null;
+    enabled: boolean;
+  }>({ configured: false, testEventCode: null, enabled: true });
+  /** ¿Hay cambios sin guardar en la CAPI? Un token nuevo siempre cuenta; el
+   *  test code solo cuando ya hay credencial (para no intentar crear la fila sin
+   *  token, que la columna es NOT NULL). */
+  public readonly metaCapiChanged = computed(() => {
+    const snap = this.lastSyncedMetaCapi();
+    const tokenDirty = !!this.draftMetaCapiToken().trim();
+    const testDirty =
+      snap.configured &&
+      (this.draftMetaCapiTestCode()?.trim() || null) !== (snap.testEventCode ?? null);
+    return tokenDirty || testDirty;
+  });
+  /** ¿Ya hay un token de CAPI guardado? (para el badge "Conectada" del form). */
+  public readonly metaCapiConfigured = computed(
+    () => this.lastSyncedMetaCapi().configured
+  );
   public readonly appLanguages = [...APP_LANGUAGES];
   public readonly draftCurrencySymbol = signal('$');
   /** "Mostrar precios sin símbolo de moneda" — persiste el centinela
@@ -538,6 +568,9 @@ export class EcommerceConfigComponent implements OnInit {
       return true;
     }
 
+    // Meta Conversions API token (lives on meta_capi_credentials)
+    if (this.metaCapiChanged()) return true;
+
     // Currency config (lives on tenant_currency_config)
     const cc = this.configStore.currencyConfig();
     const dc = this.draftCurrency();
@@ -707,6 +740,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncFieldJson(this.draftCustomerFields, prev?.customerFields ?? DEFAULT_CUSTOMER_FIELDS, config.customerFields ?? DEFAULT_CUSTOMER_FIELDS);
       syncField(this.draftDeliveryDateEnabled, prev?.deliveryDateEnabled ?? false, config.deliveryDateEnabled ?? false);
       syncFieldJson(this.draftDeliveryBlockedWeekdays, prev?.deliveryBlockedWeekdays ?? DEFAULT_DELIVERY_BLOCKED_WEEKDAYS, config.deliveryBlockedWeekdays ?? DEFAULT_DELIVERY_BLOCKED_WEEKDAYS);
+      syncField(this.draftMetaPixelId, prev?.metaPixelId ?? null, config.metaPixelId ?? null);
 
       this.lastSyncedConfig = { ...config };
     });
@@ -1020,6 +1054,7 @@ export class EcommerceConfigComponent implements OnInit {
       this.configStore.loadCurrencyConfig(String(tenantId));
       this.loadBusinessHours(String(tenantId));
       this.loadWhatsappNotifySettings(String(tenantId));
+      this.loadMetaCapiStatus(String(tenantId));
       this.loadSlugChanges(String(tenantId));
 
       // El slug del store es el confirmado en DB (en dev el de la URL
@@ -1038,6 +1073,34 @@ export class EcommerceConfigComponent implements OnInit {
       this.slugChangesUsed.set(used);
       this.slugChangeLimit.set(limit);
     });
+  }
+
+  private async loadMetaCapiStatus(tenantId: string): Promise<void> {
+    const result = await this.configService.getMetaCapiStatus(tenantId);
+    result.mapRight((s) => {
+      this.lastSyncedMetaCapi.set(s);
+      this.draftMetaCapiTestCode.set(s.testEventCode);
+      this.draftMetaCapiToken.set('');
+    });
+  }
+
+  /** Desconecta la Conversions API (borra el token guardado). El pixel del
+   *  navegador sigue funcionando; solo se apaga el envío server-side. */
+  public async disconnectMetaCapi(): Promise<void> {
+    const tenantId = this.configStore.config()?.tenantId;
+    if (!tenantId) return;
+    const result = await this.configService.clearMetaCapi(tenantId);
+    result.fold(
+      () => {
+        toast.error('No se pudo desconectar la Conversions API');
+      },
+      () => {
+        this.lastSyncedMetaCapi.set({ configured: false, testEventCode: null, enabled: true });
+        this.draftMetaCapiTestCode.set(null);
+        this.draftMetaCapiToken.set('');
+        toast.success('Conversions API desconectada');
+      }
+    );
   }
 
   /** Tras cambiar el slug, el subdominio actual del admin deja de existir:
@@ -1147,6 +1210,10 @@ export class EcommerceConfigComponent implements OnInit {
     if (this.draftWhatsappOrderMessage() !== (config.whatsappOrderMessage ?? null)) changes.whatsappOrderMessage = this.draftWhatsappOrderMessage();
     if (this.draftNotifyNewOrders() !== (config.notifyNewOrders ?? true)) changes.notifyNewOrders = this.draftNotifyNewOrders();
     if (this.draftNotifyWeeklyReport() !== (config.notifyWeeklyReport ?? true)) changes.notifyWeeklyReport = this.draftNotifyWeeklyReport();
+    // Pixel ID: normaliza vacío → null (borrar el campo desactiva el pixel).
+    if ((this.draftMetaPixelId()?.trim() || null) !== (config.metaPixelId ?? null)) {
+      changes.metaPixelId = this.draftMetaPixelId()?.trim() || null;
+    }
 
     const serverButtons = config.whatsappButtons?.length
       ? config.whatsappButtons
@@ -1289,6 +1356,31 @@ export class EcommerceConfigComponent implements OnInit {
           toast.error('Error al guardar las notificaciones de WhatsApp');
         },
         () => this.lastSyncedWhatsappNotify.set(next)
+      );
+    }
+
+    // Meta Conversions API token (lives on meta_capi_credentials, separate table)
+    if (this.metaCapiChanged() && config?.tenantId) {
+      didSilentOp = true;
+      const testCode = this.draftMetaCapiTestCode()?.trim() || null;
+      const result = await this.configService.saveMetaCapi(config.tenantId, {
+        accessToken: this.draftMetaCapiToken().trim() || null,
+        testEventCode: testCode,
+        enabled: true,
+      });
+      result.fold(
+        () => {
+          hadSilentError = true;
+          toast.error('Error al guardar la Conversions API de Meta');
+        },
+        () => {
+          this.lastSyncedMetaCapi.set({
+            configured: true,
+            testEventCode: testCode,
+            enabled: true,
+          });
+          this.draftMetaCapiToken.set('');
+        }
       );
     }
 

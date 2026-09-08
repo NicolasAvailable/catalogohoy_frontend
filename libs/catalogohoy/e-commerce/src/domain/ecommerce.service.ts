@@ -58,6 +58,10 @@ export interface CatalogInfo {
   /** Weekdays with no delivery (JS: 0 = Sunday … 6 = Saturday). The date
    *  picker blocks these days. */
   deliveryBlockedWeekdays: number[];
+  /** Meta (Facebook) Pixel ID del dueño (público). Si está seteado y el plan es
+   *  pago, el storefront inicializa este pixel y dispara los eventos de compra.
+   *  Null = el catálogo no tiene pixel configurado. */
+  metaPixelId: string | null;
 }
 
 /** Invoice-safe view of an order, fetched by id for the public receipt. */

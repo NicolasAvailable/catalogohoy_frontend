@@ -1338,6 +1338,100 @@
         </div>
       </ui-card>
 
+      <!-- Card: Píxel de Meta (marketing / ads) -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon social-icon">
+              <ui-icon name="trending-up" styleClass="size-5"></ui-icon>
+            </div>
+            <div class="flex items-center gap-2">
+              <h2 class="card-title">{{ 'Píxel de Meta' | transloco }}</h2>
+              @if (isPixelLocked()) {
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none">
+                <ui-icon name="crown" size="10" styleClass="text-indigo-500" />
+                {{ 'Pro' | transloco }}
+              </span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="card-content"
+          [class.opacity-50]="isPixelLocked()"
+          [class.pointer-events-none]="isPixelLocked()"
+        >
+          <p class="card-subtitle">
+            {{ 'Conectá tu Píxel de Meta para medir en tus campañas de Facebook e Instagram Ads las visitas, los productos vistos, los agregados al carrito y los pedidos iniciados en tu catálogo.' | transloco }}
+          </p>
+
+          <div class="mt-4">
+            <ui-input-text
+              [attr.label]="'ID del Píxel de Meta' | transloco"
+              placeholder="1234567890123456"
+              [ngModel]="draftMetaPixelId() ?? ''"
+              (ngModelChange)="draftMetaPixelId.set($event)"
+            ></ui-input-text>
+            <p class="text-xs text-grey-300 mt-2">
+              {{ 'Lo encontrás en tu Meta Events Manager, en los datos del píxel. Dejá el campo vacío para desactivarlo.' | transloco }}
+            </p>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Conversions API (server-side) -->
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm font-semibold text-grey-700">{{ 'Conversions API' | transloco }}</h3>
+              @if (metaCapiConfigured()) {
+              <span class="inline-flex items-center gap-1 text-xs font-medium text-green-600">
+                <ui-icon name="check-circle" size="14" styleClass="text-green-600" />
+                {{ 'Conectada' | transloco }}
+              </span>
+              }
+            </div>
+            <p class="card-subtitle mt-1">
+              {{ 'Enviá las conversiones también desde el servidor para una medición más precisa, aunque el cliente use bloqueadores de anuncios o un iOS con el rastreo limitado.' | transloco }}
+            </p>
+
+            <div class="mt-3">
+              <ui-input-text
+                [attr.label]="'Token de acceso de la Conversions API' | transloco"
+                [placeholder]="metaCapiConfigured() ? ('Dejá vacío para mantener el token actual' | transloco) : 'EAA...'"
+                [ngModel]="draftMetaCapiToken()"
+                (ngModelChange)="draftMetaCapiToken.set($event)"
+              ></ui-input-text>
+              <p class="text-xs text-grey-300 mt-2">
+                {{ 'Generalo en Meta Events Manager → tu píxel → Configuración → API de conversiones → Generar token de acceso.' | transloco }}
+              </p>
+            </div>
+
+            <div class="mt-3">
+              <ui-input-text
+                [attr.label]="'Código de evento de prueba (opcional)' | transloco"
+                placeholder="TEST12345"
+                [ngModel]="draftMetaCapiTestCode() ?? ''"
+                (ngModelChange)="draftMetaCapiTestCode.set($event || null)"
+              ></ui-input-text>
+              <p class="text-xs text-grey-300 mt-2">
+                {{ 'Con un código de prueba, los eventos aparecen solo en “Probar eventos” y no cuentan para tus anuncios. Dejalo vacío en producción.' | transloco }}
+              </p>
+            </div>
+
+            @if (metaCapiConfigured()) {
+            <button
+              type="button"
+              class="text-xs font-medium text-grey-300 hover:text-red-500 transition-colors cursor-pointer mt-3"
+              (click)="disconnectMetaCapi()"
+            >
+              {{ 'Desconectar Conversions API' | transloco }}
+            </button>
+            }
+          </div>
+        </div>
+      </ui-card>
+
       </div> <!-- /TAB SOCIAL -->
 
       <!-- ===== TAB: GENERAL (block 3) ===== -->
