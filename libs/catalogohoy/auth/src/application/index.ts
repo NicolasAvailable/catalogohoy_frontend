@@ -21,6 +21,12 @@ export class AuthenticationFacade {
     return new LoginUseCase(this.authenticationService).execute(input);
   }
 
+  /** Provider de auth de un email ('google' | 'email' | null) — para el aviso
+   *  de "esta cuenta se registró con Google" en el login. */
+  public getEmailProvider(email: string): Promise<string | null> {
+    return this.authenticationService.getEmailProvider(email);
+  }
+
   public signup(input: SignUpCredentials) {
     return new SignupUseCase(this.authenticationService).execute(input);
   }

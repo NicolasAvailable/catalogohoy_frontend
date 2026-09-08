@@ -168,6 +168,21 @@ export class AuthenticationService implements BaseAuthenticationService {
     return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
+  /** Provider de auth de un email ('google' | 'email' | null). Lo usa el login
+   *  para avisar "esta cuenta se registró con Google" cuando fallan las
+   *  credenciales. Best-effort — ante cualquier error devuelve null (no
+   *  bloquea el login). */
+  public async getEmailProvider(email: string): Promise<string | null> {
+    try {
+      const { data } = await this.client.functions.invoke<{
+        provider: string | null;
+      }>('check-login-provider', { body: { email } });
+      return data?.provider ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   public async signup(
     credentials: SignUpCredentials
   ): Promise<E.Either<Error, string>> {

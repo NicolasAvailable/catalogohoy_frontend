@@ -94,6 +94,7 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
 
   public async send() {
     if (this.form.valid && this.loaderStore.isDisable()) {
+      this.googleError.set(null);
       const result = await this.facade.login(
         this.form.value as LoginCredentials
       );
@@ -104,6 +105,16 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
           sessionStorage.removeItem('pending_invite_token');
         }
         window.location.href = this.applyReturnUrl(url);
+      } else {
+        // El login falló: puede ser una cuenta creada con Google (sin
+        // contraseña propia). Avisamos para que use el botón de Google en vez
+        // de reintentar con correo/contraseña.
+        const email = this.form.get('email')?.value ?? '';
+        if (email && (await this.facade.getEmailProvider(email)) === 'google') {
+          this.googleError.set(
+            'Esta cuenta está registrada con Google. Iniciá sesión con el botón de Google.'
+          );
+        }
       }
     }
   }
