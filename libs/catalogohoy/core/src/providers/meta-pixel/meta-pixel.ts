@@ -124,10 +124,29 @@ export class MetaPixelService {
     this.activeTenantPixelId = pixelId;
     this.ngZone.runOutsideAngular(() => {
       this.ensureScript();
-      const isNew = !this.initedPixels.has(pixelId);
-      this.initPixel(pixelId);
-      if (isNew) this.trackSingle(pixelId, 'PageView');
+      // Inicializar un SEGUNDO pixel mientras fbevents.js todavía se está
+      // cargando es racy: fbevents a veces no registra el pixel del catálogo
+      // (medido: fallaba ~3 de 8 cargas). Esperamos a que la librería esté
+      // completamente cargada (define fbq.callMethod) antes de init + PageView,
+      // así el pixel se registra siempre en vivo (no vía la cola del stub).
+      this.whenFbqReady(() => {
+        const isNew = !this.initedPixels.has(pixelId);
+        this.initPixel(pixelId);
+        if (isNew) this.trackSingle(pixelId, 'PageView');
+      });
     });
+  }
+
+  /** Ejecuta `cb` cuando fbevents.js terminó de cargar. El stub define
+   *  `fbq.callMethod` recién cuando la librería real está lista; hasta entonces
+   *  las llamadas se encolan. Fallback a ~5s por si el script fue bloqueado. */
+  private whenFbqReady(cb: () => void, attempts = 0): void {
+    const fbq = (window as unknown as { fbq?: { callMethod?: unknown } }).fbq;
+    if (fbq?.callMethod || attempts >= 50) {
+      cb();
+      return;
+    }
+    setTimeout(() => this.whenFbqReady(cb, attempts + 1), 100);
   }
 
   /** Dispara un evento SOLO al pixel del catálogo activo (el del storefront
