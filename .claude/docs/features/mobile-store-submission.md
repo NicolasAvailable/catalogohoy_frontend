@@ -17,16 +17,20 @@ memory + [`mobile-apps.md`](./mobile-apps.md); this file is the **store-listing*
 | Default language | Spanish (es) |
 | Legal entity | CatalogoHoy, LLC — 8947 Western Pines Drive, Douglasville, GA 30134, US |
 
-## Required URLs (confirm these resolve before submitting)
+## Required URLs — ✅ VERIFIED LIVE (2026-09-08, rendered via Playwright, HTTP 200)
 
-- **Privacy policy:** https://catalogohoy.com/privacidad  ← REQUIRED by both stores
-- **Terms:** https://catalogohoy.com/terminos
-- **Support URL:** https://catalogohoy.com  (or a support/contact page)
+- **Privacy policy:** https://catalogohoy.com/privacy-policy  → "Política de Privacidad" ✅
+- **Terms:** https://catalogohoy.com/terms-of-service  → "Términos de Servicio" ✅
+- **Data deletion:** https://catalogohoy.com/data-deletion  → "Eliminación de Datos" ✅
+  (satisfies Play's account/data-deletion requirement)
+- **Support URL:** https://catalogohoy.com
 - **Marketing URL (optional):** https://catalogohoy.com
 - **Support email:** nicolas@catalogohoy.com
 
-> ⚠️ If `/privacidad` or `/terminos` don't exist yet on the landing, create them first —
-> the stores reject submissions without a reachable privacy policy.
+> Note: the landing is a client-rendered SPA (no SSR), so a non-JS crawler sees only the app
+> shell. Real browsers (what Apple/Google reviewers use) render the full policy correctly.
+> Routes live in `apps/landing/src/App.tsx` (`/privacy-policy`, `/terms-of-service`,
+> `/data-deletion`), linked from the footer.
 
 ## Short description / subtitle
 
