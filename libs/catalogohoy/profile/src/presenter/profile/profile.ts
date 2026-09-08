@@ -71,6 +71,11 @@ export class Profile {
   public readonly isDeleting = signal(false);
   public readonly isOpeningPortal = signal(false);
 
+  /** Cuenta creada con Google (OAuth): no tiene contraseña propia (la
+   *  administra Google). Oculta el cambio de contraseña y muestra una nota.
+   *  Se resuelve async al iniciar (lee el provider del auth user). */
+  public readonly isGoogleAccount = signal(false);
+
   // ── Tabs ──────────────────────────────────────────────────────────────
   public readonly tabs: { id: ProfileTabId; label: string; icon: string }[] = [
     { id: 'general',       label: 'General',          icon: 'user' },
@@ -219,6 +224,12 @@ export class Profile {
         this.creditsStore.load();
       }
     });
+
+    // Las cuentas de Google no tienen contraseña editable (la administra
+    // Google) — resolvemos el provider para ocultar el cambio de contraseña.
+    void this.profileService
+      .isGoogleAccount()
+      .then((isGoogle) => this.isGoogleAccount.set(isGoogle));
   }
 
   public async loadBillingHistory(): Promise<void> {

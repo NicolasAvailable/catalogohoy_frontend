@@ -119,4 +119,12 @@ export class ProfileService implements BaseProfileService {
     window.location.href = 'https://auth.catalogohoy.com';
     return E.right(undefined);
   }
+
+  /** True si la cuenta se creó/inicia con Google (OAuth). Esas cuentas no
+   *  tienen contraseña propia — la administra Google — así que el perfil
+   *  oculta el cambio de contraseña y muestra una nota. */
+  public async isGoogleAccount(): Promise<boolean> {
+    const { data } = await this.client.auth.getUser();
+    return data.user?.app_metadata?.['provider'] === 'google';
+  }
 }

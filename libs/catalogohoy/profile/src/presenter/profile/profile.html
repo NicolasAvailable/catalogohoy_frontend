@@ -63,6 +63,12 @@
     <ui-card>
       <form [formGroup]="passwordForm" class="flex flex-col gap-3">
         <h2 class="text-2xl font-bold">{{ 'Contraseña' | transloco }}</h2>
+        @if (isGoogleAccount()) {
+        <div class="flex items-start gap-2 rounded-lg bg-grey-50 border border-grey-200 p-3 text-sm text-grey-600">
+          <ui-icon name="info" styleClass="size-4 shrink-0 mt-0.5 text-primary" />
+          <span>{{ 'Te registraste con Google, así que tu contraseña la administra Google. Cambiala desde tu cuenta de Google.' | transloco }}</span>
+        </div>
+        } @else {
         <div class="flex flex-col gap-1.5">
           <label for="password" class="text-sm font-medium text-grey-700">{{ 'Nueva contraseña' | transloco }}</label>
           <ui-input-password
@@ -122,6 +128,7 @@
             severity="primary"
           />
         </div>
+        }
       </form>
     </ui-card>
   </div>
