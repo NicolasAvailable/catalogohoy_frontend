@@ -4,12 +4,13 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantStore } from '@catalogohoy/tenant';
 import { WhatsAppService, WhatsAppStore } from '@catalogohoy/whatsapp';
 import { IconComponent, InputSearchComponent } from '@ui';
+import { PopoverModule } from 'primeng/popover';
 import { ChatStore } from '../../../infrastructure/chat.store';
 
 @Component({
   selector: 'lib-chat-list-panel',
   standalone: true,
-  imports: [IconComponent, InputSearchComponent, RouterLink, TranslocoPipe],
+  imports: [IconComponent, InputSearchComponent, RouterLink, TranslocoPipe, PopoverModule],
   templateUrl: './chat-list-panel.html',
 })
 export class ChatListPanelComponent {
