@@ -29,20 +29,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles/splash-screen.css" />
 
-    <!-- Meta Pixel Code -->
-    <script>
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', '965941839155879');
-      fbq('track', 'PageView');
-    </script>
-    <!-- End Meta Pixel Code -->
+    <!-- Meta Pixel: lo gestiona MetaPixelService (libs/catalogohoy/core), único
+         dueño del bootstrap de fbq. Cargar aquí un pixel hardcodeado además
+         reinicializaba fbq/fbevents.js dos veces (race → ~1/3–2/3 de los
+         PageView/eventos del catálogo no salían). No agregar pixels acá. -->
 
     <!-- Google Analytics 4 — solo storefront público (admin y localhost quedan fuera).
          Los page_view de navegación SPA los cubre la "medición mejorada" de GA4
@@ -66,11 +56,6 @@
     </script>
   </head>
   <body class="overflow-y-auto">
-    <!-- Meta Pixel noscript fallback -->
-    <noscript>
-      <img height="1" width="1" style="display:none"
-        src="https://www.facebook.com/tr?id=965941839155879&ev=PageView&noscript=1" />
-    </noscript>
     <splash-screen>
       <img
         id="splash-logo"
