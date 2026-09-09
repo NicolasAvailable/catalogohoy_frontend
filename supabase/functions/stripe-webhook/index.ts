@@ -755,25 +755,36 @@ Deno.serve(async (req: Request) => {
         const sharedUpdate: Record<string, unknown> = { plan_expires_at: expiresAtIso, plan_expired: false, stripe_subscription_status: sub.status };
         await applyPlanUpdate(admin, Number(tenantId), sharedUpdate, sharedUpdate);
       }
+      // `subscription_update` = factura de prorrateo de un UPGRADE (edge fn
+      // `change-plan` cambia el precio del ítem con proration_behavior:
+      // always_invoice → cobra solo la diferencia AHORA, misma suscripción).
+      // `subscription_cycle` = renovación automática real del período. Sin este
+      // distingo, el upgrade llegaba como "Renovación cobrada".
+      const isUpgrade = billingReason === "subscription_update";
       const owner = await fetchOwnerInfo(admin, Number(tenantId));
       const tenantName = owner?.tenantName ?? `Tenant #${tenantId}`;
       const slug = owner?.slug ?? String(tenantId);
-      const planLbl = planLabel(owner?.planId);
+      // En un upgrade el plan nuevo viene en el metadata de la sub (lo deja
+      // `change-plan`), autoritativo aunque el tenant en DB aún no se haya
+      // sincronizado por la carrera con customer.subscription.updated.
+      const planLbl = planLabel(sub.metadata?.plan_id ?? owner?.planId);
       const amountStr = formatStripeAmount(invoice.amount_paid, invoice.currency);
       const periodEndStr = expiresAtIso ? new Date(expiresAtIso).toLocaleDateString("es-ES") : "—";
       await notifyDiscord({
-        title: "♻️ Renovación cobrada",
-        description: `Stripe cobró automáticamente la renovación de **${tenantName}**.`,
-        color: 0x22c55e,
+        title: isUpgrade ? "⬆️ Upgrade de plan cobrado" : "♻️ Renovación cobrada",
+        description: isUpgrade
+          ? `Stripe cobró la diferencia prorrateada del upgrade de **${tenantName}** al plan **${planLbl}**.`
+          : `Stripe cobró automáticamente la renovación de **${tenantName}**.`,
+        color: isUpgrade ? 0x6366f1 : 0x22c55e,
         fields: [
           { name: "Plan", value: planLbl, inline: true },
-          { name: "Monto", value: amountStr, inline: true },
-          { name: "Próxima renovación", value: periodEndStr, inline: true },
+          { name: isUpgrade ? "Diferencia cobrada" : "Monto", value: amountStr, inline: true },
+          { name: isUpgrade ? "Válido hasta" : "Próxima renovación", value: periodEndStr, inline: true },
           { name: "Slug", value: slug, inline: true },
           { name: "Suscripción", value: subscriptionId, inline: false },
         ],
       });
-      if (owner) await emailPaymentSucceeded(admin, owner, "renewal", amountStr, periodEndStr, planLbl);
+      if (owner) await emailPaymentSucceeded(admin, owner, isUpgrade ? "change" : "renewal", amountStr, periodEndStr, planLbl);
     }
 
     if (event.type === "invoice.payment_failed") {
