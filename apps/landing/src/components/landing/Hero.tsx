@@ -97,13 +97,13 @@ const Hero = () => {
                     className="h-10 w-10 rounded-full bg-white object-cover shadow-sm ring-2 ring-white"
                   />
                 ))}
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-[0.65rem] font-bold text-white shadow-sm ring-2 ring-white">
-                  +500
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-[0.6rem] font-bold text-white shadow-sm ring-2 ring-white">
+                  +5000
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
                 <span className="font-semibold text-foreground">
-                  +500 negocios
+                  +5000 negocios
                 </span>{" "}
                 ya usan CatalogoHoy
               </p>
