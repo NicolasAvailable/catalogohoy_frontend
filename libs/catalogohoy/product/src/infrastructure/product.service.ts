@@ -666,6 +666,11 @@ export class ProductService implements BaseProductService {
       .insert({
         ...rest,
         name: `${src.name} (copia)`,
+        // El SKU es único por catálogo (products_sku_unique_per_tenant): la copia
+        // NO puede reusar el del original o el insert rompe con duplicate key
+        // dentro del mismo tenant. La copia nace sin SKU; el comerciante le pone
+        // uno nuevo si lo necesita.
+        sku: null,
         auth_user_id: user.id,
         tenant_id: tenantId,
         position: nextPosition,
@@ -674,7 +679,9 @@ export class ProductService implements BaseProductService {
       .select('id, name')
       .single();
     if (insErr || !inserted) {
-      return E.left(new Error(insErr?.message ?? 'No se pudo duplicar'));
+      return E.left(
+        new Error(insErr ? friendlyProductError(insErr) : 'No se pudo duplicar')
+      );
     }
 
     const { data: cats } = await this.client
