@@ -902,9 +902,11 @@ export class ImportExportHubComponent {
     }
   }
 
-  /** Miniatura JPEG base64 (sin prefijo) para mandar a la IA — chica y barata
-   *  en tokens; no hace falta subir la foto original para identificarla. */
-  private photoThumbnailB64(file: File, maxSide = 384): Promise<string | null> {
+  /** Miniatura JPEG base64 (sin prefijo) para mandar a la IA. 768px @ q0.8: a
+   *  384px el texto/SKU del empaque queda ilegible y la IA no puede desambiguar
+   *  productos parecidos (causa de falsos "no identificó"). ~100-200KB, muy por
+   *  debajo del budget del edge fn (800KB). */
+  private photoThumbnailB64(file: File, maxSide = 768): Promise<string | null> {
     return new Promise((resolve) => {
       const url = URL.createObjectURL(file);
       const img = new Image();
@@ -920,7 +922,7 @@ export class ImportExportHubComponent {
             return;
           }
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
           resolve(dataUrl.split(',')[1] ?? null);
         } catch {
           resolve(null);
