@@ -739,25 +739,42 @@ export class ProductService implements BaseProductService {
   public async replaceCategories(
     input: ReplaceCategoriesInput
   ): Promise<E.Either<Error, void>> {
-    for (const productId of input.productIds) {
-      const { error: deleteError } = await this.client
-        .from('product_categories')
-        .delete()
-        .eq('product_id', productId);
+    // El multiselect puede emitir el mismo id de categoría (o producto) más de
+    // una vez; sin deduplicar, insertar el par (producto, categoría) repetido
+    // rompe la constraint única `product_categories_unique` (duplicate key).
+    const productIds = Array.from(new Set(input.productIds));
+    const categoryIds = Array.from(new Set(input.categoryIds));
+    if (productIds.length === 0) return E.right(undefined);
 
-      if (deleteError) {
-        return E.left(new Error(deleteError.message));
-      }
+    // Reemplazo: borramos TODAS las categorías de los productos seleccionados
+    // en un solo query y luego insertamos las elegidas.
+    const { error: deleteError } = await this.client
+      .from('product_categories')
+      .delete()
+      .in('product_id', productIds);
+    if (deleteError) {
+      return E.left(new Error(deleteError.message));
+    }
 
-      for (const categoryId of input.categoryIds) {
-        const { error: insertError } = await this.client
-          .from('product_categories')
-          .insert({ product_id: productId, category_id: categoryId });
+    if (categoryIds.length === 0) return E.right(undefined);
 
-        if (insertError) {
-          return E.left(new Error(insertError.message));
-        }
-      }
+    const rows = productIds.flatMap((productId) =>
+      categoryIds.map((categoryId) => ({
+        product_id: productId,
+        category_id: categoryId,
+      }))
+    );
+
+    // upsert idempotente: aunque quedara un par residual (p.ej. otra pestaña
+    // escribiendo a la vez), no revienta con duplicate key.
+    const { error: insertError } = await this.client
+      .from('product_categories')
+      .upsert(rows, {
+        onConflict: 'product_id,category_id',
+        ignoreDuplicates: true,
+      });
+    if (insertError) {
+      return E.left(new Error(insertError.message));
     }
     return E.right(undefined);
   }

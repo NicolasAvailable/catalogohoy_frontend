@@ -425,12 +425,19 @@ export default class List implements OnInit, OnDestroy {
     this.isProcessing.set(false);
   }
 
+  // El multiselect puede reemitir un id ya elegido (re-click) → sin deduplicar,
+  // el par (producto, categoría) repetido rompe la constraint única al asignar
+  // y además se ve el chip duplicado. Deduplicamos en la fuente.
+  public onBulkCategoriesChange(ids: string[]): void {
+    this.bulkCategoryIds.set(Array.from(new Set(ids)));
+  }
+
   public async onConfirmCategoryAssign() {
     if (this.isProcessing()) return;
 
     this.isProcessing.set(true);
     const productIds = Array.from(this.selectedIds());
-    const categoryIds = this.bulkCategoryIds();
+    const categoryIds = Array.from(new Set(this.bulkCategoryIds()));
 
     const result = await this.productFacade.replaceCategories({ productIds, categoryIds });
     result.mapRight(() => {

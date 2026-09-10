@@ -531,7 +531,7 @@
       <ui-multi-select
         [options]="categoryStore.categoryList().categories"
         [ngModel]="bulkCategoryIds()"
-        (ngModelChange)="bulkCategoryIds.set($event)"
+        (ngModelChange)="onBulkCategoriesChange($event)"
         optionLabel="name"
         optionValue="id"
         display="chip"
