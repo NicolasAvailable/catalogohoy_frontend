@@ -51,7 +51,7 @@ function renderValue(value: ComparisonValue) {
 /* ═══════════════════════════════════════
    COMPONENT
    ═══════════════════════════════════════ */
-const PlanComparison = () => {
+const PlanComparison = ({ embedded = false }: { embedded?: boolean }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -60,14 +60,28 @@ const PlanComparison = () => {
       transition={{ duration: 0.6 }}
       className="mt-16"
     >
+      {/* Header: blanco sobre el morado del home; oscuro cuando va embebido en
+          la página /precios (fondo claro), si no quedaba ilegible. */}
       <header className="text-center mb-8">
-        <h3 className="text-[1.5rem] font-extrabold text-white leading-tight">
+        <h3
+          className={`text-[1.5rem] font-extrabold leading-tight ${
+            embedded ? "text-[#1e293b]" : "text-white"
+          }`}
+        >
           Compara los planes
         </h3>
-        <p className="text-white/80 mt-2 text-[0.95rem] max-w-[480px] mx-auto">
+        <p
+          className={`mt-2 text-[0.95rem] max-w-[480px] mx-auto ${
+            embedded ? "text-[#64748b]" : "text-white/80"
+          }`}
+        >
           Todos los límites de cada plan, lado a lado.
         </p>
-        <p className="sm:hidden mt-3 inline-flex items-center gap-1 text-[0.8rem] font-medium text-white/70">
+        <p
+          className={`sm:hidden mt-3 inline-flex items-center gap-1 text-[0.8rem] font-medium ${
+            embedded ? "text-[#94a3b8]" : "text-white/70"
+          }`}
+        >
           Deslizá para ver los 4 planes →
         </p>
       </header>

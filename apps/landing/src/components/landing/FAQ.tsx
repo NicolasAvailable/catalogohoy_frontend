@@ -35,7 +35,7 @@ export const faqs = [
   },
 ];
 
-const FAQ = () => {
+const FAQ = ({ embedded = false }: { embedded?: boolean }) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const toggle = (index: number) => {
@@ -45,31 +45,44 @@ const FAQ = () => {
   return (
     <section
       id="faq"
-      aria-labelledby="faq-heading"
-      className="py-24 md:py-32"
-      style={{
-        fontFamily: "'Inter var', 'Inter', ui-sans-serif, system-ui, sans-serif",
-        background: "linear-gradient(180deg, #dbeafe 0%, #eef4ff 30%, #f8faff 60%, #ffffff 100%)",
-      }}
+      aria-labelledby={embedded ? undefined : "faq-heading"}
+      aria-label={embedded ? "Preguntas frecuentes" : undefined}
+      className={embedded ? "pt-4 pb-20 md:pb-24" : "py-24 md:py-32"}
+      style={
+        embedded
+          ? {
+              fontFamily:
+                "'Inter var', 'Inter', ui-sans-serif, system-ui, sans-serif",
+            }
+          : {
+              fontFamily:
+                "'Inter var', 'Inter', ui-sans-serif, system-ui, sans-serif",
+              background:
+                "linear-gradient(180deg, #dbeafe 0%, #eef4ff 30%, #f8faff 60%, #ffffff 100%)",
+            }
+      }
     >
       <div className="mx-auto px-6 max-w-[800px]">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12"
-        >
-          <span className="inline-block text-[0.8rem] font-semibold text-[#6366f1] uppercase tracking-[0.05em] mb-2">
-            FAQ
-          </span>
-          <h2 id="faq-heading" className="text-[2rem] font-extrabold text-[#1e293b] leading-tight">
-            Preguntas frecuentes
-          </h2>
-          <p className="text-[#64748b] mt-2 text-[0.95rem]">
-            Todo lo que necesitas saber antes de empezar.
-          </p>
-        </motion.div>
+        {/* Header propio: solo en el home. En /faq el título lo pone la página. */}
+        {!embedded && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12"
+          >
+            <span className="inline-block text-[0.8rem] font-semibold text-[#6366f1] uppercase tracking-[0.05em] mb-2">
+              FAQ
+            </span>
+            <h2 id="faq-heading" className="text-[2rem] font-extrabold text-[#1e293b] leading-tight">
+              Preguntas frecuentes
+            </h2>
+            <p className="text-[#64748b] mt-2 text-[0.95rem]">
+              Todo lo que necesitas saber antes de empezar.
+            </p>
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}

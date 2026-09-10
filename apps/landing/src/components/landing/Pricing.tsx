@@ -201,7 +201,7 @@ const cardVariants = {
 /* ═══════════════════════════════════════
    COMPONENT
    ═══════════════════════════════════════ */
-const Pricing = () => {
+const Pricing = ({ embedded = false }: { embedded?: boolean }) => {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
   // Mostramos "a tasa BCV" solo cuando el visitante (por geo-IP) está en
   // Venezuela. Si está en otro país — directo o vía VPN — no aplica.
@@ -211,15 +211,27 @@ const Pricing = () => {
   return (
     <section
       id="pricing"
-      aria-labelledby="pricing-heading"
-      className="py-24 md:py-32 relative overflow-hidden"
-      style={{
-        background: "linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #7c3aed 100%)",
-      }}
+      aria-labelledby={embedded ? undefined : "pricing-heading"}
+      aria-label={embedded ? "Planes y precios" : undefined}
+      className={`relative overflow-hidden ${
+        embedded ? "pt-4 pb-20 md:pb-24" : "py-24 md:py-32"
+      }`}
+      style={
+        embedded
+          ? undefined
+          : {
+              background:
+                "linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #7c3aed 100%)",
+            }
+      }
     >
-      {/* Decorative blurred orbs */}
-      <div className="absolute top-10 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-300/20 rounded-full blur-3xl pointer-events-none" />
+      {/* Orbes decorativos: solo en modo standalone (home), sobre el morado */}
+      {!embedded && (
+        <>
+          <div className="absolute top-10 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-300/20 rounded-full blur-3xl pointer-events-none" />
+        </>
+      )}
 
       <div className="mx-auto px-4 sm:px-6 max-w-[84rem] relative z-10">
 
@@ -231,15 +243,21 @@ const Pricing = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-10"
         >
-          <span className="inline-block text-[0.8rem] font-semibold text-white/90 uppercase tracking-[0.05em] mb-2">
-            Planes
-          </span>
-          <h2 id="pricing-heading" className="text-[2rem] font-extrabold text-white leading-tight">
-            El plan perfecto para tu negocio
-          </h2>
-          <p className="text-white/80 mt-2 text-[0.95rem] max-w-[480px] mx-auto">
-            Elige el plan que mejor se adapte y escala cuando lo necesites.
-          </p>
+          {/* Header propio: solo en el home. En /precios el título lo pone la
+              página (hero), así no se duplica. */}
+          {!embedded && (
+            <>
+              <span className="inline-block text-[0.8rem] font-semibold text-white/90 uppercase tracking-[0.05em] mb-2">
+                Planes
+              </span>
+              <h2 id="pricing-heading" className="text-[2rem] font-extrabold text-white leading-tight">
+                El plan perfecto para tu negocio
+              </h2>
+              <p className="text-white/80 mt-2 text-[0.95rem] max-w-[480px] mx-auto">
+                Elige el plan que mejor se adapte y escala cuando lo necesites.
+              </p>
+            </>
+          )}
 
           {/* Billing period toggle */}
           <div className="flex items-center justify-center mt-6">
@@ -423,7 +441,7 @@ const Pricing = () => {
         </motion.div>
 
         {/* ═══ COMPARISON TABLE ═══ */}
-        <PlanComparison />
+        <PlanComparison embedded={embedded} />
       </div>
     </section>
   );

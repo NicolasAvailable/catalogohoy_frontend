@@ -30,19 +30,28 @@ const PreguntasFrecuentes = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main>
-        <section className="pt-32 pb-4 md:pt-40">
-          <div className="container mx-auto px-4 max-w-3xl text-center">
-            <h1 className="font-display font-extrabold text-4xl md:text-5xl text-foreground leading-tight">
-              Preguntas frecuentes
-            </h1>
-            <p className="mt-4 text-lg text-muted-foreground">
-              Todo lo que necesitas saber antes de crear tu catálogo digital
-              con CatalogoHoy. ¿No encuentras tu respuesta? Escríbenos y te
-              ayudamos.
-            </p>
-          </div>
-        </section>
-        <FAQ />
+        {/* Hero + FAQ = UNA sola sección con degradado blanco→azul (blanco
+            arriba, azul abajo). Sin corte de color y sin título duplicado. */}
+        <div
+          style={{
+            background:
+              "linear-gradient(180deg, #ffffff 0%, #f1f6ff 45%, #dbeafe 100%)",
+          }}
+        >
+          <section className="pt-32 pb-4 md:pt-40">
+            <div className="container mx-auto px-4 max-w-3xl text-center">
+              <h1 className="font-display font-extrabold text-4xl md:text-5xl text-foreground leading-tight">
+                Preguntas frecuentes
+              </h1>
+              <p className="mt-4 text-lg text-muted-foreground">
+                Todo lo que necesitas saber antes de crear tu catálogo digital
+                con CatalogoHoy. ¿No encuentras tu respuesta? Escríbenos y te
+                ayudamos.
+              </p>
+            </div>
+          </section>
+          <FAQ embedded />
+        </div>
         <CTA />
       </main>
       <Footer />
