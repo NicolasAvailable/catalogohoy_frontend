@@ -253,6 +253,9 @@ export class ImportExportHubComponent {
   public readonly photoItems = signal<PhotoImportItem[]>([]);
   public readonly photoProducts = signal<PhotoProductOption[]>([]);
   public readonly loadingPhotoProducts = signal(false);
+  /** True si la carga de productos del catálogo falló (para distinguir
+   *  "catálogo vacío" de "no pudimos cargar los productos" en la IA de fotos). */
+  public readonly photoProductsFailed = signal(false);
   public readonly photosProgress = signal(0);
   public readonly photosCurrentLabel = signal('');
   public readonly isApplyingPhotos = signal(false);
@@ -685,15 +688,25 @@ export class ImportExportHubComponent {
     this.clearPhotoItems();
     this.view.set('photos-upload');
     this.loadingPhotoProducts.set(true);
-    await this.productStore.productList$();
-    this.photoProducts.set(
-      this.productStore.productList().products.map((p) => ({
-        id: String(p.id),
-        name: p.name,
-        sku: p.sku ?? null,
-        photo: p.photos?.[0] ?? null,
-      }))
-    );
+    this.photoProductsFailed.set(false);
+    // Cargamos vía getAll (no productList$) para capturar el Either: si el fetch
+    // falla, distinguimos "no pudimos cargar" de "catálogo vacío" en la IA.
+    const result = await this.productService.getAll(undefined, undefined);
+    result
+      .mapRight((list) =>
+        this.photoProducts.set(
+          list.products.map((p) => ({
+            id: String(p.id),
+            name: p.name,
+            sku: p.sku ?? null,
+            photo: p.photos?.[0] ?? null,
+          }))
+        )
+      )
+      .mapLeft(() => {
+        this.photoProducts.set([]);
+        this.photoProductsFailed.set(true);
+      });
     this.loadingPhotoProducts.set(false);
   }
 
@@ -817,6 +830,23 @@ export class ImportExportHubComponent {
       .map((item, index) => ({ item, index }))
       .filter(({ item }) => item.productId === null);
     if (!unassigned.length) return;
+
+    // La IA de fotos EMPAREJA contra productos que YA existen en el catálogo.
+    // Sin productos no hay con qué emparejar → evitamos la llamada (que el
+    // backend rechazaba con "Sin productos", quemando un round-trip y ensuciando
+    // la telemetría como si fuera un error de IA). Mensaje según el motivo real.
+    if (!this.photoProducts().length) {
+      if (this.photoProductsFailed()) {
+        toast.error(
+          'No pudimos cargar los productos de tu catálogo. Cerrá y volvé a abrir la importación de fotos para reintentar.'
+        );
+      } else {
+        toast.info(
+          'Todavía no tenés productos en tu catálogo. La IA empareja tus fotos con productos que ya existen: creá algunos primero.'
+        );
+      }
+      return;
+    }
 
     this.aiIdentifying.set(true);
     const products = this.photoProducts().map((o) => ({
