@@ -38,12 +38,12 @@ const items = [
   },
 ];
 
-const AiFeatures = () => {
+const AiFeatures = ({ embedded = false }: { embedded?: boolean }) => {
   return (
     <section
       id="ai"
       aria-labelledby="ai-heading"
-      className="py-24 md:py-32 bg-white"
+      className={`py-24 md:py-32 ${embedded ? "" : "bg-white"}`}
     >
       <div className="container mx-auto px-6 max-w-6xl">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">

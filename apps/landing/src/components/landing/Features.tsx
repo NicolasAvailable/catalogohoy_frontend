@@ -408,14 +408,14 @@ const FeatureRow = ({ row }: { row: Row }) => {
   );
 };
 
-const Features = () => {
+const Features = ({ embedded = false }: { embedded?: boolean }) => {
   // La feature de "tasas del día" (BCV/Bs) es solo de Venezuela. Fuera de VE
   // (o si no podemos detectar el país) mostramos "sin comisiones" en su lugar.
   const { country } = useVisitorCountry();
   const rows = [...baseRows, isVenezuela(country) ? tasasRow : noCommissionRow];
 
   return (
-    <section id="features" aria-labelledby="features-heading" className="bg-white py-24 md:py-32">
+    <section id="features" aria-labelledby="features-heading" className={`py-24 md:py-32 ${embedded ? "" : "bg-white"}`}>
       <div className="container mx-auto max-w-6xl px-6">
         {/* Encabezado de sección */}
         <motion.div

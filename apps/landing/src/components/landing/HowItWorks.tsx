@@ -234,9 +234,9 @@ const steps = [
   },
 ];
 
-const HowItWorks = () => {
+const HowItWorks = ({ embedded = false }: { embedded?: boolean }) => {
   return (
-    <section id="how-it-works" aria-labelledby="how-it-works-heading" className="bg-white py-24 md:py-32">
+    <section id="how-it-works" aria-labelledby="how-it-works-heading" className={`py-24 md:py-32 ${embedded ? "" : "bg-white"}`}>
       <div className="container mx-auto max-w-6xl px-6">
         {/* Encabezado */}
         <motion.div
