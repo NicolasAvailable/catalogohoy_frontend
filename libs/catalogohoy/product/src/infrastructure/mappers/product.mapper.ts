@@ -30,6 +30,7 @@ export class ProductMapper {
         photos: v.photos ?? [],
         stock: v.stock ?? null,
         sizes: v.sizes ?? [],
+        isHidden: v.isHidden ?? false,
       })),
       addons: entity.addons ?? [],
     });
