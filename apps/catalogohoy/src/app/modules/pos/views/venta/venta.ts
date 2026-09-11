@@ -15,6 +15,7 @@ import {
 import {
   Order,
   OrderItem,
+  OrderItemAddon,
   OrderStatus,
   OrderStore,
 } from '@catalogohoy/order';
@@ -83,8 +84,10 @@ export default class PosVenta implements OnInit {
   // ── UI state ────────────────────────────────────────────────────────────
   readonly search = signal('');
   readonly showScanner = signal(false);
-  /** Producto cuyas variantes/tallas se están eligiendo (null = ninguno). */
+  /** Producto cuyas variantes/tallas/adicionales se están eligiendo. */
   readonly optionsProduct = signal<Product | null>(null);
+  /** Cantidades de adicionales elegidas en el modal (addonId → cantidad). */
+  readonly addonSelection = signal<Record<string, number>>({});
   readonly showCobrar = signal(false);
   readonly amountReceived = signal<number | null>(null);
   readonly isCharging = signal(false);
@@ -161,6 +164,16 @@ export default class PosVenta implements OnInit {
     return Math.max(0, r - this.cart.total());
   });
 
+  /** Qué elige el modal de opciones para el producto activo. */
+  readonly optionsMode = computed<'variant' | 'size' | 'addons' | null>(() => {
+    const p = this.optionsProduct();
+    if (!p) return null;
+    if (p.isVariant && p.variants?.length) return 'variant';
+    if (p.isSized && p.sizes?.length) return 'size';
+    if (p.addons?.length) return 'addons';
+    return null;
+  });
+
   ngOnInit(): void {
     this.productStore.productList$();
     this.rateStore.loadRates();
@@ -206,6 +219,11 @@ export default class PosVenta implements OnInit {
       return;
     }
     if (p.isSized && p.sizes?.length) {
+      this.optionsProduct.set(p);
+      return;
+    }
+    if (p.addons?.length) {
+      this.addonSelection.set({});
       this.optionsProduct.set(p);
       return;
     }
@@ -257,6 +275,54 @@ export default class PosVenta implements OnInit {
     });
     this.optionsProduct.set(null);
     this.toast.success(`${p.name} · ${s.name} agregado`);
+  }
+
+  // ── Adicionales ─────────────────────────────────────────────────────────
+  addonQty(id: string): number {
+    return this.addonSelection()[id] ?? 0;
+  }
+
+  incAddon(id: string): void {
+    this.addonSelection.update((sel) => ({ ...sel, [id]: (sel[id] ?? 0) + 1 }));
+  }
+
+  decAddon(id: string): void {
+    this.addonSelection.update((sel) => {
+      const q = (sel[id] ?? 0) - 1;
+      const next = { ...sel };
+      if (q <= 0) delete next[id];
+      else next[id] = q;
+      return next;
+    });
+  }
+
+  /** Total del combo actual: unitario base del producto + Σ adicionales. */
+  addonsRunningTotal(p: Product): number {
+    const sel = this.addonSelection();
+    const add = (p.addons ?? []).reduce(
+      (s, a) => s + a.price * (sel[a.id] ?? 0),
+      0
+    );
+    return this.unitPrice(p) + add;
+  }
+
+  /** Agrega el producto con los adicionales elegidos (el unitario ya los suma). */
+  confirmAddons(p: Product): void {
+    const sel = this.addonSelection();
+    const chosen: OrderItemAddon[] = (p.addons ?? [])
+      .filter((a) => (sel[a.id] ?? 0) > 0)
+      .map((a) => ({ id: a.id, name: a.name, price: a.price, quantity: sel[a.id] }));
+    this.cart.addLine({
+      productId: p.id,
+      name: p.name,
+      price: this.addonsRunningTotal(p),
+      photo: p.photos[0],
+      sku: p.sku,
+      available: this.stockNum(p),
+      addons: chosen.length ? chosen : null,
+    });
+    this.optionsProduct.set(null);
+    this.toast.success(`${p.name} agregado`);
   }
 
   closeOptions(): void {

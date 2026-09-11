@@ -566,6 +566,35 @@
   font-variant-numeric: tabular-nums;
 }
 
+.addon-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--pos-border);
+  border-radius: 0.7rem;
+  background: var(--pos-surface-2);
+}
+.addon-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.addon-price {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--pos-accent-strong);
+  font-variant-numeric: tabular-nums;
+}
+.stepper button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.addon-add {
+  margin-top: 0.85rem;
+}
+
 .field {
   display: flex;
   flex-direction: column;

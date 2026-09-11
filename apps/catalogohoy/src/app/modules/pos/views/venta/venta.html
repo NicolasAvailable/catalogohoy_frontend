@@ -183,34 +183,65 @@
           <ui-icon name="x" styleClass="size-5" />
         </button>
       </header>
-      <p class="modal-sub">Elegí una opción para agregar al carrito</p>
-      <div class="option-list">
-        @if (op.isVariant) {
-          @for (v of op.variants; track v.id) {
-            <button type="button" class="option-row" (click)="addVariant(op, v)">
-              <div class="option-thumb">
-                @if (v.photos[0] || op.photos[0]) {
-                  <img [src]="v.photos[0] || op.photos[0]" [alt]="v.name" />
-                } @else {
-                  <ui-icon name="package" styleClass="size-5 tile-thumb-ph" />
-                }
-              </div>
-              <span class="option-name">{{ v.name }}</span>
-              <span class="option-price">{{ cs() }}{{ (v.price > 0 ? v.price : unitPrice(op)) | number: '1.2-2' }}</span>
-            </button>
-          }
-        } @else {
-          @for (s of op.sizes; track s.name) {
-            <button type="button" class="option-row" (click)="addSize(op, s)">
-              <span class="option-size">{{ s.name }}</span>
-              <span class="option-name">
-                {{ s.stock == null ? 'Disponible' : s.stock + ' en stock' }}
-              </span>
-              <span class="option-price">{{ cs() }}{{ unitPrice(op) | number: '1.2-2' }}</span>
-            </button>
-          }
+      <p class="modal-sub">
+        {{ optionsMode() === 'addons' ? 'Elegí los adicionales' : 'Elegí una opción para agregar al carrito' }}
+      </p>
+      @switch (optionsMode()) {
+        @case ('variant') {
+          <div class="option-list">
+            @for (v of op.variants; track v.id) {
+              <button type="button" class="option-row" (click)="addVariant(op, v)">
+                <div class="option-thumb">
+                  @if (v.photos[0] || op.photos[0]) {
+                    <img [src]="v.photos[0] || op.photos[0]" [alt]="v.name" />
+                  } @else {
+                    <ui-icon name="package" styleClass="size-5 tile-thumb-ph" />
+                  }
+                </div>
+                <span class="option-name">{{ v.name }}</span>
+                <span class="option-price">{{ cs() }}{{ (v.price > 0 ? v.price : unitPrice(op)) | number: '1.2-2' }}</span>
+              </button>
+            }
+          </div>
         }
-      </div>
+        @case ('size') {
+          <div class="option-list">
+            @for (s of op.sizes; track s.name) {
+              <button type="button" class="option-row" (click)="addSize(op, s)">
+                <span class="option-size">{{ s.name }}</span>
+                <span class="option-name">
+                  {{ s.stock == null ? 'Disponible' : s.stock + ' en stock' }}
+                </span>
+                <span class="option-price">{{ cs() }}{{ unitPrice(op) | number: '1.2-2' }}</span>
+              </button>
+            }
+          </div>
+        }
+        @case ('addons') {
+          <div class="option-list">
+            @for (a of op.addons; track a.id) {
+              <div class="addon-row">
+                <div class="addon-info">
+                  <span class="option-name">{{ a.name }}</span>
+                  <span class="addon-price">+{{ cs() }}{{ a.price | number: '1.2-2' }}</span>
+                </div>
+                <div class="stepper">
+                  <button type="button" (click)="decAddon(a.id)" [disabled]="addonQty(a.id) === 0" aria-label="Restar">
+                    <ui-icon name="minus" styleClass="size-3.5" />
+                  </button>
+                  <span>{{ addonQty(a.id) }}</span>
+                  <button type="button" (click)="incAddon(a.id)" aria-label="Sumar">
+                    <ui-icon name="plus" styleClass="size-3.5" />
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+          <button type="button" class="cobrar-btn confirm addon-add" (click)="confirmAddons(op)">
+            Agregar · {{ cs() }}{{ addonsRunningTotal(op) | number: '1.2-2' }}
+          </button>
+        }
+      }
     </div>
   </div>
 }

@@ -6,7 +6,7 @@ import {
   withMethods,
   withState,
 } from '@ngrx/signals';
-import { OrderItem } from '@catalogohoy/order';
+import { OrderItem, OrderItemAddon } from '@catalogohoy/order';
 
 /** Una línea del carrito del POS. Extiende {@link OrderItem} (la misma forma que
  *  persiste la orden) con una `key` de identidad para hacer merge/borrado en el
@@ -47,12 +47,22 @@ const initialState: PosCartState = {
   paymentMethod: '',
 };
 
-/** Clave de identidad de una línea (producto + variante + talla). */
+/** Firma de los adicionales elegidos (id×cantidad, ordenada) para que combos
+ *  distintos del mismo producto no se fusionen en la misma línea. */
+const addonSig = (addons?: OrderItemAddon[] | null): string =>
+  (addons ?? [])
+    .map((a) => `${a.id ?? a.name}x${a.quantity ?? 1}`)
+    .sort()
+    .join(',');
+
+/** Clave de identidad de una línea (producto + variante + talla + adicionales). */
 const lineKey = (l: {
   productId: string | number;
   variantId?: string | null;
   size?: string | null;
-}): string => `${l.productId}|${l.variantId ?? ''}|${l.size ?? ''}`;
+  addons?: OrderItemAddon[] | null;
+}): string =>
+  `${l.productId}|${l.variantId ?? ''}|${l.size ?? ''}|${addonSig(l.addons)}`;
 
 const clampPct = (p: number) => Math.max(0, Math.min(100, p || 0));
 
