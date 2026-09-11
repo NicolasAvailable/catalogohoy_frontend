@@ -128,12 +128,22 @@ const Hero = () => {
                 }}
               />
               {/* Foto (sobre el círculo, la cabeza sobresale) */}
-              <img
-                src="/hero-photo.png"
-                alt="Persona usando CatalogoHoy"
-                className="pointer-events-none absolute bottom-0 left-1/2 h-auto w-full -translate-x-1/2 select-none"
-                draggable={false}
-              />
+              <picture className="contents">
+                {/* WebP (55 kB vs 888 kB del PNG) con fallback. Es el LCP del
+                    home → fetchPriority alto + preload en index.html; width/height
+                    fijan el aspect-ratio para no generar CLS. */}
+                <source srcSet="/hero-photo.webp" type="image/webp" />
+                <img
+                  src="/hero-photo.png"
+                  alt="Persona usando CatalogoHoy"
+                  width={992}
+                  height={1077}
+                  fetchPriority="high"
+                  decoding="async"
+                  className="pointer-events-none absolute bottom-0 left-1/2 h-auto w-full -translate-x-1/2 select-none"
+                  draggable={false}
+                />
+              </picture>
             </div>
           </motion.div>
         </div>

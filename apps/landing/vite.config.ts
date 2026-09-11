@@ -52,4 +52,20 @@ export default defineConfig(({ mode }) => ({
     // Evita copias duplicadas de React al ejecutar desde el monorepo (Nx)
     dedupe: ["react", "react-dom"],
   },
+  build: {
+    // Core Web Vitals: separar TODAS las dependencias en un único chunk `vendor`
+    // (cacheable entre deploys, cambia poco), dejando el código de la app en su
+    // propio chunk (antes todo iba junto en ~750 kB → ahora app ~270 kB).
+    // ⚠️ NO separar React en su propio chunk: rompe el orden de init
+    //   (`Cannot read properties of undefined (reading 'createContext')`) porque
+    //   un chunk consumidor puede evaluarse antes que React. Con todo el vendor
+    //   en un solo chunk, Rollup ordena los módulos por dependencia internamente.
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes("node_modules")) return "vendor";
+        },
+      },
+    },
+  },
 }));

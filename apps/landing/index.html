@@ -30,13 +30,39 @@
     <link rel="preconnect" href="https://auth.catalogohoy.com" />
     <link rel="dns-prefetch" href="https://auth.catalogohoy.com" />
 
-    <!-- Fonts: Inter (variable) + IBM Plex Mono -->
+    <!-- LCP: adelantar la foto del hero (el home la renderiza React → sin esto
+         se descubre tarde). WebP; los navegadores sin WebP ignoran el preload. -->
+    <link
+      rel="preload"
+      as="image"
+      href="/hero-photo.webp"
+      type="image/webp"
+      fetchpriority="high"
+    />
+
+    <!-- Fonts: Inter (variable) + IBM Plex Mono — carga NO bloqueante (CWV).
+         El stylesheet se pide con media="print" y se activa en onload → no
+         bloquea el render (con display=swap el texto aparece ya en la fuente de
+         sistema y luego cambia). preload adelanta el fetch; noscript de fallback. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      rel="stylesheet"
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap"
     />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+      />
+    </noscript>
 
     <!-- Open Graph -->
     <meta

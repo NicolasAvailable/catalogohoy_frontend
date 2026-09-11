@@ -39,13 +39,17 @@ const PhoneMockup = ({ src, alt }: { src: string; alt: string }) => (
         <div className="relative overflow-hidden rounded-[2.35rem] bg-white">
           {/* Barra de estado (para que el notch no tape el contenido) */}
           <div className="h-7 w-full bg-white" aria-hidden="true" />
-          <img
-            src={src}
-            alt={alt}
-            loading="lazy"
-            className="block w-full select-none"
-            draggable={false}
-          />
+          <picture>
+            {/* WebP (mucho más liviano) con fallback al PNG original. */}
+            <source srcSet={src.replace(/\.(png|jpe?g)$/, ".webp")} type="image/webp" />
+            <img
+              src={src}
+              alt={alt}
+              loading="lazy"
+              className="block w-full select-none"
+              draggable={false}
+            />
+          </picture>
           {/* Brillo diagonal sutil sobre la pantalla */}
           <div
             aria-hidden="true"
