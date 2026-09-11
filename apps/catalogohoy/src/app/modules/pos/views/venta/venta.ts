@@ -29,6 +29,7 @@ import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { IconComponent } from '@ui';
 import { PosCartStore } from '../../pos-cart.store';
+import { PosSettingsStore } from '../../pos-settings.store';
 import { PosScanner } from '../../components/scanner/scanner';
 
 /** Un medio de pago ofrecido en el modal de cobro. */
@@ -48,6 +49,7 @@ interface PayMethod {
 export default class PosVenta implements OnInit {
   readonly productStore = inject(ProductStore);
   readonly cart = inject(PosCartStore);
+  private readonly settings = inject(PosSettingsStore);
   private readonly orderStore = inject(OrderStore);
   private readonly rateStore = inject(RateStore);
   private readonly tenantStore = inject(TenantStore);
@@ -113,8 +115,14 @@ export default class PosVenta implements OnInit {
     return all.filter((p) => this.matchesQuery(p, q));
   });
 
-  /** Medios de pago: los ACTIVOS del catálogo o, si no hay, un set por defecto. */
+  /** Medios de pago del modal de cobro: primero los habilitados en la
+   *  Configuración del POS; si no, los ACTIVOS del catálogo; y como último
+   *  recurso, un set por defecto. */
   readonly payMethods = computed<PayMethod[]>(() => {
+    const configured = this.settings
+      .enabledMethods()
+      .map((m) => ({ label: m.label, icon: m.icon }));
+    if (configured.length) return configured;
     const active = this.configStore
       .paymentMethodsList()
       .filter((m) => m.isActive)
@@ -138,6 +146,7 @@ export default class PosVenta implements OnInit {
     this.productStore.productList$();
     this.rateStore.loadRates();
     this.tenantStore.getTenantIdAsync().then((tid) => {
+      this.settings.load(tid ? String(tid) : 'default');
       if (!tid) return;
       this.tenantCurrency.load(tid);
       this.configStore.loadPaymentMethods(String(tid));

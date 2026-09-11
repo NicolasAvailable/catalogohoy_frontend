@@ -208,6 +208,18 @@
     <!-- ── Canales de venta ── -->
     <li class="my-1.5 mx-2 border-t border-grey-50" aria-hidden="true"></li>
 
+    <!-- Punto de venta (pantalla full-screen /pos) -->
+    <li>
+      <a
+        routerLink="/pos"
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Punto de venta' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="shopping-cart" size="18" styleClass="text-grey-700" />
+      </a>
+    </li>
+
     <!-- Mi catálogo (flyout) -->
     @if (canViewCatalog()) {
     <li
@@ -599,6 +611,19 @@
     <!-- ══ Canales de venta ══ -->
     <li class="px-2 pt-2 pb-1 pointer-events-none select-none">
       <span class="text-[11px] font-semibold uppercase tracking-wider text-grey-300">{{ 'Canales de venta' | transloco }}</span>
+    </li>
+
+    <li
+      routerLink="/pos"
+      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out cursor-pointer"
+    >
+      <div class="flex items-center gap-2">
+        <ui-icon name="shopping-cart" size="16" />
+        <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Punto de venta' | transloco }}</a>
+      </div>
+      <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
+        {{ 'Nuevo' | transloco }}
+      </span>
     </li>
 
     <li class="flex items-center gap-2 w-full rounded-md">

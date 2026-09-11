@@ -1,0 +1,236 @@
+<div class="cfg">
+  <!-- ── Subnav ── -->
+  <nav class="cfg-nav">
+    <h1>Configuración</h1>
+    @for (group of groups; track group.title) {
+      <div class="cfg-group">
+        <span class="cfg-group-title">{{ group.title }}</span>
+        @for (item of group.items; track item.id) {
+          <button
+            type="button"
+            class="cfg-nav-item"
+            [class.active]="panel() === item.id"
+            (click)="select(item.id)"
+          >
+            <ui-icon [name]="item.icon" styleClass="size-4" />
+            <span>{{ item.label }}</span>
+          </button>
+        }
+      </div>
+    }
+  </nav>
+
+  <!-- ── Panel activo ── -->
+  <section class="cfg-panel">
+    @switch (panel()) {
+      <!-- ══ Impresora térmica ══ -->
+      @case ('printer') {
+        <header class="panel-head">
+          <h2>Impresora térmica</h2>
+          <p>Conectá una impresora de tickets por USB (58 mm o 80 mm, estándar ESC/POS).</p>
+        </header>
+
+        @if (settings.printer().connected) {
+          <div class="card connected-card">
+            <div class="connected-info">
+              <span class="dot"></span>
+              <div>
+                <strong>{{ settings.printer().deviceName || 'Impresora conectada' }}</strong>
+                <span>Lista para imprimir</span>
+              </div>
+            </div>
+            <button type="button" class="btn-ghost" (click)="disconnectPrinter()">Desconectar</button>
+          </div>
+
+          <div class="card">
+            <span class="field-label">Ancho del papel</span>
+            <div class="segmented">
+              <button type="button" [class.active]="settings.printer().width === '58'" (click)="settings.setPrinterWidth('58')">58 mm</button>
+              <button type="button" [class.active]="settings.printer().width === '80'" (click)="settings.setPrinterWidth('80')">80 mm</button>
+            </div>
+          </div>
+
+          <button type="button" class="btn-primary" (click)="printTest()">
+            <ui-icon name="printer" styleClass="size-4" />
+            Imprimir ticket de prueba
+          </button>
+        } @else {
+          <div class="card note-card">
+            <ui-icon name="info" styleClass="size-5" />
+            <p>Necesitás una impresora térmica compatible con ESC/POS conectada por USB al equipo desde el que usás el Punto de Venta.</p>
+          </div>
+
+          <button type="button" class="btn-primary connect-btn" (click)="connectPrinter()">
+            <ui-icon name="printer" styleClass="size-4" />
+            Conectar impresora USB
+          </button>
+
+          <ol class="steps">
+            <li><span>1</span> Conectá la impresora al puerto USB y encendela.</li>
+            <li><span>2</span> Tocá <b>Conectar impresora USB</b> y elegila en el navegador.</li>
+            <li><span>3</span> Elegí el ancho del papel (58 u 80 mm).</li>
+            <li><span>4</span> Imprimí un ticket de prueba para confirmar.</li>
+          </ol>
+        }
+      }
+
+      <!-- ══ Medios de pago ══ -->
+      @case ('methods') {
+        <header class="panel-head">
+          <h2>Medios de pago</h2>
+          <p>Elegí qué medios aparecen al cobrar y, opcionalmente, un recargo o descuento por cada uno.</p>
+        </header>
+
+        <div class="method-list">
+          @for (m of settings.methods(); track m.id) {
+            <div class="method-row" [class.off]="!m.enabled">
+              <div class="method-left">
+                <ui-icon [name]="m.icon" styleClass="size-5" />
+                <span>{{ m.label }}</span>
+              </div>
+              <div class="method-right">
+                @if (m.enabled) {
+                  <label class="adjust">
+                    <span>Ajuste %</span>
+                    <input
+                      type="number"
+                      min="-100"
+                      max="100"
+                      [ngModel]="m.adjustPercent"
+                      (ngModelChange)="settings.setMethodAdjust(m.id, $event)"
+                    />
+                  </label>
+                }
+                <button
+                  type="button"
+                  class="toggle"
+                  [class.on]="m.enabled"
+                  (click)="settings.toggleMethod(m.id)"
+                  [attr.aria-pressed]="m.enabled"
+                  [attr.aria-label]="m.label"
+                >
+                  <span class="knob"></span>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ══ Cajas ══ -->
+      @case ('cash') {
+        <header class="panel-head">
+          <h2>Cajas</h2>
+          <p>Administrá las cajas de tu sucursal para seguir los saldos por medio de pago.</p>
+        </header>
+
+        <div class="card empty-cash">
+          <div class="empty-badge"><ui-icon name="inbox" styleClass="size-7" /></div>
+          <strong>No hay cajas en esta sucursal</strong>
+          <p>Creá una caja para poder abrir/cerrar turno y registrar movimientos.</p>
+          <button type="button" class="btn-primary" (click)="addCash()">
+            <ui-icon name="plus" styleClass="size-4" />
+            Agregar caja
+          </button>
+        </div>
+      }
+
+      <!-- ══ Tickets ══ -->
+      @case ('tickets') {
+        <header class="panel-head">
+          <h2>Tickets</h2>
+          <p>Personalizá el encabezado, el pie y el logo que se imprimen en el comprobante.</p>
+        </header>
+
+        <div class="tickets-grid">
+          <div class="tickets-form">
+            <label class="field">
+              <span class="field-label">Texto del encabezado</span>
+              <textarea
+                rows="2"
+                maxlength="120"
+                [ngModel]="settings.ticket().header"
+                (ngModelChange)="settings.setTicketHeader($event)"
+                placeholder="Ej. Mi Tienda · RIF J-12345678-9 · Av. Principal 123"
+              ></textarea>
+              <small>{{ settings.ticket().header.length }}/120</small>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Texto del pie</span>
+              <textarea
+                rows="2"
+                maxlength="120"
+                [ngModel]="settings.ticket().footer"
+                (ngModelChange)="settings.setTicketFooter($event)"
+                placeholder="Ej. ¡Gracias por su compra!"
+              ></textarea>
+              <small>{{ settings.ticket().footer.length }}/120</small>
+            </label>
+
+            <div class="field">
+              <span class="field-label">Logo</span>
+              <div class="logo-row">
+                @if (settings.ticket().logo) {
+                  <img class="logo-preview" [src]="settings.ticket().logo" alt="Logo del ticket" />
+                  <button type="button" class="btn-ghost" (click)="removeLogo()">Quitar</button>
+                } @else {
+                  <label class="logo-upload">
+                    <ui-icon name="upload" styleClass="size-4" />
+                    <span>Subir logo</span>
+                    <input type="file" accept="image/*" (change)="onLogoSelected($event)" hidden />
+                  </label>
+                }
+              </div>
+              <label class="print-logo">
+                <button
+                  type="button"
+                  class="toggle"
+                  [class.on]="settings.ticket().printLogo"
+                  (click)="settings.setPrintLogo(!settings.ticket().printLogo)"
+                  [attr.aria-pressed]="settings.ticket().printLogo"
+                >
+                  <span class="knob"></span>
+                </button>
+                <span>Imprimir el logo en el ticket</span>
+              </label>
+            </div>
+
+            <div class="tickets-actions">
+              <button type="button" class="btn-ghost" (click)="printTest()">Imprimir prueba</button>
+              <button type="button" class="btn-primary" (click)="saveTickets()">Guardar</button>
+            </div>
+          </div>
+
+          <!-- Vista previa en vivo -->
+          <div class="receipt">
+            <div class="receipt-paper">
+              @if (settings.ticket().printLogo && settings.ticket().logo) {
+                <img class="receipt-logo" [src]="settings.ticket().logo" alt="Logo" />
+              }
+              @if (settings.ticket().header) {
+                <div class="receipt-header">{{ settings.ticket().header }}</div>
+              }
+              <div class="receipt-rule"></div>
+              @for (l of sampleLines; track l.name) {
+                <div class="receipt-line">
+                  <span>{{ l.qty }}× {{ l.name }}</span>
+                  <span>{{ l.total | number: '1.2-2' }}</span>
+                </div>
+              }
+              <div class="receipt-rule"></div>
+              <div class="receipt-line total">
+                <span>TOTAL</span>
+                <span>{{ sampleTotal() | number: '1.2-2' }}</span>
+              </div>
+              @if (settings.ticket().footer) {
+                <div class="receipt-footer">{{ settings.ticket().footer }}</div>
+              }
+            </div>
+            <span class="receipt-caption">Vista previa</span>
+          </div>
+        </div>
+      }
+    }
+  </section>
+</div>

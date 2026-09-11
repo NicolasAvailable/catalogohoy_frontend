@@ -48,11 +48,6 @@ export const posRoutes: Routes = [
   },
   {
     path: 'configuracion',
-    data: {
-      title: 'Configuración',
-      icon: 'settings',
-      desc: 'Impresora térmica, medios de pago, cajas y tickets. En construcción.',
-    },
-    loadComponent: () => import('./views/coming-soon/coming-soon'),
+    loadComponent: () => import('./views/config/config'),
   },
 ];
