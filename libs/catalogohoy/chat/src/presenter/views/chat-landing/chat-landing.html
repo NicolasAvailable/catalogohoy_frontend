@@ -1,6 +1,6 @@
-<div class="w-full max-w-4xl mx-auto px-6 py-10 flex flex-col gap-10">
+<div class="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col gap-9 sm:gap-12">
   <!-- ═══ Hero ═══ -->
-  <div class="flex flex-col items-center text-center gap-5">
+  <div class="flex flex-col items-center text-center gap-4 sm:gap-5">
     <!-- Cluster de canales disponibles hoy: WhatsApp Business + TikTok -->
     <div class="flex items-center -space-x-3 mb-1">
       <span class="w-16 h-16 rounded-2xl bg-white border border-grey-100 shadow-sm flex items-center justify-center -rotate-6">
@@ -11,7 +11,7 @@
       </span>
     </div>
 
-    <h1 class="text-2xl md:text-3xl font-bold text-grey-800 max-w-2xl leading-tight">
+    <h1 class="text-2xl md:text-3xl font-bold text-grey-800 max-w-2xl leading-tight text-balance">
       {{ 'Chatea con tus clientes desde CatalogoHoy' | transloco }}
     </h1>
     <p class="text-base text-grey-500 max-w-xl leading-relaxed">
@@ -32,6 +32,113 @@
     </p>
   </div>
 
+  <!-- ═══ Mockup de la bandeja (así se ve la funcionalidad) ═══ -->
+  <div class="flex flex-col gap-3">
+    <p class="text-center text-xs font-semibold uppercase tracking-wide text-grey-400">
+      {{ 'Así se ve tu bandeja de mensajes' | transloco }}
+    </p>
+
+    <div class="rounded-2xl border border-grey-100 bg-white shadow-xl shadow-grey-300/30 overflow-hidden">
+      <!-- Barra superior tipo ventana -->
+      <div class="flex items-center gap-1.5 px-4 py-2.5 border-b border-grey-50">
+        <span class="w-2.5 h-2.5 rounded-full bg-red-300"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-300"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-green-300"></span>
+        <span class="ml-3 text-xs text-grey-300 font-medium">CatalogoHoy · Chat</span>
+      </div>
+
+      <div class="flex h-[24rem] md:h-[27rem]">
+        <!-- Lista de chats (siempre visible) -->
+        <div class="w-full md:w-64 shrink-0 flex flex-col border-r border-grey-50 bg-white">
+          <div class="px-4 pt-4 pb-3">
+            <div class="flex items-center justify-between">
+              <span class="text-lg font-bold text-grey-800">Chats</span>
+              <span class="text-[0.65rem] font-semibold text-primary-600 bg-primary-50 rounded-full px-2 py-0.5">3 sin leer</span>
+            </div>
+            <div class="mt-3 flex items-center gap-2 rounded-lg bg-grey-50 px-3 py-2 text-grey-300">
+              <ui-icon name="search" size="15" />
+              <span class="text-sm">Buscar</span>
+            </div>
+          </div>
+          <div class="flex-1 overflow-hidden">
+            @for (c of demoChats; track c.name) {
+            <div
+              class="flex items-center gap-3 px-3 py-2.5 border-l-2 transition-colors"
+              [class]="c.active ? 'bg-primary-50/50 border-primary-500' : 'border-transparent'"
+            >
+              <div class="relative shrink-0">
+                <span
+                  class="w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                  [class]="c.color"
+                >{{ c.initials }}</span>
+                <span class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-white flex items-center justify-center">
+                  <img
+                    [src]="c.channel === 'whatsapp' ? '/images/whatsapp.svg' : '/images/tiktok-logo.svg'"
+                    [alt]="c.channel"
+                    class="w-3 h-3"
+                  />
+                </span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm font-semibold text-grey-800 truncate">{{ c.name }}</span>
+                  <span class="text-[0.7rem] text-grey-300 shrink-0">{{ c.time }}</span>
+                </div>
+                <div class="flex items-center justify-between gap-2 mt-0.5">
+                  <span class="text-xs text-grey-500 truncate">{{ c.last }}</span>
+                  @if (c.unread) {
+                  <span class="shrink-0 min-w-4 h-4 px-1 rounded-full bg-primary-500 text-white text-[0.65rem] font-bold flex items-center justify-center">{{ c.unread }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- Conversación abierta (solo desktop) -->
+        <div class="hidden md:flex flex-1 flex-col min-w-0 bg-lino-400">
+          <!-- Encabezado -->
+          <div class="h-14 shrink-0 bg-white border-b border-grey-50 flex items-center gap-3 px-4">
+            <span class="w-9 h-9 rounded-full bg-pink-500 flex items-center justify-center text-white text-xs font-bold shrink-0">MG</span>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-grey-800 leading-tight">María González</p>
+              <p class="inline-flex items-center gap-1 text-xs text-green-600">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                {{ 'En línea' | transloco }}
+              </p>
+            </div>
+            <span class="ml-auto inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+              <img src="/images/whatsapp.svg" alt="WhatsApp" class="w-3.5 h-3.5" />
+              WhatsApp
+            </span>
+          </div>
+          <!-- Mensajes -->
+          <div class="flex-1 px-5 py-5 flex flex-col gap-2 overflow-hidden">
+            @for (m of demoMessages; track $index) {
+            <div class="flex" [class.justify-end]="m.mine">
+              <div
+                class="max-w-[80%] px-3.5 py-2 text-sm leading-snug shadow-sm"
+                [class]="m.mine
+                  ? 'bg-primary-500 text-white rounded-2xl rounded-br-md'
+                  : 'bg-white text-grey-700 rounded-2xl rounded-bl-md'"
+              >{{ m.text }}</div>
+            </div>
+            }
+          </div>
+          <!-- Barra de escritura -->
+          <div class="shrink-0 px-3 py-3 bg-white border-t border-grey-50 flex items-center gap-2">
+            <ui-icon name="plus" size="20" styleClass="text-grey-300 shrink-0" />
+            <div class="flex-1 rounded-full bg-grey-50 px-4 py-2.5 text-sm text-grey-300">Escribe un mensaje…</div>
+            <span class="w-9 h-9 rounded-full bg-primary-500 flex items-center justify-center shrink-0">
+              <ui-icon name="send" size="16" styleClass="text-white" />
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ Qué puedes hacer ═══ -->
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     @for (feature of features; track feature.title) {
@@ -45,5 +152,16 @@
       </div>
     </div>
     }
+  </div>
+
+  <!-- CTA final -->
+  <div class="flex flex-col items-center gap-3 pb-2">
+    <a
+      routerLink="/admin/chat/connect"
+      class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary-500 text-white text-base font-semibold hover:bg-primary-600 transition-colors"
+    >
+      {{ 'Configurar Chat' | transloco }}
+      <ui-icon name="arrow-right" size="18" />
+    </a>
   </div>
 </div>
