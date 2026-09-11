@@ -1,39 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
+import { faqs } from "@/data/faqs";
 
-export const faqs = [
-  {
-    question: "¿Es gratis crear un catálogo digital?",
-    answer:
-      "Sí, CatalogoHoy ofrece un plan gratuito para siempre que incluye hasta 10 productos y 1 catálogo. Puedes empezar sin tarjeta de crédito.",
-  },
-  {
-    question: "¿Puedo compartir mi catálogo por WhatsApp?",
-    answer:
-      "Sí, cada catálogo tiene un enlace único que puedes compartir directamente por WhatsApp, redes sociales o cualquier medio digital. Tus clientes pueden ver tus productos sin necesidad de descargar ninguna app.",
-  },
-  {
-    question: "¿Qué tipo de negocios pueden usar CatalogoHoy?",
-    answer:
-      "CatalogoHoy es ideal para tiendas de ropa, zapaterías, joyerías, restaurantes, ferreterías y cualquier negocio que quiera mostrar sus productos de forma profesional en línea.",
-  },
-  {
-    question: "¿Puedo cambiar de plan en cualquier momento?",
-    answer:
-      "Sí, puedes mejorar o cambiar tu plan cuando quieras. No hay contratos ni permanencia mínima. Si necesitas más productos o funcionalidades, simplemente sube de plan.",
-  },
-  {
-    question: "¿Cómo recibo las órdenes de mis clientes?",
-    answer:
-      "Las órdenes llegan directamente a tu panel de administración en tiempo real. Puedes gestionarlas, ver el detalle de cada pedido y hacer seguimiento desde un solo lugar.",
-  },
-  {
-    question: "¿Puedo tener precios en diferentes monedas?",
-    answer:
-      "Sí, puedes configurar tasas de cambio del día para mostrar precios en bolívares y dólares. La tasa se actualiza fácilmente desde tu panel.",
-  },
-];
+// Los datos viven en src/data/faqs.ts (sin React) para que el prerender
+// estático los pueda cargar. Se re-exportan aquí para no romper a quienes ya
+// importaban `{ faqs }` desde este componente (p.ej. PreguntasFrecuentes.tsx).
+export { faqs } from "@/data/faqs";
 
 const FAQ = ({ embedded = false }: { embedded?: boolean }) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);

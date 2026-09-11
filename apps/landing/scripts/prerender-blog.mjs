@@ -130,7 +130,7 @@ const buildPage = (template, { title, description, urlPath, ogImage, ogType, jso
     <meta property="og:type" content="${ogType}" />
     <meta property="og:url" content="${url}" />
     <meta property="og:site_name" content="CatalogoHoy" />
-    <meta property="og:locale" content="es_ES" />
+    <meta property="og:locale" content="es_MX" />
     <meta property="og:image" content="${BASE_URL}${ogImage}" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -244,3 +244,35 @@ for (const a of ARTICLES) {
 }
 
 console.log(`[prerender-blog] ${1 + CATEGORIES.length + ARTICLES.length} páginas estáticas generadas en dist/blog`);
+
+// ---- 5. Sitemap: todas las rutas indexables + categorías + artículos ----
+// (Antes era un public/sitemap.xml estático de 11 URLs SIN el blog → los
+//  artículos no se descubrían. Ahora se genera con la data real del blog.)
+const latest = ARTICLES.reduce((m, a) => (a.date > m ? a.date : m), "2026-01-01");
+const STATIC_ROUTES = [
+  { path: "/", priority: "1.0", changefreq: "weekly" },
+  { path: "/pricing", priority: "0.9", changefreq: "monthly" },
+  { path: "/features", priority: "0.8", changefreq: "monthly" },
+  { path: "/faq", priority: "0.7", changefreq: "monthly" },
+  { path: "/catalogo-por-whatsapp", priority: "0.8", changefreq: "monthly" },
+  { path: "/catalogo-digital", priority: "0.8", changefreq: "monthly" },
+  { path: "/crear-catalogo-online-gratis", priority: "0.8", changefreq: "monthly" },
+  { path: "/catalogo-para-tiendas-de-ropa", priority: "0.8", changefreq: "monthly" },
+  { path: "/menu-digital-para-restaurantes", priority: "0.8", changefreq: "monthly" },
+  { path: "/blog", priority: "0.7", changefreq: "weekly" },
+  { path: "/privacy-policy", priority: "0.3", changefreq: "yearly" },
+  { path: "/terms-of-service", priority: "0.3", changefreq: "yearly" },
+  { path: "/data-deletion", priority: "0.3", changefreq: "yearly" },
+];
+const urlEntry = (loc, lastmod, changefreq, priority) =>
+  `  <url>\n    <loc>${BASE_URL}${loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`;
+const sitemapUrls = [
+  ...STATIC_ROUTES.map((r) => urlEntry(r.path, latest, r.changefreq, r.priority)),
+  ...CATEGORIES.map((c) => urlEntry(`/blog/${c.slug}`, latest, "weekly", "0.6")),
+  ...ARTICLES.map((a) => urlEntry(`/blog/${a.category}/${a.slug}`, a.date, "monthly", "0.7")),
+];
+await writeFile(
+  path.join(DIST, "sitemap.xml"),
+  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapUrls.join("\n")}\n</urlset>\n`
+);
+console.log(`[prerender-blog] sitemap.xml con ${sitemapUrls.length} URLs`);

@@ -15,6 +15,21 @@ const prerenderBlog = (): Plugin => ({
   },
 });
 
+/**
+ * Tras el build (y DESPUÉS del blog), genera los HTML estáticos de las páginas
+ * de marketing/SEO (/pricing, /features, /faq y las guías) en dist/<ruta>.
+ * Lee dist/index.html como plantilla, igual que el prerender del blog.
+ */
+const prerenderPages = (): Plugin => ({
+  name: "prerender-pages",
+  apply: "build",
+  closeBundle() {
+    execFileSync("node", [path.resolve(__dirname, "scripts/prerender-pages.mjs")], {
+      stdio: "inherit",
+    });
+  },
+});
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
@@ -24,7 +39,12 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
-  plugins: [react(), mode === "development" && componentTagger(), prerenderBlog()].filter(Boolean),
+  plugins: [
+    react(),
+    mode === "development" && componentTagger(),
+    prerenderBlog(),
+    prerenderPages(),
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

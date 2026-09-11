@@ -1,0 +1,44 @@
+# CatalogoHoy
+
+> CatalogoHoy es una plataforma web para crear catálogos digitales profesionales y vender por WhatsApp, pensada para pequeños negocios y emprendedores de Latinoamérica. Subes tus productos, personalizas el diseño, compartes tu catálogo por WhatsApp o redes y recibes pedidos — con un plan gratis para siempre y sin necesidad de tener un sitio web.
+
+CatalogoHoy (https://catalogohoy.com) reemplaza el catálogo en PDF y las ventas desordenadas por WhatsApp con un catálogo online que tiene su propio enlace y subdominio (por ejemplo `tunegocio.catalogohoy.com`). Está optimizado para vender por WhatsApp: cada producto y el catálogo completo se comparten con un clic, y los pedidos llegan por WhatsApp y a un panel de administración con órdenes y clientes.
+
+## Para quién es
+- Tiendas de ropa, zapaterías, joyerías, accesorios y tiendas de productos en general
+- Restaurantes y negocios de comida (menú digital)
+- Emprendedores y pequeños negocios que venden por WhatsApp, Instagram o TikTok
+- Principalmente Latinoamérica: Venezuela, Colombia, México, Argentina, Perú, Chile, Ecuador, Bolivia y toda la región
+
+## Qué ofrece
+- Catálogo digital con enlace y subdominio propio, sin necesidad de programar ni tener web
+- Compartir por WhatsApp, Instagram, TikTok y Facebook con un clic
+- Pedidos por WhatsApp + panel de órdenes y CRM de clientes
+- Personalización del diseño, categorías, variantes de producto y precios en varias monedas (incluye Bolívares con tasa del día para Venezuela)
+- Analíticas de visitas y ventas, notificaciones por WhatsApp y herramientas de IA (quitar fondo y generar descripciones/imágenes)
+- App móvil para iOS y Android para gestionar el negocio desde el teléfono
+
+## Planes
+- **Gratis** (US$0, para siempre, sin tarjeta): hasta 10 productos, 1 catálogo
+- **Básico** (US$11.99/mes): hasta 100 productos, analíticas, notificaciones por WhatsApp y diseño personalizable
+- **Pro** (US$19.99/mes): hasta 500 productos, 2 miembros de equipo y 350 créditos de IA por mes
+- **Avanzado** (US$29.99/mes): productos ilimitados, dominio propio, hasta 10 miembros de equipo y soporte dedicado
+
+La creación de la cuenta y el pago de planes se realizan en la web (https://auth.catalogohoy.com/signup).
+
+## Enlaces principales
+- [Inicio](https://catalogohoy.com/): qué es y cómo empezar
+- [Precios](https://catalogohoy.com/pricing): planes y límites
+- [Funciones](https://catalogohoy.com/features): todo lo que incluye
+- [Preguntas frecuentes](https://catalogohoy.com/faq)
+- [Crear catálogo gratis](https://auth.catalogohoy.com/signup)
+
+## Páginas por caso de uso
+- [Catálogo por WhatsApp](https://catalogohoy.com/catalogo-por-whatsapp)
+- [Catálogo digital](https://catalogohoy.com/catalogo-digital)
+- [Crear catálogo online gratis](https://catalogohoy.com/crear-catalogo-online-gratis)
+- [Catálogo para tiendas de ropa](https://catalogohoy.com/catalogo-para-tiendas-de-ropa)
+- [Menú digital para restaurantes](https://catalogohoy.com/menu-digital-para-restaurantes)
+
+## Blog y guías
+- [Blog de CatalogoHoy](https://catalogohoy.com/blog): guías para crear catálogos, vender por WhatsApp y hacer crecer el negocio, incluyendo guías específicas por país de Latinoamérica.
