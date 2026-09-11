@@ -698,6 +698,62 @@
   gap: 0.5rem;
 }
 
+/* ── Pantalla de éxito (venta cobrada) ── */
+.success-card {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+.success-check {
+  color: var(--pos-ok);
+  margin: 0.25rem 0 0.2rem;
+}
+.success-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+.success-total {
+  font-size: 2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--pos-text);
+}
+.success-num {
+  font-size: 0.85rem;
+  color: var(--pos-text-soft);
+}
+.success-change {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  margin: 0.5rem 0 0;
+  border-radius: 0.6rem;
+  background: var(--pos-surface-2);
+}
+.success-change strong {
+  color: var(--pos-ok);
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+}
+.success-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  margin-top: 0.75rem;
+}
+.btn-ghost.with-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid var(--pos-border);
+}
+
 /* ── Responsive: carrito abajo en pantallas chicas ── */
 @media (max-width: 56rem) {
   .venta {

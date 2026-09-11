@@ -363,6 +363,37 @@
   </div>
 }
 
+<!-- ══ Éxito: venta cobrada + recibo ══ -->
+@if (showSuccess() && lastSale(); as sale) {
+  <div class="modal-backdrop">
+    <div class="modal-card sm success-card">
+      <div class="success-check">
+        <ui-icon name="circle-check-big" styleClass="size-10" />
+      </div>
+      <h3 class="success-title">Venta cobrada</h3>
+      <p class="success-total">{{ cs() }}{{ sale.total | number: '1.2-2' }}</p>
+      @if (sale.number != null) {
+        <p class="success-num">Comprobante #{{ sale.number }}</p>
+      }
+      @if (sale.received != null) {
+        <div class="success-change">
+          <span>Vuelto</span>
+          <strong>{{ cs() }}{{ sale.change | number: '1.2-2' }}</strong>
+        </div>
+      }
+      <div class="success-actions">
+        <button type="button" class="btn-ghost with-icon" (click)="printReceipt()">
+          <ui-icon name="printer" styleClass="size-4" />
+          Imprimir recibo
+        </button>
+        <button type="button" class="cobrar-btn confirm" (click)="newSale()">
+          Nueva venta
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
 <!-- ══ Escáner de código de barras ══ -->
 @if (showScanner()) {
   <pos-scanner (detected)="onScan($event)" (closed)="closeScanner()" />

@@ -13,6 +13,7 @@ import {
   TenantCurrencyStore,
 } from '@catalogohoy/ecommerce-config';
 import {
+  Order,
   OrderItem,
   OrderStatus,
   OrderStore,
@@ -36,6 +37,21 @@ import { PosScanner } from '../../components/scanner/scanner';
 interface PayMethod {
   label: string;
   icon: string;
+}
+
+/** Snapshot de una venta cobrada, para el comprobante (se arma antes de vaciar
+ *  el carrito). */
+interface PosSaleReceipt {
+  number: number | null;
+  dateStr: string;
+  customer: string;
+  lines: { label: string; qty: number; total: number }[];
+  subtotal: number;
+  discount: number;
+  total: number;
+  method: string;
+  received: number | null;
+  change: number;
 }
 
 @Component({
@@ -72,6 +88,9 @@ export default class PosVenta implements OnInit {
   readonly showCobrar = signal(false);
   readonly amountReceived = signal<number | null>(null);
   readonly isCharging = signal(false);
+  /** Pantalla de éxito con el comprobante, tras cobrar. */
+  readonly showSuccess = signal(false);
+  readonly lastSale = signal<PosSaleReceipt | null>(null);
   // Acciones rápidas (mini-modales)
   readonly showCustomer = signal(false);
   readonly showNote = signal(false);
@@ -416,11 +435,14 @@ export default class PosVenta implements OnInit {
           this.toast.error(error as unknown as Exception);
           this.isCharging.set(false);
         },
-        () => {
+        (order) => {
+          // Snapshot del comprobante ANTES de vaciar el carrito.
+          this.lastSale.set(this.buildReceipt(order));
           this.toast.success('Venta cobrada ✓');
           this.cart.clear();
           this.amountReceived.set(null);
           this.showCobrar.set(false);
+          this.showSuccess.set(true);
           this.isCharging.set(false);
         }
       );
@@ -428,6 +450,104 @@ export default class PosVenta implements OnInit {
       this.toast.error('Error inesperado al cobrar' as unknown as Exception);
       this.isCharging.set(false);
     }
+  }
+
+  /** Arma el comprobante desde el carrito ANTES de vaciarlo. */
+  private buildReceipt(order: Order): PosSaleReceipt {
+    const lines = this.cart.lines().map((l) => ({
+      label:
+        l.variantName || l.size
+          ? `${l.name} · ${l.variantName ?? l.size}`
+          : l.name,
+      qty: l.quantity,
+      total: l.total,
+    }));
+    return {
+      number: order.orderNumber ?? order.id ?? null,
+      dateStr: new Date().toLocaleString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      customer: this.cart.customerName(),
+      lines,
+      subtotal: this.cart.subtotal(),
+      discount: this.cart.discountAmount(),
+      total: this.cart.total(),
+      method: this.cart.paymentMethod(),
+      received: this.amountReceived(),
+      change: this.change(),
+    };
+  }
+
+  /** Cierra la pantalla de éxito para empezar otra venta. */
+  newSale(): void {
+    this.showSuccess.set(false);
+    this.lastSale.set(null);
+    this.amountReceived.set(null);
+  }
+
+  /** Abre el comprobante en una ventana e invoca la impresión del navegador
+   *  (formato ticket 80 mm). Usa el encabezado/pie/logo de la Configuración. */
+  printReceipt(): void {
+    const sale = this.lastSale();
+    if (!sale) return;
+    const t = this.settings.ticket();
+    const cs = this.cs();
+    const money = (n: number) => `${cs}${n.toFixed(2)}`;
+    const esc = (s: string) =>
+      s.replace(
+        /[&<>]/g,
+        (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] as string
+      );
+    const rows = sale.lines
+      .map(
+        (l) =>
+          `<div class="r"><span>${l.qty}× ${esc(l.label)}</span><span>${money(l.total)}</span></div>`
+      )
+      .join('');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Recibo</title>
+      <style>
+        @page { margin: 0; }
+        body { width: 80mm; margin: 0 auto; padding: 6mm 5mm; font-family: 'Courier New', monospace; font-size: 12px; color: #000; }
+        .c { text-align: center; }
+        .logo { max-width: 60%; max-height: 40px; display: block; margin: 0 auto 6px; }
+        .hd { font-weight: 700; white-space: pre-wrap; margin-bottom: 6px; }
+        .rule { border-top: 1px dashed #000; margin: 6px 0; }
+        .r { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
+        .tot { font-weight: 700; font-size: 13px; }
+        .ft { margin-top: 8px; white-space: pre-wrap; }
+        .meta { font-size: 11px; }
+      </style></head><body>
+      ${t.printLogo && t.logo ? `<img class="logo" src="${t.logo}" alt="logo">` : ''}
+      ${t.header ? `<div class="c hd">${esc(t.header)}</div>` : ''}
+      <div class="c meta">${esc(sale.dateStr)}${sale.number != null ? ` · #${sale.number}` : ''}</div>
+      ${sale.customer ? `<div class="c meta">${esc(sale.customer)}</div>` : ''}
+      <div class="rule"></div>
+      ${rows}
+      <div class="rule"></div>
+      <div class="r"><span>Subtotal</span><span>${money(sale.subtotal)}</span></div>
+      ${sale.discount > 0 ? `<div class="r"><span>Descuento</span><span>-${money(sale.discount)}</span></div>` : ''}
+      <div class="r tot"><span>TOTAL</span><span>${money(sale.total)}</span></div>
+      ${sale.method ? `<div class="r"><span>Pago</span><span>${esc(sale.method)}</span></div>` : ''}
+      ${sale.received != null ? `<div class="r"><span>Recibido</span><span>${money(sale.received)}</span></div><div class="r"><span>Vuelto</span><span>${money(sale.change)}</span></div>` : ''}
+      ${t.footer ? `<div class="c ft">${esc(t.footer)}</div>` : ''}
+      </body></html>`;
+    const w = window.open('', '_blank', 'width=380,height=640');
+    if (!w) {
+      this.toast.error(
+        'Permití las ventanas emergentes para imprimir el recibo' as unknown as Exception
+      );
+      return;
+    }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    // Dar tiempo a que renderice el logo/estilos antes de imprimir.
+    setTimeout(() => w.print(), 250);
   }
 
   // ── Helpers de presentación ──────────────────────────────────────────────
