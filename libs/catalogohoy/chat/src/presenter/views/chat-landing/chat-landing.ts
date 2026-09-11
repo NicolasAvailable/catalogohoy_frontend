@@ -6,10 +6,10 @@ import { IconComponent } from '@ui';
 /** Landing de "Chat" (estilo Chat Nube): pantalla de bienvenida que se muestra
  *  cuando el catálogo todavía no conectó ningún canal. Explica qué se puede
  *  hacer administrando a los clientes desde la misma plataforma (WhatsApp
- *  Business y TikTok, sin IA por ahora), muestra un **mockup** de cómo se ve la
- *  bandeja y lleva a "Configurar Chat" → conectar canales. Apenas se conecta un
- *  canal, la vista de conversaciones muestra la bandeja en lugar de esta
- *  landing. */
+ *  Business y TikTok, sin IA por ahora), muestra una **captura real** de la
+ *  bandeja (tomada de una cuenta demo con chats de WhatsApp y TikTok) y lleva a
+ *  "Configurar Chat" → conectar canales. Apenas se conecta un canal, la vista de
+ *  conversaciones muestra la bandeja en lugar de esta landing. */
 @Component({
   selector: 'lib-chat-landing',
   standalone: true,
@@ -18,24 +18,6 @@ import { IconComponent } from '@ui';
   templateUrl: './chat-landing.html',
 })
 export class ChatLandingComponent {
-  /** Conversaciones ilustrativas del mockup (datos ficticios, no reales). */
-  protected readonly demoChats = [
-    { name: 'María González', initials: 'MG', color: 'bg-pink-500', channel: 'whatsapp', last: '¿Tienen la talla M disponible? 🙌', time: '11:52', unread: 2, active: true },
-    { name: 'Carlos Rivas', initials: 'CR', color: 'bg-sky-500', channel: 'tiktok', last: 'Perfecto, ya hice el pago ✅', time: '10:04', unread: 0, active: false },
-    { name: 'Andrea Pérez', initials: 'AP', color: 'bg-violet-500', channel: 'whatsapp', last: '¿Hacen envíos a Maracaibo?', time: '09:58', unread: 1, active: false },
-    { name: 'José Martínez', initials: 'JM', color: 'bg-amber-500', channel: 'whatsapp', last: 'Gracias, quedé encantado 😍', time: '09:41', unread: 0, active: false },
-    { name: 'Valentina Ruiz', initials: 'VR', color: 'bg-emerald-500', channel: 'tiktok', last: '¿El precio incluye delivery?', time: '08:47', unread: 0, active: false },
-  ];
-
-  /** Mensajes de la conversación abierta en el mockup (ficticios). */
-  protected readonly demoMessages = [
-    { mine: false, text: 'Hola! Vi el bolso negro en su catálogo 👜' },
-    { mine: false, text: '¿Tienen la talla M disponible?' },
-    { mine: true, text: '¡Hola María! Sí, nos queda 🙌 ¿Te lo aparto?' },
-    { mine: false, text: 'Sí porfa 🙏 ¿Cómo hago el pago?' },
-    { mine: true, text: 'Te paso los datos y coordinamos el envío 🚚' },
-  ];
-
   protected readonly features = [
     {
       icon: 'inbox',
