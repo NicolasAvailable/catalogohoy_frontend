@@ -146,7 +146,7 @@ const FlowDiagram = () => (
 
       {/* Canales de atención */}
       {CANALES.map((c, i) => (
-        <div key={`c-${i}`} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${c.x}%`, top: `${c.y}%` }} aria-label={c.label}>
+        <div key={`c-${i}`} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${c.x}%`, top: `${c.y}%` }} role="img" aria-label={c.label}>
           <div className="flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-white shadow-md">
             {c.glyph}
           </div>
@@ -205,6 +205,7 @@ const FlowDiagram = () => (
           <div
             key={`mc-${i}`}
             className="flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-white shadow-md"
+            role="img"
             aria-label={c.label}
           >
             {c.glyph}
