@@ -111,12 +111,15 @@ const Block = ({ block, campaign }: { block: ArticleBlock; campaign: string }) =
     case "img":
       return (
         <figure className="my-2">
-          <img
-            src={block.src}
-            alt={block.alt}
-            loading="lazy"
-            className="w-full rounded-2xl border border-border"
-          />
+          <picture>
+            <source srcSet={block.src.replace(/\.(jpe?g|png)$/, ".webp")} type="image/webp" />
+            <img
+              src={block.src}
+              alt={block.alt}
+              loading="lazy"
+              className="w-full rounded-2xl border border-border"
+            />
+          </picture>
           {block.caption && (
             <figcaption className="mt-2 text-center text-xs text-muted-foreground">
               {block.caption}

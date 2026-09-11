@@ -70,7 +70,7 @@ const renderBlock = (b, campaign) => {
     case "quote":
       return `<blockquote class="border-l-4 border-primary pl-4 italic text-foreground/75">${esc(b.text)}</blockquote>`;
     case "img":
-      return `<figure class="my-2"><img src="${b.src}" alt="${esc(b.alt)}" loading="lazy" class="w-full rounded-2xl border border-border">${b.caption ? `<figcaption class="mt-2 text-center text-xs text-muted-foreground">${esc(b.caption)}</figcaption>` : ""}</figure>`;
+      return `<figure class="my-2"><picture><source srcset="${b.src.replace(/\.(jpe?g|png)$/, ".webp")}" type="image/webp"><img src="${b.src}" alt="${esc(b.alt)}" loading="lazy" class="w-full rounded-2xl border border-border"></picture>${b.caption ? `<figcaption class="mt-2 text-center text-xs text-muted-foreground">${esc(b.caption)}</figcaption>` : ""}</figure>`;
     default:
       return "";
   }

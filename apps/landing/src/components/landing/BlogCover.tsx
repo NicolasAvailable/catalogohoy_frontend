@@ -41,12 +41,15 @@ const BlogCover = ({
       {/* Lado izquierdo: foto o patrón decorativo */}
       <div className="absolute inset-0">
         {article.coverImage ? (
-          <img
-            src={article.coverImage}
-            alt=""
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
+          <picture>
+            <source srcSet={article.coverImage.replace(/\.(jpe?g|png)$/, ".webp")} type="image/webp" />
+            <img
+              src={article.coverImage}
+              alt=""
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </picture>
         ) : (
           <div className="w-full h-full bg-[radial-gradient(circle_at_25%_30%,rgba(99,102,241,0.18),transparent_55%),radial-gradient(circle_at_10%_80%,rgba(16,185,129,0.14),transparent_45%)] bg-slate-100">
             <div
