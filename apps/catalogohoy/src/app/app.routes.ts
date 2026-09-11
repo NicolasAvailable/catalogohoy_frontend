@@ -24,6 +24,21 @@ export const appRoutes: Route[] = [
       import('./modules/admin/admin.routes').then((m) => m.adminRoutes),
   },
   {
+    // Punto de Venta: experiencia full-screen con barra lateral propia (fuera
+    // del layout del admin). Mismos guards que /admin: slug válido, sesión y
+    // permisos de equipo.
+    path: 'pos',
+    canActivate: [isValidSlugGuard, authenticationGuard],
+    resolve: {
+      profile: profileResolver,
+      teamPermissions: teamPermissionsResolver,
+    },
+    canActivateChild: [hasAccessGuard],
+    loadComponent: () => import('./modules/pos/pos-shell'),
+    loadChildren: () =>
+      import('./modules/pos/pos.routes').then((m) => m.posRoutes),
+  },
+  {
     path: 'catalog-unavailable',
     loadComponent: () =>
       import('@catalogohoy/tenant').then((m) => m.CatalogUnavailableView),

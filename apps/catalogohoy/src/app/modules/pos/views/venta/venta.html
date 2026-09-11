@@ -1,0 +1,369 @@
+<div class="venta">
+  <!-- ══ Panel izquierdo: productos ══ -->
+  <section class="venta-catalog">
+    <div class="cashbox-banner">
+      <ui-icon name="info" styleClass="size-5 shrink-0" />
+      <div class="cashbox-banner-text">
+        <strong>Iniciá la caja</strong>
+        <span>para seguir los saldos y movimientos por medio de pago.</span>
+      </div>
+      <button type="button" class="cashbox-banner-cta">Iniciar caja</button>
+    </div>
+
+    <div class="add-title">Agregar productos</div>
+
+    <div class="search-row">
+      <div class="search-field">
+        <ui-icon name="search" styleClass="size-4 search-ico" />
+        <input
+          type="text"
+          class="search-input"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+          placeholder="Buscar por nombre, descripción o SKU"
+        />
+      </div>
+      <button type="button" class="scan-btn" (click)="openScanner()">
+        <ui-icon name="scan-search" styleClass="size-4" />
+        <span>Escanear</span>
+      </button>
+    </div>
+
+    <div class="quick-actions">
+      <button type="button" class="quick-chip" (click)="openCustomer()">
+        <ui-icon name="user-plus" styleClass="size-4" />
+        <span>{{ cart.customerName() || 'Agregar cliente' }}</span>
+      </button>
+      <button type="button" class="quick-chip" (click)="openDiscount()">
+        <ui-icon name="ticket-percent" styleClass="size-4" />
+        <span>{{ cart.discountPercent() > 0 ? cart.discountPercent() + '% desc.' : 'Aplicar descuento' }}</span>
+      </button>
+      <button type="button" class="quick-chip" (click)="openNote()">
+        <ui-icon name="notepad-text" styleClass="size-4" />
+        <span>{{ cart.note() ? 'Nota ✓' : 'Agregar nota' }}</span>
+      </button>
+      <button type="button" class="quick-chip" (click)="openCreateProduct()">
+        <ui-icon name="plus-circle" styleClass="size-4" />
+        <span>Crear producto</span>
+      </button>
+    </div>
+
+    @if (productStore.isLoading()) {
+      <div class="grid-state">
+        <ui-icon name="loader-circle" styleClass="size-6 animate-spin" />
+        <p>Cargando productos…</p>
+      </div>
+    } @else if (products().length === 0) {
+      <div class="grid-state">
+        <ui-icon name="package-search" styleClass="size-7" />
+        <p>{{ search() ? 'Sin resultados para tu búsqueda' : 'Todavía no tenés productos en el catálogo' }}</p>
+      </div>
+    } @else {
+      <div class="product-grid">
+        @for (p of products(); track p.id) {
+          @let stock = stockLabel(p);
+          <button type="button" class="product-tile" (click)="onProductClick(p)">
+            <div class="tile-thumb">
+              @if (p.photos[0]) {
+                <img [src]="p.photos[0]" [alt]="p.name" loading="lazy" />
+              } @else {
+                <ui-icon name="package" styleClass="size-7 tile-thumb-ph" />
+              }
+              @if (p.isVariant || p.isSized) {
+                <span class="tile-badge">Opciones</span>
+              }
+            </div>
+            <div class="tile-body">
+              <span class="tile-name">{{ p.name }}</span>
+              <span class="tile-price">{{ cs() }}{{ unitPrice(p) | number: '1.2-2' }}</span>
+              <span class="tile-stock" [class]="'tone-' + stock.tone">{{ stock.text }}</span>
+            </div>
+          </button>
+        }
+      </div>
+    }
+  </section>
+
+  <!-- ══ Panel derecho: carrito ══ -->
+  <aside class="venta-cart">
+    <header class="cart-head">
+      <h2>Venta</h2>
+      @if (!cart.isEmpty()) {
+        <button type="button" class="cart-clear" (click)="cart.clear()">
+          <ui-icon name="trash" styleClass="size-4" />
+          Vaciar
+        </button>
+      }
+    </header>
+
+    @if (cart.isEmpty()) {
+      <div class="cart-empty">
+        <ui-icon name="shopping-cart" styleClass="size-9" />
+        <p class="cart-empty-title">Carrito vacío</p>
+        <p class="cart-empty-sub">Escaneá o buscá los productos que el cliente quiere comprar</p>
+      </div>
+    } @else {
+      <div class="cart-lines">
+        @for (l of cart.lines(); track l.key) {
+          <div class="cart-line">
+            <div class="line-thumb">
+              @if (l.photo) {
+                <img [src]="l.photo" [alt]="l.name" />
+              } @else {
+                <ui-icon name="package" styleClass="size-5 tile-thumb-ph" />
+              }
+            </div>
+            <div class="line-info">
+              <span class="line-name">{{ l.name }}</span>
+              @if (l.variantName || l.size) {
+                <span class="line-variant">{{ l.variantName || l.size }}</span>
+              }
+              <span class="line-unit">{{ cs() }}{{ l.price | number: '1.2-2' }} c/u</span>
+            </div>
+            <div class="line-right">
+              <div class="stepper">
+                <button type="button" (click)="cart.decrement(l.key)" aria-label="Restar">
+                  <ui-icon name="minus" styleClass="size-3.5" />
+                </button>
+                <span>{{ l.quantity }}</span>
+                <button type="button" (click)="cart.increment(l.key)" aria-label="Sumar">
+                  <ui-icon name="plus" styleClass="size-3.5" />
+                </button>
+              </div>
+              <span class="line-total">{{ cs() }}{{ l.total | number: '1.2-2' }}</span>
+              <button type="button" class="line-remove" (click)="cart.remove(l.key)" aria-label="Quitar">
+                <ui-icon name="x" styleClass="size-4" />
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="cart-summary">
+        @if (cart.customerName()) {
+          <div class="summary-row muted">
+            <span><ui-icon name="user" styleClass="size-3.5" /> {{ cart.customerName() }}</span>
+          </div>
+        }
+        <div class="summary-row">
+          <span>Subtotal ({{ cart.count() }} art.)</span>
+          <span>{{ cs() }}{{ cart.subtotal() | number: '1.2-2' }}</span>
+        </div>
+        @if (cart.discountPercent() > 0) {
+          <div class="summary-row discount">
+            <span>Descuento ({{ cart.discountPercent() }}%)</span>
+            <span>−{{ cs() }}{{ cart.discountAmount() | number: '1.2-2' }}</span>
+          </div>
+        }
+        <div class="summary-row total">
+          <span>Total</span>
+          <span>{{ cs() }}{{ cart.total() | number: '1.2-2' }}</span>
+        </div>
+      </div>
+    }
+
+    <button
+      type="button"
+      class="cobrar-btn"
+      [disabled]="cart.isEmpty()"
+      (click)="openCobrar()"
+    >
+      Cobrar {{ cs() }}{{ cart.total() | number: '1.2-2' }}
+    </button>
+  </aside>
+</div>
+
+<!-- ══ Modal: elegir variante / talla ══ -->
+@if (optionsProduct(); as op) {
+  <div class="modal-backdrop" (click)="closeOptions()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <header class="modal-head">
+        <h3>{{ op.name }}</h3>
+        <button type="button" class="modal-x" (click)="closeOptions()">
+          <ui-icon name="x" styleClass="size-5" />
+        </button>
+      </header>
+      <p class="modal-sub">Elegí una opción para agregar al carrito</p>
+      <div class="option-list">
+        @if (op.isVariant) {
+          @for (v of op.variants; track v.id) {
+            <button type="button" class="option-row" (click)="addVariant(op, v)">
+              <div class="option-thumb">
+                @if (v.photos[0] || op.photos[0]) {
+                  <img [src]="v.photos[0] || op.photos[0]" [alt]="v.name" />
+                } @else {
+                  <ui-icon name="package" styleClass="size-5 tile-thumb-ph" />
+                }
+              </div>
+              <span class="option-name">{{ v.name }}</span>
+              <span class="option-price">{{ cs() }}{{ (v.price > 0 ? v.price : unitPrice(op)) | number: '1.2-2' }}</span>
+            </button>
+          }
+        } @else {
+          @for (s of op.sizes; track s.name) {
+            <button type="button" class="option-row" (click)="addSize(op, s)">
+              <span class="option-size">{{ s.name }}</span>
+              <span class="option-name">
+                {{ s.stock == null ? 'Disponible' : s.stock + ' en stock' }}
+              </span>
+              <span class="option-price">{{ cs() }}{{ unitPrice(op) | number: '1.2-2' }}</span>
+            </button>
+          }
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ Mini-modal: cliente ══ -->
+@if (showCustomer()) {
+  <div class="modal-backdrop" (click)="showCustomer.set(false)">
+    <div class="modal-card sm" (click)="$event.stopPropagation()">
+      <header class="modal-head">
+        <h3>Cliente</h3>
+        <button type="button" class="modal-x" (click)="showCustomer.set(false)">
+          <ui-icon name="x" styleClass="size-5" />
+        </button>
+      </header>
+      <label class="field">
+        <span>Nombre</span>
+        <input type="text" [ngModel]="customerNameDraft()" (ngModelChange)="customerNameDraft.set($event)" placeholder="Nombre del cliente" />
+      </label>
+      <label class="field">
+        <span>Teléfono (opcional)</span>
+        <input type="text" [ngModel]="customerPhoneDraft()" (ngModelChange)="customerPhoneDraft.set($event)" placeholder="Teléfono" />
+      </label>
+      <div class="modal-actions">
+        @if (cart.customerName()) {
+          <button type="button" class="btn-ghost" (click)="clearCustomer()">Quitar</button>
+        }
+        <button type="button" class="btn-primary" (click)="saveCustomer()">Guardar</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ Mini-modal: descuento ══ -->
+@if (showDiscount()) {
+  <div class="modal-backdrop" (click)="showDiscount.set(false)">
+    <div class="modal-card sm" (click)="$event.stopPropagation()">
+      <header class="modal-head">
+        <h3>Descuento</h3>
+        <button type="button" class="modal-x" (click)="showDiscount.set(false)">
+          <ui-icon name="x" styleClass="size-5" />
+        </button>
+      </header>
+      <div class="disc-chips">
+        @for (p of [5, 10, 15, 20]; track p) {
+          <button type="button" class="disc-chip" [class.active]="discountDraft() === p" (click)="applyDiscount(p)">{{ p }}%</button>
+        }
+      </div>
+      <label class="field">
+        <span>Otro (%)</span>
+        <input type="number" min="0" max="100" [ngModel]="discountDraft()" (ngModelChange)="discountDraft.set($event)" />
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" (click)="applyDiscount(0)">Sin descuento</button>
+        <button type="button" class="btn-primary" (click)="saveDiscount()">Aplicar</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ Mini-modal: nota ══ -->
+@if (showNote()) {
+  <div class="modal-backdrop" (click)="showNote.set(false)">
+    <div class="modal-card sm" (click)="$event.stopPropagation()">
+      <header class="modal-head">
+        <h3>Nota de la venta</h3>
+        <button type="button" class="modal-x" (click)="showNote.set(false)">
+          <ui-icon name="x" styleClass="size-5" />
+        </button>
+      </header>
+      <textarea class="note-area" rows="3" maxlength="240" [ngModel]="noteDraft()" (ngModelChange)="noteDraft.set($event)" placeholder="Ej. entrega mañana, sin bolsa…"></textarea>
+      <div class="modal-actions">
+        <button type="button" class="btn-primary" (click)="saveNote()">Guardar</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ Mini-modal: crear producto suelto ══ -->
+@if (showCreateProduct()) {
+  <div class="modal-backdrop" (click)="showCreateProduct.set(false)">
+    <div class="modal-card sm" (click)="$event.stopPropagation()">
+      <header class="modal-head">
+        <h3>Producto rápido</h3>
+        <button type="button" class="modal-x" (click)="showCreateProduct.set(false)">
+          <ui-icon name="x" styleClass="size-5" />
+        </button>
+      </header>
+      <p class="modal-sub">Se agrega solo a esta venta (no se guarda en el catálogo).</p>
+      <label class="field">
+        <span>Nombre</span>
+        <input type="text" [ngModel]="newProductName()" (ngModelChange)="newProductName.set($event)" placeholder="Ej. Bolsa de regalo" />
+      </label>
+      <label class="field">
+        <span>Precio</span>
+        <input type="number" min="0" [ngModel]="newProductPrice()" (ngModelChange)="newProductPrice.set($event)" placeholder="0.00" />
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="btn-primary" (click)="createSimpleProduct()">Agregar</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ Modal: cobrar ══ -->
+@if (showCobrar()) {
+  <div class="modal-backdrop" (click)="showCobrar.set(false)">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <header class="modal-head">
+        <h3>Cobrar {{ cs() }}{{ cart.total() | number: '1.2-2' }}</h3>
+        <button type="button" class="modal-x" (click)="showCobrar.set(false)">
+          <ui-icon name="x" styleClass="size-5" />
+        </button>
+      </header>
+
+      <p class="modal-sub">Medio de pago</p>
+      <div class="pay-methods">
+        @for (m of payMethods(); track m.label) {
+          <button
+            type="button"
+            class="pay-method"
+            [class.active]="cart.paymentMethod() === m.label"
+            (click)="selectMethod(m.label)"
+          >
+            <ui-icon [name]="m.icon" styleClass="size-5" />
+            <span>{{ m.label }}</span>
+          </button>
+        }
+      </div>
+
+      @if (isCash()) {
+        <label class="field">
+          <span>Efectivo recibido</span>
+          <input type="number" min="0" [ngModel]="amountReceived()" (ngModelChange)="amountReceived.set($event)" placeholder="0.00" />
+        </label>
+        <div class="change-row">
+          <span>Vuelto</span>
+          <strong>{{ cs() }}{{ change() | number: '1.2-2' }}</strong>
+        </div>
+      }
+
+      <button type="button" class="cobrar-btn confirm" [disabled]="isCharging()" (click)="charge()">
+        @if (isCharging()) {
+          <ui-icon name="loader-circle" styleClass="size-5 animate-spin" />
+          Cobrando…
+        } @else {
+          Confirmar cobro · {{ cs() }}{{ cart.total() | number: '1.2-2' }}
+        }
+      </button>
+    </div>
+  </div>
+}
+
+<!-- ══ Escáner de código de barras ══ -->
+@if (showScanner()) {
+  <pos-scanner (detected)="onScan($event)" (closed)="closeScanner()" />
+}

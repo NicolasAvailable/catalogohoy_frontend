@@ -1,0 +1,57 @@
+<div class="pos-root">
+  <!-- ── Barra lateral (rail) ── -->
+  <nav class="pos-rail">
+    <a class="rail-logo" routerLink="/admin" title="Volver al panel">
+      <ui-icon name="store" styleClass="size-6" />
+    </a>
+
+    <div class="rail-items">
+      @for (item of nav; track item.link) {
+        <a
+          class="rail-item"
+          [routerLink]="item.link"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: item.exact }"
+          [title]="item.label"
+        >
+          <ui-icon [name]="item.icon" styleClass="size-5" />
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </div>
+
+    <a
+      class="rail-item rail-gear"
+      routerLink="/pos/configuracion"
+      routerLinkActive="active"
+      title="Configuración"
+    >
+      <ui-icon name="settings" styleClass="size-5" />
+      <span>Config</span>
+    </a>
+  </nav>
+
+  <!-- ── Contenido ── -->
+  <div class="pos-main">
+    <header class="pos-topbar">
+      <div class="pos-brand">
+        <ui-icon name="shopping-bag" styleClass="size-5" />
+        <span>{{ catalogName() }}</span>
+      </div>
+      <div class="pos-topbar-right">
+        <span class="pos-nocash">
+          <ui-icon name="wallet" styleClass="size-4" />
+          Sin caja
+        </span>
+        <a class="pos-exit" routerLink="/admin">
+          <ui-icon name="arrow-left" styleClass="size-4" />
+          <span>Salir</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="pos-content">
+      <router-outlet />
+    </div>
+  </div>
+</div>
