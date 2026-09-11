@@ -6,6 +6,7 @@ export * from './meta-pixel/meta-pixel.provider';
 export * from './posthog/posthog.provider';
 export * from './primeng/primeng.provider';
 export * from './sentry/sentry.provider';
+export * from './sound/notification-sound.service';
 export * from './supabase/supabase.provider';
 export * from './transloco/language.const';
 export * from './transloco/language.service';

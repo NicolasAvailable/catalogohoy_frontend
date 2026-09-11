@@ -1,6 +1,11 @@
 import { inject, Injectable, NgZone } from '@angular/core';
-import { SupabaseClientProvider } from '@catalogohoy/core';
+import { Router } from '@angular/router';
+import {
+  NotificationSoundService,
+  SupabaseClientProvider,
+} from '@catalogohoy/core';
 import { TenantStore } from '@catalogohoy/tenant';
+import { ToastService } from '@shared/infrastructure';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { OrderStore } from './order.store';
 
@@ -21,6 +26,9 @@ export class OrderBadgeRealtimeService {
   private readonly tenantStore = inject(TenantStore);
   private readonly orderStore = inject(OrderStore);
   private readonly zone = inject(NgZone);
+  private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
+  private readonly sound = inject(NotificationSoundService);
   private channel: RealtimeChannel | null = null;
 
   async start(): Promise<void> {
@@ -43,10 +51,33 @@ export class OrderBadgeRealtimeService {
           filter: `tenant_id=eq.${tenantId}`,
         },
         // Any insert/update/delete can change how many orders are pending
-        // (new order, status flipped to completed/cancelled, deletion).
-        () => this.zone.run(() => this.orderStore.loadPendingCount())
+        // (new order, status flipped to completed/cancelled, deletion). Un
+        // INSERT además dispara el aviso in-app (sonido + toast) al dueño.
+        (payload) =>
+          this.zone.run(() => {
+            this.orderStore.loadPendingCount();
+            if (payload.eventType === 'INSERT') {
+              this.notifyNewOrder(
+                (payload.new as { name?: string })?.name ?? ''
+              );
+            }
+          })
       )
       .subscribe();
+  }
+
+  /** Aviso in-app cuando entra una orden nueva por realtime: suena una
+   *  campanita y aparece un toast con el nombre del cliente y un acceso directo
+   *  a "Órdenes". El badge del sidebar se actualiza aparte (loadPendingCount). */
+  private notifyNewOrder(customerName: string): void {
+    this.sound.play();
+    const name = customerName.trim();
+    this.toast.notify('Nueva orden recibida', {
+      description: name || undefined,
+      actionKey: 'Ver',
+      onAction: () =>
+        this.zone.run(() => this.router.navigate(['/admin/orders'])),
+    });
   }
 
   stop(): void {
