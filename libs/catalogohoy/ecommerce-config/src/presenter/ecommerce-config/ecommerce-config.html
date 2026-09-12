@@ -1652,8 +1652,9 @@
               </div>
             </div>
             <a
-              href="/admin/profile?tab=notifications"
-              class="text-primary-600 text-sm font-semibold whitespace-nowrap"
+              routerLink="/admin/profile"
+              [queryParams]="{ tab: 'notifications' }"
+              class="text-primary-600 text-sm font-semibold whitespace-nowrap cursor-pointer"
             >
               {{ 'Ir a Notificaciones' | transloco }}
             </a>

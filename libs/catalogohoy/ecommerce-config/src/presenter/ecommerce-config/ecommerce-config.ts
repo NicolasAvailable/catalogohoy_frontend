@@ -14,7 +14,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePickerModule } from 'primeng/datepicker';
 import { APP_LANGUAGES, isDevMode } from '@catalogohoy/core';
 import { environment } from '@catalogohoy/env';
@@ -114,6 +114,7 @@ const SLUG_ERROR_MESSAGES: Record<string, string> = {
   selector: 'lib-ecommerce-config',
   imports: [
     FormsModule,
+    RouterLink,
     ButtonComponent,
     InputTextComponent,
     InputPhoneComponent,
