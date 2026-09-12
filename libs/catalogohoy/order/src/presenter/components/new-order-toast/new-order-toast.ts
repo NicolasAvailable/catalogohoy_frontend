@@ -15,12 +15,12 @@ import { IconComponent } from '@ui';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
-      class="flex items-center gap-2.5 w-full rounded-xl bg-white border border-grey-100 shadow-lg shadow-grey-400/25 py-2 pl-2.5 pr-2"
+      class="flex items-center gap-3 w-full rounded-xl bg-white border border-grey-100 shadow-lg shadow-grey-400/25 py-2.5 pl-3 pr-2.5"
     >
       <span
-        class="shrink-0 w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center"
+        class="shrink-0 w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center"
       >
-        <ui-icon name="shopping-bag" size="16" styleClass="text-primary-600" />
+        <ui-icon name="shopping-bag" size="17" styleClass="text-primary-600" />
       </span>
       <div class="flex-1 min-w-0 leading-tight">
         <p class="text-[0.82rem] font-semibold text-grey-800">

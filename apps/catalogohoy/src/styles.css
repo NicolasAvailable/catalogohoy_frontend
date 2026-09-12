@@ -44,3 +44,9 @@
   padding: 0 0.25rem;
   border-radius: 0.25rem;
 }
+
+/* Aviso in-app (ngx-sonner): pegarlo un poco más al borde derecho — el default
+   de sonner deja ~32px y se veía muy separado. */
+[data-sonner-toaster][data-x-position='right'] {
+  right: 1rem !important;
+}

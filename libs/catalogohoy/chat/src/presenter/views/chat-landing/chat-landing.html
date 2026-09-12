@@ -1,17 +1,17 @@
-<div class="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col gap-9 sm:gap-12">
+<div class="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex flex-col gap-9 sm:gap-12">
   <!-- ═══ Hero ═══ -->
-  <div class="flex flex-col items-center text-center gap-4 sm:gap-5">
-    <!-- Cluster de canales disponibles hoy: WhatsApp Business + TikTok -->
-    <div class="flex items-center -space-x-3 mb-1">
-      <span class="w-16 h-16 rounded-2xl bg-white border border-grey-100 shadow-sm flex items-center justify-center -rotate-6">
-        <img src="/images/whatsapp.svg" alt="WhatsApp Business" class="w-9 h-9" />
+  <div class="flex flex-col items-center text-center gap-4">
+    <!-- Canales disponibles hoy: WhatsApp Business + TikTok -->
+    <div class="flex items-center -space-x-3">
+      <span class="w-14 h-14 rounded-2xl bg-white border border-grey-100 shadow-sm flex items-center justify-center -rotate-6">
+        <img src="/images/whatsapp.svg" alt="WhatsApp Business" class="w-8 h-8" />
       </span>
-      <span class="w-16 h-16 rounded-2xl bg-white border border-grey-100 shadow-md flex items-center justify-center z-10 rotate-3">
-        <img src="/images/tiktok-logo.svg" alt="TikTok" class="w-8 h-8" />
+      <span class="w-14 h-14 rounded-2xl bg-white border border-grey-100 shadow-md flex items-center justify-center z-10 rotate-3">
+        <img src="/images/tiktok-logo.svg" alt="TikTok" class="w-7 h-7" />
       </span>
     </div>
 
-    <h1 class="text-2xl md:text-3xl font-bold text-grey-800 max-w-2xl leading-tight text-balance">
+    <h1 class="text-2xl md:text-[1.75rem] font-bold text-grey-800 max-w-2xl leading-tight text-balance">
       {{ 'Chatea con tus clientes desde CatalogoHoy' | transloco }}
     </h1>
     <p class="text-base text-grey-500 max-w-xl leading-relaxed">
@@ -20,7 +20,7 @@
 
     <a
       routerLink="/admin/chat/connect"
-      class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary-500 text-white text-base font-semibold hover:bg-primary-600 transition-colors"
+      class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary-500 text-white text-base font-semibold hover:bg-primary-600 transition-colors mt-1"
     >
       {{ 'Configurar Chat' | transloco }}
       <ui-icon name="arrow-right" size="18" />
@@ -32,59 +32,44 @@
     </p>
   </div>
 
-  <!-- ═══ Vista previa REAL de la bandeja (captura de una cuenta demo) ═══ -->
-  <div class="flex flex-col gap-3">
-    <p class="text-center text-xs font-semibold uppercase tracking-wide text-grey-400">
-      {{ 'Así se ve tu bandeja de mensajes' | transloco }}
-    </p>
-
-    <div class="rounded-2xl border border-grey-100 bg-white shadow-xl shadow-grey-300/30 overflow-hidden">
-      <!-- Barra superior tipo ventana -->
-      <div class="flex items-center gap-1.5 px-4 py-2.5 border-b border-grey-50">
-        <span class="w-2.5 h-2.5 rounded-full bg-red-300"></span>
-        <span class="w-2.5 h-2.5 rounded-full bg-amber-300"></span>
-        <span class="w-2.5 h-2.5 rounded-full bg-green-300"></span>
-        <span class="ml-3 text-xs text-grey-300 font-medium">CatalogoHoy · Chat</span>
+  <!-- ═══ Qué podés hacer (izquierda) + preview real (derecha) ═══ -->
+  <div class="grid md:grid-cols-5 gap-8 lg:gap-12 items-center">
+    <!-- Lista minimalista: título + descripción, separadas por líneas finas -->
+    <div class="md:col-span-2 flex flex-col">
+      @for (feature of features; track feature.title) {
+      <div class="py-4 border-b border-grey-100 last:border-b-0 first:pt-0">
+        <p class="text-[0.95rem] font-semibold text-grey-800">{{ feature.title | transloco }}</p>
+        <p class="text-sm text-grey-500 mt-1 leading-relaxed">{{ feature.description | transloco }}</p>
       </div>
-      <!-- Captura real: desktop = lista + conversación + ficha; mobile = lista -->
-      <img
-        src="/images/chat-inbox.webp"
-        alt="Bandeja de conversaciones de CatalogoHoy con chats de WhatsApp y TikTok"
-        class="hidden md:block w-full"
-        loading="lazy"
-      />
-      <img
-        src="/images/chat-inbox-mobile.webp"
-        alt="Lista de conversaciones de WhatsApp y TikTok en CatalogoHoy"
-        class="md:hidden w-full"
-        loading="lazy"
-      />
+      }
     </div>
-  </div>
 
-  <!-- ═══ Qué puedes hacer ═══ -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    @for (feature of features; track feature.title) {
-    <div class="flex items-start gap-4 rounded-2xl border border-grey-100 bg-white px-5 py-5">
-      <span class="w-11 h-11 shrink-0 rounded-xl bg-primary-50 flex items-center justify-center">
-        <ui-icon [name]="feature.icon" size="20" styleClass="text-primary-600" />
-      </span>
-      <div class="min-w-0">
-        <p class="text-sm font-semibold text-grey-800">{{ feature.title | transloco }}</p>
-        <p class="text-xs text-grey-500 mt-1 leading-relaxed">{{ feature.description | transloco }}</p>
+    <!-- Preview real de la bandeja (captura de una cuenta demo) -->
+    <div class="md:col-span-3 flex flex-col gap-2.5">
+      <p class="text-xs font-semibold uppercase tracking-wide text-grey-400">
+        {{ 'Así se ve tu bandeja de mensajes' | transloco }}
+      </p>
+      <div class="rounded-xl border border-grey-100 bg-white shadow-lg shadow-grey-300/25 overflow-hidden">
+        <div class="flex items-center gap-1.5 px-3 py-2 border-b border-grey-50">
+          <span class="w-2 h-2 rounded-full bg-red-300"></span>
+          <span class="w-2 h-2 rounded-full bg-amber-300"></span>
+          <span class="w-2 h-2 rounded-full bg-green-300"></span>
+          <span class="ml-2 text-[0.7rem] text-grey-300 font-medium">CatalogoHoy · Chat</span>
+        </div>
+        <!-- Captura real: desktop = lista + conversación + ficha; mobile = lista -->
+        <img
+          src="/images/chat-inbox.webp"
+          alt="Bandeja de conversaciones de CatalogoHoy con chats de WhatsApp y TikTok"
+          class="hidden md:block w-full"
+          loading="lazy"
+        />
+        <img
+          src="/images/chat-inbox-mobile.webp"
+          alt="Lista de conversaciones de WhatsApp y TikTok en CatalogoHoy"
+          class="md:hidden w-full"
+          loading="lazy"
+        />
       </div>
     </div>
-    }
-  </div>
-
-  <!-- CTA final -->
-  <div class="flex flex-col items-center gap-3 pb-2">
-    <a
-      routerLink="/admin/chat/connect"
-      class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary-500 text-white text-base font-semibold hover:bg-primary-600 transition-colors"
-    >
-      {{ 'Configurar Chat' | transloco }}
-      <ui-icon name="arrow-right" size="18" />
-    </a>
   </div>
 </div>
