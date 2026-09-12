@@ -358,6 +358,15 @@ export class OrderPdfService {
         hasSku ? `SKU: ${item.sku}` : null,
       ].filter(Boolean) as string[];
 
+      // Nombre del producto: se mide a 9pt y se PARTE en varias líneas si no
+      // entra en la columna, para no truncar códigos/descripciones largos.
+      // (Antes solo se dibujaba la 1ª línea y se perdía el resto — p. ej.
+      // "...EXTRAER LIQUIDO 2L 12534" salía cortado en la factura.)
+      const nameLines = doc.splitTextToSize(
+        item.name,
+        qtyX - descX - 6
+      ) as string[];
+
       // Ajusta cada sub-línea al ancho de la columna (medido a 7pt) y las
       // aplana, para que nada se salga ni se trunque a una sola línea.
       doc.setFontSize(7);
@@ -366,8 +375,12 @@ export class OrderPdfService {
       );
       doc.setFontSize(9);
 
+      // La fila reserva alto para TODAS las líneas del nombre (no solo la 1ª)
+      // más las sub-líneas, para que ensureSpace pagine bien y nada quede fuera.
       const rowH = Math.max(
-        (showBsPerLine ? 12 : 8) + subLines.length * 4,
+        (showBsPerLine ? 12 : 8) +
+          (nameLines.length - 1) * 4 +
+          subLines.length * 4,
         imgData ? imgSize + 2 : 0
       );
       // Si la fila no entra en lo que queda de página, sigue en una nueva
@@ -376,7 +389,10 @@ export class OrderPdfService {
       // Centra el nombre con la imagen solo si no hay sub-líneas; si las hay,
       // alinea arriba para que el bloque de texto no quede desbalanceado.
       const textY =
-        y + (imgData && subLines.length === 0 ? imgSize / 2 + 1 : 4);
+        y +
+        (imgData && subLines.length === 0 && nameLines.length === 1
+          ? imgSize / 2 + 1
+          : 4);
 
       // Product image
       if (imgData) {
@@ -389,18 +405,18 @@ export class OrderPdfService {
 
       doc.setFont('helvetica', 'normal');
 
-      // Product name
-      const nameLines = doc.splitTextToSize(
-        item.name,
-        qtyX - descX - 6
-      ) as string[];
-      doc.text(nameLines[0], descX, textY);
+      // Product name — TODAS las líneas (ya partidas arriba), no solo la 1ª.
+      let nameY = textY;
+      for (const nl of nameLines) {
+        doc.text(nl, descX, nameY);
+        nameY += 4;
+      }
 
-      // Sub-líneas (atributos / adicionales / SKU) bajo el nombre
+      // Sub-líneas (atributos / adicionales / SKU) bajo el bloque del nombre.
       if (subLines.length) {
         doc.setFontSize(7);
         doc.setTextColor(...GREY);
-        let subY = textY;
+        let subY = textY + (nameLines.length - 1) * 4;
         for (const line of subLines) {
           subY += 4;
           doc.text(line, descX, subY);
