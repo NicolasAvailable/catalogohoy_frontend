@@ -3,6 +3,9 @@ import { Profile } from './profile.model';
 
 export interface NotificationPreferences {
   notifyPlanExpiry: boolean;
+  notifyNewOrdersEmail: boolean;
+  notifyWeeklyReportEmail: boolean;
+  notifyOrdersInapp: boolean;
 }
 
 export interface BaseProfileService {

@@ -1635,86 +1635,28 @@
 
       <!-- ===== TAB: NOTIFICATIONS ===== -->
       <div [hidden]="activeTab() !== 'notifications'">
+        <!-- Los avisos por email (pedidos + reporte semanal) se movieron a
+             Perfil → Notificaciones: llegan al correo personal de cada persona,
+             así que ahora cada quien controla los suyos. -->
         <ui-card styleClass="config-card">
           <div class="card-header-custom">
             <div class="card-header-left">
-              <div class="card-icon" style="background: #fff7ed;">
+              <div class="card-icon" style="background: #eef2ff;">
                 <ui-icon name="mail" styleClass="size-5"></ui-icon>
               </div>
               <div>
-                <h2 class="card-title">{{ 'Avisos de pedidos por email' | transloco }}</h2>
+                <h2 class="card-title">{{ 'Avisos por email' | transloco }}</h2>
                 <small class="card-subtitle">
-                  {{ 'Recibí un correo cada vez que un cliente confirma un pedido en tu catálogo.' | transloco }}
+                  {{ 'Los avisos de pedidos y el reporte semanal ahora los activa cada persona desde su Perfil → Notificaciones (llegan a su correo).' | transloco }}
                 </small>
               </div>
             </div>
-            <ui-toggle
-              [ngModel]="draftNotifyNewOrders()"
-              (ngModelChange)="draftNotifyNewOrders.set($event)"
-            ></ui-toggle>
-          </div>
-
-          <div
-            class="card-content"
-            [class.section-disabled]="!draftNotifyNewOrders()"
-          >
-            <ul class="notifications-list">
-              <li>
-                {{ 'El correo lo recibe el' | transloco }} <strong>{{ 'dueño del catálogo' | transloco }}</strong> {{ 'y los' | transloco }}
-                <strong>{{ 'miembros del equipo con permiso "Ver órdenes"' | transloco }}</strong>.
-              </li>
-              <li>
-                {{ 'Aplica tanto a pedidos hechos desde el catálogo público como a las órdenes manuales que creás vos en el panel.' | transloco }}
-              </li>
-              <li>
-                {{ 'El email viene desde' | transloco }} <strong>noreply&#64;catalogohoy.com</strong> {{ 'con tu logo y color de marca, e incluye un botón directo al pedido.' | transloco }}
-              </li>
-              <li>
-                {{ 'Para cambiar quién recibe los correos, ajustá los permisos de cada miembro en la sección' | transloco }} <strong>{{ 'Equipo' | transloco }}</strong> {{ 'del menú lateral.' | transloco }}
-              </li>
-            </ul>
-          </div>
-        </ui-card>
-
-        <!-- Weekly report email -->
-        <ui-card styleClass="config-card">
-          <div class="card-header-custom">
-            <div class="card-header-left">
-              <div class="card-icon" style="background: #ecfdf5;">
-                <ui-icon name="bar-chart-3" styleClass="size-5"></ui-icon>
-              </div>
-              <div>
-                <h2 class="card-title">{{ 'Reporte semanal por email' | transloco }}</h2>
-                <small class="card-subtitle">
-                  {{ 'Cada domingo recibí un resumen de cómo fue tu semana en tu catálogo.' | transloco }}
-                </small>
-              </div>
-            </div>
-            <ui-toggle
-              [ngModel]="draftNotifyWeeklyReport()"
-              (ngModelChange)="draftNotifyWeeklyReport.set($event)"
-            ></ui-toggle>
-          </div>
-
-          <div
-            class="card-content"
-            [class.section-disabled]="!draftNotifyWeeklyReport()"
-          >
-            <ul class="notifications-list">
-              <li>
-                {{ 'Lo recibe el' | transloco }} <strong>{{ 'dueño del catálogo' | transloco }}</strong> {{ 'y los' | transloco }}
-                <strong>{{ 'miembros del equipo con permiso "Ver órdenes"' | transloco }}</strong>.
-              </li>
-              <li>
-                {{ 'Incluye' | transloco }} <strong>{{ 'ventas de la semana' | transloco }}</strong>, {{ 'comparativa con la semana anterior' | transloco }},
-                <strong>{{ 'top productos' | transloco }}</strong>, {{ 'clientes nuevos y' | transloco }}
-                <strong>{{ 'visitas al catálogo' | transloco }}</strong>.
-              </li>
-              <li>
-                {{ 'Disponible en' | transloco }} <strong>{{ 'planes pagos' | transloco }}</strong>. {{ 'Se envía los' | transloco }}
-                <strong>{{ 'domingos' | transloco }}</strong>.
-              </li>
-            </ul>
+            <a
+              href="/admin/profile?tab=notifications"
+              class="text-primary-600 text-sm font-semibold whitespace-nowrap"
+            >
+              {{ 'Ir a Notificaciones' | transloco }}
+            </a>
           </div>
         </ui-card>
 

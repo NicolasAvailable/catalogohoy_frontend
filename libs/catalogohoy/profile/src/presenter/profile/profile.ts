@@ -156,6 +156,10 @@ export class Profile {
   // Mirrors the column we'll add to `users.notify_plan_expiry`. Persisted
   // through `ProfileFacade.updateNotificationPreferences` (added below).
   public readonly draftNotifyPlanExpiry = signal<boolean>(true);
+  // Avisos a nivel CUENTA (llegan al correo/panel de la persona, no del catálogo).
+  public readonly draftNotifyOrdersInapp = signal<boolean>(true);
+  public readonly draftNotifyNewOrdersEmail = signal<boolean>(true);
+  public readonly draftNotifyWeeklyReportEmail = signal<boolean>(true);
   public readonly isSavingNotifications = signal(false);
 
   @ViewChild('cancelDialog')
@@ -205,6 +209,14 @@ export class Profile {
       // column read true.
       const pref = (profile as { notifyPlanExpiry?: boolean }).notifyPlanExpiry;
       this.draftNotifyPlanExpiry.set(pref ?? true);
+      const p = profile as {
+        notifyOrdersInapp?: boolean;
+        notifyNewOrdersEmail?: boolean;
+        notifyWeeklyReportEmail?: boolean;
+      };
+      this.draftNotifyOrdersInapp.set(p.notifyOrdersInapp ?? true);
+      this.draftNotifyNewOrdersEmail.set(p.notifyNewOrdersEmail ?? true);
+      this.draftNotifyWeeklyReportEmail.set(p.notifyWeeklyReportEmail ?? true);
     });
 
     // Lazy-load billing history the first time the user opens the tab.
@@ -291,6 +303,9 @@ export class Profile {
     this.isSavingNotifications.set(true);
     const result = await this.profileService.updateNotificationPreferences({
       notifyPlanExpiry: this.draftNotifyPlanExpiry(),
+      notifyOrdersInapp: this.draftNotifyOrdersInapp(),
+      notifyNewOrdersEmail: this.draftNotifyNewOrdersEmail(),
+      notifyWeeklyReportEmail: this.draftNotifyWeeklyReportEmail(),
     });
     result.fold(
       (err) => {

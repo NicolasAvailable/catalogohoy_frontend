@@ -83,6 +83,9 @@ export class ProfileService implements BaseProfileService {
       .from('users')
       .update({
         notify_plan_expiry: prefs.notifyPlanExpiry,
+        notify_new_orders_email: prefs.notifyNewOrdersEmail,
+        notify_weekly_report_email: prefs.notifyWeeklyReportEmail,
+        notify_orders_inapp: prefs.notifyOrdersInapp,
         updated_at: new Date().toISOString(),
       })
       .eq('auth_user_id', auth.user.id);

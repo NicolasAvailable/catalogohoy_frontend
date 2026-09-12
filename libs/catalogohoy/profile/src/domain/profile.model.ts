@@ -7,13 +7,18 @@ export class Profile extends Entity {
     public email: string,
     public photo: string | null,
     public tenantList: TenantList,
-    public notifyPlanExpiry: boolean = true
+    public notifyPlanExpiry: boolean = true,
+    // Preferencias de aviso a nivel CUENTA (llegan al correo/panel de la persona,
+    // no del catálogo). Default true = recibir.
+    public notifyNewOrdersEmail: boolean = true,
+    public notifyWeeklyReportEmail: boolean = true,
+    public notifyOrdersInapp: boolean = true
   ) {
     super();
   }
 
   static empty() {
-    return new Profile('', '', null, TenantList.empty(), true);
+    return new Profile('', '', null, TenantList.empty(), true, true, true, true);
   }
 
   static primitives(primitives: ProfilePrimitive) {
@@ -22,7 +27,10 @@ export class Profile extends Entity {
       primitives.email,
       primitives.photo,
       primitives.tenantList,
-      primitives.notifyPlanExpiry ?? true
+      primitives.notifyPlanExpiry ?? true,
+      primitives.notifyNewOrdersEmail ?? true,
+      primitives.notifyWeeklyReportEmail ?? true,
+      primitives.notifyOrdersInapp ?? true
     ).withId(primitives.id);
   }
 }
@@ -34,4 +42,7 @@ export interface ProfilePrimitive {
   photo: string | null;
   tenantList: TenantList;
   notifyPlanExpiry?: boolean;
+  notifyNewOrdersEmail?: boolean;
+  notifyWeeklyReportEmail?: boolean;
+  notifyOrdersInapp?: boolean;
 }

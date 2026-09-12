@@ -13,4 +13,7 @@ export interface ProfileEntity {
   phone: string;
   photo: string | null;
   notify_plan_expiry?: boolean;
+  notify_new_orders_email?: boolean;
+  notify_weekly_report_email?: boolean;
+  notify_orders_inapp?: boolean;
 }

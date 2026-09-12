@@ -4,6 +4,7 @@ import {
   NotificationSoundService,
   SupabaseClientProvider,
 } from '@catalogohoy/core';
+import { ProfileStore } from '@catalogohoy/profile';
 import { TenantStore } from '@catalogohoy/tenant';
 import { ToastService } from '@shared/infrastructure';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -29,6 +30,7 @@ export class OrderBadgeRealtimeService {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly sound = inject(NotificationSoundService);
+  private readonly profileStore = inject(ProfileStore);
   private channel: RealtimeChannel | null = null;
 
   async start(): Promise<void> {
@@ -70,6 +72,9 @@ export class OrderBadgeRealtimeService {
    *  campanita y aparece un toast con el nombre del cliente y un acceso directo
    *  a "Órdenes". El badge del sidebar se actualiza aparte (loadPendingCount). */
   private notifyNewOrder(customerName: string): void {
+    // Preferencia por usuario (Perfil → Notificaciones): si apagó el aviso en la
+    // app, no suena ni aparece el toast. El badge del sidebar se actualiza igual.
+    if (this.profileStore.profile().notifyOrdersInapp === false) return;
     this.sound.play();
     const name = customerName.trim();
     this.toast.notify('Nueva orden recibida', {
