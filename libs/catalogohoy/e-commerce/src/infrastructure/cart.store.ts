@@ -107,31 +107,47 @@ export const CartStore = signalStore(
       const variant = options?.variant ?? null;
       const addons = options?.addons ?? [];
 
-      // If the product is sized, prefer per-size stock; otherwise fall back
-      // to the product-level stock. Variants share the product-level stock
-      // (no per-variant stock). Either way, "no stock" rejects the add.
-      const sizeEntry =
-        product.isSized && size
-          ? product.sizes.find((s) => s.name === size) ?? null
-          : null;
-      const effectiveStock =
-        sizeEntry !== null
-          ? sizeEntry.stock
-          : product.stock !== null
-          ? Number(product.stock)
-          : null;
+      // Stock que aplica a ESTA selección, de lo más específico a lo general:
+      //   variante + talla → stock de esa talla del variante
+      //   variante (sin talla) → stock propio del variante
+      //   producto con tallas → stock de la talla
+      //   producto → stock del producto
+      // `null` = ilimitado/no rastreado. (Antes las variantes caían al stock
+      // del producto → un variante limitado no se topaba.)
+      let effectiveStock: number | null;
+      if (variant) {
+        const variantSize =
+          variant.sizes?.length && size
+            ? variant.sizes.find((s) => s.name === size) ?? null
+            : null;
+        effectiveStock = variantSize ? variantSize.stock : variant.stock;
+      } else {
+        const sizeEntry =
+          product.isSized && size
+            ? product.sizes.find((s) => s.name === size) ?? null
+            : null;
+        effectiveStock =
+          sizeEntry !== null
+            ? sizeEntry.stock
+            : product.stock !== null
+            ? Number(product.stock)
+            : null;
+      }
 
       if (effectiveStock !== null) {
         if (effectiveStock <= 0) {
           toast.error(transloco.translate('Este producto está agotado'));
           return;
         }
+        // Contar por producto + talla + VARIANTE: cada combinación se topa por
+        // separado (antes mezclaba variantes bajo el mismo producto).
         const currentInCart = store
           .cart()
           .items.filter(
             (i) =>
               i.productId === String(product.id) &&
-              i.size === size
+              i.size === size &&
+              i.variantId === (variant?.id ?? null)
           )
           .reduce((sum, i) => sum + i.quantity, 0);
         if (currentInCart >= effectiveStock) {
@@ -167,7 +183,8 @@ export const CartStore = signalStore(
         size,
         variant?.id ?? null,
         variant?.name ?? null,
-        addons.map((a) => ({ id: a.id, name: a.name, price: a.price }))
+        addons.map((a) => ({ id: a.id, name: a.name, price: a.price })),
+        effectiveStock
       );
       const newCart = store.cart().addItem(item);
       saveCartToStorage(newCart);
@@ -212,7 +229,12 @@ export const CartStore = signalStore(
         1,
         tier.title,
         undefined,
-        product.sku ?? null
+        product.sku ?? null,
+        null,
+        null,
+        null,
+        [],
+        product.stock !== null ? Number(product.stock) : null
       );
       const newCart = store.cart().addItem(item);
       saveCartToStorage(newCart);
@@ -233,6 +255,15 @@ export const CartStore = signalStore(
     },
 
     incrementItem(itemId: string) {
+      // El "+" del carrito respeta el stock: no deja pasar del tope guardado al
+      // agregar (antes incrementaba sin límite y se pedían más de las que hay).
+      const current = store.cart().items.find((i) => i.id === itemId);
+      if (current?.isAtStockLimit) {
+        toast.error(
+          transloco.translate('No hay más stock disponible de este producto')
+        );
+        return;
+      }
       const newCart = store.cart().incrementItem(itemId);
       saveCartToStorage(newCart);
       patchState(store, () => ({ cart: newCart }));
@@ -245,7 +276,16 @@ export const CartStore = signalStore(
     },
 
     updateQuantity(itemId: string, quantity: number) {
-      const newCart = store.cart().updateQuantity(itemId, quantity);
+      // Tope al stock disponible (si la línea lo lleva), avisando al recortar.
+      const current = store.cart().items.find((i) => i.id === itemId);
+      let qty = quantity;
+      if (current?.maxStock != null && qty > current.maxStock) {
+        qty = current.maxStock;
+        toast.error(
+          transloco.translate('No hay más stock disponible de este producto')
+        );
+      }
+      const newCart = store.cart().updateQuantity(itemId, qty);
       saveCartToStorage(newCart);
       patchState(store, () => ({ cart: newCart }));
     },

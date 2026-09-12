@@ -266,6 +266,15 @@
   background: #f3f4f6;
 }
 
+.cart-item__qty-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cart-item__qty-btn:disabled:hover {
+  background: white;
+}
+
 .cart-item__qty {
   min-width: 24px;
   text-align: center;
