@@ -6,8 +6,9 @@ import {
 } from '@catalogohoy/core';
 import { ProfileStore } from '@catalogohoy/profile';
 import { TenantStore } from '@catalogohoy/tenant';
-import { ToastService } from '@shared/infrastructure';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { toast } from 'ngx-sonner';
+import { NewOrderToastComponent } from '../presenter/components/new-order-toast/new-order-toast';
 import { OrderStore } from './order.store';
 
 /**
@@ -28,7 +29,6 @@ export class OrderBadgeRealtimeService {
   private readonly orderStore = inject(OrderStore);
   private readonly zone = inject(NgZone);
   private readonly router = inject(Router);
-  private readonly toast = inject(ToastService);
   private readonly sound = inject(NotificationSoundService);
   private readonly profileStore = inject(ProfileStore);
   private channel: RealtimeChannel | null = null;
@@ -76,12 +76,19 @@ export class OrderBadgeRealtimeService {
     // app, no suena ni aparece el toast. El badge del sidebar se actualiza igual.
     if (this.profileStore.profile().notifyOrdersInapp === false) return;
     this.sound.play();
-    const name = customerName.trim();
-    this.toast.notify('Nueva orden recibida', {
-      description: name || undefined,
-      actionKey: 'Ver',
-      onAction: () =>
-        this.zone.run(() => this.router.navigate(['/admin/orders'])),
+    // Toast a medida (ngx-sonner `custom`): diseño compacto con el botón "Ver"
+    // con aire. Los callbacks cierran el toast y navegan a Órdenes.
+    let id: string | number = 0;
+    id = toast.custom(NewOrderToastComponent, {
+      duration: 7000,
+      componentProps: {
+        customerName: customerName.trim(),
+        onView: () => {
+          toast.dismiss(id);
+          this.zone.run(() => this.router.navigate(['/admin/orders']));
+        },
+        onDismiss: () => toast.dismiss(id),
+      },
     });
   }
 
