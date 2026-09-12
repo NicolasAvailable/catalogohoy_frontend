@@ -316,6 +316,9 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly selectedOrder = signal<OrderBy>('date_desc');
   public readonly selectedDate = signal<Date | null>(null);
   public readonly isProcessing = signal(false);
+  // Id de la orden cuyo PDF se está generando (null = ninguna). Deshabilita su
+  // botón de descarga y le muestra un spinner mientras dura.
+  public readonly downloadingPdfId = signal<number | null>(null);
   public readonly mobileShowAll = signal(false);
 
   /** How many product lines to show before collapsing the products cell. */
@@ -742,10 +745,25 @@ export class OrderListComponent implements OnInit, OnDestroy {
       });
   }
 
-  downloadPdf(order: Order): void {
-    // Pendientes: el recibo se emite a la tasa ACTUAL (mismo criterio que el
-    // listado/detalle). El PDF deriva el rate de totalBs/totalUsd, así que le
-    // pasamos el Bs efectivo; el resto de estados usa su snapshot congelado.
-    this.orderPdf.download({ ...order, totalBs: this.orderBs(order) });
+  async downloadPdf(order: Order): Promise<void> {
+    // Evita descargas simultáneas / doble click: el PDF de órdenes largas tarda
+    // (baja las imágenes de cada producto), así que sin esto el usuario clickea
+    // varias veces y se generan varios PDF a la vez.
+    if (this.downloadingPdfId() !== null) return;
+    this.downloadingPdfId.set(order.id);
+    // Toast de espera ("Generando PDF…") para que se vea que está trabajando;
+    // el success/error lo cierra solo (dismissWait).
+    this.toastService.wait('Generando PDF...');
+    try {
+      // Pendientes: el recibo se emite a la tasa ACTUAL (mismo criterio que el
+      // listado/detalle). El PDF deriva el rate de totalBs/totalUsd, así que le
+      // pasamos el Bs efectivo; el resto de estados usa su snapshot congelado.
+      await this.orderPdf.download({ ...order, totalBs: this.orderBs(order) });
+      this.toastService.success('PDF descargado');
+    } catch {
+      this.toastService.error(new Exception('No se pudo generar el PDF'));
+    } finally {
+      this.downloadingPdfId.set(null);
+    }
   }
 }

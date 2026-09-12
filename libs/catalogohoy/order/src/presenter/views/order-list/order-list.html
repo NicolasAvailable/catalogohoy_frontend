@@ -279,6 +279,8 @@
               variant="text"
               severity="contrast"
               size="small"
+              [isLoading]="downloadingPdfId() === order.id"
+              [disabled]="downloadingPdfId() === order.id"
             />
             @if (canEditOrder()) {
             <ui-button
@@ -531,6 +533,8 @@
                   variant="outlined"
                   severity="contrast"
                   size="small"
+                  [isLoading]="downloadingPdfId() === order.id"
+                  [disabled]="downloadingPdfId() === order.id"
                   [tooltip]="'Descargar PDF' | transloco"
                   tooltipPosition="bottom"
                 />
