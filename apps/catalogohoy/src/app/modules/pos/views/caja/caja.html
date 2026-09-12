@@ -1,0 +1,213 @@
+<div class="caja-wrap">
+  <!-- ── Sin caja abierta: formulario de apertura ── -->
+  @if (caja.loaded() && !caja.hasOpenSession()) {
+    <div class="open-card">
+      <div class="open-badge">
+        <ui-icon name="wallet" styleClass="size-8" />
+      </div>
+      <h2>{{ 'Abrir caja' | transloco }}</h2>
+      <p>{{ 'Iniciá la caja con el efectivo con el que arrancás el turno. Las ventas en efectivo y los movimientos se sumarán para el arqueo de cierre.' | transloco }}</p>
+
+      <label class="fld">
+        <span>{{ 'Efectivo inicial' | transloco }}</span>
+        <div class="money-input">
+          <span class="money-sym">{{ cs() }}</span>
+          <input
+            type="number"
+            inputmode="decimal"
+            min="0"
+            step="0.01"
+            [ngModel]="openingFloat()"
+            (ngModelChange)="openingFloat.set($event)"
+            placeholder="0.00"
+          />
+        </div>
+      </label>
+
+      <label class="fld">
+        <span>{{ 'Nombre de la caja' | transloco }} <em>{{ '(opcional)' | transloco }}</em></span>
+        <input
+          type="text"
+          class="txt"
+          [ngModel]="registerName()"
+          (ngModelChange)="registerName.set($event)"
+          [placeholder]="'Caja 1, Mostrador…' | transloco"
+        />
+      </label>
+
+      <button class="btn-primary" [disabled]="isWorking()" (click)="openCaja()">
+        <ui-icon name="lock-open" styleClass="size-5" />
+        {{ 'Abrir caja' | transloco }}
+      </button>
+    </div>
+  }
+
+  <!-- ── Caja abierta: resumen + arqueo ── -->
+  @if (caja.hasOpenSession()) {
+    @let s = caja.session();
+    @let sum = caja.summary();
+    <div class="session">
+      <header class="session-head">
+        <div>
+          <span class="chip-open">
+            <ui-icon name="circle-dot" styleClass="size-4" />
+            {{ 'Caja abierta' | transloco }}
+          </span>
+          <h2>{{ s?.registerName || ('Caja' | transloco) }}</h2>
+          <p class="muted">
+            {{ 'Abierta' | transloco }} {{ s?.openedAt | date: "d 'de' MMMM, HH:mm" }}
+            · {{ 'inicial' | transloco }} {{ money(s?.openingFloat) }}
+          </p>
+        </div>
+        <button class="btn-danger" (click)="openCloseDialog()">
+          <ui-icon name="lock" styleClass="size-5" />
+          {{ 'Cerrar caja' | transloco }}
+        </button>
+      </header>
+
+      <!-- KPIs -->
+      <div class="kpis">
+        <div class="kpi">
+          <span class="kpi-label">{{ 'Ventas del turno' | transloco }}</span>
+          <strong class="kpi-value">{{ money(sum?.totalSales) }}</strong>
+          <span class="kpi-sub">{{ '{count} ventas' | transloco: { count: (sum?.salesCount || 0) } }}</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">{{ 'Ventas en efectivo' | transloco }}</span>
+          <strong class="kpi-value">{{ money(sum?.cashSales) }}</strong>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">{{ 'Ingresos / Egresos' | transloco }}</span>
+          <strong class="kpi-value">
+            <span class="pos">+{{ money(sum?.movementsIn) }}</span>
+            <span class="neg">−{{ money(sum?.movementsOut) }}</span>
+          </strong>
+        </div>
+        <div class="kpi kpi-accent">
+          <span class="kpi-label">{{ 'Efectivo esperado' | transloco }}</span>
+          <strong class="kpi-value">{{ money(sum?.expectedCash) }}</strong>
+          <span class="kpi-sub">{{ 'inicial + efectivo + ingresos − egresos' | transloco }}</span>
+        </div>
+      </div>
+
+      <!-- Ventas por medio de pago -->
+      <section class="panel">
+        <h3>{{ 'Ventas por medio de pago' | transloco }}</h3>
+        @if (sum?.salesByMethod?.length) {
+          <ul class="rows">
+            @for (m of sum?.salesByMethod; track m.method) {
+              <li class="row">
+                <span class="row-main">{{ m.method | transloco }}</span>
+                <span class="row-sub">{{ m.count }}×</span>
+                <span class="row-amt">{{ money(m.total) }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="muted pad">{{ 'Todavía no hay ventas en esta caja.' | transloco }}</p>
+        }
+      </section>
+    </div>
+  }
+
+  <!-- ── Historial ── -->
+  @if (caja.history().length) {
+    <section class="panel history">
+      <h3>{{ 'Cierres recientes' | transloco }}</h3>
+      <ul class="rows">
+        @for (h of caja.history(); track h.id) {
+          <li class="row">
+            <span class="row-main">
+              {{ h.registerName || ('Caja' | transloco) }}
+              <em class="muted">{{ h.closedAt | date: 'd/M HH:mm' }}</em>
+            </span>
+            <span class="row-sub">{{ 'esperado' | transloco }} {{ money(h.closingExpected) }}</span>
+            <span
+              class="row-amt diff"
+              [class.over]="diffTone(h.closingDifference) === 'over'"
+              [class.short]="diffTone(h.closingDifference) === 'short'"
+              [class.ok]="diffTone(h.closingDifference) === 'ok'"
+            >
+              @if (diffTone(h.closingDifference) === 'ok') {
+                {{ 'cuadró' | transloco }}
+              } @else {
+                {{ (h.closingDifference ?? 0) > 0 ? '+' : '' }}{{ money(h.closingDifference) }}
+              }
+            </span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</div>
+
+<!-- ── Modal: cierre con arqueo ── -->
+@if (showClose()) {
+  <div class="modal-backdrop" (click)="showClose.set(false)">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h3>{{ 'Arqueo de cierre' | transloco }}</h3>
+      <p class="muted">
+        {{ 'Contá el efectivo en la caja y registralo. Comparamos con lo esperado.' | transloco }}
+      </p>
+
+      <div class="arqueo-line">
+        <span>{{ 'Efectivo esperado' | transloco }}</span>
+        <strong>{{ money(caja.summary()?.expectedCash) }}</strong>
+      </div>
+
+      <label class="fld">
+        <span>{{ 'Efectivo contado' | transloco }}</span>
+        <div class="money-input">
+          <span class="money-sym">{{ cs() }}</span>
+          <input
+            type="number"
+            inputmode="decimal"
+            min="0"
+            step="0.01"
+            [ngModel]="countedCash()"
+            (ngModelChange)="countedCash.set($event)"
+            placeholder="0.00"
+            autofocus
+          />
+        </div>
+      </label>
+
+      @if (closeDifference() !== null) {
+        <div
+          class="diff-banner"
+          [class.over]="diffTone(closeDifference()) === 'over'"
+          [class.short]="diffTone(closeDifference()) === 'short'"
+          [class.ok]="diffTone(closeDifference()) === 'ok'"
+        >
+          @if (diffTone(closeDifference()) === 'ok') {
+            <ui-icon name="check" styleClass="size-5" /> {{ 'La caja cuadra' | transloco }}
+          } @else if (diffTone(closeDifference()) === 'over') {
+            <ui-icon name="trending-up" styleClass="size-5" />
+            {{ 'Sobran' | transloco }} {{ money(closeDifference()) }}
+          } @else {
+            <ui-icon name="trending-down" styleClass="size-5" />
+            {{ 'Faltan' | transloco }} {{ money(closeDifference()! * -1) }}
+          }
+        </div>
+      }
+
+      <label class="fld">
+        <span>{{ 'Nota' | transloco }} <em>{{ '(opcional)' | transloco }}</em></span>
+        <textarea
+          class="txt"
+          rows="2"
+          [ngModel]="closeNotes()"
+          (ngModelChange)="closeNotes.set($event)"
+          [placeholder]="'Observaciones del cierre…' | transloco"
+        ></textarea>
+      </label>
+
+      <div class="modal-actions">
+        <button class="btn-ghost" (click)="showClose.set(false)">{{ 'Cancelar' | transloco }}</button>
+        <button class="btn-danger" [disabled]="isWorking()" (click)="confirmClose()">
+          {{ 'Cerrar caja' | transloco }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

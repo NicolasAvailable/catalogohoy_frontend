@@ -163,6 +163,10 @@ export const OrderStore = signalStore(
           type: 'pickup' | 'delivery' | 'shipping';
           fee: number;
         } | null;
+        /** Origen de la orden (default 'manual'); el POS envía 'pos'. */
+        source?: string;
+        /** Caja abierta a la que se imputa la venta del POS (opcional). */
+        posCashSessionId?: number | null;
       }): Promise<E.Either<string, Order>> {
         patchState(store, { isLoading: true, error: null });
 

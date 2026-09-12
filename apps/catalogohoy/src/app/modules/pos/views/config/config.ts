@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TenantStore } from '@catalogohoy/tenant';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { IconComponent } from '@ui';
@@ -24,7 +25,7 @@ interface NavGroup {
 @Component({
   selector: 'pos-config',
   standalone: true,
-  imports: [DecimalPipe, FormsModule, IconComponent],
+  imports: [DecimalPipe, FormsModule, IconComponent, TranslocoPipe],
   templateUrl: './config.html',
   styleUrl: './config.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

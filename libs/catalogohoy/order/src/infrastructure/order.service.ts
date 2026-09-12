@@ -65,6 +65,14 @@ export interface CreateOrderInput {
     type: 'pickup' | 'delivery' | 'shipping';
     fee: number;
   } | null;
+  /** Origen de la orden. Default `'manual'` (alta desde el admin, no notifica).
+   *  El Punto de Venta envía `'pos'` para distinguir las ventas de mostrador
+   *  (métricas/caja/devoluciones) — los triggers de notificación también la
+   *  saltan, igual que `'manual'`. El catálogo público usa `'public'`. */
+  source?: string;
+  /** Caja (sesión) abierta a la que se imputa esta venta del POS. Null/omitido
+   *  cuando no hay caja abierta. */
+  posCashSessionId?: number | null;
 }
 
 export interface UpdateOrderInput extends CreateOrderInput {
@@ -263,9 +271,12 @@ export class OrderService {
       total_bs: input.totalBs,
       tenant_id: input.tenantId,
       // Alta manual desde el admin: los triggers de notificación (WhatsApp/email)
-      // saltan cuando source='manual'. Solo el catálogo público notifica.
-      source: 'manual',
+      // saltan cuando source='manual' o 'pos'. Solo el catálogo público notifica.
+      source: input.source ?? 'manual',
     };
+    // Venta del POS imputada a una caja abierta (opcional).
+    if (input.posCashSessionId != null)
+      payload['pos_cash_session_id'] = input.posCashSessionId;
     if (input.deliveryDate) payload['delivery_date'] = input.deliveryDate;
     if (input.paymentEvidence !== undefined)
       payload['payment_evidence'] = input.paymentEvidence;

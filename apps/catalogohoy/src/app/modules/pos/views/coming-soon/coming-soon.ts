@@ -4,6 +4,7 @@ import {
   inject,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '@ui';
 
 /**
@@ -15,16 +16,16 @@ import { IconComponent } from '@ui';
 @Component({
   selector: 'pos-coming-soon',
   standalone: true,
-  imports: [IconComponent],
+  imports: [IconComponent, TranslocoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="cs">
       <div class="cs-badge">
         <ui-icon [name]="icon" styleClass="size-8" />
       </div>
-      <h2>{{ title }}</h2>
-      <p>{{ desc }}</p>
-      <span class="cs-tag">Próximamente</span>
+      <h2>{{ title | transloco }}</h2>
+      <p>{{ desc | transloco }}</p>
+      <span class="cs-tag">{{ 'Próximamente' | transloco }}</span>
     </div>
   `,
   styles: [
@@ -50,8 +51,8 @@ import { IconComponent } from '@ui';
         width: 4.5rem;
         height: 4.5rem;
         border-radius: 1.25rem;
-        background: rgba(99, 102, 241, 0.12);
-        color: #4f46e5;
+        background: rgba(30, 67, 192, 0.12);
+        color: #1e43c0;
         margin-bottom: 0.5rem;
       }
       .cs h2 {
@@ -67,8 +68,8 @@ import { IconComponent } from '@ui';
         margin-top: 0.5rem;
         padding: 0.35rem 0.85rem;
         border-radius: 999px;
-        background: rgba(99, 102, 241, 0.12);
-        color: #4f46e5;
+        background: rgba(30, 67, 192, 0.12);
+        color: #1e43c0;
         font-size: 0.8rem;
         font-weight: 700;
       }

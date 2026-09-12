@@ -1,13 +1,19 @@
 :host {
+  --blue: #1e43c0;
+  --blue-hover: #17359b;
+  --blue-soft: #e9effc;
+
   --rail-bg: #ffffff;
-  --rail-border: #e6e8ef;
-  --rail-text: #6b7280;
-  --rail-active: #4f46e5;
-  --rail-active-bg: rgba(99, 102, 241, 0.1);
+  --rail-border: #e6e8ee;
+  --rail-icon: #6b7280;
+  --rail-active: #1e43c0;
+  --rail-active-bg: #e9effc;
+
   --top-bg: #ffffff;
-  --top-border: #e6e8ef;
-  --top-text: #1f2430;
+  --top-border: #e6e8ee;
+  --top-text: #2e3138;
   --top-soft: #6b7280;
+  --content-bg: #f6f7f9;
 
   display: block;
   height: 100vh;
@@ -16,77 +22,78 @@
 
 @media (prefers-color-scheme: dark) {
   :host {
-    --rail-bg: #171b22;
-    --rail-border: #2c313c;
-    --rail-text: #9aa1ad;
-    --rail-active: #a5b4fc;
-    --rail-active-bg: rgba(99, 102, 241, 0.18);
-    --top-bg: #171b22;
-    --top-border: #2c313c;
+    --blue: #6f8cf5;
+    --blue-soft: rgba(111, 140, 245, 0.16);
+    --rail-bg: #171a21;
+    --rail-border: #2a2e37;
+    --rail-icon: #9aa1ad;
+    --rail-active: #9db2ff;
+    --rail-active-bg: rgba(111, 140, 245, 0.16);
+    --top-bg: #171a21;
+    --top-border: #2a2e37;
     --top-text: #e7e9ee;
     --top-soft: #9aa1ad;
+    --content-bg: #10131a;
   }
 }
 :host-context(.dark) {
-  --rail-bg: #171b22;
-  --rail-border: #2c313c;
-  --rail-text: #9aa1ad;
-  --rail-active: #a5b4fc;
-  --rail-active-bg: rgba(99, 102, 241, 0.18);
-  --top-bg: #171b22;
-  --top-border: #2c313c;
+  --blue: #6f8cf5;
+  --blue-soft: rgba(111, 140, 245, 0.16);
+  --rail-bg: #171a21;
+  --rail-border: #2a2e37;
+  --rail-icon: #9aa1ad;
+  --rail-active: #9db2ff;
+  --rail-active-bg: rgba(111, 140, 245, 0.16);
+  --top-bg: #171a21;
+  --top-border: #2a2e37;
   --top-text: #e7e9ee;
   --top-soft: #9aa1ad;
+  --content-bg: #10131a;
 }
 
 .pos-root {
   display: grid;
-  grid-template-columns: 5.25rem 1fr;
+  grid-template-columns: 4.5rem 1fr;
   height: 100%;
 }
 
-/* ── Rail ── */
+/* ── Rail (icon-only) ── */
 .pos-rail {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 0.25rem;
-  padding: 0.75rem 0.5rem;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.85rem 0.5rem;
   background: var(--rail-bg);
   border-right: 1px solid var(--rail-border);
 }
 .rail-logo {
   display: grid;
   place-items: center;
-  width: 3rem;
-  height: 3rem;
-  margin: 0 auto 0.75rem;
-  border-radius: 0.9rem;
+  width: 2.6rem;
+  height: 2.6rem;
+  margin-bottom: 0.85rem;
+  border-radius: 0.85rem;
   color: #fff;
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  background: var(--blue);
 }
 .rail-items {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.35rem;
   flex: 1;
+  width: 100%;
+  align-items: center;
 }
 .rail-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2rem;
-  padding: 0.6rem 0.25rem;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 0.75rem;
-  color: var(--rail-text);
-  font-size: 0.68rem;
-  font-weight: 600;
-  text-align: center;
+  color: var(--rail-icon);
   cursor: pointer;
   transition: background 0.12s ease, color 0.12s ease;
-}
-.rail-item span {
-  line-height: 1.1;
 }
 .rail-item:hover {
   color: var(--rail-active);
@@ -98,9 +105,6 @@
 }
 .rail-gear {
   margin-top: 0.5rem;
-  border-top: 1px solid var(--rail-border);
-  padding-top: 0.75rem;
-  border-radius: 0.75rem;
 }
 
 /* ── Main ── */
@@ -109,57 +113,90 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  background: var(--content-bg);
 }
 .pos-topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   height: 3.5rem;
-  padding: 0 1.25rem;
+  padding: 0 1.1rem;
   background: var(--top-bg);
   border-bottom: 1px solid var(--top-border);
 }
-.pos-brand {
+.tb-right {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
+}
+.tb-icon {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.6rem;
+  color: var(--top-soft);
+  cursor: pointer;
+}
+.tb-icon:hover {
+  background: var(--content-bg);
+  color: var(--top-text);
+}
+.tb-sep {
+  width: 1px;
+  height: 1.6rem;
+  background: var(--top-border);
+  margin: 0 0.4rem;
+}
+.tb-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.tb-avatar {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+.tb-userinfo {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.tb-name {
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--top-text);
 }
-.pos-brand ui-icon {
-  color: var(--rail-active);
-}
-.pos-topbar-right {
+.tb-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-}
-.pos-nocash {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.7rem;
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.16);
+  gap: 0.25rem;
+  width: fit-content;
+  font-size: 0.72rem;
+  font-weight: 600;
   color: var(--top-soft);
-  font-size: 0.8rem;
-  font-weight: 600;
+  text-decoration: none;
 }
-.pos-exit {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.4rem 0.85rem;
+.tb-badge.open {
+  color: #17864a;
+}
+.tb-exit {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  margin-left: 0.35rem;
   border-radius: 0.6rem;
-  border: 1px solid var(--top-border);
-  color: var(--top-text);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
+  color: var(--top-soft);
 }
-.pos-exit:hover {
-  border-color: var(--rail-active);
-  color: var(--rail-active);
+.tb-exit:hover {
+  background: var(--content-bg);
+  color: var(--blue);
 }
 .pos-content {
   flex: 1;
@@ -167,14 +204,11 @@
   overflow: hidden;
 }
 
-@media (max-width: 40rem) {
+@media (max-width: 34rem) {
   .pos-root {
-    grid-template-columns: 4.25rem 1fr;
+    grid-template-columns: 3.75rem 1fr;
   }
-  .rail-item span {
+  .tb-name {
     display: none;
-  }
-  .rail-item {
-    padding: 0.7rem 0.25rem;
   }
 }

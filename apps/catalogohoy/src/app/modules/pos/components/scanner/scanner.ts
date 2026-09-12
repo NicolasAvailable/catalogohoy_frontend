@@ -9,6 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '@ui';
 
 /** Forma mínima de la API `BarcodeDetector` (no tipada en el lib DOM). */
@@ -34,17 +35,17 @@ type BarcodeDetectorCtor = new (opts?: {
 @Component({
   selector: 'pos-scanner',
   standalone: true,
-  imports: [FormsModule, IconComponent],
+  imports: [FormsModule, IconComponent, TranslocoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="scanner-backdrop" (click)="close()">
       <div class="scanner-card" (click)="$event.stopPropagation()">
-        <button type="button" class="scanner-close" (click)="close()" aria-label="Cerrar">
+        <button type="button" class="scanner-close" (click)="close()" [attr.aria-label]="'Cerrar' | transloco">
           <ui-icon name="x" styleClass="size-5" />
         </button>
 
         @if (phase() === 'live') {
-          <p class="scanner-hint">Ubicá el código de barras dentro del recuadro</p>
+          <p class="scanner-hint">{{ 'Ubicá el código de barras dentro del recuadro' | transloco }}</p>
         }
 
         <div class="scanner-stage">
@@ -69,7 +70,7 @@ type BarcodeDetectorCtor = new (opts?: {
           } @else if (phase() === 'init') {
             <div class="scanner-state">
               <ui-icon name="camera" styleClass="size-8" />
-              <p>Pedí permiso de cámara para escanear…</p>
+              <p>{{ 'Pedí permiso de cámara para escanear…' | transloco }}</p>
             </div>
           } @else {
             <div class="scanner-state">
@@ -77,8 +78,8 @@ type BarcodeDetectorCtor = new (opts?: {
               <p>
                 {{
                   phase() === 'denied'
-                    ? 'No pudimos acceder a la cámara. Revisá los permisos o ingresá el código a mano.'
-                    : 'Tu navegador no soporta el escaneo por cámara. Ingresá el código a mano.'
+                    ? ('No pudimos acceder a la cámara. Revisá los permisos o ingresá el código a mano.' | transloco)
+                    : ('Tu navegador no soporta el escaneo por cámara. Ingresá el código a mano.' | transloco)
                 }}
               </p>
             </div>
@@ -94,12 +95,12 @@ type BarcodeDetectorCtor = new (opts?: {
             [ngModel]="manualCode()"
             (ngModelChange)="manualCode.set($event)"
             name="manualCode"
-            placeholder="Ingresá o escaneá el código / SKU"
+            [placeholder]="'Ingresá o escaneá el código / SKU' | transloco"
             autocomplete="off"
             #manual
           />
           <button type="submit" class="scanner-manual-btn" [disabled]="!manualCode().trim()">
-            Buscar
+            {{ 'Buscar' | transloco }}
           </button>
         </form>
       </div>

@@ -27,10 +27,13 @@ import {
 } from '@catalogohoy/product';
 import { RateStore } from '@catalogohoy/rate';
 import { TenantStore } from '@catalogohoy/tenant';
+import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { IconComponent } from '@ui';
 import { PosCartStore } from '../../pos-cart.store';
+import { PosCajaStore } from '../../pos-caja.store';
 import { PosSettingsStore } from '../../pos-settings.store';
 import { PosScanner } from '../../components/scanner/scanner';
 
@@ -38,6 +41,9 @@ import { PosScanner } from '../../components/scanner/scanner';
 interface PayMethod {
   label: string;
   icon: string;
+  /** Ajuste % sobre el total con este medio (config del POS): + recargo,
+   *  − descuento, 0 sin ajuste. */
+  adjust: number;
 }
 
 /** Snapshot de una venta cobrada, para el comprobante (se arma antes de vaciar
@@ -46,9 +52,14 @@ interface PosSaleReceipt {
   number: number | null;
   dateStr: string;
   customer: string;
+  phone: string;
   lines: { label: string; qty: number; total: number }[];
   subtotal: number;
   discount: number;
+  /** Envío agregado a la venta. 0 = sin envío. */
+  shipping: number;
+  /** Ajuste del medio de pago (recargo + / descuento −). 0 = sin ajuste. */
+  adjustAmount: number;
   total: number;
   method: string;
   received: number | null;
@@ -58,7 +69,14 @@ interface PosSaleReceipt {
 @Component({
   selector: 'pos-venta',
   standalone: true,
-  imports: [DecimalPipe, FormsModule, IconComponent, PosScanner],
+  imports: [
+    DecimalPipe,
+    FormsModule,
+    IconComponent,
+    PosScanner,
+    RouterLink,
+    TranslocoPipe,
+  ],
   templateUrl: './venta.html',
   styleUrl: './venta.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -66,6 +84,7 @@ interface PosSaleReceipt {
 export default class PosVenta implements OnInit {
   readonly productStore = inject(ProductStore);
   readonly cart = inject(PosCartStore);
+  readonly caja = inject(PosCajaStore);
   private readonly settings = inject(PosSettingsStore);
   private readonly orderStore = inject(OrderStore);
   private readonly rateStore = inject(RateStore);
@@ -75,10 +94,10 @@ export default class PosVenta implements OnInit {
   private readonly toast = inject(ToastService);
 
   private static readonly DEFAULT_METHODS: PayMethod[] = [
-    { label: 'Efectivo', icon: 'banknote' },
-    { label: 'Tarjeta', icon: 'credit-card' },
-    { label: 'Transferencia', icon: 'wallet' },
-    { label: 'Pago móvil', icon: 'smartphone' },
+    { label: 'Efectivo', icon: 'banknote', adjust: 0 },
+    { label: 'Tarjeta', icon: 'credit-card', adjust: 0 },
+    { label: 'Transferencia', icon: 'wallet', adjust: 0 },
+    { label: 'Pago móvil', icon: 'smartphone', adjust: 0 },
   ];
 
   // ── UI state ────────────────────────────────────────────────────────────
@@ -105,6 +124,12 @@ export default class PosVenta implements OnInit {
   readonly discountDraft = signal(0);
   readonly newProductName = signal('');
   readonly newProductPrice = signal<number | null>(null);
+  /** Modal de búsqueda del catálogo (estilo TiendaNube: "Buscar productos"). */
+  readonly showProductSearch = signal(false);
+  /** Envío agregado a la venta (monto). */
+  readonly showShipping = signal(false);
+  readonly shippingDraft = signal<number | null>(null);
+  readonly shipping = signal(0);
 
   /** Símbolo de la moneda de referencia del catálogo (igual que el checkout). */
   readonly cs = computed(
@@ -143,25 +168,45 @@ export default class PosVenta implements OnInit {
   readonly payMethods = computed<PayMethod[]>(() => {
     const configured = this.settings
       .enabledMethods()
-      .map((m) => ({ label: m.label, icon: m.icon }));
+      .map((m) => ({ label: m.label, icon: m.icon, adjust: m.adjustPercent }));
     if (configured.length) return configured;
     const active = this.configStore
       .paymentMethodsList()
       .filter((m) => m.isActive)
-      .map((m) => ({ label: m.name, icon: this.iconForMethod(m.name) }));
+      .map((m) => ({ label: m.name, icon: this.iconForMethod(m.name), adjust: 0 }));
     return active.length ? active : PosVenta.DEFAULT_METHODS;
   });
+
+  /** Ajuste % del medio de pago elegido (recargo/descuento configurado). */
+  readonly selectedAdjust = computed(() => {
+    const label = this.cart.paymentMethod();
+    return this.payMethods().find((m) => m.label === label)?.adjust ?? 0;
+  });
+
+  /** Monto del ajuste del medio de pago sobre el total del carrito. */
+  readonly adjustAmount = computed(
+    () => (this.cart.total() * this.selectedAdjust()) / 100
+  );
+
+  /** Total del carrito con envío (antes del ajuste del medio de pago) — para
+   *  el botón Cobrar y el subtotal del panel. */
+  readonly displayTotal = computed(() => this.cart.total() + this.shipping());
+
+  /** Total REAL a cobrar = carrito + envío ± ajuste del medio de pago. */
+  readonly chargeTotal = computed(() =>
+    Math.max(0, this.cart.total() + this.shipping() + this.adjustAmount())
+  );
 
   /** El medio elegido es efectivo → mostramos el campo "recibido" y el vuelto. */
   readonly isCash = computed(() =>
     /efectivo|cash|contado/i.test(this.cart.paymentMethod())
   );
 
-  /** Vuelto = recibido − total (nunca negativo). */
+  /** Vuelto = recibido − total a cobrar (nunca negativo). */
   readonly change = computed(() => {
     const r = this.amountReceived();
     if (r == null) return 0;
-    return Math.max(0, r - this.cart.total());
+    return Math.max(0, r - this.chargeTotal());
   });
 
   /** Qué elige el modal de opciones para el producto activo. */
@@ -437,6 +482,32 @@ export default class PosVenta implements OnInit {
     this.showCreateProduct.set(false);
   }
 
+  // ── Buscar en el catálogo (modal) ──────────────────────────────────────────
+  openProductSearch(): void {
+    this.search.set('');
+    this.showProductSearch.set(true);
+  }
+
+  closeProductSearch(): void {
+    this.showProductSearch.set(false);
+  }
+
+  // ── Envío ────────────────────────────────────────────────────────────────
+  openShipping(): void {
+    this.shippingDraft.set(this.shipping() || null);
+    this.showShipping.set(true);
+  }
+
+  saveShipping(): void {
+    this.shipping.set(Math.max(0, this.shippingDraft() ?? 0));
+    this.showShipping.set(false);
+  }
+
+  clearShipping(): void {
+    this.shipping.set(0);
+    this.showShipping.set(false);
+  }
+
   // ── Cobro ────────────────────────────────────────────────────────────────
   openCobrar(): void {
     if (this.cart.isEmpty()) return;
@@ -489,10 +560,15 @@ export default class PosVenta implements OnInit {
       comments: this.cart.note() || undefined,
       status: 'completed' as OrderStatus,
       products: this.toOrderItems(),
-      totalUsd: this.cart.total(),
-      totalBs: this.cart.total() * this.exchangeRate(),
+      totalUsd: this.chargeTotal(),
+      totalBs: this.chargeTotal() * this.exchangeRate(),
       deliveryDate: this.toIsoDate(new Date()),
       paymentMethod: this.cart.paymentMethod() || undefined,
+      shippingFee: this.shipping() || undefined,
+      // Venta de mostrador: marca el origen (métricas/devoluciones) y la imputa a
+      // la caja abierta (si la hay) para el arqueo.
+      source: 'pos',
+      posCashSessionId: this.caja.openSessionId(),
     };
     try {
       const result = await this.orderStore.createOrder(orderData);
@@ -505,7 +581,10 @@ export default class PosVenta implements OnInit {
           // Snapshot del comprobante ANTES de vaciar el carrito.
           this.lastSale.set(this.buildReceipt(order));
           this.toast.success('Venta cobrada ✓');
+          // Si la venta se imputó a una caja, refresca su arqueo.
+          if (this.caja.hasOpenSession()) this.caja.refresh();
           this.cart.clear();
+          this.shipping.set(0);
           this.amountReceived.set(null);
           this.showCobrar.set(false);
           this.showSuccess.set(true);
@@ -538,10 +617,13 @@ export default class PosVenta implements OnInit {
         minute: '2-digit',
       }),
       customer: this.cart.customerName(),
+      phone: this.cart.customerPhone(),
       lines,
       subtotal: this.cart.subtotal(),
       discount: this.cart.discountAmount(),
-      total: this.cart.total(),
+      shipping: this.shipping(),
+      adjustAmount: this.adjustAmount(),
+      total: this.chargeTotal(),
       method: this.cart.paymentMethod(),
       received: this.amountReceived(),
       change: this.change(),
@@ -596,6 +678,8 @@ export default class PosVenta implements OnInit {
       <div class="rule"></div>
       <div class="r"><span>Subtotal</span><span>${money(sale.subtotal)}</span></div>
       ${sale.discount > 0 ? `<div class="r"><span>Descuento</span><span>-${money(sale.discount)}</span></div>` : ''}
+      ${sale.shipping > 0 ? `<div class="r"><span>Envío</span><span>${money(sale.shipping)}</span></div>` : ''}
+      ${sale.adjustAmount ? `<div class="r"><span>${sale.adjustAmount > 0 ? 'Recargo' : 'Descuento'} (${esc(sale.method)})</span><span>${sale.adjustAmount > 0 ? '+' : '-'}${money(Math.abs(sale.adjustAmount))}</span></div>` : ''}
       <div class="r tot"><span>TOTAL</span><span>${money(sale.total)}</span></div>
       ${sale.method ? `<div class="r"><span>Pago</span><span>${esc(sale.method)}</span></div>` : ''}
       ${sale.received != null ? `<div class="r"><span>Recibido</span><span>${money(sale.received)}</span></div><div class="r"><span>Vuelto</span><span>${money(sale.change)}</span></div>` : ''}
@@ -616,6 +700,44 @@ export default class PosVenta implements OnInit {
     setTimeout(() => w.print(), 250);
   }
 
+  /** Comparte el recibo por WhatsApp como texto. Si el cliente tiene teléfono,
+   *  abre el chat con ese número; si no, abre el selector de contacto. */
+  shareReceiptWhatsApp(): void {
+    const sale = this.lastSale();
+    if (!sale) return;
+    const cs = this.cs();
+    const money = (n: number) => `${cs}${n.toFixed(2)}`;
+    const t = this.settings.ticket();
+    const parts: string[] = [];
+    if (t.header) parts.push(`*${t.header}*`);
+    parts.push(
+      `Comprobante${sale.number != null ? ` #${sale.number}` : ''} · ${sale.dateStr}`
+    );
+    parts.push('');
+    for (const l of sale.lines) {
+      parts.push(`• ${l.qty}× ${l.label} — ${money(l.total)}`);
+    }
+    parts.push('');
+    if (sale.discount > 0) parts.push(`Descuento: −${money(sale.discount)}`);
+    if (sale.adjustAmount) {
+      parts.push(
+        `${sale.adjustAmount > 0 ? 'Recargo' : 'Descuento'} (${sale.method}): ${sale.adjustAmount > 0 ? '+' : '−'}${money(Math.abs(sale.adjustAmount))}`
+      );
+    }
+    parts.push(`*Total: ${money(sale.total)}*`);
+    if (sale.method) parts.push(`Pago: ${sale.method}`);
+    if (t.footer) {
+      parts.push('');
+      parts.push(t.footer);
+    }
+    const text = encodeURIComponent(parts.join('\n'));
+    const phone = sale.phone.replace(/\D/g, '');
+    const url = phone
+      ? `https://wa.me/${phone}?text=${text}`
+      : `https://wa.me/?text=${text}`;
+    window.open(url, '_blank');
+  }
+
   // ── Helpers de presentación ──────────────────────────────────────────────
   private iconForMethod(name: string): string {
     const n = name.toLowerCase();
@@ -625,13 +747,19 @@ export default class PosVenta implements OnInit {
     return 'wallet';
   }
 
-  /** Etiqueta corta del stock para el chip de la tarjeta de producto. */
-  stockLabel(p: Product): { text: string; tone: 'ok' | 'low' | 'out' } {
+  /** Etiqueta corta del stock para el chip de la tarjeta de producto. `text` es
+   *  la key i18n (KEY-AS-TEXT) y `params` los valores a interpolar en la plantilla
+   *  vía el pipe `transloco`. */
+  stockLabel(p: Product): {
+    text: string;
+    tone: 'ok' | 'low' | 'out';
+    params?: Record<string, unknown>;
+  } {
     if (p.isSoldOut) return { text: 'Agotado', tone: 'out' };
     const n = this.stockNum(p);
     if (n == null) return { text: 'Disponible', tone: 'ok' };
     if (n <= 0) return { text: 'Sin stock', tone: 'out' };
-    if (n <= 5) return { text: `Quedan ${n}`, tone: 'low' };
-    return { text: `${n} en stock`, tone: 'ok' };
+    if (n <= 5) return { text: 'Quedan {count}', tone: 'low', params: { count: n } };
+    return { text: '{count} en stock', tone: 'ok', params: { count: n } };
   }
 }

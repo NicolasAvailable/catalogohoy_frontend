@@ -1,7 +1,7 @@
 <div class="pos-root">
-  <!-- ── Barra lateral (rail) ── -->
+  <!-- ── Barra lateral (rail solo-iconos, estilo TiendaNube) ── -->
   <nav class="pos-rail">
-    <a class="rail-logo" routerLink="/admin" title="Volver al panel">
+    <a class="rail-logo" routerLink="/admin" [title]="'Volver al panel' | transloco">
       <ui-icon name="store" styleClass="size-6" />
     </a>
 
@@ -12,10 +12,9 @@
           [routerLink]="item.link"
           routerLinkActive="active"
           [routerLinkActiveOptions]="{ exact: item.exact }"
-          [title]="item.label"
+          [title]="item.label | transloco"
         >
           <ui-icon [name]="item.icon" styleClass="size-5" />
-          <span>{{ item.label }}</span>
         </a>
       }
     </div>
@@ -24,28 +23,42 @@
       class="rail-item rail-gear"
       routerLink="/pos/configuracion"
       routerLinkActive="active"
-      title="Configuración"
+      [title]="'Configuración' | transloco"
     >
       <ui-icon name="settings" styleClass="size-5" />
-      <span>Config</span>
     </a>
   </nav>
 
   <!-- ── Contenido ── -->
   <div class="pos-main">
     <header class="pos-topbar">
-      <div class="pos-brand">
-        <ui-icon name="shopping-bag" styleClass="size-5" />
-        <span>{{ catalogName() }}</span>
-      </div>
-      <div class="pos-topbar-right">
-        <span class="pos-nocash">
-          <ui-icon name="wallet" styleClass="size-4" />
-          Sin caja
-        </span>
-        <a class="pos-exit" routerLink="/admin">
-          <ui-icon name="arrow-left" styleClass="size-4" />
-          <span>Salir</span>
+      <div class="tb-right">
+        <button type="button" class="tb-icon" [title]="'Notificaciones' | transloco">
+          <ui-icon name="bell" styleClass="size-5" />
+        </button>
+        <button type="button" class="tb-icon" [title]="'Ayuda' | transloco">
+          <ui-icon name="circle-help" styleClass="size-5" />
+        </button>
+        <span class="tb-sep"></span>
+        <div class="tb-user">
+          <span class="tb-avatar"><ui-icon name="user" styleClass="size-4" /></span>
+          <div class="tb-userinfo">
+            <span class="tb-name">{{ catalogName() }}</span>
+            @if (caja.hasOpenSession()) {
+              <a class="tb-badge open" routerLink="/pos/caja">
+                <ui-icon name="wallet" styleClass="size-3.5" />
+                {{ 'Caja abierta' | transloco }}
+              </a>
+            } @else if (caja.loaded()) {
+              <a class="tb-badge" routerLink="/pos/caja">
+                <ui-icon name="wallet" styleClass="size-3.5" />
+                {{ 'Sin caja' | transloco }}
+              </a>
+            }
+          </div>
+        </div>
+        <a class="tb-exit" routerLink="/admin" [title]="'Salir' | transloco">
+          <ui-icon name="log-out" styleClass="size-5" />
         </a>
       </div>
     </header>

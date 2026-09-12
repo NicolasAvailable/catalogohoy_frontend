@@ -1,179 +1,218 @@
 <div class="venta">
-  <!-- ══ Panel izquierdo: productos ══ -->
-  <section class="venta-catalog">
-    <div class="cashbox-banner">
-      <ui-icon name="info" styleClass="size-5 shrink-0" />
-      <div class="cashbox-banner-text">
-        <strong>Iniciá la caja</strong>
-        <span>para seguir los saldos y movimientos por medio de pago.</span>
-      </div>
-      <button type="button" class="cashbox-banner-cta">Iniciar caja</button>
-    </div>
-
-    <div class="add-title">Agregar productos</div>
-
-    <div class="search-row">
-      <div class="search-field">
-        <ui-icon name="search" styleClass="size-4 search-ico" />
-        <input
-          type="text"
-          class="search-input"
-          [ngModel]="search()"
-          (ngModelChange)="search.set($event)"
-          placeholder="Buscar por nombre, descripción o SKU"
-        />
-      </div>
-      <button type="button" class="scan-btn" (click)="openScanner()">
-        <ui-icon name="scan-search" styleClass="size-4" />
-        <span>Escanear</span>
-      </button>
-    </div>
-
-    <div class="quick-actions">
-      <button type="button" class="quick-chip" (click)="openCustomer()">
-        <ui-icon name="user-plus" styleClass="size-4" />
-        <span>{{ cart.customerName() || 'Agregar cliente' }}</span>
-      </button>
-      <button type="button" class="quick-chip" (click)="openDiscount()">
-        <ui-icon name="ticket-percent" styleClass="size-4" />
-        <span>{{ cart.discountPercent() > 0 ? cart.discountPercent() + '% desc.' : 'Aplicar descuento' }}</span>
-      </button>
-      <button type="button" class="quick-chip" (click)="openNote()">
-        <ui-icon name="notepad-text" styleClass="size-4" />
-        <span>{{ cart.note() ? 'Nota ✓' : 'Agregar nota' }}</span>
-      </button>
-      <button type="button" class="quick-chip" (click)="openCreateProduct()">
-        <ui-icon name="plus-circle" styleClass="size-4" />
-        <span>Crear producto</span>
-      </button>
-    </div>
-
-    @if (productStore.isLoading()) {
-      <div class="grid-state">
-        <ui-icon name="loader-circle" styleClass="size-6 animate-spin" />
-        <p>Cargando productos…</p>
-      </div>
-    } @else if (products().length === 0) {
-      <div class="grid-state">
-        <ui-icon name="package-search" styleClass="size-7" />
-        <p>{{ search() ? 'Sin resultados para tu búsqueda' : 'Todavía no tenés productos en el catálogo' }}</p>
-      </div>
-    } @else {
-      <div class="product-grid">
-        @for (p of products(); track p.id) {
-          @let stock = stockLabel(p);
-          <button type="button" class="product-tile" (click)="onProductClick(p)">
-            <div class="tile-thumb">
-              @if (p.photos[0]) {
-                <img [src]="p.photos[0]" [alt]="p.name" loading="lazy" />
-              } @else {
-                <ui-icon name="package" styleClass="size-7 tile-thumb-ph" />
-              }
-              @if (p.isVariant || p.isSized) {
-                <span class="tile-badge">Opciones</span>
-              }
-            </div>
-            <div class="tile-body">
-              <span class="tile-name">{{ p.name }}</span>
-              <span class="tile-price">{{ cs() }}{{ unitPrice(p) | number: '1.2-2' }}</span>
-              <span class="tile-stock" [class]="'tone-' + stock.tone">{{ stock.text }}</span>
-            </div>
-          </button>
-        }
+  <!-- ══ Panel izquierdo: agregar productos ══ -->
+  <section class="venta-left">
+    @if (caja.loaded() && !caja.hasOpenSession()) {
+      <div class="cash-banner">
+        <ui-icon name="info" styleClass="size-5 shrink-0" />
+        <span>{{ 'Iniciá la caja para seguir los saldos y movimientos por medio de pago.' | transloco }}</span>
+        <a class="cash-banner-btn" routerLink="/pos/caja">{{ 'Iniciar caja' | transloco }}</a>
       </div>
     }
+
+    <h2 class="left-title">{{ 'Agregar productos' | transloco }}</h2>
+
+    <div class="search-row">
+      <button type="button" class="search-field" (click)="openProductSearch()">
+        <ui-icon name="search" styleClass="size-4 search-ico" />
+        <span class="search-ph">{{ 'Buscar por nombre, descripción o SKU' | transloco }}</span>
+      </button>
+      <button type="button" class="scan-btn" (click)="openScanner()" [title]="'Escanear' | transloco">
+        <ui-icon name="scan-barcode" styleClass="size-5" />
+      </button>
+    </div>
+
+    <div class="action-tiles">
+      <button type="button" class="tile" (click)="openCustomer()">
+        <span class="tile-ico"><ui-icon name="user" styleClass="size-5" /></span>
+        <span class="tile-label">{{ cart.customerName() || ('Agregar cliente' | transloco) }}</span>
+      </button>
+      <button type="button" class="tile" (click)="openDiscount()">
+        <span class="tile-ico"><ui-icon name="percent" styleClass="size-5" /></span>
+        <span class="tile-label">{{ cart.discountPercent() > 0 ? (cart.discountPercent() + ('% de descuento' | transloco)) : ('Aplicar descuento' | transloco) }}</span>
+      </button>
+      <button type="button" class="tile" (click)="openNote()">
+        <span class="tile-ico"><ui-icon name="sticky-note" styleClass="size-5" /></span>
+        <span class="tile-label">{{ cart.note() ? ('Nota agregada' | transloco) : ('Agregar nota' | transloco) }}</span>
+      </button>
+      <button type="button" class="tile" (click)="openCreateProduct()">
+        <span class="tile-ico"><ui-icon name="tag" styleClass="size-5" /></span>
+        <span class="tile-label">{{ 'Crear producto' | transloco }}</span>
+      </button>
+      <button type="button" class="tile" (click)="openShipping()">
+        <span class="tile-ico"><ui-icon name="truck" styleClass="size-5" /></span>
+        <span class="tile-label">{{ shipping() > 0 ? ('Envío agregado' | transloco) : ('Agregar envío' | transloco) }}</span>
+      </button>
+    </div>
   </section>
 
-  <!-- ══ Panel derecho: carrito ══ -->
-  <aside class="venta-cart">
+  <!-- ══ Panel derecho: venta / carrito ══ -->
+  <aside class="venta-right">
     <header class="cart-head">
-      <h2>Venta</h2>
+      <h1>{{ 'Venta' | transloco }}</h1>
       @if (!cart.isEmpty()) {
         <button type="button" class="cart-clear" (click)="cart.clear()">
-          <ui-icon name="trash" styleClass="size-4" />
-          Vaciar
+          <ui-icon name="trash-2" styleClass="size-4" />
+          {{ 'Vaciar' | transloco }}
         </button>
       }
     </header>
 
-    @if (cart.isEmpty()) {
-      <div class="cart-empty">
-        <ui-icon name="shopping-cart" styleClass="size-9" />
-        <p class="cart-empty-title">Carrito vacío</p>
-        <p class="cart-empty-sub">Escaneá o buscá los productos que el cliente quiere comprar</p>
-      </div>
-    } @else {
-      <div class="cart-lines">
-        @for (l of cart.lines(); track l.key) {
-          <div class="cart-line">
-            <div class="line-thumb">
-              @if (l.photo) {
-                <img [src]="l.photo" [alt]="l.name" />
-              } @else {
-                <ui-icon name="package" styleClass="size-5 tile-thumb-ph" />
-              }
-            </div>
-            <div class="line-info">
-              <span class="line-name">{{ l.name }}</span>
-              @if (l.variantName || l.size) {
-                <span class="line-variant">{{ l.variantName || l.size }}</span>
-              }
-              <span class="line-unit">{{ cs() }}{{ l.price | number: '1.2-2' }} c/u</span>
-            </div>
-            <div class="line-right">
-              <div class="stepper">
-                <button type="button" (click)="cart.decrement(l.key)" aria-label="Restar">
-                  <ui-icon name="minus" styleClass="size-3.5" />
-                </button>
-                <span>{{ l.quantity }}</span>
-                <button type="button" (click)="cart.increment(l.key)" aria-label="Sumar">
-                  <ui-icon name="plus" styleClass="size-3.5" />
-                </button>
-              </div>
-              <span class="line-total">{{ cs() }}{{ l.total | number: '1.2-2' }}</span>
-              <button type="button" class="line-remove" (click)="cart.remove(l.key)" aria-label="Quitar">
-                <ui-icon name="x" styleClass="size-4" />
+    <div class="cart-body">
+      @if (cart.isEmpty()) {
+        <div class="cart-empty">
+          <ui-icon name="shopping-cart" styleClass="size-12 cart-empty-ico" />
+          <h3>{{ 'Carrito vacío' | transloco }}</h3>
+          <p>{{ 'Escaneá o buscá los productos que el cliente quiere comprar' | transloco }}</p>
+          <div class="empty-actions">
+            <button type="button" class="btn-blue" (click)="openProductSearch()">
+              <ui-icon name="search" styleClass="size-4" />
+              {{ 'Buscar productos' | transloco }}
+            </button>
+            <button type="button" class="btn-outline" (click)="openScanner()">
+              <ui-icon name="scan-barcode" styleClass="size-4" />
+              {{ 'Escanear productos' | transloco }}
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="cart-lines">
+          @if (cart.customerName()) {
+            <div class="cart-customer">
+              <ui-icon name="user" styleClass="size-4" />
+              <span>{{ cart.customerName() }}</span>
+              <button type="button" (click)="cart.setCustomer('', '')" [attr.aria-label]="'Quitar' | transloco">
+                <ui-icon name="x" styleClass="size-3.5" />
               </button>
             </div>
-          </div>
-        }
-      </div>
-
-      <div class="cart-summary">
-        @if (cart.customerName()) {
-          <div class="summary-row muted">
-            <span><ui-icon name="user" styleClass="size-3.5" /> {{ cart.customerName() }}</span>
-          </div>
-        }
-        <div class="summary-row">
-          <span>Subtotal ({{ cart.count() }} art.)</span>
-          <span>{{ cs() }}{{ cart.subtotal() | number: '1.2-2' }}</span>
+          }
+          @for (l of cart.lines(); track l.key) {
+            <div class="cart-line">
+              <div class="line-thumb">
+                @if (l.photo) {
+                  <img [src]="l.photo" [alt]="l.name" />
+                } @else {
+                  <ui-icon name="package" styleClass="size-5 tile-thumb-ph" />
+                }
+              </div>
+              <div class="line-info">
+                <span class="line-name">{{ l.name }}</span>
+                @if (l.variantName || l.size) {
+                  <span class="line-variant">{{ l.variantName || l.size }}</span>
+                }
+                <span class="line-unit">{{ cs() }}{{ l.price | number: '1.2-2' }} {{ 'c/u' | transloco }}</span>
+              </div>
+              <div class="line-right">
+                <div class="stepper">
+                  <button type="button" (click)="cart.decrement(l.key)" [attr.aria-label]="'Restar' | transloco">
+                    <ui-icon name="minus" styleClass="size-3.5" />
+                  </button>
+                  <span>{{ l.quantity }}</span>
+                  <button type="button" (click)="cart.increment(l.key)" [attr.aria-label]="'Sumar' | transloco">
+                    <ui-icon name="plus" styleClass="size-3.5" />
+                  </button>
+                </div>
+                <span class="line-total">{{ cs() }}{{ l.total | number: '1.2-2' }}</span>
+                <button type="button" class="line-remove" (click)="cart.remove(l.key)" [attr.aria-label]="'Quitar' | transloco">
+                  <ui-icon name="trash-2" styleClass="size-4" />
+                </button>
+              </div>
+            </div>
+          }
         </div>
-        @if (cart.discountPercent() > 0) {
-          <div class="summary-row discount">
-            <span>Descuento ({{ cart.discountPercent() }}%)</span>
-            <span>−{{ cs() }}{{ cart.discountAmount() | number: '1.2-2' }}</span>
-          </div>
-        }
-        <div class="summary-row total">
-          <span>Total</span>
-          <span>{{ cs() }}{{ cart.total() | number: '1.2-2' }}</span>
-        </div>
-      </div>
-    }
+      }
+    </div>
 
-    <button
-      type="button"
-      class="cobrar-btn"
-      [disabled]="cart.isEmpty()"
-      (click)="openCobrar()"
-    >
-      Cobrar {{ cs() }}{{ cart.total() | number: '1.2-2' }}
-    </button>
+    <footer class="cart-foot">
+      @if (!cart.isEmpty()) {
+        <div class="foot-lines">
+          @if (cart.discountPercent() > 0) {
+            <div class="foot-row discount">
+              <span>{{ 'Descuento ({percent}%)' | transloco: { percent: cart.discountPercent() } }}</span>
+              <span>−{{ cs() }}{{ cart.discountAmount() | number: '1.2-2' }}</span>
+            </div>
+          }
+          @if (shipping() > 0) {
+            <div class="foot-row">
+              <span>{{ 'Envío' | transloco }}</span>
+              <span>{{ cs() }}{{ shipping() | number: '1.2-2' }}</span>
+            </div>
+          }
+        </div>
+      }
+      <div class="foot-subtotal">
+        <span>{{ 'Subtotal' | transloco }} ({{ cart.count() }} {{ 'productos' | transloco }})</span>
+        <strong>{{ cs() }}{{ displayTotal() | number: '1.2-2' }}</strong>
+      </div>
+      <button type="button" class="cobrar-btn" [disabled]="cart.isEmpty()" (click)="openCobrar()">
+        {{ 'Cobrar' | transloco }} {{ cs() }}{{ displayTotal() | number: '1.2-2' }}
+      </button>
+    </footer>
   </aside>
 </div>
 
-<!-- ══ Modal: elegir variante / talla ══ -->
+<!-- ══ Modal: buscar productos del catálogo ══ -->
+@if (showProductSearch()) {
+  <div class="ps-backdrop" (click)="closeProductSearch()">
+    <div class="ps-modal" (click)="$event.stopPropagation()">
+      <header class="ps-head">
+        <h3>{{ 'Agregar productos' | transloco }}</h3>
+        <button type="button" class="modal-x" (click)="closeProductSearch()">
+          <ui-icon name="x" styleClass="size-5" />
+        </button>
+      </header>
+      <div class="ps-search">
+        <ui-icon name="search" styleClass="size-4 search-ico" />
+        <input
+          type="text"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+          [placeholder]="'Buscar por nombre, descripción o SKU' | transloco"
+          autofocus
+        />
+        <button type="button" class="ps-scan" (click)="closeProductSearch(); openScanner()" [title]="'Escanear' | transloco">
+          <ui-icon name="scan-barcode" styleClass="size-5" />
+        </button>
+      </div>
+
+      @if (productStore.isLoading()) {
+        <div class="ps-state">
+          <ui-icon name="loader-circle" styleClass="size-6 animate-spin" />
+          <p>{{ 'Cargando productos…' | transloco }}</p>
+        </div>
+      } @else if (products().length === 0) {
+        <div class="ps-state">
+          <ui-icon name="package-search" styleClass="size-7" />
+          <p>{{ search() ? ('Sin resultados para tu búsqueda' | transloco) : ('Todavía no tenés productos en el catálogo' | transloco) }}</p>
+        </div>
+      } @else {
+        <div class="ps-grid">
+          @for (p of products(); track p.id) {
+            @let stock = stockLabel(p);
+            <div class="ps-card" role="button" tabindex="0" (click)="onProductClick(p)" (keydown.enter)="onProductClick(p)">
+              <div class="ps-thumb">
+                @if (p.photos[0]) {
+                  <img [src]="p.photos[0]" [alt]="p.name" loading="lazy" />
+                } @else {
+                  <ui-icon name="package" styleClass="size-7 tile-thumb-ph" />
+                }
+                @if (p.isVariant || p.isSized) {
+                  <span class="ps-badge">{{ 'Opciones' | transloco }}</span>
+                }
+              </div>
+              <div class="ps-body">
+                <span class="ps-name">{{ p.name }}</span>
+                <span class="ps-price">{{ cs() }}{{ unitPrice(p) | number: '1.2-2' }}</span>
+                <span class="ps-stock" [class]="'tone-' + stock.tone">{{ stock.text | transloco: stock.params }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- ══ Modal: elegir variante / talla / adicionales ══ -->
 @if (optionsProduct(); as op) {
   <div class="modal-backdrop" (click)="closeOptions()">
     <div class="modal-card" (click)="$event.stopPropagation()">
@@ -184,7 +223,7 @@
         </button>
       </header>
       <p class="modal-sub">
-        {{ optionsMode() === 'addons' ? 'Elegí los adicionales' : 'Elegí una opción para agregar al carrito' }}
+        {{ optionsMode() === 'addons' ? ('Elegí los adicionales' | transloco) : ('Elegí una opción para agregar al carrito' | transloco) }}
       </p>
       @switch (optionsMode()) {
         @case ('variant') {
@@ -210,7 +249,7 @@
               <button type="button" class="option-row" (click)="addSize(op, s)">
                 <span class="option-size">{{ s.name }}</span>
                 <span class="option-name">
-                  {{ s.stock == null ? 'Disponible' : s.stock + ' en stock' }}
+                  {{ s.stock == null ? ('Disponible' | transloco) : s.stock + (' en stock' | transloco) }}
                 </span>
                 <span class="option-price">{{ cs() }}{{ unitPrice(op) | number: '1.2-2' }}</span>
               </button>
@@ -226,19 +265,19 @@
                   <span class="addon-price">+{{ cs() }}{{ a.price | number: '1.2-2' }}</span>
                 </div>
                 <div class="stepper">
-                  <button type="button" (click)="decAddon(a.id)" [disabled]="addonQty(a.id) === 0" aria-label="Restar">
+                  <button type="button" (click)="decAddon(a.id)" [disabled]="addonQty(a.id) === 0" [attr.aria-label]="'Restar' | transloco">
                     <ui-icon name="minus" styleClass="size-3.5" />
                   </button>
                   <span>{{ addonQty(a.id) }}</span>
-                  <button type="button" (click)="incAddon(a.id)" aria-label="Sumar">
+                  <button type="button" (click)="incAddon(a.id)" [attr.aria-label]="'Sumar' | transloco">
                     <ui-icon name="plus" styleClass="size-3.5" />
                   </button>
                 </div>
               </div>
             }
           </div>
-          <button type="button" class="cobrar-btn confirm addon-add" (click)="confirmAddons(op)">
-            Agregar · {{ cs() }}{{ addonsRunningTotal(op) | number: '1.2-2' }}
+          <button type="button" class="btn-blue full" (click)="confirmAddons(op)">
+            {{ 'Agregar' | transloco }} · {{ cs() }}{{ addonsRunningTotal(op) | number: '1.2-2' }}
           </button>
         }
       }
@@ -246,101 +285,156 @@
   </div>
 }
 
-<!-- ══ Mini-modal: cliente ══ -->
+<!-- ══ Modal: cliente ══ -->
 @if (showCustomer()) {
   <div class="modal-backdrop" (click)="showCustomer.set(false)">
     <div class="modal-card sm" (click)="$event.stopPropagation()">
       <header class="modal-head">
-        <h3>Cliente</h3>
+        <h3>{{ 'Agregar cliente' | transloco }}</h3>
         <button type="button" class="modal-x" (click)="showCustomer.set(false)">
           <ui-icon name="x" styleClass="size-5" />
         </button>
       </header>
       <label class="field">
-        <span>Nombre</span>
-        <input type="text" [ngModel]="customerNameDraft()" (ngModelChange)="customerNameDraft.set($event)" placeholder="Nombre del cliente" />
+        <span>{{ 'Nombre' | transloco }}</span>
+        <input type="text" [ngModel]="customerNameDraft()" (ngModelChange)="customerNameDraft.set($event)" [placeholder]="'Nombre del cliente' | transloco" />
       </label>
       <label class="field">
-        <span>Teléfono (opcional)</span>
-        <input type="text" [ngModel]="customerPhoneDraft()" (ngModelChange)="customerPhoneDraft.set($event)" placeholder="Teléfono" />
+        <span>{{ 'Teléfono' | transloco }} <em>({{ 'opcional' | transloco }})</em></span>
+        <input type="text" [ngModel]="customerPhoneDraft()" (ngModelChange)="customerPhoneDraft.set($event)" [placeholder]="'Teléfono' | transloco" />
       </label>
       <div class="modal-actions">
         @if (cart.customerName()) {
-          <button type="button" class="btn-ghost" (click)="clearCustomer()">Quitar</button>
+          <button type="button" class="btn-ghost" (click)="clearCustomer()">{{ 'Quitar' | transloco }}</button>
         }
-        <button type="button" class="btn-primary" (click)="saveCustomer()">Guardar</button>
+        <button type="button" class="btn-blue" (click)="saveCustomer()">{{ 'Guardar' | transloco }}</button>
       </div>
     </div>
   </div>
 }
 
-<!-- ══ Mini-modal: descuento ══ -->
+<!-- ══ Modal: descuento ══ -->
 @if (showDiscount()) {
   <div class="modal-backdrop" (click)="showDiscount.set(false)">
-    <div class="modal-card sm" (click)="$event.stopPropagation()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
       <header class="modal-head">
-        <h3>Descuento</h3>
+        <h3>{{ 'Descuento' | transloco }}</h3>
         <button type="button" class="modal-x" (click)="showDiscount.set(false)">
           <ui-icon name="x" styleClass="size-5" />
         </button>
       </header>
-      <div class="disc-chips">
-        @for (p of [5, 10, 15, 20]; track p) {
-          <button type="button" class="disc-chip" [class.active]="discountDraft() === p" (click)="applyDiscount(p)">{{ p }}%</button>
-        }
+      <div class="disc-tabs">
+        <button type="button" class="disc-tab active">
+          <ui-icon name="percent" styleClass="size-4" /> {{ 'Porcentaje' | transloco }}
+        </button>
+        <button type="button" class="disc-tab" disabled>
+          <ui-icon name="dollar-sign" styleClass="size-4" /> {{ 'Monto fijo' | transloco }}
+        </button>
+        <button type="button" class="disc-tab" disabled>
+          <ui-icon name="ticket" styleClass="size-4" /> {{ 'Cupón' | transloco }}
+        </button>
       </div>
       <label class="field">
-        <span>Otro (%)</span>
-        <input type="number" min="0" max="100" [ngModel]="discountDraft()" (ngModelChange)="discountDraft.set($event)" />
+        <span>{{ 'Porcentaje a aplicar' | transloco }}</span>
+        <div class="pct-row">
+          <div class="pct-input">
+            <input type="number" min="0" max="100" [ngModel]="discountDraft()" (ngModelChange)="discountDraft.set($event)" />
+            <span>%</span>
+          </div>
+          @for (p of [5, 10, 15, 20]; track p) {
+            <button type="button" class="pct-chip" [class.active]="discountDraft() === p" (click)="applyDiscount(p)">{{ p }}%</button>
+          }
+        </div>
       </label>
-      <div class="modal-actions">
-        <button type="button" class="btn-ghost" (click)="applyDiscount(0)">Sin descuento</button>
-        <button type="button" class="btn-primary" (click)="saveDiscount()">Aplicar</button>
+      <div class="modal-actions between">
+        <button type="button" class="btn-ghost" (click)="applyDiscount(0)">{{ 'Sin descuento' | transloco }}</button>
+        <button type="button" class="btn-blue" (click)="saveDiscount()">{{ 'Aplicar descuento' | transloco }}</button>
       </div>
     </div>
   </div>
 }
 
-<!-- ══ Mini-modal: nota ══ -->
+<!-- ══ Modal: nota ══ -->
 @if (showNote()) {
   <div class="modal-backdrop" (click)="showNote.set(false)">
-    <div class="modal-card sm" (click)="$event.stopPropagation()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
       <header class="modal-head">
-        <h3>Nota de la venta</h3>
+        <h3>{{ 'Notas' | transloco }}</h3>
         <button type="button" class="modal-x" (click)="showNote.set(false)">
           <ui-icon name="x" styleClass="size-5" />
         </button>
       </header>
-      <textarea class="note-area" rows="3" maxlength="240" [ngModel]="noteDraft()" (ngModelChange)="noteDraft.set($event)" placeholder="Ej. entrega mañana, sin bolsa…"></textarea>
+      <label class="field">
+        <span>{{ 'Descripción de la nota' | transloco }}</span>
+        <textarea class="note-area" rows="3" maxlength="240" [ngModel]="noteDraft()" (ngModelChange)="noteDraft.set($event)"></textarea>
+        <em class="counter">{{ noteDraft().length }}/240 {{ 'caracteres' | transloco }}</em>
+      </label>
       <div class="modal-actions">
-        <button type="button" class="btn-primary" (click)="saveNote()">Guardar</button>
+        <button type="button" class="btn-ghost" (click)="showNote.set(false)">{{ 'Cancelar' | transloco }}</button>
+        <button type="button" class="btn-blue" (click)="saveNote()">{{ 'Agregar nota' | transloco }}</button>
       </div>
     </div>
   </div>
 }
 
-<!-- ══ Mini-modal: crear producto suelto ══ -->
+<!-- ══ Modal: crear producto simple ══ -->
 @if (showCreateProduct()) {
   <div class="modal-backdrop" (click)="showCreateProduct.set(false)">
-    <div class="modal-card sm" (click)="$event.stopPropagation()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
       <header class="modal-head">
-        <h3>Producto rápido</h3>
+        <h3>{{ 'Crear producto simple' | transloco }}</h3>
         <button type="button" class="modal-x" (click)="showCreateProduct.set(false)">
           <ui-icon name="x" styleClass="size-5" />
         </button>
       </header>
-      <p class="modal-sub">Se agrega solo a esta venta (no se guarda en el catálogo).</p>
+      <p class="modal-sub">{{ 'Se agrega solo a esta venta (no se guarda en el catálogo).' | transloco }}</p>
       <label class="field">
-        <span>Nombre</span>
-        <input type="text" [ngModel]="newProductName()" (ngModelChange)="newProductName.set($event)" placeholder="Ej. Bolsa de regalo" />
+        <span>{{ 'Nombre del producto' | transloco }}</span>
+        <input type="text" [ngModel]="newProductName()" (ngModelChange)="newProductName.set($event)" [placeholder]="'Ej. Bolsa de regalo' | transloco" />
       </label>
       <label class="field">
-        <span>Precio</span>
+        <span>{{ 'Precio de venta' | transloco }}</span>
         <input type="number" min="0" [ngModel]="newProductPrice()" (ngModelChange)="newProductPrice.set($event)" placeholder="0.00" />
       </label>
       <div class="modal-actions">
-        <button type="button" class="btn-primary" (click)="createSimpleProduct()">Agregar</button>
+        <button type="button" class="btn-ghost" (click)="showCreateProduct.set(false)">{{ 'Cancelar' | transloco }}</button>
+        <button type="button" class="btn-blue" (click)="createSimpleProduct()">{{ 'Crear y agregar al carrito' | transloco }}</button>
       </div>
+    </div>
+  </div>
+}
+
+<!-- ══ Modal: agregar envío ══ -->
+@if (showShipping()) {
+  <div class="modal-backdrop" (click)="showShipping.set(false)">
+    <div class="modal-card sm" (click)="$event.stopPropagation()">
+      @if (cart.isEmpty()) {
+        <header class="modal-head">
+          <h3>{{ 'Agregá productos para configurar el envío' | transloco }}</h3>
+        </header>
+        <p class="modal-sub">{{ 'Para configurar el envío necesitás tener productos en el carrito.' | transloco }}</p>
+        <div class="modal-actions">
+          <button type="button" class="btn-ghost" (click)="showShipping.set(false)">{{ 'Cancelar' | transloco }}</button>
+          <button type="button" class="btn-blue" (click)="showShipping.set(false); openProductSearch()">{{ 'Agregar productos' | transloco }}</button>
+        </div>
+      } @else {
+        <header class="modal-head">
+          <h3>{{ 'Agregar envío' | transloco }}</h3>
+          <button type="button" class="modal-x" (click)="showShipping.set(false)">
+            <ui-icon name="x" styleClass="size-5" />
+          </button>
+        </header>
+        <label class="field">
+          <span>{{ 'Costo del envío' | transloco }}</span>
+          <input type="number" min="0" step="0.01" [ngModel]="shippingDraft()" (ngModelChange)="shippingDraft.set($event)" placeholder="0.00" />
+        </label>
+        <div class="modal-actions">
+          @if (shipping() > 0) {
+            <button type="button" class="btn-ghost" (click)="clearShipping()">{{ 'Quitar' | transloco }}</button>
+          }
+          <button type="button" class="btn-blue" (click)="saveShipping()">{{ 'Agregar' | transloco }}</button>
+        </div>
+      }
     </div>
   </div>
 }
@@ -350,13 +444,13 @@
   <div class="modal-backdrop" (click)="showCobrar.set(false)">
     <div class="modal-card" (click)="$event.stopPropagation()">
       <header class="modal-head">
-        <h3>Cobrar {{ cs() }}{{ cart.total() | number: '1.2-2' }}</h3>
+        <h3>{{ 'Cobrar' | transloco }} {{ cs() }}{{ chargeTotal() | number: '1.2-2' }}</h3>
         <button type="button" class="modal-x" (click)="showCobrar.set(false)">
           <ui-icon name="x" styleClass="size-5" />
         </button>
       </header>
 
-      <p class="modal-sub">Medio de pago</p>
+      <p class="modal-sub">{{ 'Medio de pago' | transloco }}</p>
       <div class="pay-methods">
         @for (m of payMethods(); track m.label) {
           <button
@@ -367,27 +461,47 @@
           >
             <ui-icon [name]="m.icon" styleClass="size-5" />
             <span>{{ m.label }}</span>
+            @if (m.adjust) {
+              <small class="pay-adjust">{{ m.adjust > 0 ? '+' : '' }}{{ m.adjust }}%</small>
+            }
           </button>
         }
       </div>
 
+      @if (selectedAdjust() !== 0) {
+        <div class="cobrar-summary">
+          <div class="foot-row">
+            <span>{{ 'Total' | transloco }}</span>
+            <span>{{ cs() }}{{ displayTotal() | number: '1.2-2' }}</span>
+          </div>
+          <div class="foot-row" [class.discount]="selectedAdjust() < 0">
+            <span>{{ selectedAdjust() > 0 ? ('Recargo' | transloco) : ('Descuento' | transloco) }} ({{ selectedAdjust() }}%)</span>
+            <span>{{ selectedAdjust() > 0 ? '+' : '−' }}{{ cs() }}{{ (adjustAmount() < 0 ? -adjustAmount() : adjustAmount()) | number: '1.2-2' }}</span>
+          </div>
+          <div class="foot-row total">
+            <span>{{ 'A cobrar' | transloco }}</span>
+            <span>{{ cs() }}{{ chargeTotal() | number: '1.2-2' }}</span>
+          </div>
+        </div>
+      }
+
       @if (isCash()) {
         <label class="field">
-          <span>Efectivo recibido</span>
+          <span>{{ 'Efectivo recibido' | transloco }}</span>
           <input type="number" min="0" [ngModel]="amountReceived()" (ngModelChange)="amountReceived.set($event)" placeholder="0.00" />
         </label>
         <div class="change-row">
-          <span>Vuelto</span>
+          <span>{{ 'Vuelto' | transloco }}</span>
           <strong>{{ cs() }}{{ change() | number: '1.2-2' }}</strong>
         </div>
       }
 
-      <button type="button" class="cobrar-btn confirm" [disabled]="isCharging()" (click)="charge()">
+      <button type="button" class="btn-blue full" [disabled]="isCharging()" (click)="charge()">
         @if (isCharging()) {
           <ui-icon name="loader-circle" styleClass="size-5 animate-spin" />
-          Cobrando…
+          {{ 'Cobrando…' | transloco }}
         } @else {
-          Confirmar cobro · {{ cs() }}{{ cart.total() | number: '1.2-2' }}
+          {{ 'Confirmar cobro' | transloco }} · {{ cs() }}{{ chargeTotal() | number: '1.2-2' }}
         }
       </button>
     </div>
@@ -401,24 +515,28 @@
       <div class="success-check">
         <ui-icon name="circle-check-big" styleClass="size-10" />
       </div>
-      <h3 class="success-title">Venta cobrada</h3>
+      <h3 class="success-title">{{ 'Venta cobrada' | transloco }}</h3>
       <p class="success-total">{{ cs() }}{{ sale.total | number: '1.2-2' }}</p>
       @if (sale.number != null) {
-        <p class="success-num">Comprobante #{{ sale.number }}</p>
+        <p class="success-num">{{ 'Comprobante' | transloco }} #{{ sale.number }}</p>
       }
       @if (sale.received != null) {
         <div class="success-change">
-          <span>Vuelto</span>
+          <span>{{ 'Vuelto' | transloco }}</span>
           <strong>{{ cs() }}{{ sale.change | number: '1.2-2' }}</strong>
         </div>
       }
       <div class="success-actions">
-        <button type="button" class="btn-ghost with-icon" (click)="printReceipt()">
+        <button type="button" class="btn-outline with-icon" (click)="printReceipt()">
           <ui-icon name="printer" styleClass="size-4" />
-          Imprimir recibo
+          {{ 'Imprimir recibo' | transloco }}
         </button>
-        <button type="button" class="cobrar-btn confirm" (click)="newSale()">
-          Nueva venta
+        <button type="button" class="btn-outline with-icon" (click)="shareReceiptWhatsApp()">
+          <ui-icon name="message-circle" styleClass="size-4" />
+          {{ 'Enviar por WhatsApp' | transloco }}
+        </button>
+        <button type="button" class="btn-blue full" (click)="newSale()">
+          {{ 'Nueva venta' | transloco }}
         </button>
       </div>
     </div>
