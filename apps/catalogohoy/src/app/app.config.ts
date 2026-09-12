@@ -12,6 +12,7 @@ import {
 import {
   NavigationError,
   provideRouter,
+  TitleStrategy,
   withComponentInputBinding,
   withNavigationErrorHandler,
   withViewTransitions,
@@ -25,6 +26,7 @@ import {
   resolveInitialLanguage,
 } from '@catalogohoy/core';
 import { appRoutes } from './app.routes';
+import { AppTitleStrategy } from './app-title.strategy';
 
 // en viene incluido por defecto en Angular; se registran los otros 3 idiomas.
 registerLocaleData(localeEs);
@@ -79,6 +81,8 @@ export const appConfig: ApplicationConfig = {
       })
     ),
     provideHttpClient(withFetch()),
+    // Título de pestaña dinámico en el admin: "<Negocio> | <Módulo>".
+    { provide: TitleStrategy, useClass: AppTitleStrategy },
     providePrimeNG(),
     provideTranslation(),
     provideUi(),
