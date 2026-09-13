@@ -3,5 +3,6 @@ Allow: /
 Disallow: /assets/
 
 Sitemap: https://catalogohoy.com/sitemap.xml
+Sitemap: https://catalogohoy.com/catalogos.xml
 
 Host: https://catalogohoy.com

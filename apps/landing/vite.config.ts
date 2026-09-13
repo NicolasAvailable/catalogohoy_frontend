@@ -30,6 +30,18 @@ const prerenderPages = (): Plugin => ({
   },
 });
 
+/** Genera desde la DB (no manual): catalogos.xml (sitemap índice de todos los
+ *  catálogos con productos) + el directorio público /tiendas que los enlaza. */
+const generateCatalogs = (): Plugin => ({
+  name: "generate-catalogs",
+  apply: "build",
+  closeBundle() {
+    execFileSync("node", [path.resolve(__dirname, "scripts/generate-catalogs.mjs")], {
+      stdio: "inherit",
+    });
+  },
+});
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
@@ -44,6 +56,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     prerenderBlog(),
     prerenderPages(),
+    generateCatalogs(),
   ].filter(Boolean),
   resolve: {
     alias: {
