@@ -32,7 +32,7 @@ export const alternativasVenderPorWhatsapp2026: BlogArticle = {
     { type: "h3", text: "1. El catálogo nativo de WhatsApp Business" },
     {
       type: "p",
-      html: "Es gratis y vive donde están tus clientes — buen punto de partida. Sus límites aparecen rápido: <strong>no maneja variantes</strong> de verdad (cada talla es un producto repetido), la navegación es una lista plana sin buscador real, no arma un pedido calculado con envío, y todo queda atado a un solo número. Sirve para pocos productos y para arrancar.",
+      html: "Es gratis y vive donde están tus clientes — buen punto de partida. Sus límites aparecen rápido: <strong>no maneja variantes</strong> de verdad (cada talla es un producto repetido), la navegación es una lista plana sin buscador real, no arma un pedido calculado con envío, y todo queda atado a un solo número. Sirve para pocos productos y para arrancar. Lo comparamos a fondo en <a href=\"/blog/comparativas/catalogohoy-vs-catalogo-whatsapp-business-2026\">catálogo de WhatsApp Business vs CatalogoHoy</a>.",
     },
     { type: "h3", text: "2. El PDF (o Canva)" },
     {
@@ -42,7 +42,7 @@ export const alternativasVenderPorWhatsapp2026: BlogArticle = {
     { type: "h3", text: "3. Una tienda online completa (tipo Tiendanube)" },
     {
       type: "p",
-      html: "Una plataforma de e-commerce arma una tienda con carrito y <strong>pago con tarjeta en el sitio</strong>. Es potente y correcta si tu operación es de e-commerce clásico con stock y envíos. A cambio, pide más configuración (pagos, envíos) y una suscripción mensual desde el día uno. Comparamos este camino en detalle en <a href=\"/blog/comparativas/catalogohoy-vs-tiendanube-2026\">CatalogoHoy vs Tiendanube</a>.",
+      html: "Una plataforma de e-commerce arma una tienda con carrito y <strong>pago con tarjeta en el sitio</strong>. Es potente y correcta si tu operación es de e-commerce clásico con stock y envíos. A cambio, pide más configuración (pagos, envíos) y una suscripción mensual desde el día uno. Comparamos este camino en detalle en <a href=\"/blog/comparativas/catalogohoy-vs-tiendanube-2026\">CatalogoHoy vs Tiendanube</a> y, en su versión global, en <a href=\"/blog/comparativas/catalogohoy-vs-shopify-2026\">CatalogoHoy vs Shopify</a>. Y si tu duda es entre un marketplace y tu canal propio, mirá <a href=\"/blog/comparativas/catalogohoy-vs-mercado-libre-2026\">CatalogoHoy vs Mercado Libre</a>.",
     },
     { type: "h3", text: "4. Un catálogo con enlace pensado para WhatsApp" },
     {

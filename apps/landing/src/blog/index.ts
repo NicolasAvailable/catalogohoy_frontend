@@ -7,6 +7,9 @@ import { comoCobrarPorWhatsapp2026 } from "./articles/como-cobrar-por-whatsapp-2
 import { alternativasVenderPorWhatsapp2026 } from "./articles/alternativas-para-vender-por-whatsapp-2026";
 import { catalogohoyVsTiendanube2026 } from "./articles/catalogohoy-vs-tiendanube-2026";
 import { catalogohoyVsTakeApp2026 } from "./articles/catalogohoy-vs-take-app-2026";
+import { catalogohoyVsShopify2026 } from "./articles/catalogohoy-vs-shopify-2026";
+import { catalogohoyVsCatalogoWhatsappBusiness2026 } from "./articles/catalogohoy-vs-catalogo-whatsapp-business-2026";
+import { catalogohoyVsMercadoLibre2026 } from "./articles/catalogohoy-vs-mercado-libre-2026";
 import { COUNTRY_ARTICLES } from "./articles/paises";
 
 export const CATEGORIES: BlogCategory[] = [
@@ -47,6 +50,9 @@ const REGISTRY: BlogArticle[] = [
   alternativasVenderPorWhatsapp2026,
   catalogohoyVsTiendanube2026,
   catalogohoyVsTakeApp2026,
+  catalogohoyVsShopify2026,
+  catalogohoyVsCatalogoWhatsappBusiness2026,
+  catalogohoyVsMercadoLibre2026,
   comoMejorarLasVentas2026,
   comoCobrarPorWhatsapp2026,
   comoVenderPorWhatsapp2026,
