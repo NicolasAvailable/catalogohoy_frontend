@@ -259,6 +259,7 @@ const STATIC_ROUTES = [
   { path: "/crear-catalogo-online-gratis", priority: "0.8", changefreq: "monthly" },
   { path: "/catalogo-para-tiendas-de-ropa", priority: "0.8", changefreq: "monthly" },
   { path: "/menu-digital-para-restaurantes", priority: "0.8", changefreq: "monthly" },
+  { path: "/tiendas", priority: "0.7", changefreq: "daily" },
   { path: "/blog", priority: "0.7", changefreq: "weekly" },
   { path: "/privacy-policy", priority: "0.3", changefreq: "yearly" },
   { path: "/terms-of-service", priority: "0.3", changefreq: "yearly" },

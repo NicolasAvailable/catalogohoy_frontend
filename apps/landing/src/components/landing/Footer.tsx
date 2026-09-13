@@ -47,6 +47,8 @@ const Footer = () => {
             <Link to="/menu-digital-para-restaurantes" className={linkCls}>Menú digital para restaurantes</Link>
             <Link to="/blog/ventas-por-whatsapp/como-vender-por-whatsapp-guia-2026" className={linkCls}>Cómo vender por WhatsApp</Link>
             <Link to="/blog/por-pais" className={linkCls}>Guías por país</Link>
+            {/* /tiendas es una página estática (fuera de la SPA) → <a> plano, no <Link> */}
+            <a href="/tiendas" className={linkCls}>Explorar catálogos</a>
           </nav>
 
           {/* Legal */}
