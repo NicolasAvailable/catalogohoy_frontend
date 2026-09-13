@@ -4,6 +4,9 @@ import { comoCrearCatalogoDigital2026 } from "./articles/como-crear-un-catalogo-
 import { catalogoPdfVsOnline2026 } from "./articles/catalogo-pdf-vs-catalogo-online-2026";
 import { comoMejorarLasVentas2026 } from "./articles/como-mejorar-las-ventas-2026";
 import { comoCobrarPorWhatsapp2026 } from "./articles/como-cobrar-por-whatsapp-2026";
+import { alternativasVenderPorWhatsapp2026 } from "./articles/alternativas-para-vender-por-whatsapp-2026";
+import { catalogohoyVsTiendanube2026 } from "./articles/catalogohoy-vs-tiendanube-2026";
+import { catalogohoyVsTakeApp2026 } from "./articles/catalogohoy-vs-take-app-2026";
 import { COUNTRY_ARTICLES } from "./articles/paises";
 
 export const CATEGORIES: BlogCategory[] = [
@@ -31,10 +34,19 @@ export const CATEGORIES: BlogCategory[] = [
     description:
       "Cómo crear tu catálogo y vender online en cada país de Latinoamérica.",
   },
+  {
+    slug: "comparativas",
+    name: "Comparativas",
+    description:
+      "CatalogoHoy frente a otras opciones para vender online: comparativas honestas para elegir bien.",
+  },
 ];
 
 /** Registro editorial: a igual fecha manda este orden (el primero es el destacado). */
 const REGISTRY: BlogArticle[] = [
+  alternativasVenderPorWhatsapp2026,
+  catalogohoyVsTiendanube2026,
+  catalogohoyVsTakeApp2026,
   comoMejorarLasVentas2026,
   comoCobrarPorWhatsapp2026,
   comoVenderPorWhatsapp2026,
