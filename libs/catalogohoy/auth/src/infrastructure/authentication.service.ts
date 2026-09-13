@@ -213,12 +213,16 @@ export class AuthenticationService implements BaseAuthenticationService {
           // notificaciones requiere actualizar el trigger `handle_new_user`
           // (pendiente en DB).
           store_whatsapp: credentials.whatsapp ?? null,
+          // De qué red/canal vino el registro (utm) → lo muestra Slack y lo
+          // cruza GA4. Ver _readAttribution().
+          ...this._readAttribution(),
         },
       },
     });
     if (error) {
       return E.left(errorMapper(error as AuthApiError));
     }
+    this._fireSignupEvent('email');
 
     // Si la confirmación de correo está activada en Supabase, signUp NO devuelve
     // sesión: el usuario debe confirmar su email antes de entrar. El tenant ya lo
@@ -239,6 +243,69 @@ export class AuthenticationService implements BaseAuthenticationService {
     await this.setupTenantLocale(credentials.countryCode);
     await this._tryRegisterReferral(Number(tenant.id), credentials.referralCode);
     return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
+  }
+
+  // ── Atribución de tráfico (de qué red vino el registro) ───────────
+  /** Lee la atribución para adjuntarla al registro: primero la cookie
+   *  `chy_attr` que setea el landing en `.catalogohoy.com` (first-touch con el
+   *  utm de la URL de origen), y si no está, los `utm_*` de la URL del propio
+   *  signup (links que apuntan directo a auth). Va a `user_metadata` → la edge
+   *  fn `new-lead-slack` la muestra en Slack y GA4 la cruza por dominio.
+   *  Best-effort: nunca rompe el signup. */
+  private _readAttribution(): Record<string, string> {
+    try {
+      let source = '';
+      let medium = '';
+      let campaign = '';
+      const m = document.cookie.match(/(?:^|;\s*)chy_attr=([^;]+)/);
+      if (m) {
+        const o = JSON.parse(decodeURIComponent(m[1]));
+        source = (o.s ?? '').toString();
+        medium = (o.m ?? '').toString();
+        campaign = (o.c ?? '').toString();
+      }
+      if (!source) {
+        const q = new URLSearchParams(window.location.search);
+        source = q.get('utm_source') ?? '';
+        medium = q.get('utm_medium') ?? '';
+        campaign = q.get('utm_campaign') ?? '';
+      }
+      if (!source) return {};
+      const clean = (v: string) => v.trim().slice(0, 60);
+      const out: Record<string, string> = { signup_source: clean(source) };
+      if (medium) out['signup_medium'] = clean(medium);
+      if (campaign) out['signup_campaign'] = clean(campaign);
+      return out;
+    } catch {
+      return {};
+    }
+  }
+
+  /** Google no pasa por `signUp` con user_metadata → escribimos la atribución
+   *  en el auth user (hay sesión tras el OAuth) ANTES de crear el tenant, para
+   *  que el metadata esté cuando dispare el trigger de lead. Best-effort. */
+  private async _writeAttribution(): Promise<void> {
+    const attr = this._readAttribution();
+    if (!Object.keys(attr).length) return;
+    try {
+      await this.client.auth.updateUser({ data: attr });
+    } catch {
+      /* noop — el signup no falla por esto */
+    }
+  }
+
+  /** Dispara el evento `sign_up` de GA4 (si gtag está en la página) para medir
+   *  registros por fuente vía la medición de dominios cruzados. */
+  private _fireSignupEvent(method: 'email' | 'google'): void {
+    try {
+      (window as unknown as { gtag?: (...a: unknown[]) => void }).gtag?.(
+        'event',
+        'sign_up',
+        { method }
+      );
+    } catch {
+      /* noop */
+    }
   }
 
   /** Best-effort: si el usuario llegó por un link `?ref=` (o tipeó un código
@@ -386,6 +453,11 @@ export class AuthenticationService implements BaseAuthenticationService {
       ? findCountryByCode(credentials.countryCode)
       : null;
 
+    // Escribimos la atribución en el auth user ANTES de crear el tenant, para
+    // que el metadata esté cuando dispare el trigger de lead (Google confirma
+    // el email al instante → el aviso a Slack sale enseguida).
+    await this._writeAttribution();
+
     const { error } = await this.client.rpc('complete_google_signup', {
       p_name: credentials.name,
       p_store_name: credentials.storeName,
@@ -402,6 +474,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       const key = Object.keys(MSG).find((k) => error.message.includes(k));
       return E.left(new Error(key ? MSG[key] : error.message));
     }
+    this._fireSignupEvent('google');
     await this.setupTenantLocale(credentials.countryCode);
 
     // Tras crear el tenant vía complete_google_signup, podemos registrar el
