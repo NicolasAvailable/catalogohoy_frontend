@@ -25,12 +25,14 @@ import Blog from "./pages/Blog";
 import BlogArticle from "./pages/BlogArticle";
 import NotFound from "./pages/NotFound";
 import { captureReferralFromUrl } from "@/lib/referral-cookie";
+import { captureAttributionFromUrl } from "@/lib/attribution-cookie";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   useEffect(() => {
     captureReferralFromUrl();
+    captureAttributionFromUrl();
   }, []);
 
   return (
