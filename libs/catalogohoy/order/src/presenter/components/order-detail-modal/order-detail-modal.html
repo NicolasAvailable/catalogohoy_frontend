@@ -98,8 +98,8 @@
             <tr class="text-grey-400 text-xs uppercase tracking-wider border-b border-grey-100">
               <th class="pb-2.5 pr-4 font-bold">{{ 'Producto' | transloco }}</th>
               <th class="pb-2.5 px-3 font-bold text-center">{{ 'Cantidad' | transloco }}</th>
-              <th class="pb-2.5 px-3 font-bold text-center">{{ 'Talla' | transloco }}</th>
-              <th class="pb-2.5 px-3 font-bold text-center">SKU</th>
+              <th class="pb-2.5 px-3 font-bold text-center hidden sm:table-cell">{{ 'Talla' | transloco }}</th>
+              <th class="pb-2.5 px-3 font-bold text-center hidden sm:table-cell">SKU</th>
               <th class="pb-2.5 pl-3 font-bold text-right">{{ 'Total' | transloco }}</th>
             </tr>
           </thead>
@@ -133,12 +133,20 @@
                       @for (addon of item.addons; track addon.id) {{{ addon.name }}@if (addon.quantity && addon.quantity > 1) { ×{{ addon.quantity }}}@if (addon.price > 0) { ({{ cs }}{{ (addon.price * (addon.quantity || 1)) | number: '1.2-2' }})}@if (!$last) { · }}
                     </span>
                     }
+                    <!-- En mobile, Talla y SKU van bajo el nombre (sus columnas
+                         se ocultan para que la tabla no se corte). -->
+                    @if (item.size) {
+                    <span class="text-xs text-grey-400 sm:hidden"><strong>{{ 'Talla' | transloco }}:</strong> {{ item.size }}</span>
+                    }
+                    @if (item.sku) {
+                    <span class="text-xs text-grey-400 sm:hidden">SKU: {{ item.sku }}</span>
+                    }
                   </div>
                 </div>
               </td>
               <td class="py-3 px-3 text-center text-sm text-grey-600">{{ item.quantity }}</td>
-              <td class="py-3 px-3 text-center text-sm text-grey-600">{{ item.size || '—' }}</td>
-              <td class="py-3 px-3 text-center text-sm text-grey-600">{{ item.sku || '—' }}</td>
+              <td class="py-3 px-3 text-center text-sm text-grey-600 hidden sm:table-cell">{{ item.size || '—' }}</td>
+              <td class="py-3 px-3 text-center text-sm text-grey-600 hidden sm:table-cell">{{ item.sku || '—' }}</td>
               <td class="py-3 pl-3 text-right">
                 <div class="text-sm font-bold text-primary-600">{{ cs }}{{ item.total | number: '1.2-2' }}</div>
                 @if (showDualBs && bsRate()) {
