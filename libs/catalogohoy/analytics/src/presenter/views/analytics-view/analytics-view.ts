@@ -87,7 +87,7 @@ export class AnalyticsViewComponent {
     grid: {
       show: true,
       borderColor: '#334155',
-      padding: { top: 10, bottom: -40, left: 0, right: 0 },
+      padding: { top: 10, bottom: -40, left: 14, right: 14 },
       position: 'back',
       xaxis: { lines: { show: true } },
     },
@@ -142,8 +142,10 @@ export class AnalyticsViewComponent {
     yaxis: {
       axisTicks: { show: false },
       axisBorder: { show: false },
+      // Dominio SIMÉTRICO (±10): en un día con 0/pocas visitas la línea queda
+      // centrada verticalmente (antes max+5 la empujaba al ⅓ superior).
       min: (min: number) => min - 10,
-      max: (max: number) => max + 5,
+      max: (max: number) => max + 10,
       tickAmount: 5,
       show: false,
     },
