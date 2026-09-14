@@ -237,12 +237,25 @@ export class PlanCheckout implements OnInit {
     return `Hasta ${plan.maxProducts} productos`;
   });
 
+  /** El prorrateo del upgrade ("solo pagás la diferencia") aplica SOLO si al
+   *  plan actual le quedan MÁS de 20 días de vigencia. Cerca del vencimiento no
+   *  hay saldo relevante que acreditar, así que se cobra el plan nuevo completo
+   *  (con su descuento anual). */
+  public readonly prorationEligible = computed(() => {
+    const expiresAt = this.planStore.tenantPlanUsage()?.planExpiresAt;
+    if (!expiresAt) return false;
+    const daysLeft = (new Date(expiresAt).getTime() - Date.now()) / 86_400_000;
+    return daysLeft > 20;
+  });
+
   public readonly isUpgrade = computed(() => {
     const current = this.planStore.currentPlan();
     if (!current || current.isFree) return false;
     const currentPrice = PLAN_BASE_PRICES[current.id] ?? 0;
     const targetPrice = PLAN_BASE_PRICES[this.planId()] ?? 0;
-    return currentPrice > 0 && targetPrice > currentPrice;
+    return (
+      currentPrice > 0 && targetPrice > currentPrice && this.prorationEligible()
+    );
   });
 
   public readonly currentPlanName = computed(
