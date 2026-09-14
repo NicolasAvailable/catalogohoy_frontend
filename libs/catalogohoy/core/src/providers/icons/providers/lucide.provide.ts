@@ -1,5 +1,6 @@
 import { EnvironmentProviders, importProvidersFrom } from '@angular/core';
 import {
+  Bell,
   Activity,
   AlertTriangle,
   ArrowDown,
@@ -68,6 +69,7 @@ import {
   Home,
   Hourglass,
   Image,
+  Inbox,
   Info,
   Instagram,
   Gift,
@@ -114,6 +116,7 @@ import {
   RefreshCw,
   Reply,
   Save,
+  ScanSearch,
   Search,
   Send,
   Settings,
@@ -161,6 +164,7 @@ import {
 export const provideLucideIcons = (): EnvironmentProviders => {
   return importProvidersFrom(
     LucideAngularModule.pick({
+      Bell,
       Activity,
       ArrowDownToLine,
       ArrowLeft,
@@ -208,6 +212,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Heart,
       Home,
       Hourglass,
+      Inbox,
       Info,
       Instagram,
       Lock,
@@ -238,6 +243,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Printer,
       QrCode,
       Reply,
+      ScanSearch,
       Search,
       Share2,
       ShieldCheck,

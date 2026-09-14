@@ -1,9 +1,9 @@
-<div class="flex flex-col gap-4 sm:gap-6 px-4 sm:px-6 pb-6 mt-4 sm:h-full">
+<div class="flex flex-col gap-4 sm:gap-6 px-4 sm:px-6 pb-6 mt-4 sm:h-full client-native-root">
   <!-- Header -->
-  <header class="flex items-start justify-between gap-4">
+  <header class="flex items-start justify-between gap-4 client-native-header">
     <div class="min-w-0">
       <h1 class="text-2xl sm:text-3xl font-bold text-grey-800 mb-1">{{ 'Clientes' | transloco }}</h1>
-      <p class="text-sm sm:text-base text-grey-400">
+      <p class="text-sm sm:text-base text-grey-400 hide-native">
         {{ 'Gestiona tus clientes: etiquétalos, edítalos o créalos manualmente' | transloco }}
       </p>
     </div>
@@ -51,7 +51,7 @@
 
   <!-- Main Card Container -->
   <div
-    class="bg-white border border-grey-100 rounded-xl shadow-sm overflow-hidden sm:flex-1 flex flex-col"
+    class="bg-white border border-grey-100 rounded-xl shadow-sm overflow-hidden sm:flex-1 flex flex-col client-native-card"
   >
     <!-- Search + tag filters -->
     <div class="p-4 border-b border-grey-50 flex flex-col gap-3">
@@ -112,7 +112,7 @@
     </div>
 
     <!-- Mobile List -->
-    <div class="sm:hidden overflow-y-auto max-h-125">
+    <div class="sm:hidden overflow-y-auto max-h-125 client-native-mobile">
       @if (clientStore.isLoading()) {
         <div class="p-4 flex flex-col gap-3">
           @for (_ of [1, 2, 3, 4, 5]; track $index) {
@@ -372,9 +372,9 @@
 
     <!-- Pagination footer — count on the left, controls on the right -->
     <div
-      class="p-4 sm:pr-16 bg-grey-25 border-t border-grey-50 flex items-center justify-between gap-2 flex-wrap"
+      class="p-4 sm:pr-16 bg-grey-25 border-t border-grey-50 flex items-center justify-between gap-2 flex-wrap client-native-footer"
     >
-      <span class="text-xs text-grey-400 font-medium">
+      <span class="text-xs text-grey-400 font-medium client-native-count">
         {{ 'Mostrando {shown} · Total: {total} clientes' | transloco: { shown: currentPageClients().length, total: filteredClients().length } }}
       </span>
       <p-paginator
@@ -382,6 +382,7 @@
         [rows]="pageRows()"
         [totalRecords]="filteredClients().length"
         [rowsPerPageOptions]="[10, 25, 50]"
+        [pageLinkSize]="isNative ? 3 : 5"
         (onPageChange)="onPageChange($event)"
         styleClass="client-paginator"
       />

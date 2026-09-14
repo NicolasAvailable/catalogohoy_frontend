@@ -27,8 +27,13 @@
     </button>
   </div>
 
-  <!-- Secciones que no están en la barra inferior -->
+  <!-- Secciones que no están en la barra inferior (espeja el sidebar web) -->
   <nav class="flex-1 overflow-y-auto overscroll-contain px-3 py-3 flex flex-col gap-1">
+    <!-- ══ Gestión ══ -->
+    <p class="px-2 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-grey-300 select-none">
+      {{ 'Gestión' | transloco }}
+    </p>
+
     @if (canViewAnalytics()) {
     <a
       routerLink="/admin/analytics"
@@ -94,34 +99,124 @@
       </span>
     </a>
 
+    <!-- ══ Canales de venta ══ -->
     @if (canViewCatalog()) {
-    <a
-      routerLink="/admin/catalog/edit"
-      routerLinkActive="bg-primary-50"
-      [routerLinkActiveOptions]="{ exact: true }"
-      class="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors"
-    >
-      <ui-icon name="store" size="18" styleClass="text-grey-700" />
-      <span class="font-semibold text-grey-700">{{ 'Editar catálogo' | transloco }}</span>
-    </a>
+    <p class="px-2 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-grey-300 select-none">
+      {{ 'Canales de venta' | transloco }}
+    </p>
+
+    <!-- "Mi catálogo": submenú colapsable (espeja el sidebar web) -->
     <button
       type="button"
-      (click)="openStorefront()"
+      (click)="toggleCatalogMenu()"
+      [class.bg-primary-50]="showCatalogMenu()"
       class="flex items-center justify-between gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors text-left w-full"
     >
-      <span class="flex items-center gap-3">
+      <span class="flex items-center gap-3 font-semibold text-grey-700">
         <ui-icon name="store" size="18" styleClass="text-grey-700" />
-        <span class="font-semibold text-grey-700">{{ 'Ver mi catálogo' | transloco }}</span>
+        {{ 'Mi catálogo' | transloco }}
       </span>
-      <ui-icon name="square-arrow-out-up-right" size="14" styleClass="text-grey-300" />
+      <ui-icon
+        name="chevron-right"
+        size="16"
+        class="transition-transform duration-200"
+        [class.rotate-90]="showCatalogMenu()"
+        styleClass="text-grey-300"
+      />
     </button>
+
+    @if (showCatalogMenu()) {
+    <div class="flex flex-col ml-3.5 pl-3 border-l border-grey-50">
+      <a
+        routerLink="/admin/catalog/edit"
+        routerLinkActive="bg-primary-50"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="flex items-center px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors"
+      >
+        <span class="font-medium text-grey-700">{{ 'Editar catálogo' | transloco }}</span>
+      </a>
+      <button
+        type="button"
+        (click)="openStorefront()"
+        class="flex items-center justify-between gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors text-left w-full"
+      >
+        <span class="font-medium text-grey-700">{{ 'Ver mi catálogo' | transloco }}</span>
+        <ui-icon name="square-arrow-out-up-right" size="14" styleClass="text-grey-300" />
+      </button>
+    </div>
+    }
     }
   </nav>
 
-  <!-- Footer: idioma + ayuda + cerrar sesión -->
+  <!-- Footer: cambiar catálogo + idioma + cerrar sesión -->
   <div
     class="border-t border-grey-50 px-3 pt-3 flex flex-col gap-1 pb-[calc(0.75rem_+_var(--safe-area-bottom))]"
   >
+    <!-- Cambiar catálogo (switcher nativo: cachea slug + recarga /admin) -->
+    <button
+      type="button"
+      (click)="toggleCatalogSwitcher()"
+      [class.bg-primary-50]="showCatalogSwitcher()"
+      class="flex items-center justify-between gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors text-left w-full"
+    >
+      <span class="flex items-center gap-3 font-semibold text-grey-700">
+        <ui-avatar
+          size="normal"
+          shape="square"
+          [label]="currentTenant().name"
+          [image]="currentTenant().logo ?? ''"
+          styleClass="!w-6 !h-6 !text-[0.7rem] !bg-primary-100 !text-primary-600 !rounded-lg !overflow-hidden shrink-0"
+        />
+        {{ 'Cambiar catálogo' | transloco }}
+      </span>
+      <ui-icon
+        name="chevron-right"
+        size="16"
+        class="transition-transform duration-200"
+        [class.rotate-90]="showCatalogSwitcher()"
+        styleClass="text-grey-300"
+      />
+    </button>
+
+    @if (showCatalogSwitcher()) {
+    <div class="flex flex-col mb-1 border border-grey-50 rounded-lg overflow-hidden bg-grey-25">
+      @for (t of allTenants(); track t.slug) {
+      @let active = t.slug === currentTenantSlug();
+      <button
+        type="button"
+        (click)="switchCatalog(t)"
+        [disabled]="active"
+        [class.bg-primary-50]="active"
+        class="flex items-center gap-2.5 px-3 py-2.5 hover:bg-primary-50 transition-colors w-full text-left disabled:cursor-default"
+      >
+        @if (t.logo) {
+        <img [src]="t.logo" [alt]="t.name" class="w-5 h-5 rounded-full object-cover shrink-0" />
+        } @else {
+        <ui-icon name="store" size="16" [styleClass]="active ? 'text-primary-500 shrink-0' : 'text-grey-400 shrink-0'" />
+        }
+        <span
+          class="text-sm font-medium truncate flex-1"
+          [class.text-primary-600]="active"
+          [class.text-grey-700]="!active"
+        >{{ t.name }}</span>
+        @if (active) {
+        <ui-icon name="check" size="14" styleClass="text-primary-500 shrink-0" />
+        }
+      </button>
+      }
+      <div class="border-t border-grey-50 mx-2"></div>
+      <button
+        type="button"
+        (click)="createCatalog()"
+        class="flex items-center gap-2.5 px-3 py-2.5 hover:bg-primary-50 transition-colors w-full text-left"
+      >
+        <ui-icon name="plus" size="16" styleClass="text-primary-500 shrink-0" />
+        <span class="text-sm font-medium text-primary-600">{{ 'Crear catálogo' | transloco }}</span>
+      </button>
+    </div>
+    }
+
+    <!-- Idioma -->
     <div class="flex items-center justify-between px-2 py-1.5">
       <span class="flex items-center gap-3 font-semibold text-grey-700">
         <ui-icon name="globe" size="18" styleClass="text-grey-700" />
@@ -129,15 +224,6 @@
       </span>
       <lib-language-selector styleClass="text-grey-700" />
     </div>
-
-    <button
-      type="button"
-      (click)="openGuide()"
-      class="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors text-left w-full"
-    >
-      <ui-icon name="message-circle-question" size="18" styleClass="text-grey-700" />
-      <span class="font-semibold text-grey-700">{{ 'Guía de ayuda' | transloco }}</span>
-    </button>
 
     <button
       type="button"

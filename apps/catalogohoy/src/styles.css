@@ -46,8 +46,77 @@
   bottom: calc(var(--safe-area-bottom) + 4.75rem);
 }
 
+/* El FAB de "Vista previa" (ojo) del editor de catálogo también se sube por
+   encima de la barra inferior en nativo (en catalog/edit el FAB de soporte se
+   oculta y este ocupa su lugar). `!important` porque `.fab-preview` vive en el
+   CSS encapsulado del componente (misma especificidad → hay que ganar el orden). */
+.native-app .fab-preview {
+  bottom: calc(var(--safe-area-bottom) + 4.75rem) !important;
+}
+
 .native-app ui-whatsapp-support > div {
   bottom: calc(var(--safe-area-bottom) + 9.5rem);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Ajustes de LAYOUT solo para la app NATIVA (la web queda intacta).
+   Gateados por .native-app (va en <html> solo en la app). Cada regla apunta a
+   una clase-gancho INERTE agregada en el componente compartido (sin efecto en
+   web porque .native-app no está presente).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Órdenes: un solo scroll INTERNO (como Productos), sin el doble scroll de
+   página. En nativo el root llena el alto y la lista scrollea por dentro. */
+.native-app .order-native-root { flex: 1 1 0%; min-height: 0; overflow: hidden; }
+.native-app .order-native-header { flex-shrink: 0; }
+.native-app .order-native-card { flex: 1 1 0%; min-height: 0; }
+.native-app .order-native-mobile { flex: 1 1 0%; min-height: 0; }
+.native-app .order-native-footer { flex-shrink: 0; display: block; }
+.native-app .order-native-footer .order-paginator { width: 100%; }
+.native-app .order-native-metrics { flex: 1 1 0%; min-height: 0; overflow-y: auto; }
+
+/* Clientes: (a) la tarjeta LLENA el alto (100vh) con scroll interno en la lista
+   —como Órdenes/Productos—, y (b) filas-por-página en la MISMA línea que la
+   paginación (se oculta el conteo y el paginador toma ancho completo). */
+.native-app .client-native-root { flex: 1 1 0%; min-height: 0; overflow: hidden; }
+.native-app .client-native-header { flex-shrink: 0; }
+.native-app .client-native-card { flex: 1 1 0%; min-height: 0; }
+.native-app .client-native-mobile { flex: 1 1 0%; min-height: 0; max-height: none; }
+.native-app .client-native-footer { display: block; flex-shrink: 0; }
+.native-app .client-native-count { display: none; }
+.native-app .client-native-footer .client-paginator { width: 100%; }
+
+/* Utilidad: ocultar un elemento SOLO en la app nativa (ahorra espacio en
+   pantallas chicas; en web no aplica porque .native-app no está presente). */
+.native-app .hide-native { display: none !important; }
+
+/* Transición de ruta RÁPIDA solo en nativo: la default (~250ms) se sentía lenta
+   en el webview. Fade corto de 140ms → animación presente pero sin lag. En web
+   (.native-app ausente) se mantiene la transición default. */
+:root.native-app::view-transition-old(root),
+:root.native-app::view-transition-new(root) {
+  animation-duration: 140ms;
+  animation-timing-function: ease;
+}
+
+/* Modal detalle de orden: la tabla de productos LLENA el alto disponible y
+   scrollea por dentro; el Total queda anclado abajo (sin el hueco). */
+.native-app .order-modal-left { overflow: hidden; }
+.native-app .order-modal-status { flex-shrink: 0; }
+.native-app .order-modal-products { flex: 1 1 0%; min-height: 0; max-height: none; }
+.native-app .order-modal-total { margin-top: 0; flex-shrink: 0; }
+
+/* ── Toasts (ngx-sonner) en el shell nativo ─────────────────────────────────
+   ngx-sonner respeta el safe-area en su regla base, PERO trae un
+   @media(max-width:600px) que fija `top:20px`/`bottom:20px` e IGNORA el inset →
+   en la app nativa el toast chocaba con el notch / dynamic island. Lo bajamos
+   por debajo del safe-area. Scopeado a `.native-app` (va en <html>) para dejar
+   la web intacta; `!important` para ganarle al media query del paquete. */
+.native-app [data-sonner-toaster][data-y-position='top'] {
+  top: calc(var(--safe-area-top) + 0.75rem) !important;
+}
+.native-app [data-sonner-toaster][data-y-position='bottom'] {
+  bottom: calc(var(--safe-area-bottom) + 0.75rem) !important;
 }
 
 /* CDK Drag & Drop */

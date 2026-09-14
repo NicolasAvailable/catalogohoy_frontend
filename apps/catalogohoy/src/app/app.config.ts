@@ -12,6 +12,7 @@ import {
 import {
   provideRouter,
   withComponentInputBinding,
+  withPreloading,
   withViewTransitions,
 } from '@angular/router';
 import {
@@ -24,6 +25,7 @@ import {
 } from '@catalogohoy/core';
 import { provideIonicAngular } from '@ionic/angular/provide';
 import { appRoutes } from './app.routes';
+import { NativePreloadStrategy } from './mobile/native-preload.strategy';
 
 // en viene incluido por defecto en Angular; se registran los otros 3 idiomas.
 registerLocaleData(localeEs);
@@ -37,7 +39,13 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       appRoutes,
       withComponentInputBinding(),
-      withViewTransitions()
+      // Transición de ruta: en nativo se acelera por CSS (fade corto ~140ms,
+      // ver styles.css `.native-app ::view-transition-*`) para que NO se sienta
+      // el lag de la animación default; en web queda la default.
+      withViewTransitions(),
+      // En NATIVO precarga los lazy chunks en segundo plano (locales, sin red)
+      // para que el cambio de sección sea instantáneo; en web no precarga nada.
+      withPreloading(NativePreloadStrategy)
     ),
     provideHttpClient(withFetch()),
     providePrimeNG(),

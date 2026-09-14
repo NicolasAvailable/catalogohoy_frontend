@@ -2,6 +2,14 @@
   display: block;
 }
 
+/* En la app NATIVA el host debe ser contenedor FLEX (columna) para que la
+   cadena flex-1 (root → card → lista) acote el alto y solo scrollee la lista
+   por dentro (como Productos). El `:host{display:block}` de arriba pisaba el
+   `display:flex` de la clase de host; esto lo revierte solo en nativo. */
+:host-context(.native-app) {
+  display: flex;
+}
+
 /* Strip the paginator's default bg/border so it blends into the footer
    wrapper that holds the "Mostrando X de Y" span on its left. */
 :host ::ng-deep .order-paginator .p-paginator {
@@ -9,6 +17,12 @@
   border: none;
   padding: 0;
   justify-content: flex-end;
+}
+
+/* Nativo: filas-por-página en la misma línea que la paginación (como Productos). */
+:host-context(.native-app) ::ng-deep .order-paginator .p-paginator {
+  flex-wrap: nowrap;
+  justify-content: center;
 }
 
 /* Match the filter buttons (Todas / Pendientes / …) border + placeholder
@@ -72,16 +86,6 @@ button {
   transition: all 0.15s ease-in-out;
 }
 
-/* Stats cards hover effect */
-.grid > div {
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-}
-
-.grid > div:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
 /* Ensure table shows enough rows */
 .order-table-wrapper {
   min-height: 31.25rem;
@@ -89,7 +93,24 @@ button {
 
 /* Mobile list: fits ~5 orders then scrolls internally */
 .mobile-order-list {
-  max-height: 31.25rem;
+  /* Aprovecha el alto del viewport para que la tabla móvil llene el espacio
+     inferior (dejando lugar a header + tabs + filtros + paginación). */
+  max-height: calc(100dvh - 16rem);
+}
+
+/* En la app NATIVA la lista móvil llena el alto por FLEX (clases .order-native-*
+   en styles.css), NO por este max-height fijo del viewport que sobreestimaba el
+   alto disponible y provocaba DOBLE scroll (página + lista). */
+:host-context(.native-app) .mobile-order-list {
+  max-height: none;
+}
+
+/* ApexCharts: el tooltip trae una transición de entrada que lo hace "subir" y
+   deslizarse en el hover. La anulamos para que aparezca instantáneo, en su
+   lugar (sin animación). */
+:host ::ng-deep .apexcharts-tooltip,
+:host ::ng-deep .apexcharts-tooltip.apexcharts-active {
+  transition: none !important;
 }
 
 /* Custom bg color for very light grey */

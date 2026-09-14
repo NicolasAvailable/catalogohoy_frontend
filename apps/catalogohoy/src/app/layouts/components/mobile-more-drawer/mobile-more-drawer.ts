@@ -1,20 +1,32 @@
-import { Component, computed, effect, inject, input, output } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthenticationService } from '@catalogohoy/auth';
-import { isNativeApp, LanguageSelectorComponent, PosthogService } from '@catalogohoy/core';
-import { environment } from '@catalogohoy/env';
+import {
+  isNativeApp,
+  LanguageSelectorComponent,
+  PosthogService,
+  setNativeSlug,
+} from '@catalogohoy/core';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { ProfileStore } from '@catalogohoy/profile';
-import { TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
+import { Tenant, TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
-import { ConfirmDialogService, IconComponent } from '@ui';
+import { AvatarComponent, ConfirmDialogService, IconComponent } from '@ui';
 
 /**
- * Drawer "Más" de la app nativa: slide-over que entra DESDE LA DERECHA con las
- * secciones que NO están en la barra inferior (Analíticas, Reportes, Tasas del
- * día, Equipo, Referidos, Mi catálogo) + idioma, ayuda y cerrar sesión.
- * SOLO nativo ({@link isNativeApp}); en web no renderiza nada.
+ * Drawer "Más" de la app nativa: slide-over que entra DESDE LA DERECHA,
+ * espejando el sidebar web por secciones (Gestión / Canales de venta) con lo
+ * que NO está en la barra inferior, + switcher de catálogo, idioma y cerrar
+ * sesión. SOLO nativo ({@link isNativeApp}); en web no renderiza nada.
  */
 @Component({
   selector: 'app-mobile-more-drawer',
@@ -24,6 +36,7 @@ import { ConfirmDialogService, IconComponent } from '@ui';
     RouterLinkActive,
     TranslocoPipe,
     IconComponent,
+    AvatarComponent,
     LanguageSelectorComponent,
   ],
   templateUrl: './mobile-more-drawer.html',
@@ -33,7 +46,6 @@ export class MobileMoreDrawer {
   public readonly close = output<void>();
 
   public readonly isNative = isNativeApp();
-  public readonly helpGuideUrl = environment.helpGuideUrl;
 
   private readonly router = inject(Router);
   private readonly auth = inject(AuthenticationService);
@@ -62,8 +74,19 @@ export class MobileMoreDrawer {
     () => this.permissions.isOwner() || this.permissions.can()('catalogo', 'edit')
   );
 
-  private readonly currentTenant = computed(() => {
-    const slug = getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || '';
+  public readonly currentTenantSlug = computed(
+    () => getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || ''
+  );
+  public readonly allTenants = computed(
+    () => this.profileStore.profile().tenantList.tenants
+  );
+  public readonly showCatalogSwitcher = signal(false);
+  /** Submenú "Mi catálogo" (Editar / Ver mi catálogo), como la web.
+   *  Arranca ABIERTO por defecto (pedido del user). */
+  public readonly showCatalogMenu = signal(true);
+
+  public readonly currentTenant = computed(() => {
+    const slug = this.currentTenantSlug();
     const tenants = this.profileStore.profile().tenantList.tenants;
     return tenants.find((t) => t.slug === slug) ?? this.profileStore.profile().tenantList.first;
   });
@@ -85,9 +108,28 @@ export class MobileMoreDrawer {
     this.close.emit();
   }
 
-  public openGuide(): void {
-    window.open(this.helpGuideUrl, '_blank', 'noopener');
+  public toggleCatalogSwitcher(): void {
+    this.showCatalogSwitcher.update((v) => !v);
+  }
+
+  public toggleCatalogMenu(): void {
+    this.showCatalogMenu.update((v) => !v);
+  }
+
+  /** Cambiar de catálogo EN NATIVO: NO abrimos el subdominio del tenant (eso
+   *  sacaría del shell). Cacheamos el slug y hacemos un hard-reload a /admin
+   *  para re-scopear todos los stores al catálogo elegido (mismo criterio que
+   *  el post-login nativo). */
+  public switchCatalog(tenant: Tenant): void {
+    if (tenant.slug === this.currentTenantSlug()) return;
+    setNativeSlug(tenant.slug);
+    window.location.href = '/admin';
+  }
+
+  public createCatalog(): void {
+    this.showCatalogSwitcher.set(false);
     this.close.emit();
+    this.router.navigate(['/admin/new-catalog']);
   }
 
   public logout(): void {

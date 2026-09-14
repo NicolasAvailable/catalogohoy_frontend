@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
+import { PushService } from '@catalogohoy/core';
 import { Base } from './layouts';
-import { PushService } from '../mobile/push.service';
 
 @Component({
   selector: 'app-layout',

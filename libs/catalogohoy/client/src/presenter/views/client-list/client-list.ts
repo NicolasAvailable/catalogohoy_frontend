@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { isNativeApp } from '@catalogohoy/core';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
 import { ToastService } from '@shared/infrastructure';
@@ -68,6 +69,11 @@ import { ClientTagCreateRowComponent } from '../../components/client-tag-create-
       padding: 0;
       justify-content: flex-end;
     }
+    /* Nativo: todo en una línea (filas-por-página inline, como Productos). */
+    :host-context(.native-app) ::ng-deep .client-paginator .p-paginator {
+      flex-wrap: nowrap;
+      justify-content: center;
+    }
   `,
   ],
 })
@@ -79,6 +85,9 @@ export default class ClientListComponent implements OnInit, OnDestroy {
   private readonly clientRealtime = inject(ClientRealtimeService);
   private readonly toast = inject(ToastService);
   public readonly cs = computed(() => this.tenantCurrency.localSymbol() || '$');
+  /** En nativo mostramos menos números de página para que el paginador (con
+   *  el select de filas) entre todo en una sola línea, como en Productos. */
+  public readonly isNative = isNativeApp();
 
   @ViewChild(ClientFormDialogComponent)
   private formDialog!: ClientFormDialogComponent;
