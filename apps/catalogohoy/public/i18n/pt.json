@@ -2216,5 +2216,11 @@
   "Generalo en Meta Events Manager → tu píxel → Configuración → API de conversiones → Generar token de acceso.": "Gere-o no Meta Events Manager → seu pixel → Configurações → API de conversões → Gerar token de acesso.",
   "Código de evento de prueba (opcional)": "Código de evento de teste (opcional)",
   "Con un código de prueba, los eventos aparecen solo en “Probar eventos” y no cuentan para tus anuncios. Dejalo vacío en producción.": "Com um código de teste, os eventos aparecem só em “Testar eventos” e não contam para os seus anúncios. Deixe vazio em produção.",
-  "Desconectar Conversions API": "Desconectar Conversions API"
+  "Desconectar Conversions API": "Desconectar Conversions API",
+  "Ajuste de precios de la categoría": "Ajuste de preços da categoria",
+  "Aumentá o descontá el precio de todos los productos de esta categoría de una sola vez — por ejemplo, para sumar el costo del flete.": "Aumente ou reduza o preço de todos os produtos desta categoria de uma vez — por exemplo, para somar o custo do frete.",
+  "Podés usar un porcentaje (%) o un monto fijo.": "Você pode usar uma porcentagem (%) ou um valor fixo.",
+  "Se aplica al precio, la promoción, las variantes y los precios al mayor.": "Aplica-se ao preço, à promoção, às variantes e aos preços no atacado.",
+  "Para revertirlo, aplicá el ajuste inverso.": "Para reverter, aplique o ajuste inverso.",
+  "Valor": "Valor"
 }

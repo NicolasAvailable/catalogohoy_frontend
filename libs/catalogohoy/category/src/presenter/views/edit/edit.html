@@ -82,4 +82,66 @@
       </div>
     </form>
   </ui-card>
+
+  <!-- Ajuste masivo de precios de la categoría -->
+  <ui-card>
+    <div class="flex flex-col gap-3">
+      <h2 class="text-xl font-bold">{{ 'Ajuste de precios de la categoría' | transloco }}</h2>
+      <p class="text-sm text-grey-300">
+        {{ 'Aumentá o descontá el precio de todos los productos de esta categoría de una sola vez — por ejemplo, para sumar el costo del flete.' | transloco }}
+      </p>
+      <ul class="text-sm text-grey-400 list-disc pl-5 flex flex-col gap-1">
+        <li>{{ 'Podés usar un porcentaje (%) o un monto fijo.' | transloco }}</li>
+        <li>{{ 'Se aplica al precio, la promoción, las variantes y los precios al mayor.' | transloco }}</li>
+        <li>{{ 'Para revertirlo, aplicá el ajuste inverso.' | transloco }}</li>
+      </ul>
+
+      <form [formGroup]="adjustForm" class="flex flex-col sm:flex-row sm:items-end gap-3 mt-2">
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-grey-400 font-semibold">{{ 'Acción' | transloco }}</label>
+          <ui-select
+            formControlName="direction"
+            [options]="adjustDirectionOptions"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="!w-40"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-grey-400 font-semibold">{{ 'Tipo' | transloco }}</label>
+          <ui-select
+            formControlName="mode"
+            [options]="adjustModeOptions"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="!w-44"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-grey-400 font-semibold">{{ 'Valor' | transloco }}</label>
+          <ui-input-text
+            formControlName="value"
+            inputId="adjustValue"
+            class="w-32"
+            [placeholder]="adjustForm.controls.mode.value === 'percent' ? '3' : '5'"
+          />
+        </div>
+        <ui-button
+          [label]="'Aplicar' | transloco"
+          (click)="onApplyAdjust()"
+          [disabled]="adjustForm.invalid || isAdjusting()"
+          [isLoading]="isAdjusting()"
+          [fluid]="false"
+        />
+      </form>
+    </div>
+  </ui-card>
+
+  <ui-confirm-dialog
+    (confirm)="onConfirmAdjust()"
+    [headerLabel]="'Aplicar ajuste de precios'"
+    [contentLabel]="adjustConfirmMessage()"
+    [acceptLabel]="'Aplicar'"
+    [rejectLabel]="'Cancelar'"
+  />
 </section>
