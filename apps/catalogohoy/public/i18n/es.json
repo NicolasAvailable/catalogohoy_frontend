@@ -2222,5 +2222,7 @@
   "Podés usar un porcentaje (%) o un monto fijo.": "Podés usar un porcentaje (%) o un monto fijo.",
   "Se aplica al precio, la promoción, las variantes y los precios al mayor.": "Se aplica al precio, la promoción, las variantes y los precios al mayor.",
   "Para revertirlo, aplicá el ajuste inverso.": "Para revertirlo, aplicá el ajuste inverso.",
-  "Valor": "Valor"
+  "Valor": "Valor",
+  "Si un producto está en varias categorías, el precio cambia en todas (el precio vive en el producto).": "Si un producto está en varias categorías, el precio cambia en todas (el precio vive en el producto).",
+  "El cambio es permanente. Un monto fijo se revierte con el inverso; un porcentaje no vuelve exacto por el redondeo.": "El cambio es permanente. Un monto fijo se revierte con el inverso; un porcentaje no vuelve exacto por el redondeo."
 }

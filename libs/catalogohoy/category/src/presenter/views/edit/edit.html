@@ -83,7 +83,8 @@
     </form>
   </ui-card>
 
-  <!-- Ajuste masivo de precios de la categoría -->
+  <!-- Ajuste masivo de precios de la categoría (solo dueño/editor, no "Ver todos") -->
+  @if (canAdjustPrices()) {
   <ui-card>
     <div class="flex flex-col gap-3">
       <h2 class="text-xl font-bold">{{ 'Ajuste de precios de la categoría' | transloco }}</h2>
@@ -93,7 +94,8 @@
       <ul class="text-sm text-grey-400 list-disc pl-5 flex flex-col gap-1">
         <li>{{ 'Podés usar un porcentaje (%) o un monto fijo.' | transloco }}</li>
         <li>{{ 'Se aplica al precio, la promoción, las variantes y los precios al mayor.' | transloco }}</li>
-        <li>{{ 'Para revertirlo, aplicá el ajuste inverso.' | transloco }}</li>
+        <li>{{ 'Si un producto está en varias categorías, el precio cambia en todas (el precio vive en el producto).' | transloco }}</li>
+        <li>{{ 'El cambio es permanente. Un monto fijo se revierte con el inverso; un porcentaje no vuelve exacto por el redondeo.' | transloco }}</li>
       </ul>
 
       <form [formGroup]="adjustForm" class="flex flex-col sm:flex-row sm:items-end gap-3 mt-2">
@@ -136,6 +138,7 @@
       </form>
     </div>
   </ui-card>
+  }
 
   <ui-confirm-dialog
     (confirm)="onConfirmAdjust()"

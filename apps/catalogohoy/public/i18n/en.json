@@ -2222,5 +2222,7 @@
   "Podés usar un porcentaje (%) o un monto fijo.": "You can use a percentage (%) or a fixed amount.",
   "Se aplica al precio, la promoción, las variantes y los precios al mayor.": "It applies to the price, promotion, variants and wholesale prices.",
   "Para revertirlo, aplicá el ajuste inverso.": "To undo it, apply the inverse adjustment.",
-  "Valor": "Value"
+  "Valor": "Value",
+  "Si un producto está en varias categorías, el precio cambia en todas (el precio vive en el producto).": "If a product is in several categories, its price changes in all of them (the price lives on the product).",
+  "El cambio es permanente. Un monto fijo se revierte con el inverso; un porcentaje no vuelve exacto por el redondeo.": "The change is permanent. A fixed amount can be reversed with its inverse; a percentage won’t return exactly due to rounding."
 }

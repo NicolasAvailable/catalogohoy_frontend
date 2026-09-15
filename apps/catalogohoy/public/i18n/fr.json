@@ -2222,5 +2222,7 @@
   "Podés usar un porcentaje (%) o un monto fijo.": "Vous pouvez utiliser un pourcentage (%) ou un montant fixe.",
   "Se aplica al precio, la promoción, las variantes y los precios al mayor.": "Cela s’applique au prix, à la promotion, aux variantes et aux prix de gros.",
   "Para revertirlo, aplicá el ajuste inverso.": "Pour l’annuler, appliquez l’ajustement inverse.",
-  "Valor": "Valeur"
+  "Valor": "Valeur",
+  "Si un producto está en varias categorías, el precio cambia en todas (el precio vive en el producto).": "Si un produit est dans plusieurs catégories, son prix change dans toutes (le prix appartient au produit).",
+  "El cambio es permanente. Un monto fijo se revierte con el inverso; un porcentaje no vuelve exacto por el redondeo.": "Le changement est permanent. Un montant fixe s’annule avec son inverse ; un pourcentage ne revient pas exactement à cause de l’arrondi."
 }

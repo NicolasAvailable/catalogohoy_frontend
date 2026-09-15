@@ -25,6 +25,7 @@ import {
 } from '@ui';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { CategoryFacade } from '../../../application';
 import { CategoryService } from '../../../infrastructure/category.service';
 
@@ -54,6 +55,7 @@ export default class CategoryEdit implements OnInit {
   public readonly route = inject(ActivatedRoute);
   public readonly router = inject(Router);
   private readonly toastService = inject(ToastService);
+  private readonly permissions = inject(TeamPermissionsStore);
 
   public id?: string;
   public readonly isSaving = signal(false);
@@ -61,6 +63,17 @@ export default class CategoryEdit implements OnInit {
   // ── Ajuste masivo de precios de la categoría ────────────────────────────
   @ViewChild(ConfirmDialogComponent)
   public adjustConfirm!: ConfirmDialogComponent;
+
+  /** La categoría "Ver todos" no agrupa productos → no tiene sentido ajustar. */
+  public readonly isViewAll = signal(false);
+  /** La sección de ajuste de precios solo se muestra a quien puede editar
+   *  productos (dueño o miembro con permiso productos:edit) y nunca en "Ver
+   *  todos". Evita exponer un control destructivo a roles de solo-lectura. */
+  public readonly canAdjustPrices = computed(
+    () =>
+      !this.isViewAll() &&
+      (this.permissions.isOwner() || this.permissions.can()('productos', 'edit'))
+  );
 
   public readonly isAdjusting = signal(false);
   /** Mensaje (con conteo) que se muestra en el diálogo de confirmación. */
@@ -130,6 +143,7 @@ export default class CategoryEdit implements OnInit {
     });
 
     byIdResult.mapRight((category) => {
+      this.isViewAll.set(category.isViewAll ?? false);
       this.form.patchValue({
         name: category.name,
         description: category.description || '',
@@ -180,10 +194,24 @@ export default class CategoryEdit implements OnInit {
   /** Paso 1: valida, hace un dry-run para saber cuántos productos afecta y abre
    *  el diálogo de confirmación con ese conteo. */
   public async onApplyAdjust(): Promise<void> {
-    if (this.adjustForm.invalid || !this.id || this.isAdjusting()) return;
+    if (!this.id || this.isAdjusting()) return;
     const { mode, direction, value } = this.adjustForm.getRawValue();
-    const val = Number(value);
-    if (!val || val <= 0) return;
+    // El input entrega texto: normalizamos la coma decimal (uso común en LatAm)
+    // y validamos de verdad — antes un "3,5" pasaba el form pero Number() daba
+    // NaN y el botón "no hacía nada" sin aviso.
+    const val = Number(String(value ?? '').trim().replace(',', '.'));
+    if (!isFinite(val) || val <= 0) {
+      this.toastService.error(
+        new Exception('Ingresá un valor válido (un número mayor a 0).')
+      );
+      return;
+    }
+    if (mode === 'percent' && direction === 'discount' && val >= 100) {
+      this.toastService.error(
+        new Exception('El descuento por porcentaje debe ser menor a 100%.')
+      );
+      return;
+    }
     const signedValue = direction === 'increase' ? val : -val;
 
     this.isAdjusting.set(true);
