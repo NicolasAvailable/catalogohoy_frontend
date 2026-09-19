@@ -7,6 +7,7 @@ import { E } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import {
   InternalNote,
+  invoiceFilenameUsesPhone,
   Order,
   OrderItem,
   OrderMapper,
@@ -188,6 +189,31 @@ export class OrderService {
 
     if (error) return E.left(new Error(error.message));
     return E.right(count ?? 0);
+  }
+
+  /** Ordinal (1-based) de esta orden entre las del mismo cliente en la tienda,
+   *  para numerar el archivo del PDF cuando un cliente tiene varias órdenes
+   *  ("Juan Pérez.pdf", "Juan Pérez (2).pdf"…). Cuenta por nombre; en las
+   *  tiendas cuyo archivo lleva el teléfono (Moto Fox) también por teléfono,
+   *  para no numerar de más a dos homónimos con distinto número. Ante cualquier
+   *  error o falta de nombre devuelve 1 (nombre limpio) para no romper la
+   *  descarga. */
+  async clientOrderOrdinal(
+    order: Pick<Order, 'id' | 'tenantId' | 'name' | 'phone'>
+  ): Promise<number> {
+    if (!(order.name ?? '').trim()) return 1;
+    let query = this.client
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', order.tenantId)
+      .eq('name', order.name)
+      .lte('id', order.id);
+    if (invoiceFilenameUsesPhone(order.tenantId) && order.phone) {
+      query = query.eq('phone', order.phone);
+    }
+    const { count, error } = await query;
+    if (error) return 1;
+    return Math.max(count ?? 1, 1);
   }
 
   /** Aggregated metrics for the "Métricas" tab, via the `order_metrics` RPC.

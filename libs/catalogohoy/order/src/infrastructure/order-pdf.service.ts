@@ -6,7 +6,13 @@ import {
 } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
 import { jsPDF } from 'jspdf';
-import { isVentaFeatureEnabled, Order, OrderItem } from '../domain';
+import {
+  buildInvoiceFilename,
+  isVentaFeatureEnabled,
+  Order,
+  OrderItem,
+} from '../domain';
+import { OrderService } from './order.service';
 
 const PAYMENT_LABELS: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -46,6 +52,7 @@ export class OrderPdfService {
   private readonly configStore = inject(EcommerceConfigStore);
   private readonly tenantStore = inject(TenantStore);
   private readonly tenantCurrency = inject(TenantCurrencyStore);
+  private readonly orderService = inject(OrderService);
 
   /**
    * @param order   The order to render.
@@ -522,21 +529,15 @@ export class OrderPdfService {
       y
     );
 
-    // Nombre del archivo: los clientes (p. ej. Moto Fox) identifican la factura
-    // por el cliente, no por el número de orden. Sale como
-    // "<nombre del cliente>-<teléfono>.pdf". Fallbacks: sin teléfono usa el
-    // número de orden para no repetir nombre entre clientes homónimos; sin
-    // nombre, conserva el esquema anterior "orden/recibo-<número>".
-    const orderRef = order.orderNumber ?? order.id;
-    const safeName = (order.name || '')
-      .replace(/[\/\\:*?"<>|]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    const safePhone = (order.phone || '').replace(/[^\d+]/g, '');
-    const fileBase = safeName
-      ? `${safeName}-${safePhone || orderRef}`
-      : `${isReceipt ? 'recibo' : 'orden'}-${orderRef}`;
-    doc.save(`${fileBase}.pdf`);
+    // Nombre del archivo: la factura se identifica por el cliente, no por el
+    // número de orden (ver buildInvoiceFilename). El `seq` numera las órdenes
+    // repetidas de un mismo cliente ("Juan Pérez.pdf", "Juan Pérez (2).pdf") y
+    // solo aplica en el admin: la factura del catálogo público (con `context`)
+    // es una sola orden recién hecha → nombre limpio.
+    const seq = context
+      ? undefined
+      : await this.orderService.clientOrderOrdinal(order);
+    doc.save(buildInvoiceFilename(order, { isReceipt, seq }));
   }
 
   private blobToBase64(blob: Blob): Promise<string> {
