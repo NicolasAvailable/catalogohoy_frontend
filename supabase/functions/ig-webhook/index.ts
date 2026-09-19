@@ -60,16 +60,18 @@ async function isValidSignature(raw: string, header: string | null): Promise<boo
   for (const secret of SECRETS) {
     if ((await hmacHex(secret, raw)) === expected) return true;
   }
-  // MODO PERMISIVO (dev, pre-lanzamiento): la firma no cuadra con ninguno de
-  // los secrets configurados → registrar el prefijo para diagnosticar pero
-  // ACEPTAR el evento. Endurecer (return false) antes del flip de lanzamiento.
-  console.error("[ig-webhook] firma no coincide", {
+  // ESTRICTO (lanzamiento IG 2026-09-19): la firma no cuadra con NINGUNO de los
+  // secrets → RECHAZAR (una firma HMAC válida solo la produce quien tiene el
+  // app secret = Meta). Se confirmó con tráfico real que los eventos de Meta
+  // validan contra los secrets configurados. Se loguea con contexto por si algún
+  // evento legítimo llegara a fallar (Meta rota un secret / nuevo origen).
+  console.error("[ig-webhook] firma inválida — RECHAZADO", {
     expectedPrefix: expected.slice(0, 10),
     candidates: await Promise.all(
       SECRETS.map(async (s) => (await hmacHex(s, raw)).slice(0, 10)),
     ),
   });
-  return true;
+  return false;
 }
 
 type IgAccount = { tenantId: number; token: string | null };
@@ -382,17 +384,6 @@ Deno.serve(async (req) => {
 
   // 1) Handshake de verificación (GET).
   if (req.method === "GET") {
-    // Diagnóstico sin exponer valores: ¿qué secrets ve la función?
-    if (url.searchParams.get("debug") === "secrets") {
-      return new Response(
-        JSON.stringify({
-          ig: !!Deno.env.get("IG_APP_SECRET"),
-          wa: !!Deno.env.get("WA_APP_SECRET"),
-          verifyToken: !!Deno.env.get("IG_WEBHOOK_VERIFY_TOKEN"),
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    }
     const mode = url.searchParams.get("hub.mode");
     const token = url.searchParams.get("hub.verify_token");
     const challenge = url.searchParams.get("hub.challenge");
