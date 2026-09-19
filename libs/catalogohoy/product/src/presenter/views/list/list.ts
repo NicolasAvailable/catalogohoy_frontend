@@ -11,6 +11,7 @@ import {
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { CategoryStore } from '@catalogohoy/category';
@@ -48,6 +49,7 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
     ReactiveFormsModule,
     RouterLink,
     DragDropModule,
+    ScrollingModule,
     PaginatorModule,
     SkeletonListComponent,
     ButtonComponent,
@@ -105,6 +107,30 @@ export default class List implements OnInit, OnDestroy {
   public readonly pageFirst = signal(0);
   public readonly pageRows = signal(10);
 
+  /** Modo "Todos" (sin paginación). PrimeNG, al elegir la opción `showAll`,
+   *  setea `rows = totalRecords`; como la opción explícita más grande es 50,
+   *  cualquier `pageRows > 50` significa que el usuario eligió "Todos". En ese
+   *  modo el listado se renderiza con virtual scroll (CDK) para no montar
+   *  cientos de filas en el DOM. El drag-and-drop para reordenar queda
+   *  deshabilitado en este modo: es incompatible con el virtual scroll y
+   *  reordenar cientos de ítems arrastrando es impráctico. */
+  public readonly showAll = computed(() => this.pageRows() > 50);
+
+  /** Alto de fila EXACTO (px) para el virtual scroll. Debe coincidir con lo
+   *  renderizado (`h-24` = 6rem = 96px en móvil, `h-32` = 8rem = 128px en
+   *  desktop) o el scroll se desalinea. Se actualiza al cruzar el breakpoint. */
+  public readonly rowSize = signal(128);
+  private readonly desktopMq =
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(min-width: 640px)')
+      : null;
+  private readonly onBreakpointChange = (e: MediaQueryListEvent): void => {
+    this.rowSize.set(e.matches ? 128 : 96);
+  };
+
+  /** trackBy del virtual scroll: por id estable del producto. */
+  public trackById = (_: number, product: Product) => product.id;
+
   public readonly isProcessing = signal(false);
   public readonly bulkCategoryIds = signal<string[]>([]);
   public readonly filterCategoryId = signal<string | null>(null);
@@ -126,6 +152,23 @@ export default class List implements OnInit, OnDestroy {
     const products = this.filteredProducts();
     return products.slice(this.pageFirst(), this.pageFirst() + this.pageRows());
   });
+
+  /** Ítems realmente renderizados en pantalla. En modo "Todos" el virtual scroll
+   *  pinta `filteredProducts()` completo, no el slice paginado; el header
+   *  "seleccionar todo" y las acciones masivas deben operar sobre ESTE set o
+   *  quedan desincronizados (p. ej. si `pageRows` quedó fijado en un total viejo
+   *  y luego el filtro se ensancha, el slice mostraría menos de lo visible). */
+  public readonly renderedItems = computed(() =>
+    this.showAll() ? this.filteredProducts() : this.currentPageItems(),
+  );
+
+  /** `rows` que recibe el paginador. En modo "Todos" se ata al total del set
+   *  filtrado (⇒ una sola página, sin controles de página falsos) y mantiene la
+   *  opción "Todos" resaltada aunque el conteo cambie por un alta/baja o porque
+   *  el filtro se ensanchó tras elegir "Todos". En modo paginado es `pageRows`. */
+  public readonly paginatorRows = computed(() =>
+    this.showAll() ? Math.max(this.filteredProducts().length, 1) : this.pageRows(),
+  );
 
   /** Products locked by the free-plan limit. When a tenant is downgraded to the
    *  free plan and has more products than it allows, only the first `maxProducts`
@@ -159,7 +202,7 @@ export default class List implements OnInit, OnDestroy {
   }
 
   public readonly isAllPageSelected = computed(() => {
-    const pageItems = this.currentPageItems();
+    const pageItems = this.renderedItems();
     if (pageItems.length === 0) return false;
     const ids = this.selectedIds();
     return pageItems.every((p) => ids.has(String(p.id)));
@@ -198,6 +241,13 @@ export default class List implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
+    // Alto de fila del virtual scroll según el breakpoint actual + reaccionar
+    // a cambios de tamaño (rotar el móvil, redimensionar la ventana).
+    if (this.desktopMq) {
+      this.rowSize.set(this.desktopMq.matches ? 128 : 96);
+      this.desktopMq.addEventListener('change', this.onBreakpointChange);
+    }
+
     // Prime tenant currency cache (localStorage → DB fallback)
     this.tenantStore.getTenantIdAsync().then((tid) => {
       if (tid) this.tenantCurrency.load(tid);
@@ -217,6 +267,7 @@ export default class List implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.searchSubscription?.unsubscribe();
+    this.desktopMq?.removeEventListener('change', this.onBreakpointChange);
   }
 
   public onCategoryFilterChange(categoryId: string | null): void {
@@ -266,7 +317,7 @@ export default class List implements OnInit, OnDestroy {
   }
 
   public toggleAllPage() {
-    const pageItems = this.currentPageItems();
+    const pageItems = this.renderedItems();
     const ids = new Set(this.selectedIds());
     const allSelected = this.isAllPageSelected();
 
