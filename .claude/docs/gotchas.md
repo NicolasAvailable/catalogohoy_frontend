@@ -121,6 +121,13 @@
 - **Siempre `rem`, nunca pixeles hardcodeados** (los tokens de Tailwind son rem; en
   `ui-icon` usar `styleClass="w-4 h-4"`). Para valores finos, arbitrary values en rem:
   `text-[0.6875rem]`, `min-h-[11rem]`.
+- **Escala global por ancho: el `:root { font-size }` de `libs/ui/src/styles/main.css`**
+  es escalonado (75%/12px < 1280px · **81.25%/13px ≥ 1280** · 87.5%/14px ≥ 1600 · 100%/16px
+  ≥ 2560). Como TODO está en `rem`, esto agranda/achica la UI en bloque. ⚠️ Los breakpoints
+  `sm/md/lg/xl` de Tailwind NO se overridean → disparan por viewport real (px), ajenos a esta
+  escala. Si algo "se ve chico/apretado solo en laptops 13\"" es esta escala, no un breakpoint
+  de layout (verificado: a 1280/1440 no hay overflow, solo tamaño). Tocar los escalones acá,
+  nunca hardcodear tamaños para una pantalla puntual.
 - Skinear PrimeNG: clases internas v20 son `.p-select`, `.p-select-label`, `.p-placeholder`,
   `.p-select-dropdown`, `.p-dialog`, etc. Skinear con `::ng-deep` + un `styleClass` propio.
 - `ui-dialog` toma `headerTitle` como **texto plano** (no admite icono en el header) → si
