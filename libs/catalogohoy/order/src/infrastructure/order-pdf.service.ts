@@ -522,9 +522,21 @@ export class OrderPdfService {
       y
     );
 
-    doc.save(
-      `${isReceipt ? 'recibo' : 'orden'}-${order.orderNumber ?? order.id}.pdf`
-    );
+    // Nombre del archivo: los clientes (p. ej. Moto Fox) identifican la factura
+    // por el cliente, no por el número de orden. Sale como
+    // "<nombre del cliente>-<teléfono>.pdf". Fallbacks: sin teléfono usa el
+    // número de orden para no repetir nombre entre clientes homónimos; sin
+    // nombre, conserva el esquema anterior "orden/recibo-<número>".
+    const orderRef = order.orderNumber ?? order.id;
+    const safeName = (order.name || '')
+      .replace(/[\/\\:*?"<>|]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const safePhone = (order.phone || '').replace(/[^\d+]/g, '');
+    const fileBase = safeName
+      ? `${safeName}-${safePhone || orderRef}`
+      : `${isReceipt ? 'recibo' : 'orden'}-${orderRef}`;
+    doc.save(`${fileBase}.pdf`);
   }
 
   private blobToBase64(blob: Blob): Promise<string> {
