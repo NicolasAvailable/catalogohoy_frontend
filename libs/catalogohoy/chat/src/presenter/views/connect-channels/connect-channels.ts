@@ -23,11 +23,13 @@ const CHAT_ENABLED_PLANS = ['avanzado', 'enterprise'];
  *  andes-4x4 (2026-07-30): habilitado como gesto por info errada (modal decía
  *  Pro). Debe coincidir con CHAT_ENABLED_SLUGS del guard. */
 const CHAT_ENABLED_SLUGS: string[] = ['andes-4x4'];
-/** Beta cerrada de Instagram/Messenger: mientras Meta no apruebe los permisos
- *  (App Review), solo estos slugs ven las cards habilitadas — el flujo OAuth
- *  igual solo funciona para cuentas con rol en la app de Meta. Para el resto
- *  siguen "Próximamente". Quitar el gate al aprobarse la review. */
-const IG_FB_CONNECT_SLUGS: string[] = ['catalogohoy-demo', 'catalogohoy'];
+/** Instagram YA está aprobado por Meta (instagram_business_basic +
+ *  instagram_business_manage_messages, App Review 2026-09-14) y la app está en
+ *  Live → su card es PÚBLICA para todo catálogo con plan habilitado. Messenger
+ *  sigue en beta cerrada: su App Review propio (pages_messaging /
+ *  pages_manage_metadata) todavía NO está aprobado, así que solo estos slugs lo
+ *  ven. Quitar este gate cuando Meta apruebe esa review. */
+const MESSENGER_CONNECT_SLUGS: string[] = ['catalogohoy-demo', 'catalogohoy'];
 
 /** Canal conectable desde el hub (estilo galería de SocialGest). */
 interface ConnectableChannel {
@@ -82,13 +84,12 @@ export class ConnectChannelsComponent implements OnInit {
   protected readonly ttAccount = signal<SocialAccount | null>(null);
   protected readonly fbAccount = signal<SocialAccount | null>(null);
 
-  /** Canales disponibles hoy: WhatsApp Business y TikTok (ambos conectables).
-   *  Instagram y Messenger solo aparecen para la allowlist de la beta cerrada
-   *  (demo + catálogo interno, para el video de App Review de Meta); para el
-   *  resto de los catálogos quedan fuera de la galería por ahora. */
+  /** Canales de la galería: WhatsApp, Instagram y TikTok son públicos (los tres
+   *  conectables, gateados por plan vía canConnect()). Messenger solo aparece
+   *  para la allowlist de su beta cerrada hasta que Meta apruebe su review. */
   protected readonly channels = computed<ConnectableChannel[]>(() => {
     const slug = getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || '';
-    const igFbUnlocked = IG_FB_CONNECT_SLUGS.includes(slug);
+    const messengerUnlocked = MESSENGER_CONNECT_SLUGS.includes(slug);
     const list: ConnectableChannel[] = [
       {
         key: 'whatsapp',
@@ -96,6 +97,13 @@ export class ConnectChannelsComponent implements OnInit {
         logo: '/images/whatsapp.svg',
         description: 'Recibe y responde los chats de tu número de empresa.',
         route: '/admin/chat/connect/whatsapp',
+      },
+      {
+        key: 'instagram',
+        name: 'Instagram',
+        logo: '/images/instagram.svg',
+        description: 'Responde los mensajes directos de tu cuenta profesional.',
+        route: '/admin/chat/connect/instagram',
       },
       {
         key: 'tiktok',
@@ -107,23 +115,14 @@ export class ConnectChannelsComponent implements OnInit {
         route: '/admin/chat/connect/tiktok',
       },
     ];
-    if (igFbUnlocked) {
-      list.push(
-        {
-          key: 'instagram',
-          name: 'Instagram',
-          logo: '/images/instagram.svg',
-          description: 'Responde los mensajes directos de tu cuenta profesional.',
-          route: '/admin/chat/connect/instagram',
-        },
-        {
-          key: 'messenger',
-          name: 'Messenger',
-          logo: '/images/messenger.svg',
-          description: 'Responde los mensajes de Messenger de tu página de Facebook.',
-          route: '/admin/chat/connect/messenger',
-        }
-      );
+    if (messengerUnlocked) {
+      list.push({
+        key: 'messenger',
+        name: 'Messenger',
+        logo: '/images/messenger.svg',
+        description: 'Responde los mensajes de Messenger de tu página de Facebook.',
+        route: '/admin/chat/connect/messenger',
+      });
     }
     return list;
   });
