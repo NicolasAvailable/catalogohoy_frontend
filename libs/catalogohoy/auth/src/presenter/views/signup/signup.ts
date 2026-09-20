@@ -374,6 +374,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
         name,
         storeName,
         countryCode: country,
+        whatsapp: normalizedWhatsapp,
         referralCode: normalizedRef,
       });
       result.mapRight(async (url) => {

@@ -463,6 +463,7 @@ export class AuthenticationService implements BaseAuthenticationService {
       p_store_name: credentials.storeName,
       p_country_code: selectedCountry?.code ?? null,
       p_country: selectedCountry?.label ?? null,
+      p_whatsapp: credentials.whatsapp ?? null,
     });
     if (error) {
       const MSG: Record<string, string> = {

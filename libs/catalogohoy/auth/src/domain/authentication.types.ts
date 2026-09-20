@@ -24,6 +24,9 @@ export type GoogleSignupCredentials = {
   storeName: string;
   /** ISO2 country code chosen by the user at signup. */
   countryCode?: string;
+  /** WhatsApp personal del vendedor (E.164). Se persiste en el perfil y como
+   *  destinatario del aviso de nueva orden (complete_google_signup → p_whatsapp). */
+  whatsapp?: string;
   referralCode?: string | null;
 };
 
