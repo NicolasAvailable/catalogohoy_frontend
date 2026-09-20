@@ -971,12 +971,17 @@ export class EcommerceConfigComponent implements OnInit {
   // Mirrors the pre-internationalization UX (two buttons with symbol + name).
   // Also syncs `draftCurrencySymbol` — the old field in tenant_ecommerce_config
   // that the public catalog still reads for price rendering.
+  //
+  // Solo cambia el SÍMBOLO de la moneda de referencia (displayCurrency + symbol).
+  // NO toca `exchangeRateType`: la TASA (dólar/euro/personalizada) se configura
+  // aparte en el módulo "Tasas del día" y debe ser independiente del símbolo —
+  // así podés, por ejemplo, cobrar a la tasa del euro pero mostrar el signo $.
+  // (Antes seteaba exchangeRateType y, al guardar, pisaba la tasa elegida.)
   setReferenceCurrency(code: 'USD' | 'EUR') {
     const symbol = code === 'USD' ? '$' : '€';
     this.draftCurrency.set({
       ...this.draftCurrency(),
       displayCurrency: code,
-      exchangeRateType: code === 'USD' ? 'bcv_usd' : 'bcv_eur',
       showDualCurrency: true,
     });
     this.draftCurrencySymbol.set(symbol);
