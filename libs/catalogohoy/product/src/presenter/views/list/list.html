@@ -136,6 +136,21 @@
       styleClass="w-full"
       class="w-36 sm:w-56 shrink-0"
     />
+    <ui-select
+      [options]="[
+        { label: ('Predeterminado' | transloco), value: 'default' },
+        { label: ('Alfabético (A - Z)' | transloco), value: 'az' },
+        { label: ('Alfabético (Z - A)' | transloco), value: 'za' }
+      ]"
+      [ngModel]="sortOrder()"
+      [ngModelOptions]="{standalone: true}"
+      (ngModelChange)="onSortChange($event)"
+      optionLabel="label"
+      optionValue="value"
+      [placeholder]="'Ordenar' | transloco"
+      styleClass="w-full"
+      class="w-36 sm:w-52 shrink-0"
+    />
   </form>
   <section
     class="flex-1 flex flex-col overflow-hidden border border-grey-50 rounded-base bg-white"
@@ -212,6 +227,7 @@
     @if (!showAll()) {
     <div
       cdkDropList
+      [cdkDropListDisabled]="!canReorder()"
       (cdkDropListDropped)="drop($event)"
       class="flex-1 flex flex-col overflow-y-auto product-list"
     >
@@ -226,9 +242,11 @@
         <!-- Desktop row -->
         <section class="hidden sm:flex gap-4 justify-between px-6 py-4 items-center min-w-[700px]">
           <div class="flex items-center gap-3 flex-3 overflow-hidden">
+            @if (canReorder()) {
             <div cdkDragHandle class="cursor-move shrink-0 p-1 -ml-1">
               <ui-icon name="grip-vertical" styleClass="size-5 text-grey-300" />
             </div>
+            }
             <ui-checkbox
               [ngModel]="isSelected(item)"
               (valueChange)="toggleProduct(item)"
@@ -387,9 +405,11 @@
 
         <!-- Mobile row -->
         <div class="flex sm:hidden items-center gap-3 px-4 py-3">
+          @if (canReorder()) {
           <div cdkDragHandle class="cursor-move shrink-0">
             <ui-icon name="grip-vertical" styleClass="size-5 text-grey-300" />
           </div>
+          }
           <ui-checkbox
             [ngModel]="isSelected(item)"
             (valueChange)="toggleProduct(item)"

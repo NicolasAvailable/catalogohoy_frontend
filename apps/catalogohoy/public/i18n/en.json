@@ -2225,5 +2225,8 @@
   "Para revertirlo, aplicá el ajuste inverso.": "To undo it, apply the inverse adjustment.",
   "Valor": "Value",
   "Si un producto está en varias categorías, el precio cambia en todas (el precio vive en el producto).": "If a product is in several categories, its price changes in all of them (the price lives on the product).",
-  "El cambio es permanente. Un monto fijo se revierte con el inverso; un porcentaje no vuelve exacto por el redondeo.": "The change is permanent. A fixed amount can be reversed with its inverse; a percentage won’t return exactly due to rounding."
+  "El cambio es permanente. Un monto fijo se revierte con el inverso; un porcentaje no vuelve exacto por el redondeo.": "The change is permanent. A fixed amount can be reversed with its inverse; a percentage won’t return exactly due to rounding.",
+  "Ordenar": "Sort",
+  "Alfabético (A - Z)": "Alphabetical (A - Z)",
+  "Alfabético (Z - A)": "Alphabetical (Z - A)"
 }

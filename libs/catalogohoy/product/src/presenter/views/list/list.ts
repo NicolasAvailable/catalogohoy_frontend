@@ -134,6 +134,12 @@ export default class List implements OnInit, OnDestroy {
   public readonly isProcessing = signal(false);
   public readonly bulkCategoryIds = signal<string[]>([]);
   public readonly filterCategoryId = signal<string | null>(null);
+
+  /** Orden del listado. `default` = orden manual (por `position`, con drag-drop);
+   *  `az`/`za` = alfabético por nombre. En modo alfabético el reordenamiento por
+   *  arrastre se deshabilita (los índices mostrados no mapean a las posiciones
+   *  reales del store). Pedido de Distribuidora Moto Fox. */
+  public readonly sortOrder = signal<'default' | 'az' | 'za'>('default');
   /** ID del producto cuya URL pública se acaba de copiar — usado para mostrar
    *  el feedback "¡Link copiado!" en el tooltip del botón de compartir por
    *  unos segundos. */
@@ -144,9 +150,28 @@ export default class List implements OnInit, OnDestroy {
   public readonly filteredProducts = computed(() => {
     const products = this.productStore.productList().products;
     const categoryId = this.filterCategoryId();
-    if (!categoryId) return products;
-    return products.filter((p) => p.categoryList.ids.includes(categoryId));
+    const base = categoryId
+      ? products.filter((p) => p.categoryList.ids.includes(categoryId))
+      : products;
+
+    const order = this.sortOrder();
+    if (order === 'default') return base;
+    // Copia antes de ordenar (no mutar el array del store). Locale es + numeric
+    // para que "Camiseta 2" venga antes que "Camiseta 10".
+    const sorted = [...base].sort((a, b) =>
+      (a.name ?? '').localeCompare(b.name ?? '', 'es', {
+        sensitivity: 'base',
+        numeric: true,
+      })
+    );
+    return order === 'za' ? sorted.reverse() : sorted;
   });
+
+  /** El reordenamiento por arrastre solo tiene sentido en orden manual y
+   *  paginado (no en alfabético ni en "Todos"/virtual scroll). */
+  public readonly canReorder = computed(
+    () => !this.showAll() && this.sortOrder() === 'default'
+  );
 
   public readonly currentPageItems = computed(() => {
     const products = this.filteredProducts();
@@ -280,6 +305,12 @@ export default class List implements OnInit, OnDestroy {
     const resolvedId = category?.isViewAll ? null : categoryId;
 
     this.filterCategoryId.set(resolvedId);
+    this.pageFirst.set(0);
+    this.clearSelection();
+  }
+
+  public onSortChange(order: 'default' | 'az' | 'za' | null): void {
+    this.sortOrder.set(order ?? 'default');
     this.pageFirst.set(0);
     this.clearSelection();
   }

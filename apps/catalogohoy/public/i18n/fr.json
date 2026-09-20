@@ -2225,5 +2225,8 @@
   "Para revertirlo, aplicá el ajuste inverso.": "Pour l’annuler, appliquez l’ajustement inverse.",
   "Valor": "Valeur",
   "Si un producto está en varias categorías, el precio cambia en todas (el precio vive en el producto).": "Si un produit est dans plusieurs catégories, son prix change dans toutes (le prix appartient au produit).",
-  "El cambio es permanente. Un monto fijo se revierte con el inverso; un porcentaje no vuelve exacto por el redondeo.": "Le changement est permanent. Un montant fixe s’annule avec son inverse ; un pourcentage ne revient pas exactement à cause de l’arrondi."
+  "El cambio es permanente. Un monto fijo se revierte con el inverso; un porcentaje no vuelve exacto por el redondeo.": "Le changement est permanent. Un montant fixe s’annule avec son inverse ; un pourcentage ne revient pas exactement à cause de l’arrondi.",
+  "Ordenar": "Trier",
+  "Alfabético (A - Z)": "Alphabétique (A - Z)",
+  "Alfabético (Z - A)": "Alphabétique (Z - A)"
 }
