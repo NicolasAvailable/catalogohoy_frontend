@@ -81,20 +81,29 @@ edites a ciegas**; el repo puede estar atrás de prod.
 
 ## Sentry (errores + performance + replay)
 
-- **Dos proyectos** (un DSN por app): `sentryDsnCatalogohoy` y `sentryDsnAuth` en
-  `libs/catalogohoy/environments/src/sentry/sentry.ts`. Los DSN son **públicos** (van en el
-  bundle, como la key de PostHog) — no son secretos.
+- **Org `catalogohoy-w0`** (`o4512116099776512`), **tres proyectos** (un DSN por app):
+  `sentryDsnCatalogohoy`→`admin-dashboard`, `sentryDsnAuth`→`authentication`,
+  `sentryDsnInternal`→`internal`, en `libs/catalogohoy/environments/src/sentry/sentry.ts`.
+  Los DSN son **públicos** (van en el bundle, como la key de PostHog) — no son secretos.
 - **Init**: `initSentry({ dsn, appName })` en cada `apps/*/src/main.ts` **antes** de
-  `bootstrapApplication` (captura errores tempranos). **No corre en dev** ni si el DSN está vacío.
-- **Providers**: `...provideSentry()` en cada `app.config.ts` → `ErrorHandler` de Sentry +
-  `TraceService` (instrumenta el routing para performance). Vive en `core/providers/sentry`.
-- **Muestreo**: `tracesSampleRate 0.1`, replay `0.1` sesiones / `1.0` con error
-  (configurable en el env). Inputs enmascarados en el replay (`maskAllInputs: true`).
-- **`tracePropagationTargets`**: dominios `*.catalogohoy.com` + el proyecto Supabase (para
-  distributed tracing front↔backend).
-- **MCP**: `sentry` (remoto, OAuth) en `.mcp.json` → `https://mcp.sentry.dev/mcp`.
-- **Pendiente (opcional)**: subir **source maps** en el build de prod para stack traces legibles
-  (necesita auth token + org/project slugs; `@sentry/cli` o el plugin de esbuild como postbuild).
+  `bootstrapApplication` (captura errores tempranos). **No corre en dev** (`isDevMode()`) ni si
+  el DSN está vacío. Distingue apps por el tag `app`.
+- **Providers**: `...provideSentry()` en cada `app.config.ts` → `ErrorHandler` de Sentry
+  (envuelto en `ChunkAwareErrorHandler`: recupera ChunkLoadError post-deploy recargando + reporta
+  a Slack vía notify-error) + `TraceService` (routing). Vive en `core/providers/sentry`.
+- **Features activos**: Error Monitoring, **Logs** (`enableLogs: true`), Session Replay
+  (`0.1` sesiones / `1.0` con error, `maskAllInputs`), Tracing (`tracesSampleRate 0.1`).
+- **⚠️ `tracePropagationTargets: []` (VACÍO A PROPÓSITO)**: NO adjuntar headers `sentry-trace`/
+  `baggage` a las requests. Las edge functions de Supabase tienen un `Access-Control-Allow-Headers`
+  FIJO → si se agrega el dominio de Supabase, el browser bloquea el POST en el preflight y rompe
+  checkout/IA/créditos. NO agregar dominios acá (ver gotchas.md).
+- **`ignoreErrors`**: ruido de WebViews in-app (IG/FB/TikTok) + ResizeObserver.
+- **Source maps**: ✅ `scripts/sentry-sourcemaps.mjs` corre como postbuild en `build:catalogohoy`/
+  `build:authentication`/`build:internal` (inyecta debug ids, sube, borra los `.map`). Fail-safe.
+  Requiere en Vercel: `SENTRY_AUTH_TOKEN` (secreto de la org) — `SENTRY_ORG` default `catalogohoy-w0`
+  (override por env). Project slugs = args por build (`admin-dashboard`/`authentication`/`internal`).
+- **MCP**: `sentry` (remoto, OAuth) en `.mcp.json` → `https://mcp.sentry.dev/mcp` (scope
+  `project:write` → crear proyectos/DSN desde acá).
 
 ## Google (correo, login, SEO, analytics) — estado 2026-07-13
 

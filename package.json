@@ -9,7 +9,7 @@
     "build": "nx run-many --target=build --all",
     "build:catalogohoy": "nx build catalogohoy && node scripts/sentry-sourcemaps.mjs dist/apps/catalogohoy admin-dashboard",
     "build:authentication": "nx build authentication && node scripts/sentry-sourcemaps.mjs dist/apps/authentication authentication",
-    "build:internal": "nx build internal",
+    "build:internal": "nx build internal && node scripts/sentry-sourcemaps.mjs dist/apps/internal internal",
     "serve:landing": "nx serve landing",
     "build:landing": "nx build landing",
     "serve:help": "nx serve help",
