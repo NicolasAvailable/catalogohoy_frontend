@@ -416,6 +416,7 @@
         </div>
         }
 
+        @if (canCancelSubscription()) {
         <div
           class="flex items-center justify-between gap-4 pt-4 border-t border-grey-100"
         >
@@ -432,6 +433,18 @@
             (click)="onCancelSubscription()"
           />
         </div>
+        } @else {
+        <div
+          class="flex items-center gap-2 pt-4 border-t border-grey-100 text-sm text-grey-500"
+        >
+          <ui-icon name="circle-check" size="15" styleClass="text-emerald-500" />
+          @if (cancelledActiveUntil(); as until) {
+          {{ 'Tu suscripción está cancelada. Seguirá activa hasta el {date}.' | transloco: { date: until } }}
+          } @else {
+          {{ 'Tu suscripción está cancelada.' | transloco }}
+          }
+        </div>
+        }
       </div>
     </ui-card>
     } @else {

@@ -2228,5 +2228,7 @@
   "El cambio es permanente. Un monto fijo se revierte con el inverso; un porcentaje no vuelve exacto por el redondeo.": "The change is permanent. A fixed amount can be reversed with its inverse; a percentage won’t return exactly due to rounding.",
   "Ordenar": "Sort",
   "Alfabético (A - Z)": "Alphabetical (A - Z)",
-  "Alfabético (Z - A)": "Alphabetical (Z - A)"
+  "Alfabético (Z - A)": "Alphabetical (Z - A)",
+  "Tu suscripción está cancelada.": "Your subscription is canceled.",
+  "Tu suscripción está cancelada. Seguirá activa hasta el {date}.": "Your subscription is canceled. It will stay active until {date}."
 }

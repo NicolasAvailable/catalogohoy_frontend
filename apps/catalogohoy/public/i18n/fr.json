@@ -2228,5 +2228,7 @@
   "El cambio es permanente. Un monto fijo se revierte con el inverso; un porcentaje no vuelve exacto por el redondeo.": "Le changement est permanent. Un montant fixe s’annule avec son inverse ; un pourcentage ne revient pas exactement à cause de l’arrondi.",
   "Ordenar": "Trier",
   "Alfabético (A - Z)": "Alphabétique (A - Z)",
-  "Alfabético (Z - A)": "Alphabétique (Z - A)"
+  "Alfabético (Z - A)": "Alphabétique (Z - A)",
+  "Tu suscripción está cancelada.": "Votre abonnement est annulé.",
+  "Tu suscripción está cancelada. Seguirá activa hasta el {date}.": "Votre abonnement est annulé. Il restera actif jusqu au {date}."
 }

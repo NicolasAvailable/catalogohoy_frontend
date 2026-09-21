@@ -2228,5 +2228,7 @@
   "El cambio es permanente. Un monto fijo se revierte con el inverso; un porcentaje no vuelve exacto por el redondeo.": "El cambio es permanente. Un monto fijo se revierte con el inverso; un porcentaje no vuelve exacto por el redondeo.",
   "Ordenar": "Ordenar",
   "Alfabético (A - Z)": "Alfabético (A - Z)",
-  "Alfabético (Z - A)": "Alfabético (Z - A)"
+  "Alfabético (Z - A)": "Alfabético (Z - A)",
+  "Tu suscripción está cancelada.": "Tu suscripción está cancelada.",
+  "Tu suscripción está cancelada. Seguirá activa hasta el {date}.": "Tu suscripción está cancelada. Seguirá activa hasta el {date}."
 }

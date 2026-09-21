@@ -71,6 +71,23 @@ export class Profile {
   public readonly isDeleting = signal(false);
   public readonly isOpeningPortal = signal(false);
 
+  /** Se cancela una sola vez: al confirmar la cancelación ocultamos el botón
+   *  (y mostramos hasta cuándo sigue activo) para que no se pueda re-presionar.
+   *  Fuente persistida: `stripeSubscriptionStatus === 'canceled'`; este signal
+   *  cubre el estado inmediato en la sesión (Stripe deja la sub en 'active'
+   *  hasta fin de período cuando se cancela al final del ciclo). */
+  public readonly subscriptionCancelled = signal(false);
+  public readonly cancelledActiveUntil = signal<string | null>(null);
+
+  /** El botón "Cancelar suscripción" se muestra solo si hay un plan pago vigente
+   *  que todavía puede cancelarse: no gratis, no ya cancelada. */
+  public readonly canCancelSubscription = computed(() => {
+    if (this.planStore.isFreePlan()) return false;
+    if (this.subscriptionCancelled()) return false;
+    const status = this.planStore.tenantPlanUsage()?.stripeSubscriptionStatus;
+    return status !== 'canceled';
+  });
+
   /** Cuenta creada con Google (OAuth): no tiene contraseña propia (la
    *  administra Google). Oculta el cambio de contraseña y muestra una nota.
    *  Se resuelve async al iniciar (lee el provider del auth user). */
@@ -372,13 +389,17 @@ export class Profile {
         const until = info.activeUntil
           ? new Date(info.activeUntil).toLocaleDateString('es-ES')
           : null;
+        // Ocultar el botón ya: no se puede volver a cancelar lo ya cancelado.
+        this.subscriptionCancelled.set(true);
+        this.cancelledActiveUntil.set(until);
         this.toaster.success(
           info.immediate || !until
             ? 'Tu suscripción fue cancelada.'
             : `Tu suscripción se canceló. Tu plan sigue activo hasta el ${until}.`
         );
-        // Refrescar el estado del plan para que la UI deje de ofrecer cancelar.
-        this.planStore.loadTenantPlanUsage();
+        // Refrescar el estado del plan (force: loadTenantPlanUsage hace
+        // early-return si ya está cargado) para que la UI quede consistente.
+        this.planStore.refreshUsage();
       }
     );
   }
