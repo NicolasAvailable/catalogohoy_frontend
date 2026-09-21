@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { environment } from '@catalogohoy/env';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ExpirationBannerComponent, PlanStore } from '@catalogohoy/plan';
+import { ActivationBanner } from '@catalogohoy/home';
 import { WhatsappSupportComponent } from '@ui';
 import { AiAnnouncement, Navbar, Sidebar, UpdateBanner } from '../../components';
 
@@ -14,6 +15,7 @@ import { AiAnnouncement, Navbar, Sidebar, UpdateBanner } from '../../components'
     Sidebar,
     WhatsappSupportComponent,
     ExpirationBannerComponent,
+    ActivationBanner,
     AiAnnouncement,
     UpdateBanner,
     TranslocoPipe,

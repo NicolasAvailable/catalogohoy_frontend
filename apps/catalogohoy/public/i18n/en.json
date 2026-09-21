@@ -2230,5 +2230,10 @@
   "Alfabético (A - Z)": "Alphabetical (A - Z)",
   "Alfabético (Z - A)": "Alphabetical (Z - A)",
   "Tu suscripción está cancelada.": "Your subscription is canceled.",
-  "Tu suscripción está cancelada. Seguirá activa hasta el {date}.": "Your subscription is canceled. It will stay active until {date}."
+  "Tu suscripción está cancelada. Seguirá activa hasta el {date}.": "Your subscription is canceled. It will stay active until {date}.",
+  "Siguiente paso": "Next step",
+  "Súbelo con foto y precio para estrenar tu catálogo.": "Add it with a photo and price to launch your catalog.",
+  "Sube tu logo, una descripción y tus colores.": "Upload your logo, a description and your colors.",
+  "Los números que recibirán los pedidos del checkout.": "The numbers that will receive checkout orders.",
+  "Un WhatsApp cada vez que entra una orden nueva.": "A WhatsApp every time a new order comes in."
 }
