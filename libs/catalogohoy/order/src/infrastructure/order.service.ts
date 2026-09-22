@@ -9,6 +9,7 @@ import {
   InternalNote,
   invoiceFilenameUsesPhone,
   Order,
+  OrderAdjustment,
   OrderItem,
   OrderMapper,
   OrderMetrics,
@@ -57,6 +58,9 @@ export interface CreateOrderInput {
   /** Comisión (opcional) que paga el vendedor: se RESTA del total (net) y es
    *  interna (no se muestra al cliente). Distinta del envío, que suma. */
   commission?: number;
+  /** Ajuste (descuento/recargo) del método de pago, snapshot para la factura.
+   *  A diferencia de la comisión, SÍ se le muestra al cliente. null = sin ajuste. */
+  paymentAdjustment?: OrderAdjustment | null;
   /** Snapshot del envío para que la lista/detalle lo muestren (misma forma
    *  que el checkout público). En órdenes manuales el nombre es "Envío"; al
    *  editar una orden del catálogo se preserva su método original. null =
@@ -302,6 +306,8 @@ export class OrderService {
     // commission: costo del vendedor que resta del total (0 = sin comisión).
     if (input.commission !== undefined)
       payload['commission'] = input.commission ?? 0;
+    if (input.paymentAdjustment !== undefined)
+      payload['payment_adjustment'] = input.paymentAdjustment ?? null;
     if (input.shippingMethod !== undefined) payload['shipping_method'] = input.shippingMethod;
 
     const { data, error } = await this.client
@@ -366,6 +372,8 @@ export class OrderService {
     // commission: costo del vendedor que resta del total (0 = sin comisión).
     if (input.commission !== undefined)
       patch['commission'] = input.commission ?? 0;
+    if (input.paymentAdjustment !== undefined)
+      patch['payment_adjustment'] = input.paymentAdjustment ?? null;
     if (input.shippingMethod !== undefined) patch['shipping_method'] = input.shippingMethod;
 
     const { data, error } = await this.client

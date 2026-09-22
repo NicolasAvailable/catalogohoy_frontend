@@ -8,6 +8,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { EcommerceConfigStore, TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
@@ -40,6 +41,7 @@ import {
 } from '@ui';
 import {
   Order,
+  OrderAdjustment,
   OrderItem,
   OrderItemAddon,
   OrderStatus,
@@ -153,6 +155,20 @@ export default class OrderSave implements OnInit {
   public readonly orderPaymentMethods = computed(() =>
     this.configStore.paymentMethodsList().filter((m) => m.isActive)
   );
+
+  /** Valor reactivo del método de pago. El form control no es signal, así que lo
+   *  espejamos para que los computed que dependen del ajuste (ej. `totalBs`)
+   *  reaccionen cuando el usuario cambia de método. */
+  public readonly paymentMethodValue = toSignal(
+    this.form.controls.paymentMethod.valueChanges,
+    { initialValue: this.form.controls.paymentMethod.value }
+  );
+
+  /** Snapshot del ajuste + método con que se CARGÓ la orden (edición). Sirve
+   *  para respetar el ajuste guardado y NO recalcularlo desde la config actual
+   *  (que pudo cambiar) mientras el usuario no cambie el método de pago. */
+  private readonly loadedPaymentMethod = signal<string>('');
+  private readonly loadedAdjustment = signal<OrderAdjustment | null>(null);
 
 
   public readonly id = input<string | undefined>(undefined);
@@ -352,6 +368,8 @@ export default class OrderSave implements OnInit {
     this.form.controls.comments.setValue(order.comments || '');
     this.form.controls.status.setValue(order.status);
     this.form.controls.paymentMethod.setValue(order.paymentMethod || '');
+    this.loadedPaymentMethod.set(order.paymentMethod || '');
+    this.loadedAdjustment.set(order.paymentAdjustment ?? null);
     this.form.controls.paymentEvidenceNote.setValue(
       order.paymentEvidence?.note || ''
     );
@@ -763,7 +781,12 @@ export default class OrderSave implements OnInit {
   /** Lo que paga el cliente: subtotal + envío (antes de la comisión del
    *  vendedor). Base del cálculo de cambio del POS. */
   public grossTotal(): number {
-    return this.productsSubtotal() + this.effectiveShippingFee();
+    const adj = this.paymentAdjustment();
+    return (
+      this.productsSubtotal() +
+      this.effectiveShippingFee() +
+      (adj ? adj.amount : 0)
+    );
   }
 
   /** Total neto que se guarda/muestra: lo que paga el cliente MENOS la comisión
@@ -775,6 +798,55 @@ export default class OrderSave implements OnInit {
   /** Costo de envío que efectivamente se suma al total (0 si no hay envío). */
   public effectiveShippingFee(): number {
     return this.shippingSelection() === '' ? 0 : this.shippingFee() || 0;
+  }
+
+  /** Ajuste (descuento/recargo) del método de pago elegido. `amount` es SIGNED:
+   *  negativo = descuento (resta del total), positivo = recargo (suma). Se toma
+   *  del método configurado en Editar catálogo → Pagos y se aplica sobre el
+   *  subtotal de productos. A diferencia de la comisión (costo oculto del
+   *  vendedor), esto SÍ se le muestra al cliente como línea en la factura. */
+  public paymentAdjustment(): {
+    label: string;
+    amount: number;
+    magnitude: number;
+    kind: 'discount' | 'surcharge';
+    visible: boolean;
+  } | null {
+    const name = this.paymentMethodValue();
+    if (!name) return null;
+    // Edición: si el método no cambió respecto al guardado, respetá el snapshot
+    // almacenado (no recalcules desde la config, que pudo cambiar). Así no se
+    // pisan totales históricos ni se le inyecta un ajuste a una orden creada sin
+    // él (ej. del checkout público). Recalcula solo al cambiar de método.
+    if (!this.isCreate() && name === this.loadedPaymentMethod()) {
+      return this.loadedAdjustment();
+    }
+    const method = this.configStore
+      .paymentMethodsList()
+      .find((m) => m.name === name);
+    const d = method?.details ?? {};
+    const type = d['__adjustType'];
+    // Tolerá coma decimal (norma LatAm/VE): "5,5" → 5.5.
+    let value = Number(String(d['__adjustValue'] ?? '').replace(',', '.'));
+    if (!type || type === 'none' || !Number.isFinite(value) || value <= 0)
+      return null;
+    const mode = d['__adjustMode'] || 'percent';
+    if (mode === 'percent') value = Math.min(value, 100);
+    let magnitude =
+      mode === 'percent' ? (this.productsSubtotal() * value) / 100 : value;
+    // Un descuento nunca puede dejar el total (productos + envío) en negativo.
+    if (type === 'discount') {
+      magnitude = Math.min(
+        magnitude,
+        this.productsSubtotal() + this.effectiveShippingFee()
+      );
+    }
+    if (magnitude <= 0) return null;
+    const suffix = mode === 'percent' ? ` (${value}%)` : '';
+    const visible = d['__adjustVisible'] !== '0';
+    return type === 'discount'
+      ? { label: `Descuento · ${name}${suffix}`, amount: -magnitude, magnitude, kind: 'discount', visible }
+      : { label: `Recargo · ${name}${suffix}`, amount: magnitude, magnitude, kind: 'surcharge', visible };
   }
 
   public setCommissionMode(mode: 'fixed' | 'percent'): void {
@@ -917,6 +989,7 @@ export default class OrderSave implements OnInit {
       paymentEvidence: this.buildPaymentEvidence(),
       shippingFee: this.effectiveShippingFee(),
       commission: this.effectiveCommission(),
+      paymentAdjustment: this.paymentAdjustment(),
       shippingMethod: this.buildShippingMethod(),
     };
 

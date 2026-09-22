@@ -56,6 +56,21 @@ export interface InternalNote {
   media?: string[];
 }
 
+/** Ajuste de precio (descuento o recargo) aplicado por el método/condición de
+ *  pago elegido. Se guarda como snapshot en la orden para la factura. */
+export interface OrderAdjustment {
+  /** Etiqueta lista para mostrar, ej. "Descuento · Contado (5%)". */
+  label: string;
+  /** Monto SIGNED: negativo = descuento (resta del total), positivo = recargo. */
+  amount: number;
+  /** Magnitud positiva (para mostrar el número sin signo). */
+  magnitude: number;
+  kind: 'discount' | 'surcharge';
+  /** Si se muestra como línea en la factura del cliente. false = se aplica al
+   *  total pero NO se itemiza (el cliente ve solo el total final). */
+  visible: boolean;
+}
+
 export interface Order {
   id: number;
   /** Per-tenant incremental number shown in the UI (#N). Display-only;
@@ -98,6 +113,10 @@ export interface Order {
    *  from the order total (net) and is never shown to the customer. Distinct
    *  from `shippingFee`, which the customer pays and adds. */
   commission?: number;
+  /** Ajuste (descuento/recargo) del método de pago aplicado a la orden. A
+   *  diferencia de la comisión, SÍ se le muestra al cliente como línea en la
+   *  factura. Snapshot al momento de la orden. null/ausente = sin ajuste. */
+  paymentAdjustment?: OrderAdjustment | null;
   /** ISO date "YYYY-MM-DD". Defaults to the creation date on the server. */
   deliveryDate: string;
 }

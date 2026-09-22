@@ -396,6 +396,14 @@
                 <div class="payment-method-info">
                   <ui-icon [name]="method.icon" styleClass="size-5 text-grey-500"></ui-icon>
                   <span class="payment-method-name">{{ method.name }}</span>
+                  @if (adjustBadge(method); as badge) {
+                  <span
+                    class="pm-adjust-chip"
+                    [class.good]="badge.kind === 'good'"
+                    [class.warn]="badge.kind === 'warn'"
+                    >{{ badge.label }}</span
+                  >
+                  }
                 </div>
                 <div class="payment-method-actions">
                   <ui-button
@@ -451,6 +459,49 @@
                   }
                 </div>
                 }
+
+                <!-- Ajuste automático: descuento/recargo al elegir este método en una orden -->
+                <div class="payment-method-adjust">
+                  <label class="payment-method-field-label">{{ 'Ajuste al pagar con este método (opcional)' | transloco }}</label>
+                  <ui-select
+                    [options]="adjustTypeOptions"
+                    [ngModel]="adjType()"
+                    (ngModelChange)="setAdjType($event)"
+                    optionLabel="label"
+                    optionValue="value"
+                  ></ui-select>
+                  @if (adjType() !== 'none') {
+                  <div class="payment-method-adjust-row">
+                    <ui-select
+                      [options]="adjustModeOptions"
+                      [ngModel]="adjMode()"
+                      (ngModelChange)="setAdjMode($event)"
+                      optionLabel="label"
+                      optionValue="value"
+                    ></ui-select>
+                    <ui-input-text
+                      [ngModel]="adjValue()"
+                      (ngModelChange)="setAdjValue($event)"
+                      [placeholder]="(adjMode() === 'percent' ? 'Ej: 5' : 'Ej: 10') | transloco"
+                      styleClass="w-full"
+                    ></ui-input-text>
+                    @if (adjMode() === 'percent') {
+                    <span class="pm-adjust-unit">%</span>
+                    }
+                  </div>
+                  <div class="payment-method-adjust-visible">
+                    <ui-toggle
+                      [ngModel]="adjVisible()"
+                      (ngModelChange)="setAdjVisible($event)"
+                    ></ui-toggle>
+                    <span>{{ 'Mostrar en la factura del cliente' | transloco }}</span>
+                  </div>
+                  <p class="payment-method-details-hint">
+                    {{ 'Se aplica solo al elegir este método al crear una orden.' | transloco }}
+                  </p>
+                  }
+                </div>
+
                 <div class="payment-method-details-actions">
                   <ui-button
                     [label]="'Cancelar' | transloco"

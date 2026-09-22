@@ -1625,6 +1625,66 @@ export class EcommerceConfigComponent implements OnInit {
     this.expandedMethodId.set(null);
   }
 
+  // --- Ajuste por método de pago (descuento/recargo que se aplica al elegir
+  //     este método al crear una orden). Se guarda dentro de `details` bajo
+  //     claves reservadas `__adjust*`: no requiere migración y el checkout solo
+  //     renderiza los campos conocidos (paymentMethodFields), así que estas
+  //     claves nunca se le muestran al cliente. ---
+  public readonly adjustTypeOptions = [
+    { label: 'Ninguno', value: 'none' },
+    { label: 'Descuento', value: 'discount' },
+    { label: 'Recargo', value: 'surcharge' },
+  ];
+  public readonly adjustModeOptions = [
+    { label: 'Porcentaje (%)', value: 'percent' },
+    { label: 'Monto fijo', value: 'fixed' },
+  ];
+
+  public adjType(): string {
+    return this.detailsDraft()['__adjustType'] || 'none';
+  }
+  public setAdjType(v: string): void {
+    this.setDetailField('__adjustType', v);
+  }
+  public adjMode(): string {
+    return this.detailsDraft()['__adjustMode'] || 'percent';
+  }
+  public setAdjMode(v: string): void {
+    this.setDetailField('__adjustMode', v);
+  }
+  public adjValue(): string {
+    return this.detailsDraft()['__adjustValue'] ?? '';
+  }
+  public setAdjValue(v: string): void {
+    // Tolerá coma decimal (norma en LatAm/VE): "5,5" → "5.5".
+    this.setDetailField(
+      '__adjustValue',
+      v == null ? '' : String(v).replace(',', '.')
+    );
+  }
+  /** Default: visible al cliente (un descuento se muestra en la factura). */
+  public adjVisible(): boolean {
+    return this.detailsDraft()['__adjustVisible'] !== '0';
+  }
+  public setAdjVisible(v: boolean): void {
+    this.setDetailField('__adjustVisible', v ? '1' : '0');
+  }
+
+  /** Chip resumen del ajuste de un método (para la fila colapsada). */
+  public adjustBadge(
+    method: PaymentMethodEntity
+  ): { label: string; kind: 'good' | 'warn' } | null {
+    const d = method.details ?? {};
+    const type = d['__adjustType'];
+    const value = Number(String(d['__adjustValue'] ?? '').replace(',', '.'));
+    if (!type || type === 'none' || !value) return null;
+    const amount =
+      (d['__adjustMode'] || 'percent') === 'percent' ? `${value}%` : `${value}`;
+    return type === 'discount'
+      ? { label: `Descuento ${amount}`, kind: 'good' }
+      : { label: `Recargo ${amount}`, kind: 'warn' };
+  }
+
   // --- WhatsApp Section ---
   addWhatsappButton() {
     const current = this.draftWhatsappButtons();

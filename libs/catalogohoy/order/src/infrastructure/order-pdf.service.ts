@@ -464,17 +464,61 @@ export class OrderPdfService {
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text('Subtotal', labelX, y);
-    doc.text(money(order.totalUsd), valX, y, {
-      align: 'right',
-    });
-    y += 5;
+
+    // Solo se itemiza si el ajuste es visible al cliente; si no, la factura
+    // muestra Subtotal = Total (el ajuste ya está aplicado en el total).
+    const adj =
+      order.paymentAdjustment && order.paymentAdjustment.visible !== false
+        ? order.paymentAdjustment
+        : null;
+
+    // Total mostrado: con ajuste itemizado, es la suma de las líneas visibles
+    // (productos + envío ± ajuste), para que la factura SIEMPRE cuadre — aunque
+    // exista una comisión oculta que reste del `total_usd` guardado.
+    let displayTotalUsd = order.totalUsd;
+    let displayTotalBs = order.totalBs;
+
+    if (adj) {
+      const productsSubtotal = order.products.reduce(
+        (sum, p) => sum + (p.total || 0),
+        0
+      );
+      const shipping =
+        order.shippingFee && order.shippingFee > 0 ? order.shippingFee : 0;
+      displayTotalUsd = productsSubtotal + shipping + adj.amount;
+      const rate =
+        order.totalBs && order.totalUsd > 0 ? order.totalBs / order.totalUsd : 0;
+      if (rate) displayTotalBs = displayTotalUsd * rate;
+
+      doc.text('Subtotal', labelX, y);
+      doc.text(money(productsSubtotal), valX, y, { align: 'right' });
+      y += 5;
+
+      if (shipping > 0) {
+        doc.text('Envío', labelX, y);
+        doc.text(money(shipping), valX, y, { align: 'right' });
+        y += 5;
+      }
+
+      doc.text(adj.label, labelX, y);
+      doc.text(
+        `${adj.kind === 'discount' ? '- ' : '+ '}${money(adj.magnitude)}`,
+        valX,
+        y,
+        { align: 'right' }
+      );
+      y += 5;
+    } else {
+      doc.text('Subtotal', labelX, y);
+      doc.text(money(order.totalUsd), valX, y, { align: 'right' });
+      y += 5;
+    }
 
     // El mirror "Total en Bs." solo en catálogos dual-moneda (referencia + Bs);
     // en un catálogo solo-Bs el total ya sale en bolívares vía money().
-    if (!soloBs && showDualBs && order.totalBs && order.totalBs > 0) {
+    if (!soloBs && showDualBs && displayTotalBs && displayTotalBs > 0) {
       doc.text('Total en Bs.', labelX, y);
-      doc.text(`Bs. ${fmtBs(order.totalBs)}`, valX, y, {
+      doc.text(`Bs. ${fmtBs(displayTotalBs)}`, valX, y, {
         align: 'right',
       });
       y += 5;
@@ -482,7 +526,7 @@ export class OrderPdfService {
 
     doc.setFont('helvetica', 'bold');
     doc.text('Total', labelX, y);
-    doc.text(money(order.totalUsd), valX, y, {
+    doc.text(money(displayTotalUsd), valX, y, {
       align: 'right',
     });
     y += 10;

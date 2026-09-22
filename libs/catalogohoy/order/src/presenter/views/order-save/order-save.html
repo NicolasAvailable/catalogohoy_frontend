@@ -991,6 +991,18 @@
         </div>
         }
 
+        @if (paymentAdjustment(); as adj) {
+        <div class="flex justify-between items-center">
+          <span class="text-base text-grey-400 font-medium">{{ adj.label }}@if (!adj.visible) {<span class="text-xs text-grey-300"> · {{ 'oculto en factura' | transloco }}</span>}</span>
+          <span
+            class="text-base font-semibold"
+            [class.text-green-600]="adj.kind === 'discount'"
+            [class.text-amber-600]="adj.kind === 'surcharge'"
+            >{{ adj.kind === 'discount' ? '−' : '+' }} {{ cs() }} {{ adj.magnitude.toFixed(2) }}</span
+          >
+        </div>
+        }
+
         @if (effectiveCommission() > 0) {
         <div class="flex justify-between items-center">
           <span class="text-base text-grey-400 font-medium">{{ 'Comisión' | transloco }}</span>

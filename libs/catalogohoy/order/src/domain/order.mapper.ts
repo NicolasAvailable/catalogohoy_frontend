@@ -1,4 +1,10 @@
-import { Order, OrderItem, OrderStatus, PaymentEvidence } from './order';
+import {
+  Order,
+  OrderAdjustment,
+  OrderItem,
+  OrderStatus,
+  PaymentEvidence,
+} from './order';
 
 export class OrderMapper {
   static toDomain(entity: unknown): Order {
@@ -27,6 +33,7 @@ export class OrderMapper {
       shippingAddress: e.shipping_address ?? null,
       shippingFee: e.shipping_fee != null ? Number(e.shipping_fee) : undefined,
       commission: e.commission != null ? Number(e.commission) : undefined,
+      paymentAdjustment: OrderMapper.toAdjustment(e.payment_adjustment),
       deliveryDate: e.delivery_date,
     };
   }
@@ -42,6 +49,19 @@ export class OrderMapper {
     const note = typeof e.note === 'string' ? e.note : undefined;
     if (!note && images.length === 0) return null;
     return { note, images };
+  }
+
+  /** Normaliza la columna `payment_adjustment` (jsonb) a la forma de dominio.
+   *  Tolera valores ausentes/legacy → null. */
+  private static toAdjustment(raw: unknown): OrderAdjustment | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const a = raw as any;
+    const amount = Number(a.amount);
+    if (!a.label || !Number.isFinite(amount) || amount === 0) return null;
+    const magnitude = Number(a.magnitude) || Math.abs(amount);
+    const kind = a.kind === 'surcharge' ? 'surcharge' : 'discount';
+    const visible = a.visible !== false;
+    return { label: String(a.label), amount, magnitude, kind, visible };
   }
 
   private static toOrderItemDomain(item: unknown): OrderItem {
