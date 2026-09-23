@@ -1633,7 +1633,7 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly adjustTypeOptions = [
     { label: 'Ninguno', value: 'none' },
     { label: 'Descuento', value: 'discount' },
-    { label: 'Recargo', value: 'surcharge' },
+    { label: 'Cargo adicional', value: 'surcharge' },
   ];
   public readonly adjustModeOptions = [
     { label: 'Porcentaje (%)', value: 'percent' },
@@ -1682,7 +1682,7 @@ export class EcommerceConfigComponent implements OnInit {
       (d['__adjustMode'] || 'percent') === 'percent' ? `${value}%` : `${value}`;
     return type === 'discount'
       ? { label: `Descuento ${amount}`, kind: 'good' }
-      : { label: `Recargo ${amount}`, kind: 'warn' };
+      : { label: `Cargo adicional ${amount}`, kind: 'warn' };
   }
 
   // --- WhatsApp Section ---

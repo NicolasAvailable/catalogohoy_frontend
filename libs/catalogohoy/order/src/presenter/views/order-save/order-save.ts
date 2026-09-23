@@ -846,7 +846,7 @@ export default class OrderSave implements OnInit {
     const visible = d['__adjustVisible'] !== '0';
     return type === 'discount'
       ? { label: `Descuento · ${name}${suffix}`, amount: -magnitude, magnitude, kind: 'discount', visible }
-      : { label: `Recargo · ${name}${suffix}`, amount: magnitude, magnitude, kind: 'surcharge', visible };
+      : { label: `Cargo adicional · ${name}${suffix}`, amount: magnitude, magnitude, kind: 'surcharge', visible };
   }
 
   public setCommissionMode(mode: 'fixed' | 'percent'): void {
