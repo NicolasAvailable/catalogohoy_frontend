@@ -13,6 +13,7 @@ import {
   DEFAULT_SOCIAL_LINKS,
   EcommerceConfig,
   ExchangeRateType,
+  MetaCatalogSync,
   PaymentMethodEntity,
   ShippingMethod,
   SocialLinks,
@@ -559,16 +560,38 @@ export class EcommerceConfigService {
     );
   }
 
-  /** Estado de la conexión (sin traer tokens al navegador): RPC SECURITY DEFINER. */
-  async getMetaConnectionStatus(
-    tenantId: string
-  ): Promise<E.Either<Error, { connected: boolean; businessName: string | null }>> {
+  /** Estado de la conexión (sin traer tokens al navegador): RPC SECURITY DEFINER.
+   *  v2: incluye catálogo y la lista de Businesses para el selector. */
+  async getMetaConnectionStatus(tenantId: string): Promise<
+    E.Either<
+      Error,
+      {
+        connected: boolean;
+        businessId: string | null;
+        businessName: string | null;
+        catalogId: string | null;
+        businesses: { id: string; name: string }[];
+      }
+    >
+  > {
     const { data, error } = await this.client.rpc('get_meta_connection_status', {
       p_tenant_id: Number(tenantId),
     });
     if (error) return E.left(new Error(error.message));
-    const d = (data ?? {}) as { connected?: boolean; business_name?: string | null };
-    return E.right({ connected: !!d.connected, businessName: d.business_name ?? null });
+    const d = (data ?? {}) as {
+      connected?: boolean;
+      business_id?: string | null;
+      business_name?: string | null;
+      catalog_id?: string | null;
+      businesses?: { id: string; name: string }[];
+    };
+    return E.right({
+      connected: !!d.connected,
+      businessId: d.business_id ?? null,
+      businessName: d.business_name ?? null,
+      catalogId: d.catalog_id ?? null,
+      businesses: Array.isArray(d.businesses) ? d.businesses : [],
+    });
   }
 
   /** Desconecta Meta (borra la conexión local; el pixel manual, si hay, sigue). */
@@ -578,6 +601,76 @@ export class EcommerceConfigService {
     });
     if (error) return E.left(new Error(error.message));
     return E.right(undefined);
+  }
+
+  // ─────────────── Commerce Catalog de Meta (CAT-64, Fase 2) ───────────────
+  /** Llama a la edge fn meta-catalog (status | provision | sync_now |
+   *  select_business) y normaliza el Either. */
+  private async invokeMetaCatalog(
+    tenantId: string,
+    action: string,
+    extra: Record<string, unknown> = {}
+  ): Promise<E.Either<Error, Record<string, unknown>>> {
+    const { data, error } = await this.client.functions.invoke('meta-catalog', {
+      body: { tenantId: Number(tenantId), action, ...extra },
+    });
+    if (!error && data?.success) return E.right(data as Record<string, unknown>);
+    return E.left(
+      new Error(
+        (typeof data?.error === 'string' && data.error) ||
+          'No se pudo completar la operación con Meta'
+      )
+    );
+  }
+
+  private toCatalogSync(d: Record<string, unknown>): MetaCatalogSync | null {
+    if (!d['provisioned']) return null;
+    const last = (d['lastSync'] ?? null) as {
+      endTime?: string | null;
+      errorCount?: number;
+      warningCount?: number;
+    } | null;
+    return {
+      catalogId: String(d['catalogId']),
+      productCount: typeof d['productCount'] === 'number' ? d['productCount'] : null,
+      lastSyncEnd: last?.endTime ?? null,
+      errorCount: last?.errorCount ?? 0,
+      warningCount: last?.warningCount ?? 0,
+    };
+  }
+
+  /** Estado del catálogo publicado (productos que ve Meta + última ingesta). */
+  async getMetaCatalogStatus(
+    tenantId: string
+  ): Promise<E.Either<Error, MetaCatalogSync | null>> {
+    const result = await this.invokeMetaCatalog(tenantId, 'status');
+    return result.mapRight((d) => this.toCatalogSync(d));
+  }
+
+  /** Crea el Commerce Catalog en el Business + registra el feed diario y
+   *  dispara la primera sincronización. Idempotente. */
+  async provisionMetaCatalog(
+    tenantId: string
+  ): Promise<E.Either<Error, MetaCatalogSync | null>> {
+    const result = await this.invokeMetaCatalog(tenantId, 'provision');
+    return result.mapRight((d) => this.toCatalogSync(d));
+  }
+
+  /** Re-ingesta inmediata del feed (Meta puede tardar unos minutos). */
+  async syncMetaCatalog(tenantId: string): Promise<E.Either<Error, void>> {
+    const result = await this.invokeMetaCatalog(tenantId, 'sync_now');
+    return result.mapRight(() => undefined);
+  }
+
+  /** Cambia el Business donde vive el catálogo (resetea catálogo/feed). */
+  async selectMetaBusiness(
+    tenantId: string,
+    businessId: string
+  ): Promise<E.Either<Error, void>> {
+    const result = await this.invokeMetaCatalog(tenantId, 'select_business', {
+      businessId,
+    });
+    return result.mapRight(() => undefined);
   }
 
   async getPaymentMethods(

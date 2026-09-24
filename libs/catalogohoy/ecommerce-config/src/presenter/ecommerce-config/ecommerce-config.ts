@@ -11,6 +11,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -67,6 +68,7 @@ import {
   DEFAULT_WHATSAPP_ORDER_MESSAGE,
   EcommerceConfig,
   ExchangeRateType,
+  MetaCatalogSync,
   NO_CURRENCY_SYMBOL,
   PreviewMessage,
   findCountryByCode,
@@ -131,6 +133,7 @@ const SLUG_ERROR_MESSAGES: Record<string, string> = {
     PhoneMockupComponent,
     TemplateSelectorComponent,
     DatePickerModule,
+    DatePipe,
     TranslocoPipe,
   ],
   templateUrl: './ecommerce-config.html',
@@ -316,6 +319,23 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly metaConnected = signal(false);
   public readonly metaBusinessName = signal<string | null>(null);
   public readonly isConnectingMeta = signal(false);
+  // Commerce Catalog (CAT-64 Fase 2): selector de Business + estado del feed.
+  public readonly metaBusinessId = signal<string | null>(null);
+  public readonly metaBusinesses = signal<{ id: string; name: string }[]>([]);
+  public readonly metaCatalogId = signal<string | null>(null);
+  public readonly metaCatalogSync = signal<MetaCatalogSync | null>(null);
+  public readonly isProvisioningCatalog = signal(false);
+  public readonly isSyncingCatalog = signal(false);
+  public readonly metaBusinessOptions = computed(() =>
+    this.metaBusinesses().map((b) => ({ label: b.name, value: b.id }))
+  );
+  /** Link directo al catálogo en el Commerce Manager de Meta. */
+  public readonly metaCommerceUrl = computed(() => {
+    const id = this.metaCatalogId();
+    return id
+      ? `https://business.facebook.com/commerce/catalogs/${id}/products`
+      : null;
+  });
   private readonly lastSyncedMetaCapi = signal<{
     configured: boolean;
     testEventCode: string | null;
@@ -1121,7 +1141,82 @@ export class EcommerceConfigComponent implements OnInit {
     result.mapRight((s) => {
       this.metaConnected.set(s.connected);
       this.metaBusinessName.set(s.businessName);
+      this.metaBusinessId.set(s.businessId);
+      this.metaBusinesses.set(s.businesses);
+      this.metaCatalogId.set(s.catalogId);
+      // El detalle (conteo + última ingesta) llama a la Graph API: solo si ya
+      // hay catálogo publicado, y sin bloquear el render.
+      if (s.connected && s.catalogId) this.loadMetaCatalogStatus(tenantId);
     });
+  }
+
+  private async loadMetaCatalogStatus(tenantId: string): Promise<void> {
+    const result = await this.configService.getMetaCatalogStatus(tenantId);
+    result.mapRight((sync) => this.metaCatalogSync.set(sync));
+  }
+
+  /** Publica el catálogo del tenant en Meta: crea el Commerce Catalog en el
+   *  Business elegido, registra el feed diario y dispara la primera sync. */
+  public async publishMetaCatalog(): Promise<void> {
+    const tenantId = this.configStore.config()?.tenantId;
+    if (!tenantId || this.isProvisioningCatalog()) return;
+    this.isProvisioningCatalog.set(true);
+    const result = await this.configService.provisionMetaCatalog(String(tenantId));
+    result.fold(
+      (err) => {
+        toast.error(err.message || 'No se pudo publicar el catálogo en Meta');
+      },
+      (sync) => {
+        this.metaCatalogId.set(sync?.catalogId ?? null);
+        this.metaCatalogSync.set(sync);
+        toast.success(
+          'Catálogo publicado en Meta. Tus productos se sincronizan todos los días.'
+        );
+      }
+    );
+    this.isProvisioningCatalog.set(false);
+  }
+
+  /** Re-ingesta inmediata del feed (Meta tarda unos minutos en procesarla). */
+  public async syncMetaCatalogNow(): Promise<void> {
+    const tenantId = this.configStore.config()?.tenantId;
+    if (!tenantId || this.isSyncingCatalog()) return;
+    this.isSyncingCatalog.set(true);
+    const result = await this.configService.syncMetaCatalog(String(tenantId));
+    result.fold(
+      (err) => {
+        toast.error(err.message || 'No se pudo sincronizar el catálogo');
+      },
+      () => {
+        toast.success('Sincronización solicitada. Meta puede tardar unos minutos.');
+        this.loadMetaCatalogStatus(String(tenantId));
+      }
+    );
+    this.isSyncingCatalog.set(false);
+  }
+
+  /** Cambia el Business (portfolio) donde vive el catálogo. Al cambiar, el
+   *  catálogo anterior deja de estar vinculado y hay que volver a publicar. */
+  public async changeMetaBusiness(businessId: string | null): Promise<void> {
+    const tenantId = this.configStore.config()?.tenantId;
+    if (!tenantId || !businessId || businessId === this.metaBusinessId()) return;
+    const result = await this.configService.selectMetaBusiness(
+      String(tenantId),
+      businessId
+    );
+    result.fold(
+      (err) => {
+        toast.error(err.message || 'No se pudo cambiar el portfolio');
+      },
+      () => {
+        this.metaBusinessId.set(businessId);
+        this.metaBusinessName.set(
+          this.metaBusinesses().find((b) => b.id === businessId)?.name ?? null
+        );
+        this.metaCatalogId.set(null);
+        this.metaCatalogSync.set(null);
+      }
+    );
   }
 
   /** Inicia el OAuth de Meta Business: redirige a Meta y vuelve al panel con
@@ -1158,6 +1253,10 @@ export class EcommerceConfigComponent implements OnInit {
       () => {
         this.metaConnected.set(false);
         this.metaBusinessName.set(null);
+        this.metaBusinessId.set(null);
+        this.metaBusinesses.set([]);
+        this.metaCatalogId.set(null);
+        this.metaCatalogSync.set(null);
         toast.success('Meta desconectado');
       }
     );

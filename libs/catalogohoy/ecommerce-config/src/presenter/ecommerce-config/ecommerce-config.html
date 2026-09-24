@@ -1429,6 +1429,89 @@
               {{ 'Desconectar' | transloco }}
             </button>
           </div>
+
+          <!-- Selector de portfolio (solo si el usuario administra varios) -->
+          @if (metaBusinessOptions().length > 1) {
+          <div class="mt-4 max-w-xs">
+            <label class="block text-xs font-medium text-grey-500 mb-1">
+              {{ 'Portfolio comercial' | transloco }}
+            </label>
+            <ui-select
+              [options]="metaBusinessOptions()"
+              [ngModel]="metaBusinessId()"
+              (ngModelChange)="changeMetaBusiness($event)"
+              optionLabel="label"
+              optionValue="value"
+            ></ui-select>
+          </div>
+          }
+
+          <!-- Commerce Catalog (CAT-64): publicar + estado de sincronización -->
+          <div class="mt-4 pt-4 border-t border-grey-100">
+            @if (!metaCatalogId()) {
+            <p class="card-subtitle">
+              {{ 'Publicá tus productos como catálogo en Facebook e Instagram: se crea una sola vez y se mantiene sincronizado solo.' | transloco }}
+            </p>
+            <div class="mt-3">
+              <ui-button
+                [label]="'Publicar catálogo' | transloco"
+                severity="primary"
+                [fluid]="false"
+                [isLoading]="isProvisioningCatalog()"
+                [disabled]="isProvisioningCatalog()"
+                (click)="publishMetaCatalog()"
+              />
+            </div>
+            } @else {
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-green-600">
+                  {{ 'Catálogo publicado' | transloco }}
+                  @if (metaCatalogSync(); as sync) {
+                  @if (sync.productCount !== null) {
+                  <span class="font-normal text-grey-500">
+                    · {{ sync.productCount }} {{ 'productos' | transloco }}
+                  </span>
+                  }
+                  }
+                </p>
+                @if (metaCatalogSync(); as sync) {
+                @if (sync.lastSyncEnd) {
+                <p class="text-xs text-grey-400 mt-0.5">
+                  {{ 'Última sincronización' | transloco }}:
+                  {{ sync.lastSyncEnd | date: 'dd/MM/yy HH:mm' }}
+                  @if (sync.errorCount > 0) {
+                  <span class="text-red-500">
+                    · {{ sync.errorCount }} {{ 'errores' | transloco }}
+                  </span>
+                  }
+                </p>
+                }
+                }
+              </div>
+              <div class="flex items-center gap-4">
+                <button
+                  type="button"
+                  class="text-xs font-medium text-grey-500 hover:text-primary transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                  [disabled]="isSyncingCatalog()"
+                  (click)="syncMetaCatalogNow()"
+                >
+                  {{ 'Sincronizar ahora' | transloco }}
+                </button>
+                @if (metaCommerceUrl(); as url) {
+                <a
+                  [href]="url"
+                  target="_blank"
+                  rel="noopener"
+                  class="text-xs font-medium text-primary hover:underline whitespace-nowrap"
+                >
+                  {{ 'Ver en Meta' | transloco }}
+                </a>
+                }
+              </div>
+            </div>
+            }
+          </div>
           } @else {
           <p class="card-subtitle">
             {{ 'Conectá tu cuenta de Meta una sola vez para activar el catálogo de productos en Facebook e Instagram y el Píxel automáticamente, sin pegar IDs ni tokens a mano.' | transloco }}
