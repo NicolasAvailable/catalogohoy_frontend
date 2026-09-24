@@ -2235,5 +2235,9 @@
   "Súbelo con foto y precio para estrenar tu catálogo.": "Add it with a photo and price to launch your catalog.",
   "Sube tu logo, una descripción y tus colores.": "Upload your logo, a description and your colors.",
   "Los números que recibirán los pedidos del checkout.": "The numbers that will receive checkout orders.",
-  "Un WhatsApp cada vez que entra una orden nueva.": "A WhatsApp every time a new order comes in."
+  "Un WhatsApp cada vez que entra una orden nueva.": "A WhatsApp every time a new order comes in.",
+  "Avisos de stock bajo": "Low stock alerts",
+  "Te avisamos por email cuando a un producto le queda poco stock o se agota, para que puedas reponer a tiempo.": "We email you when a product is running low or out of stock, so you can restock in time.",
+  "Avisarme cuando a un producto le queden": "Notify me when a product has",
+  "unidades o menos.": "units or fewer."
 }

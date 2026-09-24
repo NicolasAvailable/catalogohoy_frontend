@@ -6,6 +6,8 @@ export interface NotificationPreferences {
   notifyNewOrdersEmail: boolean;
   notifyWeeklyReportEmail: boolean;
   notifyOrdersInapp: boolean;
+  notifyLowStock: boolean;
+  lowStockThreshold: number;
 }
 
 export interface BaseProfileService {

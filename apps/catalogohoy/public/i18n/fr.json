@@ -2235,5 +2235,9 @@
   "Súbelo con foto y precio para estrenar tu catálogo.": "Ajoute-le avec une photo et un prix pour lancer ton catalogue.",
   "Sube tu logo, una descripción y tus colores.": "Ajoute ton logo, une description et tes couleurs.",
   "Los números que recibirán los pedidos del checkout.": "Les numéros qui recevront les commandes du checkout.",
-  "Un WhatsApp cada vez que entra una orden nueva.": "Un WhatsApp à chaque nouvelle commande."
+  "Un WhatsApp cada vez que entra una orden nueva.": "Un WhatsApp à chaque nouvelle commande.",
+  "Avisos de stock bajo": "Alertes de stock bas",
+  "Te avisamos por email cuando a un producto le queda poco stock o se agota, para que puedas reponer a tiempo.": "Nous vous prévenons par e-mail quand un produit est presque ou totalement épuisé, pour réapprovisionner à temps.",
+  "Avisarme cuando a un producto le queden": "Me prévenir quand un produit n'a plus que",
+  "unidades o menos.": "unités ou moins."
 }

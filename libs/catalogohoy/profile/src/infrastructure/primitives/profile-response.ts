@@ -16,4 +16,6 @@ export interface ProfileEntity {
   notify_new_orders_email?: boolean;
   notify_weekly_report_email?: boolean;
   notify_orders_inapp?: boolean;
+  notify_low_stock?: boolean;
+  low_stock_threshold?: number;
 }

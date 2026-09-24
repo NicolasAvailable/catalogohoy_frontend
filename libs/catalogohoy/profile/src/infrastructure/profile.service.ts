@@ -86,6 +86,8 @@ export class ProfileService implements BaseProfileService {
         notify_new_orders_email: prefs.notifyNewOrdersEmail,
         notify_weekly_report_email: prefs.notifyWeeklyReportEmail,
         notify_orders_inapp: prefs.notifyOrdersInapp,
+        notify_low_stock: prefs.notifyLowStock,
+        low_stock_threshold: prefs.lowStockThreshold,
         updated_at: new Date().toISOString(),
       })
       .eq('auth_user_id', auth.user.id);

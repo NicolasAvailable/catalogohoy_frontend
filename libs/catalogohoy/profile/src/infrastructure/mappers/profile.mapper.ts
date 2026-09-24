@@ -14,6 +14,8 @@ export class ProfileMapper {
       notifyNewOrdersEmail: profile.user.notify_new_orders_email ?? true,
       notifyWeeklyReportEmail: profile.user.notify_weekly_report_email ?? true,
       notifyOrdersInapp: profile.user.notify_orders_inapp ?? true,
+      notifyLowStock: profile.user.notify_low_stock ?? true,
+      lowStockThreshold: profile.user.low_stock_threshold ?? 5,
     });
   }
 }

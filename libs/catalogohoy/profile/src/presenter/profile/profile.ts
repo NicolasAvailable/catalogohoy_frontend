@@ -177,6 +177,9 @@ export class Profile {
   public readonly draftNotifyOrdersInapp = signal<boolean>(true);
   public readonly draftNotifyNewOrdersEmail = signal<boolean>(true);
   public readonly draftNotifyWeeklyReportEmail = signal<boolean>(true);
+  // Aviso de stock bajo/agotado (email) + umbral configurable por la tienda.
+  public readonly draftNotifyLowStock = signal<boolean>(true);
+  public readonly draftLowStockThreshold = signal<number>(5);
   public readonly isSavingNotifications = signal(false);
 
   @ViewChild('cancelDialog')
@@ -234,6 +237,12 @@ export class Profile {
       this.draftNotifyOrdersInapp.set(p.notifyOrdersInapp ?? true);
       this.draftNotifyNewOrdersEmail.set(p.notifyNewOrdersEmail ?? true);
       this.draftNotifyWeeklyReportEmail.set(p.notifyWeeklyReportEmail ?? true);
+      const ls = profile as {
+        notifyLowStock?: boolean;
+        lowStockThreshold?: number;
+      };
+      this.draftNotifyLowStock.set(ls.notifyLowStock ?? true);
+      this.draftLowStockThreshold.set(ls.lowStockThreshold ?? 5);
     });
 
     // Lazy-load billing history the first time the user opens the tab.
@@ -318,11 +327,16 @@ export class Profile {
 
   public async saveNotificationPreferences(): Promise<void> {
     this.isSavingNotifications.set(true);
+    const rawThreshold = Math.floor(Number(this.draftLowStockThreshold()));
+    const lowStockThreshold =
+      Number.isFinite(rawThreshold) && rawThreshold >= 0 ? rawThreshold : 5;
     const result = await this.profileService.updateNotificationPreferences({
       notifyPlanExpiry: this.draftNotifyPlanExpiry(),
       notifyOrdersInapp: this.draftNotifyOrdersInapp(),
       notifyNewOrdersEmail: this.draftNotifyNewOrdersEmail(),
       notifyWeeklyReportEmail: this.draftNotifyWeeklyReportEmail(),
+      notifyLowStock: this.draftNotifyLowStock(),
+      lowStockThreshold,
     });
     result.fold(
       (err) => {
