@@ -75,8 +75,8 @@ export function buildActivationSteps(s: ActivationState): ActivationStep[] {
     {
       id: 'notify',
       icon: 'smartphone',
-      title: 'Activa los avisos de pedidos por WhatsApp',
-      hint: 'Un WhatsApp cada vez que entra un pedido nuevo.',
+      title: 'Activa los avisos de órdenes por WhatsApp',
+      hint: 'Un WhatsApp cada vez que entra una orden nueva.',
       ctaLabel: s.isFree ? 'Ver planes' : 'Configurar avisos',
       link: s.isFree ? '/admin/plans' : '/admin/catalog/edit',
       queryParams: s.isFree ? null : { tab: 'notifications' },

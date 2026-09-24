@@ -360,7 +360,7 @@ export default class OrderSave implements OnInit {
     }
   }
 
-  /** Si venimos del import de Excel (hub "Importar pedido"), consume el draft:
+  /** Si venimos del import de Excel (hub "Importar orden"), consume el draft:
    *  matchea cada línea contra el catálogo (SKU y luego nombre) y precarga los
    *  productos + el cliente. Las líneas sin match quedan como ítem libre. */
   private prefillFromImport(): void {
@@ -421,7 +421,7 @@ export default class OrderSave implements OnInit {
     }
 
     this.toastService.success(
-      `Pedido cargado: ${items.length} productos (${matched} del catálogo, ${custom} libres). Revisá y guardá.`
+      `Orden cargada: ${items.length} productos (${matched} del catálogo, ${custom} libres). Revisá y guardá.`
     );
   }
 
@@ -1085,7 +1085,7 @@ export default class OrderSave implements OnInit {
             this.toastService.success(
               this.isVenta()
                 ? 'Venta registrada exitosamente'
-                : 'Pedido creado exitosamente'
+                : 'Orden creada exitosamente'
             );
             this.router.navigate(['/admin/orders']);
           }
@@ -1101,7 +1101,7 @@ export default class OrderSave implements OnInit {
             this.isSubmitting.set(false);
           },
           () => {
-            this.toastService.success('Pedido actualizado exitosamente');
+            this.toastService.success('Orden actualizada exitosamente');
             this.router.navigate(['/admin/orders']);
           }
         );

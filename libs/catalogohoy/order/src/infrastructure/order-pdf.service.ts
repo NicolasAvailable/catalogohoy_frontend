@@ -161,11 +161,11 @@ export class OrderPdfService {
     // Venta / Nota de Entrega"; el resto conserva el título "Orden".
     const isReceipt =
       order.status === 'completed' && isVentaFeatureEnabled(order.tenantId);
-    const docNoun = isReceipt ? 'Recibo' : 'Pedido';
+    const docNoun = isReceipt ? 'Recibo' : 'Orden';
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(28);
     doc.setTextColor(...BLACK);
-    doc.text(isReceipt ? 'Recibo de Venta' : 'Pedido', margin, y + 8);
+    doc.text(isReceipt ? 'Recibo de Venta' : 'Orden', margin, y + 8);
     y += 16;
 
     if (isReceipt) {
@@ -214,7 +214,7 @@ export class OrderPdfService {
     }
 
     const meta: [string, string][] = [
-      [isReceipt ? 'Número de recibo' : 'Número de pedido', `#${order.orderNumber ?? order.id}`],
+      [isReceipt ? 'Número de recibo' : 'Número de orden', `#${order.orderNumber ?? order.id}`],
       [
         isReceipt ? 'Fecha y hora' : 'Fecha de creación',
         isReceipt ? formatDateTime(createdDate) : formatLong(createdDate),

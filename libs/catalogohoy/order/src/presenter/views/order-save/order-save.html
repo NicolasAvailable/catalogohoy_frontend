@@ -3,7 +3,7 @@
 >
   <header class="flex justify-between items-center py-4">
     <h1 class="text-2xl sm:text-4xl font-bold">
-      {{ (isVenta() ? 'Registrar venta' : isCreate() ? 'Crear pedido' : 'Editar pedido') | transloco }}
+      {{ (isVenta() ? 'Registrar venta' : isCreate() ? 'Crear orden' : 'Editar orden') | transloco }}
     </h1>
     <div class="flex gap-3 items-center">
       <ui-button
@@ -69,7 +69,7 @@
               styleClass="w-full border! border-grey-100! rounded-xl!"
             />
             <span class="text-sm text-grey-300">
-              {{ 'Por defecto es hoy. Puedes cambiarla si el pedido se entrega otro día.' | transloco }}
+              {{ 'Por defecto es hoy. Puedes cambiarla si la orden se entrega otro día.' | transloco }}
             </span>
           </div>
           }
@@ -120,7 +120,7 @@
           </div>
           <ui-textarea
             formControlName="comments"
-            [placeholder]="(isVenta() ? 'Condiciones de garantía, notas para el cliente…' : 'Notas adicionales sobre el pedido...') | transloco"
+            [placeholder]="(isVenta() ? 'Condiciones de garantía, notas para el cliente…' : 'Notas adicionales sobre la orden...') | transloco"
             textareaId="comments"
             [rows]="3"
           />
@@ -692,11 +692,11 @@
     <!-- Estado -->
     <ui-card>
       <div class="flex flex-col gap-4">
-        <h2 class="text-xl font-bold">{{ 'Estado del pedido' | transloco }}</h2>
+        <h2 class="text-xl font-bold">{{ 'Estado de la orden' | transloco }}</h2>
         <div
           class="flex flex-col sm:flex-row gap-4"
           role="radiogroup"
-          [attr.aria-label]="'Estado del pedido' | transloco"
+          [attr.aria-label]="'Estado de la orden' | transloco"
         >
           <div
             role="radio"
@@ -722,7 +722,7 @@
             </div>
             <div class="flex-1">
               <span class="font-medium">{{ 'Pendiente' | transloco }}</span>
-              <p class="text-sm text-grey-300">{{ 'El pedido está en proceso' | transloco }}</p>
+              <p class="text-sm text-grey-300">{{ 'La orden está en proceso' | transloco }}</p>
             </div>
           </div>
           <div
@@ -749,7 +749,7 @@
             </div>
             <div class="flex-1">
               <span class="font-medium">{{ 'Completada' | transloco }}</span>
-              <p class="text-sm text-grey-300">{{ 'El pedido ha sido entregado' | transloco }}</p>
+              <p class="text-sm text-grey-300">{{ 'La orden ha sido entregada' | transloco }}</p>
             </div>
           </div>
           <div
@@ -803,7 +803,7 @@
             </div>
             <div class="flex-1">
               <span class="font-medium">{{ 'Cancelada' | transloco }}</span>
-              <p class="text-sm text-grey-300">{{ 'El pedido fue cancelado' | transloco }}</p>
+              <p class="text-sm text-grey-300">{{ 'La orden fue cancelada' | transloco }}</p>
             </div>
           </div>
         </div>
@@ -841,7 +841,7 @@
                 <span class="font-medium block truncate">{{ opt.name }}</span>
                 <p class="text-sm text-grey-300">
                   @if (opt.kind === 'none') {
-                  {{ 'El pedido no lleva envío' | transloco }}
+                  {{ 'La orden no lleva envío' | transloco }}
                   } @else if (opt.kind === 'manual') {
                   {{ 'Flete u otro costo de envío' | transloco }}
                   } @else {
@@ -855,7 +855,7 @@
           @if (shippingSelection()) {
           <div class="flex flex-col gap-1 sm:max-w-xs">
             <label for="shipping-fee" class="text-sm text-grey-400">
-              {{ shippingSelection() === '__manual__' ? ('Monto del envío (flete u otro costo)' | transloco) : ('Costo del envío — podés ajustarlo para este pedido' | transloco) }}
+              {{ shippingSelection() === '__manual__' ? ('Monto del envío (flete u otro costo)' | transloco) : ('Costo del envío — podés ajustarlo para esta orden' | transloco) }}
             </label>
             <ui-input-number
               [ngModel]="shippingFee()"

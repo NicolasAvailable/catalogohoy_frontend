@@ -151,7 +151,7 @@ export class Home implements OnInit {
       bgClass: 'bg-blue-50',
     },
     {
-      title: 'Pedidos',
+      title: 'Ordenes',
       description: 'Registra y controla tus ventas y pedidos.',
       icon: 'clipboard-list',
       route: 'orders',
@@ -195,7 +195,7 @@ export class Home implements OnInit {
       bgClass: 'bg-purple-50',
     },
     {
-      label: 'Crear pedido',
+      label: 'Crear Orden',
       ref: 'order',
       icon: 'notepad-text',
       description: 'Registra tus ventas manualmente',

@@ -53,14 +53,14 @@ export class OrderExcelService {
       }));
 
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Pedidos');
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Órdenes');
       XLSX.writeFile(
         workbook,
-        `pedidos_${new Date().toISOString().slice(0, 10)}.xlsx`
+        `ordenes_${new Date().toISOString().slice(0, 10)}.xlsx`
       );
       return E.right(undefined);
     } catch {
-      return E.left(new Error('Error al exportar los pedidos'));
+      return E.left(new Error('Error al exportar las órdenes'));
     }
   }
 

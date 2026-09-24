@@ -102,7 +102,7 @@
         routerLinkActive="bg-primary-50"
         [routerLinkActiveOptions]="{ exact: true }"
         class="relative flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
-        [pTooltip]="'Pedidos' | transloco"
+        [pTooltip]="'Ordenes' | transloco"
         tooltipPosition="right"
       >
         <ui-icon name="notepad-text" size="18" styleClass="text-grey-700" />
@@ -455,7 +455,7 @@
     >
       <div class="flex items-center gap-2">
         <ui-icon name="notepad-text" size="16" />
-        <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Pedidos' | transloco }}</a>
+        <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Ordenes' | transloco }}</a>
       </div>
       @if (!canViewOrders()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />

@@ -154,7 +154,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
 
   // ── Tabs: "Órdenes" (tabla) | "Métricas" (dashboard) ──────────────────────
   protected readonly orderTabs: TabHeader[] = [
-    { ref: 'ordenes', label: 'Pedidos' },
+    { ref: 'ordenes', label: 'Órdenes' },
     { ref: 'metricas', label: 'Métricas' },
   ];
   protected readonly activeTab = signal<'ordenes' | 'metricas'>('ordenes');
@@ -717,8 +717,8 @@ export class OrderListComponent implements OnInit, OnDestroy {
 
     this.confirmDialogService
       .warning({
-        headerLabel: '¿Eliminar pedido?',
-        contentLabel: `¿Estás seguro de que deseas eliminar el pedido de "${order.name}"? Esta acción no se puede deshacer.`,
+        headerLabel: '¿Eliminar orden?',
+        contentLabel: `¿Estás seguro de que deseas eliminar la orden de "${order.name}"? Esta acción no se puede deshacer.`,
         acceptLabel: 'Eliminar',
         rejectLabel: 'Cancelar',
       })
@@ -736,7 +736,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
                 this.toastService.error(new Exception(error));
               },
               () => {
-                this.toastService.success('Pedido eliminado correctamente');
+                this.toastService.success('Orden eliminada correctamente');
                 // Refresh both the current page (in case the page shrank to
                 // fewer rows than pageSize and we can backfill from the next
                 // page) and the grand total footer label.
@@ -772,7 +772,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
         orderBy: this.selectedOrder(),
       });
       if (orders.length === 0) {
-        this.toastService.error(new Exception('No hay pedidos para exportar'));
+        this.toastService.error(new Exception('No hay órdenes para exportar'));
         return;
       }
       this.orderExcel
@@ -781,7 +781,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
           (error) => this.toastService.error(new Exception(error.message)),
           () =>
             this.toastService.success(
-              `${orders.length} pedidos exportados a Excel`
+              `${orders.length} órdenes exportadas a Excel`
             )
         );
     } finally {
