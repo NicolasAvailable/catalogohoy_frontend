@@ -257,14 +257,17 @@ Deno.serve(async (req) => {
             });
           }
         } catch (err) {
-          // 1784018: el Business nunca aceptó los Términos del Píxel — es un
-          // click único del dueño; devolvemos el link directo para destrabar.
+          // 1784018: el Business nunca aceptó los Términos del Píxel. La página
+          // vieja de ToS (/ads/manage/customaudiences/tos) está rota (loop de
+          // redirects); el camino vigente es crear el primer píxel desde el
+          // Administrador de eventos — ese flujo acepta los términos, y después
+          // provision_pixel lo ADOPTA en vez de crear otro.
           if (err?.fb?.error_subcode === 1784018) {
             return jsonResponse({
               success: false,
               code: "pixel_tos",
-              tosUrl: `https://business.facebook.com/ads/manage/customaudiences/tos/?business_id=${conn.business_id}`,
-              error: "Tu portfolio de Meta todavía no aceptó los Términos del Píxel. Aceptalos (un solo click) y volvé a intentar.",
+              tosUrl: `https://business.facebook.com/events_manager2/list?business_id=${conn.business_id}`,
+              error: "Tu portfolio de Meta aún no aceptó los Términos del Píxel. Abrí el Administrador de eventos, creá tu primer píxel (Conectar datos → Web) y volvé a intentar.",
             }, 409);
           }
           throw err;
