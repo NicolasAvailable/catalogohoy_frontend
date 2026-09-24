@@ -147,6 +147,21 @@
   ~4s aunque la acción siga). `success/error/warning/info` llaman `dismissWait()` primero.
   Patrón: `wait('…')` → en éxito `success('…')`, en error `error(...)` (ambos cierran el wait).
 
+## Uploader compartido (`libs/ui` → `UploaderService`)
+
+- Lo usan **todos** los flujos de subida del admin: fotos/variantes de producto, logo en
+  Configuración, evidencia de pago en Órdenes e import/export. Un cambio ahí afecta a todos.
+- El pipeline re-encodea imágenes vía `<img>` + canvas → solo soporta lo que el navegador
+  decodifique. **HEIC/HEIF (iPhone, Samsung "alta eficiencia") no decodifica en Chrome**:
+  se detecta por MIME/extensión/magic bytes (`ftyp` + brand) y se convierte con `heic2any`
+  (import dinámico → chunk lazy, solo se baja si aparece un HEIC). Ojo: WhatsApp/descargas
+  a veces renombran HEIC a `.jpg`, por eso el sniff de magic bytes.
+- Pickers de Android a veces entregan `file.type` **vacío** → los videos se detectan también
+  por extensión (mp4/webm/ogg), si no caerían al pipeline de imagen y morirían.
+- Los errores del uploader llegan **crudos al toast** (sin transloco): los mensajes se
+  escriben en español directamente en el servicio (incidente almoli-essence 2026-09-24:
+  "Failed to load image" en inglés por una foto HEIC).
+
 ## PrimeNG dialog vs overlay custom
 
 - Para que se vea "nativo" como el resto, usar `ui-dialog` (envuelve `p-dialog`), no un

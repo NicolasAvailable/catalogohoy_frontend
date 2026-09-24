@@ -11,6 +11,27 @@ const QUALITY = 0.8;
 // container format (mp4/webm) and the public catalog's <video> tag picks
 // the right decoder.
 const ALLOWED_VIDEO_EXT = new Set(['mp4', 'webm', 'ogg', 'ogv']);
+const VIDEO_MIME_BY_EXT: Record<string, string> = {
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  ogg: 'video/ogg',
+  ogv: 'video/ogg',
+};
+const MSG_UNREADABLE =
+  'No pudimos leer esta imagen. Verifica que sea JPG, PNG o WEBP e intenta de nuevo.';
+const MSG_HEIC =
+  'No pudimos convertir esta foto (formato HEIC). Compártela o expórtala como JPG e intenta de nuevo.';
+// HEIC/HEIF (fotos de iPhone o Samsung con "alta eficiencia") no se pueden
+// decodificar con <img> en Chrome: hay que convertirlas antes con heic2any
+// (chunk lazy, solo se descarga si aparece un HEIC). Detectamos por MIME,
+// extensión y magic bytes — WhatsApp/descargas a veces renombran a .jpg.
+const HEIC_MIME = new Set([
+  'image/heic',
+  'image/heif',
+  'image/heic-sequence',
+  'image/heif-sequence',
+]);
+const HEIC_BRANDS = /heic|heix|heim|heis|hevc|hevx|heif|mif1|msf1/;
 
 @Injectable({ providedIn: 'root' })
 export class UploaderService implements BaseUploaderService {
@@ -20,7 +41,14 @@ export class UploaderService implements BaseUploaderService {
       progress: () => 0,
       complete: async () => {
         try {
-          const isVideo = (file.type || '').toLowerCase().startsWith('video/');
+          const mime = (file.type || '').toLowerCase();
+          const rawExt = (file.name.split('.').pop() || '').toLowerCase();
+          // Algunos pickers de Android entregan file.type vacío: sin este
+          // fallback por extensión, un .mp4 entraría al pipeline de imagen
+          // y moriría con "no pudimos leer esta imagen".
+          const isVideo =
+            mime.startsWith('video/') ||
+            (mime === '' && ALLOWED_VIDEO_EXT.has(rawExt));
           const client = SupabaseClientProvider.getInstance();
           const baseName = file.name
             .replace(/\.[^.]+$/, '')
@@ -39,11 +67,24 @@ export class UploaderService implements BaseUploaderService {
             // Trust the file as-is; the form's accept list + size validator
             // already enforce mp4/webm under the per-product cap.
             body = file;
-            contentType = file.type || 'video/mp4';
-            const rawExt = (file.name.split('.').pop() || 'mp4').toLowerCase();
+            contentType = file.type || VIDEO_MIME_BY_EXT[rawExt] || 'video/mp4';
             ext = ALLOWED_VIDEO_EXT.has(rawExt) ? rawExt : 'mp4';
           } else {
-            body = await this.compressImage(file);
+            let source: Blob = file;
+            let decodeErrorMsg = MSG_UNREADABLE;
+            if (await this.isHeic(file)) {
+              const converted = await this.convertHeicToJpeg(file);
+              if (converted) {
+                source = converted;
+              } else {
+                // Conversión fallida: puede ser un JPEG renombrado a .heic
+                // (decodifica nativo) o Safari 17+, que decodifica HEIC solo.
+                // Probamos el decode nativo y solo si también falla mostramos
+                // el mensaje específico de HEIC.
+                decodeErrorMsg = MSG_HEIC;
+              }
+            }
+            body = await this.compressImage(source, decodeErrorMsg);
             contentType = 'image/jpeg';
             ext = 'jpeg';
           }
@@ -94,7 +135,33 @@ export class UploaderService implements BaseUploaderService {
     });
   }
 
-  private compressImage(file: File): Promise<Blob> {
+  private async isHeic(file: File): Promise<boolean> {
+    if (HEIC_MIME.has((file.type || '').toLowerCase())) return true;
+    if (/\.(heic|heif)$/i.test(file.name || '')) return true;
+    try {
+      const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+      const ascii = String.fromCharCode(...head);
+      return ascii.slice(4, 8) === 'ftyp' && HEIC_BRANDS.test(ascii.slice(8, 16));
+    } catch {
+      return false;
+    }
+  }
+
+  private async convertHeicToJpeg(file: File): Promise<Blob | null> {
+    try {
+      const { default: heic2any } = await import('heic2any');
+      const result = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.9,
+      });
+      return Array.isArray(result) ? result[0] : result;
+    } catch {
+      return null;
+    }
+  }
+
+  private compressImage(file: Blob, decodeErrorMsg = MSG_UNREADABLE): Promise<Blob> {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -110,12 +177,19 @@ export class UploaderService implements BaseUploaderService {
         ctx.drawImage(img, 0, 0, width, height);
 
         canvas.toBlob(
-          (blob) => (blob ? resolve(blob) : reject(new Error('Compression failed'))),
+          (blob) =>
+            blob
+              ? resolve(blob)
+              : reject(
+                  new Error(
+                    'No pudimos procesar esta imagen. Intenta con otra foto.'
+                  )
+                ),
           'image/jpeg',
           QUALITY
         );
       };
-      img.onerror = () => reject(new Error('Failed to load image'));
+      img.onerror = () => reject(new Error(decodeErrorMsg));
       img.src = URL.createObjectURL(file);
     });
   }
