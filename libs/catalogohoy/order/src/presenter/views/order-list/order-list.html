@@ -2,12 +2,33 @@
   <!-- Header -->
   <header class="flex items-start justify-between gap-4">
     <div>
-      <h1 class="text-2xl sm:text-3xl font-bold text-grey-800 mb-1">{{ 'Órdenes' | transloco }}</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold text-grey-800 mb-1">{{ 'Pedidos' | transloco }}</h1>
       <p class="text-sm sm:text-base text-grey-400">
         {{ 'Gestiona los pedidos y el estado de ventas de tu catálogo' | transloco }}
       </p>
     </div>
     <div class="flex gap-2 items-center shrink-0">
+      <ui-button
+        class="sm:hidden"
+        (click)="openImportExport()"
+        [fluid]="false"
+        icon="arrow-up-down"
+        variant="outlined"
+        severity="contrast"
+        size="small"
+        [tooltip]="'Exportar o importar pedidos' | transloco"
+      />
+      <ui-button
+        class="hidden sm:block"
+        (click)="openImportExport()"
+        [fluid]="false"
+        [label]="'Exportar/Importar' | transloco"
+        icon="arrow-up-down"
+        variant="outlined"
+        severity="contrast"
+        size="small"
+        [tooltip]="'Exportar o importar pedidos' | transloco"
+      />
       @if (isAdmin() && ventaFeatureEnabled()) {
       <ui-button
         class="sm:hidden"
@@ -41,7 +62,7 @@
         class="hidden sm:block"
         (click)="onCreateOrder()"
         [fluid]="false"
-        [label]="'Crear orden manual' | transloco"
+        [label]="'Crear pedido manual' | transloco"
         icon="circle-plus"
         variant="outlined"
         severity="contrast"
@@ -309,14 +330,14 @@
           <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
             <ui-icon name="notepad-text" styleClass="size-8 text-primary-400" />
           </div>
-          <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes órdenes todavía' | transloco }}</h3>
+          <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes pedidos todavía' | transloco }}</h3>
           <p class="text-grey-300 text-sm mb-6 max-w-sm">
             {{ 'Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente.' | transloco }}
           </p>
           @if (canCreateOrder()) {
           <ui-button
             (click)="onCreateOrder()"
-            [label]="'Crear orden manual' | transloco"
+            [label]="'Crear pedido manual' | transloco"
             icon="circle-plus"
             [fluid]="false"
           />
@@ -572,14 +593,14 @@
                 <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
                   <ui-icon name="notepad-text" styleClass="size-8 text-primary-400" />
                 </div>
-                <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes órdenes todavía' | transloco }}</h3>
+                <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes pedidos todavía' | transloco }}</h3>
                 <p class="text-grey-300 text-sm mb-6 max-w-sm">
                   {{ 'Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente.' | transloco }}
                 </p>
                 @if (canCreateOrder()) {
                 <ui-button
                   (click)="onCreateOrder()"
-                  [label]="'Crear orden manual' | transloco"
+                  [label]="'Crear pedido manual' | transloco"
                   icon="circle-plus"
                   [fluid]="false"
                 />
@@ -597,7 +618,7 @@
       class="p-4 bg-grey-25 border-t border-grey-50 flex items-center justify-between gap-2 flex-wrap"
     >
       <span class="text-xs text-grey-400 font-medium">
-        {{ 'Mostrando {shown} · Total: {total} órdenes' | transloco: { shown: paginatedOrders().length, total: orderStore.grandTotalCount() } }}
+        {{ 'Mostrando {shown} · Total: {total} pedidos' | transloco: { shown: paginatedOrders().length, total: orderStore.grandTotalCount() } }}
       </span>
       <p-paginator
         [first]="pageFirst()"
@@ -669,7 +690,7 @@
         <div class="min-w-0">
           <p class="text-grey-400 text-xs font-medium uppercase tracking-wider">{{ 'Ventas hoy' | transloco }}</p>
           <p class="text-2xl font-bold text-grey-800">{{ metricSymbol() }}{{ (metrics()?.todayAmount ?? 0) | number:'1.2-2' }}</p>
-          <p class="text-xs text-grey-400">{{ '{count} órdenes' | transloco: { count: metrics()?.todayOrders ?? 0 } }}</p>
+          <p class="text-xs text-grey-400">{{ '{count} pedidos' | transloco: { count: metrics()?.todayOrders ?? 0 } }}</p>
         </div>
       </div>
       <div class="bg-white p-5 rounded-xl border border-grey-100 shadow-sm flex items-center gap-4">
@@ -679,7 +700,7 @@
         <div class="min-w-0">
           <p class="text-grey-400 text-xs font-medium uppercase tracking-wider">{{ 'Monto facturado' | transloco }}</p>
           <p class="text-2xl font-bold text-grey-800">{{ metricSymbol() }}{{ (metrics()?.rangeTotalAmount ?? 0) | number:'1.2-2' }}</p>
-          <p class="text-xs text-grey-400">{{ '{count} órdenes' | transloco: { count: metrics()?.rangeTotalOrders ?? 0 } }} {{ 'en el periodo' | transloco }}</p>
+          <p class="text-xs text-grey-400">{{ '{count} pedidos' | transloco: { count: metrics()?.rangeTotalOrders ?? 0 } }} {{ 'en el periodo' | transloco }}</p>
         </div>
       </div>
       <div class="bg-white p-5 rounded-xl border border-grey-100 shadow-sm flex items-center gap-4">
@@ -689,7 +710,7 @@
         <div class="min-w-0">
           <p class="text-grey-400 text-xs font-medium uppercase tracking-wider">{{ 'Ticket promedio' | transloco }}</p>
           <p class="text-2xl font-bold text-grey-800">{{ metricSymbol() }}{{ (metrics()?.rangeAvgTicket ?? 0) | number:'1.2-2' }}</p>
-          <p class="text-xs text-grey-400">{{ 'por orden' | transloco }}</p>
+          <p class="text-xs text-grey-400">{{ 'por pedido' | transloco }}</p>
         </div>
       </div>
     </div>
@@ -758,7 +779,7 @@
             </span>
           </div>
           <p class="text-2xl font-bold text-grey-800">{{ metricSymbol() }}{{ metricByStatus().completed.amount | number:'1.2-2' }}</p>
-          <p class="text-xs text-grey-400">{{ '{count} órdenes' | transloco: { count: metricByStatus().completed.count } }}</p>
+          <p class="text-xs text-grey-400">{{ '{count} pedidos' | transloco: { count: metricByStatus().completed.count } }}</p>
         </div>
         <div class="bg-white p-5 rounded-xl border border-grey-100 shadow-sm">
           <div class="flex items-center justify-between mb-3">
@@ -770,7 +791,7 @@
             </span>
           </div>
           <p class="text-2xl font-bold text-grey-800">{{ metricSymbol() }}{{ metricByStatus().pending.amount | number:'1.2-2' }}</p>
-          <p class="text-xs text-grey-400">{{ '{count} órdenes' | transloco: { count: metricByStatus().pending.count } }}</p>
+          <p class="text-xs text-grey-400">{{ '{count} pedidos' | transloco: { count: metricByStatus().pending.count } }}</p>
         </div>
         <div class="bg-white p-5 rounded-xl border border-grey-100 shadow-sm">
           <div class="flex items-center justify-between mb-3">
@@ -782,10 +803,12 @@
             </span>
           </div>
           <p class="text-2xl font-bold text-grey-800">{{ metricSymbol() }}{{ metricByStatus().cancelled.amount | number:'1.2-2' }}</p>
-          <p class="text-xs text-grey-400">{{ '{count} órdenes' | transloco: { count: metricByStatus().cancelled.count } }}</p>
+          <p class="text-xs text-grey-400">{{ '{count} pedidos' | transloco: { count: metricByStatus().cancelled.count } }}</p>
         </div>
       </div>
     </div>
   </div>
   }
+
+  <lib-order-import-export-hub (exportOrders)="exportToExcel()" />
 </div>

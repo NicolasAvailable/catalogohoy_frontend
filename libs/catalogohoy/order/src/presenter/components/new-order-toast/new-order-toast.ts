@@ -24,7 +24,7 @@ import { IconComponent } from '@ui';
       </span>
       <div class="flex-1 min-w-0 leading-tight">
         <p class="text-[0.82rem] font-semibold text-grey-800">
-          {{ 'Nueva orden recibida' | transloco }}
+          {{ 'Nuevo pedido recibido' | transloco }}
         </p>
         @if (customerName()) {
         <p class="text-xs text-grey-500 truncate">{{ customerName() }}</p>

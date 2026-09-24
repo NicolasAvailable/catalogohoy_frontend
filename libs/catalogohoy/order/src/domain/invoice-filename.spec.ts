@@ -69,9 +69,9 @@ describe('buildInvoiceFilename', () => {
   });
 
   describe('fallbacks y saneamiento', () => {
-    it('sin nombre conserva el esquema anterior "orden-<n>"', () => {
+    it('sin nombre usa el esquema "pedido-<n>"', () => {
       expect(buildInvoiceFilename(order({ name: '', orderNumber: 63 }))).toBe(
-        'orden-63.pdf'
+        'pedido-63.pdf'
       );
     });
 
@@ -86,7 +86,7 @@ describe('buildInvoiceFilename', () => {
     it('usa el id cuando no hay orderNumber', () => {
       expect(
         buildInvoiceFilename(order({ name: '', orderNumber: undefined, id: 4046 }))
-      ).toBe('orden-4046.pdf');
+      ).toBe('pedido-4046.pdf');
     });
 
     it('quita caracteres inválidos para nombre de archivo', () => {

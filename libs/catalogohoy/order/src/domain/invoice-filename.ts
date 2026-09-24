@@ -58,7 +58,7 @@ export function buildInvoiceFilename(
 
   // Sin nombre no hay con qué identificar la factura → esquema anterior.
   if (!name) {
-    return `${opts.isReceipt ? 'recibo' : 'orden'}-${orderRef}.pdf`;
+    return `${opts.isReceipt ? 'recibo' : 'pedido'}-${orderRef}.pdf`;
   }
 
   let base = name;

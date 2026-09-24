@@ -6,6 +6,7 @@ import {
   OnDestroy,
   OnInit,
   signal,
+  viewChild,
 } from '@angular/core';
 import { EcommerceConfigStore, TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
@@ -49,6 +50,8 @@ import {
 } from '../../../domain/order';
 import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import { OrderPdfService } from '../../../infrastructure/order-pdf.service';
+import { OrderExcelService } from '../../../infrastructure/order-excel.service';
+import { OrderImportExportHubComponent } from '../order-import-export/order-import-export-hub';
 import { OrderRealtimeService } from '../../../infrastructure/order-realtime.service';
 import { OrderStore } from '../../../infrastructure/order.store';
 
@@ -81,6 +84,7 @@ type MetricsPreset = 'today' | 'last_7' | 'last_30' | 'last_90' | 'custom';
     TooltipDirective,
     PaginatorModule,
     NgApexchartsModule,
+    OrderImportExportHubComponent,
   ],
   templateUrl: './order-list.html',
   styleUrl: './order-list.css',
@@ -99,6 +103,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
   private readonly orderPdf = inject(OrderPdfService);
+  private readonly orderExcel = inject(OrderExcelService);
   private readonly rateStore = inject(RateStore);
 
   /** Bs a mostrar por orden: pendientes a la tasa ACTUAL, el resto su snapshot.
@@ -149,7 +154,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
 
   // ── Tabs: "Órdenes" (tabla) | "Métricas" (dashboard) ──────────────────────
   protected readonly orderTabs: TabHeader[] = [
-    { ref: 'ordenes', label: 'Órdenes' },
+    { ref: 'ordenes', label: 'Pedidos' },
     { ref: 'metricas', label: 'Métricas' },
   ];
   protected readonly activeTab = signal<'ordenes' | 'metricas'>('ordenes');
@@ -712,8 +717,8 @@ export class OrderListComponent implements OnInit, OnDestroy {
 
     this.confirmDialogService
       .warning({
-        headerLabel: '¿Eliminar orden?',
-        contentLabel: `¿Estás seguro de que deseas eliminar la orden de "${order.name}"? Esta acción no se puede deshacer.`,
+        headerLabel: '¿Eliminar pedido?',
+        contentLabel: `¿Estás seguro de que deseas eliminar el pedido de "${order.name}"? Esta acción no se puede deshacer.`,
         acceptLabel: 'Eliminar',
         rejectLabel: 'Cancelar',
       })
@@ -731,7 +736,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
                 this.toastService.error(new Exception(error));
               },
               () => {
-                this.toastService.success('Orden eliminada correctamente');
+                this.toastService.success('Pedido eliminado correctamente');
                 // Refresh both the current page (in case the page shrank to
                 // fewer rows than pageSize and we can backfill from the next
                 // page) and the grand total footer label.
@@ -743,6 +748,45 @@ export class OrderListComponent implements OnInit, OnDestroy {
           }
         );
       });
+  }
+
+  public readonly importExportHub = viewChild(OrderImportExportHubComponent);
+
+  /** Abre el hub "Exportar / Importar órdenes". */
+  public openImportExport(): void {
+    this.importExportHub()?.open();
+  }
+
+  public readonly isExporting = signal(false);
+
+  /** Exporta a Excel TODAS las órdenes que matchean el filtro actual (no solo
+   *  la página cargada). Una fila por orden. */
+  public async exportToExcel(): Promise<void> {
+    if (this.isExporting()) return;
+    this.isExporting.set(true);
+    try {
+      const orders = await this.orderStore.fetchAllForExport({
+        date: this.selectedDate() ?? undefined,
+        search: this.searchQuery() || undefined,
+        status: this.selectedFilter(),
+        orderBy: this.selectedOrder(),
+      });
+      if (orders.length === 0) {
+        this.toastService.error(new Exception('No hay pedidos para exportar'));
+        return;
+      }
+      this.orderExcel
+        .exportOrders(orders, this.cs())
+        .fold(
+          (error) => this.toastService.error(new Exception(error.message)),
+          () =>
+            this.toastService.success(
+              `${orders.length} pedidos exportados a Excel`
+            )
+        );
+    } finally {
+      this.isExporting.set(false);
+    }
   }
 
   async downloadPdf(order: Order): Promise<void> {

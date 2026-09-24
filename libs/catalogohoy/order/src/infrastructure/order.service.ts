@@ -322,7 +322,7 @@ export class OrderService {
       if (error.message.includes('order_limit_reached')) {
         return E.left(
           new Error(
-            'Alcanzaste el límite de órdenes de tu plan este mes. Mejora tu plan para seguir registrando órdenes.'
+            'Alcanzaste el límite de pedidos de tu plan este mes. Mejora tu plan para seguir registrando pedidos.'
           )
         );
       }
@@ -339,7 +339,7 @@ export class OrderService {
       action: 'order.create',
       entityType: 'order',
       entityId: data.id,
-      entityName: `Orden #${data.id} — ${input.name}`,
+      entityName: `Pedido #${data.id} — ${input.name}`,
     });
 
     return E.right(OrderMapper.toDomain(data));
@@ -421,7 +421,7 @@ export class OrderService {
           action: 'order.update',
           entityType: 'order',
           entityId: input.id,
-          entityName: `Orden #${input.id} — ${input.name}`,
+          entityName: `Pedido #${input.id} — ${input.name}`,
           changes,
         });
       }
@@ -496,7 +496,7 @@ export class OrderService {
       action: 'order.status',
       entityType: 'order',
       entityId: id,
-      entityName: `Orden #${id} — ${order.name}`,
+      entityName: `Pedido #${id} — ${order.name}`,
       changes: [{ field: 'status', from: oldStatus, to: newStatus }],
     });
 
@@ -569,7 +569,7 @@ export class OrderService {
     if (error) {
       console.warn('[increment_product_stock] failed', error);
       this.toast.warning(
-        'La orden se actualizó, pero no se pudo reponer el stock. Revisa el inventario.'
+        'El pedido se actualizó, pero no se pudo reponer el stock. Revisa el inventario.'
       );
     }
   }
@@ -595,7 +595,7 @@ export class OrderService {
     if (error) {
       console.warn('[decrement_product_stock] failed', error);
       this.toast.warning(
-        'La orden se actualizó, pero no se pudo descontar el stock. Revisa el inventario.'
+        'El pedido se actualizó, pero no se pudo descontar el stock. Revisa el inventario.'
       );
     }
   }

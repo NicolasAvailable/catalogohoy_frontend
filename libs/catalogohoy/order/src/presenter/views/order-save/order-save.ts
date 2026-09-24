@@ -49,6 +49,7 @@ import {
 } from '../../../domain/order';
 import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import { OrderStore } from '../../../infrastructure/order.store';
+import { OrderImportDraftService } from '../../../infrastructure/order-import-draft.service';
 
 /** Un adicional del catálogo (pool global), con su foto para mostrarlo como
  *  mini-producto en el selector y los chips del alta manual de órdenes. */
@@ -90,6 +91,7 @@ export default class OrderSave implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
+  private readonly importDraft = inject(OrderImportDraftService);
   public readonly productStore = inject(ProductStore);
   public readonly rateStore = inject(RateStore);
   private readonly configStore = inject(EcommerceConfigStore);
@@ -330,7 +332,12 @@ export default class OrderSave implements OnInit {
       const orderId = this.id();
       if (orderId) {
         this.isCreate.set(false);
+        // Descartá cualquier draft de import rancio (si el usuario importó y en
+        // vez de guardar se fue a editar otra orden).
+        this.importDraft.consume();
         this.loadOrder(orderId);
+      } else {
+        this.prefillFromImport();
       }
     });
 
@@ -351,6 +358,79 @@ export default class OrderSave implements OnInit {
     if (result) {
       this.setValuesForm(result);
     }
+  }
+
+  /** Si venimos del import de Excel (hub "Importar pedido"), consume el draft:
+   *  matchea cada línea contra el catálogo (SKU y luego nombre) y precarga los
+   *  productos + el cliente. Las líneas sin match quedan como ítem libre. */
+  private prefillFromImport(): void {
+    const draft = this.importDraft.consume();
+    if (!draft) return;
+
+    const catalog = this.productStore.productList().products;
+    const bySku = new Map<string, (typeof catalog)[number]>();
+    const byName = new Map<string, (typeof catalog)[number]>();
+    for (const p of catalog) {
+      if (p.sku) bySku.set(this.normKey(p.sku), p);
+      byName.set(this.normKey(p.name), p);
+    }
+
+    let matched = 0;
+    let custom = 0;
+    const items: OrderItem[] = draft.lines.map((line) => {
+      const hit =
+        (line.sku ? bySku.get(this.normKey(line.sku)) : undefined) ??
+        byName.get(this.normKey(line.name));
+      const price = line.price || hit?.price || 0;
+      if (hit) {
+        matched++;
+        return {
+          productId: hit.id,
+          name: hit.name,
+          price,
+          quantity: line.quantity,
+          total: price * line.quantity,
+          photo: hit.photos?.[0],
+          isCustom: false,
+        };
+      }
+      custom++;
+      return {
+        productId: OrderSave.CUSTOM_PRODUCT_ID,
+        name: line.name,
+        price,
+        quantity: line.quantity,
+        total: price * line.quantity,
+        isCustom: true,
+        description: line.sku || '',
+      };
+    });
+
+    this.products.set(items);
+    if (draft.client.name) this.form.controls.name.setValue(draft.client.name);
+    if (draft.client.phone) this.form.controls.phone.setValue(draft.client.phone);
+    // Doc (CI/RIF) y dirección del encabezado → comentarios (para no perderlos).
+    const extra = [
+      draft.client.doc ? `Doc: ${draft.client.doc}` : '',
+      draft.client.address ? `Dirección: ${draft.client.address}` : '',
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    if (extra && !this.form.controls.comments.value) {
+      this.form.controls.comments.setValue(extra);
+    }
+
+    this.toastService.success(
+      `Pedido cargado: ${items.length} productos (${matched} del catálogo, ${custom} libres). Revisá y guardá.`
+    );
+  }
+
+  private normKey(s: string): string {
+    return s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .trim();
   }
 
   /** Format a Date as "YYYY-MM-DD" in local time. `toISOString()` would
@@ -1005,7 +1085,7 @@ export default class OrderSave implements OnInit {
             this.toastService.success(
               this.isVenta()
                 ? 'Venta registrada exitosamente'
-                : 'Orden creada exitosamente'
+                : 'Pedido creado exitosamente'
             );
             this.router.navigate(['/admin/orders']);
           }
@@ -1021,7 +1101,7 @@ export default class OrderSave implements OnInit {
             this.isSubmitting.set(false);
           },
           () => {
-            this.toastService.success('Orden actualizada exitosamente');
+            this.toastService.success('Pedido actualizado exitosamente');
             this.router.navigate(['/admin/orders']);
           }
         );

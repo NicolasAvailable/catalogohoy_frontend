@@ -154,6 +154,32 @@ export interface OrderMetrics {
   byDay: OrderDayMetric[];
 }
 
+/** Una línea leída de un Excel de pedido (antes de matchear al catálogo). */
+export interface OrderExcelLine {
+  sku: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+/** Datos del cliente leídos del encabezado del Excel de pedido (si vienen
+ *  cargados; los placeholders tipo "Por favor, rellene" se descartan). */
+export interface OrderExcelClient {
+  name?: string;
+  phone?: string;
+  doc?: string;
+  address?: string;
+}
+
+/** Resultado de parsear un Excel de pedido: datos del cliente (opcionales) +
+ *  las líneas con cantidad (PEDIDO) > 0. */
+export interface OrderExcelParseResult {
+  client: OrderExcelClient;
+  lines: OrderExcelLine[];
+  /** Total de filas de producto en la hoja (para el mensaje "20 de 2013"). */
+  totalRows: number;
+}
+
 export class OrderList {
   constructor(public readonly items: Order[]) {}
 

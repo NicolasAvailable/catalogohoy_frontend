@@ -234,7 +234,7 @@
     <!-- Órdenes -->
     <p-accordion-panel value="orders">
       <p-accordion-header>
-        <span class="ficha__section-title">{{ 'Órdenes ({count})' | transloco: { count: orders().length } }}</span>
+        <span class="ficha__section-title">{{ 'Pedidos ({count})' | transloco: { count: orders().length } }}</span>
       </p-accordion-header>
       <p-accordion-content>
         @if (orders().length) {
@@ -250,7 +250,7 @@
           }
         </div>
         } @else {
-        <p class="ficha__hint">{{ 'Sin órdenes registradas.' | transloco }}</p>
+        <p class="ficha__hint">{{ 'Sin pedidos registrados.' | transloco }}</p>
         }
       </p-accordion-content>
     </p-accordion-panel>

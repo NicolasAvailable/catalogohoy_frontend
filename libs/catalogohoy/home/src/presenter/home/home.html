@@ -22,7 +22,7 @@
       class="inline-flex items-center gap-2 pl-3 pr-4 py-2 rounded-full border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
     >
       <ui-icon name="clipboard-list" [size]="16" class="text-slate-500" />
-      {{ 'Órdenes' | transloco }}
+      {{ 'Pedidos' | transloco }}
     </a>
     <a
       routerLink="clients"
@@ -461,7 +461,7 @@
         <p class="text-grey-700 text-sm">
           @if(item.ref === 'product') { {{ 'Podes importar de un archivo personal o agregar uno a uno de forma manual.' | transloco }} } @else if(item.ref === 'category')
           { {{ 'Organiza tus productos creando categorias para facilitar la navegacion y agrupar articulos relacionados.' | transloco }} } @else if(item.ref ===
-          'order') { {{ 'Registra tus ordenes de forma manual para llevar un control de tus ventas.' | transloco }} }
+          'order') { {{ 'Registra tus pedidos de forma manual para llevar un control de tus ventas.' | transloco }} }
         </p>
         <ui-button
           [fluid]="false"

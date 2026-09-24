@@ -35,7 +35,7 @@ export const adminRoutes: Route[] = [
   },
   {
     path: 'orders',
-    title: 'Órdenes',
+    title: 'Pedidos',
     canActivate: [teamPermissionGuard('ordenes', 'view')],
     loadChildren: () =>
       import('@catalogohoy/order').then((m) => m.ORDER_ROUTES),

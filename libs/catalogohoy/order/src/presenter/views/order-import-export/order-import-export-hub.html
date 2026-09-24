@@ -1,0 +1,57 @@
+<ui-dialog
+  headerTitle=""
+  [closable]="true"
+  [dismissableMask]="true"
+  (close)="close()"
+  styleClass="w-full max-w-2xl rounded-2xl! overflow-hidden"
+>
+  <section class="flex flex-col gap-6 p-8">
+    <div class="text-center">
+      <h2 class="text-2xl font-bold text-grey-800">
+        {{ 'Exportar / Importar pedidos' | transloco }}
+      </h2>
+      <p class="text-grey-400 mt-2">
+        {{ 'Importá un pedido desde tu lista de Excel o exportá tus pedidos a un archivo.' | transloco }}
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <!-- Importar pedido desde Excel -->
+      <input
+        #fileInput
+        type="file"
+        accept=".xlsx,.xls"
+        class="hidden"
+        (change)="onFileSelected($event)"
+      />
+      <button
+        type="button"
+        (click)="onImportClick()"
+        class="flex flex-col items-center gap-3 p-6 border-2 border-grey-100 rounded-2xl transition-all cursor-pointer hover:border-primary-400 hover:bg-primary-50"
+      >
+        <div class="w-12 h-12 rounded-full bg-primary-50 grid place-items-center">
+          <ui-icon name="upload" styleClass="size-6 text-primary-500" />
+        </div>
+        <span class="font-semibold text-grey-800">{{ 'Importar pedido' | transloco }}</span>
+        <span class="text-sm text-grey-400 text-center">
+          {{ 'Subí tu lista de Excel con las cantidades y armamos el pedido.' | transloco }}
+        </span>
+      </button>
+
+      <!-- Exportar órdenes a Excel -->
+      <button
+        type="button"
+        (click)="onExport()"
+        class="flex flex-col items-center gap-3 p-6 border-2 border-grey-100 rounded-2xl transition-all cursor-pointer hover:border-primary-400 hover:bg-primary-50"
+      >
+        <div class="w-12 h-12 rounded-full bg-primary-50 grid place-items-center">
+          <ui-icon name="download" styleClass="size-6 text-primary-500" />
+        </div>
+        <span class="font-semibold text-grey-800">{{ 'Exportar pedidos' | transloco }}</span>
+        <span class="text-sm text-grey-400 text-center">
+          {{ 'Bajá tus pedidos (según el filtro actual) a un archivo Excel.' | transloco }}
+        </span>
+      </button>
+    </div>
+  </section>
+</ui-dialog>

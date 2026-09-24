@@ -114,9 +114,9 @@ export class GettingStarted implements OnInit {
       {
         id: 'notify',
         icon: 'smartphone',
-        title: 'Activa los avisos de órdenes por WhatsApp',
+        title: 'Activa los avisos de pedidos por WhatsApp',
         description:
-          'Recibe un WhatsApp cada vez que entra una orden nueva, además del correo.',
+          'Recibe un WhatsApp cada vez que entra un pedido nuevo, además del correo.',
         ctaLabel: isFree ? 'Ver planes' : 'Configurar avisos',
         link: isFree ? '/admin/plans' : '/admin/catalog/edit',
         queryParams: isFree ? null : { tab: 'notifications' },
