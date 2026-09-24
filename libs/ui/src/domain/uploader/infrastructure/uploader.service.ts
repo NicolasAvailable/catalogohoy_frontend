@@ -3,6 +3,7 @@ import { SupabaseClientProvider } from '@catalogohoy/core';
 import { BaseUploaderOutput, E } from '@shared/domain';
 import { Observable, of } from 'rxjs';
 import { BaseUploaderService } from '../domain/uploader.service';
+import { convertHeicToJpeg, isHeicFile } from './heic';
 
 const MAX_WIDTH = 1200;
 const QUALITY = 0.8;
@@ -21,17 +22,6 @@ const MSG_UNREADABLE =
   'No pudimos leer esta imagen. Verifica que sea JPG, PNG o WEBP e intenta de nuevo.';
 const MSG_HEIC =
   'No pudimos convertir esta foto (formato HEIC). Compártela o expórtala como JPG e intenta de nuevo.';
-// HEIC/HEIF (fotos de iPhone o Samsung con "alta eficiencia") no se pueden
-// decodificar con <img> en Chrome: hay que convertirlas antes con heic2any
-// (chunk lazy, solo se descarga si aparece un HEIC). Detectamos por MIME,
-// extensión y magic bytes — WhatsApp/descargas a veces renombran a .jpg.
-const HEIC_MIME = new Set([
-  'image/heic',
-  'image/heif',
-  'image/heic-sequence',
-  'image/heif-sequence',
-]);
-const HEIC_BRANDS = /heic|heix|heim|heis|hevc|hevx|heif|mif1|msf1/;
 
 @Injectable({ providedIn: 'root' })
 export class UploaderService implements BaseUploaderService {
@@ -72,8 +62,8 @@ export class UploaderService implements BaseUploaderService {
           } else {
             let source: Blob = file;
             let decodeErrorMsg = MSG_UNREADABLE;
-            if (await this.isHeic(file)) {
-              const converted = await this.convertHeicToJpeg(file);
+            if (await isHeicFile(file)) {
+              const converted = await convertHeicToJpeg(file);
               if (converted) {
                 source = converted;
               } else {
@@ -133,32 +123,6 @@ export class UploaderService implements BaseUploaderService {
         }
       },
     });
-  }
-
-  private async isHeic(file: File): Promise<boolean> {
-    if (HEIC_MIME.has((file.type || '').toLowerCase())) return true;
-    if (/\.(heic|heif)$/i.test(file.name || '')) return true;
-    try {
-      const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
-      const ascii = String.fromCharCode(...head);
-      return ascii.slice(4, 8) === 'ftyp' && HEIC_BRANDS.test(ascii.slice(8, 16));
-    } catch {
-      return false;
-    }
-  }
-
-  private async convertHeicToJpeg(file: File): Promise<Blob | null> {
-    try {
-      const { default: heic2any } = await import('heic2any');
-      const result = await heic2any({
-        blob: file,
-        toType: 'image/jpeg',
-        quality: 0.9,
-      });
-      return Array.isArray(result) ? result[0] : result;
-    } catch {
-      return null;
-    }
   }
 
   private compressImage(file: Blob, decodeErrorMsg = MSG_UNREADABLE): Promise<Blob> {

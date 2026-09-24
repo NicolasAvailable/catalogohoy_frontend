@@ -161,6 +161,10 @@
 - Los errores del uploader llegan **crudos al toast** (sin transloco): los mensajes se
   escriben en español directamente en el servicio (incidente almoli-essence 2026-09-24:
   "Failed to load image" en inglés por una foto HEIC).
+- El **chat CRM NO usa este uploader**: adjunta vía `ChatService.uploadMedia` (subida cruda
+  a `chat-media/`). La conversión HEIC ahí se hace con el util compartido
+  `isHeicFile`/`convertHeicToJpeg` (`libs/ui/.../uploader/infrastructure/heic.ts`) — si se
+  toca la detección/conversión HEIC, es en ese util, no en cada servicio.
 
 ## PrimeNG dialog vs overlay custom
 
