@@ -312,10 +312,6 @@ export class EcommerceConfigComponent implements OnInit {
    *  real. Snapshot de lo guardado para el dirty-check. */
   public readonly draftMetaCapiToken = signal<string>('');
   public readonly draftMetaCapiTestCode = signal<string | null>(null);
-  // Conexión de Meta Business por OAuth (base de CAT-64 catálogo + CAT-65 pixel).
-  public readonly metaConnected = signal(false);
-  public readonly metaBusinessName = signal<string | null>(null);
-  public readonly isConnectingMeta = signal(false);
   private readonly lastSyncedMetaCapi = signal<{
     configured: boolean;
     testEventCode: string | null;
@@ -1065,8 +1061,6 @@ export class EcommerceConfigComponent implements OnInit {
       this.loadBusinessHours(String(tenantId));
       this.loadWhatsappNotifySettings(String(tenantId));
       this.loadMetaCapiStatus(String(tenantId));
-      this.loadMetaConnection(String(tenantId));
-      this.handleMetaReturn();
       this.loadSlugChanges(String(tenantId));
 
       // El slug del store es el confirmado en DB (en dev el de la URL
@@ -1113,74 +1107,6 @@ export class EcommerceConfigComponent implements OnInit {
         toast.success('Conversions API desconectada');
       }
     );
-  }
-
-  // ─────────────── Conexión de Meta Business por OAuth (CAT-64/65) ───────────────
-  private async loadMetaConnection(tenantId: string): Promise<void> {
-    const result = await this.configService.getMetaConnectionStatus(tenantId);
-    result.mapRight((s) => {
-      this.metaConnected.set(s.connected);
-      this.metaBusinessName.set(s.businessName);
-    });
-  }
-
-  /** Inicia el OAuth de Meta Business: redirige a Meta y vuelve al panel con
-   *  `?meta=connected`. Es la base compartida del catálogo (CAT-64) y el
-   *  Pixel/CAPI automático (CAT-65). */
-  public async connectMeta(): Promise<void> {
-    const tenantId = this.configStore.config()?.tenantId;
-    if (!tenantId || this.isConnectingMeta()) return;
-    this.isConnectingMeta.set(true);
-    const result = await this.configService.startMetaConnect(
-      String(tenantId),
-      window.location.href
-    );
-    result.fold(
-      (err) => {
-        toast.error(err.message || 'No se pudo iniciar la conexión con Meta');
-        this.isConnectingMeta.set(false);
-      },
-      (url) => {
-        window.location.href = url;
-      }
-    );
-  }
-
-  /** Desconecta Meta (borra la conexión local; el pixel manual, si hay, sigue). */
-  public async disconnectMeta(): Promise<void> {
-    const tenantId = this.configStore.config()?.tenantId;
-    if (!tenantId) return;
-    const result = await this.configService.disconnectMeta(String(tenantId));
-    result.fold(
-      () => {
-        toast.error('No se pudo desconectar Meta');
-      },
-      () => {
-        this.metaConnected.set(false);
-        this.metaBusinessName.set(null);
-        toast.success('Meta desconectado');
-      }
-    );
-  }
-
-  /** Al volver del OAuth de Meta, mostramos el resultado y limpiamos el query. */
-  private handleMetaReturn(): void {
-    const meta = this.route.snapshot.queryParamMap.get('meta');
-    if (!meta) return;
-    if (meta === 'connected') {
-      toast.success('Meta conectado correctamente');
-    } else if (meta === 'connected_nobusiness') {
-      toast.success(
-        'Meta conectado. No encontramos un Business Manager; creá uno para publicar el catálogo.'
-      );
-    } else if (meta === 'error') {
-      toast.error('No se pudo conectar con Meta. Intentá de nuevo.');
-    }
-    this.router.navigate([], {
-      queryParams: { meta: null },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
-    });
   }
 
   /** Tras cambiar el slug, el subdominio actual del admin deja de existir:

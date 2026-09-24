@@ -1389,64 +1389,6 @@
         </div>
       </ui-card>
 
-      <!-- Card: Conectar con Meta (OAuth — base de catálogo + pixel, CAT-64/65) -->
-      <ui-card styleClass="config-card">
-        <div class="card-header-custom">
-          <div class="card-header-left">
-            <div class="card-icon social-icon">
-              <ui-icon name="trending-up" styleClass="size-5"></ui-icon>
-            </div>
-            <div class="flex items-center gap-2">
-              <h2 class="card-title">{{ 'Conectar con Meta' | transloco }}</h2>
-              @if (isPixelLocked()) {
-              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none">
-                <ui-icon name="crown" size="10" styleClass="text-indigo-500" />
-                {{ 'Pro' | transloco }}
-              </span>
-              }
-            </div>
-          </div>
-        </div>
-
-        <div
-          class="card-content"
-          [class.opacity-50]="isPixelLocked()"
-          [class.pointer-events-none]="isPixelLocked()"
-        >
-          @if (metaConnected()) {
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <p class="text-sm font-semibold text-green-600">
-              {{ 'Meta conectado' | transloco }}
-              @if (metaBusinessName()) {
-              <span class="font-normal text-grey-500">· {{ metaBusinessName() }}</span>
-              }
-            </p>
-            <button
-              type="button"
-              class="text-xs font-medium text-grey-300 hover:text-red-500 transition-colors cursor-pointer"
-              (click)="disconnectMeta()"
-            >
-              {{ 'Desconectar' | transloco }}
-            </button>
-          </div>
-          } @else {
-          <p class="card-subtitle">
-            {{ 'Conectá tu cuenta de Meta una sola vez para activar el catálogo de productos en Facebook e Instagram y el Píxel automáticamente, sin pegar IDs ni tokens a mano.' | transloco }}
-          </p>
-          <div class="mt-4">
-            <ui-button
-              [label]="'Conectar Meta' | transloco"
-              severity="primary"
-              [fluid]="false"
-              [isLoading]="isConnectingMeta()"
-              [disabled]="isConnectingMeta() || isPixelLocked()"
-              (click)="connectMeta()"
-            />
-          </div>
-          }
-        </div>
-      </ui-card>
-
       <!-- Card: Píxel de Meta (marketing / ads) -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
