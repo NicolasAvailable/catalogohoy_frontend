@@ -540,6 +540,46 @@ export class EcommerceConfigService {
     return E.right(undefined);
   }
 
+  // ─────────────── Conexión de Meta Business por OAuth (CAT-64/65) ───────────────
+  /** Inicia el OAuth de Meta Business: meta-oauth valida membresía y devuelve la
+   *  URL de autorización (state firmado server-side). El caller redirige ahí. */
+  async startMetaConnect(
+    tenantId: string,
+    returnUrl: string
+  ): Promise<E.Either<Error, string>> {
+    const { data, error } = await this.client.functions.invoke('meta-oauth', {
+      body: { tenantId: Number(tenantId), returnUrl },
+    });
+    if (!error && data?.success && data?.url) return E.right(data.url as string);
+    return E.left(
+      new Error(
+        (typeof data?.error === 'string' && data.error) ||
+          'No se pudo iniciar la conexión con Meta'
+      )
+    );
+  }
+
+  /** Estado de la conexión (sin traer tokens al navegador): RPC SECURITY DEFINER. */
+  async getMetaConnectionStatus(
+    tenantId: string
+  ): Promise<E.Either<Error, { connected: boolean; businessName: string | null }>> {
+    const { data, error } = await this.client.rpc('get_meta_connection_status', {
+      p_tenant_id: Number(tenantId),
+    });
+    if (error) return E.left(new Error(error.message));
+    const d = (data ?? {}) as { connected?: boolean; business_name?: string | null };
+    return E.right({ connected: !!d.connected, businessName: d.business_name ?? null });
+  }
+
+  /** Desconecta Meta (borra la conexión local; el pixel manual, si hay, sigue). */
+  async disconnectMeta(tenantId: string): Promise<E.Either<Error, void>> {
+    const { error } = await this.client.rpc('disconnect_meta', {
+      p_tenant_id: Number(tenantId),
+    });
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
   async getPaymentMethods(
     tenantId: string
   ): Promise<E.Either<Error, PaymentMethodEntity[]>> {
