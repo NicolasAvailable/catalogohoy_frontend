@@ -8,6 +8,9 @@ export interface NotificationPreferences {
   notifyOrdersInapp: boolean;
   notifyLowStock: boolean;
   lowStockThreshold: number;
+  /** Recordatorios de cobranza de órdenes a crédito (CAT-79). */
+  notifyCreditReminders: boolean;
+  creditReminderDays: number;
 }
 
 export interface BaseProfileService {

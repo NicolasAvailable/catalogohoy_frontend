@@ -18,4 +18,6 @@ export interface ProfileEntity {
   notify_orders_inapp?: boolean;
   notify_low_stock?: boolean;
   low_stock_threshold?: number;
+  notify_credit_reminders?: boolean;
+  credit_reminder_days?: number;
 }

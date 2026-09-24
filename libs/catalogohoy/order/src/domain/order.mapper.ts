@@ -1,4 +1,5 @@
 import {
+  CreditInstallment,
   Order,
   OrderAdjustment,
   OrderItem,
@@ -35,7 +36,28 @@ export class OrderMapper {
       commission: e.commission != null ? Number(e.commission) : undefined,
       paymentAdjustment: OrderMapper.toAdjustment(e.payment_adjustment),
       deliveryDate: e.delivery_date,
+      creditInstallments: OrderMapper.toInstallments(e.credit_installments),
     };
+  }
+
+  /** Normaliza la columna `credit_installments` (jsonb) al plan de cuotas.
+   *  Tolera valores ausentes/legacy → null. Solo cuotas con dueDate válida. */
+  private static toInstallments(raw: unknown): CreditInstallment[] | null {
+    if (!Array.isArray(raw)) return null;
+    const list = raw
+      .filter(
+        (c): c is Record<string, unknown> =>
+          !!c && typeof c === 'object' && typeof (c as any).dueDate === 'string'
+      )
+      .map((c: any) => ({
+        dueDate: c.dueDate as string,
+        amount:
+          c.amount != null && Number.isFinite(Number(c.amount))
+            ? Number(c.amount)
+            : null,
+        paid: c.paid === true,
+      }));
+    return list.length ? list : null;
   }
 
   /** Normalizes the `payment_evidence` jsonb column into a domain shape.

@@ -43,12 +43,20 @@ import {
 } from 'rxjs';
 import { RateStore } from '@catalogohoy/rate';
 import {
+  creditAgeDays,
   effectiveOrderBs,
+  isCreditOverdue,
+  nextInstallment,
   Order,
   OrderItem,
   OrderStatus,
+  overdueInstallment,
 } from '../../../domain/order';
 import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
+import {
+  CreditSummaryRow,
+  OrderService,
+} from '../../../infrastructure/order.service';
 import { OrderPdfService } from '../../../infrastructure/order-pdf.service';
 import { OrderExcelService } from '../../../infrastructure/order-excel.service';
 import { OrderImportExportHubComponent } from '../order-import-export/order-import-export-hub';
@@ -105,6 +113,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private readonly orderPdf = inject(OrderPdfService);
   private readonly orderExcel = inject(OrderExcelService);
   private readonly rateStore = inject(RateStore);
+  private readonly orderService = inject(OrderService);
 
   /** Bs a mostrar por orden: pendientes a la tasa ACTUAL, el resto su snapshot.
    *  Ver {@link effectiveOrderBs}. */
@@ -127,6 +136,101 @@ export class OrderListComponent implements OnInit, OnDestroy {
   // dual-currency flag (true only for Venezuela-style catalogs), NOT the
   // country code — so a non-VE catalog never shows bolivars.
   public readonly showBs = computed(() => this.tenantCurrency.showDualCurrency());
+
+  /** Umbral de días para considerar "vencida" una orden a crédito SIN cuotas.
+   *  Fase 2 (CAT-79) lo hace configurable por usuario
+   *  (users.credit_reminder_days); mientras tanto, el default del feature. */
+  private readonly CREDIT_THRESHOLD_DAYS = 7;
+
+  /** Todas las órdenes a crédito del tenant (query liviana aparte de la
+   *  paginación). Alimenta la barra "por cobrar" del filtro A crédito. */
+  private readonly creditSummary = signal<CreditSummaryRow[] | null>(null);
+
+  public readonly creditStats = computed(() => {
+    if (this.selectedFilter() !== 'credit') return null;
+    const rows = this.creditSummary();
+    if (!rows) return null;
+    const overdue = rows.filter((r) =>
+      isCreditOverdue(
+        {
+          status: 'credit',
+          createdAt: r.createdAt,
+          creditInstallments: r.creditInstallments,
+        },
+        this.CREDIT_THRESHOLD_DAYS
+      )
+    ).length;
+    return {
+      count: rows.length,
+      totalUsd: rows.reduce((acc, r) => acc + r.totalUsd, 0),
+      overdue,
+    };
+  });
+
+  private async refreshCreditSummary(): Promise<void> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return;
+    const res = await this.orderService.getCreditSummary(tenantId);
+    // Ante error se conserva el último valor (la barra simplemente no cambia).
+    res.mapRight((rows) => this.creditSummary.set(rows));
+  }
+
+  /** Chip de cobranza de una fila a crédito (null para otros estados).
+   *  Prioridad: cuota vencida (rojo) → antigüedad sobre umbral sin cuotas
+   *  (ámbar) → próxima cuota / antigüedad (gris). */
+  public creditChip(
+    order: Order
+  ): { kind: 'due' | 'next' | 'age'; tone: string; date?: string; days?: number } | null {
+    if (order.status !== 'credit') return null;
+    const due = overdueInstallment(order);
+    if (due) return { kind: 'due', tone: 'due', date: this.shortDate(due.dueDate) };
+    const age = creditAgeDays(order);
+    const hasInstallments = !!order.creditInstallments?.length;
+    if (!hasInstallments && age > this.CREDIT_THRESHOLD_DAYS) {
+      return { kind: 'age', tone: 'warn', days: age };
+    }
+    const next = nextInstallment(order);
+    if (next) return { kind: 'next', tone: 'ok', date: this.shortDate(next.dueDate) };
+    return { kind: 'age', tone: 'ok', days: age };
+  }
+
+  public creditChipClass(tone: string): string {
+    const base =
+      'inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold whitespace-nowrap ';
+    if (tone === 'due') return base + 'bg-red-50 text-red-600';
+    if (tone === 'warn') return base + 'bg-amber-50 text-amber-600';
+    return base + 'bg-grey-50 text-grey-400';
+  }
+
+  /** "YYYY-MM-DD" → "DD/MM" sin pasar por Date (evita corrimientos de TZ). */
+  private shortDate(iso: string): string {
+    const [, m, d] = iso.split('-');
+    return d && m ? `${d}/${m}` : iso;
+  }
+
+  /** Link wa.me con el recordatorio de cobro prellenado (CAT-79): sale del
+   *  WhatsApp del PROPIO comerciante — sin plantillas de Meta ni costo de API,
+   *  disponible para todas las tiendas. El texto va en español (el idioma del
+   *  comercio con su cliente final, no el del admin). */
+  public creditReminderLink(order: Order): string | null {
+    if (order.status !== 'credit' || !order.phone) return null;
+    const phone = order.phone.replace(/[^\d+]/g, '');
+    if (phone.replace(/\D/g, '').length < 8) return null;
+    const business = this.tenantStore.tenantName() || 'nuestro negocio';
+    const total = `${this.cs()}${order.totalUsd.toFixed(2)}`;
+    const num = order.orderNumber ?? order.id;
+    const due = overdueInstallment(order);
+    const cuotaTxt = due
+      ? ` La cuota del ${this.shortDate(due.dueDate)}${
+          due.amount != null ? ` (${this.cs()}${due.amount.toFixed(2)})` : ''
+        } está vencida.`
+      : '';
+    const msg =
+      `Hola ${order.name}, le saluda ${business}. ` +
+      `Le recordamos el pago pendiente de su orden #${num} por ${total}.${cuotaTxt} ` +
+      `Quedamos atentos, gracias.`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  }
 
   /** Moneda de las métricas, según la config del catálogo (mismo criterio que la
    *  factura): si muestra la referencia (USD/EUR o local) → montos en total_usd
@@ -595,6 +699,9 @@ export class OrderListComponent implements OnInit, OnDestroy {
     const pageSize = this.pageRows();
     const page = Math.floor(this.pageFirst() / pageSize) + 1;
     this.orderStore.loadOrders({ date, search, status, orderBy, page, pageSize });
+    // La barra "por cobrar" del filtro A crédito se refresca junto con la tabla
+    // (también cubre los cambios de estado, que terminan llamando acá).
+    if (status === 'credit') this.refreshCreditSummary();
   }
 
   onDateChange(date: Date | null) {

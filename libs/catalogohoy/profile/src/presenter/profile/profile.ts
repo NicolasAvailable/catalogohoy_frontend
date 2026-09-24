@@ -180,6 +180,9 @@ export class Profile {
   // Aviso de stock bajo/agotado (email) + umbral configurable por la tienda.
   public readonly draftNotifyLowStock = signal<boolean>(true);
   public readonly draftLowStockThreshold = signal<number>(5);
+  // Recordatorios de cobranza de órdenes a crédito (CAT-79) + umbral de días.
+  public readonly draftNotifyCreditReminders = signal<boolean>(true);
+  public readonly draftCreditReminderDays = signal<number>(7);
   public readonly isSavingNotifications = signal(false);
 
   @ViewChild('cancelDialog')
@@ -240,9 +243,13 @@ export class Profile {
       const ls = profile as {
         notifyLowStock?: boolean;
         lowStockThreshold?: number;
+        notifyCreditReminders?: boolean;
+        creditReminderDays?: number;
       };
       this.draftNotifyLowStock.set(ls.notifyLowStock ?? true);
       this.draftLowStockThreshold.set(ls.lowStockThreshold ?? 5);
+      this.draftNotifyCreditReminders.set(ls.notifyCreditReminders ?? true);
+      this.draftCreditReminderDays.set(ls.creditReminderDays ?? 7);
     });
 
     // Lazy-load billing history the first time the user opens the tab.
@@ -330,6 +337,9 @@ export class Profile {
     const rawThreshold = Math.floor(Number(this.draftLowStockThreshold()));
     const lowStockThreshold =
       Number.isFinite(rawThreshold) && rawThreshold >= 0 ? rawThreshold : 5;
+    const rawDays = Math.floor(Number(this.draftCreditReminderDays()));
+    const creditReminderDays =
+      Number.isFinite(rawDays) && rawDays >= 1 ? rawDays : 7;
     const result = await this.profileService.updateNotificationPreferences({
       notifyPlanExpiry: this.draftNotifyPlanExpiry(),
       notifyOrdersInapp: this.draftNotifyOrdersInapp(),
@@ -337,6 +347,8 @@ export class Profile {
       notifyWeeklyReportEmail: this.draftNotifyWeeklyReportEmail(),
       notifyLowStock: this.draftNotifyLowStock(),
       lowStockThreshold,
+      notifyCreditReminders: this.draftNotifyCreditReminders(),
+      creditReminderDays,
     });
     result.fold(
       (err) => {

@@ -40,6 +40,7 @@ import {
   UploaderComponent,
 } from '@ui';
 import {
+  CreditInstallment,
   Order,
   OrderAdjustment,
   OrderItem,
@@ -171,6 +172,82 @@ export default class OrderSave implements OnInit {
    *  (que pudo cambiar) mientras el usuario no cambie el método de pago. */
   private readonly loadedPaymentMethod = signal<string>('');
   private readonly loadedAdjustment = signal<OrderAdjustment | null>(null);
+
+  /** Borrador del plan de cuotas (CAT-79). Solo aplica con status 'credit';
+   *  se persiste como orders.credit_installments. Mismo estilo signal-array
+   *  que `products`. */
+  public readonly installments = signal<
+    { date: Date | null; amount: number | null; paid: boolean }[]
+  >([]);
+
+  public addInstallment(): void {
+    this.installments.update((list) => {
+      // Sugerencia de fecha: 30 días después de la última cuota (o de hoy).
+      const last = [...list].reverse().find((c) => c.date)?.date ?? new Date();
+      const suggested = new Date(last.getTime() + 30 * 86_400_000);
+      return [...list, { date: suggested, amount: null, paid: false }];
+    });
+  }
+
+  public removeInstallment(index: number): void {
+    this.installments.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  public onInstallmentDate(index: number, date: Date | null): void {
+    this.installments.update((list) =>
+      list.map((c, i) => (i === index ? { ...c, date } : c))
+    );
+  }
+
+  public onInstallmentAmount(index: number, amount: number | null): void {
+    this.installments.update((list) =>
+      list.map((c, i) => (i === index ? { ...c, amount } : c))
+    );
+  }
+
+  public toggleInstallmentPaid(index: number): void {
+    this.installments.update((list) =>
+      list.map((c, i) => (i === index ? { ...c, paid: !c.paid } : c))
+    );
+  }
+
+  /** Reparte el total de la orden en partes iguales entre las cuotas (la
+   *  última absorbe el redondeo para que la suma cierre exacta). */
+  public splitInstallmentsEvenly(): void {
+    const n = this.installments().length;
+    if (!n) return;
+    const total = this.calculateTotal();
+    const base = Math.floor((total / n) * 100) / 100;
+    const last = Math.round((total - base * (n - 1)) * 100) / 100;
+    this.installments.update((list) =>
+      list.map((c, i) => ({ ...c, amount: i === n - 1 ? last : base }))
+    );
+  }
+
+  public readonly installmentsSum = computed(() =>
+    this.installments().reduce((acc, c) => acc + (c.amount ?? 0), 0)
+  );
+
+  /** Hint suave: hay montos cargados pero no cuadran con el total. */
+  public readonly installmentsMismatch = computed(() => {
+    const sum = this.installmentsSum();
+    if (sum <= 0) return false;
+    return Math.abs(sum - this.calculateTotal()) > 0.01;
+  });
+
+  /** Payload jsonb del plan: solo cuotas con fecha, solo si la orden queda a
+   *  crédito. null limpia el plan (p.ej. al cobrar y pasar a completada). */
+  private buildInstallmentsPayload(): CreditInstallment[] | null {
+    if (this.form.controls.status.value !== 'credit') return null;
+    const list = this.installments()
+      .filter((c) => c.date instanceof Date)
+      .map((c) => ({
+        dueDate: this.toIsoDate(c.date as Date),
+        amount: c.amount != null && c.amount > 0 ? c.amount : null,
+        paid: c.paid === true,
+      }));
+    return list.length ? list : null;
+  }
 
 
   public readonly id = input<string | undefined>(undefined);
@@ -459,6 +536,17 @@ export default class OrderSave implements OnInit {
       const [y, m, d] = order.deliveryDate.split('-').map(Number);
       this.form.controls.deliveryDate.setValue(new Date(y, m - 1, d));
     }
+    // Plan de cuotas guardado (mismo parseo local que deliveryDate).
+    this.installments.set(
+      (order.creditInstallments ?? []).map((c) => {
+        const [cy, cm, cd] = c.dueDate.split('-').map(Number);
+        return {
+          date: new Date(cy, cm - 1, cd),
+          amount: c.amount ?? null,
+          paid: c.paid === true,
+        };
+      })
+    );
 
     const storeProducts = this.productStore.productList().products;
     this.products.set(
@@ -1071,6 +1159,7 @@ export default class OrderSave implements OnInit {
       commission: this.effectiveCommission(),
       paymentAdjustment: this.paymentAdjustment(),
       shippingMethod: this.buildShippingMethod(),
+      creditInstallments: this.buildInstallmentsPayload(),
     };
 
     try {

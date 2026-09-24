@@ -6,6 +6,7 @@ import { ActivityLogService } from '@catalogohoy/teams';
 import { E } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import {
+  CreditInstallment,
   InternalNote,
   invoiceFilenameUsesPhone,
   Order,
@@ -70,10 +71,22 @@ export interface CreateOrderInput {
     type: 'pickup' | 'delivery' | 'shipping';
     fee: number;
   } | null;
+  /** Plan de cuotas de la orden a crédito ([{dueDate, amount?, paid?}]).
+   *  Solo lo manda el editor cuando status='credit'; null = sin cuotas. */
+  creditInstallments?: CreditInstallment[] | null;
 }
 
 export interface UpdateOrderInput extends CreateOrderInput {
   id: number;
+}
+
+/** Resumen liviano del filtro "A crédito": lo que el listado necesita para la
+ *  barra de "por cobrar" sin tocar la paginación (una sola query, cap 1000). */
+export interface CreditSummaryRow {
+  id: number;
+  totalUsd: number;
+  createdAt: string;
+  creditInstallments: CreditInstallment[] | null;
 }
 
 @Injectable({
@@ -163,6 +176,32 @@ export class OrderService {
       orders: OrderMapper.toDomainList(data || []),
       totalCount: count ?? 0,
     });
+  }
+
+  /** Resumen del "por cobrar": TODAS las órdenes a crédito del tenant en una
+   *  sola query liviana (cap 1000 de PostgREST; muy por encima del caso real).
+   *  Alimenta la barra de resumen del filtro "A crédito" sin tocar la
+   *  paginación del listado. */
+  async getCreditSummary(
+    tenantId: number
+  ): Promise<E.Either<Error, CreditSummaryRow[]>> {
+    const { data, error } = await this.client
+      .from('orders')
+      .select('id, total_usd, created_at, credit_installments')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'credit');
+
+    if (error) return E.left(new Error(error.message));
+    return E.right(
+      (data ?? []).map((r) => ({
+        id: r.id,
+        totalUsd: Number(r.total_usd) || 0,
+        createdAt: r.created_at,
+        creditInstallments: Array.isArray(r.credit_installments)
+          ? (r.credit_installments as CreditInstallment[])
+          : null,
+      }))
+    );
   }
 
   /** Count-only query. Ignores all filters — used for the "total in general"
@@ -309,6 +348,8 @@ export class OrderService {
     if (input.paymentAdjustment !== undefined)
       payload['payment_adjustment'] = input.paymentAdjustment ?? null;
     if (input.shippingMethod !== undefined) payload['shipping_method'] = input.shippingMethod;
+    if (input.creditInstallments !== undefined)
+      payload['credit_installments'] = input.creditInstallments ?? null;
 
     const { data, error } = await this.client
       .from('orders')
@@ -375,6 +416,8 @@ export class OrderService {
     if (input.paymentAdjustment !== undefined)
       patch['payment_adjustment'] = input.paymentAdjustment ?? null;
     if (input.shippingMethod !== undefined) patch['shipping_method'] = input.shippingMethod;
+    if (input.creditInstallments !== undefined)
+      patch['credit_installments'] = input.creditInstallments ?? null;
 
     const { data, error } = await this.client
       .from('orders')
