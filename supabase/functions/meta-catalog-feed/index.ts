@@ -21,6 +21,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //     de stock = disponible). Variante con stock numérico manda sobre el padre.
 //   - price/sale_price: price_promotional (si es menor) va como sale_price.
 //   - link: https://<slug>.catalogohoy.com/product/<id>
+//   - IDs alineados con el pixel: el pixel manda content_ids=["<product.id>"],
+//     así que el retailer id del producto simple (y el item_group_id de las
+//     variantes) es el id PELADO del producto — Meta matchea por ambos y el
+//     retargeting dinámico (Advantage+) funciona sin tocar el pixel.
 // =============================================================================
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -116,7 +120,7 @@ Deno.serve(async (req) => {
         const price = fmtPrice(v?.price, currency) ?? basePrice;
         if (!image || !price) continue;
         rows.push([
-          `v_${v.id}`, `p_${p.id}`, `${p.name} - ${v.name}`, description,
+          `v_${v.id}`, String(p.id), `${p.name} - ${v.name}`, description,
           availability(p.is_sold_out, v?.stock ?? p.stock), "new",
           price, "", link, image, brand,
         ].map(csvCell).join(","));
@@ -126,7 +130,7 @@ Deno.serve(async (req) => {
       const promo = fmtPrice(p.price_promotional, currency);
       const salePrice = promo && Number(p.price_promotional) < Number(p.price) ? promo : "";
       rows.push([
-        `p_${p.id}`, "", p.name, description,
+        String(p.id), "", p.name, description,
         availability(p.is_sold_out, p.stock), "new",
         basePrice, salePrice, link, productImage, brand,
       ].map(csvCell).join(","));

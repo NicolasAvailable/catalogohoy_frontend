@@ -326,6 +326,7 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly metaCatalogSync = signal<MetaCatalogSync | null>(null);
   public readonly isProvisioningCatalog = signal(false);
   public readonly isSyncingCatalog = signal(false);
+  public readonly isProvisioningPixel = signal(false);
   public readonly metaBusinessOptions = computed(() =>
     this.metaBusinesses().map((b) => ({ label: b.name, value: b.id }))
   );
@@ -1193,6 +1194,30 @@ export class EcommerceConfigComponent implements OnInit {
       }
     );
     this.isSyncingCatalog.set(false);
+  }
+
+  /** CAT-65: configura el Píxel + CAPI automáticamente (adopta o crea el del
+   *  Business conectado). Llena la misma config que el modo manual, así que al
+   *  terminar recargamos config + estado CAPI para que ambas cards lo reflejen. */
+  public async provisionMetaPixel(): Promise<void> {
+    const tenantId = this.configStore.config()?.tenantId;
+    if (!tenantId || this.isProvisioningPixel()) return;
+    this.isProvisioningPixel.set(true);
+    const result = await this.configService.provisionMetaPixel(String(tenantId));
+    result.fold(
+      (err) => {
+        toast.error(err.message || 'No se pudo configurar el Píxel');
+        // Términos del Píxel sin aceptar: es un click único en Meta — lo abrimos.
+        if (err.tosUrl) window.open(err.tosUrl, '_blank', 'noopener');
+      },
+      () => {
+        toast.success('Píxel configurado. El seguimiento y la CAPI quedaron activos.');
+        this.configStore.reloadConfig(String(tenantId));
+        this.loadMetaCapiStatus(String(tenantId));
+        this.loadMetaConnection(String(tenantId));
+      }
+    );
+    this.isProvisioningPixel.set(false);
   }
 
   /** Cambia el Business (portfolio) donde vive el catálogo. Al cambiar, el

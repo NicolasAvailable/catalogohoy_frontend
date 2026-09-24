@@ -605,20 +605,33 @@ export class EcommerceConfigService {
 
   // ─────────────── Commerce Catalog de Meta (CAT-64, Fase 2) ───────────────
   /** Llama a la edge fn meta-catalog (status | provision | sync_now |
-   *  select_business) y normaliza el Either. */
+   *  select_business | provision_pixel) y normaliza el Either. Con status
+   *  no-2xx, functions.invoke deja el body en error.context — lo recuperamos
+   *  para no perder el mensaje accionable (p.ej. tosUrl del Píxel). */
   private async invokeMetaCatalog(
     tenantId: string,
     action: string,
     extra: Record<string, unknown> = {}
-  ): Promise<E.Either<Error, Record<string, unknown>>> {
+  ): Promise<E.Either<Error & { tosUrl?: string }, Record<string, unknown>>> {
     const { data, error } = await this.client.functions.invoke('meta-catalog', {
       body: { tenantId: Number(tenantId), action, ...extra },
     });
-    if (!error && data?.success) return E.right(data as Record<string, unknown>);
+    let body = (data ?? null) as Record<string, unknown> | null;
+    if (!body && error) {
+      try {
+        body = await (error as { context?: Response }).context?.json();
+      } catch {
+        body = null;
+      }
+    }
+    if (body?.['success']) return E.right(body);
     return E.left(
-      new Error(
-        (typeof data?.error === 'string' && data.error) ||
-          'No se pudo completar la operación con Meta'
+      Object.assign(
+        new Error(
+          (typeof body?.['error'] === 'string' && body['error']) ||
+            'No se pudo completar la operación con Meta'
+        ),
+        typeof body?.['tosUrl'] === 'string' ? { tosUrl: body['tosUrl'] } : {}
       )
     );
   }
@@ -671,6 +684,17 @@ export class EcommerceConfigService {
       businessId,
     });
     return result.mapRight(() => undefined);
+  }
+
+  /** CAT-65: aprovisiona el Píxel automáticamente (adopta o crea el del
+   *  Business) y deja la CAPI configurada con el token OAuth. Si el Business
+   *  no aceptó los Términos del Píxel, el Error trae `tosUrl` con el link
+   *  directo para aceptarlos. */
+  async provisionMetaPixel(
+    tenantId: string
+  ): Promise<E.Either<Error & { tosUrl?: string }, string>> {
+    const result = await this.invokeMetaCatalog(tenantId, 'provision_pixel');
+    return result.mapRight((d) => String(d['pixelId']));
   }
 
   async getPaymentMethods(
