@@ -757,6 +757,12 @@ export class OrderListComponent implements OnInit, OnDestroy {
     this.importExportHub()?.open();
   }
 
+  /** Se recuperaron órdenes desde un respaldo → recarga el listado y el total. */
+  public onOrdersRestored(): void {
+    this.reloadOrders();
+    this.orderStore.loadGrandTotalCount();
+  }
+
   public readonly isExporting = signal(false);
 
   /** Exporta a Excel TODAS las órdenes que matchean el filtro actual (no solo

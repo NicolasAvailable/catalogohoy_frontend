@@ -810,5 +810,9 @@
   </div>
   }
 
-  <lib-order-import-export-hub (exportOrders)="exportToExcel()" />
+  <lib-order-import-export-hub
+    [currencySymbol]="cs()"
+    (exportOrders)="exportToExcel()"
+    (ordersRestored)="onOrdersRestored()"
+  />
 </div>
