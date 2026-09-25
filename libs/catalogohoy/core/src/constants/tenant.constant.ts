@@ -5,6 +5,14 @@
 export const DEV_TENANT_SLUG = 'catalogohoy';
 
 /**
+ * Slugs que ven el canal "Instagram y Facebook" (Conectar Meta, CAT-64/65)
+ * mientras dura el App Review de Meta: sin Advanced Access, el OAuth solo
+ * funciona para cuentas con rol en la app. `null` = visible para todos
+ * (cambiar al aprobar la revisión). 'catalogohoy' = tenant 6, demo del revisor.
+ */
+export const META_CHANNEL_ALLOWED_SLUGS: string[] | null = ['catalogohoy'];
+
+/**
  * Reserved subdomains that redirect to other apps instead of loading a catalog.
  * Key: subdomain slug, Value: target URL.
  */

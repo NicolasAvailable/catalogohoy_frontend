@@ -4,7 +4,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/ro
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthenticationService } from '@catalogohoy/auth';
 import { ChatBadgeRealtimeService, ChatStore } from '@catalogohoy/chat';
-import { PosthogService } from '@catalogohoy/core';
+import { META_CHANNEL_ALLOWED_SLUGS, PosthogService } from '@catalogohoy/core';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { OrderBadgeRealtimeService, OrderStore } from '@catalogohoy/order';
 import { PlanStore } from '@catalogohoy/plan';
@@ -193,6 +193,18 @@ export class Sidebar {
   public readonly currentTenantSlug = computed(() =>
     getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || ''
   );
+
+  /** Canal "Instagram y Facebook" (Conectar Meta, CAT-64/65): allowlist por
+   *  slug hasta pasar el App Review de Meta + mismo permiso que Mi catálogo. */
+  public readonly canViewMetaChannel = computed(() => {
+    if (
+      META_CHANNEL_ALLOWED_SLUGS !== null &&
+      !META_CHANNEL_ALLOWED_SLUGS.includes(this.currentTenantSlug())
+    ) {
+      return false;
+    }
+    return this.canViewCatalog();
+  });
 
   /** ¿Se muestra el módulo Chats en el sidebar? Cuando el CRM está lanzado
    *  ({@link CHAT_PLAN_GATING_LIVE}) es visible para TODOS los catálogos: la

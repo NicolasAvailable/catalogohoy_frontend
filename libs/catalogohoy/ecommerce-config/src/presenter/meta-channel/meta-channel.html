@@ -1,0 +1,354 @@
+<div class="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex flex-col gap-9 sm:gap-12">
+
+  @if (!metaConnected()) {
+  <!-- ═══ Hero (mismo patrón que la landing de Chat) ═══ -->
+  <div class="flex flex-col items-center text-center gap-4">
+    <div class="flex items-center -space-x-3">
+      <span class="w-14 h-14 rounded-2xl bg-white border border-grey-100 shadow-sm flex items-center justify-center -rotate-6">
+        <img src="/images/instagram.svg" alt="Instagram" class="w-8 h-8" />
+      </span>
+      <span class="w-14 h-14 rounded-2xl bg-white border border-grey-100 shadow-md flex items-center justify-center z-10 rotate-3">
+        <img src="/images/facebook.svg" alt="Facebook" class="w-8 h-8" />
+      </span>
+    </div>
+
+    <h1 class="text-2xl md:text-[1.75rem] font-bold text-grey-800 max-w-2xl leading-tight text-balance">
+      {{ 'Tus productos, en las redes donde tus clientes pasan más tiempo.' | transloco }}
+    </h1>
+    <p class="text-base text-grey-500 max-w-xl leading-relaxed">
+      {{ 'Conectá tu cuenta de Meta una sola vez: tu catálogo se publica y se mantiene sincronizado en Facebook e Instagram, y el Píxel queda configurado solo, sin pegar códigos ni tokens.' | transloco }}
+    </p>
+
+    <button
+      type="button"
+      class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary-500 text-white text-base font-semibold hover:bg-primary-600 transition-colors mt-1 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+      [disabled]="isConnectingMeta() || isLocked()"
+      (click)="connectMeta()"
+    >
+      {{ (isConnectingMeta() ? 'Conectando…' : 'Conectar con Meta') | transloco }}
+      <ui-icon name="arrow-right" size="18" />
+    </button>
+
+    @if (isLocked()) {
+    <p class="inline-flex items-center gap-1.5 text-xs text-grey-400">
+      <ui-icon name="crown" size="13" styleClass="text-indigo-400" />
+      {{ 'Disponible en los planes pagos.' | transloco }}
+    </p>
+    } @else {
+    <p class="inline-flex items-center gap-1.5 text-xs text-grey-400">
+      <ui-icon name="sparkles" size="13" styleClass="text-grey-300" />
+      {{ 'Un solo paso: iniciás sesión con tu cuenta de Facebook y listo.' | transloco }}
+    </p>
+    }
+  </div>
+
+  <!-- ═══ Qué podés hacer (izquierda) + así se ve (derecha) ═══ -->
+  <div class="grid md:grid-cols-5 gap-8 lg:gap-12 items-center">
+    <div class="md:col-span-2 flex flex-col">
+      @for (feature of features; track feature.title) {
+      <div class="py-4 border-b border-grey-100 last:border-b-0 first:pt-0">
+        <p class="text-[0.95rem] font-semibold text-grey-800">{{ feature.title | transloco }}</p>
+        <p class="text-sm text-grey-500 mt-1 leading-relaxed">{{ feature.description | transloco }}</p>
+      </div>
+      }
+    </div>
+
+    <!-- Mock de una publicación con producto etiquetado -->
+    <div class="md:col-span-3 flex flex-col gap-2.5 items-center">
+      <p class="text-xs font-semibold uppercase tracking-wide text-grey-400">
+        {{ 'Así se ven tus productos etiquetados' | transloco }}
+      </p>
+      <div class="rounded-xl border border-grey-100 bg-white shadow-lg shadow-grey-300/25 overflow-hidden max-w-sm w-full">
+        <div class="flex items-center gap-2 px-3 py-2.5 border-b border-grey-50">
+          <img src="/images/instagram.svg" alt="" class="w-4 h-4" />
+          <span class="text-xs font-semibold text-grey-700">tu_tienda</span>
+          <ui-icon name="ellipsis-vertical" styleClass="w-4 h-4 text-grey-300 ml-auto" />
+        </div>
+        <div class="relative aspect-square bg-gradient-to-br from-grey-50 via-white to-grey-100 flex items-center justify-center">
+          <ui-icon name="shopping-bag" styleClass="w-16 h-16 text-grey-200" />
+          <span class="absolute bottom-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/95 shadow-md text-xs font-semibold text-grey-700">
+            <ui-icon name="tag" styleClass="w-3 h-3 text-grey-500" />
+            {{ 'Tu producto' | transloco }} · $15.00
+          </span>
+        </div>
+        <div class="flex items-center gap-3 px-3 py-2.5">
+          <ui-icon name="heart" styleClass="w-5 h-5 text-grey-400" />
+          <ui-icon name="message-circle" styleClass="w-5 h-5 text-grey-400" />
+          <span class="ml-auto inline-flex items-center gap-1 text-[0.7rem] font-semibold text-primary-600">
+            <ui-icon name="shopping-bag" styleClass="w-3 h-3" />
+            {{ 'Ver productos' | transloco }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  } @else {
+  <!-- ═══ Conectado: encabezado del canal ═══ -->
+  <div class="rounded-2xl border border-grey-100 bg-white shadow-sm p-5 sm:p-6">
+    <div class="flex flex-wrap items-center gap-4">
+      <div class="flex items-center -space-x-3 shrink-0">
+        <span class="w-12 h-12 rounded-2xl bg-white border border-grey-100 shadow-sm flex items-center justify-center -rotate-6">
+          <img src="/images/instagram.svg" alt="Instagram" class="w-7 h-7" />
+        </span>
+        <span class="w-12 h-12 rounded-2xl bg-white border border-grey-100 shadow-md flex items-center justify-center z-10 rotate-3">
+          <img src="/images/facebook.svg" alt="Facebook" class="w-7 h-7" />
+        </span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h1 class="text-xl font-bold text-grey-800">{{ 'Instagram y Facebook' | transloco }}</h1>
+        <p class="text-sm text-grey-500 mt-0.5 flex items-center gap-2 flex-wrap">
+          @if (metaBusinessName()) {
+          <span class="truncate">{{ metaBusinessName() }}</span>
+          <span class="text-grey-200">·</span>
+          }
+          <button
+            type="button"
+            class="text-xs font-medium text-grey-300 hover:text-red-500 transition-colors cursor-pointer"
+            (click)="disconnectMeta()"
+          >
+            {{ 'Desconectar' | transloco }}
+          </button>
+        </p>
+      </div>
+      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 border border-green-100 text-green-600 text-xs font-semibold">
+        <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+        {{ 'Conectado' | transloco }}
+      </span>
+    </div>
+    @if (metaBusinessOptions().length > 1) {
+    <div class="mt-4 max-w-xs">
+      <label class="block text-xs font-medium text-grey-500 mb-1">
+        {{ 'Portfolio comercial' | transloco }}
+      </label>
+      <ui-select
+        [options]="metaBusinessOptions()"
+        [ngModel]="metaBusinessId()"
+        (ngModelChange)="changeMetaBusiness($event)"
+        optionLabel="label"
+        optionValue="value"
+      ></ui-select>
+    </div>
+    }
+  </div>
+
+  <!-- ═══ Estado del canal ═══ -->
+  <div class="grid md:grid-cols-2 gap-5">
+    <!-- Catálogo -->
+    <div class="rounded-2xl border border-grey-100 bg-white shadow-sm p-5 sm:p-6 flex flex-col">
+      <div class="flex items-center gap-2.5">
+        <div class="flex items-center -space-x-1.5">
+          <img src="/images/instagram.svg" alt="" class="w-5 h-5" />
+          <img src="/images/facebook.svg" alt="" class="w-5 h-5" />
+        </div>
+        <h2 class="text-sm font-bold text-grey-800 uppercase tracking-wide">{{ 'Catálogo' | transloco }}</h2>
+      </div>
+
+      @if (!metaCatalogId()) {
+      <p class="text-sm text-grey-500 mt-3 leading-relaxed flex-1">
+        {{ 'Publicá tus productos como catálogo en Facebook e Instagram: se crea una sola vez y se mantiene sincronizado solo.' | transloco }}
+      </p>
+      <div class="mt-4">
+        <ui-button
+          [label]="'Publicar catálogo' | transloco"
+          severity="primary"
+          [fluid]="false"
+          [isLoading]="isProvisioningCatalog()"
+          [disabled]="isProvisioningCatalog()"
+          (click)="publishMetaCatalog()"
+        />
+      </div>
+      } @else {
+      <div class="flex items-end gap-2 mt-4">
+        <span class="text-4xl font-bold text-grey-800 leading-none">
+          {{ metaCatalogSync()?.productCount ?? '—' }}
+        </span>
+        <span class="text-sm text-grey-500 pb-0.5">{{ 'productos sincronizados' | transloco }}</span>
+      </div>
+      <div class="mt-3 flex-1">
+        @if (metaCatalogSync(); as sync) {
+        @if (sync.errorCount > 0) {
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 border border-red-100 text-red-500 text-xs font-semibold">
+          {{ sync.errorCount }} {{ 'errores' | transloco }}
+        </span>
+        } @else {
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 border border-green-100 text-green-600 text-xs font-semibold">
+          <ui-icon name="refresh-cw" styleClass="w-3 h-3" />
+          {{ 'Sincronización al día' | transloco }}
+        </span>
+        }
+        @if (sync.lastSyncEnd) {
+        <p class="text-xs text-grey-400 mt-2">
+          {{ 'Última sincronización' | transloco }}: {{ sync.lastSyncEnd | date: 'dd/MM/yy HH:mm' }}
+        </p>
+        }
+        }
+      </div>
+      <div class="flex items-center gap-4 mt-4 pt-4 border-t border-grey-50">
+        <button
+          type="button"
+          class="text-xs font-semibold text-grey-500 hover:text-primary transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
+          [disabled]="isSyncingCatalog()"
+          (click)="syncMetaCatalogNow()"
+        >
+          {{ 'Sincronizar ahora' | transloco }}
+        </button>
+        @if (metaCommerceUrl(); as url) {
+        <a
+          [href]="url"
+          target="_blank"
+          rel="noopener"
+          class="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline whitespace-nowrap"
+        >
+          {{ 'Ver en Meta' | transloco }}
+          <ui-icon name="square-arrow-out-up-right" styleClass="w-3 h-3" />
+        </a>
+        }
+      </div>
+      }
+    </div>
+
+    <!-- Píxel + Conversions API -->
+    <div class="rounded-2xl border border-grey-100 bg-white shadow-sm p-5 sm:p-6 flex flex-col">
+      <div class="flex items-center gap-2.5">
+        <div class="flex items-center justify-center w-5 h-5 rounded bg-primary-50">
+          <ui-icon name="trending-up" styleClass="w-3.5 h-3.5 text-primary-600" />
+        </div>
+        <h2 class="text-sm font-bold text-grey-800 uppercase tracking-wide">{{ 'Píxel y Conversions API' | transloco }}</h2>
+      </div>
+
+      @if (!metaPixelId()) {
+      <p class="text-sm text-grey-500 mt-3 leading-relaxed flex-1">
+        {{ 'Configurá el Píxel de Meta automáticamente: se crea en tu portfolio y el seguimiento de visitas, carritos y pedidos queda activo sin pegar IDs ni tokens.' | transloco }}
+      </p>
+      <div class="mt-4">
+        <ui-button
+          [label]="'Configurar Píxel automáticamente' | transloco"
+          severity="primary"
+          [fluid]="false"
+          [isLoading]="isProvisioningPixel()"
+          [disabled]="isProvisioningPixel()"
+          (click)="provisionMetaPixel()"
+        />
+      </div>
+      } @else {
+      <div class="flex flex-wrap items-center gap-2 mt-4">
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 border border-green-100 text-green-600 text-xs font-semibold">
+          <ui-icon name="shield-check" styleClass="w-3 h-3" />
+          {{ 'Píxel activo' | transloco }}
+        </span>
+        @if (metaCapiOk()) {
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 border border-green-100 text-green-600 text-xs font-semibold">
+          <ui-icon name="zap" styleClass="w-3 h-3" />
+          {{ 'CAPI conectada' | transloco }}
+        </span>
+        }
+      </div>
+      <p class="text-sm text-grey-500 mt-3 leading-relaxed flex-1">
+        {{ 'Midiendo visitas, carritos y pedidos de tu catálogo, listo para tus campañas y públicos.' | transloco }}
+      </p>
+      <p class="text-xs text-grey-400 mt-4 pt-4 border-t border-grey-50">
+        ID · {{ metaPixelId() }}
+      </p>
+      }
+    </div>
+  </div>
+
+  <!-- ═══ Hacé crecer tus ventas ═══ -->
+  <div>
+    <h2 class="text-lg font-bold text-grey-800 mb-3">{{ 'Hacé crecer tus ventas' | transloco }}</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a
+        href="https://www.facebook.com/business/help/191462054687226"
+        target="_blank"
+        rel="noopener"
+        class="group rounded-2xl border border-grey-100 bg-white shadow-sm p-5 hover:border-primary-200 hover:shadow-md transition-all"
+      >
+        <div class="flex items-center justify-center w-9 h-9 rounded-full bg-primary-50 mb-3">
+          <ui-icon name="tag" styleClass="w-4 h-4 text-primary-600" />
+        </div>
+        <p class="text-sm font-bold text-grey-800 flex items-center gap-1">
+          {{ 'Etiquetá productos en tus posts' | transloco }}
+          <ui-icon name="arrow-right" styleClass="w-3.5 h-3.5 text-grey-300 group-hover:text-primary transition-colors" />
+        </p>
+        <p class="text-xs text-grey-500 mt-1.5 leading-relaxed">
+          {{ 'Vinculá tu cuenta de Instagram al catálogo y activá las etiquetas de compra.' | transloco }}
+        </p>
+      </a>
+      <a
+        href="https://adsmanager.facebook.com/"
+        target="_blank"
+        rel="noopener"
+        class="group rounded-2xl border border-grey-100 bg-white shadow-sm p-5 hover:border-primary-200 hover:shadow-md transition-all"
+      >
+        <div class="flex items-center justify-center w-9 h-9 rounded-full bg-primary-50 mb-3">
+          <ui-icon name="sparkles" styleClass="w-4 h-4 text-primary-600" />
+        </div>
+        <p class="text-sm font-bold text-grey-800 flex items-center gap-1">
+          {{ 'Lanzá anuncios dinámicos' | transloco }}
+          <ui-icon name="arrow-right" styleClass="w-3.5 h-3.5 text-grey-300 group-hover:text-primary transition-colors" />
+        </p>
+        <p class="text-xs text-grey-500 mt-1.5 leading-relaxed">
+          {{ 'Usá tu catálogo en el Administrador de anuncios: cada persona ve el producto que le interesa.' | transloco }}
+        </p>
+      </a>
+      <a
+        [href]="metaCommerceUrl() ?? 'https://business.facebook.com/commerce/'"
+        target="_blank"
+        rel="noopener"
+        class="group rounded-2xl border border-grey-100 bg-white shadow-sm p-5 hover:border-primary-200 hover:shadow-md transition-all"
+      >
+        <div class="flex items-center justify-center w-9 h-9 rounded-full bg-primary-50 mb-3">
+          <ui-icon name="store" styleClass="w-4 h-4 text-primary-600" />
+        </div>
+        <p class="text-sm font-bold text-grey-800 flex items-center gap-1">
+          {{ 'Mirá tu catálogo en Meta' | transloco }}
+          <ui-icon name="arrow-right" styleClass="w-3.5 h-3.5 text-grey-300 group-hover:text-primary transition-colors" />
+        </p>
+        <p class="text-xs text-grey-500 mt-1.5 leading-relaxed">
+          {{ 'Revisá tus productos tal como los ve Meta, con precios y fotos al día.' | transloco }}
+        </p>
+      </a>
+    </div>
+  </div>
+
+  <!-- ═══ Cómo se ve (mismo bloque que la landing) ═══ -->
+  <div class="grid md:grid-cols-5 gap-8 lg:gap-12 items-center">
+    <div class="md:col-span-2 flex flex-col">
+      @for (feature of features; track feature.title) {
+      <div class="py-4 border-b border-grey-100 last:border-b-0 first:pt-0">
+        <p class="text-[0.95rem] font-semibold text-grey-800">{{ feature.title | transloco }}</p>
+        <p class="text-sm text-grey-500 mt-1 leading-relaxed">{{ feature.description | transloco }}</p>
+      </div>
+      }
+    </div>
+    <div class="md:col-span-3 flex flex-col gap-2.5 items-center">
+      <p class="text-xs font-semibold uppercase tracking-wide text-grey-400">
+        {{ 'Así se ven tus productos etiquetados' | transloco }}
+      </p>
+      <div class="rounded-xl border border-grey-100 bg-white shadow-lg shadow-grey-300/25 overflow-hidden max-w-sm w-full">
+        <div class="flex items-center gap-2 px-3 py-2.5 border-b border-grey-50">
+          <img src="/images/instagram.svg" alt="" class="w-4 h-4" />
+          <span class="text-xs font-semibold text-grey-700">tu_tienda</span>
+          <ui-icon name="ellipsis-vertical" styleClass="w-4 h-4 text-grey-300 ml-auto" />
+        </div>
+        <div class="relative aspect-square bg-gradient-to-br from-grey-50 via-white to-grey-100 flex items-center justify-center">
+          <ui-icon name="shopping-bag" styleClass="w-16 h-16 text-grey-200" />
+          <span class="absolute bottom-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/95 shadow-md text-xs font-semibold text-grey-700">
+            <ui-icon name="tag" styleClass="w-3 h-3 text-grey-500" />
+            {{ 'Tu producto' | transloco }} · $15.00
+          </span>
+        </div>
+        <div class="flex items-center gap-3 px-3 py-2.5">
+          <ui-icon name="heart" styleClass="w-5 h-5 text-grey-400" />
+          <ui-icon name="message-circle" styleClass="w-5 h-5 text-grey-400" />
+          <span class="ml-auto inline-flex items-center gap-1 text-[0.7rem] font-semibold text-primary-600">
+            <ui-icon name="shopping-bag" styleClass="w-3 h-3" />
+            {{ 'Ver productos' | transloco }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+</div>
