@@ -1,0 +1,69 @@
+<div class="pos-intro">
+  <div class="pos-intro__card">
+    <!-- Hero -->
+    <div class="pos-intro__hero">
+      <div class="pos-intro__art" aria-hidden="true">
+        <span class="pos-intro__awning"></span>
+        <ui-icon name="store" styleClass="size-14 text-primary-500" />
+      </div>
+      <div class="pos-intro__lead">
+        <span class="pos-intro__eyebrow">{{ 'Punto de venta' | transloco }}</span>
+        <h1 class="pos-intro__title">{{ 'Tu aliado para vender en persona' | transloco }}</h1>
+        <p class="pos-intro__desc">
+          {{ 'Convertí tu catálogo en una caja registradora: registrá tus ventas físicas, descontá stock y llevá todo tu negocio en un solo lugar.' | transloco }}
+        </p>
+        <div class="pos-intro__actions">
+          <button type="button" class="pos-intro__cta" (click)="goToPos()">
+            <ui-icon name="shopping-cart" styleClass="size-5" />
+            {{ 'Ir a Punto de Venta' | transloco }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cómo funciona -->
+    <div class="pos-intro__steps">
+      @for (s of steps; track s.title) {
+        <div class="pos-intro__step">
+          <span class="pos-intro__step-icon"><ui-icon [name]="s.icon" styleClass="size-5" /></span>
+          <div class="pos-intro__step-body">
+            <h3>{{ s.title | transloco }}</h3>
+            <p>{{ s.text | transloco }}</p>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- Gate de plan (mismo modal que el CRM): solo Avanzado/Enterprise -->
+<ui-dialog #upgradeDialog [showHeader]="false" styleClass="w-[26rem] max-w-[95vw]">
+  <div class="flex flex-col items-center text-center gap-4 p-2">
+    <div class="w-16 h-16 rounded-full bg-linear-to-br from-primary-50 to-violet-50 flex items-center justify-center text-primary-500">
+      <ui-icon name="crown" size="30" />
+    </div>
+    <h2 class="text-xl font-bold text-grey-800">
+      {{ 'Una función del plan Avanzado' | transloco }}
+    </h2>
+    <p class="text-sm text-grey-500 leading-relaxed">
+      {{ 'El Punto de Venta para vender en persona está disponible en el plan Avanzado. Mejorá tu plan para cobrar en el mostrador desde CatalogoHoy.' | transloco }}
+    </p>
+    <div class="flex items-center gap-2 mt-1">
+      <button
+        type="button"
+        (click)="closeUpgrade()"
+        class="px-4 py-2.5 rounded-xl border border-grey-200 text-sm font-semibold text-grey-600 hover:bg-grey-50 transition-colors cursor-pointer"
+      >
+        {{ 'Ahora no' | transloco }}
+      </button>
+      <a
+        routerLink="/admin/plans"
+        (click)="closeUpgrade()"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors"
+      >
+        <ui-icon name="sparkles" size="15" />
+        {{ 'Mejorar plan' | transloco }}
+      </a>
+    </div>
+  </div>
+</ui-dialog>

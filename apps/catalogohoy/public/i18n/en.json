@@ -2541,5 +2541,17 @@
   "La impresora está tomada por el driver del sistema. En Windows: cerrá otras apps de impresión, o instalá el driver WinUSB para esta impresora con Zadig y reintentá.": "The printer is held by the system driver. On Windows: close other printing apps, or install the WinUSB driver for this printer with Zadig and try again.",
   "No se pudo conectar la impresora. Verificá que esté encendida y conectada por USB.": "Could not connect the printer. Check that it is powered on and connected via USB.",
   "Notificar": "Notify",
-  "Enviar factura": "Send invoice"
+  "Enviar factura": "Send invoice",
+  "Tu aliado para vender en persona": "Your ally for selling in person",
+  "Convertí tu catálogo en una caja registradora: registrá tus ventas físicas, descontá stock y llevá todo tu negocio en un solo lugar.": "Turn your catalog into a cash register: record your in-person sales, deduct stock and manage your whole business in one place.",
+  "Ir a Punto de Venta": "Go to Point of Sale",
+  "Buscá o escaneá": "Search or scan",
+  "Encontrá productos por nombre, descripción, SKU o con el lector de código de barras.": "Find products by name, description, SKU or with the barcode scanner.",
+  "Armá el carrito": "Build the cart",
+  "Sumá productos y variantes, aplicá descuentos y agregá un cliente si querés.": "Add products and variants, apply discounts and add a customer if you want.",
+  "Cobrá y entregá": "Charge and hand over",
+  "Elegí el medio de pago (efectivo con vuelto, tarjeta, transferencia) e imprimí o compartí el recibo.": "Choose the payment method (cash with change, card, transfer) and print or share the receipt.",
+  "Caja y estadísticas": "Cash register and stats",
+  "Abrí y cerrá caja con arqueo, registrá movimientos y seguí tus ventas del día.": "Open and close the register with reconciliation, log movements and track your daily sales.",
+  "El Punto de Venta para vender en persona está disponible en el plan Avanzado. Mejorá tu plan para cobrar en el mostrador desde CatalogoHoy.": "The Point of Sale for selling in person is available on the Advanced plan. Upgrade your plan to charge at the counter from CatalogoHoy."
 }

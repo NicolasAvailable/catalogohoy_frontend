@@ -2541,5 +2541,17 @@
   "La impresora está tomada por el driver del sistema. En Windows: cerrá otras apps de impresión, o instalá el driver WinUSB para esta impresora con Zadig y reintentá.": "La impresora está tomada por el driver del sistema. En Windows: cerrá otras apps de impresión, o instalá el driver WinUSB para esta impresora con Zadig y reintentá.",
   "No se pudo conectar la impresora. Verificá que esté encendida y conectada por USB.": "No se pudo conectar la impresora. Verificá que esté encendida y conectada por USB.",
   "Notificar": "Notificar",
-  "Enviar factura": "Enviar factura"
+  "Enviar factura": "Enviar factura",
+  "Tu aliado para vender en persona": "Tu aliado para vender en persona",
+  "Convertí tu catálogo en una caja registradora: registrá tus ventas físicas, descontá stock y llevá todo tu negocio en un solo lugar.": "Convertí tu catálogo en una caja registradora: registrá tus ventas físicas, descontá stock y llevá todo tu negocio en un solo lugar.",
+  "Ir a Punto de Venta": "Ir a Punto de Venta",
+  "Buscá o escaneá": "Buscá o escaneá",
+  "Encontrá productos por nombre, descripción, SKU o con el lector de código de barras.": "Encontrá productos por nombre, descripción, SKU o con el lector de código de barras.",
+  "Armá el carrito": "Armá el carrito",
+  "Sumá productos y variantes, aplicá descuentos y agregá un cliente si querés.": "Sumá productos y variantes, aplicá descuentos y agregá un cliente si querés.",
+  "Cobrá y entregá": "Cobrá y entregá",
+  "Elegí el medio de pago (efectivo con vuelto, tarjeta, transferencia) e imprimí o compartí el recibo.": "Elegí el medio de pago (efectivo con vuelto, tarjeta, transferencia) e imprimí o compartí el recibo.",
+  "Caja y estadísticas": "Caja y estadísticas",
+  "Abrí y cerrá caja con arqueo, registrá movimientos y seguí tus ventas del día.": "Abrí y cerrá caja con arqueo, registrá movimientos y seguí tus ventas del día.",
+  "El Punto de Venta para vender en persona está disponible en el plan Avanzado. Mejorá tu plan para cobrar en el mostrador desde CatalogoHoy.": "El Punto de Venta para vender en persona está disponible en el plan Avanzado. Mejorá tu plan para cobrar en el mostrador desde CatalogoHoy."
 }

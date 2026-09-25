@@ -2541,5 +2541,17 @@
   "La impresora está tomada por el driver del sistema. En Windows: cerrá otras apps de impresión, o instalá el driver WinUSB para esta impresora con Zadig y reintentá.": "L’imprimante est utilisée par le pilote du système. Sous Windows : fermez les autres applications d’impression, ou installez le pilote WinUSB pour cette imprimante avec Zadig, puis réessayez.",
   "No se pudo conectar la impresora. Verificá que esté encendida y conectada por USB.": "Impossible de connecter l’imprimante. Vérifiez qu’elle est allumée et branchée en USB.",
   "Notificar": "Notifier",
-  "Enviar factura": "Envoyer la facture"
+  "Enviar factura": "Envoyer la facture",
+  "Tu aliado para vender en persona": "Votre allié pour vendre en personne",
+  "Convertí tu catálogo en una caja registradora: registrá tus ventas físicas, descontá stock y llevá todo tu negocio en un solo lugar.": "Transformez votre catalogue en caisse enregistreuse : enregistrez vos ventes en personne, déduisez le stock et gérez toute votre activité au même endroit.",
+  "Ir a Punto de Venta": "Aller au Point de Vente",
+  "Buscá o escaneá": "Recherchez ou scannez",
+  "Encontrá productos por nombre, descripción, SKU o con el lector de código de barras.": "Trouvez des produits par nom, description, SKU ou avec le lecteur de code-barres.",
+  "Armá el carrito": "Composez le panier",
+  "Sumá productos y variantes, aplicá descuentos y agregá un cliente si querés.": "Ajoutez des produits et des variantes, appliquez des remises et ajoutez un client si vous le souhaitez.",
+  "Cobrá y entregá": "Encaissez et remettez",
+  "Elegí el medio de pago (efectivo con vuelto, tarjeta, transferencia) e imprimí o compartí el recibo.": "Choisissez le moyen de paiement (espèces avec monnaie, carte, virement) et imprimez ou partagez le reçu.",
+  "Caja y estadísticas": "Caisse et statistiques",
+  "Abrí y cerrá caja con arqueo, registrá movimientos y seguí tus ventas del día.": "Ouvrez et fermez la caisse avec rapprochement, enregistrez les mouvements et suivez vos ventes du jour.",
+  "El Punto de Venta para vender en persona está disponible en el plan Avanzado. Mejorá tu plan para cobrar en el mostrador desde CatalogoHoy.": "Le Point de Vente pour vendre en personne est disponible dans le plan Avancé. Améliorez votre plan pour encaisser au comptoir depuis CatalogoHoy."
 }

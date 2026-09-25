@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   OnInit,
 } from '@angular/core';
@@ -60,6 +61,15 @@ export default class PosShell implements OnInit {
   /** Logo del catálogo del cliente (mismo que el storefront/admin). Si no hay,
    *  el rail cae al ícono de tienda. */
   readonly catalogLogo = computed(() => this.configStore.config()?.logo || null);
+
+  constructor() {
+    // Título de la VENTANA/pestaña del POS: "Punto de venta | <catálogo>" (se
+    // actualiza solo cuando carga la config).
+    effect(() => {
+      const name = this.configStore.config()?.name;
+      document.title = name ? `Punto de venta | ${name}` : 'Punto de venta';
+    });
+  }
 
   /** Salir del POS. Como el POS se abre en una VENTANA nueva (window.open desde
    *  el admin), lo natural es CERRAR esa ventana y devolver el foco al panel. Si

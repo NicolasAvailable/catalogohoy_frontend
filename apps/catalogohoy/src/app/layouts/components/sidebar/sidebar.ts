@@ -25,7 +25,6 @@ import {
   TEAMS_MENU,
 } from './sidebar.constants';
 import { CHAT_ENABLED_SLUGS, CHAT_PLAN_GATING_LIVE } from '../../../modules/admin/chat-enabled.guard';
-import { POS_ENABLED_PLANS } from '../../../modules/pos/pos-enabled.guard';
 
 @Component({
   selector: 'app-sidebar',
@@ -216,29 +215,6 @@ export class Sidebar {
     if (CHAT_ENABLED_SLUGS.includes(this.currentTenantSlug())) return true;
     return CHAT_PLAN_GATING_LIVE;
   });
-
-  /** Punto de venta en el sidebar: solo planes de {@link POS_ENABLED_PLANS}
-   *  (Avanzado/Enterprise, sin allowlist). El guard de /pos re-valida contra
-   *  la DB, esto solo decide la visibilidad del acceso. */
-  public readonly canViewPos = computed(() =>
-    POS_ENABLED_PLANS.includes(this.planStore.currentPlan()?.id ?? '')
-  );
-
-  /** Abre el Punto de Venta en una VENTANA nueva del navegador (no una pestaña
-   *  ni la misma del admin), estilo el POS de TiendaNube. La ventana es nombrada
-   *  para que un segundo clic reenfoque la misma en vez de abrir otra. */
-  public openPos(event?: Event): void {
-    event?.preventDefault();
-    const availW = window.screen?.availWidth || 1440;
-    const availH = window.screen?.availHeight || 900;
-    const w = Math.min(1600, availW);
-    const left = Math.max(0, Math.round((availW - w) / 2));
-    window.open(
-      '/pos',
-      'catalogohoy-pos',
-      `popup=yes,width=${w},height=${availH},left=${left},top=0`
-    );
-  }
 
   /** Chats / CRM de WhatsApp en el sidebar: el catálogo debe tener el módulo Y
    *  el usuario debe poder verlo (owner siempre; miembro con permiso
