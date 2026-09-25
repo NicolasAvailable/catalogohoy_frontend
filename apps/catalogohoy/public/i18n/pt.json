@@ -2541,5 +2541,6 @@
   "La impresora está tomada por el driver del sistema. En Windows: cerrá otras apps de impresión, o instalá el driver WinUSB para esta impresora con Zadig y reintentá.": "A impressora está ocupada pelo driver do sistema. No Windows: feche outros apps de impressão, ou instale o driver WinUSB para esta impressora com o Zadig e tente novamente.",
   "No se pudo conectar la impresora. Verificá que esté encendida y conectada por USB.": "Não foi possível conectar a impressora. Verifique se está ligada e conectada via USB.",
   "Notificar": "Notificar",
-  "Enviar factura": "Enviar fatura"
+  "Enviar factura": "Enviar fatura",
+  "La orden no tiene WhatsApp": "Este pedido não tem WhatsApp"
 }
