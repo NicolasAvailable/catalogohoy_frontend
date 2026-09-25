@@ -57,6 +57,10 @@ export default class PosShell implements OnInit {
     () => this.configStore.config()?.name || 'Punto de Venta'
   );
 
+  /** Logo del catálogo del cliente (mismo que el storefront/admin). Si no hay,
+   *  el rail cae al ícono de tienda. */
+  readonly catalogLogo = computed(() => this.configStore.config()?.logo || null);
+
   ngOnInit(): void {
     // El shell es el único componente siempre montado del POS: deja listos el
     // config/moneda (para el símbolo en todas las vistas) y la caja abierta

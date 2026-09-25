@@ -1,8 +1,12 @@
 <div class="pos-root">
   <!-- ── Barra lateral (rail solo-iconos, estilo TiendaNube) ── -->
   <nav class="pos-rail">
-    <a class="rail-logo" routerLink="/admin" [pTooltip]="'Volver al panel' | transloco" tooltipPosition="right">
-      <ui-icon name="store" styleClass="size-7" />
+    <a class="rail-logo" [class.has-img]="catalogLogo()" routerLink="/admin" [pTooltip]="'Volver al panel' | transloco" tooltipPosition="right">
+      @if (catalogLogo()) {
+        <img [src]="catalogLogo()" [alt]="catalogName()" />
+      } @else {
+        <ui-icon name="store" styleClass="size-7" />
+      }
     </a>
 
     <div class="rail-items">

@@ -46,6 +46,17 @@
   border-radius: 1rem;
   color: #fff;
   background: var(--blue);
+  overflow: hidden;
+}
+/* Con logo del catálogo: fondo neutro y la imagen llena el cuadro. */
+.rail-logo.has-img {
+  background: #fff;
+  border: 1px solid var(--line, #e5e7eb);
+}
+.rail-logo.has-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .rail-items {
   display: flex;
