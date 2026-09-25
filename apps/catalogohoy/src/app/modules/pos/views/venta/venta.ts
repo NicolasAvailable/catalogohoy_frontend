@@ -206,10 +206,14 @@ export default class PosVenta implements OnInit {
     Math.max(0, this.cart.total() + this.shipping() + this.adjustAmount())
   );
 
-  /** Total a cobrar en bolívares a la tasa del día (VE). 0 = sin tasa activa
-   *  (el resto de países) → la UI no muestra la línea Bs. */
-  readonly chargeTotalBs = computed(
-    () => this.chargeTotal() * this.exchangeRate()
+  /** Total a cobrar en bolívares a la tasa del día. Gateado por
+   *  `showDualCurrency` (mismo flag que usa Órdenes): la tasa BCV es GLOBAL,
+   *  así que sin este gate un catálogo no-VE también mostraría Bs. 0 = no
+   *  mostrar la línea Bs (ni en modal, éxito, recibo, térmica o WhatsApp). */
+  readonly chargeTotalBs = computed(() =>
+    this.tenantCurrency.showDualCurrency()
+      ? this.chargeTotal() * this.exchangeRate()
+      : 0
   );
 
   /** El medio elegido es efectivo → mostramos el campo "recibido" y el vuelto. */
@@ -627,6 +631,19 @@ export default class PosVenta implements OnInit {
 
   async charge(): Promise<void> {
     if (this.cart.isEmpty() || this.isCharging()) return;
+
+    // VE (doble moneda): no persistir una venta con total_bs=0 porque la tasa
+    // del día todavía no cargó (loadRates hace un round-trip al abrir /pos).
+    // Una orden 'completed' con total_bs=0 no la corrige el backfill de
+    // pendientes → subcontaría Bs para siempre. Pedimos reintentar.
+    const totalBs = this.chargeTotalBs();
+    if (this.tenantCurrency.showDualCurrency() && totalBs <= 0) {
+      this.toast.error(
+        'Cargando la tasa del día, probá de nuevo en un momento.' as unknown as Exception
+      );
+      return;
+    }
+
     this.isCharging.set(true);
     // Una venta en tienda nace cerrada (completada): descuenta stock y genera el
     // recibo, igual que "Registrar venta".
@@ -637,7 +654,7 @@ export default class PosVenta implements OnInit {
       status: 'completed' as OrderStatus,
       products: this.toOrderItems(),
       totalUsd: this.chargeTotal(),
-      totalBs: this.chargeTotalBs(),
+      totalBs,
       deliveryDate: this.toIsoDate(new Date()),
       paymentMethod: this.cart.paymentMethod() || undefined,
       shippingFee: this.shipping() || undefined,
@@ -654,8 +671,10 @@ export default class PosVenta implements OnInit {
           this.isCharging.set(false);
         },
         (order) => {
-          // Snapshot del comprobante ANTES de vaciar el carrito.
-          this.lastSale.set(this.buildReceipt(order));
+          // Snapshot del comprobante ANTES de vaciar el carrito. Usa el MISMO
+          // total_bs que se persistió (no recalcula: si la tasa cambia durante
+          // el createOrder, el recibo debe coincidir con la DB).
+          this.lastSale.set(this.buildReceipt(order, totalBs));
           this.toast.success('Venta cobrada ✓');
           // Si la venta se imputó a una caja, refresca su arqueo.
           if (this.caja.hasOpenSession()) this.caja.refresh();
@@ -673,8 +692,10 @@ export default class PosVenta implements OnInit {
     }
   }
 
-  /** Arma el comprobante desde el carrito ANTES de vaciarlo. */
-  private buildReceipt(order: Order): PosSaleReceipt {
+  /** Arma el comprobante desde el carrito ANTES de vaciarlo. `totalBs` es el
+   *  mismo valor persistido en la orden (no se recalcula, para que el recibo
+   *  coincida con la DB aunque la tasa cambie durante el createOrder). */
+  private buildReceipt(order: Order, totalBs: number): PosSaleReceipt {
     const lines = this.cart.lines().map((l) => ({
       label:
         l.variantName || l.size
@@ -700,7 +721,7 @@ export default class PosVenta implements OnInit {
       shipping: this.shipping(),
       adjustAmount: this.adjustAmount(),
       total: this.chargeTotal(),
-      totalBs: this.chargeTotalBs(),
+      totalBs,
       method: this.cart.paymentMethod(),
       received: this.amountReceived(),
       change: this.change(),

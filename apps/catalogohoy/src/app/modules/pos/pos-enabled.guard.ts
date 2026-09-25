@@ -22,14 +22,32 @@ export const posEnabledGuard: CanActivateFn = async () => {
   const tenantId = await tenantStore.getTenantIdAsync();
   if (!tenantId) return router.createUrlTree(['/admin']);
 
-  const { data } = await SupabaseClientProvider.getInstance()
+  const { data, error } = await SupabaseClientProvider.getInstance()
     .from('tenants')
-    .select('plan_id, plan_expired')
+    .select('plan_id, plan_expired, plan_expires_at')
     .eq('id', tenantId)
     .maybeSingle();
 
+  // Error transitorio (red/5xx): no lo trates como "no tenés plan" (mandaría a
+  // un tenant Avanzado pago a la página de upsell). Fail-closed a /admin neutro,
+  // igual que chatEnabledGuard.
+  if (error) return router.createUrlTree(['/admin']);
+
   const planId = (data?.plan_id as string | null) ?? '';
-  if (data && POS_ENABLED_PLANS.includes(planId) && !data.plan_expired) {
+
+  // Vencimiento igual que plan.service.getTenantExpiration: el webhook de Stripe
+  // puede poner plan_expired=true al cancelar, pero el período pago sigue hasta
+  // plan_expires_at. Solo vencido si el flag está Y la fecha ya pasó — no
+  // bloquear a quien ya pagó su período.
+  const expiresAt = data?.plan_expires_at
+    ? new Date(data.plan_expires_at as string)
+    : null;
+  const reallyExpired =
+    (data?.plan_expired ?? false) &&
+    expiresAt !== null &&
+    expiresAt.getTime() <= Date.now();
+
+  if (data && POS_ENABLED_PLANS.includes(planId) && !reallyExpired) {
     return true;
   }
   return router.createUrlTree(['/admin/plans']);

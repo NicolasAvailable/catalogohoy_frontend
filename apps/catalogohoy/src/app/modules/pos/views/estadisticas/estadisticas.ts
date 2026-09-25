@@ -68,8 +68,11 @@ export default class PosEstadisticas implements OnInit {
         '$'
   );
 
-  /** Bs solo tiene sentido si hay tasa activa (Venezuela). */
-  readonly bsAvailable = computed(() => (this.rateStore.rate()?.bcv_usd ?? 0) > 0);
+  /** Bs solo tiene sentido en catálogos con doble moneda (Venezuela). No se
+   *  gatea por la tasa actual: las estadísticas suman el `total_bs` YA guardado
+   *  en cada orden (la RPC order_metrics con p_use_bs), no convierten en vivo —
+   *  así el toggle también sirve con tasa EUR/custom o si el sync BCV falló. */
+  readonly bsAvailable = computed(() => this.tenantCurrency.showDualCurrency());
 
   /** Máximo del gráfico por día (para escalar las barras). */
   readonly maxDay = computed(() =>
