@@ -253,18 +253,6 @@
               </span>
               }
             </div>
-            @if (creditReminderLink(order); as waLink) {
-            <div>
-              <a
-                [href]="waLink"
-                target="_blank"
-                class="inline-flex items-center gap-1 rounded-full border border-green-200 px-2 py-0.5 text-[0.625rem] font-semibold text-green-600 hover:bg-green-50 hover:text-green-700 transition-colors whitespace-nowrap"
-              >
-                <ui-icon name="message-circle" styleClass="size-3" />
-                {{ 'Recordar pago' | transloco }}
-              </a>
-            </div>
-            }
             <div>
               <span class="text-grey-800 font-bold">{{ 'Productos:' | transloco }}</span>
               <div class="flex flex-col gap-2 mt-1.5">
@@ -355,14 +343,15 @@
               [disabled]="isProcessing()"
             />
             }
-            @if (canDeleteOrder()) {
+            @if (canDeleteOrder() || order.phone) {
             <ui-button
-              (click)="onDeleteOrder(order)"
-              icon="trash"
+              (click)="openOrderMenu($event, order, orderRowMenu)"
+              icon="ellipsis-vertical"
               variant="text"
-              severity="danger"
+              severity="contrast"
               size="small"
-              [disabled]="isProcessing()"
+              [disabled]="isProcessing() || sendingActionId() === order.id"
+              [isLoading]="sendingActionId() === order.id"
             />
             }
           </div>
@@ -556,18 +545,6 @@
                 </span>
               </div>
               }
-              @if (creditReminderLink(order); as waLink) {
-              <div class="flex justify-center mt-1.5">
-                <a
-                  [href]="waLink"
-                  target="_blank"
-                  class="inline-flex items-center gap-1 rounded-full border border-green-200 px-2 py-0.5 text-[0.625rem] font-semibold text-green-600 hover:bg-green-50 hover:text-green-700 transition-colors whitespace-nowrap"
-                >
-                  <ui-icon name="message-circle" styleClass="size-3" />
-                  {{ 'Recordar pago' | transloco }}
-                </a>
-              </div>
-              }
             </td>
             <td class="px-6 py-3.5">
               @if (order.phone) {
@@ -640,15 +617,16 @@
                   tooltipPosition="bottom"
                 />
                 }
-                @if (canDeleteOrder()) {
+                @if (canDeleteOrder() || order.phone) {
                 <ui-button
-                  (click)="onDeleteOrder(order)"
-                  icon="trash"
+                  (click)="openOrderMenu($event, order, orderRowMenu)"
+                  icon="ellipsis-vertical"
                   variant="outlined"
                   severity="contrast"
                   size="small"
-                  [disabled]="isProcessing()"
-                  [tooltip]="'Eliminar' | transloco"
+                  [disabled]="isProcessing() || sendingActionId() === order.id"
+                  [isLoading]="sendingActionId() === order.id"
+                  [tooltip]="'Más acciones' | transloco"
                   tooltipPosition="bottom"
                 />
                 }
@@ -890,6 +868,23 @@
     </div>
   </div>
   }
+
+  <!-- Menú ⋯ de acciones por orden (CAT-80). Los items se reconstruyen al
+       abrir según la fila (teléfono/estado/plan). Mismo patrón que Productos:
+       autoClose off + selección manual. -->
+  <ui-menu #orderRowMenu [items]="orderMenuItems()" [autoClose]="false">
+    <ng-template #item let-menuItem>
+      <button
+        type="button"
+        class="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-md cursor-pointer"
+        [class]="menuItem.styleClass === 'danger' ? 'text-red-600 hover:bg-red-50' : 'text-slate-700 hover:bg-slate-50'"
+        (click)="onOrderMenuSelect(menuItem, orderRowMenu)"
+      >
+        <ui-icon [name]="menuItem.icon ?? ''" styleClass="size-4" />
+        <span>{{ menuItem.label ?? '' | transloco }}</span>
+      </button>
+    </ng-template>
+  </ui-menu>
 
   <lib-order-import-export-hub
     [currencySymbol]="cs()"

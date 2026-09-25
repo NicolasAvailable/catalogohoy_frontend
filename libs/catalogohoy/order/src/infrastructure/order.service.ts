@@ -212,6 +212,59 @@ export class OrderService {
     );
   }
 
+  /** Sube el PDF de la factura al bucket público (mismo patrón que el media
+   *  del chat) y devuelve su URL — para adjuntarla en la plantilla de
+   *  WhatsApp (CAT-80). */
+  async uploadInvoicePdf(
+    tenantId: number,
+    orderId: number,
+    blob: Blob,
+    filename: string
+  ): Promise<E.Either<Error, { url: string; filename: string }>> {
+    const path = `invoices/${tenantId}/orden-${orderId}-${Date.now()}.pdf`;
+    const { error } = await this.client.storage
+      .from('catalogohoy')
+      .upload(path, blob, { contentType: 'application/pdf', upsert: true });
+    if (error) return E.left(new Error(error.message));
+    const { data } = this.client.storage.from('catalogohoy').getPublicUrl(path);
+    return E.right({ url: data.publicUrl, filename });
+  }
+
+  /** CAT-80: acción hacia el cliente final por WhatsApp (plantilla desde el
+   *  número de la plataforma) vía edge `send-order-action`. El gate de plan
+   *  pago y la membresía se validan server-side; acá solo mapeamos errores. */
+  async sendOrderAction(
+    orderId: number,
+    action: 'notify' | 'invoice',
+    pdf?: { url: string; filename: string }
+  ): Promise<E.Either<Error, void>> {
+    const { data, error } = await this.client.functions.invoke(
+      'send-order-action',
+      {
+        body: {
+          action,
+          orderId,
+          pdfUrl: pdf?.url,
+          pdfFilename: pdf?.filename,
+        },
+      }
+    );
+    if (error) {
+      // Non-2xx: el motivo real viaja en el body (mismo patrón que
+      // delete-account). plan_required se distingue para el candado del menú.
+      let code = error.message;
+      try {
+        const ctx = (error as { context?: Response }).context;
+        if (ctx) code = (await ctx.clone().json())?.error ?? code;
+      } catch {
+        /* body no-JSON: se queda el mensaje genérico */
+      }
+      return E.left(new Error(code));
+    }
+    if (data?.success) return E.right(undefined);
+    return E.left(new Error(String(data?.error ?? 'send_failed')));
+  }
+
   /** Count-only query. Ignores all filters — used for the "total in general"
    *  label shown in the orders list footer. */
   async countOrdersByTenant(

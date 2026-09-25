@@ -60,8 +60,14 @@ export class OrderPdfService {
    *   stores aren't available (e.g. the public catalog invoice) so the exact
    *   same receipt can be produced outside the admin. Omit it in the admin and
    *   it derives everything from the config/tenant/currency stores.
+   * @param opts    `as: 'blob'` devuelve el PDF en memoria (para enviarlo por
+   *   WhatsApp, CAT-80) en vez de descargarlo.
    */
-  async download(order: Order, context?: OrderPdfContext): Promise<void> {
+  async download(
+    order: Order,
+    context?: OrderPdfContext,
+    opts?: { as?: 'save' | 'blob' }
+  ): Promise<{ blob: Blob; filename: string } | void> {
     let storeName: string;
     let showDualBs: boolean;
     let cs: string;
@@ -581,7 +587,11 @@ export class OrderPdfService {
     const seq = context
       ? undefined
       : await this.orderService.clientOrderOrdinal(order);
-    doc.save(buildInvoiceFilename(order, { isReceipt, seq }));
+    const filename = buildInvoiceFilename(order, { isReceipt, seq });
+    if (opts?.as === 'blob') {
+      return { blob: doc.output('blob') as Blob, filename };
+    }
+    doc.save(filename);
   }
 
   private blobToBase64(blob: Blob): Promise<string> {
