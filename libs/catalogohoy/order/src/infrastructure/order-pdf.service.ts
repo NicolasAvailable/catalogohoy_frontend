@@ -304,7 +304,10 @@ export class OrderPdfService {
       try {
         const res = await fetch(item.photo, { mode: 'cors' });
         const blob = await res.blob();
-        const b64 = await this.blobToBase64(blob);
+        // Thumbnail JPEG en vez de la foto original: se dibuja a 10mm, así que
+        // la resolución completa solo inflaba el PDF (facturas de 3+MB que no
+        // subían por conexiones lentas — caso Bioma 2026-09-25).
+        const b64 = await this.blobToThumbnailBase64(blob);
         imageMap.set(idx, b64);
       } catch {
         /* image failed — skip */
@@ -592,6 +595,31 @@ export class OrderPdfService {
       return { blob: doc.output('blob') as Blob, filename };
     }
     doc.save(filename);
+  }
+
+  /** Foto → thumbnail JPEG (~256px de lado, fondo blanco porque JPEG no tiene
+   *  alfa). A los 10mm a los que se dibuja en la factura sigue sobrando
+   *  resolución; el peso del PDF baja de ~3MB a cientos de KB. Si el formato
+   *  no se puede rasterizar, cae al original. */
+  private async blobToThumbnailBase64(blob: Blob, maxSide = 256): Promise<string> {
+    try {
+      const bmp = await createImageBitmap(blob);
+      const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+      const w = Math.max(1, Math.round(bmp.width * scale));
+      const h = Math.max(1, Math.round(bmp.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return this.blobToBase64(blob);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(bmp, 0, 0, w, h);
+      bmp.close();
+      return canvas.toDataURL('image/jpeg', 0.8);
+    } catch {
+      return this.blobToBase64(blob);
+    }
   }
 
   private blobToBase64(blob: Blob): Promise<string> {
