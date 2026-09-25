@@ -71,6 +71,23 @@ export class Profile {
   public readonly isDeleting = signal(false);
   public readonly isOpeningPortal = signal(false);
 
+  /** Se cancela una sola vez: al confirmar la cancelación ocultamos el botón
+   *  (y mostramos hasta cuándo sigue activo) para que no se pueda re-presionar.
+   *  Fuente persistida: `stripeSubscriptionStatus === 'canceled'`; este signal
+   *  cubre el estado inmediato en la sesión (Stripe deja la sub en 'active'
+   *  hasta fin de período cuando se cancela al final del ciclo). */
+  public readonly subscriptionCancelled = signal(false);
+  public readonly cancelledActiveUntil = signal<string | null>(null);
+
+  /** El botón "Cancelar suscripción" se muestra solo si hay un plan pago vigente
+   *  que todavía puede cancelarse: no gratis, no ya cancelada. */
+  public readonly canCancelSubscription = computed(() => {
+    if (this.planStore.isFreePlan()) return false;
+    if (this.subscriptionCancelled()) return false;
+    const status = this.planStore.tenantPlanUsage()?.stripeSubscriptionStatus;
+    return status !== 'canceled';
+  });
+
   /** Cuenta creada con Google (OAuth): no tiene contraseña propia (la
    *  administra Google). Oculta el cambio de contraseña y muestra una nota.
    *  Se resuelve async al iniciar (lee el provider del auth user). */
@@ -156,6 +173,16 @@ export class Profile {
   // Mirrors the column we'll add to `users.notify_plan_expiry`. Persisted
   // through `ProfileFacade.updateNotificationPreferences` (added below).
   public readonly draftNotifyPlanExpiry = signal<boolean>(true);
+  // Avisos a nivel CUENTA (llegan al correo/panel de la persona, no del catálogo).
+  public readonly draftNotifyOrdersInapp = signal<boolean>(true);
+  public readonly draftNotifyNewOrdersEmail = signal<boolean>(true);
+  public readonly draftNotifyWeeklyReportEmail = signal<boolean>(true);
+  // Aviso de stock bajo/agotado (email) + umbral configurable por la tienda.
+  public readonly draftNotifyLowStock = signal<boolean>(true);
+  public readonly draftLowStockThreshold = signal<number>(5);
+  // Recordatorios de cobranza de órdenes a crédito (CAT-79) + umbral de días.
+  public readonly draftNotifyCreditReminders = signal<boolean>(true);
+  public readonly draftCreditReminderDays = signal<number>(7);
   public readonly isSavingNotifications = signal(false);
 
   @ViewChild('cancelDialog')
@@ -205,6 +232,24 @@ export class Profile {
       // column read true.
       const pref = (profile as { notifyPlanExpiry?: boolean }).notifyPlanExpiry;
       this.draftNotifyPlanExpiry.set(pref ?? true);
+      const p = profile as {
+        notifyOrdersInapp?: boolean;
+        notifyNewOrdersEmail?: boolean;
+        notifyWeeklyReportEmail?: boolean;
+      };
+      this.draftNotifyOrdersInapp.set(p.notifyOrdersInapp ?? true);
+      this.draftNotifyNewOrdersEmail.set(p.notifyNewOrdersEmail ?? true);
+      this.draftNotifyWeeklyReportEmail.set(p.notifyWeeklyReportEmail ?? true);
+      const ls = profile as {
+        notifyLowStock?: boolean;
+        lowStockThreshold?: number;
+        notifyCreditReminders?: boolean;
+        creditReminderDays?: number;
+      };
+      this.draftNotifyLowStock.set(ls.notifyLowStock ?? true);
+      this.draftLowStockThreshold.set(ls.lowStockThreshold ?? 5);
+      this.draftNotifyCreditReminders.set(ls.notifyCreditReminders ?? true);
+      this.draftCreditReminderDays.set(ls.creditReminderDays ?? 7);
     });
 
     // Lazy-load billing history the first time the user opens the tab.
@@ -289,8 +334,21 @@ export class Profile {
 
   public async saveNotificationPreferences(): Promise<void> {
     this.isSavingNotifications.set(true);
+    const rawThreshold = Math.floor(Number(this.draftLowStockThreshold()));
+    const lowStockThreshold =
+      Number.isFinite(rawThreshold) && rawThreshold >= 0 ? rawThreshold : 5;
+    const rawDays = Math.floor(Number(this.draftCreditReminderDays()));
+    const creditReminderDays =
+      Number.isFinite(rawDays) && rawDays >= 1 ? rawDays : 7;
     const result = await this.profileService.updateNotificationPreferences({
       notifyPlanExpiry: this.draftNotifyPlanExpiry(),
+      notifyOrdersInapp: this.draftNotifyOrdersInapp(),
+      notifyNewOrdersEmail: this.draftNotifyNewOrdersEmail(),
+      notifyWeeklyReportEmail: this.draftNotifyWeeklyReportEmail(),
+      notifyLowStock: this.draftNotifyLowStock(),
+      lowStockThreshold,
+      notifyCreditReminders: this.draftNotifyCreditReminders(),
+      creditReminderDays,
     });
     result.fold(
       (err) => {
@@ -357,13 +415,17 @@ export class Profile {
         const until = info.activeUntil
           ? new Date(info.activeUntil).toLocaleDateString('es-ES')
           : null;
+        // Ocultar el botón ya: no se puede volver a cancelar lo ya cancelado.
+        this.subscriptionCancelled.set(true);
+        this.cancelledActiveUntil.set(until);
         this.toaster.success(
           info.immediate || !until
             ? 'Tu suscripción fue cancelada.'
             : `Tu suscripción se canceló. Tu plan sigue activo hasta el ${until}.`
         );
-        // Refrescar el estado del plan para que la UI deje de ofrecer cancelar.
-        this.planStore.loadTenantPlanUsage();
+        // Refrescar el estado del plan (force: loadTenantPlanUsage hace
+        // early-return si ya está cargado) para que la UI quede consistente.
+        this.planStore.refreshUsage();
       }
     );
   }

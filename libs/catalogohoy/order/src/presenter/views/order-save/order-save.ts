@@ -8,6 +8,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { EcommerceConfigStore, TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
@@ -39,7 +40,9 @@ import {
   UploaderComponent,
 } from '@ui';
 import {
+  CreditInstallment,
   Order,
+  OrderAdjustment,
   OrderItem,
   OrderItemAddon,
   OrderStatus,
@@ -47,6 +50,7 @@ import {
 } from '../../../domain/order';
 import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import { OrderStore } from '../../../infrastructure/order.store';
+import { OrderImportDraftService } from '../../../infrastructure/order-import-draft.service';
 
 /** Un adicional del catálogo (pool global), con su foto para mostrarlo como
  *  mini-producto en el selector y los chips del alta manual de órdenes. */
@@ -88,6 +92,7 @@ export default class OrderSave implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
+  private readonly importDraft = inject(OrderImportDraftService);
   public readonly productStore = inject(ProductStore);
   public readonly rateStore = inject(RateStore);
   private readonly configStore = inject(EcommerceConfigStore);
@@ -153,6 +158,96 @@ export default class OrderSave implements OnInit {
   public readonly orderPaymentMethods = computed(() =>
     this.configStore.paymentMethodsList().filter((m) => m.isActive)
   );
+
+  /** Valor reactivo del método de pago. El form control no es signal, así que lo
+   *  espejamos para que los computed que dependen del ajuste (ej. `totalBs`)
+   *  reaccionen cuando el usuario cambia de método. */
+  public readonly paymentMethodValue = toSignal(
+    this.form.controls.paymentMethod.valueChanges,
+    { initialValue: this.form.controls.paymentMethod.value }
+  );
+
+  /** Snapshot del ajuste + método con que se CARGÓ la orden (edición). Sirve
+   *  para respetar el ajuste guardado y NO recalcularlo desde la config actual
+   *  (que pudo cambiar) mientras el usuario no cambie el método de pago. */
+  private readonly loadedPaymentMethod = signal<string>('');
+  private readonly loadedAdjustment = signal<OrderAdjustment | null>(null);
+
+  /** Borrador del plan de cuotas (CAT-79). Solo aplica con status 'credit';
+   *  se persiste como orders.credit_installments. Mismo estilo signal-array
+   *  que `products`. */
+  public readonly installments = signal<
+    { date: Date | null; amount: number | null; paid: boolean }[]
+  >([]);
+
+  public addInstallment(): void {
+    this.installments.update((list) => {
+      // Sugerencia de fecha: 30 días después de la última cuota (o de hoy).
+      const last = [...list].reverse().find((c) => c.date)?.date ?? new Date();
+      const suggested = new Date(last.getTime() + 30 * 86_400_000);
+      return [...list, { date: suggested, amount: null, paid: false }];
+    });
+  }
+
+  public removeInstallment(index: number): void {
+    this.installments.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  public onInstallmentDate(index: number, date: Date | null): void {
+    this.installments.update((list) =>
+      list.map((c, i) => (i === index ? { ...c, date } : c))
+    );
+  }
+
+  public onInstallmentAmount(index: number, amount: number | null): void {
+    this.installments.update((list) =>
+      list.map((c, i) => (i === index ? { ...c, amount } : c))
+    );
+  }
+
+  public toggleInstallmentPaid(index: number): void {
+    this.installments.update((list) =>
+      list.map((c, i) => (i === index ? { ...c, paid: !c.paid } : c))
+    );
+  }
+
+  /** Reparte el total de la orden en partes iguales entre las cuotas (la
+   *  última absorbe el redondeo para que la suma cierre exacta). */
+  public splitInstallmentsEvenly(): void {
+    const n = this.installments().length;
+    if (!n) return;
+    const total = this.calculateTotal();
+    const base = Math.floor((total / n) * 100) / 100;
+    const last = Math.round((total - base * (n - 1)) * 100) / 100;
+    this.installments.update((list) =>
+      list.map((c, i) => ({ ...c, amount: i === n - 1 ? last : base }))
+    );
+  }
+
+  public readonly installmentsSum = computed(() =>
+    this.installments().reduce((acc, c) => acc + (c.amount ?? 0), 0)
+  );
+
+  /** Hint suave: hay montos cargados pero no cuadran con el total. */
+  public readonly installmentsMismatch = computed(() => {
+    const sum = this.installmentsSum();
+    if (sum <= 0) return false;
+    return Math.abs(sum - this.calculateTotal()) > 0.01;
+  });
+
+  /** Payload jsonb del plan: solo cuotas con fecha, solo si la orden queda a
+   *  crédito. null limpia el plan (p.ej. al cobrar y pasar a completada). */
+  private buildInstallmentsPayload(): CreditInstallment[] | null {
+    if (this.form.controls.status.value !== 'credit') return null;
+    const list = this.installments()
+      .filter((c) => c.date instanceof Date)
+      .map((c) => ({
+        dueDate: this.toIsoDate(c.date as Date),
+        amount: c.amount != null && c.amount > 0 ? c.amount : null,
+        paid: c.paid === true,
+      }));
+    return list.length ? list : null;
+  }
 
 
   public readonly id = input<string | undefined>(undefined);
@@ -314,7 +409,12 @@ export default class OrderSave implements OnInit {
       const orderId = this.id();
       if (orderId) {
         this.isCreate.set(false);
+        // Descartá cualquier draft de import rancio (si el usuario importó y en
+        // vez de guardar se fue a editar otra orden).
+        this.importDraft.consume();
         this.loadOrder(orderId);
+      } else {
+        this.prefillFromImport();
       }
     });
 
@@ -337,6 +437,79 @@ export default class OrderSave implements OnInit {
     }
   }
 
+  /** Si venimos del import de Excel (hub "Importar orden"), consume el draft:
+   *  matchea cada línea contra el catálogo (SKU y luego nombre) y precarga los
+   *  productos + el cliente. Las líneas sin match quedan como ítem libre. */
+  private prefillFromImport(): void {
+    const draft = this.importDraft.consume();
+    if (!draft) return;
+
+    const catalog = this.productStore.productList().products;
+    const bySku = new Map<string, (typeof catalog)[number]>();
+    const byName = new Map<string, (typeof catalog)[number]>();
+    for (const p of catalog) {
+      if (p.sku) bySku.set(this.normKey(p.sku), p);
+      byName.set(this.normKey(p.name), p);
+    }
+
+    let matched = 0;
+    let custom = 0;
+    const items: OrderItem[] = draft.lines.map((line) => {
+      const hit =
+        (line.sku ? bySku.get(this.normKey(line.sku)) : undefined) ??
+        byName.get(this.normKey(line.name));
+      const price = line.price || hit?.price || 0;
+      if (hit) {
+        matched++;
+        return {
+          productId: hit.id,
+          name: hit.name,
+          price,
+          quantity: line.quantity,
+          total: price * line.quantity,
+          photo: hit.photos?.[0],
+          isCustom: false,
+        };
+      }
+      custom++;
+      return {
+        productId: OrderSave.CUSTOM_PRODUCT_ID,
+        name: line.name,
+        price,
+        quantity: line.quantity,
+        total: price * line.quantity,
+        isCustom: true,
+        description: line.sku || '',
+      };
+    });
+
+    this.products.set(items);
+    if (draft.client.name) this.form.controls.name.setValue(draft.client.name);
+    if (draft.client.phone) this.form.controls.phone.setValue(draft.client.phone);
+    // Doc (CI/RIF) y dirección del encabezado → comentarios (para no perderlos).
+    const extra = [
+      draft.client.doc ? `Doc: ${draft.client.doc}` : '',
+      draft.client.address ? `Dirección: ${draft.client.address}` : '',
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    if (extra && !this.form.controls.comments.value) {
+      this.form.controls.comments.setValue(extra);
+    }
+
+    this.toastService.success(
+      `Orden cargada: ${items.length} productos (${matched} del catálogo, ${custom} libres). Revisá y guardá.`
+    );
+  }
+
+  private normKey(s: string): string {
+    return s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .trim();
+  }
+
   /** Format a Date as "YYYY-MM-DD" in local time. `toISOString()` would
    *  shift by the timezone offset and can land on a different calendar day. */
   private toIsoDate(d: Date): string {
@@ -352,6 +525,8 @@ export default class OrderSave implements OnInit {
     this.form.controls.comments.setValue(order.comments || '');
     this.form.controls.status.setValue(order.status);
     this.form.controls.paymentMethod.setValue(order.paymentMethod || '');
+    this.loadedPaymentMethod.set(order.paymentMethod || '');
+    this.loadedAdjustment.set(order.paymentAdjustment ?? null);
     this.form.controls.paymentEvidenceNote.setValue(
       order.paymentEvidence?.note || ''
     );
@@ -361,6 +536,17 @@ export default class OrderSave implements OnInit {
       const [y, m, d] = order.deliveryDate.split('-').map(Number);
       this.form.controls.deliveryDate.setValue(new Date(y, m - 1, d));
     }
+    // Plan de cuotas guardado (mismo parseo local que deliveryDate).
+    this.installments.set(
+      (order.creditInstallments ?? []).map((c) => {
+        const [cy, cm, cd] = c.dueDate.split('-').map(Number);
+        return {
+          date: new Date(cy, cm - 1, cd),
+          amount: c.amount ?? null,
+          paid: c.paid === true,
+        };
+      })
+    );
 
     const storeProducts = this.productStore.productList().products;
     this.products.set(
@@ -763,7 +949,12 @@ export default class OrderSave implements OnInit {
   /** Lo que paga el cliente: subtotal + envío (antes de la comisión del
    *  vendedor). Base del cálculo de cambio del POS. */
   public grossTotal(): number {
-    return this.productsSubtotal() + this.effectiveShippingFee();
+    const adj = this.paymentAdjustment();
+    return (
+      this.productsSubtotal() +
+      this.effectiveShippingFee() +
+      (adj ? adj.amount : 0)
+    );
   }
 
   /** Total neto que se guarda/muestra: lo que paga el cliente MENOS la comisión
@@ -775,6 +966,55 @@ export default class OrderSave implements OnInit {
   /** Costo de envío que efectivamente se suma al total (0 si no hay envío). */
   public effectiveShippingFee(): number {
     return this.shippingSelection() === '' ? 0 : this.shippingFee() || 0;
+  }
+
+  /** Ajuste (descuento/recargo) del método de pago elegido. `amount` es SIGNED:
+   *  negativo = descuento (resta del total), positivo = recargo (suma). Se toma
+   *  del método configurado en Editar catálogo → Pagos y se aplica sobre el
+   *  subtotal de productos. A diferencia de la comisión (costo oculto del
+   *  vendedor), esto SÍ se le muestra al cliente como línea en la factura. */
+  public paymentAdjustment(): {
+    label: string;
+    amount: number;
+    magnitude: number;
+    kind: 'discount' | 'surcharge';
+    visible: boolean;
+  } | null {
+    const name = this.paymentMethodValue();
+    if (!name) return null;
+    // Edición: si el método no cambió respecto al guardado, respetá el snapshot
+    // almacenado (no recalcules desde la config, que pudo cambiar). Así no se
+    // pisan totales históricos ni se le inyecta un ajuste a una orden creada sin
+    // él (ej. del checkout público). Recalcula solo al cambiar de método.
+    if (!this.isCreate() && name === this.loadedPaymentMethod()) {
+      return this.loadedAdjustment();
+    }
+    const method = this.configStore
+      .paymentMethodsList()
+      .find((m) => m.name === name);
+    const d = method?.details ?? {};
+    const type = d['__adjustType'];
+    // Tolerá coma decimal (norma LatAm/VE): "5,5" → 5.5.
+    let value = Number(String(d['__adjustValue'] ?? '').replace(',', '.'));
+    if (!type || type === 'none' || !Number.isFinite(value) || value <= 0)
+      return null;
+    const mode = d['__adjustMode'] || 'percent';
+    if (mode === 'percent') value = Math.min(value, 100);
+    let magnitude =
+      mode === 'percent' ? (this.productsSubtotal() * value) / 100 : value;
+    // Un descuento nunca puede dejar el total (productos + envío) en negativo.
+    if (type === 'discount') {
+      magnitude = Math.min(
+        magnitude,
+        this.productsSubtotal() + this.effectiveShippingFee()
+      );
+    }
+    if (magnitude <= 0) return null;
+    const suffix = mode === 'percent' ? ` (${value}%)` : '';
+    const visible = d['__adjustVisible'] !== '0';
+    return type === 'discount'
+      ? { label: `Descuento · ${name}${suffix}`, amount: -magnitude, magnitude, kind: 'discount', visible }
+      : { label: `Cargo adicional · ${name}${suffix}`, amount: magnitude, magnitude, kind: 'surcharge', visible };
   }
 
   public setCommissionMode(mode: 'fixed' | 'percent'): void {
@@ -917,7 +1157,9 @@ export default class OrderSave implements OnInit {
       paymentEvidence: this.buildPaymentEvidence(),
       shippingFee: this.effectiveShippingFee(),
       commission: this.effectiveCommission(),
+      paymentAdjustment: this.paymentAdjustment(),
       shippingMethod: this.buildShippingMethod(),
+      creditInstallments: this.buildInstallmentsPayload(),
     };
 
     try {

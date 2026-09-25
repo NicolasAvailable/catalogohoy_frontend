@@ -36,6 +36,10 @@ export interface ProductVariant {
   /** This variant's own sizes, each with its own stock. Empty = the variant
    *  has no sizes (added directly to the cart). */
   sizes: ProductSize[];
+  /** When true, the variant is hidden from the public catalog (buyers never
+   *  see it in the option selector) but is kept on the product so the seller
+   *  can bring it back — e.g. a colour that sold out. Defaults to false. */
+  isHidden?: boolean;
 }
 
 /**

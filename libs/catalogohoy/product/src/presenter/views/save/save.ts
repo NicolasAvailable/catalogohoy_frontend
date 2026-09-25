@@ -500,6 +500,8 @@ export default class Save implements OnInit {
         stock: [null as string | null],
         // Each variant owns its tallas.
         sizes: this.fb.array([]),
+        // Ocultar la variante del catálogo sin borrarla (color/modelo agotado).
+        isHidden: [false],
       })
     );
     this.form.controls.isVariant.setValue(true);
@@ -761,6 +763,7 @@ export default class Save implements OnInit {
               })
             )
           ),
+          isHidden: [variant.isHidden ?? false],
         })
       );
     });

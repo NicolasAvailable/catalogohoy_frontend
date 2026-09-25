@@ -121,6 +121,13 @@
 - **Siempre `rem`, nunca pixeles hardcodeados** (los tokens de Tailwind son rem; en
   `ui-icon` usar `styleClass="w-4 h-4"`). Para valores finos, arbitrary values en rem:
   `text-[0.6875rem]`, `min-h-[11rem]`.
+- **Escala global por ancho: el `:root { font-size }` de `libs/ui/src/styles/main.css`**
+  es escalonado (75%/12px < 1280px · **81.25%/13px ≥ 1280** · 87.5%/14px ≥ 1600 · 100%/16px
+  ≥ 2560). Como TODO está en `rem`, esto agranda/achica la UI en bloque. ⚠️ Los breakpoints
+  `sm/md/lg/xl` de Tailwind NO se overridean → disparan por viewport real (px), ajenos a esta
+  escala. Si algo "se ve chico/apretado solo en laptops 13\"" es esta escala, no un breakpoint
+  de layout (verificado: a 1280/1440 no hay overflow, solo tamaño). Tocar los escalones acá,
+  nunca hardcodear tamaños para una pantalla puntual.
 - Skinear PrimeNG: clases internas v20 son `.p-select`, `.p-select-label`, `.p-placeholder`,
   `.p-select-dropdown`, `.p-dialog`, etc. Skinear con `::ng-deep` + un `styleClass` propio.
 - `ui-dialog` toma `headerTitle` como **texto plano** (no admite icono en el header) → si
@@ -139,6 +146,25 @@
 - `wait()` usa `toast.loading()` con **`duration: Infinity`** (si no, sonner lo auto-cierra a
   ~4s aunque la acción siga). `success/error/warning/info` llaman `dismissWait()` primero.
   Patrón: `wait('…')` → en éxito `success('…')`, en error `error(...)` (ambos cierran el wait).
+
+## Uploader compartido (`libs/ui` → `UploaderService`)
+
+- Lo usan **todos** los flujos de subida del admin: fotos/variantes de producto, logo en
+  Configuración, evidencia de pago en Órdenes e import/export. Un cambio ahí afecta a todos.
+- El pipeline re-encodea imágenes vía `<img>` + canvas → solo soporta lo que el navegador
+  decodifique. **HEIC/HEIF (iPhone, Samsung "alta eficiencia") no decodifica en Chrome**:
+  se detecta por MIME/extensión/magic bytes (`ftyp` + brand) y se convierte con `heic2any`
+  (import dinámico → chunk lazy, solo se baja si aparece un HEIC). Ojo: WhatsApp/descargas
+  a veces renombran HEIC a `.jpg`, por eso el sniff de magic bytes.
+- Pickers de Android a veces entregan `file.type` **vacío** → los videos se detectan también
+  por extensión (mp4/webm/ogg), si no caerían al pipeline de imagen y morirían.
+- Los errores del uploader llegan **crudos al toast** (sin transloco): los mensajes se
+  escriben en español directamente en el servicio (incidente almoli-essence 2026-09-24:
+  "Failed to load image" en inglés por una foto HEIC).
+- El **chat CRM NO usa este uploader**: adjunta vía `ChatService.uploadMedia` (subida cruda
+  a `chat-media/`). La conversión HEIC ahí se hace con el util compartido
+  `isHeicFile`/`convertHeicToJpeg` (`libs/ui/.../uploader/infrastructure/heic.ts`) — si se
+  toca la detección/conversión HEIC, es en ese util, no en cada servicio.
 
 ## PrimeNG dialog vs overlay custom
 

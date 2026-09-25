@@ -1,5 +1,6 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { WhatsAppStore } from '@catalogohoy/whatsapp';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { TenantStore } from '@catalogohoy/tenant';
+import { WhatsAppService, WhatsAppStore } from '@catalogohoy/whatsapp';
 import { ChatStore } from '../../../infrastructure/chat.store';
 import { ChatLayoutComponent } from '../chat-layout/chat-layout';
 import { ChatLandingComponent } from '../chat-landing/chat-landing';
@@ -12,7 +13,7 @@ import { ChatLandingComponent } from '../chat-landing/chat-landing';
   // edge-to-edge (full-bleed inbox, like Fuse) without a card/border.
   host: { class: 'flex-1 flex min-h-0 overflow-hidden -m-4' },
   template: `
-    @if (whatsAppStore.isLoading() || (chatStore.isLoading() && !chatStore.chats().length)) {
+    @if (whatsAppStore.isLoading() || (chatStore.isLoading() && !chatStore.chats().length) || (!hasAnyChannel() && !channelsResolved())) {
       <!-- Skeleton con la forma real del inbox: columna de chats + conversación
            (en móvil sólo la lista, como el layout real). -->
       <div class="flex-1 flex h-full w-full overflow-hidden animate-pulse">
@@ -47,10 +48,10 @@ import { ChatLandingComponent } from '../chat-landing/chat-landing';
           </div>
         </div>
       </div>
-    } @else if (!whatsAppStore.hasActiveAccount() && chatStore.chats().length === 0) {
-      <!-- Sin canal Y sin historial: landing de bienvenida ("Configurar Chat").
-           Si hay chats de un canal desvinculado, la bandeja se muestra igual
-           (solo lectura en ese canal). -->
+    } @else if (!hasAnyChannel()) {
+      <!-- Sin ningún canal conectado: se muestra la bienvenida ("Configurar
+           Chat") HASTA que el dueño conecte un canal — aunque ya tenga chats.
+           Así el onboarding no desaparece por tener historial suelto. -->
       <lib-chat-landing />
     } @else {
       <lib-chat-layout />
@@ -60,11 +61,44 @@ import { ChatLandingComponent } from '../chat-landing/chat-landing';
 export class ConversationsComponent implements OnInit {
   readonly whatsAppStore = inject(WhatsAppStore);
   readonly chatStore = inject(ChatStore);
+  private readonly whatsAppService = inject(WhatsAppService);
+  private readonly tenantStore = inject(TenantStore);
+
+  /** Alguna red social (IG / TikTok / Messenger) conectada. Se resuelve async. */
+  private readonly hasSocialAccount = signal(false);
+  /** true cuando ya sabemos el estado de las redes sociales (evita parpadeo
+   *  entre bienvenida e inbox mientras carga). */
+  protected readonly channelsResolved = signal(false);
+
+  /** Hay al menos un canal conectado (WhatsApp o una red social). Mientras no
+   *  haya ninguno, se muestra la bienvenida. */
+  protected readonly hasAnyChannel = computed(
+    () => this.whatsAppStore.hasActiveAccount() || this.hasSocialAccount()
+  );
 
   ngOnInit() {
     this.whatsAppStore.loadAccounts();
-    // Los chats se cargan acá (y no solo en el layout) porque el gating del
-    // empty state necesita saber si hay historial de canales desvinculados.
+    // Los chats se cargan acá para poblar el inbox apenas se decide mostrarlo.
     this.chatStore.loadChats();
+    void this.resolveSocialChannels();
+  }
+
+  private async resolveSocialChannels(): Promise<void> {
+    try {
+      const tenantId = await this.tenantStore.getTenantIdAsync();
+      if (!tenantId) return;
+      const [ig, tt, fb] = await Promise.all([
+        this.whatsAppService.getInstagramAccount(tenantId),
+        this.whatsAppService.getTikTokAccount(tenantId),
+        this.whatsAppService.getMessengerAccount(tenantId),
+      ]);
+      const connected =
+        (ig.isRight() && ig.value !== null) ||
+        (tt.isRight() && tt.value !== null) ||
+        (fb.isRight() && fb.value !== null);
+      this.hasSocialAccount.set(connected);
+    } finally {
+      this.channelsResolved.set(true);
+    }
   }
 }

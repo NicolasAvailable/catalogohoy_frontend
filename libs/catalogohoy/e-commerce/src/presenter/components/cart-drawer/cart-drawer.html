@@ -85,7 +85,12 @@
               <ui-icon name="minus" styleClass="size-4" />
             </button>
             <span class="cart-item__qty">{{ item.quantity }}</span>
-            <button class="cart-item__qty-btn" (click)="onIncrement(item)">
+            <button
+              class="cart-item__qty-btn"
+              (click)="onIncrement(item)"
+              [disabled]="item.isAtStockLimit"
+              [title]="item.isAtStockLimit ? ('No hay más stock disponible de este producto' | transloco) : ''"
+            >
               <ui-icon name="plus" styleClass="size-4" />
             </button>
           </div>

@@ -28,7 +28,7 @@ const MAX_REPORTS_PER_SESSION = 15;
  *  Meta/GA/TikTok en los storefronts): no trae información por diseño.
  *  El resto es la misma lista que Sentry ignora en su init. */
 const NOISE_PATTERNS =
-  /Script error|Java object is gone|Error invoking postMessage|ResizeObserver loop/i;
+  /Script error|Java object is gone|Error invoking postMessage|ResizeObserver loop|WKWebView was deallocated|Error invoking jsReceiveMessages|Java bridge method invocation error|window\.webkit\.messageHandlers|The operation was aborted/i;
 
 /** Fingerprint del build (main-XXXX.js) — mismo truco que AppVersionService.
  *  Cambia con cada deploy: permite correlacionar errores con deploys. */

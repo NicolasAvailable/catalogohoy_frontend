@@ -134,7 +134,23 @@
       [emptyMessage]="'No hay categorías creadas' | transloco"
       [emptyFilterMessage]="'No se encontró la categoría' | transloco"
       styleClass="w-full"
-      class="w-36 sm:w-56 shrink-0"
+      class="w-32 sm:w-56 shrink-0"
+    />
+    <ui-select
+      [options]="[
+        { label: ('Predeterminado' | transloco), value: 'default' },
+        { label: ('Alfabético (A - Z)' | transloco), value: 'az' },
+        { label: ('Alfabético (Z - A)' | transloco), value: 'za' }
+      ]"
+      [ngModel]="sortOrder()"
+      [ngModelOptions]="{standalone: true}"
+      (ngModelChange)="onSortChange($event)"
+      optionLabel="label"
+      optionValue="value"
+      [placeholder]="'Ordenar' | transloco"
+      [clearable]="true"
+      styleClass="w-full"
+      class="w-32 sm:w-52 shrink-0"
     />
   </form>
   <section
@@ -208,9 +224,11 @@
       </h4>
     </div>
 
-    <!-- Product list with drag-and-drop -->
+    <!-- Modo paginado (10/25/50): lista con drag-and-drop para reordenar -->
+    @if (!showAll()) {
     <div
       cdkDropList
+      [cdkDropListDisabled]="!canReorder()"
       (cdkDropListDropped)="drop($event)"
       class="flex-1 flex flex-col overflow-y-auto product-list"
     >
@@ -225,9 +243,11 @@
         <!-- Desktop row -->
         <section class="hidden sm:flex gap-4 justify-between px-6 py-4 items-center min-w-[700px]">
           <div class="flex items-center gap-3 flex-3 overflow-hidden">
+            @if (canReorder()) {
             <div cdkDragHandle class="cursor-move shrink-0 p-1 -ml-1">
               <ui-icon name="grip-vertical" styleClass="size-5 text-grey-300" />
             </div>
+            }
             <ui-checkbox
               [ngModel]="isSelected(item)"
               (valueChange)="toggleProduct(item)"
@@ -386,9 +406,11 @@
 
         <!-- Mobile row -->
         <div class="flex sm:hidden items-center gap-3 px-4 py-3">
+          @if (canReorder()) {
           <div cdkDragHandle class="cursor-move shrink-0">
             <ui-icon name="grip-vertical" styleClass="size-5 text-grey-300" />
           </div>
+          }
           <ui-checkbox
             [ngModel]="isSelected(item)"
             (valueChange)="toggleProduct(item)"
@@ -495,13 +517,291 @@
       </div>
       }
     </div>
+    } @else {
+    <!-- Modo "Todos": virtual scroll (CDK) — quita del DOM las filas fuera de
+         vista para que catálogos grandes no traben. Sin drag-and-drop (el
+         reordenar por arrastre es incompatible con el virtual scroll). -->
+    <cdk-virtual-scroll-viewport [itemSize]="rowSize()" class="flex-1 min-h-0">
+      <div
+        *cdkVirtualFor="let item of filteredProducts(); let i = index; trackBy: trackById"
+        class="border-b border-grey-50 h-24 sm:h-32 overflow-hidden hover:bg-grey-25 transition-colors"
+        [class.bg-slate-50]="isLocked(item)"
+        [class.opacity-70]="isLocked(item)"
+      >
+        <!-- Desktop row -->
+        <section class="hidden sm:flex gap-4 justify-between px-6 py-4 items-center min-w-[700px]">
+          <div class="flex items-center gap-3 flex-3 overflow-hidden">
+            <ui-checkbox
+              [ngModel]="isSelected(item)"
+              (valueChange)="toggleProduct(item)"
+            />
+            <span class="w-7 text-center text-xs font-medium text-grey-300 shrink-0">{{ i + 1 }}</span>
+            <div
+              [routerLink]="isLocked(item) ? null : ['edit', item.id]"
+              (click)="onLockedAttempt(item)"
+              class="flex gap-2 flex-1 cursor-pointer overflow-hidden"
+            >
+              @if (item.photos.length > 0) {
+              <div class="flex items-center justify-center w-24 h-24 shrink-0">
+                <ui-product-media
+                  [url]="thumbnailUrl(item)"
+                  [alt]="item.name"
+                  [controls]="false"
+                  [posterSeconds]="1.5"
+                  styleClass="w-24 h-24 rounded-sm object-cover"
+                />
+              </div>
+              } @else {
+              <ui-icon
+                name="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg"
+                class="flex items-center justify-center w-24 h-24"
+                styleClass="max-w-24 max-h-24 rounded-sm object-cover"
+              />
+              }
+              <div class="ml-2 flex flex-col gap-1 self-center">
+                <h2
+                  class="text-primary-500 font-semibold text-base line-clamp-2 break-all"
+                >
+                  {{item.name}}
+                </h2>
+                @if (item.sku) {
+                <span class="text-xs text-grey-400 break-all">{{ 'SKU: {sku}' | transloco: { sku: item.sku } }}</span>
+                }
+                <div class="flex flex-wrap items-center gap-1">
+                  @if (item.isWholesale) {
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 w-fit">
+                    <ui-icon name="package" size="10" />
+                    {{ 'Al mayor' | transloco }}
+                  </span>
+                  }
+                  @if (item.isSoldOut) {
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-red-100 text-red-600 w-fit">
+                    <ui-icon name="package-x" size="10" />
+                    {{ 'Agotado' | transloco }}
+                  </span>
+                  }
+                  @if (item.isHidden) {
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-slate-200 text-slate-700 w-fit">
+                    <ui-icon name="eye-off" size="10" />
+                    {{ 'Oculto' | transloco }}
+                  </span>
+                  }
+                  @if (isLocked(item)) {
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 w-fit">
+                    <ui-icon name="lock" size="10" />
+                    {{ 'Oculto · plan gratis' | transloco }}
+                  </span>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            class="flex-1 flex items-center justify-center overflow-hidden"
+          >
+            @if (!item.stock) {
+            <span class="line-clamp-1 break-all text-sm">{{ '∞ Infinito' | transloco }}</span>
+            } @else if (+item.stock <= 0) {
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-red-100 text-red-600">
+              {{ 'Agotado' | transloco }}
+            </span>
+            } @else {
+            <span class="line-clamp-1 break-all text-sm">{{ item.stock }}</span>
+            }
+          </div>
+          <div
+            class="flex-1 flex items-center justify-center overflow-hidden"
+          >
+            @if (item.isWholesale && item.wholesaleTiers.length > 0) {
+            <div class="flex flex-col items-center gap-0.5 text-sm">
+              <span class="font-medium text-amber-700">{{ '{n} escalas' | transloco: { n: item.wholesaleTiers.length } }}</span>
+              <span class="text-grey-400 text-xs">{{ 'Desde {price}' | transloco: { price: cs() + item.wholesaleTiers[item.wholesaleTiers.length - 1].price } }}</span>
+            </div>
+            } @else {
+            <div
+              class="flex items-center gap-2 px-3 py-2 border border-slate-700 rounded-lg w-full max-w-32"
+            >
+              <span class="text-sm font-semibold text-slate-700">{{ cs() }}</span>
+              <span class="text-sm font-medium truncate">{{item.price}}</span>
+            </div>
+            }
+          </div>
+          <div
+            class="flex-1 flex items-center justify-center overflow-hidden"
+          >
+            @if (item.isWholesale) {
+            <span class="text-grey-300">-</span>
+            } @else if (item.pricePromotional) {
+            <div
+              class="flex items-center gap-2 px-3 py-2 border border-slate-700 rounded-lg w-full max-w-32"
+            >
+              <span class="text-sm font-semibold text-slate-700">{{ cs() }}</span>
+              <span class="text-sm font-medium truncate"
+                >{{item.pricePromotional}}</span
+              >
+            </div>
+            } @else {
+            <span class="text-grey-300">-</span>
+            }
+          </div>
+          <div class="flex-1 flex items-center justify-center gap-1">
+            <ui-button
+              [routerLink]="isLocked(item) ? null : ['edit', item.id]"
+              (click)="onLockedAttempt(item)"
+              [icon]="isLocked(item) ? 'lock' : 'pencil'"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+              [tooltip]="(isLocked(item) ? 'Mejora tu plan para editar' : 'Editar') | transloco"
+              tooltipPosition="bottom"
+            />
+            <ui-button
+              (click)="onToggleHidden(item)"
+              [icon]="item.isHidden ? 'eye-off' : 'eye'"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+              [tooltip]="(item.isHidden ? 'Mostrar en el catálogo' : 'Ocultar del catálogo') | transloco"
+              tooltipPosition="bottom"
+            />
+            <ui-button
+              (click)="onShare(item)"
+              icon="share2"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+              [tooltip]="(copiedId() === ('' + item.id) ? '¡Link copiado!' : 'Compartir') | transloco"
+              tooltipPosition="bottom"
+            />
+            @if (canCreateProduct() || canDeleteProduct()) {
+            <ui-button
+              (click)="openRowMenu($event, item, rowMenu)"
+              icon="ellipsis-vertical"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+              [tooltip]="'Más acciones' | transloco"
+              tooltipPosition="bottom"
+            />
+            }
+          </div>
+        </section>
+
+        <!-- Mobile row -->
+        <div class="flex sm:hidden items-center gap-3 px-4 py-3">
+          <ui-checkbox
+            [ngModel]="isSelected(item)"
+            (valueChange)="toggleProduct(item)"
+          />
+          <div
+            [routerLink]="isLocked(item) ? null : ['edit', item.id]"
+            (click)="onLockedAttempt(item)"
+            class="flex gap-3 flex-1 cursor-pointer overflow-hidden items-center"
+          >
+            @if (item.photos.length > 0) {
+            <div class="flex items-center justify-center w-12 h-12 shrink-0">
+              <ui-product-media
+                [url]="thumbnailUrl(item)"
+                [alt]="item.name"
+                [controls]="false"
+                [posterSeconds]="1.5"
+                styleClass="w-12 h-12 rounded-sm object-cover"
+              />
+            </div>
+            } @else {
+            <ui-icon
+              name="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg"
+              class="flex items-center justify-center w-12 h-12 shrink-0"
+              styleClass="max-w-12 max-h-12 rounded-sm object-cover"
+            />
+            }
+            <div class="flex flex-col min-w-0 gap-0.5">
+              <h2 class="text-primary-500 font-semibold text-base line-clamp-1 break-all">
+                {{item.name}}
+              </h2>
+              @if (item.sku) {
+              <span class="text-[0.6875rem] text-grey-400 truncate">{{ 'SKU: {sku}' | transloco: { sku: item.sku } }}</span>
+              }
+              @if (item.isSoldOut || item.isHidden || isLocked(item)) {
+              <div class="flex flex-wrap items-center gap-1">
+                @if (item.isSoldOut) {
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-red-100 text-red-600 w-fit">
+                  {{ 'Agotado' | transloco }}
+                </span>
+                }
+                @if (item.isHidden) {
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-slate-200 text-slate-700 w-fit">
+                  {{ 'Oculto' | transloco }}
+                </span>
+                }
+                @if (isLocked(item)) {
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 w-fit">
+                  {{ 'Plan gratis' | transloco }}
+                </span>
+                }
+              </div>
+              }
+              @if (item.isWholesale && item.wholesaleTiers.length > 0) {
+              <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wide bg-amber-100 text-amber-700">
+                  {{ 'Al mayor' | transloco }}
+                </span>
+                <span class="text-xs text-grey-400">{{ 'Desde {price}' | transloco: { price: cs() + item.wholesaleTiers[item.wholesaleTiers.length - 1].price } }}</span>
+              </div>
+              } @else if (item.pricePromotional > 0) {
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-grey-600">{{ cs() }}{{item.pricePromotional}}</span>
+                <span class="text-xs text-grey-300 line-through">{{ cs() }}{{item.price}}</span>
+              </div>
+              } @else {
+              <span class="text-sm text-grey-400">{{ cs() }}{{item.price}}</span>
+              }
+            </div>
+          </div>
+          <div class="flex gap-1 shrink-0">
+            <ui-button
+              [routerLink]="isLocked(item) ? null : ['edit', item.id]"
+              (click)="onLockedAttempt(item)"
+              [icon]="isLocked(item) ? 'lock' : 'pencil'"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+            />
+            <ui-button
+              (click)="onToggleHidden(item)"
+              [icon]="item.isHidden ? 'eye-off' : 'eye'"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+            />
+            <ui-button
+              (click)="onShare(item)"
+              icon="share2"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+            />
+            @if (canCreateProduct() || canDeleteProduct()) {
+            <ui-button
+              (click)="openRowMenu($event, item, rowMenu)"
+              icon="ellipsis-vertical"
+              variant="outlined"
+              severity="contrast"
+              size="small"
+            />
+            }
+          </div>
+        </div>
+      </div>
+    </cdk-virtual-scroll-viewport>
+    }
 
     <!-- Pagination -->
     <p-paginator
       [first]="pageFirst()"
-      [rows]="pageRows()"
+      [rows]="paginatorRows()"
       [totalRecords]="filteredProducts().length"
-      [rowsPerPageOptions]="[10, 25, 50]"
+      [rowsPerPageOptions]="[10, 25, 50, { showAll: ('Todos' | transloco) }]"
       [showCurrentPageReport]="true"
       [currentPageReportTemplate]="'{totalRecords} productos — Pág. {currentPage} de {totalPages}' | transloco"
       (onPageChange)="onPageChange($event)"

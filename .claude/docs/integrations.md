@@ -39,6 +39,7 @@
 | **ig-send** | Respuesta del agente por Instagram DM con el token del tenant (`social_accounts`). Ventana 24h (sin plantillas), texto ≤1000 chars, imagen por URL. | front invoke | sí | Meta (token por tenant) |
 | **ig-oauth** | Conexión del comerciante vía Instagram Login: POST (JWT manual) devuelve la URL de autorización con `state` HMAC; GET (redirect de IG) cambia code→token largo (60 días), upsertea `social_accounts` y suscribe webhooks. Redirect fijo server-side → sin problema de dominios por cliente. | front invoke + redirect IG | no (JWT manual en POST) | Meta · `IG_APP_ID`, `IG_APP_SECRET` |
 | **tiktok-webhook** | **STUB (CAT-47)**: loguea eventos de TikTok Business Messaging y responde 200 + eco de challenge. Existe para registrar la URL durante la solicitud de acceso a la API (beta) y mapear el payload real. El front ya rutea `channel='tiktok'` a `tiktok-send`/`tiktok-oauth` (no existen aún); card de conexión oculta tras `tiktokCardVisible=false`. Reglas del canal: cliente escribe primero, ventana 48 h, máx 10 msgs/ventana, texto+imagen. | webhook TikTok | no (firma pendiente de doc) | TikTok Business API |
+| **send-credit-reminders** | CAT-79: recordatorios de cobranza de órdenes a crédito. Cron diario `send-credit-reminders-daily` (12:00 UTC = 08:00 VE) → escanea `orders.status='credit'`, detecta vencidas (cuota impaga con `dueDate` pasada en `credit_installments`, o antigüedad > `users.credit_reminder_days` si no hay cuotas) y manda al dueño UN email por tienda (SES, shell branded) + push best-effort vía `send-push-notification`. Anti-spam: `orders.credit_reminded_at` (cooldown 7 días, máx 10 filas por email). Respeta `users.notify_credit_reminders` (opt-out en Perfil → Notificaciones). State-driven: sin tabla cola; al cobrar (status→completed) sale sola. | cron diario | no (`x-webhook-secret`) | SES `AWS_SES_*` · `PUSH_WEBHOOK_SECRET` |
 
 ## Edge functions deployadas pero NO en el repo
 
@@ -81,20 +82,29 @@ edites a ciegas**; el repo puede estar atrás de prod.
 
 ## Sentry (errores + performance + replay)
 
-- **Dos proyectos** (un DSN por app): `sentryDsnCatalogohoy` y `sentryDsnAuth` en
-  `libs/catalogohoy/environments/src/sentry/sentry.ts`. Los DSN son **públicos** (van en el
-  bundle, como la key de PostHog) — no son secretos.
+- **Org `catalogohoy-w0`** (`o4512116099776512`), **tres proyectos** (un DSN por app):
+  `sentryDsnCatalogohoy`→`admin-dashboard`, `sentryDsnAuth`→`authentication`,
+  `sentryDsnInternal`→`internal`, en `libs/catalogohoy/environments/src/sentry/sentry.ts`.
+  Los DSN son **públicos** (van en el bundle, como la key de PostHog) — no son secretos.
 - **Init**: `initSentry({ dsn, appName })` en cada `apps/*/src/main.ts` **antes** de
-  `bootstrapApplication` (captura errores tempranos). **No corre en dev** ni si el DSN está vacío.
-- **Providers**: `...provideSentry()` en cada `app.config.ts` → `ErrorHandler` de Sentry +
-  `TraceService` (instrumenta el routing para performance). Vive en `core/providers/sentry`.
-- **Muestreo**: `tracesSampleRate 0.1`, replay `0.1` sesiones / `1.0` con error
-  (configurable en el env). Inputs enmascarados en el replay (`maskAllInputs: true`).
-- **`tracePropagationTargets`**: dominios `*.catalogohoy.com` + el proyecto Supabase (para
-  distributed tracing front↔backend).
-- **MCP**: `sentry` (remoto, OAuth) en `.mcp.json` → `https://mcp.sentry.dev/mcp`.
-- **Pendiente (opcional)**: subir **source maps** en el build de prod para stack traces legibles
-  (necesita auth token + org/project slugs; `@sentry/cli` o el plugin de esbuild como postbuild).
+  `bootstrapApplication` (captura errores tempranos). **No corre en dev** (`isDevMode()`) ni si
+  el DSN está vacío. Distingue apps por el tag `app`.
+- **Providers**: `...provideSentry()` en cada `app.config.ts` → `ErrorHandler` de Sentry
+  (envuelto en `ChunkAwareErrorHandler`: recupera ChunkLoadError post-deploy recargando + reporta
+  a Slack vía notify-error) + `TraceService` (routing). Vive en `core/providers/sentry`.
+- **Features activos**: Error Monitoring, **Logs** (`enableLogs: true`), Session Replay
+  (`0.1` sesiones / `1.0` con error, `maskAllInputs`), Tracing (`tracesSampleRate 0.1`).
+- **⚠️ `tracePropagationTargets: []` (VACÍO A PROPÓSITO)**: NO adjuntar headers `sentry-trace`/
+  `baggage` a las requests. Las edge functions de Supabase tienen un `Access-Control-Allow-Headers`
+  FIJO → si se agrega el dominio de Supabase, el browser bloquea el POST en el preflight y rompe
+  checkout/IA/créditos. NO agregar dominios acá (ver gotchas.md).
+- **`ignoreErrors`**: ruido de WebViews in-app (IG/FB/TikTok) + ResizeObserver.
+- **Source maps**: ✅ `scripts/sentry-sourcemaps.mjs` corre como postbuild en `build:catalogohoy`/
+  `build:authentication`/`build:internal` (inyecta debug ids, sube, borra los `.map`). Fail-safe.
+  Requiere en Vercel: `SENTRY_AUTH_TOKEN` (secreto de la org) — `SENTRY_ORG` default `catalogohoy-w0`
+  (override por env). Project slugs = args por build (`admin-dashboard`/`authentication`/`internal`).
+- **MCP**: `sentry` (remoto, OAuth) en `.mcp.json` → `https://mcp.sentry.dev/mcp` (scope
+  `project:write` → crear proyectos/DSN desde acá).
 
 ## Google (correo, login, SEO, analytics) — estado 2026-07-13
 

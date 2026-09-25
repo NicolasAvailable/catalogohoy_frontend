@@ -25,6 +25,7 @@ export type CreateProductInput = {
     /** Stock del propio variante cuando NO maneja tallas. '' / null = ilimitado. */
     stock?: string | null;
     sizes: { name: string; stock: string | null; sku?: string | null }[];
+    isHidden?: boolean;
   }[];
   addons?: {
     id: string | null;

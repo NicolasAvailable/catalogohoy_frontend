@@ -244,6 +244,7 @@ export class ProductService implements BaseProductService {
                     ? null
                     : Number(v.stock),
               sizes: (v.sizes ?? []).map(mapSize),
+              isHidden: !!v.isHidden,
             }))
           : [],
         addons: (input.addons ?? []).map((a) => ({
@@ -329,6 +330,7 @@ export class ProductService implements BaseProductService {
                   ? null
                   : Number(v.stock),
             sizes: (v.sizes ?? []).map(mapSize),
+            isHidden: !!v.isHidden,
           }))
         : [],
       addons: (input.addons ?? []).map((a) => ({

@@ -6,9 +6,10 @@ import { IconComponent } from '@ui';
 /** Landing de "Chat" (estilo Chat Nube): pantalla de bienvenida que se muestra
  *  cuando el catálogo todavía no conectó ningún canal. Explica qué se puede
  *  hacer administrando a los clientes desde la misma plataforma (WhatsApp
- *  Business y TikTok, sin IA por ahora) y lleva a "Configurar Chat" → conectar
- *  canales. Apenas se conecta un canal, la vista de conversaciones muestra la
- *  bandeja en lugar de esta landing. */
+ *  Business y TikTok, sin IA por ahora), muestra una **captura real** de la
+ *  bandeja (tomada de una cuenta demo con chats de WhatsApp y TikTok) y lleva a
+ *  "Configurar Chat" → conectar canales. Apenas se conecta un canal, la vista de
+ *  conversaciones muestra la bandeja en lugar de esta landing. */
 @Component({
   selector: 'lib-chat-landing',
   standalone: true,

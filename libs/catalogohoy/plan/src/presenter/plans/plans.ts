@@ -346,8 +346,24 @@ export class Plans implements OnInit {
     return plan.id === 'gratis' ? '' : '50% de descuento';
   }
 
+  /** El prorrateo ("solo pagás la diferencia") aplica SOLO si al plan actual le
+   *  quedan MÁS de 20 días de vigencia. Cerca del vencimiento se muestra/cobra
+   *  el precio completo del plan nuevo (con su descuento anual). */
+  public readonly prorationEligible = computed(() => {
+    const expiresAt = this.planStore.tenantPlanUsage()?.planExpiresAt;
+    if (!expiresAt) return false;
+    const daysLeft = (new Date(expiresAt).getTime() - Date.now()) / 86_400_000;
+    return daysLeft > 20;
+  });
+
   public isUpgradePlan(plan: PlanDisplay): boolean {
-    return this.hasPaidPlan() && !plan.isCurrent && !plan.isFree && plan.position > this.currentPlanPosition();
+    return (
+      this.hasPaidPlan() &&
+      !plan.isCurrent &&
+      !plan.isFree &&
+      plan.position > this.currentPlanPosition() &&
+      this.prorationEligible()
+    );
   }
 
   public getUpgradePrice(plan: PlanDisplay): number {

@@ -6,8 +6,11 @@ import { ActivityLogService } from '@catalogohoy/teams';
 import { E } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import {
+  CreditInstallment,
   InternalNote,
+  invoiceFilenameUsesPhone,
   Order,
+  OrderAdjustment,
   OrderItem,
   OrderMapper,
   OrderMetrics,
@@ -56,6 +59,9 @@ export interface CreateOrderInput {
   /** Comisión (opcional) que paga el vendedor: se RESTA del total (net) y es
    *  interna (no se muestra al cliente). Distinta del envío, que suma. */
   commission?: number;
+  /** Ajuste (descuento/recargo) del método de pago, snapshot para la factura.
+   *  A diferencia de la comisión, SÍ se le muestra al cliente. null = sin ajuste. */
+  paymentAdjustment?: OrderAdjustment | null;
   /** Snapshot del envío para que la lista/detalle lo muestren (misma forma
    *  que el checkout público). En órdenes manuales el nombre es "Envío"; al
    *  editar una orden del catálogo se preserva su método original. null =
@@ -73,10 +79,22 @@ export interface CreateOrderInput {
   /** Caja (sesión) abierta a la que se imputa esta venta del POS. Null/omitido
    *  cuando no hay caja abierta. */
   posCashSessionId?: number | null;
+  /** Plan de cuotas de la orden a crédito ([{dueDate, amount?, paid?}]).
+   *  Solo lo manda el editor cuando status='credit'; null = sin cuotas. */
+  creditInstallments?: CreditInstallment[] | null;
 }
 
 export interface UpdateOrderInput extends CreateOrderInput {
   id: number;
+}
+
+/** Resumen liviano del filtro "A crédito": lo que el listado necesita para la
+ *  barra de "por cobrar" sin tocar la paginación (una sola query, cap 1000). */
+export interface CreditSummaryRow {
+  id: number;
+  totalUsd: number;
+  createdAt: string;
+  creditInstallments: CreditInstallment[] | null;
 }
 
 @Injectable({
@@ -168,6 +186,32 @@ export class OrderService {
     });
   }
 
+  /** Resumen del "por cobrar": TODAS las órdenes a crédito del tenant en una
+   *  sola query liviana (cap 1000 de PostgREST; muy por encima del caso real).
+   *  Alimenta la barra de resumen del filtro "A crédito" sin tocar la
+   *  paginación del listado. */
+  async getCreditSummary(
+    tenantId: number
+  ): Promise<E.Either<Error, CreditSummaryRow[]>> {
+    const { data, error } = await this.client
+      .from('orders')
+      .select('id, total_usd, created_at, credit_installments')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'credit');
+
+    if (error) return E.left(new Error(error.message));
+    return E.right(
+      (data ?? []).map((r) => ({
+        id: r.id,
+        totalUsd: Number(r.total_usd) || 0,
+        createdAt: r.created_at,
+        creditInstallments: Array.isArray(r.credit_installments)
+          ? (r.credit_installments as CreditInstallment[])
+          : null,
+      }))
+    );
+  }
+
   /** Count-only query. Ignores all filters — used for the "total in general"
    *  label shown in the orders list footer. */
   async countOrdersByTenant(
@@ -196,6 +240,31 @@ export class OrderService {
 
     if (error) return E.left(new Error(error.message));
     return E.right(count ?? 0);
+  }
+
+  /** Ordinal (1-based) de esta orden entre las del mismo cliente en la tienda,
+   *  para numerar el archivo del PDF cuando un cliente tiene varias órdenes
+   *  ("Juan Pérez.pdf", "Juan Pérez (2).pdf"…). Cuenta por nombre; en las
+   *  tiendas cuyo archivo lleva el teléfono (Moto Fox) también por teléfono,
+   *  para no numerar de más a dos homónimos con distinto número. Ante cualquier
+   *  error o falta de nombre devuelve 1 (nombre limpio) para no romper la
+   *  descarga. */
+  async clientOrderOrdinal(
+    order: Pick<Order, 'id' | 'tenantId' | 'name' | 'phone'>
+  ): Promise<number> {
+    if (!(order.name ?? '').trim()) return 1;
+    let query = this.client
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', order.tenantId)
+      .eq('name', order.name)
+      .lte('id', order.id);
+    if (invoiceFilenameUsesPhone(order.tenantId) && order.phone) {
+      query = query.eq('phone', order.phone);
+    }
+    const { count, error } = await query;
+    if (error) return 1;
+    return Math.max(count ?? 1, 1);
   }
 
   /** Aggregated metrics for the "Métricas" tab, via the `order_metrics` RPC.
@@ -287,7 +356,11 @@ export class OrderService {
     // commission: costo del vendedor que resta del total (0 = sin comisión).
     if (input.commission !== undefined)
       payload['commission'] = input.commission ?? 0;
+    if (input.paymentAdjustment !== undefined)
+      payload['payment_adjustment'] = input.paymentAdjustment ?? null;
     if (input.shippingMethod !== undefined) payload['shipping_method'] = input.shippingMethod;
+    if (input.creditInstallments !== undefined)
+      payload['credit_installments'] = input.creditInstallments ?? null;
 
     const { data, error } = await this.client
       .from('orders')
@@ -351,7 +424,11 @@ export class OrderService {
     // commission: costo del vendedor que resta del total (0 = sin comisión).
     if (input.commission !== undefined)
       patch['commission'] = input.commission ?? 0;
+    if (input.paymentAdjustment !== undefined)
+      patch['payment_adjustment'] = input.paymentAdjustment ?? null;
     if (input.shippingMethod !== undefined) patch['shipping_method'] = input.shippingMethod;
+    if (input.creditInstallments !== undefined)
+      patch['credit_installments'] = input.creditInstallments ?? null;
 
     const { data, error } = await this.client
       .from('orders')

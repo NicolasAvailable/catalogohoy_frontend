@@ -786,6 +786,62 @@
   margin-top: 0.25rem;
 }
 
+/* ── Ajuste automático por método (descuento/recargo) ── */
+.payment-method-adjust {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 0.0625rem solid #e2e8f0;
+}
+
+.payment-method-adjust-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.payment-method-adjust-row ui-select {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+
+.pm-adjust-unit {
+  font-weight: 600;
+  color: var(--text-color-secondary);
+}
+
+.payment-method-adjust-visible {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-color);
+}
+
+/* Chip de resumen del ajuste en la fila colapsada */
+.pm-adjust-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 1rem;
+  border: 0.0625rem solid transparent;
+  white-space: nowrap;
+}
+
+.pm-adjust-chip.good {
+  color: #128a4b;
+  background: #e6f4ec;
+  border-color: #bfe6cf;
+}
+
+.pm-adjust-chip.warn {
+  color: #b0700c;
+  background: #f8eeda;
+  border-color: #ecd7a6;
+}
+
 .add-method-form {
   display: flex;
   flex-direction: column;

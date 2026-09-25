@@ -6,7 +6,13 @@ import {
 } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
 import { jsPDF } from 'jspdf';
-import { isVentaFeatureEnabled, Order, OrderItem } from '../domain';
+import {
+  buildInvoiceFilename,
+  isVentaFeatureEnabled,
+  Order,
+  OrderItem,
+} from '../domain';
+import { OrderService } from './order.service';
 
 const PAYMENT_LABELS: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -46,6 +52,7 @@ export class OrderPdfService {
   private readonly configStore = inject(EcommerceConfigStore);
   private readonly tenantStore = inject(TenantStore);
   private readonly tenantCurrency = inject(TenantCurrencyStore);
+  private readonly orderService = inject(OrderService);
 
   /**
    * @param order   The order to render.
@@ -358,6 +365,15 @@ export class OrderPdfService {
         hasSku ? `SKU: ${item.sku}` : null,
       ].filter(Boolean) as string[];
 
+      // Nombre del producto: se mide a 9pt y se PARTE en varias líneas si no
+      // entra en la columna, para no truncar códigos/descripciones largos.
+      // (Antes solo se dibujaba la 1ª línea y se perdía el resto — p. ej.
+      // "...EXTRAER LIQUIDO 2L 12534" salía cortado en la factura.)
+      const nameLines = doc.splitTextToSize(
+        item.name,
+        qtyX - descX - 6
+      ) as string[];
+
       // Ajusta cada sub-línea al ancho de la columna (medido a 7pt) y las
       // aplana, para que nada se salga ni se trunque a una sola línea.
       doc.setFontSize(7);
@@ -366,8 +382,12 @@ export class OrderPdfService {
       );
       doc.setFontSize(9);
 
+      // La fila reserva alto para TODAS las líneas del nombre (no solo la 1ª)
+      // más las sub-líneas, para que ensureSpace pagine bien y nada quede fuera.
       const rowH = Math.max(
-        (showBsPerLine ? 12 : 8) + subLines.length * 4,
+        (showBsPerLine ? 12 : 8) +
+          (nameLines.length - 1) * 4 +
+          subLines.length * 4,
         imgData ? imgSize + 2 : 0
       );
       // Si la fila no entra en lo que queda de página, sigue en una nueva
@@ -376,7 +396,10 @@ export class OrderPdfService {
       // Centra el nombre con la imagen solo si no hay sub-líneas; si las hay,
       // alinea arriba para que el bloque de texto no quede desbalanceado.
       const textY =
-        y + (imgData && subLines.length === 0 ? imgSize / 2 + 1 : 4);
+        y +
+        (imgData && subLines.length === 0 && nameLines.length === 1
+          ? imgSize / 2 + 1
+          : 4);
 
       // Product image
       if (imgData) {
@@ -389,18 +412,18 @@ export class OrderPdfService {
 
       doc.setFont('helvetica', 'normal');
 
-      // Product name
-      const nameLines = doc.splitTextToSize(
-        item.name,
-        qtyX - descX - 6
-      ) as string[];
-      doc.text(nameLines[0], descX, textY);
+      // Product name — TODAS las líneas (ya partidas arriba), no solo la 1ª.
+      let nameY = textY;
+      for (const nl of nameLines) {
+        doc.text(nl, descX, nameY);
+        nameY += 4;
+      }
 
-      // Sub-líneas (atributos / adicionales / SKU) bajo el nombre
+      // Sub-líneas (atributos / adicionales / SKU) bajo el bloque del nombre.
       if (subLines.length) {
         doc.setFontSize(7);
         doc.setTextColor(...GREY);
-        let subY = textY;
+        let subY = textY + (nameLines.length - 1) * 4;
         for (const line of subLines) {
           subY += 4;
           doc.text(line, descX, subY);
@@ -441,17 +464,61 @@ export class OrderPdfService {
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text('Subtotal', labelX, y);
-    doc.text(money(order.totalUsd), valX, y, {
-      align: 'right',
-    });
-    y += 5;
+
+    // Solo se itemiza si el ajuste es visible al cliente; si no, la factura
+    // muestra Subtotal = Total (el ajuste ya está aplicado en el total).
+    const adj =
+      order.paymentAdjustment && order.paymentAdjustment.visible !== false
+        ? order.paymentAdjustment
+        : null;
+
+    // Total mostrado: con ajuste itemizado, es la suma de las líneas visibles
+    // (productos + envío ± ajuste), para que la factura SIEMPRE cuadre — aunque
+    // exista una comisión oculta que reste del `total_usd` guardado.
+    let displayTotalUsd = order.totalUsd;
+    let displayTotalBs = order.totalBs;
+
+    if (adj) {
+      const productsSubtotal = order.products.reduce(
+        (sum, p) => sum + (p.total || 0),
+        0
+      );
+      const shipping =
+        order.shippingFee && order.shippingFee > 0 ? order.shippingFee : 0;
+      displayTotalUsd = productsSubtotal + shipping + adj.amount;
+      const rate =
+        order.totalBs && order.totalUsd > 0 ? order.totalBs / order.totalUsd : 0;
+      if (rate) displayTotalBs = displayTotalUsd * rate;
+
+      doc.text('Subtotal', labelX, y);
+      doc.text(money(productsSubtotal), valX, y, { align: 'right' });
+      y += 5;
+
+      if (shipping > 0) {
+        doc.text('Envío', labelX, y);
+        doc.text(money(shipping), valX, y, { align: 'right' });
+        y += 5;
+      }
+
+      doc.text(adj.label, labelX, y);
+      doc.text(
+        `${adj.kind === 'discount' ? '- ' : '+ '}${money(adj.magnitude)}`,
+        valX,
+        y,
+        { align: 'right' }
+      );
+      y += 5;
+    } else {
+      doc.text('Subtotal', labelX, y);
+      doc.text(money(order.totalUsd), valX, y, { align: 'right' });
+      y += 5;
+    }
 
     // El mirror "Total en Bs." solo en catálogos dual-moneda (referencia + Bs);
     // en un catálogo solo-Bs el total ya sale en bolívares vía money().
-    if (!soloBs && showDualBs && order.totalBs && order.totalBs > 0) {
+    if (!soloBs && showDualBs && displayTotalBs && displayTotalBs > 0) {
       doc.text('Total en Bs.', labelX, y);
-      doc.text(`Bs. ${fmtBs(order.totalBs)}`, valX, y, {
+      doc.text(`Bs. ${fmtBs(displayTotalBs)}`, valX, y, {
         align: 'right',
       });
       y += 5;
@@ -459,7 +526,7 @@ export class OrderPdfService {
 
     doc.setFont('helvetica', 'bold');
     doc.text('Total', labelX, y);
-    doc.text(money(order.totalUsd), valX, y, {
+    doc.text(money(displayTotalUsd), valX, y, {
       align: 'right',
     });
     y += 10;
@@ -506,9 +573,15 @@ export class OrderPdfService {
       y
     );
 
-    doc.save(
-      `${isReceipt ? 'recibo' : 'orden'}-${order.orderNumber ?? order.id}.pdf`
-    );
+    // Nombre del archivo: la factura se identifica por el cliente, no por el
+    // número de orden (ver buildInvoiceFilename). El `seq` numera las órdenes
+    // repetidas de un mismo cliente ("Juan Pérez.pdf", "Juan Pérez (2).pdf") y
+    // solo aplica en el admin: la factura del catálogo público (con `context`)
+    // es una sola orden recién hecha → nombre limpio.
+    const seq = context
+      ? undefined
+      : await this.orderService.clientOrderOrdinal(order);
+    doc.save(buildInvoiceFilename(order, { isReceipt, seq }));
   }
 
   private blobToBase64(blob: Blob): Promise<string> {

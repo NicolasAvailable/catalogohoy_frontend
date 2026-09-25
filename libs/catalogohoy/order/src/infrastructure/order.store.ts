@@ -89,6 +89,39 @@ export const OrderStore = signalStore(
         }
       },
 
+      /** Trae TODAS las órdenes que matchean el filtro (sin paginar), para el
+       *  export a Excel. NO toca el estado — no pisa la página cargada. */
+      async fetchAllForExport(options?: {
+        date?: Date;
+        search?: string;
+        status?: OrderStatus | 'all';
+        orderBy?: 'date_desc' | 'date_asc' | 'total_desc' | 'total_asc';
+      }): Promise<Order[]> {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return [];
+        // PostgREST corta las selects planas en 1000 filas → paginar hasta traer
+        // TODO (tope de seguridad 50 páginas = 50k pedidos).
+        const pageSize = 1000;
+        const all: Order[] = [];
+        for (let page = 1; page <= 50; page++) {
+          const res = await orderService.getOrdersByTenant(tenantId, {
+            ...options,
+            page,
+            pageSize,
+          });
+          const batch = res.fold(
+            () => null,
+            (r) => r
+          );
+          if (!batch) break;
+          all.push(...batch.orders);
+          if (batch.orders.length < pageSize || all.length >= batch.totalCount) {
+            break;
+          }
+        }
+        return all;
+      },
+
       /** Grand total (unfiltered). Call once on init; refresh after
        *  create/delete since those are the only ops that change it. */
       async loadGrandTotalCount() {

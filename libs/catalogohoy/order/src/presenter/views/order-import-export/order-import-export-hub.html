@@ -1,0 +1,315 @@
+<ui-dialog
+  headerTitle=""
+  [closable]="true"
+  [dismissableMask]="true"
+  (close)="close()"
+  styleClass="w-full max-w-2xl rounded-2xl! overflow-hidden"
+>
+  <!-- HUB VIEW: elegir importar / exportar / respaldos -->
+  @if (view() === 'hub') {
+  <section class="flex flex-col gap-6 p-8">
+    <div class="text-center">
+      <h2 class="text-2xl font-bold text-grey-800">
+        {{ 'Exportar / Importar órdenes' | transloco }}
+      </h2>
+      <p class="text-grey-400 mt-2">
+        {{ 'Importá una orden desde tu lista de Excel o exportá tus órdenes a un archivo.' | transloco }}
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <!-- Importar orden desde Excel -->
+      <button
+        type="button"
+        (click)="onImportClick()"
+        class="flex flex-col items-center gap-3 p-6 border-2 border-grey-100 rounded-2xl transition-all cursor-pointer hover:border-primary-400 hover:bg-primary-50"
+      >
+        <div class="w-12 h-12 rounded-full bg-primary-50 grid place-items-center">
+          <ui-icon name="upload" styleClass="size-6 text-primary-500" />
+        </div>
+        <span class="font-semibold text-grey-800">{{ 'Importar orden' | transloco }}</span>
+        <span class="text-sm text-grey-400 text-center">
+          {{ 'Subí tu lista de Excel con las cantidades y armamos la orden.' | transloco }}
+        </span>
+      </button>
+
+      <!-- Exportar órdenes a Excel -->
+      <button
+        type="button"
+        (click)="onExport()"
+        class="flex flex-col items-center gap-3 p-6 border-2 border-grey-100 rounded-2xl transition-all cursor-pointer hover:border-primary-400 hover:bg-primary-50"
+      >
+        <div class="w-12 h-12 rounded-full bg-primary-50 grid place-items-center">
+          <ui-icon name="download" styleClass="size-6 text-primary-500" />
+        </div>
+        <span class="font-semibold text-grey-800">{{ 'Exportar órdenes' | transloco }}</span>
+        <span class="text-sm text-grey-400 text-center">
+          {{ 'Bajá tus órdenes (según el filtro actual) a un archivo Excel.' | transloco }}
+        </span>
+      </button>
+    </div>
+
+    <!-- Respaldos (card ancha, mismo patrón que Productos) -->
+    <button
+      type="button"
+      (click)="openBackups()"
+      class="flex items-center gap-4 p-4 border-2 border-grey-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer text-left"
+    >
+      <div class="w-11 h-11 bg-primary-50 rounded-full flex items-center justify-center shrink-0">
+        <ui-icon name="history" styleClass="w-5 h-5 text-primary-500" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <h3 class="text-base font-bold text-grey-800">{{ 'Respaldos' | transloco }}</h3>
+        <p class="text-sm text-grey-400">
+          {{ 'Guardá una copia de tus órdenes y recuperá las que se borren.' | transloco }}
+        </p>
+      </div>
+      <ui-icon name="chevron-right" styleClass="w-5 h-5 text-grey-300 shrink-0" />
+    </button>
+  </section>
+  }
+
+  <!-- UPLOAD VIEW: dropzone para subir el Excel (espejo del import de productos) -->
+  @if (view() === 'upload') {
+  <section class="flex flex-col gap-6 p-8">
+    <div class="flex items-center gap-3">
+      <button
+        (click)="view.set('hub')"
+        class="p-2 hover:bg-grey-100 rounded-lg transition-colors cursor-pointer"
+      >
+        <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+      </button>
+      <img src="/images/excel.svg" alt="Microsoft Excel" class="w-8 h-8" />
+      <h2 class="text-2xl font-bold text-grey-800">{{ 'Importar orden' | transloco }}</h2>
+    </div>
+    <p class="text-sm text-grey-400 -mt-3">
+      {{ 'Subí tu lista de Excel con las cantidades y armamos la orden.' | transloco }}
+    </p>
+
+    <!-- Drop zone -->
+    <div
+      (drop)="onFileDrop($event)"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      class="flex flex-col items-center justify-center gap-4 p-16
+             border-2 border-dashed rounded-2xl transition-all"
+      [class.border-grey-200]="!isDragging()"
+      [class.bg-grey-50]="!isDragging()"
+      [class.border-primary-400]="isDragging()"
+      [class.bg-primary-50]="isDragging()"
+    >
+      @if (isParsing()) {
+      <ui-icon name="loader-circle" styleClass="w-12 h-12 text-primary-400 animate-spin" />
+      <p class="text-base font-semibold text-grey-700">{{ 'Leyendo tu archivo...' | transloco }}</p>
+      } @else {
+      <ui-icon name="file-spreadsheet" styleClass="w-12 h-12 text-grey-300" />
+      <div class="text-center">
+        <p class="text-base font-semibold text-grey-700">
+          {{ 'Arrastra y suelta tu archivo .xlsx aqui' | transloco }}
+        </p>
+        <p class="text-sm text-grey-400 mt-1">{{ 'o' | transloco }}</p>
+      </div>
+      <label class="cursor-pointer mt-1">
+        <input
+          type="file"
+          accept=".xlsx,.xls"
+          (change)="onFileSelected($event)"
+          class="hidden"
+        />
+        <span
+          class="inline-block px-6 py-2.5 bg-primary-500 text-white rounded-lg font-medium
+                 hover:bg-primary-600 transition-colors"
+        >
+          {{ 'Seleccionar archivo' | transloco }}
+        </span>
+      </label>
+      }
+    </div>
+
+    <div class="flex items-start gap-2 text-xs text-grey-400">
+      <ui-icon name="info" styleClass="w-4 h-4 shrink-0" />
+      <span>
+        {{ 'Detectamos las columnas solas (producto, cantidad, precio) aunque tu lista tenga otro formato. Después revisás la orden antes de guardar.' | transloco }}
+      </span>
+    </div>
+  </section>
+  }
+
+  <!-- BACKUPS VIEW: historial (crear / ver / descargar / restaurar) -->
+  @if (view() === 'backups') {
+  <section class="flex flex-col gap-4 p-8">
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <button
+          (click)="view.set('hub')"
+          class="p-2 hover:bg-grey-100 rounded-lg transition-colors cursor-pointer"
+        >
+          <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+        </button>
+        <h2 class="text-xl font-bold text-grey-800">{{ 'Respaldos de órdenes' | transloco }}</h2>
+      </div>
+      <ui-button
+        [label]="(isCreatingBackup() ? 'Creando...' : 'Crear respaldo ahora') | transloco"
+        icon="shield-check"
+        size="small"
+        [fluid]="false"
+        [isLoading]="isCreatingBackup()"
+        [disabled]="isCreatingBackup()"
+        (click)="createBackupNow()"
+      />
+    </div>
+    <p class="text-sm text-grey-400 -mt-2">
+      {{ 'Una copia de todas tus órdenes en este momento. Si borrás una por error, la recuperás desde acá. Guardamos los últimos 20.' | transloco }}
+    </p>
+
+    @if (isRestoring()) {
+    <div class="flex items-center gap-2 text-sm text-primary-600">
+      <ui-icon name="loader-circle" styleClass="w-4 h-4 animate-spin" />
+      {{ 'Recuperando órdenes...' | transloco }}
+    </div>
+    }
+
+    @if (loadingBackups()) {
+    <div class="flex items-center justify-center py-12 text-grey-400">
+      <ui-icon name="loader-circle" styleClass="w-6 h-6 animate-spin" />
+    </div>
+    } @else if (backups().length === 0) {
+    <div class="flex flex-col items-center gap-2 py-12 text-center text-grey-400">
+      <ui-icon name="history" styleClass="w-8 h-8" />
+      <p>{{ 'Todavía no hay respaldos. Tocá "Crear respaldo ahora" para guardar el primero.' | transloco }}</p>
+    </div>
+    } @else {
+    <div class="max-h-96 overflow-auto border border-grey-100 rounded-xl divide-y divide-grey-50">
+      @for (backup of backups(); track backup.id) {
+      <div class="flex items-center justify-between gap-3 p-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-9 h-9 bg-grey-50 rounded-lg flex items-center justify-center shrink-0">
+            <ui-icon name="history" styleClass="w-5 h-5 text-grey-400" />
+          </div>
+          <div class="flex flex-col min-w-0">
+            <span class="text-sm font-semibold text-grey-800">{{ backup.createdAt | date: 'medium' }}</span>
+            <span class="text-xs text-grey-400">
+              {{ backup.orderCount }} {{ 'órdenes' | transloco }}
+              @if (backup.reason === 'pre-restore') {
+              · {{ 'antes de restaurar' | transloco }}
+              }
+            </span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <ui-button
+            [label]="'Ver' | transloco"
+            icon="eye"
+            variant="outlined"
+            severity="contrast"
+            size="small"
+            [fluid]="false"
+            (click)="viewBackup(backup)"
+          />
+          <ui-button
+            [label]="'Descargar' | transloco"
+            icon="download"
+            variant="outlined"
+            severity="contrast"
+            size="small"
+            [fluid]="false"
+            (click)="downloadBackup(backup)"
+          />
+          <ui-button
+            [label]="'Restaurar' | transloco"
+            icon="refresh-cw"
+            size="small"
+            [fluid]="false"
+            [disabled]="isRestoring()"
+            (click)="restoreBackup(backup)"
+          />
+        </div>
+      </div>
+      }
+    </div>
+    }
+  </section>
+  }
+
+  <!-- BACKUP DETAIL VIEW: contenido del respaldo (planilla de órdenes) -->
+  @if (view() === 'backup-view') {
+  <section class="flex flex-col gap-4 p-8">
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <button
+          (click)="view.set('backups')"
+          class="p-2 hover:bg-grey-100 rounded-lg transition-colors cursor-pointer"
+        >
+          <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+        </button>
+        <div class="flex flex-col min-w-0">
+          <h2 class="text-xl font-bold text-grey-800 truncate">
+            {{ 'Respaldo del' | transloco }} {{ viewingBackup()?.createdAt | date: 'medium' }}
+          </h2>
+          <span class="text-xs text-grey-400">{{ viewingBackup()?.orderCount }} {{ 'órdenes' | transloco }}</span>
+        </div>
+      </div>
+      @if (viewingBackup(); as backup) {
+      <div class="flex items-center gap-2 shrink-0">
+        <ui-button
+          [label]="'Descargar' | transloco"
+          icon="download"
+          variant="outlined"
+          severity="contrast"
+          size="small"
+          [fluid]="false"
+          (click)="downloadBackup(backup)"
+        />
+        <ui-button
+          [label]="'Restaurar' | transloco"
+          icon="refresh-cw"
+          size="small"
+          [fluid]="false"
+          [disabled]="isRestoring()"
+          (click)="restoreBackup(backup)"
+        />
+      </div>
+      }
+    </div>
+
+    @if (loadingBackupRows()) {
+    <div class="flex items-center justify-center py-12 text-grey-400">
+      <ui-icon name="loader-circle" styleClass="w-6 h-6 animate-spin" />
+    </div>
+    } @else {
+    <div class="max-h-96 overflow-auto border border-grey-200 rounded-xl">
+      <table class="w-full text-sm border-collapse">
+        <thead class="sticky top-0 z-10">
+          <tr class="bg-grey-100">
+            <th class="border border-grey-200 px-3 py-1.5 text-left font-semibold text-grey-600 w-16">N°</th>
+            <th class="border border-grey-200 px-3 py-1.5 text-left font-semibold text-grey-600">{{ 'Cliente' | transloco }}</th>
+            <th class="border border-grey-200 px-3 py-1.5 text-left font-semibold text-grey-600">{{ 'Estado' | transloco }}</th>
+            <th class="border border-grey-200 px-3 py-1.5 text-left font-semibold text-grey-600">{{ 'Total' | transloco }}</th>
+            <th class="border border-grey-200 px-3 py-1.5 text-left font-semibold text-grey-600">{{ 'Fecha' | transloco }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (o of backupOrders(); track o.id) {
+          <tr class="hover:bg-primary-50/30">
+            <td class="border border-grey-100 px-3 py-1.5 text-grey-500">#{{ o.orderNumber ?? o.id }}</td>
+            <td class="border border-grey-100 px-3 py-1.5 font-medium text-grey-800">{{ o.name }}</td>
+            <td class="border border-grey-100 px-3 py-1.5 text-grey-600">
+              @switch (o.status) {
+                @case ('pending') { {{ 'Pendiente' | transloco }} }
+                @case ('completed') { {{ 'Completada' | transloco }} }
+                @case ('cancelled') { {{ 'Cancelada' | transloco }} }
+                @case ('credit') { {{ 'A crédito' | transloco }} }
+                @default { {{ o.status }} }
+              }
+            </td>
+            <td class="border border-grey-100 px-3 py-1.5 text-grey-700 whitespace-nowrap">{{ currencySymbol() }}{{ o.totalUsd | number: '1.2-2' }}</td>
+            <td class="border border-grey-100 px-3 py-1.5 text-grey-500 whitespace-nowrap">{{ o.createdAt | date: 'dd/MM/yyyy' }}</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    }
+  </section>
+  }
+</ui-dialog>

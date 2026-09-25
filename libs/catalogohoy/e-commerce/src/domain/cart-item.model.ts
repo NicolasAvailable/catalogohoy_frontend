@@ -22,9 +22,18 @@ export class CartItem {
     public readonly size: string | null = null,
     public readonly variantId: string | null = null,
     public readonly variantName: string | null = null,
-    public readonly addons: CartItemAddon[] = []
+    public readonly addons: CartItemAddon[] = [],
+    /** Tope de unidades para esta línea = stock disponible al momento de
+     *  agregar (variante/talla/producto, lo más específico). `null` = sin
+     *  límite/no rastreado. Lo respeta el "+" del carrito para no pasarse. */
+    public readonly maxStock: number | null = null
   ) {
     this.id = id || crypto.randomUUID();
+  }
+
+  /** true si ya se alcanzó el tope de stock de esta línea. */
+  public get isAtStockLimit(): boolean {
+    return this.maxStock !== null && this.quantity >= this.maxStock;
   }
 
   public get total(): number {
@@ -45,7 +54,8 @@ export class CartItem {
       this.size,
       this.variantId,
       this.variantName,
-      this.addons
+      this.addons,
+      this.maxStock
     );
   }
 
@@ -64,7 +74,8 @@ export class CartItem {
       this.size,
       this.variantId,
       this.variantName,
-      this.addons
+      this.addons,
+      this.maxStock
     );
   }
 
@@ -82,7 +93,8 @@ export class CartItem {
       primitives.size ?? null,
       primitives.variantId ?? null,
       primitives.variantName ?? null,
-      primitives.addons ?? []
+      primitives.addons ?? [],
+      primitives.maxStock ?? null
     );
   }
 }
@@ -101,4 +113,5 @@ export interface CartItemPrimitives {
   variantId?: string | null;
   variantName?: string | null;
   addons?: CartItemAddon[];
+  maxStock?: number | null;
 }
