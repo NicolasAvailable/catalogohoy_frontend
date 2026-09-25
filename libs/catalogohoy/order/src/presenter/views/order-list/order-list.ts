@@ -228,22 +228,23 @@ export class OrderListComponent implements OnInit, OnDestroy {
     const hasPhone = (order.phone ?? '').replace(/\D/g, '').length >= 8;
     const locked = this.planStore.isFreePlan();
     const items: MenuItem[] = [];
-    if (hasPhone && (order.status === 'credit' || order.status === 'pending')) {
+    if (order.status === 'credit' || order.status === 'pending') {
       items.push({
         // "Recordar pago" y no "Notificar": el nombre dice exactamente qué hace
-        // (feedback de Nicolas — "Notificar" era ambiguo).
+        // (feedback de Nicolas — "Notificar" era ambiguo). Sin teléfono queda
+        // DESHABILITADO (visible, feedback de Nicolas), no oculto.
         label: 'Recordar pago',
-        icon: locked ? 'lock' : 'message-circle',
+        icon: locked && hasPhone ? 'lock' : 'message-circle',
+        disabled: !hasPhone,
         command: () => this.sendWhatsAppAction(order, 'notify'),
       });
     }
-    if (hasPhone) {
-      items.push({
-        label: 'Enviar factura',
-        icon: locked ? 'lock' : 'file-text',
-        command: () => this.sendWhatsAppAction(order, 'invoice'),
-      });
-    }
+    items.push({
+      label: 'Enviar factura',
+      icon: locked && hasPhone ? 'lock' : 'file-text',
+      disabled: !hasPhone,
+      command: () => this.sendWhatsAppAction(order, 'invoice'),
+    });
     if (this.canDeleteOrder()) {
       items.push({
         label: 'Eliminar',
@@ -258,6 +259,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
 
   /** Ejecuta la acción elegida del menú ⋯ y lo cierra (autoClose off). */
   public onOrderMenuSelect(item: MenuItem, menu: MenuComponent): void {
+    if (item.disabled) return;
     menu.hide();
     item.command?.({} as never);
   }
@@ -285,8 +287,10 @@ export class OrderListComponent implements OnInit, OnDestroy {
             header: '¿Enviar la factura?',
             content: `Le enviamos un WhatsApp a ${order.name} (${order.phone}) con el PDF de la factura de la orden #${num}.`,
           };
+    // .info() = botón Enviar en azul primary (warning lo pinta rojo, que es
+    // para acciones destructivas — feedback de Nicolas).
     this.confirmDialogService
-      .warning({
+      .info({
         headerLabel: labels.header,
         contentLabel: labels.content,
         acceptLabel: 'Enviar',

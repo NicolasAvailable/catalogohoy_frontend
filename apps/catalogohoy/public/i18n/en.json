@@ -2542,6 +2542,7 @@
   "No se pudo conectar la impresora. Verificá que esté encendida y conectada por USB.": "Could not connect the printer. Check that it is powered on and connected via USB.",
   "Notificar": "Notify",
   "Enviar factura": "Send invoice",
+  "La orden no tiene WhatsApp": "This order has no WhatsApp number",
   "Tu aliado para vender en persona": "Your ally for selling in person",
   "Convertí tu catálogo en una caja registradora: registrá tus ventas físicas, descontá stock y llevá todo tu negocio en un solo lugar.": "Turn your catalog into a cash register: record your in-person sales, deduct stock and manage your whole business in one place.",
   "Ir a Punto de Venta": "Go to Point of Sale",

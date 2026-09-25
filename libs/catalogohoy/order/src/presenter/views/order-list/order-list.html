@@ -168,9 +168,11 @@
       </div>
     </div>
 
-    <!-- Resumen "por cobrar" — solo con el filtro A crédito activo (CAT-79) -->
+    <!-- Resumen "por cobrar" — solo con el filtro A crédito activo (CAT-79).
+         Franja plana edge-to-edge (sin radius: las esquinas chocaban contra el
+         contenedor — feedback de Nicolas). -->
     @if (creditStats(); as stats) {
-    <div class="mx-4 sm:mx-0 mb-3 flex items-center gap-x-2 gap-y-1 flex-wrap rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-2.5">
+    <div class="mb-3 flex items-center gap-x-2 gap-y-1 flex-wrap border-y border-blue-200 bg-blue-50 px-4 py-2.5">
       <ui-icon name="wallet" styleClass="size-4 text-blue-600 shrink-0" />
       <span class="text-sm font-bold text-blue-900">{{ 'Por cobrar:' | transloco }}</span>
       <span class="text-sm text-blue-900">
@@ -337,7 +339,6 @@
               [disabled]="isProcessing()"
             />
             }
-            @if (canDeleteOrder() || order.phone) {
             <ui-button
               (click)="openOrderMenu($event, order, orderRowMenu)"
               icon="ellipsis-vertical"
@@ -347,7 +348,6 @@
               [disabled]="isProcessing() || sendingActionId() === order.id"
               [isLoading]="sendingActionId() === order.id"
             />
-            }
           </div>
         </div>
         } @empty {
@@ -611,7 +611,6 @@
                   tooltipPosition="bottom"
                 />
                 }
-                @if (canDeleteOrder() || order.phone) {
                 <ui-button
                   (click)="openOrderMenu($event, order, orderRowMenu)"
                   icon="ellipsis-vertical"
@@ -623,7 +622,6 @@
                   [tooltip]="'Más acciones' | transloco"
                   tooltipPosition="bottom"
                 />
-                }
               </div>
             </td>
           </tr>
@@ -868,10 +866,17 @@
        autoClose off + selección manual. -->
   <ui-menu #orderRowMenu [items]="orderMenuItems()" [autoClose]="false">
     <ng-template #item let-menuItem>
+      <!-- Deshabilitado VISUAL (sin [disabled] nativo: mataría el hover y el
+           tooltip que explica el porqué). El guard real está en
+           onOrderMenuSelect. -->
       <button
         type="button"
-        class="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-md cursor-pointer"
-        [class]="menuItem.styleClass === 'danger' ? 'text-red-600 hover:bg-red-50' : 'text-slate-700 hover:bg-slate-50'"
+        class="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-md"
+        [class]="menuItem.disabled
+          ? 'text-grey-200 cursor-not-allowed'
+          : (menuItem.styleClass === 'danger' ? 'text-red-600 hover:bg-red-50 cursor-pointer' : 'text-slate-700 hover:bg-slate-50 cursor-pointer')"
+        [tooltip]="menuItem.disabled ? ('La orden no tiene WhatsApp' | transloco) : ''"
+        tooltipPosition="left"
         (click)="onOrderMenuSelect(menuItem, orderRowMenu)"
       >
         <ui-icon [name]="menuItem.icon ?? ''" styleClass="size-4" />
