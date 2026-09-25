@@ -30,12 +30,12 @@
           <p>{{ 'Conectá una impresora de tickets por USB (58 mm o 80 mm, estándar ESC/POS).' | transloco }}</p>
         </header>
 
-        @if (settings.printer().connected) {
+        @if (printer.connected()) {
           <div class="card connected-card">
             <div class="connected-info">
               <span class="dot"></span>
               <div>
-                <strong>{{ settings.printer().deviceName || ('Impresora conectada' | transloco) }}</strong>
+                <strong>{{ printer.deviceName() || ('Impresora conectada' | transloco) }}</strong>
                 <span>{{ 'Lista para imprimir' | transloco }}</span>
               </div>
             </div>
@@ -60,9 +60,9 @@
             <p>{{ 'Necesitás una impresora térmica compatible con ESC/POS conectada por USB al equipo desde el que usás el Punto de Venta.' | transloco }}</p>
           </div>
 
-          <button type="button" class="btn-primary connect-btn" (click)="connectPrinter()">
-            <ui-icon name="printer" styleClass="size-4" />
-            {{ 'Conectar impresora USB' | transloco }}
+          <button type="button" class="btn-primary connect-btn" [disabled]="isConnecting()" (click)="connectPrinter()">
+            <ui-icon [name]="isConnecting() ? 'loader-circle' : 'printer'" [styleClass]="isConnecting() ? 'size-4 animate-spin' : 'size-4'" />
+            {{ isConnecting() ? ('Conectando…' | transloco) : ('Conectar impresora USB' | transloco) }}
           </button>
 
           <ol class="steps">

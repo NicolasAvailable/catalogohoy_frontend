@@ -1,4 +1,5 @@
 :host {
+  color-scheme: light;
   --pos-accent: #2b54d4;
   --pos-accent-strong: #1e43c0;
   --pos-bg: #f4f5f8;
@@ -14,25 +15,6 @@
   height: 100%;
   background: var(--pos-bg);
   color: var(--pos-text);
-}
-
-@media (prefers-color-scheme: dark) {
-  :host {
-    --pos-bg: #12151c;
-    --pos-surface: #1b1f28;
-    --pos-surface-2: #20252f;
-    --pos-border: #2c313c;
-    --pos-text: #e7e9ee;
-    --pos-text-soft: #9aa1ad;
-  }
-}
-:host-context(.dark) {
-  --pos-bg: #12151c;
-  --pos-surface: #1b1f28;
-  --pos-surface-2: #20252f;
-  --pos-border: #2c313c;
-  --pos-text: #e7e9ee;
-  --pos-text-soft: #9aa1ad;
 }
 
 .dev-wrap {
@@ -262,7 +244,7 @@
 }
 .txt {
   width: 100%;
-  padding: 0.6rem 0.75rem;
+  padding: 0.85rem 1rem;
   border: 1px solid var(--pos-border);
   border-radius: 0.6rem;
   background: var(--pos-surface-2);

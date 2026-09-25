@@ -13,6 +13,7 @@ import {
   EcommerceConfigStore,
   TenantCurrencyStore,
 } from '@catalogohoy/ecommerce-config';
+import { ProfileStore } from '@catalogohoy/profile';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
@@ -39,6 +40,7 @@ export default class PosMovimientos implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly configStore = inject(EcommerceConfigStore);
+  private readonly profileStore = inject(ProfileStore);
 
   readonly cs = computed(
     () =>
@@ -75,6 +77,7 @@ export default class PosMovimientos implements OnInit {
       type: this.type(),
       amount: amt,
       reason: this.reason().trim() || null,
+      createdByName: this.profileStore.profile().name?.trim() || 'Equipo',
     });
     this.isWorking.set(false);
     res.fold(

@@ -57,6 +57,9 @@
           <p class="muted">
             {{ 'Abierta' | transloco }} {{ s?.openedAt | date: "d 'de' MMMM, HH:mm" }}
             · {{ 'inicial' | transloco }} {{ money(s?.openingFloat) }}
+            @if (s?.openedByName) {
+              · {{ 'por' | transloco }} {{ s?.openedByName }}
+            }
           </p>
         </div>
         <button class="btn-danger" (click)="openCloseDialog()">

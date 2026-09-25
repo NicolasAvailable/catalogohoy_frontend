@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
   OnInit,
   signal,
@@ -29,12 +30,14 @@ import { RateStore } from '@catalogohoy/rate';
 import { TenantStore } from '@catalogohoy/tenant';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { TooltipModule } from 'primeng/tooltip';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { IconComponent } from '@ui';
 import { PosCartStore } from '../../pos-cart.store';
 import { PosCajaStore } from '../../pos-caja.store';
 import { PosSettingsStore } from '../../pos-settings.store';
+import { PosPrinterService } from '../../pos-printer.service';
 import { PosScanner } from '../../components/scanner/scanner';
 
 /** Un medio de pago ofrecido en el modal de cobro. */
@@ -76,6 +79,7 @@ interface PosSaleReceipt {
     PosScanner,
     RouterLink,
     TranslocoPipe,
+    TooltipModule,
   ],
   templateUrl: './venta.html',
   styleUrl: './venta.css',
@@ -92,6 +96,8 @@ export default class PosVenta implements OnInit {
   private readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly configStore = inject(EcommerceConfigStore);
   private readonly toast = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly posPrinter = inject(PosPrinterService);
 
   private static readonly DEFAULT_METHODS: PayMethod[] = [
     { label: 'Efectivo', icon: 'banknote', adjust: 0 },
@@ -229,7 +235,68 @@ export default class PosVenta implements OnInit {
       this.configStore.loadPaymentMethods(String(tid));
       this.configStore.loadConfig(String(tid));
     });
+
+    // Lector USB (keyboard-wedge): los escáneres por USB "tipean" el código muy
+    // rápido y cierran con Enter. Escuchamos globalmente y, ante una ráfaga
+    // veloz terminada en Enter, la tratamos como escaneo → SKU al carrito. No
+    // interceptamos cuando el foco está en un campo (búsqueda/modales).
+    document.addEventListener('keydown', this.onWedgeKey, true);
+    this.destroyRef.onDestroy(() =>
+      document.removeEventListener('keydown', this.onWedgeKey, true)
+    );
   }
+
+  // ── Lector USB (keyboard-wedge) ─────────────────────────────────────────────
+  private wedgeBuffer = '';
+  private wedgeLastTs = 0;
+  private wedgeFast = true;
+  /** ms máximos entre teclas para considerarlas parte del mismo escaneo (los
+   *  escáneres tipean <30ms/char; un humano ~150ms). */
+  private static readonly WEDGE_GAP_MS = 100;
+
+  private readonly onWedgeKey = (e: KeyboardEvent): void => {
+    // No robar teclas cuando el cajero está escribiendo en un campo.
+    const el = document.activeElement as HTMLElement | null;
+    if (
+      el &&
+      (el.tagName === 'INPUT' ||
+        el.tagName === 'TEXTAREA' ||
+        el.tagName === 'SELECT' ||
+        el.isContentEditable)
+    ) {
+      return;
+    }
+    const now = e.timeStamp || performance.now();
+
+    // Muchos escáneres cierran con Enter (CR); otros con Tab. Ambos son fin de código.
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      const code = this.wedgeBuffer;
+      const fast = this.wedgeFast;
+      this.wedgeBuffer = '';
+      this.wedgeFast = true;
+      // Un código real: ráfaga veloz de ≥3 caracteres.
+      if (fast && code.length >= 3) {
+        e.preventDefault(); // evita el salto de foco del Tab
+        this.onScan(code);
+      }
+      return;
+    }
+
+    // Solo caracteres imprimibles (dígitos/letras del código de barras).
+    if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+
+    const gap = now - this.wedgeLastTs;
+    if (gap > PosVenta.WEDGE_GAP_MS) {
+      // Nueva secuencia (o tecleo humano lento): reinicia el buffer.
+      this.wedgeBuffer = '';
+      this.wedgeFast = true;
+    } else if (this.wedgeBuffer.length > 0 && gap > PosVenta.WEDGE_GAP_MS / 2) {
+      // Dentro de la secuencia pero demasiado lento para un escáner: es humano.
+      this.wedgeFast = false;
+    }
+    this.wedgeBuffer += e.key;
+    this.wedgeLastTs = now;
+  };
 
   // ── Búsqueda / matching ──────────────────────────────────────────────────
   private matchesQuery(p: Product, q: string): boolean {
@@ -639,11 +706,40 @@ export default class PosVenta implements OnInit {
 
   /** Abre el comprobante en una ventana e invoca la impresión del navegador
    *  (formato ticket 80 mm). Usa el encabezado/pie/logo de la Configuración. */
-  printReceipt(): void {
+  async printReceipt(): Promise<void> {
     const sale = this.lastSale();
     if (!sale) return;
     const t = this.settings.ticket();
     const cs = this.cs();
+
+    // Si hay una impresora térmica conectada por USB, imprimir por ESC-POS.
+    if (this.posPrinter.connected()) {
+      const ok = await this.posPrinter.printReceipt(
+        {
+          header: t.header,
+          footer: t.footer,
+          currency: cs,
+          number: sale.number,
+          dateStr: sale.dateStr,
+          customer: sale.customer,
+          lines: sale.lines,
+          subtotal: sale.subtotal,
+          discount: sale.discount,
+          shipping: sale.shipping,
+          adjustAmount: sale.adjustAmount,
+          method: sale.method,
+          total: sale.total,
+          received: sale.received,
+          change: sale.change,
+        },
+        this.settings.printer().width
+      );
+      if (ok) {
+        this.toast.success('Recibo enviado a la impresora ✓');
+        return;
+      }
+      // Si falló (se desconectó), cae al recibo por navegador.
+    }
     const money = (n: number) => `${cs}${n.toFixed(2)}`;
     const esc = (s: string) =>
       s.replace(

@@ -409,7 +409,17 @@ export class PosService {
   ): Promise<E.Either<Error, void>> {
     if (!items.length) return E.left(new Error('Seleccioná al menos un ítem.'));
 
-    const refundTotal = items.reduce((s, it) => s + (it.total ?? 0), 0);
+    // Reembolso PRORRATEADO a lo realmente cobrado: si la venta tuvo descuento,
+    // ajuste de medio de pago o envío, la suma de líneas no es lo que pagó el
+    // cliente. factor = total cobrado / suma de líneas de la venta original.
+    const originalLineSum = (original.products ?? []).reduce(
+      (s, it) => s + (it.total ?? 0),
+      0
+    );
+    const factor =
+      originalLineSum > 0 ? original.totalUsd / originalLineSum : 1;
+    const rawRefund = items.reduce((s, it) => s + (it.total ?? 0), 0);
+    const refundTotal = rawRefund * factor;
     if (refundTotal <= 0) return E.left(new Error('El monto a devolver es 0.'));
 
     // 1) Reponer inventario de los ítems devueltos.

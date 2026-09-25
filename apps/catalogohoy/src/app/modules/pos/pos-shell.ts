@@ -16,6 +16,7 @@ import {
 } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { TooltipModule } from 'primeng/tooltip';
 import { IconComponent } from '@ui';
 import { PosCajaStore } from './pos-caja.store';
 
@@ -34,7 +35,14 @@ interface RailItem {
 @Component({
   selector: 'pos-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent, TranslocoPipe],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    IconComponent,
+    TranslocoPipe,
+    TooltipModule,
+  ],
   templateUrl: './pos-shell.html',
   styleUrl: './pos-shell.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

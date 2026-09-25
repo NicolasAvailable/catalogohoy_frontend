@@ -72,9 +72,20 @@ export default class PosDevoluciones implements OnInit {
   readonly reason = signal('');
   readonly isWorking = signal(false);
 
-  /** Total a reembolsar según las cantidades elegidas. */
-  readonly refundTotal = computed(() =>
-    this.lines().reduce((s, l) => s + l.item.price * l.qty, 0)
+  /** Factor de prorrateo: lo realmente cobrado ÷ suma de líneas de la venta,
+   *  para no reembolsar de más cuando hubo descuento/ajuste/envío. */
+  private readonly refundFactor = computed(() => {
+    const o = this.selected();
+    if (!o) return 1;
+    const lineSum = (o.products ?? []).reduce((s, it) => s + (it.total ?? 0), 0);
+    return lineSum > 0 ? o.totalUsd / lineSum : 1;
+  });
+
+  /** Total a reembolsar (prorrateado) según las cantidades elegidas. */
+  readonly refundTotal = computed(
+    () =>
+      this.lines().reduce((s, l) => s + l.item.price * l.qty, 0) *
+      this.refundFactor()
   );
   readonly hasSelection = computed(() => this.lines().some((l) => l.qty > 0));
 

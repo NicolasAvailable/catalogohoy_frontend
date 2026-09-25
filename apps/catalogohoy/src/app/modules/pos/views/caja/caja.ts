@@ -12,6 +12,7 @@ import {
   EcommerceConfigStore,
   TenantCurrencyStore,
 } from '@catalogohoy/ecommerce-config';
+import { ProfileStore } from '@catalogohoy/profile';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
@@ -37,6 +38,12 @@ export default class PosCaja implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly configStore = inject(EcommerceConfigStore);
+  private readonly profileStore = inject(ProfileStore);
+
+  /** Nombre del cajero logueado para atribuir apertura/cierre. */
+  private cashier(): string {
+    return this.profileStore.profile().name?.trim() || 'Equipo';
+  }
 
   readonly cs = computed(
     () =>
@@ -82,6 +89,7 @@ export default class PosCaja implements OnInit {
     const res = await this.caja.open({
       openingFloat: float,
       registerName: this.registerName().trim() || null,
+      openedByName: this.cashier(),
     });
     this.isWorking.set(false);
     res.fold(
@@ -111,6 +119,7 @@ export default class PosCaja implements OnInit {
     const res = await this.caja.close({
       countedCash: counted,
       notes: this.closeNotes().trim() || null,
+      closedByName: this.cashier(),
     });
     this.isWorking.set(false);
     res.fold(

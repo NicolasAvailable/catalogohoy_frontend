@@ -1,4 +1,5 @@
 :host {
+  color-scheme: light;
   --pos-accent: #2b54d4;
   --pos-accent-strong: #1e43c0;
   --pos-bg: #f4f5f8;
@@ -15,25 +16,6 @@
   overflow-y: auto;
   background: var(--pos-bg);
   color: var(--pos-text);
-}
-
-@media (prefers-color-scheme: dark) {
-  :host {
-    --pos-bg: #12151c;
-    --pos-surface: #1b1f28;
-    --pos-surface-2: #20252f;
-    --pos-border: #2c313c;
-    --pos-text: #e7e9ee;
-    --pos-text-soft: #9aa1ad;
-  }
-}
-:host-context(.dark) {
-  --pos-bg: #12151c;
-  --pos-surface: #1b1f28;
-  --pos-surface-2: #20252f;
-  --pos-border: #2c313c;
-  --pos-text: #e7e9ee;
-  --pos-text-soft: #9aa1ad;
 }
 
 .mov-wrap {
@@ -154,7 +136,7 @@
   font-size: 0.95rem;
 }
 .txt {
-  padding: 0.6rem 0.75rem;
+  padding: 0.85rem 1rem;
 }
 .money-input {
   display: flex;
@@ -170,7 +152,7 @@
   border: 0;
   background: transparent;
   color: var(--pos-text);
-  padding: 0.6rem 0.4rem;
+  padding: 0.85rem 0.4rem;
   font-size: 1.05rem;
   font-weight: 600;
   outline: none;
@@ -185,9 +167,9 @@
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  padding: 0.7rem 1.1rem;
+  padding: 0.9rem 1.4rem;
   border-radius: 0.7rem;
-  font-size: 0.92rem;
+  font-size: 1.02rem;
   font-weight: 700;
   cursor: pointer;
   border: 0;

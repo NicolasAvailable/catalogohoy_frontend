@@ -233,8 +233,8 @@ type BarcodeDetectorCtor = new (opts?: {
         left: 6%;
         right: 6%;
         height: 2px;
-        background: #6366f1;
-        box-shadow: 0 0 0.75rem #6366f1;
+        background: #1e43c0;
+        box-shadow: 0 0 0.75rem #1e43c0;
         animation: scan 2s ease-in-out infinite;
       }
       @keyframes scan {
@@ -272,12 +272,12 @@ type BarcodeDetectorCtor = new (opts?: {
       }
       .scanner-manual input:focus {
         outline: none;
-        border-color: #6366f1;
+        border-color: #1e43c0;
       }
       .scanner-manual-btn {
         padding: 0 1.1rem;
         border-radius: 0.7rem;
-        background: #6366f1;
+        background: #1e43c0;
         color: #fff;
         font-weight: 600;
         cursor: pointer;

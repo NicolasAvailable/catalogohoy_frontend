@@ -14,6 +14,7 @@ import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { IconComponent } from '@ui';
 import { PosSettingsStore } from '../../pos-settings.store';
+import { PosPrinterService } from '../../pos-printer.service';
 
 type ConfigPanel = 'printer' | 'methods' | 'cash' | 'tickets';
 
@@ -32,8 +33,11 @@ interface NavGroup {
 })
 export default class PosConfig implements OnInit {
   readonly settings = inject(PosSettingsStore);
+  readonly printer = inject(PosPrinterService);
   private readonly tenantStore = inject(TenantStore);
   private readonly toast = inject(ToastService);
+
+  readonly isConnecting = signal(false);
 
   readonly panel = signal<ConfigPanel>('printer');
 
@@ -71,24 +75,41 @@ export default class PosConfig implements OnInit {
     this.panel.set(p);
   }
 
-  // ── Impresora ──────────────────────────────────────────────────────────────
-  /** Stub de conexión: la integración real WebUSB/ESC-POS es F3. Simula el
-   *  emparejamiento para poder maquetar y probar el flujo de tickets. */
-  connectPrinter(): void {
-    this.settings.setPrinterConnected(true, 'Impresora térmica USB');
-    this.toast.success('Impresora conectada (demo)');
+  // ── Impresora (WebUSB / ESC-POS) ────────────────────────────────────────────
+  /** Empareja una impresora térmica USB real vía WebUSB (Chrome/Edge de
+   *  escritorio). El estado real vive en el servicio; también lo persistimos en
+   *  settings para recordar el último dispositivo. */
+  async connectPrinter(): Promise<void> {
+    if (!this.printer.supported) {
+      this.toast.error(
+        'Tu navegador no soporta impresión por USB. Usá Chrome o Edge de escritorio.' as unknown as Exception
+      );
+      return;
+    }
+    this.isConnecting.set(true);
+    const res = await this.printer.connect();
+    this.isConnecting.set(false);
+    if (res.ok) {
+      this.settings.setPrinterConnected(true, res.name ?? 'Impresora USB');
+      this.toast.success('Impresora conectada ✓');
+    } else if (res.error) {
+      this.toast.error(res.error as unknown as Exception);
+    }
   }
 
-  disconnectPrinter(): void {
+  async disconnectPrinter(): Promise<void> {
+    await this.printer.disconnect();
     this.settings.setPrinterConnected(false, '');
   }
 
-  printTest(): void {
-    if (!this.settings.printer().connected) {
+  async printTest(): Promise<void> {
+    if (!this.printer.connected()) {
       this.toast.error('Conectá una impresora primero' as unknown as Exception);
       return;
     }
-    this.toast.success('Ticket de prueba enviado a la impresora (demo)');
+    const ok = await this.printer.printTest(this.settings.printer().width);
+    if (ok) this.toast.success('Ticket de prueba enviado a la impresora');
+    else this.toast.error('No se pudo imprimir. Revisá la conexión.' as unknown as Exception);
   }
 
   // ── Tickets ────────────────────────────────────────────────────────────────

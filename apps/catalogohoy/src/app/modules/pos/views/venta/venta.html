@@ -13,33 +13,33 @@
 
     <div class="search-row">
       <button type="button" class="search-field" (click)="openProductSearch()">
-        <ui-icon name="search" styleClass="size-4 search-ico" />
+        <ui-icon name="search" styleClass="size-5 search-ico" />
         <span class="search-ph">{{ 'Buscar por nombre, descripción o SKU' | transloco }}</span>
       </button>
-      <button type="button" class="scan-btn" (click)="openScanner()" [title]="'Escanear' | transloco">
-        <ui-icon name="scan-barcode" styleClass="size-5" />
+      <button type="button" class="scan-btn" (click)="openScanner()" [pTooltip]="'Escanear' | transloco" tooltipPosition="bottom">
+        <ui-icon name="scan-barcode" styleClass="size-6" />
       </button>
     </div>
 
     <div class="action-tiles">
       <button type="button" class="tile" (click)="openCustomer()">
-        <span class="tile-ico"><ui-icon name="user" styleClass="size-5" /></span>
+        <span class="tile-ico"><ui-icon name="user" styleClass="size-6" /></span>
         <span class="tile-label">{{ cart.customerName() || ('Agregar cliente' | transloco) }}</span>
       </button>
       <button type="button" class="tile" (click)="openDiscount()">
-        <span class="tile-ico"><ui-icon name="percent" styleClass="size-5" /></span>
+        <span class="tile-ico"><ui-icon name="percent" styleClass="size-6" /></span>
         <span class="tile-label">{{ cart.discountPercent() > 0 ? (cart.discountPercent() + ('% de descuento' | transloco)) : ('Aplicar descuento' | transloco) }}</span>
       </button>
       <button type="button" class="tile" (click)="openNote()">
-        <span class="tile-ico"><ui-icon name="sticky-note" styleClass="size-5" /></span>
+        <span class="tile-ico"><ui-icon name="sticky-note" styleClass="size-6" /></span>
         <span class="tile-label">{{ cart.note() ? ('Nota agregada' | transloco) : ('Agregar nota' | transloco) }}</span>
       </button>
       <button type="button" class="tile" (click)="openCreateProduct()">
-        <span class="tile-ico"><ui-icon name="tag" styleClass="size-5" /></span>
+        <span class="tile-ico"><ui-icon name="tag" styleClass="size-6" /></span>
         <span class="tile-label">{{ 'Crear producto' | transloco }}</span>
       </button>
       <button type="button" class="tile" (click)="openShipping()">
-        <span class="tile-ico"><ui-icon name="truck" styleClass="size-5" /></span>
+        <span class="tile-ico"><ui-icon name="truck" styleClass="size-6" /></span>
         <span class="tile-label">{{ shipping() > 0 ? ('Envío agregado' | transloco) : ('Agregar envío' | transloco) }}</span>
       </button>
     </div>
@@ -112,7 +112,7 @@
                   </button>
                 </div>
                 <span class="line-total">{{ cs() }}{{ l.total | number: '1.2-2' }}</span>
-                <button type="button" class="line-remove" (click)="cart.remove(l.key)" [attr.aria-label]="'Quitar' | transloco">
+                <button type="button" class="line-remove" (click)="cart.remove(l.key)" [pTooltip]="'Quitar' | transloco" tooltipPosition="top" [attr.aria-label]="'Quitar' | transloco">
                   <ui-icon name="trash-2" styleClass="size-4" />
                 </button>
               </div>
@@ -157,11 +157,11 @@
       <header class="ps-head">
         <h3>{{ 'Agregar productos' | transloco }}</h3>
         <button type="button" class="modal-x" (click)="closeProductSearch()">
-          <ui-icon name="x" styleClass="size-5" />
+          <ui-icon name="x" styleClass="size-6" />
         </button>
       </header>
       <div class="ps-search">
-        <ui-icon name="search" styleClass="size-4 search-ico" />
+        <ui-icon name="search" styleClass="size-5 search-ico" />
         <input
           type="text"
           [ngModel]="search()"
@@ -170,7 +170,7 @@
           autofocus
         />
         <button type="button" class="ps-scan" (click)="closeProductSearch(); openScanner()" [title]="'Escanear' | transloco">
-          <ui-icon name="scan-barcode" styleClass="size-5" />
+          <ui-icon name="scan-barcode" styleClass="size-6" />
         </button>
       </div>
 
@@ -219,7 +219,7 @@
       <header class="modal-head">
         <h3>{{ op.name }}</h3>
         <button type="button" class="modal-x" (click)="closeOptions()">
-          <ui-icon name="x" styleClass="size-5" />
+          <ui-icon name="x" styleClass="size-6" />
         </button>
       </header>
       <p class="modal-sub">
@@ -292,7 +292,7 @@
       <header class="modal-head">
         <h3>{{ 'Agregar cliente' | transloco }}</h3>
         <button type="button" class="modal-x" (click)="showCustomer.set(false)">
-          <ui-icon name="x" styleClass="size-5" />
+          <ui-icon name="x" styleClass="size-6" />
         </button>
       </header>
       <label class="field">
@@ -320,7 +320,7 @@
       <header class="modal-head">
         <h3>{{ 'Descuento' | transloco }}</h3>
         <button type="button" class="modal-x" (click)="showDiscount.set(false)">
-          <ui-icon name="x" styleClass="size-5" />
+          <ui-icon name="x" styleClass="size-6" />
         </button>
       </header>
       <div class="disc-tabs">
@@ -361,7 +361,7 @@
       <header class="modal-head">
         <h3>{{ 'Notas' | transloco }}</h3>
         <button type="button" class="modal-x" (click)="showNote.set(false)">
-          <ui-icon name="x" styleClass="size-5" />
+          <ui-icon name="x" styleClass="size-6" />
         </button>
       </header>
       <label class="field">
@@ -384,7 +384,7 @@
       <header class="modal-head">
         <h3>{{ 'Crear producto simple' | transloco }}</h3>
         <button type="button" class="modal-x" (click)="showCreateProduct.set(false)">
-          <ui-icon name="x" styleClass="size-5" />
+          <ui-icon name="x" styleClass="size-6" />
         </button>
       </header>
       <p class="modal-sub">{{ 'Se agrega solo a esta venta (no se guarda en el catálogo).' | transloco }}</p>
@@ -421,7 +421,7 @@
         <header class="modal-head">
           <h3>{{ 'Agregar envío' | transloco }}</h3>
           <button type="button" class="modal-x" (click)="showShipping.set(false)">
-            <ui-icon name="x" styleClass="size-5" />
+            <ui-icon name="x" styleClass="size-6" />
           </button>
         </header>
         <label class="field">
@@ -446,7 +446,7 @@
       <header class="modal-head">
         <h3>{{ 'Cobrar' | transloco }} {{ cs() }}{{ chargeTotal() | number: '1.2-2' }}</h3>
         <button type="button" class="modal-x" (click)="showCobrar.set(false)">
-          <ui-icon name="x" styleClass="size-5" />
+          <ui-icon name="x" styleClass="size-6" />
         </button>
       </header>
 
@@ -459,7 +459,7 @@
             [class.active]="cart.paymentMethod() === m.label"
             (click)="selectMethod(m.label)"
           >
-            <ui-icon [name]="m.icon" styleClass="size-5" />
+            <ui-icon [name]="m.icon" styleClass="size-6" />
             <span>{{ m.label }}</span>
             @if (m.adjust) {
               <small class="pay-adjust">{{ m.adjust > 0 ? '+' : '' }}{{ m.adjust }}%</small>
