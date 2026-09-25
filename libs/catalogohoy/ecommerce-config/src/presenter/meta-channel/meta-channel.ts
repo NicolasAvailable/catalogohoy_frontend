@@ -14,12 +14,7 @@ import { toast as sonnerToast } from 'ngx-sonner';
 import { META_CHANNEL_ALLOWED_SLUGS } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
-import {
-  ButtonComponent,
-  CardComponent,
-  IconComponent,
-  SelectComponent,
-} from '@ui';
+import { ButtonComponent, IconComponent, SelectComponent } from '@ui';
 import { MetaCatalogSync } from '../../domain';
 import { EcommerceConfigService } from '../../infrastructure';
 
@@ -43,7 +38,6 @@ const toast = {
     DatePipe,
     TranslocoPipe,
     ButtonComponent,
-    CardComponent,
     IconComponent,
     SelectComponent,
   ],
@@ -58,6 +52,30 @@ export class MetaChannelView implements OnInit {
   private readonly router = inject(Router);
 
   private tenantId: string | null = null;
+
+  /** Bullets del hero (mismo patrón que la landing de Chat). */
+  public readonly features = [
+    {
+      title: 'Tu catálogo, sincronizado solo',
+      description:
+        'Precios, fotos, variantes y stock siempre al día en Facebook e Instagram. Cambiás algo en CatalogoHoy y se refleja allá.',
+    },
+    {
+      title: 'Etiquetá productos en tus publicaciones',
+      description:
+        'Tus posts y stories con etiqueta de producto: tus clientes tocan y van directo a tu catálogo.',
+    },
+    {
+      title: 'Píxel y Conversions API sin configurar nada',
+      description:
+        'La medición de visitas, carritos y pedidos queda activa sola, lista para tus campañas y públicos.',
+    },
+    {
+      title: 'Anuncios dinámicos que venden',
+      description:
+        'Meta le muestra a cada persona el producto que le interesa de tu catálogo, como hacen las marcas grandes.',
+    },
+  ];
 
   /** Función de planes pagos (mismo gating que el Píxel manual). */
   public readonly isLocked = computed(() => this.planStore.currentPlan()?.isFree ?? false);
