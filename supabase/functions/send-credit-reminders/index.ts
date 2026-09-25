@@ -43,10 +43,11 @@ function emailShell(opts) {
 }
 
 async function fetchOwnerInfo(admin, tenantId) {
-  const [tenantResp, cfgResp, linkResp] = await Promise.all([
+  const [tenantResp, cfgResp, linkResp, curResp] = await Promise.all([
     admin.from("tenants").select("name, slug").eq("id", tenantId).maybeSingle(),
-    admin.from("tenant_ecommerce_config").select("logo, theme_color, currency_symbol").eq("tenant_id", tenantId).maybeSingle(),
+    admin.from("tenant_ecommerce_config").select("logo, theme_color").eq("tenant_id", tenantId).maybeSingle(),
     admin.from("users_tenants").select("users!inner(name, last_name, email, notify_credit_reminders, credit_reminder_days)").eq("tenant_id", tenantId).eq("role", "owner").limit(1).maybeSingle(),
+    admin.from("tenant_currency_config").select("currency_symbol, show_dual_currency, exchange_rate_type, custom_rate, product_currency").eq("tenant_id", tenantId).maybeSingle(),
   ]);
   if (!tenantResp.data) return null;
   const tenant = tenantResp.data;
@@ -63,8 +64,45 @@ async function fetchOwnerInfo(admin, tenantId) {
     slug: tenant.slug ?? String(tenantId),
     logo: cfg?.logo ?? null,
     themeColor: cfg?.theme_color ?? "#10b981",
-    currencySymbol: (cfg?.currency_symbol ?? "$").trim() || "$",
+    currency: curResp.data ?? null,
   };
+}
+
+// ── Moneda: espejo de TenantCurrencyStore + effectiveOrderBs del front ──────
+// Los montos del email respetan la config del catálogo: solo referencia,
+// solo Bs, o dual "$X / Bs. Y" (pedido de Nicolas 2026-09-25). Las órdenes a
+// crédito usan su snapshot total_bs; sin snapshot cae a la tasa activa.
+function moneyFmt(cfg) {
+  const ve = cfg?.product_currency === "VES";
+  const thou = ve ? "." : ",";
+  const dec = ve ? "," : ".";
+  return (n, symbol) => {
+    const [i, f] = (Number(n) || 0).toFixed(2).split(".");
+    return `${symbol}${i.replace(/\B(?=(\d{3})+(?!\d))/g, thou)}${dec}${f}`;
+  };
+}
+
+function activeRateValue(cfg, rates) {
+  const type = cfg?.exchange_rate_type ?? "bcv_usd";
+  if (type === "custom") return Number(cfg?.custom_rate) || 0;
+  if (type === "bcv_eur") return Number(rates?.bcv_eur) || 0;
+  return Number(rates?.bcv_usd) || 0;
+}
+
+function effectiveBs(order, cfg, rates) {
+  const bs = Number(order.total_bs) || 0;
+  if (bs > 0) return bs;
+  const rate = activeRateValue(cfg, rates);
+  return rate > 0 ? (Number(order.total_usd) || 0) * rate : 0;
+}
+
+function amountText(usd, bs, cfg) {
+  const sym = (cfg?.currency_symbol ?? "$").trim() || "$";
+  let text = moneyFmt(cfg)(usd, sym);
+  if (cfg?.show_dual_currency && bs > 0) {
+    text += ` / ${moneyFmt({ product_currency: "VES" })(bs, "Bs. ")}`;
+  }
+  return text;
 }
 
 async function sendViaSes(to, subject, html, text) {
@@ -125,9 +163,16 @@ Deno.serve(async (req) => {
 
   // Todas las órdenes a crédito con el cooldown vencido (o nunca avisadas).
   // Volumen actual ~decenas; el limit es holgado y el filtro fino va en memoria.
+  // Tasas globales (BCV) una sola vez por corrida — para el dual de VE.
+  const { data: globalRates } = await admin
+    .from("exchange_rates")
+    .select("bcv_usd, bcv_eur")
+    .eq("id", 1)
+    .maybeSingle();
+
   const { data: orders, error } = await admin
     .from("orders")
-    .select("id, tenant_id, name, order_number, total_usd, created_at, credit_installments, credit_reminded_at")
+    .select("id, tenant_id, name, order_number, total_usd, total_bs, created_at, credit_installments, credit_reminded_at")
     .eq("status", "credit")
     .or(`credit_reminded_at.is.null,credit_reminded_at.lt.${cooldownIso}`)
     .order("tenant_id", { ascending: true })
@@ -162,25 +207,33 @@ Deno.serve(async (req) => {
 
     if (!overdue.length) continue;
 
-    const sym = owner.currencySymbol;
-    const fmt = (n) => `${sym}${Number(n).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const cfg = owner.currency;
+    const fmtRef = moneyFmt(cfg);
+    const sym = (cfg?.currency_symbol ?? "$").trim() || "$";
+    const dual = cfg?.show_dual_currency === true;
     const shown = overdue.slice(0, MAX_ROWS);
     const rows = shown.map(({ o, cuota, days }) => ({
       label: `${o.name || `Orden #${o.order_number ?? o.id}`} · ${
         cuota ? `cuota vencida el ${shortDate(cuota.dueDate)}` : `hace ${days} días`
       }`,
-      value: fmt(cuota && cuota.amount != null ? cuota.amount : o.total_usd),
+      value: cuota && cuota.amount != null
+        ? fmtRef(cuota.amount, sym)
+        : amountText(Number(o.total_usd) || 0, dual ? effectiveBs(o, cfg, globalRates) : 0, cfg),
       danger: cuota != null,
     }));
     if (overdue.length > shown.length) {
       rows.push({ label: `… y ${overdue.length - shown.length} más`, value: "", danger: false });
     }
-    const totalDue = overdue.reduce((acc, { o }) => acc + (Number(o.total_usd) || 0), 0);
+    const totalUsd = overdue.reduce((acc, { o }) => acc + (Number(o.total_usd) || 0), 0);
+    const totalBs = dual
+      ? overdue.reduce((acc, { o }) => acc + effectiveBs(o, cfg, globalRates), 0)
+      : 0;
+    const totalDueText = amountText(totalUsd, totalBs, cfg);
 
     const headline = "Tienes cobros pendientes";
     const body = overdue.length === 1
       ? "Esta orden a crédito sigue sin cobrarse. Te la recordamos para que no se te pase."
-      : `Estas ${overdue.length} órdenes a crédito siguen sin cobrarse (${fmt(totalDue)} en total). Te las dejamos ordenadas por antigüedad para que no se te pase ninguna.`;
+      : `Estas ${overdue.length} órdenes a crédito siguen sin cobrarse (${totalDueText} en total). Te las dejamos ordenadas por antigüedad para que no se te pase ninguna.`;
     const html = emailShell({
       title: headline, headline, headlineColor: "#f59e0b",
       greetingName: owner.name, body, rows,
@@ -210,7 +263,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               tenantId,
               title: overdue.length === 1 ? "Tienes un cobro pendiente 💰" : `Tienes ${overdue.length} cobros pendientes 💰`,
-              body: `${fmt(totalDue)} por cobrar en ${owner.tenantName}`,
+              body: `${totalDueText} por cobrar en ${owner.tenantName}`,
               route: "/admin/orders",
             }),
           });

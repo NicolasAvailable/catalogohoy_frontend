@@ -2539,5 +2539,7 @@
   "La impresión por USB necesita HTTPS. Abrí el Punto de Venta desde el enlace seguro (https://).": "A impressão por USB precisa de HTTPS. Abra o Ponto de Venda pelo link seguro (https://).",
   "Tu navegador no soporta impresión por USB. Usá Google Chrome o Microsoft Edge de ESCRITORIO (no funciona en celular, Safari ni Firefox).": "Seu navegador não suporta impressão por USB. Use o Google Chrome ou o Microsoft Edge no COMPUTADOR (não funciona em celular, Safari nem Firefox).",
   "La impresora está tomada por el driver del sistema. En Windows: cerrá otras apps de impresión, o instalá el driver WinUSB para esta impresora con Zadig y reintentá.": "A impressora está ocupada pelo driver do sistema. No Windows: feche outros apps de impressão, ou instale o driver WinUSB para esta impressora com o Zadig e tente novamente.",
-  "No se pudo conectar la impresora. Verificá que esté encendida y conectada por USB.": "Não foi possível conectar a impressora. Verifique se está ligada e conectada via USB."
+  "No se pudo conectar la impresora. Verificá que esté encendida y conectada por USB.": "Não foi possível conectar a impressora. Verifique se está ligada e conectada via USB.",
+  "Notificar": "Notificar",
+  "Enviar factura": "Enviar fatura"
 }

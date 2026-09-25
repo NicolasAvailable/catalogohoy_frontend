@@ -26,12 +26,15 @@ import {
   IconComponent,
   ImageComponent,
   InputSearchComponent,
+  MenuComponent,
+  MenuItem,
   SelectComponent,
   SelectItemDirective,
   SelectSelectedItemDirective,
   TabHeader,
   TooltipDirective,
 } from '@ui';
+import { PlanStore } from '@catalogohoy/plan';
 import { OrderDetailModal } from '../../components/order-detail-modal/order-detail-modal';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
@@ -86,6 +89,7 @@ type MetricsPreset = 'today' | 'last_7' | 'last_30' | 'last_90' | 'custom';
     EmptyListComponent,
     InputSearchComponent,
     ImageComponent,
+    MenuComponent,
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
@@ -114,6 +118,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private readonly orderExcel = inject(OrderExcelService);
   private readonly rateStore = inject(RateStore);
   private readonly orderService = inject(OrderService);
+  private readonly planStore = inject(PlanStore);
 
   /** Bs a mostrar por orden: pendientes a la tasa ACTUAL, el resto su snapshot.
    *  Ver {@link effectiveOrderBs}. */
@@ -208,28 +213,151 @@ export class OrderListComponent implements OnInit, OnDestroy {
     return d && m ? `${d}/${m}` : iso;
   }
 
-  /** Link wa.me con el recordatorio de cobro prellenado (CAT-79): sale del
-   *  WhatsApp del PROPIO comerciante — sin plantillas de Meta ni costo de API,
-   *  disponible para todas las tiendas. El texto va en español (el idioma del
-   *  comercio con su cliente final, no el del admin). */
-  public creditReminderLink(order: Order): string | null {
-    if (order.status !== 'credit' || !order.phone) return null;
-    const phone = order.phone.replace(/[^\d+]/g, '');
-    if (phone.replace(/\D/g, '').length < 8) return null;
-    const business = this.tenantStore.tenantName() || 'nuestro negocio';
-    const total = `${this.cs()}${order.totalUsd.toFixed(2)}`;
+  // ── Menú ⋯ de acciones por orden (CAT-80): Notificar / Enviar factura /
+  //    Eliminar. Los envíos son plantillas reales por Cloud API (un click,
+  //    sin wa.me), desde el número de la plataforma. Mismo patrón de menú que
+  //    el listado de Productos. ────────────────────────────────────────────
+  public readonly orderMenuItems = signal<MenuItem[]>([]);
+  /** Orden con un envío WhatsApp en curso (spinner + bloquea el menú). */
+  public readonly sendingActionId = signal<number | null>(null);
+
+  /** Arma y abre el menú ⋯ de la fila. Los envíos solo aparecen con teléfono
+   *  válido; en plan gratis van con candado (el server igual rechaza con
+   *  plan_required — el gate real es server-side). */
+  public openOrderMenu(event: Event, order: Order, menu: MenuComponent): void {
+    const hasPhone = (order.phone ?? '').replace(/\D/g, '').length >= 8;
+    const locked = this.planStore.isFreePlan();
+    const items: MenuItem[] = [];
+    if (hasPhone && (order.status === 'credit' || order.status === 'pending')) {
+      items.push({
+        // "Recordar pago" y no "Notificar": el nombre dice exactamente qué hace
+        // (feedback de Nicolas — "Notificar" era ambiguo).
+        label: 'Recordar pago',
+        icon: locked ? 'lock' : 'message-circle',
+        command: () => this.sendWhatsAppAction(order, 'notify'),
+      });
+    }
+    if (hasPhone) {
+      items.push({
+        label: 'Enviar factura',
+        icon: locked ? 'lock' : 'file-text',
+        command: () => this.sendWhatsAppAction(order, 'invoice'),
+      });
+    }
+    if (this.canDeleteOrder()) {
+      items.push({
+        label: 'Eliminar',
+        icon: 'trash',
+        styleClass: 'danger',
+        command: () => this.onDeleteOrder(order),
+      });
+    }
+    this.orderMenuItems.set(items);
+    menu.toggle(event);
+  }
+
+  /** Ejecuta la acción elegida del menú ⋯ y lo cierra (autoClose off). */
+  public onOrderMenuSelect(item: MenuItem, menu: MenuComponent): void {
+    menu.hide();
+    item.command?.({} as never);
+  }
+
+  /** Confirmación previa al envío: un misclick acá es un WhatsApp REAL al
+   *  cliente de la tienda. */
+  private sendWhatsAppAction(order: Order, action: 'notify' | 'invoice'): void {
+    if (this.planStore.isFreePlan()) {
+      this.toastService.error(
+        new Exception(
+          'Disponible en planes pagos. Mejorá tu plan para enviarle mensajes a tus clientes.'
+        )
+      );
+      return;
+    }
+    if (this.sendingActionId() !== null) return;
     const num = order.orderNumber ?? order.id;
-    const due = overdueInstallment(order);
-    const cuotaTxt = due
-      ? ` La cuota del ${this.shortDate(due.dueDate)}${
-          due.amount != null ? ` (${this.cs()}${due.amount.toFixed(2)})` : ''
-        } está vencida.`
-      : '';
-    const msg =
-      `Hola ${order.name}, le saluda ${business}. ` +
-      `Le recordamos el pago pendiente de su orden #${num} por ${total}.${cuotaTxt} ` +
-      `Quedamos atentos, gracias.`;
-    return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    const labels =
+      action === 'notify'
+        ? {
+            header: '¿Enviar recordatorio de pago?',
+            content: `Le enviamos un WhatsApp a ${order.name} (${order.phone}) recordándole el pago pendiente de la orden #${num}.`,
+          }
+        : {
+            header: '¿Enviar la factura?',
+            content: `Le enviamos un WhatsApp a ${order.name} (${order.phone}) con el PDF de la factura de la orden #${num}.`,
+          };
+    this.confirmDialogService
+      .warning({
+        headerLabel: labels.header,
+        contentLabel: labels.content,
+        acceptLabel: 'Enviar',
+        rejectLabel: 'Cancelar',
+      })
+      .subscribe((result) => {
+        result.fold(
+          () => {
+            // Usuario canceló
+          },
+          () => void this.executeWhatsAppAction(order, action)
+        );
+      });
+  }
+
+  private async executeWhatsAppAction(
+    order: Order,
+    action: 'notify' | 'invoice'
+  ): Promise<void> {
+    this.sendingActionId.set(order.id);
+    this.toastService.wait(
+      action === 'invoice'
+        ? 'Generando y enviando la factura...'
+        : 'Enviando recordatorio...'
+    );
+    try {
+      let pdf: { url: string; filename: string } | undefined;
+      if (action === 'invoice') {
+        // Mismo criterio de Bs que la descarga manual del PDF.
+        const rendered = await this.orderPdf.download(
+          { ...order, totalBs: this.orderBs(order) },
+          undefined,
+          { as: 'blob' }
+        );
+        if (!rendered) throw new Error('pdf_failed');
+        const tenantId = await this.tenantStore.getTenantIdAsync();
+        if (!tenantId) throw new Error('no_tenant');
+        const uploaded = await this.orderService.uploadInvoicePdf(
+          tenantId,
+          order.id,
+          rendered.blob,
+          rendered.filename
+        );
+        if (uploaded.isLeft()) throw uploaded.value;
+        pdf = uploaded.value as { url: string; filename: string };
+      }
+      const sent = await this.orderService.sendOrderAction(order.id, action, pdf);
+      sent.fold(
+        (error) => {
+          const msg =
+            error.message === 'plan_required'
+              ? 'Disponible en planes pagos. Mejorá tu plan para enviarle mensajes a tus clientes.'
+              : error.message === 'no_phone'
+                ? 'La orden no tiene un teléfono válido.'
+                : 'No se pudo enviar el mensaje. Probá de nuevo en unos minutos.';
+          this.toastService.error(new Exception(msg));
+        },
+        () =>
+          this.toastService.success(
+            action === 'invoice'
+              ? 'Factura enviada por WhatsApp'
+              : 'Recordatorio enviado por WhatsApp'
+          )
+      );
+    } catch {
+      this.toastService.error(
+        new Exception('No se pudo enviar el mensaje. Probá de nuevo en unos minutos.')
+      );
+    } finally {
+      this.sendingActionId.set(null);
+    }
   }
 
   /** Moneda de las métricas, según la config del catálogo (mismo criterio que la
