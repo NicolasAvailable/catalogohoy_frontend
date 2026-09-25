@@ -1389,7 +1389,9 @@
         </div>
       </ui-card>
 
-      <!-- Card: Conectar con Meta (OAuth — base de catálogo + pixel, CAT-64/65) -->
+      <!-- Card: Conectar con Meta (OAuth — base de catálogo + pixel, CAT-64/65).
+           Allowlist hasta pasar el App Review de Meta (ver isMetaConnectVisible). -->
+      @if (isMetaConnectVisible()) {
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
           <div class="card-header-left">
@@ -1556,6 +1558,7 @@
           }
         </div>
       </ui-card>
+      }
 
       <!-- Card: Píxel de Meta (marketing / ads) -->
       <ui-card styleClass="config-card">

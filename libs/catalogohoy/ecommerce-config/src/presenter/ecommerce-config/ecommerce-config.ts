@@ -102,6 +102,10 @@ const VALID_TABS: TabId[] = ['general', 'location', 'shipping', 'payments', 'soc
  *  RPC change_tenant_slug; acá solo se usa para la UI). */
 const SLUG_CHANGES_PER_MONTH = 2;
 
+/** Tenants que ven la card "Conectar con Meta" mientras dura el App Review
+ *  (6 = demo del revisor). Cambiar a `null` para abrirla a todos al aprobar. */
+const META_CONNECT_TENANT_ALLOWLIST: number[] | null = [6];
+
 /** Códigos de error de la RPC change_tenant_slug → mensaje para el usuario. */
 const SLUG_ERROR_MESSAGES: Record<string, string> = {
   limit_reached: 'Ya usaste los 2 cambios de dirección de este mes. Vas a poder cambiarla de nuevo más adelante.',
@@ -154,6 +158,16 @@ export class EcommerceConfigComponent implements OnInit {
   /** El Píxel de Meta + Conversions API son función de planes pagos: el plan
    *  gratis ve el campo bloqueado con CTA a mejorar plan. */
   public readonly isPixelLocked = computed(() => this.planStore.currentPlan()?.isFree ?? false);
+
+  /** "Conectar con Meta" (CAT-64/65) está gateado por allowlist hasta pasar el
+   *  App Review de Meta (Advanced Access): sin él, el OAuth solo funciona para
+   *  cuentas con rol en la app. `null` = visible para todos (post-aprobación).
+   *  El tenant 6 es el demo que usa el revisor (reviewer@catalogohoy.com). */
+  public readonly isMetaConnectVisible = computed(() => {
+    if (META_CONNECT_TENANT_ALLOWLIST === null) return true;
+    const tenantId = Number(this.configStore.config()?.tenantId ?? 0);
+    return META_CONNECT_TENANT_ALLOWLIST.includes(tenantId);
+  });
 
   /** Dominio personalizado del tenant actual (null si usa slug.catalogohoy.com).
    *  Con dominio propio vinculado, el cambio de dirección se deshabilita: la
