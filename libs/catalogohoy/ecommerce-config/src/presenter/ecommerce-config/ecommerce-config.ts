@@ -11,7 +11,6 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -68,7 +67,6 @@ import {
   DEFAULT_WHATSAPP_ORDER_MESSAGE,
   EcommerceConfig,
   ExchangeRateType,
-  MetaCatalogSync,
   NO_CURRENCY_SYMBOL,
   PreviewMessage,
   findCountryByCode,
@@ -102,9 +100,6 @@ const VALID_TABS: TabId[] = ['general', 'location', 'shipping', 'payments', 'soc
  *  RPC change_tenant_slug; acá solo se usa para la UI). */
 const SLUG_CHANGES_PER_MONTH = 2;
 
-/** Tenants que ven la card "Conectar con Meta" mientras dura el App Review
- *  (6 = demo del revisor). Cambiar a `null` para abrirla a todos al aprobar. */
-const META_CONNECT_TENANT_ALLOWLIST: number[] | null = [6];
 
 /** Códigos de error de la RPC change_tenant_slug → mensaje para el usuario. */
 const SLUG_ERROR_MESSAGES: Record<string, string> = {
@@ -137,7 +132,6 @@ const SLUG_ERROR_MESSAGES: Record<string, string> = {
     PhoneMockupComponent,
     TemplateSelectorComponent,
     DatePickerModule,
-    DatePipe,
     TranslocoPipe,
   ],
   templateUrl: './ecommerce-config.html',
@@ -158,16 +152,6 @@ export class EcommerceConfigComponent implements OnInit {
   /** El Píxel de Meta + Conversions API son función de planes pagos: el plan
    *  gratis ve el campo bloqueado con CTA a mejorar plan. */
   public readonly isPixelLocked = computed(() => this.planStore.currentPlan()?.isFree ?? false);
-
-  /** "Conectar con Meta" (CAT-64/65) está gateado por allowlist hasta pasar el
-   *  App Review de Meta (Advanced Access): sin él, el OAuth solo funciona para
-   *  cuentas con rol en la app. `null` = visible para todos (post-aprobación).
-   *  El tenant 6 es el demo que usa el revisor (reviewer@catalogohoy.com). */
-  public readonly isMetaConnectVisible = computed(() => {
-    if (META_CONNECT_TENANT_ALLOWLIST === null) return true;
-    const tenantId = Number(this.configStore.config()?.tenantId ?? 0);
-    return META_CONNECT_TENANT_ALLOWLIST.includes(tenantId);
-  });
 
   /** Dominio personalizado del tenant actual (null si usa slug.catalogohoy.com).
    *  Con dominio propio vinculado, el cambio de dirección se deshabilita: la
@@ -329,28 +313,6 @@ export class EcommerceConfigComponent implements OnInit {
    *  real. Snapshot de lo guardado para el dirty-check. */
   public readonly draftMetaCapiToken = signal<string>('');
   public readonly draftMetaCapiTestCode = signal<string | null>(null);
-  // Conexión de Meta Business por OAuth (base de CAT-64 catálogo + CAT-65 pixel).
-  public readonly metaConnected = signal(false);
-  public readonly metaBusinessName = signal<string | null>(null);
-  public readonly isConnectingMeta = signal(false);
-  // Commerce Catalog (CAT-64 Fase 2): selector de Business + estado del feed.
-  public readonly metaBusinessId = signal<string | null>(null);
-  public readonly metaBusinesses = signal<{ id: string; name: string }[]>([]);
-  public readonly metaCatalogId = signal<string | null>(null);
-  public readonly metaCatalogSync = signal<MetaCatalogSync | null>(null);
-  public readonly isProvisioningCatalog = signal(false);
-  public readonly isSyncingCatalog = signal(false);
-  public readonly isProvisioningPixel = signal(false);
-  public readonly metaBusinessOptions = computed(() =>
-    this.metaBusinesses().map((b) => ({ label: b.name, value: b.id }))
-  );
-  /** Link directo al catálogo en el Commerce Manager de Meta. */
-  public readonly metaCommerceUrl = computed(() => {
-    const id = this.metaCatalogId();
-    return id
-      ? `https://business.facebook.com/commerce/catalogs/${id}/products`
-      : null;
-  });
   private readonly lastSyncedMetaCapi = signal<{
     configured: boolean;
     testEventCode: string | null;
@@ -1100,8 +1062,6 @@ export class EcommerceConfigComponent implements OnInit {
       this.loadBusinessHours(String(tenantId));
       this.loadWhatsappNotifySettings(String(tenantId));
       this.loadMetaCapiStatus(String(tenantId));
-      this.loadMetaConnection(String(tenantId));
-      this.handleMetaReturn();
       this.loadSlugChanges(String(tenantId));
 
       // El slug del store es el confirmado en DB (en dev el de la URL
@@ -1148,177 +1108,6 @@ export class EcommerceConfigComponent implements OnInit {
         toast.success('Conversions API desconectada');
       }
     );
-  }
-
-  // ─────────────── Conexión de Meta Business por OAuth (CAT-64/65) ───────────────
-  private async loadMetaConnection(tenantId: string): Promise<void> {
-    const result = await this.configService.getMetaConnectionStatus(tenantId);
-    result.mapRight((s) => {
-      this.metaConnected.set(s.connected);
-      this.metaBusinessName.set(s.businessName);
-      this.metaBusinessId.set(s.businessId);
-      this.metaBusinesses.set(s.businesses);
-      this.metaCatalogId.set(s.catalogId);
-      // El detalle (conteo + última ingesta) llama a la Graph API: solo si ya
-      // hay catálogo publicado, y sin bloquear el render.
-      if (s.connected && s.catalogId) this.loadMetaCatalogStatus(tenantId);
-    });
-  }
-
-  private async loadMetaCatalogStatus(tenantId: string): Promise<void> {
-    const result = await this.configService.getMetaCatalogStatus(tenantId);
-    result.mapRight((sync) => this.metaCatalogSync.set(sync));
-  }
-
-  /** Publica el catálogo del tenant en Meta: crea el Commerce Catalog en el
-   *  Business elegido, registra el feed diario y dispara la primera sync. */
-  public async publishMetaCatalog(): Promise<void> {
-    const tenantId = this.configStore.config()?.tenantId;
-    if (!tenantId || this.isProvisioningCatalog()) return;
-    this.isProvisioningCatalog.set(true);
-    const result = await this.configService.provisionMetaCatalog(String(tenantId));
-    result.fold(
-      (err) => {
-        toast.error(err.message || 'No se pudo publicar el catálogo en Meta');
-      },
-      (sync) => {
-        this.metaCatalogId.set(sync?.catalogId ?? null);
-        this.metaCatalogSync.set(sync);
-        toast.success(
-          'Catálogo publicado en Meta. Tus productos se sincronizan todos los días.'
-        );
-      }
-    );
-    this.isProvisioningCatalog.set(false);
-  }
-
-  /** Re-ingesta inmediata del feed (Meta tarda unos minutos en procesarla). */
-  public async syncMetaCatalogNow(): Promise<void> {
-    const tenantId = this.configStore.config()?.tenantId;
-    if (!tenantId || this.isSyncingCatalog()) return;
-    this.isSyncingCatalog.set(true);
-    const result = await this.configService.syncMetaCatalog(String(tenantId));
-    result.fold(
-      (err) => {
-        toast.error(err.message || 'No se pudo sincronizar el catálogo');
-      },
-      () => {
-        toast.success('Sincronización solicitada. Meta puede tardar unos minutos.');
-        this.loadMetaCatalogStatus(String(tenantId));
-      }
-    );
-    this.isSyncingCatalog.set(false);
-  }
-
-  /** CAT-65: configura el Píxel + CAPI automáticamente (adopta o crea el del
-   *  Business conectado). Llena la misma config que el modo manual, así que al
-   *  terminar recargamos config + estado CAPI para que ambas cards lo reflejen. */
-  public async provisionMetaPixel(): Promise<void> {
-    const tenantId = this.configStore.config()?.tenantId;
-    if (!tenantId || this.isProvisioningPixel()) return;
-    this.isProvisioningPixel.set(true);
-    const result = await this.configService.provisionMetaPixel(String(tenantId));
-    result.fold(
-      (err) => {
-        toast.error(err.message || 'No se pudo configurar el Píxel');
-        // Términos del Píxel sin aceptar: es un click único en Meta — lo abrimos.
-        if (err.tosUrl) window.open(err.tosUrl, '_blank', 'noopener');
-      },
-      () => {
-        toast.success('Píxel configurado. El seguimiento y la CAPI quedaron activos.');
-        this.configStore.reloadConfig(String(tenantId));
-        this.loadMetaCapiStatus(String(tenantId));
-        this.loadMetaConnection(String(tenantId));
-      }
-    );
-    this.isProvisioningPixel.set(false);
-  }
-
-  /** Cambia el Business (portfolio) donde vive el catálogo. Al cambiar, el
-   *  catálogo anterior deja de estar vinculado y hay que volver a publicar. */
-  public async changeMetaBusiness(businessId: string | null): Promise<void> {
-    const tenantId = this.configStore.config()?.tenantId;
-    if (!tenantId || !businessId || businessId === this.metaBusinessId()) return;
-    const result = await this.configService.selectMetaBusiness(
-      String(tenantId),
-      businessId
-    );
-    result.fold(
-      (err) => {
-        toast.error(err.message || 'No se pudo cambiar el portfolio');
-      },
-      () => {
-        this.metaBusinessId.set(businessId);
-        this.metaBusinessName.set(
-          this.metaBusinesses().find((b) => b.id === businessId)?.name ?? null
-        );
-        this.metaCatalogId.set(null);
-        this.metaCatalogSync.set(null);
-      }
-    );
-  }
-
-  /** Inicia el OAuth de Meta Business: redirige a Meta y vuelve al panel con
-   *  `?meta=connected`. Es la base compartida del catálogo (CAT-64) y el
-   *  Pixel/CAPI automático (CAT-65). */
-  public async connectMeta(): Promise<void> {
-    const tenantId = this.configStore.config()?.tenantId;
-    if (!tenantId || this.isConnectingMeta()) return;
-    this.isConnectingMeta.set(true);
-    const result = await this.configService.startMetaConnect(
-      String(tenantId),
-      window.location.href
-    );
-    result.fold(
-      (err) => {
-        toast.error(err.message || 'No se pudo iniciar la conexión con Meta');
-        this.isConnectingMeta.set(false);
-      },
-      (url) => {
-        window.location.href = url;
-      }
-    );
-  }
-
-  /** Desconecta Meta (borra la conexión local; el pixel manual, si hay, sigue). */
-  public async disconnectMeta(): Promise<void> {
-    const tenantId = this.configStore.config()?.tenantId;
-    if (!tenantId) return;
-    const result = await this.configService.disconnectMeta(String(tenantId));
-    result.fold(
-      () => {
-        toast.error('No se pudo desconectar Meta');
-      },
-      () => {
-        this.metaConnected.set(false);
-        this.metaBusinessName.set(null);
-        this.metaBusinessId.set(null);
-        this.metaBusinesses.set([]);
-        this.metaCatalogId.set(null);
-        this.metaCatalogSync.set(null);
-        toast.success('Meta desconectado');
-      }
-    );
-  }
-
-  /** Al volver del OAuth de Meta, mostramos el resultado y limpiamos el query. */
-  private handleMetaReturn(): void {
-    const meta = this.route.snapshot.queryParamMap.get('meta');
-    if (!meta) return;
-    if (meta === 'connected') {
-      toast.success('Meta conectado correctamente');
-    } else if (meta === 'connected_nobusiness') {
-      toast.success(
-        'Meta conectado. No encontramos un Business Manager; creá uno para publicar el catálogo.'
-      );
-    } else if (meta === 'error') {
-      toast.error('No se pudo conectar con Meta. Intentá de nuevo.');
-    }
-    this.router.navigate([], {
-      queryParams: { meta: null },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
-    });
   }
 
   /** Tras cambiar el slug, el subdominio actual del admin deja de existir:

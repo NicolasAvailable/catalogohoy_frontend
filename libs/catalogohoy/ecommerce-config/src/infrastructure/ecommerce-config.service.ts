@@ -652,12 +652,20 @@ export class EcommerceConfigService {
     };
   }
 
-  /** Estado del catálogo publicado (productos que ve Meta + última ingesta). */
-  async getMetaCatalogStatus(
-    tenantId: string
-  ): Promise<E.Either<Error, MetaCatalogSync | null>> {
+  /** Estado del canal Meta: catálogo publicado (productos que ve Meta + última
+   *  ingesta) + pixel/CAPI (misma config que usa el runtime). */
+  async getMetaCatalogStatus(tenantId: string): Promise<
+    E.Either<
+      Error,
+      { sync: MetaCatalogSync | null; pixelId: string | null; capiOk: boolean }
+    >
+  > {
     const result = await this.invokeMetaCatalog(tenantId, 'status');
-    return result.mapRight((d) => this.toCatalogSync(d));
+    return result.mapRight((d) => ({
+      sync: this.toCatalogSync(d),
+      pixelId: typeof d['pixelId'] === 'string' ? d['pixelId'] : null,
+      capiOk: !!d['capiOk'],
+    }));
   }
 
   /** Crea el Commerce Catalog en el Business + registra el feed diario y

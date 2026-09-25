@@ -1,0 +1,222 @@
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+
+  <!-- Hero del canal -->
+  <ui-card styleClass="config-card">
+    <div class="flex flex-col md:flex-row items-center gap-8 p-2 sm:p-4">
+      <div class="flex-1 min-w-0">
+        <p class="text-[11px] font-bold tracking-widest text-grey-400 uppercase">
+          Meta · Instagram · Facebook
+        </p>
+        <h1 class="text-2xl font-bold text-grey-800 mt-2 leading-snug">
+          {{ 'Tus productos, en las redes donde tus clientes pasan más tiempo.' | transloco }}
+        </h1>
+        <p class="text-sm text-grey-500 mt-3">
+          {{ 'Conectá tu cuenta de Meta una sola vez: tu catálogo se publica y se mantiene sincronizado en Facebook e Instagram, y el Píxel queda configurado solo, sin pegar códigos ni tokens.' | transloco }}
+        </p>
+
+        @if (!metaConnected()) {
+        <div class="mt-5 flex items-center gap-3">
+          <ui-button
+            [label]="'Conectar con Meta' | transloco"
+            severity="primary"
+            [fluid]="false"
+            [isLoading]="isConnectingMeta()"
+            [disabled]="isConnectingMeta() || isLocked()"
+            (click)="connectMeta()"
+          />
+          @if (isLocked()) {
+          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none">
+            <ui-icon name="crown" styleClass="w-2.5 h-2.5 text-indigo-500" />
+            {{ 'Pro' | transloco }}
+          </span>
+          }
+        </div>
+        } @else {
+        <div class="mt-5 flex flex-wrap items-center gap-3">
+          <p class="text-sm font-semibold text-green-600">
+            {{ 'Meta conectado' | transloco }}
+            @if (metaBusinessName()) {
+            <span class="font-normal text-grey-500">· {{ metaBusinessName() }}</span>
+            }
+          </p>
+          <button
+            type="button"
+            class="text-xs font-medium text-grey-300 hover:text-red-500 transition-colors cursor-pointer"
+            (click)="disconnectMeta()"
+          >
+            {{ 'Desconectar' | transloco }}
+          </button>
+        </div>
+        @if (metaBusinessOptions().length > 1) {
+        <div class="mt-3 max-w-xs">
+          <label class="block text-xs font-medium text-grey-500 mb-1">
+            {{ 'Portfolio comercial' | transloco }}
+          </label>
+          <ui-select
+            [options]="metaBusinessOptions()"
+            [ngModel]="metaBusinessId()"
+            (ngModelChange)="changeMetaBusiness($event)"
+            optionLabel="label"
+            optionValue="value"
+          ></ui-select>
+        </div>
+        }
+        }
+      </div>
+
+      <div class="hidden md:flex items-center justify-center w-44 h-44 shrink-0 rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-pink-50 border border-grey-50">
+        <ui-icon name="meta$" styleClass="w-20 h-20 text-indigo-500" />
+      </div>
+    </div>
+  </ui-card>
+
+  <!-- Beneficios -->
+  <div>
+    <h2 class="text-lg font-bold text-grey-800 mb-3">
+      {{ 'El impulso que tu catálogo estaba necesitando:' | transloco }}
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <ui-card styleClass="config-card h-full">
+        <div class="p-2">
+          <div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary-50 mb-3">
+            <ui-icon name="refresh-cw" styleClass="w-5 h-5 text-primary-600" />
+          </div>
+          <h3 class="text-sm font-bold text-grey-800">{{ 'Tu catálogo sincronizado' | transloco }}</h3>
+          <p class="text-xs text-grey-500 mt-1.5">
+            {{ 'Tus productos siempre actualizados en Facebook e Instagram: precios, fotos, variantes y stock, sin trabajo manual.' | transloco }}
+          </p>
+        </div>
+      </ui-card>
+      <ui-card styleClass="config-card h-full">
+        <div class="p-2">
+          <div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary-50 mb-3">
+            <ui-icon name="trending-up" styleClass="w-5 h-5 text-primary-600" />
+          </div>
+          <h3 class="text-sm font-bold text-grey-800">{{ 'Píxel y CAPI automáticos' | transloco }}</h3>
+          <p class="text-xs text-grey-500 mt-1.5">
+            {{ 'La medición de visitas, carritos y pedidos queda activa sola, lista para tus campañas y públicos.' | transloco }}
+          </p>
+        </div>
+      </ui-card>
+      <ui-card styleClass="config-card h-full">
+        <div class="p-2">
+          <div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary-50 mb-3">
+            <ui-icon name="sparkles" styleClass="w-5 h-5 text-primary-600" />
+          </div>
+          <h3 class="text-sm font-bold text-grey-800">{{ 'Anuncios que venden' | transloco }}</h3>
+          <p class="text-xs text-grey-500 mt-1.5">
+            {{ 'Catálogo y Píxel conectados para anuncios dinámicos: cada persona ve el producto que le interesa.' | transloco }}
+          </p>
+        </div>
+      </ui-card>
+    </div>
+  </div>
+
+  @if (metaConnected()) {
+  <!-- Catálogo en Facebook e Instagram -->
+  <ui-card styleClass="config-card">
+    <div class="p-2">
+      <div class="flex items-center gap-2 mb-1">
+        <ui-icon name="store" styleClass="w-4 h-4 text-grey-700" />
+        <h2 class="text-base font-bold text-grey-800">{{ 'Catálogo en Facebook e Instagram' | transloco }}</h2>
+      </div>
+      @if (!metaCatalogId()) {
+      <p class="text-sm text-grey-500 mt-1">
+        {{ 'Publicá tus productos como catálogo en Facebook e Instagram: se crea una sola vez y se mantiene sincronizado solo.' | transloco }}
+      </p>
+      <div class="mt-4">
+        <ui-button
+          [label]="'Publicar catálogo' | transloco"
+          severity="primary"
+          [fluid]="false"
+          [isLoading]="isProvisioningCatalog()"
+          [disabled]="isProvisioningCatalog()"
+          (click)="publishMetaCatalog()"
+        />
+      </div>
+      } @else {
+      <div class="flex flex-wrap items-center justify-between gap-3 mt-2">
+        <div>
+          <p class="text-sm font-semibold text-green-600">
+            {{ 'Catálogo publicado' | transloco }}
+            @if (metaCatalogSync(); as sync) {
+            @if (sync.productCount !== null) {
+            <span class="font-normal text-grey-500">
+              · {{ sync.productCount }} {{ 'productos' | transloco }}
+            </span>
+            }
+            }
+          </p>
+          @if (metaCatalogSync(); as sync) {
+          @if (sync.lastSyncEnd) {
+          <p class="text-xs text-grey-400 mt-0.5">
+            {{ 'Última sincronización' | transloco }}:
+            {{ sync.lastSyncEnd | date: 'dd/MM/yy HH:mm' }}
+            @if (sync.errorCount > 0) {
+            <span class="text-red-500">
+              · {{ sync.errorCount }} {{ 'errores' | transloco }}
+            </span>
+            }
+          </p>
+          }
+          }
+        </div>
+        <div class="flex items-center gap-4">
+          <button
+            type="button"
+            class="text-xs font-medium text-grey-500 hover:text-primary transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
+            [disabled]="isSyncingCatalog()"
+            (click)="syncMetaCatalogNow()"
+          >
+            {{ 'Sincronizar ahora' | transloco }}
+          </button>
+          @if (metaCommerceUrl(); as url) {
+          <a
+            [href]="url"
+            target="_blank"
+            rel="noopener"
+            class="text-xs font-medium text-primary hover:underline whitespace-nowrap"
+          >
+            {{ 'Ver en Meta' | transloco }}
+          </a>
+          }
+        </div>
+      </div>
+      }
+    </div>
+  </ui-card>
+
+  <!-- Píxel + Conversions API -->
+  <ui-card styleClass="config-card">
+    <div class="p-2">
+      <div class="flex items-center gap-2 mb-1">
+        <ui-icon name="trending-up" styleClass="w-4 h-4 text-grey-700" />
+        <h2 class="text-base font-bold text-grey-800">{{ 'Píxel y Conversions API' | transloco }}</h2>
+      </div>
+      @if (!metaPixelId()) {
+      <p class="text-sm text-grey-500 mt-1">
+        {{ 'Configurá el Píxel de Meta automáticamente: se crea en tu portfolio y el seguimiento de visitas, carritos y pedidos queda activo sin pegar IDs ni tokens.' | transloco }}
+      </p>
+      <div class="mt-4">
+        <ui-button
+          [label]="'Configurar Píxel automáticamente' | transloco"
+          severity="primary"
+          [fluid]="false"
+          [isLoading]="isProvisioningPixel()"
+          [disabled]="isProvisioningPixel()"
+          (click)="provisionMetaPixel()"
+        />
+      </div>
+      } @else {
+      <p class="text-sm font-semibold text-green-600 mt-2">
+        {{ 'Píxel activo' | transloco }}
+        <span class="font-normal text-grey-500">· {{ metaPixelId() }}</span>
+        @if (metaCapiOk()) {
+        <span class="font-normal text-grey-500">· {{ 'CAPI conectada' | transloco }}</span>
+        }
+      </p>
+      }
+    </div>
+  </ui-card>
+  }
+</div>

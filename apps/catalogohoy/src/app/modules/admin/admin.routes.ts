@@ -69,6 +69,15 @@ export const adminRoutes: Route[] = [
       import('@catalogohoy/ecommerce-config').then((m) => m.CreateCatalog),
   },
   {
+    // Canal "Instagram y Facebook" (Conectar Meta: catálogo + píxel, CAT-64/65).
+    // La vista se auto-gatea por META_CHANNEL_ALLOWED_SLUGS hasta el App Review.
+    path: 'meta',
+    title: 'Instagram y Facebook',
+    canActivate: [teamPermissionGuard('catalogo', 'edit')],
+    loadComponent: () =>
+      import('@catalogohoy/ecommerce-config').then((m) => m.MetaChannelView),
+  },
+  {
     path: 'plans',
     title: 'Planes',
     loadChildren: () =>
