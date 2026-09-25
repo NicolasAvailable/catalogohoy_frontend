@@ -2535,5 +2535,9 @@
   "Tu navegador no soporta impresión por USB. Usá Chrome o Edge de escritorio.": "Tu navegador no soporta impresión por USB. Usá Chrome o Edge de escritorio.",
   "caracteres": "caracteres",
   "por": "por",
-  "Recibido": "Recibido"
+  "Recibido": "Recibido",
+  "La impresión por USB necesita HTTPS. Abrí el Punto de Venta desde el enlace seguro (https://).": "La impresión por USB necesita HTTPS. Abrí el Punto de Venta desde el enlace seguro (https://).",
+  "Tu navegador no soporta impresión por USB. Usá Google Chrome o Microsoft Edge de ESCRITORIO (no funciona en celular, Safari ni Firefox).": "Tu navegador no soporta impresión por USB. Usá Google Chrome o Microsoft Edge de ESCRITORIO (no funciona en celular, Safari ni Firefox).",
+  "La impresora está tomada por el driver del sistema. En Windows: cerrá otras apps de impresión, o instalá el driver WinUSB para esta impresora con Zadig y reintentá.": "La impresora está tomada por el driver del sistema. En Windows: cerrá otras apps de impresión, o instalá el driver WinUSB para esta impresora con Zadig y reintentá.",
+  "No se pudo conectar la impresora. Verificá que esté encendida y conectada por USB.": "No se pudo conectar la impresora. Verificá que esté encendida y conectada por USB."
 }

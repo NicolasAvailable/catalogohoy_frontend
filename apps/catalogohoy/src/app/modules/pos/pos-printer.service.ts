@@ -73,7 +73,9 @@ interface UsbDevice {
   transferOut(endpoint: number, data: BufferSource): Promise<unknown>;
 }
 interface UsbApi {
-  requestDevice(opts: { filters: { classCode?: number }[] }): Promise<UsbDevice>;
+  requestDevice(opts: {
+    filters: { classCode?: number; vendorId?: number; productId?: number }[];
+  }): Promise<UsbDevice>;
 }
 
 const ESC = 0x1b;
@@ -156,9 +158,40 @@ export class PosPrinterService {
   /** Pide al usuario elegir la impresora USB y reclama su endpoint de salida. */
   async connect(): Promise<{ ok: boolean; name?: string; error?: string }> {
     const usb = this.usb;
-    if (!usb) return { ok: false, error: 'Tu navegador no soporta impresión por USB (usá Chrome/Edge de escritorio).' };
+    if (!usb) {
+      // WebUSB solo existe en Chromium de escritorio y en contexto seguro (HTTPS).
+      const insecure =
+        typeof window !== 'undefined' &&
+        !window.isSecureContext;
+      return {
+        ok: false,
+        error: insecure
+          ? 'La impresión por USB necesita HTTPS. Abrí el Punto de Venta desde el enlace seguro (https://).'
+          : 'Tu navegador no soporta impresión por USB. Usá Google Chrome o Microsoft Edge de ESCRITORIO (no funciona en celular, Safari ni Firefox).',
+      };
+    }
     try {
-      const device = await usb.requestDevice({ filters: [{ classCode: 7 }] });
+      // Filtro amplio: la clase 7 (impresora) NO cubre a muchas térmicas
+      // económicas, que se enumeran como clase "vendor". Sumamos los vendor IDs
+      // más comunes (Epson, Star, Bixolon, Citizen, y los chips genéricos
+      // WCH/Winbond, STM, GD32, Prolific que usan las 58/80mm chinas) para que
+      // aparezcan en el selector del navegador.
+      const device = await usb.requestDevice({
+        filters: [
+          { classCode: 7 }, // clase impresora estándar
+          { vendorId: 0x04b8 }, // Epson
+          { vendorId: 0x0519 }, // Star Micronics
+          { vendorId: 0x1504 }, // Bixolon
+          { vendorId: 0x1d90 }, // Citizen
+          { vendorId: 0x0416 }, // WCH/Winbond (genéricas)
+          { vendorId: 0x28e9 }, // GD32 (genéricas)
+          { vendorId: 0x0483 }, // STMicroelectronics
+          { vendorId: 0x067b }, // Prolific
+          { vendorId: 0x0dd4 }, // Custom/Citizen
+          { vendorId: 0x6868 }, // genéricas
+          { vendorId: 0x0fe6 }, // ICS Advent (genéricas)
+        ],
+      });
       await device.open();
       if (!device.configuration) await device.selectConfiguration(1);
       const config = device.configuration ?? device.configurations[0];
@@ -186,12 +219,31 @@ export class PosPrinterService {
       this.deviceName.set(name);
       return { ok: true, name };
     } catch (e) {
-      // El usuario canceló el selector, o error de permiso/dispositivo.
-      const msg = (e as Error)?.message || '';
-      if (/no device selected|cancel/i.test(msg)) {
-        return { ok: false, error: '' }; // cancelado, sin ruido
+      const err = e as Error & { name?: string };
+      const name = err?.name || '';
+      const msg = err?.message || '';
+      const both = `${name} ${msg}`;
+      // El usuario cerró el selector sin elegir (o no había ninguna): sin ruido.
+      if (/NotFoundError/i.test(name) || /no device selected|cancel/i.test(msg)) {
+        return { ok: false, error: '' };
       }
-      return { ok: false, error: 'No se pudo conectar la impresora.' };
+      // En Windows el driver del sistema (usbprint) suele tomar la impresora y
+      // WebUSB no puede reclamar la interfaz. Es el caso más común de fallo.
+      if (/claim|access|SecurityError|InvalidStateError|NetworkError|in use|busy/i.test(both)) {
+        return {
+          ok: false,
+          error:
+            'La impresora está tomada por el driver del sistema. En Windows: cerrá otras apps de impresión, o instalá el driver WinUSB para esta impresora con Zadig y reintentá.',
+        };
+      }
+      // Cualquier otro: mostramos el detalle real para poder diagnosticar (antes
+      // se ocultaba tras un genérico y el cliente veía un toast vacío).
+      return {
+        ok: false,
+        error: msg
+          ? `No se pudo conectar la impresora: ${msg}`
+          : 'No se pudo conectar la impresora. Verificá que esté encendida y conectada por USB.',
+      };
     }
   }
 

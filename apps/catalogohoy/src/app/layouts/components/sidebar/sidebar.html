@@ -208,20 +208,6 @@
     <!-- ── Canales de venta ── -->
     <li class="my-1.5 mx-2 border-t border-grey-50" aria-hidden="true"></li>
 
-    <!-- Punto de venta (pantalla full-screen /pos) — solo planes Avanzado/Enterprise -->
-    @if (canViewPos()) {
-      <li>
-        <a
-          routerLink="/pos"
-          class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
-          [pTooltip]="'Punto de venta' | transloco"
-          tooltipPosition="right"
-        >
-          <ui-icon name="shopping-cart" size="18" styleClass="text-grey-700" />
-        </a>
-      </li>
-    }
-
     <!-- Mi catálogo (flyout) -->
     @if (canViewCatalog()) {
     <li
@@ -256,6 +242,22 @@
       </div>
       }
     </li>
+    }
+
+    <!-- Punto de venta: DEBAJO de Mi catálogo, abre en VENTANA nueva del
+         navegador (estilo TiendaNube). Solo planes Avanzado/Enterprise. -->
+    @if (canViewPos()) {
+      <li>
+        <a
+          href="/pos"
+          (click)="openPos($event)"
+          class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+          [pTooltip]="'Punto de venta' | transloco"
+          tooltipPosition="right"
+        >
+          <ui-icon name="shopping-cart" size="18" styleClass="text-grey-700" />
+        </a>
+      </li>
     }
 
     <!-- Instagram y Facebook (canal Meta; allowlist hasta App Review) -->
@@ -414,7 +416,7 @@
     </div>
     }
   </div>
-  <ul class="flex flex-col gap-1.5 w-full h-full px-3">
+  <ul class="flex flex-col gap-1.5 w-full flex-1 min-h-0 overflow-y-auto px-3">
     <li
       routerLink="/admin"
       routerLinkActive="bg-primary-50"
@@ -630,21 +632,6 @@
       <span class="text-[11px] font-semibold uppercase tracking-wider text-grey-300">{{ 'Canales de venta' | transloco }}</span>
     </li>
 
-    @if (canViewPos()) {
-      <li
-        routerLink="/pos"
-        class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out cursor-pointer"
-      >
-        <div class="flex items-center gap-2">
-          <ui-icon name="shopping-cart" size="16" />
-          <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Punto de venta' | transloco }}</a>
-        </div>
-        <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
-          {{ 'Nuevo' | transloco }}
-        </span>
-      </li>
-    }
-
     <li class="flex items-center gap-2 w-full rounded-md">
       @if (!canViewCatalog()) {
         <div
@@ -686,6 +673,26 @@
         </ui-panel-menu>
       }
     </li>
+
+    <!-- Punto de venta: DEBAJO de Mi catálogo, abre en VENTANA nueva del
+         navegador (estilo TiendaNube). Solo planes Avanzado/Enterprise. -->
+    @if (canViewPos()) {
+      <li>
+        <a
+          href="/pos"
+          (click)="openPos($event)"
+          class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out cursor-pointer"
+        >
+          <div class="flex items-center gap-2">
+            <ui-icon name="shopping-cart" size="16" />
+            <span class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Punto de venta' | transloco }}</span>
+          </div>
+          <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
+            {{ 'Nuevo' | transloco }}
+          </span>
+        </a>
+      </li>
+    }
 
     <!-- Instagram y Facebook (canal Meta: catálogo + píxel; allowlist hasta App Review) -->
     @if (canViewMetaChannel()) {
