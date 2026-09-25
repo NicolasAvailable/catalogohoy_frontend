@@ -1,7 +1,7 @@
 <div class="pos-root">
   <!-- ── Barra lateral (rail solo-iconos, estilo TiendaNube) ── -->
   <nav class="pos-rail">
-    <a class="rail-logo" [class.has-img]="catalogLogo()" routerLink="/admin" [pTooltip]="'Volver al panel' | transloco" tooltipPosition="right">
+    <a class="rail-logo" [class.has-img]="catalogLogo()" routerLink="/pos" [pTooltip]="'Inicio' | transloco" tooltipPosition="right">
       @if (catalogLogo()) {
         <img [src]="catalogLogo()" [alt]="catalogName()" />
       } @else {
@@ -33,6 +33,17 @@
     >
       <ui-icon name="settings" styleClass="size-6" />
     </a>
+
+    <!-- Último: salir del POS (cierra la ventana / vuelve al panel del admin) -->
+    <button
+      type="button"
+      class="rail-item rail-exit"
+      (click)="exitPos()"
+      [pTooltip]="'Volver al panel' | transloco"
+      tooltipPosition="right"
+    >
+      <ui-icon name="log-out" styleClass="size-6" />
+    </button>
   </nav>
 
   <!-- ── Contenido ── -->
@@ -63,9 +74,9 @@
             }
           </div>
         </div>
-        <a class="tb-exit" routerLink="/admin" [pTooltip]="'Salir' | transloco" tooltipPosition="bottom">
+        <button type="button" class="tb-exit" (click)="exitPos()" [pTooltip]="'Salir' | transloco" tooltipPosition="bottom">
           <ui-icon name="log-out" styleClass="size-6" />
-        </a>
+        </button>
       </div>
     </header>
 

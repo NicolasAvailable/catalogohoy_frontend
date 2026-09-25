@@ -87,6 +87,18 @@
 .rail-gear {
   margin-top: 0.5rem;
 }
+/* Botón de salir (último del rail): reset de <button> + acento de salida. */
+.rail-exit {
+  margin-top: 0.15rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+.rail-exit:hover {
+  color: #e5484d;
+  background: rgba(229, 72, 77, 0.1);
+}
 
 /* ── Main ── */
 .pos-main {
@@ -174,6 +186,9 @@
   margin-left: 0.35rem;
   border-radius: 0.6rem;
   color: var(--top-soft);
+  border: none;
+  background: transparent;
+  cursor: pointer;
 }
 .tb-exit:hover {
   background: var(--content-bg);

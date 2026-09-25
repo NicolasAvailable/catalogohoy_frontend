@@ -61,6 +61,18 @@ export default class PosShell implements OnInit {
    *  el rail cae al ícono de tienda. */
   readonly catalogLogo = computed(() => this.configStore.config()?.logo || null);
 
+  /** Salir del POS. Como el POS se abre en una VENTANA nueva (window.open desde
+   *  el admin), lo natural es CERRAR esa ventana y devolver el foco al panel. Si
+   *  se entró directo a /pos escribiendo la URL (sin ventana padre), el navegador
+   *  bloquea window.close() → navegamos al admin. */
+  exitPos(): void {
+    if (window.opener && !window.opener.closed) {
+      window.close();
+      return;
+    }
+    window.location.href = '/admin';
+  }
+
   ngOnInit(): void {
     // El shell es el único componente siempre montado del POS: deja listos el
     // config/moneda (para el símbolo en todas las vistas) y la caja abierta
