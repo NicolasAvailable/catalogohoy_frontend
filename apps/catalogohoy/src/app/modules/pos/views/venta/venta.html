@@ -450,6 +450,14 @@
         </button>
       </header>
 
+      <!-- VE: total en bolívares a la tasa del día (oculto si no hay tasa) -->
+      @if (chargeTotalBs() > 0) {
+        <p class="cobrar-bs">
+          {{ 'Total Bs' | transloco }}:
+          <strong>Bs. {{ chargeTotalBs() | number: '1.2-2' }}</strong>
+        </p>
+      }
+
       <p class="modal-sub">{{ 'Medio de pago' | transloco }}</p>
       <div class="pay-methods">
         @for (m of payMethods(); track m.label) {
@@ -517,6 +525,9 @@
       </div>
       <h3 class="success-title">{{ 'Venta cobrada' | transloco }}</h3>
       <p class="success-total">{{ cs() }}{{ sale.total | number: '1.2-2' }}</p>
+      @if (sale.totalBs > 0) {
+        <p class="success-bs">Bs. {{ sale.totalBs | number: '1.2-2' }}</p>
+      }
       @if (sale.number != null) {
         <p class="success-num">{{ 'Comprobante' | transloco }} #{{ sale.number }}</p>
       }

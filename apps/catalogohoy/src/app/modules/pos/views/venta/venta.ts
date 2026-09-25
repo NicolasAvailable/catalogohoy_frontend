@@ -29,7 +29,7 @@ import {
 import { RateStore } from '@catalogohoy/rate';
 import { TenantStore } from '@catalogohoy/tenant';
 import { RouterLink } from '@angular/router';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { TooltipModule } from 'primeng/tooltip';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
@@ -64,6 +64,8 @@ interface PosSaleReceipt {
   /** Ajuste del medio de pago (recargo + / descuento −). 0 = sin ajuste. */
   adjustAmount: number;
   total: number;
+  /** Total en bolívares a la tasa del día (VE). 0 = sin tasa activa. */
+  totalBs: number;
   method: string;
   received: number | null;
   change: number;
@@ -98,6 +100,7 @@ export default class PosVenta implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly posPrinter = inject(PosPrinterService);
+  private readonly transloco = inject(TranslocoService);
 
   private static readonly DEFAULT_METHODS: PayMethod[] = [
     { label: 'Efectivo', icon: 'banknote', adjust: 0 },
@@ -201,6 +204,12 @@ export default class PosVenta implements OnInit {
   /** Total REAL a cobrar = carrito + envío ± ajuste del medio de pago. */
   readonly chargeTotal = computed(() =>
     Math.max(0, this.cart.total() + this.shipping() + this.adjustAmount())
+  );
+
+  /** Total a cobrar en bolívares a la tasa del día (VE). 0 = sin tasa activa
+   *  (el resto de países) → la UI no muestra la línea Bs. */
+  readonly chargeTotalBs = computed(
+    () => this.chargeTotal() * this.exchangeRate()
   );
 
   /** El medio elegido es efectivo → mostramos el campo "recibido" y el vuelto. */
@@ -628,7 +637,7 @@ export default class PosVenta implements OnInit {
       status: 'completed' as OrderStatus,
       products: this.toOrderItems(),
       totalUsd: this.chargeTotal(),
-      totalBs: this.chargeTotal() * this.exchangeRate(),
+      totalBs: this.chargeTotalBs(),
       deliveryDate: this.toIsoDate(new Date()),
       paymentMethod: this.cart.paymentMethod() || undefined,
       shippingFee: this.shipping() || undefined,
@@ -691,6 +700,7 @@ export default class PosVenta implements OnInit {
       shipping: this.shipping(),
       adjustAmount: this.adjustAmount(),
       total: this.chargeTotal(),
+      totalBs: this.chargeTotalBs(),
       method: this.cart.paymentMethod(),
       received: this.amountReceived(),
       change: this.change(),
@@ -706,11 +716,31 @@ export default class PosVenta implements OnInit {
 
   /** Abre el comprobante en una ventana e invoca la impresión del navegador
    *  (formato ticket 80 mm). Usa el encabezado/pie/logo de la Configuración. */
+  /** Etiquetas del comprobante en el idioma activo. El ticket (HTML/ESC-POS)
+   *  y el texto de WhatsApp se generan fuera de las plantillas Angular, así
+   *  que no pasan por el pipe transloco. */
+  private receiptLabels() {
+    const t = (key: string) => this.transloco.translate(key);
+    return {
+      subtotal: t('Subtotal'),
+      discount: t('Descuento'),
+      shipping: t('Envío'),
+      surcharge: t('Recargo'),
+      total: t('Total').toUpperCase(),
+      totalBs: t('Total Bs'),
+      payment: t('Pago'),
+      received: t('Recibido'),
+      change: t('Vuelto'),
+      receipt: t('Comprobante'),
+    };
+  }
+
   async printReceipt(): Promise<void> {
     const sale = this.lastSale();
     if (!sale) return;
     const t = this.settings.ticket();
     const cs = this.cs();
+    const L = this.receiptLabels();
 
     // Si hay una impresora térmica conectada por USB, imprimir por ESC-POS.
     if (this.posPrinter.connected()) {
@@ -729,8 +759,10 @@ export default class PosVenta implements OnInit {
           adjustAmount: sale.adjustAmount,
           method: sale.method,
           total: sale.total,
+          totalBs: sale.totalBs,
           received: sale.received,
           change: sale.change,
+          labels: L,
         },
         this.settings.printer().width
       );
@@ -772,13 +804,14 @@ export default class PosVenta implements OnInit {
       <div class="rule"></div>
       ${rows}
       <div class="rule"></div>
-      <div class="r"><span>Subtotal</span><span>${money(sale.subtotal)}</span></div>
-      ${sale.discount > 0 ? `<div class="r"><span>Descuento</span><span>-${money(sale.discount)}</span></div>` : ''}
-      ${sale.shipping > 0 ? `<div class="r"><span>Envío</span><span>${money(sale.shipping)}</span></div>` : ''}
-      ${sale.adjustAmount ? `<div class="r"><span>${sale.adjustAmount > 0 ? 'Recargo' : 'Descuento'} (${esc(sale.method)})</span><span>${sale.adjustAmount > 0 ? '+' : '-'}${money(Math.abs(sale.adjustAmount))}</span></div>` : ''}
-      <div class="r tot"><span>TOTAL</span><span>${money(sale.total)}</span></div>
-      ${sale.method ? `<div class="r"><span>Pago</span><span>${esc(sale.method)}</span></div>` : ''}
-      ${sale.received != null ? `<div class="r"><span>Recibido</span><span>${money(sale.received)}</span></div><div class="r"><span>Vuelto</span><span>${money(sale.change)}</span></div>` : ''}
+      <div class="r"><span>${esc(L.subtotal)}</span><span>${money(sale.subtotal)}</span></div>
+      ${sale.discount > 0 ? `<div class="r"><span>${esc(L.discount)}</span><span>-${money(sale.discount)}</span></div>` : ''}
+      ${sale.shipping > 0 ? `<div class="r"><span>${esc(L.shipping)}</span><span>${money(sale.shipping)}</span></div>` : ''}
+      ${sale.adjustAmount ? `<div class="r"><span>${sale.adjustAmount > 0 ? esc(L.surcharge) : esc(L.discount)} (${esc(sale.method)})</span><span>${sale.adjustAmount > 0 ? '+' : '-'}${money(Math.abs(sale.adjustAmount))}</span></div>` : ''}
+      <div class="r tot"><span>${esc(L.total)}</span><span>${money(sale.total)}</span></div>
+      ${sale.totalBs > 0 ? `<div class="r tot"><span>${esc(L.totalBs)}</span><span>Bs. ${sale.totalBs.toFixed(2)}</span></div>` : ''}
+      ${sale.method ? `<div class="r"><span>${esc(L.payment)}</span><span>${esc(sale.method)}</span></div>` : ''}
+      ${sale.received != null ? `<div class="r"><span>${esc(L.received)}</span><span>${money(sale.received)}</span></div><div class="r"><span>${esc(L.change)}</span><span>${money(sale.change)}</span></div>` : ''}
       ${t.footer ? `<div class="c ft">${esc(t.footer)}</div>` : ''}
       </body></html>`;
     const w = window.open('', '_blank', 'width=380,height=640');
@@ -804,24 +837,26 @@ export default class PosVenta implements OnInit {
     const cs = this.cs();
     const money = (n: number) => `${cs}${n.toFixed(2)}`;
     const t = this.settings.ticket();
+    const L = this.receiptLabels();
     const parts: string[] = [];
     if (t.header) parts.push(`*${t.header}*`);
     parts.push(
-      `Comprobante${sale.number != null ? ` #${sale.number}` : ''} · ${sale.dateStr}`
+      `${L.receipt}${sale.number != null ? ` #${sale.number}` : ''} · ${sale.dateStr}`
     );
     parts.push('');
     for (const l of sale.lines) {
       parts.push(`• ${l.qty}× ${l.label} — ${money(l.total)}`);
     }
     parts.push('');
-    if (sale.discount > 0) parts.push(`Descuento: −${money(sale.discount)}`);
+    if (sale.discount > 0) parts.push(`${L.discount}: −${money(sale.discount)}`);
     if (sale.adjustAmount) {
       parts.push(
-        `${sale.adjustAmount > 0 ? 'Recargo' : 'Descuento'} (${sale.method}): ${sale.adjustAmount > 0 ? '+' : '−'}${money(Math.abs(sale.adjustAmount))}`
+        `${sale.adjustAmount > 0 ? L.surcharge : L.discount} (${sale.method}): ${sale.adjustAmount > 0 ? '+' : '−'}${money(Math.abs(sale.adjustAmount))}`
       );
     }
     parts.push(`*Total: ${money(sale.total)}*`);
-    if (sale.method) parts.push(`Pago: ${sale.method}`);
+    if (sale.totalBs > 0) parts.push(`*${L.totalBs}: Bs. ${sale.totalBs.toFixed(2)}*`);
+    if (sale.method) parts.push(`${L.payment}: ${sale.method}`);
     if (t.footer) {
       parts.push('');
       parts.push(t.footer);

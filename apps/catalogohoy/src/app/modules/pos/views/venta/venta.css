@@ -624,6 +624,16 @@
   font-size: 0.9rem;
   margin-top: -0.4rem;
 }
+/* VE: total en Bs bajo el título del modal de cobro */
+.cobrar-bs {
+  color: var(--text-soft);
+  font-size: 0.9rem;
+  margin-top: -0.4rem;
+}
+.cobrar-bs strong {
+  color: var(--text);
+  font-weight: 700;
+}
 .field {
   display: flex;
   flex-direction: column;
@@ -899,6 +909,13 @@
 .success-total {
   font-size: 2rem;
   font-weight: 800;
+}
+/* VE: equivalente en Bs bajo el total cobrado */
+.success-bs {
+  color: var(--text-soft);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-top: -0.4rem;
 }
 .success-num {
   color: var(--text-soft);

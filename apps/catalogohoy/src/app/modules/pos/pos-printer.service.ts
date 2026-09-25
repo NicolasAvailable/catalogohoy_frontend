@@ -22,8 +22,26 @@ export interface ThermalReceipt {
   adjustAmount: number;
   method: string;
   total: number;
+  /** Total en bolívares (VE); 0 u omitido = no se imprime la línea. */
+  totalBs?: number;
   received: number | null;
   change: number;
+  /** Etiquetas en el idioma del admin (el builder normaliza a ASCII);
+   *  si faltan, caen al español. */
+  labels?: Partial<
+    Record<
+      | 'subtotal'
+      | 'discount'
+      | 'shipping'
+      | 'surcharge'
+      | 'total'
+      | 'totalBs'
+      | 'payment'
+      | 'received'
+      | 'change',
+      string
+    >
+  >;
 }
 
 // ── Tipos mínimos de WebUSB (no siempre están en lib.dom) ───────────────────
@@ -244,22 +262,36 @@ export class PosPrinterService {
     for (const l of r.lines) {
       b.line(row(`${l.qty}x ${l.label}`, money(l.total)));
     }
+    const L = {
+      subtotal: 'Subtotal',
+      discount: 'Descuento',
+      shipping: 'Envio',
+      surcharge: 'Recargo',
+      total: 'TOTAL',
+      totalBs: 'Total Bs',
+      payment: 'Pago',
+      received: 'Recibido',
+      change: 'Vuelto',
+      ...r.labels,
+    };
     b.text('-'.repeat(cols)).feed();
-    b.line(row('Subtotal', money(r.subtotal)));
-    if (r.discount > 0) b.line(row('Descuento', '-' + money(r.discount)));
-    if (r.shipping > 0) b.line(row('Envio', money(r.shipping)));
+    b.line(row(L.subtotal, money(r.subtotal)));
+    if (r.discount > 0) b.line(row(L.discount, '-' + money(r.discount)));
+    if (r.shipping > 0) b.line(row(L.shipping, money(r.shipping)));
     if (r.adjustAmount)
       b.line(
         row(
-          `${r.adjustAmount > 0 ? 'Recargo' : 'Descuento'} (${r.method})`,
+          `${r.adjustAmount > 0 ? L.surcharge : L.discount} (${r.method})`,
           (r.adjustAmount > 0 ? '+' : '-') + money(Math.abs(r.adjustAmount))
         )
       );
-    b.bold(true).size(true).line(row('TOTAL', money(r.total))).size(false).bold(false);
-    if (r.method) b.line(row('Pago', r.method));
+    b.bold(true).size(true).line(row(L.total, money(r.total))).size(false).bold(false);
+    if (r.totalBs && r.totalBs > 0)
+      b.bold(true).line(row(L.totalBs, 'Bs. ' + r.totalBs.toFixed(2))).bold(false);
+    if (r.method) b.line(row(L.payment, r.method));
     if (r.received != null) {
-      b.line(row('Recibido', money(r.received)));
-      b.line(row('Vuelto', money(r.change)));
+      b.line(row(L.received, money(r.received)));
+      b.line(row(L.change, money(r.change)));
     }
     if (r.footer) {
       b.feed().align('center').line(r.footer);
