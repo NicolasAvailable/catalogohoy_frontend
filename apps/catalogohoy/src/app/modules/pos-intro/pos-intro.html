@@ -1,37 +1,96 @@
-<div class="pos-intro">
-  <div class="pos-intro__card">
-    <!-- Hero -->
-    <div class="pos-intro__hero">
-      <div class="pos-intro__art" aria-hidden="true">
-        <span class="pos-intro__awning"></span>
-        <ui-icon name="store" styleClass="size-14 text-primary-500" />
+<div class="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex flex-col gap-9 sm:gap-12">
+
+  <!-- ═══ Hero (mismo patrón que la landing de Meta) ═══ -->
+  <div class="flex flex-col items-center text-center gap-4">
+    <span class="w-14 h-14 rounded-2xl bg-white border border-grey-100 shadow-sm flex items-center justify-center text-primary-500">
+      <ui-icon name="store" styleClass="size-8" />
+    </span>
+
+    <h1 class="text-2xl md:text-[1.75rem] font-bold text-grey-800 max-w-2xl leading-tight text-balance">
+      {{ 'Tu aliado para vender en persona' | transloco }}
+    </h1>
+    <p class="text-base text-grey-500 max-w-xl leading-relaxed">
+      {{ 'Convertí tu catálogo en una caja registradora: registrá tus ventas físicas, descontá stock y llevá todo tu negocio en un solo lugar.' | transloco }}
+    </p>
+
+    <button
+      type="button"
+      class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary-500 text-white text-base font-semibold hover:bg-primary-600 transition-colors mt-1 cursor-pointer"
+      (click)="goToPos()"
+    >
+      {{ 'Ir a Punto de Venta' | transloco }}
+      <ui-icon name="arrow-right" size="18" />
+    </button>
+
+    <p class="inline-flex items-center gap-1.5 text-xs text-grey-400">
+      <ui-icon name="sparkles" size="13" styleClass="text-grey-300" />
+      {{ 'Se abre en una ventana nueva para que vendas cómodo desde el mostrador.' | transloco }}
+    </p>
+  </div>
+
+  <!-- ═══ Cómo funciona (izquierda) + preview del POS (derecha) ═══ -->
+  <div class="grid md:grid-cols-5 gap-8 lg:gap-12 items-center">
+    <div class="md:col-span-2 flex flex-col">
+      @for (s of steps; track s.title) {
+      <div class="py-4 border-b border-grey-100 last:border-b-0 first:pt-0">
+        <p class="text-[0.95rem] font-semibold text-grey-800">{{ s.title | transloco }}</p>
+        <p class="text-sm text-grey-500 mt-1 leading-relaxed">{{ s.text | transloco }}</p>
       </div>
-      <div class="pos-intro__lead">
-        <span class="pos-intro__eyebrow">{{ 'Punto de venta' | transloco }}</span>
-        <h1 class="pos-intro__title">{{ 'Tu aliado para vender en persona' | transloco }}</h1>
-        <p class="pos-intro__desc">
-          {{ 'Convertí tu catálogo en una caja registradora: registrá tus ventas físicas, descontá stock y llevá todo tu negocio en un solo lugar.' | transloco }}
-        </p>
-        <div class="pos-intro__actions">
-          <button type="button" class="pos-intro__cta" (click)="goToPos()">
-            <ui-icon name="shopping-cart" styleClass="size-5" />
-            {{ 'Ir a Punto de Venta' | transloco }}
-          </button>
-        </div>
-      </div>
+      }
     </div>
 
-    <!-- Cómo funciona -->
-    <div class="pos-intro__steps">
-      @for (s of steps; track s.title) {
-        <div class="pos-intro__step">
-          <span class="pos-intro__step-icon"><ui-icon [name]="s.icon" styleClass="size-5" /></span>
-          <div class="pos-intro__step-body">
-            <h3>{{ s.title | transloco }}</h3>
-            <p>{{ s.text | transloco }}</p>
+    <!-- Mock de la pantalla de Venta / cobro -->
+    <div class="md:col-span-3 flex flex-col gap-2.5 items-center">
+      <p class="text-xs font-semibold uppercase tracking-wide text-grey-400">
+        {{ 'Así se ve al cobrar' | transloco }}
+      </p>
+      <div class="rounded-xl border border-grey-100 bg-white shadow-lg shadow-grey-300/25 overflow-hidden max-w-sm w-full">
+        <!-- Encabezado del ticket -->
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-grey-50">
+          <span class="w-6 h-6 rounded-lg bg-primary-50 flex items-center justify-center">
+            <ui-icon name="shopping-cart" styleClass="size-3.5 text-primary-500" />
+          </span>
+          <span class="text-sm font-bold text-grey-800">{{ 'Venta' | transloco }}</span>
+          <span class="ml-auto inline-flex items-center gap-1 text-[0.7rem] font-semibold text-grey-400">
+            <ui-icon name="scan-barcode" styleClass="size-3.5" />
+            {{ 'Escanear' | transloco }}
+          </span>
+        </div>
+        <!-- Líneas del carrito -->
+        <div class="px-4 py-3 flex flex-col gap-3">
+          <div class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-lg bg-grey-50 flex items-center justify-center shrink-0">
+              <ui-icon name="package" styleClass="size-4 text-grey-300" />
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium text-grey-700 truncate">{{ 'Producto' | transloco }} A</p>
+              <p class="text-xs text-grey-400">1 × $10.00</p>
+            </div>
+            <span class="text-sm font-semibold text-grey-700">$10.00</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-lg bg-grey-50 flex items-center justify-center shrink-0">
+              <ui-icon name="package" styleClass="size-4 text-grey-300" />
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium text-grey-700 truncate">{{ 'Producto' | transloco }} B</p>
+              <p class="text-xs text-grey-400">2 × $8.00</p>
+            </div>
+            <span class="text-sm font-semibold text-grey-700">$16.00</span>
           </div>
         </div>
-      }
+        <!-- Total + cobrar -->
+        <div class="px-4 pb-4 pt-1 flex flex-col gap-3 border-t border-grey-50">
+          <div class="flex items-center justify-between pt-3">
+            <span class="text-sm text-grey-400">{{ 'Subtotal' | transloco }}</span>
+            <span class="text-base font-bold text-grey-800">$26.00</span>
+          </div>
+          <div class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary-500 text-white text-sm font-semibold">
+            <ui-icon name="banknote" styleClass="size-4" />
+            {{ 'Cobrar' | transloco }} $26.00
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

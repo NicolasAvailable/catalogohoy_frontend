@@ -200,11 +200,53 @@
   overflow: hidden;
 }
 
-@media (max-width: 34rem) {
+/* ── Teléfonos: el rail lateral pasa a barra de navegación INFERIOR (patrón
+      app nativa) para liberar todo el ancho al contenido. ── */
+@media (max-width: 40rem) {
   .pos-root {
-    grid-template-columns: 3.75rem 1fr;
+    display: flex;
+    flex-direction: column;
+  }
+  .pos-main {
+    order: 1;
+    flex: 1;
+    min-height: 0;
+  }
+  .pos-rail {
+    order: 2;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    gap: 0.15rem;
+    height: auto;
+    padding: 0.35rem 0.4rem;
+    padding-bottom: max(0.35rem, env(safe-area-inset-bottom));
+    border-right: 0;
+    border-top: 1px solid var(--rail-border);
+  }
+  /* Logo y "salir" son redundantes en móvil (el catálogo y el salir ya están
+     en la barra superior) → se ocultan de la barra inferior. */
+  .rail-logo,
+  .rail-exit {
+    display: none;
+  }
+  .rail-items {
+    flex-direction: row;
+    flex: 1;
+    justify-content: space-around;
+    gap: 0.15rem;
+  }
+  .rail-item {
+    width: 3rem;
+    height: 3rem;
+  }
+  .rail-gear {
+    margin-top: 0;
   }
   .tb-name {
     display: none;
+  }
+  .pos-topbar {
+    padding: 0 0.9rem;
   }
 }

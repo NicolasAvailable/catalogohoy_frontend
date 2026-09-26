@@ -32,7 +32,6 @@ interface Step {
   standalone: true,
   imports: [RouterLink, IconComponent, DialogComponent, TranslocoPipe],
   templateUrl: './pos-intro.html',
-  styleUrl: './pos-intro.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class PosIntro implements OnInit {

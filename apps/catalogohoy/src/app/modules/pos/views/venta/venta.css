@@ -948,3 +948,14 @@
     border-top: 1px solid var(--border);
   }
 }
+
+/* Teléfonos: menos padding para aprovechar el ancho (el rail ya pasó a barra
+   inferior). */
+@media (max-width: 40rem) {
+  .venta-left {
+    padding: 1rem;
+  }
+  .left-title {
+    font-size: 1.05rem;
+  }
+}
