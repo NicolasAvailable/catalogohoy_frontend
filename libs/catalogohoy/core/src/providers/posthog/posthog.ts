@@ -47,9 +47,13 @@ export class PosthogService {
       .pipe(filter((e) => e instanceof NavigationEnd))
       .subscribe((e) => {
         const event = e as NavigationEnd;
-        const isAdmin = event.urlAfterRedirects.startsWith('/admin');
+        // Backoffice autenticado: admin + Punto de Venta (/pos vive top-level,
+        // fuera de /admin). Ambos se graban (session recording) y capturan
+        // pageview; el resto (storefront público) no, salvo tracking público.
+        const url = event.urlAfterRedirects;
+        const isBackoffice = url.startsWith('/admin') || url.startsWith('/pos');
 
-        if (isAdmin) {
+        if (isBackoffice) {
           this.ngZone.runOutsideAngular(() => {
             posthog.startSessionRecording();
             posthog.capture('$pageview');

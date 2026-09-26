@@ -54,14 +54,18 @@ export class OrderBadgeRealtimeService {
         },
         // Any insert/update/delete can change how many orders are pending
         // (new order, status flipped to completed/cancelled, deletion). Un
-        // INSERT además dispara el aviso in-app (sonido + toast) al dueño.
+        // INSERT además dispara el aviso in-app (sonido + toast) al dueño, pero
+        // SOLO para órdenes que ENTRAN del catálogo público (source='public').
+        // Las creadas internamente —alta manual ('manual') o venta del POS
+        // ('pos')— no avisan: el dueño ya está en la app creándolas.
         (payload) =>
           this.zone.run(() => {
             this.orderStore.loadPendingCount();
             if (payload.eventType === 'INSERT') {
-              this.notifyNewOrder(
-                (payload.new as { name?: string })?.name ?? ''
-              );
+              const row = payload.new as { name?: string; source?: string };
+              if ((row?.source ?? 'public') === 'public') {
+                this.notifyNewOrder(row?.name ?? '');
+              }
             }
           })
       )

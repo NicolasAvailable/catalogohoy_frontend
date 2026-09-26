@@ -71,6 +71,14 @@ export interface CreateOrderInput {
     type: 'pickup' | 'delivery' | 'shipping';
     fee: number;
   } | null;
+  /** Origen de la orden. Default `'manual'` (alta desde el admin, no notifica).
+   *  El Punto de Venta envía `'pos'` para distinguir las ventas de mostrador
+   *  (métricas/caja/devoluciones) — los triggers de notificación también la
+   *  saltan, igual que `'manual'`. El catálogo público usa `'public'`. */
+  source?: string;
+  /** Caja (sesión) abierta a la que se imputa esta venta del POS. Null/omitido
+   *  cuando no hay caja abierta. */
+  posCashSessionId?: number | null;
   /** Plan de cuotas de la orden a crédito ([{dueDate, amount?, paid?}]).
    *  Solo lo manda el editor cuando status='credit'; null = sin cuotas. */
   creditInstallments?: CreditInstallment[] | null;
@@ -204,6 +212,59 @@ export class OrderService {
     );
   }
 
+  /** Sube el PDF de la factura al bucket público (mismo patrón que el media
+   *  del chat) y devuelve su URL — para adjuntarla en la plantilla de
+   *  WhatsApp (CAT-80). */
+  async uploadInvoicePdf(
+    tenantId: number,
+    orderId: number,
+    blob: Blob,
+    filename: string
+  ): Promise<E.Either<Error, { url: string; filename: string }>> {
+    const path = `invoices/${tenantId}/orden-${orderId}-${Date.now()}.pdf`;
+    const { error } = await this.client.storage
+      .from('catalogohoy')
+      .upload(path, blob, { contentType: 'application/pdf', upsert: true });
+    if (error) return E.left(new Error(error.message));
+    const { data } = this.client.storage.from('catalogohoy').getPublicUrl(path);
+    return E.right({ url: data.publicUrl, filename });
+  }
+
+  /** CAT-80: acción hacia el cliente final por WhatsApp (plantilla desde el
+   *  número de la plataforma) vía edge `send-order-action`. El gate de plan
+   *  pago y la membresía se validan server-side; acá solo mapeamos errores. */
+  async sendOrderAction(
+    orderId: number,
+    action: 'notify' | 'invoice',
+    pdf?: { url: string; filename: string }
+  ): Promise<E.Either<Error, void>> {
+    const { data, error } = await this.client.functions.invoke(
+      'send-order-action',
+      {
+        body: {
+          action,
+          orderId,
+          pdfUrl: pdf?.url,
+          pdfFilename: pdf?.filename,
+        },
+      }
+    );
+    if (error) {
+      // Non-2xx: el motivo real viaja en el body (mismo patrón que
+      // delete-account). plan_required se distingue para el candado del menú.
+      let code = error.message;
+      try {
+        const ctx = (error as { context?: Response }).context;
+        if (ctx) code = (await ctx.clone().json())?.error ?? code;
+      } catch {
+        /* body no-JSON: se queda el mensaje genérico */
+      }
+      return E.left(new Error(code));
+    }
+    if (data?.success) return E.right(undefined);
+    return E.left(new Error(String(data?.error ?? 'send_failed')));
+  }
+
   /** Count-only query. Ignores all filters — used for the "total in general"
    *  label shown in the orders list footer. */
   async countOrdersByTenant(
@@ -332,9 +393,12 @@ export class OrderService {
       total_bs: input.totalBs,
       tenant_id: input.tenantId,
       // Alta manual desde el admin: los triggers de notificación (WhatsApp/email)
-      // saltan cuando source='manual'. Solo el catálogo público notifica.
-      source: 'manual',
+      // saltan cuando source='manual' o 'pos'. Solo el catálogo público notifica.
+      source: input.source ?? 'manual',
     };
+    // Venta del POS imputada a una caja abierta (opcional).
+    if (input.posCashSessionId != null)
+      payload['pos_cash_session_id'] = input.posCashSessionId;
     if (input.deliveryDate) payload['delivery_date'] = input.deliveryDate;
     if (input.paymentEvidence !== undefined)
       payload['payment_evidence'] = input.paymentEvidence;

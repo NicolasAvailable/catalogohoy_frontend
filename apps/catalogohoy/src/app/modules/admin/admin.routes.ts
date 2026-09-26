@@ -41,6 +41,14 @@ export const adminRoutes: Route[] = [
       import('@catalogohoy/order').then((m) => m.ORDER_ROUTES),
   },
   {
+    // Vista inicial del Punto de Venta (landing con gate de plan). Visible a
+    // todos los planes; el CTA abre el POS (/pos, ventana nueva) o el modal de
+    // upgrade. La experiencia full-screen del POS vive en la ruta top-level /pos.
+    path: 'pos',
+    title: 'Punto de venta',
+    loadComponent: () => import('../pos-intro/pos-intro'),
+  },
+  {
     path: 'clients',
     title: 'Clientes',
     canActivate: [teamPermissionGuard('clientes', 'view')],

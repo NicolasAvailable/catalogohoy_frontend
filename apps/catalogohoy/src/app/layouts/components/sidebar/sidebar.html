@@ -244,6 +244,21 @@
     </li>
     }
 
+    <!-- Punto de venta: DEBAJO de Mi catálogo. Lleva a la vista inicial del POS
+         (/admin/pos), visible a TODOS los planes; desde ahí se abre el POS o el
+         gate de plan. -->
+    <li>
+      <a
+        routerLink="/admin/pos"
+        routerLinkActive="bg-primary-50"
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Punto de venta' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="shopping-cart" size="18" styleClass="text-grey-700" />
+      </a>
+    </li>
+
     <!-- Instagram y Facebook (canal Meta; allowlist hasta App Review) -->
     @if (canViewMetaChannel()) {
     <li>
@@ -400,7 +415,7 @@
     </div>
     }
   </div>
-  <ul class="flex flex-col gap-1.5 w-full h-full px-3">
+  <ul class="flex flex-col gap-1.5 w-full flex-1 min-h-0 overflow-y-auto px-3">
     <li
       routerLink="/admin"
       routerLinkActive="bg-primary-50"
@@ -656,6 +671,23 @@
           </ng-template>
         </ui-panel-menu>
       }
+    </li>
+
+    <!-- Punto de venta: DEBAJO de Mi catálogo. Lleva a la vista inicial del POS
+         (/admin/pos), visible a TODOS los planes; desde ahí se abre el POS o el
+         gate de plan. -->
+    <li
+      routerLink="/admin/pos"
+      routerLinkActive="bg-primary-50"
+      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out cursor-pointer"
+    >
+      <div class="flex items-center gap-2">
+        <ui-icon name="shopping-cart" size="16" />
+        <span class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Punto de venta' | transloco }}</span>
+      </div>
+      <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
+        {{ 'Nuevo' | transloco }}
+      </span>
     </li>
 
     <!-- Instagram y Facebook (canal Meta: catálogo + píxel; allowlist hasta App Review) -->

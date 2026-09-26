@@ -3,6 +3,7 @@ import { authenticationGuard } from '@catalogohoy/auth';
 import { profileResolver } from '@catalogohoy/profile';
 import { isValidSlugGuard } from '@catalogohoy/tenant';
 import { hasAccessGuard, teamPermissionsResolver } from '@catalogohoy/teams';
+import { posEnabledGuard } from './modules/pos/pos-enabled.guard';
 
 export const appRoutes: Route[] = [
   {
@@ -22,6 +23,21 @@ export const appRoutes: Route[] = [
     loadComponent: () => import('./layouts/layout').then((m) => m.default),
     loadChildren: () =>
       import('./modules/admin/admin.routes').then((m) => m.adminRoutes),
+  },
+  {
+    // Punto de Venta: experiencia full-screen con barra lateral propia (fuera
+    // del layout del admin). Mismos guards que /admin (slug válido, sesión y
+    // permisos de equipo) + gate por plan (solo Avanzado/Enterprise).
+    path: 'pos',
+    canActivate: [isValidSlugGuard, authenticationGuard, posEnabledGuard],
+    resolve: {
+      profile: profileResolver,
+      teamPermissions: teamPermissionsResolver,
+    },
+    canActivateChild: [hasAccessGuard],
+    loadComponent: () => import('./modules/pos/pos-shell'),
+    loadChildren: () =>
+      import('./modules/pos/pos.routes').then((m) => m.posRoutes),
   },
   {
     path: 'catalog-unavailable',
