@@ -2559,5 +2559,7 @@
   "Cuenta": "Account",
   "Así se ve al cobrar": "How checkout looks",
   "Se abre en una ventana nueva para que vendas cómodo desde el mostrador.": "It opens in a new window so you can sell comfortably from the counter.",
-  "Cargando la tasa del día, probá de nuevo en un momento.": "Loading today’s exchange rate, please try again in a moment."
+  "Cargando la tasa del día, probá de nuevo en un momento.": "Loading today’s exchange rate, please try again in a moment.",
+  "Punto de Venta (caja registradora)": "Point of Sale (cash register)",
+  "Punto de Venta (caja registradora presencial)": "Point of Sale (in-person cash register)"
 }

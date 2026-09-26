@@ -2559,5 +2559,7 @@
   "Cuenta": "Compte",
   "Así se ve al cobrar": "À quoi ressemble l’encaissement",
   "Se abre en una ventana nueva para que vendas cómodo desde el mostrador.": "Il s’ouvre dans une nouvelle fenêtre pour vendre confortablement depuis le comptoir.",
-  "Cargando la tasa del día, probá de nuevo en un momento.": "Chargement du taux du jour, réessayez dans un instant."
+  "Cargando la tasa del día, probá de nuevo en un momento.": "Chargement du taux du jour, réessayez dans un instant.",
+  "Punto de Venta (caja registradora)": "Point de Vente (caisse enregistreuse)",
+  "Punto de Venta (caja registradora presencial)": "Point de Vente (caisse en personne)"
 }
