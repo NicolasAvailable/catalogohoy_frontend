@@ -39,57 +39,18 @@
       }
     </div>
 
-    <!-- Mock de la pantalla de Venta / cobro -->
+    <!-- Captura real de la interfaz del Punto de Venta con productos por cobrar -->
     <div class="md:col-span-3 flex flex-col gap-2.5 items-center">
       <p class="text-xs font-semibold uppercase tracking-wide text-grey-400">
         {{ 'Así se ve al cobrar' | transloco }}
       </p>
-      <div class="rounded-xl border border-grey-100 bg-white shadow-lg shadow-grey-300/25 overflow-hidden max-w-sm w-full">
-        <!-- Encabezado del ticket -->
-        <div class="flex items-center gap-2 px-4 py-3 border-b border-grey-50">
-          <span class="w-6 h-6 rounded-lg bg-primary-50 flex items-center justify-center">
-            <ui-icon name="shopping-cart" styleClass="size-3.5 text-primary-500" />
-          </span>
-          <span class="text-sm font-bold text-grey-800">{{ 'Venta' | transloco }}</span>
-          <span class="ml-auto inline-flex items-center gap-1 text-[0.7rem] font-semibold text-grey-400">
-            <ui-icon name="scan-barcode" styleClass="size-3.5" />
-            {{ 'Escanear' | transloco }}
-          </span>
-        </div>
-        <!-- Líneas del carrito -->
-        <div class="px-4 py-3 flex flex-col gap-3">
-          <div class="flex items-center gap-3">
-            <span class="w-9 h-9 rounded-lg bg-grey-50 flex items-center justify-center shrink-0">
-              <ui-icon name="package" styleClass="size-4 text-grey-300" />
-            </span>
-            <div class="min-w-0 flex-1">
-              <p class="text-sm font-medium text-grey-700 truncate">{{ 'Producto' | transloco }} A</p>
-              <p class="text-xs text-grey-400">1 × $10.00</p>
-            </div>
-            <span class="text-sm font-semibold text-grey-700">$10.00</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="w-9 h-9 rounded-lg bg-grey-50 flex items-center justify-center shrink-0">
-              <ui-icon name="package" styleClass="size-4 text-grey-300" />
-            </span>
-            <div class="min-w-0 flex-1">
-              <p class="text-sm font-medium text-grey-700 truncate">{{ 'Producto' | transloco }} B</p>
-              <p class="text-xs text-grey-400">2 × $8.00</p>
-            </div>
-            <span class="text-sm font-semibold text-grey-700">$16.00</span>
-          </div>
-        </div>
-        <!-- Total + cobrar -->
-        <div class="px-4 pb-4 pt-1 flex flex-col gap-3 border-t border-grey-50">
-          <div class="flex items-center justify-between pt-3">
-            <span class="text-sm text-grey-400">{{ 'Subtotal' | transloco }}</span>
-            <span class="text-base font-bold text-grey-800">$26.00</span>
-          </div>
-          <div class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary-500 text-white text-sm font-semibold">
-            <ui-icon name="banknote" styleClass="size-4" />
-            {{ 'Cobrar' | transloco }} $26.00
-          </div>
-        </div>
+      <div class="rounded-xl border border-grey-100 bg-white shadow-lg shadow-grey-300/25 overflow-hidden w-full">
+        <img
+          src="/images/pos-preview.webp"
+          [alt]="'Así se ve al cobrar' | transloco"
+          class="block w-full h-auto"
+          loading="lazy"
+        />
       </div>
     </div>
   </div>
