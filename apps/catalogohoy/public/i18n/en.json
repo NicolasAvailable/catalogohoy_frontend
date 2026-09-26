@@ -2555,5 +2555,8 @@
   "Caja y estadísticas": "Cash register and stats",
   "Abrí y cerrá caja con arqueo, registrá movimientos y seguí tus ventas del día.": "Open and close the register with reconciliation, log movements and track your daily sales.",
   "El Punto de Venta para vender en persona está disponible en el plan Avanzado. Mejorá tu plan para cobrar en el mostrador desde CatalogoHoy.": "The Point of Sale for selling in person is available on the Advanced plan. Upgrade your plan to charge at the counter from CatalogoHoy.",
-  "Cuenta": "Account"
+  "Cuenta": "Account",
+  "Así se ve al cobrar": "How checkout looks",
+  "Se abre en una ventana nueva para que vendas cómodo desde el mostrador.": "It opens in a new window so you can sell comfortably from the counter.",
+  "Cargando la tasa del día, probá de nuevo en un momento.": "Loading today’s exchange rate, please try again in a moment."
 }
