@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  OnDestroy,
   OnInit,
   computed,
   inject,
@@ -44,7 +45,7 @@ const toast = {
   templateUrl: './meta-channel.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MetaChannelView implements OnInit {
+export class MetaChannelView implements OnInit, OnDestroy {
   private readonly configService = inject(EcommerceConfigService);
   private readonly tenantStore = inject(TenantStore);
   private readonly planStore = inject(PlanStore);
@@ -96,6 +97,13 @@ export class MetaChannelView implements OnInit {
   public readonly metaPixelId = signal<string | null>(null);
   public readonly metaCapiOk = signal(false);
   public readonly isProvisioningPixel = signal(false);
+  /** true cuando ya llegó el primer estado de la Graph API (evita el flash de
+   *  "configurar" mientras carga). */
+  public readonly statusLoaded = signal(false);
+  /** Ingesta del feed en curso: la página se auto-actualiza hasta que Meta
+   *  termina de procesar los productos (sin recargar). */
+  public readonly isPollingSync = signal(false);
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   public readonly metaBusinessOptions = computed(() =>
     this.metaBusinesses().map((b) => ({ label: b.name, value: b.id }))
@@ -148,6 +156,37 @@ export class MetaChannelView implements OnInit {
       this.metaPixelId.set(s.pixelId);
       this.metaCapiOk.set(s.capiOk);
     });
+    this.statusLoaded.set(true);
+  }
+
+  ngOnDestroy(): void {
+    this.stopSyncPolling();
+  }
+
+  /** Meta ingiere el feed de forma asíncrona (~15-30s): tras publicar o
+   *  sincronizar, refrescamos el estado cada 5s hasta ver el resultado nuevo
+   *  (o cortar a los 2 min), así el conteo aparece solo, sin recargar. */
+  private startSyncPolling(): void {
+    this.stopSyncPolling();
+    this.isPollingSync.set(true);
+    const startedAt = Date.now();
+    const before = JSON.stringify({
+      c: this.metaCatalogSync()?.productCount ?? null,
+      t: this.metaCatalogSync()?.lastSyncEnd ?? null,
+    });
+    this.pollTimer = setInterval(async () => {
+      await this.loadChannelStatus();
+      const sync = this.metaCatalogSync();
+      const now = JSON.stringify({ c: sync?.productCount ?? null, t: sync?.lastSyncEnd ?? null });
+      const finished = now !== before && (sync?.productCount ?? 0) > 0;
+      if (finished || Date.now() - startedAt > 120_000) this.stopSyncPolling();
+    }, 5000);
+  }
+
+  private stopSyncPolling(): void {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.pollTimer = null;
+    this.isPollingSync.set(false);
   }
 
   /** Al volver del OAuth de Meta, mostramos el resultado y limpiamos el query. */
@@ -241,6 +280,7 @@ export class MetaChannelView implements OnInit {
         toast.success(
           'Catálogo publicado en Meta. Tus productos se sincronizan todos los días.'
         );
+        this.startSyncPolling();
       }
     );
     this.isProvisioningCatalog.set(false);
@@ -256,7 +296,7 @@ export class MetaChannelView implements OnInit {
       },
       () => {
         toast.success('Sincronización solicitada. Meta puede tardar unos minutos.');
-        this.loadChannelStatus();
+        this.startSyncPolling();
       }
     );
     this.isSyncingCatalog.set(false);
