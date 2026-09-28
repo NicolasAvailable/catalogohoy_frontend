@@ -2566,16 +2566,13 @@
   "Descuentos al pagar y pedidos a crédito en tu checkout": "Descontos no pagamento e pedidos a crédito no seu checkout",
   "Aplicar los ajustes de tus métodos de pago en el checkout": "Aplicar os ajustes dos seus métodos de pagamento no checkout",
   "El descuento o recargo de cada método se aplica solo cuando tu cliente lo elige al hacer el pedido, y aparece en el resumen y en la factura.": "O desconto ou acréscimo de cada método é aplicado automaticamente quando o cliente o escolhe, e aparece no resumo e na fatura.",
-  "Aún no configuraste ajustes: abrí \"Datos\" en un método de pago y definí su descuento o recargo.": "Você ainda não configurou ajustes: abra \"Dados\" em um método de pagamento e defina seu desconto ou acréscimo.",
   "Permitir pedidos a crédito": "Permitir pedidos a crédito",
-  "Tu cliente puede elegir entre pagar de contado o pedir a crédito. Los pedidos a crédito te llegan marcados para que los confirmes vos.": "O cliente pode escolher entre pagar à vista ou pedir a crédito. Os pedidos a crédito chegam marcados para você confirmar.",
   "Compras mínimas para acceder al crédito": "Compras mínimas para liberar o crédito",
   "compras": "compras",
   "Ej: 3": "Ex.: 3",
   "Contamos las órdenes completadas o a crédito con el mismo teléfono. 0 = cualquier cliente puede pedir a crédito.": "Contamos os pedidos concluídos ou a crédito com o mesmo telefone. 0 = qualquer cliente pode pedir a crédito.",
   "Nota que ve el cliente": "Nota que o cliente vê",
   "El crédito está disponible después de {n} compras en esta tienda.": "O crédito fica disponível após {n} compras nesta loja.",
-  "Si la dejás vacía, mostramos ese texto por defecto.": "Se deixar vazio, mostramos esse texto padrão.",
   "¿Cómo quieres pagar?": "Como você quer pagar?",
   "De contado": "À vista",
   "Pagas ahora": "Paga agora",
@@ -2585,5 +2582,8 @@
   "¡Tu número ya tiene crédito disponible!": "Seu número já tem crédito disponível!",
   "Condición de pago": "Condição de pagamento",
   "Solicitó crédito": "Pediu crédito",
-  "El cliente pidió pagar A CRÉDITO al hacer este pedido. Si lo entregas a crédito, marca la orden como \"A crédito\" para llevar la cobranza.": "O cliente pediu para pagar A CRÉDITO ao fazer este pedido. Se entregar a crédito, marque o pedido como \"A crédito\" para acompanhar a cobrança."
+  "El cliente pidió pagar A CRÉDITO al hacer este pedido. Si lo entregas a crédito, marca la orden como \"A crédito\" para llevar la cobranza.": "O cliente pediu para pagar A CRÉDITO ao fazer este pedido. Se entregar a crédito, marque o pedido como \"A crédito\" para acompanhar a cobrança.",
+  "Aún no has configurado ajustes: abre \"Datos\" en un método de pago y define su descuento o recargo.": "Você ainda não configurou ajustes: abra \"Dados\" em um método de pagamento e defina seu desconto ou acréscimo.",
+  "Tu cliente puede elegir entre pagar de contado o pedir a crédito. Los pedidos a crédito te llegan marcados para que tú los confirmes.": "O cliente pode escolher entre pagar à vista ou pedir a crédito. Os pedidos a crédito chegam marcados para você confirmar.",
+  "Si la dejas vacía, mostramos ese texto por defecto.": "Se deixar vazio, mostramos esse texto padrão."
 }

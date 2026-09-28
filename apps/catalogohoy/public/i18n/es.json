@@ -2566,16 +2566,13 @@
   "Descuentos al pagar y pedidos a crédito en tu checkout": "Descuentos al pagar y pedidos a crédito en tu checkout",
   "Aplicar los ajustes de tus métodos de pago en el checkout": "Aplicar los ajustes de tus métodos de pago en el checkout",
   "El descuento o recargo de cada método se aplica solo cuando tu cliente lo elige al hacer el pedido, y aparece en el resumen y en la factura.": "El descuento o recargo de cada método se aplica solo cuando tu cliente lo elige al hacer el pedido, y aparece en el resumen y en la factura.",
-  "Aún no configuraste ajustes: abrí \"Datos\" en un método de pago y definí su descuento o recargo.": "Aún no configuraste ajustes: abrí \"Datos\" en un método de pago y definí su descuento o recargo.",
   "Permitir pedidos a crédito": "Permitir pedidos a crédito",
-  "Tu cliente puede elegir entre pagar de contado o pedir a crédito. Los pedidos a crédito te llegan marcados para que los confirmes vos.": "Tu cliente puede elegir entre pagar de contado o pedir a crédito. Los pedidos a crédito te llegan marcados para que los confirmes vos.",
   "Compras mínimas para acceder al crédito": "Compras mínimas para acceder al crédito",
   "compras": "compras",
   "Ej: 3": "Ej: 3",
   "Contamos las órdenes completadas o a crédito con el mismo teléfono. 0 = cualquier cliente puede pedir a crédito.": "Contamos las órdenes completadas o a crédito con el mismo teléfono. 0 = cualquier cliente puede pedir a crédito.",
   "Nota que ve el cliente": "Nota que ve el cliente",
   "El crédito está disponible después de {n} compras en esta tienda.": "El crédito está disponible después de {n} compras en esta tienda.",
-  "Si la dejás vacía, mostramos ese texto por defecto.": "Si la dejás vacía, mostramos ese texto por defecto.",
   "¿Cómo quieres pagar?": "¿Cómo quieres pagar?",
   "De contado": "De contado",
   "Pagas ahora": "Pagas ahora",
@@ -2585,5 +2582,8 @@
   "¡Tu número ya tiene crédito disponible!": "¡Tu número ya tiene crédito disponible!",
   "Condición de pago": "Condición de pago",
   "Solicitó crédito": "Solicitó crédito",
-  "El cliente pidió pagar A CRÉDITO al hacer este pedido. Si lo entregas a crédito, marca la orden como \"A crédito\" para llevar la cobranza.": "El cliente pidió pagar A CRÉDITO al hacer este pedido. Si lo entregas a crédito, marca la orden como \"A crédito\" para llevar la cobranza."
+  "El cliente pidió pagar A CRÉDITO al hacer este pedido. Si lo entregas a crédito, marca la orden como \"A crédito\" para llevar la cobranza.": "El cliente pidió pagar A CRÉDITO al hacer este pedido. Si lo entregas a crédito, marca la orden como \"A crédito\" para llevar la cobranza.",
+  "Aún no has configurado ajustes: abre \"Datos\" en un método de pago y define su descuento o recargo.": "Aún no has configurado ajustes: abre \"Datos\" en un método de pago y define su descuento o recargo.",
+  "Tu cliente puede elegir entre pagar de contado o pedir a crédito. Los pedidos a crédito te llegan marcados para que tú los confirmes.": "Tu cliente puede elegir entre pagar de contado o pedir a crédito. Los pedidos a crédito te llegan marcados para que tú los confirmes.",
+  "Si la dejas vacía, mostramos ese texto por defecto.": "Si la dejas vacía, mostramos ese texto por defecto."
 }
