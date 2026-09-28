@@ -62,7 +62,6 @@ import { PlanStore } from '../../infrastructure/plan.store';
           <button class="expiration-banner__close" (click)="dismiss()">
             <lucide-angular name="x" [size]="16" />
           </button>
-          }
         </div>
       </div>
     </div>
