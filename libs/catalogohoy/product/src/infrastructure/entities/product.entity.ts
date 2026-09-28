@@ -29,6 +29,7 @@ export interface ProductEntity {
     sku?: string | null;
     photos: string[];
     sizes?: { name: string; stock: number | null; sku?: string | null }[];
+    isHidden?: boolean;
   }[];
   addons?: {
     id: string;

@@ -77,6 +77,9 @@ export class ConnectChannelsComponent implements OnInit {
   protected readonly ttAccount = signal<SocialAccount | null>(null);
   protected readonly fbAccount = signal<SocialAccount | null>(null);
 
+  // Canales disponibles hoy: WhatsApp Business, Instagram y TikTok. Messenger
+  // queda fuera de la galería por ahora (su pantalla de conexión sigue
+  // existiendo y se puede reactivar agregándola de nuevo acá).
   protected readonly channels: ConnectableChannel[] = [
     {
       key: 'whatsapp',
@@ -89,17 +92,8 @@ export class ConnectChannelsComponent implements OnInit {
       key: 'instagram',
       name: 'Instagram',
       logo: '/images/instagram.svg',
-      description: 'Responde los mensajes directos de tu cuenta profesional.',
+      description: 'Responde los mensajes directos de tu cuenta de empresa.',
       route: '/admin/chat/connect/instagram',
-      comingSoon: true,
-    },
-    {
-      key: 'messenger',
-      name: 'Messenger',
-      logo: '/images/messenger.svg',
-      description: 'Responde los mensajes de Messenger de tu página de Facebook.',
-      route: '/admin/chat/connect/messenger',
-      comingSoon: true,
     },
     {
       key: 'tiktok',
@@ -107,9 +101,8 @@ export class ConnectChannelsComponent implements OnInit {
       // Nota colorida sin fondo (tiktok.svg es la versión app-icon con fondo
       // negro, para los badges chicos de la bandeja).
       logo: '/images/tiktok-logo.svg',
-      description: 'Mensajería de TikTok para empresas (beta).',
+      description: 'Responde los mensajes directos de tu cuenta de empresa.',
       route: '/admin/chat/connect/tiktok',
-      comingSoon: true,
     },
   ];
 

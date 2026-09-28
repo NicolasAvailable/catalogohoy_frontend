@@ -377,7 +377,17 @@ export class ECommerce implements OnInit, OnDestroy {
       const ctx = canvas.getContext('2d')!;
 
       ctx.beginPath();
-      ctx.roundRect(0, 0, size, size, radius);
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(0, 0, size, size, radius);
+      } else {
+        // Fallback for Safari < 16 (iOS 15) which lacks CanvasRenderingContext2D.roundRect
+        const r = Math.min(radius, size / 2);
+        ctx.moveTo(r, 0);
+        ctx.arcTo(size, 0, size, size, r);
+        ctx.arcTo(size, size, 0, size, r);
+        ctx.arcTo(0, size, 0, 0, r);
+        ctx.arcTo(0, 0, size, 0, r);
+      }
       ctx.closePath();
       ctx.clip();
       ctx.drawImage(img, 0, 0, size, size);

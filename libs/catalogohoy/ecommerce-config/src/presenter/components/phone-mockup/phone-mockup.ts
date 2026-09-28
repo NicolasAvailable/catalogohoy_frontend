@@ -23,6 +23,10 @@ export class PhoneMockupComponent {
   public readonly iframeUrl = input.required<SafeResourceUrl>();
   public readonly isOverlay = input(false);
   public readonly hidden = input(false);
+  /** Origen del iframe (para el postMessage del preview en vivo). En web coincide
+   *  con window.location.origin; en la app nativa el iframe es cross-origin
+   *  (dominio público del catálogo), así que hay que apuntarle su origen real. */
+  public readonly targetOrigin = input<string>('');
   public readonly close = output<void>();
   /** Fires every time the iframe finishes (re)loading a document. */
   public readonly loaded = output<void>();
@@ -37,7 +41,10 @@ export class PhoneMockupComponent {
   sendPreviewMessage(message: PreviewMessage): void {
     const iframe = this.iframeRef()?.nativeElement;
     if (iframe?.contentWindow) {
-      iframe.contentWindow.postMessage(message, window.location.origin);
+      iframe.contentWindow.postMessage(
+        message,
+        this.targetOrigin() || window.location.origin
+      );
     }
   }
 }

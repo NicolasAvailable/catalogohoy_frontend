@@ -55,7 +55,14 @@ export class ChatService {
     let query = this.client
       .from('chats')
       .select('*')
-      .eq('tenant_id', tenantId);
+      .eq('tenant_id', tenantId)
+      // Solo conversaciones reales. El trigger create_chat_for_order crea un
+      // chat "cascarón" (sin mensajes, last_message_at NULL) por cada orden con
+      // teléfono, lo que ensucia la bandeja con chats que el negocio nunca
+      // inició y da la impresión de que WhatsApp no está conectado. Mostramos
+      // solo los que ya tienen al menos un mensaje; el vínculo orden↔chat se
+      // conserva y el chat aparece cuando el cliente realmente escribe.
+      .not('last_message_at', 'is', null);
 
     if (search?.trim()) {
       query = query.ilike('customer_name', `%${search.trim()}%`);

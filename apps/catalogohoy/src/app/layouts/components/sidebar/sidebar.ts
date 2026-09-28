@@ -21,7 +21,6 @@ import {
 import { TooltipModule } from 'primeng/tooltip';
 import {
   CATALOG_MENU,
-  CHAT_MENU,
   PRODUCTS_MENU,
   TEAMS_MENU,
 } from './sidebar.constants';
@@ -115,12 +114,10 @@ export class Sidebar {
   public readonly productsMenu: PanelMenuItem[] = PRODUCTS_MENU;
   public readonly catalogMenu: PanelMenuItem[] = CATALOG_MENU;
   public readonly teamsMenu: PanelMenuItem[] = TEAMS_MENU;
-  public readonly chatMenu: PanelMenuItem[] = CHAT_MENU;
 
   // ------------------------------------------- sidebar colapsable (desktop) ---
   /** Raíces de los menús con submenú, para los flyouts del modo rail. */
   public readonly productsRoot = PRODUCTS_MENU[0];
-  public readonly chatRoot = CHAT_MENU[0];
   public readonly catalogRoot = CATALOG_MENU[0];
 
   private static readonly COLLAPSED_KEY = 'sidebar-collapsed';

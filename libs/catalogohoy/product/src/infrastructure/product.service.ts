@@ -236,6 +236,7 @@ export class ProductService implements BaseProductService {
               sku: v.sku?.trim() ? v.sku.trim() : null,
               photos: v.photos ?? [],
               sizes: (v.sizes ?? []).map(mapSize),
+              isHidden: !!v.isHidden,
             }))
           : [],
         addons: (input.addons ?? []).map((a) => ({
@@ -314,6 +315,7 @@ export class ProductService implements BaseProductService {
             sku: v.sku?.trim() ? v.sku.trim() : null,
             photos: v.photos ?? [],
             sizes: (v.sizes ?? []).map(mapSize),
+            isHidden: !!v.isHidden,
           }))
         : [],
       addons: (input.addons ?? []).map((a) => ({

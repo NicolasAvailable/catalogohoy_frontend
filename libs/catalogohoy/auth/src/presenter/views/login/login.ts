@@ -50,6 +50,12 @@ import { LoginCredentials } from '../../../domain';
       .native-login label {
         font-size: 1rem;
       }
+      /* El selector de idioma (absolute top-6) quedaba DETRÁS de la barra de
+         estado / notch en nativo → lo bajamos debajo del safe-area para que se
+         vea y sea tocable. */
+      .native-login lib-language-selector {
+        top: calc(0.75rem + env(safe-area-inset-top, 0px));
+      }
     `,
   ],
 })
@@ -154,6 +160,14 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
       'No tienes un catálogo registrado. Regístrate en catalogohoy.com para usar la app.'
     );
     await this.facade.logout();
+  }
+
+  /** Registro desde la app nativa: el alta de cuenta y la compra de planes
+   *  viven en la web (política IAP de Apple), así que abrimos el signup web
+   *  (auth.catalogohoy.com) en el navegador del sistema. `_blank` en Capacitor
+   *  se abre en Safari/Chrome externo, no dentro del WKWebView. */
+  public openSignup(): void {
+    window.open('https://auth.catalogohoy.com/signup', '_blank');
   }
 
   public async loginWithGoogle() {

@@ -21,6 +21,14 @@ export const appRoutes: Route[] = [
     loadComponent: () => import('@catalogohoy/auth').then((m) => m.Login),
   },
   {
+    // Recuperar contraseña in-app (shell nativo). El email de reset apunta al
+    // /reset-password web real (auth.catalogohoy.com), no a localhost — ver
+    // `forgottenPassword` en authentication.service.ts.
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('@catalogohoy/auth').then((m) => m.ForgottenPassword),
+  },
+  {
     path: 'admin',
     canActivate: [isValidSlugGuard, authenticationGuard],
     resolve: {

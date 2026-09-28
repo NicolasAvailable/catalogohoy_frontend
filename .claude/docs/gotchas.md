@@ -228,3 +228,18 @@
   **CSS del propio componente** (media queries + clases modificadoras tipo
   `:host(.ficha--mobile-open)`), no en utilities del padre. Igual para el slide-over del
   conversation-panel (`chat-layout.css` usa el selector del tag, no utilities).
+
+## El bootstrap del admin se come los query params (deep links)
+
+- `App.captureQueryParametersToLocalStorage()` (`apps/catalogohoy/src/app/app.ts`) mueve
+  **todos** los query params a localStorage al arrancar y los borra de la URL — un deep
+  link tipo `/admin/orders?order=ID` llega al router **sin** el param salvo que la key
+  esté en la allowlist `QUERY_PARAMS_KEEP_IN_URL` (`product`, `category`, `preview`,
+  `order`). Mordió dos veces: `create-venta` (se resolvió con route `data`) y el botón
+  "Ver pedido" de WhatsApp (2026-08-17, se agregó `order` a la allowlist).
+- Regla: cualquier deep link nuevo por query param **debe** agregar su key a esa allowlist.
+- Relacionado: el `authenticationGuard` manda `returnUrl` al login
+  (`auth.catalogohoy.com/login?returnUrl=…`) y el login vuelve al deep link tras
+  autenticar (solo mismo origin del tenant, conservando el token de traspaso de sesión).
+- Ojo: el `#61` que muestra la lista de órdenes es `orderNumber` (numeración por tenant);
+  el deep link y el botón de WhatsApp usan el **id global** de `orders` (p.ej. 2630).

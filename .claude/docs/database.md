@@ -640,6 +640,31 @@ supabase.auth.getUser()
 - Default tenant: `users_tenants.is_default = true`
 - Fallback: first row in `users_tenants` for that user
 
+## RPCs del panel interno (SECURITY DEFINER + `_assert_internal_admin`)
+
+Los listados usan búsqueda+paginación server-side (`p_search/p_limit/p_offset` +
+`total_count`, migración `20260811_internal_lists_search_pagination.sql`):
+`list_all_tenants_admin`, `list_all_users_admin`, `list_paying_clients_admin`,
+`channel_connections_admin`, `list_enterprise_leads_admin`.
+
+**`platform_orders_stats_admin()` / `list_platform_orders_admin(p_limit)`**
+(fix 2026-08-26, migración `20260826_platform_orders_currency.sql`): ⚠️
+`orders.total_usd` guarda el monto en la **moneda del catálogo** (no siempre
+USD) — nunca sumar cross-tenant. Stats: `revenueUsd` = solo catálogos USD +
+`revenueByCurrency` [{currency, orders, total}]; el listado devuelve
+`currency` por fila (moneda = COALESCE(tcc.display_currency, tec.currency,
+'USD')).
+
+**`get_tenant_detail_admin(p_tenant_id)` → jsonb** (2026-08-26, migración
+`20260826_internal_tenant_detail.sql`): detalle completo de un catálogo en un
+round-trip — tenant+config, plan, miembros, historial de `tenant_subscriptions`
+(pagos/renovaciones **manuales**; las renovaciones de Stripe NO están ahí, el
+webhook solo actualiza `tenants.plan_*`), órdenes (totales/30d/por mes últimos
+12), checklist de configuración inicial (mismos criterios que el card "primeros
+pasos" del Inicio), counts (productos/categorías/customers/chats/miembros),
+chats por canal, canales conectados y actividad. Lo consume la vista
+`/tenants/:id` del internal (`tenant-detail.ts`).
+
 ## Defaults & Conventions
 
 | Convention | Value |
@@ -652,3 +677,11 @@ supabase.auth.getUser()
 | Default order status | `pending` |
 | Default exchange rate | `bcv_usd` |
 | Business hours open | `08:00 – 20:00` |
+
+### Dataset del video CRM (2026-09-08)
+
+- Catálogo de prueba: `catalogohoy-demo`, tenant `1992` (Nortesur Company).
+- Fixture reproducible: `assets/videos/crm-production/seed-20260908.sql`; inserta solo registros nuevos e identifica los chats con `external_user_id` prefijado `demo-crm-video-20260908-` y tag `crm-video-20260908`.
+- Chats: `10872` y `10874` (WhatsApp), `10873` y `10875` (TikTok). Nombres y mensajes ficticios; los teléfonos WhatsApp son de ejemplo. No representan clientes ni entregas externas.
+- La carga agrega estados con claves `demo-video-*`; conserva conversaciones, conexiones y estados previos. El trigger de `chat_messages` inspeccionado solo incrementa no leídos; no envía mensajes externos.
+- Antes de responder durante una grabación, verificar de nuevo que WhatsApp no tenga `phone_number_id` ni token y que TikTok siga usando credenciales demo. No asumir que una cuenta sigue en demo por su nombre o por el prefijo de un chat.

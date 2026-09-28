@@ -16,7 +16,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DatePickerModule } from 'primeng/datepicker';
-import { APP_LANGUAGES, isDevMode } from '@catalogohoy/core';
+import { APP_LANGUAGES, isDevMode, isNativeApp } from '@catalogohoy/core';
 import { environment } from '@catalogohoy/env';
 import { PlanStore } from '@catalogohoy/plan';
 import { TenantStore, getTenantSlugFromUrl, isCustomDomain } from '@catalogohoy/tenant';
@@ -325,6 +325,13 @@ export class EcommerceConfigComponent implements OnInit {
   // destinatario es standalone (no es un botón de vendedor del checkout).
   public readonly draftNotifyOrderReceived = signal<boolean>(true);
   public readonly draftNotifyOrderCompleted = signal<boolean>(false);
+  /**
+   * Kill-switch de las notificaciones por WhatsApp. Ponerlo en `true`
+   * deshabilita la tarjeta y muestra un banner con el motivo (se usó del
+   * 2026-08-11 al 2026-08-17 mientras Meta re-aprobaba el número emisor
+   * en la WABA del portfolio verificado).
+   */
+  public readonly whatsappNotificationsPaused = signal<boolean>(false);
   public readonly draftWhatsappNotifyNumber = signal<string | null>(null);
   public readonly draftWhatsappNotifyNumber2 = signal<string | null>(null);
   /** Cuántos números puede configurar el tenant (tenants.
@@ -535,10 +542,22 @@ export class EcommerceConfigComponent implements OnInit {
   private readonly previewPath = computed(() =>
     this.CHECKOUT_TABS.includes(this.activeTab()) ? '/checkout' : '/'
   );
+  /** Origen del catálogo PÚBLICO para el iframe del preview. En web es el mismo
+   *  host del admin (window.location.origin). En la app nativa el host es
+   *  capacitor://localhost (la propia app), así que ahí armamos el dominio
+   *  público real: el dominio personalizado del tenant o `slug.catalogohoy.com`. */
+  public readonly previewOrigin = computed<string>(() => {
+    if (!isNativeApp()) return window.location.origin;
+    const custom = this.tenantCustomDomain();
+    if (custom) return `https://${custom}`;
+    const slug = this.previewSlug();
+    return slug ? `https://${slug}.${environment.apiUrl}` : window.location.origin;
+  });
+
   public readonly safeIframeUrl = computed<SafeResourceUrl | ''>(() => {
     const slug = this.previewSlug();
     if (!slug) return '';
-    const url = `${window.location.origin}${this.previewPath()}?slug=${slug}&preview=true`;
+    const url = `${this.previewOrigin()}${this.previewPath()}?slug=${slug}&preview=true`;
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   });
 

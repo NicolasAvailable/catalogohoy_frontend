@@ -495,6 +495,9 @@ export default class Save implements OnInit {
         photos: [[] as string[]],
         // Each variant owns its tallas.
         sizes: this.fb.array([]),
+        // Hidden variants stay on the product but disappear from the public
+        // catalog — handy for a colour/model that ran out of stock.
+        isHidden: [false],
       })
     );
     this.form.controls.isVariant.setValue(true);
@@ -629,7 +632,7 @@ export default class Save implements OnInit {
    *  to the variant's own gallery, just like the product media uploader. */
   public addVariantPhotos(index: number, url: string | string[]): void {
     const urls = Array.isArray(url) ? url : [url];
-    const ctrl = this.variantsArray.at(index).get('photos');
+    const ctrl = this.variantsArray.at(index)?.get('photos');
     const current = (ctrl?.value as string[]) ?? [];
     // Each variant gallery respects the same per-plan image cap as the product
     // media (gratis 3 / basico 10 / avanzado 50): add what fits, warn on the rest.
@@ -649,12 +652,12 @@ export default class Save implements OnInit {
   /** True when the variant's gallery already reached the per-plan cap. */
   public variantPhotosFull(index: number): boolean {
     const photos =
-      (this.variantsArray.at(index).get('photos')?.value as string[]) ?? [];
+      (this.variantsArray.at(index)?.get('photos')?.value as string[]) ?? [];
     return photos.length >= this.maxPhotos();
   }
 
   public removeVariantPhoto(index: number, url: string): void {
-    const ctrl = this.variantsArray.at(index).get('photos');
+    const ctrl = this.variantsArray.at(index)?.get('photos');
     const current = (ctrl?.value as string[]) ?? [];
     ctrl?.setValue(current.filter((u) => u !== url));
   }
@@ -755,6 +758,7 @@ export default class Save implements OnInit {
               })
             )
           ),
+          isHidden: [variant.isHidden ?? false],
         })
       );
     });

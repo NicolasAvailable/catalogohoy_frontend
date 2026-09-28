@@ -506,7 +506,25 @@ async function handleIncoming(body: unknown): Promise<void> {
       if (!phoneNumberId) continue;
 
       const account = await accountForPhoneNumberId(phoneNumberId);
-      if (!account) continue;
+      if (!account) {
+        // Números sin fila en whatsapp_accounts (p.ej. el emisor de
+        // notificaciones de la plataforma): loguear los statuses para poder
+        // diagnosticar entregas fallidas (el failed llega solo por acá).
+        const orphanStatuses = (value.statuses as Record<string, unknown>[]) ?? [];
+        for (const s of orphanStatuses) {
+          console.log(
+            "[wa-webhook] status no-CRM",
+            JSON.stringify({
+              phone_number_id: phoneNumberId,
+              wamid: s.id,
+              status: s.status,
+              recipient: s.recipient_id,
+              errors: s.errors ?? null,
+            }),
+          );
+        }
+        continue;
+      }
 
       switch (field) {
         case "messages":

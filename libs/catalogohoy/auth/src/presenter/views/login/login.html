@@ -51,11 +51,9 @@
         <ui-input-message [control]="form.get('password')" error="minlength" [text]="'Debe tener mínimo 6 caracteres' | transloco" />
       </div>
 
-      @if (!isNative) {
-        <a routerLink="/forgot-password" class="inline-block text-base font-semibold text-blue-500 mb-5">
-          {{ '¿Olvidaste tu contraseña?' | transloco }}
-        </a>
-      }
+      <a routerLink="/forgot-password" class="inline-block text-base font-semibold text-blue-500 mb-5">
+        {{ '¿Olvidaste tu contraseña?' | transloco }}
+      </a>
 
       <ui-button
         (click)="send()"
@@ -94,12 +92,18 @@
           {{ 'Continuar con Google' | transloco }}
         }
       </button>
-
-      <div class="flex justify-center gap-1 text-base text-center">
-        <p class="font-semibold text-grey-400">{{ '¿No tienes una cuenta?' | transloco }}</p>
-        <a routerLink="/signup" class="font-semibold text-blue-500">{{ 'Regístrate aquí' | transloco }}</a>
-      </div>
     }
+
+    <!-- Registro: in-app (web) o abriendo el signup web en el navegador del
+         sistema (nativo) — el alta/compra de planes vive en la web (IAP). -->
+    <div class="flex justify-center gap-1 text-base text-center">
+      <p class="font-semibold text-grey-400">{{ '¿No tienes una cuenta?' | transloco }}</p>
+      @if (isNative) {
+        <a (click)="openSignup()" class="font-semibold text-blue-500 cursor-pointer">{{ 'Regístrate aquí' | transloco }}</a>
+      } @else {
+        <a routerLink="/signup" class="font-semibold text-blue-500">{{ 'Regístrate aquí' | transloco }}</a>
+      }
+    </div>
 
     </div>
     <!-- /Card -->

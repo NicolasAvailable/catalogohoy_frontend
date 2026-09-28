@@ -17,12 +17,19 @@
       styleClass="!bg-[#8892F0] !text-lino-500"
     />
   </a>
-  <!-- Nombre de la tienda (centro) → Inicio -->
+  <!-- Ícono + nombre de la tienda (centro) → Inicio -->
   <a
     routerLink="/admin"
-    class="flex-1 min-w-0 text-center text-base font-bold text-grey-700 truncate"
+    class="flex-1 min-w-0 flex items-center justify-center gap-2"
   >
-    {{ currentTenant().name }}
+    <ui-avatar
+      size="normal"
+      shape="square"
+      [label]="currentTenant().name"
+      [image]="currentTenant().logo ?? ''"
+      styleClass="!w-6 !h-6 !text-[0.7rem] !bg-primary-100 !text-primary-600 !rounded-lg !overflow-hidden shrink-0"
+    />
+    <span class="text-base font-bold text-grey-700 truncate">{{ currentTenant().name }}</span>
   </a>
   <!-- Acciones (derecha): compartir + QR -->
   <div class="flex items-center gap-1 shrink-0">

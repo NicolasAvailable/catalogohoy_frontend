@@ -1,5 +1,9 @@
 import { isDevMode, Injectable, inject } from '@angular/core';
-import { LanguageService, SupabaseClientProvider } from '@catalogohoy/core';
+import {
+  isNativeApp,
+  LanguageService,
+  SupabaseClientProvider,
+} from '@catalogohoy/core';
 import {
   findCountryByCode,
   SUPPORTED_CURRENCIES,
@@ -243,9 +247,14 @@ export class AuthenticationService implements BaseAuthenticationService {
   }
 
   public async forgottenPassword(input: ForgottenPasswordCredentials) {
+    // En la app nativa `window.location.origin` es `localhost` → el link del
+    // email de reset sería inválido. Apuntamos siempre al reset-password web.
+    const base = isNativeApp()
+      ? 'https://auth.catalogohoy.com'
+      : window.location.origin;
     const { error } = await this.client.auth.resetPasswordForEmail(
       input.email,
-      { redirectTo: `${window.location.origin}/reset-password` }
+      { redirectTo: `${base}/reset-password` }
     );
     if (error) {
       return E.left(errorMapper(error as AuthApiError));

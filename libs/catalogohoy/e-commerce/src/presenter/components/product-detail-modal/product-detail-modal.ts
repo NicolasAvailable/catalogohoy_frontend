@@ -161,7 +161,9 @@ export class ProductDetailModal {
         sizes: this.product.sizes,
       });
     }
-    options.push(...this.product.variants);
+    // Hidden variants (e.g. a colour that sold out) stay on the product but
+    // never reach the buyer's option selector.
+    options.push(...this.product.variants.filter((v) => !v.isHidden));
     return options;
   })();
 

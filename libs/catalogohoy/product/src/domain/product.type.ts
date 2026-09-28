@@ -23,6 +23,7 @@ export type CreateProductInput = {
     sku?: string | null;
     photos: string[];
     sizes: { name: string; stock: string | null; sku?: string | null }[];
+    isHidden?: boolean;
   }[];
   addons?: {
     id: string | null;

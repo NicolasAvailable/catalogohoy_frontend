@@ -5,6 +5,8 @@ import {
   BaseCheckoutService,
   CancelSubscriptionResult,
   CatalogCheckoutRequest,
+  ChangePlanRequest,
+  ChangePlanResult,
   CheckoutRequest,
   CheckoutSession,
   PromotionCodeValidation,
@@ -27,6 +29,35 @@ export class CheckoutService implements BaseCheckoutService {
     if (!data?.url) return E.left(new Error('No se recibió URL de pago'));
 
     return E.right({ url: data.url, currency: data.currency });
+  }
+
+  public async changePlan(
+    request: ChangePlanRequest
+  ): Promise<E.Either<Error, ChangePlanResult>> {
+    const { data, error } = await this.client.functions.invoke('change-plan', {
+      body: request,
+    });
+
+    if (error) {
+      // FunctionsHttpError trae el body real en `context` — lo leemos para
+      // surfacear el motivo de Stripe (tarjeta rechazada, requiere 3DS, etc.).
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        try {
+          const body = await ctx.json();
+          if (body?.error) return E.left(new Error(body.error));
+        } catch {
+          // cae al error genérico
+        }
+      }
+      return E.left(new Error(error.message));
+    }
+
+    const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+    if (!parsed?.success) {
+      return E.left(new Error(parsed?.error ?? 'No se pudo cambiar el plan'));
+    }
+    return E.right({ success: true, subscriptionId: parsed.subscriptionId });
   }
 
   public async cancelSubscription(
@@ -71,10 +102,26 @@ export class CheckoutService implements BaseCheckoutService {
     const { data, error } = await this.client.functions.invoke<{
       success: boolean;
       extraCatalogs: number;
+      error?: string;
     }>('update-catalog-slots', { body: request });
 
-    if (error) return E.left(new Error(error.message));
-    if (!data?.success) return E.left(new Error('No se pudo actualizar los catálogos'));
+    // La función pega a Stripe para agregar la línea del catálogo extra a la
+    // suscripción. Cuando falla (p. ej. el negocio no tiene suscripción de
+    // Stripe activa) responde non-2xx; desenvolvemos el body para mostrar el
+    // motivo real en vez del genérico "Edge Function returned a non-2xx…".
+    if (error) {
+      return E.left(
+        await this.unwrapFunctionError(
+          error,
+          'No se pudieron agregar los catálogos. Intenta de nuevo en unos minutos.'
+        )
+      );
+    }
+    if (!data?.success) {
+      return E.left(
+        new Error(data?.error ?? 'No se pudieron agregar los catálogos.')
+      );
+    }
     return E.right({ extraCatalogs: data.extraCatalogs });
   }
 
@@ -105,5 +152,28 @@ export class CheckoutService implements BaseCheckoutService {
       return E.left(new Error((data as { error?: string })?.error ?? 'Cupón inválido'));
     }
     return E.right(data);
+  }
+
+  /**
+   * supabase-js entrega un `.message` genérico ("Edge Function returned a
+   * non-2xx status code") en `FunctionsHttpError`; el motivo real viaja en el
+   * body de la respuesta (`error.context`). Lo desenvolvemos para surfacear ese
+   * mensaje real, y si no lo hay caemos al `fallback` legible.
+   */
+  private async unwrapFunctionError(
+    error: { message: string; context?: unknown },
+    fallback: string
+  ): Promise<Error> {
+    const ctx = (error as { context?: Response }).context;
+    if (ctx && typeof ctx.json === 'function') {
+      try {
+        const body = await ctx.json();
+        const msg = body?.error ?? body?.message;
+        if (msg) return new Error(msg);
+      } catch {
+        // body vacío o no-JSON → caemos al fallback
+      }
+    }
+    return new Error(fallback);
   }
 }

@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { isNativeApp } from '@catalogohoy/core';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
@@ -22,6 +23,7 @@ import {
   IconComponent,
 } from '@ui';
 import { HomeStore } from '../../infrastructure/home.store';
+import { GettingStarted } from '../components/getting-started/getting-started';
 
 type ChartTab = 'ventas' | 'pedidos';
 type Currency = 'bs' | 'usd';
@@ -39,6 +41,7 @@ type Currency = 'bs' | 'usd';
     AccordionPanelDirective,
     DecimalPipe,
     TranslocoPipe,
+    GettingStarted,
   ],
   templateUrl: './home.html',
   styleUrls: ['./home.css'],
@@ -58,6 +61,10 @@ export class Home implements OnInit {
   public readonly showDashboard = computed(() => {
     return this.permissionsStore.isOwner() || this.permissionsStore.can()('ordenes', 'view');
   });
+
+  /** En la app nativa el CRM/Chats está oculto (solo web), así que la promo
+   *  de "Conectá tu WhatsApp" tampoco se muestra. */
+  public readonly isNative = isNativeApp();
 
   public readonly tenantName = computed(() => this.tenantStore.tenantName());
   public readonly stats = computed(() => this.homeStore.stats());
