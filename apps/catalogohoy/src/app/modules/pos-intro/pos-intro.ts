@@ -4,14 +4,13 @@ import {
   OnInit,
   computed,
   inject,
-  viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EcommerceConfigStore } from '@catalogohoy/ecommerce-config';
 import { PlanStore } from '@catalogohoy/plan';
 import { TenantStore } from '@catalogohoy/tenant';
-import { DialogComponent, IconComponent } from '@ui';
+import { IconComponent } from '@ui';
 import { POS_ENABLED_PLANS } from '../pos/pos-enabled.guard';
 
 interface Step {
@@ -24,13 +23,13 @@ interface Step {
  * Vista inicial del Punto de Venta dentro del admin (estilo el landing del POS
  * de TiendaNube): explica qué es y cómo funciona, visible para TODOS los planes.
  * El CTA "Ir a Punto de Venta" abre el POS en una ventana nueva si el plan lo
- * incluye (Avanzado/Enterprise); si no, muestra el MISMO modal de upgrade que
- * el CRM (Chats) que lleva a la página de Planes.
+ * incluye (Avanzado/Enterprise); si no, el CTA se muestra deshabilitado con el
+ * aviso de plan y link a Planes (mismo patrón que el CRM/Chats, sin modal).
  */
 @Component({
   selector: 'app-pos-intro',
   standalone: true,
-  imports: [RouterLink, IconComponent, DialogComponent, TranslocoPipe],
+  imports: [RouterLink, IconComponent, TranslocoPipe],
   templateUrl: './pos-intro.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -39,7 +38,12 @@ export default class PosIntro implements OnInit {
   private readonly tenantStore = inject(TenantStore);
   private readonly configStore = inject(EcommerceConfigStore);
 
-  private readonly upgradeDialog = viewChild<DialogComponent>('upgradeDialog');
+  /** CTA bloqueado: plan cargado y sin POS. Mientras el plan carga se muestra
+   *  habilitado (el guard de /pos revalida igual, como siempre). */
+  protected readonly posLocked = computed(() => {
+    const plan = this.planStore.currentPlan()?.id;
+    return !!plan && !POS_ENABLED_PLANS.includes(plan);
+  });
 
   readonly steps: Step[] = [
     { icon: 'scan-barcode', title: 'Buscá o escaneá', text: 'Encontrá productos por nombre, descripción, SKU o con el lector de código de barras.' },
@@ -56,14 +60,10 @@ export default class PosIntro implements OnInit {
     });
   }
 
-  /** CTA principal: abre el POS o muestra el gate de plan (como el CRM). */
+  /** CTA principal: abre el POS (con plan bloqueado el botón está disabled y
+   *  este guard es solo defensivo). */
   goToPos(): void {
-    const plan = this.planStore.currentPlan()?.id;
-    // Plan cargado y NO habilitado → modal de upgrade a Planes.
-    if (plan && !POS_ENABLED_PLANS.includes(plan)) {
-      this.upgradeDialog()?.show();
-      return;
-    }
+    if (this.posLocked()) return;
     // Habilitado (o plan aún no cargado → el guard de /pos decide): ventana nueva
     // nombrada, para reenfocar la misma en un segundo clic. El título de la
     // ventana lo pone el shell del POS ("Punto de venta | <catálogo>").
@@ -76,9 +76,5 @@ export default class PosIntro implements OnInit {
       'catalogohoy-pos',
       `popup=yes,width=${w},height=${availH},left=${left},top=0`
     );
-  }
-
-  closeUpgrade(): void {
-    this.upgradeDialog()?.hide();
   }
 }

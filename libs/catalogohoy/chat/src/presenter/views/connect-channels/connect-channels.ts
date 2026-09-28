@@ -4,7 +4,6 @@ import {
   inject,
   OnInit,
   signal,
-  viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { translate, TranslocoPipe } from '@jsverse/transloco';
@@ -14,15 +13,9 @@ import { WhatsAppService, WhatsAppStore } from '@catalogohoy/whatsapp';
 import { NgClass } from '@angular/common';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { ConfirmDialogService, DialogComponent, IconComponent } from '@ui';
+import { ConfirmDialogService, IconComponent } from '@ui';
+import { canConnectChannels } from '../../../domain';
 
-/** Planes con acceso al CRM/conexión de canales (solo Avanzado; enterprise por
- *  estar por encima). Pro NO. Debe coincidir con CHAT_ENABLED_PLANS del guard. */
-const CHAT_ENABLED_PLANS = ['avanzado', 'enterprise'];
-/** Override interno por slug: acceso al CRM aunque el plan no lo incluya.
- *  andes-4x4 (2026-07-30): habilitado como gesto por info errada (modal decía
- *  Pro). Debe coincidir con CHAT_ENABLED_SLUGS del guard. */
-const CHAT_ENABLED_SLUGS: string[] = ['andes-4x4'];
 /** Instagram YA está aprobado por Meta (instagram_business_basic +
  *  instagram_business_manage_messages, App Review 2026-09-14) y la app está en
  *  Live → su card es PÚBLICA para todo catálogo con plan habilitado. Messenger
@@ -50,7 +43,7 @@ type SocialAccount = { username: string | null; displayName: string | null };
 @Component({
   selector: 'lib-connect-channels',
   standalone: true,
-  imports: [NgClass, RouterLink, DialogComponent, IconComponent, TranslocoPipe],
+  imports: [NgClass, RouterLink, IconComponent, TranslocoPipe],
   host: { class: 'flex-1 flex flex-col min-h-0 overflow-y-auto' },
   templateUrl: './connect-channels.html',
 })
@@ -66,16 +59,15 @@ export class ConnectChannelsComponent implements OnInit {
    *  internos (allowlist) pueden conectar igual para demo / App Review. */
   protected readonly canConnect = computed(() => {
     const slug = getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || '';
-    if (CHAT_ENABLED_SLUGS.includes(slug)) return true;
-    const planId = this.planStore.currentPlan()?.id ?? '';
-    return CHAT_ENABLED_PLANS.includes(planId);
+    return canConnectChannels(slug, this.planStore.currentPlan()?.id ?? '');
   });
 
-  /** Modal "función premium" al intentar conectar sin plan avanzado. */
-  private readonly upgradeDialog = viewChild<DialogComponent>('upgradeDialog');
-  protected closeUpgrade(): void {
-    this.upgradeDialog()?.hide();
-  }
+  /** Aviso "necesitás Avanzado" bajo el header: solo cuando el plan ya cargó
+   *  y no incluye el CRM (evita flashearle el upsell a un Avanzado mientras
+   *  carga el plan). */
+  protected readonly showPlanNote = computed(
+    () => !!this.planStore.currentPlan() && !this.canConnect()
+  );
 
   /** Canal cuya desvinculación está en vuelo (spinner por card). */
   protected readonly disconnectingKey = signal<string | null>(null);
@@ -132,20 +124,18 @@ export class ConnectChannelsComponent implements OnInit {
   );
 
   ngOnInit(): void {
+    // El plan puede no estar cargado si se entra directo a esta ruta (el aviso
+    // de plan y el estado de las cards dependen de él).
+    this.planStore.loadTenantPlanUsage();
     this.whatsAppStore.loadAccounts();
     this.loadSocialAccounts();
   }
 
-  /** Click en una card: los canales "Próximamente" no hacen nada; si el plan
-   *  no incluye conexión de canales, muestra el modal premium; si no, navega a
-   *  la pantalla de conexión del canal. */
+  /** Click en una card: las "Próximamente" y las bloqueadas por plan no
+   *  navegan (routeFor da null; el aviso de plan ya está visible en la
+   *  pantalla, sin modal). Con plan válido el routerLink navega normalmente. */
   protected onChannelClick(channel: ConnectableChannel, event: Event): void {
-    if (channel.comingSoon) return;
-    if (!this.canConnect()) {
-      event.preventDefault();
-      this.upgradeDialog()?.show();
-    }
-    // Con plan válido, el routerLink de la card navega normalmente.
+    if (this.routeFor(channel) === null) event.preventDefault();
   }
 
   /** Destino del routerLink de la card: null si es "Próximamente" o el plan no

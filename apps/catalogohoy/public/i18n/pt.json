@@ -2222,6 +2222,8 @@
   "Todavía no creaste ninguna plantilla propia. Empezá desde las sugeridas o creá una nueva.": "Você ainda não criou nenhum modelo próprio. Comece pelos sugeridos ou crie um novo.",
   "Un costo tuyo por la venta (por ejemplo la comisión de un vendedor o una pasarela). Se descuenta de tu total y no se le muestra al cliente.": "Um custo seu pela venda (por exemplo, a comissão de um vendedor ou de um gateway de pagamento). É descontado do seu total e não aparece para o cliente.",
   "Una función del plan Avanzado": "Um recurso do plano Avançado",
+  "Necesitas el plan Avanzado para conectar tus canales de chat.": "Você precisa do plano Avançado para conectar seus canais de chat.",
+  "Necesitas el plan Avanzado para usar el Punto de Venta.": "Você precisa do plano Avançado para usar o Ponto de Venda.",
   "Usuario": "Usuário",
   "Vender": "Vender",
   "Ventas por día": "Vendas por dia",

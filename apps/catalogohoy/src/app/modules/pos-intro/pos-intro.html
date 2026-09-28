@@ -15,17 +15,37 @@
 
     <button
       type="button"
-      class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary-500 text-white text-base font-semibold hover:bg-primary-600 transition-colors mt-1 cursor-pointer"
+      class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary-500 text-white text-base font-semibold enabled:hover:bg-primary-600 transition-colors mt-1 enabled:cursor-pointer disabled:bg-grey-200 disabled:text-grey-400 disabled:cursor-not-allowed"
+      [disabled]="posLocked()"
       (click)="goToPos()"
     >
+      @if (posLocked()) {
+      <ui-icon name="lock" size="18" />
+      }
       {{ 'Ir a Punto de Venta' | transloco }}
+      @if (!posLocked()) {
       <ui-icon name="arrow-right" size="18" />
+      }
     </button>
 
+    @if (posLocked()) {
+    <!-- Plan sin POS: aviso de plan con link a Planes (reemplaza al viejo
+         modal de upgrade). -->
+    <p class="inline-flex flex-wrap items-center justify-center gap-1.5 text-sm text-grey-500">
+      <ui-icon name="crown" size="15" styleClass="text-primary-500" />
+      {{ 'Necesitas el plan Avanzado para usar el Punto de Venta.' | transloco }}
+      <a
+        routerLink="/admin/plans"
+        class="font-semibold text-primary-500 hover:text-primary-600 underline underline-offset-2"
+        >{{ 'Mejorar plan' | transloco }}</a
+      >
+    </p>
+    } @else {
     <p class="inline-flex items-center gap-1.5 text-xs text-grey-400">
       <ui-icon name="sparkles" size="13" styleClass="text-grey-300" />
       {{ 'Se abre en una ventana nueva para que vendas cómodo desde el mostrador.' | transloco }}
     </p>
+    }
   </div>
 
   <!-- ═══ Cómo funciona (izquierda) + preview del POS (derecha) ═══ -->
@@ -55,35 +75,3 @@
     </div>
   </div>
 </div>
-
-<!-- Gate de plan (mismo modal que el CRM): solo Avanzado/Enterprise -->
-<ui-dialog #upgradeDialog [showHeader]="false" styleClass="w-[26rem] max-w-[95vw]">
-  <div class="flex flex-col items-center text-center gap-4 p-2">
-    <div class="w-16 h-16 rounded-full bg-linear-to-br from-primary-50 to-violet-50 flex items-center justify-center text-primary-500">
-      <ui-icon name="crown" size="30" />
-    </div>
-    <h2 class="text-xl font-bold text-grey-800">
-      {{ 'Una función del plan Avanzado' | transloco }}
-    </h2>
-    <p class="text-sm text-grey-500 leading-relaxed">
-      {{ 'El Punto de Venta para vender en persona está disponible en el plan Avanzado. Mejorá tu plan para cobrar en el mostrador desde CatalogoHoy.' | transloco }}
-    </p>
-    <div class="flex items-center gap-2 mt-1">
-      <button
-        type="button"
-        (click)="closeUpgrade()"
-        class="px-4 py-2.5 rounded-xl border border-grey-200 text-sm font-semibold text-grey-600 hover:bg-grey-50 transition-colors cursor-pointer"
-      >
-        {{ 'Ahora no' | transloco }}
-      </button>
-      <a
-        routerLink="/admin/plans"
-        (click)="closeUpgrade()"
-        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors"
-      >
-        <ui-icon name="sparkles" size="15" />
-        {{ 'Mejorar plan' | transloco }}
-      </a>
-    </div>
-  </div>
-</ui-dialog>
