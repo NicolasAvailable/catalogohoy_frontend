@@ -37,6 +37,10 @@ export class OrderMapper {
       paymentAdjustment: OrderMapper.toAdjustment(e.payment_adjustment),
       deliveryDate: e.delivery_date,
       creditInstallments: OrderMapper.toInstallments(e.credit_installments),
+      paymentCondition:
+        e.payment_condition === 'credit' || e.payment_condition === 'cash'
+          ? e.payment_condition
+          : null,
     };
   }
 

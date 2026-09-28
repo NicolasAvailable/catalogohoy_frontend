@@ -55,6 +55,14 @@ export default class Invoice {
     () => this.ecommerceStore.isVenezuela() && (this.order()?.totalBs ?? 0) > 0
   );
 
+  /** Ajuste visible (p. ej. descuento de contado) para itemizarlo entre el
+   *  Subtotal y el Total. Si el ajuste está oculto, el total ya lo incluye y
+   *  no se muestra la línea. */
+  public readonly visibleAdjustment = computed(() => {
+    const adj = this.order()?.paymentAdjustment;
+    return adj && adj.visible ? adj : null;
+  });
+
   /** Tasa derivada del snapshot de la orden (totalBs/totalUsd), para que los
    *  montos por línea en Bs cuadren con el total guardado. 0 si no aplica. */
   public readonly orderRate = computed(() => {

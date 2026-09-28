@@ -60,6 +60,7 @@ import {
   DAY_LABELS_ES,
   DEFAULT_BUSINESS_HOURS_WEEK,
   DEFAULT_CURRENCY_CONFIG,
+  DEFAULT_CREDIT_MIN_PURCHASES,
   DEFAULT_CUSTOMER_FIELDS,
   DEFAULT_DELIVERY_BLOCKED_WEEKDAYS,
   DELIVERY_WEEKDAY_OPTIONS,
@@ -360,6 +361,35 @@ export class EcommerceConfigComponent implements OnInit {
   /** Weekdays with no delivery (JS: 0 = Sunday … 6 = Saturday). */
   public readonly draftDeliveryBlockedWeekdays = signal<number[]>([]);
   public readonly deliveryWeekdayOptions = DELIVERY_WEEKDAY_OPTIONS;
+
+  // --- Contado y crédito (Pagos tab) drafts ---
+  /** Apply per-method adjustments (__adjust*) in the public checkout. */
+  public readonly draftApplyAdjustmentsInCheckout = signal<boolean>(false);
+  /** Offer "Pago a crédito" in the public checkout. */
+  public readonly draftCreditEnabled = signal<boolean>(false);
+  /** Previous purchases required before credit unlocks (0 = no minimum). */
+  public readonly draftCreditMinPurchases = signal<number>(
+    DEFAULT_CREDIT_MIN_PURCHASES
+  );
+  /** Custom note under the credit option (null/'' = checkout default text). */
+  public readonly draftCreditNote = signal<string | null>(null);
+
+  /** Métodos activos que tienen un ajuste configurado — chips informativos de
+   *  la card "Contado y crédito" (el descuento se configura por método, en
+   *  "Datos"; acá solo se decide si aplica también en el checkout). */
+  public readonly methodsWithAdjustment = computed(() =>
+    this.configStore
+      .paymentMethodsList()
+      .filter((m) => m.isActive)
+      .map((m) => ({ name: m.name, badge: this.adjustBadge(m) }))
+      .filter((m): m is { name: string; badge: { label: string; kind: 'good' | 'warn' } } => !!m.badge)
+  );
+
+  /** Sanea el input de compras mínimas: solo dígitos, piso 0. */
+  setCreditMinPurchases(value: string): void {
+    const n = parseInt(String(value).replace(/[^\d]/g, ''), 10);
+    this.draftCreditMinPurchases.set(Number.isFinite(n) ? n : 0);
+  }
 
   /** Alterna un día entre "despacha" y "no despacha". Se almacena como lista de
    *  días BLOQUEADos (para no tocar el checkout ni migrar), pero la UI se expresa
@@ -742,6 +772,10 @@ export class EcommerceConfigComponent implements OnInit {
       syncFieldJson(this.draftCustomerFields, prev?.customerFields ?? DEFAULT_CUSTOMER_FIELDS, config.customerFields ?? DEFAULT_CUSTOMER_FIELDS);
       syncField(this.draftDeliveryDateEnabled, prev?.deliveryDateEnabled ?? false, config.deliveryDateEnabled ?? false);
       syncFieldJson(this.draftDeliveryBlockedWeekdays, prev?.deliveryBlockedWeekdays ?? DEFAULT_DELIVERY_BLOCKED_WEEKDAYS, config.deliveryBlockedWeekdays ?? DEFAULT_DELIVERY_BLOCKED_WEEKDAYS);
+      syncField(this.draftApplyAdjustmentsInCheckout, prev?.applyAdjustmentsInCheckout ?? false, config.applyAdjustmentsInCheckout ?? false);
+      syncField(this.draftCreditEnabled, prev?.creditEnabled ?? false, config.creditEnabled ?? false);
+      syncField(this.draftCreditMinPurchases, prev?.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES, config.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES);
+      syncField(this.draftCreditNote, prev?.creditNote ?? null, config.creditNote ?? null);
       syncField(this.draftMetaPixelId, prev?.metaPixelId ?? null, config.metaPixelId ?? null);
 
       this.lastSyncedConfig = { ...config };
@@ -785,6 +819,11 @@ export class EcommerceConfigComponent implements OnInit {
       const customerFields = this.draftCustomerFields();
       const deliveryDateEnabled = this.draftDeliveryDateEnabled();
       const deliveryBlockedWeekdays = this.draftDeliveryBlockedWeekdays();
+      // Contado/crédito — la preview del checkout refleja el selector en vivo.
+      const applyAdjustmentsInCheckout = this.draftApplyAdjustmentsInCheckout();
+      const creditEnabled = this.draftCreditEnabled();
+      const creditMinPurchases = this.draftCreditMinPurchases();
+      const creditNote = this.draftCreditNote();
       // Métodos de pago activos (con sus datos) — para que la preview del
       // checkout refleje en vivo los datos al elegir un método, sin recargar.
       const paymentMethods = this.configStore
@@ -818,6 +857,10 @@ export class EcommerceConfigComponent implements OnInit {
           customerFields,
           deliveryDateEnabled,
           deliveryBlockedWeekdays,
+          applyAdjustmentsInCheckout,
+          creditEnabled,
+          creditMinPurchases,
+          creditNote,
           // Solo overrideamos si hay métodos activos cargados; si la lista aún
           // no cargó (vacía), la preview usa los del catálogo real.
           ...(paymentMethods.length ? { paymentMethods } : {}),
@@ -1261,7 +1304,43 @@ export class EcommerceConfigComponent implements OnInit {
     if (deliveryDaysChanged) {
       changes.deliveryBlockedWeekdays = this.draftDeliveryBlockedWeekdays();
     }
-    if (customerFieldsChanged || deliveryEnabledChanged || deliveryDaysChanged) {
+
+    // Contado/crédito también vive dentro de `customer_fields` — mismas
+    // reglas que delivery-date: cualquier cambio manda además customerFields
+    // como base para que el service no pise el resto del jsonb.
+    const applyAdjustmentsChanged =
+      this.draftApplyAdjustmentsInCheckout() !==
+      (config.applyAdjustmentsInCheckout ?? false);
+    const creditEnabledChanged =
+      this.draftCreditEnabled() !== (config.creditEnabled ?? false);
+    const creditMinChanged =
+      this.draftCreditMinPurchases() !==
+      (config.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES);
+    const creditNoteChanged =
+      (this.draftCreditNote()?.trim() || null) !== (config.creditNote ?? null);
+
+    if (applyAdjustmentsChanged) {
+      changes.applyAdjustmentsInCheckout = this.draftApplyAdjustmentsInCheckout();
+    }
+    if (creditEnabledChanged) {
+      changes.creditEnabled = this.draftCreditEnabled();
+    }
+    if (creditMinChanged) {
+      changes.creditMinPurchases = this.draftCreditMinPurchases();
+    }
+    if (creditNoteChanged) {
+      changes.creditNote = this.draftCreditNote()?.trim() || null;
+    }
+
+    if (
+      customerFieldsChanged ||
+      deliveryEnabledChanged ||
+      deliveryDaysChanged ||
+      applyAdjustmentsChanged ||
+      creditEnabledChanged ||
+      creditMinChanged ||
+      creditNoteChanged
+    ) {
       changes.customerFields = this.draftCustomerFields();
     }
 

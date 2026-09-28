@@ -693,6 +693,14 @@
     <ui-card>
       <div class="flex flex-col gap-4">
         <h2 class="text-xl font-bold">{{ 'Estado de la orden' | transloco }}</h2>
+        @if (creditRequested()) {
+        <div class="flex items-start gap-2.5 p-3 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
+          <ui-icon name="hand-coins" size="18" styleClass="shrink-0 mt-0.5" />
+          <p class="text-sm m-0">
+            {{ 'El cliente pidió pagar A CRÉDITO al hacer este pedido. Si lo entregas a crédito, marca la orden como "A crédito" para llevar la cobranza.' | transloco }}
+          </p>
+        </div>
+        }
         <div
           class="flex flex-col sm:flex-row gap-4"
           role="radiogroup"

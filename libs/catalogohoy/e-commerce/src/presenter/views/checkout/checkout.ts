@@ -25,7 +25,11 @@ import {
   QrCodeComponent,
   TextareaComponent,
 } from '@ui';
-import { CartItem, isNitFeatureEnabled } from '../../../domain';
+import {
+  CartItem,
+  isNitFeatureEnabled,
+  PublicOrderAdjustment,
+} from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 
@@ -179,7 +183,95 @@ export default class Checkout {
   });
 
   public readonly subtotal = computed(() => this.cartStore.totalPrice());
-  public readonly total = computed(() => this.subtotal() + this.shippingFee());
+
+  // --- Contado y crédito (condición de pago elegida por el cliente) ---
+  /** Config del catálogo: aplicar los ajustes (__adjust*) del método elegido. */
+  public readonly applyAdjustments = computed(
+    () => this.info()?.applyAdjustmentsInCheckout ?? false
+  );
+  /** Config del catálogo: ofrecer "Pago a crédito" en el checkout. */
+  public readonly creditEnabled = computed(
+    () => this.info()?.creditEnabled ?? false
+  );
+  /** Compras previas necesarias para desbloquear el crédito (0 = ninguna). */
+  public readonly creditMinPurchases = computed(
+    () => this.info()?.creditMinPurchases ?? 0
+  );
+  /** Nota del comerciante bajo la opción de crédito ('' = texto default). */
+  public readonly creditNote = computed(
+    () => this.info()?.creditNote?.trim() || null
+  );
+  /** Condición elegida. Solo relevante cuando creditEnabled. */
+  public readonly paymentCondition = signal<'cash' | 'credit'>('cash');
+  public readonly isCredit = computed(
+    () => this.creditEnabled() && this.paymentCondition() === 'credit'
+  );
+
+  /** Gate "crédito después de N compras": conteo de compras previas por
+   *  teléfono (RPC). null = aún no verificado. */
+  public readonly purchaseCount = signal<number | null>(null);
+  /** RPC caído → fallback permisivo (el comerciante confirma la orden igual). */
+  public readonly purchaseCheckFailed = signal(false);
+  public readonly isCheckingCredit = signal(false);
+
+  /** Crédito desbloqueado para este cliente. Sin mínimo = siempre; con mínimo,
+   *  exige conteo verificado >= N (o RPC caído → permisivo). En la preview del
+   *  editor no hay cliente real → se muestra desbloqueado. */
+  public readonly creditUnlocked = computed(() => {
+    if (this.isPreview) return true;
+    const min = this.creditMinPurchases();
+    if (min <= 0) return true;
+    if (this.purchaseCheckFailed()) return true;
+    const count = this.purchaseCount();
+    return count !== null && count >= min;
+  });
+
+  /** Ajuste del método de pago elegido, aplicado al pedido. Solo cuando el
+   *  catálogo activó "aplicar ajustes en el checkout" y el pago NO es a
+   *  crédito. Mismas reglas y snapshot que el editor de órdenes del admin
+   *  (% sobre el subtotal de productos, descuento capeado para no dejar el
+   *  total negativo). */
+  public readonly paymentAdjustment = computed<PublicOrderAdjustment | null>(() => {
+    if (!this.applyAdjustments() || this.isCredit()) return null;
+    const name = this.selectedPaymentMethod();
+    if (!name) return null;
+    const method = this.availablePaymentMethods().find((m) => m.name === name);
+    const d = method?.details ?? {};
+    const type = d['__adjustType'];
+    if (!type || type === 'none') return null;
+    const value = Number(String(d['__adjustValue'] ?? '').replace(',', '.'));
+    if (!Number.isFinite(value) || value <= 0) return null;
+    const mode = d['__adjustMode'] === 'amount' ? 'amount' : 'percent';
+    const base = this.subtotal();
+    let magnitude =
+      mode === 'percent'
+        ? Math.round(base * Math.min(value, 100)) / 100
+        : value;
+    const kind: 'discount' | 'surcharge' =
+      type === 'discount' ? 'discount' : 'surcharge';
+    if (kind === 'discount') {
+      magnitude = Math.min(magnitude, base + this.shippingFee());
+    }
+    magnitude = Math.round(magnitude * 100) / 100;
+    if (magnitude <= 0) return null;
+    const suffix = mode === 'percent' ? ` (${value}%)` : '';
+    return {
+      label: `${kind === 'discount' ? 'Descuento' : 'Cargo adicional'} · ${name}${suffix}`,
+      amount: kind === 'discount' ? -magnitude : magnitude,
+      magnitude,
+      kind,
+      visible: d['__adjustVisible'] !== '0',
+    };
+  });
+
+  public readonly total = computed(() =>
+    Math.max(
+      0,
+      this.subtotal() +
+        this.shippingFee() +
+        (this.paymentAdjustment()?.amount ?? 0)
+    )
+  );
 
   /** Bolívares mirror of any price row — Venezuela only, honoring the
    *  merchant's "show local currency" toggle, and only with a rate. Same
@@ -212,6 +304,26 @@ export default class Checkout {
       .map((f) => ({ label: f.label, value: (details[f.key] ?? '').trim() }))
       .filter((f) => f.value.length > 0);
   });
+
+  /** Chip corto del ajuste de un método ("-5%", "+$2") en su fila — solo
+   *  cuando el catálogo aplica los ajustes en el checkout. */
+  public methodAdjustChip(pm: {
+    details?: Record<string, string> | null;
+  }): { label: string; kind: 'discount' | 'surcharge' } | null {
+    if (!this.applyAdjustments()) return null;
+    const d = pm.details ?? {};
+    const type = d['__adjustType'];
+    const value = Number(String(d['__adjustValue'] ?? '').replace(',', '.'));
+    if (!type || type === 'none' || !Number.isFinite(value) || value <= 0)
+      return null;
+    const amount =
+      (d['__adjustMode'] || 'percent') === 'percent'
+        ? `${value}%`
+        : `${this.cs()}${value}`;
+    return type === 'discount'
+      ? { label: `-${amount}`, kind: 'discount' }
+      : { label: `+${amount}`, kind: 'surcharge' };
+  }
 
   /** True si el método tiene datos cargados (muestra el chevron en su fila). */
   public hasPaymentInfo(pm: { name: string; details?: Record<string, string> | null }): boolean {
@@ -280,6 +392,53 @@ export default class Checkout {
         this.router.navigate(['/'], { queryParamsHandling: 'preserve' });
       }
     });
+
+    // Gate de crédito: al escribir el teléfono se consulta (con debounce) el
+    // conteo de compras previas de ese número en esta tienda. En preview no
+    // se consulta (no hay cliente real).
+    effect(() => {
+      const min = this.creditMinPurchases();
+      const enabled = this.creditEnabled();
+      const digits = `${this.countryCode()}${this.phone()}`.replace(/\D/g, '');
+      clearTimeout(this.creditCheckTimer);
+      if (!enabled || min <= 0 || this.isPreview) return;
+      // El RPC matchea por los últimos 7 dígitos; menos que eso no identifica.
+      if (digits.length < 7) {
+        this.purchaseCount.set(null);
+        this.purchaseCheckFailed.set(false);
+        return;
+      }
+      const phoneFull = `${this.countryCode()} ${this.phone()}`.trim();
+      this.creditCheckTimer = setTimeout(async () => {
+        this.isCheckingCredit.set(true);
+        const count = await this.ecommerceStore.getCustomerPurchaseCount(phoneFull);
+        this.isCheckingCredit.set(false);
+        if (count === null) {
+          // RPC caído → permisivo: no bloqueamos la venta (el comerciante
+          // confirma la orden de todas formas).
+          this.purchaseCheckFailed.set(true);
+          this.purchaseCount.set(null);
+        } else {
+          this.purchaseCheckFailed.set(false);
+          this.purchaseCount.set(count);
+        }
+      }, 450);
+    });
+
+    // Si el crédito se bloquea (cambió el teléfono a uno sin compras), la
+    // condición vuelve a contado para no dejar seleccionada una opción inválida.
+    effect(() => {
+      if (this.paymentCondition() === 'credit' && !this.creditUnlocked()) {
+        this.paymentCondition.set('cash');
+      }
+    });
+  }
+
+  private creditCheckTimer: ReturnType<typeof setTimeout> | undefined;
+
+  selectPaymentCondition(condition: 'cash' | 'credit') {
+    if (condition === 'credit' && !this.creditUnlocked()) return;
+    this.paymentCondition.set(condition);
   }
 
   // --- Cart line-item controls ---
@@ -362,8 +521,10 @@ export default class Checkout {
     // NIT: obligatorio cuando la feature está activa para el catálogo.
     if (this.nitEnabled() && !this.nit().trim()) return false;
 
+    // A crédito no se pide método de pago (no está pagando ahora).
     const methods = this.availablePaymentMethods();
-    if (methods.length > 0 && !this.selectedPaymentMethod()) return false;
+    if (!this.isCredit() && methods.length > 0 && !this.selectedPaymentMethod())
+      return false;
 
     if (this.hasShipping() && !this.selectedShippingId()) return false;
     const sel = this.selectedShipping();
@@ -440,7 +601,18 @@ export default class Checkout {
           : null,
       })),
       total,
-      payment_method: this.selectedPaymentMethod() || undefined,
+      payment_method: this.isCredit()
+        ? undefined
+        : this.selectedPaymentMethod() || undefined,
+      // Snapshot del descuento/recargo aplicado (misma forma que el admin) —
+      // así la factura/PDF lo itemiza sin lógica nueva.
+      payment_adjustment: this.paymentAdjustment() ?? undefined,
+      // Solo cuando el catálogo ofrece el selector; undefined = flujo viejo.
+      payment_condition: this.creditEnabled()
+        ? this.isCredit()
+          ? 'credit'
+          : 'cash'
+        : undefined,
       shipping_method: sel
         ? {
             name: sel.name,
@@ -566,8 +738,16 @@ export default class Checkout {
         ? `*Dirección:* ${this.customerAddress().trim()}\n`
         : '';
     const commentsStr = this.comments() ? `*Comentarios:* ${this.comments()}` : '';
-    const paymentStr = this.selectedPaymentMethod()
+    // A crédito: no hay método de pago; se avisa la condición al vendedor.
+    const paymentStr = this.isCredit()
+      ? `*Condición de pago:* A crédito (a coordinar con el vendedor)`
+      : this.selectedPaymentMethod()
       ? `*Método de pago:* ${this.selectedPaymentMethod()}\nPor favor compartir los datos para realizar el pago.`
+      : '';
+    // Línea del descuento/recargo de contado (el total ya lo incluye).
+    const adj = this.paymentAdjustment();
+    const adjStr = adj
+      ? `*${adj.label}:* ${adj.kind === 'discount' ? '-' : '+'}${this.priceForMessage(adj.magnitude)}\n`
       : '';
 
     const phoneFull = this.customerFields().phone.visible
@@ -600,7 +780,8 @@ export default class Checkout {
     if (phoneFull) message += `*Teléfono:* ${phoneFull}\n`;
     if (nitStr) message += `${nitStr}\n`;
     message += `\n*Productos:*\n${productsList}`;
-    if (fee > 0) message += `\n*Subtotal:* ${this.priceForMessage(subtotal)}`;
+    if (fee > 0 || adjStr) message += `\n*Subtotal:* ${this.priceForMessage(subtotal)}`;
+    if (adjStr) message += `\n${adjStr.trimEnd()}`;
     message += `\n*Total:* ${this.priceForMessage(total)}${totalBsStr}\n`;
     if (envioStr) message += `\n${envioStr.trimEnd()}`;
     if (direccionStr) message += `\n${direccionStr.trimEnd()}`;

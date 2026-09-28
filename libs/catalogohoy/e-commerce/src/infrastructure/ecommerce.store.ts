@@ -8,7 +8,7 @@ import {
   withMethods,
   withState,
 } from '@ngrx/signals';
-import { CatalogInfo } from '../domain';
+import { CatalogInfo, PublicOrderAdjustment } from '../domain';
 import { EcommerceService } from './ecommerce.service';
 
 const PAGE_SIZE = 20;
@@ -334,6 +334,10 @@ export const EcommerceStore = signalStore(
       shipping_fee?: number;
       /** Fecha de entrega elegida por el cliente (YYYY-MM-DD). Opcional. */
       delivery_date?: string;
+      /** Snapshot del descuento/recargo del checkout (contado). */
+      payment_adjustment?: PublicOrderAdjustment | null;
+      /** Condición elegida por el cliente ('cash' | 'credit'). Opcional. */
+      payment_condition?: 'cash' | 'credit';
     }) {
       const catalogInfo = store.catalogInfo();
       if (!catalogInfo) return;
@@ -354,10 +358,24 @@ export const EcommerceStore = signalStore(
         shipping_address: order.shipping_address,
         shipping_fee: order.shipping_fee,
         delivery_date: order.delivery_date,
+        payment_adjustment: order.payment_adjustment,
+        payment_condition: order.payment_condition,
       });
 
       patchState(store, () => ({ isLoading: false }));
       return result;
+    },
+
+    /** Gate de crédito del checkout: compras previas (completadas o a crédito)
+     *  del teléfono en esta tienda. null = no se pudo verificar (el caller
+     *  decide; el checkout es permisivo para no bloquear ventas). */
+    async getCustomerPurchaseCount(phone: string): Promise<number | null> {
+      const catalogInfo = store.catalogInfo();
+      if (!catalogInfo) return null;
+      return ecommerceService.getCustomerPurchaseCount(
+        Number(catalogInfo.id),
+        phone
+      );
     },
 
     enterPreviewMode() {

@@ -62,6 +62,29 @@ export interface CatalogInfo {
    *  pago, el storefront inicializa este pixel y dispara los eventos de compra.
    *  Null = el catálogo no tiene pixel configurado. */
   metaPixelId: string | null;
+  /** When true, the checkout applies the per-method adjustment (`__adjust*`)
+   *  of the payment method the customer picks. Default false = adjustments
+   *  stay admin-only (current behavior). */
+  applyAdjustmentsInCheckout: boolean;
+  /** When true, the checkout offers "Pago a crédito" besides cash. */
+  creditEnabled: boolean;
+  /** Previous purchases (by phone) needed before credit unlocks. 0 = none. */
+  creditMinPurchases: number;
+  /** Merchant note under the credit option. Null/'' = default text. */
+  creditNote: string | null;
+}
+
+/** Snapshot of the payment adjustment applied to an order at checkout. Same
+ *  shape the admin editor persists in `orders.payment_adjustment` (see
+ *  OrderAdjustment in @catalogohoy/order — kept structurally identical here
+ *  to avoid a cross-lib dependency). */
+export interface PublicOrderAdjustment {
+  label: string;
+  /** Signed: negative = discount, positive = surcharge. */
+  amount: number;
+  magnitude: number;
+  kind: 'discount' | 'surcharge';
+  visible: boolean;
 }
 
 /** Invoice-safe view of an order, fetched by id for the public receipt. */
@@ -96,6 +119,9 @@ export interface PublicOrder {
   shippingAddress: string | null;
   shippingFee: number;
   paymentMethod: string | null;
+  /** Discount/surcharge applied at checkout (e.g. cash discount). Null for
+   *  orders without one. The invoice only itemizes it when `visible`. */
+  paymentAdjustment: PublicOrderAdjustment | null;
   comments: string | null;
   createdAt: string;
 }

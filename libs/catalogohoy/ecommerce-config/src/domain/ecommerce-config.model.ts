@@ -313,6 +313,9 @@ export const DEFAULT_CUSTOMER_FIELDS: CustomerFieldsConfig = {
  *  follow JS convention (0 = Sunday … 6 = Saturday). */
 export const DEFAULT_DELIVERY_BLOCKED_WEEKDAYS: number[] = [];
 
+/** Default minimum previous purchases required for credit at checkout. */
+export const DEFAULT_CREDIT_MIN_PURCHASES = 3;
+
 /** Weekday options for the "días bloqueados" selector in the editor. Ordered
  *  Monday → Sunday for display but keyed with the JS day number. */
 export const DELIVERY_WEEKDAY_OPTIONS: { day: number; label: string }[] = [
@@ -390,6 +393,26 @@ export interface EcommerceConfig {
    *  checkout date picker skips/blocks these days. Persisted inside the
    *  `customer_fields` jsonb column alongside `deliveryDateEnabled`. */
   deliveryBlockedWeekdays: number[];
+  /** When true, the PUBLIC checkout applies the per-method adjustment
+   *  (`__adjust*` keys in payment_methods.details) of the method the customer
+   *  picks: discount/surcharge line in the summary + `payment_adjustment`
+   *  snapshot on the order. Default false = current behavior (adjustments
+   *  only apply on admin manual orders). Persisted inside the
+   *  `customer_fields` jsonb column (no dedicated DB column). */
+  applyAdjustmentsInCheckout: boolean;
+  /** When true, the public checkout offers "Pago a crédito" besides paying
+   *  now. Credit orders are created as `pending` with
+   *  `payment_condition='credit'` so the merchant confirms them (moving to
+   *  status `credit` deducts stock, so it must stay a merchant decision).
+   *  Persisted inside `customer_fields` jsonb. */
+  creditEnabled: boolean;
+  /** Previous purchases (completed or credit orders, matched by phone) the
+   *  customer needs before the credit option unlocks. 0 = no minimum.
+   *  Persisted inside `customer_fields` jsonb. */
+  creditMinPurchases: number;
+  /** Custom note shown under the credit option at checkout. Null/'' = the
+   *  checkout renders its default text. Persisted inside `customer_fields`. */
+  creditNote: string | null;
   /** Meta (Facebook) Pixel ID del dueño para medir su catálogo público en sus
    *  campañas de Meta Ads. Es un dato PÚBLICO: viaja por el RPC público y se
    *  inyecta en el storefront (dispara ViewContent/AddToCart/InitiateCheckout/

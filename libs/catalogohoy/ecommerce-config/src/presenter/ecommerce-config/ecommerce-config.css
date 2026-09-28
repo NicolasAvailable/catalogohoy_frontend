@@ -842,6 +842,84 @@
   border-color: #ecd7a6;
 }
 
+/* ── Card "Contado y crédito" (condición de pago del checkout) ── */
+.credit-icon { background: #d1fae5; color: #059669; }
+
+.credit-option {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.credit-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.credit-option-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-color, #1a1a1a);
+}
+
+.credit-option-hint {
+  font-size: 0.8125rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.credit-option-empty {
+  font-size: 0.8125rem;
+  color: #b0700c;
+  background: #f8eeda;
+  border: 0.0625rem solid #ecd7a6;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin: 0;
+}
+
+.credit-adjust-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.125rem;
+}
+
+.credit-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border: 0.0625rem solid #e2e8f0;
+  border-radius: 0.75rem;
+}
+
+.credit-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.credit-min-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.credit-min-row ui-input-text {
+  flex: 0 0 6rem;
+}
+
+.credit-min-suffix {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+}
+
 .add-method-form {
   display: flex;
   flex-direction: column;

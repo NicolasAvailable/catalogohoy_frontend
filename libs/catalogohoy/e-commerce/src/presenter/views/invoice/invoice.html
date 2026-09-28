@@ -96,6 +96,18 @@
       </span>
     </div>
     }
+    @if (visibleAdjustment(); as adj) {
+    <div class="invoice__row invoice__row--adj"
+      [class.invoice__row--adj-warn]="adj.kind === 'surcharge'">
+      <span>{{ adj.label }}</span>
+      <span>
+        {{ adj.kind === 'discount' ? '-' : '+' }}
+        @if (showReferencePrice()) { {{ cs() }}{{ adj.magnitude | tenantPrice }} }
+        @else if (showBs()) { Bs. {{ adj.magnitude * orderRate() | number:'1.2-2' }} }
+        @else { {{ cs() }}{{ adj.magnitude | tenantPrice }} }
+      </span>
+    </div>
+    }
     <div class="invoice__row invoice__row--total">
       <span>{{ 'Total' | transloco }}</span>
       <span>

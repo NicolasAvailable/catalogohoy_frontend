@@ -199,6 +199,13 @@ export class OrderListComponent implements OnInit, OnDestroy {
     return { kind: 'age', tone: 'ok', days: age };
   }
 
+  /** El cliente pidió pagar A CRÉDITO en el checkout y la orden sigue
+   *  pendiente de confirmación. Una vez movida a status 'credit', mandan los
+   *  chips de cobranza de arriba. */
+  public creditRequested(order: Order): boolean {
+    return order.paymentCondition === 'credit' && order.status === 'pending';
+  }
+
   public creditChipClass(tone: string): string {
     const base =
       'inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold whitespace-nowrap ';

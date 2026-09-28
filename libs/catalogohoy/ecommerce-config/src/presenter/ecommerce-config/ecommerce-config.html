@@ -607,6 +607,115 @@
         </div>
       </ui-card>
 
+      <!-- Card: Contado y crédito — el cliente elige la condición de pago en
+           el checkout. TODO apagado por default = el checkout queda exactamente
+           como está hoy; cada catálogo lo habilita si quiere. -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon credit-icon">
+              <ui-icon name="hand-coins" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ 'Contado y crédito' | transloco }}</h2>
+              <p class="card-subtitle">
+                {{ 'Descuentos al pagar y pedidos a crédito en tu checkout' | transloco }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <!-- Opción 1: aplicar los ajustes por método en el checkout -->
+          <div class="credit-option">
+            <div class="credit-option-text">
+              <span class="credit-option-title">
+                {{ 'Aplicar los ajustes de tus métodos de pago en el checkout' | transloco }}
+              </span>
+              <p class="credit-option-hint">
+                {{ 'El descuento o recargo de cada método se aplica solo cuando tu cliente lo elige al hacer el pedido, y aparece en el resumen y en la factura.' | transloco }}
+              </p>
+              @if (methodsWithAdjustment().length) {
+              <div class="credit-adjust-chips">
+                @for (m of methodsWithAdjustment(); track m.name) {
+                <span
+                  class="pm-adjust-chip"
+                  [class.good]="m.badge.kind === 'good'"
+                  [class.warn]="m.badge.kind === 'warn'"
+                  >{{ m.name }} · {{ m.badge.label }}</span
+                >
+                }
+              </div>
+              } @else {
+              <p class="credit-option-empty">
+                {{ 'Aún no configuraste ajustes: abrí "Datos" en un método de pago y definí su descuento o recargo.' | transloco }}
+              </p>
+              }
+            </div>
+            <ui-toggle
+              [ngModel]="draftApplyAdjustmentsInCheckout()"
+              (ngModelChange)="draftApplyAdjustmentsInCheckout.set($event)"
+            ></ui-toggle>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Opción 2: pedidos a crédito -->
+          <div class="credit-option">
+            <div class="credit-option-text">
+              <span class="credit-option-title">
+                {{ 'Permitir pedidos a crédito' | transloco }}
+              </span>
+              <p class="credit-option-hint">
+                {{ 'Tu cliente puede elegir entre pagar de contado o pedir a crédito. Los pedidos a crédito te llegan marcados para que los confirmes vos.' | transloco }}
+              </p>
+            </div>
+            <ui-toggle
+              [ngModel]="draftCreditEnabled()"
+              (ngModelChange)="draftCreditEnabled.set($event)"
+            ></ui-toggle>
+          </div>
+
+          @if (draftCreditEnabled()) {
+          <div class="credit-settings">
+            <div class="credit-settings-field">
+              <label class="payment-method-field-label">
+                {{ 'Compras mínimas para acceder al crédito' | transloco }}
+              </label>
+              <div class="credit-min-row">
+                <ui-input-text
+                  [ngModel]="draftCreditMinPurchases()"
+                  (ngModelChange)="setCreditMinPurchases($event)"
+                  [placeholder]="'Ej: 3' | transloco"
+                  styleClass="credit-min-input"
+                ></ui-input-text>
+                <span class="credit-min-suffix">{{ 'compras' | transloco }}</span>
+              </div>
+              <p class="credit-option-hint">
+                {{ 'Contamos las órdenes completadas o a crédito con el mismo teléfono. 0 = cualquier cliente puede pedir a crédito.' | transloco }}
+              </p>
+            </div>
+
+            <div class="credit-settings-field">
+              <label class="payment-method-field-label">
+                {{ 'Nota que ve el cliente' | transloco }}
+              </label>
+              <ui-textarea
+                [ngModel]="draftCreditNote() || ''"
+                (ngModelChange)="draftCreditNote.set($event)"
+                [placeholder]="'El crédito está disponible después de {n} compras en esta tienda.' | transloco: { n: draftCreditMinPurchases() }"
+                [rows]="2"
+                styleClass="w-full"
+              ></ui-textarea>
+              <p class="credit-option-hint">
+                {{ 'Si la dejás vacía, mostramos ese texto por defecto.' | transloco }}
+              </p>
+            </div>
+          </div>
+          }
+        </div>
+      </ui-card>
+
       </div> <!-- /TAB PAYMENTS (block 1) -->
 
       <!-- ===== TAB: GENERAL (block 2) ===== -->

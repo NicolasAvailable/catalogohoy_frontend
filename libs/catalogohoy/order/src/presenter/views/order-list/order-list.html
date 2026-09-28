@@ -248,6 +248,12 @@
                 }
               </span>
               }
+              @if (creditRequested(order)) {
+              <span class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold whitespace-nowrap bg-indigo-50 text-indigo-600">
+                <ui-icon name="hand-coins" size="10" />
+                {{ 'Solicitó crédito' | transloco }}
+              </span>
+              }
             </div>
             <div>
               <span class="text-grey-800 font-bold">{{ 'Productos:' | transloco }}</span>
@@ -536,6 +542,14 @@
                       @else { {{ 'Hace {days} días' | transloco: { days: chip.days } }} }
                     }
                   }
+                </span>
+              </div>
+              }
+              @if (creditRequested(order)) {
+              <div class="flex justify-center mt-1.5">
+                <span class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold whitespace-nowrap bg-indigo-50 text-indigo-600">
+                  <ui-icon name="hand-coins" size="10" />
+                  {{ 'Solicitó crédito' | transloco }}
                 </span>
               </div>
               }

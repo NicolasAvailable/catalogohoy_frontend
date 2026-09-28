@@ -8,6 +8,7 @@ import {
   countryNameFromCode,
   CustomerFieldsConfig,
   DEFAULT_BUSINESS_HOURS_WEEK,
+  DEFAULT_CREDIT_MIN_PURCHASES,
   DEFAULT_CUSTOMER_FIELDS,
   DEFAULT_DELIVERY_BLOCKED_WEEKDAYS,
   DEFAULT_SOCIAL_LINKS,
@@ -102,6 +103,27 @@ export class EcommerceConfigService {
           ? ((config?.customer_fields as { deliveryBlockedWeekdays?: number[] })
               .deliveryBlockedWeekdays as number[])
           : DEFAULT_DELIVERY_BLOCKED_WEEKDAYS,
+        // Contado/crédito settings also live inside `customer_fields` (same
+        // no-migration trick as delivery-date). Defaults keep the current
+        // behavior: adjustments admin-only, no credit option at checkout.
+        applyAdjustmentsInCheckout:
+          (config?.customer_fields as { applyAdjustmentsInCheckout?: boolean })
+            ?.applyAdjustmentsInCheckout ?? false,
+        creditEnabled:
+          (config?.customer_fields as { creditEnabled?: boolean })
+            ?.creditEnabled ?? false,
+        creditMinPurchases: (() => {
+          const raw = (
+            config?.customer_fields as { creditMinPurchases?: unknown }
+          )?.creditMinPurchases;
+          const n = Number(raw);
+          return Number.isFinite(n) && n >= 0
+            ? Math.floor(n)
+            : DEFAULT_CREDIT_MIN_PURCHASES;
+        })(),
+        creditNote:
+          (config?.customer_fields as { creditNote?: string | null })
+            ?.creditNote ?? null,
         metaPixelId: (config?.meta_pixel_id as string | null) ?? null,
       });
     } catch (error) {
@@ -322,7 +344,11 @@ export class EcommerceConfigService {
       if (
         config.customerFields !== undefined ||
         config.deliveryDateEnabled !== undefined ||
-        config.deliveryBlockedWeekdays !== undefined
+        config.deliveryBlockedWeekdays !== undefined ||
+        config.applyAdjustmentsInCheckout !== undefined ||
+        config.creditEnabled !== undefined ||
+        config.creditMinPurchases !== undefined ||
+        config.creditNote !== undefined
       ) {
         const base =
           config.customerFields ??
@@ -334,6 +360,18 @@ export class EcommerceConfigService {
             : {}),
           ...(config.deliveryBlockedWeekdays !== undefined
             ? { deliveryBlockedWeekdays: config.deliveryBlockedWeekdays }
+            : {}),
+          ...(config.applyAdjustmentsInCheckout !== undefined
+            ? { applyAdjustmentsInCheckout: config.applyAdjustmentsInCheckout }
+            : {}),
+          ...(config.creditEnabled !== undefined
+            ? { creditEnabled: config.creditEnabled }
+            : {}),
+          ...(config.creditMinPurchases !== undefined
+            ? { creditMinPurchases: config.creditMinPurchases }
+            : {}),
+          ...(config.creditNote !== undefined
+            ? { creditNote: config.creditNote }
             : {}),
         };
       }

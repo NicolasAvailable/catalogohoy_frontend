@@ -254,3 +254,13 @@
     border: none;
   }
 }
+
+/* Línea del ajuste (descuento de contado / recargo) entre Subtotal y Total. */
+.invoice__row--adj {
+  color: #128a4b;
+  font-weight: 600;
+}
+
+.invoice__row--adj-warn {
+  color: #b0700c;
+}
