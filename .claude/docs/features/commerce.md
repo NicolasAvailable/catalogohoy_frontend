@@ -17,6 +17,16 @@
   - Carrito deduplica por `productId + tierTitle + size + variantId`.
   - `PageSize = 20` hardcodeado en el store.
   - Usar `effectiveCatalogInfo` (mezcla real + preview), no `catalogInfo()` directo.
+  - **Contado y crédito en el checkout** (pedido Moto Fox, 2026-09-28; extensión de CAT-74):
+    opt-in por catálogo en Editar catálogo → Pagos (card "Contado y crédito", TODO apagado por
+    default). `applyAdjustmentsInCheckout` = el ajuste `__adjust*` del método elegido se aplica
+    al resumen/total/mensaje WA y se guarda como snapshot `orders.payment_adjustment` (misma
+    forma que el admin → la factura pública y el PDF lo itemizan). `creditEnabled` = selector
+    "¿Cómo quieres pagar?"; crédito gateado por `creditMinPurchases` compras previas por
+    teléfono (RPC `get_customer_purchase_count`, debounce, fallback PERMISIVO si el RPC falla).
+    La orden a crédito nace `pending` + `orders.payment_condition='credit'` (NUNCA status
+    `credit` directo: eso descuenta stock y lo decide el comerciante) → chip "Solicitó crédito"
+    en el listado + aviso en order-save. Config dentro de `customer_fields` jsonb.
 
 ## product (`@catalogohoy/product`)
 
