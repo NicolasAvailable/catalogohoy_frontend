@@ -139,7 +139,13 @@ export const PAYMENT_METHOD_FIELDS: Record<string, PaymentFieldDef[]> = {
   tarjeta_credito: [
     { key: 'instrucciones', label: 'Instrucciones', placeholder: 'Cómo pagar con tarjeta', multiline: true },
   ],
+  // Método libre: mismos campos que una transferencia (titular, cuenta e
+  // instrucciones). Todos opcionales — en el checkout solo se muestran los que
+  // el comerciante completa, así "otro" sirve tanto para un pago adelantado /
+  // transferencia como para métodos con una sola instrucción.
   otro: [
+    { key: 'titular', label: 'Titular', placeholder: 'Nombre del titular (opcional)' },
+    { key: 'numeroCuenta', label: 'Número de cuenta', placeholder: 'N° de cuenta / celular (opcional)' },
     { key: 'instrucciones', label: 'Datos / instrucciones', placeholder: 'Datos que el cliente necesita para pagar', multiline: true },
   ],
 };
@@ -203,6 +209,10 @@ export interface ShippingMethod {
   type: ShippingMethodType;
   /** Flat fee added to the order total. 0 = free. */
   fee: number;
+  /** Precio variable / "A consultar": el checkout muestra "A consultar" en vez
+   *  de un precio y no suma nada al total (el vendedor cotiza el envío luego).
+   *  `fee` se mantiene en 0. Ausente/false = precio normal. */
+  priceOnRequest?: boolean;
   instructions: string;
   /** delivery/shipping: ask the customer to type their address at checkout. */
   requestCustomerAddress: boolean;
@@ -380,6 +390,12 @@ export interface EcommerceConfig {
    *  checkout date picker skips/blocks these days. Persisted inside the
    *  `customer_fields` jsonb column alongside `deliveryDateEnabled`. */
   deliveryBlockedWeekdays: number[];
+  /** Meta (Facebook) Pixel ID del dueño para medir su catálogo público en sus
+   *  campañas de Meta Ads. Es un dato PÚBLICO: viaja por el RPC público y se
+   *  inyecta en el storefront (dispara ViewContent/AddToCart/InitiateCheckout/
+   *  Lead con `trackSingle` a ESTE pixel). Null = sin pixel. El token secreto de
+   *  la Conversions API vive aparte (MetaCapiSettings), nunca en esta config. */
+  metaPixelId: string | null;
 }
 
 /** Business hours for a single day. `dayOfWeek` follows JS convention:

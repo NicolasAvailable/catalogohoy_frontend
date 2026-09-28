@@ -116,6 +116,7 @@
     <dl class="invoice__details">
       <dt>{{ 'Cliente' | transloco }}</dt>
       <dd>{{ o.name }}@if (o.phone) { / {{ o.phone }} }</dd>
+      @if (o.nit) { <dt>{{ 'NIT' | transloco }}</dt><dd>{{ o.nit }}</dd> }
       @if (o.email) { <dt>{{ 'Correo' | transloco }}</dt><dd>{{ o.email }}</dd> }
       @if (o.shippingMethod) {
       <dt>{{ 'Envío' | transloco }}</dt>

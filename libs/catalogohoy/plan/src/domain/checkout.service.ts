@@ -2,6 +2,8 @@ import { E } from '@shared/domain';
 import {
   CancelSubscriptionResult,
   CatalogCheckoutRequest,
+  ChangePlanRequest,
+  ChangePlanResult,
   CheckoutRequest,
   CheckoutSession,
   PromotionCodeValidation,
@@ -12,6 +14,13 @@ export abstract class BaseCheckoutService {
   abstract createCheckoutSession(
     request: CheckoutRequest
   ): Promise<E.Either<Error, CheckoutSession>>;
+
+  /** Upgrade con prorrateo: cobra solo la diferencia sobre la suscripción
+   *  existente. Devuelve `no_active_subscription` / `not_an_upgrade` cuando el
+   *  caso debe resolverse por el checkout normal. */
+  abstract changePlan(
+    request: ChangePlanRequest
+  ): Promise<E.Either<Error, ChangePlanResult>>;
 
   abstract cancelSubscription(
     tenantId: number

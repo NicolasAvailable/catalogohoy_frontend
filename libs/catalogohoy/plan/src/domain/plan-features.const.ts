@@ -36,6 +36,7 @@ export const PLAN_FEATURES: Record<string, PlanFeature[]> = {
   avanzado: [
     { text: '2 catálogos' },
     { text: 'Todo del plan Pro' },
+    { text: 'Punto de Venta (caja registradora)' },
     { text: 'Hasta 30 reportes por mes' },
     { text: '500 créditos de IA por mes' },
     { text: 'Vinculación de dominio personalizado (dominio aparte)' },
@@ -106,6 +107,7 @@ export const PLAN_FEATURES_DETAILED: Record<string, PlanFeature[]> = {
     { text: 'Hasta 30 reportes por mes' },
     { text: '500 créditos de IA por mes' },
     { text: 'Todos los módulos disponibles' },
+    { text: 'Punto de Venta (caja registradora presencial)' },
     { text: 'CRM de chats: WhatsApp, Instagram y TikTok' },
     { text: 'Analíticas del catálogo' },
     { text: 'Notificaciones de órdenes por WhatsApp' },

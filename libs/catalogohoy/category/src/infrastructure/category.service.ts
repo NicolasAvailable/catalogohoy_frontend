@@ -265,4 +265,28 @@ export class CategoryService implements BaseCategoryService {
     await Promise.all(updates);
     return E.right(undefined);
   }
+
+  /**
+   * Ajuste masivo de precios de TODOS los productos de una categoría.
+   * `mode`='percent' → sube/baja un % (signedValue +3 / -3);
+   * `mode`='fixed'   → suma/resta un monto fijo (signedValue +5 / -5).
+   * Toca price, promoción, precios de variantes (price + originalPrice) y de
+   * mayoreo. `dryRun` no aplica nada, solo devuelve cuántos productos afectaría.
+   * El RPC (SECURITY DEFINER) valida que el usuario sea owner/admin del tenant.
+   */
+  public async adjustCategoryPrices(
+    categoryId: string | number,
+    mode: 'percent' | 'fixed',
+    signedValue: number,
+    dryRun: boolean
+  ): Promise<E.Either<Error, number>> {
+    const { data, error } = await this.client.rpc('adjust_category_prices', {
+      p_category_id: Number(categoryId),
+      p_mode: mode,
+      p_signed_value: signedValue,
+      p_dry_run: dryRun,
+    });
+    if (error) return E.left(new Error(error.message));
+    return E.right(Number(data) || 0);
+  }
 }

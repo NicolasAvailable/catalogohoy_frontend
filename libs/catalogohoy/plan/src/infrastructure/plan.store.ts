@@ -87,6 +87,16 @@ export const PlanStore = signalStore(
       );
     }),
     isPlanExpired: computed(() => store.planExpired()),
+    // El último cobro de Stripe falló (`past_due`/`unpaid`): Stripe reintenta
+    // ~2 semanas antes de cancelar. Avisamos para que actualicen la tarjeta
+    // antes de perder el plan. Solo aplica a suscripciones Stripe (los planes
+    // manuales VE no tienen estos estados) y nunca en plan gratis.
+    showPaymentFailedBanner: computed(() => {
+      const status = store.tenantPlanUsage()?.stripeSubscriptionStatus;
+      const isFree =
+        store.isFreePlan() || (store.tenantPlanUsage()?.plan.isFree ?? false);
+      return !isFree && (status === 'past_due' || status === 'unpaid');
+    }),
     // Covers both the public-catalog flow (sets the `isFreePlan` state flag
     // via checkExpiredBySlug) and the admin flow (loads tenantPlanUsage.plan).
     isFreePlan: computed(

@@ -43,6 +43,7 @@ export class Navbar extends BaseComponent implements OnInit {
   /** Catálogo ACTIVO (por slug del subdominio), no el primero de la lista:
    *  un owner con varios catálogos debe compartir/QR el que está administrando.
    *  Mismo patrón que el sidebar (currentTenant). */
+  // public: el template móvil (navbar Shopify) lo lee directamente.
   public readonly currentTenant = computed(() => {
     const slug = getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || '';
     const tenants = this.profileStore.profile().tenantList.tenants;

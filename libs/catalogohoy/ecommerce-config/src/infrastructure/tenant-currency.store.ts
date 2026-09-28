@@ -10,6 +10,7 @@ import {
 import {
   findCountryByCode,
   findCurrencyByCode,
+  NO_CURRENCY_SYMBOL,
   SUPPORTED_CURRENCIES,
 } from '../domain';
 
@@ -180,7 +181,15 @@ export const TenantCurrencyStore = signalStore(
           localSymbol =
             currencyRes.data.currency_symbol ?? symbolForCode(localCode);
           displayCode = currencyRes.data.display_currency ?? localCode;
-          displaySymbol = symbolForCode(displayCode);
+          // "Sin símbolo de moneda": cuando el tenant activa el toggle, el
+          // centinela vive en currency_symbol y debe ganarle a la derivación
+          // por código — si no, el admin renderiza €/$ aunque el catálogo
+          // público ya lo oculte. Se propaga el centinela (no '') para que
+          // sobreviva las cadenas `displaySymbol() || fallback` de las vistas.
+          displaySymbol =
+            currencyRes.data.currency_symbol === NO_CURRENCY_SYMBOL
+              ? NO_CURRENCY_SYMBOL
+              : symbolForCode(displayCode);
           showDualCurrency = currencyRes.data.show_dual_currency ?? false;
         } else {
           // No currency_config row — derive from country defaults.
@@ -282,16 +291,21 @@ export const TenantCurrencyStore = signalStore(
         payload: Partial<CachedCurrency>
       ): void {
         const displayCode = payload.displayCode ?? store.displayCode();
+        const localSymbol = payload.localSymbol ?? store.localSymbol();
         const next: CachedCurrency = {
           localCode: payload.localCode ?? store.localCode(),
-          localSymbol: payload.localSymbol ?? store.localSymbol(),
+          localSymbol,
           displayCode,
           // Derive the reference symbol from the code when the caller only
           // passes displayCode (the editor does), so VE→USD/EUR and any
-          // country switch always cache the right symbol.
+          // country switch always cache the right symbol. The "sin símbolo"
+          // sentinel arrives via localSymbol (the editor persists it in
+          // currency_symbol) and must win over the code-derived symbol.
           displaySymbol:
-            payload.displaySymbol ??
-            (payload.displayCode ? symbolForCode(payload.displayCode) : store.displaySymbol()),
+            localSymbol === NO_CURRENCY_SYMBOL
+              ? NO_CURRENCY_SYMBOL
+              : payload.displaySymbol ??
+                (payload.displayCode ? symbolForCode(payload.displayCode) : store.displaySymbol()),
           showDualCurrency:
             payload.showDualCurrency ?? store.showDualCurrency(),
           countryCode:

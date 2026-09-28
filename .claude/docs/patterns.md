@@ -199,6 +199,10 @@ Reglas clave:
 - Los 4 JSON viven en `apps/<app>/public/i18n/*.json` y **deben mantenerse
   iguales entre las 3 apps** (hoy: copiar el de catalogohoy). Paridad de keys:
   `node scripts/i18n-check.mjs` (falla si en/fr/pt driftean de es.json).
+- **Auditoría profunda**: `node scripts/i18n-audit.mjs` extrae las keys realmente
+  usadas (pipe transloco en HTML + translate()/toasts/confirm en TS) y reporta las
+  que faltan en es.json — correrla tras mergear features nuevas (2026-08-26 detectó
+  130 keys sin traducir acumuladas de features post-i18n).
 - Al agregar texto nuevo: agregar la key (=texto es) a `es.json` + su traducción
   en `en/fr/pt.json` de las 3 apps. Contenido del tenant NO se traduce.
 

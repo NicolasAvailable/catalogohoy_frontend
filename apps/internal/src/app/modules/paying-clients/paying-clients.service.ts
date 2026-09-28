@@ -46,7 +46,14 @@ export class PayingClientsService {
   private readonly client = SupabaseClientProvider.getInstance();
 
   async list(): Promise<Either<Error, PayingClient[]>> {
-    const { data, error } = await this.client.rpc('list_paying_clients_admin');
+    // Este módulo necesita el set completo (alimenta conteos por estado, tabs y
+    // el buscador client-side), así que pedimos hasta el tope de PostgREST. Hoy
+    // son ~120 activos; el RPC pagina/busca server-side si algún día crece.
+    const { data, error } = await this.client.rpc('list_paying_clients_admin', {
+      p_search: null,
+      p_limit: 1000,
+      p_offset: 0,
+    });
 
     if (error) {
       return E.left(new Error(error.message));

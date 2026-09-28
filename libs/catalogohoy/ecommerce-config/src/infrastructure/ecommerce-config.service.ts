@@ -13,6 +13,7 @@ import {
   DEFAULT_SOCIAL_LINKS,
   EcommerceConfig,
   ExchangeRateType,
+  MetaCatalogSync,
   PaymentMethodEntity,
   ShippingMethod,
   SocialLinks,
@@ -38,7 +39,7 @@ export class EcommerceConfigService {
       const { data: config } = await this.client
         .from('tenant_ecommerce_config')
         .select(
-          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message, notify_new_orders, notify_weekly_report, shipping_methods, show_shipping_section, customer_fields, default_language'
+          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message, notify_new_orders, notify_weekly_report, shipping_methods, show_shipping_section, customer_fields, default_language, meta_pixel_id'
         )
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -101,6 +102,7 @@ export class EcommerceConfigService {
           ? ((config?.customer_fields as { deliveryBlockedWeekdays?: number[] })
               .deliveryBlockedWeekdays as number[])
           : DEFAULT_DELIVERY_BLOCKED_WEEKDAYS,
+        metaPixelId: (config?.meta_pixel_id as string | null) ?? null,
       });
     } catch (error) {
       return E.left(error as Error);
@@ -310,6 +312,8 @@ export class EcommerceConfigService {
         updateData['shipping_methods'] = config.shippingMethods;
       if (config.showShippingSection !== undefined)
         updateData['show_shipping_section'] = config.showShippingSection;
+      if (config.metaPixelId !== undefined)
+        updateData['meta_pixel_id'] = config.metaPixelId;
       // `customer_fields` also carries the delivery-date settings (no dedicated
       // DB column). Merge them into the same jsonb so a change to either the
       // fields OR the delivery settings persists the combined object. When only
@@ -347,9 +351,29 @@ export class EcommerceConfigService {
         if (configError) return E.left(new Error(configError.message));
       }
 
+      // Aviso EN VIVO al catálogo público: un visitante parado en el checkout
+      // refetchea la config al instante (p. ej. el botón de pedido se activa
+      // apenas el dueño agrega su vendedor de WhatsApp). Best-effort.
+      this.notifyPublicConfigChanged(config.tenantId);
+
       return E.right(undefined);
     } catch (error) {
       return E.left(error as Error);
+    }
+  }
+
+  /** Broadcast de Realtime (canal `public-config-<tenantId>`) que escucha el
+   *  storefront (CatalogConfigLiveService). `send` sobre un canal sin
+   *  suscribir sale por HTTP — no deja websocket abierto en el admin. */
+  private notifyPublicConfigChanged(tenantId: string): void {
+    try {
+      const channel = this.client.channel(`public-config-${Number(tenantId)}`);
+      void channel
+        .send({ type: 'broadcast', event: 'config-updated', payload: {} })
+        .catch(() => undefined)
+        .finally(() => void this.client.removeChannel(channel));
+    } catch {
+      // Best-effort: el fallback de visibilidad del storefront cubre.
     }
   }
 
@@ -462,6 +486,223 @@ export class EcommerceConfigService {
       return E.left(new Error(data?.error ?? 'No se pudo enviar la prueba'));
     }
     return E.right(undefined);
+  }
+
+  // ─────────────── Conversions API de Meta (token secreto) ───────────────
+  /** Estado de la CAPI del tenant SIN traer el token al navegador: la sola
+   *  existencia de la fila implica que hay token (access_token es NOT NULL). */
+  async getMetaCapiStatus(
+    tenantId: string
+  ): Promise<
+    E.Either<Error, { configured: boolean; testEventCode: string | null; enabled: boolean }>
+  > {
+    const { data, error } = await this.client
+      .from('meta_capi_credentials')
+      .select('test_event_code, enabled')
+      .eq('tenant_id', Number(tenantId))
+      .maybeSingle();
+    if (error) return E.left(new Error(error.message));
+    return E.right({
+      configured: !!data,
+      testEventCode: data?.test_event_code ?? null,
+      enabled: data?.enabled ?? true,
+    });
+  }
+
+  /** Guarda/actualiza la credencial de CAPI. El access_token solo se escribe si
+   *  viene uno nuevo (no vacío): así el dueño puede cambiar el test_event_code
+   *  sin re-pegar el token. Crear la fila SÍ exige token (columna NOT NULL). */
+  async saveMetaCapi(
+    tenantId: string,
+    input: { accessToken?: string | null; testEventCode?: string | null; enabled?: boolean }
+  ): Promise<E.Either<Error, void>> {
+    const row: Record<string, unknown> = {
+      tenant_id: Number(tenantId),
+      test_event_code: input.testEventCode?.trim() || null,
+      enabled: input.enabled ?? true,
+      updated_at: new Date().toISOString(),
+    };
+    const token = input.accessToken?.trim();
+    if (token) row['access_token'] = token;
+    const { error } = await this.client
+      .from('meta_capi_credentials')
+      .upsert(row, { onConflict: 'tenant_id' });
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  /** Desconecta la CAPI: borra la credencial (el pixel del navegador sigue). */
+  async clearMetaCapi(tenantId: string): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('meta_capi_credentials')
+      .delete()
+      .eq('tenant_id', Number(tenantId));
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  // ─────────────── Conexión de Meta Business por OAuth (CAT-64/65) ───────────────
+  /** Inicia el OAuth de Meta Business: meta-oauth valida membresía y devuelve la
+   *  URL de autorización (state firmado server-side). El caller redirige ahí. */
+  async startMetaConnect(
+    tenantId: string,
+    returnUrl: string
+  ): Promise<E.Either<Error, string>> {
+    const { data, error } = await this.client.functions.invoke('meta-oauth', {
+      body: { tenantId: Number(tenantId), returnUrl },
+    });
+    if (!error && data?.success && data?.url) return E.right(data.url as string);
+    return E.left(
+      new Error(
+        (typeof data?.error === 'string' && data.error) ||
+          'No se pudo iniciar la conexión con Meta'
+      )
+    );
+  }
+
+  /** Estado de la conexión (sin traer tokens al navegador): RPC SECURITY DEFINER.
+   *  v2: incluye catálogo y la lista de Businesses para el selector. */
+  async getMetaConnectionStatus(tenantId: string): Promise<
+    E.Either<
+      Error,
+      {
+        connected: boolean;
+        businessId: string | null;
+        businessName: string | null;
+        catalogId: string | null;
+        businesses: { id: string; name: string }[];
+      }
+    >
+  > {
+    const { data, error } = await this.client.rpc('get_meta_connection_status', {
+      p_tenant_id: Number(tenantId),
+    });
+    if (error) return E.left(new Error(error.message));
+    const d = (data ?? {}) as {
+      connected?: boolean;
+      business_id?: string | null;
+      business_name?: string | null;
+      catalog_id?: string | null;
+      businesses?: { id: string; name: string }[];
+    };
+    return E.right({
+      connected: !!d.connected,
+      businessId: d.business_id ?? null,
+      businessName: d.business_name ?? null,
+      catalogId: d.catalog_id ?? null,
+      businesses: Array.isArray(d.businesses) ? d.businesses : [],
+    });
+  }
+
+  /** Desconecta Meta (borra la conexión local; el pixel manual, si hay, sigue). */
+  async disconnectMeta(tenantId: string): Promise<E.Either<Error, void>> {
+    const { error } = await this.client.rpc('disconnect_meta', {
+      p_tenant_id: Number(tenantId),
+    });
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  // ─────────────── Commerce Catalog de Meta (CAT-64, Fase 2) ───────────────
+  /** Llama a la edge fn meta-catalog (status | provision | sync_now |
+   *  select_business | provision_pixel) y normaliza el Either. Con status
+   *  no-2xx, functions.invoke deja el body en error.context — lo recuperamos
+   *  para no perder el mensaje accionable (p.ej. tosUrl del Píxel). */
+  private async invokeMetaCatalog(
+    tenantId: string,
+    action: string,
+    extra: Record<string, unknown> = {}
+  ): Promise<E.Either<Error & { tosUrl?: string }, Record<string, unknown>>> {
+    const { data, error } = await this.client.functions.invoke('meta-catalog', {
+      body: { tenantId: Number(tenantId), action, ...extra },
+    });
+    let body = (data ?? null) as Record<string, unknown> | null;
+    if (!body && error) {
+      try {
+        body = await (error as { context?: Response }).context?.json();
+      } catch {
+        body = null;
+      }
+    }
+    if (body?.['success']) return E.right(body);
+    return E.left(
+      Object.assign(
+        new Error(
+          (typeof body?.['error'] === 'string' && body['error']) ||
+            'No se pudo completar la operación con Meta'
+        ),
+        typeof body?.['tosUrl'] === 'string' ? { tosUrl: body['tosUrl'] } : {}
+      )
+    );
+  }
+
+  private toCatalogSync(d: Record<string, unknown>): MetaCatalogSync | null {
+    if (!d['provisioned']) return null;
+    const last = (d['lastSync'] ?? null) as {
+      endTime?: string | null;
+      errorCount?: number;
+      warningCount?: number;
+    } | null;
+    return {
+      catalogId: String(d['catalogId']),
+      productCount: typeof d['productCount'] === 'number' ? d['productCount'] : null,
+      lastSyncEnd: last?.endTime ?? null,
+      errorCount: last?.errorCount ?? 0,
+      warningCount: last?.warningCount ?? 0,
+    };
+  }
+
+  /** Estado del canal Meta: catálogo publicado (productos que ve Meta + última
+   *  ingesta) + pixel/CAPI (misma config que usa el runtime). */
+  async getMetaCatalogStatus(tenantId: string): Promise<
+    E.Either<
+      Error,
+      { sync: MetaCatalogSync | null; pixelId: string | null; capiOk: boolean }
+    >
+  > {
+    const result = await this.invokeMetaCatalog(tenantId, 'status');
+    return result.mapRight((d) => ({
+      sync: this.toCatalogSync(d),
+      pixelId: typeof d['pixelId'] === 'string' ? d['pixelId'] : null,
+      capiOk: !!d['capiOk'],
+    }));
+  }
+
+  /** Crea el Commerce Catalog en el Business + registra el feed diario y
+   *  dispara la primera sincronización. Idempotente. */
+  async provisionMetaCatalog(
+    tenantId: string
+  ): Promise<E.Either<Error, MetaCatalogSync | null>> {
+    const result = await this.invokeMetaCatalog(tenantId, 'provision');
+    return result.mapRight((d) => this.toCatalogSync(d));
+  }
+
+  /** Re-ingesta inmediata del feed (Meta puede tardar unos minutos). */
+  async syncMetaCatalog(tenantId: string): Promise<E.Either<Error, void>> {
+    const result = await this.invokeMetaCatalog(tenantId, 'sync_now');
+    return result.mapRight(() => undefined);
+  }
+
+  /** Cambia el Business donde vive el catálogo (resetea catálogo/feed). */
+  async selectMetaBusiness(
+    tenantId: string,
+    businessId: string
+  ): Promise<E.Either<Error, void>> {
+    const result = await this.invokeMetaCatalog(tenantId, 'select_business', {
+      businessId,
+    });
+    return result.mapRight(() => undefined);
+  }
+
+  /** CAT-65: aprovisiona el Píxel automáticamente (adopta o crea el del
+   *  Business) y deja la CAPI configurada con el token OAuth. Si el Business
+   *  no aceptó los Términos del Píxel, el Error trae `tosUrl` con el link
+   *  directo para aceptarlos. */
+  async provisionMetaPixel(
+    tenantId: string
+  ): Promise<E.Either<Error & { tosUrl?: string }, string>> {
+    const result = await this.invokeMetaCatalog(tenantId, 'provision_pixel');
+    return result.mapRight((d) => String(d['pixelId']));
   }
 
   async getPaymentMethods(

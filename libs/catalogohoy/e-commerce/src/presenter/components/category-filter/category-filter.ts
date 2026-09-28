@@ -28,6 +28,9 @@ const ALL_TAB = '__all__';
 })
 export class CategoryFilter {
   public readonly categories = input<CategoryPill[]>([]);
+  /** True cuando el tenant ocultó su "Ver todos": suprime también el tab
+   *  sintético (que existe solo para tenants sin la fila seedeada). */
+  public readonly suppressAllTab = input<boolean>(false);
   public readonly selectedCategoryId = input<string | null>(null);
   public readonly categorySelect = output<string | null>();
   public readonly searchClick = output<void>();
@@ -48,6 +51,23 @@ export class CategoryFilter {
     if (selected === null) return ALL_TAB;
     return selected;
   });
+
+  /** Selección vigente ANTES del click en curso. Se captura en pointerdown
+   *  (antes de que PrimeNG procese el click y dispare valueChange) para poder
+   *  distinguir "re-tocó el tab ya activo" de un cambio normal de tab. */
+  private selectedBeforeClick: string | null = null;
+
+  onTabPointerdown(): void {
+    this.selectedBeforeClick = this.selectedCategoryId();
+  }
+
+  /** Sin tab "Ver todos" (suppressAllTab), re-tocar la categoría activa quita
+   *  el filtro — es la única vuelta a "todos los productos". Con all-tab
+   *  visible se mantiene el comportamiento clásico (no hace nada). */
+  onTabClick(category: CategoryPill): void {
+    if (!this.suppressAllTab() || category.isViewAll) return;
+    if (this.selectedBeforeClick === category.id) this.categorySelect.emit(null);
+  }
 
   onTabChange(value: string | number | undefined): void {
     if (!value || value === ALL_TAB) {

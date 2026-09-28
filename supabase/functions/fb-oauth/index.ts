@@ -27,8 +27,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const FB_APP_ID = Deno.env.get("FB_APP_ID") ?? "";
-const FB_APP_SECRET = Deno.env.get("FB_APP_SECRET") ?? "";
+// Misma app de Meta que WhatsApp (Embedded Signup, id 1533064975039243):
+// si no hay secrets FB_* dedicados, caemos a los WA_* que ya están en prod.
+const FB_APP_ID = Deno.env.get("FB_APP_ID") ?? Deno.env.get("WA_APP_ID") ?? "";
+const FB_APP_SECRET = Deno.env.get("FB_APP_SECRET") ?? Deno.env.get("WA_APP_SECRET") ?? "";
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/fb-oauth`;
 const GRAPH = "https://graph.facebook.com/v23.0";
 const SCOPES = [
@@ -215,6 +217,16 @@ async function handleCallback(req: Request): Promise<Response> {
       },
       { onConflict: "channel,external_account_id" },
     );
+
+    // 4b) Una sola Página ACTIVA por tenant: desactivar cualquier otra (p. ej.
+    //     la DEMO del catálogo de demostración). Con 2 activas, fb-send hace
+    //     .maybeSingle() y falla.
+    await admin
+      .from("social_accounts")
+      .update({ status: "inactive" })
+      .eq("tenant_id", state.tenantId)
+      .eq("channel", "messenger")
+      .neq("external_account_id", String(page.id));
 
     // 5) Suscribir la Página a los webhooks de mensajes + comentarios (feed).
     await fetch(

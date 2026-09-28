@@ -171,6 +171,7 @@ export class PlanService implements BasePlanService {
       planStartedAt: expiration.planStartedAt,
       planExpiresAt: expiration.planExpiresAt,
       hasStripeSubscription: !!expiration.stripeSubscriptionId,
+      stripeSubscriptionStatus: expiration.stripeSubscriptionStatus,
       autoRenews: expiration.stripeSubscriptionStatus === 'active',
     });
   }

@@ -7,7 +7,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { translate, TranslocoPipe } from '@jsverse/transloco';
 import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl, TenantStore } from '@catalogohoy/tenant';
 import { WhatsAppService, WhatsAppStore } from '@catalogohoy/whatsapp';
@@ -23,6 +23,13 @@ const CHAT_ENABLED_PLANS = ['avanzado', 'enterprise'];
  *  andes-4x4 (2026-07-30): habilitado como gesto por info errada (modal decía
  *  Pro). Debe coincidir con CHAT_ENABLED_SLUGS del guard. */
 const CHAT_ENABLED_SLUGS: string[] = ['andes-4x4'];
+/** Instagram YA está aprobado por Meta (instagram_business_basic +
+ *  instagram_business_manage_messages, App Review 2026-09-14) y la app está en
+ *  Live → su card es PÚBLICA para todo catálogo con plan habilitado. Messenger
+ *  sigue en beta cerrada: su App Review propio (pages_messaging /
+ *  pages_manage_metadata) todavía NO está aprobado, así que solo estos slugs lo
+ *  ven. Quitar este gate cuando Meta apruebe esa review. */
+const MESSENGER_CONNECT_SLUGS: string[] = ['catalogohoy-demo', 'catalogohoy'];
 
 /** Canal conectable desde el hub (estilo galería de SocialGest). */
 interface ConnectableChannel {
@@ -77,34 +84,48 @@ export class ConnectChannelsComponent implements OnInit {
   protected readonly ttAccount = signal<SocialAccount | null>(null);
   protected readonly fbAccount = signal<SocialAccount | null>(null);
 
-  // Canales disponibles hoy: WhatsApp Business, Instagram y TikTok. Messenger
-  // queda fuera de la galería por ahora (su pantalla de conexión sigue
-  // existiendo y se puede reactivar agregándola de nuevo acá).
-  protected readonly channels: ConnectableChannel[] = [
-    {
-      key: 'whatsapp',
-      name: 'WhatsApp Business',
-      logo: '/images/whatsapp.svg',
-      description: 'Recibe y responde los chats de tu número de empresa.',
-      route: '/admin/chat/connect/whatsapp',
-    },
-    {
-      key: 'instagram',
-      name: 'Instagram',
-      logo: '/images/instagram.svg',
-      description: 'Responde los mensajes directos de tu cuenta de empresa.',
-      route: '/admin/chat/connect/instagram',
-    },
-    {
-      key: 'tiktok',
-      name: 'TikTok',
-      // Nota colorida sin fondo (tiktok.svg es la versión app-icon con fondo
-      // negro, para los badges chicos de la bandeja).
-      logo: '/images/tiktok-logo.svg',
-      description: 'Responde los mensajes directos de tu cuenta de empresa.',
-      route: '/admin/chat/connect/tiktok',
-    },
-  ];
+  /** Canales de la galería: WhatsApp, Instagram y TikTok son públicos (los tres
+   *  conectables, gateados por plan vía canConnect()). Messenger solo aparece
+   *  para la allowlist de su beta cerrada hasta que Meta apruebe su review. */
+  protected readonly channels = computed<ConnectableChannel[]>(() => {
+    const slug = getTenantSlugFromUrl() || this.tenantStore.tenantSlug() || '';
+    const messengerUnlocked = MESSENGER_CONNECT_SLUGS.includes(slug);
+    const list: ConnectableChannel[] = [
+      {
+        key: 'whatsapp',
+        name: 'WhatsApp Business',
+        logo: '/images/whatsapp.svg',
+        description: 'Recibe y responde los chats de tu número de empresa.',
+        route: '/admin/chat/connect/whatsapp',
+      },
+      {
+        key: 'instagram',
+        name: 'Instagram',
+        logo: '/images/instagram.svg',
+        description: 'Responde los mensajes directos de tu cuenta profesional.',
+        route: '/admin/chat/connect/instagram',
+      },
+      {
+        key: 'tiktok',
+        name: 'TikTok',
+        // Nota colorida sin fondo (tiktok.svg es la versión app-icon con fondo
+        // negro, para los badges chicos de la bandeja).
+        logo: '/images/tiktok-logo.svg',
+        description: 'Responde los mensajes directos de tu cuenta de empresa.',
+        route: '/admin/chat/connect/tiktok',
+      },
+    ];
+    if (messengerUnlocked) {
+      list.push({
+        key: 'messenger',
+        name: 'Messenger',
+        logo: '/images/messenger.svg',
+        description: 'Responde los mensajes de Messenger de tu página de Facebook.',
+        route: '/admin/chat/connect/messenger',
+      });
+    }
+    return list;
+  });
 
   protected readonly waConnected = computed(() =>
     this.whatsAppStore.hasActiveAccount()
@@ -192,7 +213,7 @@ export class ConnectChannelsComponent implements OnInit {
     const identity = this.identityOf(channel) ?? channel.name;
     this.confirmDialog
       .warning({
-        headerLabel: '¿Desvincular ' + channel.name + '?',
+        headerLabel: translate('¿Desvincular {name}?', { name: channel.name }),
         target: identity,
         contentLabel:
           'Se desconectará la cuenta de tu bandeja. Tus chats y datos se conservan, y puedes volver a conectarla cuando quieras.',

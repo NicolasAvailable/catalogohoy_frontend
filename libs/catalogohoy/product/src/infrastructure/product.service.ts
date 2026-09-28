@@ -235,6 +235,14 @@ export class ProductService implements BaseProductService {
                 v.originalPrice === '' ? 0 : Number(v.originalPrice),
               sku: v.sku?.trim() ? v.sku.trim() : null,
               photos: v.photos ?? [],
+              // Stock propio del variante SOLO cuando no maneja tallas (con
+              // tallas el stock vive en cada talla). '' / null = ilimitado.
+              stock:
+                v.sizes && v.sizes.length
+                  ? null
+                  : v.stock == null || v.stock === ''
+                    ? null
+                    : Number(v.stock),
               sizes: (v.sizes ?? []).map(mapSize),
               isHidden: !!v.isHidden,
             }))
@@ -314,6 +322,13 @@ export class ProductService implements BaseProductService {
             originalPrice: v.originalPrice === '' ? 0 : Number(v.originalPrice),
             sku: v.sku?.trim() ? v.sku.trim() : null,
             photos: v.photos ?? [],
+            // Stock propio del variante SOLO cuando no maneja tallas.
+            stock:
+              v.sizes && v.sizes.length
+                ? null
+                : v.stock == null || v.stock === ''
+                  ? null
+                  : Number(v.stock),
             sizes: (v.sizes ?? []).map(mapSize),
             isHidden: !!v.isHidden,
           }))
@@ -588,6 +603,20 @@ export class ProductService implements BaseProductService {
     return E.right(undefined);
   }
 
+  /** Oculta o muestra el producto en el catálogo público. Toque quirúrgico:
+   *  solo `is_hidden`, sin pasar por el payload completo del editor. */
+  public async setHidden(
+    id: string,
+    hidden: boolean
+  ): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('products')
+      .update({ is_hidden: hidden })
+      .eq('id', id);
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
   /** Duplica un producto: inserta una nueva fila con los mismos campos +
    *  sufijo "(copia)" en el nombre, posición al final, y re-linkea las
    *  categorías al nuevo id. Todo lo que vive en la fila (sizes, wholesale
@@ -623,14 +652,27 @@ export class ProductService implements BaseProductService {
       .single();
     const nextPosition = (maxData?.position ?? -1) + 1;
 
-    const { id: _omitId, created_at: _omitCreated, updated_at: _omitUpdated, ...rest } = src;
-    void _omitId; void _omitCreated; void _omitUpdated;
+    // OJO: `search_blob` es columna GENERADA — si viaja en el insert Postgres
+    // rechaza la fila entera (428C9). Se omite junto con id/timestamps.
+    const {
+      id: _omitId,
+      created_at: _omitCreated,
+      updated_at: _omitUpdated,
+      search_blob: _omitSearch,
+      ...rest
+    } = src;
+    void _omitId; void _omitCreated; void _omitUpdated; void _omitSearch;
 
     const { data: inserted, error: insErr } = await this.client
       .from('products')
       .insert({
         ...rest,
         name: `${src.name} (copia)`,
+        // El SKU es único por catálogo (products_sku_unique_per_tenant): la copia
+        // NO puede reusar el del original o el insert rompe con duplicate key
+        // dentro del mismo tenant. La copia nace sin SKU; el comerciante le pone
+        // uno nuevo si lo necesita.
+        sku: null,
         auth_user_id: user.id,
         tenant_id: tenantId,
         position: nextPosition,
@@ -639,7 +681,9 @@ export class ProductService implements BaseProductService {
       .select('id, name')
       .single();
     if (insErr || !inserted) {
-      return E.left(new Error(insErr?.message ?? 'No se pudo duplicar'));
+      return E.left(
+        new Error(insErr ? friendlyProductError(insErr) : 'No se pudo duplicar')
+      );
     }
 
     const { data: cats } = await this.client
@@ -704,25 +748,42 @@ export class ProductService implements BaseProductService {
   public async replaceCategories(
     input: ReplaceCategoriesInput
   ): Promise<E.Either<Error, void>> {
-    for (const productId of input.productIds) {
-      const { error: deleteError } = await this.client
-        .from('product_categories')
-        .delete()
-        .eq('product_id', productId);
+    // El multiselect puede emitir el mismo id de categoría (o producto) más de
+    // una vez; sin deduplicar, insertar el par (producto, categoría) repetido
+    // rompe la constraint única `product_categories_unique` (duplicate key).
+    const productIds = Array.from(new Set(input.productIds));
+    const categoryIds = Array.from(new Set(input.categoryIds));
+    if (productIds.length === 0) return E.right(undefined);
 
-      if (deleteError) {
-        return E.left(new Error(deleteError.message));
-      }
+    // Reemplazo: borramos TODAS las categorías de los productos seleccionados
+    // en un solo query y luego insertamos las elegidas.
+    const { error: deleteError } = await this.client
+      .from('product_categories')
+      .delete()
+      .in('product_id', productIds);
+    if (deleteError) {
+      return E.left(new Error(deleteError.message));
+    }
 
-      for (const categoryId of input.categoryIds) {
-        const { error: insertError } = await this.client
-          .from('product_categories')
-          .insert({ product_id: productId, category_id: categoryId });
+    if (categoryIds.length === 0) return E.right(undefined);
 
-        if (insertError) {
-          return E.left(new Error(insertError.message));
-        }
-      }
+    const rows = productIds.flatMap((productId) =>
+      categoryIds.map((categoryId) => ({
+        product_id: productId,
+        category_id: categoryId,
+      }))
+    );
+
+    // upsert idempotente: aunque quedara un par residual (p.ej. otra pestaña
+    // escribiendo a la vez), no revienta con duplicate key.
+    const { error: insertError } = await this.client
+      .from('product_categories')
+      .upsert(rows, {
+        onConflict: 'product_id,category_id',
+        ignoreDuplicates: true,
+      });
+    if (insertError) {
+      return E.left(new Error(insertError.message));
     }
     return E.right(undefined);
   }

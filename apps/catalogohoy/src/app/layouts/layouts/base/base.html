@@ -5,6 +5,9 @@
   />
   <section class="flex flex-auto flex-col bg-lino-500 overflow-hidden">
     <lib-expiration-banner />
+    <!-- Banner de "Siguiente paso" (activación, CAT-73) bajado temporalmente
+         mientras se rediseña. Reactivar restaurando esta línea. -->
+    <!-- <app-activation-banner /> -->
     <app-navbar (toggleSidebar)="toggleSidebar()" />
     <div class="admin-scroll flex w-full flex-auto flex-col overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(1rem_+_var(--safe-area-bottom))]">
       <router-outlet />

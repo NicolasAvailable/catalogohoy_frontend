@@ -305,6 +305,8 @@ await Promise.all(
 | total_bs | numeric | `0` | Venezuelan bolivares |
 | created_at | timestamp | `timezone('utc')` | |
 | updated_at | timestamp | `timezone('utc')` | |
+| credit_installments | jsonb | NULL | CAT-79: plan de cuotas `[{dueDate,amount?,paid?}]` de órdenes a crédito (NO es ledger de abonos) |
+| credit_reminded_at | timestamptz | NULL | CAT-79: anti-spam del cron `send-credit-reminders` (no repite la misma orden por 7 días) |
 
 **RLS:** Enabled
 

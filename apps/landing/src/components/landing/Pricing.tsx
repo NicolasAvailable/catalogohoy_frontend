@@ -98,6 +98,7 @@ const plans: PlanData[] = [
     features: [
       { label: "Hasta 2 catálogos" },
       { label: "Todo del plan Básico" },
+      { label: "Punto de Venta (caja registradora)" },
       { label: "Analíticas del catálogo" },
       { label: "Hasta 30 reportes por mes" },
       { label: "500 créditos de IA por mes" },

@@ -79,6 +79,18 @@
       }
     </label>
     }
+
+    @if (nitEnabled()) {
+    <label class="checkout__field">
+      <span class="checkout__label">{{ 'NIT' | transloco }} <span class="checkout__req">*</span></span>
+      <ui-input-text [ngModel]="nit()" (ngModelChange)="nit.set($event)"
+        (inputBlur)="nitTouched.set(true)" [invalid]="!!nitError()"
+        placeholder="Tu NIT" styleClass="w-full"></ui-input-text>
+      @if (nitError(); as err) {
+      <p class="text-xs text-red-500 mt-1">{{ err | transloco }}</p>
+      }
+    </label>
+    }
   </section>
 
   <!-- ===== Artículos ===== -->
@@ -155,7 +167,9 @@
         <span class="checkout__radio" [class.checkout__radio--on]="selectedShippingId() === method.id"></span>
         <span class="checkout__ship-name">{{ method.name }}</span>
         <span class="checkout__ship-fee">
-          @if (method.fee > 0) {
+          @if (method.priceOnRequest) {
+          {{ 'A consultar' | transloco }}
+          } @else if (method.fee > 0) {
           @if (showReferencePrice()) {
           {{ cs() }}{{ method.fee | tenantPrice }}
           @if (showBs()) { <small class="checkout__price-bs">Bs. {{ method.fee * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
@@ -290,7 +304,9 @@
     <div class="checkout__summary-row">
       <span>{{ selectedShipping()?.name }}</span>
       <span>
-        @if (shippingFee() > 0) {
+        @if (selectedShipping()?.priceOnRequest) {
+        {{ 'A consultar' | transloco }}
+        } @else if (shippingFee() > 0) {
         @if (showReferencePrice()) {
         {{ cs() }}{{ shippingFee() | tenantPrice }}
         @if (showBs()) { <small class="checkout__price-bs">Bs. {{ shippingFee() * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }

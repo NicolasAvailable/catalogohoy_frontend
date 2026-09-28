@@ -32,6 +32,7 @@ import {
   ImportSummary,
   PdfCatalogPage,
   PdfParsedProduct,
+  Product,
   ProductBackup,
   ProductBackupSnapshotRow,
   ProductExcelRow,
@@ -252,6 +253,9 @@ export class ImportExportHubComponent {
   public readonly photoItems = signal<PhotoImportItem[]>([]);
   public readonly photoProducts = signal<PhotoProductOption[]>([]);
   public readonly loadingPhotoProducts = signal(false);
+  /** True si la carga de productos del catálogo falló (para distinguir
+   *  "catálogo vacío" de "no pudimos cargar los productos" en la IA de fotos). */
+  public readonly photoProductsFailed = signal(false);
   public readonly photosProgress = signal(0);
   public readonly photosCurrentLabel = signal('');
   public readonly isApplyingPhotos = signal(false);
@@ -268,6 +272,7 @@ export class ImportExportHubComponent {
   private readonly photosLimitByPlan: Record<string, number> = {
     gratis: 3,
     basico: 10,
+    pro: 20,
     avanzado: 50,
     enterprise: 0, // 0 = ilimitado
   };
@@ -348,19 +353,46 @@ export class ImportExportHubComponent {
 
   /** From the hub, request the export via WhatsApp. Paid plans only.
    *  Ya no se genera el Excel en el navegador: el equipo lo envía manualmente. */
-  public onExport(): void {
+  /** Exportación en curso (deshabilita el tile y muestra "Generando..."). */
+  public readonly isExporting = signal(false);
+
+  /** Descarga TODOS los productos del catálogo en un Excel con las mismas
+   *  columnas que entiende el import → el archivo es autogestionable: se
+   *  edita y se re-importa (upsert por SKU). Antes este tile pedía la
+   *  exportación por WhatsApp a soporte. */
+  public async onExport(): Promise<void> {
     if (this.isFreePlan()) {
       toast.error('La exportación de productos está disponible en los planes pagos.');
       return;
     }
-    const slug = localStorage.getItem('slug') ?? '';
-    const message = encodeURIComponent(
-      `Hola, quiero exportar los productos de mi catálogo${slug ? ` (${slug})` : ''} a Excel.`
-    );
-    // window.open debe ejecutarse síncrono dentro del click: un await previo
-    // hace que Safari lo bloquee como popup.
-    window.open(`https://wa.me/584220240947?text=${message}`, '_blank');
-    this.dialog.hide();
+    if (this.isExporting()) return;
+    this.isExporting.set(true);
+    try {
+      // Todas las páginas: PostgREST corta en 1000 filas por request, así
+      // que un catálogo grande no cabe en una sola llamada.
+      const PAGE_SIZE = 500;
+      const all: Product[] = [];
+      for (let page = 1; page <= 100; page++) {
+        const result = await this.productService.getAll(page, PAGE_SIZE);
+        if (result.isLeft()) {
+          toast.error('No se pudieron cargar tus productos. Intenta de nuevo.');
+          return;
+        }
+        const products = result.value.products;
+        all.push(...products);
+        if (products.length < PAGE_SIZE) break;
+      }
+      if (all.length === 0) {
+        toast.error('No tienes productos para exportar.');
+        return;
+      }
+      this.excelService
+        .exportToExcel(all)
+        .mapRight(() => toast.success(`Se descargó el Excel con tus ${all.length} productos`))
+        .mapLeft(() => toast.error('No se pudo generar el archivo. Intenta de nuevo.'));
+    } finally {
+      this.isExporting.set(false);
+    }
   }
 
   public async onFileSelected(event: Event): Promise<void> {
@@ -525,12 +557,14 @@ export class ImportExportHubComponent {
     if (errorCount > 0) {
       this.importEvents.notify(
         'import-rows-error',
-        `${errorCount} de ${rows.length} filas fallaron${this.isPdfRun() ? ' (fuente: PDF)' : ''}`
+        `${errorCount} de ${rows.length} filas fallaron${this.isPdfRun() ? ' (fuente: PDF)' : ''}`,
+        { products: successCount }
       );
     } else if (this.isPdfRun()) {
       this.importEvents.notify(
         'pdf-import-ok',
-        `${successCount} productos importados desde ${this.pdfFileName()}`
+        `${successCount} productos importados desde ${this.pdfFileName()}`,
+        { pages: this.pdfPages().length, products: successCount }
       );
     }
     this.view.set('import-done');
@@ -654,15 +688,25 @@ export class ImportExportHubComponent {
     this.clearPhotoItems();
     this.view.set('photos-upload');
     this.loadingPhotoProducts.set(true);
-    await this.productStore.productList$();
-    this.photoProducts.set(
-      this.productStore.productList().products.map((p) => ({
-        id: String(p.id),
-        name: p.name,
-        sku: p.sku ?? null,
-        photo: p.photos?.[0] ?? null,
-      }))
-    );
+    this.photoProductsFailed.set(false);
+    // Cargamos vía getAll (no productList$) para capturar el Either: si el fetch
+    // falla, distinguimos "no pudimos cargar" de "catálogo vacío" en la IA.
+    const result = await this.productService.getAll(undefined, undefined);
+    result
+      .mapRight((list) =>
+        this.photoProducts.set(
+          list.products.map((p) => ({
+            id: String(p.id),
+            name: p.name,
+            sku: p.sku ?? null,
+            photo: p.photos?.[0] ?? null,
+          }))
+        )
+      )
+      .mapLeft(() => {
+        this.photoProducts.set([]);
+        this.photoProductsFailed.set(true);
+      });
     this.loadingPhotoProducts.set(false);
   }
 
@@ -787,6 +831,23 @@ export class ImportExportHubComponent {
       .filter(({ item }) => item.productId === null);
     if (!unassigned.length) return;
 
+    // La IA de fotos EMPAREJA contra productos que YA existen en el catálogo.
+    // Sin productos no hay con qué emparejar → evitamos la llamada (que el
+    // backend rechazaba con "Sin productos", quemando un round-trip y ensuciando
+    // la telemetría como si fuera un error de IA). Mensaje según el motivo real.
+    if (!this.photoProducts().length) {
+      if (this.photoProductsFailed()) {
+        toast.error(
+          'No pudimos cargar los productos de tu catálogo. Cerrá y volvé a abrir la importación de fotos para reintentar.'
+        );
+      } else {
+        toast.info(
+          'Todavía no tenés productos en tu catálogo. La IA empareja tus fotos con productos que ya existen: creá algunos primero.'
+        );
+      }
+      return;
+    }
+
     this.aiIdentifying.set(true);
     const products = this.photoProducts().map((o) => ({
       id: o.id,
@@ -841,9 +902,11 @@ export class ImportExportHubComponent {
     }
   }
 
-  /** Miniatura JPEG base64 (sin prefijo) para mandar a la IA — chica y barata
-   *  en tokens; no hace falta subir la foto original para identificarla. */
-  private photoThumbnailB64(file: File, maxSide = 384): Promise<string | null> {
+  /** Miniatura JPEG base64 (sin prefijo) para mandar a la IA. 768px @ q0.8: a
+   *  384px el texto/SKU del empaque queda ilegible y la IA no puede desambiguar
+   *  productos parecidos (causa de falsos "no identificó"). ~100-200KB, muy por
+   *  debajo del budget del edge fn (800KB). */
+  private photoThumbnailB64(file: File, maxSide = 768): Promise<string | null> {
     return new Promise((resolve) => {
       const url = URL.createObjectURL(file);
       const img = new Image();
@@ -859,7 +922,7 @@ export class ImportExportHubComponent {
             return;
           }
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
           resolve(dataUrl.split(',')[1] ?? null);
         } catch {
           resolve(null);
@@ -1011,6 +1074,9 @@ export class ImportExportHubComponent {
 
     this.clearPdfState();
     this.pdfFileName.set(file.name);
+    // Traza de soporte: si algo falla (o el import termina), el archivo
+    // fuente queda en el bucket + catalog_imports para reproducirlo.
+    this.importEvents.registerFile(file);
     this.view.set('ai-analyzing');
     this.startAiMessages(PDF_READ_MESSAGES);
 
@@ -1102,7 +1168,8 @@ export class ImportExportHubComponent {
       toast.error(failure?.message ?? 'La IA no encontró productos en el PDF.');
       this.importEvents.notify(
         'pdf-ia-error',
-        `${this.pdfFileName()} (${pages.length} págs): ${failure?.message ?? 'sin productos'}`
+        `${this.pdfFileName()} (${pages.length} págs): ${failure?.message ?? 'sin productos'}`,
+        { pages: pages.length }
       );
       this.view.set('pdf-confirm');
       return;
@@ -1113,7 +1180,8 @@ export class ImportExportHubComponent {
       );
       this.importEvents.notify(
         'pdf-ia-error',
-        `${this.pdfFileName()}: lote falló tras ${analyzedPages}/${pages.length} págs — ${failure.message}`
+        `${this.pdfFileName()}: lote falló tras ${analyzedPages}/${pages.length} págs — ${failure.message}`,
+        { pages: pages.length }
       );
     }
 
@@ -1273,6 +1341,9 @@ export class ImportExportHubComponent {
   ): Promise<void> {
     // Un import de Excel/Sheets no habilita el paso de fotos del PDF.
     this.isPdfRun.set(false);
+    // Traza de soporte: el archivo fuente queda registrado para que cualquier
+    // evento del import lo suba al bucket + catalog_imports.
+    this.importEvents.registerFile(file);
     const result = await this.excelService.parseExcelFile(file);
 
     if (result.isRight()) {

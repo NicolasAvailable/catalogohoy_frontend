@@ -29,6 +29,10 @@ export interface ProductVariant {
   /** Own media (images and/or videos). When empty, the variant falls back to
    *  the product's media. The first item is the variant cover. */
   photos: string[];
+  /** Units available for this variant when it has NO sizes (e.g. per color).
+   *  `null` = unlimited/untracked. Ignored when the variant has sizes (each
+   *  size carries its own stock). */
+  stock: number | null;
   /** This variant's own sizes, each with its own stock. Empty = the variant
    *  has no sizes (added directly to the cart). */
   sizes: ProductSize[];

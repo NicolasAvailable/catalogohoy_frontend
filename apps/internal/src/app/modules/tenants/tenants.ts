@@ -1,13 +1,14 @@
 import { DatePipe } from '@angular/common';
 import {
   Component,
-  computed,
   inject,
+  OnDestroy,
   OnInit,
   signal,
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { IconComponent } from '@ui';
 import { cycleLabel, tierLabel } from '../shared/plan-cycle.model';
 import { countryLabel } from '../shared/country.util';
@@ -28,8 +29,8 @@ import { TenantsStore } from './tenants.store';
       <header class="flex flex-col gap-1 shrink-0">
         <h1 class="text-2xl font-bold text-grey-700">Catálogos</h1>
         <p class="text-sm text-grey-400">
-          Todos los catálogos (tenants) registrados. Asigná un plan y la
-          frecuencia de cobro a cada catálogo.
+          Todos los catálogos (tenants) registrados. Hacé click en uno para ver
+          su detalle completo, o asignale un plan directo desde la lista.
         </p>
       </header>
 
@@ -43,11 +44,11 @@ import { TenantsStore } from './tenants.store';
             placeholder="Buscar por nombre, slug o dueño..."
             class="flex-1 outline-none text-sm text-grey-700 placeholder:text-grey-300 bg-transparent"
             [ngModel]="searchTerm()"
-            (ngModelChange)="searchTerm.set($event)"
+            (ngModelChange)="onSearchChange($event)"
           />
         </div>
         <span class="text-sm text-grey-400">
-          {{ filteredTenants().length }} de {{ store.tenants().length }}
+          {{ store.tenants().length }} de {{ store.total() }}
         </span>
         <button
           type="button"
@@ -122,8 +123,11 @@ import { TenantsStore } from './tenants.store';
                   </td>
                 </tr>
               } @else {
-                @for (tenant of filteredTenants(); track tenant.id) {
-                  <tr class="hover:bg-grey-25 transition-colors">
+                @for (tenant of store.tenants(); track tenant.id) {
+                  <tr
+                    class="hover:bg-grey-25 transition-colors cursor-pointer"
+                    (click)="openDetail(tenant)"
+                  >
                     <td class="px-4 py-3 border-b border-grey-50">
                       <div class="flex items-center gap-3">
                         @if (tenant.logo && !brokenLogos().has(tenant.id)) {
@@ -232,7 +236,7 @@ import { TenantsStore } from './tenants.store';
                     <td class="px-4 py-3 text-right border-b border-grey-50">
                       <button
                         type="button"
-                        (click)="openAssignDialog(tenant)"
+                        (click)="$event.stopPropagation(); openAssignDialog(tenant)"
                         [disabled]="store.isMutating()"
                         class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors cursor-pointer text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -265,6 +269,25 @@ import { TenantsStore } from './tenants.store';
             </tbody>
           </table>
         </div>
+
+        @if (!store.isLoading() && store.tenants().length < store.total()) {
+          <div class="shrink-0 border-t border-grey-50 p-3 flex justify-center">
+            <button
+              type="button"
+              (click)="store.loadMore()"
+              [disabled]="store.isLoadingMore()"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-white border border-grey-50 hover:bg-grey-50 transition-colors cursor-pointer text-sm font-semibold text-grey-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              @if (store.isLoadingMore()) {
+                <ui-icon name="loader-circle" size="14" styleClass="text-grey-400 animate-spin" />
+                Cargando...
+              } @else {
+                <ui-icon name="chevron-down" size="14" styleClass="text-grey-500" />
+                Cargar más ({{ store.tenants().length }} de {{ store.total() }})
+              }
+            </button>
+          </div>
+        }
       </section>
     </div>
 
@@ -274,33 +297,33 @@ import { TenantsStore } from './tenants.store';
     />
   `,
 })
-export class Tenants implements OnInit {
+export class Tenants implements OnInit, OnDestroy {
   protected readonly store = inject(TenantsStore);
+  private readonly router = inject(Router);
 
   protected readonly searchTerm = signal('');
   protected readonly brokenLogos = signal<Set<number>>(new Set());
 
   private readonly dialog = viewChild.required(AssignPlanDialog);
-
-  protected readonly filteredTenants = computed(() => {
-    const term = this.searchTerm().trim().toLowerCase();
-    if (!term) return this.store.tenants();
-    return this.store.tenants().filter((t) => {
-      const name = (t.name ?? '').toLowerCase();
-      const slug = (t.slug ?? '').toLowerCase();
-      const owner = (t.ownerName ?? '').toLowerCase();
-      const email = (t.ownerEmail ?? '').toLowerCase();
-      return (
-        name.includes(term) ||
-        slug.includes(term) ||
-        owner.includes(term) ||
-        email.includes(term)
-      );
-    });
-  });
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.store.load();
+  }
+
+  ngOnDestroy(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+  }
+
+  /** Debounce keystrokes so search hits the server (not the loaded page). */
+  protected onSearchChange(term: string): void {
+    this.searchTerm.set(term);
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.store.setSearch(term), 300);
+  }
+
+  protected openDetail(tenant: Tenant): void {
+    void this.router.navigate(['/tenants', tenant.id]);
   }
 
   protected openAssignDialog(tenant: Tenant): void {

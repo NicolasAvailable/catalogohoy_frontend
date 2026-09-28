@@ -11,6 +11,7 @@
         } @else {
           <lib-category-filter
             [categories]="ecommerceStore.categories()"
+            [suppressAllTab]="ecommerceStore.viewAllHidden()"
             [selectedCategoryId]="ecommerceStore.selectedCategoryId()"
             (categorySelect)="onCategorySelect($event)"
             (filterClick)="openCategoriesSheet()"

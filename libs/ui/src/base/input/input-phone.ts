@@ -7,6 +7,7 @@ import {
   input,
   OnInit,
   signal,
+  untracked,
   ViewEncapsulation,
 } from '@angular/core';
 import {
@@ -240,12 +241,19 @@ export class InputPhoneComponent implements ControlValueAccessor, OnInit {
   private countryLocked = false;
 
   /** defaultCountry suele llegar async (ej. el countryCode del catálogo se
-   *  carga después del init): seguirlo mientras el input esté "virgen". */
+   *  carga después del init) o cambiar en vivo (el select de país del signup):
+   *  seguirlo mientras el usuario no haya elegido el país del teléfono a mano.
+   *  Si ya hay dígitos tipeados, se re-emite el E.164 con el código nuevo. */
   private readonly followDefaultCountry = effect(() => {
     const iso = (this.defaultCountry() ?? 've').toUpperCase();
-    if (this.countryLocked || this.nationalNumber().trim()) return;
+    if (this.countryLocked) return;
     const found = PHONE_COUNTRIES.find((c) => c.iso === iso);
-    if (found) this.selectedCountry.set(found);
+    if (!found) return;
+    untracked(() => {
+      if (found.iso === this.selectedCountry().iso) return;
+      this.selectedCountry.set(found);
+      if (this.nationalNumber().trim()) this.emit();
+    });
   });
 
   ngOnInit(): void {

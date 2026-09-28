@@ -39,9 +39,9 @@ const BILLING_CONFIG: Record<BillingPeriod, { label: string; months: number; dis
   annual:    { label: 'Anual',       months: 12, discount: 0    },
 };
 
-// Meses gratis del plan ANUAL: 2 meses en todos los planes.
-const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 2, pro: 2, avanzado: 2 };
-const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 1;
+// Anual: 50% de descuento — se paga la mitad del año (6 de 12 meses) en todos los planes.
+const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 6, pro: 6, avanzado: 6 };
+const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 6;
 
 type PlanUIConfig = {
   period: string;
@@ -50,6 +50,9 @@ type PlanUIConfig = {
   buttonSeverity: 'primary' | 'secondary';
   isPopular: boolean;
   color: string;
+  /** Prueba social: cantidad de suscriptores a mostrar en un badge ("+N
+   *  suscriptores"). Solo los planes que lo definen lo muestran. */
+  socialProof?: number;
 };
 
 // Los features viven en PLAN_FEATURES (domain) — misma fuente que la sección
@@ -72,7 +75,7 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
     color: '#6366f1',
   },
   // El badge "Más popular" vive en el Pro (ancla la decisión en el plan del
-  // medio); el Avanzado queda como tier premium sin badge.
+  // medio); el Avanzado lleva un badge de prueba social ("+N suscriptores").
   pro: {
     period: '/mes',
     features: PLAN_FEATURES['pro'],
@@ -88,6 +91,7 @@ const PLAN_UI_CONFIG: Record<string, PlanUIConfig> = {
     buttonSeverity: 'secondary',
     isPopular: false,
     color: '#312e81',
+    socialProof: 500,
   },
 };
 
@@ -127,6 +131,7 @@ function toPlanDisplay(plan: Plan, currentPlanPosition: number, rateType: string
     isPopular: config.isPopular,
     color: config.color,
     isCurrent,
+    socialProof: config.socialProof,
   };
 }
 
@@ -169,8 +174,8 @@ export class Plans implements OnInit {
 
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
     { key: 'monthly',   label: 'Mensual' },
-    { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '2 meses gratis' },
+    { key: 'quarterly', label: 'Trimestral', savingsLabel: '-10%' },
+    { key: 'annual',    label: 'Anual',      savingsLabel: '-50%' },
   ];
 
   // Resolve the currency we'll charge in, driven by the tenant's country.
@@ -341,14 +346,29 @@ export class Plans implements OnInit {
     return this.billingPeriod() === 'annual';
   }
 
-  /** Label del gancho anual por plan: "1 mes gratis" / "2 meses gratis". */
+  /** Gancho anual: 50% de descuento (equivale a 6 meses pagos de 12). */
   public annualFreeLabel(plan: PlanDisplay): string {
-    const n = annualFreeMonthsFor(plan.id);
-    return n === 1 ? '1 mes gratis' : `${n} meses gratis`;
+    return plan.id === 'gratis' ? '' : '50% de descuento';
   }
 
+  /** El prorrateo ("solo pagás la diferencia") aplica SOLO si al plan actual le
+   *  quedan MÁS de 20 días de vigencia. Cerca del vencimiento se muestra/cobra
+   *  el precio completo del plan nuevo (con su descuento anual). */
+  public readonly prorationEligible = computed(() => {
+    const expiresAt = this.planStore.tenantPlanUsage()?.planExpiresAt;
+    if (!expiresAt) return false;
+    const daysLeft = (new Date(expiresAt).getTime() - Date.now()) / 86_400_000;
+    return daysLeft > 20;
+  });
+
   public isUpgradePlan(plan: PlanDisplay): boolean {
-    return this.hasPaidPlan() && !plan.isCurrent && !plan.isFree && plan.position > this.currentPlanPosition();
+    return (
+      this.hasPaidPlan() &&
+      !plan.isCurrent &&
+      !plan.isFree &&
+      plan.position > this.currentPlanPosition() &&
+      this.prorationEligible()
+    );
   }
 
   public getUpgradePrice(plan: PlanDisplay): number {
@@ -375,11 +395,16 @@ export class Plans implements OnInit {
     // Compliance IAP: en nativo no se dispara checkout (se gestiona en la web).
     if (this.isNative) return;
 
+    const countryCode = this.tenantCurrency.countryCode();
+    const countryName = findCountryByCode(countryCode)?.label ?? null;
+
     this.discord.notifyCheckoutIntent({
       tenantName: this.tenantStore.tenantName(),
       tenantSlug: this.tenantStore.tenantSlug(),
       planName: plan.name,
       billingPeriod: this.billingPeriod(),
+      countryName,
+      countryCode,
     });
 
     this.router.navigate(['/admin/plans/checkout', plan.id], {

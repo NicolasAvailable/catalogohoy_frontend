@@ -15,9 +15,15 @@
   `tenants.stripe_subscription_status = 'active'` el banner se oculta — Stripe renueva solo;
   solo los planes manuales (pago móvil VE / WhatsApp) ven el banner con "Renovar plan"),
   `currentPlanPalette` (colores por plan). `loadTenantPlanUsage()` se cachea (singleton).
-- **`CheckoutService`** invoca edge functions: `create-checkout-session`, `cancel-subscription`
-  (⚠️ **no está deployada en prod** — ese flujo falla hoy), `create-catalog-checkout`,
-  `update-catalog-slots`, `validate-promotion-code`.
+- **`CheckoutService`** invoca edge functions: `create-checkout-session`, `change-plan`,
+  `cancel-subscription`, `create-catalog-checkout`, `update-catalog-slots`,
+  `validate-promotion-code`.
+- **Upgrades con prorrateo (2026-08)**: `plan-checkout.pay()` con `isUpgrade()` y sin addons de
+  catálogo llama a `change-plan` (cobra SOLO la diferencia prorrateada sobre la sub existente,
+  tarjeta guardada, sin redirect). Si responde un código de `CHECKOUT_FALLBACK_CODES`
+  (`no_active_subscription`, `not_an_upgrade`, `subscription_not_active`, `plan_item_not_found`)
+  cae al checkout normal (`startCheckoutSession`). Antes el upgrade creaba una sub nueva a precio
+  completo (sobrecobro Aglaia t2092).
 - **Presenter**: `plans` (cards con features; `negative:true` = lo que NO incluye, con X),
   `plan-checkout`, `plan-success`, `expiration-banner`, `plan-expired-dialog`, `plan-limit-dialog`,
   `enterprise-contact-dialog` (funnel multi-step de "Contactar ventas").

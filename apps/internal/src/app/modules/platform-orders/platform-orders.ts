@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@ui';
 import { toast } from 'ngx-sonner';
 import {
+  CURRENCY_NAMES,
   orderStatusLabel,
   PlatformOrder,
   PlatformOrderStats,
@@ -172,9 +173,12 @@ type StatusFilter = 'all' | PlatformOrderStatus;
                         class="px-4 py-3 text-right border-b border-grey-50 whitespace-nowrap"
                       >
                         <span class="font-semibold text-grey-700">
-                          \${{ o.totalUsd | number: '1.2-2' }}
+                          {{ o.totalUsd | number: '1.2-2' }}
+                          <span class="text-xs text-grey-400 font-normal">
+                            {{ o.currency }}
+                          </span>
                         </span>
-                        @if (o.totalBs > 0) {
+                        @if (o.totalBs > 0 && o.currency !== 'VES') {
                           <span class="block text-xs text-grey-400">
                             Bs {{ o.totalBs | number: '1.2-2' }}
                           </span>
@@ -221,6 +225,9 @@ type StatusFilter = 'all' | PlatformOrderStatus;
                 <strong class="text-2xl font-bold text-grey-700">
                   {{ kpi.value }}
                 </strong>
+                @if (kpi.hint) {
+                  <span class="text-xs text-grey-400">{{ kpi.hint }}</span>
+                }
               </article>
             }
           </section>
@@ -248,6 +255,52 @@ type StatusFilter = 'all' | PlatformOrderStatus;
               <span class="text-sm text-grey-500 flex-1">Canceladas</span>
               <strong class="font-bold text-grey-700">{{ s.cancelled }}</strong>
             </article>
+          </section>
+
+          <!-- Ingresos por moneda -->
+          <section
+            class="bg-white border border-grey-50 rounded-xl overflow-hidden"
+          >
+            <div class="p-4 border-b border-grey-50 flex items-center justify-between gap-2">
+              <h2 class="text-sm font-bold text-grey-600">
+                Ingresos por moneda (completadas)
+              </h2>
+              <span class="text-xs text-grey-400">
+                Cada catálogo vende en su propia moneda — no se pueden sumar
+              </span>
+            </div>
+            @if (s.revenueByCurrency.length === 0) {
+              <p class="text-sm text-grey-400 p-4">Sin órdenes completadas.</p>
+            } @else {
+              <table class="w-full text-left text-sm">
+                <tbody>
+                  @for (c of s.revenueByCurrency; track c.currency) {
+                    <tr class="border-b border-grey-50 last:border-0">
+                      <td class="px-4 py-2.5 w-20">
+                        <span
+                          class="inline-flex items-center px-2 py-0.5 rounded bg-grey-50 text-grey-600 text-xs font-bold"
+                        >
+                          {{ c.currency }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-2.5 text-grey-500">
+                        {{ currencyName(c.currency) }}
+                      </td>
+                      <td class="px-4 py-2.5 text-right text-grey-400 whitespace-nowrap">
+                        {{ c.orders }}
+                        {{ c.orders === 1 ? 'orden' : 'órdenes' }}
+                      </td>
+                      <td class="px-4 py-2.5 text-right font-bold text-grey-700 whitespace-nowrap">
+                        {{ c.total | number: '1.0-2' }}
+                        <span class="text-xs text-grey-400 font-normal">
+                          {{ c.currency }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
           </section>
 
           <!-- Daily chart -->
@@ -351,17 +404,29 @@ export class PlatformOrders implements OnInit {
     });
   });
 
-  public readonly kpis = computed(() => {
-    const s = this.stats();
-    if (!s) return [];
-    return [
-      { label: 'Total', value: `${s.total}` },
-      { label: 'Hoy', value: `${s.today}` },
-      { label: '7 días', value: `${s.last7}` },
-      { label: '30 días', value: `${s.last30}` },
-      { label: 'Ingresos (compl.)', value: `$${this.money(s.revenueUsd)}` },
-    ];
-  });
+  public readonly kpis = computed(
+    (): { label: string; value: string; hint?: string }[] => {
+      const s = this.stats();
+      if (!s) return [];
+      const otherCurrencies = s.revenueByCurrency.filter(
+        (c) => c.currency !== 'USD'
+      ).length;
+      return [
+        { label: 'Total', value: `${s.total}` },
+        { label: 'Hoy', value: `${s.today}` },
+        { label: '7 días', value: `${s.last7}` },
+        { label: '30 días', value: `${s.last30}` },
+        {
+          label: 'Ingresos USD (compl.)',
+          value: `$${this.money(s.revenueUsd)}`,
+          hint:
+            otherCurrencies > 0
+              ? `solo catálogos en USD · +${otherCurrencies} monedas abajo`
+              : 'solo catálogos en USD',
+        },
+      ];
+    }
+  );
 
   private readonly maxDaily = computed(() =>
     Math.max(1, ...(this.stats()?.daily.map((d) => d.count) ?? [1]))
@@ -408,6 +473,10 @@ export class PlatformOrders implements OnInit {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
+  }
+
+  protected currencyName(code: string): string {
+    return CURRENCY_NAMES[code] ?? code;
   }
 
   protected statusLabel = orderStatusLabel;

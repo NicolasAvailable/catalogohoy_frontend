@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@17";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { AwsClient } from "npm:aws4fetch@1";
 
 const ZERO_DECIMAL = new Set([
   "BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG",
@@ -331,15 +332,119 @@ async function fetchOwnerInfo(admin: ReturnType<typeof createClient>, tenantId: 
   };
 }
 
-async function sendResendEmail(admin: ReturnType<typeof createClient>, to: string, subject: string, html: string, text: string): Promise<void> {
-  const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendKey) { await logDebug(admin, "Missing RESEND_API_KEY — email skipped"); return; }
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: "CatalogoHoy <noreply@catalogohoy.com>", to: [to], subject, html, text }),
+// --- Email (AWS SES principal, con fallback a MailerSend/Resend) --------------
+// El switch es por presencia de secret: AWS_SES_ACCESS_KEY_ID (SES) tiene
+// prioridad; si no, MailerSend; si no, Resend.
+function hasEmailProvider(): boolean {
+  return !!(Deno.env.get("AWS_SES_ACCESS_KEY_ID") || Deno.env.get("MAILER_SEND_API_KEY") || Deno.env.get("RESEND_API_KEY"));
+}
+
+// Envío por AWS SES (v2 SendEmail, firma SigV4 con aws4fetch). Proveedor
+// principal: se activa por presencia de AWS_SES_ACCESS_KEY_ID (prioridad sobre
+// MailerSend/Resend). Región sa-east-1, config set catalogohoy-prod.
+async function sendViaSes(
+  to: string[],
+  fromName: string,
+  fromEmail: string,
+  subject: string,
+  html: string,
+  text?: string,
+): Promise<{ ok: boolean; id: string | null; status: number; error?: string }> {
+  const region = Deno.env.get("AWS_SES_REGION") ?? "sa-east-1";
+  const aws = new AwsClient({
+    accessKeyId: Deno.env.get("AWS_SES_ACCESS_KEY_ID")!,
+    secretAccessKey: Deno.env.get("AWS_SES_SECRET_ACCESS_KEY")!,
+    region,
+    service: "ses",
   });
-  if (!res.ok) { const errText = await res.text().catch(() => ""); await logDebug(admin, `Resend ${res.status} for ${to}: ${errText}`); }
+  const res = await aws.fetch(`https://email.${region}.amazonaws.com/v2/email/outbound-emails`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      FromEmailAddress: `${fromName} <${fromEmail}>`,
+      Destination: { ToAddresses: to },
+      Content: {
+        Simple: {
+          Subject: { Data: subject, Charset: "UTF-8" },
+          Body: {
+            Html: { Data: html, Charset: "UTF-8" },
+            ...(text ? { Text: { Data: text, Charset: "UTF-8" } } : {}),
+          },
+        },
+      },
+      ConfigurationSetName: "catalogohoy-prod",
+    }),
+  });
+  if (!res.ok) return { ok: false, id: null, status: res.status, error: await res.text().catch(() => "") };
+  const j = await res.json().catch(() => null);
+  return { ok: true, id: (j as { MessageId?: string } | null)?.MessageId ?? null, status: res.status };
+}
+
+async function deliverEmail(opts: {
+  to: string | string[];
+  subject: string;
+  html: string;
+  text?: string;
+  fromName?: string;
+  fromEmail?: string;
+}): Promise<{ ok: boolean; id: string | null; status: number; error?: string }> {
+  const to = (Array.isArray(opts.to) ? opts.to : [opts.to]).filter((e) => e && e.includes("@"));
+  if (to.length === 0) return { ok: false, id: null, status: 0, error: "no recipients" };
+  const fromName = opts.fromName ?? "CatalogoHoy";
+  const fromEmail = opts.fromEmail ?? "noreply@catalogohoy.com";
+
+  // AWS SES primero (proveedor principal desde la migración desde Resend).
+  if (Deno.env.get("AWS_SES_ACCESS_KEY_ID") && Deno.env.get("AWS_SES_SECRET_ACCESS_KEY")) {
+    return await sendViaSes(to, fromName, fromEmail, opts.subject, opts.html, opts.text);
+  }
+
+  const msToken = Deno.env.get("MAILER_SEND_API_KEY");
+  if (msToken) {
+    const res = await fetch("https://api.mailersend.com/v1/email", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${msToken}`,
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: JSON.stringify({
+        from: { email: fromEmail, name: fromName },
+        to: to.map((email) => ({ email })),
+        subject: opts.subject,
+        html: opts.html,
+        ...(opts.text ? { text: opts.text } : {}),
+      }),
+    });
+    const id = res.headers.get("x-message-id");
+    if (!res.ok) return { ok: false, id, status: res.status, error: await res.text().catch(() => "") };
+    return { ok: true, id, status: res.status };
+  }
+
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (resendKey) {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: `${fromName} <${fromEmail}>`,
+        to,
+        subject: opts.subject,
+        html: opts.html,
+        ...(opts.text ? { text: opts.text } : {}),
+      }),
+    });
+    if (!res.ok) return { ok: false, id: null, status: res.status, error: await res.text().catch(() => "") };
+    const j = await res.json().catch(() => null);
+    return { ok: true, id: (j as { id?: string } | null)?.id ?? null, status: res.status };
+  }
+
+  return { ok: false, id: null, status: 0, error: "No email provider (AWS_SES / MAILER_SEND_API_KEY / RESEND_API_KEY)" };
+}
+
+async function sendResendEmail(admin: ReturnType<typeof createClient>, to: string, subject: string, html: string, text: string): Promise<void> {
+  if (!hasEmailProvider()) { await logDebug(admin, "No email provider configured — email skipped"); return; }
+  const r = await deliverEmail({ to, subject, html, text });
+  if (!r.ok) { await logDebug(admin, `Email ${r.status} for ${to}: ${r.error ?? ""}`); }
 }
 
 function adminUrlFor(owner: OwnerInfo): string {
@@ -607,6 +712,16 @@ Deno.serve(async (req: Request) => {
         } else if (!expiresAtIso) {
           await logDebug(admin, `customer.subscription.updated: missing period end for sub ${sub.id} (tenant ${tenantId})`);
         }
+        // Upgrade con prorrateo (edge fn `change-plan`): al cambiar el precio del
+        // ítem, la suscripción sigue viva pero pasa a otro plan. Reflejamos el
+        // nuevo plan_id desde el metadata de la suscripción (que `change-plan`
+        // deja sincronizado). Solo con estado válido, para no "ascender" a un
+        // tenant cuya sub quedó impaga.
+        const metaPlanId = sub.metadata?.plan_id;
+        if (metaPlanId && isValid) {
+          fullUpdate["plan_id"] = metaPlanId;
+          sharedUpdate["plan_id"] = metaPlanId;
+        }
         await applyPlanUpdate(admin, Number(tenantId), fullUpdate, sharedUpdate);
         const { data: tenant } = await admin.from("tenants").select("name, slug").eq("id", Number(tenantId)).single();
         await notifyDiscord({
@@ -640,25 +755,36 @@ Deno.serve(async (req: Request) => {
         const sharedUpdate: Record<string, unknown> = { plan_expires_at: expiresAtIso, plan_expired: false, stripe_subscription_status: sub.status };
         await applyPlanUpdate(admin, Number(tenantId), sharedUpdate, sharedUpdate);
       }
+      // `subscription_update` = factura de prorrateo de un UPGRADE (edge fn
+      // `change-plan` cambia el precio del ítem con proration_behavior:
+      // always_invoice → cobra solo la diferencia AHORA, misma suscripción).
+      // `subscription_cycle` = renovación automática real del período. Sin este
+      // distingo, el upgrade llegaba como "Renovación cobrada".
+      const isUpgrade = billingReason === "subscription_update";
       const owner = await fetchOwnerInfo(admin, Number(tenantId));
       const tenantName = owner?.tenantName ?? `Tenant #${tenantId}`;
       const slug = owner?.slug ?? String(tenantId);
-      const planLbl = planLabel(owner?.planId);
+      // En un upgrade el plan nuevo viene en el metadata de la sub (lo deja
+      // `change-plan`), autoritativo aunque el tenant en DB aún no se haya
+      // sincronizado por la carrera con customer.subscription.updated.
+      const planLbl = planLabel(sub.metadata?.plan_id ?? owner?.planId);
       const amountStr = formatStripeAmount(invoice.amount_paid, invoice.currency);
       const periodEndStr = expiresAtIso ? new Date(expiresAtIso).toLocaleDateString("es-ES") : "—";
       await notifyDiscord({
-        title: "♻️ Renovación cobrada",
-        description: `Stripe cobró automáticamente la renovación de **${tenantName}**.`,
-        color: 0x22c55e,
+        title: isUpgrade ? "⬆️ Upgrade de plan cobrado" : "♻️ Renovación cobrada",
+        description: isUpgrade
+          ? `Stripe cobró la diferencia prorrateada del upgrade de **${tenantName}** al plan **${planLbl}**.`
+          : `Stripe cobró automáticamente la renovación de **${tenantName}**.`,
+        color: isUpgrade ? 0x6366f1 : 0x22c55e,
         fields: [
           { name: "Plan", value: planLbl, inline: true },
-          { name: "Monto", value: amountStr, inline: true },
-          { name: "Próxima renovación", value: periodEndStr, inline: true },
+          { name: isUpgrade ? "Diferencia cobrada" : "Monto", value: amountStr, inline: true },
+          { name: isUpgrade ? "Válido hasta" : "Próxima renovación", value: periodEndStr, inline: true },
           { name: "Slug", value: slug, inline: true },
           { name: "Suscripción", value: subscriptionId, inline: false },
         ],
       });
-      if (owner) await emailPaymentSucceeded(admin, owner, "renewal", amountStr, periodEndStr, planLbl);
+      if (owner) await emailPaymentSucceeded(admin, owner, isUpgrade ? "change" : "renewal", amountStr, periodEndStr, planLbl);
     }
 
     if (event.type === "invoice.payment_failed") {
@@ -717,16 +843,33 @@ Deno.serve(async (req: Request) => {
         });
         return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });
       }
-      const { data: tenantRow } = await admin.from("tenants").select("stripe_subscription_id, name, slug").eq("id", Number(tenantId)).single();
+      const { data: tenantRow } = await admin.from("tenants").select("stripe_subscription_id, name, slug, plan_id").eq("id", Number(tenantId)).single();
       if (tenantRow?.stripe_subscription_id === sub.id) {
-        const fullUpdate: Record<string, unknown> = { plan_expired: true, stripe_subscription_status: "canceled", extra_catalogs: 0 };
-        const sharedUpdate: Record<string, unknown> = { plan_expired: true, stripe_subscription_status: "canceled" };
+        // Churn real: cuando Stripe BORRA la suscripción (cancelación inmediata o
+        // fin de período de un cancel_at_period_end), no basta con marcar
+        // plan_expired: bajamos el plan a 'gratis' y guardamos el plan pago que
+        // tenían en previous_plan_id (para reactivar y para que el interno lo
+        // clasifique como churn, no como pago vigente). También limpiamos
+        // plan_expires_at porque 'gratis' no tiene vencimiento.
+        // El guard `stripe_subscription_id === sub.id` evita que esto dispare en
+        // upgrades: ahí el sub viejo se cancela pero el tenant ya apunta al nuevo.
+        const currentPlan = (tenantRow as { plan_id?: string | null }).plan_id ?? null;
+        const wasPaid = !!currentPlan && currentPlan !== "gratis";
+        const fullUpdate: Record<string, unknown> = { plan_id: "gratis", plan_expired: true, plan_expires_at: null, stripe_subscription_status: "canceled", extra_catalogs: 0 };
+        const sharedUpdate: Record<string, unknown> = { plan_id: "gratis", plan_expired: true, plan_expires_at: null, stripe_subscription_status: "canceled" };
+        if (wasPaid) {
+          fullUpdate["previous_plan_id"] = currentPlan;
+          sharedUpdate["previous_plan_id"] = currentPlan;
+        }
         await applyPlanUpdate(admin, Number(tenantId), fullUpdate, sharedUpdate);
         await notifyDiscord({
           title: "❌ Suscripción cancelada",
-          description: `La suscripción de **${tenantRow?.name ?? `Tenant #${tenantId}`}** ha sido cancelada.`,
+          description: `La suscripción de **${tenantRow?.name ?? `Tenant #${tenantId}`}** ha sido cancelada.${wasPaid ? ` Plan bajado a gratis (antes: ${planLabel(currentPlan)}).` : ""}`,
           color: 0xef4444,
-          fields: [{ name: "Slug", value: tenantRow?.slug ?? String(tenantId), inline: true }],
+          fields: [
+            { name: "Slug", value: tenantRow?.slug ?? String(tenantId), inline: true },
+            { name: "Plan anterior", value: wasPaid ? planLabel(currentPlan) : "—", inline: true },
+          ],
         });
       }
     }

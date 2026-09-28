@@ -251,17 +251,29 @@ export class EcommerceService implements BaseEcommerceService {
         ? ((config?.customer_fields as { deliveryBlockedWeekdays?: number[] })
             .deliveryBlockedWeekdays as number[])
         : [],
+      metaPixelId: (config?.meta_pixel_id as string | null) ?? null,
     };
 
-    const categories: Category[] = (data.categories ?? []).map((cat: any) => ({
-      id: String(cat.id),
-      name: cat.name,
-      isViewAll: cat.is_view_all ?? false,
-    }));
+    // El RPC devuelve solo categorías visibles, EXCEPTO la fila "Ver todos"
+    // (is_view_all) que viene siempre con su is_visible, para distinguir
+    // "no existe" (tenant legacy -> tab sintético) de "el tenant la ocultó"
+    // (-> ningún tab de Ver todos, pero se muestran todos los productos).
+    const rawCategories: any[] = data.categories ?? [];
+    const categories: Category[] = rawCategories
+      .filter((cat: any) => cat.is_visible !== false)
+      .map((cat: any) => ({
+        id: String(cat.id),
+        name: cat.name,
+        isViewAll: cat.is_view_all ?? false,
+      }));
+    const viewAllHidden = rawCategories.some(
+      (cat: any) => (cat.is_view_all ?? false) && cat.is_visible === false
+    );
 
     return E.right({
       catalogInfo,
       categories,
+      viewAllHidden,
       exchangeRate,
       planExpired: data.plan?.plan_expired ?? false,
       isFreePlan: data.plan?.is_free ?? true,
@@ -513,11 +525,15 @@ export class EcommerceService implements BaseEcommerceService {
     phone: string;
     comments: string;
     email?: string;
+    /** NIT del cliente (identificación tributaria). Solo lo envían los catálogos
+     *  con la feature NIT activa; el resto lo deja undefined. */
+    nit?: string;
     payment_method?: string;
     shipping_method?: {
       name: string;
       type: 'pickup' | 'delivery' | 'shipping';
       fee: number;
+      priceOnRequest?: boolean;
     } | null;
     shipping_address?: string | null;
     shipping_fee?: number;
@@ -541,6 +557,7 @@ export class EcommerceService implements BaseEcommerceService {
           phone: order.phone,
           comments: order.comments,
           email: order.email ?? null,
+          nit: order.nit ?? null,
           payment_method: order.payment_method ?? null,
           shipping_method: order.shipping_method ?? null,
           shipping_address: order.shipping_address ?? null,
@@ -579,7 +596,7 @@ export class EcommerceService implements BaseEcommerceService {
     const { data, error } = await this.client
       .from('orders')
       .select(
-        'id, order_number, status, name, phone, email, products, total_usd, total_bs, shipping_method, shipping_address, shipping_fee, payment_method, comments, created_at'
+        'id, order_number, status, name, phone, email, nit, products, total_usd, total_bs, shipping_method, shipping_address, shipping_fee, payment_method, comments, created_at'
       )
       .eq('id', id)
       .single();
@@ -594,6 +611,7 @@ export class EcommerceService implements BaseEcommerceService {
       name: data.name ?? '',
       phone: data.phone ?? null,
       email: data.email ?? null,
+      nit: data.nit ?? null,
       products: Array.isArray(data.products)
         ? data.products.map((p: any) => ({
             productId: p.productId,
@@ -640,6 +658,9 @@ export class EcommerceService implements BaseEcommerceService {
           name: String(m?.name ?? ''),
           type,
           fee: Number(m?.fee) || 0,
+          // "A consultar": sin esto el flag se pierde al normalizar la
+          // respuesta del RPC y el checkout público muestra "Gratis".
+          priceOnRequest: !!m?.priceOnRequest,
           instructions: String(m?.instructions ?? ''),
           requestCustomerAddress: !!m?.requestCustomerAddress,
           address: m?.address ?? null,

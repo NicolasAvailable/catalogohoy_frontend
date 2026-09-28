@@ -4,7 +4,15 @@ import { Capacitor } from '@capacitor/core';
  * Default tenant slug for local development.
  * Change this value to test with different tenants.
  */
-export const DEV_TENANT_SLUG = 'catalogohoy-demo'; // TEMP: probar checklist del Inicio (revertir a 'catalogohoy')
+export const DEV_TENANT_SLUG = 'catalogohoy';
+
+/**
+ * Slugs que ven el canal "Instagram y Facebook" (Conectar Meta, CAT-64/65)
+ * mientras dura el App Review de Meta: sin Advanced Access, el OAuth solo
+ * funciona para cuentas con rol en la app. `null` = visible para todos
+ * (cambiar al aprobar la revisión). 'catalogohoy' = tenant 6, demo del revisor.
+ */
+export const META_CHANNEL_ALLOWED_SLUGS: string[] | null = ['catalogohoy'];
 
 /**
  * true cuando la app corre dentro del shell nativo (Capacitor, iOS/Android),

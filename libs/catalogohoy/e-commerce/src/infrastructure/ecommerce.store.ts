@@ -18,6 +18,8 @@ type EcommerceState = {
   productList: ProductList;
   selectedProduct: Product | null;
   categories: { id: string; name: string }[];
+  /** El tenant ocultó su categoría "Ver todos" (no renderizar ningún all-tab). */
+  viewAllHidden: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
   searchTerm: string;
@@ -40,6 +42,7 @@ const initialState: EcommerceState = {
   productList: ProductList.empty(),
   selectedProduct: null,
   categories: [],
+  viewAllHidden: false,
   isLoading: true,
   isLoadingMore: false,
   searchTerm: '',
@@ -128,7 +131,7 @@ export const EcommerceStore = signalStore(
           return catalogResult;
         }
 
-        const { catalogInfo, categories, exchangeRate, planExpired, isFreePlan } =
+        const { catalogInfo, categories, viewAllHidden, exchangeRate, planExpired, isFreePlan } =
           catalogResult.value;
 
         // Free (incl. auto-downgraded) tenants only expose their first N products
@@ -141,6 +144,7 @@ export const EcommerceStore = signalStore(
         patchState(store, () => ({
           catalogInfo,
           categories,
+          viewAllHidden,
           exchangeRate,
           productCap,
         }));
@@ -171,6 +175,29 @@ export const EcommerceStore = signalStore(
       } catch {
         patchState(store, () => ({ isLoading: false }));
         return undefined;
+      }
+    },
+
+    /** Refresca SOLO la config del catálogo (info + categorías + tasa) sin
+     *  tocar productos, carrito ni flags de loading — cero parpadeo. Lo
+     *  dispara el aviso realtime cuando el comerciante guarda en "Editar
+     *  catálogo" (p. ej. agrega su vendedor de WhatsApp) para que un
+     *  visitante que YA está en el checkout vea el botón activarse en vivo,
+     *  sin salir ni recargar. */
+    async refreshCatalogInfo(slug: string) {
+      try {
+        const result = await ecommerceService.getPublicCatalog(slug);
+        result.mapRight(
+          ({ catalogInfo, categories, viewAllHidden, exchangeRate }) =>
+            patchState(store, () => ({
+              catalogInfo,
+              categories,
+              viewAllHidden,
+              exchangeRate,
+            }))
+        );
+      } catch {
+        // Best-effort: si falla, la config cargada sigue siendo válida.
       }
     },
 
@@ -295,11 +322,13 @@ export const EcommerceStore = signalStore(
       items: any[];
       total: number;
       email?: string;
+      nit?: string;
       payment_method?: string;
       shipping_method?: {
         name: string;
         type: 'pickup' | 'delivery' | 'shipping';
         fee: number;
+        priceOnRequest?: boolean;
       } | null;
       shipping_address?: string | null;
       shipping_fee?: number;
@@ -319,6 +348,7 @@ export const EcommerceStore = signalStore(
         phone: order.phone,
         comments: order.comments,
         email: order.email,
+        nit: order.nit,
         payment_method: order.payment_method,
         shipping_method: order.shipping_method,
         shipping_address: order.shipping_address,

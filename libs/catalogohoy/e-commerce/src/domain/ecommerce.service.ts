@@ -58,6 +58,10 @@ export interface CatalogInfo {
   /** Weekdays with no delivery (JS: 0 = Sunday … 6 = Saturday). The date
    *  picker blocks these days. */
   deliveryBlockedWeekdays: number[];
+  /** Meta (Facebook) Pixel ID del dueño (público). Si está seteado y el plan es
+   *  pago, el storefront inicializa este pixel y dispara los eventos de compra.
+   *  Null = el catálogo no tiene pixel configurado. */
+  metaPixelId: string | null;
 }
 
 /** Invoice-safe view of an order, fetched by id for the public receipt. */
@@ -69,6 +73,8 @@ export interface PublicOrder {
   name: string;
   phone: string | null;
   email: string | null;
+  /** NIT del cliente (identificación tributaria). Null si el catálogo no lo pide. */
+  nit: string | null;
   products: {
     productId?: string | number;
     name: string;
@@ -110,6 +116,11 @@ export interface PaginatedProductList {
 export interface PublicCatalogData {
   catalogInfo: CatalogInfo;
   categories: Category[];
+  /** True cuando el tenant OCULTÓ su categoría "Ver todos" (la fila is_view_all
+   *  existe pero is_visible=false): el catálogo no debe renderizar ningún tab
+   *  de "Ver todos" (ni el seedeado ni el sintético), pero sigue mostrando
+   *  todos los productos por defecto. */
+  viewAllHidden: boolean;
   exchangeRate: number;
   planExpired: boolean;
   isFreePlan: boolean;
@@ -141,6 +152,7 @@ export interface BaseEcommerceService {
     phone: string;
     comments: string;
     email?: string;
+    nit?: string;
     payment_method?: string;
     shipping_method?: {
       name: string;

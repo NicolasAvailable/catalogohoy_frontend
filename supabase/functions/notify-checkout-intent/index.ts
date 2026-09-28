@@ -47,12 +47,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { tenantName, tenantSlug, planName, billingPeriod } =
+    const { tenantName, tenantSlug, planName, billingPeriod, countryName, countryCode } =
       (await req.json()) as {
         tenantName: string | null;
         tenantSlug: string | null;
         planName: string;
         billingPeriod: string;
+        countryName?: string | null;
+        countryCode?: string | null;
       };
 
     const slug = tenantSlug ?? "desconocido";
@@ -68,6 +70,10 @@ Deno.serve(async (req) => {
     };
 
     const periodo = periodLabels[billingPeriod] ?? billingPeriod;
+
+    const pais = countryName
+      ? `${countryName}${countryCode ? ` (${countryCode})` : ""}`
+      : countryCode ?? "—";
 
     // Slack Block Kit: barra de color vía attachment, campos en dos columnas.
     const payload = {
@@ -87,6 +93,7 @@ Deno.serve(async (req) => {
                 { type: "mrkdwn", text: `*Email:*\n${user.email ?? "—"}` },
                 { type: "mrkdwn", text: `*Plan:*\nPlan ${planName}` },
                 { type: "mrkdwn", text: `*Periodo:*\n${periodo}` },
+                { type: "mrkdwn", text: `*🌍 País:*\n${pais}` },
                 { type: "mrkdwn", text: `*Fecha:*\n${now}` },
               ],
             },

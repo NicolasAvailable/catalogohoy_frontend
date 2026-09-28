@@ -1,14 +1,21 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
+import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
+import { RateStore } from '@catalogohoy/rate';
 import { ActivityLogService } from '@catalogohoy/teams';
 import { E } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import {
+  CreditInstallment,
   InternalNote,
+  invoiceFilenameUsesPhone,
   Order,
+  OrderAdjustment,
   OrderItem,
   OrderMapper,
+  OrderMetrics,
   OrderStatus,
+  PaymentEvidence,
 } from '../domain';
 
 export interface WeekDayData {
@@ -31,6 +38,9 @@ export interface CreateOrderInput {
   name: string;
   phone?: string;
   comments?: string;
+  /** Admin-only proof of payment (note + image URLs). Only the admin order
+   *  form sends this; the public catalog checkout never does. */
+  paymentEvidence?: PaymentEvidence | null;
   status: OrderStatus;
   products: OrderItem[];
   totalUsd: number;
@@ -46,6 +56,12 @@ export interface CreateOrderInput {
    *  comisión, u otro gasto). Se suma al `totalUsd` y se guarda en
    *  `shipping_fee`. 0 / undefined = sin envío. */
   shippingFee?: number;
+  /** Comisión (opcional) que paga el vendedor: se RESTA del total (net) y es
+   *  interna (no se muestra al cliente). Distinta del envío, que suma. */
+  commission?: number;
+  /** Ajuste (descuento/recargo) del método de pago, snapshot para la factura.
+   *  A diferencia de la comisión, SÍ se le muestra al cliente. null = sin ajuste. */
+  paymentAdjustment?: OrderAdjustment | null;
   /** Snapshot del envío para que la lista/detalle lo muestren (misma forma
    *  que el checkout público). En órdenes manuales el nombre es "Envío"; al
    *  editar una orden del catálogo se preserva su método original. null =
@@ -55,10 +71,30 @@ export interface CreateOrderInput {
     type: 'pickup' | 'delivery' | 'shipping';
     fee: number;
   } | null;
+  /** Origen de la orden. Default `'manual'` (alta desde el admin, no notifica).
+   *  El Punto de Venta envía `'pos'` para distinguir las ventas de mostrador
+   *  (métricas/caja/devoluciones) — los triggers de notificación también la
+   *  saltan, igual que `'manual'`. El catálogo público usa `'public'`. */
+  source?: string;
+  /** Caja (sesión) abierta a la que se imputa esta venta del POS. Null/omitido
+   *  cuando no hay caja abierta. */
+  posCashSessionId?: number | null;
+  /** Plan de cuotas de la orden a crédito ([{dueDate, amount?, paid?}]).
+   *  Solo lo manda el editor cuando status='credit'; null = sin cuotas. */
+  creditInstallments?: CreditInstallment[] | null;
 }
 
 export interface UpdateOrderInput extends CreateOrderInput {
   id: number;
+}
+
+/** Resumen liviano del filtro "A crédito": lo que el listado necesita para la
+ *  barra de "por cobrar" sin tocar la paginación (una sola query, cap 1000). */
+export interface CreditSummaryRow {
+  id: number;
+  totalUsd: number;
+  createdAt: string;
+  creditInstallments: CreditInstallment[] | null;
 }
 
 @Injectable({
@@ -68,6 +104,8 @@ export class OrderService {
   private readonly client = SupabaseClientProvider.getInstance();
   private readonly activityLog = inject(ActivityLogService);
   private readonly toast = inject(ToastService);
+  private readonly rateStore = inject(RateStore);
+  private readonly tenantCurrency = inject(TenantCurrencyStore);
 
   async getOrdersByTenant(
     tenantId: number,
@@ -148,6 +186,85 @@ export class OrderService {
     });
   }
 
+  /** Resumen del "por cobrar": TODAS las órdenes a crédito del tenant en una
+   *  sola query liviana (cap 1000 de PostgREST; muy por encima del caso real).
+   *  Alimenta la barra de resumen del filtro "A crédito" sin tocar la
+   *  paginación del listado. */
+  async getCreditSummary(
+    tenantId: number
+  ): Promise<E.Either<Error, CreditSummaryRow[]>> {
+    const { data, error } = await this.client
+      .from('orders')
+      .select('id, total_usd, created_at, credit_installments')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'credit');
+
+    if (error) return E.left(new Error(error.message));
+    return E.right(
+      (data ?? []).map((r) => ({
+        id: r.id,
+        totalUsd: Number(r.total_usd) || 0,
+        createdAt: r.created_at,
+        creditInstallments: Array.isArray(r.credit_installments)
+          ? (r.credit_installments as CreditInstallment[])
+          : null,
+      }))
+    );
+  }
+
+  /** Sube el PDF de la factura al bucket público (mismo patrón que el media
+   *  del chat) y devuelve su URL — para adjuntarla en la plantilla de
+   *  WhatsApp (CAT-80). */
+  async uploadInvoicePdf(
+    tenantId: number,
+    orderId: number,
+    blob: Blob,
+    filename: string
+  ): Promise<E.Either<Error, { url: string; filename: string }>> {
+    const path = `invoices/${tenantId}/orden-${orderId}-${Date.now()}.pdf`;
+    const { error } = await this.client.storage
+      .from('catalogohoy')
+      .upload(path, blob, { contentType: 'application/pdf', upsert: true });
+    if (error) return E.left(new Error(error.message));
+    const { data } = this.client.storage.from('catalogohoy').getPublicUrl(path);
+    return E.right({ url: data.publicUrl, filename });
+  }
+
+  /** CAT-80: acción hacia el cliente final por WhatsApp (plantilla desde el
+   *  número de la plataforma) vía edge `send-order-action`. El gate de plan
+   *  pago y la membresía se validan server-side; acá solo mapeamos errores. */
+  async sendOrderAction(
+    orderId: number,
+    action: 'notify' | 'invoice',
+    pdf?: { url: string; filename: string }
+  ): Promise<E.Either<Error, void>> {
+    const { data, error } = await this.client.functions.invoke(
+      'send-order-action',
+      {
+        body: {
+          action,
+          orderId,
+          pdfUrl: pdf?.url,
+          pdfFilename: pdf?.filename,
+        },
+      }
+    );
+    if (error) {
+      // Non-2xx: el motivo real viaja en el body (mismo patrón que
+      // delete-account). plan_required se distingue para el candado del menú.
+      let code = error.message;
+      try {
+        const ctx = (error as { context?: Response }).context;
+        if (ctx) code = (await ctx.clone().json())?.error ?? code;
+      } catch {
+        /* body no-JSON: se queda el mensaje genérico */
+      }
+      return E.left(new Error(code));
+    }
+    if (data?.success) return E.right(undefined);
+    return E.left(new Error(String(data?.error ?? 'send_failed')));
+  }
+
   /** Count-only query. Ignores all filters — used for the "total in general"
    *  label shown in the orders list footer. */
   async countOrdersByTenant(
@@ -176,6 +293,75 @@ export class OrderService {
 
     if (error) return E.left(new Error(error.message));
     return E.right(count ?? 0);
+  }
+
+  /** Ordinal (1-based) de esta orden entre las del mismo cliente en la tienda,
+   *  para numerar el archivo del PDF cuando un cliente tiene varias órdenes
+   *  ("Juan Pérez.pdf", "Juan Pérez (2).pdf"…). Cuenta por nombre; en las
+   *  tiendas cuyo archivo lleva el teléfono (Moto Fox) también por teléfono,
+   *  para no numerar de más a dos homónimos con distinto número. Ante cualquier
+   *  error o falta de nombre devuelve 1 (nombre limpio) para no romper la
+   *  descarga. */
+  async clientOrderOrdinal(
+    order: Pick<Order, 'id' | 'tenantId' | 'name' | 'phone'>
+  ): Promise<number> {
+    if (!(order.name ?? '').trim()) return 1;
+    let query = this.client
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', order.tenantId)
+      .eq('name', order.name)
+      .lte('id', order.id);
+    if (invoiceFilenameUsesPhone(order.tenantId) && order.phone) {
+      query = query.eq('phone', order.phone);
+    }
+    const { count, error } = await query;
+    if (error) return 1;
+    return Math.max(count ?? 1, 1);
+  }
+
+  /** Aggregated metrics for the "Métricas" tab, via the `order_metrics` RPC.
+   *  Boundaries are computed client-side (admin's local timezone): [start, end)
+   *  is the selected range and `todayStart` is local midnight. Amounts in USD. */
+  async getOrderMetrics(
+    tenantId: number,
+    start: string,
+    end: string,
+    todayStart: string,
+    useBs: boolean
+  ): Promise<E.Either<Error, OrderMetrics>> {
+    const { data, error } = await this.client.rpc('order_metrics', {
+      p_tenant_id: tenantId,
+      p_start: start,
+      p_end: end,
+      p_today_start: todayStart,
+      p_use_bs: useBs,
+    });
+
+    if (error) return E.left(new Error(error.message));
+
+    const d = (data ?? {}) as Record<string, unknown>;
+    return E.right({
+      todayAmount: Number(d['todayAmount']) || 0,
+      todayOrders: Number(d['todayOrders']) || 0,
+      rangeTotalOrders: Number(d['rangeTotalOrders']) || 0,
+      rangeTotalAmount: Number(d['rangeTotalAmount']) || 0,
+      rangeAvgTicket: Number(d['rangeAvgTicket']) || 0,
+      byStatus: Array.isArray(d['byStatus'])
+        ? (d['byStatus'] as Record<string, unknown>[]).map((s) => ({
+            status: String(s['status']),
+            count: Number(s['count']) || 0,
+            amount: Number(s['amount']) || 0,
+          }))
+        : [],
+      byDay: Array.isArray(d['byDay'])
+        ? (d['byDay'] as Record<string, unknown>[]).map((day) => ({
+            date: String(day['date']),
+            amount: Number(day['amount']) || 0,
+            count: Number(day['count']) || 0,
+          }))
+        : [],
+    });
   }
 
   async getOrderById(
@@ -207,15 +393,27 @@ export class OrderService {
       total_bs: input.totalBs,
       tenant_id: input.tenantId,
       // Alta manual desde el admin: los triggers de notificación (WhatsApp/email)
-      // saltan cuando source='manual'. Solo el catálogo público notifica.
-      source: 'manual',
+      // saltan cuando source='manual' o 'pos'. Solo el catálogo público notifica.
+      source: input.source ?? 'manual',
     };
+    // Venta del POS imputada a una caja abierta (opcional).
+    if (input.posCashSessionId != null)
+      payload['pos_cash_session_id'] = input.posCashSessionId;
     if (input.deliveryDate) payload['delivery_date'] = input.deliveryDate;
+    if (input.paymentEvidence !== undefined)
+      payload['payment_evidence'] = input.paymentEvidence;
     if (input.paymentMethod !== undefined) payload['payment_method'] = input.paymentMethod || null;
     // shipping_fee es NOT NULL (default 0): sin envío = 0, nunca null.
     if (input.shippingFee !== undefined)
       payload['shipping_fee'] = input.shippingFee ?? 0;
+    // commission: costo del vendedor que resta del total (0 = sin comisión).
+    if (input.commission !== undefined)
+      payload['commission'] = input.commission ?? 0;
+    if (input.paymentAdjustment !== undefined)
+      payload['payment_adjustment'] = input.paymentAdjustment ?? null;
     if (input.shippingMethod !== undefined) payload['shipping_method'] = input.shippingMethod;
+    if (input.creditInstallments !== undefined)
+      payload['credit_installments'] = input.creditInstallments ?? null;
 
     const { data, error } = await this.client
       .from('orders')
@@ -236,9 +434,9 @@ export class OrderService {
       return E.left(new Error(error.message));
     }
 
-    // Una orden que NACE completada también mueve inventario (misma regla
-    // que updateOrderStatus: el stock se descuenta al cruzar a completed).
-    if (input.status === 'completed') {
+    // Una orden que NACE descontando inventario (completada o a crédito) mueve
+    // stock de una vez (misma regla que updateOrderStatus).
+    if (this.deductsStock(input.status)) {
       await this.deductStock(input.tenantId, input.products ?? []);
     }
 
@@ -270,11 +468,20 @@ export class OrderService {
       total_bs: input.totalBs,
     };
     if (input.deliveryDate) patch['delivery_date'] = input.deliveryDate;
+    if (input.paymentEvidence !== undefined)
+      patch['payment_evidence'] = input.paymentEvidence;
     if (input.paymentMethod !== undefined) patch['payment_method'] = input.paymentMethod || null;
     // shipping_fee es NOT NULL (default 0): sin envío = 0, nunca null.
     if (input.shippingFee !== undefined)
       patch['shipping_fee'] = input.shippingFee ?? 0;
+    // commission: costo del vendedor que resta del total (0 = sin comisión).
+    if (input.commission !== undefined)
+      patch['commission'] = input.commission ?? 0;
+    if (input.paymentAdjustment !== undefined)
+      patch['payment_adjustment'] = input.paymentAdjustment ?? null;
     if (input.shippingMethod !== undefined) patch['shipping_method'] = input.shippingMethod;
+    if (input.creditInstallments !== undefined)
+      patch['credit_installments'] = input.creditInstallments ?? null;
 
     const { data, error } = await this.client
       .from('orders')
@@ -296,13 +503,15 @@ export class OrderService {
     const beforeStatus = before?.status as OrderStatus | undefined;
     const beforeProducts = Array.isArray(before?.products) ? before.products : [];
     const newProducts = Array.isArray(input.products) ? input.products : [];
-    if (beforeStatus !== 'completed' && input.status === 'completed') {
+    const wasDeducted = this.deductsStock(beforeStatus);
+    const willDeduct = this.deductsStock(input.status);
+    if (!wasDeducted && willDeduct) {
       await this.deductStock(input.tenantId, newProducts);
-    } else if (beforeStatus === 'completed' && input.status !== 'completed') {
+    } else if (wasDeducted && !willDeduct) {
       await this.restoreStock(input.tenantId, beforeProducts);
     } else if (
-      beforeStatus === 'completed' &&
-      input.status === 'completed' &&
+      wasDeducted &&
+      willDeduct &&
       JSON.stringify(beforeProducts) !== JSON.stringify(newProducts)
     ) {
       await this.restoreStock(input.tenantId, beforeProducts);
@@ -345,9 +554,26 @@ export class OrderService {
       return E.left(new Error(fetchError.message));
     }
 
+    // Congelar el Bs a la tasa ACTUAL al SALIR de "pendiente": el pedido se
+    // cobra a la tasa del día en que se cierra (pagada/entregada). Mientras
+    // está pendiente el Bs se muestra en vivo; aquí queda el snapshot final.
+    // SOLO catálogos con doble moneda (Venezuela) — el resto no usa bolívares,
+    // así que no se les toca `total_bs` (mismo criterio que la visualización).
+    const patch: Record<string, unknown> = { status: newStatus };
+    const rate = this.rateStore.rateValue();
+    if (
+      this.tenantCurrency.showDualCurrency() &&
+      oldStatus === 'pending' &&
+      newStatus !== 'pending' &&
+      rate > 0 &&
+      Number(order.total_usd) > 0
+    ) {
+      patch['total_bs'] = Number(order.total_usd) * rate;
+    }
+
     const { data, error } = await this.client
       .from('orders')
-      .update({ status: newStatus })
+      .update(patch)
       .eq('id', id)
       .eq('tenant_id', tenantId)
       .select()
@@ -359,13 +585,17 @@ export class OrderService {
 
     const products = Array.isArray(order.products) ? order.products : [];
 
-    // El stock se mueve únicamente cuando la orden cruza la frontera
-    // `completed`. Mientras está pending/cancelled no afecta inventario.
-    //   - cualquier estado → completed: descontar
-    //   - completed → cualquier otro: restaurar
-    if (oldStatus !== 'completed' && newStatus === 'completed') {
+    // El stock se mueve cuando la orden cruza la frontera de "descuenta
+    // inventario" (completed o credit). Mientras está pending/cancelled no
+    // afecta inventario.
+    //   - a un estado que descuenta (completed/credit): descontar
+    //   - de un estado que descontaba a uno que no: restaurar
+    //   - entre dos que descuentan (credit ↔ completed): no-op (ya está fuera)
+    const wasDeducted = this.deductsStock(oldStatus);
+    const willDeduct = this.deductsStock(newStatus);
+    if (!wasDeducted && willDeduct) {
       await this.deductStock(tenantId, products);
-    } else if (oldStatus === 'completed' && newStatus !== 'completed') {
+    } else if (wasDeducted && !willDeduct) {
       await this.restoreStock(tenantId, products);
     }
 
@@ -415,6 +645,14 @@ export class OrderService {
 
     if (error) return E.left(new Error(error.message));
     return E.right(OrderMapper.toDomain(data));
+  }
+
+  /** Estados en los que la orden YA salió del inventario (stock descontado):
+   *  `completed` (entregada/pagada) y `credit` (entregada a crédito, por
+   *  cobrar). `pending`/`cancelled` no tocan inventario. Centraliza la regla
+   *  para que create/update/status/delete la compartan. */
+  private deductsStock(status?: OrderStatus | null): boolean {
+    return status === 'completed' || status === 'credit';
   }
 
   /** Restaura stock vía RPC `increment_product_stock` (SECURITY DEFINER).
@@ -583,10 +821,10 @@ export class OrderService {
       return E.left(new Error(error.message));
     }
 
-    // Borrar una orden completada también la saca de completed: se repone lo
-    // que descontó (misma regla que updateOrder / updateOrderStatus). Las
-    // órdenes en pending/confirmed/cancelled nunca descontaron, no reponen.
-    if (before?.status === 'completed') {
+    // Borrar una orden que había descontado inventario (completed/credit) lo
+    // repone (misma regla que updateOrder / updateOrderStatus). Las órdenes en
+    // pending/cancelled nunca descontaron, no reponen.
+    if (before && this.deductsStock(before.status as OrderStatus)) {
       await this.restoreStock(
         tenantId,
         Array.isArray(before.products) ? before.products : []

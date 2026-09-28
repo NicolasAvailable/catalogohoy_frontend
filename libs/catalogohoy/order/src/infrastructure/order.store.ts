@@ -7,6 +7,7 @@ import {
   Order,
   OrderItem,
   OrderList,
+  OrderMetrics,
   OrderStatus,
 } from '../domain/order';
 import { OrderService } from './order.service';
@@ -23,6 +24,10 @@ type OrderState = {
   pendingCount: number;
   isLoading: boolean;
   error: string | null;
+  /** Aggregated metrics for the "Métricas" tab (server-side, covers all
+   *  matching orders — not just the loaded page). Null until first load. */
+  metrics: OrderMetrics | null;
+  isLoadingMetrics: boolean;
 };
 
 const initialState: OrderState = {
@@ -32,6 +37,8 @@ const initialState: OrderState = {
   pendingCount: 0,
   isLoading: false,
   error: null,
+  metrics: null,
+  isLoadingMetrics: false,
 };
 
 export const OrderStore = signalStore(
@@ -82,6 +89,39 @@ export const OrderStore = signalStore(
         }
       },
 
+      /** Trae TODAS las órdenes que matchean el filtro (sin paginar), para el
+       *  export a Excel. NO toca el estado — no pisa la página cargada. */
+      async fetchAllForExport(options?: {
+        date?: Date;
+        search?: string;
+        status?: OrderStatus | 'all';
+        orderBy?: 'date_desc' | 'date_asc' | 'total_desc' | 'total_asc';
+      }): Promise<Order[]> {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return [];
+        // PostgREST corta las selects planas en 1000 filas → paginar hasta traer
+        // TODO (tope de seguridad 50 páginas = 50k pedidos).
+        const pageSize = 1000;
+        const all: Order[] = [];
+        for (let page = 1; page <= 50; page++) {
+          const res = await orderService.getOrdersByTenant(tenantId, {
+            ...options,
+            page,
+            pageSize,
+          });
+          const batch = res.fold(
+            () => null,
+            (r) => r
+          );
+          if (!batch) break;
+          all.push(...batch.orders);
+          if (batch.orders.length < pageSize || all.length >= batch.totalCount) {
+            break;
+          }
+        }
+        return all;
+      },
+
       /** Grand total (unfiltered). Call once on init; refresh after
        *  create/delete since those are the only ops that change it. */
       async loadGrandTotalCount() {
@@ -90,6 +130,30 @@ export const OrderStore = signalStore(
         const result = await orderService.countOrdersByTenant(tenantId);
         result.mapRight((grandTotalCount) =>
           patchState(store, { grandTotalCount })
+        );
+      },
+
+      /** Load aggregated metrics for the "Métricas" tab. Boundaries are ISO
+       *  strings computed client-side (admin's local timezone). */
+      async loadOrderMetrics(range: {
+        start: string;
+        end: string;
+        todayStart: string;
+        useBs: boolean;
+      }) {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return;
+        patchState(store, { isLoadingMetrics: true });
+        const result = await orderService.getOrderMetrics(
+          tenantId,
+          range.start,
+          range.end,
+          range.todayStart,
+          range.useBs
+        );
+        result.fold(
+          () => patchState(store, { isLoadingMetrics: false }),
+          (metrics) => patchState(store, { metrics, isLoadingMetrics: false })
         );
       },
 
@@ -126,11 +190,16 @@ export const OrderStore = signalStore(
         deliveryDate?: string;
         paymentMethod?: string;
         shippingFee?: number;
+        commission?: number;
         shippingMethod?: {
           name: string;
           type: 'pickup' | 'delivery' | 'shipping';
           fee: number;
         } | null;
+        /** Origen de la orden (default 'manual'); el POS envía 'pos'. */
+        source?: string;
+        /** Caja abierta a la que se imputa la venta del POS (opcional). */
+        posCashSessionId?: number | null;
       }): Promise<E.Either<string, Order>> {
         patchState(store, { isLoading: true, error: null });
 
@@ -177,6 +246,7 @@ export const OrderStore = signalStore(
         deliveryDate?: string;
         paymentMethod?: string;
         shippingFee?: number;
+        commission?: number;
         shippingMethod?: {
           name: string;
           type: 'pickup' | 'delivery' | 'shipping';

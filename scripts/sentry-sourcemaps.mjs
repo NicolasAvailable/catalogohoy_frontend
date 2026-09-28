@@ -15,7 +15,8 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-const SENTRY_ORG = 'catalogohoy';
+// Org de Sentry (slug). Migrada a `catalogohoy-w0`; override por env si cambia.
+const SENTRY_ORG = process.env.SENTRY_ORG || 'catalogohoy-w0';
 const [distPath, sentryProject] = process.argv.slice(2);
 
 if (!distPath || !sentryProject) {

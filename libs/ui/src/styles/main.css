@@ -137,6 +137,16 @@
   --color-background: #fbfcfe;
 }
 
+/* Laptops 13"–14" (1280–1599px, ej. MacBook Air/Pro 13"): sin este escalón la
+   UI quedaba clavada en la base mínima (75% = 12px rem) hasta 1600px, así que en
+   estas pantallas —las más comunes— todo se veía chico/apretado. Un paso
+   intermedio a 13px las descomprime sin causar overflow (verificado a 1280/1440). */
+@media (width >= 1280px) {
+  :root {
+    font-size: 81.25%;
+  }
+}
+
 @media (width >= 1600px) {
   :root {
     font-size: 87.5%;

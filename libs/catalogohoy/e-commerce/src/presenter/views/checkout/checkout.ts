@@ -25,7 +25,7 @@ import {
   QrCodeComponent,
   TextareaComponent,
 } from '@ui';
-import { CartItem } from '../../../domain';
+import { CartItem, isNitFeatureEnabled } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 
@@ -78,6 +78,9 @@ export default class Checkout {
   public readonly name = signal('');
   public readonly phone = signal('');
   public readonly email = signal('');
+  /** NIT del cliente (identificación tributaria, Guatemala). Solo se pide en
+   *  los catálogos con la feature activa (ver `nitEnabled`). */
+  public readonly nit = signal('');
   public readonly comments = signal('');
   public readonly countryCode = signal('+58');
   public readonly countryIso = signal('VE');
@@ -110,6 +113,12 @@ export default class Checkout {
         phone: { visible: true, required: true },
         email: { visible: false, required: false },
       }
+  );
+
+  /** True cuando este catálogo pide el NIT (obligatorio) en el checkout.
+   *  Gateado por allowlist de tenant (hoy solo Droguería El Paisano). */
+  public readonly nitEnabled = computed(() =>
+    isNitFeatureEnabled(Number(this.info()?.id))
   );
 
   /** Active shipping options, ordered, only when the section is enabled. */
@@ -163,9 +172,11 @@ export default class Checkout {
       null
   );
 
-  public readonly shippingFee = computed(
-    () => this.selectedShipping()?.fee ?? 0
-  );
+  public readonly shippingFee = computed(() => {
+    const s = this.selectedShipping();
+    // "A consultar": no suma nada al total (el vendedor cotiza el envío luego).
+    return s && !s.priceOnRequest ? s.fee ?? 0 : 0;
+  });
 
   public readonly subtotal = computed(() => this.cartStore.totalPrice());
   public readonly total = computed(() => this.subtotal() + this.shippingFee());
@@ -309,6 +320,7 @@ export default class Checkout {
   readonly nameTouched = signal(false);
   readonly phoneTouched = signal(false);
   readonly emailTouched = signal(false);
+  readonly nitTouched = signal(false);
 
   readonly nameError = computed(() =>
     this.nameTouched() && !this.name().trim()
@@ -334,6 +346,12 @@ export default class Checkout {
     return this.isValidEmail(v) ? null : 'Ingresa un correo válido';
   });
 
+  readonly nitError = computed(() =>
+    this.nitEnabled() && this.nitTouched() && !this.nit().trim()
+      ? 'El NIT es obligatorio'
+      : null
+  );
+
   get isValid(): boolean {
     const f = this.customerFields();
     // Name is always required, regardless of config.
@@ -341,6 +359,8 @@ export default class Checkout {
     if (f.phone.visible && f.phone.required && !this.phone().trim()) return false;
     if (f.email.visible && f.email.required && !this.isValidEmail(this.email()))
       return false;
+    // NIT: obligatorio cuando la feature está activa para el catálogo.
+    if (this.nitEnabled() && !this.nit().trim()) return false;
 
     const methods = this.availablePaymentMethods();
     if (methods.length > 0 && !this.selectedPaymentMethod()) return false;
@@ -397,6 +417,7 @@ export default class Checkout {
       name: this.name().trim() || 'Cliente',
       phone: phoneFull,
       email: f.email.visible ? this.email().trim() || undefined : undefined,
+      nit: this.nitEnabled() ? this.nit().trim() || undefined : undefined,
       comments: this.comments(),
       items: items.map((item) => ({
         productId: item.productId,
@@ -421,7 +442,12 @@ export default class Checkout {
       total,
       payment_method: this.selectedPaymentMethod() || undefined,
       shipping_method: sel
-        ? { name: sel.name, type: sel.type, fee: sel.fee }
+        ? {
+            name: sel.name,
+            type: sel.type,
+            fee: sel.priceOnRequest ? 0 : sel.fee,
+            priceOnRequest: !!sel.priceOnRequest,
+          }
         : null,
       shipping_address: sel?.requestCustomerAddress
         ? this.customerAddress().trim() || null
@@ -464,6 +490,16 @@ export default class Checkout {
       value: total,
       num_items: items.length,
     });
+
+    // Conversión del catálogo (pixel del comerciante): el comprador inició su
+    // pedido por WhatsApp = Lead. event_id = order-<id> para que Meta lo
+    // deduplique con el mismo evento enviado server-side por la Conversions API
+    // (trigger de la orden). No-op si el catálogo no tiene pixel / plan no pago.
+    this.metaPixel.trackActiveTenant(
+      'Lead',
+      { currency: 'USD', value: total, num_items: items.length },
+      `order-${orderResult.value.id}`
+    );
 
     this.pendingMessage.set(message);
     this.pendingWhatsappUrl.set(whatsappUrl);
@@ -517,7 +553,13 @@ export default class Checkout {
         : '';
 
     const envioStr = shipping
-      ? `*Envío:* ${shipping.name}${fee > 0 ? ` (${this.priceForMessage(fee)})` : ' (Gratis)'}\n`
+      ? `*Envío:* ${shipping.name}${
+          shipping.priceOnRequest
+            ? ' (A consultar)'
+            : fee > 0
+            ? ` (${this.priceForMessage(fee)})`
+            : ' (Gratis)'
+        }\n`
       : '';
     const direccionStr =
       shipping?.requestCustomerAddress && this.customerAddress().trim()
@@ -532,11 +574,18 @@ export default class Checkout {
       ? `${this.countryCode()} ${this.phone()}`.trim()
       : '';
 
+    // NIT en su propia línea cuando el catálogo lo pide y el cliente lo cargó.
+    const nitStr =
+      this.nitEnabled() && this.nit().trim()
+        ? `*NIT:* ${this.nit().trim()}`
+        : '';
+
     const template = this.info()?.whatsappOrderMessage;
     if (template) {
       return template
         .replace(/\{nombre\}/g, this.name().trim() || 'Cliente')
         .replace(/\{telefono\}/g, phoneFull)
+        .replace(/\{nit\}/g, nitStr ? `\n${nitStr}` : '')
         .replace(/\{productos\}/g, productsList.trimEnd())
         .replace(/\{total\}/g, this.priceForMessage(total))
         .replace(/\{totalBs\}/g, totalBsStr)
@@ -549,6 +598,7 @@ export default class Checkout {
     let message = `¡Hola! Me gustaría hacer un pedido:\n\n`;
     message += `*Nombre:* ${this.name().trim() || 'Cliente'}\n`;
     if (phoneFull) message += `*Teléfono:* ${phoneFull}\n`;
+    if (nitStr) message += `${nitStr}\n`;
     message += `\n*Productos:*\n${productsList}`;
     if (fee > 0) message += `\n*Subtotal:* ${this.priceForMessage(subtotal)}`;
     message += `\n*Total:* ${this.priceForMessage(total)}${totalBsStr}\n`;

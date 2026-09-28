@@ -90,6 +90,69 @@ Deno.serve(async (req: Request) => {
       console.error("ingest_ses_event error:", error.message);
       return new Response("db error", { status: 500 });
     }
+
+    // Fallos de entrega → canal de Slack de errores (best-effort). Cubre a
+    // TODOS los senders de email en un solo punto: si SES no pudo entregar
+    // (Bounce/Reject) o el destinatario marcó spam (Complaint), avisamos.
+    if (["Bounce", "Complaint", "Reject"].includes(eventType)) {
+      try {
+        let webhook = Deno.env.get("SLACK_IMPORT_EVENTS_WEBHOOK") ?? null;
+        if (!webhook) {
+          const { data } = await admin.rpc("internal_get_secret", {
+            p_name: "slack_import_events_webhook",
+          });
+          webhook = (data as string | null) ?? null;
+        }
+        if (webhook) {
+          const detailParts = [
+            bounceType ? `${bounceType}/${bounceSubType ?? ""}` : null,
+            diagnostic,
+          ].filter(Boolean);
+          await fetch(webhook, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              blocks: [
+                {
+                  type: "header",
+                  text: {
+                    type: "plain_text",
+                    text: `📧 Email ${eventType === "Complaint" ? "marcado como spam" : "no entregado"} (${eventType})`,
+                    emoji: true,
+                  },
+                },
+                {
+                  type: "section",
+                  fields: [
+                    { type: "mrkdwn", text: `*Para:*\n${recipient ?? "—"}` },
+                    { type: "mrkdwn", text: `*Asunto:*\n${subject ?? "—"}` },
+                  ],
+                },
+                ...(detailParts.length
+                  ? [{
+                    type: "section",
+                    text: {
+                      type: "mrkdwn",
+                      text: `*Detalle:*\n${detailParts.join(" — ").slice(0, 500)}`,
+                    },
+                  }]
+                  : []),
+                {
+                  type: "context",
+                  elements: [{
+                    type: "mrkdwn",
+                    text: `ses-events · ${ts ?? new Date().toISOString()}`,
+                  }],
+                },
+              ],
+            }),
+          });
+        }
+      } catch (e) {
+        console.error("slack notify failed:", e instanceof Error ? e.message : String(e));
+      }
+    }
+
     return new Response("ok", { status: 200 });
   } catch (e) {
     console.error("ses-events error:", e instanceof Error ? e.message : String(e));

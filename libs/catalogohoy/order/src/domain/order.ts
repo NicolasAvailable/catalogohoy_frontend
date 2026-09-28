@@ -32,7 +32,28 @@ export interface OrderItem {
   description?: string;
 }
 
-export type OrderStatus = 'pending' | 'completed' | 'cancelled';
+/** `credit` = entregada a crédito (salió del inventario) pero aún por cobrar:
+ *  descuenta stock como `completed`, pero NO cuenta como pagada. */
+export type OrderStatus = 'pending' | 'completed' | 'cancelled' | 'credit';
+
+/** Una cuota del plan de pago de una orden a crédito. NO es un ledger de
+ *  abonos: es el compromiso acordado con el cliente. `amount` es opcional
+ *  (sin repartir, la cuota referencia el total de la orden) y `paid` se marca
+ *  a mano desde el editor cuando el cliente la abona. */
+export interface CreditInstallment {
+  /** ISO date "YYYY-MM-DD" (fecha local del comerciante). */
+  dueDate: string;
+  amount?: number | null;
+  paid?: boolean;
+}
+
+/** Admin-only payment proof attached to a manual order/sale. */
+export interface PaymentEvidence {
+  /** Free-form note (e.g. reference number, bank, conditions). */
+  note?: string;
+  /** Uploaded image URLs (transfer screenshots, receipts). */
+  images: string[];
+}
 
 /** A single internal team note (chat-style). */
 export interface InternalNote {
@@ -44,6 +65,21 @@ export interface InternalNote {
   authorPhoto?: string | null;
   /** Attached media (image/video URLs). */
   media?: string[];
+}
+
+/** Ajuste de precio (descuento o recargo) aplicado por el método/condición de
+ *  pago elegido. Se guarda como snapshot en la orden para la factura. */
+export interface OrderAdjustment {
+  /** Etiqueta lista para mostrar, ej. "Descuento · Contado (5%)". */
+  label: string;
+  /** Monto SIGNED: negativo = descuento (resta del total), positivo = recargo. */
+  amount: number;
+  /** Magnitud positiva (para mostrar el número sin signo). */
+  magnitude: number;
+  kind: 'discount' | 'surcharge';
+  /** Si se muestra como línea en la factura del cliente. false = se aplica al
+   *  total pero NO se itemiza (el cliente ve solo el total final). */
+  visible: boolean;
 }
 
 export interface Order {
@@ -61,7 +97,15 @@ export interface Order {
   updatedAt: string;
   phone?: string;
   email?: string;
+  /** NIT del cliente (identificación tributaria, Guatemala). Solo lo capturan
+   *  los catálogos con la feature NIT activa; el resto lo deja vacío. */
+  nit?: string;
   comments?: string;
+  /** Admin-only proof of payment for a manual sale/order: a free-form note plus
+   *  uploaded image URLs (transfer screenshots, etc.). Captured only from the
+   *  admin order form — never from the public catalog checkout — and never
+   *  printed on the customer receipt PDF. */
+  paymentEvidence?: PaymentEvidence | null;
   /** Internal team notes thread — admin-only, never shown to the customer. */
   internalNotes?: InternalNote[];
   paymentMethod?: string;
@@ -76,8 +120,79 @@ export interface Order {
   shippingAddress?: string | null;
   /** Flat shipping fee added to the total. */
   shippingFee?: number;
+  /** Admin-only commission the SELLER pays on a manual order/sale. Subtracts
+   *  from the order total (net) and is never shown to the customer. Distinct
+   *  from `shippingFee`, which the customer pays and adds. */
+  commission?: number;
+  /** Ajuste (descuento/recargo) del método de pago aplicado a la orden. A
+   *  diferencia de la comisión, SÍ se le muestra al cliente como línea en la
+   *  factura. Snapshot al momento de la orden. null/ausente = sin ajuste. */
+  paymentAdjustment?: OrderAdjustment | null;
   /** ISO date "YYYY-MM-DD". Defaults to the creation date on the server. */
   deliveryDate: string;
+  /** Plan de cuotas acordado (solo tiene sentido con status `credit`).
+   *  Ausente/null = sin fechas: los recordatorios de cobranza usan el umbral
+   *  de días del dueño (users.credit_reminder_days). */
+  creditInstallments?: CreditInstallment[] | null;
+}
+
+/** One row of the per-status breakdown in {@link OrderMetrics}. */
+export interface OrderStatusMetric {
+  status: string;
+  count: number;
+  /** Sum of `total_usd` for the orders in this status (within the range). */
+  amount: number;
+}
+
+/** One day of the daily series in {@link OrderMetrics} (for the area chart). */
+export interface OrderDayMetric {
+  /** ISO timestamp at the start of the local day (used as the chart's x). */
+  date: string;
+  amount: number;
+  count: number;
+}
+
+/** Aggregated order metrics for the "Métricas" tab. Computed server-side by the
+ *  `order_metrics` RPC so the figures cover ALL matching orders — not just the
+ *  page currently loaded in the table. Amounts are in USD (the universal
+ *  currency across orders). */
+export interface OrderMetrics {
+  /** Sales for the admin's local "today" (independent of the selected range). */
+  todayAmount: number;
+  todayOrders: number;
+  /** Aggregates for the selected date range [start, end). */
+  rangeTotalOrders: number;
+  rangeTotalAmount: number;
+  rangeAvgTicket: number;
+  byStatus: OrderStatusMetric[];
+  /** One entry per day in the range (zero-filled), oldest first. */
+  byDay: OrderDayMetric[];
+}
+
+/** Una línea leída de un Excel de pedido (antes de matchear al catálogo). */
+export interface OrderExcelLine {
+  sku: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+/** Datos del cliente leídos del encabezado del Excel de pedido (si vienen
+ *  cargados; los placeholders tipo "Por favor, rellene" se descartan). */
+export interface OrderExcelClient {
+  name?: string;
+  phone?: string;
+  doc?: string;
+  address?: string;
+}
+
+/** Resultado de parsear un Excel de pedido: datos del cliente (opcionales) +
+ *  las líneas con cantidad (PEDIDO) > 0. */
+export interface OrderExcelParseResult {
+  client: OrderExcelClient;
+  lines: OrderExcelLine[];
+  /** Total de filas de producto en la hoja (para el mensaje "20 de 2013"). */
+  totalRows: number;
 }
 
 export class OrderList {
@@ -86,4 +201,87 @@ export class OrderList {
   static empty(): OrderList {
     return new OrderList([]);
   }
+}
+
+/** Bs a mostrar/facturar para una orden. Los pedidos **pendientes** se cobran a
+ *  la **tasa ACTUAL** del catálogo (`totalUsd × activeRate`), porque el pago
+ *  ocurre después; el resto de estados conservan su `total_bs` histórico
+ *  (snapshot congelado al salir de pendiente). Si no hay tasa cargada
+ *  (`activeRate <= 0`) cae al snapshot para no mostrar 0. */
+export function effectiveOrderBs(
+  order: Pick<Order, 'status' | 'totalUsd' | 'totalBs'>,
+  activeRate: number
+): number {
+  if (order.status === 'pending' && activeRate > 0 && order.totalUsd > 0) {
+    return order.totalUsd * activeRate;
+  }
+  return order.totalBs ?? 0;
+}
+
+/** Fecha local "YYYY-MM-DD" (para comparar contra `CreditInstallment.dueDate`,
+ *  que se guarda en fecha local del comerciante — mismo criterio que
+ *  `deliveryDate`). Las ISO date strings comparan bien lexicográficamente. */
+function localIsoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Días de calendario transcurridos desde la creación de la orden. */
+export function creditAgeDays(
+  order: Pick<Order, 'createdAt'>,
+  now: Date = new Date()
+): number {
+  const created = new Date(order.createdAt).getTime();
+  if (!Number.isFinite(created)) return 0;
+  return Math.max(0, Math.floor((now.getTime() - created) / 86_400_000));
+}
+
+/** Cuotas con fecha válida de una orden (tolera jsonb legacy/malformado). */
+function validInstallments(
+  order: Pick<Order, 'creditInstallments'>
+): CreditInstallment[] {
+  return (order.creditInstallments ?? []).filter(
+    (c) => typeof c?.dueDate === 'string' && c.dueDate.length >= 10
+  );
+}
+
+/** Primera cuota IMPAGA ya vencida (dueDate anterior a hoy), o null. */
+export function overdueInstallment(
+  order: Pick<Order, 'creditInstallments'>,
+  now: Date = new Date()
+): CreditInstallment | null {
+  const today = localIsoDate(now);
+  const due = validInstallments(order)
+    .filter((c) => !c.paid && c.dueDate < today)
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  return due[0] ?? null;
+}
+
+/** Próxima cuota impaga aún NO vencida (para el chip "cuota el DD/MM"), o null. */
+export function nextInstallment(
+  order: Pick<Order, 'creditInstallments'>,
+  now: Date = new Date()
+): CreditInstallment | null {
+  const today = localIsoDate(now);
+  const upcoming = validInstallments(order)
+    .filter((c) => !c.paid && c.dueDate >= today)
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  return upcoming[0] ?? null;
+}
+
+/** ¿La orden a crédito está vencida (hay que recordar el cobro)? Con cuotas:
+ *  alguna impaga con fecha pasada. Sin cuotas: la antigüedad supera el umbral
+ *  de días del dueño. Órdenes que no son `credit` nunca están vencidas. */
+export function isCreditOverdue(
+  order: Pick<Order, 'status' | 'createdAt' | 'creditInstallments'>,
+  thresholdDays: number,
+  now: Date = new Date()
+): boolean {
+  if (order.status !== 'credit') return false;
+  if (validInstallments(order).length > 0) {
+    return overdueInstallment(order, now) !== null;
+  }
+  return creditAgeDays(order, now) > Math.max(0, thresholdDays);
 }

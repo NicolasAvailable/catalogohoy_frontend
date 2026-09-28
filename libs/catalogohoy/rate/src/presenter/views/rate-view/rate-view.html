@@ -246,7 +246,10 @@
                 [(ngModel)]="tempCustomRate"
                 [min]="0"
                 [showButtons]="false"
-                placeholder="0.00"
+                mode="decimal"
+                [minFractionDigits]="0"
+                [maxFractionDigits]="2"
+                placeholder="0,00"
                 styleClass="custom-input"
               />
               <span class="input-suffix">VES</span>

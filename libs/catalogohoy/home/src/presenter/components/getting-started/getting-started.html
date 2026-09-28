@@ -1,0 +1,88 @@
+@if (isLoading()) {
+<!-- Skeleton del checklist: mismo layout que el card real para no saltar. -->
+<div class="flex flex-col gap-3 animate-pulse" aria-hidden="true">
+  <div class="h-4 w-72 max-w-full rounded bg-slate-200"></div>
+  <div
+    class="bg-white border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden shadow-sm"
+  >
+    @for (width of ['w-44', 'w-52', 'w-64', 'w-72']; track width) {
+    <div class="flex items-center gap-4 px-5 py-4">
+      <div class="shrink-0 w-9 h-9 rounded-full bg-slate-100"></div>
+      <div class="h-4 rounded bg-slate-100 {{ width }}"></div>
+      <div class="ml-auto w-4 h-4 rounded bg-slate-100"></div>
+    </div>
+    }
+  </div>
+</div>
+} @else if (visible()) {
+<div class="flex flex-col gap-3">
+  <p class="text-[0.9375rem] text-slate-700">
+    {{ '¡Revisa los pasos para dejar tu catálogo listo para vender!' | transloco }}
+  </p>
+
+  <div
+    class="bg-white border border-slate-200 rounded-xl divide-y divide-slate-200 overflow-hidden shadow-sm"
+  >
+    @for (step of steps(); track step.id) {
+    <div [class.bg-slate-50]="expanded() === step.id">
+      <button
+        type="button"
+        class="w-full flex items-center gap-4 px-5 py-4 text-left cursor-pointer"
+        (click)="toggle(step.id)"
+      >
+        @if (step.done) {
+        <span
+          class="shrink-0 w-9 h-9 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center"
+        >
+          <ui-icon name="check" [size]="18" />
+        </span>
+        } @else {
+        <span
+          class="shrink-0 w-9 h-9 rounded-lg border-2 border-dashed border-slate-300 text-primary-600 flex items-center justify-center"
+        >
+          <ui-icon [name]="step.icon" [size]="17" />
+        </span>
+        }
+        <span
+          class="flex-1 min-w-0 text-[0.9375rem] font-semibold text-slate-800"
+          [class.line-through]="step.done"
+        >
+          {{ step.title | transloco }}
+        </span>
+        @if (step.locked && !step.done) {
+        <span
+          class="hidden sm:inline-flex items-center gap-1 shrink-0 text-[0.6875rem] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5"
+        >
+          <ui-icon name="lock" [size]="10" />
+          {{ 'Planes pagos' | transloco }}
+        </span>
+        }
+        <ui-icon
+          name="chevron-down"
+          [size]="18"
+          class="shrink-0 text-slate-500 transition-transform"
+          [class.rotate-180]="expanded() === step.id"
+        />
+      </button>
+      @if (expanded() === step.id) {
+      <div class="px-5 pb-5 pl-[4.5rem] -mt-1.5">
+        <p class="text-sm text-slate-600 leading-snug">
+          {{ step.description | transloco }}
+        </p>
+        @if (!step.done) {
+        <div class="mt-4">
+          <ui-button
+            [label]="step.ctaLabel"
+            severity="primary"
+            [fluid]="false"
+            (click)="go(step)"
+          />
+        </div>
+        }
+      </div>
+      }
+    </div>
+    }
+  </div>
+</div>
+}

@@ -109,7 +109,13 @@ export default class Catalog implements OnInit, OnDestroy {
   }
 
   onSheetCategorySelect(category: Category) {
-    this.onCategorySelect(category.isViewAll ? null : category.id);
+    // Sin "Ver todos" (oculto por el tenant), re-tocar la categoría activa
+    // quita el filtro — misma vuelta a "todos" que en los tabs.
+    const togglesOff =
+      this.ecommerceStore.viewAllHidden() && this.isActiveCategory(category);
+    this.onCategorySelect(
+      category.isViewAll || togglesOff ? null : category.id
+    );
     this.closeCategoriesSheet();
   }
 

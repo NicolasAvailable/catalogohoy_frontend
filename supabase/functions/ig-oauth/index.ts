@@ -129,9 +129,13 @@ async function handleStart(req: Request): Promise<Response> {
   }
 
   const state = await makeState(tenantId, returnUrl);
+  // OJO: sin `force_reauth=true` — ese parámetro dispara un re-login interno
+  // que emite el code en un contexto de redirect distinto y el intercambio
+  // muere con "Error validating verification code" (y quema el code). La
+  // conexión de julio funcionaba sin él.
   const url =
-    `https://www.instagram.com/oauth/authorize?force_reauth=true` +
-    `&client_id=${IG_APP_ID}` +
+    `https://www.instagram.com/oauth/authorize` +
+    `?client_id=${IG_APP_ID}` +
     `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
     `&response_type=code&scope=${encodeURIComponent(SCOPES)}` +
     `&state=${encodeURIComponent(state)}`;
@@ -154,23 +158,43 @@ async function handleCallback(req: Request): Promise<Response> {
   if (!code || !state) return back("?ig=error");
 
   try {
-    // 1) code → token corto (+ IGSID del comerciante).
-    const form = new URLSearchParams({
-      client_id: IG_APP_ID,
-      client_secret: IG_APP_SECRET,
-      grant_type: "authorization_code",
-      redirect_uri: REDIRECT_URI,
-      code,
-    });
-    const shortRes = await fetch("https://api.instagram.com/oauth/access_token", {
-      method: "POST",
-      body: form,
-    });
-    const short = await shortRes.json();
-    if (!shortRes.ok || !short?.access_token) {
-      console.error("[ig-oauth] short token error", JSON.stringify(short));
+    // 1) code → token corto (+ IGSID del comerciante). Instagram valida el
+    //    redirect_uri contra el REGISTRADO en el panel; si difieren solo en la
+    //    barra final (clásico de Meta/TikTok), reintentamos con la variante.
+    const exchange = async (redirectUri: string) => {
+      const form = new URLSearchParams({
+        client_id: IG_APP_ID,
+        client_secret: IG_APP_SECRET,
+        grant_type: "authorization_code",
+        redirect_uri: redirectUri,
+        code,
+      });
+      const res = await fetch("https://api.instagram.com/oauth/access_token", {
+        method: "POST",
+        body: form,
+      });
+      return { ok: res.ok, json: await res.json() };
+    };
+
+    let attempt = await exchange(REDIRECT_URI);
+    if (!attempt.ok || !attempt.json?.access_token) {
+      const alt = REDIRECT_URI.endsWith("/")
+        ? REDIRECT_URI.slice(0, -1)
+        : `${REDIRECT_URI}/`;
+      console.error(
+        "[ig-oauth] short token error (1er intento, redirect sin alternar)",
+        JSON.stringify(attempt.json),
+      );
+      attempt = await exchange(alt);
+      if (attempt.ok && attempt.json?.access_token) {
+        console.log("[ig-oauth] el intercambio funcionó con la variante:", alt);
+      }
+    }
+    if (!attempt.ok || !attempt.json?.access_token) {
+      console.error("[ig-oauth] short token error (ambas variantes)", JSON.stringify(attempt.json));
       return back("?ig=error");
     }
+    const short = attempt.json;
 
     // 2) token corto → long-lived (60 días).
     const longRes = await fetch(
@@ -189,8 +213,9 @@ async function handleCallback(req: Request): Promise<Response> {
     const igUserId = String(me?.user_id ?? short?.user_id ?? "");
     if (!igUserId) return back("?ig=error");
 
-    // 4) Guardar la cuenta del tenant.
-    await admin.from("social_accounts").upsert(
+    // 4) Guardar la cuenta del tenant. OJO: verificar el error — antes un
+    //    fallo acá seguía de largo y redirigía "?ig=connected" sin guardar.
+    const { error: saveError } = await admin.from("social_accounts").upsert(
       {
         tenant_id: state.tenantId,
         channel: "instagram",
@@ -203,6 +228,20 @@ async function handleCallback(req: Request): Promise<Response> {
       },
       { onConflict: "channel,external_account_id" },
     );
+    if (saveError) {
+      console.error("[ig-oauth] upsert social_accounts fallo", JSON.stringify(saveError));
+      return back("?ig=error");
+    }
+
+    // 4b) Una sola cuenta ACTIVA por tenant+canal: desactivar cualquier otra
+    //     (p. ej. la cuenta DEMO del catálogo de demostración, o una cuenta
+    //     anterior). Con 2 activas, ig-send hace .maybeSingle() y falla.
+    await admin
+      .from("social_accounts")
+      .update({ status: "inactive" })
+      .eq("tenant_id", state.tenantId)
+      .eq("channel", "instagram")
+      .neq("external_account_id", igUserId);
 
     // 5) Suscribir la cuenta a los webhooks de mensajes + comentarios.
     await fetch(

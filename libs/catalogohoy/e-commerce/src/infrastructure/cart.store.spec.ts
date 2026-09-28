@@ -207,6 +207,62 @@ describe('CartStore', () => {
       expect(store.isEmpty()).toBe(true);
     });
 
+    it('incrementItem respects the stock cap captured when added', () => {
+      store.addProduct(buildProduct({ stock: '2' }));
+      const id = store.items()[0].id;
+      store.incrementItem(id); // 1 -> 2, hits the cap
+      expect(store.totalItems()).toBe(2);
+      store.incrementItem(id); // blocked at the cap
+      expect(store.totalItems()).toBe(2);
+      expect(toast.error).toHaveBeenCalledWith(
+        'No hay más stock disponible de este producto'
+      );
+    });
+
+    it('incrementItem stays unlimited when stock is not tracked (null)', () => {
+      store.addProduct(buildProduct({ stock: null }));
+      const id = store.items()[0].id;
+      store.incrementItem(id);
+      store.incrementItem(id);
+      expect(store.totalItems()).toBe(3);
+    });
+
+    it('updateQuantity clamps to the stock cap', () => {
+      store.addProduct(buildProduct({ stock: '3' }));
+      const id = store.items()[0].id;
+      store.updateQuantity(id, 10);
+      expect(store.totalItems()).toBe(3);
+      expect(toast.error).toHaveBeenCalledWith(
+        'No hay más stock disponible de este producto'
+      );
+    });
+
+    it('caps a limited VARIANT in the cart even when the product stock is unlimited', () => {
+      // Caso Distribuidora moto Fox: el producto no rastrea stock, pero el
+      // variante (p. ej. "un tanque") tiene stock 1 → no se puede pasar de 1.
+      const p = buildProduct({ stock: null });
+      const variant = {
+        id: 'v1',
+        name: 'Tanque único',
+        price: 30,
+        originalPrice: 0,
+        sku: null,
+        photos: [] as string[],
+        stock: 1,
+        sizes: [],
+        isHidden: false,
+      };
+      store.addProduct(p, { variant });
+      const id = store.items()[0].id;
+      store.incrementItem(id); // "+" del carrito: bloqueado por stock de variante
+      expect(store.totalItems()).toBe(1);
+      store.addProduct(p, { variant }); // re-agregar: también bloqueado
+      expect(store.totalItems()).toBe(1);
+      expect(toast.error).toHaveBeenCalledWith(
+        'No hay más stock disponible de este producto'
+      );
+    });
+
     it('updateQuantity sets the exact count', () => {
       store.addProduct(buildProduct());
       const id = store.items()[0].id;

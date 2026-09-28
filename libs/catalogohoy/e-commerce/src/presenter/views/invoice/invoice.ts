@@ -142,6 +142,7 @@ export default class Invoice {
       updatedAt: o.createdAt,
       phone: o.phone ?? undefined,
       email: o.email ?? undefined,
+      nit: o.nit ?? undefined,
       comments: o.comments ?? undefined,
       paymentMethod: o.paymentMethod ?? undefined,
       shippingMethod: o.shippingMethod
