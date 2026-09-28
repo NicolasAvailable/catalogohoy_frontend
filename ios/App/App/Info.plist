@@ -29,6 +29,10 @@
 			</array>
 		</dict>
 	</array>
+	<!-- Solo HTTPS estándar → exenta de declaración de encriptación; evita la
+	     pregunta de export compliance en cada upload a App Store Connect. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
