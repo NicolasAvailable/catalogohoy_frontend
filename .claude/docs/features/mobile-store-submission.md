@@ -124,6 +124,32 @@ Suggested screens (capture from a seeded tenant): Inicio (KPIs + chart) · Produ
 4. Upload the AAB. Enroll in **Play App Signing** (recommended); this upload keystore becomes
    your *upload key*.
 
+## Login social nativo (Apple + Google) — 2026-09-28
+
+La app nativa ofrece **Sign in with Apple** (solo iOS, cumple guideline 4.8) y
+**Google** vía `@capgo/capacitor-social-login` + `signInWithIdToken` de Supabase
+(nada de redirects: Google bloquea OAuth dentro del WKWebView). Si la cuenta no
+tiene catálogo, el login pasa a un **alta in-app** (nombre de tienda + país) que
+llama la RPC `complete_google_signup` (sirve para cualquier provider OAuth).
+El flujo web NO cambió. Código: `native-oauth.constants.ts` (client IDs),
+`loginWithSocialNative()` en el service, bloque nativo en `login.html`.
+
+### Config pendiente (una sola vez, paneles)
+
+1. **Supabase → Auth → Providers → Apple** (https://supabase.com/dashboard/project/yvkurjivijnhliofmfmj/auth/providers):
+   habilitar y en **Authorized Client IDs** poner `com.catalogohoy.app`.
+   (Sin Services ID ni secret: solo flujo nativo.)
+2. **Google Cloud → Credentials** (proyecto `164826274834`, el del OAuth de Supabase —
+   https://console.cloud.google.com/apis/credentials):
+   - Crear OAuth client **iOS** con bundle `com.catalogohoy.app` → copiar su ID en
+     `GOOGLE_IOS_CLIENT_ID` (native-oauth.constants.ts) y su **reversed** en el
+     `CFBundleURLTypes` de `ios/App/App/Info.plist` (placeholder `REEMPLAZAR-IOS-CLIENT`).
+   - Crear OAuth client **Android** con package `com.catalogohoy.app` + SHA-1 del
+     upload keystore (abajo) — y tras subir a Play, TAMBIÉN el SHA-1 de App Signing.
+3. **Supabase → Auth → Providers → Google**: agregar el client ID iOS a
+   **Authorized Client IDs** (el web client `164826274834-82m44…` ya es el principal).
+4. Mientras `GOOGLE_IOS_CLIENT_ID` esté vacío, iOS muestra SOLO Apple (guard en login.ts).
+
 ## Signing — upload keystore (Android)
 
 - File: `android/catalogohoy-upload.keystore` (**gitignored — NOT in the repo**).

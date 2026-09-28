@@ -23,6 +23,11 @@ import {
 } from '../domain';
 import { errorMapper } from './authentication-error';
 import { authenticationTokenService } from './authentication-token.service';
+import {
+  GOOGLE_IOS_CLIENT_ID,
+  GOOGLE_WEB_CLIENT_ID,
+  NATIVE_APP_BUNDLE_ID,
+} from './native-oauth.constants';
 
 // Sentinel devuelto por `signup()` cuando Supabase exige confirmar el correo
 // (no hay sesión todavía). El componente lo usa para mostrar "revisá tu correo"
@@ -317,6 +322,80 @@ export class AuthenticationService implements BaseAuthenticationService {
       },
     });
     return data.url;
+  }
+
+  /** Init perezoso (y único) del plugin de login social nativo. */
+  private socialLoginInit: Promise<void> | null = null;
+
+  private initSocialLogin(): Promise<void> {
+    this.socialLoginInit ??= import('@capgo/capacitor-social-login').then(
+      ({ SocialLogin }) =>
+        SocialLogin.initialize({
+          google: {
+            webClientId: GOOGLE_WEB_CLIENT_ID,
+            iOSClientId: GOOGLE_IOS_CLIENT_ID,
+            mode: 'online',
+          },
+          // En iOS el clientId no llega al OS; solo le dice al plugin qué
+          // provider inicializar.
+          apple: { clientId: NATIVE_APP_BUNDLE_ID },
+        })
+    );
+    return this.socialLoginInit;
+  }
+
+  /**
+   * Login social NATIVO (Apple / Google) para la app iOS-Android: obtiene el
+   * idToken con el SDK nativo y abre sesión en Supabase vía signInWithIdToken.
+   * NO usa el flujo de redirects del navegador — Google bloquea OAuth dentro
+   * de un WKWebView, por eso en nativo el camino es token-based.
+   *
+   * Devuelve el nombre del perfil si el provider lo entrega (Apple SOLO lo da
+   * la PRIMERA vez que el usuario autoriza la app) para prefillear el alta del
+   * catálogo cuando la cuenta todavía no tiene uno.
+   */
+  public async loginWithSocialNative(
+    provider: 'apple' | 'google'
+  ): Promise<E.Either<Error, { name: string | null }>> {
+    try {
+      await this.initSocialLogin();
+      const { SocialLogin } = await import('@capgo/capacitor-social-login');
+      const res = await SocialLogin.login({
+        provider,
+        options: {
+          scopes:
+            provider === 'apple' ? ['email', 'name'] : ['email', 'profile'],
+        },
+      });
+      const result = res.result as {
+        idToken?: string | null;
+        profile?: {
+          givenName?: string | null;
+          familyName?: string | null;
+          name?: string | null;
+        };
+      };
+      if (!result?.idToken) return E.left(new Error('social_cancelled'));
+
+      const { error } = await this.client.auth.signInWithIdToken({
+        provider,
+        token: result.idToken,
+      });
+      if (error) return E.left(new Error(error.message));
+
+      const name =
+        [result.profile?.givenName, result.profile?.familyName]
+          .filter(Boolean)
+          .join(' ') ||
+        result.profile?.name ||
+        null;
+      return E.right({ name });
+    } catch (e) {
+      // El usuario cerró la hoja nativa (cancel) u otro fallo del SDK.
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/cancel|1001/i.test(msg)) return E.left(new Error('social_cancelled'));
+      return E.left(new Error(msg));
+    }
   }
 
   public onAuthStateChange(callback: (event: string) => void): () => void {

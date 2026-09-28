@@ -38,6 +38,11 @@ export class AuthenticationFacade {
     return this.authenticationService.loginWithGoogle(redirectTo);
   }
 
+  /** Login social NATIVO (app iOS/Android): Apple o Google vía SDK nativo. */
+  public loginWithSocialNative(provider: 'apple' | 'google') {
+    return this.authenticationService.loginWithSocialNative(provider);
+  }
+
   public onAuthStateChange(callback: (event: string) => void): () => void {
     return this.authenticationService.onAuthStateChange(callback);
   }

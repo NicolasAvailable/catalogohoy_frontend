@@ -2,10 +2,15 @@ import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
+  isIosApp,
   isNativeApp,
   LanguageSelectorComponent,
   setNativeSlug,
 } from '@catalogohoy/core';
+import {
+  findCountryByCode,
+  SUPPORTED_COUNTRIES,
+} from '@catalogohoy/ecommerce-config';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import {
@@ -14,9 +19,11 @@ import {
   InputMessageComponent,
   InputPasswordComponent,
   InputTextComponent,
+  SelectComponent,
 } from '@ui';
 import { AuthenticationFacade } from '../../../application';
 import { LoginCredentials } from '../../../domain';
+import { GOOGLE_IOS_CLIENT_ID } from '../../../infrastructure/native-oauth.constants';
 
 @Component({
   selector: 'app-login',
@@ -28,6 +35,7 @@ import { LoginCredentials } from '../../../domain';
     InputPasswordComponent,
     ButtonComponent,
     IconComponent,
+    SelectComponent,
     LanguageSelectorComponent,
     TranslocoPipe,
   ],
@@ -63,8 +71,13 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
   private readonly facade = inject(AuthenticationFacade);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  /** true en la app nativa (Capacitor): oculta Google y rutea in-app. */
+  /** true en la app nativa (Capacitor): login social por SDK y ruteo in-app. */
   readonly isNative = isNativeApp();
+  /** Sign in with Apple solo tiene sentido (y es requisito 4.8) en iOS. */
+  readonly showAppleLogin = isIosApp();
+  /** En iOS el Google nativo necesita su OAuth client; sin él, no se ofrece. */
+  readonly showGoogleNative =
+    this.isNative && (!isIosApp() || GOOGLE_IOS_CLIENT_ID.length > 0);
   private pendingInviteToken: string | null = null;
   public readonly form = inject(FormBuilder).group({
     email: [
@@ -79,6 +92,21 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
 
   readonly isGoogleLoading = signal(false);
   readonly googleError = signal<string | null>(null);
+
+  // ── Registro in-app (nativo): cuenta social sin catálogo todavía ─────────
+  /** Provider social con login en curso ('apple' | 'google') o null. */
+  readonly socialLoading = signal<'apple' | 'google' | null>(null);
+  /** true → la card muestra el paso "ponle nombre a tu catálogo". */
+  readonly needsStoreSetup = signal(false);
+  readonly isCreatingStore = signal(false);
+  /** Nombre entregado por el provider (Apple solo la 1ª autorización). */
+  private socialName: string | null = null;
+  readonly countries = SUPPORTED_COUNTRIES;
+  public readonly storeForm = inject(FormBuilder).group({
+    storeName: ['', [Validators.required, whiteSpacesValidator()]],
+    name: ['', [Validators.required, whiteSpacesValidator()]],
+    countryCode: [this.detectCountryCode()],
+  });
 
   private authSub: (() => void) | null = null;
   private googlePopup: Window | null = null;
@@ -159,6 +187,88 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     this.googleError.set(
       'No tienes un catálogo registrado. Regístrate en catalogohoy.com para usar la app.'
     );
+    await this.facade.logout();
+  }
+
+  /** País por defecto del alta in-app, desde el locale del teléfono
+   *  (ej. "es-VE" → VE). Si no está soportado, queda sin selección. */
+  private detectCountryCode(): string | null {
+    const region = navigator.language?.split('-')[1]?.toUpperCase() ?? null;
+    return findCountryByCode(region)?.code ?? null;
+  }
+
+  /** Login social NATIVO (Apple/Google). Si la cuenta no tiene catálogo,
+   *  en vez de rebotar al usuario pasamos al alta in-app (needsStoreSetup). */
+  public async loginWithSocial(provider: 'apple' | 'google'): Promise<void> {
+    if (this.socialLoading()) return;
+    this.socialLoading.set(provider);
+    this.googleError.set(null);
+
+    const result = await this.facade.loginWithSocialNative(provider);
+    if (result.isLeft()) {
+      const msg = (result.value as Error).message;
+      // Cancelar la hoja nativa no es un error para el usuario.
+      if (msg !== 'social_cancelled') {
+        this.googleError.set('No se pudo iniciar sesión. Intenta de nuevo.');
+      }
+      this.socialLoading.set(null);
+      return;
+    }
+
+    this.socialName = (result.value as { name: string | null }).name;
+    if (this.pendingInviteToken) {
+      await this.facade.acceptInvite(this.pendingInviteToken);
+      sessionStorage.removeItem('pending_invite_token');
+      this.pendingInviteToken = null;
+    }
+
+    const slug = await this.facade.getMyTenantSlug();
+    if (slug.isRight()) {
+      setNativeSlug(slug.value as string);
+      await this.router.navigateByUrl('/admin');
+      return; // el spinner sigue hasta que la navegación desmonta la vista
+    }
+
+    // Cuenta nueva (o sin catálogo): registro in-app.
+    this.storeForm.patchValue({ name: this.socialName ?? '' });
+    this.needsStoreSetup.set(true);
+    this.socialLoading.set(null);
+  }
+
+  /** Crea el catálogo del usuario social recién logueado (registro in-app). */
+  public async createStore(): Promise<void> {
+    if (this.storeForm.invalid || this.isCreatingStore()) return;
+    this.isCreatingStore.set(true);
+    this.googleError.set(null);
+
+    const value = this.storeForm.value;
+    const result = await this.facade.completeGoogleSignup({
+      name: value.name!.trim(),
+      storeName: value.storeName!.trim(),
+      countryCode: value.countryCode ?? undefined,
+    });
+
+    if (result.isLeft()) {
+      this.googleError.set((result.value as Error).message);
+      this.isCreatingStore.set(false);
+      return;
+    }
+
+    // completeGoogleSignup devuelve la URL web de redirect — en nativo la
+    // ignoramos: cacheamos el slug y ruteamos in-app.
+    const slug = await this.facade.getMyTenantSlug();
+    if (slug.isRight()) {
+      setNativeSlug(slug.value as string);
+      await this.router.navigateByUrl('/admin');
+      return;
+    }
+    this.googleError.set('Ha ocurrido un error. Intenta de nuevo.');
+    this.isCreatingStore.set(false);
+  }
+
+  /** Volver del alta in-app al login (cierra la sesión social a medias). */
+  public async cancelStoreSetup(): Promise<void> {
+    this.needsStoreSetup.set(false);
     await this.facade.logout();
   }
 

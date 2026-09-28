@@ -22,6 +22,10 @@ export const META_CHANNEL_ALLOWED_SLUGS: string[] | null = ['catalogohoy'];
  */
 export const isNativeApp = (): boolean => Capacitor.isNativePlatform();
 
+/** true solo en el shell nativo de iOS (p.ej. para mostrar Sign in with Apple). */
+export const isIosApp = (): boolean =>
+  Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+
 const NATIVE_SLUG_STORAGE_KEY = 'slug';
 let cachedNativeSlug: string | null = null;
 
