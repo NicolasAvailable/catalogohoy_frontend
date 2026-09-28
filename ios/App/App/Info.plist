@@ -23,9 +23,9 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<!-- REVERSED client id del OAuth client iOS de Google.
-				     TODO(nicolas): reemplazar al crear el client en Google Cloud. -->
-				<string>com.googleusercontent.apps.REEMPLAZAR-IOS-CLIENT</string>
+				<!-- REVERSED client id del OAuth client iOS de Google (callback del
+				     Google Sign-In nativo). -->
+				<string>com.googleusercontent.apps.164826274834-ljgiuc6e541d6dvrjtuibou2qdaa8n7k</string>
 			</array>
 		</dict>
 	</array>
