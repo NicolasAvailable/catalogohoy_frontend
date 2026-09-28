@@ -97,21 +97,23 @@ Suggested screens (capture from a seeded tenant): Inicio (KPIs + chart) · Produ
 
 ## Remaining manual steps
 
-### iOS (blocked on Apple Developer activation)
-1. Apple Developer account **active** (was "Enrollment Pending", Individual, 2026-09-06).
-2. Xcode → Signing & Capabilities: pick the **Team** (sets `DEVELOPMENT_TEAM`), automatic signing.
-   The **Push Notifications** capability is already pre-wired (`App/App.entitlements` +
-   `CODE_SIGN_ENTITLEMENTS`), so it should light up once the account is active.
-3. Create an **APNs Auth Key (.p8)** in the Apple portal → upload to Firebase Cloud Messaging.
-4. App Store Connect: create the app record (`com.catalogohoy.app`), fill this metadata.
-5. Xcode → Product → Archive → distribute to TestFlight / App Store.
+### iOS
+1. ✅ Apple Developer account **ACTIVO** (aprobado 2026-09-28; cert "Apple Development:
+   NICOLAS ALEJANDRO SOTO OSORIO" ya en el keychain).
+2. ✅ `DEVELOPMENT_TEAM = G2K6QW9VZ2` seteado en el pbxproj (Debug+Release), automatic signing.
+   La capability **Push Notifications** ya está pre-cableada (`App/App.entitlements` +
+   `CODE_SIGN_ENTITLEMENTS`).
+3. ⏳ Create an **APNs Auth Key (.p8)** → https://developer.apple.com/account/resources/authkeys/list
+   → upload en Firebase: https://console.firebase.google.com/project/catalogohoy-app/settings/cloudmessaging
+4. ⏳ App Store Connect: crear el app record (`com.catalogohoy.app`) → https://appstoreconnect.apple.com/apps
+   y llenar esta metadata + App Privacy + screenshots.
+5. ⏳ Xcode → Product → Archive → distribute a TestFlight / App Store.
 
-### Android (repo is build-ready; blocked on accounts/config)
-1. **Firebase Android app:** register `com.catalogohoy.app` in the `catalogohoy-app` Firebase
-   project → download `google-services.json` → `android/app/google-services.json` (gitignored).
-   Upload keystore SHA-1/SHA-256 (below) if using App Signing / phone-number/Google features.
-2. **Play Console** ($25): create the app, fill this metadata, Data Safety form, content rating.
-3. Build the store artifact:
+### Android (repo build-ready; falta solo la cuenta)
+1. ✅ **Firebase Android app** registrada; `android/app/google-services.json` presente (gitignored).
+2. ⏳ **Play Console** ($25): crear cuenta+app → https://play.google.com/console — metadata,
+   Data Safety form, content rating.
+3. ✅ El artefacto compila firmado (verificado 2026-09-28, JDK 21 instalado):
    ```bash
    export JAVA_HOME=/opt/homebrew/opt/openjdk@21   # Capacitor 8 requires JDK 21 (not 17)
    export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
