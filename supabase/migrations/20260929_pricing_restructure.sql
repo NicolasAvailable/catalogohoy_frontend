@@ -31,6 +31,26 @@ alter table public.tenants
 comment on column public.tenants.trial_used_at is
   'Momento en que el tenant consumió su free trial de 7 días (se estampa cuando arranca la sub con trial). NULL = todavía puede pedir trial.';
 
+-- 1b) Precio congelado (grandfathering): los clientes ANTERIORES a este switch
+--     mantienen su precio viejo en su plan actual hasta que cancelen/cambien.
+--     Se limpia (→ NULL) en el webhook al cambiar de plan o cancelar, y en
+--     change-plan al hacer upgrade. Alimenta el badge "precio de cliente".
+alter table public.tenants
+  add column if not exists locked_plan_price numeric;
+
+comment on column public.tenants.locked_plan_price is
+  'Precio mensual (USD) congelado para clientes previos a la reestructura 2026-09. NULL = paga el precio de lista vigente.';
+
+-- Backfill: todo tenant HOY en un plan pago vigente conserva su precio viejo.
+update public.tenants
+  set locked_plan_price = case plan_id
+    when 'basico'   then 11.99
+    when 'pro'      then 19.99
+    when 'avanzado' then 29.99
+  end
+  where plan_id in ('basico', 'pro', 'avanzado')
+    and plan_expired is not true;
+
 -- 2) Precios nuevos (display/orden; el cobro real sale del PRICE_MAP de Stripe).
 update public.plans set price = 20, updated_at = now() where id = 'pro';
 update public.plans set price = 35, updated_at = now() where id = 'avanzado';

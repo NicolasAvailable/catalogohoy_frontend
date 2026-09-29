@@ -627,6 +627,10 @@ Deno.serve(async (req: Request) => {
           plan_expired: false,
           stripe_subscription_id: newSubId,
           stripe_subscription_status: subscription.status,
+          // Checkout de un plan = tarifa vigente → se pierde el precio congelado
+          // de cliente antiguo (si lo tenía). Las renovaciones automáticas van
+          // por invoice.payment_succeeded y NO tocan esto.
+          locked_plan_price: null,
         };
         if (expiresAtIso) fullUpdate["plan_expires_at"] = expiresAtIso;
         // Si la sub arrancó con free trial (trial_end seteado), marcamos el
@@ -638,7 +642,7 @@ Deno.serve(async (req: Request) => {
         }
 
         const sharedUpdate: Record<string, unknown> = {
-          plan_id: planId, plan_expired: false, stripe_subscription_status: subscription.status,
+          plan_id: planId, plan_expired: false, stripe_subscription_status: subscription.status, locked_plan_price: null,
         };
         if (expiresAtIso) sharedUpdate["plan_expires_at"] = expiresAtIso;
 
@@ -858,8 +862,8 @@ Deno.serve(async (req: Request) => {
         // upgrades: ahí el sub viejo se cancela pero el tenant ya apunta al nuevo.
         const currentPlan = (tenantRow as { plan_id?: string | null }).plan_id ?? null;
         const wasPaid = !!currentPlan && currentPlan !== "gratis";
-        const fullUpdate: Record<string, unknown> = { plan_id: "gratis", plan_expired: true, plan_expires_at: null, stripe_subscription_status: "canceled", extra_catalogs: 0 };
-        const sharedUpdate: Record<string, unknown> = { plan_id: "gratis", plan_expired: true, plan_expires_at: null, stripe_subscription_status: "canceled" };
+        const fullUpdate: Record<string, unknown> = { plan_id: "gratis", plan_expired: true, plan_expires_at: null, stripe_subscription_status: "canceled", extra_catalogs: 0, locked_plan_price: null };
+        const sharedUpdate: Record<string, unknown> = { plan_id: "gratis", plan_expired: true, plan_expires_at: null, stripe_subscription_status: "canceled", locked_plan_price: null };
         if (wasPaid) {
           fullUpdate["previous_plan_id"] = currentPlan;
           sharedUpdate["previous_plan_id"] = currentPlan;

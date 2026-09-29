@@ -333,6 +333,24 @@ export class Plans implements OnInit {
     );
   }
 
+  /** Precio mensual congelado del tenant (grandfathered, reestructura 2026-09):
+   *  los clientes anteriores mantienen su precio viejo en su plan actual hasta
+   *  que cancelen. Null = paga el precio de lista. */
+  public readonly lockedPlanPrice = computed(
+    () => this.planStore.tenantPlanUsage()?.lockedPlanPrice ?? null
+  );
+
+  /** ¿Esta card es el plan actual de un cliente con precio congelado? Solo ahí
+   *  mostramos el badge y el precio respetado en vez del de lista. */
+  public isGrandfathered(plan: PlanDisplay): boolean {
+    return plan.isCurrent && this.lockedPlanPrice() != null;
+  }
+
+  /** Precio congelado ya convertido a la moneda de cobro (para el display). */
+  public getLockedPrice(): number {
+    return convertUsdToLocal(this.lockedPlanPrice() ?? 0, this.displayCurrency());
+  }
+
   public getBasePrice(plan: PlanDisplay): number {
     if (plan.isFree) return 0;
     return PLAN_BASE_PRICES[plan.id] ?? plan.price;

@@ -156,6 +156,7 @@ export class PlanService implements BasePlanService {
           planExpiresAt: null,
           stripeSubscriptionId: null,
           stripeSubscriptionStatus: null,
+          lockedPlanPrice: null,
         };
 
     return E.right({
@@ -173,6 +174,7 @@ export class PlanService implements BasePlanService {
       hasStripeSubscription: !!expiration.stripeSubscriptionId,
       stripeSubscriptionStatus: expiration.stripeSubscriptionStatus,
       autoRenews: expiration.stripeSubscriptionStatus === 'active',
+      lockedPlanPrice: expiration.lockedPlanPrice,
     });
   }
 
@@ -227,7 +229,7 @@ export class PlanService implements BasePlanService {
     const { data, error } = await this.client
       .from('tenants')
       .select(
-        'plan_started_at, plan_expires_at, plan_expired, stripe_subscription_id, stripe_subscription_status'
+        'plan_started_at, plan_expires_at, plan_expired, stripe_subscription_id, stripe_subscription_status, locked_plan_price'
       )
       .eq('id', tenantId)
       .single();
@@ -254,6 +256,7 @@ export class PlanService implements BasePlanService {
       planExpired: flag && datePassed,
       stripeSubscriptionId: data.stripe_subscription_id ?? null,
       stripeSubscriptionStatus: data.stripe_subscription_status ?? null,
+      lockedPlanPrice: data.locked_plan_price != null ? Number(data.locked_plan_price) : null,
     });
   }
 

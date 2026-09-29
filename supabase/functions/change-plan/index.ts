@@ -196,6 +196,9 @@ Deno.serve(async (req: Request) => {
       plan_id: planId,
       plan_expired: false,
       stripe_subscription_status: updated.status,
+      // Upgrade → pasa a la tarifa nueva, se pierde el precio congelado de
+      // cliente antiguo (si lo tenía).
+      locked_plan_price: null,
     };
     if (expiresAtIso) planUpdate["plan_expires_at"] = expiresAtIso;
 

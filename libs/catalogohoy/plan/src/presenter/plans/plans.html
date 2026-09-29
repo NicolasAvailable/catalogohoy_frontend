@@ -109,6 +109,18 @@
           @if (plan.isFree) {
             <span class="plan-card__price-amount">{{ currencySymbol() }}0</span>
             <span class="plan-card__price-period">{{ 'por siempre' | transloco }}</span>
+          } @else if (isGrandfathered(plan)) {
+            <!-- Cliente antiguo (reestructura 2026-09): mantiene su precio viejo
+                 en su plan actual. Mostramos ESE precio + un badge, no el de lista. -->
+            <div class="plan-card__price-main">
+              <span class="plan-card__price-currency">{{ currencySymbol() }}</span>
+              <span class="plan-card__price-amount">{{ getLockedPrice() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
+            </div>
+            <span class="plan-card__price-period">{{ '/mes' | transloco }} · {{ currencyCode() }}</span>
+            <p class="plan-card__grandfathered">
+              <ui-icon name="badge-check" styleClass="size-3.5 shrink-0" />
+              {{ 'Precio de cliente: mantienes este valor mientras no canceles' | transloco }}
+            </p>
           } @else if (isUpgradePlan(plan)) {
             <!-- Upgrade desde plan pago actual: el precio que mostramos es la
                  diferencia prorrateada, NO el precio absoluto del nuevo plan.
