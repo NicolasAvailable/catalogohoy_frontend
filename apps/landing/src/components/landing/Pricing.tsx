@@ -7,33 +7,30 @@ import PlanComparison from "@/components/landing/PlanComparison";
 /* ═══════════════════════════════════════
    TYPES & CONFIG
    ═══════════════════════════════════════ */
-type BillingPeriod = "monthly" | "quarterly" | "annual";
+type BillingPeriod = "monthly" | "annual";
 
-// quarterly: 10% off. annual: meses gratis por plan (ver ANNUAL_FREE_MONTHS).
+// annual: 50% de descuento (meses gratis por plan, ver ANNUAL_FREE_MONTHS).
+// Trimestral retirado 2026-09: solo mensual + anual.
 const BILLING_CONFIG: Record<BillingPeriod, { months: number; discount: number }> = {
-  monthly:   { months: 1,  discount: 0    },
-  quarterly: { months: 3,  discount: 0.10 },
-  annual:    { months: 12, discount: 0    },
+  monthly: { months: 1,  discount: 0 },
+  annual:  { months: 12, discount: 0 },
 };
 
 const PLAN_BASE_PRICES: Record<string, number> = {
-  basico: 11.99,
-  pro: 19.99,
-  avanzado: 29.99,
+  pro: 20,
+  avanzado: 35,
 };
 
-// Anual: 50% de descuento — se paga la mitad del año (6 de 12 meses) en todos los planes.
-const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 6, pro: 6, avanzado: 6 };
+// Anual: 50% de descuento — se paga la mitad del año (6 de 12 meses).
+const ANNUAL_FREE_MONTHS: Record<string, number> = { pro: 6, avanzado: 6 };
 const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 6;
 
 const CATALOG_ADDON_PRICE = 4.99;
 
-// Los ganchos de ahorro ("10% off", "2 meses gratis") se renderizan como badges
-// FLOTANTES sobrepuestos sobre cada tab (estilo postbridge), no inline.
+// Solo mensual y anual (el ahorro anual −50% se renderiza como badge flotante).
 const billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
-  { key: "monthly",   label: "Mensual" },
-  { key: "quarterly", label: "Trimestral", savingsLabel: "-10%" },
-  { key: "annual",    label: "Anual",      savingsLabel: "-50%" },
+  { key: "monthly", label: "Mensual" },
+  { key: "annual",  label: "Anual", savingsLabel: "-50%" },
 ];
 
 /* ═══════════════════════════════════════
@@ -75,36 +72,20 @@ const plans: PlanData[] = [
     color: "#64748b",
   },
   {
-    id: "basico",
-    name: "Básico",
+    id: "pro",
+    name: "Pro",
     isFree: false,
-    description: "Para tiendas que quieren crecer.",
-    maxProducts: 100,
-    maxTeamMembers: 1,
+    description: "Para tiendas que venden todos los días.",
+    maxProducts: 500,
+    maxTeamMembers: 2,
     features: [
       { label: "Órdenes ilimitadas" },
       { label: "Analíticas del catálogo" },
       { label: "Notificaciones WhatsApp de órdenes" },
-      { label: "200 créditos de IA por mes" },
-      { label: "Diseño personalizable" },
-      { label: "Soporte prioritario" },
-    ],
-    buttonLabel: "Comenzar ahora",
-    isPopular: false,
-    color: "#6366f1",
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    isFree: false,
-    description: "Para tiendas grandes que venden todos los días.",
-    maxProducts: 500,
-    maxTeamMembers: 2,
-    features: [
-      { label: "Todo lo del plan Básico" },
       { label: "350 créditos de IA por mes" },
       { label: "Hasta 20 reportes por mes" },
       { label: "10 variantes y 10 adicionales por producto" },
+      { label: "Diseño personalizable" },
       { label: "Soporte prioritario" },
     ],
     buttonLabel: "Comenzar ahora",
@@ -170,7 +151,6 @@ function formatPrice(value: number): string {
 function getPeriodLabel(period: BillingPeriod, isFree: boolean): string {
   if (isFree) return "por siempre";
   if (period === "monthly") return "/mes";
-  if (period === "quarterly") return "/trimestre";
   return "/año";
 }
 
@@ -297,7 +277,7 @@ const Pricing = ({ embedded = false }: { embedded?: boolean }) => {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="flex snap-x snap-mandatory overflow-x-auto pb-4 -mx-4 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 sm:overflow-visible sm:mx-auto sm:px-0 sm:pb-0 lg:grid-cols-4 gap-6 lg:gap-4 xl:gap-6 max-w-none sm:max-w-[56rem] lg:max-w-none mx-auto items-stretch"
+          className="flex snap-x snap-mandatory overflow-x-auto pb-4 -mx-4 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 sm:overflow-visible sm:mx-auto sm:px-0 sm:pb-0 lg:grid-cols-3 gap-6 lg:gap-5 xl:gap-6 max-w-none sm:max-w-[56rem] lg:max-w-[64rem] mx-auto items-stretch"
         >
           {plans.map((plan) => (
             <motion.div
@@ -355,14 +335,8 @@ const Pricing = ({ embedded = false }: { embedded?: boolean }) => {
                         {getPeriodLabel(billingPeriod, false)}
                       </p>
                       <p className="inline-flex items-center gap-1 text-[0.78rem] font-semibold text-[#16a34a]">
-                        {billingPeriod === "annual" ? (
-                          <>
-                            <Gift className="h-3.5 w-3.5 shrink-0" />
-                            50% de descuento
-                          </>
-                        ) : (
-                          "Ahorras 10%"
-                        )}
+                        <Gift className="h-3.5 w-3.5 shrink-0" />
+                        50% de descuento
                       </p>
                     </div>
                   )}
@@ -383,6 +357,14 @@ const Pricing = ({ embedded = false }: { embedded?: boolean }) => {
                 >
                   {plan.buttonLabel}
                 </button>
+
+                {/* Gancho de trial: 7 días gratis en los planes pagos */}
+                {!plan.isFree && (
+                  <p className="flex items-center justify-center gap-1.5 -mt-1 text-[0.78rem] font-semibold text-[#6366f1]">
+                    <Gift className="h-3.5 w-3.5 shrink-0" />
+                    Pruébalo 7 días gratis
+                  </p>
+                )}
 
                 {/* ── Divider ── */}
                 <hr className="border-0 h-px bg-[#f1f5f9] m-0" />

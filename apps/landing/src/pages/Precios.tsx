@@ -23,26 +23,18 @@ const JSON_LD = {
     },
     {
       "@type": "Offer",
-      name: "Plan Básico",
-      description:
-        "Hasta 100 productos, analíticas, notificaciones WhatsApp y diseño personalizable",
-      price: "9.99",
-      priceCurrency: "USD",
-    },
-    {
-      "@type": "Offer",
       name: "Plan Pro",
       description:
-        "Hasta 500 productos, 2 miembros de equipo y 350 créditos de IA por mes",
-      price: "19.99",
+        "Hasta 500 productos, 2 miembros de equipo y 350 créditos de IA por mes. 7 días de prueba gratis.",
+      price: "20",
       priceCurrency: "USD",
     },
     {
       "@type": "Offer",
       name: "Plan Avanzado",
       description:
-        "Productos ilimitados, dominio propio, hasta 10 miembros de equipo y soporte dedicado",
-      price: "29.99",
+        "Productos ilimitados, dominio propio, hasta 3 miembros de equipo y soporte dedicado. 7 días de prueba gratis.",
+      price: "35",
       priceCurrency: "USD",
     },
   ],
@@ -52,7 +44,7 @@ const Precios = () => {
   usePageMeta({
     title: "Precios y planes — CatalogoHoy | Empieza gratis",
     description:
-      "Planes de CatalogoHoy: empieza gratis y crece con los planes Básico, Pro y Avanzado. Catálogo digital, pedidos por WhatsApp, IA para tus fotos y más. Sin permanencia.",
+      "Planes de CatalogoHoy: empieza gratis y crece con los planes Pro y Avanzado. Catálogo digital, pedidos por WhatsApp, IA para tus fotos y más. 7 días de prueba gratis, sin permanencia.",
     path: "/pricing",
     jsonLd: JSON_LD,
   });
@@ -77,7 +69,7 @@ const Precios = () => {
               <p className="mt-4 text-lg text-muted-foreground">
                 Empieza gratis y sube de plan cuando tu negocio lo necesite. Sin
                 contratos, sin permanencia mínima y con la opción de pagar
-                mensual, trimestral o anual con descuento.
+                mensual o anual con descuento.
               </p>
             </div>
           </section>
