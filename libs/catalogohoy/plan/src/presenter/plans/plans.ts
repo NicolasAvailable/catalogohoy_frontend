@@ -25,7 +25,7 @@ import {
   PlanFeature,
   resolveCheckoutCurrency,
 } from '../../domain';
-import { PlanStore } from '../../infrastructure';
+import { CheckoutService, PlanStore } from '../../infrastructure';
 import { EnterpriseContactDialog } from '../enterprise-contact-dialog/enterprise-contact-dialog';
 
 /** Card Enterprise ("Hablemos") oculta del grid por ahora — dejaba las cards
@@ -151,9 +151,13 @@ export class Plans implements OnInit {
   private readonly tenantStore = inject(TenantStore);
   private readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly discord = inject(DiscordWebhookService);
+  private readonly checkout = inject(CheckoutService);
   private readonly supabase = SupabaseClientProvider.getInstance();
 
   public readonly billingPeriod = signal<BillingPeriod>('monthly');
+
+  /** Plan cuya sesión de trial se está creando → botón en "Redirigiendo…". */
+  public readonly trialLoading = signal<string | null>(null);
 
   /** Contenedor scrolleable de las cards, para las flechas del carousel en
    *  laptops chicas (768–1279 px). */
@@ -442,10 +446,52 @@ export class Plans implements OnInit {
       countryCode,
     });
 
+    // Trial-elegible (usuario sin plan pago) → directo al checkout de Stripe con
+    // los 7 días (la edge function aplica trial_period_days), sin pasar por la
+    // pantalla interna. Los upgrades/renovaciones siguen por esa pantalla, que
+    // maneja prorrateo, cupones, catálogos extra y Pago Móvil (VE).
+    if (this.showsTrial(plan)) {
+      void this.startTrialCheckout(plan);
+      return;
+    }
+
     this.router.navigate(['/admin/plans/checkout', plan.id], {
       queryParams: {
         period: this.billingPeriod(),
       },
     });
+  }
+
+  /** Crea la sesión de Stripe (con trial) y redirige DIRECTO a Stripe. */
+  private async startTrialCheckout(plan: PlanDisplay): Promise<void> {
+    if (this.trialLoading()) return;
+    this.trialLoading.set(plan.id);
+
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) {
+      this.trialLoading.set(null);
+      return;
+    }
+    const code = this.tenantCurrency.countryCode();
+    const currency = resolveCheckoutCurrency(code, findCountryByCode(code)?.defaultCurrency);
+    const origin = window.location.origin;
+    const slug = localStorage.getItem('slug') ?? this.tenantStore.tenantSlug() ?? '';
+
+    const result = await this.checkout.createCheckoutSession({
+      planId: plan.id,
+      billingPeriod: this.billingPeriod(),
+      tenantId,
+      successUrl: `${origin}/admin/plans/success?slug=${slug}`,
+      cancelUrl: `${origin}/admin/plans`,
+      currency,
+    });
+
+    result
+      .mapRight(({ url }) => {
+        window.location.href = url;
+      })
+      .mapLeft(() => {
+        this.trialLoading.set(null);
+      });
   }
 }

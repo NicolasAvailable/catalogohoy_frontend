@@ -171,15 +171,20 @@
           [class.plan-card__button--secondary]="!plan.isPopular && !plan.isCurrent && !(hasPaidPlan() && !plan.isFree && plan.position > currentPlanPosition())"
           [class.plan-card__button--current]="plan.isCurrent"
           [class.plan-card__button--upgrade]="hasPaidPlan() && !plan.isCurrent && !plan.isFree && plan.position > currentPlanPosition()"
-          [disabled]="plan.isCurrent || (plan.isFree && hasPaidPlan())"
+          [disabled]="plan.isCurrent || (plan.isFree && hasPaidPlan()) || trialLoading() !== null"
           (click)="selectPlan(plan)"
         >
-          @if (showsTrial(plan)) {
-          <ui-icon name="gift" styleClass="size-4" />
-          } @else if (hasPaidPlan() && !plan.isCurrent && !plan.isFree && plan.position > currentPlanPosition()) {
-          <ui-icon name="zap" styleClass="size-4" />
+          @if (trialLoading() === plan.id) {
+          <ui-icon name="loader-circle" styleClass="size-4 animate-spin" />
+          {{ 'Redirigiendo…' | transloco }}
+          } @else {
+            @if (showsTrial(plan)) {
+            <ui-icon name="gift" styleClass="size-4" />
+            } @else if (hasPaidPlan() && !plan.isCurrent && !plan.isFree && plan.position > currentPlanPosition()) {
+            <ui-icon name="zap" styleClass="size-4" />
+            }
+            {{ (showsTrial(plan) ? 'Pruébalo 7 días gratis' : plan.buttonLabel) | transloco }}
           }
-          {{ (showsTrial(plan) ? 'Pruébalo 7 días gratis' : plan.buttonLabel) | transloco }}
         </button>
 
         @if (showsTrial(plan)) {

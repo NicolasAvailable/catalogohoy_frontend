@@ -4,10 +4,18 @@ import {
   OnInit,
   effect,
   inject,
+  signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { BillingPeriod, PlanStore } from '@catalogohoy/plan';
+import {
+  BillingPeriod,
+  CheckoutService,
+  PlanStore,
+  resolveCheckoutCurrency,
+} from '@catalogohoy/plan';
+import { findCountryByCode, TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
+import { TenantStore } from '@catalogohoy/tenant';
 import { IconComponent } from '@ui';
 
 interface TrialPlan {
@@ -22,10 +30,11 @@ interface TrialPlan {
 
 /**
  * Pantalla de bienvenida post-registro (Opción B): apenas se registra, el
- * usuario cae en `/bienvenida` (el signup redirige acá; el login sigue yendo a
- * `/admin`). Ofrece arrancar 7 días de prueba de Pro o Avanzado —que llevan al
- * checkout, donde el trial se aplica solo (trial_period_days)— o seguir con el
- * plan gratuito. Full-screen, fuera del layout del admin (como el POS).
+ * usuario cae en `/bienvenida` (el signup redirige acá; el login sigue a
+ * `/admin`). "Probar Pro/Avanzado" crea la sesión de Stripe (con el trial de 7
+ * días que la edge function aplica sola) y redirige DIRECTO al checkout de
+ * Stripe para poner la tarjeta — sin pasar por la pantalla de checkout interna.
+ * "Continuar con el plan gratuito" sigue al admin en plan Gratis.
  */
 @Component({
   selector: 'app-welcome',
@@ -38,10 +47,17 @@ interface TrialPlan {
 export default class Welcome implements OnInit {
   private readonly router = inject(Router);
   private readonly planStore = inject(PlanStore);
+  private readonly checkout = inject(CheckoutService);
+  private readonly tenantStore = inject(TenantStore);
+  private readonly tenantCurrency = inject(TenantCurrencyStore);
 
   private readonly period: BillingPeriod = 'monthly';
 
-  protected readonly plans: TrialPlan[] = [
+  /** Plan cuya sesión de Stripe se está creando (deshabilita los botones). */
+  public readonly loadingPlan = signal<string | null>(null);
+  public readonly error = signal<string | null>(null);
+
+  public readonly plans: TrialPlan[] = [
     {
       id: 'pro',
       name: 'Pro',
@@ -81,18 +97,54 @@ export default class Welcome implements OnInit {
 
   ngOnInit(): void {
     this.planStore.refreshUsage();
-  }
-
-  /** Arranca la prueba: al checkout del plan (ahí se ingresa la tarjeta y Stripe
-   *  aplica los 7 días gratis en la primera suscripción). */
-  protected startTrial(planId: 'pro' | 'avanzado'): void {
-    this.router.navigate(['/admin/plans/checkout', planId], {
-      queryParams: { period: this.period },
+    // La moneda del checkout se resuelve por el país del tenant; la precargamos
+    // para armar la sesión en la moneda correcta al tocar "Probar".
+    this.tenantStore.getTenantIdAsync().then((tid) => {
+      if (tid) this.tenantCurrency.load(tid);
     });
   }
 
+  /** Crea la sesión de Stripe (con trial) y redirige DIRECTO a Stripe para
+   *  poner la tarjeta. La edge function aplica `trial_period_days` sola. */
+  public async startTrial(planId: 'pro' | 'avanzado'): Promise<void> {
+    if (this.loadingPlan()) return;
+    this.loadingPlan.set(planId);
+    this.error.set(null);
+
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) {
+      this.error.set('No se pudo obtener la información de tu negocio.');
+      this.loadingPlan.set(null);
+      return;
+    }
+
+    const code = this.tenantCurrency.countryCode();
+    const currency = resolveCheckoutCurrency(code, findCountryByCode(code)?.defaultCurrency);
+    const origin = window.location.origin;
+    const slug = localStorage.getItem('slug') ?? this.tenantStore.tenantSlug() ?? '';
+
+    const result = await this.checkout.createCheckoutSession({
+      planId,
+      billingPeriod: this.period,
+      tenantId,
+      successUrl: `${origin}/admin/plans/success?slug=${slug}`,
+      cancelUrl: `${origin}/bienvenida`,
+      currency,
+    });
+
+    result
+      .mapRight(({ url }) => {
+        window.location.href = url;
+      })
+      .mapLeft((err) => {
+        this.error.set(err.message);
+        this.loadingPlan.set(null);
+      });
+  }
+
   /** Omitir: seguir con el plan gratuito → al admin. */
-  protected continueFree(): void {
+  public continueFree(): void {
+    if (this.loadingPlan()) return;
     this.router.navigate(['/admin']);
   }
 }

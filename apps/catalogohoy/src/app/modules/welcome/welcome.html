@@ -1,5 +1,5 @@
 <div class="welcome-shell">
-  <div class="w-full max-w-4xl mx-auto px-4 sm:px-6 py-10 flex flex-col items-center gap-8">
+  <div class="w-full max-w-4xl mx-auto px-5 sm:px-6 py-10 flex flex-col items-center gap-8">
 
     <!-- ═══ Encabezado ═══ -->
     <div class="flex flex-col items-center text-center gap-3">
@@ -48,18 +48,31 @@
 
         <button
           type="button"
-          class="mt-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
+          class="mt-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-colors enabled:cursor-pointer disabled:opacity-60"
           [class]="plan.highlighted
-            ? 'bg-primary-500 text-white hover:bg-primary-600'
-            : 'bg-grey-50 text-grey-700 border border-grey-200 hover:bg-grey-100'"
+            ? 'bg-primary-500 text-white enabled:hover:bg-primary-600'
+            : 'bg-grey-50 text-grey-700 border border-grey-200 enabled:hover:bg-grey-100'"
+          [disabled]="loadingPlan() !== null"
           (click)="startTrial(plan.id)"
         >
+          @if (loadingPlan() === plan.id) {
+          <ui-icon name="loader-circle" size="16" styleClass="animate-spin" />
+          {{ 'Redirigiendo…' | transloco }}
+          } @else {
           {{ 'Probar {name} 7 días gratis' | transloco: { name: plan.name } }}
           <ui-icon name="arrow-right" size="16" />
+          }
         </button>
       </div>
       }
     </div>
+
+    @if (error()) {
+    <p class="inline-flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-2.5 max-w-md text-center">
+      <ui-icon name="circle-alert" size="16" styleClass="shrink-0" />
+      {{ error() }}
+    </p>
+    }
 
     <!-- ═══ Opción gratuita (clara y al final) ═══ -->
     <div class="w-full max-w-3xl flex flex-col items-center gap-3">
@@ -71,7 +84,8 @@
 
       <button
         type="button"
-        class="w-full flex items-center justify-between gap-4 rounded-2xl border border-grey-200 bg-white px-5 py-4 text-left hover:border-grey-300 hover:shadow-sm transition-all cursor-pointer"
+        class="w-full flex items-center justify-between gap-4 rounded-2xl border border-grey-200 bg-white px-5 py-4 text-left enabled:hover:border-grey-300 enabled:hover:shadow-sm transition-all enabled:cursor-pointer disabled:opacity-60"
+        [disabled]="loadingPlan() !== null"
         (click)="continueFree()"
       >
         <span class="flex items-center gap-3 min-w-0">
