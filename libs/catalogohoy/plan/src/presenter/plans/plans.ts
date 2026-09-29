@@ -11,6 +11,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { SkeletonModule } from 'primeng/skeleton';
 import { IconComponent } from '@ui';
 import {
+  BASICO_PLAN_ID,
   BillingPeriod,
   CATALOG_ADDON_PRICE,
   convertUsdToLocal,
@@ -167,10 +168,12 @@ export class Plans implements OnInit {
     el.scrollBy({ left: dir * amount, behavior: 'smooth' });
   }
 
+  // Solo mensual y anual (el trimestral se retiró 2026-09; el plumbing de
+  // 'quarterly' sigue en el type/PRICE_MAP para no romper suscripciones viejas,
+  // pero ya no se ofrece).
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
-    { key: 'monthly',   label: 'Mensual' },
-    { key: 'quarterly', label: 'Trimestral', savingsLabel: '-10%' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '-50%' },
+    { key: 'monthly', label: 'Mensual' },
+    { key: 'annual',  label: 'Anual', savingsLabel: '-50%' },
   ];
 
   // Resolve the currency we'll charge in, driven by the tenant's country.
@@ -210,14 +213,34 @@ export class Plans implements OnInit {
    *  Null = no aplica (sin referido o ya pagó antes). */
   public readonly referralDiscountPct = signal<number | null>(null);
 
+  /** El Básico ($12) se discontinuó para altas nuevas (2026-09): quedó como
+   *  grandfathered para los que ya lo pagan. Se oculta del grid salvo que sea
+   *  el plan actual del tenant (a ese no le escondemos su propio plan). */
+  public readonly isBasicoCurrent = computed(
+    () => this.planStore.currentPlan()?.id === BASICO_PLAN_ID
+  );
+
   // Enterprise no se renderiza como card del grid: tiene su propia banda
-  // debajo (sin precio ni checkout self-service).
+  // debajo (sin precio ni checkout self-service). Básico se oculta salvo para
+  // quien ya lo tiene (grandfathered).
   public readonly plans = computed<PlanDisplay[]>(() =>
     this.planStore
       .plans()
       .filter((plan) => plan.id !== ENTERPRISE_PLAN_ID)
+      .filter((plan) => plan.id !== BASICO_PLAN_ID || this.isBasicoCurrent())
       .map((plan) => toPlanDisplay(plan, this.currentPlanPosition(), this.currencyCode()))
   );
+
+  /** Trial de 7 días: solo aplica en la PRIMERA suscripción (tenant en Gratis,
+   *  sin plan pago). Cuando aplica, las cards pagas muestran el badge y el
+   *  checkout activa `trial_period_days` en Stripe. */
+  public readonly eligibleForTrial = computed(() => !this.hasPaidPlan());
+
+  /** ¿Esta card muestra el gancho "7 días gratis"? Solo planes pagos, no el
+   *  actual, y solo si el tenant califica para trial. */
+  public showsTrial(plan: PlanDisplay): boolean {
+    return this.eligibleForTrial() && !plan.isFree && !plan.isCurrent;
+  }
 
   public readonly isEnterpriseCurrent = computed(
     () => this.planStore.currentPlan()?.id === ENTERPRISE_PLAN_ID
@@ -238,8 +261,9 @@ export class Plans implements OnInit {
     () => this.planStore.isLoading() && this.plans().length === 0
   );
 
-  // 4 planes: gratis/básico/pro/avanzado (Enterprise oculta — ver ENTERPRISE_CARD_VISIBLE).
-  public readonly skeletonCards = [0, 1, 2, 3];
+  // 3 planes visibles en altas nuevas: gratis/pro/avanzado (Básico oculto salvo
+  // grandfathered; Enterprise oculta — ver ENTERPRISE_CARD_VISIBLE).
+  public readonly skeletonCards = [0, 1, 2];
 
   /** Cantidad de cards visibles (skeletons durante la carga) — decide si el
    *  grid usa 3 o 4 columnas. */

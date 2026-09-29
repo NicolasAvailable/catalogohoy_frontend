@@ -35,6 +35,9 @@ const CORS = {
 };
 
 // Mismos IDs que create-checkout-session (mantener sincronizados).
+// ⚠️ GO-LIVE 2026-09: los 4 __GOLIVE__ son placeholders — reemplazar con los
+// mismos price IDs nuevos ($20/$120/$35/$210) que en create-checkout-session
+// antes de deployar. quarterly inerte; basico grandfathered.
 const PRICE_MAP: Record<string, Record<string, string>> = {
   basico: {
     monthly:   "price_1UBcws85rys2QLXd2VNxshFD",
@@ -42,14 +45,14 @@ const PRICE_MAP: Record<string, Record<string, string>> = {
     annual:    "price_1UBcwt85rys2QLXdstJ7waFV",
   },
   pro: {
-    monthly:   "price_1TyBl585rys2QLXdc1GUWVJh",
+    monthly:   "price___GOLIVE_pro_monthly_20__",
     quarterly: "price_1TyBl585rys2QLXdKk3w7yGm",
-    annual:    "price_1UBcwt85rys2QLXdqUs4wZKT",
+    annual:    "price___GOLIVE_pro_annual_120__",
   },
   avanzado: {
-    monthly:   "price_1TyBl785rys2QLXd08l8YOs7",
+    monthly:   "price___GOLIVE_avanzado_monthly_35__",
     quarterly: "price_1TyBl785rys2QLXdp7nbigVf",
-    annual:    "price_1UBcwu85rys2QLXdJVEue0XU",
+    annual:    "price___GOLIVE_avanzado_annual_210__",
   },
 };
 

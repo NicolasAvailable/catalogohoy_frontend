@@ -158,10 +158,10 @@ export class PlanCheckout implements OnInit {
   private readonly metaPixel = inject(MetaPixelService);
   private readonly supabase = SupabaseClientProvider.getInstance();
 
+  // Solo mensual y anual (trimestral retirado 2026-09).
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
-    { key: 'monthly',   label: 'Mensual' },
-    { key: 'quarterly', label: 'Trimestral', savingsLabel: '-10%' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '-50%' },
+    { key: 'monthly', label: 'Mensual' },
+    { key: 'annual',  label: 'Anual', savingsLabel: '-50%' },
   ];
 
   public readonly planId               = signal<string>('');

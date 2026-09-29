@@ -378,6 +378,18 @@
   margin: -0.25rem 0 0;
 }
 
+/* Gancho de trial de 7 días bajo el CTA (solo primera suscripción). */
+.plan-card__trial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--plan-color, #7c3aed);
+  margin: -0.35rem 0 0;
+}
+
 /* ── Divider ── */
 .plan-card__divider {
   border: none;

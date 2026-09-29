@@ -33,6 +33,14 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, sentry-trace, baggage",
 };
 
+// ⚠️ GO-LIVE 2026-09 (switch a $20/$35): los 4 price IDs marcados __GOLIVE__
+// son PLACEHOLDERS a propósito — fallan el checkout si se deploya sin
+// reemplazar (para NO cobrar los precios viejos $19.99/$29.99 por error).
+// Antes de deployar, crear en Stripe y pegar acá:
+//   pro monthly  = $20      · pro annual  = $120 (-50%)
+//   avanzado monthly = $35  · avanzado annual = $210 (-50%)
+// El quarterly queda inerte (ya no se ofrece). basico queda con sus IDs viejos
+// para las suscripciones grandfathered que renuevan.
 const PRICE_MAP: Record<string, Record<string, string>> = {
   basico: {
     monthly:   "price_1UBcws85rys2QLXd2VNxshFD",
@@ -40,14 +48,14 @@ const PRICE_MAP: Record<string, Record<string, string>> = {
     annual:    "price_1UBcwt85rys2QLXdstJ7waFV",
   },
   pro: {
-    monthly:   "price_1TyBl585rys2QLXdc1GUWVJh",
+    monthly:   "price___GOLIVE_pro_monthly_20__",
     quarterly: "price_1TyBl585rys2QLXdKk3w7yGm",
-    annual:    "price_1UBcwt85rys2QLXdqUs4wZKT", // -50% anual ($119.94)
+    annual:    "price___GOLIVE_pro_annual_120__", // -50% anual ($120)
   },
   avanzado: {
-    monthly:   "price_1TyBl785rys2QLXd08l8YOs7",
+    monthly:   "price___GOLIVE_avanzado_monthly_35__",
     quarterly: "price_1TyBl785rys2QLXdp7nbigVf",
-    annual:    "price_1UBcwu85rys2QLXdJVEue0XU", // -50% anual ($179.94)
+    annual:    "price___GOLIVE_avanzado_annual_210__", // -50% anual ($210)
   },
 };
 
@@ -117,13 +125,20 @@ Deno.serve(async (req: Request) => {
 
     const { data: tenantRow } = await admin
       .from("tenants")
-      .select("stripe_customer_id, stripe_subscription_id, referred_by_tenant_id")
+      .select("stripe_customer_id, stripe_subscription_id, referred_by_tenant_id, trial_used_at")
       .eq("id", tenantId)
       .single();
 
     let customerId: string = tenantRow?.stripe_customer_id ?? "";
     const previousSubscriptionId: string = tenantRow?.stripe_subscription_id ?? "";
     const referredByTenantId: number | null = tenantRow?.referred_by_tenant_id ?? null;
+
+    // Free trial de 7 días: SOLO en la primera suscripción del tenant (nunca
+    // tuvo sub de Stripe y no consumió su trial antes). El webhook estampa
+    // `trial_used_at` cuando la sub con trial arranca, así que no se quema si
+    // el usuario abandona el checkout. Con addons de catálogo no aplica trial
+    // (se cobra el addon de una). El status `trialing` ya lo trata el webhook.
+    const eligibleForTrial = !previousSubscriptionId && !tenantRow?.trial_used_at && addonQty === 0;
 
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -238,6 +253,7 @@ Deno.serve(async (req: Request) => {
       },
       subscription_data: {
         metadata: { tenant_id: String(tenantId), plan_id: planId },
+        ...(eligibleForTrial ? { trial_period_days: 7 } : {}),
       },
     };
     if (discounts) sessionParams.discounts = discounts;

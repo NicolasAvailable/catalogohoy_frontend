@@ -168,6 +168,13 @@
           {{ plan.buttonLabel | transloco }}
         </button>
 
+        @if (showsTrial(plan)) {
+          <p class="plan-card__trial">
+            <ui-icon name="gift" styleClass="size-3.5 shrink-0" />
+            {{ 'Pruébalo 7 días gratis' | transloco }}
+          </p>
+        }
+
         <hr class="plan-card__divider" />
 
         <!-- Features —

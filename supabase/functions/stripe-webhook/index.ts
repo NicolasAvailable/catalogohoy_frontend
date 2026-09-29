@@ -629,6 +629,9 @@ Deno.serve(async (req: Request) => {
           stripe_subscription_status: subscription.status,
         };
         if (expiresAtIso) fullUpdate["plan_expires_at"] = expiresAtIso;
+        // Si la sub arrancó con free trial (trial_end seteado), marcamos el
+        // trial como consumido — así el tenant no puede volver a pedir otro.
+        if (subscription.trial_end) fullUpdate["trial_used_at"] = new Date().toISOString();
         if (addonQty > 0) {
           const qtyFromSub = getCatalogAddonQtyFromSub(subscription);
           fullUpdate["extra_catalogs"] = qtyFromSub > 0 ? qtyFromSub : addonQty;
