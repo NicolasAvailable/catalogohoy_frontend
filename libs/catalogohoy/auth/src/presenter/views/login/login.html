@@ -29,7 +29,7 @@
       </div>
     }
 
-    @if (!needsStoreSetup()) {
+    @if (!needsStoreSetup() && !showSignup()) {
 
     <div>
       <h1 class="text-3xl sm:text-4xl lg:text-3xl font-semibold text-grey-700">{{ 'Ingresa a tu cuenta' | transloco }}</h1>
@@ -158,7 +158,7 @@
       }
     </div>
 
-    } @else {
+    } @else if (needsStoreSetup()) {
     <!-- ── Alta in-app (nativo): la cuenta social no tiene catálogo aún ── -->
     <div>
       <h1 class="text-3xl sm:text-4xl lg:text-3xl font-semibold text-grey-700">{{ 'Crea tu catálogo' | transloco }}</h1>
@@ -201,6 +201,75 @@
     <div class="flex justify-center text-base">
       <a (click)="cancelStoreSetup()" class="font-semibold text-grey-400 cursor-pointer">{{ 'Volver' | transloco }}</a>
     </div>
+    } @else {
+    <!-- ── Registro in-app con email/contraseña (nativo). Crea la cuenta en el
+         plan GRATIS y entra al admin — no empuja a pagar (IAP). ── -->
+    @if (signupConfirmEmail()) {
+      <div>
+        <h1 class="text-3xl sm:text-4xl lg:text-3xl font-semibold text-grey-700">{{ 'Revisa tu correo' | transloco }}</h1>
+        <p class="text-base text-grey-400 mt-1">{{ 'Te enviamos un enlace para confirmar tu cuenta. Ábrelo y luego inicia sesión.' | transloco }}</p>
+      </div>
+      <div class="flex justify-center text-base">
+        <a (click)="cancelSignup()" class="font-semibold text-blue-500 cursor-pointer">{{ 'Volver al inicio de sesión' | transloco }}</a>
+      </div>
+    } @else {
+      <div>
+        <h1 class="text-3xl sm:text-4xl lg:text-3xl font-semibold text-grey-700">{{ 'Crea tu cuenta' | transloco }}</h1>
+        <p class="text-base text-grey-400 mt-1">{{ 'Gratis. Empezá a vender en minutos.' | transloco }}</p>
+      </div>
+
+      <form [formGroup]="signupForm" (keyup.enter)="createAccount()">
+        <div class="mb-4">
+          <label class="block font-medium text-sm text-grey-400 mb-1">{{ 'Nombre de tu tienda' | transloco }}</label>
+          <ui-input-text size="large" formControlName="storeName" [placeholder]="'Ej: La señora de las tortas' | transloco" />
+          <ui-input-message [control]="signupForm.get('storeName')" error="required" [text]="'El campo es obligatorio' | transloco" />
+        </div>
+
+        <div class="mb-4">
+          <label class="block font-medium text-sm text-grey-400 mb-1">{{ 'Tu nombre' | transloco }}</label>
+          <ui-input-text size="large" formControlName="name" />
+          <ui-input-message [control]="signupForm.get('name')" error="required" [text]="'El campo es obligatorio' | transloco" />
+        </div>
+
+        <div class="mb-4">
+          <label class="block font-medium text-sm text-grey-400 mb-1">{{ 'Email' | transloco }}</label>
+          <ui-input-text size="large" formControlName="email" [placeholder]="'tu@correo.com' | transloco" />
+          <ui-input-message [control]="signupForm.get('email')" error="required" [text]="'El campo es obligatorio' | transloco" />
+          <ui-input-message [control]="signupForm.get('email')" error="email" [text]="'El formato no es válido' | transloco" />
+        </div>
+
+        <div class="mb-4">
+          <label class="block font-medium text-sm text-grey-400 mb-1">{{ 'Contraseña' | transloco }}</label>
+          <ui-input-password size="large" [feedback]="false" formControlName="password" placeholder="*********" />
+          <ui-input-message [control]="signupForm.get('password')" error="required" [text]="'El campo es obligatorio' | transloco" />
+          <ui-input-message [control]="signupForm.get('password')" error="minlength" [text]="'Debe tener mínimo 6 caracteres' | transloco" />
+        </div>
+
+        <div class="mb-6">
+          <label class="block font-medium text-sm text-grey-400 mb-1">{{ 'País' | transloco }}</label>
+          <ui-select
+            [options]="countries"
+            formControlName="countryCode"
+            optionLabel="label"
+            optionValue="code"
+          ></ui-select>
+        </div>
+
+        <ui-button
+          (click)="createAccount()"
+          [disabled]="signupForm.invalid || isSigningUp()"
+          [label]="(isSigningUp() ? 'Creando...' : 'Crear mi cuenta') | transloco"
+          severity="primary"
+          styleClass="!py-4 !text-base"
+          [fluid]="true"
+        />
+      </form>
+
+      <div class="flex justify-center gap-1 text-base text-center">
+        <p class="font-semibold text-grey-400">{{ '¿Ya tienes una cuenta?' | transloco }}</p>
+        <a (click)="cancelSignup()" class="font-semibold text-blue-500 cursor-pointer">{{ 'Inicia sesión' | transloco }}</a>
+      </div>
+    }
     }
 
     </div>

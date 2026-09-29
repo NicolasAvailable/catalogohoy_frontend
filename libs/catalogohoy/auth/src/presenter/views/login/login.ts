@@ -23,6 +23,7 @@ import {
 } from '@ui';
 import { AuthenticationFacade } from '../../../application';
 import { LoginCredentials } from '../../../domain';
+import { SIGNUP_CONFIRM_EMAIL } from '../../../infrastructure';
 import { GOOGLE_IOS_CLIENT_ID } from '../../../infrastructure/native-oauth.constants';
 
 @Component({
@@ -105,6 +106,23 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
   public readonly storeForm = inject(FormBuilder).group({
     storeName: ['', [Validators.required, whiteSpacesValidator()]],
     name: ['', [Validators.required, whiteSpacesValidator()]],
+    countryCode: [this.detectCountryCode()],
+  });
+
+  // ── Registro in-app con email/contraseña (nativo) ────────────────────────
+  /** true → la card muestra el formulario de "crear cuenta". */
+  readonly showSignup = signal(false);
+  readonly isSigningUp = signal(false);
+  /** true tras un signup que quedó pendiente de confirmar el correo. */
+  readonly signupConfirmEmail = signal(false);
+  public readonly signupForm = inject(FormBuilder).group({
+    email: ['', [Validators.required, Validators.email, whiteSpacesValidator()]],
+    password: [
+      '',
+      [Validators.required, Validators.minLength(6), whiteSpacesValidator()],
+    ],
+    name: ['', [Validators.required, whiteSpacesValidator()]],
+    storeName: ['', [Validators.required, whiteSpacesValidator()]],
     countryCode: [this.detectCountryCode()],
   });
 
@@ -272,12 +290,66 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     await this.facade.logout();
   }
 
-  /** Registro desde la app nativa: el alta de cuenta y la compra de planes
-   *  viven en la web (política IAP de Apple), así que abrimos el signup web
-   *  (auth.catalogohoy.com) en el navegador del sistema. `_blank` en Capacitor
-   *  se abre en Safari/Chrome externo, no dentro del WKWebView. */
+  /** Registro desde la app: en nativo se hace IN-APP (crea la cuenta en el plan
+   *  gratis y entra al admin — NO empuja a pagar; la compra de planes vive en
+   *  la web por la política IAP de Apple). En web, `/signup` normal. */
   public openSignup(): void {
-    window.open('https://auth.catalogohoy.com/signup', '_blank');
+    this.googleError.set(null);
+    this.signupConfirmEmail.set(false);
+    this.showSignup.set(true);
+  }
+
+  /** Vuelve del formulario de registro in-app al login. */
+  public cancelSignup(): void {
+    this.showSignup.set(false);
+    this.signupConfirmEmail.set(false);
+  }
+
+  /** Crea la cuenta in-app (email/contraseña) en el plan gratis y entra al
+   *  admin. Si Supabase exige confirmar el correo, muestra ese aviso. */
+  public async createAccount(): Promise<void> {
+    if (this.signupForm.invalid || this.isSigningUp()) return;
+    this.isSigningUp.set(true);
+    this.googleError.set(null);
+
+    const v = this.signupForm.value;
+    const result = await this.facade.signup({
+      email: v.email!.trim(),
+      password: v.password!,
+      name: v.name!.trim(),
+      storeName: v.storeName!.trim(),
+      countryCode: v.countryCode ?? undefined,
+    });
+
+    if (result.isLeft()) {
+      this.googleError.set((result.value as Error).message);
+      this.isSigningUp.set(false);
+      return;
+    }
+
+    // Confirm-email ON en Supabase → no hay sesión todavía.
+    if ((result.value as string) === SIGNUP_CONFIRM_EMAIL) {
+      this.signupConfirmEmail.set(true);
+      this.isSigningUp.set(false);
+      return;
+    }
+
+    // Aceptar invitación pendiente si la había.
+    if (this.pendingInviteToken) {
+      await this.facade.acceptInvite(this.pendingInviteToken);
+      sessionStorage.removeItem('pending_invite_token');
+      this.pendingInviteToken = null;
+    }
+
+    // Nativo: ignoramos la URL web de redirect; cacheamos el slug y vamos a /admin.
+    const slug = await this.facade.getMyTenantSlug();
+    if (slug.isRight()) {
+      setNativeSlug(slug.value as string);
+      await this.router.navigateByUrl('/admin');
+      return;
+    }
+    this.googleError.set('Ha ocurrido un error. Intenta de nuevo.');
+    this.isSigningUp.set(false);
   }
 
   public async loginWithGoogle() {
