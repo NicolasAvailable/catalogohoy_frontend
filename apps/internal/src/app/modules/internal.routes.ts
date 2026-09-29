@@ -31,6 +31,11 @@ export const internalRoutes: Route[] = [
       ),
   },
   {
+    path: 'free-trials',
+    loadComponent: () =>
+      import('./free-trials/free-trials').then((m) => m.FreeTrials),
+  },
+  {
     path: 'enterprise-leads',
     loadChildren: () =>
       import('./enterprise-leads/enterprise-leads.routes').then(

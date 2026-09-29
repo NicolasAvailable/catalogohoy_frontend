@@ -33,6 +33,11 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     routerLink: '/paying-accounts',
   },
   {
+    label: 'Free trials',
+    icon: 'gift',
+    routerLink: '/free-trials',
+  },
+  {
     label: 'Leads Enterprise',
     icon: 'building-2',
     routerLink: '/enterprise-leads',
