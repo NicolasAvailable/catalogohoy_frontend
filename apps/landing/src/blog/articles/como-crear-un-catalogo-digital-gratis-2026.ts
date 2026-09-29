@@ -124,7 +124,7 @@ export const comoCrearCatalogoDigital2026: BlogArticle = {
   faqs: [
     {
       q: "¿Cuánto cuesta crear un catálogo digital?",
-      a: "En CatalogoHoy el plan gratuito incluye hasta 10 productos, tu enlace propio y pedidos por WhatsApp, sin tarjeta de crédito. Los planes pagos desde $9.99/mes amplían productos y funciones.",
+      a: "En CatalogoHoy el plan gratuito incluye hasta 10 productos, tu enlace propio y pedidos por WhatsApp, sin tarjeta de crédito. Los planes pagos desde $20/mes amplían productos y funciones.",
     },
     {
       q: "¿Necesito saber de diseño o programación?",

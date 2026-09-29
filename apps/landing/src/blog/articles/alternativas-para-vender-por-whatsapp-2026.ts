@@ -58,7 +58,7 @@ export const alternativasVenderPorWhatsapp2026: BlogArticle = {
         ["PDF / Canva", "Gratis / diseño", "El cliente lo escribe a mano", "Listas mayoristas que cambian poco"],
         ["Tienda online (Tiendanube)", "Suscripción mensual", "Carrito + pago con tarjeta en el sitio", "E-commerce tradicional con envíos"],
         ["Take App", "Gratis + planes", "Enlace → pedido por WhatsApp", "Público global o en inglés"],
-        ["CatalogoHoy", "Gratis + desde $11.99", "Enlace → pedido calculado por WhatsApp", "Vender por WhatsApp y redes en LatAm"],
+        ["CatalogoHoy", "Gratis + desde $20", "Enlace → pedido calculado por WhatsApp", "Vender por WhatsApp y redes en LatAm"],
       ],
     },
     { type: "h2", id: "como-elegir", text: "Cómo elegir sin equivocarte" },

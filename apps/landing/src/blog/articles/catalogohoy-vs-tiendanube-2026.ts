@@ -19,7 +19,7 @@ export const catalogohoyVsTiendanube2026: BlogArticle = {
   keyPoints: [
     "Son dos filosofías distintas: Tiendanube es una tienda online completa (carrito + pago con tarjeta en el sitio); CatalogoHoy es un catálogo que cierra la venta por WhatsApp.",
     "Si tus clientes te compran escribiéndote por WhatsApp —como la mayoría en Latinoamérica— un catálogo con enlace suele convertir mejor y es más simple de mantener.",
-    "CatalogoHoy tiene plan gratis permanente y planes desde $11.99/mes; Tiendanube trabaja con suscripción mensual y su fuerte es el e-commerce tradicional.",
+    "CatalogoHoy tiene plan gratis permanente y planes desde $20/mes; Tiendanube trabaja con suscripción mensual y su fuerte es el e-commerce tradicional.",
     "CatalogoHoy suma pedidos por WhatsApp, importación con IA, monedas duales (Bs y tasa del día) y bandeja omnicanal — pensado para LatAm.",
     "Elegí Tiendanube si querés una tienda con cobro con tarjeta e integraciones de envío; elegí CatalogoHoy si vendés por WhatsApp y redes y querés publicar en minutos.",
   ],
@@ -103,7 +103,7 @@ export const catalogohoyVsTiendanube2026: BlogArticle = {
     { type: "h2", id: "costos", text: "¿Y los costos?" },
     {
       type: "p",
-      html: "En CatalogoHoy los precios son claros y en dólares: <strong>plan Gratis</strong> para siempre (hasta 10 productos y 1 catálogo), <strong>Básico $11.99/mes</strong> (100 productos, analíticas y notificaciones por WhatsApp), <strong>Pro $19.99/mes</strong> (500 productos, equipo y créditos de IA) y <strong>Avanzado $29.99/mes</strong> (productos ilimitados, dominio propio y soporte). Tiendanube trabaja con suscripción mensual por planes y, según el país, la pasarela puede sumar comisiones por venta. La cuenta importante no es solo el precio de lista: es cuánto te cuesta <em>empezar a vender</em> — y con un catálogo por WhatsApp ese costo de arranque es cero.",
+      html: "En CatalogoHoy los precios son claros y en dólares: <strong>plan Gratis</strong> para siempre (hasta 10 productos y 1 catálogo), <strong>Pro $20/mes</strong> (500 productos, equipo y créditos de IA) y <strong>Avanzado $35/mes</strong> (productos ilimitados, dominio propio y soporte), con 7 días de prueba gratis en los planes pagos. Tiendanube trabaja con suscripción mensual por planes y, según el país, la pasarela puede sumar comisiones por venta. La cuenta importante no es solo el precio de lista: es cuánto te cuesta <em>empezar a vender</em> — y con un catálogo por WhatsApp ese costo de arranque es cero.",
     },
     { type: "h2", id: "migrar", text: "¿Se puede migrar de una a otra?" },
     {
@@ -122,7 +122,7 @@ export const catalogohoyVsTiendanube2026: BlogArticle = {
     },
     {
       q: "¿Cuál es más barato, CatalogoHoy o Tiendanube?",
-      a: "CatalogoHoy tiene un plan gratis permanente y planes de pago desde $11.99 al mes, sin comisiones por venta. Tiendanube funciona con suscripción mensual y, según el país, la pasarela de pago puede cobrar comisión por transacción. Para empezar a vender, el catálogo por WhatsApp tiene costo de arranque cero.",
+      a: "CatalogoHoy tiene un plan gratis permanente y planes de pago desde $20 al mes, sin comisiones por venta. Tiendanube funciona con suscripción mensual y, según el país, la pasarela de pago puede cobrar comisión por transacción. Para empezar a vender, el catálogo por WhatsApp tiene costo de arranque cero.",
     },
     {
       q: "¿Puedo cobrar con tarjeta usando CatalogoHoy?",

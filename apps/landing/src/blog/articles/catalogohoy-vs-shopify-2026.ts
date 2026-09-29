@@ -20,7 +20,7 @@ export const catalogohoyVsShopify2026: BlogArticle = {
     "Shopify es la plataforma de e-commerce más potente del mundo; CatalogoHoy es un catálogo que vende por WhatsApp. La pregunta real es si necesitás una tienda global o cerrar ventas por chat en LatAm.",
     "Shopify cobra suscripción mensual (su plan de entrada es varias veces más caro que empezar con un catálogo) y puede sumar comisión por transacción si no usás su pasarela propia.",
     "Shopify Payments no está disponible en todos los países de la región; CatalogoHoy no depende de una pasarela: cobrás por WhatsApp (transferencia, pago móvil, efectivo, link).",
-    "CatalogoHoy tiene plan gratis y planes desde $11.99/mes, sin comisión por venta.",
+    "CatalogoHoy tiene plan gratis y planes desde $20/mes, sin comisión por venta.",
     "Shopify gana en escala internacional, apps y checkout con tarjeta; CatalogoHoy gana en simpleza, costo y encajar con cómo compra Latinoamérica.",
   ],
   blocks: [
@@ -44,7 +44,7 @@ export const catalogohoyVsShopify2026: BlogArticle = {
       rows: [
         ["Enfoque", "Tienda online global completa", "Catálogo que vende por WhatsApp"],
         ["Cómo paga el cliente", "Tarjeta / checkout en el sitio", "Por WhatsApp (transferencia, pago móvil, efectivo, link)"],
-        ["Costo de entrada", "Suscripción mensual (plan de entrada alto)", "✅ Gratis para siempre; planes desde $11.99"],
+        ["Costo de entrada", "Suscripción mensual (plan de entrada alto)", "✅ Gratis para siempre; planes desde $20"],
         ["Comisión por venta", "Posible si no usás su pasarela", "✅ Sin comisión por venta"],
         ["Pasarela en LatAm", "Shopify Payments no está en todos los países", "✅ No depende de pasarela: cobrás por WhatsApp"],
         ["Puesta en marcha", "Configurar tienda, pagos, envíos y apps", "✅ Subir productos y compartir el enlace (minutos)"],
@@ -102,7 +102,7 @@ export const catalogohoyVsShopify2026: BlogArticle = {
     { type: "h2", id: "costos", text: "La cuenta honesta de costos" },
     {
       type: "p",
-      html: "Con Shopify pagás una <strong>suscripción mensual</strong> y, si no usás su pasarela propia (que no está disponible en todos los países de la región), podés pagar además una <strong>comisión por transacción</strong>. Sumá dominio, apps de pago y, muchas veces, alguien que lo configure. Con CatalogoHoy el arranque es <strong>gratis</strong>, los planes van de $11.99 a $29.99/mes y <strong>no hay comisión por venta</strong>. Para un negocio que recién profesionaliza su venta, esa diferencia de costo fijo puede ser la diferencia entre probar y no probar.",
+      html: "Con Shopify pagás una <strong>suscripción mensual</strong> y, si no usás su pasarela propia (que no está disponible en todos los países de la región), podés pagar además una <strong>comisión por transacción</strong>. Sumá dominio, apps de pago y, muchas veces, alguien que lo configure. Con CatalogoHoy el arranque es <strong>gratis</strong>, los planes van de $20 a $35/mes y <strong>no hay comisión por venta</strong>. Para un negocio que recién profesionaliza su venta, esa diferencia de costo fijo puede ser la diferencia entre probar y no probar.",
     },
     { type: "h2", id: "coexistir", text: "¿Y si mañana quiero Shopify?" },
     {
@@ -121,7 +121,7 @@ export const catalogohoyVsShopify2026: BlogArticle = {
     },
     {
       q: "¿Cuánto más barato es CatalogoHoy que Shopify?",
-      a: "CatalogoHoy tiene plan gratis y planes desde $11.99 al mes, sin comisión por venta. Shopify cobra una suscripción mensual más alta y puede sumar comisión por transacción si no usás su pasarela. La diferencia real depende de tu volumen, pero el costo de arranque de un catálogo es cero.",
+      a: "CatalogoHoy tiene plan gratis y planes desde $20 al mes, sin comisión por venta. Shopify cobra una suscripción mensual más alta y puede sumar comisión por transacción si no usás su pasarela. La diferencia real depende de tu volumen, pero el costo de arranque de un catálogo es cero.",
     },
     {
       q: "¿Puedo cobrar con tarjeta como en Shopify?",

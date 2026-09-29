@@ -20,7 +20,7 @@ export const catalogohoyVsTakeApp2026: BlogArticle = {
     "Take App y CatalogoHoy comparten la misma idea: un catálogo con enlace que recibe pedidos por WhatsApp. La diferencia está en el enfoque regional y las funciones.",
     "CatalogoHoy está pensado para Latinoamérica: plataforma y soporte en español, pagos locales (transferencia, pago móvil, efectivo) y monedas duales con tasa del día.",
     "CatalogoHoy suma IA (importar PDF/Excel, quitar fondo, generar imágenes) y una bandeja omnicanal (WhatsApp, Instagram, TikTok, Messenger) en un solo lugar.",
-    "Ambos tienen plan gratis; CatalogoHoy cobra en dólares desde $11.99/mes con planes pensados para negocios que crecen.",
+    "Ambos tienen plan gratis; CatalogoHoy cobra en dólares desde $20/mes con planes pensados para negocios que crecen.",
     "Elegí Take App si vendés a público global o en inglés; elegí CatalogoHoy si tu mercado es LatAm y querés todo en español con pagos locales.",
   ],
   blocks: [
@@ -107,7 +107,7 @@ export const catalogohoyVsTakeApp2026: BlogArticle = {
     },
     {
       q: "¿CatalogoHoy tiene plan gratis como Take App?",
-      a: "Sí, CatalogoHoy tiene un plan gratis permanente para empezar sin tarjeta, y planes de pago desde $11.99 al mes a medida que tu negocio crece.",
+      a: "Sí, CatalogoHoy tiene un plan gratis permanente para empezar sin tarjeta, y planes de pago desde $20 al mes a medida que tu negocio crece.",
     },
     {
       q: "¿Puedo migrar mi catálogo de Take App a CatalogoHoy?",

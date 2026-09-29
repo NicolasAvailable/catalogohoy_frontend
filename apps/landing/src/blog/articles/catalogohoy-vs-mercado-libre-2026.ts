@@ -49,7 +49,7 @@ export const catalogohoyVsMercadoLibre2026: BlogArticle = {
         ["Marca y experiencia", "El estándar de ML", "✅ Tu identidad y tu diseño"],
         ["Competencia", "Por precio, junto a otros vendedores", "✅ Tu catálogo, sin competidores al lado"],
         ["Pago y envío", "MercadoPago / Mercado Envíos", "Coordinás por WhatsApp (transferencia, pago móvil, envío propio)"],
-        ["Costo de entrada", "Gratis publicar; pagás al vender", "✅ Gratis; planes desde $11.99"],
+        ["Costo de entrada", "Gratis publicar; pagás al vender", "✅ Gratis; planes desde $20"],
         ["Ideal para", "Captar compradores nuevos", "Fidelizar y vender directo sin comisión"],
       ],
     },

@@ -88,7 +88,7 @@ const plans: PlanData[] = [
       { label: "Diseño personalizable" },
       { label: "Soporte prioritario" },
     ],
-    buttonLabel: "Comenzar ahora",
+    buttonLabel: "Empieza tu prueba de 7 días",
     isPopular: true,
     color: "#6366f1",
   },
@@ -109,7 +109,7 @@ const plans: PlanData[] = [
       { label: "Dominio propio" },
       { label: "Soporte dedicado" },
     ],
-    buttonLabel: "Comenzar ahora",
+    buttonLabel: "Empieza tu prueba de 7 días",
     isPopular: false,
     color: "#7c3aed",
   },
@@ -358,11 +358,11 @@ const Pricing = ({ embedded = false }: { embedded?: boolean }) => {
                   {plan.buttonLabel}
                 </button>
 
-                {/* Gancho de trial: 7 días gratis en los planes pagos */}
+                {/* Nota bajo el CTA de prueba: sin compromiso */}
                 {!plan.isFree && (
-                  <p className="flex items-center justify-center gap-1.5 -mt-1 text-[0.78rem] font-semibold text-[#6366f1]">
-                    <Gift className="h-3.5 w-3.5 shrink-0" />
-                    Pruébalo 7 días gratis
+                  <p className="flex items-center justify-center gap-1.5 -mt-1 text-[0.72rem] text-[#94a3b8]">
+                    <Gift className="h-3.5 w-3.5 shrink-0 text-[#6366f1]" />
+                    7 días gratis, sin compromiso
                   </p>
                 )}
 
