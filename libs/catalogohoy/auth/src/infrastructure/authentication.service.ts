@@ -218,7 +218,8 @@ export class AuthenticationService implements BaseAuthenticationService {
     const tenant = TenantMapper.toDomain(tenantRows[0]);
     await this.setupTenantLocale(credentials.countryCode);
     await this._tryRegisterReferral(Number(tenant.id), credentials.referralCode);
-    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
+    // Alta nueva → bienvenida (elección de prueba de 7 días o seguir gratis).
+    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain, '/bienvenida'));
   }
 
   /** Best-effort: si el usuario llegó por un link `?ref=` (o tipeó un código
@@ -274,7 +275,8 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
+    // Confirmación de correo = completa un alta nueva → bienvenida.
+    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain, '/bienvenida'));
   }
 
   public async resetPassword(
@@ -341,20 +343,28 @@ export class AuthenticationService implements BaseAuthenticationService {
    *  (user_metadata) para que el admin —otro origen— lo sincronice al abrir. */
   private async _authRedirectUrl(
     slug: string,
-    customDomain?: string | null
+    customDomain?: string | null,
+    path = '/admin'
   ): Promise<string> {
     await this.language.flushToProfile();
-    return this._buildRedirectUrl(slug, customDomain);
+    return this._buildRedirectUrl(slug, customDomain, path);
   }
 
-  private _buildRedirectUrl(slug: string, customDomain?: string | null): string {
+  /** `path` decide el destino tras autenticar: el login cae en `/admin`; las
+   *  altas nuevas (signup email/Google/confirmación) van a `/bienvenida`
+   *  (elección de prueba de 7 días o seguir gratis). */
+  private _buildRedirectUrl(
+    slug: string,
+    customDomain?: string | null,
+    path = '/admin'
+  ): string {
     const key = this.authenticationTokenService.AUTH_CONFIG_KEY;
     const value = encodeURIComponent(this.authenticationTokenService.authConfigValue ?? '');
     if (isDevMode()) {
-      return `http://localhost:4200/admin?${key}=${value}`;
+      return `http://localhost:4200${path}?${key}=${value}`;
     }
     const host = customDomain ?? `${slug}.catalogohoy.com`;
-    return `https://${host}/admin?${key}=${value}`;
+    return `https://${host}${path}?${key}=${value}`;
   }
 
   public async completeGoogleSignup(
@@ -388,12 +398,11 @@ export class AuthenticationService implements BaseAuthenticationService {
     // referral. getLoginRedirectUrl ya hace get_my_tenant — lo replicamos
     // aquí porque necesitamos el id del tenant, no solo el slug.
     const { data: tenantRows } = await this.client.rpc('get_my_tenant');
-    if (tenantRows?.length) {
-      const tenant = TenantMapper.toDomain(tenantRows[0]);
-      await this._tryRegisterReferral(Number(tenant.id), credentials.referralCode);
-    }
-
-    return this.getLoginRedirectUrl();
+    if (!tenantRows?.length) return this.getLoginRedirectUrl();
+    const tenant = TenantMapper.toDomain(tenantRows[0]);
+    await this._tryRegisterReferral(Number(tenant.id), credentials.referralCode);
+    // Alta nueva por Google → bienvenida (elección de prueba o seguir gratis).
+    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain, '/bienvenida'));
   }
 
   public async checkEmailExists(email: string): Promise<boolean> {

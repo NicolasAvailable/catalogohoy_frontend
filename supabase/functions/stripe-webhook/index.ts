@@ -657,6 +657,11 @@ Deno.serve(async (req: Request) => {
         const paidAmountUsd = stripeAmountToNumber(session.amount_total, session.currency);
         const validUntilStr = expiresAtIso ? new Date(expiresAtIso).toLocaleDateString("es-ES") : "—";
         const isPlanChange = !!previousSubId;
+        // Arranque de free trial: la sub tiene trial_end y no hubo cobro ($0).
+        const isTrialStart = !!subscription.trial_end && !isPlanChange;
+        const trialEndStr = subscription.trial_end
+          ? new Date(subscription.trial_end * 1000).toLocaleDateString("es-ES")
+          : "—";
 
         const owner = await fetchOwnerInfo(admin, Number(tenantId));
         const tenantName = owner?.tenantName ?? `Tenant #${tenantId}`;
@@ -685,14 +690,30 @@ Deno.serve(async (req: Request) => {
           fields.push({ name: "⚠️ Referral flagged", value: referral.fraud_flag ?? "unknown", inline: false });
         }
 
-        await notifyDiscord({
-          title: isPlanChange ? "🔄 Plan cambiado" : "💰 Nuevo pago recibido",
-          description: isPlanChange ? `**${tenantName}** ha cambiado al plan **${planLbl}**.` : `**${tenantName}** ha activado el plan **${planLbl}**.`,
-          color: isPlanChange ? 0x6366f1 : 0x22c55e,
-          fields,
-        });
-
-        if (owner) await emailPaymentSucceeded(admin, owner, isPlanChange ? "change" : "new", amountStr, validUntilStr, planLbl);
+        if (isTrialStart) {
+          // 🎁 Free trial iniciado — a Slack #pagos. NO mandamos email/nota de
+          // "pago recibido" porque no hubo cobro ($0); el cobro real llega al
+          // terminar el trial (invoice.payment_succeeded).
+          await notifyDiscord({
+            title: "🎁 Free trial iniciado (7 días)",
+            description: `**${tenantName}** empezó una prueba de 7 días del plan **${planLbl}**. Si no cancela, se le cobra al terminar.`,
+            color: 0xf59e0b,
+            fields: [
+              { name: "Plan", value: planLbl, inline: true },
+              { name: "Prueba hasta", value: trialEndStr, inline: true },
+              { name: "Slug", value: slug, inline: true },
+              { name: "Dueño", value: owner?.email ? `${owner.name ?? "-"} (${owner.email})` : "-", inline: false },
+            ],
+          });
+        } else {
+          await notifyDiscord({
+            title: isPlanChange ? "🔄 Plan cambiado" : "💰 Nuevo pago recibido",
+            description: isPlanChange ? `**${tenantName}** ha cambiado al plan **${planLbl}**.` : `**${tenantName}** ha activado el plan **${planLbl}**.`,
+            color: isPlanChange ? 0x6366f1 : 0x22c55e,
+            fields,
+          });
+          if (owner) await emailPaymentSucceeded(admin, owner, isPlanChange ? "change" : "new", amountStr, validUntilStr, planLbl);
+        }
       }
     }
 
@@ -731,17 +752,53 @@ Deno.serve(async (req: Request) => {
         }
         await applyPlanUpdate(admin, Number(tenantId), fullUpdate, sharedUpdate);
         const { data: tenant } = await admin.from("tenants").select("name, slug").eq("id", Number(tenantId)).single();
-        await notifyDiscord({
-          title: "🔄 Suscripción actualizada",
-          description: `La suscripción de **${tenant?.name ?? `Tenant #${tenantId}`}** ha cambiado.`,
-          color: 0x6366f1,
-          fields: [
-            { name: "Estado", value: sub.status, inline: true },
-            { name: "Catálogos extra", value: String(catalogQty), inline: true },
-            { name: "Válido hasta", value: (expiresAtIso && isValid) ? new Date(expiresAtIso).toLocaleDateString("es-ES") : "—", inline: true },
-            { name: "Slug", value: tenant?.slug ?? String(tenantId), inline: true },
-          ],
-        });
+        const tName = tenant?.name ?? `Tenant #${tenantId}`;
+        const tSlug = tenant?.slug ?? String(tenantId);
+        const validUntil = (expiresAtIso && isValid) ? new Date(expiresAtIso).toLocaleDateString("es-ES") : "—";
+        // Transición del free trial: `previous_attributes.status` trae el estado
+        // anterior. trialing→active = convirtió a pago; trialing→(canceled/
+        // unpaid/past_due/…) = terminó sin convertir.
+        const prevStatus = (event.data as { previous_attributes?: { status?: string } }).previous_attributes?.status;
+        const cameFromTrial = prevStatus === "trialing";
+        const endedStatuses = new Set(["canceled", "unpaid", "past_due", "incomplete_expired"]);
+        if (cameFromTrial && sub.status === "active") {
+          const owner = await fetchOwnerInfo(admin, Number(tenantId));
+          await notifyDiscord({
+            title: "✅ Trial convertido a pago",
+            description: `**${tName}** convirtió su prueba en una suscripción paga del plan **${planLabel(metaPlanId ?? "")}**.`,
+            color: 0x22c55e,
+            fields: [
+              { name: "Estado", value: sub.status, inline: true },
+              { name: "Próximo cobro", value: validUntil, inline: true },
+              { name: "Slug", value: tSlug, inline: true },
+              { name: "Dueño", value: owner?.email ? `${owner.name ?? "-"} (${owner.email})` : "-", inline: false },
+            ],
+          });
+        } else if (cameFromTrial && endedStatuses.has(sub.status)) {
+          const owner = await fetchOwnerInfo(admin, Number(tenantId));
+          await notifyDiscord({
+            title: "🔚 Trial terminó sin convertir",
+            description: `La prueba de **${tName}** terminó y no pasó a plan pago (estado: ${sub.status}).`,
+            color: 0xef4444,
+            fields: [
+              { name: "Estado", value: sub.status, inline: true },
+              { name: "Slug", value: tSlug, inline: true },
+              { name: "Dueño", value: owner?.email ? `${owner.name ?? "-"} (${owner.email})` : "-", inline: false },
+            ],
+          });
+        } else {
+          await notifyDiscord({
+            title: "🔄 Suscripción actualizada",
+            description: `La suscripción de **${tName}** ha cambiado.`,
+            color: 0x6366f1,
+            fields: [
+              { name: "Estado", value: sub.status, inline: true },
+              { name: "Catálogos extra", value: String(catalogQty), inline: true },
+              { name: "Válido hasta", value: validUntil, inline: true },
+              { name: "Slug", value: tSlug, inline: true },
+            ],
+          });
+        }
       }
     }
 

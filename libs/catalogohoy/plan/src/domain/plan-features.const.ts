@@ -27,7 +27,7 @@ export const PLAN_FEATURES: Record<string, PlanFeature[]> = {
   ],
   pro: [
     { text: '1 catálogo' },
-    { text: 'Todo del plan Básico' },
+    { text: 'Órdenes ilimitadas' },
     { text: 'Analíticas del catálogo' },
     { text: 'Hasta 20 reportes por mes' },
     { text: '350 créditos de IA por mes' },

@@ -40,6 +40,15 @@ export const appRoutes: Route[] = [
       import('./modules/pos/pos.routes').then((m) => m.posRoutes),
   },
   {
+    // Bienvenida post-registro (Opción B): el signup redirige acá (el login
+    // sigue yendo a /admin). Ofrece 7 días de prueba de Pro/Avanzado o seguir
+    // gratis. Full-screen, fuera del layout del admin; mismos guards de sesión
+    // y slug que /admin.
+    path: 'bienvenida',
+    canActivate: [isValidSlugGuard, authenticationGuard],
+    loadComponent: () => import('./modules/welcome/welcome'),
+  },
+  {
     path: 'catalog-unavailable',
     loadComponent: () =>
       import('@catalogohoy/tenant').then((m) => m.CatalogUnavailableView),

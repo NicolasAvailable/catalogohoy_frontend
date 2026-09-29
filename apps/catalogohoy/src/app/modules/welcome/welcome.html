@@ -1,0 +1,96 @@
+<div class="welcome-shell">
+  <div class="w-full max-w-4xl mx-auto px-4 sm:px-6 py-10 flex flex-col items-center gap-8">
+
+    <!-- ═══ Encabezado ═══ -->
+    <div class="flex flex-col items-center text-center gap-3">
+      <span class="w-14 h-14 rounded-2xl bg-white border border-grey-100 shadow-sm flex items-center justify-center text-primary-500">
+        <ui-icon name="sparkles" styleClass="size-8" />
+      </span>
+      <h1 class="text-2xl md:text-3xl font-bold text-grey-800 max-w-2xl leading-tight text-balance">
+        {{ '¡Tu catálogo está listo!' | transloco }}
+      </h1>
+      <p class="text-base text-grey-500 max-w-xl leading-relaxed">
+        {{ 'Empieza con 7 días gratis de un plan pago y aprovecha todo el potencial, o continúa con el plan gratuito. Sin compromiso.' | transloco }}
+      </p>
+    </div>
+
+    <!-- ═══ Dos planes de prueba ═══ -->
+    <div class="grid sm:grid-cols-2 gap-4 w-full max-w-3xl items-stretch">
+      @for (plan of plans; track plan.id) {
+      <div
+        class="relative flex flex-col gap-4 rounded-2xl bg-white p-6 transition-shadow hover:shadow-lg"
+        [class]="plan.highlighted ? 'border-2 border-primary-500 shadow-md' : 'border border-grey-100'"
+      >
+        <span class="absolute -top-3 right-5 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-600 text-xs font-bold">
+          <ui-icon name="gift" styleClass="size-3.5 shrink-0" />
+          {{ '7 días gratis' | transloco }}
+        </span>
+
+        <div class="flex flex-col gap-1">
+          <h2 class="text-lg font-bold text-grey-800">{{ plan.name }}</h2>
+          <p class="text-sm text-grey-500 leading-relaxed">{{ plan.tagline | transloco }}</p>
+        </div>
+
+        <div class="flex items-baseline gap-1">
+          <span class="text-3xl font-extrabold text-grey-800">${{ plan.price }}</span>
+          <span class="text-sm text-grey-400">{{ '/mes' | transloco }}</span>
+          <span class="text-xs text-grey-400 ml-1">{{ 'después de la prueba' | transloco }}</span>
+        </div>
+
+        <ul class="flex flex-col gap-2">
+          @for (feature of plan.features; track feature) {
+          <li class="flex items-center gap-2 text-sm text-grey-600">
+            <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
+            <span>{{ feature | transloco }}</span>
+          </li>
+          }
+        </ul>
+
+        <button
+          type="button"
+          class="mt-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
+          [class]="plan.highlighted
+            ? 'bg-primary-500 text-white hover:bg-primary-600'
+            : 'bg-grey-50 text-grey-700 border border-grey-200 hover:bg-grey-100'"
+          (click)="startTrial(plan.id)"
+        >
+          {{ 'Probar {name} 7 días gratis' | transloco: { name: plan.name } }}
+          <ui-icon name="arrow-right" size="16" />
+        </button>
+      </div>
+      }
+    </div>
+
+    <!-- ═══ Opción gratuita (clara y al final) ═══ -->
+    <div class="w-full max-w-3xl flex flex-col items-center gap-3">
+      <div class="flex items-center gap-3 w-full max-w-3xl text-grey-300">
+        <span class="flex-1 h-px bg-grey-100"></span>
+        <span class="text-xs font-medium uppercase tracking-wide text-grey-400">{{ 'o' | transloco }}</span>
+        <span class="flex-1 h-px bg-grey-100"></span>
+      </div>
+
+      <button
+        type="button"
+        class="w-full flex items-center justify-between gap-4 rounded-2xl border border-grey-200 bg-white px-5 py-4 text-left hover:border-grey-300 hover:shadow-sm transition-all cursor-pointer"
+        (click)="continueFree()"
+      >
+        <span class="flex items-center gap-3 min-w-0">
+          <span class="w-10 h-10 rounded-xl bg-grey-50 flex items-center justify-center text-grey-500 shrink-0">
+            <ui-icon name="store" styleClass="size-5" />
+          </span>
+          <span class="flex flex-col min-w-0">
+            <span class="text-sm font-semibold text-grey-800">{{ 'Continuar con el plan gratuito' | transloco }}</span>
+            <span class="text-xs text-grey-500">{{ 'Hasta 10 productos · sin tarjeta · para siempre' | transloco }}</span>
+          </span>
+        </span>
+        <ui-icon name="arrow-right" size="18" styleClass="text-grey-400 shrink-0" />
+      </button>
+
+      <p class="inline-flex items-center gap-1.5 text-xs text-grey-400">
+        <ui-icon name="shield-check" size="13" styleClass="text-grey-300" />
+        {{ 'No se te cobra durante la prueba. Cancela cuando quieras.' | transloco }}
+      </p>
+    </div>
+
+  </div>
+</div>

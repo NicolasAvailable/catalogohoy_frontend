@@ -121,6 +121,10 @@ export const PlanStore = signalStore(
     showExpirationBanner: computed(() => {
       const expiresAt = store.planExpiresAt();
       if (!expiresAt || store.isFreePlan() || store.planExpired()) return false;
+      // Durante el free trial la sub tiene tarjeta y se cobra sola al terminar
+      // (status 'trialing', que NO es 'active' → autoRenews false). No hay que
+      // mostrarle "tu plan vence / renová": no es una renovación manual.
+      if (store.tenantPlanUsage()?.stripeSubscriptionStatus === 'trialing') return false;
       // Una suscripción Stripe activa se renueva sola: pedir "Renovar plan"
       // lleva a un checkout que crea una suscripción duplicada. El banner de
       // vencimiento es solo para renovación manual (pago móvil VE / WhatsApp).

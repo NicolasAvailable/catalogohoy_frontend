@@ -174,16 +174,17 @@
           [disabled]="plan.isCurrent || (plan.isFree && hasPaidPlan())"
           (click)="selectPlan(plan)"
         >
-          @if (hasPaidPlan() && !plan.isCurrent && !plan.isFree && plan.position > currentPlanPosition()) {
+          @if (showsTrial(plan)) {
+          <ui-icon name="gift" styleClass="size-4" />
+          } @else if (hasPaidPlan() && !plan.isCurrent && !plan.isFree && plan.position > currentPlanPosition()) {
           <ui-icon name="zap" styleClass="size-4" />
           }
-          {{ plan.buttonLabel | transloco }}
+          {{ (showsTrial(plan) ? 'Pruébalo 7 días gratis' : plan.buttonLabel) | transloco }}
         </button>
 
         @if (showsTrial(plan)) {
           <p class="plan-card__trial">
-            <ui-icon name="gift" styleClass="size-3.5 shrink-0" />
-            {{ 'Pruébalo 7 días gratis' | transloco }}
+            {{ 'Hoy no se te cobra · cancela cuando quieras' | transloco }}
           </p>
         }
 

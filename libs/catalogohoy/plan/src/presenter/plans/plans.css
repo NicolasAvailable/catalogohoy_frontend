@@ -152,11 +152,18 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   align-items: stretch;
+  /* Cards más compactas: acotamos el ancho del grid de 3 y lo centramos, en vez
+     de estirarlo al ancho completo del wrapper. */
+  width: 100%;
+  max-width: 62rem;
+  margin-inline: auto;
 }
 
-/* Con la card Enterprise visible (tenant enterprise) el grid pasa a 4. */
+/* Con la card Enterprise visible (tenant enterprise) el grid pasa a 4 y necesita
+   más ancho. */
 .plans-grid--four {
   grid-template-columns: repeat(4, 1fr);
+  max-width: 82rem;
 }
 
 /* ── Carousel (laptops chicas): flechas para navegar entre planes ── */
