@@ -36,13 +36,14 @@ update public.plans set price = 20, updated_at = now() where id = 'pro';
 update public.plans set price = 35, updated_at = now() where id = 'avanzado';
 
 -- 3) Sincronizar los stripe_price_id_* informativos de la tabla (los usa el
---    panel interno). Reemplazar los placeholders con los IDs creados en Stripe
---    en el paso (a) del go-live y descomentar:
--- update public.plans set
---   stripe_price_id_monthly = 'price_XXXX_pro_monthly_20',
---   stripe_price_id_annual  = 'price_XXXX_pro_annual_120'
---   where id = 'pro';
--- update public.plans set
---   stripe_price_id_monthly = 'price_XXXX_avanzado_monthly_35',
---   stripe_price_id_annual  = 'price_XXXX_avanzado_annual_210'
---   where id = 'avanzado';
+--    panel interno). IDs creados en Stripe live 2026-09-29.
+update public.plans set
+  stripe_price_id_monthly = 'price_1UL59T85rys2QLXdkrWZiIh1', -- $20
+  stripe_price_id_annual  = 'price_1UL59g85rys2QLXdp7UiCjCQ', -- $120 (-50%)
+  updated_at = now()
+  where id = 'pro';
+update public.plans set
+  stripe_price_id_monthly = 'price_1UL59m85rys2QLXdC40TyaQE', -- $35
+  stripe_price_id_annual  = 'price_1UL59r85rys2QLXdnrsXjQis', -- $210 (-50%)
+  updated_at = now()
+  where id = 'avanzado';

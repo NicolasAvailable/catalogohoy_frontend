@@ -33,14 +33,11 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, sentry-trace, baggage",
 };
 
-// ⚠️ GO-LIVE 2026-09 (switch a $20/$35): los 4 price IDs marcados __GOLIVE__
-// son PLACEHOLDERS a propósito — fallan el checkout si se deploya sin
-// reemplazar (para NO cobrar los precios viejos $19.99/$29.99 por error).
-// Antes de deployar, crear en Stripe y pegar acá:
-//   pro monthly  = $20      · pro annual  = $120 (-50%)
-//   avanzado monthly = $35  · avanzado annual = $210 (-50%)
-// El quarterly queda inerte (ya no se ofrece). basico queda con sus IDs viejos
-// para las suscripciones grandfathered que renuevan.
+// Switch a $20/$35 (2026-09-29): precios nuevos creados en Stripe (live) sobre
+// los mismos productos (pro prod_UvXD7BXlWjSsUN, avanzado prod_U4NQhPd3F2XD85),
+// multimoneda con los currency_options de CHECKOUT_FX_RATES. El quarterly queda
+// inerte (ya no se ofrece). basico conserva sus IDs viejos para las
+// suscripciones grandfathered que renuevan.
 const PRICE_MAP: Record<string, Record<string, string>> = {
   basico: {
     monthly:   "price_1UBcws85rys2QLXd2VNxshFD",
@@ -48,14 +45,14 @@ const PRICE_MAP: Record<string, Record<string, string>> = {
     annual:    "price_1UBcwt85rys2QLXdstJ7waFV",
   },
   pro: {
-    monthly:   "price___GOLIVE_pro_monthly_20__",
+    monthly:   "price_1UL59T85rys2QLXdkrWZiIh1", // $20
     quarterly: "price_1TyBl585rys2QLXdKk3w7yGm",
-    annual:    "price___GOLIVE_pro_annual_120__", // -50% anual ($120)
+    annual:    "price_1UL59g85rys2QLXdp7UiCjCQ", // $120 (-50% anual)
   },
   avanzado: {
-    monthly:   "price___GOLIVE_avanzado_monthly_35__",
+    monthly:   "price_1UL59m85rys2QLXdC40TyaQE", // $35
     quarterly: "price_1TyBl785rys2QLXdp7nbigVf",
-    annual:    "price___GOLIVE_avanzado_annual_210__", // -50% anual ($210)
+    annual:    "price_1UL59r85rys2QLXdnrsXjQis", // $210 (-50% anual)
   },
 };
 
