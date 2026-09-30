@@ -450,12 +450,15 @@
           (ngModelChange)="messageInput.set($event)"
           (keydown)="onKeydown($event)"
           (paste)="onPasteComposer($event)"
+          [disabled]="windowClosed() && composerMode() !== 'whisper'"
           [placeholder]="
             (composerMode() === 'whisper'
               ? 'Nota interna para el equipo (no la ve el cliente)…'
-              : 'Escribe una respuesta...') | transloco
+              : windowClosed()
+                ? 'Usa una plantilla para reabrir la conversación (pasaron +24 h)'
+                : 'Escribe una respuesta...') | transloco
           "
-          class="w-full resize-none bg-transparent px-4 py-3 text-sm leading-relaxed text-grey-700 placeholder:text-grey-300 focus:outline-none min-h-[5rem] max-h-[11.5rem] overflow-y-auto"
+          class="w-full resize-none bg-transparent px-4 py-3 text-sm leading-relaxed text-grey-700 placeholder:text-grey-300 focus:outline-none min-h-[5rem] max-h-[11.5rem] overflow-y-auto disabled:cursor-not-allowed"
         ></textarea>
 
         <!-- Toolbar -->
@@ -649,7 +652,7 @@
                   ? 'bg-amber-500 hover:bg-amber-600'
                   : 'bg-primary-500 hover:bg-primary-600'
               "
-              [disabled]="(!messageInput().trim() && !pendingMedia().length) || chatStore.isSendingMessage() || overLimit()"
+              [disabled]="(!messageInput().trim() && !pendingMedia().length) || chatStore.isSendingMessage() || overLimit() || (windowClosed() && composerMode() !== 'whisper')"
               (click)="send()"
             >
               {{ 'Enviar' | transloco }} <ui-icon name="send" size="14" />
