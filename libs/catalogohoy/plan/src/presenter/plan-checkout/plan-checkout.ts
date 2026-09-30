@@ -272,6 +272,26 @@ export class PlanCheckout implements OnInit {
     return hasStripe && !!current && !current.isFree && current.id === this.planId();
   });
 
+  /** Trial de 7 días: solo en la PRIMERA suscripción del tenant (aún en Gratis,
+   *  sin suscripción de Stripe). El server (create-checkout-session) es la
+   *  autoridad: aplica `trial_period_days` solo si no hubo sub previa y sin
+   *  addons. Acá lo reflejamos para mostrar el gancho y cambiar el copy. */
+  public readonly eligibleForTrial = computed(() => {
+    const current = this.planStore.currentPlan();
+    const hasPaid = !!current && !current.isFree;
+    const hasStripe = this.planStore.tenantPlanUsage()?.hasStripeSubscription ?? false;
+    return !hasPaid && !hasStripe;
+  });
+
+  /** Mostramos el flujo "Activar 7 días de prueba" solo cuando el server
+   *  efectivamente dará el trial: tarjeta (no Pago Móvil) y sin catálogos
+   *  extra (con addons el server no aplica trial). */
+  public readonly showTrial = computed(() =>
+    this.eligibleForTrial() &&
+    this.paymentMethod() === 'card' &&
+    this.catalogAddonQuantity() === 0
+  );
+
   public readonly currentPlanPrice = computed(() => {
     const current = this.planStore.currentPlan();
     if (!current) return 0;
