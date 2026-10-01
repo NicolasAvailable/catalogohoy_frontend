@@ -314,7 +314,7 @@
             @let mobileProfit = estimatedProfit(order);
             @if (mobileProfit !== null) {
             <div [title]="'Ganancia estimada con el costo actual de cada producto. Las líneas sin costo registrado o manuales no se descuentan.' | transloco">
-              <span class="text-grey-800 font-bold">{{ 'Ganancia est.' | transloco }}: </span><span class="font-bold" [class.text-emerald-600]="mobileProfit >= 0" [class.text-red-500]="mobileProfit < 0">{{ cs() }}{{ mobileProfit | number:'1.2-2' }}</span>
+              <span class="text-grey-800 font-bold">{{ 'Ganancia' | transloco }}: </span><span class="font-bold" [class.text-emerald-600]="mobileProfit >= 0" [class.text-red-500]="mobileProfit < 0">{{ cs() }}{{ mobileProfit | number:'1.2-2' }}</span>
             </div>
             }
             @if (showBs() && orderBs(order)) {
@@ -606,7 +606,7 @@
                 [class.text-red-500]="rowProfit < 0"
                 [title]="'Ganancia estimada con el costo actual de cada producto. Las líneas sin costo registrado o manuales no se descuentan.' | transloco"
               >
-                {{ 'Ganancia est.' | transloco }} {{ cs() }}{{ rowProfit | number:'1.2-2' }}
+                {{ 'Ganancia' | transloco }} {{ cs() }}{{ rowProfit | number:'1.2-2' }}
               </div>
               }
             </td>
@@ -760,7 +760,7 @@
     </div>
 
     <!-- KPIs principales -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="bg-white p-5 rounded-xl border border-grey-100 shadow-sm flex items-center gap-4">
         <div class="w-12 h-12 bg-primary-50 rounded-lg flex items-center justify-center text-primary-500 shrink-0">
           <ui-icon name="trending-up" styleClass="size-6" />
@@ -791,6 +791,21 @@
           <p class="text-xs text-grey-400">{{ 'por orden' | transloco }}</p>
         </div>
       </div>
+      @if (hasCostData()) {
+      <div
+        class="bg-white p-5 rounded-xl border border-grey-100 shadow-sm flex items-center gap-4"
+        [title]="'Ganancia = ventas − costo actual de cada producto − comisión. Estimada: los productos sin costo registrado o las líneas manuales no se descuentan.' | transloco"
+      >
+        <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center text-green-600 shrink-0">
+          <ui-icon name="hand-coins" styleClass="size-6" />
+        </div>
+        <div class="min-w-0">
+          <p class="text-grey-400 text-xs font-medium uppercase tracking-wider">{{ 'Ganancia' | transloco }}</p>
+          <p class="text-2xl font-bold" [class.text-emerald-600]="metricsProfit() >= 0" [class.text-red-500]="metricsProfit() < 0">{{ metricSymbol() }}{{ metricsProfit() | number:'1.2-2' }}</p>
+          <p class="text-xs text-grey-400">{{ 'estimada en el periodo' | transloco }}</p>
+        </div>
+      </div>
+      }
     </div>
 
     <!-- Gráficas -->
@@ -895,6 +910,67 @@
           <p class="text-2xl font-bold text-grey-800">{{ metricSymbol() }}{{ metricByStatus().cancelled.amount | number:'1.2-2' }}</p>
           <p class="text-xs text-grey-400">{{ '{count} órdenes' | transloco: { count: metricByStatus().cancelled.count } }}</p>
         </div>
+      </div>
+    </div>
+
+    <!-- Desglose: las órdenes que se están contabilizando en el periodo -->
+    <div class="flex flex-col gap-3">
+      <div class="flex items-center justify-between gap-2 flex-wrap">
+        <h3 class="text-sm font-bold text-grey-500 uppercase tracking-wider">
+          {{ 'Órdenes del periodo' | transloco }}
+        </h3>
+        <span class="text-xs text-grey-400">{{ '{count} órdenes' | transloco: { count: metricsOrders().length } }}</span>
+      </div>
+      <p class="text-xs text-grey-400 -mt-1">
+        {{ 'Cada orden contada en los totales de arriba, con sus productos y método de pago para verificar una por una.' | transloco }}
+      </p>
+
+      <div class="bg-white rounded-xl border border-grey-100 shadow-sm overflow-hidden">
+        @if (isLoadingMetricsOrders()) {
+        <div class="p-8 flex items-center justify-center text-sm text-grey-300">
+          <ui-icon name="loader-circle" styleClass="size-4 animate-spin mr-2" /> {{ 'Cargando...' | transloco }}
+        </div>
+        } @else if (metricsOrders().length === 0) {
+        <div class="p-8 text-center text-sm text-grey-300">{{ 'Sin órdenes en el periodo' | transloco }}</div>
+        } @else {
+        <div class="max-h-[34rem] overflow-y-auto divide-y divide-grey-50">
+          @for (order of metricsOrders(); track order.id) {
+          <div class="p-4 flex items-start gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap mb-1.5">
+                <span class="text-xs font-bold text-grey-300">#{{ order.orderNumber ?? order.id }}</span>
+                <span class="text-sm font-semibold text-grey-800">{{ order.name }}</span>
+                <span [class]="getStatusDotClass(order.status)"></span>
+                <span class="text-[0.625rem] text-grey-400">{{ order.createdAt | date: 'dd/MM/yy' }}</span>
+                @if (order.paymentMethod) {
+                <span class="inline-flex items-center gap-1 text-[0.625rem] text-grey-500 bg-grey-50 rounded px-1.5 py-0.5">
+                  <ui-icon name="wallet" styleClass="size-3" />{{ paymentLabel(order.paymentMethod) }}
+                </span>
+                }
+              </div>
+              <div class="flex flex-col gap-0.5">
+                @for (item of order.products; track $index) {
+                <div class="text-xs text-grey-600 flex items-baseline gap-1.5">
+                  <span class="text-[0.625rem] font-bold text-primary-600 bg-primary-50 rounded px-1 shrink-0">{{ item.quantity }}x</span>
+                  <span class="truncate">{{ item.name }}</span>
+                  <span class="text-grey-300 ml-auto shrink-0">{{ cs() }}{{ item.total | number:'1.2-2' }}</span>
+                </div>
+                }
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-sm font-bold text-primary-600">{{ cs() }}{{ order.totalUsd | number:'1.2-2' }}</div>
+              @let bProfit = estimatedProfit(order);
+              @if (bProfit !== null) {
+              <div class="text-[0.6875rem] font-semibold mt-0.5" [class.text-emerald-600]="bProfit >= 0" [class.text-red-500]="bProfit < 0">
+                {{ 'Ganancia' | transloco }} {{ cs() }}{{ bProfit | number:'1.2-2' }}
+              </div>
+              }
+            </div>
+          </div>
+          }
+        </div>
+        }
       </div>
     </div>
   </div>

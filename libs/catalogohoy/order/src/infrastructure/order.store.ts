@@ -122,6 +122,35 @@ export const OrderStore = signalStore(
         return all;
       },
 
+      /** Trae TODAS las órdenes en el rango ISO [fromIso, toIso) para el
+       *  desglose del tab Métricas (las que se están contabilizando). No toca
+       *  el estado ni pisa la página cargada de la tabla. */
+      async fetchOrdersInRange(fromIso: string, toIso: string): Promise<Order[]> {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return [];
+        const pageSize = 1000;
+        const all: Order[] = [];
+        for (let page = 1; page <= 50; page++) {
+          const res = await orderService.getOrdersByTenant(tenantId, {
+            fromIso,
+            toIso,
+            page,
+            pageSize,
+            orderBy: 'date_desc',
+          });
+          const batch = res.fold(
+            () => null,
+            (r) => r
+          );
+          if (!batch) break;
+          all.push(...batch.orders);
+          if (batch.orders.length < pageSize || all.length >= batch.totalCount) {
+            break;
+          }
+        }
+        return all;
+      },
+
       /** Grand total (unfiltered). Call once on init; refresh after
        *  create/delete since those are the only ops that change it. */
       async loadGrandTotalCount() {

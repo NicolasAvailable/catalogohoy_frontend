@@ -576,6 +576,24 @@ export class OrderListComponent implements OnInit, OnDestroy {
    *  costos, queda vacío → no mostramos ganancia). */
   public readonly productCosts = signal<Record<string, number>>({});
 
+  /** Órdenes del periodo seleccionado en Métricas (las que se están
+   *  contabilizando) — para el desglose verificable y la ganancia del periodo. */
+  public readonly metricsOrders = signal<Order[]>([]);
+  public readonly isLoadingMetricsOrders = signal(false);
+
+  /** ¿El tenant registró costos? Sin costos no mostramos ganancia. */
+  public readonly hasCostData = computed(
+    () => Object.keys(this.productCosts()).length > 0
+  );
+
+  /** Ganancia estimada total del periodo = suma de la ganancia por orden. */
+  public readonly metricsProfit = computed(() =>
+    this.metricsOrders().reduce(
+      (sum, o) => sum + (this.estimatedProfit(o) ?? 0),
+      0
+    )
+  );
+
   /** How many product lines to show before collapsing the products cell. */
   public readonly PRODUCTS_PREVIEW = 3;
   /** Order ids whose products cell is expanded ("Ver más"). */
@@ -771,6 +789,16 @@ export class OrderListComponent implements OnInit, OnDestroy {
     const range = this.buildMetricsRange();
     if (!range) return;
     this.orderStore.loadOrderMetrics(range);
+    this.loadMetricsOrders(range);
+  }
+
+  /** Trae las órdenes del periodo (con sus productos) para el desglose y la
+   *  ganancia estimada del rango. Reusa la ganancia por orden ya definida. */
+  private async loadMetricsOrders(range: { start: string; end: string }): Promise<void> {
+    this.isLoadingMetricsOrders.set(true);
+    const orders = await this.orderStore.fetchOrdersInRange(range.start, range.end);
+    this.metricsOrders.set(orders);
+    this.isLoadingMetricsOrders.set(false);
   }
 
   private startOfDay(d: Date): Date {

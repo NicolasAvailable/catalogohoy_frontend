@@ -111,6 +111,10 @@ export class OrderService {
     tenantId: number,
     options?: {
       date?: Date;
+      /** Rango ISO [fromIso, toIso) sobre created_at (desglose de Métricas).
+       *  Tiene prioridad sobre `date` (que filtra un solo día). */
+      fromIso?: string;
+      toIso?: string;
       search?: string;
       /** Filter by status ('all' = no filter). */
       status?: OrderStatus | 'all';
@@ -132,8 +136,11 @@ export class OrderService {
       query = query.eq('status', options.status);
     }
 
-    // Filter by date if provided
-    if (options?.date) {
+    // Filter by ISO range [fromIso, toIso) (Métricas) o por día único (`date`).
+    if (options?.fromIso || options?.toIso) {
+      if (options.fromIso) query = query.gte('created_at', options.fromIso);
+      if (options.toIso) query = query.lt('created_at', options.toIso);
+    } else if (options?.date) {
       const startOfDay = new Date(options.date);
       startOfDay.setHours(0, 0, 0, 0);
 
