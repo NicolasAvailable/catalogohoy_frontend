@@ -24,6 +24,7 @@ import {
   BaseEcommerceService,
   CatalogInfo,
   Category,
+  isAlphabeticalCatalogEnabled,
   PaginatedProductList,
   PublicCatalogData,
   PublicOrder,
@@ -376,7 +377,12 @@ export class EcommerceService implements BaseEcommerceService {
         query = query.order('price', { ascending: false });
         break;
       default:
-        query = query.order('position', { ascending: true });
+        // Moto Fox (y la allowlist) ven su vitrina en orden alfabético; el
+        // resto conserva el orden manual (`position`). Un orderBy explícito
+        // elegido por el cliente (si algún día se agrega el selector) igual gana.
+        query = isAlphabeticalCatalogEnabled(Number(resolvedTenantId))
+          ? query.order('name', { ascending: true })
+          : query.order('position', { ascending: true });
     }
 
     const hasCap = cap !== undefined && cap > 0;
