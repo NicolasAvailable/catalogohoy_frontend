@@ -311,12 +311,6 @@
             @if (order.paymentMethod) {
             <div><span class="text-grey-800 font-bold">{{ 'Pago:' | transloco }} </span><span class="text-grey-700">{{ paymentLabel(order.paymentMethod) }}</span></div>
             }
-            @let mobileProfit = estimatedProfit(order);
-            @if (mobileProfit !== null) {
-            <div [title]="'Ganancia estimada con el costo actual de cada producto. Las líneas sin costo registrado o manuales no se descuentan.' | transloco">
-              <span class="text-grey-800 font-bold">{{ 'Ganancia' | transloco }}: </span><span class="font-bold" [class.text-emerald-600]="mobileProfit >= 0" [class.text-red-500]="mobileProfit < 0">{{ cs() }}{{ mobileProfit | number:'1.2-2' }}</span>
-            </div>
-            }
             @if (showBs() && orderBs(order)) {
             <div><span class="text-grey-800 font-bold">{{ 'Total Bs:' | transloco }} </span><span class="font-bold text-primary-600">Bs. {{ orderBs(order) | number:'1.2-2' }}</span></div>
             }
@@ -405,9 +399,6 @@
             <th class="px-3 py-3 border-b border-grey-50">{{ 'Fecha de creación' | transloco }}</th>
             <th class="px-3 py-3 border-b border-grey-50">{{ 'Envío' | transloco }}</th>
             <th class="px-3 py-3 border-b border-grey-50">{{ 'Total' | transloco }}</th>
-            @if (hasCostData()) {
-            <th class="px-3 py-3 border-b border-grey-50 text-right">{{ 'Ganancia' | transloco }}</th>
-            }
             @if (showBs()) {
             <th class="px-3 py-3 border-b border-grey-50">{{ 'Total Bs' | transloco }}</th>
             }
@@ -607,19 +598,6 @@
             <td class="px-3 py-3.5 text-sm font-bold text-primary-600 whitespace-nowrap">
               {{ cs() }}{{ order.totalUsd | number:'1.2-2' }}
             </td>
-            @if (hasCostData()) {
-            <td
-              class="px-3 py-3.5 text-sm text-right whitespace-nowrap"
-              [title]="'Ganancia estimada con el costo actual de cada producto. Las líneas sin costo registrado o manuales no se descuentan.' | transloco"
-            >
-              @let rowProfit = estimatedProfit(order);
-              @if (rowProfit !== null) {
-              <span class="font-semibold" [class.text-emerald-600]="rowProfit >= 0" [class.text-red-500]="rowProfit < 0">{{ cs() }}{{ rowProfit | number:'1.2-2' }}</span>
-              } @else {
-              <span class="text-grey-300">—</span>
-              }
-            </td>
-            }
             @if (showBs()) {
             <td class="px-3 py-3.5 text-sm font-bold text-grey-700">
               Bs. {{ orderBs(order) | number:'1.2-2' }}
