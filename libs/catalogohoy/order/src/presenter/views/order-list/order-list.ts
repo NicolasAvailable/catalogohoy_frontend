@@ -945,6 +945,11 @@ export class OrderListComponent implements OnInit, OnDestroy {
     return labels[method] ?? method;
   }
 
+  /** Etiqueta i18n del estado de la orden (para el badge estático del desglose). */
+  statusLabel(status: OrderStatus): string {
+    return this.statusOptions.find((o) => o.value === status)?.label ?? status;
+  }
+
   /** Carga el costo de producción ACTUAL de los productos del tenant, para
    *  estimar la ganancia por orden. Falla en silencio (la ganancia es un extra;
    *  sin costos registrados simplemente no se muestra). */

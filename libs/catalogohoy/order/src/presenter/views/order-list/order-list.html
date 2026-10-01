@@ -933,42 +933,78 @@
         } @else if (metricsOrders().length === 0) {
         <div class="p-8 text-center text-sm text-grey-300">{{ 'Sin órdenes en el periodo' | transloco }}</div>
         } @else {
-        <div class="max-h-[34rem] overflow-y-auto divide-y divide-grey-50">
-          @for (order of metricsOrders(); track order.id) {
-          <div class="p-4 flex items-start gap-4">
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 flex-wrap mb-1.5">
-                <span class="text-xs font-bold text-grey-300">#{{ order.orderNumber ?? order.id }}</span>
-                <span class="text-sm font-semibold text-grey-800">{{ order.name }}</span>
-                <span [class]="getStatusDotClass(order.status)"></span>
-                <span class="text-[0.625rem] text-grey-400">{{ order.createdAt | date: 'dd/MM/yy' }}</span>
-                @if (order.paymentMethod) {
-                <span class="inline-flex items-center gap-1 text-[0.625rem] text-grey-500 bg-grey-50 rounded px-1.5 py-0.5">
-                  <ui-icon name="wallet" styleClass="size-3" />{{ paymentLabel(order.paymentMethod) }}
-                </span>
+        <div class="max-h-[36rem] overflow-auto">
+          <table class="w-full text-sm">
+            <thead class="sticky top-0 z-10 bg-grey-25 text-grey-400 text-[11px] uppercase tracking-wider font-bold">
+              <tr>
+                <th class="px-3 py-3 border-b border-grey-50 text-left">ID</th>
+                <th class="px-3 py-3 border-b border-grey-50 text-left">{{ 'Nombre' | transloco }}</th>
+                <th class="px-3 py-3 border-b border-grey-50 text-left">{{ 'Productos' | transloco }}</th>
+                <th class="px-3 py-3 border-b border-grey-50 text-center">{{ 'Estado' | transloco }}</th>
+                <th class="px-3 py-3 border-b border-grey-50 text-left">{{ 'Pago' | transloco }}</th>
+                <th class="px-3 py-3 border-b border-grey-50 text-right">{{ 'Total' | transloco }}</th>
+                @if (hasCostData()) {
+                <th class="px-3 py-3 border-b border-grey-50 text-right">{{ 'Ganancia' | transloco }}</th>
                 }
-              </div>
-              <div class="flex flex-col gap-0.5">
-                @for (item of order.products; track $index) {
-                <div class="text-xs text-grey-600 flex items-baseline gap-1.5">
-                  <span class="text-[0.625rem] font-bold text-primary-600 bg-primary-50 rounded px-1 shrink-0">{{ item.quantity }}x</span>
-                  <span class="truncate">{{ item.name }}</span>
-                  <span class="text-grey-300 ml-auto shrink-0">{{ cs() }}{{ item.total | number:'1.2-2' }}</span>
-                </div>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-grey-50">
+              @for (order of metricsOrders(); track order.id) {
+              <tr class="hover:bg-grey-25 transition-colors cursor-pointer" (click)="openOrderDetail(order)">
+                <td class="px-3 py-3 align-top font-medium text-grey-300">#{{ order.orderNumber ?? order.id }}</td>
+                <td class="px-3 py-3 align-top">
+                  <div class="font-semibold text-grey-800 whitespace-nowrap">{{ order.name }}</div>
+                  <div class="text-[0.625rem] text-grey-400 mt-0.5 whitespace-nowrap">{{ order.createdAt | date: 'dd/MM/yy hh:mm a' }}</div>
+                </td>
+                <td class="px-3 py-3 align-top">
+                  <div class="flex flex-col gap-1.5 min-w-44 max-w-80">
+                    @for (item of visibleProducts(order); track $index) {
+                    <div class="flex items-center gap-2">
+                      @if (item.photo) {
+                      <ui-image [src]="item.photo" [alt]="item.name" styleClass="w-7 h-7 block rounded overflow-hidden border border-grey-100 bg-grey-50 shrink-0" imageClass="w-full h-full object-cover" />
+                      } @else {
+                      <div class="w-7 h-7 rounded overflow-hidden border border-grey-100 bg-grey-50 shrink-0 flex items-center justify-center">
+                        <ui-icon name="package" styleClass="size-3.5 text-grey-300" />
+                      </div>
+                      }
+                      <span class="text-[0.625rem] font-bold text-primary-600 bg-primary-50 rounded px-1 shrink-0">{{ item.quantity }}x</span>
+                      <span class="text-xs text-grey-700 truncate">{{ item.name }}</span>
+                    </div>
+                    }
+                    @if (order.products.length > PRODUCTS_PREVIEW) {
+                    <span class="text-[0.625rem] text-grey-400">{{ 'Ver {count} más' | transloco: { count: order.products.length - PRODUCTS_PREVIEW } }}</span>
+                    }
+                  </div>
+                </td>
+                <td class="px-3 py-3 align-top text-center">
+                  <span [class]="getStatusBadgeClass(order.status)">
+                    <span [class]="getStatusDotClass(order.status)"></span>{{ statusLabel(order.status) | transloco }}
+                  </span>
+                </td>
+                <td class="px-3 py-3 align-top">
+                  @if (order.paymentMethod) {
+                  <span class="inline-flex items-center gap-1 text-[0.6875rem] text-grey-600 whitespace-nowrap">
+                    <ui-icon name="wallet" styleClass="size-3 shrink-0" />{{ paymentLabel(order.paymentMethod) }}
+                  </span>
+                  } @else {
+                  <span class="text-grey-300">—</span>
+                  }
+                </td>
+                <td class="px-3 py-3 align-top text-right font-bold text-primary-600 whitespace-nowrap">{{ cs() }}{{ order.totalUsd | number:'1.2-2' }}</td>
+                @if (hasCostData()) {
+                <td class="px-3 py-3 align-top text-right whitespace-nowrap">
+                  @let tProfit = estimatedProfit(order);
+                  @if (tProfit !== null) {
+                  <span class="font-semibold" [class.text-emerald-600]="tProfit >= 0" [class.text-red-500]="tProfit < 0">{{ cs() }}{{ tProfit | number:'1.2-2' }}</span>
+                  } @else {
+                  <span class="text-grey-300">—</span>
+                  }
+                </td>
                 }
-              </div>
-            </div>
-            <div class="text-right shrink-0">
-              <div class="text-sm font-bold text-primary-600">{{ cs() }}{{ order.totalUsd | number:'1.2-2' }}</div>
-              @let bProfit = estimatedProfit(order);
-              @if (bProfit !== null) {
-              <div class="text-[0.6875rem] font-semibold mt-0.5" [class.text-emerald-600]="bProfit >= 0" [class.text-red-500]="bProfit < 0">
-                {{ 'Ganancia' | transloco }} {{ cs() }}{{ bProfit | number:'1.2-2' }}
-              </div>
+              </tr>
               }
-            </div>
-          </div>
-          }
+            </tbody>
+          </table>
         </div>
         }
       </div>
