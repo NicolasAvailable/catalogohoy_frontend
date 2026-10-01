@@ -403,7 +403,11 @@
             <th class="px-3 py-3 border-b border-grey-50">WhatsApp</th>
             <th class="px-3 py-3 border-b border-grey-50">{{ 'Fecha de creación' | transloco }}</th>
             <th class="px-3 py-3 border-b border-grey-50">{{ 'Envío' | transloco }}</th>
+            <th class="px-3 py-3 border-b border-grey-50">{{ 'Pago' | transloco }}</th>
             <th class="px-3 py-3 border-b border-grey-50">{{ 'Total' | transloco }}</th>
+            @if (hasCostData()) {
+            <th class="px-3 py-3 border-b border-grey-50 text-right">{{ 'Ganancia' | transloco }}</th>
+            }
             @if (showBs()) {
             <th class="px-3 py-3 border-b border-grey-50">{{ 'Total Bs' | transloco }}</th>
             }
@@ -591,25 +595,31 @@
               <span class="text-grey-400">—</span>
               }
             </td>
-            <td class="px-3 py-3.5 text-sm align-top">
-              <div class="font-bold text-primary-600">{{ cs() }}{{ order.totalUsd | number:'1.2-2' }}</div>
+            <td class="px-3 py-3.5 text-sm">
               @if (order.paymentMethod) {
-              <div class="mt-0.5 inline-flex items-center gap-1 text-[0.6875rem] text-grey-500">
-                <ui-icon name="wallet" styleClass="size-3 shrink-0" />{{ paymentLabel(order.paymentMethod) }}
-              </div>
-              }
-              @let rowProfit = estimatedProfit(order);
-              @if (rowProfit !== null) {
-              <div
-                class="mt-0.5 text-[0.6875rem] font-semibold"
-                [class.text-emerald-600]="rowProfit >= 0"
-                [class.text-red-500]="rowProfit < 0"
-                [title]="'Ganancia estimada con el costo actual de cada producto. Las líneas sin costo registrado o manuales no se descuentan.' | transloco"
-              >
-                {{ 'Ganancia' | transloco }} {{ cs() }}{{ rowProfit | number:'1.2-2' }}
-              </div>
+              <span class="inline-flex items-center gap-1.5 text-grey-700 whitespace-nowrap">
+                <ui-icon name="wallet" styleClass="size-4 text-grey-300 shrink-0" />{{ paymentLabel(order.paymentMethod) }}
+              </span>
+              } @else {
+              <span class="text-grey-400">—</span>
               }
             </td>
+            <td class="px-3 py-3.5 text-sm font-bold text-primary-600 whitespace-nowrap">
+              {{ cs() }}{{ order.totalUsd | number:'1.2-2' }}
+            </td>
+            @if (hasCostData()) {
+            <td
+              class="px-3 py-3.5 text-sm text-right whitespace-nowrap"
+              [title]="'Ganancia estimada con el costo actual de cada producto. Las líneas sin costo registrado o manuales no se descuentan.' | transloco"
+            >
+              @let rowProfit = estimatedProfit(order);
+              @if (rowProfit !== null) {
+              <span class="font-semibold" [class.text-emerald-600]="rowProfit >= 0" [class.text-red-500]="rowProfit < 0">{{ cs() }}{{ rowProfit | number:'1.2-2' }}</span>
+              } @else {
+              <span class="text-grey-300">—</span>
+              }
+            </td>
+            }
             @if (showBs()) {
             <td class="px-3 py-3.5 text-sm font-bold text-grey-700">
               Bs. {{ orderBs(order) | number:'1.2-2' }}
