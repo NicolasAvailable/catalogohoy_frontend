@@ -935,9 +935,15 @@ export class OrderListComponent implements OnInit, OnDestroy {
     this.productCosts.set(map);
   }
 
-  /** Ganancia ESTIMADA de la orden: ventas de sus líneas − costo actual×cantidad.
-   *  Aproximada: usa el costo VIGENTE del producto (no un snapshot al vender), y
-   *  las líneas manuales o productos sin costo registrado no restan costo.
+  /** Ganancia ESTIMADA de la orden:
+   *    ventas de sus líneas de producto − costo actual×cantidad − comisión.
+   *  Notas:
+   *   - Costo: usa el `production_cost` VIGENTE del producto (no un snapshot al
+   *     vender) → es una aproximación. Líneas manuales o productos sin costo
+   *     registrado no restan costo.
+   *   - Comisión: la que paga el vendedor (oculta al cliente) sí resta.
+   *   - Envío: no entra — la base son las ventas de producto, que no incluyen
+   *     el flete (el flete lo paga el cliente y se despacha aparte).
    *  null = no hay costos cargados → la fila no muestra ganancia. */
   estimatedProfit(order: Order): number | null {
     const costs = this.productCosts();
@@ -950,7 +956,8 @@ export class OrderListComponent implements OnInit, OnDestroy {
       const cost = costs[String(item.productId)];
       if (cost != null) cogs += cost * (Number(item.quantity) || 0);
     }
-    return revenue - cogs;
+    const commission = Number(order.commission) || 0;
+    return revenue - cogs - commission;
   }
 
   getWhatsAppLink(phone: string): string {
