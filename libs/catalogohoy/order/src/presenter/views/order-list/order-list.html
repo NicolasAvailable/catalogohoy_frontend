@@ -308,6 +308,15 @@
               </div>
             </div>
             <div><span class="text-grey-800 font-bold">{{ 'Total:' | transloco }} </span><span class="font-bold text-primary-600">{{ cs() }}{{ order.totalUsd | number:'1.2-2' }}</span></div>
+            @if (order.paymentMethod) {
+            <div><span class="text-grey-800 font-bold">{{ 'Pago:' | transloco }} </span><span class="text-grey-700">{{ paymentLabel(order.paymentMethod) }}</span></div>
+            }
+            @let mobileProfit = estimatedProfit(order);
+            @if (mobileProfit !== null) {
+            <div [title]="'Ganancia estimada con el costo actual de cada producto. Las líneas sin costo registrado o manuales no se descuentan.' | transloco">
+              <span class="text-grey-800 font-bold">{{ 'Ganancia est.' | transloco }}: </span><span class="font-bold" [class.text-emerald-600]="mobileProfit >= 0" [class.text-red-500]="mobileProfit < 0">{{ cs() }}{{ mobileProfit | number:'1.2-2' }}</span>
+            </div>
+            }
             @if (showBs() && orderBs(order)) {
             <div><span class="text-grey-800 font-bold">{{ 'Total Bs:' | transloco }} </span><span class="font-bold text-primary-600">Bs. {{ orderBs(order) | number:'1.2-2' }}</span></div>
             }
@@ -582,8 +591,24 @@
               <span class="text-grey-400">—</span>
               }
             </td>
-            <td class="px-4 py-3.5 text-sm font-bold text-primary-600">
-              {{ cs() }}{{ order.totalUsd | number:'1.2-2' }}
+            <td class="px-4 py-3.5 text-sm align-top">
+              <div class="font-bold text-primary-600">{{ cs() }}{{ order.totalUsd | number:'1.2-2' }}</div>
+              @if (order.paymentMethod) {
+              <div class="mt-0.5 inline-flex items-center gap-1 text-[0.6875rem] text-grey-500">
+                <ui-icon name="wallet" styleClass="size-3 shrink-0" />{{ paymentLabel(order.paymentMethod) }}
+              </div>
+              }
+              @let rowProfit = estimatedProfit(order);
+              @if (rowProfit !== null) {
+              <div
+                class="mt-0.5 text-[0.6875rem] font-semibold"
+                [class.text-emerald-600]="rowProfit >= 0"
+                [class.text-red-500]="rowProfit < 0"
+                [title]="'Ganancia estimada con el costo actual de cada producto. Las líneas sin costo registrado o manuales no se descuentan.' | transloco"
+              >
+                {{ 'Ganancia est.' | transloco }} {{ cs() }}{{ rowProfit | number:'1.2-2' }}
+              </div>
+              }
             </td>
             @if (showBs()) {
             <td class="px-4 py-3.5 text-sm font-bold text-grey-700">
