@@ -46,7 +46,7 @@ export const BusinessMetricsStore = signalStore(
     ) => ({
       async load(): Promise<void> {
         patchState(store, { isLoading: true, error: null });
-        const [coreR, liveR, opexR, churnR, ordersR, waR, aiR, moveR, trialR] =
+        const [coreR, liveR, opexR, churnR, ordersR, waR, aiR, aiCostR, moveR, trialR] =
           await Promise.all([
             service.core(),
             live.getMetrics(),
@@ -55,6 +55,7 @@ export const BusinessMetricsStore = signalStore(
             ordersSvc.getStats(),
             waSvc.stats(),
             aiSvc.stats(),
+            service.aiCostMonthlyUsd(),
             service.movement(),
             service.trialFunnel(),
           ]);
@@ -74,6 +75,7 @@ export const BusinessMetricsStore = signalStore(
         const orders = ordersR.isRight() ? ordersR.value : null;
         const wa = waR.isRight() ? waR.value : null;
         const ai = aiR.isRight() ? aiR.value : null;
+        const aiCost = aiCostR.isRight() ? aiCostR.value : 0;
         const movement = moveR.isRight() ? moveR.value : { ready: false };
         const trialFunnel = trialR.isRight()
           ? trialR.value
@@ -93,7 +95,7 @@ export const BusinessMetricsStore = signalStore(
             ? churnPts[churnPts.length - 1].churnRate
             : 0;
 
-          const variableCosts = waCost + stripeFees;
+          const variableCosts = waCost + stripeFees + aiCost;
           const contributionMargin = mrr - variableCosts;
           const ebitda = contributionMargin - opex;
 
@@ -114,6 +116,7 @@ export const BusinessMetricsStore = signalStore(
               whatsappCostUsd: waCost,
               stripeFeesUsd: stripeFees,
               aiCredits: ai?.totalCredits ?? 0,
+              aiCostUsd: aiCost,
               variableCostsUsd: variableCosts,
               contributionMarginUsd: contributionMargin,
               contributionMarginPct: mrr > 0 ? contributionMargin / mrr : 0,

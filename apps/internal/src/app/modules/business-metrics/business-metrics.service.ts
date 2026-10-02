@@ -34,6 +34,14 @@ export class BusinessMetricsService {
     return E.right((data ?? { ready: false }) as MrrMovement);
   }
 
+  /** Costo de IA del mes en USD (estimado por feature según el proveedor). */
+  async aiCostMonthlyUsd(): Promise<Either<Error, number>> {
+    const { data, error } = await this.client.rpc('ai_cost_monthly_admin');
+    if (error) return E.left(new Error(error.message));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return E.right(Number((data as any)?.monthUsd ?? 0));
+  }
+
   /** Embudo de prueba gratis: iniciaron / en trial / convirtieron. */
   async trialFunnel(): Promise<Either<Error, TrialFunnel>> {
     const { data, error } = await this.client.rpc('trial_funnel_admin');

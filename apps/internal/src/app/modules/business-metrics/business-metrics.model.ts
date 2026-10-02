@@ -73,6 +73,8 @@ export interface BusinessMetrics {
   whatsappCostUsd: number;
   stripeFeesUsd: number;
   aiCredits: number;
+  /** Costo real de IA del mes en USD (fal.ai + LLM + Whisper, aprox por feature). */
+  aiCostUsd: number;
   // Margen / EBITDA (run-rate mensual; IA aún no entra en USD)
   variableCostsUsd: number;
   contributionMarginUsd: number;

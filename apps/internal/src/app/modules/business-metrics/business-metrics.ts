@@ -245,9 +245,9 @@ import { BusinessMetricsStore } from './business-metrics.store';
             </div>
             <div class="kpi">
               <div class="kpi-ico bg-fuchsia-50 text-fuchsia-600"><ui-icon name="sparkles" [size]="20" /></div>
-              <p class="kpi-label">IA (créditos)</p>
-              <p class="kpi-value">{{ b.aiCredits | number }}</p>
-              <p class="kpi-sub">costo en USD pendiente</p>
+              <p class="kpi-label">Costo de IA (mes)</p>
+              <p class="kpi-value">{{ b.aiCostUsd | currency:'USD':'symbol':'1.2-2' }}</p>
+              <p class="kpi-sub">fal.ai + LLM + Whisper · {{ b.aiCredits | number }} créditos históricos</p>
             </div>
           </div>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -260,7 +260,7 @@ import { BusinessMetricsStore } from './business-metrics.store';
                 </p>
                 <span class="text-sm font-semibold text-slate-500">{{ b.contributionMarginPct | percent:'1.0-0' }}</span>
               </div>
-              <p class="kpi-sub">MRR − WhatsApp − fees de Stripe</p>
+              <p class="kpi-sub">MRR − WhatsApp − Stripe − IA</p>
             </div>
             <div class="kpi ring-1 ring-slate-200">
               <div class="kpi-ico bg-slate-100 text-slate-700"><ui-icon name="banknote" [size]="20" /></div>
@@ -271,12 +271,12 @@ import { BusinessMetricsStore } from './business-metrics.store';
                 </p>
                 <span class="text-sm font-semibold text-slate-500">{{ b.ebitdaPct | percent:'1.0-0' }}</span>
               </div>
-              <p class="kpi-sub">MRR − OpEx − WhatsApp − fees de Stripe</p>
+              <p class="kpi-sub">MRR − OpEx − WhatsApp − Stripe − IA</p>
             </div>
           </div>
           <p class="text-xs text-slate-400">
-            ⓘ EBITDA en run-rate mensual (sobre el MRR). Aún no descuenta el costo de IA en USD
-            (los créditos existen, falta mapearlos a dólares). El GMV solo suma catálogos en USD.
+            ⓘ EBITDA en run-rate mensual (sobre el MRR). El costo de IA es aproximado por feature
+            (fal.ai imágenes, LLM de texto, Whisper audio). El GMV solo suma catálogos en USD.
           </p>
         </section>
       }
