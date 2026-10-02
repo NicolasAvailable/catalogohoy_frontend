@@ -6,7 +6,33 @@ export interface MonthPoint {
 export interface MoMMetric {
   thisMonth: number;
   prevMonth: number;
+  /** Mismo tramo del mes anterior (hasta el mismo día) → delta comparable. */
+  prevMonthToDate: number;
   series: MonthPoint[];
+}
+
+/** Movimiento de MRR entre los dos snapshots más recientes (RPC `mrr_movement_admin`).
+ *  `ready=false` mientras no haya 2 meses de snapshots. */
+export interface MrrMovement {
+  ready: boolean;
+  snapshots?: number;
+  curMonth?: string;
+  prevMonth?: string;
+  startMrr?: number;
+  newMrr?: number;
+  expansionMrr?: number;
+  contractionMrr?: number;
+  churnedMrr?: number;
+  endMrr?: number;
+  nrrPct?: number;
+}
+
+/** Embudo de prueba gratis (RPC `trial_funnel_admin`). */
+export interface TrialFunnel {
+  started: number;
+  inTrial: number;
+  converted: number;
+  conversionPct: number;
 }
 
 export interface PlanMix {
@@ -53,4 +79,7 @@ export interface BusinessMetrics {
   contributionMarginPct: number;
   ebitdaUsd: number;
   ebitdaPct: number;
+  // Movimiento de MRR + retención por dólar + embudo de prueba
+  movement: MrrMovement;
+  trialFunnel: TrialFunnel;
 }

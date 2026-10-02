@@ -2,7 +2,11 @@ import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
 import { Either } from '@sweet-monads/either';
-import { CoreBusinessMetrics } from './business-metrics.model';
+import {
+  CoreBusinessMetrics,
+  MrrMovement,
+  TrialFunnel,
+} from './business-metrics.model';
 
 @Injectable({ providedIn: 'root' })
 export class BusinessMetricsService {
@@ -16,11 +20,27 @@ export class BusinessMetricsService {
     const d = (data ?? {}) as any;
     return E.right({
       monthStart: d.monthStart ?? '',
-      signups: d.signups ?? { thisMonth: 0, prevMonth: 0, series: [] },
-      activeMerchants: d.activeMerchants ?? { thisMonth: 0, prevMonth: 0, series: [] },
+      signups: d.signups ?? { thisMonth: 0, prevMonth: 0, prevMonthToDate: 0, series: [] },
+      activeMerchants: d.activeMerchants ?? { thisMonth: 0, prevMonth: 0, prevMonthToDate: 0, series: [] },
       planMix: d.planMix ?? [],
       payingCount: d.payingCount ?? 0,
     });
+  }
+
+  /** Movimiento de MRR (new/expansion/contraction/churn) + NRR entre snapshots. */
+  async movement(): Promise<Either<Error, MrrMovement>> {
+    const { data, error } = await this.client.rpc('mrr_movement_admin');
+    if (error) return E.left(new Error(error.message));
+    return E.right((data ?? { ready: false }) as MrrMovement);
+  }
+
+  /** Embudo de prueba gratis: iniciaron / en trial / convirtieron. */
+  async trialFunnel(): Promise<Either<Error, TrialFunnel>> {
+    const { data, error } = await this.client.rpc('trial_funnel_admin');
+    if (error) return E.left(new Error(error.message));
+    return E.right(
+      (data ?? { started: 0, inTrial: 0, converted: 0, conversionPct: 0 }) as TrialFunnel
+    );
   }
 
   /** OpEx mensual: gastos de la empresa, anuales prorrateados /12. */

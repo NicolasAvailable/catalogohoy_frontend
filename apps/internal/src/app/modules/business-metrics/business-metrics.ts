@@ -81,22 +81,22 @@ import { BusinessMetricsStore } from './business-metrics.store';
               <p class="kpi-label">Altas de catálogos (mes)</p>
               <div class="flex items-baseline gap-2">
                 <p class="kpi-value">{{ b.signups.thisMonth | number }}</p>
-                <span [class]="deltaClass(b.signups.thisMonth, b.signups.prevMonth)">
-                  {{ deltaLabel(b.signups.thisMonth, b.signups.prevMonth) }}
+                <span [class]="deltaClass(b.signups.thisMonth, b.signups.prevMonthToDate)">
+                  {{ deltaLabel(b.signups.thisMonth, b.signups.prevMonthToDate) }}
                 </span>
               </div>
-              <p class="kpi-sub">mes anterior: {{ b.signups.prevMonth | number }}</p>
+              <p class="kpi-sub">vs mismo día mes pasado: {{ b.signups.prevMonthToDate | number }} · mes completo: {{ b.signups.prevMonth | number }}</p>
             </div>
             <div class="kpi">
               <div class="kpi-ico bg-teal-50 text-teal-600"><ui-icon name="store" [size]="20" /></div>
               <p class="kpi-label">Comercios activos (mes)</p>
               <div class="flex items-baseline gap-2">
                 <p class="kpi-value">{{ b.activeMerchants.thisMonth | number }}</p>
-                <span [class]="deltaClass(b.activeMerchants.thisMonth, b.activeMerchants.prevMonth)">
-                  {{ deltaLabel(b.activeMerchants.thisMonth, b.activeMerchants.prevMonth) }}
+                <span [class]="deltaClass(b.activeMerchants.thisMonth, b.activeMerchants.prevMonthToDate)">
+                  {{ deltaLabel(b.activeMerchants.thisMonth, b.activeMerchants.prevMonthToDate) }}
                 </span>
               </div>
-              <p class="kpi-sub">con órdenes en el mes · prev: {{ b.activeMerchants.prevMonth | number }}</p>
+              <p class="kpi-sub">con órdenes · vs mismo día mes pasado: {{ b.activeMerchants.prevMonthToDate | number }}</p>
             </div>
             <div class="kpi">
               <div class="kpi-ico bg-amber-50 text-amber-600"><ui-icon name="layers" [size]="20" /></div>
@@ -137,6 +137,86 @@ import { BusinessMetricsStore } from './business-metrics.store';
               <p class="kpi-label">Churn mensual</p>
               <p class="kpi-value" [class.text-red-600]="b.churnRatePct >= 5">{{ b.churnRatePct | number:'1.1-1' }}%</p>
               <p class="kpi-sub">catálogos de pago (mes en curso)</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══ Movimiento de MRR (NRR) ══ -->
+        <section class="flex flex-col gap-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Movimiento de MRR &amp; retención por dólar</h2>
+          @if (b.movement.ready) {
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div class="kpi">
+                <div class="kpi-ico bg-emerald-50 text-emerald-600"><ui-icon name="trending-up" [size]="20" /></div>
+                <p class="kpi-label">Nuevo</p>
+                <p class="kpi-value text-emerald-600">+{{ b.movement.newMrr | currency:'USD':'symbol':'1.0-0' }}</p>
+                <p class="kpi-sub">altas del mes</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-green-50 text-green-600"><ui-icon name="trending-up" [size]="20" /></div>
+                <p class="kpi-label">Expansión</p>
+                <p class="kpi-value text-green-600">+{{ b.movement.expansionMrr | currency:'USD':'symbol':'1.0-0' }}</p>
+                <p class="kpi-sub">upgrades</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-amber-50 text-amber-600"><ui-icon name="trending-down" [size]="20" /></div>
+                <p class="kpi-label">Contracción</p>
+                <p class="kpi-value text-amber-600">−{{ b.movement.contractionMrr | currency:'USD':'symbol':'1.0-0' }}</p>
+                <p class="kpi-sub">downgrades</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-red-50 text-red-600"><ui-icon name="trending-down" [size]="20" /></div>
+                <p class="kpi-label">Churn</p>
+                <p class="kpi-value text-red-600">−{{ b.movement.churnedMrr | currency:'USD':'symbol':'1.0-0' }}</p>
+                <p class="kpi-sub">bajas del mes</p>
+              </div>
+              <div class="kpi ring-1 ring-slate-200">
+                <div class="kpi-ico bg-slate-100 text-slate-700"><ui-icon name="repeat" [size]="20" /></div>
+                <p class="kpi-label">NRR</p>
+                <p class="kpi-value" [class.text-emerald-600]="(b.movement.nrrPct ?? 0) >= 100" [class.text-red-600]="(b.movement.nrrPct ?? 0) < 100">{{ b.movement.nrrPct | number:'1.0-1' }}%</p>
+                <p class="kpi-sub">retención neta de ingresos</p>
+              </div>
+            </div>
+          } @else {
+            <div class="kpi">
+              <div class="kpi-ico bg-slate-100 text-slate-500"><ui-icon name="repeat" [size]="20" /></div>
+              <p class="kpi-label">Acumulando</p>
+              <p class="text-sm text-slate-600">
+                El movimiento de MRR y la NRR necesitan 2 meses de fotos.
+                Ya guardamos la de este mes; aparecen con la del próximo.
+              </p>
+              <p class="kpi-sub">snapshots guardados: {{ b.movement.snapshots ?? 1 }}</p>
+            </div>
+          }
+        </section>
+
+        <!-- ══ Prueba gratis (trial) ══ -->
+        <section class="flex flex-col gap-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Prueba gratis (7 días)</h2>
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="kpi">
+              <div class="kpi-ico bg-indigo-50 text-indigo-600"><ui-icon name="user-plus" [size]="20" /></div>
+              <p class="kpi-label">Iniciaron prueba</p>
+              <p class="kpi-value">{{ b.trialFunnel.started | number }}</p>
+              <p class="kpi-sub">desde que se mide</p>
+            </div>
+            <div class="kpi">
+              <div class="kpi-ico bg-amber-50 text-amber-600"><ui-icon name="calendar" [size]="20" /></div>
+              <p class="kpi-label">En prueba ahora</p>
+              <p class="kpi-value">{{ b.trialFunnel.inTrial | number }}</p>
+              <p class="kpi-sub">trial activo</p>
+            </div>
+            <div class="kpi">
+              <div class="kpi-ico bg-emerald-50 text-emerald-600"><ui-icon name="dollar-sign" [size]="20" /></div>
+              <p class="kpi-label">Convirtieron a pago</p>
+              <p class="kpi-value">{{ b.trialFunnel.converted | number }}</p>
+              <p class="kpi-sub">usaron trial y hoy pagan</p>
+            </div>
+            <div class="kpi ring-1 ring-slate-200">
+              <div class="kpi-ico bg-slate-100 text-slate-700"><ui-icon name="trending-up" [size]="20" /></div>
+              <p class="kpi-label">Conversión</p>
+              <p class="kpi-value">{{ b.trialFunnel.conversionPct | number:'1.0-1' }}%</p>
+              <p class="kpi-sub">trial → pago</p>
             </div>
           </div>
         </section>
