@@ -13,6 +13,8 @@ export interface LiveRevenueMetrics {
   mrrUsd: number;
   arrUsd: number;
   collectedThisMonthUsd: number;
+  /** Comisiones de Stripe cobradas este mes (balance_transactions.fee). */
+  stripeFeesThisMonthUsd?: number;
   newSubsThisMonth: number;
   stripe: {
     mrrUsd: number;

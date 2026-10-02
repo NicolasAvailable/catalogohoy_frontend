@@ -181,7 +181,9 @@ Deno.serve(async (req) => {
     }
 
     // Cobrado del mes (USD): charges liquidados menos reembolsos.
+    // Fees: comisión de Stripe por transacción (bt.fee, en centavos, positivo).
     let stripeCollectedUsd = 0;
+    let stripeFeesUsd = 0;
     for (const bt of balanceTx) {
       if (bt.currency !== 'usd') continue;
       if (bt.type === 'charge' || bt.type === 'payment') {
@@ -189,6 +191,7 @@ Deno.serve(async (req) => {
       } else if (bt.type === 'refund' || bt.type === 'payment_refund') {
         stripeCollectedUsd += Number(bt.amount) / 100; // amount ya viene negativo
       }
+      stripeFeesUsd += Number(bt.fee ?? 0) / 100;
     }
 
     // ======================= MANUAL (DB) ===================================
@@ -231,6 +234,7 @@ Deno.serve(async (req) => {
       mrrUsd,
       arrUsd: round2(mrrUsd * 12),
       collectedThisMonthUsd,
+      stripeFeesThisMonthUsd: round2(stripeFeesUsd),
       newSubsThisMonth: stripeNewThisMonth + manualNewThisMonth,
       stripe: {
         mrrUsd: round2(stripeMrrUsd),

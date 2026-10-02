@@ -116,7 +116,32 @@ import { BusinessMetricsStore } from './business-metrics.store';
           </div>
         </section>
 
-        <!-- ══ Costos & Margen ══ -->
+        <!-- ══ Volumen & retención ══ -->
+        <section class="flex flex-col gap-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Volumen &amp; retención</h2>
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="kpi">
+              <div class="kpi-ico bg-cyan-50 text-cyan-600"><ui-icon name="shopping-bag" [size]="20" /></div>
+              <p class="kpi-label">GMV (catálogos en USD)</p>
+              <p class="kpi-value">{{ b.gmvUsd | currency:'USD':'symbol':'1.0-0' }}</p>
+              <p class="kpi-sub">no incluye catálogos en otra moneda</p>
+            </div>
+            <div class="kpi">
+              <div class="kpi-ico bg-orange-50 text-orange-600"><ui-icon name="shopping-bag" [size]="20" /></div>
+              <p class="kpi-label">Órdenes completadas</p>
+              <p class="kpi-value">{{ b.completedOrders | number }}</p>
+              <p class="kpi-sub">histórico de la plataforma</p>
+            </div>
+            <div class="kpi">
+              <div class="kpi-ico bg-red-50 text-red-600"><ui-icon name="trending-down" [size]="20" /></div>
+              <p class="kpi-label">Churn mensual</p>
+              <p class="kpi-value" [class.text-red-600]="b.churnRatePct >= 5">{{ b.churnRatePct | number:'1.1-1' }}%</p>
+              <p class="kpi-sub">catálogos de pago (mes en curso)</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══ Costos & Margen (EBITDA) ══ -->
         <section class="flex flex-col gap-3">
           <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Costos &amp; margen</h2>
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -124,25 +149,54 @@ import { BusinessMetricsStore } from './business-metrics.store';
               <div class="kpi-ico bg-rose-50 text-rose-600"><ui-icon name="wallet" [size]="20" /></div>
               <p class="kpi-label">OpEx mensual</p>
               <p class="kpi-value">{{ b.opexMonthlyUsd | currency:'USD':'symbol':'1.0-0' }}</p>
-              <p class="kpi-sub">gastos de la empresa</p>
+              <p class="kpi-sub">gastos fijos de la empresa</p>
             </div>
-            <div class="kpi lg:col-span-2">
-              <div class="kpi-ico bg-green-50 text-green-600"><ui-icon name="trending-up" [size]="20" /></div>
-              <p class="kpi-label">Margen de contribución (aprox)</p>
+            <div class="kpi">
+              <div class="kpi-ico bg-green-50 text-green-600"><ui-icon name="message-circle" [size]="20" /></div>
+              <p class="kpi-label">Costo WhatsApp (mes)</p>
+              <p class="kpi-value">{{ b.whatsappCostUsd | currency:'USD':'symbol':'1.2-2' }}</p>
+              <p class="kpi-sub">facturación Meta</p>
+            </div>
+            <div class="kpi">
+              <div class="kpi-ico bg-violet-50 text-violet-600"><ui-icon name="credit-card" [size]="20" /></div>
+              <p class="kpi-label">Fees de Stripe (mes)</p>
+              <p class="kpi-value">{{ b.stripeFeesUsd | currency:'USD':'symbol':'1.2-2' }}</p>
+              <p class="kpi-sub">comisiones de procesamiento</p>
+            </div>
+            <div class="kpi">
+              <div class="kpi-ico bg-fuchsia-50 text-fuchsia-600"><ui-icon name="sparkles" [size]="20" /></div>
+              <p class="kpi-label">IA (créditos)</p>
+              <p class="kpi-value">{{ b.aiCredits | number }}</p>
+              <p class="kpi-sub">costo en USD pendiente</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="kpi">
+              <div class="kpi-ico bg-emerald-50 text-emerald-600"><ui-icon name="trending-up" [size]="20" /></div>
+              <p class="kpi-label">Margen de contribución (mes)</p>
               <div class="flex items-baseline gap-2">
-                <p class="kpi-value" [class.text-green-600]="b.contributionMarginUsd >= 0" [class.text-red-600]="b.contributionMarginUsd < 0">
+                <p class="kpi-value" [class.text-emerald-600]="b.contributionMarginUsd >= 0" [class.text-red-600]="b.contributionMarginUsd < 0">
                   {{ b.contributionMarginUsd | currency:'USD':'symbol':'1.0-0' }}
                 </p>
-                <span class="text-sm font-semibold text-slate-500">
-                  {{ b.contributionMarginPct | percent:'1.0-0' }}
-                </span>
+                <span class="text-sm font-semibold text-slate-500">{{ b.contributionMarginPct | percent:'1.0-0' }}</span>
               </div>
-              <p class="kpi-sub">MRR − OpEx · falta sumar WhatsApp, IA y fees de Stripe</p>
+              <p class="kpi-sub">MRR − WhatsApp − fees de Stripe</p>
+            </div>
+            <div class="kpi ring-1 ring-slate-200">
+              <div class="kpi-ico bg-slate-100 text-slate-700"><ui-icon name="banknote" [size]="20" /></div>
+              <p class="kpi-label">EBITDA mensual (aprox)</p>
+              <div class="flex items-baseline gap-2">
+                <p class="kpi-value" [class.text-emerald-600]="b.ebitdaUsd >= 0" [class.text-red-600]="b.ebitdaUsd < 0">
+                  {{ b.ebitdaUsd | currency:'USD':'symbol':'1.0-0' }}
+                </p>
+                <span class="text-sm font-semibold text-slate-500">{{ b.ebitdaPct | percent:'1.0-0' }}</span>
+              </div>
+              <p class="kpi-sub">MRR − OpEx − WhatsApp − fees de Stripe</p>
             </div>
           </div>
           <p class="text-xs text-slate-400">
-            ⓘ El margen/EBITDA es aproximado por ahora: todavía no entran el costo de WhatsApp (Meta),
-            IA (en USD) ni las comisiones de Stripe. Esas fuentes se suman en la próxima etapa.
+            ⓘ EBITDA en run-rate mensual (sobre el MRR). Aún no descuenta el costo de IA en USD
+            (los créditos existen, falta mapearlos a dólares). El GMV solo suma catálogos en USD.
           </p>
         </section>
       }

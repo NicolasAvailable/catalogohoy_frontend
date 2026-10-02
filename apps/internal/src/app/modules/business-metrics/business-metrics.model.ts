@@ -37,8 +37,20 @@ export interface BusinessMetrics {
   signups: MoMMetric;
   activeMerchants: MoMMetric;
   planMix: PlanMix[];
-  // Costos & margen (aprox: por ahora solo OpEx; faltan WhatsApp/AI/fees Stripe)
+  // Volumen / plataforma
+  gmvUsd: number;
+  completedOrders: number;
+  // Retención
+  churnRatePct: number;
+  // Costos (mensuales)
   opexMonthlyUsd: number;
+  whatsappCostUsd: number;
+  stripeFeesUsd: number;
+  aiCredits: number;
+  // Margen / EBITDA (run-rate mensual; IA aún no entra en USD)
+  variableCostsUsd: number;
   contributionMarginUsd: number;
   contributionMarginPct: number;
+  ebitdaUsd: number;
+  ebitdaPct: number;
 }
