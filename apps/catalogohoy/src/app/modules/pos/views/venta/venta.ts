@@ -33,7 +33,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { TooltipModule } from 'primeng/tooltip';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { IconComponent } from '@ui';
+import { IconComponent, InputPhoneComponent } from '@ui';
 import { PosCartStore } from '../../pos-cart.store';
 import { PosCajaStore } from '../../pos-caja.store';
 import { PosSettingsStore } from '../../pos-settings.store';
@@ -78,6 +78,7 @@ interface PosSaleReceipt {
     DecimalPipe,
     FormsModule,
     IconComponent,
+    InputPhoneComponent,
     PosScanner,
     RouterLink,
     TranslocoPipe,
@@ -129,6 +130,15 @@ export default class PosVenta implements OnInit {
   readonly showCreateProduct = signal(false);
   readonly customerNameDraft = signal('');
   readonly customerPhoneDraft = signal('');
+  /** País por defecto del select de teléfono: el del catálogo del tenant
+   *  (ISO en minúsculas, ej. 'hn'). Fallback 've'. */
+  readonly defaultPhoneCountry = computed(() =>
+    (
+      this.tenantCurrency.countryCode() ??
+      this.configStore.config()?.countryCode ??
+      'VE'
+    ).toLowerCase()
+  );
   readonly noteDraft = signal('');
   readonly discountDraft = signal(0);
   readonly newProductName = signal('');

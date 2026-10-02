@@ -301,7 +301,7 @@
       </label>
       <label class="field">
         <span>{{ 'Teléfono' | transloco }} <em>({{ 'opcional' | transloco }})</em></span>
-        <input type="text" [ngModel]="customerPhoneDraft()" (ngModelChange)="customerPhoneDraft.set($event)" [placeholder]="'Teléfono' | transloco" />
+        <ui-input-phone [ngModel]="customerPhoneDraft()" (ngModelChange)="customerPhoneDraft.set($event)" [defaultCountry]="defaultPhoneCountry()" />
       </label>
       <div class="modal-actions">
         @if (cart.customerName()) {
