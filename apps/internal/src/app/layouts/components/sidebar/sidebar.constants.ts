@@ -13,6 +13,11 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     exact: true,
   },
   {
+    label: 'Métricas de negocio',
+    icon: 'line-chart',
+    routerLink: '/business-metrics',
+  },
+  {
     label: 'Catálogos',
     icon: 'store',
     routerLink: '/tenants',

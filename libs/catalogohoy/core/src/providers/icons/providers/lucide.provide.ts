@@ -169,6 +169,11 @@ import {
   X,
   XCircle,
   Zap,
+  Repeat,
+  LineChart,
+  UserRound,
+  Layers,
+  Calendar,
 } from 'lucide-angular';
 
 export const provideLucideIcons = (): EnvironmentProviders => {
@@ -281,6 +286,11 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       History,
       BarChart3,
       RefreshCw,
+      Repeat,
+      LineChart,
+      UserRound,
+      Layers,
+      Calendar,
       Euro,
       Settings2,
       Loader,

@@ -7,6 +7,13 @@ export const internalRoutes: Route[] = [
       import('./dashboard/dashboard').then((m) => m.Dashboard),
   },
   {
+    path: 'business-metrics',
+    loadChildren: () =>
+      import('./business-metrics/business-metrics.routes').then(
+        (m) => m.businessMetricsRoutes
+      ),
+  },
+  {
     path: 'tenants',
     loadChildren: () =>
       import('./tenants/tenants.routes').then((m) => m.tenantsRoutes),
