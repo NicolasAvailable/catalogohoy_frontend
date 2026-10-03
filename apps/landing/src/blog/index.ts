@@ -10,6 +10,9 @@ import { catalogohoyVsTakeApp2026 } from "./articles/catalogohoy-vs-take-app-202
 import { catalogohoyVsShopify2026 } from "./articles/catalogohoy-vs-shopify-2026";
 import { catalogohoyVsCatalogoWhatsappBusiness2026 } from "./articles/catalogohoy-vs-catalogo-whatsapp-business-2026";
 import { catalogohoyVsMercadoLibre2026 } from "./articles/catalogohoy-vs-mercado-libre-2026";
+import { comoQuitarFondoFotoProducto2026 } from "./articles/como-quitar-el-fondo-de-una-foto-de-producto-gratis-2026";
+import { fondoBlancoFotosProducto2026 } from "./articles/fondo-blanco-fotos-de-producto-marketplaces-2026";
+import { comoTomarFotosProductoCelular2026 } from "./articles/como-tomar-fotos-de-producto-con-el-celular-2026";
 import { COUNTRY_ARTICLES } from "./articles/paises";
 
 export const CATEGORIES: BlogCategory[] = [
@@ -47,6 +50,9 @@ export const CATEGORIES: BlogCategory[] = [
 
 /** Registro editorial: a igual fecha manda este orden (el primero es el destacado). */
 const REGISTRY: BlogArticle[] = [
+  comoQuitarFondoFotoProducto2026,
+  fondoBlancoFotosProducto2026,
+  comoTomarFotosProductoCelular2026,
   alternativasVenderPorWhatsapp2026,
   catalogohoyVsTiendanube2026,
   catalogohoyVsTakeApp2026,

@@ -781,6 +781,7 @@ PAGES.push({
   urlPath: "/quita-fondo-de-fotos-de-producto",
   title: "Quitar el fondo de fotos de producto gratis con IA | CatalogoHoy",
   description: RBG_DESC,
+  ogImage: "/og/quita-fondo.jpg",
   body: rbgBody,
   jsonLd: [
     webPageLd("Quitar el fondo de fotos de producto gratis con IA", RBG_DESC, RBG_URL),
@@ -799,7 +800,7 @@ for (const p of PAGES) {
       title: p.title,
       description: p.description,
       urlPath: p.urlPath,
-      ogImage: DEFAULT_OG,
+      ogImage: p.ogImage ?? DEFAULT_OG,
       ogType: "website",
       jsonLd: p.jsonLd,
       body: p.body,

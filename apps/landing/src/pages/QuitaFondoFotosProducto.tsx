@@ -180,6 +180,7 @@ const QuitaFondoFotosProducto = () => {
     description:
       "Quita el fondo de las fotos de tus productos gratis y con IA. Deja el fondo transparente o blanco en segundos, sin registro, listo para tu catálogo, marketplaces y redes.",
     path: PATH,
+    image: "/og/quita-fondo.jpg",
     jsonLd: JSON_LD,
   });
 
