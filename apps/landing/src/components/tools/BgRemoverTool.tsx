@@ -34,6 +34,9 @@ const BgRemoverTool = () => {
   const [quotaHit, setQuotaHit] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
+  // El PNG del resultado (grande) tarda en pintar; mostramos un spinner sobre
+  // el panel "Después" hasta que carga, para que nunca se vea vacío.
+  const [resultLoaded, setResultLoaded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const hpRef = useRef<HTMLInputElement>(null);
 
@@ -43,6 +46,7 @@ const BgRemoverTool = () => {
     setResultUrl(null);
     setError(null);
     setQuotaHit(false);
+    setResultLoaded(false);
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -60,6 +64,7 @@ const BgRemoverTool = () => {
     setError(null);
     setQuotaHit(false);
     setResultUrl(null);
+    setResultLoaded(false);
     try {
       const dataUrl = await fileToDataUrl(file);
       setOriginal(dataUrl);
@@ -187,13 +192,22 @@ const BgRemoverTool = () => {
                 Después (sin fondo)
               </figcaption>
               <div
-                className="flex h-56 items-center justify-center overflow-hidden rounded-xl border border-border"
+                className="relative flex h-56 items-center justify-center overflow-hidden rounded-xl border border-border"
                 style={{ background: CHECKER }}
               >
+                {!resultLoaded && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-card/70 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    <span className="text-xs">Cargando resultado…</span>
+                  </div>
+                )}
                 <img
                   src={resultUrl}
                   alt="Foto del producto con el fondo quitado, transparente"
-                  className="max-h-56 object-contain"
+                  onLoad={() => setResultLoaded(true)}
+                  className={`max-h-56 object-contain transition-opacity duration-300 ${
+                    resultLoaded ? "opacity-100" : "opacity-0"
+                  }`}
                 />
               </div>
             </figure>
