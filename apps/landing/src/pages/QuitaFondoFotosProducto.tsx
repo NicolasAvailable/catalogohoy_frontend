@@ -52,6 +52,7 @@ const JSON_LD = [
     description:
       "Herramienta gratuita para quitar el fondo de fotos de productos con IA y dejarlo transparente o blanco, lista para tu catálogo, marketplaces y redes.",
     inLanguage: "es",
+    isAccessibleForFree: true,
     offers: {
       "@type": "Offer",
       price: "0",

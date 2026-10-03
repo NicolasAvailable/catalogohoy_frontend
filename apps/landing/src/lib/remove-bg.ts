@@ -69,6 +69,7 @@ export function fileToDataUrl(file: File): Promise<string> {
 /** Descarga una imagen (url) como archivo local. */
 export async function downloadImage(url: string, filename: string): Promise<void> {
   const res = await fetch(url);
+  if (!res.ok) throw new Error("No se pudo descargar la imagen");
   const blob = await res.blob();
   const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -88,7 +89,9 @@ export async function downloadWithWhiteBg(
 ): Promise<void> {
   // Cargar vía blob (object URL same-origin) para que el canvas NO quede
   // "tainted" por CORS y toBlob() funcione siempre.
-  const srcBlob = await (await fetch(url)).blob();
+  const srcRes = await fetch(url);
+  if (!srcRes.ok) throw new Error("No se pudo descargar la imagen");
+  const srcBlob = await srcRes.blob();
   const srcUrl = URL.createObjectURL(srcBlob);
   try {
     const img = new Image();
@@ -105,9 +108,10 @@ export async function downloadWithWhiteBg(
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0);
-    const blob: Blob = await new Promise((resolve) =>
-      canvas.toBlob((b) => resolve(b as Blob), "image/jpeg", 0.92)
+    const blob: Blob | null = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92)
     );
+    if (!blob) throw new Error("No se pudo generar la imagen");
     const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = objectUrl;

@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   Upload,
   Loader2,
@@ -64,13 +65,13 @@ const BgRemoverTool = () => {
       setOriginal(dataUrl);
       setStatus("processing");
       const res = await removeBackgroundFree(dataUrl, hpRef.current?.value ?? "");
-      if (!res.ok) {
-        setError(res.error ?? "No se pudo quitar el fondo.");
+      if (!res.ok || !res.url) {
+        setError(res.error ?? "No se pudo quitar el fondo. Inténtalo de nuevo.");
         setQuotaHit(Boolean(res.quota));
         setStatus("error");
         return;
       }
-      setResultUrl(res.url ?? null);
+      setResultUrl(res.url);
       setRemaining(typeof res.remaining === "number" ? res.remaining : null);
       setStatus("done");
     } catch {
@@ -100,7 +101,7 @@ const BgRemoverTool = () => {
         tabIndex={-1}
         autoComplete="off"
         aria-hidden="true"
-        className="absolute left-[-9999px] h-0 w-0 opacity-0"
+        className="sr-only"
       />
 
       {/* ── IDLE: dropzone ─────────────────────────────── */}
@@ -113,7 +114,16 @@ const BgRemoverTool = () => {
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           onClick={() => inputRef.current?.click()}
-          className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-14 text-center transition-colors ${
+          role="button"
+          tabIndex={0}
+          aria-label="Subir una foto para quitarle el fondo"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              inputRef.current?.click();
+            }
+          }}
+          className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-14 text-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
             dragging
               ? "border-primary bg-primary/5"
               : "border-border hover:border-primary/60 hover:bg-muted/40"
@@ -191,17 +201,23 @@ const BgRemoverTool = () => {
 
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <button
-              onClick={() =>
-                resultUrl && downloadImage(resultUrl, "sin-fondo.png")
-              }
+              onClick={() => {
+                if (resultUrl)
+                  downloadImage(resultUrl, "sin-fondo.png").catch(() =>
+                    toast.error("No se pudo descargar. Inténtalo de nuevo.")
+                  );
+              }}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               <Download className="h-4 w-4" /> Descargar PNG (transparente)
             </button>
             <button
-              onClick={() =>
-                resultUrl && downloadWithWhiteBg(resultUrl, "fondo-blanco.jpg")
-              }
+              onClick={() => {
+                if (resultUrl)
+                  downloadWithWhiteBg(resultUrl, "fondo-blanco.jpg").catch(() =>
+                    toast.error("No se pudo descargar. Inténtalo de nuevo.")
+                  );
+              }}
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-5 py-2.5 font-semibold text-foreground transition-colors hover:bg-muted"
             >
               <ImageDown className="h-4 w-4" /> Descargar con fondo blanco
