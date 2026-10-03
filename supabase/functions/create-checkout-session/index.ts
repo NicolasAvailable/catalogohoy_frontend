@@ -33,6 +33,11 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, sentry-trace, baggage",
 };
 
+// Switch a $20/$35 (2026-09-29): precios nuevos creados en Stripe (live) sobre
+// los mismos productos (pro prod_UvXD7BXlWjSsUN, avanzado prod_U4NQhPd3F2XD85),
+// multimoneda con los currency_options de CHECKOUT_FX_RATES. El quarterly queda
+// inerte (ya no se ofrece). basico conserva sus IDs viejos para las
+// suscripciones grandfathered que renuevan.
 const PRICE_MAP: Record<string, Record<string, string>> = {
   basico: {
     monthly:   "price_1UBcws85rys2QLXd2VNxshFD",
@@ -40,14 +45,14 @@ const PRICE_MAP: Record<string, Record<string, string>> = {
     annual:    "price_1UBcwt85rys2QLXdstJ7waFV",
   },
   pro: {
-    monthly:   "price_1TyBl585rys2QLXdc1GUWVJh",
+    monthly:   "price_1UL59T85rys2QLXdkrWZiIh1", // $20
     quarterly: "price_1TyBl585rys2QLXdKk3w7yGm",
-    annual:    "price_1UBcwt85rys2QLXdqUs4wZKT", // -50% anual ($119.94)
+    annual:    "price_1UL59g85rys2QLXdp7UiCjCQ", // $120 (-50% anual)
   },
   avanzado: {
-    monthly:   "price_1TyBl785rys2QLXd08l8YOs7",
+    monthly:   "price_1UL59m85rys2QLXdC40TyaQE", // $35
     quarterly: "price_1TyBl785rys2QLXdp7nbigVf",
-    annual:    "price_1UBcwu85rys2QLXdJVEue0XU", // -50% anual ($179.94)
+    annual:    "price_1UL59r85rys2QLXdnrsXjQis", // $210 (-50% anual)
   },
 };
 
@@ -117,13 +122,20 @@ Deno.serve(async (req: Request) => {
 
     const { data: tenantRow } = await admin
       .from("tenants")
-      .select("stripe_customer_id, stripe_subscription_id, referred_by_tenant_id")
+      .select("stripe_customer_id, stripe_subscription_id, referred_by_tenant_id, trial_used_at")
       .eq("id", tenantId)
       .single();
 
     let customerId: string = tenantRow?.stripe_customer_id ?? "";
     const previousSubscriptionId: string = tenantRow?.stripe_subscription_id ?? "";
     const referredByTenantId: number | null = tenantRow?.referred_by_tenant_id ?? null;
+
+    // Free trial de 7 días: SOLO en la primera suscripción del tenant (nunca
+    // tuvo sub de Stripe y no consumió su trial antes). El webhook estampa
+    // `trial_used_at` cuando la sub con trial arranca, así que no se quema si
+    // el usuario abandona el checkout. Con addons de catálogo no aplica trial
+    // (se cobra el addon de una). El status `trialing` ya lo trata el webhook.
+    const eligibleForTrial = !previousSubscriptionId && !tenantRow?.trial_used_at && addonQty === 0;
 
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -140,9 +152,9 @@ Deno.serve(async (req: Request) => {
     // Stripe FIJA la moneda de un customer con su primera factura/suscripción.
     // Si este customer ya tiene una moneda fijada (p. ej. una sub activa en USD),
     // el checkout DEBE usar esa misma moneda o Stripe rechaza con "You cannot
-    // combine currencies on a single customer". Esto permite pagar o renovar
-    // ANTICIPADO a quien ya tiene una suscripción, aunque su catálogo esté en
-    // otra moneda (caso real: catálogo en DOP/HTG con sub previa en USD).
+    // combine currencies on a single customer". Esto permite pagar/renovar o
+    // hacer upgrade ANTICIPADO a quien ya tiene una suscripción, aunque su
+    // catálogo esté en otra moneda (caso real: catálogo DOP/HTG con sub en USD).
     let checkoutCurrency = resolvedCurrency;
     try {
       const existingCustomer = await stripe.customers.retrieve(customerId);
@@ -256,6 +268,7 @@ Deno.serve(async (req: Request) => {
       },
       subscription_data: {
         metadata: { tenant_id: String(tenantId), plan_id: planId },
+        ...(eligibleForTrial ? { trial_period_days: 7 } : {}),
       },
     };
     if (discounts) sessionParams.discounts = discounts;
