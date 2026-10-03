@@ -21,6 +21,7 @@ import CatalogoDigital from "./pages/CatalogoDigital";
 import CrearCatalogoOnlineGratis from "./pages/CrearCatalogoOnlineGratis";
 import CatalogoParaTiendasDeRopa from "./pages/CatalogoParaTiendasDeRopa";
 import MenuDigitalRestaurantes from "./pages/MenuDigitalRestaurantes";
+import QuitaFondoFotosProducto from "./pages/QuitaFondoFotosProducto";
 import Blog from "./pages/Blog";
 import BlogArticle from "./pages/BlogArticle";
 import NotFound from "./pages/NotFound";
@@ -64,6 +65,7 @@ const App = () => {
             <Route path="/crear-catalogo-online-gratis" element={<CrearCatalogoOnlineGratis />} />
             <Route path="/catalogo-para-tiendas-de-ropa" element={<CatalogoParaTiendasDeRopa />} />
             <Route path="/menu-digital-para-restaurantes" element={<MenuDigitalRestaurantes />} />
+            <Route path="/quita-fondo-de-fotos-de-producto" element={<QuitaFondoFotosProducto />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

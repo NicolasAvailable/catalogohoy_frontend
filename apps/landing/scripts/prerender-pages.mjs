@@ -709,6 +709,87 @@ for (const g of GUIDES) {
   });
 }
 
+// /quita-fondo-de-fotos-de-producto — herramienta gratuita (lead-gen).
+// El prerender estático lleva el copy + JSON-LD para crawlers y agentes de IA;
+// el uploader interactivo lo monta React encima (createRoot reemplaza el HTML).
+const RBG_URL = BASE_URL + "/quita-fondo-de-fotos-de-producto";
+const RBG_DESC =
+  "Quita el fondo de las fotos de tus productos gratis y con IA. Deja el fondo transparente o blanco en segundos, sin registro, listo para tu catálogo, marketplaces y redes.";
+const RBG_STEPS = [
+  { title: "Sube tu foto", text: "Arrastra o elige la foto de tu producto (JPG, PNG o WEBP). Sin crear cuenta." },
+  { title: "La IA quita el fondo", text: "En segundos recorta el producto y deja el fondo transparente, sin perder calidad." },
+  { title: "Descarga y usa", text: "Bájala en PNG transparente o con fondo blanco, lista para tu catálogo o tus redes." },
+];
+const RBG_USES = [
+  { title: "Catálogos que se ven profesionales", text: "Todas tus fotos con el mismo fondo limpio: tu catálogo se ve prolijo y ordenado, no un collage de fotos dispares." },
+  { title: "Fondo blanco para marketplaces", text: "Amazon, Mercado Libre y la mayoría de tiendas piden fondo blanco. Descárgalo con un clic y cumple el requisito." },
+  { title: "Publicaciones que resaltan", text: "El producto recortado luce mejor en Instagram, Facebook y TikTok, y en tus anuncios: capta más la atención." },
+  { title: "Menos tiempo editando", text: "Lo que en Photoshop toma minutos, acá es automático. Procesas tus fotos y vuelves a vender." },
+];
+const RBG_FAQS = [
+  { q: "¿Cómo quito el fondo de la foto de un producto gratis?", a: "Sube la foto en esta página y nuestra IA quita el fondo en segundos, dejándolo transparente. Luego la descargas en PNG (fondo transparente) o con fondo blanco. Es gratis y no necesitas crear una cuenta para probarlo." },
+  { q: "¿La herramienta para quitar el fondo es realmente gratis?", a: "Sí. Puedes quitar el fondo de varias fotos por día sin pagar ni registrarte. Si necesitas hacerlo sin límite y además armar tu catálogo con esas fotos, creas una cuenta gratis en CatalogoHoy." },
+  { q: "¿Puedo poner fondo blanco a mi foto de producto?", a: "Sí. Después de quitar el fondo puedes descargar la imagen con fondo blanco con un clic. El fondo blanco es el que piden la mayoría de marketplaces (como Amazon o Mercado Libre) y hace que tu catálogo se vea prolijo y uniforme." },
+  { q: "¿Qué formatos de imagen puedo usar?", a: "Puedes subir fotos en JPG, PNG o WEBP de hasta 10 MB. El resultado se entrega en PNG con transparencia, o en JPG con fondo blanco si eliges esa opción." },
+  { q: "¿La calidad de la foto se pierde al quitar el fondo?", a: "No. La IA recorta el producto respetando la resolución original: no reduce ni comprime la imagen. Obtienes un recorte limpio en los bordes, listo para tu catálogo o tus redes." },
+  { q: "¿Para qué sirve quitar el fondo de las fotos de productos?", a: "Un fondo limpio hace que el producto resalte y que todo tu catálogo se vea profesional y uniforme. Sirve para vender en marketplaces, catálogos online, tiendas, publicaciones de Instagram y Facebook, y anuncios." },
+  { q: "¿Mis imágenes quedan guardadas o son privadas?", a: "Procesamos la imagen solo para devolverte el resultado. No publicamos tus fotos ni las usamos para otra cosa. Si creas tu catálogo, tus imágenes quedan en tu cuenta, bajo tu control." },
+];
+const rbgWebAppLd = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "Quita-fondo de fotos de producto — CatalogoHoy",
+  url: RBG_URL,
+  applicationCategory: "MultimediaApplication",
+  operatingSystem: "Web",
+  description:
+    "Herramienta gratuita para quitar el fondo de fotos de productos con IA y dejarlo transparente o blanco, lista para tu catálogo, marketplaces y redes.",
+  inLanguage: "es",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  featureList: [
+    "Quitar el fondo de fotos de productos con IA",
+    "Fondo transparente (PNG)",
+    "Fondo blanco (JPG)",
+    "Sin registro para probar",
+  ],
+  provider: { "@type": "Organization", name: "CatalogoHoy", url: BASE_URL },
+};
+const rbgBody =
+  `<main>` +
+  hero(
+    "Quita el fondo de tus fotos de producto gratis",
+    "Sube una foto y la IA le quita el fondo en segundos: transparente o blanco, sin perder calidad. Gratis, sin registro, listo para tu catálogo, los marketplaces y tus redes.",
+    "quita-fondo",
+    "Crear mi catálogo gratis"
+  ) +
+  stepsSection("Cómo quitar el fondo de una foto en 3 pasos", RBG_STEPS) +
+  prose("Por qué quitarle el fondo a las fotos de tus productos", [
+    "La foto es lo primero que decide si alguien se interesa por tu producto. Un fondo desordenado distrae y le resta valor a lo que vendes. Con un fondo limpio el producto resalta, y cuando todas tus fotos comparten el mismo fondo tu catálogo se ve profesional y uniforme, como el de una tienda grande.",
+    "Antes esto requería Photoshop o pagar a un diseñador. Hoy la IA lo hace sola en segundos: recorta el producto, deja el fondo transparente y, si lo necesitas, lo pone en blanco —el formato que piden los marketplaces—. Es la forma más rápida de tener fotos listas para vender.",
+  ]) +
+  cardsSection("Para qué te sirve", RBG_USES) +
+  nichesSection(
+    "Ideal para cualquier negocio con productos",
+    "Si vendes productos con foto, un fondo limpio te hace ver más profesional. Algunos que lo usan a diario:",
+    ["tiendas de ropa", "zapaterías", "cosméticos y belleza", "accesorios y joyería", "tecnología y repuestos", "productos por catálogo"]
+  ) +
+  faqSection(RBG_FAQS) +
+  closingCta("quita-fondo") +
+  `</main>`;
+PAGES.push({
+  urlPath: "/quita-fondo-de-fotos-de-producto",
+  title: "Quitar el fondo de fotos de producto gratis con IA | CatalogoHoy",
+  description: RBG_DESC,
+  body: rbgBody,
+  jsonLd: [
+    webPageLd("Quitar el fondo de fotos de producto gratis con IA", RBG_DESC, RBG_URL),
+    breadcrumbLd("Quita-fondo de fotos de producto", RBG_URL),
+    rbgWebAppLd,
+    howToLd("Cómo quitar el fondo de la foto de un producto", "Quita el fondo de la foto de tu producto gratis con IA en 3 pasos: sube la imagen, la IA la recorta y descargas el resultado.", RBG_STEPS),
+    faqLd(RBG_FAQS),
+  ],
+});
+
 // ---- 7. Generar ------------------------------------------------------------
 for (const p of PAGES) {
   await writePage(
