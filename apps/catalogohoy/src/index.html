@@ -6,6 +6,38 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 
+    <!-- Auto-recuperación de ChunkLoadError tras un deploy. Si un index.html viejo
+         (cacheado) referencia un chunk hasheado que el deploy nuevo ya reemplazó,
+         el navegador falla al importar el módulo y el catálogo se ve "caído".
+         Escuchamos a nivel window (captura) porque estos fallos de carga de módulo
+         no siempre llegan al ErrorHandler de Angular ni al handler del router.
+         Recargamos UNA vez (anti-loop 10s) para traer el shell nuevo. -->
+    <script>
+      (function () {
+        var KEY = 'chunk-reload-at';
+        var RX = /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|is not a valid JavaScript MIME type|Expected a JavaScript module script but the server responded with|ChunkLoadError|Loading chunk [\w-]+ failed/i;
+        function reloadOnce() {
+          try {
+            var last = Number(sessionStorage.getItem(KEY) || 0);
+            if (Date.now() - last < 10000) return;
+            sessionStorage.setItem(KEY, String(Date.now()));
+          } catch (e) {}
+          location.reload();
+        }
+        window.addEventListener('error', function (e) {
+          var t = e && e.target;
+          if (t && t.tagName === 'SCRIPT' && t.src && /\.(?:m?js)(?:\?|$)/.test(t.src)) { reloadOnce(); return; }
+          var m = e && (e.message || (e.error && e.error.message));
+          if (m && RX.test(String(m))) reloadOnce();
+        }, true);
+        window.addEventListener('unhandledrejection', function (e) {
+          var r = e && e.reason;
+          var m = r && (r.message || r);
+          if (m && RX.test(String(m))) reloadOnce();
+        });
+      })();
+    </script>
+
     <!-- SEO base (overridden dynamically by Angular + serverless for crawlers) -->
     <meta name="description" content="Crea tu catálogo online y comparte tus productos con tus clientes." />
     <meta property="og:title" content="CatalogoHoy — Tu catálogo digital" />
