@@ -746,7 +746,8 @@ export default class PosVenta implements OnInit {
    *  porción = total − total/(1+rate/100). Null = catálogo sin impuesto. */
   private buildTaxLine(total: number): { label: string; amount: number } | null {
     const cfg = this.configStore.config();
-    const rate = cfg?.taxRate ?? 0;
+    // Number(): numeric(5,2) puede llegar como string según el serializador.
+    const rate = Number(cfg?.taxRate ?? 0);
     if (!rate || rate <= 0 || total <= 0) return null;
     const name = cfg?.taxLabel?.trim() || 'IVA';
     const pct = `${+rate.toFixed(2)}`;

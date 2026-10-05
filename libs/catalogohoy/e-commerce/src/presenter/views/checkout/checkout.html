@@ -399,6 +399,7 @@
       <span>
         @if (showReferencePrice()) {
         {{ cs() }}{{ tax.usd | tenantPrice }}
+        @if (showBs()) { <small class="checkout__price-bs">Bs. {{ tax.usd * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
         } @else if (showBs()) {
         Bs. {{ tax.usd * ecommerceStore.exchangeRate() | number:'1.2-2' }}
         } @else {

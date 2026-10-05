@@ -276,8 +276,8 @@ export default class Checkout {
   /** CAT-84: desglose informativo del impuesto incluido en el total. */
   public readonly taxInfo = computed(() => {
     const rate = this.info()?.taxRate ?? 0;
-    if (!rate || rate <= 0) return null;
     const total = this.total();
+    if (!rate || rate <= 0 || total <= 0) return null;
     return {
       label: this.info()?.taxLabel?.trim() || 'IVA',
       rate,
