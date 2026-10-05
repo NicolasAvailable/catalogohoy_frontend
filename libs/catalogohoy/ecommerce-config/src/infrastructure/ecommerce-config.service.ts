@@ -40,7 +40,7 @@ export class EcommerceConfigService {
       const { data: config } = await this.client
         .from('tenant_ecommerce_config')
         .select(
-          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message, notify_new_orders, notify_weekly_report, shipping_methods, show_shipping_section, customer_fields, default_language, meta_pixel_id'
+          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message, notify_new_orders, notify_weekly_report, shipping_methods, show_shipping_section, customer_fields, default_language, meta_pixel_id, tax_rate, tax_label'
         )
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -125,6 +125,8 @@ export class EcommerceConfigService {
           (config?.customer_fields as { creditNote?: string | null })
             ?.creditNote ?? null,
         metaPixelId: (config?.meta_pixel_id as string | null) ?? null,
+        taxRate: (config?.tax_rate as number | null) ?? null,
+        taxLabel: (config?.tax_label as string | null) ?? null,
       });
     } catch (error) {
       return E.left(error as Error);
@@ -336,6 +338,8 @@ export class EcommerceConfigService {
         updateData['show_shipping_section'] = config.showShippingSection;
       if (config.metaPixelId !== undefined)
         updateData['meta_pixel_id'] = config.metaPixelId;
+      if (config.taxRate !== undefined) updateData['tax_rate'] = config.taxRate;
+      if (config.taxLabel !== undefined) updateData['tax_label'] = config.taxLabel;
       // `customer_fields` also carries the delivery-date settings (no dedicated
       // DB column). Merge them into the same jsonb so a change to either the
       // fields OR the delivery settings persists the combined object. When only

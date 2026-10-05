@@ -264,3 +264,9 @@
 .invoice__row--adj-warn {
   color: #b0700c;
 }
+
+/* CAT-84: fila informativa del impuesto incluido (gris, no altera el total) */
+.invoice__row--tax {
+  color: var(--text-muted, #6b7280);
+  font-size: 0.85em;
+}

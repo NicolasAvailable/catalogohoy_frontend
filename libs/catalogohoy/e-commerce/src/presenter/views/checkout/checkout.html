@@ -393,6 +393,20 @@
       <span>{{ 'A crédito' | transloco }}</span>
     </div>
     }
+    @if (taxInfo(); as tax) {
+    <div class="checkout__summary-row checkout__summary-tax">
+      <span>{{ tax.label }} {{ tax.rate | number:'1.0-2' }}% ({{ 'incluido' | transloco }})</span>
+      <span>
+        @if (showReferencePrice()) {
+        {{ cs() }}{{ tax.usd | tenantPrice }}
+        } @else if (showBs()) {
+        Bs. {{ tax.usd * ecommerceStore.exchangeRate() | number:'1.2-2' }}
+        } @else {
+        {{ cs() }}{{ tax.usd | tenantPrice }}
+        }
+      </span>
+    </div>
+    }
     <div class="checkout__summary-total">
       <span>{{ 'Total' | transloco }}</span>
       <span>

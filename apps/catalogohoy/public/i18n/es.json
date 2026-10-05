@@ -1500,7 +1500,6 @@
   "Redacción más clara y vendedora en un toque.": "Redacción más clara y vendedora en un toque.",
   "Redes Sociales": "Redes Sociales",
   "Redes sociales": "Redes sociales",
-  "Redirigiendo…": "Redirigiendo…",
   "Reembolsado": "Reembolsado",
   "Referido #{n}": "Referido #{n}",
   "Referidos": "Referidos",
@@ -1961,7 +1960,6 @@
   "no se realizan reembolsos": "no se realizan reembolsos",
   "nombre": "nombre",
   "nueva versión": "nueva versión",
-  "o": "o",
   "oculto": "oculto",
   "para no pasar al plan Gratis.": "para no pasar al plan Gratis.",
   "para renovar antes de pasar al plan Gratis.": "para renovar antes de pasar al plan Gratis.",
@@ -2624,5 +2622,13 @@
   "El cliente pidió pagar A CRÉDITO al hacer este pedido. Si lo entregas a crédito, marca la orden como \"A crédito\" para llevar la cobranza.": "El cliente pidió pagar A CRÉDITO al hacer este pedido. Si lo entregas a crédito, marca la orden como \"A crédito\" para llevar la cobranza.",
   "Aún no has configurado ajustes: abre \"Datos\" en un método de pago y define su descuento o recargo.": "Aún no has configurado ajustes: abre \"Datos\" en un método de pago y define su descuento o recargo.",
   "Tu cliente puede elegir entre pagar de contado o pedir a crédito. Los pedidos a crédito te llegan marcados para que tú los confirmes.": "Tu cliente puede elegir entre pagar de contado o pedir a crédito. Los pedidos a crédito te llegan marcados para que tú los confirmes.",
-  "Si la dejas vacía, mostramos ese texto por defecto.": "Si la dejas vacía, mostramos ese texto por defecto."
+  "Si la dejas vacía, mostramos ese texto por defecto.": "Si la dejas vacía, mostramos ese texto por defecto.",
+  "incluido": "incluido",
+  "Impuesto en la factura": "Impuesto en la factura",
+  "Muestra el desglose del impuesto (IVA) en el recibo y la factura. Tus precios ya lo incluyen: no cambia los totales.": "Muestra el desglose del impuesto (IVA) en el recibo y la factura. Tus precios ya lo incluyen: no cambia los totales.",
+  "Porcentaje del impuesto": "Porcentaje del impuesto",
+  "Ej: 16": "Ej: 16",
+  "Déjalo vacío o en 0 para no mostrar el impuesto.": "Déjalo vacío o en 0 para no mostrar el impuesto.",
+  "Nombre del impuesto": "Nombre del impuesto",
+  "Según tu país: IVA, ITBIS, IGV… Si lo dejas vacío usamos IVA.": "Según tu país: IVA, ITBIS, IGV… Si lo dejas vacío usamos IVA."
 }

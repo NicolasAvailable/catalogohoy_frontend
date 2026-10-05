@@ -690,3 +690,9 @@
 .checkout__summary-credit {
   font-weight: 600;
 }
+
+/* CAT-84: fila informativa del impuesto incluido */
+.checkout__summary-tax {
+  color: var(--text-muted, #6b7280);
+  font-size: 0.85em;
+}

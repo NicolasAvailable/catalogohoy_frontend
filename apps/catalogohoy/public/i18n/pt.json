@@ -1500,7 +1500,6 @@
   "Redacción más clara y vendedora en un toque.": "Texto mais claro e vendedor em um toque.",
   "Redes Sociales": "Redes sociais",
   "Redes sociales": "Redes sociais",
-  "Redirigiendo…": "Redirecionando…",
   "Reembolsado": "Reembolsado",
   "Referido #{n}": "Indicação #{n}",
   "Referidos": "Indicações",
@@ -1961,7 +1960,6 @@
   "no se realizan reembolsos": "não são realizados reembolsos",
   "nombre": "nome",
   "nueva versión": "nova versão",
-  "o": "ou",
   "oculto": "oculto",
   "para no pasar al plan Gratis.": "para não voltar ao plano Grátis.",
   "para renovar antes de pasar al plan Gratis.": "para renovar antes de voltar ao plano Grátis.",
@@ -2624,5 +2622,13 @@
   "El cliente pidió pagar A CRÉDITO al hacer este pedido. Si lo entregas a crédito, marca la orden como \"A crédito\" para llevar la cobranza.": "O cliente pediu para pagar A CRÉDITO ao fazer este pedido. Se entregar a crédito, marque o pedido como \"A crédito\" para acompanhar a cobrança.",
   "Aún no has configurado ajustes: abre \"Datos\" en un método de pago y define su descuento o recargo.": "Você ainda não configurou ajustes: abra \"Dados\" em um método de pagamento e defina seu desconto ou acréscimo.",
   "Tu cliente puede elegir entre pagar de contado o pedir a crédito. Los pedidos a crédito te llegan marcados para que tú los confirmes.": "O cliente pode escolher entre pagar à vista ou pedir a crédito. Os pedidos a crédito chegam marcados para você confirmar.",
-  "Si la dejas vacía, mostramos ese texto por defecto.": "Se deixar vazio, mostramos esse texto padrão."
+  "Si la dejas vacía, mostramos ese texto por defecto.": "Se deixar vazio, mostramos esse texto padrão.",
+  "incluido": "incluído",
+  "Impuesto en la factura": "Imposto na fatura",
+  "Muestra el desglose del impuesto (IVA) en el recibo y la factura. Tus precios ya lo incluyen: no cambia los totales.": "Mostra o detalhamento do imposto (IVA) no recibo e na fatura. Seus preços já o incluem: os totais não mudam.",
+  "Porcentaje del impuesto": "Porcentagem do imposto",
+  "Ej: 16": "Ex.: 16",
+  "Déjalo vacío o en 0 para no mostrar el impuesto.": "Deixe vazio ou em 0 para não mostrar o imposto.",
+  "Nombre del impuesto": "Nome do imposto",
+  "Según tu país: IVA, ITBIS, IGV… Si lo dejas vacío usamos IVA.": "Conforme seu país: IVA, ITBIS, IGV… Se vazio, usamos IVA."
 }

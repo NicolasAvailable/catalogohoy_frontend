@@ -716,6 +716,58 @@
         </div>
       </ui-card>
 
+      <!-- Card: Impuesto en la factura (IVA) — CAT-84 -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon payments-icon">
+              <ui-icon name="percent" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ 'Impuesto en la factura' | transloco }}</h2>
+              <small class="card-subtitle">
+                {{ 'Muestra el desglose del impuesto (IVA) en el recibo y la factura. Tus precios ya lo incluyen: no cambia los totales.' | transloco }}
+              </small>
+            </div>
+          </div>
+        </div>
+        <div class="credit-settings">
+          <div class="credit-settings-field">
+            <label class="payment-method-field-label">
+              {{ 'Porcentaje del impuesto' | transloco }}
+            </label>
+            <div class="credit-min-row">
+              <ui-input-text
+                [ngModel]="draftTaxRate() ?? ''"
+                (ngModelChange)="setTaxRate($event)"
+                [placeholder]="'Ej: 16' | transloco"
+                styleClass="credit-min-input"
+              ></ui-input-text>
+              <span class="credit-min-suffix">%</span>
+            </div>
+            <p class="credit-option-hint">
+              {{ 'Déjalo vacío o en 0 para no mostrar el impuesto.' | transloco }}
+            </p>
+          </div>
+          @if (draftTaxRate()) {
+          <div class="credit-settings-field">
+            <label class="payment-method-field-label">
+              {{ 'Nombre del impuesto' | transloco }}
+            </label>
+            <ui-input-text
+              [ngModel]="draftTaxLabel() || ''"
+              (ngModelChange)="draftTaxLabel.set($event)"
+              [placeholder]="'IVA'"
+              styleClass="w-full"
+            ></ui-input-text>
+            <p class="credit-option-hint">
+              {{ 'Según tu país: IVA, ITBIS, IGV… Si lo dejas vacío usamos IVA.' | transloco }}
+            </p>
+          </div>
+          }
+        </div>
+      </ui-card>
+
       </div> <!-- /TAB PAYMENTS (block 1) -->
 
       <!-- ===== TAB: GENERAL (block 2) ===== -->

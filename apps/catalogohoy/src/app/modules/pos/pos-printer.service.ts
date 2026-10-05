@@ -24,6 +24,9 @@ export interface ThermalReceipt {
   total: number;
   /** Total en bolívares (VE); 0 u omitido = no se imprime la línea. */
   totalBs?: number;
+  /** CAT-84: impuesto incluido en el total (informativo). `label` ya viene
+   *  armado y traducido ("IVA 16% (incluido)"); omitido = no se imprime. */
+  tax?: { label: string; amount: number };
   received: number | null;
   change: number;
   /** Etiquetas en el idioma del admin (el builder normaliza a ASCII);
@@ -337,6 +340,7 @@ export class PosPrinterService {
           (r.adjustAmount > 0 ? '+' : '-') + money(Math.abs(r.adjustAmount))
         )
       );
+    if (r.tax) b.line(row(r.tax.label, money(r.tax.amount)));
     b.bold(true).size(true).line(row(L.total, money(r.total))).size(false).bold(false);
     if (r.totalBs && r.totalBs > 0)
       b.bold(true).line(row(L.totalBs, 'Bs. ' + r.totalBs.toFixed(2))).bold(false);

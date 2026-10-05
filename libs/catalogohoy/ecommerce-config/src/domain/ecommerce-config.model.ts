@@ -419,6 +419,12 @@ export interface EcommerceConfig {
    *  Lead con `trackSingle` a ESTE pixel). Null = sin pixel. El token secreto de
    *  la Conversions API vive aparte (MetaCapiSettings), nunca en esta config. */
   metaPixelId: string | null;
+  /** CAT-84: % de impuesto INCLUIDO en los precios (ej. 16 = IVA 16%). Es un
+   *  desglose informativo en recibo POS/factura/checkout — NO altera totales.
+   *  Null/0 = no mostrar. */
+  taxRate: number | null;
+  /** Etiqueta del impuesto según el país (IVA, ITBIS, IGV…). Null → "IVA". */
+  taxLabel: string | null;
 }
 
 /** Business hours for a single day. `dayOfWeek` follows JS convention:

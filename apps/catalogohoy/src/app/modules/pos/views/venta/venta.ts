@@ -66,6 +66,9 @@ interface PosSaleReceipt {
   total: number;
   /** Total en bolívares a la tasa del día (VE). 0 = sin tasa activa. */
   totalBs: number;
+  /** CAT-84: impuesto INCLUIDO en el total (desglose informativo, no lo altera).
+   *  `label` llega listo para mostrar ("IVA 16% (incluido)"). Null = sin impuesto. */
+  tax: { label: string; amount: number } | null;
   method: string;
   received: number | null;
   change: number;
@@ -732,9 +735,24 @@ export default class PosVenta implements OnInit {
       adjustAmount: this.adjustAmount(),
       total: this.chargeTotal(),
       totalBs,
+      tax: this.buildTaxLine(this.chargeTotal()),
       method: this.cart.paymentMethod(),
       received: this.amountReceived(),
       change: this.change(),
+    };
+  }
+
+  /** CAT-84: desglose del impuesto incluido en `total`.
+   *  porción = total − total/(1+rate/100). Null = catálogo sin impuesto. */
+  private buildTaxLine(total: number): { label: string; amount: number } | null {
+    const cfg = this.configStore.config();
+    const rate = cfg?.taxRate ?? 0;
+    if (!rate || rate <= 0 || total <= 0) return null;
+    const name = cfg?.taxLabel?.trim() || 'IVA';
+    const pct = `${+rate.toFixed(2)}`;
+    return {
+      label: `${name} ${pct}% (${this.transloco.translate('incluido')})`,
+      amount: total - total / (1 + rate / 100),
     };
   }
 
@@ -791,6 +809,7 @@ export default class PosVenta implements OnInit {
           method: sale.method,
           total: sale.total,
           totalBs: sale.totalBs,
+          tax: sale.tax ?? undefined,
           received: sale.received,
           change: sale.change,
           labels: L,
@@ -839,6 +858,7 @@ export default class PosVenta implements OnInit {
       ${sale.discount > 0 ? `<div class="r"><span>${esc(L.discount)}</span><span>-${money(sale.discount)}</span></div>` : ''}
       ${sale.shipping > 0 ? `<div class="r"><span>${esc(L.shipping)}</span><span>${money(sale.shipping)}</span></div>` : ''}
       ${sale.adjustAmount ? `<div class="r"><span>${sale.adjustAmount > 0 ? esc(L.surcharge) : esc(L.discount)} (${esc(sale.method)})</span><span>${sale.adjustAmount > 0 ? '+' : '-'}${money(Math.abs(sale.adjustAmount))}</span></div>` : ''}
+      ${sale.tax ? `<div class="r meta"><span>${esc(sale.tax.label)}</span><span>${money(sale.tax.amount)}</span></div>` : ''}
       <div class="r tot"><span>${esc(L.total)}</span><span>${money(sale.total)}</span></div>
       ${sale.totalBs > 0 ? `<div class="r tot"><span>${esc(L.totalBs)}</span><span>Bs. ${sale.totalBs.toFixed(2)}</span></div>` : ''}
       ${sale.method ? `<div class="r"><span>${esc(L.payment)}</span><span>${esc(sale.method)}</span></div>` : ''}
@@ -885,6 +905,7 @@ export default class PosVenta implements OnInit {
         `${sale.adjustAmount > 0 ? L.surcharge : L.discount} (${sale.method}): ${sale.adjustAmount > 0 ? '+' : '−'}${money(Math.abs(sale.adjustAmount))}`
       );
     }
+    if (sale.tax) parts.push(`${sale.tax.label}: ${money(sale.tax.amount)}`);
     parts.push(`*Total: ${money(sale.total)}*`);
     if (sale.totalBs > 0) parts.push(`*${L.totalBs}: Bs. ${sale.totalBs.toFixed(2)}*`);
     if (sale.method) parts.push(`${L.payment}: ${sale.method}`);

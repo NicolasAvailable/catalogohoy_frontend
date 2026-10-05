@@ -45,6 +45,10 @@ export interface OrderPdfContext {
    *  renderiza en bolívares en vez de la moneda de referencia. Default true. */
   showReference?: boolean;
   logoUrl: string | null;
+  /** CAT-84: % de impuesto incluido en los precios (desglose informativo). */
+  taxRate?: number | null;
+  /** Etiqueta del impuesto (IVA/ITBIS/IGV…). */
+  taxLabel?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -72,10 +76,15 @@ export class OrderPdfService {
     let showDualBs: boolean;
     let cs: string;
     let logoUrl: string | null;
+    // CAT-84: desglose informativo del impuesto incluido (null = no mostrar).
+    let taxRate: number | null = null;
+    let taxLabel = 'IVA';
 
     if (context) {
       storeName = context.storeName || 'Catálogo';
       showDualBs = context.showDualBs;
+      taxRate = context.taxRate && context.taxRate > 0 ? context.taxRate : null;
+      taxLabel = context.taxLabel?.trim() || 'IVA';
       // `''` es un valor válido: el storefront ya mapeó el centinela "sin
       // símbolo" a cadena vacía, así que no debe caer al '$' de fallback.
       cs = context.currencySymbol ?? '$';
@@ -95,6 +104,8 @@ export class OrderPdfService {
       // every other country renders its local currency.
       cs = this.tenantCurrency.displaySymbol() || config?.currencySymbol || '$';
       logoUrl = config?.logo ?? null;
+      taxRate = config?.taxRate && config.taxRate > 0 ? config.taxRate : null;
+      taxLabel = config?.taxLabel?.trim() || 'IVA';
     }
     // El centinela zero-width "sin símbolo" se normaliza a '' — jsPDF con las
     // fuentes estándar no sabe renderizar U+200B y pintaría un glifo basura.
@@ -520,6 +531,17 @@ export class OrderPdfService {
     } else {
       doc.text('Subtotal', labelX, y);
       doc.text(money(order.totalUsd), valX, y, { align: 'right' });
+      y += 5;
+    }
+
+    // IVA/impuesto incluido (CAT-84): línea informativa en gris — el precio ya
+    // lo incluye, NO altera el total. porción = total − total/(1+rate).
+    if (taxRate && taxRate > 0) {
+      const taxPortion = displayTotalUsd - displayTotalUsd / (1 + taxRate / 100);
+      doc.setTextColor(...GREY);
+      doc.text(`${taxLabel} ${taxRate}% (incluido)`, labelX, y);
+      doc.text(money(taxPortion), valX, y, { align: 'right' });
+      doc.setTextColor(...BLACK);
       y += 5;
     }
 

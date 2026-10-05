@@ -273,6 +273,18 @@ export default class Checkout {
     )
   );
 
+  /** CAT-84: desglose informativo del impuesto incluido en el total. */
+  public readonly taxInfo = computed(() => {
+    const rate = this.info()?.taxRate ?? 0;
+    if (!rate || rate <= 0) return null;
+    const total = this.total();
+    return {
+      label: this.info()?.taxLabel?.trim() || 'IVA',
+      rate,
+      usd: total - total / (1 + rate / 100),
+    };
+  });
+
   /** Bolívares mirror of any price row — Venezuela only, honoring the
    *  merchant's "show local currency" toggle, and only with a rate. Same
    *  condition used by the catalog cards, so every surface stays in sync. */

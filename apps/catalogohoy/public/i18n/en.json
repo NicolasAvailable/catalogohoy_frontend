@@ -1500,7 +1500,6 @@
   "Redacción más clara y vendedora en un toque.": "Clearer, more persuasive copy in one tap.",
   "Redes Sociales": "Social Media",
   "Redes sociales": "Social media",
-  "Redirigiendo…": "Redirecting…",
   "Reembolsado": "Refunded",
   "Referido #{n}": "Referral #{n}",
   "Referidos": "Referrals",
@@ -1961,7 +1960,6 @@
   "no se realizan reembolsos": "no refunds are issued",
   "nombre": "name",
   "nueva versión": "new version",
-  "o": "or",
   "oculto": "hidden",
   "para no pasar al plan Gratis.": "to avoid switching to the Free plan.",
   "para renovar antes de pasar al plan Gratis.": "to renew before switching to the Free plan.",
@@ -2624,5 +2622,13 @@
   "El cliente pidió pagar A CRÉDITO al hacer este pedido. Si lo entregas a crédito, marca la orden como \"A crédito\" para llevar la cobranza.": "The customer asked to pay ON CREDIT when placing this order. If you deliver it on credit, mark the order as \"On credit\" to track collection.",
   "Aún no has configurado ajustes: abre \"Datos\" en un método de pago y define su descuento o recargo.": "No adjustments configured yet: open \"Details\" on a payment method and set its discount or surcharge.",
   "Tu cliente puede elegir entre pagar de contado o pedir a crédito. Los pedidos a crédito te llegan marcados para que tú los confirmes.": "Your customer can choose between paying cash or ordering on credit. Credit orders arrive flagged so you confirm them yourself.",
-  "Si la dejas vacía, mostramos ese texto por defecto.": "Leave it empty and we show that default text."
+  "Si la dejas vacía, mostramos ese texto por defecto.": "Leave it empty and we show that default text.",
+  "incluido": "included",
+  "Impuesto en la factura": "Tax on the invoice",
+  "Muestra el desglose del impuesto (IVA) en el recibo y la factura. Tus precios ya lo incluyen: no cambia los totales.": "Shows the tax (VAT) breakdown on the receipt and invoice. Your prices already include it: totals don't change.",
+  "Porcentaje del impuesto": "Tax percentage",
+  "Ej: 16": "E.g.: 16",
+  "Déjalo vacío o en 0 para no mostrar el impuesto.": "Leave it empty or at 0 to hide the tax.",
+  "Nombre del impuesto": "Tax name",
+  "Según tu país: IVA, ITBIS, IGV… Si lo dejas vacío usamos IVA.": "Depending on your country: VAT, ITBIS, IGV… If left empty we use IVA."
 }

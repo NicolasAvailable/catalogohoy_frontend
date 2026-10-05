@@ -254,6 +254,8 @@ export class EcommerceService implements BaseEcommerceService {
             .deliveryBlockedWeekdays as number[])
         : [],
       metaPixelId: (config?.meta_pixel_id as string | null) ?? null,
+      taxRate: (config?.tax_rate as number | null) ?? null,
+      taxLabel: (config?.tax_label as string | null) ?? null,
       // Contado/crédito — vive dentro de `customer_fields` (mismo truco que
       // delivery-date). Defaults = comportamiento actual del checkout.
       applyAdjustmentsInCheckout:

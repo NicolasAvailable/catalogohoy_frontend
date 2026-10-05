@@ -374,6 +374,12 @@ export class EcommerceConfigComponent implements OnInit {
   /** Custom note under the credit option (null/'' = checkout default text). */
   public readonly draftCreditNote = signal<string | null>(null);
 
+  // --- Impuesto/IVA (Pagos tab) drafts — CAT-84 ---
+  /** % de impuesto incluido en los precios (null/0 = sin desglose). */
+  public readonly draftTaxRate = signal<number | null>(null);
+  /** Etiqueta del impuesto (IVA, ITBIS, IGV…). */
+  public readonly draftTaxLabel = signal<string | null>(null);
+
   /** Métodos activos que tienen un ajuste configurado — chips informativos de
    *  la card "Contado y crédito" (el descuento se configura por método, en
    *  "Datos"; acá solo se decide si aplica también en el checkout). */
@@ -389,6 +395,12 @@ export class EcommerceConfigComponent implements OnInit {
   setCreditMinPurchases(value: string): void {
     const n = parseInt(String(value).replace(/[^\d]/g, ''), 10);
     this.draftCreditMinPurchases.set(Number.isFinite(n) ? n : 0);
+  }
+
+  /** CAT-84: parsea el % de impuesto (acepta coma decimal). Vacío/0 → null. */
+  setTaxRate(value: string): void {
+    const n = parseFloat(String(value).replace(',', '.').replace(/[^\d.]/g, ''));
+    this.draftTaxRate.set(Number.isFinite(n) && n > 0 ? Math.min(n, 100) : null);
   }
 
   /** Alterna un día entre "despacha" y "no despacha". Se almacena como lista de
@@ -777,6 +789,8 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftCreditMinPurchases, prev?.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES, config.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES);
       syncField(this.draftCreditNote, prev?.creditNote ?? null, config.creditNote ?? null);
       syncField(this.draftMetaPixelId, prev?.metaPixelId ?? null, config.metaPixelId ?? null);
+      syncField(this.draftTaxRate, prev?.taxRate ?? null, config.taxRate ?? null);
+      syncField(this.draftTaxLabel, prev?.taxLabel ?? null, config.taxLabel ?? null);
 
       this.lastSyncedConfig = { ...config };
     });
@@ -1263,6 +1277,14 @@ export class EcommerceConfigComponent implements OnInit {
     // Pixel ID: normaliza vacío → null (borrar el campo desactiva el pixel).
     if ((this.draftMetaPixelId()?.trim() || null) !== (config.metaPixelId ?? null)) {
       changes.metaPixelId = this.draftMetaPixelId()?.trim() || null;
+    }
+    // IVA: 0/NaN/vacío → null (apagado).
+    {
+      const rawRate = this.draftTaxRate();
+      const normRate = rawRate && rawRate > 0 ? Math.min(rawRate, 100) : null;
+      if (normRate !== (config.taxRate ?? null)) changes.taxRate = normRate;
+      const normLabel = this.draftTaxLabel()?.trim() || null;
+      if (normLabel !== (config.taxLabel ?? null)) changes.taxLabel = normLabel;
     }
 
     const serverButtons = config.whatsappButtons?.length

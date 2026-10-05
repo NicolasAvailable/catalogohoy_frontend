@@ -62,6 +62,11 @@ export interface CatalogInfo {
    *  pago, el storefront inicializa este pixel y dispara los eventos de compra.
    *  Null = el catálogo no tiene pixel configurado. */
   metaPixelId: string | null;
+  /** CAT-84: % de impuesto INCLUIDO en los precios (desglose informativo en
+   *  factura/checkout; no altera totales). Null/0 = no mostrar. */
+  taxRate: number | null;
+  /** Etiqueta del impuesto (IVA, ITBIS, IGV…). Null → "IVA". */
+  taxLabel: string | null;
   /** When true, the checkout applies the per-method adjustment (`__adjust*`)
    *  of the payment method the customer picks. Default false = adjustments
    *  stay admin-only (current behavior). */
