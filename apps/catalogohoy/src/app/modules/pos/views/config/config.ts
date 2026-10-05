@@ -13,7 +13,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { IconComponent } from '@ui';
-import { PosSettingsStore } from '../../pos-settings.store';
+import { PosReceiptFormat, PosSettingsStore } from '../../pos-settings.store';
 import { PosPrinterService } from '../../pos-printer.service';
 
 type ConfigPanel = 'printer' | 'methods' | 'cash' | 'tickets';
@@ -54,6 +54,18 @@ export default class PosConfig implements OnInit {
         { id: 'tickets', label: 'Tickets', icon: 'file-text' },
       ],
     },
+  ];
+
+  /** Tamaños disponibles del recibo imprimible (ventana del navegador). */
+  readonly receiptFormats: {
+    id: PosReceiptFormat;
+    label: string;
+    detail: string;
+  }[] = [
+    { id: '58', label: 'Pequeño', detail: 'Ticket 58 mm' },
+    { id: '80', label: 'Estándar', detail: 'Ticket 80 mm' },
+    { id: 'media-carta', label: 'Mediano', detail: 'Media carta (A5)' },
+    { id: 'carta', label: 'Grande', detail: 'Carta (A4)' },
   ];
 
   /** Líneas de ejemplo para la vista previa del ticket. */

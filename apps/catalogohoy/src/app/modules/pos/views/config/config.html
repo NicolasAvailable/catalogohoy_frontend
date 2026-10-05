@@ -169,6 +169,26 @@
             </label>
 
             <div class="field">
+              <span class="field-label">{{ 'Tamaño del recibo' | transloco }}</span>
+              <div class="fmt-grid">
+                @for (f of receiptFormats; track f.id) {
+                  <button
+                    type="button"
+                    class="fmt-card"
+                    [class.active]="settings.ticket().format === f.id"
+                    (click)="settings.setTicketFormat(f.id)"
+                    [attr.aria-pressed]="settings.ticket().format === f.id"
+                  >
+                    <span class="fmt-paper" [attr.data-size]="f.id"></span>
+                    <strong>{{ f.label | transloco }}</strong>
+                    <small>{{ f.detail | transloco }}</small>
+                  </button>
+                }
+              </div>
+              <small class="fmt-hint">{{ 'Aplica al recibo que se imprime desde el navegador. La impresora térmica USB usa su propio ancho (58/80 mm).' | transloco }}</small>
+            </div>
+
+            <div class="field">
               <span class="field-label">{{ 'Logo' | transloco }}</span>
               <div class="logo-row">
                 @if (settings.ticket().logo) {
@@ -204,7 +224,7 @@
 
           <!-- Vista previa en vivo -->
           <div class="receipt">
-            <div class="receipt-paper">
+            <div class="receipt-paper" [attr.data-format]="settings.ticket().format">
               @if (settings.ticket().printLogo && settings.ticket().logo) {
                 <img class="receipt-logo" [src]="settings.ticket().logo" [alt]="'Logo' | transloco" />
               }

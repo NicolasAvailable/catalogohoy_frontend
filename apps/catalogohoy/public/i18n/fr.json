@@ -2630,5 +2630,16 @@
   "Ej: 16": "Ex. : 16",
   "Déjalo vacío o en 0 para no mostrar el impuesto.": "Laissez vide ou à 0 pour masquer la taxe.",
   "Nombre del impuesto": "Nom de la taxe",
-  "Según tu país: IVA, ITBIS, IGV… Si lo dejas vacío usamos IVA.": "Selon votre pays : TVA, ITBIS, IGV… Si vide, nous utilisons IVA."
+  "Según tu país: IVA, ITBIS, IGV… Si lo dejas vacío usamos IVA.": "Selon votre pays : TVA, ITBIS, IGV… Si vide, nous utilisons IVA.",
+  "Tamaño del recibo": "Taille du reçu",
+  "Aplica al recibo que se imprime desde el navegador. La impresora térmica USB usa su propio ancho (58/80 mm).": "S'applique au reçu imprimé depuis le navigateur. L'imprimante thermique USB utilise sa propre largeur (58/80 mm).",
+  "Pequeño": "Petit",
+  "Estándar": "Standard",
+  "Mediano": "Moyen",
+  "Grande": "Grand",
+  "Ticket 58 mm": "Ticket 58 mm",
+  "Ticket 80 mm": "Ticket 80 mm",
+  "Media carta (A5)": "Demi-lettre (A5)",
+  "Carta (A4)": "Lettre (A4)",
+  "Cant.": "Qté"
 }

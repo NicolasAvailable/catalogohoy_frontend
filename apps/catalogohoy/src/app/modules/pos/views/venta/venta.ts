@@ -782,6 +782,8 @@ export default class PosVenta implements OnInit {
       received: t('Recibido'),
       change: t('Vuelto'),
       receipt: t('Comprobante'),
+      qty: t('Cant.'),
+      detail: t('Detalle'),
     };
   }
 
@@ -823,30 +825,63 @@ export default class PosVenta implements OnInit {
       }
       // Si falló (se desconectó), cae al recibo por navegador.
     }
-    const money = (n: number) => `${cs}${n.toFixed(2)}`;
-    const esc = (s: string) =>
-      s.replace(
-        /[&<>]/g,
-        (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] as string
+    // Tamaño configurable (Configuración → Tickets): ticket angosto (58/80 mm)
+    // u hoja con layout de factura (media carta / carta).
+    const format = t.format ?? '80';
+    const html =
+      format === 'media-carta' || format === 'carta'
+        ? this.sheetReceiptHtml(sale, format)
+        : this.ticketReceiptHtml(sale, format);
+    const w = window.open('', '_blank', 'width=380,height=640');
+    if (!w) {
+      this.toast.error(
+        'Permití las ventanas emergentes para imprimir el recibo' as unknown as Exception
       );
+      return;
+    }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    // Dar tiempo a que renderice el logo/estilos antes de imprimir.
+    setTimeout(() => w.print(), 250);
+  }
+
+  private escHtml(s: string): string {
+    return s.replace(
+      /[&<>]/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] as string
+    );
+  }
+
+  /** Recibo angosto estilo ticket (58 u 80 mm) para la impresión del navegador. */
+  private ticketReceiptHtml(sale: PosSaleReceipt, width: '58' | '80'): string {
+    const t = this.settings.ticket();
+    const cs = this.cs();
+    const L = this.receiptLabels();
+    const esc = (s: string) => this.escHtml(s);
+    const money = (n: number) => `${cs}${n.toFixed(2)}`;
+    const mm = width === '58' ? '58mm' : '80mm';
+    const fs = width === '58' ? '10.5px' : '12px';
+    const fsTot = width === '58' ? '11.5px' : '13px';
     const rows = sale.lines
       .map(
         (l) =>
           `<div class="r"><span>${l.qty}× ${esc(l.label)}</span><span>${money(l.total)}</span></div>`
       )
       .join('');
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Recibo</title>
+    return `<!doctype html><html><head><meta charset="utf-8"><title>Recibo</title>
       <style>
         @page { margin: 0; }
-        body { width: 80mm; margin: 0 auto; padding: 6mm 5mm; font-family: 'Courier New', monospace; font-size: 12px; color: #000; }
+        body { width: ${mm}; margin: 0 auto; padding: 5mm 4mm; font-family: 'Courier New', monospace; font-size: ${fs}; color: #000; }
         .c { text-align: center; }
         .logo { max-width: 60%; max-height: 40px; display: block; margin: 0 auto 6px; }
         .hd { font-weight: 700; white-space: pre-wrap; margin-bottom: 6px; }
         .rule { border-top: 1px dashed #000; margin: 6px 0; }
         .r { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
-        .tot { font-weight: 700; font-size: 13px; }
+        .tot { font-weight: 700; font-size: ${fsTot}; }
         .ft { margin-top: 8px; white-space: pre-wrap; }
-        .meta { font-size: 11px; }
+        .meta { font-size: .92em; }
       </style></head><body>
       ${t.printLogo && t.logo ? `<img class="logo" src="${t.logo}" alt="logo">` : ''}
       ${t.header ? `<div class="c hd">${esc(t.header)}</div>` : ''}
@@ -866,19 +901,82 @@ export default class PosVenta implements OnInit {
       ${sale.received != null ? `<div class="r"><span>${esc(L.received)}</span><span>${money(sale.received)}</span></div><div class="r"><span>${esc(L.change)}</span><span>${money(sale.change)}</span></div>` : ''}
       ${t.footer ? `<div class="c ft">${esc(t.footer)}</div>` : ''}
       </body></html>`;
-    const w = window.open('', '_blank', 'width=380,height=640');
-    if (!w) {
-      this.toast.error(
-        'Permití las ventanas emergentes para imprimir el recibo' as unknown as Exception
+  }
+
+  /** Recibo en hoja (media carta / carta) con layout de factura: encabezado con
+   *  logo, tabla de artículos y bloque de totales. Mismos datos que el ticket. */
+  private sheetReceiptHtml(
+    sale: PosSaleReceipt,
+    format: 'media-carta' | 'carta'
+  ): string {
+    const t = this.settings.ticket();
+    const cs = this.cs();
+    const L = this.receiptLabels();
+    const esc = (s: string) => this.escHtml(s);
+    const money = (n: number) => `${cs}${n.toFixed(2)}`;
+    const page = format === 'carta' ? 'letter' : 'A5';
+    const fs = format === 'carta' ? '13px' : '12px';
+    const rows = sale.lines
+      .map(
+        (l) =>
+          `<tr><td class="qty">${l.qty}</td><td>${esc(l.label)}</td><td class="amt">${money(l.total)}</td></tr>`
+      )
+      .join('');
+    const totalRow = (
+      label: string,
+      value: string,
+      cls = ''
+    ) => `<tr class="${cls}"><td>${label}</td><td class="amt">${value}</td></tr>`;
+    let totals = totalRow(esc(L.subtotal), money(sale.subtotal));
+    if (sale.discount > 0)
+      totals += totalRow(esc(L.discount), '-' + money(sale.discount));
+    if (sale.shipping > 0)
+      totals += totalRow(esc(L.shipping), money(sale.shipping));
+    if (sale.adjustAmount)
+      totals += totalRow(
+        `${sale.adjustAmount > 0 ? esc(L.surcharge) : esc(L.discount)} (${esc(sale.method)})`,
+        (sale.adjustAmount > 0 ? '+' : '-') + money(Math.abs(sale.adjustAmount))
       );
-      return;
+    if (sale.tax) totals += totalRow(esc(sale.tax.label), money(sale.tax.amount), 'muted');
+    totals += totalRow(esc(L.total), money(sale.total), 'grand');
+    if (sale.totalBs > 0)
+      totals += totalRow(esc(L.totalBs), 'Bs. ' + sale.totalBs.toFixed(2), 'grand');
+    if (sale.method) totals += totalRow(esc(L.payment), esc(sale.method));
+    if (sale.received != null) {
+      totals += totalRow(esc(L.received), money(sale.received));
+      totals += totalRow(esc(L.change), money(sale.change));
     }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    // Dar tiempo a que renderice el logo/estilos antes de imprimir.
-    setTimeout(() => w.print(), 250);
+    return `<!doctype html><html><head><meta charset="utf-8"><title>Recibo</title>
+      <style>
+        @page { size: ${page} portrait; margin: 14mm; }
+        body { margin: 0; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: ${fs}; color: #111; }
+        .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+        .hd { font-weight: 700; white-space: pre-wrap; font-size: 1.1em; }
+        .logo { max-height: 56px; max-width: 160px; }
+        .meta { color: #555; font-size: .9em; margin-bottom: 14px; }
+        table { width: 100%; border-collapse: collapse; }
+        .items th { text-align: left; font-size: .75em; text-transform: uppercase; letter-spacing: .06em; color: #666; border-bottom: 1px solid #bbb; padding: 4px 6px; }
+        .items td { padding: 5px 6px; border-bottom: 1px solid #e4e4e4; }
+        .items .qty, .items th.qty { width: 3em; }
+        .amt { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .totals { width: 55%; margin: 12px 0 0 auto; }
+        .totals td { padding: 3px 6px; }
+        .totals .muted td { color: #777; font-size: .9em; }
+        .totals .grand td { font-weight: 700; font-size: 1.15em; border-top: 1px solid #bbb; padding-top: 6px; }
+        .ft { margin-top: 24px; text-align: center; white-space: pre-wrap; color: #333; }
+      </style></head><body>
+      <div class="top">
+        <div class="hd">${t.header ? esc(t.header) : ''}</div>
+        ${t.printLogo && t.logo ? `<img class="logo" src="${t.logo}" alt="logo">` : ''}
+      </div>
+      <div class="meta">${esc(L.receipt)}${sale.number != null ? ` #${sale.number}` : ''} · ${esc(sale.dateStr)}${sale.customer ? ` · ${esc(sale.customer)}` : ''}</div>
+      <table class="items">
+        <thead><tr><th class="qty">${esc(L.qty)}</th><th>${esc(L.detail)}</th><th class="amt">${esc(L.total)}</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <table class="totals">${totals}</table>
+      ${t.footer ? `<div class="ft">${esc(t.footer)}</div>` : ''}
+      </body></html>`;
   }
 
   /** Comparte el recibo por WhatsApp como texto. Si el cliente tiene teléfono,

@@ -2630,5 +2630,16 @@
   "Ej: 16": "Ej: 16",
   "Déjalo vacío o en 0 para no mostrar el impuesto.": "Déjalo vacío o en 0 para no mostrar el impuesto.",
   "Nombre del impuesto": "Nombre del impuesto",
-  "Según tu país: IVA, ITBIS, IGV… Si lo dejas vacío usamos IVA.": "Según tu país: IVA, ITBIS, IGV… Si lo dejas vacío usamos IVA."
+  "Según tu país: IVA, ITBIS, IGV… Si lo dejas vacío usamos IVA.": "Según tu país: IVA, ITBIS, IGV… Si lo dejas vacío usamos IVA.",
+  "Tamaño del recibo": "Tamaño del recibo",
+  "Aplica al recibo que se imprime desde el navegador. La impresora térmica USB usa su propio ancho (58/80 mm).": "Aplica al recibo que se imprime desde el navegador. La impresora térmica USB usa su propio ancho (58/80 mm).",
+  "Pequeño": "Pequeño",
+  "Estándar": "Estándar",
+  "Mediano": "Mediano",
+  "Grande": "Grande",
+  "Ticket 58 mm": "Ticket 58 mm",
+  "Ticket 80 mm": "Ticket 80 mm",
+  "Media carta (A5)": "Media carta (A5)",
+  "Carta (A4)": "Carta (A4)",
+  "Cant.": "Cant."
 }

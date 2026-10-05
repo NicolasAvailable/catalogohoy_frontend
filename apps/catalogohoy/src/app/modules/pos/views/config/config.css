@@ -126,6 +126,67 @@
   margin-bottom: 0.5rem;
 }
 
+/* ── Tamaño del recibo imprimible ── */
+.fmt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.6rem;
+}
+.fmt-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.85rem 0.6rem 0.7rem;
+  background: var(--pos-surface);
+  border: 1px solid var(--pos-border);
+  border-radius: 0.6rem;
+  cursor: pointer;
+  text-align: center;
+}
+.fmt-card strong {
+  font-size: 0.85rem;
+  color: var(--pos-text);
+}
+.fmt-card small {
+  font-size: 0.72rem;
+  color: var(--pos-text-soft);
+}
+.fmt-card.active {
+  border-color: var(--pos-accent);
+  box-shadow: 0 0 0 1px var(--pos-accent) inset;
+}
+.fmt-card.active strong {
+  color: var(--pos-accent);
+}
+/* Glifo de papel: mismo alto, ancho según el tamaño elegido. */
+.fmt-paper {
+  height: 2.1rem;
+  border: 1px solid var(--pos-border);
+  border-radius: 0.15rem;
+  background: #fff;
+  margin-bottom: 0.35rem;
+}
+.fmt-card.active .fmt-paper {
+  border-color: var(--pos-accent);
+}
+.fmt-paper[data-size='58'] { width: 0.8rem; }
+.fmt-paper[data-size='80'] { width: 1.15rem; }
+.fmt-paper[data-size='media-carta'] { width: 1.6rem; }
+.fmt-paper[data-size='carta'] { width: 2rem; }
+.fmt-hint {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--pos-text-soft);
+}
+
+/* La vista previa acompaña el tamaño elegido. */
+.receipt-paper[data-format='58'] { max-width: 10.5rem; }
+.receipt-paper[data-format='80'] { max-width: 14rem; }
+.receipt-paper[data-format='media-carta'] { max-width: 18rem; font-size: 0.85rem; }
+.receipt-paper[data-format='carta'] { max-width: 22rem; font-size: 0.9rem; }
+
 .segmented {
   display: inline-flex;
   border: 1px solid var(--pos-border);
