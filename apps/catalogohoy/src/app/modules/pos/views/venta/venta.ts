@@ -4,17 +4,18 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   inject,
   OnInit,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
+  EcommerceConfig,
   EcommerceConfigStore,
   TenantCurrencyStore,
 } from '@catalogohoy/ecommerce-config';
 import {
-  Order,
   OrderItem,
   OrderItemAddon,
   OrderStatus,
@@ -22,11 +23,12 @@ import {
 } from '@catalogohoy/order';
 import {
   Product,
+  ProductList,
   ProductSize,
   ProductStore,
   ProductVariant,
 } from '@catalogohoy/product';
-import { RateStore } from '@catalogohoy/rate';
+import { ExchangeRate, RateStore } from '@catalogohoy/rate';
 import { TenantStore } from '@catalogohoy/tenant';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -35,6 +37,7 @@ import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { IconComponent, InputPhoneComponent } from '@ui';
 import { PosCartStore } from '../../pos-cart.store';
+import { PosOfflineStore, QueuedSale } from '../../offline/pos-offline.store';
 import { PosCajaStore } from '../../pos-caja.store';
 import { PosSettingsStore } from '../../pos-settings.store';
 import { PosPrinterService } from '../../pos-printer.service';
@@ -105,6 +108,30 @@ export default class PosVenta implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly posPrinter = inject(PosPrinterService);
   private readonly transloco = inject(TranslocoService);
+  readonly offline = inject(PosOfflineStore);
+
+  /** Tenant resuelto (para el snapshot offline). */
+  private readonly resolvedTenantId = signal<number | null>(null);
+  /** La última venta se cobró sin conexión (badge en la pantalla de éxito). */
+  readonly lastSaleOffline = signal(false);
+
+  /** F1 (CAT-85): cada vez que el POS tiene datos frescos Y conexión, espeja
+   *  productos/config/tasa en IndexedDB para poder operar sin red después. */
+  private readonly offlineSnapshotFx = effect(() => {
+    const tid = this.resolvedTenantId();
+    const products = this.productStore.productList().products;
+    const config = this.configStore.config();
+    const rate = this.rateStore.rate();
+    if (!tid || !this.offline.online() || products.length === 0 || !config)
+      return;
+    void this.offline.saveSnapshot({
+      savedAt: Date.now(),
+      tenantId: tid,
+      products: products as unknown[],
+      config,
+      rate,
+    });
+  });
 
   private static readonly DEFAULT_METHODS: PayMethod[] = [
     { label: 'Efectivo', icon: 'banknote', adjust: 0 },
@@ -254,9 +281,15 @@ export default class PosVenta implements OnInit {
   ngOnInit(): void {
     this.productStore.productList$();
     this.rateStore.loadRates();
-    this.tenantStore.getTenantIdAsync().then((tid) => {
-      this.settings.load(tid ? String(tid) : 'default');
+    this.tenantStore.getTenantIdAsync().then(async (tid) => {
+      // Sin red el tenant puede no resolver: caer al último tenant que abrió
+      // el POS en este dispositivo (CAT-85) antes del 'default'.
+      const key = tid ? String(tid) : this.offline.lastTenantKey() || 'default';
+      this.settings.load(key);
+      await this.offline.init(tid ?? null);
+      if (!this.offline.online()) await this.hydrateFromCache();
       if (!tid) return;
+      this.resolvedTenantId.set(tid);
       this.tenantCurrency.load(tid);
       this.configStore.loadPaymentMethods(String(tid));
       this.configStore.loadConfig(String(tid));
@@ -657,7 +690,6 @@ export default class PosVenta implements OnInit {
       return;
     }
 
-    this.isCharging.set(true);
     // Una venta en tienda nace cerrada (completada): descuenta stock y genera el
     // recibo, igual que "Registrar venta".
     const orderData = {
@@ -676,27 +708,41 @@ export default class PosVenta implements OnInit {
       source: 'pos',
       posCashSessionId: this.caja.openSessionId(),
     };
+
+    // F2 (CAT-85): sin conexión, la venta va a la cola local y se sincroniza
+    // sola al volver la red. El recibo sale igual (sin número de orden).
+    if (!this.offline.online()) {
+      await this.chargeOffline(orderData, totalBs);
+      return;
+    }
+
+    this.isCharging.set(true);
     try {
       const result = await this.orderStore.createOrder(orderData);
-      result.fold(
-        (error) => {
+      await result.fold(
+        async (error) => {
+          // La red se cayó entre que abrió el modal y confirmó el cobro:
+          // misma cola offline en vez de perder la venta.
+          if (/failed to fetch|network/i.test(error)) {
+            this.offline.online.set(false);
+            await this.chargeOffline(orderData, totalBs);
+            return;
+          }
           this.toast.error(error as unknown as Exception);
           this.isCharging.set(false);
         },
-        (order) => {
+        async (order) => {
           // Snapshot del comprobante ANTES de vaciar el carrito. Usa el MISMO
           // total_bs que se persistió (no recalcula: si la tasa cambia durante
           // el createOrder, el recibo debe coincidir con la DB).
-          this.lastSale.set(this.buildReceipt(order, totalBs));
+          this.lastSale.set(
+            this.buildReceipt(order.orderNumber ?? order.id ?? null, totalBs)
+          );
+          this.lastSaleOffline.set(false);
           this.toast.success('Venta cobrada ✓');
           // Si la venta se imputó a una caja, refresca su arqueo.
           if (this.caja.hasOpenSession()) this.caja.refresh();
-          this.cart.clear();
-          this.shipping.set(0);
-          this.amountReceived.set(null);
-          this.showCobrar.set(false);
-          this.showSuccess.set(true);
-          this.isCharging.set(false);
+          this.finishSale();
         }
       );
     } catch {
@@ -705,10 +751,56 @@ export default class PosVenta implements OnInit {
     }
   }
 
+  /** F2 (CAT-85): cobra sin conexión — encola la venta con uuid idempotente,
+   *  genera el recibo local (sin número) y deja el sync para el reconnect. */
+  private async chargeOffline(
+    orderData: QueuedSale['order'],
+    totalBs: number
+  ): Promise<void> {
+    this.isCharging.set(true);
+    try {
+      await this.offline.enqueue(orderData);
+      this.lastSale.set(this.buildReceipt(null, totalBs));
+      this.lastSaleOffline.set(true);
+      this.toast.success('Venta guardada sin conexión ✓');
+      this.finishSale();
+    } catch {
+      this.toast.error(
+        'No se pudo guardar la venta en este dispositivo' as unknown as Exception
+      );
+      this.isCharging.set(false);
+    }
+  }
+
+  /** Cierre común del cobro (online u offline): limpia carrito y abre éxito. */
+  private finishSale(): void {
+    this.cart.clear();
+    this.shipping.set(0);
+    this.amountReceived.set(null);
+    this.showCobrar.set(false);
+    this.showSuccess.set(true);
+    this.isCharging.set(false);
+  }
+
+  /** F1 (CAT-85): siembra los stores desde el espejo local cuando no hay red. */
+  private async hydrateFromCache(): Promise<void> {
+    const snap = await this.offline.loadSnapshot();
+    if (!snap) return;
+    if (
+      Array.isArray(snap.products) &&
+      snap.products.length > 0 &&
+      this.productStore.productList().products.length === 0
+    ) {
+      this.productStore.set(ProductList.from(snap.products as Product[]));
+    }
+    if (snap.config) this.configStore.hydrate(snap.config as EcommerceConfig);
+    if (snap.rate) this.rateStore.hydrate(snap.rate as ExchangeRate);
+  }
+
   /** Arma el comprobante desde el carrito ANTES de vaciarlo. `totalBs` es el
    *  mismo valor persistido en la orden (no se recalcula, para que el recibo
    *  coincida con la DB aunque la tasa cambie durante el createOrder). */
-  private buildReceipt(order: Order, totalBs: number): PosSaleReceipt {
+  private buildReceipt(number: number | null, totalBs: number): PosSaleReceipt {
     const lines = this.cart.lines().map((l) => ({
       label:
         l.variantName || l.size
@@ -718,7 +810,7 @@ export default class PosVenta implements OnInit {
       total: l.total,
     }));
     return {
-      number: order.orderNumber ?? order.id ?? null,
+      number,
       dateStr: new Date().toLocaleString('es-ES', {
         day: '2-digit',
         month: '2-digit',

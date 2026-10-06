@@ -531,6 +531,12 @@
       @if (sale.number != null) {
         <p class="success-num">{{ 'Comprobante' | transloco }} #{{ sale.number }}</p>
       }
+      @if (lastSaleOffline()) {
+        <p class="success-offline">
+          <ui-icon name="cloud-off" styleClass="size-4" />
+          {{ 'Guardada sin conexión — se sincroniza al volver internet' | transloco }}
+        </p>
+      }
       @if (sale.received != null) {
         <div class="success-change">
           <span>{{ 'Vuelto' | transloco }}</span>

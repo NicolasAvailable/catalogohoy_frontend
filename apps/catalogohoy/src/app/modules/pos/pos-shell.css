@@ -111,11 +111,44 @@
 .pos-topbar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   height: 4rem;
   padding: 0 1.25rem;
   background: var(--top-bg);
   border-bottom: 1px solid var(--top-border);
+}
+
+/* ── CAT-85: chips de estado de red / sync (lado izquierdo del topbar) ── */
+.tb-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.tb-chip.offline {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+.tb-chip.pending {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+  cursor: pointer;
+}
+.tb-chip.syncing {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
 }
 .tb-right {
   display: inline-flex;

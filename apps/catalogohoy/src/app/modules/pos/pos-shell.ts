@@ -20,6 +20,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { TooltipModule } from 'primeng/tooltip';
 import { IconComponent } from '@ui';
 import { PosCajaStore } from './pos-caja.store';
+import { PosOfflineStore } from './offline/pos-offline.store';
 
 interface RailItem {
   label: string;
@@ -53,6 +54,7 @@ export default class PosShell implements OnInit {
   private readonly tenantStore = inject(TenantStore);
   private readonly tenantCurrency = inject(TenantCurrencyStore);
   readonly caja = inject(PosCajaStore);
+  readonly offline = inject(PosOfflineStore);
 
   readonly catalogName = computed(
     () => this.configStore.config()?.name || 'Punto de Venta'
@@ -89,6 +91,9 @@ export default class PosShell implements OnInit {
     // (para el badge y para imputar las ventas), sin importar a qué sección se
     // entre primero.
     this.tenantStore.getTenantIdAsync().then((tid) => {
+      // CAT-85: estado de red + cola de ventas offline (sincroniza si quedó
+      // alguna pendiente de una sesión anterior).
+      void this.offline.init(tid ?? null);
       if (!tid) return;
       this.configStore.loadConfig(String(tid));
       this.tenantCurrency.load(tid);

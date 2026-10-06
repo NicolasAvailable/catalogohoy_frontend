@@ -2641,5 +2641,9 @@
   "Ticket 80 mm": "Ticket 80 mm",
   "Media carta (A5)": "Media carta (A5)",
   "Carta (A4)": "Carta (A4)",
-  "Cant.": "Cant."
+  "Cant.": "Cant.",
+  "Sin conexión": "Sin conexión",
+  "Sincronizando…": "Sincronizando…",
+  "Ventas por sincronizar: {count}": "Ventas por sincronizar: {count}",
+  "Guardada sin conexión — se sincroniza al volver internet": "Guardada sin conexión — se sincroniza al volver internet"
 }

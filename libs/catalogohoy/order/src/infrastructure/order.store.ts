@@ -229,6 +229,8 @@ export const OrderStore = signalStore(
         source?: string;
         /** Caja abierta a la que se imputa la venta del POS (opcional). */
         posCashSessionId?: number | null;
+        /** uuid de idempotencia de ventas offline del POS (CAT-85). */
+        posClientId?: string | null;
       }): Promise<E.Either<string, Order>> {
         patchState(store, { isLoading: true, error: null });
 

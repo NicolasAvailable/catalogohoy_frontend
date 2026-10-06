@@ -49,6 +49,27 @@
   <!-- ── Contenido ── -->
   <div class="pos-main">
     <header class="pos-topbar">
+      <!-- CAT-85: estado de red + ventas offline pendientes de sincronizar -->
+      <div class="tb-left">
+        @if (!offline.online()) {
+          <span class="tb-chip offline">
+            <ui-icon name="cloud-off" styleClass="size-4" />
+            {{ 'Sin conexión' | transloco }}
+          </span>
+        }
+        @if (offline.syncing()) {
+          <span class="tb-chip syncing">
+            <ui-icon name="refresh-cw" styleClass="size-4 animate-spin" />
+            {{ 'Sincronizando…' | transloco }}
+          </span>
+        } @else if (offline.pending() > 0) {
+          <button type="button" class="tb-chip pending" (click)="offline.sync()"
+            [pTooltip]="'Sincronizar ahora' | transloco" tooltipPosition="bottom">
+            <ui-icon name="cloud-upload" styleClass="size-4" />
+            {{ 'Ventas por sincronizar: {count}' | transloco: { count: offline.pending() } }}
+          </button>
+        }
+      </div>
       <div class="tb-right">
         <button type="button" class="tb-icon" [pTooltip]="'Notificaciones' | transloco" tooltipPosition="bottom">
           <ui-icon name="bell" styleClass="size-6" />

@@ -2641,5 +2641,9 @@
   "Ticket 80 mm": "Ticket 80 mm",
   "Media carta (A5)": "Demi-lettre (A5)",
   "Carta (A4)": "Lettre (A4)",
-  "Cant.": "Qté"
+  "Cant.": "Qté",
+  "Sin conexión": "Hors ligne",
+  "Sincronizando…": "Synchronisation…",
+  "Ventas por sincronizar: {count}": "Ventes à synchroniser : {count}",
+  "Guardada sin conexión — se sincroniza al volver internet": "Enregistrée hors ligne — synchronisation au retour d'internet"
 }

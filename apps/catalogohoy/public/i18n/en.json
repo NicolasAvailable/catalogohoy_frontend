@@ -2641,5 +2641,9 @@
   "Ticket 80 mm": "80 mm ticket",
   "Media carta (A5)": "Half letter (A5)",
   "Carta (A4)": "Letter (A4)",
-  "Cant.": "Qty"
+  "Cant.": "Qty",
+  "Sin conexión": "Offline",
+  "Sincronizando…": "Syncing…",
+  "Ventas por sincronizar: {count}": "Sales to sync: {count}",
+  "Guardada sin conexión — se sincroniza al volver internet": "Saved offline — it will sync when you are back online"
 }

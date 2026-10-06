@@ -2641,5 +2641,9 @@
   "Ticket 80 mm": "Cupom 80 mm",
   "Media carta (A5)": "Meia carta (A5)",
   "Carta (A4)": "Carta (A4)",
-  "Cant.": "Qtd."
+  "Cant.": "Qtd.",
+  "Sin conexión": "Sem conexão",
+  "Sincronizando…": "Sincronizando…",
+  "Ventas por sincronizar: {count}": "Vendas a sincronizar: {count}",
+  "Guardada sin conexión — se sincroniza al volver internet": "Salva sem conexão — sincroniza quando a internet voltar"
 }

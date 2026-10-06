@@ -53,6 +53,13 @@ export const RateStore = signalStore(
     const tenantStore = inject(TenantStore);
 
     return {
+      /** CAT-85 (POS offline): siembra la última tasa conocida desde el caché
+       *  local cuando no hay red. Solo si el store está vacío. */
+      hydrate(rate: ExchangeRate) {
+        if (store.rate() !== null) return;
+        patchState(store, { rate, isLoading: false });
+      },
+
       async loadRates() {
         patchState(store, { isLoading: true, error: null });
 

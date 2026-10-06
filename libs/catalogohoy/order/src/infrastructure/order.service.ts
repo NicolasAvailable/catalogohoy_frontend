@@ -38,6 +38,10 @@ export interface CreateOrderInput {
   name: string;
   phone?: string;
   comments?: string;
+  /** CAT-85: uuid de idempotencia de las ventas offline del POS. El índice
+   *  único (tenant_id, pos_client_id) hace que reintentar un sync cortado no
+   *  duplique la orden. undefined = orden normal. */
+  posClientId?: string | null;
   /** Admin-only proof of payment (note + image URLs). Only the admin order
    *  form sends this; the public catalog checkout never does. */
   paymentEvidence?: PaymentEvidence | null;
@@ -406,6 +410,8 @@ export class OrderService {
     // Venta del POS imputada a una caja abierta (opcional).
     if (input.posCashSessionId != null)
       payload['pos_cash_session_id'] = input.posCashSessionId;
+    // Venta offline del POS: uuid de idempotencia para el sync (CAT-85).
+    if (input.posClientId) payload['pos_client_id'] = input.posClientId;
     if (input.deliveryDate) payload['delivery_date'] = input.deliveryDate;
     if (input.paymentEvidence !== undefined)
       payload['payment_evidence'] = input.paymentEvidence;
