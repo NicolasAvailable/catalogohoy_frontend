@@ -90,3 +90,25 @@
 - **Reglas**: clientes se crean manual o se auto-backfillean desde órdenes (nombre/teléfono).
   Tags tenant-scoped para segmentar. Stats son agregados point-in-time (se actualizan al refetch).
   Realtime sobre `customers`.
+
+## POS — Punto de Venta (`apps/catalogohoy/src/app/modules/pos/`, ruta `/pos`)
+
+- Full-screen fuera del layout admin; gate por plan (Avanzado/Enterprise, `posEnabledGuard`).
+  Settings en `pos-settings.store.ts` (localStorage por tenant): medios de pago, ticket
+  (header/footer/logo), impresora térmica (WebUSB ESC/POS, 58/80 mm) y **tamaño del recibo
+  imprimible** (`ticket.format`: 58 | 80 | media-carta | carta — los dos últimos con layout de
+  factura; generadores `ticketReceiptHtml`/`sheetReceiptHtml` en `views/venta/venta.ts`).
+- **IVA (CAT-84)**: `buildTaxLine` (venta.ts) agrega el desglose informativo del impuesto del
+  catálogo (`tenant_ecommerce_config.tax_rate/tax_label`) a los 3 formatos de recibo.
+- **Offline F1+F2 (CAT-85)** — `offline/pos-offline.store.ts`:
+  - F1: espejo de productos/config/tasa en IndexedDB al cargar con red; sin red se siembra vía
+    `ProductStore.set` + `hydrate()` (EcommerceConfigStore/RateStore).
+  - F2: cobrar sin red encola la venta (uuid → `orders.pos_client_id`, índice único por tenant,
+    migración `20261006_orders_pos_client_id.sql`) y sincroniza FIFO en el evento `online`;
+    duplicado (23505) = ya sincronizada; stock se descuenta al sincronizar. Chips de estado en el
+    topbar del shell y badge en la pantalla de éxito.
+  - Alcance: sesión ya abierta (corte de luz a mitad de jornada). F3 (service worker para abrir
+    sin red + reconciliación multi-dispositivo) pendiente.
+- ⚠️ Gotcha: todo ícono nuevo debe registrarse en
+  `libs/catalogohoy/core/src/providers/icons/providers/lucide.provide.ts` (import + lista); un
+  ícono sin registrar rompe el render del componente a mitad de change detection.
