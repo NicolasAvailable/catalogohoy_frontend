@@ -63,8 +63,10 @@
             {{ 'Sincronizando…' | transloco }}
           </span>
         } @else if (offline.pending() > 0) {
-          <button type="button" class="tb-chip pending" (click)="offline.sync()"
-            [pTooltip]="'Sincronizar ahora' | transloco" tooltipPosition="bottom">
+          <button type="button" class="tb-chip pending" (click)="offline.sync(true)"
+            [disabled]="!offline.online()"
+            [pTooltip]="(offline.online() ? 'Sincronizar ahora' : 'Se sincroniza al volver internet') | transloco"
+            tooltipPosition="bottom">
             <ui-icon name="cloud-upload" styleClass="size-4" />
             {{ 'Ventas por sincronizar: {count}' | transloco: { count: offline.pending() } }}
           </button>

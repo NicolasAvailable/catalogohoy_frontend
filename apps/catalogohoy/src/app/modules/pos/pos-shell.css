@@ -145,6 +145,10 @@
   border-color: #fde68a;
   cursor: pointer;
 }
+.tb-chip.pending:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
 .tb-chip.syncing {
   background: #eff6ff;
   color: #1d4ed8;

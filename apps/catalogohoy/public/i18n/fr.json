@@ -2645,5 +2645,6 @@
   "Sin conexión": "Hors ligne",
   "Sincronizando…": "Synchronisation…",
   "Ventas por sincronizar: {count}": "Ventes à synchroniser : {count}",
-  "Guardada sin conexión — se sincroniza al volver internet": "Enregistrée hors ligne — synchronisation au retour d'internet"
+  "Guardada sin conexión — se sincroniza al volver internet": "Enregistrée hors ligne — synchronisation au retour d'internet",
+  "Se sincroniza al volver internet": "Synchronisation au retour d'internet"
 }

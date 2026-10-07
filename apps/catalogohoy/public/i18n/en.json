@@ -2645,5 +2645,6 @@
   "Sin conexión": "Offline",
   "Sincronizando…": "Syncing…",
   "Ventas por sincronizar: {count}": "Sales to sync: {count}",
-  "Guardada sin conexión — se sincroniza al volver internet": "Saved offline — it will sync when you are back online"
+  "Guardada sin conexión — se sincroniza al volver internet": "Saved offline — it will sync when you are back online",
+  "Se sincroniza al volver internet": "Will sync when back online"
 }

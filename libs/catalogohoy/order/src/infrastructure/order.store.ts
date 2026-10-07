@@ -259,9 +259,13 @@ export const OrderStore = signalStore(
               return E.right(order);
             }
           );
-        } catch {
-          patchState(store, { isLoading: false, error: 'Error inesperado' });
-          return E.left('Error inesperado');
+        } catch (e) {
+          // Preservar el mensaje real: el POS offline detecta la caída de red
+          // por el texto del error ("Failed to fetch") para encolar la venta
+          // en vez de perderla (CAT-85).
+          const msg = e instanceof Error && e.message ? e.message : 'Error inesperado';
+          patchState(store, { isLoading: false, error: msg });
+          return E.left(msg);
         }
       },
 

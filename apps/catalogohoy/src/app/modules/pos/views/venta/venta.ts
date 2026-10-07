@@ -37,7 +37,11 @@ import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { IconComponent, InputPhoneComponent } from '@ui';
 import { PosCartStore } from '../../pos-cart.store';
-import { PosOfflineStore, QueuedSale } from '../../offline/pos-offline.store';
+import {
+  isNetworkError,
+  PosOfflineStore,
+  QueuedSale,
+} from '../../offline/pos-offline.store';
 import { PosCajaStore } from '../../pos-caja.store';
 import { PosSettingsStore } from '../../pos-settings.store';
 import { PosPrinterService } from '../../pos-printer.service';
@@ -684,8 +688,12 @@ export default class PosVenta implements OnInit {
     // pendientes → subcontaría Bs para siempre. Pedimos reintentar.
     const totalBs = this.chargeTotalBs();
     if (this.tenantCurrency.showDualCurrency() && totalBs <= 0) {
+      // Offline sin tasa espejada: "probá en un momento" sería mentira — la
+      // tasa no va a llegar hasta que vuelva la red.
       this.toast.error(
-        'Cargando la tasa del día, probá de nuevo en un momento.' as unknown as Exception
+        (this.offline.online()
+          ? 'Cargando la tasa del día, probá de nuevo en un momento.'
+          : 'Sin conexión y sin tasa del día guardada: reconectá para poder cobrar en bolívares.') as unknown as Exception
       );
       return;
     }
@@ -722,8 +730,9 @@ export default class PosVenta implements OnInit {
       await result.fold(
         async (error) => {
           // La red se cayó entre que abrió el modal y confirmó el cobro:
-          // misma cola offline en vez de perder la venta.
-          if (/failed to fetch|network/i.test(error)) {
+          // misma cola offline en vez de perder la venta. `navigator.onLine`
+          // de respaldo por si el mensaje del motor no está contemplado.
+          if (isNetworkError(error) || !navigator.onLine) {
             this.offline.online.set(false);
             await this.chargeOffline(orderData, totalBs);
             return;

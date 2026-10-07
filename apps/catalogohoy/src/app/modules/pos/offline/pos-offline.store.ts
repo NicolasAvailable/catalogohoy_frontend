@@ -1,7 +1,10 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { EcommerceConfigStore } from '@catalogohoy/ecommerce-config';
 import { OrderItem, OrderStatus, OrderStore } from '@catalogohoy/order';
+import { RateStore } from '@catalogohoy/rate';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
+import { PosCajaStore } from '../pos-caja.store';
 
 /** Payload de una venta cobrada sin conexión, lista para re-enviarse tal cual
  *  a `OrderStore.createOrder` al volver la red. */
@@ -39,6 +42,17 @@ export interface PosSnapshot {
   config: unknown | null;
   /** Última `ExchangeRate` conocida (VE). */
   rate: unknown | null;
+}
+
+/** ¿El mensaje de error corresponde a una caída de red? Cubre los textos
+ *  reales de los 3 motores: Chrome "Failed to fetch", Firefox "NetworkError
+ *  when attempting to fetch resource.", Safari/WebKit "Load failed" (el POS
+ *  corre mayormente en iPad). supabase-js v2 NO rechaza ante fallo de red:
+ *  resuelve con `error.message = "TypeError: <texto>"`. */
+export function isNetworkError(message: string): boolean {
+  return /failed to fetch|networkerror|network request failed|load failed|fetch failed|err_internet/i.test(
+    message
+  );
 }
 
 const DB_NAME = 'pos-offline';
@@ -96,6 +110,9 @@ function tx<T>(
 @Injectable({ providedIn: 'root' })
 export class PosOfflineStore {
   private readonly orderStore = inject(OrderStore);
+  private readonly configStore = inject(EcommerceConfigStore);
+  private readonly rateStore = inject(RateStore);
+  private readonly caja = inject(PosCajaStore);
   private readonly toast = inject(ToastService);
 
   /** Estado de red reactivo (navigator.onLine + eventos online/offline). */
@@ -105,7 +122,6 @@ export class PosOfflineStore {
   readonly syncing = signal(false);
 
   private tenantKey = '';
-  private db: IDBDatabase | null = null;
   private initialized = false;
 
   /** Idempotente. Registra los listeners de red, cuenta pendientes y dispara
@@ -125,12 +141,24 @@ export class PosOfflineStore {
       this.initialized = true;
       window.addEventListener('online', () => {
         this.online.set(true);
-        void this.sync();
+        void this.onReconnect();
       });
       window.addEventListener('offline', () => this.online.set(false));
     }
     await this.refreshPending();
     if (this.online() && this.pending() > 0) void this.sync();
+  }
+
+  /** Al volver la red: sube la cola Y refresca config/tasa — la hidratación
+   *  offline sembró datos del caché y `loadConfig` tiene guard "si ya hay
+   *  config, no-op", así que sin este reload la config vieja quedaría pegada
+   *  toda la sesión (incluso navegando al admin). */
+  private async onReconnect(): Promise<void> {
+    await this.sync();
+    if (this.tenantKey) {
+      void this.configStore.reloadConfig(this.tenantKey);
+      void this.rateStore.loadRates();
+    }
   }
 
   /** Tenant con el que se abrió el POS por última vez (fallback offline). */
@@ -187,21 +215,37 @@ export class PosOfflineStore {
     return sale;
   }
 
+  /** Tras N fallos NO-red, una venta deja de reintentarse en los sync
+   *  automáticos (solo el sync manual del chip la vuelve a intentar) — evita
+   *  que un error permanente (p.ej. tope de plan) martille y spamee toasts. */
+  private static readonly MAX_AUTO_TRIES = 5;
+
   /** Sube las ventas pendientes en orden FIFO. Corta ante un error de red
    *  (reintenta en el próximo 'online'); un duplicado (sync anterior cortado
-   *  a la mitad) se da por sincronizado. */
-  async sync(): Promise<void> {
+   *  a la mitad) se da por sincronizado. `manual=true` (chip) reintenta
+   *  también las ventas que agotaron sus reintentos automáticos. */
+  async sync(manual = false): Promise<void> {
     if (this.syncing() || !this.online() || !this.tenantKey) return;
-    const sales = await this.queued();
-    if (!sales.length) return;
-
+    // El flag ANTES de cualquier await: 'online' + init del shell + init de
+    // venta + click manual pueden solaparse y colarse todos por el guard.
     this.syncing.set(true);
     let synced = 0;
     let failed = 0;
     try {
-      for (const sale of sales.sort((a, b) => a.chargedAt - b.chargedAt)) {
+      const sales = (await this.queued())
+        .filter((s) => manual || s.tries < PosOfflineStore.MAX_AUTO_TRIES)
+        .sort((a, b) => a.chargedAt - b.chargedAt);
+      for (const sale of sales) {
         const result = await this.orderStore.createOrder({
           ...sale.order,
+          // Si la caja a la que se imputó ya no es la sesión abierta (se cerró
+          // con el arqueo congelado antes de este sync), la venta entra sin
+          // caja: imputarla a una sesión cerrada descuadraría su cierre.
+          posCashSessionId:
+            sale.order.posCashSessionId != null &&
+            sale.order.posCashSessionId === this.caja.openSessionId()
+              ? sale.order.posCashSessionId
+              : null,
           posClientId: sale.clientId,
         });
         const ok = result.fold(
@@ -210,7 +254,7 @@ export class PosOfflineStore {
             // un sync anterior que se cortó después del insert.
             if (/duplicate key|pos_client_unique|23505/i.test(error)) return true;
             // Sin red a mitad del sync: cortar y reintentar al reconectar.
-            if (/failed to fetch|network|fetch/i.test(error)) return null;
+            if (isNetworkError(error)) return null;
             return false;
           },
           () => true
@@ -234,6 +278,8 @@ export class PosOfflineStore {
           ? '1 venta offline sincronizada ✓'
           : `${synced} ventas offline sincronizadas ✓`
       );
+      // Ventas imputadas a la caja abierta: refrescar su arqueo.
+      if (this.caja.hasOpenSession()) this.caja.refresh();
     }
     if (failed > 0) {
       this.toast.error(
@@ -270,8 +316,11 @@ export class PosOfflineStore {
     this.pending.set((await this.queued()).length);
   }
 
-  private async database(): Promise<IDBDatabase> {
-    if (!this.db) this.db = await openDb();
-    return this.db;
+  /** Memoiza la PROMESA (no la conexión): dos llamadas concurrentes en el
+   *  arranque (refreshPending + saveSnapshot) comparten el mismo open. */
+  private dbPromise: Promise<IDBDatabase> | null = null;
+  private database(): Promise<IDBDatabase> {
+    if (!this.dbPromise) this.dbPromise = openDb();
+    return this.dbPromise;
   }
 }

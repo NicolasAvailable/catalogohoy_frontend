@@ -2645,5 +2645,6 @@
   "Sin conexión": "Sin conexión",
   "Sincronizando…": "Sincronizando…",
   "Ventas por sincronizar: {count}": "Ventas por sincronizar: {count}",
-  "Guardada sin conexión — se sincroniza al volver internet": "Guardada sin conexión — se sincroniza al volver internet"
+  "Guardada sin conexión — se sincroniza al volver internet": "Guardada sin conexión — se sincroniza al volver internet",
+  "Se sincroniza al volver internet": "Se sincroniza al volver internet"
 }
