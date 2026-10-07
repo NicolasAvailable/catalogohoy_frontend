@@ -2651,5 +2651,10 @@
   "Número de documento": "Document number",
   "Base imponible": "Taxable base",
   "Sugeridos para tu país": "Suggested for your country",
-  "Un toque lo deja listo; abajo puedes ajustar el porcentaje y el nombre.": "One tap sets it up; you can adjust the rate and name below."
+  "Un toque lo deja listo; abajo puedes ajustar el porcentaje y el nombre.": "One tap sets it up; you can adjust the rate and name below.",
+  "Descarga todos tus productos en Excel o CSV, listos para editar y volver a importar.": "Download all your products as Excel or CSV, ready to edit and re-import.",
+  "¿En qué formato quieres exportar?": "Which format do you want to export?",
+  "El archivo trae todos tus productos, listo para editar y volver a importar.": "The file includes all your products, ready to edit and re-import.",
+  "Archivo .xlsx con columnas ajustadas, ideal para editar.": "An .xlsx file with fitted columns, ideal for editing.",
+  "Archivo .csv de texto plano, compatible con cualquier sistema.": "A plain-text .csv file, compatible with any system."
 }

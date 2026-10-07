@@ -2651,5 +2651,10 @@
   "Número de documento": "Numéro de document",
   "Base imponible": "Base imposable",
   "Sugeridos para tu país": "Suggérés pour votre pays",
-  "Un toque lo deja listo; abajo puedes ajustar el porcentaje y el nombre.": "Un seul geste et c’est prêt ; ajustez le taux et le nom ci-dessous."
+  "Un toque lo deja listo; abajo puedes ajustar el porcentaje y el nombre.": "Un seul geste et c’est prêt ; ajustez le taux et le nom ci-dessous.",
+  "Descarga todos tus productos en Excel o CSV, listos para editar y volver a importar.": "Téléchargez tous vos produits en Excel ou CSV, prêts à modifier et réimporter.",
+  "¿En qué formato quieres exportar?": "Dans quel format souhaitez-vous exporter ?",
+  "El archivo trae todos tus productos, listo para editar y volver a importar.": "Le fichier contient tous vos produits, prêt à modifier et réimporter.",
+  "Archivo .xlsx con columnas ajustadas, ideal para editar.": "Fichier .xlsx avec colonnes ajustées, idéal pour modifier.",
+  "Archivo .csv de texto plano, compatible con cualquier sistema.": "Fichier .csv en texte brut, compatible avec tout système."
 }

@@ -2651,5 +2651,10 @@
   "Número de documento": "Número de documento",
   "Base imponible": "Base imponible",
   "Sugeridos para tu país": "Sugeridos para tu país",
-  "Un toque lo deja listo; abajo puedes ajustar el porcentaje y el nombre.": "Un toque lo deja listo; abajo puedes ajustar el porcentaje y el nombre."
+  "Un toque lo deja listo; abajo puedes ajustar el porcentaje y el nombre.": "Un toque lo deja listo; abajo puedes ajustar el porcentaje y el nombre.",
+  "Descarga todos tus productos en Excel o CSV, listos para editar y volver a importar.": "Descarga todos tus productos en Excel o CSV, listos para editar y volver a importar.",
+  "¿En qué formato quieres exportar?": "¿En qué formato quieres exportar?",
+  "El archivo trae todos tus productos, listo para editar y volver a importar.": "El archivo trae todos tus productos, listo para editar y volver a importar.",
+  "Archivo .xlsx con columnas ajustadas, ideal para editar.": "Archivo .xlsx con columnas ajustadas, ideal para editar.",
+  "Archivo .csv de texto plano, compatible con cualquier sistema.": "Archivo .csv de texto plano, compatible con cualquier sistema."
 }
