@@ -44,7 +44,37 @@ export class ConfirmEmail implements OnInit {
     }
 
     this.processing = true;
+
+    // Invitación pendiente: el token viaja en el query del link de
+    // verificación (emailRedirectTo del signupInvitee) o quedó en
+    // sessionStorage si es el mismo navegador. Un invitado NO tiene tenant
+    // hasta aceptar, así que confirmEmail devuelve Left para él — por eso
+    // el accept va ANTES de evaluar el redirect.
+    const inviteToken =
+      this.route.snapshot.queryParamMap.get('invite_token') ??
+      sessionStorage.getItem('pending_invite_token');
+
     const result = await this.facade.confirmEmail(accessToken, refreshToken);
+
+    if (inviteToken) {
+      // confirmEmail ya dejó la sesión establecida (aunque haya devuelto
+      // Left por falta de tenant); con sesión, el accept sí procede.
+      const accepted = await this.facade.acceptInvite(inviteToken);
+      if (accepted.isRight()) {
+        sessionStorage.removeItem('pending_invite_token');
+        const redirect = await this.facade.getLoginRedirectUrl();
+        if (redirect.isRight()) {
+          window.location.href = redirect.value as string;
+          return;
+        }
+      }
+      this.processing = false;
+      this.fail(
+        'Tu correo quedó verificado, pero no pudimos vincular la invitación. Inicia sesión para aceptarla.'
+      );
+      return;
+    }
+
     result
       .mapRight((url) => {
         window.location.href = url; // al admin del tenant (cross-app)

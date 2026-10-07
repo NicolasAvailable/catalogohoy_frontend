@@ -558,16 +558,19 @@ export class AuthenticationService implements BaseAuthenticationService {
     password: string;
     name: string;
     inviteToken: string;
-  }): Promise<E.Either<Error, void>> {
+  }): Promise<E.Either<Error, string | void>> {
     // `is_invitee` + `invite_token` let the `handle_new_user` DB trigger skip
     // auto-creating a tenant for this user (they will be linked to the
     // inviter's tenant via `accept-team-invite`). Without this flag, the
     // trigger seeds an orphan tenant named after the email prefix, which
     // shows up in the tenant switcher and confuses the invitee.
-    const { error } = await this.client.auth.signUp({
+    const { data, error } = await this.client.auth.signUp({
       email: credentials.email,
       password: credentials.password,
       options: {
+        // El token viaja en el link de verificación: si el correo se abre en
+        // OTRO navegador, /confirm-email igual puede aceptar la invitación.
+        emailRedirectTo: `${window.location.origin}/confirm-email?invite_token=${encodeURIComponent(credentials.inviteToken)}`,
         data: {
           name: credentials.name,
           display_name: credentials.name,
@@ -578,6 +581,12 @@ export class AuthenticationService implements BaseAuthenticationService {
     });
 
     if (error) return E.left(errorMapper(error as AuthApiError));
+    // Confirmación de correo activa → signUp no devuelve sesión. Sin esto,
+    // el flujo seguía como si hubiera login y el accept fallaba en silencio
+    // (bug 7-oct: el invitado quedaba plantado sin poder crear la cuenta).
+    if (!data.session) {
+      return E.right(SIGNUP_CONFIRM_EMAIL);
+    }
     return E.right(undefined);
   }
 }

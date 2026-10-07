@@ -311,10 +311,27 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
         this.isCheckingEmail.set(false);
         return;
       }
-      await this.facade.acceptInvite(this.inviteToken);
-      sessionStorage.removeItem('pending_invite_token');
+      // Confirmación de correo activa: aún no hay sesión, así que NO se puede
+      // aceptar la invitación acá. El token sigue en sessionStorage y en el
+      // link de verificación; /confirm-email completa el accept.
+      if (signupResult.value === SIGNUP_CONFIRM_EMAIL) {
+        this.isCheckingEmail.set(false);
+        this.confirmEmailSent.set(email);
+        return;
+      }
+      const accepted = await this.facade.acceptInvite(this.inviteToken);
+      if (accepted.isRight()) {
+        sessionStorage.removeItem('pending_invite_token');
+      }
       const redirectResult = await this.facade.getLoginRedirectUrl();
-      redirectResult.mapRight((url) => (window.location.href = url));
+      redirectResult
+        .mapRight((url) => (window.location.href = url))
+        // Sin tenant aún (accept falló): el login re-intenta con el token.
+        .mapLeft(() =>
+          this.router.navigate(['/login'], {
+            queryParams: { invite_token: this.inviteToken },
+          })
+        );
       return;
     }
 
@@ -361,11 +378,28 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
         inviteToken: this.inviteToken,
       });
       if (signupResult.isLeft()) return;
-      await this.facade.acceptInvite(this.inviteToken);
-      sessionStorage.removeItem('pending_invite_token');
+      // Confirmación de correo activa: sin sesión no se puede aceptar acá;
+      // /confirm-email completa el accept con el token del link.
+      if (signupResult.value === SIGNUP_CONFIRM_EMAIL) {
+        const { email: inviteeEmail } = this.credentialsForm.getRawValue() as {
+          email: string;
+        };
+        this.confirmEmailSent.set(inviteeEmail);
+        return;
+      }
+      const accepted = await this.facade.acceptInvite(this.inviteToken);
+      if (accepted.isRight()) {
+        sessionStorage.removeItem('pending_invite_token');
+      }
       await this._recordTermsAcceptance();
       const redirectResult = await this.facade.getLoginRedirectUrl();
-      redirectResult.mapRight((url) => (window.location.href = url));
+      redirectResult
+        .mapRight((url) => (window.location.href = url))
+        .mapLeft(() =>
+          this.router.navigate(['/login'], {
+            queryParams: { invite_token: this.inviteToken },
+          })
+        );
       return;
     }
 
