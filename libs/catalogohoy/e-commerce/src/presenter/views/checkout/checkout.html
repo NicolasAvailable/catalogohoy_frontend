@@ -395,7 +395,20 @@
     }
     @if (taxInfo(); as tax) {
     <div class="checkout__summary-row checkout__summary-tax">
-      <span>{{ tax.label }} {{ tax.rate | number:'1.0-2' }}% ({{ 'incluido' | transloco }})</span>
+      <span>{{ 'Base imponible' | transloco }}</span>
+      <span>
+        @if (showReferencePrice()) {
+        {{ cs() }}{{ tax.base | tenantPrice }}
+        @if (showBs()) { <small class="checkout__price-bs">Bs. {{ tax.base * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
+        } @else if (showBs()) {
+        Bs. {{ tax.base * ecommerceStore.exchangeRate() | number:'1.2-2' }}
+        } @else {
+        {{ cs() }}{{ tax.base | tenantPrice }}
+        }
+      </span>
+    </div>
+    <div class="checkout__summary-row checkout__summary-tax">
+      <span>{{ tax.label }} {{ tax.rate | number:'1.0-2' }}%</span>
       <span>
         @if (showReferencePrice()) {
         {{ cs() }}{{ tax.usd | tenantPrice }}

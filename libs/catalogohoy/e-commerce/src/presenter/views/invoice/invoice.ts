@@ -70,16 +70,18 @@ export default class Invoice {
     return o && o.totalUsd > 0 && o.totalBs ? o.totalBs / o.totalUsd : 0;
   });
 
-  /** CAT-84: desglose informativo del impuesto incluido en el total.
-   *  porción = total − total/(1+rate). Null = catálogo sin impuesto. */
+  /** CAT-84: desglose del impuesto incluido estilo factura fiscal —
+   *  base imponible → IVA → total. Null = catálogo sin impuesto. */
   public readonly taxInfo = computed(() => {
-    const rate = this.info()?.taxRate ?? 0;
+    const rate = Number(this.info()?.taxRate ?? 0);
     const o = this.order();
     if (!rate || rate <= 0 || !o) return null;
+    const base = o.totalUsd / (1 + rate / 100);
     return {
       label: this.info()?.taxLabel?.trim() || 'IVA',
       rate,
-      usd: o.totalUsd - o.totalUsd / (1 + rate / 100),
+      base,
+      usd: o.totalUsd - base,
     };
   });
 

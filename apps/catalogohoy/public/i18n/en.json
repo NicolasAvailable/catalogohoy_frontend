@@ -2648,5 +2648,6 @@
   "Guardada sin conexión — se sincroniza al volver internet": "Saved offline — it will sync when you are back online",
   "Se sincroniza al volver internet": "Will sync when back online",
   "Salen en el recibo y la factura.": "They appear on the receipt and the invoice.",
-  "Número de documento": "Document number"
+  "Número de documento": "Document number",
+  "Base imponible": "Taxable base"
 }

@@ -110,7 +110,15 @@
     }
     @if (taxInfo(); as tax) {
     <div class="invoice__row invoice__row--tax">
-      <span>{{ tax.label }} {{ tax.rate | number:'1.0-2' }}% ({{ 'incluido' | transloco }})</span>
+      <span>{{ 'Base imponible' | transloco }}</span>
+      <span>
+        @if (showReferencePrice()) { {{ cs() }}{{ tax.base | tenantPrice }} }
+        @else if (showBs()) { Bs. {{ tax.base * orderRate() | number:'1.2-2' }} }
+        @else { {{ cs() }}{{ tax.base | tenantPrice }} }
+      </span>
+    </div>
+    <div class="invoice__row invoice__row--tax">
+      <span>{{ tax.label }} {{ tax.rate | number:'1.0-2' }}%</span>
       <span>
         @if (showReferencePrice()) { {{ cs() }}{{ tax.usd | tenantPrice }} }
         @else if (showBs()) { Bs. {{ tax.usd * orderRate() | number:'1.2-2' }} }

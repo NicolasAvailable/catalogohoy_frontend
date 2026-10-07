@@ -273,15 +273,18 @@ export default class Checkout {
     )
   );
 
-  /** CAT-84: desglose informativo del impuesto incluido en el total. */
+  /** CAT-84: desglose del impuesto incluido en el total, estilo factura
+   *  fiscal — base imponible → IVA → total (el total NO cambia). */
   public readonly taxInfo = computed(() => {
-    const rate = this.info()?.taxRate ?? 0;
+    const rate = Number(this.info()?.taxRate ?? 0);
     const total = this.total();
     if (!rate || rate <= 0 || total <= 0) return null;
+    const base = total / (1 + rate / 100);
     return {
       label: this.info()?.taxLabel?.trim() || 'IVA',
       rate,
-      usd: total - total / (1 + rate / 100),
+      base,
+      usd: total - base,
     };
   });
 

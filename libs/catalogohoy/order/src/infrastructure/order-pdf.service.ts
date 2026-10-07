@@ -534,13 +534,16 @@ export class OrderPdfService {
       y += 5;
     }
 
-    // IVA/impuesto incluido (CAT-84): línea informativa en gris — el precio ya
-    // lo incluye, NO altera el total. porción = total − total/(1+rate).
+    // IVA/impuesto incluido (CAT-84): desglose estilo factura fiscal — base
+    // imponible → IVA → total. El precio YA lo incluye, NO altera el total.
     if (taxRate && taxRate > 0) {
-      const taxPortion = displayTotalUsd - displayTotalUsd / (1 + taxRate / 100);
+      const taxBase = displayTotalUsd / (1 + Number(taxRate) / 100);
       doc.setTextColor(...GREY);
-      doc.text(`${taxLabel} ${taxRate}% (incluido)`, labelX, y);
-      doc.text(money(taxPortion), valX, y, { align: 'right' });
+      doc.text('Base imponible', labelX, y);
+      doc.text(money(taxBase), valX, y, { align: 'right' });
+      y += 5;
+      doc.text(`${taxLabel} ${taxRate}%`, labelX, y);
+      doc.text(money(displayTotalUsd - taxBase), valX, y, { align: 'right' });
       doc.setTextColor(...BLACK);
       y += 5;
     }
