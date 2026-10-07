@@ -2641,5 +2641,10 @@
   "Ticket 80 mm": "Ticket 80 mm",
   "Media carta (A5)": "Media carta (A5)",
   "Carta (A4)": "Carta (A4)",
-  "Cant.": "Cant."
+  "Cant.": "Cant.",
+  "Descarga todos tus productos en Excel o CSV, listos para editar y volver a importar.": "Descarga todos tus productos en Excel o CSV, listos para editar y volver a importar.",
+  "¿En qué formato quieres exportar?": "¿En qué formato quieres exportar?",
+  "El archivo trae todos tus productos, listo para editar y volver a importar.": "El archivo trae todos tus productos, listo para editar y volver a importar.",
+  "Archivo .xlsx con columnas ajustadas, ideal para editar.": "Archivo .xlsx con columnas ajustadas, ideal para editar.",
+  "Archivo .csv de texto plano, compatible con cualquier sistema.": "Archivo .csv de texto plano, compatible con cualquier sistema."
 }

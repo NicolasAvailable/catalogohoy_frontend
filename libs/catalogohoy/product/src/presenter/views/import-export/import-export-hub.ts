@@ -52,6 +52,7 @@ import {
 
 type View =
   | 'hub'
+  | 'export-pick'
   | 'import-source'
   | 'import-upload'
   | 'import-gsheet'
@@ -307,6 +308,16 @@ export class ImportExportHubComponent {
     this.view.set('import-source');
   }
 
+  /** Del hub al picker de formato de exportación (Excel / CSV) — espejo del
+   *  paso de Importar. */
+  public onExportTile(): void {
+    if (this.isFreePlan()) {
+      toast.error('La exportación de productos está disponible en los planes pagos.');
+      return;
+    }
+    this.view.set('export-pick');
+  }
+
   // ── Google Sheets ────────────────────────────────────────────────────────
   public readonly gsheetUrl = signal('');
   public readonly isFetchingSheet = signal(false);
@@ -356,11 +367,11 @@ export class ImportExportHubComponent {
   /** Exportación en curso (deshabilita el tile y muestra "Generando..."). */
   public readonly isExporting = signal(false);
 
-  /** Descarga TODOS los productos del catálogo en un Excel con las mismas
+  /** Descarga TODOS los productos del catálogo en Excel o CSV con las mismas
    *  columnas que entiende el import → el archivo es autogestionable: se
    *  edita y se re-importa (upsert por SKU). Antes este tile pedía la
    *  exportación por WhatsApp a soporte. */
-  public async onExport(): Promise<void> {
+  public async onExport(format: 'xlsx' | 'csv' = 'xlsx'): Promise<void> {
     if (this.isFreePlan()) {
       toast.error('La exportación de productos está disponible en los planes pagos.');
       return;
@@ -386,9 +397,16 @@ export class ImportExportHubComponent {
         toast.error('No tienes productos para exportar.');
         return;
       }
-      this.excelService
-        .exportToExcel(all)
-        .mapRight(() => toast.success(`Se descargó el Excel con tus ${all.length} productos`))
+      const result =
+        format === 'csv'
+          ? this.excelService.exportToCsv(all)
+          : this.excelService.exportToExcel(all);
+      result
+        .mapRight(() =>
+          toast.success(
+            `Se descargó el ${format === 'csv' ? 'CSV' : 'Excel'} con tus ${all.length} productos`
+          )
+        )
         .mapLeft(() => toast.error('No se pudo generar el archivo. Intenta de nuevo.'));
     } finally {
       this.isExporting.set(false);

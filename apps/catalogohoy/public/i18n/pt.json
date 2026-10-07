@@ -2641,5 +2641,10 @@
   "Ticket 80 mm": "Cupom 80 mm",
   "Media carta (A5)": "Meia carta (A5)",
   "Carta (A4)": "Carta (A4)",
-  "Cant.": "Qtd."
+  "Cant.": "Qtd.",
+  "Descarga todos tus productos en Excel o CSV, listos para editar y volver a importar.": "Baixe todos os seus produtos em Excel ou CSV, prontos para editar e reimportar.",
+  "¿En qué formato quieres exportar?": "Em qual formato você quer exportar?",
+  "El archivo trae todos tus productos, listo para editar y volver a importar.": "O arquivo traz todos os seus produtos, pronto para editar e reimportar.",
+  "Archivo .xlsx con columnas ajustadas, ideal para editar.": "Arquivo .xlsx com colunas ajustadas, ideal para editar.",
+  "Archivo .csv de texto plano, compatible con cualquier sistema.": "Arquivo .csv de texto simples, compatível com qualquer sistema."
 }
