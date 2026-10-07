@@ -303,6 +303,15 @@
         <span>{{ 'Teléfono' | transloco }} <em>({{ 'opcional' | transloco }})</em></span>
         <ui-input-phone [ngModel]="customerPhoneDraft()" (ngModelChange)="customerPhoneDraft.set($event)" [defaultCountry]="defaultPhoneCountry()" />
       </label>
+      <label class="field">
+        <span>{{ documentLabel() }} <em>({{ 'opcional' | transloco }})</em></span>
+        <input type="text" maxlength="30" [ngModel]="customerNitDraft()" (ngModelChange)="customerNitDraft.set($event)" [placeholder]="documentPlaceholder()" />
+      </label>
+      <label class="field">
+        <span>{{ 'Dirección' | transloco }} <em>({{ 'opcional' | transloco }})</em></span>
+        <input type="text" maxlength="160" [ngModel]="customerAddressDraft()" (ngModelChange)="customerAddressDraft.set($event)" [placeholder]="'Dirección del cliente' | transloco" />
+      </label>
+      <p class="field-hint">{{ 'Salen en el recibo y la factura.' | transloco }}</p>
       <div class="modal-actions">
         @if (cart.customerName()) {
           <button type="button" class="btn-ghost" (click)="clearCustomer()">{{ 'Quitar' | transloco }}</button>

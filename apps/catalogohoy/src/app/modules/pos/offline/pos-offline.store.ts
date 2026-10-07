@@ -19,6 +19,9 @@ export interface QueuedSale {
   order: {
     name: string;
     phone?: string;
+    /** Cédula/RIF y dirección del cliente (datos de factura). */
+    nit?: string;
+    shippingAddress?: string;
     comments?: string;
     status: OrderStatus;
     products: OrderItem[];

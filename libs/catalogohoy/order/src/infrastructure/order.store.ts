@@ -231,6 +231,10 @@ export const OrderStore = signalStore(
         posCashSessionId?: number | null;
         /** uuid de idempotencia de ventas offline del POS (CAT-85). */
         posClientId?: string | null;
+        /** Cédula/RIF del cliente para la factura (columna orders.nit). */
+        nit?: string | null;
+        /** Dirección del cliente para la factura (shipping_address). */
+        shippingAddress?: string | null;
       }): Promise<E.Either<string, Order>> {
         patchState(store, { isLoading: true, error: null });
 

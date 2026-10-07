@@ -42,6 +42,12 @@ export interface CreateOrderInput {
    *  único (tenant_id, pos_client_id) hace que reintentar un sync cortado no
    *  duplique la orden. undefined = orden normal. */
   posClientId?: string | null;
+  /** Cédula/RIF/NIT del cliente para la factura (pedido leonardoadventure).
+   *  Misma columna `orders.nit` que usa el checkout público. */
+  nit?: string | null;
+  /** Dirección del cliente para la factura. Misma columna `shipping_address`
+   *  que llena el checkout cuando el envío la pide. */
+  shippingAddress?: string | null;
   /** Admin-only proof of payment (note + image URLs). Only the admin order
    *  form sends this; the public catalog checkout never does. */
   paymentEvidence?: PaymentEvidence | null;
@@ -412,6 +418,10 @@ export class OrderService {
       payload['pos_cash_session_id'] = input.posCashSessionId;
     // Venta offline del POS: uuid de idempotencia para el sync (CAT-85).
     if (input.posClientId) payload['pos_client_id'] = input.posClientId;
+    // Datos de factura del cliente (POS): cédula/RIF y dirección.
+    if (input.nit !== undefined) payload['nit'] = input.nit || null;
+    if (input.shippingAddress !== undefined)
+      payload['shipping_address'] = input.shippingAddress || null;
     if (input.deliveryDate) payload['delivery_date'] = input.deliveryDate;
     if (input.paymentEvidence !== undefined)
       payload['payment_evidence'] = input.paymentEvidence;

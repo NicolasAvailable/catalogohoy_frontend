@@ -2646,5 +2646,7 @@
   "Sincronizando…": "Sincronizando…",
   "Ventas por sincronizar: {count}": "Vendas a sincronizar: {count}",
   "Guardada sin conexión — se sincroniza al volver internet": "Salva sem conexão — sincroniza quando a internet voltar",
-  "Se sincroniza al volver internet": "Sincroniza quando a internet voltar"
+  "Se sincroniza al volver internet": "Sincroniza quando a internet voltar",
+  "Salen en el recibo y la factura.": "Aparecem no recibo e na fatura.",
+  "Número de documento": "Número do documento"
 }

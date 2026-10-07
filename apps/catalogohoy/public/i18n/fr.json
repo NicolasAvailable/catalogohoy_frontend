@@ -2646,5 +2646,7 @@
   "Sincronizando…": "Synchronisation…",
   "Ventas por sincronizar: {count}": "Ventes à synchroniser : {count}",
   "Guardada sin conexión — se sincroniza al volver internet": "Enregistrée hors ligne — synchronisation au retour d'internet",
-  "Se sincroniza al volver internet": "Synchronisation au retour d'internet"
+  "Se sincroniza al volver internet": "Synchronisation au retour d'internet",
+  "Salen en el recibo y la factura.": "Ils apparaissent sur le reçu et la facture.",
+  "Número de documento": "Numéro de document"
 }

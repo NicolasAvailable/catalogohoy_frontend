@@ -15,6 +15,11 @@ export interface ThermalReceipt {
   number: number | null;
   dateStr: string;
   customer: string;
+  /** Cédula/RIF y dirección del cliente; vacíos = no se imprimen. El label
+   *  de la cédula llega traducido en `nitLabel`. */
+  nit?: string;
+  nitLabel?: string;
+  address?: string;
   lines: ThermalLine[];
   subtotal: number;
   discount: number;
@@ -312,6 +317,8 @@ export class PosPrinterService {
     if (r.header) b.bold(true).line(r.header).bold(false);
     b.text(r.dateStr + (r.number != null ? ` #${r.number}` : '')).feed();
     if (r.customer) b.line(r.customer);
+    if (r.nit) b.line(`${r.nitLabel || 'Cedula/RIF'}: ${r.nit}`);
+    if (r.address) b.line(r.address);
     b.align('left').text('-'.repeat(cols)).feed();
 
     for (const l of r.lines) {

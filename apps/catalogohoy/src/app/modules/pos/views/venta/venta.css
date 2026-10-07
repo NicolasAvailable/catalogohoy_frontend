@@ -972,3 +972,10 @@
     font-size: 1.05rem;
   }
 }
+
+/* Nota al pie del modal de cliente (cédula/dirección → factura). */
+.field-hint {
+  margin: -0.25rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}

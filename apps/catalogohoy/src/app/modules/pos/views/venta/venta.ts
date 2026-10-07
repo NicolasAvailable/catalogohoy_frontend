@@ -63,6 +63,9 @@ interface PosSaleReceipt {
   dateStr: string;
   customer: string;
   phone: string;
+  /** Cédula/RIF y dirección del cliente — salen bajo su nombre en el recibo. */
+  nit: string;
+  address: string;
   lines: { label: string; qty: number; total: number }[];
   subtotal: number;
   discount: number;
@@ -164,6 +167,43 @@ export default class PosVenta implements OnInit {
   readonly showCreateProduct = signal(false);
   readonly customerNameDraft = signal('');
   readonly customerPhoneDraft = signal('');
+  readonly customerNitDraft = signal('');
+  readonly customerAddressDraft = signal('');
+
+  /** Etiqueta del documento de identidad/fiscal según el país del catálogo:
+   *  cédula/RIF en VE, DNI/CUIT en AR, RUT en CL… Son nombres propios de cada
+   *  país (no se traducen); solo el fallback genérico pasa por transloco. */
+  readonly documentLabel = computed(() => {
+    const cc = (this.configStore.config()?.countryCode || '').toUpperCase();
+    const map: Record<string, string> = {
+      VE: 'Cédula o RIF',
+      CO: 'Cédula o NIT',
+      AR: 'DNI o CUIT',
+      MX: 'RFC',
+      PE: 'DNI o RUC',
+      CL: 'RUT',
+      EC: 'Cédula o RUC',
+      BO: 'CI o NIT',
+      PY: 'CI o RUC',
+      UY: 'CI o RUT',
+      GT: 'DPI o NIT',
+      DO: 'Cédula o RNC',
+      CR: 'Cédula',
+      PA: 'Cédula o RUC',
+      HN: 'DNI o RTN',
+      SV: 'DUI o NIT',
+      NI: 'Cédula o RUC',
+    };
+    return map[cc] || this.transloco.translate('Documento');
+  });
+
+  /** Placeholder del documento: con ejemplo local en VE, genérico en el resto. */
+  readonly documentPlaceholder = computed(() => {
+    const cc = (this.configStore.config()?.countryCode || '').toUpperCase();
+    return cc === 'VE'
+      ? 'Ej: V-12.345.678'
+      : this.transloco.translate('Número de documento');
+  });
   /** País por defecto del select de teléfono: el del catálogo del tenant
    *  (ISO en minúsculas, ej. 'hn'). Fallback 've'. */
   readonly defaultPhoneCountry = computed(() =>
@@ -547,19 +587,23 @@ export default class PosVenta implements OnInit {
   openCustomer(): void {
     this.customerNameDraft.set(this.cart.customerName());
     this.customerPhoneDraft.set(this.cart.customerPhone());
+    this.customerNitDraft.set(this.cart.customerNit());
+    this.customerAddressDraft.set(this.cart.customerAddress());
     this.showCustomer.set(true);
   }
 
   saveCustomer(): void {
     this.cart.setCustomer(
       this.customerNameDraft().trim(),
-      this.customerPhoneDraft().trim()
+      this.customerPhoneDraft().trim(),
+      this.customerNitDraft().trim(),
+      this.customerAddressDraft().trim()
     );
     this.showCustomer.set(false);
   }
 
   clearCustomer(): void {
-    this.cart.setCustomer('', '');
+    this.cart.setCustomer('', '', '', '');
     this.showCustomer.set(false);
   }
 
@@ -703,6 +747,9 @@ export default class PosVenta implements OnInit {
     const orderData = {
       name: this.cart.customerName() || 'Venta en tienda',
       phone: this.cart.customerPhone() || undefined,
+      // Datos de factura del cliente (cédula/RIF + dirección, opcionales).
+      nit: this.cart.customerNit() || undefined,
+      shippingAddress: this.cart.customerAddress() || undefined,
       comments: this.cart.note() || undefined,
       status: 'completed' as OrderStatus,
       products: this.toOrderItems(),
@@ -829,6 +876,8 @@ export default class PosVenta implements OnInit {
       }),
       customer: this.cart.customerName(),
       phone: this.cart.customerPhone(),
+      nit: this.cart.customerNit(),
+      address: this.cart.customerAddress(),
       lines,
       subtotal: this.cart.subtotal(),
       discount: this.cart.discountAmount(),
@@ -885,6 +934,8 @@ export default class PosVenta implements OnInit {
       receipt: t('Comprobante'),
       qty: t('Cant.'),
       detail: t('Detalle'),
+      // Etiqueta del documento según el país (cédula/RIF, DNI/CUIT, RUT…).
+      nit: this.documentLabel(),
     };
   }
 
@@ -905,6 +956,9 @@ export default class PosVenta implements OnInit {
           number: sale.number,
           dateStr: sale.dateStr,
           customer: sale.customer,
+          nit: sale.nit || undefined,
+          nitLabel: L.nit,
+          address: sale.address || undefined,
           lines: sale.lines,
           subtotal: sale.subtotal,
           discount: sale.discount,
@@ -988,6 +1042,8 @@ export default class PosVenta implements OnInit {
       ${t.header ? `<div class="c hd">${esc(t.header)}</div>` : ''}
       <div class="c meta">${esc(sale.dateStr)}${sale.number != null ? ` · #${sale.number}` : ''}</div>
       ${sale.customer ? `<div class="c meta">${esc(sale.customer)}</div>` : ''}
+      ${sale.nit ? `<div class="c meta">${esc(L.nit)}: ${esc(sale.nit)}</div>` : ''}
+      ${sale.address ? `<div class="c meta">${esc(sale.address)}</div>` : ''}
       <div class="rule"></div>
       ${rows}
       <div class="rule"></div>
@@ -1070,7 +1126,7 @@ export default class PosVenta implements OnInit {
         <div class="hd">${t.header ? esc(t.header) : ''}</div>
         ${t.printLogo && t.logo ? `<img class="logo" src="${t.logo}" alt="logo">` : ''}
       </div>
-      <div class="meta">${esc(L.receipt)}${sale.number != null ? ` #${sale.number}` : ''} · ${esc(sale.dateStr)}${sale.customer ? ` · ${esc(sale.customer)}` : ''}</div>
+      <div class="meta">${esc(L.receipt)}${sale.number != null ? ` #${sale.number}` : ''} · ${esc(sale.dateStr)}${sale.customer ? ` · ${esc(sale.customer)}` : ''}${sale.nit ? ` · ${esc(L.nit)}: ${esc(sale.nit)}` : ''}${sale.address ? `<br>${esc(sale.address)}` : ''}</div>
       <table class="items">
         <thead><tr><th class="qty">${esc(L.qty)}</th><th>${esc(L.detail)}</th><th class="amt">${esc(L.total)}</th></tr></thead>
         <tbody>${rows}</tbody>
@@ -1094,6 +1150,9 @@ export default class PosVenta implements OnInit {
     parts.push(
       `${L.receipt}${sale.number != null ? ` #${sale.number}` : ''} · ${sale.dateStr}`
     );
+    if (sale.customer) parts.push(sale.customer);
+    if (sale.nit) parts.push(`${L.nit}: ${sale.nit}`);
+    if (sale.address) parts.push(sale.address);
     parts.push('');
     for (const l of sale.lines) {
       parts.push(`• ${l.qty}× ${l.label} — ${money(l.total)}`);

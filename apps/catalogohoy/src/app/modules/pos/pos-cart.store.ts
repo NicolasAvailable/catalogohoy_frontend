@@ -30,6 +30,10 @@ interface PosCartState {
   /** Cliente asociado a la venta (opcional). */
   customerName: string;
   customerPhone: string;
+  /** Cédula/RIF del cliente — sale en la factura (pedido leonardoadventure). */
+  customerNit: string;
+  /** Dirección del cliente — sale en la factura. */
+  customerAddress: string;
   /** Nota libre que viaja como `comments` de la orden. */
   note: string;
   /** Descuento global de la venta, en % (0–100). */
@@ -42,6 +46,8 @@ const initialState: PosCartState = {
   lines: [],
   customerName: '',
   customerPhone: '',
+  customerNit: '',
+  customerAddress: '',
   note: '',
   discountPercent: 0,
   paymentMethod: '',
@@ -151,8 +157,13 @@ export const PosCartStore = signalStore(
         lines: st.lines.filter((l) => l.key !== key),
       }));
     },
-    setCustomer(name: string, phone = ''): void {
-      patchState(store, { customerName: name, customerPhone: phone });
+    setCustomer(name: string, phone = '', nit = '', address = ''): void {
+      patchState(store, {
+        customerName: name,
+        customerPhone: phone,
+        customerNit: nit,
+        customerAddress: address,
+      });
     },
     setNote(note: string): void {
       patchState(store, { note });
