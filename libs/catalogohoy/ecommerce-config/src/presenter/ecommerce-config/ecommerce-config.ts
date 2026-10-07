@@ -403,6 +403,47 @@ export class EcommerceConfigComponent implements OnInit {
     this.draftTaxRate.set(Number.isFinite(n) && n > 0 ? Math.min(n, 100) : null);
   }
 
+  /** Impuestos sugeridos según el país del catálogo (tasa estándar + reducida
+   *  donde existe). Un click llena % y nombre; ambos siguen editables. El
+   *  desglose queda APAGADO hasta que el comercio elige — nunca se activa solo. */
+  public readonly taxPresets = computed(() => {
+    const cc = (this.draftCountryCode() || this.configStore.config()?.countryCode || '')
+      .toUpperCase();
+    const map: Record<string, { name: string; rate: number }[]> = {
+      VE: [{ name: 'IVA', rate: 16 }, { name: 'IVA', rate: 8 }],
+      CO: [{ name: 'IVA', rate: 19 }, { name: 'IVA', rate: 5 }],
+      AR: [{ name: 'IVA', rate: 21 }, { name: 'IVA', rate: 10.5 }],
+      MX: [{ name: 'IVA', rate: 16 }, { name: 'IVA', rate: 8 }],
+      CL: [{ name: 'IVA', rate: 19 }],
+      PE: [{ name: 'IGV', rate: 18 }],
+      EC: [{ name: 'IVA', rate: 15 }],
+      BO: [{ name: 'IVA', rate: 13 }],
+      PY: [{ name: 'IVA', rate: 10 }, { name: 'IVA', rate: 5 }],
+      UY: [{ name: 'IVA', rate: 22 }, { name: 'IVA', rate: 10 }],
+      GT: [{ name: 'IVA', rate: 12 }],
+      DO: [{ name: 'ITBIS', rate: 18 }],
+      CR: [{ name: 'IVA', rate: 13 }],
+      PA: [{ name: 'ITBMS', rate: 7 }],
+      HN: [{ name: 'ISV', rate: 15 }],
+      SV: [{ name: 'IVA', rate: 13 }],
+      NI: [{ name: 'IVA', rate: 15 }],
+    };
+    return map[cc] ?? [{ name: 'IVA', rate: 16 }];
+  });
+
+  /** ¿Este preset es el que está elegido ahora mismo? (para pintar el chip). */
+  isTaxPresetActive(p: { name: string; rate: number }): boolean {
+    return (
+      this.draftTaxRate() === p.rate &&
+      (this.draftTaxLabel()?.trim() || 'IVA') === p.name
+    );
+  }
+
+  applyTaxPreset(p: { name: string; rate: number }): void {
+    this.draftTaxRate.set(p.rate);
+    this.draftTaxLabel.set(p.name);
+  }
+
   /** Alterna un día entre "despacha" y "no despacha". Se almacena como lista de
    *  días BLOQUEADos (para no tocar el checkout ni migrar), pero la UI se expresa
    *  en positivo ("días en los que SÍ despachas"): togglear un día = agregarlo o

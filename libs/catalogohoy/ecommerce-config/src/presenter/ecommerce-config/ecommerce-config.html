@@ -734,6 +734,31 @@
         <div class="credit-settings">
           <div class="credit-settings-field">
             <label class="payment-method-field-label">
+              {{ 'Sugeridos para tu país' | transloco }}
+            </label>
+            <div class="tax-presets">
+              @for (p of taxPresets(); track p.name + p.rate) {
+              <button
+                type="button"
+                class="tax-preset"
+                [class.tax-preset--active]="isTaxPresetActive(p)"
+                (click)="applyTaxPreset(p)"
+              >
+                {{ p.name }} {{ p.rate }}%
+              </button>
+              }
+              @if (draftTaxRate()) {
+              <button type="button" class="tax-preset tax-preset--off" (click)="setTaxRate(''); draftTaxLabel.set(null)">
+                {{ 'Quitar' | transloco }}
+              </button>
+              }
+            </div>
+            <p class="credit-option-hint">
+              {{ 'Un toque lo deja listo; abajo puedes ajustar el porcentaje y el nombre.' | transloco }}
+            </p>
+          </div>
+          <div class="credit-settings-field">
+            <label class="payment-method-field-label">
               {{ 'Porcentaje del impuesto' | transloco }}
             </label>
             <div class="credit-min-row">

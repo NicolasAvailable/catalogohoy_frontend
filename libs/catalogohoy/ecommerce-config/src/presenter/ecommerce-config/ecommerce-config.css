@@ -1519,3 +1519,32 @@
   color: var(--color-grey-300, #7d7d7d);
   font-size: 0.75rem;
 }
+
+/* CAT-84: chips de impuestos sugeridos por país. */
+.tax-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.tax-preset {
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--p-surface-300, #d4d7dd);
+  background: var(--p-surface-0, #fff);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tax-preset:hover {
+  border-color: var(--p-primary-color, #1e43c0);
+  color: var(--p-primary-color, #1e43c0);
+}
+.tax-preset--active {
+  border-color: var(--p-primary-color, #1e43c0);
+  box-shadow: 0 0 0 1px var(--p-primary-color, #1e43c0) inset;
+  color: var(--p-primary-color, #1e43c0);
+  font-weight: 700;
+}
+.tax-preset--off {
+  color: var(--p-surface-500, #6b7280);
+}
