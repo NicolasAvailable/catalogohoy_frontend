@@ -19,7 +19,7 @@ const JSON_LD = {
 
 const PreguntasFrecuentes = () => {
   usePageMeta({
-    title: "Preguntas frecuentes — CatalogoHoy",
+    title: "Preguntas frecuentes | CatalogoHoy",
     description:
       "Respuestas a las dudas más comunes sobre CatalogoHoy: cómo crear tu catálogo digital gratis, compartirlo por WhatsApp, recibir órdenes, cambiar de plan y más.",
     path: "/faq",

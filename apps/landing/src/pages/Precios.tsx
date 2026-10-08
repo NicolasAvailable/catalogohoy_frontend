@@ -50,7 +50,7 @@ const JSON_LD = {
 
 const Precios = () => {
   usePageMeta({
-    title: "Precios y planes — CatalogoHoy | Empieza gratis",
+    title: "Precios y planes de catálogo digital | CatalogoHoy",
     description:
       "Planes de CatalogoHoy: empieza gratis y crece con los planes Pro y Avanzado. Catálogo digital, pedidos por WhatsApp, IA para tus fotos y más. 7 días de prueba gratis, sin permanencia.",
     path: "/pricing",

@@ -8,7 +8,7 @@ import { usePageMeta } from "@/hooks/use-page-meta";
 
 const Funciones = () => {
   usePageMeta({
-    title: "Funciones — CatalogoHoy | Catálogo digital, WhatsApp e IA",
+    title: "Funciones: catálogo, WhatsApp e IA | CatalogoHoy",
     description:
       "Descubre todo lo que puedes hacer con CatalogoHoy: catálogo digital personalizable, pedidos por WhatsApp, gestión de órdenes y clientes, precios en dos monedas e inteligencia artificial para tus fotos.",
     path: "/features",
