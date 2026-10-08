@@ -276,7 +276,7 @@ const PLANS = [
   },
   {
     name: "Avanzado",
-    price: "$29.99",
+    price: "$34.99",
     period: "/mes · USD",
     description: "Para negocios con muchos productos.",
     features: [
@@ -305,7 +305,7 @@ const PRICING_OFFERS = [
   },
   {
     name: "Plan Avanzado",
-    price: "29.99",
+    price: "34.99",
     description: "Productos ilimitados, dominio propio, hasta 10 miembros de equipo y soporte dedicado",
   },
 ];
@@ -412,7 +412,7 @@ PAGES.push({
   urlPath: "/pricing",
   title: "Precios y planes de catálogo digital | CatalogoHoy",
   description:
-    "Planes de CatalogoHoy: empieza gratis y crece con Básico ($11.99), Pro ($19.99) y Avanzado ($29.99). Sin permanencia. Catálogo digital y pedidos por WhatsApp.",
+    "Planes de CatalogoHoy: empieza gratis y crece con Básico ($11.99), Pro ($19.99) y Avanzado ($34.99). Sin permanencia. Catálogo digital y pedidos por WhatsApp.",
   body: pricingBody("pricing"),
   jsonLd: [
     webPageLd("Planes y precios — CatalogoHoy", "Planes de CatalogoHoy: gratis, Básico, Pro y Avanzado.", `${BASE_URL}/pricing`),

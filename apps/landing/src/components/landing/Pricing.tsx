@@ -90,7 +90,7 @@ const plans: PlanData[] = [
       { label: "Diseño personalizable" },
       { label: "Soporte prioritario" },
     ],
-    buttonLabel: "Empieza tu prueba de 7 días",
+    buttonLabel: "Comenzar ahora",
     isPopular: false,
     color: "#0ea5e9",
   },
@@ -381,8 +381,9 @@ const Pricing = ({ embedded = false }: { embedded?: boolean }) => {
                   {plan.buttonLabel}
                 </button>
 
-                {/* Nota bajo el CTA de prueba: sin compromiso */}
-                {!plan.isFree && (
+                {/* Nota bajo el CTA de prueba: sin compromiso. Solo Pro y
+                    Avanzado tienen trial — el Básico se cobra de una. */}
+                {!plan.isFree && plan.id !== "basico" && (
                   <p className="flex items-center justify-center gap-1.5 -mt-1 text-[0.72rem] text-[#94a3b8]">
                     <Gift className="h-3.5 w-3.5 shrink-0 text-[#6366f1]" />
                     7 días gratis, sin compromiso

@@ -25,7 +25,7 @@ const JSON_LD = {
       "@type": "Offer",
       name: "Plan Básico",
       description:
-        "Hasta 100 productos, órdenes ilimitadas y 200 créditos de IA por mes. 7 días de prueba gratis.",
+        "Hasta 100 productos, órdenes ilimitadas y 200 créditos de IA por mes.",
       price: "11.99",
       priceCurrency: "USD",
     },
