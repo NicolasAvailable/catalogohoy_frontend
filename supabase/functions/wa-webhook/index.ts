@@ -229,10 +229,11 @@ const VE_TRANSFERENCIA = {
   cedula: "V-30.524.891"
 };
 // Precios mensuales por plan (fallback si el CTA no trae monto explícito).
+// Switch 2026-10-08: Básico 11.99 / Pro 19.99 / Avanzado 34.99.
 const PLAN_PRICES_USD = {
-  "Básico": 9.99,
+  "Básico": 11.99,
   "Pro": 19.99,
-  "Avanzado": 29.99
+  "Avanzado": 34.99
 };
 /** Detecta la intención "adquirir plan" en un texto y extrae plan + total USD.
  *  Devuelve null si el texto no es un CTA de adquisición. */ function detectPlanIntent(text) {
