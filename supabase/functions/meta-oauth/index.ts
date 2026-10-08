@@ -224,9 +224,34 @@ async function handleCallback(req) {
       }));
     }
 
+    // 3b) Último fallback (los system users no traen granular_scopes útiles):
+    //     el Business sale de los ACTIVOS otorgados en el diálogo. De paso
+    //     adoptamos el catálogo elegido, para publicarlo en vez de crear otro.
+    //     (Verificado 2026-10-08: /me/assigned_product_catalogs?fields=
+    //     business{...} responde con el catálogo y Business del diálogo;
+    //     /me/assigned_pixels NO existe — el pixel lo adopta provision_pixel.)
+    let grantedCatalog = null;
+    if (!businesses.length) {
+      try {
+        const cats = await (await fetch(
+          `${GRAPH}/me/assigned_product_catalogs?fields=id,name,business{id,name}` +
+          `&access_token=${encodeURIComponent(userToken)}`)).json();
+        grantedCatalog = (cats?.data ?? []).find((c) => c?.business?.id) ?? null;
+        if (grantedCatalog) {
+          businesses = [{ id: grantedCatalog.business.id, name: grantedCatalog.business.name }];
+        } else {
+          const accs = await (await fetch(
+            `${GRAPH}/me/assigned_ad_accounts?fields=id,name,business{id,name}` +
+            `&access_token=${encodeURIComponent(userToken)}`)).json();
+          const acc = (accs?.data ?? []).find((a) => a?.business?.id);
+          if (acc) businesses = [{ id: acc.business.id, name: acc.business.name }];
+        }
+      } catch { /* queda connected_nobusiness y el panel lo indica */ }
+    }
+
     const { data: existing } = await admin
       .from("meta_business_connections")
-      .select("business_id, metadata")
+      .select("business_id, catalog_id, metadata")
       .eq("tenant_id", state.tenantId)
       .maybeSingle();
     const keepCurrent = existing?.business_id &&
@@ -235,7 +260,7 @@ async function handleCallback(req) {
       ? businesses.find((b) => b.id === existing.business_id)
       : (businesses[0] ?? null);
 
-    // 3b) token duradero: si el login vino por la config de Business Login, el
+    // 3c) token duradero: si el login vino por la config de Business Login, el
     //     propio userToken ya es el system user token; si no, se intenta el
     //     canje clásico (sin config da 1690164 → fallback al user token).
     const sysToken = isDurable
@@ -246,9 +271,13 @@ async function handleCallback(req) {
     else if (!keepCurrent) delete metadata.system_user_token;
 
     // 4) guardar conexión (token server-only); metadata preserva claves previas
-    //    (p.ej. feed_id del catálogo) y refresca scopes + businesses.
+    //    (p.ej. feed_id del catálogo) y refresca scopes + businesses. Si el
+    //    diálogo otorgó un catálogo y el tenant no tenía uno, se adopta.
+    const adoptCatalog = grantedCatalog && !existing?.catalog_id &&
+      grantedCatalog.business.id === selected?.id;
     await admin.from("meta_business_connections").upsert({
       tenant_id: state.tenantId,
+      ...(adoptCatalog ? { catalog_id: grantedCatalog.id } : {}),
       access_token: userToken,
       token_expires_at: expiresAt,
       business_id: selected?.id ?? null,
