@@ -61,7 +61,7 @@ export default class Welcome implements OnInit {
     {
       id: 'pro',
       name: 'Pro',
-      price: 20,
+      price: 19.99,
       tagline: 'Para tiendas que venden todos los días.',
       features: [
         'Hasta 500 productos',
@@ -74,7 +74,7 @@ export default class Welcome implements OnInit {
     {
       id: 'avanzado',
       name: 'Avanzado',
-      price: 35,
+      price: 34.99,
       tagline: 'Para negocios con muchos productos.',
       features: [
         'Productos ilimitados',

@@ -44,7 +44,7 @@ const SECRET = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
 const LIST_PRICE_USD: Record<string, number> = {
   basico: 11.99,
   pro: 19.99,
-  avanzado: 29.99,
+  avanzado: 34.99,
   enterprise: 99.99,
 };
 const CYCLE_MONTHS: Record<string, number> = {

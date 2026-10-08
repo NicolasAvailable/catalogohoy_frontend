@@ -93,8 +93,8 @@ export const cycleLabel = (cycle: PlanCycle | string): string =>
  */
 export const TIER_MONTHLY_PRICE_USD: Record<Exclude<PlanTier, 'gratis'>, number> = {
   basico: 11.99,
-  pro: 20,
-  avanzado: 35,
+  pro: 19.99,
+  avanzado: 34.99,
   // Enterprise no tiene precio de lista: es un default sugerido que el
   // operador SIEMPRE debe ajustar al monto negociado del deal.
   enterprise: 99.99,
