@@ -8,33 +8,33 @@ type ComparisonValue = string | boolean | null; // string = texto, boolean = che
 
 type ComparisonRow = {
   label: string;
-  values: [ComparisonValue, ComparisonValue, ComparisonValue];
+  values: [ComparisonValue, ComparisonValue, ComparisonValue, ComparisonValue];
 };
 
-// Básico se discontinuó para altas nuevas (2026-09): la comparativa muestra los
-// 3 planes vigentes.
+// El Básico volvió a ofrecerse (2026-10): comparativa de los 4 planes.
 const planColumns = [
   { id: "gratis", name: "Gratis", price: "$0", isPopular: false },
-  { id: "pro", name: "Pro", price: "$20/mes", isPopular: true },
-  { id: "avanzado", name: "Avanzado", price: "$35/mes", isPopular: false },
+  { id: "basico", name: "Básico", price: "$11.99/mes", isPopular: false },
+  { id: "pro", name: "Pro", price: "$19.99/mes", isPopular: true },
+  { id: "avanzado", name: "Avanzado", price: "$34.99/mes", isPopular: false },
 ] as const;
 
 const rows: ComparisonRow[] = [
-  { label: "Productos", values: ["10", "500", "Ilimitados"] },
-  { label: "Órdenes por mes", values: ["25", "Ilimitadas", "Ilimitadas"] },
-  { label: "Catálogos", values: ["1", "1", "2 (ampliable con extras)"] },
-  { label: "Miembros de equipo", values: ["0", "2", "3"] },
-  { label: "Variantes por producto", values: ["1", "10", "15"] },
-  { label: "Adicionales por producto", values: ["2", "10", "15"] },
-  { label: "Créditos de IA por mes", values: ["15", "350", "500"] },
-  { label: "Reportes por mes", values: ["1", "20", "30"] },
-  { label: "Prueba gratis", values: [false, "7 días", "7 días"] },
-  { label: "Analíticas del catálogo", values: [false, true, true] },
-  { label: "Notificaciones WhatsApp de órdenes", values: [false, true, true] },
-  { label: "CRM de chats (WhatsApp, Instagram, TikTok)", values: [false, false, true] },
-  { label: "Diseño personalizable", values: [false, true, true] },
-  { label: "Dominio propio", values: [false, false, true] },
-  { label: "Soporte", values: [null, "Prioritario", "Dedicado"] },
+  { label: "Productos", values: ["10", "100", "500", "Ilimitados"] },
+  { label: "Órdenes por mes", values: ["25", "Ilimitadas", "Ilimitadas", "Ilimitadas"] },
+  { label: "Catálogos", values: ["1", "1", "1", "2 (ampliable con extras)"] },
+  { label: "Miembros de equipo", values: ["0", "1", "2", "3"] },
+  { label: "Variantes por producto", values: ["1", "3", "10", "15"] },
+  { label: "Adicionales por producto", values: ["2", "5", "10", "15"] },
+  { label: "Créditos de IA por mes", values: ["15", "200", "350", "500"] },
+  { label: "Reportes por mes", values: ["1", "10", "20", "30"] },
+  { label: "Prueba gratis", values: [false, "7 días", "7 días", "7 días"] },
+  { label: "Analíticas del catálogo", values: [false, true, true, true] },
+  { label: "Notificaciones WhatsApp de órdenes", values: [false, true, true, true] },
+  { label: "CRM de chats (WhatsApp, Instagram, TikTok)", values: [false, false, false, true] },
+  { label: "Diseño personalizable", values: [false, true, true, true] },
+  { label: "Dominio propio", values: [false, false, false, true] },
+  { label: "Soporte", values: [null, "Prioritario", "Prioritario", "Dedicado"] },
 ];
 
 function renderValue(value: ComparisonValue) {

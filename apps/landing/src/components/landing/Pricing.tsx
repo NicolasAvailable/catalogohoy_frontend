@@ -16,13 +16,15 @@ const BILLING_CONFIG: Record<BillingPeriod, { months: number; discount: number }
   annual:  { months: 12, discount: 0 },
 };
 
+// Switch 2026-10: precios con decimales y el Básico vuelve a ofrecerse.
 const PLAN_BASE_PRICES: Record<string, number> = {
-  pro: 20,
-  avanzado: 35,
+  basico: 11.99,
+  pro: 19.99,
+  avanzado: 34.99,
 };
 
 // Anual: 50% de descuento — se paga la mitad del año (6 de 12 meses).
-const ANNUAL_FREE_MONTHS: Record<string, number> = { pro: 6, avanzado: 6 };
+const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 6, pro: 6, avanzado: 6 };
 const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 6;
 
 const CATALOG_ADDON_PRICE = 4.99;
@@ -70,6 +72,27 @@ const plans: PlanData[] = [
     buttonLabel: "Empezar gratis",
     isPopular: false,
     color: "#64748b",
+  },
+  {
+    id: "basico",
+    name: "Básico",
+    isFree: false,
+    description: "Para tiendas que quieren crecer.",
+    maxProducts: 100,
+    maxTeamMembers: 1,
+    features: [
+      { label: "Órdenes ilimitadas" },
+      { label: "Analíticas del catálogo" },
+      { label: "Notificaciones WhatsApp de órdenes" },
+      { label: "200 créditos de IA por mes" },
+      { label: "Hasta 10 reportes por mes" },
+      { label: "3 variantes y 5 adicionales por producto" },
+      { label: "Diseño personalizable" },
+      { label: "Soporte prioritario" },
+    ],
+    buttonLabel: "Empieza tu prueba de 7 días",
+    isPopular: false,
+    color: "#0ea5e9",
   },
   {
     id: "pro",
@@ -277,7 +300,7 @@ const Pricing = ({ embedded = false }: { embedded?: boolean }) => {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="flex snap-x snap-mandatory overflow-x-auto pb-4 -mx-4 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 sm:overflow-visible sm:mx-auto sm:px-0 sm:pb-0 lg:grid-cols-3 gap-6 lg:gap-5 xl:gap-6 max-w-none sm:max-w-[56rem] lg:max-w-[64rem] mx-auto items-stretch"
+          className="flex snap-x snap-mandatory overflow-x-auto pb-4 -mx-4 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 sm:overflow-visible sm:mx-auto sm:px-0 sm:pb-0 lg:grid-cols-4 gap-6 lg:gap-4 xl:gap-6 max-w-none sm:max-w-[56rem] lg:max-w-none mx-auto items-stretch"
         >
           {plans.map((plan) => (
             <motion.div

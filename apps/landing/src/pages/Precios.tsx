@@ -23,10 +23,18 @@ const JSON_LD = {
     },
     {
       "@type": "Offer",
+      name: "Plan Básico",
+      description:
+        "Hasta 100 productos, órdenes ilimitadas y 200 créditos de IA por mes. 7 días de prueba gratis.",
+      price: "11.99",
+      priceCurrency: "USD",
+    },
+    {
+      "@type": "Offer",
       name: "Plan Pro",
       description:
         "Hasta 500 productos, 2 miembros de equipo y 350 créditos de IA por mes. 7 días de prueba gratis.",
-      price: "20",
+      price: "19.99",
       priceCurrency: "USD",
     },
     {
@@ -34,7 +42,7 @@ const JSON_LD = {
       name: "Plan Avanzado",
       description:
         "Productos ilimitados, dominio propio, hasta 3 miembros de equipo y soporte dedicado. 7 días de prueba gratis.",
-      price: "35",
+      price: "34.99",
       priceCurrency: "USD",
     },
   ],
