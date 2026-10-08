@@ -166,6 +166,14 @@
   max-width: 82rem;
 }
 
+/* Tenant Enterprise: con el Básico de vuelta son 5 cards (4 planes + la de
+   Enterprise). La 5ª cae sola a la segunda fila — se centra ocupando las dos
+   columnas del medio en vez de quedar pegada a la izquierda. Solo aplica al
+   grid de escritorio (el carousel/mobile usan flex e ignoran grid-column). */
+.plans-grid--four > .plan-card--enterprise:nth-child(5) {
+  grid-column: 2 / 4;
+}
+
 /* ── Carousel (laptops chicas): flechas para navegar entre planes ── */
 .plans-carousel {
   position: relative;
