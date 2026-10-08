@@ -1,5 +1,5 @@
 import Navbar from "@/components/landing/Navbar";
-import HowItWorks from "@/components/landing/HowItWorks";
+import FeatureShowcase from "@/components/landing/FeatureShowcase";
 import Features from "@/components/landing/Features";
 import AiFeatures from "@/components/landing/AiFeatures";
 import CTA from "@/components/landing/CTA";
@@ -40,7 +40,9 @@ const Funciones = () => {
               </p>
             </div>
           </section>
-          <HowItWorks embedded />
+          {/* Showcase estilo teléfono anotado (la demo en video vive en el
+              home, #how-it-works — acá iba duplicada). */}
+          <FeatureShowcase />
           <Features embedded />
           <AiFeatures embedded />
         </div>
