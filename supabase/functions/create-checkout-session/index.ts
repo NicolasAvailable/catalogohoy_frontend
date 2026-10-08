@@ -138,7 +138,9 @@ Deno.serve(async (req: Request) => {
     // `trial_used_at` cuando la sub con trial arranca, así que no se quema si
     // el usuario abandona el checkout. Con addons de catálogo no aplica trial
     // (se cobra el addon de una). El status `trialing` ya lo trata el webhook.
-    const eligibleForTrial = !previousSubscriptionId && !tenantRow?.trial_used_at && addonQty === 0;
+    // Solo Pro y Avanzado dan trial — el Básico se cobra de una (2026-10-08).
+    const eligibleForTrial =
+      !previousSubscriptionId && !tenantRow?.trial_used_at && addonQty === 0 && planId !== "basico";
 
     if (!customerId) {
       const customer = await stripe.customers.create({

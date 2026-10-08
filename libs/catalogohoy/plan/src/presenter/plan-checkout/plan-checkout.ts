@@ -11,6 +11,7 @@ import { IconComponent } from '@ui';
 import {
   BillingPeriod,
   CATALOG_ADDON_PRICE,
+  BASICO_PLAN_ID,
   CheckoutRequest,
   convertUsdToLocal,
   CURRENCY_SYMBOLS,
@@ -273,14 +274,15 @@ export class PlanCheckout implements OnInit {
   });
 
   /** Trial de 7 días: solo en la PRIMERA suscripción del tenant (aún en Gratis,
-   *  sin suscripción de Stripe). El server (create-checkout-session) es la
-   *  autoridad: aplica `trial_period_days` solo si no hubo sub previa y sin
-   *  addons. Acá lo reflejamos para mostrar el gancho y cambiar el copy. */
+   *  sin suscripción de Stripe) y SOLO para Pro/Avanzado — el Básico se cobra
+   *  de una. El server (create-checkout-session) es la autoridad: aplica
+   *  `trial_period_days` con las mismas reglas. Acá lo reflejamos para mostrar
+   *  el gancho y cambiar el copy. */
   public readonly eligibleForTrial = computed(() => {
     const current = this.planStore.currentPlan();
     const hasPaid = !!current && !current.isFree;
     const hasStripe = this.planStore.tenantPlanUsage()?.hasStripeSubscription ?? false;
-    return !hasPaid && !hasStripe;
+    return !hasPaid && !hasStripe && this.planId() !== BASICO_PLAN_ID;
   });
 
   /** Mostramos el flujo "Activar 7 días de prueba" solo cuando el server
