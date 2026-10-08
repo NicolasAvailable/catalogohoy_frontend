@@ -82,6 +82,34 @@ async function parseState(state) {
   return { tenantId: Number(tenantId), returnUrl: rest.join("|") };
 }
 
+// ── System user token del Business del tenant (Tech Provider) ──────────────
+// POST /{business_id}/access_token crea (o reutiliza) un system user de nuestra
+// app dentro del Business del comercio y devuelve un token que NO caduca →
+// la CAPI y la sync diaria del feed quedan inmunes al vencimiento del user
+// token (60d). Requiere Advanced Access de business_management (App Review
+// aprobado 2026-10-08) y que quien autorizó sea admin del Business; si falla,
+// devolvemos null y todo sigue funcionando con el user token como hasta ahora.
+async function systemUserToken(businessId, userToken) {
+  try {
+    const res = await fetch(`${GRAPH}/${businessId}/access_token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        app_id: FB_APP_ID,
+        scope: SCOPES,
+        access_token: userToken,
+        appsecret_proof: await hmac(userToken),
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (res.ok && json?.access_token) return json.access_token;
+    console.error("[meta-oauth] system token error", JSON.stringify(json?.error ?? json));
+  } catch (err) {
+    console.error("[meta-oauth] system token error", err);
+  }
+  return null;
+}
+
 // ── POST: iniciar el flujo desde el panel ───────────────────────────────────
 async function handleStart(req) {
   const authHeader = req.headers.get("Authorization") ?? "";
@@ -164,6 +192,13 @@ async function handleCallback(req) {
       ? businesses.find((b) => b.id === existing.business_id)
       : (businesses[0] ?? null);
 
+    // 3b) token duradero del Business elegido (ver systemUserToken). Si el
+    //     exchange falla se conserva el previo solo si el Business no cambió.
+    const sysToken = selected ? await systemUserToken(selected.id, userToken) : null;
+    const metadata = { ...(existing?.metadata ?? {}), scopes: SCOPES, businesses };
+    if (sysToken) metadata.system_user_token = sysToken;
+    else if (!keepCurrent) delete metadata.system_user_token;
+
     // 4) guardar conexión (token server-only); metadata preserva claves previas
     //    (p.ej. feed_id del catálogo) y refresca scopes + businesses.
     await admin.from("meta_business_connections").upsert({
@@ -173,7 +208,7 @@ async function handleCallback(req) {
       business_id: selected?.id ?? null,
       business_name: selected?.name ?? null,
       status: "connected",
-      metadata: { ...(existing?.metadata ?? {}), scopes: SCOPES, businesses },
+      metadata,
       connected_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }, { onConflict: "tenant_id" });

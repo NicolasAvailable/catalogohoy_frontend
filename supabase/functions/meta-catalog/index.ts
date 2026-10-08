@@ -25,8 +25,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const FB_APP_ID = Deno.env.get("FB_APP_ID") ?? Deno.env.get("WA_APP_ID") ?? "";
 const FB_APP_SECRET = Deno.env.get("FB_APP_SECRET") ?? Deno.env.get("WA_APP_SECRET") ?? "";
 const GRAPH = "https://graph.facebook.com/v23.0";
+const SCOPES = "business_management,catalog_management,ads_management";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,6 +53,40 @@ async function feedSig(tenantId) {
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Token para hablar con Graph: el system user token del Business del tenant
+// (no caduca; ver systemUserToken en meta-oauth) y, si aún no existe, el user
+// token del OAuth (60d) como hasta ahora.
+const tokenFor = (conn) => conn.metadata?.system_user_token ?? conn.access_token;
+
+// Mismo exchange que hace meta-oauth al conectar (ver doc allá). Acá se usa
+// para backfillear conexiones previas al App Review y al cambiar de Business.
+async function systemUserToken(businessId, userToken) {
+  try {
+    const key = await crypto.subtle.importKey(
+      "raw", new TextEncoder().encode(FB_APP_SECRET || "dev-secret"),
+      { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+    );
+    const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(userToken));
+    const proof = [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+    const res = await fetch(`${GRAPH}/${businessId}/access_token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        app_id: FB_APP_ID,
+        scope: SCOPES,
+        access_token: userToken,
+        appsecret_proof: proof,
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (res.ok && json?.access_token) return json.access_token;
+    console.error("[meta-catalog] system token error", JSON.stringify(json?.error ?? json));
+  } catch (err) {
+    console.error("[meta-catalog] system token error", err);
+  }
+  return null;
+}
+
 async function graph(path, token, init = {}) {
   const sep = path.includes("?") ? "&" : "?";
   const res = await fetch(`${GRAPH}/${path}${sep}access_token=${encodeURIComponent(token)}`, init);
@@ -71,7 +107,7 @@ async function catalogStatus(conn) {
   if (!conn.catalog_id) return { provisioned: false };
   const out = { provisioned: true, catalogId: conn.catalog_id };
   try {
-    const cat = await graph(`${conn.catalog_id}?fields=product_count,name`, conn.access_token);
+    const cat = await graph(`${conn.catalog_id}?fields=product_count,name`, tokenFor(conn));
     out.productCount = cat.product_count ?? 0;
     out.catalogName = cat.name ?? null;
   } catch { out.productCount = null; }
@@ -80,7 +116,7 @@ async function catalogStatus(conn) {
     try {
       const uploads = await graph(
         `${feedId}/uploads?limit=1&fields=start_time,end_time,error_count,warning_count`,
-        conn.access_token,
+        tokenFor(conn),
       );
       const last = (uploads.data ?? [])[0] ?? null;
       if (last) {
@@ -122,6 +158,25 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: false, error: "Meta no está conectado" }, 409);
   }
 
+  // Backfill: conexiones hechas antes del App Review no tienen system user
+  // token. Se intercambia una vez con el user token vigente y queda persistido;
+  // si la CAPI ya estaba aprovisionada por OAuth, también se pasa al duradero.
+  if (!conn.metadata?.system_user_token && conn.business_id) {
+    const sysToken = await systemUserToken(conn.business_id, conn.access_token);
+    if (sysToken) {
+      conn.metadata = { ...(conn.metadata ?? {}), system_user_token: sysToken };
+      const nowIso = new Date().toISOString();
+      await admin.from("meta_business_connections")
+        .update({ metadata: conn.metadata, updated_at: nowIso })
+        .eq("tenant_id", tenantId);
+      if (conn.pixel_id) {
+        await admin.from("meta_capi_credentials")
+          .update({ access_token: sysToken, updated_at: nowIso })
+          .eq("tenant_id", tenantId);
+      }
+    }
+  }
+
   const feedUrl =
     `${SUPABASE_URL}/functions/v1/meta-catalog-feed?t=${tenantId}&sig=${await feedSig(tenantId)}`;
 
@@ -159,6 +214,10 @@ Deno.serve(async (req) => {
         // El catálogo/feed pertenecen al Business anterior: se re-aprovisiona.
         const metadata = { ...(conn.metadata ?? {}) };
         delete metadata.feed_id;
+        // El system user token es POR Business: el del anterior no sirve acá.
+        delete metadata.system_user_token;
+        const newSysToken = await systemUserToken(chosen.id, conn.access_token);
+        if (newSysToken) metadata.system_user_token = newSysToken;
         await admin.from("meta_business_connections").update({
           business_id: chosen.id,
           business_name: chosen.name,
@@ -177,7 +236,7 @@ Deno.serve(async (req) => {
         if (!catalogId) {
           const { data: tenant } = await admin
             .from("tenants").select("name, slug").eq("id", tenantId).maybeSingle();
-          const created = await graph(`${conn.business_id}/owned_product_catalogs`, conn.access_token, {
+          const created = await graph(`${conn.business_id}/owned_product_catalogs`, tokenFor(conn), {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({ name: `${tenant?.name ?? tenant?.slug ?? "Catálogo"} · CatalogoHoy` }),
@@ -186,7 +245,7 @@ Deno.serve(async (req) => {
         }
         let feedId = conn.metadata?.feed_id ?? null;
         if (!feedId) {
-          const feed = await graph(`${catalogId}/product_feeds`, conn.access_token, {
+          const feed = await graph(`${catalogId}/product_feeds`, tokenFor(conn), {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({
@@ -197,7 +256,7 @@ Deno.serve(async (req) => {
           feedId = feed.id;
         }
         // Primera ingesta inmediata (sin esperar el schedule).
-        await graph(`${feedId}/uploads`, conn.access_token, {
+        await graph(`${feedId}/uploads`, tokenFor(conn), {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams({ url: feedUrl }),
@@ -206,7 +265,7 @@ Deno.serve(async (req) => {
         // (dynamic ads) — así el orden catálogo/pixel no importa.
         if (conn.pixel_id) {
           try {
-            await graph(`${catalogId}/external_event_sources`, conn.access_token, {
+            await graph(`${catalogId}/external_event_sources`, tokenFor(conn), {
               method: "POST",
               headers: { "Content-Type": "application/x-www-form-urlencoded" },
               body: new URLSearchParams({ external_event_sources: JSON.stringify([conn.pixel_id]) }),
@@ -235,7 +294,7 @@ Deno.serve(async (req) => {
 
         let pixel;
         try {
-          const owned = await graph(`${conn.business_id}/adspixels?fields=id,name&limit=50`, conn.access_token);
+          const owned = await graph(`${conn.business_id}/adspixels?fields=id,name&limit=50`, tokenFor(conn));
           const pixels = owned.data ?? [];
           // Si hay un pixel puesto a mano que NO pertenece a este Business, no lo
           // pisamos (romperíamos el tracking/CAPI actual del comercio).
@@ -250,7 +309,7 @@ Deno.serve(async (req) => {
           if (!pixel) {
             const { data: tenant } = await admin
               .from("tenants").select("name, slug").eq("id", tenantId).maybeSingle();
-            pixel = await graph(`${conn.business_id}/adspixels`, conn.access_token, {
+            pixel = await graph(`${conn.business_id}/adspixels`, tokenFor(conn), {
               method: "POST",
               headers: { "Content-Type": "application/x-www-form-urlencoded" },
               body: new URLSearchParams({ name: `${tenant?.name ?? tenant?.slug ?? "Pixel"} · CatalogoHoy` }),
@@ -276,7 +335,7 @@ Deno.serve(async (req) => {
         // Vincular pixel ↔ catálogo (dynamic ads); si aún no hay catálogo, se
         // vincula cuando se publique (provision lo reintenta — ver abajo).
         if (conn.catalog_id) {
-          await graph(`${conn.catalog_id}/external_event_sources`, conn.access_token, {
+          await graph(`${conn.catalog_id}/external_event_sources`, tokenFor(conn), {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({ external_event_sources: JSON.stringify([pixel.id]) }),
@@ -291,7 +350,7 @@ Deno.serve(async (req) => {
           .eq("tenant_id", tenantId);
         await admin.from("meta_capi_credentials").upsert({
           tenant_id: tenantId,
-          access_token: conn.access_token,
+          access_token: tokenFor(conn), // system user token si existe (no caduca)
           enabled: true,
           updated_at: nowIso,
         }, { onConflict: "tenant_id" });
@@ -307,7 +366,7 @@ Deno.serve(async (req) => {
         if (!conn.catalog_id || !feedId) {
           return jsonResponse({ success: false, error: "El catálogo no está publicado todavía" }, 409);
         }
-        await graph(`${feedId}/uploads`, conn.access_token, {
+        await graph(`${feedId}/uploads`, tokenFor(conn), {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams({ url: feedUrl }),
