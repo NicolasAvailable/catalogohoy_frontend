@@ -37,6 +37,12 @@ const SCOPES = [
   "catalog_management", // CAT-64: Commerce Catalog + feed de productos
   "ads_management",     // CAT-65: Pixel/dataset + Conversions API
 ].join(",");
+// Config de Facebook Login for Business "CatalogoHoy Connect (system user)":
+// token type system-user SIN caducidad. Con config_id en el diálogo, el code
+// devuelve directamente el token del system user del Business del cliente;
+// sin la config, el canje de systemUserToken da 1690164 (Client Business
+// Cannot Be Accessed). Creada 2026-10-08 en el app dashboard.
+const LOGIN_CONFIG_ID = Deno.env.get("META_LOGIN_CONFIG_ID") ?? "1713510653471927";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -133,10 +139,15 @@ async function handleStart(req) {
   if (!member) return jsonResponse({ success: false, error: "Forbidden" }, 403);
 
   const state = await makeState(tenantId, returnUrl);
+  // Con config_id el diálogo usa la config de Business Login (system user
+  // token); el scope clásico queda solo como fallback si se vacía el env.
+  const authParams = LOGIN_CONFIG_ID
+    ? `&config_id=${LOGIN_CONFIG_ID}`
+    : `&scope=${encodeURIComponent(SCOPES)}`;
   const url =
     `https://www.facebook.com/v23.0/dialog/oauth?client_id=${FB_APP_ID}` +
     `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-    `&response_type=code&scope=${encodeURIComponent(SCOPES)}` +
+    `&response_type=code${authParams}` +
     `&state=${encodeURIComponent(state)}`;
   return jsonResponse({ success: true, url });
 }
@@ -163,7 +174,8 @@ async function handleCallback(req) {
       console.error("[meta-oauth] token error", JSON.stringify(tokenJson));
       return back("?meta=error");
     }
-    // 2) → long-lived (60d)
+    // 2) → long-lived (60d; para un system user token este canje falla y se
+    //    sigue con el original)
     const longRes = await fetch(
       `${GRAPH}/oauth/access_token?grant_type=fb_exchange_token` +
       `&client_id=${FB_APP_ID}&client_secret=${FB_APP_SECRET}` +
@@ -171,15 +183,46 @@ async function handleCallback(req) {
     const longJson = await longRes.json();
     const userToken = longJson?.access_token ?? tokenJson.access_token;
     const expiresIn = Number(longJson?.expires_in ?? 0);
-    const expiresAt = expiresIn > 0
+
+    // 2b) Radiografía del token (app access token id|secret): con la config de
+    //     Business Login el code ya devuelve el token del SYSTEM USER del
+    //     Business (expires_at = 0 → no caduca, guardamos null); con un user
+    //     token clásico trae la caducidad real (~60d).
+    let expiresAt = expiresIn > 0
       ? new Date(Date.now() + expiresIn * 1000).toISOString()
       : new Date(Date.now() + 60 * 86400_000).toISOString();
+    let isDurable = false;
+    let grantedBizIds = [];
+    try {
+      const dbgRes = await fetch(
+        `${GRAPH}/debug_token?input_token=${encodeURIComponent(userToken)}` +
+        `&access_token=${FB_APP_ID}|${FB_APP_SECRET}`);
+      const dbg = (await dbgRes.json())?.data;
+      if (dbgRes.ok && dbg?.is_valid) {
+        isDurable = !dbg.expires_at;
+        expiresAt = dbg.expires_at ? new Date(dbg.expires_at * 1000).toISOString() : null;
+        grantedBizIds = (dbg.granular_scopes ?? [])
+          .filter((g) => g.scope === "business_management")
+          .flatMap((g) => g.target_ids ?? []);
+      }
+    } catch { /* sin debug seguimos con los defaults */ }
 
     // 3) Businesses que administra el usuario: todos al metadata (selector en el
     //    panel); si reconecta y su elección previa sigue vigente, se respeta.
     const bizRes = await fetch(`${GRAPH}/me/businesses?fields=id,name&limit=50&access_token=${userToken}`);
     const bizJson = await bizRes.json();
-    const businesses = (bizJson?.data ?? []).map((b) => ({ id: b.id, name: b.name }));
+    let businesses = (bizJson?.data ?? []).map((b) => ({ id: b.id, name: b.name }));
+    // Un system user no tiene /me/businesses: usar los Businesses otorgados en
+    // el login (granular_scopes) y resolver sus nombres.
+    if (!businesses.length && grantedBizIds.length) {
+      businesses = await Promise.all(grantedBizIds.map(async (id) => {
+        try {
+          const b = await (await fetch(
+            `${GRAPH}/${id}?fields=id,name&access_token=${encodeURIComponent(userToken)}`)).json();
+          return { id, name: b?.name ?? `Business ${id}` };
+        } catch { return { id, name: `Business ${id}` }; }
+      }));
+    }
 
     const { data: existing } = await admin
       .from("meta_business_connections")
@@ -192,9 +235,12 @@ async function handleCallback(req) {
       ? businesses.find((b) => b.id === existing.business_id)
       : (businesses[0] ?? null);
 
-    // 3b) token duradero del Business elegido (ver systemUserToken). Si el
-    //     exchange falla se conserva el previo solo si el Business no cambió.
-    const sysToken = selected ? await systemUserToken(selected.id, userToken) : null;
+    // 3b) token duradero: si el login vino por la config de Business Login, el
+    //     propio userToken ya es el system user token; si no, se intenta el
+    //     canje clásico (sin config da 1690164 → fallback al user token).
+    const sysToken = isDurable
+      ? userToken
+      : (selected ? await systemUserToken(selected.id, userToken) : null);
     const metadata = { ...(existing?.metadata ?? {}), scopes: SCOPES, businesses };
     if (sysToken) metadata.system_user_token = sysToken;
     else if (!keepCurrent) delete metadata.system_user_token;
