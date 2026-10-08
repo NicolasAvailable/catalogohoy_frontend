@@ -33,26 +33,29 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, sentry-trace, baggage",
 };
 
-// Switch a $20/$35 (2026-09-29): precios nuevos creados en Stripe (live) sobre
-// los mismos productos (pro prod_UvXD7BXlWjSsUN, avanzado prod_U4NQhPd3F2XD85),
-// multimoneda con los currency_options de CHECKOUT_FX_RATES. El quarterly queda
-// inerte (ya no se ofrece). basico conserva sus IDs viejos para las
-// suscripciones grandfathered que renuevan.
+// Switch a decimales (2026-10-08): Pro $19.99 / Avanzado $34.99, precios nuevos
+// en Stripe (live, batch pricing-decimals-2026-10) sobre los mismos productos
+// (pro prod_UvXD7BXlWjSsUN, avanzado prod_U4NQhPd3F2XD85), multimoneda con los
+// currency_options de CHECKOUT_FX_RATES. El quarterly queda inerte (ya no se
+// ofrece). basico (11.99) vuelve a ofrecerse en altas nuevas con sus IDs de
+// siempre. Los precios $20/$35 del switch 2026-09 quedan anclados a las subs
+// que ya los pagan (monthly price_1UL59T.../price_1UL59m..., annual
+// price_1UL59g.../price_1UL59r...).
 const PRICE_MAP: Record<string, Record<string, string>> = {
   basico: {
     monthly:   "price_1UBcws85rys2QLXd2VNxshFD",
     quarterly: "price_1UBcwt85rys2QLXd9plZqrRK",
-    annual:    "price_1UBcwt85rys2QLXdstJ7waFV",
+    annual:    "price_1UBcwt85rys2QLXdstJ7waFV", // $71.94 (-50% anual)
   },
   pro: {
-    monthly:   "price_1UL59T85rys2QLXdkrWZiIh1", // $20
+    monthly:   "price_1UOJEz85rys2QLXdD2qy2sbm", // $19.99
     quarterly: "price_1TyBl585rys2QLXdKk3w7yGm",
-    annual:    "price_1UL59g85rys2QLXdp7UiCjCQ", // $120 (-50% anual)
+    annual:    "price_1UOJFA85rys2QLXd5NgVNHLY", // $119.94 (-50% anual)
   },
   avanzado: {
-    monthly:   "price_1UL59m85rys2QLXdC40TyaQE", // $35
+    monthly:   "price_1UOJFK85rys2QLXdN1DNC5Uh", // $34.99
     quarterly: "price_1TyBl785rys2QLXdp7nbigVf",
-    annual:    "price_1UL59r85rys2QLXdnrsXjQis", // $210 (-50% anual)
+    annual:    "price_1UOJFV85rys2QLXdkcOdcw0T", // $209.94 (-50% anual)
   },
 };
 

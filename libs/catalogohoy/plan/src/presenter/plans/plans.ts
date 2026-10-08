@@ -11,7 +11,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { SkeletonModule } from 'primeng/skeleton';
 import { IconComponent } from '@ui';
 import {
-  BASICO_PLAN_ID,
   BillingPeriod,
   CATALOG_ADDON_PRICE,
   convertUsdToLocal,
@@ -213,21 +212,13 @@ export class Plans implements OnInit {
    *  Null = no aplica (sin referido o ya pagó antes). */
   public readonly referralDiscountPct = signal<number | null>(null);
 
-  /** El Básico ($12) se discontinuó para altas nuevas (2026-09): quedó como
-   *  grandfathered para los que ya lo pagan. Se oculta del grid salvo que sea
-   *  el plan actual del tenant (a ese no le escondemos su propio plan). */
-  public readonly isBasicoCurrent = computed(
-    () => this.planStore.currentPlan()?.id === BASICO_PLAN_ID
-  );
-
   // Enterprise no se renderiza como card del grid: tiene su propia banda
-  // debajo (sin precio ni checkout self-service). Básico se oculta salvo para
-  // quien ya lo tiene (grandfathered).
+  // debajo (sin precio ni checkout self-service). Básico volvió a ofrecerse
+  // en altas nuevas (2026-10) — ya no se filtra.
   public readonly plans = computed<PlanDisplay[]>(() =>
     this.planStore
       .plans()
       .filter((plan) => plan.id !== ENTERPRISE_PLAN_ID)
-      .filter((plan) => plan.id !== BASICO_PLAN_ID || this.isBasicoCurrent())
       .map((plan) => toPlanDisplay(plan, this.currentPlanPosition(), this.currencyCode()))
   );
 
@@ -250,9 +241,9 @@ export class Plans implements OnInit {
     () => this.planStore.isLoading() && this.plans().length === 0
   );
 
-  // 3 planes visibles en altas nuevas: gratis/pro/avanzado (Básico oculto salvo
-  // grandfathered; Enterprise oculta — ver ENTERPRISE_CARD_VISIBLE).
-  public readonly skeletonCards = [0, 1, 2];
+  // 4 planes visibles: gratis/básico/pro/avanzado (Enterprise oculta — ver
+  // ENTERPRISE_CARD_VISIBLE).
+  public readonly skeletonCards = [0, 1, 2, 3];
 
   /** Cantidad de cards visibles (skeletons durante la carga) — decide si el
    *  grid usa 3 o 4 columnas. */

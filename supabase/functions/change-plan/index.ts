@@ -35,29 +35,53 @@ const CORS = {
 };
 
 // Mismos IDs que create-checkout-session (mantener sincronizados).
-// Switch a $20/$35 (2026-09-29). quarterly inerte; basico grandfathered.
+// Switch a decimales (2026-10-08): Pro $19.99 / Avanzado $34.99; basico (11.99)
+// vuelve a ofrecerse. quarterly inerte.
 const PRICE_MAP: Record<string, Record<string, string>> = {
   basico: {
     monthly:   "price_1UBcws85rys2QLXd2VNxshFD",
     quarterly: "price_1UBcwt85rys2QLXd9plZqrRK",
-    annual:    "price_1UBcwt85rys2QLXdstJ7waFV",
+    annual:    "price_1UBcwt85rys2QLXdstJ7waFV", // $71.94 (-50% anual)
   },
   pro: {
-    monthly:   "price_1UL59T85rys2QLXdkrWZiIh1", // $20
+    monthly:   "price_1UOJEz85rys2QLXdD2qy2sbm", // $19.99
     quarterly: "price_1TyBl585rys2QLXdKk3w7yGm",
-    annual:    "price_1UL59g85rys2QLXdp7UiCjCQ", // $120 (-50% anual)
+    annual:    "price_1UOJFA85rys2QLXd5NgVNHLY", // $119.94 (-50% anual)
   },
   avanzado: {
-    monthly:   "price_1UL59m85rys2QLXdC40TyaQE", // $35
+    monthly:   "price_1UOJFK85rys2QLXdN1DNC5Uh", // $34.99
     quarterly: "price_1TyBl785rys2QLXdp7nbigVf",
-    annual:    "price_1UL59r85rys2QLXdnrsXjQis", // $210 (-50% anual)
+    annual:    "price_1UOJFV85rys2QLXdkcOdcw0T", // $209.94 (-50% anual)
   },
+};
+
+// Price IDs históricos que siguen ANCLADOS a suscripciones vigentes. No se usan
+// para cobrar upgrades (eso sale de PRICE_MAP), pero PRICE_TO_PLAN los necesita
+// para reconocer el ítem de plan dentro de una suscripción existente.
+const LEGACY_PRICES: Record<string, { planId: string; period: string }> = {
+  // Switch $20/$35 (2026-09-29 → 2026-10-08)
+  "price_1UL59T85rys2QLXdkrWZiIh1": { planId: "pro",      period: "monthly" }, // $20
+  "price_1UL59g85rys2QLXdp7UiCjCQ": { planId: "pro",      period: "annual"  }, // $120
+  "price_1UL59m85rys2QLXdC40TyaQE": { planId: "avanzado", period: "monthly" }, // $35
+  "price_1UL59r85rys2QLXdnrsXjQis": { planId: "avanzado", period: "annual"  }, // $210
+  // Pre-switch 2026-09 (Pro $19.99 / Avanzado $29.99, regen parallel-freemonth)
+  "price_1TyBl585rys2QLXdc1GUWVJh": { planId: "pro",      period: "monthly" }, // $19.99 viejo
+  "price_1UBcwt85rys2QLXdqUs4wZKT": { planId: "pro",      period: "annual"  }, // $119.94 viejo
+  "price_1TyBl785rys2QLXd08l8YOs7": { planId: "avanzado", period: "monthly" }, // $29.99
+  "price_1UBcwu85rys2QLXdJVEue0XU": { planId: "avanzado", period: "annual"  }, // $179.94
+  // Avanzado pre-2026-07 (25% off)
+  "price_1TGfmg85rys2QLXduNXYy9h3": { planId: "avanzado", period: "monthly" },
+  "price_1TGfmh85rys2QLXdH8DRmSqH": { planId: "avanzado", period: "quarterly" },
+  "price_1TGfmh85rys2QLXdBW7wZB1U": { planId: "avanzado", period: "annual"  },
 };
 
 // priceId → { planId, period }. Sirve para ubicar el ítem de plan dentro de la
 // suscripción (ignorando ítems de catálogos adicionales) y mantener el MISMO
-// período de facturación en el upgrade.
-const PRICE_TO_PLAN: Record<string, { planId: string; period: string }> = {};
+// período de facturación en el upgrade. Incluye los precios vigentes
+// (PRICE_MAP) y los históricos anclados a subs viejas (LEGACY_PRICES).
+const PRICE_TO_PLAN: Record<string, { planId: string; period: string }> = {
+  ...LEGACY_PRICES,
+};
 for (const [planId, periods] of Object.entries(PRICE_MAP)) {
   for (const [period, priceId] of Object.entries(periods)) {
     PRICE_TO_PLAN[priceId] = { planId, period };
