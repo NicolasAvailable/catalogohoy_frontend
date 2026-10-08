@@ -7,7 +7,7 @@
     <link rel="apple-touch-icon" href="/favicon.png" />
     <!-- canonical: lo setea usePageMeta por ruta (SPA) -->
 
-    <title>CatalogoHoy — Crea tu catálogo digital gratis en minutos</title>
+    <title>CatalogoHoy | Crea tu catálogo digital gratis en minutos</title>
     <meta
       name="description"
       content="Crea catálogos digitales profesionales para tu tienda de ropa o negocio. Sube productos, personaliza el diseño, comparte por WhatsApp y recibe órdenes. Empieza gratis hoy."
@@ -67,7 +67,7 @@
     <!-- Open Graph -->
     <meta
       property="og:title"
-      content="CatalogoHoy — Crea tu catálogo digital gratis en minutos"
+      content="CatalogoHoy | Crea tu catálogo digital gratis en minutos"
     />
     <meta
       property="og:description"
@@ -91,7 +91,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
-      content="CatalogoHoy — Crea tu catálogo digital gratis"
+      content="CatalogoHoy | Crea tu catálogo digital gratis"
     />
     <meta
       name="twitter:description"
@@ -194,6 +194,27 @@
             }
           }
         ]
+      }
+    </script>
+
+    <!-- JSON-LD: VideoObject (demo del home; dentro del rango que
+         prerender-blog.mjs recorta → no se filtra a las páginas del blog) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoObject",
+        "name": "Demo de CatalogoHoy: crea tu catálogo digital y vende por WhatsApp",
+        "description": "Mira cómo funciona CatalogoHoy: crea tu catálogo digital, comparte el link de tu tienda y recibe pedidos por WhatsApp, Instagram y más.",
+        "thumbnailUrl": "https://catalogohoy.com/demo-poster.webp",
+        "contentUrl": "https://catalogohoy.com/demo-catalogohoy.mp4",
+        "uploadDate": "2026-10-08",
+        "duration": "PT3M47S",
+        "inLanguage": "es",
+        "publisher": {
+          "@type": "Organization",
+          "name": "CatalogoHoy",
+          "logo": { "@type": "ImageObject", "url": "https://catalogohoy.com/favicon.png" }
+        }
       }
     </script>
 

@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 // Links reales a páginas (crawleables, habilitan sitelinks en Google) +
 // anclas ancladas a la raíz para que funcionen desde cualquier ruta.
 const navLinks = [
-  { href: "/#how-it-works", label: "Cómo funciona" },
+  { href: "/#how-it-works", label: "Demo" },
   { href: "/features", label: "Funciones" },
   { href: "/pricing", label: "Precios" },
   { href: "/blog", label: "Blog" },
