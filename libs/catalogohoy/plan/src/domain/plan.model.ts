@@ -67,6 +67,10 @@ export interface TenantPlanUsage {
    *  plan actual hasta que cancele/cambie (grandfathered). Null = paga el precio
    *  de lista vigente. Alimenta el badge "precio de cliente antiguo". */
   lockedPlanPrice: number | null;
+  /** Cuándo consumió su trial de 7 días (lo estampa el stripe-webhook, o a mano
+   *  para trials otorgados manualmente). Si está seteado, el checkout NO vuelve
+   *  a ofrecer el trial — mismo criterio que create-checkout-session. */
+  trialUsedAt: string | null;
 }
 
 export interface TenantPlanExpiration {
@@ -77,6 +81,8 @@ export interface TenantPlanExpiration {
   stripeSubscriptionStatus: string | null;
   /** Precio mensual congelado (grandfathered) — ver TenantPlanUsage. */
   lockedPlanPrice: number | null;
+  /** Ver TenantPlanUsage.trialUsedAt. */
+  trialUsedAt: string | null;
 }
 
 export interface TenantPlanPublicInfo {

@@ -280,9 +280,14 @@ export class PlanCheckout implements OnInit {
    *  el gancho y cambiar el copy. */
   public readonly eligibleForTrial = computed(() => {
     const current = this.planStore.currentPlan();
+    const usage = this.planStore.tenantPlanUsage();
     const hasPaid = !!current && !current.isFree;
-    const hasStripe = this.planStore.tenantPlanUsage()?.hasStripeSubscription ?? false;
-    return !hasPaid && !hasStripe && this.planId() !== BASICO_PLAN_ID;
+    const hasStripe = usage?.hasStripeSubscription ?? false;
+    // trialUsedAt también cubre trials otorgados A MANO (sin sub de Stripe):
+    // se estampa tenants.trial_used_at y el checkout deja de ofrecerlo, igual
+    // que hace el server.
+    const trialUsed = !!usage?.trialUsedAt;
+    return !hasPaid && !hasStripe && !trialUsed && this.planId() !== BASICO_PLAN_ID;
   });
 
   /** Mostramos el flujo "Activar 7 días de prueba" solo cuando el server
