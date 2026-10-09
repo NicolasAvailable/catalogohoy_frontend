@@ -331,6 +331,12 @@ Deno.serve(async (req: Request) => {
         summary.push({ tenantId: cand.tenant_id, days, sent: false, skipped: "opted out" });
         continue;
       }
+      // Free trial: la sub con tarjeta se cobra sola al terminar; NO es un
+      // vencimiento a "renovar", así que no le mandamos el aviso.
+      if (cand.stripe_subscription_status === "trialing") {
+        summary.push({ tenantId: cand.tenant_id, days, sent: false, skipped: "trialing" });
+        continue;
+      }
       if (!cand.owner_email || !cand.owner_email.includes("@")) {
         summary.push({ tenantId: cand.tenant_id, days, sent: false, skipped: "no owner email" });
         continue;

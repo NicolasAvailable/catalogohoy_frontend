@@ -12,7 +12,10 @@ export default {
       },
     ],
   },
-  transformIgnorePatterns: ['node_modules/(?!.*\\.mjs$)'],
+  // Mismo allowlist que las libs: transloco (@jsverse) y cía. publican ESM.
+  transformIgnorePatterns: [
+    'node_modules/(?!(.*\\.mjs$|@jsverse|lucide-angular|@sweet-monads|@ngrx))',
+  ],
   snapshotSerializers: [
     'jest-preset-angular/build/serializers/no-ng-attributes',
     'jest-preset-angular/build/serializers/ng-snapshot',

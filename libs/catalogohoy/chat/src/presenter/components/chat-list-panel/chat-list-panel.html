@@ -3,7 +3,37 @@
   <div class="flex flex-col gap-3 px-4 pt-5 pb-3 shrink-0">
     <div class="flex items-center justify-between">
       <h2 class="text-2xl font-extrabold text-grey-800 leading-none">{{ 'Chats' | transloco }}</h2>
-      <ui-icon name="ellipsis-vertical" size="18" styleClass="text-grey-400 cursor-pointer shrink-0" />
+      <div class="flex items-center gap-1.5 shrink-0">
+        <!-- Acceso rápido a conectar canales. -->
+        <a
+          routerLink="/admin/chat/connect"
+          class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary-50 text-primary-600 text-xs font-semibold hover:bg-primary-100 transition-colors"
+        >
+          <ui-icon name="plus" size="13" styleClass="text-primary-600" />
+          {{ 'Conectar' | transloco }}
+        </a>
+        <!-- Menú ⋮: acciones secundarias (Plantillas). -->
+        <button
+          type="button"
+          (click)="$event.stopPropagation(); menu.toggle($event)"
+          class="flex items-center justify-center w-7 h-7 rounded-lg text-grey-400 hover:bg-grey-50 hover:text-grey-600 transition-colors cursor-pointer"
+          [title]="'Más opciones' | transloco"
+        >
+          <ui-icon name="ellipsis-vertical" size="18" />
+        </button>
+        <p-popover #menu appendTo="body">
+          <div class="w-52 py-1">
+            <a
+              routerLink="/admin/chat/templates"
+              (click)="menu.hide()"
+              class="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-grey-25 text-left cursor-pointer text-sm text-grey-700"
+            >
+              <ui-icon name="layout-template" size="16" styleClass="text-grey-500" />
+              {{ 'Plantillas' | transloco }}
+            </a>
+          </div>
+        </p-popover>
+      </div>
     </div>
     <ui-input-search
       placeholder="Buscar un chat"

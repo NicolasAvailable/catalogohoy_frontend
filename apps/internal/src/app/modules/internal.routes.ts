@@ -7,6 +7,13 @@ export const internalRoutes: Route[] = [
       import('./dashboard/dashboard').then((m) => m.Dashboard),
   },
   {
+    path: 'business-metrics',
+    loadChildren: () =>
+      import('./business-metrics/business-metrics.routes').then(
+        (m) => m.businessMetricsRoutes
+      ),
+  },
+  {
     path: 'tenants',
     loadChildren: () =>
       import('./tenants/tenants.routes').then((m) => m.tenantsRoutes),
@@ -29,6 +36,11 @@ export const internalRoutes: Route[] = [
       import('./paying-accounts/paying-accounts.routes').then(
         (m) => m.payingAccountsRoutes
       ),
+  },
+  {
+    path: 'free-trials',
+    loadComponent: () =>
+      import('./free-trials/free-trials').then((m) => m.FreeTrials),
   },
   {
     path: 'enterprise-leads',

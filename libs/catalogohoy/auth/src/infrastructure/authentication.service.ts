@@ -325,7 +325,8 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
+    // Confirmación de correo = completa un alta nueva → bienvenida.
+    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain, '/bienvenida'));
   }
 
   public async resetPassword(
@@ -399,6 +400,8 @@ export class AuthenticationService implements BaseAuthenticationService {
     return this._buildRedirectUrl(slug, customDomain, path);
   }
 
+  /** `path` decide el destino tras autenticar: el login cae en `/admin`; las
+   *  altas nuevas (signup email/Google/OTP) van al wizard de `/onboarding`. */
   private _buildRedirectUrl(
     slug: string,
     customDomain?: string | null,

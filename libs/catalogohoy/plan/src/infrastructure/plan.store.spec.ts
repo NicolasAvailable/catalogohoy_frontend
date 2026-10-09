@@ -61,6 +61,9 @@ function buildUsage(overrides: Partial<TenantPlanUsage> = {}): TenantPlanUsage {
     planExpiresAt: null,
     hasStripeSubscription: false,
     autoRenews: false,
+    stripeSubscriptionStatus: null,
+    lockedPlanPrice: null,
+    trialUsedAt: null,
     ...overrides,
   };
 }

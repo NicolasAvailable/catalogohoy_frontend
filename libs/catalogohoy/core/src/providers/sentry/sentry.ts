@@ -47,6 +47,15 @@ export function initSentry({ dsn, appName }: InitSentryOptions): void {
       // postMessage cuando el WebView se destruye. No es un error nuestro.
       'Java object is gone',
       'Error invoking postMessage',
+      // App nativa (Capacitor iOS/Android): ruido del ciclo de vida del WebView,
+      // no bugs de la app. El WKWebView se libera antes de entregar el mensaje,
+      // el bridge de Android falla al invocar, o `window.webkit` aún no existe.
+      'WKWebView was deallocated',
+      'Error invoking jsReceiveMessages',
+      'Java bridge method invocation error',
+      'window.webkit.messageHandlers',
+      // Operación cancelada (navegación / fetch abortado a mitad): benigno.
+      'The operation was aborted',
       // ResizeObserver: bucle benigno, ruido universal de Chrome.
       'ResizeObserver loop completed with undelivered notifications',
       'ResizeObserver loop limit exceeded',
@@ -124,7 +133,17 @@ class ChunkAwareErrorHandler implements ErrorHandler {
   private readonly sentry = Sentry.createErrorHandler();
 
   handleError(error: unknown): void {
-    if (isChunkLoadError(error) && reloadForFreshAssets()) return;
+    // Chunk lazy que ya no existe: el deploy reemplazó el `chunk-XXXX.js` que un
+    // index.html viejo (cacheado) todavía referencia. Intentamos recuperar
+    // recargando para traer el shell nuevo (ahora que index.html es `no-cache`,
+    // el reload trae siempre los hashes actuales). NO se reporta ni a Sentry ni
+    // al canal de Slack: es ruido esperado de deploy, no un bug, y se
+    // auto-recupera. El anti-loop evita recargas en bucle; si no recargó
+    // (segundo fallo en <10s), igual lo tragamos en vez de ensuciar los canales.
+    if (isChunkLoadError(error)) {
+      reloadForFreshAssets();
+      return;
+    }
     this.sentry.handleError(error);
     // Además de Sentry, al canal de Slack de errores (best-effort, dedupe).
     const err = error as { message?: string; stack?: string } | null;

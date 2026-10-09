@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
+import { convertHeicToJpeg, isHeicFile } from '@ui';
 import {
   Chat,
   ChatMessage,
@@ -299,16 +300,31 @@ export class ChatService {
     file: File,
     tenantId: number
   ): Promise<E.Either<Error, { url: string; mime: string }>> {
-    const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+    // Fotos HEIC (iPhone/Samsung "alta eficiencia") no previsualizan en
+    // Chrome ni las aceptan los canales al reenviar: se convierten a JPEG
+    // con el mismo util del uploader de productos. Si la conversión falla
+    // (p.ej. un JPEG renombrado a .heic), sube el archivo original como
+    // siempre.
+    let body: Blob = file;
+    let mime = file.type;
+    let ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+    if (await isHeicFile(file)) {
+      const converted = await convertHeicToJpeg(file);
+      if (converted) {
+        body = converted;
+        mime = 'image/jpeg';
+        ext = 'jpeg';
+      }
+    }
     const path = `chat-media/${tenantId}/${Date.now()}-${Math.random()
       .toString(36)
       .slice(2)}.${ext}`;
     const { error } = await this.client.storage
       .from('catalogohoy')
-      .upload(path, file, { contentType: file.type, upsert: false });
+      .upload(path, body, { contentType: mime, upsert: false });
     if (error) return E.left(new Error(error.message));
     const { data } = this.client.storage.from('catalogohoy').getPublicUrl(path);
-    return E.right({ url: data.publicUrl, mime: file.type });
+    return E.right({ url: data.publicUrl, mime });
   }
 
   /** Send a media message (image/document) via wa-send, with a demo fallback

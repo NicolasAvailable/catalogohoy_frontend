@@ -4,13 +4,29 @@
 
 ## Planes
 
-| Plan | Precio (mes) | Productos | Catálogos | Miembros equipo | Variantes/producto | Créditos IA/mes |
-|---|---|---|---|---|---|---|
-| **gratis** | $0 | 1 (visible en catálogo público) | 1 | 0 | 1 | **15** |
-| **basico** | $9.99 | hasta 100 | 1 | 1 | 3 | **200** |
-| **avanzado** | $19.99 | ilimitados | hasta 2–3 | hasta 5–10 | 15 | **500** |
-| **enterprise** | a medida (sin checkout) | ilimitados | 10 | 50 | 100 | **2000** |
+> **Reestructura 2026-09**: se eliminó el trimestral (queda mensual + anual −50%),
+> Pro subió a $20 y Avanzado a $35, y el **Básico se discontinuó para altas nuevas**
+> (grandfathered: los que ya lo pagan siguen igual, su sub está anclada al precio
+> viejo en Stripe; el grid de planes lo oculta salvo que sea el plan actual del
+> tenant). Se agregó **free trial de 7 días CON tarjeta** en la primera suscripción.
 
+| Plan | Precio (mes) | Productos | Catálogos | Miembros equipo | Variantes/producto | Créditos IA/mes | Visible altas nuevas |
+|---|---|---|---|---|---|---|---|
+| **gratis** | $0 | 10 | 1 | 0 | 1 | **15** | sí |
+| **pro** | **$20** | 500 | 1 | 2 | 10 | **350** | sí |
+| **avanzado** | **$35** | ilimitados | 2 | 3 | 35 | **500** | sí |
+| ~~basico~~ (discontinuado) | $11.99 | 100 | 1 | 1 | 3 | **200** | **no** (grandfathered) |
+| **enterprise** | a medida (sin checkout) | ilimitados | 10 | 50 | 100 | **2000** | no (flag) |
+
+- **Free trial (2026-09)**: 7 días con tarjeta en la 1ª suscripción de Pro/Avanzado
+  (`trial_period_days` en `create-checkout-session`, gate por `tenants.trial_used_at`
+  + no tener sub previa). El webhook estampa `trial_used_at` cuando el trial arranca
+  (`checkout.session.completed` con `subscription.trial_end`). El status `trialing`
+  ya lo trata el webhook como válido → el plan queda activo durante el trial.
+- **Precios**: el cobro real sale del `PRICE_MAP` de `create-checkout-session` /
+  `change-plan` (price IDs de Stripe, inmutables) — NO de `plans.price`. Cambiar un
+  precio = crear price IDs nuevos en Stripe + actualizar ese `PRICE_MAP` +
+  `PLAN_BASE_PRICES` (app) + `Pricing.tsx`/`PlanComparison.tsx`/`Precios.tsx` (landing).
 - **Sentinela "ilimitado"**: `max_products = 0` significa ilimitado (no -1 ni flag aparte).
   ⚠️ Aplica SOLO a productos: `max_catalogs = 0` daría CERO slots (por eso enterprise usa 10/50/100).
 - **Enterprise (agregado 2026-07-07)**: fila real en `plans` (`price 0`, `is_free false`, pos 3,
@@ -26,8 +42,10 @@
   `enterprise.model.ts` (admin), `apps/landing/src/lib/enterprise-lead.ts` (landing) y la edge
   function (fuente de verdad de lo persistido). Se asigna manualmente desde el panel interno
   (tier con precio sugerido $99.99 SIEMPRE ajustable al deal).
-- **Billing**: mensual / trimestral (10% off) / anual (15% off). Stripe multi-moneda con FX
-  de display; los **edge functions de Stripe son la fuente de verdad** del cobro.
+- **Billing**: mensual / anual (−50%, "6 meses gratis"). El **trimestral se retiró
+  2026-09** (el plumbing `quarterly` sigue inerte en el type/PRICE_MAP para no romper
+  suscripciones viejas, pero ya no se ofrece). Stripe multi-moneda con FX de display;
+  los **edge functions de Stripe son la fuente de verdad** del cobro.
 - **Add-on de catálogo**: ~$3.99–$5.99/mes; los slots extra son **a nivel de cuenta** (owner),
   agregados a través de cualquier catálogo, pero se acreditan al owner.
 - **Expiración / gracia**: el plan expira solo si el flag está seteado **Y** la fecha

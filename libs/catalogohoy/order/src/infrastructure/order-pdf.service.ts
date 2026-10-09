@@ -6,7 +6,13 @@ import {
 } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
 import { jsPDF } from 'jspdf';
-import { isVentaFeatureEnabled, Order, OrderItem } from '../domain';
+import {
+  buildInvoiceFilename,
+  isVentaFeatureEnabled,
+  Order,
+  OrderItem,
+} from '../domain';
+import { OrderService } from './order.service';
 
 const PAYMENT_LABELS: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -39,6 +45,10 @@ export interface OrderPdfContext {
    *  renderiza en bolívares en vez de la moneda de referencia. Default true. */
   showReference?: boolean;
   logoUrl: string | null;
+  /** CAT-84: % de impuesto incluido en los precios (desglose informativo). */
+  taxRate?: number | null;
+  /** Etiqueta del impuesto (IVA/ITBIS/IGV…). */
+  taxLabel?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -46,6 +56,7 @@ export class OrderPdfService {
   private readonly configStore = inject(EcommerceConfigStore);
   private readonly tenantStore = inject(TenantStore);
   private readonly tenantCurrency = inject(TenantCurrencyStore);
+  private readonly orderService = inject(OrderService);
 
   /**
    * @param order   The order to render.
@@ -53,16 +64,27 @@ export class OrderPdfService {
    *   stores aren't available (e.g. the public catalog invoice) so the exact
    *   same receipt can be produced outside the admin. Omit it in the admin and
    *   it derives everything from the config/tenant/currency stores.
+   * @param opts    `as: 'blob'` devuelve el PDF en memoria (para enviarlo por
+   *   WhatsApp, CAT-80) en vez de descargarlo.
    */
-  async download(order: Order, context?: OrderPdfContext): Promise<void> {
+  async download(
+    order: Order,
+    context?: OrderPdfContext,
+    opts?: { as?: 'save' | 'blob' }
+  ): Promise<{ blob: Blob; filename: string } | void> {
     let storeName: string;
     let showDualBs: boolean;
     let cs: string;
     let logoUrl: string | null;
+    // CAT-84: desglose informativo del impuesto incluido (null = no mostrar).
+    let taxRate: number | null = null;
+    let taxLabel = 'IVA';
 
     if (context) {
       storeName = context.storeName || 'Catálogo';
       showDualBs = context.showDualBs;
+      taxRate = context.taxRate && context.taxRate > 0 ? context.taxRate : null;
+      taxLabel = context.taxLabel?.trim() || 'IVA';
       // `''` es un valor válido: el storefront ya mapeó el centinela "sin
       // símbolo" a cadena vacía, así que no debe caer al '$' de fallback.
       cs = context.currencySymbol ?? '$';
@@ -82,6 +104,8 @@ export class OrderPdfService {
       // every other country renders its local currency.
       cs = this.tenantCurrency.displaySymbol() || config?.currencySymbol || '$';
       logoUrl = config?.logo ?? null;
+      taxRate = config?.taxRate && config.taxRate > 0 ? config.taxRate : null;
+      taxLabel = config?.taxLabel?.trim() || 'IVA';
     }
     // El centinela zero-width "sin símbolo" se normaliza a '' — jsPDF con las
     // fuentes estándar no sabe renderizar U+200B y pintaría un glifo basura.
@@ -256,6 +280,13 @@ export class OrderPdfService {
       y += 5;
     }
 
+    // NIT (identificación tributaria) cuando la orden lo trae — dato fiscal
+    // que el cliente necesita en el recibo para facturar.
+    if (order.nit) {
+      doc.text(`NIT: ${order.nit}`, colR, y);
+      y += 5;
+    }
+
     y += 8;
 
     // ── Amount line ───────────────────────────────────────────
@@ -284,7 +315,10 @@ export class OrderPdfService {
       try {
         const res = await fetch(item.photo, { mode: 'cors' });
         const blob = await res.blob();
-        const b64 = await this.blobToBase64(blob);
+        // Thumbnail JPEG en vez de la foto original: se dibuja a 10mm, así que
+        // la resolución completa solo inflaba el PDF (facturas de 3+MB que no
+        // subían por conexiones lentas — caso Bioma 2026-09-25).
+        const b64 = await this.blobToThumbnailBase64(blob);
         imageMap.set(idx, b64);
       } catch {
         /* image failed — skip */
@@ -351,6 +385,15 @@ export class OrderPdfService {
         hasSku ? `SKU: ${item.sku}` : null,
       ].filter(Boolean) as string[];
 
+      // Nombre del producto: se mide a 9pt y se PARTE en varias líneas si no
+      // entra en la columna, para no truncar códigos/descripciones largos.
+      // (Antes solo se dibujaba la 1ª línea y se perdía el resto — p. ej.
+      // "...EXTRAER LIQUIDO 2L 12534" salía cortado en la factura.)
+      const nameLines = doc.splitTextToSize(
+        item.name,
+        qtyX - descX - 6
+      ) as string[];
+
       // Ajusta cada sub-línea al ancho de la columna (medido a 7pt) y las
       // aplana, para que nada se salga ni se trunque a una sola línea.
       doc.setFontSize(7);
@@ -359,8 +402,12 @@ export class OrderPdfService {
       );
       doc.setFontSize(9);
 
+      // La fila reserva alto para TODAS las líneas del nombre (no solo la 1ª)
+      // más las sub-líneas, para que ensureSpace pagine bien y nada quede fuera.
       const rowH = Math.max(
-        (showBsPerLine ? 12 : 8) + subLines.length * 4,
+        (showBsPerLine ? 12 : 8) +
+          (nameLines.length - 1) * 4 +
+          subLines.length * 4,
         imgData ? imgSize + 2 : 0
       );
       // Si la fila no entra en lo que queda de página, sigue en una nueva
@@ -369,7 +416,10 @@ export class OrderPdfService {
       // Centra el nombre con la imagen solo si no hay sub-líneas; si las hay,
       // alinea arriba para que el bloque de texto no quede desbalanceado.
       const textY =
-        y + (imgData && subLines.length === 0 ? imgSize / 2 + 1 : 4);
+        y +
+        (imgData && subLines.length === 0 && nameLines.length === 1
+          ? imgSize / 2 + 1
+          : 4);
 
       // Product image
       if (imgData) {
@@ -382,18 +432,18 @@ export class OrderPdfService {
 
       doc.setFont('helvetica', 'normal');
 
-      // Product name
-      const nameLines = doc.splitTextToSize(
-        item.name,
-        qtyX - descX - 6
-      ) as string[];
-      doc.text(nameLines[0], descX, textY);
+      // Product name — TODAS las líneas (ya partidas arriba), no solo la 1ª.
+      let nameY = textY;
+      for (const nl of nameLines) {
+        doc.text(nl, descX, nameY);
+        nameY += 4;
+      }
 
-      // Sub-líneas (atributos / adicionales / SKU) bajo el nombre
+      // Sub-líneas (atributos / adicionales / SKU) bajo el bloque del nombre.
       if (subLines.length) {
         doc.setFontSize(7);
         doc.setTextColor(...GREY);
-        let subY = textY;
+        let subY = textY + (nameLines.length - 1) * 4;
         for (const line of subLines) {
           subY += 4;
           doc.text(line, descX, subY);
@@ -434,17 +484,75 @@ export class OrderPdfService {
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text('Subtotal', labelX, y);
-    doc.text(money(order.totalUsd), valX, y, {
-      align: 'right',
-    });
-    y += 5;
+
+    // Solo se itemiza si el ajuste es visible al cliente; si no, la factura
+    // muestra Subtotal = Total (el ajuste ya está aplicado en el total).
+    const adj =
+      order.paymentAdjustment && order.paymentAdjustment.visible !== false
+        ? order.paymentAdjustment
+        : null;
+
+    // Total mostrado: con ajuste itemizado, es la suma de las líneas visibles
+    // (productos + envío ± ajuste), para que la factura SIEMPRE cuadre — aunque
+    // exista una comisión oculta que reste del `total_usd` guardado.
+    let displayTotalUsd = order.totalUsd;
+    let displayTotalBs = order.totalBs;
+
+    if (adj) {
+      const productsSubtotal = order.products.reduce(
+        (sum, p) => sum + (p.total || 0),
+        0
+      );
+      const shipping =
+        order.shippingFee && order.shippingFee > 0 ? order.shippingFee : 0;
+      displayTotalUsd = productsSubtotal + shipping + adj.amount;
+      const rate =
+        order.totalBs && order.totalUsd > 0 ? order.totalBs / order.totalUsd : 0;
+      if (rate) displayTotalBs = displayTotalUsd * rate;
+
+      doc.text('Subtotal', labelX, y);
+      doc.text(money(productsSubtotal), valX, y, { align: 'right' });
+      y += 5;
+
+      if (shipping > 0) {
+        doc.text('Envío', labelX, y);
+        doc.text(money(shipping), valX, y, { align: 'right' });
+        y += 5;
+      }
+
+      doc.text(adj.label, labelX, y);
+      doc.text(
+        `${adj.kind === 'discount' ? '- ' : '+ '}${money(adj.magnitude)}`,
+        valX,
+        y,
+        { align: 'right' }
+      );
+      y += 5;
+    } else {
+      doc.text('Subtotal', labelX, y);
+      doc.text(money(order.totalUsd), valX, y, { align: 'right' });
+      y += 5;
+    }
+
+    // IVA/impuesto incluido (CAT-84): desglose estilo factura fiscal — base
+    // imponible → IVA → total. El precio YA lo incluye, NO altera el total.
+    if (taxRate && taxRate > 0) {
+      const taxBase = displayTotalUsd / (1 + Number(taxRate) / 100);
+      doc.setTextColor(...GREY);
+      doc.text('Base imponible', labelX, y);
+      doc.text(money(taxBase), valX, y, { align: 'right' });
+      y += 5;
+      doc.text(`${taxLabel} ${taxRate}%`, labelX, y);
+      doc.text(money(displayTotalUsd - taxBase), valX, y, { align: 'right' });
+      doc.setTextColor(...BLACK);
+      y += 5;
+    }
 
     // El mirror "Total en Bs." solo en catálogos dual-moneda (referencia + Bs);
     // en un catálogo solo-Bs el total ya sale en bolívares vía money().
-    if (!soloBs && showDualBs && order.totalBs && order.totalBs > 0) {
+    if (!soloBs && showDualBs && displayTotalBs && displayTotalBs > 0) {
       doc.text('Total en Bs.', labelX, y);
-      doc.text(`Bs. ${fmtBs(order.totalBs)}`, valX, y, {
+      doc.text(`Bs. ${fmtBs(displayTotalBs)}`, valX, y, {
         align: 'right',
       });
       y += 5;
@@ -452,7 +560,7 @@ export class OrderPdfService {
 
     doc.setFont('helvetica', 'bold');
     doc.text('Total', labelX, y);
-    doc.text(money(order.totalUsd), valX, y, {
+    doc.text(money(displayTotalUsd), valX, y, {
       align: 'right',
     });
     y += 10;
@@ -499,9 +607,44 @@ export class OrderPdfService {
       y
     );
 
-    doc.save(
-      `${isReceipt ? 'recibo' : 'orden'}-${order.orderNumber ?? order.id}.pdf`
-    );
+    // Nombre del archivo: la factura se identifica por el cliente, no por el
+    // número de orden (ver buildInvoiceFilename). El `seq` numera las órdenes
+    // repetidas de un mismo cliente ("Juan Pérez.pdf", "Juan Pérez (2).pdf") y
+    // solo aplica en el admin: la factura del catálogo público (con `context`)
+    // es una sola orden recién hecha → nombre limpio.
+    const seq = context
+      ? undefined
+      : await this.orderService.clientOrderOrdinal(order);
+    const filename = buildInvoiceFilename(order, { isReceipt, seq });
+    if (opts?.as === 'blob') {
+      return { blob: doc.output('blob') as Blob, filename };
+    }
+    doc.save(filename);
+  }
+
+  /** Foto → thumbnail JPEG (~256px de lado, fondo blanco porque JPEG no tiene
+   *  alfa). A los 10mm a los que se dibuja en la factura sigue sobrando
+   *  resolución; el peso del PDF baja de ~3MB a cientos de KB. Si el formato
+   *  no se puede rasterizar, cae al original. */
+  private async blobToThumbnailBase64(blob: Blob, maxSide = 256): Promise<string> {
+    try {
+      const bmp = await createImageBitmap(blob);
+      const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+      const w = Math.max(1, Math.round(bmp.width * scale));
+      const h = Math.max(1, Math.round(bmp.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return this.blobToBase64(blob);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(bmp, 0, 0, w, h);
+      bmp.close();
+      return canvas.toDataURL('image/jpeg', 0.8);
+    } catch {
+      return this.blobToBase64(blob);
+    }
   }
 
   private blobToBase64(blob: Blob): Promise<string> {

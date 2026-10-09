@@ -35,28 +35,83 @@ const CORS = {
 };
 
 // Mismos IDs que create-checkout-session (mantener sincronizados).
+// Switch a decimales (2026-10-08): Pro $19.99 / Avanzado $34.99; basico (11.99)
+// vuelve a ofrecerse. quarterly inerte.
 const PRICE_MAP: Record<string, Record<string, string>> = {
   basico: {
-    monthly:   "price_1TyBl485rys2QLXd8LCfn4PZ",
-    quarterly: "price_1TyBl485rys2QLXdPdkMqstS",
-    annual:    "price_1TyBl585rys2QLXdrlplXJzX",
+    monthly:   "price_1UBcws85rys2QLXd2VNxshFD",
+    quarterly: "price_1UBcwt85rys2QLXd9plZqrRK",
+    annual:    "price_1UBcwt85rys2QLXdstJ7waFV", // $71.94 (-50% anual)
   },
   pro: {
-    monthly:   "price_1TyBl585rys2QLXdc1GUWVJh",
+    monthly:   "price_1UOJEz85rys2QLXdD2qy2sbm", // $19.99
     quarterly: "price_1TyBl585rys2QLXdKk3w7yGm",
-    annual:    "price_1TyBrh85rys2QLXd7Q9EPKKF",
+    annual:    "price_1UOJFA85rys2QLXd5NgVNHLY", // $119.94 (-50% anual)
   },
   avanzado: {
-    monthly:   "price_1TyBl785rys2QLXd08l8YOs7",
+    monthly:   "price_1UOJFK85rys2QLXdN1DNC5Uh", // $34.99
     quarterly: "price_1TyBl785rys2QLXdp7nbigVf",
-    annual:    "price_1TyBrh85rys2QLXdtGFJFkPf",
+    annual:    "price_1UOJFV85rys2QLXdkcOdcw0T", // $209.94 (-50% anual)
   },
+};
+
+// Price IDs históricos que siguen ANCLADOS a suscripciones vigentes. No se usan
+// para cobrar upgrades (eso sale de PRICE_MAP), pero PRICE_TO_PLAN los necesita
+// para reconocer el ítem de plan dentro de una suscripción existente — si falta
+// el ID, el upgrade cae a `plan_item_not_found` y el front hace checkout a
+// precio COMPLETO sin acreditar lo no usado (bug Aglaia). Inventario COMPLETO
+// de los 3 productos en Stripe live (2026-10-08, incluye precios archivados):
+// pro prod_UvXD7BXlWjSsUN, avanzado prod_U4NQhPd3F2XD85, basico prod_U4NQdQmoKgPBfl.
+const LEGACY_PRICES: Record<string, { planId: string; period: string }> = {
+  // ── pro ──
+  "price_1UL59T85rys2QLXdkrWZiIh1": { planId: "pro", period: "monthly" },   // $20 (switch 2026-09)
+  "price_1UL59g85rys2QLXdp7UiCjCQ": { planId: "pro", period: "annual" },    // $120 (switch 2026-09)
+  "price_1UBcwt85rys2QLXdqUs4wZKT": { planId: "pro", period: "annual" },    // $119.94
+  "price_1TyBrh85rys2QLXd7Q9EPKKF": { planId: "pro", period: "annual" },    // $199.90 (2 meses gratis jul)
+  "price_1TyBl685rys2QLXdwXHCBjvu": { planId: "pro", period: "annual" },    // $219.89 (archivado)
+  "price_1TyBl585rys2QLXdc1GUWVJh": { planId: "pro", period: "monthly" },   // $19.99 (regen jul)
+  "price_1Twl8D85rys2QLXdriJD6mKz": { planId: "pro", period: "annual" },    // $179.91
+  "price_1TvgA385rys2QLXdZTw9tolK": { planId: "pro", period: "annual" },    // $203.90 (pre-jul)
+  "price_1Tvg9u85rys2QLXdaDdgvbii": { planId: "pro", period: "quarterly" }, // $53.97 (pre-jul)
+  "price_1Tvg9h85rys2QLXd18YBSdOk": { planId: "pro", period: "monthly" },   // $19.99 (pre-jul)
+  // ── avanzado ──
+  "price_1UL59m85rys2QLXdC40TyaQE": { planId: "avanzado", period: "monthly" },   // $35 (switch 2026-09)
+  "price_1UL59r85rys2QLXdnrsXjQis": { planId: "avanzado", period: "annual" },    // $210 (switch 2026-09)
+  "price_1UBcwu85rys2QLXdJVEue0XU": { planId: "avanzado", period: "annual" },    // $179.94
+  "price_1TyBrh85rys2QLXdtGFJFkPf": { planId: "avanzado", period: "annual" },    // $299.90 (2 meses gratis jul)
+  "price_1TyBl785rys2QLXdtBSv8PyU": { planId: "avanzado", period: "annual" },    // $329.89 (archivado)
+  "price_1TyBl785rys2QLXd08l8YOs7": { planId: "avanzado", period: "monthly" },   // $29.99 (regen jul)
+  "price_1Twl8E85rys2QLXdOAhiu0kx": { planId: "avanzado", period: "annual" },    // $269.91
+  "price_1TvgAZ85rys2QLXdhNuebVOL": { planId: "avanzado", period: "annual" },    // $305.90 (pre-jul)
+  "price_1TvgAO85rys2QLXdfdTCu165": { planId: "avanzado", period: "quarterly" }, // $80.97 (pre-jul)
+  "price_1TvgAE85rys2QLXdoNMJFJ6O": { planId: "avanzado", period: "monthly" },   // $29.99 (pre-jul)
+  "price_1TGfmh85rys2QLXdBW7wZB1U": { planId: "avanzado", period: "annual" },    // $203.90 (gen 1.5)
+  "price_1TGfmh85rys2QLXdH8DRmSqH": { planId: "avanzado", period: "quarterly" }, // $53.97 (gen 1.5)
+  "price_1TGfmg85rys2QLXduNXYy9h3": { planId: "avanzado", period: "monthly" },   // $19.99 (gen 1.5)
+  "price_1T6Egm85rys2QLXd7SUripKT": { planId: "avanzado", period: "annual" },    // $305.90 (gen 1, archivado)
+  "price_1T6Egm85rys2QLXd0xhEdxq5": { planId: "avanzado", period: "quarterly" }, // $80.97 (gen 1, archivado)
+  "price_1T6Egl85rys2QLXdgBMNNpb6": { planId: "avanzado", period: "monthly" },   // $29.99 (gen 1, archivado)
+  // ── basico ──
+  "price_1TyyMD85rys2QLXdtQYv2JBj": { planId: "basico", period: "annual" },    // $99.90
+  "price_1TyBl585rys2QLXdrlplXJzX": { planId: "basico", period: "annual" },    // $109.89
+  "price_1TyBl485rys2QLXdPdkMqstS": { planId: "basico", period: "quarterly" }, // $26.97 (regen jul)
+  "price_1TyBl485rys2QLXd8LCfn4PZ": { planId: "basico", period: "monthly" },   // $9.99 (regen jul)
+  "price_1Twl8B85rys2QLXdPxrTsKgi": { planId: "basico", period: "annual" },    // $89.91
+  "price_1TGfmg85rys2QLXdxnVflylM": { planId: "basico", period: "annual" },    // $101.90 (gen 1.5)
+  "price_1TGfmg85rys2QLXdjyfHoGWn": { planId: "basico", period: "quarterly" }, // $26.97 (gen 1.5)
+  "price_1TGfmg85rys2QLXdofh9ytbw": { planId: "basico", period: "monthly" },   // $9.99 (gen 1.5)
+  "price_1T6Egl85rys2QLXd2sIJMAO4": { planId: "basico", period: "annual" },    // $152.90 (gen 1, archivado)
+  "price_1T6EgQ85rys2QLXdHQlp7Tui": { planId: "basico", period: "quarterly" }, // $40.47 (gen 1, archivado)
+  "price_1T6Eg785rys2QLXddxPhqn6B": { planId: "basico", period: "monthly" },   // $14.99 (gen 1, archivado)
 };
 
 // priceId → { planId, period }. Sirve para ubicar el ítem de plan dentro de la
 // suscripción (ignorando ítems de catálogos adicionales) y mantener el MISMO
-// período de facturación en el upgrade.
-const PRICE_TO_PLAN: Record<string, { planId: string; period: string }> = {};
+// período de facturación en el upgrade. Incluye los precios vigentes
+// (PRICE_MAP) y los históricos anclados a subs viejas (LEGACY_PRICES).
+const PRICE_TO_PLAN: Record<string, { planId: string; period: string }> = {
+  ...LEGACY_PRICES,
+};
 for (const [planId, periods] of Object.entries(PRICE_MAP)) {
   for (const [period, priceId] of Object.entries(periods)) {
     PRICE_TO_PLAN[priceId] = { planId, period };
@@ -195,6 +250,9 @@ Deno.serve(async (req: Request) => {
       plan_id: planId,
       plan_expired: false,
       stripe_subscription_status: updated.status,
+      // Upgrade → pasa a la tarifa nueva, se pierde el precio congelado de
+      // cliente antiguo (si lo tenía).
+      locked_plan_price: null,
     };
     if (expiresAtIso) planUpdate["plan_expires_at"] = expiresAtIso;
 

@@ -496,8 +496,12 @@ export default class Save implements OnInit {
         originalPrice: [''],
         sku: [''],
         photos: [[] as string[]],
+        // Stock propio del variante cuando NO maneja tallas (null = ilimitado).
+        stock: [null as string | null],
         // Each variant owns its tallas.
         sizes: this.fb.array([]),
+        // Ocultar la variante del catálogo sin borrarla (color/modelo agotado).
+        isHidden: [false],
       })
     );
     this.form.controls.isVariant.setValue(true);
@@ -749,6 +753,7 @@ export default class Save implements OnInit {
           ],
           sku: [variant.sku ?? ''],
           photos: [variant.photos ?? []],
+          stock: [variant.stock != null ? String(variant.stock) : null],
           sizes: this.fb.array(
             (variant.sizes ?? []).map((s) =>
               this.fb.group({
@@ -758,6 +763,7 @@ export default class Save implements OnInit {
               })
             )
           ),
+          isHidden: [variant.isHidden ?? false],
         })
       );
     });

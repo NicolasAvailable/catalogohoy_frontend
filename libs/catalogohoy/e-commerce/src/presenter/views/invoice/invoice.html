@@ -96,6 +96,36 @@
       </span>
     </div>
     }
+    @if (visibleAdjustment(); as adj) {
+    <div class="invoice__row invoice__row--adj"
+      [class.invoice__row--adj-warn]="adj.kind === 'surcharge'">
+      <span>{{ adj.label }}</span>
+      <span>
+        {{ adj.kind === 'discount' ? '-' : '+' }}
+        @if (showReferencePrice()) { {{ cs() }}{{ adj.magnitude | tenantPrice }} }
+        @else if (showBs()) { Bs. {{ adj.magnitude * orderRate() | number:'1.2-2' }} }
+        @else { {{ cs() }}{{ adj.magnitude | tenantPrice }} }
+      </span>
+    </div>
+    }
+    @if (taxInfo(); as tax) {
+    <div class="invoice__row invoice__row--tax">
+      <span>{{ 'Base imponible' | transloco }}</span>
+      <span>
+        @if (showReferencePrice()) { {{ cs() }}{{ tax.base | tenantPrice }} }
+        @else if (showBs()) { Bs. {{ tax.base * orderRate() | number:'1.2-2' }} }
+        @else { {{ cs() }}{{ tax.base | tenantPrice }} }
+      </span>
+    </div>
+    <div class="invoice__row invoice__row--tax">
+      <span>{{ tax.label }} {{ tax.rate | number:'1.0-2' }}%</span>
+      <span>
+        @if (showReferencePrice()) { {{ cs() }}{{ tax.usd | tenantPrice }} }
+        @else if (showBs()) { Bs. {{ tax.usd * orderRate() | number:'1.2-2' }} }
+        @else { {{ cs() }}{{ tax.usd | tenantPrice }} }
+      </span>
+    </div>
+    }
     <div class="invoice__row invoice__row--total">
       <span>{{ 'Total' | transloco }}</span>
       <span>
@@ -116,6 +146,7 @@
     <dl class="invoice__details">
       <dt>{{ 'Cliente' | transloco }}</dt>
       <dd>{{ o.name }}@if (o.phone) { / {{ o.phone }} }</dd>
+      @if (o.nit) { <dt>{{ 'NIT' | transloco }}</dt><dd>{{ o.nit }}</dd> }
       @if (o.email) { <dt>{{ 'Correo' | transloco }}</dt><dd>{{ o.email }}</dd> }
       @if (o.shippingMethod) {
       <dt>{{ 'Envío' | transloco }}</dt>

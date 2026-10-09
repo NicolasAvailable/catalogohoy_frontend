@@ -693,6 +693,14 @@
     <ui-card>
       <div class="flex flex-col gap-4">
         <h2 class="text-xl font-bold">{{ 'Estado de la orden' | transloco }}</h2>
+        @if (creditRequested()) {
+        <div class="flex items-start gap-2.5 p-3 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">
+          <ui-icon name="hand-coins" size="18" styleClass="shrink-0 mt-0.5" />
+          <p class="text-sm m-0">
+            {{ 'El cliente pidió pagar A CRÉDITO al hacer este pedido. Si lo entregas a crédito, marca la orden como "A crédito" para llevar la cobranza.' | transloco }}
+          </p>
+        </div>
+        }
         <div
           class="flex flex-col sm:flex-row gap-4"
           role="radiogroup"
@@ -755,6 +763,33 @@
           <div
             role="radio"
             tabindex="0"
+            [attr.aria-checked]="form.get('status')?.value === 'credit'"
+            (click)="form.get('status')?.setValue('credit')"
+            (keydown.enter)="form.get('status')?.setValue('credit')"
+            (keydown.space)="form.get('status')?.setValue('credit'); $event.preventDefault()"
+            [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer flex-1 ' +
+              (form.get('status')?.value === 'credit'
+                ? 'border-blue-500 bg-blue-50/30'
+                : 'border-grey-200 hover:border-blue-300')"
+          >
+            <div
+              [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ' +
+                (form.get('status')?.value === 'credit'
+                  ? 'border-primary-500'
+                  : 'border-grey-300')"
+            >
+              @if (form.get('status')?.value === 'credit') {
+              <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
+              }
+            </div>
+            <div class="flex-1">
+              <span class="font-medium">{{ 'A crédito' | transloco }}</span>
+              <p class="text-sm text-grey-300">{{ 'Entregada a crédito (por cobrar)' | transloco }}</p>
+            </div>
+          </div>
+          <div
+            role="radio"
+            tabindex="0"
             [attr.aria-checked]="form.get('status')?.value === 'cancelled'"
             (click)="form.get('status')?.setValue('cancelled')"
             (keydown.enter)="form.get('status')?.setValue('cancelled')"
@@ -780,6 +815,106 @@
             </div>
           </div>
         </div>
+
+        <!-- Plan de pago en cuotas (CAT-79) — solo órdenes a crédito -->
+        @if (form.get('status')?.value === 'credit') {
+        <div class="rounded-xl border border-blue-200 bg-blue-50/40 p-4 flex flex-col gap-3">
+          <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div class="flex items-start gap-2.5">
+              <span class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                <ui-icon name="calendar-days" styleClass="size-4.5" />
+              </span>
+              <div>
+                <h3 class="font-semibold text-grey-800 leading-tight">{{ 'Plan de pago (cuotas)' | transloco }}</h3>
+                <p class="text-sm text-grey-400 mt-0.5">
+                  {{ 'Opcional. Acordá las fechas de pago con tu cliente y te recordamos las que se venzan.' | transloco }}
+                </p>
+              </div>
+            </div>
+            @if (installments().length > 1) {
+            <button
+              type="button"
+              (click)="splitInstallmentsEvenly()"
+              class="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer shrink-0"
+            >
+              {{ 'Repartir en partes iguales' | transloco }}
+            </button>
+            }
+          </div>
+
+          @for (cuota of installments(); track $index; let i = $index) {
+          <div
+            class="flex items-center gap-2.5 flex-wrap rounded-lg border bg-white px-3 py-2.5 transition-opacity"
+            [class]="cuota.paid ? 'border-green-200 opacity-70' : 'border-grey-200'"
+          >
+            <span
+              [class]="'w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ' +
+                (cuota.paid ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700')"
+            >
+              {{ i + 1 }}
+            </span>
+            <ui-datepicker
+              [ngModel]="cuota.date"
+              (ngModelChange)="onInstallmentDate(i, $event)"
+              [ngModelOptions]="{ standalone: true }"
+              [placeholder]="'Fecha de pago' | transloco"
+              dateFormat="dd/mm/yy"
+              mode="single"
+              size="small"
+              styleClass="w-36"
+            />
+            <ui-input-number
+              [ngModel]="cuota.amount"
+              (ngModelChange)="onInstallmentAmount(i, $event)"
+              [ngModelOptions]="{ standalone: true }"
+              [min]="0"
+              mode="decimal"
+              [prefix]="cs() + ' '"
+              [minFractionDigits]="2"
+              [maxFractionDigits]="2"
+              [placeholder]="'Monto (opcional)' | transloco"
+              styleClass="w-32"
+            />
+            @if (!isCreate()) {
+            <button
+              type="button"
+              (click)="toggleInstallmentPaid(i)"
+              [class]="'flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 cursor-pointer transition-colors ' +
+                (cuota.paid
+                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                  : 'bg-grey-100 text-grey-500 hover:bg-grey-200')"
+            >
+              <ui-icon name="circle-check" styleClass="size-3.5" />
+              {{ (cuota.paid ? 'Cobrada' : 'Marcar cobrada') | transloco }}
+            </button>
+            }
+            <button
+              type="button"
+              (click)="removeInstallment(i)"
+              class="ml-auto text-grey-300 hover:text-red-500 cursor-pointer transition-colors"
+              [attr.aria-label]="'Quitar cuota' | transloco"
+            >
+              <ui-icon name="trash" styleClass="size-4" />
+            </button>
+          </div>
+          }
+
+          <button
+            type="button"
+            (click)="addInstallment()"
+            class="flex items-center justify-center gap-2 rounded-lg border border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 text-sm font-semibold py-2.5 cursor-pointer transition-colors"
+          >
+            <ui-icon name="plus" styleClass="size-4" />
+            {{ 'Agregar cuota' | transloco }}
+          </button>
+
+          @if (installmentsMismatch()) {
+          <p class="text-xs text-amber-600">
+            {{ 'Las cuotas suman {sum} y la orden es {total}. No es obligatorio que cuadren.' | transloco: { sum: cs() + (installmentsSum() | number:'1.2-2'), total: cs() + (calculateTotal() | number:'1.2-2') } }}
+          </p>
+          }
+        </div>
+        }
       </div>
     </ui-card>
 
@@ -814,7 +949,7 @@
                 <span class="font-medium block truncate">{{ opt.name }}</span>
                 <p class="text-sm text-grey-300">
                   @if (opt.kind === 'none') {
-                  {{ 'El pedido no lleva envío' | transloco }}
+                  {{ 'La orden no lleva envío' | transloco }}
                   } @else if (opt.kind === 'manual') {
                   {{ 'Flete u otro costo de envío' | transloco }}
                   } @else {
@@ -964,6 +1099,18 @@
         </div>
         }
 
+        @if (paymentAdjustment(); as adj) {
+        <div class="flex justify-between items-center">
+          <span class="text-base text-grey-400 font-medium">{{ adj.label }}@if (!adj.visible) {<span class="text-xs text-grey-300"> · {{ 'oculto en factura' | transloco }}</span>}</span>
+          <span
+            class="text-base font-semibold"
+            [class.text-green-600]="adj.kind === 'discount'"
+            [class.text-amber-600]="adj.kind === 'surcharge'"
+            >{{ adj.kind === 'discount' ? '−' : '+' }} {{ cs() }} {{ adj.magnitude.toFixed(2) }}</span
+          >
+        </div>
+        }
+
         @if (effectiveCommission() > 0) {
         <div class="flex justify-between items-center">
           <span class="text-base text-grey-400 font-medium">{{ 'Comisión' | transloco }}</span>
@@ -1040,21 +1187,11 @@
           </div>
         </div>
 
-        <!-- Total Bs -->
+        <!-- Total Bs (se recalcula solo: total × tasa) -->
         <div
           class="flex justify-between items-center py-4 border-t border-grey-100"
         >
-          <div class="flex items-center gap-3">
-            <span class="text-lg text-grey-400 font-semibold">{{ 'Total Bs' | transloco }}</span>
-            <ui-button
-              (click)="recalculateTotalBs()"
-              icon="refresh-cw"
-              [label]="'Recalcular' | transloco"
-              variant="outlined"
-              severity="primary"
-              size="small"
-            />
-          </div>
+          <span class="text-lg text-grey-400 font-semibold">{{ 'Total Bs' | transloco }}</span>
           <span class="text-2xl font-bold text-grey-800"
             >Bs. {{ totalBs() | number:'1.2-2' }}</span
           >

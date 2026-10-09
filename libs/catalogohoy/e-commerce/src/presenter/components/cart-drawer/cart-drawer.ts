@@ -2,6 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { MetaPixelService } from '@catalogohoy/core';
 import { StripHtmlPipe } from '@shared/presenter';
 import { IconComponent } from '@ui';
 import { CartItem } from '../../../domain';
@@ -26,6 +27,7 @@ export class CartDrawer {
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cs = this.ecommerceStore.currencySymbol;
   private readonly router = inject(Router);
+  private readonly metaPixel = inject(MetaPixelService);
 
   onClose() {
     this.cartStore.closeCart();
@@ -48,6 +50,13 @@ export class CartDrawer {
   }
 
   onProceedToCheckout() {
+    // Meta Pixel del catálogo: el comprador arranca el checkout (no-op si el
+    // catálogo no tiene pixel / plan no pago).
+    this.metaPixel.trackActiveTenant('InitiateCheckout', {
+      value: this.cartStore.totalPrice(),
+      num_items: this.cartStore.totalItems(),
+      currency: 'USD',
+    });
     this.cartStore.closeCart();
     this.router.navigate(['/checkout'], { queryParamsHandling: 'preserve' });
   }

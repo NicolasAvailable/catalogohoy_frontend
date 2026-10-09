@@ -627,15 +627,22 @@ Deno.serve(async (req: Request) => {
           plan_expired: false,
           stripe_subscription_id: newSubId,
           stripe_subscription_status: subscription.status,
+          // Checkout de un plan = tarifa vigente → se pierde el precio congelado
+          // de cliente antiguo (si lo tenía). Las renovaciones automáticas van
+          // por invoice.payment_succeeded y NO tocan esto.
+          locked_plan_price: null,
         };
         if (expiresAtIso) fullUpdate["plan_expires_at"] = expiresAtIso;
+        // Si la sub arrancó con free trial (trial_end seteado), marcamos el
+        // trial como consumido — así el tenant no puede volver a pedir otro.
+        if (subscription.trial_end) fullUpdate["trial_used_at"] = new Date().toISOString();
         if (addonQty > 0) {
           const qtyFromSub = getCatalogAddonQtyFromSub(subscription);
           fullUpdate["extra_catalogs"] = qtyFromSub > 0 ? qtyFromSub : addonQty;
         }
 
         const sharedUpdate: Record<string, unknown> = {
-          plan_id: planId, plan_expired: false, stripe_subscription_status: subscription.status,
+          plan_id: planId, plan_expired: false, stripe_subscription_status: subscription.status, locked_plan_price: null,
         };
         if (expiresAtIso) sharedUpdate["plan_expires_at"] = expiresAtIso;
 
@@ -650,6 +657,11 @@ Deno.serve(async (req: Request) => {
         const paidAmountUsd = stripeAmountToNumber(session.amount_total, session.currency);
         const validUntilStr = expiresAtIso ? new Date(expiresAtIso).toLocaleDateString("es-ES") : "—";
         const isPlanChange = !!previousSubId;
+        // Arranque de free trial: la sub tiene trial_end y no hubo cobro ($0).
+        const isTrialStart = !!subscription.trial_end && !isPlanChange;
+        const trialEndStr = subscription.trial_end
+          ? new Date(subscription.trial_end * 1000).toLocaleDateString("es-ES")
+          : "—";
 
         const owner = await fetchOwnerInfo(admin, Number(tenantId));
         const tenantName = owner?.tenantName ?? `Tenant #${tenantId}`;
@@ -678,14 +690,30 @@ Deno.serve(async (req: Request) => {
           fields.push({ name: "⚠️ Referral flagged", value: referral.fraud_flag ?? "unknown", inline: false });
         }
 
-        await notifyDiscord({
-          title: isPlanChange ? "🔄 Plan cambiado" : "💰 Nuevo pago recibido",
-          description: isPlanChange ? `**${tenantName}** ha cambiado al plan **${planLbl}**.` : `**${tenantName}** ha activado el plan **${planLbl}**.`,
-          color: isPlanChange ? 0x6366f1 : 0x22c55e,
-          fields,
-        });
-
-        if (owner) await emailPaymentSucceeded(admin, owner, isPlanChange ? "change" : "new", amountStr, validUntilStr, planLbl);
+        if (isTrialStart) {
+          // 🎁 Free trial iniciado — a Slack #pagos. NO mandamos email/nota de
+          // "pago recibido" porque no hubo cobro ($0); el cobro real llega al
+          // terminar el trial (invoice.payment_succeeded).
+          await notifyDiscord({
+            title: "🎁 Free trial iniciado (7 días)",
+            description: `**${tenantName}** empezó una prueba de 7 días del plan **${planLbl}**. Si no cancela, se le cobra al terminar.`,
+            color: 0xf59e0b,
+            fields: [
+              { name: "Plan", value: planLbl, inline: true },
+              { name: "Prueba hasta", value: trialEndStr, inline: true },
+              { name: "Slug", value: slug, inline: true },
+              { name: "Dueño", value: owner?.email ? `${owner.name ?? "-"} (${owner.email})` : "-", inline: false },
+            ],
+          });
+        } else {
+          await notifyDiscord({
+            title: isPlanChange ? "🔄 Plan cambiado" : "💰 Nuevo pago recibido",
+            description: isPlanChange ? `**${tenantName}** ha cambiado al plan **${planLbl}**.` : `**${tenantName}** ha activado el plan **${planLbl}**.`,
+            color: isPlanChange ? 0x6366f1 : 0x22c55e,
+            fields,
+          });
+          if (owner) await emailPaymentSucceeded(admin, owner, isPlanChange ? "change" : "new", amountStr, validUntilStr, planLbl);
+        }
       }
     }
 
@@ -724,17 +752,53 @@ Deno.serve(async (req: Request) => {
         }
         await applyPlanUpdate(admin, Number(tenantId), fullUpdate, sharedUpdate);
         const { data: tenant } = await admin.from("tenants").select("name, slug").eq("id", Number(tenantId)).single();
-        await notifyDiscord({
-          title: "🔄 Suscripción actualizada",
-          description: `La suscripción de **${tenant?.name ?? `Tenant #${tenantId}`}** ha cambiado.`,
-          color: 0x6366f1,
-          fields: [
-            { name: "Estado", value: sub.status, inline: true },
-            { name: "Catálogos extra", value: String(catalogQty), inline: true },
-            { name: "Válido hasta", value: (expiresAtIso && isValid) ? new Date(expiresAtIso).toLocaleDateString("es-ES") : "—", inline: true },
-            { name: "Slug", value: tenant?.slug ?? String(tenantId), inline: true },
-          ],
-        });
+        const tName = tenant?.name ?? `Tenant #${tenantId}`;
+        const tSlug = tenant?.slug ?? String(tenantId);
+        const validUntil = (expiresAtIso && isValid) ? new Date(expiresAtIso).toLocaleDateString("es-ES") : "—";
+        // Transición del free trial: `previous_attributes.status` trae el estado
+        // anterior. trialing→active = convirtió a pago; trialing→(canceled/
+        // unpaid/past_due/…) = terminó sin convertir.
+        const prevStatus = (event.data as { previous_attributes?: { status?: string } }).previous_attributes?.status;
+        const cameFromTrial = prevStatus === "trialing";
+        const endedStatuses = new Set(["canceled", "unpaid", "past_due", "incomplete_expired"]);
+        if (cameFromTrial && sub.status === "active") {
+          const owner = await fetchOwnerInfo(admin, Number(tenantId));
+          await notifyDiscord({
+            title: "✅ Trial convertido a pago",
+            description: `**${tName}** convirtió su prueba en una suscripción paga del plan **${planLabel(metaPlanId ?? "")}**.`,
+            color: 0x22c55e,
+            fields: [
+              { name: "Estado", value: sub.status, inline: true },
+              { name: "Próximo cobro", value: validUntil, inline: true },
+              { name: "Slug", value: tSlug, inline: true },
+              { name: "Dueño", value: owner?.email ? `${owner.name ?? "-"} (${owner.email})` : "-", inline: false },
+            ],
+          });
+        } else if (cameFromTrial && endedStatuses.has(sub.status)) {
+          const owner = await fetchOwnerInfo(admin, Number(tenantId));
+          await notifyDiscord({
+            title: "🔚 Trial terminó sin convertir",
+            description: `La prueba de **${tName}** terminó y no pasó a plan pago (estado: ${sub.status}).`,
+            color: 0xef4444,
+            fields: [
+              { name: "Estado", value: sub.status, inline: true },
+              { name: "Slug", value: tSlug, inline: true },
+              { name: "Dueño", value: owner?.email ? `${owner.name ?? "-"} (${owner.email})` : "-", inline: false },
+            ],
+          });
+        } else {
+          await notifyDiscord({
+            title: "🔄 Suscripción actualizada",
+            description: `La suscripción de **${tName}** ha cambiado.`,
+            color: 0x6366f1,
+            fields: [
+              { name: "Estado", value: sub.status, inline: true },
+              { name: "Catálogos extra", value: String(catalogQty), inline: true },
+              { name: "Válido hasta", value: validUntil, inline: true },
+              { name: "Slug", value: tSlug, inline: true },
+            ],
+          });
+        }
       }
     }
 
@@ -755,25 +819,36 @@ Deno.serve(async (req: Request) => {
         const sharedUpdate: Record<string, unknown> = { plan_expires_at: expiresAtIso, plan_expired: false, stripe_subscription_status: sub.status };
         await applyPlanUpdate(admin, Number(tenantId), sharedUpdate, sharedUpdate);
       }
+      // `subscription_update` = factura de prorrateo de un UPGRADE (edge fn
+      // `change-plan` cambia el precio del ítem con proration_behavior:
+      // always_invoice → cobra solo la diferencia AHORA, misma suscripción).
+      // `subscription_cycle` = renovación automática real del período. Sin este
+      // distingo, el upgrade llegaba como "Renovación cobrada".
+      const isUpgrade = billingReason === "subscription_update";
       const owner = await fetchOwnerInfo(admin, Number(tenantId));
       const tenantName = owner?.tenantName ?? `Tenant #${tenantId}`;
       const slug = owner?.slug ?? String(tenantId);
-      const planLbl = planLabel(owner?.planId);
+      // En un upgrade el plan nuevo viene en el metadata de la sub (lo deja
+      // `change-plan`), autoritativo aunque el tenant en DB aún no se haya
+      // sincronizado por la carrera con customer.subscription.updated.
+      const planLbl = planLabel(sub.metadata?.plan_id ?? owner?.planId);
       const amountStr = formatStripeAmount(invoice.amount_paid, invoice.currency);
       const periodEndStr = expiresAtIso ? new Date(expiresAtIso).toLocaleDateString("es-ES") : "—";
       await notifyDiscord({
-        title: "♻️ Renovación cobrada",
-        description: `Stripe cobró automáticamente la renovación de **${tenantName}**.`,
-        color: 0x22c55e,
+        title: isUpgrade ? "⬆️ Upgrade de plan cobrado" : "♻️ Renovación cobrada",
+        description: isUpgrade
+          ? `Stripe cobró la diferencia prorrateada del upgrade de **${tenantName}** al plan **${planLbl}**.`
+          : `Stripe cobró automáticamente la renovación de **${tenantName}**.`,
+        color: isUpgrade ? 0x6366f1 : 0x22c55e,
         fields: [
           { name: "Plan", value: planLbl, inline: true },
-          { name: "Monto", value: amountStr, inline: true },
-          { name: "Próxima renovación", value: periodEndStr, inline: true },
+          { name: isUpgrade ? "Diferencia cobrada" : "Monto", value: amountStr, inline: true },
+          { name: isUpgrade ? "Válido hasta" : "Próxima renovación", value: periodEndStr, inline: true },
           { name: "Slug", value: slug, inline: true },
           { name: "Suscripción", value: subscriptionId, inline: false },
         ],
       });
-      if (owner) await emailPaymentSucceeded(admin, owner, "renewal", amountStr, periodEndStr, planLbl);
+      if (owner) await emailPaymentSucceeded(admin, owner, isUpgrade ? "change" : "renewal", amountStr, periodEndStr, planLbl);
     }
 
     if (event.type === "invoice.payment_failed") {
@@ -844,8 +919,8 @@ Deno.serve(async (req: Request) => {
         // upgrades: ahí el sub viejo se cancela pero el tenant ya apunta al nuevo.
         const currentPlan = (tenantRow as { plan_id?: string | null }).plan_id ?? null;
         const wasPaid = !!currentPlan && currentPlan !== "gratis";
-        const fullUpdate: Record<string, unknown> = { plan_id: "gratis", plan_expired: true, plan_expires_at: null, stripe_subscription_status: "canceled", extra_catalogs: 0 };
-        const sharedUpdate: Record<string, unknown> = { plan_id: "gratis", plan_expired: true, plan_expires_at: null, stripe_subscription_status: "canceled" };
+        const fullUpdate: Record<string, unknown> = { plan_id: "gratis", plan_expired: true, plan_expires_at: null, stripe_subscription_status: "canceled", extra_catalogs: 0, locked_plan_price: null };
+        const sharedUpdate: Record<string, unknown> = { plan_id: "gratis", plan_expired: true, plan_expires_at: null, stripe_subscription_status: "canceled", locked_plan_price: null };
         if (wasPaid) {
           fullUpdate["previous_plan_id"] = currentPlan;
           sharedUpdate["previous_plan_id"] = currentPlan;

@@ -58,6 +58,38 @@ export interface CatalogInfo {
   /** Weekdays with no delivery (JS: 0 = Sunday … 6 = Saturday). The date
    *  picker blocks these days. */
   deliveryBlockedWeekdays: number[];
+  /** Meta (Facebook) Pixel ID del dueño (público). Si está seteado y el plan es
+   *  pago, el storefront inicializa este pixel y dispara los eventos de compra.
+   *  Null = el catálogo no tiene pixel configurado. */
+  metaPixelId: string | null;
+  /** CAT-84: % de impuesto INCLUIDO en los precios (desglose informativo en
+   *  factura/checkout; no altera totales). Null/0 = no mostrar. */
+  taxRate: number | null;
+  /** Etiqueta del impuesto (IVA, ITBIS, IGV…). Null → "IVA". */
+  taxLabel: string | null;
+  /** When true, the checkout applies the per-method adjustment (`__adjust*`)
+   *  of the payment method the customer picks. Default false = adjustments
+   *  stay admin-only (current behavior). */
+  applyAdjustmentsInCheckout: boolean;
+  /** When true, the checkout offers "Pago a crédito" besides cash. */
+  creditEnabled: boolean;
+  /** Previous purchases (by phone) needed before credit unlocks. 0 = none. */
+  creditMinPurchases: number;
+  /** Merchant note under the credit option. Null/'' = default text. */
+  creditNote: string | null;
+}
+
+/** Snapshot of the payment adjustment applied to an order at checkout. Same
+ *  shape the admin editor persists in `orders.payment_adjustment` (see
+ *  OrderAdjustment in @catalogohoy/order — kept structurally identical here
+ *  to avoid a cross-lib dependency). */
+export interface PublicOrderAdjustment {
+  label: string;
+  /** Signed: negative = discount, positive = surcharge. */
+  amount: number;
+  magnitude: number;
+  kind: 'discount' | 'surcharge';
+  visible: boolean;
 }
 
 /** Invoice-safe view of an order, fetched by id for the public receipt. */
@@ -69,6 +101,8 @@ export interface PublicOrder {
   name: string;
   phone: string | null;
   email: string | null;
+  /** NIT del cliente (identificación tributaria). Null si el catálogo no lo pide. */
+  nit: string | null;
   products: {
     productId?: string | number;
     name: string;
@@ -90,6 +124,9 @@ export interface PublicOrder {
   shippingAddress: string | null;
   shippingFee: number;
   paymentMethod: string | null;
+  /** Discount/surcharge applied at checkout (e.g. cash discount). Null for
+   *  orders without one. The invoice only itemizes it when `visible`. */
+  paymentAdjustment: PublicOrderAdjustment | null;
   comments: string | null;
   createdAt: string;
 }
@@ -146,6 +183,7 @@ export interface BaseEcommerceService {
     phone: string;
     comments: string;
     email?: string;
+    nit?: string;
     payment_method?: string;
     shipping_method?: {
       name: string;

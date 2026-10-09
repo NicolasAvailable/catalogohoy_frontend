@@ -73,7 +73,9 @@ export class Cart {
           item.sku,
           item.size,
           item.variantId,
-          item.variantName
+          item.variantName,
+          item.addons,
+          item.maxStock
         );
       }
       return item;

@@ -152,11 +152,26 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   align-items: stretch;
+  /* Cards más compactas: acotamos el ancho del grid de 3 y lo centramos, en vez
+     de estirarlo al ancho completo del wrapper. */
+  width: 100%;
+  max-width: 62rem;
+  margin-inline: auto;
 }
 
-/* Con la card Enterprise visible (tenant enterprise) el grid pasa a 4. */
+/* Con la card Enterprise visible (tenant enterprise) el grid pasa a 4 y necesita
+   más ancho. */
 .plans-grid--four {
   grid-template-columns: repeat(4, 1fr);
+  max-width: 82rem;
+}
+
+/* Tenant Enterprise: con el Básico de vuelta son 5 cards (4 planes + la de
+   Enterprise). La 5ª cae sola a la segunda fila — se centra ocupando las dos
+   columnas del medio en vez de quedar pegada a la izquierda. Solo aplica al
+   grid de escritorio (el carousel/mobile usan flex e ignoran grid-column). */
+.plans-grid--four > .plan-card--enterprise:nth-child(5) {
+  grid-column: 2 / 4;
 }
 
 /* ── Carousel (laptops chicas): flechas para navegar entre planes ── */
@@ -265,6 +280,13 @@
   border: 1px solid #bbf7d0;
 }
 
+/* Prueba social ("⭐ +500 suscriptores") — tono cálido/dorado para destacar. */
+.badge-inline--social {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
 /* ── Precio ── */
 .plan-card__price {
   display: flex;
@@ -369,6 +391,34 @@
   font-weight: 600;
   color: #16a34a;
   margin: -0.25rem 0 0;
+}
+
+/* Badge "precio de cliente antiguo" bajo el precio congelado (grandfathered). */
+.plan-card__grandfathered {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #16a34a;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  margin: 0.4rem 0 0;
+  line-height: 1.3;
+}
+
+/* Gancho de trial de 7 días bajo el CTA (solo primera suscripción). */
+.plan-card__trial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--plan-color, #7c3aed);
+  margin: -0.35rem 0 0;
 }
 
 /* ── Divider ── */

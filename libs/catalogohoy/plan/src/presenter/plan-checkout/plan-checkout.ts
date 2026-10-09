@@ -11,6 +11,7 @@ import { IconComponent } from '@ui';
 import {
   BillingPeriod,
   CATALOG_ADDON_PRICE,
+  BASICO_PLAN_ID,
   CheckoutRequest,
   convertUsdToLocal,
   CURRENCY_SYMBOLS,
@@ -39,9 +40,9 @@ const BILLING_CONFIG: Record<
   annual:    { label: 'año',       months: 12, discount: 0    },
 };
 
-// Meses gratis del plan ANUAL: 2 meses en todos los planes.
-const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 2, pro: 2, avanzado: 2 };
-const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 1;
+// Anual: 50% de descuento — se paga la mitad del año (6 de 12 meses) en todos los planes.
+const ANNUAL_FREE_MONTHS: Record<string, number> = { basico: 6, pro: 6, avanzado: 6 };
+const annualFreeMonthsFor = (planId: string): number => ANNUAL_FREE_MONTHS[planId] ?? 6;
 
 /** Meses efectivamente pagados. En anual, los meses gratis dependen del plan. */
 function paidMonthsFor(period: BillingPeriod, planId: string): number {
@@ -158,10 +159,10 @@ export class PlanCheckout implements OnInit {
   private readonly metaPixel = inject(MetaPixelService);
   private readonly supabase = SupabaseClientProvider.getInstance();
 
+  // Solo mensual y anual (trimestral retirado 2026-09).
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
-    { key: 'monthly',   label: 'Mensual' },
-    { key: 'quarterly', label: 'Trimestral', savingsLabel: '10% off' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '2 meses gratis' },
+    { key: 'monthly', label: 'Mensual' },
+    { key: 'annual',  label: 'Anual', savingsLabel: '-50%' },
   ];
 
   public readonly planId               = signal<string>('');
@@ -237,12 +238,25 @@ export class PlanCheckout implements OnInit {
     return `Hasta ${plan.maxProducts} productos`;
   });
 
+  /** El prorrateo del upgrade ("solo pagás la diferencia") aplica SOLO si al
+   *  plan actual le quedan MÁS de 20 días de vigencia. Cerca del vencimiento no
+   *  hay saldo relevante que acreditar, así que se cobra el plan nuevo completo
+   *  (con su descuento anual). */
+  public readonly prorationEligible = computed(() => {
+    const expiresAt = this.planStore.tenantPlanUsage()?.planExpiresAt;
+    if (!expiresAt) return false;
+    const daysLeft = (new Date(expiresAt).getTime() - Date.now()) / 86_400_000;
+    return daysLeft > 20;
+  });
+
   public readonly isUpgrade = computed(() => {
     const current = this.planStore.currentPlan();
     if (!current || current.isFree) return false;
     const currentPrice = PLAN_BASE_PRICES[current.id] ?? 0;
     const targetPrice = PLAN_BASE_PRICES[this.planId()] ?? 0;
-    return currentPrice > 0 && targetPrice > currentPrice;
+    return (
+      currentPrice > 0 && targetPrice > currentPrice && this.prorationEligible()
+    );
   });
 
   public readonly currentPlanName = computed(
@@ -258,6 +272,32 @@ export class PlanCheckout implements OnInit {
     const hasStripe = this.planStore.tenantPlanUsage()?.hasStripeSubscription ?? false;
     return hasStripe && !!current && !current.isFree && current.id === this.planId();
   });
+
+  /** Trial de 7 días: solo en la PRIMERA suscripción del tenant (aún en Gratis,
+   *  sin suscripción de Stripe) y SOLO para Pro/Avanzado — el Básico se cobra
+   *  de una. El server (create-checkout-session) es la autoridad: aplica
+   *  `trial_period_days` con las mismas reglas. Acá lo reflejamos para mostrar
+   *  el gancho y cambiar el copy. */
+  public readonly eligibleForTrial = computed(() => {
+    const current = this.planStore.currentPlan();
+    const usage = this.planStore.tenantPlanUsage();
+    const hasPaid = !!current && !current.isFree;
+    const hasStripe = usage?.hasStripeSubscription ?? false;
+    // trialUsedAt también cubre trials otorgados A MANO (sin sub de Stripe):
+    // se estampa tenants.trial_used_at y el checkout deja de ofrecerlo, igual
+    // que hace el server.
+    const trialUsed = !!usage?.trialUsedAt;
+    return !hasPaid && !hasStripe && !trialUsed && this.planId() !== BASICO_PLAN_ID;
+  });
+
+  /** Mostramos el flujo "Activar 7 días de prueba" solo cuando el server
+   *  efectivamente dará el trial: tarjeta (no Pago Móvil) y sin catálogos
+   *  extra (con addons el server no aplica trial). */
+  public readonly showTrial = computed(() =>
+    this.eligibleForTrial() &&
+    this.paymentMethod() === 'card' &&
+    this.catalogAddonQuantity() === 0
+  );
 
   public readonly currentPlanPrice = computed(() => {
     const current = this.planStore.currentPlan();
@@ -410,11 +450,8 @@ export class PlanCheckout implements OnInit {
   /** El anual no es "% off" sino "N meses gratis" → el desglose usa otro label. */
   public readonly isAnnual = computed(() => this.billingPeriod() === 'annual');
 
-  /** Meses gratis del anual para este plan: "1 mes gratis" / "2 meses gratis". */
-  public readonly annualFreeLabel = computed(() => {
-    const n = annualFreeMonthsFor(this.planId());
-    return n === 1 ? '1 mes gratis' : `${n} meses gratis`;
-  });
+  /** Gancho anual: 50% de descuento (equivale a 6 meses pagos de 12). */
+  public readonly annualFreeLabel = computed(() => '50% de descuento');
 
   async ngOnInit(): Promise<void> {
     const planId = this.route.snapshot.paramMap.get('planId') ?? '';

@@ -61,6 +61,9 @@ export const TEMPLATE_CATEGORY: Record<string, 'MARKETING' | 'UTILITY'> = {
   payment_failed: 'UTILITY',
   plan_expiring: 'MARKETING',
   order_pending_reminder: 'MARKETING',
+  // CAT-80 (sep-2026): acciones del menú ⋯ de Órdenes hacia el cliente final.
+  credit_payment_reminder: 'UTILITY',
+  order_invoice: 'UTILITY',
 };
 
 /** Etiqueta legible para la categoría de facturación de Meta. */
@@ -86,6 +89,10 @@ export function categoryLabel(category: string): string {
 const TEMPLATE_VARIABLE_LABELS: Record<string, string[]> = {
   order_received: ['Catálogo', 'Cliente', 'Teléfono', 'Productos', 'Total'],
   order_completed: ['Cliente', 'Catálogo'],
+  // CAT-80: [cliente, catálogo, #orden] (el monto no viaja en variables; el
+  // PDF/botón va en url_button_param).
+  credit_payment_reminder: ['Cliente', 'Catálogo', 'Orden'],
+  order_invoice: ['Cliente', 'Catálogo', 'Orden'],
 };
 
 /**
@@ -100,7 +107,13 @@ export function describeVariables(log: WhatsappLog): WhatsappLogField[] {
     value,
   }));
   if (log.urlButtonParam) {
-    fields.push({ label: 'Pedido (botón)', value: `#${log.urlButtonParam}` });
+    // order_invoice guarda acá la URL del PDF (no un número de pedido).
+    const isUrl = /^https?:\/\//.test(log.urlButtonParam);
+    fields.push(
+      isUrl
+        ? { label: 'Factura (PDF)', value: log.urlButtonParam }
+        : { label: 'Pedido (botón)', value: `#${log.urlButtonParam}` }
+    );
   }
   return fields;
 }
@@ -122,6 +135,10 @@ export function templateLabel(type: string): string {
       return 'Activación sin productos';
     case 'setup_missing_whatsapp':
       return 'Falta configurar WhatsApp';
+    case 'credit_payment_reminder':
+      return 'Recordatorio de cobro';
+    case 'order_invoice':
+      return 'Factura por WhatsApp';
     default:
       return type;
   }

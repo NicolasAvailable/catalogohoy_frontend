@@ -12,13 +12,15 @@ export type PaymentCurrency =
  *  ⚠️ Display/gate only — el cobro real sale del PRICE_MAP hardcodeado en la
  *  edge function `create-checkout-session`. Cambios de precio = actualizar
  *  AMBOS y deployarlos juntos.
- *  Nota switch pricing 2026-07: avanzado pasa a 29.99 en el commit del switch
- *  (junto con la fila `pro` en DB + redeploy de la edge function). */
+ *  Switch 2026-10: precios con decimales (Pro 19.99 / Avanzado 34.99) y el
+ *  Básico (11.99) vuelve a ofrecerse en altas nuevas. */
 export const PLAN_BASE_PRICES: Record<string, number> = {
-  basico: 9.99,
+  basico: 11.99,
   pro: 19.99,
-  avanzado: 29.99,
+  avanzado: 34.99,
 };
+
+export const BASICO_PLAN_ID = 'basico';
 
 /** Catalog addon monthly price (USD). Mirror this in Stripe — the actual
  *  charge comes from the price IDs configured in the

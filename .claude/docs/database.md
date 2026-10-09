@@ -305,6 +305,16 @@ await Promise.all(
 | total_bs | numeric | `0` | Venezuelan bolivares |
 | created_at | timestamp | `timezone('utc')` | |
 | updated_at | timestamp | `timezone('utc')` | |
+| credit_installments | jsonb | NULL | CAT-79: plan de cuotas `[{dueDate,amount?,paid?}]` de órdenes a crédito (NO es ledger de abonos) |
+| credit_reminded_at | timestamptz | NULL | CAT-79: anti-spam del cron `send-credit-reminders` (no repite la misma orden por 7 días) |
+| payment_condition | text | NULL | Condición que ELIGIÓ el cliente en el checkout: `'cash'` \| `'credit'` (check constraint). `'credit'` = pidió a crédito pero la orden nace `pending`; pasarla a status `credit` es del comerciante. NULL = sin selector (admin/POS/históricas). Migración `20260928_checkout_credit_conditions.sql` |
+
+> **RPC `get_customer_purchase_count(p_tenant_id bigint, p_phone text) → int`** (SECURITY DEFINER, grant anon):
+> gate "crédito después de N compras" del checkout público. Cuenta órdenes `completed|credit` del tenant
+> matcheando por los **últimos 7 dígitos** del teléfono (tolerante a +58/0412/espacios); <7 dígitos → 0.
+> Solo expone un conteo. La config del gate vive en `tenant_ecommerce_config.customer_fields`
+> (keys `applyAdjustmentsInCheckout`/`creditEnabled`/`creditMinPurchases`/`creditNote` — mismo truco
+> sin-migración que delivery-date, NO hay que tocar `get_public_catalog`).
 
 **RLS:** Enabled
 

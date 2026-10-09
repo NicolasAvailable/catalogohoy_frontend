@@ -52,6 +52,7 @@ import {
 
 type View =
   | 'hub'
+  | 'export-pick'
   | 'import-source'
   | 'import-upload'
   | 'import-gsheet'
@@ -253,6 +254,9 @@ export class ImportExportHubComponent {
   public readonly photoItems = signal<PhotoImportItem[]>([]);
   public readonly photoProducts = signal<PhotoProductOption[]>([]);
   public readonly loadingPhotoProducts = signal(false);
+  /** True si la carga de productos del catálogo falló (para distinguir
+   *  "catálogo vacío" de "no pudimos cargar los productos" en la IA de fotos). */
+  public readonly photoProductsFailed = signal(false);
   public readonly photosProgress = signal(0);
   public readonly photosCurrentLabel = signal('');
   public readonly isApplyingPhotos = signal(false);
@@ -304,6 +308,16 @@ export class ImportExportHubComponent {
     this.view.set('import-source');
   }
 
+  /** Del hub al picker de formato de exportación (Excel / CSV) — espejo del
+   *  paso de Importar. */
+  public onExportTile(): void {
+    if (this.isFreePlan()) {
+      toast.error('La exportación de productos está disponible en los planes pagos.');
+      return;
+    }
+    this.view.set('export-pick');
+  }
+
   // ── Google Sheets ────────────────────────────────────────────────────────
   public readonly gsheetUrl = signal('');
   public readonly isFetchingSheet = signal(false);
@@ -353,11 +367,11 @@ export class ImportExportHubComponent {
   /** Exportación en curso (deshabilita el tile y muestra "Generando..."). */
   public readonly isExporting = signal(false);
 
-  /** Descarga TODOS los productos del catálogo en un Excel con las mismas
+  /** Descarga TODOS los productos del catálogo en Excel o CSV con las mismas
    *  columnas que entiende el import → el archivo es autogestionable: se
    *  edita y se re-importa (upsert por SKU). Antes este tile pedía la
    *  exportación por WhatsApp a soporte. */
-  public async onExport(): Promise<void> {
+  public async onExport(format: 'xlsx' | 'csv' = 'xlsx'): Promise<void> {
     if (this.isFreePlan()) {
       toast.error('La exportación de productos está disponible en los planes pagos.');
       return;
@@ -383,9 +397,16 @@ export class ImportExportHubComponent {
         toast.error('No tienes productos para exportar.');
         return;
       }
-      this.excelService
-        .exportToExcel(all)
-        .mapRight(() => toast.success(`Se descargó el Excel con tus ${all.length} productos`))
+      const result =
+        format === 'csv'
+          ? this.excelService.exportToCsv(all)
+          : this.excelService.exportToExcel(all);
+      result
+        .mapRight(() =>
+          toast.success(
+            `Se descargó el ${format === 'csv' ? 'CSV' : 'Excel'} con tus ${all.length} productos`
+          )
+        )
         .mapLeft(() => toast.error('No se pudo generar el archivo. Intenta de nuevo.'));
     } finally {
       this.isExporting.set(false);
@@ -685,15 +706,25 @@ export class ImportExportHubComponent {
     this.clearPhotoItems();
     this.view.set('photos-upload');
     this.loadingPhotoProducts.set(true);
-    await this.productStore.productList$();
-    this.photoProducts.set(
-      this.productStore.productList().products.map((p) => ({
-        id: String(p.id),
-        name: p.name,
-        sku: p.sku ?? null,
-        photo: p.photos?.[0] ?? null,
-      }))
-    );
+    this.photoProductsFailed.set(false);
+    // Cargamos vía getAll (no productList$) para capturar el Either: si el fetch
+    // falla, distinguimos "no pudimos cargar" de "catálogo vacío" en la IA.
+    const result = await this.productService.getAll(undefined, undefined);
+    result
+      .mapRight((list) =>
+        this.photoProducts.set(
+          list.products.map((p) => ({
+            id: String(p.id),
+            name: p.name,
+            sku: p.sku ?? null,
+            photo: p.photos?.[0] ?? null,
+          }))
+        )
+      )
+      .mapLeft(() => {
+        this.photoProducts.set([]);
+        this.photoProductsFailed.set(true);
+      });
     this.loadingPhotoProducts.set(false);
   }
 
@@ -818,6 +849,23 @@ export class ImportExportHubComponent {
       .filter(({ item }) => item.productId === null);
     if (!unassigned.length) return;
 
+    // La IA de fotos EMPAREJA contra productos que YA existen en el catálogo.
+    // Sin productos no hay con qué emparejar → evitamos la llamada (que el
+    // backend rechazaba con "Sin productos", quemando un round-trip y ensuciando
+    // la telemetría como si fuera un error de IA). Mensaje según el motivo real.
+    if (!this.photoProducts().length) {
+      if (this.photoProductsFailed()) {
+        toast.error(
+          'No pudimos cargar los productos de tu catálogo. Cerrá y volvé a abrir la importación de fotos para reintentar.'
+        );
+      } else {
+        toast.info(
+          'Todavía no tenés productos en tu catálogo. La IA empareja tus fotos con productos que ya existen: creá algunos primero.'
+        );
+      }
+      return;
+    }
+
     this.aiIdentifying.set(true);
     const products = this.photoProducts().map((o) => ({
       id: o.id,
@@ -872,9 +920,11 @@ export class ImportExportHubComponent {
     }
   }
 
-  /** Miniatura JPEG base64 (sin prefijo) para mandar a la IA — chica y barata
-   *  en tokens; no hace falta subir la foto original para identificarla. */
-  private photoThumbnailB64(file: File, maxSide = 384): Promise<string | null> {
+  /** Miniatura JPEG base64 (sin prefijo) para mandar a la IA. 768px @ q0.8: a
+   *  384px el texto/SKU del empaque queda ilegible y la IA no puede desambiguar
+   *  productos parecidos (causa de falsos "no identificó"). ~100-200KB, muy por
+   *  debajo del budget del edge fn (800KB). */
+  private photoThumbnailB64(file: File, maxSide = 768): Promise<string | null> {
     return new Promise((resolve) => {
       const url = URL.createObjectURL(file);
       const img = new Image();
@@ -890,7 +940,7 @@ export class ImportExportHubComponent {
             return;
           }
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
           resolve(dataUrl.split(',')[1] ?? null);
         } catch {
           resolve(null);

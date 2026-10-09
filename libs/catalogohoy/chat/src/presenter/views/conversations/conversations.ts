@@ -1,20 +1,19 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { TranslocoPipe } from '@jsverse/transloco';
-import { WhatsAppStore } from '@catalogohoy/whatsapp';
-import { IconComponent } from '@ui';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { TenantStore } from '@catalogohoy/tenant';
+import { WhatsAppService, WhatsAppStore } from '@catalogohoy/whatsapp';
 import { ChatStore } from '../../../infrastructure/chat.store';
 import { ChatLayoutComponent } from '../chat-layout/chat-layout';
+import { ChatLandingComponent } from '../chat-landing/chat-landing';
 
 @Component({
   selector: 'lib-conversations',
   standalone: true,
-  imports: [ChatLayoutComponent, RouterLink, IconComponent, TranslocoPipe],
+  imports: [ChatLayoutComponent, ChatLandingComponent],
   // -m-4 cancels the admin layout's px-4 py-4 wrapper so the chat module sits
   // edge-to-edge (full-bleed inbox, like Fuse) without a card/border.
   host: { class: 'flex-1 flex min-h-0 overflow-hidden -m-4' },
   template: `
-    @if (whatsAppStore.isLoading() || (chatStore.isLoading() && !chatStore.chats().length)) {
+    @if (whatsAppStore.isLoading() || (chatStore.isLoading() && !chatStore.chats().length) || (!hasAnyChannel() && !channelsResolved())) {
       <!-- Skeleton con la forma real del inbox: columna de chats + conversación
            (en móvil sólo la lista, como el layout real). -->
       <div class="flex-1 flex h-full w-full overflow-hidden animate-pulse">
@@ -49,40 +48,11 @@ import { ChatLayoutComponent } from '../chat-layout/chat-layout';
           </div>
         </div>
       </div>
-    } @else if (!whatsAppStore.hasActiveAccount() && chatStore.chats().length === 0) {
-      <!-- Sin canal Y sin historial: si hay chats de un canal desvinculado, la
-           bandeja se muestra igual (solo lectura en ese canal). -->
-      <!-- Sin canal conectado: invitar a conectar antes de mostrar la bandeja. -->
-      <div class="flex-1 flex flex-col items-center justify-center gap-5 bg-lino-400 px-6 text-center">
-        <!-- Cluster con los logos de los canales conectables -->
-        <div class="flex items-center -space-x-4 mb-1">
-          <span class="w-20 h-20 rounded-full bg-white border border-grey-100 shadow-sm flex items-center justify-center -rotate-6">
-            <img src="/images/whatsapp.svg" alt="WhatsApp" class="w-10 h-10" />
-          </span>
-          <span class="w-24 h-24 rounded-full bg-white border border-grey-100 shadow-md flex items-center justify-center z-10">
-            <img src="/images/instagram.svg" alt="Instagram" class="w-12 h-12" />
-          </span>
-          <span class="w-20 h-20 rounded-full bg-white border border-grey-100 shadow-sm flex items-center justify-center rotate-3">
-            <img src="/images/messenger.svg" alt="Messenger" class="w-10 h-10" />
-          </span>
-          <span class="w-20 h-20 rounded-full bg-white border border-grey-100 shadow-sm flex items-center justify-center rotate-6">
-            <img src="/images/tiktok-logo.svg" alt="TikTok" class="w-10 h-10" />
-          </span>
-        </div>
-        <h2 class="text-2xl font-bold text-grey-800">
-          {{ 'Todavía no has conectado ningún canal' | transloco }}
-        </h2>
-        <p class="text-base text-grey-400 max-w-lg leading-relaxed">
-          {{ 'Conecta tu número de WhatsApp o tus cuentas de Instagram y TikTok para recibir y responder los mensajes de tus clientes desde una sola bandeja.' | transloco }}
-        </p>
-        <a
-          routerLink="/admin/chat/connect"
-          class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary-500 text-white text-base font-semibold hover:bg-primary-600 transition-colors"
-        >
-          {{ 'Conectar canales' | transloco }}
-          <ui-icon name="arrow-right" size="18" />
-        </a>
-      </div>
+    } @else if (!hasAnyChannel()) {
+      <!-- Sin ningún canal conectado: se muestra la bienvenida ("Configurar
+           Chat") HASTA que el dueño conecte un canal — aunque ya tenga chats.
+           Así el onboarding no desaparece por tener historial suelto. -->
+      <lib-chat-landing />
     } @else {
       <lib-chat-layout />
     }
@@ -91,11 +61,44 @@ import { ChatLayoutComponent } from '../chat-layout/chat-layout';
 export class ConversationsComponent implements OnInit {
   readonly whatsAppStore = inject(WhatsAppStore);
   readonly chatStore = inject(ChatStore);
+  private readonly whatsAppService = inject(WhatsAppService);
+  private readonly tenantStore = inject(TenantStore);
+
+  /** Alguna red social (IG / TikTok / Messenger) conectada. Se resuelve async. */
+  private readonly hasSocialAccount = signal(false);
+  /** true cuando ya sabemos el estado de las redes sociales (evita parpadeo
+   *  entre bienvenida e inbox mientras carga). */
+  protected readonly channelsResolved = signal(false);
+
+  /** Hay al menos un canal conectado (WhatsApp o una red social). Mientras no
+   *  haya ninguno, se muestra la bienvenida. */
+  protected readonly hasAnyChannel = computed(
+    () => this.whatsAppStore.hasActiveAccount() || this.hasSocialAccount()
+  );
 
   ngOnInit() {
     this.whatsAppStore.loadAccounts();
-    // Los chats se cargan acá (y no solo en el layout) porque el gating del
-    // empty state necesita saber si hay historial de canales desvinculados.
+    // Los chats se cargan acá para poblar el inbox apenas se decide mostrarlo.
     this.chatStore.loadChats();
+    void this.resolveSocialChannels();
+  }
+
+  private async resolveSocialChannels(): Promise<void> {
+    try {
+      const tenantId = await this.tenantStore.getTenantIdAsync();
+      if (!tenantId) return;
+      const [ig, tt, fb] = await Promise.all([
+        this.whatsAppService.getInstagramAccount(tenantId),
+        this.whatsAppService.getTikTokAccount(tenantId),
+        this.whatsAppService.getMessengerAccount(tenantId),
+      ]);
+      const connected =
+        (ig.isRight() && ig.value !== null) ||
+        (tt.isRight() && tt.value !== null) ||
+        (fb.isRight() && fb.value !== null);
+      this.hasSocialAccount.set(connected);
+    } finally {
+      this.channelsResolved.set(true);
+    }
   }
 }

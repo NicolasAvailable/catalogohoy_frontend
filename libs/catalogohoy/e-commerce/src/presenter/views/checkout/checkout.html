@@ -79,6 +79,18 @@
       }
     </label>
     }
+
+    @if (nitEnabled()) {
+    <label class="checkout__field">
+      <span class="checkout__label">{{ 'NIT' | transloco }} <span class="checkout__req">*</span></span>
+      <ui-input-text [ngModel]="nit()" (ngModelChange)="nit.set($event)"
+        (inputBlur)="nitTouched.set(true)" [invalid]="!!nitError()"
+        placeholder="Tu NIT" styleClass="w-full"></ui-input-text>
+      @if (nitError(); as err) {
+      <p class="text-xs text-red-500 mt-1">{{ err | transloco }}</p>
+      }
+    </label>
+    }
   </section>
 
   <!-- ===== Artículos ===== -->
@@ -218,8 +230,59 @@
   </section>
   }
 
+  <!-- ===== Condición de pago (contado / crédito) ===== -->
+  @if (creditEnabled()) {
+  <section class="checkout__card">
+    <h2 class="checkout__card-title">{{ '¿Cómo quieres pagar?' | transloco }} <span class="checkout__req">*</span></h2>
+
+    <div class="checkout__ship-item" [class.checkout__ship-item--active]="!isCredit()">
+      <button type="button" class="checkout__ship" (click)="selectPaymentCondition('cash')">
+        <span class="checkout__radio" [class.checkout__radio--on]="!isCredit()"></span>
+        <span class="checkout__ship-name">{{ 'De contado' | transloco }}</span>
+        <span class="checkout__ship-fee">{{ 'Pagas ahora' | transloco }}</span>
+      </button>
+    </div>
+
+    <div class="checkout__ship-item"
+      [class.checkout__ship-item--active]="isCredit()"
+      [class.checkout__credit-locked]="!creditUnlocked()">
+      <button type="button" class="checkout__ship" (click)="selectPaymentCondition('credit')"
+        [disabled]="!creditUnlocked()">
+        <span class="checkout__radio" [class.checkout__radio--on]="isCredit()"></span>
+        <span class="checkout__ship-name">{{ 'A crédito' | transloco }}</span>
+        @if (!creditUnlocked()) {
+        <span class="checkout__ship-fee"><ui-icon name="lock" size="14" /></span>
+        } @else {
+        <span class="checkout__ship-fee">{{ 'Coordinas con el vendedor' | transloco }}</span>
+        }
+      </button>
+    </div>
+
+    <!-- Acotación del crédito + estado del gate por compras previas -->
+    @if (creditNote() || creditMinPurchases() > 0) {
+    <p class="checkout__credit-note">
+      <ui-icon name="info" size="14" />
+      <span>
+        @if (creditNote()) {
+        {{ creditNote() }}
+        } @else {
+        {{ 'El crédito está disponible después de {n} compras en esta tienda.' | transloco: { n: creditMinPurchases() } }}
+        }
+        @if (isCheckingCredit()) {
+        {{ 'Verificando tus compras…' | transloco }}
+        } @else if (purchaseCount() !== null && !creditUnlocked()) {
+        {{ 'Llevas {c} de {n} compras.' | transloco: { c: purchaseCount(), n: creditMinPurchases() } }}
+        } @else if (purchaseCount() !== null && creditMinPurchases() > 0 && creditUnlocked()) {
+        {{ '¡Tu número ya tiene crédito disponible!' | transloco }}
+        }
+      </span>
+    </p>
+    }
+  </section>
+  }
+
   <!-- ===== Método de pago ===== -->
-  @if (availablePaymentMethods().length) {
+  @if (availablePaymentMethods().length && !isCredit()) {
   <section class="checkout__card">
     <h2 class="checkout__card-title">{{ 'Método de pago' | transloco }} <span class="checkout__req">*</span></h2>
 
@@ -231,6 +294,10 @@
         <span class="checkout__radio" [class.checkout__radio--on]="selectedPaymentMethod() === pm.name"></span>
         <ui-icon [name]="pm.icon" size="16" />
         <span class="checkout__ship-name">{{ pm.name }}</span>
+        @if (methodAdjustChip(pm); as chip) {
+        <span class="checkout__pay-chip"
+          [class.checkout__pay-chip--warn]="chip.kind === 'surcharge'">{{ chip.label }}</span>
+        }
         @if (hasPaymentInfo(pm)) {
         <span class="checkout__ship-chevron"
           [class.checkout__ship-chevron--open]="selectedPaymentMethod() === pm.name">
@@ -302,6 +369,55 @@
         Bs. {{ shippingFee() * ecommerceStore.exchangeRate() | number:'1.2-2' }}
         }
         } @else { {{ 'Gratis' | transloco }} }
+      </span>
+    </div>
+    }
+    @if (paymentAdjustment(); as adj) {
+    <div class="checkout__summary-row checkout__summary-adj"
+      [class.checkout__summary-adj--warn]="adj.kind === 'surcharge'">
+      <span>{{ adj.label }}</span>
+      <span>
+        {{ adj.kind === 'discount' ? '-' : '+' }}
+        @if (showReferencePrice()) {
+        {{ cs() }}{{ adj.magnitude | tenantPrice }}
+        @if (showBs()) { <small class="checkout__price-bs">Bs. {{ adj.magnitude * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
+        } @else if (showBs()) {
+        Bs. {{ adj.magnitude * ecommerceStore.exchangeRate() | number:'1.2-2' }}
+        }
+      </span>
+    </div>
+    }
+    @if (isCredit()) {
+    <div class="checkout__summary-row checkout__summary-credit">
+      <span>{{ 'Condición de pago' | transloco }}</span>
+      <span>{{ 'A crédito' | transloco }}</span>
+    </div>
+    }
+    @if (taxInfo(); as tax) {
+    <div class="checkout__summary-row checkout__summary-tax">
+      <span>{{ 'Base imponible' | transloco }}</span>
+      <span>
+        @if (showReferencePrice()) {
+        {{ cs() }}{{ tax.base | tenantPrice }}
+        @if (showBs()) { <small class="checkout__price-bs">Bs. {{ tax.base * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
+        } @else if (showBs()) {
+        Bs. {{ tax.base * ecommerceStore.exchangeRate() | number:'1.2-2' }}
+        } @else {
+        {{ cs() }}{{ tax.base | tenantPrice }}
+        }
+      </span>
+    </div>
+    <div class="checkout__summary-row checkout__summary-tax">
+      <span>{{ tax.label }} {{ tax.rate | number:'1.0-2' }}%</span>
+      <span>
+        @if (showReferencePrice()) {
+        {{ cs() }}{{ tax.usd | tenantPrice }}
+        @if (showBs()) { <small class="checkout__price-bs">Bs. {{ tax.usd * ecommerceStore.exchangeRate() | number:'1.2-2' }}</small> }
+        } @else if (showBs()) {
+        Bs. {{ tax.usd * ecommerceStore.exchangeRate() | number:'1.2-2' }}
+        } @else {
+        {{ cs() }}{{ tax.usd | tenantPrice }}
+        }
       </span>
     </div>
     }

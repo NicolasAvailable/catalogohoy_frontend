@@ -396,6 +396,14 @@
                 <div class="payment-method-info">
                   <ui-icon [name]="method.icon" styleClass="size-5 text-grey-500"></ui-icon>
                   <span class="payment-method-name">{{ method.name }}</span>
+                  @if (adjustBadge(method); as badge) {
+                  <span
+                    class="pm-adjust-chip"
+                    [class.good]="badge.kind === 'good'"
+                    [class.warn]="badge.kind === 'warn'"
+                    >{{ badge.label }}</span
+                  >
+                  }
                 </div>
                 <div class="payment-method-actions">
                   <ui-button
@@ -451,6 +459,49 @@
                   }
                 </div>
                 }
+
+                <!-- Ajuste automático: descuento/recargo al elegir este método en una orden -->
+                <div class="payment-method-adjust">
+                  <label class="payment-method-field-label">{{ 'Ajuste al pagar con este método (opcional)' | transloco }}</label>
+                  <ui-select
+                    [options]="adjustTypeOptions"
+                    [ngModel]="adjType()"
+                    (ngModelChange)="setAdjType($event)"
+                    optionLabel="label"
+                    optionValue="value"
+                  ></ui-select>
+                  @if (adjType() !== 'none') {
+                  <div class="payment-method-adjust-row">
+                    <ui-select
+                      [options]="adjustModeOptions"
+                      [ngModel]="adjMode()"
+                      (ngModelChange)="setAdjMode($event)"
+                      optionLabel="label"
+                      optionValue="value"
+                    ></ui-select>
+                    <ui-input-text
+                      [ngModel]="adjValue()"
+                      (ngModelChange)="setAdjValue($event)"
+                      [placeholder]="(adjMode() === 'percent' ? 'Ej: 5' : 'Ej: 10') | transloco"
+                      styleClass="w-full"
+                    ></ui-input-text>
+                    @if (adjMode() === 'percent') {
+                    <span class="pm-adjust-unit">%</span>
+                    }
+                  </div>
+                  <div class="payment-method-adjust-visible">
+                    <ui-toggle
+                      [ngModel]="adjVisible()"
+                      (ngModelChange)="setAdjVisible($event)"
+                    ></ui-toggle>
+                    <span>{{ 'Mostrar en la factura del cliente' | transloco }}</span>
+                  </div>
+                  <p class="payment-method-details-hint">
+                    {{ 'Se aplica solo al elegir este método al crear una orden.' | transloco }}
+                  </p>
+                  }
+                </div>
+
                 <div class="payment-method-details-actions">
                   <ui-button
                     [label]="'Cancelar' | transloco"
@@ -553,6 +604,192 @@
             ></ui-button>
           </div>
 
+        </div>
+      </ui-card>
+
+      <!-- Card: Contado y crédito — el cliente elige la condición de pago en
+           el checkout. TODO apagado por default = el checkout queda exactamente
+           como está hoy; cada catálogo lo habilita si quiere. -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon credit-icon">
+              <ui-icon name="hand-coins" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ 'Contado y crédito' | transloco }}</h2>
+              <p class="card-subtitle">
+                {{ 'Descuentos al pagar y pedidos a crédito en tu checkout' | transloco }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <!-- Opción 1: aplicar los ajustes por método en el checkout -->
+          <div class="credit-option">
+            <div class="credit-option-text">
+              <span class="credit-option-title">
+                {{ 'Aplicar los ajustes de tus métodos de pago en el checkout' | transloco }}
+              </span>
+              <p class="credit-option-hint">
+                {{ 'El descuento o recargo de cada método se aplica solo cuando tu cliente lo elige al hacer el pedido, y aparece en el resumen y en la factura.' | transloco }}
+              </p>
+              @if (methodsWithAdjustment().length) {
+              <div class="credit-adjust-chips">
+                @for (m of methodsWithAdjustment(); track m.name) {
+                <span
+                  class="pm-adjust-chip"
+                  [class.good]="m.badge.kind === 'good'"
+                  [class.warn]="m.badge.kind === 'warn'"
+                  >{{ m.name }} · {{ m.badge.label }}</span
+                >
+                }
+              </div>
+              } @else {
+              <p class="credit-option-empty">
+                {{ 'Aún no has configurado ajustes: abre "Datos" en un método de pago y define su descuento o recargo.' | transloco }}
+              </p>
+              }
+            </div>
+            <ui-toggle
+              [ngModel]="draftApplyAdjustmentsInCheckout()"
+              (ngModelChange)="draftApplyAdjustmentsInCheckout.set($event)"
+            ></ui-toggle>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Opción 2: pedidos a crédito -->
+          <div class="credit-option">
+            <div class="credit-option-text">
+              <span class="credit-option-title">
+                {{ 'Permitir pedidos a crédito' | transloco }}
+              </span>
+              <p class="credit-option-hint">
+                {{ 'Tu cliente puede elegir entre pagar de contado o pedir a crédito. Los pedidos a crédito te llegan marcados para que tú los confirmes.' | transloco }}
+              </p>
+            </div>
+            <ui-toggle
+              [ngModel]="draftCreditEnabled()"
+              (ngModelChange)="draftCreditEnabled.set($event)"
+            ></ui-toggle>
+          </div>
+
+          @if (draftCreditEnabled()) {
+          <div class="credit-settings">
+            <div class="credit-settings-field">
+              <label class="payment-method-field-label">
+                {{ 'Compras mínimas para acceder al crédito' | transloco }}
+              </label>
+              <div class="credit-min-row">
+                <ui-input-text
+                  [ngModel]="draftCreditMinPurchases()"
+                  (ngModelChange)="setCreditMinPurchases($event)"
+                  [placeholder]="'Ej: 3' | transloco"
+                  styleClass="credit-min-input"
+                ></ui-input-text>
+                <span class="credit-min-suffix">{{ 'compras' | transloco }}</span>
+              </div>
+              <p class="credit-option-hint">
+                {{ 'Contamos las órdenes completadas o a crédito con el mismo teléfono. 0 = cualquier cliente puede pedir a crédito.' | transloco }}
+              </p>
+            </div>
+
+            <div class="credit-settings-field">
+              <label class="payment-method-field-label">
+                {{ 'Nota que ve el cliente' | transloco }}
+              </label>
+              <ui-textarea
+                [ngModel]="draftCreditNote() || ''"
+                (ngModelChange)="draftCreditNote.set($event)"
+                [placeholder]="'El crédito está disponible después de {n} compras en esta tienda.' | transloco: { n: draftCreditMinPurchases() }"
+                [rows]="2"
+                styleClass="w-full"
+              ></ui-textarea>
+              <p class="credit-option-hint">
+                {{ 'Si la dejas vacía, mostramos ese texto por defecto.' | transloco }}
+              </p>
+            </div>
+          </div>
+          }
+        </div>
+      </ui-card>
+
+      <!-- Card: Impuesto en la factura (IVA) — CAT-84 -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon payments-icon">
+              <ui-icon name="percent" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ 'Impuesto en la factura' | transloco }}</h2>
+              <small class="card-subtitle">
+                {{ 'Muestra el desglose del impuesto (IVA) en el recibo y la factura. Tus precios ya lo incluyen: no cambia los totales.' | transloco }}
+              </small>
+            </div>
+          </div>
+        </div>
+        <div class="credit-settings">
+          <div class="credit-settings-field">
+            <label class="payment-method-field-label">
+              {{ 'Sugeridos para tu país' | transloco }}
+            </label>
+            <div class="tax-presets">
+              @for (p of taxPresets(); track p.name + p.rate) {
+              <button
+                type="button"
+                class="tax-preset"
+                [class.tax-preset--active]="isTaxPresetActive(p)"
+                (click)="applyTaxPreset(p)"
+              >
+                {{ p.name }} {{ p.rate }}%
+              </button>
+              }
+              @if (draftTaxRate()) {
+              <button type="button" class="tax-preset tax-preset--off" (click)="setTaxRate(''); draftTaxLabel.set(null)">
+                {{ 'Quitar' | transloco }}
+              </button>
+              }
+            </div>
+            <p class="credit-option-hint">
+              {{ 'Un toque lo deja listo; abajo puedes ajustar el porcentaje y el nombre.' | transloco }}
+            </p>
+          </div>
+          <div class="credit-settings-field">
+            <label class="payment-method-field-label">
+              {{ 'Porcentaje del impuesto' | transloco }}
+            </label>
+            <div class="credit-min-row">
+              <ui-input-text
+                [ngModel]="draftTaxRate() ?? ''"
+                (ngModelChange)="setTaxRate($event)"
+                [placeholder]="'Ej: 16' | transloco"
+                styleClass="credit-min-input"
+              ></ui-input-text>
+              <span class="credit-min-suffix">%</span>
+            </div>
+            <p class="credit-option-hint">
+              {{ 'Déjalo vacío o en 0 para no mostrar el impuesto.' | transloco }}
+            </p>
+          </div>
+          @if (draftTaxRate()) {
+          <div class="credit-settings-field">
+            <label class="payment-method-field-label">
+              {{ 'Nombre del impuesto' | transloco }}
+            </label>
+            <ui-input-text
+              [ngModel]="draftTaxLabel() || ''"
+              (ngModelChange)="draftTaxLabel.set($event)"
+              [placeholder]="'IVA'"
+              styleClass="w-full"
+            ></ui-input-text>
+            <p class="credit-option-hint">
+              {{ 'Según tu país: IVA, ITBIS, IGV… Si lo dejas vacío usamos IVA.' | transloco }}
+            </p>
+          </div>
+          }
         </div>
       </ui-card>
 
@@ -1061,14 +1298,14 @@
 
         <div class="card-content" [class.section-disabled]="!draftDeliveryDateEnabled()">
           <p class="text-sm text-grey-300 mb-4">
-            {{ 'Marca los días de la semana en los que NO haces entregas. El calendario del checkout deshabilitará esos días.' | transloco }}
+            {{ 'Selecciona los días en los que SÍ despachas pedidos. Los demás se deshabilitarán en el calendario del checkout.' | transloco }}
           </p>
           <div class="delivery-weekdays">
             @for (opt of deliveryWeekdayOptions; track opt.day) {
             <button
               type="button"
               class="delivery-weekday-chip"
-              [class.delivery-weekday-chip--blocked]="isDeliveryWeekdayBlocked(opt.day)"
+              [class.delivery-weekday-chip--active]="isDeliveryWeekdayActive(opt.day)"
               (click)="toggleDeliveryBlockedWeekday(opt.day)"
             >
               {{ opt.label | transloco }}
@@ -1076,7 +1313,7 @@
             }
           </div>
           <small class="delivery-weekdays-hint">
-            {{ 'Los días resaltados están bloqueados (sin entregas).' | transloco }}
+            {{ 'Los días resaltados son los que despachas. Toca uno para activarlo o desactivarlo.' | transloco }}
           </small>
         </div>
       </ui-card>
@@ -1338,6 +1575,100 @@
         </div>
       </ui-card>
 
+      <!-- Card: Píxel de Meta (marketing / ads) -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon social-icon">
+              <ui-icon name="trending-up" styleClass="size-5"></ui-icon>
+            </div>
+            <div class="flex items-center gap-2">
+              <h2 class="card-title">{{ 'Píxel de Meta' | transloco }}</h2>
+              @if (isPixelLocked()) {
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none">
+                <ui-icon name="crown" size="10" styleClass="text-indigo-500" />
+                {{ 'Pro' | transloco }}
+              </span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="card-content"
+          [class.opacity-50]="isPixelLocked()"
+          [class.pointer-events-none]="isPixelLocked()"
+        >
+          <p class="card-subtitle">
+            {{ 'Conectá tu Píxel de Meta para medir en tus campañas de Facebook e Instagram Ads las visitas, los productos vistos, los agregados al carrito y los pedidos iniciados en tu catálogo.' | transloco }}
+          </p>
+
+          <div class="mt-4">
+            <ui-input-text
+              [attr.label]="'ID del Píxel de Meta' | transloco"
+              placeholder="1234567890123456"
+              [ngModel]="draftMetaPixelId() ?? ''"
+              (ngModelChange)="draftMetaPixelId.set($event)"
+            ></ui-input-text>
+            <p class="text-xs text-grey-300 mt-2">
+              {{ 'Lo encontrás en tu Meta Events Manager, en los datos del píxel. Dejá el campo vacío para desactivarlo.' | transloco }}
+            </p>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Conversions API (server-side) -->
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm font-semibold text-grey-700">{{ 'Conversions API' | transloco }}</h3>
+              @if (metaCapiConfigured()) {
+              <span class="inline-flex items-center gap-1 text-xs font-medium text-green-600">
+                <ui-icon name="check-circle" size="14" styleClass="text-green-600" />
+                {{ 'Conectada' | transloco }}
+              </span>
+              }
+            </div>
+            <p class="card-subtitle mt-1">
+              {{ 'Enviá las conversiones también desde el servidor para una medición más precisa, aunque el cliente use bloqueadores de anuncios o un iOS con el rastreo limitado.' | transloco }}
+            </p>
+
+            <div class="mt-3">
+              <ui-input-text
+                [attr.label]="'Token de acceso de la Conversions API' | transloco"
+                [placeholder]="metaCapiConfigured() ? ('Dejá vacío para mantener el token actual' | transloco) : 'EAA...'"
+                [ngModel]="draftMetaCapiToken()"
+                (ngModelChange)="draftMetaCapiToken.set($event)"
+              ></ui-input-text>
+              <p class="text-xs text-grey-300 mt-2">
+                {{ 'Generalo en Meta Events Manager → tu píxel → Configuración → API de conversiones → Generar token de acceso.' | transloco }}
+              </p>
+            </div>
+
+            <div class="mt-3">
+              <ui-input-text
+                [attr.label]="'Código de evento de prueba (opcional)' | transloco"
+                placeholder="TEST12345"
+                [ngModel]="draftMetaCapiTestCode() ?? ''"
+                (ngModelChange)="draftMetaCapiTestCode.set($event || null)"
+              ></ui-input-text>
+              <p class="text-xs text-grey-300 mt-2">
+                {{ 'Con un código de prueba, los eventos aparecen solo en “Probar eventos” y no cuentan para tus anuncios. Dejalo vacío en producción.' | transloco }}
+              </p>
+            </div>
+
+            @if (metaCapiConfigured()) {
+            <button
+              type="button"
+              class="text-xs font-medium text-grey-300 hover:text-red-500 transition-colors cursor-pointer mt-3"
+              (click)="disconnectMetaCapi()"
+            >
+              {{ 'Desconectar Conversions API' | transloco }}
+            </button>
+            }
+          </div>
+        </div>
+      </ui-card>
+
       </div> <!-- /TAB SOCIAL -->
 
       <!-- ===== TAB: GENERAL (block 3) ===== -->
@@ -1541,86 +1872,29 @@
 
       <!-- ===== TAB: NOTIFICATIONS ===== -->
       <div [hidden]="activeTab() !== 'notifications'">
+        <!-- Los avisos por email (pedidos + reporte semanal) se movieron a
+             Perfil → Notificaciones: llegan al correo personal de cada persona,
+             así que ahora cada quien controla los suyos. -->
         <ui-card styleClass="config-card">
           <div class="card-header-custom">
             <div class="card-header-left">
-              <div class="card-icon" style="background: #fff7ed;">
+              <div class="card-icon" style="background: #eef2ff;">
                 <ui-icon name="mail" styleClass="size-5"></ui-icon>
               </div>
               <div>
-                <h2 class="card-title">{{ 'Avisos de pedidos por email' | transloco }}</h2>
+                <h2 class="card-title">{{ 'Avisos por email' | transloco }}</h2>
                 <small class="card-subtitle">
-                  {{ 'Recibí un correo cada vez que un cliente confirma un pedido en tu catálogo.' | transloco }}
+                  {{ 'Los avisos de pedidos y el reporte semanal ahora los activa cada persona desde su Perfil → Notificaciones (llegan a su correo).' | transloco }}
                 </small>
               </div>
             </div>
-            <ui-toggle
-              [ngModel]="draftNotifyNewOrders()"
-              (ngModelChange)="draftNotifyNewOrders.set($event)"
-            ></ui-toggle>
-          </div>
-
-          <div
-            class="card-content"
-            [class.section-disabled]="!draftNotifyNewOrders()"
-          >
-            <ul class="notifications-list">
-              <li>
-                {{ 'El correo lo recibe el' | transloco }} <strong>{{ 'dueño del catálogo' | transloco }}</strong> {{ 'y los' | transloco }}
-                <strong>{{ 'miembros del equipo con permiso "Ver órdenes"' | transloco }}</strong>.
-              </li>
-              <li>
-                {{ 'Aplica tanto a pedidos hechos desde el catálogo público como a las órdenes manuales que creás vos en el panel.' | transloco }}
-              </li>
-              <li>
-                {{ 'El email viene desde' | transloco }} <strong>noreply&#64;catalogohoy.com</strong> {{ 'con tu logo y color de marca, e incluye un botón directo al pedido.' | transloco }}
-              </li>
-              <li>
-                {{ 'Para cambiar quién recibe los correos, ajustá los permisos de cada miembro en la sección' | transloco }} <strong>{{ 'Equipo' | transloco }}</strong> {{ 'del menú lateral.' | transloco }}
-              </li>
-            </ul>
-          </div>
-        </ui-card>
-
-        <!-- Weekly report email -->
-        <ui-card styleClass="config-card">
-          <div class="card-header-custom">
-            <div class="card-header-left">
-              <div class="card-icon" style="background: #ecfdf5;">
-                <ui-icon name="bar-chart-3" styleClass="size-5"></ui-icon>
-              </div>
-              <div>
-                <h2 class="card-title">{{ 'Reporte semanal por email' | transloco }}</h2>
-                <small class="card-subtitle">
-                  {{ 'Cada domingo recibí un resumen de cómo fue tu semana en tu catálogo.' | transloco }}
-                </small>
-              </div>
-            </div>
-            <ui-toggle
-              [ngModel]="draftNotifyWeeklyReport()"
-              (ngModelChange)="draftNotifyWeeklyReport.set($event)"
-            ></ui-toggle>
-          </div>
-
-          <div
-            class="card-content"
-            [class.section-disabled]="!draftNotifyWeeklyReport()"
-          >
-            <ul class="notifications-list">
-              <li>
-                {{ 'Lo recibe el' | transloco }} <strong>{{ 'dueño del catálogo' | transloco }}</strong> {{ 'y los' | transloco }}
-                <strong>{{ 'miembros del equipo con permiso "Ver órdenes"' | transloco }}</strong>.
-              </li>
-              <li>
-                {{ 'Incluye' | transloco }} <strong>{{ 'ventas de la semana' | transloco }}</strong>, {{ 'comparativa con la semana anterior' | transloco }},
-                <strong>{{ 'top productos' | transloco }}</strong>, {{ 'clientes nuevos y' | transloco }}
-                <strong>{{ 'visitas al catálogo' | transloco }}</strong>.
-              </li>
-              <li>
-                {{ 'Disponible en' | transloco }} <strong>{{ 'planes pagos' | transloco }}</strong>. {{ 'Se envía los' | transloco }}
-                <strong>{{ 'domingos' | transloco }}</strong>.
-              </li>
-            </ul>
+            <a
+              routerLink="/admin/profile"
+              [queryParams]="{ tab: 'notifications' }"
+              class="text-primary-600 text-sm font-semibold whitespace-nowrap cursor-pointer"
+            >
+              {{ 'Ir a Notificaciones' | transloco }}
+            </a>
           </div>
         </ui-card>
 
