@@ -22,7 +22,8 @@ CatalogoHoy (https://catalogohoy.com) reemplaza el catálogo en PDF y las ventas
 - **Gratis** (US$0, para siempre, sin tarjeta): hasta 10 productos, 1 catálogo
 - **Básico** (US$11.99/mes): hasta 100 productos, analíticas, notificaciones por WhatsApp y diseño personalizable
 - **Pro** (US$19.99/mes): hasta 500 productos, 2 miembros de equipo y 350 créditos de IA por mes
-- **Avanzado** (US$29.99/mes): productos ilimitados, dominio propio, hasta 10 miembros de equipo y soporte dedicado
+- **Avanzado** (US$34.99/mes): productos ilimitados, Punto de Venta (POS), CRM de chats (WhatsApp, Instagram y TikTok), dominio propio, hasta 3 miembros de equipo y soporte dedicado
+- Pro y Avanzado incluyen **7 días de prueba gratis** en la primera suscripción (sin permanencia); el plan anual tiene 50% de descuento.
 
 La creación de la cuenta y el pago de planes se realizan en la web (https://auth.catalogohoy.com/signup).
 
@@ -44,4 +45,7 @@ La creación de la cuenta y el pago de planes se realizan en la web (https://aut
 - [Menú digital para restaurantes](https://catalogohoy.com/menu-digital-para-restaurantes)
 
 ## Blog y guías
-- [Blog de CatalogoHoy](https://catalogohoy.com/blog): guías para crear catálogos, vender por WhatsApp y hacer crecer el negocio, incluyendo guías específicas por país de Latinoamérica.
+- [Blog de CatalogoHoy](https://catalogohoy.com/blog): guías para crear catálogos, vender por WhatsApp y hacer crecer el negocio.
+- Guías por país (cómo crear un catálogo digital gratis y vender online en cada país, con métodos de pago y envíos locales): [Venezuela](https://catalogohoy.com/blog/por-pais/como-crear-un-catalogo-digital-gratis-en-venezuela-2026), [Colombia](https://catalogohoy.com/blog/por-pais/como-crear-un-catalogo-digital-gratis-en-colombia-2026), [México](https://catalogohoy.com/blog/por-pais/como-crear-un-catalogo-digital-gratis-en-mexico-2026), [Guatemala](https://catalogohoy.com/blog/por-pais/como-crear-un-catalogo-digital-gratis-en-guatemala-2026) y el resto de Latinoamérica (17 países) en https://catalogohoy.com/blog/por-pais.
+- Guías por rubro (catálogo digital para cada tipo de negocio): tiendas de ropa, zapaterías, repuestos y autopartes, mayoristas y distribuidoras, ferreterías, restaurantes y comida, perfumerías y cosméticos, joyerías y accesorios — en https://catalogohoy.com/blog/por-rubro.
+- Comparativas honestas frente a otras plataformas (Tiendanube, Shopify, Take App, Mercado Libre, el catálogo de WhatsApp Business): https://catalogohoy.com/blog/comparativas.

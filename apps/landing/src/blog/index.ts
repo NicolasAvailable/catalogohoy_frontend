@@ -14,6 +14,14 @@ import { comoQuitarFondoFotoProducto2026 } from "./articles/como-quitar-el-fondo
 import { fondoBlancoFotosProducto2026 } from "./articles/fondo-blanco-fotos-de-producto-marketplaces-2026";
 import { comoTomarFotosProductoCelular2026 } from "./articles/como-tomar-fotos-de-producto-con-el-celular-2026";
 import { COUNTRY_ARTICLES } from "./articles/paises";
+import { catalogoParaTiendasDeRopa2026 } from "./articles/catalogo-digital-para-tiendas-de-ropa-2026";
+import { catalogoParaZapaterias2026 } from "./articles/catalogo-digital-para-zapaterias-2026";
+import { catalogoParaJoyerias2026 } from "./articles/catalogo-digital-para-joyerias-y-accesorios-2026";
+import { catalogoParaRepuestos2026 } from "./articles/catalogo-digital-para-repuestos-y-autopartes-2026";
+import { catalogoParaMayoristas2026 } from "./articles/catalogo-digital-para-mayoristas-y-distribuidoras-2026";
+import { catalogoParaFerreterias2026 } from "./articles/catalogo-digital-para-ferreterias-2026";
+import { menuDigitalRestaurantes2026 } from "./articles/menu-digital-para-restaurantes-y-comida-2026";
+import { catalogoParaPerfumerias2026 } from "./articles/catalogo-digital-para-perfumerias-y-cosmeticos-2026";
 
 export const CATEGORIES: BlogCategory[] = [
   {
@@ -35,6 +43,12 @@ export const CATEGORIES: BlogCategory[] = [
       "Estrategias de ventas, precios y crecimiento para tu negocio.",
   },
   {
+    slug: "por-rubro",
+    name: "Guías por rubro",
+    description:
+      "Cómo armar el catálogo y vender online según tu tipo de negocio: ropa, repuestos, comida y más.",
+  },
+  {
     slug: "por-pais",
     name: "Guías por país",
     description:
@@ -50,6 +64,15 @@ export const CATEGORIES: BlogCategory[] = [
 
 /** Registro editorial: a igual fecha manda este orden (el primero es el destacado). */
 const REGISTRY: BlogArticle[] = [
+  // Guías por rubro (2026-10)
+  catalogoParaTiendasDeRopa2026,
+  catalogoParaZapaterias2026,
+  catalogoParaJoyerias2026,
+  catalogoParaRepuestos2026,
+  catalogoParaMayoristas2026,
+  catalogoParaFerreterias2026,
+  menuDigitalRestaurantes2026,
+  catalogoParaPerfumerias2026,
   comoQuitarFondoFotoProducto2026,
   fondoBlancoFotosProducto2026,
   comoTomarFotosProductoCelular2026,
