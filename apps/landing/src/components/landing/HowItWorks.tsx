@@ -3,7 +3,8 @@ import { motion } from "framer-motion";
 import { useRef, useState } from "react";
 
 // ─── Demo en video ───────────────────────────────────────────────────────────
-// Reemplaza al antiguo diagrama de flujo. El video pesa ~10 MB (3:47), así que
+// Reemplaza al antiguo diagrama de flujo. El video es el corte 1:45-2:26 del
+// master (41 s, ~1.2 MB), así que
 // NO se descarga nada hasta que el visitante le da play: preload="none" +
 // poster webp (48 kB). Los controles nativos aparecen recién al reproducir.
 // SEO: schema.org VideoObject en index.html apunta a estos mismos archivos.
@@ -33,14 +34,14 @@ const DemoVideo = () => {
         <button
           type="button"
           onClick={() => videoRef.current?.play()}
-          aria-label="Ver la demo (3 min 47 s)"
+          aria-label="Ver la demo (41 segundos)"
           className="group absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/15 transition-colors hover:bg-black/25"
         >
           <span className="flex h-20 w-20 items-center justify-center rounded-full bg-primary shadow-xl shadow-primary/40 transition-transform group-hover:scale-110">
             <Play className="ml-1 h-9 w-9 text-primary-foreground" fill="currentColor" strokeWidth={0} />
           </span>
           <span className="rounded-full bg-black/55 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
-            Ver la demo · 3:47
+            Ver la demo · 0:41
           </span>
         </button>
       )}
@@ -88,7 +89,7 @@ const HowItWorks = ({ embedded = false }: { embedded?: boolean }) => {
             <span className="text-primary">todo en un mismo lugar</span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Mira en unos minutos cómo creas tu catálogo, lo compartes y
+            Mira en 41 segundos cómo creas tu catálogo, lo compartes y
             recibes pedidos por WhatsApp — tal cual lo vas a usar.
           </p>
         </motion.div>
