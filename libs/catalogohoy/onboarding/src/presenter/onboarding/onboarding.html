@@ -95,7 +95,11 @@
             >{{ 'Dirección de la tienda' | transloco }}
             <span class="onb__req">*</span></span
           >
-          <div class="onb__slugbox">
+          <div
+            class="onb__slugbox"
+            [class.onb__slugbox--taken]="slugCheck() === 'taken'"
+            [class.onb__slugbox--ok]="finalSlug() && slugCheck() === 'available'"
+          >
             <input
               type="text"
               class="onb__slugbox-input"
@@ -104,8 +108,26 @@
               [placeholder]="'mi-tienda' | transloco"
             />
             <span class="onb__slugbox-suffix">.catalogohoy.com</span>
+            @if (finalSlug()) {
+            <span class="onb__slugbox-status">
+              @switch (slugCheck()) { @case ('checking') {
+              <ui-icon
+                name="loader-circle"
+                size="16"
+                styleClass="animate-spin text-grey-400"
+              /> } @case ('available') {
+              <ui-icon name="circle-check" size="16" styleClass="text-emerald-500" />
+              } @case ('taken') {
+              <ui-icon name="circle-x" size="16" styleClass="text-red-500" />
+              } }
+            </span>
+            }
           </div>
-          @if (storeUrl()) {
+          @if (slugCheck() === 'taken') {
+          <span class="onb__hint onb__hint--error">
+            {{ 'Esa dirección de catálogo ya está ocupada. Prueba con otro nombre.' | transloco }}
+          </span>
+          } @else if (storeUrl()) {
           <span class="onb__hint">
             {{ 'Tu catálogo estará en {url}' | transloco: { url: storeUrl() } }}
           </span>

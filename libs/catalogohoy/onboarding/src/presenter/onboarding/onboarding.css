@@ -10,6 +10,25 @@
   min-height: 100dvh;
 }
 
+/* Desktop: el wizard queda clavado al viewport — el teléfono del preview
+   SIEMPRE visible, y el scroll vive DENTRO de la card del formulario (p.ej.
+   el paso Entrega y pago, que es largo), no en la página. En mobile el
+   preview se oculta y el scroll natural de página se mantiene. */
+@media (min-width: 48.0625rem) {
+  .onb {
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .onb__body {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .onb__form {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 /* ── Top bar ─────────────────────────────────────────────────────────────── */
 .onb__topbar {
   display: flex;
@@ -146,6 +165,26 @@
   outline: none;
   background: transparent;
   text-align: right;
+}
+
+/* Estado en vivo de la dirección: libre (verde) / ocupada (rojo) */
+.onb__slugbox--ok,
+.onb__slugbox--ok:focus-within {
+  border-color: var(--color-emerald-500, #10b981);
+  box-shadow: 0 0 0 0.0625rem var(--color-emerald-500, #10b981);
+}
+.onb__slugbox--taken,
+.onb__slugbox--taken:focus-within {
+  border-color: var(--color-red-500, #ef4444);
+  box-shadow: 0 0 0 0.0625rem var(--color-red-500, #ef4444);
+}
+.onb__slugbox-status {
+  display: inline-flex;
+  align-items: center;
+  padding-right: 0.625rem;
+}
+.onb__hint--error {
+  color: var(--color-red-500, #ef4444);
 }
 
 /* Logo circular (uploader con badge de cámara) */

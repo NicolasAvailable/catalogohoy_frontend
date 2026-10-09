@@ -187,6 +187,14 @@ export class Onboarding implements OnInit {
   public readonly slugInput = signal('');
   private slugManuallyEdited = false;
   private initialSlug = '';
+  /** Verificación EN VIVO de la dirección: check verde si está libre, rojo si
+   *  ya existe (y Continuar se deshabilita). saveStore() re-verifica igual —
+   *  esto es UX inmediata; aquél es el gate autoritativo. */
+  public readonly slugCheck = signal<
+    'idle' | 'checking' | 'available' | 'taken'
+  >('idle');
+  private slugCheckTimer: ReturnType<typeof setTimeout> | null = null;
+  private slugCheckSeq = 0;
   /** Slug deseado (validado en el paso 1). El rename se DIFIERE al final para
    *  no romper el host/preview: hasta entonces this.slug() sigue siendo el
    *  temporal y el usuario navega en el subdominio que aún resuelve. */
@@ -236,7 +244,9 @@ export class Onboarding implements OnInit {
     () =>
       this.storeName().trim().length > 0 &&
       this.whatsapp().trim().length > 0 &&
-      this.finalSlug().length > 0
+      this.finalSlug().length > 0 &&
+      // Dirección ocupada ⇒ Continuar deshabilitado hasta que elija otra.
+      this.slugCheck() !== 'taken'
   );
   public readonly productValid = computed(
     () =>
@@ -404,6 +414,7 @@ export class Onboarding implements OnInit {
     // La dirección sigue al nombre hasta que el usuario la edite a mano.
     if (this.isTempSlug() && !this.slugManuallyEdited) {
       this.slugInput.set(toSlug(value));
+      this.queueSlugCheck();
     }
   }
 
@@ -412,6 +423,32 @@ export class Onboarding implements OnInit {
     // Sanitiza mientras escribe pero SIN recortar guiones de los bordes
     // (si no, sería imposible tipear "mi-tienda"); finalSlug() recorta.
     this.slugInput.set(sanitizeSlug(value));
+    this.queueSlugCheck();
+  }
+
+  /** Encola la verificación de disponibilidad con debounce (400 ms). El `seq`
+   *  descarta respuestas tardías cuando el usuario siguió tecleando. */
+  private queueSlugCheck(): void {
+    if (this.slugCheckTimer) clearTimeout(this.slugCheckTimer);
+    const slug = this.finalSlug();
+    const seq = ++this.slugCheckSeq;
+    if (!slug) {
+      this.slugCheck.set('idle');
+      return;
+    }
+    // Su propia dirección actual siempre está "disponible" para sí mismo.
+    if (slug === this.initialSlug) {
+      this.slugCheck.set('available');
+      return;
+    }
+    this.slugCheck.set('checking');
+    this.slugCheckTimer = setTimeout(async () => {
+      const check = await this.tenantService.checkSlug(slug);
+      if (seq !== this.slugCheckSeq) return; // tecleó de nuevo: respuesta vieja
+      // 'valid' = ya hay un tenant con ese slug (ocupada); 'not-found' = libre;
+      // 'error' = no se pudo verificar → no bloqueamos (saveStore decide).
+      this.slugCheck.set(check.status === 'valid' ? 'taken' : 'available');
+    }, 400);
   }
 
   /** Paso 1 → guarda nombre/logo/color (+ WhatsApp si faltaba) y RESERVA el
