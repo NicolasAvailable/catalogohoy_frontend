@@ -24,6 +24,7 @@ import {
   InputPhoneComponent,
   InputTextComponent,
   MultiSelectComponent,
+  TextareaComponent,
   ToggleComponent,
   UploaderComponent,
 } from '@ui';
@@ -131,6 +132,7 @@ const SHIPPING_CARDS: {
     InputTextComponent,
     MultiSelectComponent,
     PhoneMockupComponent,
+    TextareaComponent,
     ToggleComponent,
     UploaderComponent,
   ],
@@ -209,6 +211,25 @@ export class Onboarding implements OnInit {
   public readonly productPrice = signal<number | null>(null);
   public readonly productPhotos = signal<string[]>([]);
   public readonly productCategoryIds = signal<string[]>([]);
+  public readonly productDescription = signal('');
+  /** Opciones avanzadas (colapsadas por defecto): promo, stock, SKU, costo. */
+  public readonly showAdvanced = signal(false);
+  public readonly productPromoPrice = signal<number | null>(null);
+  public readonly productStock = signal<number | null>(null);
+  public readonly productSku = signal('');
+  public readonly productCost = signal<number | null>(null);
+  /** Producto creado EN este wizard (máx. 1: para más, el mensaje manda a
+   *  terminar el onboarding y usar Productos). */
+  public readonly addedProduct = signal<{
+    name: string;
+    price: number;
+    photo: string | null;
+  } | null>(null);
+  /** Cache-buster del iframe del preview: al crear el producto se incrementa
+   *  → el iframe recarga y el producto APARECE en el teléfono (la lista de
+   *  productos no viaja por postMessage; name/logo/banner/color se re-mandan
+   *  solos al recargar vía onPreviewIframeLoaded). */
+  private readonly previewBust = signal(0);
 
   // ── Paso 3: entrega y pago ──────────────────────────────────────────────
   public readonly shippingDrafts = signal<ShippingDraft[]>(
@@ -284,7 +305,7 @@ export class Onboarding implements OnInit {
     const slug = this.slug();
     if (!slug) return '';
     const origin = window.location.origin;
-    const url = `${origin}/?slug=${slug}&preview=true`;
+    const url = `${origin}/?slug=${slug}&preview=true&r=${this.previewBust()}`;
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   });
 
@@ -581,21 +602,26 @@ export class Onboarding implements OnInit {
     this.productPhotos.update((cur) => cur.filter((u) => u !== url));
   }
 
-  /** Crea el primer producto y avanza al paso Entrega y pago. */
+  /** Crea el primer producto y lo deja VISIBLE en el preview (recarga el
+   *  iframe vía cache-buster). No avanza: muestra el estado "agregado" con el
+   *  mensaje de que los siguientes se cargan desde Productos. */
   public async saveProduct(): Promise<void> {
     if (!this.productValid() || this.isSaving()) return;
     this.isSaving.set(true);
 
+    const promo = this.productPromoPrice();
+    const stock = this.productStock();
+    const cost = this.productCost();
     const input: CreateProductInput = {
       name: this.productName().trim(),
-      description: null,
+      description: this.productDescription().trim() || null,
       price: String(this.productPrice() ?? 0),
-      pricePromotional: '',
+      pricePromotional: promo != null && promo > 0 ? String(promo) : '',
       photos: this.productPhotos(),
-      stock: null,
+      stock: stock != null && stock >= 0 ? String(stock) : null,
       categoryIds: this.productCategoryIds(),
-      sku: null,
-      productionCost: null,
+      sku: this.productSku().trim() || null,
+      productionCost: cost != null && cost > 0 ? String(cost) : null,
       isWholesale: false,
       wholesaleTiers: [],
       isSoldOut: false,
@@ -611,18 +637,35 @@ export class Onboarding implements OnInit {
     result
       .mapRight(() => {
         this.toast.success('Producto creado');
-        // Reset: si vuelve a este paso puede cargar OTRO producto sin duplicar.
+        this.addedProduct.set({
+          name: input.name,
+          price: this.productPrice() ?? 0,
+          photo: this.productPhotos()[0] ?? null,
+        });
+        // Recarga el iframe para que el producto aparezca en el teléfono.
+        this.previewBust.update((n) => n + 1);
+        // Reset del form (queda detrás del estado "agregado").
         this.productName.set('');
         this.productPrice.set(null);
         this.productPhotos.set([]);
         this.productCategoryIds.set([]);
+        this.productDescription.set('');
+        this.productPromoPrice.set(null);
+        this.productStock.set(null);
+        this.productSku.set('');
+        this.productCost.set(null);
+        this.showAdvanced.set(false);
         this.isSaving.set(false);
-        this.goNext();
       })
       .mapLeft((e: Error) => {
         this.toast.error(e as unknown as Exception);
         this.isSaving.set(false);
       });
+  }
+
+  /** Continuar desde el estado "producto agregado" → Entrega y pago. */
+  public continueAfterProduct(): void {
+    this.goNext();
   }
 
   /** Salta el producto sin crear y avanza al paso Entrega y pago. */

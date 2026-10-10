@@ -219,6 +219,47 @@
         {{ 'Con esto tu catálogo queda listo para vender.' | transloco }}
       </p>
 
+      @if (addedProduct(); as added) {
+      <!-- Estado "producto agregado": se ve en el teléfono; los siguientes van
+           por el admin (Productos) al terminar el onboarding. -->
+      <div class="onb__added">
+        <div class="onb__added-card">
+          @if (added.photo) {
+          <img class="onb__added-photo" [src]="added.photo" alt="" />
+          } @else {
+          <span class="onb__added-photo onb__added-photo--empty">
+            <ui-icon name="package" size="20" styleClass="text-grey-300" />
+          </span>
+          }
+          <div class="onb__added-info">
+            <span class="onb__added-name">{{ added.name }}</span>
+            <span class="onb__added-price">$ {{ added.price }}</span>
+          </div>
+          <span class="onb__added-check">
+            <ui-icon name="circle-check" size="20" styleClass="text-emerald-500" />
+          </span>
+        </div>
+        <p class="onb__added-hint">
+          {{ '¡Ya está en tu catálogo! Míralo en el teléfono. Para agregar más productos, termina el onboarding y hazlo desde Productos.' | transloco }}
+        </p>
+      </div>
+
+      <div class="onb__actions">
+        <ui-button
+          [label]="'Atrás' | transloco"
+          variant="text"
+          [fluid]="false"
+          (click)="back()"
+        />
+        <ui-button
+          [label]="'Continuar' | transloco"
+          icon="arrow-right"
+          iconPos="right"
+          [fluid]="false"
+          (click)="continueAfterProduct()"
+        />
+      </div>
+      } @else {
       <div class="onb__fields">
         <div class="onb__field">
           <span class="onb__label"
@@ -249,9 +290,9 @@
           ></ui-input-number>
         </div>
 
-        <!-- Foto(s) -->
+        <!-- Multimedia: varias fotos, igual que en el editor del admin -->
         <div class="onb__field">
-          <span class="onb__label">{{ 'Foto (opcional)' | transloco }}</span>
+          <span class="onb__label">{{ 'Fotos del producto' | transloco }}</span>
           <div class="onb__photos">
             @for (photo of productPhotos(); track photo) {
             <div class="onb__photo">
@@ -283,6 +324,18 @@
               </ng-template>
             </ui-uploader>
           </div>
+        </div>
+
+        <!-- Descripción -->
+        <div class="onb__field">
+          <span class="onb__label">{{ 'Descripción (opcional)' | transloco }}</span>
+          <ui-textarea
+            [ngModel]="productDescription()"
+            (ngModelChange)="productDescription.set($event)"
+            [rows]="3"
+            class="w-full"
+            [placeholder]="'Cuéntales a tus clientes sobre este producto.' | transloco"
+          />
         </div>
 
         <!-- Categoría + creación inline -->
@@ -319,6 +372,74 @@
             />
           </div>
         </div>
+
+        <!-- Opciones avanzadas (colapsables): promo, stock, SKU, costo -->
+        <div class="onb__field">
+          <button
+            type="button"
+            class="onb__advanced-toggle"
+            (click)="showAdvanced.set(!showAdvanced())"
+          >
+            <ui-icon
+              [name]="showAdvanced() ? 'chevron-up' : 'chevron-down'"
+              size="16"
+            />
+            {{ 'Opciones avanzadas' | transloco }}
+          </button>
+          @if (showAdvanced()) {
+          <div class="onb__advanced">
+            <div class="onb__advanced-grid">
+              <div class="onb__field">
+                <span class="onb__label">{{ 'Precio promocional' | transloco }}</span>
+                <ui-input-number
+                  [ngModel]="productPromoPrice()"
+                  (ngModelChange)="productPromoPrice.set($event)"
+                  mode="decimal"
+                  [min]="0"
+                  [minFractionDigits]="2"
+                  [maxFractionDigits]="2"
+                  prefix="$ "
+                  placeholder="0.00"
+                ></ui-input-number>
+              </div>
+              <div class="onb__field">
+                <span class="onb__label">{{ 'Stock' | transloco }}</span>
+                <ui-input-number
+                  [ngModel]="productStock()"
+                  (ngModelChange)="productStock.set($event)"
+                  [min]="0"
+                  [placeholder]="'Ilimitado' | transloco"
+                ></ui-input-number>
+              </div>
+              <div class="onb__field">
+                <span class="onb__label">{{ 'SKU' | transloco }}</span>
+                <ui-input-text
+                  [ngModel]="productSku()"
+                  (ngModelChange)="productSku.set($event)"
+                  [placeholder]="'Ej: CAM-001' | transloco"
+                  styleClass="w-full"
+                ></ui-input-text>
+              </div>
+              <div class="onb__field">
+                <span class="onb__label">{{ 'Costo de producción' | transloco }}</span>
+                <ui-input-number
+                  [ngModel]="productCost()"
+                  (ngModelChange)="productCost.set($event)"
+                  mode="decimal"
+                  [min]="0"
+                  [minFractionDigits]="2"
+                  [maxFractionDigits]="2"
+                  prefix="$ "
+                  placeholder="0.00"
+                ></ui-input-number>
+              </div>
+            </div>
+            <span class="onb__hint">
+              {{ 'Variantes, tallas, mayoreo y adicionales se configuran después desde Productos.' | transloco }}
+            </span>
+          </div>
+          }
+        </div>
       </div>
 
       <div class="onb__actions">
@@ -336,9 +457,8 @@
             (click)="skipProduct()"
           />
           <ui-button
-            [label]="'Continuar' | transloco"
-            icon="arrow-right"
-            iconPos="right"
+            [label]="'Agregar producto' | transloco"
+            icon="plus"
             [fluid]="false"
             [disabled]="!productValid() || isSaving()"
             [isLoading]="isSaving()"
@@ -346,7 +466,7 @@
           />
         </div>
       </div>
-      }
+      } }
 
       <!-- ============ PASO 3: Entrega y pago ============ -->
       @case ('setup') {

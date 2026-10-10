@@ -486,3 +486,89 @@
   color: var(--p-surface-500, #6b7280);
   font-size: 0.875rem;
 }
+
+/* ── Paso 2: opciones avanzadas (colapsables) ───────────────────────────── */
+.onb__advanced-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-primary-500, #3e7bfa);
+}
+.onb__advanced {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 0.0625rem solid var(--color-grey-100, #eee);
+  border-radius: 0.875rem;
+  background: var(--color-grey-50, #f8fafc);
+}
+.onb__advanced-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+@media (max-width: 36rem) {
+  .onb__advanced-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Paso 2: estado "producto agregado" ─────────────────────────────────── */
+.onb__added {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+.onb__added-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  border: 0.0625rem solid var(--color-emerald-200, #a7f3d0);
+  background: var(--color-emerald-50, #ecfdf5);
+  border-radius: 0.875rem;
+}
+.onb__added-photo {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 0.625rem;
+  object-fit: cover;
+  background: white;
+}
+.onb__added-photo--empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.0625rem dashed var(--color-grey-200, #d1d5db);
+}
+.onb__added-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.onb__added-name {
+  font-weight: 700;
+  color: var(--color-grey-900, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.onb__added-price {
+  font-size: 0.875rem;
+  color: var(--color-grey-500, #64748b);
+}
+.onb__added-hint {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-grey-500, #64748b);
+}

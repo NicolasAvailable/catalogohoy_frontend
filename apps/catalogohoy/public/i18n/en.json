@@ -2711,5 +2711,12 @@
   "Mi tienda": "My store",
   "Saltar": "Skip",
   "¿A qué WhatsApp te hacen los pedidos?": "Which WhatsApp do customers order on?",
-  "Aparece en tu catálogo para que tus clientes te escriban y te compren.": "It shows on your catalog so customers can message you and buy."
+  "Aparece en tu catálogo para que tus clientes te escriban y te compren.": "It shows on your catalog so customers can message you and buy.",
+  "Fotos del producto": "Product photos",
+  "Cuéntales a tus clientes sobre este producto.": "Tell your customers about this product.",
+  "Opciones avanzadas": "Advanced options",
+  "Ilimitado": "Unlimited",
+  "Ej: CAM-001": "E.g.: CAM-001",
+  "Variantes, tallas, mayoreo y adicionales se configuran después desde Productos.": "Variants, sizes, wholesale and add-ons are set up later from Products.",
+  "¡Ya está en tu catálogo! Míralo en el teléfono. Para agregar más productos, termina el onboarding y hazlo desde Productos.": "It's in your catalog! Check it on the phone. To add more products, finish the onboarding and do it from Products."
 }
