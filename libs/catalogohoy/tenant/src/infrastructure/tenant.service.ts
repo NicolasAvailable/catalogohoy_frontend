@@ -62,6 +62,21 @@ export class TenantService implements BaseTenantService {
     return E.right(result);
   }
 
+  /** Paso pendiente del wizard de onboarding del tenant del usuario
+   *  (NULL = nada pendiente). Best-effort: ante error devuelve null para no
+   *  bloquear logins/boots por un RPC caído. */
+  public async getOnboardingStep(): Promise<number | null> {
+    const { data, error } = await this.client.rpc('get_my_onboarding_step');
+    if (error) return null;
+    return typeof data === 'number' ? data : null;
+  }
+
+  /** Persiste el paso del wizard (o null al completar/saltar). Fire-and-forget
+   *  friendly: el wizard no depende del resultado. */
+  public async setOnboardingStep(step: number | null): Promise<void> {
+    await this.client.rpc('set_my_onboarding_step', { p_step: step });
+  }
+
   /** Renombra tienda + dirección (onboarding: reemplaza el slug temporal
    *  `tienda-XXXXXX`). Valida disponibilidad con checkSlug solo si el slug
    *  realmente cambia (checkSlug no distingue "existe porque es MI tenant");

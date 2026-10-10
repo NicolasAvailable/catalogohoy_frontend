@@ -20,6 +20,10 @@ export interface BaseTenantService {
   isValidSlug(slug: string): Promise<boolean>;
   checkSlug(slug: string): Promise<SlugCheck>;
   getSlugByCustomDomain(domain: string): Promise<string | null>;
+  /** Paso pendiente del wizard de onboarding (null = nada pendiente). */
+  getOnboardingStep(): Promise<number | null>;
+  /** Persiste el paso del wizard; null al completar/saltar. */
+  setOnboardingStep(step: number | null): Promise<void>;
   createCatalog(name: string, slug: string): Promise<E.Either<Error, CreateCatalogResult>>;
   /** Renombra la tienda y su dirección (`tenants.name` + `tenants.slug`).
    *  Left con mensaje amigable si el slug ya está ocupado. */

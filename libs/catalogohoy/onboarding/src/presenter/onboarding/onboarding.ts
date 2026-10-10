@@ -360,6 +360,19 @@ export class Onboarding implements OnInit {
       /* ignore private-mode */
     }
 
+    // Progreso persistido en DB (tenants.onboarding_step): si el usuario
+    // abandonó a mitad, retoma EN ESE PASO (funciona entre navegadores y
+    // dispositivos, a diferencia del flag de localStorage). Si es la primera
+    // vez (null), se marca el paso 0 → el login sabrá que quedó pendiente.
+    const savedStep = await this.tenantService.getOnboardingStep();
+    if (savedStep != null) {
+      this.stepIndex.set(
+        Math.min(Math.max(savedStep, 0), this.stepIds.length - 1)
+      );
+    } else {
+      void this.tenantService.setOnboardingStep(0);
+    }
+
     await this.configStore.loadConfig(this.tenantId);
     const config = this.configStore.config();
     const profile = this.profileStore.profile();
@@ -425,13 +438,23 @@ export class Onboarding implements OnInit {
 
   // ── Navegación (sobre la lista de pasos: nunca sale de rango) ───────────
   public back(): void {
-    if (this.stepIndex() > 0) this.stepIndex.update((i) => i - 1);
+    if (this.stepIndex() > 0) {
+      this.stepIndex.update((i) => i - 1);
+      this.persistStep();
+    }
   }
 
   private goNext(): void {
     if (this.stepIndex() < this.stepIds.length - 1) {
       this.stepIndex.update((i) => i + 1);
+      this.persistStep();
     }
+  }
+
+  /** Guarda el paso actual en DB (fire-and-forget): si abandona acá, el login
+   *  lo trae de vuelta a este mismo paso. */
+  private persistStep(): void {
+    void this.tenantService.setOnboardingStep(this.stepIndex());
   }
 
   public onStoreNameChange(value: string): void {
@@ -955,6 +978,9 @@ export class Onboarding implements OnInit {
   }
 
   private complete(): void {
+    // Onboarding cerrado: NULL en DB (el login vuelve a mandar a /admin) +
+    // flag local como caché del guard de re-entrada.
+    void this.tenantService.setOnboardingStep(null);
     if (this.tenantId) {
       try {
         localStorage.setItem(onboardingDoneKey(this.tenantId), '1');

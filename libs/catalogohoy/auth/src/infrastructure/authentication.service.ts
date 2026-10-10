@@ -381,7 +381,23 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (error) return E.left(new Error(error.message));
     if (!tenantRows?.length) return E.left(new Error('no_tenant'));
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
+    // Onboarding a medias (tenants.onboarding_step != null): el login retoma
+    // el wizard en el paso guardado en vez de ir al admin. Best-effort: si el
+    // RPC falla, el login sigue normal a /admin.
+    const path = (await this._hasPendingOnboarding()) ? '/onboarding' : '/admin';
+    return E.right(
+      await this._authRedirectUrl(tenant.slug, tenant.customDomain, path)
+    );
+  }
+
+  /** true si el tenant del usuario tiene el wizard de onboarding a medias. */
+  private async _hasPendingOnboarding(): Promise<boolean> {
+    try {
+      const { data, error } = await this.client.rpc('get_my_onboarding_step');
+      return !error && typeof data === 'number';
+    } catch {
+      return false;
+    }
   }
 
   public buildTenantAdminUrl(slug: string, customDomain?: string | null): string {
