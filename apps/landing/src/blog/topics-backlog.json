@@ -1,0 +1,33 @@
+{
+  "_doc": "Backlog de temas del blog para la rutina diaria de contenido. La rutina toma SIEMPRE el primer tema de 'queue', escribe el artículo siguiendo src/blog/PLAYBOOK.md, lo registra y lo mueve a 'published' con la fecha. Orden = prioridad (intención de lead primero).",
+  "queue": [
+    { "slug": "como-vender-por-whatsapp-en-venezuela-2026", "category": "por-pais", "keyword": "como vender por whatsapp en venezuela", "angulo": "Serie país x intención: pago móvil/Zelle, tasa BCV automática, estados de WhatsApp, delivery en moto. Enlazar la guía de catálogo de Venezuela." },
+    { "slug": "como-vender-por-whatsapp-en-colombia-2026", "category": "por-pais", "keyword": "como vender por whatsapp en colombia", "angulo": "Nequi/Daviplata, contraentrega como gancho, Servientrega; enlazar guía de catálogo de Colombia." },
+    { "slug": "como-vender-por-whatsapp-en-mexico-2026", "category": "por-pais", "keyword": "como vender por whatsapp en mexico", "angulo": "SPEI/OXXO/Mercado Pago, mayoreo y detal; enlazar guía de catálogo de México." },
+    { "slug": "catalogo-digital-para-floristerias-2026", "category": "por-rubro", "keyword": "catalogo digital para floristeria", "angulo": "Pedidos con fecha/hora de entrega (feature estrella), arreglos personalizados, fechas pico (San Valentín, Día de la Madre)." },
+    { "slug": "catalogo-digital-para-dulcerias-y-reposteria-2026", "category": "por-rubro", "keyword": "catalogo para reposteria / tortas por encargo", "angulo": "Encargos con fecha de entrega, adicionales (rellenos, toppings), fotos que venden, pagos por adelantado." },
+    { "slug": "catalogo-digital-para-licorerias-2026", "category": "por-rubro", "keyword": "catalogo digital para licoreria / delivery de licores", "angulo": "Delivery nocturno, combos como productos, precios por caja (mayoreo), stock en tiempo real." },
+    { "slug": "catalogo-digital-para-tiendas-de-mascotas-2026", "category": "por-rubro", "keyword": "catalogo para pet shop / tienda de mascotas", "angulo": "Recompra recurrente (alimento), variantes por peso/tamaño, recordatorios a clientes frecuentes vía CRM." },
+    { "slug": "catalogo-digital-para-papelerias-y-libreria-2026", "category": "por-rubro", "keyword": "catalogo digital para papeleria", "angulo": "Temporada escolar, listas escolares como pedidos grandes, cientos de SKUs con buscador, import Excel." },
+    { "slug": "como-poner-un-catalogo-en-el-link-de-instagram-2026", "category": "ventas-por-whatsapp", "keyword": "link en bio instagram para vender / catalogo en instagram", "angulo": "Link-in-bio que vende: catálogo como destino del link de IG/TikTok, DMs al CRM, comparación vs linktree." },
+    { "slug": "como-hacer-un-catalogo-en-canva-vs-catalogo-online-2026", "category": "comparativas", "keyword": "como hacer un catalogo en canva", "angulo": "Interceptar la keyword gigante de Canva: hacerlo en Canva está bien para empezar, pero no toma pedidos ni descuenta stock — comparativa honesta + migración." },
+    { "slug": "plantillas-de-mensajes-para-vender-por-whatsapp-2026", "category": "ventas-por-whatsapp", "keyword": "mensajes para vender por whatsapp / plantillas", "angulo": "20+ plantillas copiables (bienvenida, seguimiento, cobro, reactivación) — contenido 100% citable por IAs, CTA al catálogo." },
+    { "slug": "como-organizar-el-inventario-de-tu-negocio-2026", "category": "emprender", "keyword": "como organizar inventario negocio pequeño", "angulo": "Del cuaderno/Excel al stock que se descuenta solo; método simple de conteo + catálogo como fuente de verdad." },
+    { "slug": "como-vender-por-whatsapp-en-guatemala-2026", "category": "por-pais", "keyword": "como vender por whatsapp en guatemala", "angulo": "El país que ya convierte: profundizar con la keyword de intención; enlazar la guía de catálogo de Guatemala." },
+    { "slug": "catalogo-digital-para-tiendas-naturistas-2026", "category": "por-rubro", "keyword": "catalogo para tienda naturista / suplementos", "angulo": "Fichas con beneficios y presentaciones, recompra mensual, revendedoras." },
+    { "slug": "catalogo-digital-para-boutiques-infantiles-2026", "category": "por-rubro", "keyword": "catalogo para ropa de bebe / boutique infantil", "angulo": "Tallas por edad como variantes, colecciones por temporada, mamás que compran de noche por WhatsApp." },
+    { "slug": "cuanto-cuesta-hacer-una-tienda-online-2026", "category": "emprender", "keyword": "cuanto cuesta hacer una tienda online", "angulo": "Desglose honesto de costos (dominio, Shopify, desarrollador) vs catálogo gratis; tabla comparativa de rutas." },
+    { "slug": "como-cobrar-con-zelle-en-venezuela-negocios-2026", "category": "por-pais", "keyword": "como cobrar con zelle en venezuela negocio", "angulo": "Guía práctica de cobros en divisas + pago móvil, con el catálogo mostrando Bs/USD a tasa BCV." },
+    { "slug": "catalogo-digital-para-barberias-y-salones-2026", "category": "por-rubro", "keyword": "catalogo de servicios para barberia / salon", "angulo": "Servicios como productos (cortes, combos), reservas por WhatsApp, productos de venta al detal." }
+  ],
+  "published": [
+    { "slug": "catalogo-digital-para-tiendas-de-ropa-2026", "date": "2026-10-09" },
+    { "slug": "catalogo-digital-para-zapaterias-2026", "date": "2026-10-09" },
+    { "slug": "catalogo-digital-para-joyerias-y-accesorios-2026", "date": "2026-10-09" },
+    { "slug": "catalogo-digital-para-repuestos-y-autopartes-2026", "date": "2026-10-09" },
+    { "slug": "catalogo-digital-para-mayoristas-y-distribuidoras-2026", "date": "2026-10-09" },
+    { "slug": "catalogo-digital-para-ferreterias-2026", "date": "2026-10-09" },
+    { "slug": "menu-digital-para-restaurantes-y-comida-2026", "date": "2026-10-09" },
+    { "slug": "catalogo-digital-para-perfumerias-y-cosmeticos-2026", "date": "2026-10-09" }
+  ]
+}
