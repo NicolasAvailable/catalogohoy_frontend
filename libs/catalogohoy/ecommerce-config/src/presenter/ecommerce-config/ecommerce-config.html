@@ -944,6 +944,23 @@
         </div>
 
         <div class="card-content">
+          <!-- Zona horaria del negocio: define contra qué hora se calcula el
+               estado abierto/cerrado (no la hora del dispositivo del cliente). -->
+          <div class="form-field" style="margin-bottom: 1.25rem;">
+            <label>{{ 'Zona horaria del negocio' | transloco }}</label>
+            <ui-select
+              [options]="timezoneOptions"
+              [ngModel]="draftTimezone()"
+              (ngModelChange)="onTimezoneChange($event)"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+            ></ui-select>
+            <small class="field-hint">
+              {{ 'Se usa para mostrar tu catálogo como abierto o cerrado según el horario de tu ciudad, sin importar desde dónde entre el cliente.' | transloco }}
+            </small>
+          </div>
+
           <div class="schedule-table">
             @for (day of orderedDraftHours(); track day.dayOfWeek; let first = $first) {
               <div

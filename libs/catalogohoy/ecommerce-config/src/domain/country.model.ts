@@ -108,3 +108,96 @@ export function countryNameFromCode(code: string | null | undefined): string | n
   const found = findCountryByCode(code);
   return found?.label ?? null;
 }
+
+// ── Zona horaria del negocio ────────────────────────────────────────────────
+// Se usa para calcular el estado "abierto/cerrado" del catálogo contra la hora
+// del NEGOCIO (no la del dispositivo del visitante). Espejo del map SQL
+// `default_timezone_for_country` (migración 20261010_business_timezone). El día
+// de la semana lo calcula el RPC get_public_catalog en esta misma zona.
+export const DEFAULT_TIMEZONE_BY_COUNTRY: Record<string, string> = {
+  VE: 'America/Caracas',
+  CO: 'America/Bogota',
+  MX: 'America/Mexico_City',
+  AR: 'America/Argentina/Buenos_Aires',
+  PE: 'America/Lima',
+  EC: 'America/Guayaquil',
+  BO: 'America/La_Paz',
+  GT: 'America/Guatemala',
+  DO: 'America/Santo_Domingo',
+  CL: 'America/Santiago',
+  HN: 'America/Tegucigalpa',
+  PY: 'America/Asuncion',
+  CR: 'America/Costa_Rica',
+  US: 'America/New_York',
+  NI: 'America/Managua',
+  PA: 'America/Panama',
+  SV: 'America/El_Salvador',
+  UY: 'America/Montevideo',
+  BR: 'America/Sao_Paulo',
+  ES: 'Europe/Madrid',
+  HT: 'America/Port-au-Prince',
+  JM: 'America/Jamaica',
+  PR: 'America/Puerto_Rico',
+  BB: 'America/Barbados',
+  BS: 'America/Nassau',
+  GY: 'America/Guyana',
+  SR: 'America/Paramaribo',
+  CA: 'America/Toronto',
+  CU: 'America/Havana',
+  BZ: 'America/Belize',
+};
+
+export function defaultTimezoneForCountry(
+  code: string | null | undefined
+): string {
+  return DEFAULT_TIMEZONE_BY_COUNTRY[(code ?? '').toUpperCase()] ?? 'America/Caracas';
+}
+
+export interface TimezoneOption {
+  /** IANA id persistido, ej. "America/Mexico_City". */
+  value: string;
+  /** Etiqueta legible para el selector. */
+  label: string;
+}
+
+// Lista curada de zonas IANA relevantes para los países soportados. Los países
+// multi-zona (México, EE. UU., Brasil, Chile, Ecuador, España) incluyen sus
+// zonas alternas para que el dueño pueda elegir la correcta.
+export const SUPPORTED_TIMEZONES: TimezoneOption[] = [
+  { value: 'America/Caracas', label: 'Venezuela (Caracas)' },
+  { value: 'America/Bogota', label: 'Colombia (Bogotá)' },
+  { value: 'America/Mexico_City', label: 'México — Centro (Ciudad de México)' },
+  { value: 'America/Cancun', label: 'México — Sureste (Cancún)' },
+  { value: 'America/Mazatlan', label: 'México — Pacífico (Mazatlán)' },
+  { value: 'America/Hermosillo', label: 'México — Noroeste (Hermosillo)' },
+  { value: 'America/Tijuana', label: 'México — Noroeste (Tijuana)' },
+  { value: 'America/Argentina/Buenos_Aires', label: 'Argentina (Buenos Aires)' },
+  { value: 'America/Lima', label: 'Perú (Lima)' },
+  { value: 'America/Guayaquil', label: 'Ecuador — Continental (Guayaquil)' },
+  { value: 'Pacific/Galapagos', label: 'Ecuador — Galápagos' },
+  { value: 'America/La_Paz', label: 'Bolivia (La Paz)' },
+  { value: 'America/Guatemala', label: 'Guatemala' },
+  { value: 'America/Santo_Domingo', label: 'República Dominicana' },
+  { value: 'America/Santiago', label: 'Chile — Continental (Santiago)' },
+  { value: 'Pacific/Easter', label: 'Chile — Isla de Pascua' },
+  { value: 'America/Tegucigalpa', label: 'Honduras' },
+  { value: 'America/Asuncion', label: 'Paraguay (Asunción)' },
+  { value: 'America/Costa_Rica', label: 'Costa Rica' },
+  { value: 'America/Managua', label: 'Nicaragua' },
+  { value: 'America/Panama', label: 'Panamá' },
+  { value: 'America/El_Salvador', label: 'El Salvador' },
+  { value: 'America/Montevideo', label: 'Uruguay (Montevideo)' },
+  { value: 'America/Sao_Paulo', label: 'Brasil — Este (São Paulo)' },
+  { value: 'America/Manaus', label: 'Brasil — Amazonas (Manaus)' },
+  { value: 'America/New_York', label: 'EE. UU. — Este (New York)' },
+  { value: 'America/Chicago', label: 'EE. UU. — Central (Chicago)' },
+  { value: 'America/Denver', label: 'EE. UU. — Montaña (Denver)' },
+  { value: 'America/Los_Angeles', label: 'EE. UU. — Pacífico (Los Angeles)' },
+  { value: 'America/Puerto_Rico', label: 'Puerto Rico' },
+  { value: 'Europe/Madrid', label: 'España — Peninsular (Madrid)' },
+  { value: 'Atlantic/Canary', label: 'España — Canarias' },
+  { value: 'America/Port-au-Prince', label: 'Haití' },
+  { value: 'America/Jamaica', label: 'Jamaica' },
+  { value: 'America/Toronto', label: 'Canadá — Este (Toronto)' },
+  { value: 'America/Havana', label: 'Cuba (La Habana)' },
+];

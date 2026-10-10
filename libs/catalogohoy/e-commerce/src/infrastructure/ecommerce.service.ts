@@ -11,6 +11,7 @@ import {
   CustomerFieldsConfig,
   DEFAULT_CUSTOMER_FIELDS,
   DEFAULT_SOCIAL_LINKS,
+  defaultTimezoneForCountry,
   ExchangeRateType,
   findCountryByCode,
   findCurrencyByCode,
@@ -81,12 +82,33 @@ export class EcommerceService implements BaseEcommerceService {
       isOpen: h.is_open,
     }));
 
-    // Calcular si está abierto ahora
-    const now = new Date();
-    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now
-      .getMinutes()
-      .toString()
-      .padStart(2, '0')}`;
+    // Calcular si está abierto ahora — SIEMPRE en la zona horaria del NEGOCIO,
+    // no la del dispositivo del visitante (bug reportado: un cliente en otra
+    // zona veía "cerrado" aunque el negocio estuviera abierto en su ciudad).
+    // El día de la semana ya lo calcula el RPC en esta misma zona (así el
+    // `hours` corresponde al día correcto del negocio).
+    const businessTimezone =
+      config?.timezone || defaultTimezoneForCountry(data.tenant.country_code);
+    let currentTime: string;
+    try {
+      // hourCycle h23 garantiza 00–23; formatToParts evita separadores de locale.
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: businessTimezone,
+        hourCycle: 'h23',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).formatToParts(new Date());
+      const hh = parts.find((p) => p.type === 'hour')?.value ?? '00';
+      const mm = parts.find((p) => p.type === 'minute')?.value ?? '00';
+      currentTime = `${hh}:${mm}`;
+    } catch {
+      // Zona inválida (no debería): caer a la hora del dispositivo.
+      const now = new Date();
+      currentTime = `${now.getHours().toString().padStart(2, '0')}:${now
+        .getMinutes()
+        .toString()
+        .padStart(2, '0')}`;
+    }
 
     let isOpen = config?.is_accepting_orders ?? true;
     let openTime = '08:00';

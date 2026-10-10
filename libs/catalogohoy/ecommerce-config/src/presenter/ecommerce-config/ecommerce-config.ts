@@ -71,6 +71,8 @@ import {
   NO_CURRENCY_SYMBOL,
   PreviewMessage,
   findCountryByCode,
+  defaultTimezoneForCountry,
+  SUPPORTED_TIMEZONES,
   ShippingMethod,
   SHIPPING_METHOD_TYPE_OPTIONS,
   SocialLinks,
@@ -300,6 +302,9 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftCountryCode = signal<string | null>(null);
   public readonly draftState = signal<string | null>(null);
   public readonly draftCity = signal<string | null>(null);
+  /** Zona horaria IANA del negocio — define el cálculo abierto/cerrado. */
+  public readonly draftTimezone = signal<string | null>(null);
+  public readonly timezoneOptions = SUPPORTED_TIMEZONES;
   public readonly draftShowDesignSection = signal(true);
   public readonly draftShowLocationSection = signal(true);
   public readonly draftShowPaymentMethodsSection = signal(true);
@@ -801,6 +806,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftCountryCode, prev?.countryCode ?? null, config.countryCode ?? null);
       syncField(this.draftState, prev?.state ?? null, config.state ?? null);
       syncField(this.draftCity, prev?.city ?? null, config.city ?? null);
+      syncField(this.draftTimezone, prev?.timezone ?? null, config.timezone ?? null);
       syncField(this.draftShowDesignSection, prev?.showDesignSection ?? true, config.showDesignSection ?? true);
       syncField(this.draftShowLocationSection, prev?.showLocationSection ?? true, config.showLocationSection ?? true);
       syncField(this.draftShowPaymentMethodsSection, prev?.showPaymentMethodsSection ?? true, config.showPaymentMethodsSection ?? true);
@@ -1049,6 +1055,9 @@ export class EcommerceConfigComponent implements OnInit {
     // Reset state + city when country changes
     this.draftState.set(null);
     this.draftCity.set(null);
+    // Al cambiar de país, la zona horaria anterior casi seguro ya no aplica:
+    // la reseteamos al default del país nuevo (el dueño puede ajustarla).
+    this.draftTimezone.set(code ? defaultTimezoneForCountry(code) : null);
     // Seed currency defaults from the new country (same helper as initial sync)
     if (code) {
       const seeded = this.buildCurrencyDefaultsForCountry(code);
@@ -1094,6 +1103,10 @@ export class EcommerceConfigComponent implements OnInit {
 
   onCityChange(city: string | null) {
     this.draftCity.set(city);
+  }
+
+  onTimezoneChange(tz: string | null) {
+    this.draftTimezone.set(tz);
   }
 
   // --- Currency section handlers ---
@@ -1303,6 +1316,7 @@ export class EcommerceConfigComponent implements OnInit {
     if (this.draftThemeColor() !== (config.themeColor ?? '#10b981')) changes.themeColor = this.draftThemeColor();
     if (this.draftState() !== (config.state ?? null)) changes.state = this.draftState();
     if (this.draftCity() !== (config.city ?? null)) changes.city = this.draftCity();
+    if (this.draftTimezone() !== (config.timezone ?? null)) changes.timezone = this.draftTimezone();
     // country lives on `tenants` — handled by a separate saveTenantCountry call
     // in saveAllChanges, not through updateConfig.
     if (this.draftShowDesignSection() !== (config.showDesignSection ?? true)) changes.showDesignSection = this.draftShowDesignSection();

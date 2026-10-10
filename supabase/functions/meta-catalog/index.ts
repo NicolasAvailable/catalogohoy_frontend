@@ -101,6 +101,40 @@ async function graph(path, token, init = {}) {
   return json;
 }
 
+/** Descubre los pixels del Business. El edge directo /{business}/adspixels suele
+ *  fallar con subcode 33 ("Unsupported get request… missing permissions") cuando
+ *  el system user tiene compartidos el ad account y el catálogo PERO no un pixel
+ *  como asset del Business (caso típico del Business Login). En ese caso caemos
+ *  a listar los pixels de cada ad account del Business, ruta que sí es accesible.
+ *  Devuelve { pixels, businessEdgeOk } — businessEdgeOk=false ⇒ no se puede crear
+ *  un pixel a nivel Business (hay que hacerlo en el Administrador de eventos). */
+async function discoverBusinessPixels(businessId, token) {
+  try {
+    const owned = await graph(`${businessId}/adspixels?fields=id,name&limit=50`, token);
+    const pixels = owned.data ?? [];
+    if (pixels.length) return { pixels, businessEdgeOk: true };
+    // Edge accesible pero vacío: igual probamos los ad accounts por si hay uno.
+  } catch (err) {
+    // Subcode 33 = edge de pixels del Business no accesible por el system user.
+    // Cualquier otro error (p.ej. ToS 1784018) se propaga.
+    if (err?.fb?.error_subcode !== 33) throw err;
+  }
+  // Fallback: pixels bajo los ad accounts compartidos del Business.
+  const acctPixels = [];
+  try {
+    const accts = await graph(`${businessId}/owned_ad_accounts?fields=id&limit=50`, token);
+    for (const acct of accts.data ?? []) {
+      try {
+        const ap = await graph(`${acct.id}/adspixels?fields=id,name&limit=50`, token);
+        for (const p of ap.data ?? []) {
+          if (!acctPixels.some((x) => x.id === p.id)) acctPixels.push(p);
+        }
+      } catch { /* ese ad account no tiene pixels o no es accesible */ }
+    }
+  } catch { /* sin ad accounts accesibles */ }
+  return { pixels: acctPixels, businessEdgeOk: false };
+}
+
 /** Estado resumido del catálogo: cuántos productos ve Meta y cómo salió la
  *  última ingesta del feed. */
 async function catalogStatus(conn) {
@@ -294,19 +328,33 @@ Deno.serve(async (req) => {
 
         let pixel;
         try {
-          const owned = await graph(`${conn.business_id}/adspixels?fields=id,name&limit=50`, tokenFor(conn));
-          const pixels = owned.data ?? [];
+          // Descubrimiento robusto: edge del Business y, si da subcode 33,
+          // fallback a los pixels de los ad accounts compartidos.
+          const { pixels, businessEdgeOk } =
+            await discoverBusinessPixels(conn.business_id, tokenFor(conn));
           // Si hay un pixel puesto a mano que NO pertenece a este Business, no lo
           // pisamos (romperíamos el tracking/CAPI actual del comercio).
           if (manualId && !pixels.some((p) => p.id === manualId)) {
             return jsonResponse({
               success: false,
-              error: "Ya tenés un Píxel configurado a mano que no pertenece a este portfolio. Quitalo primero o conectá el portfolio correcto.",
+              error: "Ya tienes un Píxel configurado a mano que no pertenece a este portafolio. Quítalo primero o conecta el portafolio correcto.",
             }, 409);
           }
           // Adoptar: el manual (si es del Business) > el primero existente > crear.
           pixel = pixels.find((p) => p.id === manualId) ?? pixels[0] ?? null;
           if (!pixel) {
+            // No hay pixel en el portafolio. Crear a nivel Business solo funciona
+            // si ese edge es accesible; si vino por subcode 33 (businessEdgeOk
+            // false), la creación también fallaría → guiamos al Administrador de
+            // eventos, y la próxima vez provision_pixel lo ADOPTA.
+            if (!businessEdgeOk) {
+              return jsonResponse({
+                success: false,
+                code: "pixel_create_manual",
+                tosUrl: `https://business.facebook.com/events_manager2/list?business_id=${conn.business_id}`,
+                error: "No encontramos un Píxel en tu portafolio de Meta. Créalo en el Administrador de eventos (Conectar datos → Web) y vuelve a intentar: lo adoptamos automáticamente.",
+              }, 409);
+            }
             const { data: tenant } = await admin
               .from("tenants").select("name, slug").eq("id", tenantId).maybeSingle();
             pixel = await graph(`${conn.business_id}/adspixels`, tokenFor(conn), {
@@ -326,7 +374,17 @@ Deno.serve(async (req) => {
               success: false,
               code: "pixel_tos",
               tosUrl: `https://business.facebook.com/events_manager2/list?business_id=${conn.business_id}`,
-              error: "Tu portfolio de Meta aún no aceptó los Términos del Píxel. Abrí el Administrador de eventos, creá tu primer píxel (Conectar datos → Web) y volvé a intentar.",
+              error: "Tu portafolio de Meta aún no aceptó los Términos del Píxel. Abre el Administrador de eventos, crea tu primer píxel (Conectar datos → Web) y vuelve a intentar.",
+            }, 409);
+          }
+          // Subcode 33 remanente (p.ej. del intento de creación): mensaje amable
+          // en vez del texto crudo de Graph ("Unsupported get request…").
+          if (err?.fb?.error_subcode === 33) {
+            return jsonResponse({
+              success: false,
+              code: "pixel_assets",
+              tosUrl: `https://business.facebook.com/events_manager2/list?business_id=${conn.business_id}`,
+              error: "No pudimos acceder al Píxel de tu portafolio de Meta. Abre el Administrador de eventos, crea o comparte tu Píxel, y vuelve a intentar.",
             }, 409);
           }
           throw err;
