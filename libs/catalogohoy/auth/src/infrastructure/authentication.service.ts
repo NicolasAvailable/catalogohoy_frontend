@@ -190,7 +190,13 @@ export class AuthenticationService implements BaseAuthenticationService {
           name: credentials.name,
           display_name: credentials.name,
           phone: '',
-          store_name: credentials.storeName,
+          // El wizard de onboarding pide el nombre de la tienda DESPUÉS del
+          // signup, pero el hook handle_new_user de prod exige store_name para
+          // crear el tenant (guard anti-huérfanos de OAuth). Centinela
+          // "Mi tienda" → el hook crea el tenant con slug temporal mi-tienda-N,
+          // que el wizard ya trata como provisional (TEMP_SLUG_PREFIXES) y
+          // renombra al finalizar.
+          store_name: credentials.storeName?.trim() || 'Mi tienda',
           store_country_code: selectedCountry?.code ?? null,
           store_country: selectedCountry?.label ?? null,
           // WhatsApp del vendedor (E.164) para notificaciones del catálogo.
