@@ -316,7 +316,11 @@ export class Onboarding implements OnInit {
     effect(() => {
       if (this.isBooting()) return;
       if (!this.phoneMockup()) return;
-      const name = this.storeName().trim();
+      // Con slug provisional y sin nombre tipeado, el catálogo real mostraría
+      // el churro interno (mi-tienda-XXXXXX): el preview enseña "Mi tienda"
+      // como placeholder hasta que el usuario escriba el suyo.
+      const name =
+        this.storeName().trim() || (this.isTempSlug() ? 'Mi tienda' : '');
       const message: PreviewMessage = {
         type: 'PREVIEW_UPDATE',
         payload: {
