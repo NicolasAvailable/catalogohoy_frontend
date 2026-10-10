@@ -187,6 +187,56 @@
   color: var(--color-red-500, #ef4444);
 }
 
+/* Banner + logo superpuesto (composición como el catálogo) */
+.onb__field--media {
+  position: relative;
+}
+.onb__banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 6rem;
+  border: none;
+  border-radius: 0.875rem;
+  background: var(--color-grey-100, #f1f5f9);
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0;
+}
+.onb__banner--empty {
+  border: 0.0625rem dashed var(--color-grey-200, #d1d5db);
+}
+.onb__banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.onb__banner-placeholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--color-grey-400, #94a3b8);
+}
+.onb__banner-badge {
+  right: 0.5rem;
+  bottom: 0.5rem;
+}
+/* El logo pisa el borde inferior del banner, centrado */
+.onb__avatar-overlap {
+  display: flex;
+  justify-content: center;
+  margin-top: -2.75rem;
+  position: relative;
+  z-index: 1;
+}
+.onb__avatar-overlap .onb__avatar {
+  background: white;
+  box-shadow: 0 0 0 0.1875rem white;
+}
+
 /* Logo circular (uploader con badge de cámara) */
 .onb__avatar {
   position: relative;

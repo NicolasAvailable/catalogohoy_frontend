@@ -31,10 +31,10 @@
       </p>
 
       <div class="onb__fields">
-        <!-- Logo circular con badge de cámara -->
-        <div class="onb__field onb__field--logo">
+        <!-- Banner + logo superpuesto (misma composición que el catálogo) -->
+        <div class="onb__field onb__field--media">
           <ui-uploader
-            (valueChange)="onLogoUpload($event)"
+            (valueChange)="onBannerUpload($event)"
             [accept]="'image/*'"
             [max]="{ mb: 40 }"
             [multiple]="false"
@@ -42,21 +42,52 @@
             <ng-template #picker let-pick="pick">
               <button
                 type="button"
-                class="onb__avatar"
+                class="onb__banner"
+                [class.onb__banner--empty]="!bannerUrl()"
                 (click)="pick()"
-                [attr.aria-label]="'Logo' | transloco"
+                [attr.aria-label]="'Banner' | transloco"
               >
-                @if (logoUrl()) {
-                <img [src]="logoUrl()" [alt]="storeName()" />
+                @if (bannerUrl()) {
+                <img [src]="bannerUrl()" alt="" />
                 } @else {
-                <ui-icon name="store" size="26" styleClass="text-grey-300" />
+                <span class="onb__banner-placeholder">
+                  <ui-icon name="image" size="16" styleClass="text-grey-300" />
+                  {{ 'Banner (opcional)' | transloco }}
+                </span>
                 }
-                <span class="onb__avatar-badge">
+                <span class="onb__avatar-badge onb__banner-badge">
                   <ui-icon name="camera" size="12" />
                 </span>
               </button>
             </ng-template>
           </ui-uploader>
+
+          <div class="onb__avatar-overlap">
+            <ui-uploader
+              (valueChange)="onLogoUpload($event)"
+              [accept]="'image/*'"
+              [max]="{ mb: 40 }"
+              [multiple]="false"
+            >
+              <ng-template #picker let-pick="pick">
+                <button
+                  type="button"
+                  class="onb__avatar"
+                  (click)="pick()"
+                  [attr.aria-label]="'Logo' | transloco"
+                >
+                  @if (logoUrl()) {
+                  <img [src]="logoUrl()" [alt]="storeName()" />
+                  } @else {
+                  <ui-icon name="store" size="26" styleClass="text-grey-300" />
+                  }
+                  <span class="onb__avatar-badge">
+                    <ui-icon name="camera" size="12" />
+                  </span>
+                </button>
+              </ng-template>
+            </ui-uploader>
+          </div>
         </div>
 
         <div class="onb__field">

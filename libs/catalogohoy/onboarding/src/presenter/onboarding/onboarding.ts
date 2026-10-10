@@ -178,6 +178,8 @@ export class Onboarding implements OnInit {
 
   public readonly storeName = signal('');
   public readonly logoUrl = signal<string | null>(null);
+  /** Banner del catálogo (la cabecera detrás del logo) — editable acá mismo. */
+  public readonly bannerUrl = signal<string | null>(null);
   public readonly themeColor = signal('#10b981');
   public readonly slug = signal('');
   /** true si el tenant todavía tiene un slug temporal (tienda-* / mi-tienda-*):
@@ -299,6 +301,7 @@ export class Onboarding implements OnInit {
         payload: {
           ...(name ? { name } : {}),
           logo: this.logoUrl(),
+          banner: this.bannerUrl(),
           themeColor: this.themeColor(),
         },
         source: 'catalogohoy-admin',
@@ -344,6 +347,7 @@ export class Onboarding implements OnInit {
     this.profileName = (profile?.name ?? '').trim();
     this.themeColor.set(config?.themeColor || '#10b981');
     this.logoUrl.set(config?.logo ?? null);
+    this.bannerUrl.set(config?.banner ?? null);
     this.countryIso.set((config?.countryCode ?? 've').toLowerCase());
 
     const currentSlug = this.tenantStore.tenant().tenantSlug ?? '';
@@ -485,6 +489,7 @@ export class Onboarding implements OnInit {
       name: this.storeName().trim(),
       themeColor: this.themeColor(),
       logo: this.logoUrl(),
+      banner: this.bannerUrl(),
     };
     // WhatsApp de VENTAS (vendedor del checkout): se guarda con este mismo
     // update cuando la config aún no lo tenía. name = nombre de la tienda o,
@@ -540,6 +545,11 @@ export class Onboarding implements OnInit {
   public onLogoUpload(url: string | string[]): void {
     const first = Array.isArray(url) ? url[0] : url;
     if (first) this.logoUrl.set(first);
+  }
+
+  public onBannerUpload(url: string | string[]): void {
+    const first = Array.isArray(url) ? url[0] : url;
+    if (first) this.bannerUrl.set(first);
   }
 
   public selectColor(color: string): void {
