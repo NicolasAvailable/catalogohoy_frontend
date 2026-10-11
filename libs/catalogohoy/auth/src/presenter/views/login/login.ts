@@ -347,11 +347,12 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     await this._recordTermsAcceptance();
 
     // completeGoogleSignup devuelve la URL web de redirect — en nativo la
-    // ignoramos: cacheamos el slug y ruteamos in-app.
+    // ignoramos: cacheamos el slug y ruteamos in-app. Alta NUEVA → al wizard de
+    // onboarding (igual que la web); el wizard cierra yendo a /admin en nativo.
     const slug = await this.facade.getMyTenantSlug();
     if (slug.isRight()) {
       setNativeSlug(slug.value as string);
-      await this.router.navigateByUrl('/admin');
+      await this.router.navigateByUrl('/onboarding');
       return;
     }
     this.googleError.set('Ha ocurrido un error. Intenta de nuevo.');
@@ -459,11 +460,13 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
       this.pendingInviteToken = null;
     }
 
-    // Nativo: ignoramos la URL web de redirect; cacheamos el slug y vamos a /admin.
+    // Nativo: ignoramos la URL web de redirect; cacheamos el slug. Alta NUEVA →
+    // al wizard de onboarding (igual que la web); el wizard cierra yendo a
+    // /admin en nativo (sin pasar por /bienvenida, que es la oferta de prueba).
     const slug = await this.facade.getMyTenantSlug();
     if (slug.isRight()) {
       setNativeSlug(slug.value as string);
-      await this.router.navigateByUrl('/admin');
+      await this.router.navigateByUrl('/onboarding');
       return;
     }
     this.googleError.set('Ha ocurrido un error. Intenta de nuevo.');

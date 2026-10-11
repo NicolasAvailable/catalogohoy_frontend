@@ -43,7 +43,7 @@ import {
   ShippingMethodType,
   THEME_COLORS,
 } from '@catalogohoy/ecommerce-config';
-import { PosthogService, SupabaseClientProvider } from '@catalogohoy/core';
+import { isNativeApp, PosthogService, SupabaseClientProvider } from '@catalogohoy/core';
 import { CreateProductInput, ProductService } from '@catalogohoy/product';
 import { ProfileStore } from '@catalogohoy/profile';
 import { TenantService, TenantStore } from '@catalogohoy/tenant';
@@ -1015,7 +1015,9 @@ export class Onboarding implements OnInit {
   /** `reason` distingue en el embudo quién terminó el wizard de quién lo saltó
    *  en el paso final. Al cerrar el onboarding se va a /bienvenida (la oferta
    *  de prueba de 7 días, en el momento de máximo entusiasmo: recién armó su
-   *  tienda); desde ahí el usuario entra al admin. */
+   *  tienda); desde ahí el usuario entra al admin.
+   *  EN NATIVO: /bienvenida es una oferta de prueba/upsell → se SALTA y se va
+   *  directo a /admin (Apple 3.1.1: sin paywalls mientras no haya IAP). */
   private async complete(reason: 'finished' | 'skipped' = 'finished'): Promise<void> {
     this.posthog.captureOnboarding('onboarding_completed', {
       reason,
@@ -1033,6 +1035,14 @@ export class Onboarding implements OnInit {
       } catch {
         /* ignore quota/private-mode */
       }
+    }
+
+    // En la app nativa no hay subdominios (el host es localhost y el slug se
+    // resuelve del perfil): nunca hay handoff cross-subdominio, y /bienvenida
+    // es la oferta de prueba (upsell) → vamos directo al admin.
+    if (isNativeApp()) {
+      this.router.navigate(['/admin']);
+      return;
     }
 
     // Si la tienda se renombró y estamos en el subdominio del slug temporal
