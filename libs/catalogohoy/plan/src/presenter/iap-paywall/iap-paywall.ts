@@ -12,6 +12,7 @@ import type { PurchasesPackage } from '@revenuecat/purchases-capacitor';
 import { RevenueCatService } from '@catalogohoy/core';
 import { ToastService } from '@shared/infrastructure';
 import { ButtonComponent, IconComponent } from '@ui';
+import { PLAN_FEATURES } from '../../domain';
 import { PlanStore } from '../../infrastructure/plan.store';
 
 type Period = 'monthly' | 'annual';
@@ -28,39 +29,14 @@ interface PlanCard {
 
 const PLAN_ORDER = ['basico', 'pro', 'avanzado'];
 
-/** Nombre + qué incluye cada plan (igual que la web / pantalla de bienvenida).
- *  NO depende de la carga de `plans()` → evita el fallback a "basico" en
- *  minúscula. El precio sale localizado del store (RevenueCat priceString). */
-const PLAN_INFO: Record<string, { name: string; tagline: string; features: string[] }> = {
-  basico: {
-    name: 'Plan Básico',
-    tagline: 'Para empezar a vender online.',
-    features: [
-      'Tu catálogo online con marca propia',
-      'Pagos y pedidos por WhatsApp',
-      'Gestión de productos, órdenes y clientes',
-    ],
-  },
-  pro: {
-    name: 'Plan Pro',
-    tagline: 'Para tiendas que venden todos los días.',
-    features: [
-      'Hasta 500 productos',
-      'Analíticas del catálogo',
-      'Notificaciones de órdenes por WhatsApp',
-      '350 créditos de IA por mes',
-    ],
-  },
-  avanzado: {
-    name: 'Plan Avanzado',
-    tagline: 'Para negocios con muchos productos.',
-    features: [
-      'Productos ilimitados',
-      'Punto de Venta (caja registradora)',
-      'CRM de chats: WhatsApp, Instagram y TikTok',
-      'Dominio personalizado',
-    ],
-  },
+/** Nombre + resumen de cada plan. Las FEATURES salen de PLAN_FEATURES (domain,
+ *  la MISMA fuente que usa la página de planes de la web) → lista completa y sin
+ *  drift. NO depende de la carga de `plans()` (evita el fallback a "basico" en
+ *  minúscula). El precio sale localizado del store (RevenueCat priceString). */
+const PLAN_INFO: Record<string, { name: string; tagline: string }> = {
+  basico: { name: 'Plan Básico', tagline: 'Para empezar a vender online.' },
+  pro: { name: 'Plan Pro', tagline: 'Para tiendas que venden todos los días.' },
+  avanzado: { name: 'Plan Avanzado', tagline: 'Para negocios con muchos productos.' },
 };
 
 /**
@@ -131,13 +107,17 @@ export class IapPaywall implements OnInit {
     }
 
     return PLAN_ORDER.filter((id) => byPlan.has(id)).map((id) => {
-      const info = PLAN_INFO[id] ?? { name: id, tagline: '', features: [] };
+      const info = PLAN_INFO[id] ?? { name: id, tagline: '' };
       const slot = byPlan.get(id)!;
+      // Features completas de PLAN_FEATURES (domain); solo las positivas.
+      const features = (PLAN_FEATURES[id] ?? [])
+        .filter((f) => !f.negative)
+        .map((f) => f.text);
       return {
         id,
         name: info.name,
         tagline: info.tagline,
-        features: info.features,
+        features,
         monthly: slot.monthly,
         annual: slot.annual,
       };

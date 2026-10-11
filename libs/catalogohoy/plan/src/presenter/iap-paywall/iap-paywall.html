@@ -144,7 +144,8 @@
         (click)="buy(card)"
         [disabled]="purchasing() !== null"
         [label]="(purchasing() === card.id ? 'Procesando...' : 'Suscribirme') | transloco"
-        [severity]="card.id === 'pro' ? 'primary' : 'secondary'"
+        severity="primary"
+        [variant]="card.id === 'pro' ? undefined : 'outlined'"
         styleClass="!py-3.5 !text-base"
         [fluid]="true"
       />
