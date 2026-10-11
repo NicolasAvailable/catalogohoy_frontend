@@ -177,13 +177,37 @@ Deno.serve(async (req) => {
         if (!catalogId) {
           const { data: tenant } = await admin
             .from("tenants").select("name, slug").eq("id", tenantId).maybeSingle();
+          // vertical "commerce": los catálogos sin vertical se crean como
+          // "generic", que NO acepta productos de e-commerce (items_batch y el
+          // feed devuelven "wrong catalogue vertical"). El vertical es inmutable
+          // una vez creado, así que hay que fijarlo acá.
           const created = await graph(`${conn.business_id}/owned_product_catalogs`, conn.access_token, {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({ name: `${tenant?.name ?? tenant?.slug ?? "Catálogo"} · CatalogoHoy` }),
+            body: new URLSearchParams({
+              name: `${tenant?.name ?? tenant?.slug ?? "Catálogo"} · CatalogoHoy`,
+              vertical: "commerce",
+            }),
           });
           catalogId = created.id;
         }
+        // Guard: si el catálogo (creado o pre-adoptado) no es de productos, el
+        // feed nunca persiste nada. Mejor fallar claro que quedar "conectado"
+        // con 0 productos para siempre.
+        try {
+          const meta = await graph(`${catalogId}?fields=vertical`, conn.access_token);
+          if (meta?.vertical && meta.vertical !== "commerce") {
+            return jsonResponse({
+              success: false,
+              error:
+                "El catálogo de Meta vinculado no es de tipo e-commerce, así que no " +
+                "puede recibir tus productos. Hay que crear un catálogo de tipo " +
+                "“E-commerce” en el Administrador comercial de Meta y volver a conectar.",
+              code: "catalog_wrong_vertical",
+              vertical: meta.vertical,
+            }, 409);
+          }
+        } catch { /* si no se puede leer el vertical, seguimos e intentamos igual */ }
         let feedId = conn.metadata?.feed_id ?? null;
         if (!feedId) {
           const feed = await graph(`${catalogId}/product_feeds`, conn.access_token, {

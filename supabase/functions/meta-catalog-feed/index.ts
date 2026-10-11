@@ -82,6 +82,19 @@ function availability(soldOut, stock) {
 }
 
 Deno.serve(async (req) => {
+  // Meta valida la accesibilidad del feed con un HEAD (y a veces OPTIONS) antes
+  // de descargarlo; si eso devuelve 405 reporta "no se pudo acceder al archivo"
+  // aunque el GET funcione. Respondemos 200 sin cuerpo para esas sondas.
+  if (req.method === "HEAD" || req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Allow": "GET, HEAD, OPTIONS",
+      },
+    });
+  }
   if (req.method !== "GET") return new Response("Method Not Allowed", { status: 405 });
   const url = new URL(req.url);
   const tenantId = Number(url.searchParams.get("t") ?? "");
@@ -105,7 +118,9 @@ Deno.serve(async (req) => {
   const brand = tenant.name ?? tenant.slug;
   const baseUrl = `https://${tenant.slug}.catalogohoy.com`;
 
-  const rows = [HEADER.map(csvCell).join(",")];
+  // Header SIN comillas: Meta auto-mapea los nombres de columna (id→item_id,
+  // image_link→image) por match literal; si van entre comillas no los reconoce.
+  const rows = [HEADER.join(",")];
   for (const p of products ?? []) {
     const link = `${baseUrl}/product/${p.id}`;
     const productImage = (p.photos ?? [])[0] ?? null;
