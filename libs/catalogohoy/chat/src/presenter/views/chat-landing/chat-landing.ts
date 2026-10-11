@@ -1,6 +1,7 @@
 import { Component, computed, inject, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { isNativeApp } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl, TenantStore } from '@catalogohoy/tenant';
 import { IconComponent } from '@ui';
@@ -25,6 +26,10 @@ import { canConnectChannels } from '../../../domain';
 export class ChatLandingComponent implements OnInit {
   private readonly planStore = inject(PlanStore);
   private readonly tenantStore = inject(TenantStore);
+
+  /** Compliance IAP (Apple 3.1.1): en nativo se oculta el aviso de plan con
+   *  link a /admin/plans (compra externa). El CTA deshabilitado queda igual. */
+  protected readonly isNative = isNativeApp();
 
   /** CTA bloqueado cuando el plan ya cargó y no incluye el CRM. Mientras el
    *  plan carga se muestra habilitado: navega al hub Conectar, que gatea

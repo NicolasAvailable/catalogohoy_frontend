@@ -31,6 +31,9 @@
       {{ 'Configurar Chat' | transloco }}
     </span>
 
+    <!-- En nativo NO se muestra: enlaza a compra externa (Apple 3.1.1). El CTA
+         deshabilitado de arriba queda igual. -->
+    @if (!isNative) {
     <p class="inline-flex flex-wrap items-center justify-center gap-1.5 text-sm text-grey-500">
       <ui-icon name="crown" size="15" styleClass="text-primary-500" />
       {{ 'Necesitas el plan Avanzado para conectar tus canales de chat.' | transloco }}
@@ -40,6 +43,7 @@
         >{{ 'Mejorar plan' | transloco }}</a
       >
     </p>
+    }
     } @else {
     <a
       routerLink="/admin/chat/connect"

@@ -30,6 +30,9 @@ export const planRoutes: Route[] = [
   },
   {
     path: 'terms',
+    // Los T&C describen precios de planes (sección "Planes y Pagos"): también
+    // web-only para que no sean alcanzables por URL directa en nativo.
+    canActivate: [webOnlyGuard],
     loadComponent: () =>
       import('./presenter/terms/terms').then((m) => m.Terms),
   },

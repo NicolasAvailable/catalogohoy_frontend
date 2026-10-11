@@ -1,6 +1,7 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { isNativeApp } from '@catalogohoy/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { ButtonComponent } from '../button';
 
@@ -26,7 +27,7 @@ import { ButtonComponent } from '../button';
         <h2 class="text-2xl font-bold text-grey-800">{{ title() | transloco }}</h2>
         <p class="text-base text-grey-400">{{ description() | transloco }}</p>
       </div>
-      @if (showCta()) {
+      @if (canShowCta()) {
       <ui-button
         [label]="'Mejorar plan' | transloco"
         icon="sparkles"
@@ -46,10 +47,16 @@ export class PremiumUpgradePromptComponent {
     'Mejora tu plan para desbloquear esta funcionalidad y sacarle el máximo provecho a tu catálogo.'
   );
   public readonly icon = input('crown');
-  /** Compliance IAP (Apple 3.1.1): los consumidores lo apagan en la app nativa. */
+  /** Compliance IAP (Apple 3.1.1): los consumidores pueden apagarlo. */
   public readonly showCta = input(true);
 
+  /** El CTA a /admin/plans NUNCA se muestra en nativo, pase lo que pase el
+   *  `showCta` del consumidor (defensa central: evita que un call-site futuro
+   *  filtre la ruta de compra externa en la app). */
+  protected readonly canShowCta = computed(() => this.showCta() && !isNativeApp());
+
   protected goToPlans(): void {
+    if (isNativeApp()) return;
     this.router.navigate(['/admin/plans']);
   }
 }
