@@ -16,7 +16,12 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePickerModule } from 'primeng/datepicker';
-import { APP_LANGUAGES, isDevMode, isNativeApp } from '@catalogohoy/core';
+import {
+  APP_LANGUAGES,
+  isDevMode,
+  isNativeApp,
+  setNativeSlug,
+} from '@catalogohoy/core';
 import { environment } from '@catalogohoy/env';
 import { PlanStore } from '@catalogohoy/plan';
 import { TenantStore, getTenantSlugFromUrl, isCustomDomain } from '@catalogohoy/tenant';
@@ -1134,6 +1139,13 @@ export class EcommerceConfigComponent implements OnInit {
    *  mismo hand-off que usa el login (AppComponent lo persiste a localStorage
    *  en el bootstrap del origen nuevo, así no se pierde la sesión). */
   private redirectToNewSlug(newSlug: string): void {
+    if (isNativeApp()) {
+      // Nativo: no hay subdominio ni hand-off por query param; basta actualizar
+      // el slug cacheado y recargar in-app (sin salir del shell).
+      setNativeSlug(newSlug);
+      window.location.href = '/admin/catalog/edit';
+      return;
+    }
     if (isDevMode() || isCustomDomain()) {
       // En dev el host no depende del slug; con dominio propio el admin
       // vive en el custom domain. En ambos casos basta recargar.

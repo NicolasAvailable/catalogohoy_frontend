@@ -50,8 +50,9 @@
   <!-- Checklist de primeros pasos (se oculta solo al completarse) -->
   <app-getting-started />
 
-  <!-- Promo: planes anuales -50% (card blanca compacta, descartable) -->
-  @if (!annualPromoDismissed()) {
+  <!-- Promo: planes anuales -50% (card blanca compacta, descartable).
+       Compliance IAP (Apple 3.1.1): nunca en la app nativa. -->
+  @if (!isNative && !annualPromoDismissed()) {
   <div
     class="flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-4 shadow-sm -mt-1"
   >

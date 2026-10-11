@@ -43,7 +43,9 @@ type Payload = {
     // el nombre del template es fijo en la WABA de la plataforma (ver CS_TEMPLATES).
     | "order_pending_reminder"
     | "activation_no_product"
-    | "setup_missing_whatsapp";
+    | "setup_missing_whatsapp"
+    // Win-back: plan vencido → invitación a renovar (blast puntual, interno).
+    | "plan_expired_winback";
   // Parámetros posicionales del body del template aprobado ({{1}}, {{2}}, ...).
   variables?: string[];
   // Valor del botón URL dinámico (índice 0), p.ej. el order id para `/o/{{1}}`.
@@ -58,7 +60,24 @@ const CS_TEMPLATES: Record<string, { name: string; lang: string }> = {
   order_pending_reminder: { name: "order_pending_reminder", lang: "es" },
   activation_no_product: { name: "activation_no_product", lang: "es" },
   setup_missing_whatsapp: { name: "setup_missing_whatsapp", lang: "es" },
+  plan_expired_winback: { name: "plan_expired_winback", lang: "es" },
 };
+
+// Marketing deshabilitado (2026-09-01, pedido del dueño): el número solo envía
+// notificaciones UTILITY/transaccionales. Estos template_types son categoría
+// MARKETING en Meta (order_pending_reminder, plan_expiry_warning) o nudges de
+// re-engagement. Se saltan con status "skipped". Los EMAILS de esos mismos
+// crones (plan-expiry / customer-success) NO se ven afectados. Reversible:
+// vaciar este set para reactivar.
+// plan_expired_winback (MARKETING) queda FUERA del set a propósito: es la
+// excepción aprobada para el blast de reactivación a clientes vencidos
+// (2026-10-05); lo dispara solo la utilidad interna, ningún cron.
+const MARKETING_DISABLED = new Set<string>([
+  "order_pending_reminder",
+  "plan_expiring",
+  "activation_no_product",
+  "setup_missing_whatsapp",
+]);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -131,6 +150,12 @@ Deno.serve(async (req) => {
   if (phone.length < 8) {
     await logAttempt({ status: "failed", recipient: to, error: "Invalid phone" });
     return jsonResponse({ success: false, error: "Invalid phone" }, 400);
+  }
+
+  // Gate de marketing: solo utility/transaccionales salen por WhatsApp.
+  if (MARKETING_DISABLED.has(templateType)) {
+    await logAttempt({ status: "skipped", recipient: phone, error: "marketing deshabilitado" });
+    return jsonResponse({ success: true, skipped: true, reason: "marketing_disabled" });
   }
 
   // Customer success: template fijo de la plataforma (no per-tenant). El resto

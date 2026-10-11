@@ -30,14 +30,19 @@ import { PlanStore } from '../../infrastructure';
           <strong class="text-grey-700">{{
             planStore.currentPlan()?.name
           }}</strong>
+          @if (isNative) {
+          {{ 'ha vencido.' | transloco }}
+          } @else {
           {{ 'ha vencido. Para continuar usando el panel de administración, renueva o mejora tu plan.' | transloco }}
+          }
         </p>
 
         <div class="flex flex-col gap-2 w-full mt-2">
           @if (isNative) {
-          <!-- Compliance IAP: en nativo no se ofrece la compra; se renueva en la web. -->
+          <!-- Compliance IAP (Apple 3.1.1): en nativo no se ofrece la compra ni
+               se dirige al usuario a comprar fuera de la app. -->
           <p class="text-grey-400 text-sm bg-grey-50 border border-grey-100 rounded-xl px-4 py-3">
-            {{ 'La gestión de planes está disponible en la versión web de CatalogoHoy.' | transloco }}
+            {{ 'La gestión de planes no está disponible en la app.' | transloco }}
           </p>
           } @else {
           <ui-button

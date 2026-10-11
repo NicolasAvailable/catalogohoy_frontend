@@ -137,6 +137,24 @@ Deno.serve(async (req: Request) => {
         .eq("id", tenantId);
     }
 
+    // Stripe FIJA la moneda de un customer con su primera factura/suscripción.
+    // Si este customer ya tiene una moneda fijada (p. ej. una sub activa en USD),
+    // el checkout DEBE usar esa misma moneda o Stripe rechaza con "You cannot
+    // combine currencies on a single customer". Esto permite pagar o renovar
+    // ANTICIPADO a quien ya tiene una suscripción, aunque su catálogo esté en
+    // otra moneda (caso real: catálogo en DOP/HTG con sub previa en USD).
+    let checkoutCurrency = resolvedCurrency;
+    try {
+      const existingCustomer = await stripe.customers.retrieve(customerId);
+      const lockedCurrency =
+        existingCustomer && !(existingCustomer as Stripe.DeletedCustomer).deleted
+          ? (existingCustomer as Stripe.Customer).currency
+          : null;
+      if (lockedCurrency) checkoutCurrency = lockedCurrency;
+    } catch (_err) {
+      // Si falla la lectura, seguimos con la moneda solicitada.
+    }
+
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
       { price: priceId, quantity: 1 },
     ];
@@ -224,7 +242,7 @@ Deno.serve(async (req: Request) => {
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       mode: "subscription",
-      currency: resolvedCurrency,
+      currency: checkoutCurrency,
       line_items: lineItems,
       success_url: successUrl,
       cancel_url:  cancelUrl,
@@ -233,7 +251,7 @@ Deno.serve(async (req: Request) => {
         plan_id:                  planId,
         previous_subscription_id: previousSubscriptionId,
         catalog_addon_quantity:   String(addonQty),
-        currency:                 resolvedCurrency,
+        currency:                 checkoutCurrency,
         promotion_code:           appliedPromoCodeForMeta,
       },
       subscription_data: {
@@ -245,7 +263,7 @@ Deno.serve(async (req: Request) => {
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
-    return new Response(JSON.stringify({ url: session.url, currency: resolvedCurrency }), {
+    return new Response(JSON.stringify({ url: session.url, currency: checkoutCurrency }), {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
   } catch (err: unknown) {

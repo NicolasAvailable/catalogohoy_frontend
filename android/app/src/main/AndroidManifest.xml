@@ -42,4 +42,14 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Escáner de código de barras del POS (getUserMedia video) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Dictado / notas de voz del chat (getUserMedia audio) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- La cámara y el micrófono NO son obligatorios: el POS cae a entrada
+         manual y el dictado es opcional, así que no excluimos dispositivos. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 </manifest>

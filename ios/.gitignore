@@ -1,4 +1,6 @@
 App/build
+App/build_sim
+App/build_*
 App/Pods
 App/output
 App/App/public

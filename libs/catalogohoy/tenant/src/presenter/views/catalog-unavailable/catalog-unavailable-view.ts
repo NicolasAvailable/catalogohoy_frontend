@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { isNativeApp } from '@catalogohoy/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
 import { ButtonComponent } from '@ui';
@@ -34,7 +35,14 @@ export class CatalogUnavailableView {
     window.location.reload();
   }
 
+  private readonly router = inject(Router);
+
   protected goHome(): void {
+    if (isNativeApp()) {
+      // Nativo: no hay landing dentro del shell; volvemos al login in-app.
+      this.router.navigateByUrl('/login');
+      return;
+    }
     window.location.href = 'https://catalogohoy.com';
   }
 }

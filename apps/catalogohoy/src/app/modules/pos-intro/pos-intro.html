@@ -66,7 +66,12 @@
       {{ 'Una función del plan Avanzado' | transloco }}
     </h2>
     <p class="text-sm text-grey-500 leading-relaxed">
+      <!-- Compliance IAP (Apple 3.1.1): sin upsell ni CTA a planes en nativo. -->
+      @if (isNative) {
+      {{ 'Esta función no está disponible en tu plan actual.' | transloco }}
+      } @else {
       {{ 'El Punto de Venta para vender en persona está disponible en el plan Avanzado. Mejorá tu plan para cobrar en el mostrador desde CatalogoHoy.' | transloco }}
+      }
     </p>
     <div class="flex items-center gap-2 mt-1">
       <button
@@ -76,6 +81,7 @@
       >
         {{ 'Ahora no' | transloco }}
       </button>
+      @if (!isNative) {
       <a
         routerLink="/admin/plans"
         (click)="closeUpgrade()"
@@ -84,6 +90,7 @@
         <ui-icon name="sparkles" size="15" />
         {{ 'Mejorar plan' | transloco }}
       </a>
+      }
     </div>
   </div>
 </ui-dialog>

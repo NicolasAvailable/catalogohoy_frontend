@@ -38,6 +38,43 @@ Cambios (todos **aditivos + gateados a nativo**, web intacto — build de `authe
   resuelve slug via `get_my_tenant` → `/admin`; sin sesión → `/login`; web = no-op).
 - ⚠️ Google OAuth nativo NO implementado (necesita deep-links) → login nativo = email/contraseña.
 
+### Logout nativo (fix 2026-10-02)
+
+Caso simétrico del entry-point: los handlers de "Cerrar sesión" hacían
+`window.location.href = 'https://auth.catalogohoy.com'` incondicionalmente, lo que en
+nativo **saca al usuario del shell** (navega el WebView al sitio web externo, otro origen)
+y parece "no cerró la sesión" (el shell nativo nunca re-evalúa su sesión ya limpia).
+`auth.logout()` / `signOut()` **sí** limpia la sesión del localStorage del origen nativo;
+el problema era solo el redirect. Fix: gatear por `isNativeApp()` → `clearNativeSlug()` +
+`window.location.href = '/login'` (hard-reload in-app, re-scopea stores; mismo patrón que
+`switchCatalog`). En web, intacto. Archivos: `sidebar.ts`, `profile-menu.ts`,
+`mobile-more-drawer.ts` (los 3 handlers de logout) + `profile.service.ts` `deleteAccount()`.
+Requiere nuevo build nativo (`npm run mobile:build`) + resubir a las stores para que llegue.
+
+### Otras vistas con el mismo patrón (fix 2026-10-02)
+
+Barrido de TODOS los `window.location.href = 'https://…catalogohoy.com'` que sacan del shell
+en nativo. Gateados por `isNativeApp()` → `setNativeSlug(nuevoSlug)` + nav in-app:
+- `ecommerce-config/create-catalog.ts` — crear catálogo (alcanzable desde el drawer "Más") →
+  `setNativeSlug` + `/admin` en vez de `https://slug.catalogohoy.com/admin`.
+- `ecommerce-config/ecommerce-config.ts` `redirectToNewSlug()` — cambiar slug → `setNativeSlug` +
+  `/admin/catalog/edit` (en web usa hand-off de token por query al subdominio nuevo).
+- `tenant/catalog-unavailable-view.ts` `goHome()` — nativo → `/login` (no hay landing en el shell).
+- `teams/no-access-view.ts` `goToOwnStore()`/`createStore()` — nativo → `setNativeSlug` + `/admin` / `/login`.
+
+Ya nativo-safe de antes (NO tocar): `authentication.guard.ts` (sin sesión → `/login` in-app) y
+`authentication.service.ts` `forgottenPassword()` (base URL gateada). Share/referral/help/WhatsApp-bridge
+usan URLs externas **a propósito** (no son navegación del shell).
+
+### Deeplinks (estado 2026-10-02): NO existen
+
+No hay Universal Links (iOS Associated Domains / AASA), ni App Links (Android assetlinks + intent-filter),
+ni listener `App.addListener('appUrlOpen')`. El único `CFBundleURLScheme` es el reversed-client-id de
+Google (callback del Sign-In nativo). El signup nativo es **in-app** (email/contraseña Y social via
+`needsStoreSetup`), así que NO hay round-trip a la web para registrarse → los deeplinks web→app no son
+necesarios hoy. Se justificarían a futuro solo para "abrir en la app" desde links de marketing/emails,
+lo cual además requiere transferir la sesión cross-origin (patrón del `?sb-…-auth-token=` del login web).
+
 ## Fase 1b — Push FCM (implementado, pendiente Firebase)
 
 Plugin: **`@capacitor-firebase/messaging`** (NO `@capacitor/push-notifications`, que en iOS da
@@ -126,3 +163,41 @@ con `Capacitor.isNativePlatform()` (expuesto por `NativePlatformService.isNative
 - **Google Play Console** ($25 única vez).
 - **Proyecto Firebase** (gratis): FCM; subir la APNs `.p8` para iOS.
 - Para Android: Android Studio + JDK 17.
+
+## Compliance Apple 3.1.1 (In-App Purchase) — barrido 2026-10-06
+
+Apple rechazó la 1.0 (5) (submission 6d1ea7db, revisado en iPad Air M3) por Guideline
+3.1.1: la app mostraba/enlazaba la compra de planes (Stripe) sin ofrecer IAP. Decisión:
+**en el build nativo no existe NINGUNA superficie de compra/upsell** (modelo Shopify);
+la suscripción se gestiona solo en la web y la app ni la menciona (dirigir a comprar
+fuera de la app también viola 3.1.1 fuera del storefront de EE.UU.).
+
+Patrón: `isNativeApp()` de `@catalogohoy/core` (`tenant.constant.ts`). Superficies
+gateadas (además de las previas: navbar nativo sin chip plan/créditos, checkout
+bloqueado, expiration-banner y plan-expired-dialog sin CTAs):
+
+- `plan.routes.ts` → `webOnlyGuard`: `/admin/plans`, `checkout/:planId` y `success`
+  redirigen a `/admin` en nativo (los precios de `plans.html` quedan inalcanzables);
+  `terms` sigue accesible (lo usa el registro).
+- Home: banner promo "planes anuales -50%" oculto (`home.html`).
+- Checklist getting-started: pasos `locked` (upsell "Ver planes") filtrados en nativo.
+- `plan-limit-dialog`: sin párrafo "Mejora tu plan" ni botón "Ver planes".
+- Gate POS (`pos-intro.html`) y gate Chats (`connect-channels.html`): texto neutro
+  "Esta función no está disponible en tu plan actual." sin CTA.
+- `ui-premium-upgrade-prompt`: nuevo input `showCta` (los consumidores Equipo y
+  Analíticas pasan `!isNative` + descripción neutra).
+- Equipo header: botón "Mejorar plan" (team lleno) → "Invitar miembro" deshabilitado.
+- Crear catálogo: sin compra de slots (card neutra de límite) ni CTA "Ver planes".
+- `plan-expired-dialog`: en nativo ya no menciona "versión web" (texto neutro).
+
+i18n: 4 claves nuevas en es/en/fr/pt. Si se agrega CUALQUIER upsell/precio nuevo,
+gatearlo con `isNativeApp()` o Apple lo rechaza en la próxima review.
+
+### ⭐ Hallazgo clave del rechazo (captura del revisor)
+La captura adjunta al rechazo (`Screenshot-1006-14809PM.png`) era **Perfil → pestaña
+Suscripción → "Tu plan incluye"** (profile.html) — NO la página de Planes. Fix: la
+pestaña "Suscripción" del Perfil se filtra completa en nativo (`profile.ts` tabs +
+guard del query param `?tab=subscription`). Esa pestaña contenía además "Cambiar
+tarjeta" (portal Stripe = mecanismo de pago externo), "Cancelar suscripción",
+historial de pagos y el upsell "Explorá los planes disponibles". Lección: al auditar
+3.1.1 revisar también vistas de CUENTA (perfil/billing), no solo las de compra.

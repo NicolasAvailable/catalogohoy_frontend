@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { isNativeApp } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { AnalyticsStore } from '../../../infrastructure';
 import { ChartSeries, PageViewsPeriod, TimeSeriesPoint } from '../../../domain';
@@ -21,6 +22,8 @@ import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
   templateUrl: './analytics-view.html',
 })
 export class AnalyticsViewComponent {
+  /** Compliance IAP (Apple 3.1.1): en nativo no se ofrece mejorar el plan. */
+  protected readonly isNative = isNativeApp();
   private readonly router = inject(Router);
   protected readonly analyticsStore = inject(AnalyticsStore);
   protected readonly planStore = inject(PlanStore);

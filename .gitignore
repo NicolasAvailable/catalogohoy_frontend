@@ -5,6 +5,9 @@ dist
 tmp
 out-tsc
 
+# agent tooling (no es fuente; evita que Tailwind v4 lo escanee en la auto-detección de contenido)
+.agents/
+
 # dependencies
 node_modules
 

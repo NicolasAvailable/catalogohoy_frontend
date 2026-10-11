@@ -25,11 +25,11 @@
     <ui-avatar
       size="normal"
       shape="square"
-      [label]="currentTenant().name"
-      [image]="currentTenant().logo ?? ''"
+      [label]="currentTenant()?.name ?? ''"
+      [image]="currentTenant()?.logo ?? ''"
       styleClass="!w-6 !h-6 !text-[0.7rem] !bg-primary-100 !text-primary-600 !rounded-lg !overflow-hidden shrink-0"
     />
-    <span class="text-base font-bold text-grey-700 truncate">{{ currentTenant().name }}</span>
+    <span class="text-base font-bold text-grey-700 truncate">{{ currentTenant()?.name }}</span>
   </a>
   <!-- Acciones (derecha): compartir + QR -->
   <div class="flex items-center gap-1 shrink-0">

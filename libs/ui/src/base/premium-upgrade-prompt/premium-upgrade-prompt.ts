@@ -26,6 +26,7 @@ import { ButtonComponent } from '../button';
         <h2 class="text-2xl font-bold text-grey-800">{{ title() | transloco }}</h2>
         <p class="text-base text-grey-400">{{ description() | transloco }}</p>
       </div>
+      @if (showCta()) {
       <ui-button
         [label]="'Mejorar plan' | transloco"
         icon="sparkles"
@@ -33,6 +34,7 @@ import { ButtonComponent } from '../button';
         [fluid]="false"
         (click)="goToPlans()"
       />
+      }
     </div>
   `,
 })
@@ -44,6 +46,8 @@ export class PremiumUpgradePromptComponent {
     'Mejora tu plan para desbloquear esta funcionalidad y sacarle el máximo provecho a tu catálogo.'
   );
   public readonly icon = input('crown');
+  /** Compliance IAP (Apple 3.1.1): los consumidores lo apagan en la app nativa. */
+  public readonly showCta = input(true);
 
   protected goToPlans(): void {
     this.router.navigate(['/admin/plans']);

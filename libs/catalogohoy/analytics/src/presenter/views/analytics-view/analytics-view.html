@@ -18,7 +18,8 @@
     <ui-premium-upgrade-prompt
       icon="bar-chart-3"
       [title]="'Entiende el comportamiento de tus clientes' | transloco"
-      [description]="'Mejora tu plan para acceder a métricas de visitas, horarios pico, productos más vistos y analíticas en tiempo real.' | transloco"
+      [description]="(isNative ? 'Esta función no está disponible en tu plan actual.' : 'Mejora tu plan para acceder a métricas de visitas, horarios pico, productos más vistos y analíticas en tiempo real.') | transloco"
+      [showCta]="!isNative"
     />
     } @else if (analyticsStore.isLoading()) {
     <!-- ─── SKELETON ─────────────────────────────────────────── -->

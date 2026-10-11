@@ -1759,5 +1759,10 @@
   "📭 Todavía no tenés categorías. ¡Creá una en la caja de texto de abajo y guardala! ✨": "📭 Vous n'avez pas encore de catégories. Créez-en une dans la zone de texte ci-dessous et enregistrez-la ! ✨",
   "🔄 Estás renovando tu plan {plan} por {months}": "🔄 Vous renouvelez votre plan {plan} pour {months}",
   "🔍 No se encontraron categorías con ese nombre": "🔍 Aucune catégorie trouvée avec ce nom",
-  "🖼️ Galería de imágenes": "🖼️ Galerie d'images"
+  "🖼️ Galería de imágenes": "🖼️ Galerie d'images",
+  "Tu correo quedó verificado, pero no pudimos vincular la invitación. Inicia sesión para aceptarla.": "Votre e-mail est vérifié, mais nous n'avons pas pu lier l'invitation. Connectez-vous pour l'accepter.",
+  "Revisá tu correo": "Vérifiez votre e-mail",
+  "Te enviamos un enlace a": "Nous avons envoyé un lien à",
+  "Hacé clic en él para confirmar tu cuenta y aceptar la invitación.": "Cliquez dessus pour confirmer votre compte et accepter l'invitation.",
+  "¿No te llegó? Revisá spam o promociones.": "Vous ne l'avez pas reçu ? Vérifiez les spams ou promotions."
 }

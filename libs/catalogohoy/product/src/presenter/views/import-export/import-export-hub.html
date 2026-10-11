@@ -16,10 +16,10 @@
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <!-- Export tile (paid plans only) -->
+      <!-- Export tile (paid plans only): abre el picker de formato Excel/CSV -->
       <button
         type="button"
-        (click)="onExport()"
+        (click)="onExportTile()"
         [disabled]="isFreePlan()"
         class="relative flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl transition-all"
         [class.cursor-pointer]="!isFreePlan()"
@@ -41,13 +41,16 @@
         </div>
         <h3 class="text-lg font-bold text-gray-900">{{ 'Exportar' | transloco }}</h3>
         <p class="text-sm text-gray-500 text-center">
-          {{ (isFreePlan() ? 'Disponible en planes pagos' : 'Descarga todos tus productos en un Excel listo para editar y volver a importar.') | transloco }}
+          {{ (isFreePlan() ? 'Disponible en planes pagos' : 'Descarga todos tus productos en Excel o CSV, listos para editar y volver a importar.') | transloco }}
         </p>
         <span
           class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold whitespace-nowrap"
         >
           <img src="/images/excel.svg" alt="Excel" class="w-3.5 h-3.5 shrink-0" />
-          {{ (isExporting() ? 'Generando...' : 'Descargar Excel') | transloco }}
+          Excel
+          <span class="text-primary-300">·</span>
+          <img src="/images/csv.svg" alt="CSV" class="w-3.5 h-3.5 shrink-0" />
+          CSV
         </span>
       </button>
 
@@ -117,6 +120,61 @@
       </div>
       <ui-icon name="chevron-right" styleClass="w-5 h-5 text-gray-300 shrink-0" />
     </button>
+  </section>
+  }
+
+  <!-- EXPORT FORMAT PICKER (Excel / CSV) — espejo del paso de Importar -->
+  @if (view() === 'export-pick') {
+  <section class="flex flex-col gap-6 p-8">
+    <div class="flex items-center gap-3">
+      <button
+        (click)="view.set('hub')"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+      >
+        <ui-icon name="arrow-left" styleClass="w-5 h-5" />
+      </button>
+      <h2 class="text-2xl font-bold text-gray-900">{{ '¿En qué formato quieres exportar?' | transloco }}</h2>
+    </div>
+    <p class="text-sm text-gray-500 -mt-3">
+      {{ 'El archivo trae todos tus productos, listo para editar y volver a importar.' | transloco }}
+    </p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <!-- Microsoft Excel -->
+      <button
+        type="button"
+        (click)="onExport('xlsx')"
+        [disabled]="isExporting()"
+        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+      >
+        <img src="/images/excel.svg" alt="Microsoft Excel" class="w-14 h-14" />
+        <h3 class="text-lg font-bold text-gray-900">Microsoft Excel</h3>
+        <p class="text-sm text-gray-500 text-center">
+          {{ 'Archivo .xlsx con columnas ajustadas, ideal para editar.' | transloco }}
+        </p>
+      </button>
+
+      <!-- CSV -->
+      <button
+        type="button"
+        (click)="onExport('csv')"
+        [disabled]="isExporting()"
+        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+      >
+        <img src="/images/csv.svg" alt="CSV" class="w-14 h-14" />
+        <h3 class="text-lg font-bold text-gray-900">CSV</h3>
+        <p class="text-sm text-gray-500 text-center">
+          {{ 'Archivo .csv de texto plano, compatible con cualquier sistema.' | transloco }}
+        </p>
+      </button>
+    </div>
+
+    @if (isExporting()) {
+    <p class="flex items-center justify-center gap-2 text-sm text-gray-500">
+      <ui-icon name="loader-circle" styleClass="size-4 animate-spin" />
+      {{ 'Generando...' | transloco }}
+    </p>
+    }
   </section>
   }
 
@@ -402,7 +460,7 @@
       <label class="cursor-pointer mt-1">
         <input
           type="file"
-          accept=".xlsx,.xls"
+          accept=".xlsx,.xls,.csv"
           (change)="onFileSelected($event)"
           class="hidden"
         />

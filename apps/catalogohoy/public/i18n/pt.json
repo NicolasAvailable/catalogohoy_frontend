@@ -2105,7 +2105,6 @@
   "Producto oculto del catálogo": "Produto ocultado do catálogo",
   "Producto visible en el catálogo": "Produto visível no catálogo",
   "Exportá tus productos a Excel o importá nuevos desde un archivo.": "Exporte seus produtos para Excel ou importe novos de um arquivo.",
-  "Descarga todos tus productos en un Excel listo para editar y volver a importar.": "Baixe todos os seus produtos em um Excel pronto para editar e reimportar.",
   "Descargar Excel": "Baixar Excel",
   "A consultar": "A combinar",
   "Abrir menú lateral": "Abrir menu lateral",
@@ -2577,5 +2576,14 @@
   "Crear mi cuenta": "Criar minha conta",
   "Revisa tu correo": "Verifique seu e-mail",
   "Te enviamos un enlace para confirmar tu cuenta. Ábrelo y luego inicia sesión.": "Enviamos um link para confirmar sua conta. Abra-o e depois faça login.",
-  "Volver al inicio de sesión": "Voltar ao login"
+  "Volver al inicio de sesión": "Voltar ao login",
+  "Esta función no está disponible en tu plan actual.": "Este recurso não está disponível no seu plano atual.",
+  "La gestión de planes no está disponible en la app.": "O gerenciamento de planos não está disponível no aplicativo.",
+  "ha vencido.": "venceu.",
+  "Has alcanzado el límite de catálogos de tu plan.": "Você atingiu o limite de catálogos do seu plano.",
+  "Descarga todos tus productos en Excel o CSV, listos para editar y volver a importar.": "Baixe todos os seus produtos em Excel ou CSV, prontos para editar e reimportar.",
+  "¿En qué formato quieres exportar?": "Em qual formato você quer exportar?",
+  "El archivo trae todos tus productos, listo para editar y volver a importar.": "O arquivo traz todos os seus produtos, pronto para editar e reimportar.",
+  "Archivo .xlsx con columnas ajustadas, ideal para editar.": "Arquivo .xlsx com colunas ajustadas, ideal para editar.",
+  "Archivo .csv de texto plano, compatible con cualquier sistema.": "Arquivo .csv de texto simples, compatível com qualquer sistema."
 }

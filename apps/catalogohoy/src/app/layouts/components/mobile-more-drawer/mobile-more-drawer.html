@@ -163,8 +163,8 @@
         <ui-avatar
           size="normal"
           shape="square"
-          [label]="currentTenant().name"
-          [image]="currentTenant().logo ?? ''"
+          [label]="currentTenant()?.name ?? ''"
+          [image]="currentTenant()?.logo ?? ''"
           styleClass="!w-6 !h-6 !text-[0.7rem] !bg-primary-100 !text-primary-600 !rounded-lg !overflow-hidden shrink-0"
         />
         {{ 'Cambiar catálogo' | transloco }}

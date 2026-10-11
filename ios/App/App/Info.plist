@@ -87,6 +87,8 @@
 	<string>CatalogoHoy accede a tus fotos para agregar imágenes a tus productos y catálogo.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>CatalogoHoy guarda imágenes (como el QR de tu catálogo) en tu galería.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>CatalogoHoy usa el micrófono para grabar notas de voz y dictar mensajes en el chat.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

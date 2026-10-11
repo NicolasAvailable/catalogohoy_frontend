@@ -1,5 +1,9 @@
 import { Injectable } from '@angular/core';
-import { SupabaseClientProvider } from '@catalogohoy/core';
+import {
+  clearNativeSlug,
+  isNativeApp,
+  SupabaseClientProvider,
+} from '@catalogohoy/core';
 import { E } from '@shared/domain';
 import { Either } from '@sweet-monads/either';
 import { BaseProfileService, NotificationPreferences } from '../domain';
@@ -123,7 +127,14 @@ export class ProfileService implements BaseProfileService {
     }
 
     await this.client.auth.signOut();
-    window.location.href = 'https://auth.catalogohoy.com';
+    if (isNativeApp()) {
+      // En nativo no hay auth.catalogohoy.com (saldría del shell): limpiamos el
+      // slug cacheado y hard-reload al login in-app.
+      clearNativeSlug();
+      window.location.href = '/login';
+    } else {
+      window.location.href = 'https://auth.catalogohoy.com';
+    }
     return E.right(undefined);
   }
 

@@ -1,5 +1,6 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { isNativeApp, setNativeSlug } from '@catalogohoy/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { CATALOG_ADDON_PRICE, PlanStore } from '@catalogohoy/plan';
 import { TenantService } from '@catalogohoy/tenant';
@@ -29,6 +30,9 @@ export class CreateCatalog implements OnInit {
   public readonly slug = signal('');
   public readonly slugStatus = signal<SlugStatus>('idle');
   public readonly isSubmitting = signal(false);
+
+  /** Compliance IAP (Apple 3.1.1): en nativo no se compran slots ni planes. */
+  public readonly isNative = isNativeApp();
 
   public readonly isLoading = this.planStore.isLoading;
   // Team members (non-owners) always get to create their own catalog for free;
@@ -109,7 +113,15 @@ export class CreateCatalog implements OnInit {
 
     result
       .mapRight((catalog) => {
-        window.location.href = `https://${catalog.slug}.catalogohoy.com/admin`;
+        if (isNativeApp()) {
+          // Nativo: no hay subdominio (saldría del shell). Cacheamos el slug
+          // nuevo y hard-reload in-app a /admin (re-scopea los stores al
+          // catálogo recién creado, igual que switchCatalog).
+          setNativeSlug(catalog.slug);
+          window.location.href = '/admin';
+        } else {
+          window.location.href = `https://${catalog.slug}.catalogohoy.com/admin`;
+        }
       })
       .mapLeft((error) => {
         // Nunca fallar en silencio: el error de la RPC llega con un código

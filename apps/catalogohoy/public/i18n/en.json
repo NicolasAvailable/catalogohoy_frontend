@@ -2105,7 +2105,6 @@
   "Producto oculto del catálogo": "Product hidden from the catalog",
   "Producto visible en el catálogo": "Product visible in the catalog",
   "Exportá tus productos a Excel o importá nuevos desde un archivo.": "Export your products to Excel or import new ones from a file.",
-  "Descarga todos tus productos en un Excel listo para editar y volver a importar.": "Download all your products in an Excel file ready to edit and re-import.",
   "Descargar Excel": "Download Excel",
   "A consultar": "On request",
   "Abrir menú lateral": "Open side menu",
@@ -2577,5 +2576,14 @@
   "Crear mi cuenta": "Create my account",
   "Revisa tu correo": "Check your email",
   "Te enviamos un enlace para confirmar tu cuenta. Ábrelo y luego inicia sesión.": "We sent you a link to confirm your account. Open it and then sign in.",
-  "Volver al inicio de sesión": "Back to sign in"
+  "Volver al inicio de sesión": "Back to sign in",
+  "Esta función no está disponible en tu plan actual.": "This feature isn't available on your current plan.",
+  "La gestión de planes no está disponible en la app.": "Plan management is not available in the app.",
+  "ha vencido.": "has expired.",
+  "Has alcanzado el límite de catálogos de tu plan.": "You've reached the catalog limit of your plan.",
+  "Descarga todos tus productos en Excel o CSV, listos para editar y volver a importar.": "Download all your products as Excel or CSV, ready to edit and re-import.",
+  "¿En qué formato quieres exportar?": "Which format do you want to export?",
+  "El archivo trae todos tus productos, listo para editar y volver a importar.": "The file includes all your products, ready to edit and re-import.",
+  "Archivo .xlsx con columnas ajustadas, ideal para editar.": "An .xlsx file with fitted columns, ideal for editing.",
+  "Archivo .csv de texto plano, compatible con cualquier sistema.": "A plain-text .csv file, compatible with any system."
 }

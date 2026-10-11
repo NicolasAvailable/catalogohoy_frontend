@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { isNativeApp } from '@catalogohoy/core';
 import { EcommerceConfigStore } from '@catalogohoy/ecommerce-config';
 import { PlanStore } from '@catalogohoy/plan';
 import { TenantStore } from '@catalogohoy/tenant';
@@ -38,6 +39,8 @@ export default class PosIntro implements OnInit {
   private readonly planStore = inject(PlanStore);
   private readonly tenantStore = inject(TenantStore);
   private readonly configStore = inject(EcommerceConfigStore);
+  /** Compliance IAP (Apple 3.1.1): en nativo no se ofrece mejorar el plan. */
+  public readonly isNative = isNativeApp();
 
   private readonly upgradeDialog = viewChild<DialogComponent>('upgradeDialog');
 

@@ -16,12 +16,21 @@
           [disabled]="true"
         />
       } @else if (teamFull()) {
-        <ui-button
-          label="Mejorar plan"
-          icon="arrow-up-circle"
-          severity="secondary"
-          (click)="goToPlans()"
-        />
+        <!-- Compliance IAP (Apple 3.1.1): sin CTA a planes en nativo. -->
+        @if (isNative) {
+          <ui-button
+            label="Invitar miembro"
+            icon="user-plus"
+            [disabled]="true"
+          />
+        } @else {
+          <ui-button
+            label="Mejorar plan"
+            icon="arrow-up-circle"
+            severity="secondary"
+            (click)="goToPlans()"
+          />
+        }
       } @else {
         <ui-button
           label="Invitar miembro"
@@ -245,7 +254,8 @@
         <ui-premium-upgrade-prompt
           icon="users-round"
           [title]="'Invita a tu equipo a gestionar el catálogo' | transloco"
-          [description]="'Mejora tu plan para invitar miembros, asignarles permisos por módulo y controlar qué puede hacer cada uno.' | transloco"
+          [description]="(isNative ? 'Esta función no está disponible en tu plan actual.' : 'Mejora tu plan para invitar miembros, asignarles permisos por módulo y controlar qué puede hacer cada uno.') | transloco"
+          [showCta]="!isNative"
         />
       } @else {
         <div class="teams-view__empty">

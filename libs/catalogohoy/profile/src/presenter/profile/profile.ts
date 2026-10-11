@@ -2,6 +2,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, effect, inject, signal, ViewChild } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { isNativeApp } from '@catalogohoy/core';
 import { CheckoutService, PLAN_FEATURES_DETAILED, PlanFeature, PlanStore } from '@catalogohoy/plan';
 import { CreditsStore } from '@catalogohoy/product';
 import { TenantStore } from '@catalogohoy/tenant';
@@ -93,13 +94,22 @@ export class Profile {
    *  Se resuelve async al iniciar (lee el provider del auth user). */
   public readonly isGoogleAccount = signal(false);
 
+  /** Compliance IAP (Apple 3.1.1): la pestaña Suscripción (plan, "Tu plan
+   *  incluye", portal de Stripe, historial de pagos) no existe en nativo —
+   *  fue exactamente lo que App Review capturó en el rechazo del 6-oct. */
+  public readonly isNative = isNativeApp();
+
   // ── Tabs ──────────────────────────────────────────────────────────────
   public readonly tabs: { id: ProfileTabId; label: string; icon: string }[] = [
     { id: 'general',       label: 'General',          icon: 'user' },
     { id: 'subscription',  label: 'Suscripción',      icon: 'credit-card' },
     { id: 'notifications', label: 'Notificaciones',   icon: 'mail' },
     { id: 'danger',        label: 'Zona de peligro',  icon: 'triangle-alert' },
-  ];
+  ].filter((t) => !(this.isNative && t.id === 'subscription')) as {
+    id: ProfileTabId;
+    label: string;
+    icon: string;
+  }[];
   public readonly activeTab = signal<ProfileTabId>('general');
 
   setActiveTab(tab: ProfileTabId): void {
@@ -219,7 +229,11 @@ export class Profile {
     // Restore active tab from query param (?tab=general|subscription|notifications|danger).
     // One-way bootstrap from URL — afterwards the signal is the source of truth.
     const initialTab = this.route.snapshot.queryParamMap.get('tab') as ProfileTabId | null;
-    if (initialTab && VALID_TABS.includes(initialTab)) {
+    if (
+      initialTab &&
+      VALID_TABS.includes(initialTab) &&
+      !(this.isNative && initialTab === 'subscription')
+    ) {
       this.activeTab.set(initialTab);
     }
 

@@ -67,8 +67,9 @@ export class Navbar extends BaseComponent implements OnInit {
   }
 
   public share() {
-    const url = this.currentTenant().url;
-    is.affirmative(this.clipboard.copy(url)).mapRight(() =>
+    const tenant = this.currentTenant();
+    if (!tenant) return;
+    is.affirmative(this.clipboard.copy(tenant.url)).mapRight(() =>
       this.useCaseProgress
         .completeFor('Se ha copiado al portapapeles')
         .complete()
@@ -77,6 +78,7 @@ export class Navbar extends BaseComponent implements OnInit {
 
   public async generateQR() {
     const tenant = this.currentTenant();
+    if (!tenant) return;
 
     await qr.to.pdf(tenant.url, `QR-${tenant.slug}`, tenant.name);
 

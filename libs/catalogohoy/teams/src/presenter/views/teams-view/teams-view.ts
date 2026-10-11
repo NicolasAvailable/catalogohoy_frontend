@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { Exception } from '@shared/domain';
-import { SupabaseClientProvider } from '@catalogohoy/core';
+import { isNativeApp, SupabaseClientProvider } from '@catalogohoy/core';
 import { OrderService, Order } from '@catalogohoy/order';
 import { PlanStore } from '@catalogohoy/plan';
 import { Product, ProductService } from '@catalogohoy/product';
@@ -66,6 +66,8 @@ type TabKey = 'members' | 'history';
 })
 
 export default class TeamsViewComponent implements OnInit {
+  /** Compliance IAP (Apple 3.1.1): en nativo no se ofrece mejorar el plan. */
+  protected readonly isNative = isNativeApp();
   protected readonly teamStore = inject(TeamStore);
   protected readonly planStore = inject(PlanStore);
   protected readonly permissionsStore = inject(TeamPermissionsStore);

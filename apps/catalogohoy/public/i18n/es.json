@@ -2105,7 +2105,6 @@
   "Producto oculto del catálogo": "Producto oculto del catálogo",
   "Producto visible en el catálogo": "Producto visible en el catálogo",
   "Exportá tus productos a Excel o importá nuevos desde un archivo.": "Exportá tus productos a Excel o importá nuevos desde un archivo.",
-  "Descarga todos tus productos en un Excel listo para editar y volver a importar.": "Descarga todos tus productos en un Excel listo para editar y volver a importar.",
   "Descargar Excel": "Descargar Excel",
   "A consultar": "A consultar",
   "Abrir menú lateral": "Abrir menú lateral",
@@ -2577,5 +2576,14 @@
   "Crear mi cuenta": "Crear mi cuenta",
   "Revisa tu correo": "Revisa tu correo",
   "Te enviamos un enlace para confirmar tu cuenta. Ábrelo y luego inicia sesión.": "Te enviamos un enlace para confirmar tu cuenta. Ábrelo y luego inicia sesión.",
-  "Volver al inicio de sesión": "Volver al inicio de sesión"
+  "Volver al inicio de sesión": "Volver al inicio de sesión",
+  "Esta función no está disponible en tu plan actual.": "Esta función no está disponible en tu plan actual.",
+  "La gestión de planes no está disponible en la app.": "La gestión de planes no está disponible en la app.",
+  "ha vencido.": "ha vencido.",
+  "Has alcanzado el límite de catálogos de tu plan.": "Has alcanzado el límite de catálogos de tu plan.",
+  "Descarga todos tus productos en Excel o CSV, listos para editar y volver a importar.": "Descarga todos tus productos en Excel o CSV, listos para editar y volver a importar.",
+  "¿En qué formato quieres exportar?": "¿En qué formato quieres exportar?",
+  "El archivo trae todos tus productos, listo para editar y volver a importar.": "El archivo trae todos tus productos, listo para editar y volver a importar.",
+  "Archivo .xlsx con columnas ajustadas, ideal para editar.": "Archivo .xlsx con columnas ajustadas, ideal para editar.",
+  "Archivo .csv de texto plano, compatible con cualquier sistema.": "Archivo .csv de texto plano, compatible con cualquier sistema."
 }

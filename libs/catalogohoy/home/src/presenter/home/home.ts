@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { isNativeApp } from '@catalogohoy/core';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
@@ -64,6 +65,9 @@ export class Home implements OnInit {
   public readonly tenantName = computed(() => this.tenantStore.tenantName());
   public readonly stats = computed(() => this.homeStore.stats());
   public readonly isLoading = computed(() => this.homeStore.isLoading());
+
+  /** Compliance IAP (Apple 3.1.1): en nativo no se muestran promos de planes. */
+  public readonly isNative = isNativeApp();
 
   /** Promo de precios: "Planes anuales -50%". Descartable (localStorage). */
   public readonly annualPromoDismissed = signal(

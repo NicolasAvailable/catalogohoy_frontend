@@ -143,7 +143,9 @@ export class GettingStarted implements OnInit {
         locked: false,
       });
     }
-    return steps;
+    // Compliance IAP (Apple 3.1.1): los pasos `locked` son upsell hacia
+    // /admin/plans; en la app nativa no se muestran.
+    return this.isNative ? steps.filter((s) => !s.locked) : steps;
   });
 
   /** Pasos que cuentan para ocultar el card (los locked son upsell, no meta). */

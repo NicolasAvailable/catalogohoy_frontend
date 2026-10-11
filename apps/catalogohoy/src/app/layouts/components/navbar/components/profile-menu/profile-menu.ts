@@ -9,7 +9,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthenticationService } from '@catalogohoy/auth';
-import { PosthogService } from '@catalogohoy/core';
+import { clearNativeSlug, isNativeApp, PosthogService } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { CreditsStore } from '@catalogohoy/product';
 import { ProfileStore } from '@catalogohoy/profile';
@@ -98,7 +98,15 @@ export class ProfileMenu {
         if (result.isRight()) {
           this.posthog.reset();
           this.auth.logout().then(() => {
-            window.location.href = 'https://auth.catalogohoy.com';
+            if (isNativeApp()) {
+              // En nativo no hay auth.catalogohoy.com (saldría del shell):
+              // limpiamos el slug cacheado y hard-reload al login in-app
+              // (re-scopea todos los stores, igual que el post-login nativo).
+              clearNativeSlug();
+              window.location.href = '/login';
+            } else {
+              window.location.href = 'https://auth.catalogohoy.com';
+            }
           });
         }
       });

@@ -1,4 +1,5 @@
 import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
@@ -6,6 +7,7 @@ import {
   isNativeApp,
   LanguageSelectorComponent,
   setNativeSlug,
+  SupabaseClientProvider,
 } from '@catalogohoy/core';
 import {
   findCountryByCode,
@@ -15,16 +17,38 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { BaseComponent, whiteSpacesValidator } from '@shared/presenter';
 import {
   ButtonComponent,
+  CheckboxComponent,
   IconComponent,
   InputMessageComponent,
   InputPasswordComponent,
   InputTextComponent,
   SelectComponent,
+  SelectItemDirective,
+  SelectSelectedItemDirective,
 } from '@ui';
 import { AuthenticationFacade } from '../../../application';
 import { LoginCredentials } from '../../../domain';
 import { SIGNUP_CONFIRM_EMAIL } from '../../../infrastructure';
 import { GOOGLE_IOS_CLIENT_ID } from '../../../infrastructure/native-oauth.constants';
+
+/** slug derivado del nombre de la tienda (mismo mapeo que el signup web). */
+function slugify(text: string): string {
+  const map: Record<string, string> = {
+    á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u',
+    Á: 'A', É: 'E', Í: 'I', Ó: 'O', Ú: 'U',
+    ñ: 'n', Ñ: 'N',
+  };
+  return text
+    .split('')
+    .map((c) => map[c] ?? c)
+    .join('')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/** Sub-paso del registro in-app (nativo), espejo del wizard web. */
+type SignupStep = 'choose' | 'credentials' | 'profile';
 
 @Component({
   selector: 'app-login',
@@ -35,8 +59,11 @@ import { GOOGLE_IOS_CLIENT_ID } from '../../../infrastructure/native-oauth.const
     InputMessageComponent,
     InputPasswordComponent,
     ButtonComponent,
+    CheckboxComponent,
     IconComponent,
     SelectComponent,
+    SelectItemDirective,
+    SelectSelectedItemDirective,
     LanguageSelectorComponent,
     TranslocoPipe,
   ],
@@ -72,6 +99,7 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
   private readonly facade = inject(AuthenticationFacade);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly supabase = SupabaseClientProvider.getInstance();
   /** true en la app nativa (Capacitor): login social por SDK y ruteo in-app. */
   readonly isNative = isNativeApp();
   /** Sign in with Apple solo tiene sentido (y es requisito 4.8) en iOS. */
@@ -79,6 +107,11 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
   /** En iOS el Google nativo necesita su OAuth client; sin él, no se ofrece. */
   readonly showGoogleNative =
     this.isNative && (!isIosApp() || GOOGLE_IOS_CLIENT_ID.length > 0);
+
+  /** Versión publicada de Términos + Privacidad (igual que el signup web).
+   *  Se guarda en la fila del usuario al aceptar, para auditoría. */
+  private static readonly TERMS_VERSION = '2026-03-13';
+
   private pendingInviteToken: string | null = null;
   public readonly form = inject(FormBuilder).group({
     email: [
@@ -106,34 +139,68 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
   public readonly storeForm = inject(FormBuilder).group({
     storeName: ['', [Validators.required, whiteSpacesValidator()]],
     name: ['', [Validators.required, whiteSpacesValidator()]],
-    countryCode: [this.detectCountryCode()],
+    countryCode: [this.detectCountryCode(), [Validators.required]],
+    referralCode: [''],
+    acceptedTerms: [false, [Validators.requiredTrue]],
   });
 
-  // ── Registro in-app con email/contraseña (nativo) ────────────────────────
-  /** true → la card muestra el formulario de "crear cuenta". */
+  // ── Registro in-app (nativo), wizard espejo del web ──────────────────────
+  /** true → la card muestra el flujo de "crear cuenta". */
   readonly showSignup = signal(false);
+  /** Sub-paso del wizard de registro: elegir método → credenciales → perfil. */
+  readonly signupStep = signal<SignupStep>('choose');
   readonly isSigningUp = signal(false);
+  readonly isCheckingEmail = signal(false);
+  readonly emailExistsError = signal(false);
   /** true tras un signup que quedó pendiente de confirmar el correo. */
   readonly signupConfirmEmail = signal(false);
-  public readonly signupForm = inject(FormBuilder).group({
+  /** Preview `{slug}.catalogohoy.com` derivada del nombre de la tienda. */
+  readonly slugPreview = signal('');
+
+  public readonly signupCredentialsForm = inject(FormBuilder).group({
     email: ['', [Validators.required, Validators.email, whiteSpacesValidator()]],
     password: [
       '',
       [Validators.required, Validators.minLength(6), whiteSpacesValidator()],
     ],
-    name: ['', [Validators.required, whiteSpacesValidator()]],
-    storeName: ['', [Validators.required, whiteSpacesValidator()]],
-    countryCode: [this.detectCountryCode()],
+  });
+  public readonly signupProfileForm = inject(FormBuilder).group({
+    name: [
+      '',
+      [Validators.required, Validators.minLength(4), whiteSpacesValidator()],
+    ],
+    storeName: ['', [Validators.required, Validators.minLength(3)]],
+    countryCode: [this.detectCountryCode(), [Validators.required]],
+    referralCode: [''],
+    acceptedTerms: [false, [Validators.requiredTrue]],
   });
 
   private authSub: (() => void) | null = null;
   private googlePopup: Window | null = null;
   private popupPollId: ReturnType<typeof setInterval> | null = null;
+  private slugSubs: Subscription[] = [];
+
+  /** URL de la bandera (ISO2 en minúscula) para el selector de país. */
+  flagUrl(code: string | null | undefined): string {
+    if (!code) return '';
+    return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
+  }
 
   async ngOnInit() {
     this.pendingInviteToken =
       this.route.snapshot.queryParamMap.get('invite_token') ??
       sessionStorage.getItem('pending_invite_token');
+
+    // El preview del slug se alimenta del nombre de la tienda en ambos flujos
+    // (registro email y alta social sin catálogo).
+    this.slugSubs.push(
+      this.signupProfileForm.controls.storeName.valueChanges.subscribe((v) =>
+        this.slugPreview.set(slugify(v ?? ''))
+      ),
+      this.storeForm.controls.storeName.valueChanges.subscribe((v) =>
+        this.slugPreview.set(slugify(v ?? ''))
+      )
+    );
 
     // returnUrl (lo manda el authenticationGuard del admin): deep link al que
     // volver tras el login. Persistido en sessionStorage porque el flujo de
@@ -158,6 +225,8 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.clearGooglePolling();
+    this.slugSubs.forEach((s) => s.unsubscribe());
+    this.slugSubs = [];
   }
 
   private clearGooglePolling() {
@@ -216,7 +285,9 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
   }
 
   /** Login social NATIVO (Apple/Google). Si la cuenta no tiene catálogo,
-   *  en vez de rebotar al usuario pasamos al alta in-app (needsStoreSetup). */
+   *  en vez de rebotar al usuario pasamos al alta in-app (needsStoreSetup).
+   *  Se usa tanto desde el login como desde el paso "elegir método" del
+   *  registro. */
   public async loginWithSocial(provider: 'apple' | 'google'): Promise<void> {
     if (this.socialLoading()) return;
     this.socialLoading.set(provider);
@@ -264,6 +335,7 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
       name: value.name!.trim(),
       storeName: value.storeName!.trim(),
       countryCode: value.countryCode ?? undefined,
+      referralCode: (value.referralCode ?? '').trim() || null,
     });
 
     if (result.isLeft()) {
@@ -271,6 +343,8 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
       this.isCreatingStore.set(false);
       return;
     }
+
+    await this._recordTermsAcceptance();
 
     // completeGoogleSignup devuelve la URL web de redirect — en nativo la
     // ignoramos: cacheamos el slug y ruteamos in-app.
@@ -284,41 +358,83 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     this.isCreatingStore.set(false);
   }
 
-  /** Volver del alta in-app al login (cierra la sesión social a medias). */
+  /** Volver del alta in-app social al login (cierra la sesión social a medias). */
   public async cancelStoreSetup(): Promise<void> {
     this.needsStoreSetup.set(false);
+    this.showSignup.set(false);
+    this.signupStep.set('choose');
     await this.facade.logout();
   }
 
-  /** Registro desde la app: en nativo se hace IN-APP (crea la cuenta en el plan
-   *  gratis y entra al admin — NO empuja a pagar; la compra de planes vive en
-   *  la web por la política IAP de Apple). En web, `/signup` normal. */
+  // ── Wizard de registro in-app (nativo): elegir método → … → perfil ───────
+
+  /** Abre el registro: arranca en "elegir método" (email/Google/Apple). */
   public openSignup(): void {
     this.googleError.set(null);
+    this.emailExistsError.set(false);
     this.signupConfirmEmail.set(false);
+    this.signupStep.set('choose');
     this.showSignup.set(true);
   }
 
-  /** Vuelve del formulario de registro in-app al login. */
+  /** Vuelve del registro al login. */
   public cancelSignup(): void {
     this.showSignup.set(false);
+    this.signupStep.set('choose');
     this.signupConfirmEmail.set(false);
+  }
+
+  /** Elegir "Continuar con email" → paso de credenciales. */
+  public chooseSignupEmail(): void {
+    this.emailExistsError.set(false);
+    this.signupStep.set('credentials');
+  }
+
+  /** "Volver" dentro del wizard de registro. */
+  public signupBack(): void {
+    if (this.signupStep() === 'profile') {
+      this.signupStep.set('credentials');
+    } else if (this.signupStep() === 'credentials') {
+      this.signupStep.set('choose');
+    }
+  }
+
+  /** Paso 2 → 3: valida credenciales y verifica que el email no exista. */
+  public async signupNextStep(): Promise<void> {
+    if (this.signupCredentialsForm.invalid) {
+      this.signupCredentialsForm.markAllAsTouched();
+      return;
+    }
+    this.emailExistsError.set(false);
+    this.isCheckingEmail.set(true);
+
+    const email = this.signupCredentialsForm.value.email!.trim();
+    const exists = await this.facade.checkEmailExists(email);
+
+    this.isCheckingEmail.set(false);
+    if (exists) {
+      this.emailExistsError.set(true);
+      return;
+    }
+    this.signupStep.set('profile');
   }
 
   /** Crea la cuenta in-app (email/contraseña) en el plan gratis y entra al
    *  admin. Si Supabase exige confirmar el correo, muestra ese aviso. */
   public async createAccount(): Promise<void> {
-    if (this.signupForm.invalid || this.isSigningUp()) return;
+    if (this.signupProfileForm.invalid || this.isSigningUp()) return;
     this.isSigningUp.set(true);
     this.googleError.set(null);
 
-    const v = this.signupForm.value;
+    const c = this.signupCredentialsForm.value;
+    const p = this.signupProfileForm.value;
     const result = await this.facade.signup({
-      email: v.email!.trim(),
-      password: v.password!,
-      name: v.name!.trim(),
-      storeName: v.storeName!.trim(),
-      countryCode: v.countryCode ?? undefined,
+      email: c.email!.trim(),
+      password: c.password!,
+      name: p.name!.trim(),
+      storeName: p.storeName!.trim(),
+      countryCode: p.countryCode ?? undefined,
+      referralCode: (p.referralCode ?? '').trim() || undefined,
     });
 
     if (result.isLeft()) {
@@ -333,6 +449,8 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
       this.isSigningUp.set(false);
       return;
     }
+
+    await this._recordTermsAcceptance();
 
     // Aceptar invitación pendiente si la había.
     if (this.pendingInviteToken) {
@@ -350,6 +468,19 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     }
     this.googleError.set('Ha ocurrido un error. Intenta de nuevo.');
     this.isSigningUp.set(false);
+  }
+
+  /** Best-effort: registra fecha + versión de aceptación de Términos +
+   *  Privacidad en la fila del usuario (igual que el signup web). No bloquea
+   *  el flujo si falla — la aceptación ya quedó probada por el checkbox. */
+  private async _recordTermsAcceptance(): Promise<void> {
+    try {
+      await this.supabase.rpc('record_terms_acceptance', {
+        p_version: Login.TERMS_VERSION,
+      });
+    } catch (err) {
+      console.warn('record_terms_acceptance failed:', err);
+    }
   }
 
   public async loginWithGoogle() {

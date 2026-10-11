@@ -62,6 +62,16 @@
     </button>
   </div>
 
+  } @else if (hasActivePlan() && isNative) {
+
+  <!-- ── Compliance IAP (Apple 3.1.1): sin compra de slots en nativo ── -->
+  <div class="create-catalog-card">
+    <div class="no-slots">
+      <ui-icon name="folder-plus" size="56" styleClass="text-slate-300" />
+      <h2 class="no-slots__title">{{ 'Has alcanzado el límite de catálogos de tu plan.' | transloco }}</h2>
+    </div>
+  </div>
+
   } @else if (hasActivePlan()) {
 
   <!-- ── Has active plan but no slots: buy more ── -->
@@ -146,12 +156,19 @@
       <ui-icon name="package-x" size="56" styleClass="text-slate-300" />
       <h2 class="no-slots__title">{{ 'Necesitas un plan activo' | transloco }}</h2>
       <p class="no-slots__description">
+        <!-- Compliance IAP (Apple 3.1.1): sin upsell ni CTA a planes en nativo. -->
+        @if (isNative) {
+        {{ 'Esta función no está disponible en tu plan actual.' | transloco }}
+        } @else {
         {{ 'Para crear catálogos primero debes adquirir un plan.' | transloco }}
+        }
       </p>
+      @if (!isNative) {
       <button class="no-slots__button" (click)="goToPlans()">
         <ui-icon name="arrow-right" size="18" />
         {{ 'Ver planes' | transloco }}
       </button>
+      }
     </div>
   </div>
 
