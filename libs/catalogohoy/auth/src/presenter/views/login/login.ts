@@ -296,7 +296,26 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     this.socialLoading.set(provider);
     this.googleError.set(null);
 
-    const result = await this.facade.loginWithSocialNative(provider);
+    // Red de seguridad: si el SDK nativo no responde (p.ej. la hoja de Apple se
+    // cuelga), no dejamos el botón en "Conectando..." para siempre — se corta y
+    // se muestra un error claro en vez de quedar trabado.
+    let result: Awaited<ReturnType<typeof this.facade.loginWithSocialNative>>;
+    try {
+      result = await Promise.race([
+        this.facade.loginWithSocialNative(provider),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('social_timeout')), 90_000)
+        ),
+      ]);
+    } catch {
+      this.googleError.set(
+        provider === 'apple'
+          ? 'No se pudo iniciar sesión con Apple. Intenta de nuevo o usa otro método.'
+          : 'No se pudo iniciar sesión. Intenta de nuevo.'
+      );
+      this.socialLoading.set(null);
+      return;
+    }
     if (result.isLeft()) {
       const msg = (result.value as Error).message;
       // Cancelar la hoja nativa no es un error para el usuario.
