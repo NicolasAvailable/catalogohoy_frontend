@@ -1,6 +1,8 @@
 <div class="w-full max-w-md mx-auto px-5 py-8 flex flex-col gap-6 min-h-full">
 
-  <!-- Header -->
+  <!-- Header — se oculta cuando ya se pagó (éxito) o ya hay un plan activo:
+       ahí "Mejora tu plan" no corresponde. -->
+  @if (!successName() && !blockedByStripe()) {
   <div class="flex flex-col items-center text-center gap-2">
     <span class="w-14 h-14 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-500">
       <ui-icon name="crown" [size]="28" />
@@ -10,6 +12,7 @@
       {{ 'Desbloquea más productos, canales de chat, Punto de Venta y mucho más.' | transloco }}
     </p>
   </div>
+  }
 
   @if (loading()) {
   <!-- Cargando ofertas -->
@@ -19,18 +22,31 @@
   </div>
 
   } @else if (successName()) {
-  <!-- Éxito -->
-  <div class="flex flex-col items-center text-center gap-4 py-12">
-    <span class="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center text-green-600">
-      <ui-icon name="check" [size]="34" />
-    </span>
-    <div>
-      <h2 class="text-xl font-bold text-grey-800">{{ '¡Listo! Ya tienes el plan' | transloco }} {{ successName() }}</h2>
-      <p class="text-base text-grey-500 mt-1">{{ 'Gracias por tu compra. Ya puedes usar todas las funciones de tu plan.' | transloco }}</p>
+  <!-- Éxito (mismo espíritu que la web: glow + check grande con destellos). -->
+  <div class="relative flex flex-col items-center text-center gap-6 py-12">
+    <div class="absolute top-1/4 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full bg-green-100 opacity-40 blur-3xl pointer-events-none"></div>
+    <div class="relative">
+      <div class="absolute inset-0 rounded-full bg-green-200 opacity-40 scale-150 blur-xl"></div>
+      <div class="absolute -top-3 -right-3 w-7 h-7 rounded-full bg-yellow-100 flex items-center justify-center shadow-sm">
+        <ui-icon name="sparkles" styleClass="size-3.5 text-yellow-500" />
+      </div>
+      <div class="absolute -bottom-2 -left-4 w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center shadow-sm">
+        <ui-icon name="zap" styleClass="size-3 text-primary-500" />
+      </div>
+      <div class="relative w-24 h-24 rounded-full bg-linear-to-br from-green-400 to-green-500 flex items-center justify-center shadow-xl shadow-green-200">
+        <ui-icon name="check" styleClass="size-12 text-white" />
+      </div>
+    </div>
+    <div class="relative flex flex-col gap-2">
+      <h2 class="text-3xl font-bold text-grey-800">{{ '¡Todo listo!' | transloco }}</h2>
+      <p class="text-base text-grey-500 leading-relaxed max-w-xs">
+        {{ 'Tu' | transloco }} {{ successName() }} {{ 'ya está activo. Ya puedes usar todas sus funciones.' | transloco }}
+      </p>
     </div>
     <ui-button
       (click)="goToAdmin()"
       [label]="'Ir a mi panel' | transloco"
+      icon="home"
       severity="primary"
       styleClass="!py-3.5 !text-base"
       [fluid]="true"
