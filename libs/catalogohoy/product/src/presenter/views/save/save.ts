@@ -225,15 +225,18 @@ export default class Save implements OnInit {
   private readonly photosLimitByPlan: Record<string, number> = {
     gratis: 3,
     basico: 10,
+    pro: 20,
     avanzado: 50,
+    enterprise: 0, // 0 = ilimitado (mismo criterio que import-export-hub)
   };
   public readonly maxPhotos = computed(
     () => this.photosLimitByPlan[this.planStore.currentPlan()?.id ?? 'gratis'] ?? 3
   );
   public readonly photosLimitMessage = computed(() => {
     const planId = this.planStore.currentPlan()?.id ?? 'gratis';
-    if (planId === 'gratis') return 'Mejora tu plan para subir hasta 10 o 50 imágenes';
-    if (planId === 'basico') return 'Mejora tu plan para subir hasta 50 imágenes';
+    if (planId === 'gratis') return 'Mejora tu plan para subir hasta 10, 20 o 50 imágenes';
+    if (planId === 'basico') return 'Mejora tu plan para subir hasta 20 o 50 imágenes';
+    if (planId === 'pro') return 'Mejora tu plan para subir hasta 50 imágenes';
     return 'Límite de imágenes alcanzado';
   });
 
@@ -493,8 +496,12 @@ export default class Save implements OnInit {
         originalPrice: [''],
         sku: [''],
         photos: [[] as string[]],
+        // Stock propio del variante cuando NO maneja tallas (null = ilimitado).
+        stock: [null as string | null],
         // Each variant owns its tallas.
         sizes: this.fb.array([]),
+        // Ocultar la variante del catálogo sin borrarla (color/modelo agotado).
+        isHidden: [false],
       })
     );
     this.form.controls.isVariant.setValue(true);
@@ -746,6 +753,7 @@ export default class Save implements OnInit {
           ],
           sku: [variant.sku ?? ''],
           photos: [variant.photos ?? []],
+          stock: [variant.stock != null ? String(variant.stock) : null],
           sizes: this.fb.array(
             (variant.sizes ?? []).map((s) =>
               this.fb.group({
@@ -755,6 +763,7 @@ export default class Save implements OnInit {
               })
             )
           ),
+          isHidden: [variant.isHidden ?? false],
         })
       );
     });

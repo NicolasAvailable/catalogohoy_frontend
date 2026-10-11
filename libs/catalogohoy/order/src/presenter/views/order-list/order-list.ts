@@ -6,9 +6,11 @@ import {
   OnDestroy,
   OnInit,
   signal,
+  viewChild,
 } from '@angular/core';
 import { EcommerceConfigStore, TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
+import { SupabaseClientProvider } from '@catalogohoy/core';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -25,12 +27,15 @@ import {
   IconComponent,
   ImageComponent,
   InputSearchComponent,
+  MenuComponent,
+  MenuItem,
   SelectComponent,
   SelectItemDirective,
   SelectSelectedItemDirective,
   TabHeader,
   TooltipDirective,
 } from '@ui';
+import { PlanStore } from '@catalogohoy/plan';
 import { OrderDetailModal } from '../../components/order-detail-modal/order-detail-modal';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
@@ -40,9 +45,25 @@ import {
   Subject,
   Subscription,
 } from 'rxjs';
-import { Order, OrderItem, OrderStatus } from '../../../domain/order';
+import { RateStore } from '@catalogohoy/rate';
+import {
+  creditAgeDays,
+  effectiveOrderBs,
+  isCreditOverdue,
+  nextInstallment,
+  Order,
+  OrderItem,
+  OrderStatus,
+  overdueInstallment,
+} from '../../../domain/order';
 import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
+import {
+  CreditSummaryRow,
+  OrderService,
+} from '../../../infrastructure/order.service';
 import { OrderPdfService } from '../../../infrastructure/order-pdf.service';
+import { OrderExcelService } from '../../../infrastructure/order-excel.service';
+import { OrderImportExportHubComponent } from '../order-import-export/order-import-export-hub';
 import { OrderRealtimeService } from '../../../infrastructure/order-realtime.service';
 import { OrderStore } from '../../../infrastructure/order.store';
 
@@ -69,12 +90,14 @@ type MetricsPreset = 'today' | 'last_7' | 'last_30' | 'last_90' | 'custom';
     EmptyListComponent,
     InputSearchComponent,
     ImageComponent,
+    MenuComponent,
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
     TooltipDirective,
     PaginatorModule,
     NgApexchartsModule,
+    OrderImportExportHubComponent,
   ],
   templateUrl: './order-list.html',
   styleUrl: './order-list.css',
@@ -93,6 +116,17 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
   private readonly orderPdf = inject(OrderPdfService);
+  private readonly orderExcel = inject(OrderExcelService);
+  private readonly rateStore = inject(RateStore);
+  private readonly orderService = inject(OrderService);
+  private readonly planStore = inject(PlanStore);
+  private readonly supabase = SupabaseClientProvider.getInstance();
+
+  /** Bs a mostrar por orden: pendientes a la tasa ACTUAL, el resto su snapshot.
+   *  Ver {@link effectiveOrderBs}. */
+  public orderBs(order: Order): number {
+    return effectiveOrderBs(order, this.rateStore.rateValue());
+  }
   // Primary "Total" column symbol = the catalog's reference/display currency.
   // For Venezuela that's the chosen reference (USD '$' or EUR '€'); for every
   // other country it's the local currency (DOP 'RD$', MXN '$', COP '$'…),
@@ -109,6 +143,235 @@ export class OrderListComponent implements OnInit, OnDestroy {
   // dual-currency flag (true only for Venezuela-style catalogs), NOT the
   // country code — so a non-VE catalog never shows bolivars.
   public readonly showBs = computed(() => this.tenantCurrency.showDualCurrency());
+
+  /** Umbral de días para considerar "vencida" una orden a crédito SIN cuotas.
+   *  Fase 2 (CAT-79) lo hace configurable por usuario
+   *  (users.credit_reminder_days); mientras tanto, el default del feature. */
+  private readonly CREDIT_THRESHOLD_DAYS = 7;
+
+  /** Todas las órdenes a crédito del tenant (query liviana aparte de la
+   *  paginación). Alimenta la barra "por cobrar" del filtro A crédito. */
+  private readonly creditSummary = signal<CreditSummaryRow[] | null>(null);
+
+  public readonly creditStats = computed(() => {
+    if (this.selectedFilter() !== 'credit') return null;
+    const rows = this.creditSummary();
+    if (!rows) return null;
+    const overdue = rows.filter((r) =>
+      isCreditOverdue(
+        {
+          status: 'credit',
+          createdAt: r.createdAt,
+          creditInstallments: r.creditInstallments,
+        },
+        this.CREDIT_THRESHOLD_DAYS
+      )
+    ).length;
+    return {
+      count: rows.length,
+      totalUsd: rows.reduce((acc, r) => acc + r.totalUsd, 0),
+      overdue,
+    };
+  });
+
+  private async refreshCreditSummary(): Promise<void> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return;
+    const res = await this.orderService.getCreditSummary(tenantId);
+    // Ante error se conserva el último valor (la barra simplemente no cambia).
+    res.mapRight((rows) => this.creditSummary.set(rows));
+  }
+
+  /** Chip de cobranza de una fila a crédito (null para otros estados).
+   *  Prioridad: cuota vencida (rojo) → antigüedad sobre umbral sin cuotas
+   *  (ámbar) → próxima cuota / antigüedad (gris). */
+  public creditChip(
+    order: Order
+  ): { kind: 'due' | 'next' | 'age'; tone: string; date?: string; days?: number } | null {
+    if (order.status !== 'credit') return null;
+    const due = overdueInstallment(order);
+    if (due) return { kind: 'due', tone: 'due', date: this.shortDate(due.dueDate) };
+    const age = creditAgeDays(order);
+    const hasInstallments = !!order.creditInstallments?.length;
+    if (!hasInstallments && age > this.CREDIT_THRESHOLD_DAYS) {
+      return { kind: 'age', tone: 'warn', days: age };
+    }
+    const next = nextInstallment(order);
+    if (next) return { kind: 'next', tone: 'ok', date: this.shortDate(next.dueDate) };
+    return { kind: 'age', tone: 'ok', days: age };
+  }
+
+  /** El cliente pidió pagar A CRÉDITO en el checkout y la orden sigue
+   *  pendiente de confirmación. Una vez movida a status 'credit', mandan los
+   *  chips de cobranza de arriba. */
+  public creditRequested(order: Order): boolean {
+    return order.paymentCondition === 'credit' && order.status === 'pending';
+  }
+
+  public creditChipClass(tone: string): string {
+    const base =
+      'inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold whitespace-nowrap ';
+    if (tone === 'due') return base + 'bg-red-50 text-red-600';
+    if (tone === 'warn') return base + 'bg-amber-50 text-amber-600';
+    return base + 'bg-grey-50 text-grey-400';
+  }
+
+  /** "YYYY-MM-DD" → "DD/MM" sin pasar por Date (evita corrimientos de TZ). */
+  private shortDate(iso: string): string {
+    const [, m, d] = iso.split('-');
+    return d && m ? `${d}/${m}` : iso;
+  }
+
+  // ── Menú ⋯ de acciones por orden (CAT-80): Notificar / Enviar factura /
+  //    Eliminar. Los envíos son plantillas reales por Cloud API (un click,
+  //    sin wa.me), desde el número de la plataforma. Mismo patrón de menú que
+  //    el listado de Productos. ────────────────────────────────────────────
+  public readonly orderMenuItems = signal<MenuItem[]>([]);
+  /** Orden con un envío WhatsApp en curso (spinner + bloquea el menú). */
+  public readonly sendingActionId = signal<number | null>(null);
+
+  /** Arma y abre el menú ⋯ de la fila. Los envíos solo aparecen con teléfono
+   *  válido; en plan gratis van con candado (el server igual rechaza con
+   *  plan_required — el gate real es server-side). */
+  public openOrderMenu(event: Event, order: Order, menu: MenuComponent): void {
+    const hasPhone = (order.phone ?? '').replace(/\D/g, '').length >= 8;
+    const locked = this.planStore.isFreePlan();
+    const items: MenuItem[] = [];
+    if (order.status === 'credit' || order.status === 'pending') {
+      items.push({
+        // "Recordar pago" y no "Notificar": el nombre dice exactamente qué hace
+        // (feedback de Nicolas — "Notificar" era ambiguo). Sin teléfono queda
+        // DESHABILITADO (visible, feedback de Nicolas), no oculto.
+        label: 'Recordar pago',
+        icon: locked && hasPhone ? 'lock' : 'message-circle',
+        disabled: !hasPhone,
+        command: () => this.sendWhatsAppAction(order, 'notify'),
+      });
+    }
+    items.push({
+      label: 'Enviar factura',
+      icon: locked && hasPhone ? 'lock' : 'file-text',
+      disabled: !hasPhone,
+      command: () => this.sendWhatsAppAction(order, 'invoice'),
+    });
+    if (this.canDeleteOrder()) {
+      items.push({
+        label: 'Eliminar',
+        icon: 'trash',
+        styleClass: 'danger',
+        command: () => this.onDeleteOrder(order),
+      });
+    }
+    this.orderMenuItems.set(items);
+    menu.toggle(event);
+  }
+
+  /** Ejecuta la acción elegida del menú ⋯ y lo cierra (autoClose off). */
+  public onOrderMenuSelect(item: MenuItem, menu: MenuComponent): void {
+    if (item.disabled) return;
+    menu.hide();
+    item.command?.({} as never);
+  }
+
+  /** Confirmación previa al envío: un misclick acá es un WhatsApp REAL al
+   *  cliente de la tienda. */
+  private sendWhatsAppAction(order: Order, action: 'notify' | 'invoice'): void {
+    if (this.planStore.isFreePlan()) {
+      this.toastService.error(
+        new Exception(
+          'Disponible en planes pagos. Mejorá tu plan para enviarle mensajes a tus clientes.'
+        )
+      );
+      return;
+    }
+    if (this.sendingActionId() !== null) return;
+    const num = order.orderNumber ?? order.id;
+    const labels =
+      action === 'notify'
+        ? {
+            header: '¿Enviar recordatorio de pago?',
+            content: `Le enviamos un WhatsApp a ${order.name} (${order.phone}) recordándole el pago pendiente de la orden #${num}.`,
+          }
+        : {
+            header: '¿Enviar la factura?',
+            content: `Le enviamos un WhatsApp a ${order.name} (${order.phone}) con el PDF de la factura de la orden #${num}.`,
+          };
+    // .info() = botón Enviar en azul primary (warning lo pinta rojo, que es
+    // para acciones destructivas — feedback de Nicolas).
+    this.confirmDialogService
+      .info({
+        headerLabel: labels.header,
+        contentLabel: labels.content,
+        acceptLabel: 'Enviar',
+        rejectLabel: 'Cancelar',
+      })
+      .subscribe((result) => {
+        result.fold(
+          () => {
+            // Usuario canceló
+          },
+          () => void this.executeWhatsAppAction(order, action)
+        );
+      });
+  }
+
+  private async executeWhatsAppAction(
+    order: Order,
+    action: 'notify' | 'invoice'
+  ): Promise<void> {
+    this.sendingActionId.set(order.id);
+    this.toastService.wait(
+      action === 'invoice'
+        ? 'Generando y enviando la factura...'
+        : 'Enviando recordatorio...'
+    );
+    try {
+      let pdf: { url: string; filename: string } | undefined;
+      if (action === 'invoice') {
+        // Mismo criterio de Bs que la descarga manual del PDF.
+        const rendered = await this.orderPdf.download(
+          { ...order, totalBs: this.orderBs(order) },
+          undefined,
+          { as: 'blob' }
+        );
+        if (!rendered) throw new Error('pdf_failed');
+        const tenantId = await this.tenantStore.getTenantIdAsync();
+        if (!tenantId) throw new Error('no_tenant');
+        const uploaded = await this.orderService.uploadInvoicePdf(
+          tenantId,
+          order.id,
+          rendered.blob,
+          rendered.filename
+        );
+        if (uploaded.isLeft()) throw uploaded.value;
+        pdf = uploaded.value as { url: string; filename: string };
+      }
+      const sent = await this.orderService.sendOrderAction(order.id, action, pdf);
+      sent.fold(
+        (error) => {
+          const msg =
+            error.message === 'plan_required'
+              ? 'Disponible en planes pagos. Mejorá tu plan para enviarle mensajes a tus clientes.'
+              : error.message === 'no_phone'
+                ? 'La orden no tiene un teléfono válido.'
+                : 'No se pudo enviar el mensaje. Probá de nuevo en unos minutos.';
+          this.toastService.error(new Exception(msg));
+        },
+        () =>
+          this.toastService.success(
+            action === 'invoice'
+              ? 'Factura enviada por WhatsApp'
+              : 'Recordatorio enviado por WhatsApp'
+          )
+      );
+    } catch {
+      this.toastService.error(
+        new Exception('No se pudo enviar el mensaje. Probá de nuevo en unos minutos.')
+      );
+    } finally {
+      this.sendingActionId.set(null);
+    }
+  }
 
   /** Moneda de las métricas, según la config del catálogo (mismo criterio que la
    *  factura): si muestra la referencia (USD/EUR o local) → montos en total_usd
@@ -165,6 +428,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
     return {
       completed: map['completed'] ?? zero,
       pending: map['pending'] ?? zero,
+      credit: map['credit'] ?? zero,
       cancelled: map['cancelled'] ?? zero,
     };
   });
@@ -245,7 +509,11 @@ export class OrderListComponent implements OnInit, OnDestroy {
   protected readonly statusDonutOptions = computed<ApexOptions>(() => {
     const s = this.metricByStatus();
     const symbol = this.metricSymbol();
-    const total = s.completed.amount + s.pending.amount + s.cancelled.amount;
+    const total =
+      s.completed.amount +
+      s.pending.amount +
+      s.credit.amount +
+      s.cancelled.amount;
     return {
       chart: {
         type: 'donut',
@@ -253,9 +521,14 @@ export class OrderListComponent implements OnInit, OnDestroy {
         fontFamily: 'inherit',
         foreColor: 'inherit',
       },
-      labels: ['Completadas', 'Pendientes', 'Canceladas'],
-      series: [s.completed.amount, s.pending.amount, s.cancelled.amount],
-      colors: ['#22c55e', '#f97316', '#ef4444'],
+      labels: ['Completadas', 'Pendientes', 'A crédito', 'Canceladas'],
+      series: [
+        s.completed.amount,
+        s.pending.amount,
+        s.credit.amount,
+        s.cancelled.amount,
+      ],
+      colors: ['#22c55e', '#f97316', '#3b82f6', '#ef4444'],
       stroke: { width: 0 },
       dataLabels: { enabled: false },
       legend: { position: 'bottom', fontSize: '13px' },
@@ -293,7 +566,33 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly selectedOrder = signal<OrderBy>('date_desc');
   public readonly selectedDate = signal<Date | null>(null);
   public readonly isProcessing = signal(false);
+  // Id de la orden cuyo PDF se está generando (null = ninguna). Deshabilita su
+  // botón de descarga y le muestra un spinner mientras dura.
+  public readonly downloadingPdfId = signal<number | null>(null);
   public readonly mobileShowAll = signal(false);
+
+  /** Mapa productId → costo de producción ACTUAL del tenant, para la ganancia
+   *  estimada por orden. Vacío hasta que carga (y si el tenant no registró
+   *  costos, queda vacío → no mostramos ganancia). */
+  public readonly productCosts = signal<Record<string, number>>({});
+
+  /** Órdenes del periodo seleccionado en Métricas (las que se están
+   *  contabilizando) — para el desglose verificable y la ganancia del periodo. */
+  public readonly metricsOrders = signal<Order[]>([]);
+  public readonly isLoadingMetricsOrders = signal(false);
+
+  /** ¿El tenant registró costos? Sin costos no mostramos ganancia. */
+  public readonly hasCostData = computed(
+    () => Object.keys(this.productCosts()).length > 0
+  );
+
+  /** Ganancia estimada total del periodo = suma de la ganancia por orden. */
+  public readonly metricsProfit = computed(() =>
+    this.metricsOrders().reduce(
+      (sum, o) => sum + (this.estimatedProfit(o) ?? 0),
+      0
+    )
+  );
 
   /** How many product lines to show before collapsing the products cell. */
   public readonly PRODUCTS_PREVIEW = 3;
@@ -323,6 +622,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
     { label: 'Todas', value: 'all' },
     { label: 'Pendientes', value: 'pending', dotClass: 'bg-orange-500' },
     { label: 'Completadas', value: 'completed', dotClass: 'bg-green-500' },
+    { label: 'A crédito', value: 'credit', dotClass: 'bg-blue-500' },
     { label: 'Canceladas', value: 'cancelled', dotClass: 'bg-red-500' },
   ];
 
@@ -332,6 +632,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   }[] = [
     { label: 'Pendiente', value: 'pending' },
     { label: 'Completada', value: 'completed' },
+    { label: 'A crédito', value: 'credit' },
     { label: 'Cancelada', value: 'cancelled' },
   ];
 
@@ -368,7 +669,12 @@ export class OrderListComponent implements OnInit, OnDestroy {
   async ngOnInit() {
     // Prime the tenant currency cache (localStorage → DB fallback).
     const tenantId = await this.tenantStore.getTenantIdAsync();
-    if (tenantId) this.tenantCurrency.load(tenantId);
+    if (tenantId) {
+      this.tenantCurrency.load(tenantId);
+      this.loadProductCosts(tenantId);
+    }
+    // Tasa activa: para mostrar el Bs de los pedidos pendientes a la tasa de hoy.
+    this.rateStore.loadRates();
 
     // Setup debounced search
     this.searchSubscription = this.searchSubject
@@ -483,6 +789,16 @@ export class OrderListComponent implements OnInit, OnDestroy {
     const range = this.buildMetricsRange();
     if (!range) return;
     this.orderStore.loadOrderMetrics(range);
+    this.loadMetricsOrders(range);
+  }
+
+  /** Trae las órdenes del periodo (con sus productos) para el desglose y la
+   *  ganancia estimada del rango. Reusa la ganancia por orden ya definida. */
+  private async loadMetricsOrders(range: { start: string; end: string }): Promise<void> {
+    this.isLoadingMetricsOrders.set(true);
+    const orders = await this.orderStore.fetchOrdersInRange(range.start, range.end);
+    this.metricsOrders.set(orders);
+    this.isLoadingMetricsOrders.set(false);
   }
 
   private startOfDay(d: Date): Date {
@@ -560,6 +876,9 @@ export class OrderListComponent implements OnInit, OnDestroy {
     const pageSize = this.pageRows();
     const page = Math.floor(this.pageFirst() / pageSize) + 1;
     this.orderStore.loadOrders({ date, search, status, orderBy, page, pageSize });
+    // La barra "por cobrar" del filtro A crédito se refresca junto con la tabla
+    // (también cubre los cambios de estado, que terminan llamando acá).
+    if (status === 'credit') this.refreshCreditSummary();
   }
 
   onDateChange(date: Date | null) {
@@ -580,6 +899,8 @@ export class OrderListComponent implements OnInit, OnDestroy {
         return 'success';
       case 'pending':
         return 'warn';
+      case 'credit':
+        return 'info';
       default:
         return 'secondary';
     }
@@ -589,6 +910,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
     const labels: Record<OrderStatus, string> = {
       pending: 'Pendiente',
       completed: 'Completada',
+      credit: 'A crédito',
       cancelled: 'Cancelada',
     };
     return labels[status] || status;
@@ -602,37 +924,73 @@ export class OrderListComponent implements OnInit, OnDestroy {
     const colors: Record<OrderStatus, string> = {
       pending: 'bg-orange-400',
       completed: 'bg-green-500',
+      credit: 'bg-blue-500',
       cancelled: 'bg-red-500',
     };
     return `w-2 h-2 rounded-full shrink-0 ${colors[status] ?? 'bg-grey-400'}`;
   }
 
-  getPaymentMethod(order: Order): string {
-    // This could be expanded based on actual payment data
-    const methods = ['WhatsApp', 'Efectivo', 'Zelle', 'Pago Móvil'];
-    return methods[order.id % methods.length];
+  /** Etiqueta legible del método de pago guardado en la orden (mismo criterio
+   *  que el modal de detalle). Un valor libre no catalogado se muestra tal cual. */
+  paymentLabel(method: string): string {
+    const labels: Record<string, string> = {
+      efectivo: 'Efectivo',
+      transferencia: 'Transferencia',
+      tarjeta_credito: 'Tarjeta de crédito',
+      pago_movil: 'Pago móvil',
+      binance: 'Binance',
+      zelle: 'Zelle',
+      paypal: 'PayPal',
+    };
+    return labels[method] ?? method;
   }
 
-  getPaymentIcon(order: Order): string {
-    const method = this.getPaymentMethod(order);
-    const icons: Record<string, string> = {
-      WhatsApp: 'message-circle',
-      Efectivo: 'banknote',
-      Zelle: 'wallet',
-      'Pago Móvil': 'smartphone',
-    };
-    return icons[method] || 'credit-card';
+  /** Etiqueta i18n del estado de la orden (para el badge estático del desglose). */
+  statusLabel(status: OrderStatus): string {
+    return this.statusOptions.find((o) => o.value === status)?.label ?? status;
   }
 
-  getPaymentColor(order: Order): string {
-    const method = this.getPaymentMethod(order);
-    const colors: Record<string, string> = {
-      WhatsApp: 'text-green-500',
-      Efectivo: 'text-blue-500',
-      Zelle: 'text-emerald-500',
-      'Pago Móvil': 'text-purple-500',
-    };
-    return colors[method] || 'text-grey-500';
+  /** Carga el costo de producción ACTUAL de los productos del tenant, para
+   *  estimar la ganancia por orden. Falla en silencio (la ganancia es un extra;
+   *  sin costos registrados simplemente no se muestra). */
+  private async loadProductCosts(tenantId: number): Promise<void> {
+    const { data, error } = await this.supabase
+      .from('products')
+      .select('id, production_cost')
+      .eq('tenant_id', tenantId)
+      .not('production_cost', 'is', null);
+    if (error || !data) return;
+    const map: Record<string, number> = {};
+    for (const row of data as { id: number | string; production_cost: number }[]) {
+      const cost = Number(row.production_cost);
+      if (Number.isFinite(cost) && cost > 0) map[String(row.id)] = cost;
+    }
+    this.productCosts.set(map);
+  }
+
+  /** Ganancia ESTIMADA de la orden:
+   *    ventas de sus líneas de producto − costo actual×cantidad − comisión.
+   *  Notas:
+   *   - Costo: usa el `production_cost` VIGENTE del producto (no un snapshot al
+   *     vender) → es una aproximación. Líneas manuales o productos sin costo
+   *     registrado no restan costo.
+   *   - Comisión: la que paga el vendedor (oculta al cliente) sí resta.
+   *   - Envío: no entra — la base son las ventas de producto, que no incluyen
+   *     el flete (el flete lo paga el cliente y se despacha aparte).
+   *  null = no hay costos cargados → la fila no muestra ganancia. */
+  estimatedProfit(order: Order): number | null {
+    const costs = this.productCosts();
+    if (!order.products?.length || Object.keys(costs).length === 0) return null;
+    let revenue = 0;
+    let cogs = 0;
+    for (const item of order.products) {
+      revenue += Number(item.total) || 0;
+      if (item.isCustom) continue;
+      const cost = costs[String(item.productId)];
+      if (cost != null) cogs += cost * (Number(item.quantity) || 0);
+    }
+    const commission = Number(order.commission) || 0;
+    return revenue - cogs - commission;
   }
 
   getWhatsAppLink(phone: string): string {
@@ -711,7 +1069,70 @@ export class OrderListComponent implements OnInit, OnDestroy {
       });
   }
 
-  downloadPdf(order: Order): void {
-    this.orderPdf.download(order);
+  public readonly importExportHub = viewChild(OrderImportExportHubComponent);
+
+  /** Abre el hub "Exportar / Importar órdenes". */
+  public openImportExport(): void {
+    this.importExportHub()?.open();
+  }
+
+  /** Se recuperaron órdenes desde un respaldo → recarga el listado y el total. */
+  public onOrdersRestored(): void {
+    this.reloadOrders();
+    this.orderStore.loadGrandTotalCount();
+  }
+
+  public readonly isExporting = signal(false);
+
+  /** Exporta a Excel TODAS las órdenes que matchean el filtro actual (no solo
+   *  la página cargada). Una fila por orden. */
+  public async exportToExcel(): Promise<void> {
+    if (this.isExporting()) return;
+    this.isExporting.set(true);
+    try {
+      const orders = await this.orderStore.fetchAllForExport({
+        date: this.selectedDate() ?? undefined,
+        search: this.searchQuery() || undefined,
+        status: this.selectedFilter(),
+        orderBy: this.selectedOrder(),
+      });
+      if (orders.length === 0) {
+        this.toastService.error(new Exception('No hay órdenes para exportar'));
+        return;
+      }
+      this.orderExcel
+        .exportOrders(orders, this.cs())
+        .fold(
+          (error) => this.toastService.error(new Exception(error.message)),
+          () =>
+            this.toastService.success(
+              `${orders.length} órdenes exportadas a Excel`
+            )
+        );
+    } finally {
+      this.isExporting.set(false);
+    }
+  }
+
+  async downloadPdf(order: Order): Promise<void> {
+    // Evita descargas simultáneas / doble click: el PDF de órdenes largas tarda
+    // (baja las imágenes de cada producto), así que sin esto el usuario clickea
+    // varias veces y se generan varios PDF a la vez.
+    if (this.downloadingPdfId() !== null) return;
+    this.downloadingPdfId.set(order.id);
+    // Toast de espera ("Generando PDF…") para que se vea que está trabajando;
+    // el success/error lo cierra solo (dismissWait).
+    this.toastService.wait('Generando PDF...');
+    try {
+      // Pendientes: el recibo se emite a la tasa ACTUAL (mismo criterio que el
+      // listado/detalle). El PDF deriva el rate de totalBs/totalUsd, así que le
+      // pasamos el Bs efectivo; el resto de estados usa su snapshot congelado.
+      await this.orderPdf.download({ ...order, totalBs: this.orderBs(order) });
+      this.toastService.success('PDF descargado');
+    } catch {
+      this.toastService.error(new Exception('No se pudo generar el PDF'));
+    } finally {
+      this.downloadingPdfId.set(null);
+    }
   }
 }

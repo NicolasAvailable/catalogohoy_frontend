@@ -3,6 +3,14 @@ import { Profile } from './profile.model';
 
 export interface NotificationPreferences {
   notifyPlanExpiry: boolean;
+  notifyNewOrdersEmail: boolean;
+  notifyWeeklyReportEmail: boolean;
+  notifyOrdersInapp: boolean;
+  notifyLowStock: boolean;
+  lowStockThreshold: number;
+  /** Recordatorios de cobranza de órdenes a crédito (CAT-79). */
+  notifyCreditReminders: boolean;
+  creditReminderDays: number;
 }
 
 export interface BaseProfileService {

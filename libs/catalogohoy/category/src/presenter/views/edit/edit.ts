@@ -1,4 +1,11 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+  ViewChild,
+} from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -11,10 +18,14 @@ import {
   ButtonComponent,
   CardComponent,
   CheckboxComponent,
+  ConfirmDialogComponent,
   InputTextComponent,
   SelectComponent,
   TextareaComponent,
 } from '@ui';
+import { Exception } from '@shared/domain';
+import { ToastService } from '@shared/infrastructure';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { CategoryFacade } from '../../../application';
 import { CategoryService } from '../../../infrastructure/category.service';
 
@@ -30,6 +41,7 @@ import { CategoryService } from '../../../infrastructure/category.service';
     CheckboxComponent,
     CardComponent,
     SelectComponent,
+    ConfirmDialogComponent,
   ],
   templateUrl: './edit.html',
   styleUrl: './edit.css',
@@ -42,9 +54,53 @@ export default class CategoryEdit implements OnInit {
   public readonly categoryService = inject(CategoryService);
   public readonly route = inject(ActivatedRoute);
   public readonly router = inject(Router);
+  private readonly toastService = inject(ToastService);
+  private readonly permissions = inject(TeamPermissionsStore);
 
   public id?: string;
   public readonly isSaving = signal(false);
+
+  // ── Ajuste masivo de precios de la categoría ────────────────────────────
+  @ViewChild(ConfirmDialogComponent)
+  public adjustConfirm!: ConfirmDialogComponent;
+
+  /** La categoría "Ver todos" no agrupa productos → no tiene sentido ajustar. */
+  public readonly isViewAll = signal(false);
+  /** La sección de ajuste de precios solo se muestra a quien puede editar
+   *  productos (dueño o miembro con permiso productos:edit) y nunca en "Ver
+   *  todos". Evita exponer un control destructivo a roles de solo-lectura. */
+  public readonly canAdjustPrices = computed(
+    () =>
+      !this.isViewAll() &&
+      (this.permissions.isOwner() || this.permissions.can()('productos', 'edit'))
+  );
+
+  public readonly isAdjusting = signal(false);
+  /** Mensaje (con conteo) que se muestra en el diálogo de confirmación. */
+  public readonly adjustConfirmMessage = signal('');
+  /** Ajuste pendiente de confirmar (calculado en el dry-run). */
+  private pendingAdjust: { mode: 'percent' | 'fixed'; signedValue: number } | null =
+    null;
+
+  public readonly adjustModeOptions = [
+    { label: 'Porcentaje (%)', value: 'percent' },
+    { label: 'Monto fijo', value: 'fixed' },
+  ];
+  public readonly adjustDirectionOptions = [
+    { label: 'Aumentar', value: 'increase' },
+    { label: 'Descontar', value: 'discount' },
+  ];
+
+  public readonly adjustForm = new FormGroup({
+    mode: new FormControl<'percent' | 'fixed'>('percent', { nonNullable: true }),
+    direction: new FormControl<'increase' | 'discount'>('increase', {
+      nonNullable: true,
+    }),
+    value: new FormControl<number | null>(null, [
+      Validators.required,
+      Validators.min(0.01),
+    ]),
+  });
 
   /** Total categories — used to populate the position select. */
   public readonly totalCategories = signal(0);
@@ -87,6 +143,7 @@ export default class CategoryEdit implements OnInit {
     });
 
     byIdResult.mapRight((category) => {
+      this.isViewAll.set(category.isViewAll ?? false);
       this.form.patchValue({
         name: category.name,
         description: category.description || '',
@@ -132,5 +189,85 @@ export default class CategoryEdit implements OnInit {
     }
 
     this.router.navigate(['../../'], { relativeTo: this.route });
+  }
+
+  /** Paso 1: valida, hace un dry-run para saber cuántos productos afecta y abre
+   *  el diálogo de confirmación con ese conteo. */
+  public async onApplyAdjust(): Promise<void> {
+    if (!this.id || this.isAdjusting()) return;
+    const { mode, direction, value } = this.adjustForm.getRawValue();
+    // El input entrega texto: normalizamos la coma decimal (uso común en LatAm)
+    // y validamos de verdad — antes un "3,5" pasaba el form pero Number() daba
+    // NaN y el botón "no hacía nada" sin aviso.
+    const val = Number(String(value ?? '').trim().replace(',', '.'));
+    if (!isFinite(val) || val <= 0) {
+      this.toastService.error(
+        new Exception('Ingresá un valor válido (un número mayor a 0).')
+      );
+      return;
+    }
+    if (mode === 'percent' && direction === 'discount' && val >= 100) {
+      this.toastService.error(
+        new Exception('El descuento por porcentaje debe ser menor a 100%.')
+      );
+      return;
+    }
+    const signedValue = direction === 'increase' ? val : -val;
+
+    this.isAdjusting.set(true);
+    const result = await this.categoryService.adjustCategoryPrices(
+      this.id,
+      mode,
+      signedValue,
+      true
+    );
+    this.isAdjusting.set(false);
+
+    result
+      .mapRight((count) => {
+        if (count === 0) {
+          this.toastService.info(
+            'Esta categoría no tiene productos para ajustar.'
+          );
+          return;
+        }
+        const verb =
+          mode === 'percent'
+            ? `${direction === 'increase' ? 'aumentar' : 'descontar'} ${val}%`
+            : `${direction === 'increase' ? 'sumarle' : 'restarle'} ${val} al precio`;
+        this.adjustConfirmMessage.set(
+          `Vas a <strong>${verb}</strong> en los <strong>${count}</strong> producto${
+            count === 1 ? '' : 's'
+          } de esta categoría (incluye variantes y precios al mayor). ¿Continuar?`
+        );
+        this.pendingAdjust = { mode, signedValue };
+        this.adjustConfirm.warning();
+      })
+      .mapLeft((err) => this.toastService.error(new Exception(err.message)));
+  }
+
+  /** Paso 2: confirmado → aplica el ajuste y avisa cuántos productos cambió. */
+  public async onConfirmAdjust(): Promise<void> {
+    if (!this.pendingAdjust || !this.id || this.isAdjusting()) return;
+    const { mode, signedValue } = this.pendingAdjust;
+    this.pendingAdjust = null;
+
+    this.isAdjusting.set(true);
+    const result = await this.categoryService.adjustCategoryPrices(
+      this.id,
+      mode,
+      signedValue,
+      false
+    );
+    this.isAdjusting.set(false);
+
+    result
+      .mapRight((count) => {
+        this.toastService.success(
+          `Precios actualizados en ${count} producto${count === 1 ? '' : 's'}.`
+        );
+        this.adjustForm.controls.value.reset();
+      })
+      .mapLeft((err) => this.toastService.error(new Exception(err.message)));
   }
 }

@@ -34,6 +34,9 @@ export interface PlanDisplay extends Plan {
   isPopular: boolean;
   isCurrent: boolean;
   color: string;
+  /** Cantidad de suscriptores para el badge de prueba social ("+N suscriptores").
+   *  Opcional: solo los planes que lo definen en la config lo muestran. */
+  socialProof?: number;
 }
 
 export interface TenantPlanUsage {
@@ -51,10 +54,23 @@ export interface TenantPlanUsage {
   /** True when the tenant has (or had) a Stripe subscription — used to route
    *  the expired-plan dialog to a Stripe checkout instead of WhatsApp. */
   hasStripeSubscription: boolean;
+  /** Estado crudo de la suscripción Stripe (`active`, `past_due`, `unpaid`,
+   *  `canceled`…). `past_due`/`unpaid` = el último cobro falló → banner de
+   *  "actualizá tu pago". Null para planes sin Stripe (pago manual VE). */
+  stripeSubscriptionStatus: string | null;
   /** True cuando la suscripción Stripe está `active`: Stripe cobra la
    *  renovación solo, así que no corresponde pedir renovación manual (eso
    *  aplica únicamente a los planes sin Stripe, p. ej. pago móvil VE). */
   autoRenews: boolean;
+  /** Precio mensual (USD) congelado para clientes anteriores a la reestructura
+   *  de precios 2026-09: si está seteado, este tenant mantiene ESTE precio en su
+   *  plan actual hasta que cancele/cambie (grandfathered). Null = paga el precio
+   *  de lista vigente. Alimenta el badge "precio de cliente antiguo". */
+  lockedPlanPrice: number | null;
+  /** Cuándo consumió su trial de 7 días (lo estampa el stripe-webhook, o a mano
+   *  para trials otorgados manualmente). Si está seteado, el checkout NO vuelve
+   *  a ofrecer el trial — mismo criterio que create-checkout-session. */
+  trialUsedAt: string | null;
 }
 
 export interface TenantPlanExpiration {
@@ -63,6 +79,10 @@ export interface TenantPlanExpiration {
   planExpired: boolean;
   stripeSubscriptionId: string | null;
   stripeSubscriptionStatus: string | null;
+  /** Precio mensual congelado (grandfathered) — ver TenantPlanUsage. */
+  lockedPlanPrice: number | null;
+  /** Ver TenantPlanUsage.trialUsedAt. */
+  trialUsedAt: string | null;
 }
 
 export interface TenantPlanPublicInfo {

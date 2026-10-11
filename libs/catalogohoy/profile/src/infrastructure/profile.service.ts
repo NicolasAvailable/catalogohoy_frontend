@@ -83,6 +83,13 @@ export class ProfileService implements BaseProfileService {
       .from('users')
       .update({
         notify_plan_expiry: prefs.notifyPlanExpiry,
+        notify_new_orders_email: prefs.notifyNewOrdersEmail,
+        notify_weekly_report_email: prefs.notifyWeeklyReportEmail,
+        notify_orders_inapp: prefs.notifyOrdersInapp,
+        notify_low_stock: prefs.notifyLowStock,
+        low_stock_threshold: prefs.lowStockThreshold,
+        notify_credit_reminders: prefs.notifyCreditReminders,
+        credit_reminder_days: prefs.creditReminderDays,
         updated_at: new Date().toISOString(),
       })
       .eq('auth_user_id', auth.user.id);
@@ -118,5 +125,13 @@ export class ProfileService implements BaseProfileService {
     await this.client.auth.signOut();
     window.location.href = 'https://auth.catalogohoy.com';
     return E.right(undefined);
+  }
+
+  /** True si la cuenta se creó/inicia con Google (OAuth). Esas cuentas no
+   *  tienen contraseña propia — la administra Google — así que el perfil
+   *  oculta el cambio de contraseña y muestra una nota. */
+  public async isGoogleAccount(): Promise<boolean> {
+    const { data } = await this.client.auth.getUser();
+    return data.user?.app_metadata?.['provider'] === 'google';
   }
 }

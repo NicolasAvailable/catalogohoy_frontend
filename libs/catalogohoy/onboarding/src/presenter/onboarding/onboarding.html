@@ -1,0 +1,639 @@
+@if (!isRedirecting() && isBooting()) {
+<div class="onb onb--boot">{{ 'Cargando...' | transloco }}</div>
+} @if (!isRedirecting() && !isBooting()) {
+<div class="onb">
+  <!-- ===== Top bar (solo la marca; saltar vive en cada paso) ===== -->
+  <header class="onb__topbar">
+    <span class="onb__brand">CatalogoHoy</span>
+  </header>
+
+  <!-- ===== Progreso ===== -->
+  <div class="onb__progress">
+    <div
+      class="onb__progress-fill"
+      [style.width.%]="(stepNumber() / totalSteps) * 100"
+    ></div>
+  </div>
+
+  <div class="onb__body">
+    <!-- ================= PANEL IZQUIERDO: formulario ================= -->
+    <section class="onb__form">
+      <span class="onb__step-label"
+        >{{ 'Paso' | transloco }} {{ stepNumber() }} / {{ totalSteps }}</span
+      >
+
+      @switch (currentStep()) {
+      <!-- ============ PASO 1: Tu tienda (estilo Take App) ============ -->
+      @case ('store') {
+      <h1 class="onb__title">{{ 'Crea tu tienda' | transloco }}</h1>
+      <p class="onb__subtitle">
+        {{ 'Ponle nombre, logo y color. Lo podrás cambiar cuando quieras.' | transloco }}
+      </p>
+
+      <div class="onb__fields">
+        <!-- Banner + logo superpuesto (misma composición que el catálogo) -->
+        <div class="onb__field onb__field--media">
+          <ui-uploader
+            (valueChange)="onBannerUpload($event)"
+            [accept]="'image/*'"
+            [max]="{ mb: 40 }"
+            [multiple]="false"
+          >
+            <ng-template #picker let-pick="pick">
+              <button
+                type="button"
+                class="onb__banner"
+                [class.onb__banner--empty]="!bannerUrl()"
+                (click)="pick()"
+                [attr.aria-label]="'Banner' | transloco"
+              >
+                @if (bannerUrl()) {
+                <img [src]="bannerUrl()" alt="" />
+                } @else {
+                <span class="onb__banner-placeholder">
+                  <ui-icon name="image" size="16" styleClass="text-grey-300" />
+                  {{ 'Banner (opcional)' | transloco }}
+                </span>
+                }
+                <span class="onb__avatar-badge onb__banner-badge">
+                  <ui-icon name="camera" size="12" />
+                </span>
+              </button>
+            </ng-template>
+          </ui-uploader>
+
+          <div class="onb__avatar-overlap">
+            <ui-uploader
+              (valueChange)="onLogoUpload($event)"
+              [accept]="'image/*'"
+              [max]="{ mb: 40 }"
+              [multiple]="false"
+            >
+              <ng-template #picker let-pick="pick">
+                <button
+                  type="button"
+                  class="onb__avatar"
+                  (click)="pick()"
+                  [attr.aria-label]="'Logo' | transloco"
+                >
+                  @if (logoUrl()) {
+                  <img [src]="logoUrl()" [alt]="storeName()" />
+                  } @else {
+                  <ui-icon name="store" size="26" styleClass="text-grey-300" />
+                  }
+                  <span class="onb__avatar-badge">
+                    <ui-icon name="camera" size="12" />
+                  </span>
+                </button>
+              </ng-template>
+            </ui-uploader>
+          </div>
+        </div>
+
+        <div class="onb__field">
+          <span class="onb__label"
+            >{{ 'Nombre de la tienda' | transloco }}
+            <span class="onb__req">*</span></span
+          >
+          <ui-input-text
+            [ngModel]="storeName()"
+            (ngModelChange)="onStoreNameChange($event)"
+            [placeholder]="'Ej: Mi Tienda' | transloco"
+            styleClass="w-full"
+          ></ui-input-text>
+        </div>
+
+        <!-- WhatsApp de VENTAS: el vendedor del checkout (siempre visible) -->
+        <div class="onb__field">
+          <span class="onb__label"
+            >{{ '¿A qué WhatsApp te hacen los pedidos?' | transloco }}
+            <span class="onb__req">*</span></span
+          >
+          <ui-input-phone
+            [ngModel]="whatsapp()"
+            (ngModelChange)="whatsapp.set($event)"
+            [defaultCountry]="countryIso()"
+          ></ui-input-phone>
+          <span class="onb__hint">
+            {{ 'Aparece en tu catálogo para que tus clientes te escriban y te compren.' | transloco }}
+          </span>
+        </div>
+
+        <!-- Dirección: SIEMPRE editable (autogenerada mientras el slug sea
+             temporal y no la hayan tocado a mano) -->
+        <div class="onb__field">
+          <span class="onb__label"
+            >{{ 'Dirección de la tienda' | transloco }}
+            <span class="onb__req">*</span></span
+          >
+          <div
+            class="onb__slugbox"
+            [class.onb__slugbox--taken]="slugCheck() === 'taken'"
+            [class.onb__slugbox--ok]="finalSlug() && slugCheck() === 'available'"
+          >
+            <input
+              type="text"
+              class="onb__slugbox-input"
+              [ngModel]="slugInput()"
+              (ngModelChange)="onSlugInputChange($event)"
+              [placeholder]="'mi-tienda' | transloco"
+            />
+            <span class="onb__slugbox-suffix">.catalogohoy.com</span>
+            @if (finalSlug()) {
+            <span class="onb__slugbox-status">
+              @switch (slugCheck()) { @case ('checking') {
+              <ui-icon
+                name="loader-circle"
+                size="16"
+                styleClass="animate-spin text-grey-400"
+              /> } @case ('available') {
+              <ui-icon name="circle-check" size="16" styleClass="text-emerald-500" />
+              } @case ('taken') {
+              <ui-icon name="circle-x" size="16" styleClass="text-red-500" />
+              } }
+            </span>
+            }
+          </div>
+          @if (slugCheck() === 'taken') {
+          <span class="onb__hint onb__hint--error">
+            {{ 'Esa dirección de catálogo ya está ocupada. Prueba con otro nombre.' | transloco }}
+          </span>
+          } @else if (storeUrl()) {
+          <span class="onb__hint">
+            {{ 'Tu catálogo estará en {url}' | transloco: { url: storeUrl() } }}
+          </span>
+          }
+        </div>
+
+        <!-- Color de marca -->
+        <div class="onb__field">
+          <span class="onb__label">{{ 'Color de marca' | transloco }}</span>
+          <div class="onb__colors">
+            @for (c of themeColors; track c.value) {
+            <button
+              type="button"
+              class="onb__swatch"
+              [class.onb__swatch--active]="themeColor() === c.value"
+              [style.background]="c.value"
+              (click)="selectColor(c.value)"
+              [attr.aria-label]="c.name"
+            ></button>
+            }
+            <ui-color-picker
+              [color]="themeColor()"
+              (valueChange)="selectColor($event)"
+            >
+              <ng-template #picker let-color let-pick="pick">
+                <button
+                  type="button"
+                  class="onb__swatch onb__swatch--custom"
+                  (click)="pick($event)"
+                  [attr.aria-label]="'Color personalizado' | transloco"
+                >
+                  <ui-icon name="plus" size="14" />
+                </button>
+              </ng-template>
+            </ui-color-picker>
+          </div>
+        </div>
+      </div>
+
+      <div class="onb__actions">
+        <span></span>
+        <ui-button
+          [label]="'Continuar' | transloco"
+          icon="arrow-right"
+          iconPos="right"
+          [fluid]="false"
+          [disabled]="!storeStepValid() || isSaving()"
+          [isLoading]="isSaving()"
+          (click)="saveStore()"
+        />
+      </div>
+      }
+
+      <!-- ============ PASO 2: Primer producto ============ -->
+      @case ('product') {
+      <h1 class="onb__title">{{ 'Agrega tu primer producto' | transloco }}</h1>
+      <p class="onb__subtitle">
+        {{ 'Con esto tu catálogo queda listo para vender.' | transloco }}
+      </p>
+
+      @if (addedProduct(); as added) {
+      <!-- Estado "producto agregado": se ve en el teléfono; los siguientes van
+           por el admin (Productos) al terminar el onboarding. -->
+      <div class="onb__added">
+        <div class="onb__added-card">
+          @if (added.photo) {
+          <img class="onb__added-photo" [src]="added.photo" alt="" />
+          } @else {
+          <span class="onb__added-photo onb__added-photo--empty">
+            <ui-icon name="package" size="20" styleClass="text-grey-300" />
+          </span>
+          }
+          <div class="onb__added-info">
+            <span class="onb__added-name">{{ added.name }}</span>
+            <span class="onb__added-price">$ {{ added.price }}</span>
+          </div>
+          <span class="onb__added-check">
+            <ui-icon name="circle-check" size="20" styleClass="text-emerald-500" />
+          </span>
+        </div>
+        <p class="onb__added-hint">
+          {{ '¡Ya está en tu catálogo! Míralo en el teléfono. Para agregar más productos, termina el onboarding y hazlo desde Productos.' | transloco }}
+        </p>
+      </div>
+
+      <div class="onb__actions">
+        <ui-button
+          [label]="'Atrás' | transloco"
+          variant="text"
+          [fluid]="false"
+          (click)="back()"
+        />
+        <ui-button
+          [label]="'Continuar' | transloco"
+          icon="arrow-right"
+          iconPos="right"
+          [fluid]="false"
+          (click)="continueAfterProduct()"
+        />
+      </div>
+      } @else {
+      <div class="onb__fields">
+        <div class="onb__field">
+          <span class="onb__label"
+            >{{ 'Nombre del producto' | transloco }}
+            <span class="onb__req">*</span></span
+          >
+          <ui-input-text
+            [ngModel]="productName()"
+            (ngModelChange)="productName.set($event)"
+            [placeholder]="'Ej: Camiseta negra' | transloco"
+            styleClass="w-full"
+          ></ui-input-text>
+        </div>
+
+        <div class="onb__field">
+          <span class="onb__label"
+            >{{ 'Precio' | transloco }} <span class="onb__req">*</span></span
+          >
+          <ui-input-number
+            [ngModel]="productPrice()"
+            (ngModelChange)="productPrice.set($event)"
+            mode="decimal"
+            [min]="0"
+            [minFractionDigits]="2"
+            [maxFractionDigits]="2"
+            prefix="$ "
+            placeholder="0.00"
+          ></ui-input-number>
+        </div>
+
+        <!-- Multimedia: varias fotos, igual que en el editor del admin -->
+        <div class="onb__field">
+          <span class="onb__label">{{ 'Fotos del producto' | transloco }}</span>
+          <div class="onb__photos">
+            @for (photo of productPhotos(); track photo) {
+            <div class="onb__photo">
+              <img [src]="photo" alt="" />
+              <button
+                type="button"
+                class="onb__photo-remove"
+                (click)="removeProductPhoto(photo)"
+                [attr.aria-label]="'Quitar' | transloco"
+              >
+                <ui-icon name="x" size="12" />
+              </button>
+            </div>
+            }
+            <ui-uploader
+              (valueChange)="onProductPhoto($event)"
+              [accept]="'image/*'"
+              [max]="{ mb: 40 }"
+              [multiple]="true"
+            >
+              <ng-template #picker let-pick="pick">
+                <button
+                  type="button"
+                  class="onb__photo onb__photo--add"
+                  (click)="pick()"
+                >
+                  <ui-icon name="plus" size="20" styleClass="text-grey-300" />
+                </button>
+              </ng-template>
+            </ui-uploader>
+          </div>
+        </div>
+
+        <!-- Descripción -->
+        <div class="onb__field">
+          <span class="onb__label">{{ 'Descripción (opcional)' | transloco }}</span>
+          <ui-textarea
+            [ngModel]="productDescription()"
+            (ngModelChange)="productDescription.set($event)"
+            [rows]="3"
+            class="w-full"
+            [placeholder]="'Cuéntales a tus clientes sobre este producto.' | transloco"
+          />
+        </div>
+
+        <!-- Categoría + creación inline -->
+        <div class="onb__field">
+          <span class="onb__label">{{ 'Categoría' | transloco }}</span>
+          @if (categoryOptions().length) {
+          <ui-multi-select
+            [options]="categoryOptions()"
+            optionLabel="name"
+            optionValue="id"
+            [ngModel]="productCategoryIds()"
+            (ngModelChange)="productCategoryIds.set($event)"
+            [ngModelOptions]="{ standalone: true }"
+            [placeholder]="'Elegí categorías' | transloco"
+            appendTo="body"
+            styleClass="w-full"
+          ></ui-multi-select>
+          }
+          <div class="onb__inline">
+            <ui-input-text
+              [ngModel]="newCategoryName()"
+              (ngModelChange)="newCategoryName.set($event)"
+              [placeholder]="'Nueva categoría' | transloco"
+              styleClass="w-full"
+            ></ui-input-text>
+            <ui-button
+              [label]="'Agregar' | transloco"
+              icon="plus"
+              variant="outlined"
+              [fluid]="false"
+              [disabled]="!newCategoryName().trim() || creatingCategory()"
+              [isLoading]="creatingCategory()"
+              (click)="createCategory()"
+            />
+          </div>
+        </div>
+
+        <!-- Opciones avanzadas (colapsables): promo, stock, SKU, costo -->
+        <div class="onb__field">
+          <button
+            type="button"
+            class="onb__advanced-toggle"
+            (click)="showAdvanced.set(!showAdvanced())"
+          >
+            <ui-icon
+              [name]="showAdvanced() ? 'chevron-up' : 'chevron-down'"
+              size="16"
+            />
+            {{ 'Opciones avanzadas' | transloco }}
+          </button>
+          @if (showAdvanced()) {
+          <div class="onb__advanced">
+            <div class="onb__advanced-grid">
+              <div class="onb__field">
+                <span class="onb__label">{{ 'Precio promocional' | transloco }}</span>
+                <ui-input-number
+                  [ngModel]="productPromoPrice()"
+                  (ngModelChange)="productPromoPrice.set($event)"
+                  mode="decimal"
+                  [min]="0"
+                  [minFractionDigits]="2"
+                  [maxFractionDigits]="2"
+                  prefix="$ "
+                  placeholder="0.00"
+                ></ui-input-number>
+              </div>
+              <div class="onb__field">
+                <span class="onb__label">{{ 'Stock' | transloco }}</span>
+                <ui-input-number
+                  [ngModel]="productStock()"
+                  (ngModelChange)="productStock.set($event)"
+                  [min]="0"
+                  [placeholder]="'Ilimitado' | transloco"
+                ></ui-input-number>
+              </div>
+              <div class="onb__field">
+                <span class="onb__label">{{ 'SKU' | transloco }}</span>
+                <ui-input-text
+                  [ngModel]="productSku()"
+                  (ngModelChange)="productSku.set($event)"
+                  [placeholder]="'Ej: CAM-001' | transloco"
+                  styleClass="w-full"
+                ></ui-input-text>
+              </div>
+              <div class="onb__field">
+                <span class="onb__label">{{ 'Costo de producción' | transloco }}</span>
+                <ui-input-number
+                  [ngModel]="productCost()"
+                  (ngModelChange)="productCost.set($event)"
+                  mode="decimal"
+                  [min]="0"
+                  [minFractionDigits]="2"
+                  [maxFractionDigits]="2"
+                  prefix="$ "
+                  placeholder="0.00"
+                ></ui-input-number>
+              </div>
+            </div>
+            <span class="onb__hint">
+              {{ 'Variantes, tallas, mayoreo y adicionales se configuran después desde Productos.' | transloco }}
+            </span>
+          </div>
+          }
+        </div>
+      </div>
+
+      <div class="onb__actions">
+        <ui-button
+          [label]="'Atrás' | transloco"
+          variant="text"
+          [fluid]="false"
+          (click)="back()"
+        />
+        <div class="onb__actions-end">
+          <ui-button
+            [label]="'Saltar' | transloco"
+            variant="text"
+            [fluid]="false"
+            (click)="skipProduct()"
+          />
+          <ui-button
+            [label]="'Agregar producto' | transloco"
+            icon="plus"
+            [fluid]="false"
+            [disabled]="!productValid() || isSaving()"
+            [isLoading]="isSaving()"
+            (click)="saveProduct()"
+          />
+        </div>
+      </div>
+      } }
+
+      <!-- ============ PASO 3: Entrega y pago ============ -->
+      @case ('setup') {
+      <h1 class="onb__title">{{ 'Entrega y pago' | transloco }}</h1>
+
+      <div class="onb__fields">
+        <!-- Entrega -->
+        <div class="onb__section">
+          <h2 class="onb__section-title">
+            {{ '¿Cómo entregas tus pedidos?' | transloco }}
+          </h2>
+          <p class="onb__section-hint">
+            {{ 'Activa las opciones de entrega que ofreces. Las puedes cambiar cuando quieras.' | transloco }}
+          </p>
+
+          @for (draft of shippingDrafts(); track draft.type) {
+          <div class="onb__option" [class.onb__option--active]="draft.active">
+            <button
+              type="button"
+              class="onb__option-head"
+              (click)="toggleShipping(draft.type)"
+            >
+              <span
+                class="onb__option-check"
+                [class.onb__option-check--on]="draft.active"
+              >
+                @if (draft.active) {
+                <ui-icon name="check" size="12" />
+                }
+              </span>
+              <ui-icon
+                [name]="draft.icon"
+                size="18"
+                styleClass="text-grey-400"
+              />
+              <span class="onb__option-info">
+                <span class="onb__option-title">{{ draft.label | transloco }}</span>
+                <span class="onb__option-hint">{{ draft.hint | transloco }}</span>
+              </span>
+            </button>
+
+            @if (draft.active) {
+            <div class="onb__option-body">
+              <div class="onb__field">
+                <span class="onb__label">{{ 'Costo' | transloco }}</span>
+                <ui-input-number
+                  [ngModel]="draft.fee"
+                  (ngModelChange)="setShippingFee(draft.type, $event)"
+                  [disabled]="draft.priceOnRequest"
+                  mode="decimal"
+                  [min]="0"
+                  [minFractionDigits]="2"
+                  [maxFractionDigits]="2"
+                  [showButtons]="false"
+                  prefix="$ "
+                  placeholder="0.00"
+                ></ui-input-number>
+                <span class="onb__hint">{{ '0 = gratis' | transloco }}</span>
+              </div>
+
+              @if (draft.type !== 'pickup') {
+              <div class="onb__switch">
+                <ui-toggle
+                  [ngModel]="draft.priceOnRequest"
+                  (ngModelChange)="setShippingOnRequest(draft.type, $event)"
+                ></ui-toggle>
+                <span>{{ 'Precio a consultar' | transloco }}</span>
+              </div>
+              }
+            </div>
+            }
+          </div>
+          }
+        </div>
+
+        <!-- Pago -->
+        <div class="onb__section">
+          <h2 class="onb__section-title">
+            {{ '¿Cómo te pagan tus clientes?' | transloco }}
+          </h2>
+          <p class="onb__section-hint">
+            {{ 'Activa tus métodos de pago y completa sus datos. El cliente los ve al hacer su pedido.' | transloco }}
+          </p>
+
+          @for (draft of paymentDrafts(); track draft.name; let i = $index) {
+          <div class="onb__option" [class.onb__option--active]="draft.active">
+            <button
+              type="button"
+              class="onb__option-head"
+              (click)="togglePayment(i)"
+            >
+              <span
+                class="onb__option-check"
+                [class.onb__option-check--on]="draft.active"
+              >
+                @if (draft.active) {
+                <ui-icon name="check" size="12" />
+                }
+              </span>
+              <ui-icon
+                [name]="draft.icon"
+                size="18"
+                styleClass="text-grey-400"
+              />
+              <span class="onb__option-info">
+                <span class="onb__option-title">{{ draft.name | transloco }}</span>
+              </span>
+            </button>
+
+            @if (draft.active && draft.fields.length) {
+            <div class="onb__option-body">
+              @for (field of draft.fields; track field.key) {
+              <div class="onb__field">
+                <span class="onb__label">{{ field.label | transloco }}</span>
+                <ui-input-text
+                  [ngModel]="draft.values[field.key]"
+                  (ngModelChange)="setPaymentValue(i, field.key, $event)"
+                  [placeholder]="(field.placeholder ?? '') | transloco"
+                  styleClass="w-full"
+                ></ui-input-text>
+              </div>
+              }
+            </div>
+            }
+          </div>
+          }
+        </div>
+      </div>
+
+      <div class="onb__actions">
+        <ui-button
+          [label]="'Atrás' | transloco"
+          variant="text"
+          [fluid]="false"
+          (click)="back()"
+        />
+        <div class="onb__actions-end">
+          <ui-button
+            [label]="'Saltar' | transloco"
+            variant="text"
+            [fluid]="false"
+            [disabled]="isSaving()"
+            (click)="skipAll()"
+          />
+          <ui-button
+            [label]="'Finalizar' | transloco"
+            icon="check"
+            [fluid]="false"
+            [disabled]="isSaving()"
+            [isLoading]="isSaving()"
+            (click)="finishSetup()"
+          />
+        </div>
+      </div>
+      } }
+    </section>
+
+    <!-- ==== PANEL DERECHO: mockup real del editor de catálogo (iframe) ==== -->
+    <aside class="onb__preview">
+      @if (safeIframeUrl(); as url) {
+      <lib-phone-mockup
+        #phoneMockup
+        [iframeUrl]="url"
+        (loaded)="onPreviewIframeLoaded()"
+      ></lib-phone-mockup>
+      }
+    </aside>
+  </div>
+</div>
+}

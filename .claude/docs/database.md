@@ -305,6 +305,16 @@ await Promise.all(
 | total_bs | numeric | `0` | Venezuelan bolivares |
 | created_at | timestamp | `timezone('utc')` | |
 | updated_at | timestamp | `timezone('utc')` | |
+| credit_installments | jsonb | NULL | CAT-79: plan de cuotas `[{dueDate,amount?,paid?}]` de órdenes a crédito (NO es ledger de abonos) |
+| credit_reminded_at | timestamptz | NULL | CAT-79: anti-spam del cron `send-credit-reminders` (no repite la misma orden por 7 días) |
+| payment_condition | text | NULL | Condición que ELIGIÓ el cliente en el checkout: `'cash'` \| `'credit'` (check constraint). `'credit'` = pidió a crédito pero la orden nace `pending`; pasarla a status `credit` es del comerciante. NULL = sin selector (admin/POS/históricas). Migración `20260928_checkout_credit_conditions.sql` |
+
+> **RPC `get_customer_purchase_count(p_tenant_id bigint, p_phone text) → int`** (SECURITY DEFINER, grant anon):
+> gate "crédito después de N compras" del checkout público. Cuenta órdenes `completed|credit` del tenant
+> matcheando por los **últimos 7 dígitos** del teléfono (tolerante a +58/0412/espacios); <7 dígitos → 0.
+> Solo expone un conteo. La config del gate vive en `tenant_ecommerce_config.customer_fields`
+> (keys `applyAdjustmentsInCheckout`/`creditEnabled`/`creditMinPurchases`/`creditNote` — mismo truco
+> sin-migración que delivery-date, NO hay que tocar `get_public_catalog`).
 
 **RLS:** Enabled
 
@@ -639,6 +649,31 @@ supabase.auth.getUser()
 - Supabase auth UUID ≠ `users.id` — always join via `auth_user_id`
 - Default tenant: `users_tenants.is_default = true`
 - Fallback: first row in `users_tenants` for that user
+
+## RPCs del panel interno (SECURITY DEFINER + `_assert_internal_admin`)
+
+Los listados usan búsqueda+paginación server-side (`p_search/p_limit/p_offset` +
+`total_count`, migración `20260811_internal_lists_search_pagination.sql`):
+`list_all_tenants_admin`, `list_all_users_admin`, `list_paying_clients_admin`,
+`channel_connections_admin`, `list_enterprise_leads_admin`.
+
+**`platform_orders_stats_admin()` / `list_platform_orders_admin(p_limit)`**
+(fix 2026-08-26, migración `20260826_platform_orders_currency.sql`): ⚠️
+`orders.total_usd` guarda el monto en la **moneda del catálogo** (no siempre
+USD) — nunca sumar cross-tenant. Stats: `revenueUsd` = solo catálogos USD +
+`revenueByCurrency` [{currency, orders, total}]; el listado devuelve
+`currency` por fila (moneda = COALESCE(tcc.display_currency, tec.currency,
+'USD')).
+
+**`get_tenant_detail_admin(p_tenant_id)` → jsonb** (2026-08-26, migración
+`20260826_internal_tenant_detail.sql`): detalle completo de un catálogo en un
+round-trip — tenant+config, plan, miembros, historial de `tenant_subscriptions`
+(pagos/renovaciones **manuales**; las renovaciones de Stripe NO están ahí, el
+webhook solo actualiza `tenants.plan_*`), órdenes (totales/30d/por mes últimos
+12), checklist de configuración inicial (mismos criterios que el card "primeros
+pasos" del Inicio), counts (productos/categorías/customers/chats/miembros),
+chats por canal, canales conectados y actividad. Lo consume la vista
+`/tenants/:id` del internal (`tenant-detail.ts`).
 
 ## Defaults & Conventions
 

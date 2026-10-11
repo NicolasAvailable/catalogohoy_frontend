@@ -3,7 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { PlanStore } from '@catalogohoy/plan';
 import { AnalyticsStore } from '../../../infrastructure';
-import { PageViewsPeriod } from '../../../domain';
+import { ChartSeries, PageViewsPeriod, TimeSeriesPoint } from '../../../domain';
 import { IconComponent, PremiumUpgradePromptComponent } from '@ui';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
@@ -34,6 +34,41 @@ export class AnalyticsViewComponent {
     this._initApexFix();
   }
 
+  /**
+   * "Hoy" viene del backend con SOLO las horas que tuvieron visitas
+   * (GROUP BY hora). Con 1-2 puntos, ApexCharts estira ese rango angosto a todo
+   * el ancho y el eje repite la misma hora ("3pm 3pm … 4pm 4pm"). Rellenamos las
+   * 24 horas del día (0 donde no hubo visitas) para que el eje abarque el día
+   * completo y las horas salgan distintas. Todo en la misma base UTC que usa el
+   * formatter del eje (getUTCHours), consistente con cómo llega el dato.
+   */
+  private padTodayHourly(series: ChartSeries[]): ChartSeries[] {
+    const raw = (series?.[0]?.data as TimeSeriesPoint[] | undefined) ?? [];
+    // Ancla del día: medianoche UTC del primer punto (o de hoy si no hay datos).
+    const refMs = raw.length ? raw[0].x : Date.now();
+    const ref = new Date(refMs);
+    const dayStart =
+      refMs -
+      ref.getUTCHours() * 3_600_000 -
+      ref.getUTCMinutes() * 60_000 -
+      ref.getUTCSeconds() * 1_000 -
+      ref.getUTCMilliseconds();
+    const byHour = new Map<number, number>();
+    for (const p of raw) byHour.set(new Date(p.x).getUTCHours(), p.y);
+    const data: TimeSeriesPoint[] = Array.from({ length: 24 }, (_, h) => ({
+      x: dayStart + h * 3_600_000,
+      y: byHour.get(h) ?? 0,
+    }));
+    return [{ name: series?.[0]?.name ?? 'Visitas', data }];
+  }
+
+  /** Serie de la gráfica según el período; "hoy" se rellena a 24h. */
+  private readonly pageViewsSeries = computed<ChartSeries[]>(() => {
+    const period = this.pageViewsPeriod();
+    const series = this.analyticsStore.data()?.pageViews?.series?.[period] ?? [];
+    return period === 'today' ? this.padTodayHourly(series) : series;
+  });
+
   // ─── Chart: Page Views Overview (dark area) ──────────────────
   protected readonly chartPageViews = computed<ApexOptions>(() => ({
     chart: {
@@ -52,11 +87,11 @@ export class AnalyticsViewComponent {
     grid: {
       show: true,
       borderColor: '#334155',
-      padding: { top: 10, bottom: -40, left: 0, right: 0 },
+      padding: { top: 10, bottom: -40, left: 14, right: 14 },
       position: 'back',
       xaxis: { lines: { show: true } },
     },
-    series: this.analyticsStore.data()?.pageViews?.series?.[this.pageViewsPeriod()] ?? [],
+    series: this.pageViewsSeries(),
     stroke: { width: 2 },
     tooltip: {
       followCursor: true,
@@ -107,8 +142,10 @@ export class AnalyticsViewComponent {
     yaxis: {
       axisTicks: { show: false },
       axisBorder: { show: false },
+      // Dominio SIMÉTRICO (±10): en un día con 0/pocas visitas la línea queda
+      // centrada verticalmente (antes max+5 la empujaba al ⅓ superior).
       min: (min: number) => min - 10,
-      max: (max: number) => max + 5,
+      max: (max: number) => max + 10,
       tickAmount: 5,
       show: false,
     },

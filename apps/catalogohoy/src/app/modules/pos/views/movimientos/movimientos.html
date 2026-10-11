@@ -1,0 +1,117 @@
+<div class="mov-wrap">
+  <!-- ── Sin caja ── -->
+  @if (caja.loaded() && !caja.hasOpenSession()) {
+    <div class="empty">
+      <div class="empty-badge">
+        <ui-icon name="wallet" styleClass="size-8" />
+      </div>
+      <h2>{{ 'No hay caja abierta' | transloco }}</h2>
+      <p>{{ 'Abrí una caja para registrar ingresos y egresos de efectivo.' | transloco }}</p>
+      <a class="btn-primary" routerLink="/pos/caja">
+        <ui-icon name="lock-open" styleClass="size-5" />
+        {{ 'Ir a abrir caja' | transloco }}
+      </a>
+    </div>
+  }
+
+  @if (caja.hasOpenSession()) {
+    <div class="grid">
+      <!-- Formulario -->
+      <section class="panel form">
+        <h2>{{ 'Registrar movimiento' | transloco }}</h2>
+
+        <div class="seg">
+          <button
+            class="seg-btn"
+            [class.active-in]="type() === 'in'"
+            (click)="setType('in')"
+          >
+            <ui-icon name="arrow-down-left" styleClass="size-5" />
+            {{ 'Ingreso' | transloco }}
+          </button>
+          <button
+            class="seg-btn"
+            [class.active-out]="type() === 'out'"
+            (click)="setType('out')"
+          >
+            <ui-icon name="arrow-up-right" styleClass="size-5" />
+            {{ 'Egreso' | transloco }}
+          </button>
+        </div>
+
+        <label class="fld">
+          <span>{{ 'Monto' | transloco }}</span>
+          <div class="money-input">
+            <span class="money-sym">{{ cs() }}</span>
+            <input
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="0.01"
+              [ngModel]="amount()"
+              (ngModelChange)="amount.set($event)"
+              placeholder="0.00"
+            />
+          </div>
+        </label>
+
+        <label class="fld">
+          <span>{{ 'Concepto' | transloco }} <em>{{ '(opcional)' | transloco }}</em></span>
+          <input
+            type="text"
+            class="txt"
+            [ngModel]="reason()"
+            (ngModelChange)="reason.set($event)"
+            [placeholder]="'Aporte, retiro, pago a proveedor…' | transloco"
+          />
+        </label>
+
+        <button
+          class="btn-primary"
+          [class.out]="type() === 'out'"
+          [disabled]="isWorking()"
+          (click)="add()"
+        >
+          <ui-icon name="plus" styleClass="size-5" />
+          {{ type() === 'in' ? ('Registrar ingreso' | transloco) : ('Registrar egreso' | transloco) }}
+        </button>
+      </section>
+
+      <!-- Lista + saldos -->
+      <section class="panel list">
+        <header class="list-head">
+          <h2>{{ 'Movimientos del turno' | transloco }}</h2>
+          @let sum = caja.summary();
+          <div class="totals">
+            <span class="t-in">+{{ money(sum?.movementsIn) }}</span>
+            <span class="t-out">−{{ money(sum?.movementsOut) }}</span>
+          </div>
+        </header>
+
+        @if (caja.movements().length) {
+          <ul class="rows">
+            @for (m of caja.movements(); track m.id) {
+              <li class="row">
+                <span class="mv-icon" [class.in]="m.type === 'in'" [class.out]="m.type === 'out'">
+                  <ui-icon
+                    [name]="m.type === 'in' ? 'arrow-down-left' : 'arrow-up-right'"
+                    styleClass="size-4"
+                  />
+                </span>
+                <span class="mv-main">
+                  {{ m.reason || (m.type === 'in' ? ('Ingreso' | transloco) : ('Egreso' | transloco)) }}
+                  <em class="muted">{{ m.createdAt | date: 'd/M HH:mm' }}</em>
+                </span>
+                <span class="mv-amt" [class.in]="m.type === 'in'" [class.out]="m.type === 'out'">
+                  {{ m.type === 'in' ? '+' : '−' }}{{ money(m.amount) }}
+                </span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="muted pad">{{ 'Todavía no registraste movimientos en esta caja.' | transloco }}</p>
+        }
+      </section>
+    </div>
+  }
+</div>

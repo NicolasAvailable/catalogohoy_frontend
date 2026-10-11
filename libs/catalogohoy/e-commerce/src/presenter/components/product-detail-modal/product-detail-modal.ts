@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { Product, ProductAddon, ProductVariant, WholesaleTier } from '@catalogohoy/product';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { MetaPixelService } from '@catalogohoy/core';
 import { isVideoUrl } from '@shared/domain';
 import { SafeDescriptionHtmlPipe } from '@shared/presenter';
 import {
@@ -42,6 +43,7 @@ export class ProductDetailModal {
   private readonly ref = inject(DynamicDialogRef);
   private readonly config = inject(DynamicDialogConfig);
   private readonly cartStore = inject(CartStore);
+  private readonly metaPixel = inject(MetaPixelService);
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cs = this.ecommerceStore.currencySymbol;
   public readonly showReferencePrice = this.ecommerceStore.showReferencePrice;
@@ -62,6 +64,22 @@ export class ProductDetailModal {
   public readonly selectedAddonIds = signal<Set<string>>(
     new Set(this.addons.filter((a) => a.isDefault).map((a) => a.id))
   );
+
+  constructor() {
+    // Meta Pixel del catálogo: el comprador vio el detalle de un producto.
+    // No-op si el catálogo no tiene pixel o el plan no es pago.
+    const value =
+      this.product.pricePromotional > 0
+        ? this.product.pricePromotional
+        : this.product.price;
+    this.metaPixel.trackActiveTenant('ViewContent', {
+      content_ids: [String(this.product.id)],
+      content_name: this.product.name,
+      content_type: 'product',
+      value,
+      currency: 'USD',
+    });
+  }
 
   public isAddonSelected(id: string): boolean {
     return this.selectedAddonIds().has(id);
@@ -158,10 +176,15 @@ export class ProductDetailModal {
         price: hasPromo ? this.product.pricePromotional : this.product.price,
         originalPrice: hasPromo ? this.product.price : 0,
         photos: this.product.photos,
+        // La base (producto original) usa el stock a nivel de producto, para
+        // que effectiveStock lo respete al seleccionarla.
+        stock: this.product.stock !== null ? Number(this.product.stock) : null,
         sizes: this.product.sizes,
       });
     }
-    options.push(...this.product.variants);
+    // Hidden variants (e.g. a colour that sold out) stay on the product but
+    // never reach the buyer's option selector.
+    options.push(...this.product.variants.filter((v) => !v.isHidden));
     return options;
   })();
 
@@ -268,6 +291,13 @@ export class ProductDetailModal {
       if (!size) return null;
       const entry = this.availableSizes().find((s) => s.name === size);
       return entry?.stock ?? null;
+    }
+    // Variante sin tallas: usa el stock propio del variante cuando lo lleva
+    // (null = ilimitado). Antes caía siempre al stock del producto (compartido).
+    if (this.isVariant) {
+      const v = this.selectedVariant();
+      if (!v) return null;
+      return v.stock ?? null;
     }
     return this.availableStock;
   });

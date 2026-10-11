@@ -49,6 +49,13 @@ export const EcommerceConfigStore = signalStore(
   { providedIn: 'root' },
   withState(initialState),
   withMethods((store, service = inject(EcommerceConfigService)) => ({
+    /** CAT-85 (POS offline): siembra la config desde el caché local cuando no
+     *  hay red. Solo si el store está vacío — una config fresca siempre gana. */
+    hydrate(config: EcommerceConfig) {
+      if (store.config() !== null) return;
+      patchState(store, { config, isLoading: false });
+    },
+
     async loadConfig(tenantId: string) {
       if (store.config() !== null) return;
       patchState(store, { isLoading: true, error: null });

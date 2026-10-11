@@ -331,6 +331,24 @@ export default async function middleware(request: Request): Promise<Response | u
                 }
               : {}),
           },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              {
+                '@type': 'ListItem',
+                position: 1,
+                name: stripHtml(tenant.name),
+                item: `${baseUrl}/`,
+              },
+              {
+                '@type': 'ListItem',
+                position: 2,
+                name: stripHtml(product.name),
+                item: productUrl,
+              },
+            ],
+          },
         ];
 
         return new Response(

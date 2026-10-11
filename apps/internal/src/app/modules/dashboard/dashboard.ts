@@ -11,8 +11,8 @@ import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
 import { IconComponent } from '@ui';
 import { groupByOwner } from '../paying-accounts/paying-accounts.model';
 import { PayingClientsStore } from '../paying-clients/paying-clients.store';
+import { LiveMetricsStore } from './live-metrics.store';
 import { TIER_MONTHLY_PRICE_USD } from '../shared/plan-cycle.model';
-import { TenantsStore } from '../tenants/tenants.store';
 import { UsersStore } from '../users/users.store';
 import { ChurnStore } from './churn.store';
 import { RevenuePoint } from './revenue.service';
@@ -86,8 +86,10 @@ type ChartType = 'bar' | 'area';
               <strong class="text-3xl md:text-4xl font-bold text-grey-700 tracking-tight leading-none">
                 @if (isHidden('chart-mrr')) {
                   •••••
+                } @else if (live.metrics()) {
+                  {{ live.metrics()!.mrrUsd | currency: 'USD' : 'symbol' : '1.2-2' }}
                 } @else {
-                  {{ revenue.currentMrr() | currency: 'USD' : 'symbol' : '1.2-2' }}
+                  —
                 }
               </strong>
               @if (!isHidden('chart-mrr')) {
@@ -165,12 +167,16 @@ type ChartType = 'bar' | 'area';
               <strong class="text-3xl md:text-4xl font-bold text-grey-700 tracking-tight leading-none">
                 @if (isHidden('chart-arr')) {
                   •••••
+                } @else if (live.metrics()) {
+                  {{ live.metrics()!.arrUsd | currency: 'USD' : 'symbol' : '1.2-2' }}
                 } @else {
-                  {{ revenue.currentArr() | currency: 'USD' : 'symbol' : '1.2-2' }}
+                  —
                 }
               </strong>
               <span class="text-xs text-grey-400">
-                {{ revenue.currentActiveSubs() }} subs activas
+                @if (live.metrics()) {
+                  {{ live.metrics()!.stripe.activeCount + live.metrics()!.manual.activeCount }} subs activas
+                }
               </span>
             </div>
           </div>
@@ -347,7 +353,7 @@ type ChartType = 'bar' | 'area';
               <ui-icon name="globe" size="18" styleClass="text-sky-500" />
             </div>
           </header>
-          @if (tenants.isLoading() && countryBreakdown().length === 0) {
+          @if (payingClients.isLoading() && countryBreakdown().length === 0) {
             <ul class="flex flex-col gap-2" aria-busy="true">
               @for (_ of countrySkeletonRows; track $index) {
                 <li class="flex items-center gap-3 animate-pulse">
@@ -475,8 +481,8 @@ export class Dashboard implements OnInit {
   protected readonly revenue = inject(RevenueStore);
   protected readonly churn = inject(ChurnStore);
   protected readonly users = inject(UsersStore);
-  protected readonly tenants = inject(TenantsStore);
   protected readonly payingClients = inject(PayingClientsStore);
+  protected readonly live = inject(LiveMetricsStore);
 
   /** Static array used to drive the skeleton @for in the country card. */
   protected readonly countrySkeletonRows = Array.from({ length: 4 });
@@ -554,7 +560,10 @@ export class Dashboard implements OnInit {
     };
   });
 
-  protected readonly usersCount = computed(() => this.users.users().length);
+  /** Real platform user count. Uses the server-side `total` (matches the
+   *  search before LIMIT/OFFSET), NOT `users().length` — the store only holds
+   *  the first page (100 rows), which would peg this card at exactly 100. */
+  protected readonly usersCount = computed(() => this.users.total());
 
   protected readonly mrrOptions = computed<ApexOptions>(() =>
     this.buildChart(
@@ -576,63 +585,78 @@ export class Dashboard implements OnInit {
     )
   );
 
-  protected readonly cards = computed<SummaryCard[]>(() => [
-    {
-      key: 'card-cash',
-      label: 'Cobrado este mes',
-      value: this.formatCurrency(this.revenue.currentCashReceived()),
-      sensitive: true,
-      icon: 'banknote',
-      hint: `${this.revenue.currentNewSubs()} suscripciones nuevas`,
-      tone: 'warning',
-    },
-    {
-      key: 'card-mrr',
-      label: 'MRR actual',
-      value: this.formatCurrency(this.revenue.currentMrr()),
-      sensitive: true,
-      icon: 'trending-up',
-      hint: 'Ingreso mensual recurrente (normalizado)',
-      tone: 'success',
-    },
-    {
-      key: 'card-arr',
-      label: 'ARR proyectado',
-      value: this.formatCurrency(this.revenue.currentArr()),
-      sensitive: true,
-      icon: 'calendar-days',
-      hint: 'MRR × 12',
-      tone: 'info',
-    },
-    {
-      key: 'card-subs',
-      label: 'Suscripciones activas',
-      value: String(this.revenue.currentActiveSubs()),
-      sensitive: false,
-      icon: 'check-circle',
-      hint: 'Catálogos con plan pago vigente',
-      tone: 'primary',
-    },
-    {
-      key: 'card-users',
-      label: 'Usuarios registrados',
-      value: String(this.usersCount()),
-      sensitive: false,
-      icon: 'users',
-      hint: 'Cuentas totales en la plataforma',
-      tone: 'neutral',
-    },
-  ]);
+  /** KPI cards. The money/subscription cards read the REAL numbers from the
+   *  `admin-revenue-metrics` edge fn (Stripe live + manual plans), not the
+   *  incomplete `tenant_subscriptions` ledger. While that call is in flight we
+   *  show `—` rather than a wrong ledger figure. */
+  protected readonly cards = computed<SummaryCard[]>(() => {
+    const m = this.live.metrics();
+    const money = (v: number | undefined): string =>
+      m && v !== undefined ? this.formatCurrency(v) : '—';
+    const activeSubs = m ? m.stripe.activeCount + m.manual.activeCount : null;
+    return [
+      {
+        key: 'card-cash',
+        label: 'Cobrado este mes',
+        value: money(m?.collectedThisMonthUsd),
+        sensitive: true,
+        icon: 'banknote',
+        hint: m
+          ? `${m.newSubsThisMonth} suscripciones nuevas · Stripe + manual`
+          : 'Cargando cobros reales…',
+        tone: 'warning',
+      },
+      {
+        key: 'card-mrr',
+        label: 'MRR actual',
+        value: money(m?.mrrUsd),
+        sensitive: true,
+        icon: 'trending-up',
+        hint: 'Ingreso mensual recurrente (Stripe + manual)',
+        tone: 'success',
+      },
+      {
+        key: 'card-arr',
+        label: 'ARR proyectado',
+        value: money(m?.arrUsd),
+        sensitive: true,
+        icon: 'calendar-days',
+        hint: 'MRR × 12',
+        tone: 'info',
+      },
+      {
+        key: 'card-subs',
+        label: 'Suscripciones activas',
+        value: activeSubs === null ? '—' : String(activeSubs),
+        sensitive: false,
+        icon: 'check-circle',
+        hint: m
+          ? `${m.stripe.activeCount} Stripe · ${m.manual.activeCount} manuales`
+          : 'Catálogos con plan pago vigente',
+        tone: 'primary',
+      },
+      {
+        key: 'card-users',
+        label: 'Usuarios registrados',
+        value: this.usersCount() > 0 ? String(this.usersCount()) : '—',
+        sensitive: false,
+        icon: 'users',
+        hint: 'Cuentas totales en la plataforma',
+        tone: 'neutral',
+      },
+    ];
+  });
 
-  /** Tenants with an active paid plan, broken down by country. ISO codes are
+  /** Catalogs with a currently-valid paid plan, broken down by country. Reads
+   *  from the paying-clients store (full set, ~all vigentes) rather than the
+   *  tenants list, which is paginated to the first page and would only surface
+   *  the handful of paid catalogs that happen to load first. ISO codes are
    *  translated via Intl.DisplayNames so we don't need a hand-maintained map. */
   protected readonly countryBreakdown = computed(() => {
-    const paid = this.tenants
-      .tenants()
-      .filter((t) => t.plan.tier !== 'gratis');
+    const paid = this.payingClients.clients();
     const counts = new Map<string, number>();
-    for (const t of paid) {
-      const code = (t.countryCode ?? '').toUpperCase() || '__';
+    for (const c of paid) {
+      const code = (c.countryCode ?? '').toUpperCase() || '__';
       counts.set(code, (counts.get(code) ?? 0) + 1);
     }
     const namer = new Intl.DisplayNames(['es'], { type: 'region' });
@@ -677,8 +701,8 @@ export class Dashboard implements OnInit {
     this.revenue.load(12);
     this.churn.load(12);
     this.users.load();
-    this.tenants.load();
     this.payingClients.load();
+    this.live.load();
   }
 
   private pointsAs(

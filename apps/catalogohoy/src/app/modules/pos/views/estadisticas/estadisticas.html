@@ -1,0 +1,83 @@
+<div class="est-wrap">
+  <header class="est-head">
+    <h1>{{ 'Estadísticas' | transloco }}</h1>
+    <div class="controls">
+      <div class="seg">
+        @for (p of presets; track p.key) {
+          <button
+            class="seg-btn"
+            [class.active]="preset() === p.key"
+            (click)="setPreset(p.key)"
+          >
+            {{ p.label | transloco }}
+          </button>
+        }
+      </div>
+      @if (bsAvailable()) {
+        <button class="bs-toggle" [class.on]="useBs()" (click)="toggleBs()">
+          {{ useBs() ? 'Bs' : cs() }}
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (isLoading() && !metrics()) {
+    <div class="loading">
+      <ui-icon name="loader-circle" styleClass="size-6 animate-spin" />
+      {{ 'Cargando…' | transloco }}
+    </div>
+  }
+
+  @let m = metrics();
+  @if (m) {
+    <!-- KPIs -->
+    <div class="kpis">
+      <div class="kpi kpi-accent">
+        <span class="kpi-label">{{ 'Facturación' | transloco }}</span>
+        <strong class="kpi-value">{{ money(m.rangeTotalAmount) }}</strong>
+        <span class="kpi-sub">{{ 'en el período' | transloco }}</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">{{ 'Ventas' | transloco }}</span>
+        <strong class="kpi-value">{{ m.rangeTotalOrders | number }}</strong>
+        <span class="kpi-sub">{{ 'órdenes' | transloco }}</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">{{ 'Ticket promedio' | transloco }}</span>
+        <strong class="kpi-value">{{ money(m.rangeAvgTicket) }}</strong>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">{{ 'Hoy' | transloco }}</span>
+        <strong class="kpi-value">{{ money(m.todayAmount) }}</strong>
+        <span class="kpi-sub">{{ '{count} ventas' | transloco: { count: m.todayOrders } }}</span>
+      </div>
+    </div>
+
+    <!-- Gráfico por día -->
+    <section class="panel">
+      <h3>{{ 'Ventas por día' | transloco }}</h3>
+      @if (m.byDay.length) {
+        <div class="chart" [style.--cols]="m.byDay.length">
+          @for (d of m.byDay; track d.date) {
+            <div class="bar-col" [title]="money(d.amount) + ' · ' + d.count + ' ' + ('ventas' | transloco)">
+              <div class="bar-track">
+                <div class="bar" [style.height.%]="barHeight(d.amount)"></div>
+              </div>
+              <span class="bar-label">{{ d.date | date: 'd/M' }}</span>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="muted pad">{{ 'Sin ventas en el período.' | transloco }}</p>
+      }
+    </section>
+  } @else if (!isLoading()) {
+    <div class="empty">
+      <div class="empty-badge">
+        <ui-icon name="bar-chart-3" styleClass="size-8" />
+      </div>
+      <h2>{{ 'Sin datos todavía' | transloco }}</h2>
+      <p>{{ 'Cuando registres ventas en el Punto de Venta vas a ver acá la facturación, las ventas y el ticket promedio.' | transloco }}</p>
+    </div>
+  }
+</div>

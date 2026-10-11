@@ -5,6 +5,8 @@ import {
   BaseCheckoutService,
   CancelSubscriptionResult,
   CatalogCheckoutRequest,
+  ChangePlanRequest,
+  ChangePlanResult,
   CheckoutRequest,
   CheckoutSession,
   PromotionCodeValidation,
@@ -27,6 +29,35 @@ export class CheckoutService implements BaseCheckoutService {
     if (!data?.url) return E.left(new Error('No se recibió URL de pago'));
 
     return E.right({ url: data.url, currency: data.currency });
+  }
+
+  public async changePlan(
+    request: ChangePlanRequest
+  ): Promise<E.Either<Error, ChangePlanResult>> {
+    const { data, error } = await this.client.functions.invoke('change-plan', {
+      body: request,
+    });
+
+    if (error) {
+      // FunctionsHttpError trae el body real en `context` — lo leemos para
+      // surfacear el motivo de Stripe (tarjeta rechazada, requiere 3DS, etc.).
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        try {
+          const body = await ctx.json();
+          if (body?.error) return E.left(new Error(body.error));
+        } catch {
+          // cae al error genérico
+        }
+      }
+      return E.left(new Error(error.message));
+    }
+
+    const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+    if (!parsed?.success) {
+      return E.left(new Error(parsed?.error ?? 'No se pudo cambiar el plan'));
+    }
+    return E.right({ success: true, subscriptionId: parsed.subscriptionId });
   }
 
   public async cancelSubscription(
@@ -105,5 +136,23 @@ export class CheckoutService implements BaseCheckoutService {
       return E.left(new Error((data as { error?: string })?.error ?? 'Cupón inválido'));
     }
     return E.right(data);
+  }
+
+  /** Crea una sesión del Stripe Billing Portal (actualizar tarjeta) y devuelve
+   *  su URL. Solo el OWNER de un tenant con `stripe_customer_id`; la edge
+   *  function valida ambas cosas. Espeja `BillingService` (profile) — vive acá
+   *  para que el banner de pago (en plan) no cruce la dependencia plan → profile. */
+  public async createBillingPortalSession(
+    tenantId: number,
+    locale: string
+  ): Promise<E.Either<Error, string>> {
+    const { data, error } = await this.client.functions.invoke<{ url: string }>(
+      'create-billing-portal-session',
+      { body: { tenantId, locale } }
+    );
+
+    if (error) return E.left(new Error(error.message ?? 'No se pudo abrir el portal de pago'));
+    if (!data?.url) return E.left(new Error('No se pudo abrir el portal de pago'));
+    return E.right(data.url);
   }
 }

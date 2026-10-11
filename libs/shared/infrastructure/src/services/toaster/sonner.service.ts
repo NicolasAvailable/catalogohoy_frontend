@@ -31,6 +31,30 @@ export class SonnerToasterService {
     toast.info(this.translate.translate(message));
   }
 
+  /**
+   * Aviso in-app enriquecido para eventos del sistema (p. ej. una orden nueva):
+   * título traducido + descripción libre (que NO se traduce, suele ser dato del
+   * cliente) + una acción opcional. Dura más que un toast normal para dar tiempo
+   * a reaccionar.
+   */
+  public notify(
+    titleKey: string,
+    options?: { description?: string; actionKey?: string; onAction?: () => void }
+  ) {
+    this.dismissWait();
+    toast.success(this.translate.translate(titleKey), {
+      description: options?.description,
+      duration: 8000,
+      action:
+        options?.actionKey && options?.onAction
+          ? {
+              label: this.translate.translate(options.actionKey),
+              onClick: options.onAction,
+            }
+          : undefined,
+    });
+  }
+
   public wait(message: string) {
     // duration: Infinity → el toast de espera NO se auto-cierra; persiste hasta
     // que la acción termine (dismissWait) o lo reemplace un toast de resultado.

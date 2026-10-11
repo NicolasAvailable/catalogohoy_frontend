@@ -1,5 +1,6 @@
 import { CurrencyPipe, DatePipe, formatDate } from '@angular/common';
 import { Component, inject, output, signal, viewChild } from '@angular/core';
+import { Router } from '@angular/router';
 import { DialogComponent, IconComponent } from '@ui';
 import {
   cycleLabel,
@@ -235,6 +236,14 @@ import { PayingClientsStore } from '../../paying-clients.store';
 
           <div class="flex items-center justify-between gap-2 pt-3 border-t border-grey-50 flex-wrap">
             <div class="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                (click)="openFullDetail(client)"
+                class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold text-primary-600 hover:bg-primary-50 transition-colors cursor-pointer"
+              >
+                <ui-icon name="scan-search" size="14" styleClass="text-primary-500" />
+                Ver detalle completo
+              </button>
               @if (client.tier !== 'gratis') {
                 <button
                   type="button"
@@ -313,6 +322,7 @@ export class ClientDetailDialog {
 
   protected readonly store = inject(PayingClientsStore);
   private readonly tenantsService = inject(TenantsService);
+  private readonly router = inject(Router);
   private readonly dialog = viewChild.required(DialogComponent);
 
   protected readonly ownersBanned = signal<boolean>(false);
@@ -334,6 +344,13 @@ export class ClientDetailDialog {
     if (!client) return;
     const res = await this.tenantsService.isOwnersBanned(client.tenantId);
     res.mapRight((b) => this.ownersBanned.set(b));
+  }
+
+  /** Abre la página de detalle completo del catálogo (misma vista que en la
+   *  sección Catálogos). */
+  protected openFullDetail(client: PayingClient): void {
+    this.hide();
+    void this.router.navigate(['/tenants', client.tenantId]);
   }
 
   protected onAdjustPlan(client: PayingClient): void {

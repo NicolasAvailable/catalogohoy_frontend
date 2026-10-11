@@ -47,9 +47,18 @@ export class PosthogService {
       .pipe(filter((e) => e instanceof NavigationEnd))
       .subscribe((e) => {
         const event = e as NavigationEnd;
-        const isAdmin = event.urlAfterRedirects.startsWith('/admin');
+        // Backoffice autenticado: admin + Punto de Venta (/pos vive top-level,
+        // fuera de /admin) + el wizard de onboarding (/onboarding, el embudo de
+        // activación — queremos ver dónde se traban los nuevos). Todos se graban
+        // (session recording) y capturan pageview; el resto (storefront público)
+        // no, salvo tracking público.
+        const url = event.urlAfterRedirects;
+        const isBackoffice =
+          url.startsWith('/admin') ||
+          url.startsWith('/pos') ||
+          url.startsWith('/onboarding');
 
-        if (isAdmin) {
+        if (isBackoffice) {
           this.ngZone.runOutsideAngular(() => {
             posthog.startSessionRecording();
             posthog.capture('$pageview');
@@ -88,5 +97,14 @@ export class PosthogService {
     if (!this.isConfigured) return;
     if (this.planStore.currentPlan()?.isFree) return;
     posthog.capture(event, properties);
+  }
+
+  /** Eventos del embudo de onboarding: se capturan SIEMPRE, sin el gate de
+   *  plan pagado de `capture()` — los usuarios que hacen el onboarding están
+   *  en plan gratis por definición, y ese es justo el funnel de activación que
+   *  queremos medir (dónde se cae la gente en el wizard). */
+  captureOnboarding(event: string, properties?: Record<string, unknown>): void {
+    if (!this.isConfigured) return;
+    this.ngZone.runOutsideAngular(() => posthog.capture(event, properties));
   }
 }

@@ -55,11 +55,34 @@ export default class Invoice {
     () => this.ecommerceStore.isVenezuela() && (this.order()?.totalBs ?? 0) > 0
   );
 
+  /** Ajuste visible (p. ej. descuento de contado) para itemizarlo entre el
+   *  Subtotal y el Total. Si el ajuste está oculto, el total ya lo incluye y
+   *  no se muestra la línea. */
+  public readonly visibleAdjustment = computed(() => {
+    const adj = this.order()?.paymentAdjustment;
+    return adj && adj.visible ? adj : null;
+  });
+
   /** Tasa derivada del snapshot de la orden (totalBs/totalUsd), para que los
    *  montos por línea en Bs cuadren con el total guardado. 0 si no aplica. */
   public readonly orderRate = computed(() => {
     const o = this.order();
     return o && o.totalUsd > 0 && o.totalBs ? o.totalBs / o.totalUsd : 0;
+  });
+
+  /** CAT-84: desglose del impuesto incluido estilo factura fiscal —
+   *  base imponible → IVA → total. Null = catálogo sin impuesto. */
+  public readonly taxInfo = computed(() => {
+    const rate = Number(this.info()?.taxRate ?? 0);
+    const o = this.order();
+    if (!rate || rate <= 0 || !o) return null;
+    const base = o.totalUsd / (1 + rate / 100);
+    return {
+      label: this.info()?.taxLabel?.trim() || 'IVA',
+      rate,
+      base,
+      usd: o.totalUsd - base,
+    };
   });
 
   constructor() {
@@ -110,6 +133,8 @@ export default class Invoice {
         showDualBs: this.showBs(),
         showReference: this.showReferencePrice(),
         logoUrl: info?.logo ?? null,
+        taxRate: info?.taxRate ?? null,
+        taxLabel: info?.taxLabel ?? null,
       });
     } finally {
       this.isGeneratingPdf.set(false);
@@ -142,6 +167,7 @@ export default class Invoice {
       updatedAt: o.createdAt,
       phone: o.phone ?? undefined,
       email: o.email ?? undefined,
+      nit: o.nit ?? undefined,
       comments: o.comments ?? undefined,
       paymentMethod: o.paymentMethod ?? undefined,
       shippingMethod: o.shippingMethod

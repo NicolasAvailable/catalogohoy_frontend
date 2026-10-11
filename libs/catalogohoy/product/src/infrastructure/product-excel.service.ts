@@ -15,35 +15,40 @@ export class ProductExcelService {
   private readonly productService = inject(ProductService);
   private readonly categoryStore = inject(CategoryStore);
 
+  /** Mismas columnas que entiende el import — compartidas por Excel y CSV. */
+  private buildExportRows(products: Product[]): Record<string, unknown>[] {
+    return products.map((p) => ({
+      nombre: p.name,
+      descripcion: this.stripHtml(p.description ?? ''),
+      precio: p.price,
+      precio_promocional: p.pricePromotional || '',
+      stock: p.stock ?? '',
+      sku: p.sku ?? '',
+      costo_produccion: p.productionCost ?? '',
+      categorias: p.categoryList.categories.map((c) => c.name).join(', '),
+      tallas: this.formatSizes(p.sizes),
+      mayoreo: p.isWholesale
+        ? p.wholesaleTiers.map((t) => `${t.title}: ${t.price}`).join(' | ')
+        : '',
+      variantes: p.isVariant
+        ? p.variants
+            .map((v) => {
+              const tallas = v.sizes?.length
+                ? ` [tallas: ${this.formatSizes(v.sizes)}]`
+                : '';
+              const original = v.originalPrice
+                ? ` (antes ${v.originalPrice})`
+                : '';
+              return `${v.name}: ${v.price}${original}${tallas}`;
+            })
+            .join(' | ')
+        : '',
+    }));
+  }
+
   public exportToExcel(products: Product[]): E.Either<Error, void> {
     try {
-      const rows = products.map((p) => ({
-        nombre: p.name,
-        descripcion: this.stripHtml(p.description ?? ''),
-        precio: p.price,
-        precio_promocional: p.pricePromotional || '',
-        stock: p.stock ?? '',
-        sku: p.sku ?? '',
-        costo_produccion: p.productionCost ?? '',
-        categorias: p.categoryList.categories.map((c) => c.name).join(', '),
-        tallas: this.formatSizes(p.sizes),
-        mayoreo: p.isWholesale
-          ? p.wholesaleTiers.map((t) => `${t.title}: ${t.price}`).join(' | ')
-          : '',
-        variantes: p.isVariant
-          ? p.variants
-              .map((v) => {
-                const tallas = v.sizes?.length
-                  ? ` [tallas: ${this.formatSizes(v.sizes)}]`
-                  : '';
-                const original = v.originalPrice
-                  ? ` (antes ${v.originalPrice})`
-                  : '';
-                return `${v.name}: ${v.price}${original}${tallas}`;
-              })
-              .join(' | ')
-          : '',
-      }));
+      const rows = this.buildExportRows(products);
 
       const worksheet = XLSX.utils.json_to_sheet(rows);
 
@@ -68,6 +73,27 @@ export class ProductExcelService {
         workbook,
         `productos_${new Date().toISOString().slice(0, 10)}.xlsx`
       );
+
+      return E.right(undefined);
+    } catch {
+      return E.left(new Error('Error al exportar productos'));
+    }
+  }
+
+  /** Igual que exportToExcel pero en CSV plano (UTF-8 con BOM para que Excel
+   *  y Google Sheets lean bien los acentos). Mismas columnas que el import. */
+  public exportToCsv(products: Product[]): E.Either<Error, void> {
+    try {
+      const worksheet = XLSX.utils.json_to_sheet(this.buildExportRows(products));
+      const csv = XLSX.utils.sheet_to_csv(worksheet);
+      const blob = new Blob(['\ufeff' + csv], {
+        type: 'text/csv;charset=utf-8;',
+      });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `productos_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(link.href);
 
       return E.right(undefined);
     } catch {
@@ -178,7 +204,17 @@ export class ProductExcelService {
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          // CSV: parsear en crudo — si no, SheetJS tipa los valores y corrompe
+          // datos reales: SKU "00123" → 123 (rompe el upsert por SKU y duplica
+          // el producto) y una celda que empieza con "=" se trata como fórmula
+          // (el nombre se pierde). En .xlsx los tipos ya vienen de la celda.
+          const isCsv = /\.csv$/i.test(file.name);
+          const workbook = XLSX.read(
+            data,
+            isCsv
+              ? { type: 'array', raw: true, cellFormula: false }
+              : { type: 'array' }
+          );
           const sheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonRows =
             XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
@@ -207,8 +243,10 @@ export class ProductExcelService {
             pricePromotional: row['precio_promocional']
               ? Number(row['precio_promocional'])
               : null,
+            // Ojo: stock 0 es un valor VÁLIDO (agotado) — null/'' = sin límite.
+            // Con `!row['stock']` el 0 se convertía en ilimitado al re-importar.
             stock:
-              !row['stock'] || row['stock'] === ''
+              row['stock'] == null || String(row['stock']).trim() === ''
                 ? null
                 : String(row['stock']),
             sku: row['sku'] ? String(row['sku']).trim() : null,

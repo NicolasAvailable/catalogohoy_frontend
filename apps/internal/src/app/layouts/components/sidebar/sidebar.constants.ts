@@ -13,6 +13,11 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     exact: true,
   },
   {
+    label: 'Métricas de negocio',
+    icon: 'line-chart',
+    routerLink: '/business-metrics',
+  },
+  {
     label: 'Catálogos',
     icon: 'store',
     routerLink: '/tenants',
@@ -33,12 +38,17 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     routerLink: '/paying-accounts',
   },
   {
+    label: 'Free trials',
+    icon: 'gift',
+    routerLink: '/free-trials',
+  },
+  {
     label: 'Leads Enterprise',
     icon: 'building-2',
     routerLink: '/enterprise-leads',
   },
   {
-    label: 'WhatsApp',
+    label: 'Notificaciones WhatsApp',
     icon: 'message-circle',
     routerLink: '/whatsapp-logs',
   },

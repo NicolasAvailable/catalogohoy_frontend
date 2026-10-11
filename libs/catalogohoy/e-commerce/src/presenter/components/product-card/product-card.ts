@@ -116,7 +116,7 @@ export class ProductCard {
     if (basePrice > 0) {
       return { min: basePrice, max: basePrice };
     }
-    const prices = p.variants.map((v) => v.price);
+    const prices = p.variants.filter((v) => !v.isHidden).map((v) => v.price);
     if (!prices.length) {
       return { min: p.price, max: p.price };
     }

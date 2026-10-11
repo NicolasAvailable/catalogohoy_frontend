@@ -83,16 +83,7 @@
         (click)="close()"
       >
         <ui-icon name="user" size="16" styleClass="pm-item__icon" />
-        <span class="pm-item__label">{{ 'Datos de la cuenta' | transloco }}</span>
-      </a>
-      <a
-        routerLink="profile"
-        [queryParams]="{ tab: 'notifications' }"
-        class="pm-item"
-        (click)="close()"
-      >
-        <ui-icon name="mail" size="16" styleClass="pm-item__icon" />
-        <span class="pm-item__label">{{ 'Notificaciones' | transloco }}</span>
+        <span class="pm-item__label">{{ 'Cuenta' | transloco }}</span>
       </a>
 
       <div class="pm-divider"></div>

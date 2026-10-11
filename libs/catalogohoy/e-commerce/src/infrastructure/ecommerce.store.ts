@@ -8,7 +8,7 @@ import {
   withMethods,
   withState,
 } from '@ngrx/signals';
-import { CatalogInfo } from '../domain';
+import { CatalogInfo, PublicOrderAdjustment } from '../domain';
 import { EcommerceService } from './ecommerce.service';
 
 const PAGE_SIZE = 20;
@@ -18,6 +18,8 @@ type EcommerceState = {
   productList: ProductList;
   selectedProduct: Product | null;
   categories: { id: string; name: string }[];
+  /** El tenant ocultó su categoría "Ver todos" (no renderizar ningún all-tab). */
+  viewAllHidden: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
   searchTerm: string;
@@ -40,6 +42,7 @@ const initialState: EcommerceState = {
   productList: ProductList.empty(),
   selectedProduct: null,
   categories: [],
+  viewAllHidden: false,
   isLoading: true,
   isLoadingMore: false,
   searchTerm: '',
@@ -128,7 +131,7 @@ export const EcommerceStore = signalStore(
           return catalogResult;
         }
 
-        const { catalogInfo, categories, exchangeRate, planExpired, isFreePlan } =
+        const { catalogInfo, categories, viewAllHidden, exchangeRate, planExpired, isFreePlan } =
           catalogResult.value;
 
         // Free (incl. auto-downgraded) tenants only expose their first N products
@@ -141,6 +144,7 @@ export const EcommerceStore = signalStore(
         patchState(store, () => ({
           catalogInfo,
           categories,
+          viewAllHidden,
           exchangeRate,
           productCap,
         }));
@@ -171,6 +175,29 @@ export const EcommerceStore = signalStore(
       } catch {
         patchState(store, () => ({ isLoading: false }));
         return undefined;
+      }
+    },
+
+    /** Refresca SOLO la config del catálogo (info + categorías + tasa) sin
+     *  tocar productos, carrito ni flags de loading — cero parpadeo. Lo
+     *  dispara el aviso realtime cuando el comerciante guarda en "Editar
+     *  catálogo" (p. ej. agrega su vendedor de WhatsApp) para que un
+     *  visitante que YA está en el checkout vea el botón activarse en vivo,
+     *  sin salir ni recargar. */
+    async refreshCatalogInfo(slug: string) {
+      try {
+        const result = await ecommerceService.getPublicCatalog(slug);
+        result.mapRight(
+          ({ catalogInfo, categories, viewAllHidden, exchangeRate }) =>
+            patchState(store, () => ({
+              catalogInfo,
+              categories,
+              viewAllHidden,
+              exchangeRate,
+            }))
+        );
+      } catch {
+        // Best-effort: si falla, la config cargada sigue siendo válida.
       }
     },
 
@@ -295,6 +322,7 @@ export const EcommerceStore = signalStore(
       items: any[];
       total: number;
       email?: string;
+      nit?: string;
       payment_method?: string;
       shipping_method?: {
         name: string;
@@ -306,6 +334,10 @@ export const EcommerceStore = signalStore(
       shipping_fee?: number;
       /** Fecha de entrega elegida por el cliente (YYYY-MM-DD). Opcional. */
       delivery_date?: string;
+      /** Snapshot del descuento/recargo del checkout (contado). */
+      payment_adjustment?: PublicOrderAdjustment | null;
+      /** Condición elegida por el cliente ('cash' | 'credit'). Opcional. */
+      payment_condition?: 'cash' | 'credit';
     }) {
       const catalogInfo = store.catalogInfo();
       if (!catalogInfo) return;
@@ -320,15 +352,30 @@ export const EcommerceStore = signalStore(
         phone: order.phone,
         comments: order.comments,
         email: order.email,
+        nit: order.nit,
         payment_method: order.payment_method,
         shipping_method: order.shipping_method,
         shipping_address: order.shipping_address,
         shipping_fee: order.shipping_fee,
         delivery_date: order.delivery_date,
+        payment_adjustment: order.payment_adjustment,
+        payment_condition: order.payment_condition,
       });
 
       patchState(store, () => ({ isLoading: false }));
       return result;
+    },
+
+    /** Gate de crédito del checkout: compras previas (completadas o a crédito)
+     *  del teléfono en esta tienda. null = no se pudo verificar (el caller
+     *  decide; el checkout es permisivo para no bloquear ventas). */
+    async getCustomerPurchaseCount(phone: string): Promise<number | null> {
+      const catalogInfo = store.catalogInfo();
+      if (!catalogInfo) return null;
+      return ecommerceService.getCustomerPurchaseCount(
+        Number(catalogInfo.id),
+        phone
+      );
     },
 
     enterPreviewMode() {

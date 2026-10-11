@@ -1,0 +1,1205 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  isDevMode,
+  OnInit,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { authenticationTokenService } from '@catalogohoy/auth';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { Exception } from '@shared/domain';
+import { ToastService } from '@shared/infrastructure';
+import {
+  ButtonComponent,
+  ColorPickerComponent,
+  IconComponent,
+  InputNumberComponent,
+  InputPhoneComponent,
+  InputTextComponent,
+  MultiSelectComponent,
+  TextareaComponent,
+  ToggleComponent,
+  UploaderComponent,
+} from '@ui';
+import { CategoryStore } from '@catalogohoy/category';
+import {
+  EcommerceConfig,
+  EcommerceConfigService,
+  EcommerceConfigStore,
+  PhoneMockupComponent,
+  PreviewMessage,
+  detectPaymentMethodType,
+  PaymentFieldDef,
+  paymentMethodFields,
+  PaymentMethodEntity,
+  ShippingMethod,
+  ShippingMethodType,
+  THEME_COLORS,
+} from '@catalogohoy/ecommerce-config';
+import { PosthogService, SupabaseClientProvider } from '@catalogohoy/core';
+import { CreateProductInput, ProductService } from '@catalogohoy/product';
+import { ProfileStore } from '@catalogohoy/profile';
+import { TenantService, TenantStore } from '@catalogohoy/tenant';
+
+/** Los 3 pasos del wizard (estilo Take App):
+ *  tienda (datos + logo + color + dirección) → primer producto → entrega+pago.
+ *  Se navegan por índice sobre STEP_IDS (lista + índice, no números mágicos). */
+type StepId = 'store' | 'product' | 'setup';
+
+const STEP_IDS: StepId[] = ['store', 'product', 'setup'];
+
+/** Clave de localStorage que marca el onboarding como completado por tenant.
+ *  Evita re-disparar el wizard (hasta tener un flag en DB). */
+export const onboardingDoneKey = (tenantId: string | number) =>
+  `chy_onboarding_done_${tenantId}`;
+
+/** Prefijos de slug temporal que crea el trigger de signup (handle_new_user):
+ *  'tienda-XXXXXX' o 'mi-tienda-XXXXXX' según el seed. Mientras el slug sea
+ *  temporal, la dirección se autogenera desde el nombre; en el wizard el campo
+ *  es SIEMPRE editable sea cual sea el slug. */
+const TEMP_SLUG_PREFIXES = ['tienda-', 'mi-tienda-'];
+
+const isTempSlugValue = (slug: string): boolean =>
+  TEMP_SLUG_PREFIXES.some((p) => slug.startsWith(p));
+
+/** Draft de una card de entrega (paso Entrega y pago). */
+interface ShippingDraft {
+  type: ShippingMethodType;
+  label: string;
+  hint: string;
+  icon: string;
+  active: boolean;
+  fee: number | null;
+  priceOnRequest: boolean;
+}
+
+/** Draft de una card de método de pago (paso Entrega y pago). */
+interface PaymentDraft {
+  name: string;
+  icon: string;
+  active: boolean;
+  /** id de la fila de `payment_methods` si el preset matchea una existente. */
+  existingId: number | null;
+  wasActive: boolean;
+  fields: PaymentFieldDef[];
+  values: Record<string, string>;
+}
+
+const SHIPPING_CARDS: {
+  type: ShippingMethodType;
+  label: string;
+  hint: string;
+  icon: string;
+}[] = [
+  {
+    type: 'pickup',
+    label: 'Retiro en local',
+    hint: 'El cliente pasa a buscar su pedido',
+    icon: 'store',
+  },
+  {
+    type: 'delivery',
+    label: 'Entrega personal',
+    hint: 'Tú llevas el pedido a la dirección del cliente',
+    icon: 'map-pin',
+  },
+  {
+    type: 'shipping',
+    label: 'Envío nacional',
+    hint: 'Envías por encomienda o courier',
+    icon: 'truck',
+  },
+];
+
+@Component({
+  selector: 'lib-onboarding',
+  standalone: true,
+  imports: [
+    FormsModule,
+    TranslocoPipe,
+    ButtonComponent,
+    ColorPickerComponent,
+    IconComponent,
+    InputNumberComponent,
+    InputPhoneComponent,
+    InputTextComponent,
+    MultiSelectComponent,
+    PhoneMockupComponent,
+    TextareaComponent,
+    ToggleComponent,
+    UploaderComponent,
+  ],
+  templateUrl: './onboarding.html',
+  styleUrl: './onboarding.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class Onboarding implements OnInit {
+  private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
+  private readonly tenantStore = inject(TenantStore);
+  private readonly tenantService = inject(TenantService);
+  private readonly profileStore = inject(ProfileStore);
+  public readonly configStore = inject(EcommerceConfigStore);
+  private readonly configService = inject(EcommerceConfigService);
+  public readonly categoryStore = inject(CategoryStore);
+  private readonly productService = inject(ProductService);
+  private readonly posthog = inject(PosthogService);
+
+  public readonly themeColors = THEME_COLORS;
+  /** Lista de pasos + índice actual: la numeración (Paso 1/3) sale de acá. */
+  public readonly stepIds = STEP_IDS;
+  public readonly totalSteps = STEP_IDS.length;
+  public readonly stepIndex = signal(0);
+  public readonly currentStep = computed<StepId>(
+    () => this.stepIds[this.stepIndex()]
+  );
+  /** Número humano del paso actual (Paso {stepNumber}/{totalSteps}). */
+  public readonly stepNumber = computed(() => this.stepIndex() + 1);
+  /** true mientras redirige a /admin (onboarding ya completado): no renderiza. */
+  public readonly isRedirecting = signal(false);
+  /** El formulario no se muestra hasta aplicar los prefills (evita que el
+   *  loadConfig asíncrono pise lo que el usuario ya tipeó). */
+  public readonly isBooting = signal(true);
+  private tenantId: string | null = null;
+
+  // ── Paso 1: tu tienda ───────────────────────────────────────────────────
+  /** Número de VENTAS: el vendedor del checkout (whatsappButtons) que el
+   *  cliente toca para hacer el pedido. NO es el de notificaciones de la
+   *  plataforma (user_metadata.store_whatsapp), que el onboarding no gestiona. */
+  public readonly whatsapp = signal('');
+  public readonly countryIso = signal('ve');
+  /** true si la config ya tenía un botón de WhatsApp (no se re-guarda). */
+  private hadConfigWhatsapp = false;
+  private profileName = '';
+
+  public readonly storeName = signal('');
+  public readonly logoUrl = signal<string | null>(null);
+  /** Banner del catálogo (la cabecera detrás del logo) — editable acá mismo. */
+  public readonly bannerUrl = signal<string | null>(null);
+  public readonly themeColor = signal('#10b981');
+  public readonly slug = signal('');
+  /** true si el tenant todavía tiene un slug temporal (tienda-* / mi-tienda-*):
+   *  mientras lo sea, la dirección sigue al nombre al tipear. */
+  public readonly isTempSlug = signal(false);
+  /** Dirección editable (siempre visible en el wizard). */
+  public readonly slugInput = signal('');
+  private slugManuallyEdited = false;
+  private initialSlug = '';
+  /** Verificación EN VIVO de la dirección: check verde si está libre, rojo si
+   *  ya existe (y Continuar se deshabilita). saveStore() re-verifica igual —
+   *  esto es UX inmediata; aquél es el gate autoritativo. */
+  public readonly slugCheck = signal<
+    'idle' | 'checking' | 'available' | 'taken'
+  >('idle');
+  private slugCheckTimer: ReturnType<typeof setTimeout> | null = null;
+  private slugCheckSeq = 0;
+  /** Slug deseado (validado en el paso 1). El rename se DIFIERE al final para
+   *  no romper el host/preview: hasta entonces this.slug() sigue siendo el
+   *  temporal y el usuario navega en el subdominio que aún resuelve. */
+  private desiredSlug = '';
+
+  // ── Paso 2: primer producto (+ categorías inline) ───────────────────────
+  public readonly newCategoryName = signal('');
+  public readonly creatingCategory = signal(false);
+  public readonly productName = signal('');
+  public readonly productPrice = signal<number | null>(null);
+  public readonly productPhotos = signal<string[]>([]);
+  public readonly productCategoryIds = signal<string[]>([]);
+  public readonly productDescription = signal('');
+  /** Opciones avanzadas (colapsadas por defecto): promo, stock, SKU, costo. */
+  public readonly showAdvanced = signal(false);
+  public readonly productPromoPrice = signal<number | null>(null);
+  public readonly productStock = signal<number | null>(null);
+  public readonly productSku = signal('');
+  public readonly productCost = signal<number | null>(null);
+  /** Producto creado EN este wizard (máx. 1: para más, el mensaje manda a
+   *  terminar el onboarding y usar Productos). */
+  public readonly addedProduct = signal<{
+    name: string;
+    price: number;
+    photo: string | null;
+  } | null>(null);
+  /** Cache-buster del iframe del preview: al crear el producto se incrementa
+   *  → el iframe recarga y el producto APARECE en el teléfono (la lista de
+   *  productos no viaja por postMessage; name/logo/banner/color se re-mandan
+   *  solos al recargar vía onPreviewIframeLoaded). */
+  private readonly previewBust = signal(0);
+
+  // ── Paso 3: entrega y pago ──────────────────────────────────────────────
+  public readonly shippingDrafts = signal<ShippingDraft[]>(
+    SHIPPING_CARDS.map((card) => ({
+      ...card,
+      active: false,
+      fee: 0,
+      priceOnRequest: false,
+    }))
+  );
+  private existingShippingMethods: ShippingMethod[] = [];
+
+  public readonly paymentDrafts = signal<PaymentDraft[]>([]);
+  private existingPaymentMethods: PaymentMethodEntity[] = [];
+
+  public readonly isSaving = signal(false);
+
+  public readonly isVenezuela = computed(
+    () => this.countryIso().toUpperCase() === 'VE'
+  );
+
+  /** Categorías reales del catálogo (excluye la sembrada "Ver todos"). */
+  public readonly categories = computed(() =>
+    this.categoryStore
+      .categoryList()
+      .categories.filter((c) => !c.isViewAll)
+  );
+  public readonly categoryOptions = computed(() =>
+    this.categories().map((c) => ({ id: c.id, name: c.name }))
+  );
+
+  /** Slug final del campo editable (slugificado + sin guiones en los bordes). */
+  public readonly finalSlug = computed(() => toSlug(this.slugInput()));
+  public readonly storeStepValid = computed(
+    () =>
+      this.storeName().trim().length > 0 &&
+      this.whatsapp().trim().length > 0 &&
+      this.finalSlug().length > 0 &&
+      // Dirección ocupada ⇒ Continuar deshabilitado hasta que elija otra.
+      this.slugCheck() !== 'taken'
+  );
+  public readonly productValid = computed(
+    () =>
+      this.productName().trim().length > 0 && (this.productPrice() ?? 0) > 0
+  );
+
+  /** URL pública del catálogo (hint en vivo bajo el campo de dirección). */
+  public readonly storeUrl = computed(() => {
+    // Con slug temporal y sin dirección tipeada aún, no mostramos el slug
+    // aleatorio del trigger: el hint queda oculto hasta que el usuario escriba.
+    const fallback = this.isTempSlug() ? '' : this.slug();
+    const slug = this.finalSlug() || fallback;
+    return slug ? `${slug}.catalogohoy.com` : '';
+  });
+
+  // ── Preview: mismo mockup (iframe del catálogo real) que Editar Catálogo ──
+  private readonly sanitizer = inject(DomSanitizer);
+  private readonly phoneMockup =
+    viewChild<PhoneMockupComponent>('phoneMockup');
+  /** Último PREVIEW_UPDATE enviado — se re-manda cuando el iframe (re)carga. */
+  private lastPreviewMessage: PreviewMessage | null = null;
+
+  /** URL del catálogo público dentro del mockup (igual que el editor). Usa el
+   *  slug ACTUAL del tenant (el temporal — el rename está diferido al final).
+   *  La URL es CONSTANTE entre pasos: el iframe carga UNA sola vez y no se
+   *  recarga al avanzar (evita el parpadeo/estado roto de recargar el
+   *  storefront en cada paso). El nombre/logo/color se reflejan en vivo por
+   *  postMessage; el primer producto no aparece en el preview hasta recargar,
+   *  pero la estabilidad vale más que ese detalle.
+   *  `preview=true` hace que getTenantSlugFromUrl respete este slug (en dev y
+   *  prod) en vez del host/DEV_TENANT_SLUG → muestra la tienda real. */
+  public readonly safeIframeUrl = computed<SafeResourceUrl | ''>(() => {
+    const slug = this.slug();
+    if (!slug) return '';
+    const origin = window.location.origin;
+    const url = `${origin}/?slug=${slug}&preview=true&r=${this.previewBust()}`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  });
+
+  constructor() {
+    // Push en vivo al iframe (mismo canal postMessage del editor de catálogo):
+    // nombre, logo y color se reflejan mientras se tipea. Guard de boot para
+    // no pisar con nulls lo que el iframe cargó del RPC público.
+    effect(() => {
+      if (this.isBooting()) return;
+      if (!this.phoneMockup()) return;
+      // Con slug provisional y sin nombre tipeado, el catálogo real mostraría
+      // el churro interno (mi-tienda-XXXXXX): el preview enseña "Mi tienda"
+      // como placeholder hasta que el usuario escriba el suyo.
+      const name =
+        this.storeName().trim() || (this.isTempSlug() ? 'Mi tienda' : '');
+      const message: PreviewMessage = {
+        type: 'PREVIEW_UPDATE',
+        payload: {
+          ...(name ? { name } : {}),
+          logo: this.logoUrl(),
+          banner: this.bannerUrl(),
+          themeColor: this.themeColor(),
+        },
+        source: 'catalogohoy-admin',
+      };
+      this.lastPreviewMessage = message;
+      this.phoneMockup()?.sendPreviewMessage(message);
+    });
+  }
+
+  /** Re-push del último estado al (re)cargar el iframe — igual que el editor:
+   *  el frame nuevo engancha su listener al iniciar; el tick evita la carrera. */
+  public onPreviewIframeLoaded(): void {
+    const msg = this.lastPreviewMessage;
+    if (!msg) return;
+    setTimeout(() => this.phoneMockup()?.sendPreviewMessage(msg), 250);
+  }
+
+  async ngOnInit(): Promise<void> {
+    const id = await this.tenantStore.getTenantIdAsync();
+    if (id == null) {
+      this.isBooting.set(false);
+      return;
+    }
+    this.tenantId = String(id);
+
+    // Guard de re-entrada: si este tenant ya completó (u omitió) el wizard,
+    // directo al admin sin renderizar.
+    try {
+      if (localStorage.getItem(onboardingDoneKey(this.tenantId)) === '1') {
+        this.isRedirecting.set(true);
+        this.router.navigate(['/admin']);
+        return;
+      }
+    } catch {
+      /* ignore private-mode */
+    }
+
+    // Progreso persistido en DB (tenants.onboarding_step): si el usuario
+    // abandonó a mitad, retoma EN ESE PASO (funciona entre navegadores y
+    // dispositivos, a diferencia del flag de localStorage). Si es la primera
+    // vez (null), se marca el paso 0 → el login sabrá que quedó pendiente.
+    const savedStep = await this.tenantService.getOnboardingStep();
+    if (savedStep != null) {
+      this.stepIndex.set(
+        Math.min(Math.max(savedStep, 0), this.stepIds.length - 1)
+      );
+    } else {
+      void this.tenantService.setOnboardingStep(0);
+    }
+
+    await this.configStore.loadConfig(this.tenantId);
+    const config = this.configStore.config();
+    const profile = this.profileStore.profile();
+
+    // Prefills: nombre del perfil, color/logo del catálogo ya creado.
+    this.profileName = (profile?.name ?? '').trim();
+    this.themeColor.set(config?.themeColor || '#10b981');
+    this.logoUrl.set(config?.logo ?? null);
+    this.bannerUrl.set(config?.banner ?? null);
+    this.countryIso.set((config?.countryCode ?? 've').toLowerCase());
+
+    const currentSlug = this.tenantStore.tenant().tenantSlug ?? '';
+    this.slug.set(currentSlug);
+    this.isTempSlug.set(isTempSlugValue(currentSlug));
+    this.initialSlug = currentSlug;
+
+    // Nombre: NO prefillear el sembrado por el trigger de signup ("Mi tienda",
+    // el propio slug o un nombre con pinta de slug temporal tipo
+    // "mi-tienda-mmr0ps"): input vacío con placeholder.
+    const rawName = (config?.name ?? '').trim();
+    const seededName =
+      rawName.toLowerCase() === 'mi tienda' ||
+      rawName === currentSlug ||
+      /^(mi-)?tienda-[a-z0-9-]+$/.test(rawName.toLowerCase());
+    this.storeName.set(seededName ? '' : rawName);
+    // Dirección SIEMPRE editable. Si el slug es temporal (mi-tienda-XXXX del
+    // trigger de signup), el input arranca VACÍO con placeholder — el usuario
+    // no ve el slug aleatorio feo; se autogenera desde el nombre al tipear.
+    // Si ya es un slug real, se prefillea para que lo puedan editar.
+    this.slugInput.set(this.isTempSlug() ? '' : currentSlug);
+
+    // ── WhatsApp de VENTAS (whatsappButtons) — SIEMPRE se muestra/confirma ──
+    // Prefill por conveniencia: (1) el vendedor ya guardado en la config; si no
+    // (2) el store_whatsapp del signup como valor por defecto EDITABLE. Ese
+    // metadata es el número de NOTIFICACIONES de la plataforma; acá solo se usa
+    // como sugerencia para el número de ventas y NO se modifica.
+    const configWhatsapp =
+      config?.whatsappButtons?.find((b) => b.number?.trim())?.number ?? '';
+    this.hadConfigWhatsapp = configWhatsapp.length > 0;
+    if (configWhatsapp) {
+      this.whatsapp.set(configWhatsapp);
+    } else {
+      try {
+        const { data } =
+          await SupabaseClientProvider.getInstance().auth.getUser();
+        const raw = data.user?.user_metadata?.['store_whatsapp'];
+        const signupWhatsapp = typeof raw === 'string' ? raw.trim() : '';
+        if (signupWhatsapp) this.whatsapp.set(signupWhatsapp);
+      } catch {
+        /* sin metadata/sesión: el campo arranca vacío, editable */
+      }
+    }
+
+    this.prefillShipping(config?.shippingMethods ?? []);
+    await this.loadPaymentPrefill(this.tenantId);
+
+    this.categoryStore.categoryList$(1, 100);
+
+    // Recién ahora se renderiza el formulario: si se mostrara antes, estos
+    // prefills asíncronos pisarían lo que el usuario ya escribió.
+    this.isBooting.set(false);
+
+    // Embudo de activación (PostHog): start con el paso en que abre el wizard.
+    // resumed = volvió a un onboarding a medias (savedStep ya existía).
+    this.posthog.captureOnboarding('onboarding_started', {
+      step: this.currentStep(),
+      step_number: this.stepNumber(),
+      resumed: savedStep != null && savedStep > 0,
+    });
+  }
+
+  // ── Navegación (sobre la lista de pasos: nunca sale de rango) ───────────
+  public back(): void {
+    if (this.stepIndex() > 0) {
+      this.stepIndex.update((i) => i - 1);
+      this.persistStep();
+    }
+  }
+
+  private goNext(): void {
+    if (this.stepIndex() < this.stepIds.length - 1) {
+      this.stepIndex.update((i) => i + 1);
+      this.persistStep();
+    }
+  }
+
+  /** Guarda el paso actual en DB (fire-and-forget): si abandona acá, el login
+   *  lo trae de vuelta a este mismo paso. */
+  private persistStep(): void {
+    void this.tenantService.setOnboardingStep(this.stepIndex());
+  }
+
+  public onStoreNameChange(value: string): void {
+    this.storeName.set(value);
+    // La dirección sigue al nombre hasta que el usuario la edite a mano.
+    if (this.isTempSlug() && !this.slugManuallyEdited) {
+      this.slugInput.set(toSlug(value));
+      this.queueSlugCheck();
+    }
+  }
+
+  public onSlugInputChange(value: string): void {
+    this.slugManuallyEdited = true;
+    // Sanitiza mientras escribe pero SIN recortar guiones de los bordes
+    // (si no, sería imposible tipear "mi-tienda"); finalSlug() recorta.
+    this.slugInput.set(sanitizeSlug(value));
+    this.queueSlugCheck();
+  }
+
+  /** Encola la verificación de disponibilidad con debounce (400 ms). El `seq`
+   *  descarta respuestas tardías cuando el usuario siguió tecleando. */
+  private queueSlugCheck(): void {
+    if (this.slugCheckTimer) clearTimeout(this.slugCheckTimer);
+    const slug = this.finalSlug();
+    const seq = ++this.slugCheckSeq;
+    if (!slug) {
+      this.slugCheck.set('idle');
+      return;
+    }
+    // Su propia dirección actual siempre está "disponible" para sí mismo.
+    if (slug === this.initialSlug) {
+      this.slugCheck.set('available');
+      return;
+    }
+    this.slugCheck.set('checking');
+    this.slugCheckTimer = setTimeout(async () => {
+      const check = await this.tenantService.checkSlug(slug);
+      if (seq !== this.slugCheckSeq) return; // tecleó de nuevo: respuesta vieja
+      // 'valid' = ya hay un tenant con ese slug (ocupada); 'not-found' = libre;
+      // 'error' = no se pudo verificar → no bloqueamos (saveStore decide).
+      this.slugCheck.set(check.status === 'valid' ? 'taken' : 'available');
+    }, 400);
+  }
+
+  /** Paso 1 → guarda nombre/logo/color (+ WhatsApp si faltaba) y RESERVA el
+   *  slug deseado, pero DIFIERE el rename al final: mientras se navega el
+   *  wizard el host sigue siendo el subdominio temporal (el único que resuelve)
+   *  y el preview/navegación no se rompen. */
+  public async saveStore(): Promise<void> {
+    if (!this.storeStepValid() || this.isSaving()) return;
+    this.isSaving.set(true);
+
+    // Dirección editada ⇒ solo VALIDAR disponibilidad (el rename real corre al
+    // completar). checkSlug distingue "ocupado" de "libre"; el UNIQUE de la DB
+    // es la última línea de defensa ante una carrera al hacer el rename final.
+    const newSlug = this.finalSlug();
+    if (newSlug !== this.initialSlug) {
+      const check = await this.tenantService.checkSlug(newSlug);
+      if (check.status === 'valid') {
+        this.toast.error(
+          new Error(
+            'Esa dirección de catálogo ya está ocupada. Prueba con otro nombre.'
+          ) as unknown as Exception
+        );
+        this.isSaving.set(false);
+        return;
+      }
+      // 'not-found' = libre; 'error' = no se pudo verificar → dejamos pasar y
+      // el rename final (con su propio checkSlug + UNIQUE) decide.
+      this.desiredSlug = newSlug;
+    } else {
+      this.desiredSlug = '';
+    }
+
+    const partial: Partial<EcommerceConfig> = {
+      name: this.storeName().trim(),
+      themeColor: this.themeColor(),
+      logo: this.logoUrl(),
+      banner: this.bannerUrl(),
+    };
+    // WhatsApp de VENTAS (vendedor del checkout): se guarda con este mismo
+    // update cuando la config aún no lo tenía. name = nombre de la tienda o,
+    // en su defecto, el del perfil.
+    if (!this.hadConfigWhatsapp && this.whatsapp().trim()) {
+      partial.whatsappButtons = [
+        {
+          name: this.storeName().trim() || this.profileName || 'WhatsApp',
+          number: this.whatsapp().trim(),
+        },
+      ];
+    }
+    await this.configStore.updatePartialConfig(partial);
+    if (partial.whatsappButtons) this.hadConfigWhatsapp = true;
+    this.isSaving.set(false);
+    this.posthog.captureOnboarding('onboarding_step_completed', {
+      step: 'store',
+      has_logo: !!this.logoUrl(),
+      has_banner: !!this.bannerUrl(),
+      renamed_slug: newSlug !== this.initialSlug,
+    });
+    this.goNext();
+  }
+
+  /** Aplica el rename diferido (slug deseado del paso 1) justo antes de salir
+   *  del wizard. Devuelve false si el slug quedó ocupado en el ínterin: manda
+   *  al usuario de vuelta al paso 1 con el error y NO completa. */
+  private async applyDeferredRename(): Promise<boolean> {
+    const newSlug = this.desiredSlug;
+    if (!this.tenantId || !newSlug || newSlug === this.slug()) return true;
+
+    const name = this.storeName().trim();
+    const renamed = await this.tenantService.renameTenant(
+      this.tenantId,
+      name,
+      newSlug
+    );
+    if (renamed.isLeft()) {
+      this.toast.error(renamed.value as unknown as Exception);
+      this.stepIndex.set(this.stepIds.indexOf('store'));
+      return false;
+    }
+
+    // La multi-tenancy lee 'slug' de localStorage (AppComponent lo captura de
+    // los query params): reflejar el rename para las próximas queries.
+    try {
+      localStorage.setItem('slug', newSlug);
+    } catch {
+      /* ignore private-mode */
+    }
+    this.tenantStore.setTenantIdentity(name, newSlug);
+    this.slug.set(newSlug);
+    this.initialSlug = newSlug;
+    this.isTempSlug.set(isTempSlugValue(newSlug));
+    this.desiredSlug = '';
+    return true;
+  }
+
+  public onLogoUpload(url: string | string[]): void {
+    const first = Array.isArray(url) ? url[0] : url;
+    if (first) this.logoUrl.set(first);
+  }
+
+  public onBannerUpload(url: string | string[]): void {
+    const first = Array.isArray(url) ? url[0] : url;
+    if (first) this.bannerUrl.set(first);
+  }
+
+  public selectColor(color: string): void {
+    this.themeColor.set(color);
+  }
+
+  // ── Paso 2: categorías inline ───────────────────────────────────────────
+  public async createCategory(): Promise<void> {
+    const name = this.newCategoryName().trim();
+    if (!name || this.creatingCategory()) return;
+    this.creatingCategory.set(true);
+    const result = await this.categoryStore.save({ name, isVisible: true });
+    result
+      .mapRight(() => {
+        this.newCategoryName.set('');
+        this.toast.success('Categoría creada');
+      })
+      .mapLeft((e: Error) => this.toast.error(e as unknown as Exception));
+    this.creatingCategory.set(false);
+  }
+
+  // ── Paso 2: producto ────────────────────────────────────────────────────
+  public onProductPhoto(url: string | string[]): void {
+    const urls = Array.isArray(url) ? url : [url];
+    this.productPhotos.update((cur) => [...cur, ...urls.filter(Boolean)]);
+  }
+
+  public removeProductPhoto(url: string): void {
+    this.productPhotos.update((cur) => cur.filter((u) => u !== url));
+  }
+
+  /** Crea el primer producto y lo deja VISIBLE en el preview (recarga el
+   *  iframe vía cache-buster). No avanza: muestra el estado "agregado" con el
+   *  mensaje de que los siguientes se cargan desde Productos. */
+  public async saveProduct(): Promise<void> {
+    if (!this.productValid() || this.isSaving()) return;
+    this.isSaving.set(true);
+
+    const promo = this.productPromoPrice();
+    const stock = this.productStock();
+    const cost = this.productCost();
+    const input: CreateProductInput = {
+      name: this.productName().trim(),
+      description: this.productDescription().trim() || null,
+      price: String(this.productPrice() ?? 0),
+      pricePromotional: promo != null && promo > 0 ? String(promo) : '',
+      photos: this.productPhotos(),
+      stock: stock != null && stock >= 0 ? String(stock) : null,
+      categoryIds: this.productCategoryIds(),
+      sku: this.productSku().trim() || null,
+      productionCost: cost != null && cost > 0 ? String(cost) : null,
+      isWholesale: false,
+      wholesaleTiers: [],
+      isSoldOut: false,
+      isHidden: false,
+      isSized: false,
+      sizes: [],
+      isVariant: false,
+      variants: [],
+      addons: [],
+    };
+
+    const result = await this.productService.create(input);
+    result
+      .mapRight(() => {
+        this.toast.success('Producto creado');
+        this.posthog.captureOnboarding('onboarding_product_added', {
+          has_photo: this.productPhotos().length > 0,
+          has_description: this.productDescription().trim().length > 0,
+          used_advanced: this.showAdvanced(),
+        });
+        this.addedProduct.set({
+          name: input.name,
+          price: this.productPrice() ?? 0,
+          photo: this.productPhotos()[0] ?? null,
+        });
+        // Recarga el iframe para que el producto aparezca en el teléfono.
+        this.previewBust.update((n) => n + 1);
+        // Reset del form (queda detrás del estado "agregado").
+        this.productName.set('');
+        this.productPrice.set(null);
+        this.productPhotos.set([]);
+        this.productCategoryIds.set([]);
+        this.productDescription.set('');
+        this.productPromoPrice.set(null);
+        this.productStock.set(null);
+        this.productSku.set('');
+        this.productCost.set(null);
+        this.showAdvanced.set(false);
+        this.isSaving.set(false);
+      })
+      .mapLeft((e: Error) => {
+        this.toast.error(e as unknown as Exception);
+        this.isSaving.set(false);
+      });
+  }
+
+  /** Continuar desde el estado "producto agregado" → Entrega y pago. */
+  public continueAfterProduct(): void {
+    this.posthog.captureOnboarding('onboarding_step_completed', {
+      step: 'product',
+      added_product: true,
+    });
+    this.goNext();
+  }
+
+  /** Salta el producto sin crear y avanza al paso Entrega y pago. */
+  public skipProduct(): void {
+    this.posthog.captureOnboarding('onboarding_step_completed', {
+      step: 'product',
+      added_product: false,
+    });
+    this.goNext();
+  }
+
+  // ── Paso 3: entrega ─────────────────────────────────────────────────────
+  private prefillShipping(methods: ShippingMethod[]): void {
+    this.existingShippingMethods = methods;
+    this.shippingDrafts.set(
+      SHIPPING_CARDS.map((card) => {
+        const existing = methods.find((m) => m.type === card.type);
+        return {
+          ...card,
+          active: existing?.isActive ?? false,
+          fee: existing?.fee ?? 0,
+          priceOnRequest: existing?.priceOnRequest === true,
+        };
+      })
+    );
+  }
+
+  public toggleShipping(type: ShippingMethodType): void {
+    this.shippingDrafts.update((drafts) =>
+      drafts.map((d) => (d.type === type ? { ...d, active: !d.active } : d))
+    );
+  }
+
+  public setShippingFee(type: ShippingMethodType, fee: number | null): void {
+    this.shippingDrafts.update((drafts) =>
+      drafts.map((d) => (d.type === type ? { ...d, fee } : d))
+    );
+  }
+
+  public setShippingOnRequest(
+    type: ShippingMethodType,
+    priceOnRequest: boolean
+  ): void {
+    this.shippingDrafts.update((drafts) =>
+      drafts.map((d) =>
+        d.type === type
+          ? { ...d, priceOnRequest, fee: priceOnRequest ? 0 : d.fee }
+          : d
+      )
+    );
+  }
+
+  private buildShippingMethods(): ShippingMethod[] {
+    const existing = this.existingShippingMethods;
+    const consumed = new Set<string>();
+    let nextPosition =
+      existing.reduce((max, m) => Math.max(max, m.position), -1) + 1;
+
+    const fromDrafts: ShippingMethod[] = this.shippingDrafts().map((draft) => {
+      const match = existing.find(
+        (m) => m.type === draft.type && !consumed.has(m.id)
+      );
+      if (match) consumed.add(match.id);
+
+      const fee = draft.priceOnRequest ? 0 : Math.max(0, draft.fee ?? 0);
+      if (match) {
+        return {
+          ...match,
+          name: match.name?.trim() ? match.name : draft.label,
+          fee,
+          priceOnRequest: draft.priceOnRequest,
+          requestCustomerAddress:
+            match.type === 'pickup' ? match.requestCustomerAddress : true,
+          isActive: draft.active,
+        };
+      }
+      return {
+        id: crypto.randomUUID(),
+        name: draft.label,
+        type: draft.type,
+        fee,
+        priceOnRequest: draft.priceOnRequest,
+        instructions: '',
+        requestCustomerAddress: draft.type !== 'pickup',
+        address: null,
+        lat: null,
+        lng: null,
+        isActive: draft.active,
+        isDefault: false,
+        position: nextPosition++,
+      };
+    });
+
+    const untouched = existing.filter((m) => !consumed.has(m.id));
+    const all = [...fromDrafts, ...untouched].sort(
+      (a, b) => a.position - b.position
+    );
+
+    // El primero activo es el default; el resto no.
+    let defaultAssigned = false;
+    return all.map((m) => {
+      const isDefault = m.isActive && !defaultAssigned;
+      if (isDefault) defaultAssigned = true;
+      return { ...m, isDefault };
+    });
+  }
+
+  // ── Paso 3: pago ────────────────────────────────────────────────────────
+  /** Presets de métodos de pago por país: los más usados de cada mercado van
+   *  primero (ver PAYMENT_PRESETS_BY_COUNTRY). Fallback: set internacional. */
+  private paymentPresets(): { name: string; icon: string }[] {
+    const iso = this.countryIso().toUpperCase();
+    return PAYMENT_PRESETS_BY_COUNTRY[iso] ?? DEFAULT_PAYMENT_PRESETS;
+  }
+
+  /** Lee los métodos existentes (tabla `payment_methods`) para prefill; los
+   *  presets matchean por nombre normalizado y, si no, por tipo inferido. */
+  private async loadPaymentPrefill(tenantId: string): Promise<void> {
+    const result = await this.configService.getPaymentMethods(tenantId);
+    this.existingPaymentMethods = result.isRight() ? result.value : [];
+
+    const consumed = new Set<number>();
+    const drafts = this.paymentPresets().map((preset) => {
+      const presetName = normalizeName(preset.name);
+      const presetType = detectPaymentMethodType(preset.name);
+      const match =
+        this.existingPaymentMethods.find(
+          (m) => !consumed.has(m.id) && normalizeName(m.name) === presetName
+        ) ??
+        this.existingPaymentMethods.find(
+          (m) =>
+            !consumed.has(m.id) &&
+            presetType !== 'otro' &&
+            detectPaymentMethodType(m.name) === presetType
+        ) ??
+        null;
+      if (match) consumed.add(match.id);
+
+      const fields = paymentMethodFields(preset.name, this.isVenezuela()).slice(
+        0,
+        3
+      );
+      const values: Record<string, string> = {};
+      for (const field of fields) {
+        values[field.key] = match?.details?.[field.key] ?? '';
+      }
+      return {
+        name: preset.name,
+        icon: match?.icon ?? preset.icon,
+        active: match?.isActive ?? false,
+        existingId: match?.id ?? null,
+        wasActive: match?.isActive ?? false,
+        fields,
+        values,
+      };
+    });
+    this.paymentDrafts.set(drafts);
+  }
+
+  public togglePayment(index: number): void {
+    this.paymentDrafts.update((drafts) =>
+      drafts.map((d, i) => (i === index ? { ...d, active: !d.active } : d))
+    );
+  }
+
+  public setPaymentValue(index: number, key: string, value: string): void {
+    this.paymentDrafts.update((drafts) =>
+      drafts.map((d, i) =>
+        i === index ? { ...d, values: { ...d.values, [key]: value } } : d
+      )
+    );
+  }
+
+  /** Paso 3 (final) → guarda entrega + métodos de pago, aplica el rename
+   *  diferido y termina el wizard. */
+  public async finishSetup(): Promise<void> {
+    if (this.isSaving()) return;
+    this.isSaving.set(true);
+
+    const shippingMethods = this.buildShippingMethods();
+    await this.configStore.updatePartialConfig({
+      shippingMethods,
+      showShippingSection: shippingMethods.some((m) => m.isActive),
+    });
+    this.existingShippingMethods = shippingMethods;
+
+    const saved = await this.savePaymentMethods();
+    if (!saved) {
+      this.isSaving.set(false);
+      return;
+    }
+    // Rename diferido: si el slug quedó ocupado en el ínterin, vuelve al paso 1
+    // con el error y NO completa.
+    const renamed = await this.applyDeferredRename();
+    this.isSaving.set(false);
+    if (!renamed) return;
+    this.posthog.captureOnboarding('onboarding_step_completed', {
+      step: 'setup',
+      shipping_count: shippingMethods.filter((m) => m.isActive).length,
+      payment_count: this.paymentDrafts().filter((d) => d.active).length,
+    });
+    this.toast.success('¡Tu tienda está lista!');
+    this.complete('finished');
+  }
+
+  /** Persiste los presets en la tabla `payment_methods` (la que lee el
+   *  checkout): activos → upsert con details; apagados que estaban activos →
+   *  is_active=false; los preexistentes no tocados quedan como están. */
+  private async savePaymentMethods(): Promise<boolean> {
+    const tenantId = this.tenantId;
+    if (!tenantId) return true;
+
+    for (const draft of this.paymentDrafts()) {
+      if (draft.existingId != null) {
+        if (draft.active) {
+          const result = await this.configService.updatePaymentMethod(
+            draft.existingId,
+            { is_active: true, details: this.draftDetails(draft) }
+          );
+          if (result.isLeft()) return this.paymentSaveFailed(result.value);
+        } else if (draft.wasActive) {
+          const result = await this.configService.updatePaymentMethod(
+            draft.existingId,
+            { is_active: false }
+          );
+          if (result.isLeft()) return this.paymentSaveFailed(result.value);
+        }
+      } else if (draft.active) {
+        const created = await this.configService.createPaymentMethod(
+          tenantId,
+          draft.name,
+          draft.icon
+        );
+        if (created.isLeft()) return this.paymentSaveFailed(created.value);
+        // Registrar el id creado en el draft: si un paso posterior falla y el
+        // usuario reintenta Finalizar, se actualiza en vez de duplicar.
+        const createdId = created.value.id;
+        this.existingPaymentMethods = [
+          ...this.existingPaymentMethods,
+          created.value,
+        ];
+        this.paymentDrafts.update((drafts) =>
+          drafts.map((d) =>
+            d.name === draft.name ? { ...d, existingId: createdId } : d
+          )
+        );
+        const result = await this.configService.updatePaymentMethod(
+          createdId,
+          { is_active: true, details: this.draftDetails(draft) }
+        );
+        if (result.isLeft()) return this.paymentSaveFailed(result.value);
+      }
+    }
+    return true;
+  }
+
+  /** Merge de details: conserva claves existentes no mostradas y solo guarda
+   *  los campos con valor (los vaciados se quitan). */
+  private draftDetails(draft: PaymentDraft): Record<string, string> {
+    const existing = this.existingPaymentMethods.find(
+      (m) => m.id === draft.existingId
+    );
+    const details: Record<string, string> = { ...(existing?.details ?? {}) };
+    for (const field of draft.fields) {
+      const value = (draft.values[field.key] ?? '').trim();
+      if (value) details[field.key] = value;
+      else delete details[field.key];
+    }
+    return details;
+  }
+
+  private paymentSaveFailed(error: Error): false {
+    this.toast.error(error as unknown as Exception);
+    return false;
+  }
+
+  /** "Saltar" del paso final: aplica el rename diferido (la dirección elegida
+   *  en el paso 1 sí debe quedar) y va al admin SIN guardar entrega/pago ni
+   *  toast — el checklist del Inicio queda de recordatorio. */
+  public async skipAll(): Promise<void> {
+    if (this.isSaving()) return;
+    this.isSaving.set(true);
+    const renamed = await this.applyDeferredRename();
+    this.isSaving.set(false);
+    if (!renamed) return;
+    this.complete('skipped');
+  }
+
+  /** `reason` distingue en el embudo quién terminó el wizard de quién lo saltó
+   *  en el paso final. Al cerrar el onboarding se va a /bienvenida (la oferta
+   *  de prueba de 7 días, en el momento de máximo entusiasmo: recién armó su
+   *  tienda); desde ahí el usuario entra al admin. */
+  private complete(reason: 'finished' | 'skipped' = 'finished'): void {
+    this.posthog.captureOnboarding('onboarding_completed', {
+      reason,
+      last_step: this.currentStep(),
+    });
+    // Onboarding cerrado: NULL en DB (el login deja de mandar al wizard) +
+    // flag local como caché del guard de re-entrada.
+    void this.tenantService.setOnboardingStep(null);
+    if (this.tenantId) {
+      try {
+        localStorage.setItem(onboardingDoneKey(this.tenantId), '1');
+      } catch {
+        /* ignore quota/private-mode */
+      }
+    }
+
+    // Si la tienda se renombró y estamos en el subdominio del slug temporal
+    // (prod: cada tenant vive en <slug>.catalogohoy.com), el host viejo dejó
+    // de resolver a un slug válido. Saltamos al subdominio nuevo llevando la
+    // sesión por query param (mismo handoff que usa el login entre orígenes).
+    const slug = this.slug().trim();
+    const target = `${slug}.catalogohoy.com`;
+    if (
+      !isDevMode() &&
+      slug &&
+      window.location.hostname.endsWith('.catalogohoy.com') &&
+      window.location.hostname !== target
+    ) {
+      const key = authenticationTokenService.AUTH_CONFIG_KEY;
+      const value = encodeURIComponent(authenticationTokenService.authConfigValue ?? '');
+      window.location.href = `https://${target}/bienvenida?${key}=${value}`;
+      return;
+    }
+
+    this.router.navigate(['/bienvenida']);
+  }
+}
+
+type PaymentPreset = { name: string; icon: string };
+
+/** Métodos de pago por defecto según el PAÍS del catálogo: los más usados de
+ *  cada mercado LATAM van primero (billeteras locales → transferencia → efectivo).
+ *  Los nombres alimentan detectPaymentMethodType, que les asigna los campos
+ *  correctos (billeteras → teléfono/@usuario + titular; transferencia → banco +
+ *  cuenta; etc.). Clave = ISO-3166 alpha-2 en mayúsculas. */
+const PAYMENT_PRESETS_BY_COUNTRY: Record<string, PaymentPreset[]> = {
+  // Venezuela — Pago Móvil es el rey; Zelle muy usado en USD.
+  VE: [
+    { name: 'Pago móvil', icon: 'smartphone' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Zelle', icon: 'dollar-sign' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // Colombia — Nequi y Daviplata dominan los pagos informales.
+  CO: [
+    { name: 'Nequi', icon: 'wallet' },
+    { name: 'Daviplata', icon: 'wallet' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // México — SPEI (transferencia) + Mercado Pago; OXXO/efectivo contra entrega.
+  MX: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Mercado Pago', icon: 'wallet' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'Tarjeta', icon: 'credit-card' },
+  ],
+  // Argentina — Mercado Pago es casi universal; transferencia por alias/CVU.
+  AR: [
+    { name: 'Mercado Pago', icon: 'wallet' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'Tarjeta', icon: 'credit-card' },
+  ],
+  // Perú — Yape y Plin son los wallets dominantes.
+  PE: [
+    { name: 'Yape', icon: 'wallet' },
+    { name: 'Plin', icon: 'wallet' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // Chile — transferencia bancaria es el método estrella del comercio informal.
+  CL: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Mercado Pago', icon: 'wallet' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'Tarjeta', icon: 'credit-card' },
+  ],
+  // Ecuador — USD; transferencia + DeUna (wallet de Pichincha) en alza.
+  EC: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'DeUna', icon: 'wallet' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'PayPal', icon: 'globe' },
+  ],
+  // Bolivia — QR Simple (interoperable) + transferencia; Tigo Money.
+  BO: [
+    { name: 'QR Simple', icon: 'qr-code' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Tigo Money', icon: 'wallet' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // Guatemala — transferencia + efectivo; tarjeta/PayPal secundarios.
+  GT: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'Tarjeta', icon: 'credit-card' },
+    { name: 'PayPal', icon: 'globe' },
+  ],
+  // Honduras — transferencia + Tigo Money + efectivo.
+  HN: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Tigo Money', icon: 'wallet' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // El Salvador — USD; transferencia + efectivo; PayPal.
+  SV: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'PayPal', icon: 'globe' },
+  ],
+  // Nicaragua — transferencia + efectivo.
+  NI: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // Costa Rica — SINPE Móvil es el método omnipresente.
+  CR: [
+    { name: 'SINPE Móvil', icon: 'smartphone' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'Tarjeta', icon: 'credit-card' },
+  ],
+  // Panamá — Yappy domina los pagos entre personas y comercios.
+  PA: [
+    { name: 'Yappy', icon: 'wallet' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // Paraguay — transferencia + Tigo Money; efectivo.
+  PY: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Tigo Money', icon: 'wallet' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // Uruguay — Mercado Pago + transferencia; redes de cobro (Red Pagos).
+  UY: [
+    { name: 'Mercado Pago', icon: 'wallet' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'Red Pagos', icon: 'banknote' },
+  ],
+  // República Dominicana — transferencia + tPago; efectivo.
+  DO: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'tPago', icon: 'wallet' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+};
+
+/** Set internacional (países fuera del mapa: US, ES, etc.). */
+const DEFAULT_PAYMENT_PRESETS: PaymentPreset[] = [
+  { name: 'Transferencia', icon: 'building' },
+  { name: 'PayPal', icon: 'globe' },
+  { name: 'Efectivo', icon: 'banknote' },
+  { name: 'Tarjeta', icon: 'credit-card' },
+];
+
+/** Slugifica sin recortar guiones en los bordes (para sanear mientras se
+ *  escribe): lowercase, sin acentos, no-alfanuméricos → '-'. */
+function sanitizeSlug(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-');
+}
+
+/** Slug final: igual que sanitizeSlug + trim de '-' en los bordes. Mismo
+ *  resultado que translate(ÁÉÍÓÚáéíóúÑñ→AEIOUaeiouNn) del trigger de DB. */
+function toSlug(value: string): string {
+  return sanitizeSlug(value).replace(/^-+|-+$/g, '');
+}
+
+/** Normaliza un nombre para matchear presets de pago: lowercase, sin acentos
+ *  ("Pago móvil" matchea la fila sembrada "Pago movil"). */
+function normalizeName(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}

@@ -1,0 +1,137 @@
+<div class="dev-wrap">
+  <!-- ── Lista de ventas ── -->
+  @if (!selected()) {
+    <header class="dev-head">
+      <h1>{{ 'Devoluciones' | transloco }}</h1>
+      <p class="muted">{{ 'Buscá una venta del mostrador para devolver productos.' | transloco }}</p>
+    </header>
+
+    <div class="searchbar">
+      <ui-icon name="search" styleClass="size-5" />
+      <input
+        type="text"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keyup.enter)="runSearch()"
+        [placeholder]="'Número de venta (#123) o nombre del cliente…' | transloco"
+      />
+      <button class="btn-ghost" (click)="runSearch()">{{ 'Buscar' | transloco }}</button>
+    </div>
+
+    @if (isSearching()) {
+      <div class="loading">
+        <ui-icon name="loader-circle" styleClass="size-6 animate-spin" />
+        {{ 'Buscando…' | transloco }}
+      </div>
+    } @else if (results().length) {
+      <ul class="sales">
+        @for (o of results(); track o.id) {
+          <li class="sale" (click)="selectOrder(o)">
+            <div class="sale-main">
+              <strong>#{{ o.orderNumber ?? o.id }}</strong>
+              <span>{{ o.name }}</span>
+            </div>
+            <div class="sale-meta">
+              <span class="muted">{{ o.createdAt | date: 'd/M HH:mm' }}</span>
+              <span class="sale-amt">{{ money(o.totalUsd) }}</span>
+              <ui-icon name="chevron-right" styleClass="size-5" />
+            </div>
+          </li>
+        }
+      </ul>
+    } @else {
+      <div class="empty">
+        <div class="empty-badge"><ui-icon name="undo-2" styleClass="size-8" /></div>
+        <h2>{{ 'No hay ventas' | transloco }}</h2>
+        <p>{{ 'No encontramos ventas del Punto de Venta con ese criterio.' | transloco }}</p>
+      </div>
+    }
+  }
+
+  <!-- ── Devolución de una venta ── -->
+  @if (selected()) {
+    @let o = selected();
+    <div class="return">
+      <header class="return-head">
+        <button class="back" (click)="clearSelection()">
+          <ui-icon name="arrow-left" styleClass="size-5" />
+          {{ 'Volver' | transloco }}
+        </button>
+        <div>
+          <h1>{{ 'Devolver · venta' | transloco }} #{{ o?.orderNumber ?? o?.id }}</h1>
+          <p class="muted">
+            {{ o?.name }} · {{ o?.createdAt | date: 'd/M/y HH:mm' }} ·
+            {{ 'pagó con' | transloco }} {{ o?.paymentMethod || ('sin especificar' | transloco) }}
+          </p>
+        </div>
+      </header>
+
+      <section class="panel">
+        <h3>{{ '¿Qué devolvés?' | transloco }}</h3>
+        <ul class="items">
+          @for (l of lines(); track l.item.productId + (l.item.variantId ?? '') + (l.item.size ?? '') + $index) {
+            <li class="item" [class.off]="l.qty === 0">
+              <div class="item-info">
+                <span class="item-name">{{ l.label }}</span>
+                <span class="muted">{{ money(l.item.price) }} {{ 'c/u' | transloco }} · {{ 'vendidas' | transloco }} {{ l.maxQty }}</span>
+              </div>
+              <div class="stepper">
+                <button (click)="decLine($index)" [disabled]="l.qty === 0">
+                  <ui-icon name="minus" styleClass="size-4" />
+                </button>
+                <span>{{ l.qty }}</span>
+                <button (click)="incLine($index)" [disabled]="l.qty >= l.maxQty">
+                  <ui-icon name="plus" styleClass="size-4" />
+                </button>
+              </div>
+              <span class="item-amt">{{ money(l.item.price * l.qty) }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="panel options">
+        <label class="switch">
+          <input type="checkbox" [ngModel]="restock()" (ngModelChange)="restock.set($event)" />
+          <span>{{ 'Reponer el stock de los productos devueltos' | transloco }}</span>
+        </label>
+
+        <label class="fld">
+          <span>{{ 'Motivo' | transloco }} <em>{{ '(opcional)' | transloco }}</em></span>
+          <input
+            type="text"
+            class="txt"
+            [ngModel]="reason()"
+            (ngModelChange)="reason.set($event)"
+            [placeholder]="'Producto defectuoso, cambio de talla…' | transloco"
+          />
+        </label>
+
+        @if (caja.hasOpenSession()) {
+          <p class="hint">
+            <ui-icon name="wallet" styleClass="size-4" />
+            {{ 'El reembolso se imputa a la caja abierta.' | transloco }}
+          </p>
+        }
+      </section>
+    </div>
+  }
+</div>
+
+<!-- ── Barra de acción (footer) ── -->
+@if (selected()) {
+  <div class="action-bar">
+    <div class="refund">
+      <span class="muted">{{ 'A reembolsar' | transloco }}</span>
+      <strong>{{ money(refundTotal()) }}</strong>
+    </div>
+    <button
+      class="btn-primary"
+      [disabled]="!hasSelection() || isWorking()"
+      (click)="process()"
+    >
+      <ui-icon name="undo-2" styleClass="size-5" />
+      {{ 'Procesar devolución' | transloco }}
+    </button>
+  </div>
+}

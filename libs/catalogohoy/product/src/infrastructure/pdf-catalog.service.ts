@@ -93,22 +93,48 @@ export class PdfCatalogService implements BaseProductPdfCatalogService {
 
       const pages: PdfCatalogPage[] = [];
       const images: PdfCatalogImage[] = [];
+      let failedPages = 0;
 
       for (let p = 1; p <= doc.numPages; p++) {
-        const page = (await doc.getPage(p)) as unknown as PdfPageLike;
+        // Aislamos cada página: una con encoding raro, stream dañado o que
+        // revienta memoria al renderizar NO debe tumbar todo el PDF. Antes un
+        // solo throw caía en el catch general → "archivo dañado" para TODO el
+        // catálogo (era la causa #1 de fallos de import).
+        try {
+          const page = (await doc.getPage(p)) as unknown as PdfPageLike;
 
-        const text = await this.extractText(page);
-        if (text.trim()) {
-          pages.push({ page: p, text: text.slice(0, MAX_TEXT_PER_PAGE) });
+          const text = await this.extractText(page);
+          if (text.trim()) {
+            pages.push({ page: p, text: text.slice(0, MAX_TEXT_PER_PAGE) });
+          }
+
+          if (images.length < MAX_IMAGES) {
+            // El render a canvas es lo que más memoria consume (páginas con
+            // imágenes de miles de px, catálogos de 100+ págs). Si falla acá,
+            // conservamos igual el texto de la página — que es lo que usa la
+            // extracción de productos por IA.
+            try {
+              const crops = await this.extractImages(pdfjs, page, p);
+              images.push(...crops.slice(0, MAX_IMAGES - images.length));
+            } catch (imgErr) {
+              console.warn(
+                `[PDF Catalog] page ${p}: image extraction failed, keeping text`,
+                imgErr
+              );
+            }
+          }
+
+          page.cleanup();
+        } catch (pageErr) {
+          failedPages++;
+          console.warn(`[PDF Catalog] page ${p} skipped:`, pageErr);
         }
-
-        if (images.length < MAX_IMAGES) {
-          const crops = await this.extractImages(pdfjs, page, p);
-          images.push(...crops.slice(0, MAX_IMAGES - images.length));
-        }
-
-        page.cleanup();
         onProgress?.(p, doc.numPages);
+      }
+      if (failedPages) {
+        console.warn(
+          `[PDF Catalog] ${failedPages}/${doc.numPages} páginas no se pudieron procesar.`
+        );
       }
 
       await loadingTask.destroy();
@@ -123,8 +149,30 @@ export class PdfCatalogService implements BaseProductPdfCatalogService {
       return E.right({ pages, images });
     } catch (e) {
       console.error('[PDF Catalog] parse error:', e);
+      const name = (e as { name?: string })?.name ?? '';
+      const msg = (e as { message?: string })?.message ?? '';
+      // PDFs protegidos con contraseña: pdf.js no puede abrirlos sin la clave.
+      if (name === 'PasswordException' || /password/i.test(msg)) {
+        return E.left(
+          new Error(
+            'El PDF está protegido con contraseña. Quitá la protección y subilo de nuevo.'
+          )
+        );
+      }
+      // PDF realmente corrupto/incompleto.
+      if (name === 'InvalidPDFException' || /invalid pdf|corrupt/i.test(msg)) {
+        return E.left(
+          new Error(
+            'El PDF parece estar dañado o incompleto. Volvé a exportarlo y subilo de nuevo.'
+          )
+        );
+      }
+      // Worker, memoria u otros. El fallo por peso ya no debería llegar acá
+      // (se aísla por página arriba); si igual pasa, damos una salida accionable.
       return E.left(
-        new Error('No se pudo leer el PDF. Verifica que el archivo no esté dañado.')
+        new Error(
+          'No se pudo leer el PDF. Puede ser muy pesado o de demasiadas páginas — probá exportarlo más liviano o dividirlo en partes.'
+        )
       );
     }
   }

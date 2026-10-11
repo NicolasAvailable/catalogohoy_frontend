@@ -60,17 +60,44 @@
     }
   </div>
 
-  <!-- ═══ Requisitos ═══ -->
+  <!-- ═══ Qué podrás hacer ═══ -->
   @if (!ttAccount()) {
   <div class="bg-white rounded-2xl border border-grey-100 p-5">
     <h2 class="text-base font-semibold text-grey-800 mb-3">
-      {{ 'Antes de conectar' | transloco }}
+      {{ 'Qué podrás hacer al conectar TikTok' | transloco }}
     </h2>
     <ul class="flex flex-col gap-2.5">
       <li class="flex items-start gap-2 text-sm text-grey-600">
         <ui-icon name="check-circle" size="16" styleClass="text-green-600 shrink-0 mt-0.5" />
-        {{ 'Tu cuenta de TikTok debe ser de Empresa (Business).' | transloco }}
+        {{ 'Recibe y responde los mensajes directos de tu TikTok desde la misma bandeja donde atiendes WhatsApp.' | transloco }}
       </li>
+      <li class="flex items-start gap-2 text-sm text-grey-600">
+        <ui-icon name="check-circle" size="16" styleClass="text-green-600 shrink-0 mt-0.5" />
+        {{ 'Ve la ficha de cada cliente con su historial de pedidos mientras chateas.' | transloco }}
+      </li>
+      <li class="flex items-start gap-2 text-sm text-grey-600">
+        <ui-icon name="check-circle" size="16" styleClass="text-green-600 shrink-0 mt-0.5" />
+        {{ 'Asigna las conversaciones a tu equipo y deja notas internas en cada chat.' | transloco }}
+      </li>
+    </ul>
+  </div>
+
+  <!-- ═══ Requisitos ═══ -->
+  <div class="bg-white rounded-2xl border border-grey-100 p-5">
+    <h2 class="text-base font-semibold text-grey-800 mb-3">
+      {{ 'Antes de conectar' | transloco }}
+    </h2>
+
+    <!-- Requisito clave: la cuenta debe ser de Empresa (Business). -->
+    <div class="flex items-start gap-2.5 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 mb-4">
+      <ui-icon name="triangle-alert" size="18" styleClass="text-amber-600 shrink-0 mt-0.5" />
+      <p class="text-sm text-amber-800 leading-relaxed">
+        <strong>{{ 'Tu cuenta de TikTok debe ser de Empresa (Business).' | transloco }}</strong>
+        {{ 'Puedes cambiarla gratis en la app de TikTok: Perfil → Menú → Ajustes y privacidad → Cuenta → Cambiar a cuenta de empresa.' | transloco }}
+      </p>
+    </div>
+
+    <ul class="flex flex-col gap-2.5">
       <li class="flex items-start gap-2 text-sm text-grey-600">
         <ui-icon name="check-circle" size="16" styleClass="text-green-600 shrink-0 mt-0.5" />
         {{ 'Solo puedes responder a personas que te escriben primero: TikTok abre una ventana de 48 horas por cada mensaje del cliente.' | transloco }}

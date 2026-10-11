@@ -17,12 +17,18 @@ import { StripHtmlPipe } from '@shared/presenter';
 import {
   AppLanguage,
   LanguageService,
+  MetaPixelService,
   PosthogService,
 } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl } from '@catalogohoy/tenant';
 import { DialogService, IconComponent, dialogConfig } from '@ui';
-import { CartStore, EcommerceService, EcommerceStore } from '../../infrastructure';
+import {
+  CartStore,
+  CatalogConfigLiveService,
+  EcommerceService,
+  EcommerceStore,
+} from '../../infrastructure';
 import { ProductDetailModal } from '../components/product-detail-modal/product-detail-modal';
 import { CartDrawer } from '../components/cart-drawer/cart-drawer';
 import { CatalogFooter } from '../components/catalog-footer/catalog-footer';
@@ -55,6 +61,8 @@ export class ECommerce implements OnInit, OnDestroy {
   public readonly cartStore = inject(CartStore);
   public readonly planStore = inject(PlanStore);
   private readonly posthogService = inject(PosthogService);
+  private readonly metaPixel = inject(MetaPixelService);
+  private readonly configLive = inject(CatalogConfigLiveService);
   private readonly language = inject(LanguageService);
 
   /** Idioma default del tenant: se aplica UNA vez al cargar el catálogo y
@@ -77,6 +85,23 @@ export class ECommerce implements OnInit, OnDestroy {
     // tenant. La preferencia del PANEL (otra llave) no aplica acá.
     const stored = this.language.getStoredCatalogLanguage();
     this.language.setSession(stored ?? (info.defaultLanguage as AppLanguage));
+  });
+
+  /** El pixel del tenant se inicializa cuando (a) el gate de plan pago pasó
+   *  (`pixelGateOk`, seteado en ngOnInit con el resultado del RPC) Y (b)
+   *  catalogInfo() ya está poblado con el metaPixelId. Un effect (no un read
+   *  one-shot) para que no importe el orden en que se resuelven ambos: evita la
+   *  race donde el signal aún no reflejaba el pixel justo tras el await. No corre
+   *  en el preview del editor. */
+  public readonly pixelGateOk = signal(false);
+  private tenantPixelInited = false;
+  private readonly initTenantPixelEffect = effect(() => {
+    const info = this.ecommerceStore.effectiveCatalogInfo();
+    const gateOk = this.pixelGateOk();
+    if (this.tenantPixelInited || !gateOk || !info?.metaPixelId) return;
+    if (this.ecommerceStore.isPreviewMode()) return;
+    this.tenantPixelInited = true;
+    this.metaPixel.initTenantPixel(info.metaPixelId);
   });
   private readonly titleService = inject(Title);
   private readonly metaService = inject(Meta);
@@ -242,12 +267,29 @@ export class ECommerce implements OnInit, OnDestroy {
     if (slug) {
       const result = await this.ecommerceStore.loadCatalog(slug);
 
+      // Config en vivo: si el comerciante guarda cambios en Editar catálogo
+      // (p. ej. agrega su vendedor de WhatsApp) mientras un visitante está en
+      // el checkout, la config se refresca sola y el botón de pedido se
+      // activa sin recargar.
+      const tenantId = this.ecommerceStore.catalogInfo()?.id;
+      if (tenantId && !this.ecommerceStore.isPreviewMode()) {
+        this.configLive.watch(slug, tenantId);
+      }
+
       // Plan status comes from the same RPC — no extra query needed
       if (result && 'planExpired' in result) {
         this.planStore.setPlanPublicStatus(result.planExpired, result.isFreePlan);
 
         if (!result.isFreePlan && !result.planExpired) {
           this.posthogService.enablePublicTracking(slug);
+          // Pixel de Meta del comerciante (solo planes pagos, no vencidos): el
+          // init lo dispara `initTenantPixelEffect` cuando catalogInfo() ya
+          // reflejó el pixel del RPC. Leerlo acá mismo era una race: el signal a
+          // veces todavía no estaba poblado justo tras el await → initTenantPixel
+          // recibía null y no hacía nada (~5 de 6 cargas). Con el effect es
+          // determinístico. Los eventos de compra (ViewContent/AddToCart/
+          // InitiateCheckout/Lead) salen de las vistas con trackActiveTenant.
+          this.pixelGateOk.set(true);
         }
       }
     }
@@ -303,6 +345,7 @@ export class ECommerce implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.configLive.unwatch();
     window.removeEventListener('message', this.handlePreviewMessage);
     if (this.ecommerceStore.isPreviewMode()) {
       this.ecommerceStore.exitPreviewMode();

@@ -1,0 +1,10 @@
+/* Bienvenida post-registro: full-screen (fuera del layout del admin), con un
+   fondo suave que centra la elección de plan. */
+.welcome-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f7ff 100%);
+}

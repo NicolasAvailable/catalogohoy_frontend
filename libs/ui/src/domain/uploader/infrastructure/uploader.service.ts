@@ -3,6 +3,7 @@ import { SupabaseClientProvider } from '@catalogohoy/core';
 import { BaseUploaderOutput, E } from '@shared/domain';
 import { Observable, of } from 'rxjs';
 import { BaseUploaderService } from '../domain/uploader.service';
+import { convertHeicToJpeg, isHeicFile } from './heic';
 
 const MAX_WIDTH = 1200;
 const QUALITY = 0.8;
@@ -11,6 +12,16 @@ const QUALITY = 0.8;
 // container format (mp4/webm) and the public catalog's <video> tag picks
 // the right decoder.
 const ALLOWED_VIDEO_EXT = new Set(['mp4', 'webm', 'ogg', 'ogv']);
+const VIDEO_MIME_BY_EXT: Record<string, string> = {
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  ogg: 'video/ogg',
+  ogv: 'video/ogg',
+};
+const MSG_UNREADABLE =
+  'No pudimos leer esta imagen. Verifica que sea JPG, PNG o WEBP e intenta de nuevo.';
+const MSG_HEIC =
+  'No pudimos convertir esta foto (formato HEIC). Compártela o expórtala como JPG e intenta de nuevo.';
 
 @Injectable({ providedIn: 'root' })
 export class UploaderService implements BaseUploaderService {
@@ -20,7 +31,14 @@ export class UploaderService implements BaseUploaderService {
       progress: () => 0,
       complete: async () => {
         try {
-          const isVideo = (file.type || '').toLowerCase().startsWith('video/');
+          const mime = (file.type || '').toLowerCase();
+          const rawExt = (file.name.split('.').pop() || '').toLowerCase();
+          // Algunos pickers de Android entregan file.type vacío: sin este
+          // fallback por extensión, un .mp4 entraría al pipeline de imagen
+          // y moriría con "no pudimos leer esta imagen".
+          const isVideo =
+            mime.startsWith('video/') ||
+            (mime === '' && ALLOWED_VIDEO_EXT.has(rawExt));
           const client = SupabaseClientProvider.getInstance();
           const baseName = file.name
             .replace(/\.[^.]+$/, '')
@@ -39,11 +57,24 @@ export class UploaderService implements BaseUploaderService {
             // Trust the file as-is; the form's accept list + size validator
             // already enforce mp4/webm under the per-product cap.
             body = file;
-            contentType = file.type || 'video/mp4';
-            const rawExt = (file.name.split('.').pop() || 'mp4').toLowerCase();
+            contentType = file.type || VIDEO_MIME_BY_EXT[rawExt] || 'video/mp4';
             ext = ALLOWED_VIDEO_EXT.has(rawExt) ? rawExt : 'mp4';
           } else {
-            body = await this.compressImage(file);
+            let source: Blob = file;
+            let decodeErrorMsg = MSG_UNREADABLE;
+            if (await isHeicFile(file)) {
+              const converted = await convertHeicToJpeg(file);
+              if (converted) {
+                source = converted;
+              } else {
+                // Conversión fallida: puede ser un JPEG renombrado a .heic
+                // (decodifica nativo) o Safari 17+, que decodifica HEIC solo.
+                // Probamos el decode nativo y solo si también falla mostramos
+                // el mensaje específico de HEIC.
+                decodeErrorMsg = MSG_HEIC;
+              }
+            }
+            body = await this.compressImage(source, decodeErrorMsg);
             contentType = 'image/jpeg';
             ext = 'jpeg';
           }
@@ -94,7 +125,7 @@ export class UploaderService implements BaseUploaderService {
     });
   }
 
-  private compressImage(file: File): Promise<Blob> {
+  private compressImage(file: Blob, decodeErrorMsg = MSG_UNREADABLE): Promise<Blob> {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -110,12 +141,19 @@ export class UploaderService implements BaseUploaderService {
         ctx.drawImage(img, 0, 0, width, height);
 
         canvas.toBlob(
-          (blob) => (blob ? resolve(blob) : reject(new Error('Compression failed'))),
+          (blob) =>
+            blob
+              ? resolve(blob)
+              : reject(
+                  new Error(
+                    'No pudimos procesar esta imagen. Intenta con otra foto.'
+                  )
+                ),
           'image/jpeg',
           QUALITY
         );
       };
-      img.onerror = () => reject(new Error('Failed to load image'));
+      img.onerror = () => reject(new Error(decodeErrorMsg));
       img.src = URL.createObjectURL(file);
     });
   }

@@ -14,7 +14,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePickerModule } from 'primeng/datepicker';
 import { APP_LANGUAGES, isDevMode } from '@catalogohoy/core';
 import { environment } from '@catalogohoy/env';
@@ -45,7 +45,8 @@ import { toast as sonnerToast } from 'ngx-sonner';
 // solo, así que este alias traduce antes de mostrar (mismo rol que ToastService).
 const toast = {
   success: (msg: string) => sonnerToast.success(translate(msg)),
-  error: (msg: string) => sonnerToast.error(translate(msg)),
+  error: (msg: string, params?: Record<string, unknown>) =>
+    sonnerToast.error(translate(msg, params)),
   loading: (msg: string) => sonnerToast.loading(translate(msg)),
   dismiss: (id?: string | number) => sonnerToast.dismiss(id),
 };
@@ -59,6 +60,7 @@ import {
   DAY_LABELS_ES,
   DEFAULT_BUSINESS_HOURS_WEEK,
   DEFAULT_CURRENCY_CONFIG,
+  DEFAULT_CREDIT_MIN_PURCHASES,
   DEFAULT_CUSTOMER_FIELDS,
   DEFAULT_DELIVERY_BLOCKED_WEEKDAYS,
   DELIVERY_WEEKDAY_OPTIONS,
@@ -69,6 +71,8 @@ import {
   NO_CURRENCY_SYMBOL,
   PreviewMessage,
   findCountryByCode,
+  defaultTimezoneForCountry,
+  timezonesForCountry,
   ShippingMethod,
   SHIPPING_METHOD_TYPE_OPTIONS,
   SocialLinks,
@@ -99,6 +103,7 @@ const VALID_TABS: TabId[] = ['general', 'location', 'shipping', 'payments', 'soc
  *  RPC change_tenant_slug; acá solo se usa para la UI). */
 const SLUG_CHANGES_PER_MONTH = 2;
 
+
 /** Códigos de error de la RPC change_tenant_slug → mensaje para el usuario. */
 const SLUG_ERROR_MESSAGES: Record<string, string> = {
   limit_reached: 'Ya usaste los 2 cambios de dirección de este mes. Vas a poder cambiarla de nuevo más adelante.',
@@ -113,6 +118,7 @@ const SLUG_ERROR_MESSAGES: Record<string, string> = {
   selector: 'lib-ecommerce-config',
   imports: [
     FormsModule,
+    RouterLink,
     ButtonComponent,
     InputTextComponent,
     InputPhoneComponent,
@@ -146,6 +152,9 @@ export class EcommerceConfigComponent implements OnInit {
   protected readonly canEditCatalog = computed(() => this.permissions.isOwner() || this.permissions.can()('catalogo', 'edit'));
   private readonly planStore = inject(PlanStore);
   public readonly isWhatsappLocked = computed(() => this.planStore.currentPlan()?.isFree ?? false);
+  /** El Píxel de Meta + Conversions API son función de planes pagos: el plan
+   *  gratis ve el campo bloqueado con CTA a mejorar plan. */
+  public readonly isPixelLocked = computed(() => this.planStore.currentPlan()?.isFree ?? false);
 
   /** Dominio personalizado del tenant actual (null si usa slug.catalogohoy.com).
    *  Con dominio propio vinculado, el cambio de dirección se deshabilita: la
@@ -188,6 +197,27 @@ export class EcommerceConfigComponent implements OnInit {
     queueMicrotask(() => {
       this.mainColumn()?.nativeElement?.scrollTo?.({ top: 0, behavior: 'auto' });
     });
+  }
+
+  /** Scrollea (con reintentos cortos) hasta la card cuyo id llega por
+   *  ?section=… — el contenido del tab se pinta después del init, así que el
+   *  elemento puede no existir todavía en los primeros intentos. Al llegar,
+   *  se limpia el param para que un cambio de tab no lo arrastre. */
+  private scrollToSection(id: string, attempt = 0): void {
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { section: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+      } else if (attempt < 10) {
+        this.scrollToSection(id, attempt + 1);
+      }
+    }, attempt === 0 ? 150 : 200);
   }
 
   /** Recalcula si la barra de tabs puede scrollear a izquierda/derecha (para
@@ -272,6 +302,19 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftCountryCode = signal<string | null>(null);
   public readonly draftState = signal<string | null>(null);
   public readonly draftCity = signal<string | null>(null);
+  /** Zona horaria IANA del negocio — define el cálculo abierto/cerrado. */
+  public readonly draftTimezone = signal<string | null>(null);
+  /** Opciones del selector: solo las zonas del país del negocio. Si la zona
+   *  guardada no estuviera en la lista del país (caso raro), se incluye igual
+   *  para que el valor seleccionado siempre se renderice. */
+  public readonly timezoneOptions = computed(() => {
+    const opts = timezonesForCountry(this.draftCountryCode());
+    const current = this.draftTimezone();
+    if (current && !opts.some((o) => o.value === current)) {
+      return [{ value: current, label: current.split('/').pop()?.replace(/_/g, ' ') ?? current, country: '' }, ...opts];
+    }
+    return opts;
+  });
   public readonly draftShowDesignSection = signal(true);
   public readonly draftShowLocationSection = signal(true);
   public readonly draftShowPaymentMethodsSection = signal(true);
@@ -279,6 +322,33 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftSocialLinks = signal<SocialLinks>({ ...DEFAULT_SOCIAL_LINKS });
   public readonly draftTemplate = signal<CatalogTemplate>('banner-centered');
   public readonly draftDefaultLanguage = signal<string>('es');
+  /** Meta (Facebook) Pixel ID del comerciante (marketing). Solo planes pagos. */
+  public readonly draftMetaPixelId = signal<string | null>(null);
+  /** Token NUEVO de la Conversions API a setear ('' = no cambiar; el token real
+   *  nunca vuelve al navegador). test_event_code opcional para probar sin data
+   *  real. Snapshot de lo guardado para el dirty-check. */
+  public readonly draftMetaCapiToken = signal<string>('');
+  public readonly draftMetaCapiTestCode = signal<string | null>(null);
+  private readonly lastSyncedMetaCapi = signal<{
+    configured: boolean;
+    testEventCode: string | null;
+    enabled: boolean;
+  }>({ configured: false, testEventCode: null, enabled: true });
+  /** ¿Hay cambios sin guardar en la CAPI? Un token nuevo siempre cuenta; el
+   *  test code solo cuando ya hay credencial (para no intentar crear la fila sin
+   *  token, que la columna es NOT NULL). */
+  public readonly metaCapiChanged = computed(() => {
+    const snap = this.lastSyncedMetaCapi();
+    const tokenDirty = !!this.draftMetaCapiToken().trim();
+    const testDirty =
+      snap.configured &&
+      (this.draftMetaCapiTestCode()?.trim() || null) !== (snap.testEventCode ?? null);
+    return tokenDirty || testDirty;
+  });
+  /** ¿Ya hay un token de CAPI guardado? (para el badge "Conectada" del form). */
+  public readonly metaCapiConfigured = computed(
+    () => this.lastSyncedMetaCapi().configured
+  );
   public readonly appLanguages = [...APP_LANGUAGES];
   public readonly draftCurrencySymbol = signal('$');
   /** "Mostrar precios sin símbolo de moneda" — persiste el centinela
@@ -307,7 +377,92 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftDeliveryBlockedWeekdays = signal<number[]>([]);
   public readonly deliveryWeekdayOptions = DELIVERY_WEEKDAY_OPTIONS;
 
-  /** Toggle a weekday in/out of the blocked list. */
+  // --- Contado y crédito (Pagos tab) drafts ---
+  /** Apply per-method adjustments (__adjust*) in the public checkout. */
+  public readonly draftApplyAdjustmentsInCheckout = signal<boolean>(false);
+  /** Offer "Pago a crédito" in the public checkout. */
+  public readonly draftCreditEnabled = signal<boolean>(false);
+  /** Previous purchases required before credit unlocks (0 = no minimum). */
+  public readonly draftCreditMinPurchases = signal<number>(
+    DEFAULT_CREDIT_MIN_PURCHASES
+  );
+  /** Custom note under the credit option (null/'' = checkout default text). */
+  public readonly draftCreditNote = signal<string | null>(null);
+
+  // --- Impuesto/IVA (Pagos tab) drafts — CAT-84 ---
+  /** % de impuesto incluido en los precios (null/0 = sin desglose). */
+  public readonly draftTaxRate = signal<number | null>(null);
+  /** Etiqueta del impuesto (IVA, ITBIS, IGV…). */
+  public readonly draftTaxLabel = signal<string | null>(null);
+
+  /** Métodos activos que tienen un ajuste configurado — chips informativos de
+   *  la card "Contado y crédito" (el descuento se configura por método, en
+   *  "Datos"; acá solo se decide si aplica también en el checkout). */
+  public readonly methodsWithAdjustment = computed(() =>
+    this.configStore
+      .paymentMethodsList()
+      .filter((m) => m.isActive)
+      .map((m) => ({ name: m.name, badge: this.adjustBadge(m) }))
+      .filter((m): m is { name: string; badge: { label: string; kind: 'good' | 'warn' } } => !!m.badge)
+  );
+
+  /** Sanea el input de compras mínimas: solo dígitos, piso 0. */
+  setCreditMinPurchases(value: string): void {
+    const n = parseInt(String(value).replace(/[^\d]/g, ''), 10);
+    this.draftCreditMinPurchases.set(Number.isFinite(n) ? n : 0);
+  }
+
+  /** CAT-84: parsea el % de impuesto (acepta coma decimal). Vacío/0 → null. */
+  setTaxRate(value: string): void {
+    const n = parseFloat(String(value).replace(',', '.').replace(/[^\d.]/g, ''));
+    this.draftTaxRate.set(Number.isFinite(n) && n > 0 ? Math.min(n, 100) : null);
+  }
+
+  /** Impuestos sugeridos según el país del catálogo (tasa estándar + reducida
+   *  donde existe). Un click llena % y nombre; ambos siguen editables. El
+   *  desglose queda APAGADO hasta que el comercio elige — nunca se activa solo. */
+  public readonly taxPresets = computed(() => {
+    const cc = (this.draftCountryCode() || this.configStore.config()?.countryCode || '')
+      .toUpperCase();
+    const map: Record<string, { name: string; rate: number }[]> = {
+      VE: [{ name: 'IVA', rate: 16 }, { name: 'IVA', rate: 8 }],
+      CO: [{ name: 'IVA', rate: 19 }, { name: 'IVA', rate: 5 }],
+      AR: [{ name: 'IVA', rate: 21 }, { name: 'IVA', rate: 10.5 }],
+      MX: [{ name: 'IVA', rate: 16 }, { name: 'IVA', rate: 8 }],
+      CL: [{ name: 'IVA', rate: 19 }],
+      PE: [{ name: 'IGV', rate: 18 }],
+      EC: [{ name: 'IVA', rate: 15 }],
+      BO: [{ name: 'IVA', rate: 13 }],
+      PY: [{ name: 'IVA', rate: 10 }, { name: 'IVA', rate: 5 }],
+      UY: [{ name: 'IVA', rate: 22 }, { name: 'IVA', rate: 10 }],
+      GT: [{ name: 'IVA', rate: 12 }],
+      DO: [{ name: 'ITBIS', rate: 18 }],
+      CR: [{ name: 'IVA', rate: 13 }],
+      PA: [{ name: 'ITBMS', rate: 7 }],
+      HN: [{ name: 'ISV', rate: 15 }],
+      SV: [{ name: 'IVA', rate: 13 }],
+      NI: [{ name: 'IVA', rate: 15 }],
+    };
+    return map[cc] ?? [{ name: 'IVA', rate: 16 }];
+  });
+
+  /** ¿Este preset es el que está elegido ahora mismo? (para pintar el chip). */
+  isTaxPresetActive(p: { name: string; rate: number }): boolean {
+    return (
+      this.draftTaxRate() === p.rate &&
+      (this.draftTaxLabel()?.trim() || 'IVA') === p.name
+    );
+  }
+
+  applyTaxPreset(p: { name: string; rate: number }): void {
+    this.draftTaxRate.set(p.rate);
+    this.draftTaxLabel.set(p.name);
+  }
+
+  /** Alterna un día entre "despacha" y "no despacha". Se almacena como lista de
+   *  días BLOQUEADos (para no tocar el checkout ni migrar), pero la UI se expresa
+   *  en positivo ("días en los que SÍ despachas"): togglear un día = agregarlo o
+   *  quitarlo de la lista de bloqueados. */
   toggleDeliveryBlockedWeekday(day: number): void {
     const current = this.draftDeliveryBlockedWeekdays();
     this.draftDeliveryBlockedWeekdays.set(
@@ -317,8 +472,10 @@ export class EcommerceConfigComponent implements OnInit {
     );
   }
 
-  isDeliveryWeekdayBlocked(day: number): boolean {
-    return this.draftDeliveryBlockedWeekdays().includes(day);
+  /** True cuando el catálogo SÍ despacha ese día (no está en la lista de
+   *  bloqueados). Es lo que la UI resalta. */
+  isDeliveryWeekdayActive(day: number): boolean {
+    return !this.draftDeliveryBlockedWeekdays().includes(day);
   }
 
   // WhatsApp notifications (tabla whatsapp_notification_settings). Se cargan
@@ -511,6 +668,9 @@ export class EcommerceConfigComponent implements OnInit {
       return true;
     }
 
+    // Meta Conversions API token (lives on meta_capi_credentials)
+    if (this.metaCapiChanged()) return true;
+
     // Currency config (lives on tenant_currency_config)
     const cc = this.configStore.currencyConfig();
     const dc = this.draftCurrency();
@@ -656,6 +816,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftCountryCode, prev?.countryCode ?? null, config.countryCode ?? null);
       syncField(this.draftState, prev?.state ?? null, config.state ?? null);
       syncField(this.draftCity, prev?.city ?? null, config.city ?? null);
+      syncField(this.draftTimezone, prev?.timezone ?? null, config.timezone ?? null);
       syncField(this.draftShowDesignSection, prev?.showDesignSection ?? true, config.showDesignSection ?? true);
       syncField(this.draftShowLocationSection, prev?.showLocationSection ?? true, config.showLocationSection ?? true);
       syncField(this.draftShowPaymentMethodsSection, prev?.showPaymentMethodsSection ?? true, config.showPaymentMethodsSection ?? true);
@@ -680,6 +841,13 @@ export class EcommerceConfigComponent implements OnInit {
       syncFieldJson(this.draftCustomerFields, prev?.customerFields ?? DEFAULT_CUSTOMER_FIELDS, config.customerFields ?? DEFAULT_CUSTOMER_FIELDS);
       syncField(this.draftDeliveryDateEnabled, prev?.deliveryDateEnabled ?? false, config.deliveryDateEnabled ?? false);
       syncFieldJson(this.draftDeliveryBlockedWeekdays, prev?.deliveryBlockedWeekdays ?? DEFAULT_DELIVERY_BLOCKED_WEEKDAYS, config.deliveryBlockedWeekdays ?? DEFAULT_DELIVERY_BLOCKED_WEEKDAYS);
+      syncField(this.draftApplyAdjustmentsInCheckout, prev?.applyAdjustmentsInCheckout ?? false, config.applyAdjustmentsInCheckout ?? false);
+      syncField(this.draftCreditEnabled, prev?.creditEnabled ?? false, config.creditEnabled ?? false);
+      syncField(this.draftCreditMinPurchases, prev?.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES, config.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES);
+      syncField(this.draftCreditNote, prev?.creditNote ?? null, config.creditNote ?? null);
+      syncField(this.draftMetaPixelId, prev?.metaPixelId ?? null, config.metaPixelId ?? null);
+      syncField(this.draftTaxRate, prev?.taxRate ?? null, config.taxRate ?? null);
+      syncField(this.draftTaxLabel, prev?.taxLabel ?? null, config.taxLabel ?? null);
 
       this.lastSyncedConfig = { ...config };
     });
@@ -722,6 +890,11 @@ export class EcommerceConfigComponent implements OnInit {
       const customerFields = this.draftCustomerFields();
       const deliveryDateEnabled = this.draftDeliveryDateEnabled();
       const deliveryBlockedWeekdays = this.draftDeliveryBlockedWeekdays();
+      // Contado/crédito — la preview del checkout refleja el selector en vivo.
+      const applyAdjustmentsInCheckout = this.draftApplyAdjustmentsInCheckout();
+      const creditEnabled = this.draftCreditEnabled();
+      const creditMinPurchases = this.draftCreditMinPurchases();
+      const creditNote = this.draftCreditNote();
       // Métodos de pago activos (con sus datos) — para que la preview del
       // checkout refleje en vivo los datos al elegir un método, sin recargar.
       const paymentMethods = this.configStore
@@ -755,6 +928,10 @@ export class EcommerceConfigComponent implements OnInit {
           customerFields,
           deliveryDateEnabled,
           deliveryBlockedWeekdays,
+          applyAdjustmentsInCheckout,
+          creditEnabled,
+          creditMinPurchases,
+          creditNote,
           // Solo overrideamos si hay métodos activos cargados; si la lista aún
           // no cargó (vacía), la preview usa los del catálogo real.
           ...(paymentMethods.length ? { paymentMethods } : {}),
@@ -888,6 +1065,9 @@ export class EcommerceConfigComponent implements OnInit {
     // Reset state + city when country changes
     this.draftState.set(null);
     this.draftCity.set(null);
+    // Al cambiar de país, la zona horaria anterior casi seguro ya no aplica:
+    // la reseteamos al default del país nuevo (el dueño puede ajustarla).
+    this.draftTimezone.set(code ? defaultTimezoneForCountry(code) : null);
     // Seed currency defaults from the new country (same helper as initial sync)
     if (code) {
       const seeded = this.buildCurrencyDefaultsForCountry(code);
@@ -909,12 +1089,17 @@ export class EcommerceConfigComponent implements OnInit {
   // Mirrors the pre-internationalization UX (two buttons with symbol + name).
   // Also syncs `draftCurrencySymbol` — the old field in tenant_ecommerce_config
   // that the public catalog still reads for price rendering.
+  //
+  // Solo cambia el SÍMBOLO de la moneda de referencia (displayCurrency + symbol).
+  // NO toca `exchangeRateType`: la TASA (dólar/euro/personalizada) se configura
+  // aparte en el módulo "Tasas del día" y debe ser independiente del símbolo —
+  // así podés, por ejemplo, cobrar a la tasa del euro pero mostrar el signo $.
+  // (Antes seteaba exchangeRateType y, al guardar, pisaba la tasa elegida.)
   setReferenceCurrency(code: 'USD' | 'EUR') {
     const symbol = code === 'USD' ? '$' : '€';
     this.draftCurrency.set({
       ...this.draftCurrency(),
       displayCurrency: code,
-      exchangeRateType: code === 'USD' ? 'bcv_usd' : 'bcv_eur',
       showDualCurrency: true,
     });
     this.draftCurrencySymbol.set(symbol);
@@ -928,6 +1113,10 @@ export class EcommerceConfigComponent implements OnInit {
 
   onCityChange(city: string | null) {
     this.draftCity.set(city);
+  }
+
+  onTimezoneChange(tz: string | null) {
+    this.draftTimezone.set(tz);
   }
 
   // --- Currency section handlers ---
@@ -979,6 +1168,13 @@ export class EcommerceConfigComponent implements OnInit {
       this.activeTab.set(initialTab);
     }
 
+    // Deep link ?section=<id> (ej. el checklist del Inicio → whatsapp-sellers):
+    // scrollea hasta esa card dentro del tab activo.
+    const section = this.route.snapshot.queryParamMap.get('section');
+    if (section) {
+      this.scrollToSection(section);
+    }
+
     const tenantId = await this.tenantStore.getTenantIdAsync();
     if (tenantId) {
       this.configStore.reloadConfig(String(tenantId));
@@ -986,6 +1182,7 @@ export class EcommerceConfigComponent implements OnInit {
       this.configStore.loadCurrencyConfig(String(tenantId));
       this.loadBusinessHours(String(tenantId));
       this.loadWhatsappNotifySettings(String(tenantId));
+      this.loadMetaCapiStatus(String(tenantId));
       this.loadSlugChanges(String(tenantId));
 
       // El slug del store es el confirmado en DB (en dev el de la URL
@@ -1004,6 +1201,34 @@ export class EcommerceConfigComponent implements OnInit {
       this.slugChangesUsed.set(used);
       this.slugChangeLimit.set(limit);
     });
+  }
+
+  private async loadMetaCapiStatus(tenantId: string): Promise<void> {
+    const result = await this.configService.getMetaCapiStatus(tenantId);
+    result.mapRight((s) => {
+      this.lastSyncedMetaCapi.set(s);
+      this.draftMetaCapiTestCode.set(s.testEventCode);
+      this.draftMetaCapiToken.set('');
+    });
+  }
+
+  /** Desconecta la Conversions API (borra el token guardado). El pixel del
+   *  navegador sigue funcionando; solo se apaga el envío server-side. */
+  public async disconnectMetaCapi(): Promise<void> {
+    const tenantId = this.configStore.config()?.tenantId;
+    if (!tenantId) return;
+    const result = await this.configService.clearMetaCapi(tenantId);
+    result.fold(
+      () => {
+        toast.error('No se pudo desconectar la Conversions API');
+      },
+      () => {
+        this.lastSyncedMetaCapi.set({ configured: false, testEventCode: null, enabled: true });
+        this.draftMetaCapiTestCode.set(null);
+        this.draftMetaCapiToken.set('');
+        toast.success('Conversions API desconectada');
+      }
+    );
   }
 
   /** Tras cambiar el slug, el subdominio actual del admin deja de existir:
@@ -1058,7 +1283,9 @@ export class EcommerceConfigComponent implements OnInit {
     );
     result.fold(
       (err) =>
-        toast.error('No se pudo enviar la prueba: ' + (err.message || '')),
+        toast.error('No se pudo enviar la prueba: {error}', {
+          error: err.message || '',
+        }),
       () => toast.success('¡Te enviamos un WhatsApp de prueba a ese número!')
     );
     loading.set(false);
@@ -1099,6 +1326,7 @@ export class EcommerceConfigComponent implements OnInit {
     if (this.draftThemeColor() !== (config.themeColor ?? '#10b981')) changes.themeColor = this.draftThemeColor();
     if (this.draftState() !== (config.state ?? null)) changes.state = this.draftState();
     if (this.draftCity() !== (config.city ?? null)) changes.city = this.draftCity();
+    if (this.draftTimezone() !== (config.timezone ?? null)) changes.timezone = this.draftTimezone();
     // country lives on `tenants` — handled by a separate saveTenantCountry call
     // in saveAllChanges, not through updateConfig.
     if (this.draftShowDesignSection() !== (config.showDesignSection ?? true)) changes.showDesignSection = this.draftShowDesignSection();
@@ -1111,6 +1339,18 @@ export class EcommerceConfigComponent implements OnInit {
     if (this.draftWhatsappOrderMessage() !== (config.whatsappOrderMessage ?? null)) changes.whatsappOrderMessage = this.draftWhatsappOrderMessage();
     if (this.draftNotifyNewOrders() !== (config.notifyNewOrders ?? true)) changes.notifyNewOrders = this.draftNotifyNewOrders();
     if (this.draftNotifyWeeklyReport() !== (config.notifyWeeklyReport ?? true)) changes.notifyWeeklyReport = this.draftNotifyWeeklyReport();
+    // Pixel ID: normaliza vacío → null (borrar el campo desactiva el pixel).
+    if ((this.draftMetaPixelId()?.trim() || null) !== (config.metaPixelId ?? null)) {
+      changes.metaPixelId = this.draftMetaPixelId()?.trim() || null;
+    }
+    // IVA: 0/NaN/vacío → null (apagado).
+    {
+      const rawRate = this.draftTaxRate();
+      const normRate = rawRate && rawRate > 0 ? Math.min(rawRate, 100) : null;
+      if (normRate !== (config.taxRate ?? null)) changes.taxRate = normRate;
+      const normLabel = this.draftTaxLabel()?.trim() || null;
+      if (normLabel !== (config.taxLabel ?? null)) changes.taxLabel = normLabel;
+    }
 
     const serverButtons = config.whatsappButtons?.length
       ? config.whatsappButtons
@@ -1151,7 +1391,43 @@ export class EcommerceConfigComponent implements OnInit {
     if (deliveryDaysChanged) {
       changes.deliveryBlockedWeekdays = this.draftDeliveryBlockedWeekdays();
     }
-    if (customerFieldsChanged || deliveryEnabledChanged || deliveryDaysChanged) {
+
+    // Contado/crédito también vive dentro de `customer_fields` — mismas
+    // reglas que delivery-date: cualquier cambio manda además customerFields
+    // como base para que el service no pise el resto del jsonb.
+    const applyAdjustmentsChanged =
+      this.draftApplyAdjustmentsInCheckout() !==
+      (config.applyAdjustmentsInCheckout ?? false);
+    const creditEnabledChanged =
+      this.draftCreditEnabled() !== (config.creditEnabled ?? false);
+    const creditMinChanged =
+      this.draftCreditMinPurchases() !==
+      (config.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES);
+    const creditNoteChanged =
+      (this.draftCreditNote()?.trim() || null) !== (config.creditNote ?? null);
+
+    if (applyAdjustmentsChanged) {
+      changes.applyAdjustmentsInCheckout = this.draftApplyAdjustmentsInCheckout();
+    }
+    if (creditEnabledChanged) {
+      changes.creditEnabled = this.draftCreditEnabled();
+    }
+    if (creditMinChanged) {
+      changes.creditMinPurchases = this.draftCreditMinPurchases();
+    }
+    if (creditNoteChanged) {
+      changes.creditNote = this.draftCreditNote()?.trim() || null;
+    }
+
+    if (
+      customerFieldsChanged ||
+      deliveryEnabledChanged ||
+      deliveryDaysChanged ||
+      applyAdjustmentsChanged ||
+      creditEnabledChanged ||
+      creditMinChanged ||
+      creditNoteChanged
+    ) {
       changes.customerFields = this.draftCustomerFields();
     }
 
@@ -1253,6 +1529,31 @@ export class EcommerceConfigComponent implements OnInit {
           toast.error('Error al guardar las notificaciones de WhatsApp');
         },
         () => this.lastSyncedWhatsappNotify.set(next)
+      );
+    }
+
+    // Meta Conversions API token (lives on meta_capi_credentials, separate table)
+    if (this.metaCapiChanged() && config?.tenantId) {
+      didSilentOp = true;
+      const testCode = this.draftMetaCapiTestCode()?.trim() || null;
+      const result = await this.configService.saveMetaCapi(config.tenantId, {
+        accessToken: this.draftMetaCapiToken().trim() || null,
+        testEventCode: testCode,
+        enabled: true,
+      });
+      result.fold(
+        () => {
+          hadSilentError = true;
+          toast.error('Error al guardar la Conversions API de Meta');
+        },
+        () => {
+          this.lastSyncedMetaCapi.set({
+            configured: true,
+            testEventCode: testCode,
+            enabled: true,
+          });
+          this.draftMetaCapiToken.set('');
+        }
       );
     }
 
@@ -1489,6 +1790,66 @@ export class EcommerceConfigComponent implements OnInit {
   public saveMethodDetails(method: PaymentMethodEntity): void {
     this.configStore.savePaymentMethodDetails(method.id, this.detailsDraft());
     this.expandedMethodId.set(null);
+  }
+
+  // --- Ajuste por método de pago (descuento/recargo que se aplica al elegir
+  //     este método al crear una orden). Se guarda dentro de `details` bajo
+  //     claves reservadas `__adjust*`: no requiere migración y el checkout solo
+  //     renderiza los campos conocidos (paymentMethodFields), así que estas
+  //     claves nunca se le muestran al cliente. ---
+  public readonly adjustTypeOptions = [
+    { label: 'Ninguno', value: 'none' },
+    { label: 'Descuento', value: 'discount' },
+    { label: 'Cargo adicional', value: 'surcharge' },
+  ];
+  public readonly adjustModeOptions = [
+    { label: 'Porcentaje (%)', value: 'percent' },
+    { label: 'Monto fijo', value: 'fixed' },
+  ];
+
+  public adjType(): string {
+    return this.detailsDraft()['__adjustType'] || 'none';
+  }
+  public setAdjType(v: string): void {
+    this.setDetailField('__adjustType', v);
+  }
+  public adjMode(): string {
+    return this.detailsDraft()['__adjustMode'] || 'percent';
+  }
+  public setAdjMode(v: string): void {
+    this.setDetailField('__adjustMode', v);
+  }
+  public adjValue(): string {
+    return this.detailsDraft()['__adjustValue'] ?? '';
+  }
+  public setAdjValue(v: string): void {
+    // Tolerá coma decimal (norma en LatAm/VE): "5,5" → "5.5".
+    this.setDetailField(
+      '__adjustValue',
+      v == null ? '' : String(v).replace(',', '.')
+    );
+  }
+  /** Default: visible al cliente (un descuento se muestra en la factura). */
+  public adjVisible(): boolean {
+    return this.detailsDraft()['__adjustVisible'] !== '0';
+  }
+  public setAdjVisible(v: boolean): void {
+    this.setDetailField('__adjustVisible', v ? '1' : '0');
+  }
+
+  /** Chip resumen del ajuste de un método (para la fila colapsada). */
+  public adjustBadge(
+    method: PaymentMethodEntity
+  ): { label: string; kind: 'good' | 'warn' } | null {
+    const d = method.details ?? {};
+    const type = d['__adjustType'];
+    const value = Number(String(d['__adjustValue'] ?? '').replace(',', '.'));
+    if (!type || type === 'none' || !value) return null;
+    const amount =
+      (d['__adjustMode'] || 'percent') === 'percent' ? `${value}%` : `${value}`;
+    return type === 'discount'
+      ? { label: `Descuento ${amount}`, kind: 'good' }
+      : { label: `Cargo adicional ${amount}`, kind: 'warn' };
   }
 
   // --- WhatsApp Section ---

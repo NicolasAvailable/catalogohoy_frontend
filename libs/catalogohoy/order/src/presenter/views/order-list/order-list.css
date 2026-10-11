@@ -99,7 +99,7 @@ button {
 
 /* Status select - compact inline style */
 :host ::ng-deep .order-status-select {
-  min-width: 140px;
+  min-width: 7rem;
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
