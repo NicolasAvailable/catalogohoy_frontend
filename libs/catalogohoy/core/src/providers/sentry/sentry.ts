@@ -59,6 +59,17 @@ export function initSentry({ dsn, appName }: InitSentryOptions): void {
       // ResizeObserver: bucle benigno, ruido universal de Chrome.
       'ResizeObserver loop completed with undelivered notifications',
       'ResizeObserver loop limit exceeded',
+      // Código AJENO inyectado en la página del visitante (no es nuestro
+      // bundle; aparece como `global code@…/:1`): extensiones de wallet cripto
+      // (MetaMask/Coinbase inyectan `window.ethereum`), modo lector de Firefox
+      // / Firefox iOS (`__firefox__`) y otras extensiones. No son bugs nuestros.
+      'window.ethereum',
+      'selectedAddress',
+      '__firefox__',
+      'evmAsk',
+      'chrome-extension',
+      'moz-extension',
+      'safari-web-extension',
     ],
     integrations: [
       Sentry.browserTracingIntegration(),

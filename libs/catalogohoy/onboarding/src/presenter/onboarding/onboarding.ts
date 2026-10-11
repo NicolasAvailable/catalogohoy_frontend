@@ -367,15 +367,17 @@ export class Onboarding implements OnInit {
 
     // Progreso persistido en DB (tenants.onboarding_step): si el usuario
     // abandonó a mitad, retoma EN ESE PASO (funciona entre navegadores y
-    // dispositivos, a diferencia del flag de localStorage). Si es la primera
-    // vez (null), se marca el paso 0 → el login sabrá que quedó pendiente.
+    // dispositivos, a diferencia del flag de localStorage).
+    // NO sembramos el paso 0 al cargar: `null` es ambiguo (tenant legacy que
+    // nunca onboardeó, o uno que ya completó), y sembrar acá re-armaría el
+    // wizard para quien entre a /onboarding a mano. El paso se persiste recién
+    // en el primer goNext (saveStore); hasta entonces la primera visita
+    // (signup nuevo, redirigido acá) arranca en 0 sin tocar la DB.
     const savedStep = await this.tenantService.getOnboardingStep();
     if (savedStep != null) {
       this.stepIndex.set(
         Math.min(Math.max(savedStep, 0), this.stepIds.length - 1)
       );
-    } else {
-      void this.tenantService.setOnboardingStep(0);
     }
 
     await this.configStore.loadConfig(this.tenantId);
@@ -684,6 +686,11 @@ export class Onboarding implements OnInit {
           has_description: this.productDescription().trim().length > 0,
           used_advanced: this.showAdvanced(),
         });
+        // El producto ya quedó creado: persistimos el paso "setup" para que, si
+        // el usuario abandona ahora (la card de "agregado" es solo en memoria) y
+        // retoma en otra sesión, caiga en Entrega y pago y NO en el form de
+        // producto vacío — donde crearía un duplicado (create no es idempotente).
+        void this.tenantService.setOnboardingStep(this.stepIds.indexOf('setup'));
         this.addedProduct.set({
           name: input.name,
           price: this.productPrice() ?? 0,
@@ -919,7 +926,7 @@ export class Onboarding implements OnInit {
       payment_count: this.paymentDrafts().filter((d) => d.active).length,
     });
     this.toast.success('¡Tu tienda está lista!');
-    this.complete('finished');
+    await this.complete('finished');
   }
 
   /** Persiste los presets en la tabla `payment_methods` (la que lee el
@@ -1002,21 +1009,24 @@ export class Onboarding implements OnInit {
     const renamed = await this.applyDeferredRename();
     this.isSaving.set(false);
     if (!renamed) return;
-    this.complete('skipped');
+    await this.complete('skipped');
   }
 
   /** `reason` distingue en el embudo quién terminó el wizard de quién lo saltó
    *  en el paso final. Al cerrar el onboarding se va a /bienvenida (la oferta
    *  de prueba de 7 días, en el momento de máximo entusiasmo: recién armó su
    *  tienda); desde ahí el usuario entra al admin. */
-  private complete(reason: 'finished' | 'skipped' = 'finished'): void {
+  private async complete(reason: 'finished' | 'skipped' = 'finished'): Promise<void> {
     this.posthog.captureOnboarding('onboarding_completed', {
       reason,
       last_step: this.currentStep(),
     });
     // Onboarding cerrado: NULL en DB (el login deja de mandar al wizard) +
-    // flag local como caché del guard de re-entrada.
-    void this.tenantService.setOnboardingStep(null);
+    // flag local como caché del guard de re-entrada. CRÍTICO: AWAIT el write
+    // ANTES de navegar — el redirect cross-subdominio de abajo (prod) cancela
+    // cualquier request en vuelo, y si el NULL no llegó, el próximo login
+    // vuelve a mandar al wizard (onboarding_step quedó seteado).
+    await this.tenantService.setOnboardingStep(null);
     if (this.tenantId) {
       try {
         localStorage.setItem(onboardingDoneKey(this.tenantId), '1');

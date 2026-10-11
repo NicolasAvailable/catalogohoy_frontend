@@ -75,6 +75,13 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   readonly emailExistsError = signal(false);
   readonly googleAccountExistsError = signal(false);
   readonly invitedTenantName = signal<string | null>(null);
+  /** Email del INVITADO cuando el signup quedó pendiente de confirmación de
+   *  correo: muestra una pantalla "revisá tu correo" en vez de dejar la UI
+   *  congelada. El invitado completa el accept al hacer clic en el enlace del
+   *  correo (emailRedirectTo=/confirm-email?invite_token=…), que lo resuelve
+   *  `confirm-email.ts` con sesión. NO usa OTP (ese flujo manda a /onboarding,
+   *  incorrecto para un invitado que se suma a un equipo). */
+  readonly inviteConfirmEmail = signal<string | null>(null);
 
   // ── Paso 4: verificación por código (OTP) ──────────────────────────────
   /** Email al que se mandó el código (se muestra en el paso 4). */
@@ -307,6 +314,16 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
         this.isCheckingEmail.set(false);
         return;
       }
+      this.isCheckingEmail.set(false);
+      // Confirmación de correo activa: todavía NO hay sesión, así que no se
+      // puede aceptar la invitación acá. Mostramos "revisá tu correo"; el token
+      // sigue en sessionStorage y en el link del correo. NO borrar el token ni
+      // llamar a acceptInvite/getLoginRedirectUrl sin sesión (dejaría al
+      // invitado plantado sin feedback).
+      if (signupResult.value === SIGNUP_CONFIRM_EMAIL) {
+        this.inviteConfirmEmail.set(email);
+        return;
+      }
       await this.facade.acceptInvite(this.inviteToken);
       sessionStorage.removeItem('pending_invite_token');
       const redirectResult = await this.facade.getLoginRedirectUrl();
@@ -358,6 +375,12 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
         inviteToken: this.inviteToken,
       });
       if (signupResult.isLeft()) return;
+      // Confirmación de correo activa: sin sesión no se puede aceptar acá.
+      // Pantalla "revisá tu correo"; el link del correo completa el accept.
+      if (signupResult.value === SIGNUP_CONFIRM_EMAIL) {
+        this.inviteConfirmEmail.set(email);
+        return;
+      }
       await this.facade.acceptInvite(this.inviteToken);
       sessionStorage.removeItem('pending_invite_token');
       await this._recordTermsAcceptance();
