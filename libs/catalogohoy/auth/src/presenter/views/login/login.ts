@@ -137,7 +137,9 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
   private socialName: string | null = null;
   readonly countries = SUPPORTED_COUNTRIES;
   public readonly storeForm = inject(FormBuilder).group({
-    storeName: ['', [Validators.required, whiteSpacesValidator()]],
+    // El nombre de la tienda se pide en el ONBOARDING (no acá): se crea con un
+    // placeholder que el wizard detecta como "sembrado" y pide el real.
+    storeName: ['Mi tienda'],
     name: ['', [Validators.required, whiteSpacesValidator()]],
     countryCode: [this.detectCountryCode(), [Validators.required]],
     referralCode: [''],
@@ -169,7 +171,8 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
       '',
       [Validators.required, Validators.minLength(4), whiteSpacesValidator()],
     ],
-    storeName: ['', [Validators.required, Validators.minLength(3)]],
+    // El nombre de la tienda se pide en el ONBOARDING (no acá): placeholder.
+    storeName: ['Mi tienda'],
     countryCode: [this.detectCountryCode(), [Validators.required]],
     referralCode: [''],
     acceptedTerms: [false, [Validators.requiredTrue]],

@@ -20,14 +20,48 @@ type Period = 'monthly' | 'annual';
 interface PlanCard {
   id: string;
   name: string;
-  description: string;
-  /** Destaque corto derivado de los límites reales del plan (no inventado). */
-  highlight: string;
+  tagline: string;
+  features: string[];
   monthly: PurchasesPackage | null;
   annual: PurchasesPackage | null;
 }
 
 const PLAN_ORDER = ['basico', 'pro', 'avanzado'];
+
+/** Nombre + qué incluye cada plan (igual que la web / pantalla de bienvenida).
+ *  NO depende de la carga de `plans()` → evita el fallback a "basico" en
+ *  minúscula. El precio sale localizado del store (RevenueCat priceString). */
+const PLAN_INFO: Record<string, { name: string; tagline: string; features: string[] }> = {
+  basico: {
+    name: 'Plan Básico',
+    tagline: 'Para empezar a vender online.',
+    features: [
+      'Tu catálogo online con marca propia',
+      'Pagos y pedidos por WhatsApp',
+      'Gestión de productos, órdenes y clientes',
+    ],
+  },
+  pro: {
+    name: 'Plan Pro',
+    tagline: 'Para tiendas que venden todos los días.',
+    features: [
+      'Hasta 500 productos',
+      'Analíticas del catálogo',
+      'Notificaciones de órdenes por WhatsApp',
+      '350 créditos de IA por mes',
+    ],
+  },
+  avanzado: {
+    name: 'Plan Avanzado',
+    tagline: 'Para negocios con muchos productos.',
+    features: [
+      'Productos ilimitados',
+      'Punto de Venta (caja registradora)',
+      'CRM de chats: WhatsApp, Instagram y TikTok',
+      'Dominio personalizado',
+    ],
+  },
+};
 
 /**
  * Paywall de compra de plan por IAP de Apple (RevenueCat) — SOLO iOS. Es lo que
@@ -96,27 +130,18 @@ export class IapPaywall implements OnInit {
       byPlan.set(plan, slot);
     }
 
-    const plans = this.planStore.plans();
     return PLAN_ORDER.filter((id) => byPlan.has(id)).map((id) => {
-      const row = plans.find((p) => p.id === id);
+      const info = PLAN_INFO[id] ?? { name: id, tagline: '', features: [] };
       const slot = byPlan.get(id)!;
       return {
         id,
-        name: row?.name ?? id,
-        description: row?.description ?? '',
-        highlight: this.highlightFor(row),
+        name: info.name,
+        tagline: info.tagline,
+        features: info.features,
         monthly: slot.monthly,
         annual: slot.annual,
       };
     });
-  }
-
-  /** Destaque corto y VERÍDICO a partir de los límites del plan. */
-  private highlightFor(row: { maxProducts: number } | undefined): string {
-    if (!row) return '';
-    return row.maxProducts <= 0
-      ? 'Productos ilimitados'
-      : `Hasta ${row.maxProducts} productos`;
   }
 
   public setPeriod(p: Period): void {

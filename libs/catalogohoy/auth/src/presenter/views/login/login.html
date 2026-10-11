@@ -164,23 +164,11 @@
     } @else if (needsStoreSetup()) {
     <!-- ── Alta in-app (nativo): la cuenta social no tiene catálogo aún ── -->
     <div>
-      <h1 class="text-3xl sm:text-4xl lg:text-3xl font-semibold text-grey-700">{{ 'Crea tu catálogo' | transloco }}</h1>
-      <p class="text-base text-grey-400 mt-1">{{ '¡Ya casi! Ponle nombre a tu catálogo para empezar.' | transloco }}</p>
+      <h1 class="text-3xl sm:text-4xl lg:text-3xl font-semibold text-grey-700">{{ 'Crea tu cuenta' | transloco }}</h1>
+      <p class="text-base text-grey-400 mt-1">{{ 'Un último paso y empezamos a armar tu tienda.' | transloco }}</p>
     </div>
 
     <form [formGroup]="storeForm" (keyup.enter)="createStore()">
-      <div class="mb-4">
-        <label class="block font-medium text-sm text-grey-400 mb-1">{{ 'Nombre de tu tienda' | transloco }}</label>
-        <ui-input-text size="large" formControlName="storeName" [placeholder]="'Ej: La señora de las tortas' | transloco" />
-        <ui-input-message [control]="storeForm.get('storeName')" error="required" [text]="'El campo es obligatorio' | transloco" />
-        @if (slugPreview()) {
-          <p class="text-xs text-grey-400 mt-1.5 break-words leading-relaxed">
-            {{ 'Tu catálogo estará en:' | transloco }}
-            <span class="font-medium text-primary-500">{{ slugPreview() }}.catalogohoy.com</span>
-          </p>
-        }
-      </div>
-
       <div class="mb-4">
         <label class="block font-medium text-sm text-grey-400 mb-1">{{ 'Tu nombre' | transloco }}</label>
         <ui-input-text size="large" formControlName="name" />
@@ -390,8 +378,8 @@
           </svg>
           {{ 'Volver' | transloco }}
         </button>
-        <h1 class="text-3xl sm:text-4xl lg:text-3xl font-semibold text-grey-700">{{ 'Datos de tu tienda' | transloco }}</h1>
-        <p class="text-base text-grey-400 mt-1">{{ 'Ya casi terminas. ¿Cómo se llama tu tienda?' | transloco }}</p>
+        <h1 class="text-3xl sm:text-4xl lg:text-3xl font-semibold text-grey-700">{{ 'Crea tu cuenta' | transloco }}</h1>
+        <p class="text-base text-grey-400 mt-1">{{ 'Ya casi terminas. Completa tus datos para empezar.' | transloco }}</p>
       </div>
 
       <form [formGroup]="signupProfileForm" (keyup.enter)="createAccount()">
@@ -400,19 +388,6 @@
           <ui-input-text size="large" formControlName="name" [placeholder]="'María González' | transloco" />
           <ui-input-message [control]="signupProfileForm.get('name')" error="required" [text]="'El campo es obligatorio' | transloco" />
           <ui-input-message [control]="signupProfileForm.get('name')" error="minlength" [text]="'Debe tener mínimo 4 caracteres' | transloco" />
-        </div>
-
-        <div class="mb-4">
-          <label class="block font-medium text-sm text-grey-400 mb-1">{{ 'Nombre de la tienda' | transloco }}</label>
-          <ui-input-text size="large" formControlName="storeName" [placeholder]="'Ej: La señora de las tortas' | transloco" />
-          <ui-input-message [control]="signupProfileForm.get('storeName')" error="required" [text]="'El campo es obligatorio' | transloco" />
-          <ui-input-message [control]="signupProfileForm.get('storeName')" error="minlength" [text]="'Debe tener mínimo 3 caracteres' | transloco" />
-          @if (slugPreview()) {
-            <p class="text-xs text-grey-400 mt-1.5 break-words leading-relaxed">
-              {{ 'Tu catálogo estará en:' | transloco }}
-              <span class="font-medium text-primary-500">{{ slugPreview() }}.catalogohoy.com</span>
-            </p>
-          }
         </div>
 
         <div class="mb-4">

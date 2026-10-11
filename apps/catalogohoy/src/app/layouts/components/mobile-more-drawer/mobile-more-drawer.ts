@@ -12,12 +12,14 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthenticationService } from '@catalogohoy/auth';
 import {
   clearNativeSlug,
+  isIosApp,
   isNativeApp,
   LanguageSelectorComponent,
   PosthogService,
   RevenueCatService,
   setNativeSlug,
 } from '@catalogohoy/core';
+import { PlanStore } from '@catalogohoy/plan';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { ProfileStore } from '@catalogohoy/profile';
 import { Tenant, TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
@@ -54,6 +56,15 @@ export class MobileMoreDrawer {
   private readonly posthog = inject(PosthogService);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly revenueCat = inject(RevenueCatService);
+  private readonly planStore = inject(PlanStore);
+
+  /** El acceso directo a Planes solo en iOS (ahí la compra es por IAP; en
+   *  Android todavía no hay billing). */
+  public readonly isIos = isIosApp();
+  /** Nombre del plan actual para el ítem "Mi plan" (Gratis si no hay pago). */
+  public readonly currentPlanName = computed(
+    () => this.planStore.currentPlan()?.name ?? 'Gratis'
+  );
   private readonly permissions = inject(TeamPermissionsStore);
   private readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);

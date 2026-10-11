@@ -38,6 +38,13 @@
   background: white;
   border-bottom: 0.0625rem solid var(--color-grey-100, #eee);
 }
+/* En la app NATIVA (iOS/Android) la barra superior del wizard debe respetar el
+   safe-area del notch / barra de estado — si no, "CatalogoHoy" queda tapado por
+   la hora del teléfono (el onboarding es una ruta full-screen fuera del admin,
+   así que maneja su propio safe-area). */
+:host-context(.native-app) .onb__topbar {
+  padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+}
 .onb__brand {
   font-weight: 800;
   font-size: 1.125rem;
