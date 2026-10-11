@@ -43,7 +43,7 @@ import {
   ShippingMethodType,
   THEME_COLORS,
 } from '@catalogohoy/ecommerce-config';
-import { SupabaseClientProvider } from '@catalogohoy/core';
+import { PosthogService, SupabaseClientProvider } from '@catalogohoy/core';
 import { CreateProductInput, ProductService } from '@catalogohoy/product';
 import { ProfileStore } from '@catalogohoy/profile';
 import { TenantService, TenantStore } from '@catalogohoy/tenant';
@@ -150,6 +150,7 @@ export class Onboarding implements OnInit {
   private readonly configService = inject(EcommerceConfigService);
   public readonly categoryStore = inject(CategoryStore);
   private readonly productService = inject(ProductService);
+  private readonly posthog = inject(PosthogService);
 
   public readonly themeColors = THEME_COLORS;
   /** Lista de pasos + índice actual: la numeración (Paso 1/3) sale de acá. */
@@ -438,6 +439,14 @@ export class Onboarding implements OnInit {
     // Recién ahora se renderiza el formulario: si se mostrara antes, estos
     // prefills asíncronos pisarían lo que el usuario ya escribió.
     this.isBooting.set(false);
+
+    // Embudo de activación (PostHog): start con el paso en que abre el wizard.
+    // resumed = volvió a un onboarding a medias (savedStep ya existía).
+    this.posthog.captureOnboarding('onboarding_started', {
+      step: this.currentStep(),
+      step_number: this.stepNumber(),
+      resumed: savedStep != null && savedStep > 0,
+    });
   }
 
   // ── Navegación (sobre la lista de pasos: nunca sale de rango) ───────────
@@ -553,6 +562,12 @@ export class Onboarding implements OnInit {
     await this.configStore.updatePartialConfig(partial);
     if (partial.whatsappButtons) this.hadConfigWhatsapp = true;
     this.isSaving.set(false);
+    this.posthog.captureOnboarding('onboarding_step_completed', {
+      step: 'store',
+      has_logo: !!this.logoUrl(),
+      has_banner: !!this.bannerUrl(),
+      renamed_slug: newSlug !== this.initialSlug,
+    });
     this.goNext();
   }
 
@@ -664,6 +679,11 @@ export class Onboarding implements OnInit {
     result
       .mapRight(() => {
         this.toast.success('Producto creado');
+        this.posthog.captureOnboarding('onboarding_product_added', {
+          has_photo: this.productPhotos().length > 0,
+          has_description: this.productDescription().trim().length > 0,
+          used_advanced: this.showAdvanced(),
+        });
         this.addedProduct.set({
           name: input.name,
           price: this.productPrice() ?? 0,
@@ -692,11 +712,19 @@ export class Onboarding implements OnInit {
 
   /** Continuar desde el estado "producto agregado" → Entrega y pago. */
   public continueAfterProduct(): void {
+    this.posthog.captureOnboarding('onboarding_step_completed', {
+      step: 'product',
+      added_product: true,
+    });
     this.goNext();
   }
 
   /** Salta el producto sin crear y avanza al paso Entrega y pago. */
   public skipProduct(): void {
+    this.posthog.captureOnboarding('onboarding_step_completed', {
+      step: 'product',
+      added_product: false,
+    });
     this.goNext();
   }
 
@@ -885,8 +913,13 @@ export class Onboarding implements OnInit {
     const renamed = await this.applyDeferredRename();
     this.isSaving.set(false);
     if (!renamed) return;
+    this.posthog.captureOnboarding('onboarding_step_completed', {
+      step: 'setup',
+      shipping_count: shippingMethods.filter((m) => m.isActive).length,
+      payment_count: this.paymentDrafts().filter((d) => d.active).length,
+    });
     this.toast.success('¡Tu tienda está lista!');
-    this.complete();
+    this.complete('finished');
   }
 
   /** Persiste los presets en la tabla `payment_methods` (la que lee el
@@ -969,10 +1002,16 @@ export class Onboarding implements OnInit {
     const renamed = await this.applyDeferredRename();
     this.isSaving.set(false);
     if (!renamed) return;
-    this.complete();
+    this.complete('skipped');
   }
 
-  private complete(): void {
+  /** `reason` distingue en el embudo quién terminó el wizard de quién lo saltó
+   *  en el paso final (ambos cierran el onboarding e van al admin). */
+  private complete(reason: 'finished' | 'skipped' = 'finished'): void {
+    this.posthog.captureOnboarding('onboarding_completed', {
+      reason,
+      last_step: this.currentStep(),
+    });
     // Onboarding cerrado: NULL en DB (el login vuelve a mandar a /admin) +
     // flag local como caché del guard de re-entrada.
     void this.tenantService.setOnboardingStep(null);
