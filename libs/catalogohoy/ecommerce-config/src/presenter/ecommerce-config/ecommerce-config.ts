@@ -65,6 +65,7 @@ import {
   DAY_LABELS_ES,
   DEFAULT_BUSINESS_HOURS_WEEK,
   DEFAULT_CURRENCY_CONFIG,
+  DEFAULT_CREDIT_MIN_PURCHASES,
   DEFAULT_CUSTOMER_FIELDS,
   DEFAULT_DELIVERY_BLOCKED_WEEKDAYS,
   DELIVERY_WEEKDAY_OPTIONS,
@@ -75,6 +76,8 @@ import {
   NO_CURRENCY_SYMBOL,
   PreviewMessage,
   findCountryByCode,
+  defaultTimezoneForCountry,
+  timezonesForCountry,
   ShippingMethod,
   SHIPPING_METHOD_TYPE_OPTIONS,
   SocialLinks,
@@ -304,6 +307,19 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftCountryCode = signal<string | null>(null);
   public readonly draftState = signal<string | null>(null);
   public readonly draftCity = signal<string | null>(null);
+  /** Zona horaria IANA del negocio — define el cálculo abierto/cerrado. */
+  public readonly draftTimezone = signal<string | null>(null);
+  /** Opciones del selector: solo las zonas del país del negocio. Si la zona
+   *  guardada no estuviera en la lista del país (caso raro), se incluye igual
+   *  para que el valor seleccionado siempre se renderice. */
+  public readonly timezoneOptions = computed(() => {
+    const opts = timezonesForCountry(this.draftCountryCode());
+    const current = this.draftTimezone();
+    if (current && !opts.some((o) => o.value === current)) {
+      return [{ value: current, label: current.split('/').pop()?.replace(/_/g, ' ') ?? current, country: '' }, ...opts];
+    }
+    return opts;
+  });
   public readonly draftShowDesignSection = signal(true);
   public readonly draftShowLocationSection = signal(true);
   public readonly draftShowPaymentMethodsSection = signal(true);
@@ -365,6 +381,88 @@ export class EcommerceConfigComponent implements OnInit {
   /** Weekdays with no delivery (JS: 0 = Sunday … 6 = Saturday). */
   public readonly draftDeliveryBlockedWeekdays = signal<number[]>([]);
   public readonly deliveryWeekdayOptions = DELIVERY_WEEKDAY_OPTIONS;
+
+  // --- Contado y crédito (Pagos tab) drafts ---
+  /** Apply per-method adjustments (__adjust*) in the public checkout. */
+  public readonly draftApplyAdjustmentsInCheckout = signal<boolean>(false);
+  /** Offer "Pago a crédito" in the public checkout. */
+  public readonly draftCreditEnabled = signal<boolean>(false);
+  /** Previous purchases required before credit unlocks (0 = no minimum). */
+  public readonly draftCreditMinPurchases = signal<number>(
+    DEFAULT_CREDIT_MIN_PURCHASES
+  );
+  /** Custom note under the credit option (null/'' = checkout default text). */
+  public readonly draftCreditNote = signal<string | null>(null);
+
+  // --- Impuesto/IVA (Pagos tab) drafts — CAT-84 ---
+  /** % de impuesto incluido en los precios (null/0 = sin desglose). */
+  public readonly draftTaxRate = signal<number | null>(null);
+  /** Etiqueta del impuesto (IVA, ITBIS, IGV…). */
+  public readonly draftTaxLabel = signal<string | null>(null);
+
+  /** Métodos activos que tienen un ajuste configurado — chips informativos de
+   *  la card "Contado y crédito" (el descuento se configura por método, en
+   *  "Datos"; acá solo se decide si aplica también en el checkout). */
+  public readonly methodsWithAdjustment = computed(() =>
+    this.configStore
+      .paymentMethodsList()
+      .filter((m) => m.isActive)
+      .map((m) => ({ name: m.name, badge: this.adjustBadge(m) }))
+      .filter((m): m is { name: string; badge: { label: string; kind: 'good' | 'warn' } } => !!m.badge)
+  );
+
+  /** Sanea el input de compras mínimas: solo dígitos, piso 0. */
+  setCreditMinPurchases(value: string): void {
+    const n = parseInt(String(value).replace(/[^\d]/g, ''), 10);
+    this.draftCreditMinPurchases.set(Number.isFinite(n) ? n : 0);
+  }
+
+  /** CAT-84: parsea el % de impuesto (acepta coma decimal). Vacío/0 → null. */
+  setTaxRate(value: string): void {
+    const n = parseFloat(String(value).replace(',', '.').replace(/[^\d.]/g, ''));
+    this.draftTaxRate.set(Number.isFinite(n) && n > 0 ? Math.min(n, 100) : null);
+  }
+
+  /** Impuestos sugeridos según el país del catálogo (tasa estándar + reducida
+   *  donde existe). Un click llena % y nombre; ambos siguen editables. El
+   *  desglose queda APAGADO hasta que el comercio elige — nunca se activa solo. */
+  public readonly taxPresets = computed(() => {
+    const cc = (this.draftCountryCode() || this.configStore.config()?.countryCode || '')
+      .toUpperCase();
+    const map: Record<string, { name: string; rate: number }[]> = {
+      VE: [{ name: 'IVA', rate: 16 }, { name: 'IVA', rate: 8 }],
+      CO: [{ name: 'IVA', rate: 19 }, { name: 'IVA', rate: 5 }],
+      AR: [{ name: 'IVA', rate: 21 }, { name: 'IVA', rate: 10.5 }],
+      MX: [{ name: 'IVA', rate: 16 }, { name: 'IVA', rate: 8 }],
+      CL: [{ name: 'IVA', rate: 19 }],
+      PE: [{ name: 'IGV', rate: 18 }],
+      EC: [{ name: 'IVA', rate: 15 }],
+      BO: [{ name: 'IVA', rate: 13 }],
+      PY: [{ name: 'IVA', rate: 10 }, { name: 'IVA', rate: 5 }],
+      UY: [{ name: 'IVA', rate: 22 }, { name: 'IVA', rate: 10 }],
+      GT: [{ name: 'IVA', rate: 12 }],
+      DO: [{ name: 'ITBIS', rate: 18 }],
+      CR: [{ name: 'IVA', rate: 13 }],
+      PA: [{ name: 'ITBMS', rate: 7 }],
+      HN: [{ name: 'ISV', rate: 15 }],
+      SV: [{ name: 'IVA', rate: 13 }],
+      NI: [{ name: 'IVA', rate: 15 }],
+    };
+    return map[cc] ?? [{ name: 'IVA', rate: 16 }];
+  });
+
+  /** ¿Este preset es el que está elegido ahora mismo? (para pintar el chip). */
+  isTaxPresetActive(p: { name: string; rate: number }): boolean {
+    return (
+      this.draftTaxRate() === p.rate &&
+      (this.draftTaxLabel()?.trim() || 'IVA') === p.name
+    );
+  }
+
+  applyTaxPreset(p: { name: string; rate: number }): void {
+    this.draftTaxRate.set(p.rate);
+    this.draftTaxLabel.set(p.name);
+  }
 
   /** Alterna un día entre "despacha" y "no despacha". Se almacena como lista de
    *  días BLOQUEADos (para no tocar el checkout ni migrar), pero la UI se expresa
@@ -742,6 +840,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftCountryCode, prev?.countryCode ?? null, config.countryCode ?? null);
       syncField(this.draftState, prev?.state ?? null, config.state ?? null);
       syncField(this.draftCity, prev?.city ?? null, config.city ?? null);
+      syncField(this.draftTimezone, prev?.timezone ?? null, config.timezone ?? null);
       syncField(this.draftShowDesignSection, prev?.showDesignSection ?? true, config.showDesignSection ?? true);
       syncField(this.draftShowLocationSection, prev?.showLocationSection ?? true, config.showLocationSection ?? true);
       syncField(this.draftShowPaymentMethodsSection, prev?.showPaymentMethodsSection ?? true, config.showPaymentMethodsSection ?? true);
@@ -766,7 +865,13 @@ export class EcommerceConfigComponent implements OnInit {
       syncFieldJson(this.draftCustomerFields, prev?.customerFields ?? DEFAULT_CUSTOMER_FIELDS, config.customerFields ?? DEFAULT_CUSTOMER_FIELDS);
       syncField(this.draftDeliveryDateEnabled, prev?.deliveryDateEnabled ?? false, config.deliveryDateEnabled ?? false);
       syncFieldJson(this.draftDeliveryBlockedWeekdays, prev?.deliveryBlockedWeekdays ?? DEFAULT_DELIVERY_BLOCKED_WEEKDAYS, config.deliveryBlockedWeekdays ?? DEFAULT_DELIVERY_BLOCKED_WEEKDAYS);
+      syncField(this.draftApplyAdjustmentsInCheckout, prev?.applyAdjustmentsInCheckout ?? false, config.applyAdjustmentsInCheckout ?? false);
+      syncField(this.draftCreditEnabled, prev?.creditEnabled ?? false, config.creditEnabled ?? false);
+      syncField(this.draftCreditMinPurchases, prev?.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES, config.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES);
+      syncField(this.draftCreditNote, prev?.creditNote ?? null, config.creditNote ?? null);
       syncField(this.draftMetaPixelId, prev?.metaPixelId ?? null, config.metaPixelId ?? null);
+      syncField(this.draftTaxRate, prev?.taxRate ?? null, config.taxRate ?? null);
+      syncField(this.draftTaxLabel, prev?.taxLabel ?? null, config.taxLabel ?? null);
 
       this.lastSyncedConfig = { ...config };
     });
@@ -809,6 +914,11 @@ export class EcommerceConfigComponent implements OnInit {
       const customerFields = this.draftCustomerFields();
       const deliveryDateEnabled = this.draftDeliveryDateEnabled();
       const deliveryBlockedWeekdays = this.draftDeliveryBlockedWeekdays();
+      // Contado/crédito — la preview del checkout refleja el selector en vivo.
+      const applyAdjustmentsInCheckout = this.draftApplyAdjustmentsInCheckout();
+      const creditEnabled = this.draftCreditEnabled();
+      const creditMinPurchases = this.draftCreditMinPurchases();
+      const creditNote = this.draftCreditNote();
       // Métodos de pago activos (con sus datos) — para que la preview del
       // checkout refleje en vivo los datos al elegir un método, sin recargar.
       const paymentMethods = this.configStore
@@ -842,6 +952,10 @@ export class EcommerceConfigComponent implements OnInit {
           customerFields,
           deliveryDateEnabled,
           deliveryBlockedWeekdays,
+          applyAdjustmentsInCheckout,
+          creditEnabled,
+          creditMinPurchases,
+          creditNote,
           // Solo overrideamos si hay métodos activos cargados; si la lista aún
           // no cargó (vacía), la preview usa los del catálogo real.
           ...(paymentMethods.length ? { paymentMethods } : {}),
@@ -975,6 +1089,9 @@ export class EcommerceConfigComponent implements OnInit {
     // Reset state + city when country changes
     this.draftState.set(null);
     this.draftCity.set(null);
+    // Al cambiar de país, la zona horaria anterior casi seguro ya no aplica:
+    // la reseteamos al default del país nuevo (el dueño puede ajustarla).
+    this.draftTimezone.set(code ? defaultTimezoneForCountry(code) : null);
     // Seed currency defaults from the new country (same helper as initial sync)
     if (code) {
       const seeded = this.buildCurrencyDefaultsForCountry(code);
@@ -1020,6 +1137,10 @@ export class EcommerceConfigComponent implements OnInit {
 
   onCityChange(city: string | null) {
     this.draftCity.set(city);
+  }
+
+  onTimezoneChange(tz: string | null) {
+    this.draftTimezone.set(tz);
   }
 
   // --- Currency section handlers ---
@@ -1236,6 +1357,7 @@ export class EcommerceConfigComponent implements OnInit {
     if (this.draftThemeColor() !== (config.themeColor ?? '#10b981')) changes.themeColor = this.draftThemeColor();
     if (this.draftState() !== (config.state ?? null)) changes.state = this.draftState();
     if (this.draftCity() !== (config.city ?? null)) changes.city = this.draftCity();
+    if (this.draftTimezone() !== (config.timezone ?? null)) changes.timezone = this.draftTimezone();
     // country lives on `tenants` — handled by a separate saveTenantCountry call
     // in saveAllChanges, not through updateConfig.
     if (this.draftShowDesignSection() !== (config.showDesignSection ?? true)) changes.showDesignSection = this.draftShowDesignSection();
@@ -1251,6 +1373,14 @@ export class EcommerceConfigComponent implements OnInit {
     // Pixel ID: normaliza vacío → null (borrar el campo desactiva el pixel).
     if ((this.draftMetaPixelId()?.trim() || null) !== (config.metaPixelId ?? null)) {
       changes.metaPixelId = this.draftMetaPixelId()?.trim() || null;
+    }
+    // IVA: 0/NaN/vacío → null (apagado).
+    {
+      const rawRate = this.draftTaxRate();
+      const normRate = rawRate && rawRate > 0 ? Math.min(rawRate, 100) : null;
+      if (normRate !== (config.taxRate ?? null)) changes.taxRate = normRate;
+      const normLabel = this.draftTaxLabel()?.trim() || null;
+      if (normLabel !== (config.taxLabel ?? null)) changes.taxLabel = normLabel;
     }
 
     const serverButtons = config.whatsappButtons?.length
@@ -1292,7 +1422,43 @@ export class EcommerceConfigComponent implements OnInit {
     if (deliveryDaysChanged) {
       changes.deliveryBlockedWeekdays = this.draftDeliveryBlockedWeekdays();
     }
-    if (customerFieldsChanged || deliveryEnabledChanged || deliveryDaysChanged) {
+
+    // Contado/crédito también vive dentro de `customer_fields` — mismas
+    // reglas que delivery-date: cualquier cambio manda además customerFields
+    // como base para que el service no pise el resto del jsonb.
+    const applyAdjustmentsChanged =
+      this.draftApplyAdjustmentsInCheckout() !==
+      (config.applyAdjustmentsInCheckout ?? false);
+    const creditEnabledChanged =
+      this.draftCreditEnabled() !== (config.creditEnabled ?? false);
+    const creditMinChanged =
+      this.draftCreditMinPurchases() !==
+      (config.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES);
+    const creditNoteChanged =
+      (this.draftCreditNote()?.trim() || null) !== (config.creditNote ?? null);
+
+    if (applyAdjustmentsChanged) {
+      changes.applyAdjustmentsInCheckout = this.draftApplyAdjustmentsInCheckout();
+    }
+    if (creditEnabledChanged) {
+      changes.creditEnabled = this.draftCreditEnabled();
+    }
+    if (creditMinChanged) {
+      changes.creditMinPurchases = this.draftCreditMinPurchases();
+    }
+    if (creditNoteChanged) {
+      changes.creditNote = this.draftCreditNote()?.trim() || null;
+    }
+
+    if (
+      customerFieldsChanged ||
+      deliveryEnabledChanged ||
+      deliveryDaysChanged ||
+      applyAdjustmentsChanged ||
+      creditEnabledChanged ||
+      creditMinChanged ||
+      creditNoteChanged
+    ) {
       changes.customerFields = this.draftCustomerFields();
     }
 

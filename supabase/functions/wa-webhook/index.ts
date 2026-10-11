@@ -229,10 +229,11 @@ const VE_TRANSFERENCIA = {
   cedula: "V-30.524.891"
 };
 // Precios mensuales por plan (fallback si el CTA no trae monto explícito).
+// Switch 2026-10-08: Básico 11.99 / Pro 19.99 / Avanzado 34.99.
 const PLAN_PRICES_USD = {
-  "Básico": 9.99,
+  "Básico": 11.99,
   "Pro": 19.99,
-  "Avanzado": 29.99
+  "Avanzado": 34.99
 };
 /** Detecta la intención "adquirir plan" en un texto y extrae plan + total USD.
  *  Devuelve null si el texto no es un CTA de adquisición. */ function detectPlanIntent(text) {
@@ -766,17 +767,26 @@ const PLAN_PRICES_USD = {
  *  comerciante; si no lo conocemos, usa el texto que manda Meta. */ function friendlyDeliveryError(err) {
   const code = Number(err?.code ?? 0);
   const known = {
-    131047: "Pasaron más de 24 horas desde el último mensaje del cliente. Usá una plantilla aprobada para reabrir la conversación.",
+    131047: "Pasaron más de 24 horas desde el último mensaje del cliente. Usa una plantilla aprobada para reabrir la conversación.",
+    470: "Pasaron más de 24 horas desde el último mensaje del cliente. Usa una plantilla aprobada para reabrir la conversación.",
     131026: "El mensaje no se pudo entregar. El número puede no tener WhatsApp o no poder recibir mensajes en este momento.",
+    131031: "La cuenta de WhatsApp Business fue bloqueada o restringida por Meta. Revisa el estado de tu cuenta en WhatsApp Manager (business.facebook.com); hasta resolverlo no se pueden enviar mensajes.",
     131051: "Este tipo de mensaje no está soportado.",
-    131049: "WhatsApp limitó este mensaje para cuidar la experiencia del cliente. Intentá más tarde.",
+    131049: "WhatsApp limitó este mensaje para cuidar la experiencia del cliente. Intenta más tarde.",
+    131048: "WhatsApp limitó el envío por posible spam. Espera un poco antes de volver a intentar.",
+    131056: "Se enviaron demasiados mensajes al mismo número en poco tiempo. Espera unos minutos y vuelve a intentar.",
+    131045: "El número de WhatsApp no está registrado correctamente. Reconecta tu número en la configuración del canal.",
     130472: "El cliente forma parte de un experimento de Meta y no puede recibir este mensaje ahora."
   };
   if (known[code]) return known[code];
   const details = err?.error_data?.details;
   const title = err?.title || err?.message || "";
-  const text = details || title || "No se pudo entregar el mensaje.";
-  return code ? `[${code}] ${text}` : text;
+  const extra = details || title;
+  // Código no catalogado: mensaje claro en español + el detalle técnico de Meta
+  // entre paréntesis (código/título) para que soporte lo pueda diagnosticar.
+  return code
+    ? `No se pudo entregar el mensaje. (Meta ${code}${extra ? `: ${extra}` : ""})`
+    : (extra || "No se pudo entregar el mensaje.");
 }
 async function processStatuses(value) {
   const statuses = value.statuses ?? [];

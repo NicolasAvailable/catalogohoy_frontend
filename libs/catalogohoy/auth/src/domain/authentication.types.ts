@@ -10,6 +10,10 @@ export type SignUpCredentials = {
   password: string;
   /** ISO2 country code chosen by the user at signup (e.g. "VE", "BR"). */
   countryCode?: string;
+  /** WhatsApp personal del vendedor (E.164, ej. "+58414..."). Número de
+   *  notificaciones del catálogo (plan, avisos). Se manda en el metadata como
+   *  `store_whatsapp`. */
+  whatsapp?: string;
   /** Código de afiliado capturado de la cookie chy_ref o tipeado a mano.
    *  Vacío/null = no es un referido. Se resuelve contra register_referral RPC. */
   referralCode?: string | null;

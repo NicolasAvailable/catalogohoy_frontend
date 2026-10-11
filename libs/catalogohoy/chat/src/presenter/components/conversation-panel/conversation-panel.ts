@@ -325,6 +325,11 @@ export class ConversationPanelComponent {
       return;
     }
 
+    // Ventana de servicio de WhatsApp (24h) cerrada → Meta no entrega texto
+    // libre ni media; hay que usar una plantilla aprobada. Bloqueamos el envío
+    // (el banner ya explica el motivo y ofrece "Crear plantilla").
+    if (this.windowClosed()) return;
+
     const media = this.pendingMedia();
     if (media.length) {
       // Cada imagen es un mensaje aparte, con su propio caption.

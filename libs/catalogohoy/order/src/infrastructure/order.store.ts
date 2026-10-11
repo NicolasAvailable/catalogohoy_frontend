@@ -122,6 +122,35 @@ export const OrderStore = signalStore(
         return all;
       },
 
+      /** Trae TODAS las órdenes en el rango ISO [fromIso, toIso) para el
+       *  desglose del tab Métricas (las que se están contabilizando). No toca
+       *  el estado ni pisa la página cargada de la tabla. */
+      async fetchOrdersInRange(fromIso: string, toIso: string): Promise<Order[]> {
+        const tenantId = await tenantStore.getTenantIdAsync();
+        if (!tenantId) return [];
+        const pageSize = 1000;
+        const all: Order[] = [];
+        for (let page = 1; page <= 50; page++) {
+          const res = await orderService.getOrdersByTenant(tenantId, {
+            fromIso,
+            toIso,
+            page,
+            pageSize,
+            orderBy: 'date_desc',
+          });
+          const batch = res.fold(
+            () => null,
+            (r) => r
+          );
+          if (!batch) break;
+          all.push(...batch.orders);
+          if (batch.orders.length < pageSize || all.length >= batch.totalCount) {
+            break;
+          }
+        }
+        return all;
+      },
+
       /** Grand total (unfiltered). Call once on init; refresh after
        *  create/delete since those are the only ops that change it. */
       async loadGrandTotalCount() {
@@ -200,6 +229,12 @@ export const OrderStore = signalStore(
         source?: string;
         /** Caja abierta a la que se imputa la venta del POS (opcional). */
         posCashSessionId?: number | null;
+        /** uuid de idempotencia de ventas offline del POS (CAT-85). */
+        posClientId?: string | null;
+        /** Cédula/RIF del cliente para la factura (columna orders.nit). */
+        nit?: string | null;
+        /** Dirección del cliente para la factura (shipping_address). */
+        shippingAddress?: string | null;
       }): Promise<E.Either<string, Order>> {
         patchState(store, { isLoading: true, error: null });
 
@@ -228,9 +263,13 @@ export const OrderStore = signalStore(
               return E.right(order);
             }
           );
-        } catch {
-          patchState(store, { isLoading: false, error: 'Error inesperado' });
-          return E.left('Error inesperado');
+        } catch (e) {
+          // Preservar el mensaje real: el POS offline detecta la caída de red
+          // por el texto del error ("Failed to fetch") para encolar la venta
+          // en vez de perderla (CAT-85).
+          const msg = e instanceof Error && e.message ? e.message : 'Error inesperado';
+          patchState(store, { isLoading: false, error: msg });
+          return E.left(msg);
         }
       },
 

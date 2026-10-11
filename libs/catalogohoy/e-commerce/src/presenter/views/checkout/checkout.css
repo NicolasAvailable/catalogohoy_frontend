@@ -627,3 +627,72 @@
   opacity: 1 !important;
   cursor: not-allowed !important;
 }
+
+/* ── Contado y crédito ── */
+/* Chip del descuento/recargo en la fila del método de pago. */
+.checkout__pay-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 1rem;
+  color: #128a4b;
+  background: #e6f4ec;
+  border: 0.0625rem solid #bfe6cf;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.checkout__pay-chip--warn {
+  color: #b0700c;
+  background: #f8eeda;
+  border-color: #ecd7a6;
+}
+
+/* Opción de crédito bloqueada por el gate de compras mínimas. */
+.checkout__credit-locked {
+  opacity: 0.55;
+}
+
+.checkout__credit-locked .checkout__ship {
+  cursor: not-allowed;
+}
+
+/* Acotación del crédito (nota del comerciante + estado del gate). */
+.checkout__credit-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--color-grey-500, #64748b);
+  background: var(--color-grey-50, #f8fafc);
+  border: 0.0625rem solid var(--color-grey-100, #f1f5f9);
+  border-radius: 0.625rem;
+  padding: 0.5rem 0.625rem;
+}
+
+.checkout__credit-note ui-icon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+/* Línea del ajuste en el Resumen: verde descuento / ámbar recargo. */
+.checkout__summary-adj {
+  color: #128a4b;
+  font-weight: 600;
+}
+
+.checkout__summary-adj--warn {
+  color: #b0700c;
+}
+
+.checkout__summary-credit {
+  font-weight: 600;
+}
+
+/* CAT-84: fila informativa del impuesto incluido */
+.checkout__summary-tax {
+  color: var(--text-muted, #6b7280);
+  font-size: 0.85em;
+}

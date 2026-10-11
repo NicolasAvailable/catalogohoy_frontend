@@ -254,3 +254,19 @@
     border: none;
   }
 }
+
+/* Línea del ajuste (descuento de contado / recargo) entre Subtotal y Total. */
+.invoice__row--adj {
+  color: #128a4b;
+  font-weight: 600;
+}
+
+.invoice__row--adj-warn {
+  color: #b0700c;
+}
+
+/* CAT-84: fila informativa del impuesto incluido (gris, no altera el total) */
+.invoice__row--tax {
+  color: var(--text-muted, #6b7280);
+  font-size: 0.85em;
+}

@@ -301,8 +301,17 @@
       </label>
       <label class="field">
         <span>{{ 'Teléfono' | transloco }} <em>({{ 'opcional' | transloco }})</em></span>
-        <input type="text" [ngModel]="customerPhoneDraft()" (ngModelChange)="customerPhoneDraft.set($event)" [placeholder]="'Teléfono' | transloco" />
+        <ui-input-phone [ngModel]="customerPhoneDraft()" (ngModelChange)="customerPhoneDraft.set($event)" [defaultCountry]="defaultPhoneCountry()" />
       </label>
+      <label class="field">
+        <span>{{ documentLabel() }} <em>({{ 'opcional' | transloco }})</em></span>
+        <input type="text" maxlength="30" [ngModel]="customerNitDraft()" (ngModelChange)="customerNitDraft.set($event)" [placeholder]="documentPlaceholder()" />
+      </label>
+      <label class="field">
+        <span>{{ 'Dirección' | transloco }} <em>({{ 'opcional' | transloco }})</em></span>
+        <input type="text" maxlength="160" [ngModel]="customerAddressDraft()" (ngModelChange)="customerAddressDraft.set($event)" [placeholder]="'Dirección del cliente' | transloco" />
+      </label>
+      <p class="field-hint">{{ 'Salen en el recibo y la factura.' | transloco }}</p>
       <div class="modal-actions">
         @if (cart.customerName()) {
           <button type="button" class="btn-ghost" (click)="clearCustomer()">{{ 'Quitar' | transloco }}</button>
@@ -530,6 +539,12 @@
       }
       @if (sale.number != null) {
         <p class="success-num">{{ 'Comprobante' | transloco }} #{{ sale.number }}</p>
+      }
+      @if (lastSaleOffline()) {
+        <p class="success-offline">
+          <ui-icon name="cloud-off" styleClass="size-4" />
+          {{ 'Guardada sin conexión — se sincroniza al volver internet' | transloco }}
+        </p>
       }
       @if (sale.received != null) {
         <div class="success-change">

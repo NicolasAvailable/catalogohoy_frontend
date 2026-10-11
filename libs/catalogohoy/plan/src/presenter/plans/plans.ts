@@ -172,10 +172,12 @@ export class Plans implements OnInit {
     el.scrollBy({ left: dir * amount, behavior: 'smooth' });
   }
 
+  // Solo mensual y anual (el trimestral se retiró 2026-09; el plumbing de
+  // 'quarterly' sigue en el type/PRICE_MAP para no romper suscripciones viejas,
+  // pero ya no se ofrece).
   public readonly billingOptions: { key: BillingPeriod; label: string; savingsLabel?: string }[] = [
-    { key: 'monthly',   label: 'Mensual' },
-    { key: 'quarterly', label: 'Trimestral', savingsLabel: '-10%' },
-    { key: 'annual',    label: 'Anual',      savingsLabel: '-50%' },
+    { key: 'monthly', label: 'Mensual' },
+    { key: 'annual',  label: 'Anual', savingsLabel: '-50%' },
   ];
 
   // Resolve the currency we'll charge in, driven by the tenant's country.
@@ -216,7 +218,8 @@ export class Plans implements OnInit {
   public readonly referralDiscountPct = signal<number | null>(null);
 
   // Enterprise no se renderiza como card del grid: tiene su propia banda
-  // debajo (sin precio ni checkout self-service).
+  // debajo (sin precio ni checkout self-service). Básico volvió a ofrecerse
+  // en altas nuevas (2026-10) — ya no se filtra.
   public readonly plans = computed<PlanDisplay[]>(() =>
     this.planStore
       .plans()
@@ -243,7 +246,8 @@ export class Plans implements OnInit {
     () => this.planStore.isLoading() && this.plans().length === 0
   );
 
-  // 4 planes: gratis/básico/pro/avanzado (Enterprise oculta — ver ENTERPRISE_CARD_VISIBLE).
+  // 4 planes visibles: gratis/básico/pro/avanzado (Enterprise oculta — ver
+  // ENTERPRISE_CARD_VISIBLE).
   public readonly skeletonCards = [0, 1, 2, 3];
 
   /** Cantidad de cards visibles (skeletons durante la carga) — decide si el
@@ -312,6 +316,24 @@ export class Plans implements OnInit {
       !this.isUpgradePlan(plan) &&
       !plan.isCurrent
     );
+  }
+
+  /** Precio mensual congelado del tenant (grandfathered, reestructura 2026-09):
+   *  los clientes anteriores mantienen su precio viejo en su plan actual hasta
+   *  que cancelen. Null = paga el precio de lista. */
+  public readonly lockedPlanPrice = computed(
+    () => this.planStore.tenantPlanUsage()?.lockedPlanPrice ?? null
+  );
+
+  /** ¿Esta card es el plan actual de un cliente con precio congelado? Solo ahí
+   *  mostramos el badge y el precio respetado en vez del de lista. */
+  public isGrandfathered(plan: PlanDisplay): boolean {
+    return plan.isCurrent && this.lockedPlanPrice() != null;
+  }
+
+  /** Precio congelado ya convertido a la moneda de cobro (para el display). */
+  public getLockedPrice(): number {
+    return convertUsdToLocal(this.lockedPlanPrice() ?? 0, this.displayCurrency());
   }
 
   public getBasePrice(plan: PlanDisplay): number {
@@ -407,6 +429,9 @@ export class Plans implements OnInit {
       countryCode,
     });
 
+    // Todo plan pago pasa por la pantalla de checkout interna, que maneja el
+    // trial de 7 días (primera compra), prorrateo, cupones, catálogos extra y
+    // Pago Móvil (VE). El trial_period_days lo aplica la edge function.
     this.router.navigate(['/admin/plans/checkout', plan.id], {
       queryParams: {
         period: this.billingPeriod(),

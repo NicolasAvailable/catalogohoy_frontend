@@ -607,6 +607,192 @@
         </div>
       </ui-card>
 
+      <!-- Card: Contado y crédito — el cliente elige la condición de pago en
+           el checkout. TODO apagado por default = el checkout queda exactamente
+           como está hoy; cada catálogo lo habilita si quiere. -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon credit-icon">
+              <ui-icon name="hand-coins" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ 'Contado y crédito' | transloco }}</h2>
+              <p class="card-subtitle">
+                {{ 'Descuentos al pagar y pedidos a crédito en tu checkout' | transloco }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <!-- Opción 1: aplicar los ajustes por método en el checkout -->
+          <div class="credit-option">
+            <div class="credit-option-text">
+              <span class="credit-option-title">
+                {{ 'Aplicar los ajustes de tus métodos de pago en el checkout' | transloco }}
+              </span>
+              <p class="credit-option-hint">
+                {{ 'El descuento o recargo de cada método se aplica solo cuando tu cliente lo elige al hacer el pedido, y aparece en el resumen y en la factura.' | transloco }}
+              </p>
+              @if (methodsWithAdjustment().length) {
+              <div class="credit-adjust-chips">
+                @for (m of methodsWithAdjustment(); track m.name) {
+                <span
+                  class="pm-adjust-chip"
+                  [class.good]="m.badge.kind === 'good'"
+                  [class.warn]="m.badge.kind === 'warn'"
+                  >{{ m.name }} · {{ m.badge.label }}</span
+                >
+                }
+              </div>
+              } @else {
+              <p class="credit-option-empty">
+                {{ 'Aún no has configurado ajustes: abre "Datos" en un método de pago y define su descuento o recargo.' | transloco }}
+              </p>
+              }
+            </div>
+            <ui-toggle
+              [ngModel]="draftApplyAdjustmentsInCheckout()"
+              (ngModelChange)="draftApplyAdjustmentsInCheckout.set($event)"
+            ></ui-toggle>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Opción 2: pedidos a crédito -->
+          <div class="credit-option">
+            <div class="credit-option-text">
+              <span class="credit-option-title">
+                {{ 'Permitir pedidos a crédito' | transloco }}
+              </span>
+              <p class="credit-option-hint">
+                {{ 'Tu cliente puede elegir entre pagar de contado o pedir a crédito. Los pedidos a crédito te llegan marcados para que tú los confirmes.' | transloco }}
+              </p>
+            </div>
+            <ui-toggle
+              [ngModel]="draftCreditEnabled()"
+              (ngModelChange)="draftCreditEnabled.set($event)"
+            ></ui-toggle>
+          </div>
+
+          @if (draftCreditEnabled()) {
+          <div class="credit-settings">
+            <div class="credit-settings-field">
+              <label class="payment-method-field-label">
+                {{ 'Compras mínimas para acceder al crédito' | transloco }}
+              </label>
+              <div class="credit-min-row">
+                <ui-input-text
+                  [ngModel]="draftCreditMinPurchases()"
+                  (ngModelChange)="setCreditMinPurchases($event)"
+                  [placeholder]="'Ej: 3' | transloco"
+                  styleClass="credit-min-input"
+                ></ui-input-text>
+                <span class="credit-min-suffix">{{ 'compras' | transloco }}</span>
+              </div>
+              <p class="credit-option-hint">
+                {{ 'Contamos las órdenes completadas o a crédito con el mismo teléfono. 0 = cualquier cliente puede pedir a crédito.' | transloco }}
+              </p>
+            </div>
+
+            <div class="credit-settings-field">
+              <label class="payment-method-field-label">
+                {{ 'Nota que ve el cliente' | transloco }}
+              </label>
+              <ui-textarea
+                [ngModel]="draftCreditNote() || ''"
+                (ngModelChange)="draftCreditNote.set($event)"
+                [placeholder]="'El crédito está disponible después de {n} compras en esta tienda.' | transloco: { n: draftCreditMinPurchases() }"
+                [rows]="2"
+                styleClass="w-full"
+              ></ui-textarea>
+              <p class="credit-option-hint">
+                {{ 'Si la dejas vacía, mostramos ese texto por defecto.' | transloco }}
+              </p>
+            </div>
+          </div>
+          }
+        </div>
+      </ui-card>
+
+      <!-- Card: Impuesto en la factura (IVA) — CAT-84 -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon payments-icon">
+              <ui-icon name="percent" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ 'Impuesto en la factura' | transloco }}</h2>
+              <small class="card-subtitle">
+                {{ 'Muestra el desglose del impuesto (IVA) en el recibo y la factura. Tus precios ya lo incluyen: no cambia los totales.' | transloco }}
+              </small>
+            </div>
+          </div>
+        </div>
+        <div class="credit-settings">
+          <div class="credit-settings-field">
+            <label class="payment-method-field-label">
+              {{ 'Sugeridos para tu país' | transloco }}
+            </label>
+            <div class="tax-presets">
+              @for (p of taxPresets(); track p.name + p.rate) {
+              <button
+                type="button"
+                class="tax-preset"
+                [class.tax-preset--active]="isTaxPresetActive(p)"
+                (click)="applyTaxPreset(p)"
+              >
+                {{ p.name }} {{ p.rate }}%
+              </button>
+              }
+              @if (draftTaxRate()) {
+              <button type="button" class="tax-preset tax-preset--off" (click)="setTaxRate(''); draftTaxLabel.set(null)">
+                {{ 'Quitar' | transloco }}
+              </button>
+              }
+            </div>
+            <p class="credit-option-hint">
+              {{ 'Un toque lo deja listo; abajo puedes ajustar el porcentaje y el nombre.' | transloco }}
+            </p>
+          </div>
+          <div class="credit-settings-field">
+            <label class="payment-method-field-label">
+              {{ 'Porcentaje del impuesto' | transloco }}
+            </label>
+            <div class="credit-min-row">
+              <ui-input-text
+                [ngModel]="draftTaxRate() ?? ''"
+                (ngModelChange)="setTaxRate($event)"
+                [placeholder]="'Ej: 16' | transloco"
+                styleClass="credit-min-input"
+              ></ui-input-text>
+              <span class="credit-min-suffix">%</span>
+            </div>
+            <p class="credit-option-hint">
+              {{ 'Déjalo vacío o en 0 para no mostrar el impuesto.' | transloco }}
+            </p>
+          </div>
+          @if (draftTaxRate()) {
+          <div class="credit-settings-field">
+            <label class="payment-method-field-label">
+              {{ 'Nombre del impuesto' | transloco }}
+            </label>
+            <ui-input-text
+              [ngModel]="draftTaxLabel() || ''"
+              (ngModelChange)="draftTaxLabel.set($event)"
+              [placeholder]="'IVA'"
+              styleClass="w-full"
+            ></ui-input-text>
+            <p class="credit-option-hint">
+              {{ 'Según tu país: IVA, ITBIS, IGV… Si lo dejas vacío usamos IVA.' | transloco }}
+            </p>
+          </div>
+          }
+        </div>
+      </ui-card>
+
       </div> <!-- /TAB PAYMENTS (block 1) -->
 
       <!-- ===== TAB: GENERAL (block 2) ===== -->
@@ -758,6 +944,23 @@
         </div>
 
         <div class="card-content">
+          <!-- Zona horaria del negocio: define contra qué hora se calcula el
+               estado abierto/cerrado (no la hora del dispositivo del cliente). -->
+          <div class="form-field" style="margin-bottom: 1.25rem;">
+            <label>{{ 'Zona horaria del negocio' | transloco }}</label>
+            <ui-select
+              [options]="timezoneOptions()"
+              [ngModel]="draftTimezone()"
+              (ngModelChange)="onTimezoneChange($event)"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+            ></ui-select>
+            <small class="field-hint">
+              {{ 'Se usa para mostrar tu catálogo como abierto o cerrado según el horario de tu ciudad, sin importar desde dónde entre el cliente.' | transloco }}
+            </small>
+          </div>
+
           <div class="schedule-table">
             @for (day of orderedDraftHours(); track day.dayOfWeek; let first = $first) {
               <div

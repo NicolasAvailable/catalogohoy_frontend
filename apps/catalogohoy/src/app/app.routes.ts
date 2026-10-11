@@ -42,6 +42,17 @@ export const appRoutes: Route[] = [
       import('./modules/admin/admin.routes').then((m) => m.adminRoutes),
   },
   {
+    // Onboarding wizard (full-screen, sin el layout admin). Mismos guards de
+    // auth + slug + perfil que el admin.
+    path: 'onboarding',
+    canActivate: [isValidSlugGuard, authenticationGuard],
+    resolve: {
+      profile: profileResolver,
+    },
+    loadChildren: () =>
+      import('@catalogohoy/onboarding').then((m) => m.onboardingRoutes),
+  },
+  {
     // Punto de Venta: experiencia full-screen con barra lateral propia (fuera
     // del layout del admin). Mismos guards que /admin (slug válido, sesión y
     // permisos de equipo) + gate por plan (solo Avanzado/Enterprise).
@@ -55,6 +66,15 @@ export const appRoutes: Route[] = [
     loadComponent: () => import('./modules/pos/pos-shell'),
     loadChildren: () =>
       import('./modules/pos/pos.routes').then((m) => m.posRoutes),
+  },
+  {
+    // Bienvenida post-registro (Opción B): el signup redirige acá (el login
+    // sigue yendo a /admin). Ofrece 7 días de prueba de Pro/Avanzado o seguir
+    // gratis. Full-screen, fuera del layout del admin; mismos guards de sesión
+    // y slug que /admin.
+    path: 'bienvenida',
+    canActivate: [isValidSlugGuard, authenticationGuard],
+    loadComponent: () => import('./modules/welcome/welcome'),
   },
   {
     path: 'catalog-unavailable',

@@ -8,9 +8,9 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { isNativeApp } from '@catalogohoy/core';
 import { EcommerceConfigStore, TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
+import { isNativeApp, SupabaseClientProvider } from '@catalogohoy/core';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -106,6 +106,8 @@ type MetricsPreset = 'today' | 'last_7' | 'last_30' | 'last_90' | 'custom';
   },
 })
 export class OrderListComponent implements OnInit, OnDestroy {
+  /** En nativo el paginador muestra menos enlaces (pantalla angosta). */
+  public readonly isNative = isNativeApp();
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly dialogService = inject(DialogService);
@@ -116,14 +118,11 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
   private readonly orderPdf = inject(OrderPdfService);
-  /** En nativo, menos números de página para que el paginador (con el select de
-   *  filas) entre todo en una sola línea, como en Productos/Clientes. */
-  public readonly isNative = isNativeApp();
-
   private readonly orderExcel = inject(OrderExcelService);
   private readonly rateStore = inject(RateStore);
   private readonly orderService = inject(OrderService);
   private readonly planStore = inject(PlanStore);
+  private readonly supabase = SupabaseClientProvider.getInstance();
 
   /** Bs a mostrar por orden: pendientes a la tasa ACTUAL, el resto su snapshot.
    *  Ver {@link effectiveOrderBs}. */
@@ -202,6 +201,13 @@ export class OrderListComponent implements OnInit, OnDestroy {
     const next = nextInstallment(order);
     if (next) return { kind: 'next', tone: 'ok', date: this.shortDate(next.dueDate) };
     return { kind: 'age', tone: 'ok', days: age };
+  }
+
+  /** El cliente pidió pagar A CRÉDITO en el checkout y la orden sigue
+   *  pendiente de confirmación. Una vez movida a status 'credit', mandan los
+   *  chips de cobranza de arriba. */
+  public creditRequested(order: Order): boolean {
+    return order.paymentCondition === 'credit' && order.status === 'pending';
   }
 
   public creditChipClass(tone: string): string {
@@ -567,6 +573,29 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly downloadingPdfId = signal<number | null>(null);
   public readonly mobileShowAll = signal(false);
 
+  /** Mapa productId → costo de producción ACTUAL del tenant, para la ganancia
+   *  estimada por orden. Vacío hasta que carga (y si el tenant no registró
+   *  costos, queda vacío → no mostramos ganancia). */
+  public readonly productCosts = signal<Record<string, number>>({});
+
+  /** Órdenes del periodo seleccionado en Métricas (las que se están
+   *  contabilizando) — para el desglose verificable y la ganancia del periodo. */
+  public readonly metricsOrders = signal<Order[]>([]);
+  public readonly isLoadingMetricsOrders = signal(false);
+
+  /** ¿El tenant registró costos? Sin costos no mostramos ganancia. */
+  public readonly hasCostData = computed(
+    () => Object.keys(this.productCosts()).length > 0
+  );
+
+  /** Ganancia estimada total del periodo = suma de la ganancia por orden. */
+  public readonly metricsProfit = computed(() =>
+    this.metricsOrders().reduce(
+      (sum, o) => sum + (this.estimatedProfit(o) ?? 0),
+      0
+    )
+  );
+
   /** How many product lines to show before collapsing the products cell. */
   public readonly PRODUCTS_PREVIEW = 3;
   /** Order ids whose products cell is expanded ("Ver más"). */
@@ -642,7 +671,10 @@ export class OrderListComponent implements OnInit, OnDestroy {
   async ngOnInit() {
     // Prime the tenant currency cache (localStorage → DB fallback).
     const tenantId = await this.tenantStore.getTenantIdAsync();
-    if (tenantId) this.tenantCurrency.load(tenantId);
+    if (tenantId) {
+      this.tenantCurrency.load(tenantId);
+      this.loadProductCosts(tenantId);
+    }
     // Tasa activa: para mostrar el Bs de los pedidos pendientes a la tasa de hoy.
     this.rateStore.loadRates();
 
@@ -759,6 +791,16 @@ export class OrderListComponent implements OnInit, OnDestroy {
     const range = this.buildMetricsRange();
     if (!range) return;
     this.orderStore.loadOrderMetrics(range);
+    this.loadMetricsOrders(range);
+  }
+
+  /** Trae las órdenes del periodo (con sus productos) para el desglose y la
+   *  ganancia estimada del rango. Reusa la ganancia por orden ya definida. */
+  private async loadMetricsOrders(range: { start: string; end: string }): Promise<void> {
+    this.isLoadingMetricsOrders.set(true);
+    const orders = await this.orderStore.fetchOrdersInRange(range.start, range.end);
+    this.metricsOrders.set(orders);
+    this.isLoadingMetricsOrders.set(false);
   }
 
   private startOfDay(d: Date): Date {
@@ -890,32 +932,67 @@ export class OrderListComponent implements OnInit, OnDestroy {
     return `w-2 h-2 rounded-full shrink-0 ${colors[status] ?? 'bg-grey-400'}`;
   }
 
-  getPaymentMethod(order: Order): string {
-    // This could be expanded based on actual payment data
-    const methods = ['WhatsApp', 'Efectivo', 'Zelle', 'Pago Móvil'];
-    return methods[order.id % methods.length];
+  /** Etiqueta legible del método de pago guardado en la orden (mismo criterio
+   *  que el modal de detalle). Un valor libre no catalogado se muestra tal cual. */
+  paymentLabel(method: string): string {
+    const labels: Record<string, string> = {
+      efectivo: 'Efectivo',
+      transferencia: 'Transferencia',
+      tarjeta_credito: 'Tarjeta de crédito',
+      pago_movil: 'Pago móvil',
+      binance: 'Binance',
+      zelle: 'Zelle',
+      paypal: 'PayPal',
+    };
+    return labels[method] ?? method;
   }
 
-  getPaymentIcon(order: Order): string {
-    const method = this.getPaymentMethod(order);
-    const icons: Record<string, string> = {
-      WhatsApp: 'message-circle',
-      Efectivo: 'banknote',
-      Zelle: 'wallet',
-      'Pago Móvil': 'smartphone',
-    };
-    return icons[method] || 'credit-card';
+  /** Etiqueta i18n del estado de la orden (para el badge estático del desglose). */
+  statusLabel(status: OrderStatus): string {
+    return this.statusOptions.find((o) => o.value === status)?.label ?? status;
   }
 
-  getPaymentColor(order: Order): string {
-    const method = this.getPaymentMethod(order);
-    const colors: Record<string, string> = {
-      WhatsApp: 'text-green-500',
-      Efectivo: 'text-blue-500',
-      Zelle: 'text-emerald-500',
-      'Pago Móvil': 'text-purple-500',
-    };
-    return colors[method] || 'text-grey-500';
+  /** Carga el costo de producción ACTUAL de los productos del tenant, para
+   *  estimar la ganancia por orden. Falla en silencio (la ganancia es un extra;
+   *  sin costos registrados simplemente no se muestra). */
+  private async loadProductCosts(tenantId: number): Promise<void> {
+    const { data, error } = await this.supabase
+      .from('products')
+      .select('id, production_cost')
+      .eq('tenant_id', tenantId)
+      .not('production_cost', 'is', null);
+    if (error || !data) return;
+    const map: Record<string, number> = {};
+    for (const row of data as { id: number | string; production_cost: number }[]) {
+      const cost = Number(row.production_cost);
+      if (Number.isFinite(cost) && cost > 0) map[String(row.id)] = cost;
+    }
+    this.productCosts.set(map);
+  }
+
+  /** Ganancia ESTIMADA de la orden:
+   *    ventas de sus líneas de producto − costo actual×cantidad − comisión.
+   *  Notas:
+   *   - Costo: usa el `production_cost` VIGENTE del producto (no un snapshot al
+   *     vender) → es una aproximación. Líneas manuales o productos sin costo
+   *     registrado no restan costo.
+   *   - Comisión: la que paga el vendedor (oculta al cliente) sí resta.
+   *   - Envío: no entra — la base son las ventas de producto, que no incluyen
+   *     el flete (el flete lo paga el cliente y se despacha aparte).
+   *  null = no hay costos cargados → la fila no muestra ganancia. */
+  estimatedProfit(order: Order): number | null {
+    const costs = this.productCosts();
+    if (!order.products?.length || Object.keys(costs).length === 0) return null;
+    let revenue = 0;
+    let cogs = 0;
+    for (const item of order.products) {
+      revenue += Number(item.total) || 0;
+      if (item.isCustom) continue;
+      const cost = costs[String(item.productId)];
+      if (cost != null) cogs += cost * (Number(item.quantity) || 0);
+    }
+    const commission = Number(order.commission) || 0;
+    return revenue - cogs - commission;
   }
 
   getWhatsAppLink(phone: string): string {

@@ -69,7 +69,9 @@
 
 .hero--banner-centered .hero__logo,
 .hero--banner-centered .hero__logo-placeholder {
-  display: block;
+  /* flex (no block) para conservar el centrado de la inicial de la base;
+     margin auto centra el círculo horizontalmente igual. */
+  display: flex;
   margin-left: auto;
   margin-right: auto;
 }

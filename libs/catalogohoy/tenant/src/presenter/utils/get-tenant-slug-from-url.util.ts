@@ -22,6 +22,17 @@ export const isCustomDomain = (): boolean => {
 const RESERVED_PATH_SEGMENTS = ['checkout', 'order', 'product', 'admin'];
 
 export const getTenantSlugFromUrl = (): string | null => {
+  // Modo preview (iframe del editor de catálogo y del wizard de onboarding):
+  // el tenant a mostrar es el slug que se pasó explícitamente, no el del host.
+  // Va PRIMERO (antes del guard nativo) para que el preview del wizard también
+  // funcione dentro del shell nativo. Solo aplica con `preview=true` en la URL,
+  // un contexto que NUNCA ocurre en el storefront público de un cliente real.
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('preview') === 'true') {
+    const previewSlug = params.get('slug') || localStorage.getItem('slug');
+    if (previewSlug) return previewSlug;
+  }
+
   // En la app nativa no hay subdominio (hostname = localhost): el slug se
   // resuelve del perfil tras el login y se cachea (ver setNativeSlug).
   if (isNativeApp()) {

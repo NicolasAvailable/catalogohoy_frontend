@@ -4,7 +4,7 @@
   <header class="checkout-header">
     <div class="checkout-header__brand">
       <ui-icon name="shopping-cart" styleClass="size-6 text-primary" />
-      <h1 class="checkout-header__title">{{ (isRenewal() ? 'Renovar plan' : 'Pagar orden') | transloco }}</h1>
+      <h1 class="checkout-header__title">{{ (showTrial() ? 'Activar prueba gratis' : (isRenewal() ? 'Renovar plan' : 'Pagar orden')) | transloco }}</h1>
     </div>
     <button class="checkout-header__cancel" (click)="cancel()">
       {{ 'Cancelar' | transloco }}
@@ -269,9 +269,33 @@
       </div>
       }
 
+      <!-- Trial de 7 días (primera compra, tarjeta, sin catálogos extra) -->
+      @if (showTrial()) {
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 mb-3 flex flex-col gap-2">
+          <div class="flex items-center gap-2">
+            <ui-icon name="gift" styleClass="size-5 shrink-0 text-emerald-600" />
+            <span class="font-semibold text-emerald-800 text-sm">{{ 'Activa 7 días de prueba gratis' | transloco }}</span>
+          </div>
+          <ul class="flex flex-col gap-1.5 text-xs text-emerald-900">
+            <li class="flex items-start gap-1.5">
+              <ui-icon name="check" styleClass="size-4 shrink-0 text-emerald-600" />
+              <span>{{ 'Hoy no se te cobra nada' | transloco }}</span>
+            </li>
+            <li class="flex items-start gap-1.5">
+              <ui-icon name="check" styleClass="size-4 shrink-0 text-emerald-600" />
+              <span>{{ 'A los 7 días se activa tu suscripción y recién ahí se cobra tu tarjeta' | transloco }}</span>
+            </li>
+            <li class="flex items-start gap-1.5">
+              <ui-icon name="check" styleClass="size-4 shrink-0 text-emerald-600" />
+              <span>{{ 'Cancela cuando quieras antes de que termine' | transloco }}</span>
+            </li>
+          </ul>
+        </div>
+      }
+
       <!-- Total -->
       <div class="summary-total">
-        <span class="summary-total__label">{{ 'Total a pagar' | transloco }}</span>
+        <span class="summary-total__label">{{ (showTrial() ? 'Se cobra a los 7 días' : 'Total a pagar') | transloco }}</span>
         <div class="summary-total__amounts">
           <span class="summary-total__amount">{{ currencySymbol() }}{{ total() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }} {{ currencyCode() }}</span>
           @if (isVenezuela() && totalVes()) {
@@ -321,8 +345,13 @@
           <ui-icon name="loader-circle" styleClass="size-5 animate-spin" />
           {{ 'Procesando...' | transloco }}
         } @else if (paymentMethod() === 'card') {
-          <ui-icon name="credit-card" styleClass="size-5" />
-          {{ (isRenewal() ? 'Renovar con tarjeta' : 'Pagar con tarjeta') | transloco }}
+          @if (showTrial()) {
+            <ui-icon name="gift" styleClass="size-5" />
+            {{ 'Activar 7 días de prueba' | transloco }}
+          } @else {
+            <ui-icon name="credit-card" styleClass="size-5" />
+            {{ (isRenewal() ? 'Renovar con tarjeta' : 'Pagar con tarjeta') | transloco }}
+          }
         } @else {
           <ui-icon name="message-circle" styleClass="size-5" />
           {{ 'Coordinar pago por WhatsApp' | transloco }}

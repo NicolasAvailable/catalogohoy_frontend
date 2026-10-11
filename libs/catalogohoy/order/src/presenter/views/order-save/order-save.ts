@@ -173,6 +173,11 @@ export default class OrderSave implements OnInit {
   private readonly loadedPaymentMethod = signal<string>('');
   private readonly loadedAdjustment = signal<OrderAdjustment | null>(null);
 
+  /** El cliente pidió pagar A CRÉDITO en el checkout (payment_condition).
+   *  Muestra el aviso sobre el Estado para que el comerciante confirme la
+   *  orden como "A crédito" con un click informado. */
+  public readonly creditRequested = signal(false);
+
   /** Borrador del plan de cuotas (CAT-79). Solo aplica con status 'credit';
    *  se persiste como orders.credit_installments. Mismo estilo signal-array
    *  que `products`. */
@@ -527,6 +532,9 @@ export default class OrderSave implements OnInit {
     this.form.controls.paymentMethod.setValue(order.paymentMethod || '');
     this.loadedPaymentMethod.set(order.paymentMethod || '');
     this.loadedAdjustment.set(order.paymentAdjustment ?? null);
+    this.creditRequested.set(
+      order.paymentCondition === 'credit' && order.status === 'pending'
+    );
     this.form.controls.paymentEvidenceNote.setValue(
       order.paymentEvidence?.note || ''
     );

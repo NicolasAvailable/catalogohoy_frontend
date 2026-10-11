@@ -61,4 +61,65 @@ export class TenantService implements BaseTenantService {
     const result = data as { id: number; name: string; slug: string };
     return E.right(result);
   }
+
+  /** Paso pendiente del wizard de onboarding del tenant del usuario
+   *  (NULL = nada pendiente). Best-effort: ante error devuelve null para no
+   *  bloquear logins/boots por un RPC caído. */
+  public async getOnboardingStep(): Promise<number | null> {
+    const { data, error } = await this.client.rpc('get_my_onboarding_step');
+    if (error) return null;
+    return typeof data === 'number' ? data : null;
+  }
+
+  /** Persiste el paso del wizard (o null al completar/saltar). Fire-and-forget
+   *  friendly: el wizard no depende del resultado. */
+  public async setOnboardingStep(step: number | null): Promise<void> {
+    await this.client.rpc('set_my_onboarding_step', { p_step: step });
+  }
+
+  /** Renombra tienda + dirección (onboarding: reemplaza el slug temporal
+   *  `tienda-XXXXXX`). Valida disponibilidad con checkSlug solo si el slug
+   *  realmente cambia (checkSlug no distingue "existe porque es MI tenant");
+   *  el UNIQUE de la DB es la última línea de defensa ante una carrera. */
+  public async renameTenant(
+    tenantId: number | string,
+    name: string,
+    slug: string
+  ): Promise<E.Either<Error, void>> {
+    const slugTaken = () =>
+      E.left(
+        new Error(
+          'Esa dirección de catálogo ya está ocupada. Prueba con otro nombre.'
+        )
+      );
+
+    const { data: current, error: currentError } = await this.client
+      .from('tenants')
+      .select('slug')
+      .eq('id', tenantId)
+      .single();
+    if (currentError) return E.left(new Error(currentError.message));
+
+    if (current?.slug !== slug) {
+      const check = await this.checkSlug(slug);
+      if (check.status === 'valid') return slugTaken();
+      // status 'error' (chequeo transitorio caído): seguimos igual — si el
+      // slug estuviera tomado, el update de abajo falla por unique violation.
+    }
+
+    const { error } = await this.client
+      .from('tenants')
+      .update({ name, slug })
+      .eq('id', tenantId);
+
+    if (error) {
+      const message = error.message ?? '';
+      const isUniqueViolation =
+        error.code === '23505' ||
+        message.includes('duplicate key') ||
+        message.toLowerCase().includes('unique');
+      return isUniqueViolation ? slugTaken() : E.left(new Error(message));
+    }
+    return E.right(undefined);
+  }
 }

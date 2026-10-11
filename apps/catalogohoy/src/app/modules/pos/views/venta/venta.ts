@@ -4,17 +4,18 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   inject,
   OnInit,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
+  EcommerceConfig,
   EcommerceConfigStore,
   TenantCurrencyStore,
 } from '@catalogohoy/ecommerce-config';
 import {
-  Order,
   OrderItem,
   OrderItemAddon,
   OrderStatus,
@@ -22,19 +23,25 @@ import {
 } from '@catalogohoy/order';
 import {
   Product,
+  ProductList,
   ProductSize,
   ProductStore,
   ProductVariant,
 } from '@catalogohoy/product';
-import { RateStore } from '@catalogohoy/rate';
+import { ExchangeRate, RateStore } from '@catalogohoy/rate';
 import { TenantStore } from '@catalogohoy/tenant';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { TooltipModule } from 'primeng/tooltip';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { IconComponent } from '@ui';
+import { IconComponent, InputPhoneComponent } from '@ui';
 import { PosCartStore } from '../../pos-cart.store';
+import {
+  isNetworkError,
+  PosOfflineStore,
+  QueuedSale,
+} from '../../offline/pos-offline.store';
 import { PosCajaStore } from '../../pos-caja.store';
 import { PosSettingsStore } from '../../pos-settings.store';
 import { PosPrinterService } from '../../pos-printer.service';
@@ -56,6 +63,9 @@ interface PosSaleReceipt {
   dateStr: string;
   customer: string;
   phone: string;
+  /** Cédula/RIF y dirección del cliente — salen bajo su nombre en el recibo. */
+  nit: string;
+  address: string;
   lines: { label: string; qty: number; total: number }[];
   subtotal: number;
   discount: number;
@@ -66,6 +76,9 @@ interface PosSaleReceipt {
   total: number;
   /** Total en bolívares a la tasa del día (VE). 0 = sin tasa activa. */
   totalBs: number;
+  /** CAT-84: impuesto INCLUIDO en el total — desglose fiscal base → IVA →
+   *  total (no lo altera). `label` llega listo ("IVA 16%"). Null = sin impuesto. */
+  tax: { label: string; amount: number; base: number } | null;
   method: string;
   received: number | null;
   change: number;
@@ -78,6 +91,7 @@ interface PosSaleReceipt {
     DecimalPipe,
     FormsModule,
     IconComponent,
+    InputPhoneComponent,
     PosScanner,
     RouterLink,
     TranslocoPipe,
@@ -101,6 +115,30 @@ export default class PosVenta implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly posPrinter = inject(PosPrinterService);
   private readonly transloco = inject(TranslocoService);
+  readonly offline = inject(PosOfflineStore);
+
+  /** Tenant resuelto (para el snapshot offline). */
+  private readonly resolvedTenantId = signal<number | null>(null);
+  /** La última venta se cobró sin conexión (badge en la pantalla de éxito). */
+  readonly lastSaleOffline = signal(false);
+
+  /** F1 (CAT-85): cada vez que el POS tiene datos frescos Y conexión, espeja
+   *  productos/config/tasa en IndexedDB para poder operar sin red después. */
+  private readonly offlineSnapshotFx = effect(() => {
+    const tid = this.resolvedTenantId();
+    const products = this.productStore.productList().products;
+    const config = this.configStore.config();
+    const rate = this.rateStore.rate();
+    if (!tid || !this.offline.online() || products.length === 0 || !config)
+      return;
+    void this.offline.saveSnapshot({
+      savedAt: Date.now(),
+      tenantId: tid,
+      products: products as unknown[],
+      config,
+      rate,
+    });
+  });
 
   private static readonly DEFAULT_METHODS: PayMethod[] = [
     { label: 'Efectivo', icon: 'banknote', adjust: 0 },
@@ -129,6 +167,52 @@ export default class PosVenta implements OnInit {
   readonly showCreateProduct = signal(false);
   readonly customerNameDraft = signal('');
   readonly customerPhoneDraft = signal('');
+  readonly customerNitDraft = signal('');
+  readonly customerAddressDraft = signal('');
+
+  /** Etiqueta del documento de identidad/fiscal según el país del catálogo:
+   *  cédula/RIF en VE, DNI/CUIT en AR, RUT en CL… Son nombres propios de cada
+   *  país (no se traducen); solo el fallback genérico pasa por transloco. */
+  readonly documentLabel = computed(() => {
+    const cc = (this.configStore.config()?.countryCode || '').toUpperCase();
+    const map: Record<string, string> = {
+      VE: 'Cédula o RIF',
+      CO: 'Cédula o NIT',
+      AR: 'DNI o CUIT',
+      MX: 'RFC',
+      PE: 'DNI o RUC',
+      CL: 'RUT',
+      EC: 'Cédula o RUC',
+      BO: 'CI o NIT',
+      PY: 'CI o RUC',
+      UY: 'CI o RUT',
+      GT: 'DPI o NIT',
+      DO: 'Cédula o RNC',
+      CR: 'Cédula',
+      PA: 'Cédula o RUC',
+      HN: 'DNI o RTN',
+      SV: 'DUI o NIT',
+      NI: 'Cédula o RUC',
+    };
+    return map[cc] || this.transloco.translate('Documento');
+  });
+
+  /** Placeholder del documento: con ejemplo local en VE, genérico en el resto. */
+  readonly documentPlaceholder = computed(() => {
+    const cc = (this.configStore.config()?.countryCode || '').toUpperCase();
+    return cc === 'VE'
+      ? 'Ej: V-12.345.678'
+      : this.transloco.translate('Número de documento');
+  });
+  /** País por defecto del select de teléfono: el del catálogo del tenant
+   *  (ISO en minúsculas, ej. 'hn'). Fallback 've'. */
+  readonly defaultPhoneCountry = computed(() =>
+    (
+      this.tenantCurrency.countryCode() ??
+      this.configStore.config()?.countryCode ??
+      'VE'
+    ).toLowerCase()
+  );
   readonly noteDraft = signal('');
   readonly discountDraft = signal(0);
   readonly newProductName = signal('');
@@ -241,9 +325,15 @@ export default class PosVenta implements OnInit {
   ngOnInit(): void {
     this.productStore.productList$();
     this.rateStore.loadRates();
-    this.tenantStore.getTenantIdAsync().then((tid) => {
-      this.settings.load(tid ? String(tid) : 'default');
+    this.tenantStore.getTenantIdAsync().then(async (tid) => {
+      // Sin red el tenant puede no resolver: caer al último tenant que abrió
+      // el POS en este dispositivo (CAT-85) antes del 'default'.
+      const key = tid ? String(tid) : this.offline.lastTenantKey() || 'default';
+      this.settings.load(key);
+      await this.offline.init(tid ?? null);
+      if (!this.offline.online()) await this.hydrateFromCache();
       if (!tid) return;
+      this.resolvedTenantId.set(tid);
       this.tenantCurrency.load(tid);
       this.configStore.loadPaymentMethods(String(tid));
       this.configStore.loadConfig(String(tid));
@@ -497,19 +587,23 @@ export default class PosVenta implements OnInit {
   openCustomer(): void {
     this.customerNameDraft.set(this.cart.customerName());
     this.customerPhoneDraft.set(this.cart.customerPhone());
+    this.customerNitDraft.set(this.cart.customerNit());
+    this.customerAddressDraft.set(this.cart.customerAddress());
     this.showCustomer.set(true);
   }
 
   saveCustomer(): void {
     this.cart.setCustomer(
       this.customerNameDraft().trim(),
-      this.customerPhoneDraft().trim()
+      this.customerPhoneDraft().trim(),
+      this.customerNitDraft().trim(),
+      this.customerAddressDraft().trim()
     );
     this.showCustomer.set(false);
   }
 
   clearCustomer(): void {
-    this.cart.setCustomer('', '');
+    this.cart.setCustomer('', '', '', '');
     this.showCustomer.set(false);
   }
 
@@ -638,18 +732,24 @@ export default class PosVenta implements OnInit {
     // pendientes → subcontaría Bs para siempre. Pedimos reintentar.
     const totalBs = this.chargeTotalBs();
     if (this.tenantCurrency.showDualCurrency() && totalBs <= 0) {
+      // Offline sin tasa espejada: "probá en un momento" sería mentira — la
+      // tasa no va a llegar hasta que vuelva la red.
       this.toast.error(
-        'Cargando la tasa del día, probá de nuevo en un momento.' as unknown as Exception
+        (this.offline.online()
+          ? 'Cargando la tasa del día, probá de nuevo en un momento.'
+          : 'Sin conexión y sin tasa del día guardada: reconectá para poder cobrar en bolívares.') as unknown as Exception
       );
       return;
     }
 
-    this.isCharging.set(true);
     // Una venta en tienda nace cerrada (completada): descuenta stock y genera el
     // recibo, igual que "Registrar venta".
     const orderData = {
       name: this.cart.customerName() || 'Venta en tienda',
       phone: this.cart.customerPhone() || undefined,
+      // Datos de factura del cliente (cédula/RIF + dirección, opcionales).
+      nit: this.cart.customerNit() || undefined,
+      shippingAddress: this.cart.customerAddress() || undefined,
       comments: this.cart.note() || undefined,
       status: 'completed' as OrderStatus,
       products: this.toOrderItems(),
@@ -663,27 +763,42 @@ export default class PosVenta implements OnInit {
       source: 'pos',
       posCashSessionId: this.caja.openSessionId(),
     };
+
+    // F2 (CAT-85): sin conexión, la venta va a la cola local y se sincroniza
+    // sola al volver la red. El recibo sale igual (sin número de orden).
+    if (!this.offline.online()) {
+      await this.chargeOffline(orderData, totalBs);
+      return;
+    }
+
+    this.isCharging.set(true);
     try {
       const result = await this.orderStore.createOrder(orderData);
-      result.fold(
-        (error) => {
+      await result.fold(
+        async (error) => {
+          // La red se cayó entre que abrió el modal y confirmó el cobro:
+          // misma cola offline en vez de perder la venta. `navigator.onLine`
+          // de respaldo por si el mensaje del motor no está contemplado.
+          if (isNetworkError(error) || !navigator.onLine) {
+            this.offline.online.set(false);
+            await this.chargeOffline(orderData, totalBs);
+            return;
+          }
           this.toast.error(error as unknown as Exception);
           this.isCharging.set(false);
         },
-        (order) => {
+        async (order) => {
           // Snapshot del comprobante ANTES de vaciar el carrito. Usa el MISMO
           // total_bs que se persistió (no recalcula: si la tasa cambia durante
           // el createOrder, el recibo debe coincidir con la DB).
-          this.lastSale.set(this.buildReceipt(order, totalBs));
+          this.lastSale.set(
+            this.buildReceipt(order.orderNumber ?? order.id ?? null, totalBs)
+          );
+          this.lastSaleOffline.set(false);
           this.toast.success('Venta cobrada ✓');
           // Si la venta se imputó a una caja, refresca su arqueo.
           if (this.caja.hasOpenSession()) this.caja.refresh();
-          this.cart.clear();
-          this.shipping.set(0);
-          this.amountReceived.set(null);
-          this.showCobrar.set(false);
-          this.showSuccess.set(true);
-          this.isCharging.set(false);
+          this.finishSale();
         }
       );
     } catch {
@@ -692,10 +807,56 @@ export default class PosVenta implements OnInit {
     }
   }
 
+  /** F2 (CAT-85): cobra sin conexión — encola la venta con uuid idempotente,
+   *  genera el recibo local (sin número) y deja el sync para el reconnect. */
+  private async chargeOffline(
+    orderData: QueuedSale['order'],
+    totalBs: number
+  ): Promise<void> {
+    this.isCharging.set(true);
+    try {
+      await this.offline.enqueue(orderData);
+      this.lastSale.set(this.buildReceipt(null, totalBs));
+      this.lastSaleOffline.set(true);
+      this.toast.success('Venta guardada sin conexión ✓');
+      this.finishSale();
+    } catch {
+      this.toast.error(
+        'No se pudo guardar la venta en este dispositivo' as unknown as Exception
+      );
+      this.isCharging.set(false);
+    }
+  }
+
+  /** Cierre común del cobro (online u offline): limpia carrito y abre éxito. */
+  private finishSale(): void {
+    this.cart.clear();
+    this.shipping.set(0);
+    this.amountReceived.set(null);
+    this.showCobrar.set(false);
+    this.showSuccess.set(true);
+    this.isCharging.set(false);
+  }
+
+  /** F1 (CAT-85): siembra los stores desde el espejo local cuando no hay red. */
+  private async hydrateFromCache(): Promise<void> {
+    const snap = await this.offline.loadSnapshot();
+    if (!snap) return;
+    if (
+      Array.isArray(snap.products) &&
+      snap.products.length > 0 &&
+      this.productStore.productList().products.length === 0
+    ) {
+      this.productStore.set(ProductList.from(snap.products as Product[]));
+    }
+    if (snap.config) this.configStore.hydrate(snap.config as EcommerceConfig);
+    if (snap.rate) this.rateStore.hydrate(snap.rate as ExchangeRate);
+  }
+
   /** Arma el comprobante desde el carrito ANTES de vaciarlo. `totalBs` es el
    *  mismo valor persistido en la orden (no se recalcula, para que el recibo
    *  coincida con la DB aunque la tasa cambie durante el createOrder). */
-  private buildReceipt(order: Order, totalBs: number): PosSaleReceipt {
+  private buildReceipt(number: number | null, totalBs: number): PosSaleReceipt {
     const lines = this.cart.lines().map((l) => ({
       label:
         l.variantName || l.size
@@ -705,7 +866,7 @@ export default class PosVenta implements OnInit {
       total: l.total,
     }));
     return {
-      number: order.orderNumber ?? order.id ?? null,
+      number,
       dateStr: new Date().toLocaleString('es-ES', {
         day: '2-digit',
         month: '2-digit',
@@ -715,6 +876,8 @@ export default class PosVenta implements OnInit {
       }),
       customer: this.cart.customerName(),
       phone: this.cart.customerPhone(),
+      nit: this.cart.customerNit(),
+      address: this.cart.customerAddress(),
       lines,
       subtotal: this.cart.subtotal(),
       discount: this.cart.discountAmount(),
@@ -722,9 +885,28 @@ export default class PosVenta implements OnInit {
       adjustAmount: this.adjustAmount(),
       total: this.chargeTotal(),
       totalBs,
+      tax: this.buildTaxLine(this.chargeTotal()),
       method: this.cart.paymentMethod(),
       received: this.amountReceived(),
       change: this.change(),
+    };
+  }
+
+  /** CAT-84: desglose fiscal del impuesto incluido en `total` —
+   *  base = total/(1+rate), IVA = total − base. Null = sin impuesto. */
+  private buildTaxLine(
+    total: number
+  ): { label: string; amount: number; base: number } | null {
+    const cfg = this.configStore.config();
+    // Number(): numeric(5,2) puede llegar como string según el serializador.
+    const rate = Number(cfg?.taxRate ?? 0);
+    if (!rate || rate <= 0 || total <= 0) return null;
+    const name = cfg?.taxLabel?.trim() || 'IVA';
+    const base = total / (1 + rate / 100);
+    return {
+      label: `${name} ${+rate.toFixed(2)}%`,
+      amount: total - base,
+      base,
     };
   }
 
@@ -753,6 +935,11 @@ export default class PosVenta implements OnInit {
       received: t('Recibido'),
       change: t('Vuelto'),
       receipt: t('Comprobante'),
+      qty: t('Cant.'),
+      detail: t('Detalle'),
+      // Etiqueta del documento según el país (cédula/RIF, DNI/CUIT, RUT…).
+      nit: this.documentLabel(),
+      taxBase: t('Base imponible'),
     };
   }
 
@@ -773,6 +960,9 @@ export default class PosVenta implements OnInit {
           number: sale.number,
           dateStr: sale.dateStr,
           customer: sale.customer,
+          nit: sale.nit || undefined,
+          nitLabel: L.nit,
+          address: sale.address || undefined,
           lines: sale.lines,
           subtotal: sale.subtotal,
           discount: sale.discount,
@@ -781,6 +971,7 @@ export default class PosVenta implements OnInit {
           method: sale.method,
           total: sale.total,
           totalBs: sale.totalBs,
+          tax: sale.tax ? { ...sale.tax, baseLabel: L.taxBase } : undefined,
           received: sale.received,
           change: sale.change,
           labels: L,
@@ -793,48 +984,13 @@ export default class PosVenta implements OnInit {
       }
       // Si falló (se desconectó), cae al recibo por navegador.
     }
-    const money = (n: number) => `${cs}${n.toFixed(2)}`;
-    const esc = (s: string) =>
-      s.replace(
-        /[&<>]/g,
-        (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] as string
-      );
-    const rows = sale.lines
-      .map(
-        (l) =>
-          `<div class="r"><span>${l.qty}× ${esc(l.label)}</span><span>${money(l.total)}</span></div>`
-      )
-      .join('');
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Recibo</title>
-      <style>
-        @page { margin: 0; }
-        body { width: 80mm; margin: 0 auto; padding: 6mm 5mm; font-family: 'Courier New', monospace; font-size: 12px; color: #000; }
-        .c { text-align: center; }
-        .logo { max-width: 60%; max-height: 40px; display: block; margin: 0 auto 6px; }
-        .hd { font-weight: 700; white-space: pre-wrap; margin-bottom: 6px; }
-        .rule { border-top: 1px dashed #000; margin: 6px 0; }
-        .r { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
-        .tot { font-weight: 700; font-size: 13px; }
-        .ft { margin-top: 8px; white-space: pre-wrap; }
-        .meta { font-size: 11px; }
-      </style></head><body>
-      ${t.printLogo && t.logo ? `<img class="logo" src="${t.logo}" alt="logo">` : ''}
-      ${t.header ? `<div class="c hd">${esc(t.header)}</div>` : ''}
-      <div class="c meta">${esc(sale.dateStr)}${sale.number != null ? ` · #${sale.number}` : ''}</div>
-      ${sale.customer ? `<div class="c meta">${esc(sale.customer)}</div>` : ''}
-      <div class="rule"></div>
-      ${rows}
-      <div class="rule"></div>
-      <div class="r"><span>${esc(L.subtotal)}</span><span>${money(sale.subtotal)}</span></div>
-      ${sale.discount > 0 ? `<div class="r"><span>${esc(L.discount)}</span><span>-${money(sale.discount)}</span></div>` : ''}
-      ${sale.shipping > 0 ? `<div class="r"><span>${esc(L.shipping)}</span><span>${money(sale.shipping)}</span></div>` : ''}
-      ${sale.adjustAmount ? `<div class="r"><span>${sale.adjustAmount > 0 ? esc(L.surcharge) : esc(L.discount)} (${esc(sale.method)})</span><span>${sale.adjustAmount > 0 ? '+' : '-'}${money(Math.abs(sale.adjustAmount))}</span></div>` : ''}
-      <div class="r tot"><span>${esc(L.total)}</span><span>${money(sale.total)}</span></div>
-      ${sale.totalBs > 0 ? `<div class="r tot"><span>${esc(L.totalBs)}</span><span>Bs. ${sale.totalBs.toFixed(2)}</span></div>` : ''}
-      ${sale.method ? `<div class="r"><span>${esc(L.payment)}</span><span>${esc(sale.method)}</span></div>` : ''}
-      ${sale.received != null ? `<div class="r"><span>${esc(L.received)}</span><span>${money(sale.received)}</span></div><div class="r"><span>${esc(L.change)}</span><span>${money(sale.change)}</span></div>` : ''}
-      ${t.footer ? `<div class="c ft">${esc(t.footer)}</div>` : ''}
-      </body></html>`;
+    // Tamaño configurable (Configuración → Tickets): ticket angosto (58/80 mm)
+    // u hoja con layout de factura (media carta / carta).
+    const format = t.format ?? '80';
+    const html =
+      format === 'media-carta' || format === 'carta'
+        ? this.sheetReceiptHtml(sale, format)
+        : this.ticketReceiptHtml(sale, format);
     const w = window.open('', '_blank', 'width=380,height=640');
     if (!w) {
       this.toast.error(
@@ -848,6 +1004,143 @@ export default class PosVenta implements OnInit {
     w.focus();
     // Dar tiempo a que renderice el logo/estilos antes de imprimir.
     setTimeout(() => w.print(), 250);
+  }
+
+  private escHtml(s: string): string {
+    return s.replace(
+      /[&<>]/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] as string
+    );
+  }
+
+  /** Recibo angosto estilo ticket (58 u 80 mm) para la impresión del navegador. */
+  private ticketReceiptHtml(sale: PosSaleReceipt, width: '58' | '80'): string {
+    const t = this.settings.ticket();
+    const cs = this.cs();
+    const L = this.receiptLabels();
+    const esc = (s: string) => this.escHtml(s);
+    const money = (n: number) => `${cs}${n.toFixed(2)}`;
+    const mm = width === '58' ? '58mm' : '80mm';
+    const fs = width === '58' ? '10.5px' : '12px';
+    const fsTot = width === '58' ? '11.5px' : '13px';
+    const rows = sale.lines
+      .map(
+        (l) =>
+          `<div class="r"><span>${l.qty}× ${esc(l.label)}</span><span>${money(l.total)}</span></div>`
+      )
+      .join('');
+    return `<!doctype html><html><head><meta charset="utf-8"><title>Recibo</title>
+      <style>
+        @page { margin: 0; }
+        body { width: ${mm}; margin: 0 auto; padding: 5mm 4mm; font-family: 'Courier New', monospace; font-size: ${fs}; color: #000; }
+        .c { text-align: center; }
+        .logo { max-width: 60%; max-height: 40px; display: block; margin: 0 auto 6px; }
+        .hd { font-weight: 700; white-space: pre-wrap; margin-bottom: 6px; }
+        .rule { border-top: 1px dashed #000; margin: 6px 0; }
+        .r { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
+        .tot { font-weight: 700; font-size: ${fsTot}; }
+        .ft { margin-top: 8px; white-space: pre-wrap; }
+        .meta { font-size: .92em; }
+      </style></head><body>
+      ${t.printLogo && t.logo ? `<img class="logo" src="${t.logo}" alt="logo">` : ''}
+      ${t.header ? `<div class="c hd">${esc(t.header)}</div>` : ''}
+      <div class="c meta">${esc(sale.dateStr)}${sale.number != null ? ` · #${sale.number}` : ''}</div>
+      ${sale.customer ? `<div class="c meta">${esc(sale.customer)}</div>` : ''}
+      ${sale.nit ? `<div class="c meta">${esc(L.nit)}: ${esc(sale.nit)}</div>` : ''}
+      ${sale.address ? `<div class="c meta">${esc(sale.address)}</div>` : ''}
+      <div class="rule"></div>
+      ${rows}
+      <div class="rule"></div>
+      <div class="r"><span>${esc(L.subtotal)}</span><span>${money(sale.subtotal)}</span></div>
+      ${sale.discount > 0 ? `<div class="r"><span>${esc(L.discount)}</span><span>-${money(sale.discount)}</span></div>` : ''}
+      ${sale.shipping > 0 ? `<div class="r"><span>${esc(L.shipping)}</span><span>${money(sale.shipping)}</span></div>` : ''}
+      ${sale.adjustAmount ? `<div class="r"><span>${sale.adjustAmount > 0 ? esc(L.surcharge) : esc(L.discount)} (${esc(sale.method)})</span><span>${sale.adjustAmount > 0 ? '+' : '-'}${money(Math.abs(sale.adjustAmount))}</span></div>` : ''}
+      ${sale.tax ? `<div class="r meta"><span>${esc(L.taxBase)}</span><span>${money(sale.tax.base)}</span></div><div class="r meta"><span>${esc(sale.tax.label)}</span><span>${money(sale.tax.amount)}</span></div>` : ''}
+      <div class="r tot"><span>${esc(L.total)}</span><span>${money(sale.total)}</span></div>
+      ${sale.totalBs > 0 ? `<div class="r tot"><span>${esc(L.totalBs)}</span><span>Bs. ${sale.totalBs.toFixed(2)}</span></div>` : ''}
+      ${sale.method ? `<div class="r"><span>${esc(L.payment)}</span><span>${esc(sale.method)}</span></div>` : ''}
+      ${sale.received != null ? `<div class="r"><span>${esc(L.received)}</span><span>${money(sale.received)}</span></div><div class="r"><span>${esc(L.change)}</span><span>${money(sale.change)}</span></div>` : ''}
+      ${t.footer ? `<div class="c ft">${esc(t.footer)}</div>` : ''}
+      </body></html>`;
+  }
+
+  /** Recibo en hoja (media carta / carta) con layout de factura: encabezado con
+   *  logo, tabla de artículos y bloque de totales. Mismos datos que el ticket. */
+  private sheetReceiptHtml(
+    sale: PosSaleReceipt,
+    format: 'media-carta' | 'carta'
+  ): string {
+    const t = this.settings.ticket();
+    const cs = this.cs();
+    const L = this.receiptLabels();
+    const esc = (s: string) => this.escHtml(s);
+    const money = (n: number) => `${cs}${n.toFixed(2)}`;
+    const page = format === 'carta' ? 'letter' : 'A5';
+    const fs = format === 'carta' ? '13px' : '12px';
+    const rows = sale.lines
+      .map(
+        (l) =>
+          `<tr><td class="qty">${l.qty}</td><td>${esc(l.label)}</td><td class="amt">${money(l.total)}</td></tr>`
+      )
+      .join('');
+    const totalRow = (
+      label: string,
+      value: string,
+      cls = ''
+    ) => `<tr class="${cls}"><td>${label}</td><td class="amt">${value}</td></tr>`;
+    let totals = totalRow(esc(L.subtotal), money(sale.subtotal));
+    if (sale.discount > 0)
+      totals += totalRow(esc(L.discount), '-' + money(sale.discount));
+    if (sale.shipping > 0)
+      totals += totalRow(esc(L.shipping), money(sale.shipping));
+    if (sale.adjustAmount)
+      totals += totalRow(
+        `${sale.adjustAmount > 0 ? esc(L.surcharge) : esc(L.discount)} (${esc(sale.method)})`,
+        (sale.adjustAmount > 0 ? '+' : '-') + money(Math.abs(sale.adjustAmount))
+      );
+    if (sale.tax) {
+      totals += totalRow(esc(L.taxBase), money(sale.tax.base), 'muted');
+      totals += totalRow(esc(sale.tax.label), money(sale.tax.amount), 'muted');
+    }
+    totals += totalRow(esc(L.total), money(sale.total), 'grand');
+    if (sale.totalBs > 0)
+      totals += totalRow(esc(L.totalBs), 'Bs. ' + sale.totalBs.toFixed(2), 'grand');
+    if (sale.method) totals += totalRow(esc(L.payment), esc(sale.method));
+    if (sale.received != null) {
+      totals += totalRow(esc(L.received), money(sale.received));
+      totals += totalRow(esc(L.change), money(sale.change));
+    }
+    return `<!doctype html><html><head><meta charset="utf-8"><title>Recibo</title>
+      <style>
+        @page { size: ${page} portrait; margin: 14mm; }
+        body { margin: 0; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: ${fs}; color: #111; }
+        .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+        .hd { font-weight: 700; white-space: pre-wrap; font-size: 1.1em; }
+        .logo { max-height: 56px; max-width: 160px; }
+        .meta { color: #555; font-size: .9em; margin-bottom: 14px; }
+        table { width: 100%; border-collapse: collapse; }
+        .items th { text-align: left; font-size: .75em; text-transform: uppercase; letter-spacing: .06em; color: #666; border-bottom: 1px solid #bbb; padding: 4px 6px; }
+        .items td { padding: 5px 6px; border-bottom: 1px solid #e4e4e4; }
+        .items .qty, .items th.qty { width: 3em; }
+        .amt { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .totals { width: 55%; margin: 12px 0 0 auto; }
+        .totals td { padding: 3px 6px; }
+        .totals .muted td { color: #777; font-size: .9em; }
+        .totals .grand td { font-weight: 700; font-size: 1.15em; border-top: 1px solid #bbb; padding-top: 6px; }
+        .ft { margin-top: 24px; text-align: center; white-space: pre-wrap; color: #333; }
+      </style></head><body>
+      <div class="top">
+        <div class="hd">${t.header ? esc(t.header) : ''}</div>
+        ${t.printLogo && t.logo ? `<img class="logo" src="${t.logo}" alt="logo">` : ''}
+      </div>
+      <div class="meta">${esc(L.receipt)}${sale.number != null ? ` #${sale.number}` : ''} · ${esc(sale.dateStr)}${sale.customer ? ` · ${esc(sale.customer)}` : ''}${sale.nit ? ` · ${esc(L.nit)}: ${esc(sale.nit)}` : ''}${sale.address ? `<br>${esc(sale.address)}` : ''}</div>
+      <table class="items">
+        <thead><tr><th class="qty">${esc(L.qty)}</th><th>${esc(L.detail)}</th><th class="amt">${esc(L.total)}</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <table class="totals">${totals}</table>
+      ${t.footer ? `<div class="ft">${esc(t.footer)}</div>` : ''}
+      </body></html>`;
   }
 
   /** Comparte el recibo por WhatsApp como texto. Si el cliente tiene teléfono,
@@ -864,6 +1157,9 @@ export default class PosVenta implements OnInit {
     parts.push(
       `${L.receipt}${sale.number != null ? ` #${sale.number}` : ''} · ${sale.dateStr}`
     );
+    if (sale.customer) parts.push(sale.customer);
+    if (sale.nit) parts.push(`${L.nit}: ${sale.nit}`);
+    if (sale.address) parts.push(sale.address);
     parts.push('');
     for (const l of sale.lines) {
       parts.push(`• ${l.qty}× ${l.label} — ${money(l.total)}`);
@@ -874,6 +1170,10 @@ export default class PosVenta implements OnInit {
       parts.push(
         `${sale.adjustAmount > 0 ? L.surcharge : L.discount} (${sale.method}): ${sale.adjustAmount > 0 ? '+' : '−'}${money(Math.abs(sale.adjustAmount))}`
       );
+    }
+    if (sale.tax) {
+      parts.push(`${L.taxBase}: ${money(sale.tax.base)}`);
+      parts.push(`${sale.tax.label}: ${money(sale.tax.amount)}`);
     }
     parts.push(`*Total: ${money(sale.total)}*`);
     if (sale.totalBs > 0) parts.push(`*${L.totalBs}: Bs. ${sale.totalBs.toFixed(2)}*`);

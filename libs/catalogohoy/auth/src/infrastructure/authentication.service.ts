@@ -200,9 +200,17 @@ export class AuthenticationService implements BaseAuthenticationService {
           name: credentials.name,
           display_name: credentials.name,
           phone: '',
-          store_name: credentials.storeName,
+          // El wizard de onboarding pide el nombre de la tienda DESPUÉS del
+          // signup, pero el hook handle_new_user de prod exige store_name para
+          // crear el tenant (guard anti-huérfanos de OAuth). Centinela
+          // "Mi tienda" → el hook crea el tenant con slug temporal mi-tienda-N,
+          // que el wizard ya trata como provisional (TEMP_SLUG_PREFIXES) y
+          // renombra al finalizar.
+          store_name: credentials.storeName?.trim() || 'Mi tienda',
           store_country_code: selectedCountry?.code ?? null,
           store_country: selectedCountry?.label ?? null,
+          // WhatsApp del vendedor (E.164) para notificaciones del catálogo.
+          store_whatsapp: credentials.whatsapp ?? null,
           // Atribución del alta: la noti de leads (new-lead-slack) mapea
           // ios/android/web → "App iOS" / "App Android" / "Web".
           signup_platform: isNativeApp() ? (isIosApp() ? 'ios' : 'android') : 'web',
@@ -231,7 +239,53 @@ export class AuthenticationService implements BaseAuthenticationService {
     const tenant = TenantMapper.toDomain(tenantRows[0]);
     await this.setupTenantLocale(credentials.countryCode);
     await this._tryRegisterReferral(Number(tenant.id), credentials.referralCode);
-    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
+    // Confirmación de correo desactivada (hay sesión al toque): los signups
+    // nuevos también van al wizard de onboarding, no directo al admin.
+    return E.right(
+      await this._authRedirectUrl(tenant.slug, tenant.customDomain, '/onboarding')
+    );
+  }
+
+  /** Verifica el código OTP de 6 dígitos del correo de confirmación (paso 4 del
+   *  signup por email). `verifyOtp` establece la sesión; el tenant ya lo creó
+   *  `handle_new_user` en el signUp. Al confirmar, registramos el referral (que
+   *  no pudo correr en el signup porque no había sesión) y mandamos al usuario
+   *  al **wizard de onboarding**, no directo al admin. */
+  public async verifySignupOtp(input: {
+    email: string;
+    token: string;
+    countryCode?: string;
+    referralCode?: string | null;
+  }): Promise<E.Either<Error, string>> {
+    const { error } = await this.client.auth.verifyOtp({
+      email: input.email,
+      token: input.token.trim(),
+      type: 'signup',
+    });
+    if (error) {
+      return E.left(errorMapper(error as AuthApiError));
+    }
+    const { data: tenantRows, error: tenantError } = await this.client.rpc(
+      'get_my_tenant'
+    );
+    if (tenantError) {
+      return E.left(new Error(tenantError.message));
+    }
+    const tenant = TenantMapper.toDomain(tenantRows[0]);
+    await this.setupTenantLocale(input.countryCode);
+    await this._tryRegisterReferral(Number(tenant.id), input.referralCode);
+    return E.right(
+      await this._authRedirectUrl(tenant.slug, tenant.customDomain, '/onboarding')
+    );
+  }
+
+  /** Reenvía el correo de confirmación (con el código OTP) al mismo email. */
+  public async resendSignupOtp(email: string): Promise<E.Either<Error, void>> {
+    const { error } = await this.client.auth.resend({ type: 'signup', email });
+    if (error) {
+      return E.left(errorMapper(error as AuthApiError));
+    }
+    return E.right(undefined);
   }
 
   /** Best-effort: si el usuario llegó por un link `?ref=` (o tipeó un código
@@ -292,7 +346,8 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
+    // Confirmación de correo = completa un alta nueva → bienvenida.
+    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain, '/bienvenida'));
   }
 
   public async resetPassword(
@@ -434,7 +489,23 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (error) return E.left(new Error(error.message));
     if (!tenantRows?.length) return E.left(new Error('no_tenant'));
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
+    // Onboarding a medias (tenants.onboarding_step != null): el login retoma
+    // el wizard en el paso guardado en vez de ir al admin. Best-effort: si el
+    // RPC falla, el login sigue normal a /admin.
+    const path = (await this._hasPendingOnboarding()) ? '/onboarding' : '/admin';
+    return E.right(
+      await this._authRedirectUrl(tenant.slug, tenant.customDomain, path)
+    );
+  }
+
+  /** true si el tenant del usuario tiene el wizard de onboarding a medias. */
+  private async _hasPendingOnboarding(): Promise<boolean> {
+    try {
+      const { data, error } = await this.client.rpc('get_my_onboarding_step');
+      return !error && typeof data === 'number';
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -459,20 +530,27 @@ export class AuthenticationService implements BaseAuthenticationService {
    *  (user_metadata) para que el admin —otro origen— lo sincronice al abrir. */
   private async _authRedirectUrl(
     slug: string,
-    customDomain?: string | null
+    customDomain?: string | null,
+    path = '/admin'
   ): Promise<string> {
     await this.language.flushToProfile();
-    return this._buildRedirectUrl(slug, customDomain);
+    return this._buildRedirectUrl(slug, customDomain, path);
   }
 
-  private _buildRedirectUrl(slug: string, customDomain?: string | null): string {
+  /** `path` decide el destino tras autenticar: el login cae en `/admin`; las
+   *  altas nuevas (signup email/Google/OTP) van al wizard de `/onboarding`. */
+  private _buildRedirectUrl(
+    slug: string,
+    customDomain?: string | null,
+    path = '/admin'
+  ): string {
     const key = this.authenticationTokenService.AUTH_CONFIG_KEY;
     const value = encodeURIComponent(this.authenticationTokenService.authConfigValue ?? '');
     if (isDevMode()) {
-      return `http://localhost:4200/admin?${key}=${value}`;
+      return `http://localhost:4200${path}?${key}=${value}`;
     }
     const host = customDomain ?? `${slug}.catalogohoy.com`;
-    return `https://${host}/admin?${key}=${value}`;
+    return `https://${host}${path}?${key}=${value}`;
   }
 
   public async completeGoogleSignup(
@@ -509,6 +587,10 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (tenantRows?.length) {
       const tenant = TenantMapper.toDomain(tenantRows[0]);
       await this._tryRegisterReferral(Number(tenant.id), credentials.referralCode);
+      // Nuevos signups (también Google) van al wizard de onboarding.
+      return E.right(
+        await this._authRedirectUrl(tenant.slug, tenant.customDomain, '/onboarding')
+      );
     }
 
     return this.getLoginRedirectUrl();
@@ -598,8 +680,7 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (error) return E.left(errorMapper(error as AuthApiError));
     // Confirmación de correo activa → signUp no devuelve sesión. Sin esto,
     // el flujo seguía como si hubiera login y el accept fallaba en silencio
-    // (bug reportado 7-oct: el invitado quedaba plantado sin poder crear
-    // la cuenta).
+    // (bug 7-oct: el invitado quedaba plantado sin poder crear la cuenta).
     if (!data.session) {
       return E.right(SIGNUP_CONFIRM_EMAIL);
     }

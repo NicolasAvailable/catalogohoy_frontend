@@ -23,7 +23,7 @@ import {
   IconComponent,
 } from '@ui';
 import { HomeStore } from '../../infrastructure/home.store';
-import { GettingStarted } from '../components/getting-started/getting-started';
+import { CatalogProgress } from '../components/catalog-progress/catalog-progress';
 
 type ChartTab = 'ventas' | 'pedidos';
 type Currency = 'bs' | 'usd';
@@ -41,7 +41,7 @@ type Currency = 'bs' | 'usd';
     AccordionPanelDirective,
     DecimalPipe,
     TranslocoPipe,
-    GettingStarted,
+    CatalogProgress,
   ],
   templateUrl: './home.html',
   styleUrls: ['./home.css'],
@@ -68,6 +68,7 @@ export class Home implements OnInit {
 
   /** Compliance IAP (Apple 3.1.1): en nativo no se muestran promos de planes. */
   public readonly isNative = isNativeApp();
+
 
   /** Promo de precios: "Planes anuales -50%". Descartable (localStorage). */
   public readonly annualPromoDismissed = signal(

@@ -15,6 +15,11 @@ export interface ThermalReceipt {
   number: number | null;
   dateStr: string;
   customer: string;
+  /** Cédula/RIF y dirección del cliente; vacíos = no se imprimen. El label
+   *  de la cédula llega traducido en `nitLabel`. */
+  nit?: string;
+  nitLabel?: string;
+  address?: string;
   lines: ThermalLine[];
   subtotal: number;
   discount: number;
@@ -24,6 +29,9 @@ export interface ThermalReceipt {
   total: number;
   /** Total en bolívares (VE); 0 u omitido = no se imprime la línea. */
   totalBs?: number;
+  /** CAT-84: impuesto incluido en el total — desglose fiscal base → IVA →
+   *  total. `label`/`baseLabel` llegan traducidos; omitido = no se imprime. */
+  tax?: { label: string; amount: number; base: number; baseLabel: string };
   received: number | null;
   change: number;
   /** Etiquetas en el idioma del admin (el builder normaliza a ASCII);
@@ -309,6 +317,8 @@ export class PosPrinterService {
     if (r.header) b.bold(true).line(r.header).bold(false);
     b.text(r.dateStr + (r.number != null ? ` #${r.number}` : '')).feed();
     if (r.customer) b.line(r.customer);
+    if (r.nit) b.line(`${r.nitLabel || 'Cedula/RIF'}: ${r.nit}`);
+    if (r.address) b.line(r.address);
     b.align('left').text('-'.repeat(cols)).feed();
 
     for (const l of r.lines) {
@@ -337,6 +347,10 @@ export class PosPrinterService {
           (r.adjustAmount > 0 ? '+' : '-') + money(Math.abs(r.adjustAmount))
         )
       );
+    if (r.tax) {
+      b.line(row(r.tax.baseLabel, money(r.tax.base)));
+      b.line(row(r.tax.label, money(r.tax.amount)));
+    }
     b.bold(true).size(true).line(row(L.total, money(r.total))).size(false).bold(false);
     if (r.totalBs && r.totalBs > 0)
       b.bold(true).line(row(L.totalBs, 'Bs. ' + r.totalBs.toFixed(2))).bold(false);

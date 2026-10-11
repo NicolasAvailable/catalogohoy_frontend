@@ -18,12 +18,19 @@ export interface PosPayMethodSetting {
   adjustPercent: number;
 }
 
+/** Tamaño del recibo imprimible por navegador (CAT-84 follow-up).
+ *  '58'/'80' = ticket angosto; 'media-carta'/'carta' = hoja con layout de
+ *  factura. La impresora térmica usa su propio ancho (PosPrinterSettings). */
+export type PosReceiptFormat = '58' | '80' | 'media-carta' | 'carta';
+
 export interface PosTicketSettings {
   header: string;
   footer: string;
   /** Logo en data-URL (se guarda en localStorage; usar imágenes chicas). */
   logo: string | null;
   printLogo: boolean;
+  /** Tamaño del papel del recibo imprimible. */
+  format: PosReceiptFormat;
 }
 
 export interface PosPrinterSettings {
@@ -51,7 +58,7 @@ const DEFAULT_METHODS: PosPayMethodSetting[] = [
 const initialState: PosSettingsState = {
   tenantKey: '',
   methods: DEFAULT_METHODS,
-  ticket: { header: '', footer: '¡Gracias por su compra!', logo: null, printLogo: true },
+  ticket: { header: '', footer: '¡Gracias por su compra!', logo: null, printLogo: true, format: '80' },
   printer: { connected: false, width: '80', deviceName: '' },
   loaded: false,
 };
@@ -150,6 +157,10 @@ export const PosSettingsStore = signalStore(
       },
       setPrintLogo(printLogo: boolean): void {
         patchState(store, (st) => ({ ticket: { ...st.ticket, printLogo } }));
+        write();
+      },
+      setTicketFormat(format: PosReceiptFormat): void {
+        patchState(store, (st) => ({ ticket: { ...st.ticket, format } }));
         write();
       },
     };

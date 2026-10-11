@@ -134,6 +134,11 @@ export interface Order {
    *  Ausente/null = sin fechas: los recordatorios de cobranza usan el umbral
    *  de días del dueño (users.credit_reminder_days). */
   creditInstallments?: CreditInstallment[] | null;
+  /** Condición de pago que ELIGIÓ el cliente en el checkout público:
+   *  'credit' = pidió a crédito (la orden nace pending; pasarla a status
+   *  `credit` es decisión del comerciante), 'cash' = contado explícito.
+   *  Null/ausente = orden sin selector (admin, POS, históricas). */
+  paymentCondition?: 'cash' | 'credit' | null;
 }
 
 /** One row of the per-status breakdown in {@link OrderMetrics}. */

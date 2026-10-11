@@ -15,17 +15,37 @@
 
     <button
       type="button"
-      class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary-500 text-white text-base font-semibold hover:bg-primary-600 transition-colors mt-1 cursor-pointer"
+      class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary-500 text-white text-base font-semibold enabled:hover:bg-primary-600 transition-colors mt-1 enabled:cursor-pointer disabled:bg-grey-200 disabled:text-grey-400 disabled:cursor-not-allowed"
+      [disabled]="posLocked()"
       (click)="goToPos()"
     >
+      @if (posLocked()) {
+      <ui-icon name="lock" size="18" />
+      }
       {{ 'Ir a Punto de Venta' | transloco }}
+      @if (!posLocked()) {
       <ui-icon name="arrow-right" size="18" />
+      }
     </button>
 
+    @if (posLocked()) {
+    <!-- Plan sin POS: aviso de plan con link a Planes (reemplaza al viejo
+         modal de upgrade). -->
+    <p class="inline-flex flex-wrap items-center justify-center gap-1.5 text-sm text-grey-500">
+      <ui-icon name="crown" size="15" styleClass="text-primary-500" />
+      {{ 'Necesitas el plan Avanzado para usar el Punto de Venta.' | transloco }}
+      <a
+        routerLink="/admin/plans"
+        class="font-semibold text-primary-500 hover:text-primary-600 underline underline-offset-2"
+        >{{ 'Mejorar plan' | transloco }}</a
+      >
+    </p>
+    } @else {
     <p class="inline-flex items-center gap-1.5 text-xs text-grey-400">
       <ui-icon name="sparkles" size="13" styleClass="text-grey-300" />
       {{ 'Se abre en una ventana nueva para que vendas cómodo desde el mostrador.' | transloco }}
     </p>
+    }
   </div>
 
   <!-- ═══ Cómo funciona (izquierda) + preview del POS (derecha) ═══ -->

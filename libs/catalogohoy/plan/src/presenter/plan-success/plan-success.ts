@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '@ui';
@@ -10,14 +10,25 @@ import { PlanStore } from '../../infrastructure';
   templateUrl: './plan-success.html',
   host: { class: 'flex-1 flex flex-col min-h-0' },
 })
-export class PlanSuccess implements OnInit {
+export class PlanSuccess implements OnInit, OnDestroy {
   private readonly router   = inject(Router);
   private readonly planStore = inject(PlanStore);
 
+  private redirectTimer?: ReturnType<typeof setTimeout>;
+
   ngOnInit(): void {
-    // Reload plan data so the UI reflects the new plan once the webhook fires
+    // refreshUsage (no loadTenantPlanUsage, que early-returnea si ya había
+    // datos) fuerza el refetch para que el plan/trial nuevo quede activo en el
+    // home apenas el webhook lo aplica.
     this.planStore.loadPlans();
-    this.planStore.loadTenantPlanUsage();
+    this.planStore.refreshUsage();
+    // Llevamos al inicio tras unos segundos (alcanza a ver el "listo"); el plan
+    // ya quedó activo. Si toca un botón antes, navega y el timer se limpia.
+    this.redirectTimer = setTimeout(() => this.goHome(), 5000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.redirectTimer) clearTimeout(this.redirectTimer);
   }
 
   public goHome(): void {

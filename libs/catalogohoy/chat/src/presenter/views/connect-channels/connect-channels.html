@@ -5,6 +5,21 @@
     <p class="text-sm text-grey-500 mt-1 max-w-xl">
       {{ 'Conecta tus redes para recibir y responder todos los mensajes desde una sola bandeja.' | transloco }}
     </p>
+    <!-- Aviso de plan: reemplaza al viejo modal de upgrade (el CTA queda
+         deshabilitado y acá se explica por qué, con link a Planes). -->
+    @if (showPlanNote()) {
+    <p class="flex items-center gap-1.5 text-sm text-grey-500 mt-3">
+      <ui-icon name="crown" size="15" styleClass="text-primary-500 shrink-0" />
+      <span>
+        {{ 'Necesitas el plan Avanzado para conectar tus canales de chat.' | transloco }}
+        <a
+          routerLink="/admin/plans"
+          class="font-semibold text-primary-500 hover:text-primary-600 underline underline-offset-2"
+          >{{ 'Mejorar plan' | transloco }}</a
+        >
+      </span>
+    </p>
+    }
   </div>
 
   <!-- Galería de canales (estilo SocialGest: una card por red) -->
@@ -14,7 +29,7 @@
       [routerLink]="routeFor(channel)"
       (click)="onChannelClick(channel, $event)"
       class="group flex flex-col items-center text-center gap-3 rounded-2xl border border-grey-100 bg-white px-6 py-8 transition-all"
-      [ngClass]="channel.comingSoon ? 'opacity-70 cursor-default' : 'cursor-pointer hover:border-primary-300 hover:shadow-md'"
+      [ngClass]="routeFor(channel) === null ? 'opacity-70 cursor-default' : 'cursor-pointer hover:border-primary-300 hover:shadow-md'"
     >
       <img
         [src]="channel.logo"
@@ -44,6 +59,13 @@
       } @else if (channel.comingSoon) {
       <span class="inline-flex items-center px-3 py-1 mt-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
         {{ 'Próximamente' | transloco }}
+      </span>
+      } @else if (!canConnect()) {
+      <!-- Bloqueado por plan: botón deshabilitado (el aviso del header explica
+           por qué y lleva a Planes). -->
+      <span class="inline-flex items-center gap-2 px-5 py-2.5 mt-1 rounded-xl bg-grey-100 text-grey-400 text-sm font-semibold cursor-not-allowed">
+        <ui-icon name="lock" size="14" />
+        {{ 'Conectar' | transloco }}
       </span>
       } @else {
       <span class="inline-flex items-center gap-2 px-5 py-2.5 mt-1 rounded-xl bg-primary-500 text-white text-sm font-semibold group-hover:bg-primary-600 transition-colors">

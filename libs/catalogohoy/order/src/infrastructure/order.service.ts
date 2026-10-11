@@ -38,6 +38,16 @@ export interface CreateOrderInput {
   name: string;
   phone?: string;
   comments?: string;
+  /** CAT-85: uuid de idempotencia de las ventas offline del POS. El índice
+   *  único (tenant_id, pos_client_id) hace que reintentar un sync cortado no
+   *  duplique la orden. undefined = orden normal. */
+  posClientId?: string | null;
+  /** Cédula/RIF/NIT del cliente para la factura (pedido leonardoadventure).
+   *  Misma columna `orders.nit` que usa el checkout público. */
+  nit?: string | null;
+  /** Dirección del cliente para la factura. Misma columna `shipping_address`
+   *  que llena el checkout cuando el envío la pide. */
+  shippingAddress?: string | null;
   /** Admin-only proof of payment (note + image URLs). Only the admin order
    *  form sends this; the public catalog checkout never does. */
   paymentEvidence?: PaymentEvidence | null;
@@ -111,6 +121,10 @@ export class OrderService {
     tenantId: number,
     options?: {
       date?: Date;
+      /** Rango ISO [fromIso, toIso) sobre created_at (desglose de Métricas).
+       *  Tiene prioridad sobre `date` (que filtra un solo día). */
+      fromIso?: string;
+      toIso?: string;
       search?: string;
       /** Filter by status ('all' = no filter). */
       status?: OrderStatus | 'all';
@@ -132,8 +146,11 @@ export class OrderService {
       query = query.eq('status', options.status);
     }
 
-    // Filter by date if provided
-    if (options?.date) {
+    // Filter by ISO range [fromIso, toIso) (Métricas) o por día único (`date`).
+    if (options?.fromIso || options?.toIso) {
+      if (options.fromIso) query = query.gte('created_at', options.fromIso);
+      if (options.toIso) query = query.lt('created_at', options.toIso);
+    } else if (options?.date) {
       const startOfDay = new Date(options.date);
       startOfDay.setHours(0, 0, 0, 0);
 
@@ -399,6 +416,12 @@ export class OrderService {
     // Venta del POS imputada a una caja abierta (opcional).
     if (input.posCashSessionId != null)
       payload['pos_cash_session_id'] = input.posCashSessionId;
+    // Venta offline del POS: uuid de idempotencia para el sync (CAT-85).
+    if (input.posClientId) payload['pos_client_id'] = input.posClientId;
+    // Datos de factura del cliente (POS): cédula/RIF y dirección.
+    if (input.nit !== undefined) payload['nit'] = input.nit || null;
+    if (input.shippingAddress !== undefined)
+      payload['shipping_address'] = input.shippingAddress || null;
     if (input.deliveryDate) payload['delivery_date'] = input.deliveryDate;
     if (input.paymentEvidence !== undefined)
       payload['payment_evidence'] = input.paymentEvidence;

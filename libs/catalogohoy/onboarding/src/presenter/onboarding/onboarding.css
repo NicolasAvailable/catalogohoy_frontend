@@ -1,0 +1,574 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+  background: var(--color-lino-400, #f7f7f5);
+}
+
+.onb {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+/* Desktop: el wizard queda clavado al viewport — el teléfono del preview
+   SIEMPRE visible, y el scroll vive DENTRO de la card del formulario (p.ej.
+   el paso Entrega y pago, que es largo), no en la página. En mobile el
+   preview se oculta y el scroll natural de página se mantiene. */
+@media (min-width: 48.0625rem) {
+  .onb {
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .onb__body {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .onb__form {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
+.onb__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: white;
+  border-bottom: 0.0625rem solid var(--color-grey-100, #eee);
+}
+.onb__brand {
+  font-weight: 800;
+  font-size: 1.125rem;
+  color: var(--color-grey-900, #0f172a);
+  letter-spacing: -0.01em;
+}
+
+/* ── Progreso ────────────────────────────────────────────────────────────── */
+.onb__progress {
+  height: 0.25rem;
+  background: var(--color-grey-100, #eee);
+}
+.onb__progress-fill {
+  height: 100%;
+  background: var(--color-primary-500, #3e7bfa);
+  transition: width 0.3s ease;
+}
+
+/* ── Layout 2 paneles ────────────────────────────────────────────────────── */
+.onb__body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 64rem;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  gap: 2rem;
+  align-items: stretch;
+}
+
+.onb__form {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 0.0625rem solid var(--color-grey-100, #eee);
+  border-radius: 1.25rem;
+  padding: 2rem;
+  min-width: 0;
+}
+.onb__step-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-grey-300, #cbd5e1);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.onb__title {
+  margin-top: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-grey-900, #0f172a);
+  letter-spacing: -0.01em;
+}
+.onb__subtitle {
+  margin-top: 0.375rem;
+  font-size: 0.9375rem;
+  color: var(--color-grey-400, #94a3b8);
+  line-height: 1.4;
+}
+
+.onb__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1.75rem;
+  flex: 1;
+}
+.onb__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.onb__field--logo {
+  align-items: center;
+}
+.onb__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-grey-600, #475569);
+}
+.onb__req {
+  color: var(--color-red-500, #ef4444);
+}
+.onb__hint {
+  font-size: 0.75rem;
+  color: var(--color-grey-400, #94a3b8);
+}
+.onb__inline {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.onb__inline > :first-child {
+  flex: 1;
+}
+
+/* Dirección con prefijo fijo (catalogohoy.com/ + slug) */
+.onb__slugbox {
+  display: flex;
+  align-items: center;
+  border: 0.0625rem solid var(--color-grey-200, #d1d5db);
+  border-radius: 0.625rem;
+  background: white;
+  overflow: hidden;
+}
+.onb__slugbox:focus-within {
+  border-color: var(--color-primary-500, #3e7bfa);
+  box-shadow: 0 0 0 0.0625rem var(--color-primary-500, #3e7bfa);
+}
+.onb__slugbox-suffix {
+  padding: 0.625rem 0.75rem 0.625rem 0;
+  font-size: 0.875rem;
+  color: var(--color-grey-400, #94a3b8);
+  white-space: nowrap;
+  user-select: none;
+}
+.onb__slugbox-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.625rem 0.125rem 0.625rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-grey-800, #1e293b);
+  border: none;
+  outline: none;
+  background: transparent;
+  text-align: right;
+}
+
+/* Estado en vivo de la dirección: libre (verde) / ocupada (rojo) */
+.onb__slugbox--ok,
+.onb__slugbox--ok:focus-within {
+  border-color: var(--color-emerald-500, #10b981);
+  box-shadow: 0 0 0 0.0625rem var(--color-emerald-500, #10b981);
+}
+.onb__slugbox--taken,
+.onb__slugbox--taken:focus-within {
+  border-color: var(--color-red-500, #ef4444);
+  box-shadow: 0 0 0 0.0625rem var(--color-red-500, #ef4444);
+}
+.onb__slugbox-status {
+  display: inline-flex;
+  align-items: center;
+  padding-right: 0.625rem;
+}
+.onb__hint--error {
+  color: var(--color-red-500, #ef4444);
+}
+
+/* Banner + logo superpuesto (composición como el catálogo) */
+.onb__field--media {
+  position: relative;
+}
+.onb__banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 6rem;
+  border: none;
+  border-radius: 0.875rem;
+  background: var(--color-grey-100, #f1f5f9);
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0;
+}
+.onb__banner--empty {
+  border: 0.0625rem dashed var(--color-grey-200, #d1d5db);
+}
+.onb__banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.onb__banner-placeholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--color-grey-400, #94a3b8);
+}
+.onb__banner-badge {
+  right: 0.5rem;
+  bottom: 0.5rem;
+}
+/* El logo pisa el borde inferior del banner, centrado */
+.onb__avatar-overlap {
+  display: flex;
+  justify-content: center;
+  margin-top: -2.75rem;
+  position: relative;
+  z-index: 1;
+}
+.onb__avatar-overlap .onb__avatar {
+  background: white;
+  box-shadow: 0 0 0 0.1875rem white;
+}
+
+/* Logo circular (uploader con badge de cámara) */
+.onb__avatar {
+  position: relative;
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 50%;
+  background: var(--color-grey-50, #f8fafc);
+  border: 0.09375rem dashed var(--color-grey-200, #d1d5db);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.onb__avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.onb__avatar:hover {
+  border-color: var(--color-primary-400, #60a5fa);
+}
+.onb__avatar-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 50%;
+  background: var(--color-grey-900, #0f172a);
+  color: white;
+  border: 0.125rem solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Swatches de color */
+.onb__colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.onb__swatch {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 0.125rem solid transparent;
+  box-shadow: 0 0 0 0.0625rem rgba(0, 0, 0, 0.06) inset;
+}
+.onb__swatch--active {
+  border-color: var(--color-grey-900, #0f172a);
+}
+.onb__swatch--custom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-grey-50, #f8fafc);
+  color: var(--color-grey-400, #94a3b8);
+  border: 0.09375rem dashed var(--color-grey-200, #d1d5db);
+}
+
+/* Fotos del producto */
+.onb__photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.onb__photo {
+  position: relative;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 0.625rem;
+  overflow: hidden;
+  border: 0.0625rem solid var(--color-grey-100, #eee);
+}
+.onb__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.onb__photo--add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-grey-50, #f8fafc);
+  border: 0.09375rem dashed var(--color-grey-200, #d1d5db);
+  cursor: pointer;
+}
+.onb__photo--add:hover {
+  border-color: var(--color-primary-400, #60a5fa);
+}
+.onb__photo-remove {
+  position: absolute;
+  top: 0.125rem;
+  right: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-grey-600, #475569);
+  cursor: pointer;
+}
+
+/* Secciones del paso Entrega y pago */
+.onb__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.onb__section + .onb__section {
+  margin-top: 0.5rem;
+}
+.onb__section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-grey-800, #1e293b);
+}
+.onb__section-hint {
+  margin-top: -0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-grey-400, #94a3b8);
+  line-height: 1.4;
+}
+
+/* Cards toggleables (entrega y pago) */
+.onb__option {
+  border: 0.0625rem solid var(--color-grey-100, #eee);
+  border-radius: 0.875rem;
+  background: white;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.onb__option--active {
+  border-color: var(--color-primary-500, #3e7bfa);
+  box-shadow: 0 0 0 0.0625rem var(--color-primary-500, #3e7bfa);
+}
+.onb__option-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  cursor: pointer;
+  text-align: left;
+}
+.onb__option-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.375rem;
+  border: 0.09375rem solid var(--color-grey-200, #d1d5db);
+  background: white;
+  color: white;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.onb__option-check--on {
+  background: var(--color-primary-500, #3e7bfa);
+  border-color: var(--color-primary-500, #3e7bfa);
+}
+.onb__option-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+.onb__option-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-grey-800, #1e293b);
+}
+.onb__option-hint {
+  font-size: 0.75rem;
+  color: var(--color-grey-400, #94a3b8);
+}
+.onb__option-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem 1rem;
+  border-top: 0.0625rem dashed var(--color-grey-100, #eee);
+}
+.onb__switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-grey-600, #475569);
+  cursor: pointer;
+}
+
+/* Acciones */
+.onb__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.75rem;
+  gap: 0.5rem;
+}
+.onb__actions-end {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ── Preview (panel derecho): mockup real del editor de catálogo ─────────── */
+/* Fondo neutro del wizard: solo el teléfono (lib-phone-mockup). */
+.onb__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 1rem 0;
+}
+.onb__preview lib-phone-mockup {
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 48rem) {
+  .onb__body {
+    grid-template-columns: 1fr;
+  }
+  .onb__preview {
+    display: none;
+  }
+  .onb__form {
+    padding: 1.5rem;
+  }
+}
+
+/* Estado de carga inicial: centrado, mismo fondo que el wizard */
+.onb--boot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  color: var(--p-surface-500, #6b7280);
+  font-size: 0.875rem;
+}
+
+/* ── Paso 2: opciones avanzadas (colapsables) ───────────────────────────── */
+.onb__advanced-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-primary-500, #3e7bfa);
+}
+.onb__advanced {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 0.0625rem solid var(--color-grey-100, #eee);
+  border-radius: 0.875rem;
+  background: var(--color-grey-50, #f8fafc);
+}
+.onb__advanced-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+@media (max-width: 36rem) {
+  .onb__advanced-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Paso 2: estado "producto agregado" ─────────────────────────────────── */
+.onb__added {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+.onb__added-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  border: 0.0625rem solid var(--color-emerald-200, #a7f3d0);
+  background: var(--color-emerald-50, #ecfdf5);
+  border-radius: 0.875rem;
+}
+.onb__added-photo {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 0.625rem;
+  object-fit: cover;
+  background: white;
+}
+.onb__added-photo--empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.0625rem dashed var(--color-grey-200, #d1d5db);
+}
+.onb__added-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.onb__added-name {
+  font-weight: 700;
+  color: var(--color-grey-900, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.onb__added-price {
+  font-size: 0.875rem;
+  color: var(--color-grey-500, #64748b);
+}
+.onb__added-hint {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-grey-500, #64748b);
+}

@@ -11,6 +11,7 @@ import {
   CustomerFieldsConfig,
   DEFAULT_CUSTOMER_FIELDS,
   DEFAULT_SOCIAL_LINKS,
+  defaultTimezoneForCountry,
   ExchangeRateType,
   findCountryByCode,
   findCurrencyByCode,
@@ -24,9 +25,11 @@ import {
   BaseEcommerceService,
   CatalogInfo,
   Category,
+  isAlphabeticalCatalogEnabled,
   PaginatedProductList,
   PublicCatalogData,
   PublicOrder,
+  PublicOrderAdjustment,
 } from '../domain';
 
 @Injectable({
@@ -79,12 +82,33 @@ export class EcommerceService implements BaseEcommerceService {
       isOpen: h.is_open,
     }));
 
-    // Calcular si está abierto ahora
-    const now = new Date();
-    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now
-      .getMinutes()
-      .toString()
-      .padStart(2, '0')}`;
+    // Calcular si está abierto ahora — SIEMPRE en la zona horaria del NEGOCIO,
+    // no la del dispositivo del visitante (bug reportado: un cliente en otra
+    // zona veía "cerrado" aunque el negocio estuviera abierto en su ciudad).
+    // El día de la semana ya lo calcula el RPC en esta misma zona (así el
+    // `hours` corresponde al día correcto del negocio).
+    const businessTimezone =
+      config?.timezone || defaultTimezoneForCountry(data.tenant.country_code);
+    let currentTime: string;
+    try {
+      // hourCycle h23 garantiza 00–23; formatToParts evita separadores de locale.
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: businessTimezone,
+        hourCycle: 'h23',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).formatToParts(new Date());
+      const hh = parts.find((p) => p.type === 'hour')?.value ?? '00';
+      const mm = parts.find((p) => p.type === 'minute')?.value ?? '00';
+      currentTime = `${hh}:${mm}`;
+    } catch {
+      // Zona inválida (no debería): caer a la hora del dispositivo.
+      const now = new Date();
+      currentTime = `${now.getHours().toString().padStart(2, '0')}:${now
+        .getMinutes()
+        .toString()
+        .padStart(2, '0')}`;
+    }
 
     let isOpen = config?.is_accepting_orders ?? true;
     let openTime = '08:00';
@@ -252,6 +276,25 @@ export class EcommerceService implements BaseEcommerceService {
             .deliveryBlockedWeekdays as number[])
         : [],
       metaPixelId: (config?.meta_pixel_id as string | null) ?? null,
+      taxRate: (config?.tax_rate as number | null) ?? null,
+      taxLabel: (config?.tax_label as string | null) ?? null,
+      // Contado/crédito — vive dentro de `customer_fields` (mismo truco que
+      // delivery-date). Defaults = comportamiento actual del checkout.
+      applyAdjustmentsInCheckout:
+        (config?.customer_fields as { applyAdjustmentsInCheckout?: boolean })
+          ?.applyAdjustmentsInCheckout ?? false,
+      creditEnabled:
+        (config?.customer_fields as { creditEnabled?: boolean })
+          ?.creditEnabled ?? false,
+      creditMinPurchases: (() => {
+        const raw = (config?.customer_fields as { creditMinPurchases?: unknown })
+          ?.creditMinPurchases;
+        const n = Number(raw);
+        return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+      })(),
+      creditNote:
+        (config?.customer_fields as { creditNote?: string | null })
+          ?.creditNote ?? null,
     };
 
     // El RPC devuelve solo categorías visibles, EXCEPTO la fila "Ver todos"
@@ -358,7 +401,12 @@ export class EcommerceService implements BaseEcommerceService {
         query = query.order('price', { ascending: false });
         break;
       default:
-        query = query.order('position', { ascending: true });
+        // Moto Fox (y la allowlist) ven su vitrina en orden alfabético; el
+        // resto conserva el orden manual (`position`). Un orderBy explícito
+        // elegido por el cliente (si algún día se agrega el selector) igual gana.
+        query = isAlphabeticalCatalogEnabled(Number(resolvedTenantId))
+          ? query.order('name', { ascending: true })
+          : query.order('position', { ascending: true });
     }
 
     const hasCap = cap !== undefined && cap > 0;
@@ -541,6 +589,12 @@ export class EcommerceService implements BaseEcommerceService {
      *  has the delivery-date feature enabled and the customer picked one; when
      *  omitted the DB uses its default (CURRENT_DATE). */
     delivery_date?: string;
+    /** Snapshot del descuento/recargo aplicado en el checkout (contado). */
+    payment_adjustment?: PublicOrderAdjustment | null;
+    /** Condición elegida por el cliente cuando el catálogo la ofrece:
+     *  'credit' = pidió a crédito (la orden igual nace `pending`; pasarla a
+     *  status 'credit' es decisión del comerciante). Undefined = sin selector. */
+    payment_condition?: 'cash' | 'credit';
   }): Promise<E.Either<Error, { id: number }>> {
     const exchangeRate = await this.getExchangeRate(order.tenant_id);
     const totalBs = order.total_usd * exchangeRate;
@@ -567,6 +621,12 @@ export class EcommerceService implements BaseEcommerceService {
           ...(order.delivery_date
             ? { delivery_date: order.delivery_date }
             : {}),
+          ...(order.payment_adjustment
+            ? { payment_adjustment: order.payment_adjustment }
+            : {}),
+          ...(order.payment_condition
+            ? { payment_condition: order.payment_condition }
+            : {}),
           status: 'pending',
           // Orden del catálogo público: sí dispara notificaciones (WhatsApp/email).
           source: 'public',
@@ -587,6 +647,22 @@ export class EcommerceService implements BaseEcommerceService {
     return E.right({ id: data.id as number });
   }
 
+  /** Compras previas (completadas o a crédito) de un teléfono en una tienda —
+   *  gate "crédito después de N compras" del checkout. Devuelve null si el RPC
+   *  falla, para que el caller aplique su fallback (permisivo). */
+  public async getCustomerPurchaseCount(
+    tenantId: number,
+    phone: string
+  ): Promise<number | null> {
+    const { data, error } = await this.client.rpc(
+      'get_customer_purchase_count',
+      { p_tenant_id: tenantId, p_phone: phone }
+    );
+    if (error) return null;
+    const n = Number(data);
+    return Number.isFinite(n) ? n : 0;
+  }
+
   /** Fetch an order by id for the public invoice/receipt. Orders are readable
    *  by anon (RLS `lectura_publica`), so the invoice link is shareable like a
    *  normal receipt — no extra RPC needed. */
@@ -596,7 +672,7 @@ export class EcommerceService implements BaseEcommerceService {
     const { data, error } = await this.client
       .from('orders')
       .select(
-        'id, order_number, status, name, phone, email, nit, products, total_usd, total_bs, shipping_method, shipping_address, shipping_fee, payment_method, comments, created_at'
+        'id, order_number, status, name, phone, email, nit, products, total_usd, total_bs, shipping_method, shipping_address, shipping_fee, payment_method, payment_adjustment, comments, created_at'
       )
       .eq('id', id)
       .single();
@@ -638,6 +714,19 @@ export class EcommerceService implements BaseEcommerceService {
       shippingAddress: data.shipping_address ?? null,
       shippingFee: Number(data.shipping_fee) || 0,
       paymentMethod: data.payment_method ?? null,
+      paymentAdjustment:
+        data.payment_adjustment && typeof data.payment_adjustment === 'object'
+          ? {
+              label: String(data.payment_adjustment.label ?? ''),
+              amount: Number(data.payment_adjustment.amount) || 0,
+              magnitude: Number(data.payment_adjustment.magnitude) || 0,
+              kind:
+                data.payment_adjustment.kind === 'surcharge'
+                  ? 'surcharge'
+                  : 'discount',
+              visible: data.payment_adjustment.visible !== false,
+            }
+          : null,
       comments: data.comments ?? null,
       createdAt: data.created_at,
     });
