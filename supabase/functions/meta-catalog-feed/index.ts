@@ -105,7 +105,13 @@ Deno.serve(async (req) => {
   const brand = tenant.name ?? tenant.slug;
   const baseUrl = `https://${tenant.slug}.catalogohoy.com`;
 
-  const rows = [HEADER.map(csvCell).join(",")];
+  // Header SIN comillas: Meta auto-mapea las columnas por el nombre exacto del
+  // encabezado. Si el header va entre comillas (`"id"`), falla el mapeo de los
+  // campos que requieren traducción de nombre (id→item_id, image_link→image) y
+  // Meta rechaza TODO el feed con "missing required field item_id/image" aunque
+  // los datos estén completos (bug reportado: 120 detectados, 0 persistidos).
+  // Las filas de DATOS sí van entre comillas (manejan comas en títulos/desc).
+  const rows = [HEADER.join(",")];
   for (const p of products ?? []) {
     const link = `${baseUrl}/product/${p.id}`;
     const productImage = (p.photos ?? [])[0] ?? null;

@@ -393,6 +393,9 @@ export interface EcommerceConfig {
   countryCode: string | null;
   state: string | null;
   city: string | null;
+  /** Zona horaria IANA del negocio (ej. "America/Mexico_City"). Define contra
+   *  qué hora se calcula el estado "abierto/cerrado" del catálogo público. */
+  timezone: string | null;
   showDesignSection: boolean;
   showPaymentMethodsSection: boolean;
   showLocationSection: boolean;

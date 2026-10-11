@@ -40,7 +40,7 @@ export class EcommerceConfigService {
       const { data: config } = await this.client
         .from('tenant_ecommerce_config')
         .select(
-          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message, notify_new_orders, notify_weekly_report, shipping_methods, show_shipping_section, customer_fields, default_language, meta_pixel_id, tax_rate, tax_label'
+          'logo, banner, whatsapp_buttons, description, is_accepting_orders, is_visible, currency, currency_symbol, show_reference_price, show_local_currency_price, theme_color, payment_methods, state, city, timezone, show_design_section, show_payment_methods_section, show_location_section, show_categories_section, social_links, template, whatsapp_order_message, notify_new_orders, notify_weekly_report, shipping_methods, show_shipping_section, customer_fields, default_language, meta_pixel_id, tax_rate, tax_label'
         )
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -72,6 +72,7 @@ export class EcommerceConfigService {
         countryCode,
         state: config?.state ?? null,
         city: config?.city ?? null,
+        timezone: config?.timezone ?? null,
         showDesignSection: config?.show_design_section ?? true,
         showPaymentMethodsSection:
           config?.show_payment_methods_section ?? true,
@@ -311,6 +312,7 @@ export class EcommerceConfigService {
         updateData['payment_methods'] = config.paymentMethods;
       if (config.state !== undefined) updateData['state'] = config.state;
       if (config.city !== undefined) updateData['city'] = config.city;
+      if (config.timezone !== undefined) updateData['timezone'] = config.timezone;
       if (config.showDesignSection !== undefined)
         updateData['show_design_section'] = config.showDesignSection;
       if (config.showPaymentMethodsSection !== undefined)

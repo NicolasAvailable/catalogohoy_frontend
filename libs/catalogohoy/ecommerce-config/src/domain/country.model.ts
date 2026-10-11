@@ -108,3 +108,113 @@ export function countryNameFromCode(code: string | null | undefined): string | n
   const found = findCountryByCode(code);
   return found?.label ?? null;
 }
+
+// ── Zona horaria del negocio ────────────────────────────────────────────────
+// Se usa para calcular el estado "abierto/cerrado" del catálogo contra la hora
+// del NEGOCIO (no la del dispositivo del visitante). Espejo del map SQL
+// `default_timezone_for_country` (migración 20261010_business_timezone). El día
+// de la semana lo calcula el RPC get_public_catalog en esta misma zona.
+export const DEFAULT_TIMEZONE_BY_COUNTRY: Record<string, string> = {
+  VE: 'America/Caracas',
+  CO: 'America/Bogota',
+  MX: 'America/Mexico_City',
+  AR: 'America/Argentina/Buenos_Aires',
+  PE: 'America/Lima',
+  EC: 'America/Guayaquil',
+  BO: 'America/La_Paz',
+  GT: 'America/Guatemala',
+  DO: 'America/Santo_Domingo',
+  CL: 'America/Santiago',
+  HN: 'America/Tegucigalpa',
+  PY: 'America/Asuncion',
+  CR: 'America/Costa_Rica',
+  US: 'America/New_York',
+  NI: 'America/Managua',
+  PA: 'America/Panama',
+  SV: 'America/El_Salvador',
+  UY: 'America/Montevideo',
+  BR: 'America/Sao_Paulo',
+  ES: 'Europe/Madrid',
+  HT: 'America/Port-au-Prince',
+  JM: 'America/Jamaica',
+  PR: 'America/Puerto_Rico',
+  BB: 'America/Barbados',
+  BS: 'America/Nassau',
+  GY: 'America/Guyana',
+  SR: 'America/Paramaribo',
+  CA: 'America/Toronto',
+  CU: 'America/Havana',
+  BZ: 'America/Belize',
+};
+
+export function defaultTimezoneForCountry(
+  code: string | null | undefined
+): string {
+  return DEFAULT_TIMEZONE_BY_COUNTRY[(code ?? '').toUpperCase()] ?? 'America/Caracas';
+}
+
+export interface TimezoneOption {
+  /** IANA id persistido, ej. "America/Mexico_City". */
+  value: string;
+  /** Etiqueta legible para el selector. */
+  label: string;
+  /** País (ISO-2) al que pertenece esta zona — filtra el selector por país. */
+  country: string;
+}
+
+// Lista curada de zonas IANA relevantes para los países soportados. Los países
+// multi-zona (México, EE. UU., Brasil, Chile, Ecuador, España) incluyen sus
+// zonas alternas para que el dueño pueda elegir la correcta. El selector del
+// editor filtra por el país del negocio (ver timezonesForCountry).
+export const SUPPORTED_TIMEZONES: TimezoneOption[] = [
+  { value: 'America/Caracas', label: 'Caracas', country: 'VE' },
+  { value: 'America/Bogota', label: 'Bogotá', country: 'CO' },
+  { value: 'America/Mexico_City', label: 'Centro (Ciudad de México)', country: 'MX' },
+  { value: 'America/Cancun', label: 'Sureste (Cancún / Quintana Roo)', country: 'MX' },
+  { value: 'America/Mazatlan', label: 'Pacífico (Mazatlán / Sinaloa, Nayarit)', country: 'MX' },
+  { value: 'America/Hermosillo', label: 'Noroeste (Hermosillo / Sonora)', country: 'MX' },
+  { value: 'America/Tijuana', label: 'Noroeste (Tijuana / Baja California)', country: 'MX' },
+  { value: 'America/Argentina/Buenos_Aires', label: 'Buenos Aires', country: 'AR' },
+  { value: 'America/Lima', label: 'Lima', country: 'PE' },
+  { value: 'America/Guayaquil', label: 'Continental (Guayaquil / Quito)', country: 'EC' },
+  { value: 'Pacific/Galapagos', label: 'Galápagos', country: 'EC' },
+  { value: 'America/La_Paz', label: 'La Paz', country: 'BO' },
+  { value: 'America/Guatemala', label: 'Guatemala', country: 'GT' },
+  { value: 'America/Santo_Domingo', label: 'Santo Domingo', country: 'DO' },
+  { value: 'America/Santiago', label: 'Continental (Santiago)', country: 'CL' },
+  { value: 'Pacific/Easter', label: 'Isla de Pascua', country: 'CL' },
+  { value: 'America/Tegucigalpa', label: 'Tegucigalpa', country: 'HN' },
+  { value: 'America/Asuncion', label: 'Asunción', country: 'PY' },
+  { value: 'America/Costa_Rica', label: 'San José', country: 'CR' },
+  { value: 'America/Managua', label: 'Managua', country: 'NI' },
+  { value: 'America/Panama', label: 'Panamá', country: 'PA' },
+  { value: 'America/El_Salvador', label: 'San Salvador', country: 'SV' },
+  { value: 'America/Montevideo', label: 'Montevideo', country: 'UY' },
+  { value: 'America/Sao_Paulo', label: 'Este (Brasília / São Paulo)', country: 'BR' },
+  { value: 'America/Manaus', label: 'Amazonas (Manaus)', country: 'BR' },
+  { value: 'America/New_York', label: 'Este (New York)', country: 'US' },
+  { value: 'America/Chicago', label: 'Central (Chicago)', country: 'US' },
+  { value: 'America/Denver', label: 'Montaña (Denver)', country: 'US' },
+  { value: 'America/Los_Angeles', label: 'Pacífico (Los Angeles)', country: 'US' },
+  { value: 'America/Puerto_Rico', label: 'San Juan', country: 'PR' },
+  { value: 'Europe/Madrid', label: 'Peninsular (Madrid)', country: 'ES' },
+  { value: 'Atlantic/Canary', label: 'Canarias', country: 'ES' },
+  { value: 'America/Port-au-Prince', label: 'Puerto Príncipe', country: 'HT' },
+  { value: 'America/Jamaica', label: 'Kingston', country: 'JM' },
+  { value: 'America/Toronto', label: 'Este (Toronto)', country: 'CA' },
+  { value: 'America/Havana', label: 'La Habana', country: 'CU' },
+];
+
+/** Zonas horarias a mostrar en el selector para un país. Devuelve las zonas de
+ *  ese país (varias si es multi-zona). Si el país no tiene zonas curadas, cae a
+ *  una única opción con su zona por defecto — así todo país muestra al menos su
+ *  zona correcta. */
+export function timezonesForCountry(
+  code: string | null | undefined
+): TimezoneOption[] {
+  const cc = (code ?? '').toUpperCase();
+  const list = SUPPORTED_TIMEZONES.filter((t) => t.country === cc);
+  if (list.length) return list;
+  const fallback = defaultTimezoneForCountry(cc);
+  return [{ value: fallback, label: fallback.split('/').pop()?.replace(/_/g, ' ') ?? fallback, country: cc }];
+}

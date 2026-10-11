@@ -47,6 +47,7 @@ function buildConfig(overrides: Partial<EcommerceConfig> = {}): EcommerceConfig 
     countryCode: 'VE',
     state: null,
     city: null,
+    timezone: null,
     showDesignSection: true,
     showPaymentMethodsSection: true,
     showLocationSection: true,
