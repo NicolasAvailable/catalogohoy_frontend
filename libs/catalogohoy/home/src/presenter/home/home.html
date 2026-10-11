@@ -47,8 +47,9 @@
     </a>
   </div>
 
-  <!-- Checklist de primeros pasos (se oculta solo al completarse) -->
-  <app-getting-started />
+  <!-- Progreso del catálogo: celebra los hitos logrados y guía los que faltan
+       (reemplaza al checklist de primeros pasos; descartable por el owner). -->
+  <app-catalog-progress />
 
   <!-- Promo: planes anuales -50% (card blanca compacta, descartable) -->
   @if (!annualPromoDismissed()) {
