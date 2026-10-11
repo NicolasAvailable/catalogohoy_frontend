@@ -2718,5 +2718,12 @@
   "Ilimitado": "Unlimited",
   "Ej: CAM-001": "E.g.: CAM-001",
   "Variantes, tallas, mayoreo y adicionales se configuran después desde Productos.": "Variants, sizes, wholesale and add-ons are set up later from Products.",
-  "¡Ya está en tu catálogo! Míralo en el teléfono. Para agregar más productos, termina el onboarding y hazlo desde Productos.": "It's in your catalog! Check it on the phone. To add more products, finish the onboarding and do it from Products."
+  "¡Ya está en tu catálogo! Míralo en el teléfono. Para agregar más productos, termina el onboarding y hazlo desde Productos.": "It's in your catalog! Check it on the phone. To add more products, finish the onboarding and do it from Products.",
+  "Teléfono / @usuario": "Phone / @username",
+  "Ej: 0412-1234567 o @usuario": "E.g.: 0412-1234567 or @username",
+  "Documento (opcional)": "ID (optional)",
+  "Cédula / DNI / RUT": "ID / DNI / RUT",
+  "Alias / CVU": "Alias / CVU",
+  "Ej: mi.tienda.mp o CVU": "E.g.: my.store.mp or CVU",
+  "O pega tu link de cobro": "Or paste your payment link"
 }

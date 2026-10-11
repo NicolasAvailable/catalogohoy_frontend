@@ -797,20 +797,11 @@ export class Onboarding implements OnInit {
   }
 
   // ── Paso 3: pago ────────────────────────────────────────────────────────
+  /** Presets de métodos de pago por país: los más usados de cada mercado van
+   *  primero (ver PAYMENT_PRESETS_BY_COUNTRY). Fallback: set internacional. */
   private paymentPresets(): { name: string; icon: string }[] {
-    return this.isVenezuela()
-      ? [
-          { name: 'Pago móvil', icon: 'smartphone' },
-          { name: 'Transferencia', icon: 'building' },
-          { name: 'Zelle', icon: 'dollar-sign' },
-          { name: 'Efectivo', icon: 'banknote' },
-        ]
-      : [
-          { name: 'Transferencia', icon: 'building' },
-          { name: 'Zelle', icon: 'dollar-sign' },
-          { name: 'PayPal', icon: 'globe' },
-          { name: 'Efectivo', icon: 'banknote' },
-        ];
+    const iso = this.countryIso().toUpperCase();
+    return PAYMENT_PRESETS_BY_COUNTRY[iso] ?? DEFAULT_PAYMENT_PRESETS;
   }
 
   /** Lee los métodos existentes (tabla `payment_methods`) para prefill; los
@@ -1014,6 +1005,136 @@ export class Onboarding implements OnInit {
     this.router.navigate(['/admin']);
   }
 }
+
+type PaymentPreset = { name: string; icon: string };
+
+/** Métodos de pago por defecto según el PAÍS del catálogo: los más usados de
+ *  cada mercado LATAM van primero (billeteras locales → transferencia → efectivo).
+ *  Los nombres alimentan detectPaymentMethodType, que les asigna los campos
+ *  correctos (billeteras → teléfono/@usuario + titular; transferencia → banco +
+ *  cuenta; etc.). Clave = ISO-3166 alpha-2 en mayúsculas. */
+const PAYMENT_PRESETS_BY_COUNTRY: Record<string, PaymentPreset[]> = {
+  // Venezuela — Pago Móvil es el rey; Zelle muy usado en USD.
+  VE: [
+    { name: 'Pago móvil', icon: 'smartphone' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Zelle', icon: 'dollar-sign' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // Colombia — Nequi y Daviplata dominan los pagos informales.
+  CO: [
+    { name: 'Nequi', icon: 'wallet' },
+    { name: 'Daviplata', icon: 'wallet' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // México — SPEI (transferencia) + Mercado Pago; OXXO/efectivo contra entrega.
+  MX: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Mercado Pago', icon: 'wallet' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'Tarjeta', icon: 'credit-card' },
+  ],
+  // Argentina — Mercado Pago es casi universal; transferencia por alias/CVU.
+  AR: [
+    { name: 'Mercado Pago', icon: 'wallet' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'Tarjeta', icon: 'credit-card' },
+  ],
+  // Perú — Yape y Plin son los wallets dominantes.
+  PE: [
+    { name: 'Yape', icon: 'wallet' },
+    { name: 'Plin', icon: 'wallet' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // Chile — transferencia bancaria es el método estrella del comercio informal.
+  CL: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Mercado Pago', icon: 'wallet' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'Tarjeta', icon: 'credit-card' },
+  ],
+  // Ecuador — USD; transferencia + DeUna (wallet de Pichincha) en alza.
+  EC: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'DeUna', icon: 'wallet' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'PayPal', icon: 'globe' },
+  ],
+  // Bolivia — QR Simple (interoperable) + transferencia; Tigo Money.
+  BO: [
+    { name: 'QR Simple', icon: 'qr-code' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Tigo Money', icon: 'wallet' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // Guatemala — transferencia + efectivo; tarjeta/PayPal secundarios.
+  GT: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'Tarjeta', icon: 'credit-card' },
+    { name: 'PayPal', icon: 'globe' },
+  ],
+  // Honduras — transferencia + Tigo Money + efectivo.
+  HN: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Tigo Money', icon: 'wallet' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // El Salvador — USD; transferencia + efectivo; PayPal.
+  SV: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'PayPal', icon: 'globe' },
+  ],
+  // Nicaragua — transferencia + efectivo.
+  NI: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // Costa Rica — SINPE Móvil es el método omnipresente.
+  CR: [
+    { name: 'SINPE Móvil', icon: 'smartphone' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'Tarjeta', icon: 'credit-card' },
+  ],
+  // Panamá — Yappy domina los pagos entre personas y comercios.
+  PA: [
+    { name: 'Yappy', icon: 'wallet' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // Paraguay — transferencia + Tigo Money; efectivo.
+  PY: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Tigo Money', icon: 'wallet' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+  // Uruguay — Mercado Pago + transferencia; redes de cobro (Red Pagos).
+  UY: [
+    { name: 'Mercado Pago', icon: 'wallet' },
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'Efectivo', icon: 'banknote' },
+    { name: 'Red Pagos', icon: 'banknote' },
+  ],
+  // República Dominicana — transferencia + tPago; efectivo.
+  DO: [
+    { name: 'Transferencia', icon: 'building' },
+    { name: 'tPago', icon: 'wallet' },
+    { name: 'Efectivo', icon: 'banknote' },
+  ],
+};
+
+/** Set internacional (países fuera del mapa: US, ES, etc.). */
+const DEFAULT_PAYMENT_PRESETS: PaymentPreset[] = [
+  { name: 'Transferencia', icon: 'building' },
+  { name: 'PayPal', icon: 'globe' },
+  { name: 'Efectivo', icon: 'banknote' },
+  { name: 'Tarjeta', icon: 'credit-card' },
+];
 
 /** Slugifica sin recortar guiones en los bordes (para sanear mientras se
  *  escribe): lowercase, sin acentos, no-alfanuméricos → '-'. */

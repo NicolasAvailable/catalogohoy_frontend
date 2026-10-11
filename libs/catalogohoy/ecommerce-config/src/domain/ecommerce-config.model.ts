@@ -125,6 +125,19 @@ export const PAYMENT_METHOD_FIELDS: Record<string, PaymentFieldDef[]> = {
     { key: 'email', label: 'Correo (email)', placeholder: 'Ej: pagos@tienda.com' },
     { key: 'titular', label: 'Titular', placeholder: 'Nombre del titular' },
   ],
+  // Billeteras móviles de LATAM (Nequi, Daviplata, Yape, Plin, SINPE Móvil,
+  // Yappy, Tigo Money, DeUna, tPago…): el cliente paga a un número/@alias.
+  billetera: [
+    { key: 'telefono', label: 'Teléfono / @usuario', placeholder: 'Ej: 0412-1234567 o @usuario' },
+    { key: 'titular', label: 'Titular', placeholder: 'Nombre del titular' },
+    { key: 'documento', label: 'Documento (opcional)', placeholder: 'Cédula / DNI / RUT' },
+  ],
+  // Mercado Pago: alias/CVU o link de cobro.
+  mercadopago: [
+    { key: 'numeroCuenta', label: 'Alias / CVU', placeholder: 'Ej: mi.tienda.mp o CVU' },
+    { key: 'titular', label: 'Titular', placeholder: 'Nombre del titular' },
+    { key: 'instrucciones', label: 'Instrucciones', placeholder: 'O pega tu link de cobro', multiline: true },
+  ],
   binance: [
     { key: 'email', label: 'Correo / Pay ID', placeholder: 'Email o ID de Binance Pay' },
     { key: 'titular', label: 'Titular', placeholder: 'Nombre (opcional)' },
@@ -150,6 +163,25 @@ export const PAYMENT_METHOD_FIELDS: Record<string, PaymentFieldDef[]> = {
   ],
 };
 
+/** Marcas de billeteras móviles de LATAM → tipo 'billetera' (campos: teléfono
+ *  o @usuario + titular). Se matchean por nombre normalizado (sin acentos). */
+const WALLET_BRANDS = [
+  'nequi',
+  'daviplata',
+  'yape',
+  'plin',
+  'sinpe', // SINPE Móvil (Costa Rica)
+  'yappy', // Panamá
+  'tigo money',
+  'tigomoney',
+  'deuna', // DeUna (Ecuador)
+  'tpago',
+  't-pago', // tPago (Rep. Dominicana)
+  'billetera',
+  'bancamovil',
+  'banca movil',
+];
+
 /** Infiere el "tipo" de un método a partir de su nombre (nombres libres). */
 export function detectPaymentMethodType(name: string): string {
   const n = (name ?? '')
@@ -161,6 +193,8 @@ export function detectPaymentMethodType(name: string): string {
   if (n.includes('zelle')) return 'zelle';
   if (n.includes('binance')) return 'binance';
   if (n.includes('paypal')) return 'paypal';
+  if (n.includes('mercado pago') || n.includes('mercadopago')) return 'mercadopago';
+  if (WALLET_BRANDS.some((w) => n.includes(w))) return 'billetera';
   if (n.includes('efectivo')) return 'efectivo';
   if (n.includes('tarjeta')) return 'tarjeta_credito';
   return 'otro';

@@ -2718,5 +2718,12 @@
   "Ilimitado": "Ilimitado",
   "Ej: CAM-001": "Ej: CAM-001",
   "Variantes, tallas, mayoreo y adicionales se configuran después desde Productos.": "Variantes, tallas, mayoreo y adicionales se configuran después desde Productos.",
-  "¡Ya está en tu catálogo! Míralo en el teléfono. Para agregar más productos, termina el onboarding y hazlo desde Productos.": "¡Ya está en tu catálogo! Míralo en el teléfono. Para agregar más productos, termina el onboarding y hazlo desde Productos."
+  "¡Ya está en tu catálogo! Míralo en el teléfono. Para agregar más productos, termina el onboarding y hazlo desde Productos.": "¡Ya está en tu catálogo! Míralo en el teléfono. Para agregar más productos, termina el onboarding y hazlo desde Productos.",
+  "Teléfono / @usuario": "Teléfono / @usuario",
+  "Ej: 0412-1234567 o @usuario": "Ej: 0412-1234567 o @usuario",
+  "Documento (opcional)": "Documento (opcional)",
+  "Cédula / DNI / RUT": "Cédula / DNI / RUT",
+  "Alias / CVU": "Alias / CVU",
+  "Ej: mi.tienda.mp o CVU": "Ej: mi.tienda.mp o CVU",
+  "O pega tu link de cobro": "O pega tu link de cobro"
 }
