@@ -420,9 +420,29 @@ Deno.serve(async (req) => {
       }
 
       case "sync_now": {
-        const feedId = conn.metadata?.feed_id;
-        if (!conn.catalog_id || !feedId) {
+        if (!conn.catalog_id) {
           return jsonResponse({ success: false, error: "El catálogo no está publicado todavía" }, 409);
+        }
+        // Self-heal: el catálogo se pudo auto-adoptar en el OAuth (hay catalog_id)
+        // SIN feed. Antes "Sincronizar ahora" devolvía 409 y el cliente quedaba
+        // trancado porque "Publicar catálogo" solo aparece cuando NO hay catálogo.
+        // Ahora, si falta el feed, lo creamos acá (igual que provision) y luego
+        // disparamos la ingesta.
+        let feedId = conn.metadata?.feed_id ?? null;
+        if (!feedId) {
+          const feed = await graph(`${conn.catalog_id}/product_feeds`, tokenFor(conn), {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              name: "CatalogoHoy — feed diario",
+              schedule: JSON.stringify({ interval: "DAILY", url: feedUrl, hour: 6 }),
+            }),
+          });
+          feedId = feed.id;
+          const metadata = { ...(conn.metadata ?? {}), feed_id: feedId };
+          await admin.from("meta_business_connections")
+            .update({ metadata, updated_at: new Date().toISOString() })
+            .eq("tenant_id", tenantId);
         }
         await graph(`${feedId}/uploads`, tokenFor(conn), {
           method: "POST",
