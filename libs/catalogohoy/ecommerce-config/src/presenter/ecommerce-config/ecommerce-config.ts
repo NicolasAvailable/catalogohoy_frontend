@@ -72,7 +72,7 @@ import {
   PreviewMessage,
   findCountryByCode,
   defaultTimezoneForCountry,
-  SUPPORTED_TIMEZONES,
+  timezonesForCountry,
   ShippingMethod,
   SHIPPING_METHOD_TYPE_OPTIONS,
   SocialLinks,
@@ -304,7 +304,17 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftCity = signal<string | null>(null);
   /** Zona horaria IANA del negocio — define el cálculo abierto/cerrado. */
   public readonly draftTimezone = signal<string | null>(null);
-  public readonly timezoneOptions = SUPPORTED_TIMEZONES;
+  /** Opciones del selector: solo las zonas del país del negocio. Si la zona
+   *  guardada no estuviera en la lista del país (caso raro), se incluye igual
+   *  para que el valor seleccionado siempre se renderice. */
+  public readonly timezoneOptions = computed(() => {
+    const opts = timezonesForCountry(this.draftCountryCode());
+    const current = this.draftTimezone();
+    if (current && !opts.some((o) => o.value === current)) {
+      return [{ value: current, label: current.split('/').pop()?.replace(/_/g, ' ') ?? current, country: '' }, ...opts];
+    }
+    return opts;
+  });
   public readonly draftShowDesignSection = signal(true);
   public readonly draftShowLocationSection = signal(true);
   public readonly draftShowPaymentMethodsSection = signal(true);

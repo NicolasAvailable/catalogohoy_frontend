@@ -949,7 +949,7 @@
           <div class="form-field" style="margin-bottom: 1.25rem;">
             <label>{{ 'Zona horaria del negocio' | transloco }}</label>
             <ui-select
-              [options]="timezoneOptions"
+              [options]="timezoneOptions()"
               [ngModel]="draftTimezone()"
               (ngModelChange)="onTimezoneChange($event)"
               optionLabel="label"

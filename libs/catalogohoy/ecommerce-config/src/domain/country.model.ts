@@ -158,46 +158,63 @@ export interface TimezoneOption {
   value: string;
   /** Etiqueta legible para el selector. */
   label: string;
+  /** País (ISO-2) al que pertenece esta zona — filtra el selector por país. */
+  country: string;
 }
 
 // Lista curada de zonas IANA relevantes para los países soportados. Los países
 // multi-zona (México, EE. UU., Brasil, Chile, Ecuador, España) incluyen sus
-// zonas alternas para que el dueño pueda elegir la correcta.
+// zonas alternas para que el dueño pueda elegir la correcta. El selector del
+// editor filtra por el país del negocio (ver timezonesForCountry).
 export const SUPPORTED_TIMEZONES: TimezoneOption[] = [
-  { value: 'America/Caracas', label: 'Venezuela (Caracas)' },
-  { value: 'America/Bogota', label: 'Colombia (Bogotá)' },
-  { value: 'America/Mexico_City', label: 'México — Centro (Ciudad de México)' },
-  { value: 'America/Cancun', label: 'México — Sureste (Cancún)' },
-  { value: 'America/Mazatlan', label: 'México — Pacífico (Mazatlán)' },
-  { value: 'America/Hermosillo', label: 'México — Noroeste (Hermosillo)' },
-  { value: 'America/Tijuana', label: 'México — Noroeste (Tijuana)' },
-  { value: 'America/Argentina/Buenos_Aires', label: 'Argentina (Buenos Aires)' },
-  { value: 'America/Lima', label: 'Perú (Lima)' },
-  { value: 'America/Guayaquil', label: 'Ecuador — Continental (Guayaquil)' },
-  { value: 'Pacific/Galapagos', label: 'Ecuador — Galápagos' },
-  { value: 'America/La_Paz', label: 'Bolivia (La Paz)' },
-  { value: 'America/Guatemala', label: 'Guatemala' },
-  { value: 'America/Santo_Domingo', label: 'República Dominicana' },
-  { value: 'America/Santiago', label: 'Chile — Continental (Santiago)' },
-  { value: 'Pacific/Easter', label: 'Chile — Isla de Pascua' },
-  { value: 'America/Tegucigalpa', label: 'Honduras' },
-  { value: 'America/Asuncion', label: 'Paraguay (Asunción)' },
-  { value: 'America/Costa_Rica', label: 'Costa Rica' },
-  { value: 'America/Managua', label: 'Nicaragua' },
-  { value: 'America/Panama', label: 'Panamá' },
-  { value: 'America/El_Salvador', label: 'El Salvador' },
-  { value: 'America/Montevideo', label: 'Uruguay (Montevideo)' },
-  { value: 'America/Sao_Paulo', label: 'Brasil — Este (São Paulo)' },
-  { value: 'America/Manaus', label: 'Brasil — Amazonas (Manaus)' },
-  { value: 'America/New_York', label: 'EE. UU. — Este (New York)' },
-  { value: 'America/Chicago', label: 'EE. UU. — Central (Chicago)' },
-  { value: 'America/Denver', label: 'EE. UU. — Montaña (Denver)' },
-  { value: 'America/Los_Angeles', label: 'EE. UU. — Pacífico (Los Angeles)' },
-  { value: 'America/Puerto_Rico', label: 'Puerto Rico' },
-  { value: 'Europe/Madrid', label: 'España — Peninsular (Madrid)' },
-  { value: 'Atlantic/Canary', label: 'España — Canarias' },
-  { value: 'America/Port-au-Prince', label: 'Haití' },
-  { value: 'America/Jamaica', label: 'Jamaica' },
-  { value: 'America/Toronto', label: 'Canadá — Este (Toronto)' },
-  { value: 'America/Havana', label: 'Cuba (La Habana)' },
+  { value: 'America/Caracas', label: 'Caracas', country: 'VE' },
+  { value: 'America/Bogota', label: 'Bogotá', country: 'CO' },
+  { value: 'America/Mexico_City', label: 'Centro (Ciudad de México)', country: 'MX' },
+  { value: 'America/Cancun', label: 'Sureste (Cancún / Quintana Roo)', country: 'MX' },
+  { value: 'America/Mazatlan', label: 'Pacífico (Mazatlán / Sinaloa, Nayarit)', country: 'MX' },
+  { value: 'America/Hermosillo', label: 'Noroeste (Hermosillo / Sonora)', country: 'MX' },
+  { value: 'America/Tijuana', label: 'Noroeste (Tijuana / Baja California)', country: 'MX' },
+  { value: 'America/Argentina/Buenos_Aires', label: 'Buenos Aires', country: 'AR' },
+  { value: 'America/Lima', label: 'Lima', country: 'PE' },
+  { value: 'America/Guayaquil', label: 'Continental (Guayaquil / Quito)', country: 'EC' },
+  { value: 'Pacific/Galapagos', label: 'Galápagos', country: 'EC' },
+  { value: 'America/La_Paz', label: 'La Paz', country: 'BO' },
+  { value: 'America/Guatemala', label: 'Guatemala', country: 'GT' },
+  { value: 'America/Santo_Domingo', label: 'Santo Domingo', country: 'DO' },
+  { value: 'America/Santiago', label: 'Continental (Santiago)', country: 'CL' },
+  { value: 'Pacific/Easter', label: 'Isla de Pascua', country: 'CL' },
+  { value: 'America/Tegucigalpa', label: 'Tegucigalpa', country: 'HN' },
+  { value: 'America/Asuncion', label: 'Asunción', country: 'PY' },
+  { value: 'America/Costa_Rica', label: 'San José', country: 'CR' },
+  { value: 'America/Managua', label: 'Managua', country: 'NI' },
+  { value: 'America/Panama', label: 'Panamá', country: 'PA' },
+  { value: 'America/El_Salvador', label: 'San Salvador', country: 'SV' },
+  { value: 'America/Montevideo', label: 'Montevideo', country: 'UY' },
+  { value: 'America/Sao_Paulo', label: 'Este (Brasília / São Paulo)', country: 'BR' },
+  { value: 'America/Manaus', label: 'Amazonas (Manaus)', country: 'BR' },
+  { value: 'America/New_York', label: 'Este (New York)', country: 'US' },
+  { value: 'America/Chicago', label: 'Central (Chicago)', country: 'US' },
+  { value: 'America/Denver', label: 'Montaña (Denver)', country: 'US' },
+  { value: 'America/Los_Angeles', label: 'Pacífico (Los Angeles)', country: 'US' },
+  { value: 'America/Puerto_Rico', label: 'San Juan', country: 'PR' },
+  { value: 'Europe/Madrid', label: 'Peninsular (Madrid)', country: 'ES' },
+  { value: 'Atlantic/Canary', label: 'Canarias', country: 'ES' },
+  { value: 'America/Port-au-Prince', label: 'Puerto Príncipe', country: 'HT' },
+  { value: 'America/Jamaica', label: 'Kingston', country: 'JM' },
+  { value: 'America/Toronto', label: 'Este (Toronto)', country: 'CA' },
+  { value: 'America/Havana', label: 'La Habana', country: 'CU' },
 ];
+
+/** Zonas horarias a mostrar en el selector para un país. Devuelve las zonas de
+ *  ese país (varias si es multi-zona). Si el país no tiene zonas curadas, cae a
+ *  una única opción con su zona por defecto — así todo país muestra al menos su
+ *  zona correcta. */
+export function timezonesForCountry(
+  code: string | null | undefined
+): TimezoneOption[] {
+  const cc = (code ?? '').toUpperCase();
+  const list = SUPPORTED_TIMEZONES.filter((t) => t.country === cc);
+  if (list.length) return list;
+  const fallback = defaultTimezoneForCountry(cc);
+  return [{ value: fallback, label: fallback.split('/').pop()?.replace(/_/g, ' ') ?? fallback, country: cc }];
+}
