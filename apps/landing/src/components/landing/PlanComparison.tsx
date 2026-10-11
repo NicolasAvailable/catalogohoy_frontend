@@ -32,6 +32,7 @@ const rows: ComparisonRow[] = [
   { label: "Analíticas del catálogo", values: [false, true, true, true] },
   { label: "Notificaciones WhatsApp de órdenes", values: [false, true, true, true] },
   { label: "CRM de chats (WhatsApp, Instagram, TikTok)", values: [false, false, false, true] },
+  { label: "Catálogo de Meta (Instagram y Facebook)", values: [false, false, false, true] },
   { label: "Diseño personalizable", values: [false, true, true, true] },
   { label: "Dominio propio", values: [false, false, false, true] },
   { label: "Soporte", values: [null, "Prioritario", "Prioritario", "Dedicado"] },
