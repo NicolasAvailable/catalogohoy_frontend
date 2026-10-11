@@ -1006,13 +1006,15 @@ export class Onboarding implements OnInit {
   }
 
   /** `reason` distingue en el embudo quién terminó el wizard de quién lo saltó
-   *  en el paso final (ambos cierran el onboarding e van al admin). */
+   *  en el paso final. Al cerrar el onboarding se va a /bienvenida (la oferta
+   *  de prueba de 7 días, en el momento de máximo entusiasmo: recién armó su
+   *  tienda); desde ahí el usuario entra al admin. */
   private complete(reason: 'finished' | 'skipped' = 'finished'): void {
     this.posthog.captureOnboarding('onboarding_completed', {
       reason,
       last_step: this.currentStep(),
     });
-    // Onboarding cerrado: NULL en DB (el login vuelve a mandar a /admin) +
+    // Onboarding cerrado: NULL en DB (el login deja de mandar al wizard) +
     // flag local como caché del guard de re-entrada.
     void this.tenantService.setOnboardingStep(null);
     if (this.tenantId) {
@@ -1037,11 +1039,11 @@ export class Onboarding implements OnInit {
     ) {
       const key = authenticationTokenService.AUTH_CONFIG_KEY;
       const value = encodeURIComponent(authenticationTokenService.authConfigValue ?? '');
-      window.location.href = `https://${target}/admin?${key}=${value}`;
+      window.location.href = `https://${target}/bienvenida?${key}=${value}`;
       return;
     }
 
-    this.router.navigate(['/admin']);
+    this.router.navigate(['/bienvenida']);
   }
 }
 
