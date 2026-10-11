@@ -95,9 +95,32 @@
     }
 
     <!-- ══════════════════════════════════════════════════════
+         Invitado con confirmación de correo pendiente: revisá tu correo.
+         El enlace del correo (→ /confirm-email?invite_token=…) acepta la
+         invitación con sesión; no se pide código acá (el OTP mandaría al
+         wizard, incorrecto para quien se suma a un equipo).
+    ══════════════════════════════════════════════════════ -->
+    @if (inviteConfirmEmail(); as invEmail) {
+      <div class="step-enter flex flex-col gap-4 text-center">
+        <div class="flex justify-center">
+          <span class="flex h-14 w-14 items-center justify-center rounded-full bg-primary-50">
+            <ui-icon name="inbox" styleClass="w-7 h-7 text-primary-500" />
+          </span>
+        </div>
+        <h2 class="text-2xl font-semibold text-grey-700">{{ 'Revisá tu correo' | transloco }}</h2>
+        <p class="text-sm text-grey-400">
+          {{ 'Te enviamos un enlace a' | transloco }}
+          <span class="font-semibold text-grey-700">{{ invEmail }}</span>.
+          {{ 'Hacé clic en él para confirmar tu cuenta y aceptar la invitación.' | transloco }}
+        </p>
+        <p class="text-xs text-grey-400">{{ '¿No te llegó? Revisá spam o promociones.' | transloco }}</p>
+      </div>
+    }
+
+    <!-- ══════════════════════════════════════════════════════
          STEP 2 — Credentials (email path only)
     ══════════════════════════════════════════════════════ -->
-    @if (step() === 2) {
+    @if (step() === 2 && !inviteConfirmEmail()) {
       <div class="step-enter flex flex-col gap-6">
         <div>
           @if (!isInviteMode()) {
