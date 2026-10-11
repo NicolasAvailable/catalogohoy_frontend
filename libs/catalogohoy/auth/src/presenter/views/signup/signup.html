@@ -124,7 +124,7 @@
 
         <form [formGroup]="credentialsForm" (keyup.enter)="nextStep()">
           <div class="mb-4">
-            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'Email' | transloco }}</label>
+            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'Email' | transloco }} <span class="text-red-500">*</span></label>
             <ui-input-text size="large" formControlName="email" [placeholder]="'tu@correo.com' | transloco" />
             @if (isInviteMode()) {
               <p class="text-xs text-grey-400 mt-1">{{ 'Este es el correo al que enviaron la invitación y no se puede cambiar.' | transloco }}</p>
@@ -137,7 +137,7 @@
             }
           </div>
           <div class="mb-6">
-            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'Contraseña' | transloco }}</label>
+            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'Contraseña' | transloco }} <span class="text-red-500">*</span></label>
             <ui-input-password size="large" [feedback]="false" formControlName="password" [placeholder]="'Mínimo 6 caracteres' | transloco" />
             <ui-input-message [control]="credentialsForm.get('password')" error="required" [text]="'El campo es obligatorio' | transloco" />
             <ui-input-message [control]="credentialsForm.get('password')" error="minlength" [text]="'Debe tener mínimo 6 caracteres' | transloco" />
@@ -180,14 +180,14 @@
 
         <form [formGroup]="profileForm" (keyup.enter)="submit()">
           <div class="mb-4">
-            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'Tu nombre completo' | transloco }}</label>
+            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'Tu nombre completo' | transloco }} <span class="text-red-500">*</span></label>
             <ui-input-text size="large" formControlName="name" [placeholder]="'María González' | transloco" />
             <ui-input-message [control]="profileForm.get('name')" error="required" [text]="'El campo es obligatorio' | transloco" />
             <ui-input-message [control]="profileForm.get('name')" error="minlength" [text]="'Debe tener mínimo 4 caracteres' | transloco" />
             <ui-input-message [control]="profileForm.get('name')" error="whitespace" [text]="'No puede contener espacios en blanco' | transloco" />
           </div>
           <div class="mb-6">
-            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'País' | transloco }}</label>
+            <label class="block font-medium text-base text-grey-400 mb-1">{{ 'País' | transloco }} <span class="text-red-500">*</span></label>
             <ui-select
               size="large"
               [options]="supportedCountries"
@@ -222,7 +222,7 @@
                al usuario para qué es. -->
           <div class="mb-6">
             <label class="block font-medium text-base text-grey-400 mb-1">
-              {{ 'Tu WhatsApp' | transloco }}
+              {{ 'Tu WhatsApp' | transloco }} <span class="text-red-500">*</span>
             </label>
             <ui-input-phone
               formControlName="whatsapp"
