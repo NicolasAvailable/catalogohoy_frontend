@@ -1,6 +1,6 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { isNativeApp, setNativeSlug } from '@catalogohoy/core';
+import { isAndroidApp, isNativeApp, setNativeSlug } from '@catalogohoy/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { CATALOG_ADDON_PRICE, PlanStore } from '@catalogohoy/plan';
 import { TenantService } from '@catalogohoy/tenant';
@@ -32,7 +32,7 @@ export class CreateCatalog implements OnInit {
   public readonly isSubmitting = signal(false);
 
   /** Compliance IAP (Apple 3.1.1): en nativo no se compran slots ni planes. */
-  public readonly isNative = isNativeApp();
+  public readonly isAndroid = isAndroidApp();
 
   public readonly isLoading = this.planStore.isLoading;
   // Team members (non-owners) always get to create their own catalog for free;

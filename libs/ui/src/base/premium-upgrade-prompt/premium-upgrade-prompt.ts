@@ -1,7 +1,7 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { isNativeApp } from '@catalogohoy/core';
+import { isAndroidApp } from '@catalogohoy/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { ButtonComponent } from '../button';
 
@@ -53,10 +53,10 @@ export class PremiumUpgradePromptComponent {
   /** El CTA a /admin/plans NUNCA se muestra en nativo, pase lo que pase el
    *  `showCta` del consumidor (defensa central: evita que un call-site futuro
    *  filtre la ruta de compra externa en la app). */
-  protected readonly canShowCta = computed(() => this.showCta() && !isNativeApp());
+  protected readonly canShowCta = computed(() => this.showCta() && !isAndroidApp());
 
   protected goToPlans(): void {
-    if (isNativeApp()) return;
+    if (isAndroidApp()) return;
     this.router.navigate(['/admin/plans']);
   }
 }

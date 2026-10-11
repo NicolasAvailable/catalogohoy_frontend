@@ -15,6 +15,7 @@ import {
   isNativeApp,
   LanguageSelectorComponent,
   PosthogService,
+  RevenueCatService,
   setNativeSlug,
 } from '@catalogohoy/core';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
@@ -52,6 +53,7 @@ export class MobileMoreDrawer {
   private readonly auth = inject(AuthenticationService);
   private readonly posthog = inject(PosthogService);
   private readonly confirm = inject(ConfirmDialogService);
+  private readonly revenueCat = inject(RevenueCatService);
   private readonly permissions = inject(TeamPermissionsStore);
   private readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
@@ -150,6 +152,7 @@ export class MobileMoreDrawer {
               // En nativo no hay auth.catalogohoy.com (saldría del shell):
               // limpiamos el slug cacheado y hard-reload al login in-app
               // (re-scopea todos los stores, igual que el post-login nativo).
+              void this.revenueCat.logOut();
               clearNativeSlug();
               window.location.href = '/login';
             } else {

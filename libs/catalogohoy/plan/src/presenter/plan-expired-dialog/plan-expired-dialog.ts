@@ -1,7 +1,7 @@
 import { Component, inject, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { isNativeApp } from '@catalogohoy/core';
+import { isAndroidApp } from '@catalogohoy/core';
 import { ButtonComponent, DialogComponent, IconComponent } from '@ui';
 import { PlanStore } from '../../infrastructure';
 
@@ -30,7 +30,7 @@ import { PlanStore } from '../../infrastructure';
           <strong class="text-grey-700">{{
             planStore.currentPlan()?.name
           }}</strong>
-          @if (isNative) {
+          @if (isAndroid) {
           {{ 'ha vencido.' | transloco }}
           } @else {
           {{ 'ha vencido. Para continuar usando el panel de administración, renueva o mejora tu plan.' | transloco }}
@@ -38,7 +38,7 @@ import { PlanStore } from '../../infrastructure';
         </p>
 
         <div class="flex flex-col gap-2 w-full mt-2">
-          @if (isNative) {
+          @if (isAndroid) {
           <!-- Compliance IAP (Apple 3.1.1): en nativo no se ofrece la compra ni
                se dirige al usuario a comprar fuera de la app. -->
           <p class="text-grey-400 text-sm bg-grey-50 border border-grey-100 rounded-xl px-4 py-3">
@@ -68,7 +68,7 @@ export class PlanExpiredDialogComponent {
   public readonly planStore = inject(PlanStore);
   private readonly router = inject(Router);
   /** En nativo se muestra una nota (renovar en la web) en vez de CTAs de compra. */
-  public readonly isNative = isNativeApp();
+  public readonly isAndroid = isAndroidApp();
 
   @ViewChild(DialogComponent) dialog!: DialogComponent;
 

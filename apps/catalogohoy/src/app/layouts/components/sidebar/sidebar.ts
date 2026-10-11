@@ -9,6 +9,7 @@ import {
   isNativeApp,
   META_CHANNEL_ALLOWED_SLUGS,
   PosthogService,
+  RevenueCatService,
 } from '@catalogohoy/core';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { OrderBadgeRealtimeService, OrderStore } from '@catalogohoy/order';
@@ -54,6 +55,7 @@ export class Sidebar {
   private authService = inject(AuthenticationService);
   private confirmService = inject(ConfirmDialogService);
   private posthog = inject(PosthogService);
+  private revenueCat = inject(RevenueCatService);
   public readonly planStore = inject(PlanStore);
   public readonly profileStore = inject(ProfileStore);
   public readonly tenantStore = inject(TenantStore);
@@ -302,6 +304,7 @@ export class Sidebar {
               // En nativo no hay auth.catalogohoy.com (saldría del shell):
               // limpiamos el slug cacheado y hard-reload al login in-app
               // (re-scopea todos los stores, igual que el post-login nativo).
+              void this.revenueCat.logOut();
               clearNativeSlug();
               window.location.href = '/login';
             } else {

@@ -8,7 +8,7 @@
     <!-- Aviso de plan: reemplaza al viejo modal de upgrade (el CTA queda
          deshabilitado y acá se explica por qué, con link a Planes).
          En nativo NO se muestra: enlaza a compra externa (Apple 3.1.1). -->
-    @if (showPlanNote() && !isNative) {
+    @if (showPlanNote() && !isAndroid) {
     <p class="flex items-center gap-1.5 text-sm text-grey-500 mt-3">
       <ui-icon name="crown" size="15" styleClass="text-primary-500 shrink-0" />
       <span>

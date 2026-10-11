@@ -48,6 +48,7 @@
     "@ngneat/falso": "^8.0.2",
     "@ngrx/signals": "^20.1.0",
     "@primeuix/themes": "^1.2.5",
+    "@revenuecat/purchases-capacitor": "^13.7.3",
     "@sentry/angular": "^10.60.0",
     "@supabase/supabase-js": "^2.86.0",
     "@sweet-monads/either": "^3.3.1",

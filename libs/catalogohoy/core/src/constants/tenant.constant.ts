@@ -24,6 +24,15 @@ export const isNativeApp = (): boolean => Capacitor.isNativePlatform();
 export const isIosApp = (): boolean =>
   Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
 
+/**
+ * true solo en el shell nativo de Android. Se usa para gatear las superficies
+ * de compra de plan: en iOS se compra por IAP de Apple (RevenueCat) y en web
+ * por Stripe, pero en Android todavía NO hay billing → los upsell se ocultan.
+ * Regla general de visibilidad de un CTA de plan: `!isAndroidApp()`.
+ */
+export const isAndroidApp = (): boolean =>
+  Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+
 const NATIVE_SLUG_STORAGE_KEY = 'slug';
 let cachedNativeSlug: string | null = null;
 

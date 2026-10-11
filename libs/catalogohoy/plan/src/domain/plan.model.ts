@@ -79,6 +79,9 @@ export interface TenantPlanExpiration {
   planExpired: boolean;
   stripeSubscriptionId: string | null;
   stripeSubscriptionStatus: string | null;
+  /** Estado de la suscripción IAP (RevenueCat, iOS): `active` significa
+   *  auto-renovable por Apple → no corresponde pedir renovación manual. */
+  iapSubscriptionStatus: string | null;
   /** Precio mensual congelado (grandfathered) — ver TenantPlanUsage. */
   lockedPlanPrice: number | null;
   /** Ver TenantPlanUsage.trialUsedAt. */

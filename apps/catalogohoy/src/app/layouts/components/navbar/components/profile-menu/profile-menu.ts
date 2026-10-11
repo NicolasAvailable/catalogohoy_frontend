@@ -9,7 +9,12 @@ import {
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthenticationService } from '@catalogohoy/auth';
-import { clearNativeSlug, isNativeApp, PosthogService } from '@catalogohoy/core';
+import {
+  clearNativeSlug,
+  isNativeApp,
+  PosthogService,
+  RevenueCatService,
+} from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { CreditsStore } from '@catalogohoy/product';
 import { ProfileStore } from '@catalogohoy/profile';
@@ -36,6 +41,7 @@ export class ProfileMenu {
   private readonly auth = inject(AuthenticationService);
   private readonly posthog = inject(PosthogService);
   private readonly confirm = inject(ConfirmDialogService);
+  private readonly revenueCat = inject(RevenueCatService);
   /** El navbar conecta esto con el diálogo de compra del CreditsWidget. */
   public readonly buyCredits = output<void>();
 
@@ -102,6 +108,7 @@ export class ProfileMenu {
               // En nativo no hay auth.catalogohoy.com (saldría del shell):
               // limpiamos el slug cacheado y hard-reload al login in-app
               // (re-scopea todos los stores, igual que el post-login nativo).
+              void this.revenueCat.logOut();
               clearNativeSlug();
               window.location.href = '/login';
             } else {

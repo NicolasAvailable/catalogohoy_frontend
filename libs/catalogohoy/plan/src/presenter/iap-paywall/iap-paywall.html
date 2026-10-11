@@ -1,0 +1,168 @@
+<div class="w-full max-w-md mx-auto px-5 py-8 flex flex-col gap-6 min-h-full">
+
+  <!-- Header -->
+  <div class="flex flex-col items-center text-center gap-2">
+    <span class="w-14 h-14 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-500">
+      <ui-icon name="crown" [size]="28" />
+    </span>
+    <h1 class="text-2xl font-bold text-grey-800">{{ 'Mejora tu plan' | transloco }}</h1>
+    <p class="text-base text-grey-500 max-w-xs">
+      {{ 'Desbloquea más productos, canales de chat, Punto de Venta y mucho más.' | transloco }}
+    </p>
+  </div>
+
+  @if (loading()) {
+  <!-- Cargando ofertas -->
+  <div class="flex flex-col items-center gap-3 py-16 text-grey-400">
+    <ui-icon name="loader-circle" styleClass="w-8 h-8 animate-spin" />
+    <span class="text-sm">{{ 'Cargando planes...' | transloco }}</span>
+  </div>
+
+  } @else if (successName()) {
+  <!-- Éxito -->
+  <div class="flex flex-col items-center text-center gap-4 py-12">
+    <span class="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center text-green-600">
+      <ui-icon name="check" [size]="34" />
+    </span>
+    <div>
+      <h2 class="text-xl font-bold text-grey-800">{{ '¡Listo! Ya tienes el plan' | transloco }} {{ successName() }}</h2>
+      <p class="text-base text-grey-500 mt-1">{{ 'Gracias por tu compra. Ya puedes usar todas las funciones de tu plan.' | transloco }}</p>
+    </div>
+    <ui-button
+      (click)="goToAdmin()"
+      [label]="'Ir a mi panel' | transloco"
+      severity="primary"
+      styleClass="!py-3.5 !text-base"
+      [fluid]="true"
+    />
+  </div>
+
+  } @else if (blockedByStripe()) {
+  <!-- Ya tiene plan por Stripe (web): no se compra por IAP -->
+  <div class="flex flex-col items-center text-center gap-4 py-10">
+    <span class="w-14 h-14 rounded-full bg-grey-100 flex items-center justify-center text-grey-500">
+      <ui-icon name="info" [size]="26" />
+    </span>
+    <div>
+      <h2 class="text-lg font-semibold text-grey-800">{{ 'Ya tienes un plan activo' | transloco }}</h2>
+      <p class="text-base text-grey-500 mt-1 max-w-xs">
+        {{ 'Tu plan actual se gestiona desde la web. Entra a catalogohoy.com para cambiarlo o cancelarlo.' | transloco }}
+      </p>
+    </div>
+    <ui-button
+      (click)="goToAdmin()"
+      [label]="'Volver al panel' | transloco"
+      severity="secondary"
+      styleClass="!py-3.5 !text-base"
+      [fluid]="true"
+    />
+  </div>
+
+  } @else if (!cards().length) {
+  <!-- Sin ofertas disponibles -->
+  <div class="flex flex-col items-center text-center gap-3 py-12 text-grey-500">
+    <ui-icon name="triangle-alert" styleClass="w-8 h-8 text-grey-300" />
+    <p class="text-base max-w-xs">{{ 'Por ahora no hay planes disponibles para comprar. Intenta más tarde.' | transloco }}</p>
+    <ui-button (click)="goToAdmin()" [label]="'Volver' | transloco" severity="secondary" />
+  </div>
+
+  } @else {
+  <!-- Toggle mensual / anual -->
+  <div class="flex items-center justify-center">
+    <div class="inline-flex p-1 rounded-xl bg-grey-100">
+      <button
+        type="button"
+        (click)="setPeriod('monthly')"
+        class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+        [class.bg-white]="period() === 'monthly'"
+        [class.text-grey-800]="period() === 'monthly'"
+        [class.text-grey-400]="period() !== 'monthly'"
+      >
+        {{ 'Mensual' | transloco }}
+      </button>
+      <button
+        type="button"
+        (click)="setPeriod('annual')"
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+        [class.bg-white]="period() === 'annual'"
+        [class.text-grey-800]="period() === 'annual'"
+        [class.text-grey-400]="period() !== 'annual'"
+      >
+        {{ 'Anual' | transloco }}
+        <span class="text-[0.65rem] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">-50%</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tarjetas de plan -->
+  <div class="flex flex-col gap-3">
+    @for (card of cards(); track card.id) {
+    <div
+      class="rounded-2xl border p-5 flex flex-col gap-3 transition-colors"
+      [class.border-primary-300]="card.id === 'pro'"
+      [class.bg-primary-50]="card.id === 'pro'"
+      [class.border-grey-200]="card.id !== 'pro'"
+    >
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 class="text-lg font-bold text-grey-800">{{ card.name }}</h3>
+            @if (card.id === 'pro') {
+            <span class="text-[0.65rem] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-primary-500 text-white">
+              {{ 'Popular' | transloco }}
+            </span>
+            }
+          </div>
+          @if (card.highlight) {
+          <p class="text-sm text-grey-500 mt-0.5">{{ card.highlight | transloco }}</p>
+          }
+        </div>
+        <div class="text-right shrink-0">
+          <p class="text-lg font-bold text-grey-800 leading-tight">{{ priceLabel(card) }}</p>
+          <p class="text-xs text-grey-400">{{ (period() === 'annual' ? '/ año' : '/ mes') | transloco }}</p>
+        </div>
+      </div>
+
+      @if (card.description) {
+      <p class="text-sm text-grey-500 leading-relaxed">{{ card.description | transloco }}</p>
+      }
+
+      @if (isCurrent(card)) {
+      <div class="inline-flex items-center justify-center gap-1.5 w-full py-3 rounded-xl bg-grey-100 text-grey-500 text-sm font-semibold">
+        <ui-icon name="check" [size]="16" />
+        {{ 'Tu plan actual' | transloco }}
+      </div>
+      } @else {
+      <ui-button
+        (click)="buy(card)"
+        [disabled]="purchasing() !== null"
+        [label]="(purchasing() === card.id ? 'Procesando...' : 'Suscribirme') | transloco"
+        [severity]="card.id === 'pro' ? 'primary' : 'secondary'"
+        styleClass="!py-3.5 !text-base"
+        [fluid]="true"
+      />
+      }
+    </div>
+    }
+  </div>
+
+  <!-- Restaurar compras (requisito de Apple) -->
+  <button
+    type="button"
+    (click)="restore()"
+    [disabled]="restoring()"
+    class="text-sm font-semibold text-blue-500 py-2 disabled:opacity-60"
+  >
+    {{ (restoring() ? 'Restaurando...' : 'Restaurar compras') | transloco }}
+  </button>
+
+  <!-- Divulgación de suscripción (requisito de Apple) + legales -->
+  <p class="text-xs text-grey-400 leading-relaxed text-center">
+    {{ 'La suscripción se renueva automáticamente al mismo precio y período, salvo que la canceles al menos 24 horas antes del fin del período. La gestionas y cancelas desde los Ajustes de tu Apple ID.' | transloco }}
+    <br />
+    <a href="https://catalogohoy.com/terms-of-service" target="_blank" rel="noopener noreferrer" class="text-grey-500 underline">{{ 'Términos' | transloco }}</a>
+    ·
+    <a href="https://catalogohoy.com/privacy-policy" target="_blank" rel="noopener noreferrer" class="text-grey-500 underline">{{ 'Privacidad' | transloco }}</a>
+  </p>
+  }
+</div>

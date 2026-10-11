@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { TenantStore } from '@catalogohoy/tenant';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
-import { isNativeApp } from '@catalogohoy/core';
+import { isAndroidApp } from '@catalogohoy/core';
 import { toast } from 'ngx-sonner';
 import { CheckoutService } from '../../infrastructure/checkout.service';
 import { PlanStore } from '../../infrastructure/plan.store';
@@ -48,7 +48,7 @@ import { PlanStore } from '../../infrastructure/plan.store';
         </div>
         <div class="expiration-banner__actions">
           <!-- En nativo ocultamos los CTA de pago (la compra se gestiona en la web — IAP). -->
-          @if (!isNative) {
+          @if (!isAndroid) {
             @if (isPaymentFailed()) {
             <button class="expiration-banner__cta" (click)="openPortal()" [disabled]="isOpeningPortal()">
               {{ 'Actualizar pago' | transloco }}
@@ -182,7 +182,7 @@ export class ExpirationBannerComponent {
   private readonly _planStore = inject(PlanStore);
   private readonly _router = inject(Router);
   /** En nativo ocultamos el CTA de renovar (la compra se gestiona en la web). */
-  public readonly isNative = isNativeApp();
+  public readonly isAndroid = isAndroidApp();
   private readonly _tenant = inject(TenantStore);
   private readonly _checkout = inject(CheckoutService);
   private readonly _transloco = inject(TranslocoService);

@@ -17,7 +17,7 @@
         />
       } @else if (teamFull()) {
         <!-- Compliance IAP (Apple 3.1.1): sin CTA a planes en nativo. -->
-        @if (isNative) {
+        @if (isAndroid) {
           <ui-button
             label="Invitar miembro"
             icon="user-plus"
@@ -254,8 +254,8 @@
         <ui-premium-upgrade-prompt
           icon="users-round"
           [title]="'Invita a tu equipo a gestionar el catálogo' | transloco"
-          [description]="(isNative ? 'Esta función no está disponible en tu plan actual.' : 'Mejora tu plan para invitar miembros, asignarles permisos por módulo y controlar qué puede hacer cada uno.') | transloco"
-          [showCta]="!isNative"
+          [description]="(isAndroid ? 'Esta función no está disponible en tu plan actual.' : 'Mejora tu plan para invitar miembros, asignarles permisos por módulo y controlar qué puede hacer cada uno.') | transloco"
+          [showCta]="!isAndroid"
         />
       } @else {
         <div class="teams-view__empty">
