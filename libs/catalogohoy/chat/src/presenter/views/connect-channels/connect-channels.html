@@ -6,8 +6,9 @@
       {{ 'Conecta tus redes para recibir y responder todos los mensajes desde una sola bandeja.' | transloco }}
     </p>
     <!-- Aviso de plan: reemplaza al viejo modal de upgrade (el CTA queda
-         deshabilitado y acá se explica por qué, con link a Planes). -->
-    @if (showPlanNote()) {
+         deshabilitado y acá se explica por qué, con link a Planes).
+         En nativo NO se muestra: enlaza a compra externa (Apple 3.1.1). -->
+    @if (showPlanNote() && !isNative) {
     <p class="flex items-center gap-1.5 text-sm text-grey-500 mt-3">
       <ui-icon name="crown" size="15" styleClass="text-primary-500 shrink-0" />
       <span>
@@ -77,42 +78,3 @@
     }
   </div>
 </div>
-
-<!-- Modal: conectar canales es una función de los planes avanzados. -->
-<ui-dialog #upgradeDialog [showHeader]="false" styleClass="w-[26rem] max-w-[95vw]">
-  <div class="flex flex-col items-center text-center gap-4 p-2">
-    <div class="w-16 h-16 rounded-full bg-linear-to-br from-primary-50 to-violet-50 flex items-center justify-center text-primary-500">
-      <ui-icon name="crown" size="30" />
-    </div>
-    <h2 class="text-xl font-bold text-grey-800">
-      {{ 'Una función del plan Avanzado' | transloco }}
-    </h2>
-    <p class="text-sm text-grey-500 leading-relaxed">
-      <!-- Compliance IAP (Apple 3.1.1): sin upsell ni CTA a planes en nativo. -->
-      @if (isNative) {
-      {{ 'Esta función no está disponible en tu plan actual.' | transloco }}
-      } @else {
-      {{ 'Conectar WhatsApp Business y TikTok en una sola bandeja está disponible en el plan Avanzado. Mejorá tu plan para responderle a tus clientes desde CatalogoHoy.' | transloco }}
-      }
-    </p>
-    <div class="flex items-center gap-2 mt-1">
-      <button
-        type="button"
-        (click)="closeUpgrade()"
-        class="px-4 py-2.5 rounded-xl border border-grey-200 text-sm font-semibold text-grey-600 hover:bg-grey-50 transition-colors cursor-pointer"
-      >
-        {{ 'Ahora no' | transloco }}
-      </button>
-      @if (!isNative) {
-      <a
-        routerLink="/admin/plans"
-        (click)="closeUpgrade()"
-        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors"
-      >
-        <ui-icon name="sparkles" size="15" />
-        {{ 'Mejorar plan' | transloco }}
-      </a>
-      }
-    </div>
-  </div>
-</ui-dialog>
