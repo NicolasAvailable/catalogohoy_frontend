@@ -234,7 +234,7 @@ async function handleCallback(req) {
     if (!businesses.length) {
       try {
         const cats = await (await fetch(
-          `${GRAPH}/me/assigned_product_catalogs?fields=id,name,business{id,name}` +
+          `${GRAPH}/me/assigned_product_catalogs?fields=id,name,vertical,business{id,name}` +
           `&access_token=${encodeURIComponent(userToken)}`)).json();
         grantedCatalog = (cats?.data ?? []).find((c) => c?.business?.id) ?? null;
         if (grantedCatalog) {
@@ -272,9 +272,15 @@ async function handleCallback(req) {
 
     // 4) guardar conexión (token server-only); metadata preserva claves previas
     //    (p.ej. feed_id del catálogo) y refresca scopes + businesses. Si el
-    //    diálogo otorgó un catálogo y el tenant no tenía uno, se adopta.
+    //    diálogo otorgó un catálogo y el tenant no tenía uno, se adopta —
+    //    pero SOLO si es vertical "commerce": un catálogo "generic" (p.ej. el
+    //    que Meta autocrea para Instagram Shopping) NO acepta productos de
+    //    e-commerce por el feed y quedaría en 0 productos para siempre. Si el
+    //    asignado es generic, dejamos catalog_id en null y provision crea uno
+    //    de tipo commerce propio. (bioma t2186 / Heyner t3411.)
     const adoptCatalog = grantedCatalog && !existing?.catalog_id &&
-      grantedCatalog.business.id === selected?.id;
+      grantedCatalog.business.id === selected?.id &&
+      grantedCatalog.vertical === "commerce";
     await admin.from("meta_business_connections").upsert({
       tenant_id: state.tenantId,
       ...(adoptCatalog ? { catalog_id: grantedCatalog.id } : {}),

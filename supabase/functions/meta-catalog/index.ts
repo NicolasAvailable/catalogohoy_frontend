@@ -270,13 +270,36 @@ Deno.serve(async (req) => {
         if (!catalogId) {
           const { data: tenant } = await admin
             .from("tenants").select("name, slug").eq("id", tenantId).maybeSingle();
+          // vertical "commerce": sin esto Meta crea el catálogo como "generic",
+          // que NO acepta productos de e-commerce (el feed queda en 0 para
+          // siempre) y el vertical es inmutable. Hay que fijarlo al crear.
           const created = await graph(`${conn.business_id}/owned_product_catalogs`, tokenFor(conn), {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({ name: `${tenant?.name ?? tenant?.slug ?? "Catálogo"} · CatalogoHoy` }),
+            body: new URLSearchParams({
+              name: `${tenant?.name ?? tenant?.slug ?? "Catálogo"} · CatalogoHoy`,
+              vertical: "commerce",
+            }),
           });
           catalogId = created.id;
         }
+        // Guard: si el catálogo (recién creado o pre-adoptado) NO es "commerce"
+        // —p.ej. un "generic" que el comercio ya tenía en su Business— nunca
+        // recibirá productos por el feed. Fallamos claro, con el link directo
+        // para crear uno de e-commerce, en vez de quedar "conectado" con 0
+        // productos en silencio.
+        try {
+          const meta = await graph(`${catalogId}?fields=vertical`, tokenFor(conn));
+          if (meta?.vertical && meta.vertical !== "commerce") {
+            return jsonResponse({
+              success: false,
+              code: "catalog_wrong_vertical",
+              vertical: meta.vertical,
+              tosUrl: "https://business.facebook.com/commerce",
+              error: "El catálogo vinculado en tu Meta no es de tipo “E-commerce”, por eso no puede recibir tus productos. Crea uno de tipo E-commerce en el Administrador de comercio de Meta (business.facebook.com/commerce) y vuelve a publicar.",
+            }, 409);
+          }
+        } catch { /* si no se puede leer el vertical, seguimos e intentamos igual */ }
         let feedId = conn.metadata?.feed_id ?? null;
         if (!feedId) {
           const feed = await graph(`${catalogId}/product_feeds`, tokenFor(conn), {
