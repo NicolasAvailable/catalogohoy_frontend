@@ -7,7 +7,6 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { translate, TranslocoPipe } from '@jsverse/transloco';
-import { isAndroidApp } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { getTenantSlugFromUrl, TenantStore } from '@catalogohoy/tenant';
 import { WhatsAppService, WhatsAppStore } from '@catalogohoy/whatsapp';
@@ -49,8 +48,6 @@ type SocialAccount = { username: string | null; displayName: string | null };
   templateUrl: './connect-channels.html',
 })
 export class ConnectChannelsComponent implements OnInit {
-  /** Compliance IAP (Apple 3.1.1): en nativo no se ofrece mejorar el plan. */
-  public readonly isAndroid = isAndroidApp();
   protected readonly whatsAppStore = inject(WhatsAppStore);
   private readonly whatsAppService = inject(WhatsAppService);
   private readonly tenantStore = inject(TenantStore);

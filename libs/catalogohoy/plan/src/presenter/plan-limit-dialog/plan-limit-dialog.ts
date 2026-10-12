@@ -1,7 +1,6 @@
 import { Component, inject, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { isAndroidApp } from '@catalogohoy/core';
 import { ButtonComponent, DialogComponent, IconComponent } from '@ui';
 import { PlanStore } from '../../infrastructure';
 
@@ -36,12 +35,9 @@ import { PlanStore } from '../../infrastructure';
           >.
         </p>
 
-        <!-- Compliance IAP (Apple 3.1.1): sin upsell ni CTA a planes en nativo. -->
-        @if (!isAndroid) {
         <p class="text-grey-300 text-sm">
           {{ 'Mejora tu plan para agregar más productos a tu catálogo.' | transloco }}
         </p>
-        }
 
         <div class="flex gap-2 w-full">
           <ui-button
@@ -51,14 +47,12 @@ import { PlanStore } from '../../infrastructure';
             (click)="close()"
             [fluid]="true"
           />
-          @if (!isAndroid) {
           <ui-button
             [label]="'Ver planes' | transloco"
             icon="crown"
             (click)="goToPlans()"
             [fluid]="true"
           />
-          }
         </div>
       </div>
     </ui-dialog>
@@ -67,8 +61,6 @@ import { PlanStore } from '../../infrastructure';
 export class PlanLimitDialogComponent {
   public readonly planStore = inject(PlanStore);
   private readonly router = inject(Router);
-  /** Compliance IAP (Apple 3.1.1): en nativo no se ofrece mejorar el plan. */
-  public readonly isAndroid = isAndroidApp();
 
   @ViewChild(DialogComponent) dialog!: DialogComponent;
 

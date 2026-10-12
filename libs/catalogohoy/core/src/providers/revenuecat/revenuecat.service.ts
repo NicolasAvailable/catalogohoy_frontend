@@ -4,8 +4,11 @@ import type {
   PurchasesOffering,
   PurchasesPackage,
 } from '@revenuecat/purchases-capacitor';
-import { isIosApp } from '../../constants/tenant.constant';
-import { REVENUECAT_IOS_PUBLIC_KEY } from '../../constants/revenuecat.constant';
+import { isAndroidApp, isIosApp, isNativeApp } from '../../constants/tenant.constant';
+import {
+  REVENUECAT_ANDROID_PUBLIC_KEY,
+  REVENUECAT_IOS_PUBLIC_KEY,
+} from '../../constants/revenuecat.constant';
 import { SupabaseClientProvider } from '../supabase/supabase';
 
 /** Resultado de un intento de compra. `cancelled` = el usuario cerró la hoja de
@@ -19,10 +22,10 @@ export interface PurchaseOutcome {
 
 /**
  * Compras in-app (IAP) de planes vía RevenueCat (`@revenuecat/purchases-capacitor`).
- * SOLO iOS por ahora (App Store): en web se paga por Stripe y en Android todavía
- * no hay billing, así que acá es no-op y, por el import dinámico, el SDK NO entra
- * al bundle web. Espejo de `PushService`: vive en core, `providedIn:'root'`,
- * guardado por `isIosApp()`, init idempotente.
+ * iOS (App Store) + Android (Google Play): en web se paga por Stripe. En nativo
+ * configura con la key pública según plataforma (appl_ / goog_). Por el import
+ * dinámico, el SDK NO entra al bundle web. Espejo de `PushService`: vive en core,
+ * `providedIn:'root'`, guardado por `isNativeApp()`, init idempotente.
  *
  * El estado del plan NO se decide acá: RevenueCat manda un webhook a la edge
  * function `revenuecat-webhook`, que escribe `tenants.plan_id` (igual que el
@@ -38,7 +41,7 @@ export class RevenueCatService {
    *  Idempotente; no-op fuera de iOS. Se llama desde el layout del admin
    *  (post-login). Devuelve si quedó listo. */
   async init(): Promise<boolean> {
-    if (!isIosApp()) return false;
+    if (!isNativeApp()) return false;
     this.configuring ??= this.doConfigure();
     return this.configuring;
   }
@@ -54,7 +57,9 @@ export class RevenueCatService {
       // Supabase); el webhook lo resuelve a su tenant. Sin él, RC usa un id
       // anónimo y luego habría que logIn — por eso lo pasamos ya en configure.
       await Purchases.configure({
-        apiKey: REVENUECAT_IOS_PUBLIC_KEY,
+        apiKey: isAndroidApp()
+          ? REVENUECAT_ANDROID_PUBLIC_KEY
+          : REVENUECAT_IOS_PUBLIC_KEY,
         appUserID,
       });
       this.ready.set(true);
@@ -138,7 +143,7 @@ export class RevenueCatService {
   /** Desvincula al usuario del SDK al cerrar sesión (evita mezclar compras entre
    *  cuentas en el mismo dispositivo). No-op fuera de iOS. */
   async logOut(): Promise<void> {
-    if (!isIosApp() || !this.ready()) return;
+    if (!isNativeApp() || !this.ready()) return;
     try {
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
       await Purchases.logOut();

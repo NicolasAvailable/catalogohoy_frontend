@@ -1,7 +1,6 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { isAndroidApp } from '@catalogohoy/core';
 import {
   EcommerceConfigService,
   EcommerceConfigStore,
@@ -153,10 +152,7 @@ export class CatalogProgress implements OnInit {
         locked: isFree,
       },
     ];
-    // En la app nativa no se muestran hitos "locked" (son upsell a un plan pago
-    // con link a /admin/plans → compra externa): Apple 3.1.1. El hito de avisos
-    // sigue visible para quien ya tiene plan pago (ahí locked=false).
-    return isAndroidApp() ? steps.filter((s) => !s.locked) : steps;
+    return steps;
   });
 
   /** Hitos que cuentan para el progreso (los locked son upsell, no meta). */

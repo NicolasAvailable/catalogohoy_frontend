@@ -51,9 +51,8 @@
        (reemplaza al checklist de primeros pasos; descartable por el owner). -->
   <app-catalog-progress />
 
-  <!-- Promo: planes anuales -50% (card blanca compacta, descartable).
-       Compliance IAP (Apple 3.1.1): nunca en la app nativa. -->
-  @if (!isAndroid && !annualPromoDismissed()) {
+  <!-- Promo: planes anuales -50% (card blanca compacta, descartable). -->
+  @if (!annualPromoDismissed()) {
   <div
     class="flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-4 shadow-sm -mt-1"
   >

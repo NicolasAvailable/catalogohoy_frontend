@@ -1,25 +1,19 @@
-import { inject } from '@angular/core';
 import { Route, Router } from '@angular/router';
-import { isAndroidApp, isIosApp, isNativeApp } from '@catalogohoy/core';
+import { inject } from '@angular/core';
+import { isNativeApp } from '@catalogohoy/core';
 
-/** Planes/checkout/success: en iOS la compra es por IAP (paywall propia, ver la
- *  ruta ''), así que estas vistas de Stripe quedan web-only. En Android todavía
- *  no hay billing → también redirigen al admin. */
+/** Checkout/success/terms son vistas de Stripe (pago web): quedan web-only. En
+ *  nativo (iOS y Android) la compra es por IAP vía la paywall (ruta ''). */
 const webOnlyGuard = () =>
   isNativeApp() ? inject(Router).createUrlTree(['/admin']) : true;
-
-/** La página de planes raíz: en web es la página de Stripe y en iOS la paywall
- *  de IAP (RevenueCat); solo Android (sin billing todavía) se redirige. */
-const plansRootGuard = () =>
-  isAndroidApp() ? inject(Router).createUrlTree(['/admin']) : true;
 
 export const planRoutes: Route[] = [
   {
     path: '',
-    canActivate: [plansRootGuard],
-    // iOS → paywall de compra IAP; web → página de planes de Stripe.
+    // Nativo (iOS + Android) → paywall de compra IAP (RevenueCat); web → página
+    // de planes de Stripe.
     loadComponent: () =>
-      isIosApp()
+      isNativeApp()
         ? import('./presenter/iap-paywall/iap-paywall').then((m) => m.IapPaywall)
         : import('./presenter/plans/plans').then((m) => m.Plans),
   },

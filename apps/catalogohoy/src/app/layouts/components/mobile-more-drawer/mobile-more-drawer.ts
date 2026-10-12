@@ -12,7 +12,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthenticationService } from '@catalogohoy/auth';
 import {
   clearNativeSlug,
-  isIosApp,
   isNativeApp,
   LanguageSelectorComponent,
   PosthogService,
@@ -58,9 +57,6 @@ export class MobileMoreDrawer {
   private readonly revenueCat = inject(RevenueCatService);
   private readonly planStore = inject(PlanStore);
 
-  /** El acceso directo a Planes solo en iOS (ahí la compra es por IAP; en
-   *  Android todavía no hay billing). */
-  public readonly isIos = isIosApp();
   /** Nombre del plan actual para el ítem "Mi plan" (Gratis si no hay pago). */
   public readonly currentPlanName = computed(
     () => this.planStore.currentPlan()?.name ?? 'Gratis'
