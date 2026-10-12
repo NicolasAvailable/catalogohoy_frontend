@@ -15,6 +15,7 @@
         "outputPath": "dist/apps/catalogohoy",
         "browser": "apps/catalogohoy/src/main.ts",
         "polyfills": [
+          "apps/catalogohoy/src/webview-compat.ts",
           "zone.js"
         ],
         "tsConfig": "apps/catalogohoy/tsconfig.app.json",
