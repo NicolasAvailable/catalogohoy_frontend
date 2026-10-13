@@ -43,7 +43,12 @@ import {
   ShippingMethodType,
   THEME_COLORS,
 } from '@catalogohoy/ecommerce-config';
-import { isNativeApp, PosthogService, SupabaseClientProvider } from '@catalogohoy/core';
+import {
+  isNativeApp,
+  PosthogService,
+  setNativeSlug,
+  SupabaseClientProvider,
+} from '@catalogohoy/core';
 import { CreateProductInput, ProductService } from '@catalogohoy/product';
 import { ProfileStore } from '@catalogohoy/profile';
 import { TenantService, TenantStore } from '@catalogohoy/tenant';
@@ -598,6 +603,13 @@ export class Onboarding implements OnInit {
       localStorage.setItem('slug', newSlug);
     } catch {
       /* ignore private-mode */
+    }
+    // En la app nativa el slug NO sale del host (es localhost) sino del cache
+    // nativo (getNativeSlug). Si no lo actualizamos tras el rename, el guard de
+    // /admin al salir del wizard busca el slug temporal viejo (mi-tienda-XXXX)
+    // que ya no existe → "este catálogo no existe". Actualizarlo lo arregla.
+    if (isNativeApp()) {
+      setNativeSlug(newSlug);
     }
     this.tenantStore.setTenantIdentity(name, newSlug);
     this.slug.set(newSlug);
