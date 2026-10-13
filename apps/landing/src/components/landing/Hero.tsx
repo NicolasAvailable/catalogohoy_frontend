@@ -82,10 +82,12 @@ const Hero = () => {
                 <ArrowRight className="h-4 w-4" />
               </a>
               <a
-                href="#features"
+                href="https://autorepuestos-rodriguez.catalogohoy.com/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-white px-8 py-3.5 text-base font-semibold text-foreground transition-colors hover:bg-muted"
               >
-                Ver funciones
+                Ver una tienda real
               </a>
             </motion.div>
 
