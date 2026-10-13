@@ -118,7 +118,7 @@ const Hero = () => {
               </p>
             </motion.div>
 
-            {/* Meta Business Partner */}
+            {/* Verificación de Meta (Tech Provider + negocio verificado) */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -130,15 +130,15 @@ const Hero = () => {
                   <Check className="h-3 w-3 text-white" strokeWidth={3.5} />
                 </span>
                 <span className="text-sm font-semibold text-foreground">
-                  Socios oficiales de Meta
+                  Tecnología verificada por Meta
                 </span>
               </span>
-              <span className="flex items-center gap-2" role="img" aria-label="Meta Business Partners">
+              <span className="flex items-center gap-2" role="img" aria-label="Negocio verificado por Meta">
                 <MetaGlyph className="h-7 w-7" />
                 <span className="text-left text-sm font-bold leading-[1.15] tracking-tight text-foreground">
-                  Meta Business
+                  Negocio
                   <br />
-                  Partners
+                  verificado
                 </span>
               </span>
             </motion.div>
