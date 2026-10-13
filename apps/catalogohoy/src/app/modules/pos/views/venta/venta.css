@@ -743,6 +743,10 @@
   color: var(--text-soft);
   font-weight: 600;
 }
+/* Moneda como prefijo (descuento por monto fijo). */
+.pct-input.amount span {
+  margin-right: 0.4rem;
+}
 .pct-chip {
   padding: 0.55rem 0.85rem;
   border: 1px solid var(--border);

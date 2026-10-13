@@ -215,6 +215,10 @@ export default class PosVenta implements OnInit {
   );
   readonly noteDraft = signal('');
   readonly discountDraft = signal(0);
+  /** Pestaña activa del modal de descuento: porcentaje o monto fijo. */
+  readonly discountTab = signal<'percent' | 'amount'>('percent');
+  /** Borrador del descuento por monto fijo (en la moneda de la venta). */
+  readonly discountFixedDraft = signal<number | null>(null);
   readonly newProductName = signal('');
   readonly newProductPrice = signal<number | null>(null);
   /** Modal de búsqueda del catálogo (estilo TiendaNube: "Buscar productos"). */
@@ -320,6 +324,32 @@ export default class PosVenta implements OnInit {
     if (p.isSized && p.sizes?.length) return 'size';
     if (p.addons?.length) return 'addons';
     return null;
+  });
+
+  /** Sentinela de la opción "Producto original" en el modal de variantes. */
+  private static readonly BASE_OPTION_ID = '__base__';
+  readonly baseOptionId = PosVenta.BASE_OPTION_ID;
+
+  /** Opciones del modal de variantes: el "Producto original" (precio/stock base)
+   *  SIEMPRE primero — igual que el selector de la tienda pública
+   *  (product-detail-modal) — seguido de las variantes NO ocultas. Antes el POS
+   *  solo listaba las variantes y no dejaba vender la opción principal. */
+  readonly variantOptions = computed<ProductVariant[]>(() => {
+    const p = this.optionsProduct();
+    if (!p?.isVariant || !p.variants?.length) return [];
+    const hasPromo = p.pricePromotional > 0;
+    const base: ProductVariant = {
+      id: PosVenta.BASE_OPTION_ID,
+      name: 'Producto original',
+      // Mismo precio que cobra `addSimple` (unitPrice contempla promo y mayoreo),
+      // para que lo que se muestra == lo que se agrega al carrito.
+      price: this.unitPrice(p),
+      originalPrice: hasPromo ? p.price : 0,
+      photos: p.photos ?? [],
+      stock: this.stockNum(p),
+      sizes: [],
+    };
+    return [base, ...p.variants.filter((v) => !v.isHidden)];
   });
 
   ngOnInit(): void {
@@ -463,6 +493,13 @@ export default class PosVenta implements OnInit {
   }
 
   addVariant(p: Product, v: ProductVariant): void {
+    // La opción "Producto original" agrega el producto base (sin variante), con
+    // el precio y el stock a nivel de producto — igual que la tienda pública.
+    if (v.id === PosVenta.BASE_OPTION_ID) {
+      this.addSimple(p);
+      this.optionsProduct.set(null);
+      return;
+    }
     const price = v.price > 0 ? v.price : this.unitPrice(p);
     this.cart.addLine({
       productId: p.id,
@@ -618,16 +655,29 @@ export default class PosVenta implements OnInit {
   }
 
   openDiscount(): void {
+    this.discountTab.set(this.cart.discountMode());
     this.discountDraft.set(this.cart.discountPercent());
+    this.discountFixedDraft.set(this.cart.discountFixed() || null);
     this.showDiscount.set(true);
   }
 
   applyDiscount(pct: number): void {
+    this.discountTab.set('percent');
     this.discountDraft.set(pct);
   }
 
+  /** "Sin descuento": limpia los dos borradores del modal. */
+  clearDiscountDraft(): void {
+    this.discountDraft.set(0);
+    this.discountFixedDraft.set(null);
+  }
+
   saveDiscount(): void {
-    this.cart.setDiscountPercent(this.discountDraft());
+    if (this.discountTab() === 'amount') {
+      this.cart.setDiscountFixed(this.discountFixedDraft() ?? 0);
+    } else {
+      this.cart.setDiscountPercent(this.discountDraft());
+    }
     this.showDiscount.set(false);
   }
 

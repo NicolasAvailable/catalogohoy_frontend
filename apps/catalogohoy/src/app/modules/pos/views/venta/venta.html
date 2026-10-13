@@ -28,7 +28,17 @@
       </button>
       <button type="button" class="tile" (click)="openDiscount()">
         <span class="tile-ico"><ui-icon name="percent" styleClass="size-6" /></span>
-        <span class="tile-label">{{ cart.discountPercent() > 0 ? (cart.discountPercent() + ('% de descuento' | transloco)) : ('Aplicar descuento' | transloco) }}</span>
+        <span class="tile-label">
+          @if (cart.discountAmount() > 0) {
+            @if (cart.discountMode() === 'amount') {
+              {{ cs() }}{{ cart.discountAmount() | number: '1.2-2' }} {{ 'de descuento' | transloco }}
+            } @else {
+              {{ cart.discountPercent() }}{{ '% de descuento' | transloco }}
+            }
+          } @else {
+            {{ 'Aplicar descuento' | transloco }}
+          }
+        </span>
       </button>
       <button type="button" class="tile" (click)="openNote()">
         <span class="tile-ico"><ui-icon name="sticky-note" styleClass="size-6" /></span>
@@ -125,9 +135,9 @@
     <footer class="cart-foot">
       @if (!cart.isEmpty()) {
         <div class="foot-lines">
-          @if (cart.discountPercent() > 0) {
+          @if (cart.discountAmount() > 0) {
             <div class="foot-row discount">
-              <span>{{ 'Descuento ({percent}%)' | transloco: { percent: cart.discountPercent() } }}</span>
+              <span>{{ cart.discountMode() === 'amount' ? ('Descuento' | transloco) : ('Descuento ({percent}%)' | transloco: { percent: cart.discountPercent() }) }}</span>
               <span>−{{ cs() }}{{ cart.discountAmount() | number: '1.2-2' }}</span>
             </div>
           }
@@ -228,16 +238,16 @@
       @switch (optionsMode()) {
         @case ('variant') {
           <div class="option-list">
-            @for (v of op.variants; track v.id) {
+            @for (v of variantOptions(); track v.id) {
               <button type="button" class="option-row" (click)="addVariant(op, v)">
                 <div class="option-thumb">
                   @if (v.photos[0] || op.photos[0]) {
-                    <img [src]="v.photos[0] || op.photos[0]" [alt]="v.name" />
+                    <img [src]="v.photos[0] || op.photos[0]" [alt]="v.id === baseOptionId ? ('Producto original' | transloco) : v.name" />
                   } @else {
                     <ui-icon name="package" styleClass="size-5 tile-thumb-ph" />
                   }
                 </div>
-                <span class="option-name">{{ v.name }}</span>
+                <span class="option-name">{{ v.id === baseOptionId ? ('Producto original' | transloco) : v.name }}</span>
                 <span class="option-price">{{ cs() }}{{ (v.price > 0 ? v.price : unitPrice(op)) | number: '1.2-2' }}</span>
               </button>
             }
@@ -333,30 +343,42 @@
         </button>
       </header>
       <div class="disc-tabs">
-        <button type="button" class="disc-tab active">
+        <button type="button" class="disc-tab" [class.active]="discountTab() === 'percent'" (click)="discountTab.set('percent')">
           <ui-icon name="percent" styleClass="size-4" /> {{ 'Porcentaje' | transloco }}
         </button>
-        <button type="button" class="disc-tab" disabled>
+        <button type="button" class="disc-tab" [class.active]="discountTab() === 'amount'" (click)="discountTab.set('amount')">
           <ui-icon name="dollar-sign" styleClass="size-4" /> {{ 'Monto fijo' | transloco }}
         </button>
         <button type="button" class="disc-tab" disabled>
           <ui-icon name="ticket" styleClass="size-4" /> {{ 'Cupón' | transloco }}
         </button>
       </div>
-      <label class="field">
-        <span>{{ 'Porcentaje a aplicar' | transloco }}</span>
-        <div class="pct-row">
-          <div class="pct-input">
-            <input type="number" min="0" max="100" [ngModel]="discountDraft()" (ngModelChange)="discountDraft.set($event)" />
-            <span>%</span>
+      @if (discountTab() === 'amount') {
+        <label class="field">
+          <span>{{ 'Monto a descontar' | transloco }}</span>
+          <div class="pct-row">
+            <div class="pct-input amount">
+              <span>{{ cs() }}</span>
+              <input type="number" min="0" step="0.01" [ngModel]="discountFixedDraft()" (ngModelChange)="discountFixedDraft.set($event)" />
+            </div>
           </div>
-          @for (p of [5, 10, 15, 20]; track p) {
-            <button type="button" class="pct-chip" [class.active]="discountDraft() === p" (click)="applyDiscount(p)">{{ p }}%</button>
-          }
-        </div>
-      </label>
+        </label>
+      } @else {
+        <label class="field">
+          <span>{{ 'Porcentaje a aplicar' | transloco }}</span>
+          <div class="pct-row">
+            <div class="pct-input">
+              <input type="number" min="0" max="100" [ngModel]="discountDraft()" (ngModelChange)="discountDraft.set($event)" />
+              <span>%</span>
+            </div>
+            @for (p of [5, 10, 15, 20]; track p) {
+              <button type="button" class="pct-chip" [class.active]="discountDraft() === p" (click)="applyDiscount(p)">{{ p }}%</button>
+            }
+          </div>
+        </label>
+      }
       <div class="modal-actions between">
-        <button type="button" class="btn-ghost" (click)="applyDiscount(0)">{{ 'Sin descuento' | transloco }}</button>
+        <button type="button" class="btn-ghost" (click)="clearDiscountDraft()">{{ 'Sin descuento' | transloco }}</button>
         <button type="button" class="btn-blue" (click)="saveDiscount()">{{ 'Aplicar descuento' | transloco }}</button>
       </div>
     </div>

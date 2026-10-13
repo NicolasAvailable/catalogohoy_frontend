@@ -2748,5 +2748,8 @@
   "Ver vendedores": "View sellers",
   "Ver métodos de pago": "View payment methods",
   "Ver entregas": "View deliveries",
-  "Ver avisos": "View alerts"
+  "Ver avisos": "View alerts",
+  "Monto a descontar": "Amount to discount",
+  "de descuento": "discount",
+  "Tu sesión expiró. Recarga la página o vuelve a iniciar sesión e inténtalo de nuevo.": "Your session expired. Reload the page or sign in again and try once more."
 }
