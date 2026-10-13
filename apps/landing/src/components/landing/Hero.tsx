@@ -63,7 +63,7 @@ const Hero = () => {
             >
               Diseña, organiza y comparte catálogos profesionales para tu tienda.
               Publica tus productos y recibe pedidos por WhatsApp, Instagram y
-              más — sin conocimientos técnicos.
+              más, sin conocimientos técnicos.
             </motion.p>
 
             <motion.div
