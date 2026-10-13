@@ -11,12 +11,42 @@ CatalogoHoy (https://catalogohoy.com) reemplaza el catálogo en PDF y las ventas
 - Principalmente Latinoamérica: Venezuela, Colombia, México, Argentina, Perú, Chile, Ecuador, Bolivia y toda la región
 
 ## Qué ofrece
-- Catálogo digital con enlace y subdominio propio, sin necesidad de programar ni tener web
-- Compartir por WhatsApp, Instagram, TikTok y Facebook con un clic
-- Pedidos por WhatsApp + panel de órdenes y CRM de clientes
-- Personalización del diseño, categorías, variantes de producto y precios en varias monedas (incluye Bolívares con tasa del día para Venezuela)
-- Analíticas de visitas y ventas, notificaciones por WhatsApp y herramientas de IA (quitar fondo y generar descripciones/imágenes)
-- App móvil para iOS y Android para gestionar el negocio desde el teléfono
+
+**Catálogo y productos**
+- Catálogo digital con enlace y subdominio propio (`tunegocio.catalogohoy.com`), sin programar ni tener web; opción de dominio propio
+- Diseño personalizable (colores, logo, banner) y plantillas; organización por categorías
+- Variantes de producto (tallas, colores) y adicionales/complementos por producto
+- Precios en varias monedas y venta por mayoreo (precios por cantidad); Bolívares con tasa del día para Venezuela
+- Control de inventario: descuenta stock al vender (incluso por variante) y avisa cuando queda poco; ocultar productos o marcar agotado
+- Horario de atención con apertura/cierre automático según la zona horaria del negocio
+
+**Ventas y pedidos**
+- Pedidos por WhatsApp con un clic y checkout configurable (datos del cliente, envío y método de pago)
+- Panel de órdenes con estados (pendiente, completada, a crédito) y CRM de clientes
+- Ventas a crédito con cuotas y recordatorios de cobranza (por WhatsApp, email y notificación push)
+- Envíos con métodos y costo (o "precio a consultar"), dirección y fecha de entrega; condiciones de pago con descuento o recargo por método
+- Factura, recibo y nota de entrega en PDF; configuración fiscal / IVA con desglose y documento por país
+- Punto de Venta (POS) para vender en persona: caja, escáner de código de barras con la cámara, cobro con cálculo de vuelto, devoluciones y modo offline
+
+**Canales y marketing**
+- Compartir el catálogo y cada producto por WhatsApp, Instagram, TikTok y Facebook con un clic
+- Bandeja/CRM omnicanal: conversaciones de WhatsApp, Instagram y TikTok en un solo lugar, con fotos, documentos y notas de voz transcritas por IA
+- Catálogo en Instagram y Facebook (Meta Shops): sincroniza tus productos a Meta para vender y anunciar
+- Meta Pixel + Conversions API (CAPI) para medir y optimizar anuncios
+- Descuentos y cupones; analíticas de visitas y ventas; reportes y resúmenes del negocio con la ganancia estimada
+
+**Inteligencia artificial**
+- Quitar el fondo de las fotos de producto con IA (fondo transparente o blanco)
+- Generar y mejorar descripciones e imágenes de productos con IA
+- Importar productos con IA desde Excel o PDF (los lee, mapea y crea automáticamente)
+- Créditos de IA mensuales incluidos según el plan
+
+**Gestión y equipo**
+- Importar y exportar productos y órdenes en Excel/CSV, con respaldos automáticos
+- Miembros de equipo con roles y permisos
+- Notificaciones de nueva orden (sonido en el panel), de stock bajo y push en la app móvil
+- App móvil para iOS y Android para gestionar todo el negocio desde el teléfono
+- Plan gratis para siempre; pago con tarjeta y métodos de pago locales en Venezuela
 
 ## Planes
 - **Gratis** (US$0, para siempre, sin tarjeta): hasta 10 productos, 1 catálogo
