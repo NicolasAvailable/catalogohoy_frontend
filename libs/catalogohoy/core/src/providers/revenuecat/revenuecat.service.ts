@@ -52,9 +52,7 @@ export class RevenueCatService {
       const { Purchases, LOG_LEVEL } = await import(
         '@revenuecat/purchases-capacitor'
       );
-      // DEBUG temporal para diagnosticar la paywall vacía en Android (muestra
-      // "Could not find products" en logcat). Volver a ERROR tras resolver.
-      await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
+      await Purchases.setLogLevel({ level: LOG_LEVEL.ERROR });
       // appUserID identifica al suscriptor en RevenueCat (= auth UUID de
       // Supabase); el webhook lo resuelve a su tenant. Sin él, RC usa un id
       // anónimo y luego habría que logIn — por eso lo pasamos ya en configure.

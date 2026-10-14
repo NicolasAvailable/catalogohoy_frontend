@@ -26,7 +26,12 @@ import { InputTextModule } from 'primeng/inputtext';
       [fluid]="true"
       [class]="styleClass()"
       [ngClass]="{ 'ng-invalid ng-dirty': invalid() || (control?.invalid && (control?.dirty || control?.touched)) }"
-      [attr.inputmode]="digitsOnly() ? 'numeric' : null"
+      [attr.type]="email() ? 'email' : null"
+      [attr.inputmode]="digitsOnly() ? 'numeric' : (email() ? 'email' : null)"
+      [attr.autocapitalize]="email() ? 'none' : null"
+      [attr.autocorrect]="email() ? 'off' : null"
+      [attr.autocomplete]="email() ? 'email' : null"
+      [attr.spellcheck]="email() ? 'false' : null"
       (keypress)="onKeypress($event)"
       (blur)="onBlur()"
     />
@@ -45,6 +50,11 @@ export class InputTextComponent implements OnInit, ControlValueAccessor {
   /** Solo dígitos: bloquea letras al tipear, limpia lo pegado y activa el
    *  teclado numérico en mobile (inputmode). Para teléfonos, cédulas, etc. */
   public readonly digitsOnly = input<boolean>(false);
+  /** Modo email: teclado de email (type/inputmode), SIN autocapitalizar ni
+   *  autocorregir, y ELIMINA los espacios al tipear. Clave en Android: Gboard
+   *  mete un espacio al final tras una sugerencia/autocompletado y eso hacía
+   *  fallar la validación ("El formato no es válido"). */
+  public readonly email = input<boolean>(false);
 
   public readonly value = signal<string>('');
   public readonly disabled = signal(false);
@@ -82,7 +92,9 @@ export class InputTextComponent implements OnInit, ControlValueAccessor {
   }
 
   public change(value: string) {
-    const v = this.digitsOnly() ? (value ?? '').replace(/\D+/g, '') : value;
+    let v = value ?? '';
+    if (this.digitsOnly()) v = v.replace(/\D+/g, '');
+    else if (this.email()) v = v.replace(/\s+/g, ''); // los emails no llevan espacios
     this.value.set(v);
     this.onChange(v);
     this.onTouched();
