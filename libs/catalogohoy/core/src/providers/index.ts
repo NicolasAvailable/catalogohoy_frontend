@@ -1,3 +1,4 @@
+export * from './app-update/app-update.service';
 export * from './app-version/app-version.service';
 export * from './discord/discord-webhook';
 export * from './error-reporter/error-reporter';

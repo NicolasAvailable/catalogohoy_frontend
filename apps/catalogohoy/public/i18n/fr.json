@@ -2787,5 +2787,13 @@
   "La suscripción se renueva automáticamente al mismo precio y período, salvo que la canceles al menos 24 horas antes del fin del período. La gestionas y cancelas desde los Ajustes de tu Apple ID.": "L’abonnement se renouvelle automatiquement au même prix et pour la même période, sauf si vous l’annulez au moins 24 heures avant la fin de la période. Vous le gérez et l’annulez depuis les Réglages de votre identifiant Apple.",
   "Popular": "Populaire",
   "Términos": "Conditions",
-  "Privacidad": "Confidentialité"
+  "Privacidad": "Confidentialité",
+  "Monto a descontar": "Montant à déduire",
+  "de descuento": "de remise",
+  "Tu sesión expiró. Recarga la página o vuelve a iniciar sesión e inténtalo de nuevo.": "Votre session a expiré. Rechargez la page ou reconnectez-vous puis réessayez.",
+  "Actualizar ahora": "Mettre à jour",
+  "Actualización disponible": "Mise à jour disponible",
+  "Actualización necesaria": "Mise à jour requise",
+  "Hay una nueva versión de la app con mejoras y correcciones.": "Une nouvelle version de l'application est disponible avec des améliorations et des corrections.",
+  "Necesitas actualizar a la última versión para seguir usando la app.": "Vous devez mettre à jour vers la dernière version pour continuer à utiliser l'application."
 }

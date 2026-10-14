@@ -440,7 +440,10 @@ export class AuthenticationService implements BaseAuthenticationService {
         provider,
         token: result.idToken,
       });
-      if (error) return E.left(new Error(error.message));
+      if (error) {
+        this.reportNativeSocialError(provider, 'signInWithIdToken', error.message);
+        return E.left(new Error(error.message));
+      }
 
       // Atribución del alta social en nativo: se setea UNA sola vez (si ya
       // viene en el user, es un login posterior y no se pisa). La noti de
@@ -466,8 +469,41 @@ export class AuthenticationService implements BaseAuthenticationService {
       // El usuario cerró la hoja nativa (cancel) u otro fallo del SDK.
       const msg = e instanceof Error ? e.message : String(e);
       if (/cancel|1001/i.test(msg)) return E.left(new Error('social_cancelled'));
+      this.reportNativeSocialError(provider, 'sdk', msg);
       return E.left(new Error(msg));
     }
+  }
+
+  /** Reporta a Sentry los fallos del login social NATIVO. Normalmente estos
+   *  errores se tragan como E.left (se muestran como un toast genérico) y NO
+   *  llegan a telemetría, así que el error REAL del dispositivo (p. ej. el
+   *  `DEVELOPER_ERROR` de Google en Android, o "Unacceptable audience" de
+   *  signInWithIdToken) queda invisible. Esto lo captura con tags buscables
+   *  para diagnosticar sin depender de logs USB. Best-effort, solo en nativo. */
+  private reportNativeSocialError(
+    provider: 'apple' | 'google',
+    stage: 'signInWithIdToken' | 'sdk',
+    detail: string
+  ): void {
+    if (!isNativeApp()) return;
+    void import('@sentry/angular')
+      .then((Sentry) => {
+        Sentry.captureException(
+          new Error(`native_social_login_failed [${provider}/${stage}]: ${detail}`),
+          {
+            tags: {
+              area: 'native-social-login',
+              provider,
+              stage,
+              nativePlatform: isIosApp() ? 'ios' : 'android',
+            },
+            level: 'error',
+          }
+        );
+      })
+      .catch(() => {
+        /* best-effort: la telemetría nunca bloquea el login */
+      });
   }
 
   public onAuthStateChange(callback: (event: string) => void): () => void {

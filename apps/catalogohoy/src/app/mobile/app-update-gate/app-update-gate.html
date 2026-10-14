@@ -1,0 +1,51 @@
+@if (visible()) {
+<!-- Backdrop: cerrar al tocar afuera SOLO si es opcional -->
+<div
+  class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-slate-900/50 p-4 pb-[calc(1rem_+_var(--safe-area-bottom))]"
+  (click)="dismiss()"
+>
+  <!-- Card -->
+  <div
+    class="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 flex flex-col items-center text-center"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="w-14 h-14 rounded-full bg-primary-50 flex items-center justify-center mb-4">
+      <ui-icon name="arrow-down-to-line" size="26" styleClass="text-primary-600" />
+    </div>
+
+    <h2 class="text-lg font-bold text-grey-800">
+      @if (status()?.title; as t) {
+      {{ t }}
+      } @else {
+      {{ titleKey() | transloco }}
+      }
+    </h2>
+
+    <p class="mt-2 text-sm text-grey-500 leading-relaxed">
+      @if (status()?.message; as m) {
+      {{ m }}
+      } @else {
+      {{ messageKey() | transloco }}
+      }
+    </p>
+
+    <button
+      type="button"
+      (click)="update()"
+      class="mt-5 w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors"
+    >
+      {{ 'Actualizar ahora' | transloco }}
+    </button>
+
+    @if (!required()) {
+    <button
+      type="button"
+      (click)="dismiss()"
+      class="mt-2 w-full py-2.5 rounded-xl text-grey-500 font-medium hover:bg-grey-50 transition-colors"
+    >
+      {{ 'Ahora no' | transloco }}
+    </button>
+    }
+  </div>
+</div>
+}

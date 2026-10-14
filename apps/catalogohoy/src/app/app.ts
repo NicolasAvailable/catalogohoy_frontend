@@ -8,9 +8,10 @@ import {
 import { NgxSonnerToaster } from 'ngx-sonner';
 import { AppSubscriber } from './app.subscriber';
 import { NativePlatformService } from './mobile/native-platform.service';
+import { AppUpdateGate } from './mobile/app-update-gate/app-update-gate';
 
 @Component({
-  imports: [RouterModule, NgxSonnerToaster],
+  imports: [RouterModule, NgxSonnerToaster, AppUpdateGate],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.css',

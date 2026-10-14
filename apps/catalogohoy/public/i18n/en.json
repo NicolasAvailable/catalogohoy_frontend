@@ -2787,5 +2787,13 @@
   "La suscripción se renueva automáticamente al mismo precio y período, salvo que la canceles al menos 24 horas antes del fin del período. La gestionas y cancelas desde los Ajustes de tu Apple ID.": "The subscription renews automatically at the same price and period unless you cancel at least 24 hours before the end of the period. You manage and cancel it from your Apple ID Settings.",
   "Popular": "Popular",
   "Términos": "Terms",
-  "Privacidad": "Privacy"
+  "Privacidad": "Privacy",
+  "Monto a descontar": "Amount to discount",
+  "de descuento": "discount",
+  "Tu sesión expiró. Recarga la página o vuelve a iniciar sesión e inténtalo de nuevo.": "Your session expired. Reload the page or sign in again and try once more.",
+  "Actualizar ahora": "Update now",
+  "Actualización disponible": "Update available",
+  "Actualización necesaria": "Update required",
+  "Hay una nueva versión de la app con mejoras y correcciones.": "There's a new version of the app with improvements and fixes.",
+  "Necesitas actualizar a la última versión para seguir usando la app.": "You need to update to the latest version to keep using the app."
 }
