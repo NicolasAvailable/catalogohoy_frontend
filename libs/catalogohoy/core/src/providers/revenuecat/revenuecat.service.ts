@@ -52,7 +52,9 @@ export class RevenueCatService {
       const { Purchases, LOG_LEVEL } = await import(
         '@revenuecat/purchases-capacitor'
       );
-      await Purchases.setLogLevel({ level: LOG_LEVEL.ERROR });
+      // DEBUG temporal para diagnosticar la paywall vacía en Android (muestra
+      // "Could not find products" en logcat). Volver a ERROR tras resolver.
+      await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
       // appUserID identifica al suscriptor en RevenueCat (= auth UUID de
       // Supabase); el webhook lo resuelve a su tenant. Sin él, RC usa un id
       // anónimo y luego habría que logIn — por eso lo pasamos ya en configure.
@@ -85,14 +87,79 @@ export class RevenueCatService {
   /** Oferta vigente (`offering.current`) con sus packages (basico/pro/avanzado ×
    *  mensual/anual). Devuelve null si no hay oferta o el SDK no está listo. */
   async getCurrentOffering(): Promise<PurchasesOffering | null> {
-    if (!(await this.init())) return null;
+    if (!(await this.init())) {
+      this.reportOfferingsDiag('init_failed', null, null, null);
+      return null;
+    }
     try {
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
-      const { current } = await Purchases.getOfferings();
-      return current ?? null;
+      const offerings = await Purchases.getOfferings();
+      // Sonda directa a la tienda: qué productos encuentra BillingClient/StoreKit
+      // para los IDs de suscripción. Si esto viene vacío, el problema es que la
+      // tienda no devuelve los productos (no el mapeo de la oferta).
+      let probeIds: string[] = [];
+      try {
+        const probe = await Purchases.getProducts({
+          productIdentifiers: ['ch_basico', 'ch_pro', 'ch_avanzado'],
+        });
+        probeIds = (probe.products ?? []).map((p) => p.identifier);
+      } catch {
+        /* la sonda es best-effort; no bloquea */
+      }
+      this.reportOfferingsDiag('ok', offerings, probeIds, null);
+      return offerings.current ?? null;
     } catch (err) {
       console.error('[revenuecat] getOfferings failed', err);
+      this.reportOfferingsDiag('error', null, null, err);
       return null;
+    }
+  }
+
+  /** Telemetría de diagnóstico de la oferta a Sentry (los problemas de IAP en
+   *  Android no dan error visible: la paywall simplemente sale vacía). Reporta
+   *  si la oferta vino null / con 0 paquetes, los identifiers de los productos
+   *  que SÍ llegaron y lo que la tienda devolvió en la sonda directa. Solo
+   *  nativo, best-effort. */
+  private reportOfferingsDiag(
+    stage: 'init_failed' | 'ok' | 'error',
+    offerings: { all?: Record<string, unknown>; current?: PurchasesOffering | null } | null,
+    probeIds: string[] | null,
+    err: unknown
+  ): void {
+    if (!isNativeApp()) return;
+    try {
+      const current = offerings?.current ?? null;
+      const pkgs = current?.availablePackages ?? [];
+      const diag = {
+        stage,
+        nativePlatform: isAndroidApp() ? 'android' : 'ios',
+        allOfferingIds: offerings?.all ? Object.keys(offerings.all) : [],
+        currentId: current?.identifier ?? null,
+        availableCount: pkgs.length,
+        packageProductIds: pkgs.map((p) => p.product?.identifier),
+        storeProbeIds: probeIds,
+        error: err ? ((err as { message?: string }).message ?? String(err)) : null,
+      };
+      void import('@sentry/angular')
+        .then((Sentry) => {
+          Sentry.captureMessage(
+            `revenuecat_offerings [${stage}] avail=${diag.availableCount} probe=${probeIds?.length ?? 'n/a'}`,
+            {
+              level: diag.availableCount > 0 ? 'info' : 'warning',
+              tags: {
+                area: 'revenuecat-offerings',
+                nativePlatform: diag.nativePlatform,
+                stage,
+              },
+              extra: diag,
+            }
+          );
+        })
+        .catch(() => {
+          /* best-effort */
+        });
+    } catch {
+      /* nunca romper el flujo por telemetría */
     }
   }
 
