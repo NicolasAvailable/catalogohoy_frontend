@@ -97,7 +97,13 @@ export class IapPaywall implements OnInit {
   private buildCards(packages: PurchasesPackage[]): PlanCard[] {
     const byPlan = new Map<string, { monthly: PurchasesPackage | null; annual: PurchasesPackage | null }>();
     for (const pkg of packages) {
-      const m = pkg.product.identifier.match(/^ch_(basico|pro|avanzado)_(monthly|annual)/i);
+      // El separador plan↔período difiere por store: iOS usa guion bajo
+      // (`ch_basico_monthly`), Google Play usa dos puntos en el formato
+      // `productId:basePlanId` (`ch_basico:monthly`). Aceptamos ambos — si no,
+      // en Android no matcheaba ningún package y la paywall salía vacía.
+      const m = pkg.product.identifier.match(
+        /^ch_(basico|pro|avanzado)[_:](monthly|annual)/i
+      );
       if (!m) continue;
       const plan = m[1].toLowerCase();
       const per = m[2].toLowerCase() as Period;
