@@ -138,7 +138,7 @@ export class RevenueCatService {
         availableCount: pkgs.length,
         packageProductIds: pkgs.map((p) => p.product?.identifier),
         storeProbeIds: probeIds,
-        error: err ? ((err as { message?: string }).message ?? String(err)) : null,
+        error: this.describeError(err),
       };
       void import('@sentry/angular')
         .then((Sentry) => {
@@ -161,6 +161,27 @@ export class RevenueCatService {
     } catch {
       /* nunca romper el flujo por telemetría */
     }
+  }
+
+  /** Extrae TODO lo útil del error de RevenueCat, en especial el
+   *  `underlyingErrorMessage` (el "check the underlying error" que trae la causa
+   *  real: producto no encontrado, billing no disponible, etc.) + el código. */
+  private describeError(err: unknown): Record<string, unknown> | null {
+    if (!err) return null;
+    const e = err as Record<string, unknown>;
+    let raw: string;
+    try {
+      raw = JSON.stringify(err, Object.getOwnPropertyNames(e));
+    } catch {
+      raw = String(err);
+    }
+    return {
+      message: e['message'] ?? String(err),
+      code: e['code'] ?? null,
+      readableErrorCode: e['readableErrorCode'] ?? null,
+      underlyingErrorMessage: e['underlyingErrorMessage'] ?? null,
+      raw,
+    };
   }
 
   /** Compra un package. Distingue la cancelación del usuario de un error real. */
