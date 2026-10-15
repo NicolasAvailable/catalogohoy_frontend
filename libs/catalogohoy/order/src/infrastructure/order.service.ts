@@ -72,6 +72,11 @@ export interface CreateOrderInput {
   /** Ajuste (descuento/recargo) del método de pago, snapshot para la factura.
    *  A diferencia de la comisión, SÍ se le muestra al cliente. null = sin ajuste. */
   paymentAdjustment?: OrderAdjustment | null;
+  /** POS pago dividido/mixto: desglose de cuánto se cobró con cada medio
+   *  ([{method, amount}]). El `paymentMethod` lleva el resumen legible; esta
+   *  columna guarda el detalle para el arqueo de caja (saber la porción en
+   *  efectivo) y el recibo. null/omitido = pago con un solo medio. */
+  payments?: { method: string; amount: number }[] | null;
   /** Snapshot del envío para que la lista/detalle lo muestren (misma forma
    *  que el checkout público). En órdenes manuales el nombre es "Envío"; al
    *  editar una orden del catálogo se preserva su método original. null =
@@ -426,6 +431,9 @@ export class OrderService {
     if (input.paymentEvidence !== undefined)
       payload['payment_evidence'] = input.paymentEvidence;
     if (input.paymentMethod !== undefined) payload['payment_method'] = input.paymentMethod || null;
+    // Pago dividido/mixto del POS: desglose por medio (null = pago simple).
+    if (input.payments !== undefined)
+      payload['payments'] = input.payments && input.payments.length ? input.payments : null;
     // shipping_fee es NOT NULL (default 0): sin envío = 0, nunca null.
     if (input.shippingFee !== undefined)
       payload['shipping_fee'] = input.shippingFee ?? 0;
