@@ -46,7 +46,11 @@ export class AppUpdateGate {
   );
 
   constructor() {
-    if (isNativeApp()) void this.run();
+    // En el preview del onboarding/editor (iframe `?preview=true`) no hay bridge
+    // nativo → no chequeamos actualización ahí (evita tocar @capacitor/app).
+    const isPreview =
+      new URLSearchParams(window.location.search).get('preview') === 'true';
+    if (isNativeApp() && !isPreview) void this.run();
   }
 
   private async run(): Promise<void> {

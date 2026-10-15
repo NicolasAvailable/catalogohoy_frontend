@@ -22,8 +22,24 @@ export class NativePlatformService {
     return Capacitor.getPlatform() as 'ios' | 'android' | 'web';
   }
 
+  /** true dentro del iframe de preview (onboarding/editor, `?preview=true`):
+   *  ahí NO hay bridge nativo, así que no se deben tocar plugins de Capacitor. */
+  isPreview(): boolean {
+    try {
+      return new URLSearchParams(window.location.search).get('preview') === 'true';
+    } catch {
+      return false;
+    }
+  }
+
   async init(): Promise<void> {
     if (!this.isNative) return;
+
+    // Preview del onboarding/editor (iframe con `?preview=true`): el bridge
+    // nativo de Capacitor NO está wireado en el sub-frame → cualquier llamada a
+    // un plugin tira "plugin not implemented on ios/android". El preview solo
+    // renderiza un storefront, así que NO inicializamos el shell nativo acá.
+    if (this.isPreview()) return;
 
     // Marca el documento como app nativa → habilita reglas CSS que anulan el
     // rebote elástico del WKWebView y fijan la barra superior (ver styles.css).
@@ -39,15 +55,22 @@ export class NativePlatformService {
       /* plugin no disponible en esta plataforma */
     }
 
-    // Botón "atrás" físico de Android: navega hacia atrás si hay historial,
-    // si no minimiza la app en vez de cerrarla de golpe.
-    CapacitorApp.addListener('backButton', ({ canGoBack }) => {
-      if (canGoBack) {
-        window.history.back();
-      } else {
-        void CapacitorApp.minimizeApp();
+    // Botón "atrás" físico: SOLO Android (iOS no tiene botón físico; llamar al
+    // plugin ahí tira "not implemented on ios"). Envuelto por si el bridge aún
+    // no está listo.
+    if (this.platform === 'android') {
+      try {
+        CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+          if (canGoBack) {
+            window.history.back();
+          } else {
+            void CapacitorApp.minimizeApp();
+          }
+        });
+      } catch {
+        /* noop */
       }
-    });
+    }
 
     // Angular ya montó → escondemos el splash nativo.
     try {
