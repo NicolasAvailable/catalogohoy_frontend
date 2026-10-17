@@ -22,6 +22,7 @@ import {
   ProductMediaComponent,
 } from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
+import { isBaseVariantHidden } from '../../../domain';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 
 @Component({
@@ -168,7 +169,17 @@ export class ProductDetailModal {
    *  then switches to a variant if they want. */
   public readonly selectorOptions: ProductVariant[] = (() => {
     const options: ProductVariant[] = [];
-    if (this.isVariant) {
+    // Hidden variants (e.g. a colour that sold out) stay on the product but
+    // never reach the buyer's option selector.
+    const visibleVariants = this.product.variants.filter((v) => !v.isHidden);
+    // Gate por catálogo: algunos tenants ocultan "Producto original" (cada
+    // unidad es una variante, p. ej. lencería por color) — abre con la primera
+    // variante seleccionada. Solo se omite si hay ≥1 variante visible, para que
+    // nunca quede un producto sin opciones.
+    const hideBase =
+      isBaseVariantHidden(Number(this.ecommerceStore.catalogInfo()?.id)) &&
+      visibleVariants.length > 0;
+    if (this.isVariant && !hideBase) {
       const hasPromo = this.product.pricePromotional > 0;
       options.push({
         id: ProductDetailModal.BASE_ID,
@@ -182,9 +193,7 @@ export class ProductDetailModal {
         sizes: this.product.sizes,
       });
     }
-    // Hidden variants (e.g. a colour that sold out) stay on the product but
-    // never reach the buyer's option selector.
-    options.push(...this.product.variants.filter((v) => !v.isHidden));
+    options.push(...visibleVariants);
     return options;
   })();
 
