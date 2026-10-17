@@ -51,6 +51,7 @@ const PLAN_INFO: Record<string, { name: string; tagline: string }> = {
   standalone: true,
   imports: [TranslocoPipe, ButtonComponent, IconComponent],
   templateUrl: './iap-paywall.html',
+  styleUrl: './iap-paywall.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class IapPaywall implements OnInit {

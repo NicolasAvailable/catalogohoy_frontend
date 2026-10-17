@@ -110,62 +110,73 @@
     </div>
   </div>
 
-  <!-- Tarjetas de plan -->
-  <div class="flex flex-col gap-3">
+  <!-- Tarjetas de plan — MISMO diseño que la página de planes web (plans.css):
+       badge inline, precio grande, botón tras el precio, divisor y checks verdes. -->
+  <div class="flex flex-col gap-4">
     @for (card of cards(); track card.id) {
-    <div
-      class="rounded-2xl border p-5 flex flex-col gap-3 transition-colors"
-      [class.border-primary-300]="card.id === 'pro'"
-      [class.bg-primary-50]="card.id === 'pro'"
-      [class.border-grey-200]="card.id !== 'pro'"
-    >
-      <div class="flex items-start justify-between gap-3">
-        <div>
-          <div class="flex items-center gap-2">
-            <h3 class="text-lg font-bold text-grey-800">{{ card.name | transloco }}</h3>
-            @if (card.id === 'pro') {
-            <span class="text-[0.65rem] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-primary-500 text-white">
-              {{ 'Popular' | transloco }}
-            </span>
+    <div class="plan-card" [class.plan-card--popular]="card.id === 'pro' && !isCurrent(card)">
+      <div class="plan-card__content">
+        <!-- Header: nombre + badge -->
+        <div class="plan-card__header">
+          <div class="plan-card__name-row">
+            <h2
+              class="plan-card__name"
+              [class.plan-card__name--popular]="card.id === 'pro' && !isCurrent(card)"
+            >
+              {{ card.name | transloco }}
+            </h2>
+            @if (isCurrent(card)) {
+            <span class="badge-inline badge-inline--current">{{ 'Actual' | transloco }}</span>
+            } @else if (card.id === 'pro') {
+            <span class="badge-inline badge-inline--popular">{{ 'Más popular' | transloco }}</span>
+            } @else if (card.id === 'avanzado') {
+            <span class="badge-inline badge-inline--social">⭐ {{ '+500 suscriptores' | transloco }}</span>
             }
           </div>
           @if (card.tagline) {
-          <p class="text-sm text-grey-500 mt-0.5">{{ card.tagline | transloco }}</p>
+          <p class="plan-card__description">{{ card.tagline | transloco }}</p>
           }
         </div>
-        <div class="text-right shrink-0">
-          <p class="text-lg font-bold text-grey-800 leading-tight">{{ priceLabel(card) }}</p>
-          <p class="text-xs text-grey-400">{{ (period() === 'annual' ? '/ año' : '/ mes') | transloco }}</p>
+
+        <!-- Precio (localizado del store) -->
+        <div class="plan-card__price">
+          <span class="plan-card__price-amount">{{ priceLabel(card) }}</span>
+          <span class="plan-card__price-period">{{ (period() === 'annual' ? '/año' : '/mes') | transloco }}</span>
         </div>
-      </div>
 
-      @if (card.features.length) {
-      <ul class="flex flex-col gap-1.5 mt-1">
-        @for (f of card.features; track f) {
-        <li class="flex items-start gap-2 text-sm text-grey-600">
-          <ui-icon name="check" [size]="16" styleClass="text-primary-500 shrink-0 mt-0.5" />
-          <span>{{ f | transloco }}</span>
-        </li>
+        <!-- Botón (tras el precio, como la web) -->
+        @if (isCurrent(card)) {
+        <div class="plan-card__button plan-card__button--current">
+          <ui-icon name="check" styleClass="size-4" />
+          {{ 'Tu plan actual' | transloco }}
+        </div>
+        } @else {
+        <button
+          type="button"
+          class="plan-card__button"
+          [class.plan-card__button--primary]="card.id === 'pro'"
+          [class.plan-card__button--secondary]="card.id !== 'pro'"
+          [disabled]="purchasing() !== null"
+          (click)="buy(card)"
+        >
+          {{ (purchasing() === card.id ? 'Procesando...' : 'Suscribirme') | transloco }}
+        </button>
         }
-      </ul>
-      }
 
-      @if (isCurrent(card)) {
-      <div class="inline-flex items-center justify-center gap-1.5 w-full py-3 rounded-xl bg-grey-100 text-grey-500 text-sm font-semibold">
-        <ui-icon name="check" [size]="16" />
-        {{ 'Tu plan actual' | transloco }}
+        <hr class="plan-card__divider" />
+
+        <!-- Features: checks verdes -->
+        @if (card.features.length) {
+        <ul class="plan-card__features">
+          @for (f of card.features; track f) {
+          <li class="plan-card__feature">
+            <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
+            <span>{{ f | transloco }}</span>
+          </li>
+          }
+        </ul>
+        }
       </div>
-      } @else {
-      <ui-button
-        (click)="buy(card)"
-        [disabled]="purchasing() !== null"
-        [label]="(purchasing() === card.id ? 'Procesando...' : 'Suscribirme') | transloco"
-        severity="primary"
-        [variant]="card.id === 'pro' ? undefined : 'outlined'"
-        styleClass="!py-3.5 !text-base"
-        [fluid]="true"
-      />
-      }
     </div>
     }
   </div>
