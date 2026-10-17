@@ -21,6 +21,7 @@ export const PLAN_BASE_PRICES: Record<string, number> = {
 };
 
 export const BASICO_PLAN_ID = 'basico';
+export const AVANZADO_PLAN_ID = 'avanzado';
 
 /** Catalog addon monthly price (USD). Mirror this in Stripe — the actual
  *  charge comes from the price IDs configured in the
