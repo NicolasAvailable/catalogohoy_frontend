@@ -119,7 +119,7 @@ export const catalogoParaRepuestos2026: BlogArticle = {
       rows: [
         ["Gratis", "$0 para siempre", "10 productos, 1 catálogo", "Probar la plataforma con tus piezas de más rotación."],
         ["Básico", "$11.99/mes", "100 productos", "Un local chico con las líneas principales."],
-        ["Pro", "$19.99/mes (prueba 7 días)", "500 productos", "La casa de repuestos típica: varios sistemas y marcas."],
+        ["Pro", "$19.99/mes", "500 productos", "La casa de repuestos típica: varios sistemas y marcas."],
         ["Avanzado", "$34.99/mes (prueba 7 días)", "Ilimitados + POS, CRM de chats y dominio propio", "Inventario grande, venta en mostrador y clientes a crédito."],
       ],
     },

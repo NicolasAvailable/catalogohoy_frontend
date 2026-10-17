@@ -164,7 +164,7 @@ export const menuDigitalRestaurantes2026: BlogArticle = {
     },
     {
       q: "¿Cuánto cuesta un menú digital para restaurante?",
-      a: "En CatalogoHoy el plan Gratis incluye hasta 10 productos, tu enlace propio, el QR descargable y los pedidos por WhatsApp, sin tarjeta de crédito. Los planes pagos amplían el menú: Básico $11.99/mes (100 productos), Pro $19.99/mes (500 productos, 7 días de prueba) y Avanzado $34.99/mes (productos ilimitados, POS y CRM de chats, también con prueba de 7 días).",
+      a: "En CatalogoHoy el plan Gratis incluye hasta 10 productos, tu enlace propio, el QR descargable y los pedidos por WhatsApp, sin tarjeta de crédito. Los planes pagos amplían el menú: Básico $11.99/mes (100 productos), Pro $19.99/mes (500 productos) y Avanzado $34.99/mes (productos ilimitados, POS y CRM de chats, también con prueba de 7 días).",
     },
     {
       q: "¿Necesito una app de delivery para recibir pedidos?",

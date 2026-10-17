@@ -45,7 +45,7 @@ de un comerciante de LATAM y lo lleva a crear su catálogo gratis.
 
 - Gratis $0 para siempre: 10 productos, 1 catálogo, 25 órdenes/mes.
 - Básico $11.99/mes: 100 productos, analíticas, notis WhatsApp, diseño.
-- Pro $19.99/mes: 500 productos, 2 miembros, 350 créditos IA. Prueba 7 días.
+- Pro $19.99/mes: 500 productos, 2 miembros, 350 créditos IA.
 - Avanzado $34.99/mes: ilimitados, POS, CRM de chats (WA/IG/TikTok), dominio
   propio, 3 miembros. Prueba 7 días. Anual: -50% en todos.
 - Variantes por producto: 1/3/10/15 · Adicionales: 2/5/10/15 (Gratis/Básico/Pro/Avanzado).

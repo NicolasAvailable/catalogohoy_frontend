@@ -119,7 +119,7 @@ export const catalogoParaPerfumerias2026: BlogArticle = {
       rows: [
         ["Gratis", "$0 — para siempre", "10", "1", "2"],
         ["Básico", "$11.99/mes", "100", "3", "5"],
-        ["Pro", "$19.99/mes — 7 días de prueba", "500", "10", "10"],
+        ["Pro", "$19.99/mes", "500", "10", "10"],
         ["Avanzado", "$34.99/mes — 7 días de prueba", "Ilimitados", "15", "15"],
       ],
     },
@@ -161,7 +161,7 @@ export const catalogoParaPerfumerias2026: BlogArticle = {
     },
     {
       q: "¿Cuánto cuesta el catálogo digital?",
-      a: "El plan Gratis incluye 10 productos, 1 catálogo con enlace propio y pedidos por WhatsApp, para siempre y sin tarjeta. Los planes pagos amplían el inventario y las variantes: Básico $11.99/mes (100 productos), Pro $19.99/mes (500 productos, con 7 días de prueba) y Avanzado $34.99/mes (productos ilimitados, POS, CRM de chats y dominio propio, también con prueba de 7 días).",
+      a: "El plan Gratis incluye 10 productos, 1 catálogo con enlace propio y pedidos por WhatsApp, para siempre y sin tarjeta. Los planes pagos amplían el inventario y las variantes: Básico $11.99/mes (100 productos), Pro $19.99/mes (500 productos) y Avanzado $34.99/mes (productos ilimitados, POS, CRM de chats y dominio propio, también con prueba de 7 días).",
     },
   ],
 };

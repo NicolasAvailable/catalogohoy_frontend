@@ -112,7 +112,7 @@ export const catalogoParaJoyerias2026: BlogArticle = {
       rows: [
         ["Gratis", "$0 para siempre", "10 productos, 1 catálogo", "1", "Probar con tus piezas estrella y tu enlace propio."],
         ["Básico", "$11.99/mes", "100 productos", "3", "La tienda de bisutería típica: colecciones medianas, acabados dorado/plateado."],
-        ["Pro", "$19.99/mes (prueba 7 días)", "500 productos", "10", "Inventario grande o anillos con tallas completas. El más popular."],
+        ["Pro", "$19.99/mes", "500 productos", "10", "Inventario grande o anillos con tallas completas. El más popular."],
         ["Avanzado", "$34.99/mes (prueba 7 días)", "Ilimitados", "15", "Venta en local con POS, chats de WhatsApp/Instagram/TikTok en una bandeja y dominio propio."],
       ],
     },
@@ -170,7 +170,7 @@ export const catalogoParaJoyerias2026: BlogArticle = {
     },
     {
       q: "¿Cuánto cuesta un catálogo digital para joyería?",
-      a: "Empiezas gratis con 10 piezas y tu enlace propio, sin tarjeta. El plan Básico ($11.99/mes) cubre 100 productos y suele alcanzar para una tienda de accesorios típica; el Pro ($19.99/mes, con prueba de 7 días) sube a 500 productos con 10 variantes cada uno para inventarios grandes o anillos por talla.",
+      a: "Empiezas gratis con 10 piezas y tu enlace propio, sin tarjeta. El plan Básico ($11.99/mes) cubre 100 productos y suele alcanzar para una tienda de accesorios típica; el Pro ($19.99/mes) sube a 500 productos con 10 variantes cada uno para inventarios grandes o anillos por talla.",
     },
   ],
 };

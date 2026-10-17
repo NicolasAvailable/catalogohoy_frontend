@@ -28,7 +28,7 @@ const rows: ComparisonRow[] = [
   { label: "Adicionales por producto", values: ["2", "5", "10", "15"] },
   { label: "Créditos de IA por mes", values: ["15", "200", "350", "500"] },
   { label: "Reportes por mes", values: ["1", "10", "20", "30"] },
-  { label: "Prueba gratis", values: [false, false, "7 días", "7 días"] },
+  { label: "Prueba gratis", values: [false, false, false, "7 días"] },
   { label: "Analíticas del catálogo", values: [false, true, true, true] },
   { label: "Notificaciones WhatsApp de órdenes", values: [false, true, true, true] },
   { label: "CRM de chats (WhatsApp, Instagram, TikTok)", values: [false, false, false, true] },

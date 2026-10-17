@@ -111,7 +111,7 @@ export const catalogoParaFerreterias2026: BlogArticle = {
       items: [
         "<strong>Gratis ($0, para siempre):</strong> 10 productos y 1 catálogo — para probar la plataforma con tus artículos de más consulta.",
         "<strong>Básico ($11.99/mes):</strong> 100 productos — una ferretería chica o un arranque por categorías.",
-        "<strong>Pro ($19.99/mes, prueba de 7 días):</strong> 500 productos — cubre las líneas principales de una ferretería mediana.",
+        "<strong>Pro ($19.99/mes):</strong> 500 productos — cubre las líneas principales de una ferretería mediana.",
         "<strong>Avanzado ($34.99/mes, prueba de 7 días):</strong> productos ilimitados, punto de venta para el mostrador, CRM de chats y dominio propio — el plan natural del rubro.",
       ],
     },
@@ -169,7 +169,7 @@ export const catalogoParaFerreterias2026: BlogArticle = {
     },
     {
       q: "¿Cuánto cuesta el catálogo digital para una ferretería?",
-      a: "Empiezas gratis con 10 productos. El plan Básico ($11.99/mes) llega a 100 productos, el Pro ($19.99/mes) a 500, y el Avanzado ($34.99/mes) ofrece productos ilimitados más el punto de venta para el mostrador. Pro y Avanzado incluyen prueba gratis de 7 días.",
+      a: "Empiezas gratis con 10 productos. El plan Básico ($11.99/mes) llega a 100 productos, el Pro ($19.99/mes) a 500, y el Avanzado ($34.99/mes) ofrece productos ilimitados más el punto de venta para el mostrador. El plan Avanzado incluye prueba gratis de 7 días.",
     },
   ],
 };

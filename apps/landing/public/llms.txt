@@ -53,7 +53,7 @@ CatalogoHoy (https://catalogohoy.com) reemplaza el catálogo en PDF y las ventas
 - **Básico** (US$11.99/mes): hasta 100 productos, analíticas, notificaciones por WhatsApp y diseño personalizable
 - **Pro** (US$19.99/mes): hasta 500 productos, 2 miembros de equipo y 350 créditos de IA por mes
 - **Avanzado** (US$34.99/mes): productos ilimitados, Punto de Venta (POS), CRM de chats (WhatsApp, Instagram y TikTok), dominio propio, hasta 3 miembros de equipo y soporte dedicado
-- Pro y Avanzado incluyen **7 días de prueba gratis** en la primera suscripción (sin permanencia); el plan anual tiene 50% de descuento.
+- El plan **Avanzado** incluye **7 días de prueba gratis** en la primera suscripción (sin permanencia); Básico y Pro son de pago directo. El plan anual tiene 50% de descuento.
 
 La creación de la cuenta y el pago de planes se realizan en la web (https://auth.catalogohoy.com/signup).
 

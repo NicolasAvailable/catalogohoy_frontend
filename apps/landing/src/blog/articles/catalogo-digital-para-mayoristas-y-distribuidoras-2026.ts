@@ -105,13 +105,13 @@ export const catalogoParaMayoristas2026: BlogArticle = {
       rows: [
         ["Gratis", "$0 para siempre", "10 productos, 1 catálogo", "Probar la mecánica con tu línea principal."],
         ["Básico", "$11.99/mes", "100 productos", "Mayorista de catálogo corto y mucha rotación."],
-        ["Pro", "$19.99/mes (prueba 7 días)", "500 productos", "La distribuidora típica con varias líneas."],
+        ["Pro", "$19.99/mes", "500 productos", "La distribuidora típica con varias líneas."],
         ["Avanzado", "$34.99/mes (prueba 7 días)", "Ilimitados + POS, CRM de chats y dominio propio", "Catálogo grande, mostrador con despacho y equipo de ventas."],
       ],
     },
     {
       type: "p",
-      html: "La comparación completa de funciones está en la <a href=\"/pricing\">página de precios</a>. Los planes Pro y Avanzado tienen prueba gratis de 7 días — suficiente para importar tu lista, configurar la escala de mayoreo y recibir los primeros pedidos reales.",
+      html: "La comparación completa de funciones está en la <a href=\"/pricing\">página de precios</a>. Los planes El plan Avanzado tiene prueba gratis de 7 días — suficiente para importar tu lista, configurar la escala de mayoreo y recibir los primeros pedidos reales.",
     },
     { type: "h2", id: "empezar", text: "Puesta en marcha: de la lista al primer pedido" },
     {
@@ -163,7 +163,7 @@ export const catalogoParaMayoristas2026: BlogArticle = {
     },
     {
       q: "¿Cuánto cuesta un catálogo mayorista en CatalogoHoy?",
-      a: "Puedes empezar gratis con 10 productos para probar la mecánica. El plan Básico ($11.99/mes) llega a 100 productos, el Pro ($19.99/mes) a 500 y el Avanzado ($34.99/mes) ofrece productos ilimitados más punto de venta y CRM de chats. Pro y Avanzado tienen prueba gratis de 7 días.",
+      a: "Puedes empezar gratis con 10 productos para probar la mecánica. El plan Básico ($11.99/mes) llega a 100 productos, el Pro ($19.99/mes) a 500 y el Avanzado ($34.99/mes) ofrece productos ilimitados más punto de venta y CRM de chats. El plan Avanzado tiene prueba gratis de 7 días.",
     },
   ],
 };

@@ -115,7 +115,7 @@ export const catalogoParaZapaterias2026: BlogArticle = {
       rows: [
         ["Gratis", "$0 para siempre", "10 productos, 1 catálogo", "1", "Probar la plataforma con tus modelos estrella."],
         ["Básico", "$11.99/mes", "100 productos", "3", "Catálogo corto con pocas tallas por modelo."],
-        ["Pro", "$19.99/mes (prueba 7 días)", "500 productos", "10", "La zapatería típica: curva 35-40 en uno o dos colores. El más popular."],
+        ["Pro", "$19.99/mes", "500 productos", "10", "La zapatería típica: curva 35-40 en uno o dos colores. El más popular."],
         ["Avanzado", "$34.99/mes (prueba 7 días)", "Ilimitados", "15", "Curvas completas 34-44, venta en mostrador con POS y chats de WhatsApp/Instagram/TikTok en una bandeja."],
       ],
     },
@@ -173,7 +173,7 @@ export const catalogoParaZapaterias2026: BlogArticle = {
     },
     {
       q: "¿Cuánto cuesta un catálogo digital para zapatería?",
-      a: "Empiezas gratis con 10 productos y tu enlace propio, sin tarjeta. El plan Pro ($19.99/mes, prueba de 7 días) permite 500 productos con hasta 10 variantes cada uno — suficiente para curvas de numeración típicas — y el Avanzado ($34.99/mes) sube a productos ilimitados con 15 variantes y punto de venta para el local.",
+      a: "Empiezas gratis con 10 productos y tu enlace propio, sin tarjeta. El plan Pro ($19.99/mes) permite 500 productos con hasta 10 variantes cada uno — suficiente para curvas de numeración típicas — y el Avanzado ($34.99/mes) sube a productos ilimitados con 15 variantes y punto de venta para el local.",
     },
   ],
 };

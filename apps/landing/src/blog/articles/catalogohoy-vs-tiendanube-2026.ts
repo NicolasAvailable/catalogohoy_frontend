@@ -103,7 +103,7 @@ export const catalogohoyVsTiendanube2026: BlogArticle = {
     { type: "h2", id: "costos", text: "¿Y los costos?" },
     {
       type: "p",
-      html: "En CatalogoHoy los precios son claros y en dólares: <strong>plan Gratis</strong> para siempre (hasta 10 productos y 1 catálogo), <strong>Pro $20/mes</strong> (500 productos, equipo y créditos de IA) y <strong>Avanzado $35/mes</strong> (productos ilimitados, dominio propio y soporte), con 7 días de prueba gratis en los planes pagos. Tiendanube trabaja con suscripción mensual por planes y, según el país, la pasarela puede sumar comisiones por venta. La cuenta importante no es solo el precio de lista: es cuánto te cuesta <em>empezar a vender</em> — y con un catálogo por WhatsApp ese costo de arranque es cero.",
+      html: "En CatalogoHoy los precios son claros y en dólares: <strong>plan Gratis</strong> para siempre (hasta 10 productos y 1 catálogo), <strong>Pro $20/mes</strong> (500 productos, equipo y créditos de IA) y <strong>Avanzado $35/mes</strong> (productos ilimitados, dominio propio y soporte), con 7 días de prueba gratis en el plan Avanzado. Tiendanube trabaja con suscripción mensual por planes y, según el país, la pasarela puede sumar comisiones por venta. La cuenta importante no es solo el precio de lista: es cuánto te cuesta <em>empezar a vender</em> — y con un catálogo por WhatsApp ese costo de arranque es cero.",
     },
     { type: "h2", id: "migrar", text: "¿Se puede migrar de una a otra?" },
     {

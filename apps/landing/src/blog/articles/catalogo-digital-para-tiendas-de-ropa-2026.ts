@@ -120,7 +120,7 @@ export const catalogoParaTiendasDeRopa2026: BlogArticle = {
       rows: [
         ["Gratis", "$0 para siempre", "10 productos, 1 catálogo", "1", "Probar la plataforma con tus prendas estrella."],
         ["Básico", "$11.99/mes", "100 productos", "3", "Emprendimiento que arranca con pocas tallas por prenda."],
-        ["Pro", "$19.99/mes (prueba 7 días)", "500 productos", "10", "La tienda de ropa típica: tallas × colores completos. El más popular."],
+        ["Pro", "$19.99/mes", "500 productos", "10", "La tienda de ropa típica: tallas × colores completos. El más popular."],
         ["Avanzado", "$34.99/mes (prueba 7 días)", "Ilimitados", "15", "Tienda con local (POS), ventas por Instagram/TikTok en un solo chat y dominio propio."],
       ],
     },
@@ -174,7 +174,7 @@ export const catalogoParaTiendasDeRopa2026: BlogArticle = {
     },
     {
       q: "¿Cuánto cuesta un catálogo digital para tienda de ropa?",
-      a: "Puedes empezar gratis con 10 productos y tu enlace propio, sin tarjeta. Para una tienda con curvas de tallas completas, el plan Pro ($19.99/mes, con prueba de 7 días) permite 500 productos con hasta 10 variantes cada uno, y suele ser el punto de partida ideal del rubro.",
+      a: "Puedes empezar gratis con 10 productos y tu enlace propio, sin tarjeta. Para una tienda con curvas de tallas completas, el plan Pro ($19.99/mes) permite 500 productos con hasta 10 variantes cada uno, y suele ser el punto de partida ideal del rubro.",
     },
     {
       q: "¿Sirve si vendo por Instagram y TikTok, no solo por WhatsApp?",

@@ -33,7 +33,7 @@ const JSON_LD = {
       "@type": "Offer",
       name: "Plan Pro",
       description:
-        "Hasta 500 productos, 2 miembros de equipo y 350 créditos de IA por mes. 7 días de prueba gratis.",
+        "Hasta 500 productos, 2 miembros de equipo y 350 créditos de IA por mes.",
       price: "19.99",
       priceCurrency: "USD",
     },
@@ -52,7 +52,7 @@ const Precios = () => {
   usePageMeta({
     title: "Precios y planes de catálogo digital | CatalogoHoy",
     description:
-      "Planes de CatalogoHoy: empieza gratis y crece con los planes Pro y Avanzado. Catálogo digital, pedidos por WhatsApp, IA para tus fotos y más. 7 días de prueba gratis, sin permanencia.",
+      "Planes de CatalogoHoy: empieza gratis y crece con los planes Pro y Avanzado. Catálogo digital, pedidos por WhatsApp, IA para tus fotos y más. El plan Avanzado incluye 7 días de prueba gratis, sin permanencia.",
     path: "/pricing",
     jsonLd: JSON_LD,
   });
