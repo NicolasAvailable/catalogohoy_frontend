@@ -212,12 +212,12 @@
           @if (variant.photos?.length) {
           <ui-product-media
             [url]="variant.photos![0]"
-            [alt]="variant.id === baseOptionId ? ('Producto original' | transloco) : variant.name"
+            [alt]="variant.id === baseOptionId ? (variant.name | transloco) : variant.name"
             [controls]="false"
             styleClass="w-10 h-10 rounded-lg object-cover shrink-0"
           />
           }
-          <span class="flex-1 font-medium text-grey-700">{{ variant.id === baseOptionId ? ('Producto original' | transloco) : variant.name }}</span>
+          <span class="flex-1 font-medium text-grey-700">{{ variant.id === baseOptionId ? (variant.name | transloco) : variant.name }}</span>
           <!-- Precio de la variante: respeta la configuración de moneda del
                catálogo, igual que el precio principal (referencia solo si está
                habilitada + Bs para catálogos de Venezuela). -->
