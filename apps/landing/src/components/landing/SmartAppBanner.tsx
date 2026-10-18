@@ -92,7 +92,7 @@ const SmartAppBanner = () => {
           src={logo}
           alt=""
           aria-hidden="true"
-          className="h-9 w-9 shrink-0 rounded-lg bg-primary/10 p-1"
+          className="h-9 w-9 shrink-0"
         />
         <span className="flex min-w-0 flex-col leading-tight">
           <span className="truncate text-sm font-bold text-foreground">
