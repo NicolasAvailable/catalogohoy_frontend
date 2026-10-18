@@ -1013,9 +1013,9 @@ export class Onboarding implements OnInit {
   }
 
   /** `reason` distingue en el embudo quién terminó el wizard de quién lo saltó
-   *  en el paso final. Al cerrar el onboarding se va a /bienvenida (la oferta
-   *  de prueba de 7 días, en el momento de máximo entusiasmo: recién armó su
-   *  tienda); desde ahí el usuario entra al admin. */
+   *  en el paso final. Al cerrar el onboarding se entra directo al /admin.
+   *  (La paywall /bienvenida quedó deshabilitada por ahora; el componente y la
+   *  ruta siguen existiendo para restaurarla fácil cuando se decida.) */
   private async complete(reason: 'finished' | 'skipped' = 'finished'): Promise<void> {
     this.posthog.captureOnboarding('onboarding_completed', {
       reason,
@@ -1049,11 +1049,11 @@ export class Onboarding implements OnInit {
     ) {
       const key = authenticationTokenService.AUTH_CONFIG_KEY;
       const value = encodeURIComponent(authenticationTokenService.authConfigValue ?? '');
-      window.location.href = `https://${target}/bienvenida?${key}=${value}`;
+      window.location.href = `https://${target}/admin?${key}=${value}`;
       return;
     }
 
-    this.router.navigate(['/bienvenida']);
+    this.router.navigate(['/admin']);
   }
 }
 
