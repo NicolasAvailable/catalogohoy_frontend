@@ -3,15 +3,15 @@
   <!-- Header — se oculta cuando ya se pagó (éxito) o ya hay un plan activo:
        ahí "Mejora tu plan" no corresponde. -->
   @if (!successName() && !blockedByStripe()) {
-  <div class="flex flex-col items-center text-center gap-2">
-    <span class="w-14 h-14 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-500">
-      <ui-icon name="crown" [size]="28" />
-    </span>
-    <h1 class="text-2xl font-bold text-grey-800">{{ 'Mejora tu plan' | transloco }}</h1>
-    <p class="text-base text-grey-500 max-w-xs">
-      {{ 'Desbloquea más productos, canales de chat, Punto de Venta y mucho más.' | transloco }}
+  <!-- Header igual que la web: eyebrow + título + subtítulo (sin el ícono de
+       corona ni "Mejora tu plan", que no existen en la web). -->
+  <header class="plans-header">
+    <span class="plans-eyebrow">{{ 'Planes' | transloco }}</span>
+    <h1 class="plans-title">{{ 'El plan perfecto para tu negocio' | transloco }}</h1>
+    <p class="plans-subtitle">
+      {{ 'Elige el plan que mejor se adapte y escala cuando lo necesites.' | transloco }}
     </p>
-  </div>
+  </header>
   }
 
   @if (loading()) {

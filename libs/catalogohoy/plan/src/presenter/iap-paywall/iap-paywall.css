@@ -2,6 +2,35 @@
    para que en móvil se vea idéntico: precio grande, botón arriba (tras el
    precio), divisor, checks verdes y badges inline. */
 
+/* ── Header: igual que la web (eyebrow + título + subtítulo), SIN el ícono de
+   corona ni "Mejora tu plan" (eso no existe en la web). ── */
+.plans-header {
+  text-align: center;
+}
+.plans-eyebrow {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6366f1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+.plans-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1.2;
+}
+.plans-subtitle {
+  color: #64748b;
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .plan-card {
   position: relative;
   background: #ffffff;
