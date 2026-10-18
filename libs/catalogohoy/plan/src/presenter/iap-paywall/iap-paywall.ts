@@ -61,7 +61,9 @@ export class IapPaywall implements OnInit {
   private readonly router = inject(Router);
 
   public readonly loading = signal(true);
-  public readonly period = signal<Period>('annual');
+  // Arranca en MENSUAL (como la web): el número anual, más alto, asusta. El
+  // usuario cambia a Anual si quiere el -50%.
+  public readonly period = signal<Period>('monthly');
   public readonly cards = signal<PlanCard[]>([]);
   /** id del plan cuya compra está en curso (deshabilita los botones). */
   public readonly purchasing = signal<string | null>(null);
