@@ -65,16 +65,32 @@ export class Home implements OnInit {
   public readonly stats = computed(() => this.homeStore.stats());
   public readonly isLoading = computed(() => this.homeStore.isLoading());
 
-  /** Promo de precios: "Planes anuales -50%". Descartable (localStorage). */
-  public readonly annualPromoDismissed = signal(
+  /** No tiene sentido invitar a descargar la app a quien ya está en la app.
+   *  Capacitor inyecta `window.Capacitor` en el webview nativo aunque el
+   *  paquete JS no esté en este branch → detección sin dependencia. */
+  public readonly isNative =
+    typeof window !== 'undefined' &&
+    !!(
+      window as unknown as {
+        Capacitor?: { isNativePlatform?: () => boolean };
+      }
+    ).Capacitor?.isNativePlatform?.();
+
+  public readonly appStoreUrl =
+    'https://apps.apple.com/us/app/catalogohoy-cat%C3%A1logo-y-ventas/id6817059692?l=es-MX';
+  public readonly playStoreUrl =
+    'https://play.google.com/store/apps/details?id=com.catalogohoy.app';
+
+  /** Promo: descarga de la app móvil (App Store / Play Store). Descartable. */
+  public readonly appPromoDismissed = signal(
     typeof localStorage !== 'undefined' &&
-      localStorage.getItem('annual_promo_dismissed') === '1'
+      localStorage.getItem('app_download_promo_dismissed') === '1'
   );
 
-  public dismissAnnualPromo(): void {
-    this.annualPromoDismissed.set(true);
+  public dismissAppPromo(): void {
+    this.appPromoDismissed.set(true);
     try {
-      localStorage.setItem('annual_promo_dismissed', '1');
+      localStorage.setItem('app_download_promo_dismissed', '1');
     } catch {
       /* localStorage no disponible → no persiste, sin drama */
     }

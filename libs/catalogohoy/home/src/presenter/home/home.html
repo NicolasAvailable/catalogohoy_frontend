@@ -51,38 +51,70 @@
        (reemplaza al checklist de primeros pasos; descartable por el owner). -->
   <app-catalog-progress />
 
-  <!-- Promo: planes anuales -50% (card blanca compacta, descartable) -->
-  @if (!annualPromoDismissed()) {
+  <!-- Promo: descargá la app móvil (App Store / Play Store). Solo en web — en
+       la app nativa no tiene sentido. Card blanca descartable (localStorage). -->
+  @if (!appPromoDismissed() && !isNative) {
   <div
-    class="flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-4 shadow-sm -mt-1"
+    class="relative flex flex-col gap-3 bg-white border border-slate-200 rounded-xl p-4 shadow-sm -mt-1 sm:flex-row sm:items-center"
   >
-    <div
-      class="shrink-0 w-9 h-9 rounded-lg bg-[#eef2ff] flex items-center justify-center text-lg"
-    >
-      🎁
-    </div>
-    <div class="flex-1 min-w-0">
-      <p class="text-sm font-semibold text-slate-800 leading-tight">
-        {{ '¡Planes anuales con 50% de descuento!' | transloco }}
-      </p>
-      <p class="hidden sm:block text-xs text-slate-500 mt-0.5 leading-snug">
-        {{ 'Pagá el año y ahorrá la mitad. Solo por este mes.' | transloco }}
-      </p>
-    </div>
-    <a
-      routerLink="/admin/plans"
-      class="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#3e7bfa] hover:bg-[#2d63d1] text-white text-sm font-semibold transition-colors cursor-pointer"
-    >
-      {{ 'Ver planes' | transloco }}
-    </a>
     <button
       type="button"
-      (click)="dismissAnnualPromo()"
-      class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+      (click)="dismissAppPromo()"
+      class="absolute top-2 right-2 inline-flex items-center justify-center w-7 h-7 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer sm:static"
       [attr.aria-label]="'Descartar' | transloco"
     >
       <ui-icon name="x" [size]="16" />
     </button>
+
+    <div class="flex items-center gap-3 flex-1 min-w-0 order-first pr-8 sm:pr-0 sm:order-none">
+      <div
+        class="shrink-0 w-9 h-9 rounded-lg bg-[#eef2ff] flex items-center justify-center text-lg"
+      >
+        📱
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-slate-800 leading-tight">
+          {{ '¡Ya puedes descargar la app de CatalogoHoy!' | transloco }}
+        </p>
+        <p class="hidden sm:block text-xs text-slate-500 mt-0.5 leading-snug">
+          {{ 'Lleva tu negocio en el teléfono. Descárgala gratis en App Store o Google Play.' | transloco }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Botones de tienda (mismos iconos que el banner de la landing). -->
+    <div class="shrink-0 flex items-center gap-2">
+      <a
+        [href]="appStoreUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-2 rounded-lg bg-slate-900 hover:bg-black px-3 py-2 text-white transition-colors"
+        aria-label="App Store"
+      >
+        <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="currentColor" aria-hidden="true">
+          <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z" />
+        </svg>
+        <span class="flex flex-col leading-none text-left">
+          <span class="text-[0.55rem] font-medium opacity-80">{{ 'Descárgala en' | transloco }}</span>
+          <span class="text-xs font-semibold tracking-tight">App Store</span>
+        </span>
+      </a>
+      <a
+        [href]="playStoreUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-2 rounded-lg bg-slate-900 hover:bg-black px-3 py-2 text-white transition-colors"
+        aria-label="Google Play"
+      >
+        <svg viewBox="0 0 512 512" class="w-4 h-4 shrink-0" fill="currentColor" aria-hidden="true">
+          <path d="M47 24.6C40.4 28.7 36 36 36 45.4v421.2c0 9.4 4.4 16.7 11 20.8l236.3-231.4L47 24.6zM318.6 291.2 61.9 42.4l304.4 174.5-47.7 74.3zm0 0 47.7 74.3L61.9 469.6l256.7-178.4zM410.3 232.4l-55.2-31.6-52 76.8 52 76.8 55.2-31.6c17-9.8 17-34.3 0-44.1v-46.3z" />
+        </svg>
+        <span class="flex flex-col leading-none text-left">
+          <span class="text-[0.55rem] font-medium opacity-80">{{ 'Disponible en' | transloco }}</span>
+          <span class="text-xs font-semibold tracking-tight">Google Play</span>
+        </span>
+      </a>
+    </div>
   </div>
   }
 
