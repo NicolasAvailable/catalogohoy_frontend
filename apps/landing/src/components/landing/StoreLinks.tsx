@@ -12,9 +12,13 @@ export const AppleGlyph = ({ className = "h-7 w-7" }: { className?: string }) =>
   </svg>
 );
 
+// Google Play con sus colores oficiales (azul/rojo/verde/amarillo).
 export const PlayGlyph = ({ className = "h-6 w-6" }: { className?: string }) => (
-  <svg viewBox="0 0 512 512" className={className} fill="currentColor" aria-hidden="true">
-    <path d="M47 24.6C40.4 28.7 36 36 36 45.4v421.2c0 9.4 4.4 16.7 11 20.8l236.3-231.4L47 24.6zM318.6 291.2 61.9 42.4l304.4 174.5-47.7 74.3zm0 0 47.7 74.3L61.9 469.6l256.7-178.4zM410.3 232.4l-55.2-31.6-52 76.8 52 76.8 55.2-31.6c17-9.8 17-34.3 0-44.1v-46.3z" />
+  <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+    <path fill="#2196F3" d="M1.337.924a1.486 1.486 0 0 0-.112.568v21.017c0 .217.045.419.124.6l11.155-11.087L1.337.924z" />
+    <path fill="#F44336" d="M13.544 10.989l3.258-3.238L3.45.195a1.466 1.466 0 0 0-.946-.179l11.04 10.973z" />
+    <path fill="#4CAF50" d="M13.544 13.056l-11 10.933c.298.036.612-.016.906-.183l13.324-7.54-3.23-3.21z" />
+    <path fill="#FFC107" d="M22.018 13.298l-3.919 2.218-3.515-3.493 3.543-3.521 3.891 2.202a1.49 1.49 0 0 1 0 2.594z" />
   </svg>
 );
 
