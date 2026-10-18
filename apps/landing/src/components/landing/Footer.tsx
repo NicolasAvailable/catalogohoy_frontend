@@ -1,7 +1,7 @@
 import logo from "@/assets/logo.svg";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { StoreBadges } from "@/components/landing/AppDownload";
+import { StoreBadges } from "@/components/landing/StoreLinks";
 
 const linkCls = "hover:text-foreground transition-colors";
 

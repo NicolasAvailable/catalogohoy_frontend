@@ -102,3 +102,13 @@ html {
     @apply bg-background text-foreground font-sans antialiased;
   }
 }
+
+/* Smart app banner (SmartAppBanner.tsx): mientras está visible (solo en móvil),
+   baja el header fijo y el contenido 3.5rem para darle su franja arriba.
+   La clase `has-app-banner` la pone/saca el componente en <html>. */
+.has-app-banner body {
+  padding-top: 3.5rem;
+}
+.has-app-banner .site-header {
+  top: 3.5rem;
+}
