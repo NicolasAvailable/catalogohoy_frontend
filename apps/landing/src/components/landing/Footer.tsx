@@ -1,6 +1,7 @@
 import logo from "@/assets/logo.svg";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { StoreBadges } from "@/components/landing/AppDownload";
 
 const linkCls = "hover:text-foreground transition-colors";
 
@@ -26,6 +27,7 @@ const Footer = () => {
             <p className="text-sm text-muted-foreground max-w-xs">
               Crea tu catálogo digital y vende por WhatsApp. Gratis para empezar.
             </p>
+            <StoreBadges className="mt-2" />
           </div>
 
           {/* Producto */}
