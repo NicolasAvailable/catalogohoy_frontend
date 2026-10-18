@@ -108,16 +108,11 @@ const SmartAppBanner = () => {
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-foreground px-2.5 py-1.5 text-white"
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 text-white"
       >
         {isIOS ? <AppleGlyph className="h-4 w-4" /> : <PlayGlyph className="h-3.5 w-3.5" />}
-        <span className="flex flex-col text-left leading-none">
-          <span className="text-[0.55rem] font-medium opacity-80">
-            {isIOS ? "Descárgala en" : "Disponible en"}
-          </span>
-          <span className="text-xs font-semibold tracking-tight">
-            {isIOS ? "App Store" : "Google Play"}
-          </span>
+        <span className="text-xs font-semibold tracking-tight">
+          {isIOS ? "App Store" : "Google Play"}
         </span>
       </a>
     </div>
