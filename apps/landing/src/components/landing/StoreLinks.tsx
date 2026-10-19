@@ -29,30 +29,30 @@ const StoreBadge = ({ href, top, bottom, icon }: BadgeProps) => (
     href={href}
     target="_blank"
     rel="noopener noreferrer"
-    className="inline-flex items-center gap-3 rounded-xl bg-foreground px-5 py-3 text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl"
+    className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3 py-1.5 text-white shadow-sm transition-all hover:scale-105 hover:shadow-md"
   >
     <span className="shrink-0">{icon}</span>
     <span className="flex flex-col text-left leading-none">
-      <span className="text-[0.65rem] font-medium opacity-80">{top}</span>
-      <span className="font-display text-lg font-semibold tracking-tight">{bottom}</span>
+      <span className="text-[0.5rem] font-medium opacity-80">{top}</span>
+      <span className="font-display text-sm font-semibold tracking-tight">{bottom}</span>
     </span>
   </a>
 );
 
-/** Badges reutilizables (p.ej. el footer). */
+/** Badges reutilizables (p.ej. el footer). Compactos y uno al lado del otro. */
 export const StoreBadges = ({ className = "" }: { className?: string }) => (
-  <div className={`flex flex-wrap items-center gap-3 ${className}`}>
+  <div className={`flex items-center gap-2 ${className}`}>
     <StoreBadge
       href={APP_STORE_URL}
       top="Descárgala en el"
       bottom="App Store"
-      icon={<AppleGlyph className="h-7 w-7" />}
+      icon={<AppleGlyph className="h-5 w-5" />}
     />
     <StoreBadge
       href={PLAY_STORE_URL}
       top="Disponible en"
       bottom="Google Play"
-      icon={<PlayGlyph className="h-6 w-6" />}
+      icon={<PlayGlyph className="h-4 w-4" />}
     />
   </div>
 );
