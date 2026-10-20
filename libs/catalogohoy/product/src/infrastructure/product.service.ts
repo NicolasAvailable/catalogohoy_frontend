@@ -93,10 +93,13 @@ export class ProductService implements BaseProductService {
       return E.left(new Error('No tenant found'));
     }
 
-    let query = this.client
-      .from('products')
-      .select(
-        `
+    // Query base (select + tenant + orden + búsqueda). Se reconstruye por
+    // bloque: el builder de Supabase no se puede reusar tras ejecutarse.
+    const buildQuery = () => {
+      let query = this.client
+        .from('products')
+        .select(
+          `
       *,
       product_categories (
         categories (
@@ -104,30 +107,44 @@ export class ProductService implements BaseProductService {
         )
       )
       `
-      )
-      .eq('tenant_id', tenantId)
-      .order('position', { ascending: true });
+        )
+        .eq('tenant_id', tenantId)
+        .order('position', { ascending: true });
 
-    if (search && search.trim().length > 0) {
-      // Busca contra search_blob (columna generada en la DB): nombre +
-      // descripción + SKU top-level + nombre/SKU de cada talla y variante. Un
-      // solo input del listado cubre todo, sin que el usuario elija el campo.
-      query = query.ilike('search_blob', `%${search.trim()}%`);
-    }
+      if (search && search.trim().length > 0) {
+        // Busca contra search_blob (columna generada en la DB): nombre +
+        // descripción + SKU top-level + nombre/SKU de cada talla y variante. Un
+        // solo input del listado cubre todo, sin que el usuario elija el campo.
+        query = query.ilike('search_blob', `%${search.trim()}%`);
+      }
+      return query;
+    };
 
+    let rows: ProductEntity[];
     if (page !== undefined && pageSize !== undefined) {
+      // Una página puntual (paginado server-side explícito).
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
-      query = query.range(from, to);
+      const { data, error } = await buildQuery().range(from, to);
+      if (error) return E.left(error);
+      rows = (data ?? []) as ProductEntity[];
+    } else {
+      // "Todos": PostgREST/Supabase capea cada SELECT a 1000 filas. Hay que
+      // paginar en bloques y concatenar, si no un catálogo con >1000 productos
+      // se corta en 1000 (el listado pagina del lado del cliente sobre este
+      // total). Sin esto, un tenant con 1056 productos solo veía 1000.
+      rows = [];
+      const CHUNK = 1000;
+      for (let from = 0; ; from += CHUNK) {
+        const { data, error } = await buildQuery().range(from, from + CHUNK - 1);
+        if (error) return E.left(error);
+        const batch = (data ?? []) as ProductEntity[];
+        rows.push(...batch);
+        if (batch.length < CHUNK) break;
+      }
     }
 
-    const { data, error } = await query;
-
-    if (error) {
-      return E.left(error);
-    }
-
-    const entities = (data as ProductEntity[]).map((item) => ({
+    const entities = rows.map((item) => ({
       ...item,
       product_categories:
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
