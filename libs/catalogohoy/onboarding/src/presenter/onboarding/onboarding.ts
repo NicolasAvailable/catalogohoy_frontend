@@ -406,10 +406,16 @@ export class Onboarding implements OnInit {
       /^(mi-)?tienda-[a-z0-9-]+$/.test(rawName.toLowerCase());
     this.storeName.set(seededName ? '' : rawName);
     // Dirección SIEMPRE editable. Si el slug es temporal (mi-tienda-XXXX del
-    // trigger de signup), el input arranca VACÍO con placeholder — el usuario
-    // no ve el slug aleatorio feo; se autogenera desde el nombre al tipear.
-    // Si ya es un slug real, se prefillea para que lo puedan editar.
-    this.slugInput.set(this.isTempSlug() ? '' : currentSlug);
+    // trigger de signup), el input se DERIVA del nombre. Si el nombre ya viene
+    // pre-cargado del signup (ej. "Chalinas Jacky"), lo derivamos YA en el init
+    // — sin esperar a que el usuario retipee: antes, si no tocaba el nombre, el
+    // slug destino quedaba vacío y el rename diferido se saltaba, dejando la
+    // tienda en el slug feo `mi-tienda-XXXX` para siempre. Con nombre sembrado
+    // ("Mi tienda"/slug) storeName() es '' → toSlug('')='' → placeholder.
+    // Si el slug ya es real, se prefillea para que lo puedan editar.
+    this.slugInput.set(
+      this.isTempSlug() ? toSlug(this.storeName()) : currentSlug
+    );
 
     // ── WhatsApp de VENTAS (whatsappButtons) — SIEMPRE se muestra/confirma ──
     // Prefill por conveniencia: (1) el vendedor ya guardado en la config; si no

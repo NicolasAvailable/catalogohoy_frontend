@@ -5,7 +5,13 @@ import { toast } from 'ngx-sonner';
 
 @Injectable({ providedIn: 'root' })
 export class SonnerToasterService {
-  private waitId: string | number | undefined = undefined;
+  /** Id FIJO del toast de espera. Al reusar siempre el mismo id, ngx-sonner
+   *  ACTUALIZA el toast existente en vez de apilar uno nuevo: por más rápido
+   *  que se dispare `wait()` (p. ej. subir/quitar imágenes seguido) nunca
+   *  quedan varios "cargando…" huérfanos, y `dismissWait()` siempre lo cierra.
+   *  (Antes se guardaba el id dinámico de cada `toast.loading`, que se
+   *  sobreescribía sin cerrar el anterior → toasts pegados con duration:∞.) */
+  private static readonly WAIT_ID = 'app-wait-toast';
 
   constructor(private readonly translate: TranslateService) {}
 
@@ -58,12 +64,16 @@ export class SonnerToasterService {
   public wait(message: string) {
     // duration: Infinity → el toast de espera NO se auto-cierra; persiste hasta
     // que la acción termine (dismissWait) o lo reemplace un toast de resultado.
-    this.waitId = toast.loading(this.translate.translate(message), {
+    // id fijo → si ya hay uno de espera, se ACTUALIZA (no se apila otro).
+    toast.loading(this.translate.translate(message), {
+      id: SonnerToasterService.WAIT_ID,
       duration: Infinity,
     });
   }
 
   public dismissWait() {
-    toast.dismiss(this.waitId);
+    // Cierra SOLO el toast de espera por su id fijo. (Con `dismiss(undefined)`
+    // ngx-sonner cerraba TODOS los toasts; con el id fijo es un no-op si no hay.)
+    toast.dismiss(SonnerToasterService.WAIT_ID);
   }
 }
