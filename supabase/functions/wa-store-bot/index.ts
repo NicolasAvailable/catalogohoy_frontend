@@ -442,6 +442,96 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "create_order",
+    description:
+      "Registra una orden manual (venta por WhatsApp, en tienda, etc.). No le avisa al cliente. " +
+      "El precio de cada producto sale del catálogo (oferta si tiene) salvo que mandes price. " +
+      "status completed o credit descuenta stock. Devuelve la orden creada con su número.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Nombre del cliente" },
+        phone: { type: "string" },
+        items: {
+          type: "array",
+          description: "Productos de la orden. Del catálogo: {product_id, quantity, size?, variant?}. Ítem libre (fuera del catálogo): {name, price, quantity}.",
+          items: {
+            type: "object",
+            properties: {
+              product_id: { type: "number" },
+              quantity: { type: "number" },
+              size: { type: "string", description: "Nombre de la talla" },
+              variant: { type: "string", description: "Nombre de la variante" },
+              name: { type: "string", description: "Solo ítem libre" },
+              price: { type: "number", description: "Ítem libre, o para cambiar el precio unitario" },
+            },
+          },
+        },
+        status: { type: "string", enum: ["pending", "completed", "credit"], description: "Default pending" },
+        payment_method: { type: "string" },
+        shipping_fee: { type: "number" },
+        comments: { type: "string" },
+      },
+      required: ["name", "items"],
+    },
+  },
+  {
+    name: "update_order",
+    description:
+      "Edita una orden por su número: datos del cliente, método de pago, envío, comentarios o sus productos " +
+      "(items reemplaza la lista completa y recalcula el total). Para cambiar solo el estado usa set_order_status.",
+    input_schema: {
+      type: "object",
+      properties: {
+        order_number: { type: "number" },
+        name: { type: "string" },
+        phone: { type: "string" },
+        items: {
+          type: "array",
+          description: "Productos de la orden. Del catálogo: {product_id, quantity, size?, variant?}. Ítem libre (fuera del catálogo): {name, price, quantity}.",
+          items: {
+            type: "object",
+            properties: {
+              product_id: { type: "number" },
+              quantity: { type: "number" },
+              size: { type: "string", description: "Nombre de la talla" },
+              variant: { type: "string", description: "Nombre de la variante" },
+              name: { type: "string", description: "Solo ítem libre" },
+              price: { type: "number", description: "Ítem libre, o para cambiar el precio unitario" },
+            },
+          },
+        },
+        payment_method: { type: "string" },
+        shipping_fee: { type: "number" },
+        comments: { type: "string" },
+      },
+      required: ["order_number"],
+    },
+  },
+  {
+    name: "set_order_status",
+    description:
+      "Cambia el estado de una orden: pending (pendiente), completed (pagada/entregada), credit (entregada a crédito, por cobrar), cancelled (cancelada). " +
+      "Mueve el stock igual que el panel. Si la orden vino del catálogo público, el cliente recibe el aviso por WhatsApp.",
+    input_schema: {
+      type: "object",
+      properties: {
+        order_number: { type: "number" },
+        status: { type: "string", enum: ["pending", "completed", "credit", "cancelled"] },
+      },
+      required: ["order_number", "status"],
+    },
+  },
+  {
+    name: "delete_order",
+    description: "Elimina una orden (si había descontado stock, lo repone). Irreversible: SOLO con confirmed=true después de que el dueño lo confirmó.",
+    input_schema: {
+      type: "object",
+      properties: { order_number: { type: "number" }, confirmed: { type: "boolean" } },
+      required: ["order_number", "confirmed"],
+    },
+  },
+  {
     name: "get_order",
     description: "Detalle de una orden por su número (#) o id: cliente, productos, pagos, envío.",
     input_schema: {
@@ -480,6 +570,127 @@ async function ownCategoryIds(tenantId: number, ids: unknown): Promise<number[]>
   if (!Array.isArray(ids) || !ids.length) return [];
   const { data } = await admin.from("categories").select("id").eq("tenant_id", tenantId).in("id", ids.map(Number));
   return (data ?? []).map((c) => c.id);
+}
+
+// ── Órdenes: mismas reglas que el panel (order.service.ts) ──────────────────
+// completed y credit ya sacaron la mercancía del inventario; pending y
+// cancelled no lo tocan. Cruzar esa frontera descuenta o repone stock.
+const deductsStock = (status?: string | null) => status === "completed" || status === "credit";
+const ORDER_FIELDS =
+  "id, order_number, name, phone, email, status, source, products, total_usd, total_bs, payment_method, payments, shipping_method, shipping_address, shipping_fee, discount_amount, comments, created_at";
+
+// deno-lint-ignore no-explicit-any
+async function moveStock(tenantId: number, items: any[], dir: "deduct" | "restore") {
+  if (!items?.length) return;
+  const payload = items.map((it) => ({
+    productId: it.productId, quantity: it.quantity ?? 0, size: it.size ?? null, variantId: it.variantId ?? null,
+  }));
+  const { error } = await admin.rpc(dir === "deduct" ? "decrement_product_stock" : "increment_product_stock", {
+    p_tenant_id: tenantId, p_items: payload,
+  });
+  if (error) console.error("[wa-store-bot] stock", dir, error.message);
+}
+
+/** Tasa activa del tenant si usa doble moneda (Venezuela); 0 si no aplica. */
+async function dualRate(tenantId: number): Promise<number> {
+  const [{ data: cfg }, { data: t }, { data: rates }] = await Promise.all([
+    admin.from("tenant_currency_config").select("show_dual_currency, exchange_rate_type, custom_rate").eq("tenant_id", tenantId).maybeSingle(),
+    admin.from("tenants").select("country_code").eq("id", tenantId).maybeSingle(),
+    admin.from("exchange_rates").select("bcv_usd, bcv_eur").eq("id", 1).maybeSingle(),
+  ]);
+  const dual = cfg ? !!cfg.show_dual_currency : t?.country_code === "VE";
+  if (!dual) return 0;
+  const type = cfg?.exchange_rate_type ?? "bcv_usd";
+  const rate = type === "custom" ? cfg?.custom_rate : type === "bcv_eur" ? rates?.bcv_eur : rates?.bcv_usd;
+  return Number(rate) || 0;
+}
+
+/** Arma los ítems de la orden con el formato del panel a partir de lo que pidió el dueño. */
+// deno-lint-ignore no-explicit-any
+async function buildOrderItems(tenantId: number, raw: any[]): Promise<{ items?: any[]; error?: string }> {
+  const ids = raw.map((r) => Number(r.product_id)).filter(Boolean);
+  const { data } = ids.length
+    ? await admin.from("products").select("id, name, price, price_promotional, photos, sku, is_sized, sizes, is_variant, variants")
+      .eq("tenant_id", tenantId).in("id", ids)
+    : { data: [] };
+  // deno-lint-ignore no-explicit-any
+  const byId = new Map((data ?? []).map((p: any) => [p.id, p]));
+  // deno-lint-ignore no-explicit-any
+  const items: any[] = [];
+  for (const r of raw) {
+    const quantity = Math.max(Number(r.quantity) || 1, 1);
+    if (!r.product_id) {
+      const name = String(r.name ?? "").trim();
+      if (!name) return { error: "Cada ítem necesita product_id o un nombre" };
+      const price = Number(r.price) || 0;
+      items.push({
+        sku: null, name, size: null, photo: null, price, total: price * quantity, addons: null, quantity,
+        productId: null, isCustom: true, tierTitle: null, variantId: null, variantName: null,
+      });
+      continue;
+    }
+    const p = byId.get(Number(r.product_id));
+    if (!p) return { error: `Producto ${r.product_id} no encontrado en esta tienda` };
+    // deno-lint-ignore no-explicit-any
+    let variant: any = null;
+    if (r.variant) {
+      const v = String(r.variant).trim().toLowerCase();
+      // deno-lint-ignore no-explicit-any
+      variant = (p.variants ?? []).find((x: any) => String(x.name ?? "").trim().toLowerCase() === v);
+      // deno-lint-ignore no-explicit-any
+      if (!variant) return { error: `«${p.name}» no tiene la variante «${r.variant}». Tiene: ${(p.variants ?? []).map((x: any) => x.name).join(", ") || "ninguna"}` };
+    } else if (p.is_variant && (p.variants ?? []).length) {
+      // deno-lint-ignore no-explicit-any
+      return { error: `Indica la variante de «${p.name}»: ${(p.variants ?? []).map((x: any) => x.name).join(", ")}` };
+    }
+    // deno-lint-ignore no-explicit-any
+    const sizes = (variant ? variant.sizes : p.is_sized ? p.sizes : []) as any[] ?? [];
+    let size: string | null = null;
+    if (r.size) {
+      const sz = String(r.size).trim().toLowerCase();
+      size = sizes.find((x) => String(x.name ?? "").trim().toLowerCase() === sz)?.name ?? null;
+      if (!size) return { error: `«${p.name}» no tiene la talla «${r.size}». Tiene: ${sizes.map((x) => x.name).join(", ") || "ninguna"}` };
+    } else if (sizes.length) {
+      return { error: `Indica la talla de «${p.name}»: ${sizes.map((x) => x.name).join(", ")}` };
+    }
+    const catalogPrice = variant
+      ? Number(variant.price) || Number(p.price) || 0
+      : Number(p.price_promotional) > 0 ? Number(p.price_promotional) : Number(p.price) || 0;
+    const price = r.price !== undefined ? Number(r.price) || 0 : catalogPrice;
+    items.push({
+      sku: (variant?.sku ?? p.sku) || null, name: p.name, size,
+      photo: (variant?.photos ?? p.photos ?? [])[0] ?? null,
+      price, total: Math.round(price * quantity * 100) / 100, addons: null, quantity,
+      productId: p.id, isCustom: false, tierTitle: null,
+      variantId: variant?.id ?? null, variantName: variant?.name ?? null,
+    });
+  }
+  return { items };
+}
+
+// deno-lint-ignore no-explicit-any
+const itemsTotal = (items: any[]) => Math.round(items.reduce((acc, it) => acc + (Number(it.total) || 0), 0) * 100) / 100;
+
+// deno-lint-ignore no-explicit-any
+function orderView(o: any, shopUrl: string) {
+  return {
+    ...o,
+    // deno-lint-ignore no-explicit-any
+    products: ((o.products ?? []) as any[]).map((p) => ({
+      product_id: p.productId ?? null, name: p.name, quantity: p.quantity, price: p.price, total: p.total,
+      size: p.size ?? undefined, variant: p.variantName ?? undefined,
+    })),
+    admin_url: shopUrl ? `${shopUrl}/admin/orders` : undefined,
+  };
+}
+
+async function findOrder(tenantId: number, a: Record<string, unknown>) {
+  let q = admin.from("orders").select(ORDER_FIELDS).eq("tenant_id", tenantId);
+  if (a.order_number) q = q.eq("order_number", Number(a.order_number));
+  else if (a.id) q = q.eq("id", Number(a.id));
+  else return null;
+  const { data } = await q.maybeSingle();
+  return data;
 }
 
 // deno-lint-ignore no-explicit-any
@@ -726,21 +937,105 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       return { days, total_orders: count ?? rows.length, total_usd: Math.round(total * 100) / 100, orders: rows.slice(0, limit) };
     }
     case "get_order": {
-      let q = admin.from("orders")
-        .select("id, order_number, name, phone, email, status, products, total_usd, total_bs, payment_method, payments, shipping_method, shipping_address, shipping_fee, discount_amount, comments, created_at")
-        .eq("tenant_id", tenantId);
-      if (a.order_number) q = q.eq("order_number", Number(a.order_number));
-      else if (a.id) q = q.eq("id", Number(a.id));
-      else return { error: "Indica el número de orden" };
-      const { data } = await q.maybeSingle();
+      if (!a.order_number && !a.id) return { error: "Indica el número de orden" };
+      const data = await findOrder(tenantId, a);
       if (!data) return { error: "Orden no encontrada" };
       // Productos con su product_id para poder editarlos con update_product.
+      return orderView(data, ctx.shopUrl);
+    }
+    case "create_order": {
+      const name = String(a.name ?? "").trim();
+      if (!name) return { error: "Falta el nombre del cliente" };
+      if (!Array.isArray(a.items) || !a.items.length) return { error: "La orden necesita al menos un producto" };
+      const built = await buildOrderItems(tenantId, a.items);
+      if (built.error) return { error: built.error };
+      const items = built.items!;
+      const status = ["pending", "completed", "credit"].includes(a.status) ? a.status : "pending";
+      const shippingFee = Number(a.shipping_fee) || 0;
+      const totalUsd = Math.round((itemsTotal(items) + shippingFee) * 100) / 100;
+      const rate = await dualRate(tenantId);
+      // Alta manual: source='manual' → los triggers no le escriben al cliente.
+      const { data, error } = await admin.from("orders").insert({
+        tenant_id: tenantId, name, phone: a.phone ? digits(a.phone) : null, comments: a.comments ?? null,
+        status, products: items, total_usd: totalUsd, total_bs: rate ? Math.round(totalUsd * rate * 100) / 100 : 0,
+        shipping_fee: shippingFee, payment_method: a.payment_method || null, source: "manual",
+      }).select(ORDER_FIELDS).single();
+      if (error) {
+        if (error.message.includes("order_limit_reached")) {
+          return { error: "Llegó al límite de órdenes de su plan este mes. Ofrece mejorar el plan." };
+        }
+        return { error: error.message };
+      }
+      if (deductsStock(status)) await moveStock(tenantId, items, "deduct");
+      return { created: true, order: orderView(data, ctx.shopUrl) };
+    }
+    case "update_order": {
+      const before = await findOrder(tenantId, a);
+      if (!before) return { error: "Orden no encontrada" };
+      const patch: Record<string, unknown> = {};
+      if (a.name !== undefined) patch.name = String(a.name).trim();
+      if (a.phone !== undefined) patch.phone = a.phone ? digits(a.phone) : null;
+      if (a.comments !== undefined) patch.comments = a.comments;
+      if (a.payment_method !== undefined) patch.payment_method = a.payment_method || null;
+      if (a.shipping_fee !== undefined) patch.shipping_fee = Number(a.shipping_fee) || 0;
       // deno-lint-ignore no-explicit-any
-      const items = ((data.products ?? []) as any[]).map((p) => ({
-        product_id: p.productId ?? null, name: p.name, quantity: p.quantity, price: p.price, total: p.total,
-        size: p.size ?? undefined, variant: p.variantName ?? undefined,
-      }));
-      return { ...data, products: items };
+      let newItems: any[] | null = null;
+      if (Array.isArray(a.items)) {
+        if (!a.items.length) return { error: "La orden necesita al menos un producto" };
+        const built = await buildOrderItems(tenantId, a.items);
+        if (built.error) return { error: built.error };
+        newItems = built.items!;
+        patch.products = newItems;
+      }
+      if (newItems || patch.shipping_fee !== undefined) {
+        // deno-lint-ignore no-explicit-any
+        const items = newItems ?? (before.products as any[] ?? []);
+        const fee = patch.shipping_fee !== undefined ? Number(patch.shipping_fee) : Number(before.shipping_fee) || 0;
+        const totalUsd = Math.round((itemsTotal(items) + fee - (Number(before.discount_amount) || 0)) * 100) / 100;
+        patch.total_usd = totalUsd;
+        const rate = await dualRate(tenantId);
+        if (rate) patch.total_bs = Math.round(totalUsd * rate * 100) / 100;
+      }
+      if (!Object.keys(patch).length) return { error: "No indicaste qué cambiar" };
+      const { data, error } = await admin.from("orders").update(patch).eq("id", before.id).eq("tenant_id", tenantId)
+        .select(ORDER_FIELDS).single();
+      if (error) return { error: error.message };
+      // Orden que ya descontó stock y cambia sus productos: repone lo viejo y descuenta lo nuevo.
+      if (newItems && deductsStock(before.status)) {
+        await moveStock(tenantId, before.products ?? [], "restore");
+        await moveStock(tenantId, newItems, "deduct");
+      }
+      return { updated: true, changed: Object.keys(patch), order: orderView(data, ctx.shopUrl) };
+    }
+    case "set_order_status": {
+      const status = String(a.status ?? "");
+      if (!["pending", "completed", "credit", "cancelled"].includes(status)) return { error: "Estado inválido" };
+      const before = await findOrder(tenantId, a);
+      if (!before) return { error: "Orden no encontrada" };
+      if (before.status === status) return { unchanged: true, status };
+      const patch: Record<string, unknown> = { status };
+      // Al salir de "pendiente", el Bs queda fijo con la tasa del día (igual que el panel).
+      if (before.status === "pending" && Number(before.total_usd) > 0) {
+        const rate = await dualRate(tenantId);
+        if (rate) patch.total_bs = Number(before.total_usd) * rate;
+      }
+      const { data, error } = await admin.from("orders").update(patch).eq("id", before.id).eq("tenant_id", tenantId)
+        .select(ORDER_FIELDS).single();
+      if (error) return { error: error.message };
+      const was = deductsStock(before.status), will = deductsStock(status);
+      if (!was && will) await moveStock(tenantId, before.products ?? [], "deduct");
+      else if (was && !will) await moveStock(tenantId, before.products ?? [], "restore");
+      const notified = !["manual", "pos"].includes(before.source ?? "public");
+      return { updated: true, from: before.status, to: status, customer_notified: notified, order: orderView(data, ctx.shopUrl) };
+    }
+    case "delete_order": {
+      if (a.confirmed !== true) return { error: "Pide confirmación al dueño antes de eliminar la orden." };
+      const before = await findOrder(tenantId, a);
+      if (!before) return { error: "Orden no encontrada" };
+      const { error } = await admin.from("orders").delete().eq("id", before.id).eq("tenant_id", tenantId);
+      if (error) return { error: error.message };
+      if (deductsStock(before.status)) await moveStock(tenantId, before.products ?? [], "restore");
+      return { deleted: true, order_number: before.order_number };
     }
     case "get_metrics": {
       const days = Math.min(Math.max(Number(a.days) || 30, 1), 365);
@@ -779,7 +1074,7 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
 }
 
 // ── Agente ──────────────────────────────────────────────────────────────────
-const SYSTEM = `Eres el asistente de WhatsApp de CatalogoHoy. Hablas con el DUEÑO de una tienda (no con sus clientes) y le ayudas a gestionar su catálogo: crear y editar productos, subir fotos, ajustar precios, crear categorías, consultar sus órdenes y ver sus métricas de ventas, usando las herramientas.
+const SYSTEM = `Eres el asistente de WhatsApp de CatalogoHoy. Hablas con el DUEÑO de una tienda (no con sus clientes) y le ayudas a gestionar su catálogo: crear y editar productos, subir fotos, ajustar precios, crear categorías, gestionar sus órdenes (crear, editar, cambiar estado, eliminar) y ver sus métricas de ventas, usando las herramientas.
 
 Cómo responder:
 - Español, trato de "tú", cercano y muy breve: es WhatsApp. Máximo 5-6 líneas salvo que pidan una lista.
@@ -798,7 +1093,8 @@ Reglas:
 - Si el mensaje empieza con [Respondiendo al producto …], el dueño citó esa ficha: lo que pida aplica a ESE producto (usa su id directo, sin buscar).
 - Tallas: sizes [{name, stock}]. Venta al mayor: wholesale_tiers [{title, price}].
 - Eliminar productos y cambiar precios en lote: pide confirmación explícita antes de aplicarlo.
-- Las órdenes son solo de consulta: si piden cambiar el estado de una orden, explica que por ahora eso se hace desde el panel.
+- Órdenes: puedes crearlas (create_order, para ventas por WhatsApp o en tienda), editarlas (update_order), cambiarles el estado (set_order_status) y eliminarlas (delete_order, solo con confirmación explícita). Estados: pendiente = pending, pagada/entregada/completada = completed, a crédito/fiada/por cobrar = credit, cancelada = cancelled. Si en create_order un producto tiene tallas o variantes y no te las dijeron, pregunta. Si customer_notified es true, dile que al cliente le llegó el aviso por WhatsApp.
+- Al mostrar una orden, dala estructurada y breve: número, cliente y teléfono, estado, cada producto en una línea (cantidad × nombre, talla/variante, total), envío, total y método de pago.
 - No inventes datos (precios, stock, órdenes): usa siempre las herramientas.
 - Métricas ("¿cuánto vendí?", "lo más vendido", "ventas de la semana"): usa get_metrics y resume en 3-5 líneas.
 - Límites del plan (productos, catálogos, variantes…) o sin créditos de IA: explica el límite en una línea y ofrece las dos salidas: *mejorar el plan* (desde el panel web, en el enlace "Planes" del contexto, o desde la app móvil de CatalogoHoy, en Planes) o, para créditos, *comprar más* desde el panel web (botón de créditos arriba). Si aplica, sugiere también liberar espacio (ej. borrar productos que no usa), pero primero la mejora de plan.
