@@ -108,3 +108,14 @@ create table if not exists public.wa_bot_link_attempts (
 );
 create index if not exists wa_bot_link_attempts_phone_idx on public.wa_bot_link_attempts (phone, created_at desc);
 alter table public.wa_bot_link_attempts enable row level security;
+
+-- v1.2: mensajes que el bot envía (fichas de producto) ↔ producto, para que el
+-- dueño pueda responder (citar) una ficha y editar ese producto.
+create table if not exists public.wa_bot_msg_refs (
+  wamid       text primary key,
+  phone       text not null,
+  tenant_id   bigint not null references public.tenants(id) on delete cascade,
+  product_id  bigint,
+  created_at  timestamptz not null default now()
+);
+alter table public.wa_bot_msg_refs enable row level security;
