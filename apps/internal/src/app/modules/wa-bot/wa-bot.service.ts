@@ -28,9 +28,10 @@ export interface WaBotDebug {
   error?: string;
   stack?: string;
 }
+export interface WaBotMedia { url: string; type: 'image' | 'audio' | 'video' | 'document'; name?: string }
 export interface WaBotLogRow {
   id: number; tenant_id: number; phone: string; role: 'user' | 'assistant' | 'system';
-  body: string; media: string[]; actions: { tool: string; label: string; url?: string }[];
+  body: string; media: WaBotMedia[]; actions: { tool: string; label: string; url?: string }[];
   credits: number; created_at: string; debug: WaBotDebug | null;
 }
 
@@ -55,6 +56,11 @@ export class WaBotAdminService {
       p_limit: q.limit ?? 100,
     });
     if (error) return E.left(new Error(error.message));
-    return E.right(((data ?? []) as WaBotLogRow[]).reverse());
+    // Los registros viejos guardan solo la URL de la foto; los nuevos, el objeto.
+    const rows = ((data ?? []) as (Omit<WaBotLogRow, 'media'> & { media: (string | WaBotMedia)[] })[]).map((m) => ({
+      ...m,
+      media: (m.media ?? []).map((x) => (typeof x === 'string' ? { url: x, type: 'image' as const } : x)),
+    }));
+    return E.right(rows.reverse());
   }
 }

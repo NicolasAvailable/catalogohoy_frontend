@@ -1,4 +1,19 @@
 <div class="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex flex-col gap-9 sm:gap-12">
+  @if (isLoading()) {
+  <!-- Esqueleto mientras se consulta la conexión con Meta -->
+  <div class="flex flex-col items-center gap-4 animate-pulse" aria-busy="true">
+    <div class="w-14 h-14 rounded-2xl bg-grey-100"></div>
+    <div class="h-7 w-full max-w-lg rounded bg-grey-100"></div>
+    <div class="h-4 w-full max-w-md rounded bg-grey-100"></div>
+    <div class="h-12 w-52 rounded-xl bg-grey-100 mt-1"></div>
+  </div>
+  <div class="grid md:grid-cols-3 gap-4 animate-pulse">
+    @for (i of [1, 2, 3]; track i) {
+    <div class="h-36 rounded-xl bg-white border border-grey-100"></div>
+    }
+  </div>
+  } @else {
+  <div class="flex flex-col gap-9 sm:gap-12 animate-fade-in">
 
   @if (!metaConnected()) {
   <!-- ═══ Hero (mismo patrón que la landing de Chat) ═══ -->
@@ -361,6 +376,8 @@
         </div>
       </div>
     </div>
+  </div>
+  }
   </div>
   }
 </div>
