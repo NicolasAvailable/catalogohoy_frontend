@@ -184,5 +184,5 @@ Todos los emails transaccionales usan el mismo layout de marca que las plantilla
 Supabase Auth: fondo `#eaf1ff`, card blanca radio 12px, logo, título `#16367f`, Arial,
 botón `#3e7bfa` radio 8px. Vive como bloque copiado `brandEmail()` / `brandButton()` /
 `brandRows()` / `brandSection()` al inicio de cada función (no hay `_shared`: cada función
-se deploya sola). Si cambiás el diseño, cambialo en todas. Pendiente: `stripe-webhook`
-(recibos/cobro fallido) todavía usa el `emailShell` viejo.
+se deploya sola). Si cambiás el diseño, cambialo en todas.
+`stripe-webhook` también (su `emailShell` delega en `brandEmail`).
