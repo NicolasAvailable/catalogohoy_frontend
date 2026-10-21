@@ -1,0 +1,283 @@
+<div class="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-8">
+  <!-- ═══ Encabezado ═══ -->
+  <header class="flex flex-wrap items-center gap-4">
+    <span class="shrink-0 w-12 h-12 rounded-2xl bg-white border border-grey-100 shadow-sm flex items-center justify-center">
+      <img src="/images/whatsapp.svg" alt="WhatsApp" class="w-7 h-7" />
+    </span>
+    <div class="flex-1 min-w-[14rem]">
+      <h1 class="text-2xl sm:text-3xl font-bold text-grey-800 flex items-center gap-2">
+        Asistente WhatsApp
+        <span class="text-[11px] font-semibold uppercase tracking-wide text-primary-500 bg-primary-50 rounded px-1.5 py-0.5">Beta</span>
+      </h1>
+      <p class="text-sm text-grey-500">Gestiona tu tienda conversando por WhatsApp con el asistente de CatalogoHoy.</p>
+    </div>
+  </header>
+
+  @if (!ready()) {
+  <div class="h-64 rounded-xl bg-white border border-grey-100 animate-pulse"></div>
+  } @else {
+
+  @if (!connected()) {
+  <!-- ═══ Hero: sin conectar ═══ -->
+  <section class="grid md:grid-cols-5 gap-8 lg:gap-12 items-center rounded-2xl bg-white border border-grey-100 shadow-sm px-5 sm:px-8 pt-8 md:py-10">
+    <div class="md:col-span-3 flex flex-col gap-4">
+      <h2 class="text-2xl md:text-[1.75rem] font-bold text-grey-800 leading-tight text-balance">
+        Tu catálogo, en el chat que ya usas todos los días
+      </h2>
+      <p class="text-base text-grey-500 leading-relaxed">
+        Escríbele al asistente como le escribirías a un empleado: crea productos con una foto, cambia precios,
+        registra ventas y pregunta cómo te va. Todo queda al instante en tu catálogo y en tu panel.
+      </p>
+      <ul class="flex flex-col gap-2 text-sm text-grey-600">
+        <li class="flex items-center gap-2"><ui-icon name="circle-check" [size]="16" styleClass="text-green-500" /> Sin instalar nada: funciona en tu WhatsApp de siempre.</li>
+        <li class="flex items-center gap-2"><ui-icon name="circle-check" [size]="16" styleClass="text-green-500" /> Te responde con los links al producto en tu catálogo y en el panel.</li>
+        <li class="flex items-center gap-2"><ui-icon name="circle-check" [size]="16" styleClass="text-green-500" /> Ves aquí todo lo que conversan y cuántos créditos usa.</li>
+      </ul>
+      @if (enabled()) {
+      <div class="flex flex-wrap items-center gap-3 pt-2">
+        <ui-button label="Conectar mi WhatsApp" icon="arrow-right" iconPos="right" size="large" [fluid]="false" (click)="openConnect()" />
+        <span class="text-xs text-grey-400">Toma menos de un minuto.</span>
+      </div>
+      } @else {
+      <p class="inline-flex items-center gap-2 text-sm text-grey-500 pt-2">
+        <ui-icon name="clock" [size]="16" styleClass="text-primary-500" />
+        Estamos abriendo el beta por etapas. Muy pronto estará disponible para tu tienda.
+      </p>
+      }
+    </div>
+    <div class="md:col-span-2 flex justify-center pb-8 md:pb-0">
+      <div class="relative w-[14rem] rounded-[2.4rem] border-[8px] border-grey-800 bg-grey-800 shadow-xl shadow-grey-300/40 rotate-2">
+        <span class="absolute top-1.5 left-1/2 -translate-x-1/2 w-16 h-4 rounded-full bg-black z-10"></span>
+        <img src="/images/wa-bot-chat.webp" alt="Chat con el asistente de CatalogoHoy creando un producto desde una foto" class="w-full block rounded-[1.9rem]" />
+      </div>
+    </div>
+  </section>
+  } @else {
+  <!-- ═══ Panel: conectado ═══ -->
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="rounded-xl bg-white border border-grey-100 p-4">
+      <p class="text-xs font-medium text-grey-400">Mensajes hoy</p>
+      <p class="text-2xl font-bold text-grey-800 mt-1">{{ stats()?.messagesToday ?? 0 }}</p>
+    </div>
+    <div class="rounded-xl bg-white border border-grey-100 p-4">
+      <p class="text-xs font-medium text-grey-400">Créditos usados hoy</p>
+      <p class="text-2xl font-bold text-grey-800 mt-1">{{ stats()?.creditsToday ?? 0 }}</p>
+    </div>
+    <div class="rounded-xl bg-white border border-grey-100 p-4">
+      <p class="text-xs font-medium text-grey-400">Créditos usados (30 días)</p>
+      <p class="text-2xl font-bold text-grey-800 mt-1">{{ stats()?.credits30d ?? 0 }}</p>
+      <p class="text-xs text-grey-400">{{ stats()?.messages30d ?? 0 }} mensajes</p>
+    </div>
+    <div class="rounded-xl bg-white border border-grey-100 p-4">
+      <p class="text-xs font-medium text-grey-400">Tu saldo de créditos</p>
+      <p class="text-2xl font-bold text-primary-500 mt-1">{{ stats()?.balance ?? 0 | number }}</p>
+      <p class="text-xs text-grey-400">≈ {{ messagesLeft() | number }} mensajes más</p>
+    </div>
+  </section>
+
+  <section class="grid lg:grid-cols-3 gap-4 items-start">
+    <!-- Números conectados -->
+    <div class="rounded-xl bg-white border border-grey-100 p-4 flex flex-col gap-3">
+      <div>
+        <p class="font-semibold text-grey-800">Números conectados</p>
+        <p class="text-xs text-grey-400">{{ links().length }} de {{ maxLinks() }} posibles</p>
+      </div>
+      @for (link of links(); track link.id) {
+      <div class="flex items-center justify-between gap-2 rounded-lg bg-lino-400 px-3 py-2">
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-grey-700 flex items-center gap-1.5">
+            <ui-icon name="circle-check" [size]="14" styleClass="text-green-500" /> +{{ link.phone }}
+          </p>
+          <p class="text-xs text-grey-400">
+            {{ link.last_used_at ? 'Último mensaje ' + (link.last_used_at | date: 'd MMM, h:mm a') : 'Conectado ' + (link.created_at | date: 'd MMM') }}
+          </p>
+        </div>
+        <button type="button" class="shrink-0 text-xs text-grey-500 hover:text-red-500 underline cursor-pointer" (click)="unlink(link)">Desconectar</button>
+      </div>
+      }
+      @if (!full()) {
+      <button type="button" (click)="openConnect()"
+        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-grey-200 px-3 py-2 text-sm font-medium text-grey-500 hover:text-primary-500 hover:border-primary-200 cursor-pointer transition-colors">
+        <ui-icon name="plus" [size]="16" /> Conectar otro número
+      </button>
+      }
+      <p class="text-xs text-grey-400 leading-relaxed">
+        Escríbele al asistente desde estos números. Si escribes <strong>desconectar</strong> en el chat, el número se desvincula.
+      </p>
+    </div>
+
+    <!-- Registro de la conversación -->
+    <div class="lg:col-span-2 rounded-xl bg-white border border-grey-100 flex flex-col overflow-hidden">
+      <div class="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-grey-100">
+        <p class="font-semibold text-grey-800 mr-auto">Conversaciones</p>
+        @if (links().length > 1) {
+        <button type="button" (click)="setFilter(null)"
+          class="rounded-full px-2.5 py-1 text-xs font-medium cursor-pointer"
+          [class]="phoneFilter() === null ? 'bg-primary-50 text-primary-600' : 'text-grey-500 hover:bg-lino-400'">Todos</button>
+        @for (link of links(); track link.id) {
+        <button type="button" (click)="setFilter(link.phone)"
+          class="rounded-full px-2.5 py-1 text-xs font-medium cursor-pointer"
+          [class]="phoneFilter() === link.phone ? 'bg-primary-50 text-primary-600' : 'text-grey-500 hover:bg-lino-400'">+{{ link.phone }}</button>
+        }
+        }
+        <button type="button" (click)="loadLog()" class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-grey-400 hover:text-grey-700 hover:bg-lino-400 cursor-pointer" aria-label="Actualizar">
+          <ui-icon name="refresh-cw" [size]="16" [styleClass]="loadingLog() ? 'animate-spin' : ''" />
+        </button>
+      </div>
+
+      <div #log class="h-[34rem] overflow-y-auto bg-[#efeae2] px-3 sm:px-5 py-4 flex flex-col gap-2">
+        @if (hasMore()) {
+        <button type="button" (click)="loadOlder()" class="self-center rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-grey-600 shadow-sm cursor-pointer hover:bg-white">
+          Ver mensajes anteriores
+        </button>
+        }
+        @for (m of messages(); track m.id; let i = $index) {
+        @if (newDay(i)) {
+        <span class="self-center my-1 rounded-md bg-white/90 px-2.5 py-0.5 text-[11px] font-medium text-grey-500 shadow-sm first-letter:uppercase">
+          {{ m.created_at | date: 'EEEE d MMM' }}
+        </span>
+        }
+        @if (m.role === 'system') {
+        <span class="self-center max-w-[90%] text-center rounded-md bg-[#fff5c4] px-2.5 py-1 text-[11px] text-grey-600 shadow-sm">
+          {{ m.body }} · {{ m.created_at | date: 'h:mm a' }}
+        </span>
+        } @else {
+        <div class="max-w-[85%] sm:max-w-[75%] rounded-lg px-3 py-2 shadow-sm text-[13px] leading-relaxed text-grey-800"
+          [class]="m.role === 'user' ? 'self-end rounded-tr-none bg-[#d9fdd3]' : 'self-start rounded-tl-none bg-white'">
+          @if (m.role === 'user' && links().length > 1 && phoneFilter() === null) {
+          <p class="text-[11px] font-semibold text-primary-600 mb-0.5">+{{ m.phone }}</p>
+          }
+          @if (m.media.length) {
+          <div class="flex flex-wrap gap-1 mb-1.5">
+            @for (url of m.media; track url) {
+            <a [href]="url" target="_blank" rel="noopener"><img [src]="url" alt="Foto enviada" class="w-20 h-20 rounded-md object-cover" loading="lazy" /></a>
+            }
+          </div>
+          }
+          <p class="whitespace-pre-line break-words" [innerHTML]="html(m.body)"></p>
+          @if (m.actions.length) {
+          <div class="flex flex-col gap-1 mt-2 pt-2 border-t border-grey-100">
+            @for (a of m.actions; track $index) {
+            @if (a.url) {
+            <a [href]="a.url" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 hover:underline">
+              <ui-icon name="zap" [size]="12" /> {{ a.label }} <ui-icon name="external-link" [size]="11" />
+            </a>
+            } @else {
+            <span class="inline-flex items-center gap-1.5 text-xs font-medium text-grey-600"><ui-icon name="zap" [size]="12" styleClass="text-primary-500" /> {{ a.label }}</span>
+            }
+            }
+          </div>
+          }
+          <p class="mt-1 flex items-center justify-end gap-2 text-[10px] text-grey-400">
+            @if (m.credits) { <span>−{{ m.credits }} créditos</span> }
+            <span>{{ m.created_at | date: 'h:mm a' }}</span>
+          </p>
+        </div>
+        }
+        } @empty {
+        <div class="m-auto max-w-xs text-center flex flex-col items-center gap-2 text-grey-500">
+          <ui-icon name="message-circle" [size]="28" styleClass="text-grey-300" />
+          <p class="text-sm font-semibold text-grey-600">Todavía no hay mensajes</p>
+          <p class="text-xs">Escríbele al asistente desde tu WhatsApp y aquí verás la conversación y lo que cambió en tu tienda.</p>
+        </div>
+        }
+      </div>
+    </div>
+  </section>
+  }
+
+  <!-- ═══ Qué puedes hacer ═══ -->
+  <section class="flex flex-col gap-4">
+    <div>
+      <h2 class="text-xl font-bold text-grey-800">Qué puedes pedirle</h2>
+      <p class="text-sm text-grey-500">Escríbele con tus palabras. Estos son algunos ejemplos.</p>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      @for (c of capabilities; track c.title) {
+      <div class="rounded-xl bg-white border border-grey-100 p-4 flex flex-col gap-3">
+        <div class="flex items-start gap-3">
+          <span class="shrink-0 w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center">
+            <ui-icon [name]="c.icon" [size]="18" styleClass="text-primary-500" />
+          </span>
+          <div>
+            <p class="text-[0.95rem] font-semibold text-grey-800">{{ c.title }}</p>
+            <p class="text-sm text-grey-500 mt-0.5 leading-relaxed">{{ c.description }}</p>
+          </div>
+        </div>
+        <span class="mt-auto self-end max-w-full rounded-lg rounded-tr-none bg-[#d9fdd3] px-3 py-1.5 text-xs text-grey-700 shadow-sm">{{ c.example }}</span>
+      </div>
+      }
+    </div>
+  </section>
+
+  @if (!connected()) {
+  <!-- ═══ Paso a paso para conectar ═══ -->
+  <section class="flex flex-col gap-4">
+    <div>
+      <h2 class="text-xl font-bold text-grey-800">Cómo se conecta</h2>
+      <p class="text-sm text-grey-500">Tres pasos y listo. No necesitas WhatsApp Business ni cambiar de número.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-3">
+      @for (s of connectSteps; track s.title; let i = $index) {
+      <div class="rounded-xl bg-white border border-grey-100 p-4 flex flex-col gap-2">
+        <div class="flex items-center gap-2">
+          <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm font-semibold flex items-center justify-center">{{ i + 1 }}</span>
+          <ui-icon [name]="s.icon" [size]="16" styleClass="text-grey-400" />
+        </div>
+        <p class="text-[0.95rem] font-semibold text-grey-800">{{ s.title }}</p>
+        <p class="text-sm text-grey-500 leading-relaxed">{{ s.description }}</p>
+      </div>
+      }
+    </div>
+  </section>
+  }
+
+  <!-- ═══ Precios y beta ═══ -->
+  <section class="grid lg:grid-cols-2 gap-4 items-start">
+    <div class="rounded-xl bg-white border border-grey-100 p-5 flex flex-col gap-3">
+      <div class="flex items-center gap-2">
+        <ui-icon name="sparkles" [size]="18" styleClass="text-primary-500" />
+        <h2 class="text-lg font-bold text-grey-800">Está en beta</h2>
+      </div>
+      <p class="text-sm text-grey-500 leading-relaxed">
+        El asistente es nuevo y lo estamos abriendo por etapas. Puede equivocarse: antes de borrar productos u órdenes
+        siempre te pide confirmación, y todo lo que hace queda registrado en esta página.
+      </p>
+      <ul class="flex flex-col gap-2 text-sm text-grey-600">
+        <li class="flex items-start gap-2"><ui-icon name="shield-check" [size]="16" styleClass="text-primary-500 shrink-0 mt-0.5" /> Solo responde a los números que conectas aquí, con un código de un solo uso.</li>
+        <li class="flex items-start gap-2"><ui-icon name="smartphone" [size]="16" styleClass="text-primary-500 shrink-0 mt-0.5" /> Hasta {{ maxLinks() }} números por tienda. Te avisamos si se conecta uno nuevo.</li>
+        <li class="flex items-start gap-2"><ui-icon name="message-circle" [size]="16" styleClass="text-primary-500 shrink-0 mt-0.5" /> Solo habla de tu tienda y de CatalogoHoy.</li>
+      </ul>
+    </div>
+
+    <div class="rounded-xl bg-white border border-grey-100 p-5 flex flex-col gap-3">
+      <div class="flex items-center gap-2">
+        <ui-icon name="coins" [size]="18" styleClass="text-primary-500" />
+        <h2 class="text-lg font-bold text-grey-800">Cuánto cuesta</h2>
+      </div>
+      <p class="text-sm text-grey-500 leading-relaxed">
+        Cada mensaje que el asistente responde usa <strong class="text-grey-700">{{ creditCost() }} créditos de IA</strong> de tu plan.
+        Los créditos se renuevan cada mes.
+      </p>
+      <div class="rounded-lg border border-grey-100 overflow-hidden text-sm">
+        <div class="grid grid-cols-3 bg-lino-400 px-3 py-2 text-xs font-semibold text-grey-500">
+          <span>Plan</span><span class="text-right">Créditos al mes</span><span class="text-right">Mensajes aprox.</span>
+        </div>
+        @for (r of planRows(); track r.plan) {
+        <div class="grid grid-cols-3 px-3 py-2 border-t border-grey-100 text-grey-700">
+          <span class="font-medium">{{ r.plan }}</span>
+          <span class="text-right">{{ r.credits | number }}</span>
+          <span class="text-right">{{ r.messages | number }}</span>
+        </div>
+        }
+      </div>
+      <p class="text-xs text-grey-400">
+        ¿Necesitas más? Compra créditos desde el botón de créditos de tu panel o
+        <a routerLink="/admin/plans" class="font-semibold text-primary-500 hover:text-primary-600 underline underline-offset-2">mejora tu plan</a>.
+      </p>
+    </div>
+  </section>
+  }
+</div>
+
+<lib-whatsapp-bot-connect-dialog [tenantId]="tenantId()" [maxLinks]="maxLinks()" (connected)="onConnected()" />

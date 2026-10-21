@@ -15,7 +15,7 @@ import { uploadToS3 } from "../_shared/s3.ts";
 //   1. Interna (wa-webhook): header `x-internal-secret` = service-role key.
 //      Body { message, profileName } con el mensaje crudo de Meta. Responde 202
 //      al toque y procesa en background (EdgeRuntime.waitUntil).
-//   2. Panel (JWT del usuario): { action: 'status' | 'create_code' | 'unlink',
+//   2. Panel (JWT del usuario): { action: 'status' | 'create_code' | 'unlink' | 'activity',
 //      tenantId, linkId? }. Genera el código de vinculación (8 dígitos, 15 min)
 //      que el dueño manda por WhatsApp ("Vincular 12345678").
 //
@@ -253,13 +253,14 @@ async function linkWithCode(phone: string, code: string): Promise<"ok" | "invali
   }, { onConflict: "phone" });
   const t = await tenantInfo(row.tenant_id);
   await sendText(phone, `✅ ¡Listo! Este WhatsApp quedó conectado a *${t.name}*.\n\n${WELCOME_HELP}`);
+  await logMsg(row.tenant_id, phone, "system", `+${phone} se conectó al asistente.`);
   // Aviso a los demás números ya conectados a la tienda.
   const { data: others } = await admin.from("wa_bot_links").select("phone")
     .eq("tenant_id", row.tenant_id).neq("phone", phone);
   for (const o of others ?? []) {
     await sendText(
       o.phone,
-      `🔐 Se conectó un nuevo número a *${t.name}*: +${phone}.\nSi no lo reconoces, desconéctalo desde tu panel (Inicio → Gestiona tu tienda por WhatsApp).`,
+      `🔐 Se conectó un nuevo número a *${t.name}*: +${phone}.\nSi no lo reconoces, desconéctalo desde tu panel (menú Gestión → Asistente WhatsApp).`,
     );
   }
   return "ok";
@@ -1124,7 +1125,61 @@ async function recentOrders(tenantId: number): Promise<string> {
   }).join(" · ");
 }
 
+// ── Registro para el panel (wa_bot_messages) ───────────────────────────────
+interface LoggedAction { tool: string; label: string; url?: string }
+
+async function logMsg(
+  tenantId: number, phone: string, role: "user" | "assistant" | "system", body: string,
+  extra: { media?: string[]; actions?: LoggedAction[]; credits?: number; debug?: unknown } = {},
+) {
+  const { error } = await admin.from("wa_bot_messages").insert({
+    tenant_id: tenantId, phone, role, body: body.slice(0, 4000),
+    media: extra.media ?? [], actions: extra.actions ?? [], credits: extra.credits ?? 0,
+    debug: extra.debug ?? null,
+  });
+  if (error) console.error("[wa-store-bot] log", error.message);
+}
+
+const STATUS_ES: Record<string, string> = { pending: "pendiente", completed: "pagada", credit: "por cobrar", cancelled: "cancelada" };
+
+/** Resumen legible de lo que hizo una herramienta, para el registro del panel. */
+// deno-lint-ignore no-explicit-any
+function actionLabel(name: string, a: Record<string, any>, out: any, shopUrl: string): LoggedAction | null {
+  const order = out?.order?.order_number ?? out?.order_number ?? a.order_number;
+  const ordersUrl = shopUrl ? `${shopUrl}/admin/orders` : undefined;
+  switch (name) {
+    case "create_product":
+      return { tool: name, label: `Creó el producto «${out?.product?.name ?? a.name}»`, url: out?.admin_url };
+    case "update_product":
+      return { tool: name, label: `Editó ${a.name ? `«${a.name}»` : `el producto #${out?.id}`}`, url: out?.admin_url };
+    case "delete_product":
+      return { tool: name, label: `Eliminó ${out?.deleted === 1 ? "un producto" : `${out?.deleted ?? 0} productos`}` };
+    case "adjust_prices":
+      return { tool: name, label: `Ajustó precios de ${out?.updated ?? 0} productos (${a.percent > 0 ? "+" : ""}${a.percent}%)` };
+    case "create_category":
+      return { tool: name, label: `Creó la categoría «${out?.category?.name ?? a.name}»` };
+    case "create_order":
+      return { tool: name, label: `Creó la orden #${order}`, url: ordersUrl };
+    case "update_order":
+      return { tool: name, label: `Editó la orden #${order}`, url: ordersUrl };
+    case "set_order_status":
+      return { tool: name, label: `Orden #${order}: ${STATUS_ES[out?.from] ?? out?.from} → ${STATUS_ES[out?.to] ?? out?.to}`, url: ordersUrl };
+    case "delete_order":
+      return { tool: name, label: `Eliminó la orden #${order}` };
+    case "send_products":
+      return { tool: name, label: `Envió ${out?.sent ?? 0} ficha(s) de producto` };
+    default:
+      return null;
+  }
+}
+
 interface Usage { input: number; output: number; cacheRead: number; cacheWrite: number; tools: number }
+/** Llamada a herramienta, para depurar desde el panel interno. */
+interface ToolTrace { name: string; input: unknown; output: string; error: boolean; ms: number }
+
+/** Costo aproximado en USD (precios de Sonnet 5.5 por millón de tokens). */
+const costUsd = (u: Usage) =>
+  Math.round((u.input * 2 + u.output * 10 + u.cacheRead * 0.2 + u.cacheWrite * 2.5) / 1e6 * 10000) / 10000;
 
 async function runAgent(
   link: Link,
@@ -1132,10 +1187,12 @@ async function runAgent(
   userText: string,
   shopName: string,
   shopUrl: string,
-): Promise<{ reply: string; actions: string[]; usage: Usage; photosUsed: boolean }> {
+): Promise<{ reply: string; actions: string[]; logged: LoggedAction[]; trace: ToolTrace[]; usage: Usage; photosUsed: boolean }> {
   const ctx: Ctx = { link, shopUrl, pendingPhotos: session.pending_photos, photosUsed: false };
   const usage: Usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, tools: 0 };
   const actions: string[] = [];
+  const logged: LoggedAction[] = [];
+  const trace: ToolTrace[] = [];
 
   const today = new Date().toLocaleDateString("es-VE", { timeZone: "America/Caracas", dateStyle: "full" });
   const recent = await recentOrders(link.tenant_id);
@@ -1186,21 +1243,25 @@ async function runAgent(
     for (const tu of toolUses) {
       usage.tools++;
       let out: unknown;
+      const t0 = Date.now();
       try {
         out = await runTool(tu.name, (tu.input ?? {}) as Record<string, unknown>, ctx);
       } catch (e) {
         out = { error: e instanceof Error ? e.message : String(e) };
       }
       const isError = !!(out && typeof out === "object" && "error" in out);
+      trace.push({ name: tu.name, input: tu.input, output: JSON.stringify(out).slice(0, 1500), error: isError, ms: Date.now() - t0 });
       if (!isError && !tu.name.startsWith("list_") && !tu.name.startsWith("get_")) {
         actions.push(`${tu.name} ${JSON.stringify(out).slice(0, 160)}`);
+        const la = actionLabel(tu.name, (tu.input ?? {}) as Record<string, unknown>, out, shopUrl);
+        if (la) logged.push(la);
       }
       results.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(out).slice(0, 12000), is_error: isError });
     }
     messages.push({ role: "user", content: results });
   }
 
-  return { reply: reply || "Listo 👍", actions, usage, photosUsed: ctx.photosUsed };
+  return { reply: reply || "Listo 👍", actions, logged, trace, usage, photosUsed: ctx.photosUsed };
 }
 
 // ── Mensaje entrante ────────────────────────────────────────────────────────
@@ -1230,9 +1291,9 @@ async function handleInbound(m: any) {
     if (result === "blocked") {
       await sendText(phone, "Demasiados intentos con códigos inválidos. Espera una hora y genera un código nuevo en tu panel.");
     } else if (result === "full") {
-      await sendText(phone, `Tu tienda ya tiene ${MAX_LINKS} números conectados al asistente, que es el máximo. Desconecta uno desde tu panel (Inicio → Gestiona tu tienda por WhatsApp) y vuelve a intentarlo.`);
+      await sendText(phone, `Tu tienda ya tiene ${MAX_LINKS} números conectados al asistente, que es el máximo. Desconecta uno desde tu panel (menú Gestión → Asistente WhatsApp) y vuelve a intentarlo.`);
     } else if (result === "invalid") {
-      await sendText(phone, "Ese código no es válido o ya venció. Genera uno nuevo en tu panel (Inicio → Gestiona tu tienda por WhatsApp).");
+      await sendText(phone, "Ese código no es válido o ya venció. Genera uno nuevo en tu panel (menú Gestión → Asistente WhatsApp).");
     }
     return;
   }
@@ -1240,16 +1301,17 @@ async function handleInbound(m: any) {
     await admin.from("wa_bot_links").delete().eq("id", link.id);
     await admin.from("wa_bot_sessions").delete().eq("phone", phone);
     await sendText(phone, "Listo, este WhatsApp ya no está conectado a tu tienda. 👋");
+    await logMsg(link.tenant_id, phone, "system", `+${phone} se desconectó desde WhatsApp.`);
     return;
   }
   if (link && !(await linkStillValid(link))) {
     await admin.from("wa_bot_links").delete().eq("id", link.id);
     await admin.from("wa_bot_sessions").delete().eq("phone", phone);
-    await sendText(phone, "Por seguridad tu conexión venció 🔐 Vuelve a conectar tu WhatsApp desde tu panel: Inicio → *Gestiona tu tienda por WhatsApp*.");
+    await sendText(phone, "Por seguridad tu conexión venció 🔐 Vuelve a conectar tu WhatsApp desde tu panel: menú Gestión → *Asistente WhatsApp*.");
     return;
   }
   if (!link) {
-    await sendText(phone, "Para usar el asistente, conecta tu WhatsApp desde tu panel de CatalogoHoy: Inicio → *Gestiona tu tienda por WhatsApp*.");
+    await sendText(phone, "Para usar el asistente, conecta tu WhatsApp desde tu panel de CatalogoHoy: menú Gestión → *Asistente WhatsApp*.");
     return;
   }
   if (!tenantAllowed(link.tenant_id)) {
@@ -1314,18 +1376,26 @@ async function handleInbound(m: any) {
         "Puedes *comprar más créditos* desde tu panel web (botón de créditos arriba) o *mejorar tu plan* desde el panel o la app de CatalogoHoy" +
         (shop.url ? `: ${shop.url}/admin/plans` : "."),
     );
+    await logMsg(link.tenant_id, phone, "user", text);
+    await logMsg(link.tenant_id, phone, "system", "Sin créditos de IA: el asistente no respondió este mensaje.");
     return;
   }
 
   const session = await loadSession(phone, link.tenant_id);
   try {
-    const { reply, actions, usage, photosUsed } = await runAgent(link, session, text, shop.name, shop.url);
+    const started = Date.now();
+    const { reply, actions, logged, trace, usage, photosUsed } = await runAgent(link, session, text, shop.name, shop.url);
     const { count: used } = await admin.from("wa_bot_usage").select("id", { count: "exact", head: true }).eq("phone", phone);
     const notice = balance <= CREDIT_LOW || ((used ?? 0) + 1) % CREDIT_NOTICE_EVERY === 0
       ? `\n\n💳 Te quedan *${balance}* créditos de IA (cada mensaje usa ${CREDIT_COST}).` +
         (balance <= CREDIT_LOW ? " Puedes comprar más desde tu panel." : "")
       : "";
     await sendText(phone, reply + notice);
+    await logMsg(link.tenant_id, phone, "user", text, { media: session.pending_photos });
+    await logMsg(link.tenant_id, phone, "assistant", reply + notice, {
+      actions: logged, credits: CREDIT_COST,
+      debug: { model: MODEL, ms: Date.now() - started, usage, cost_usd: costUsd(usage), balance_after: balance, tools: trace },
+    });
 
     const userNote = session.pending_photos.length ? `${text}\n[Envió ${session.pending_photos.length} foto(s)]` : text;
     const assistantNote = actions.length ? `${reply}\n[Acciones: ${actions.join(" | ")}]` : reply;
@@ -1351,6 +1421,10 @@ async function handleInbound(m: any) {
     console.error("[wa-store-bot] agent", e instanceof Error ? e.message : String(e));
     await admin.rpc("refund_ai_credits", { p_user_id: link.user_id, p_cost: CREDIT_COST });
     await sendText(phone, "Tuve un problema procesando tu mensaje 😕 Intenta de nuevo en un momento.");
+    await logMsg(link.tenant_id, phone, "user", text, { media: session.pending_photos });
+    await logMsg(link.tenant_id, phone, "system", "El asistente tuvo un error con este mensaje (no se cobraron créditos).", {
+      debug: { error: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack?.slice(0, 2000) : undefined, model: MODEL },
+    });
   }
 }
 
@@ -1402,8 +1476,42 @@ async function handlePanel(req: Request): Promise<Response> {
       return json({ error: "No se pudo generar el código" }, 500);
     }
     case "unlink": {
-      await admin.from("wa_bot_links").delete().eq("id", Number(body.linkId)).eq("tenant_id", tenantId);
+      const { data: gone } = await admin.from("wa_bot_links").delete()
+        .eq("id", Number(body.linkId)).eq("tenant_id", tenantId).select("phone");
+      for (const g of gone ?? []) await logMsg(tenantId, g.phone, "system", `+${g.phone} se desconectó desde el panel.`);
       return json({ ok: true });
+    }
+    case "activity": {
+      // Registro de la conversación (sin el detalle técnico) + gasto de créditos.
+      const limit = Math.min(Number(body.limit) || 60, 200);
+      let q = admin.from("wa_bot_messages").select("id, phone, role, body, media, actions, credits, created_at")
+        .eq("tenant_id", tenantId).order("id", { ascending: false }).limit(limit);
+      if (body.phone) q = q.eq("phone", digits(String(body.phone)));
+      if (body.before) q = q.lt("id", Number(body.before));
+      const { data: messages } = await q;
+
+      const since30 = new Date(Date.now() - 30 * 86_400_000).toISOString();
+      const startToday = new Date(new Date().toLocaleDateString("en-CA", { timeZone: "America/Caracas" }) + "T04:00:00Z").toISOString();
+      const { data: usage } = await admin.from("wa_bot_usage").select("credits, created_at")
+        .eq("tenant_id", tenantId).gte("created_at", since30);
+      const rows = usage ?? [];
+      const sum = (list: { credits: number }[]) => list.reduce((acc, r) => acc + (r.credits ?? 0), 0);
+      const today = rows.filter((r) => r.created_at >= startToday);
+
+      await admin.rpc("ensure_ai_credits", { p_user_id: user.id });
+      const { data: wallet } = await admin.from("ai_credits").select("monthly_balance, monthly_allowance, purchased_balance")
+        .eq("user_id", user.id).maybeSingle();
+      return json({
+        messages: (messages ?? []).reverse(),
+        hasMore: (messages ?? []).length === limit,
+        stats: {
+          messagesToday: today.length, creditsToday: sum(today),
+          messages30d: rows.length, credits30d: sum(rows),
+          balance: (wallet?.monthly_balance ?? 0) + (wallet?.purchased_balance ?? 0),
+          monthlyAllowance: wallet?.monthly_allowance ?? 0,
+          creditCost: CREDIT_COST,
+        },
+      });
     }
     default:
       return json({ error: "Acción desconocida" }, 400);

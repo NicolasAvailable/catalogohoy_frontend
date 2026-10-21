@@ -23,6 +23,43 @@ export interface WaBotCode {
   expiresInMinutes: number;
 }
 
+export { WA_BOT_BETA_TENANTS } from '@catalogohoy/core';
+
+export interface WaBotAction {
+  tool: string;
+  label: string;
+  url?: string;
+}
+
+/** Un mensaje del registro: lo que escribió el dueño, lo que respondió el
+ *  asistente (con sus acciones y créditos) o un evento del sistema. */
+export interface WaBotMessage {
+  id: number;
+  phone: string;
+  role: 'user' | 'assistant' | 'system';
+  body: string;
+  media: string[];
+  actions: WaBotAction[];
+  credits: number;
+  created_at: string;
+}
+
+export interface WaBotStats {
+  messagesToday: number;
+  creditsToday: number;
+  messages30d: number;
+  credits30d: number;
+  balance: number;
+  monthlyAllowance: number;
+  creditCost: number;
+}
+
+export interface WaBotActivity {
+  messages: WaBotMessage[];
+  hasMore: boolean;
+  stats: WaBotStats;
+}
+
 /** Bot de WhatsApp para gestionar la tienda (CAT-78): vínculo del número del
  *  dueño vía la edge `wa-store-bot`. */
 @Injectable({ providedIn: 'root' })
@@ -39,6 +76,14 @@ export class WaBotService {
 
   public unlink(tenantId: number, linkId: number): Promise<E.Either<Error, { ok: boolean }>> {
     return this.call<{ ok: boolean }>({ action: 'unlink', tenantId, linkId });
+  }
+
+  /** Registro de conversaciones (más recientes; `before` pagina hacia atrás). */
+  public getActivity(
+    tenantId: number,
+    opts: { phone?: string | null; before?: number | null; limit?: number } = {}
+  ): Promise<E.Either<Error, WaBotActivity>> {
+    return this.call<WaBotActivity>({ action: 'activity', tenantId, ...opts });
   }
 
   private async call<T>(body: Record<string, unknown>): Promise<E.Either<Error, T>> {

@@ -2756,5 +2756,7 @@
   "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Completed orders only. Split payments add each part to its method.",
   "En divisas o USDT": "In foreign currency or USDT",
   "Promo en divisas": "Foreign-currency deal",
-  "Pagando con {methods} ahorras": "Pay with {methods} and save"
+  "Pagando con {methods} ahorras": "Pay with {methods} and save",
+  "Asistente WhatsApp": "WhatsApp Assistant",
+  "Beta": "Beta"
 }

@@ -64,6 +64,10 @@ export const internalRoutes: Route[] = [
       ),
   },
   {
+    path: 'wa-bot',
+    loadChildren: () => import('./wa-bot/wa-bot.routes').then((m) => m.waBotRoutes),
+  },
+  {
     path: 'ai-usage',
     loadChildren: () =>
       import('./ai-usage/ai-usage.routes').then((m) => m.aiUsageRoutes),
