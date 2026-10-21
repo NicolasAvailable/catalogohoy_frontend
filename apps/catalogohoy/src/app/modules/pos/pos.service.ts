@@ -358,6 +358,13 @@ export class PosService {
             count: Number(day['count']) || 0,
           }))
         : [],
+      byPaymentMethod: Array.isArray(d['byPaymentMethod'])
+        ? (d['byPaymentMethod'] as Record<string, unknown>[]).map((m) => ({
+            method: String(m['method']),
+            count: Number(m['count']) || 0,
+            amount: Number(m['amount']) || 0,
+          }))
+        : [],
     });
   }
 
