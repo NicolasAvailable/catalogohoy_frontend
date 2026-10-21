@@ -16,6 +16,7 @@
 | **notify-import-event** | Telemetría del hub de import: Slack (canal de errores) cuando un import Excel/PDF/fotos falla o un PDF importa bien, **+ traza en `catalog_imports`** (tenant por slug; `status` mapeado a success/partial/failed —CHECK de la tabla—, evento crudo en `event`, `detail`, page/product_count y el archivo fuente que el front sube lazy a `imports/<slug>/` en el bucket — link en el mensaje de Slack). La fila se inserta aunque el webhook falte. `ImportEventsService.registerFile()` en el front registra el archivo; se sube solo si un evento lo necesita. | front invoke | no (valida JWT a mano) | Slack · `SLACK_IMPORT_EVENTS_WEBHOOK` / Vault `slack_import_events_webhook` · `SERVICE_ROLE` |
 | **notify-error** | Telemetría GENÉRICA de errores → mismo canal de Slack de errores. El front la llama desde 2 ganchos centrales que enchufa `provideSentry()` (core): el parche de `toast.error` (todo error mostrado al usuario, ~90 call sites cubiertos sin tocarlos) y el ErrorHandler global (`uncaught`, además de Sentry). Acepta reportes sin sesión (errores del catálogo público → "visitante"). Anti-ruido en el front: dedupe por mensaje + tope 15/sesión, no reporta en dev. | front invoke (+ anon) | no (JWT opcional a mano) | Slack · mismo webhook |
 | **ses-events** | Webhook SNS de eventos de SES (config set catalogohoy-prod): persiste Send/Delivery/Bounce/Complaint/Open/Click/… en `ses_email_events` (RPC `ingest_ses_event`). **Bounce/Complaint/Reject además avisan al canal de Slack de errores** (destinatario, asunto, diagnóstico) — cubre los fallos de entrega de TODOS los senders de email en un solo punto. | webhook SNS | no (`?token=` + TopicArn) | AWS SNS/SES · `SES_EVENTS_WEBHOOK_TOKEN`, `SES_EVENTS_TOPIC_ARN` · Slack (mismo webhook) |
+| **send-welcome-email** | Email de bienvenida al CREAR la cuenta (no al terminar onboarding). Lo dispara el trigger `on_auth_user_confirmed_send_welcome` / `on_auth_user_created_send_welcome` en `auth.users` (confirmación de email, o INSERT ya confirmado vía Google). Idempotencia `users.welcome_email_sent_at`. | trigger auth.users (`net.http_post`) | no (`x-webhook-secret` = Vault `welcome_email_webhook_secret`) | SES `AWS_SES_*` |
 | **manage-stripe-coupons** | Admin interno: cupones + promotion codes de Stripe. | app internal | sí + `_assert_internal_admin()` | Stripe |
 | **tenant-stripe-history** | Admin interno (detalle de catálogo `/tenants/:id`): suscripciones + facturas pagadas del `stripe_customer_id` del tenant. Devuelve `paidTotalUsd` = bruto liquidado en USD vía balance_transactions de los charges (⚠️ Adaptive Pricing: la factura puede presentarse en moneda local, p.ej. HNL; NO sumar `amount_paid` como USD). API nueva de Stripe: `current_period_end` sale del subscription item, `invoice.charge` ya no existe. | app internal | sí + `_assert_internal_admin()` | Stripe · `STRIPE_SECRET_KEY` |
 | **impersonate-tenant** | Admin interno (whitelist): magic link para impersonar owner. | app internal | sí + whitelist email | `SERVICE_ROLE` |
@@ -175,3 +176,12 @@ edites a ciegas**; el repo puede estar atrás de prod.
   (history changes).
 - Landing: snippet estándar de gtag en `apps/landing/index.html` (**rama `landing`**).
 - Convive con PostHog (producto) y Meta Pixel (ads); GA4 es para adquisición/SEO/Google Ads.
+
+## Diseño de emails
+
+Todos los emails transaccionales usan el mismo layout de marca que las plantillas de
+Supabase Auth: fondo `#eaf1ff`, card blanca radio 12px, logo, título `#16367f`, Arial,
+botón `#3e7bfa` radio 8px. Vive como bloque copiado `brandEmail()` / `brandButton()` /
+`brandRows()` / `brandSection()` al inicio de cada función (no hay `_shared`: cada función
+se deploya sola). Si cambiás el diseño, cambialo en todas. Pendiente: `stripe-webhook`
+(recibos/cobro fallido) todavía usa el `emailShell` viejo.

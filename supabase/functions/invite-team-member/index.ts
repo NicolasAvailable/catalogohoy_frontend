@@ -263,7 +263,7 @@ Deno.serve(async (req)=>{
           </tr>
           <tr>
             <td style="font-size:15px;color:#383838;text-align:left;line-height:1.6;padding-bottom:25px;">
-              Fuiste invitado a colaborar en <strong>${tenantName}</strong> en CatalogoHoy.<br /><br />
+              Fuiste invitado a colaborar en <strong>${String(tenantName).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</strong> en CatalogoHoy.<br /><br />
               Haz clic en el siguiente botón para aceptar la invitación y configurar tu acceso:
             </td>
           </tr>
