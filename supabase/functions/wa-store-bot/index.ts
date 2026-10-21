@@ -462,6 +462,11 @@ interface Ctx {
 const totalStock = (p: { stock: number | null; sizes?: { stock?: number }[]; is_sized?: boolean }) =>
   p.is_sized ? (p.sizes ?? []).reduce((acc, s) => acc + (Number(s.stock) || 0), 0) : p.stock;
 
+/** Links al producto: ficha pública del catálogo y edición en el panel. */
+function productLinks(shopUrl: string, id: number) {
+  return shopUrl ? { public_url: `${shopUrl}/product/${id}`, admin_url: `${shopUrl}/admin/products/edit/${id}` } : {};
+}
+
 async function relinkCategories(productId: number, categoryIds: number[]) {
   await admin.from("product_categories").delete().eq("product_id", productId);
   if (categoryIds.length) {
@@ -608,7 +613,7 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       if (photos.length) ctx.photosUsed = true;
       const cats = await ownCategoryIds(tenantId, a.category_ids);
       if (cats.length) await relinkCategories(data.id, cats);
-      return { created: true, product: { ...data, photos: data.photos?.length ?? 0 } };
+      return { created: true, product: { ...data, photos: data.photos?.length ?? 0 }, ...productLinks(ctx.shopUrl, data.id) };
     }
     case "update_product": {
       const { data: current } = await admin.from("products").select("id, photos")
@@ -624,7 +629,7 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
         if (error) return { error: error.message };
       }
       if (Array.isArray(a.category_ids)) await relinkCategories(current.id, await ownCategoryIds(tenantId, a.category_ids));
-      return { updated: true, id: current.id, changed: Object.keys(payload) };
+      return { updated: true, id: current.id, changed: Object.keys(payload), ...productLinks(ctx.shopUrl, current.id) };
     }
     case "send_products": {
       const ids = (Array.isArray(a.product_ids) ? a.product_ids : []).map(Number).filter(Boolean).slice(0, 10);
@@ -784,6 +789,7 @@ Cómo responder:
 
 Reglas:
 - Si te dan nombre y precio, crea el producto directo, sin pedir confirmación. Si falta el precio, pregúntalo. Si hay fotos pendientes, úsalas en el producto que crees o edites.
+- Siempre que crees o edites un producto, termina la respuesta con sus dos links (vienen en public_url y admin_url): "🔗 Ver en tu catálogo: …" y "⚙️ Editar en el panel: …".
 - Si ves la foto y no te dieron descripción, escribe una descripción corta y vendedora basada en la foto.
 - Para editar, busca primero el producto con list_products. Si hay varios parecidos, pregunta cuál.
 - Para preguntas sobre muchos productos (sin foto, agotados, ocultos, en oferta, de una categoría…) usa los filtros de list_products: nunca digas que no puedes filtrar ni pidas revisar uno por uno. Si total es grande, da el número y lista los nombres de forma compacta (uno por línea); si hay next_offset, ofrece mostrar más.
