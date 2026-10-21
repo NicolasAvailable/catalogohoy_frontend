@@ -1,16 +1,20 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { AwsClient } from "npm:aws4fetch@1";
-
 // ============================================================================
 // send-customer-success (CAT-48) — motor de disparo de plantillas de ciclo de
 // vida (CatalogoHoy → comerciante). Corre por cron.
 //
 // Primera condición: order_pending_reminder — pedidos pending 2–30 días sin
 // recordatorio previo (candidatos vía RPC customer_success_order_pending_
-// candidates). Canal: WhatsApp (template aprobado, best-effort si hay número)
-// + email (AWS SES, siempre que haya email). Idempotencia: 1 fila por evento en
-// customer_success_sends (event_key único).
+// candidates). Canales:
+//   - WhatsApp: por pedido (template aprobado con botón URL a cada orden,
+//     best-effort si hay número).
+//   - Email (AWS SES, fallback Resend): UN solo correo por dueño agrupando
+//     TODOS sus pedidos pendientes — nunca 1 email por pedido.
+// Idempotencia: 1 fila por PEDIDO en customer_success_sends (event_key único
+// `order_pending:<order_id>`), así los pedidos nuevos del día siguiente se
+// recuerdan sin re-spamear los ya avisados.
 //
 // Auth del cron: x-webhook-secret contra el secret `customer_success_webhook_
 // secret` en Vault (o env CUSTOMER_SUCCESS_WEBHOOK_SECRET como override).
@@ -22,279 +26,448 @@ import { AwsClient } from "npm:aws4fetch@1";
 //   - record=false: no marca idempotencia (para re-testear).
 //   - dryRun=true: no envía nada, solo devuelve los candidatos.
 // ============================================================================
-
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-webhook-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-webhook-secret"
 };
-
-interface PendingCandidate {
-  order_id: number;
-  order_number: number | null;
-  tenant_id: number;
-  catalog_name: string;
-  slug: string;
-  owner_name: string | null;
-  owner_email: string | null;
-  product_name: string;
-  days_pending: number;
-  wa_recipient: string | null;
-}
-
-function firstNameOf(name: string | null, fallback: string): string {
+function firstNameOf(name, fallback) {
   const n = (name ?? "").trim().split(/\s+/)[0];
   return n || fallback;
 }
-
-function daysLabel(days: number): string {
+function daysLabel(days) {
   const d = Math.max(1, days);
   return d === 1 ? "1 día" : `${d} días`;
 }
-
-function escapeHtml(input: string | null | undefined): string {
+function escapeHtml(input) {
   if (input == null) return "";
-  return String(input)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+  return String(input).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-
-function renderPendingEmail(c: PendingCandidate): {
-  subject: string;
-  html: string;
-  text: string;
-} {
-  const first = firstNameOf(c.owner_name, c.catalog_name);
-  const orderUrl = `https://catalogohoy.com/o/${c.order_id}`;
-  const timePending = daysLabel(c.days_pending);
-  const subject = "Tienes un pedido pendiente — CatalogoHoy";
-
+// UN solo correo por dueño, con TODOS sus pedidos pendientes agrupados.
+// `group` = array de candidatos que comparten el mismo owner_email.
+function renderPendingEmail(group) {
+  // Más urgente (más días pendiente) primero.
+  const orders = [
+    ...group
+  ].sort((a, b)=>(b.days_pending ?? 0) - (a.days_pending ?? 0));
+  const first = firstNameOf(orders[0].owner_name, orders[0].catalog_name);
+  const n = orders.length;
+  const plural = n > 1;
+  const catalogs = Array.from(new Set(orders.map((o)=>o.catalog_name).filter(Boolean)));
+  const oneCatalog = catalogs.length === 1;
+  const catalogLabel = oneCatalog ? catalogs[0] : "tus catálogos";
+  const subject = plural ? `Tenés ${n} pedidos pendientes — CatalogoHoy` : "Tenés un pedido pendiente — CatalogoHoy";
+  const headline = plural ? `Tenés ${n} pedidos esperando confirmación.` : "Tenés un pedido esperando confirmación.";
+  const subline = plural ? "Cada cliente que espera es una venta a punto de cerrarse. Confirmalos antes de que se enfríen." : "Un cliente esperando es una venta a punto de cerrarse. Confirmalo antes de que se enfríe.";
+  // Una tarjeta por pedido: producto + meta + botón "Ver →" a esa orden.
+  const cards = orders.map((c)=>{
+    const orderUrl = `https://catalogohoy.com/o/${c.order_id}`;
+    const timePending = daysLabel(c.days_pending);
+    // El catálogo en la meta solo si el dueño tiene más de uno (si no, es ruido).
+    const meta = oneCatalog ? `Pendiente hace ${escapeHtml(timePending)}` : `${escapeHtml(c.catalog_name)} · Pendiente hace ${escapeHtml(timePending)}`;
+    // Thumbnail del primer producto (placeholder gris si la orden no tiene foto).
+    const thumb = c.photo ? `<img src="${escapeHtml(c.photo)}" alt="" width="44" height="44" style="display:block;width:44px;height:44px;border-radius:9px;object-fit:cover;" />` : `<div style="width:44px;height:44px;border-radius:9px;background:#eef2f7;"></div>`;
+    return `
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#f8fafc;border:1px solid #eef2f7;border-radius:12px;margin:0 0 10px;">
+        <tr><td style="padding:12px 14px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"><tr>
+            <td width="44" valign="middle" style="padding-right:12px;">${thumb}</td>
+            <td valign="middle">
+              <p style="margin:0 0 3px;font-size:14px;font-weight:600;color:#0f172a;line-height:1.35;">${escapeHtml(c.product_name || "Pedido")}</p>
+              <p style="margin:0;font-size:12px;color:#94a3b8;">${meta}</p>
+            </td>
+            <td valign="middle" align="right" style="padding-left:12px;white-space:nowrap;">
+              <a href="${escapeHtml(orderUrl)}" style="display:inline-block;background:#10b981;color:#ffffff;text-decoration:none;font-weight:600;font-size:12px;padding:8px 14px;border-radius:8px;">Ver&nbsp;→</a>
+            </td>
+          </tr></table>
+        </td></tr>
+      </table>`;
+  }).join("");
   const html = `<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${escapeHtml(subject)}</title></head>
-<body style="margin:0;padding:0;background:#f8fafc;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1e293b;">
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#f8fafc;padding:24px 12px;"><tr><td align="center">
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
-<tr><td style="background:#10b981;padding:28px 24px;text-align:center;">
-  <p style="margin:0;font-size:22px;">🛒</p>
-  <h1 style="margin:10px 0 2px;font-size:18px;font-weight:700;color:#ffffff;">Tienes un pedido esperando</h1>
-  <p style="margin:0;font-size:13px;color:#ffffffcc;">CatalogoHoy</p>
-</td></tr>
-<tr><td style="padding:30px 24px;">
-  <p style="margin:0 0 12px;font-size:15px;color:#1e293b;">Hola ${escapeHtml(first)} 👋</p>
-  <p style="margin:0 0 22px;font-size:14px;color:#475569;line-height:1.6;">
-    Tienes un pedido de <strong>${escapeHtml(c.product_name)}</strong> en
-    <strong>${escapeHtml(c.catalog_name)}</strong> que sigue pendiente desde hace
-    <strong>${escapeHtml(timePending)}</strong>. Un cliente esperando es una venta
-    a punto de cerrarse — revísalo y confírmalo antes de que se enfríe. 👇
-  </p>
-  <div style="text-align:center;margin:8px 0;">
-    <a href="${escapeHtml(orderUrl)}" style="display:inline-block;background:#10b981;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:14px 30px;border-radius:12px;">Ver el pedido →</a>
-  </div>
-</td></tr>
-<tr><td style="padding:18px 24px;text-align:center;background:#f8fafc;border-top:1px solid #f1f5f9;">
-  <p style="margin:0;font-size:11px;color:#94a3b8;line-height:1.6;">
-    Recibiste este email porque tienes un pedido pendiente en tu catálogo
-    <strong>${escapeHtml(c.catalog_name)}</strong>.<br>
-    CatalogoHoy · <a href="https://catalogohoy.com" style="color:#94a3b8;">catalogohoy.com</a>
-  </p>
-</td></tr>
+<body style="margin:0;padding:0;background:#f2f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#f2f5f9;padding:24px 12px;"><tr><td align="center">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e8edf3;">
+  <tr><td style="height:3px;background:#10b981;font-size:0;line-height:0;">&nbsp;</td></tr>
+  <tr><td style="padding:18px 26px;border-bottom:1px solid #eef2f7;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"><tr>
+      <td valign="middle" style="font-size:16px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">CatalogoHoy</td>
+      <td valign="middle" align="right" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;">Recordatorio</td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="padding:26px 26px 8px;">
+    <p style="margin:0 0 6px;font-size:13px;color:#64748b;">Hola ${escapeHtml(first)},</p>
+    <p style="margin:0 0 8px;font-size:20px;line-height:1.35;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">${escapeHtml(headline)}</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">${escapeHtml(subline)}</p>
+    ${cards}
+  </td></tr>
+  <tr><td style="padding:18px 26px;text-align:center;background:#fbfcfe;border-top:1px solid #f1f5f9;">
+    <p style="margin:0;font-size:11px;line-height:1.7;color:#94a3b8;">Recibiste este email porque ${plural ? "tenés pedidos pendientes" : "tenés un pedido pendiente"} en <strong style="color:#64748b;">${escapeHtml(catalogLabel)}</strong>.<br><a href="https://catalogohoy.com" style="color:#94a3b8;text-decoration:none;">CatalogoHoy</a></p>
+  </td></tr>
 </table></td></tr></table></body></html>`;
-
   const text = [
-    `Hola ${first} 👋`,
+    `Hola ${first},`,
     "",
-    `Tienes un pedido de ${c.product_name} en ${c.catalog_name} que sigue pendiente desde hace ${timePending}.`,
-    "Revísalo y confírmalo antes de que se enfríe.",
+    plural ? `Tenés ${n} pedidos pendientes de confirmación:` : "Tenés un pedido pendiente de confirmación:",
     "",
-    `Ver el pedido: ${orderUrl}`,
+    ...orders.map((c)=>`- ${c.product_name || "Pedido"}${oneCatalog ? "" : ` (${c.catalog_name})`} — pendiente hace ${daysLabel(c.days_pending)}: https://catalogohoy.com/o/${c.order_id}`),
+    "",
+    plural ? "Confirmalos antes de que se enfríen." : "Confirmalo antes de que se enfríe."
   ].join("\n");
-
-  return { subject, html, text };
+  return {
+    subject,
+    html,
+    text
+  };
 }
-
-// Envío por AWS SES (v2 SendEmail, firma SigV4 con aws4fetch). Región
-// sa-east-1, config set catalogohoy-prod (eventos → ses-events).
-async function sendViaSes(to: string, subject: string, html: string, text: string): Promise<{ ok: boolean; error?: string; status: number }> {
+// --- Email (MailerSend con fallback a Resend) ---------------------------------
+// Usa MailerSend si MAILER_SEND_API_KEY está seteado; si no, cae a Resend con
+// RESEND_API_KEY. El switch es por presencia del token: se deploya sin romper
+// nada y se flipea a MailerSend seteando el secret cuando el dominio esté
+// verificado. MailerSend responde 202 y el id viene en el header x-message-id.
+function hasEmailProvider() {
+  return !!(Deno.env.get("AWS_SES_ACCESS_KEY_ID") || Deno.env.get("MAILER_SEND_API_KEY") || Deno.env.get("RESEND_API_KEY"));
+}
+// AWS SES (v2 SendEmail, SigV4 con aws4fetch). Proveedor principal: se activa por
+// presencia de AWS_SES_ACCESS_KEY_ID (prioridad sobre MailerSend/Resend).
+async function sendViaSes(to, fromName, fromEmail, subject, html, text) {
   const region = Deno.env.get("AWS_SES_REGION") ?? "sa-east-1";
   const aws = new AwsClient({
-    accessKeyId: Deno.env.get("AWS_SES_ACCESS_KEY_ID")!,
-    secretAccessKey: Deno.env.get("AWS_SES_SECRET_ACCESS_KEY")!,
+    accessKeyId: Deno.env.get("AWS_SES_ACCESS_KEY_ID"),
+    secretAccessKey: Deno.env.get("AWS_SES_SECRET_ACCESS_KEY"),
     region,
-    service: "ses",
+    service: "ses"
   });
   const res = await aws.fetch(`https://email.${region}.amazonaws.com/v2/email/outbound-emails`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({
-      FromEmailAddress: "CatalogoHoy <noreply@catalogohoy.com>",
-      Destination: { ToAddresses: [to] },
-      Content: { Simple: {
-        Subject: { Data: subject, Charset: "UTF-8" },
-        Body: { Html: { Data: html, Charset: "UTF-8" }, Text: { Data: text, Charset: "UTF-8" } },
-      } },
-      ConfigurationSetName: "catalogohoy-prod",
-    }),
+      FromEmailAddress: `${fromName} <${fromEmail}>`,
+      Destination: {
+        ToAddresses: to
+      },
+      Content: {
+        Simple: {
+          Subject: {
+            Data: subject,
+            Charset: "UTF-8"
+          },
+          Body: {
+            Html: {
+              Data: html,
+              Charset: "UTF-8"
+            },
+            ...text ? {
+              Text: {
+                Data: text,
+                Charset: "UTF-8"
+              }
+            } : {}
+          }
+        }
+      },
+      ConfigurationSetName: "catalogohoy-prod"
+    })
   });
-  if (!res.ok) return { ok: false, status: res.status, error: await res.text().catch(() => "") };
-  return { ok: true, status: res.status };
+  if (!res.ok) return {
+    ok: false,
+    id: null,
+    status: res.status,
+    error: await res.text().catch(()=>"")
+  };
+  const j = await res.json().catch(()=>null);
+  return {
+    ok: true,
+    id: j?.MessageId ?? null,
+    status: res.status
+  };
 }
-
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
-
-  const admin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
-
+async function deliverEmail(opts) {
+  const to = (Array.isArray(opts.to) ? opts.to : [
+    opts.to
+  ]).filter((e)=>e && e.includes("@"));
+  if (to.length === 0) return {
+    ok: false,
+    id: null,
+    status: 0,
+    error: "no recipients"
+  };
+  const fromName = opts.fromName ?? "CatalogoHoy";
+  const fromEmail = opts.fromEmail ?? "noreply@catalogohoy.com";
+  if (Deno.env.get("AWS_SES_ACCESS_KEY_ID") && Deno.env.get("AWS_SES_SECRET_ACCESS_KEY")) {
+    return await sendViaSes(to, fromName, fromEmail, opts.subject, opts.html, opts.text);
+  }
+  const msToken = Deno.env.get("MAILER_SEND_API_KEY");
+  if (msToken) {
+    const res = await fetch("https://api.mailersend.com/v1/email", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${msToken}`,
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      body: JSON.stringify({
+        from: {
+          email: fromEmail,
+          name: fromName
+        },
+        to: to.map((email)=>({
+            email
+          })),
+        subject: opts.subject,
+        html: opts.html,
+        ...opts.text ? {
+          text: opts.text
+        } : {}
+      })
+    });
+    const id = res.headers.get("x-message-id");
+    if (!res.ok) return {
+      ok: false,
+      id,
+      status: res.status,
+      error: await res.text().catch(()=>"")
+    };
+    return {
+      ok: true,
+      id,
+      status: res.status
+    };
+  }
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (resendKey) {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: `${fromName} <${fromEmail}>`,
+        to,
+        subject: opts.subject,
+        html: opts.html,
+        ...opts.text ? {
+          text: opts.text
+        } : {}
+      })
+    });
+    if (!res.ok) return {
+      ok: false,
+      id: null,
+      status: res.status,
+      error: await res.text().catch(()=>"")
+    };
+    const j = await res.json().catch(()=>null);
+    return {
+      ok: true,
+      id: j?.id ?? null,
+      status: res.status
+    };
+  }
+  return {
+    ok: false,
+    id: null,
+    status: 0,
+    error: "No email provider (MAILER_SEND_API_KEY / RESEND_API_KEY)"
+  };
+}
+Deno.serve(async (req)=>{
+  if (req.method === "OPTIONS") return new Response(null, {
+    headers: CORS
+  });
+  const admin = createClient(Deno.env.get("SUPABASE_URL"), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
   // Auth: env override, Vault como fuente normal (repo público → nada hardcodeado).
   let expectedSecret = Deno.env.get("CUSTOMER_SUCCESS_WEBHOOK_SECRET") ?? null;
   if (!expectedSecret) {
     const { data } = await admin.rpc("internal_get_secret", {
-      p_name: "customer_success_webhook_secret",
+      p_name: "customer_success_webhook_secret"
     });
-    expectedSecret = (data as string | null) ?? null;
+    expectedSecret = data ?? null;
   }
   if (!expectedSecret || req.headers.get("x-webhook-secret") !== expectedSecret) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    return new Response(JSON.stringify({
+      error: "Unauthorized"
+    }), {
       status: 401,
-      headers: { ...CORS, "Content-Type": "application/json" },
+      headers: {
+        ...CORS,
+        "Content-Type": "application/json"
+      }
     });
   }
-
-  let opts: {
-    onlyOrderId?: number;
-    limit?: number;
-    record?: boolean;
-    sendEmail?: boolean;
-    dryRun?: boolean;
-  } = {};
+  let opts = {};
   try {
     opts = req.method === "POST" ? await req.json() : {};
-  } catch {
+  } catch  {
     opts = {};
   }
   const record = opts.record !== false;
   const sendEmail = opts.sendEmail !== false;
-
   const waSecret = Deno.env.get("WHATSAPP_WEBHOOK_SECRET");
-  const sesReady = !!(Deno.env.get("AWS_SES_ACCESS_KEY_ID") && Deno.env.get("AWS_SES_SECRET_ACCESS_KEY"));
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-
+  const emailReady = hasEmailProvider();
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
   // --- Condición 1: order_pending_reminder ---
-  const { data: rows, error } = await admin.rpc(
-    "customer_success_order_pending_candidates",
-  );
+  const { data: rows, error } = await admin.rpc("customer_success_order_pending_candidates");
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({
+      error: error.message
+    }), {
       status: 500,
-      headers: { ...CORS, "Content-Type": "application/json" },
+      headers: {
+        ...CORS,
+        "Content-Type": "application/json"
+      }
     });
   }
-
-  let candidates = (rows ?? []) as PendingCandidate[];
+  let candidates = rows ?? [];
   // Más recientes primero (order_id como proxy de recencia) para los sublotes.
-  candidates.sort((a, b) => b.order_id - a.order_id);
+  candidates.sort((a, b)=>b.order_id - a.order_id);
   if (opts.onlyOrderId) {
-    candidates = candidates.filter((c) => c.order_id === opts.onlyOrderId);
+    candidates = candidates.filter((c)=>c.order_id === opts.onlyOrderId);
   }
   if (opts.limit && opts.limit > 0) {
     candidates = candidates.slice(0, opts.limit);
   }
-
   if (opts.dryRun) {
-    return new Response(
-      JSON.stringify({ dryRun: true, count: candidates.length, candidates }),
-      { headers: { ...CORS, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({
+      dryRun: true,
+      count: candidates.length,
+      candidates
+    }), {
+      headers: {
+        ...CORS,
+        "Content-Type": "application/json"
+      }
+    });
   }
-
-  const summary: Array<{
-    orderId: number;
-    tenantId: number;
-    whatsapp: boolean;
-    email: boolean;
-    recorded: boolean;
-  }> = [];
-
-  for (const c of candidates) {
-    const first = firstNameOf(c.owner_name, c.catalog_name);
-    let waOk = false;
-    let emailOk = false;
-
-    // WhatsApp (best-effort: solo si hay número resolvible + secret).
-    if (waSecret && c.wa_recipient) {
+  // Foto del primer producto de cada orden (1 query batch) para el thumbnail
+  // del email. Best-effort: si falla, el email cae al placeholder gris.
+  if (sendEmail && candidates.length) {
+    try {
+      const ids = candidates.map((c)=>c.order_id);
+      const { data: ordProducts } = await admin.from("orders").select("id, products").in("id", ids);
+      const photoById = new Map();
+      for (const o of ordProducts ?? []){
+        const p = Array.isArray(o.products) ? o.products[0] : null;
+        const photo = p && typeof p.photo === "string" && p.photo.startsWith("http") ? p.photo : null;
+        photoById.set(o.id, photo);
+      }
+      for (const c of candidates)c.photo = photoById.get(c.order_id) ?? null;
+    } catch  {
+    /* noop: sin foto → placeholder */ }
+  }
+  // Estado por pedido: WhatsApp se manda por-pedido (template aprobado con botón
+  // URL a cada orden), pero el EMAIL se agrupa en 1 solo correo por dueño.
+  const perOrder = new Map();
+  for (const c of candidates){
+    perOrder.set(c.order_id, {
+      c,
+      waOk: false,
+      emailOk: false
+    });
+  }
+  // --- WhatsApp: por pedido (best-effort: solo si hay número resolvible + secret) ---
+  if (waSecret) {
+    for (const entry of perOrder.values()){
+      const c = entry.c;
+      if (!c.wa_recipient) continue;
+      const first = firstNameOf(c.owner_name, c.catalog_name);
       try {
-        const res = await fetch(
-          `${supabaseUrl}/functions/v1/send-whatsapp-notification`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-webhook-secret": waSecret,
-            },
-            body: JSON.stringify({
-              tenantId: c.tenant_id,
-              to: c.wa_recipient,
-              templateType: "order_pending_reminder",
-              variables: [
-                first,
-                c.product_name,
-                c.catalog_name,
-                daysLabel(c.days_pending),
-              ],
-              urlButtonParam: String(c.order_id),
-            }),
+        const res = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-webhook-secret": waSecret
           },
-        );
-        const j = await res.json().catch(() => null);
-        waOk = res.ok && j?.success === true && !j?.skipped;
-      } catch {
-        waOk = false;
+          body: JSON.stringify({
+            tenantId: c.tenant_id,
+            to: c.wa_recipient,
+            templateType: "order_pending_reminder",
+            variables: [
+              first,
+              c.product_name,
+              c.catalog_name,
+              daysLabel(c.days_pending)
+            ],
+            urlButtonParam: String(c.order_id)
+          })
+        });
+        const j = await res.json().catch(()=>null);
+        entry.waOk = res.ok && j?.success === true && !j?.skipped;
+      } catch  {
+        entry.waOk = false;
       }
     }
-
-    // Email (siempre que haya email + SES).
-    if (sendEmail && sesReady && c.owner_email && c.owner_email.includes("@")) {
+  }
+  // --- Email: UN correo por dueño con TODOS sus pedidos pendientes ---
+  let emailsSent = 0;
+  if (sendEmail && emailReady) {
+    const groups = new Map();
+    for (const c of candidates){
+      if (!c.owner_email || !c.owner_email.includes("@")) continue;
+      const key = c.owner_email.toLowerCase();
+      const g = groups.get(key);
+      if (g) g.push(c);
+      else groups.set(key, [
+        c
+      ]);
+    }
+    for (const [email, group] of groups){
+      let ok = false;
       try {
-        const { subject, html, text } = renderPendingEmail(c);
-        emailOk = (await sendViaSes(c.owner_email, subject, html, text)).ok;
-      } catch {
-        emailOk = false;
+        const { subject, html, text } = renderPendingEmail(group);
+        const r = await deliverEmail({
+          to: email,
+          subject,
+          html,
+          text
+        });
+        ok = r.ok;
+      } catch  {
+        ok = false;
+      }
+      if (ok) {
+        emailsSent++;
+        for (const c of group)perOrder.get(c.order_id).emailOk = true;
       }
     }
-
-    // Idempotencia: registrar el evento si al menos un canal salió.
+  }
+  // --- Idempotencia: 1 fila por pedido si algún canal salió ---
+  const summary = [];
+  for (const entry of perOrder.values()){
+    const { c, waOk, emailOk } = entry;
     let recorded = false;
     if (record && (waOk || emailOk)) {
       const channel = waOk && emailOk ? "both" : waOk ? "whatsapp" : "email";
-      const { error: insErr } = await admin
-        .from("customer_success_sends")
-        .insert({
-          tenant_id: c.tenant_id,
-          event_key: `order_pending:${c.order_id}`,
-          channel,
-          recipient: c.wa_recipient ?? c.owner_email,
-        });
+      const { error: insErr } = await admin.from("customer_success_sends").insert({
+        tenant_id: c.tenant_id,
+        event_key: `order_pending:${c.order_id}`,
+        channel,
+        recipient: c.wa_recipient ?? c.owner_email
+      });
       recorded = !insErr;
     }
-
     summary.push({
       orderId: c.order_id,
       tenantId: c.tenant_id,
       whatsapp: waOk,
       email: emailOk,
-      recorded,
+      recorded
     });
   }
-
-  return new Response(
-    JSON.stringify({ condition: "order_pending_reminder", sent: summary.length, summary }),
-    { headers: { ...CORS, "Content-Type": "application/json" } },
-  );
+  return new Response(JSON.stringify({
+    condition: "order_pending_reminder",
+    orders: summary.length,
+    emails: emailsSent,
+    summary
+  }), {
+    headers: {
+      ...CORS,
+      "Content-Type": "application/json"
+    }
+  });
 });

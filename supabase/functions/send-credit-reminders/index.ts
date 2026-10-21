@@ -161,8 +161,6 @@ Deno.serve(async (req) => {
   const today = todayIso();
   const cooldownIso = new Date(Date.now() - REMIND_COOLDOWN_DAYS * 86_400_000).toISOString();
 
-  // Todas las órdenes a crédito con el cooldown vencido (o nunca avisadas).
-  // Volumen actual ~decenas; el limit es holgado y el filtro fino va en memoria.
   // Tasas globales (BCV) una sola vez por corrida — para el dual de VE.
   const { data: globalRates } = await admin
     .from("exchange_rates")
@@ -170,6 +168,8 @@ Deno.serve(async (req) => {
     .eq("id", 1)
     .maybeSingle();
 
+  // Todas las órdenes a crédito con el cooldown vencido (o nunca avisadas).
+  // Volumen actual ~decenas; el limit es holgado y el filtro fino va en memoria.
   const { data: orders, error } = await admin
     .from("orders")
     .select("id, tenant_id, name, order_number, total_usd, total_bs, created_at, credit_installments, credit_reminded_at")
