@@ -51,6 +51,9 @@
        (reemplaza al checklist de primeros pasos; descartable por el owner). -->
   <app-catalog-progress />
 
+  <!-- Bot de WhatsApp (CAT-78, beta): solo tiendas habilitadas. -->
+  <app-whatsapp-bot-card />
+
   <!-- Promo: descargá la app móvil (App Store / Play Store). Solo en web — en
        la app nativa no tiene sentido. Card blanca descartable (localStorage). -->
   @if (!appPromoDismissed() && !isNative) {
