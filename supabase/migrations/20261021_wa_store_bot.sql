@@ -99,3 +99,12 @@ as $$
   returning jsonb_array_length(pending_photos);
 $$;
 revoke all on function public.wa_bot_push_photo(text, bigint, text) from public, anon, authenticated;
+
+-- v1.1: intentos fallidos de vinculación (límite por teléfono y hora).
+create table if not exists public.wa_bot_link_attempts (
+  id          bigint generated always as identity primary key,
+  phone       text not null,
+  created_at  timestamptz not null default now()
+);
+create index if not exists wa_bot_link_attempts_phone_idx on public.wa_bot_link_attempts (phone, created_at desc);
+alter table public.wa_bot_link_attempts enable row level security;

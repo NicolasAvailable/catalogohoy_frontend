@@ -16,11 +16,14 @@ import { uploadToS3 } from "../_shared/s3.ts";
 //      Body { message, profileName } con el mensaje crudo de Meta. Responde 202
 //      al toque y procesa en background (EdgeRuntime.waitUntil).
 //   2. Panel (JWT del usuario): { action: 'status' | 'create_code' | 'unlink',
-//      tenantId, linkId? }. Genera el código de vinculación (6 dígitos, 15 min)
-//      que el dueño manda por WhatsApp ("Vincular 123456").
+//      tenantId, linkId? }. Genera el código de vinculación (8 dígitos, 15 min)
+//      que el dueño manda por WhatsApp ("Vincular 12345678").
 //
 // Seguridad: un teléfono queda ligado a UNA tienda solo con un código generado
-// por un owner/admin logueado. Toda tool filtra por ese tenant_id.
+// por un owner/admin logueado. Toda tool filtra por ese tenant_id. Además:
+// máx. LINK_MAX_FAILS intentos fallidos de código por teléfono y hora, el
+// vínculo caduca tras LINK_IDLE_DAYS sin uso, se revoca si quien lo creó deja
+// de ser owner/admin, y los otros números conectados reciben un aviso.
 // Gating v1: WA_BOT_TENANTS (lista de ids separada por coma, "*" = todas).
 // Costo: 1 crédito de IA por mensaje procesado por el agente.
 // Deploy con verify_jwt=false (auth propia en ambas entradas).
@@ -39,6 +42,10 @@ const HISTORY_MAX = 16;
 const MAX_AGENT_STEPS = 8;
 const PHOTO_ACK_DELAY_MS = 5000;
 const CODE_TTL_MIN = 15;
+const CODE_DIGITS = 8;
+const LINK_MAX_FAILS = 5; // intentos fallidos de código por teléfono y hora
+const LINK_IDLE_DAYS = 30; // un vínculo sin uso por más tiempo pide vincular de nuevo
+const LIST_MAX = 100;
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });
@@ -135,11 +142,13 @@ interface Link {
   user_id: number;
   auth_user_id: string;
   phone: string;
+  created_at?: string;
+  last_used_at?: string | null;
 }
 
 async function getLink(phone: string): Promise<Link | null> {
   const { data } = await admin.from("wa_bot_links")
-    .select("id, tenant_id, user_id, auth_user_id, phone").eq("phone", phone).maybeSingle();
+    .select("id, tenant_id, user_id, auth_user_id, phone, created_at, last_used_at").eq("phone", phone).maybeSingle();
   return (data as Link | null) ?? null;
 }
 
@@ -157,11 +166,25 @@ const WELCOME_HELP =
   "📦 \"¿Qué órdenes tengo pendientes?\"\n" +
   "🎤 También entiendo notas de voz.";
 
-async function linkWithCode(phone: string, code: string): Promise<boolean> {
+async function tooManyFails(phone: string): Promise<boolean> {
+  const since = new Date(Date.now() - 3600_000).toISOString();
+  const { count } = await admin.from("wa_bot_link_attempts").select("phone", { count: "exact", head: true })
+    .eq("phone", phone).gte("created_at", since);
+  return (count ?? 0) >= LINK_MAX_FAILS;
+}
+
+async function linkWithCode(phone: string, code: string): Promise<"ok" | "invalid" | "blocked"> {
+  if (await tooManyFails(phone)) return "blocked";
   const { data: row } = await admin.from("wa_bot_link_codes")
     .select("code, tenant_id, user_id, auth_user_id, expires_at, used_at").eq("code", code).maybeSingle();
-  if (!row || row.used_at || new Date(row.expires_at).getTime() < Date.now()) return false;
-  await admin.from("wa_bot_link_codes").update({ used_at: new Date().toISOString() }).eq("code", code);
+  if (!row || row.used_at || new Date(row.expires_at).getTime() < Date.now()) {
+    await admin.from("wa_bot_link_attempts").insert({ phone });
+    return "invalid";
+  }
+  // Marca de uso atómica: si dos mensajes llegan con el mismo código, solo uno gana.
+  const { data: claimed } = await admin.from("wa_bot_link_codes").update({ used_at: new Date().toISOString() })
+    .eq("code", code).is("used_at", null).select("code");
+  if (!claimed?.length) return "invalid";
   await admin.from("wa_bot_links").upsert({
     phone, tenant_id: row.tenant_id, user_id: row.user_id, auth_user_id: row.auth_user_id,
     created_at: new Date().toISOString(),
@@ -172,7 +195,25 @@ async function linkWithCode(phone: string, code: string): Promise<boolean> {
   }, { onConflict: "phone" });
   const t = await tenantInfo(row.tenant_id);
   await sendText(phone, `✅ ¡Listo! Este WhatsApp quedó conectado a *${t.name}*.\n\n${WELCOME_HELP}`);
-  return true;
+  // Aviso a los demás números ya conectados a la tienda.
+  const { data: others } = await admin.from("wa_bot_links").select("phone")
+    .eq("tenant_id", row.tenant_id).neq("phone", phone);
+  for (const o of others ?? []) {
+    await sendText(
+      o.phone,
+      `🔐 Se conectó un nuevo número a *${t.name}*: +${phone}.\nSi no lo reconoces, desconéctalo desde tu panel (Inicio → Gestiona tu tienda por WhatsApp).`,
+    );
+  }
+  return "ok";
+}
+
+/** El vínculo sigue vigente: uso reciente y quien lo creó sigue siendo owner/admin. */
+async function linkStillValid(link: Link): Promise<boolean> {
+  const lastUse = new Date(link.last_used_at ?? link.created_at ?? 0).getTime();
+  if (Date.now() - lastUse > LINK_IDLE_DAYS * 86400_000) return false;
+  const { data } = await admin.from("users_tenants").select("role")
+    .eq("user_id", link.user_id).eq("tenant_id", link.tenant_id).maybeSingle();
+  return !!data && ["owner", "admin"].includes(data.role);
 }
 
 // ── Sesión (memoria corta) ──────────────────────────────────────────────────
@@ -199,13 +240,24 @@ async function saveSession(phone: string, tenantId: number, history: Turn[], pen
 const TOOLS: Anthropic.Tool[] = [
   {
     name: "list_products",
-    description: "Busca productos de la tienda por texto (nombre/descripción/SKU) o categoría. Úsala para encontrar el id antes de editar.",
+    description:
+      "Busca y filtra los productos de la tienda. Todos los filtros son opcionales y se combinan. " +
+      "Devuelve total (cuántos cumplen), los productos de esta página (con photos = cantidad de fotos) y next_offset si hay más. " +
+      "Úsala también para contar (ej. cuántos no tienen foto) y para encontrar el id antes de editar.",
     input_schema: {
       type: "object",
       properties: {
-        search: { type: "string" },
+        search: { type: "string", description: "Texto en nombre, descripción o SKU" },
         category_id: { type: "number" },
-        limit: { type: "number", description: "Máximo 50 (default 20)" },
+        has_photos: { type: "boolean", description: "true = solo con foto, false = solo sin foto" },
+        stock: { type: "string", enum: ["in_stock", "out_of_stock", "low", "unlimited"], description: "low = 1 a 5 unidades" },
+        hidden: { type: "boolean", description: "true = solo ocultos, false = solo visibles" },
+        on_sale: { type: "boolean", description: "true = solo con precio de oferta" },
+        min_price: { type: "number" },
+        max_price: { type: "number" },
+        sort: { type: "string", enum: ["catalog", "newest", "price_asc", "price_desc", "name"] },
+        offset: { type: "number" },
+        limit: { type: "number", description: `Máximo ${LIST_MAX} (default 50)` },
       },
     },
   },
@@ -367,22 +419,45 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
   const tenantId = ctx.link.tenant_id;
   switch (name) {
     case "list_products": {
-      const limit = Math.min(Number(a.limit) || 20, 50);
+      const limit = Math.min(Number(a.limit) || 50, LIST_MAX);
+      const offset = Math.max(Number(a.offset) || 0, 0);
+      const sorts: Record<string, [string, boolean]> = {
+        catalog: ["position", true], newest: ["created_at", false], price_asc: ["price", true],
+        price_desc: ["price", false], name: ["name", true],
+      };
+      const [col, asc] = sorts[String(a.sort)] ?? sorts.catalog;
+      const cat = Number(a.category_id) || 0;
       let q = admin.from("products")
-        .select("id, name, price, price_promotional, stock, is_sized, sizes, is_hidden, is_sold_out, product_categories(category_id)")
-        .eq("tenant_id", tenantId).order("position", { ascending: true }).limit(a.category_id ? 500 : limit);
+        .select(`id, name, price, price_promotional, stock, is_sized, sizes, is_hidden, is_sold_out, photos${cat ? ", product_categories!inner(category_id)" : ""}`)
+        .eq("tenant_id", tenantId).order(col, { ascending: asc }).limit(2000);
+      if (cat) q = q.eq("product_categories.category_id", cat);
       if (a.search?.trim()) q = q.ilike("search_blob", `%${a.search.trim()}%`);
+      if (typeof a.hidden === "boolean") q = q.eq("is_hidden", a.hidden);
+      if (a.min_price !== undefined) q = q.gte("price", Number(a.min_price));
+      if (a.max_price !== undefined) q = q.lte("price", Number(a.max_price));
       const { data, error } = await q;
       if (error) return { error: error.message };
-      let rows = data ?? [];
-      if (a.category_id) {
-        rows = rows.filter((r) => (r.product_categories ?? []).some((pc) => pc.category_id === Number(a.category_id))).slice(0, limit);
+      // deno-lint-ignore no-explicit-any
+      let rows = (data ?? []) as any[];
+      if (typeof a.has_photos === "boolean") rows = rows.filter((r) => ((r.photos ?? []).length > 0) === a.has_photos);
+      if (a.on_sale === true) rows = rows.filter((r) => Number(r.price_promotional) > 0);
+      if (a.stock) {
+        rows = rows.filter((r) => {
+          const s = totalStock(r);
+          if (a.stock === "unlimited") return s === null;
+          if (a.stock === "out_of_stock") return r.is_sold_out || s === 0;
+          if (a.stock === "low") return s !== null && s > 0 && s <= 5;
+          return !r.is_sold_out && (s === null || s > 0); // in_stock
+        });
       }
+      const page = rows.slice(offset, offset + limit);
       return {
-        count: rows.length,
-        products: rows.map((r) => ({
+        total: rows.length,
+        offset,
+        next_offset: offset + limit < rows.length ? offset + limit : null,
+        products: page.map((r) => ({
           id: r.id, name: r.name, price: r.price, price_promotional: r.price_promotional,
-          stock: totalStock(r), hidden: r.is_hidden, sold_out: r.is_sold_out,
+          stock: totalStock(r), photos: (r.photos ?? []).length, hidden: r.is_hidden, sold_out: r.is_sold_out,
         })),
       };
     }
@@ -507,7 +582,13 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       else return { error: "Indica el número de orden" };
       const { data } = await q.maybeSingle();
       if (!data) return { error: "Orden no encontrada" };
-      return data;
+      // Productos con su product_id para poder editarlos con update_product.
+      // deno-lint-ignore no-explicit-any
+      const items = ((data.products ?? []) as any[]).map((p) => ({
+        product_id: p.productId ?? null, name: p.name, quantity: p.quantity, price: p.price, total: p.total,
+        size: p.size ?? undefined, variant: p.variantName ?? undefined,
+      }));
+      return { ...data, products: items };
     }
     default:
       return { error: `Tool desconocida: ${name}` };
@@ -527,10 +608,24 @@ Reglas:
 - Si te dan nombre y precio, crea el producto directo, sin pedir confirmación. Si falta el precio, pregúntalo. Si hay fotos pendientes, úsalas en el producto que crees o edites.
 - Si ves la foto y no te dieron descripción, escribe una descripción corta y vendedora basada en la foto.
 - Para editar, busca primero el producto con list_products. Si hay varios parecidos, pregunta cuál.
+- Para preguntas sobre muchos productos (sin foto, agotados, ocultos, en oferta, de una categoría…) usa los filtros de list_products: nunca digas que no puedes filtrar ni pidas revisar uno por uno. Si total es grande, da el número y lista los nombres de forma compacta (uno por línea); si hay next_offset, ofrece mostrar más.
+- "Órdenes recientes" en el contexto son las últimas que recibió la tienda (de esas le llega aviso al dueño). Si dice "esa orden", "la última" o "la que me llegó", es la más reciente salvo que el chat indique otra. Usa get_order para ver qué pidió: cada producto trae product_id, con el que puedes editarlo (precio, stock, fotos…).
 - Eliminar productos y cambiar precios en lote: pide confirmación explícita antes de aplicarlo.
 - Las órdenes son solo de consulta: si piden cambiar el estado de una orden, explica que por ahora eso se hace desde el panel.
 - No inventes datos (precios, stock, órdenes): usa siempre las herramientas.
 - Si te piden algo fuera de la gestión de la tienda, responde amable que solo ayudas con el catálogo y las órdenes, y que para soporte escriban a https://wa.me/584220240947.`;
+
+/** Últimas órdenes (48 h) para que "esa orden" tenga referente. */
+async function recentOrders(tenantId: number): Promise<string> {
+  const since = new Date(Date.now() - 48 * 3600_000).toISOString();
+  const { data } = await admin.from("orders").select("order_number, name, total_usd, status, created_at")
+    .eq("tenant_id", tenantId).gte("created_at", since).order("created_at", { ascending: false }).limit(3);
+  return (data ?? []).map((o) => {
+    const mins = Math.round((Date.now() - new Date(o.created_at).getTime()) / 60000);
+    const ago = mins < 60 ? `hace ${mins} min` : `hace ${Math.round(mins / 60)} h`;
+    return `#${o.order_number} ${o.name ?? "cliente"} $${Number(o.total_usd) || 0} (${o.status}, ${ago})`;
+  }).join(" · ");
+}
 
 interface Usage { input: number; output: number; cacheRead: number; cacheWrite: number; tools: number }
 
@@ -546,9 +641,11 @@ async function runAgent(
   const actions: string[] = [];
 
   const today = new Date().toLocaleDateString("es-VE", { timeZone: "America/Caracas", dateStyle: "full" });
+  const recent = await recentOrders(link.tenant_id);
   const context =
     `[Tienda: ${shopName}${shopUrl ? ` · ${shopUrl}` : ""} · Hoy: ${today}` +
-    (ctx.pendingPhotos.length ? ` · Fotos pendientes en el chat: ${ctx.pendingPhotos.length}` : "") + "]";
+    (ctx.pendingPhotos.length ? ` · Fotos pendientes en el chat: ${ctx.pendingPhotos.length}` : "") +
+    (recent ? `\nÓrdenes recientes: ${recent}` : "") + "]";
   const userContent: Anthropic.Beta.BetaContentBlockParam[] = [
     ...ctx.pendingPhotos.slice(-4).map((url) => ({ type: "image" as const, source: { type: "url" as const, url } })),
     { type: "text", text: `${context}\n${userText}` },
@@ -626,14 +723,29 @@ async function handleInbound(m: any) {
   const phone = digits(m.from ?? "");
   if (!phone) return;
   let text = messageText(m);
-  const code = text.match(/\b(\d{6})\b/)?.[1];
+  const code = text.match(/\b(\d{6,8})\b/)?.[1];
   const link = await getLink(phone);
 
   // Vinculación (o cambio de tienda) con el código del panel.
   if (code && (!link || /vincular/i.test(text))) {
-    if (!(await linkWithCode(phone, code))) {
+    const result = await linkWithCode(phone, code);
+    if (result === "blocked") {
+      await sendText(phone, "Demasiados intentos con códigos inválidos. Espera una hora y genera un código nuevo en tu panel.");
+    } else if (result === "invalid") {
       await sendText(phone, "Ese código no es válido o ya venció. Genera uno nuevo en tu panel (Inicio → Gestiona tu tienda por WhatsApp).");
     }
+    return;
+  }
+  if (link && /^\s*(desconectar|desvincular)\s*$/i.test(text)) {
+    await admin.from("wa_bot_links").delete().eq("id", link.id);
+    await admin.from("wa_bot_sessions").delete().eq("phone", phone);
+    await sendText(phone, "Listo, este WhatsApp ya no está conectado a tu tienda. 👋");
+    return;
+  }
+  if (link && !(await linkStillValid(link))) {
+    await admin.from("wa_bot_links").delete().eq("id", link.id);
+    await admin.from("wa_bot_sessions").delete().eq("phone", phone);
+    await sendText(phone, "Por seguridad tu conexión venció 🔐 Vuelve a conectar tu WhatsApp desde tu panel: Inicio → *Gestiona tu tienda por WhatsApp*.");
     return;
   }
   if (!link) {
@@ -752,7 +864,7 @@ async function handlePanel(req: Request): Promise<Response> {
     }
     case "create_code": {
       for (let i = 0; i < 5; i++) {
-        const code = String(Math.floor(100000 + Math.random() * 900000));
+        const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 10 ** CODE_DIGITS).padStart(CODE_DIGITS, "0");
         const { error } = await admin.from("wa_bot_link_codes").insert({
           code, tenant_id: tenantId, user_id: user.id, auth_user_id: auth.user.id,
           expires_at: new Date(Date.now() + CODE_TTL_MIN * 60_000).toISOString(),
