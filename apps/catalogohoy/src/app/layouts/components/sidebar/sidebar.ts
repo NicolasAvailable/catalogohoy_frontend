@@ -4,7 +4,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/ro
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthenticationService } from '@catalogohoy/auth';
 import { ChatBadgeRealtimeService, ChatStore } from '@catalogohoy/chat';
-import { META_CHANNEL_ALLOWED_SLUGS, PosthogService } from '@catalogohoy/core';
+import { META_CHANNEL_ALLOWED_SLUGS, PosthogService, WA_BOT_BETA_TENANTS } from '@catalogohoy/core';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { OrderBadgeRealtimeService, OrderStore } from '@catalogohoy/order';
 import { PlanStore } from '@catalogohoy/plan';
@@ -78,6 +78,8 @@ export class Sidebar {
    *  flag becomes available even when the user lands on a route that
    *  doesn't otherwise touch the currency. */
   public readonly isVenezuela = computed(() => this.tenantCurrency.isVenezuela());
+  /** Asistente de WhatsApp (CAT-78): beta solo para tiendas habilitadas. */
+  public readonly waBotEnabled = computed(() => WA_BOT_BETA_TENANTS.includes(Number(this.tenantStore.tenantId())));
 
   // Free-plan users can now enter these routes — the views themselves show
   // an upgrade prompt. The sidebar no longer needs to lock them.

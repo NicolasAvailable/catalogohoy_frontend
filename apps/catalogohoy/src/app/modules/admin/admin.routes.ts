@@ -121,4 +121,11 @@ export const adminRoutes: Route[] = [
     canActivate: [chatEnabledGuard],
     loadChildren: () => import('@catalogohoy/chat').then((m) => m.CHAT_ROUTES),
   },
+  {
+    // Asistente de WhatsApp (CAT-78, beta). La edge `wa-store-bot` exige
+    // owner/admin y una tienda habilitada.
+    path: 'whatsapp-bot',
+    title: 'Asistente WhatsApp',
+    loadComponent: () => import('@catalogohoy/home').then((m) => m.WhatsappBot),
+  },
 ];

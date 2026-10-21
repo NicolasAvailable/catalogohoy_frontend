@@ -73,6 +73,11 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     routerLink: '/expenses',
   },
   {
+    label: 'Bot de WhatsApp',
+    icon: 'bot',
+    routerLink: '/wa-bot',
+  },
+  {
     label: 'Uso de IA',
     icon: 'sparkles',
     routerLink: '/ai-usage',
