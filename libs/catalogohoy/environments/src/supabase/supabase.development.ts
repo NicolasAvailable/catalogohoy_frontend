@@ -4,7 +4,7 @@
 export const SUPABASE_AUTH_STORAGE_KEY = 'sb-yvkurjivijnhliofmfmj-auth-token';
 
 export const supabaseEnvironment = {
-  supabaseUrl: 'https://yvkurjivijnhliofmfmj.supabase.co',
+  supabaseUrl: 'https://api.catalogohoy.com',
   supabaseAuthStorageKey: SUPABASE_AUTH_STORAGE_KEY,
   supabaseKey: 'sb_publishable_yYkWS23HI8l698Fl-sK12w_FcqIggPs',
 };
