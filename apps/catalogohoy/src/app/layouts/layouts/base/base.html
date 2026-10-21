@@ -9,8 +9,28 @@
          mientras se rediseña. Reactivar restaurando esta línea. -->
     <!-- <app-activation-banner /> -->
     <app-navbar (toggleSidebar)="toggleSidebar()" />
-    <div class="flex w-full flex-auto flex-col overflow-y-auto px-4 py-4">
+    <div class="relative flex w-full flex-auto flex-col overflow-y-auto px-4 py-4">
       <router-outlet />
+      @if (navigating()) {
+      <!-- Esqueleto mientras carga la vista nueva -->
+      <div class="absolute inset-0 z-10 bg-lino-500 px-4 py-4 overflow-hidden" aria-busy="true" aria-label="Cargando">
+        <div class="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6 animate-pulse">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-grey-100"></div>
+            <div class="flex-1 flex flex-col gap-2">
+              <div class="h-6 w-56 max-w-full rounded bg-grey-100"></div>
+              <div class="h-3.5 w-80 max-w-full rounded bg-grey-100"></div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            @for (i of [1, 2, 3, 4]; track i) {
+            <div class="h-24 rounded-xl bg-white border border-grey-100"></div>
+            }
+          </div>
+          <div class="h-80 rounded-xl bg-white border border-grey-100"></div>
+        </div>
+      </div>
+      }
     </div>
   </section>
 </main>

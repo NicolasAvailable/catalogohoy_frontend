@@ -126,7 +126,10 @@ export class MetaChannelView implements OnInit, OnDestroy {
       return;
     }
     const tenantId = await this.tenantStore.getTenantIdAsync();
-    if (!tenantId) return;
+    if (!tenantId) {
+      this.isLoading.set(false);
+      return;
+    }
     this.tenantId = String(tenantId);
     this.handleMetaReturn();
     await this.loadConnection();

@@ -143,8 +143,13 @@ const PAGE = 100;
             </p>
             @if (m.media.length) {
             <div class="flex flex-wrap gap-1 mb-1">
-              @for (url of m.media; track url) {
-              <a [href]="url" target="_blank" rel="noopener"><img [src]="url" alt="" class="w-16 h-16 rounded object-cover" /></a>
+              @for (f of m.media; track f.url) {
+              @switch (f.type) {
+              @case ('image') { <a [href]="f.url" target="_blank" rel="noopener"><img [src]="f.url" alt="" class="w-24 h-24 rounded object-cover" /></a> }
+              @case ('video') { <video [src]="f.url" controls preload="metadata" class="w-56 max-h-56 rounded bg-black"></video> }
+              @case ('audio') { <audio [src]="f.url" controls preload="none" class="w-56 h-10"></audio> }
+              @default { <a [href]="f.url" target="_blank" rel="noopener" class="underline text-xs text-primary-600">📄 {{ f.name || 'Documento' }}</a> }
+              }
               }
             </div>
             }

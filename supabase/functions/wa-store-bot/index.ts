@@ -560,6 +560,8 @@ interface Ctx {
   pendingPhotos: string[];
   /** Se vuelve true cuando una tool consumió las fotos pendientes. */
   photosUsed: boolean;
+  /** Fotos que el bot mandó al chat (send_products), para el registro del panel. */
+  sentMedia: Media[];
 }
 
 const totalStock = (p: { stock: number | null; sizes?: { stock?: number }[]; is_sized?: boolean }) =>
@@ -871,6 +873,7 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
         const photos = ((p.photos ?? []) as string[]).filter(isWaImage).slice(0, maxPhotos);
         const wamids: (string | null)[] = [];
         // Fotos seguidas (WhatsApp las agrupa en álbum desde 4) y la ficha en la última: así queda abajo, fácil de responder.
+        for (const url of photos) ctx.sentMedia.push({ url, type: "image" });
         for (const url of photos.slice(1)) wamids.push(await sendImage(phone, url));
         const main = photos[0] ? await sendImage(phone, photos[0], caption) : null;
         wamids.push(main ?? await sendText(phone, caption));
@@ -1094,6 +1097,7 @@ Cómo responder:
 - Formato de WhatsApp: *negritas* con un asterisco, sin tablas ni encabezados markdown.
 - Precios en USD con el símbolo $ (ej. $25).
 - Al terminar una acción, confirma qué hiciste en una o dos líneas.
+- Si adjunta un PDF (lista de precios, catálogo, factura), léelo y propón qué crear o actualizar. Antes de crear o cambiar más de 5 productos de una vez, confirma con el dueño.
 
 Reglas:
 - Si te dan nombre y precio, crea el producto directo, sin pedir confirmación. Si falta el precio, pregúntalo. Si hay fotos pendientes, úsalas en el producto que crees o edites.
@@ -1127,10 +1131,12 @@ async function recentOrders(tenantId: number): Promise<string> {
 
 // ── Registro para el panel (wa_bot_messages) ───────────────────────────────
 interface LoggedAction { tool: string; label: string; url?: string }
+/** Adjunto del registro: lo que se mandó por el chat (foto, audio, video o documento). */
+interface Media { url: string; type: "image" | "audio" | "video" | "document"; name?: string }
 
 async function logMsg(
   tenantId: number, phone: string, role: "user" | "assistant" | "system", body: string,
-  extra: { media?: string[]; actions?: LoggedAction[]; credits?: number; debug?: unknown } = {},
+  extra: { media?: Media[]; actions?: LoggedAction[]; credits?: number; debug?: unknown } = {},
 ) {
   const { error } = await admin.from("wa_bot_messages").insert({
     tenant_id: tenantId, phone, role, body: body.slice(0, 4000),
@@ -1187,8 +1193,9 @@ async function runAgent(
   userText: string,
   shopName: string,
   shopUrl: string,
-): Promise<{ reply: string; actions: string[]; logged: LoggedAction[]; trace: ToolTrace[]; usage: Usage; photosUsed: boolean }> {
-  const ctx: Ctx = { link, shopUrl, pendingPhotos: session.pending_photos, photosUsed: false };
+  extraBlocks: Anthropic.Beta.BetaContentBlockParam[] = [],
+): Promise<{ reply: string; actions: string[]; logged: LoggedAction[]; trace: ToolTrace[]; usage: Usage; photosUsed: boolean; sentMedia: Media[] }> {
+  const ctx: Ctx = { link, shopUrl, pendingPhotos: session.pending_photos, photosUsed: false, sentMedia: [] };
   const usage: Usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, tools: 0 };
   const actions: string[] = [];
   const logged: LoggedAction[] = [];
@@ -1203,6 +1210,7 @@ async function runAgent(
     (recent ? `\nÓrdenes recientes: ${recent}` : "") + "]";
   const userContent: Anthropic.Beta.BetaContentBlockParam[] = [
     ...ctx.pendingPhotos.slice(-4).map((url) => ({ type: "image" as const, source: { type: "url" as const, url } })),
+    ...extraBlocks,
     { type: "text", text: `${context}\n${userText}` },
   ];
   const messages: Anthropic.Beta.BetaMessageParam[] = [
@@ -1261,7 +1269,7 @@ async function runAgent(
     messages.push({ role: "user", content: results });
   }
 
-  return { reply: reply || "Listo 👍", actions, logged, trace, usage, photosUsed: ctx.photosUsed };
+  return { reply: reply || "Listo 👍", actions, logged, trace, usage, photosUsed: ctx.photosUsed, sentMedia: ctx.sentMedia };
 }
 
 // ── Mensaje entrante ────────────────────────────────────────────────────────
@@ -1273,6 +1281,8 @@ function messageText(m: any): string {
     m.interactive?.list_reply?.title ??
     m.button?.text ??
     m.image?.caption ??
+    m.video?.caption ??
+    m.document?.caption ??
     ""
   ).trim();
 }
@@ -1332,36 +1342,75 @@ async function handleInbound(m: any) {
   }
   admin.from("wa_bot_links").update({ last_used_at: new Date().toISOString() }).eq("id", link.id).then(() => {});
 
-  // Fotos: se acumulan. Si vienen sin texto, esperamos un momento por si
-  // llegan más y respondemos UNA sola vez.
-  if (m.type === "image" && m.image?.id) {
-    const url = await storeMedia(m.image.id, m.image.mime_type ?? "", "multimedia/wa_");
+  // Adjuntos: se guardan en S3 y quedan en el registro del panel tal cual se
+  // mandaron. Las fotos se acumulan (pending_photos); si llegan sin texto,
+  // esperamos un momento por si llegan más y respondemos UNA sola vez.
+  const userMedia: Media[] = [];
+  const extraBlocks: Anthropic.Beta.BetaContentBlockParam[] = [];
+  let userLogged = false;
+  const mediaPrefix = `chat-media/${link.tenant_id}/bot-`;
+  // Una foto mandada como archivo se trata igual que una foto normal.
+  const imageDoc = m.type === "document" && /^image\/(jpe?g|png|webp)/.test(m.document?.mime_type ?? "");
+  if ((m.type === "image" && m.image?.id) || imageDoc) {
+    const media = m.image ?? m.document;
+    const url = await storeMedia(media.id, media.mime_type ?? "", "multimedia/wa_");
     if (!url) {
       await sendText(phone, "No pude descargar la foto 😕 ¿Me la reenvías?");
       return;
     }
     await admin.rpc("wa_bot_push_photo", { p_phone: phone, p_tenant_id: link.tenant_id, p_url: url });
+    await logMsg(link.tenant_id, phone, "user", text, { media: [{ url, type: "image" }] });
+    userLogged = true;
     if (!text) {
       await new Promise((r) => setTimeout(r, PHOTO_ACK_DELAY_MS));
       const { data: s } = await admin.from("wa_bot_sessions").select("pending_photos").eq("phone", phone).maybeSingle();
       const list = (s?.pending_photos ?? []) as string[];
       if (list[list.length - 1] !== url) return; // llegó otra foto después: responde esa
-      await sendText(
-        phone,
-        `📸 Tengo ${list.length === 1 ? "la foto" : `${list.length} fotos`}. ¿Qué hago?\n` +
-          "Ej: *Crea Zapato rojo, $25, stock 10* o *agrégalas al producto Zapato rojo*.",
-      );
+      const ack = `📸 Tengo ${list.length === 1 ? "la foto" : `${list.length} fotos`}. ¿Qué hago?\n` +
+        "Ej: *Crea Zapato rojo, $25, stock 10* o *agrégalas al producto Zapato rojo*.";
+      await sendText(phone, ack);
+      await logMsg(link.tenant_id, phone, "assistant", ack);
       return;
     }
   } else if (m.type === "audio" && m.audio?.id) {
-    const url = await storeMedia(m.audio.id, m.audio.mime_type ?? "", `chat-media/${link.tenant_id}/bot-`);
+    const url = await storeMedia(m.audio.id, m.audio.mime_type ?? "", mediaPrefix);
     text = url ? await transcribe(url) : "";
+    if (url) userMedia.push({ url, type: "audio" });
     if (!text) {
       await sendText(phone, "No pude entender el audio 😕 ¿Me lo escribes?");
+      await logMsg(link.tenant_id, phone, "user", "", { media: userMedia });
       return;
     }
+  } else if (m.type === "video" && m.video?.id) {
+    const url = await storeMedia(m.video.id, m.video.mime_type ?? "", mediaPrefix);
+    if (url) userMedia.push({ url, type: "video" });
+    if (!text) {
+      const note = "Recibí tu video 🎬 Los productos por ahora solo llevan fotos, así que no lo puedo agregar. " +
+        "Si quieres, mándame una foto del producto o dime qué hago.";
+      await sendText(phone, note);
+      await logMsg(link.tenant_id, phone, "user", "", { media: userMedia });
+      await logMsg(link.tenant_id, phone, "assistant", note);
+      return;
+    }
+    text += "\n[El dueño mandó un video junto con este mensaje. Los productos solo admiten fotos: no se puede usar.]";
+  } else if (m.type === "document" && m.document?.id) {
+    const name = String(m.document.filename ?? "documento").slice(0, 120);
+    const isPdf = /pdf/.test(m.document.mime_type ?? "") || /\.pdf$/i.test(name);
+    const url = await storeMedia(m.document.id, m.document.mime_type ?? "", mediaPrefix);
+    if (url) userMedia.push({ url, type: "document", name });
+    if (!url || !isPdf) {
+      const note = url
+        ? "Por ahora solo puedo leer documentos PDF 📄 ¿Me lo mandas en PDF o me escribes lo que necesitas?"
+        : "No pude descargar el documento 😕 ¿Me lo reenvías?";
+      await sendText(phone, note);
+      await logMsg(link.tenant_id, phone, "user", text, { media: userMedia });
+      await logMsg(link.tenant_id, phone, "assistant", note);
+      return;
+    }
+    extraBlocks.push({ type: "document", source: { type: "url", url }, title: name } as Anthropic.Beta.BetaContentBlockParam);
+    text = `${text || "Revisa este documento y dime qué hago con él."}\n[Adjuntó el PDF "${name}"]`;
   } else if (!text) {
-    await sendText(phone, "Por ahora entiendo texto, fotos y notas de voz 🙂");
+    await sendText(phone, "Por ahora entiendo texto, fotos, notas de voz, videos y documentos PDF 🙂");
     return;
   }
 
@@ -1376,7 +1425,7 @@ async function handleInbound(m: any) {
         "Puedes *comprar más créditos* desde tu panel web (botón de créditos arriba) o *mejorar tu plan* desde el panel o la app de CatalogoHoy" +
         (shop.url ? `: ${shop.url}/admin/plans` : "."),
     );
-    await logMsg(link.tenant_id, phone, "user", text);
+    if (!userLogged) await logMsg(link.tenant_id, phone, "user", text, { media: userMedia });
     await logMsg(link.tenant_id, phone, "system", "Sin créditos de IA: el asistente no respondió este mensaje.");
     return;
   }
@@ -1384,16 +1433,17 @@ async function handleInbound(m: any) {
   const session = await loadSession(phone, link.tenant_id);
   try {
     const started = Date.now();
-    const { reply, actions, logged, trace, usage, photosUsed } = await runAgent(link, session, text, shop.name, shop.url);
+    const { reply, actions, logged, trace, usage, photosUsed, sentMedia } =
+      await runAgent(link, session, text, shop.name, shop.url, extraBlocks);
     const { count: used } = await admin.from("wa_bot_usage").select("id", { count: "exact", head: true }).eq("phone", phone);
     const notice = balance <= CREDIT_LOW || ((used ?? 0) + 1) % CREDIT_NOTICE_EVERY === 0
       ? `\n\n💳 Te quedan *${balance}* créditos de IA (cada mensaje usa ${CREDIT_COST}).` +
         (balance <= CREDIT_LOW ? " Puedes comprar más desde tu panel." : "")
       : "";
     await sendText(phone, reply + notice);
-    await logMsg(link.tenant_id, phone, "user", text, { media: session.pending_photos });
+    if (!userLogged) await logMsg(link.tenant_id, phone, "user", text, { media: userMedia });
     await logMsg(link.tenant_id, phone, "assistant", reply + notice, {
-      actions: logged, credits: CREDIT_COST,
+      media: sentMedia, actions: logged, credits: CREDIT_COST,
       debug: { model: MODEL, ms: Date.now() - started, usage, cost_usd: costUsd(usage), balance_after: balance, tools: trace },
     });
 
@@ -1421,7 +1471,7 @@ async function handleInbound(m: any) {
     console.error("[wa-store-bot] agent", e instanceof Error ? e.message : String(e));
     await admin.rpc("refund_ai_credits", { p_user_id: link.user_id, p_cost: CREDIT_COST });
     await sendText(phone, "Tuve un problema procesando tu mensaje 😕 Intenta de nuevo en un momento.");
-    await logMsg(link.tenant_id, phone, "user", text, { media: session.pending_photos });
+    if (!userLogged) await logMsg(link.tenant_id, phone, "user", text, { media: userMedia });
     await logMsg(link.tenant_id, phone, "system", "El asistente tuvo un error con este mensaje (no se cobraron créditos).", {
       debug: { error: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack?.slice(0, 2000) : undefined, model: MODEL },
     });

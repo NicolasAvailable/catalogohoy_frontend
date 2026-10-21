@@ -25,6 +25,16 @@ export interface WaBotCode {
 
 export { WA_BOT_BETA_TENANTS } from '@catalogohoy/core';
 
+/** Adjunto del chat: foto, audio, video o documento que se mandó por WhatsApp. */
+export interface WaBotMedia {
+  url: string;
+  type: 'image' | 'audio' | 'video' | 'document';
+  name?: string;
+}
+
+/** Los registros viejos guardan solo la URL de la foto; los nuevos, el objeto. */
+const toMedia = (m: string | WaBotMedia): WaBotMedia => (typeof m === 'string' ? { url: m, type: 'image' } : m);
+
 export interface WaBotAction {
   tool: string;
   label: string;
@@ -38,7 +48,7 @@ export interface WaBotMessage {
   phone: string;
   role: 'user' | 'assistant' | 'system';
   body: string;
-  media: string[];
+  media: WaBotMedia[];
   actions: WaBotAction[];
   credits: number;
   created_at: string;
@@ -79,11 +89,15 @@ export class WaBotService {
   }
 
   /** Registro de conversaciones (más recientes; `before` pagina hacia atrás). */
-  public getActivity(
+  public async getActivity(
     tenantId: number,
     opts: { phone?: string | null; before?: number | null; limit?: number } = {}
   ): Promise<E.Either<Error, WaBotActivity>> {
-    return this.call<WaBotActivity>({ action: 'activity', tenantId, ...opts });
+    const result = await this.call<WaBotActivity>({ action: 'activity', tenantId, ...opts });
+    return result.mapRight((a) => ({
+      ...a,
+      messages: a.messages.map((m) => ({ ...m, media: (m.media ?? []).map(toMedia) })),
+    }));
   }
 
   private async call<T>(body: Record<string, unknown>): Promise<E.Either<Error, T>> {

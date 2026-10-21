@@ -14,8 +14,35 @@
   </header>
 
   @if (!ready()) {
-  <div class="h-64 rounded-xl bg-white border border-grey-100 animate-pulse"></div>
+  <!-- Esqueleto mientras se carga el estado del asistente -->
+  <div class="flex flex-col gap-8 animate-pulse" aria-busy="true" aria-label="Cargando">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      @for (i of [1, 2, 3, 4]; track i) {
+      <div class="rounded-xl bg-white border border-grey-100 p-4 flex flex-col gap-3">
+        <div class="h-3 w-24 rounded bg-grey-100"></div>
+        <div class="h-7 w-14 rounded bg-grey-100"></div>
+      </div>
+      }
+    </div>
+    <div class="grid lg:grid-cols-3 gap-4 items-start">
+      <div class="rounded-xl bg-white border border-grey-100 p-4 flex flex-col gap-3">
+        <div class="h-4 w-36 rounded bg-grey-100"></div>
+        <div class="h-14 rounded-lg bg-grey-50"></div>
+        <div class="h-10 rounded-lg bg-grey-50"></div>
+      </div>
+      <div class="lg:col-span-2 rounded-xl bg-white border border-grey-100 overflow-hidden">
+        <div class="h-14 border-b border-grey-100 px-4 flex items-center"><div class="h-4 w-32 rounded bg-grey-100"></div></div>
+        <div class="h-[26rem] bg-[#efeae2]/60 p-4 flex flex-col gap-3">
+          <div class="h-12 w-2/3 rounded-lg bg-white/80"></div>
+          <div class="self-end h-10 w-1/2 rounded-lg bg-[#d9fdd3]/70"></div>
+          <div class="h-20 w-3/4 rounded-lg bg-white/80"></div>
+          <div class="self-end h-10 w-2/5 rounded-lg bg-[#d9fdd3]/70"></div>
+        </div>
+      </div>
+    </div>
+  </div>
   } @else {
+  <div class="flex flex-col gap-8 animate-fade-in">
 
   @if (!connected()) {
   <!-- ═══ Hero: sin conectar ═══ -->
@@ -148,13 +175,36 @@
           <p class="text-[11px] font-semibold text-primary-600 mb-0.5">+{{ m.phone }}</p>
           }
           @if (m.media.length) {
-          <div class="flex flex-wrap gap-1 mb-1.5">
-            @for (url of m.media; track url) {
-            <a [href]="url" target="_blank" rel="noopener"><img [src]="url" alt="Foto enviada" class="w-20 h-20 rounded-md object-cover" loading="lazy" /></a>
+          <div class="flex flex-wrap gap-1 -mx-1.5 -mt-0.5" [class.mb-1.5]="m.body">
+            @for (f of m.media; track f.url) {
+            @switch (f.type) {
+            @case ('image') {
+            <a [href]="f.url" target="_blank" rel="noopener" class="block"
+               [class]="m.media.length === 1 ? 'w-60 max-w-full' : 'w-28 sm:w-32'">
+              <img [src]="f.url" alt="Foto" loading="lazy"
+                   class="w-full rounded-md object-cover bg-grey-100" [class]="m.media.length === 1 ? 'max-h-72' : 'aspect-square'" />
+            </a>
+            }
+            @case ('video') {
+            <video [src]="f.url" controls preload="metadata" class="w-60 max-w-full max-h-72 rounded-md bg-black"></video>
+            }
+            @case ('audio') {
+            <audio [src]="f.url" controls preload="none" class="w-60 max-w-full h-10"></audio>
+            }
+            @default {
+            <a [href]="f.url" target="_blank" rel="noopener"
+               class="flex items-center gap-2 rounded-md bg-black/5 hover:bg-black/10 px-3 py-2 max-w-60 transition-colors">
+              <ui-icon name="file-text" [size]="18" styleClass="text-grey-500 shrink-0" />
+              <span class="text-xs font-medium text-grey-700 truncate">{{ f.name || 'Documento' }}</span>
+            </a>
+            }
+            }
             }
           </div>
           }
+          @if (m.body) {
           <p class="whitespace-pre-line break-words" [innerHTML]="html(m.body)"></p>
+          }
           @if (m.actions.length) {
           <div class="flex flex-col gap-1 mt-2 pt-2 border-t border-grey-100">
             @for (a of m.actions; track $index) {
@@ -175,11 +225,20 @@
         </div>
         }
         } @empty {
+        @if (loadingLog()) {
+        <div class="flex flex-col gap-3 animate-pulse" aria-busy="true">
+          <div class="h-12 w-2/3 rounded-lg bg-white/80"></div>
+          <div class="self-end h-10 w-1/2 rounded-lg bg-[#d9fdd3]/70"></div>
+          <div class="h-20 w-3/4 rounded-lg bg-white/80"></div>
+          <div class="self-end h-10 w-2/5 rounded-lg bg-[#d9fdd3]/70"></div>
+        </div>
+        } @else {
         <div class="m-auto max-w-xs text-center flex flex-col items-center gap-2 text-grey-500">
           <ui-icon name="message-circle" [size]="28" styleClass="text-grey-300" />
           <p class="text-sm font-semibold text-grey-600">Todavía no hay mensajes</p>
           <p class="text-xs">Escríbele al asistente desde tu WhatsApp y aquí verás la conversación y lo que cambió en tu tienda.</p>
         </div>
+        }
         }
       </div>
     </div>
@@ -277,6 +336,7 @@
       </p>
     </div>
   </section>
+  </div>
   }
 </div>
 
