@@ -505,6 +505,15 @@ export class OrderListComponent implements OnInit, OnDestroy {
     };
   });
 
+  /** % que representa un método sobre el total cobrado por todos los métodos. */
+  protected paymentMethodShare(amount: number): number {
+    const total = (this.orderStore.metrics()?.byPaymentMethod ?? []).reduce(
+      (acc, m) => acc + m.amount,
+      0
+    );
+    return total > 0 ? (amount / total) * 100 : 0;
+  }
+
   /** Donut "Distribución por estado" (por monto facturado en el periodo). */
   protected readonly statusDonutOptions = computed<ApexOptions>(() => {
     const s = this.metricByStatus();

@@ -2751,5 +2751,7 @@
   "Ver avisos": "Ver avisos",
   "Monto a descontar": "Monto a descontar",
   "de descuento": "de descuento",
-  "Tu sesión expiró. Recarga la página o vuelve a iniciar sesión e inténtalo de nuevo.": "Tu sesión expiró. Recarga la página o vuelve a iniciar sesión e inténtalo de nuevo."
+  "Tu sesión expiró. Recarga la página o vuelve a iniciar sesión e inténtalo de nuevo.": "Tu sesión expiró. Recarga la página o vuelve a iniciar sesión e inténtalo de nuevo.",
+  "Ingresos por método de pago": "Ingresos por método de pago",
+  "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Solo órdenes completadas. Los pagos divididos suman cada parte a su método."
 }

@@ -2751,5 +2751,7 @@
   "Ver avisos": "View alerts",
   "Monto a descontar": "Amount to discount",
   "de descuento": "discount",
-  "Tu sesión expiró. Recarga la página o vuelve a iniciar sesión e inténtalo de nuevo.": "Your session expired. Reload the page or sign in again and try once more."
+  "Tu sesión expiró. Recarga la página o vuelve a iniciar sesión e inténtalo de nuevo.": "Your session expired. Reload the page or sign in again and try once more.",
+  "Ingresos por método de pago": "Income by payment method",
+  "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Completed orders only. Split payments add each part to its method."
 }

@@ -77,6 +77,11 @@
   `stock NULL` = sin control de inventario (se saltea a propósito). Si el RPC
   falla, ahora sale un toast de aviso (antes se tragaba en console.warn).
 
+- **Métricas → Ingresos por método de pago** (2026-10-21): la RPC `order_metrics` devuelve
+  `byPaymentMethod` (solo órdenes `completed`; pagos divididos del POS suman cada parte de
+  `payments[]` a su método; agrupa ignorando acentos/mayúsculas). La sección se oculta si la
+  RPC no trae el campo. Migración: `20261021_order_metrics_by_payment_method.sql`.
+
 ## category (`@catalogohoy/category`)
 
 - **Rol**: categorías (no jerárquicas) para filtrar el catálogo. Rutas: `/admin/categories`, `/edit/:id`.

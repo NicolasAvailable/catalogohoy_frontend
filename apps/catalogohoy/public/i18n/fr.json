@@ -2751,5 +2751,7 @@
   "Ver avisos": "Voir les alertes",
   "Monto a descontar": "Montant à déduire",
   "de descuento": "de remise",
-  "Tu sesión expiró. Recarga la página o vuelve a iniciar sesión e inténtalo de nuevo.": "Votre session a expiré. Rechargez la page ou reconnectez-vous puis réessayez."
+  "Tu sesión expiró. Recarga la página o vuelve a iniciar sesión e inténtalo de nuevo.": "Votre session a expiré. Rechargez la page ou reconnectez-vous puis réessayez.",
+  "Ingresos por método de pago": "Revenus par moyen de paiement",
+  "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Commandes terminées uniquement. Les paiements fractionnés ajoutent chaque part à son moyen."
 }
