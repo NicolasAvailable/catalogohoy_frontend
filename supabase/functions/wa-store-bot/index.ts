@@ -25,7 +25,8 @@ import { uploadToS3 } from "../_shared/s3.ts";
 // vínculo caduca tras LINK_IDLE_DAYS sin uso, se revoca si quien lo creó deja
 // de ser owner/admin, y los otros números conectados reciben un aviso.
 // Gating v1: WA_BOT_TENANTS (lista de ids separada por coma, "*" = todas).
-// Costo: 1 crédito de IA por mensaje procesado por el agente.
+// Costo: CREDIT_COST créditos de IA por mensaje procesado por el agente; cada
+// CREDIT_NOTICE_EVERY mensajes (o con saldo bajo) se le recuerda el saldo.
 // Deploy con verify_jwt=false (auth propia en ambas entradas).
 // =============================================================================
 
@@ -35,9 +36,11 @@ const WHATSAPP_TOKEN = Deno.env.get("WHATSAPP_TOKEN")?.trim() ?? "";
 const NOTIFY_PNID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID")?.trim() ?? "";
 const API_VERSION = Deno.env.get("WHATSAPP_API_VERSION") ?? "v21.0";
 const FAL_KEY = Deno.env.get("FAL_KEY");
-const MODEL = Deno.env.get("WA_BOT_MODEL") ?? "claude-opus-5-5";
+const MODEL = Deno.env.get("WA_BOT_MODEL") ?? "claude-sonnet-5-5";
 const ALLOWED_TENANTS = (Deno.env.get("WA_BOT_TENANTS") ?? "6").split(",").map((s) => s.trim());
-const CREDIT_COST = 1;
+const CREDIT_COST = 2;
+const CREDIT_NOTICE_EVERY = 10; // mensajes entre recordatorios de saldo
+const CREDIT_LOW = 20; // con este saldo o menos, se avisa en cada respuesta
 const HISTORY_MAX = 16;
 const MAX_AGENT_STEPS = 8;
 const PHOTO_ACK_DELAY_MS = 5000;
@@ -940,11 +943,11 @@ async function handleInbound(m: any) {
     return;
   }
 
-  // Créditos de IA (1 por mensaje procesado), del pozo del dueño vinculado.
+  // Créditos de IA (CREDIT_COST por mensaje procesado), del pozo del dueño vinculado.
   await admin.rpc("ensure_ai_credits", { p_user_id: link.user_id });
   const { data: balance } = await admin.rpc("spend_ai_credits", { p_user_id: link.user_id, p_cost: CREDIT_COST });
   if (balance === -1) {
-    await sendText(phone, "Te quedaste sin créditos de IA este mes 😕 Puedes comprar más o subir de plan desde tu panel.");
+    await sendText(phone, `Te quedaste sin créditos de IA 😕 Cada mensaje al asistente usa ${CREDIT_COST}. Puedes comprar más o subir de plan desde tu panel.`);
     return;
   }
 
@@ -952,7 +955,12 @@ async function handleInbound(m: any) {
   const shop = await tenantInfo(link.tenant_id);
   try {
     const { reply, actions, usage, photosUsed } = await runAgent(link, session, text, shop.name, shop.url);
-    await sendText(phone, reply);
+    const { count: used } = await admin.from("wa_bot_usage").select("id", { count: "exact", head: true }).eq("phone", phone);
+    const notice = balance <= CREDIT_LOW || ((used ?? 0) + 1) % CREDIT_NOTICE_EVERY === 0
+      ? `\n\n💳 Te quedan *${balance}* créditos de IA (cada mensaje usa ${CREDIT_COST}).` +
+        (balance <= CREDIT_LOW ? " Puedes comprar más desde tu panel." : "")
+      : "";
+    await sendText(phone, reply + notice);
 
     const userNote = session.pending_photos.length ? `${text}\n[Envió ${session.pending_photos.length} foto(s)]` : text;
     const assistantNote = actions.length ? `${reply}\n[Acciones: ${actions.join(" | ")}]` : reply;
