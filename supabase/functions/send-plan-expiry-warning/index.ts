@@ -1,9 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { AwsClient } from "npm:aws4fetch@1";
 
 // Cron diario (13:00 UTC, pg_cron `send-plan-expiry-warnings-daily`): avisa a
 // los dueños que su plan vence en 6/4/2/0 días.
-// - EMAIL (Resend): idempotencia por fila en tenant_expiry_warnings.
+// - EMAIL (AWS SES): idempotencia por fila en tenant_expiry_warnings.
 // - WHATSAPP (template plan_expiry_warning, W6): idempotencia propia con
 //   tenant_expiry_warnings.whatsapp_sent_at — permite catch-up el mismo día
 //   sin duplicar emails. Destinatario vía RPC resolve_billing_wa_recipient.
@@ -67,6 +68,69 @@ function planLabel(planId: string | null | undefined): string {
   return planId.charAt(0).toUpperCase() + planId.slice(1);
 }
 
+// --- Layout de marca de emails ----------------------------------------------
+// Mismo diseño que las plantillas de Supabase Auth (reset de contraseña, etc.):
+// fondo #eaf1ff, card blanca con radio 12px, logo, título #16367f, texto
+// #383838 en Arial y botón #3e7bfa con radio 8px. Copia idéntica en cada
+// función que manda email: si cambiás algo acá, cambialo en todas.
+const BRAND_LOGO_URL = "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/catalogohoy-logo.png";
+const BRAND_BLUE = "#3e7bfa";
+type BrandButton = { label: string; url: string; secondary?: boolean };
+type BrandRow = { label?: string; labelHtml?: string; value?: string; valueHtml?: string; color?: string };
+type BrandEmailOpts = { title: string; subtitle?: string; bodyHtml: string; buttons?: BrandButton[]; note?: string; footer?: string; width?: number };
+function brandEsc(v: unknown): string {
+  if (v == null) return "";
+  return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+// Botón principal (azul lleno) o secundario (borde azul).
+function brandButton(b: BrandButton): string {
+  const style = b.secondary
+    ? `background-color:#ffffff;color:${BRAND_BLUE};border:2px solid ${BRAND_BLUE};padding:12px 24px;`
+    : `background-color:${BRAND_BLUE};color:#ffffff;padding:14px 26px;`;
+  return `<a href="${brandEsc(b.url)}" style="${style}text-decoration:none;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block;margin:4px;">${brandEsc(b.label)}</a>`;
+}
+// Bloque de datos "etiqueta → valor" en caja celeste (para resúmenes).
+function brandRows(rows: BrandRow[]): string {
+  const trs = rows.map((r: BrandRow, i: number) => `<tr><td style="padding:10px 0;font-size:14px;color:#383838;${i < rows.length - 1 ? "border-bottom:1px solid #dfe8fb;" : ""}">${r.labelHtml ?? brandEsc(r.label)}</td><td align="right" style="padding:10px 0;font-size:14px;font-weight:bold;color:${r.color || "#16367f"};${i < rows.length - 1 ? "border-bottom:1px solid #dfe8fb;" : ""}">${r.valueHtml ?? brandEsc(r.value)}</td></tr>`).join("");
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7ff;border-radius:8px;padding:6px 16px;margin:4px 0 8px;">${trs}</table>`;
+}
+// Subtítulo de sección dentro del cuerpo.
+function brandSection(title: string): string {
+  return `<p style="margin:22px 0 8px;font-size:13px;font-weight:bold;color:#16367f;text-transform:uppercase;letter-spacing:.04em;">${brandEsc(title)}</p>`;
+}
+// opts: { title, subtitle?, bodyHtml, buttons?: [{label,url,secondary?}], note?, footer?, width? }
+function brandEmail(opts: BrandEmailOpts): string {
+  const width = opts.width || 480;
+  const subtitle = opts.subtitle
+    ? `<tr><td style="font-size:13px;color:#646464;text-align:center;padding-bottom:20px;">${brandEsc(opts.subtitle)}</td></tr>`
+    : "";
+  const buttons = opts.buttons && opts.buttons.length
+    ? `<tr><td align="center" style="padding-bottom:30px;">${opts.buttons.map(brandButton).join("")}</td></tr>`
+    : "";
+  const note = opts.note
+    ? `<tr><td style="font-size:13px;color:#646464;text-align:center;padding-bottom:15px;line-height:1.5;">${opts.note}</td></tr>`
+    : "";
+  const footerExtra = opts.footer ? `${opts.footer}<br />` : "";
+  return `<!DOCTYPE html>
+<html lang="es" style="margin:0;padding:0;background:#eaf1ff;">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="color-scheme" content="light only" /><title>${brandEsc(opts.title)}</title></head>
+<body style="font-family:Arial,Helvetica,sans-serif;background-color:#eaf1ff;margin:0;padding:0;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eaf1ff;padding:40px 12px;"><tr><td align="center">
+<table width="${width}" cellpadding="0" cellspacing="0" style="max-width:100%;background:#ffffff;border-radius:12px;padding:40px 30px;box-shadow:0 4px 10px rgba(0,0,0,0.06);font-family:Arial,Helvetica,sans-serif;">
+<tr><td align="center" style="padding-bottom:20px;"><img src="${BRAND_LOGO_URL}" alt="CatalogoHoy" width="90" style="display:block;" /></td></tr>
+<tr><td style="font-size:22px;font-weight:bold;color:#16367f;text-align:center;padding-bottom:${opts.subtitle ? "6px" : "10px"};">${brandEsc(opts.title)}</td></tr>
+${subtitle}
+<tr><td style="font-size:15px;color:#383838;text-align:left;line-height:1.6;padding-bottom:25px;">${opts.bodyHtml}</td></tr>
+${buttons}
+${note}
+<tr><td style="font-size:12px;color:#a6a6a6;text-align:center;padding-top:25px;line-height:1.6;">${footerExtra}© ${new Date().getFullYear()} CatalogoHoy — Todos los derechos reservados.</td></tr>
+</table>
+</td></tr></table>
+</body>
+</html>`;
+}
+// ---------------------------------------------------------------------------
+
 /** Threshold-specific copy. The 0-day case is the most urgent so we lean
  *  in on the language; 6 days is informational. */
 function copyForThreshold(days: Threshold, autoRenews: boolean): {
@@ -128,74 +192,25 @@ function renderEmail(
 ): { subject: string; html: string; text: string } {
   const autoRenews = cand.stripe_subscription_status === "active";
   const copy = copyForThreshold(days, autoRenews);
-  const themeColor = cand.theme_color || "#10b981";
   const host = cand.custom_domain ?? `${cand.slug}.catalogohoy.com`;
   const plansUrl = `https://${host}/admin/plans`;
-
-  const headerInner = cand.logo
-    ? `<img src="${escape(cand.logo)}" alt="${escape(cand.tenant_name)}" width="56" height="56" style="display:inline-block;border-radius:50%;border:3px solid #ffffff;background:#ffffff;" />`
-    : `<div style="display:inline-block;width:56px;height:56px;border-radius:50%;background:#ffffff33;line-height:56px;font-weight:700;font-size:22px;color:#ffffff;">${escape(cand.tenant_name.charAt(0))}</div>`;
 
   const planLbl = planLabel(cand.plan_id);
   const greeting = cand.owner_name ? `Hola ${escape(cand.owner_name.split(" ")[0])},` : "Hola,";
 
-  const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>${escape(copy.subject)}</title>
-</head>
-<body style="margin:0;padding:0;background:#f8fafc;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1e293b;">
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#f8fafc;padding:24px 12px;">
-<tr><td align="center">
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
-<tr><td style="background:${themeColor};padding:32px 24px;text-align:center;">
-  ${headerInner}
-  <h1 style="margin:16px 0 4px;font-size:18px;font-weight:700;color:#ffffff;">${escape(cand.tenant_name)}</h1>
-  <p style="margin:0;font-size:13px;color:#ffffffcc;">CatalogoHoy</p>
-</td></tr>
-<tr><td style="padding:32px 24px;">
-  <div style="background:${copy.color}1A;border-left:4px solid ${copy.color};border-radius:8px;padding:14px 16px;margin-bottom:24px;">
-    <p style="margin:0;font-size:18px;font-weight:700;color:${copy.color};">${escape(copy.headline)}</p>
-  </div>
-
-  <p style="margin:0 0 12px;font-size:15px;color:#1e293b;">${greeting}</p>
-  <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">${escape(copy.body)}</p>
-
-  <div style="background:#f8fafc;border-radius:12px;padding:18px;margin-bottom:24px;">
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-      <tr>
-        <td style="padding:6px 0;font-size:13px;color:#94a3b8;">Catálogo</td>
-        <td style="padding:6px 0;font-size:14px;color:#1e293b;font-weight:600;text-align:right;">${escape(cand.tenant_name)}</td>
-      </tr>
-      <tr>
-        <td style="padding:6px 0;font-size:13px;color:#94a3b8;">Plan actual</td>
-        <td style="padding:6px 0;font-size:14px;color:#1e293b;font-weight:600;text-align:right;">${escape(planLbl)}</td>
-      </tr>
-      <tr>
-        <td style="padding:6px 0;font-size:13px;color:#94a3b8;">Vence el</td>
-        <td style="padding:6px 0;font-size:14px;color:#1e293b;font-weight:600;text-align:right;">${escape(formatDate(cand.plan_expires_at))}</td>
-      </tr>
-    </table>
-  </div>
-
-  <div style="text-align:center;margin:24px 0 8px;">
-    <a href="${escape(plansUrl)}" style="display:inline-block;background:${themeColor};color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:14px 28px;border-radius:12px;">${escape(copy.cta)} →</a>
-  </div>
-</td></tr>
-<tr><td style="padding:20px 24px;text-align:center;background:#f8fafc;border-top:1px solid #f1f5f9;">
-  <p style="margin:0;font-size:11px;color:#94a3b8;line-height:1.6;">
-    Recibíste este email porque sos dueño del catálogo <strong>${escape(cand.tenant_name)}</strong>.<br>
-    Podés desactivar estos avisos desde Mi Perfil → Notificaciones.<br>
-    CatalogoHoy · <a href="https://catalogohoy.com" style="color:#94a3b8;">catalogohoy.com</a>
-  </p>
-</td></tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  const html = brandEmail({
+    title: copy.headline,
+    subtitle: cand.tenant_name,
+    bodyHtml: `<p style="margin:0 0 12px;">${greeting}</p>
+<p style="margin:0 0 18px;">${escape(copy.body)}</p>
+${brandRows([
+  { label: "Catálogo", value: cand.tenant_name },
+  { label: "Plan actual", value: planLbl },
+  { label: "Vence el", value: formatDate(cand.plan_expires_at), color: copy.color },
+])}`,
+    buttons: [{ label: copy.cta, url: plansUrl }],
+    footer: `Recibiste este email porque eres dueño del catálogo <strong>${escape(cand.tenant_name)}</strong>. Puedes desactivar estos avisos desde Mi Perfil → Notificaciones.`,
+  });
 
   const text = [
     copy.headline,
@@ -271,6 +286,33 @@ async function sendWhatsAppWarning(
   }
 }
 
+// Envío por AWS SES (v2 SendEmail, firma SigV4 con aws4fetch). Región
+// sa-east-1, config set catalogohoy-prod (eventos → ses-events).
+async function sendViaSes(to: string, subject: string, html: string, text: string): Promise<{ ok: boolean; error?: string; status: number }> {
+  const region = Deno.env.get("AWS_SES_REGION") ?? "sa-east-1";
+  const aws = new AwsClient({
+    accessKeyId: Deno.env.get("AWS_SES_ACCESS_KEY_ID")!,
+    secretAccessKey: Deno.env.get("AWS_SES_SECRET_ACCESS_KEY")!,
+    region,
+    service: "ses",
+  });
+  const res = await aws.fetch(`https://email.${region}.amazonaws.com/v2/email/outbound-emails`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      FromEmailAddress: "CatalogoHoy <noreply@catalogohoy.com>",
+      Destination: { ToAddresses: [to] },
+      Content: { Simple: {
+        Subject: { Data: subject, Charset: "UTF-8" },
+        Body: { Html: { Data: html, Charset: "UTF-8" }, Text: { Data: text, Charset: "UTF-8" } },
+      } },
+      ConfigurationSetName: "catalogohoy-prod",
+    }),
+  });
+  if (!res.ok) return { ok: false, status: res.status, error: await res.text().catch(() => "") };
+  return { ok: true, status: res.status };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: CORS });
@@ -295,10 +337,9 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendKey) {
-    await logDebug(admin, "Missing RESEND_API_KEY env var");
-    return new Response(JSON.stringify({ error: "Missing RESEND_API_KEY" }), {
+  if (!Deno.env.get("AWS_SES_ACCESS_KEY_ID") || !Deno.env.get("AWS_SES_SECRET_ACCESS_KEY")) {
+    await logDebug(admin, "Missing AWS_SES_* env vars");
+    return new Response(JSON.stringify({ error: "Missing AWS_SES_ACCESS_KEY_ID / AWS_SES_SECRET_ACCESS_KEY" }), {
       status: 500,
       headers: { ...CORS, "Content-Type": "application/json" },
     });
@@ -368,25 +409,11 @@ Deno.serve(async (req: Request) => {
       }
 
       const { subject, html, text } = renderEmail(cand, days as Threshold);
-      const resendRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${resendKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "CatalogoHoy <noreply@catalogohoy.com>",
-          to: [cand.owner_email],
-          subject,
-          html,
-          text,
-        }),
-      });
+      const sesRes = await sendViaSes(cand.owner_email, subject, html, text);
 
-      if (!resendRes.ok) {
-        const errText = await resendRes.text();
-        await logDebug(admin, `Resend ${resendRes.status} for tenant ${cand.tenant_id} (${days}d): ${errText}`);
-        summary.push({ tenantId: cand.tenant_id, days, sent: false, error: errText });
+      if (!sesRes.ok) {
+        await logDebug(admin, `SES ${sesRes.status} for tenant ${cand.tenant_id} (${days}d): ${sesRes.error}`);
+        summary.push({ tenantId: cand.tenant_id, days, sent: false, error: sesRes.error });
         continue;
       }
 
@@ -395,7 +422,7 @@ Deno.serve(async (req: Request) => {
 
       // Log AFTER the email is sent. If the INSERT fails because of a race
       // (the cron ran twice), we'd send twice — acceptable trade-off vs.
-      // marking sent before sending and then having Resend fail. The UNIQUE
+      // marking sent before sending and then having SES fail. The UNIQUE
       // constraint catches concurrent inserts.
       const { error: logErr } = await admin
         .from("tenant_expiry_warnings")
