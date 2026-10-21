@@ -445,3 +445,16 @@
     flex: 1;
   }
 }
+
+/* Promo en divisas (catálogos de divisas-promo.ts) */
+.product-detail__price-divisas {
+  display: inline-block;
+  width: fit-content;
+  margin-top: 0.25rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  background: #ecfdf3;
+  color: #128a4b;
+  font-size: 0.875rem;
+  font-weight: 700;
+}

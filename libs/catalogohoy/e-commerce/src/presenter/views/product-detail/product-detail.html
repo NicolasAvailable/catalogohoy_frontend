@@ -63,6 +63,9 @@
       @if (ecommerceStore.isVenezuela() && ecommerceStore.showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
       <span class="product-detail__price-bs">Bs. {{ displayPrice * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
       }
+      @if (divisasPrice !== null) {
+      <span class="product-detail__price-divisas">{{ 'En divisas o USDT' | transloco }}: {{ cs() }}{{ divisasPrice | tenantPrice }}</span>
+      }
 
       @if (product.categoryList.categories.length) {
       <div class="product-detail__categories">

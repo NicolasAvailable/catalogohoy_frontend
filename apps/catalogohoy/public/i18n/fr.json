@@ -2753,5 +2753,8 @@
   "de descuento": "de remise",
   "Tu sesión expiró. Recarga la página o vuelve a iniciar sesión e inténtalo de nuevo.": "Votre session a expiré. Rechargez la page ou reconnectez-vous puis réessayez.",
   "Ingresos por método de pago": "Revenus par moyen de paiement",
-  "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Commandes terminées uniquement. Les paiements fractionnés ajoutent chaque part à son moyen."
+  "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Commandes terminées uniquement. Les paiements fractionnés ajoutent chaque part à son moyen.",
+  "En divisas o USDT": "En devises ou USDT",
+  "Promo en divisas": "Promo en devises",
+  "Pagando con {methods} ahorras": "En payant par {methods}, vous économisez"
 }

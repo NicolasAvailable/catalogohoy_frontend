@@ -285,6 +285,15 @@
   @if (availablePaymentMethods().length && !isCredit()) {
   <section class="checkout__card">
     <h2 class="checkout__card-title">{{ 'Método de pago' | transloco }} <span class="checkout__req">*</span></h2>
+    @if (divisasSavings() > 0 && divisasMethodNames().length) {
+    <p class="checkout__divisas-hint">
+      <ui-icon name="banknote" size="16" />
+      <span>
+        {{ 'Pagando con {methods} ahorras' | transloco: { methods: divisasMethodNames().join(' o ') } }}
+        <strong>@if (showReferencePrice()) {{{ cs() }}{{ divisasSavings() | tenantPrice }}} @else {Bs. {{ divisasSavings() * ecommerceStore.exchangeRate() | number:'1.2-2' }}}</strong>
+      </span>
+    </p>
+    }
 
     <!-- Mismo patrón de filas radio + acordeón que la sección Envío -->
     @for (pm of availablePaymentMethods(); track pm.id) {

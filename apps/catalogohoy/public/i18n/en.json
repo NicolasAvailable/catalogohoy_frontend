@@ -2753,5 +2753,8 @@
   "de descuento": "discount",
   "Tu sesión expiró. Recarga la página o vuelve a iniciar sesión e inténtalo de nuevo.": "Your session expired. Reload the page or sign in again and try once more.",
   "Ingresos por método de pago": "Income by payment method",
-  "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Completed orders only. Split payments add each part to its method."
+  "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Completed orders only. Split payments add each part to its method.",
+  "En divisas o USDT": "In foreign currency or USDT",
+  "Promo en divisas": "Foreign-currency deal",
+  "Pagando con {methods} ahorras": "Pay with {methods} and save"
 }

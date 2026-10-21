@@ -75,7 +75,8 @@ export class Cart {
           item.variantId,
           item.variantName,
           item.addons,
-          item.maxStock
+          item.maxStock,
+          item.divisasPrice
         );
       }
       return item;
