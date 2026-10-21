@@ -23,7 +23,9 @@ import { uploadToS3 } from "../_shared/s3.ts";
 // por un owner/admin logueado. Toda tool filtra por ese tenant_id. Además:
 // máx. LINK_MAX_FAILS intentos fallidos de código por teléfono y hora, el
 // vínculo caduca tras LINK_IDLE_DAYS sin uso, se revoca si quien lo creó deja
-// de ser owner/admin, y los otros números conectados reciben un aviso.
+// de ser owner/admin, los otros números conectados reciben un aviso, y cada
+// tienda tiene como máximo MAX_LINKS números conectados. Un código nuevo anula
+// los anteriores sin usar.
 // Gating v1: WA_BOT_TENANTS (lista de ids separada por coma, "*" = todas).
 // Costo: CREDIT_COST créditos de IA por mensaje procesado por el agente; cada
 // CREDIT_NOTICE_EVERY mensajes (o con saldo bajo) se le recuerda el saldo.
@@ -44,10 +46,11 @@ const CREDIT_LOW = 20; // con este saldo o menos, se avisa en cada respuesta
 const HISTORY_MAX = 16;
 const MAX_AGENT_STEPS = 8;
 const PHOTO_ACK_DELAY_MS = 5000;
-const CODE_TTL_MIN = 15;
+const CODE_TTL_MIN = 10;
 const CODE_DIGITS = 8;
 const LINK_MAX_FAILS = 5; // intentos fallidos de código por teléfono y hora
 const LINK_IDLE_DAYS = 30; // un vínculo sin uso por más tiempo pide vincular de nuevo
+const MAX_LINKS = Number(Deno.env.get("WA_BOT_MAX_LINKS") ?? 2); // números conectados por tienda
 const LIST_MAX = 100;
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -219,7 +222,14 @@ async function tooManyFails(phone: string): Promise<boolean> {
   return (count ?? 0) >= LINK_MAX_FAILS;
 }
 
-async function linkWithCode(phone: string, code: string): Promise<"ok" | "invalid" | "blocked"> {
+async function linkCount(tenantId: number, exceptPhone?: string): Promise<number> {
+  let q = admin.from("wa_bot_links").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId);
+  if (exceptPhone) q = q.neq("phone", exceptPhone);
+  const { count } = await q;
+  return count ?? 0;
+}
+
+async function linkWithCode(phone: string, code: string): Promise<"ok" | "invalid" | "blocked" | "full"> {
   if (await tooManyFails(phone)) return "blocked";
   const { data: row } = await admin.from("wa_bot_link_codes")
     .select("code, tenant_id, user_id, auth_user_id, expires_at, used_at").eq("code", code).maybeSingle();
@@ -227,6 +237,8 @@ async function linkWithCode(phone: string, code: string): Promise<"ok" | "invali
     await admin.from("wa_bot_link_attempts").insert({ phone });
     return "invalid";
   }
+  // Tope de números por tienda (reconectar el mismo número no cuenta).
+  if (await linkCount(row.tenant_id, phone) >= MAX_LINKS) return "full";
   // Marca de uso atómica: si dos mensajes llegan con el mismo código, solo uno gana.
   const { data: claimed } = await admin.from("wa_bot_link_codes").update({ used_at: new Date().toISOString() })
     .eq("code", code).is("used_at", null).select("code");
@@ -1217,6 +1229,8 @@ async function handleInbound(m: any) {
     const result = await linkWithCode(phone, code);
     if (result === "blocked") {
       await sendText(phone, "Demasiados intentos con códigos inválidos. Espera una hora y genera un código nuevo en tu panel.");
+    } else if (result === "full") {
+      await sendText(phone, `Tu tienda ya tiene ${MAX_LINKS} números conectados al asistente, que es el máximo. Desconecta uno desde tu panel (Inicio → Gestiona tu tienda por WhatsApp) y vuelve a intentarlo.`);
     } else if (result === "invalid") {
       await sendText(phone, "Ese código no es válido o ya venció. Genera uno nuevo en tu panel (Inicio → Gestiona tu tienda por WhatsApp).");
     }
@@ -1366,9 +1380,14 @@ async function handlePanel(req: Request): Promise<Response> {
     case "status": {
       const { data: links } = await admin.from("wa_bot_links")
         .select("id, phone, created_at, last_used_at").eq("tenant_id", tenantId).order("created_at");
-      return json({ botPhone: phone, links: links ?? [] });
+      return json({ botPhone: phone, links: links ?? [], maxLinks: MAX_LINKS });
     }
     case "create_code": {
+      if (await linkCount(tenantId) >= MAX_LINKS) {
+        return json({ error: `Máximo ${MAX_LINKS} números conectados. Desconecta uno para conectar otro.`, code: "max_links" }, 409);
+      }
+      // Un código nuevo anula los anteriores de la tienda que no se usaron.
+      await admin.from("wa_bot_link_codes").delete().eq("tenant_id", tenantId).is("used_at", null);
       for (let i = 0; i < 5; i++) {
         const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 10 ** CODE_DIGITS).padStart(CODE_DIGITS, "0");
         const { error } = await admin.from("wa_bot_link_codes").insert({

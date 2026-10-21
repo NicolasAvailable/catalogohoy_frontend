@@ -12,6 +12,8 @@ export interface WaBotLink {
 export interface WaBotStatus {
   botPhone: string;
   links: WaBotLink[];
+  /** Máximo de números conectados por tienda. */
+  maxLinks?: number;
 }
 
 export interface WaBotCode {
