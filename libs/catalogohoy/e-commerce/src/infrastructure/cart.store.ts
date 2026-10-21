@@ -10,7 +10,8 @@ import {
   withState,
 } from '@ngrx/signals';
 import { toast } from 'ngx-sonner';
-import { Cart, CartItem } from '../domain';
+import { Cart, CartItem, divisasPriceOf, usesDivisasPromo } from '../domain';
+import { EcommerceStore } from './ecommerce.store';
 
 type CartState = {
   cart: Cart;
@@ -49,6 +50,7 @@ function saveCartToStorage(cart: Cart): void {
       variantId: item.variantId,
       variantName: item.variantName,
       addons: item.addons,
+      divisasPrice: item.divisasPrice,
     }));
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   } catch {
@@ -74,6 +76,20 @@ function injectTranslator(): { translate: (key: string) => string } {
   }
 }
 
+/** Safe injector for the catalog's tenant id (same fallback rationale as the
+ *  translator). Used only for per-catalog gates such as the divisas promo. */
+function injectTenantId(): () => number | null {
+  try {
+    const ecommerceStore = inject(EcommerceStore);
+    return () => {
+      const id = ecommerceStore.catalogInfo()?.id;
+      return id != null ? Number(id) : null;
+    };
+  } catch {
+    return () => null;
+  }
+}
+
 /** Safe injector for the Meta Pixel (same fallback rationale as the translator:
  *  the store may be instantiated outside an injection context in tests). The
  *  no-op keeps AddToCart tracking best-effort. */
@@ -93,8 +109,13 @@ export const CartStore = signalStore(
     totalPrice: computed(() => store.cart().total),
     isEmpty: computed(() => store.cart().isEmpty),
     items: computed(() => store.cart().items),
+    /** Ahorro total del carrito si paga en divisas (promo en divisas). */
+    divisasSavings: computed(() => {
+      const raw = store.cart().items.reduce((acc, i) => acc + i.divisasSavings, 0);
+      return Math.round(raw * 100) / 100;
+    }),
   })),
-  withMethods((store, transloco = injectTranslator(), metaPixel = injectMetaPixel()) => ({
+  withMethods((store, transloco = injectTranslator(), metaPixel = injectMetaPixel(), tenantId = injectTenantId()) => ({
     addProduct(
       product: Product,
       options?: {
@@ -160,14 +181,19 @@ export const CartStore = signalStore(
 
       // A variant overrides the price and (when set) the cover image; its
       // name is carried so the cart/order/WhatsApp show "Product (Variant)".
+      // Promo en divisas (catálogos de `divisas-promo.ts`): se cobra el precio
+      // normal y el promocional queda como precio en divisas de la línea.
+      const divisasBase =
+        !variant && usesDivisasPromo(tenantId()) ? divisasPriceOf(product) : null;
       const basePrice =
-        product.pricePromotional > 0
+        divisasBase === null && product.pricePromotional > 0
           ? product.pricePromotional
           : product.price;
       const variantPrice = variant ? variant.price : basePrice;
       // Addons SUM on top of the variant/base price for this line's unit price.
       const addonsTotal = addons.reduce((sum, a) => sum + a.price, 0);
       const price = variantPrice + addonsTotal;
+      const divisasPrice = divisasBase === null ? null : divisasBase + addonsTotal;
       const photo = (variant?.photos?.[0] || product.photos[0]) ?? '';
 
       const item = new CartItem(
@@ -184,7 +210,8 @@ export const CartStore = signalStore(
         variant?.id ?? null,
         variant?.name ?? null,
         addons.map((a) => ({ id: a.id, name: a.name, price: a.price })),
-        effectiveStock
+        effectiveStock,
+        divisasPrice
       );
       const newCart = store.cart().addItem(item);
       saveCartToStorage(newCart);

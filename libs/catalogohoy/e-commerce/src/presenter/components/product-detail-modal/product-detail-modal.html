@@ -63,6 +63,8 @@
       <span class="pdm__sold-out-badge">{{ 'Agotado' | transloco }}</span>
       } @else if (hasDiscount) {
       <span class="pdm__discount-badge">{{ 'Oferta' | transloco }}</span>
+      } @else if (divisasPrice !== null) {
+      <span class="pdm__discount-badge">{{ 'Promo en divisas' | transloco }}</span>
       }
     </div>
     <!-- Acciones sobre el media (arriba-izquierda, lejos de la X): ver
@@ -151,6 +153,9 @@
       }
       @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
       <span class="pdm__price-bs">Bs. {{ displayPrice * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
+      }
+      @if (divisasPrice !== null) {
+      <span class="pdm__price-divisas">{{ 'En divisas o USDT' | transloco }}: {{ cs() }}{{ divisasPrice | tenantPrice }}</span>
       }
       }
     </div>

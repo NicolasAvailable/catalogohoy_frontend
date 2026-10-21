@@ -14,6 +14,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { isVideoUrl } from '@shared/domain';
 import { SafeDescriptionHtmlPipe, StripHtmlPipe } from '@shared/presenter';
 import { IconComponent, ProductMediaComponent } from '@ui';
+import { divisasPriceOf, usesDivisasPromo } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 
@@ -116,9 +117,21 @@ export default class ProductDetail implements OnInit {
     return this.ecommerceStore.selectedProduct();
   }
 
+  /** Promo en divisas (catálogos de `divisas-promo.ts`). */
+  get isDivisasPromo(): boolean {
+    return usesDivisasPromo(Number(this.ecommerceStore.catalogInfo()?.id));
+  }
+
+  /** Precio en divisas/USDT (promo en divisas). `null` = no aplica. */
+  get divisasPrice(): number | null {
+    const p = this.product;
+    return p && this.isDivisasPromo ? divisasPriceOf(p) : null;
+  }
+
   get displayPrice(): number {
     const p = this.product;
     if (!p) return 0;
+    if (this.isDivisasPromo) return p.price;
     return p.pricePromotional > 0 ? p.pricePromotional : p.price;
   }
 
@@ -128,7 +141,7 @@ export default class ProductDetail implements OnInit {
 
   get hasDiscount(): boolean {
     const p = this.product;
-    if (!p) return false;
+    if (!p || this.isDivisasPromo) return false;
     return p.pricePromotional > 0 && p.pricePromotional < p.price;
   }
 

@@ -77,6 +77,14 @@
         variantPriceRange().max * ecommerceStore.exchangeRate() | number:'1.2-2' }}}
       </span>
       }
+      } @else if (divisasPrice() !== null) {
+      @if (showReferencePrice()) {
+      <span class="product-card__price-current">{{ cs() }}{{ product().price | tenantPrice }}</span>
+      }
+      @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
+      <span class="product-card__price-bs">Bs. {{ product().price * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
+      }
+      <span class="product-card__price-divisas">{{ 'En divisas o USDT' | transloco }}: {{ cs() }}{{ divisasPrice()! | tenantPrice }}</span>
       } @else if (product().pricePromotional > 0) {
       @if (showReferencePrice()) {
       <span class="product-card__price-original">{{ cs() }}{{ product().price | tenantPrice }}</span>

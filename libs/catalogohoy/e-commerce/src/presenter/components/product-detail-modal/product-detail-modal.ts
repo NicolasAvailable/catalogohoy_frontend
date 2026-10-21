@@ -22,7 +22,11 @@ import {
   ProductMediaComponent,
 } from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
-import { baseVariantUsesProductName } from '../../../domain';
+import {
+  baseVariantUsesProductName,
+  divisasPriceOf,
+  usesDivisasPromo,
+} from '../../../domain';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 
 @Component({
@@ -49,6 +53,11 @@ export class ProductDetailModal {
   public readonly cs = this.ecommerceStore.currencySymbol;
   public readonly showReferencePrice = this.ecommerceStore.showReferencePrice;
   public readonly showLocalCurrencyPrice = this.ecommerceStore.showLocalCurrencyPrice;
+  /** Promo en divisas (catálogos de `divisas-promo.ts`): el precio normal no
+   *  se tacha y el promocional se muestra aparte como precio en divisas. */
+  public readonly isDivisasPromo = usesDivisasPromo(
+    Number(this.ecommerceStore.catalogInfo()?.id)
+  );
 
   public readonly product: Product = this.config.data.product;
   public readonly currentImageIndex = signal(0);
@@ -170,7 +179,7 @@ export class ProductDetailModal {
   public readonly selectorOptions: ProductVariant[] = (() => {
     const options: ProductVariant[] = [];
     if (this.isVariant) {
-      const hasPromo = this.product.pricePromotional > 0;
+      const hasPromo = !this.isDivisasPromo && this.product.pricePromotional > 0;
       // Gate por catálogo: algunos tenants muestran la opción base con el NOMBRE
       // DEL PRODUCTO en vez de "Producto original" (la base ES el producto
       // principal; solo cambia el rótulo). El template resuelve la etiqueta a
@@ -356,9 +365,17 @@ export class ProductDetailModal {
     if (this.isVariant) {
       return this.selectedVariant()?.price ?? this.product.price;
     }
-    return this.product.pricePromotional > 0
+    return !this.isDivisasPromo && this.product.pricePromotional > 0
       ? this.product.pricePromotional
       : this.product.price;
+  }
+
+  /** Precio en divisas/USDT de la selección actual (solo la opción base del
+   *  producto lleva promo). `null` = no aplica. */
+  get divisasPrice(): number | null {
+    if (!this.isDivisasPromo) return null;
+    if (this.isVariant && this.selectedVariantId() !== null) return null;
+    return divisasPriceOf(this.product);
   }
 
   /** Header price = base/variant price. Addons never alter it; they only
@@ -384,6 +401,7 @@ export class ProductDetailModal {
       return !!v && v.originalPrice > 0 && v.originalPrice > v.price;
     }
     return (
+      !this.isDivisasPromo &&
       this.product.pricePromotional > 0 &&
       this.product.pricePromotional < this.product.price
     );
