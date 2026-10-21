@@ -1242,8 +1242,7 @@ export class EcommerceConfigComponent implements OnInit {
       window.location.reload();
       return;
     }
-    const projectRef = new URL(environment.supabaseUrl).hostname.split('.')[0];
-    const tokenKey = `sb-${projectRef}-auth-token`;
+    const tokenKey = environment.supabaseAuthStorageKey;
     const token = localStorage.getItem(tokenKey);
     const session = token ? `?${tokenKey}=${encodeURIComponent(token)}` : '';
     window.location.href = `https://${newSlug}.catalogohoy.com/admin/catalog/edit${session}`;
