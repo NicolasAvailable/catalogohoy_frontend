@@ -78,7 +78,7 @@ edites a ciegas**; el repo puede estar atrás de prod.
 | **Sentry** | Errores + performance (tracing) + session replay | `core/providers/sentry` (`initSentry`/`provideSentry`) · DSN en `env/sentry`. MCP en `.mcp.json`. |
 | **WhatsApp (Meta Cloud API)** | Notificaciones de órdenes/plan | `send-whatsapp-*` · `WHATSAPP_*` |
 | **Discord** | Webhooks de eventos internos (leads, checkout, pagos) | `notify-checkout-intent`, `stripe-webhook`, `new-lead-discord` |
-| **Resend** | Email transaccional (recibos de pago, reportes semanales) | `stripe-webhook`, `send-weekly-report` |
+| **Resend** | ⚠️ RETIRADO — todo email va por AWS SES. Solo queda como último fallback en el helper `deliverEmail` (si faltan `AWS_SES_*`). Los emails de Auth (reset/cambio de contraseña, confirmación) salen por el **SMTP de Supabase Auth** (dashboard → Auth → SMTP), que debe apuntar a `email-smtp.sa-east-1.amazonaws.com`, no a `smtp.resend.com`. | `deliverEmail` (stripe-webhook, send-weekly-report, …) |
 | **countriesnow.space** | Estados/ciudades por país | `countries-proxy` |
 | **Google** | Workspace (correo @catalogohoy.com), OAuth (login), Search Console (SEO), GA4 (pendiente ID) | ver sección "Google" abajo · DNS en Vercel |
 

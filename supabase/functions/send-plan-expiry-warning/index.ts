@@ -1,9 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { AwsClient } from "npm:aws4fetch@1";
 
 // Cron diario (13:00 UTC, pg_cron `send-plan-expiry-warnings-daily`): avisa a
 // los dueños que su plan vence en 6/4/2/0 días.
-// - EMAIL (Resend): idempotencia por fila en tenant_expiry_warnings.
+// - EMAIL (AWS SES): idempotencia por fila en tenant_expiry_warnings.
 // - WHATSAPP (template plan_expiry_warning, W6): idempotencia propia con
 //   tenant_expiry_warnings.whatsapp_sent_at — permite catch-up el mismo día
 //   sin duplicar emails. Destinatario vía RPC resolve_billing_wa_recipient.
@@ -271,6 +272,33 @@ async function sendWhatsAppWarning(
   }
 }
 
+// Envío por AWS SES (v2 SendEmail, firma SigV4 con aws4fetch). Región
+// sa-east-1, config set catalogohoy-prod (eventos → ses-events).
+async function sendViaSes(to: string, subject: string, html: string, text: string): Promise<{ ok: boolean; error?: string; status: number }> {
+  const region = Deno.env.get("AWS_SES_REGION") ?? "sa-east-1";
+  const aws = new AwsClient({
+    accessKeyId: Deno.env.get("AWS_SES_ACCESS_KEY_ID")!,
+    secretAccessKey: Deno.env.get("AWS_SES_SECRET_ACCESS_KEY")!,
+    region,
+    service: "ses",
+  });
+  const res = await aws.fetch(`https://email.${region}.amazonaws.com/v2/email/outbound-emails`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      FromEmailAddress: "CatalogoHoy <noreply@catalogohoy.com>",
+      Destination: { ToAddresses: [to] },
+      Content: { Simple: {
+        Subject: { Data: subject, Charset: "UTF-8" },
+        Body: { Html: { Data: html, Charset: "UTF-8" }, Text: { Data: text, Charset: "UTF-8" } },
+      } },
+      ConfigurationSetName: "catalogohoy-prod",
+    }),
+  });
+  if (!res.ok) return { ok: false, status: res.status, error: await res.text().catch(() => "") };
+  return { ok: true, status: res.status };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: CORS });
@@ -295,10 +323,9 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendKey) {
-    await logDebug(admin, "Missing RESEND_API_KEY env var");
-    return new Response(JSON.stringify({ error: "Missing RESEND_API_KEY" }), {
+  if (!Deno.env.get("AWS_SES_ACCESS_KEY_ID") || !Deno.env.get("AWS_SES_SECRET_ACCESS_KEY")) {
+    await logDebug(admin, "Missing AWS_SES_* env vars");
+    return new Response(JSON.stringify({ error: "Missing AWS_SES_ACCESS_KEY_ID / AWS_SES_SECRET_ACCESS_KEY" }), {
       status: 500,
       headers: { ...CORS, "Content-Type": "application/json" },
     });
@@ -368,25 +395,11 @@ Deno.serve(async (req: Request) => {
       }
 
       const { subject, html, text } = renderEmail(cand, days as Threshold);
-      const resendRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${resendKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "CatalogoHoy <noreply@catalogohoy.com>",
-          to: [cand.owner_email],
-          subject,
-          html,
-          text,
-        }),
-      });
+      const sesRes = await sendViaSes(cand.owner_email, subject, html, text);
 
-      if (!resendRes.ok) {
-        const errText = await resendRes.text();
-        await logDebug(admin, `Resend ${resendRes.status} for tenant ${cand.tenant_id} (${days}d): ${errText}`);
-        summary.push({ tenantId: cand.tenant_id, days, sent: false, error: errText });
+      if (!sesRes.ok) {
+        await logDebug(admin, `SES ${sesRes.status} for tenant ${cand.tenant_id} (${days}d): ${sesRes.error}`);
+        summary.push({ tenantId: cand.tenant_id, days, sent: false, error: sesRes.error });
         continue;
       }
 
@@ -395,7 +408,7 @@ Deno.serve(async (req: Request) => {
 
       // Log AFTER the email is sent. If the INSERT fails because of a race
       // (the cron ran twice), we'd send twice — acceptable trade-off vs.
-      // marking sent before sending and then having Resend fail. The UNIQUE
+      // marking sent before sending and then having SES fail. The UNIQUE
       // constraint catches concurrent inserts.
       const { error: logErr } = await admin
         .from("tenant_expiry_warnings")

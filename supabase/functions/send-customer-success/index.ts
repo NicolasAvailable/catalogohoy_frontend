@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { AwsClient } from "npm:aws4fetch@1";
 
 // ============================================================================
 // send-customer-success (CAT-48) — motor de disparo de plantillas de ciclo de
@@ -8,7 +9,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 // Primera condición: order_pending_reminder — pedidos pending 2–30 días sin
 // recordatorio previo (candidatos vía RPC customer_success_order_pending_
 // candidates). Canal: WhatsApp (template aprobado, best-effort si hay número)
-// + email (Resend, siempre que haya email). Idempotencia: 1 fila por evento en
+// + email (AWS SES, siempre que haya email). Idempotencia: 1 fila por evento en
 // customer_success_sends (event_key único).
 //
 // Auth del cron: x-webhook-secret contra el secret `customer_success_webhook_
@@ -116,6 +117,33 @@ function renderPendingEmail(c: PendingCandidate): {
   return { subject, html, text };
 }
 
+// Envío por AWS SES (v2 SendEmail, firma SigV4 con aws4fetch). Región
+// sa-east-1, config set catalogohoy-prod (eventos → ses-events).
+async function sendViaSes(to: string, subject: string, html: string, text: string): Promise<{ ok: boolean; error?: string; status: number }> {
+  const region = Deno.env.get("AWS_SES_REGION") ?? "sa-east-1";
+  const aws = new AwsClient({
+    accessKeyId: Deno.env.get("AWS_SES_ACCESS_KEY_ID")!,
+    secretAccessKey: Deno.env.get("AWS_SES_SECRET_ACCESS_KEY")!,
+    region,
+    service: "ses",
+  });
+  const res = await aws.fetch(`https://email.${region}.amazonaws.com/v2/email/outbound-emails`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      FromEmailAddress: "CatalogoHoy <noreply@catalogohoy.com>",
+      Destination: { ToAddresses: [to] },
+      Content: { Simple: {
+        Subject: { Data: subject, Charset: "UTF-8" },
+        Body: { Html: { Data: html, Charset: "UTF-8" }, Text: { Data: text, Charset: "UTF-8" } },
+      } },
+      ConfigurationSetName: "catalogohoy-prod",
+    }),
+  });
+  if (!res.ok) return { ok: false, status: res.status, error: await res.text().catch(() => "") };
+  return { ok: true, status: res.status };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
 
@@ -155,7 +183,7 @@ Deno.serve(async (req: Request) => {
   const sendEmail = opts.sendEmail !== false;
 
   const waSecret = Deno.env.get("WHATSAPP_WEBHOOK_SECRET");
-  const resendKey = Deno.env.get("RESEND_API_KEY");
+  const sesReady = !!(Deno.env.get("AWS_SES_ACCESS_KEY_ID") && Deno.env.get("AWS_SES_SECRET_ACCESS_KEY"));
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 
   // --- Condición 1: order_pending_reminder ---
@@ -231,25 +259,11 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Email (siempre que haya email + Resend).
-    if (sendEmail && resendKey && c.owner_email && c.owner_email.includes("@")) {
+    // Email (siempre que haya email + SES).
+    if (sendEmail && sesReady && c.owner_email && c.owner_email.includes("@")) {
       try {
         const { subject, html, text } = renderPendingEmail(c);
-        const res = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${resendKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: "CatalogoHoy <noreply@catalogohoy.com>",
-            to: [c.owner_email],
-            subject,
-            html,
-            text,
-          }),
-        });
-        emailOk = res.ok;
+        emailOk = (await sendViaSes(c.owner_email, subject, html, text)).ok;
       } catch {
         emailOk = false;
       }
