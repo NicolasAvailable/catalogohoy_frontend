@@ -186,6 +186,7 @@
   </section>
   }
 
+  @if (!connected()) {
   <!-- ═══ Qué puedes hacer ═══ -->
   <section class="flex flex-col gap-4">
     <div>
@@ -210,7 +211,6 @@
     </div>
   </section>
 
-  @if (!connected()) {
   <!-- ═══ Paso a paso para conectar ═══ -->
   <section class="flex flex-col gap-4">
     <div>
