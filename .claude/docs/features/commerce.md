@@ -36,6 +36,9 @@
   categoryList, sku, productionCost (informativo), position (orden), isWholesale +
   wholesaleTiers[], isSoldOut, isHidden, isSized + sizes[] (stock por talla), isVariant +
   variants[] (precio/foto propia, tallas propias opcionales).
+  **Stock con tallas**: en productos `isSized`, `products.stock` queda NULL y el stock real
+  vive en `sizes[].stock`. El listado del admin (columna Stock) usa `stockOf()` para sumar
+  tallas (y tallas de variantes); antes leía el NULL como "∞ Infinito" (fix 2026-10-21).
 - **Stores/serv**: `ProductStore` (list + loading), `ProductService` (CRUD, search, duplicar,
   borrar, `isLockedByFreePlan()`). `ProductExcelService` (import + plantilla; su `exportToExcel`
   ya no se usa desde la UI). `AiImageService` (fal.ai, ver ai-credits) y `CreditsStore`

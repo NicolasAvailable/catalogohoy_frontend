@@ -316,14 +316,15 @@
           <div
             class="flex-1 flex items-center justify-center overflow-hidden"
           >
-            @if (!item.stock) {
+            @let stock = stockOf(item);
+            @if (stock === null) {
             <span class="line-clamp-1 break-all text-sm">{{ '∞ Infinito' | transloco }}</span>
-            } @else if (+item.stock <= 0) {
+            } @else if (stock <= 0) {
             <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-red-100 text-red-600">
               {{ 'Agotado' | transloco }}
             </span>
             } @else {
-            <span class="line-clamp-1 break-all text-sm">{{ item.stock }}</span>
+            <span class="line-clamp-1 break-all text-sm">{{ stock }}</span>
             }
           </div>
           <div
@@ -599,14 +600,15 @@
           <div
             class="flex-1 flex items-center justify-center overflow-hidden"
           >
-            @if (!item.stock) {
+            @let stock = stockOf(item);
+            @if (stock === null) {
             <span class="line-clamp-1 break-all text-sm">{{ '∞ Infinito' | transloco }}</span>
-            } @else if (+item.stock <= 0) {
+            } @else if (stock <= 0) {
             <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-red-100 text-red-600">
               {{ 'Agotado' | transloco }}
             </span>
             } @else {
-            <span class="line-clamp-1 break-all text-sm">{{ item.stock }}</span>
+            <span class="line-clamp-1 break-all text-sm">{{ stock }}</span>
             }
           </div>
           <div
