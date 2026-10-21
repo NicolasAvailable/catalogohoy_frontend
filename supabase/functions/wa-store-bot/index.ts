@@ -102,6 +102,33 @@ async function sendImage(to: string, link: string, caption?: string): Promise<st
 
 const isWaImage = (url: string) => /\.(jpe?g|png)(\?|$)/i.test(url);
 
+/** Descripción HTML del panel → texto con formato de WhatsApp. */
+function htmlToWa(html: string): string {
+  const entities: Record<string, string> = {
+    nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", aacute: "á", eacute: "é", iacute: "í",
+    oacute: "ó", uacute: "ú", ntilde: "ñ", Aacute: "Á", Eacute: "É", Iacute: "Í", Oacute: "Ó", Uacute: "Ú",
+    Ntilde: "Ñ", uuml: "ü", iexcl: "¡", iquest: "¿", deg: "°", bull: "•", hellip: "…", ndash: "–", mdash: "—",
+  };
+  const wrap = (mark: string) => (_: string, inner: string) => {
+    const t = inner.trim();
+    return t ? `${mark}${t}${mark}` : "";
+  };
+  return (html ?? "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, "\n")
+    .replace(/<(?:strong|b)(?:\s[^>]*)?>([\s\S]*?)<\/(?:strong|b)>/gi, wrap("*"))
+    .replace(/<(?:em|i)(?:\s[^>]*)?>([\s\S]*?)<\/(?:em|i)>/gi, wrap("_"))
+    .replace(/<(?:s|del|strike)(?:\s[^>]*)?>([\s\S]*?)<\/(?:s|del|strike)>/gi, wrap("~"))
+    .replace(/<[^>]+>/g, "")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&([a-z]+);/gi, (m, name) => entities[name] ?? m)
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /** Marca el mensaje como leído y muestra "escribiendo…" mientras pensamos. */
 async function markReadTyping(messageId: string) {
   if (!messageId) return;
@@ -489,7 +516,8 @@ function productCaption(p: any, shopUrl: string): string {
   if (cats.length) lines.push(`🗂️ ${cats.join(", ")}`);
   if (p.sku) lines.push(`🔖 SKU: ${p.sku}`);
   if (p.is_hidden) lines.push("🙈 Oculto en el catálogo");
-  if (p.description?.trim()) lines.push("", p.description.trim().slice(0, 350));
+  const desc = htmlToWa(p.description ?? "");
+  if (desc) lines.push("", desc.length > 450 ? `${desc.slice(0, 450).trimEnd()}…` : desc);
   if (shopUrl) lines.push("", `🔗 ${shopUrl}/product/${p.id}`);
   lines.push("", "↩️ _Responde a este mensaje para editarlo._");
   return lines.join("\n");
@@ -547,7 +575,7 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
         .select(PRODUCT_DETAIL)
         .eq("tenant_id", tenantId).eq("id", Number(a.id)).maybeSingle();
       if (!data) return { error: "Producto no encontrado en esta tienda" };
-      return { ...data, total_stock: totalStock(data) };
+      return { ...data, description: htmlToWa(data.description ?? ""), total_stock: totalStock(data) };
     }
     case "create_product": {
       if (!String(a.name ?? "").trim()) return { error: "Falta el nombre" };
@@ -600,7 +628,7 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
         const caption = productCaption(p, ctx.shopUrl);
         const photos = ((p.photos ?? []) as string[]).filter(isWaImage).slice(0, maxPhotos);
         const wamids: (string | null)[] = [];
-        // Fotos extra primero y la ficha al final, con la primera foto: así queda abajo, fácil de responder.
+        // Fotos seguidas (WhatsApp las agrupa en álbum desde 4) y la ficha en la última: así queda abajo, fácil de responder.
         for (const url of photos.slice(1)) wamids.push(await sendImage(phone, url));
         const main = photos[0] ? await sendImage(phone, photos[0], caption) : null;
         wamids.push(main ?? await sendText(phone, caption));
