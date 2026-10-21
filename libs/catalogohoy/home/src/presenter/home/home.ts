@@ -23,6 +23,7 @@ import {
 } from '@ui';
 import { HomeStore } from '../../infrastructure/home.store';
 import { CatalogProgress } from '../components/catalog-progress/catalog-progress';
+import { WhatsappBotCard } from '../components/whatsapp-bot-card/whatsapp-bot-card';
 
 type ChartTab = 'ventas' | 'pedidos';
 type Currency = 'bs' | 'usd';
@@ -41,6 +42,7 @@ type Currency = 'bs' | 'usd';
     DecimalPipe,
     TranslocoPipe,
     CatalogProgress,
+    WhatsappBotCard,
   ],
   templateUrl: './home.html',
   styleUrls: ['./home.css'],
