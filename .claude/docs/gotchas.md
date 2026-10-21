@@ -254,3 +254,14 @@
   **CSS del propio componente** (media queries + clases modificadoras tipo
   `:host(.ficha--mobile-open)`), no en utilities del padre. Igual para el slide-over del
   conversation-panel (`chat-layout.css` usa el selector del tag, no utilities).
+
+## Aislamiento entre tiendas (RPC SECURITY DEFINER)
+
+- Toda RPC `SECURITY DEFINER` que reciba `p_tenant_id` **bypassa RLS**: debe validar
+  `public._is_service_or_member(p_tenant_id)` (service_role / cron / miembro del tenant) o
+  `_pos_can_access_tenant`. Sin eso, cualquiera con la anon key lee o cambia otra tienda.
+- RPCs internas (cron, edge functions con service role): `revoke execute ... from public, anon, authenticated`.
+  Supabase da EXECUTE a PUBLIC por defecto al crear la función.
+- Ver `supabase/migrations/20261021_tenant_isolation_hardening.sql`.
+- Pendiente (2026-10-21): `orders.lectura_publica` (SELECT true para anon) sigue activa a pedido
+  de Nicolas; el plan está en `supabase/migrations/PLAN_public_orders.md`.
