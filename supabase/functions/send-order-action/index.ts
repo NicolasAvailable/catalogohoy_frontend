@@ -29,8 +29,11 @@ const GRAPH = `https://graph.facebook.com/${WHATSAPP_API_VERSION}`;
 const WABA_ID = Deno.env.get("WHATSAPP_WABA_ID") ?? "1038950559044032";
 const SETUP_SECRET = "whsec_orderaction_7f2e9b4a1c6d8035ea54b7f2c9d10e86";
 
-const STORAGE_PUBLIC_PREFIX =
-  "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/";
+// El PDF lo sube el front: antes a Supabase Storage, ahora a S3/CDN (CAT-88).
+const PDF_URL_PREFIXES = [
+  "https://cdn.catalogohoy.com/invoices/",
+  "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/",
+];
 
 const TPL_REMINDER = "credit_payment_reminder";
 const TPL_INVOICE = "order_invoice";
@@ -383,7 +386,7 @@ Deno.serve(async (req) => {
     });
   } else {
     const pdfUrl = (body.pdfUrl ?? "").trim();
-    if (!pdfUrl.startsWith(STORAGE_PUBLIC_PREFIX)) {
+    if (!PDF_URL_PREFIXES.some((p) => pdfUrl.startsWith(p))) {
       return json({ success: false, error: "invalid_pdf_url" }, 400);
     }
     templateName = TPL_INVOICE;

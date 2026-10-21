@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { uploadToS3 } from "../_shared/s3.ts";
 // =============================================================================
 // wa-webhook — WhatsApp Cloud API inbound webhook
 //
@@ -541,15 +542,7 @@ const PLAN_PRICES_USD = {
     const bytes = new Uint8Array(await fileRes.arrayBuffer());
     const ext = ((mime || meta.mime_type || "application/octet-stream").split("/")[1] ?? "bin").split(";")[0];
     const path = `chat-media/${tenantId}/in-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await admin.storage.from("catalogohoy").upload(path, bytes, {
-      contentType: mime || meta.mime_type,
-      upsert: true
-    });
-    if (error) {
-      console.error("[wa-webhook] storage upload error", error.message);
-      return null;
-    }
-    return admin.storage.from("catalogohoy").getPublicUrl(path).data.publicUrl;
+    return await uploadToS3(path, bytes, mime || meta.mime_type || "application/octet-stream");
   } catch (err) {
     console.error("[wa-webhook] downloadAndStore error", err);
     return null;

@@ -10,7 +10,8 @@ import { AwsClient } from "npm:aws4fetch@1.0.20";
 // del servidor. Reemplaza al `client.storage.from('catalogohoy').upload()` de
 // Supabase Storage. El servido se hace por CloudFront (S3_CDN_BASE_URL).
 //
-//   POST { kind: 'product'|'banner'|'chat', fileName, contentType, tenantId? }
+//   POST { kind: 'product'|'banner'|'chat'|'ai'|'invoice'|'import',
+//          fileName, contentType, tenantId?, slug? }
 //     -> { uploadUrl, publicUrl, key, headers }
 //
 // El cliente hace: fetch(uploadUrl, { method:'PUT', headers, body: blob }).
@@ -73,6 +74,25 @@ function safeBaseName(name: string): string {
     .slice(0, 80) || "file";
 }
 
+/** ¿El usuario es dueño (users_tenants) o miembro de equipo aceptado del
+ *  tenant? Mismo criterio que send-order-action. */
+async function isTenantMember(authUserId: string, tenantId: number): Promise<boolean> {
+  const { data: appUser } = await admin
+    .from("users").select("id, email").eq("auth_user_id", authUserId).maybeSingle();
+  if (!appUser) return false;
+  const { data: link } = await admin
+    .from("users_tenants").select("user_id")
+    .eq("user_id", appUser.id).eq("tenant_id", tenantId).maybeSingle();
+  if (link) return true;
+  const { data: tm } = await admin
+    .from("team_members").select("id, teams!inner(tenant_id)")
+    .eq("status", "accepted")
+    .or(`user_id.eq.${appUser.id},invited_email.eq.${appUser.email}`)
+    .eq("teams.tenant_id", tenantId)
+    .limit(1);
+  return !!tm?.length;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
@@ -89,12 +109,14 @@ Deno.serve(async (req) => {
   const { data: { user }, error: authErr } = await userClient.auth.getUser();
   if (authErr || !user) return json({ error: "Unauthorized" }, 401);
 
-  let body: { kind?: string; fileName?: string; contentType?: string; tenantId?: number };
+  let body: { kind?: string; fileName?: string; contentType?: string; tenantId?: number; slug?: string };
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
 
   const kind = String(body.kind ?? "");
   const contentType = String(body.contentType ?? "application/octet-stream").toLowerCase();
-  const ext = EXT_BY_MIME[contentType] ?? safeBaseName(body.fileName ?? "").split(".").pop() ?? "bin";
+  // Sin mime conocido (xlsx, csv…) se usa la extensión del nombre original.
+  const nameExt = /\.([a-z0-9]{1,8})$/i.exec(body.fileName ?? "")?.[1]?.toLowerCase();
+  const ext = EXT_BY_MIME[contentType] ?? nameExt ?? "bin";
   const base = safeBaseName(body.fileName ?? "file");
   const stamp = Date.now();
   const rand = crypto.randomUUID().slice(0, 8);
@@ -102,17 +124,22 @@ Deno.serve(async (req) => {
   // La key se arma en el server (prefijos permitidos) — el cliente no puede
   // inyectar rutas arbitrarias en el bucket.
   let key: string;
-  if (kind === "chat") {
+  if (kind === "chat" || kind === "invoice") {
     const tenantId = Number(body.tenantId);
-    if (!tenantId) return json({ error: "tenantId requerido para chat" }, 400);
-    // Verifica que el usuario pertenezca al tenant (igual criterio que el CRM).
-    const { data: member } = await admin
-      .from("users").select("id, users_tenants!inner(tenant_id)")
-      .eq("auth_user_id", user.id).eq("users_tenants.tenant_id", tenantId).maybeSingle();
-    if (!member) return json({ error: "Forbidden" }, 403);
-    key = `chat-media/${tenantId}/${stamp}-${rand}.${ext}`;
+    if (!tenantId) return json({ error: `tenantId requerido para ${kind}` }, 400);
+    if (!(await isTenantMember(user.id, tenantId))) return json({ error: "Forbidden" }, 403);
+    key = kind === "chat"
+      ? `chat-media/${tenantId}/${stamp}-${rand}.${ext}`
+      : `invoices/${tenantId}/${base}-${stamp}.${ext}`;
   } else if (kind === "product" || kind === "banner") {
     key = `multimedia/${stamp}_${base}.${ext}`;
+  } else if (kind === "ai") {
+    // Recortes hechos a mano en el editor de IA (borrar/segmentar local).
+    key = `ai/${base}_${stamp}_${rand}.${ext}`;
+  } else if (kind === "import") {
+    // Archivo fuente de un import (Excel/PDF/fotos) para la traza de soporte.
+    const slug = String(body.slug ?? "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 60) || "sin-slug";
+    key = `imports/${slug}/${stamp}-${base}.${ext}`;
   } else {
     return json({ error: "kind inválido" }, 400);
   }

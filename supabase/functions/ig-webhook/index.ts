@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { uploadToS3 } from "../_shared/s3.ts";
 
 // =============================================================================
 // ig-webhook — webhook de la API de Instagram (Instagram Login) del CRM
@@ -164,11 +165,7 @@ async function downloadAndStore(
     const path = `chat-media/${tenantId}/ig-${Date.now()}-${
       Math.random().toString(36).slice(2)
     }.${ext}`;
-    const { error } = await admin.storage
-      .from("catalogohoy")
-      .upload(path, bytes, { contentType: mime, upsert: true });
-    if (error) return null;
-    return admin.storage.from("catalogohoy").getPublicUrl(path).data.publicUrl;
+    return await uploadToS3(path, bytes, mime);
   } catch {
     return null;
   }

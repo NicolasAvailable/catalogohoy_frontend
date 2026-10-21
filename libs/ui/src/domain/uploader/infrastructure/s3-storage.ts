@@ -14,7 +14,7 @@ import { SupabaseClientProvider } from '@catalogohoy/core';
 // cambia a dónde van las subidas NUEVAS.
 // =============================================================================
 
-export type UploadKind = 'product' | 'banner' | 'chat';
+export type UploadKind = 'product' | 'banner' | 'chat' | 'ai' | 'invoice' | 'import';
 
 export interface CompressOptions {
   /** Ancho máximo en px (se escala manteniendo proporción). */
@@ -88,12 +88,13 @@ export async function signedUpload(
   fileName: string,
   contentType: string,
   kind: UploadKind,
-  tenantId?: number
+  tenantId?: number,
+  slug?: string
 ): Promise<string> {
   const client = SupabaseClientProvider.getInstance();
   const invoke = () =>
     client.functions.invoke('storage-sign-upload', {
-      body: { kind, fileName, contentType, tenantId },
+      body: { kind, fileName, contentType, tenantId, slug },
     });
 
   let { data, error } = await invoke();

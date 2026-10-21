@@ -5,6 +5,7 @@ import { RateStore } from '@catalogohoy/rate';
 import { ActivityLogService } from '@catalogohoy/teams';
 import { E } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
+import { signedUpload } from '@ui';
 import {
   CreditInstallment,
   InternalNote,
@@ -234,8 +235,8 @@ export class OrderService {
     );
   }
 
-  /** Sube el PDF de la factura al bucket público (mismo patrón que el media
-   *  del chat) y devuelve su URL — para adjuntarla en la plantilla de
+  /** Sube el PDF de la factura a S3/CDN (mismo patrón que el media del chat)
+   *  y devuelve su URL — para adjuntarla en la plantilla de
    *  WhatsApp (CAT-80). */
   async uploadInvoicePdf(
     tenantId: number,
@@ -243,13 +244,18 @@ export class OrderService {
     blob: Blob,
     filename: string
   ): Promise<E.Either<Error, { url: string; filename: string }>> {
-    const path = `invoices/${tenantId}/orden-${orderId}-${Date.now()}.pdf`;
-    const { error } = await this.client.storage
-      .from('catalogohoy')
-      .upload(path, blob, { contentType: 'application/pdf', upsert: true });
-    if (error) return E.left(new Error(error.message));
-    const { data } = this.client.storage.from('catalogohoy').getPublicUrl(path);
-    return E.right({ url: data.publicUrl, filename });
+    try {
+      const url = await signedUpload(
+        blob,
+        `orden-${orderId}.pdf`,
+        'application/pdf',
+        'invoice',
+        tenantId
+      );
+      return E.right({ url, filename });
+    } catch (e) {
+      return E.left(e instanceof Error ? e : new Error(String(e)));
+    }
   }
 
   /** CAT-80: acción hacia el cliente final por WhatsApp (plantilla desde el

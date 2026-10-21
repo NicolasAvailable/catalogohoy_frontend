@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
+import { signedUpload } from '@ui';
 
 /** Telemetría de soporte del hub de import: avisa a Slack (edge function
  *  `notify-import-event`) cuando un import falla o un PDF se importa bien.
@@ -63,18 +64,15 @@ export class ImportEventsService {
     const file = this.pendingFile;
     if (!file) return Promise.resolve(null);
 
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(-80);
-    const path = `imports/${slug || 'sin-slug'}/${Date.now()}-${safeName}`;
-    this.uploadPromise = this.client.storage
-      .from('catalogohoy')
-      .upload(path, file, { contentType: file.type || undefined })
-      .then(({ data, error }) => {
-        if (error || !data) return { name: file.name, url: null };
-        const { data: pub } = this.client.storage
-          .from('catalogohoy')
-          .getPublicUrl(data.path);
-        return { name: file.name, url: pub?.publicUrl ?? null };
-      })
+    this.uploadPromise = signedUpload(
+      file,
+      file.name,
+      file.type || 'application/octet-stream',
+      'import',
+      undefined,
+      slug
+    )
+      .then((url) => ({ name: file.name, url }))
       .catch(() => ({ name: file.name, url: null }));
     return this.uploadPromise;
   }
