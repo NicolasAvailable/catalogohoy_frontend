@@ -22,6 +22,7 @@ import {
   ProductMediaComponent,
 } from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
+import { baseVariantUsesProductName } from '../../../domain';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 
 @Component({
@@ -170,14 +171,22 @@ export class ProductDetailModal {
     const options: ProductVariant[] = [];
     if (this.isVariant) {
       const hasPromo = this.product.pricePromotional > 0;
+      // Gate por catálogo: algunos tenants muestran la opción base con el NOMBRE
+      // DEL PRODUCTO en vez de "Producto original" (la base ES el producto
+      // principal; solo cambia el rótulo). El template resuelve la etiqueta a
+      // partir de `name`: si no es el fallback 'Producto original', la muestra
+      // tal cual.
+      const useProductName = baseVariantUsesProductName(
+        Number(this.ecommerceStore.catalogInfo()?.id)
+      );
       options.push({
         id: ProductDetailModal.BASE_ID,
-        name: 'Producto original',
+        name: useProductName ? this.product.name : 'Producto original',
         price: hasPromo ? this.product.pricePromotional : this.product.price,
         originalPrice: hasPromo ? this.product.price : 0,
         photos: this.product.photos,
-        // La base (producto original) usa el stock a nivel de producto, para
-        // que effectiveStock lo respete al seleccionarla.
+        // La base usa el stock a nivel de producto, para que effectiveStock lo
+        // respete al seleccionarla.
         stock: this.product.stock !== null ? Number(this.product.stock) : null,
         sizes: this.product.sizes,
       });

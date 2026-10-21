@@ -346,8 +346,9 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(new Error(tenantError.message));
     }
     const tenant = TenantMapper.toDomain(tenantRows[0]);
-    // Confirmación de correo = completa un alta nueva → bienvenida.
-    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain, '/bienvenida'));
+    // Confirmación de correo = completa un alta nueva → admin.
+    // (La paywall /bienvenida quedó deshabilitada por ahora.)
+    return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain, '/admin'));
   }
 
   public async resetPassword(

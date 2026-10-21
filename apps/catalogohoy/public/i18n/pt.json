@@ -2795,5 +2795,7 @@
   "Actualización disponible": "Atualização disponível",
   "Actualización necesaria": "Atualização necessária",
   "Hay una nueva versión de la app con mejoras y correcciones.": "Há uma nova versão do app com melhorias e correções.",
-  "Necesitas actualizar a la última versión para seguir usando la app.": "Você precisa atualizar para a versão mais recente para continuar usando o app."
+  "Necesitas actualizar a la última versión para seguir usando la app.": "Você precisa atualizar para a versão mais recente para continuar usando o app.",
+  "Ingresos por método de pago": "Receitas por método de pagamento",
+  "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Apenas pedidos concluídos. Pagamentos divididos somam cada parte ao seu método."
 }

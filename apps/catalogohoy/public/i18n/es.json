@@ -2795,5 +2795,7 @@
   "Actualización disponible": "Actualización disponible",
   "Actualización necesaria": "Actualización necesaria",
   "Hay una nueva versión de la app con mejoras y correcciones.": "Hay una nueva versión de la app con mejoras y correcciones.",
-  "Necesitas actualizar a la última versión para seguir usando la app.": "Necesitas actualizar a la última versión para seguir usando la app."
+  "Necesitas actualizar a la última versión para seguir usando la app.": "Necesitas actualizar a la última versión para seguir usando la app.",
+  "Ingresos por método de pago": "Ingresos por método de pago",
+  "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Solo órdenes completadas. Los pagos divididos suman cada parte a su método."
 }

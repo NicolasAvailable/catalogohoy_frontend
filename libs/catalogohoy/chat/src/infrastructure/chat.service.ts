@@ -1,7 +1,13 @@
 import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
-import { convertHeicToJpeg, isHeicFile } from '@ui';
+import {
+  compressImage,
+  convertHeicToJpeg,
+  isHeicFile,
+  preferredImageFormat,
+  signedUpload,
+} from '@ui';
 import {
   Chat,
   ChatMessage,
@@ -312,26 +318,30 @@ export class ChatService {
     // con el mismo util del uploader de productos. Si la conversión falla
     // (p.ej. un JPEG renombrado a .heic), sube el archivo original como
     // siempre.
-    let body: Blob = file;
-    let mime = file.type;
-    let ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+    let source: Blob = file;
+    let mime = file.type || 'application/octet-stream';
     if (await isHeicFile(file)) {
       const converted = await convertHeicToJpeg(file);
       if (converted) {
-        body = converted;
+        source = converted;
         mime = 'image/jpeg';
-        ext = 'jpeg';
       }
     }
-    const path = `chat-media/${tenantId}/${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2)}.${ext}`;
-    const { error } = await this.client.storage
-      .from('catalogohoy')
-      .upload(path, body, { contentType: mime, upsert: false });
-    if (error) return E.left(new Error(error.message));
-    const { data } = this.client.storage.from('catalogohoy').getPublicUrl(path);
-    return E.right({ url: data.publicUrl, mime });
+    // Solo las imágenes pasan por el canvas (compresión + WebP); documentos y
+    // videos se suben tal cual. Migrado a S3 (bucket catalogohoy-media) vía URL
+    // prefirmada; se sirve por cdn.catalogohoy.com.
+    if (mime.startsWith('image/')) {
+      source = await compressImage(source, { maxWidth: 1600, quality: 0.8 });
+      mime = preferredImageFormat().mime;
+    }
+    try {
+      const url = await signedUpload(source, file.name, mime, 'chat', tenantId);
+      return E.right({ url, mime });
+    } catch (e) {
+      return E.left(
+        e instanceof Error ? e : new Error('No pudimos subir el archivo.')
+      );
+    }
   }
 
   /** Send a media message (image/document) via wa-send, with a demo fallback

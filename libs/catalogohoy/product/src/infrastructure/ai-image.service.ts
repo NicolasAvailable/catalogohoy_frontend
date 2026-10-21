@@ -1,10 +1,9 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
+import { signedUpload } from '@ui';
 import { BaseAiImageService } from '../domain';
 import { CreditsStore } from './credits.store';
-
-const STORAGE_BUCKET = 'catalogohoy';
 
 @Injectable({ providedIn: 'root' })
 export class AiImageService implements BaseAiImageService {
@@ -150,16 +149,8 @@ export class AiImageService implements BaseAiImageService {
 
   async uploadPng(blob: Blob): Promise<E.Either<Error, string>> {
     try {
-      const rand = Math.random().toString(36).slice(2, 10);
-      const path = `ai/erase_${Date.now()}_${rand}.png`;
-      const { error } = await this.client.storage
-        .from(STORAGE_BUCKET)
-        .upload(path, blob, { contentType: 'image/png' });
-      if (error) return E.left(new Error(error.message));
-      const { data } = this.client.storage
-        .from(STORAGE_BUCKET)
-        .getPublicUrl(path);
-      return E.right(data.publicUrl);
+      const url = await signedUpload(blob, 'erase.png', 'image/png', 'ai');
+      return E.right(url);
     } catch (e) {
       console.error('[AI Image] uploadPng error:', e);
       return E.left(new Error('No se pudo subir la imagen recortada.'));

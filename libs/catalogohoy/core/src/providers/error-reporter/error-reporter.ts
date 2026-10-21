@@ -36,6 +36,12 @@ const MAX_REPORTS_PER_SESSION = 15;
 const NOISE_PATTERNS =
   /Script error|Java object is gone|Error invoking postMessage|ResizeObserver loop|WKWebView was deallocated|Error invoking jsReceiveMessages|Java bridge method invocation error|window\.webkit\.messageHandlers|The operation was aborted|window\.ethereum|selectedAddress|__firefox__|evmAsk|__gCrWeb|chrome-extension|moz-extension|safari-web-extension|web3|solana\.|ethereum|zaloJSV2|vid_mate|_AutofillCallbackHandler|instantSearchSDK/i;
 
+/** Toasts que son validación/UX esperada (no bugs): no se reportan a Slack
+ *  aunque se le muestren al usuario. P. ej. el carrito avisando que un producto
+ *  llegó a su límite de stock — es el guardrail funcionando, no un error. */
+const TOAST_NOISE =
+  /No hay más stock disponible|No more stock available|plus de stock disponible|mais estoque disponível/i;
+
 /** Fingerprint del build (main-XXXX.js) — mismo truco que AppVersionService.
  *  Cambia con cada deploy: permite correlacionar errores con deploys. */
 let cachedVersion: string | null | undefined;
@@ -61,6 +67,7 @@ export function reportErrorToSlack(
     if (isDevMode()) return;
     const text = String(message ?? 'error desconocido').slice(0, 500);
     if (source === 'uncaught' && NOISE_PATTERNS.test(text)) return;
+    if (source === 'toast' && TOAST_NOISE.test(text)) return;
     const key = `${source}:${text}`;
     if (reportedKeys.has(key) || sentThisSession >= MAX_REPORTS_PER_SESSION) {
       return;

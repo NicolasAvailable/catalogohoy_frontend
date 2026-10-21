@@ -36,6 +36,9 @@
   categoryList, sku, productionCost (informativo), position (orden), isWholesale +
   wholesaleTiers[], isSoldOut, isHidden, isSized + sizes[] (stock por talla), isVariant +
   variants[] (precio/foto propia, tallas propias opcionales).
+  **Stock con tallas**: en productos `isSized`, `products.stock` queda NULL y el stock real
+  vive en `sizes[].stock`. El listado del admin (columna Stock) usa `stockOf()` para sumar
+  tallas (y tallas de variantes); antes leía el NULL como "∞ Infinito" (fix 2026-10-21).
 - **Stores/serv**: `ProductStore` (list + loading), `ProductService` (CRUD, search, duplicar,
   borrar, `isLockedByFreePlan()`). `ProductExcelService` (import + plantilla; su `exportToExcel`
   ya no se usa desde la UI). `AiImageService` (fal.ai, ver ai-credits) y `CreditsStore`
@@ -73,6 +76,11 @@
   stock, solo sus tallas tienen stock propio); antes la RPC las salteaba (bug).
   `stock NULL` = sin control de inventario (se saltea a propósito). Si el RPC
   falla, ahora sale un toast de aviso (antes se tragaba en console.warn).
+
+- **Métricas → Ingresos por método de pago** (2026-10-21): la RPC `order_metrics` devuelve
+  `byPaymentMethod` (solo órdenes `completed`; pagos divididos del POS suman cada parte de
+  `payments[]` a su método; agrupa ignorando acentos/mayúsculas). La sección se oculta si la
+  RPC no trae el campo. Migración: `20261021_order_metrics_by_payment_method.sql`.
 
 ## category (`@catalogohoy/category`)
 

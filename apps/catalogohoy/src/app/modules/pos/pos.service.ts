@@ -10,6 +10,7 @@ import {
   PosSalesByMethod,
   PosSessionSummary,
 } from './pos.models';
+import { paymentPartsOf } from './pos-split.util';
 
 /** Fila cruda de `pos_cash_sessions`. */
 interface CashSessionRow {
@@ -255,7 +256,7 @@ export class PosService {
     // Ventas PAGADAS de la sesión (status 'completed' = cobradas en mostrador).
     const { data: sales, error: salesErr } = await this.client
       .from('orders')
-      .select('payment_method, total_usd, status')
+      .select('payment_method, payments, total_usd, status')
       .eq('tenant_id', tenantId)
       .eq('pos_cash_session_id', session.id)
       .eq('status', 'completed');
@@ -276,16 +277,25 @@ export class PosService {
     let cashSales = 0;
     for (const row of (sales ?? []) as {
       payment_method: string | null;
+      payments: { method?: string; amount?: number }[] | null;
       total_usd: number | string | null;
     }[]) {
       const amount = num(row.total_usd);
-      const method = (row.payment_method || 'Sin especificar').trim();
       totalSales += amount;
-      if (isCashMethod(method)) cashSales += amount;
-      const acc = byMethod.get(method) ?? { method, count: 0, total: 0 };
-      acc.count += 1;
-      acc.total += amount;
-      byMethod.set(method, acc);
+      // Pago dividido/mixto: repartir por medio según el desglose guardado para
+      // que el efectivo esperado del arqueo sea correcto. Sin desglose = el
+      // medio único de la orden (comportamiento histórico).
+      for (const part of paymentPartsOf(row, amount, num)) {
+        if (isCashMethod(part.method)) cashSales += part.amount;
+        const acc = byMethod.get(part.method) ?? {
+          method: part.method,
+          count: 0,
+          total: 0,
+        };
+        acc.count += 1;
+        acc.total += part.amount;
+        byMethod.set(part.method, acc);
+      }
     }
 
     const movementsIn = movements
@@ -346,6 +356,13 @@ export class PosService {
             date: String(day['date']),
             amount: Number(day['amount']) || 0,
             count: Number(day['count']) || 0,
+          }))
+        : [],
+      byPaymentMethod: Array.isArray(d['byPaymentMethod'])
+        ? (d['byPaymentMethod'] as Record<string, unknown>[]).map((m) => ({
+            method: String(m['method']),
+            count: Number(m['count']) || 0,
+            amount: Number(m['amount']) || 0,
           }))
         : [],
     });

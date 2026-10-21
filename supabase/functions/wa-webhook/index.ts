@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { uploadToS3 } from "../_shared/s3.ts";
 // =============================================================================
 // wa-webhook — WhatsApp Cloud API inbound webhook
 //
@@ -144,6 +145,42 @@ async function handleNotifyNumberInbound(value, notifyToken, notifyPnid) {
     }
   } catch (e) {
     console.error("[wa-webhook] notify-inbound fallo", e instanceof Error ? e.message : String(e));
+  }
+}
+// ── Bot de gestión de tienda (CAT-78) en el número de AVISOS ────────────────
+// Si quien escribe al número de avisos es un dueño que vinculó su WhatsApp
+// (wa_bot_links) o manda el código de vinculación ("Vincular 123456"), el
+// mensaje NO va a la bandeja de soporte: se reenvía a la edge `wa-store-bot`,
+// que responde en background. Devuelve true si lo tomó el bot.
+async function routeToStoreBot(value) {
+  try {
+    const messages = value.messages ?? [];
+    const first = messages[0];
+    const phone = digits(first?.from ?? "");
+    if (!phone) return false;
+    const text = String(first?.text?.body ?? "");
+    const isLinkCode = /vincular\s*\d{6}/i.test(text);
+    if (!isLinkCode) {
+      const { data: link } = await admin.from("wa_bot_links").select("id").eq("phone", phone).maybeSingle();
+      if (!link) return false;
+    }
+    for (const m of messages) {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/wa-store-bot`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-internal-secret": SERVICE_ROLE_KEY
+        },
+        body: JSON.stringify({
+          message: m
+        })
+      });
+      if (!res.ok) console.error("[wa-webhook] wa-store-bot", res.status, (await res.text()).slice(0, 200));
+    }
+    return true;
+  } catch (e) {
+    console.error("[wa-webhook] store-bot route fallo", e instanceof Error ? e.message : String(e));
+    return false;
   }
 }
 // ── Bot de triaje del número de SOPORTE ─────────────────────────────────────
@@ -541,15 +578,7 @@ const PLAN_PRICES_USD = {
     const bytes = new Uint8Array(await fileRes.arrayBuffer());
     const ext = ((mime || meta.mime_type || "application/octet-stream").split("/")[1] ?? "bin").split(";")[0];
     const path = `chat-media/${tenantId}/in-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await admin.storage.from("catalogohoy").upload(path, bytes, {
-      contentType: mime || meta.mime_type,
-      upsert: true
-    });
-    if (error) {
-      console.error("[wa-webhook] storage upload error", error.message);
-      return null;
-    }
-    return admin.storage.from("catalogohoy").getPublicUrl(path).data.publicUrl;
+    return await uploadToS3(path, bytes, mime || meta.mime_type || "application/octet-stream");
   } catch (err) {
     console.error("[wa-webhook] downloadAndStore error", err);
     return null;
@@ -842,6 +871,7 @@ async function handleIncoming(body) {
         const notifyPnid = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID")?.trim();
         const inbound = value.messages ?? [];
         if (notifyPnid && phoneNumberId === notifyPnid && inbound.length > 0) {
+          if (await routeToStoreBot(value)) continue;
           await handleNotifyNumberInbound(value, Deno.env.get("WHATSAPP_TOKEN")?.trim() ?? null, phoneNumberId);
         }
         continue;

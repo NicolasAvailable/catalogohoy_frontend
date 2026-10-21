@@ -28,7 +28,17 @@
       </button>
       <button type="button" class="tile" (click)="openDiscount()">
         <span class="tile-ico"><ui-icon name="percent" styleClass="size-6" /></span>
-        <span class="tile-label">{{ cart.discountPercent() > 0 ? (cart.discountPercent() + ('% de descuento' | transloco)) : ('Aplicar descuento' | transloco) }}</span>
+        <span class="tile-label">
+          @if (cart.discountAmount() > 0) {
+            @if (cart.discountMode() === 'amount') {
+              {{ cs() }}{{ cart.discountAmount() | number: '1.2-2' }} {{ 'de descuento' | transloco }}
+            } @else {
+              {{ cart.discountPercent() }}{{ '% de descuento' | transloco }}
+            }
+          } @else {
+            {{ 'Aplicar descuento' | transloco }}
+          }
+        </span>
       </button>
       <button type="button" class="tile" (click)="openNote()">
         <span class="tile-ico"><ui-icon name="sticky-note" styleClass="size-6" /></span>
@@ -125,9 +135,9 @@
     <footer class="cart-foot">
       @if (!cart.isEmpty()) {
         <div class="foot-lines">
-          @if (cart.discountPercent() > 0) {
+          @if (cart.discountAmount() > 0) {
             <div class="foot-row discount">
-              <span>{{ 'Descuento ({percent}%)' | transloco: { percent: cart.discountPercent() } }}</span>
+              <span>{{ cart.discountMode() === 'amount' ? ('Descuento' | transloco) : ('Descuento ({percent}%)' | transloco: { percent: cart.discountPercent() }) }}</span>
               <span>−{{ cs() }}{{ cart.discountAmount() | number: '1.2-2' }}</span>
             </div>
           }
@@ -228,16 +238,16 @@
       @switch (optionsMode()) {
         @case ('variant') {
           <div class="option-list">
-            @for (v of op.variants; track v.id) {
+            @for (v of variantOptions(); track v.id) {
               <button type="button" class="option-row" (click)="addVariant(op, v)">
                 <div class="option-thumb">
                   @if (v.photos[0] || op.photos[0]) {
-                    <img [src]="v.photos[0] || op.photos[0]" [alt]="v.name" />
+                    <img [src]="v.photos[0] || op.photos[0]" [alt]="v.id === baseOptionId ? ('Producto original' | transloco) : v.name" />
                   } @else {
                     <ui-icon name="package" styleClass="size-5 tile-thumb-ph" />
                   }
                 </div>
-                <span class="option-name">{{ v.name }}</span>
+                <span class="option-name">{{ v.id === baseOptionId ? ('Producto original' | transloco) : v.name }}</span>
                 <span class="option-price">{{ cs() }}{{ (v.price > 0 ? v.price : unitPrice(op)) | number: '1.2-2' }}</span>
               </button>
             }
@@ -333,30 +343,42 @@
         </button>
       </header>
       <div class="disc-tabs">
-        <button type="button" class="disc-tab active">
+        <button type="button" class="disc-tab" [class.active]="discountTab() === 'percent'" (click)="discountTab.set('percent')">
           <ui-icon name="percent" styleClass="size-4" /> {{ 'Porcentaje' | transloco }}
         </button>
-        <button type="button" class="disc-tab" disabled>
+        <button type="button" class="disc-tab" [class.active]="discountTab() === 'amount'" (click)="discountTab.set('amount')">
           <ui-icon name="dollar-sign" styleClass="size-4" /> {{ 'Monto fijo' | transloco }}
         </button>
         <button type="button" class="disc-tab" disabled>
           <ui-icon name="ticket" styleClass="size-4" /> {{ 'Cupón' | transloco }}
         </button>
       </div>
-      <label class="field">
-        <span>{{ 'Porcentaje a aplicar' | transloco }}</span>
-        <div class="pct-row">
-          <div class="pct-input">
-            <input type="number" min="0" max="100" [ngModel]="discountDraft()" (ngModelChange)="discountDraft.set($event)" />
-            <span>%</span>
+      @if (discountTab() === 'amount') {
+        <label class="field">
+          <span>{{ 'Monto a descontar' | transloco }}</span>
+          <div class="pct-row">
+            <div class="pct-input amount">
+              <span>{{ cs() }}</span>
+              <input type="number" min="0" step="0.01" [ngModel]="discountFixedDraft()" (ngModelChange)="discountFixedDraft.set($event)" />
+            </div>
           </div>
-          @for (p of [5, 10, 15, 20]; track p) {
-            <button type="button" class="pct-chip" [class.active]="discountDraft() === p" (click)="applyDiscount(p)">{{ p }}%</button>
-          }
-        </div>
-      </label>
+        </label>
+      } @else {
+        <label class="field">
+          <span>{{ 'Porcentaje a aplicar' | transloco }}</span>
+          <div class="pct-row">
+            <div class="pct-input">
+              <input type="number" min="0" max="100" [ngModel]="discountDraft()" (ngModelChange)="discountDraft.set($event)" />
+              <span>%</span>
+            </div>
+            @for (p of [5, 10, 15, 20]; track p) {
+              <button type="button" class="pct-chip" [class.active]="discountDraft() === p" (click)="applyDiscount(p)">{{ p }}%</button>
+            }
+          </div>
+        </label>
+      }
       <div class="modal-actions between">
-        <button type="button" class="btn-ghost" (click)="applyDiscount(0)">{{ 'Sin descuento' | transloco }}</button>
+        <button type="button" class="btn-ghost" (click)="clearDiscountDraft()">{{ 'Sin descuento' | transloco }}</button>
         <button type="button" class="btn-blue" (click)="saveDiscount()">{{ 'Aplicar descuento' | transloco }}</button>
       </div>
     </div>
@@ -467,53 +489,127 @@
         </p>
       }
 
-      <p class="modal-sub">{{ 'Medio de pago' | transloco }}</p>
-      <div class="pay-methods">
-        @for (m of payMethods(); track m.label) {
-          <button
-            type="button"
-            class="pay-method"
-            [class.active]="cart.paymentMethod() === m.label"
-            (click)="selectMethod(m.label)"
-          >
-            <ui-icon [name]="m.icon" styleClass="size-6" />
-            <span>{{ m.label }}</span>
-            @if (m.adjust) {
-              <small class="pay-adjust">{{ m.adjust > 0 ? '+' : '' }}{{ m.adjust }}%</small>
-            }
-          </button>
+      @if (!splitMode()) {
+        <p class="modal-sub">{{ 'Medio de pago' | transloco }}</p>
+        <div class="pay-methods">
+          @for (m of payMethods(); track m.label) {
+            <button
+              type="button"
+              class="pay-method"
+              [class.active]="cart.paymentMethod() === m.label"
+              (click)="selectMethod(m.label)"
+            >
+              <ui-icon [name]="m.icon" styleClass="size-6" />
+              <span>{{ m.label }}</span>
+              @if (m.adjust) {
+                <small class="pay-adjust">{{ m.adjust > 0 ? '+' : '' }}{{ m.adjust }}%</small>
+              }
+            </button>
+          }
+        </div>
+
+        @if (selectedAdjust() !== 0) {
+          <div class="cobrar-summary">
+            <div class="foot-row">
+              <span>{{ 'Total' | transloco }}</span>
+              <span>{{ cs() }}{{ displayTotal() | number: '1.2-2' }}</span>
+            </div>
+            <div class="foot-row" [class.discount]="selectedAdjust() < 0">
+              <span>{{ selectedAdjust() > 0 ? ('Recargo' | transloco) : ('Descuento' | transloco) }} ({{ selectedAdjust() }}%)</span>
+              <span>{{ selectedAdjust() > 0 ? '+' : '−' }}{{ cs() }}{{ (adjustAmount() < 0 ? -adjustAmount() : adjustAmount()) | number: '1.2-2' }}</span>
+            </div>
+            <div class="foot-row total">
+              <span>{{ 'A cobrar' | transloco }}</span>
+              <span>{{ cs() }}{{ chargeTotal() | number: '1.2-2' }}</span>
+            </div>
+          </div>
         }
-      </div>
 
-      @if (selectedAdjust() !== 0) {
-        <div class="cobrar-summary">
-          <div class="foot-row">
-            <span>{{ 'Total' | transloco }}</span>
-            <span>{{ cs() }}{{ displayTotal() | number: '1.2-2' }}</span>
+        @if (isCash()) {
+          <label class="field">
+            <span>{{ 'Efectivo recibido' | transloco }}</span>
+            <input type="number" min="0" [ngModel]="amountReceived()" (ngModelChange)="amountReceived.set($event)" placeholder="0.00" />
+          </label>
+          <div class="change-row">
+            <span>{{ 'Vuelto' | transloco }}</span>
+            <strong>{{ cs() }}{{ change() | number: '1.2-2' }}</strong>
           </div>
-          <div class="foot-row" [class.discount]="selectedAdjust() < 0">
-            <span>{{ selectedAdjust() > 0 ? ('Recargo' | transloco) : ('Descuento' | transloco) }} ({{ selectedAdjust() }}%)</span>
-            <span>{{ selectedAdjust() > 0 ? '+' : '−' }}{{ cs() }}{{ (adjustAmount() < 0 ? -adjustAmount() : adjustAmount()) | number: '1.2-2' }}</span>
-          </div>
-          <div class="foot-row total">
-            <span>{{ 'A cobrar' | transloco }}</span>
-            <span>{{ cs() }}{{ chargeTotal() | number: '1.2-2' }}</span>
+        }
+      } @else {
+        <!-- Pago dividido / mixto: un medio + su monto por fila -->
+        <p class="modal-sub">{{ 'Pago dividido' | transloco }}</p>
+        <div class="split-pay">
+          @for (row of splitRows(); track $index) {
+            <div class="split-row">
+              <select
+                class="split-method"
+                [ngModel]="row.method"
+                (ngModelChange)="setSplitMethod($index, $event)"
+              >
+                @for (m of payMethods(); track m.label) {
+                  <option [value]="m.label">{{ m.label }}</option>
+                }
+              </select>
+              <div class="split-amt">
+                <span class="split-cur">{{ cs() }}</span>
+                <input
+                  type="number"
+                  min="0"
+                  inputmode="decimal"
+                  [ngModel]="row.amount"
+                  (ngModelChange)="setSplitAmount($index, $event)"
+                  placeholder="0.00"
+                />
+              </div>
+              <button
+                type="button"
+                class="split-rest"
+                (click)="fillRemaining($index)"
+                [title]="'Poner el resto' | transloco"
+              >
+                {{ 'Resto' | transloco }}
+              </button>
+              @if (splitRows().length > 1) {
+                <button type="button" class="split-del" (click)="removeSplitRow($index)" [title]="'Quitar' | transloco">
+                  <ui-icon name="x" styleClass="size-4" />
+                </button>
+              }
+            </div>
+          }
+
+          <button type="button" class="split-add" (click)="addSplitRow()">
+            <ui-icon name="plus" styleClass="size-4" />
+            {{ 'Agregar método' | transloco }}
+          </button>
+
+          <div
+            class="split-tally"
+            [class.ok]="splitBalanced()"
+            [class.over]="splitRemaining() < -0.005"
+          >
+            <div class="foot-row">
+              <span>{{ 'Asignado' | transloco }}</span>
+              <span>{{ cs() }}{{ splitAssigned() | number: '1.2-2' }} / {{ cs() }}{{ chargeTotal() | number: '1.2-2' }}</span>
+            </div>
+            <div class="foot-row total">
+              <span>{{ splitRemaining() >= -0.005 ? ('Falta por asignar' | transloco) : ('Se pasó' | transloco) }}</span>
+              <span>{{ cs() }}{{ (splitRemaining() < 0 ? -splitRemaining() : splitRemaining()) | number: '1.2-2' }}</span>
+            </div>
           </div>
         </div>
       }
 
-      @if (isCash()) {
-        <label class="field">
-          <span>{{ 'Efectivo recibido' | transloco }}</span>
-          <input type="number" min="0" [ngModel]="amountReceived()" (ngModelChange)="amountReceived.set($event)" placeholder="0.00" />
-        </label>
-        <div class="change-row">
-          <span>{{ 'Vuelto' | transloco }}</span>
-          <strong>{{ cs() }}{{ change() | number: '1.2-2' }}</strong>
-        </div>
-      }
+      <!-- Alternar entre pago único y pago por partes -->
+      <button
+        type="button"
+        class="split-toggle"
+        (click)="splitMode() ? disableSplit() : enableSplit()"
+      >
+        <ui-icon [name]="splitMode() ? 'wallet' : 'hand-coins'" styleClass="size-4" />
+        {{ splitMode() ? ('Pagar con un solo medio' | transloco) : ('Pagar por partes (varios métodos)' | transloco) }}
+      </button>
 
-      <button type="button" class="btn-blue full" [disabled]="isCharging()" (click)="charge()">
+      <button type="button" class="btn-blue full" [disabled]="isCharging() || !canCharge()" (click)="charge()">
         @if (isCharging()) {
           <ui-icon name="loader-circle" styleClass="size-5 animate-spin" />
           {{ 'Cobrando…' | transloco }}
@@ -539,6 +635,16 @@
       }
       @if (sale.number != null) {
         <p class="success-num">{{ 'Comprobante' | transloco }} #{{ sale.number }}</p>
+      }
+      @if (sale.payments && sale.payments.length) {
+        <div class="success-split">
+          @for (p of sale.payments; track $index) {
+            <div class="foot-row">
+              <span>{{ p.method }}</span>
+              <span>{{ cs() }}{{ p.amount | number: '1.2-2' }}</span>
+            </div>
+          }
+        </div>
       }
       @if (lastSaleOffline()) {
         <p class="success-offline">

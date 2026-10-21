@@ -2795,5 +2795,7 @@
   "Actualización disponible": "Update available",
   "Actualización necesaria": "Update required",
   "Hay una nueva versión de la app con mejoras y correcciones.": "There's a new version of the app with improvements and fixes.",
-  "Necesitas actualizar a la última versión para seguir usando la app.": "You need to update to the latest version to keep using the app."
+  "Necesitas actualizar a la última versión para seguir usando la app.": "You need to update to the latest version to keep using the app.",
+  "Ingresos por método de pago": "Income by payment method",
+  "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Completed orders only. Split payments add each part to its method."
 }

@@ -5,6 +5,7 @@ import { RateStore } from '@catalogohoy/rate';
 import { ActivityLogService } from '@catalogohoy/teams';
 import { E } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
+import { signedUpload } from '@ui';
 import {
   CreditInstallment,
   InternalNote,
@@ -72,6 +73,11 @@ export interface CreateOrderInput {
   /** Ajuste (descuento/recargo) del método de pago, snapshot para la factura.
    *  A diferencia de la comisión, SÍ se le muestra al cliente. null = sin ajuste. */
   paymentAdjustment?: OrderAdjustment | null;
+  /** POS pago dividido/mixto: desglose de cuánto se cobró con cada medio
+   *  ([{method, amount}]). El `paymentMethod` lleva el resumen legible; esta
+   *  columna guarda el detalle para el arqueo de caja (saber la porción en
+   *  efectivo) y el recibo. null/omitido = pago con un solo medio. */
+  payments?: { method: string; amount: number }[] | null;
   /** Snapshot del envío para que la lista/detalle lo muestren (misma forma
    *  que el checkout público). En órdenes manuales el nombre es "Envío"; al
    *  editar una orden del catálogo se preserva su método original. null =
@@ -229,8 +235,8 @@ export class OrderService {
     );
   }
 
-  /** Sube el PDF de la factura al bucket público (mismo patrón que el media
-   *  del chat) y devuelve su URL — para adjuntarla en la plantilla de
+  /** Sube el PDF de la factura a S3/CDN (mismo patrón que el media del chat)
+   *  y devuelve su URL — para adjuntarla en la plantilla de
    *  WhatsApp (CAT-80). */
   async uploadInvoicePdf(
     tenantId: number,
@@ -238,13 +244,18 @@ export class OrderService {
     blob: Blob,
     filename: string
   ): Promise<E.Either<Error, { url: string; filename: string }>> {
-    const path = `invoices/${tenantId}/orden-${orderId}-${Date.now()}.pdf`;
-    const { error } = await this.client.storage
-      .from('catalogohoy')
-      .upload(path, blob, { contentType: 'application/pdf', upsert: true });
-    if (error) return E.left(new Error(error.message));
-    const { data } = this.client.storage.from('catalogohoy').getPublicUrl(path);
-    return E.right({ url: data.publicUrl, filename });
+    try {
+      const url = await signedUpload(
+        blob,
+        `orden-${orderId}.pdf`,
+        'application/pdf',
+        'invoice',
+        tenantId
+      );
+      return E.right({ url, filename });
+    } catch (e) {
+      return E.left(e instanceof Error ? e : new Error(String(e)));
+    }
   }
 
   /** CAT-80: acción hacia el cliente final por WhatsApp (plantilla desde el
@@ -378,6 +389,13 @@ export class OrderService {
             count: Number(day['count']) || 0,
           }))
         : [],
+      byPaymentMethod: Array.isArray(d['byPaymentMethod'])
+        ? (d['byPaymentMethod'] as Record<string, unknown>[]).map((m) => ({
+            method: String(m['method']),
+            count: Number(m['count']) || 0,
+            amount: Number(m['amount']) || 0,
+          }))
+        : [],
     });
   }
 
@@ -426,6 +444,9 @@ export class OrderService {
     if (input.paymentEvidence !== undefined)
       payload['payment_evidence'] = input.paymentEvidence;
     if (input.paymentMethod !== undefined) payload['payment_method'] = input.paymentMethod || null;
+    // Pago dividido/mixto del POS: desglose por medio (null = pago simple).
+    if (input.payments !== undefined)
+      payload['payments'] = input.payments && input.payments.length ? input.payments : null;
     // shipping_fee es NOT NULL (default 0): sin envío = 0, nunca null.
     if (input.shippingFee !== undefined)
       payload['shipping_fee'] = input.shippingFee ?? 0;

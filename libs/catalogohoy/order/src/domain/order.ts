@@ -157,6 +157,18 @@ export interface OrderDayMetric {
   count: number;
 }
 
+/** One row of the income-by-payment-method breakdown in {@link OrderMetrics}. */
+export interface OrderPaymentMethodMetric {
+  /** Method label as the seller named it (e.g. "Pago móvil", "Efectivo"). */
+  method: string;
+  /** Completed orders that used this method (a split payment counts once per
+   *  method it used). */
+  count: number;
+  /** Amount collected with this method in the range (split payments add only
+   *  their part). */
+  amount: number;
+}
+
 /** Aggregated order metrics for the "Métricas" tab. Computed server-side by the
  *  `order_metrics` RPC so the figures cover ALL matching orders — not just the
  *  page currently loaded in the table. Amounts are in USD (the universal
@@ -172,6 +184,8 @@ export interface OrderMetrics {
   byStatus: OrderStatusMetric[];
   /** One entry per day in the range (zero-filled), oldest first. */
   byDay: OrderDayMetric[];
+  /** Income of COMPLETED orders per payment method, highest first. */
+  byPaymentMethod: OrderPaymentMethodMetric[];
 }
 
 /** Una línea leída de un Excel de pedido (antes de matchear al catálogo). */
