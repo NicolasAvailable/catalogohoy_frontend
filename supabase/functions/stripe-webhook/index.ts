@@ -286,18 +286,81 @@ function escape(input: string | null | undefined): string {
   return String(input).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+// --- Layout de marca de emails ----------------------------------------------
+// Mismo diseño que las plantillas de Supabase Auth (reset de contraseña, etc.):
+// fondo #eaf1ff, card blanca con radio 12px, logo, título #16367f, texto
+// #383838 en Arial y botón #3e7bfa con radio 8px. Copia idéntica en cada
+// función que manda email: si cambiás algo acá, cambialo en todas.
+const BRAND_LOGO_URL = "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/catalogohoy-logo.png";
+const BRAND_BLUE = "#3e7bfa";
+type BrandButton = { label: string; url: string; secondary?: boolean };
+type BrandRow = { label?: string; labelHtml?: string; value?: string; valueHtml?: string; color?: string };
+type BrandEmailOpts = { title: string; subtitle?: string; bodyHtml: string; buttons?: BrandButton[]; note?: string; footer?: string; width?: number };
+function brandEsc(v: unknown): string {
+  if (v == null) return "";
+  return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+// Botón principal (azul lleno) o secundario (borde azul).
+function brandButton(b: BrandButton): string {
+  const style = b.secondary
+    ? `background-color:#ffffff;color:${BRAND_BLUE};border:2px solid ${BRAND_BLUE};padding:12px 24px;`
+    : `background-color:${BRAND_BLUE};color:#ffffff;padding:14px 26px;`;
+  return `<a href="${brandEsc(b.url)}" style="${style}text-decoration:none;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block;margin:4px;">${brandEsc(b.label)}</a>`;
+}
+// Bloque de datos "etiqueta → valor" en caja celeste (para resúmenes).
+function brandRows(rows: BrandRow[]): string {
+  const trs = rows.map((r: BrandRow, i: number) => `<tr><td style="padding:10px 0;font-size:14px;color:#383838;${i < rows.length - 1 ? "border-bottom:1px solid #dfe8fb;" : ""}">${r.labelHtml ?? brandEsc(r.label)}</td><td align="right" style="padding:10px 0;font-size:14px;font-weight:bold;color:${r.color || "#16367f"};${i < rows.length - 1 ? "border-bottom:1px solid #dfe8fb;" : ""}">${r.valueHtml ?? brandEsc(r.value)}</td></tr>`).join("");
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7ff;border-radius:8px;padding:6px 16px;margin:4px 0 8px;">${trs}</table>`;
+}
+// Subtítulo de sección dentro del cuerpo.
+function brandSection(title: string): string {
+  return `<p style="margin:22px 0 8px;font-size:13px;font-weight:bold;color:#16367f;text-transform:uppercase;letter-spacing:.04em;">${brandEsc(title)}</p>`;
+}
+// opts: { title, subtitle?, bodyHtml, buttons?: [{label,url,secondary?}], note?, footer?, width? }
+function brandEmail(opts: BrandEmailOpts): string {
+  const width = opts.width || 480;
+  const subtitle = opts.subtitle
+    ? `<tr><td style="font-size:13px;color:#646464;text-align:center;padding-bottom:20px;">${brandEsc(opts.subtitle)}</td></tr>`
+    : "";
+  const buttons = opts.buttons && opts.buttons.length
+    ? `<tr><td align="center" style="padding-bottom:30px;">${opts.buttons.map(brandButton).join("")}</td></tr>`
+    : "";
+  const note = opts.note
+    ? `<tr><td style="font-size:13px;color:#646464;text-align:center;padding-bottom:15px;line-height:1.5;">${opts.note}</td></tr>`
+    : "";
+  const footerExtra = opts.footer ? `${opts.footer}<br />` : "";
+  return `<!DOCTYPE html>
+<html lang="es" style="margin:0;padding:0;background:#eaf1ff;">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="color-scheme" content="light only" /><title>${brandEsc(opts.title)}</title></head>
+<body style="font-family:Arial,Helvetica,sans-serif;background-color:#eaf1ff;margin:0;padding:0;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eaf1ff;padding:40px 12px;"><tr><td align="center">
+<table width="${width}" cellpadding="0" cellspacing="0" style="max-width:100%;background:#ffffff;border-radius:12px;padding:40px 30px;box-shadow:0 4px 10px rgba(0,0,0,0.06);font-family:Arial,Helvetica,sans-serif;">
+<tr><td align="center" style="padding-bottom:20px;"><img src="${BRAND_LOGO_URL}" alt="CatalogoHoy" width="90" style="display:block;" /></td></tr>
+<tr><td style="font-size:22px;font-weight:bold;color:#16367f;text-align:center;padding-bottom:${opts.subtitle ? "6px" : "10px"};">${brandEsc(opts.title)}</td></tr>
+${subtitle}
+<tr><td style="font-size:15px;color:#383838;text-align:left;line-height:1.6;padding-bottom:25px;">${opts.bodyHtml}</td></tr>
+${buttons}
+${note}
+<tr><td style="font-size:12px;color:#a6a6a6;text-align:center;padding-top:25px;line-height:1.6;">${footerExtra}© ${new Date().getFullYear()} CatalogoHoy — Todos los derechos reservados.</td></tr>
+</table>
+</td></tr></table>
+</body>
+</html>`;
+}
+// ---------------------------------------------------------------------------
 function emailShell(opts: {
   title: string; headlineColor: string; headline: string; greetingName: string | null; body: string;
   rows: Array<{ label: string; value: string }>; ctaLabel: string; ctaUrl: string; themeColor: string;
   logo: string | null; brandName: string;
 }): string {
-  const themeColor = opts.themeColor || "#10b981";
-  const headerInner = opts.logo
-    ? `<img src="${escape(opts.logo)}" alt="${escape(opts.brandName)}" width="56" height="56" style="display:inline-block;border-radius:50%;border:3px solid #ffffff;background:#ffffff;" />`
-    : `<div style="display:inline-block;width:56px;height:56px;border-radius:50%;background:#ffffff33;line-height:56px;font-weight:700;font-size:22px;color:#ffffff;">${escape(opts.brandName.charAt(0))}</div>`;
   const greeting = opts.greetingName ? `Hola ${escape(opts.greetingName.split(" ")[0])},` : "Hola,";
-  const rowsHtml = opts.rows.map((r) => `<tr><td style="padding:6px 0;font-size:13px;color:#94a3b8;">${escape(r.label)}</td><td style="padding:6px 0;font-size:14px;color:#1e293b;font-weight:600;text-align:right;">${escape(r.value)}</td></tr>`).join("");
-  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/><title>${escape(opts.title)}</title></head><body style="margin:0;padding:0;background:#f8fafc;font-family:'Inter',-apple-system,sans-serif;color:#1e293b;"><table cellspacing="0" cellpadding="0" width="100%" style="background:#f8fafc;padding:24px 12px;"><tr><td align="center"><table cellspacing="0" cellpadding="0" width="600" style="max-width:100%;background:#fff;border-radius:16px;overflow:hidden;"><tr><td style="background:${themeColor};padding:32px 24px;text-align:center;">${headerInner}<h1 style="margin:16px 0 4px;font-size:18px;font-weight:700;color:#fff;">${escape(opts.brandName)}</h1><p style="margin:0;font-size:13px;color:#ffffffcc;">CatalogoHoy</p></td></tr><tr><td style="padding:32px 24px;"><div style="background:${opts.headlineColor}1A;border-left:4px solid ${opts.headlineColor};border-radius:8px;padding:14px 16px;margin-bottom:24px;"><p style="margin:0;font-size:18px;font-weight:700;color:${opts.headlineColor};">${escape(opts.headline)}</p></div><p style="margin:0 0 12px;font-size:15px;">${greeting}</p><p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">${escape(opts.body)}</p><div style="background:#f8fafc;border-radius:12px;padding:18px;margin-bottom:24px;"><table cellspacing="0" cellpadding="0" width="100%">${rowsHtml}</table></div><div style="text-align:center;margin:24px 0 8px;"><a href="${escape(opts.ctaUrl)}" style="display:inline-block;background:${themeColor};color:#fff;text-decoration:none;font-weight:600;padding:14px 28px;border-radius:12px;">${escape(opts.ctaLabel)} →</a></div></td></tr><tr><td style="padding:20px 24px;text-align:center;background:#f8fafc;border-top:1px solid #f1f5f9;"><p style="margin:0;font-size:11px;color:#94a3b8;">Recibiste este email porque sos dueño del catálogo <strong>${escape(opts.brandName)}</strong>.<br>CatalogoHoy · <a href="https://catalogohoy.com" style="color:#94a3b8;">catalogohoy.com</a></p></td></tr></table></td></tr></table></body></html>`;
+  return brandEmail({
+    title: opts.headline,
+    subtitle: opts.brandName,
+    bodyHtml: `<p style="margin:0 0 12px;">${greeting}</p><p style="margin:0 0 18px;">${escape(opts.body)}</p>${brandRows(opts.rows.map((r) => ({ label: r.label, value: r.value })))}`,
+    buttons: [{ label: opts.ctaLabel, url: opts.ctaUrl }],
+    footer: `Recibiste este email porque eres dueño del catálogo <strong>${escape(opts.brandName)}</strong>.`,
+  });
 }
 
 interface OwnerInfo {
@@ -762,14 +825,19 @@ Deno.serve(async (req: Request) => {
         const cameFromTrial = prevStatus === "trialing";
         const endedStatuses = new Set(["canceled", "unpaid", "past_due", "incomplete_expired"]);
         if (cameFromTrial && sub.status === "active") {
+          // OJO: trialing→active ocurre ANTES del primer cobro (la factura del
+          // ciclo recién se finaliza ~1h después). Acá todavía NO hay pago:
+          // el cobro real se confirma con invoice.payment_succeeded ("Renovación
+          // cobrada") o falla con invoice.payment_failed ("Cobro fallido").
+          // Por eso el tono es informativo (azul), no de pago concretado.
           const owner = await fetchOwnerInfo(admin, Number(tenantId));
           await notifyDiscord({
-            title: "✅ Trial convertido a pago",
-            description: `**${tName}** convirtió su prueba en una suscripción paga del plan **${planLabel(metaPlanId ?? "")}**.`,
-            color: 0x22c55e,
+            title: "⏳ Trial finalizado — suscripción activa (cobro pendiente)",
+            description: `La prueba de **${tName}** terminó y su suscripción del plan **${planLabel(metaPlanId ?? "")}** pasó a activa. Stripe intentará el primer cobro en la próxima hora — se confirma con «Renovación cobrada» (o «Cobro fallido»).`,
+            color: 0x3b82f6,
             fields: [
               { name: "Estado", value: sub.status, inline: true },
-              { name: "Próximo cobro", value: validUntil, inline: true },
+              { name: "Ciclo pagado hasta", value: validUntil, inline: true },
               { name: "Slug", value: tSlug, inline: true },
               { name: "Dueño", value: owner?.email ? `${owner.name ?? "-"} (${owner.email})` : "-", inline: false },
             ],
