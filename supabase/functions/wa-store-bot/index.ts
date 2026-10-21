@@ -74,17 +74,33 @@ async function graph(path: string, body?: unknown) {
   return { ok: res.ok, data };
 }
 
-async function sendText(to: string, text: string) {
+/** Envía un texto y devuelve el id del mensaje (wamid) o null. */
+async function sendText(to: string, text: string): Promise<string | null> {
   // WhatsApp corta en 4096 caracteres.
   const body = text.trim().slice(0, 4000) || "👍";
-  await graph(`${NOTIFY_PNID}/messages`, {
+  const { data } = await graph(`${NOTIFY_PNID}/messages`, {
     messaging_product: "whatsapp",
     recipient_type: "individual",
     to,
     type: "text",
     text: { body, preview_url: true },
   });
+  return data?.messages?.[0]?.id ?? null;
 }
+
+/** Envía una imagen por URL (solo JPG/PNG) con caption opcional. Devuelve el wamid o null. */
+async function sendImage(to: string, link: string, caption?: string): Promise<string | null> {
+  const { ok, data } = await graph(`${NOTIFY_PNID}/messages`, {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to,
+    type: "image",
+    image: caption ? { link, caption: caption.slice(0, 1024) } : { link },
+  });
+  return ok ? data?.messages?.[0]?.id ?? null : null;
+}
+
+const isWaImage = (url: string) => /\.(jpe?g|png)(\?|$)/i.test(url);
 
 /** Marca el mensaje como leído y muestra "escribiendo…" mientras pensamos. */
 async function markReadTyping(messageId: string) {
@@ -281,6 +297,11 @@ const TOOLS: Anthropic.Tool[] = [
         price_promotional: { type: "number", description: "Precio de oferta (menor al precio)" },
         category_ids: { type: "array", items: { type: "number" } },
         sizes: { type: "array", items: { type: "object", properties: { name: { type: "string" }, stock: { type: "number" } } } },
+        wholesale_tiers: {
+          type: "array",
+          description: "Precios al mayor, ej. [{title:'3 piezas', price:15}]. [] los quita.",
+          items: { type: "object", properties: { title: { type: "string" }, price: { type: "number" } } },
+        },
         use_pending_photos: { type: "boolean" },
         is_hidden: { type: "boolean" },
       },
@@ -305,10 +326,30 @@ const TOOLS: Anthropic.Tool[] = [
         sizes: { type: "array", items: { type: "object", properties: { name: { type: "string" }, stock: { type: "number" } } } },
         is_hidden: { type: "boolean" },
         is_sold_out: { type: "boolean" },
+        wholesale_tiers: {
+          type: "array",
+          description: "Precios al mayor, ej. [{title:'3 piezas', price:15}]. [] los quita.",
+          items: { type: "object", properties: { title: { type: "string" }, price: { type: "number" } } },
+        },
         add_pending_photos: { type: "boolean" },
         replace_photos: { type: "boolean" },
       },
       required: ["id"],
+    },
+  },
+  {
+    name: "send_products",
+    description:
+      "Envía al dueño, por WhatsApp, la ficha de cada producto (fotos + toda su información) como mensajes separados, uno por producto. " +
+      "Úsala cuando pida ver productos con sus fotos, \"uno por uno\", \"la ficha\" o \"mándame el producto\". " +
+      "El dueño puede responder (citar) cualquiera de esos mensajes para editar ese producto. Máximo 10 por llamada; para más, llama de nuevo con los siguientes.",
+    input_schema: {
+      type: "object",
+      properties: {
+        product_ids: { type: "array", items: { type: "number" } },
+        max_photos: { type: "number", description: "Fotos por producto (1 a 4, default 4)" },
+      },
+      required: ["product_ids"],
     },
   },
   {
@@ -372,6 +413,7 @@ const TOOLS: Anthropic.Tool[] = [
 
 interface Ctx {
   link: Link;
+  shopUrl: string;
   pendingPhotos: string[];
   /** Se vuelve true cuando una tool consumió las fotos pendientes. */
   photosUsed: boolean;
@@ -405,6 +447,11 @@ function productFields(a: Record<string, any>): Record<string, unknown> {
   if (a.stock !== undefined) p.stock = a.stock === null ? null : Number(a.stock);
   if (a.is_hidden !== undefined) p.is_hidden = !!a.is_hidden;
   if (a.is_sold_out !== undefined) p.is_sold_out = !!a.is_sold_out;
+  if (Array.isArray(a.wholesale_tiers)) {
+    // deno-lint-ignore no-explicit-any
+    p.wholesale_tiers = a.wholesale_tiers.map((t: any) => ({ title: String(t.title ?? "").trim(), price: Number(t.price) || 0 }));
+    p.is_wholesale = a.wholesale_tiers.length > 0;
+  }
   if (Array.isArray(a.sizes)) {
     // deno-lint-ignore no-explicit-any
     p.sizes = a.sizes.map((s: any) => ({ name: String(s.name ?? ""), stock: s.stock === undefined ? null : Number(s.stock) }));
@@ -412,6 +459,40 @@ function productFields(a: Record<string, any>): Record<string, unknown> {
     if (a.sizes.length) p.stock = null;
   }
   return p;
+}
+
+const PRODUCT_DETAIL =
+  "id, name, description, price, price_promotional, stock, is_sized, sizes, is_variant, variants, is_wholesale, wholesale_tiers, photos, is_hidden, is_sold_out, sku, product_categories(categories(id, name))";
+
+// deno-lint-ignore no-explicit-any
+function productCaption(p: any, shopUrl: string): string {
+  const money = (n: unknown) => `$${Number(n) || 0}`;
+  const lines = [`*${p.name}*`];
+  const promo = Number(p.price_promotional) > 0;
+  lines.push(`💲 ${promo ? `${money(p.price_promotional)} (antes ${money(p.price)})` : money(p.price)}`);
+  if (p.is_sized && (p.sizes ?? []).length) {
+    // deno-lint-ignore no-explicit-any
+    lines.push(`📏 Tallas: ${p.sizes.map((s: any) => `${s.name} (${s.stock ?? "∞"})`).join(", ")}`);
+  } else {
+    lines.push(`📦 Stock: ${p.is_sold_out ? "agotado" : p.stock === null ? "ilimitado" : p.stock}`);
+  }
+  if (p.is_variant && (p.variants ?? []).length) {
+    // deno-lint-ignore no-explicit-any
+    lines.push(`🎨 Variantes: ${p.variants.map((v: any) => `${v.name}${v.price ? ` ${money(v.price)}` : ""}`).join(", ")}`);
+  }
+  if (p.is_wholesale && (p.wholesale_tiers ?? []).length) {
+    // deno-lint-ignore no-explicit-any
+    lines.push(`🏷️ Al mayor: ${p.wholesale_tiers.map((t: any) => `${String(t.title).trim()} ${money(t.price)}`).join(" · ")}`);
+  }
+  // deno-lint-ignore no-explicit-any
+  const cats = (p.product_categories ?? []).map((pc: any) => pc.categories?.name).filter(Boolean);
+  if (cats.length) lines.push(`🗂️ ${cats.join(", ")}`);
+  if (p.sku) lines.push(`🔖 SKU: ${p.sku}`);
+  if (p.is_hidden) lines.push("🙈 Oculto en el catálogo");
+  if (p.description?.trim()) lines.push("", p.description.trim().slice(0, 350));
+  if (shopUrl) lines.push("", `🔗 ${shopUrl}/product/${p.id}`);
+  lines.push("", "↩️ _Responde a este mensaje para editarlo._");
+  return lines.join("\n");
 }
 
 // deno-lint-ignore no-explicit-any
@@ -463,7 +544,7 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
     }
     case "get_product": {
       const { data } = await admin.from("products")
-        .select("id, name, description, price, price_promotional, stock, is_sized, sizes, is_variant, variants, photos, is_hidden, is_sold_out, sku, product_categories(categories(id, name))")
+        .select(PRODUCT_DETAIL)
         .eq("tenant_id", tenantId).eq("id", Number(a.id)).maybeSingle();
       if (!data) return { error: "Producto no encontrado en esta tienda" };
       return { ...data, total_stock: totalStock(data) };
@@ -503,6 +584,31 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       }
       if (Array.isArray(a.category_ids)) await relinkCategories(current.id, await ownCategoryIds(tenantId, a.category_ids));
       return { updated: true, id: current.id, changed: Object.keys(payload) };
+    }
+    case "send_products": {
+      const ids = (Array.isArray(a.product_ids) ? a.product_ids : []).map(Number).filter(Boolean).slice(0, 10);
+      if (!ids.length) return { error: "Indica los productos" };
+      const maxPhotos = Math.min(Math.max(Number(a.max_photos) || 4, 1), 4);
+      const { data } = await admin.from("products").select(PRODUCT_DETAIL).eq("tenant_id", tenantId).in("id", ids);
+      // deno-lint-ignore no-explicit-any
+      const byId = new Map((data ?? []).map((p: any) => [p.id, p]));
+      const phone = ctx.link.phone;
+      let sent = 0;
+      for (const id of ids) {
+        const p = byId.get(id);
+        if (!p) continue;
+        const caption = productCaption(p, ctx.shopUrl);
+        const photos = ((p.photos ?? []) as string[]).filter(isWaImage).slice(0, maxPhotos);
+        const wamids: (string | null)[] = [];
+        // Fotos extra primero y la ficha al final, con la primera foto: así queda abajo, fácil de responder.
+        for (const url of photos.slice(1)) wamids.push(await sendImage(phone, url));
+        const main = photos[0] ? await sendImage(phone, photos[0], caption) : null;
+        wamids.push(main ?? await sendText(phone, caption));
+        const refs = wamids.filter(Boolean).map((wamid) => ({ wamid, phone, tenant_id: tenantId, product_id: p.id }));
+        if (refs.length) await admin.from("wa_bot_msg_refs").upsert(refs, { onConflict: "wamid" });
+        sent++;
+      }
+      return { sent, not_found: ids.length - sent };
     }
     case "delete_product": {
       if (a.confirmed !== true) return { error: "Pide confirmación al dueño antes de eliminar." };
@@ -610,6 +716,9 @@ Reglas:
 - Para editar, busca primero el producto con list_products. Si hay varios parecidos, pregunta cuál.
 - Para preguntas sobre muchos productos (sin foto, agotados, ocultos, en oferta, de una categoría…) usa los filtros de list_products: nunca digas que no puedes filtrar ni pidas revisar uno por uno. Si total es grande, da el número y lista los nombres de forma compacta (uno por línea); si hay next_offset, ofrece mostrar más.
 - "Órdenes recientes" en el contexto son las últimas que recibió la tienda (de esas le llega aviso al dueño). Si dice "esa orden", "la última" o "la que me llegó", es la más reciente salvo que el chat indique otra. Usa get_order para ver qué pidió: cada producto trae product_id, con el que puedes editarlo (precio, stock, fotos…).
+- Sí puedes enviarle fotos: para mostrar productos con sus imágenes o "uno por uno" usa send_products (cada ficha llega como un mensaje aparte). Después responde solo una línea, ej. "Te mandé 5 productos 👆 Responde a cualquiera para editarlo." Nunca digas que no puedes enviar imágenes.
+- Si el mensaje empieza con [Respondiendo al producto …], el dueño citó esa ficha: lo que pida aplica a ESE producto (usa su id directo, sin buscar).
+- Tallas: sizes [{name, stock}]. Venta al mayor: wholesale_tiers [{title, price}].
 - Eliminar productos y cambiar precios en lote: pide confirmación explícita antes de aplicarlo.
 - Las órdenes son solo de consulta: si piden cambiar el estado de una orden, explica que por ahora eso se hace desde el panel.
 - No inventes datos (precios, stock, órdenes): usa siempre las herramientas.
@@ -636,7 +745,7 @@ async function runAgent(
   shopName: string,
   shopUrl: string,
 ): Promise<{ reply: string; actions: string[]; usage: Usage; photosUsed: boolean }> {
-  const ctx: Ctx = { link, pendingPhotos: session.pending_photos, photosUsed: false };
+  const ctx: Ctx = { link, shopUrl, pendingPhotos: session.pending_photos, photosUsed: false };
   const usage: Usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, tools: 0 };
   const actions: string[] = [];
 
@@ -758,6 +867,16 @@ async function handleInbound(m: any) {
   }
 
   await markReadTyping(m.id);
+
+  // ¿Responde (cita) una ficha de producto que le mandamos?
+  if (m.context?.id) {
+    const { data: ref } = await admin.from("wa_bot_msg_refs").select("product_id")
+      .eq("wamid", m.context.id).eq("tenant_id", link.tenant_id).maybeSingle();
+    if (ref?.product_id) {
+      const { data: rp } = await admin.from("products").select("name").eq("id", ref.product_id).eq("tenant_id", link.tenant_id).maybeSingle();
+      if (rp) text = `[Respondiendo al producto id=${ref.product_id} «${rp.name}»]\n${text}`;
+    }
+  }
   admin.from("wa_bot_links").update({ last_used_at: new Date().toISOString() }).eq("id", link.id).then(() => {});
 
   // Fotos: se acumulan. Si vienen sin texto, esperamos un momento por si
