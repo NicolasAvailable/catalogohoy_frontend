@@ -253,6 +253,25 @@
             }
           </div>
         }
+        @case ('variant-size') {
+          @if (optionsVariant(); as ov) {
+            <button type="button" class="option-back" (click)="backToVariants()">
+              <ui-icon name="chevron-left" styleClass="size-4" />
+              {{ ov.name }}
+            </button>
+            <div class="option-list">
+              @for (s of ov.sizes; track s.name) {
+                <button type="button" class="option-row" (click)="addVariantSize(op, ov, s)">
+                  <span class="option-size">{{ s.name }}</span>
+                  <span class="option-name">
+                    {{ s.stock == null ? ('Disponible' | transloco) : s.stock + (' en stock' | transloco) }}
+                  </span>
+                  <span class="option-price">{{ cs() }}{{ (ov.price > 0 ? ov.price : unitPrice(op)) | number: '1.2-2' }}</span>
+                </button>
+              }
+            </div>
+          }
+        }
         @case ('size') {
           <div class="option-list">
             @for (s of op.sizes; track s.name) {

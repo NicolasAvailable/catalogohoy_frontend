@@ -1118,3 +1118,16 @@
   font-size: 0.78rem;
   color: var(--text-soft);
 }
+
+.option-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+}
