@@ -5,7 +5,7 @@ import { TenantStore } from '@catalogohoy/tenant';
 import { ToastService } from '@shared/infrastructure';
 import { ButtonComponent, IconComponent } from '@ui';
 import {
-  WA_BOT_BETA_TENANTS,
+  isWaBotEnabled,
   WaBotLink,
   WaBotMessage,
   WaBotService,
@@ -127,7 +127,7 @@ export class WhatsappBot implements OnInit, OnDestroy {
   public async ngOnInit(): Promise<void> {
     const id = Number(await this.tenantStore.getTenantIdAsync());
     this.tenantId.set(id || null);
-    this.enabled.set(WA_BOT_BETA_TENANTS.includes(id));
+    this.enabled.set(isWaBotEnabled(id));
     if (!this.enabled()) {
       this.ready.set(true);
       return;
