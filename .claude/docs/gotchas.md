@@ -262,6 +262,6 @@
   `_pos_can_access_tenant`. Sin eso, cualquiera con la anon key lee o cambia otra tienda.
 - RPCs internas (cron, edge functions con service role): `revoke execute ... from public, anon, authenticated`.
   Supabase da EXECUTE a PUBLIC por defecto al crear la función.
-- Ver `supabase/migrations/20261021_tenant_isolation_hardening.sql`.
+- Ver `supabase/migrations/20261021_tenant_isolation_hardening.sql` (aplicada en prod 2026-10-22). El MCP de Supabase se cuelga con DROP (pide confirmación): usar ALTER POLICY.
 - Pendiente (2026-10-21): `orders.lectura_publica` (SELECT true para anon) sigue activa a pedido
   de Nicolas; el plan está en `supabase/migrations/PLAN_public_orders.md`.

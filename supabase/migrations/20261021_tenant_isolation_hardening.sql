@@ -118,20 +118,14 @@ end
 $mig$;
 
 -- 4 -------------------------------------------------------------------------
-drop policy if exists "Authenticated users can insert product categories" on public.product_categories;
-drop policy if exists "Authenticated users can update product categories" on public.product_categories;
-drop policy if exists "Authenticated users can delete product categories" on public.product_categories;
-
-create policy product_categories_insert_tenant_members on public.product_categories
-  for insert to authenticated
+-- ALTER (no DROP/CREATE) para que nunca haya un instante sin policy.
+alter policy "Authenticated users can insert product categories" on public.product_categories
   with check (exists (
     select 1 from public.products p join public.categories c on c.id = product_categories.category_id
     where p.id = product_categories.product_id
       and c.tenant_id = p.tenant_id
       and public._pos_can_access_tenant(p.tenant_id)));
-
-create policy product_categories_update_tenant_members on public.product_categories
-  for update to authenticated
+alter policy "Authenticated users can update product categories" on public.product_categories
   using (exists (
     select 1 from public.products p
     where p.id = product_categories.product_id and public._pos_can_access_tenant(p.tenant_id)))
@@ -140,12 +134,13 @@ create policy product_categories_update_tenant_members on public.product_categor
     where p.id = product_categories.product_id
       and c.tenant_id = p.tenant_id
       and public._pos_can_access_tenant(p.tenant_id)));
-
-create policy product_categories_delete_tenant_members on public.product_categories
-  for delete to authenticated
+alter policy "Authenticated users can delete product categories" on public.product_categories
   using (exists (
     select 1 from public.products p
     where p.id = product_categories.product_id and public._pos_can_access_tenant(p.tenant_id)));
+alter policy "Authenticated users can insert product categories" on public.product_categories rename to product_categories_insert_tenant_members;
+alter policy "Authenticated users can update product categories" on public.product_categories rename to product_categories_update_tenant_members;
+alter policy "Authenticated users can delete product categories" on public.product_categories rename to product_categories_delete_tenant_members;
 
 -- 5 -------------------------------------------------------------------------
 -- El front (RateService) sincroniza bcv_usd/bcv_eur desde bcv_rates con un
@@ -173,7 +168,6 @@ end;
 $$;
 revoke execute on function public.exchange_rates_guard_update() from public, anon, authenticated;
 
-drop trigger if exists trg_exchange_rates_guard_update on public.exchange_rates;
 create trigger trg_exchange_rates_guard_update
   before update on public.exchange_rates
   for each row execute function public.exchange_rates_guard_update();
