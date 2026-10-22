@@ -1,4 +1,22 @@
 <div class="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex flex-col gap-9 sm:gap-12">
+  @if (isLoading()) {
+  <!-- Esqueleto mientras se consulta la conexión con Meta -->
+  <div class="flex flex-col items-center gap-4 animate-pulse" aria-busy="true">
+    <div class="w-14 h-14 rounded-2xl bg-grey-100"></div>
+    <div class="h-7 w-full max-w-lg rounded bg-grey-100"></div>
+    <div class="h-4 w-full max-w-md rounded bg-grey-100"></div>
+    <div class="h-12 w-52 rounded-xl bg-grey-100 mt-1"></div>
+  </div>
+  <div class="grid md:grid-cols-3 gap-4 animate-pulse">
+    @for (i of [1, 2, 3]; track i) {
+    <div class="h-36 rounded-xl bg-white border border-grey-100"></div>
+    }
+  </div>
+  } @else {
+  <div class="flex flex-col gap-9 sm:gap-12 animate-fade-in">
+  @if (!canConnect()) {
+  <p class="rounded-xl bg-primary-50 px-4 py-3 text-sm text-primary-700">{{ 'Solo puedes ver este canal. Pídele al dueño del catálogo permiso para conectarlo.' | transloco }}</p>
+  }
 
   @if (!metaConnected()) {
   <!-- ═══ Hero (mismo patrón que la landing de Chat) ═══ -->
@@ -22,7 +40,7 @@
     <button
       type="button"
       class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary-500 text-white text-base font-semibold hover:bg-primary-600 transition-colors mt-1 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-      [disabled]="isConnectingMeta() || isLocked()"
+      [disabled]="isConnectingMeta() || isLocked() || !canConnect()"
       (click)="connectMeta()"
     >
       {{ (isConnectingMeta() ? 'Conectando…' : 'Conectar con Meta') | transloco }}
@@ -104,7 +122,8 @@
           }
           <button
             type="button"
-            class="text-xs font-medium text-grey-300 hover:text-red-500 transition-colors cursor-pointer"
+            class="text-xs font-medium text-grey-300 hover:text-red-500 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            [disabled]="!canConnect()"
             (click)="disconnectMeta()"
           >
             {{ 'Desconectar' | transloco }}
@@ -154,7 +173,7 @@
           severity="primary"
           [fluid]="false"
           [isLoading]="isProvisioningCatalog()"
-          [disabled]="isProvisioningCatalog()"
+          [disabled]="isProvisioningCatalog() || !canConnect()"
           (click)="publishMetaCatalog()"
         />
       </div>
@@ -193,7 +212,7 @@
         <button
           type="button"
           class="text-xs font-semibold text-grey-500 hover:text-primary transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
-          [disabled]="isSyncingCatalog()"
+          [disabled]="isSyncingCatalog() || !canConnect()"
           (click)="syncMetaCatalogNow()"
         >
           {{ 'Sincronizar ahora' | transloco }}
@@ -239,7 +258,7 @@
           severity="primary"
           [fluid]="false"
           [isLoading]="isProvisioningPixel()"
-          [disabled]="isProvisioningPixel()"
+          [disabled]="isProvisioningPixel() || !canConnect()"
           (click)="provisionMetaPixel()"
         />
       </div>
@@ -361,6 +380,8 @@
         </div>
       </div>
     </div>
+  </div>
+  }
   </div>
   }
 </div>

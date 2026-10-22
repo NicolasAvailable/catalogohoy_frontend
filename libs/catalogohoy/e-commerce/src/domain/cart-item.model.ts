@@ -26,7 +26,10 @@ export class CartItem {
     /** Tope de unidades para esta línea = stock disponible al momento de
      *  agregar (variante/talla/producto, lo más específico). `null` = sin
      *  límite/no rastreado. Lo respeta el "+" del carrito para no pasarse. */
-    public readonly maxStock: number | null = null
+    public readonly maxStock: number | null = null,
+    /** Precio unitario si paga en divisas (promo en divisas, ver
+     *  `divisas-promo.ts`). `null` = la línea no tiene precio en divisas. */
+    public readonly divisasPrice: number | null = null
   ) {
     this.id = id || crypto.randomUUID();
   }
@@ -38,6 +41,12 @@ export class CartItem {
 
   public get total(): number {
     return Math.round(this.price * this.quantity * 100) / 100;
+  }
+
+  /** Lo que se ahorra la línea si paga en divisas (0 si no aplica). */
+  public get divisasSavings(): number {
+    if (this.divisasPrice === null || this.divisasPrice >= this.price) return 0;
+    return Math.round((this.price - this.divisasPrice) * this.quantity * 100) / 100;
   }
 
   public incrementQuantity(): CartItem {
@@ -55,7 +64,8 @@ export class CartItem {
       this.variantId,
       this.variantName,
       this.addons,
-      this.maxStock
+      this.maxStock,
+      this.divisasPrice
     );
   }
 
@@ -75,7 +85,8 @@ export class CartItem {
       this.variantId,
       this.variantName,
       this.addons,
-      this.maxStock
+      this.maxStock,
+      this.divisasPrice
     );
   }
 
@@ -94,7 +105,8 @@ export class CartItem {
       primitives.variantId ?? null,
       primitives.variantName ?? null,
       primitives.addons ?? [],
-      primitives.maxStock ?? null
+      primitives.maxStock ?? null,
+      primitives.divisasPrice ?? null
     );
   }
 }
@@ -114,4 +126,5 @@ export interface CartItemPrimitives {
   variantName?: string | null;
   addons?: CartItemAddon[];
   maxStock?: number | null;
+  divisasPrice?: number | null;
 }

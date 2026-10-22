@@ -27,8 +27,10 @@ import {
 } from '@ui';
 import {
   CartItem,
+  isDivisasPaymentMethod,
   isNitFeatureEnabled,
   PublicOrderAdjustment,
+  usesDivisasPromo,
 } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
@@ -231,7 +233,7 @@ export default class Checkout {
    *  crédito. Mismas reglas y snapshot que el editor de órdenes del admin
    *  (% sobre el subtotal de productos, descuento capeado para no dejar el
    *  total negativo). */
-  public readonly paymentAdjustment = computed<PublicOrderAdjustment | null>(() => {
+  private readonly methodAdjustment = computed<PublicOrderAdjustment | null>(() => {
     if (!this.applyAdjustments() || this.isCredit()) return null;
     const name = this.selectedPaymentMethod();
     if (!name) return null;
@@ -261,6 +263,51 @@ export default class Checkout {
       magnitude,
       kind,
       visible: d['__adjustVisible'] !== '0',
+    };
+  });
+
+  /** Promo en divisas (catálogos de `divisas-promo.ts`): el carrito cobra el
+   *  precio normal; si el método elegido es en divisas (efectivo/USDT), la
+   *  diferencia con el precio promocional entra como descuento. */
+  public readonly isDivisasPromo = computed(() =>
+    usesDivisasPromo(Number(this.ecommerceStore.catalogInfo()?.id))
+  );
+  public readonly divisasSavings = computed(() =>
+    this.isDivisasPromo() ? this.cartStore.divisasSavings() : 0
+  );
+  public readonly divisasMethodNames = computed(() =>
+    this.availablePaymentMethods()
+      .map((m) => m.name)
+      .filter((n) => isDivisasPaymentMethod(n))
+  );
+  private readonly divisasAdjustment = computed<PublicOrderAdjustment | null>(() => {
+    const savings = this.divisasSavings();
+    const name = this.selectedPaymentMethod();
+    if (savings <= 0 || this.isCredit() || !isDivisasPaymentMethod(name)) return null;
+    return {
+      label: `Precio en divisas · ${name}`,
+      amount: -savings,
+      magnitude: savings,
+      kind: 'discount',
+      visible: true,
+    };
+  });
+
+  /** Ajuste final del pedido: el del método de pago y/o el de la promo en
+   *  divisas (si aplican los dos se suman en un solo snapshot). */
+  public readonly paymentAdjustment = computed<PublicOrderAdjustment | null>(() => {
+    const method = this.methodAdjustment();
+    const divisas = this.divisasAdjustment();
+    if (!divisas) return method;
+    if (!method) return divisas;
+    const amount = Math.round((method.amount + divisas.amount) * 100) / 100;
+    if (amount === 0) return null;
+    return {
+      label: `${divisas.label} + ${method.label}`,
+      amount,
+      magnitude: Math.abs(amount),
+      kind: amount < 0 ? 'discount' : 'surcharge',
+      visible: true,
     };
   });
 

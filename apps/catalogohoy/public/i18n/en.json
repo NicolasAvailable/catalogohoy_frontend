@@ -2797,5 +2797,11 @@
   "Hay una nueva versión de la app con mejoras y correcciones.": "There's a new version of the app with improvements and fixes.",
   "Necesitas actualizar a la última versión para seguir usando la app.": "You need to update to the latest version to keep using the app.",
   "Ingresos por método de pago": "Income by payment method",
-  "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Completed orders only. Split payments add each part to its method."
+  "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Completed orders only. Split payments add each part to its method.",
+  "En divisas o USDT": "In foreign currency or USDT",
+  "Promo en divisas": "Foreign-currency deal",
+  "Pagando con {methods} ahorras": "Pay with {methods} and save",
+  "Asistente WhatsApp": "WhatsApp Assistant",
+  "Beta": "Beta",
+  "Solo puedes ver este canal. Pídele al dueño del catálogo permiso para conectarlo.": "You can only view this channel. Ask the catalog owner for permission to connect it."
 }

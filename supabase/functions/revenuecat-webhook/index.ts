@@ -8,6 +8,9 @@
 // tenant_id. El estado del plan vive en las columnas existentes de `tenants`
 // (plan_id, plan_started_at, plan_expires_at, plan_expired); se agregan iap_*
 // de procedencia. Idempotente (dedupe por event.id en iap_webhook_events).
+//
+// Compras de prueba (environment SANDBOX: Xcode/TestFlight) solo se registran:
+// no tocan el plan real del tenant, salvo REVENUECAT_ALLOW_SANDBOX=true.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
@@ -23,15 +26,17 @@ const ACTIVE_TYPES = new Set([
   'TEMPORARY_ENTITLEMENT_GRANT',
 ]);
 
-const json = (body: unknown, status = 200) =>
+const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json' },
   });
 
-function planFromProduct(productId?: string | null): string | null {
+function planFromProduct(productId) {
   if (!productId) return null;
-  const m = productId.match(/^ch_(basico|pro|avanzado)_/i);
+  // iOS: `ch_basico_monthly` (guion bajo). Google Play: `ch_basico:monthly`
+  // (formato productId:basePlanId). Aceptamos ambos separadores.
+  const m = productId.match(/^ch_(basico|pro|avanzado)[_:]/i);
   return m ? m[1].toLowerCase() : null;
 }
 
@@ -44,20 +49,20 @@ Deno.serve(async (req) => {
   }
 
   const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    Deno.env.get('SUPABASE_URL'),
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   );
 
-  let payload: Record<string, unknown>;
+  let payload;
   try {
     payload = await req.json();
   } catch {
     return json({ error: 'bad_json' }, 400);
   }
 
-  const event = payload?.['event'] as Record<string, unknown> | undefined;
-  const eventId = event?.['id'] as string | undefined;
-  const type = event?.['type'] as string | undefined;
+  const event = payload?.['event'];
+  const eventId = event?.['id'];
+  const type = event?.['type'];
   if (!event || !eventId || !type) return json({ ok: true, ignored: 'no_event' });
 
   // Dedupe (idempotencia): si ya se procesó este evento, no repetir.
@@ -68,10 +73,10 @@ Deno.serve(async (req) => {
     .maybeSingle();
   if (seen) return json({ ok: true, deduped: true });
 
-  const appUserId = event['app_user_id'] as string | undefined;
+  const appUserId = event['app_user_id'];
 
   // Resolver tenant del dueño (auth UUID → users → users_tenants owner).
-  let tenantId: number | null = null;
+  let tenantId = null;
   if (appUserId && !appUserId.startsWith('$RCAnonymousID')) {
     const { data: u } = await supabase
       .from('users')
@@ -87,7 +92,7 @@ Deno.serve(async (req) => {
         .order('tenant_id', { ascending: true })
         .limit(1)
         .maybeSingle();
-      tenantId = (ut?.tenant_id as number) ?? null;
+      tenantId = ut?.tenant_id ?? null;
     }
   }
 
@@ -104,6 +109,15 @@ Deno.serve(async (req) => {
     return json({ ok: true, no_tenant: true });
   }
 
+  // Compras de prueba: se registran pero no cambian el plan real.
+  if (
+    String(event['environment'] ?? '').toUpperCase() === 'SANDBOX' &&
+    Deno.env.get('REVENUECAT_ALLOW_SANDBOX') !== 'true'
+  ) {
+    await recordEvent();
+    return json({ ok: true, sandbox_ignored: true });
+  }
+
   // Guard anti doble-cobro: si hay una suscripción Stripe ACTIVA (web), no la
   // pisamos con IAP (la paywall de la app también bloquea comprar en ese caso).
   const { data: tenant } = await supabase
@@ -117,28 +131,25 @@ Deno.serve(async (req) => {
   }
 
   const entitlements = Array.isArray(event['entitlement_ids'])
-    ? (event['entitlement_ids'] as string[])
+    ? event['entitlement_ids']
     : [];
-  const productId =
-    (event['new_product_id'] as string) ??
-    (event['product_id'] as string) ??
-    null;
+  const productId = event['new_product_id'] ?? event['product_id'] ?? null;
   const planId =
     PLAN_ENTITLEMENTS.find((p) => entitlements.includes(p)) ??
     planFromProduct(productId);
   const store = event['store'] === 'PLAY_STORE' ? 'play_store' : 'app_store';
 
-  const base: Record<string, unknown> = {
+  const base = {
     revenuecat_app_user_id: appUserId ?? null,
     iap_store: store,
     iap_product_id: productId,
   };
 
-  let update: Record<string, unknown> | null = null;
+  let update = null;
 
   if (ACTIVE_TYPES.has(type) && planId) {
-    const purchasedAt = event['purchased_at_ms'] as number | undefined;
-    const expiresAt = event['expiration_at_ms'] as number | undefined;
+    const purchasedAt = event['purchased_at_ms'];
+    const expiresAt = event['expiration_at_ms'];
     update = {
       ...base,
       plan_id: planId,
@@ -152,7 +163,6 @@ Deno.serve(async (req) => {
     const period = String(event['period_type'] ?? '').toUpperCase();
     if (period === 'TRIAL') update['trial_used_at'] = new Date().toISOString();
   } else if (type === 'CANCELLATION') {
-    // Cancelado pero con acceso hasta plan_expires_at (no se baja el plan acá).
     update = { ...base, iap_subscription_status: 'cancelled' };
   } else if (type === 'BILLING_ISSUE') {
     update = { ...base, iap_subscription_status: 'billing_issue' };
@@ -166,7 +176,6 @@ Deno.serve(async (req) => {
   }
 
   if (!update) {
-    // TRANSFER u otros tipos que no cambian el plan: solo se registran.
     await recordEvent();
     return json({ ok: true, ignored: type });
   }
@@ -176,7 +185,6 @@ Deno.serve(async (req) => {
     .update(update)
     .eq('id', tenantId);
   if (upErr) {
-    // NO registramos el evento → RevenueCat reintenta y se reaplica (idempotente).
     console.error('[revenuecat-webhook] update failed', upErr);
     return json({ ok: false, error: 'update_failed' }, 500);
   }

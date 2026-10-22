@@ -99,3 +99,11 @@ export const getTenantSlug = (): string => {
   const subdomain = hostname.split('.')[0];
   return subdomain;
 };
+
+/** Tiendas con el asistente de WhatsApp habilitado (CAT-78, beta). Debe
+ *  coincidir con WA_BOT_TENANTS de la edge `wa-store-bot`. 6 = CatalogoHoy. */
+export const WA_BOT_BETA_TENANTS: number[] = [6];
+/** Abierto a todas las tiendas (Nicolas, 2026-10-22), igual que la edge. */
+export const WA_BOT_ALL_TENANTS = true;
+export const isWaBotEnabled = (tenantId: number): boolean =>
+  WA_BOT_ALL_TENANTS || WA_BOT_BETA_TENANTS.includes(tenantId);

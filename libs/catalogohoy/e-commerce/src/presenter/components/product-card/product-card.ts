@@ -16,6 +16,7 @@ import {
   ProductMediaComponent,
   dialogConfig,
 } from '@ui';
+import { divisasPriceOf, usesDivisasPromo } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 import { ProductDetailModal } from '../product-detail-modal/product-detail-modal';
@@ -122,6 +123,14 @@ export class ProductCard {
     }
     return { min: Math.min(...prices), max: Math.max(...prices) };
   });
+
+  /** Promo en divisas (catálogos de `divisas-promo.ts`): precio para quien
+   *  paga en divisas/USDT. `null` = el catálogo no la usa o no hay promo. */
+  public readonly divisasPrice = computed(() =>
+    usesDivisasPromo(Number(this.ecommerceStore.catalogInfo()?.id))
+      ? divisasPriceOf(this.product())
+      : null
+  );
 
   public readonly availableStock = computed(() => {
     const p = this.product();

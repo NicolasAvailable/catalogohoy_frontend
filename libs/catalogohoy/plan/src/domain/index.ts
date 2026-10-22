@@ -4,3 +4,4 @@ export * from './enterprise.model';
 export * from './plan-features.const';
 export * from './plan.model';
 export * from './plan.service';
+export * from './tenant-plan-overrides';

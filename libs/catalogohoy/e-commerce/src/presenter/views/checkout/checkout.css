@@ -696,3 +696,17 @@
   color: var(--text-muted, #6b7280);
   font-size: 0.85em;
 }
+
+/* Promo en divisas (catálogos de divisas-promo.ts) */
+.checkout__divisas-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #ecfdf3;
+  color: #128a4b;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+}

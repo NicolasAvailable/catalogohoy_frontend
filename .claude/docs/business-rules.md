@@ -8,14 +8,15 @@
 > Pro subió a $20 y Avanzado a $35, y el **Básico se discontinuó para altas nuevas**
 > (grandfathered: los que ya lo pagan siguen igual, su sub está anclada al precio
 > viejo en Stripe; el grid de planes lo oculta salvo que sea el plan actual del
-> tenant). Se agregó **free trial de 7 días CON tarjeta** en la primera suscripción.
+> tenant). **2026-10: el Básico volvió a venderse** (landing y app).
+> Se agregó **free trial de 7 días CON tarjeta** en la primera suscripción.
 
 | Plan | Precio (mes) | Productos | Catálogos | Miembros equipo | Variantes/producto | Créditos IA/mes | Visible altas nuevas |
 |---|---|---|---|---|---|---|---|
 | **gratis** | $0 | 10 | 1 | 0 | 1 | **15** | sí |
 | **pro** | **$20** | 500 | 1 | 2 | 10 | **350** | sí |
 | **avanzado** | **$35** | ilimitados | 2 | 3 | 35 | **500** | sí |
-| ~~basico~~ (discontinuado) | $11.99 | 100 | 1 | 1 | 3 | **200** | **no** (grandfathered) |
+| **basico** | $11.99 | 100 | 1 | 1 | 3 | **200** | sí (volvió a la venta, 2026-10) |
 | **enterprise** | a medida (sin checkout) | ilimitados | 10 | 50 | 100 | **2000** | no (flag) |
 
 - **Free trial (2026-09)**: 7 días con tarjeta en la 1ª suscripción de Pro/Avanzado
@@ -65,6 +66,11 @@
 - Si cambian los allowances: actualizar el CASE en `ensure_ai_credits`,
   `reset_due_ai_credits`, `sync_ai_credits_on_plan_change` (DB) + `plans.ts` (app) +
   `Pricing.tsx` (landing). Al subirlos, bumpear a los existentes (sumar la diferencia al saldo).
+
+- **Bot de WhatsApp (wa-store-bot)**: cobra por costo real (v12, 2026-10-22): 1 crédito por cada
+  $0.01 de Claude Sonnet 5.5 (env `WA_BOT_CREDIT_USD`), mínimo 1. Pregunta corta ≈1, consulta ≈2,
+  producto con foto ≈3–4. Pedidos grandes (>3 productos o >10 créditos) piden confirmación antes;
+  el agente se detiene si se acaba el saldo. Avisa en la respuesta cuántos créditos usó y cuántos quedan.
 
 ## Packs de crédito (compra)
 

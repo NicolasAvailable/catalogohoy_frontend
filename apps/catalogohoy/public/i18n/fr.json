@@ -2797,5 +2797,11 @@
   "Hay una nueva versión de la app con mejoras y correcciones.": "Une nouvelle version de l'application est disponible avec des améliorations et des corrections.",
   "Necesitas actualizar a la última versión para seguir usando la app.": "Vous devez mettre à jour vers la dernière version pour continuer à utiliser l'application.",
   "Ingresos por método de pago": "Revenus par moyen de paiement",
-  "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Commandes terminées uniquement. Les paiements fractionnés ajoutent chaque part à son moyen."
+  "Solo órdenes completadas. Los pagos divididos suman cada parte a su método.": "Commandes terminées uniquement. Les paiements fractionnés ajoutent chaque part à son moyen.",
+  "En divisas o USDT": "En devises ou USDT",
+  "Promo en divisas": "Promo en devises",
+  "Pagando con {methods} ahorras": "En payant par {methods}, vous économisez",
+  "Asistente WhatsApp": "Assistant WhatsApp",
+  "Beta": "Bêta",
+  "Solo puedes ver este canal. Pídele al dueño del catálogo permiso para conectarlo.": "Vous pouvez seulement consulter ce canal. Demandez au propriétaire du catalogue l'autorisation de le connecter."
 }

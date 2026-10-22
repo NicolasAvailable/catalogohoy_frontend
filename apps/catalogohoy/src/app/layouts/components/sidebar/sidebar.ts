@@ -7,6 +7,7 @@ import { ChatBadgeRealtimeService, ChatStore } from '@catalogohoy/chat';
 import {
   clearNativeSlug,
   isNativeApp,
+  isWaBotEnabled,
   META_CHANNEL_ALLOWED_SLUGS,
   PosthogService,
   RevenueCatService,
@@ -85,6 +86,12 @@ export class Sidebar {
    *  flag becomes available even when the user lands on a route that
    *  doesn't otherwise touch the currency. */
   public readonly isVenezuela = computed(() => this.tenantCurrency.isVenezuela());
+  /** Asistente de WhatsApp (CAT-78): beta solo para tiendas habilitadas. */
+  public readonly waBotEnabled = computed(
+    () =>
+      isWaBotEnabled(Number(this.tenantStore.tenantId())) &&
+      (this.permissionsStore.isOwner() || this.permissionsStore.can()('asistente', 'view'))
+  );
 
   // Free-plan users can now enter these routes — the views themselves show
   // an upgrade prompt. The sidebar no longer needs to lock them.
@@ -111,6 +118,9 @@ export class Sidebar {
   );
   public readonly canViewTeam = computed(
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('equipo', 'view')
+  );
+  public readonly canUsePos = computed(
+    () => this.permissionsStore.isOwner() || this.permissionsStore.can()('pos', 'use')
   );
   public readonly canViewReports = computed(
     () => this.permissionsStore.isOwner() || this.permissionsStore.can()('reportes', 'view')
@@ -202,7 +212,7 @@ export class Sidebar {
   );
 
   /** Canal "Instagram y Facebook" (Conectar Meta, CAT-64/65): allowlist por
-   *  slug hasta pasar el App Review de Meta + mismo permiso que Mi catálogo. */
+   *  slug hasta pasar el App Review de Meta + permiso de equipo `meta:view`. */
   public readonly canViewMetaChannel = computed(() => {
     if (
       META_CHANNEL_ALLOWED_SLUGS !== null &&
@@ -210,7 +220,7 @@ export class Sidebar {
     ) {
       return false;
     }
-    return this.canViewCatalog();
+    return this.permissionsStore.isOwner() || this.permissionsStore.can()('meta', 'view');
   });
 
   /** ¿Se muestra el módulo Chats en el sidebar? Cuando el CRM está lanzado
