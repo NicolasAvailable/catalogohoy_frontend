@@ -8,6 +8,7 @@ import {
   TenantPlanExpiration,
   TenantPlanPublicInfo,
   TenantPlanUsage,
+  tenantPlanOverride,
 } from '../domain';
 
 @Injectable({ providedIn: 'root' })
@@ -60,6 +61,7 @@ export class PlanService implements BasePlanService {
       return E.left(new Error('Plan not found for tenant'));
     }
 
+    const override = tenantPlanOverride(tenantId);
     return E.right({
       id: row['id'] as string,
       name: row['name'] as string,
@@ -68,8 +70,9 @@ export class PlanService implements BasePlanService {
       maxProducts: row['max_products'] as number,
       maxCatalogs: (row['max_catalogs'] as number) ?? 1,
       maxTeamMembers: (row['max_team_members'] as number) ?? 0,
-      maxVariants: (row['max_variants'] as number) ?? 1,
+      maxVariants: override.maxVariants ?? (row['max_variants'] as number) ?? 1,
       maxAddons: (row['max_addons'] as number) ?? 2,
+      maxPhotos: override.maxPhotos,
       isFree: row['is_free'] as boolean,
       position: row['position'] as number,
     });
