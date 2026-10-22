@@ -23,7 +23,7 @@ export interface WaBotCode {
   expiresInMinutes: number;
 }
 
-export { WA_BOT_BETA_TENANTS } from '@catalogohoy/core';
+export { WA_BOT_BETA_TENANTS, isWaBotEnabled } from '@catalogohoy/core';
 
 /** Adjunto del chat: foto, audio, video o documento que se mandó por WhatsApp. */
 export interface WaBotMedia {

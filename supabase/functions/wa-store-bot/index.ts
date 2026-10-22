@@ -26,7 +26,7 @@ import { uploadToS3 } from "../_shared/s3.ts";
 // de ser owner/admin, los otros números conectados reciben un aviso, y cada
 // tienda tiene como máximo MAX_LINKS números conectados. Un código nuevo anula
 // los anteriores sin usar.
-// Gating v1: WA_BOT_TENANTS (lista de ids separada por coma, "*" = todas).
+// Abierto a todas las tiendas desde 2026-10-22 (antes solo la 6).
 // Costo: se cobra lo que de verdad gastó la IA en cada mensaje, 1 crédito por
 // cada CREDIT_USD (mínimo 1). Si el trabajo pasa del saldo, el agente se detiene
 // y avisa. Cada CREDIT_NOTICE_EVERY mensajes (o con saldo bajo) se recuerda el saldo.
@@ -40,7 +40,7 @@ const NOTIFY_PNID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID")?.trim() ?? "";
 const API_VERSION = Deno.env.get("WHATSAPP_API_VERSION") ?? "v21.0";
 const FAL_KEY = Deno.env.get("FAL_KEY");
 const MODEL = Deno.env.get("WA_BOT_MODEL") ?? "claude-sonnet-5-5";
-const ALLOWED_TENANTS = (Deno.env.get("WA_BOT_TENANTS") ?? "6").split(",").map((s) => s.trim());
+const ALLOWED_TENANTS = ["*"];
 const CREDIT_USD = Number(Deno.env.get("WA_BOT_CREDIT_USD") ?? 0.01); // costo de IA que cubre 1 crédito
 const CREDIT_AVG = 2; // créditos de un mensaje típico (solo para mostrar en el panel)
 const CREDIT_CONFIRM = 10; // por encima de esto el agente pide confirmación antes de hacerlo

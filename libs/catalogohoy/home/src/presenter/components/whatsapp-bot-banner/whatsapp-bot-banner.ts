@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TenantStore } from '@catalogohoy/tenant';
 import { IconComponent } from '@ui';
-import { WA_BOT_BETA_TENANTS } from '../../../infrastructure/wa-bot.service';
+import { isWaBotEnabled } from '../../../infrastructure/wa-bot.service';
 
 const DISMISS_KEY = 'wa_bot_banner_dismissed';
 
@@ -64,7 +64,7 @@ export class WhatsappBotBanner implements OnInit {
     } catch {
       /* localStorage no disponible → se muestra */
     }
-    this.visible.set(WA_BOT_BETA_TENANTS.includes(id) && !dismissed);
+    this.visible.set(isWaBotEnabled(id) && !dismissed);
   }
 
   public dismiss(): void {
