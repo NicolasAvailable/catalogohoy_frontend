@@ -66,6 +66,7 @@ export class WhatsappBot implements OnInit, OnDestroy {
     () => this.permissions.isOwner() || this.permissions.can()('asistente', 'connect')
   );
   protected readonly ready = signal(false);
+  protected readonly statusError = signal(false);
   protected readonly links = signal<WaBotLink[]>([]);
   protected readonly maxLinks = signal(2);
   protected readonly full = computed(() => this.links().length >= this.maxLinks());
@@ -224,14 +225,33 @@ export class WhatsappBot implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Si el estado no carga (red lenta, sesión renovándose), se reintenta y,
+   * si sigue fallando, se muestra un aviso: nunca "sin conectar" por un error.
+   */
   private async loadStatus(): Promise<void> {
     const tenantId = this.tenantId();
     if (!tenantId) return;
-    const result = await this.service.getStatus(tenantId);
-    result.mapRight((s) => {
-      this.links.set(s.links);
-      if (s.maxLinks) this.maxLinks.set(s.maxLinks);
-    });
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt) await new Promise((r) => setTimeout(r, attempt * 1500));
+      const result = await this.service.getStatus(tenantId);
+      let ok = false;
+      result.mapRight((s) => {
+        ok = true;
+        this.links.set(s.links);
+        if (s.maxLinks) this.maxLinks.set(s.maxLinks);
+        this.statusError.set(false);
+      });
+      if (ok) return;
+    }
+    this.statusError.set(true);
+  }
+
+  protected async retryStatus(): Promise<void> {
+    this.ready.set(false);
+    await this.loadStatus();
+    this.ready.set(true);
+    if (this.connected()) await this.loadLog();
   }
 
   /** Lleva el registro al último mensaje (después de que Angular pinte). */
