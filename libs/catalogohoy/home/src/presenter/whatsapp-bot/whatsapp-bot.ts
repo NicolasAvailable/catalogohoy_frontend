@@ -1,6 +1,7 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
 import { ToastService } from '@shared/infrastructure';
 import { ButtonComponent, IconComponent } from '@ui';
@@ -53,12 +54,17 @@ export class WhatsappBot implements OnInit, OnDestroy {
   private readonly tenantStore = inject(TenantStore);
   private readonly service = inject(WaBotService);
   private readonly toast = inject(ToastService);
+  private readonly permissions = inject(TeamPermissionsStore);
 
   @ViewChild(WhatsappBotConnectDialog) private connectDialog!: WhatsappBotConnectDialog;
   @ViewChild('log') private logEl?: ElementRef<HTMLElement>;
 
   protected readonly tenantId = signal<number | null>(null);
   protected readonly enabled = signal(false);
+  /** Conectar o desconectar números exige el permiso de equipo `asistente:connect`. */
+  protected readonly canConnect = computed(
+    () => this.permissions.isOwner() || this.permissions.can()('asistente', 'connect')
+  );
   protected readonly ready = signal(false);
   protected readonly links = signal<WaBotLink[]>([]);
   protected readonly maxLinks = signal(2);

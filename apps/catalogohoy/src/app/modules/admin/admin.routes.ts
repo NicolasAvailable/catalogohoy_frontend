@@ -46,6 +46,7 @@ export const adminRoutes: Route[] = [
     // upgrade. La experiencia full-screen del POS vive en la ruta top-level /pos.
     path: 'pos',
     title: 'Punto de venta',
+    canActivate: [teamPermissionGuard('pos', 'use')],
     loadComponent: () => import('../pos-intro/pos-intro'),
   },
   {
@@ -81,7 +82,7 @@ export const adminRoutes: Route[] = [
     // La vista se auto-gatea por META_CHANNEL_ALLOWED_SLUGS hasta el App Review.
     path: 'meta',
     title: 'Instagram y Facebook',
-    canActivate: [teamPermissionGuard('catalogo', 'edit')],
+    canActivate: [teamPermissionGuard('meta', 'view')],
     loadComponent: () =>
       import('@catalogohoy/ecommerce-config').then((m) => m.MetaChannelView),
   },
@@ -123,9 +124,10 @@ export const adminRoutes: Route[] = [
   },
   {
     // Asistente de WhatsApp (CAT-78, beta). La edge `wa-store-bot` exige
-    // owner/admin y una tienda habilitada.
+    // owner/admin o permiso de equipo `asistente`.
     path: 'whatsapp-bot',
     title: 'Asistente WhatsApp',
+    canActivate: [teamPermissionGuard('asistente', 'view')],
     loadComponent: () => import('@catalogohoy/home').then((m) => m.WhatsappBot),
   },
 ];

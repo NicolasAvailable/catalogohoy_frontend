@@ -14,6 +14,7 @@ import { TranslocoPipe, translate } from '@jsverse/transloco';
 import { toast as sonnerToast } from 'ngx-sonner';
 import { META_CHANNEL_ALLOWED_SLUGS } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
+import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
 import { ButtonComponent, IconComponent, SelectComponent } from '@ui';
 import { MetaCatalogSync } from '../../domain';
@@ -49,6 +50,7 @@ export class MetaChannelView implements OnInit, OnDestroy {
   private readonly configService = inject(EcommerceConfigService);
   private readonly tenantStore = inject(TenantStore);
   private readonly planStore = inject(PlanStore);
+  private readonly permissions = inject(TeamPermissionsStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -80,6 +82,10 @@ export class MetaChannelView implements OnInit, OnDestroy {
 
   /** Función de planes pagos (mismo gating que el Píxel manual). */
   public readonly isLocked = computed(() => this.planStore.currentPlan()?.isFree ?? false);
+  /** Conectar, publicar y configurar el píxel exige el permiso de equipo `meta:connect`. */
+  public readonly canConnect = computed(
+    () => this.permissions.isOwner() || this.permissions.can()('meta', 'connect')
+  );
 
   public readonly isLoading = signal(true);
   // Conexión

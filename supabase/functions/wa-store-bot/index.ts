@@ -23,7 +23,7 @@ import { uploadToS3 } from "../_shared/s3.ts";
 // por un owner/admin logueado. Toda tool filtra por ese tenant_id. Además:
 // máx. LINK_MAX_FAILS intentos fallidos de código por teléfono y hora, el
 // vínculo caduca tras LINK_IDLE_DAYS sin uso, se revoca si quien lo creó deja
-// de ser owner/admin, los otros números conectados reciben un aviso, y cada
+// de tener permiso (owner/admin o equipo con asistente:connect), los otros números conectados reciben un aviso, y cada
 // tienda tiene como máximo MAX_LINKS números conectados. Un código nuevo anula
 // los anteriores sin usar.
 // Abierto a todas las tiendas desde 2026-10-22 (antes solo la 6).
@@ -269,13 +269,30 @@ async function linkWithCode(phone: string, code: string): Promise<"ok" | "invali
   return "ok";
 }
 
-/** El vínculo sigue vigente: uso reciente y quien lo creó sigue siendo owner/admin. */
+/** Acceso al asistente: owner/admin de la tienda, o miembro del equipo con
+ *  permiso `asistente:view` (ver el panel) / `asistente:connect` (conectar números). */
+async function assistantAccess(userId: number, tenantId: number): Promise<{ view: boolean; connect: boolean }> {
+  const { data: ut } = await admin.from("users_tenants").select("role")
+    .eq("user_id", userId).eq("tenant_id", tenantId).maybeSingle();
+  if (ut && ["owner", "admin"].includes(ut.role)) return { view: true, connect: true };
+  const { data: teams } = await admin.from("teams").select("id").eq("tenant_id", tenantId);
+  const teamIds = (teams ?? []).map((t) => t.id);
+  if (!teamIds.length) return { view: false, connect: false };
+  const { data: members } = await admin.from("team_members").select("id")
+    .eq("user_id", userId).eq("status", "accepted").in("team_id", teamIds);
+  const memberIds = (members ?? []).map((m) => m.id);
+  if (!memberIds.length) return { view: false, connect: false };
+  const { data: perms } = await admin.from("team_member_permissions").select("action")
+    .in("team_member_id", memberIds).eq("module", "asistente");
+  const actions = new Set((perms ?? []).map((p) => p.action));
+  return { view: actions.has("view") || actions.has("connect"), connect: actions.has("connect") };
+}
+
+/** El vínculo sigue vigente: uso reciente y quien lo creó todavía puede conectar números. */
 async function linkStillValid(link: Link): Promise<boolean> {
   const lastUse = new Date(link.last_used_at ?? link.created_at ?? 0).getTime();
   if (Date.now() - lastUse > LINK_IDLE_DAYS * 86400_000) return false;
-  const { data } = await admin.from("users_tenants").select("role")
-    .eq("user_id", link.user_id).eq("tenant_id", link.tenant_id).maybeSingle();
-  return !!data && ["owner", "admin"].includes(data.role);
+  return (await assistantAccess(link.user_id, link.tenant_id)).connect;
 }
 
 // ── Sesión (memoria corta) ──────────────────────────────────────────────────
@@ -1522,10 +1539,10 @@ async function handlePanel(req: Request): Promise<Response> {
 
   const { data: user } = await admin.from("users").select("id").eq("auth_user_id", auth.user.id).maybeSingle();
   if (!user) return json({ error: "Usuario no encontrado" }, 403);
-  const { data: membership } = await admin.from("users_tenants").select("role")
-    .eq("user_id", user.id).eq("tenant_id", tenantId).maybeSingle();
-  if (!membership || !["owner", "admin"].includes(membership.role)) {
-    return json({ error: "Solo el dueño de la tienda puede conectar WhatsApp" }, 403);
+  const access = await assistantAccess(user.id, tenantId);
+  if (!access.view) return json({ error: "No tienes permiso para el Asistente WhatsApp" }, 403);
+  if (["create_code", "unlink"].includes(body.action) && !access.connect) {
+    return json({ error: "No tienes permiso para conectar números al asistente" }, 403);
   }
   if (!tenantAllowed(tenantId)) return json({ error: "No disponible para esta tienda" }, 403);
 
