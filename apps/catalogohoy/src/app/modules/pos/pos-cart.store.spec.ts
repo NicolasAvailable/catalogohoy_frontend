@@ -73,3 +73,26 @@ describe('PosCartStore — descuento global', () => {
     expect(store.total()).toBe(100);
   });
 });
+
+/** Variantes con tallas (color → talla): cada combinación es su propia línea,
+ *  y la línea guarda variantId + size para que el RPC descuente esa talla. */
+describe('PosCartStore — talla dentro de variante', () => {
+  let store: InstanceType<typeof PosCartStore>;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({});
+    store = TestBed.inject(PosCartStore);
+    store.clear();
+  });
+
+  it('misma variante con distinta talla = líneas separadas', () => {
+    store.addLine({ productId: 7, name: 'Franela', price: 10, variantId: 'negro', variantName: 'Negro', size: 'S' });
+    store.addLine({ productId: 7, name: 'Franela', price: 10, variantId: 'negro', variantName: 'Negro', size: 'M' });
+    store.addLine({ productId: 7, name: 'Franela', price: 10, variantId: 'negro', variantName: 'Negro', size: 'S' });
+    const lines = store.lines();
+    expect(lines.length).toBe(2);
+    const s = lines.find((l) => l.size === 'S');
+    expect(s?.quantity).toBe(2);
+    expect(s?.variantId).toBe('negro');
+  });
+});

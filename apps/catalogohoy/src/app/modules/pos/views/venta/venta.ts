@@ -163,6 +163,9 @@ export default class PosVenta implements OnInit {
   readonly showScanner = signal(false);
   /** Producto cuyas variantes/tallas/adicionales se están eligiendo. */
   readonly optionsProduct = signal<Product | null>(null);
+  /** Variante elegida que tiene tallas propias: el modal pasa a pedir la talla
+   *  (ej. color "Negro" → S/M/L), para descontar el stock de esa talla. */
+  readonly optionsVariant = signal<ProductVariant | null>(null);
   /** Cantidades de adicionales elegidas en el modal (addonId → cantidad). */
   readonly addonSelection = signal<Record<string, number>>({});
   readonly showCobrar = signal(false);
@@ -358,9 +361,12 @@ export default class PosVenta implements OnInit {
   });
 
   /** Qué elige el modal de opciones para el producto activo. */
-  readonly optionsMode = computed<'variant' | 'size' | 'addons' | null>(() => {
+  readonly optionsMode = computed<
+    'variant' | 'variant-size' | 'size' | 'addons' | null
+  >(() => {
     const p = this.optionsProduct();
     if (!p) return null;
+    if (this.optionsVariant()?.sizes?.length) return 'variant-size';
     if (p.isVariant && p.variants?.length) return 'variant';
     if (p.isSized && p.sizes?.length) return 'size';
     if (p.addons?.length) return 'addons';
@@ -541,6 +547,12 @@ export default class PosVenta implements OnInit {
       this.optionsProduct.set(null);
       return;
     }
+    // Variante con tallas (color → tallas): primero se elige la talla.
+    if (v.sizes?.length) {
+      this.optionsProduct.set(p);
+      this.optionsVariant.set(v);
+      return;
+    }
     const price = v.price > 0 ? v.price : this.unitPrice(p);
     this.cart.addLine({
       productId: p.id,
@@ -554,6 +566,22 @@ export default class PosVenta implements OnInit {
     });
     this.optionsProduct.set(null);
     this.toast.success(`${p.name} · ${v.name} agregado`);
+  }
+
+  addVariantSize(p: Product, v: ProductVariant, s: ProductSize): void {
+    this.cart.addLine({
+      productId: p.id,
+      name: p.name,
+      price: v.price > 0 ? v.price : this.unitPrice(p),
+      photo: v.photos?.[0] ?? p.photos?.[0],
+      sku: s.sku ?? v.sku ?? p.sku,
+      variantId: v.id,
+      variantName: v.name,
+      size: s.name,
+      available: s.stock,
+    });
+    this.closeOptions();
+    this.toast.success(`${p.name} · ${v.name} · ${s.name} agregado`);
   }
 
   addSize(p: Product, s: ProductSize): void {
@@ -620,6 +648,12 @@ export default class PosVenta implements OnInit {
 
   closeOptions(): void {
     this.optionsProduct.set(null);
+    this.optionsVariant.set(null);
+  }
+
+  /** Vuelve de la lista de tallas a la de variantes. */
+  backToVariants(): void {
+    this.optionsVariant.set(null);
   }
 
   // ── Escáner ────────────────────────────────────────────────────────────────
@@ -639,20 +673,27 @@ export default class PosVenta implements OnInit {
     if (!q) return;
     const all = this.productStore.productList().products;
 
-    // 1) variante por SKU exacto
+    // 1) talla de una variante por SKU exacto
+    for (const p of all) {
+      for (const v of p.variants ?? []) {
+        const s = v.sizes?.find((x) => x.sku?.toLowerCase() === q);
+        if (s) return this.addVariantSize(p, v, s);
+      }
+    }
+    // 2) variante por SKU exacto
     for (const p of all) {
       const v = p.variants?.find((x) => x.sku?.toLowerCase() === q);
       if (v) return this.addVariant(p, v);
     }
-    // 2) talla por SKU exacto
+    // 3) talla por SKU exacto
     for (const p of all) {
       const s = p.sizes?.find((x) => x.sku?.toLowerCase() === q);
       if (s) return this.addSize(p, s);
     }
-    // 3) producto por SKU exacto
+    // 4) producto por SKU exacto
     const byExact = all.find((p) => p.sku?.toLowerCase() === q);
     if (byExact) return this.onProductClick(byExact);
-    // 4) tolerante: contiene el código
+    // 5) tolerante: contiene el código
     const byLike = all.find((p) => p.sku?.toLowerCase().includes(q));
     if (byLike) return this.onProductClick(byLike);
 
