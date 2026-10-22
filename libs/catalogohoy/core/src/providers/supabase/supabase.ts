@@ -32,7 +32,10 @@ export class SupabaseClientProvider {
         worker: typeof Worker !== 'undefined',
         heartbeatIntervalMs: 15_000,
       },
-      ...(isDevMode() ? { auth: { storage: devStorage } } : {}),
+      auth: {
+        storageKey: environment.supabaseAuthStorageKey,
+        ...(isDevMode() ? { storage: devStorage } : {}),
+      },
     });
   }
 
