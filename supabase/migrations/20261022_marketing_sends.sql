@@ -16,7 +16,8 @@ create table if not exists public.marketing_sends (
 alter table public.marketing_sends enable row level security;
 revoke all on public.marketing_sends from anon, authenticated;
 
--- Audiencia del anuncio. whatsapp: dueños con teléfono activos en 90 días.
+-- Audiencia del anuncio. whatsapp: dueños con teléfono de tiendas de pago, o
+-- registrados este mes que ya subieron productos (Nicolas: bajar el costo).
 -- email: registrados en 60 días o activos en 30, sin rebotes duros ni quejas.
 -- "Activo" = último login, última orden o último producto creado en su tienda.
 create or replace function public.marketing_launch_audience(p_campaign text, p_channel text)
@@ -30,6 +31,9 @@ as $$
       regexp_replace(coalesce(u.phone, ''), '\D', '', 'g') as ph,
       (select t.name from users_tenants ut join tenants t on t.id = ut.tenant_id
         where ut.user_id = u.id order by ut.is_default desc nulls last, ut.id limit 1) as store,
+      exists (select 1 from users_tenants ut join tenants t on t.id = ut.tenant_id
+        where ut.user_id = u.id and coalesce(t.plan_id, 'gratis') <> 'gratis' and not coalesce(t.plan_expired, false)) as paid,
+      exists (select 1 from users_tenants ut join products p on p.tenant_id = ut.tenant_id where ut.user_id = u.id) as has_products,
       greatest(
         au.last_sign_in_at,
         (select max(o.created_at) from users_tenants ut join orders o on o.tenant_id = ut.tenant_id where ut.user_id = u.id),
@@ -45,7 +49,8 @@ as $$
       where s.campaign = p_campaign and s.channel = p_channel and s.user_id = b.id
     )
     and case p_channel
-      when 'whatsapp' then length(b.ph) between 10 and 15 and b.act > now() - interval '90 days'
+      when 'whatsapp' then length(b.ph) between 10 and 15
+        and (b.paid or (b.created_at >= date_trunc('month', now()) and b.has_products))
       when 'email' then b.email is not null
         and (b.created_at > now() - interval '60 days' or b.act > now() - interval '30 days')
         and not exists (
