@@ -262,6 +262,7 @@
     <!-- Punto de venta: DEBAJO de Mi catálogo. Lleva a la vista inicial del POS
          (/admin/pos), visible a TODOS los planes; desde ahí se abre el POS o el
          gate de plan. -->
+    @if (canUsePos()) {
     <li>
       <a
         routerLink="/admin/pos"
@@ -273,6 +274,7 @@
         <ui-icon name="shopping-cart" size="18" styleClass="text-grey-700" />
       </a>
     </li>
+    }
 
     <!-- Instagram y Facebook (canal Meta; allowlist hasta App Review) -->
     @if (canViewMetaChannel()) {
@@ -707,6 +709,7 @@
     <!-- Punto de venta: DEBAJO de Mi catálogo. Lleva a la vista inicial del POS
          (/admin/pos), visible a TODOS los planes; desde ahí se abre el POS o el
          gate de plan. -->
+    @if (canUsePos()) {
     <li
       routerLink="/admin/pos"
       routerLinkActive="bg-primary-50"
@@ -720,6 +723,7 @@
         {{ 'Nuevo' | transloco }}
       </span>
     </li>
+    }
 
     <!-- Instagram y Facebook (canal Meta: catálogo + píxel; allowlist hasta App Review) -->
     @if (canViewMetaChannel()) {

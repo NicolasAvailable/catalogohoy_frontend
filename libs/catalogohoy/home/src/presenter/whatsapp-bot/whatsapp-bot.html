@@ -61,10 +61,14 @@
         <li class="flex items-center gap-2"><ui-icon name="circle-check" [size]="16" styleClass="text-green-500" /> Ves aquí todo lo que conversan y cuántos créditos usa.</li>
       </ul>
       @if (enabled()) {
+      @if (canConnect()) {
       <div class="flex flex-wrap items-center gap-3 pt-2">
         <ui-button label="Conectar mi WhatsApp" icon="arrow-right" iconPos="right" size="large" [fluid]="false" (click)="openConnect()" />
         <span class="text-xs text-grey-400">Toma menos de un minuto.</span>
       </div>
+      } @else {
+      <p class="text-sm text-grey-500 pt-2">Pídele al dueño del catálogo permiso para conectar tu número.</p>
+      }
       } @else {
       <p class="inline-flex items-center gap-2 text-sm text-grey-500 pt-2">
         <ui-icon name="clock" [size]="16" styleClass="text-primary-500" />
@@ -119,10 +123,12 @@
             {{ link.last_used_at ? 'Último mensaje ' + (link.last_used_at | date: 'd MMM, h:mm a') : 'Conectado ' + (link.created_at | date: 'd MMM') }}
           </p>
         </div>
+        @if (canConnect()) {
         <button type="button" class="shrink-0 text-xs text-grey-500 hover:text-red-500 underline cursor-pointer" (click)="unlink(link)">Desconectar</button>
+        }
       </div>
       }
-      @if (!full()) {
+      @if (!full() && canConnect()) {
       <button type="button" (click)="openConnect()"
         class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-grey-200 px-3 py-2 text-sm font-medium text-grey-500 hover:text-primary-500 hover:border-primary-200 cursor-pointer transition-colors">
         <ui-icon name="plus" [size]="16" /> Conectar otro número

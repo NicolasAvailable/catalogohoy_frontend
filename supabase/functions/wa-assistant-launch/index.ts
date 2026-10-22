@@ -21,7 +21,8 @@ import { uploadToS3 } from "../_shared/s3.ts";
 // =============================================================================
 
 const CAMPAIGN = "wa_assistant_launch";
-const TEMPLATE = "wa_assistant_launch";
+// v2: aclara que por ahora solo se configura desde la web (la app móvil aún no lo tiene).
+const TEMPLATE = "wa_assistant_launch_web";
 const WHATSAPP_TOKEN = Deno.env.get("WHATSAPP_TOKEN");
 const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 const WHATSAPP_API_VERSION = Deno.env.get("WHATSAPP_API_VERSION") ?? "v21.0";
@@ -110,7 +111,7 @@ const TEMPLATE_BODY =
   "✅ Crea y atiende tus órdenes\n" +
   "✅ Pregunta cuánto vendiste\n" +
   "✅ Entiende notas de voz y fotos\n\n" +
-  "Está en beta y ya está disponible. Conéctalo en 1 minuto desde tu panel.";
+  "Está en beta y ya está disponible. Por ahora se configura solo desde la versión web de tu panel (no desde la app móvil). Pronto llegará a la app.";
 
 async function graph(path: string, init?: RequestInit) {
   const res = await fetch(`${GRAPH}/${path}`, {
@@ -179,7 +180,8 @@ ${item("📦", "Sube tu inventario:", "mándale fotos y precios y crea tus produ
 ${item("🧾", "Atiende tus órdenes:", "crea, consulta y actualiza pedidos.")}
 ${item("📊", "Consulta tus ventas:", "“¿cuánto vendí esta semana?”")}
 <p style="margin:0 0 12px;">🎙️ <b>Entiende notas de voz, fotos y PDFs.</b></p>
-<p style="margin:0;">Está en beta, pero ya puedes usarlo. Conéctalo en 1 minuto desde tu panel, en <b>Asistente WhatsApp</b>.</p>`,
+<p style="margin:0 0 12px;">Está en beta, pero ya puedes usarlo. Conéctalo en 1 minuto desde tu panel, en <b>Asistente WhatsApp</b>.</p>
+<p style="margin:0;padding:10px 12px;background:#f4f7ff;border-radius:8px;font-size:14px;">💻 Por ahora se configura <b>solo desde la versión web</b> de tu panel (en la computadora o en el navegador del teléfono), no desde la app móvil. Pronto llegará a la app.</p>`,
     buttons: [{ label: "Conectar mi WhatsApp", url: LOGIN_URL }],
     note: "Usa tus créditos de IA: una pregunta corta usa 1 crédito. Si tienes dudas, responde a este correo.",
   });
@@ -191,6 +193,8 @@ ${item("📊", "Consulta tus ventas:", "“¿cuánto vendí esta semana?”")}
 - Entiende notas de voz, fotos y PDFs.
 
 Está en beta, pero ya puedes usarlo. Conéctalo desde tu panel, en Asistente WhatsApp: ${LOGIN_URL}
+
+Por ahora se configura solo desde la versión web de tu panel (en la computadora o en el navegador del teléfono), no desde la app móvil. Pronto llegará a la app.
 
 © ${new Date().getFullYear()} CatalogoHoy`;
   return { subject, html, text };

@@ -23,7 +23,7 @@ import { uploadToS3 } from "../_shared/s3.ts";
 // por un owner/admin logueado. Toda tool filtra por ese tenant_id. Además:
 // máx. LINK_MAX_FAILS intentos fallidos de código por teléfono y hora, el
 // vínculo caduca tras LINK_IDLE_DAYS sin uso, se revoca si quien lo creó deja
-// de ser owner/admin, los otros números conectados reciben un aviso, y cada
+// de tener permiso (owner/admin o equipo con asistente:connect), los otros números conectados reciben un aviso, y cada
 // tienda tiene como máximo MAX_LINKS números conectados. Un código nuevo anula
 // los anteriores sin usar.
 // Abierto a todas las tiendas desde 2026-10-22 (antes solo la 6).
@@ -49,6 +49,9 @@ const CREDIT_LOW = 20; // con este saldo o menos, se avisa en cada respuesta
 const HISTORY_MAX = 16;
 const MAX_AGENT_STEPS = 16;
 const PHOTO_ACK_DELAY_MS = 5000;
+const PHOTO_BURST_POLL_MS = 1500; // revisa si siguen llegando fotos de la misma ráfaga
+const PHOTO_BURST_MAX_MS = 15000;
+const CONTEXT_WINDOW_MS = 10 * 60_000; // fotos sin texto dentro de esta ventana siguen la conversación
 const CODE_TTL_MIN = 10;
 const CODE_DIGITS = 8;
 const LINK_MAX_FAILS = 5; // intentos fallidos de código por teléfono y hora
@@ -269,13 +272,30 @@ async function linkWithCode(phone: string, code: string): Promise<"ok" | "invali
   return "ok";
 }
 
-/** El vínculo sigue vigente: uso reciente y quien lo creó sigue siendo owner/admin. */
+/** Acceso al asistente: owner/admin de la tienda, o miembro del equipo con
+ *  permiso `asistente:view` (ver el panel) / `asistente:connect` (conectar números). */
+async function assistantAccess(userId: number, tenantId: number): Promise<{ view: boolean; connect: boolean }> {
+  const { data: ut } = await admin.from("users_tenants").select("role")
+    .eq("user_id", userId).eq("tenant_id", tenantId).maybeSingle();
+  if (ut && ["owner", "admin"].includes(ut.role)) return { view: true, connect: true };
+  const { data: teams } = await admin.from("teams").select("id").eq("tenant_id", tenantId);
+  const teamIds = (teams ?? []).map((t) => t.id);
+  if (!teamIds.length) return { view: false, connect: false };
+  const { data: members } = await admin.from("team_members").select("id")
+    .eq("user_id", userId).eq("status", "accepted").in("team_id", teamIds);
+  const memberIds = (members ?? []).map((m) => m.id);
+  if (!memberIds.length) return { view: false, connect: false };
+  const { data: perms } = await admin.from("team_member_permissions").select("action")
+    .in("team_member_id", memberIds).eq("module", "asistente");
+  const actions = new Set((perms ?? []).map((p) => p.action));
+  return { view: actions.has("view") || actions.has("connect"), connect: actions.has("connect") };
+}
+
+/** El vínculo sigue vigente: uso reciente y quien lo creó todavía puede conectar números. */
 async function linkStillValid(link: Link): Promise<boolean> {
   const lastUse = new Date(link.last_used_at ?? link.created_at ?? 0).getTime();
   if (Date.now() - lastUse > LINK_IDLE_DAYS * 86400_000) return false;
-  const { data } = await admin.from("users_tenants").select("role")
-    .eq("user_id", link.user_id).eq("tenant_id", link.tenant_id).maybeSingle();
-  return !!data && ["owner", "admin"].includes(data.role);
+  return (await assistantAccess(link.user_id, link.tenant_id)).connect;
 }
 
 // ── Sesión (memoria corta) ──────────────────────────────────────────────────
@@ -287,6 +307,22 @@ async function loadSession(phone: string, tenantId: number): Promise<Session> {
     .select("tenant_id, history, pending_photos").eq("phone", phone).maybeSingle();
   if (!data || data.tenant_id !== tenantId) return { history: [], pending_photos: [] };
   return { history: (data.history ?? []) as Turn[], pending_photos: (data.pending_photos ?? []) as string[] };
+}
+
+// Espera hasta que las fotos pendientes dejen de crecer (dos revisiones seguidas sin cambios).
+async function waitPhotoBurst(phone: string) {
+  const count = async () => {
+    const { data } = await admin.from("wa_bot_sessions").select("pending_photos").eq("phone", phone).maybeSingle();
+    return ((data?.pending_photos ?? []) as string[]).length;
+  };
+  let prev = await count();
+  let stable = 0;
+  for (let waited = 0; waited < PHOTO_BURST_MAX_MS && stable < 2; waited += PHOTO_BURST_POLL_MS) {
+    await new Promise((r) => setTimeout(r, PHOTO_BURST_POLL_MS));
+    const n = await count();
+    stable = n === prev ? stable + 1 : 0;
+    prev = n;
+  }
 }
 
 async function saveSession(phone: string, tenantId: number, history: Turn[], pendingPhotos: string[]) {
@@ -1384,16 +1420,32 @@ async function handleInbound(m: any) {
     await admin.rpc("wa_bot_push_photo", { p_phone: phone, p_tenant_id: link.tenant_id, p_url: url });
     await logMsg(link.tenant_id, phone, "user", text, { media: [{ url, type: "image" }] });
     userLogged = true;
-    if (!text) {
+    if (text) {
+      // Foto con texto: WhatsApp manda el resto de la ráfaga en mensajes aparte.
+      // Esperamos a que terminen de llegar para que el agente las tenga todas.
+      await waitPhotoBurst(phone);
+    } else {
       await new Promise((r) => setTimeout(r, PHOTO_ACK_DELAY_MS));
       const { data: s } = await admin.from("wa_bot_sessions").select("pending_photos").eq("phone", phone).maybeSingle();
       const list = (s?.pending_photos ?? []) as string[];
       if (list[list.length - 1] !== url) return; // llegó otra foto después: responde esa
-      const ack = `📸 Tengo ${list.length === 1 ? "la foto" : `${list.length} fotos`}. ¿Qué hago?\n` +
-        "Ej: *Crea Zapato rojo, $25, stock 10* o *agrégalas al producto Zapato rojo*.";
-      await sendText(phone, ack);
-      await logMsg(link.tenant_id, phone, "assistant", ack);
-      return;
+      // Si en la ráfaga vino una foto con texto, ese mensaje es el que responde.
+      const { data: last } = await admin.from("wa_bot_messages").select("role, body, created_at")
+        .eq("tenant_id", link.tenant_id).eq("phone", phone).neq("body", "")
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      const lastAgo = last ? Date.now() - new Date(last.created_at).getTime() : Infinity;
+      if (last?.role === "user" && lastAgo < 60_000) return;
+      if (lastAgo < CONTEXT_WINDOW_MS) {
+        // Conversación en curso (ej. ya dio nombre y descripción): sigue con ella.
+        text = `[Mandó ${list.length === 1 ? "1 foto" : `${list.length} fotos`} sin texto. Úsalas según lo que venían conversando; ` +
+          "si no está claro qué hacer con ellas, pregúntale.]";
+      } else {
+        const ack = `📸 Tengo ${list.length === 1 ? "la foto" : `${list.length} fotos`}. ¿Qué hago?\n` +
+          "Ej: *Crea Zapato rojo, $25, stock 10* o *agrégalas al producto Zapato rojo*.";
+        await sendText(phone, ack);
+        await logMsg(link.tenant_id, phone, "assistant", ack);
+        return;
+      }
     }
   } else if (m.type === "audio" && m.audio?.id) {
     const url = await storeMedia(m.audio.id, m.audio.mime_type ?? "", mediaPrefix);
@@ -1522,10 +1574,10 @@ async function handlePanel(req: Request): Promise<Response> {
 
   const { data: user } = await admin.from("users").select("id").eq("auth_user_id", auth.user.id).maybeSingle();
   if (!user) return json({ error: "Usuario no encontrado" }, 403);
-  const { data: membership } = await admin.from("users_tenants").select("role")
-    .eq("user_id", user.id).eq("tenant_id", tenantId).maybeSingle();
-  if (!membership || !["owner", "admin"].includes(membership.role)) {
-    return json({ error: "Solo el dueño de la tienda puede conectar WhatsApp" }, 403);
+  const access = await assistantAccess(user.id, tenantId);
+  if (!access.view) return json({ error: "No tienes permiso para el Asistente WhatsApp" }, 403);
+  if (["create_code", "unlink"].includes(body.action) && !access.connect) {
+    return json({ error: "No tienes permiso para conectar números al asistente" }, 403);
   }
   if (!tenantAllowed(tenantId)) return json({ error: "No disponible para esta tienda" }, 403);
 
