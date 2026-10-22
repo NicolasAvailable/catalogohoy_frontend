@@ -278,8 +278,9 @@ export class ImportExportHubComponent {
     enterprise: 0, // 0 = ilimitado
   };
   private maxPhotosPerProduct(): number {
-    const planId = this.planStore.currentPlan()?.id ?? 'gratis';
-    return this.photosLimitByPlan[planId] ?? 3;
+    const plan = this.planStore.currentPlan();
+    if (plan?.maxPhotos != null) return plan.maxPhotos;
+    return this.photosLimitByPlan[plan?.id ?? 'gratis'] ?? 3;
   }
 
   constructor() {

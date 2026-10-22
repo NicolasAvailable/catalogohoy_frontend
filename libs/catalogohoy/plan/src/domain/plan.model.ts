@@ -18,6 +18,9 @@ export interface Plan {
   /** Max addons (paid extras) allowed per product on this plan
    *  (gratis 2, basico 5, avanzado 15, enterprise 0 = unlimited). */
   maxAddons: number;
+  /** Fotos por producto a medida para este tenant (ver TENANT_PLAN_OVERRIDES).
+   *  Ausente = se usa el límite estándar del plan. */
+  maxPhotos?: number;
   isFree: boolean;
   position: number;
 }

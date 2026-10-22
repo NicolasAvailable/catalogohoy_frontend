@@ -230,10 +230,14 @@ export default class Save implements OnInit {
     enterprise: 0, // 0 = ilimitado (mismo criterio que import-export-hub)
   };
   public readonly maxPhotos = computed(
-    () => this.photosLimitByPlan[this.planStore.currentPlan()?.id ?? 'gratis'] ?? 3
+    () =>
+      this.planStore.currentPlan()?.maxPhotos ??
+      this.photosLimitByPlan[this.planStore.currentPlan()?.id ?? 'gratis'] ??
+      3
   );
   public readonly photosLimitMessage = computed(() => {
     const planId = this.planStore.currentPlan()?.id ?? 'gratis';
+    if (this.planStore.currentPlan()?.maxPhotos != null) return 'Límite de imágenes alcanzado';
     if (planId === 'gratis') return 'Mejora tu plan para subir hasta 10, 20 o 50 imágenes';
     if (planId === 'basico') return 'Mejora tu plan para subir hasta 20 o 50 imágenes';
     if (planId === 'pro') return 'Mejora tu plan para subir hasta 50 imágenes';
