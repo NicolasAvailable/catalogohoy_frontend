@@ -72,3 +72,13 @@ html[data-theme='dark'] input.p-inputtext::placeholder {
   color: #94a3b8;
   opacity: 1;
 }
+
+/* Chat del asistente de WhatsApp (panel Bot de WhatsApp): colores de WhatsApp
+   en claro y en oscuro, para que las burbujas siempre se lean. */
+.wa-chat { background-color: #efeae2; }
+.wa-bubble-user { background-color: #d9fdd3; }
+.wa-note { background-color: #fff5c4; color: #3d3d3d; }
+html[data-theme='dark'] .wa-chat { background-color: #0b141a; }
+html[data-theme='dark'] .wa-bubble-user { background-color: #005c4b; }
+html[data-theme='dark'] .wa-chat .bg-white { background-color: #202c33; }
+html[data-theme='dark'] .wa-note { background-color: #2a2f32; color: #e9edef; }

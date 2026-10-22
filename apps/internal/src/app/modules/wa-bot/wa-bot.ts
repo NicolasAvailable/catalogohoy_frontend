@@ -120,14 +120,14 @@ const PAGE = 100;
             <ui-icon name="refresh-cw" size="16" [styleClass]="loading() ? 'animate-spin' : ''" />
           </button>
         </div>
-        <div class="flex-1 bg-[#efeae2] px-4 py-4 flex flex-col gap-2">
+        <div class="flex-1 wa-chat px-4 py-4 flex flex-col gap-2">
           @if (hasMore()) {
           <button type="button" (click)="loadOlder()" class="self-center rounded-full bg-white px-3 py-1 text-xs font-medium text-grey-600 shadow-sm cursor-pointer">Ver anteriores</button>
           }
           @for (m of messages(); track m.id) {
           @if (m.role === 'system') {
           <div class="self-center max-w-[90%] flex flex-col items-center gap-1">
-            <span class="text-center rounded-md px-2.5 py-1 text-[11px] shadow-sm" [class]="m.debug?.error ? 'bg-red-50 text-red-600' : 'bg-[#fff5c4] text-grey-600'">
+            <span class="text-center rounded-md px-2.5 py-1 text-[11px] shadow-sm" [class]="m.debug?.error ? 'bg-red-50 text-red-600' : 'wa-note'">
               {{ m.body }} · +{{ m.phone }} · {{ m.created_at | date: 'd MMM HH:mm:ss' }}
             </span>
             @if (m.debug?.error) {
@@ -136,8 +136,8 @@ const PAGE = 100;
             }
           </div>
           } @else {
-          <div class="max-w-[85%] rounded-lg px-3 py-2 shadow-sm text-[13px] text-grey-800"
-            [class]="m.role === 'user' ? 'self-end rounded-tr-none bg-[#d9fdd3]' : 'self-start rounded-tl-none bg-white'">
+          <div class="max-w-[85%] rounded-lg px-3 py-2 shadow-sm text-[13px] text-grey-700"
+            [class]="m.role === 'user' ? 'self-end rounded-tr-none wa-bubble-user' : 'self-start rounded-tl-none bg-white'">
             <p class="text-[10px] font-semibold text-grey-400 mb-0.5">
               {{ m.role === 'user' ? '+' + m.phone : 'Asistente' }} · tienda #{{ m.tenant_id }} · {{ m.created_at | date: 'd MMM HH:mm:ss' }}
             </p>
