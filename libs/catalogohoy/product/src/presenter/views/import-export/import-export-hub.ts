@@ -13,7 +13,7 @@ import { E } from '@shared/domain';
 import { CategoryStore } from '@catalogohoy/category';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
-import { PlanStore } from '@catalogohoy/plan';
+import { PlanStore, photoLimitOf } from '@catalogohoy/plan';
 import {
   ButtonComponent,
   DialogComponent,
@@ -270,17 +270,9 @@ export class ImportExportHubComponent {
     () => this.photoItems().length - this.photoAssignedCount()
   );
   /** Cap de fotos por producto según el plan (mismo criterio que el editor). */
-  private readonly photosLimitByPlan: Record<string, number> = {
-    gratis: 3,
-    basico: 10,
-    pro: 20,
-    avanzado: 50,
-    enterprise: 0, // 0 = ilimitado
-  };
+  /** Fotos por producto de la tienda (0 = ilimitado). */
   private maxPhotosPerProduct(): number {
-    const plan = this.planStore.currentPlan();
-    if (plan?.maxPhotos != null) return plan.maxPhotos;
-    return this.photosLimitByPlan[plan?.id ?? 'gratis'] ?? 3;
+    return photoLimitOf(this.planStore.currentPlan());
   }
 
   constructor() {
