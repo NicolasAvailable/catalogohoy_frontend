@@ -67,8 +67,10 @@
   `reset_due_ai_credits`, `sync_ai_credits_on_plan_change` (DB) + `plans.ts` (app) +
   `Pricing.tsx` (landing). Al subirlos, bumpear a los existentes (sumar la diferencia al saldo).
 
-- **Bot de WhatsApp (wa-store-bot)**: 2 créditos por mensaje (Claude Sonnet 5.5, ~$0.015/mensaje
-  medido). Avisa el saldo cada 10 mensajes y en cada respuesta con saldo ≤ 20.
+- **Bot de WhatsApp (wa-store-bot)**: cobra por costo real (v12, 2026-10-22): 1 crédito por cada
+  $0.01 de Claude Sonnet 5.5 (env `WA_BOT_CREDIT_USD`), mínimo 1. Pregunta corta ≈1, consulta ≈2,
+  producto con foto ≈3–4. Pedidos grandes (>3 productos o >10 créditos) piden confirmación antes;
+  el agente se detiene si se acaba el saldo. Avisa en la respuesta cuántos créditos usó y cuántos quedan.
 
 ## Packs de crédito (compra)
 

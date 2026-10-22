@@ -27,8 +27,9 @@ import { uploadToS3 } from "../_shared/s3.ts";
 // tienda tiene como máximo MAX_LINKS números conectados. Un código nuevo anula
 // los anteriores sin usar.
 // Gating v1: WA_BOT_TENANTS (lista de ids separada por coma, "*" = todas).
-// Costo: CREDIT_COST créditos de IA por mensaje procesado por el agente; cada
-// CREDIT_NOTICE_EVERY mensajes (o con saldo bajo) se le recuerda el saldo.
+// Costo: se cobra lo que de verdad gastó la IA en cada mensaje, 1 crédito por
+// cada CREDIT_USD (mínimo 1). Si el trabajo pasa del saldo, el agente se detiene
+// y avisa. Cada CREDIT_NOTICE_EVERY mensajes (o con saldo bajo) se recuerda el saldo.
 // Deploy con verify_jwt=false (auth propia en ambas entradas).
 // =============================================================================
 
@@ -40,11 +41,13 @@ const API_VERSION = Deno.env.get("WHATSAPP_API_VERSION") ?? "v21.0";
 const FAL_KEY = Deno.env.get("FAL_KEY");
 const MODEL = Deno.env.get("WA_BOT_MODEL") ?? "claude-sonnet-5-5";
 const ALLOWED_TENANTS = (Deno.env.get("WA_BOT_TENANTS") ?? "6").split(",").map((s) => s.trim());
-const CREDIT_COST = 2;
+const CREDIT_USD = Number(Deno.env.get("WA_BOT_CREDIT_USD") ?? 0.01); // costo de IA que cubre 1 crédito
+const CREDIT_AVG = 2; // créditos de un mensaje típico (solo para mostrar en el panel)
+const CREDIT_CONFIRM = 10; // por encima de esto el agente pide confirmación antes de hacerlo
 const CREDIT_NOTICE_EVERY = 10; // mensajes entre recordatorios de saldo
 const CREDIT_LOW = 20; // con este saldo o menos, se avisa en cada respuesta
 const HISTORY_MAX = 16;
-const MAX_AGENT_STEPS = 8;
+const MAX_AGENT_STEPS = 16;
 const PHOTO_ACK_DELAY_MS = 5000;
 const CODE_TTL_MIN = 10;
 const CODE_DIGITS = 8;
@@ -1097,7 +1100,8 @@ Cómo responder:
 - Formato de WhatsApp: *negritas* con un asterisco, sin tablas ni encabezados markdown.
 - Precios en USD con el símbolo $ (ej. $25).
 - Al terminar una acción, confirma qué hiciste en una o dos líneas.
-- Si adjunta un PDF (lista de precios, catálogo, factura), léelo y propón qué crear o actualizar. Antes de crear o cambiar más de 5 productos de una vez, confirma con el dueño.
+- Si adjunta un PDF (lista de precios, catálogo, factura), léelo y propón qué crear o actualizar.
+- Cada mensaje cobra créditos según el trabajo: ~1 una consulta corta, ~2 una consulta con datos, ~3-4 crear o editar un producto con foto. Si el pedido es grande (crear o editar más de 3 productos, o algo que calcules en más de ${CREDIT_CONFIRM} créditos), ANTES de hacerlo dile cuántos créditos costará aproximadamente y su saldo (viene en el contexto), y pide confirmación. Si no le alcanza el saldo, ofrece hacerlo por partes o comprar créditos.
 
 Reglas:
 - Si te dan nombre y precio, crea el producto directo, sin pedir confirmación. Si falta el precio, pregúntalo. Si hay fotos pendientes, úsalas en el producto que crees o edites.
@@ -1186,6 +1190,15 @@ interface ToolTrace { name: string; input: unknown; output: string; error: boole
 /** Costo aproximado en USD (precios de Sonnet 5.5 por millón de tokens). */
 const costUsd = (u: Usage) =>
   Math.round((u.input * 2 + u.output * 10 + u.cacheRead * 0.2 + u.cacheWrite * 2.5) / 1e6 * 10000) / 10000;
+/** Créditos que cuesta lo gastado: 1 por cada CREDIT_USD, mínimo 1. */
+const creditsFor = (u: Usage) => Math.max(1, Math.ceil(costUsd(u) / CREDIT_USD - 1e-9));
+
+/** Saldo de créditos de IA del dueño (mensual + comprados). */
+async function creditBalance(userId: number): Promise<number> {
+  await admin.rpc("ensure_ai_credits", { p_user_id: userId });
+  const { data } = await admin.from("ai_credits").select("monthly_balance, purchased_balance").eq("user_id", userId).maybeSingle();
+  return (data?.monthly_balance ?? 0) + (data?.purchased_balance ?? 0);
+}
 
 async function runAgent(
   link: Link,
@@ -1194,7 +1207,8 @@ async function runAgent(
   shopName: string,
   shopUrl: string,
   extraBlocks: Anthropic.Beta.BetaContentBlockParam[] = [],
-): Promise<{ reply: string; actions: string[]; logged: LoggedAction[]; trace: ToolTrace[]; usage: Usage; photosUsed: boolean; sentMedia: Media[] }> {
+  budget = Infinity,
+): Promise<{ reply: string; actions: string[]; logged: LoggedAction[]; trace: ToolTrace[]; usage: Usage; photosUsed: boolean; sentMedia: Media[]; outOfCredits: boolean }> {
   const ctx: Ctx = { link, shopUrl, pendingPhotos: session.pending_photos, photosUsed: false, sentMedia: [] };
   const usage: Usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, tools: 0 };
   const actions: string[] = [];
@@ -1207,6 +1221,7 @@ async function runAgent(
     `[Tienda: ${shopName}${shopUrl ? ` · ${shopUrl}` : ""} · Hoy: ${today}` +
     (shopUrl ? ` · Planes: ${shopUrl}/admin/plans` : "") +
     (ctx.pendingPhotos.length ? ` · Fotos pendientes en el chat: ${ctx.pendingPhotos.length}` : "") +
+    (Number.isFinite(budget) ? ` · Saldo de créditos: ${budget}` : "") +
     (recent ? `\nÓrdenes recientes: ${recent}` : "") + "]";
   const userContent: Anthropic.Beta.BetaContentBlockParam[] = [
     ...ctx.pendingPhotos.slice(-4).map((url) => ({ type: "image" as const, source: { type: "url" as const, url } })),
@@ -1219,7 +1234,15 @@ async function runAgent(
   ];
 
   let reply = "";
+  let outOfCredits = false;
   for (let step = 0; step < MAX_AGENT_STEPS; step++) {
+    // Sin saldo para seguir: se corta aquí y se cobra solo lo hecho.
+    if (step > 0 && creditsFor(usage) >= budget) {
+      outOfCredits = true;
+      reply = "Me quedé sin créditos de IA a mitad del trabajo 😕 Lo que alcancé a hacer quedó guardado." +
+        (actions.length ? `\nHice ${actions.length} cambio(s).` : "");
+      break;
+    }
     const res = await anthropic.beta.messages.create({
       model: MODEL,
       max_tokens: 4000,
@@ -1269,7 +1292,7 @@ async function runAgent(
     messages.push({ role: "user", content: results });
   }
 
-  return { reply: reply || "Listo 👍", actions, logged, trace, usage, photosUsed: ctx.photosUsed, sentMedia: ctx.sentMedia };
+  return { reply: reply || "Listo 👍", actions, logged, trace, usage, photosUsed: ctx.photosUsed, sentMedia: ctx.sentMedia, outOfCredits };
 }
 
 // ── Mensaje entrante ────────────────────────────────────────────────────────
@@ -1414,14 +1437,13 @@ async function handleInbound(m: any) {
     return;
   }
 
-  // Créditos de IA (CREDIT_COST por mensaje procesado), del pozo del dueño vinculado.
-  await admin.rpc("ensure_ai_credits", { p_user_id: link.user_id });
-  const { data: balance } = await admin.rpc("spend_ai_credits", { p_user_id: link.user_id, p_cost: CREDIT_COST });
+  // Créditos de IA del pozo del dueño vinculado: se cobra al final según lo gastado.
+  const before = await creditBalance(link.user_id);
   const shop = await tenantInfo(link.tenant_id);
-  if (balance === -1) {
+  if (before < 1) {
     await sendText(
       phone,
-      `Te quedaste sin créditos de IA 😕 Cada mensaje al asistente usa ${CREDIT_COST}.\n\n` +
+      "Te quedaste sin créditos de IA 😕\n\n" +
         "Puedes *comprar más créditos* desde tu panel web (botón de créditos arriba) o *mejorar tu plan* desde el panel o la app de CatalogoHoy" +
         (shop.url ? `: ${shop.url}/admin/plans` : "."),
     );
@@ -1433,17 +1455,26 @@ async function handleInbound(m: any) {
   const session = await loadSession(phone, link.tenant_id);
   try {
     const started = Date.now();
-    const { reply, actions, logged, trace, usage, photosUsed, sentMedia } =
-      await runAgent(link, session, text, shop.name, shop.url, extraBlocks);
+    const { reply, actions, logged, trace, usage, photosUsed, sentMedia, outOfCredits } =
+      await runAgent(link, session, text, shop.name, shop.url, extraBlocks, before);
+    // Cobro según lo gastado (nunca más que el saldo que tenía).
+    const credits = Math.min(creditsFor(usage), before);
+    let balance = (await admin.rpc("spend_ai_credits", { p_user_id: link.user_id, p_cost: credits })).data as number;
+    if (balance === -1) {
+      // Otro mensaje gastó en paralelo: se cobra lo que quede.
+      const left = await creditBalance(link.user_id);
+      balance = left > 0 ? (await admin.rpc("spend_ai_credits", { p_user_id: link.user_id, p_cost: Math.min(credits, left) })).data as number : 0;
+      if (balance === -1) balance = 0;
+    }
     const { count: used } = await admin.from("wa_bot_usage").select("id", { count: "exact", head: true }).eq("phone", phone);
-    const notice = balance <= CREDIT_LOW || ((used ?? 0) + 1) % CREDIT_NOTICE_EVERY === 0
-      ? `\n\n💳 Te quedan *${balance}* créditos de IA (cada mensaje usa ${CREDIT_COST}).` +
-        (balance <= CREDIT_LOW ? " Puedes comprar más desde tu panel." : "")
+    const notice = outOfCredits || balance <= CREDIT_LOW || ((used ?? 0) + 1) % CREDIT_NOTICE_EVERY === 0
+      ? `\n\n💳 Este mensaje usó *${credits}* crédito${credits === 1 ? "" : "s"}. Te quedan *${balance}*.` +
+        (balance <= CREDIT_LOW ? ` Puedes comprar más desde tu panel${shop.url ? `: ${shop.url}/admin/plans` : "."}` : "")
       : "";
     await sendText(phone, reply + notice);
     if (!userLogged) await logMsg(link.tenant_id, phone, "user", text, { media: userMedia });
     await logMsg(link.tenant_id, phone, "assistant", reply + notice, {
-      media: sentMedia, actions: logged, credits: CREDIT_COST,
+      media: sentMedia, actions: logged, credits,
       debug: { model: MODEL, ms: Date.now() - started, usage, cost_usd: costUsd(usage), balance_after: balance, tools: trace },
     });
 
@@ -1465,11 +1496,10 @@ async function handleInbound(m: any) {
       tenant_id: link.tenant_id, phone, model: MODEL,
       input_tokens: usage.input, output_tokens: usage.output,
       cache_read_tokens: usage.cacheRead, cache_write_tokens: usage.cacheWrite,
-      tool_calls: usage.tools, credits: CREDIT_COST,
+      tool_calls: usage.tools, credits,
     });
   } catch (e) {
     console.error("[wa-store-bot] agent", e instanceof Error ? e.message : String(e));
-    await admin.rpc("refund_ai_credits", { p_user_id: link.user_id, p_cost: CREDIT_COST });
     await sendText(phone, "Tuve un problema procesando tu mensaje 😕 Intenta de nuevo en un momento.");
     if (!userLogged) await logMsg(link.tenant_id, phone, "user", text, { media: userMedia });
     await logMsg(link.tenant_id, phone, "system", "El asistente tuvo un error con este mensaje (no se cobraron créditos).", {
@@ -1559,7 +1589,7 @@ async function handlePanel(req: Request): Promise<Response> {
           messages30d: rows.length, credits30d: sum(rows),
           balance: (wallet?.monthly_balance ?? 0) + (wallet?.purchased_balance ?? 0),
           monthlyAllowance: wallet?.monthly_allowance ?? 0,
-          creditCost: CREDIT_COST,
+          creditCost: CREDIT_AVG,
         },
       });
     }
