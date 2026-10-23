@@ -9,8 +9,17 @@ export interface WaBotLinkRow {
   id: number; tenant_id: number; tenant_name: string | null; phone: string;
   user_name: string | null; user_email: string | null; created_at: string; last_used_at: string | null;
 }
+/** Una fila por número: conectado o que usó el asistente alguna vez. */
+export interface WaBotUserRow {
+  tenant_id: number; tenant_name: string | null; tenant_slug: string | null; plan_name: string | null;
+  phone: string; connected: boolean; linked_at: string | null; user_name: string | null; user_email: string | null;
+  messages_total: number; messages_7d: number; messages_30d: number;
+  credits_total: number; credits_30d: number; cost_total: number; cost_30d: number;
+  first_at: string | null; last_at: string | null; errors_7d: number; credit_balance: number | null;
+}
 export interface WaBotAdminStats {
   links: WaBotLinkRow[];
+  users: WaBotUserRow[];
   today: { messages: number; credits: number; cost_usd: number };
   last_30d: WaBotDay[];
   by_tenant: WaBotTenantRow[];

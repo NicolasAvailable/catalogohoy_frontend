@@ -93,6 +93,9 @@ jobs:
     needs: web
     if: inputs.platform != 'android'
     runs-on: macos-15
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -115,19 +118,23 @@ jobs:
           GOOGLE_SERVICE_INFO_BASE64: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
         run: echo "$GOOGLE_SERVICE_INFO_BASE64" | base64 -d > ios/App/App/GoogleService-Info.plist
       - run: npx cap sync ios
-      # Llave privada del certificado de distribución (cifrada con la API key).
-      # Si todavía no existe, fastlane crea el certificado y el paso de abajo
-      # lo deja como artifact para guardarlo en el secreto IOS_DIST_CERT_ENC.
+      # Llave privada del certificado de distribución, cifrada con la API key.
+      # Se guarda como artifact en cada versión y se toma del último, así se
+      # reutiliza siempre el mismo certificado (Apple limita cuántos hay).
       - name: Certificado de distribución
         env:
-          IOS_DIST_CERT_ENC: ${{ secrets.IOS_DIST_CERT_ENC }}
+          GH_TOKEN: ${{ github.token }}
           ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
         run: |
           mkdir -p build/certs
-          if [ -n "$IOS_DIST_CERT_ENC" ]; then
-            echo "$IOS_DIST_CERT_ENC" | base64 -d \
+          id=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=ios-dist-cert&per_page=20" \
+            -q '[.artifacts[] | select(.expired == false)][0].id // empty')
+          if [ -n "$id" ]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > /tmp/ios-dist-cert.zip
+            unzip -p /tmp/ios-dist-cert.zip ios-dist-cert.enc | base64 -d \
               | openssl enc -d -aes-256-cbc -pbkdf2 -pass env:ASC_KEY_P8_BASE64 \
               | tar xz -C build/certs
+            echo "Certificado previo restaurado"
           fi
       - name: Publicar en App Store
         env:
@@ -136,14 +143,13 @@ jobs:
           ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
           RELEASE_NOTES: ${{ inputs.release_notes }}
         run: bundle exec fastlane ios release
-      - name: Guardar certificado nuevo
+      - name: Guardar certificado
         if: always()
         id: newcert
         env:
-          IOS_DIST_CERT_ENC: ${{ secrets.IOS_DIST_CERT_ENC }}
           ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
         run: |
-          if [ -z "$IOS_DIST_CERT_ENC" ] && ls build/certs/*.p12 >/dev/null 2>&1; then
+          if ls build/certs/*.p12 >/dev/null 2>&1; then
             tar cz -C build/certs $(cd build/certs && ls *.p12) \
               | openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:ASC_KEY_P8_BASE64 \
               | base64 > ios-dist-cert.enc

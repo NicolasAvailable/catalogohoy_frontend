@@ -62,6 +62,14 @@ platform :ios do
     )
     profile_name = lane_context[SharedValues::SIGH_NAME]
 
+    # Xcode 16 busca los perfiles en UserData; sigh los instala en la ruta vieja.
+    profile_file = "#{lane_context[SharedValues::SIGH_UUID]}.mobileprovision"
+    ['~/Library/Developer/Xcode/UserData/Provisioning Profiles', '~/Library/MobileDevice/Provisioning Profiles'].each do |dir|
+      dir = File.expand_path(dir)
+      FileUtils.mkdir_p(dir)
+      FileUtils.cp(lane_context[SharedValues::SIGH_PROFILE_PATH], File.join(dir, profile_file))
+    end
+
     update_code_signing_settings(
       path: xcodeproj,
       use_automatic_signing: false,
