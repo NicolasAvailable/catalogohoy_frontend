@@ -46,6 +46,18 @@
     </a>
     }
 
+    @if (canViewCategories()) {
+    <a
+      routerLink="/admin/categories"
+      routerLinkActive="bg-primary-50"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors"
+    >
+      <ui-icon name="layers" size="18" styleClass="text-grey-700" />
+      <span class="font-semibold text-grey-700">{{ 'Categorías' | transloco }}</span>
+    </a>
+    }
+
     @if (waBotEnabled()) {
     <a
       routerLink="/admin/whatsapp-bot"

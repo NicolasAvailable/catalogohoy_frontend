@@ -81,6 +81,9 @@ export class MobileMoreDrawer {
   public readonly canViewTeam = computed(
     () => this.permissions.isOwner() || this.permissions.can()('equipo', 'view')
   );
+  public readonly canViewCategories = computed(
+    () => this.permissions.isOwner() || this.permissions.can()('productos', 'view')
+  );
   /** Asistente de WhatsApp (beta): mismo gate que el sidebar web. */
   public readonly waBotEnabled = computed(
     () =>
