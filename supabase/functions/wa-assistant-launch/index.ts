@@ -15,6 +15,7 @@ import { uploadToS3 } from "../_shared/s3.ts";
 //   icon      → solo copia el ícono a S3.
 //   status    → estado de la plantilla en Meta (PENDING / APPROVED / REJECTED).
 //   audience  → cuántos recibirían cada canal (sin enviar).
+//   costs     → { start, end } lo que Meta cobró por categoría y país (solo lectura).
 //   test      → { phone?, email? } manda una muestra sin registrar el envío.
 //   send      → { channel: "whatsapp"|"email", limit? } manda un lote a los
 //               que aún no lo recibieron. Repetir hasta remaining = 0.
@@ -291,6 +292,13 @@ Deno.serve(async (req: Request) => {
         return json({ icon: await copyIcon() });
       case "status":
         return json(await templateStatus());
+      case "costs": {
+        // Solo lectura: lo que Meta cobró por categoría y país (start/end en segundos Unix).
+        const dims = encodeURIComponent('["PRICING_CATEGORY","COUNTRY"]');
+        return json((await graph(
+          `${WABA_ID}?fields=pricing_analytics.start(${Number(body.start)}).end(${Number(body.end)}).granularity(DAILY).dimensions(${dims})`,
+        )).body);
+      }
       case "audience":
         return json({
           whatsapp: (await audience("whatsapp")).length,
