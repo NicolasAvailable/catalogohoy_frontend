@@ -32,6 +32,8 @@ end
 def submit_ios(api_key:, version:, ipa: nil, build_number: nil)
   upload_to_app_store(
     api_key: api_key,
+    app_identifier: APP_ID,
+    platform: 'ios',
     ipa: ipa,
     build_number: build_number,
     skip_binary_upload: ipa.nil?,
