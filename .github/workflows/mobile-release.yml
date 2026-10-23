@@ -14,7 +14,7 @@ on:
       platform:
         description: Plataforma
         type: choice
-        options: [both, ios, android]
+        options: [both, ios, android, ios-submit]
         default: both
       release_notes:
         description: Notas de la versión (español)
@@ -26,6 +26,7 @@ concurrency:
 
 jobs:
   web:
+    if: inputs.platform != 'ios-submit'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +48,7 @@ jobs:
 
   android:
     needs: web
-    if: inputs.platform != 'ios'
+    if: inputs.platform == 'both' || inputs.platform == 'android'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,7 +92,7 @@ jobs:
 
   ios:
     needs: web
-    if: inputs.platform != 'android'
+    if: inputs.platform == 'both' || inputs.platform == 'ios'
     # Apple exige el SDK de iOS 26 (Xcode 26) para subir builds.
     runs-on: macos-26
     permissions:
@@ -168,3 +169,23 @@ jobs:
           name: ios-dist-cert
           path: ios-dist-cert.enc
           retention-days: 90
+
+  # Reintenta solo el envío a revisión de un build ya subido (sin compilar).
+  ios-submit:
+    if: inputs.platform == 'ios-submit'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+      - name: Enviar a revisión de Apple
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: bundle exec fastlane ios submit
