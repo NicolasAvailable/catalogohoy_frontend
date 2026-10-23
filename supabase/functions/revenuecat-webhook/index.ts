@@ -130,6 +130,21 @@ Deno.serve(async (req) => {
     return json({ ok: true, stripe_active: true });
   }
 
+  // Un plan asignado a mano desde el panel interno (tenant_subscriptions
+  // activa y vigente) manda sobre IAP: no lo pisamos ni lo bajamos a gratis.
+  const { data: manualSub } = await supabase
+    .from('tenant_subscriptions')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+    .gt('expires_at', new Date().toISOString())
+    .limit(1)
+    .maybeSingle();
+  if (manualSub) {
+    await recordEvent();
+    return json({ ok: true, manual_plan_active: true });
+  }
+
   const entitlements = Array.isArray(event['entitlement_ids'])
     ? event['entitlement_ids']
     : [];
