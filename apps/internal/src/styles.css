@@ -82,3 +82,23 @@ html[data-theme='dark'] .wa-chat { background-color: #0b141a; }
 html[data-theme='dark'] .wa-bubble-user { background-color: #005c4b; }
 html[data-theme='dark'] .wa-chat .bg-white { background-color: #202c33; }
 html[data-theme='dark'] .wa-note { background-color: #2a2f32; color: #e9edef; }
+
+/* Grises más oscuros usados como texto fuerte (p. ej. nombres en tablas):
+   en oscuro también se invierten para que se lean. */
+[data-theme='dark'] {
+  --color-grey-800: #ffffff;
+  --color-grey-900: #ffffff;
+}
+
+/* Botones "contrast" (Refrescar, Cancelar…): PrimeNG los pinta casi negros,
+   en oscuro los pasamos a texto/borde claro. */
+html[data-theme='dark'] .p-button-contrast.p-button-outlined,
+html[data-theme='dark'] .p-button-contrast.p-button-text {
+  color: #e2e8f0;
+  border-color: #353b4c;
+}
+html[data-theme='dark'] .p-button-contrast.p-button-outlined:not(:disabled):hover,
+html[data-theme='dark'] .p-button-contrast.p-button-text:not(:disabled):hover {
+  background-color: #232938;
+  color: #ffffff;
+}
