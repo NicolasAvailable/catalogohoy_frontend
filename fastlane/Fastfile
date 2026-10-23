@@ -1,0 +1,117 @@
+# Publicación de las apps (Capacitor) a App Store y Play Store.
+# La corre el workflow .github/workflows/mobile-release.yml: las llaves llegan
+# como variables de entorno desde los secretos de GitHub y nunca se guardan
+# en el repo. El número de build/versionCode se calcula solo (último + 1).
+
+ROOT = File.expand_path('..', __dir__)
+APP_ID = 'com.catalogohoy.app'
+TEAM_ID = 'G2K6QW9VZ2'
+
+def release_notes
+  notes = ENV['RELEASE_NOTES'].to_s.strip
+  UI.user_error!('Faltan las notas de la versión (RELEASE_NOTES)') if notes.empty?
+  notes
+end
+
+platform :ios do
+  lane :release do
+    xcodeproj = File.join(ROOT, 'ios/App/App.xcodeproj')
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch('ASC_KEY_ID'),
+      issuer_id: ENV.fetch('ASC_ISSUER_ID'),
+      key_content: ENV.fetch('ASC_KEY_P8_BASE64'),
+      is_key_content_base64: true
+    )
+
+    # Llavero temporal con el certificado de distribución.
+    setup_ci
+    import_certificate(
+      certificate_path: File.join(ROOT, 'ios_distribution.p12'),
+      certificate_password: ENV.fetch('IOS_DIST_P12_PASSWORD'),
+      keychain_name: 'fastlane_tmp_keychain',
+      keychain_password: ''
+    )
+
+    # Perfil App Store (lo crea o descarga con la API key).
+    get_provisioning_profile(api_key: api_key, app_identifier: APP_ID, team_id: TEAM_ID)
+    profile_name = lane_context[SharedValues::SIGH_NAME]
+
+    update_code_signing_settings(
+      path: xcodeproj,
+      use_automatic_signing: false,
+      team_id: TEAM_ID,
+      targets: ['App'],
+      code_sign_identity: 'Apple Distribution',
+      profile_name: profile_name,
+      bundle_identifier: APP_ID
+    )
+
+    version = get_version_number(xcodeproj: xcodeproj, target: 'App')
+    build = latest_testflight_build_number(api_key: api_key, app_identifier: APP_ID, initial_build_number: 0) + 1
+    increment_build_number(xcodeproj: xcodeproj, build_number: build)
+    UI.message("iOS #{version} (#{build})")
+
+    ipa = build_app(
+      project: xcodeproj,
+      scheme: 'App',
+      configuration: 'Release',
+      export_method: 'app-store',
+      output_directory: File.join(ROOT, 'build/ios'),
+      export_options: { provisioningProfiles: { APP_ID => profile_name } }
+    )
+
+    upload_to_app_store(
+      api_key: api_key,
+      ipa: ipa,
+      app_version: version,
+      release_notes: { 'default' => release_notes },
+      skip_screenshots: true,
+      skip_metadata: false,
+      skip_app_version_update: false,
+      submit_for_review: true,
+      automatic_release: true,
+      force: true,
+      run_precheck_before_submit: false,
+      submission_information: { add_id_info_uses_idfa: false, export_compliance_uses_encryption: false }
+    )
+  end
+end
+
+platform :android do
+  lane :release do
+    json_key = ENV.fetch('PLAY_SERVICE_ACCOUNT_JSON')
+    gradle_file = File.join(ROOT, 'android/app/build.gradle')
+
+    codes = %w[production beta alpha internal].flat_map do |track|
+      google_play_track_version_codes(package_name: APP_ID, track: track, json_key_data: json_key)
+    rescue StandardError
+      []
+    end
+    version_code = (codes.map(&:to_i).max || 0) + 1
+    gradle_src = File.read(gradle_file)
+    local_code = gradle_src[/versionCode\s+(\d+)/, 1].to_i
+    version_code = [version_code, local_code].max
+    File.write(gradle_file, gradle_src.sub(/versionCode\s+\d+/, "versionCode #{version_code}"))
+    UI.message("Android versionCode #{version_code}")
+
+    gradle(task: 'bundle', build_type: 'Release', project_dir: File.join(ROOT, 'android'))
+
+    changelog_dir = File.join(ROOT, 'build/play-metadata/es-419/changelogs')
+    FileUtils.mkdir_p(changelog_dir)
+    File.write(File.join(changelog_dir, "#{version_code}.txt"), release_notes)
+
+    upload_to_play_store(
+      package_name: APP_ID,
+      track: 'production',
+      release_status: 'completed',
+      aab: lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH],
+      json_key_data: json_key,
+      metadata_path: File.join(ROOT, 'build/play-metadata'),
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+end
