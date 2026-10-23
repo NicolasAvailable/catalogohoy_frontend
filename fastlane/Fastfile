@@ -3,6 +3,9 @@
 # como variables de entorno desde los secretos de GitHub y nunca se guardan
 # en el repo. El número de build/versionCode se calcula solo (último + 1).
 
+require 'base64'
+require 'fileutils'
+
 ROOT = File.expand_path('..', __dir__)
 APP_ID = 'com.catalogohoy.app'
 TEAM_ID = 'G2K6QW9VZ2'
@@ -24,27 +27,19 @@ platform :ios do
       is_key_content_base64: true
     )
 
-    # Llavero temporal con el certificado de distribución.
-    setup_ci
-    import_certificate(
-      certificate_path: File.join(ROOT, 'ios_distribution.p12'),
-      certificate_password: ENV.fetch('IOS_DIST_P12_PASSWORD'),
-      keychain_name: 'fastlane_tmp_keychain',
-      keychain_password: ''
-    )
-
-    # Perfil App Store (lo crea o descarga con la API key).
-    get_provisioning_profile(api_key: api_key, app_identifier: APP_ID, team_id: TEAM_ID)
-    profile_name = lane_context[SharedValues::SIGH_NAME]
+    # Firma en la nube de Apple: xcodebuild usa la API key para obtener el
+    # certificado y el perfil de distribución (no hace falta un .p12).
+    key_path = File.join(ROOT, 'build/AuthKey.p8')
+    FileUtils.mkdir_p(File.dirname(key_path))
+    File.binwrite(key_path, Base64.decode64(ENV.fetch('ASC_KEY_P8_BASE64')))
+    auth_args = "-allowProvisioningUpdates -authenticationKeyPath #{key_path} " \
+                "-authenticationKeyID #{ENV.fetch('ASC_KEY_ID')} -authenticationKeyIssuerID #{ENV.fetch('ASC_ISSUER_ID')}"
 
     update_code_signing_settings(
       path: xcodeproj,
-      use_automatic_signing: false,
+      use_automatic_signing: true,
       team_id: TEAM_ID,
-      targets: ['App'],
-      code_sign_identity: 'Apple Distribution',
-      profile_name: profile_name,
-      bundle_identifier: APP_ID
+      targets: ['App']
     )
 
     version = get_version_number(xcodeproj: xcodeproj, target: 'App')
@@ -58,7 +53,10 @@ platform :ios do
       configuration: 'Release',
       export_method: 'app-store',
       output_directory: File.join(ROOT, 'build/ios'),
-      export_options: { provisioningProfiles: { APP_ID => profile_name } }
+      xcargs: auth_args,
+      export_xcargs: auth_args,
+      export_team_id: TEAM_ID,
+      export_options: { signingStyle: 'automatic', teamID: TEAM_ID }
     )
 
     upload_to_app_store(
