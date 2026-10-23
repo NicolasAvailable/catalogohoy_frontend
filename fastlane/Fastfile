@@ -70,6 +70,14 @@ platform :ios do
       FileUtils.cp(lane_context[SharedValues::SIGH_PROFILE_PATH], File.join(dir, profile_file))
     end
 
+    # Diagnóstico de firma (sin datos secretos) para cuando Xcode no ve el perfil.
+    profile_plist = File.join(ROOT, 'build/profile.plist')
+    sh("security cms -D -i #{lane_context[SharedValues::SIGH_PROFILE_PATH].shellescape} > #{profile_plist.shellescape}")
+    sh("/usr/libexec/PlistBuddy -c 'Print :Name' -c 'Print :UUID' -c 'Print :TeamIdentifier' -c 'Print :ExpirationDate' " \
+       "-c 'Print :Entitlements' #{profile_plist.shellescape} || true")
+    sh("security find-identity -v -p codesigning || true")
+    sh("ls -la ~/Library/Developer/Xcode/UserData/Provisioning\\ Profiles ~/Library/MobileDevice/Provisioning\\ Profiles || true")
+
     update_code_signing_settings(
       path: xcodeproj,
       use_automatic_signing: false,
