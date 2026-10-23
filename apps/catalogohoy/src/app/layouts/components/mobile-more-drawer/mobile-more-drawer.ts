@@ -13,6 +13,7 @@ import { AuthenticationService } from '@catalogohoy/auth';
 import {
   clearNativeSlug,
   isNativeApp,
+  isWaBotEnabled,
   LanguageSelectorComponent,
   PosthogService,
   RevenueCatService,
@@ -79,6 +80,12 @@ export class MobileMoreDrawer {
   );
   public readonly canViewTeam = computed(
     () => this.permissions.isOwner() || this.permissions.can()('equipo', 'view')
+  );
+  /** Asistente de WhatsApp (beta): mismo gate que el sidebar web. */
+  public readonly waBotEnabled = computed(
+    () =>
+      isWaBotEnabled(Number(this.tenantStore.tenantId())) &&
+      (this.permissions.isOwner() || this.permissions.can()('asistente', 'view'))
   );
   public readonly canViewCatalog = computed(
     () => this.permissions.isOwner() || this.permissions.can()('catalogo', 'edit')

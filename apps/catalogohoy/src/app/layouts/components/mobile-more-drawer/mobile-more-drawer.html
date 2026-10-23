@@ -46,6 +46,23 @@
     </a>
     }
 
+    @if (waBotEnabled()) {
+    <a
+      routerLink="/admin/whatsapp-bot"
+      routerLinkActive="bg-primary-50"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="flex items-center justify-between gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors"
+    >
+      <span class="flex items-center gap-3">
+        <ui-icon name="message-circle" size="18" styleClass="text-grey-700" />
+        <span class="font-semibold text-grey-700">{{ 'Asistente WhatsApp' | transloco }}</span>
+      </span>
+      <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[0.625rem] font-semibold leading-none">
+        {{ 'Beta' | transloco }}
+      </span>
+    </a>
+    }
+
     @if (canViewReports()) {
     <a
       routerLink="/admin/reports"
