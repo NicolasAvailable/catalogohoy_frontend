@@ -42,6 +42,44 @@ const NOISE_PATTERNS =
 const TOAST_NOISE =
   /No hay más stock disponible|No more stock available|plus de stock disponible|mais estoque disponível/i;
 
+/** Errores ESPERADOS que se le muestran al usuario: no son fallas de la app,
+ *  así que no van al canal de errores (sólo deben llegar errores reales).
+ *  Cubre es/en/pt/fr porque el toast llega ya traducido. Tres familias:
+ *  - Login/registro: credenciales inválidas, usuario ya existe, contraseña
+ *    débil, tope de emails, enlace de verificación vencido.
+ *  - Límites del plan y créditos: "llegaste al límite", "mejora tu plan",
+ *    funciones de planes pagos, créditos insuficientes.
+ *  - Validación de lo que cargó el usuario: campos obligatorios, formato
+ *    inválido, imagen ilegible (JPG/PNG/WEBP), sin permiso, sin conexión.
+ *  Mantener en sync con EXPECTED_USER_ERRORS de la edge `notify-error`. */
+export const EXPECTED_USER_ERRORS = new RegExp(
+  [
+    // Login / registro
+    'contraseña son inv', 'email or password is invalid', 'e-mail ou a senha',
+    'mot de passe est invalide', 'invalid login credentials',
+    'email not confirmed', 'usuario ya existe', 'user already exists',
+    'usuário já existe', 'utilisateur existe déjà', 'contraseña debe',
+    'password must', 'password should', 'senha deve', 'mot de passe doit',
+    'límite emails', 'enlace de verificación expiró',
+    // Límites del plan / créditos
+    'l[ií]mite', 'limit of', 'limit reached', "plan's limit", 'plan limit',
+    'mejor[aá] (tu|el) plan', 'mejora tu plan', 'actualiza tu plan',
+    'upgrade your plan', 'upgrade do plano', 'melhore seu plano',
+    'améliorez votre plan', 'planes pagos', 'paid plans', 'PLAN_LIMIT',
+    'disponible en el plan', 'available on the', 'tu plan ha expirado',
+    'no te alcanzan', 'cr[eé]ditos? insuficientes', 'not enough credits',
+    'insufficient credits', 'sin cr[eé]ditos', 'compra más créditos',
+    'buy more credits', 'compre mais créditos', 'achetez plus de crédits',
+    // Validación / permisos / conexión del usuario
+    'obligatori', 'obrigatóri', 'requerid', 'is required', 'no es válid',
+    'is not valid', 'não é válid', "n'est pas valide", 'JPG, PNG',
+    'No pudimos leer esta imagen', 'No tienes permiso', "don't have permission",
+    'não tem permissão', "n'avez pas la permission", 'completa los campos',
+    'Verifica tu conexi', 'check your connection',
+  ].join('|'),
+  'i'
+);
+
 /** Fingerprint del build (main-XXXX.js) — mismo truco que AppVersionService.
  *  Cambia con cada deploy: permite correlacionar errores con deploys. */
 let cachedVersion: string | null | undefined;
@@ -67,7 +105,12 @@ export function reportErrorToSlack(
     if (isDevMode()) return;
     const text = String(message ?? 'error desconocido').slice(0, 500);
     if (source === 'uncaught' && NOISE_PATTERNS.test(text)) return;
-    if (source === 'toast' && TOAST_NOISE.test(text)) return;
+    if (
+      source === 'toast' &&
+      (TOAST_NOISE.test(text) || EXPECTED_USER_ERRORS.test(text))
+    ) {
+      return;
+    }
     const key = `${source}:${text}`;
     if (reportedKeys.has(key) || sentThisSession >= MAX_REPORTS_PER_SESSION) {
       return;
