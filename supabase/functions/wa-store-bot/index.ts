@@ -1817,6 +1817,17 @@ const costUsd = (u: Usage) =>
 /** Créditos que cuesta lo gastado: 1 por cada CREDIT_USD, mínimo 1. */
 const creditsFor = (u: Usage) => Math.max(1, Math.ceil(costUsd(u) / CREDIT_USD - 1e-9));
 
+/**
+ * Usuario cuyo pozo de créditos paga el asistente de una tienda: el dueño.
+ * Un miembro del equipo vinculado gasta los créditos del plan de la tienda,
+ * no los de su propia cuenta (que suele ser Gratis).
+ */
+async function walletUserId(tenantId: number, fallback: number): Promise<number> {
+  const { data } = await admin.from("users_tenants").select("user_id")
+    .eq("tenant_id", tenantId).eq("role", "owner").order("user_id").limit(1).maybeSingle();
+  return Number(data?.user_id) || fallback;
+}
+
 /** Saldo de créditos de IA del dueño (mensual + comprados). */
 async function creditBalance(userId: number): Promise<number> {
   await admin.rpc("ensure_ai_credits", { p_user_id: userId });
@@ -2078,7 +2089,8 @@ async function handleInbound(m: any) {
   }
 
   // Créditos de IA del pozo del dueño vinculado: se cobra al final según lo gastado.
-  const before = await creditBalance(link.user_id);
+  const wallet = await walletUserId(link.tenant_id, link.user_id);
+  const before = await creditBalance(wallet);
   const shop = await tenantInfo(link.tenant_id);
   if (before < 1) {
     await sendText(
@@ -2099,11 +2111,11 @@ async function handleInbound(m: any) {
       await runAgent(link, session, text, shop.name, shop.url, extraBlocks, before);
     // Cobro según lo gastado (nunca más que el saldo que tenía).
     const credits = Math.min(creditsFor(usage), before);
-    let balance = (await admin.rpc("spend_ai_credits", { p_user_id: link.user_id, p_cost: credits })).data as number;
+    let balance = (await admin.rpc("spend_ai_credits", { p_user_id: wallet, p_cost: credits })).data as number;
     if (balance === -1) {
       // Otro mensaje gastó en paralelo: se cobra lo que quede.
-      const left = await creditBalance(link.user_id);
-      balance = left > 0 ? (await admin.rpc("spend_ai_credits", { p_user_id: link.user_id, p_cost: Math.min(credits, left) })).data as number : 0;
+      const left = await creditBalance(wallet);
+      balance = left > 0 ? (await admin.rpc("spend_ai_credits", { p_user_id: wallet, p_cost: Math.min(credits, left) })).data as number : 0;
       if (balance === -1) balance = 0;
     }
     const { count: used } = await admin.from("wa_bot_usage").select("id", { count: "exact", head: true }).eq("phone", phone);
@@ -2218,9 +2230,10 @@ async function handlePanel(req: Request): Promise<Response> {
       const sum = (list: { credits: number }[]) => list.reduce((acc, r) => acc + (r.credits ?? 0), 0);
       const today = rows.filter((r) => r.created_at >= startToday);
 
-      await admin.rpc("ensure_ai_credits", { p_user_id: user.id });
+      const walletUser = await walletUserId(tenantId, user.id);
+      await admin.rpc("ensure_ai_credits", { p_user_id: walletUser });
       const { data: wallet } = await admin.from("ai_credits").select("monthly_balance, monthly_allowance, purchased_balance")
-        .eq("user_id", user.id).maybeSingle();
+        .eq("user_id", walletUser).maybeSingle();
       return json({
         messages: (messages ?? []).reverse(),
         hasMore: (messages ?? []).length === limit,
