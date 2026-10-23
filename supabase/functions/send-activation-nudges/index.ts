@@ -31,7 +31,7 @@ function escapeHtml(input) {
 // fondo #eaf1ff, card blanca con radio 12px, logo, título #16367f, texto
 // #383838 en Arial y botón #3e7bfa con radio 8px. Copia idéntica en cada
 // función que manda email: si cambiás algo acá, cambialo en todas.
-const BRAND_LOGO_URL = "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/catalogohoy-logo.png";
+const BRAND_LOGO_URL = "https://cdn.catalogohoy.com/catalogohoy-logo.png";
 const BRAND_BLUE = "#3e7bfa";
 function brandEsc(v) {
   if (v == null) return "";

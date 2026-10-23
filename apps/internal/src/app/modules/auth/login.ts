@@ -30,7 +30,7 @@ import { AuthStore } from './auth.store';
       >
         <div class="flex flex-col items-center gap-4">
           <ui-icon
-            name="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/logo.svg"
+            name="https://cdn.catalogohoy.com/logo.svg"
             styleClass="h-12"
           />
           <div class="flex flex-col items-center gap-1 text-center">
