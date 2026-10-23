@@ -254,3 +254,14 @@
   **CSS del propio componente** (media queries + clases modificadoras tipo
   `:host(.ficha--mobile-open)`), no en utilities del padre. Igual para el slide-over del
   conversation-panel (`chat-layout.css` usa el selector del tag, no utilities).
+
+## Emails a direcciones que no se pueden entregar (Apple relay, typos)
+
+- `@privaterelay.appleid.com` ("Ocultar mi correo" de Apple, usuarios que entran con
+  Sign in with Apple) rebota el 100% con `550 unauthorized sender`: Apple solo reenvía
+  desde remitentes registrados en el Apple Developer. También rebotan typos tipo
+  `gmail.comm`, `gamil.com`, `hitmail.com` y dominios de prueba (`.test`, `example.com`).
+- Cada función que manda email por SES tiene una copia de `isUndeliverableEmail()` y
+  `sendViaSes` se salta esos destinatarios sin llamar a SES (cuidar la reputación).
+  Si agregás un dominio, cambialo en todas las copias. Rebotes reales: tabla
+  `ses_email_events` (columna `bounced_at`, `diagnostic`).
