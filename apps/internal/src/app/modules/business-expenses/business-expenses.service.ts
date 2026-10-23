@@ -30,7 +30,7 @@ export class BusinessExpensesService {
 
   async list(): Promise<Either<Error, BusinessExpense[]>> {
     const { data, error } = await this.client.rpc(
-      'list_business_expenses_admin'
+      'list_business_expenses_v2_admin'
     );
 
     if (error) {
@@ -61,8 +61,8 @@ export class BusinessExpensesService {
         p_company: input.company,
         p_amount_usd: input.amountUsd,
         p_period: input.period,
-        // Solo se manda para pagos únicos, así los recurrentes siguen
-        // funcionando aunque la RPC no tenga todavía el parámetro.
+        // Solo se manda para pagos únicos: con 6 args va a la versión con
+        // mes; con 5 a la de recurrentes (que delega y limpia el mes).
         ...(input.period === 'one_time' && input.expenseMonth
           ? { p_expense_month: `${input.expenseMonth}-01` }
           : {}),
