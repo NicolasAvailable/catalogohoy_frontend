@@ -142,6 +142,9 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
           RELEASE_NOTES: ${{ inputs.release_notes }}
+          # Resolver los paquetes SPM puede tardar; fastlane corta a los ~3 s.
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: '120'
+          FASTLANE_XCODEBUILD_SETTINGS_RETRIES: '5'
         run: bundle exec fastlane ios release
       - name: Guardar certificado
         if: always()

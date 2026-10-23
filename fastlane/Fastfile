@@ -9,7 +9,7 @@ require 'securerandom'
 
 ROOT = File.expand_path('..', __dir__)
 APP_ID = 'com.catalogohoy.app'
-TEAM_ID = 'G2K6QW9VZ2'
+TEAM_ID = 'FWJZ5LN29G' # equipo de la cuenta de App Store (el del .pbxproj no existe)
 
 def release_notes
   notes = ENV['RELEASE_NOTES'].to_s.strip

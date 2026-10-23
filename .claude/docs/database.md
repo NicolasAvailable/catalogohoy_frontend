@@ -602,8 +602,10 @@ Vercel, Google Workspace, …), administrados desde la sección "Gastos" del pan
 | expense_month | date | NULL | Solo `one_time` (día 1 del mes del pago); CHECK: NOT NULL ⇔ one_time (2026-10-23) |
 | created_at / updated_at | timestamptz | `now()` | |
 
-RPCs admin (SECURITY DEFINER + `_assert_internal_admin`): `list_business_expenses_admin()`,
-`save_business_expense_admin(id, name, company, amount_usd, period, expense_month DEFAULT NULL)` (id NULL = insert) y
+RPCs admin (SECURITY DEFINER + `_assert_internal_admin`): `list_business_expenses_v2_admin()` (con
+`expense_month`; la vieja `list_business_expenses_admin()` sigue pero el panel ya no la usa),
+`save_business_expense_admin(id, name, company, amount_usd, period[, expense_month])` (id NULL = insert;
+overload de 6 args para pagos únicos, el de 5 delega en él con mes NULL) y
 `delete_business_expense_admin(id)`. El panel normaliza totales (anual/12 para el mensual) y tiene
 selector de mes: el total del mes = recurrentes + pagos únicos de ese mes.
 
