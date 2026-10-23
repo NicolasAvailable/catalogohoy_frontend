@@ -926,6 +926,55 @@
       </div>
     </div>
 
+    <!-- Productos más vendidos del periodo: unidades, ventas y ganancia -->
+    @if (topProducts().length > 0) {
+    <div class="flex flex-col gap-3">
+      <h3 class="text-sm font-bold text-grey-500 uppercase tracking-wider">
+        {{ 'Productos más vendidos' | transloco }}
+      </h3>
+      <div class="bg-white rounded-xl border border-grey-100 shadow-sm overflow-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-grey-25 text-grey-400 text-[11px] uppercase tracking-wider font-bold">
+            <tr>
+              <th class="px-3 py-3 border-b border-grey-50 text-left">{{ 'Producto' | transloco }}</th>
+              <th class="px-3 py-3 border-b border-grey-50 text-right">{{ 'Unidades' | transloco }}</th>
+              <th class="px-3 py-3 border-b border-grey-50 text-right">{{ 'Ventas' | transloco }}</th>
+              @if (hasCostData()) {
+              <th class="px-3 py-3 border-b border-grey-50 text-right">{{ 'Ganancia' | transloco }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of topProducts(); track p.key; let i = $index) {
+            <tr class="border-b border-grey-50 last:border-0">
+              <td class="px-3 py-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="text-xs font-bold text-grey-300 w-5 shrink-0">{{ i + 1 }}</span>
+                  @if (p.photo) {
+                  <img [src]="p.photo" [alt]="p.name" class="w-8 h-8 rounded-md object-cover shrink-0" loading="lazy" />
+                  }
+                  <span class="font-medium text-grey-700 truncate">{{ p.name }}</span>
+                </div>
+              </td>
+              <td class="px-3 py-2 text-right text-grey-700">{{ p.quantity }}</td>
+              <td class="px-3 py-2 text-right font-semibold text-grey-800">{{ cs() }}{{ p.revenue | number:'1.2-2' }}</td>
+              @if (hasCostData()) {
+              <td class="px-3 py-2 text-right">
+                @if (p.profit !== null) {
+                <span class="font-semibold" [class.text-emerald-600]="p.profit >= 0" [class.text-red-500]="p.profit < 0">{{ cs() }}{{ p.profit | number:'1.2-2' }}</span>
+                } @else {
+                <span class="text-grey-300" [title]="'Sin costo registrado' | transloco">—</span>
+                }
+              </td>
+              }
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+    }
+
     <!-- Desglose: las órdenes que se están contabilizando en el periodo -->
     <div class="flex flex-col gap-3">
       <div class="flex items-center justify-between gap-2 flex-wrap">

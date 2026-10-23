@@ -597,13 +597,48 @@ export class OrderListComponent implements OnInit, OnDestroy {
     () => Object.keys(this.productCosts()).length > 0
   );
 
-  /** Ganancia estimada total del periodo = suma de la ganancia por orden. */
+  /** Ganancia estimada total del periodo = suma de la ganancia por orden.
+   *  Las canceladas no cuentan (mismo criterio que el resto de métricas). */
   public readonly metricsProfit = computed(() =>
-    this.metricsOrders().reduce(
-      (sum, o) => sum + (this.estimatedProfit(o) ?? 0),
-      0
-    )
+    this.metricsOrders()
+      .filter((o) => o.status !== 'cancelled')
+      .reduce((sum, o) => sum + (this.estimatedProfit(o) ?? 0), 0)
   );
+
+  /** Productos más vendidos del periodo (sin canceladas): unidades, ventas y
+   *  ganancia estimada (ventas − costo actual × unidades). `profit` es null si
+   *  el producto no tiene costo registrado o es una línea manual. */
+  public readonly topProducts = computed(() => {
+    const costs = this.productCosts();
+    const byKey = new Map<
+      string,
+      { key: string; name: string; photo: string | null; quantity: number; revenue: number; profit: number | null }
+    >();
+    for (const order of this.metricsOrders()) {
+      if (order.status === 'cancelled') continue;
+      for (const item of order.products ?? []) {
+        const key = item.isCustom ? `custom:${item.name}` : String(item.productId);
+        const qty = Number(item.quantity) || 0;
+        const revenue = Number(item.total) || 0;
+        const cost = item.isCustom ? undefined : costs[String(item.productId)];
+        const row = byKey.get(key) ?? {
+          key,
+          name: item.name,
+          photo: item.photo ?? null,
+          quantity: 0,
+          revenue: 0,
+          profit: cost != null ? 0 : null,
+        };
+        row.quantity += qty;
+        row.revenue += revenue;
+        if (row.profit != null && cost != null) row.profit += revenue - cost * qty;
+        byKey.set(key, row);
+      }
+    }
+    return [...byKey.values()]
+      .sort((a, b) => b.quantity - a.quantity || b.revenue - a.revenue)
+      .slice(0, 10);
+  });
 
   /** How many product lines to show before collapsing the products cell. */
   public readonly PRODUCTS_PREVIEW = 3;
