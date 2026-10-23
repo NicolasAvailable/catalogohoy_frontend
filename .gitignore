@@ -59,3 +59,5 @@ ios_distribution.p12
 android/upload-keystore.jks
 fastlane/report.xml
 /build/AuthKey.p8
+/build/certs
+ios-dist-cert.enc
