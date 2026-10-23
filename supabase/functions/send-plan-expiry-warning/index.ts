@@ -309,8 +309,8 @@ function isUndeliverableEmail(email: unknown): boolean {
 }
 // Envío por AWS SES (v2 SendEmail, firma SigV4 con aws4fetch). Región
 // sa-east-1, config set catalogohoy-prod (eventos → ses-events).
-async function sendViaSes(to: string, subject: string, html: string, text: string): Promise<{ ok: boolean; error?: string; status: number }> {
-  if (isUndeliverableEmail(to)) return { ok: false, status: 0, error: "undeliverable recipient" };
+async function sendViaSes(to: string, subject: string, html: string, text: string): Promise<{ ok: boolean; error?: string; status: number; skipped?: boolean }> {
+  if (isUndeliverableEmail(to)) return { ok: false, status: 0, skipped: true, error: "undeliverable recipient" };
   const region = Deno.env.get("AWS_SES_REGION") ?? "sa-east-1";
   const aws = new AwsClient({
     accessKeyId: Deno.env.get("AWS_SES_ACCESS_KEY_ID")!,
@@ -433,7 +433,9 @@ Deno.serve(async (req: Request) => {
       const { subject, html, text } = renderEmail(cand, days as Threshold);
       const sesRes = await sendViaSes(cand.owner_email, subject, html, text);
 
-      if (!sesRes.ok) {
+      // Destinatario no entregable (relay de Apple, typo): no hay email, pero el
+      // WhatsApp sale igual y se marca el aviso para no reintentarlo cada día.
+      if (!sesRes.ok && !sesRes.skipped) {
         await logDebug(admin, `SES ${sesRes.status} for tenant ${cand.tenant_id} (${days}d): ${sesRes.error}`);
         summary.push({ tenantId: cand.tenant_id, days, sent: false, error: sesRes.error });
         continue;
