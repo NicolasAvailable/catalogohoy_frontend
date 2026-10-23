@@ -92,7 +92,8 @@ jobs:
   ios:
     needs: web
     if: inputs.platform != 'android'
-    runs-on: macos-15
+    # Apple exige el SDK de iOS 26 (Xcode 26) para subir builds.
+    runs-on: macos-26
     permissions:
       contents: read
       actions: read
@@ -109,6 +110,9 @@ jobs:
         with:
           name: web
           path: dist/apps/catalogohoy/browser
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
