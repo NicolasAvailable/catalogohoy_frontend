@@ -598,12 +598,14 @@ Vercel, Google Workspace, …), administrados desde la sección "Gastos" del pan
 | id | int8 | identity | |
 | name / company | text | — | Nombre del servicio y de la empresa |
 | amount_usd | numeric(10,2) | — | CHECK ≥ 0 |
-| period | text | `'monthly'` | `monthly\|yearly` (CHECK) |
+| period | text | `'monthly'` | `monthly\|yearly\|one_time` (CHECK) |
+| expense_month | date | NULL | Solo `one_time` (día 1 del mes del pago); CHECK: NOT NULL ⇔ one_time (2026-10-23) |
 | created_at / updated_at | timestamptz | `now()` | |
 
 RPCs admin (SECURITY DEFINER + `_assert_internal_admin`): `list_business_expenses_admin()`,
-`save_business_expense_admin(id, name, company, amount_usd, period)` (id NULL = insert) y
-`delete_business_expense_admin(id)`. El panel normaliza totales (anual/12 para el mensual).
+`save_business_expense_admin(id, name, company, amount_usd, period, expense_month DEFAULT NULL)` (id NULL = insert) y
+`delete_business_expense_admin(id)`. El panel normaliza totales (anual/12 para el mensual) y tiene
+selector de mes: el total del mes = recurrentes + pagos únicos de ese mes.
 
 ---
 
