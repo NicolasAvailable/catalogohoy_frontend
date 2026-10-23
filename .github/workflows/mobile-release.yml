@@ -1,0 +1,128 @@
+name: Mobile release
+
+# Compila, firma y publica las apps (Capacitor) en App Store y Play Store.
+# Se lanza a mano (o vía API) sobre la rama de las apps. Las llaves vienen de
+# los secretos del repo; ver fastlane/Fastfile.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Rama a publicar
+        default: feat/ios-iap-revenuecat
+        required: true
+      platform:
+        description: Plataforma
+        type: choice
+        options: [both, ios, android]
+        default: both
+      release_notes:
+        description: Notas de la versión (español)
+        required: true
+
+concurrency:
+  group: mobile-release
+  cancel-in-progress: false
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx nx build catalogohoy --configuration=production
+      # Sin sourcemaps dentro de las apps.
+      - run: find dist/apps/catalogohoy/browser -name '*.map' -delete
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: dist/apps/catalogohoy/browser
+          retention-days: 3
+
+  android:
+    needs: web
+    if: inputs.platform != 'ios'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: web
+          path: dist/apps/catalogohoy/browser
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+      - name: Llaves de Android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/upload-keystore.jks
+          printf 'storeFile=upload-keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > android/keystore.properties
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > android/app/google-services.json
+      - run: npx cap sync android
+      - name: Publicar en Play Store
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: bundle exec fastlane android release
+
+  ios:
+    needs: web
+    if: inputs.platform != 'android'
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: web
+          path: dist/apps/catalogohoy/browser
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+      - name: Llaves de iOS
+        env:
+          P12_BASE64: ${{ secrets.IOS_DIST_P12_BASE64 }}
+          GOOGLE_SERVICE_INFO_BASE64: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+        run: |
+          echo "$P12_BASE64" | base64 -d > ios_distribution.p12
+          echo "$GOOGLE_SERVICE_INFO_BASE64" | base64 -d > ios/App/App/GoogleService-Info.plist
+      - run: npx cap sync ios
+      - name: Publicar en App Store
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          IOS_DIST_P12_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: bundle exec fastlane ios release
