@@ -4,6 +4,7 @@
 # en el repo. El número de build/versionCode se calcula solo (último + 1).
 
 require 'base64'
+require 'json'
 require 'fileutils'
 require 'securerandom'
 
@@ -17,16 +18,55 @@ def release_notes
   notes
 end
 
+def asc_api_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch('ASC_KEY_ID'),
+    issuer_id: ENV.fetch('ASC_ISSUER_ID'),
+    key_content: ENV.fetch('ASC_KEY_P8_BASE64'),
+    is_key_content_base64: true
+  )
+end
+
+# Sube metadatos y manda a revisión. Si App Store Connect rechaza el envío,
+# muestra los motivos concretos (associatedErrors) en vez del error genérico.
+def submit_ios(api_key:, version:, ipa: nil, build_number: nil)
+  upload_to_app_store(
+    api_key: api_key,
+    ipa: ipa,
+    build_number: build_number,
+    skip_binary_upload: ipa.nil?,
+    app_version: version,
+    release_notes: { 'default' => release_notes },
+    skip_screenshots: true,
+    skip_metadata: false,
+    skip_app_version_update: false,
+    submit_for_review: true,
+    automatic_release: true,
+    force: true,
+    run_precheck_before_submit: false,
+    submission_information: { add_id_info_uses_idfa: false, export_compliance_uses_encryption: false }
+  )
+rescue Spaceship::UnexpectedResponse => e
+  UI.error('App Store Connect rechazó el envío a revisión:')
+  UI.error(JSON.pretty_generate(e.error_info)) if e.respond_to?(:error_info) && e.error_info
+  raise
+end
+
 platform :ios do
+  # Solo manda a revisión un build ya subido (BUILD_NUMBER o el último de TestFlight).
+  lane :submit do
+    api_key = asc_api_key
+    version = get_version_number(xcodeproj: File.join(ROOT, 'ios/App/App.xcodeproj'), target: 'App')
+    build = ENV['BUILD_NUMBER'].to_s.strip
+    build = latest_testflight_build_number(api_key: api_key, app_identifier: APP_ID, version: version).to_s if build.empty?
+    UI.message("Enviando a revisión iOS #{version} (#{build})")
+    submit_ios(api_key: api_key, version: version, build_number: build)
+  end
+
   lane :release do
     xcodeproj = File.join(ROOT, 'ios/App/App.xcodeproj')
 
-    api_key = app_store_connect_api_key(
-      key_id: ENV.fetch('ASC_KEY_ID'),
-      issuer_id: ENV.fetch('ASC_ISSUER_ID'),
-      key_content: ENV.fetch('ASC_KEY_P8_BASE64'),
-      is_key_content_base64: true
-    )
+    api_key = asc_api_key
 
     # Firma con la API key: certificado Apple Distribution + perfil App Store
     # creados/descargados por la API, en un keychain temporal. La llave privada
@@ -107,20 +147,7 @@ platform :ios do
       }
     )
 
-    upload_to_app_store(
-      api_key: api_key,
-      ipa: ipa,
-      app_version: version,
-      release_notes: { 'default' => release_notes },
-      skip_screenshots: true,
-      skip_metadata: false,
-      skip_app_version_update: false,
-      submit_for_review: true,
-      automatic_release: true,
-      force: true,
-      run_precheck_before_submit: false,
-      submission_information: { add_id_info_uses_idfa: false, export_compliance_uses_encryption: false }
-    )
+    submit_ios(api_key: api_key, version: version, ipa: ipa)
   end
 end
 

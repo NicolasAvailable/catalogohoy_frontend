@@ -61,4 +61,27 @@ describe('reportErrorToSlack — filtro de ruido del canal de Slack', () => {
     reportErrorToSlack('uncaught', msg);
     expect(mockInvoke).toHaveBeenCalledTimes(1);
   });
+
+  const ESPERADOS = [
+    'El correo o la contraseña son invalidos',
+    'The email or password is invalid',
+    'No pudimos leer esta imagen. Verifica que sea JPG, PNG o WEBP e intenta de nuevo.',
+    'Llegaste al límite de 5 imágenes de tu plan.',
+    'Upgrade your plan to add more products to your catalog.',
+    'No te alcanzan: compra más créditos desde tu perfil o mejora tu plan.',
+    'PLAN_LIMIT_EXCEEDED:Has alcanzado el límite de 50 productos de tu plan Gratis.',
+    'La exportación de productos está disponible en los planes pagos.',
+    'El campo es obligatorio',
+    'No tienes permiso para generar reportes',
+  ];
+
+  it.each(ESPERADOS)('NO reporta errores esperados del usuario: %s', (msg) => {
+    reportErrorToSlack('toast', msg);
+    expect(mockInvoke).not.toHaveBeenCalled();
+  });
+
+  it('SÍ reporta un toast de falla real', () => {
+    reportErrorToSlack('toast', 'Error al guardar la plantilla [real-toast]');
+    expect(mockInvoke).toHaveBeenCalledTimes(1);
+  });
 });
