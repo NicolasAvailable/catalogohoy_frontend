@@ -165,7 +165,29 @@ function amountText(usd, bs, cfg) {
   return text;
 }
 
+// Destinatarios que SES no puede entregar y se saltan sin llamar a SES (cada
+// intento suma un rebote a la reputación de la cuenta): el relay de Apple
+// "Ocultar mi correo" (@privaterelay.appleid.com rechaza a remitentes no
+// registrados en Apple con "550 unauthorized sender"), dominios de prueba y
+// typos frecuentes de gmail/hotmail. Copia idéntica en cada función que manda
+// email: si cambiás algo acá, cambialo en todas.
+const UNDELIVERABLE_EMAIL_DOMAINS = new Set([
+  "privaterelay.appleid.com",
+  "example.com", "example.org", "example.net",
+  "gmail.comm", "gmail.co.com", "gmail.vom", "gmail.con", "gmail.cm", "gmailcom",
+  "gamil.com", "gmial.com", "hitmail.com", "hotmal.com", "hotmail.con"
+]);
+function isUndeliverableEmail(email: unknown): boolean {
+  const e = String(email ?? "").trim().toLowerCase();
+  const at = e.lastIndexOf("@");
+  if (at < 1) return true;
+  const domain = e.slice(at + 1);
+  if (!domain.includes(".")) return true;
+  if (UNDELIVERABLE_EMAIL_DOMAINS.has(domain)) return true;
+  return /\.(test|invalid|local|localhost|example)$/.test(domain);
+}
 async function sendViaSes(to, subject, html, text) {
+  if (isUndeliverableEmail(to)) return { ok: false, status: 0, error: "undeliverable recipient" };
   const region = Deno.env.get("AWS_SES_REGION") ?? "sa-east-1";
   const aws = new AwsClient({
     accessKeyId: Deno.env.get("AWS_SES_ACCESS_KEY_ID"),
