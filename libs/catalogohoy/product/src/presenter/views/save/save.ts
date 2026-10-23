@@ -27,7 +27,7 @@ import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { CategoryStore } from '@catalogohoy/category';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
-import { PlanLimitDialogComponent, PlanStore } from '@catalogohoy/plan';
+import { PlanLimitDialogComponent, PlanStore, photoLimitOf } from '@catalogohoy/plan';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
 import { EditorModule } from 'primeng/editor';
@@ -222,25 +222,17 @@ export default class Save implements OnInit {
   });
   public readonly stockMode = signal<'unlimited' | 'limited'>('unlimited');
 
-  private readonly photosLimitByPlan: Record<string, number> = {
-    gratis: 3,
-    basico: 10,
-    pro: 20,
-    avanzado: 50,
-    enterprise: 0, // 0 = ilimitado (mismo criterio que import-export-hub)
-  };
-  public readonly maxPhotos = computed(
-    () =>
-      this.planStore.currentPlan()?.maxPhotos ??
-      this.photosLimitByPlan[this.planStore.currentPlan()?.id ?? 'gratis'] ??
-      3
-  );
+  /** Fotos por producto de la tienda (tenant_limits / plans.max_photos).
+   *  0 = ilimitado → un tope alto para que las comparaciones `>=` no bloqueen. */
+  public readonly maxPhotos = computed(() => {
+    const limit = photoLimitOf(this.planStore.currentPlan());
+    return limit > 0 ? limit : 999;
+  });
   public readonly photosLimitMessage = computed(() => {
-    const planId = this.planStore.currentPlan()?.id ?? 'gratis';
-    if (this.planStore.currentPlan()?.maxPhotos != null) return 'Límite de imágenes alcanzado';
-    if (planId === 'gratis') return 'Mejora tu plan para subir hasta 10, 20 o 50 imágenes';
-    if (planId === 'basico') return 'Mejora tu plan para subir hasta 20 o 50 imágenes';
-    if (planId === 'pro') return 'Mejora tu plan para subir hasta 50 imágenes';
+    const limit = this.maxPhotos();
+    if (limit < 10) return 'Mejora tu plan para subir hasta 10, 20 o 50 imágenes';
+    if (limit < 20) return 'Mejora tu plan para subir hasta 20 o 50 imágenes';
+    if (limit < 50) return 'Mejora tu plan para subir hasta 50 imágenes';
     return 'Límite de imágenes alcanzado';
   });
 

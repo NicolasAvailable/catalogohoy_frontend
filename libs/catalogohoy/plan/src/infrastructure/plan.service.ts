@@ -7,8 +7,9 @@ import {
   Plan,
   TenantPlanExpiration,
   TenantPlanPublicInfo,
+  TenantLimitsRow,
   TenantPlanUsage,
-  tenantPlanOverride,
+  withTenantLimits,
 } from '../domain';
 
 @Injectable({ providedIn: 'root' })
@@ -19,7 +20,7 @@ export class PlanService implements BasePlanService {
   public async getAll(): Promise<E.Either<Error, Plan[]>> {
     const { data, error } = await this.client
       .from('plans')
-      .select('id, name, description, price, max_products, max_catalogs, max_team_members, max_variants, max_addons, is_free, position')
+      .select('id, name, description, price, max_products, max_catalogs, max_team_members, max_variants, max_addons, max_photos, is_free, position')
       .order('position', { ascending: true });
 
     if (error) {
@@ -36,6 +37,7 @@ export class PlanService implements BasePlanService {
       maxTeamMembers: row.max_team_members ?? 0,
       maxVariants: row.max_variants ?? 1,
       maxAddons: row.max_addons ?? 2,
+      maxPhotos: row.max_photos ?? undefined,
       isFree: row.is_free,
       position: row.position,
     }));
@@ -47,7 +49,7 @@ export class PlanService implements BasePlanService {
     const { data, error } = await this.client
       .from('tenants')
       .select(
-        'plans:plan_id (id, name, description, price, max_products, max_catalogs, max_team_members, max_variants, max_addons, is_free, position)'
+        'plans:plan_id (id, name, description, price, max_products, max_catalogs, max_team_members, max_variants, max_addons, max_photos, is_free, position)'
       )
       .eq('id', tenantId)
       .single();
@@ -61,8 +63,15 @@ export class PlanService implements BasePlanService {
       return E.left(new Error('Plan not found for tenant'));
     }
 
-    const override = tenantPlanOverride(tenantId);
-    return E.right({
+    // Límites propios de la tienda (tenant_limits). Si la fila no existe o no se
+    // puede leer, quedan los del plan.
+    const { data: limits } = await this.client
+      .from('tenant_limits')
+      .select('max_products, max_photos, max_variants, max_addons, is_custom')
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+
+    return E.right(withTenantLimits({
       id: row['id'] as string,
       name: row['name'] as string,
       description: row['description'] as string,
@@ -70,12 +79,12 @@ export class PlanService implements BasePlanService {
       maxProducts: row['max_products'] as number,
       maxCatalogs: (row['max_catalogs'] as number) ?? 1,
       maxTeamMembers: (row['max_team_members'] as number) ?? 0,
-      maxVariants: override.maxVariants ?? (row['max_variants'] as number) ?? 1,
+      maxVariants: (row['max_variants'] as number) ?? 1,
       maxAddons: (row['max_addons'] as number) ?? 2,
-      maxPhotos: override.maxPhotos,
+      maxPhotos: (row['max_photos'] as number | null) ?? undefined,
       isFree: row['is_free'] as boolean,
       position: row['position'] as number,
-    });
+    }, limits as TenantLimitsRow | null));
   }
 
   public async getProductCount(
