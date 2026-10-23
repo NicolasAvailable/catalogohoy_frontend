@@ -276,7 +276,7 @@ Deno.serve(async (req)=>{
         <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;padding:40px 30px;box-shadow:0 4px 10px rgba(0,0,0,0.06);">
           <tr>
             <td align="center" style="padding-bottom:20px;">
-              <img src="https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/catalogohoy-logo.png" alt="CatalogoHoy" width="90" style="display:block;" />
+              <img src="https://cdn.catalogohoy.com/catalogohoy-logo.png" alt="CatalogoHoy" width="90" style="display:block;" />
             </td>
           </tr>
           <tr>
