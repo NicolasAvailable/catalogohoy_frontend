@@ -243,7 +243,9 @@ export default class Checkout {
     if (!type || type === 'none') return null;
     const value = Number(String(d['__adjustValue'] ?? '').replace(',', '.'));
     if (!Number.isFinite(value) || value <= 0) return null;
-    const mode = d['__adjustMode'] === 'amount' ? 'amount' : 'percent';
+    // El panel guarda 'fixed' para monto fijo (antes se comparaba con 'amount' y
+    // un descuento fijo se cobraba como porcentaje).
+    const mode = (d['__adjustMode'] || 'percent') === 'percent' ? 'percent' : 'amount';
     const base = this.subtotal();
     let magnitude =
       mode === 'percent'
