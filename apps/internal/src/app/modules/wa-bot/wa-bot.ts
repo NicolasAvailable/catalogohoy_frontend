@@ -1,9 +1,11 @@
 import { DatePipe, DecimalPipe, JsonPipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { IconComponent } from '@ui';
-import { WaBotAdminService, WaBotAdminStats, WaBotLogRow } from './wa-bot.service';
+import { WaBotAdminService, WaBotAdminStats, WaBotLogRow, WaBotUserRow } from './wa-bot.service';
 
 const PAGE = 100;
+
+type UserView = 'recent' | 'top' | 'connected' | 'unused' | 'all';
 
 /**
  * Bot de WhatsApp (CAT-78): control diario del asistente de las tiendas.
@@ -21,7 +23,7 @@ const PAGE = 100;
       <header class="flex flex-col gap-1 shrink-0">
         <h1 class="text-2xl font-bold text-grey-700">Bot de WhatsApp</h1>
         <p class="text-sm text-grey-400">
-          Asistente de las tiendas (wa-store-bot): gasto, números conectados y el registro de cada conversación con su detalle técnico.
+          Asistente de las tiendas (wa-store-bot): quién lo usa, cuánto consume y el registro de cada conversación con su detalle técnico.
           El costo en USD es estimado con los precios de Sonnet 5.5.
         </p>
       </header>
@@ -30,81 +32,111 @@ const PAGE = 100;
       <p class="text-sm text-red-500">{{ error() }}</p>
       }
 
-      <!-- Métricas -->
-      <section class="grid grid-cols-2 lg:grid-cols-5 gap-4 shrink-0">
+      <!-- Resumen -->
+      <section class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 shrink-0">
+        <article class="p-4 bg-white rounded-xl border border-grey-50">
+          <span class="text-xs text-grey-400">Conectados</span>
+          <strong class="block text-xl font-bold text-grey-700">{{ summary().connected }}</strong>
+          <span class="text-xs text-grey-400">{{ summary().neverUsed }} sin usarlo aún</span>
+        </article>
+        <article class="p-4 bg-white rounded-xl border border-grey-50">
+          <span class="text-xs text-grey-400">Activos 7 días</span>
+          <strong class="block text-xl font-bold text-grey-700">{{ summary().active7 }}</strong>
+          <span class="text-xs text-grey-400">de {{ summary().users }} números</span>
+        </article>
         <article class="p-4 bg-white rounded-xl border border-grey-50">
           <span class="text-xs text-grey-400">Mensajes hoy</span>
           <strong class="block text-xl font-bold text-grey-700">{{ stats()?.today?.messages ?? 0 }}</strong>
-        </article>
-        <article class="p-4 bg-white rounded-xl border border-grey-50">
-          <span class="text-xs text-grey-400">Costo hoy (USD)</span>
-          <strong class="block text-xl font-bold text-grey-700">\${{ stats()?.today?.cost_usd ?? 0 | number: '1.2-4' }}</strong>
-          <span class="text-xs text-grey-400">{{ stats()?.today?.credits ?? 0 }} créditos cobrados</span>
+          <span class="text-xs text-grey-400">\${{ stats()?.today?.cost_usd ?? 0 | number: '1.2-2' }} · {{ stats()?.today?.credits ?? 0 }} créditos</span>
         </article>
         <article class="p-4 bg-white rounded-xl border border-grey-50">
           <span class="text-xs text-grey-400">Mensajes 30 días</span>
           <strong class="block text-xl font-bold text-grey-700">{{ totals30().messages }}</strong>
         </article>
         <article class="p-4 bg-white rounded-xl border border-grey-50">
-          <span class="text-xs text-grey-400">Costo 30 días (USD)</span>
+          <span class="text-xs text-grey-400">Créditos 30 días</span>
+          <strong class="block text-xl font-bold text-grey-700">{{ totals30().credits }}</strong>
+        </article>
+        <article class="p-4 bg-white rounded-xl border border-grey-50">
+          <span class="text-xs text-grey-400">Costo IA 30 días</span>
           <strong class="block text-xl font-bold text-grey-700">\${{ totals30().cost | number: '1.2-2' }}</strong>
           <span class="text-xs text-grey-400">≈ \${{ totals30().perMsg | number: '1.3-3' }} por mensaje</span>
         </article>
         <article class="p-4 bg-white rounded-xl border border-grey-50">
-          <span class="text-xs text-grey-400">Errores (7 días)</span>
+          <span class="text-xs text-grey-400">Errores 7 días</span>
           <strong class="block text-xl font-bold" [class]="(stats()?.errors_7d ?? 0) ? 'text-red-500' : 'text-grey-700'">{{ stats()?.errors_7d ?? 0 }}</strong>
         </article>
       </section>
 
-      <section class="grid lg:grid-cols-2 gap-4 shrink-0">
-        <!-- Por tienda -->
-        <div class="bg-white rounded-xl border border-grey-50 overflow-hidden">
-          <p class="px-4 py-3 font-semibold text-grey-700 border-b border-grey-50">Por tienda (histórico)</p>
-          <table class="w-full text-sm">
+      <!-- Usuarios -->
+      <section class="bg-white rounded-xl border border-grey-50 overflow-hidden shrink-0">
+        <div class="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-grey-50">
+          <p class="font-semibold text-grey-700 mr-auto">Usuarios del asistente</p>
+          @for (v of views; track v.key) {
+          <button type="button" (click)="view.set(v.key)"
+            class="rounded-full px-3 py-1 text-xs font-medium cursor-pointer"
+            [class]="view() === v.key ? 'bg-primary-500 text-white' : 'bg-grey-50 text-grey-500 hover:text-grey-700'">
+            {{ v.label }} ({{ counts()[v.key] }})
+          </button>
+          }
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm whitespace-nowrap">
             <thead class="text-xs text-grey-400 text-left">
-              <tr><th class="px-4 py-2">Tienda</th><th class="px-2 py-2 text-right">Mensajes</th><th class="px-2 py-2 text-right">Créditos</th><th class="px-2 py-2 text-right">USD</th><th class="px-4 py-2 text-right">Último</th></tr>
+              <tr>
+                <th class="px-4 py-2">Usuario y tienda</th>
+                <th class="px-2 py-2">Nivel</th>
+                <th class="px-2 py-2 text-right">Msj 7d</th>
+                <th class="px-2 py-2 text-right">Msj 30d</th>
+                <th class="px-2 py-2 text-right">Msj total</th>
+                <th class="px-2 py-2 text-right">Créditos 30d</th>
+                <th class="px-2 py-2 text-right">Créditos total</th>
+                <th class="px-2 py-2 text-right">Costo IA total</th>
+                <th class="px-2 py-2 text-right">Saldo</th>
+                <th class="px-4 py-2 text-right">Último uso</th>
+              </tr>
             </thead>
             <tbody>
-              @for (t of stats()?.by_tenant ?? []; track t.tenant_id) {
-              <tr class="border-t border-grey-50 hover:bg-grey-50 cursor-pointer" (click)="filterTenant(t.tenant_id)">
-                <td class="px-4 py-2 text-grey-700">{{ t.tenant_name ?? '#' + t.tenant_id }}</td>
-                <td class="px-2 py-2 text-right">{{ t.messages }}</td>
-                <td class="px-2 py-2 text-right">{{ t.credits }}</td>
-                <td class="px-2 py-2 text-right">\${{ t.cost_usd | number: '1.2-2' }}</td>
-                <td class="px-4 py-2 text-right text-grey-400">{{ t.last_at | date: 'd MMM, HH:mm' }}</td>
+              @for (u of visibleUsers(); track u.tenant_id + '-' + u.phone) {
+              <tr class="border-t border-grey-50 hover:bg-grey-50 cursor-pointer" (click)="filterPhone(u.phone)">
+                <td class="px-4 py-2">
+                  <span class="flex items-center gap-1.5 font-medium text-grey-700">
+                    <span class="w-2 h-2 rounded-full" [class]="u.connected ? 'bg-emerald-500' : 'bg-grey-200'" [title]="u.connected ? 'Conectado' : 'Desconectado'"></span>
+                    {{ u.user_name || ('+' + u.phone) }}
+                  </span>
+                  <span class="block text-xs text-grey-400">
+                    {{ u.tenant_name ?? '#' + u.tenant_id }} · {{ u.plan_name ?? '—' }} · +{{ u.phone }}
+                  </span>
+                </td>
+                <td class="px-2 py-2">
+                  <span class="rounded-full px-2 py-0.5 text-xs font-medium" [class]="level(u).cls">{{ level(u).label }}</span>
+                  @if (u.errors_7d) { <span class="ml-1 text-xs text-red-500" title="Errores en 7 días">⚠ {{ u.errors_7d }}</span> }
+                </td>
+                <td class="px-2 py-2 text-right font-medium text-grey-700">{{ u.messages_7d }}</td>
+                <td class="px-2 py-2 text-right">{{ u.messages_30d }}</td>
+                <td class="px-2 py-2 text-right">{{ u.messages_total }}</td>
+                <td class="px-2 py-2 text-right">{{ u.credits_30d }}</td>
+                <td class="px-2 py-2 text-right">{{ u.credits_total }}</td>
+                <td class="px-2 py-2 text-right">\${{ u.cost_total | number: '1.2-2' }}</td>
+                <td class="px-2 py-2 text-right" [class.text-red-500]="u.credit_balance != null && u.credit_balance <= 20">{{ u.credit_balance ?? '—' }}</td>
+                <td class="px-4 py-2 text-right text-grey-400">
+                  {{ u.last_at ? (u.last_at | date: 'd MMM, HH:mm') : 'Nunca' }}
+                  <span class="block text-[11px]">{{ u.linked_at ? 'conectó ' + (u.linked_at | date: 'd MMM') : 'desconectado' }}</span>
+                </td>
               </tr>
               } @empty {
-              <tr><td colspan="5" class="px-4 py-6 text-center text-grey-400">Sin uso todavía</td></tr>
+              <tr><td colspan="10" class="px-4 py-6 text-center text-grey-400">Nadie en esta vista</td></tr>
               }
             </tbody>
           </table>
         </div>
-
-        <!-- Números conectados -->
-        <div class="bg-white rounded-xl border border-grey-50 overflow-hidden">
-          <p class="px-4 py-3 font-semibold text-grey-700 border-b border-grey-50">Números conectados ({{ stats()?.links?.length ?? 0 }})</p>
-          <table class="w-full text-sm">
-            <thead class="text-xs text-grey-400 text-left">
-              <tr><th class="px-4 py-2">Teléfono</th><th class="px-2 py-2">Tienda</th><th class="px-2 py-2">Usuario</th><th class="px-4 py-2 text-right">Último uso</th></tr>
-            </thead>
-            <tbody>
-              @for (l of stats()?.links ?? []; track l.id) {
-              <tr class="border-t border-grey-50 hover:bg-grey-50 cursor-pointer" (click)="filterPhone(l.phone)">
-                <td class="px-4 py-2 font-medium text-grey-700">+{{ l.phone }}</td>
-                <td class="px-2 py-2">{{ l.tenant_name ?? '#' + l.tenant_id }}</td>
-                <td class="px-2 py-2 text-grey-500">{{ l.user_name ?? l.user_email }}</td>
-                <td class="px-4 py-2 text-right text-grey-400">{{ (l.last_used_at ?? l.created_at) | date: 'd MMM, HH:mm' }}</td>
-              </tr>
-              } @empty {
-              <tr><td colspan="4" class="px-4 py-6 text-center text-grey-400">Ningún número conectado</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
+        <p class="px-4 py-2 border-t border-grey-50 text-[11px] text-grey-400">
+          Nivel por mensajes en 7 días: Alto 20+, Medio 5–19, Bajo 1–4; Inactivo = lo usó antes pero no esta semana. Costo IA estimado con precios de Sonnet 5.5. Toca una fila para ver su conversación.
+        </p>
       </section>
 
       <!-- Registro -->
-      <section class="bg-white rounded-xl border border-grey-50 flex flex-col min-h-[36rem] shrink-0">
+      <section id="wa-log" class="bg-white rounded-xl border border-grey-50 flex flex-col min-h-[36rem] shrink-0">
         <div class="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-grey-50">
           <p class="font-semibold text-grey-700 mr-auto">Registro de conversaciones</p>
           @if (tenantFilter() || phoneFilter()) {
@@ -200,9 +232,58 @@ export class WaBot implements OnInit {
   protected readonly totals30 = computed(() => {
     const days = this.stats()?.last_30d ?? [];
     const messages = days.reduce((a, d) => a + d.messages, 0);
+    const credits = days.reduce((a, d) => a + (d.credits ?? 0), 0);
     const cost = days.reduce((a, d) => a + Number(d.cost_usd), 0);
-    return { messages, cost, perMsg: messages ? cost / messages : 0 };
+    return { messages, credits, cost, perMsg: messages ? cost / messages : 0 };
   });
+
+  protected readonly views: { key: UserView; label: string }[] = [
+    { key: 'recent', label: 'Recientes' },
+    { key: 'top', label: 'Más uso' },
+    { key: 'connected', label: 'Conectados' },
+    { key: 'unused', label: 'Sin usar' },
+    { key: 'all', label: 'Todos' },
+  ];
+  protected readonly view = signal<UserView>('recent');
+
+  private readonly users = computed(() => this.stats()?.users ?? []);
+
+  protected readonly summary = computed(() => {
+    const users = this.users();
+    return {
+      users: users.length,
+      connected: users.filter((u) => u.connected).length,
+      neverUsed: users.filter((u) => u.connected && !u.messages_total).length,
+      active7: users.filter((u) => u.messages_7d > 0).length,
+    };
+  });
+
+  private readonly byView = computed<Record<UserView, WaBotUserRow[]>>(() => {
+    const users = this.users();
+    const recent = users.filter((u) => u.last_at).sort((a, b) => (b.last_at ?? '').localeCompare(a.last_at ?? ''));
+    return {
+      recent,
+      top: [...users].filter((u) => u.messages_total).sort((a, b) => b.credits_total - a.credits_total || b.messages_total - a.messages_total),
+      connected: users.filter((u) => u.connected),
+      unused: users.filter((u) => u.connected && !u.messages_total),
+      all: users,
+    };
+  });
+
+  protected readonly visibleUsers = computed(() => this.byView()[this.view()]);
+  protected readonly counts = computed(() => {
+    const v = this.byView();
+    return { recent: v.recent.length, top: v.top.length, connected: v.connected.length, unused: v.unused.length, all: v.all.length };
+  });
+
+  /** Nivel de uso por mensajes en los últimos 7 días. */
+  protected level(u: WaBotUserRow): { label: string; cls: string } {
+    if (u.messages_7d >= 20) return { label: 'Alto', cls: 'bg-emerald-50 text-emerald-600' };
+    if (u.messages_7d >= 5) return { label: 'Medio', cls: 'bg-sky-50 text-sky-600' };
+    if (u.messages_7d >= 1) return { label: 'Bajo', cls: 'bg-amber-50 text-amber-600' };
+    if (u.messages_total) return { label: 'Inactivo', cls: 'bg-grey-50 text-grey-500' };
+    return { label: 'Sin usar', cls: 'bg-grey-50 text-grey-400' };
+  }
 
   public async ngOnInit(): Promise<void> {
     await this.load();
@@ -242,10 +323,11 @@ export class WaBot implements OnInit {
     this.load();
   }
 
-  protected filterPhone(phone: string): void {
+  protected async filterPhone(phone: string): Promise<void> {
     this.phoneFilter.set(phone);
     this.tenantFilter.set(null);
-    this.load();
+    await this.load();
+    document.getElementById('wa-log')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   protected clearFilter(): void {
