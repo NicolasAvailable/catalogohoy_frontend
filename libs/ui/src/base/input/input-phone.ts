@@ -29,8 +29,9 @@ export interface PhoneCountry {
 // signup + location select + phone picker all draw from the same country set
 // so a tenant can never pick a country in one place and be unable to use it
 // in another. VE first, then alphabetical by Spanish label.
-// NANP countries (CA, BS, BB, JM, PR, DO, TT) share +1 with the US but include
-// the area code so the stored number is dialable.
+// NANP countries with a single area code (BS, BB, JM, PR, TT) include it in the
+// dial code. US, CA and DO (809/829/849) use plain +1 and the customer types
+// the area code as part of the national number.
 export const PHONE_COUNTRIES: PhoneCountry[] = [
   { iso: 'VE', name: 'Venezuela',           dialCode: '+58'   },
   { iso: 'AR', name: 'Argentina',           dialCode: '+54'   },
@@ -59,7 +60,7 @@ export const PHONE_COUNTRIES: PhoneCountry[] = [
   { iso: 'PY', name: 'Paraguay',            dialCode: '+595'  },
   { iso: 'PE', name: 'Perú',                dialCode: '+51'   },
   { iso: 'PR', name: 'Puerto Rico',         dialCode: '+1787' },
-  { iso: 'DO', name: 'República Dominicana', dialCode: '+1809' },
+  { iso: 'DO', name: 'República Dominicana', dialCode: '+1'    },
   { iso: 'SR', name: 'Surinam',             dialCode: '+597'  },
   { iso: 'TT', name: 'Trinidad y Tobago',   dialCode: '+1868' },
   { iso: 'UY', name: 'Uruguay',             dialCode: '+598'  },
@@ -69,7 +70,11 @@ const COUNTRIES_BY_DIAL_LENGTH = [...PHONE_COUNTRIES].sort(
   (a, b) => b.dialCode.length - a.dialCode.length
 );
 
+/** Area codes of the Dominican Republic, used to recognise a stored +1 number as DO. */
+const DO_AREA_CODES = ['809', '829', '849'];
+
 const NATIONAL_PLACEHOLDER_BY_ISO: Record<string, string> = {
+  DO: '809 123 4567',
   VE: '412 1234567',
   AR: '11 12345678',
   BR: '11 91234 5678',
@@ -330,7 +335,18 @@ export class InputPhoneComponent implements ControlValueAccessor, OnInit {
     for (const c of COUNTRIES_BY_DIAL_LENGTH) {
       const code = c.dialCode.substring(1);
       if (digits.startsWith(code)) {
-        return { country: c, national: digits.substring(code.length) };
+        const national = digits.substring(code.length);
+        // +1 is shared by US, CA and DO: pick DO by area code, otherwise keep
+        // the currently selected +1 country (e.g. the catalog's country).
+        if (code === '1') {
+          const iso = DO_AREA_CODES.includes(national.substring(0, 3))
+            ? 'DO'
+            : this.selectedCountry().dialCode === '+1'
+              ? this.selectedCountry().iso
+              : c.iso;
+          return { country: PHONE_COUNTRIES.find((p) => p.iso === iso) ?? c, national };
+        }
+        return { country: c, national };
       }
     }
     return { country: null, national: digits };
