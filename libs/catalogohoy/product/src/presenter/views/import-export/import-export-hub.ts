@@ -9,6 +9,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { E } from '@shared/domain';
 import { CategoryStore } from '@catalogohoy/category';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -181,6 +182,7 @@ export class ImportExportHubComponent {
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   public readonly cs = computed(() => this.tenantCurrency.localSymbol() || '$');
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   @ViewChild(DialogComponent) dialog!: DialogComponent;
 
@@ -690,6 +692,13 @@ export class ImportExportHubComponent {
 
   public close(): void {
     this.dialog.hide();
+  }
+
+  /** Importar por WhatsApp: cierra el modal y lleva al Asistente de WhatsApp,
+   *  donde el dueño lo conecta y le manda su Excel, PDF o fotos. */
+  public goToWhatsappAssistant(): void {
+    this.close();
+    void this.router.navigate(['/admin/whatsapp-bot']);
   }
 
   // ── Import masivo de fotos ────────────────────────────────────────────────
@@ -1336,7 +1345,16 @@ export class ImportExportHubComponent {
 
   /** Entra al preview: setea las filas y calcula (en background) qué filas ya
    *  existen para los badges "Nuevo"/"Se actualizará" y el chequeo del plan. */
-  private enterPreview(rows: ProductExcelRow[]): void {
+  private enterPreview(allRows: ProductExcelRow[]): void {
+    // Filas sin nombre no son productos: suelen ser la fila de TOTALES de una
+    // factura/consolidado (ej. Motofox: creó un producto vacío de $608 con
+    // stock 4843) o filas en blanco al final de la hoja.
+    const rows = allRows.filter((r) => !!r.name?.trim());
+    if (rows.length === 0) {
+      toast.error('No encontramos productos con nombre en el archivo.');
+      this.view.set('import-source');
+      return;
+    }
     this.parsedRows.set(rows);
     this.existingFlags.set([]);
     this.view.set('import-preview');

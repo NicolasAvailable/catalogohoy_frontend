@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk@0.132.1";
+import * as XLSX from "npm:xlsx@0.18.5";
 import { uploadToS3 } from "../_shared/s3.ts";
 
 // =============================================================================
@@ -174,6 +175,32 @@ async function storeMedia(mediaId: string, mime: string, prefix: string): Promis
     return await uploadToS3(key, bytes, type);
   } catch (e) {
     console.error("[wa-store-bot] storeMedia", e instanceof Error ? e.message : String(e));
+    return null;
+  }
+}
+
+/** Máximo de texto de una planilla que se le pasa al modelo (≈ 15k tokens). */
+const SHEET_MAX_CHARS = 60_000;
+
+/** Excel/CSV → texto CSV (una sección por hoja, filas vacías fuera) para que
+ *  el modelo lo lea igual que un PDF. Corta en SHEET_MAX_CHARS. */
+async function spreadsheetToText(url: string): Promise<{ text: string; truncated: boolean } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const wb = XLSX.read(new Uint8Array(await res.arrayBuffer()), { type: "array" });
+    let out = "";
+    for (const name of wb.SheetNames) {
+      const csv = XLSX.utils.sheet_to_csv(wb.Sheets[name], { blankrows: false }).trim();
+      if (!csv) continue;
+      out += `${wb.SheetNames.length > 1 ? `### Hoja "${name}"\n` : ""}${csv}\n\n`;
+    }
+    out = out.trim();
+    if (!out) return null;
+    const truncated = out.length > SHEET_MAX_CHARS;
+    return { text: truncated ? out.slice(0, SHEET_MAX_CHARS) : out, truncated };
+  } catch (e) {
+    console.error("[wa-store-bot] spreadsheetToText", e instanceof Error ? e.message : String(e));
     return null;
   }
 }
@@ -1705,7 +1732,7 @@ Cómo responder:
 - Formato de WhatsApp: *negritas* con un asterisco, sin tablas ni encabezados markdown.
 - Precios en USD con el símbolo $ (ej. $25).
 - Al terminar una acción, confirma qué hiciste en una o dos líneas.
-- Si adjunta un PDF (lista de precios, catálogo, factura), léelo y propón qué crear o actualizar.
+- Si adjunta un PDF o una planilla Excel/CSV (lista de precios, catálogo, factura), léelo y propón qué crear o actualizar. Ignora filas de encabezado, subtotales y totales: no son productos.
 - Cada mensaje cobra créditos según el trabajo: ~1 una consulta corta, ~2 una consulta con datos, ~3-4 crear o editar un producto con foto. Si el pedido es grande (crear o editar más de 3 productos, o algo que calcules en más de ${CREDIT_CONFIRM} créditos), ANTES de hacerlo dile cuántos créditos costará aproximadamente y su saldo (viene en el contexto), y pide confirmación. Si no le alcanza el saldo, ofrece hacerlo por partes o comprar créditos.
 
 Reglas:
@@ -1816,6 +1843,17 @@ const costUsd = (u: Usage) =>
   Math.round((u.input * 2 + u.output * 10 + u.cacheRead * 0.2 + u.cacheWrite * 2.5) / 1e6 * 10000) / 10000;
 /** Créditos que cuesta lo gastado: 1 por cada CREDIT_USD, mínimo 1. */
 const creditsFor = (u: Usage) => Math.max(1, Math.ceil(costUsd(u) / CREDIT_USD - 1e-9));
+
+/**
+ * Usuario cuyo pozo de créditos paga el asistente de una tienda: el dueño.
+ * Un miembro del equipo vinculado gasta los créditos del plan de la tienda,
+ * no los de su propia cuenta (que suele ser Gratis).
+ */
+async function walletUserId(tenantId: number, fallback: number): Promise<number> {
+  const { data } = await admin.from("users_tenants").select("user_id")
+    .eq("tenant_id", tenantId).eq("role", "owner").order("user_id").limit(1).maybeSingle();
+  return Number(data?.user_id) || fallback;
+}
 
 /** Saldo de créditos de IA del dueño (mensual + comprados). */
 async function creditBalance(userId: number): Promise<number> {
@@ -2058,27 +2096,41 @@ async function handleInbound(m: any) {
     text += "\n[El dueño mandó un video junto con este mensaje. Los productos solo admiten fotos: no se puede usar.]";
   } else if (m.type === "document" && m.document?.id) {
     const name = String(m.document.filename ?? "documento").slice(0, 120);
-    const isPdf = /pdf/.test(m.document.mime_type ?? "") || /\.pdf$/i.test(name);
-    const url = await storeMedia(m.document.id, m.document.mime_type ?? "", mediaPrefix);
+    const mime = m.document.mime_type ?? "";
+    const isPdf = /pdf/.test(mime) || /\.pdf$/i.test(name);
+    const isSheet = /spreadsheet|ms-excel|text\/csv/.test(mime) || /\.(xlsx|xls|csv)$/i.test(name);
+    const url = await storeMedia(m.document.id, mime, mediaPrefix);
     if (url) userMedia.push({ url, type: "document", name });
-    if (!url || !isPdf) {
-      const note = url
-        ? "Por ahora solo puedo leer documentos PDF 📄 ¿Me lo mandas en PDF o me escribes lo que necesitas?"
-        : "No pude descargar el documento 😕 ¿Me lo reenvías?";
+    const sheet = url && isSheet ? await spreadsheetToText(url) : null;
+    if (!url || (!isPdf && !sheet)) {
+      const note = !url
+        ? "No pude descargar el documento 😕 ¿Me lo reenvías?"
+        : isSheet
+          ? "No pude leer esa planilla 😕 ¿Me la mandas otra vez, en PDF o como .xlsx?"
+          : "Por ahora leo documentos PDF y planillas Excel/CSV 📄 ¿Me lo mandas así o me escribes lo que necesitas?";
       await sendText(phone, note);
       await logMsg(link.tenant_id, phone, "user", text, { media: userMedia });
       await logMsg(link.tenant_id, phone, "assistant", note);
       return;
     }
-    extraBlocks.push({ type: "document", source: { type: "url", url }, title: name } as Anthropic.Beta.BetaContentBlockParam);
-    text = `${text || "Revisa este documento y dime qué hago con él."}\n[Adjuntó el PDF "${name}"]`;
+    if (sheet) {
+      extraBlocks.push({
+        type: "text",
+        text: `Contenido de la planilla "${name}" (CSV${sheet.truncated ? ", recortado: es muy larga" : ""}):\n${sheet.text}`,
+      });
+      text = `${text || "Revisa esta planilla y dime qué hago con ella."}\n[Adjuntó la planilla "${name}"]`;
+    } else {
+      extraBlocks.push({ type: "document", source: { type: "url", url }, title: name } as Anthropic.Beta.BetaContentBlockParam);
+      text = `${text || "Revisa este documento y dime qué hago con él."}\n[Adjuntó el PDF "${name}"]`;
+    }
   } else if (!text) {
-    await sendText(phone, "Por ahora entiendo texto, fotos, notas de voz, videos y documentos PDF 🙂");
+    await sendText(phone, "Por ahora entiendo texto, fotos, notas de voz, videos, documentos PDF y planillas Excel 🙂");
     return;
   }
 
   // Créditos de IA del pozo del dueño vinculado: se cobra al final según lo gastado.
-  const before = await creditBalance(link.user_id);
+  const wallet = await walletUserId(link.tenant_id, link.user_id);
+  const before = await creditBalance(wallet);
   const shop = await tenantInfo(link.tenant_id);
   if (before < 1) {
     await sendText(
@@ -2099,11 +2151,11 @@ async function handleInbound(m: any) {
       await runAgent(link, session, text, shop.name, shop.url, extraBlocks, before);
     // Cobro según lo gastado (nunca más que el saldo que tenía).
     const credits = Math.min(creditsFor(usage), before);
-    let balance = (await admin.rpc("spend_ai_credits", { p_user_id: link.user_id, p_cost: credits })).data as number;
+    let balance = (await admin.rpc("spend_ai_credits", { p_user_id: wallet, p_cost: credits })).data as number;
     if (balance === -1) {
       // Otro mensaje gastó en paralelo: se cobra lo que quede.
-      const left = await creditBalance(link.user_id);
-      balance = left > 0 ? (await admin.rpc("spend_ai_credits", { p_user_id: link.user_id, p_cost: Math.min(credits, left) })).data as number : 0;
+      const left = await creditBalance(wallet);
+      balance = left > 0 ? (await admin.rpc("spend_ai_credits", { p_user_id: wallet, p_cost: Math.min(credits, left) })).data as number : 0;
       if (balance === -1) balance = 0;
     }
     const { count: used } = await admin.from("wa_bot_usage").select("id", { count: "exact", head: true }).eq("phone", phone);
@@ -2218,9 +2270,10 @@ async function handlePanel(req: Request): Promise<Response> {
       const sum = (list: { credits: number }[]) => list.reduce((acc, r) => acc + (r.credits ?? 0), 0);
       const today = rows.filter((r) => r.created_at >= startToday);
 
-      await admin.rpc("ensure_ai_credits", { p_user_id: user.id });
+      const walletUser = await walletUserId(tenantId, user.id);
+      await admin.rpc("ensure_ai_credits", { p_user_id: walletUser });
       const { data: wallet } = await admin.from("ai_credits").select("monthly_balance, monthly_allowance, purchased_balance")
-        .eq("user_id", user.id).maybeSingle();
+        .eq("user_id", walletUser).maybeSingle();
       return json({
         messages: (messages ?? []).reverse(),
         hasMore: (messages ?? []).length === limit,

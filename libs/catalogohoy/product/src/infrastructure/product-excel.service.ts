@@ -285,15 +285,14 @@ export class ProductExcelService {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
           const sheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+          const table = this.extractTable(sheet);
 
-          if (jsonRows.length === 0) {
+          if (table.rows.length === 0) {
             resolve(E.left(new Error('El archivo no contiene datos')));
             return;
           }
 
-          const headers = Object.keys(jsonRows[0]);
-          resolve(E.right({ headers, rows: jsonRows }));
+          resolve(E.right(table));
         } catch {
           resolve(
             E.left(new Error('Error al leer el archivo. Asegurate de que sea un .xlsx valido.'))
@@ -304,6 +303,52 @@ export class ProductExcelService {
       reader.onerror = () => resolve(E.left(new Error('Error al leer el archivo')));
       reader.readAsArrayBuffer(file);
     });
+  }
+
+  /** Planillas "reales" (facturas, consolidados de distribuidor) traen un
+   *  título o los datos de la empresa ANTES del encabezado. Con
+   *  `sheet_to_json` a secas ese título quedaba como único header y las
+   *  columnas llegaban a la IA como __EMPTY, __EMPTY_1… (caso Motofox). Acá
+   *  se busca en las primeras filas el encabezado real: la fila con más
+   *  celdas de texto (en las filas de datos, precio/cantidad son números).
+   *  Con empate gana la primera. Filas vacías fuera. */
+  private extractTable(sheet: XLSX.WorkSheet): {
+    headers: string[];
+    rows: Record<string, unknown>[];
+  } {
+    const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+      header: 1,
+      defval: '',
+      blankrows: false,
+    });
+    const isText = (c: unknown) =>
+      typeof c === 'string' && c.trim() !== '' && isNaN(Number(c));
+    let headerIdx = 0;
+    let best = -1;
+    matrix.slice(0, 20).forEach((row, i) => {
+      const n = row.filter(isText).length;
+      if (n > best) {
+        best = n;
+        headerIdx = i;
+      }
+    });
+
+    const width = Math.max(0, ...matrix.map((r) => r.length));
+    const seen = new Map<string, number>();
+    const headers = Array.from({ length: width }, (_, j) => {
+      const base = String(matrix[headerIdx]?.[j] ?? '').trim() || `Columna ${j + 1}`;
+      const count = (seen.get(base) ?? 0) + 1;
+      seen.set(base, count);
+      return count > 1 ? `${base} ${count}` : base;
+    });
+
+    const rows = matrix
+      .slice(headerIdx + 1)
+      .filter((r) => r.some((c) => String(c ?? '').trim() !== ''))
+      .map((r) =>
+        Object.fromEntries(headers.map((h, j) => [h, r[j] ?? '']))
+      );
+    return { headers, rows };
   }
 
   /** Importa una fila del Excel con semántica de UPSERT: si ya existe un
