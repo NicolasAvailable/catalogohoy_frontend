@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk@0.132.1";
+import * as XLSX from "npm:xlsx@0.18.5";
 import { uploadToS3 } from "../_shared/s3.ts";
 
 // =============================================================================
@@ -174,6 +175,32 @@ async function storeMedia(mediaId: string, mime: string, prefix: string): Promis
     return await uploadToS3(key, bytes, type);
   } catch (e) {
     console.error("[wa-store-bot] storeMedia", e instanceof Error ? e.message : String(e));
+    return null;
+  }
+}
+
+/** Máximo de texto de una planilla que se le pasa al modelo (≈ 15k tokens). */
+const SHEET_MAX_CHARS = 60_000;
+
+/** Excel/CSV → texto CSV (una sección por hoja, filas vacías fuera) para que
+ *  el modelo lo lea igual que un PDF. Corta en SHEET_MAX_CHARS. */
+async function spreadsheetToText(url: string): Promise<{ text: string; truncated: boolean } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const wb = XLSX.read(new Uint8Array(await res.arrayBuffer()), { type: "array" });
+    let out = "";
+    for (const name of wb.SheetNames) {
+      const csv = XLSX.utils.sheet_to_csv(wb.Sheets[name], { blankrows: false }).trim();
+      if (!csv) continue;
+      out += `${wb.SheetNames.length > 1 ? `### Hoja "${name}"\n` : ""}${csv}\n\n`;
+    }
+    out = out.trim();
+    if (!out) return null;
+    const truncated = out.length > SHEET_MAX_CHARS;
+    return { text: truncated ? out.slice(0, SHEET_MAX_CHARS) : out, truncated };
+  } catch (e) {
+    console.error("[wa-store-bot] spreadsheetToText", e instanceof Error ? e.message : String(e));
     return null;
   }
 }
@@ -1705,7 +1732,7 @@ Cómo responder:
 - Formato de WhatsApp: *negritas* con un asterisco, sin tablas ni encabezados markdown.
 - Precios en USD con el símbolo $ (ej. $25).
 - Al terminar una acción, confirma qué hiciste en una o dos líneas.
-- Si adjunta un PDF (lista de precios, catálogo, factura), léelo y propón qué crear o actualizar.
+- Si adjunta un PDF o una planilla Excel/CSV (lista de precios, catálogo, factura), léelo y propón qué crear o actualizar. Ignora filas de encabezado, subtotales y totales: no son productos.
 - Cada mensaje cobra créditos según el trabajo: ~1 una consulta corta, ~2 una consulta con datos, ~3-4 crear o editar un producto con foto. Si el pedido es grande (crear o editar más de 3 productos, o algo que calcules en más de ${CREDIT_CONFIRM} créditos), ANTES de hacerlo dile cuántos créditos costará aproximadamente y su saldo (viene en el contexto), y pide confirmación. Si no le alcanza el saldo, ofrece hacerlo por partes o comprar créditos.
 
 Reglas:
@@ -2069,22 +2096,35 @@ async function handleInbound(m: any) {
     text += "\n[El dueño mandó un video junto con este mensaje. Los productos solo admiten fotos: no se puede usar.]";
   } else if (m.type === "document" && m.document?.id) {
     const name = String(m.document.filename ?? "documento").slice(0, 120);
-    const isPdf = /pdf/.test(m.document.mime_type ?? "") || /\.pdf$/i.test(name);
-    const url = await storeMedia(m.document.id, m.document.mime_type ?? "", mediaPrefix);
+    const mime = m.document.mime_type ?? "";
+    const isPdf = /pdf/.test(mime) || /\.pdf$/i.test(name);
+    const isSheet = /spreadsheet|ms-excel|text\/csv/.test(mime) || /\.(xlsx|xls|csv)$/i.test(name);
+    const url = await storeMedia(m.document.id, mime, mediaPrefix);
     if (url) userMedia.push({ url, type: "document", name });
-    if (!url || !isPdf) {
-      const note = url
-        ? "Por ahora solo puedo leer documentos PDF 📄 ¿Me lo mandas en PDF o me escribes lo que necesitas?"
-        : "No pude descargar el documento 😕 ¿Me lo reenvías?";
+    const sheet = url && isSheet ? await spreadsheetToText(url) : null;
+    if (!url || (!isPdf && !sheet)) {
+      const note = !url
+        ? "No pude descargar el documento 😕 ¿Me lo reenvías?"
+        : isSheet
+          ? "No pude leer esa planilla 😕 ¿Me la mandas otra vez, en PDF o como .xlsx?"
+          : "Por ahora leo documentos PDF y planillas Excel/CSV 📄 ¿Me lo mandas así o me escribes lo que necesitas?";
       await sendText(phone, note);
       await logMsg(link.tenant_id, phone, "user", text, { media: userMedia });
       await logMsg(link.tenant_id, phone, "assistant", note);
       return;
     }
-    extraBlocks.push({ type: "document", source: { type: "url", url }, title: name } as Anthropic.Beta.BetaContentBlockParam);
-    text = `${text || "Revisa este documento y dime qué hago con él."}\n[Adjuntó el PDF "${name}"]`;
+    if (sheet) {
+      extraBlocks.push({
+        type: "text",
+        text: `Contenido de la planilla "${name}" (CSV${sheet.truncated ? ", recortado: es muy larga" : ""}):\n${sheet.text}`,
+      });
+      text = `${text || "Revisa esta planilla y dime qué hago con ella."}\n[Adjuntó la planilla "${name}"]`;
+    } else {
+      extraBlocks.push({ type: "document", source: { type: "url", url }, title: name } as Anthropic.Beta.BetaContentBlockParam);
+      text = `${text || "Revisa este documento y dime qué hago con él."}\n[Adjuntó el PDF "${name}"]`;
+    }
   } else if (!text) {
-    await sendText(phone, "Por ahora entiendo texto, fotos, notas de voz, videos y documentos PDF 🙂");
+    await sendText(phone, "Por ahora entiendo texto, fotos, notas de voz, videos, documentos PDF y planillas Excel 🙂");
     return;
   }
 

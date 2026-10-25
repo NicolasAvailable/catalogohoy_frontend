@@ -3,14 +3,14 @@
   [closable]="true"
   [dismissableMask]="true"
   (close)="close()"
-  styleClass="w-full max-w-4xl rounded-2xl! overflow-hidden"
+  styleClass="w-[calc(100vw-1.5rem)] sm:w-full max-w-4xl rounded-2xl! overflow-hidden [&_.p-dialog-content]:px-1! sm:[&_.p-dialog-content]:px-5! [&_.p-dialog-header]:pb-0!"
 >
   <!-- HUB VIEW (export + import) -->
   @if (view() === 'hub') {
-  <section class="flex flex-col gap-6 p-8">
+  <section class="flex flex-col gap-5 sm:gap-6 px-4 pb-5 sm:p-8">
     <div class="text-center">
-      <h2 class="text-2xl font-bold text-gray-900">{{ 'Exportar / Importar productos' | transloco }}</h2>
-      <p class="text-gray-500 mt-2">
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-900">{{ 'Exportar / Importar productos' | transloco }}</h2>
+      <p class="text-sm sm:text-base text-gray-500 mt-2">
         {{ 'Exportá tus productos a Excel o importá nuevos desde un archivo.' | transloco }}
       </p>
     </div>
@@ -21,7 +21,7 @@
         type="button"
         (click)="onExportTile()"
         [disabled]="isFreePlan()"
-        class="relative flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl transition-all"
+        class="relative grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 items-center text-left p-4 sm:flex sm:flex-col sm:items-center sm:gap-3 sm:p-6 sm:text-center border-2 border-gray-100 rounded-2xl transition-all"
         [class.cursor-pointer]="!isFreePlan()"
         [class.hover:border-primary-400]="!isFreePlan()"
         [class.hover:bg-primary-50]="!isFreePlan()"
@@ -30,21 +30,21 @@
       >
         @if (isFreePlan()) {
         <span
-          class="absolute top-3 right-3 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-500 text-[10px] font-semibold leading-none"
+          class="absolute top-2 right-2 sm:top-3 sm:right-3 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-500 text-[10px] font-semibold leading-none"
         >
           <ui-icon name="crown" styleClass="size-3 text-primary-500" />
           {{ 'Pro' | transloco }}
         </span>
         }
-        <div class="w-14 h-14 bg-primary-50 rounded-full flex items-center justify-center">
+        <div class="row-span-3 w-12 h-12 sm:w-14 sm:h-14 bg-primary-50 rounded-full flex items-center justify-center">
           <ui-icon name="download" styleClass="size-7 text-primary-600" />
         </div>
-        <h3 class="text-lg font-bold text-gray-900">{{ 'Exportar' | transloco }}</h3>
-        <p class="text-sm text-gray-500 text-center">
+        <h3 class="text-base sm:text-lg font-bold text-gray-900">{{ 'Exportar' | transloco }}</h3>
+        <p class="text-sm text-gray-500 sm:text-center">
           {{ (isFreePlan() ? 'Disponible en planes pagos' : 'Descarga todos tus productos en Excel o CSV, listos para editar y volver a importar.') | transloco }}
         </p>
         <span
-          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold whitespace-nowrap"
+          class="justify-self-start mt-1 sm:mt-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold whitespace-nowrap"
         >
           <img src="/images/excel.svg" alt="Excel" class="w-3.5 h-3.5 shrink-0" />
           Excel
@@ -58,17 +58,17 @@
       <button
         type="button"
         (click)="onImport()"
-        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+        class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 items-center text-left p-4 sm:flex sm:flex-col sm:items-center sm:gap-3 sm:p-6 sm:text-center border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
       >
-        <div class="w-14 h-14 bg-primary-50 rounded-full flex items-center justify-center">
+        <div class="row-span-3 w-12 h-12 sm:w-14 sm:h-14 bg-primary-50 rounded-full flex items-center justify-center">
           <ui-icon name="upload" styleClass="size-7 text-primary-600" />
         </div>
-        <h3 class="text-lg font-bold text-gray-900">{{ 'Importar' | transloco }}</h3>
-        <p class="text-sm text-gray-500 text-center">
+        <h3 class="text-base sm:text-lg font-bold text-gray-900">{{ 'Importar' | transloco }}</h3>
+        <p class="text-sm text-gray-500 sm:text-center">
           {{ 'Trae tus productos desde Excel, Google Sheets o un catálogo en PDF.' | transloco }}
         </p>
         <span
-          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold whitespace-nowrap"
+          class="justify-self-start mt-1 sm:mt-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold whitespace-nowrap"
         >
           <img src="/images/excel.svg" alt="Excel" class="w-3.5 h-3.5 shrink-0" />
           Excel
@@ -85,17 +85,17 @@
       <button
         type="button"
         (click)="openPhotosImport()"
-        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+        class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 items-center text-left p-4 sm:flex sm:flex-col sm:items-center sm:gap-3 sm:p-6 sm:text-center border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
       >
-        <div class="w-14 h-14 bg-primary-50 rounded-full flex items-center justify-center">
+        <div class="row-span-3 w-12 h-12 sm:w-14 sm:h-14 bg-primary-50 rounded-full flex items-center justify-center">
           <ui-icon name="image" styleClass="size-7 text-primary-600" />
         </div>
-        <h3 class="text-lg font-bold text-gray-900">{{ 'Importar fotos' | transloco }}</h3>
-        <p class="text-sm text-gray-500 text-center">
+        <h3 class="text-base sm:text-lg font-bold text-gray-900">{{ 'Importar fotos' | transloco }}</h3>
+        <p class="text-sm text-gray-500 sm:text-center">
           {{ 'Sube muchas fotos de una vez y asígnalas a tus productos.' | transloco }}
         </p>
         <span
-          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold whitespace-nowrap"
+          class="justify-self-start mt-1 sm:mt-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold whitespace-nowrap"
         >
           <ui-icon name="image" styleClass="size-3.5 text-primary-600" />
           JPG · PNG
@@ -125,7 +125,7 @@
 
   <!-- EXPORT FORMAT PICKER (Excel / CSV) — espejo del paso de Importar -->
   @if (view() === 'export-pick') {
-  <section class="flex flex-col gap-6 p-8">
+  <section class="flex flex-col gap-5 sm:gap-6 px-4 pb-5 sm:p-8">
     <div class="flex items-center gap-3">
       <button
         (click)="view.set('hub')"
@@ -133,7 +133,7 @@
       >
         <ui-icon name="arrow-left" styleClass="w-5 h-5" />
       </button>
-      <h2 class="text-2xl font-bold text-gray-900">{{ '¿En qué formato quieres exportar?' | transloco }}</h2>
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-900">{{ '¿En qué formato quieres exportar?' | transloco }}</h2>
     </div>
     <p class="text-sm text-gray-500 -mt-3">
       {{ 'El archivo trae todos tus productos, listo para editar y volver a importar.' | transloco }}
@@ -145,11 +145,11 @@
         type="button"
         (click)="onExport('xlsx')"
         [disabled]="isExporting()"
-        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+        class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 items-center text-left p-4 sm:flex sm:flex-col sm:items-center sm:gap-3 sm:p-6 sm:text-center border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
       >
-        <img src="/images/excel.svg" alt="Microsoft Excel" class="w-14 h-14" />
-        <h3 class="text-lg font-bold text-gray-900">Microsoft Excel</h3>
-        <p class="text-sm text-gray-500 text-center">
+        <img src="/images/excel.svg" alt="Microsoft Excel" class="row-span-2 w-11 h-11 sm:w-14 sm:h-14" />
+        <h3 class="text-base sm:text-lg font-bold text-gray-900">Microsoft Excel</h3>
+        <p class="text-sm text-gray-500 sm:text-center">
           {{ 'Archivo .xlsx con columnas ajustadas, ideal para editar.' | transloco }}
         </p>
       </button>
@@ -159,11 +159,11 @@
         type="button"
         (click)="onExport('csv')"
         [disabled]="isExporting()"
-        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+        class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 items-center text-left p-4 sm:flex sm:flex-col sm:items-center sm:gap-3 sm:p-6 sm:text-center border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
       >
-        <img src="/images/csv.svg" alt="CSV" class="w-14 h-14" />
-        <h3 class="text-lg font-bold text-gray-900">CSV</h3>
-        <p class="text-sm text-gray-500 text-center">
+        <img src="/images/csv.svg" alt="CSV" class="row-span-2 w-11 h-11 sm:w-14 sm:h-14" />
+        <h3 class="text-base sm:text-lg font-bold text-gray-900">CSV</h3>
+        <p class="text-sm text-gray-500 sm:text-center">
           {{ 'Archivo .csv de texto plano, compatible con cualquier sistema.' | transloco }}
         </p>
       </button>
@@ -180,7 +180,7 @@
 
   <!-- IMPORT SOURCE PICKER (Excel / Google Sheets) -->
   @if (view() === 'import-source') {
-  <section class="flex flex-col gap-6 p-8">
+  <section class="flex flex-col gap-5 sm:gap-6 px-4 pb-5 sm:p-8">
     <div class="flex items-center gap-3">
       <button
         (click)="view.set('hub')"
@@ -188,22 +188,22 @@
       >
         <ui-icon name="arrow-left" styleClass="w-5 h-5" />
       </button>
-      <h2 class="text-2xl font-bold text-gray-900">{{ '¿Desde dónde quieres importar?' | transloco }}</h2>
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-900">{{ '¿Desde dónde quieres importar?' | transloco }}</h2>
     </div>
     <p class="text-sm text-gray-500 -mt-3">
       {{ 'Elige la app donde tienes tu lista de productos.' | transloco }}
     </p>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <!-- Microsoft Excel -->
       <button
         type="button"
         (click)="view.set('import-upload')"
-        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+        class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 items-center text-left p-4 sm:flex sm:flex-col sm:items-center sm:gap-3 sm:p-6 sm:text-center border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
       >
-        <img src="/images/excel.svg" alt="Microsoft Excel" class="w-14 h-14" />
-        <h3 class="text-lg font-bold text-gray-900">Microsoft Excel</h3>
-        <p class="text-sm text-gray-500 text-center">
+        <img src="/images/excel.svg" alt="Microsoft Excel" class="row-span-2 w-11 h-11 sm:w-14 sm:h-14" />
+        <h3 class="text-base sm:text-lg font-bold text-gray-900">Microsoft Excel</h3>
+        <p class="text-sm text-gray-500 sm:text-center">
           {{ 'Sube un archivo .xlsx o .xls desde tu computadora.' | transloco }}
         </p>
       </button>
@@ -212,11 +212,11 @@
       <button
         type="button"
         (click)="view.set('import-gsheet')"
-        class="flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+        class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 items-center text-left p-4 sm:flex sm:flex-col sm:items-center sm:gap-3 sm:p-6 sm:text-center border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
       >
-        <img src="/images/google-sheets.svg" alt="Google Sheets" class="w-14 h-14" />
-        <h3 class="text-lg font-bold text-gray-900">Google Sheets</h3>
-        <p class="text-sm text-gray-500 text-center">
+        <img src="/images/google-sheets.svg" alt="Google Sheets" class="row-span-2 w-11 h-11 sm:w-14 sm:h-14" />
+        <h3 class="text-base sm:text-lg font-bold text-gray-900">Google Sheets</h3>
+        <p class="text-sm text-gray-500 sm:text-center">
           {{ 'Pega el link de tu hoja de cálculo, sin descargar nada.' | transloco }}
         </p>
       </button>
@@ -225,18 +225,37 @@
       <button
         type="button"
         (click)="view.set('pdf-upload')"
-        class="relative flex flex-col items-center gap-3 p-6 border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+        class="relative grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 items-center text-left p-4 sm:flex sm:flex-col sm:items-center sm:gap-3 sm:p-6 sm:text-center border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
       >
         <span
-          class="absolute top-3 right-3 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-500 text-[10px] font-semibold leading-none"
+          class="absolute top-2 right-2 sm:top-3 sm:right-3 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-500 text-[10px] font-semibold leading-none"
         >
           <ui-icon name="sparkles" styleClass="size-3 text-primary-500" />
           IA
         </span>
-        <img src="/images/pdf.svg" alt="PDF" class="w-14 h-14" />
-        <h3 class="text-lg font-bold text-gray-900">{{ 'Catálogo en PDF' | transloco }}</h3>
-        <p class="text-sm text-gray-500 text-center">
+        <img src="/images/pdf.svg" alt="PDF" class="row-span-2 w-11 h-11 sm:w-14 sm:h-14" />
+        <h3 class="text-base sm:text-lg font-bold text-gray-900">{{ 'Catálogo en PDF' | transloco }}</h3>
+        <p class="text-sm text-gray-500 sm:text-center">
           {{ 'La IA lee tu catálogo: productos, precios y hasta las fotos.' | transloco }}
+        </p>
+      </button>
+
+      <!-- Por WhatsApp: lleva a conectar el Asistente de WhatsApp -->
+      <button
+        type="button"
+        (click)="goToWhatsappAssistant()"
+        class="relative grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 items-center text-left p-4 sm:flex sm:flex-col sm:items-center sm:gap-3 sm:p-6 sm:text-center border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer"
+      >
+        <span
+          class="absolute top-2 right-2 sm:top-3 sm:right-3 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-500 text-[10px] font-semibold leading-none"
+        >
+          <ui-icon name="sparkles" styleClass="size-3 text-primary-500" />
+          IA
+        </span>
+        <img src="/images/whatsapp.svg" alt="WhatsApp" class="row-span-2 w-11 h-11 sm:w-14 sm:h-14" />
+        <h3 class="text-base sm:text-lg font-bold text-gray-900">{{ 'Por WhatsApp' | transloco }}</h3>
+        <p class="text-sm text-gray-500 sm:text-center">
+          {{ 'Mándale tu Excel, PDF o fotos al Asistente de WhatsApp y él crea los productos.' | transloco }}
         </p>
       </button>
     </div>
@@ -245,7 +264,7 @@
 
   <!-- PDF UPLOAD VIEW -->
   @if (view() === 'pdf-upload') {
-  <section class="flex flex-col gap-6 p-8">
+  <section class="flex flex-col gap-5 sm:gap-6 px-4 pb-5 sm:p-8">
     <div class="flex items-center gap-3">
       <button
         (click)="view.set('import-source')"
@@ -254,7 +273,7 @@
         <ui-icon name="arrow-left" styleClass="w-5 h-5" />
       </button>
       <img src="/images/pdf.svg" alt="PDF" class="w-8 h-8" />
-      <h2 class="text-2xl font-bold text-gray-900">{{ 'Catálogo en PDF' | transloco }}</h2>
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-900">{{ 'Catálogo en PDF' | transloco }}</h2>
     </div>
     <p class="text-sm text-gray-500 -mt-3">
       {{ 'Sube el PDF de tu catálogo: la IA detecta los productos con sus precios y puede asignarles las fotos del propio PDF.' | transloco }}
@@ -264,12 +283,12 @@
     <div
       (drop)="onPdfDrop($event)"
       (dragover)="onDragOver($event)"
-      class="flex flex-col items-center justify-center gap-4 p-16
+      class="flex flex-col items-center justify-center gap-3 sm:gap-4 px-4 py-8 sm:p-16
              border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50
              hover:border-primary-400 hover:bg-primary-50/10 transition-all"
     >
-      <ui-icon name="file-text" styleClass="w-12 h-12 text-gray-300" />
-      <div class="text-center">
+      <ui-icon name="file-text" styleClass="w-10 h-10 sm:w-12 sm:h-12 text-gray-300" />
+      <div class="hidden sm:block text-center">
         <p class="text-base font-semibold text-gray-700">
           {{ 'Arrastra y suelta tu archivo .pdf aqui' | transloco }}
         </p>
@@ -302,15 +321,15 @@
 
   <!-- PDF CONFIRM VIEW (costo antes de llamar a la IA) -->
   @if (view() === 'pdf-confirm') {
-  <section class="flex flex-col items-center gap-6 p-10 text-center">
+  <section class="flex flex-col items-center gap-5 sm:gap-6 px-4 pb-6 sm:p-10 text-center">
     <img src="/images/pdf.svg" alt="PDF" class="w-14 h-14" />
     <div>
-      <h2 class="text-xl font-bold text-gray-900">{{ pdfFileName() }}</h2>
+      <h2 class="text-lg sm:text-xl font-bold text-gray-900">{{ pdfFileName() }}</h2>
       <p class="text-gray-500 mt-2 max-w-md">
         {{ 'Leímos tu PDF. Ahora la IA va a detectar los productos con sus precios para que los revises antes de importar.' | transloco }}
       </p>
     </div>
-    <div class="flex gap-10">
+    <div class="flex flex-wrap justify-center gap-8 sm:gap-10">
       <div class="flex flex-col items-center">
         <span class="text-3xl font-bold text-gray-900">{{ pdfPages().length }}</span>
         <span class="text-sm text-gray-500 mt-1">{{ 'Páginas con texto' | transloco }}</span>
@@ -335,18 +354,16 @@
       }
     </p>
     }
-    <div class="flex gap-3">
+    <div class="flex flex-col-reverse sm:flex-row gap-3 w-full sm:w-auto">
       <ui-button
         [label]="'Cancelar' | transloco"
         variant="outlined"
         severity="contrast"
-        [fluid]="false"
         (click)="view.set('pdf-upload')"
       />
       <ui-button
         [label]="'Analizar con IA' | transloco"
         icon="sparkles"
-        [fluid]="false"
         (click)="analyzePdf()"
       />
     </div>
@@ -355,7 +372,7 @@
 
   <!-- PDF PHOTOS MATCHING VIEW (IA asignando fotos por página) -->
   @if (view() === 'pdf-photos-matching') {
-  <section class="flex flex-col items-center gap-6 p-12">
+  <section class="flex flex-col items-center gap-5 sm:gap-6 px-4 py-8 sm:p-12">
     <div class="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center">
       <ui-icon
         [name]="aiStatusMessage().icon"
@@ -381,7 +398,7 @@
 
   <!-- IMPORT GOOGLE SHEETS VIEW -->
   @if (view() === 'import-gsheet') {
-  <section class="flex flex-col gap-6 p-8">
+  <section class="flex flex-col gap-5 sm:gap-6 px-4 pb-5 sm:p-8">
     <div class="flex items-center gap-3">
       <button
         (click)="view.set('import-source')"
@@ -390,7 +407,7 @@
         <ui-icon name="arrow-left" styleClass="w-5 h-5" />
       </button>
       <img src="/images/google-sheets.svg" alt="Google Sheets" class="w-8 h-8" />
-      <h2 class="text-2xl font-bold text-gray-900">Google Sheets</h2>
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Google Sheets</h2>
     </div>
     <p class="text-sm text-gray-500 -mt-3">
       {{ 'Pega el link de tu hoja y la IA mapeará tus productos automáticamente.' | transloco }}
@@ -424,7 +441,7 @@
 
   <!-- IMPORT UPLOAD VIEW -->
   @if (view() === 'import-upload') {
-  <section class="flex flex-col gap-6 p-8">
+  <section class="flex flex-col gap-5 sm:gap-6 px-4 pb-5 sm:p-8">
     <div class="flex items-center gap-3">
       <button
         (click)="view.set('import-source')"
@@ -433,7 +450,7 @@
         <ui-icon name="arrow-left" styleClass="w-5 h-5" />
       </button>
       <img src="/images/excel.svg" alt="Microsoft Excel" class="w-8 h-8" />
-      <h2 class="text-2xl font-bold text-gray-900">Microsoft Excel</h2>
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Microsoft Excel</h2>
     </div>
     <p class="text-sm text-gray-500 -mt-3">
       {{ 'Sube un archivo Excel y la IA mapeará tus productos automáticamente.' | transloco }}
@@ -443,15 +460,15 @@
     <div
       (drop)="onFileDrop($event)"
       (dragover)="onDragOver($event)"
-      class="flex flex-col items-center justify-center gap-4 p-16
+      class="flex flex-col items-center justify-center gap-3 sm:gap-4 px-4 py-8 sm:p-16
              border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50
              hover:border-primary-400 hover:bg-primary-50/10 transition-all"
     >
       <ui-icon
         name="file-spreadsheet"
-        styleClass="w-12 h-12 text-gray-300"
+        styleClass="w-10 h-10 sm:w-12 sm:h-12 text-gray-300"
       />
-      <div class="text-center">
+      <div class="hidden sm:block text-center">
         <p class="text-base font-semibold text-gray-700">
           {{ 'Arrastra y suelta tu archivo .xlsx aqui' | transloco }}
         </p>
@@ -474,8 +491,8 @@
     </div>
 
     <!-- Template download -->
-    <div class="flex items-center gap-2 text-sm text-gray-400">
-      <ui-icon name="info" styleClass="w-4 h-4" />
+    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-400">
+      <ui-icon name="info" styleClass="w-4 h-4 shrink-0" />
       <span>{{ 'No tienes una plantilla?' | transloco }}</span>
       <button
         (click)="downloadTemplate()"
@@ -489,7 +506,7 @@
 
   <!-- AI ANALYZING VIEW -->
   @if (view() === 'ai-analyzing') {
-  <section class="flex flex-col items-center gap-6 p-12">
+  <section class="flex flex-col items-center gap-5 sm:gap-6 px-4 py-8 sm:p-12">
     <div
       class="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center"
     >
@@ -519,25 +536,25 @@
 
   <!-- IMPORT PREVIEW VIEW -->
   @if (view() === 'import-preview') {
-  <section class="flex flex-col gap-4 p-8">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
+  <section class="flex flex-col gap-4 px-4 pb-5 sm:p-8">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
         <button
           (click)="view.set('import-source')"
           class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
         >
           <ui-icon name="arrow-left" styleClass="w-5 h-5" />
         </button>
-        <h2 class="text-xl font-bold text-gray-900">
+        <h2 class="text-lg sm:text-xl font-bold text-gray-900">
           {{ 'Vista previa ({n} productos)' | transloco: { n: parsedRows().length } }}
         </h2>
       </div>
-      <ui-button [label]="'Importar' | transloco" icon="upload" (click)="askImportConfirm()" />
+      <ui-button [label]="'Importar' | transloco" icon="upload" class="w-full sm:w-auto" (click)="askImportConfirm()" />
     </div>
 
     <!-- Resumen: qué hará el import con esta lista -->
     @if (flagsReady()) {
-    <div class="flex items-center gap-2 -mt-1">
+    <div class="flex flex-wrap items-center gap-2 -mt-1">
       <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold">
         {{ '{n} nuevos' | transloco: { n: newCount() } }}
       </span>
@@ -553,34 +570,34 @@
       <table class="w-full text-sm">
         <thead class="bg-gray-50 sticky top-0 z-10">
           <tr>
-            <th class="p-3 text-left font-semibold text-gray-600">#</th>
-            <th class="p-3 text-left font-semibold text-gray-600">{{ 'Nombre' | transloco }}</th>
-            <th class="p-3 text-left font-semibold text-gray-600">{{ 'Precio' | transloco }}</th>
-            <th class="p-3 text-left font-semibold text-gray-600">{{ 'Stock' | transloco }}</th>
-            <th class="p-3 text-left font-semibold text-gray-600">SKU</th>
-            <th class="p-3 text-left font-semibold text-gray-600">
+            <th class="hidden sm:table-cell px-2 py-2.5 sm:p-3 text-left font-semibold text-gray-600">#</th>
+            <th class="px-2 py-2.5 sm:p-3 text-left font-semibold text-gray-600">{{ 'Nombre' | transloco }}</th>
+            <th class="px-2 py-2.5 sm:p-3 text-left font-semibold text-gray-600">{{ 'Precio' | transloco }}</th>
+            <th class="px-2 py-2.5 sm:p-3 text-left font-semibold text-gray-600">{{ 'Stock' | transloco }}</th>
+            <th class="hidden sm:table-cell px-2 py-2.5 sm:p-3 text-left font-semibold text-gray-600">SKU</th>
+            <th class="hidden sm:table-cell px-2 py-2.5 sm:p-3 text-left font-semibold text-gray-600">
               {{ 'Categorias' | transloco }}
             </th>
-            <th class="p-3 text-left font-semibold text-gray-600">{{ 'Acción' | transloco }}</th>
+            <th class="px-2 py-2.5 sm:p-3 text-left font-semibold text-gray-600">{{ 'Acción' | transloco }}</th>
           </tr>
         </thead>
         <tbody>
           @for (row of parsedRows(); track $index) {
           <tr class="border-b border-gray-50 hover:bg-gray-50/50">
-            <td class="p-3 text-gray-400">{{ $index + 1 }}</td>
-            <td class="p-3 font-medium text-gray-900">{{ row.name }}</td>
-            <td class="p-3 text-gray-700">{{ cs() }}{{ row.price }}</td>
-            <td class="p-3 text-gray-700">{{ row.stock ?? ('Sin limite' | transloco) }}</td>
-            <td class="p-3 text-gray-500">{{ row.sku ?? '-' }}</td>
-            <td class="p-3 text-gray-500">{{ row.categories || '-' }}</td>
-            <td class="p-3">
+            <td class="hidden sm:table-cell px-2 py-2.5 sm:p-3 text-gray-400">{{ $index + 1 }}</td>
+            <td class="px-2 py-2.5 sm:p-3 font-medium text-gray-900">{{ row.name }}</td>
+            <td class="px-2 py-2.5 sm:p-3 text-gray-700 whitespace-nowrap">{{ cs() }}{{ row.price }}</td>
+            <td class="px-2 py-2.5 sm:p-3 text-gray-700">{{ row.stock ?? ('Sin limite' | transloco) }}</td>
+            <td class="hidden sm:table-cell px-2 py-2.5 sm:p-3 text-gray-500">{{ row.sku ?? '-' }}</td>
+            <td class="hidden sm:table-cell px-2 py-2.5 sm:p-3 text-gray-500">{{ row.categories || '-' }}</td>
+            <td class="px-2 py-2.5 sm:p-3">
               @if (flagsReady()) {
                 @if (existingFlags()[$index]) {
                 <span class="inline-flex px-2 py-0.5 rounded-md bg-gray-50 border border-gray-200 text-gray-600 text-xs font-semibold whitespace-nowrap">
                   {{ 'Se actualizará' | transloco }}
                 </span>
                 } @else {
-                <span class="inline-flex px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold">
+                <span class="inline-flex px-2 py-0.5 rounded-md bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold whitespace-nowrap">
                   {{ 'Nuevo' | transloco }}
                 </span>
                 }
@@ -596,12 +613,12 @@
 
   <!-- IMPORT PROGRESS VIEW -->
   @if (view() === 'import-progress') {
-  <section class="flex flex-col gap-4 p-8">
-    <div class="flex items-center justify-between gap-3">
-      <h2 class="text-xl font-bold text-gray-900">
+  <section class="flex flex-col gap-4 px-4 pb-5 sm:p-8">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 class="text-lg sm:text-xl font-bold text-gray-900">
         {{ (isPaused() ? 'Importación en pausa' : 'Importando productos...') | transloco }}
       </h2>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <!-- Pausar/Reanudar: siempre disponible durante el import. -->
         @if (!cancelRequested()) {
         <ui-button
@@ -688,7 +705,7 @@
 
   <!-- IMPORT DONE VIEW -->
   @if (view() === 'import-done') {
-  <section class="flex flex-col items-center gap-8 p-12">
+  <section class="flex flex-col items-center gap-6 sm:gap-8 px-4 py-8 sm:p-12">
     <div
       class="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center"
     >
@@ -696,7 +713,7 @@
     </div>
 
     <div class="text-center">
-      <h2 class="text-2xl font-bold text-gray-900">
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-900">
         {{ 'Importacion completada' | transloco }}
       </h2>
       <p class="text-gray-500 mt-1">
@@ -705,7 +722,7 @@
     </div>
 
     @if (importSummary(); as summary) {
-    <div class="flex gap-12">
+    <div class="flex flex-wrap justify-center gap-8 sm:gap-12">
       <div class="flex flex-col items-center">
         <span class="text-4xl font-bold text-primary-600">{{
           summary.success
@@ -748,12 +765,12 @@
 
   <!-- IMPORT CONFIRM VIEW (aviso de backup antes de actualizar) -->
   @if (view() === 'import-confirm') {
-  <section class="flex flex-col items-center gap-6 p-10 text-center">
+  <section class="flex flex-col items-center gap-5 sm:gap-6 px-4 pb-6 sm:p-10 text-center">
     <div class="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center">
       <ui-icon name="shield-check" styleClass="w-8 h-8 text-primary-500" />
     </div>
     <div>
-      <h2 class="text-xl font-bold text-gray-900">
+      <h2 class="text-lg sm:text-xl font-bold text-gray-900">
         {{ 'Antes de actualizar, creamos un respaldo' | transloco }}
       </h2>
       <p class="text-gray-500 mt-2 max-w-md">
@@ -767,19 +784,17 @@
       {{ 'Los productos que ya existan (por SKU o nombre) se actualizarán; los nuevos se agregarán.' | transloco }}
       }
     </p>
-    <div class="flex gap-3">
+    <div class="flex flex-col-reverse sm:flex-row gap-3 w-full sm:w-auto">
       <ui-button
         [label]="'Cancelar' | transloco"
         variant="outlined"
         severity="contrast"
-        [fluid]="false"
         [disabled]="isCreatingBackup()"
         (click)="view.set('import-preview')"
       />
       <ui-button
         [label]="(isCreatingBackup() ? 'Creando respaldo...' : 'Crear respaldo e importar') | transloco"
         icon="shield-check"
-        [fluid]="false"
         [isLoading]="isCreatingBackup()"
         [disabled]="isCreatingBackup()"
         (click)="confirmImport()"
@@ -790,7 +805,7 @@
 
   <!-- BACKUPS VIEW (historial: descargar / restaurar) -->
   @if (view() === 'backups') {
-  <section class="flex flex-col gap-4 p-8">
+  <section class="flex flex-col gap-4 px-4 pb-5 sm:p-8">
     <div class="flex items-center gap-3">
       <button
         (click)="view.set('hub')"
@@ -798,7 +813,7 @@
       >
         <ui-icon name="arrow-left" styleClass="w-5 h-5" />
       </button>
-      <h2 class="text-xl font-bold text-gray-900">{{ 'Respaldos de productos' | transloco }}</h2>
+      <h2 class="text-lg sm:text-xl font-bold text-gray-900">{{ 'Respaldos de productos' | transloco }}</h2>
     </div>
     <p class="text-sm text-gray-500 -mt-2">
       {{ 'Copias creadas antes de cada importación. Descargá o restaurá una versión anterior.' | transloco }}
@@ -823,7 +838,7 @@
     } @else {
     <div class="max-h-96 overflow-auto border border-gray-100 rounded-xl divide-y divide-gray-50">
       @for (backup of backups(); track backup.id) {
-      <div class="flex items-center justify-between gap-3 p-3">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3">
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center shrink-0">
             <ui-icon name="history" styleClass="w-5 h-5 text-gray-400" />
@@ -833,7 +848,7 @@
             <span class="text-xs text-gray-400">{{ backup.productCount }} {{ 'productos' | transloco }}</span>
           </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <ui-button
             [label]="'Ver' | transloco"
             icon="eye"
@@ -870,8 +885,8 @@
 
   <!-- BACKUP VIEW (contenido del respaldo, tipo planilla) -->
   @if (view() === 'backup-view') {
-  <section class="flex flex-col gap-4 p-8">
-    <div class="flex items-center justify-between gap-3">
+  <section class="flex flex-col gap-4 px-4 pb-5 sm:p-8">
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3 min-w-0">
         <button
           (click)="view.set('backups')"
@@ -916,7 +931,7 @@
     } @else {
     <!-- Grilla tipo Excel: celdas con borde, columna de nº de fila, header sticky -->
     <div class="max-h-96 overflow-auto border border-gray-200 rounded-xl">
-      <table class="w-full text-sm border-collapse">
+      <table class="w-full text-sm border-collapse whitespace-nowrap sm:whitespace-normal">
         <thead class="sticky top-0 z-10">
           <tr class="bg-gray-100">
             <th class="border border-gray-200 px-2 py-1.5 text-center font-semibold text-gray-400 w-10"></th>
@@ -949,7 +964,7 @@
 
   <!-- PHOTOS UPLOAD VIEW -->
   @if (view() === 'photos-upload') {
-  <section class="flex flex-col gap-6 p-8">
+  <section class="flex flex-col gap-5 sm:gap-6 px-4 pb-5 sm:p-8">
     <div class="flex items-center gap-3">
       <button
         (click)="view.set('hub')"
@@ -957,7 +972,7 @@
       >
         <ui-icon name="arrow-left" styleClass="w-5 h-5" />
       </button>
-      <h2 class="text-2xl font-bold text-gray-900">{{ 'Importar fotos' | transloco }}</h2>
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-900">{{ 'Importar fotos' | transloco }}</h2>
     </div>
     <p class="text-sm text-gray-500 -mt-3">
       {{ 'Sube tus fotos y las asignamos automáticamente por el nombre del archivo (SKU o nombre del producto).' | transloco }}
@@ -966,12 +981,12 @@
     <div
       (drop)="onPhotoDrop($event)"
       (dragover)="onDragOver($event)"
-      class="flex flex-col items-center justify-center gap-4 p-16
+      class="flex flex-col items-center justify-center gap-3 sm:gap-4 px-4 py-8 sm:p-16
              border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50
              hover:border-primary-400 hover:bg-primary-50/10 transition-all"
     >
-      <ui-icon name="image" styleClass="w-12 h-12 text-gray-300" />
-      <div class="text-center">
+      <ui-icon name="image" styleClass="w-10 h-10 sm:w-12 sm:h-12 text-gray-300" />
+      <div class="hidden sm:block text-center">
         <p class="text-base font-semibold text-gray-700">
           {{ 'Arrastra y suelta tus fotos aquí' | transloco }}
         </p>
@@ -1010,7 +1025,7 @@
 
   <!-- PHOTOS REVIEW VIEW -->
   @if (view() === 'photos-review') {
-  <section class="flex flex-col gap-4 p-8">
+  <section class="flex flex-col gap-4 px-4 pb-5 sm:p-8">
     <div class="flex items-center gap-3">
       <button
         (click)="view.set('photos-upload')"
@@ -1018,7 +1033,7 @@
       >
         <ui-icon name="arrow-left" styleClass="w-5 h-5" />
       </button>
-      <h2 class="text-xl font-bold text-gray-900">{{ 'Revisar fotos' | transloco }}</h2>
+      <h2 class="text-lg sm:text-xl font-bold text-gray-900">{{ 'Revisar fotos' | transloco }}</h2>
     </div>
 
     <div class="flex items-center gap-2 -mt-1">
@@ -1034,10 +1049,10 @@
 
     <!-- IA: identificar las fotos sin asignar (opt-in, cobra créditos) -->
     @if (photoUnassignedCount() > 0) {
-    <div class="flex items-center justify-between gap-3 rounded-xl border border-primary-200 bg-primary-50/50 px-3 py-2">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 rounded-xl border border-primary-200 bg-primary-50/50 px-3 py-2">
       <div class="flex items-center gap-2 text-sm text-primary-700 min-w-0">
         <ui-icon name="sparkles" styleClass="w-4 h-4 shrink-0" />
-        <span class="truncate">{{ 'La IA puede identificar a qué producto pertenece cada foto (1 crédito por foto).' | transloco }}</span>
+        <span class="sm:truncate">{{ 'La IA puede identificar a qué producto pertenece cada foto (1 crédito por foto).' | transloco }}</span>
       </div>
       <ui-button
         [label]="('Identificar con IA' | transloco) + ' (' + photoUnassignedCount() + ')'"
@@ -1053,13 +1068,13 @@
 
     <div class="max-h-96 overflow-auto border border-gray-100 rounded-xl divide-y divide-gray-50">
       @for (item of photoItems(); track item.previewUrl; let i = $index) {
-      <div class="flex items-center gap-3 p-3">
+      <div class="flex flex-wrap sm:flex-nowrap items-center gap-3 p-3">
         <img
           [src]="item.previewUrl"
           [alt]="item.file.name"
           class="w-12 h-12 rounded-lg object-cover border border-gray-100 shrink-0"
         />
-        <div class="flex flex-col min-w-0 w-44 shrink-0">
+        <div class="flex flex-col min-w-0 flex-1 sm:flex-none sm:w-44 sm:shrink-0">
           <span class="text-sm font-medium text-gray-800 truncate">{{ item.file.name }}</span>
           @if (item.method === 'sku') {
           <span class="text-[11px] font-semibold text-primary-600">{{ 'Match por SKU' | transloco }}</span>
@@ -1073,7 +1088,7 @@
           <span class="text-[11px] font-semibold text-amber-600">{{ 'Sin asignar' | transloco }}</span>
           }
         </div>
-        <div class="flex-1 min-w-0">
+        <div class="order-last basis-full sm:order-none sm:basis-auto flex-1 min-w-0">
           <ui-select
             styleClass="w-full"
             [options]="photoProducts()"
@@ -1126,7 +1141,7 @@
     </div>
 
     <!-- Barra inferior: nota + acción principal (Aplicar) -->
-    <div class="flex items-center justify-between gap-4 pt-1">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pt-1">
       <div class="flex items-center gap-2 text-xs text-gray-400 min-w-0">
         <ui-icon name="info" styleClass="w-4 h-4 shrink-0" />
         <span>{{ 'Las fotos sin asignar no se subirán. Antes de aplicar se crea un respaldo de tus productos.' | transloco }}</span>
@@ -1145,8 +1160,8 @@
 
   <!-- PHOTOS PROGRESS VIEW -->
   @if (view() === 'photos-progress') {
-  <section class="flex flex-col gap-4 p-8">
-    <h2 class="text-xl font-bold text-gray-900">{{ 'Subiendo fotos...' | transloco }}</h2>
+  <section class="flex flex-col gap-4 px-4 pb-5 sm:p-8">
+    <h2 class="text-lg sm:text-xl font-bold text-gray-900">{{ 'Subiendo fotos...' | transloco }}</h2>
     <ui-progress-bar [value]="photosProgress()" />
     @if (photosCurrentLabel()) {
     <p class="text-sm text-gray-500 truncate">{{ photosCurrentLabel() }}</p>
@@ -1156,16 +1171,16 @@
 
   <!-- PHOTOS DONE VIEW -->
   @if (view() === 'photos-done') {
-  <section class="flex flex-col items-center gap-8 p-12">
+  <section class="flex flex-col items-center gap-6 sm:gap-8 px-4 py-8 sm:p-12">
     <div class="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center">
       <ui-icon name="check-circle" styleClass="w-10 h-10 text-primary-500" />
     </div>
 
     <div class="text-center">
-      <h2 class="text-2xl font-bold text-gray-900">{{ 'Fotos aplicadas' | transloco }}</h2>
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-900">{{ 'Fotos aplicadas' | transloco }}</h2>
     </div>
 
-    <div class="flex gap-10">
+    <div class="flex flex-wrap justify-center gap-8 sm:gap-10">
       <div class="flex flex-col items-center">
         <span class="text-4xl font-bold text-primary-600">{{ photosApplied() }}</span>
         <span class="text-sm text-gray-500 mt-1">{{ 'Aplicadas' | transloco }}</span>
