@@ -139,4 +139,33 @@ describe('ProductExcelService.exportToCsv', () => {
     expect(csv).toContain('Rojo: 10 (antes 12) | Azul: 11');
     expect(csv).toContain('1-10: 9');
   });
+
+  it('encuentra el encabezado real aunque la planilla traiga un título arriba', async () => {
+    // Caso Motofox: "Consolidado de facturas" en la fila 1, encabezado en la 3
+    // y una fila de totales sin descripción al final.
+    const XLSX = await import('xlsx');
+    const sheet = XLSX.utils.aoa_to_sheet([
+      ['Consolidado Facturas Moto Fox 23/10/2026'],
+      [],
+      ['Código', 'Descripción', 'Cantidad', 'Precio'],
+      ['64712', 'MINI EXPLORADORA LED', 15, 5.01],
+      ['4007', 'FARO LED C/BASE', 50, 3.81],
+      ['', '', 4843, 608.63],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, 'Hoja1');
+    const bytes = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+    const file = new File([bytes], 'consolidado.xlsx');
+
+    const result = await service.extractRawData(file);
+    expect(result.isRight()).toBe(true);
+    const { headers, rows } = result.value as {
+      headers: string[];
+      rows: Record<string, unknown>[];
+    };
+    expect(headers).toEqual(['Código', 'Descripción', 'Cantidad', 'Precio']);
+    expect(rows).toHaveLength(3);
+    expect(rows[0]['Descripción']).toBe('MINI EXPLORADORA LED');
+    expect(rows[0]['Precio']).toBe(5.01);
+  });
 });
