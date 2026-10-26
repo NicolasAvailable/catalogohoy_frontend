@@ -20,9 +20,9 @@ const JSON_LD = {
 
 const Index = () => {
   usePageMeta({
-    title: "CatalogoHoy | Crea tu catálogo digital gratis en minutos",
+    title: "CatalogoHoy | ERP para tu negocio: catálogo, ventas, inventario y POS",
     description:
-      "Crea catálogos digitales profesionales para tu tienda de ropa o negocio. Sube productos, personaliza el diseño, comparte por WhatsApp y recibe órdenes. Empieza gratis hoy.",
+      "CatalogoHoy es el ERP todo en uno para pequeños negocios: catálogo digital, pedidos por WhatsApp, inventario, Punto de Venta, clientes, reportes, Instagram/Facebook e IA. Empieza gratis.",
     path: "/",
     jsonLd: JSON_LD,
   });

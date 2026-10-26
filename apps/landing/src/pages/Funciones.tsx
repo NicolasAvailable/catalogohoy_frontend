@@ -8,9 +8,9 @@ import { usePageMeta } from "@/hooks/use-page-meta";
 
 const Funciones = () => {
   usePageMeta({
-    title: "Funciones: catálogo, WhatsApp e IA | CatalogoHoy",
+    title: "Funciones: ERP, catálogo, WhatsApp, POS e IA | CatalogoHoy",
     description:
-      "Descubre todo lo que puedes hacer con CatalogoHoy: catálogo digital personalizable, pedidos por WhatsApp, gestión de órdenes y clientes, precios en dos monedas e inteligencia artificial para tus fotos.",
+      "Todo lo que tu negocio necesita en un solo lugar: catálogo digital, pedidos por WhatsApp, órdenes, inventario, Punto de Venta, clientes, reportes, Instagram/Facebook, asistente de WhatsApp e IA.",
     path: "/features",
   });
 
