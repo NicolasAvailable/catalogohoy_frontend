@@ -499,13 +499,17 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "list_orders",
     description:
-      "Lista órdenes recientes con totales. status: pending | completed | credit | cancelled. days = ventana hacia atrás (default 7).",
+      "Lista órdenes recientes con totales. status: pending | completed | credit | cancelled. days = ventana hacia atrás (default 7; 90 si filtras por producto). " +
+      "Para \"¿en qué órdenes se vendió X?\" o \"¿cuántas unidades de X vendí?\" filtra por product_id (búscalo antes con list_products) " +
+      "o por product_name: devuelve solo las órdenes que llevan ese producto, con las unidades de ese producto en cada una y el total de unidades.",
     input_schema: {
       type: "object",
       properties: {
         status: { type: "string" },
         days: { type: "number" },
         search: { type: "string", description: "Nombre o teléfono del cliente" },
+        product_id: { type: "number" },
+        product_name: { type: "string", description: "Parte del nombre del producto (si no tienes el id)" },
         limit: { type: "number", description: "Máximo 30 (default 10)" },
       },
     },
@@ -1244,19 +1248,51 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       return { created: true, category: data };
     }
     case "list_orders": {
-      const days = Math.min(Number(a.days) || 7, 365);
-      const limit = Math.min(Number(a.limit) || 10, 30);
+      const productId = Number(a.product_id) || 0;
+      const productName = String(a.product_name ?? "").trim().toLowerCase();
+      const byProduct = !!(productId || productName);
+      const days = Math.min(Number(a.days) || (byProduct ? 90 : 7), 365);
+      const limit = Math.min(Number(a.limit) || (byProduct ? 30 : 10), 30);
       const since = new Date(Date.now() - days * 86400_000).toISOString();
       let q = admin.from("orders")
-        .select("id, order_number, name, phone, status, total_usd, payment_method, source, created_at", { count: "exact" })
+        .select(`id, order_number, name, phone, status, total_usd, payment_method, source, created_at${byProduct ? ", products" : ""}`, { count: "exact" })
         .eq("tenant_id", tenantId).gte("created_at", since).order("created_at", { ascending: false });
       if (a.status) q = q.eq("status", String(a.status));
       if (a.search?.trim()) q = q.or(`name.ilike.%${a.search.trim()}%,phone.ilike.%${digits(a.search)}%`);
-      const { data, error, count } = await q.limit(200);
+      // productId se guarda como número o, en órdenes viejas, como texto.
+      if (productId) q = q.or(`products.cs.[{"productId":${productId}}],products.cs.[{"productId":"${productId}"}]`);
+      const { data, error, count } = await q.limit(byProduct ? 1000 : 200);
       if (error) return { error: error.message };
-      const rows = data ?? [];
-      const total = rows.reduce((acc, r) => acc + (Number(r.total_usd) || 0), 0);
-      return { days, total_orders: count ?? rows.length, total_usd: Math.round(total * 100) / 100, orders: rows.slice(0, limit) };
+      // deno-lint-ignore no-explicit-any
+      let rows: any[] = data ?? [];
+      if (!byProduct) {
+        const total = rows.reduce((acc, r) => acc + (Number(r.total_usd) || 0), 0);
+        return { days, total_orders: count ?? rows.length, total_usd: Math.round(total * 100) / 100, orders: rows.slice(0, limit) };
+      }
+      // Solo las líneas de ese producto (por id, o por nombre si no hay id).
+      // deno-lint-ignore no-explicit-any
+      const matches = (it: any) => productId ? Number(it.productId) === productId : String(it.name ?? "").toLowerCase().includes(productName);
+      rows = rows.map((r) => {
+        const lines = (Array.isArray(r.products) ? r.products : []).filter(matches);
+        const { products: _p, ...order } = r;
+        return {
+          ...order,
+          units: lines.reduce((acc: number, it: { quantity?: number }) => acc + (Number(it.quantity) || 0), 0),
+          product_total_usd: Math.round(lines.reduce((acc: number, it: { total?: number }) => acc + (Number(it.total) || 0), 0) * 100) / 100,
+          lines: lines.map((it: { name: string; quantity: number; variantName?: string; size?: string }) =>
+            [it.quantity, "×", it.name, it.variantName, it.size].filter(Boolean).join(" ")),
+        };
+      }).filter((r) => r.lines.length);
+      const valid = rows.filter((r) => r.status !== "cancelled");
+      return {
+        days, product_id: productId || undefined, product_name: productName || undefined,
+        total_orders: rows.length,
+        units_sold: valid.reduce((acc, r) => acc + r.units, 0),
+        product_sales_usd: Math.round(valid.reduce((acc, r) => acc + r.product_total_usd, 0) * 100) / 100,
+        note: "units_sold y product_sales_usd no cuentan órdenes canceladas.",
+        orders: rows.slice(0, limit),
+        more: rows.length > limit ? rows.length - limit : 0,
+      };
     }
     case "get_order": {
       if (!a.order_number && !a.id) return { error: "Indica el número de orden" };
@@ -1750,6 +1786,7 @@ Reglas:
 - Al mostrar una orden, dala estructurada y breve: número, cliente y teléfono, estado, cada producto en una línea (cantidad × nombre, talla/variante, total), envío, total y método de pago.
 - No inventes datos (precios, stock, órdenes): usa siempre las herramientas.
 - Métricas ("¿cuánto vendí?", "lo más vendido", "ventas de la semana"): usa get_metrics y resume en 3-5 líneas.
+- Órdenes de un producto ("¿en qué órdenes se vendió X?", "¿cuántas X vendí este mes?", "¿quién compró X?"): busca el producto con list_products y usa list_orders con product_id (o product_name). Nunca digas que no puedes filtrar órdenes por producto ni propongas revisarlas una por una.
 - Tasa de cambio (Venezuela): "¿cuál es la tasa?", "¿cuánto es en bolívares?" → get_exchange_rate; responde con la tasa que usa la tienda (di si es BCV dólar, BCV euro o su tasa propia) y, si sirve, la BCV del día. Para cambiarla usa set_exchange_rate. Nunca digas que no tienes la tasa sin consultarla.
 - Clientes ("datos de María", "¿quién es mi mejor cliente?", "teléfono de…"): usa list_customers.
 - Configuración de la tienda (nombre, descripción, logo, banner, color, país, moneda, horario, abierta 24 horas, aceptar pedidos, ocultar la tienda, vendedores de WhatsApp, mensaje de WhatsApp del pedido, redes sociales, notificaciones, impuesto, métodos de pago con sus datos, descuentos o recargos por método de pago, métodos de envío): SÍ puedes cambiarla con get_store_settings, update_store_settings, set_business_hours, set_whatsapp_sellers, set_order_notifications, manage_payment_method y manage_shipping_method. Mira primero cómo está con get_store_settings. Nunca digas que no puedes cambiar la configuración. Para logo o banner, pide que mande la imagen y usa logo_from_photo / banner_from_photo. Ocultar la tienda, dejar de aceptar pedidos y eliminar un método de pago o envío: pide confirmación antes. Lo que no se puede desde aquí (plantilla y diseño visual, dominio, slug, píxel): manda el link de configuración (design_url).
