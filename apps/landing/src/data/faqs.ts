@@ -10,6 +10,11 @@ export type Faq = { question: string; answer: string };
 
 export const faqs: Faq[] = [
   {
+    question: "¿CatalogoHoy es un ERP?",
+    answer:
+      "Sí. CatalogoHoy es un ERP todo en uno para pequeños negocios: reúne catálogo digital y tienda online, pedidos por WhatsApp, órdenes, inventario, Punto de Venta (POS), clientes, ventas a crédito, facturas, reportes, chats de WhatsApp, Instagram, Facebook y TikTok, y un asistente de WhatsApp con IA. Todo desde la web o la app móvil, con un plan gratis para empezar.",
+  },
+  {
     question: "¿Es gratis crear un catálogo digital?",
     answer:
       "Sí, CatalogoHoy ofrece un plan gratuito para siempre que incluye hasta 10 productos y 1 catálogo. Puedes empezar sin tarjeta de crédito.",

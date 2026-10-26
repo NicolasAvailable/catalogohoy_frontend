@@ -363,6 +363,16 @@ const FEATURE_BLOCKS = [
   },
 ];
 
+// Gestión del negocio (posicionamiento ERP): lo que va más allá del catálogo.
+const ERP_BLOCKS = [
+  { title: "Órdenes e inventario", text: "Panel de órdenes con estados, stock que se descuenta solo al vender (también por variante) y aviso de stock bajo." },
+  { title: "Punto de Venta (POS)", text: "Vende en persona con caja, escáner de código de barras con la cámara, cálculo de vuelto, devoluciones y modo offline." },
+  { title: "Clientes y ventas a crédito", text: "CRM con el historial de cada cliente, ventas a crédito con cuotas y recordatorios de cobranza." },
+  { title: "Facturas, reportes y métricas", text: "Factura, recibo y nota de entrega en PDF, IVA por país, reportes del negocio, productos más vendidos y ganancia." },
+  { title: "WhatsApp, Instagram, Facebook y TikTok", text: "Todos tus chats en una bandeja, comentarios de Instagram y Facebook, y tu catálogo sincronizado con Meta." },
+  { title: "Asistente de WhatsApp con IA", text: "Gestiona tu tienda escribiendo por WhatsApp: crea productos y órdenes, revisa ventas, cambia stock, la tasa o la configuración." },
+];
+
 const AI_ITEMS = [
   { title: "Genera imágenes con IA", text: "Crea fotos de producto profesionales a partir de un texto." },
   { title: "Quita el fondo con IA", text: "Deja tus fotos con un fondo limpio y uniforme en un clic." },
@@ -383,6 +393,11 @@ const featuresBody = (campaign) =>
   ]) +
   stepsSection("Cómo funciona, en 3 pasos", FEATURE_STEPS) +
   cardsSection("Todo lo que tu tienda necesita, desde el primer día", FEATURE_BLOCKS) +
+  cardsSection(
+    "Un ERP para todo tu negocio",
+    ERP_BLOCKS,
+    "CatalogoHoy no es solo un catálogo: es el sistema de gestión de tu negocio. Ventas, inventario, caja, clientes, reportes y redes en un solo lugar, desde la web o la app móvil."
+  ) +
   cardsSection(
     "Inteligencia artificial en el editor",
     AI_ITEMS,
@@ -439,14 +454,14 @@ PAGES.push({
 // /features
 PAGES.push({
   urlPath: "/features",
-  title: "Funciones: catálogo, WhatsApp e IA | CatalogoHoy",
+  title: "Funciones: ERP, catálogo, WhatsApp, POS e IA | CatalogoHoy",
   description:
-    "Todo lo que puedes hacer con CatalogoHoy: catálogo personalizable, pedidos por WhatsApp, gestión de órdenes, precios en dos monedas e IA para tus fotos.",
+    "Todo lo que tu negocio necesita en un solo lugar: catálogo digital, pedidos por WhatsApp, órdenes, inventario, Punto de Venta, clientes, reportes, Instagram/Facebook, asistente de WhatsApp e IA.",
   body: featuresBody("features"),
   jsonLd: [
     webPageLd(
       "Funciones de CatalogoHoy",
-      "Catálogo digital personalizable, pedidos por WhatsApp, gestión de órdenes e IA.",
+      "ERP todo en uno: catálogo digital, pedidos por WhatsApp, órdenes, inventario, POS, clientes, reportes e IA.",
       `${BASE_URL}/features`
     ),
     breadcrumbLd("Funciones", `${BASE_URL}/features`),
