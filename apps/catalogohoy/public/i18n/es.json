@@ -986,6 +986,8 @@
   "Invitaciones pendientes": "Invitaciones pendientes",
   "Invitación cancelada": "Invitación cancelada",
   "Invitación enviada": "Invitación enviada",
+  "El correo rebotó: esa dirección no existe": "El correo rebotó: esa dirección no existe",
+  "No se pudo entregar: el correo no existe": "No se pudo entregar: el correo no existe",
   "Invitación enviada correctamente": "Invitación enviada correctamente",
   "Invitación inválida": "Invitación inválida",
   "Invitación por correo electrónico": "Invitación por correo electrónico",

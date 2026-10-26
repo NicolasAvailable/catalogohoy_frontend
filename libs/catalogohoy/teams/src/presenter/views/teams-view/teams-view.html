@@ -209,17 +209,33 @@
                   <div class="teams-view__avatar teams-view__avatar--pending">
                     {{ getMemberInitial(member.invitedEmail) }}
                   </div>
-                  <span
-                    class="teams-view__status-badge teams-view__status-badge--pending"
-                    [pTooltip]="'Pendiente por aceptar la invitación' | transloco"
-                    tooltipPosition="top"
-                  >
-                    <lucide-icon name="clock" [size]="9" />
-                  </span>
+                  @if (member.bouncedAt) {
+                    <span
+                      class="teams-view__status-badge teams-view__status-badge--pending"
+                      [pTooltip]="'El correo rebotó: esa dirección no existe' | transloco"
+                      tooltipPosition="top"
+                    >
+                      <lucide-icon name="triangle-alert" [size]="9" />
+                    </span>
+                  } @else {
+                    <span
+                      class="teams-view__status-badge teams-view__status-badge--pending"
+                      [pTooltip]="'Pendiente por aceptar la invitación' | transloco"
+                      tooltipPosition="top"
+                    >
+                      <lucide-icon name="clock" [size]="9" />
+                    </span>
+                  }
                 </div>
                 <div>
                   <p class="teams-view__member-email">{{ member.invitedEmail }}</p>
-                  <p class="teams-view__member-status">{{ 'Invitación enviada' | transloco }}</p>
+                  @if (member.bouncedAt) {
+                    <p class="teams-view__member-status teams-view__member-status--failed">
+                      {{ 'No se pudo entregar: el correo no existe' | transloco }}
+                    </p>
+                  } @else {
+                    <p class="teams-view__member-status">{{ 'Invitación enviada' | transloco }}</p>
+                  }
                 </div>
               </div>
               @if (canRemove()) {

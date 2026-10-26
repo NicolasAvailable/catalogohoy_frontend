@@ -986,6 +986,8 @@
   "Invitaciones pendientes": "Invitations en attente",
   "Invitación cancelada": "Invitation annulée",
   "Invitación enviada": "Invitation envoyée",
+  "El correo rebotó: esa dirección no existe": "L'e-mail a rebondi : cette adresse n'existe pas",
+  "No se pudo entregar: el correo no existe": "Impossible à livrer : l'e-mail n'existe pas",
   "Invitación enviada correctamente": "Invitation envoyée avec succès",
   "Invitación inválida": "Invitation invalide",
   "Invitación por correo electrónico": "Invitation par e-mail",

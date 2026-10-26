@@ -9,6 +9,8 @@ export interface TeamMember {
   inviteToken: string;
   inviteExpiresAt: string | null;
   createdAt: string;
+  /** Set when the invitation email bounced (the address does not exist). */
+  bouncedAt: string | null;
   userName: string | null;
   userLastName: string | null;
 }

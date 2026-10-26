@@ -36,7 +36,7 @@ function isUndeliverableEmail(email: unknown): boolean {
 }
 // AWS SES (v2 SendEmail, SigV4 con aws4fetch). Proveedor principal: se activa por
 // presencia de AWS_SES_ACCESS_KEY_ID (prioridad sobre MailerSend/Resend).
-async function sendViaSes(to, fromName, fromEmail, subject, html, text) {
+async function sendViaSes(to, fromName, fromEmail, subject, html, text, tags) {
   to = to.filter((e) => !isUndeliverableEmail(e));
   if (to.length === 0) return { ok: false, id: null, status: 0, error: "undeliverable recipient" };
   const region = Deno.env.get('AWS_SES_REGION') ?? 'sa-east-1';
@@ -76,7 +76,10 @@ async function sendViaSes(to, fromName, fromEmail, subject, html, text) {
           }
         }
       },
-      ConfigurationSetName: 'catalogohoy-prod'
+      ConfigurationSetName: 'catalogohoy-prod',
+      ...tags?.length ? {
+        EmailTags: tags
+      } : {}
     })
   });
   if (!res.ok) return {
@@ -105,7 +108,7 @@ async function deliverEmail(opts) {
   const fromName = opts.fromName ?? 'CatalogoHoy';
   const fromEmail = opts.fromEmail ?? 'noreply@catalogohoy.com';
   if (Deno.env.get('AWS_SES_ACCESS_KEY_ID') && Deno.env.get('AWS_SES_SECRET_ACCESS_KEY')) {
-    return await sendViaSes(to, fromName, fromEmail, opts.subject, opts.html, opts.text);
+    return await sendViaSes(to, fromName, fromEmail, opts.subject, opts.html, opts.text, opts.tags);
   }
   const msToken = Deno.env.get('MAILER_SEND_API_KEY');
   if (msToken) {
@@ -243,7 +246,8 @@ Deno.serve(async (req)=>{
     const { data: member, error: insertError } = await supabase.from('team_members').insert({
       team_id: teamId,
       invited_email: email.toLowerCase().trim(),
-      status: 'pending'
+      status: 'pending',
+      invited_by: userRow.id
     }).select('id, team_id, user_id, invited_email, status, invite_token, invite_expires_at, created_at').single();
     if (insertError) return json({
       error: insertError.message
@@ -325,7 +329,19 @@ Deno.serve(async (req)=>{
           subject: `Te invitaron a colaborar en ${tenantName}`,
           html: emailHtml,
           fromName: 'Nicolas de CatalogoHoy',
-          fromEmail: 'nicolas@catalogohoy.com'
+          fromEmail: 'nicolas@catalogohoy.com',
+          // ses-events usa estos tags para encontrar la invitación si el
+          // correo rebota y avisarle a quien invitó.
+          tags: [
+            {
+              Name: 'type',
+              Value: 'team_invite'
+            },
+            {
+              Name: 'team_member_id',
+              Value: String(member.id)
+            }
+          ]
         });
       } catch (_) {
       /* noop */ }
