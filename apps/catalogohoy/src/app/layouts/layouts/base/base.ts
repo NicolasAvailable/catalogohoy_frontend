@@ -40,8 +40,9 @@ export class Base implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   public readonly sidebarOpen = signal(false);
-  /** Esqueleto mientras se descarga la vista nueva (rutas lazy). Solo aparece
-   *  si la navegación tarda, para no parpadear en las rápidas. */
+  /** Esqueleto del Asistente WhatsApp mientras se descarga esa vista (ruta lazy).
+   *  Solo para /admin/whatsapp-bot: el resto de vistas tiene su propio layout y
+   *  no debe ver este esqueleto. Solo aparece si la navegación tarda. */
   public readonly navigating = signal(false);
   private navTimer: ReturnType<typeof setTimeout> | null = null;
   public readonly helpGuideUrl = environment.helpGuideUrl;
@@ -51,6 +52,9 @@ export class Base implements OnInit {
     this.router.events.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((e) => {
       if (e instanceof NavigationStart) {
         if (this.navTimer) clearTimeout(this.navTimer);
+        this.navTimer = null;
+        this.navigating.set(false);
+        if (!e.url.startsWith('/admin/whatsapp-bot')) return;
         this.navTimer = setTimeout(() => this.navigating.set(true), 120);
       } else if (e instanceof NavigationEnd || e instanceof NavigationCancel || e instanceof NavigationError) {
         if (this.navTimer) clearTimeout(this.navTimer);
