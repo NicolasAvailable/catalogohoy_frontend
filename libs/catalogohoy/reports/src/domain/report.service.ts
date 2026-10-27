@@ -4,6 +4,8 @@ import {
   PublicReport,
   Report,
   ReportSnapshot,
+  ReportTemplate,
+  TemplatePeriodPreset,
 } from './report.model';
 
 export interface CreateReportInput {
@@ -11,6 +13,15 @@ export interface CreateReportInput {
   title: string;
   periodStart: Date;
   periodEnd: Date;
+  metricsConfig: MetricsConfig;
+  /** Set when the report was generated from a saved template. */
+  templateId?: number | null;
+}
+
+export interface CreateReportTemplateInput {
+  tenantId: number;
+  title: string;
+  periodPreset: TemplatePeriodPreset;
   metricsConfig: MetricsConfig;
 }
 
@@ -38,4 +49,14 @@ export abstract class BaseReportService {
   abstract countGeneratedThisMonth(
     tenantId: number
   ): Promise<E.Either<Error, number>>;
+
+  abstract listTemplates(
+    tenantId: number
+  ): Promise<E.Either<Error, ReportTemplate[]>>;
+
+  abstract createTemplate(
+    input: CreateReportTemplateInput
+  ): Promise<E.Either<Error, ReportTemplate>>;
+
+  abstract deleteTemplate(id: number): Promise<E.Either<Error, void>>;
 }

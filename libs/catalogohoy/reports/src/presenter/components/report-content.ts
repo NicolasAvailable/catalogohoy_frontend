@@ -47,6 +47,20 @@ const PAYMENT_COLORS = [
   '#8b5cf6', '#ec4899', '#ef4444', '#14b8a6',
 ];
 
+const CHANNEL_LABELS: Record<string, string> = {
+  public: 'Catálogo online',
+  pos:    'Punto de venta',
+  manual: 'Órdenes manuales',
+};
+
+const WEEKDAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+/** % change vs the previous period; null when there's nothing to compare. */
+function pctChange(current: number, previous: number): number | null {
+  if (!previous) return null;
+  return ((current - previous) / previous) * 100;
+}
+
 interface ReportBranding {
   name: string;
   logo: string | null;
@@ -198,6 +212,64 @@ export class ReportContent {
       // there's one dominant method).
       share: maxCount > 0 ? (m.ordersCount / maxCount) * 100 : 0,
     }));
+  });
+
+  /** Rows for the "vs periodo anterior" card. Null for old snapshots. */
+  public readonly comparisonRows = computed(() => {
+    const c = this.snapshot().comparison;
+    if (!c) return null;
+    const snap = this.snapshot();
+    return [
+      { label: 'Ventas', money: true, current: Number(snap.sales.total), previous: Number(c.sales) },
+      { label: 'Órdenes', money: false, current: Number(snap.orders.total), previous: Number(c.orders) },
+      { label: 'Ticket promedio', money: true, current: Number(snap.sales.avgTicket), previous: Number(c.avgTicket) },
+    ].map((r) => ({ ...r, change: pctChange(r.current, r.previous) }));
+  });
+
+  public readonly channels = computed(() => {
+    const items = this.snapshot().channels ?? [];
+    const max = items.reduce((m, c) => Math.max(m, Number(c.total)), 0);
+    return items.map((c, i) => ({
+      ...c,
+      label: CHANNEL_LABELS[c.channel] ?? c.channel,
+      color: PAYMENT_COLORS[i % PAYMENT_COLORS.length],
+      share: max > 0 ? (Number(c.total) / max) * 100 : 0,
+    }));
+  });
+
+  public readonly shippingMethods = computed(() => {
+    const items = this.snapshot().shipping?.methods ?? [];
+    const max = items.reduce((m, x) => Math.max(m, x.ordersCount), 0);
+    return items.map((x, i) => ({
+      ...x,
+      color: PAYMENT_COLORS[i % PAYMENT_COLORS.length],
+      share: max > 0 ? (x.ordersCount / max) * 100 : 0,
+    }));
+  });
+
+  /** Share of new customers, 0-100, for the split bar. */
+  public readonly newCustomersShare = computed(() => {
+    const c = this.snapshot().customers;
+    return c && c.total > 0 ? (c.new / c.total) * 100 : 0;
+  });
+
+  /** Mon→Sun bars by sales, same CSS bars as the status chart. */
+  public readonly weekdayBars = computed(() => {
+    const items = this.snapshot().weekdays ?? [];
+    const byDay = new Map(items.map((w) => [w.weekday, w]));
+    const max = items.reduce((m, w) => Math.max(m, Number(w.total)), 0);
+    return [1, 2, 3, 4, 5, 6, 0].map((d) => {
+      const w = byDay.get(d);
+      const total = Number(w?.total ?? 0);
+      return {
+        key: d,
+        label: WEEKDAY_LABELS[d],
+        total,
+        orders: w?.ordersCount ?? 0,
+        isBest: max > 0 && total === max,
+        height: max > 0 ? Math.max((total / max) * 100, total > 0 ? 6 : 0) : 0,
+      };
+    });
   });
 
   public statusLabel(key: string): string {

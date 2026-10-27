@@ -4,11 +4,14 @@ import { E } from '@shared/domain';
 import {
   BaseReportService,
   CreateReportInput,
-  DEFAULT_METRICS_CONFIG,
+  CreateReportTemplateInput,
   MetricsConfig,
+  normalizeMetricsConfig,
   PublicReport,
   Report,
   ReportSnapshot,
+  ReportTemplate,
+  TemplatePeriodPreset,
 } from '../domain';
 
 type ReportRow = {
@@ -20,8 +23,29 @@ type ReportRow = {
   period_end: string;
   metrics_config: MetricsConfig | Record<string, unknown>;
   snapshot: ReportSnapshot;
+  template_id: number | null;
   created_at: string;
 };
+
+type ReportTemplateRow = {
+  id: number;
+  tenant_id: number;
+  title: string;
+  period_preset: TemplatePeriodPreset;
+  metrics_config: Partial<MetricsConfig>;
+  created_at: string;
+};
+
+function rowToTemplate(row: ReportTemplateRow): ReportTemplate {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    title: row.title,
+    periodPreset: row.period_preset,
+    metricsConfig: normalizeMetricsConfig(row.metrics_config),
+    createdAt: row.created_at,
+  };
+}
 
 function rowToReport(row: ReportRow): Report {
   return {
@@ -31,11 +55,11 @@ function rowToReport(row: ReportRow): Report {
     title: row.title,
     periodStart: row.period_start,
     periodEnd: row.period_end,
-    metricsConfig: {
-      ...DEFAULT_METRICS_CONFIG,
-      ...(row.metrics_config as Partial<MetricsConfig>),
-    },
+    metricsConfig: normalizeMetricsConfig(
+      row.metrics_config as Partial<MetricsConfig>
+    ),
     snapshot: row.snapshot,
+    templateId: row.template_id ?? null,
     createdAt: row.created_at,
   };
 }
@@ -79,6 +103,7 @@ export class ReportService implements BaseReportService {
         period_end: input.periodEnd.toISOString(),
         metrics_config: input.metricsConfig,
         snapshot: snapshotResult.value,
+        template_id: input.templateId ?? null,
       })
       .select('*')
       .single();
@@ -131,7 +156,7 @@ export class ReportService implements BaseReportService {
     const raw = data as PublicReport & { metricsConfig: Partial<MetricsConfig> };
     return E.right({
       ...raw,
-      metricsConfig: { ...DEFAULT_METRICS_CONFIG, ...(raw.metricsConfig ?? {}) },
+      metricsConfig: normalizeMetricsConfig(raw.metricsConfig),
     });
   }
 
@@ -144,6 +169,45 @@ export class ReportService implements BaseReportService {
     const { error } = await this.client
       .from('reports')
       .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) return E.left(new Error(error.message));
+    return E.right(undefined);
+  }
+
+  public async listTemplates(
+    tenantId: number
+  ): Promise<E.Either<Error, ReportTemplate[]>> {
+    const { data, error } = await this.client
+      .from('report_templates')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false });
+    if (error) return E.left(new Error(error.message));
+    return E.right((data as ReportTemplateRow[]).map(rowToTemplate));
+  }
+
+  public async createTemplate(
+    input: CreateReportTemplateInput
+  ): Promise<E.Either<Error, ReportTemplate>> {
+    const { data, error } = await this.client
+      .from('report_templates')
+      .insert({
+        tenant_id: input.tenantId,
+        title: input.title,
+        period_preset: input.periodPreset,
+        metrics_config: input.metricsConfig,
+      })
+      .select('*')
+      .single();
+    if (error) return E.left(new Error(error.message));
+    return E.right(rowToTemplate(data as ReportTemplateRow));
+  }
+
+  /** Hard delete — reports generated from it stay (template_id → null). */
+  public async deleteTemplate(id: number): Promise<E.Either<Error, void>> {
+    const { error } = await this.client
+      .from('report_templates')
+      .delete()
       .eq('id', id);
     if (error) return E.left(new Error(error.message));
     return E.right(undefined);

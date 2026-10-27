@@ -17,6 +17,17 @@
   Ruta pública: `public/report/:token` (sin auth, RPC `get_public_report`).
 - **Borrado lógico** (`deleted_at`) para mantener el quota honesto (límite por plan).
 - El email de reporte semanal lo manda `send-weekly-report` (cron, ver `business-rules.md`).
+- **Plantillas** (tabla `report_templates`, RLS por miembro): título + métricas + periodo
+  relativo (`last_7/30/90_days`, `previous_week`, `previous_month`, `current_month`; nunca
+  rango fijo). "Generar ahora" crea un `reports` nuevo con `template_id` y cuenta para el
+  límite mensual; los anteriores quedan (historial por plantilla en la lista). Borrar una
+  plantilla no borra sus reportes (`on delete set null`). Rango en `resolvePresetRange()`.
+- **Métricas** (`METRIC_OPTIONS`): además de orders/sales/topProducts/topCustomers, el
+  snapshot trae `comparison` (periodo anterior de igual duración), `profit` (igual que
+  Órdenes → Métricas: costo actual, sin canceladas), `customers` (nuevos vs recurrentes por
+  teléfono), `channels` (`orders.source`), `shipping`, `discounts`, `weekdays` (UTC).
+  Reportes viejos no tienen esas claves → `normalizeMetricsConfig` las pone en false
+  (paymentMethods en true, que antes se mostraba siempre).
 
 ## analytics (`@catalogohoy/analytics`)
 
