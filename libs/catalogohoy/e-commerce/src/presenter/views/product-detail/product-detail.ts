@@ -17,6 +17,7 @@ import { IconComponent, ProductMediaComponent } from '@ui';
 import { divisasPriceOf, usesDivisasPromo } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
+import { parseQuantityInput } from '../../utils/quantity-input';
 
 @Component({
   selector: 'lib-product-detail',
@@ -151,6 +152,12 @@ export default class ProductDetail implements OnInit {
 
   decrementQuantity() {
     this.quantity.update((q) => (q > 1 ? q - 1 : 1));
+  }
+
+  onQuantityChange(event: Event) {
+    const { input, value } = parseQuantityInput(event);
+    if (value !== null) this.quantity.set(Math.max(1, value));
+    input.value = String(this.quantity());
   }
 
   onAddToCart() {

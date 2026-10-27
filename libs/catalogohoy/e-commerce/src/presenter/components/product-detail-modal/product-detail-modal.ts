@@ -28,6 +28,7 @@ import {
   usesDivisasPromo,
 } from '../../../domain';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
+import { parseQuantityInput } from '../../utils/quantity-input';
 
 @Component({
   selector: 'lib-product-detail-modal',
@@ -489,6 +490,21 @@ export class ProductDetailModal {
 
   decrementQuantity() {
     this.quantity.update((q) => (q > 1 ? q - 1 : 1));
+  }
+
+  /** Cantidad escrita a mano (p. ej. 200 unidades sin pulsar "+" 200 veces).
+   *  Mínimo 1 y, si hay stock, lo que queda descontando lo ya en el carrito. */
+  onQuantityChange(event: Event) {
+    const { input, value } = parseQuantityInput(event);
+    if (value !== null) {
+      let qty = Math.max(1, value);
+      const stock = this.effectiveStock();
+      if (stock !== null) {
+        qty = Math.min(qty, Math.max(1, stock - this.cartQuantity()));
+      }
+      this.quantity.set(qty);
+    }
+    input.value = String(this.quantity());
   }
 
   close() {
