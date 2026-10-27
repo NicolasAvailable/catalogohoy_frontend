@@ -51,15 +51,23 @@ export default class Catalog implements OnInit, OnDestroy {
       this.observer?.disconnect();
 
       if (sentinel) {
-        this.observer = new IntersectionObserver(
-          (entries) => {
-            if (entries[0].isIntersecting && this.slug) {
-              this.ecommerceStore.loadMoreProducts(this.slug);
-            }
-          },
-          { rootMargin: '200px' }
-        );
-        this.observer.observe(sentinel.nativeElement);
+        try {
+          this.observer = new IntersectionObserver(
+            (entries) => {
+              if (entries[0].isIntersecting && this.slug) {
+                this.ecommerceStore.loadMoreProducts(this.slug);
+              }
+            },
+            { rootMargin: '200px' }
+          );
+          this.observer.observe(sentinel.nativeElement);
+        } catch {
+          // Algunos navegadores in-app (Instagram/Facebook) traen un
+          // IntersectionObserver roto ("observe is not a function"): caemos a
+          // un listener de scroll para que el scroll infinito siga andando.
+          this.observer = null;
+          this.bindScrollFallback(sentinel.nativeElement);
+        }
       }
     });
 
@@ -82,6 +90,22 @@ export default class Catalog implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
     this.observer?.disconnect();
+    this.removeScrollFallback?.();
+  }
+
+  private removeScrollFallback: (() => void) | null = null;
+
+  private bindScrollFallback(sentinel: HTMLElement) {
+    this.removeScrollFallback?.();
+    const onScroll = () => {
+      const top = sentinel.getBoundingClientRect().top;
+      if (top - window.innerHeight < 200 && this.slug) {
+        this.ecommerceStore.loadMoreProducts(this.slug);
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    this.removeScrollFallback = () =>
+      window.removeEventListener('scroll', onScroll);
   }
 
   onSearch(value: string) {
