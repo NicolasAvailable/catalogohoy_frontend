@@ -3,7 +3,9 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { AwsClient } from "npm:aws4fetch@1";
 
 // Cron diario (13:00 UTC, pg_cron `send-plan-expiry-warnings-daily`): avisa a
-// los dueños que su plan vence en 6/4/2/0 días.
+// los dueños que su plan vence en 6 días. Un solo aviso por renovación (antes
+// salían 4: a los 6/4/2/0 días, y los clientes recibían el mismo mensaje varias
+// veces por email y WhatsApp).
 // - EMAIL (AWS SES): idempotencia por fila en tenant_expiry_warnings.
 // - WHATSAPP (template plan_expiry_warning, W6): idempotencia propia con
 //   tenant_expiry_warnings.whatsapp_sent_at — permite catch-up el mismo día
@@ -18,7 +20,7 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-webhook-secret",
 };
 
-const THRESHOLDS = [6, 4, 2, 0] as const;
+const THRESHOLDS = [6] as const;
 type Threshold = (typeof THRESHOLDS)[number];
 
 interface Candidate {
@@ -131,9 +133,8 @@ ${note}
 }
 // ---------------------------------------------------------------------------
 
-/** Threshold-specific copy. The 0-day case is the most urgent so we lean
- *  in on the language; 6 days is informational. */
-function copyForThreshold(days: Threshold, autoRenews: boolean): {
+/** Copy del único aviso (6 días antes del vencimiento / cobro). */
+function copyForThreshold(_days: Threshold, autoRenews: boolean): {
   subject: string;
   headline: string;
   body: string;
@@ -141,45 +142,11 @@ function copyForThreshold(days: Threshold, autoRenews: boolean): {
   color: string;
 } {
   const cta = autoRenews ? "Ver mis planes" : "Renovar mi plan";
-  if (days === 0) {
-    return {
-      subject: "Tu plan vence hoy — CatalogoHoy",
-      headline: "Tu plan vence hoy",
-      body: autoRenews
-        ? "Tu suscripción se renovará automáticamente en las próximas horas. Si no querés renovarla podés cancelarla desde tu panel."
-        : "Hoy es el último día. Si no renovás, perderás acceso a las funciones premium de tu catálogo.",
-      cta,
-      color: "#dc2626",
-    };
-  }
-  if (days === 2) {
-    return {
-      subject: "Tu plan vence en 2 días — CatalogoHoy",
-      headline: "Tu plan vence en 2 días",
-      body: autoRenews
-        ? "Tu suscripción se renovará automáticamente. No tenés que hacer nada — te avisamos por si querés revisar el estado."
-        : "Quedan 2 días para que tu plan expire. Renovalo para no perder acceso a tu catálogo premium.",
-      cta,
-      color: "#ea580c",
-    };
-  }
-  if (days === 4) {
-    return {
-      subject: "Tu plan vence en 4 días — CatalogoHoy",
-      headline: "Tu plan vence en 4 días",
-      body: autoRenews
-        ? "En 4 días se cobra automáticamente la renovación de tu plan. Si querés actualizar tu método de pago, hacelo desde tu panel."
-        : "Faltan 4 días para que tu plan expire. Renovalo con tiempo y evitá sorpresas.",
-      cta,
-      color: "#f59e0b",
-    };
-  }
-  // days === 6
   return {
     subject: "Tu plan vence en 6 días — CatalogoHoy",
     headline: "Tu plan vence en 6 días",
     body: autoRenews
-      ? "En 6 días se cobra automáticamente la renovación de tu plan. Te avisamos por las dudas."
+      ? "En 6 días se cobra automáticamente la renovación de tu plan. Si querés actualizar tu método de pago o cancelar, hacelo desde tu panel."
       : "Tu plan está por expirar en 6 días. Renovalo cuando puedas para mantener tu catálogo activo.",
     cta,
     color: "#0ea5e9",
