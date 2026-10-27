@@ -986,6 +986,8 @@
   "Invitaciones pendientes": "Pending invitations",
   "Invitación cancelada": "Invitation canceled",
   "Invitación enviada": "Invitation sent",
+  "El correo rebotó: esa dirección no existe": "The email bounced: that address doesn't exist",
+  "No se pudo entregar: el correo no existe": "Couldn't deliver: the email doesn't exist",
   "Invitación enviada correctamente": "Invitation sent successfully",
   "Invitación inválida": "Invalid invitation",
   "Invitación por correo electrónico": "Email invitation",
