@@ -485,6 +485,12 @@ export default class PosVenta implements OnInit {
     if (p.sku?.toLowerCase().includes(q)) return true;
     if (p.sizes?.some((s) => s.sku?.toLowerCase().includes(q))) return true;
     if (p.variants?.some((v) => v.sku?.toLowerCase().includes(q))) return true;
+    if (
+      p.variants?.some((v) =>
+        v.sizes?.some((s) => s.sku?.toLowerCase().includes(q))
+      )
+    )
+      return true;
     return false;
   }
 
@@ -669,37 +675,84 @@ export default class PosVenta implements OnInit {
    *  lo agrega. Si no matchea, avisa. */
   onScan(code: string): void {
     this.showScanner.set(false);
-    const q = code.trim().toLowerCase();
+    if (!code.trim()) return;
+    if (this.addByCode(code)) return;
+    this.toast.error(
+      `No encontramos un producto con el código "${code}"` as unknown as Exception
+    );
+  }
+
+  /** Enter en el buscador de "Agregar productos": los lectores USB tipean el
+   *  código ahí y mandan Enter. Si es un código exacto lo agrega y limpia el
+   *  campo para el siguiente escaneo; si queda un solo resultado, lo elige. */
+  onSearchEnter(): void {
+    const q = this.search().trim();
     if (!q) return;
-    const all = this.productStore.productList().products;
+    if (this.addByCode(q)) {
+      this.search.set('');
+      return;
+    }
+    const list = this.products();
+    if (list.length === 1) this.onProductClick(list[0]);
+  }
+
+  /** Normaliza un código para compararlo: sin espacios, minúsculas y sin ceros
+   *  a la izquierda (un UPC-A se lee a veces como EAN-13 con un 0 delante). */
+  private normCode(code: string | null | undefined): string {
+    return (code ?? '').replace(/\s+/g, '').toLowerCase().replace(/^0+(?=.)/, '');
+  }
+
+  /** Busca por SKU/código (talla de variante → variante → talla → producto) y
+   *  agrega al carrito la opción exacta. `true` si encontró algo. */
+  private addByCode(code: string): boolean {
+    const q = this.normCode(code);
+    if (!q) return false;
+    const eq = (sku: string | null | undefined) =>
+      !!sku && this.normCode(sku) === q;
+    const all = this.productStore
+      .productList()
+      .products.filter((p) => !p.isHidden);
 
     // 1) talla de una variante por SKU exacto
     for (const p of all) {
       for (const v of p.variants ?? []) {
-        const s = v.sizes?.find((x) => x.sku?.toLowerCase() === q);
-        if (s) return this.addVariantSize(p, v, s);
+        const s = v.sizes?.find((x) => eq(x.sku));
+        if (s) {
+          this.addVariantSize(p, v, s);
+          return true;
+        }
       }
     }
     // 2) variante por SKU exacto
     for (const p of all) {
-      const v = p.variants?.find((x) => x.sku?.toLowerCase() === q);
-      if (v) return this.addVariant(p, v);
+      const v = p.variants?.find((x) => eq(x.sku));
+      if (v) {
+        this.addVariant(p, v);
+        return true;
+      }
     }
     // 3) talla por SKU exacto
     for (const p of all) {
-      const s = p.sizes?.find((x) => x.sku?.toLowerCase() === q);
-      if (s) return this.addSize(p, s);
+      const s = p.sizes?.find((x) => eq(x.sku));
+      if (s) {
+        this.addSize(p, s);
+        return true;
+      }
     }
     // 4) producto por SKU exacto
-    const byExact = all.find((p) => p.sku?.toLowerCase() === q);
-    if (byExact) return this.onProductClick(byExact);
-    // 5) tolerante: contiene el código
-    const byLike = all.find((p) => p.sku?.toLowerCase().includes(q));
-    if (byLike) return this.onProductClick(byLike);
-
-    this.toast.error(
-      `No encontramos un producto con el código "${code}"` as unknown as Exception
-    );
+    const byExact = all.find((p) => eq(p.sku));
+    if (byExact) {
+      this.onProductClick(byExact);
+      return true;
+    }
+    // 5) tolerante: el SKU del producto contiene el código
+    const byLike =
+      q.length >= 4 && all.find((p) => this.normCode(p.sku).includes(q));
+    if (byLike) {
+      this.onProductClick(byLike);
+      return true;
+    }
+    return false;
   }
 
   // ── Acciones rápidas ───────────────────────────────────────────────────────

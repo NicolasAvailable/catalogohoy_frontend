@@ -26,9 +26,9 @@ type BarcodeDetectorCtor = new (opts?: {
 /**
  * Escáner de código de barras del POS. Pide permiso de cámara, muestra el video
  * en vivo con un recuadro y detecta el código con la API nativa
- * `BarcodeDetector` (Chrome/Android/Edge y Safari 17+). Cuando el navegador no
- * la soporta —o si el usuario niega la cámara— cae a una entrada manual de
- * SKU/código para no bloquear la venta. (Mejora futura cross-browser: ZXing.)
+ * `BarcodeDetector` (o su ponyfill ZXing/WASM donde no existe, p. ej. Chrome en
+ * Windows). Si el usuario niega la cámara cae a una entrada manual de
+ * SKU/código para no bloquear la venta.
  *
  * Emite `detected` con el valor crudo del código y `closed` al cerrarse.
  */
@@ -328,20 +328,28 @@ export class PosScanner implements AfterViewInit, OnDestroy {
       video.srcObject = this.stream;
       await video.play();
       this.phase.set('live');
-      this.beginDetection(video);
+      void this.beginDetection(video);
     } catch {
       this.phase.set('denied');
     }
   }
 
-  private beginDetection(video: HTMLVideoElement): void {
-    const BD = (window as unknown as { BarcodeDetector?: BarcodeDetectorCtor })
+  private async beginDetection(video: HTMLVideoElement): Promise<void> {
+    // Nativo en Chrome Android/macOS y Safari 17+. En Chrome/Edge de Windows y
+    // en Firefox no existe: usamos el ponyfill (ZXing en WASM), cargado bajo
+    // demanda para no inflar el bundle del POS.
+    let BD = (window as unknown as { BarcodeDetector?: BarcodeDetectorCtor })
       .BarcodeDetector;
     if (!BD) {
-      // Cámara viva pero sin detección automática: el usuario apunta y, si no
-      // resuelve, usa la entrada manual. Mantenemos 'live' para mostrar el video.
-      return;
+      try {
+        const mod = await import('barcode-detector/ponyfill');
+        BD = mod.BarcodeDetector as unknown as BarcodeDetectorCtor;
+      } catch {
+        // Sin detección automática: queda la entrada manual.
+        return;
+      }
     }
+    if (this.done) return;
     try {
       this.detector = new BD({
         formats: [

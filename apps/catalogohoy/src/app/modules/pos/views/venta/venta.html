@@ -176,6 +176,7 @@
           type="text"
           [ngModel]="search()"
           (ngModelChange)="search.set($event)"
+          (keydown.enter)="onSearchEnter()"
           [placeholder]="'Buscar por nombre, descripción o SKU' | transloco"
           autofocus
         />
