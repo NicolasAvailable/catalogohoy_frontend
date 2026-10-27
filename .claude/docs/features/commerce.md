@@ -27,6 +27,11 @@
     La orden a crédito nace `pending` + `orders.payment_condition='credit'` (NUNCA status
     `credit` directo: eso descuenta stock y lo decide el comerciante) → chip "Solicitó crédito"
     en el listado + aviso en order-save. Config dentro de `customer_fields` jsonb.
+  - **Mostrar stock** (PR #86, 2026-10-27): toggle en Editar catálogo → General, guardado en
+    `customer_fields.showStock` (default false, sin migración). Muestra "Quedan N" en tarjeta
+    (`totalStockOf()` suma tallas/variantes) y modal (stock de la selección − carrito), y
+    "Stock: N" en el carrito. Los TOPES de stock aplican siempre, con o sin el toggle; el
+    `maxStock` de cada línea se persiste en localStorage.
 
 ## product (`@catalogohoy/product`)
 
