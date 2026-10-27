@@ -401,6 +401,9 @@
           </button>
         </div>
       </div>
+      @if (stockLeft() !== null) {
+      <p class="pdm__stock-left">{{ 'Quedan {n}' | transloco: { n: stockLeft() } }}</p>
+      }
 
       <button
         type="button"

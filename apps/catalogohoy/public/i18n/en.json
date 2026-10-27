@@ -2763,5 +2763,8 @@
   "Unidades": "Units",
   "Sin costo registrado": "No cost recorded",
   "Por WhatsApp": "Via WhatsApp",
-  "Mándale tu Excel, PDF o fotos al Asistente de WhatsApp y él crea los productos.": "Send your Excel, PDF or photos to the WhatsApp Assistant and it creates the products."
+  "Mándale tu Excel, PDF o fotos al Asistente de WhatsApp y él crea los productos.": "Send your Excel, PDF or photos to the WhatsApp Assistant and it creates the products.",
+  "Mostrar stock": "Show stock",
+  "Tus clientes verán cuántas unidades quedan de cada producto.": "Your customers will see how many units are left of each product.",
+  "Quedan {n}": "{n} left"
 }

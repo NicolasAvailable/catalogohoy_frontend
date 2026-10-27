@@ -119,6 +119,10 @@
     </div>
     }
 
+    @if (stockLeft() !== null) {
+    <span class="product-card__stock-left">{{ 'Quedan {n}' | transloco: { n: stockLeft() } }}</span>
+    }
+
     <div class="product-card__actions">
       @if (isOutOfStock()) {
       <button

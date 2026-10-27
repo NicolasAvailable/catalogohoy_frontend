@@ -71,6 +71,9 @@
             </span>
             }
             <p class="cart-item__description">{{ item.description | stripHtml }}</p>
+            @if (ecommerceStore.showStock() && item.maxStock !== null) {
+            <span class="cart-item__stock">{{ 'Stock: {n}' | transloco: { n: item.maxStock } }}</span>
+            }
             <span class="cart-item__price">
               @if (ecommerceStore.showReferencePrice()) {
               {{ cs() }}{{ item.price | tenantPrice }}

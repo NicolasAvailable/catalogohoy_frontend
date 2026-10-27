@@ -374,3 +374,9 @@
   -webkit-appearance: none;
   margin: 0;
 }
+
+.cart-item__stock {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-grey-500);
+}
