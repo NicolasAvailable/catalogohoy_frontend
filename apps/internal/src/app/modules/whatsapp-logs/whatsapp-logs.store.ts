@@ -7,6 +7,7 @@ import {
   withState,
 } from '@ngrx/signals';
 import {
+  effectiveStatus,
   WhatsappLog,
   WhatsappLogStatus,
   WhatsappMonthlyRow,
@@ -46,6 +47,14 @@ export const WhatsappLogsStore = signalStore(
         sent: by('sent'),
         failed: by('failed'),
         skipped: by('skipped'),
+        // Acuses de Meta sobre lo enviado: lo que de verdad llegó al teléfono.
+        delivered: logs.filter((l) =>
+          ['delivered', 'read'].includes(effectiveStatus(l))
+        ).length,
+        read: logs.filter((l) => effectiveStatus(l) === 'read').length,
+        undelivered: logs.filter((l) => effectiveStatus(l) === 'undelivered')
+          .length,
+        pending: logs.filter((l) => effectiveStatus(l) === 'pending').length,
       };
     }),
   })),
