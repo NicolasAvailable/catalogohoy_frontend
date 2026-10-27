@@ -588,6 +588,14 @@
   color: var(--color-grey-500);
 }
 
+.pdm__stock-left {
+  margin: -0.25rem 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-grey-500);
+  text-align: right;
+}
+
 .pdm__quantity-selector {
   display: flex;
   align-items: center;
@@ -830,4 +838,27 @@
   color: #128a4b;
   font-size: 0.875rem;
   font-weight: 700;
+}
+
+/* Campo de cantidad editable a mano (se ve como el número del stepper). */
+.qty-input {
+  width: 3.5rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.qty-input:focus {
+  outline: none;
+  border-color: var(--color-grey-300, #cbd5e1);
+}
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }

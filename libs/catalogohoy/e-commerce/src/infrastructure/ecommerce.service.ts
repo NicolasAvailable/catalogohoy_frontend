@@ -5,7 +5,7 @@ import {
   ProductListMapper,
   ProductMapper,
 } from '@catalogohoy/product';
-import { E } from '@shared/domain';
+import { E, searchPatterns } from '@shared/domain';
 import {
   CatalogTemplate,
   CustomerFieldsConfig,
@@ -295,6 +295,10 @@ export class EcommerceService implements BaseEcommerceService {
       creditNote:
         (config?.customer_fields as { creditNote?: string | null })
           ?.creditNote ?? null,
+      // "Mostrar stock" — también dentro de `customer_fields` (sin migración).
+      showStock:
+        (config?.customer_fields as { showStock?: boolean })?.showStock ??
+        false,
     };
 
     // El RPC devuelve solo categorías visibles, EXCEPTO la fila "Ver todos"
@@ -382,8 +386,11 @@ export class EcommerceService implements BaseEcommerceService {
 
     if (search && search.trim().length > 0) {
       // Igual que el admin: busca contra search_blob (nombre + descripción +
-      // SKU top-level + nombre/SKU de tallas y variantes).
-      query = query.ilike('search_blob', `%${search.trim()}%`);
+      // SKU top-level + nombre/SKU de tallas y variantes). Palabra por palabra,
+      // sin importar acentos, orden ni s/z/c ("carcasa" encuentra "CARCAZA").
+      for (const pattern of searchPatterns(search)) {
+        query = query.filter('search_blob', 'imatch', pattern);
+      }
     }
 
     if (categoryId) {

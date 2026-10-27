@@ -33,6 +33,7 @@ import {
   usesDivisasPromo,
 } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
+import { parseQuantityInput } from '../../utils/quantity-input';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 
 function isPagoMovil(name: string): boolean {
@@ -511,6 +512,14 @@ export default class Checkout {
   }
   onDecrement(item: CartItem) {
     this.cartStore.decrementItem(item.id);
+  }
+  onQuantityChange(item: CartItem, event: Event) {
+    const { input, value } = parseQuantityInput(event);
+    if (value !== null) this.cartStore.updateQuantity(item.id, value);
+    // El store puede recortar al stock; si el valor final no cambió, el binding
+    // no repinta el campo, así que lo sincronizamos a mano.
+    const current = this.cartStore.items().find((i) => i.id === item.id);
+    if (current) input.value = String(current.quantity);
   }
   onRemove(item: CartItem) {
     this.cartStore.removeItem(item.id);

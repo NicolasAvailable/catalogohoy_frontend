@@ -119,6 +119,10 @@
     </div>
     }
 
+    @if (stockLeft() !== null) {
+    <span class="product-card__stock-left">{{ 'Quedan {n}' | transloco: { n: stockLeft() } }}</span>
+    }
+
     <div class="product-card__actions">
       @if (isOutOfStock()) {
       <button
@@ -156,7 +160,22 @@
         >
           −
         </button>
+        @if (cartLineCount() === 1) {
+        <input
+          type="number"
+          inputmode="numeric"
+          min="0"
+          class="product-card__qty-count product-card__qty-input"
+          [value]="cartQuantity()"
+          (focus)="$any($event.target).select()"
+          (click)="$event.stopPropagation()"
+          (keydown.enter)="$any($event.target).blur()"
+          (change)="onQuantityChange($event)"
+          [attr.aria-label]="'Cantidad' | transloco"
+        />
+        } @else {
         <span class="product-card__qty-count">{{ cartQuantity() }}</span>
+        }
         <button
           type="button"
           class="product-card__qty-btn"

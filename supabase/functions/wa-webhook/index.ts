@@ -838,6 +838,26 @@ async function processStatuses(value) {
     await admin.from("chat_messages").update(update).eq("id", row.id);
   }
 }
+/** Acuses de las notificaciones de la plataforma (send-whatsapp-notification):
+ *  se guardan en whatsapp_notification_logs por message_id para que el panel
+ *  interno muestre si de verdad llegaron (entregada / leída / no entregada).
+ *  Misma regla de rango que el CRM; `played` (audio/video) cuenta como leído. */ async function processNotificationStatuses(statuses) {
+  for (const s of statuses){
+    const wamid = s.id ?? "";
+    const status = s.status === "played" ? "read" : s.status ?? "";
+    if (!wamid || !STATUS_RANK[status]) continue;
+    const { data: row } = await admin.from("whatsapp_notification_logs").select("id, delivery_status").eq("message_id", wamid).maybeSingle();
+    if (!row) continue;
+    if ((STATUS_RANK[row.delivery_status] ?? 0) >= STATUS_RANK[status]) continue;
+    const update = {
+      delivery_status: status,
+      delivery_updated_at: new Date().toISOString()
+    };
+    if (status === "failed") update.delivery_error = friendlyDeliveryError((s.errors ?? [])[0]);
+    const { error } = await admin.from("whatsapp_notification_logs").update(update).eq("id", row.id);
+    if (error) console.error("[wa-webhook] notif status update", error.message);
+  }
+}
 async function handleIncoming(body) {
   // Meta payload: entry[].changes[].{ field, value }. El field decide el flujo:
   // messages (cliente) · smb_message_echoes / history / smb_app_state_sync
@@ -866,6 +886,7 @@ async function handleIncoming(body) {
             errors: s.errors ?? null
           }));
         }
+        await processNotificationStatuses(orphanStatuses);
         // Mensajes ENTRANTES al número de avisos de la plataforma → bandeja
         // de soporte + auto-respuesta (antes se botaban en silencio).
         const notifyPnid = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID")?.trim();

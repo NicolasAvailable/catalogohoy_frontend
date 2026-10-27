@@ -5,17 +5,35 @@ import { IconComponent } from '@ui';
 import {
   categoryLabel,
   describeVariables,
-  statusLabel,
+  EFFECTIVE_STATUS_CLASS,
+  effectiveStatus,
+  effectiveStatusLabel,
   TEMPLATE_CATEGORY,
   templateLabel,
+  WhatsappEffectiveStatus,
   WhatsappLog,
-  WhatsappLogStatus,
   WhatsappMonthCost,
   WhatsappMonthlyRow,
 } from './whatsapp-logs.model';
 import { WhatsappLogsStore } from './whatsapp-logs.store';
 
-type StatusFilter = 'all' | WhatsappLogStatus;
+type StatusFilter =
+  | 'all'
+  | 'delivered'
+  | 'pending'
+  | 'problems'
+  | 'skipped';
+
+/** Qué estados reales entran en cada filtro del panel. */
+const FILTER_STATUSES: Record<
+  Exclude<StatusFilter, 'all'>,
+  WhatsappEffectiveStatus[]
+> = {
+  delivered: ['delivered', 'read'],
+  pending: ['pending', 'legacy'],
+  problems: ['failed', 'undelivered'],
+  skipped: ['skipped'],
+};
 
 @Component({
   selector: 'app-whatsapp-logs',
@@ -29,7 +47,8 @@ type StatusFilter = 'all' | WhatsappLogStatus;
         <p class="text-sm text-grey-400">
           Historial de notificaciones enviadas vía WhatsApp (pedidos nuevos,
           completados, avisos de plan). Muestra los últimos
-          {{ store.counts().total }} envíos.
+          {{ store.counts().total }} envíos. "Entregada" y "Leída" son el
+          acuse real de Meta (llegó al teléfono del destinatario).
         </p>
       </header>
 
@@ -58,10 +77,17 @@ type StatusFilter = 'all' | WhatsappLogStatus;
             <ui-icon name="check-circle" size="18" styleClass="text-emerald-500" />
           </div>
           <div class="flex flex-col">
-            <span class="text-xs text-grey-400">Enviadas</span>
+            <span class="text-xs text-grey-400">Entregadas</span>
             <strong class="text-xl font-bold text-grey-700">
-              {{ store.counts().sent }}
+              {{ store.counts().delivered }}
             </strong>
+            <span class="text-[0.7rem] text-grey-400">
+              de {{ store.counts().sent }} enviadas ·
+              {{ store.counts().read }} leídas
+              @if (store.counts().pending) {
+                · {{ store.counts().pending }} sin confirmar
+              }
+            </span>
           </div>
         </article>
         <article
@@ -73,9 +99,9 @@ type StatusFilter = 'all' | WhatsappLogStatus;
             <ui-icon name="circle-x" size="18" styleClass="text-red-500" />
           </div>
           <div class="flex flex-col">
-            <span class="text-xs text-grey-400">Fallidas</span>
+            <span class="text-xs text-grey-400">Fallidas / no entregadas</span>
             <strong class="text-xl font-bold text-grey-700">
-              {{ store.counts().failed }}
+              {{ store.counts().failed + store.counts().undelivered }}
             </strong>
           </div>
         </article>
@@ -403,23 +429,19 @@ type StatusFilter = 'all' | WhatsappLogStatus;
                       </span>
                     </td>
                     <td class="px-4 py-3 border-b border-grey-50">
+                      @let st = effectiveStatus(log);
                       <span
-                        class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold"
-                        [class.bg-emerald-50]="log.status === 'sent'"
-                        [class.text-emerald-600]="log.status === 'sent'"
-                        [class.bg-red-50]="log.status === 'failed'"
-                        [class.text-red-600]="log.status === 'failed'"
-                        [class.bg-amber-50]="log.status === 'skipped'"
-                        [class.text-amber-600]="log.status === 'skipped'"
+                        class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold whitespace-nowrap"
+                        [class]="statusClass[st]"
                       >
-                        {{ statusLabel(log.status) }}
+                        {{ effectiveStatusLabel(st) }}
                       </span>
-                      @if (log.error) {
+                      @if (log.error ?? log.deliveryError; as err) {
                         <p
                           class="mt-1 text-xs text-grey-400 max-w-xs truncate"
-                          [title]="log.error"
+                          [title]="err"
                         >
-                          {{ log.error }}
+                          {{ err }}
                         </p>
                       }
                     </td>
@@ -473,6 +495,33 @@ type StatusFilter = 'all' | WhatsappLogStatus;
                               </span>
                             </div>
                           }
+                          @if (log.deliveryStatus) {
+                            <div class="flex gap-2 text-xs">
+                              <span class="text-grey-400 shrink-0">
+                                Acuse de Meta:
+                              </span>
+                              <span class="text-grey-600">
+                                {{ effectiveStatusLabel(effectiveStatus(log)) }}
+                                @if (log.deliveryUpdatedAt) {
+                                  ·
+                                  {{
+                                    log.deliveryUpdatedAt
+                                      | date: 'dd/MM/yyyy HH:mm'
+                                  }}
+                                }
+                              </span>
+                            </div>
+                          }
+                          @if (log.deliveryError) {
+                            <div class="flex gap-2 text-xs">
+                              <span class="text-grey-400 shrink-0">
+                                Motivo:
+                              </span>
+                              <span class="text-red-600 break-words">
+                                {{ log.deliveryError }}
+                              </span>
+                            </div>
+                          }
                           @if (log.error) {
                             <div class="flex gap-2 text-xs">
                               <span class="text-grey-400 shrink-0">Error:</span>
@@ -518,8 +567,9 @@ export class WhatsappLogs implements OnInit {
 
   protected readonly statusFilters: { value: StatusFilter; label: string }[] = [
     { value: 'all', label: 'Todas' },
-    { value: 'sent', label: 'Enviadas' },
-    { value: 'failed', label: 'Fallidas' },
+    { value: 'delivered', label: 'Entregadas' },
+    { value: 'pending', label: 'Sin confirmar' },
+    { value: 'problems', label: 'Fallidas' },
     { value: 'skipped', label: 'Omitidas' },
   ];
 
@@ -605,7 +655,9 @@ export class WhatsappLogs implements OnInit {
         (log.recipient ?? '').toLowerCase().includes(term) ||
         (log.tenantName ?? '').toLowerCase().includes(term) ||
         (log.tenantSlug ?? '').toLowerCase().includes(term);
-      const matchesStatus = status === 'all' || log.status === status;
+      const matchesStatus =
+        status === 'all' ||
+        FILTER_STATUSES[status].includes(effectiveStatus(log));
       return matchesTerm && matchesStatus;
     });
   });
@@ -619,7 +671,9 @@ export class WhatsappLogs implements OnInit {
   }
 
   protected templateLabel = templateLabel;
-  protected statusLabel = statusLabel;
+  protected effectiveStatus = effectiveStatus;
+  protected effectiveStatusLabel = effectiveStatusLabel;
+  protected readonly statusClass = EFFECTIVE_STATUS_CLASS;
   protected describeVariables = describeVariables;
   protected categoryLabel = categoryLabel;
 }

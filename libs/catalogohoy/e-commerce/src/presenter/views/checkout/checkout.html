@@ -140,7 +140,18 @@
           <button type="button" (click)="onDecrement(item)" [attr.aria-label]="'Quitar uno' | transloco">
             <ui-icon name="minus" size="14" />
           </button>
-          <span>{{ item.quantity }}</span>
+          <input
+          type="number"
+          inputmode="numeric"
+          min="0"
+          class="checkout__qty-input qty-input"
+          [value]="item.quantity"
+          (focus)="$any($event.target).select()"
+          (click)="$event.stopPropagation()"
+          (keydown.enter)="$any($event.target).blur()"
+          (change)="onQuantityChange(item, $event)"
+          [attr.aria-label]="'Cantidad' | transloco"
+        />
           <button type="button" (click)="onIncrement(item)" [attr.aria-label]="'Agregar uno' | transloco">
             <ui-icon name="plus" size="14" />
           </button>

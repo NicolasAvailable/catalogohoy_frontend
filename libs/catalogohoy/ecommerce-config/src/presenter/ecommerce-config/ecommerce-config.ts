@@ -388,6 +388,8 @@ export class EcommerceConfigComponent implements OnInit {
   );
   /** Custom note under the credit option (null/'' = checkout default text). */
   public readonly draftCreditNote = signal<string | null>(null);
+  /** Show units left ("Quedan N") in the public catalog (General tab). */
+  public readonly draftShowStock = signal<boolean>(false);
 
   // --- Impuesto/IVA (Pagos tab) drafts — CAT-84 ---
   /** % de impuesto incluido en los precios (null/0 = sin desglose). */
@@ -845,6 +847,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftCreditEnabled, prev?.creditEnabled ?? false, config.creditEnabled ?? false);
       syncField(this.draftCreditMinPurchases, prev?.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES, config.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES);
       syncField(this.draftCreditNote, prev?.creditNote ?? null, config.creditNote ?? null);
+      syncField(this.draftShowStock, prev?.showStock ?? false, config.showStock ?? false);
       syncField(this.draftMetaPixelId, prev?.metaPixelId ?? null, config.metaPixelId ?? null);
       syncField(this.draftTaxRate, prev?.taxRate ?? null, config.taxRate ?? null);
       syncField(this.draftTaxLabel, prev?.taxLabel ?? null, config.taxLabel ?? null);
@@ -895,6 +898,7 @@ export class EcommerceConfigComponent implements OnInit {
       const creditEnabled = this.draftCreditEnabled();
       const creditMinPurchases = this.draftCreditMinPurchases();
       const creditNote = this.draftCreditNote();
+      const showStock = this.draftShowStock();
       // Métodos de pago activos (con sus datos) — para que la preview del
       // checkout refleje en vivo los datos al elegir un método, sin recargar.
       const paymentMethods = this.configStore
@@ -932,6 +936,7 @@ export class EcommerceConfigComponent implements OnInit {
           creditEnabled,
           creditMinPurchases,
           creditNote,
+          showStock,
           // Solo overrideamos si hay métodos activos cargados; si la lista aún
           // no cargó (vacía), la preview usa los del catálogo real.
           ...(paymentMethods.length ? { paymentMethods } : {}),
@@ -1418,6 +1423,11 @@ export class EcommerceConfigComponent implements OnInit {
     if (creditNoteChanged) {
       changes.creditNote = this.draftCreditNote()?.trim() || null;
     }
+    const showStockChanged =
+      this.draftShowStock() !== (config.showStock ?? false);
+    if (showStockChanged) {
+      changes.showStock = this.draftShowStock();
+    }
 
     if (
       customerFieldsChanged ||
@@ -1426,7 +1436,8 @@ export class EcommerceConfigComponent implements OnInit {
       applyAdjustmentsChanged ||
       creditEnabledChanged ||
       creditMinChanged ||
-      creditNoteChanged
+      creditNoteChanged ||
+      showStockChanged
     ) {
       changes.customerFields = this.draftCustomerFields();
     }

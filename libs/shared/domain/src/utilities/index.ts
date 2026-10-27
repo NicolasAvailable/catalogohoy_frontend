@@ -20,3 +20,4 @@ export * from './sort/sort';
 export * from './string/string';
 export * from './that/that';
 export * from './url/url';
+export * from './search/search';

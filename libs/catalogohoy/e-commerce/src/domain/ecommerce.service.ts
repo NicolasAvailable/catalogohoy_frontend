@@ -77,6 +77,8 @@ export interface CatalogInfo {
   creditMinPurchases: number;
   /** Merchant note under the credit option. Null/'' = default text. */
   creditNote: string | null;
+  /** Show the units left ("Quedan N") to buyers. Default false. */
+  showStock: boolean;
 }
 
 /** Snapshot of the payment adjustment applied to an order at checkout. Same

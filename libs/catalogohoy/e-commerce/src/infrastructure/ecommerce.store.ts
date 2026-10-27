@@ -96,6 +96,14 @@ export const EcommerceStore = signalStore(
       }
       return store.catalogInfo()?.showLocalCurrencyPrice ?? true;
     }),
+    /** "Mostrar stock" (Editar catálogo → General): muestra "Quedan N". */
+    showStock: computed(() => {
+      const overrides = store.previewOverrides();
+      if (store.isPreviewMode() && overrides?.showStock !== undefined) {
+        return overrides.showStock;
+      }
+      return store.catalogInfo()?.showStock ?? false;
+    }),
     // Separadores de miles/decimales del tenant (de tenant_currency_config).
     // Los usa el pipe `tenantPrice` para formatear precios según el país:
     // "1.234,50" (VE/AR) vs "1,234.50" (GT/MX/US). Default ',' decimal / '.'

@@ -378,7 +378,18 @@
           >
             <ui-icon name="minus" styleClass="size-4" />
           </button>
-          <span class="pdm__qty-value">{{ quantity() }}</span>
+          <input
+          type="number"
+          inputmode="numeric"
+          min="1"
+          class="pdm__qty-value qty-input"
+          [value]="quantity()"
+          (focus)="$any($event.target).select()"
+          (click)="$event.stopPropagation()"
+          (keydown.enter)="$any($event.target).blur()"
+          (change)="onQuantityChange($event)"
+          [attr.aria-label]="'Cantidad' | transloco"
+        />
           <button
             type="button"
             class="pdm__qty-btn"
@@ -390,6 +401,9 @@
           </button>
         </div>
       </div>
+      @if (stockLeft() !== null) {
+      <p class="pdm__stock-left">{{ 'Quedan {n}' | transloco: { n: stockLeft() } }}</p>
+      }
 
       <button
         type="button"
