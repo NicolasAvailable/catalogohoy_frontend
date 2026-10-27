@@ -447,3 +447,27 @@
 .product-card--list .product-card__description {
   -webkit-line-clamp: 1;
 }
+
+/* Campo de cantidad editable a mano (se ve como el número del stepper). */
+.product-card__qty-input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.product-card__qty-input:focus {
+  outline: none;
+  border-color: var(--color-grey-300, #cbd5e1);
+}
+.product-card__qty-input::-webkit-outer-spin-button,
+.product-card__qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

@@ -84,7 +84,18 @@
             <button class="cart-item__qty-btn" (click)="onDecrement(item)">
               <ui-icon name="minus" styleClass="size-4" />
             </button>
-            <span class="cart-item__qty">{{ item.quantity }}</span>
+            <input
+          type="number"
+          inputmode="numeric"
+          min="0"
+          class="cart-item__qty qty-input"
+          [value]="item.quantity"
+          (focus)="$any($event.target).select()"
+          (click)="$event.stopPropagation()"
+          (keydown.enter)="$any($event.target).blur()"
+          (change)="onQuantityChange(item, $event)"
+          [attr.aria-label]="'Cantidad' | transloco"
+        />
             <button
               class="cart-item__qty-btn"
               (click)="onIncrement(item)"

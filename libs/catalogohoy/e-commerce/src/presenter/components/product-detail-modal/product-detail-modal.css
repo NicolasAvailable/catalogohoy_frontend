@@ -831,3 +831,26 @@
   font-size: 0.875rem;
   font-weight: 700;
 }
+
+/* Campo de cantidad editable a mano (se ve como el número del stepper). */
+.qty-input {
+  width: 3.5rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.qty-input:focus {
+  outline: none;
+  border-color: var(--color-grey-300, #cbd5e1);
+}
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
