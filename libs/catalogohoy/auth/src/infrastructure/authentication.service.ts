@@ -158,13 +158,9 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (error) {
       return E.left(errorMapper(error as AuthApiError));
     }
-    const { data: tenantRows, error: tenantError } = await this.client.rpc(
-      'get_my_tenant'
-    );
-    if (tenantError) {
-      return E.left(new Error(tenantError.message));
-    }
-    const tenant = TenantMapper.toDomain(tenantRows[0]);
+    const tenantResult = await this._getMyTenant();
+    if (tenantResult.isLeft()) return E.left(tenantResult.value);
+    const tenant = tenantResult.value;
     return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
@@ -220,13 +216,9 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.right(SIGNUP_CONFIRM_EMAIL);
     }
 
-    const { data: tenantRows, error: tenantError } = await this.client.rpc(
-      'get_my_tenant'
-    );
-    if (tenantError) {
-      return E.left(new Error(tenantError.message));
-    }
-    const tenant = TenantMapper.toDomain(tenantRows[0]);
+    const tenantResult = await this._getMyTenant();
+    if (tenantResult.isLeft()) return E.left(tenantResult.value);
+    const tenant = tenantResult.value;
     await this.setupTenantLocale(credentials.countryCode);
     await this._tryRegisterReferral(Number(tenant.id), credentials.referralCode);
     // Confirmación de correo desactivada (hay sesión al toque): los signups
@@ -255,13 +247,9 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (error) {
       return E.left(errorMapper(error as AuthApiError));
     }
-    const { data: tenantRows, error: tenantError } = await this.client.rpc(
-      'get_my_tenant'
-    );
-    if (tenantError) {
-      return E.left(new Error(tenantError.message));
-    }
-    const tenant = TenantMapper.toDomain(tenantRows[0]);
+    const tenantResult = await this._getMyTenant();
+    if (tenantResult.isLeft()) return E.left(tenantResult.value);
+    const tenant = tenantResult.value;
     await this.setupTenantLocale(input.countryCode);
     await this._tryRegisterReferral(Number(tenant.id), input.referralCode);
     return E.right(
@@ -276,6 +264,26 @@ export class AuthenticationService implements BaseAuthenticationService {
       return E.left(errorMapper(error as AuthApiError));
     }
     return E.right(undefined);
+  }
+
+  /** Tenant del usuario recién autenticado. Justo después de signUp/verifyOtp
+   *  el RPC a veces sale antes de que el cliente adjunte la sesión nueva y
+   *  devuelve 0 filas (el tenant sí existe): reintentamos un par de veces en
+   *  vez de reventar con "reading 'id'" y dejar al usuario sin registro. */
+  private async _getMyTenant(): Promise<
+    E.Either<Error, ReturnType<typeof TenantMapper.toDomain>>
+  > {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
+      }
+      const { data, error } = await this.client.rpc('get_my_tenant');
+      if (error) return E.left(new Error(error.message));
+      if (data?.length) return E.right(TenantMapper.toDomain(data[0]));
+    }
+    return E.left(
+      new Error('No pudimos cargar tu tienda. Inicia sesión para continuar.')
+    );
   }
 
   /** Best-effort: si el usuario llegó por un link `?ref=` (o tipeó un código
@@ -325,12 +333,9 @@ export class AuthenticationService implements BaseAuthenticationService {
     if (sessionError) {
       return E.left(new Error(sessionError.message));
     }
-    const { data: tenantRows, error: tenantError } =
-      await this.client.rpc('get_my_tenant');
-    if (tenantError) {
-      return E.left(new Error(tenantError.message));
-    }
-    const tenant = TenantMapper.toDomain(tenantRows[0]);
+    const tenantResult = await this._getMyTenant();
+    if (tenantResult.isLeft()) return E.left(tenantResult.value);
+    const tenant = tenantResult.value;
     // Confirmación de correo = completa un alta nueva → admin.
     // (La paywall /bienvenida quedó deshabilitada por ahora.)
     return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain, '/admin'));

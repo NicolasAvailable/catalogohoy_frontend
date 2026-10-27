@@ -34,6 +34,9 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
 // créditos, validaciones): no son fallas de la app y no van al canal. El front
 // ya los filtra (EXPECTED_USER_ERRORS en error-reporter.ts, mantener en sync);
 // esto cubre bundles viejos en caché y la app móvil.
+const BROWSER_NOISE =
+  /IABInnerFrame|window\._META|observe is not a function/i;
+
 const EXPECTED_USER_ERRORS = new RegExp(
   [
     "contraseña son inv", "email or password is invalid", "e-mail ou a senha",
@@ -117,6 +120,12 @@ Deno.serve(async (req: Request) => {
 
   if (source === "toast" && EXPECTED_USER_ERRORS.test(message)) {
     return jsonResponse({ success: true, skipped: "expected" });
+  }
+
+  // Ruido del navegador del visitante, no de la app (cubre bundles viejos en
+  // caché; el front ya lo filtra en NOISE_PATTERNS de error-reporter.ts).
+  if (source === "uncaught" && BROWSER_NOISE.test(message)) {
+    return jsonResponse({ success: true, skipped: "noise" });
   }
 
   const admin = createClient(

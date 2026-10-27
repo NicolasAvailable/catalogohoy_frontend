@@ -8,11 +8,13 @@ export class Multimedia extends Entity {
 
   constructor(url: string) {
     super();
-    this.url = url;
+    // Filas viejas o incompletas pueden traer la URL vacía/null: sin esto,
+    // `type`/`isImage()` revientan con "reading 'split'" al renderizar.
+    this.url = typeof url === 'string' ? url : '';
   }
 
   public get type(): string {
-    return this.url.split('.').pop()?.split(/[#?]/)[0] || '';
+    return (this.url ?? '').split('.').pop()?.split(/[#?]/)[0] || '';
   }
 
   public get file() {
