@@ -295,6 +295,10 @@ export class EcommerceService implements BaseEcommerceService {
       creditNote:
         (config?.customer_fields as { creditNote?: string | null })
           ?.creditNote ?? null,
+      // "Mostrar stock" — también dentro de `customer_fields` (sin migración).
+      showStock:
+        (config?.customer_fields as { showStock?: boolean })?.showStock ??
+        false,
     };
 
     // El RPC devuelve solo categorías visibles, EXCEPTO la fila "Ver todos"

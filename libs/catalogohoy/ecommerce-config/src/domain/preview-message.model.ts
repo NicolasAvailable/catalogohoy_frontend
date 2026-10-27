@@ -13,6 +13,7 @@ export interface PreviewMessage {
     themeColor: string;
     showDesignSection: boolean;
     showCategoriesSection: boolean;
+    showStock: boolean;
     socialLinks: SocialLinks;
     template: CatalogTemplate;
     currencySymbol: string;

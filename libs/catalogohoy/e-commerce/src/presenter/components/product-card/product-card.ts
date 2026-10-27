@@ -6,7 +6,7 @@ import {
   inject,
   input,
 } from '@angular/core';
-import { Product } from '@catalogohoy/product';
+import { Product, totalStockOf } from '@catalogohoy/product';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { firstImageUrl, isVideoUrl } from '@shared/domain';
 import { StripHtmlPipe } from '@shared/presenter';
@@ -61,10 +61,21 @@ export class ProductCard {
     (this.product().photos ?? []).some((url) => isVideoUrl(url))
   );
 
+  /** Units left across sizes/variants (`null` = unlimited). */
+  private readonly totalStock = computed(() => totalStockOf(this.product()));
+
   public readonly isOutOfStock = computed(() => {
     const p = this.product();
-    return p.isSoldOut || (p.stock !== null && Number(p.stock) <= 0);
+    const total = this.totalStock();
+    return p.isSoldOut || (total !== null && total <= 0);
   });
+
+  /** "Quedan N" label — only when the catalog enables "Mostrar stock". */
+  public readonly stockLeft = computed(() =>
+    this.ecommerceStore.showStock() && !this.isOutOfStock()
+      ? this.totalStock()
+      : null
+  );
 
   public readonly isWholesale = computed(() => this.product().isWholesale);
 

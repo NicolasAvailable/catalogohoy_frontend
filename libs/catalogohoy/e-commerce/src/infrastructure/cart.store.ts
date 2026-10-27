@@ -51,6 +51,8 @@ function saveCartToStorage(cart: Cart): void {
       variantName: item.variantName,
       addons: item.addons,
       divisasPrice: item.divisasPrice,
+      // Tope de stock: sin esto se perdía al recargar y el "+" quedaba libre.
+      maxStock: item.maxStock,
     }));
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   } catch {

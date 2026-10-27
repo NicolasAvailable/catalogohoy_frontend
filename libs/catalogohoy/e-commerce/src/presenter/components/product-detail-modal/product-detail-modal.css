@@ -588,6 +588,14 @@
   color: var(--color-grey-500);
 }
 
+.pdm__stock-left {
+  margin: -0.25rem 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-grey-500);
+  text-align: right;
+}
+
 .pdm__quantity-selector {
   display: flex;
   align-items: center;

@@ -123,6 +123,10 @@ export class EcommerceConfigService {
             ? Math.floor(n)
             : DEFAULT_CREDIT_MIN_PURCHASES;
         })(),
+        // "Mostrar stock" en el catálogo público (dentro de customer_fields).
+        showStock:
+          (config?.customer_fields as { showStock?: boolean })?.showStock ??
+          false,
         creditNote:
           (config?.customer_fields as { creditNote?: string | null })
             ?.creditNote ?? null,
@@ -355,7 +359,8 @@ export class EcommerceConfigService {
         config.applyAdjustmentsInCheckout !== undefined ||
         config.creditEnabled !== undefined ||
         config.creditMinPurchases !== undefined ||
-        config.creditNote !== undefined
+        config.creditNote !== undefined ||
+        config.showStock !== undefined
       ) {
         const base =
           config.customerFields ??
@@ -379,6 +384,9 @@ export class EcommerceConfigService {
             : {}),
           ...(config.creditNote !== undefined
             ? { creditNote: config.creditNote }
+            : {}),
+          ...(config.showStock !== undefined
+            ? { showStock: config.showStock }
             : {}),
         };
       }

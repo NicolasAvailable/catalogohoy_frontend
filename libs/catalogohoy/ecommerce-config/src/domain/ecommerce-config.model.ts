@@ -450,6 +450,10 @@ export interface EcommerceConfig {
   /** Custom note shown under the credit option at checkout. Null/'' = the
    *  checkout renders its default text. Persisted inside `customer_fields`. */
   creditNote: string | null;
+  /** When true, the public catalog shows the units left ("Quedan N") on
+   *  product cards, the product modal and the cart. Purchase limits apply
+   *  either way. Persisted inside `customer_fields` jsonb. Default false. */
+  showStock: boolean;
   /** Meta (Facebook) Pixel ID del dueño para medir su catálogo público en sus
    *  campañas de Meta Ads. Es un dato PÚBLICO: viaja por el RPC público y se
    *  inyecta en el storefront (dispara ViewContent/AddToCart/InitiateCheckout/
