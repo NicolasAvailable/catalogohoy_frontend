@@ -81,6 +81,10 @@
   Fulfillment por **verify-on-redirect** (`confirm-credit-purchase`, idempotente por
   `stripe_session_id`). No se tocó el `stripe-webhook` de suscripciones.
 
+## Aviso de vencimiento / renovación del plan
+
+Un **solo aviso** por renovación, **6 días antes** de `plan_expires_at`, por email (SES) y WhatsApp (template `plan_expiry_warning`). Lo manda el cron diario `send-plan-expiry-warnings-daily` → `send-plan-expiry-warning` (`THRESHOLDS = [6]`). Antes salían 4 (6/4/2/0 días) y los clientes se quejaban de recibir el mismo aviso repetido (cambiado 2026-10-27). No se avisa en free trial (`trialing`) ni si el dueño apagó `notify_plan_expiry`. El CHECK de `tenant_expiry_warnings.days_before` solo admite 0/2/4/6: para usar otro día hay que cambiar ese CHECK.
+
 ## Reportes semanales (email)
 
 - Se envían **solo a planes pagos** (`plan_id IS DISTINCT FROM 'gratis'`) con el toggle
