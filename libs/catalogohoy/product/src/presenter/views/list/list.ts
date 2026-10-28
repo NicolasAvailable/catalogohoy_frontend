@@ -173,7 +173,16 @@ export default class List implements OnInit, OnDestroy {
    *  paginado (no en alfabético ni en "Todos"/virtual scroll). */
   public readonly canReorder = computed(() => {
     const order = this.sortOrder();
-    return !this.showAll() && order !== 'az' && order !== 'za';
+    // Con búsqueda o filtro de categoría el store/listado es solo un subconjunto:
+    // `drop` renumeraría ese subconjunto desde 0 y chocaría con las posiciones
+    // del resto (productos repetidos/saltados en el catálogo paginado).
+    return (
+      !this.showAll() &&
+      order !== 'az' &&
+      order !== 'za' &&
+      !this.filterCategoryId() &&
+      !this.searchTerm()
+    );
   });
 
   public readonly currentPageItems = computed(() => {
@@ -253,6 +262,9 @@ export default class List implements OnInit, OnDestroy {
   @ViewChild('categoryDialog')
   public categoryDialog!: DialogComponent;
 
+  /** Término de búsqueda activo (el store solo trae los que coinciden). */
+  private readonly searchTerm = signal('');
+
   public searchForm = new FormGroup({
     search: new FormControl('', []),
   });
@@ -294,6 +306,7 @@ export default class List implements OnInit, OnDestroy {
       .pipe(debounceTime(300), distinctUntilChanged())
       .subscribe((searchTerm) => {
         this.clearSelection();
+        this.searchTerm.set((searchTerm || '').trim());
         this.productStore.productList$(searchTerm || '');
       });
   }

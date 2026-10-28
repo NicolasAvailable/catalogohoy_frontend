@@ -415,6 +415,10 @@ export class EcommerceService implements BaseEcommerceService {
           ? query.order('name', { ascending: true })
           : query.order('position', { ascending: true });
     }
+    // Desempate estable para el paginado por rangos ("cargar más"): con
+    // posiciones o nombres repetidos, sin esto un producto podía salir dos
+    // veces y otro ninguna.
+    query = query.order('id', { ascending: true });
 
     const hasCap = cap !== undefined && cap > 0;
     const from = (page - 1) * pageSize;
