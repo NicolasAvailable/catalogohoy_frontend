@@ -58,12 +58,15 @@ import {
 } from '../../../domain/order';
 import {
   BASE_STATUS_META,
+  NEW_STAGE_KEY,
+  NEW_STAGE_OPTION,
+  OrderStage,
   OrderStatusKey,
   resolveStatusKey,
   statusKeyOf,
 } from '../../../domain/order-stage';
 import { OrderStageStore } from '../../../infrastructure/order-stage.store';
-import { OrderStagesModal } from '../../components/order-stages-modal/order-stages-modal';
+import { openOrderStagesEditor } from '../../components/order-stages-modal/order-stages-modal';
 import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import {
   CreditSummaryRow,
@@ -684,13 +687,21 @@ export class OrderListComponent implements OnInit, OnDestroy {
     { label: 'Todas', value: 'all' },
     ...this.stageStore.statusOptions().map((o) => ({
       label: o.stageId ? o.label : this.baseFilterLabels[o.baseStatus],
-      value: o.value,
+      value: o.value as OrderStatusKey,
       color: o.color,
     })),
   ]);
 
   /** Opciones del selector de estado (base + propios de la tienda). */
   public readonly statusOptions = this.stageStore.statusOptions;
+
+  /** Lo mismo + "+ Crear estado" al final (solo quien puede editar órdenes). */
+  public readonly statusSelectOptions = computed(() =>
+    this.canEditOrder()
+      ? [...this.statusOptions(), NEW_STAGE_OPTION]
+      : this.statusOptions()
+  );
+  protected readonly NEW_STAGE_KEY = NEW_STAGE_KEY;
 
   /** Clave del estado que muestra el selector de una orden. */
   statusKey(order: Order): OrderStatusKey {
@@ -708,14 +719,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
 
   /** Abre el editor de estados de la tienda (crear, renombrar, comportamiento). */
   openStagesEditor() {
-    const ref = this.dialogService.open(
-      OrderStagesModal,
-      dialogConfig({
-        showHeader: false,
-        style: { width: '36rem', maxWidth: '95vw' },
-        contentStyle: { padding: '0' },
-      })
-    );
+    const ref = openOrderStagesEditor(this.dialogService);
     ref?.onClose.subscribe(() => {
       // Si borró el estado que estaba filtrando, volver a Todas.
       const f = this.selectedFilter();
@@ -1089,7 +1093,15 @@ export class OrderListComponent implements OnInit, OnDestroy {
     return `https://wa.me/${cleanPhone}`;
   }
 
-  async onStatusChange(order: Order, newKey: OrderStatusKey) {
+  async onStatusChange(order: Order, newKey: OrderStatusKey | typeof NEW_STAGE_KEY) {
+    if (newKey === NEW_STAGE_KEY) {
+      // "+ Crear estado": crea uno y deja la orden en él.
+      const ref = openOrderStagesEditor(this.dialogService, true);
+      ref?.onClose.subscribe((stage?: OrderStage) => {
+        if (stage) this.onStatusChange(order, `stage:${stage.id}`);
+      });
+      return;
+    }
     if (newKey === this.statusKey(order) || this.isProcessing()) return;
     const target = resolveStatusKey(newKey, this.stageStore.stages());
     if (!target) return;

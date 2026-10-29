@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { ButtonComponent, IconComponent } from '@ui';
-import { DynamicDialogRef } from 'primeng/dynamicdialog';
+import { ButtonComponent, DialogService, dialogConfig, IconComponent } from '@ui';
+import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { OrderStatus } from '../../../domain/order';
 import {
   BASE_STATUS_BEHAVIOR,
@@ -23,6 +23,24 @@ type Draft = {
   baseStatus: OrderStatus;
 };
 
+/** Abre el editor de estados. Con `quickCreate` arranca directo en "nuevo
+ *  estado" y se cierra devolviendo el `OrderStage` creado (o undefined si
+ *  cancela): lo usa la opción "+ Crear estado" de los selectores. */
+export function openOrderStagesEditor(
+  dialogService: DialogService,
+  quickCreate = false
+) {
+  return dialogService.open(
+    OrderStagesModal,
+    dialogConfig({
+      data: { quickCreate },
+      showHeader: false,
+      style: { width: '36rem', maxWidth: '95vw' },
+      contentStyle: { padding: '0' },
+    })
+  );
+}
+
 /** Editor de los estados de orden propios de la tienda: crear, renombrar,
  *  color, comportamiento (stock/ventas), orden y borrar. Se abre desde el
  *  botón "Estados" del listado de órdenes. */
@@ -34,6 +52,8 @@ type Draft = {
 })
 export class OrderStagesModal {
   private readonly ref = inject(DynamicDialogRef);
+  /** Abierto desde "+ Crear estado": solo crear uno y volver. */
+  public readonly quickCreate = !!inject(DynamicDialogConfig).data?.quickCreate;
   private readonly toast = inject(ToastService);
   public readonly stageStore = inject(OrderStageStore);
 
@@ -56,6 +76,7 @@ export class OrderStagesModal {
 
   constructor() {
     this.stageStore.load(true);
+    if (this.quickCreate) this.newStage();
   }
 
   behaviorHint(status: OrderStatus): string {
@@ -106,6 +127,10 @@ export class OrderStagesModal {
   }
 
   cancelDraft() {
+    if (this.quickCreate) {
+      this.ref.close();
+      return;
+    }
     this.draft.set(null);
   }
 
@@ -134,8 +159,12 @@ export class OrderStagesModal {
     this.isSaving.set(false);
     result.fold(
       (error) => this.toast.error(new Exception(error)),
-      () => {
+      (stage) => {
         this.toast.success(d.id ? 'Estado actualizado' : 'Estado creado');
+        if (this.quickCreate && !d.id) {
+          this.ref.close(stage);
+          return;
+        }
         this.draft.set(null);
       }
     );

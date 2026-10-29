@@ -21,6 +21,7 @@ import {
   SelectItemDirective,
   SelectSelectedItemDirective,
   UploaderComponent,
+  DialogService,
 } from '@ui';
 import { ProfileStore } from '@catalogohoy/profile';
 import { SupabaseClientProvider } from '@catalogohoy/core';
@@ -33,10 +34,14 @@ import {
 import { OrderStore } from '../../../infrastructure/order.store';
 import { OrderStageStore } from '../../../infrastructure/order-stage.store';
 import {
+  NEW_STAGE_KEY,
+  NEW_STAGE_OPTION,
+  OrderStage,
   OrderStatusKey,
   resolveStatusKey,
   statusKeyOf,
 } from '../../../domain/order-stage';
+import { openOrderStagesEditor } from '../order-stages-modal/order-stages-modal';
 
 /** Modal de detalle de una orden. Se abre vía DialogService desde el listado
  *  (botón "ojo") y desde el deep-link `?order=ID` (botón "Ver pedido" de las
@@ -235,8 +240,28 @@ export class OrderDetailModal {
 
   /** Estados base + los propios de la tienda. */
   public readonly statusOptions = this.stageStore.statusOptions;
+  /** Lo mismo + "+ Crear estado" al final. */
+  public readonly statusSelectOptions = computed(() => [
+    ...this.statusOptions(),
+    NEW_STAGE_OPTION,
+  ]);
+  protected readonly NEW_STAGE_KEY = NEW_STAGE_KEY;
+  private readonly dialogService = inject(DialogService);
 
-  async onStatusChange(newStatus: OrderStatusKey): Promise<void> {
+  /** Color del estado actual (para el badge del selector). */
+  public readonly statusColor = computed(
+    () => this.statusOptions().find((o) => o.value === this.status())?.color ?? '#9ca3af'
+  );
+
+  async onStatusChange(newStatus: OrderStatusKey | typeof NEW_STAGE_KEY): Promise<void> {
+    if (newStatus === NEW_STAGE_KEY) {
+      // "+ Crear estado": crea uno y deja la orden en él.
+      const ref = openOrderStagesEditor(this.dialogService, true);
+      ref?.onClose.subscribe((stage?: OrderStage) => {
+        if (stage) this.onStatusChange(`stage:${stage.id}`);
+      });
+      return;
+    }
     const current = this.status();
     if (newStatus === current || this.isUpdating()) return;
     const stages = this.stageStore.stages();

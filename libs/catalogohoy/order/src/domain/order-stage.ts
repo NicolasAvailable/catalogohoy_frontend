@@ -16,13 +16,24 @@ export interface OrderStage {
 /** Valor de los selectores de estado: un estado base o `stage:<id>`. */
 export type OrderStatusKey = OrderStatus | `stage:${string}`;
 
+/** Opción "+ Crear estado" al final de los selectores de estado. */
+export const NEW_STAGE_KEY = '__new_stage__';
+
 export interface OrderStatusOption {
-  value: OrderStatusKey;
+  value: OrderStatusKey | typeof NEW_STAGE_KEY;
   label: string;
   color: string;
   baseStatus: OrderStatus;
   stageId: string | null;
 }
+
+export const NEW_STAGE_OPTION: OrderStatusOption = {
+  value: NEW_STAGE_KEY,
+  label: 'Crear estado',
+  color: '',
+  baseStatus: 'pending',
+  stageId: null,
+};
 
 /** Nombre y color de los 4 estados base (mismos colores que tenían los badges). */
 export const BASE_STATUS_META: Record<OrderStatus, { label: string; color: string }> = {

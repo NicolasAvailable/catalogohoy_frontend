@@ -38,6 +38,7 @@ import {
   SelectSelectedItemDirective,
   TextareaComponent,
   UploaderComponent,
+  DialogService,
 } from '@ui';
 import {
   CreditInstallment,
@@ -52,6 +53,7 @@ import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import { OrderStore } from '../../../infrastructure/order.store';
 import { OrderStageStore } from '../../../infrastructure/order-stage.store';
 import { BASE_STATUS_META, OrderStage } from '../../../domain/order-stage';
+import { openOrderStagesEditor } from '../../components/order-stages-modal/order-stages-modal';
 import { OrderImportDraftService } from '../../../infrastructure/order-import-draft.service';
 
 /** Un adicional del catálogo (pool global), con su foto para mostrarlo como
@@ -192,6 +194,16 @@ export default class OrderSave implements OnInit {
     if (!stage) return id;
     return stage.baseStatus === this.statusValue() ? id : null;
   });
+
+  private readonly dialogService = inject(DialogService);
+
+  /** "+ Crear estado": crea uno y lo deja elegido en esta orden. */
+  createStage() {
+    const ref = openOrderStagesEditor(this.dialogService, true);
+    ref?.onClose.subscribe((stage?: OrderStage) => {
+      if (stage) this.selectStage(stage);
+    });
+  }
 
   selectStage(stage: OrderStage) {
     this.stageId.set(stage.id);

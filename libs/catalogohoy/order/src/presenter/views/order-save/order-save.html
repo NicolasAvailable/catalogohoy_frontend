@@ -817,7 +817,6 @@
         </div>
 
         <!-- Estados propios de la tienda (Despacho, Revisión...) -->
-        @if (sortedStages().length) {
         <div class="flex flex-col gap-2">
           <span class="text-sm font-medium text-grey-700">{{ 'Tus estados' | transloco }}</span>
           <div class="flex flex-wrap gap-2">
@@ -834,6 +833,14 @@
               {{ stage.label }}
             </button>
             }
+            <button
+              type="button"
+              (click)="createStage()"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border border-dashed border-grey-300 text-primary-600 hover:bg-primary-50 cursor-pointer"
+            >
+              <ui-icon name="plus" styleClass="size-3.5" />
+              {{ 'Crear estado' | transloco }}
+            </button>
           </div>
           @for (stage of sortedStages(); track stage.id) {
             @if (selectedStageId() === stage.id) {
@@ -843,7 +850,6 @@
             }
           }
         </div>
-        }
 
         <!-- Plan de pago en cuotas (CAT-79) — solo órdenes a crédito -->
         @if (form.get('status')?.value === 'credit') {
