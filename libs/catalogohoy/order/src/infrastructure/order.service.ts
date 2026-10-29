@@ -434,7 +434,7 @@ export class OrderService {
       phone: input.phone,
       comments: input.comments,
       status: input.status,
-      stage_id: input.stageId ?? null,
+      ...(input.stageId ? { stage_id: input.stageId } : {}),
       products: input.products,
       total_usd: input.totalUsd,
       total_bs: input.totalBs,
@@ -623,10 +623,9 @@ export class OrderService {
     // está pendiente el Bs se muestra en vivo; aquí queda el snapshot final.
     // SOLO catálogos con doble moneda (Venezuela) — el resto no usa bolívares,
     // así que no se les toca `total_bs` (mismo criterio que la visualización).
-    const patch: Record<string, unknown> = {
-      status: newStatus,
-      stage_id: stageId,
-    };
+    const patch: Record<string, unknown> = { status: newStatus };
+    // Solo se toca stage_id si entra o sale de un estado propio.
+    if (stageId !== null || order.stage_id != null) patch['stage_id'] = stageId;
     const rate = this.rateStore.rateValue();
     if (
       this.tenantCurrency.showDualCurrency() &&

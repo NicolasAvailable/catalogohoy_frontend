@@ -1015,6 +1015,8 @@ export class OrderListComponent implements OnInit, OnDestroy {
     if (filter === 'all') return { status: 'all' };
     const resolved = resolveStatusKey(filter, this.stageStore.defs());
     if (!resolved) return { status: 'all' };
+    const hasCustom = this.stageStore.defs().some((d) => !d.system);
+    if (!resolved.stageId && !hasCustom) return { status: resolved.status };
     return { status: resolved.status, stageId: resolved.stageId };
   }
 

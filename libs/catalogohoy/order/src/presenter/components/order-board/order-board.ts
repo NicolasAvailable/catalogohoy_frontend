@@ -118,11 +118,12 @@ export class OrderBoardComponent {
   }
 
   /** Una columna base muestra solo las órdenes sin estado propio, así cada
-   *  orden aparece en una sola columna. */
+   *  orden aparece en una sola columna (sin estados propios no hace falta). */
   private async fetch(tenantId: number, def: OrderStatusDef, page: number) {
+    const hasCustom = this.stageStore.defs().some((d) => !d.system);
     const result = await this.orderService.getOrdersByTenant(tenantId, {
       status: def.baseStatus,
-      stageId: def.system ? null : def.rowId,
+      stageId: def.system ? (hasCustom ? null : undefined) : def.rowId,
       search: this.search() || undefined,
       date: this.date() ?? undefined,
       orderBy: 'date_desc',

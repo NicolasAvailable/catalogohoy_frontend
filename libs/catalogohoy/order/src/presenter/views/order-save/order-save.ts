@@ -179,6 +179,8 @@ export default class OrderSave implements OnInit {
 
   /** Estado propio de la tienda elegido (Despacho, Revisión...). */
   private readonly stageId = signal<string | null>(null);
+  /** Estado propio con el que se cargó la orden (edición). */
+  private loadedStageId: string | null = null;
 
   /** Estados visibles de la tienda (+ el de la orden si está oculto). */
   public readonly statusDefs = computed(() => {
@@ -591,6 +593,7 @@ export default class OrderSave implements OnInit {
     this.form.controls.phone.setValue(order.phone || '');
     this.form.controls.comments.setValue(order.comments || '');
     this.stageId.set(order.stageId ?? null);
+    this.loadedStageId = order.stageId ?? null;
     this.form.controls.status.setValue(order.status);
     this.form.controls.paymentMethod.setValue(order.paymentMethod || '');
     this.loadedPaymentMethod.set(order.paymentMethod || '');
@@ -1220,7 +1223,8 @@ export default class OrderSave implements OnInit {
       phone: this.form.controls.phone.value || undefined,
       comments: this.form.controls.comments.value || undefined,
       status: this.form.controls.status.value as OrderStatus,
-      stageId: this.selectedStageId(),
+      // Solo se toca el estado propio si la orden tenía uno o se eligió uno.
+      stageId: this.selectedStageId() ?? (this.loadedStageId ? null : undefined),
       products: this.products(),
       totalUsd: this.calculateTotal(),
       totalBs: this.totalBs(),
