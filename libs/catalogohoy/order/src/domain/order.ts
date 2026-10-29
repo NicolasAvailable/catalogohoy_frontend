@@ -90,6 +90,10 @@ export interface Order {
   name: string;
   products: OrderItem[];
   status: OrderStatus;
+  /** Estado propio de la tienda (`order_stages.id`) en el que está la orden,
+   *  ej. "Despacho". null = solo su estado base. `status` sigue mandando para
+   *  stock/métricas; el estado propio es la "columna" que se ve. */
+  stageId?: string | null;
   tenantId: number;
   totalUsd: number;
   totalBs?: number;

@@ -53,6 +53,9 @@ export interface CreateOrderInput {
    *  form sends this; the public catalog checkout never does. */
   paymentEvidence?: PaymentEvidence | null;
   status: OrderStatus;
+  /** Estado propio de la tienda (debe tener `status` como base). null/omitido
+   *  = sin estado propio. */
+  stageId?: string | null;
   products: OrderItem[];
   totalUsd: number;
   totalBs: number;
@@ -134,6 +137,9 @@ export class OrderService {
       search?: string;
       /** Filter by status ('all' = no filter). */
       status?: OrderStatus | 'all';
+      /** Estado propio (`order_stages.id`). string = solo ese estado; null =
+       *  solo órdenes SIN estado propio (columna base); undefined = sin filtro. */
+      stageId?: string | null;
       /** 1-based page index. */
       page?: number;
       /** How many rows per page. When omitted, no range is applied (all). */
@@ -150,6 +156,11 @@ export class OrderService {
     // Filter by status
     if (options?.status && options.status !== 'all') {
       query = query.eq('status', options.status);
+    }
+    if (options?.stageId) {
+      query = query.eq('stage_id', options.stageId);
+    } else if (options?.stageId === null) {
+      query = query.is('stage_id', null);
     }
 
     // Filter by ISO range [fromIso, toIso) (Métricas) o por día único (`date`).
@@ -168,9 +179,20 @@ export class OrderService {
         .lt('created_at', endOfDay.toISOString());
     }
 
-    // Filter by search query (search in name field)
-    if (options?.search?.trim()) {
-      query = query.ilike('name', `%${options.search.trim()}%`);
+    // Búsqueda por nombre del cliente, SKU de un producto (exacto) o #/ID.
+    const search = options?.search?.trim().replace(/[,()"\\]/g, ' ').trim();
+    if (search) {
+      const terms = [`name.ilike."%${search}%"`];
+      for (const sku of new Set([search, search.toUpperCase()])) {
+        // Valor entre comillas (con \" escapadas) para que or() no parta el JSON.
+        const json = JSON.stringify([{ sku }]).replace(/"/g, '\\"');
+        terms.push(`products.cs."${json}"`);
+      }
+      const num = search.replace(/^#/, '');
+      if (/^\d{1,12}$/.test(num)) {
+        terms.push(`order_number.eq.${num}`, `id.eq.${num}`);
+      }
+      query = query.or(terms.join(','));
     }
 
     // Ordering
@@ -423,6 +445,7 @@ export class OrderService {
       phone: input.phone,
       comments: input.comments,
       status: input.status,
+      ...(input.stageId ? { stage_id: input.stageId } : {}),
       products: input.products,
       total_usd: input.totalUsd,
       total_bs: input.totalBs,
@@ -511,6 +534,7 @@ export class OrderService {
       total_usd: input.totalUsd,
       total_bs: input.totalBs,
     };
+    if (input.stageId !== undefined) patch['stage_id'] = input.stageId;
     if (input.deliveryDate) patch['delivery_date'] = input.deliveryDate;
     if (input.paymentEvidence !== undefined)
       patch['payment_evidence'] = input.paymentEvidence;
@@ -585,7 +609,9 @@ export class OrderService {
     id: number,
     tenantId: number,
     oldStatus: OrderStatus,
-    newStatus: OrderStatus
+    newStatus: OrderStatus,
+    /** Estado propio destino (base = `newStatus`); null = columna base. */
+    stageId: string | null = null
   ): Promise<E.Either<Error, Order>> {
     const { data: order, error: fetchError } = await this.client
       .from('orders')
@@ -598,16 +624,23 @@ export class OrderService {
       return E.left(new Error(fetchError.message));
     }
 
+    // El status real es el de la BD, no el que trae la pantalla: si la lista
+    // estaba desactualizada (otra pestaña, el bot, el POS) el stock se movería
+    // con un estado viejo.
+    const fromStatus = (order.status as OrderStatus | null) ?? oldStatus;
+
     // Congelar el Bs a la tasa ACTUAL al SALIR de "pendiente": el pedido se
     // cobra a la tasa del día en que se cierra (pagada/entregada). Mientras
     // está pendiente el Bs se muestra en vivo; aquí queda el snapshot final.
     // SOLO catálogos con doble moneda (Venezuela) — el resto no usa bolívares,
     // así que no se les toca `total_bs` (mismo criterio que la visualización).
     const patch: Record<string, unknown> = { status: newStatus };
+    // Solo se toca stage_id si entra o sale de un estado propio.
+    if (stageId !== null || order.stage_id != null) patch['stage_id'] = stageId;
     const rate = this.rateStore.rateValue();
     if (
       this.tenantCurrency.showDualCurrency() &&
-      oldStatus === 'pending' &&
+      fromStatus === 'pending' &&
       newStatus !== 'pending' &&
       rate > 0 &&
       Number(order.total_usd) > 0
@@ -635,7 +668,7 @@ export class OrderService {
     //   - a un estado que descuenta (completed/credit): descontar
     //   - de un estado que descontaba a uno que no: restaurar
     //   - entre dos que descuentan (credit ↔ completed): no-op (ya está fuera)
-    const wasDeducted = this.deductsStock(oldStatus);
+    const wasDeducted = this.deductsStock(fromStatus);
     const willDeduct = this.deductsStock(newStatus);
     if (!wasDeducted && willDeduct) {
       await this.deductStock(tenantId, products);
@@ -648,7 +681,7 @@ export class OrderService {
       entityType: 'order',
       entityId: id,
       entityName: `Orden #${id} — ${order.name}`,
-      changes: [{ field: 'status', from: oldStatus, to: newStatus }],
+      changes: [{ field: 'status', from: fromStatus, to: newStatus }],
     });
 
     return E.right(OrderMapper.toDomain(data));

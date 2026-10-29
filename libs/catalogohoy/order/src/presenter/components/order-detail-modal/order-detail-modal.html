@@ -61,7 +61,7 @@
         <div class="flex items-center gap-2">
           <span class="text-sm font-medium text-grey-500">{{ 'Estado' | transloco }}</span>
           <ui-select
-            [options]="statusOptions"
+            [options]="statusSelectOptions()"
             [ngModel]="status()"
             (ngModelChange)="onStatusChange($event)"
             [disabled]="isUpdating()"
@@ -71,16 +71,23 @@
             styleClass="order-status-select"
           >
             <ng-template selectSelectedItem let-selected>
-              <span [class]="getStatusBadgeClass(selected.value)">
-                <span [class]="getStatusDotClass(selected.value)"></span>
-                {{ selected.label | transloco }}
+              <span [class]="getStatusBadgeClass()">
+                <span [class]="getStatusDotClass()" [style.background-color]="statusColor()"></span>
+                {{ getStatusLabel(status()) | transloco }}
               </span>
             </ng-template>
             <ng-template selectItem let-item>
-              <span [class]="getStatusBadgeClass(item.value)">
-                <span [class]="getStatusDotClass(item.value)"></span>
+              @if (item.value === NEW_STAGE_KEY) {
+              <span class="inline-flex items-center gap-1.5 px-1 py-1 text-xs font-semibold text-primary-600">
+                <ui-icon name="plus" styleClass="size-3.5" />
                 {{ item.label | transloco }}
               </span>
+              } @else {
+              <span [class]="getStatusBadgeClass()">
+                <span [class]="getStatusDotClass()" [style.background-color]="item.color"></span>
+                {{ item.label | transloco }}
+              </span>
+              }
             </ng-template>
           </ui-select>
         </div>

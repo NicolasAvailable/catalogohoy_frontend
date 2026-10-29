@@ -299,7 +299,7 @@ await Promise.all(
 | name | text | NULL | Customer name |
 | phone | text | NULL | |
 | comments | text | NULL | |
-| status | text | `'pending'` | `'pending'` \| `'completed'` |
+| status | text | `'pending'` | `'pending'` \| `'completed'` \| `'credit'` \| `'cancelled'` |
 | products | jsonb | `'[]'::jsonb` | **Embedded order lines** — see `OrderItem` below |
 | total_usd | numeric | `0` | |
 | total_bs | numeric | `0` | Venezuelan bolivares |
@@ -308,6 +308,7 @@ await Promise.all(
 | credit_installments | jsonb | NULL | CAT-79: plan de cuotas `[{dueDate,amount?,paid?}]` de órdenes a crédito (NO es ledger de abonos) |
 | credit_reminded_at | timestamptz | NULL | CAT-79: anti-spam del cron `send-credit-reminders` (no repite la misma orden por 7 días) |
 | payment_condition | text | NULL | Condición que ELIGIÓ el cliente en el checkout: `'cash'` \| `'credit'` (check constraint). `'credit'` = pidió a crédito pero la orden nace `pending`; pasarla a status `credit` es del comerciante. NULL = sin selector (admin/POS/históricas). Migración `20260928_checkout_credit_conditions.sql` |
+| stage_id | uuid | NULL | FK → `order_stages.id` ON DELETE SET NULL. Estado propio de la tienda (ej. "Despacho"); su `base_status` = `orders.status` (trigger `orders_sync_stage` lo limpia si no coincide). Migración `20261029_order_stages.sql` |
 
 > **RPC `get_customer_purchase_count(p_tenant_id bigint, p_phone text) → int`** (SECURITY DEFINER, grant anon):
 > gate "crédito después de N compras" del checkout público. Cuenta órdenes `completed|credit` del tenant

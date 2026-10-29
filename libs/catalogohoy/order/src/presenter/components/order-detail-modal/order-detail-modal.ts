@@ -21,6 +21,7 @@ import {
   SelectItemDirective,
   SelectSelectedItemDirective,
   UploaderComponent,
+  DialogService,
 } from '@ui';
 import { ProfileStore } from '@catalogohoy/profile';
 import { SupabaseClientProvider } from '@catalogohoy/core';
@@ -29,9 +30,17 @@ import {
   effectiveOrderBs,
   InternalNote,
   Order,
-  OrderStatus,
 } from '../../../domain/order';
 import { OrderStore } from '../../../infrastructure/order.store';
+import { OrderStageStore } from '../../../infrastructure/order-stage.store';
+import {
+  NEW_STAGE_KEY,
+  OrderStatusDef,
+  OrderStatusKey,
+  resolveStatusKey,
+  statusKeyOf,
+} from '../../../domain/order-stage';
+import { openOrderStagesEditor } from '../order-stages-modal/order-stages-modal';
 
 /** Modal de detalle de una orden. Se abre vía DialogService desde el listado
  *  (botón "ojo") y desde el deep-link `?order=ID` (botón "Ver pedido" de las
@@ -81,8 +90,14 @@ export class OrderDetailModal {
     this.order.totalUsd > 0 ? this.effectiveBs() / this.order.totalUsd : 0
   );
 
-  /** Live status — updated in place when the user changes it from the modal. */
-  public readonly status = signal<OrderStatus>(this.order.status);
+  private readonly stageStore = inject(OrderStageStore);
+
+  /** Live status — updated in place when the user changes it from the modal.
+   *  Es la clave del selector (estado base o `stage:<id>`). */
+  private readonly changedStatus = signal<OrderStatusKey | null>(null);
+  public readonly status = computed<OrderStatusKey>(
+    () => this.changedStatus() ?? statusKeyOf(this.order, this.stageStore.defs())
+  );
   public readonly isUpdating = signal(false);
 
   /** Internal team notes thread (admin-only, chat-style). */
@@ -128,6 +143,8 @@ export class OrderDetailModal {
 
   constructor() {
     const destroyRef = inject(DestroyRef);
+    // Por si el modal se abre directo (deep-link) sin pasar por la lista.
+    this.stageStore.load();
 
     if (typeof window !== 'undefined') {
       const mql = window.matchMedia('(min-width: 1024px)');
@@ -220,27 +237,45 @@ export class OrderDetailModal {
     this.isSavingNotes.set(false);
   }
 
-  public readonly statusOptions: { label: string; value: OrderStatus }[] = [
-    { label: 'Pendiente', value: 'pending' },
-    { label: 'Completada', value: 'completed' },
-    { label: 'A crédito', value: 'credit' },
-    { label: 'Cancelada', value: 'cancelled' },
-  ];
+  /** Estados visibles (+ el actual si está oculto) y "+ Crear estado". */
+  public readonly statusSelectOptions = computed(() =>
+    this.stageStore.optionsFor(this.status())
+  );
+  protected readonly NEW_STAGE_KEY = NEW_STAGE_KEY;
+  private readonly dialogService = inject(DialogService);
 
-  async onStatusChange(newStatus: OrderStatus): Promise<void> {
+  /** Color del estado actual (para el badge del selector). */
+  public readonly statusColor = computed(
+    () => this.stageStore.def(this.status())?.color ?? '#9ca3af'
+  );
+
+  async onStatusChange(newStatus: OrderStatusKey | typeof NEW_STAGE_KEY): Promise<void> {
+    if (newStatus === NEW_STAGE_KEY) {
+      // "+ Crear estado": crea uno y deja la orden en él.
+      const ref = openOrderStagesEditor(this.dialogService, true);
+      ref?.onClose.subscribe((created?: OrderStatusDef) => {
+        if (created) this.onStatusChange(created.key);
+      });
+      return;
+    }
     const current = this.status();
     if (newStatus === current || this.isUpdating()) return;
+    const defs = this.stageStore.defs();
+    const from = resolveStatusKey(current, defs);
+    const target = resolveStatusKey(newStatus, defs);
+    if (!target) return;
 
     this.isUpdating.set(true);
     const result = await this.orderStore.updateOrderStatus(
       this.order.id,
-      current,
-      newStatus
+      from?.status ?? this.order.status,
+      target.status,
+      target.stageId
     );
     result.fold(
       (error) => this.toastService.error(new Exception(error)),
       () => {
-        this.status.set(newStatus);
+        this.changedStatus.set(newStatus);
         this.toastService.success(
           `Estado actualizado a "${this.getStatusLabel(newStatus)}"`
         );
@@ -253,28 +288,16 @@ export class OrderDetailModal {
     this.ref.close();
   }
 
-  getStatusLabel(status: OrderStatus): string {
-    const labels: Record<OrderStatus, string> = {
-      pending: 'Pendiente',
-      completed: 'Completada',
-      credit: 'A crédito',
-      cancelled: 'Cancelada',
-    };
-    return labels[status] ?? status;
+  getStatusLabel(key: OrderStatusKey): string {
+    return this.stageStore.def(key)?.label ?? key;
   }
 
-  getStatusBadgeClass(_status: OrderStatus): string {
+  getStatusBadgeClass(): string {
     return 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white border border-grey-100 text-grey-700';
   }
 
-  getStatusDotClass(status: OrderStatus): string {
-    const colors: Record<OrderStatus, string> = {
-      pending: 'bg-orange-400',
-      completed: 'bg-green-500',
-      credit: 'bg-blue-500',
-      cancelled: 'bg-red-500',
-    };
-    return `w-2 h-2 rounded-full shrink-0 ${colors[status] ?? 'bg-grey-400'}`;
+  getStatusDotClass(): string {
+    return 'w-2 h-2 rounded-full shrink-0';
   }
 
   getPaymentMethodLabel(method: string): string {

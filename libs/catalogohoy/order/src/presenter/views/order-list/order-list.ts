@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import {
   Component,
   computed,
+  effect,
+  ElementRef,
   inject,
   OnDestroy,
   OnInit,
@@ -56,6 +58,17 @@ import {
   OrderStatus,
   overdueInstallment,
 } from '../../../domain/order';
+import {
+  BASE_STATUS_META,
+  NEW_STAGE_KEY,
+  OrderStatusDef,
+  OrderStatusKey,
+  resolveStatusKey,
+  statusKeyOf,
+} from '../../../domain/order-stage';
+import { OrderStageStore } from '../../../infrastructure/order-stage.store';
+import { openOrderStagesEditor } from '../../components/order-stages-modal/order-stages-modal';
+import { OrderBoardComponent } from '../../components/order-board/order-board';
 import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import {
   CreditSummaryRow,
@@ -69,10 +82,13 @@ import { OrderStore } from '../../../infrastructure/order.store';
 
 type FilterTab = {
   label: string;
-  value: OrderStatus | 'all';
-  /** Tailwind bg color class for the colored dot matching the status badge. */
-  dotClass?: string;
+  value: OrderStatusKey | 'all';
+  /** Color (hex) del punto, igual al del badge del estado. */
+  color?: string;
 };
+/** Órdenes como tabla o como tablero (columnas por estado). */
+type OrderViewMode = 'list' | 'board';
+const VIEW_MODE_KEY = 'orders.viewMode';
 type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
 /** Presets del selector de rango del tab de Métricas. */
 type MetricsPreset = 'today' | 'last_7' | 'last_30' | 'last_90' | 'custom';
@@ -98,6 +114,7 @@ type MetricsPreset = 'today' | 'last_7' | 'last_30' | 'last_90' | 'custom';
     PaginatorModule,
     NgApexchartsModule,
     OrderImportExportHubComponent,
+    OrderBoardComponent,
   ],
   templateUrl: './order-list.html',
   styleUrl: './order-list.css',
@@ -112,6 +129,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private readonly confirmDialogService = inject(ConfirmDialogService);
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
+  public readonly stageStore = inject(OrderStageStore);
   private readonly configStore = inject(EcommerceConfigStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
@@ -571,7 +589,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private searchSubscription?: Subscription;
 
   public readonly searchQuery = signal('');
-  public readonly selectedFilter = signal<OrderStatus | 'all'>('all');
+  public readonly selectedFilter = signal<OrderStatusKey | 'all'>('all');
   public readonly selectedOrder = signal<OrderBy>('date_desc');
   public readonly selectedDate = signal<Date | null>(null);
   public readonly isProcessing = signal(false);
@@ -662,23 +680,114 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly pageFirst = signal(0);
   public readonly pageRows = signal(10);
 
-  public readonly filterTabs: FilterTab[] = [
-    { label: 'Todas', value: 'all' },
-    { label: 'Pendientes', value: 'pending', dotClass: 'bg-orange-500' },
-    { label: 'Completadas', value: 'completed', dotClass: 'bg-green-500' },
-    { label: 'A crédito', value: 'credit', dotClass: 'bg-blue-500' },
-    { label: 'Canceladas', value: 'cancelled', dotClass: 'bg-red-500' },
-  ];
+  /** Plural de los filtros de los estados base. */
+  private readonly baseFilterLabels: Record<OrderStatus, string> = {
+    pending: 'Pendientes',
+    completed: 'Completadas',
+    credit: 'A crédito',
+    cancelled: 'Canceladas',
+  };
 
-  public readonly statusOptions: {
-    label: string;
-    value: OrderStatus;
-  }[] = [
-    { label: 'Pendiente', value: 'pending' },
-    { label: 'Completada', value: 'completed' },
-    { label: 'A crédito', value: 'credit' },
-    { label: 'Cancelada', value: 'cancelled' },
-  ];
+  /** Todas + un filtro por estado visible (base y propios de la tienda). Los
+   *  base sin renombrar usan el plural ("Pendientes"). */
+  public readonly filterTabs = computed<FilterTab[]>(() => [
+    { label: 'Todas', value: 'all' },
+    ...this.stageStore.visibleDefs().map((d) => ({
+      label:
+        d.system && d.label === BASE_STATUS_META[d.baseStatus].label
+          ? this.baseFilterLabels[d.baseStatus]
+          : d.label,
+      value: d.key,
+      color: d.color,
+    })),
+  ]);
+
+  /** Opciones del selector de estado de una orden: los visibles (+ el suyo
+   *  si está oculto) y "+ Crear estado" al final para quien puede editar. */
+  statusSelectOptions(order: Order) {
+    const options = this.stageStore.optionsFor(this.statusKey(order));
+    return this.canEditOrder() ? options : this.stageStore.visibleOptions();
+  }
+  protected readonly NEW_STAGE_KEY = NEW_STAGE_KEY;
+
+  /** Clave del estado que muestra el selector de una orden. */
+  statusKey(order: Order): OrderStatusKey {
+    return statusKeyOf(order, this.stageStore.defs());
+  }
+
+  /** Color (hex) del punto de un estado. */
+  statusColor(key: OrderStatusKey): string {
+    return (
+      this.stageStore.def(key)?.color ??
+      BASE_STATUS_META[key as OrderStatus]?.color ??
+      '#9ca3af'
+    );
+  }
+
+  /** Abre el editor de estados de la tienda (nombre, color, checks, ocultar). */
+  openStagesEditor() {
+    const ref = openOrderStagesEditor(this.dialogService);
+    ref?.onClose.subscribe(() => {
+      // Si borró u ocultó el estado que estaba filtrando, volver a Todas.
+      const f = this.selectedFilter();
+      if (f !== 'all' && !this.stageStore.visibleDefs().some((d) => d.key === f)) {
+        this.selectedFilter.set('all');
+      }
+      this.reloadOrders();
+    });
+  }
+
+  // ── Carrusel de estados (filtros) ─────────────────────────────────────────
+  private readonly chipsRef = viewChild<ElementRef<HTMLElement>>('chips');
+  public readonly chipsCanLeft = signal(false);
+  public readonly chipsCanRight = signal(false);
+
+  private readonly chipsArrowsEffect = effect((onCleanup) => {
+    const el = this.chipsRef()?.nativeElement;
+    this.filterTabs();
+    if (!el) return;
+    const observer = new ResizeObserver(() => this.updateChipArrows());
+    observer.observe(el);
+    const timer = setTimeout(() => this.updateChipArrows());
+    onCleanup(() => {
+      observer.disconnect();
+      clearTimeout(timer);
+    });
+  });
+
+  updateChipArrows() {
+    const el = this.chipsRef()?.nativeElement;
+    if (!el) return;
+    this.chipsCanLeft.set(el.scrollLeft > 2);
+    this.chipsCanRight.set(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  }
+
+  scrollChips(direction: -1 | 1) {
+    const el = this.chipsRef()?.nativeElement;
+    el?.scrollBy({ left: direction * el.clientWidth * 0.7, behavior: 'smooth' });
+  }
+
+  // ── Vista lista / tablero ─────────────────────────────────────────────────
+  public readonly viewMode = signal<OrderViewMode>(this.readViewMode());
+  private readonly board = viewChild(OrderBoardComponent);
+
+  setViewMode(mode: OrderViewMode) {
+    this.viewMode.set(mode);
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, mode);
+    } catch {
+      // Sin storage: solo dura esta visita.
+    }
+    if (mode === 'list') this.reloadOrders();
+  }
+
+  private readViewMode(): OrderViewMode {
+    try {
+      return localStorage.getItem(VIEW_MODE_KEY) === 'board' ? 'board' : 'list';
+    } catch {
+      return 'list';
+    }
+  }
 
   public readonly orderOptions: {
     label: string;
@@ -717,6 +826,8 @@ export class OrderListComponent implements OnInit, OnDestroy {
       this.tenantCurrency.load(tenantId);
       this.loadProductCosts(tenantId);
     }
+    // Estados propios de la tienda (Despacho, Revisión...) para filtros y selectores.
+    this.stageStore.load();
     // Tasa activa: para mostrar el Bs de los pedidos pendientes a la tasa de hoy.
     this.rateStore.loadRates();
 
@@ -766,7 +877,11 @@ export class OrderListComponent implements OnInit, OnDestroy {
         contentStyle: { padding: '0', overflow: 'hidden' },
       })
     );
-    ref?.onClose.subscribe(() => this.clearOrderParam());
+    ref?.onClose.subscribe(() => {
+      this.clearOrderParam();
+      // El detalle puede cambiar estado, montos o borrar: refrescar el tablero.
+      this.board()?.reload();
+    });
   }
 
   private setOrderParam(orderId: number): void {
@@ -900,7 +1015,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
     this.router.navigate(['/admin/orders/edit', order.id]);
   }
 
-  selectFilter(filter: OrderStatus | 'all') {
+  selectFilter(filter: OrderStatusKey | 'all') {
     this.selectedFilter.set(filter);
     this.pageFirst.set(0);
     this.reloadOrders();
@@ -915,14 +1030,26 @@ export class OrderListComponent implements OnInit, OnDestroy {
   reloadOrders() {
     const date = this.selectedDate() ?? undefined;
     const search = this.searchQuery() || undefined;
-    const status = this.selectedFilter();
+    const { status, stageId } = this.filterQuery();
     const orderBy = this.selectedOrder();
     const pageSize = this.pageRows();
     const page = Math.floor(this.pageFirst() / pageSize) + 1;
-    this.orderStore.loadOrders({ date, search, status, orderBy, page, pageSize });
+    this.orderStore.loadOrders({ date, search, status, stageId, orderBy, page, pageSize });
     // La barra "por cobrar" del filtro A crédito se refresca junto con la tabla
     // (también cubre los cambios de estado, que terminan llamando acá).
     if (status === 'credit') this.refreshCreditSummary();
+  }
+
+  /** Filtro seleccionado → query. Un estado base muestra solo las órdenes que
+   *  NO están en un estado propio (cada orden aparece en una sola columna). */
+  private filterQuery(): { status: OrderStatus | 'all'; stageId?: string | null } {
+    const filter = this.selectedFilter();
+    if (filter === 'all') return { status: 'all' };
+    const resolved = resolveStatusKey(filter, this.stageStore.defs());
+    if (!resolved) return { status: 'all' };
+    const hasCustom = this.stageStore.defs().some((d) => !d.system);
+    if (!resolved.stageId && !hasCustom) return { status: resolved.status };
+    return { status: resolved.status, stageId: resolved.stageId };
   }
 
   onDateChange(date: Date | null) {
@@ -950,28 +1077,16 @@ export class OrderListComponent implements OnInit, OnDestroy {
     }
   }
 
-  getStatusLabel(status: OrderStatus): string {
-    const labels: Record<OrderStatus, string> = {
-      pending: 'Pendiente',
-      completed: 'Completada',
-      credit: 'A crédito',
-      cancelled: 'Cancelada',
-    };
-    return labels[status] || status;
+  getStatusLabel(key: OrderStatusKey): string {
+    return this.stageStore.def(key)?.label ?? key;
   }
 
-  getStatusBadgeClass(_status: OrderStatus): string {
+  getStatusBadgeClass(): string {
     return 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white border border-grey-100 text-grey-700';
   }
 
-  getStatusDotClass(status: OrderStatus): string {
-    const colors: Record<OrderStatus, string> = {
-      pending: 'bg-orange-400',
-      completed: 'bg-green-500',
-      credit: 'bg-blue-500',
-      cancelled: 'bg-red-500',
-    };
-    return `w-2 h-2 rounded-full shrink-0 ${colors[status] ?? 'bg-grey-400'}`;
+  getStatusDotClass(): string {
+    return 'w-2 h-2 rounded-full shrink-0';
   }
 
   /** Etiqueta legible del método de pago guardado en la orden (mismo criterio
@@ -990,8 +1105,8 @@ export class OrderListComponent implements OnInit, OnDestroy {
   }
 
   /** Etiqueta i18n del estado de la orden (para el badge estático del desglose). */
-  statusLabel(status: OrderStatus): string {
-    return this.statusOptions.find((o) => o.value === status)?.label ?? status;
+  statusLabel(order: Order): string {
+    return this.getStatusLabel(this.statusKey(order));
   }
 
   /** Carga el costo de producción ACTUAL de los productos del tenant, para
@@ -1043,19 +1158,30 @@ export class OrderListComponent implements OnInit, OnDestroy {
     return `https://wa.me/${cleanPhone}`;
   }
 
-  async onStatusChange(order: Order, newStatus: OrderStatus) {
-    if (newStatus === order.status || this.isProcessing()) return;
+  async onStatusChange(order: Order, newKey: OrderStatusKey | typeof NEW_STAGE_KEY) {
+    if (newKey === NEW_STAGE_KEY) {
+      // "+ Crear estado": crea uno y deja la orden en él.
+      const ref = openOrderStagesEditor(this.dialogService, true);
+      ref?.onClose.subscribe((created?: OrderStatusDef) => {
+        if (created) this.onStatusChange(order, created.key);
+      });
+      return;
+    }
+    if (newKey === this.statusKey(order) || this.isProcessing()) return;
+    const target = resolveStatusKey(newKey, this.stageStore.defs());
+    if (!target) return;
 
     this.isProcessing.set(true);
     const result = await this.orderStore.updateOrderStatus(
       order.id,
       order.status,
-      newStatus
+      target.status,
+      target.stageId
     );
     result.fold(
       (error) => this.toastService.error(new Exception(error)),
       () => {
-        const label = this.getStatusLabel(newStatus);
+        const label = this.getStatusLabel(newKey);
         this.toastService.success(`Estado actualizado a "${label}"`);
       }
     );
@@ -1137,7 +1263,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
       const orders = await this.orderStore.fetchAllForExport({
         date: this.selectedDate() ?? undefined,
         search: this.searchQuery() || undefined,
-        status: this.selectedFilter(),
+        ...this.filterQuery(),
         orderBy: this.selectedOrder(),
       });
       if (orders.length === 0) {
