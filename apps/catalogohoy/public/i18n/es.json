@@ -2825,5 +2825,6 @@
   "Tablero": "Tablero",
   "Todos los estados": "Todos los estados",
   "Ver más ({count})": "Ver más ({count})",
-  "{count} productos": "{count} productos"
+  "{count} productos": "{count} productos",
+  "Arrastra para ordenar": "Arrastra para ordenar"
 }

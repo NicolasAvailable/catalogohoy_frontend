@@ -1,3 +1,4 @@
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -44,7 +45,7 @@ export function openOrderStagesEditor(
 @Component({
   selector: 'lib-order-stages-modal',
   standalone: true,
-  imports: [FormsModule, TranslocoPipe, IconComponent, ButtonComponent],
+  imports: [FormsModule, DragDropModule, TranslocoPipe, IconComponent, ButtonComponent],
   templateUrl: './order-stages-modal.html',
 })
 export class OrderStagesModal {
@@ -170,13 +171,11 @@ export class OrderStagesModal {
     );
   }
 
-  move(item: DraftItem, direction: -1 | 1, event?: Event) {
-    event?.stopPropagation();
+  /** Reordenar arrastrando en la lista. */
+  drop(event: CdkDragDrop<DraftItem[]>) {
+    if (event.previousIndex === event.currentIndex) return;
     const list = [...this.items()];
-    const from = list.findIndex((i) => i.uid === item.uid);
-    const to = from + direction;
-    if (from < 0 || to < 0 || to >= list.length) return;
-    [list[from], list[to]] = [list[to], list[from]];
+    moveItemInArray(list, event.previousIndex, event.currentIndex);
     this.items.set(list);
   }
 

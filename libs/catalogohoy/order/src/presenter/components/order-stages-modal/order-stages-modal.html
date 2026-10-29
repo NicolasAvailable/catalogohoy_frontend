@@ -22,16 +22,31 @@
     <div
       [class]="'flex-col w-full md:w-72 md:border-r border-grey-100 bg-grey-50/50 min-h-0 ' + (selected() ? 'hidden md:flex' : 'flex')"
     >
-      <div class="flex-1 overflow-y-auto p-3 flex flex-col gap-1">
-        @for (item of items(); track item.uid; let first = $first; let last = $last) {
+      <div
+        class="stages-list flex-1 overflow-y-auto p-3 flex flex-col gap-1"
+        cdkDropList
+        cdkDropListLockAxis="y"
+        (cdkDropListDropped)="drop($event)"
+      >
+        @for (item of items(); track item.uid) {
         <div
+          cdkDrag
+          cdkDragBoundary=".stages-list"
+          [cdkDragStartDelay]="{ touch: 200, mouse: 0 }"
           role="button"
           tabindex="0"
           (click)="select(item.uid)"
           (keydown.enter)="select(item.uid)"
-          [class]="'group flex items-center gap-2.5 pl-3 pr-1.5 py-2 rounded-lg cursor-pointer transition-colors border ' +
+          [class]="'group flex items-center gap-2 pl-1.5 pr-3 py-2 rounded-lg cursor-pointer transition-colors border ' +
             (selectedUid() === item.uid ? 'bg-white border-primary-300 shadow-sm' : 'border-transparent hover:bg-white')"
         >
+          <span
+            cdkDragHandle
+            class="p-0.5 text-grey-300 group-hover:text-grey-500 cursor-grab active:cursor-grabbing shrink-0"
+            [attr.aria-label]="'Arrastra para ordenar' | transloco"
+          >
+            <ui-icon name="grip-vertical" styleClass="size-4" />
+          </span>
           <span
             class="w-2.5 h-2.5 rounded-full shrink-0"
             [style.background-color]="item.color"
@@ -42,29 +57,13 @@
           >
             {{ item.label || ('Nuevo estado' | transloco) }}
           </span>
+          @if (item.hidden) {
+          <ui-icon name="eye-off" styleClass="size-3.5 text-grey-400 shrink-0" />
+          }
           @if (item.system) {
           <span class="text-[10px] uppercase tracking-wide text-grey-400 shrink-0">{{ 'Base' | transloco }}</span>
           }
-          <div class="flex items-center shrink-0">
-            <button
-              type="button"
-              class="p-1 rounded text-grey-400 hover:text-grey-700 cursor-pointer disabled:opacity-20 disabled:cursor-default"
-              [disabled]="first"
-              (click)="move(item, -1, $event)"
-              [attr.aria-label]="'Subir' | transloco"
-            >
-              <ui-icon name="chevron-up" styleClass="size-3.5" />
-            </button>
-            <button
-              type="button"
-              class="p-1 rounded text-grey-400 hover:text-grey-700 cursor-pointer disabled:opacity-20 disabled:cursor-default"
-              [disabled]="last"
-              (click)="move(item, 1, $event)"
-              [attr.aria-label]="'Bajar' | transloco"
-            >
-              <ui-icon name="chevron-down" styleClass="size-3.5" />
-            </button>
-          </div>
+          <div *cdkDragPlaceholder class="h-9 rounded-lg border-2 border-dashed border-primary-300 bg-primary-50/50"></div>
         </div>
         }
       </div>
