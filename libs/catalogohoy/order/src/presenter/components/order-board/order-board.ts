@@ -3,11 +3,14 @@ import {
   DragDropModule,
   transferArrayItem,
 } from '@angular/cdk/drag-drop';
+import { CdkScrollable } from '@angular/cdk/scrolling';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import {
   Component,
   computed,
   effect,
+  ElementRef,
+  viewChild,
   inject,
   input,
   output,
@@ -43,6 +46,7 @@ const PAGE_SIZE = 30;
   standalone: true,
   imports: [
     DragDropModule,
+    CdkScrollable,
     DatePipe,
     DecimalPipe,
     TranslocoPipe,
@@ -84,6 +88,15 @@ export class OrderBoardComponent {
       if (!this.stagesReady()) return;
       untracked(() => this.loadAll(defs));
     });
+  }
+
+  private readonly boardScroll = viewChild<ElementRef<HTMLElement>>('boardScroll');
+
+  /** Móvil: lleva el tablero a la columna elegida en los chips de arriba. */
+  scrollToColumn(index: number) {
+    const el = this.boardScroll()?.nativeElement;
+    const col = el?.querySelectorAll<HTMLElement>('[data-board-column]')[index];
+    if (el && col) el.scrollTo({ left: col.offsetLeft - 12, behavior: 'smooth' });
   }
 
   /** "Nueva columna": crea un estado; al guardarse el tablero se recarga solo
