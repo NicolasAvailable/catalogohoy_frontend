@@ -38,12 +38,13 @@ function lineLabel(item: CartItem): string {
  * `CartStore.addProduct` para que una línea recién agregada no "cambie".
  *
  * `products` trae solo los productos que siguen existiendo en el catálogo; un
- * id ausente = eliminado.
+ * id ausente = eliminado. Las líneas agotadas/eliminadas NO se quitan: quedan
+ * marcadas `unavailable` para que el cliente las vea y las elimine.
  */
 export function revalidateCart(
   items: CartItem[],
   products: Product[],
-  options: { divisasPromo: boolean },
+  options: { divisasPromo: boolean }
 ): CartRevalidation {
   const byId = new Map(products.map((p) => [String(p.id), p]));
   const changes: CartChange[] = [];
@@ -54,13 +55,38 @@ export function revalidateCart(
 
   for (const item of items) {
     const label = lineLabel(item);
+    // La línea se queda en el carrito, deshabilitada (no suma ni va en la
+    // orden). Solo se avisa la primera vez que pasa a no disponible.
+    const unavailable = (kind: 'removed' | 'sold_out') => {
+      if (!item.unavailable) changes.push({ kind, name: label });
+      result.push(
+        new CartItem(
+          item.productId,
+          item.name,
+          item.description,
+          item.price,
+          item.photo,
+          item.quantity,
+          item.tierTitle,
+          item.id,
+          item.sku,
+          item.size,
+          item.variantId,
+          item.variantName,
+          item.addons,
+          item.maxStock,
+          item.divisasPrice,
+          true
+        )
+      );
+    };
     const product = byId.get(item.productId);
     if (!product || product.isHidden) {
-      changes.push({ kind: 'removed', name: label });
+      unavailable('removed');
       continue;
     }
     if (product.isSoldOut) {
-      changes.push({ kind: 'sold_out', name: label });
+      unavailable('sold_out');
       continue;
     }
 
@@ -70,10 +96,10 @@ export function revalidateCart(
     let variantPhoto: string | undefined;
     if (item.variantId) {
       const variant = (product.variants ?? []).find(
-        (v) => v.id === item.variantId,
+        (v) => v.id === item.variantId
       );
       if (!variant || variant.isHidden) {
-        changes.push({ kind: 'removed', name: label });
+        unavailable('removed');
         continue;
       }
       variantPrice = Number(variant.price) || 0;
@@ -81,7 +107,7 @@ export function revalidateCart(
       if (item.size && variant.sizes?.length) {
         const size = variant.sizes.find((s) => s.name === item.size);
         if (!size) {
-          changes.push({ kind: 'removed', name: label });
+          unavailable('removed');
           continue;
         }
         stock = toStock(size.stock);
@@ -91,7 +117,7 @@ export function revalidateCart(
     } else if (item.size && product.isSized) {
       const size = (product.sizes ?? []).find((s) => s.name === item.size);
       if (!size) {
-        changes.push({ kind: 'removed', name: label });
+        unavailable('removed');
         continue;
       }
       stock = toStock(size.stock);
@@ -112,10 +138,10 @@ export function revalidateCart(
     let name = item.name;
     if (item.tierTitle) {
       const tier = (product.wholesaleTiers ?? []).find(
-        (t) => t.title === item.tierTitle,
+        (t) => t.title === item.tierTitle
       );
       if (!tier) {
-        changes.push({ kind: 'removed', name: label });
+        unavailable('removed');
         continue;
       }
       price = Number(tier.price) || 0;
@@ -137,10 +163,12 @@ export function revalidateCart(
     // --- Cantidad dentro del stock disponible ---
     let quantity = item.quantity;
     if (stock !== null) {
-      const key = `${item.productId}|${item.variantId ?? ''}|${item.size ?? ''}`;
+      const key = `${item.productId}|${item.variantId ?? ''}|${
+        item.size ?? ''
+      }`;
       const left = Math.max(0, stock - (used.get(key) ?? 0));
       if (left <= 0) {
-        changes.push({ kind: 'sold_out', name: label });
+        unavailable('sold_out');
         continue;
       }
       if (quantity > left) {
@@ -181,8 +209,8 @@ export function revalidateCart(
         addons,
         // Las líneas de mayoreo se topan por el stock del producto (como al agregar).
         item.tierTitle ? toStock(product.stock) : stock,
-        divisasPrice,
-      ),
+        divisasPrice
+      )
     );
   }
 

@@ -2771,9 +2771,11 @@
   "Quedan {n}": "{n} left",
   "Actualizamos tu carrito": "We updated your cart",
   "Algunos productos cambiaron desde que los agregaste. Revisa tu pedido antes de continuar.": "Some products changed since you added them. Please review your order before continuing.",
-  "ya no está disponible y se quitó del carrito.": "is no longer available and was removed from your cart.",
-  "se agotó y se quitó del carrito.": "is sold out and was removed from your cart.",
+  "ya no está disponible.": "is no longer available.",
+  "se agotó.": "is sold out.",
   "solo quedan {n}, ajustamos la cantidad.": "only {n} left, we adjusted the quantity.",
   "el precio cambió": "the price changed",
-  "Algunos productos de tu carrito cambiaron o ya no tienen stock. Revisa tu pedido e intenta de nuevo.": "Some products in your cart changed or are out of stock. Please review your order and try again."
+  "Algunos productos de tu carrito cambiaron o ya no tienen stock. Revisa tu pedido e intenta de nuevo.": "Some products in your cart changed or are out of stock. Please review your order and try again.",
+  "Este producto ya no está disponible": "This product is no longer available",
+  "Ver otros productos": "See other products"
 }

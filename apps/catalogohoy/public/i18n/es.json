@@ -2771,9 +2771,11 @@
   "Quedan {n}": "Quedan {n}",
   "Actualizamos tu carrito": "Actualizamos tu carrito",
   "Algunos productos cambiaron desde que los agregaste. Revisa tu pedido antes de continuar.": "Algunos productos cambiaron desde que los agregaste. Revisa tu pedido antes de continuar.",
-  "ya no está disponible y se quitó del carrito.": "ya no está disponible y se quitó del carrito.",
-  "se agotó y se quitó del carrito.": "se agotó y se quitó del carrito.",
+  "ya no está disponible.": "ya no está disponible.",
+  "se agotó.": "se agotó.",
   "solo quedan {n}, ajustamos la cantidad.": "solo quedan {n}, ajustamos la cantidad.",
   "el precio cambió": "el precio cambió",
-  "Algunos productos de tu carrito cambiaron o ya no tienen stock. Revisa tu pedido e intenta de nuevo.": "Algunos productos de tu carrito cambiaron o ya no tienen stock. Revisa tu pedido e intenta de nuevo."
+  "Algunos productos de tu carrito cambiaron o ya no tienen stock. Revisa tu pedido e intenta de nuevo.": "Algunos productos de tu carrito cambiaron o ya no tienen stock. Revisa tu pedido e intenta de nuevo.",
+  "Este producto ya no está disponible": "Este producto ya no está disponible",
+  "Ver otros productos": "Ver otros productos"
 }

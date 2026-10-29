@@ -20,10 +20,10 @@
     <li>
       @switch (c.kind) {
       @case ('removed') {
-      <strong>{{ c.name }}</strong> {{ 'ya no está disponible y se quitó del carrito.' | transloco }}
+      <strong>{{ c.name }}</strong> {{ 'ya no está disponible.' | transloco }}
       }
       @case ('sold_out') {
-      <strong>{{ c.name }}</strong> {{ 'se agotó y se quitó del carrito.' | transloco }}
+      <strong>{{ c.name }}</strong> {{ 'se agotó.' | transloco }}
       }
       @case ('stock_reduced') {
       <strong>{{ c.name }}</strong>: {{ 'solo quedan {n}, ajustamos la cantidad.' | transloco: { n: c.newQuantity } }}

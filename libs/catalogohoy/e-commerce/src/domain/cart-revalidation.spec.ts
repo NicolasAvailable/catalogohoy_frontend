@@ -85,13 +85,14 @@ describe('revalidateCart', () => {
     expect(r.items[0].price).toBe(20);
   });
 
-  it('removes deleted and hidden products', () => {
+  it('keeps deleted and hidden products as unavailable lines', () => {
     const r = revalidateCart(
       [line(), line({ productId: '11' })],
       [product({ id: '11', isHidden: true })],
       opts
     );
-    expect(r.items).toHaveLength(0);
+    expect(r.items.map((i) => i.unavailable)).toEqual([true, true]);
+    expect(r.items.map((i) => i.total)).toEqual([0, 0]);
     expect(r.changes.map((c) => c.kind)).toEqual(['removed', 'removed']);
   });
 
@@ -123,13 +124,13 @@ describe('revalidateCart', () => {
     expect(r.items[0].divisasPrice).toBe(15);
   });
 
-  it('drops sold-out products and caps quantity to the stock left', () => {
+  it('marks sold-out products unavailable and caps quantity to the stock left', () => {
     const soldOut = revalidateCart(
       [line()],
       [product({ isSoldOut: true })],
       opts
     );
-    expect(soldOut.items).toHaveLength(0);
+    expect(soldOut.items[0].unavailable).toBe(true);
     expect(soldOut.changes[0].kind).toBe('sold_out');
 
     const zero = revalidateCart([line()], [product({ stock: '0' })], opts);
@@ -174,7 +175,7 @@ describe('revalidateCart', () => {
     expect(r.changes.map((c) => c.kind)).toEqual(['stock_reduced']);
   });
 
-  it('removes lines whose size or variant no longer exists', () => {
+  it('marks lines whose size or variant no longer exists as unavailable', () => {
     const r = revalidateCart(
       [line({ size: 'XL' }), line({ variantId: 'v1', variantName: 'Rojo' })],
       [
@@ -198,7 +199,8 @@ describe('revalidateCart', () => {
       ],
       opts
     );
-    expect(r.items).toHaveLength(0);
+    expect(r.items.map((i) => i.unavailable)).toEqual([true, true]);
+    expect(r.items.map((i) => i.total)).toEqual([0, 0]);
     expect(r.changes.map((c) => c.kind)).toEqual(['removed', 'removed']);
   });
 
@@ -230,5 +232,16 @@ describe('revalidateCart', () => {
     expect(r.items.map((i) => i.price)).toEqual([32, 15]);
     expect(r.items[0].maxStock).toBe(4);
     expect(r.changes.map((c) => c.kind)).toEqual(['price_changed']);
+  });
+
+  it('reports an unavailable line only once and re-enables it when stock returns', () => {
+    const first = revalidateCart([line()], [product({ stock: '0' })], opts);
+    const again = revalidateCart(first.items, [product({ stock: '0' })], opts);
+    expect(again.changes).toEqual([]);
+    expect(again.items[0].unavailable).toBe(true);
+
+    const back = revalidateCart(again.items, [product({ stock: '5' })], opts);
+    expect(back.items[0].unavailable).toBe(false);
+    expect(back.items[0].total).toBe(20);
   });
 });

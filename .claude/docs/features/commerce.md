@@ -37,7 +37,10 @@
     pagar", al entrar al checkout y justo antes de crear la orden, `CartStore.revalidate()` trae
     los productos actuales (`getCartProducts`) y `revalidateCart()` (domain) recalcula precio
     (promo, variante, mayoreo, adicionales, promo en divisas), stock (compartido por
-    producto+variante+talla) y quita eliminados/ocultos/agotados. Los cambios se muestran en
+    producto+variante+talla). Eliminados/ocultos/agotados NO se quitan: quedan como línea
+    `unavailable` (gris, "Este producto ya no está disponible", botones Eliminar / Ver otros
+    productos; pedido de Nicolas 2026-10-29), no suman al total ni van en la orden
+    (`availableItems`), y se rehabilitan solos si vuelve el stock. Los cambios se muestran en
     `<lib-cart-changes-notice>`. Si la consulta falla se sigue (fail-open). Red de seguridad en
     el servidor: trigger `trg_orders_validate_public_cart` (BEFORE INSERT, solo
     `source='public'` y rol anon/authenticated) usa `public_cart_issues(tenant, items)` y

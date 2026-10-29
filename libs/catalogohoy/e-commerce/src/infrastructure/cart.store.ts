@@ -71,6 +71,7 @@ function saveCartToStorage(cart: Cart): void {
       divisasPrice: item.divisasPrice,
       // Tope de stock: sin esto se perdía al recargar y el "+" quedaba libre.
       maxStock: item.maxStock,
+      unavailable: item.unavailable,
     }));
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   } catch {
@@ -144,6 +145,9 @@ export const CartStore = signalStore(
     totalPrice: computed(() => store.cart().total),
     isEmpty: computed(() => store.cart().isEmpty),
     items: computed(() => store.cart().items),
+    /** Líneas comprables: lo que va en la orden, el total y el mensaje. */
+    availableItems: computed(() => store.cart().availableItems),
+    hasAvailable: computed(() => store.cart().availableItems.length > 0),
     /** Ahorro total del carrito si paga en divisas (promo en divisas). */
     divisasSavings: computed(() => {
       const raw = store
@@ -248,7 +252,7 @@ export const CartStore = signalStore(
             // separado (antes mezclaba variantes bajo el mismo producto).
             const currentInCart = store
               .cart()
-              .items.filter(
+              .availableItems.filter(
                 (i) =>
                   i.productId === String(product.id) &&
                   i.size === size &&
@@ -326,7 +330,7 @@ export const CartStore = signalStore(
             }
             const currentInCart = store
               .cart()
-              .items.filter((i) => i.productId === String(product.id))
+              .availableItems.filter((i) => i.productId === String(product.id))
               .reduce((sum, i) => sum + i.quantity, 0);
             if (currentInCart >= stock) {
               toast.error(
@@ -376,6 +380,7 @@ export const CartStore = signalStore(
           // El "+" del carrito respeta el stock: no deja pasar del tope guardado al
           // agregar (antes incrementaba sin límite y se pedían más de las que hay).
           const current = store.cart().items.find((i) => i.id === itemId);
+          if (current?.unavailable) return;
           if (current?.isAtStockLimit) {
             toast.error(
               transloco.translate(

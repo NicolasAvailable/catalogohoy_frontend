@@ -66,7 +66,7 @@ export class CartDrawer {
     // cambios, el cliente los ve aquí antes de pagar. Si no hay red se sigue;
     // el servidor vuelve a validar al crear la orden.
     const changes = await this.cartStore.revalidate();
-    if (changes?.length || this.cartStore.isEmpty()) return;
+    if (changes?.length || !this.cartStore.hasAvailable()) return;
 
     // Meta Pixel del catálogo: el comprador arranca el checkout (no-op si el
     // catálogo no tiene pixel / plan no pago).

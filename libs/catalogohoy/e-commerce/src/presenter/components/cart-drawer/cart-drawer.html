@@ -47,7 +47,7 @@
       } @else {
       <div class="cart-drawer__items">
         @for (item of cartStore.items(); track item.id) {
-        <div class="cart-item">
+        <div class="cart-item" [class.cart-item--unavailable]="item.unavailable">
           <img
             class="cart-item__image"
             [src]="item.photo || 'assets/placeholder-product.png'"
@@ -71,8 +71,21 @@
               }
             </span>
             }
+            @if (item.unavailable) {
+            <span class="cart-item__unavailable">{{ 'Este producto ya no está disponible' | transloco }}</span>
+            <div class="cart-item__unavailable-actions">
+              <button type="button" class="cart-item__remove" (click)="onRemove(item)">
+                <ui-icon name="trash-2" styleClass="size-4" />
+                {{ 'Eliminar' | transloco }}
+              </button>
+              <button type="button" class="cart-item__browse" (click)="onClose()">
+                {{ 'Ver otros productos' | transloco }}
+              </button>
+            </div>
+            } @else {
             <p class="cart-item__description">{{ item.description | stripHtml }}</p>
-            @if (ecommerceStore.showStock() && item.maxStock !== null) {
+            }
+            @if (!item.unavailable && ecommerceStore.showStock() && item.maxStock !== null) {
             <span class="cart-item__stock">{{ 'Stock: {n}' | transloco: { n: item.maxStock } }}</span>
             }
             <span class="cart-item__price">
@@ -84,6 +97,7 @@
               }
             </span>
           </div>
+          @if (!item.unavailable) {
           <div class="cart-item__actions">
             <button class="cart-item__qty-btn" (click)="onDecrement(item)">
               <ui-icon name="minus" styleClass="size-4" />
@@ -109,12 +123,13 @@
               <ui-icon name="plus" styleClass="size-4" />
             </button>
           </div>
+          }
         </div>
         }
       </div>
       }
     </div>
-    @if (!cartStore.isEmpty()) {
+    @if (cartStore.hasAvailable()) {
     <footer class="cart-drawer__footer">
       <button class="cart-drawer__checkout-btn" (click)="onProceedToCheckout()">
         <div class="cart-drawer__checkout-count">

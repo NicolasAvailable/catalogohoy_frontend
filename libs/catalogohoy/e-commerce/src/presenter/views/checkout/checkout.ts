@@ -456,10 +456,11 @@ export default class Checkout {
     // and we stay on the confirm/sent screens.
     effect(() => {
       if (this.isPreview) return;
-      if (this.phase() === 'form' && this.cartStore.isEmpty()) {
-        // Si se vació porque todo se agotó/eliminó al revalidar, se abre el
-        // carrito en la tienda para que el cliente vea el aviso.
-        if (untracked(() => this.cartStore.changes().length)) {
+      if (this.phase() === 'form' && !this.cartStore.hasAvailable()) {
+        // Si no queda nada comprable porque se agotó/eliminó al revalidar, se
+        // abre el carrito en la tienda: ahí el cliente ve los productos no
+        // disponibles y puede eliminarlos o ver otros.
+        if (!untracked(() => this.cartStore.isEmpty())) {
           untracked(() => this.cartStore.openCart());
         }
         this.router.navigate(['/'], { queryParamsHandling: 'preserve' });
@@ -625,7 +626,7 @@ export default class Checkout {
       if (this.deliveryDateIsBlocked()) return false;
     }
 
-    return !this.cartStore.isEmpty();
+    return this.cartStore.hasAvailable();
   }
 
   private isValidEmail(value: string): boolean {
@@ -660,7 +661,9 @@ export default class Checkout {
       return;
     }
 
-    const items = this.cartStore.items();
+    // Solo las líneas comprables: las no disponibles se quedan en el carrito
+    // (deshabilitadas) pero no van en la orden ni en el mensaje.
+    const items = this.cartStore.availableItems();
     const subtotal = this.subtotal();
     const fee = this.shippingFee();
     const total = this.total();
