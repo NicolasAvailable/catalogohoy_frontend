@@ -70,7 +70,8 @@ export const OrderStageStore = signalStore(
           patchState(store, { isLoading: true });
           const result = await service.list(tenantId);
           result.fold(
-            () => patchState(store, { isLoading: false }),
+            // Si falla, se sigue con los estados base (no bloquear el tablero).
+            () => patchState(store, { loadedTenantId: tenantId, isLoading: false }),
             (rows) =>
               patchState(store, { rows, loadedTenantId: tenantId, isLoading: false })
           );

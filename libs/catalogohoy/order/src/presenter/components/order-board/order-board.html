@@ -1,5 +1,28 @@
 <div class="flex-1 min-h-0 overflow-x-auto overflow-y-hidden h-[70vh] sm:h-auto">
   <div class="flex gap-3 p-4 h-full w-max" cdkDropListGroup>
+    @if (!stagesReady()) {
+    <!-- Esqueleto mientras cargan los estados -->
+    @for (c of skeletonColumns; track $index) {
+    <div class="flex flex-col w-72 shrink-0 h-full rounded-xl bg-grey-50 border border-grey-100 animate-pulse">
+      <div class="flex items-center gap-2 px-3 pt-3 pb-2">
+        <div class="w-2.5 h-2.5 rounded-full bg-grey-200"></div>
+        <div class="h-3.5 w-24 rounded bg-grey-200"></div>
+        <div class="ml-auto h-5 w-7 rounded-full bg-grey-200"></div>
+      </div>
+      <div class="mx-3 h-0.5 rounded-full bg-grey-200"></div>
+      <div class="flex flex-col gap-2 p-3">
+        @for (k of c; track $index) {
+          <div class="flex flex-col gap-2.5 p-3 rounded-lg bg-white border border-grey-100 animate-pulse">
+            <div class="flex justify-between"><div class="h-3 w-10 rounded bg-grey-100"></div><div class="h-3 w-16 rounded bg-grey-100"></div></div>
+            <div class="h-4 w-3/4 rounded bg-grey-100"></div>
+            <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-md bg-grey-100"></div><div class="h-3 flex-1 rounded bg-grey-100"></div></div>
+            <div class="flex justify-between pt-2 border-t border-grey-50"><div class="h-3 w-14 rounded bg-grey-100"></div><div class="h-4 w-16 rounded bg-grey-100"></div></div>
+          </div>
+        }
+      </div>
+    </div>
+    }
+    }
     @for (column of columns(); track column.def.key) {
     <div class="flex flex-col w-72 shrink-0 h-full rounded-xl bg-grey-50 border border-grey-100">
       <!-- Encabezado de la columna -->
@@ -79,9 +102,15 @@
         }
 
         @if (column.loading) {
-        <div class="flex justify-center py-3">
-          <ui-icon name="loader-circle" styleClass="size-4 text-grey-300 animate-spin" />
-        </div>
+          <!-- Esqueleto de tarjetas mientras cargan las órdenes -->
+          @for (k of column.orders.length ? [1] : [1, 2, 3]; track $index) {
+          <div class="flex flex-col gap-2.5 p-3 rounded-lg bg-white border border-grey-100 animate-pulse">
+            <div class="flex justify-between"><div class="h-3 w-10 rounded bg-grey-100"></div><div class="h-3 w-16 rounded bg-grey-100"></div></div>
+            <div class="h-4 w-3/4 rounded bg-grey-100"></div>
+            <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-md bg-grey-100"></div><div class="h-3 flex-1 rounded bg-grey-100"></div></div>
+            <div class="flex justify-between pt-2 border-t border-grey-50"><div class="h-3 w-14 rounded bg-grey-100"></div><div class="h-4 w-16 rounded bg-grey-100"></div></div>
+          </div>
+          }
         } @else if (column.orders.length < column.total) {
         <button
           type="button"

@@ -1,7 +1,12 @@
-import { CdkDragDrop, DragDropModule, transferArrayItem } from '@angular/cdk/drag-drop';
+import {
+  CdkDragDrop,
+  DragDropModule,
+  transferArrayItem,
+} from '@angular/cdk/drag-drop';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import {
   Component,
+  computed,
   effect,
   inject,
   input,
@@ -35,7 +40,14 @@ const PAGE_SIZE = 30;
 @Component({
   selector: 'lib-order-board',
   standalone: true,
-  imports: [DragDropModule, DatePipe, DecimalPipe, TranslocoPipe, IconComponent, ImageComponent],
+  imports: [
+    DragDropModule,
+    DatePipe,
+    DecimalPipe,
+    TranslocoPipe,
+    IconComponent,
+    ImageComponent,
+  ],
   templateUrl: './order-board.html',
   host: { class: 'flex-1 flex flex-col min-h-0' },
 })
@@ -53,6 +65,12 @@ export class OrderBoardComponent {
   public readonly openOrder = output<Order>();
 
   public readonly columns = signal<BoardColumn[]>([]);
+  /** Ya se sabe qué columnas hay (estados de la tienda cargados). */
+  public readonly stagesReady = computed(
+    () => this.stageStore.loadedTenantId() !== null
+  );
+  /** Forma del esqueleto inicial: columnas con distinta cantidad de tarjetas. */
+  public readonly skeletonColumns = [[1, 2, 3], [1, 2], [1, 2, 3], [1], [1, 2]];
   public readonly movingId = signal<number | null>(null);
   private loadSeq = 0;
 
@@ -61,6 +79,7 @@ export class OrderBoardComponent {
       const defs = this.stageStore.visibleDefs();
       this.search();
       this.date();
+      if (!this.stagesReady()) return;
       untracked(() => this.loadAll(defs));
     });
   }
@@ -121,20 +140,30 @@ export class OrderBoardComponent {
    *  orden aparece en una sola columna (sin estados propios no hace falta). */
   private async fetch(tenantId: number, def: OrderStatusDef, page: number) {
     const hasCustom = this.stageStore.defs().some((d) => !d.system);
-    const result = await this.orderService.getOrdersByTenant(tenantId, {
-      status: def.baseStatus,
-      stageId: def.system ? (hasCustom ? null : undefined) : def.rowId,
-      search: this.search() || undefined,
-      date: this.date() ?? undefined,
-      orderBy: 'date_desc',
-      page,
-      pageSize: PAGE_SIZE,
-    });
-    return result.fold(() => null, (value) => value);
+    // Cada columna termina por su cuenta: un error no deja a las demás cargando.
+    try {
+      const result = await this.orderService.getOrdersByTenant(tenantId, {
+        status: def.baseStatus,
+        stageId: def.system ? (hasCustom ? null : undefined) : def.rowId,
+        search: this.search() || undefined,
+        date: this.date() ?? undefined,
+        orderBy: 'date_desc',
+        page,
+        pageSize: PAGE_SIZE,
+      });
+      return result.fold(
+        () => null,
+        (value) => value
+      );
+    } catch {
+      return null;
+    }
   }
 
   private patchColumn(key: string, fn: (c: BoardColumn) => BoardColumn) {
-    this.columns.update((cols) => cols.map((c) => (c.def.key === key ? fn(c) : c)));
+    this.columns.update((cols) =>
+      cols.map((c) => (c.def.key === key ? fn(c) : c))
+    );
   }
 
   async drop(event: CdkDragDrop<BoardColumn>) {
@@ -149,9 +178,22 @@ export class OrderBoardComponent {
     const snapshot = this.columns();
     const fromOrders = [...from.orders];
     const toOrders = [...to.orders];
-    transferArrayItem(fromOrders, toOrders, event.previousIndex, event.currentIndex);
-    this.patchColumn(from.def.key, (c) => ({ ...c, orders: fromOrders, total: c.total - 1 }));
-    this.patchColumn(to.def.key, (c) => ({ ...c, orders: toOrders, total: c.total + 1 }));
+    transferArrayItem(
+      fromOrders,
+      toOrders,
+      event.previousIndex,
+      event.currentIndex
+    );
+    this.patchColumn(from.def.key, (c) => ({
+      ...c,
+      orders: fromOrders,
+      total: c.total - 1,
+    }));
+    this.patchColumn(to.def.key, (c) => ({
+      ...c,
+      orders: toOrders,
+      total: c.total + 1,
+    }));
 
     this.movingId.set(order.id);
     const result = await this.orderStore.updateOrderStatus(
@@ -171,13 +213,18 @@ export class OrderBoardComponent {
           ...c,
           orders: c.orders.map((o) => (o.id === updated.id ? updated : o)),
         }));
-        this.toast.success(`Orden #${order.orderNumber ?? order.id} → ${to.def.label}`);
+        this.toast.success(
+          `Orden #${order.orderNumber ?? order.id} → ${to.def.label}`
+        );
       }
     );
   }
 
   itemCount(order: Order): number {
-    return order.products.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
+    return order.products.reduce(
+      (sum, p) => sum + (Number(p.quantity) || 0),
+      0
+    );
   }
 
   itemsSummary(order: Order): string {
