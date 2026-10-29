@@ -103,16 +103,19 @@ export class OrderBoardComponent {
     );
     const tenantId = await this.tenantStore.getTenantIdAsync();
     if (!tenantId || seq !== this.loadSeq) return;
-    await Promise.all(
-      defs.map(async (def) => {
-        const page = await this.fetch(tenantId, def, 1);
-        if (seq !== this.loadSeq) return;
-        this.patchColumn(def.key, (c) => ({
+    // Todas las columnas aparecen juntas: se esperan todas y se pintan a la vez.
+    const pages = await Promise.all(defs.map((def) => this.fetch(tenantId, def, 1)));
+    if (seq !== this.loadSeq) return;
+    const byKey = new Map(defs.map((def, i) => [def.key, pages[i]]));
+    this.columns.update((cols) =>
+      cols.map((c) => {
+        const page = byKey.get(c.def.key);
+        return {
           ...c,
           orders: page?.orders ?? c.orders,
           total: page?.totalCount ?? c.total,
           loading: false,
-        }));
+        };
       })
     );
   }
