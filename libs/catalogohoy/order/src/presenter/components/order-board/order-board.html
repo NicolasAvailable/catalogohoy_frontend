@@ -123,5 +123,19 @@
       </div>
     </div>
     }
+
+    <!-- Nueva columna: siempre al final, a la derecha -->
+    @if (canEdit() && stagesReady()) {
+    <button
+      type="button"
+      (click)="createColumn()"
+      class="flex flex-col items-center justify-center gap-2 w-72 shrink-0 h-full rounded-xl border-2 border-dashed border-grey-200 bg-grey-50/40 text-grey-400 hover:text-primary-600 hover:border-primary-300 hover:bg-primary-50/40 transition-colors cursor-pointer"
+    >
+      <span class="w-10 h-10 rounded-full bg-white border border-grey-200 flex items-center justify-center">
+        <ui-icon name="plus" styleClass="size-5" />
+      </span>
+      <span class="text-sm font-semibold">{{ 'Nueva columna' | transloco }}</span>
+    </button>
+    }
   </div>
 </div>

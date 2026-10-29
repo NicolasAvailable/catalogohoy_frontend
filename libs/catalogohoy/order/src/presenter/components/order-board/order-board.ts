@@ -18,12 +18,13 @@ import { TenantStore } from '@catalogohoy/tenant';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { IconComponent, ImageComponent } from '@ui';
+import { DialogService, IconComponent, ImageComponent } from '@ui';
 import { Order } from '../../../domain/order';
 import { OrderStatusDef, resolveStatusKey } from '../../../domain/order-stage';
 import { OrderStageStore } from '../../../infrastructure/order-stage.store';
 import { OrderService } from '../../../infrastructure/order.service';
 import { OrderStore } from '../../../infrastructure/order.store';
+import { openOrderStagesEditor } from '../order-stages-modal/order-stages-modal';
 
 type BoardColumn = {
   def: OrderStatusDef;
@@ -57,6 +58,7 @@ export class OrderBoardComponent {
   private readonly orderStore = inject(OrderStore);
   private readonly tenantStore = inject(TenantStore);
   private readonly toast = inject(ToastService);
+  private readonly dialogService = inject(DialogService);
 
   public readonly search = input<string>('');
   public readonly date = input<Date | null>(null);
@@ -82,6 +84,12 @@ export class OrderBoardComponent {
       if (!this.stagesReady()) return;
       untracked(() => this.loadAll(defs));
     });
+  }
+
+  /** "Nueva columna": crea un estado; al guardarse el tablero se recarga solo
+   *  (cambian los estados visibles). */
+  createColumn() {
+    openOrderStagesEditor(this.dialogService, true);
   }
 
   /** Recarga todas las columnas (ej. al cerrar el detalle de una orden). */
