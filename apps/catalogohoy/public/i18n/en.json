@@ -2836,5 +2836,6 @@
   "Ver más ({count})": "Show more ({count})",
   "{count} productos": "{count} products",
   "Arrastra para ordenar": "Drag to reorder",
-  "Buscar por nombre, SKU o ID...": "Search by name, SKU or ID..."
+  "Buscar por nombre, SKU o ID...": "Search by name, SKU or ID...",
+  "Nueva columna": "New column"
 }
