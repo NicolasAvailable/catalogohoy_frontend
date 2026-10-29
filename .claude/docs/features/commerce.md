@@ -32,6 +32,20 @@
     (`totalStockOf()` suma tallas/variantes) y modal (stock de la selección − carrito), y
     "Stock: N" en el carrito. Los TOPES de stock aplican siempre, con o sin el toggle; el
     `maxStock` de cada línea se persiste en localStorage.
+  - **Revalidación del carrito** (pedido de un cliente, 2026-10-29): el carrito vive en
+    localStorage y el comprador puede pagar días después. Al abrir el carrito, al pulsar "Ir a
+    pagar", al entrar al checkout y justo antes de crear la orden, `CartStore.revalidate()` trae
+    los productos actuales (`getCartProducts`) y `revalidateCart()` (domain) recalcula precio
+    (promo, variante, mayoreo, adicionales, promo en divisas), stock (compartido por
+    producto+variante+talla). Eliminados/ocultos/agotados NO se quitan: quedan como línea
+    `unavailable` (gris, "Este producto ya no está disponible", botones Eliminar / Ver otros
+    productos; pedido de Nicolas 2026-10-29), no suman al total ni van en la orden
+    (`availableItems`), y se rehabilitan solos si vuelve el stock. Los cambios se muestran en
+    `<lib-cart-changes-notice>`. Si la consulta falla se sigue (fail-open). Red de seguridad en
+    el servidor: trigger `trg_orders_validate_public_cart` (BEFORE INSERT, solo
+    `source='public'` y rol anon/authenticated) usa `public_cart_issues(tenant, items)` y
+    rechaza con `cart_outdated`; el checkout lo captura, revalida y avisa. Si cambias cómo se
+    calcula el precio de una línea, cambia AMBOS (front y función SQL).
 
 ## product (`@catalogohoy/product`)
 
