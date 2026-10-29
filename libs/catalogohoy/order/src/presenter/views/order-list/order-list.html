@@ -82,6 +82,35 @@
       {{ t.label | transloco }}
     </button>
     }
+    @if (activeTab() === 'ordenes') {
+    <div class="ml-auto mb-1.5 flex items-center gap-2">
+    @if (canEditOrder()) {
+    <button
+      type="button"
+      (click)="openStagesEditor()"
+      class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer whitespace-nowrap text-grey-500 hover:text-grey-800 hover:bg-grey-50"
+      [tooltip]="'Crea y edita los estados de tus órdenes' | transloco"
+    >
+      <ui-icon name="settings-2" styleClass="size-4" />
+      <span class="hidden sm:inline">{{ 'Estados' | transloco }}</span>
+    </button>
+    }
+    <!-- Lista / Tablero -->
+    <div class="flex items-center p-0.5 rounded-lg bg-grey-50 border border-grey-100 shrink-0">
+      @for (mode of [{ value: 'list', icon: 'list', label: 'Lista' }, { value: 'board', icon: 'square-kanban', label: 'Tablero' }]; track mode.value) {
+      <button
+        type="button"
+        (click)="setViewMode($any(mode.value))"
+        [class]="'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium transition-colors cursor-pointer ' +
+          (viewMode() === mode.value ? 'bg-white text-grey-800 shadow-xs' : 'text-grey-400 hover:text-grey-700')"
+      >
+        <ui-icon [name]="mode.icon" styleClass="size-4" />
+        <span class="hidden sm:inline">{{ mode.label | transloco }}</span>
+      </button>
+      }
+    </div>
+    </div>
+    }
   </div>
 
   <!-- Tab: Órdenes -->
@@ -94,23 +123,8 @@
     <div
       class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-grey-50"
     >
-      <div class="flex items-center gap-3 flex-1 min-w-0">
-      <!-- Lista / Tablero -->
-      <div class="flex items-center p-0.5 rounded-lg bg-grey-50 border border-grey-100 shrink-0">
-        @for (mode of [{ value: 'list', icon: 'list', label: 'Lista' }, { value: 'board', icon: 'square-kanban', label: 'Tablero' }]; track mode.value) {
-        <button
-          type="button"
-          (click)="setViewMode($any(mode.value))"
-          [class]="'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium transition-colors cursor-pointer ' +
-            (viewMode() === mode.value ? 'bg-white text-grey-800 shadow-xs' : 'text-grey-400 hover:text-grey-700')"
-        >
-          <ui-icon [name]="mode.icon" styleClass="size-4" />
-          <span class="hidden lg:inline">{{ mode.label | transloco }}</span>
-        </button>
-        }
-      </div>
       <!-- Search -->
-      <div class="relative flex-1 max-w-md">
+      <div class="relative flex-1 min-w-[220px] max-w-md">
         <ui-input-search
           [placeholder]="'Buscar por nombre...' | transloco"
           [ngModel]="searchQuery()"
@@ -119,7 +133,6 @@
           styleClass="w-full"
           iconStyleClass="size-4.5!"
         />
-      </div>
       </div>
 
       <!-- Filter Tabs -->
@@ -140,17 +153,6 @@
           {{ tab.label | transloco }}
         </button>
         }
-        }
-        @if (canEditOrder()) {
-        <button
-          type="button"
-          (click)="openStagesEditor()"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer whitespace-nowrap bg-white text-grey-700 border border-dashed border-grey-300 hover:bg-grey-50"
-          [tooltip]="'Crea y edita los estados de tus órdenes' | transloco"
-        >
-          <ui-icon name="settings-2" styleClass="size-3.5" />
-          {{ 'Estados' | transloco }}
-        </button>
         }
         @if (viewMode() === 'list') {
         <div class="w-px h-6 bg-grey-100 mx-1"></div>
