@@ -179,9 +179,20 @@ export class OrderService {
         .lt('created_at', endOfDay.toISOString());
     }
 
-    // Filter by search query (search in name field)
-    if (options?.search?.trim()) {
-      query = query.ilike('name', `%${options.search.trim()}%`);
+    // Búsqueda por nombre del cliente, SKU de un producto (exacto) o #/ID.
+    const search = options?.search?.trim().replace(/[,()"\\]/g, ' ').trim();
+    if (search) {
+      const terms = [`name.ilike."%${search}%"`];
+      for (const sku of new Set([search, search.toUpperCase()])) {
+        // Valor entre comillas (con \" escapadas) para que or() no parta el JSON.
+        const json = JSON.stringify([{ sku }]).replace(/"/g, '\\"');
+        terms.push(`products.cs."${json}"`);
+      }
+      const num = search.replace(/^#/, '');
+      if (/^\d{1,12}$/.test(num)) {
+        terms.push(`order_number.eq.${num}`, `id.eq.${num}`);
+      }
+      query = query.or(terms.join(','));
     }
 
     // Ordering

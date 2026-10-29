@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import {
   Component,
   computed,
+  effect,
+  ElementRef,
   inject,
   OnDestroy,
   OnInit,
@@ -733,6 +735,36 @@ export class OrderListComponent implements OnInit, OnDestroy {
       }
       this.reloadOrders();
     });
+  }
+
+  // ── Carrusel de estados (filtros) ─────────────────────────────────────────
+  private readonly chipsRef = viewChild<ElementRef<HTMLElement>>('chips');
+  public readonly chipsCanLeft = signal(false);
+  public readonly chipsCanRight = signal(false);
+
+  private readonly chipsArrowsEffect = effect((onCleanup) => {
+    const el = this.chipsRef()?.nativeElement;
+    this.filterTabs();
+    if (!el) return;
+    const observer = new ResizeObserver(() => this.updateChipArrows());
+    observer.observe(el);
+    const timer = setTimeout(() => this.updateChipArrows());
+    onCleanup(() => {
+      observer.disconnect();
+      clearTimeout(timer);
+    });
+  });
+
+  updateChipArrows() {
+    const el = this.chipsRef()?.nativeElement;
+    if (!el) return;
+    this.chipsCanLeft.set(el.scrollLeft > 2);
+    this.chipsCanRight.set(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  }
+
+  scrollChips(direction: -1 | 1) {
+    const el = this.chipsRef()?.nativeElement;
+    el?.scrollBy({ left: direction * el.clientWidth * 0.7, behavior: 'smooth' });
   }
 
   // ── Vista lista / tablero ─────────────────────────────────────────────────

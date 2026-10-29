@@ -124,9 +124,9 @@
       class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-grey-50"
     >
       <!-- Search -->
-      <div class="relative flex-1 min-w-[220px] max-w-md">
+      <div class="relative w-full md:w-72 md:shrink-0">
         <ui-input-search
-          [placeholder]="'Buscar por nombre...' | transloco"
+          [placeholder]="'Buscar por nombre, SKU o ID...' | transloco"
           [ngModel]="searchQuery()"
           (ngModelChange)="onSearch($event)"
           size="small"
@@ -136,8 +136,27 @@
       </div>
 
       <!-- Filter Tabs -->
-      <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+      <div class="flex items-center gap-2 min-w-0 flex-1 md:justify-end">
         @if (viewMode() === 'list') {
+        <!-- Estados: carrusel con flechas cuando no caben (como las
+             categorías del catálogo público) -->
+        <div class="relative min-w-0 flex items-center">
+          @if (chipsCanLeft()) {
+          <button
+            type="button"
+            (click)="scrollChips(-1)"
+            class="absolute left-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-grey-200 shadow-sm text-grey-600 hover:text-grey-900 cursor-pointer"
+            [attr.aria-label]="'Anterior' | transloco"
+          >
+            <ui-icon name="chevron-left" styleClass="size-4" />
+          </button>
+          <div class="pointer-events-none absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white to-transparent"></div>
+          }
+          <div
+            #chips
+            (scroll)="updateChipArrows()"
+            class="flex items-center gap-2 overflow-x-auto scrollbar-hide scroll-smooth min-w-0"
+          >
         @for (tab of filterTabs(); track tab.value) {
         <button
           type="button"
@@ -153,6 +172,19 @@
           {{ tab.label | transloco }}
         </button>
         }
+          </div>
+          @if (chipsCanRight()) {
+          <div class="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent"></div>
+          <button
+            type="button"
+            (click)="scrollChips(1)"
+            class="absolute right-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-grey-200 shadow-sm text-grey-600 hover:text-grey-900 cursor-pointer"
+            [attr.aria-label]="'Siguiente' | transloco"
+          >
+            <ui-icon name="chevron-right" styleClass="size-4" />
+          </button>
+          }
+        </div>
         }
         @if (viewMode() === 'list') {
         <div class="w-px h-6 bg-grey-100 mx-1"></div>

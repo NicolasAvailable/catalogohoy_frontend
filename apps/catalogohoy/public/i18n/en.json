@@ -2826,5 +2826,6 @@
   "Todos los estados": "All statuses",
   "Ver más ({count})": "Show more ({count})",
   "{count} productos": "{count} products",
-  "Arrastra para ordenar": "Drag to reorder"
+  "Arrastra para ordenar": "Drag to reorder",
+  "Buscar por nombre, SKU o ID...": "Search by name, SKU or ID..."
 }
