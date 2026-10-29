@@ -93,8 +93,16 @@
   `OrderStageStore`). Un filtro base (ej. Pendientes) muestra solo órdenes SIN stage
   (`stageId: null`), así cada orden vive en una sola columna. Trigger `orders_sync_stage`:
   si el status cambia a algo distinto del base del stage (bot, POS, MCP), `stage_id` → NULL.
-  Editor: botón "Estados" en Órdenes (`OrderStagesModal`); con órdenes adentro no se puede
-  cambiar el comportamiento; borrar un estado deja sus órdenes en el base (FK SET NULL).
+  Filas con `system_status` = personalización (nombre, color, posición, `is_hidden`) de un
+  estado base; no son estados nuevos (el trigger las ignora). Pendiente nunca se oculta.
+  Editor (`OrderStagesModal`, botón "Estados" en Órdenes): tamaño fijo, lista + panel, borrador
+  local y un solo "Guardar" (`OrderStageStore.saveAll`). Comportamiento = 3 checks escalonados
+  (venta ⊂ descuenta stock ⊂ pagada → cancelled/pending/credit/completed, `toggleBehavior`).
+  Base: comportamiento fijo. Propio con órdenes: comportamiento bloqueado. Borrar un propio
+  deja sus órdenes en el base (FK SET NULL).
+  **Vista Tablero** (`OrderBoardComponent`, toggle Lista/Tablero guardado en localStorage
+  `orders.viewMode`): una columna por estado visible, CDK drag and drop → `updateOrderStatus`
+  optimista (revierte si falla), 30 por columna con "Ver más".
 
 - **Métricas → Ingresos por método de pago** (2026-10-21): la RPC `order_metrics` devuelve
   `byPaymentMethod` (solo órdenes `completed`; pagos divididos del POS suman cada parte de

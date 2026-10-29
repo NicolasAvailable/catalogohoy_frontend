@@ -35,8 +35,7 @@ import { OrderStore } from '../../../infrastructure/order.store';
 import { OrderStageStore } from '../../../infrastructure/order-stage.store';
 import {
   NEW_STAGE_KEY,
-  NEW_STAGE_OPTION,
-  OrderStage,
+  OrderStatusDef,
   OrderStatusKey,
   resolveStatusKey,
   statusKeyOf,
@@ -97,7 +96,7 @@ export class OrderDetailModal {
    *  Es la clave del selector (estado base o `stage:<id>`). */
   private readonly changedStatus = signal<OrderStatusKey | null>(null);
   public readonly status = computed<OrderStatusKey>(
-    () => this.changedStatus() ?? statusKeyOf(this.order, this.stageStore.stages())
+    () => this.changedStatus() ?? statusKeyOf(this.order, this.stageStore.defs())
   );
   public readonly isUpdating = signal(false);
 
@@ -238,35 +237,32 @@ export class OrderDetailModal {
     this.isSavingNotes.set(false);
   }
 
-  /** Estados base + los propios de la tienda. */
-  public readonly statusOptions = this.stageStore.statusOptions;
-  /** Lo mismo + "+ Crear estado" al final. */
-  public readonly statusSelectOptions = computed(() => [
-    ...this.statusOptions(),
-    NEW_STAGE_OPTION,
-  ]);
+  /** Estados visibles (+ el actual si está oculto) y "+ Crear estado". */
+  public readonly statusSelectOptions = computed(() =>
+    this.stageStore.optionsFor(this.status())
+  );
   protected readonly NEW_STAGE_KEY = NEW_STAGE_KEY;
   private readonly dialogService = inject(DialogService);
 
   /** Color del estado actual (para el badge del selector). */
   public readonly statusColor = computed(
-    () => this.statusOptions().find((o) => o.value === this.status())?.color ?? '#9ca3af'
+    () => this.stageStore.def(this.status())?.color ?? '#9ca3af'
   );
 
   async onStatusChange(newStatus: OrderStatusKey | typeof NEW_STAGE_KEY): Promise<void> {
     if (newStatus === NEW_STAGE_KEY) {
       // "+ Crear estado": crea uno y deja la orden en él.
       const ref = openOrderStagesEditor(this.dialogService, true);
-      ref?.onClose.subscribe((stage?: OrderStage) => {
-        if (stage) this.onStatusChange(`stage:${stage.id}`);
+      ref?.onClose.subscribe((created?: OrderStatusDef) => {
+        if (created) this.onStatusChange(created.key);
       });
       return;
     }
     const current = this.status();
     if (newStatus === current || this.isUpdating()) return;
-    const stages = this.stageStore.stages();
-    const from = resolveStatusKey(current, stages);
-    const target = resolveStatusKey(newStatus, stages);
+    const defs = this.stageStore.defs();
+    const from = resolveStatusKey(current, defs);
+    const target = resolveStatusKey(newStatus, defs);
     if (!target) return;
 
     this.isUpdating.set(true);
@@ -293,7 +289,7 @@ export class OrderDetailModal {
   }
 
   getStatusLabel(key: OrderStatusKey): string {
-    return this.statusOptions().find((o) => o.value === key)?.label ?? key;
+    return this.stageStore.def(key)?.label ?? key;
   }
 
   getStatusBadgeClass(): string {

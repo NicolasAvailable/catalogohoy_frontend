@@ -94,6 +94,21 @@
     <div
       class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-grey-50"
     >
+      <div class="flex items-center gap-3 flex-1 min-w-0">
+      <!-- Lista / Tablero -->
+      <div class="flex items-center p-0.5 rounded-lg bg-grey-50 border border-grey-100 shrink-0">
+        @for (mode of [{ value: 'list', icon: 'list', label: 'Lista' }, { value: 'board', icon: 'square-kanban', label: 'Tablero' }]; track mode.value) {
+        <button
+          type="button"
+          (click)="setViewMode($any(mode.value))"
+          [class]="'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium transition-colors cursor-pointer ' +
+            (viewMode() === mode.value ? 'bg-white text-grey-800 shadow-xs' : 'text-grey-400 hover:text-grey-700')"
+        >
+          <ui-icon [name]="mode.icon" styleClass="size-4" />
+          <span class="hidden lg:inline">{{ mode.label | transloco }}</span>
+        </button>
+        }
+      </div>
       <!-- Search -->
       <div class="relative flex-1 max-w-md">
         <ui-input-search
@@ -105,9 +120,11 @@
           iconStyleClass="size-4.5!"
         />
       </div>
+      </div>
 
       <!-- Filter Tabs -->
       <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+        @if (viewMode() === 'list') {
         @for (tab of filterTabs(); track tab.value) {
         <button
           type="button"
@@ -123,6 +140,7 @@
           {{ tab.label | transloco }}
         </button>
         }
+        }
         @if (canEditOrder()) {
         <button
           type="button"
@@ -134,6 +152,7 @@
           {{ 'Estados' | transloco }}
         </button>
         }
+        @if (viewMode() === 'list') {
         <div class="w-px h-6 bg-grey-100 mx-1"></div>
         <!-- Order Select -->
         <ui-select
@@ -161,6 +180,7 @@
             </div>
           </ng-template>
         </ui-select>
+        }
 
         <div class="w-px h-6 bg-grey-100 mx-1"></div>
         <!-- Date Filter -->
@@ -179,6 +199,15 @@
       </div>
     </div>
 
+    @if (viewMode() === 'board') {
+    <lib-order-board
+      [search]="searchQuery()"
+      [date]="selectedDate()"
+      [currencySymbol]="cs()"
+      [canEdit]="canEditOrder()"
+      (openOrder)="openOrderDetail($event)"
+    />
+    } @else {
     <!-- Resumen "por cobrar" — solo con el filtro A crédito activo (CAT-79).
          Franja plana edge-to-edge (sin radius: las esquinas chocaban contra el
          contenedor — feedback de Nicolas). -->
@@ -225,7 +254,7 @@
             <div class="flex items-center gap-1">
               <span class="text-grey-800 font-bold">{{ 'Estado:' | transloco }} </span>
               <ui-select
-                [options]="statusSelectOptions()"
+                [options]="statusSelectOptions(order)"
                 [ngModel]="statusKey(order)"
                 (ngModelChange)="onStatusChange(order, $event)"
                 optionLabel="label"
@@ -530,7 +559,7 @@
             <td class="px-3 py-3.5 align-top">
               <div class="flex justify-center">
                 <ui-select
-                  [options]="statusSelectOptions()"
+                  [options]="statusSelectOptions(order)"
                   [ngModel]="statusKey(order)"
                   (ngModelChange)="onStatusChange(order, $event)"
                   optionLabel="label"
@@ -720,6 +749,7 @@
         styleClass="order-paginator"
       />
     </div>
+    }
   </div>
 
   }

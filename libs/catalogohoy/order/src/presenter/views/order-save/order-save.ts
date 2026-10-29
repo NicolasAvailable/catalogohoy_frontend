@@ -52,7 +52,7 @@ import {
 import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import { OrderStore } from '../../../infrastructure/order.store';
 import { OrderStageStore } from '../../../infrastructure/order-stage.store';
-import { BASE_STATUS_META, OrderStage } from '../../../domain/order-stage';
+import { behaviorOf, OrderStatusDef, OrderStatusKey } from '../../../domain/order-stage';
 import { openOrderStagesEditor } from '../../components/order-stages-modal/order-stages-modal';
 import { OrderImportDraftService } from '../../../infrastructure/order-import-draft.service';
 
@@ -180,19 +180,36 @@ export default class OrderSave implements OnInit {
   /** Estado propio de la tienda elegido (Despacho, Revisión...). */
   private readonly stageId = signal<string | null>(null);
 
-  /** Estados propios ordenados, para los chips "Tus estados". */
-  public readonly sortedStages = computed(() =>
-    [...this.stageStore.stages()].sort((a, b) => a.position - b.position)
-  );
+  /** Estados visibles de la tienda (+ el de la orden si está oculto). */
+  public readonly statusDefs = computed(() => {
+    const visible = this.stageStore.visibleDefs();
+    const current = this.stageStore.def(this.selectedKey());
+    return current && current.hidden ? [...visible, current] : visible;
+  });
 
   /** Estado propio vigente: si el usuario elige un estado base distinto al
    *  comportamiento del estado propio, la orden sale de él. */
   public readonly selectedStageId = computed(() => {
     const id = this.stageId();
     if (!id) return null;
-    const stage = this.stageStore.stages().find((s) => s.id === id);
-    if (!stage) return id;
-    return stage.baseStatus === this.statusValue() ? id : null;
+    const def = this.stageStore.def(`stage:${id}`);
+    if (!def) return id;
+    return def.baseStatus === this.statusValue() ? id : null;
+  });
+
+  /** Clave del estado elegido (base o `stage:<id>`). */
+  public readonly selectedKey = computed<OrderStatusKey>(() => {
+    const id = this.selectedStageId();
+    return id ? `stage:${id}` : (this.statusValue() as OrderStatusKey);
+  });
+
+  /** Qué hace el estado elegido, en una línea. */
+  public readonly selectedHint = computed(() => {
+    const b = behaviorOf(this.statusValue() ?? 'pending');
+    if (!b.countsAsSale) return 'No cuenta como venta ni descuenta stock.';
+    if (b.paid) return 'Descuenta stock y se marca como pagada.';
+    if (b.deductsStock) return 'Descuenta stock, queda por cobrar.';
+    return 'Cuenta como venta, no descuenta stock todavía.';
   });
 
   private readonly dialogService = inject(DialogService);
@@ -200,20 +217,16 @@ export default class OrderSave implements OnInit {
   /** "+ Crear estado": crea uno y lo deja elegido en esta orden. */
   createStage() {
     const ref = openOrderStagesEditor(this.dialogService, true);
-    ref?.onClose.subscribe((stage?: OrderStage) => {
-      if (stage) this.selectStage(stage);
+    ref?.onClose.subscribe((created?: OrderStatusDef) => {
+      if (created) this.selectStatus(created);
     });
   }
 
-  selectStage(stage: OrderStage) {
-    this.stageId.set(stage.id);
-    this.form.controls.status.setValue(stage.baseStatus);
+  selectStatus(def: OrderStatusDef) {
+    this.stageId.set(def.system ? null : def.rowId);
+    this.form.controls.status.setValue(def.baseStatus);
   }
 
-  /** Para el texto de ayuda: "Se comporta como Pendiente". */
-  baseLabel(stage: OrderStage): string {
-    return BASE_STATUS_META[stage.baseStatus].label;
-  }
 
   /** Snapshot del ajuste + método con que se CARGÓ la orden (edición). Sirve
    *  para respetar el ajuste guardado y NO recalcularlo desde la config actual

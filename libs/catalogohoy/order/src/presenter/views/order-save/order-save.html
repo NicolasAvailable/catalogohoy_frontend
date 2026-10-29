@@ -701,154 +701,38 @@
           </p>
         </div>
         }
-        <div
-          class="flex flex-col sm:flex-row gap-4"
-          role="radiogroup"
-          [attr.aria-label]="'Estado de la orden' | transloco"
-        >
-          <div
-            role="radio"
-            tabindex="0"
-            [attr.aria-checked]="form.get('status')?.value === 'pending'"
-            (click)="form.get('status')?.setValue('pending')"
-            (keydown.enter)="form.get('status')?.setValue('pending')"
-            (keydown.space)="form.get('status')?.setValue('pending'); $event.preventDefault()"
-            [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer flex-1 ' + 
-              (form.get('status')?.value === 'pending' 
-                ? 'border-orange-500 bg-orange-50/30' 
-                : 'border-grey-200 hover:border-orange-300')"
-          >
-            <div
-              [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ' +
-                (form.get('status')?.value === 'pending'
-                  ? 'border-primary-500'
-                  : 'border-grey-300')"
-            >
-              @if (form.get('status')?.value === 'pending') {
-              <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
-              }
-            </div>
-            <div class="flex-1">
-              <span class="font-medium">{{ 'Pendiente' | transloco }}</span>
-              <p class="text-sm text-grey-300">{{ 'La orden está en proceso' | transloco }}</p>
-            </div>
-          </div>
-          <div
-            role="radio"
-            tabindex="0"
-            [attr.aria-checked]="form.get('status')?.value === 'completed'"
-            (click)="form.get('status')?.setValue('completed')"
-            (keydown.enter)="form.get('status')?.setValue('completed')"
-            (keydown.space)="form.get('status')?.setValue('completed'); $event.preventDefault()"
-            [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer flex-1 ' + 
-              (form.get('status')?.value === 'completed' 
-                ? 'border-green-500 bg-green-50/30' 
-                : 'border-grey-200 hover:border-green-300')"
-          >
-            <div
-              [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ' +
-                (form.get('status')?.value === 'completed'
-                  ? 'border-primary-500'
-                  : 'border-grey-300')"
-            >
-              @if (form.get('status')?.value === 'completed') {
-              <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
-              }
-            </div>
-            <div class="flex-1">
-              <span class="font-medium">{{ 'Completada' | transloco }}</span>
-              <p class="text-sm text-grey-300">{{ 'La orden ha sido entregada' | transloco }}</p>
-            </div>
-          </div>
-          <div
-            role="radio"
-            tabindex="0"
-            [attr.aria-checked]="form.get('status')?.value === 'credit'"
-            (click)="form.get('status')?.setValue('credit')"
-            (keydown.enter)="form.get('status')?.setValue('credit')"
-            (keydown.space)="form.get('status')?.setValue('credit'); $event.preventDefault()"
-            [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer flex-1 ' +
-              (form.get('status')?.value === 'credit'
-                ? 'border-blue-500 bg-blue-50/30'
-                : 'border-grey-200 hover:border-blue-300')"
-          >
-            <div
-              [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ' +
-                (form.get('status')?.value === 'credit'
-                  ? 'border-primary-500'
-                  : 'border-grey-300')"
-            >
-              @if (form.get('status')?.value === 'credit') {
-              <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
-              }
-            </div>
-            <div class="flex-1">
-              <span class="font-medium">{{ 'A crédito' | transloco }}</span>
-              <p class="text-sm text-grey-300">{{ 'Entregada a crédito (por cobrar)' | transloco }}</p>
-            </div>
-          </div>
-          <div
-            role="radio"
-            tabindex="0"
-            [attr.aria-checked]="form.get('status')?.value === 'cancelled'"
-            (click)="form.get('status')?.setValue('cancelled')"
-            (keydown.enter)="form.get('status')?.setValue('cancelled')"
-            (keydown.space)="form.get('status')?.setValue('cancelled'); $event.preventDefault()"
-            [class]="'flex items-center gap-3 p-4 border rounded-lg transition-all cursor-pointer flex-1 ' +
-              (form.get('status')?.value === 'cancelled'
-                ? 'border-red-500 bg-red-50/30'
-                : 'border-grey-200 hover:border-red-300')"
-          >
-            <div
-              [class]="'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ' +
-                (form.get('status')?.value === 'cancelled'
-                  ? 'border-primary-500'
-                  : 'border-grey-300')"
-            >
-              @if (form.get('status')?.value === 'cancelled') {
-              <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
-              }
-            </div>
-            <div class="flex-1">
-              <span class="font-medium">{{ 'Cancelada' | transloco }}</span>
-              <p class="text-sm text-grey-300">{{ 'La orden fue cancelada' | transloco }}</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Estados propios de la tienda (Despacho, Revisión...) -->
+        <!-- Estados de la tienda (base + propios, en su orden) -->
         <div class="flex flex-col gap-2">
-          <span class="text-sm font-medium text-grey-700">{{ 'Tus estados' | transloco }}</span>
-          <div class="flex flex-wrap gap-2">
-            @for (stage of sortedStages(); track stage.id) {
+          <div
+            class="flex flex-wrap gap-2"
+            role="radiogroup"
+            [attr.aria-label]="'Estado de la orden' | transloco"
+          >
+            @for (def of statusDefs(); track def.key) {
             <button
               type="button"
-              (click)="selectStage(stage)"
-              [class]="'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors cursor-pointer ' +
-                (selectedStageId() === stage.id
-                  ? 'border-primary-500 bg-primary-50 text-primary-700'
-                  : 'border-grey-200 bg-white text-grey-700 hover:bg-grey-50')"
+              role="radio"
+              [attr.aria-checked]="selectedKey() === def.key"
+              (click)="selectStatus(def)"
+              [class]="'flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border transition-all cursor-pointer ' +
+                (selectedKey() === def.key ? 'text-grey-800 shadow-xs' : 'border-grey-200 bg-white text-grey-600 hover:bg-grey-50')"
+              [style.border-color]="selectedKey() === def.key ? def.color : null"
+              [style.background-color]="selectedKey() === def.key ? def.color + '14' : null"
             >
-              <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="stage.color"></span>
-              {{ stage.label }}
+              <span class="w-2.5 h-2.5 rounded-full shrink-0" [style.background-color]="def.color"></span>
+              {{ def.label | transloco }}
             </button>
             }
             <button
               type="button"
               (click)="createStage()"
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border border-dashed border-grey-300 text-primary-600 hover:bg-primary-50 cursor-pointer"
+              class="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold border border-dashed border-grey-300 text-primary-600 hover:bg-primary-50 cursor-pointer"
             >
               <ui-icon name="plus" styleClass="size-3.5" />
               {{ 'Crear estado' | transloco }}
             </button>
           </div>
-          @for (stage of sortedStages(); track stage.id) {
-            @if (selectedStageId() === stage.id) {
-            <p class="text-xs text-grey-400 m-0">
-              {{ '"{stage}" se comporta como {base}.' | transloco: { stage: stage.label, base: (baseLabel(stage) | transloco) } }}
-            </p>
-            }
-          }
+          <p class="text-xs text-grey-400 m-0">{{ selectedHint() | transloco }}</p>
         </div>
 
         <!-- Plan de pago en cuotas (CAT-79) — solo órdenes a crédito -->

@@ -1,5 +1,9 @@
 -- Estados de orden personalizados por tienda ("Despacho", "Revisión"...).
 --
+-- Una fila con `system_status` NO es un estado nuevo: guarda la personalización
+-- (nombre, color, posición, oculto) de uno de los 4 estados base. Sin fila, el
+-- estado base usa su nombre/color de siempre.
+--
 -- Cada estado propio se comporta como uno de los 4 estados base
 -- (`base_status`), que sigue siendo la fuente de verdad en `orders.status`:
 -- stock, métricas, notificaciones y reportes NO cambian. La orden solo guarda
@@ -15,9 +19,15 @@ CREATE TABLE public.order_stages (
   base_status text NOT NULL DEFAULT 'pending'
               CHECK (base_status IN ('pending', 'completed', 'credit', 'cancelled')),
   position    int NOT NULL DEFAULT 0,
-  created_at  timestamptz NOT NULL DEFAULT now()
+  is_hidden   boolean NOT NULL DEFAULT false,
+  system_status text CHECK (system_status IN ('pending', 'completed', 'credit', 'cancelled')),
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT order_stages_system_base_check
+    CHECK (system_status IS NULL OR system_status = base_status)
 );
 CREATE INDEX order_stages_tenant_idx ON public.order_stages (tenant_id, position);
+CREATE UNIQUE INDEX order_stages_system_uniq
+  ON public.order_stages (tenant_id, system_status) WHERE system_status IS NOT NULL;
 
 ALTER TABLE public.order_stages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY order_stages_select_member ON public.order_stages
@@ -55,7 +65,7 @@ BEGIN
   END IF;
 
   SELECT base_status, tenant_id INTO v_base, v_tenant
-  FROM public.order_stages WHERE id = NEW.stage_id;
+  FROM public.order_stages WHERE id = NEW.stage_id AND system_status IS NULL;
 
   IF v_base IS NULL OR v_tenant IS DISTINCT FROM NEW.tenant_id THEN
     NEW.stage_id := NULL;

@@ -5,6 +5,8 @@ import {
   ArrowDown,
   ArrowDownToLine,
   ArrowLeft,
+  LayoutList,
+  SquareKanban,
   ArrowRight,
   ArrowUp,
   ArrowUpCircle,
@@ -358,6 +360,8 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       ScanBarcode,
       StickyNote,
       Trash2,
+      LayoutList,
+      SquareKanban,
     })
   );
 };

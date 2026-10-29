@@ -1,10 +1,15 @@
-<div class="flex flex-col max-h-[85vh]">
+<div class="flex flex-col h-[min(640px,85vh)]">
   <!-- Header -->
-  <div class="relative flex items-center justify-center px-6 py-4 border-b border-grey-100 shrink-0">
-    <h2 class="text-lg font-bold text-grey-800 m-0">{{ 'Estados de las órdenes' | transloco }}</h2>
+  <div class="flex items-center gap-3 px-5 py-4 border-b border-grey-100 shrink-0">
+    <div class="flex-1 min-w-0">
+      <h2 class="text-lg font-bold text-grey-800 m-0">{{ 'Estados de las órdenes' | transloco }}</h2>
+      <p class="text-xs text-grey-500 m-0 mt-0.5">
+        {{ 'Son las columnas del tablero y las opciones del selector de estado.' | transloco }}
+      </p>
+    </div>
     <button
       type="button"
-      class="absolute right-4 top-1/2 -translate-y-1/2 text-grey-400 hover:text-grey-700 cursor-pointer"
+      class="p-1.5 rounded-lg text-grey-400 hover:text-grey-700 hover:bg-grey-50 cursor-pointer"
       (click)="close()"
       [attr.aria-label]="'Cerrar' | transloco"
     >
@@ -12,160 +17,226 @@
     </button>
   </div>
 
-  <div class="flex flex-col gap-5 p-5 overflow-y-auto">
-    <p class="text-sm text-grey-500 m-0">
-      {{ 'Crea los estados que usa tu negocio (por ejemplo Revisión o Despacho). Cada estado se comporta como uno de los estados base, y eso decide si descuenta stock y si cuenta como venta.' | transloco }}
-    </p>
-
-    <!-- Estados base (fijos) -->
-    <div class="flex flex-col gap-2">
-      <span class="text-xs font-semibold uppercase tracking-wide text-grey-400">{{ 'Estados base' | transloco }}</span>
-      <div class="flex flex-wrap gap-2">
-        @for (base of baseStatuses; track base.status) {
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white border border-grey-100 text-grey-700">
-          <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="base.color"></span>
-          {{ base.label | transloco }}
-        </span>
-        }
-      </div>
-    </div>
-
-    <!-- Estados propios -->
-    <div class="flex flex-col gap-2">
-      <span class="text-xs font-semibold uppercase tracking-wide text-grey-400">{{ 'Tus estados' | transloco }}</span>
-
-      @if (stages().length === 0 && !draft()) {
-      <p class="text-sm text-grey-400 m-0">{{ 'Todavía no creaste estados propios.' | transloco }}</p>
-      }
-
-      @for (stage of stages(); track stage.id; let first = $first; let last = $last) {
-        @if (draft()?.id === stage.id) {
-          <ng-container *ngTemplateOutlet="editor" />
-        } @else {
-        <div class="flex items-center gap-3 p-3 rounded-lg border border-grey-100 bg-white">
-          <span class="w-3 h-3 rounded-full shrink-0" [style.background-color]="stage.color"></span>
-          <div class="flex-1 min-w-0">
-            <div class="text-sm font-semibold text-grey-800 truncate">{{ stage.label }}</div>
-            <div class="text-xs text-grey-400">
-              {{ behaviorLabel(stage.baseStatus) | transloco }} · {{ behaviorHint(stage.baseStatus) | transloco }}
-            </div>
-            @if (confirmingDelete() === stage.id) {
-            <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
-              <span class="text-red-600">
-                @if (ordersInStage() > 0) {
-                  {{ '¿Eliminar? Sus {count} órdenes pasan a {base}.' | transloco: { count: ordersInStage(), base: (baseName(stage.baseStatus) | transloco) } }}
-                } @else {
-                  {{ '¿Eliminar este estado?' | transloco }}
-                }
-              </span>
-              <button type="button" class="font-semibold text-red-600 hover:text-red-700 cursor-pointer" (click)="confirmDelete(stage)">{{ 'Sí, eliminar' | transloco }}</button>
-              <button type="button" class="font-semibold text-grey-500 hover:text-grey-700 cursor-pointer" (click)="confirmingDelete.set(null)">{{ 'No' | transloco }}</button>
-            </div>
-            }
-          </div>
-          <div class="flex items-center gap-1 shrink-0">
-            <button type="button" class="p-1.5 rounded text-grey-400 hover:text-grey-700 hover:bg-grey-50 cursor-pointer disabled:opacity-30 disabled:cursor-default" [disabled]="first" (click)="move(stage, -1)" [attr.aria-label]="'Subir' | transloco">
-              <ui-icon name="chevron-up" styleClass="size-4" />
+  <div class="flex flex-1 min-h-0">
+    <!-- Lista de estados -->
+    <div
+      [class]="'flex-col w-full md:w-72 md:border-r border-grey-100 bg-grey-50/50 min-h-0 ' + (selected() ? 'hidden md:flex' : 'flex')"
+    >
+      <div class="flex-1 overflow-y-auto p-3 flex flex-col gap-1">
+        @for (item of items(); track item.uid; let first = $first; let last = $last) {
+        <div
+          role="button"
+          tabindex="0"
+          (click)="select(item.uid)"
+          (keydown.enter)="select(item.uid)"
+          [class]="'group flex items-center gap-2.5 pl-3 pr-1.5 py-2 rounded-lg cursor-pointer transition-colors border ' +
+            (selectedUid() === item.uid ? 'bg-white border-primary-300 shadow-sm' : 'border-transparent hover:bg-white')"
+        >
+          <span
+            class="w-2.5 h-2.5 rounded-full shrink-0"
+            [style.background-color]="item.color"
+            [class.opacity-40]="item.hidden"
+          ></span>
+          <span
+            [class]="'flex-1 min-w-0 truncate text-sm ' + (item.hidden ? 'text-grey-400 line-through' : 'text-grey-800 font-medium')"
+          >
+            {{ item.label || ('Nuevo estado' | transloco) }}
+          </span>
+          @if (item.system) {
+          <span class="text-[10px] uppercase tracking-wide text-grey-400 shrink-0">{{ 'Base' | transloco }}</span>
+          }
+          <div class="flex items-center shrink-0">
+            <button
+              type="button"
+              class="p-1 rounded text-grey-400 hover:text-grey-700 cursor-pointer disabled:opacity-20 disabled:cursor-default"
+              [disabled]="first"
+              (click)="move(item, -1, $event)"
+              [attr.aria-label]="'Subir' | transloco"
+            >
+              <ui-icon name="chevron-up" styleClass="size-3.5" />
             </button>
-            <button type="button" class="p-1.5 rounded text-grey-400 hover:text-grey-700 hover:bg-grey-50 cursor-pointer disabled:opacity-30 disabled:cursor-default" [disabled]="last" (click)="move(stage, 1)" [attr.aria-label]="'Bajar' | transloco">
-              <ui-icon name="chevron-down" styleClass="size-4" />
-            </button>
-            <button type="button" class="p-1.5 rounded text-grey-400 hover:text-grey-700 hover:bg-grey-50 cursor-pointer" (click)="editStage(stage)" [attr.aria-label]="'Editar' | transloco">
-              <ui-icon name="pencil" styleClass="size-4" />
-            </button>
-            <button type="button" class="p-1.5 rounded text-grey-400 hover:text-red-600 hover:bg-red-50 cursor-pointer" (click)="askDelete(stage)" [attr.aria-label]="'Eliminar' | transloco">
-              <ui-icon name="trash-2" styleClass="size-4" />
+            <button
+              type="button"
+              class="p-1 rounded text-grey-400 hover:text-grey-700 cursor-pointer disabled:opacity-20 disabled:cursor-default"
+              [disabled]="last"
+              (click)="move(item, 1, $event)"
+              [attr.aria-label]="'Bajar' | transloco"
+            >
+              <ui-icon name="chevron-down" styleClass="size-3.5" />
             </button>
           </div>
         </div>
         }
-      }
-
-      @if (draft() && draft()!.id === null) {
-        <ng-container *ngTemplateOutlet="editor" />
-      }
-
-      @if (!draft()) {
-      <button
-        type="button"
-        (click)="newStage()"
-        class="flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-grey-300 text-sm font-medium text-primary-600 hover:bg-primary-50 cursor-pointer"
-      >
-        <ui-icon name="plus" styleClass="size-4" />
-        {{ 'Agregar estado' | transloco }}
-      </button>
-      }
-    </div>
-  </div>
-</div>
-
-<!-- Editor de un estado (nuevo o existente) -->
-<ng-template #editor>
-  @if (draft(); as d) {
-  <div class="flex flex-col gap-4 p-4 rounded-lg border border-primary-200 bg-primary-50/30">
-    <label class="flex flex-col gap-1.5">
-      <span class="text-sm font-medium text-grey-700">{{ 'Nombre' | transloco }}</span>
-      <input
-        type="text"
-        maxlength="40"
-        class="w-full px-3 py-2 rounded-lg border border-grey-200 bg-white text-sm text-grey-800 focus:outline-none focus:border-primary-500"
-        [placeholder]="'Ej: Despacho' | transloco"
-        [ngModel]="d.label"
-        (ngModelChange)="patchDraft({ label: $event })"
-        (keydown.enter)="saveDraft()"
-      />
-    </label>
-
-    <div class="flex flex-col gap-1.5">
-      <span class="text-sm font-medium text-grey-700">{{ 'Color' | transloco }}</span>
-      <div class="flex flex-wrap gap-2">
-        @for (color of colors; track color) {
+      </div>
+      <div class="p-3 border-t border-grey-100 shrink-0">
         <button
           type="button"
-          (click)="patchDraft({ color })"
-          [class]="'w-7 h-7 rounded-full cursor-pointer border-2 transition-transform ' + (d.color === color ? 'border-grey-800 scale-110' : 'border-white')"
-          [style.background-color]="color"
-          [attr.aria-label]="color"
-        ></button>
-        }
+          (click)="addStatus()"
+          class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed border-grey-300 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-300 cursor-pointer transition-colors"
+        >
+          <ui-icon name="plus" styleClass="size-4" />
+          {{ 'Agregar estado' | transloco }}
+        </button>
       </div>
     </div>
 
-    <div class="flex flex-col gap-1.5">
-      <span class="text-sm font-medium text-grey-700">{{ '¿Cómo se comporta?' | transloco }}</span>
-      @if (isBehaviorLocked()) {
-      <p class="text-xs text-orange-600 m-0">
-        {{ 'Este estado tiene {count} órdenes. Muévelas a otro estado para poder cambiar su comportamiento.' | transloco: { count: ordersInStage() } }}
-      </p>
-      }
-      <div class="flex flex-col gap-2">
-        @for (b of behaviors; track b.value) {
+    <!-- Editor del estado seleccionado -->
+    <div [class]="'flex-1 min-w-0 min-h-0 overflow-y-auto ' + (selected() ? 'block' : 'hidden md:block')">
+      @if (selected(); as s) {
+      <div class="flex flex-col gap-6 p-5">
         <button
           type="button"
-          [disabled]="isBehaviorLocked()"
-          (click)="patchDraft({ baseStatus: b.value })"
-          [class]="'flex items-start gap-3 p-3 rounded-lg border text-left transition-colors ' +
-            (d.baseStatus === b.value ? 'border-primary-500 bg-white' : 'border-grey-200 bg-white hover:border-primary-300') +
-            (isBehaviorLocked() ? ' opacity-60 cursor-not-allowed' : ' cursor-pointer')"
+          class="md:hidden self-start flex items-center gap-1 text-sm text-grey-500 hover:text-grey-800 cursor-pointer"
+          (click)="select(null)"
         >
-          <span [class]="'mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ' + (d.baseStatus === b.value ? 'border-primary-500' : 'border-grey-300')">
-            @if (d.baseStatus === b.value) {
-            <span class="w-2 h-2 rounded-full bg-primary-500"></span>
+          <ui-icon name="arrow-left" styleClass="size-4" />
+          {{ 'Todos los estados' | transloco }}
+        </button>
+
+        <!-- Nombre -->
+        <label class="flex flex-col gap-1.5">
+          <span class="text-sm font-semibold text-grey-700">{{ 'Nombre' | transloco }}</span>
+          <input
+            type="text"
+            maxlength="40"
+            class="w-full px-3 py-2.5 rounded-lg border border-grey-200 bg-white text-sm text-grey-800 focus:outline-none focus:border-primary-500"
+            [placeholder]="'Ej: Despacho' | transloco"
+            [ngModel]="s.label"
+            (ngModelChange)="patch({ label: $event })"
+          />
+          @if (s.system) {
+          <span class="text-xs text-grey-400">
+            {{ 'Estado base. Puedes cambiarle el nombre y el color.' | transloco }}
+          </span>
+          }
+        </label>
+
+        <!-- Color -->
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-semibold text-grey-700">{{ 'Color' | transloco }}</span>
+          <div class="flex flex-wrap gap-2">
+            @for (color of colors; track color) {
+            <button
+              type="button"
+              (click)="patch({ color })"
+              [class]="'w-7 h-7 rounded-full cursor-pointer flex items-center justify-center transition-transform ' + (s.color === color ? 'scale-110 ring-2 ring-offset-2 ring-grey-300' : 'hover:scale-105')"
+              [style.background-color]="color"
+              [attr.aria-label]="color"
+            >
+              @if (s.color === color) {
+              <ui-icon name="check" styleClass="size-3.5 text-white" />
+              }
+            </button>
+            }
+          </div>
+        </div>
+
+        <!-- Comportamiento -->
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-grey-700">{{ 'Qué hace este estado' | transloco }}</span>
+            @if (behaviorLocked()) {
+            <ui-icon name="lock" styleClass="size-3.5 text-grey-400" />
+            }
+          </div>
+          @if (s.system) {
+          <p class="text-xs text-grey-400 m-0">{{ 'Los estados base tienen su comportamiento fijo.' | transloco }}</p>
+          } @else if (behaviorLocked()) {
+          <p class="text-xs text-orange-600 m-0">
+            {{ 'Este estado tiene {count} órdenes. Muévelas a otro estado para poder cambiar su comportamiento.' | transloco: { count: ordersInSelected() } }}
+          </p>
+          }
+          <div class="flex flex-col rounded-lg border border-grey-200 divide-y divide-grey-100 bg-white">
+            @for (check of checks; track check.field) {
+            @let on = selectedBehavior()?.[check.field] ?? false;
+            <button
+              type="button"
+              [disabled]="behaviorLocked()"
+              (click)="toggleCheck(check.field, !on)"
+              [class]="'flex items-center gap-3 px-3.5 py-3 text-left ' + (behaviorLocked() ? 'cursor-default' : 'cursor-pointer hover:bg-grey-50')"
+            >
+              <span
+                [class]="'w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ' +
+                  (on ? (behaviorLocked() ? 'bg-grey-400 border-grey-400' : 'bg-primary-500 border-primary-500') : 'border-grey-300 bg-white')"
+              >
+                @if (on) {
+                <ui-icon name="check" styleClass="size-3.5 text-white" />
+                }
+              </span>
+              <span class="flex flex-col min-w-0">
+                <span [class]="'text-sm font-medium ' + (behaviorLocked() ? 'text-grey-500' : 'text-grey-800')">{{ check.label | transloco }}</span>
+                <span class="text-xs text-grey-400">{{ check.hint | transloco }}</span>
+              </span>
+            </button>
+            }
+          </div>
+        </div>
+
+        <!-- Visibilidad -->
+        <div class="flex items-center gap-3 px-3.5 py-3 rounded-lg border border-grey-200 bg-white">
+          <ui-icon [name]="s.hidden ? 'eye-off' : 'eye'" styleClass="size-4 text-grey-500 shrink-0" />
+          <span class="flex flex-col flex-1 min-w-0">
+            <span class="text-sm font-medium text-grey-800">{{ 'Mostrar este estado' | transloco }}</span>
+            <span class="text-xs text-grey-400">
+              @if (canHide(s)) {
+                {{ 'Si lo ocultas no aparece en el tablero, los filtros ni el selector.' | transloco }}
+              } @else {
+                {{ 'Pendiente no se puede ocultar: ahí llegan los pedidos nuevos.' | transloco }}
+              }
+            </span>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            [attr.aria-checked]="!s.hidden"
+            [disabled]="!canHide(s)"
+            (click)="toggleHidden(s)"
+            [class]="'relative w-10 h-6 rounded-full transition-colors shrink-0 ' + (!s.hidden ? 'bg-primary-500' : 'bg-grey-300') + (canHide(s) ? ' cursor-pointer' : ' opacity-50 cursor-not-allowed')"
+          >
+            <span
+              [class]="'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ' + (!s.hidden ? 'translate-x-4' : '')"
+            ></span>
+          </button>
+        </div>
+
+        <!-- Eliminar (solo propios) -->
+        @if (!s.system) {
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+          @if (!confirmingDelete()) {
+          <button
+            type="button"
+            class="flex items-center gap-1.5 text-red-600 hover:text-red-700 font-medium cursor-pointer"
+            (click)="confirmingDelete.set(true)"
+          >
+            <ui-icon name="trash-2" styleClass="size-4" />
+            {{ 'Eliminar estado' | transloco }}
+          </button>
+          } @else {
+          <span class="text-red-600">
+            @if (ordersInSelected() > 0) {
+              {{ '¿Eliminar? Sus {count} órdenes pasan a {base}.' | transloco: { count: ordersInSelected(), base: (baseName(s) | transloco) } }}
+            } @else {
+              {{ '¿Eliminar este estado?' | transloco }}
             }
           </span>
-          <span class="flex flex-col">
-            <span class="text-sm font-medium text-grey-800">{{ b.label | transloco }}</span>
-            <span class="text-xs text-grey-400">{{ b.hint | transloco }}</span>
-          </span>
-        </button>
+          <button type="button" class="font-semibold text-red-600 hover:text-red-700 cursor-pointer" (click)="removeSelected()">{{ 'Sí, eliminar' | transloco }}</button>
+          <button type="button" class="font-semibold text-grey-500 hover:text-grey-700 cursor-pointer" (click)="confirmingDelete.set(false)">{{ 'No' | transloco }}</button>
+          }
+        </div>
         }
       </div>
-    </div>
-
-    <div class="flex justify-end gap-2">
-      <ui-button [label]="'Cancelar'" variant="outlined" severity="secondary" size="small" [fluid]="false" (click)="cancelDraft()" />
-      <ui-button [label]="d.id ? 'Guardar' : 'Crear estado'" size="small" [fluid]="false" [isLoading]="isSaving()" (click)="saveDraft()" />
+      } @else {
+      <div class="h-full flex flex-col items-center justify-center gap-2 p-8 text-center text-grey-400">
+        <ui-icon name="settings-2" styleClass="size-8" />
+        <p class="text-sm m-0">{{ 'Elige un estado para editarlo.' | transloco }}</p>
+      </div>
+      }
     </div>
   </div>
-  }
-</ng-template>
+
+  <!-- Footer -->
+  <div class="flex justify-end gap-2 px-5 py-3 border-t border-grey-100 shrink-0">
+    <ui-button [label]="'Cancelar'" variant="outlined" severity="secondary" size="small" [fluid]="false" (click)="close()" />
+    <ui-button [label]="'Guardar cambios'" size="small" [fluid]="false" [isLoading]="isSaving()" (click)="save()" />
+  </div>
+</div>
