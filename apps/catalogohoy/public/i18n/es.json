@@ -2768,5 +2768,12 @@
   "Mándale tu Excel, PDF o fotos al Asistente de WhatsApp y él crea los productos.": "Mándale tu Excel, PDF o fotos al Asistente de WhatsApp y él crea los productos.",
   "Mostrar stock": "Mostrar stock",
   "Tus clientes verán cuántas unidades quedan de cada producto.": "Tus clientes verán cuántas unidades quedan de cada producto.",
-  "Quedan {n}": "Quedan {n}"
+  "Quedan {n}": "Quedan {n}",
+  "Actualizamos tu carrito": "Actualizamos tu carrito",
+  "Algunos productos cambiaron desde que los agregaste. Revisa tu pedido antes de continuar.": "Algunos productos cambiaron desde que los agregaste. Revisa tu pedido antes de continuar.",
+  "ya no está disponible y se quitó del carrito.": "ya no está disponible y se quitó del carrito.",
+  "se agotó y se quitó del carrito.": "se agotó y se quitó del carrito.",
+  "solo quedan {n}, ajustamos la cantidad.": "solo quedan {n}, ajustamos la cantidad.",
+  "el precio cambió": "el precio cambió",
+  "Algunos productos de tu carrito cambiaron o ya no tienen stock. Revisa tu pedido e intenta de nuevo.": "Algunos productos de tu carrito cambiaron o ya no tienen stock. Revisa tu pedido e intenta de nuevo."
 }

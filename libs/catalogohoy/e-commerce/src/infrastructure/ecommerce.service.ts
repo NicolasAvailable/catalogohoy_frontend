@@ -505,6 +505,30 @@ export class EcommerceService implements BaseEcommerceService {
     return E.right(ProductMapper.toDomain(transformedData));
   }
 
+  /** Productos ACTUALES de las líneas del carrito (para revalidarlo antes de
+   *  comprar). Solo devuelve los que siguen existiendo en este catálogo; un id
+   *  ausente = el producto se eliminó. */
+  public async getCartProducts(
+    tenantId: number,
+    productIds: string[]
+  ): Promise<E.Either<Error, Product[]>> {
+    const ids = [...new Set(productIds)].filter((id) => /^\d+$/.test(id));
+    if (!ids.length) return E.right([]);
+    const { data, error } = await this.client
+      .from('products')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .in('id', ids);
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+    return E.right(
+      (data as any[]).map((row) =>
+        ProductMapper.toDomain({ ...row, product_categories: [] })
+      )
+    );
+  }
+
   public async getCategories(
     slug: string
   ): Promise<E.Either<Error, Category[]>> {

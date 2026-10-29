@@ -2768,5 +2768,12 @@
   "Mándale tu Excel, PDF o fotos al Asistente de WhatsApp y él crea los productos.": "Send your Excel, PDF or photos to the WhatsApp Assistant and it creates the products.",
   "Mostrar stock": "Show stock",
   "Tus clientes verán cuántas unidades quedan de cada producto.": "Your customers will see how many units are left of each product.",
-  "Quedan {n}": "{n} left"
+  "Quedan {n}": "{n} left",
+  "Actualizamos tu carrito": "We updated your cart",
+  "Algunos productos cambiaron desde que los agregaste. Revisa tu pedido antes de continuar.": "Some products changed since you added them. Please review your order before continuing.",
+  "ya no está disponible y se quitó del carrito.": "is no longer available and was removed from your cart.",
+  "se agotó y se quitó del carrito.": "is sold out and was removed from your cart.",
+  "solo quedan {n}, ajustamos la cantidad.": "only {n} left, we adjusted the quantity.",
+  "el precio cambió": "the price changed",
+  "Algunos productos de tu carrito cambiaron o ya no tienen stock. Revisa tu pedido e intenta de nuevo.": "Some products in your cart changed or are out of stock. Please review your order and try again."
 }

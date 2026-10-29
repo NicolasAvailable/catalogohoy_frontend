@@ -7,6 +7,7 @@ import {
   HostListener,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -35,6 +36,7 @@ import {
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { parseQuantityInput } from '../../utils/quantity-input';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
+import { CartChangesNotice } from '../../components/cart-changes-notice/cart-changes-notice';
 
 function isPagoMovil(name: string): boolean {
   return name
@@ -49,6 +51,7 @@ type CheckoutPhase = 'form' | 'confirm' | 'sent';
 @Component({
   selector: 'lib-checkout',
   imports: [
+    CartChangesNotice,
     DecimalPipe,
     FormsModule,
     DatepickerComponent,
@@ -454,9 +457,18 @@ export default class Checkout {
     effect(() => {
       if (this.isPreview) return;
       if (this.phase() === 'form' && this.cartStore.isEmpty()) {
+        // Si se vació porque todo se agotó/eliminó al revalidar, se abre el
+        // carrito en la tienda para que el cliente vea el aviso.
+        if (untracked(() => this.cartStore.changes().length)) {
+          untracked(() => this.cartStore.openCart());
+        }
         this.router.navigate(['/'], { queryParamsHandling: 'preserve' });
       }
     });
+
+    // El carrito puede tener días guardado: al entrar al checkout se revalida
+    // contra los productos actuales (precio, stock, eliminados).
+    if (!this.isPreview) void this.cartStore.revalidate();
 
     // Gate de crédito: al escribir el teléfono se consulta (con debounce) el
     // conteo de compras previas de ese número en esta tienda. En preview no
@@ -639,6 +651,15 @@ export default class Checkout {
 
     this.isSubmitting.set(true);
 
+    // Última revisión antes de crear la orden: si algo cambió (precio, stock,
+    // eliminado), se actualiza el carrito y el cliente revisa antes de enviar.
+    const changes = await this.cartStore.revalidate();
+    if (changes?.length) {
+      this.isSubmitting.set(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     const items = this.cartStore.items();
     const subtotal = this.subtotal();
     const fee = this.shippingFee();
@@ -714,6 +735,22 @@ export default class Checkout {
       const isOrderLimit =
         orderResult?.isLeft() &&
         orderResult.value.message.includes('order_limit_reached');
+      // Validación del servidor (trigger de órdenes): el carrito no coincide
+      // con los precios/stock actuales. Se revalida para mostrar qué cambió.
+      const isCartOutdated =
+        orderResult?.isLeft() &&
+        orderResult.value.message.includes('cart_outdated');
+      if (isCartOutdated) {
+        const found = await this.cartStore.revalidate();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (found?.length) return;
+        alert(
+          this.transloco.translate(
+            'Algunos productos de tu carrito cambiaron o ya no tienen stock. Revisa tu pedido e intenta de nuevo.'
+          )
+        );
+        return;
+      }
       alert(
         this.transloco.translate(
           isOrderLimit

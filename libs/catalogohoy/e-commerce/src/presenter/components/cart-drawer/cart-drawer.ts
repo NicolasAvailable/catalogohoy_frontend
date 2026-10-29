@@ -9,10 +9,12 @@ import { CartItem } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { parseQuantityInput } from '../../utils/quantity-input';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
+import { CartChangesNotice } from '../cart-changes-notice/cart-changes-notice';
 
 @Component({
   selector: 'lib-cart-drawer',
   imports: [
+    CartChangesNotice,
     DecimalPipe,
     IconComponent,
     StripHtmlPipe,
@@ -59,7 +61,13 @@ export class CartDrawer {
     this.cartStore.removeItem(item.id);
   }
 
-  onProceedToCheckout() {
+  async onProceedToCheckout() {
+    // Revalida otra vez (pudo pasar un rato desde que abrió el carrito): con
+    // cambios, el cliente los ve aquí antes de pagar. Si no hay red se sigue;
+    // el servidor vuelve a validar al crear la orden.
+    const changes = await this.cartStore.revalidate();
+    if (changes?.length || this.cartStore.isEmpty()) return;
+
     // Meta Pixel del catálogo: el comprador arranca el checkout (no-op si el
     // catálogo no tiene pixel / plan no pago).
     this.metaPixel.trackActiveTenant('InitiateCheckout', {

@@ -5,3 +5,4 @@ export * from './nit-feature';
 export * from './alphabetical-catalog';
 export * from './base-variant-label';
 export * from './divisas-promo';
+export * from './cart-revalidation';
