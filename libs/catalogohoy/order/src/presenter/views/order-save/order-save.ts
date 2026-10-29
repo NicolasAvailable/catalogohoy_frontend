@@ -50,6 +50,8 @@ import {
 } from '../../../domain/order';
 import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import { OrderStore } from '../../../infrastructure/order.store';
+import { OrderStageStore } from '../../../infrastructure/order-stage.store';
+import { BASE_STATUS_META, OrderStage } from '../../../domain/order-stage';
 import { OrderImportDraftService } from '../../../infrastructure/order-import-draft.service';
 
 /** Un adicional del catálogo (pool global), con su foto para mostrarlo como
@@ -92,6 +94,7 @@ export default class OrderSave implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
+  public readonly stageStore = inject(OrderStageStore);
   private readonly importDraft = inject(OrderImportDraftService);
   public readonly productStore = inject(ProductStore);
   public readonly rateStore = inject(RateStore);
@@ -166,6 +169,39 @@ export default class OrderSave implements OnInit {
     this.form.controls.paymentMethod.valueChanges,
     { initialValue: this.form.controls.paymentMethod.value }
   );
+
+  /** Status del form como signal (para el estado propio elegido). */
+  private readonly statusValue = toSignal(this.form.controls.status.valueChanges, {
+    initialValue: this.form.controls.status.value,
+  });
+
+  /** Estado propio de la tienda elegido (Despacho, Revisión...). */
+  private readonly stageId = signal<string | null>(null);
+
+  /** Estados propios ordenados, para los chips "Tus estados". */
+  public readonly sortedStages = computed(() =>
+    [...this.stageStore.stages()].sort((a, b) => a.position - b.position)
+  );
+
+  /** Estado propio vigente: si el usuario elige un estado base distinto al
+   *  comportamiento del estado propio, la orden sale de él. */
+  public readonly selectedStageId = computed(() => {
+    const id = this.stageId();
+    if (!id) return null;
+    const stage = this.stageStore.stages().find((s) => s.id === id);
+    if (!stage) return id;
+    return stage.baseStatus === this.statusValue() ? id : null;
+  });
+
+  selectStage(stage: OrderStage) {
+    this.stageId.set(stage.id);
+    this.form.controls.status.setValue(stage.baseStatus);
+  }
+
+  /** Para el texto de ayuda: "Se comporta como Pendiente". */
+  baseLabel(stage: OrderStage): string {
+    return BASE_STATUS_META[stage.baseStatus].label;
+  }
 
   /** Snapshot del ajuste + método con que se CARGÓ la orden (edición). Sirve
    *  para respetar el ajuste guardado y NO recalcularlo desde la config actual
@@ -388,6 +424,7 @@ export default class OrderSave implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.stageStore.load();
     // Prime tenant currency cache (localStorage → DB fallback) and load the
     // list of payment methods configured by the tenant so the selector can
     // populate.
@@ -528,6 +565,7 @@ export default class OrderSave implements OnInit {
     this.form.controls.name.setValue(order.name);
     this.form.controls.phone.setValue(order.phone || '');
     this.form.controls.comments.setValue(order.comments || '');
+    this.stageId.set(order.stageId ?? null);
     this.form.controls.status.setValue(order.status);
     this.form.controls.paymentMethod.setValue(order.paymentMethod || '');
     this.loadedPaymentMethod.set(order.paymentMethod || '');
@@ -1157,6 +1195,7 @@ export default class OrderSave implements OnInit {
       phone: this.form.controls.phone.value || undefined,
       comments: this.form.controls.comments.value || undefined,
       status: this.form.controls.status.value as OrderStatus,
+      stageId: this.selectedStageId(),
       products: this.products(),
       totalUsd: this.calculateTotal(),
       totalBs: this.totalBs(),

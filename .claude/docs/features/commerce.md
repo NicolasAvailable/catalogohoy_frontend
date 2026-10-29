@@ -81,6 +81,20 @@
   stock, solo sus tallas tienen stock propio); antes la RPC las salteaba (bug).
   `stock NULL` = sin control de inventario (se saltea a propósito). Si el RPC
   falla, ahora sale un toast de aviso (antes se tragaba en console.warn).
+  **Pendiente NO aparta stock** (solo `completed`/`credit` descuentan). Clientes como
+  Motofox a veces creen que sí: revisar el historial en edge_logs antes de "arreglar".
+  `updateOrderStatus` usa el status REAL de la BD (no el que trae la pantalla) para decidir.
+
+- **Estados propios por tienda** (2026-10-29, migración `20261029_order_stages.sql`): tabla
+  `order_stages` (label, color hex, `base_status`, position) + `orders.stage_id`. Cada estado
+  propio (ej. "Despacho", "Revisión") **se comporta como su `base_status`**, que es lo que se
+  guarda en `orders.status`: stock, métricas, notificaciones, bot y reportes no cambian. La UI
+  usa claves `OrderStatusKey` = status base | `stage:<uuid>` (`domain/order-stage.ts`,
+  `OrderStageStore`). Un filtro base (ej. Pendientes) muestra solo órdenes SIN stage
+  (`stageId: null`), así cada orden vive en una sola columna. Trigger `orders_sync_stage`:
+  si el status cambia a algo distinto del base del stage (bot, POS, MCP), `stage_id` → NULL.
+  Editor: botón "Estados" en Órdenes (`OrderStagesModal`); con órdenes adentro no se puede
+  cambiar el comportamiento; borrar un estado deja sus órdenes en el base (FK SET NULL).
 
 - **Métricas → Ingresos por método de pago** (2026-10-21): la RPC `order_metrics` devuelve
   `byPaymentMethod` (solo órdenes `completed`; pagos divididos del POS suman cada parte de

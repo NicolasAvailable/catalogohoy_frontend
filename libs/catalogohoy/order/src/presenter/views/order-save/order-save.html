@@ -816,6 +816,35 @@
           </div>
         </div>
 
+        <!-- Estados propios de la tienda (Despacho, Revisión...) -->
+        @if (sortedStages().length) {
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-grey-700">{{ 'Tus estados' | transloco }}</span>
+          <div class="flex flex-wrap gap-2">
+            @for (stage of sortedStages(); track stage.id) {
+            <button
+              type="button"
+              (click)="selectStage(stage)"
+              [class]="'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors cursor-pointer ' +
+                (selectedStageId() === stage.id
+                  ? 'border-primary-500 bg-primary-50 text-primary-700'
+                  : 'border-grey-200 bg-white text-grey-700 hover:bg-grey-50')"
+            >
+              <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="stage.color"></span>
+              {{ stage.label }}
+            </button>
+            }
+          </div>
+          @for (stage of sortedStages(); track stage.id) {
+            @if (selectedStageId() === stage.id) {
+            <p class="text-xs text-grey-400 m-0">
+              {{ '"{stage}" se comporta como {base}.' | transloco: { stage: stage.label, base: (baseLabel(stage) | transloco) } }}
+            </p>
+            }
+          }
+        </div>
+        }
+
         <!-- Plan de pago en cuotas (CAT-79) — solo órdenes a crédito -->
         @if (form.get('status')?.value === 'credit') {
         <div class="rounded-xl border border-blue-200 bg-blue-50/40 p-4 flex flex-col gap-3">

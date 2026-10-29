@@ -108,7 +108,7 @@
 
       <!-- Filter Tabs -->
       <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-        @for (tab of filterTabs; track tab.value) {
+        @for (tab of filterTabs(); track tab.value) {
         <button
           type="button"
           (click)="selectFilter(tab.value)"
@@ -117,10 +117,21 @@
               ? 'bg-primary-500 text-white border border-primary-500'
               : 'bg-white text-grey-700 border border-grey-200 hover:bg-grey-50')"
         >
-          @if (tab.dotClass) {
-            <span [class]="'w-1.5 h-1.5 rounded-full shrink-0 ' + tab.dotClass"></span>
+          @if (tab.color) {
+            <span class="w-1.5 h-1.5 rounded-full shrink-0" [style.background-color]="tab.color"></span>
           }
           {{ tab.label | transloco }}
+        </button>
+        }
+        @if (canEditOrder()) {
+        <button
+          type="button"
+          (click)="openStagesEditor()"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer whitespace-nowrap bg-white text-grey-700 border border-dashed border-grey-300 hover:bg-grey-50"
+          [tooltip]="'Crea y edita los estados de tus órdenes' | transloco"
+        >
+          <ui-icon name="settings-2" styleClass="size-3.5" />
+          {{ 'Estados' | transloco }}
         </button>
         }
         <div class="w-px h-6 bg-grey-100 mx-1"></div>
@@ -214,8 +225,8 @@
             <div class="flex items-center gap-1">
               <span class="text-grey-800 font-bold">{{ 'Estado:' | transloco }} </span>
               <ui-select
-                [options]="statusOptions"
-                [ngModel]="order.status"
+                [options]="statusOptions()"
+                [ngModel]="statusKey(order)"
                 (ngModelChange)="onStatusChange(order, $event)"
                 optionLabel="label"
                 optionValue="value"
@@ -223,14 +234,14 @@
                 styleClass="order-status-select"
               >
                 <ng-template selectSelectedItem let-selected>
-                  <span [class]="getStatusBadgeClass(selected.value)">
-                    <span [class]="getStatusDotClass(selected.value)"></span>
+                  <span [class]="getStatusBadgeClass()">
+                    <span [class]="getStatusDotClass()" [style.background-color]="selected.color"></span>
                     {{ selected.label | transloco }}
                   </span>
                 </ng-template>
                 <ng-template selectItem let-item>
-                  <span [class]="getStatusBadgeClass(item.value)">
-                    <span [class]="getStatusDotClass(item.value)"></span>
+                  <span [class]="getStatusBadgeClass()">
+                    <span [class]="getStatusDotClass()" [style.background-color]="item.color"></span>
                     {{ item.label | transloco }}
                   </span>
                 </ng-template>
@@ -512,8 +523,8 @@
             <td class="px-3 py-3.5 align-top">
               <div class="flex justify-center">
                 <ui-select
-                  [options]="statusOptions"
-                  [ngModel]="order.status"
+                  [options]="statusOptions()"
+                  [ngModel]="statusKey(order)"
                   (ngModelChange)="onStatusChange(order, $event)"
                   optionLabel="label"
                   optionValue="value"
@@ -521,14 +532,14 @@
                   styleClass="order-status-select"
                 >
                   <ng-template selectSelectedItem let-selected>
-                    <span [class]="getStatusBadgeClass(selected.value)">
-                      <span [class]="getStatusDotClass(selected.value)"></span>
+                    <span [class]="getStatusBadgeClass()">
+                      <span [class]="getStatusDotClass()" [style.background-color]="selected.color"></span>
                       {{ selected.label | transloco }}
                     </span>
                   </ng-template>
                   <ng-template selectItem let-item>
-                    <span [class]="getStatusBadgeClass(item.value)">
-                      <span [class]="getStatusDotClass(item.value)"></span>
+                    <span [class]="getStatusBadgeClass()">
+                      <span [class]="getStatusDotClass()" [style.background-color]="item.color"></span>
                       {{ item.label | transloco }}
                     </span>
                   </ng-template>
@@ -1038,8 +1049,8 @@
                   </div>
                 </td>
                 <td class="px-3 py-3 align-top text-center">
-                  <span [class]="getStatusBadgeClass(order.status)">
-                    <span [class]="getStatusDotClass(order.status)"></span>{{ statusLabel(order.status) | transloco }}
+                  <span [class]="getStatusBadgeClass()">
+                    <span [class]="getStatusDotClass()" [style.background-color]="statusColor(statusKey(order))"></span>{{ statusLabel(order) | transloco }}
                   </span>
                 </td>
                 <td class="px-3 py-3 align-top">

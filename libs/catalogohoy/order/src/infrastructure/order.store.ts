@@ -54,6 +54,7 @@ export const OrderStore = signalStore(
         date?: Date;
         search?: string;
         status?: OrderStatus | 'all';
+        stageId?: string | null;
         page?: number;
         pageSize?: number;
         orderBy?: 'date_desc' | 'date_asc' | 'total_desc' | 'total_asc';
@@ -95,6 +96,7 @@ export const OrderStore = signalStore(
         date?: Date;
         search?: string;
         status?: OrderStatus | 'all';
+        stageId?: string | null;
         orderBy?: 'date_desc' | 'date_asc' | 'total_desc' | 'total_asc';
       }): Promise<Order[]> {
         const tenantId = await tenantStore.getTenantIdAsync();
@@ -331,7 +333,8 @@ export const OrderStore = signalStore(
       async updateOrderStatus(
         id: number,
         oldStatus: OrderStatus,
-        newStatus: OrderStatus
+        newStatus: OrderStatus,
+        stageId: string | null = null
       ): Promise<E.Either<string, Order>> {
         try {
           const tenantId = await tenantStore.getTenantIdAsync();
@@ -341,7 +344,8 @@ export const OrderStore = signalStore(
             id,
             tenantId,
             oldStatus,
-            newStatus
+            newStatus,
+            stageId
           );
 
           return result.fold(

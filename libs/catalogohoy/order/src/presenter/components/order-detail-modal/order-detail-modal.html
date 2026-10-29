@@ -61,7 +61,7 @@
         <div class="flex items-center gap-2">
           <span class="text-sm font-medium text-grey-500">{{ 'Estado' | transloco }}</span>
           <ui-select
-            [options]="statusOptions"
+            [options]="statusOptions()"
             [ngModel]="status()"
             (ngModelChange)="onStatusChange($event)"
             [disabled]="isUpdating()"
@@ -71,14 +71,14 @@
             styleClass="order-status-select"
           >
             <ng-template selectSelectedItem let-selected>
-              <span [class]="getStatusBadgeClass(selected.value)">
-                <span [class]="getStatusDotClass(selected.value)"></span>
+              <span [class]="getStatusBadgeClass()">
+                <span [class]="getStatusDotClass()" [style.background-color]="selected.color"></span>
                 {{ selected.label | transloco }}
               </span>
             </ng-template>
             <ng-template selectItem let-item>
-              <span [class]="getStatusBadgeClass(item.value)">
-                <span [class]="getStatusDotClass(item.value)"></span>
+              <span [class]="getStatusBadgeClass()">
+                <span [class]="getStatusDotClass()" [style.background-color]="item.color"></span>
                 {{ item.label | transloco }}
               </span>
             </ng-template>
