@@ -59,6 +59,7 @@ const LINK_MAX_FAILS = 5; // intentos fallidos de código por teléfono y hora
 const LINK_IDLE_DAYS = 30; // un vínculo sin uso por más tiempo pide vincular de nuevo
 const MAX_LINKS = Number(Deno.env.get("WA_BOT_MAX_LINKS") ?? 2); // números conectados por tienda
 const LIST_MAX = 100;
+const BULK_MAX = 500; // productos por llamada de bulk_edit_products
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });
@@ -383,13 +384,58 @@ const TOOLS: Anthropic.Tool[] = [
         sort: { type: "string", enum: ["catalog", "newest", "price_asc", "price_desc", "name"] },
         offset: { type: "number" },
         limit: { type: "number", description: `Máximo ${LIST_MAX} (default 50)` },
+        include_description: { type: "boolean", description: "true = trae también la descripción de cada producto (para revisar textos de muchos a la vez)" },
       },
     },
   },
   {
     name: "get_product",
-    description: "Detalle completo de un producto por id (precio, stock, tallas, fotos, categorías).",
-    input_schema: { type: "object", properties: { id: { type: "number" } }, required: ["id"] },
+    description:
+      "Detalle completo de un producto por id (precio, stock, tallas, fotos, categorías). " +
+      "Para varios, pasa ids (hasta 20) en UNA llamada en vez de llamarla muchas veces.",
+    input_schema: {
+      type: "object",
+      properties: { id: { type: "number" }, ids: { type: "array", items: { type: "number" } } },
+    },
+  },
+  {
+    name: "bulk_edit_products",
+    description:
+      "Edita MUCHOS productos en una sola llamada (todo se hace en el servidor). Úsala SIEMPRE que el cambio aplique a más de 2 productos " +
+      "en vez de update_product uno por uno. Destino: all=true (toda la tienda), product_ids, o los mismos filtros de list_products. " +
+      "Cambios de descripción: find + replace_with (reemplaza ese texto exacto), remove_text, append_text (lo agrega al final; si ya está, no lo repite), " +
+      "prepend_text, o description (reemplaza la descripción completa). Otros: is_hidden, is_sold_out, price_promotional (0 quita la oferta), " +
+      "add_category_ids, remove_category_ids. Para precios usa adjust_prices. " +
+      "confirmed=false devuelve una vista previa (cuántos cambian, un ejemplo antes/después y cuáles no contienen el texto); confirmed=true lo aplica. " +
+      "Para reemplazar un aviso que ya está en las descripciones, copia el texto EXACTO de una descripción actual (get_product o list_products con include_description) en find.",
+    input_schema: {
+      type: "object",
+      properties: {
+        all: { type: "boolean" },
+        product_ids: { type: "array", items: { type: "number" } },
+        search: { type: "string" },
+        category_id: { type: "number" },
+        has_photos: { type: "boolean" },
+        stock: { type: "string", enum: ["in_stock", "out_of_stock", "low", "unlimited"] },
+        hidden: { type: "boolean" },
+        on_sale: { type: "boolean" },
+        min_price: { type: "number" },
+        max_price: { type: "number" },
+        find: { type: "string" },
+        replace_with: { type: "string" },
+        remove_text: { type: "string" },
+        append_text: { type: "string" },
+        prepend_text: { type: "string" },
+        description: { type: "string" },
+        is_hidden: { type: "boolean" },
+        is_sold_out: { type: "boolean" },
+        price_promotional: { type: "number" },
+        add_category_ids: { type: "array", items: { type: "number" } },
+        remove_category_ids: { type: "array", items: { type: "number" } },
+        confirmed: { type: "boolean" },
+      },
+      required: ["confirmed"],
+    },
   },
   {
     name: "create_product",
@@ -499,7 +545,8 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "list_orders",
     description:
-      "Lista órdenes recientes con totales. status: pending | completed | credit | cancelled. days = ventana hacia atrás (default 7; 90 si filtras por producto). " +
+      "Lista órdenes recientes con totales. status: pending | completed | credit | cancelled o el nombre de un estado propio de la tienda " +
+      "(cada orden trae status_label, el nombre con que la tienda ve su estado). days = ventana hacia atrás (default 7; 90 si filtras por producto). " +
       "Para \"¿en qué órdenes se vendió X?\" o \"¿cuántas unidades de X vendí?\" filtra por product_id (búscalo antes con list_products) " +
       "o por product_name: devuelve solo las órdenes que llevan ese producto, con las unidades de ese producto en cada una y el total de unidades.",
     input_schema: {
@@ -594,15 +641,48 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "set_order_status",
     description:
-      "Cambia el estado de una orden: pending (pendiente), completed (pagada/entregada), credit (entregada a crédito, por cobrar), cancelled (cancelada). " +
+      "Cambia el estado de una orden: pending (pendiente), completed (pagada/entregada), credit (entregada a crédito, por cobrar), cancelled (cancelada) " +
+      "o un estado propio de la tienda por su nombre (ej. \"Despachado\"; ver list_order_statuses). " +
       "Mueve el stock igual que el panel. Si la orden vino del catálogo público, el cliente recibe el aviso por WhatsApp.",
     input_schema: {
       type: "object",
       properties: {
         order_number: { type: "number" },
-        status: { type: "string", enum: ["pending", "completed", "credit", "cancelled"] },
+        status: { type: "string", description: "pending | completed | credit | cancelled, o el nombre/key de un estado propio" },
       },
       required: ["order_number", "status"],
+    },
+  },
+  {
+    name: "list_order_statuses",
+    description:
+      "Estados de orden de la tienda en el orden del tablero: los 4 base (con el nombre que les puso la tienda) y los propios " +
+      "(ej. \"Despachado\"). Cada uno dice cómo se comporta: si cuenta como venta, si descuenta stock y si queda pagada.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "manage_order_status",
+    description:
+      "Crea, edita o elimina estados de orden (son las columnas del tablero de Órdenes). " +
+      "create: name y cómo se comporta con counts_as_sale / deducts_stock / paid (escalonados: pagada ⇒ descuenta stock ⇒ cuenta como venta; " +
+      "sin flags = como Pendiente: no descuenta stock). Si no te dijeron si descuenta stock, pregunta antes de crearlo. " +
+      "update: status (nombre actual) + lo que cambia (name, color, hidden, flags). A los base solo se les cambia nombre, color y si se ocultan " +
+      "(Pendiente no se oculta); el comportamiento de un propio con órdenes no se cambia. " +
+      "delete: solo estados propios, con confirmed=true después de que el dueño lo confirmó; sus órdenes vuelven a su estado base.",
+    input_schema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["create", "update", "delete"] },
+        status: { type: "string", description: "update/delete: nombre o key del estado" },
+        name: { type: "string", description: "create: nombre; update: nombre nuevo (máx. 40)" },
+        color: { type: "string", description: "Hex #rrggbb o nombre (naranja, verde, azul, rojo, morado, rosado, celeste, turquesa, amarillo, indigo, gris, marrón)" },
+        counts_as_sale: { type: "boolean" },
+        deducts_stock: { type: "boolean" },
+        paid: { type: "boolean" },
+        hidden: { type: "boolean", description: "true = no aparece en el tablero ni en los selectores" },
+        confirmed: { type: "boolean" },
+      },
+      required: ["action"],
     },
   },
   {
@@ -818,6 +898,41 @@ interface Ctx {
 const totalStock = (p: { stock: number | null; sizes?: { stock?: number }[]; is_sized?: boolean }) =>
   p.is_sized ? (p.sizes ?? []).reduce((acc, s) => acc + (Number(s.stock) || 0), 0) : p.stock;
 
+/** Productos de la tienda que cumplen los filtros de list_products (todos combinados). */
+// deno-lint-ignore no-explicit-any
+async function findProducts(tenantId: number, a: Record<string, any>, extraCols = ""): Promise<{ rows: any[] } | { error: string }> {
+  const sorts: Record<string, [string, boolean]> = {
+    catalog: ["position", true], newest: ["created_at", false], price_asc: ["price", true],
+    price_desc: ["price", false], name: ["name", true],
+  };
+  const [col, asc] = sorts[String(a.sort)] ?? sorts.catalog;
+  const cat = Number(a.category_id) || 0;
+  let q = admin.from("products")
+    .select(`id, name, price, price_promotional, stock, is_sized, sizes, is_hidden, is_sold_out, photos${extraCols ? `, ${extraCols}` : ""}${cat ? ", product_categories!inner(category_id)" : ""}`)
+    .eq("tenant_id", tenantId).order(col, { ascending: asc }).limit(2000);
+  if (cat) q = q.eq("product_categories.category_id", cat);
+  if (a.search?.trim()) q = q.ilike("search_blob", `%${a.search.trim()}%`);
+  if (typeof a.hidden === "boolean") q = q.eq("is_hidden", a.hidden);
+  if (a.min_price !== undefined) q = q.gte("price", Number(a.min_price));
+  if (a.max_price !== undefined) q = q.lte("price", Number(a.max_price));
+  const { data, error } = await q;
+  if (error) return { error: error.message };
+  // deno-lint-ignore no-explicit-any
+  let rows = (data ?? []) as any[];
+  if (typeof a.has_photos === "boolean") rows = rows.filter((r) => ((r.photos ?? []).length > 0) === a.has_photos);
+  if (a.on_sale === true) rows = rows.filter((r) => Number(r.price_promotional) > 0);
+  if (a.stock) {
+    rows = rows.filter((r) => {
+      const s = totalStock(r);
+      if (a.stock === "unlimited") return s === null;
+      if (a.stock === "out_of_stock") return r.is_sold_out || s === 0;
+      if (a.stock === "low") return s !== null && s > 0 && s <= 5;
+      return !r.is_sold_out && (s === null || s > 0); // in_stock
+    });
+  }
+  return { rows };
+}
+
 /** Links al producto: ficha pública del catálogo y edición en el panel. */
 function productLinks(shopUrl: string, id: number) {
   return shopUrl ? { public_url: `${shopUrl}/product/${id}`, admin_url: `${shopUrl}/admin/products/edit/${id}` } : {};
@@ -843,7 +958,109 @@ async function ownCategoryIds(tenantId: number, ids: unknown): Promise<number[]>
 // cancelled no lo tocan. Cruzar esa frontera descuenta o repone stock.
 const deductsStock = (status?: string | null) => status === "completed" || status === "credit";
 const ORDER_FIELDS =
-  "id, order_number, name, phone, email, status, source, products, total_usd, total_bs, payment_method, payments, shipping_method, shipping_address, shipping_fee, discount_amount, comments, created_at";
+  "id, order_number, name, phone, email, status, stage_id, source, products, total_usd, total_bs, payment_method, payments, shipping_method, shipping_address, shipping_fee, discount_amount, comments, created_at";
+
+// ── Estados de orden de la tienda (order_stages, igual que el panel) ─────────
+// Los 4 base (con el nombre/color/orden que les puso la tienda) + los propios.
+// Un estado propio se comporta como su base_status (stock, métricas, avisos):
+// la orden guarda status = base y stage_id = el propio.
+const BASE_STATUSES = ["pending", "completed", "credit", "cancelled"];
+const BASE_STATUS_META: Record<string, { label: string; color: string }> = {
+  pending: { label: "Pendiente", color: "#fb923c" },
+  completed: { label: "Completada", color: "#22c55e" },
+  credit: { label: "A crédito", color: "#3b82f6" },
+  cancelled: { label: "Cancelada", color: "#ef4444" },
+};
+const STAGE_COLORS = [
+  "#fb923c", "#22c55e", "#3b82f6", "#ef4444", "#8b5cf6", "#ec4899",
+  "#06b6d4", "#14b8a6", "#eab308", "#6366f1", "#64748b", "#a16207",
+];
+const COLOR_NAMES: Record<string, string> = {
+  naranja: "#fb923c", verde: "#22c55e", azul: "#3b82f6", rojo: "#ef4444", morado: "#8b5cf6", violeta: "#8b5cf6",
+  rosado: "#ec4899", rosa: "#ec4899", celeste: "#06b6d4", cian: "#06b6d4", turquesa: "#14b8a6", amarillo: "#eab308",
+  indigo: "#6366f1", gris: "#64748b", marron: "#a16207", cafe: "#a16207",
+};
+/** Otros nombres con los que el dueño llama a los estados base. */
+const BASE_ALIASES: Record<string, string> = {
+  pendiente: "pending", nueva: "pending", completada: "completed", pagada: "completed", entregada: "completed",
+  "a credito": "credit", credito: "credit", "por cobrar": "credit", fiada: "credit", cancelada: "cancelled", anulada: "cancelled",
+};
+
+interface StatusDef {
+  key: string; label: string; color: string; base_status: string; custom: boolean; hidden: boolean; position: number;
+  row_id: string | null;
+}
+
+const normLabel = (s: unknown) =>
+  String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+
+const statusBehavior = (status: string) => ({
+  counts_as_sale: status !== "cancelled", deducts_stock: deductsStock(status), paid: status === "completed",
+});
+
+/** Comportamiento escalonado como los checks del panel: pagada ⇒ descuenta stock ⇒ cuenta como venta. */
+function statusFromFlags(a: Record<string, unknown>): string {
+  if (a.paid === true) return "completed";
+  if (a.deducts_stock === true) return "credit";
+  if (a.counts_as_sale === false) return "cancelled";
+  return "pending";
+}
+
+async function statusDefs(tenantId: number): Promise<StatusDef[]> {
+  const { data } = await admin.from("order_stages")
+    .select("id, label, color, base_status, position, is_hidden, system_status").eq("tenant_id", tenantId);
+  const rows = data ?? [];
+  const defs: StatusDef[] = BASE_STATUSES.map((status, i) => {
+    const row = rows.find((r) => r.system_status === status);
+    return {
+      key: status, label: row?.label ?? BASE_STATUS_META[status].label, color: row?.color ?? BASE_STATUS_META[status].color,
+      base_status: status, custom: false, hidden: status === "pending" ? false : !!row?.is_hidden,
+      position: row?.position ?? (i === 0 ? -1000 : 1000 + i), row_id: row?.id ?? null,
+    };
+  });
+  for (const r of rows) {
+    if (r.system_status) continue;
+    defs.push({
+      key: r.id, label: r.label, color: r.color, base_status: r.base_status, custom: true, hidden: !!r.is_hidden,
+      position: r.position, row_id: r.id,
+    });
+  }
+  return defs.sort((x, y) => x.position - y.position);
+}
+
+/** Busca un estado por su clave (pending…/id) o por su nombre (el de la tienda o el de siempre). */
+function findStatus(defs: StatusDef[], input: unknown): StatusDef | null {
+  const raw = String(input ?? "").trim();
+  if (!raw) return null;
+  const n = normLabel(raw);
+  return defs.find((d) => d.key === raw)
+    ?? defs.find((d) => normLabel(d.label) === n)
+    ?? defs.find((d) => !d.custom && d.key === BASE_ALIASES[n])
+    ?? null;
+}
+
+/** Nombre con que la tienda ve el estado de una orden. */
+function statusLabel(defs: StatusDef[], status: string, stageId?: string | null): string {
+  const def = (stageId && defs.find((d) => d.custom && d.key === stageId)) || defs.find((d) => d.key === status);
+  return def?.label ?? status;
+}
+
+const statusView = (d: StatusDef) => ({
+  key: d.key, name: d.label, color: d.color, custom: d.custom, hidden: d.hidden,
+  behaves_like: d.base_status, ...statusBehavior(d.base_status),
+});
+
+/** Guarda el orden completo de los estados (mismo formato que el editor del panel). */
+async function saveStatusOrder(tenantId: number, defs: StatusDef[]) {
+  for (const [position, d] of defs.entries()) {
+    const row = { label: d.label, color: d.color, base_status: d.base_status, position, is_hidden: d.hidden };
+    const { error } = d.row_id
+      ? await admin.from("order_stages").update(row).eq("id", d.row_id).eq("tenant_id", tenantId)
+      : await admin.from("order_stages").insert({ ...row, tenant_id: tenantId, system_status: d.custom ? null : d.base_status });
+    if (error) return error.message;
+  }
+  return null;
+}
 
 // deno-lint-ignore no-explicit-any
 async function moveStock(tenantId: number, items: any[], dir: "deduct" | "restore") {
@@ -1084,35 +1301,9 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
     case "list_products": {
       const limit = Math.min(Number(a.limit) || 50, LIST_MAX);
       const offset = Math.max(Number(a.offset) || 0, 0);
-      const sorts: Record<string, [string, boolean]> = {
-        catalog: ["position", true], newest: ["created_at", false], price_asc: ["price", true],
-        price_desc: ["price", false], name: ["name", true],
-      };
-      const [col, asc] = sorts[String(a.sort)] ?? sorts.catalog;
-      const cat = Number(a.category_id) || 0;
-      let q = admin.from("products")
-        .select(`id, name, price, price_promotional, stock, is_sized, sizes, is_hidden, is_sold_out, photos${cat ? ", product_categories!inner(category_id)" : ""}`)
-        .eq("tenant_id", tenantId).order(col, { ascending: asc }).limit(2000);
-      if (cat) q = q.eq("product_categories.category_id", cat);
-      if (a.search?.trim()) q = q.ilike("search_blob", `%${a.search.trim()}%`);
-      if (typeof a.hidden === "boolean") q = q.eq("is_hidden", a.hidden);
-      if (a.min_price !== undefined) q = q.gte("price", Number(a.min_price));
-      if (a.max_price !== undefined) q = q.lte("price", Number(a.max_price));
-      const { data, error } = await q;
-      if (error) return { error: error.message };
-      // deno-lint-ignore no-explicit-any
-      let rows = (data ?? []) as any[];
-      if (typeof a.has_photos === "boolean") rows = rows.filter((r) => ((r.photos ?? []).length > 0) === a.has_photos);
-      if (a.on_sale === true) rows = rows.filter((r) => Number(r.price_promotional) > 0);
-      if (a.stock) {
-        rows = rows.filter((r) => {
-          const s = totalStock(r);
-          if (a.stock === "unlimited") return s === null;
-          if (a.stock === "out_of_stock") return r.is_sold_out || s === 0;
-          if (a.stock === "low") return s !== null && s > 0 && s <= 5;
-          return !r.is_sold_out && (s === null || s > 0); // in_stock
-        });
-      }
+      const found = await findProducts(tenantId, a, a.include_description ? "description" : "");
+      if ("error" in found) return found;
+      const rows = found.rows;
       const page = rows.slice(offset, offset + limit);
       return {
         total: rows.length,
@@ -1121,10 +1312,101 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
         products: page.map((r) => ({
           id: r.id, name: r.name, price: r.price, price_promotional: r.price_promotional,
           stock: totalStock(r), photos: (r.photos ?? []).length, hidden: r.is_hidden, sold_out: r.is_sold_out,
+          ...(a.include_description ? { description: htmlToWa(r.description ?? "") } : {}),
         })),
       };
     }
+    case "bulk_edit_products": {
+      const hasTarget = a.all === true || (Array.isArray(a.product_ids) && a.product_ids.length) ||
+        ["search", "category_id", "has_photos", "stock", "hidden", "on_sale", "min_price", "max_price"].some((k) => a[k] !== undefined);
+      if (!hasTarget) return { error: "Indica a qué productos: all=true, product_ids o filtros" };
+      const found = await findProducts(tenantId, a, "description");
+      if ("error" in found) return found;
+      let rows = found.rows;
+      if (Array.isArray(a.product_ids) && a.product_ids.length) {
+        const ids = new Set(a.product_ids.map(Number));
+        rows = rows.filter((r) => ids.has(r.id));
+      }
+      if (rows.length > BULK_MAX) return { error: `Son ${rows.length} productos; máximo ${BULK_MAX} por vez. Usa filtros.` };
+      const find = typeof a.find === "string" && a.find.trim() ? a.find.trim() : "";
+      const remove = typeof a.remove_text === "string" && a.remove_text.trim() ? a.remove_text.trim() : "";
+      const append = typeof a.append_text === "string" && a.append_text.trim() ? a.append_text.trim() : "";
+      const prepend = typeof a.prepend_text === "string" && a.prepend_text.trim() ? a.prepend_text.trim() : "";
+      const textOps = !!(find || remove || append || prepend || typeof a.description === "string");
+      if (find && typeof a.replace_with !== "string") return { error: "Falta replace_with (el texto nuevo)" };
+      const flags = productFields({
+        ...(a.is_hidden !== undefined ? { is_hidden: a.is_hidden } : {}),
+        ...(a.is_sold_out !== undefined ? { is_sold_out: a.is_sold_out } : {}),
+        ...(a.price_promotional !== undefined ? { price_promotional: a.price_promotional } : {}),
+      });
+      const addCats = await ownCategoryIds(tenantId, a.add_category_ids);
+      const removeCats = (Array.isArray(a.remove_category_ids) ? a.remove_category_ids : []).map(Number).filter(Boolean);
+      if (!textOps && !Object.keys(flags).length && !addCats.length && !removeCats.length) {
+        return { error: "No indicaste ningún cambio" };
+      }
+      // deno-lint-ignore no-explicit-any
+      const plan: { r: any; desc?: string; note?: string }[] = [];
+      for (const r of rows) {
+        if (!textOps) { plan.push({ r }); continue; }
+        const raw = String(r.description ?? "");
+        // Descripciones del editor web vienen en HTML: si el texto no está tal cual, se trabaja sobre la versión en texto.
+        const plain = /<[a-z][^>]*>/i.test(raw) ? htmlToWa(raw) : raw;
+        let d = typeof a.description === "string" ? a.description : raw;
+        if (find) {
+          const base = d.includes(find) ? d : plain.includes(find) ? plain : null;
+          if (base === null) { plan.push({ r, note: "no contiene el texto a reemplazar" }); continue; }
+          d = base.split(find).join(String(a.replace_with));
+        }
+        if (remove) {
+          const base = d.includes(remove) ? d : plain.includes(remove) ? plain : null;
+          if (base !== null) d = base.split(remove).join("").replace(/\n{3,}/g, "\n\n").trim();
+        }
+        if (append && !d.includes(append)) d = `${d.trimEnd()}${d.trim() ? "\n\n" : ""}${append}`;
+        if (prepend && !d.includes(prepend)) d = `${prepend}${d.trim() ? "\n\n" : ""}${d.trimStart()}`;
+        plan.push(d === raw ? { r, note: "ya estaba así" } : { r, desc: d });
+      }
+      const toChange = plan.filter((x) => !textOps || x.desc !== undefined);
+      const skipped = plan.filter((x) => textOps && x.desc === undefined)
+        .map((x) => ({ id: x.r.id, name: x.r.name, reason: x.note }));
+      if (a.confirmed !== true) {
+        const ex = toChange.find((x) => x.desc !== undefined);
+        return {
+          preview: true, matched: rows.length, will_change: toChange.length, skipped: skipped.slice(0, 20),
+          ...(ex ? { example: { name: ex.r.name, before: htmlToWa(ex.r.description ?? "").slice(-600), after: ex.desc!.slice(-600) } } : {}),
+          next: "Si el dueño ya lo pidió/confirmó, llama de nuevo igual con confirmed=true.",
+        };
+      }
+      let updated = 0;
+      const failed: string[] = [];
+      for (const x of toChange) {
+        const payload = { ...flags, ...(x.desc !== undefined ? { description: x.desc } : {}) };
+        if (Object.keys(payload).length) {
+          const { error } = await admin.from("products").update(payload).eq("id", x.r.id).eq("tenant_id", tenantId);
+          if (error) { failed.push(`${x.r.name}: ${error.message}`); continue; }
+        }
+        if (addCats.length) {
+          const { data: has } = await admin.from("product_categories").select("category_id").eq("product_id", x.r.id);
+          const have = new Set((has ?? []).map((c) => c.category_id));
+          const missing = addCats.filter((c) => !have.has(c));
+          if (missing.length) {
+            await admin.from("product_categories").insert(missing.map((category_id) => ({ product_id: x.r.id, category_id, position: have.size })));
+          }
+        }
+        if (removeCats.length) await admin.from("product_categories").delete().eq("product_id", x.r.id).in("category_id", removeCats);
+        updated++;
+      }
+      return {
+        updated, skipped: skipped.slice(0, 20), failed: failed.slice(0, 10),
+        example_url: toChange[0] ? productLinks(ctx.shopUrl, toChange[0].r.id).public_url : undefined,
+      };
+    }
     case "get_product": {
+      if (Array.isArray(a.ids) && a.ids.length) {
+        const { data } = await admin.from("products").select(PRODUCT_DETAIL)
+          .eq("tenant_id", tenantId).in("id", a.ids.map(Number).slice(0, 20));
+        // deno-lint-ignore no-explicit-any
+        return { products: (data ?? []).map((p: any) => ({ ...p, description: htmlToWa(p.description ?? ""), total_stock: totalStock(p) })) };
+      }
       const { data } = await admin.from("products")
         .select(PRODUCT_DETAIL)
         .eq("tenant_id", tenantId).eq("id", Number(a.id)).maybeSingle();
@@ -1255,16 +1537,21 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       const limit = Math.min(Number(a.limit) || (byProduct ? 30 : 10), 30);
       const since = new Date(Date.now() - days * 86400_000).toISOString();
       let q = admin.from("orders")
-        .select(`id, order_number, name, phone, status, total_usd, payment_method, source, created_at${byProduct ? ", products" : ""}`, { count: "exact" })
+        .select(`id, order_number, name, phone, status, stage_id, total_usd, payment_method, source, created_at${byProduct ? ", products" : ""}`, { count: "exact" })
         .eq("tenant_id", tenantId).gte("created_at", since).order("created_at", { ascending: false });
-      if (a.status) q = q.eq("status", String(a.status));
+      const defs = await statusDefs(tenantId);
+      if (a.status) {
+        const def = findStatus(defs, a.status);
+        if (!def) return { error: `No hay un estado «${a.status}». Estados: ${defs.map((d) => d.label).join(", ")}` };
+        q = def.custom ? q.eq("stage_id", def.key) : q.eq("status", def.key);
+      }
       if (a.search?.trim()) q = q.or(`name.ilike.%${a.search.trim()}%,phone.ilike.%${digits(a.search)}%`);
       // productId se guarda como número o, en órdenes viejas, como texto.
       if (productId) q = q.or(`products.cs.[{"productId":${productId}}],products.cs.[{"productId":"${productId}"}]`);
       const { data, error, count } = await q.limit(byProduct ? 1000 : 200);
       if (error) return { error: error.message };
       // deno-lint-ignore no-explicit-any
-      let rows: any[] = data ?? [];
+      let rows: any[] = ((data ?? []) as any[]).map(({ stage_id, ...r }) => ({ ...r, status_label: statusLabel(defs, r.status, stage_id) }));
       if (!byProduct) {
         const total = rows.reduce((acc, r) => acc + (Number(r.total_usd) || 0), 0);
         return { days, total_orders: count ?? rows.length, total_usd: Math.round(total * 100) / 100, orders: rows.slice(0, limit) };
@@ -1299,7 +1586,7 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       const data = await findOrder(tenantId, a);
       if (!data) return { error: "Orden no encontrada" };
       // Productos con su product_id para poder editarlos con update_product.
-      return orderView(data, ctx.shopUrl);
+      return { ...orderView(data, ctx.shopUrl), status_label: statusLabel(await statusDefs(tenantId), data.status, data.stage_id) };
     }
     case "create_order": {
       const name = String(a.name ?? "").trim();
@@ -1366,14 +1653,18 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       return { updated: true, changed: Object.keys(patch), order: orderView(data, ctx.shopUrl) };
     }
     case "set_order_status": {
-      const status = String(a.status ?? "");
-      if (!["pending", "completed", "credit", "cancelled"].includes(status)) return { error: "Estado inválido" };
+      const defs = await statusDefs(tenantId);
+      const target = findStatus(defs, a.status);
+      if (!target) return { error: `No hay un estado «${a.status}». Estados: ${defs.map((d) => d.label).join(", ")}` };
+      const status = target.base_status;
+      const stageId = target.custom ? target.key : null;
       const before = await findOrder(tenantId, a);
       if (!before) return { error: "Orden no encontrada" };
-      if (before.status === status) return { unchanged: true, status };
-      const patch: Record<string, unknown> = { status };
+      const fromLabel = statusLabel(defs, before.status, before.stage_id);
+      if (before.status === status && (before.stage_id ?? null) === stageId) return { unchanged: true, status: target.label };
+      const patch: Record<string, unknown> = { status, stage_id: stageId };
       // Al salir de "pendiente", el Bs queda fijo con la tasa del día (igual que el panel).
-      if (before.status === "pending" && Number(before.total_usd) > 0) {
+      if (before.status === "pending" && status !== "pending" && Number(before.total_usd) > 0) {
         const rate = await dualRate(tenantId);
         if (rate) patch.total_bs = Number(before.total_usd) * rate;
       }
@@ -1384,7 +1675,10 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       if (!was && will) await moveStock(tenantId, before.products ?? [], "deduct");
       else if (was && !will) await moveStock(tenantId, before.products ?? [], "restore");
       const notified = !["manual", "pos"].includes(before.source ?? "public");
-      return { updated: true, from: before.status, to: status, customer_notified: notified, order: orderView(data, ctx.shopUrl) };
+      return {
+        updated: true, from: fromLabel, to: target.label, customer_notified: notified && before.status !== status,
+        order: { ...orderView(data, ctx.shopUrl), status_label: target.label },
+      };
     }
     case "delete_order": {
       if (a.confirmed !== true) return { error: "Pide confirmación al dueño antes de eliminar la orden." };
@@ -1394,6 +1688,98 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       if (error) return { error: error.message };
       if (deductsStock(before.status)) await moveStock(tenantId, before.products ?? [], "restore");
       return { deleted: true, order_number: before.order_number };
+    }
+    case "list_order_statuses": {
+      return {
+        statuses: (await statusDefs(tenantId)).map(statusView),
+        note: "behaves_like es el estado base cuyo comportamiento copia. hidden = no se muestra en el tablero ni en los selectores.",
+      };
+    }
+    case "manage_order_status": {
+      const action = String(a.action ?? "");
+      const defs = await statusDefs(tenantId);
+      let color: string | undefined;
+      if (a.color !== undefined) {
+        const c = String(a.color).trim();
+        color = /^#[0-9a-fA-F]{6}$/.test(c) ? c.toLowerCase() : COLOR_NAMES[normLabel(c)];
+        if (!color) return { error: "Color inválido: usa un hex #rrggbb o un nombre (verde, azul, morado…)" };
+      }
+      const name = a.name !== undefined ? String(a.name).trim() : undefined;
+      if (name !== undefined && (!name || name.length > 40)) return { error: "El nombre debe tener entre 1 y 40 caracteres" };
+      const taken = (n: string, except?: StatusDef) => defs.some((d) => d !== except && normLabel(d.label) === normLabel(n));
+      const hasFlags = ["counts_as_sale", "deducts_stock", "paid"].some((k) => a[k] !== undefined);
+
+      if (action === "create") {
+        if (!name) return { error: "Falta el nombre del estado" };
+        if (taken(name)) return { error: `Ya hay un estado «${name}»` };
+        const used = new Set(defs.map((d) => d.color));
+        const def: StatusDef = {
+          key: "", label: name, color: color ?? STAGE_COLORS.find((c) => !used.has(c)) ?? STAGE_COLORS[4],
+          base_status: statusFromFlags(a), custom: true, hidden: a.hidden === true, position: 0, row_id: null,
+        };
+        // Como en el panel: antes de los base del final (Completada, A crédito, Cancelada).
+        const idx = defs.findIndex((d) => !d.custom && d.base_status !== "pending");
+        defs.splice(idx === -1 ? defs.length : idx, 0, def);
+        const err = await saveStatusOrder(tenantId, defs);
+        if (err) return { error: err };
+        const created = (await statusDefs(tenantId)).find((d) => d.custom && normLabel(d.label) === normLabel(name));
+        return { ok: true, action, status: created ? statusView(created) : statusView(def) };
+      }
+
+      const def = findStatus(defs, a.status);
+      if (!def) return { error: `No hay un estado «${a.status ?? ""}». Estados: ${defs.map((d) => d.label).join(", ")}` };
+      const countOrders = async () => {
+        if (!def.custom) return 0;
+        const { count } = await admin.from("orders").select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId).eq("stage_id", def.key);
+        return count ?? 0;
+      };
+
+      if (action === "update") {
+        if (name !== undefined && taken(name, def)) return { error: `Ya hay un estado «${name}»` };
+        if (a.hidden === true && !def.custom && def.base_status === "pending") {
+          return { error: "Pendiente no se puede ocultar: ahí llegan los pedidos nuevos." };
+        }
+        let base = def.base_status;
+        if (hasFlags) {
+          if (!def.custom) return { error: "Los estados base tienen su comportamiento fijo; solo se les cambia nombre, color o si se ocultan." };
+          const merged: Record<string, unknown> = { ...statusBehavior(def.base_status) };
+          for (const k of ["counts_as_sale", "deducts_stock", "paid"]) if (a[k] !== undefined) merged[k] = a[k] === true;
+          // Desmarcar uno desmarca los de arriba (misma escalera que los checks del panel).
+          if (a.deducts_stock === false) merged.paid = false;
+          if (a.counts_as_sale === false) merged.deducts_stock = merged.paid = false;
+          base = statusFromFlags(merged);
+          if (base !== def.base_status) {
+            const n = await countOrders();
+            if (n > 0) return { error: `«${def.label}» tiene ${n} órdenes: muévelas a otro estado antes de cambiar lo que hace.` };
+          }
+        }
+        if (name === undefined && color === undefined && a.hidden === undefined && base === def.base_status) {
+          return { error: "No indicaste qué cambiar" };
+        }
+        Object.assign(def, {
+          label: name ?? def.label, color: color ?? def.color, base_status: base,
+          hidden: a.hidden !== undefined ? a.hidden === true : def.hidden,
+        });
+        const err = await saveStatusOrder(tenantId, defs);
+        if (err) return { error: err };
+        return { ok: true, action, status: statusView(def) };
+      }
+
+      if (action === "delete") {
+        if (!def.custom) return { error: "Los estados base no se eliminan; se pueden ocultar (menos Pendiente)." };
+        const n = await countOrders();
+        if (a.confirmed !== true) {
+          return {
+            error: "Pide confirmación al dueño antes de eliminar el estado.",
+            orders_in_status: n, orders_go_to: BASE_STATUS_META[def.base_status].label,
+          };
+        }
+        const { error } = await admin.from("order_stages").delete().eq("id", def.key).eq("tenant_id", tenantId).is("system_status", null);
+        if (error) return { error: error.message };
+        return { ok: true, action, status: statusView(def), orders_moved: n, orders_now_in: statusLabel(defs, def.base_status) };
+      }
+      return { error: "action debe ser create, update o delete" };
     }
     case "get_exchange_rate": {
       const [{ data: cfg }, { data: bcv }] = await Promise.all([
@@ -1769,9 +2155,12 @@ Cómo responder:
 - Precios en USD con el símbolo $ (ej. $25).
 - Al terminar una acción, confirma qué hiciste en una o dos líneas.
 - Si adjunta un PDF o una planilla Excel/CSV (lista de precios, catálogo, factura), léelo y propón qué crear o actualizar. Ignora filas de encabezado, subtotales y totales: no son productos.
-- Cada mensaje cobra créditos según el trabajo: ~1 una consulta corta, ~2 una consulta con datos, ~3-4 crear o editar un producto con foto. Si el pedido es grande (crear o editar más de 3 productos, o algo que calcules en más de ${CREDIT_CONFIRM} créditos), ANTES de hacerlo dile cuántos créditos costará aproximadamente y su saldo (viene en el contexto), y pide confirmación. Si no le alcanza el saldo, ofrece hacerlo por partes o comprar créditos.
+- Cada mensaje cobra créditos según el trabajo: ~1 una consulta corta, ~2 una consulta con datos, ~3-4 crear o editar un producto con foto, ~3-5 un cambio en lote con bulk_edit_products (sin importar cuántos productos). Si el pedido es grande (crear más de 3 productos, o algo que calcules en más de ${CREDIT_CONFIRM} créditos), ANTES de hacerlo dile cuántos créditos costará aproximadamente y su saldo (viene en el contexto), y pide confirmación. Si no le alcanza el saldo, ofrece hacerlo por partes o comprar créditos.
 
 Reglas:
+- NUNCA digas "listo", "hecho", "ya lo cambié" ni nada parecido si en ESTE turno no llamaste a la herramienta que hace el cambio y te devolvió éxito. Si el dueño confirma ("sí", "dale", "aplícalo"), ejecuta el cambio en ese mismo turno. Si una herramienta falló o algo quedó sin hacer, dilo claro.
+- Cambios a varios productos a la vez (agregar, quitar o reemplazar un texto o aviso en las descripciones, ocultar/mostrar, marcar agotados, quitar ofertas, agregar o quitar una categoría): usa bulk_edit_products en UNA llamada, nunca update_product uno por uno. Para reemplazar un aviso que ya pusiste, copia el texto exacto que hay hoy (míralo con get_product de uno) en find. Revisa el resultado: si skipped trae productos que no tenían el texto, dilo.
+- Para ver varios productos usa get_product con ids o list_products con include_description, no muchas llamadas sueltas.
 - Si te dan nombre y precio, crea el producto directo, sin pedir confirmación. Si falta el precio, pregúntalo. Si hay fotos pendientes, úsalas en el producto que crees o edites.
 - Siempre que crees o edites un producto, termina la respuesta con sus dos links (vienen en public_url y admin_url): "🔗 Ver en tu catálogo: …" y "⚙️ Editar en el panel: …".
 - Si ves la foto y no te dieron descripción, escribe una descripción corta y vendedora basada en la foto.
@@ -1781,8 +2170,8 @@ Reglas:
 - Sí puedes enviarle fotos: para mostrar productos con sus imágenes o "uno por uno" usa send_products (cada ficha llega como un mensaje aparte). Después responde solo una línea, ej. "Te mandé 5 productos 👆 Responde a cualquiera para editarlo." Nunca digas que no puedes enviar imágenes.
 - Si el mensaje empieza con [Respondiendo al producto …], el dueño citó esa ficha: lo que pida aplica a ESE producto (usa su id directo, sin buscar).
 - Tallas: sizes [{name, stock}]. Venta al mayor: wholesale_tiers [{title, price}].
-- Eliminar productos y cambiar precios en lote: pide confirmación explícita antes de aplicarlo.
-- Órdenes: puedes crearlas (create_order, para ventas por WhatsApp o en tienda), editarlas (update_order), cambiarles el estado (set_order_status) y eliminarlas (delete_order, solo con confirmación explícita). Estados: pendiente = pending, pagada/entregada/completada = completed, a crédito/fiada/por cobrar = credit, cancelada = cancelled. Si en create_order un producto tiene tallas o variantes y no te las dijeron, pregunta. Si customer_notified es true, dile que al cliente le llegó el aviso por WhatsApp.
+- Eliminar productos, cambiar precios en lote y cambios en lote de descripciones: pide confirmación explícita antes de aplicarlo (muestra cómo quedará y a cuántos productos aplica). Si el dueño ya lo confirmó, aplícalo directo con confirmed=true.
+- Órdenes: puedes crearlas (create_order, para ventas por WhatsApp o en tienda), editarlas (update_order), cambiarles el estado (set_order_status) y eliminarlas (delete_order, solo con confirmación explícita). Estados: pendiente = pending, pagada/entregada/completada = completed, a crédito/fiada/por cobrar = credit, cancelada = cancelled. La tienda puede tener estados propios (columnas del tablero, ej. "Despachado"): list_order_statuses los muestra y set_order_status acepta su nombre; para crearlos, editarlos o borrarlos usa manage_order_status. Al hablar de una orden usa su status_label. Si en create_order un producto tiene tallas o variantes y no te las dijeron, pregunta. Si customer_notified es true, dile que al cliente le llegó el aviso por WhatsApp.
 - Al mostrar una orden, dala estructurada y breve: número, cliente y teléfono, estado, cada producto en una línea (cantidad × nombre, talla/variante, total), envío, total y método de pago.
 - No inventes datos (precios, stock, órdenes): usa siempre las herramientas.
 - Métricas ("¿cuánto vendí?", "lo más vendido", "ventas de la semana"): usa get_metrics y resume en 3-5 líneas.
@@ -1836,6 +2225,8 @@ function actionLabel(name: string, a: Record<string, any>, out: any, shopUrl: st
       return { tool: name, label: `Editó ${a.name ? `«${a.name}»` : `el producto #${out?.id}`}`, url: out?.admin_url };
     case "delete_product":
       return { tool: name, label: `Eliminó ${out?.deleted === 1 ? "un producto" : `${out?.deleted ?? 0} productos`}` };
+    case "bulk_edit_products":
+      return out?.updated ? { tool: name, label: `Editó ${out.updated} productos en lote`, url: out.example_url } : null;
     case "adjust_prices":
       return { tool: name, label: `Ajustó precios de ${out?.updated ?? 0} productos (${a.percent > 0 ? "+" : ""}${a.percent}%)` };
     case "create_category":
@@ -1845,7 +2236,9 @@ function actionLabel(name: string, a: Record<string, any>, out: any, shopUrl: st
     case "update_order":
       return { tool: name, label: `Editó la orden #${order}`, url: ordersUrl };
     case "set_order_status":
-      return { tool: name, label: `Orden #${order}: ${STATUS_ES[out?.from] ?? out?.from} → ${STATUS_ES[out?.to] ?? out?.to}`, url: ordersUrl };
+      return out?.updated ? { tool: name, label: `Orden #${order}: ${STATUS_ES[out?.from] ?? out?.from} → ${STATUS_ES[out?.to] ?? out?.to}`, url: ordersUrl } : null;
+    case "manage_order_status":
+      return out?.ok ? { tool: name, label: `Estado de orden «${out.status?.name}»: ${{ create: "creado", update: "editado", delete: "eliminado" }[out.action as string] ?? out.action}`, url: ordersUrl } : null;
     case "delete_order":
       return { tool: name, label: `Eliminó la orden #${order}` };
     case "send_products":
@@ -1934,6 +2327,7 @@ async function runAgent(
 
   let reply = "";
   let outOfCredits = false;
+  let truncated = 0;
   for (let step = 0; step < MAX_AGENT_STEPS; step++) {
     // Sin saldo para seguir: se corta aquí y se cobra solo lo hecho.
     if (step > 0 && creditsFor(usage) >= budget) {
@@ -1944,7 +2338,7 @@ async function runAgent(
     }
     const res = await anthropic.beta.messages.create({
       model: MODEL,
-      max_tokens: 4000,
+      max_tokens: 8000,
       system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
       tools: TOOLS,
       messages,
@@ -1965,6 +2359,26 @@ async function runAgent(
       break;
     }
     const toolUses = res.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
+    // Respuesta cortada por largo (p. ej. muchas update_product con descripciones completas):
+    // no se ejecuta nada a medias; se le pide que lo haga en menos llamadas.
+    if (res.stop_reason === "max_tokens") {
+      truncated++;
+      messages.pop();
+      const text = res.content.filter((b) => b.type === "text").map((b) => (b as Anthropic.Beta.BetaTextBlock).text).join("\n").trim();
+      if (truncated > 2) {
+        reply = actions.length
+          ? `Hice ${actions.length} cambio(s), pero no alcancé a terminar todo. ¿Sigo con el resto?`
+          : "No alcancé a hacer el cambio 😕 ¿Me lo repites? Lo intento de nuevo.";
+        break;
+      }
+      messages.push({ role: "assistant", content: text || "(Respuesta cortada)" });
+      messages.push({
+        role: "user",
+        content: "[Sistema: tu respuesta se cortó por ser demasiado larga y NO se ejecutó ninguna herramienta. " +
+          "Si el cambio es igual para varios productos usa bulk_edit_products en una sola llamada; si no, haz como máximo 5 llamadas por turno.]",
+      });
+      continue;
+    }
     if (res.stop_reason !== "tool_use" || !toolUses.length) {
       reply = res.content.filter((b) => b.type === "text").map((b) => (b as Anthropic.Beta.BetaTextBlock).text).join("\n").trim();
       break;
@@ -1981,7 +2395,8 @@ async function runAgent(
       }
       const isError = !!(out && typeof out === "object" && "error" in out);
       trace.push({ name: tu.name, input: tu.input, output: JSON.stringify(out).slice(0, 1500), error: isError, ms: Date.now() - t0 });
-      if (!isError && !tu.name.startsWith("list_") && !tu.name.startsWith("get_")) {
+      const isPreview = !!(out && typeof out === "object" && "preview" in out);
+      if (!isError && !isPreview && !tu.name.startsWith("list_") && !tu.name.startsWith("get_")) {
         actions.push(`${tu.name} ${JSON.stringify(out).slice(0, 160)}`);
         const la = actionLabel(tu.name, (tu.input ?? {}) as Record<string, unknown>, out, shopUrl);
         if (la) logged.push(la);
@@ -1991,7 +2406,9 @@ async function runAgent(
     messages.push({ role: "user", content: results });
   }
 
-  return { reply: reply || "Listo 👍", actions, logged, trace, usage, photosUsed: ctx.photosUsed, sentMedia: ctx.sentMedia, outOfCredits };
+  // Sin texto final: nunca "Listo" si no se hizo nada.
+  if (!reply) reply = actions.length ? `Listo, hice ${actions.length} cambio(s).` : "No alcancé a terminar 😕 ¿Me lo repites?";
+  return { reply, actions, logged, trace, usage, photosUsed: ctx.photosUsed, sentMedia: ctx.sentMedia, outOfCredits };
 }
 
 // ── Mensaje entrante ────────────────────────────────────────────────────────
