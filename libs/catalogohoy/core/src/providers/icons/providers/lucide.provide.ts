@@ -179,6 +179,7 @@ import {
   UserRound,
   Layers,
   Calendar,
+  Receipt,
 } from 'lucide-angular';
 
 export const provideLucideIcons = (): EnvironmentProviders => {
@@ -197,6 +198,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Bot,
       Building,
       Building2,
+    Receipt,
       Check,
       CheckCheck,
       CheckCircle,

@@ -109,6 +109,14 @@ export const adminRoutes: Route[] = [
       import('@catalogohoy/reports').then((m) => m.REPORTS_ADMIN_ROUTES),
   },
   {
+    // Gastos y facturas de proveedores (pedido de Distribuidor Motomax).
+    path: 'expenses',
+    title: 'Gastos y facturas',
+    canActivate: [teamPermissionGuard('gastos', 'view')],
+    loadChildren: () =>
+      import('@catalogohoy/expenses').then((m) => m.EXPENSES_ROUTES),
+  },
+  {
     path: 'teams',
     title: 'Equipo',
     // Same: free plan can see the list + history, but invite button is

@@ -176,6 +176,21 @@
     </li>
     }
 
+    <!-- Gastos y facturas -->
+    @if (canViewExpenses()) {
+    <li>
+      <a
+        routerLink="/admin/expenses"
+        routerLinkActive="bg-primary-50"
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Gastos y facturas' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="receipt" size="18" styleClass="text-grey-700" />
+      </a>
+    </li>
+    }
+
     <!-- Tasas del día (solo Venezuela) -->
     @if (isVenezuela() && canViewRates()) {
     <li>
@@ -591,6 +606,29 @@
         <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Reportes' | transloco }}</a>
       </div>
       @if (!canViewReports()) {
+        <ui-icon name="lock" size="12" styleClass="text-grey-400" />
+      } @else {
+        <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
+          {{ 'Nuevo' | transloco }}
+        </span>
+      }
+    </li>
+    <li
+      [routerLink]="canViewExpenses() ? '/admin/expenses' : null"
+      [routerLinkActive]="canViewExpenses() ? 'bg-primary-50' : ''"
+      [routerLinkActiveOptions]="{exact: false}"
+      [class.opacity-50]="!canViewExpenses()"
+      [class.cursor-not-allowed]="!canViewExpenses()"
+      [class.cursor-pointer]="canViewExpenses()"
+      [pTooltip]="!canViewExpenses() ? (noPermissionTooltip | transloco) : ''"
+      tooltipPosition="right"
+      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+    >
+      <div class="flex items-center gap-2">
+        <ui-icon name="receipt" size="16" />
+        <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Gastos y facturas' | transloco }}</a>
+      </div>
+      @if (!canViewExpenses()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
       } @else {
         <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">

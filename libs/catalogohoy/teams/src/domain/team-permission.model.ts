@@ -1,6 +1,6 @@
 export type PermissionModule =
   | 'catalogo' | 'ordenes' | 'clientes' | 'chats' | 'analiticas' | 'tasas' | 'productos' | 'equipo' | 'reportes'
-  | 'pos' | 'meta' | 'asistente';
+  | 'pos' | 'meta' | 'asistente' | 'gastos';
 export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'invite' | 'connect' | 'use';
 export type PermissionKey = `${PermissionModule}:${PermissionAction}`;
 
@@ -22,6 +22,8 @@ export const MODULE_ACTIONS: Record<PermissionModule, PermissionAction[]> = {
   // Asistente WhatsApp: ver la conversación; conectar números (el número
   // conectado puede editar productos y órdenes por chat).
   asistente:  ['view', 'connect'],
+  // Gastos y facturas de proveedores (info financiera: solo con permiso).
+  gastos:     ['view', 'create', 'edit', 'delete'],
 };
 
 export const MODULE_LABELS: Record<PermissionModule, string> = {
@@ -37,6 +39,7 @@ export const MODULE_LABELS: Record<PermissionModule, string> = {
   pos:        'Punto de venta',
   meta:       'Instagram y Facebook',
   asistente:  'Asistente WhatsApp',
+  gastos:     'Gastos y facturas',
 };
 
 export const ACTION_LABELS: Record<PermissionAction, string> = {

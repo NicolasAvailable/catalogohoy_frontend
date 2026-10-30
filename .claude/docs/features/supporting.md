@@ -18,6 +18,19 @@
 - **Borrado lógico** (`deleted_at`) para mantener el quota honesto (límite por plan).
 - El email de reporte semanal lo manda `send-weekly-report` (cron, ver `business-rules.md`).
 
+## expenses (`@catalogohoy/expenses`)
+
+- **Rol**: "Gastos y facturas" (`/admin/expenses`, 2026-10-30, pedido de Distribuidor Motomax):
+  la tienda carga facturas de proveedores, compras de mercancía y otros gastos, con foto/PDF,
+  categoría, moneda, estado (pagado / por pagar + vencimiento). Vista por mes con totales
+  (gastado, pagado, por pagar) y gasto por categoría.
+- Tabla `tenant_expenses`. Archivos a S3 vía `signedUpload(..., 'invoice', tenantId)`
+  (`invoices/{tenantId}/…`, mismo prefijo que las facturas de órdenes).
+- Permiso de equipo **`gastos`** (view/create/edit/delete). Es info financiera: los miembros
+  sin ese permiso NO la ven (RLS con `_tenant_module_allowed`, no `_pos_can_access_tenant`).
+- Totales separados por moneda (USD y Bs no se suman). Pendiente: balance mensual
+  gastos vs. ventas / ganancia (siguiente paso).
+
 ## analytics (`@catalogohoy/analytics`)
 
 - **Rol**: dashboard de analíticas con PostHog (pageviews, sesiones, usuarios, horas activas,

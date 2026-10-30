@@ -1,0 +1,310 @@
+<div class="flex flex-col gap-4 sm:gap-6 px-4 sm:px-6 pb-6 mt-4">
+  <!-- Header -->
+  <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-bold text-grey-800 mb-1">{{ 'Gastos y facturas' | transloco }}</h1>
+      <p class="text-sm sm:text-base text-grey-400">
+        {{ 'Registra las facturas de tus proveedores, compras de mercancía y otros gastos en un solo lugar' | transloco }}
+      </p>
+    </div>
+    @if (canCreate()) {
+      <ui-button label="Registrar gasto" icon="plus" size="small" [fluid]="false" (click)="openAdd()" />
+    }
+  </header>
+
+  <!-- Mes -->
+  <div class="flex items-center gap-2">
+    <button
+      type="button"
+      class="flex items-center justify-center w-9 h-9 rounded-lg border border-grey-100 bg-white hover:bg-grey-25 cursor-pointer"
+      [title]="'Mes anterior' | transloco"
+      (click)="changeMonth(-1)"
+    >
+      <ui-icon name="chevron-left" styleClass="size-4 text-grey-600" />
+    </button>
+    <span class="min-w-40 text-center font-semibold text-grey-800">{{ monthLabel() }}</span>
+    <button
+      type="button"
+      class="flex items-center justify-center w-9 h-9 rounded-lg border border-grey-100 bg-white hover:bg-grey-25 cursor-pointer"
+      [title]="'Mes siguiente' | transloco"
+      (click)="changeMonth(1)"
+    >
+      <ui-icon name="chevron-right" styleClass="size-4 text-grey-600" />
+    </button>
+    @if (!isCurrentMonth()) {
+      <button
+        type="button"
+        class="text-sm font-semibold text-primary-600 hover:underline cursor-pointer ml-1"
+        (click)="goToCurrentMonth()"
+      >
+        {{ 'Ir al mes actual' | transloco }}
+      </button>
+    }
+  </div>
+
+  <!-- Resumen -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 flex flex-col gap-1">
+      <div class="flex items-center gap-2 text-sm text-grey-400">
+        <ui-icon name="wallet" styleClass="size-4" />
+        {{ 'Gastado en el mes' | transloco }}
+      </div>
+      <span class="text-2xl font-bold text-grey-800">{{ money(mainTotals().total, mainTotals().currency) }}</span>
+      @for (t of otherTotals(); track t.currency) {
+        <span class="text-sm font-semibold text-grey-500">+ {{ money(t.total, t.currency) }}</span>
+      }
+    </div>
+    <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 flex flex-col gap-1">
+      <div class="flex items-center gap-2 text-sm text-grey-400">
+        <ui-icon name="circle-check" styleClass="size-4 text-green-500" />
+        {{ 'Pagado' | transloco }}
+      </div>
+      <span class="text-2xl font-bold text-grey-800">{{ money(mainTotals().paid, mainTotals().currency) }}</span>
+      @for (t of otherTotals(); track t.currency) {
+        <span class="text-sm font-semibold text-grey-500">+ {{ money(t.paid, t.currency) }}</span>
+      }
+    </div>
+    <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 flex flex-col gap-1">
+      <div class="flex items-center gap-2 text-sm text-grey-400">
+        <ui-icon name="clock" styleClass="size-4 text-amber-500" />
+        {{ 'Por pagar' | transloco }}
+        @if (store.pendingCount()) {
+          <span class="text-xs font-semibold text-amber-600">({{ store.pendingCount() }})</span>
+        }
+      </div>
+      <span class="text-2xl font-bold" [class.text-amber-600]="mainTotals().pending > 0" [class.text-grey-800]="!mainTotals().pending">
+        {{ money(mainTotals().pending, mainTotals().currency) }}
+      </span>
+      @for (t of otherTotals(); track t.currency) {
+        <span class="text-sm font-semibold text-grey-500">+ {{ money(t.pending, t.currency) }}</span>
+      }
+    </div>
+  </div>
+
+  <!-- Por categoría -->
+  @if (store.byCategory().length > 1) {
+    <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 flex flex-col gap-3">
+      <h2 class="text-sm font-semibold text-grey-700">{{ 'Gastos por categoría' | transloco }}</h2>
+      @for (c of store.byCategory(); track c.category) {
+        <div class="flex items-center gap-3 text-sm">
+          <span class="w-40 shrink-0 text-grey-600 truncate">{{ c.label | transloco }}</span>
+          <div class="flex-1 h-2 rounded-full bg-grey-50 overflow-hidden">
+            <div class="h-full rounded-full bg-primary-500" [style.width.%]="(c.total / maxCategory()) * 100"></div>
+          </div>
+          <span class="w-28 shrink-0 text-right font-semibold text-grey-700">{{ money(c.total, store.mainCurrency()) }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Lista -->
+  <div class="bg-white border border-grey-100 rounded-xl shadow-sm overflow-hidden flex flex-col">
+    <div class="p-4 border-b border-grey-50 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div class="flex-1 max-w-md">
+        <ui-input-search
+          placeholder="Buscar por proveedor, descripción o nº de factura..."
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+          size="small"
+          styleClass="w-full"
+          iconStyleClass="size-4.5!"
+        />
+      </div>
+      <div class="flex items-center gap-2">
+        @for (f of statusFilters; track f.value) {
+          <button
+            type="button"
+            (click)="statusFilter.set(f.value)"
+            class="px-3 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer"
+            [class.bg-primary-500]="statusFilter() === f.value"
+            [class.text-white]="statusFilter() === f.value"
+            [class.border-primary-500]="statusFilter() === f.value"
+            [class.bg-white]="statusFilter() !== f.value"
+            [class.text-grey-500]="statusFilter() !== f.value"
+            [class.border-grey-200]="statusFilter() !== f.value"
+          >
+            {{ f.label | transloco }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (store.isLoading()) {
+      <div class="p-4 flex flex-col gap-3">
+        @for (_ of [1, 2, 3, 4]; track $index) {
+          <div class="animate-pulse h-12 bg-grey-50 rounded-lg"></div>
+        }
+      </div>
+    } @else if (!filtered().length) {
+      <div class="flex flex-col items-center justify-center gap-2 py-12 px-4 text-center">
+        <div class="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
+          <ui-icon name="receipt" styleClass="size-6 text-primary-500" />
+        </div>
+        @if (store.expenses().length) {
+          <p class="font-semibold text-grey-700">{{ 'No hay gastos con ese filtro' | transloco }}</p>
+        } @else {
+          <p class="font-semibold text-grey-700">{{ 'Aún no hay gastos en este mes' | transloco }}</p>
+          <p class="text-sm text-grey-400 max-w-sm">
+            {{ 'Carga tus facturas de proveedores y compras para saber cuánto gastas cada mes.' | transloco }}
+          </p>
+          @if (canCreate()) {
+            <ui-button label="Registrar gasto" icon="plus" size="small" [fluid]="false" (click)="openAdd()" />
+          }
+        }
+      </div>
+    } @else {
+      <!-- Móvil -->
+      <div class="sm:hidden flex flex-col">
+        @for (e of filtered(); track e.id) {
+          <div class="border-b border-grey-50 px-4 py-3 flex flex-col gap-1.5" (click)="openEdit(e)">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="font-semibold text-grey-800 truncate">{{ e.supplier || e.description }}</p>
+                @if (e.supplier && e.description) {
+                  <p class="text-xs text-grey-400 truncate">{{ e.description }}</p>
+                }
+              </div>
+              <span class="font-bold text-grey-800 shrink-0">{{ money(e.amount, e.currency) }}</span>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap text-xs">
+              <span class="text-grey-400">{{ date(e.issueDate) }}</span>
+              <span class="px-2 py-0.5 rounded-full bg-grey-50 text-grey-600">{{ categoryLabel(e.category) | transloco }}</span>
+              <ng-container *ngTemplateOutlet="statusBadge; context: { $implicit: e }" />
+              @if (e.fileUrl) {
+                <a [href]="e.fileUrl" target="_blank" rel="noopener" class="flex items-center gap-1 text-primary-600" (click)="$event.stopPropagation()">
+                  <ui-icon name="paperclip" styleClass="size-3.5" />{{ 'Factura' | transloco }}
+                </a>
+              }
+            </div>
+            <div class="flex items-center gap-2 pt-1" (click)="$event.stopPropagation()">
+              <ng-container *ngTemplateOutlet="rowActions; context: { $implicit: e }" />
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Escritorio -->
+      <div class="hidden sm:block overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs uppercase tracking-wide text-grey-400 border-b border-grey-50">
+              <th class="px-4 py-3 font-semibold">{{ 'Fecha' | transloco }}</th>
+              <th class="px-4 py-3 font-semibold">{{ 'Proveedor / descripción' | transloco }}</th>
+              <th class="px-4 py-3 font-semibold">{{ 'Categoría' | transloco }}</th>
+              <th class="px-4 py-3 font-semibold">{{ 'Estado' | transloco }}</th>
+              <th class="px-4 py-3 font-semibold text-right">{{ 'Monto' | transloco }}</th>
+              <th class="px-4 py-3 font-semibold text-center">{{ 'Factura' | transloco }}</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of filtered(); track e.id) {
+              <tr class="border-b border-grey-50 hover:bg-grey-25">
+                <td class="px-4 py-3 text-grey-600 whitespace-nowrap">{{ date(e.issueDate) }}</td>
+                <td class="px-4 py-3 max-w-72">
+                  <p class="font-semibold text-grey-800 truncate">{{ e.supplier || e.description }}</p>
+                  @if (e.supplier && e.description) {
+                    <p class="text-xs text-grey-400 truncate">{{ e.description }}</p>
+                  }
+                  @if (e.invoiceNumber) {
+                    <p class="text-xs text-grey-400">{{ 'Nº' | transloco }} {{ e.invoiceNumber }}</p>
+                  }
+                </td>
+                <td class="px-4 py-3 text-grey-600 whitespace-nowrap">{{ categoryLabel(e.category) | transloco }}</td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                  <ng-container *ngTemplateOutlet="statusBadge; context: { $implicit: e }" />
+                </td>
+                <td class="px-4 py-3 text-right font-bold text-grey-800 whitespace-nowrap">{{ money(e.amount, e.currency) }}</td>
+                <td class="px-4 py-3 text-center">
+                  @if (e.fileUrl) {
+                    <a
+                      [href]="e.fileUrl"
+                      target="_blank"
+                      rel="noopener"
+                      class="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-primary-50 text-primary-600"
+                      [pTooltip]="e.fileName || ('Ver factura' | transloco)"
+                      tooltipPosition="top"
+                    >
+                      <ui-icon name="paperclip" styleClass="size-4" />
+                    </a>
+                  } @else {
+                    <span class="text-grey-300">—</span>
+                  }
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center justify-end gap-1">
+                    <ng-container *ngTemplateOutlet="rowActions; context: { $implicit: e }" />
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>
+
+<ng-template #statusBadge let-e>
+  @if (e.status === 'paid') {
+    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-700">
+      {{ 'Pagado' | transloco }}
+    </span>
+  } @else if (overdue(e)) {
+    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-600">
+      {{ 'Vencido' | transloco }} {{ date(e.dueDate) }}
+    </span>
+  } @else {
+    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
+      {{ 'Por pagar' | transloco }}
+      @if (e.dueDate) {
+        · {{ date(e.dueDate) }}
+      }
+    </span>
+  }
+</ng-template>
+
+<ng-template #rowActions let-e>
+  @if (canEdit()) {
+    <button
+      type="button"
+      class="flex items-center justify-center w-8 h-8 rounded-md hover:bg-grey-50 cursor-pointer"
+      [pTooltip]="(e.status === 'paid' ? 'Marcar como por pagar' : 'Marcar como pagado') | transloco"
+      tooltipPosition="top"
+      (click)="togglePaid(e)"
+    >
+      <ui-icon [name]="e.status === 'paid' ? 'rotate-ccw' : 'check'" styleClass="size-4 text-grey-500" />
+    </button>
+    <button
+      type="button"
+      class="flex items-center justify-center w-8 h-8 rounded-md hover:bg-grey-50 cursor-pointer"
+      [pTooltip]="'Editar' | transloco"
+      tooltipPosition="top"
+      (click)="openEdit(e)"
+    >
+      <ui-icon name="pencil" styleClass="size-4 text-grey-500" />
+    </button>
+  }
+  @if (canDelete()) {
+    <button
+      type="button"
+      class="flex items-center justify-center w-8 h-8 rounded-md hover:bg-red-50 cursor-pointer"
+      [pTooltip]="'Eliminar' | transloco"
+      tooltipPosition="top"
+      (click)="askDelete(e)"
+    >
+      <ui-icon name="trash" styleClass="size-4 text-red-500" />
+    </button>
+  }
+</ng-template>
+
+<lib-expense-form-dialog />
+
+<ui-confirm-dialog
+  (confirm)="onConfirmDelete()"
+  headerLabel="Eliminar gasto"
+  [contentLabel]="confirmContent()"
+  acceptLabel="Eliminar"
+  rejectLabel="Cancelar"
+  rejectSeverity="contrast"
+/>

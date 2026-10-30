@@ -32,6 +32,7 @@
       "@catalogohoy/category": ["libs/catalogohoy/category/src/index.ts"],
       "@catalogohoy/order": ["libs/catalogohoy/order/src/index.ts"],
       "@catalogohoy/client": ["libs/catalogohoy/client/src/index.ts"],
+      "@catalogohoy/expenses": ["libs/catalogohoy/expenses/src/index.ts"],
       "@catalogohoy/rate": ["libs/catalogohoy/rate/src/index.ts"],
       "@catalogohoy/ecommerce-config": [
         "libs/catalogohoy/ecommerce-config/src/index.ts"

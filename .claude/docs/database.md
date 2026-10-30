@@ -628,6 +628,7 @@ selector de mes: el total del mes = recurrentes + pagos únicos de ese mes.
 | tenant_business_hours | ON | `true` | tenant member | tenant member | tenant member | |
 | exchange_rates | OFF | — | — | — | — | Singleton, no RLS |
 | enterprise_leads | ON | **none** | **none** | **none** | **none** | Solo service role (edge fn `enterprise-lead`) |
+| tenant_expenses | ON | — | owner / `gastos:create` | owner / `gastos:edit` | owner / `gastos:delete` | SELECT = owner / `gastos:view`. Helper `_tenant_module_allowed(tenant, module, action)` (dueño o permiso de equipo) — reutilizable para módulos con info sensible |
 
 **"Tenant member" check pattern:**
 ```sql
