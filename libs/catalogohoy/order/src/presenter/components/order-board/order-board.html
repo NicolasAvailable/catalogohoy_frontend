@@ -103,7 +103,11 @@
 
           <div class="flex items-center justify-between gap-2 pt-2 border-t border-grey-50">
             <span class="text-xs text-grey-400">
-              {{ '{count} productos' | transloco: { count: itemCount(order) } }}
+              @if (itemCount(order) === 1) {
+                {{ '1 producto' | transloco }}
+              } @else {
+                {{ '{count} productos' | transloco: { count: itemCount(order) } }}
+              }
             </span>
             <span class="text-sm font-bold text-grey-800">
               {{ currencySymbol() }}{{ order.totalUsd | number: '1.2-2' }}
