@@ -176,8 +176,9 @@
           type="text"
           [ngModel]="search()"
           (ngModelChange)="search.set($event)"
+          (keydown.enter)="onSearchEnter()"
           [placeholder]="'Buscar por nombre, descripción o SKU' | transloco"
-          autofocus
+          [attr.autofocus]="autofocus ? '' : null"
         />
         <button type="button" class="ps-scan" (click)="closeProductSearch(); openScanner()" [title]="'Escanear' | transloco">
           <ui-icon name="scan-barcode" styleClass="size-6" />

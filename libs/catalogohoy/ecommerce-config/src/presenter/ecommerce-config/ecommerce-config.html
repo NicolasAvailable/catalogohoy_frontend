@@ -818,6 +818,27 @@
         </div>
       </ui-card>
 
+      <!-- Card: Mostrar stock (toggle-only) -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon categories-icon">
+              <ui-icon name="package" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ 'Mostrar stock' | transloco }}</h2>
+              <small class="card-subtitle">
+                {{ 'Tus clientes verán cuántas unidades quedan de cada producto.' | transloco }}
+              </small>
+            </div>
+          </div>
+          <ui-toggle
+            [ngModel]="draftShowStock()"
+            (ngModelChange)="draftShowStock.set($event)"
+          ></ui-toggle>
+        </div>
+      </ui-card>
+
       </div> <!-- /TAB GENERAL (block 2) -->
 
       <!-- ===== TAB: LOCATION ===== -->

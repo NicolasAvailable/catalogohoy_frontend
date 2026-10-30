@@ -1,5 +1,8 @@
 export type WhatsappLogStatus = 'sent' | 'failed' | 'skipped';
 
+/** Acuse de Meta para un envío aceptado (webhook statuses). */
+export type WhatsappDeliveryStatus = 'sent' | 'delivered' | 'read' | 'failed';
+
 export type WhatsappTemplateType =
   | 'order_received'
   | 'order_completed'
@@ -19,6 +22,9 @@ export interface WhatsappLog {
   variables: string[] | null;
   urlButtonParam: string | null;
   createdAt: string;
+  deliveryStatus: WhatsappDeliveryStatus | null;
+  deliveryError: string | null;
+  deliveryUpdatedAt: string | null;
 }
 
 /** Un dato enviado en la notificación: etiqueta legible + valor. */
@@ -154,3 +160,66 @@ export function statusLabel(status: WhatsappLogStatus): string {
       return 'Omitida';
   }
 }
+
+/**
+ * Estado real para el panel: combina el resultado del envío con el acuse de
+ * Meta. `sent` sin acuse = Meta lo aceptó pero aún no confirmó la entrega.
+ */
+export type WhatsappEffectiveStatus =
+  | 'legacy'
+  | 'read'
+  | 'delivered'
+  | 'pending'
+  | 'undelivered'
+  | 'failed'
+  | 'skipped';
+
+// Desde aquí wa-webhook guarda los acuses; lo anterior no tiene acuse
+// guardado y se muestra como "Enviada" a secas (no como "sin confirmar").
+const DELIVERY_TRACKING_SINCE = '2026-10-27T18:00:00Z';
+
+export function effectiveStatus(log: WhatsappLog): WhatsappEffectiveStatus {
+  if (log.status !== 'sent') return log.status;
+  if (!log.deliveryStatus && Date.parse(log.createdAt) < Date.parse(DELIVERY_TRACKING_SINCE)) {
+    return 'legacy';
+  }
+  switch (log.deliveryStatus) {
+    case 'read':
+      return 'read';
+    case 'delivered':
+      return 'delivered';
+    case 'failed':
+      return 'undelivered';
+    default:
+      return 'pending';
+  }
+}
+
+export function effectiveStatusLabel(status: WhatsappEffectiveStatus): string {
+  switch (status) {
+    case 'legacy':
+      return 'Enviada';
+    case 'read':
+      return 'Leída';
+    case 'delivered':
+      return 'Entregada';
+    case 'pending':
+      return 'Enviada · sin confirmar';
+    case 'undelivered':
+      return 'No entregada';
+    case 'failed':
+      return 'Fallida';
+    case 'skipped':
+      return 'Omitida';
+  }
+}
+
+export const EFFECTIVE_STATUS_CLASS: Record<WhatsappEffectiveStatus, string> = {
+  legacy: 'bg-emerald-50 text-emerald-600',
+  read: 'bg-sky-50 text-sky-600',
+  delivered: 'bg-emerald-50 text-emerald-600',
+  pending: 'bg-grey-50 text-grey-500',
+  undelivered: 'bg-red-50 text-red-600',
+  failed: 'bg-red-50 text-red-600',
+  skipped: 'bg-amber-50 text-amber-600',
+};

@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { ActivityLogService } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
-import { E } from '@shared/domain';
+import { E, searchPatterns } from '@shared/domain';
 import { HtmlSanitizerService } from '@shared/infrastructure';
 import {
   BaseProductService,
@@ -109,13 +109,19 @@ export class ProductService implements BaseProductService {
       `
         )
         .eq('tenant_id', tenantId)
-        .order('position', { ascending: true });
+        .order('position', { ascending: true })
+        // Desempate estable: si dos productos comparten `position`, el
+        // paginado por rangos podría repetir uno y saltarse otro.
+        .order('id', { ascending: true });
 
       if (search && search.trim().length > 0) {
         // Busca contra search_blob (columna generada en la DB): nombre +
         // descripción + SKU top-level + nombre/SKU de cada talla y variante. Un
         // solo input del listado cubre todo, sin que el usuario elija el campo.
-        query = query.ilike('search_blob', `%${search.trim()}%`);
+        // Palabra por palabra, tolerante a acentos, orden y s/z/c.
+        for (const pattern of searchPatterns(search)) {
+          query = query.filter('search_blob', 'imatch', pattern);
+        }
       }
       return query;
     };

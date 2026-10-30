@@ -16,6 +16,7 @@
   }
 
   @if (phase() === 'form') {
+  <lib-cart-changes-notice />
   <!-- ===== Cliente ===== -->
   <section class="checkout__card">
     <h2 class="checkout__card-title">{{ 'Cliente' | transloco }}</h2>
@@ -101,7 +102,7 @@
     </div>
 
     @for (item of cartStore.items(); track item.id) {
-    <div class="checkout__item">
+    <div class="checkout__item" [class.checkout__item--unavailable]="item.unavailable">
       @if (item.photo) {
       <img class="checkout__item-img" [src]="item.photo" [alt]="item.name" />
       } @else {
@@ -128,6 +129,16 @@
           }</span>
         </p>
         }
+        @if (item.unavailable) {
+        <p class="checkout__item-unavailable">{{ 'Este producto ya no está disponible' | transloco }}</p>
+        <div class="checkout__item-unavailable-actions">
+          <button type="button" class="checkout__item-unavailable-remove" (click)="onRemove(item)">
+            <ui-icon name="trash-2" size="14" />
+            {{ 'Eliminar' | transloco }}
+          </button>
+          <button type="button" class="checkout__link" (click)="goToStore()">{{ 'Ver otros productos' | transloco }}</button>
+        </div>
+        } @else {
         <p class="checkout__item-price">
           @if (showReferencePrice()) {
           {{ cs() }}{{ item.total | tenantPrice }}
@@ -140,11 +151,23 @@
           <button type="button" (click)="onDecrement(item)" [attr.aria-label]="'Quitar uno' | transloco">
             <ui-icon name="minus" size="14" />
           </button>
-          <span>{{ item.quantity }}</span>
+          <input
+          type="number"
+          inputmode="numeric"
+          min="0"
+          class="checkout__qty-input qty-input"
+          [value]="item.quantity"
+          (focus)="$any($event.target).select()"
+          (click)="$event.stopPropagation()"
+          (keydown.enter)="$any($event.target).blur()"
+          (change)="onQuantityChange(item, $event)"
+          [attr.aria-label]="'Cantidad' | transloco"
+        />
           <button type="button" (click)="onIncrement(item)" [attr.aria-label]="'Agregar uno' | transloco">
             <ui-icon name="plus" size="14" />
           </button>
         </div>
+        }
       </div>
       <button type="button" class="checkout__item-remove" (click)="onRemove(item)" [attr.aria-label]="'Eliminar' | transloco">
         <ui-icon name="x" size="16" />

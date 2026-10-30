@@ -82,6 +82,35 @@
       {{ t.label | transloco }}
     </button>
     }
+    @if (activeTab() === 'ordenes') {
+    <div class="ml-auto mb-1.5 flex items-center gap-2">
+    @if (canEditOrder()) {
+    <button
+      type="button"
+      (click)="openStagesEditor()"
+      class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer whitespace-nowrap text-grey-500 hover:text-grey-800 hover:bg-grey-50"
+      [tooltip]="'Crea y edita los estados de tus órdenes' | transloco"
+    >
+      <ui-icon name="settings-2" styleClass="size-4" />
+      <span class="hidden sm:inline">{{ 'Estados' | transloco }}</span>
+    </button>
+    }
+    <!-- Lista / Tablero -->
+    <div class="flex items-center p-0.5 rounded-lg bg-grey-50 border border-grey-100 shrink-0">
+      @for (mode of [{ value: 'list', icon: 'list', label: 'Lista' }, { value: 'board', icon: 'square-kanban', label: 'Tablero' }]; track mode.value) {
+      <button
+        type="button"
+        (click)="setViewMode($any(mode.value))"
+        [class]="'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium transition-colors cursor-pointer ' +
+          (viewMode() === mode.value ? 'bg-white text-grey-800 shadow-xs' : 'text-grey-400 hover:text-grey-700')"
+      >
+        <ui-icon [name]="mode.icon" styleClass="size-4" />
+        <span class="hidden sm:inline">{{ mode.label | transloco }}</span>
+      </button>
+      }
+    </div>
+    </div>
+    }
   </div>
 
   <!-- Tab: Órdenes -->
@@ -95,9 +124,9 @@
       class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-grey-50"
     >
       <!-- Search -->
-      <div class="relative flex-1 max-w-md">
+      <div class="relative w-full md:w-72 md:shrink-0">
         <ui-input-search
-          [placeholder]="'Buscar por nombre...' | transloco"
+          [placeholder]="'Buscar por nombre, SKU o ID...' | transloco"
           [ngModel]="searchQuery()"
           (ngModelChange)="onSearch($event)"
           size="small"
@@ -107,8 +136,28 @@
       </div>
 
       <!-- Filter Tabs -->
-      <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-        @for (tab of filterTabs; track tab.value) {
+      <div class="flex items-center gap-2 min-w-0 flex-1 md:justify-end">
+        @if (viewMode() === 'list') {
+        <!-- Estados: carrusel con flechas cuando no caben (como las
+             categorías del catálogo público) -->
+        <div class="relative min-w-0 flex items-center">
+          @if (chipsCanLeft()) {
+          <button
+            type="button"
+            (click)="scrollChips(-1)"
+            class="absolute left-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-grey-200 shadow-sm text-grey-600 hover:text-grey-900 cursor-pointer"
+            [attr.aria-label]="'Anterior' | transloco"
+          >
+            <ui-icon name="chevron-left" styleClass="size-4" />
+          </button>
+          <div class="pointer-events-none absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white to-transparent"></div>
+          }
+          <div
+            #chips
+            (scroll)="updateChipArrows()"
+            class="flex items-center gap-2 overflow-x-auto scrollbar-hide scroll-smooth min-w-0"
+          >
+        @for (tab of filterTabs(); track tab.value) {
         <button
           type="button"
           (click)="selectFilter(tab.value)"
@@ -117,12 +166,27 @@
               ? 'bg-primary-500 text-white border border-primary-500'
               : 'bg-white text-grey-700 border border-grey-200 hover:bg-grey-50')"
         >
-          @if (tab.dotClass) {
-            <span [class]="'w-1.5 h-1.5 rounded-full shrink-0 ' + tab.dotClass"></span>
+          @if (tab.color) {
+            <span class="w-1.5 h-1.5 rounded-full shrink-0" [style.background-color]="tab.color"></span>
           }
           {{ tab.label | transloco }}
         </button>
         }
+          </div>
+          @if (chipsCanRight()) {
+          <div class="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent"></div>
+          <button
+            type="button"
+            (click)="scrollChips(1)"
+            class="absolute right-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-grey-200 shadow-sm text-grey-600 hover:text-grey-900 cursor-pointer"
+            [attr.aria-label]="'Siguiente' | transloco"
+          >
+            <ui-icon name="chevron-right" styleClass="size-4" />
+          </button>
+          }
+        </div>
+        }
+        @if (viewMode() === 'list') {
         <div class="w-px h-6 bg-grey-100 mx-1"></div>
         <!-- Order Select -->
         <ui-select
@@ -150,6 +214,7 @@
             </div>
           </ng-template>
         </ui-select>
+        }
 
         <div class="w-px h-6 bg-grey-100 mx-1"></div>
         <!-- Date Filter -->
@@ -168,6 +233,15 @@
       </div>
     </div>
 
+    @if (viewMode() === 'board') {
+    <lib-order-board
+      [search]="searchQuery()"
+      [date]="selectedDate()"
+      [currencySymbol]="cs()"
+      [canEdit]="canEditOrder()"
+      (openOrder)="openOrderDetail($event)"
+    />
+    } @else {
     <!-- Resumen "por cobrar" — solo con el filtro A crédito activo (CAT-79).
          Franja plana edge-to-edge (sin radius: las esquinas chocaban contra el
          contenedor — feedback de Nicolas). -->
@@ -214,8 +288,8 @@
             <div class="flex items-center gap-1">
               <span class="text-grey-800 font-bold">{{ 'Estado:' | transloco }} </span>
               <ui-select
-                [options]="statusOptions"
-                [ngModel]="order.status"
+                [options]="statusSelectOptions(order)"
+                [ngModel]="statusKey(order)"
                 (ngModelChange)="onStatusChange(order, $event)"
                 optionLabel="label"
                 optionValue="value"
@@ -223,16 +297,23 @@
                 styleClass="order-status-select"
               >
                 <ng-template selectSelectedItem let-selected>
-                  <span [class]="getStatusBadgeClass(selected.value)">
-                    <span [class]="getStatusDotClass(selected.value)"></span>
-                    {{ selected.label | transloco }}
+                  <span [class]="getStatusBadgeClass()">
+                    <span [class]="getStatusDotClass()" [style.background-color]="statusColor(statusKey(order))"></span>
+                    {{ statusLabel(order) | transloco }}
                   </span>
                 </ng-template>
                 <ng-template selectItem let-item>
-                  <span [class]="getStatusBadgeClass(item.value)">
-                    <span [class]="getStatusDotClass(item.value)"></span>
+                  @if (item.value === NEW_STAGE_KEY) {
+                  <span class="inline-flex items-center gap-1.5 px-1 py-1 text-xs font-semibold text-primary-600">
+                    <ui-icon name="plus" styleClass="size-3.5" />
                     {{ item.label | transloco }}
                   </span>
+                  } @else {
+                  <span [class]="getStatusBadgeClass()">
+                    <span [class]="getStatusDotClass()" [style.background-color]="item.color"></span>
+                    {{ item.label | transloco }}
+                  </span>
+                  }
                 </ng-template>
               </ui-select>
               @if (creditChip(order); as chip) {
@@ -512,8 +593,8 @@
             <td class="px-3 py-3.5 align-top">
               <div class="flex justify-center">
                 <ui-select
-                  [options]="statusOptions"
-                  [ngModel]="order.status"
+                  [options]="statusSelectOptions(order)"
+                  [ngModel]="statusKey(order)"
                   (ngModelChange)="onStatusChange(order, $event)"
                   optionLabel="label"
                   optionValue="value"
@@ -521,16 +602,23 @@
                   styleClass="order-status-select"
                 >
                   <ng-template selectSelectedItem let-selected>
-                    <span [class]="getStatusBadgeClass(selected.value)">
-                      <span [class]="getStatusDotClass(selected.value)"></span>
-                      {{ selected.label | transloco }}
+                    <span [class]="getStatusBadgeClass()">
+                      <span [class]="getStatusDotClass()" [style.background-color]="statusColor(statusKey(order))"></span>
+                      {{ statusLabel(order) | transloco }}
                     </span>
                   </ng-template>
                   <ng-template selectItem let-item>
-                    <span [class]="getStatusBadgeClass(item.value)">
-                      <span [class]="getStatusDotClass(item.value)"></span>
+                    @if (item.value === NEW_STAGE_KEY) {
+                    <span class="inline-flex items-center gap-1.5 px-1 py-1 text-xs font-semibold text-primary-600">
+                      <ui-icon name="plus" styleClass="size-3.5" />
                       {{ item.label | transloco }}
                     </span>
+                    } @else {
+                    <span [class]="getStatusBadgeClass()">
+                      <span [class]="getStatusDotClass()" [style.background-color]="item.color"></span>
+                      {{ item.label | transloco }}
+                    </span>
+                    }
                   </ng-template>
                 </ui-select>
               </div>
@@ -696,6 +784,7 @@
         styleClass="order-paginator"
       />
     </div>
+    }
   </div>
 
   }
@@ -1039,8 +1128,8 @@
                   </div>
                 </td>
                 <td class="px-3 py-3 align-top text-center">
-                  <span [class]="getStatusBadgeClass(order.status)">
-                    <span [class]="getStatusDotClass(order.status)"></span>{{ statusLabel(order.status) | transloco }}
+                  <span [class]="getStatusBadgeClass()">
+                    <span [class]="getStatusDotClass()" [style.background-color]="statusColor(statusKey(order))"></span>{{ statusLabel(order) | transloco }}
                   </span>
                 </td>
                 <td class="px-3 py-3 align-top">

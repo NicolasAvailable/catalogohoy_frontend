@@ -38,6 +38,7 @@ import {
   SelectSelectedItemDirective,
   TextareaComponent,
   UploaderComponent,
+  DialogService,
 } from '@ui';
 import {
   CreditInstallment,
@@ -50,6 +51,9 @@ import {
 } from '../../../domain/order';
 import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import { OrderStore } from '../../../infrastructure/order.store';
+import { OrderStageStore } from '../../../infrastructure/order-stage.store';
+import { behaviorOf, OrderStatusDef, OrderStatusKey } from '../../../domain/order-stage';
+import { openOrderStagesEditor } from '../../components/order-stages-modal/order-stages-modal';
 import { OrderImportDraftService } from '../../../infrastructure/order-import-draft.service';
 
 /** Un adicional del catálogo (pool global), con su foto para mostrarlo como
@@ -92,6 +96,7 @@ export default class OrderSave implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
+  public readonly stageStore = inject(OrderStageStore);
   private readonly importDraft = inject(OrderImportDraftService);
   public readonly productStore = inject(ProductStore);
   public readonly rateStore = inject(RateStore);
@@ -166,6 +171,64 @@ export default class OrderSave implements OnInit {
     this.form.controls.paymentMethod.valueChanges,
     { initialValue: this.form.controls.paymentMethod.value }
   );
+
+  /** Status del form como signal (para el estado propio elegido). */
+  private readonly statusValue = toSignal(this.form.controls.status.valueChanges, {
+    initialValue: this.form.controls.status.value,
+  });
+
+  /** Estado propio de la tienda elegido (Despacho, Revisión...). */
+  private readonly stageId = signal<string | null>(null);
+  /** Estado propio con el que se cargó la orden (edición). */
+  private loadedStageId: string | null = null;
+
+  /** Estados visibles de la tienda (+ el de la orden si está oculto). */
+  public readonly statusDefs = computed(() => {
+    const visible = this.stageStore.visibleDefs();
+    const current = this.stageStore.def(this.selectedKey());
+    return current && current.hidden ? [...visible, current] : visible;
+  });
+
+  /** Estado propio vigente: si el usuario elige un estado base distinto al
+   *  comportamiento del estado propio, la orden sale de él. */
+  public readonly selectedStageId = computed(() => {
+    const id = this.stageId();
+    if (!id) return null;
+    const def = this.stageStore.def(`stage:${id}`);
+    if (!def) return id;
+    return def.baseStatus === this.statusValue() ? id : null;
+  });
+
+  /** Clave del estado elegido (base o `stage:<id>`). */
+  public readonly selectedKey = computed<OrderStatusKey>(() => {
+    const id = this.selectedStageId();
+    return id ? `stage:${id}` : (this.statusValue() as OrderStatusKey);
+  });
+
+  /** Qué hace el estado elegido, en una línea. */
+  public readonly selectedHint = computed(() => {
+    const b = behaviorOf(this.statusValue() ?? 'pending');
+    if (!b.countsAsSale) return 'No cuenta como venta ni descuenta stock.';
+    if (b.paid) return 'Descuenta stock y se marca como pagada.';
+    if (b.deductsStock) return 'Descuenta stock, queda por cobrar.';
+    return 'Cuenta como venta, no descuenta stock todavía.';
+  });
+
+  private readonly dialogService = inject(DialogService);
+
+  /** "+ Crear estado": crea uno y lo deja elegido en esta orden. */
+  createStage() {
+    const ref = openOrderStagesEditor(this.dialogService, true);
+    ref?.onClose.subscribe((created?: OrderStatusDef) => {
+      if (created) this.selectStatus(created);
+    });
+  }
+
+  selectStatus(def: OrderStatusDef) {
+    this.stageId.set(def.system ? null : def.rowId);
+    this.form.controls.status.setValue(def.baseStatus);
+  }
+
 
   /** Snapshot del ajuste + método con que se CARGÓ la orden (edición). Sirve
    *  para respetar el ajuste guardado y NO recalcularlo desde la config actual
@@ -388,6 +451,7 @@ export default class OrderSave implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.stageStore.load();
     // Prime tenant currency cache (localStorage → DB fallback) and load the
     // list of payment methods configured by the tenant so the selector can
     // populate.
@@ -528,6 +592,8 @@ export default class OrderSave implements OnInit {
     this.form.controls.name.setValue(order.name);
     this.form.controls.phone.setValue(order.phone || '');
     this.form.controls.comments.setValue(order.comments || '');
+    this.stageId.set(order.stageId ?? null);
+    this.loadedStageId = order.stageId ?? null;
     this.form.controls.status.setValue(order.status);
     this.form.controls.paymentMethod.setValue(order.paymentMethod || '');
     this.loadedPaymentMethod.set(order.paymentMethod || '');
@@ -1157,6 +1223,8 @@ export default class OrderSave implements OnInit {
       phone: this.form.controls.phone.value || undefined,
       comments: this.form.controls.comments.value || undefined,
       status: this.form.controls.status.value as OrderStatus,
+      // Solo se toca el estado propio si la orden tenía uno o se eligió uno.
+      stageId: this.selectedStageId() ?? (this.loadedStageId ? null : undefined),
       products: this.products(),
       totalUsd: this.calculateTotal(),
       totalBs: this.totalBs(),

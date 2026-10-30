@@ -5,7 +5,7 @@ import {
   ProductListMapper,
   ProductMapper,
 } from '@catalogohoy/product';
-import { E } from '@shared/domain';
+import { E, searchPatterns } from '@shared/domain';
 import {
   CatalogTemplate,
   CustomerFieldsConfig,
@@ -295,6 +295,10 @@ export class EcommerceService implements BaseEcommerceService {
       creditNote:
         (config?.customer_fields as { creditNote?: string | null })
           ?.creditNote ?? null,
+      // "Mostrar stock" — también dentro de `customer_fields` (sin migración).
+      showStock:
+        (config?.customer_fields as { showStock?: boolean })?.showStock ??
+        false,
     };
 
     // El RPC devuelve solo categorías visibles, EXCEPTO la fila "Ver todos"
@@ -382,8 +386,11 @@ export class EcommerceService implements BaseEcommerceService {
 
     if (search && search.trim().length > 0) {
       // Igual que el admin: busca contra search_blob (nombre + descripción +
-      // SKU top-level + nombre/SKU de tallas y variantes).
-      query = query.ilike('search_blob', `%${search.trim()}%`);
+      // SKU top-level + nombre/SKU de tallas y variantes). Palabra por palabra,
+      // sin importar acentos, orden ni s/z/c ("carcasa" encuentra "CARCAZA").
+      for (const pattern of searchPatterns(search)) {
+        query = query.filter('search_blob', 'imatch', pattern);
+      }
     }
 
     if (categoryId) {
@@ -408,6 +415,10 @@ export class EcommerceService implements BaseEcommerceService {
           ? query.order('name', { ascending: true })
           : query.order('position', { ascending: true });
     }
+    // Desempate estable para el paginado por rangos ("cargar más"): con
+    // posiciones o nombres repetidos, sin esto un producto podía salir dos
+    // veces y otro ninguna.
+    query = query.order('id', { ascending: true });
 
     const hasCap = cap !== undefined && cap > 0;
     const from = (page - 1) * pageSize;
@@ -492,6 +503,30 @@ export class EcommerceService implements BaseEcommerceService {
     };
 
     return E.right(ProductMapper.toDomain(transformedData));
+  }
+
+  /** Productos ACTUALES de las líneas del carrito (para revalidarlo antes de
+   *  comprar). Solo devuelve los que siguen existiendo en este catálogo; un id
+   *  ausente = el producto se eliminó. */
+  public async getCartProducts(
+    tenantId: number,
+    productIds: string[]
+  ): Promise<E.Either<Error, Product[]>> {
+    const ids = [...new Set(productIds)].filter((id) => /^\d+$/.test(id));
+    if (!ids.length) return E.right([]);
+    const { data, error } = await this.client
+      .from('products')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .in('id', ids);
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+    return E.right(
+      (data as any[]).map((row) =>
+        ProductMapper.toDomain({ ...row, product_categories: [] })
+      )
+    );
   }
 
   public async getCategories(

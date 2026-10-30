@@ -38,7 +38,7 @@ import { ToastService } from '@shared/infrastructure';
 import { debounceTime, distinctUntilChanged, Subscription } from 'rxjs';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { ProductFacade } from '../../../application';
-import { Product, ProductList } from '../../../domain';
+import { Product, ProductList, totalStockOf } from '../../../domain';
 import { ProductService, ProductStore } from '../../../infrastructure';
 import { ImportExportHubComponent } from '../import-export/import-export-hub';
 
@@ -173,7 +173,16 @@ export default class List implements OnInit, OnDestroy {
    *  paginado (no en alfabético ni en "Todos"/virtual scroll). */
   public readonly canReorder = computed(() => {
     const order = this.sortOrder();
-    return !this.showAll() && order !== 'az' && order !== 'za';
+    // Con búsqueda o filtro de categoría el store/listado es solo un subconjunto:
+    // `drop` renumeraría ese subconjunto desde 0 y chocaría con las posiciones
+    // del resto (productos repetidos/saltados en el catálogo paginado).
+    return (
+      !this.showAll() &&
+      order !== 'az' &&
+      order !== 'za' &&
+      !this.filterCategoryId() &&
+      !this.searchTerm()
+    );
   });
 
   public readonly currentPageItems = computed(() => {
@@ -221,31 +230,9 @@ export default class List implements OnInit, OnDestroy {
     return this.lockedIds().has(String(item.id));
   }
 
-  /** Stock shown in the list's Stock column. Sized products keep their units
-   *  per size (`products.stock` stays NULL), so the column sums the sizes —
-   *  and the sizes of each variant when every variant has its own sizes —
-   *  instead of reading the NULL product stock as "Infinito". `null` =
-   *  unlimited (no stock set, or any size left without a quantity). */
+  /** Stock shown in the list's Stock column (sums sizes, see totalStockOf). */
   public stockOf(item: Product): number | null {
-    const sumSizes = (sizes: { stock: number | string | null }[]) =>
-      sizes.some((s) => s.stock === null || s.stock === '')
-        ? null
-        : sizes.reduce((acc, s) => acc + Number(s.stock || 0), 0);
-
-    if (item.isSized && item.sizes?.length) {
-      return sumSizes(item.sizes);
-    }
-    const variants = item.isVariant ? item.variants ?? [] : [];
-    if (variants.length && variants.every((v) => v.sizes?.length)) {
-      let total = 0;
-      for (const v of variants) {
-        const sub = sumSizes(v.sizes);
-        if (sub === null) return null;
-        total += sub;
-      }
-      return total;
-    }
-    return item.stock === null || item.stock === '' ? null : Number(item.stock);
+    return totalStockOf(item);
   }
 
   /** Intercepts an edit attempt on a plan-locked product: surfaces the upgrade
@@ -274,6 +261,9 @@ export default class List implements OnInit, OnDestroy {
 
   @ViewChild('categoryDialog')
   public categoryDialog!: DialogComponent;
+
+  /** Término de búsqueda activo (el store solo trae los que coinciden). */
+  private readonly searchTerm = signal('');
 
   public searchForm = new FormGroup({
     search: new FormControl('', []),
@@ -316,6 +306,7 @@ export default class List implements OnInit, OnDestroy {
       .pipe(debounceTime(300), distinctUntilChanged())
       .subscribe((searchTerm) => {
         this.clearSelection();
+        this.searchTerm.set((searchTerm || '').trim());
         this.productStore.productList$(searchTerm || '');
       });
   }

@@ -9,7 +9,13 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { Product, ProductAddon, ProductVariant, WholesaleTier } from '@catalogohoy/product';
+import {
+  Product,
+  ProductAddon,
+  ProductVariant,
+  WholesaleTier,
+  totalStockOf,
+} from '@catalogohoy/product';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { MetaPixelService } from '@catalogohoy/core';
 import { isVideoUrl } from '@shared/domain';
@@ -28,6 +34,7 @@ import {
   usesDivisasPromo,
 } from '../../../domain';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
+import { parseQuantityInput } from '../../utils/quantity-input';
 
 @Component({
   selector: 'lib-product-detail-modal',
@@ -294,8 +301,11 @@ export class ProductDetailModal {
   public readonly isWholesale =
     this.product.isWholesale && this.product.wholesaleTiers.length > 0;
 
+  /** Units left across sizes/variants (`null` = unlimited). */
+  private readonly totalStock = totalStockOf(this.product);
+
   public readonly isOutOfStock =
-    this.product.isSoldOut || (this.product.stock !== null && Number(this.product.stock) <= 0);
+    this.product.isSoldOut || (this.totalStock !== null && this.totalStock <= 0);
 
   public readonly availableStock =
     this.product.stock !== null ? Number(this.product.stock) : null;
@@ -332,6 +342,21 @@ export class ProductDetailModal {
           (this.isVariant ? i.variantId === vid : true)
       )
       .reduce((sum, i) => sum + i.quantity, 0);
+  });
+
+  /** "Quedan N" label — only when the catalog enables "Mostrar stock". Units
+   *  of the current selection not yet in the cart; before a size/variant is
+   *  picked, the product total. */
+  public readonly stockLeft = computed(() => {
+    if (!this.ecommerceStore.showStock() || this.isOutOfStock) return null;
+    const stock = this.effectiveStock();
+    if (stock === null) {
+      const pending =
+        (this.availableSizes().length && !this.selectedSize()) ||
+        (this.isVariant && !this.selectedVariant());
+      return pending ? this.totalStock : null;
+    }
+    return Math.max(0, stock - this.cartQuantity());
   });
 
   public readonly canAddMore = computed(() => {
@@ -480,8 +505,11 @@ export class ProductDetailModal {
   }
 
   incrementQuantity() {
-    if (this.availableStock !== null) {
-      const maxCanAdd = this.availableStock - this.cartQuantity();
+    // Tope con el stock de la selección (talla/variante), no solo el del
+    // producto: en productos con tallas `products.stock` es NULL.
+    const stock = this.effectiveStock();
+    if (stock !== null) {
+      const maxCanAdd = stock - this.cartQuantity();
       if (this.quantity() >= maxCanAdd) return;
     }
     this.quantity.update((q) => q + 1);
@@ -489,6 +517,21 @@ export class ProductDetailModal {
 
   decrementQuantity() {
     this.quantity.update((q) => (q > 1 ? q - 1 : 1));
+  }
+
+  /** Cantidad escrita a mano (p. ej. 200 unidades sin pulsar "+" 200 veces).
+   *  Mínimo 1 y, si hay stock, lo que queda descontando lo ya en el carrito. */
+  onQuantityChange(event: Event) {
+    const { input, value } = parseQuantityInput(event);
+    if (value !== null) {
+      let qty = Math.max(1, value);
+      const stock = this.effectiveStock();
+      if (stock !== null) {
+        qty = Math.min(qty, Math.max(1, stock - this.cartQuantity()));
+      }
+      this.quantity.set(qty);
+    }
+    input.value = String(this.quantity());
   }
 
   close() {

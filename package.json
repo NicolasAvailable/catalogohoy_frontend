@@ -57,6 +57,7 @@
     "anchorme": "^3.0.8",
     "angularx-qrcode": "^20.0.0",
     "apexcharts": "^5.6.0",
+    "barcode-detector": "^3.2.3",
     "chart.js": "^4.5.1",
     "dompurify": "^3.4.5",
     "firebase": "^12.18.0",

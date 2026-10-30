@@ -27,6 +27,25 @@
     La orden a crédito nace `pending` + `orders.payment_condition='credit'` (NUNCA status
     `credit` directo: eso descuenta stock y lo decide el comerciante) → chip "Solicitó crédito"
     en el listado + aviso en order-save. Config dentro de `customer_fields` jsonb.
+  - **Mostrar stock** (PR #86, 2026-10-27): toggle en Editar catálogo → General, guardado en
+    `customer_fields.showStock` (default false, sin migración). Muestra "Quedan N" en tarjeta
+    (`totalStockOf()` suma tallas/variantes) y modal (stock de la selección − carrito), y
+    "Stock: N" en el carrito. Los TOPES de stock aplican siempre, con o sin el toggle; el
+    `maxStock` de cada línea se persiste en localStorage.
+  - **Revalidación del carrito** (pedido de un cliente, 2026-10-29): el carrito vive en
+    localStorage y el comprador puede pagar días después. Al abrir el carrito, al pulsar "Ir a
+    pagar", al entrar al checkout y justo antes de crear la orden, `CartStore.revalidate()` trae
+    los productos actuales (`getCartProducts`) y `revalidateCart()` (domain) recalcula precio
+    (promo, variante, mayoreo, adicionales, promo en divisas), stock (compartido por
+    producto+variante+talla). Eliminados/ocultos/agotados NO se quitan: quedan como línea
+    `unavailable` (gris, "Este producto ya no está disponible", botones Eliminar / Ver otros
+    productos; pedido de Nicolas 2026-10-29), no suman al total ni van en la orden
+    (`availableItems`), y se rehabilitan solos si vuelve el stock. Los cambios se muestran en
+    `<lib-cart-changes-notice>`. Si la consulta falla se sigue (fail-open). Red de seguridad en
+    el servidor: trigger `trg_orders_validate_public_cart` (BEFORE INSERT, solo
+    `source='public'` y rol anon/authenticated) usa `public_cart_issues(tenant, items)` y
+    rechaza con `cart_outdated`; el checkout lo captura, revalida y avisa. Si cambias cómo se
+    calcula el precio de una línea, cambia AMBOS (front y función SQL).
 
 ## product (`@catalogohoy/product`)
 
@@ -76,6 +95,28 @@
   stock, solo sus tallas tienen stock propio); antes la RPC las salteaba (bug).
   `stock NULL` = sin control de inventario (se saltea a propósito). Si el RPC
   falla, ahora sale un toast de aviso (antes se tragaba en console.warn).
+  **Pendiente NO aparta stock** (solo `completed`/`credit` descuentan). Clientes como
+  Motofox a veces creen que sí: revisar el historial en edge_logs antes de "arreglar".
+  `updateOrderStatus` usa el status REAL de la BD (no el que trae la pantalla) para decidir.
+
+- **Estados propios por tienda** (2026-10-29, migración `20261029_order_stages.sql`): tabla
+  `order_stages` (label, color hex, `base_status`, position) + `orders.stage_id`. Cada estado
+  propio (ej. "Despacho", "Revisión") **se comporta como su `base_status`**, que es lo que se
+  guarda en `orders.status`: stock, métricas, notificaciones, bot y reportes no cambian. La UI
+  usa claves `OrderStatusKey` = status base | `stage:<uuid>` (`domain/order-stage.ts`,
+  `OrderStageStore`). Un filtro base (ej. Pendientes) muestra solo órdenes SIN stage
+  (`stageId: null`), así cada orden vive en una sola columna. Trigger `orders_sync_stage`:
+  si el status cambia a algo distinto del base del stage (bot, POS, MCP), `stage_id` → NULL.
+  Filas con `system_status` = personalización (nombre, color, posición, `is_hidden`) de un
+  estado base; no son estados nuevos (el trigger las ignora). Pendiente nunca se oculta.
+  Editor (`OrderStagesModal`, botón "Estados" en Órdenes): tamaño fijo, lista + panel, borrador
+  local y un solo "Guardar" (`OrderStageStore.saveAll`). Comportamiento = 3 checks escalonados
+  (venta ⊂ descuenta stock ⊂ pagada → cancelled/pending/credit/completed, `toggleBehavior`).
+  Base: comportamiento fijo. Propio con órdenes: comportamiento bloqueado. Borrar un propio
+  deja sus órdenes en el base (FK SET NULL).
+  **Vista Tablero** (`OrderBoardComponent`, toggle Lista/Tablero guardado en localStorage
+  `orders.viewMode`): una columna por estado visible, CDK drag and drop → `updateOrderStatus`
+  optimista (revierte si falla), 30 por columna con "Ver más".
 
 - **Métricas → Ingresos por método de pago** (2026-10-21): la RPC `order_metrics` devuelve
   `byPaymentMethod` (solo órdenes `completed`; pagos divididos del POS suman cada parte de

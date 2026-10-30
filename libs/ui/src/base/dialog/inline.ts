@@ -1,6 +1,7 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { TranslatePipe } from '@shared/presenter';
 import { DialogModule } from 'primeng/dialog';
+import { allowAutofocus } from '../focus';
 
 @Component({
   selector: 'ui-dialog',
@@ -20,6 +21,7 @@ import { DialogModule } from 'primeng/dialog';
       [styleClass]="styleClass()"
       [resizable]="false"
       [appendTo]="appendTo()"
+      [focusOnShow]="focusOnShow"
     >
       <ng-content />
     </p-dialog>
@@ -39,6 +41,7 @@ export class DialogComponent {
   public readonly open = output<void>();
 
   public readonly visible = signal(false);
+  protected readonly focusOnShow = allowAutofocus();
 
   public readonly isOpen = computed(() => this.visible());
 
