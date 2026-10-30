@@ -83,6 +83,47 @@
 
           <div class="text-sm font-semibold text-grey-800 truncate">{{ order.name }}</div>
 
+          @if (canEdit()) {
+          <!-- Cambiar el estado sin arrastrar: no abre la orden ni empieza a arrastrar -->
+          <div
+            class="board-status-select self-start -ml-1"
+            (click)="$event.stopPropagation()"
+            (mousedown)="$event.stopPropagation()"
+            (touchstart)="$event.stopPropagation()"
+            (pointerdown)="$event.stopPropagation()"
+          >
+            <ui-select
+              [options]="statusOptions()"
+              [ngModel]="column.def.key"
+              (ngModelChange)="onStatusSelect(order, column, $event)"
+              [disabled]="movingId() !== null"
+              optionLabel="label"
+              optionValue="value"
+              size="small"
+            >
+              <ng-template selectSelectedItem>
+                <span class="inline-flex items-center gap-1.5 text-xs font-medium text-grey-700">
+                  <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="column.def.color"></span>
+                  {{ column.def.label | transloco }}
+                </span>
+              </ng-template>
+              <ng-template selectItem let-item>
+                @if (item.value === NEW_STAGE_KEY) {
+                <span class="inline-flex items-center gap-1.5 py-0.5 text-xs font-semibold text-primary-600">
+                  <ui-icon name="plus" styleClass="size-3.5" />
+                  {{ item.label | transloco }}
+                </span>
+                } @else {
+                <span class="inline-flex items-center gap-1.5 text-xs font-medium text-grey-700">
+                  <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="item.color"></span>
+                  {{ item.label | transloco }}
+                </span>
+                }
+              </ng-template>
+            </ui-select>
+          </div>
+          }
+
           @if (order.products.length) {
           <div class="flex items-center gap-2">
             @if (photos(order).length) {
