@@ -162,6 +162,10 @@ export default class ExpenseListComponent implements OnInit {
     return `${symbol} ${value}`;
   }
 
+  public attachmentNames(expense: Expense): string {
+    return expense.attachments.map((a) => a.name).join(', ');
+  }
+
   /** 'YYYY-MM-DD' → '05/10/2026'. */
   public date(iso: string | null): string {
     if (!iso) return '';

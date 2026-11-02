@@ -174,9 +174,10 @@
               <span class="text-grey-400">{{ date(e.issueDate) }}</span>
               <span class="px-2 py-0.5 rounded-full bg-grey-50 text-grey-600">{{ categoryLabel(e.category) | transloco }}</span>
               <ng-container *ngTemplateOutlet="statusBadge; context: { $implicit: e }" />
-              @if (e.fileUrl) {
-                <a [href]="e.fileUrl" target="_blank" rel="noopener" class="flex items-center gap-1 text-primary-600" (click)="$event.stopPropagation()">
-                  <ui-icon name="paperclip" styleClass="size-3.5" />{{ 'Factura' | transloco }}
+              @if (e.attachments.length) {
+                <a [href]="e.attachments[0].url" target="_blank" rel="noopener" class="flex items-center gap-1 text-primary-600" (click)="$event.stopPropagation()">
+                  <ui-icon name="paperclip" styleClass="size-3.5" />
+                  {{ e.attachments.length === 1 ? ('Factura' | transloco) : ('{n} archivos' | transloco: { n: e.attachments.length }) }}
                 </a>
               }
             </div>
@@ -220,16 +221,19 @@
                 </td>
                 <td class="px-4 py-3 text-right font-bold text-grey-800 whitespace-nowrap">{{ money(e.amount, e.currency) }}</td>
                 <td class="px-4 py-3 text-center">
-                  @if (e.fileUrl) {
+                  @if (e.attachments.length) {
                     <a
-                      [href]="e.fileUrl"
+                      [href]="e.attachments[0].url"
                       target="_blank"
                       rel="noopener"
-                      class="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-primary-50 text-primary-600"
-                      [pTooltip]="e.fileName || ('Ver factura' | transloco)"
+                      class="inline-flex items-center justify-center gap-1 h-8 px-2 rounded-md hover:bg-primary-50 text-primary-600"
+                      [pTooltip]="attachmentNames(e)"
                       tooltipPosition="top"
                     >
                       <ui-icon name="paperclip" styleClass="size-4" />
+                      @if (e.attachments.length > 1) {
+                        <span class="text-xs font-semibold">{{ e.attachments.length }}</span>
+                      }
                     </a>
                   } @else {
                     <span class="text-grey-300">—</span>

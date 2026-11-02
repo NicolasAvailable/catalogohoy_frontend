@@ -33,6 +33,38 @@ export function categoryLabel(category: ExpenseCategory): string {
   return EXPENSE_CATEGORIES.find((c) => c.value === category)?.label ?? 'Otros';
 }
 
+/** Archivo adjunto de un gasto (foto, PDF, Excel…), servido desde el CDN. */
+export interface ExpenseAttachment {
+  url: string;
+  name: string;
+  /** MIME type del archivo original. */
+  type: string;
+}
+
+/** Tipos que se aceptan como factura (fotos, PDF, Excel/CSV, Word, XML de
+ *  factura electrónica). */
+export const EXPENSE_FILE_ACCEPT =
+  'image/*,application/pdf,.pdf,.xls,.xlsx,.csv,.doc,.docx,.xml,.txt';
+
+const ALLOWED_EXTENSIONS = ['pdf', 'xls', 'xlsx', 'csv', 'doc', 'docx', 'xml', 'txt', 'jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif'];
+
+/** ¿Se puede adjuntar este archivo como factura? */
+export function isAllowedExpenseFile(file: { name: string; type: string }): boolean {
+  // SVG no: puede llevar scripts y se sirve desde nuestro CDN.
+  if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) return false;
+  if (file.type.startsWith('image/') || file.type === 'application/pdf') return true;
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  return ALLOWED_EXTENSIONS.includes(ext);
+}
+
+/** Ícono (lucide) según el tipo de archivo. */
+export function attachmentIcon(att: { name: string; type: string }): string {
+  const ext = att.name.split('.').pop()?.toLowerCase() ?? '';
+  if (att.type.startsWith('image/')) return 'image';
+  if (['xls', 'xlsx', 'csv'].includes(ext)) return 'file-spreadsheet';
+  return 'file-text';
+}
+
 export interface Expense {
   id: string;
   supplier: string | null;
@@ -46,8 +78,7 @@ export interface Expense {
   dueDate: string | null;
   status: ExpenseStatus;
   paidAt: string | null;
-  fileUrl: string | null;
-  fileName: string | null;
+  attachments: ExpenseAttachment[];
   notes: string | null;
   createdAt: string;
 }

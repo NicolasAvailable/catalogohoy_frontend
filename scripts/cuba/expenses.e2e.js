@@ -20,19 +20,21 @@ let n = 0;
 
   const shot = async (name) => { n++; const f = path.join(OUT, `${String(n).padStart(2, '0')}-${name}.png`); await page.screenshot({ path: f }); return f; };
   const step = async (name, fn) => {
-    try { await fn(); results.push(`✅ ${name}`); }
+    try { await fn(); results.push(`✅ ${name}`); console.error(`✅ ${name}`); }
     catch (e) { results.push(`❌ ${name}: ${e.message.split('\n').slice(0, 3).join(' / ')}`); await shot('fallo'); }
   };
   const expectText = async (loc, text) => {
     await loc.filter({ hasText: text }).first().waitFor({ timeout: 5000 });
   };
-  const field = (label) => page.locator('.p-dialog div.flex.flex-col', { has: page.locator(`label:text-is("${label}")`) }).last();
+  // Campo del formulario por el texto de su etiqueta (sin el "*" ni "(opcional)").
+  const field = (label) =>
+    page.locator('.p-dialog div.flex.flex-col', { has: page.locator('label').filter({ hasText: new RegExp(`^\\s*${label}(\\s|$)`) }) }).last();
   const pick = async (label, option) => {
     await field(label).locator('p-select').click();
     await page.getByRole('option', { name: option, exact: true }).click();
   };
   const fill = async (label, value) => { await field(label).locator('input').first().fill(value); };
-  const amount = async (value) => { const i = field('Monto *').locator('input'); await i.click(); await i.press('Control+A'); await i.pressSequentially(value); };
+  const amount = async (value) => { const i = field('Monto').locator('input'); await i.click(); await i.press('Control+A'); await i.pressSequentially(value); };
   const totals = () => page.getByTestId('expense-totals');
   const rows = () => page.locator('table tbody tr');
   const expectRows = async (count, what) => {
@@ -50,21 +52,34 @@ let n = 0;
     await shot('vacio');
   });
 
-  await step('Registrar factura pagada con PDF adjunto', async () => {
+  await step('Campos obligatorios: no deja guardar vacío', async () => {
     await page.getByRole('button', { name: 'Registrar gasto' }).first().click();
+    await page.locator('.p-dialog ui-button').last().click();
+    await expectText(page.locator('.p-dialog p'), 'El proveedor es obligatorio');
+    await expectText(page.locator('.p-dialog p'), 'El monto es obligatorio');
+    const optional = await page.locator('.p-dialog label:has-text("(opcional)")').count();
+    if (optional < 4) throw new Error(`Solo ${optional} campos marcados como opcionales`);
+    await shot('obligatorios');
+  });
+
+  await step('Registrar factura pagada con PDF + Excel adjuntos', async () => {
     await fill('Proveedor', 'Repuestos El Motor C.A.');
     await fill('Nº de factura', '000123');
     await fill('Descripción', '20 cascos y 50 cauchos');
     await amount('450');
     const pdf = path.join(OUT, 'factura-000123.pdf');
     fs.writeFileSync(pdf, '%PDF-1.4\n%demo\n');
-    await page.locator('.p-dialog input[type=file]').setInputFiles(pdf);
-    await expectText(page.locator('.p-dialog a'), 'factura-000123.pdf');
+    const xlsx = path.join(OUT, 'detalle-000123.xlsx');
+    fs.writeFileSync(xlsx, 'demo');
+    await page.getByTestId('expense-dropzone').locator('input[type=file]').setInputFiles([pdf, xlsx]);
+    await expectText(page.getByTestId('expense-attachments').locator('li'), 'factura-000123.pdf');
+    await expectText(page.getByTestId('expense-attachments').locator('li'), 'detalle-000123.xlsx');
     await shot('formulario-lleno');
     await save();
     await expectText(rows(), 'Repuestos El Motor C.A.');
     await expectText(totals(), '450,00');
-    if (!db.tenant_expenses[0].file_url?.includes('factura-000123.pdf')) throw new Error('No se guardó el archivo');
+    const att = db.tenant_expenses[0].attachments || [];
+    if (att.length !== 2) throw new Error(`Se guardaron ${att.length} archivos (esperaba 2)`);
   });
 
   await step('Registrar factura por pagar ya vencida (transporte)', async () => {
@@ -83,7 +98,7 @@ let n = 0;
 
   await step('Registrar gasto en bolívares (no se suma con dólares)', async () => {
     await page.getByRole('button', { name: 'Registrar gasto' }).first().click();
-    await fill('Descripción', 'Alquiler del local');
+    await fill('Proveedor', 'Alquiler del local');
     await amount('15000');
     await pick('Moneda', 'VES');
     await pick('Categoría', 'Alquiler');

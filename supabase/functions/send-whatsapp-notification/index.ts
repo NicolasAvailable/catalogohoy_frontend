@@ -43,7 +43,9 @@ type Payload = {
     // el nombre del template es fijo en la WABA de la plataforma (ver CS_TEMPLATES).
     | "order_pending_reminder"
     | "activation_no_product"
-    | "setup_missing_whatsapp";
+    | "setup_missing_whatsapp"
+    // Facturas de proveedores por vencer / vencidas (send-expense-reminders).
+    | "expense_due_reminder";
   // Parámetros posicionales del body del template aprobado ({{1}}, {{2}}, ...).
   variables?: string[];
   // Valor del botón URL dinámico (índice 0), p.ej. el order id para `/o/{{1}}`.
@@ -58,6 +60,7 @@ const CS_TEMPLATES: Record<string, { name: string; lang: string }> = {
   order_pending_reminder: { name: "order_pending_reminder", lang: "es" },
   activation_no_product: { name: "activation_no_product", lang: "es" },
   setup_missing_whatsapp: { name: "setup_missing_whatsapp", lang: "es" },
+  expense_due_reminder: { name: "expense_due_reminder", lang: "es" },
 };
 
 Deno.serve(async (req) => {

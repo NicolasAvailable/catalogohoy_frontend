@@ -321,9 +321,6 @@
         <span class="absolute -top-1 -right-1 flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold leading-none">
           {{ unreadChatsCount() > 99 ? '99+' : unreadChatsCount() }}
         </span>
-        } @else {
-        <!-- Punto "Nuevo" cuando no hay contador de no-leídos que mostrar. -->
-        <span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary-500 ring-2 ring-white"></span>
         }
       </a>
     </li>
@@ -607,10 +604,6 @@
       </div>
       @if (!canViewReports()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
-      } @else {
-        <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
-          {{ 'Nuevo' | transloco }}
-        </span>
       }
     </li>
     <li
@@ -797,10 +790,6 @@
         tooltipPosition="right"
       >
         {{ unreadChatsCount() > 99 ? '99+' : unreadChatsCount() }}
-      </span>
-      } @else {
-      <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
-        {{ 'Nuevo' | transloco }}
       </span>
       }
     </li>

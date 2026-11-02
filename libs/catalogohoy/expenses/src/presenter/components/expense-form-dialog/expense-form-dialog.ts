@@ -14,19 +14,25 @@ import {
   TextareaComponent,
 } from '@ui';
 import {
+  attachmentIcon,
   EXPENSE_CATEGORIES,
+  EXPENSE_FILE_ACCEPT,
   EXPENSE_STATUSES,
   Expense,
+  ExpenseAttachment,
   ExpenseCategory,
   ExpenseInput,
   ExpenseStatus,
   fromIsoDate,
+  isAllowedExpenseFile,
   toIsoDate,
 } from '../../../domain';
 import { ExpenseStore } from '../../../infrastructure';
 
-/** Máximo por archivo (fotos se comprimen; esto aplica sobre todo a PDF). */
+/** Máximo por archivo (fotos se comprimen; esto aplica sobre todo a PDF/Excel). */
 const MAX_FILE_MB = 15;
+/** Máximo de archivos por gasto. */
+const MAX_FILES = 10;
 
 @Component({
   selector: 'lib-expense-form-dialog',
@@ -72,11 +78,15 @@ export class ExpenseFormDialogComponent {
   public readonly issueDate = signal<Date | null>(new Date());
   public readonly dueDate = signal<Date | null>(null);
   public readonly status = signal<ExpenseStatus>('paid');
-  public readonly fileUrl = signal<string | null>(null);
-  public readonly fileName = signal<string | null>(null);
+  public readonly attachments = signal<ExpenseAttachment[]>([]);
+  public readonly fileAccept = EXPENSE_FILE_ACCEPT;
+  public readonly attachmentIcon = attachmentIcon;
+  public readonly isDragOver = signal(false);
   public readonly notes = signal('');
   public readonly submitted = signal(false);
-  public readonly isUploading = signal(false);
+  /** Cuántos archivos se están subiendo ahora. */
+  public readonly uploadingCount = signal(0);
+  public readonly isUploading = computed(() => this.uploadingCount() > 0);
   private paidAt: string | null = null;
 
   public get isEditing(): boolean {
@@ -85,7 +95,8 @@ export class ExpenseFormDialogComponent {
 
   public open(expense: Expense | null = null): void {
     this.submitted.set(false);
-    this.isUploading.set(false);
+    this.uploadingCount.set(0);
+    this.isDragOver.set(false);
     this.editingId.set(expense?.id ?? null);
     this.supplier.set(expense?.supplier ?? '');
     this.invoiceNumber.set(expense?.invoiceNumber ?? '');
@@ -96,8 +107,7 @@ export class ExpenseFormDialogComponent {
     this.issueDate.set(expense ? fromIsoDate(expense.issueDate) : new Date());
     this.dueDate.set(expense?.dueDate ? fromIsoDate(expense.dueDate) : null);
     this.status.set(expense?.status ?? 'paid');
-    this.fileUrl.set(expense?.fileUrl ?? null);
-    this.fileName.set(expense?.fileName ?? null);
+    this.attachments.set(expense?.attachments ?? []);
     this.notes.set(expense?.notes ?? '');
     this.paidAt = expense?.paidAt ?? null;
     this.dialog.show();
@@ -107,33 +117,61 @@ export class ExpenseFormDialogComponent {
     this.dialog.hide();
   }
 
-  public async onFileSelected(event: Event): Promise<void> {
+  public onFileSelected(event: Event): void {
     const inputEl = event.target as HTMLInputElement;
-    const file = inputEl.files?.[0];
+    const files = Array.from(inputEl.files ?? []);
     inputEl.value = '';
-    if (!file) return;
-    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
-      this.toast.warning('Sube una foto o un PDF de la factura.');
-      return;
-    }
-    if (file.size > MAX_FILE_MB * 1024 * 1024) {
-      this.toast.warning(`El archivo pesa más de ${MAX_FILE_MB} MB.`);
-      return;
-    }
-    this.isUploading.set(true);
-    const url = await this.store.uploadFile(file);
-    this.isUploading.set(false);
-    if (!url) {
-      this.toast.warning('No pudimos subir el archivo. Intenta de nuevo.');
-      return;
-    }
-    this.fileUrl.set(url);
-    this.fileName.set(file.name);
+    this.addFiles(files);
   }
 
-  public removeFile(): void {
-    this.fileUrl.set(null);
-    this.fileName.set(null);
+  public onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragOver.set(true);
+  }
+
+  public onDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragOver.set(false);
+    this.addFiles(Array.from(event.dataTransfer?.files ?? []));
+  }
+
+  public removeAttachment(index: number): void {
+    this.attachments.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  private async addFiles(files: File[]): Promise<void> {
+    if (!files.length) return;
+    const room = MAX_FILES - this.attachments().length - this.uploadingCount();
+    if (room <= 0) {
+      this.toast.warning(`Máximo ${MAX_FILES} archivos por gasto.`);
+      return;
+    }
+    const valid = files.filter((f) => {
+      if (!isAllowedExpenseFile(f)) {
+        this.toast.warning(`"${f.name}" no es un tipo de archivo permitido.`);
+        return false;
+      }
+      if (f.size > MAX_FILE_MB * 1024 * 1024) {
+        this.toast.warning(`"${f.name}" pesa más de ${MAX_FILE_MB} MB.`);
+        return false;
+      }
+      return true;
+    });
+    await Promise.all(
+      valid.slice(0, room).map(async (file) => {
+        this.uploadingCount.update((n) => n + 1);
+        const url = await this.store.uploadFile(file);
+        this.uploadingCount.update((n) => n - 1);
+        if (!url) {
+          this.toast.warning(`No pudimos subir "${file.name}". Intenta de nuevo.`);
+          return;
+        }
+        this.attachments.update((list) => [
+          ...list,
+          { url, name: file.name, type: file.type || 'application/octet-stream' },
+        ]);
+      })
+    );
   }
 
   public async save(): Promise<void> {
@@ -141,7 +179,7 @@ export class ExpenseFormDialogComponent {
     const amount = this.amount();
     const issueDate = this.issueDate();
     if (amount === null || amount < 0 || !issueDate) return;
-    if (!this.supplier().trim() && !this.description().trim()) return;
+    if (!this.supplier().trim()) return;
 
     const status = this.status();
     const dueDate = this.dueDate();
@@ -156,8 +194,7 @@ export class ExpenseFormDialogComponent {
       dueDate: status === 'pending' && dueDate ? toIsoDate(dueDate) : null,
       status,
       paidAt: status === 'paid' ? (this.paidAt ?? toIsoDate(new Date())) : null,
-      fileUrl: this.fileUrl(),
-      fileName: this.fileName(),
+      attachments: this.attachments(),
       notes: this.notes().trim() || null,
     };
 

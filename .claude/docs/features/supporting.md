@@ -24,8 +24,13 @@
   la tienda carga facturas de proveedores, compras de mercancía y otros gastos, con foto/PDF,
   categoría, moneda, estado (pagado / por pagar + vencimiento). Vista por mes con totales
   (gastado, pagado, por pagar) y gasto por categoría.
-- Tabla `tenant_expenses`. Archivos a S3 vía `signedUpload(..., 'invoice', tenantId)`
-  (`invoices/{tenantId}/…`, mismo prefijo que las facturas de órdenes).
+- Tabla `tenant_expenses`. Adjuntos en `attachments` jsonb `[{url,name,type}]` (máx. 10: fotos,
+  PDF, Excel/CSV, Word, XML; nunca SVG) a S3 vía `signedUpload(..., 'invoice', tenantId)`
+  (`invoices/{tenantId}/…`, mismo prefijo que las facturas de órdenes). Proveedor, monto,
+  moneda, categoría, estado y fecha son obligatorios; el resto se marca "(opcional)".
+- Avisos de vencimiento por email + WhatsApp: edge `send-expense-reminders` (ver
+  `integrations.md`). Opt-out: `users.notify_expense_reminders` (Perfil → Notificaciones).
+- Orden de despliegue: migración ANTES del front (el perfil guarda `notify_expense_reminders`).
 - Permiso de equipo **`gastos`** (view/create/edit/delete). Es info financiera: los miembros
   sin ese permiso NO la ven (RLS con `_tenant_module_allowed`, no `_pos_can_access_tenant`).
 - Totales separados por moneda (USD y Bs no se suman). Pendiente: balance mensual

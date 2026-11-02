@@ -6,7 +6,7 @@ import { BaseExpenseService, Expense, ExpenseInput } from '../domain';
 
 const TABLE = 'tenant_expenses';
 const COLUMNS =
-  'id, supplier, invoice_number, category, description, amount, currency, issue_date, due_date, status, paid_at, file_url, file_name, notes, created_at';
+  'id, supplier, invoice_number, category, description, amount, currency, issue_date, due_date, status, paid_at, attachments, notes, created_at';
 
 /** Gastos de la tienda (`tenant_expenses`). RLS: dueño o permiso `gastos`. */
 @Injectable({ providedIn: 'root' })
@@ -61,13 +61,13 @@ export class ExpenseService extends BaseExpenseService {
   async uploadFile(tenantId: number, file: File): Promise<E.Either<Error, string>> {
     try {
       // Las fotos se comprimen (las de celular pesan varios MB); los PDF van tal cual.
-      if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
+      if (['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
         const blob = await compressImage(file, { maxWidth: 2000, quality: 0.85 });
         const { mime } = preferredImageFormat();
         return E.right(await signedUpload(blob, file.name, mime, 'invoice', tenantId));
       }
       return E.right(
-        await signedUpload(file, file.name, file.type || 'application/pdf', 'invoice', tenantId)
+        await signedUpload(file, file.name, file.type || 'application/octet-stream', 'invoice', tenantId)
       );
     } catch (e) {
       return E.left(e instanceof Error ? e : new Error('No pudimos subir el archivo.'));
@@ -86,8 +86,7 @@ export class ExpenseService extends BaseExpenseService {
       dueDate: 'due_date',
       status: 'status',
       paidAt: 'paid_at',
-      fileUrl: 'file_url',
-      fileName: 'file_name',
+      attachments: 'attachments',
       notes: 'notes',
     };
     const row: Record<string, unknown> = {};
@@ -112,8 +111,7 @@ export class ExpenseService extends BaseExpenseService {
       dueDate: row.due_date ?? null,
       status: row.status,
       paidAt: row.paid_at ?? null,
-      fileUrl: row.file_url ?? null,
-      fileName: row.file_name ?? null,
+      attachments: Array.isArray(row.attachments) ? row.attachments : [],
       notes: row.notes ?? null,
       createdAt: row.created_at,
     };

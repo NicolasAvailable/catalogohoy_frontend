@@ -15,19 +15,26 @@
       </div>
     </div>
 
+    <p class="text-xs text-grey-400 -mt-1">
+      {{ 'Los campos con' | transloco }} <span class="text-red-500 font-semibold">*</span> {{ 'son obligatorios.' | transloco }}
+    </p>
+
     <div class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto px-1 py-1">
       <!-- Proveedor + Nº factura -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium text-grey-700">{{ 'Proveedor' | transloco }}</label>
+          <label class="text-sm font-medium text-grey-700">{{ 'Proveedor' | transloco }} <span class="text-red-500">*</span></label>
           <ui-input-text
             placeholder="Ej: Distribuidora Repuestos C.A."
             [ngModel]="supplier()"
             (ngModelChange)="supplier.set($event)"
           />
+          @if (submitted() && !supplier().trim()) {
+            <p class="text-xs text-red-500">{{ 'El proveedor es obligatorio' | transloco }}</p>
+          }
         </div>
         <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium text-grey-700">{{ 'Nº de factura' | transloco }}</label>
+          <label class="text-sm font-medium text-grey-700">{{ 'Nº de factura' | transloco }} <span class="text-grey-300 font-normal">{{ '(opcional)' | transloco }}</span></label>
           <ui-input-text
             placeholder="Ej: 000123"
             [ngModel]="invoiceNumber()"
@@ -38,21 +45,18 @@
 
       <!-- Descripción -->
       <div class="flex flex-col gap-1.5">
-        <label class="text-sm font-medium text-grey-700">{{ 'Descripción' | transloco }}</label>
+        <label class="text-sm font-medium text-grey-700">{{ 'Descripción' | transloco }} <span class="text-grey-300 font-normal">{{ '(opcional)' | transloco }}</span></label>
         <ui-input-text
           placeholder="Ej: 20 cascos y 50 cauchos"
           [ngModel]="description()"
           (ngModelChange)="description.set($event)"
         />
-        @if (submitted() && !supplier().trim() && !description().trim()) {
-          <p class="text-xs text-red-500">{{ 'Escribe el proveedor o una descripción' | transloco }}</p>
-        }
       </div>
 
       <!-- Monto + Moneda -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium text-grey-700">{{ 'Monto' | transloco }} *</label>
+          <label class="text-sm font-medium text-grey-700">{{ 'Monto' | transloco }} <span class="text-red-500">*</span></label>
           <ui-input-number
             placeholder="0,00"
             [showButtons]="false"
@@ -67,7 +71,7 @@
           }
         </div>
         <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium text-grey-700">{{ 'Moneda' | transloco }}</label>
+          <label class="text-sm font-medium text-grey-700">{{ 'Moneda' | transloco }} <span class="text-red-500">*</span></label>
           <ui-select
             [options]="currencies()"
             optionLabel="label"
@@ -82,7 +86,7 @@
       <!-- Categoría + Estado -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium text-grey-700">{{ 'Categoría' | transloco }}</label>
+          <label class="text-sm font-medium text-grey-700">{{ 'Categoría' | transloco }} <span class="text-red-500">*</span></label>
           <ui-select
             [options]="categories"
             optionLabel="label"
@@ -93,7 +97,7 @@
           />
         </div>
         <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium text-grey-700">{{ 'Estado' | transloco }}</label>
+          <label class="text-sm font-medium text-grey-700">{{ 'Estado' | transloco }} <span class="text-red-500">*</span></label>
           <ui-select
             [options]="statuses"
             optionLabel="label"
@@ -108,7 +112,7 @@
       <!-- Fecha + Vencimiento -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium text-grey-700">{{ 'Fecha de la factura' | transloco }} *</label>
+          <label class="text-sm font-medium text-grey-700">{{ 'Fecha de la factura' | transloco }} <span class="text-red-500">*</span></label>
           <ui-datepicker
             dateFormat="dd/mm/yy"
             styleClass="w-full border! border-grey-100! rounded-xl!"
@@ -118,11 +122,11 @@
         </div>
         @if (status() === 'pending') {
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium text-grey-700">{{ 'Vence el' | transloco }}</label>
+            <label class="text-sm font-medium text-grey-700">{{ 'Vence el' | transloco }} <span class="text-grey-300 font-normal">{{ '(opcional)' | transloco }}</span></label>
             <ui-datepicker
               dateFormat="dd/mm/yy"
               styleClass="w-full border! border-grey-100! rounded-xl!"
-              [placeholder]="'Opcional' | transloco"
+              [placeholder]="'Te avisamos antes de que venza' | transloco"
               [showClear]="true"
               [ngModel]="dueDate()"
               (ngModelChange)="dueDate.set($event)"
@@ -132,50 +136,61 @@
         }
       </div>
 
-      <!-- Archivo -->
+      <!-- Archivos -->
       <div class="flex flex-col gap-1.5">
-        <label class="text-sm font-medium text-grey-700">{{ 'Factura (foto o PDF)' | transloco }}</label>
-        @if (fileUrl()) {
-          <div class="flex items-center gap-2 rounded-lg border border-grey-100 px-3 py-2">
-            <ui-icon name="paperclip" styleClass="size-4 text-grey-400 shrink-0" />
-            <a
-              [href]="fileUrl()"
-              target="_blank"
-              rel="noopener"
-              class="text-sm text-primary-600 hover:underline truncate flex-1"
-            >
-              {{ fileName() || ('Ver archivo' | transloco) }}
-            </a>
-            <button
-              type="button"
-              class="flex items-center justify-center w-7 h-7 rounded-md hover:bg-grey-50 cursor-pointer"
-              [title]="'Quitar archivo' | transloco"
-              (click)="removeFile()"
-            >
-              <ui-icon name="x" styleClass="size-4 text-grey-500" />
-            </button>
-          </div>
-        } @else {
-          <label
-            class="flex items-center justify-center gap-2 rounded-lg border border-dashed border-grey-200 px-3 py-4 text-sm text-grey-500 hover:bg-grey-25 cursor-pointer"
-            [class.opacity-60]="isUploading()"
-            [class.pointer-events-none]="isUploading()"
-          >
-            <ui-icon [name]="isUploading() ? 'loader-circle' : 'upload'" [styleClass]="'size-4' + (isUploading() ? ' animate-spin' : '')" />
-            {{ (isUploading() ? 'Subiendo...' : 'Subir foto o PDF') | transloco }}
-            <input
-              type="file"
-              class="hidden"
-              accept="image/*,application/pdf"
-              (change)="onFileSelected($event)"
-            />
-          </label>
+        <label class="text-sm font-medium text-grey-700">{{ 'Factura o comprobantes' | transloco }} <span class="text-grey-300 font-normal">{{ '(opcional)' | transloco }}</span></label>
+        <label
+          data-testid="expense-dropzone"
+          class="flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl py-8 px-4 text-center transition-colors cursor-pointer border-primary-500"
+          [class.bg-primary-50]="isDragOver()"
+          [class.bg-primary-50/10]="!isDragOver()"
+          (dragover)="onDragOver($event)"
+          (dragleave)="isDragOver.set(false)"
+          (drop)="onDrop($event)"
+        >
+          <ui-icon
+            [name]="isUploading() ? 'loader-circle' : 'circle-plus'"
+            size="24"
+            [styleClass]="'text-primary-500 mb-2' + (isUploading() ? ' animate-spin' : '')"
+          />
+          <p class="font-bold text-base text-primary-500">
+            {{ (isUploading() ? 'Subiendo...' : 'Arrastra, suelta o sube tu factura') | transloco }}
+          </p>
+          <p class="text-xs text-grey-400 mt-1">
+            {{ 'Fotos, PDF, Excel, Word o XML · hasta 15 MB cada uno' | transloco }}
+          </p>
+          <input type="file" class="hidden" multiple [accept]="fileAccept" (change)="onFileSelected($event)" />
+        </label>
+        @if (attachments().length) {
+          <ul class="flex flex-col gap-1.5" data-testid="expense-attachments">
+            @for (att of attachments(); track att.url; let i = $index) {
+              <li class="flex items-center gap-2 rounded-lg border border-grey-100 px-3 py-2">
+                <ui-icon [name]="attachmentIcon(att)" styleClass="size-4 text-grey-400 shrink-0" />
+                <a
+                  [href]="att.url"
+                  target="_blank"
+                  rel="noopener"
+                  class="text-sm text-primary-600 hover:underline truncate flex-1"
+                >
+                  {{ att.name }}
+                </a>
+                <button
+                  type="button"
+                  class="flex items-center justify-center w-7 h-7 rounded-md hover:bg-grey-50 cursor-pointer"
+                  [title]="'Quitar archivo' | transloco"
+                  (click)="removeAttachment(i)"
+                >
+                  <ui-icon name="x" styleClass="size-4 text-grey-500" />
+                </button>
+              </li>
+            }
+          </ul>
         }
       </div>
 
       <!-- Notas -->
       <div class="flex flex-col gap-1.5">
-        <label class="text-sm font-medium text-grey-700">{{ 'Notas' | transloco }}</label>
+        <label class="text-sm font-medium text-grey-700">{{ 'Notas' | transloco }} <span class="text-grey-300 font-normal">{{ '(opcional)' | transloco }}</span></label>
         <ui-textarea
           [rows]="2"
           [placeholder]="'Notas internas (forma de pago, referencia...)' | transloco"

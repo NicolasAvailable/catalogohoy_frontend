@@ -18,13 +18,15 @@ export class Profile extends Entity {
     public lowStockThreshold: number = 5,
     // Recordatorios de cobranza de órdenes a crédito (CAT-79) + umbral de días.
     public notifyCreditReminders = true,
-    public creditReminderDays = 7
+    public creditReminderDays = 7,
+    // Avisos de facturas de proveedores por vencer / vencidas (Gastos).
+    public notifyExpenseReminders = true
   ) {
     super();
   }
 
   static empty() {
-    return new Profile('', '', null, TenantList.empty(), true, true, true, true, true, 5, true, 7);
+    return new Profile('', '', null, TenantList.empty(), true, true, true, true, true, 5, true, 7, true);
   }
 
   static primitives(primitives: ProfilePrimitive) {
@@ -40,7 +42,8 @@ export class Profile extends Entity {
       primitives.notifyLowStock ?? true,
       primitives.lowStockThreshold ?? 5,
       primitives.notifyCreditReminders ?? true,
-      primitives.creditReminderDays ?? 7
+      primitives.creditReminderDays ?? 7,
+      primitives.notifyExpenseReminders ?? true
     ).withId(primitives.id);
   }
 }
@@ -59,4 +62,5 @@ export interface ProfilePrimitive {
   lowStockThreshold?: number;
   notifyCreditReminders?: boolean;
   creditReminderDays?: number;
+  notifyExpenseReminders?: boolean;
 }

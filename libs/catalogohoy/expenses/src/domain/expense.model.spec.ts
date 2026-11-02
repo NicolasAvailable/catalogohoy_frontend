@@ -1,5 +1,7 @@
 import {
+  attachmentIcon,
   Expense,
+  isAllowedExpenseFile,
   isOverdue,
   monthRange,
   shiftMonth,
@@ -19,8 +21,7 @@ const base: Expense = {
   dueDate: null,
   status: 'paid',
   paidAt: null,
-  fileUrl: null,
-  fileName: null,
+  attachments: [],
   notes: null,
   createdAt: '2026-10-05T00:00:00Z',
 };
@@ -71,5 +72,19 @@ describe('expense.model', () => {
     expect(isOverdue({ ...base, status: 'pending', dueDate: '2026-10-01' }, '2026-10-30')).toBe(true);
     expect(isOverdue({ ...base, status: 'paid', dueDate: '2026-10-01' }, '2026-10-30')).toBe(false);
     expect(isOverdue({ ...base, status: 'pending', dueDate: null }, '2026-10-30')).toBe(false);
+  });
+
+  it('acepta fotos, PDF, Excel y XML; rechaza ejecutables', () => {
+    expect(isAllowedExpenseFile({ name: 'f.pdf', type: 'application/pdf' })).toBe(true);
+    expect(isAllowedExpenseFile({ name: 'f.xlsx', type: '' })).toBe(true);
+    expect(isAllowedExpenseFile({ name: 'foto.heic', type: 'image/heic' })).toBe(true);
+    expect(isAllowedExpenseFile({ name: 'factura.xml', type: 'text/xml' })).toBe(true);
+    expect(isAllowedExpenseFile({ name: 'virus.exe', type: 'application/x-msdownload' })).toBe(false);
+  });
+
+  it('attachmentIcon por tipo', () => {
+    expect(attachmentIcon({ name: 'a.xlsx', type: '' })).toBe('file-spreadsheet');
+    expect(attachmentIcon({ name: 'a.png', type: 'image/png' })).toBe('image');
+    expect(attachmentIcon({ name: 'a.pdf', type: 'application/pdf' })).toBe('file-text');
   });
 });
