@@ -180,3 +180,28 @@ export function resolveStatusKey(
   }
   return { status: key as OrderStatus, stageId: null };
 }
+
+/** Series por estado para la gráfica apilada por día: una serie por estado
+ *  (en el orden de `defs`, incluye estados propios y ocultos) con un valor por
+ *  día de `days`. Solo las series con algún valor. */
+export function dailyStatusSeries(
+  days: string[],
+  rows: { date: string; status: string; stageId: string | null; count: number; amount: number }[],
+  defs: OrderStatusDef[],
+  metric: 'count' | 'amount'
+): { key: OrderStatusKey; name: string; color: string; data: number[] }[] {
+  const dayIndex = new Map(days.map((d, i) => [d, i]));
+  const data = new Map<OrderStatusKey, number[]>(defs.map((d) => [d.key, days.map(() => 0)]));
+  for (const r of rows) {
+    const i = dayIndex.get(r.date);
+    if (i === undefined) continue;
+    const key = statusKeyOf({ status: r.status as OrderStatus, stageId: r.stageId }, defs);
+    const row = data.get(key);
+    if (!row) continue;
+    const value = metric === 'count' ? r.count : r.amount;
+    row[i] = Math.round((row[i] + value) * 100) / 100;
+  }
+  return defs
+    .map((d) => ({ key: d.key, name: d.label, color: d.color, data: data.get(d.key)! }))
+    .filter((s) => s.data.some((v) => v > 0));
+}

@@ -29,6 +29,7 @@ export * from './segment';
 export * from './select';
 export * from './skeleton';
 export * from './status';
+export * from './stacked-day-chart';
 export * from './stepper';
 export * from './table';
 export * from './tabs';

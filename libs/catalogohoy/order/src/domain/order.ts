@@ -161,6 +161,17 @@ export interface OrderDayMetric {
   count: number;
 }
 
+/** Órdenes de un día en un estado (base + estado propio), del RPC
+ *  `order_metrics_by_day_status`. Para la gráfica apilada por día. */
+export interface OrderDayStatusMetric {
+  /** Mismo inicio de día que {@link OrderDayMetric.date}. */
+  date: string;
+  status: string;
+  stageId: string | null;
+  count: number;
+  amount: number;
+}
+
 /** One row of the income-by-payment-method breakdown in {@link OrderMetrics}. */
 export interface OrderPaymentMethodMetric {
   /** Method label as the seller named it (e.g. "Pago móvil", "Efectivo"). */

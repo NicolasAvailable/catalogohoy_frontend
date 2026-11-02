@@ -1,0 +1,222 @@
+<ui-dialog styleClass="max-w-xl w-full">
+  <div class="flex flex-col gap-4 p-2">
+    <!-- Header -->
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center shrink-0">
+        <ui-icon [name]="isEditing ? 'pencil' : 'receipt'" styleClass="size-5 text-primary-500" />
+      </div>
+      <div>
+        <h3 class="font-semibold text-grey-700">
+          {{ (isEditing ? 'Editar gasto' : 'Registrar gasto') | transloco }}
+        </h3>
+        <p class="text-sm text-grey-300">
+          {{ 'Factura de proveedor, compra de mercancía u otro pago' | transloco }}
+        </p>
+      </div>
+    </div>
+
+    <p class="text-xs text-grey-400 -mt-1">
+      {{ 'Los campos con' | transloco }} <span class="text-red-500 font-semibold">*</span> {{ 'son obligatorios.' | transloco }}
+    </p>
+
+    <div class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto px-1 py-1">
+      <!-- Proveedor + Nº factura -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium text-grey-700">{{ 'Proveedor' | transloco }} <span class="text-red-500">*</span></label>
+          <ui-input-text
+            placeholder="Ej: Distribuidora Repuestos C.A."
+            [ngModel]="supplier()"
+            (ngModelChange)="supplier.set($event)"
+          />
+          @if (submitted() && !supplier().trim()) {
+            <p class="text-xs text-red-500">{{ 'El proveedor es obligatorio' | transloco }}</p>
+          }
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium text-grey-700">{{ 'Nº de factura' | transloco }} <span class="text-grey-300 font-normal">{{ '(opcional)' | transloco }}</span></label>
+          <ui-input-text
+            placeholder="Ej: 000123"
+            [ngModel]="invoiceNumber()"
+            (ngModelChange)="invoiceNumber.set($event)"
+          />
+        </div>
+      </div>
+
+      <!-- Descripción -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-grey-700">{{ 'Descripción' | transloco }} <span class="text-grey-300 font-normal">{{ '(opcional)' | transloco }}</span></label>
+        <ui-input-text
+          placeholder="Ej: 20 cascos y 50 cauchos"
+          [ngModel]="description()"
+          (ngModelChange)="description.set($event)"
+        />
+      </div>
+
+      <!-- Monto + Moneda -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium text-grey-700">{{ 'Monto' | transloco }} <span class="text-red-500">*</span></label>
+          <ui-input-number
+            placeholder="0,00"
+            [showButtons]="false"
+            [min]="0"
+            [minFractionDigits]="0"
+            [maxFractionDigits]="2"
+            [ngModel]="amount()"
+            (ngModelChange)="amount.set($event)"
+          />
+          @if (submitted() && amount() === null) {
+            <p class="text-xs text-red-500">{{ 'El monto es obligatorio' | transloco }}</p>
+          }
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium text-grey-700">{{ 'Moneda' | transloco }} <span class="text-red-500">*</span></label>
+          <ui-select
+            [options]="currencies()"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="currencyCode()"
+            (ngModelChange)="currencyCode.set($event)"
+            styleClass="w-full"
+          />
+        </div>
+      </div>
+
+      <!-- Categoría + Estado -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium text-grey-700">{{ 'Categoría' | transloco }} <span class="text-red-500">*</span></label>
+          <ui-select
+            [options]="categories"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="category()"
+            (ngModelChange)="category.set($event)"
+            styleClass="w-full"
+          />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium text-grey-700">{{ 'Estado' | transloco }} <span class="text-red-500">*</span></label>
+          <ui-select
+            [options]="statuses"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="status()"
+            (ngModelChange)="status.set($event)"
+            styleClass="w-full"
+          />
+        </div>
+      </div>
+
+      <!-- Fecha + Vencimiento -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium text-grey-700">{{ 'Fecha de la factura' | transloco }} <span class="text-red-500">*</span></label>
+          <ui-datepicker
+            dateFormat="dd/mm/yy"
+            styleClass="w-full border! border-grey-100! rounded-xl!"
+            [ngModel]="issueDate()"
+            (ngModelChange)="issueDate.set($event)"
+          />
+        </div>
+        @if (status() === 'pending') {
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-grey-700">{{ 'Vence el' | transloco }} <span class="text-grey-300 font-normal">{{ '(opcional)' | transloco }}</span></label>
+            <ui-datepicker
+              dateFormat="dd/mm/yy"
+              styleClass="w-full border! border-grey-100! rounded-xl!"
+              [placeholder]="'Te avisamos antes de que venza' | transloco"
+              [showClear]="true"
+              [ngModel]="dueDate()"
+              (ngModelChange)="dueDate.set($event)"
+              (cleaned)="dueDate.set(null)"
+            />
+          </div>
+        }
+      </div>
+
+      <!-- Archivos -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-grey-700">{{ 'Factura o comprobantes' | transloco }} <span class="text-grey-300 font-normal">{{ '(opcional)' | transloco }}</span></label>
+        <label
+          data-testid="expense-dropzone"
+          class="flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl py-8 px-4 text-center transition-colors cursor-pointer border-primary-500"
+          [class.bg-primary-50]="isDragOver()"
+          [class.bg-primary-50/10]="!isDragOver()"
+          (dragover)="onDragOver($event)"
+          (dragleave)="isDragOver.set(false)"
+          (drop)="onDrop($event)"
+        >
+          <ui-icon
+            [name]="isUploading() ? 'loader-circle' : 'circle-plus'"
+            size="24"
+            [styleClass]="'text-primary-500 mb-2' + (isUploading() ? ' animate-spin' : '')"
+          />
+          <p class="font-bold text-base text-primary-500">
+            {{ (isUploading() ? 'Subiendo...' : 'Arrastra, suelta o sube tu factura') | transloco }}
+          </p>
+          <p class="text-xs text-grey-400 mt-1">
+            {{ 'Fotos, PDF, Excel, Word o XML · hasta 15 MB cada uno' | transloco }}
+          </p>
+          <input type="file" class="hidden" multiple [accept]="fileAccept" (change)="onFileSelected($event)" />
+        </label>
+        @if (attachments().length) {
+          <ul class="flex flex-col gap-1.5" data-testid="expense-attachments">
+            @for (att of attachments(); track att.url; let i = $index) {
+              <li class="flex items-center gap-2 rounded-lg border border-grey-100 px-3 py-2">
+                <ui-icon [name]="attachmentIcon(att)" styleClass="size-4 text-grey-400 shrink-0" />
+                <a
+                  [href]="att.url"
+                  target="_blank"
+                  rel="noopener"
+                  class="text-sm text-primary-600 hover:underline truncate flex-1"
+                >
+                  {{ att.name }}
+                </a>
+                <button
+                  type="button"
+                  class="flex items-center justify-center w-7 h-7 rounded-md hover:bg-grey-50 cursor-pointer"
+                  [title]="'Quitar archivo' | transloco"
+                  (click)="removeAttachment(i)"
+                >
+                  <ui-icon name="x" styleClass="size-4 text-grey-500" />
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <!-- Notas -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-grey-700">{{ 'Notas' | transloco }} <span class="text-grey-300 font-normal">{{ '(opcional)' | transloco }}</span></label>
+        <ui-textarea
+          [rows]="2"
+          [placeholder]="'Notas internas (forma de pago, referencia...)' | transloco"
+          [ngModel]="notes()"
+          (ngModelChange)="notes.set($event)"
+        />
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="flex gap-2 justify-end pt-1">
+      <ui-button
+        label="Cancelar"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        (click)="close()"
+      />
+      <ui-button
+        [label]="isEditing ? 'Guardar cambios' : 'Registrar gasto'"
+        [icon]="isEditing ? 'save' : 'plus'"
+        [fluid]="false"
+        [disabled]="isUploading()"
+        [isLoading]="store.isSaving()"
+        (click)="save()"
+      />
+    </div>
+  </div>
+</ui-dialog>

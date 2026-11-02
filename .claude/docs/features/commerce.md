@@ -123,6 +123,13 @@
   `payments[]` a su método; agrupa ignorando acentos/mayúsculas). La sección se oculta si la
   RPC no trae el campo. Migración: `20261021_order_metrics_by_payment_method.sql`.
 
+- **Métricas → Órdenes por día y estado** (2026-11-02): barras apiladas por día (componente
+  `ui-stacked-day-chart` de `@ui`, tooltip con cada estado + total), una serie por estado
+  incluyendo los propios (`order_stages`) y canceladas; selector Órdenes / Monto. RPC
+  `order_metrics_by_day_status` (invoker) con los mismos cortes de día que `order_metrics.byDay`;
+  el front mapea `status + stageId` con `statusKeyOf`. Si la RPC no existe o falla, la gráfica
+  no se muestra. Migración: `20261102_order_metrics_by_day_status.sql`.
+
 ## category (`@catalogohoy/category`)
 
 - **Rol**: categorías (no jerárquicas) para filtrar el catálogo. Rutas: `/admin/categories`, `/edit/:id`.

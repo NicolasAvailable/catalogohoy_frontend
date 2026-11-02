@@ -933,6 +933,31 @@
       </div>
     </div>
 
+    <!-- Órdenes por día y estado (barras apiladas, incluye estados propios) -->
+    @if (statusDaily(); as sd) {
+    <div class="bg-white p-5 rounded-xl border border-grey-100 shadow-sm flex flex-col gap-2" data-testid="orders-status-daily-chart">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h3 class="text-sm font-bold text-grey-600">{{ 'Órdenes por día y estado' | transloco }}</h3>
+        <div class="flex gap-1 bg-grey-50 rounded-lg p-1 self-start">
+          @for (o of statusDailyMetricOptions; track o.value) {
+          <button
+            type="button"
+            class="px-3 py-1 text-xs font-medium rounded-md cursor-pointer transition-colors"
+            [class.bg-white]="statusDailyMetric() === o.value"
+            [class.shadow-sm]="statusDailyMetric() === o.value"
+            [class.text-grey-700]="statusDailyMetric() === o.value"
+            [class.text-grey-400]="statusDailyMetric() !== o.value"
+            (click)="statusDailyMetric.set(o.value)"
+          >
+            {{ o.label | transloco }}
+          </button>
+          }
+        </div>
+      </div>
+      <ui-stacked-day-chart [days]="sd.days" [series]="sd.series" [format]="statusDailyFormat()" />
+    </div>
+    }
+
     <!-- Ingresos por método de pago (órdenes completadas del periodo) -->
     @if ((metrics()?.byPaymentMethod?.length ?? 0) > 0) {
     <div class="flex flex-col gap-3">
