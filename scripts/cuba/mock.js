@@ -6,7 +6,7 @@ const TENANT = { id: 1, name: 'Tienda Demo', slug: 'catalogohoy' };
 // `routes`: handlers extra por pathname para la feature que se prueba, p. ej.
 //   { '/rest/v1/mi_tabla': (route, req, url, db) => route.fulfill({ json: [] }) }
 async function setupMock(page, { log = false, routes = {} } = {}) {
-  const db = { tenant_expenses: [] };
+  const db = { tenant_expenses: [], expense_stages: [] };
   const unmatched = new Set();
   const session = { access_token: 'x.eyJzdWIiOiIwIn0.x', refresh_token: 'r', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 36000, user: USER };
   await page.addInitScript(([k, v]) => { if (!localStorage.getItem(k)) localStorage.setItem(k, v); }, [`sb-${REF}-auth-token`, JSON.stringify(session)]);
@@ -36,6 +36,7 @@ async function setupMock(page, { log = false, routes = {} } = {}) {
     }
     if (routes[p]) return routes[p](route, req, url, db, single);
     if (p === '/rest/v1/tenant_expenses') return expenses(route, req, url, db, single);
+    if (p === '/rest/v1/expense_stages') return stages(route, req, url, db, single);
 
     unmatched.add(`${method} ${p}`);
     if (p.startsWith('/rest/v1/rpc/')) return route.fulfill({ json: null });
@@ -67,6 +68,32 @@ function expenses(route, req, url, db, single) {
   }
   if (m === 'DELETE') {
     db.tenant_expenses = db.tenant_expenses.filter((e) => e.id !== id);
+    return route.fulfill({ status: 204, body: '' });
+  }
+  return route.fulfill({ json: [] });
+}
+
+// Estados de gastos (`expense_stages`) en memoria.
+function stages(route, req, url, db, single) {
+  const m = req.method();
+  const q = url.searchParams;
+  const reply = (data) => route.fulfill({ json: single ? data[0] ?? null : data });
+  if (m === 'GET') return reply([...db.expense_stages].sort((a, b) => a.position - b.position));
+  if (m === 'POST') {
+    const row = { id: `stg-${db.expense_stages.length + 1}`, created_at: new Date().toISOString(), is_hidden: false, ...JSON.parse(req.postData()) };
+    db.expense_stages.push(row);
+    return reply([row]);
+  }
+  if (m === 'PATCH') {
+    const id = q.get('id')?.replace('eq.', '');
+    const row = db.expense_stages.find((e) => e.id === id);
+    if (row) Object.assign(row, JSON.parse(req.postData()));
+    return reply(row ? [row] : []);
+  }
+  if (m === 'DELETE') {
+    const ids = (q.get('id') || '').replace(/^in\.\(|\)$/g, '').split(',').map((x) => x.replace(/"/g, ''));
+    db.expense_stages = db.expense_stages.filter((e) => !ids.includes(e.id));
+    for (const e of db.tenant_expenses) if (ids.includes(e.stage_id)) e.stage_id = null;
     return route.fulfill({ status: 204, body: '' });
   }
   return route.fulfill({ json: [] });

@@ -6,7 +6,7 @@ import { BaseExpenseService, Expense, ExpenseInput } from '../domain';
 
 const TABLE = 'tenant_expenses';
 const COLUMNS =
-  'id, supplier, invoice_number, category, description, amount, currency, issue_date, due_date, status, paid_at, attachments, notes, created_at';
+  'id, supplier, invoice_number, category, description, amount, currency, issue_date, due_date, status, stage_id, paid_at, paid_amount, attachments, notes, created_at';
 
 /** Gastos de la tienda (`tenant_expenses`). RLS: dueño o permiso `gastos`. */
 @Injectable({ providedIn: 'root' })
@@ -85,7 +85,9 @@ export class ExpenseService extends BaseExpenseService {
       issueDate: 'issue_date',
       dueDate: 'due_date',
       status: 'status',
+      stageId: 'stage_id',
       paidAt: 'paid_at',
+      paidAmount: 'paid_amount',
       attachments: 'attachments',
       notes: 'notes',
     };
@@ -110,7 +112,9 @@ export class ExpenseService extends BaseExpenseService {
       issueDate: row.issue_date,
       dueDate: row.due_date ?? null,
       status: row.status,
+      stageId: row.stage_id ?? null,
       paidAt: row.paid_at ?? null,
+      paidAmount: Number(row.paid_amount) || 0,
       attachments: Array.isArray(row.attachments) ? row.attachments : [],
       notes: row.notes ?? null,
       createdAt: row.created_at,

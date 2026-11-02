@@ -11,23 +11,26 @@ import {
   InputNumberComponent,
   InputTextComponent,
   SelectComponent,
+  SelectItemDirective,
+  SelectSelectedItemDirective,
   TextareaComponent,
 } from '@ui';
 import {
   attachmentIcon,
   EXPENSE_CATEGORIES,
   EXPENSE_FILE_ACCEPT,
-  EXPENSE_STATUSES,
   Expense,
   ExpenseAttachment,
   ExpenseCategory,
   ExpenseInput,
-  ExpenseStatus,
+  ExpenseStatusKey,
+  expenseStatusKeyOf,
   fromIsoDate,
+  resolveExpenseStatusKey,
   isAllowedExpenseFile,
   toIsoDate,
 } from '../../../domain';
-import { ExpenseStore } from '../../../infrastructure';
+import { ExpenseStageStore, ExpenseStore } from '../../../infrastructure';
 
 /** Máximo por archivo (fotos se comprimen; esto aplica sobre todo a PDF/Excel). */
 const MAX_FILE_MB = 15;
@@ -44,6 +47,8 @@ const MAX_FILES = 10;
     InputNumberComponent,
     TextareaComponent,
     SelectComponent,
+    SelectItemDirective,
+    SelectSelectedItemDirective,
     DatepickerComponent,
     ButtonComponent,
     IconComponent,
@@ -55,13 +60,21 @@ export class ExpenseFormDialogComponent {
   public readonly store = inject(ExpenseStore);
   private readonly currency = inject(TenantCurrencyStore);
   private readonly toast = inject(ToastService);
+  private readonly stageStore = inject(ExpenseStageStore);
 
   @ViewChild(DialogComponent) private dialog!: DialogComponent;
 
   public readonly saved = output<void>();
 
   public readonly categories = EXPENSE_CATEGORIES;
-  public readonly statuses = EXPENSE_STATUSES;
+  /** Estados visibles de la tienda (+ el actual si está oculto). */
+  public readonly statuses = computed(() => {
+    const visible = this.stageStore.visibleDefs();
+    const current = this.stageStore.def(this.statusKey());
+    const list = current?.hidden ? [...visible, current] : visible;
+    return list.map((d) => ({ value: d.key as string, label: d.label, color: d.color }));
+  });
+  public readonly statusColor = computed(() => this.stageStore.def(this.statusKey())?.color ?? '#9ca3af');
   /** Moneda de referencia + moneda local (p. ej. USD y VES) si son distintas. */
   public readonly currencies = computed(() => {
     const codes = [this.currency.displayCode() || 'USD', this.currency.localCode() || 'USD'];
@@ -77,7 +90,13 @@ export class ExpenseFormDialogComponent {
   public readonly currencyCode = signal('USD');
   public readonly issueDate = signal<Date | null>(new Date());
   public readonly dueDate = signal<Date | null>(null);
-  public readonly status = signal<ExpenseStatus>('paid');
+  public readonly statusKey = signal<ExpenseStatusKey>('paid');
+  /** Estado base del estado elegido (los propios se comportan como su base). */
+  public readonly status = computed(
+    () => resolveExpenseStatusKey(this.statusKey(), this.stageStore.defs())?.status ?? 'paid'
+  );
+  /** Abonado (pagos por partes) de una factura por pagar. */
+  public readonly paidAmount = signal<number | null>(null);
   public readonly attachments = signal<ExpenseAttachment[]>([]);
   public readonly fileAccept = EXPENSE_FILE_ACCEPT;
   public readonly attachmentIcon = attachmentIcon;
@@ -106,7 +125,9 @@ export class ExpenseFormDialogComponent {
     this.currencyCode.set(expense?.currency ?? this.currencies()[0].value);
     this.issueDate.set(expense ? fromIsoDate(expense.issueDate) : new Date());
     this.dueDate.set(expense?.dueDate ? fromIsoDate(expense.dueDate) : null);
-    this.status.set(expense?.status ?? 'paid');
+    this.stageStore.load();
+    this.statusKey.set(expense ? expenseStatusKeyOf(expense, this.stageStore.defs()) : 'paid');
+    this.paidAmount.set(expense?.paidAmount || null);
     this.attachments.set(expense?.attachments ?? []);
     this.notes.set(expense?.notes ?? '');
     this.paidAt = expense?.paidAt ?? null;
@@ -180,19 +201,25 @@ export class ExpenseFormDialogComponent {
     const issueDate = this.issueDate();
     if (amount === null || amount < 0 || !issueDate) return;
     if (!this.supplier().trim()) return;
+    if (this.status() === 'pending' && (this.paidAmount() ?? 0) > amount) return;
 
     const status = this.status();
+    const stageId = resolveExpenseStatusKey(this.statusKey(), this.stageStore.defs())?.stageId ?? null;
     const dueDate = this.dueDate();
+    const total = Math.round(amount * 100) / 100;
+    const abono = Math.min(Math.max(this.paidAmount() ?? 0, 0), total);
     const input: ExpenseInput = {
       supplier: this.supplier().trim() || null,
       invoiceNumber: this.invoiceNumber().trim() || null,
       category: this.category(),
       description: this.description().trim() || null,
-      amount: Math.round(amount * 100) / 100,
+      amount: total,
       currency: this.currencyCode(),
       issueDate: toIsoDate(issueDate),
       dueDate: status === 'pending' && dueDate ? toIsoDate(dueDate) : null,
       status,
+      stageId,
+      paidAmount: status === 'pending' ? Math.round(abono * 100) / 100 : 0,
       paidAt: status === 'paid' ? (this.paidAt ?? toIsoDate(new Date())) : null,
       attachments: this.attachments(),
       notes: this.notes().trim() || null,
