@@ -237,7 +237,7 @@ async function sendWhatsApp(
 // consulta con { action: "template_setup" | "template_status" } (mismo secret).
 const WA_TEMPLATE = "expense_due_reminder";
 const WA_TEMPLATE_BODY =
-  "Hola {{1}}, tienes {{2}} en facturas de proveedores de {{3}}. " +
+  "Hola {{1}}, en {{3}} tienes facturas de proveedores pendientes: {{2}}. " +
   "Revísalas en tu panel de CatalogoHoy, en Gastos y facturas.";
 
 async function waGraph(path: string, init?: RequestInit) {

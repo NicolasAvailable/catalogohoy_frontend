@@ -44,6 +44,10 @@ type Payload = {
     | "order_pending_reminder"
     | "activation_no_product"
     | "setup_missing_whatsapp"
+    // Win-back: plan vencido → invitación a renovar (blast puntual, interno).
+    | "plan_expired_winback"
+    // Lanzamiento app móvil: aviso de disponibilidad en App Store / Play Store.
+    | "app_launch_announcement"
     // Facturas de proveedores por vencer / vencidas (send-expense-reminders).
     | "expense_due_reminder";
   // Parámetros posicionales del body del template aprobado ({{1}}, {{2}}, ...).
@@ -60,8 +64,29 @@ const CS_TEMPLATES: Record<string, { name: string; lang: string }> = {
   order_pending_reminder: { name: "order_pending_reminder", lang: "es" },
   activation_no_product: { name: "activation_no_product", lang: "es" },
   setup_missing_whatsapp: { name: "setup_missing_whatsapp", lang: "es" },
+  plan_expired_winback: { name: "plan_expired_winback", lang: "es" },
+  app_launch_announcement: { name: "app_launch_announcement", lang: "es" },
+  // UTILITY: aviso de facturas de proveedores (Gastos y facturas).
   expense_due_reminder: { name: "expense_due_reminder", lang: "es" },
 };
+
+// Marketing deshabilitado (2026-09-01, pedido del dueño): el número solo envía
+// notificaciones UTILITY/transaccionales. Estos template_types son categoría
+// MARKETING en Meta (order_pending_reminder, plan_expiry_warning) o nudges de
+// re-engagement. Se saltan con status "skipped". Los EMAILS de esos mismos
+// crones (plan-expiry / customer-success) NO se ven afectados. Reversible:
+// vaciar este set para reactivar.
+// plan_expired_winback (MARKETING) queda FUERA del set a propósito: es la
+// excepción aprobada para el blast de reactivación a clientes vencidos
+// (2026-10-05); lo dispara solo la utilidad interna, ningún cron.
+// app_launch_announcement (MARKETING) también queda FUERA: blast puntual del
+// lanzamiento de la app móvil (2026-10-18), disparado solo por wa-launch-admin.
+const MARKETING_DISABLED = new Set<string>([
+  "order_pending_reminder",
+  "plan_expiring",
+  "activation_no_product",
+  "setup_missing_whatsapp",
+]);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -134,6 +159,12 @@ Deno.serve(async (req) => {
   if (phone.length < 8) {
     await logAttempt({ status: "failed", recipient: to, error: "Invalid phone" });
     return jsonResponse({ success: false, error: "Invalid phone" }, 400);
+  }
+
+  // Gate de marketing: solo utility/transaccionales salen por WhatsApp.
+  if (MARKETING_DISABLED.has(templateType)) {
+    await logAttempt({ status: "skipped", recipient: phone, error: "marketing deshabilitado" });
+    return jsonResponse({ success: true, skipped: true, reason: "marketing_disabled" });
   }
 
   // Customer success: template fijo de la plataforma (no per-tenant). El resto
