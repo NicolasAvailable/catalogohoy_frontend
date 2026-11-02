@@ -205,9 +205,21 @@ begin
 end;
 $function$;
 
+-- Secret del cron: vive en el Vault (`expense_reminders_cron_secret`, se crea
+-- al desplegar, nunca en el repo). La edge function lo lee con esta RPC.
+CREATE OR REPLACE FUNCTION public._expense_reminders_cron_secret()
+ RETURNS text
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select decrypted_secret from vault.decrypted_secrets
+  where name = 'expense_reminders_cron_secret' limit 1;
+$function$;
+REVOKE ALL ON FUNCTION public._expense_reminders_cron_secret() FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._expense_reminders_cron_secret() TO service_role;
+
 -- Cron diario de avisos (después de deployar send-expense-reminders).
--- El secret vive en el Vault (`expense_reminders_cron_secret`) y como edge
--- secret EXPENSE_REMINDERS_CRON_SECRET; se crean al desplegar, no en el repo.
 -- 12:30 UTC = 08:30 Venezuela.
 select cron.unschedule('send-expense-reminders-daily')
 where exists (select 1 from cron.job where jobname = 'send-expense-reminders-daily');

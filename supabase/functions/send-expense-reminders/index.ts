@@ -16,12 +16,21 @@ import { AwsClient } from "npm:aws4fetch@1";
 // aviso "por vencer" y uno "vencida" (si cambian la fecha, el trigger de la
 // tabla limpia las marcas). Respeta users.notify_expense_reminders (si está
 // apagado se marca igual, para no mandar el atraso al volver a encenderlo).
-// Auth: header x-webhook-secret = edge secret EXPENSE_REMINDERS_CRON_SECRET (el
-// cron lo lee del Vault: `expense_reminders_cron_secret`; nunca en el repo).
+// Auth: header x-webhook-secret = secret del Vault `expense_reminders_cron_secret`
+// (el cron lo manda; la función lo lee con una RPC solo para service_role).
 // =============================================================================
 
-// Secret del cron: edge secret EXPENSE_REMINDERS_CRON_SECRET (= el del Vault que usa el cron).
-const CRON_SECRET = Deno.env.get("EXPENSE_REMINDERS_CRON_SECRET") ?? "";
+// Secret del cron: el del Vault (`expense_reminders_cron_secret`), leído con la
+// RPC _expense_reminders_cron_secret (solo service_role). El edge secret
+// EXPENSE_REMINDERS_CRON_SECRET, si existe, tiene prioridad.
+let cronSecret: string | null = Deno.env.get("EXPENSE_REMINDERS_CRON_SECRET") || null;
+async function getCronSecret(): Promise<string> {
+  if (cronSecret) return cronSecret;
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const { data } = await admin.rpc("_expense_reminders_cron_secret");
+  cronSecret = typeof data === "string" && data.length >= 16 ? data : null;
+  return cronSecret ?? "";
+}
 const FROM_NAME = "CatalogoHoy";
 const FROM_EMAIL = "noreply@catalogohoy.com";
 /** Avisar cuando falten estos días (o menos) para el vencimiento. */
@@ -223,9 +232,60 @@ async function sendWhatsApp(
   }
 }
 
+// --- Plantilla de WhatsApp de la plataforma ---------------------------------
+// `expense_due_reminder` (UTILITY, es) en la WABA de CatalogoHoy. Se crea y se
+// consulta con { action: "template_setup" | "template_status" } (mismo secret).
+const WA_TEMPLATE = "expense_due_reminder";
+const WA_TEMPLATE_BODY =
+  "Hola {{1}}, tienes {{2}} en facturas de proveedores de {{3}}. " +
+  "Revísalas en tu panel de CatalogoHoy, en Gastos y facturas.";
+
+async function waGraph(path: string, init?: RequestInit) {
+  const version = Deno.env.get("WHATSAPP_API_VERSION") ?? "v21.0";
+  const res = await fetch(`https://graph.facebook.com/${version}/${path}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${Deno.env.get("WHATSAPP_TOKEN")}`, "Content-Type": "application/json" },
+  });
+  return { ok: res.ok, status: res.status, body: await res.json().catch(() => ({})) };
+}
+
+async function templateAction(action: string): Promise<Response> {
+  const waba = Deno.env.get("WHATSAPP_WABA_ID") ?? "1038950559044032";
+  const status = async () => {
+    const r = await waGraph(`${waba}/message_templates?name=${WA_TEMPLATE}&fields=name,status,category,language,rejected_reason`);
+    return r.body?.data?.[0] ?? null;
+  };
+  let current = await status();
+  let created: unknown = null;
+  if (action === "template_setup" && !current) {
+    const r = await waGraph(`${waba}/message_templates`, {
+      method: "POST",
+      body: JSON.stringify({
+        name: WA_TEMPLATE,
+        category: "UTILITY",
+        language: "es",
+        components: [
+          { type: "BODY", text: WA_TEMPLATE_BODY, example: { body_text: [["María", "1 vencida y 2 por vencer", "Mi Tienda"]] } },
+          { type: "FOOTER", text: "CatalogoHoy" },
+        ],
+      }),
+    });
+    created = r.body;
+    current = await status();
+  }
+  return new Response(JSON.stringify({ ok: true, template: current, created }), {
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
-  if (!CRON_SECRET || req.headers.get("x-webhook-secret") !== CRON_SECRET) {
+  const secret = await getCronSecret();
+  if (!secret || req.headers.get("x-webhook-secret") !== secret) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  }
+  if (req.method === "POST") {
+    const body = await req.clone().json().catch(() => ({}));
+    if (body?.action === "template_setup" || body?.action === "template_status") return await templateAction(body.action);
   }
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const today = isoDay(0);
