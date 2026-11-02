@@ -2837,5 +2837,10 @@
   "{count} productos": "{count} produtos",
   "Arrastra para ordenar": "Arraste para ordenar",
   "Buscar por nombre, SKU o ID...": "Buscar por nome, SKU ou ID...",
-  "Nueva columna": "Nova coluna"
+  "Nueva columna": "Nova coluna",
+  "ya devueltas": "já devolvidas",
+  "Esta venta ya fue devuelta por completo.": "Esta venda já foi totalmente devolvida.",
+  "Historial de lo que se vendió en el mostrador y a quién.": "Histórico do que foi vendido no balcão e para quem.",
+  "Devolución": "Devolução",
+  "Sin cliente": "Sem cliente"
 }

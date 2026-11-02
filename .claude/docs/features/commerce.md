@@ -158,6 +158,13 @@
     topbar del shell y badge en la pantalla de éxito.
   - Alcance: sesión ya abierta (corte de luz a mitad de jornada). F3 (service worker para abrir
     sin red + reconciliación multi-dispositivo) pendiente.
+- **Ventas (CAT-95)** — `views/ventas`, ruta `/pos/ventas`: historial de tickets del POS (incl.
+  devoluciones) agrupado por día con neto diario; detalle con cliente, ítems y medio de pago.
+- **Devoluciones (CAT-96)**: una devolución es una orden negativa llamada `Devolución #<ref>` (sin
+  FK a la venta). `PosService.getReturnedQuantities` suma lo ya devuelto por línea
+  (productId|variantId|size|name) y `processReturn` rechaza devolver más que vendido − devuelto.
+- **Tallas del principal (CAT-94)**: en productos con variantes Y tallas propias, "Producto
+  original" abre la lista de tallas del principal (`optionsBaseSizes` en venta.ts).
 - ⚠️ Gotcha: todo ícono nuevo debe registrarse en
   `libs/catalogohoy/core/src/providers/icons/providers/lucide.provide.ts` (import + lista); un
   ícono sin registrar rompe el render del componente a mitad de change detection.
