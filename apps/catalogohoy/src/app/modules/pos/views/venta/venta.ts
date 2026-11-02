@@ -35,7 +35,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { TooltipModule } from 'primeng/tooltip';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { IconComponent, InputPhoneComponent } from '@ui';
+import { IconComponent, InputPhoneComponent, allowAutofocus } from '@ui';
 import { PosCartStore } from '../../pos-cart.store';
 import {
   fillRemainingAmount,
@@ -113,6 +113,8 @@ interface PosSaleReceipt {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class PosVenta implements OnInit {
+  // En móvil no abrimos el teclado solo.
+  protected readonly autofocus = allowAutofocus();
   readonly productStore = inject(ProductStore);
   readonly cart = inject(PosCartStore);
   readonly caja = inject(PosCajaStore);

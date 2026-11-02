@@ -18,6 +18,7 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { allowAutofocus } from '../focus';
 
 export interface PhoneCountry {
   iso: string;
@@ -107,6 +108,7 @@ const NATIONAL_PLACEHOLDER_BY_ISO: Record<string, string> = {
         (ngModelChange)="onCountryChange($event)"
         optionLabel="name"
         [filter]="true"
+        [autofocusFilter]="autofocusFilter"
         [filterPlaceholder]="'Buscar país...' | transloco"
         scrollHeight="15rem"
         [disabled]="disabled()"
@@ -222,6 +224,7 @@ const NATIONAL_PLACEHOLDER_BY_ISO: Record<string, string> = {
   ],
 })
 export class InputPhoneComponent implements ControlValueAccessor, OnInit {
+  protected readonly autofocusFilter = allowAutofocus();
   public readonly defaultCountry = input<string>('ve');
   public readonly disabled = signal(false);
   public readonly countries = PHONE_COUNTRIES;

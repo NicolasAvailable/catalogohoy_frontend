@@ -11,6 +11,7 @@ export * from './counter';
 export * from './datepicker';
 export * from './dialog';
 export * from './empty-list';
+export * from './focus';
 export * from './header';
 export * from './icon';
 export * from './image';

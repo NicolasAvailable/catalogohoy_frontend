@@ -170,7 +170,7 @@
             [ngModel]="countedCash()"
             (ngModelChange)="countedCash.set($event)"
             placeholder="0.00"
-            autofocus
+            [attr.autofocus]="autofocus ? '' : null"
           />
         </div>
       </label>
