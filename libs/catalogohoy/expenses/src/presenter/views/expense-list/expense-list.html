@@ -43,7 +43,7 @@
   </div>
 
   <!-- Resumen -->
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" data-testid="expense-totals">
     <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 flex flex-col gap-1">
       <div class="flex items-center gap-2 text-sm text-grey-400">
         <ui-icon name="wallet" styleClass="size-4" />
@@ -61,7 +61,9 @@
       </div>
       <span class="text-2xl font-bold text-grey-800">{{ money(mainTotals().paid, mainTotals().currency) }}</span>
       @for (t of otherTotals(); track t.currency) {
-        <span class="text-sm font-semibold text-grey-500">+ {{ money(t.paid, t.currency) }}</span>
+        @if (t.paid > 0) {
+          <span class="text-sm font-semibold text-grey-500">+ {{ money(t.paid, t.currency) }}</span>
+        }
       }
     </div>
     <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 flex flex-col gap-1">
@@ -76,7 +78,9 @@
         {{ money(mainTotals().pending, mainTotals().currency) }}
       </span>
       @for (t of otherTotals(); track t.currency) {
-        <span class="text-sm font-semibold text-grey-500">+ {{ money(t.pending, t.currency) }}</span>
+        @if (t.pending > 0) {
+          <span class="text-sm font-semibold text-grey-500">+ {{ money(t.pending, t.currency) }}</span>
+        }
       }
     </div>
   </div>

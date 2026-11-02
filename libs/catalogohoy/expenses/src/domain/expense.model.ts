@@ -14,7 +14,7 @@ export type ExpenseCategory =
   | 'otros';
 
 export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
-  { value: 'mercancia', label: 'Mercancía / productos' },
+  { value: 'mercancia', label: 'Mercancía' },
   { value: 'servicios', label: 'Servicios' },
   { value: 'transporte', label: 'Transporte y envíos' },
   { value: 'alquiler', label: 'Alquiler' },

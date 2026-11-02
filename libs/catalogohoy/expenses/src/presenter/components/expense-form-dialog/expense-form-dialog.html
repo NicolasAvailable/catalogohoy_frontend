@@ -49,8 +49,8 @@
         }
       </div>
 
-      <!-- Monto + Moneda + Categoría -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <!-- Monto + Moneda -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium text-grey-700">{{ 'Monto' | transloco }} *</label>
           <ui-input-number
@@ -77,6 +77,10 @@
             styleClass="w-full"
           />
         </div>
+      </div>
+
+      <!-- Categoría + Estado -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium text-grey-700">{{ 'Categoría' | transloco }}</label>
           <ui-select
@@ -87,14 +91,6 @@
             (ngModelChange)="category.set($event)"
             styleClass="w-full"
           />
-        </div>
-      </div>
-
-      <!-- Fecha + Estado + Vencimiento -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium text-grey-700">{{ 'Fecha de la factura' | transloco }} *</label>
-          <ui-datepicker [ngModel]="issueDate()" (ngModelChange)="issueDate.set($event)" />
         </div>
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium text-grey-700">{{ 'Estado' | transloco }}</label>
@@ -107,10 +103,26 @@
             styleClass="w-full"
           />
         </div>
+      </div>
+
+      <!-- Fecha + Vencimiento -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium text-grey-700">{{ 'Fecha de la factura' | transloco }} *</label>
+          <ui-datepicker
+            dateFormat="dd/mm/yy"
+            styleClass="w-full border! border-grey-100! rounded-xl!"
+            [ngModel]="issueDate()"
+            (ngModelChange)="issueDate.set($event)"
+          />
+        </div>
         @if (status() === 'pending') {
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-medium text-grey-700">{{ 'Vence el' | transloco }}</label>
             <ui-datepicker
+              dateFormat="dd/mm/yy"
+              styleClass="w-full border! border-grey-100! rounded-xl!"
+              [placeholder]="'Opcional' | transloco"
               [showClear]="true"
               [ngModel]="dueDate()"
               (ngModelChange)="dueDate.set($event)"
