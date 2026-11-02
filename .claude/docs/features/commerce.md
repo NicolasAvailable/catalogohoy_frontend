@@ -46,6 +46,11 @@
     `source='public'` y rol anon/authenticated) usa `public_cart_issues(tenant, items)` y
     rechaza con `cart_outdated`; el checkout lo captura, revalida y avisa. Si cambias cómo se
     calcula el precio de una línea, cambia AMBOS (front y función SQL).
+- **Orden alfabético** (2026-11-02): toggle "Orden alfabético" en Editar catálogo → General,
+  guardado en `tenant_ecommerce_config.customer_fields.sortAlphabetically` (sin migración, como
+  `showStock`). El store pide `orderBy: 'name'` cuando está activo; si no, `position` (orden manual
+  del admin). Siempre con desempate por `id`. Reemplazó la allowlist hardcodeada de Moto Fox.
+  Activo hoy en Moto Fox (2421) y BRACHOMOTOS (3730). Solo afecta la vitrina pública, no el admin.
 
 ## product (`@catalogohoy/product`)
 
@@ -122,6 +127,13 @@
   `byPaymentMethod` (solo órdenes `completed`; pagos divididos del POS suman cada parte de
   `payments[]` a su método; agrupa ignorando acentos/mayúsculas). La sección se oculta si la
   RPC no trae el campo. Migración: `20261021_order_metrics_by_payment_method.sql`.
+
+- **Métricas → Órdenes por día y estado** (2026-11-02): barras apiladas por día (componente
+  `ui-stacked-day-chart` de `@ui`, tooltip con cada estado + total), una serie por estado
+  incluyendo los propios (`order_stages`) y canceladas; selector Órdenes / Monto. RPC
+  `order_metrics_by_day_status` (invoker) con los mismos cortes de día que `order_metrics.byDay`;
+  el front mapea `status + stageId` con `statusKeyOf`. Si la RPC no existe o falla, la gráfica
+  no se muestra. Migración: `20261102_order_metrics_by_day_status.sql`.
 
 ## category (`@catalogohoy/category`)
 

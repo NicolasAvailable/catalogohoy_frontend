@@ -11,6 +11,8 @@ export interface NotificationPreferences {
   /** Recordatorios de cobranza de órdenes a crédito (CAT-79). */
   notifyCreditReminders: boolean;
   creditReminderDays: number;
+  /** Avisos de facturas de proveedores por vencer / vencidas (Gastos). */
+  notifyExpenseReminders: boolean;
 }
 
 export interface BaseProfileService {

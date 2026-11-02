@@ -25,7 +25,6 @@ import {
   BaseEcommerceService,
   CatalogInfo,
   Category,
-  isAlphabeticalCatalogEnabled,
   PaginatedProductList,
   PublicCatalogData,
   PublicOrder,
@@ -299,6 +298,10 @@ export class EcommerceService implements BaseEcommerceService {
       showStock:
         (config?.customer_fields as { showStock?: boolean })?.showStock ??
         false,
+      // "Orden alfabético" — también dentro de `customer_fields`.
+      sortAlphabetically:
+        (config?.customer_fields as { sortAlphabetically?: boolean })
+          ?.sortAlphabetically ?? false,
     };
 
     // El RPC devuelve solo categorías visibles, EXCEPTO la fila "Ver todos"
@@ -408,12 +411,9 @@ export class EcommerceService implements BaseEcommerceService {
         query = query.order('price', { ascending: false });
         break;
       default:
-        // Moto Fox (y la allowlist) ven su vitrina en orden alfabético; el
-        // resto conserva el orden manual (`position`). Un orderBy explícito
-        // elegido por el cliente (si algún día se agrega el selector) igual gana.
-        query = isAlphabeticalCatalogEnabled(Number(resolvedTenantId))
-          ? query.order('name', { ascending: true })
-          : query.order('position', { ascending: true });
+        // Orden manual del admin. El orden alfabético lo pide el store
+        // (`orderBy: 'name'`) cuando el catálogo tiene "Orden alfabético".
+        query = query.order('position', { ascending: true });
     }
     // Desempate estable para el paginado por rangos ("cargar más"): con
     // posiciones o nombres repetidos, sin esto un producto podía salir dos

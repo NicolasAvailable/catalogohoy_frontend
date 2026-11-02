@@ -14,6 +14,7 @@ import {
   OrderAdjustment,
   OrderItem,
   OrderMapper,
+  OrderDayStatusMetric,
   OrderMetrics,
   OrderStatus,
   PaymentEvidence,
@@ -419,6 +420,33 @@ export class OrderService {
           }))
         : [],
     });
+  }
+
+  /** Órdenes por día y estado (incluye estados propios y canceladas), via el
+   *  RPC `order_metrics_by_day_status`. Mismos límites que getOrderMetrics. */
+  async getOrderMetricsByDayStatus(
+    tenantId: number,
+    start: string,
+    end: string,
+    useBs: boolean
+  ): Promise<E.Either<Error, OrderDayStatusMetric[]>> {
+    const { data, error } = await this.client.rpc('order_metrics_by_day_status', {
+      p_tenant_id: tenantId,
+      p_start: start,
+      p_end: end,
+      p_use_bs: useBs,
+    });
+    if (error) return E.left(new Error(error.message));
+    const rows = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+    return E.right(
+      rows.map((r) => ({
+        date: String(r['date']),
+        status: String(r['status']),
+        stageId: r['stageId'] ? String(r['stageId']) : null,
+        count: Number(r['count']) || 0,
+        amount: Number(r['amount']) || 0,
+      }))
+    );
   }
 
   async getOrderById(

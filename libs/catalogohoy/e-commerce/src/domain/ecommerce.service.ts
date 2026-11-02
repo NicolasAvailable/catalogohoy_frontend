@@ -79,6 +79,9 @@ export interface CatalogInfo {
   creditNote: string | null;
   /** Show the units left ("Quedan N") to buyers. Default false. */
   showStock: boolean;
+  /** Order the public catalog A→Z by product name instead of the manual
+   *  (`position`) order. Lives in `customer_fields`. Default false. */
+  sortAlphabetically: boolean;
 }
 
 /** Snapshot of the payment adjustment applied to an order at checkout. Same
