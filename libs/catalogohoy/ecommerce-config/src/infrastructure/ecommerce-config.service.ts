@@ -127,6 +127,10 @@ export class EcommerceConfigService {
         showStock:
           (config?.customer_fields as { showStock?: boolean })?.showStock ??
           false,
+        // "Orden alfabético" del catálogo público (dentro de customer_fields).
+        sortAlphabetically:
+          (config?.customer_fields as { sortAlphabetically?: boolean })
+            ?.sortAlphabetically ?? false,
         creditNote:
           (config?.customer_fields as { creditNote?: string | null })
             ?.creditNote ?? null,
@@ -360,7 +364,8 @@ export class EcommerceConfigService {
         config.creditEnabled !== undefined ||
         config.creditMinPurchases !== undefined ||
         config.creditNote !== undefined ||
-        config.showStock !== undefined
+        config.showStock !== undefined ||
+        config.sortAlphabetically !== undefined
       ) {
         const base =
           config.customerFields ??
@@ -387,6 +392,9 @@ export class EcommerceConfigService {
             : {}),
           ...(config.showStock !== undefined
             ? { showStock: config.showStock }
+            : {}),
+          ...(config.sortAlphabetically !== undefined
+            ? { sortAlphabetically: config.sortAlphabetically }
             : {}),
         };
       }
