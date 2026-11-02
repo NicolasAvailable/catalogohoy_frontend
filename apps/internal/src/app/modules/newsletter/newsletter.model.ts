@@ -8,7 +8,10 @@ export type NewsletterStatus =
 
 export interface NewsletterItem {
   title: string;
+  /** Vacío = línea corta (lista de ajustes). */
   text: string;
+  /** URL https de una imagen a ancho completo (opcional). */
+  image?: string;
 }
 
 export interface NewsletterSection {

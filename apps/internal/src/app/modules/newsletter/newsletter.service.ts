@@ -62,6 +62,22 @@ export class NewsletterService {
     return this.invoke<{ remaining: number }>({ action: 'audience', id });
   }
 
+  /** Sube una imagen a cdn.catalogohoy.com/newsletter/ y devuelve su URL. */
+  async uploadImage(file: File): Promise<Either<Error, string>> {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    let bin = '';
+    for (let i = 0; i < buf.length; i += 0x8000) {
+      bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    }
+    const res = await this.invoke<{ url: string }>({
+      action: 'upload_image',
+      name: file.name,
+      contentType: file.type,
+      base64: btoa(bin),
+    });
+    return res.map((r) => r.url);
+  }
+
   send(id: number, limit = 150) {
     return this.invoke<NewsletterSendResult>({ action: 'send', id, limit });
   }

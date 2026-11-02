@@ -6,6 +6,7 @@ import { IconComponent } from '@ui';
 import {
   NEWSLETTER_STATUS_LABEL,
   NewsletterIssue,
+  NewsletterItem,
   NewsletterKind,
   NewsletterStatus,
 } from './newsletter.model';
@@ -163,7 +164,17 @@ function defaultPeriod(kind: NewsletterKind): { start: string; end: string } {
                       <div class="flex gap-2 items-start pl-2 border-l-2 border-grey-50">
                         <div class="flex-1 flex flex-col gap-1">
                           <input class="font-semibold" placeholder="Título" [(ngModel)]="it.title" />
-                          <textarea rows="2" placeholder="Texto corto, en lenguaje de comerciante" [(ngModel)]="it.text"></textarea>
+                          <textarea rows="2" placeholder="Texto corto (vacío = línea de la lista de ajustes)" [(ngModel)]="it.text"></textarea>
+                          <div class="flex gap-2 items-center">
+                            <input placeholder="Imagen (URL https, opcional)" [(ngModel)]="it.image" />
+                            <label class="btn-secondary shrink-0" [class.opacity-50]="uploading()">
+                              <ui-icon name="image" size="14" /> Subir
+                              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" (change)="upload($event, it)" />
+                            </label>
+                          </div>
+                          @if (it.image) {
+                            <img [src]="it.image" alt="" class="max-h-32 w-auto self-start rounded-md border border-grey-50" />
+                          }
                         </div>
                         <button type="button" (click)="s.items.splice(ii, 1)" class="icon-btn" aria-label="Quitar"><ui-icon name="x" size="14" /></button>
                       </div>
@@ -259,6 +270,7 @@ export class Newsletter implements OnInit {
   protected readonly previewLoading = signal(false);
   protected readonly isLoading = signal(false);
   protected readonly busy = signal(false);
+  protected readonly uploading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly notice = signal<string | null>(null);
   protected readonly progress = signal<string | null>(null);
@@ -316,8 +328,8 @@ export class Newsletter implements OnInit {
       title: kind === 'monthly' ? 'Lo nuevo en CatalogoHoy' : 'Esta semana en CatalogoHoy',
       intro: '',
       sections: [
-        { emoji: '✨', title: 'Nuevo', items: [{ title: '', text: '' }] },
-        { emoji: '🔧', title: 'Arreglos y mejoras', items: [{ title: '', text: '' }] },
+        { emoji: '🚀', title: 'Nuevas funcionalidades', items: [{ title: '', text: '' }] },
+        { emoji: '🔧', title: 'Ajustes y mejoras', items: [{ title: '', text: '' }] },
       ],
       outro: '¿Tienes una idea o algo que te gustaría ver? Responde este correo.',
       status: 'draft',
@@ -333,11 +345,28 @@ export class Newsletter implements OnInit {
     [d.sections[i], d.sections[j]] = [d.sections[j], d.sections[i]];
   }
 
+  protected async upload(ev: Event, item: NewsletterItem): Promise<void> {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    this.uploading.set(true);
+    const res = await this.service.uploadImage(file);
+    res.mapRight((url) => (item.image = url));
+    res.mapLeft((e) => this.error.set(e.message));
+    this.uploading.set(false);
+  }
+
   private clean(d: NewsletterIssue): NewsletterIssue {
     return {
       ...d,
       sections: d.sections
-        .map((s) => ({ ...s, items: s.items.filter((it) => it.title.trim() || it.text.trim()) }))
+        .map((s) => ({
+          ...s,
+          items: s.items
+            .filter((it) => it.title.trim() || it.text.trim())
+            .map((it) => (it.image?.trim() ? it : { title: it.title, text: it.text })),
+        }))
         .filter((s) => s.title.trim() && s.items.length),
     };
   }

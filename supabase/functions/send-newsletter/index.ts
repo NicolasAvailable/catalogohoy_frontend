@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { AwsClient } from "npm:aws4fetch@1";
 import Anthropic from "npm:@anthropic-ai/sdk@0.71";
+import { uploadToS3 } from "../_shared/s3.ts";
 
 // =============================================================================
 // send-newsletter — Newsletter de novedades (CAT-97, 2026-11-02).
@@ -132,7 +133,8 @@ function isUndeliverableEmail(email: unknown): boolean {
 
 // --- Contenido -----------------------------------------------------------------
 
-type Item = { title: string; text: string };
+// text vacío = línea corta (lista de ajustes). image = URL https (ancho completo).
+type Item = { title: string; text?: string; image?: string };
 type Section = { emoji?: string; title: string; items: Item[] };
 type Issue = {
   id: number;
@@ -183,12 +185,20 @@ function render(i: Issue, name: string | null, unsubscribe: string) {
   const first = firstName(name);
   const hello = first ? `¡Hola ${brandEsc(first)}!` : "¡Hola!";
   const sections = (i.sections ?? []).map((s) => {
-    const items = (s.items ?? []).map((it) =>
-      `<tr><td style="padding:8px 0;border-bottom:1px solid #eef2fb;">
-<p style="margin:0 0 2px;font-size:15px;font-weight:bold;color:#16367f;">${brandEsc(it.title)}</p>
-<p style="margin:0;font-size:14px;color:#4a4a4a;line-height:1.5;">${brandEsc(it.text)}</p>
-</td></tr>`).join("");
-    return `<p style="margin:26px 0 6px;font-size:17px;font-weight:bold;color:#16367f;">${s.emoji ? brandEsc(s.emoji) + " " : ""}${brandEsc(s.title)}</p>
+    const items = (s.items ?? []).map((it) => {
+      if (!it.text && !it.image) {
+        return `<tr><td style="padding:5px 0;font-size:14px;color:#383838;line-height:1.45;">• ${brandEsc(it.title)}</td></tr>`;
+      }
+      const img = it.image && /^https:\/\//.test(it.image)
+        ? `<img src="${brandEsc(it.image)}" alt="${brandEsc(it.title)}" width="500" style="display:block;width:100%;max-width:500px;height:auto;border-radius:10px;margin:10px 0 4px;border:1px solid #e6ecf8;" />`
+        : "";
+      return `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2fb;">
+<p style="margin:0 0 2px;font-size:16px;font-weight:bold;color:#16367f;">${brandEsc(it.title)}</p>
+${it.text ? `<p style="margin:0;font-size:14px;color:#4a4a4a;line-height:1.5;">${brandEsc(it.text)}</p>` : ""}
+${img}
+</td></tr>`;
+    }).join("");
+    return `<p style="margin:26px 0 4px;font-size:18px;font-weight:bold;color:#16367f;">${s.emoji ? brandEsc(s.emoji) + " " : ""}${brandEsc(s.title)}</p>
 <table width="100%" cellpadding="0" cellspacing="0">${items}</table>`;
   }).join("");
   const outro = i.outro
@@ -205,7 +215,7 @@ function render(i: Issue, name: string | null, unsubscribe: string) {
   });
   const textSections = (i.sections ?? []).map((s) =>
     `${s.emoji ? s.emoji + " " : ""}${s.title.toUpperCase()}\n` +
-    (s.items ?? []).map((it) => `- ${it.title}: ${it.text}`).join("\n")
+    (s.items ?? []).map((it) => `- ${it.title}${it.text ? ": " + it.text : ""}`).join("\n")
   ).join("\n\n");
   const text = `${first ? `¡Hola ${first}!` : "¡Hola!"} ${i.intro}
 
@@ -385,9 +395,11 @@ const DRAFT_SYSTEM = `Escribes la newsletter de novedades de CatalogoHoy, una pl
 Recibes la lista de cambios que salieron a producción (mensajes de commit, técnicos). Conviértelos en novedades para los dueños de tienda:
 - Español neutro con "tú", frases cortas y concretas, sin tecnicismos (nada de RPC, edge, deploy, Supabase, CI, PR, migración).
 - Solo lo que un dueño de tienda nota o usa. Omite lo interno: panel interno, métricas de la empresa, CI, publicación de apps, logs, telemetría, Slack, refactors invisibles.
-- Agrupa cambios relacionados en una sola novedad. Cada novedad: título de 2 a 6 palabras y un texto de 1 o 2 frases que diga qué puede hacer ahora y dónde.
+- Agrupa cambios relacionados en una sola novedad. Cada novedad dice qué puede hacer ahora y dónde.
 - No menciones clientes por nombre ni precios en dólares.
-- Si es semanal, usa secciones como "✨ Nuevo" y "🔧 Arreglos y mejoras". Si es mensual, agrupa por área (lo más importante primero).
+- Corto. Exactamente dos secciones, en este orden (omite una si queda vacía):
+  1. emoji "🚀", title "Nuevas funcionalidades": cada novedad con un emoji al inicio del título (por ejemplo "📱 Apps para iPhone y Android") y un text de 1 frase. Lo más importante primero. Máximo 7 en el mensual y 4 en el semanal.
+  2. emoji "🔧", title "Ajustes y mejoras": cada ajuste es una línea corta en title y text vacío (""). Máximo 8 en el mensual y 5 en el semanal.
 - subject: asunto de correo atractivo y corto (puede llevar un emoji al final). title: "Lo nuevo en CatalogoHoy · <período>". intro: 1 o 2 frases. outro: invita a responder el correo con ideas.
 - Si no hay nada que un dueño de tienda note, responde skip=true con el resto vacío.
 El ejemplo de estilo es un número anterior; imita el tono, no el contenido.`;
@@ -497,6 +509,21 @@ Deno.serve(async (req: Request) => {
   if (adminErr) return json({ error: "Unauthorized" }, 403);
 
   const body = await req.json().catch(() => ({}));
+  if (body.action === "upload_image") {
+    // { name, contentType, base64 } → URL en cdn.catalogohoy.com/newsletter/…
+    const ct = String(body.contentType ?? "");
+    if (!/^image\/(png|jpe?g|gif|webp)$/.test(ct)) return json({ error: "Formato no permitido" }, 400);
+    const bytes = Uint8Array.from(atob(String(body.base64 ?? "")), (c) => c.charCodeAt(0));
+    if (!bytes.length || bytes.length > 3_000_000) return json({ error: "La imagen debe pesar menos de 3 MB" }, 400);
+    const ext = ct.split("/")[1].replace("jpeg", "jpg");
+    const base = String(body.name ?? "imagen").toLowerCase().replace(/\.[a-z0-9]+$/, "").replace(/[^a-z0-9]+/g, "-").slice(0, 40) || "imagen";
+    try {
+      const url = await uploadToS3(`newsletter/${Date.now()}-${base}.${ext}`, bytes, ct);
+      return json({ url });
+    } catch (e) {
+      return json({ error: String(e) }, 500);
+    }
+  }
   if (body.action === "draft") {
     if (body.kind !== "weekly" && body.kind !== "monthly") return json({ error: "kind" }, 400);
     try {
