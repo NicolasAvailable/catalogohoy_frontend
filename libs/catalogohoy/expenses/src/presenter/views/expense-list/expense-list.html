@@ -85,6 +85,31 @@
     </div>
   </div>
 
+  <!-- Gastos por día (barras apiladas) -->
+  @if (daily().series.length) {
+    <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 flex flex-col gap-2" data-testid="expense-daily-chart">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h2 class="text-sm font-semibold text-grey-700">{{ 'Gastos por día' | transloco }}</h2>
+        <div class="flex gap-1 bg-grey-50 rounded-lg p-1 self-start">
+          @for (o of breakdownOptions; track o.value) {
+            <button
+              type="button"
+              class="px-3 py-1 text-xs font-medium rounded-md cursor-pointer transition-colors"
+              [class.bg-white]="breakdown() === o.value"
+              [class.shadow-sm]="breakdown() === o.value"
+              [class.text-grey-700]="breakdown() === o.value"
+              [class.text-grey-400]="breakdown() !== o.value"
+              (click)="breakdown.set(o.value)"
+            >
+              {{ o.label | transloco }}
+            </button>
+          }
+        </div>
+      </div>
+      <ui-stacked-day-chart [days]="daily().days" [series]="daily().series" [format]="formatMain" />
+    </div>
+  }
+
   <!-- Por categoría -->
   @if (store.byCategory().length > 1) {
     <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 flex flex-col gap-3">
@@ -93,7 +118,7 @@
         <div class="flex items-center gap-3 text-sm">
           <span class="w-40 shrink-0 text-grey-600 truncate">{{ c.label | transloco }}</span>
           <div class="flex-1 h-2 rounded-full bg-grey-50 overflow-hidden">
-            <div class="h-full rounded-full bg-primary-500" [style.width.%]="(c.total / maxCategory()) * 100"></div>
+            <div class="h-full rounded-full" [style.background-color]="categoryColors[c.category]" [style.width.%]="(c.total / maxCategory()) * 100"></div>
           </div>
           <span class="w-28 shrink-0 text-right font-semibold text-grey-700">{{ money(c.total, store.mainCurrency()) }}</span>
         </div>

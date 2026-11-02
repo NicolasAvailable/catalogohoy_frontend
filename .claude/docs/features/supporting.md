@@ -24,6 +24,8 @@
   la tienda carga facturas de proveedores, compras de mercancía y otros gastos, con foto/PDF,
   categoría, moneda, estado (pagado / por pagar + vencimiento). Vista por mes con totales
   (gastado, pagado, por pagar) y gasto por categoría.
+- Gráfica "Gastos por día" (`ui-stacked-day-chart`): barras apiladas por categoría o por
+  pagado / por pagar, solo moneda principal, calculada en el front (`dailyBreakdown`).
 - Tabla `tenant_expenses`. Adjuntos en `attachments` jsonb `[{url,name,type}]` (máx. 10: fotos,
   PDF, Excel/CSV, Word, XML; nunca SVG) a S3 vía `signedUpload(..., 'invoice', tenantId)`
   (`invoices/{tenantId}/…`, mismo prefijo que las facturas de órdenes). Proveedor, monto,

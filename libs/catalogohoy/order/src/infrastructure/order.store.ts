@@ -7,6 +7,7 @@ import {
   Order,
   OrderItem,
   OrderList,
+  OrderDayStatusMetric,
   OrderMetrics,
   OrderStatus,
 } from '../domain/order';
@@ -27,6 +28,9 @@ type OrderState = {
   /** Aggregated metrics for the "Métricas" tab (server-side, covers all
    *  matching orders — not just the loaded page). Null until first load. */
   metrics: OrderMetrics | null;
+  /** Órdenes por día y estado (gráfica apilada). Null si el RPC no existe o
+   *  falla: la gráfica simplemente no se muestra. */
+  metricsByDayStatus: OrderDayStatusMetric[] | null;
   isLoadingMetrics: boolean;
 };
 
@@ -38,6 +42,7 @@ const initialState: OrderState = {
   isLoading: false,
   error: null,
   metrics: null,
+  metricsByDayStatus: null,
   isLoadingMetrics: false,
 };
 
@@ -175,13 +180,24 @@ export const OrderStore = signalStore(
         const tenantId = await tenantStore.getTenantIdAsync();
         if (!tenantId) return;
         patchState(store, { isLoadingMetrics: true });
-        const result = await orderService.getOrderMetrics(
-          tenantId,
-          range.start,
-          range.end,
-          range.todayStart,
-          range.useBs
-        );
+        const [result, byDayStatus] = await Promise.all([
+          orderService.getOrderMetrics(
+            tenantId,
+            range.start,
+            range.end,
+            range.todayStart,
+            range.useBs
+          ),
+          orderService.getOrderMetricsByDayStatus(
+            tenantId,
+            range.start,
+            range.end,
+            range.useBs
+          ),
+        ]);
+        patchState(store, {
+          metricsByDayStatus: byDayStatus.isRight() ? byDayStatus.value : null,
+        });
         result.fold(
           () => patchState(store, { isLoadingMetrics: false }),
           (metrics) => patchState(store, { metrics, isLoadingMetrics: false })

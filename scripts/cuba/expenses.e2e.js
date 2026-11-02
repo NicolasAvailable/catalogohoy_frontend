@@ -151,6 +151,40 @@ let n = 0;
     await expectText(rows(), 'Repuestos El Motor');
   });
 
+  await step('Gráfica "Gastos por día" apilada por categoría y por estado', async () => {
+    // Siembra gastos en varios días del mes para ver las barras apiladas.
+    // En el mes anterior (mes completo) para que se vean varios días.
+    const now = new Date();
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const ym = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+    const seed = [
+      ['mercancia', 120, 'paid'], ['transporte', 35, 'pending'], ['servicios', 60, 'paid'],
+      ['mercancia', 240, 'pending'], ['publicidad', 45, 'paid'], ['alquiler', 300, 'paid'],
+      ['sueldos', 180, 'paid'], ['mercancia', 90, 'paid'], ['impuestos', 70, 'pending'],
+      ['mercancia', 150, 'paid'], ['transporte', 40, 'paid'], ['mercancia', 310, 'pending'],
+      ['servicios', 25, 'paid'], ['publicidad', 80, 'paid'], ['mercancia', 60, 'paid'],
+    ];
+    seed.forEach(([category, amount, status], i) => {
+      const day = String([2, 2, 5, 8, 8, 1, 15, 12, 20, 20, 22, 26, 26, 18, 9][i]).padStart(2, '0');
+      db.tenant_expenses.push({ id: `seed-${i}`, created_at: now.toISOString(), supplier: `Proveedor ${i + 1}`, invoice_number: null, category, description: null, amount, currency: 'USD', issue_date: `${ym}-${day}`, due_date: null, status, paid_at: null, attachments: [], notes: null });
+    });
+    await page.getByTitle('Mes anterior').click();
+    await page.getByText('Ir al mes actual').waitFor();
+    await page.waitForTimeout(1000); // la gráfica se vuelve a dibujar con el mes nuevo
+    const chart = page.getByTestId('expense-daily-chart');
+    await chart.locator('.apexcharts-bar-area:not([val="0"])').first().waitFor({ timeout: 8000 });
+    await chart.scrollIntoViewIfNeeded();
+    { const b = await chart.locator('.apexcharts-bar-area:not([val="0"])').first().boundingBox();
+      await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); }
+    await expectText(chart.locator('.apexcharts-tooltip'), 'Total');
+    await page.waitForTimeout(400); await page.screenshot({ path: path.join(OUT, `${String(++n).padStart(2, '0')}-grafica-por-categoria.png`) });
+    await chart.getByRole('button', { name: 'Pagado / por pagar' }).click();
+    await expectText(chart.locator('.apexcharts-legend'), 'Por pagar');
+    { const b = await chart.locator('.apexcharts-bar-area:not([val="0"])').first().boundingBox();
+      await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); }
+    await page.waitForTimeout(400); await page.screenshot({ path: path.join(OUT, `${String(++n).padStart(2, '0')}-grafica-por-estado.png`) });
+  });
+
   await step('Vista en celular', async () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(500);

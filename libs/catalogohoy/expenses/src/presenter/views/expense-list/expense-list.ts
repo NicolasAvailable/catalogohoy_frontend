@@ -10,11 +10,15 @@ import {
   ConfirmDialogComponent,
   IconComponent,
   InputSearchComponent,
+  StackedDayChartComponent,
 } from '@ui';
 import { TooltipModule } from 'primeng/tooltip';
 import {
   categoryLabel,
   currentMonth,
+  dailyBreakdown,
+  EXPENSE_CATEGORY_COLORS,
+  ExpenseBreakdown,
   Expense,
   ExpenseStatus,
   isOverdue,
@@ -36,6 +40,7 @@ type StatusFilter = 'all' | ExpenseStatus;
     ConfirmDialogComponent,
     IconComponent,
     InputSearchComponent,
+    StackedDayChartComponent,
     TooltipModule,
     TranslocoPipe,
     ExpenseFormDialogComponent,
@@ -79,6 +84,17 @@ export default class ExpenseListComponent implements OnInit {
     Math.max(1, ...this.store.byCategory().map((c) => c.total))
   );
 
+  /** Gráfica "Gastos por día": apilada por categoría o por estado. */
+  public readonly breakdown = signal<ExpenseBreakdown>('category');
+  public readonly breakdownOptions: { value: ExpenseBreakdown; label: string }[] = [
+    { value: 'category', label: 'Por categoría' },
+    { value: 'status', label: 'Pagado / por pagar' },
+  ];
+  public readonly daily = computed(() =>
+    dailyBreakdown(this.store.expenses(), this.store.month(), this.store.mainCurrency(), this.breakdown())
+  );
+  public readonly formatMain = (v: number) => this.money(v, this.store.mainCurrency());
+
   public readonly filtered = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
     const status = this.statusFilter();
@@ -98,6 +114,7 @@ export default class ExpenseListComponent implements OnInit {
   });
 
   public readonly categoryLabel = categoryLabel;
+  public readonly categoryColors = EXPENSE_CATEGORY_COLORS;
   private readonly today = toIsoDate(new Date());
 
   ngOnInit(): void {

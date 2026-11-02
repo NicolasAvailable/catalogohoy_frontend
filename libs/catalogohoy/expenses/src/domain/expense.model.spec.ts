@@ -1,5 +1,7 @@
 import {
   attachmentIcon,
+  dailyBreakdown,
+  daysOfMonth,
   Expense,
   isAllowedExpenseFile,
   isOverdue,
@@ -86,5 +88,39 @@ describe('expense.model', () => {
     expect(attachmentIcon({ name: 'a.xlsx', type: '' })).toBe('file-spreadsheet');
     expect(attachmentIcon({ name: 'a.png', type: 'image/png' })).toBe('image');
     expect(attachmentIcon({ name: 'a.pdf', type: 'application/pdf' })).toBe('file-text');
+  });
+
+  it('daysOfMonth cubre febrero bisiesto', () => {
+    expect(daysOfMonth('2028-02')).toHaveLength(29);
+    expect(daysOfMonth('2026-11')[29]).toBe('2026-11-30');
+  });
+
+  it('dailyBreakdown suma por día y categoría, ignora otras monedas', () => {
+    const r = dailyBreakdown(
+      [
+        { ...base, amount: 10, issueDate: '2026-10-05' },
+        { ...base, id: '2', amount: 5.5, issueDate: '2026-10-05' },
+        { ...base, id: '3', amount: 7, category: 'transporte', issueDate: '2026-10-06' },
+        { ...base, id: '4', amount: 99, currency: 'VES', issueDate: '2026-10-06' },
+      ],
+      '2026-10',
+      'USD',
+      'category'
+    );
+    expect(r.days).toHaveLength(31);
+    expect(r.series.map((s) => s.key)).toEqual(['mercancia', 'transporte']);
+    expect(r.series[0].data[4]).toBe(15.5);
+    expect(r.series[1].data[5]).toBe(7);
+  });
+
+  it('dailyBreakdown por estado', () => {
+    const r = dailyBreakdown(
+      [{ ...base, status: 'pending', amount: 3 }],
+      '2026-10',
+      'USD',
+      'status'
+    );
+    expect(r.series).toHaveLength(1);
+    expect(r.series[0]).toMatchObject({ key: 'pending', name: 'Por pagar' });
   });
 });

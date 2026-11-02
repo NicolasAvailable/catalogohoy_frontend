@@ -10,6 +10,7 @@ npx nx build catalogohoy                            # compila
 npx nx serve catalogohoy --port 4200                # en segundo plano
 # En el contenedor cloud hay que pasar el Chromium preinstalado:
 CHROME_PATH=/opt/pw-browsers/chromium OUT=/tmp/cuba-shots node scripts/cuba/expenses.e2e.js
+CHROME_PATH=/opt/pw-browsers/chromium OUT=/tmp/cuba-shots node scripts/cuba/orders-metrics.e2e.js
 ```
 
 - `mock.js`: `setupMock(page, { log, routes })`. Con `log: true` imprime cada request para
@@ -19,3 +20,6 @@ CHROME_PATH=/opt/pw-browsers/chromium OUT=/tmp/cuba-shots node scripts/cuba/expe
 - Trampas: los `p-dialog` de PrimeNG se renderizan en `body` (no dentro de `ui-dialog`); usa
   `locale: 'es-ES'` en el contexto (si no, el admin sale en inglés); preferir `data-testid`
   a selectores de layout.
+- Gráficas ApexCharts: espera una barra con `:not([val="0"])` (las de valor 0 no son visibles) y
+  mueve el mouse con `page.mouse.move` al centro de la barra para que salga el tooltip; espera
+  ~1 s tras cambiar de mes/periodo porque la gráfica se vuelve a dibujar.

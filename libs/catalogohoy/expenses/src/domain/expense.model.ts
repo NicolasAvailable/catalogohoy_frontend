@@ -170,3 +170,59 @@ export function totalsByCategory(
 export function isOverdue(expense: Expense, today = toIsoDate(new Date())): boolean {
   return expense.status === 'pending' && !!expense.dueDate && expense.dueDate < today;
 }
+
+/** Colores fijos por categoría y por estado (gráfica por día). */
+export const EXPENSE_CATEGORY_COLORS: Record<ExpenseCategory, string> = {
+  mercancia: '#6366f1',
+  servicios: '#0ea5e9',
+  transporte: '#f59e0b',
+  alquiler: '#8b5cf6',
+  sueldos: '#10b981',
+  impuestos: '#ef4444',
+  publicidad: '#ec4899',
+  otros: '#94a3b8',
+};
+
+export const EXPENSE_STATUS_COLORS: Record<ExpenseStatus, string> = {
+  paid: '#22c55e',
+  pending: '#f97316',
+};
+
+export type ExpenseBreakdown = 'category' | 'status';
+
+/** Todos los días del mes 'YYYY-MM' en 'YYYY-MM-DD'. */
+export function daysOfMonth(month: string): string[] {
+  const [y, m] = month.split('-').map(Number);
+  const count = new Date(y, m, 0).getDate();
+  return Array.from({ length: count }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`);
+}
+
+/** Gasto por día del mes (solo la moneda indicada), una serie por categoría o
+ *  por estado. Solo incluye las series que tienen algún gasto. */
+export function dailyBreakdown(
+  expenses: Expense[],
+  month: string,
+  currency: string,
+  by: ExpenseBreakdown
+): { days: string[]; series: { key: string; name: string; color: string; data: number[] }[] } {
+  const days = daysOfMonth(month);
+  const index = new Map(days.map((d, i) => [d, i]));
+  const keys =
+    by === 'category'
+      ? EXPENSE_CATEGORIES.map((c) => ({ key: c.value, name: c.label, color: EXPENSE_CATEGORY_COLORS[c.value] }))
+      : EXPENSE_STATUSES.map((s) => ({ key: s.value, name: s.label, color: EXPENSE_STATUS_COLORS[s.value] }));
+  const data = new Map(keys.map((k) => [k.key, days.map(() => 0)]));
+  for (const e of expenses) {
+    if (e.currency !== currency) continue;
+    const i = index.get(e.issueDate);
+    if (i === undefined) continue;
+    const row = data.get(by === 'category' ? e.category : e.status);
+    if (row) row[i] = Math.round((row[i] + e.amount) * 100) / 100;
+  }
+  return {
+    days,
+    series: keys
+      .map((k) => ({ ...k, data: data.get(k.key)! }))
+      .filter((s) => s.data.some((v) => v > 0)),
+  };
+}
