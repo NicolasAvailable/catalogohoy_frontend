@@ -390,6 +390,8 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftCreditNote = signal<string | null>(null);
   /** Show units left ("Quedan N") in the public catalog (General tab). */
   public readonly draftShowStock = signal<boolean>(false);
+  /** List the public catalog A→Z instead of the manual order (General tab). */
+  public readonly draftSortAlphabetically = signal<boolean>(false);
 
   // --- Impuesto/IVA (Pagos tab) drafts — CAT-84 ---
   /** % de impuesto incluido en los precios (null/0 = sin desglose). */
@@ -848,6 +850,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftCreditMinPurchases, prev?.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES, config.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES);
       syncField(this.draftCreditNote, prev?.creditNote ?? null, config.creditNote ?? null);
       syncField(this.draftShowStock, prev?.showStock ?? false, config.showStock ?? false);
+      syncField(this.draftSortAlphabetically, prev?.sortAlphabetically ?? false, config.sortAlphabetically ?? false);
       syncField(this.draftMetaPixelId, prev?.metaPixelId ?? null, config.metaPixelId ?? null);
       syncField(this.draftTaxRate, prev?.taxRate ?? null, config.taxRate ?? null);
       syncField(this.draftTaxLabel, prev?.taxLabel ?? null, config.taxLabel ?? null);
@@ -899,6 +902,7 @@ export class EcommerceConfigComponent implements OnInit {
       const creditMinPurchases = this.draftCreditMinPurchases();
       const creditNote = this.draftCreditNote();
       const showStock = this.draftShowStock();
+      const sortAlphabetically = this.draftSortAlphabetically();
       // Métodos de pago activos (con sus datos) — para que la preview del
       // checkout refleje en vivo los datos al elegir un método, sin recargar.
       const paymentMethods = this.configStore
@@ -937,6 +941,7 @@ export class EcommerceConfigComponent implements OnInit {
           creditMinPurchases,
           creditNote,
           showStock,
+          sortAlphabetically,
           // Solo overrideamos si hay métodos activos cargados; si la lista aún
           // no cargó (vacía), la preview usa los del catálogo real.
           ...(paymentMethods.length ? { paymentMethods } : {}),
@@ -1428,6 +1433,11 @@ export class EcommerceConfigComponent implements OnInit {
     if (showStockChanged) {
       changes.showStock = this.draftShowStock();
     }
+    const sortAlphabeticallyChanged =
+      this.draftSortAlphabetically() !== (config.sortAlphabetically ?? false);
+    if (sortAlphabeticallyChanged) {
+      changes.sortAlphabetically = this.draftSortAlphabetically();
+    }
 
     if (
       customerFieldsChanged ||
@@ -1437,7 +1447,8 @@ export class EcommerceConfigComponent implements OnInit {
       creditEnabledChanged ||
       creditMinChanged ||
       creditNoteChanged ||
-      showStockChanged
+      showStockChanged ||
+      sortAlphabeticallyChanged
     ) {
       changes.customerFields = this.draftCustomerFields();
     }

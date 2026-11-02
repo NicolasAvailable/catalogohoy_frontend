@@ -14,6 +14,7 @@ export interface PreviewMessage {
     showDesignSection: boolean;
     showCategoriesSection: boolean;
     showStock: boolean;
+    sortAlphabetically: boolean;
     socialLinks: SocialLinks;
     template: CatalogTemplate;
     currencySymbol: string;

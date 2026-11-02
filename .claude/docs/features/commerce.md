@@ -46,6 +46,11 @@
     `source='public'` y rol anon/authenticated) usa `public_cart_issues(tenant, items)` y
     rechaza con `cart_outdated`; el checkout lo captura, revalida y avisa. Si cambias cómo se
     calcula el precio de una línea, cambia AMBOS (front y función SQL).
+- **Orden alfabético** (2026-11-02): toggle "Orden alfabético" en Editar catálogo → General,
+  guardado en `tenant_ecommerce_config.customer_fields.sortAlphabetically` (sin migración, como
+  `showStock`). El store pide `orderBy: 'name'` cuando está activo; si no, `position` (orden manual
+  del admin). Siempre con desempate por `id`. Reemplazó la allowlist hardcodeada de Moto Fox.
+  Activo hoy en Moto Fox (2421) y BRACHOMOTOS (3730). Solo afecta la vitrina pública, no el admin.
 
 ## product (`@catalogohoy/product`)
 

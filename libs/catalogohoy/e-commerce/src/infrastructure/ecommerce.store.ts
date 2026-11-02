@@ -126,7 +126,21 @@ export const EcommerceStore = signalStore(
       return store.catalogInfo()?.countryCode === 'VE';
     }),
   })),
-  withMethods((store, ecommerceService = inject(EcommerceService)) => ({
+  withMethods((store, ecommerceService = inject(EcommerceService)) => {
+  /** "Orden alfabético" del catálogo (o su override en la preview). */
+  const isAlphabetical = (): boolean => {
+    const overrides = store.previewOverrides();
+    if (store.isPreviewMode() && overrides?.sortAlphabetically !== undefined) {
+      return overrides.sortAlphabetically;
+    }
+    return store.catalogInfo()?.sortAlphabetically ?? false;
+  };
+  /** Orden que se pide al server: el que eligió el comprador gana; si no,
+   *  A→Z cuando el catálogo lo tiene activo; si no, el orden manual. */
+  const resolveOrderBy = (): 'name' | 'price_asc' | 'price_desc' | undefined =>
+    store.orderBy() ?? (isAlphabetical() ? 'name' : undefined);
+
+  return {
     async loadCatalog(slug: string) {
       patchState(store, () => ({ isLoading: true }));
 
@@ -162,7 +176,7 @@ export const EcommerceStore = signalStore(
           slug,
           undefined,
           undefined,
-          undefined,
+          resolveOrderBy(),
           1,
           PAGE_SIZE,
           String(catalogInfo.id),
@@ -220,7 +234,7 @@ export const EcommerceStore = signalStore(
           slug,
           store.searchTerm(),
           store.selectedCategoryId() ?? undefined,
-          store.orderBy() ?? undefined,
+          resolveOrderBy(),
           1,
           PAGE_SIZE,
           tenantId,
@@ -256,7 +270,7 @@ export const EcommerceStore = signalStore(
           slug,
           store.searchTerm(),
           store.selectedCategoryId() ?? undefined,
-          store.orderBy() ?? undefined,
+          resolveOrderBy(),
           nextPage,
           PAGE_SIZE,
           tenantId,
@@ -395,13 +409,20 @@ export const EcommerceStore = signalStore(
     },
 
     applyPreviewOverrides(overrides: Partial<CatalogInfo>) {
+      const wasAlphabetical = isAlphabetical();
       patchState(store, {
         previewOverrides: { ...store.previewOverrides(), ...overrides },
       });
+      // El toggle "Orden alfabético" cambia el orden que trae el server:
+      // recargar la lista para que la preview lo refleje en vivo.
+      if (store.catalogInfo() && isAlphabetical() !== wasAlphabetical) {
+        void this.loadProducts('');
+      }
     },
 
     reset() {
       patchState(store, () => initialState);
     },
-  }))
+  };
+  })
 );
