@@ -84,6 +84,12 @@ stepper, image, product-media, icon, avatar, badge, chip, toggle, checkbox, date
 color-picker, counter, qr, etc. + dominio `uploader` (drop-uploader).
 **Iconos:** `ui-icon name="kebab-case"` (lucide). Registrados en
 `libs/catalogohoy/core/.../lucide.provide.ts` (hay que registrar el icono ahí para usarlo).
+**Todd (mascota) y vistas vacías:** `ui-todd pose="…"` muestra a Todd (poses: thumbs-up, wave,
+running, celebrate, pointing, excel-pdf, phone, thinking, apps-idea; archivos en
+`apps/catalogohoy/public/images/todd/todd-<pose>.webp`). Para el estado vacío de un módulo usa
+`ui-module-empty` (estilo PostHog: Todd + título + frase + descripción + botones, y en pantallas
+anchas un panel con `previewRows` de datos de ejemplo). Con `[compact]="true"` sirve para
+"búsqueda sin resultados" (pose `thinking`). Toda vista vacía nueva debe usarlo.
 
 ## Core (`@catalogohoy/core`)
 

@@ -24,8 +24,7 @@ import {
   IconComponent,
   InputSearchComponent,
   SelectComponent,
-  TooltipDirective,
-} from '@ui';
+  TooltipDirective, ModuleEmptyComponent, ModuleEmptyPreviewRow } from '@ui';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { debounceTime, distinctUntilChanged, Subject, Subscription } from 'rxjs';
@@ -39,7 +38,7 @@ import { ClientTagCreateRowComponent } from '../../components/client-tag-create-
 @Component({
   selector: 'lib-client-list',
   standalone: true,
-  imports: [
+  imports: [ModuleEmptyComponent,
     CommonModule,
     FormsModule,
     IconComponent,
@@ -72,6 +71,17 @@ import { ClientTagCreateRowComponent } from '../../components/client-tag-create-
   ],
 })
 export default class ClientListComponent implements OnInit, OnDestroy {
+  /** Datos de ejemplo de la vista vacía (panel derecho). */
+  public readonly emptyPreview: ModuleEmptyPreviewRow[] = [
+    { label: 'María González', sub: '8 pedidos · último hace 2 días', value: '$412', badge: 'VIP', badgeClass: 'bg-amber-50 text-amber-700' },
+    { label: 'Carlos Pérez', sub: '3 pedidos · último hace 1 semana', value: '$96', badge: 'Mayorista', badgeClass: 'bg-sky-50 text-sky-700' },
+    { label: 'Ana Rodríguez', sub: '1 pedido · ayer', value: '$34', badge: 'Nuevo', badgeClass: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Luis Martínez', sub: '5 pedidos · último hace 3 días', value: '$188' },
+  ];
+
+  /** Hay búsqueda o filtro de etiqueta activo (vacío = "sin resultados"). */
+  public readonly hasActiveFilter = computed(() => !!this.searchQuery().trim() || this.selectedTagId() !== null);
+
   private readonly router = inject(Router);
   public readonly clientStore = inject(ClientStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);

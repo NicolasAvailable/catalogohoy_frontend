@@ -31,8 +31,7 @@ import {
   ProductMediaComponent,
   SelectComponent,
   SkeletonListComponent,
-  TooltipDirective,
-} from '@ui';
+  TooltipDirective, ModuleEmptyComponent, ModuleEmptyPreviewRow } from '@ui';
 import { firstImageUrl } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { debounceTime, distinctUntilChanged, Subscription } from 'rxjs';
@@ -44,7 +43,7 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
 
 @Component({
   selector: 'lib-list',
-  imports: [
+  imports: [ModuleEmptyComponent,
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
@@ -148,6 +147,17 @@ export default class List implements OnInit, OnDestroy {
   public readonly copiedId = signal<string | null>(null);
 
   public readonly hasSelection = computed(() => this.selectedIds().size > 0);
+
+  /** Hay búsqueda o filtro de categoría activo (vacío = "sin resultados"). */
+  public readonly hasActiveFilter = computed(() => !!this.searchTerm() || !!this.filterCategoryId());
+
+  /** Datos de ejemplo de la vista vacía (panel derecho). */
+  public readonly emptyPreview: ModuleEmptyPreviewRow[] = [
+    { label: 'Camiseta oversize', sub: 'Ropa · 12 en stock', value: '$15.00', badge: 'Activo', badgeClass: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Gorra bordada', sub: 'Accesorios · 4 en stock', value: '$9.50', badge: 'Activo', badgeClass: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Zapatillas urbanas', sub: 'Calzado · 3 variantes', value: '$42.00', badge: 'Agotado', badgeClass: 'bg-rose-50 text-rose-600' },
+    { label: 'Bolso de cuero', sub: 'Accesorios · 7 en stock', value: '$28.00', badge: 'Activo', badgeClass: 'bg-emerald-50 text-emerald-700' },
+  ];
 
   public readonly filteredProducts = computed(() => {
     const products = this.productStore.productList().products;

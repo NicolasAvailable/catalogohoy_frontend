@@ -14,8 +14,7 @@ import {
   SelectComponent,
   SelectItemDirective,
   SelectSelectedItemDirective,
-  StackedDayChartComponent,
-} from '@ui';
+  StackedDayChartComponent, ModuleEmptyComponent, ModuleEmptyPreviewRow } from '@ui';
 import { TooltipModule } from 'primeng/tooltip';
 import {
   categoryLabel,
@@ -43,7 +42,7 @@ type StatusFilter = 'all' | ExpenseStatusKey;
 @Component({
   selector: 'lib-expense-list',
   standalone: true,
-  imports: [
+  imports: [ModuleEmptyComponent,
     NgTemplateOutlet,
     FormsModule,
     ButtonComponent,
@@ -62,6 +61,14 @@ type StatusFilter = 'all' | ExpenseStatusKey;
   host: { class: 'flex-1 flex flex-col min-h-0' },
 })
 export default class ExpenseListComponent implements OnInit {
+  /** Datos de ejemplo de la vista vacía (panel derecho). */
+  public readonly emptyPreview: ModuleEmptyPreviewRow[] = [
+    { label: 'Distribuidora Central', sub: 'Mercancía · vence el 15', value: '$1,250', badge: 'Pendiente', badgeClass: 'bg-amber-50 text-amber-700' },
+    { label: 'Alquiler del local', sub: 'Fijo mensual', value: '$600', badge: 'Pagado', badgeClass: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Internet', sub: 'Servicios', value: '$45', badge: 'Pagado', badgeClass: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Publicidad Instagram', sub: 'Marketing · pago único', value: '$80', badge: 'Abonado', badgeClass: 'bg-sky-50 text-sky-700' },
+  ];
+
   public readonly store = inject(ExpenseStore);
   private readonly currency = inject(TenantCurrencyStore);
   private readonly permissions = inject(TeamPermissionsStore);
