@@ -96,4 +96,9 @@ export const internalRoutes: Route[] = [
     loadChildren: () =>
       import('./email-ses/email-ses.routes').then((m) => m.emailSesRoutes),
   },
+  {
+    path: 'newsletter',
+    loadChildren: () =>
+      import('./newsletter/newsletter.routes').then((m) => m.newsletterRoutes),
+  },
 ];

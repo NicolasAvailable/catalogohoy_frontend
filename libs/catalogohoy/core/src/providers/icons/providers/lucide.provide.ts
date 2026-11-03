@@ -95,6 +95,7 @@ import {
   LogOut,
   LucideAngularModule,
   Mail,
+  Newspaper,
   MapPin,
   Menu,
   Moon,
