@@ -35,7 +35,7 @@
           </div>
         }
       </div>
-    } @else if (store.reports().length === 0) {
+    } @else if (store.reports().length === 0 && store.templates().length === 0) {
       <section class="reports-empty">
         <div class="reports-empty__hero">
           <div class="reports-empty__badge">
@@ -102,6 +102,65 @@
         </div>
       </section>
     } @else {
+      @if (store.templates().length > 0) {
+        <section class="templates">
+          <header class="templates__header">
+            <h2>{{ 'Plantillas' | transloco }}</h2>
+            <small>{{ 'Genera de nuevo el mismo reporte con datos actualizados. Los anteriores se guardan.' | transloco }}</small>
+          </header>
+          <div class="templates__grid">
+            @for (t of store.templates(); track t.id) {
+              <div
+                class="template-card"
+                [class.template-card--active]="filterTemplateId() === t.id"
+                (click)="toggleTemplateFilter(t)"
+              >
+                <div class="template-card__top">
+                  <ui-icon name="repeat" styleClass="size-4 text-primary-500 shrink-0" />
+                  <strong class="template-card__title">{{ t.title }}</strong>
+                  @if (canDelete()) {
+                    <button
+                      type="button"
+                      class="template-card__delete"
+                      (click)="onDeleteTemplate($event, t)"
+                      [attr.aria-label]="'Eliminar plantilla' | transloco"
+                    >
+                      <ui-icon name="trash" styleClass="size-4" />
+                    </button>
+                  }
+                </div>
+                <span class="template-card__meta">
+                  {{ presetLabel(t.periodPreset) | transloco }}
+                  · {{ ((templateStats()[t.id]?.count ?? 0) === 1 ? '{n} reporte' : '{n} reportes') | transloco: { n: templateStats()[t.id]?.count ?? 0 } }}
+                </span>
+                @if (templateStats()[t.id]?.last; as last) {
+                  <span class="template-card__meta">
+                    {{ 'Último:' | transloco }} {{ last.createdAt | date:'d MMM y':'':'es-ES' }}
+                  </span>
+                }
+                <ui-button
+                  [label]="'Generar ahora' | transloco"
+                  icon="sparkles"
+                  severity="primary"
+                  size="small"
+                  [fluid]="true"
+                  [isLoading]="generatingTemplateId() === t.id"
+                  [disabled]="limitReached() || !canCreate() || generatingTemplateId() !== null"
+                  (click)="generateFromTemplate($event, t)"
+                />
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      @if (filterTemplate(); as ft) {
+        <div class="templates__filter">
+          <span>{{ 'Historial de' | transloco }} <strong>{{ ft.title }}</strong></span>
+          <button type="button" (click)="filterTemplateId.set(null)">{{ 'Ver todos' | transloco }}</button>
+        </div>
+      }
+
       <div class="reports-table">
         <div class="reports-table__header">
           <span class="reports-table__col reports-table__col--title">{{ 'Título' | transloco }}</span>
@@ -110,11 +169,14 @@
           <span class="reports-table__col reports-table__col--actions">{{ 'Acciones' | transloco }}</span>
         </div>
 
-        @for (report of store.reports(); track report.id) {
+        @for (report of visibleReports(); track report.id) {
           <div class="reports-table__row" (click)="goToDetail(report)">
             <div class="reports-table__col reports-table__col--title">
               <ui-icon name="clipboard-list" styleClass="size-4 text-primary-500 shrink-0" />
               <span>{{ report.title }}</span>
+              @if (report.templateId != null) {
+                <span class="reports-table__badge">{{ 'Plantilla' | transloco }}</span>
+              }
             </div>
             <div class="reports-table__col reports-table__col--period">
               {{ report.periodStart | date:'d MMM y':'':'es-ES' }}
@@ -151,9 +213,19 @@
   </div>
 
   <ui-confirm-dialog
+    #deleteReportDialog
     (confirm)="onConfirmDelete()"
     headerLabel="Eliminar reporte"
     contentLabel="¿Estás seguro de que deseas eliminar este reporte? Esta acción es irreversible."
+    acceptLabel="Eliminar"
+    rejectLabel="Cancelar"
+  />
+
+  <ui-confirm-dialog
+    #deleteTemplateDialog
+    (confirm)="onConfirmDeleteTemplate()"
+    headerLabel="Eliminar plantilla"
+    contentLabel="Se elimina la plantilla, pero los reportes que ya generaste con ella se mantienen."
     acceptLabel="Eliminar"
     rejectLabel="Cancelar"
   />
