@@ -79,6 +79,9 @@ export interface CatalogInfo {
   creditNote: string | null;
   /** Show the units left ("Quedan N") to buyers. Default false. */
   showStock: boolean;
+  /** Order the public catalog A→Z by product name instead of the manual
+   *  (`position`) order. Lives in `customer_fields`. Default false. */
+  sortAlphabetically: boolean;
 }
 
 /** Snapshot of the payment adjustment applied to an order at checkout. Same
@@ -173,6 +176,11 @@ export interface BaseEcommerceService {
     cap?: number
   ): Promise<E.Either<Error, PaginatedProductList>>;
   getProductById(id: string): Promise<E.Either<Error, Product>>;
+  /** Productos actuales de un carrito (solo los que siguen existiendo). */
+  getCartProducts(
+    tenantId: number,
+    productIds: string[]
+  ): Promise<E.Either<Error, Product[]>>;
   /** Max products the free plan allows — the public-catalog cap for downgraded
    *  (free) tenants. Read from the `plans` table (public). */
   getFreePlanMaxProducts(): Promise<number>;

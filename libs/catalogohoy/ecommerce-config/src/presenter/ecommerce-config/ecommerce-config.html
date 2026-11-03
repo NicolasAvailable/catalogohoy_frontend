@@ -839,6 +839,27 @@
         </div>
       </ui-card>
 
+      <!-- Card: Orden alfabético (toggle-only) -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon categories-icon">
+              <ui-icon name="arrow-up-down" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ 'Orden alfabético' | transloco }}</h2>
+              <small class="card-subtitle">
+                {{ 'Tus clientes verán los productos ordenados de la A a la Z, en vez del orden manual.' | transloco }}
+              </small>
+            </div>
+          </div>
+          <ui-toggle
+            [ngModel]="draftSortAlphabetically()"
+            (ngModelChange)="draftSortAlphabetically.set($event)"
+          ></ui-toggle>
+        </div>
+      </ui-card>
+
       </div> <!-- /TAB GENERAL (block 2) -->
 
       <!-- ===== TAB: LOCATION ===== -->

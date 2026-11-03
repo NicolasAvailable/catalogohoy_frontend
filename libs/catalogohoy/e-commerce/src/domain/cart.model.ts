@@ -12,8 +12,14 @@ export class Cart {
     return Math.round(raw * 100) / 100;
   }
 
+  /** Unidades comprables (las líneas no disponibles no cuentan). */
   public get totalItems(): number {
-    return this._items.reduce((acc, item) => acc + item.quantity, 0);
+    return this.availableItems.reduce((acc, item) => acc + item.quantity, 0);
+  }
+
+  /** Líneas que se pueden comprar (sin las marcadas como no disponibles). */
+  public get availableItems(): CartItem[] {
+    return this._items.filter((item) => !item.unavailable);
   }
 
   public get isEmpty(): boolean {
@@ -42,6 +48,12 @@ export class Cart {
 
     if (existingIndex >= 0) {
       const updatedItems = [...this._items];
+      // Una línea que quedó no disponible se reemplaza por la nueva (el
+      // producto volvió a tener stock) en vez de sumarle cantidad.
+      if (updatedItems[existingIndex].unavailable) {
+        updatedItems[existingIndex] = item;
+        return new Cart(updatedItems);
+      }
       updatedItems[existingIndex] =
         updatedItems[existingIndex].incrementQuantity();
       return new Cart(updatedItems);
@@ -76,7 +88,8 @@ export class Cart {
           item.variantName,
           item.addons,
           item.maxStock,
-          item.divisasPrice
+          item.divisasPrice,
+          item.unavailable
         );
       }
       return item;

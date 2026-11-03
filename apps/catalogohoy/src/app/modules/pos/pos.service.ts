@@ -374,17 +374,18 @@ export class PosService {
   async findPosOrders(
     tenantId: number,
     search: string,
-    limit = 30
+    limit = 30,
+    opts: { includeReturns?: boolean } = {}
   ): Promise<E.Either<Error, Order[]>> {
     let query = this.client
       .from('orders')
       .select('*')
       .eq('tenant_id', tenantId)
       .eq('source', 'pos')
-      .eq('status', 'completed')
-      .gt('total_usd', 0)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      .eq('status', 'completed');
+    // El historial de ventas (CAT-95) también muestra las devoluciones.
+    if (!opts.includeReturns) query = query.gt('total_usd', 0);
+    query = query.order('created_at', { ascending: false }).limit(limit);
 
     const q = search.trim();
     if (q) {
@@ -402,6 +403,41 @@ export class PosService {
     return E.right(
       ((data || []) as Record<string, unknown>[]).map((r) => this.toOrder(r))
     );
+  }
+
+  /** Clave de una línea de venta para cruzar venta ↔ devoluciones. */
+  static returnLineKey(it: OrderItem): string {
+    return [it.productId ?? '', it.variantId ?? '', it.size ?? '', it.name ?? ''].join('|');
+  }
+
+  /**
+   * Cantidades ya devueltas de una venta (CAT-96), por línea. Las devoluciones
+   * son órdenes negativas del POS cuyo nombre es `Devolución #<ref>` o
+   * `Devolución #<ref> — <cliente>`.
+   */
+  async getReturnedQuantities(
+    tenantId: number,
+    original: Order
+  ): Promise<E.Either<Error, Map<string, number>>> {
+    const base = `Devolución #${original.orderNumber ?? original.id}`;
+    const { data, error } = await this.client
+      .from('orders')
+      .select('name, products')
+      .eq('tenant_id', tenantId)
+      .eq('source', 'pos')
+      .lt('total_usd', 0)
+      .like('name', `${base}%`);
+    if (error) return E.left(new Error(error.message));
+    const returned = new Map<string, number>();
+    for (const row of (data || []) as { name: string; products: OrderItem[] | null }[]) {
+      // `like` también trae "#12" al buscar "#1": quedarse solo con el exacto.
+      if (row.name !== base && !row.name.startsWith(`${base} — `)) continue;
+      for (const it of row.products ?? []) {
+        const k = PosService.returnLineKey(it);
+        returned.set(k, (returned.get(k) ?? 0) + Math.abs(it.quantity ?? 0));
+      }
+    }
+    return E.right(returned);
   }
 
   /**
@@ -425,6 +461,29 @@ export class PosService {
     }
   ): Promise<E.Either<Error, void>> {
     if (!items.length) return E.left(new Error('Seleccioná al menos un ítem.'));
+
+    // No devolver más de lo vendido menos lo ya devuelto (CAT-96): evita que
+    // la misma venta se devuelva varias veces y reponga stock N veces.
+    const already = await this.getReturnedQuantities(tenantId, original);
+    if (already.isLeft()) return E.left(already.value);
+    const returned = already.value;
+    const sold = new Map<string, number>();
+    for (const it of original.products ?? []) {
+      const k = PosService.returnLineKey(it);
+      sold.set(k, (sold.get(k) ?? 0) + Math.abs(it.quantity ?? 0));
+    }
+    const asking = new Map<string, number>();
+    for (const it of items) {
+      const k = PosService.returnLineKey(it);
+      asking.set(k, (asking.get(k) ?? 0) + Math.abs(it.quantity ?? 0));
+    }
+    for (const [k, qty] of asking) {
+      if (qty > (sold.get(k) ?? 0) - (returned.get(k) ?? 0)) {
+        return E.left(
+          new Error('Esa venta ya fue devuelta (total o parcialmente). Recargá e intentá de nuevo.')
+        );
+      }
+    }
 
     // Reembolso PRORRATEADO a lo realmente cobrado: si la venta tuvo descuento,
     // ajuste de medio de pago o envío, la suma de líneas no es lo que pagó el

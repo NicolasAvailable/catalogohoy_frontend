@@ -18,6 +18,7 @@ export class OrderMapper {
         ? e.products.map(OrderMapper.toOrderItemDomain)
         : [],
       status: e.status as OrderStatus,
+      stageId: e.stage_id ?? null,
       tenantId: e.tenant_id,
       totalUsd: e.total_usd,
       totalBs: e.total_bs,

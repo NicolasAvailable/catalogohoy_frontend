@@ -109,7 +109,10 @@ export class ProductService implements BaseProductService {
       `
         )
         .eq('tenant_id', tenantId)
-        .order('position', { ascending: true });
+        .order('position', { ascending: true })
+        // Desempate estable: si dos productos comparten `position`, el
+        // paginado por rangos podría repetir uno y saltarse otro.
+        .order('id', { ascending: true });
 
       if (search && search.trim().length > 0) {
         // Busca contra search_blob (columna generada en la DB): nombre +

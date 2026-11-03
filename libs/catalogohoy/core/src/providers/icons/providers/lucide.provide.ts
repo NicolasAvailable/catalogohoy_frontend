@@ -5,6 +5,8 @@ import {
   ArrowDown,
   ArrowDownToLine,
   ArrowLeft,
+  LayoutList,
+  SquareKanban,
   ArrowRight,
   ArrowUp,
   ArrowUpCircle,
@@ -93,6 +95,7 @@ import {
   LogOut,
   LucideAngularModule,
   Mail,
+  Newspaper,
   MapPin,
   Menu,
   Moon,
@@ -122,6 +125,7 @@ import {
   PlusCircle,
   Printer,
   QrCode,
+  Receipt,
   RefreshCw,
   Reply,
   RotateCcw,
@@ -177,6 +181,7 @@ import {
   UserRound,
   Layers,
   Calendar,
+  Receipt,
 } from 'lucide-angular';
 
 export const provideLucideIcons = (): EnvironmentProviders => {
@@ -195,6 +200,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Bot,
       Building,
       Building2,
+    Receipt,
       Check,
       CheckCheck,
       CheckCircle,
@@ -355,9 +361,12 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       CircleHelp,
       Percent,
       RotateCcw,
+      Receipt,
       ScanBarcode,
       StickyNote,
       Trash2,
+      LayoutList,
+      SquareKanban,
     })
   );
 };

@@ -57,7 +57,7 @@ export class TeamService implements BaseTeamService {
       this.client
         .from('team_members')
         .select(
-          'id, team_id, user_id, invited_email, status, invite_token, invite_expires_at, created_at'
+          'id, team_id, user_id, invited_email, status, invite_token, invite_expires_at, created_at, bounced_at'
         )
         .eq('team_id', teamId)
         .order('created_at', { ascending: true }),
@@ -93,6 +93,7 @@ export class TeamService implements BaseTeamService {
         inviteToken: row.invite_token,
         inviteExpiresAt: row.invite_expires_at,
         createdAt: row.created_at,
+        bouncedAt: row.bounced_at ?? null,
         userName: dir?.name ?? null,
         userLastName: dir?.last_name ?? null,
       };
@@ -137,6 +138,7 @@ export class TeamService implements BaseTeamService {
       inviteToken: data.invite_token,
       inviteExpiresAt: data.invite_expires_at,
       createdAt: data.created_at,
+      bouncedAt: null,
       userName: null,
       userLastName: null,
     });

@@ -7,6 +7,7 @@ import {
   Order,
   OrderItem,
   OrderList,
+  OrderDayStatusMetric,
   OrderMetrics,
   OrderStatus,
 } from '../domain/order';
@@ -27,6 +28,9 @@ type OrderState = {
   /** Aggregated metrics for the "Métricas" tab (server-side, covers all
    *  matching orders — not just the loaded page). Null until first load. */
   metrics: OrderMetrics | null;
+  /** Órdenes por día y estado (gráfica apilada). Null si el RPC no existe o
+   *  falla: la gráfica simplemente no se muestra. */
+  metricsByDayStatus: OrderDayStatusMetric[] | null;
   isLoadingMetrics: boolean;
 };
 
@@ -38,6 +42,7 @@ const initialState: OrderState = {
   isLoading: false,
   error: null,
   metrics: null,
+  metricsByDayStatus: null,
   isLoadingMetrics: false,
 };
 
@@ -54,6 +59,7 @@ export const OrderStore = signalStore(
         date?: Date;
         search?: string;
         status?: OrderStatus | 'all';
+        stageId?: string | null;
         page?: number;
         pageSize?: number;
         orderBy?: 'date_desc' | 'date_asc' | 'total_desc' | 'total_asc';
@@ -95,6 +101,7 @@ export const OrderStore = signalStore(
         date?: Date;
         search?: string;
         status?: OrderStatus | 'all';
+        stageId?: string | null;
         orderBy?: 'date_desc' | 'date_asc' | 'total_desc' | 'total_asc';
       }): Promise<Order[]> {
         const tenantId = await tenantStore.getTenantIdAsync();
@@ -173,13 +180,24 @@ export const OrderStore = signalStore(
         const tenantId = await tenantStore.getTenantIdAsync();
         if (!tenantId) return;
         patchState(store, { isLoadingMetrics: true });
-        const result = await orderService.getOrderMetrics(
-          tenantId,
-          range.start,
-          range.end,
-          range.todayStart,
-          range.useBs
-        );
+        const [result, byDayStatus] = await Promise.all([
+          orderService.getOrderMetrics(
+            tenantId,
+            range.start,
+            range.end,
+            range.todayStart,
+            range.useBs
+          ),
+          orderService.getOrderMetricsByDayStatus(
+            tenantId,
+            range.start,
+            range.end,
+            range.useBs
+          ),
+        ]);
+        patchState(store, {
+          metricsByDayStatus: byDayStatus.isRight() ? byDayStatus.value : null,
+        });
         result.fold(
           () => patchState(store, { isLoadingMetrics: false }),
           (metrics) => patchState(store, { metrics, isLoadingMetrics: false })
@@ -331,7 +349,8 @@ export const OrderStore = signalStore(
       async updateOrderStatus(
         id: number,
         oldStatus: OrderStatus,
-        newStatus: OrderStatus
+        newStatus: OrderStatus,
+        stageId: string | null = null
       ): Promise<E.Either<string, Order>> {
         try {
           const tenantId = await tenantStore.getTenantIdAsync();
@@ -341,7 +360,8 @@ export const OrderStore = signalStore(
             id,
             tenantId,
             oldStatus,
-            newStatus
+            newStatus,
+            stageId
           );
 
           return result.fold(

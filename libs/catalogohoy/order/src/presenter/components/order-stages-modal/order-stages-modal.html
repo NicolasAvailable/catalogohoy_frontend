@@ -1,0 +1,241 @@
+<div class="flex flex-col h-[min(640px,85vh)]">
+  <!-- Header -->
+  <div class="flex items-center gap-3 px-5 py-4 border-b border-grey-100 shrink-0">
+    <div class="flex-1 min-w-0">
+      <h2 class="text-lg font-bold text-grey-800 m-0">{{ 'Estados de las órdenes' | transloco }}</h2>
+      <p class="text-xs text-grey-500 m-0 mt-0.5">
+        {{ 'Son las columnas del tablero y las opciones del selector de estado.' | transloco }}
+      </p>
+    </div>
+    <button
+      type="button"
+      class="p-1.5 rounded-lg text-grey-400 hover:text-grey-700 hover:bg-grey-50 cursor-pointer"
+      (click)="close()"
+      [attr.aria-label]="'Cerrar' | transloco"
+    >
+      <ui-icon name="x" styleClass="size-5" />
+    </button>
+  </div>
+
+  <div class="flex flex-1 min-h-0">
+    <!-- Lista de estados -->
+    <div
+      [class]="'flex-col w-full md:w-72 md:border-r border-grey-100 bg-grey-50/50 min-h-0 ' + (selected() ? 'hidden md:flex' : 'flex')"
+    >
+      <div
+        class="stages-list flex-1 overflow-y-auto p-3 flex flex-col gap-1"
+        cdkDropList
+        cdkDropListLockAxis="y"
+        (cdkDropListDropped)="drop($event)"
+      >
+        @for (item of items(); track item.uid) {
+        <div
+          cdkDrag
+          cdkDragBoundary=".stages-list"
+          [cdkDragStartDelay]="{ touch: 200, mouse: 0 }"
+          role="button"
+          tabindex="0"
+          (click)="select(item.uid)"
+          (keydown.enter)="select(item.uid)"
+          [class]="'group flex items-center gap-2 pl-1.5 pr-3 py-2 rounded-lg cursor-pointer transition-colors border ' +
+            (selectedUid() === item.uid ? 'bg-white border-primary-300 shadow-sm' : 'border-transparent hover:bg-white')"
+        >
+          <span
+            cdkDragHandle
+            class="p-0.5 text-grey-300 group-hover:text-grey-500 cursor-grab active:cursor-grabbing shrink-0"
+            [attr.aria-label]="'Arrastra para ordenar' | transloco"
+          >
+            <ui-icon name="grip-vertical" styleClass="size-4" />
+          </span>
+          <span
+            class="w-2.5 h-2.5 rounded-full shrink-0"
+            [style.background-color]="item.color"
+            [class.opacity-40]="item.hidden"
+          ></span>
+          <span
+            [class]="'flex-1 min-w-0 truncate text-sm ' + (item.hidden ? 'text-grey-400 line-through' : 'text-grey-800 font-medium')"
+          >
+            {{ item.label || ('Nuevo estado' | transloco) }}
+          </span>
+          @if (item.hidden) {
+          <ui-icon name="eye-off" styleClass="size-3.5 text-grey-400 shrink-0" />
+          }
+          @if (item.system) {
+          <span class="text-[10px] uppercase tracking-wide text-grey-400 shrink-0">{{ 'Base' | transloco }}</span>
+          }
+          <div *cdkDragPlaceholder class="h-9 rounded-lg border-2 border-dashed border-primary-300 bg-primary-50/50"></div>
+        </div>
+        }
+      </div>
+      <div class="p-3 border-t border-grey-100 shrink-0">
+        <button
+          type="button"
+          (click)="addStatus()"
+          class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed border-grey-300 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-300 cursor-pointer transition-colors"
+        >
+          <ui-icon name="plus" styleClass="size-4" />
+          {{ 'Agregar estado' | transloco }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Editor del estado seleccionado -->
+    <div [class]="'flex-1 min-w-0 min-h-0 overflow-y-auto ' + (selected() ? 'block' : 'hidden md:block')">
+      @if (selected(); as s) {
+      <div class="flex flex-col gap-6 p-5">
+        <button
+          type="button"
+          class="md:hidden self-start flex items-center gap-1 text-sm text-grey-500 hover:text-grey-800 cursor-pointer"
+          (click)="select(null)"
+        >
+          <ui-icon name="arrow-left" styleClass="size-4" />
+          {{ 'Todos los estados' | transloco }}
+        </button>
+
+        <!-- Nombre -->
+        <label class="flex flex-col gap-1.5">
+          <span class="text-sm font-semibold text-grey-700">{{ 'Nombre' | transloco }}</span>
+          <input
+            type="text"
+            maxlength="40"
+            class="w-full px-3 py-2.5 rounded-lg border border-grey-200 bg-white text-sm text-grey-800 focus:outline-none focus:border-primary-500"
+            [placeholder]="'Ej: Despacho' | transloco"
+            [ngModel]="s.label"
+            (ngModelChange)="patch({ label: $event })"
+          />
+          @if (s.system) {
+          <span class="text-xs text-grey-400">
+            {{ 'Estado base. Puedes cambiarle el nombre y el color.' | transloco }}
+          </span>
+          }
+        </label>
+
+        <!-- Color -->
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-semibold text-grey-700">{{ 'Color' | transloco }}</span>
+          <div class="flex flex-wrap gap-2">
+            @for (color of colors; track color) {
+            <button
+              type="button"
+              (click)="patch({ color })"
+              [class]="'w-7 h-7 rounded-full cursor-pointer flex items-center justify-center transition-transform ' + (s.color === color ? 'scale-110 ring-2 ring-offset-2 ring-grey-300' : 'hover:scale-105')"
+              [style.background-color]="color"
+              [attr.aria-label]="color"
+            >
+              @if (s.color === color) {
+              <ui-icon name="check" styleClass="size-3.5 text-white" />
+              }
+            </button>
+            }
+          </div>
+        </div>
+
+        <!-- Comportamiento -->
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-grey-700">{{ 'Qué hace este estado' | transloco }}</span>
+            @if (behaviorLocked()) {
+            <ui-icon name="lock" styleClass="size-3.5 text-grey-400" />
+            }
+          </div>
+          @if (s.system) {
+          <p class="text-xs text-grey-400 m-0">{{ 'Los estados base tienen su comportamiento fijo.' | transloco }}</p>
+          } @else if (behaviorLocked()) {
+          <p class="text-xs text-orange-600 m-0">
+            {{ 'Este estado tiene {count} órdenes. Muévelas a otro estado para poder cambiar su comportamiento.' | transloco: { count: ordersInSelected() } }}
+          </p>
+          }
+          <div class="flex flex-col rounded-lg border border-grey-200 divide-y divide-grey-100 bg-white">
+            @for (check of checks; track check.field) {
+            @let on = selectedBehavior()?.[check.field] ?? false;
+            <button
+              type="button"
+              [disabled]="behaviorLocked()"
+              (click)="toggleCheck(check.field, !on)"
+              [class]="'flex items-center gap-3 px-3.5 py-3 text-left ' + (behaviorLocked() ? 'cursor-default' : 'cursor-pointer hover:bg-grey-50')"
+            >
+              <span
+                [class]="'w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ' +
+                  (on ? (behaviorLocked() ? 'bg-grey-400 border-grey-400' : 'bg-primary-500 border-primary-500') : 'border-grey-300 bg-white')"
+              >
+                @if (on) {
+                <ui-icon name="check" styleClass="size-3.5 text-white" />
+                }
+              </span>
+              <span class="flex flex-col min-w-0">
+                <span [class]="'text-sm font-medium ' + (behaviorLocked() ? 'text-grey-500' : 'text-grey-800')">{{ check.label | transloco }}</span>
+                <span class="text-xs text-grey-400">{{ check.hint | transloco }}</span>
+              </span>
+            </button>
+            }
+          </div>
+        </div>
+
+        <!-- Visibilidad -->
+        <div class="flex items-center gap-3 px-3.5 py-3 rounded-lg border border-grey-200 bg-white">
+          <ui-icon [name]="s.hidden ? 'eye-off' : 'eye'" styleClass="size-4 text-grey-500 shrink-0" />
+          <span class="flex flex-col flex-1 min-w-0">
+            <span class="text-sm font-medium text-grey-800">{{ 'Mostrar este estado' | transloco }}</span>
+            <span class="text-xs text-grey-400">
+              @if (canHide(s)) {
+                {{ 'Si lo ocultas no aparece en el tablero, los filtros ni el selector.' | transloco }}
+              } @else {
+                {{ 'Pendiente no se puede ocultar: ahí llegan los pedidos nuevos.' | transloco }}
+              }
+            </span>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            [attr.aria-checked]="!s.hidden"
+            [disabled]="!canHide(s)"
+            (click)="toggleHidden(s)"
+            [class]="'relative w-10 h-6 rounded-full transition-colors shrink-0 ' + (!s.hidden ? 'bg-primary-500' : 'bg-grey-300') + (canHide(s) ? ' cursor-pointer' : ' opacity-50 cursor-not-allowed')"
+          >
+            <span
+              [class]="'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ' + (!s.hidden ? 'translate-x-4' : '')"
+            ></span>
+          </button>
+        </div>
+
+        <!-- Eliminar (solo propios) -->
+        @if (!s.system) {
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+          @if (!confirmingDelete()) {
+          <button
+            type="button"
+            class="flex items-center gap-1.5 text-red-600 hover:text-red-700 font-medium cursor-pointer"
+            (click)="confirmingDelete.set(true)"
+          >
+            <ui-icon name="trash-2" styleClass="size-4" />
+            {{ 'Eliminar estado' | transloco }}
+          </button>
+          } @else {
+          <span class="text-red-600">
+            @if (ordersInSelected() > 0) {
+              {{ '¿Eliminar? Sus {count} órdenes pasan a {base}.' | transloco: { count: ordersInSelected(), base: (baseName(s) | transloco) } }}
+            } @else {
+              {{ '¿Eliminar este estado?' | transloco }}
+            }
+          </span>
+          <button type="button" class="font-semibold text-red-600 hover:text-red-700 cursor-pointer" (click)="removeSelected()">{{ 'Sí, eliminar' | transloco }}</button>
+          <button type="button" class="font-semibold text-grey-500 hover:text-grey-700 cursor-pointer" (click)="confirmingDelete.set(false)">{{ 'No' | transloco }}</button>
+          }
+        </div>
+        }
+      </div>
+      } @else {
+      <div class="h-full flex flex-col items-center justify-center gap-2 p-8 text-center text-grey-400">
+        <ui-icon name="settings-2" styleClass="size-8" />
+        <p class="text-sm m-0">{{ 'Elige un estado para editarlo.' | transloco }}</p>
+      </div>
+      }
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="flex justify-end gap-2 px-5 py-3 border-t border-grey-100 shrink-0">
+    <ui-button [label]="'Cancelar'" variant="outlined" severity="secondary" size="small" [fluid]="false" (click)="close()" />
+    <ui-button [label]="'Guardar cambios'" size="small" [fluid]="false" [isLoading]="isSaving()" (click)="save()" />
+  </div>
+</div>

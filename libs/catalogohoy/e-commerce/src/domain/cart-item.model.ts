@@ -29,7 +29,12 @@ export class CartItem {
     public readonly maxStock: number | null = null,
     /** Precio unitario si paga en divisas (promo en divisas, ver
      *  `divisas-promo.ts`). `null` = la línea no tiene precio en divisas. */
-    public readonly divisasPrice: number | null = null
+    public readonly divisasPrice: number | null = null,
+    /** La línea ya no se puede comprar (agotado, eliminado, oculto o sin esa
+     *  variante/talla). Se queda en el carrito deshabilitada para que el
+     *  cliente la vea y la elimine; no suma al total ni va en la orden. La
+     *  revalidación la vuelve a habilitar si el producto regresa. */
+    public readonly unavailable: boolean = false
   ) {
     this.id = id || crypto.randomUUID();
   }
@@ -40,11 +45,13 @@ export class CartItem {
   }
 
   public get total(): number {
+    if (this.unavailable) return 0;
     return Math.round(this.price * this.quantity * 100) / 100;
   }
 
   /** Lo que se ahorra la línea si paga en divisas (0 si no aplica). */
   public get divisasSavings(): number {
+    if (this.unavailable) return 0;
     if (this.divisasPrice === null || this.divisasPrice >= this.price) return 0;
     return Math.round((this.price - this.divisasPrice) * this.quantity * 100) / 100;
   }
@@ -65,7 +72,8 @@ export class CartItem {
       this.variantName,
       this.addons,
       this.maxStock,
-      this.divisasPrice
+      this.divisasPrice,
+      this.unavailable
     );
   }
 
@@ -86,7 +94,8 @@ export class CartItem {
       this.variantName,
       this.addons,
       this.maxStock,
-      this.divisasPrice
+      this.divisasPrice,
+      this.unavailable
     );
   }
 
@@ -106,7 +115,8 @@ export class CartItem {
       primitives.variantName ?? null,
       primitives.addons ?? [],
       primitives.maxStock ?? null,
-      primitives.divisasPrice ?? null
+      primitives.divisasPrice ?? null,
+      primitives.unavailable ?? false
     );
   }
 }
@@ -127,4 +137,5 @@ export interface CartItemPrimitives {
   addons?: CartItemAddon[];
   maxStock?: number | null;
   divisasPrice?: number | null;
+  unavailable?: boolean;
 }

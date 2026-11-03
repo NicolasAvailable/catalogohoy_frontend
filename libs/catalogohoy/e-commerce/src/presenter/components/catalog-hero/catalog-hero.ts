@@ -83,14 +83,20 @@ export class CatalogHero implements OnDestroy {
       // leaves the viewport. A negative rootMargin top accounts for
       // that, triggering the transition as soon as the navbar starts
       // to overlap the profile section.
-      this.observer = new IntersectionObserver(
-        ([entry]) => {
-          this.ecommerceStore.setHeroLogoVisible(entry.isIntersecting);
-        },
-        { threshold: 0, rootMargin: '-64px 0px 0px 0px' }
-      );
+      try {
+        this.observer = new IntersectionObserver(
+          ([entry]) => {
+            this.ecommerceStore.setHeroLogoVisible(entry.isIntersecting);
+          },
+          { threshold: 0, rootMargin: '-64px 0px 0px 0px' }
+        );
 
-      this.observer.observe(el);
+        this.observer.observe(el);
+      } catch {
+        // IntersectionObserver roto en algunos navegadores in-app: sin la
+        // animación del logo, la página sigue funcionando.
+        this.observer = null;
+      }
     });
   }
 

@@ -41,6 +41,9 @@ export class InviteMemberDialogComponent {
       (m) => m.invitedEmail.toLowerCase() === target && m.status !== 'declined'
     );
     if (existing) {
+      if (existing.status === 'pending' && existing.bouncedAt) {
+        return 'Este correo no existe. Cancela esa invitación y revisa cómo está escrito.';
+      }
       return existing.status === 'pending'
         ? 'Ya existe una invitación pendiente para este correo.'
         : 'Este usuario ya es miembro del equipo.';

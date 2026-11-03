@@ -90,6 +90,10 @@ export interface Order {
   name: string;
   products: OrderItem[];
   status: OrderStatus;
+  /** Estado propio de la tienda (`order_stages.id`) en el que está la orden,
+   *  ej. "Despacho". null = solo su estado base. `status` sigue mandando para
+   *  stock/métricas; el estado propio es la "columna" que se ve. */
+  stageId?: string | null;
   tenantId: number;
   totalUsd: number;
   totalBs?: number;
@@ -155,6 +159,17 @@ export interface OrderDayMetric {
   date: string;
   amount: number;
   count: number;
+}
+
+/** Órdenes de un día en un estado (base + estado propio), del RPC
+ *  `order_metrics_by_day_status`. Para la gráfica apilada por día. */
+export interface OrderDayStatusMetric {
+  /** Mismo inicio de día que {@link OrderDayMetric.date}. */
+  date: string;
+  status: string;
+  stageId: string | null;
+  count: number;
+  amount: number;
 }
 
 /** One row of the income-by-payment-method breakdown in {@link OrderMetrics}. */
