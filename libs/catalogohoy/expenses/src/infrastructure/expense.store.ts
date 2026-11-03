@@ -94,10 +94,11 @@ export const ExpenseStore = signalStore(
           );
         },
 
-        async setStatus(expense: Expense, status: Expense['status'], paidAt: string | null): Promise<boolean> {
+        /** Cambia campos sueltos (estado, abono…) sin abrir el formulario. */
+        async patch(expense: Expense, patch: Partial<ExpenseInput>): Promise<boolean> {
           const tenantId = await tenantStore.getTenantIdAsync();
           if (!tenantId) return false;
-          const result = await service.update(tenantId, expense.id, { status, paidAt });
+          const result = await service.update(tenantId, expense.id, patch);
           return result.fold(
             () => false,
             (saved) => {

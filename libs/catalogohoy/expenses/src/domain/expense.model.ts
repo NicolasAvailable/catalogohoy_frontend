@@ -1,3 +1,5 @@
+import { buildExpenseStatusDefs, ExpenseStatusDef, expenseStatusKeyOf } from './expense-stage';
+
 // Gastos de la tienda (`tenant_expenses`): facturas de proveedores, compras de
 // mercancía y otros pagos. Base del balance mensual (gastos vs. ventas).
 
@@ -77,7 +79,11 @@ export interface Expense {
   issueDate: string;
   dueDate: string | null;
   status: ExpenseStatus;
+  /** Estado propio de la tienda (`expense_stages`), o null = estado base. */
+  stageId: string | null;
   paidAt: string | null;
+  /** Abonado de una factura por pagar (pagos por partes). */
+  paidAmount: number;
   attachments: ExpenseAttachment[];
   notes: string | null;
   createdAt: string;
@@ -134,8 +140,13 @@ export function totalsByCurrency(
   for (const e of expenses) {
     const t = map.get(e.currency) ?? { currency: e.currency, total: 0, paid: 0, pending: 0 };
     t.total += e.amount;
-    if (e.status === 'paid') t.paid += e.amount;
-    else t.pending += e.amount;
+    if (e.status === 'paid') {
+      t.paid += e.amount;
+    } else {
+      const abono = Math.min(e.paidAmount || 0, e.amount);
+      t.paid += abono;
+      t.pending += e.amount - abono;
+    }
     map.set(e.currency, t);
   }
   if (!map.size) map.set(mainCurrency, { currency: mainCurrency, total: 0, paid: 0, pending: 0 });
@@ -197,26 +208,34 @@ export function daysOfMonth(month: string): string[] {
   return Array.from({ length: count }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`);
 }
 
+/** Lo que falta pagar de un gasto (0 si está pagado). */
+export function pendingAmount(e: Expense): number {
+  if (e.status === 'paid') return 0;
+  return Math.round((e.amount - Math.min(e.paidAmount || 0, e.amount)) * 100) / 100;
+}
+
 /** Gasto por día del mes (solo la moneda indicada), una serie por categoría o
- *  por estado. Solo incluye las series que tienen algún gasto. */
+ *  por estado (los de la tienda, si se pasan `statusDefs`; incluye propios).
+ *  Solo incluye las series que tienen algún gasto. */
 export function dailyBreakdown(
   expenses: Expense[],
   month: string,
   currency: string,
-  by: ExpenseBreakdown
+  by: ExpenseBreakdown,
+  statusDefs: ExpenseStatusDef[] = buildExpenseStatusDefs([])
 ): { days: string[]; series: { key: string; name: string; color: string; data: number[] }[] } {
   const days = daysOfMonth(month);
   const index = new Map(days.map((d, i) => [d, i]));
-  const keys =
+  const keys: { key: string; name: string; color: string }[] =
     by === 'category'
       ? EXPENSE_CATEGORIES.map((c) => ({ key: c.value, name: c.label, color: EXPENSE_CATEGORY_COLORS[c.value] }))
-      : EXPENSE_STATUSES.map((s) => ({ key: s.value, name: s.label, color: EXPENSE_STATUS_COLORS[s.value] }));
+      : statusDefs.map((d) => ({ key: d.key, name: d.label, color: d.color }));
   const data = new Map(keys.map((k) => [k.key, days.map(() => 0)]));
   for (const e of expenses) {
     if (e.currency !== currency) continue;
     const i = index.get(e.issueDate);
     if (i === undefined) continue;
-    const row = data.get(by === 'category' ? e.category : e.status);
+    const row = data.get(by === 'category' ? e.category : expenseStatusKeyOf(e, statusDefs));
     if (row) row[i] = Math.round((row[i] + e.amount) * 100) / 100;
   }
   return {

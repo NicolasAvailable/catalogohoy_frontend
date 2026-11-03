@@ -99,13 +99,26 @@
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium text-grey-700">{{ 'Estado' | transloco }} <span class="text-red-500">*</span></label>
           <ui-select
-            [options]="statuses"
+            [options]="statuses()"
             optionLabel="label"
             optionValue="value"
-            [ngModel]="status()"
-            (ngModelChange)="status.set($event)"
+            [ngModel]="statusKey()"
+            (ngModelChange)="statusKey.set($event)"
             styleClass="w-full"
-          />
+          >
+            <ng-template selectSelectedItem let-selected>
+              <span class="inline-flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full" [style.background-color]="statusColor()"></span>
+                {{ selected?.label | transloco }}
+              </span>
+            </ng-template>
+            <ng-template selectItem let-item>
+              <span class="inline-flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full" [style.background-color]="item.color"></span>
+                {{ item.label | transloco }}
+              </span>
+            </ng-template>
+          </ui-select>
         </div>
       </div>
 
@@ -135,6 +148,31 @@
           </div>
         }
       </div>
+
+      @if (status() === 'pending') {
+        <!-- Abonos (pagos por partes) -->
+        <div class="flex flex-col gap-1.5" data-testid="expense-paid-amount">
+          <label class="text-sm font-medium text-grey-700">{{ 'Abonado' | transloco }} <span class="text-grey-300 font-normal">{{ '(opcional)' | transloco }}</span></label>
+          <ui-input-number
+            [ngModel]="paidAmount()"
+            (ngModelChange)="paidAmount.set($event)"
+            [showButtons]="false"
+            [min]="0"
+            [minFractionDigits]="0"
+            [maxFractionDigits]="2"
+            placeholder="0,00"
+          />
+          <span class="text-xs text-grey-400">
+            @if ((paidAmount() ?? 0) > (amount() ?? 0)) {
+              <span class="text-red-500">{{ 'El abono no puede ser mayor que el monto.' | transloco }}</span>
+            } @else if ((paidAmount() ?? 0) > 0) {
+              {{ 'Falta por pagar: {value}' | transloco: { value: ((amount() ?? 0) - (paidAmount() ?? 0)).toFixed(2) + ' ' + currencyCode() } }}
+            } @else {
+              {{ 'Si le estás pagando por partes, anota aquí cuánto llevas abonado.' | transloco }}
+            }
+          </span>
+        </div>
+      }
 
       <!-- Archivos -->
       <div class="flex flex-col gap-1.5">
