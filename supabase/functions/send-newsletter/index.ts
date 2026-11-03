@@ -18,6 +18,7 @@ import { uploadToS3 } from "../_shared/s3.ts";
 //               número está APROBADO. Repetir hasta remaining = 0.
 //   draft     → { kind } arma ya el borrador del período (igual que el cron).
 // POST con x-webhook-secret (Vault `newsletter_cron_secret`), body
+// { action: "send", id, approve?, limit? } → lote de un número aprobado.
 // { action: "auto_draft", kind: "weekly"|"monthly" } → el cron de los domingos
 // y del día 1 arma el BORRADOR del período con Claude a partir de los commits
 // de main en GitHub (repo público) y le manda una prueba a Nicolas (nicolas@catalogohoy.com). No envía a
@@ -492,8 +493,20 @@ Deno.serve(async (req: Request) => {
     const secret = await cronSecret();
     if (!secret || hook !== secret) return json({ error: "Unauthorized" }, 401);
     const b = await req.json().catch(() => ({}));
-    if (b.action !== "auto_draft" || (b.kind !== "weekly" && b.kind !== "monthly")) return json({ error: "Bad request" }, 400);
     try {
+      // Envío por lotes de un número ya aprobado por Nicolas (cuando él pide
+      // "envíalo" en un chat con Claude). approve:true lo aprueba primero.
+      if (b.action === "send") {
+        if (b.approve === true) {
+          await admin.from("newsletter_issues").update({ status: "approved", approved_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+            .eq("id", Number(b.id)).eq("status", "draft");
+        }
+        const { data: issue } = await admin.from("newsletter_issues").select("*").eq("id", Number(b.id)).maybeSingle();
+        if (!issue) return json({ error: "Número no encontrado" }, 404);
+        if (issue.status !== "approved" && issue.status !== "sending") return json({ error: "Primero aprueba el número" }, 409);
+        return json(await sendBatch(issue as Issue, Math.min(Number(b.limit) || 150, 300)));
+      }
+      if (b.action !== "auto_draft" || (b.kind !== "weekly" && b.kind !== "monthly")) return json({ error: "Bad request" }, 400);
       return json(await autoDraft(b.kind));
     } catch (e) {
       return json({ error: String(e) }, 500);
