@@ -115,7 +115,7 @@
         <span class="report__card-sub">
           {{ snapshot().comparison!.previousStart | date:'d MMM y':'':'es-ES' }}
           –
-          {{ snapshot().comparison!.previousEnd | date:'d MMM y':'':'es-ES' }}
+          {{ comparisonEnd() | date:'d MMM y':'':'es-ES' }}
         </span>
       </header>
       <div class="cmp">

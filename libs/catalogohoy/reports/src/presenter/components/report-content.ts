@@ -226,6 +226,12 @@ export class ReportContent {
     ].map((r) => ({ ...r, change: pctChange(r.current, r.previous) }));
   });
 
+  /** previousEnd es exclusivo (= inicio del periodo actual): mostrar el instante anterior. */
+  public readonly comparisonEnd = computed(() => {
+    const end = this.snapshot().comparison?.previousEnd;
+    return end ? new Date(new Date(end).getTime() - 1) : null;
+  });
+
   public readonly channels = computed(() => {
     const items = this.snapshot().channels ?? [];
     const max = items.reduce((m, c) => Math.max(m, Number(c.total)), 0);
