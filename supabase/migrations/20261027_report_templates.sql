@@ -29,11 +29,20 @@ create index if not exists report_templates_tenant_idx
 
 alter table public.report_templates enable row level security;
 
-drop policy if exists report_templates_tenant_all on public.report_templates;
-create policy report_templates_tenant_all on public.report_templates
-  for all to authenticated
-  using (public._is_service_or_member(tenant_id))
-  with check (public._is_service_or_member(tenant_id));
+-- Add-only (sin DROP): la tabla es nueva; el IF NOT EXISTS la hace re-ejecutable.
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'report_templates'
+      and policyname = 'report_templates_tenant_all'
+  ) then
+    create policy report_templates_tenant_all on public.report_templates
+      for all to authenticated
+      using (public._is_service_or_member(tenant_id))
+      with check (public._is_service_or_member(tenant_id));
+  end if;
+end $$;
 
 alter table public.reports
   add column if not exists template_id bigint
