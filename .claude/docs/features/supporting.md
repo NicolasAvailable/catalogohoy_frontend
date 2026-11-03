@@ -43,6 +43,16 @@
   moneda, categoría, estado y fecha son obligatorios; el resto se marca "(opcional)".
 - Avisos de vencimiento por email + WhatsApp: edge `send-expense-reminders` (ver
   `integrations.md`). Opt-out: `users.notify_expense_reminders` (Perfil → Notificaciones).
+- **Estados propios + abonos** (2026-11-02, como los de órdenes): tabla `expense_stages`
+  (migración `20261102_expense_stages.sql`). Una fila con `system_status` personaliza un estado
+  base (Por pagar / Pagada); sin él es un estado propio ("A crédito") que **se comporta como su
+  `base_status`**. `tenant_expenses.status` sigue siendo la verdad (totales, avisos, bot);
+  `stage_id` dice en qué estado propio está. Trigger `tenant_expenses_sync_stage` mantiene la
+  coherencia (si el status cambia a otro base, sale del estado propio). Borrar un estado deja
+  sus gastos en su base (FK `ON DELETE SET NULL`). Claves en el front: `pending|paid|stage:<uuid>`
+  (`domain/expense-stage.ts`). Editor: botón "Estados" (`expense-stages-modal`).
+  `paid_amount` = abonado de una factura por pagar; Por pagar = amount − paid_amount, Pagado
+  incluye abonos; con status `paid` se guarda 0. Avisos y bot usan lo que falta.
 - Orden de despliegue: migración ANTES del front (el perfil guarda `notify_expense_reminders`).
 - Permiso de equipo **`gastos`** (view/create/edit/delete). Es info financiera: los miembros
   sin ese permiso NO la ven (RLS con `_tenant_module_allowed`, no `_pos_can_access_tenant`).

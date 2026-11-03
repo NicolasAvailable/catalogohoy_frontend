@@ -125,7 +125,6 @@ import {
   PlusCircle,
   Printer,
   QrCode,
-  Receipt,
   RefreshCw,
   Reply,
   RotateCcw,
@@ -361,12 +360,12 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       CircleHelp,
       Percent,
       RotateCcw,
-      Receipt,
       ScanBarcode,
       StickyNote,
       Trash2,
       LayoutList,
       SquareKanban,
+      Newspaper,
     })
   );
 };
