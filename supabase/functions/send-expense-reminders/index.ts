@@ -155,6 +155,8 @@ type ExpenseRow = {
   description: string | null;
   invoice_number: string | null;
   amount: number;
+  /** Abonado (pagos por partes). Lo que se avisa es lo que falta. */
+  paid_amount: number | null;
   currency: string;
   due_date: string;
   due_reminded_at: string | null;
@@ -176,10 +178,15 @@ function money(amount: number, currency: string): string {
   return `${SYMBOLS[currency] ?? currency}\u00a0${value}`;
 }
 
+/** Lo que falta por pagar de una factura (monto - abonado). */
+function remaining(r: ExpenseRow): number {
+  return Math.max(0, Number(r.amount) - Number(r.paid_amount ?? 0));
+}
+
 /** Totales por moneda: "$ 530,00 + Bs 15.000,00". */
 function totalsText(rows: ExpenseRow[]): string {
   const map = new Map<string, number>();
-  for (const r of rows) map.set(r.currency, (map.get(r.currency) ?? 0) + Number(r.amount));
+  for (const r of rows) map.set(r.currency, (map.get(r.currency) ?? 0) + remaining(r));
   return [...map.entries()].map(([c, t]) => money(t, c)).join(" + ");
 }
 
@@ -295,7 +302,7 @@ Deno.serve(async (req) => {
 
   const { data, error } = await admin
     .from("tenant_expenses")
-    .select("id, tenant_id, supplier, description, invoice_number, amount, currency, due_date, due_reminded_at, overdue_reminded_at")
+    .select("id, tenant_id, supplier, description, invoice_number, amount, paid_amount, currency, due_date, due_reminded_at, overdue_reminded_at")
     .eq("status", "pending")
     .not("due_date", "is", null)
     .gte("due_date", oldest)
@@ -353,7 +360,7 @@ Deno.serve(async (req) => {
           : `vence ${shortDate(r.due_date)}`;
       return {
         label: `${label(r)} (${when})`,
-        value: money(r.amount, r.currency),
+        value: money(remaining(r), r.currency),
         color: late ? "#dc2626" : undefined,
       };
     });
