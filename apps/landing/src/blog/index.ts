@@ -22,6 +22,7 @@ import { catalogoParaMayoristas2026 } from "./articles/catalogo-digital-para-may
 import { catalogoParaFerreterias2026 } from "./articles/catalogo-digital-para-ferreterias-2026";
 import { menuDigitalRestaurantes2026 } from "./articles/menu-digital-para-restaurantes-y-comida-2026";
 import { catalogoParaPerfumerias2026 } from "./articles/catalogo-digital-para-perfumerias-y-cosmeticos-2026";
+import { novedadesOctubre2026 } from "./articles/novedades-catalogohoy-octubre-2026";
 
 export const CATEGORIES: BlogCategory[] = [
   {
@@ -60,10 +61,18 @@ export const CATEGORIES: BlogCategory[] = [
     description:
       "CatalogoHoy frente a otras opciones para vender online: comparativas honestas para elegir bien.",
   },
+  {
+    slug: "novedades",
+    name: "Novedades",
+    description:
+      "Todo lo nuevo de CatalogoHoy: funcionalidades, ajustes y mejoras de cada mes.",
+  },
 ];
 
 /** Registro editorial: a igual fecha manda este orden (el primero es el destacado). */
 const REGISTRY: BlogArticle[] = [
+  // Novedades del producto (una por mes)
+  novedadesOctubre2026,
   // Guías por rubro (2026-10)
   catalogoParaTiendasDeRopa2026,
   catalogoParaZapaterias2026,
