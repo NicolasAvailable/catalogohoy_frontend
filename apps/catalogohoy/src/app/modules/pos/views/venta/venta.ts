@@ -168,6 +168,10 @@ export default class PosVenta implements OnInit {
   /** Variante elegida que tiene tallas propias: el modal pasa a pedir la talla
    *  (ej. color "Negro" → S/M/L), para descontar el stock de esa talla. */
   readonly optionsVariant = signal<ProductVariant | null>(null);
+  /** El usuario eligió "Producto original" en un producto con variantes Y
+   *  tallas a nivel principal: el modal pasa a elegir la talla del principal
+   *  (CAT-94). */
+  readonly optionsBaseSizes = signal(false);
   /** Cantidades de adicionales elegidas en el modal (addonId → cantidad). */
   readonly addonSelection = signal<Record<string, number>>({});
   readonly showCobrar = signal(false);
@@ -369,6 +373,7 @@ export default class PosVenta implements OnInit {
     const p = this.optionsProduct();
     if (!p) return null;
     if (this.optionsVariant()?.sizes?.length) return 'variant-size';
+    if (this.optionsBaseSizes() && p.isSized && p.sizes?.length) return 'size';
     if (p.isVariant && p.variants?.length) return 'variant';
     if (p.isSized && p.sizes?.length) return 'size';
     if (p.addons?.length) return 'addons';
@@ -514,6 +519,8 @@ export default class PosVenta implements OnInit {
 
   // ── Agregar al carrito ─────────────────────────────────────────────────────
   onProductClick(p: Product): void {
+    this.optionsVariant.set(null);
+    this.optionsBaseSizes.set(false);
     if (p.isVariant && p.variants?.length) {
       this.optionsProduct.set(p);
       return;
@@ -551,6 +558,11 @@ export default class PosVenta implements OnInit {
     // La opción "Producto original" agrega el producto base (sin variante), con
     // el precio y el stock a nivel de producto — igual que la tienda pública.
     if (v.id === PosVenta.BASE_OPTION_ID) {
+      // Si el principal tiene tallas propias, primero se elige la talla (CAT-94).
+      if (p.isSized && p.sizes?.length) {
+        this.optionsBaseSizes.set(true);
+        return;
+      }
       this.addSimple(p);
       this.optionsProduct.set(null);
       return;
@@ -602,7 +614,7 @@ export default class PosVenta implements OnInit {
       size: s.name,
       available: s.stock,
     });
-    this.optionsProduct.set(null);
+    this.closeOptions();
     this.toast.success(`${p.name} · ${s.name} agregado`);
   }
 
@@ -657,11 +669,13 @@ export default class PosVenta implements OnInit {
   closeOptions(): void {
     this.optionsProduct.set(null);
     this.optionsVariant.set(null);
+    this.optionsBaseSizes.set(false);
   }
 
   /** Vuelve de la lista de tallas a la de variantes. */
   backToVariants(): void {
     this.optionsVariant.set(null);
+    this.optionsBaseSizes.set(false);
   }
 
   // ── Escáner ────────────────────────────────────────────────────────────────

@@ -2839,5 +2839,10 @@
   "{count} productos": "{count} produits",
   "Arrastra para ordenar": "Glissez pour réordonner",
   "Buscar por nombre, SKU o ID...": "Rechercher par nom, SKU ou ID...",
-  "Nueva columna": "Nouvelle colonne"
+  "Nueva columna": "Nouvelle colonne",
+  "ya devueltas": "déjà retournées",
+  "Esta venta ya fue devuelta por completo.": "Cette vente a déjà été entièrement retournée.",
+  "Historial de lo que se vendió en el mostrador y a quién.": "Historique de ce qui a été vendu au comptoir et à qui.",
+  "Devolución": "Retour",
+  "Sin cliente": "Sans client"
 }

@@ -68,12 +68,28 @@
 
       <section class="panel">
         <h3>{{ '¿Qué devolvés?' | transloco }}</h3>
+        @if (isLoadingLines()) {
+          <div class="loading">
+            <ui-icon name="loader-circle" styleClass="size-6 animate-spin" />
+            {{ 'Cargando…' | transloco }}
+          </div>
+        }
+        @if (fullyReturned()) {
+          <p class="hint">
+            <ui-icon name="circle-check" styleClass="size-4" />
+            {{ 'Esta venta ya fue devuelta por completo.' | transloco }}
+          </p>
+        }
         <ul class="items">
           @for (l of lines(); track l.item.productId + (l.item.variantId ?? '') + (l.item.size ?? '') + $index) {
             <li class="item" [class.off]="l.qty === 0">
               <div class="item-info">
                 <span class="item-name">{{ l.label }}</span>
-                <span class="muted">{{ money(l.item.price) }} {{ 'c/u' | transloco }} · {{ 'vendidas' | transloco }} {{ l.maxQty }}</span>
+                <span class="muted">{{ money(l.item.price) }} {{ 'c/u' | transloco }} · {{ 'vendidas' | transloco }} {{ l.soldQty }}
+                  @if (l.returnedQty > 0) {
+                    · {{ 'ya devueltas' | transloco }} {{ l.returnedQty }}
+                  }
+                </span>
               </div>
               <div class="stepper">
                 <button (click)="decLine($index)" [disabled]="l.qty === 0">

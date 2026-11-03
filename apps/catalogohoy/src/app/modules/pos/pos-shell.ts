@@ -103,6 +103,7 @@ export default class PosShell implements OnInit {
 
   readonly nav: RailItem[] = [
     { label: 'Venta', icon: 'shopping-cart', link: '/pos', exact: true },
+    { label: 'Ventas', icon: 'receipt', link: '/pos/ventas', exact: false },
     { label: 'Movimientos', icon: 'dollar-sign', link: '/pos/movimientos', exact: false },
     { label: 'Devoluciones', icon: 'rotate-ccw', link: '/pos/devoluciones', exact: false },
     { label: 'Caja', icon: 'wallet', link: '/pos/caja', exact: false },
