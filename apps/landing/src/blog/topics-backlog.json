@@ -1,7 +1,6 @@
 {
   "_doc": "Backlog de temas del blog para la rutina diaria de contenido. La rutina toma SIEMPRE el primer tema de 'queue', escribe el artículo siguiendo src/blog/PLAYBOOK.md, lo registra y lo mueve a 'published' con la fecha. Orden = prioridad (intención de lead primero).",
   "queue": [
-    { "slug": "como-vender-por-whatsapp-en-venezuela-2026", "category": "por-pais", "keyword": "como vender por whatsapp en venezuela", "angulo": "Serie país x intención: pago móvil/Zelle, tasa BCV automática, estados de WhatsApp, delivery en moto. Enlazar la guía de catálogo de Venezuela." },
     { "slug": "como-vender-por-whatsapp-en-colombia-2026", "category": "por-pais", "keyword": "como vender por whatsapp en colombia", "angulo": "Nequi/Daviplata, contraentrega como gancho, Servientrega; enlazar guía de catálogo de Colombia." },
     { "slug": "como-vender-por-whatsapp-en-mexico-2026", "category": "por-pais", "keyword": "como vender por whatsapp en mexico", "angulo": "SPEI/OXXO/Mercado Pago, mayoreo y detal; enlazar guía de catálogo de México." },
     { "slug": "catalogo-digital-para-floristerias-2026", "category": "por-rubro", "keyword": "catalogo digital para floristeria", "angulo": "Pedidos con fecha/hora de entrega (feature estrella), arreglos personalizados, fechas pico (San Valentín, Día de la Madre)." },
@@ -28,6 +27,7 @@
     { "slug": "catalogo-digital-para-mayoristas-y-distribuidoras-2026", "date": "2026-10-09" },
     { "slug": "catalogo-digital-para-ferreterias-2026", "date": "2026-10-09" },
     { "slug": "menu-digital-para-restaurantes-y-comida-2026", "date": "2026-10-09" },
-    { "slug": "catalogo-digital-para-perfumerias-y-cosmeticos-2026", "date": "2026-10-09" }
+    { "slug": "catalogo-digital-para-perfumerias-y-cosmeticos-2026", "date": "2026-10-09" },
+    { "slug": "como-vender-por-whatsapp-en-venezuela-2026", "date": "2026-11-03" }
   ]
 }
