@@ -20,7 +20,7 @@ import { uploadToS3 } from "../_shared/s3.ts";
 // POST con x-webhook-secret (Vault `newsletter_cron_secret`), body
 // { action: "auto_draft", kind: "weekly"|"monthly" } → el cron de los domingos
 // y del día 1 arma el BORRADOR del período con Claude a partir de los commits
-// de main en GitHub (repo público) y le manda una prueba a Nicolas. No envía a
+// de main en GitHub (repo público) y le manda una prueba a Nicolas (nicolas@catalogohoy.com). No envía a
 // clientes: eso sigue siendo Aprobar + Enviar en el panel.
 // GET/POST ?u=<email>&t=<token> → baja de la newsletter (link del pie y
 // List-Unsubscribe one-click). Sin sesión: el token es un HMAC del correo.
@@ -33,7 +33,7 @@ const FROM = "CatalogoHoy <novedades@catalogohoy.com>";
 const REPLY_TO = "nicolas@catalogohoy.com";
 const LOGIN_URL = "https://auth.catalogohoy.com";
 const PUBLIC_FN_URL = "https://api.catalogohoy.com/functions/v1/send-newsletter";
-const ADMIN_EMAIL = "nicaso3006@gmail.com";
+const ADMIN_EMAIL = "nicolas@catalogohoy.com";
 const GITHUB_REPO = "NicolasAvailable/catalogohoy_frontend";
 const MODEL = "claude-opus-5-5";
 const APP_STORE_URL = "https://apps.apple.com/us/app/catalogohoy-cat%C3%A1logo-y-ventas/id6817059692?l=es-MX";
