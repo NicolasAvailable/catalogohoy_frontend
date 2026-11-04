@@ -119,3 +119,23 @@ button {
 :host ::ng-deep .order-status-select-compact .p-select-dropdown {
   display: none;
 }
+
+/* Móvil: orden y fecha solo con icono, en la fila del buscador. */
+@media (max-width: 767.98px) {
+  :host ::ng-deep .order-sort-select .p-select-dropdown {
+    display: none;
+  }
+
+  :host ::ng-deep .order-sort-select .p-select-label {
+    padding-inline: 0.7rem;
+  }
+
+  :host ::ng-deep .order-filter-datepicker-compact .p-datepicker-input {
+    color: transparent !important;
+    padding-inline: 0 !important;
+  }
+
+  :host ::ng-deep .order-filter-datepicker-compact .p-datepicker-input::placeholder {
+    color: transparent !important;
+  }
+}
