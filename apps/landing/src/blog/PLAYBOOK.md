@@ -22,6 +22,13 @@ de un comerciante de LATAM y lo lleva a crear su catálogo gratis.
    - El HTML prerenderizado del artículo existe en `dist/blog/...` con JSON-LD
      Article + FAQPage + BreadcrumbList.
    - Cero voseo (podés/tenés/querés/armá/compartí) y cero españolismos.
+   - Imágenes: cada `{ type: "img", src }` y `coverImage` debe existir en
+     `public/` **con su `.webp` al lado** (mismo nombre). El blog sirve la
+     imagen con `<picture><source type="image/webp">` y si el `.webp` no existe
+     el navegador la muestra ROTA (no cae al `.jpg`). Genera el `.webp` con
+     Pillow: `Image.open(f).save(f[:-4] + ".webp", "WEBP", quality=82)`.
+     Lo verifican `npx vitest run` (test `blog-images`) y el prerender (el
+     build falla si falta alguna). No uses URLs externas para imágenes.
    - Precios correctos (ver "Datos del producto").
 7. Commit + push a la rama `landing` (eso deploya). Mensaje:
    `feat(blog): {titulo corto} (rutina diaria)`.

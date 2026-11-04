@@ -38,6 +38,30 @@ await build({
 const { ARTICLES, CATEGORIES } = await import(tmpFile);
 await rm(tmpFile);
 
+// ---- 1b. Validar imágenes: cada <img>/coverImage del blog necesita el
+// archivo original Y su .webp en public/. El renderer pone un
+// <source type="image/webp"> y el navegador NO cae al .jpg si el .webp da
+// 404: la imagen sale rota (pasó con las novedades de octubre 2026).
+// Si falta algo, el build falla en vez de publicar imágenes rotas.
+{
+  const { existsSync } = await import("node:fs");
+  const PUBLIC = path.join(ROOT, "public");
+  const missing = [];
+  for (const a of ARTICLES) {
+    const srcs = a.blocks.filter((b) => b.type === "img").map((b) => b.src);
+    if (a.coverImage) srcs.push(a.coverImage);
+    for (const src of srcs) {
+      if (/^https?:\/\//.test(src)) continue;
+      const files = [src];
+      if (/\.(jpe?g|png)$/.test(src)) files.push(src.replace(/\.(jpe?g|png)$/, ".webp"));
+      for (const f of files) if (!existsSync(path.join(PUBLIC, f))) missing.push(`${a.slug}: ${f}`);
+    }
+  }
+  if (missing.length) {
+    throw new Error(`[prerender-blog] Faltan imágenes del blog en public/ (agrega el archivo y su .webp):\n  ${missing.join("\n  ")}`);
+  }
+}
+
 const esc = (s) =>
   s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 
