@@ -136,11 +136,11 @@
       </div>
 
       <!-- Filter Tabs -->
-      <div class="flex items-center gap-2 min-w-0 flex-1 md:justify-end">
+      <div class="flex flex-wrap md:flex-nowrap items-center gap-2 min-w-0 flex-1 md:justify-end">
         @if (viewMode() === 'list') {
         <!-- Estados: carrusel con flechas cuando no caben (como las
-             categorías del catálogo público) -->
-        <div class="relative min-w-0 flex items-center">
+             categorías del catálogo público). En móvil ocupa su propia fila. -->
+        <div class="relative min-w-0 flex items-center w-full md:w-auto">
           @if (chipsCanLeft()) {
           <button
             type="button"
@@ -187,7 +187,7 @@
         </div>
         }
         @if (viewMode() === 'list') {
-        <div class="w-px h-6 bg-grey-100 mx-1"></div>
+        <div class="hidden md:block w-px h-6 bg-grey-100 mx-1"></div>
         <!-- Order Select -->
         <ui-select
           [options]="orderOptions"
@@ -285,8 +285,10 @@
               <a [href]="getWhatsAppLink(order.phone)" target="_blank" class="text-green-600 font-medium">{{ order.phone }}</a>
             </div>
             }
-            <div class="flex items-center gap-1">
+            <div class="flex flex-wrap items-center gap-x-1.5 gap-y-1">
               <span class="text-grey-800 font-bold">{{ 'Estado:' | transloco }} </span>
+              <!-- Móvil: el chevron va dentro de la pastilla (sin trigger
+                   suelto de PrimeNG) para que la fila no se descuadre. -->
               <ui-select
                 [options]="statusSelectOptions(order)"
                 [ngModel]="statusKey(order)"
@@ -294,12 +296,13 @@
                 optionLabel="label"
                 optionValue="value"
                 size="small"
-                styleClass="order-status-select"
+                styleClass="order-status-select order-status-select-compact"
               >
                 <ng-template selectSelectedItem let-selected>
                   <span [class]="getStatusBadgeClass()">
                     <span [class]="getStatusDotClass()" [style.background-color]="statusColor(statusKey(order))"></span>
                     {{ statusLabel(order) | transloco }}
+                    <ui-icon name="chevron-down" styleClass="size-3 text-grey-400 -mr-0.5" />
                   </span>
                 </ng-template>
                 <ng-template selectItem let-item>

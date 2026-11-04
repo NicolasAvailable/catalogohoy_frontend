@@ -104,3 +104,18 @@ button {
   background: transparent !important;
   box-shadow: none !important;
 }
+
+/* Móvil: el select de estado se ajusta a la pastilla (sin ancho mínimo ni
+   trigger aparte; el chevron va dentro de la pastilla). */
+:host ::ng-deep .order-status-select-compact {
+  min-width: 0;
+  width: auto;
+}
+
+:host ::ng-deep .order-status-select-compact .p-select-label {
+  padding: 0;
+}
+
+:host ::ng-deep .order-status-select-compact .p-select-dropdown {
+  display: none;
+}
