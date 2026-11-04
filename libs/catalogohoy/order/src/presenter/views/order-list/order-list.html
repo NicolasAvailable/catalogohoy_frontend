@@ -223,16 +223,18 @@
         <div class="hidden md:block w-px h-6 bg-grey-100 mx-1"></div>
         }
         <!-- Date Filter (en móvil solo el icono hasta elegir fecha) -->
-        <ui-datepicker
-          (ngModelChange)="onDateChange($event)"
-          [(ngModel)]="selectedDate"
-          [showClear]="true"
-          dateFormat="dd/mm/yy"
-          mode="single"
-          size="small"
-          [placeholder]="'Seleccionar fecha' | transloco"
-          [styleClass]="'order-filter-datepicker ' + (selectedDate() ? 'w-40' : 'order-filter-datepicker-compact w-10 md:w-40')"
-        />
+        <div [class]="selectedDate() ? 'w-40' : 'order-filter-datepicker-compact w-9 md:w-40'">
+          <ui-datepicker
+            (ngModelChange)="onDateChange($event)"
+            [(ngModel)]="selectedDate"
+            [showClear]="true"
+            dateFormat="dd/mm/yy"
+            mode="single"
+            size="small"
+            [placeholder]="'Seleccionar fecha' | transloco"
+            styleClass="w-full order-filter-datepicker"
+          />
+        </div>
       </div>
     </div>
 
