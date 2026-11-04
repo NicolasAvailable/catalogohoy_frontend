@@ -130,9 +130,26 @@ button {
     padding-inline: 0.7rem;
   }
 
+  /* Cajita del tamaño del botón de orden: el contenedor fija el ancho y el
+     datepicker/input lo llenan (sin el ancho intrínseco del input). */
+  :host ::ng-deep .order-filter-datepicker-compact ui-datepicker,
+  :host ::ng-deep .order-filter-datepicker-compact .p-datepicker,
+  :host ::ng-deep .order-filter-datepicker-compact .p-datepicker-input {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
   :host ::ng-deep .order-filter-datepicker-compact .p-datepicker-input {
     color: transparent !important;
     padding-inline: 0 !important;
+  }
+
+  :host ::ng-deep .order-filter-datepicker-compact .p-datepicker-input-icon-container {
+    inset-inline-end: 50% !important;
+    transform: translate(50%, -50%) !important;
+    top: 50% !important;
+    margin-top: 0 !important;
   }
 
   :host ::ng-deep .order-filter-datepicker-compact .p-datepicker-input::placeholder {
