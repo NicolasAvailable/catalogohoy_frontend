@@ -116,6 +116,21 @@ async function sendImage(to: string, link: string, caption?: string): Promise<st
 }
 
 const isWaImage = (url: string) => /\.(jpe?g|png)(\?|$)/i.test(url);
+/** Misma regla que el panel (libs/shared/domain media-type.ts): fotos y videos
+ *  van juntos en products.photos y el catálogo distingue por la extensión. */
+const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|ogv)(?:\?|$|#)/i.test(url);
+/** "1 foto", "3 fotos", "2 fotos y 1 video"… (con `the`: "la foto", "el video"). */
+function mediaCount(urls: string[], the = false): string {
+  const vids = urls.filter(isVideoUrl).length;
+  const pics = urls.length - vids;
+  if (the && urls.length === 1) return vids ? "el video" : "la foto";
+  const parts: string[] = [];
+  if (pics) parts.push(`${pics} foto${pics === 1 ? "" : "s"}`);
+  if (vids) parts.push(`${vids} video${vids === 1 ? "" : "s"}`);
+  return parts.join(" y ");
+}
+/** Fotos primero y videos al final: la portada (photos[0]) siempre es una foto. */
+const imagesFirst = (urls: string[]) => [...urls.filter((u) => !isVideoUrl(u)), ...urls.filter(isVideoUrl)];
 
 /** Descripción HTML del panel → texto con formato de WhatsApp. */
 function htmlToWa(html: string): string {
@@ -1261,7 +1276,7 @@ async function buildOrderItems(tenantId: number, raw: any[]): Promise<{ items?: 
     const price = r.price !== undefined ? Number(r.price) || 0 : catalogPrice;
     items.push({
       sku: (variant?.sku ?? p.sku) || null, name: p.name, size,
-      photo: (variant?.photos ?? p.photos ?? [])[0] ?? null,
+      photo: ((variant?.photos ?? p.photos ?? []) as string[]).find((u) => !isVideoUrl(u)) ?? null,
       price, total: Math.round(price * quantity * 100) / 100, addons: null, quantity,
       productId: p.id, isCustom: false, tierTitle: null,
       variantId: variant?.id ?? null, variantName: variant?.name ?? null,
@@ -1324,7 +1339,7 @@ function buildVariants(ctx: Ctx, input: any[], current: any[] = []): Record<stri
   return input.filter((v) => String(v?.name ?? "").trim()).map((v) => {
     const name = String(v.name).trim();
     const prev = current.find((x) => String(x?.name ?? "").trim().toLowerCase() === name.toLowerCase());
-    const photos = Array.isArray(v.photo_numbers) && v.photo_numbers.length ? pickPhotos(ctx, v.photo_numbers) : (prev?.photos ?? []);
+    const photos = Array.isArray(v.photo_numbers) && v.photo_numbers.length ? imagesFirst(pickPhotos(ctx, v.photo_numbers)) : (prev?.photos ?? []);
     return {
       id: prev?.id ?? crypto.randomUUID(),
       sku: prev?.sku ?? null,
@@ -1693,7 +1708,7 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       const variantNums = (Array.isArray(a.variants) ? a.variants : []).flatMap((v: { photo_numbers?: unknown }) =>
         Array.isArray(v?.photo_numbers) ? v.photo_numbers : []);
       const photoNums = Array.isArray(a.photo_numbers) && a.photo_numbers.length ? a.photo_numbers : variantNums;
-      const photos = a.use_pending_photos === false ? [] : pickPhotos(ctx, photoNums);
+      const photos = a.use_pending_photos === false ? [] : imagesFirst(pickPhotos(ctx, photoNums));
       const variantFields = Array.isArray(a.variants)
         ? { variants: buildVariants(ctx, a.variants), is_variant: a.variants.length > 0 }
         : {};
@@ -1710,7 +1725,12 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       if (error) return { error: error.message };
       const cats = await ownCategoryIds(tenantId, a.category_ids);
       if (cats.length) await relinkCategories(data.id, cats);
-      return { created: true, product: { ...data, photos: data.photos?.length ?? 0 }, ...productLinks(ctx.shopUrl, data.id) };
+      const media = (data.photos ?? []) as string[];
+      return {
+        created: true,
+        product: { ...data, photos: media.filter((u) => !isVideoUrl(u)).length, videos: media.filter(isVideoUrl).length },
+        ...productLinks(ctx.shopUrl, data.id),
+      };
     }
     case "update_product": {
       const { data: current } = await admin.from("products").select("id, photos, variants")
@@ -1722,7 +1742,7 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       const wantsPhotos = a.add_pending_photos || a.replace_photos || (Array.isArray(a.photo_numbers) && a.photo_numbers.length);
       if (wantsPhotos && ctx.pendingPhotos.length) {
         const picked = pickPhotos(ctx, a.photo_numbers);
-        payload.photos = a.replace_photos ? picked : [...(current.photos ?? []), ...picked.filter((u) => !(current.photos ?? []).includes(u))];
+        payload.photos = imagesFirst(a.replace_photos ? picked : [...(current.photos ?? []), ...picked.filter((u) => !(current.photos ?? []).includes(u))]);
       }
       if (Array.isArray(a.variants)) {
         payload.variants = buildVariants(ctx, a.variants, current.variants ?? []);
@@ -2160,6 +2180,11 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       }
       const badSetting = badPhotoNumbers(ctx, [a.logo_photo_number, a.banner_photo_number].filter((n) => n !== undefined));
       if (badSetting.length) return { error: `No existe la foto ${badSetting.join(", ")}. Hay ${ctx.pendingPhotos.length} foto(s) pendiente(s).` };
+      const logoUrl = wantsLogo ? ctx.pendingPhotos[Number(a.logo_photo_number ?? 1) - 1] : null;
+      const bannerUrl = wantsBanner ? ctx.pendingPhotos[Number(a.banner_photo_number ?? (wantsLogo && ctx.pendingPhotos[1] ? 2 : 1)) - 1] : null;
+      if ((logoUrl && isVideoUrl(logoUrl)) || (bannerUrl && isVideoUrl(bannerUrl))) {
+        return { error: "Ese archivo es un video: el logo y el banner tienen que ser una foto." };
+      }
       if (wantsLogo) {
         patch.logo = pickPhotos(ctx, [a.logo_photo_number ?? 1])[0];
         changed.push("logo");
@@ -2562,6 +2587,7 @@ Reglas:
 - Para ver varios productos usa get_product con ids o list_products con include_description, no muchas llamadas sueltas.
 - Si te dan nombre y precio, crea el producto directo, sin pedir confirmación. Si falta el precio, pregúntalo. Si hay fotos pendientes, úsalas en el producto que crees o edites.
 - Las fotos pendientes vienen numeradas (Foto 1, Foto 2…). Si son de productos distintos, asigna cada una a su producto con photo_numbers en create_product / update_product (puedes hacer varias llamadas en el mismo turno). NUNCA le pidas al dueño que reenvíe las fotos una por una: míralas y repártelas tú. Si de verdad no puedes saber de qué producto es una foto, pregunta solo por esa ("¿la Foto 3 es la crema o la azul?"). Las repetidas o que ya no sirven, descártalas con discard_photos.
+- Los productos SÍ pueden llevar videos. Un video que manda el dueño queda en la lista de fotos pendientes (marcado [VIDEO]) y se agrega igual que una foto: photo_numbers en create_product / update_product. No puedes ver el video: si no está claro de qué producto es, usa el contexto de la conversación (lo último que se creó o mencionó) o pregunta. Nunca digas que los productos solo llevan fotos. El logo y el banner sí tienen que ser fotos.
 - Si un producto viene en opciones con precios distintos (medidas, capacidades, colores que cuestan distinto), usa variants [{name, price}] en un solo producto. Las tallas (sizes) son para opciones con el mismo precio. Nunca digas que una variante no puede tener su propio precio.
 - Siempre que crees o edites un producto, termina la respuesta con sus dos links (vienen en public_url y admin_url): "🔗 Ver en tu catálogo: …" y "⚙️ Editar en el panel: …".
 - Si ves la foto y no te dieron descripción, escribe una descripción corta y vendedora basada en la foto.
@@ -2720,10 +2746,14 @@ async function runAgent(
   const today = new Date().toLocaleDateString("es-VE", { timeZone: "America/Caracas", dateStyle: "full" });
   // Cada foto va con su número para que el modelo pueda asignar cada una a su producto.
   const firstVisible = Math.max(0, ctx.pendingPhotos.length - MAX_VISIBLE_PHOTOS);
-  const photoBlocks: Anthropic.Beta.BetaContentBlockParam[] = ctx.pendingPhotos.slice(firstVisible).flatMap((url, i) => [
-    { type: "text" as const, text: `Foto ${firstVisible + i + 1}:` },
-    { type: "image" as const, source: { type: "url" as const, url } },
-  ]);
+  // Los videos no se le pueden mostrar al modelo: van como texto con su número.
+  const photoBlocks: Anthropic.Beta.BetaContentBlockParam[] = ctx.pendingPhotos.slice(firstVisible).flatMap((url, i) =>
+    isVideoUrl(url)
+      ? [{ type: "text" as const, text: `Foto ${firstVisible + i + 1}: [VIDEO del producto. No puedes verlo; va en el producto como cualquier foto.]` }]
+      : [
+        { type: "text" as const, text: `Foto ${firstVisible + i + 1}:` },
+        { type: "image" as const, source: { type: "url" as const, url } },
+      ]);
   const recent = await recentOrders(link.tenant_id);
   const context =
     `[Tienda: ${shopName}${shopUrl ? ` · ${shopUrl}` : ""} · Hoy: ${today}` +
@@ -2909,15 +2939,27 @@ async function handleInbound(m: any) {
   const mediaPrefix = `chat-media/${link.tenant_id}/bot-`;
   // Una foto mandada como archivo se trata igual que una foto normal.
   const imageDoc = m.type === "document" && /^image\/(jpe?g|png|webp)/.test(m.document?.mime_type ?? "");
-  if ((m.type === "image" && m.image?.id) || imageDoc) {
-    const media = m.image ?? m.document;
-    const url = await storeMedia(media.id, media.mime_type ?? "", "multimedia/wa_");
+  // Un video MP4 (lo normal en WhatsApp) entra en la misma fila que las fotos:
+  // se agrega al producto igual que una foto (el catálogo ya muestra videos).
+  const productVideo = (m.type === "video" && m.video?.id) || (m.type === "document" && /^video\/mp4/.test(m.document?.mime_type ?? ""));
+  if ((m.type === "image" && m.image?.id) || imageDoc || productVideo) {
+    const media = productVideo ? (m.video ?? m.document) : (m.image ?? m.document);
+    const isVid = !!productVideo;
+    // WhatsApp a veces manda 3GP; el catálogo solo reproduce MP4.
+    const mime = isVid ? "video/mp4" : media.mime_type ?? "";
+    if (isVid && media.mime_type && !/mp4/.test(media.mime_type)) {
+      const note = "Ese video viene en un formato que el catálogo no puede mostrar 😕 ¿Me lo mandas grabado con la cámara normal (MP4)?";
+      await sendText(phone, note);
+      await logMsg(link.tenant_id, phone, "assistant", note);
+      return;
+    }
+    const url = await storeMedia(media.id, mime, "multimedia/wa_");
     if (!url) {
-      await sendText(phone, "No pude descargar la foto 😕 ¿Me la reenvías?");
+      await sendText(phone, isVid ? "No pude descargar el video 😕 ¿Me lo reenvías?" : "No pude descargar la foto 😕 ¿Me la reenvías?");
       return;
     }
     await admin.rpc("wa_bot_push_photo", { p_phone: phone, p_tenant_id: link.tenant_id, p_url: url });
-    await logMsg(link.tenant_id, phone, "user", text, { media: [{ url, type: "image" }] });
+    await logMsg(link.tenant_id, phone, "user", text, { media: [{ url, type: isVid ? "video" : "image" }] });
     userLogged = true;
     if (text) {
       // Foto con texto: WhatsApp manda el resto de la ráfaga en mensajes aparte.
@@ -2936,10 +2978,10 @@ async function handleInbound(m: any) {
       if (last?.role === "user" && lastAgo < 60_000) return;
       if (lastAgo < CONTEXT_WINDOW_MS) {
         // Conversación en curso (ej. ya dio nombre y descripción): sigue con ella.
-        text = `[Mandó ${list.length === 1 ? "1 foto" : `${list.length} fotos`} sin texto. Úsalas según lo que venían conversando; ` +
+        text = `[Mandó ${mediaCount(list)} sin texto. Úsalas según lo que venían conversando; ` +
           "si no está claro qué hacer con ellas, pregúntale.]";
       } else {
-        const ack = `📸 Tengo ${list.length === 1 ? "la foto" : `${list.length} fotos`}. ¿Qué hago?\n` +
+        const ack = `📸 Tengo ${mediaCount(list, true)}. ¿Qué hago?\n` +
           "Ej: *Crea Zapato rojo, $25, stock 10* o *agrégalas al producto Zapato rojo*.";
         await sendText(phone, ack);
         await logMsg(link.tenant_id, phone, "assistant", ack);
@@ -2955,18 +2997,6 @@ async function handleInbound(m: any) {
       await logMsg(link.tenant_id, phone, "user", "", { media: userMedia });
       return;
     }
-  } else if (m.type === "video" && m.video?.id) {
-    const url = await storeMedia(m.video.id, m.video.mime_type ?? "", mediaPrefix);
-    if (url) userMedia.push({ url, type: "video" });
-    if (!text) {
-      const note = "Recibí tu video 🎬 Los productos por ahora solo llevan fotos, así que no lo puedo agregar. " +
-        "Si quieres, mándame una foto del producto o dime qué hago.";
-      await sendText(phone, note);
-      await logMsg(link.tenant_id, phone, "user", "", { media: userMedia });
-      await logMsg(link.tenant_id, phone, "assistant", note);
-      return;
-    }
-    text += "\n[El dueño mandó un video junto con este mensaje. Los productos solo admiten fotos: no se puede usar.]";
   } else if (m.type === "document" && m.document?.id) {
     const name = String(m.document.filename ?? "documento").slice(0, 120);
     const mime = m.document.mime_type ?? "";
@@ -3043,7 +3073,7 @@ async function handleInbound(m: any) {
       debug: { model: MODEL, ms: Date.now() - started, usage, cost_usd: costUsd(usage), balance_after: balance, tools: trace },
     });
 
-    const userNote = session.pending_photos.length ? `${text}\n[Envió ${session.pending_photos.length} foto(s)]` : text;
+    const userNote = session.pending_photos.length ? `${text}\n[Envió ${mediaCount(session.pending_photos)}]` : text;
     const assistantNote = actions.length ? `${reply}\n[Acciones: ${actions.join(" | ")}]` : reply;
     // Las fotos que no se usaron siguen pendientes (se re-lee por si llegaron más).
     // Solo salen de pendientes las que se usaron: el resto queda para el siguiente producto.
