@@ -18,7 +18,7 @@ catálogos de clientes de CatalogoHoy.
   revoked) y `api_request_log`. RLS on sin policies. RPCs `api_tokens_list`, `api_token_create` (devuelve el
   token en claro una sola vez), `api_token_revoke`, `api_request_log_list`: exigen owner/admin
   (`api_tenant_admin_user`).
-- **Panel**: `/admin/api` (`apps/catalogohoy/src/app/modules/api-access`), en el sidebar solo para el dueño.
+- **Panel**: pestaña **API** en Perfil (`/admin/profile?tab=api`, componente `libs/catalogohoy/profile/src/presenter/api-access`). Nicolas no la quiere en el menú lateral.
 
 ## Reglas de seguridad
 - Token `cht_` + 48 hex. El tenant sale SIEMPRE del token. Scopes: `{products,orders,settings,expenses}:{read,write}`,

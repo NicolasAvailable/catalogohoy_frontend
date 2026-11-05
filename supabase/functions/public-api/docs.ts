@@ -8,7 +8,7 @@ productos, categorías, órdenes, clientes, métricas, configuración y gastos.
 
 ## 1. Token de acceso
 
-El dueño (o un admin) de la tienda crea el token en **Ajustes → API** del panel:
+El dueño (o un admin) de la tienda crea el token en **Perfil → API** del panel:
 
 1. Le pone un nombre (ej. "Work by Agents").
 2. Elige los permisos (scopes) y, si quiere, una fecha de vencimiento.
@@ -122,7 +122,7 @@ el stock se mueve al crear/cancelar órdenes y los precios están en USD salvo q
 ## 6. Límites y registro
 
 - Máximo **120 llamadas por minuto** por token (\`429 rate_limited\`, header \`Retry-After\`).
-- Cada llamada queda registrada y el dueño la ve en **Ajustes → API → Actividad**.
+- Cada llamada queda registrada y el dueño la ve en **Perfil → API → Actividad**.
 
 ## 7. Códigos de error
 

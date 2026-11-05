@@ -8,7 +8,7 @@ import { DOCS_MD } from "./docs.ts";
 // public-api — API pública de CatalogoHoy (2026-11-05).
 //
 // Software externo (p. ej. agentes de IA de "Work by Agents") gestiona UNA
-// tienda con un token que crea el dueño en Ajustes → API (tabla api_tokens,
+// tienda con un token que crea el dueño en Perfil → API (tabla api_tokens,
 // migración 20261105_public_api_tokens.sql). Docs públicas: docs.ts (GET /docs).
 //
 // Rutas (después de /functions/v1/public-api):
@@ -183,7 +183,7 @@ async function authenticate(req: Request): Promise<Auth | Response> {
     .eq("token_hash", await sha256Hex(raw)).maybeSingle<TokenRow>();
   if (!token || token.revoked_at) return apiError(401, "invalid_token", "Token inválido o revocado.");
   if (token.expires_at && new Date(token.expires_at).getTime() < Date.now()) {
-    return apiError(401, "token_expired", "El token venció. Crea uno nuevo en Ajustes → API.");
+    return apiError(401, "token_expired", "El token venció. Crea uno nuevo en Perfil → API.");
   }
   // Quien creó el token tiene que seguir siendo owner/admin de la tienda.
   const [{ data: ut }, { data: user }, { data: tenant }] = await Promise.all([

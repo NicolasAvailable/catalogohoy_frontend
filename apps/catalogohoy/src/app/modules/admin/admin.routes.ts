@@ -138,11 +138,4 @@ export const adminRoutes: Route[] = [
     canActivate: [teamPermissionGuard('asistente', 'view')],
     loadComponent: () => import('@catalogohoy/home').then((m) => m.WhatsappBot),
   },
-  {
-    // API pública (tokens para software externo / agentes de IA). Las RPCs
-    // api_* exigen owner/admin; la vista muestra un aviso a los demás.
-    path: 'api',
-    title: 'API y agentes de IA',
-    loadComponent: () => import('../api-access/api-access'),
-  },
 ];

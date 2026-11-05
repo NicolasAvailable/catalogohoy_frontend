@@ -1,7 +1,7 @@
 -- =============================================================================
 -- API pública de CatalogoHoy (tokens por tienda) — 2026-11-05
 --
--- Cada tienda puede crear tokens de acceso (Ajustes → API) para que software
+-- Cada tienda puede crear tokens de acceso (Perfil → API) para que software
 -- externo (p. ej. agentes de IA como "Work by Agents") gestione SU catálogo.
 --   * El token se muestra una sola vez; en la DB solo queda su hash SHA-256.
 --   * Scopes por área (products/orders/customers/settings/expenses × read/write).

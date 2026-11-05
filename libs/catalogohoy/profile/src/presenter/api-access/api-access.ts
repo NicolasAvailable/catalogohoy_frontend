@@ -52,20 +52,20 @@ interface ApiLogRow {
 }
 
 /**
- * Ajustes → API: el dueño/admin crea tokens para que software externo (p. ej.
+ * Perfil → pestaña "API": el dueño/admin crea tokens para que software externo (p. ej.
  * agentes de IA de Work by Agents) gestione SU tienda vía la edge `public-api`.
  * El token se muestra una sola vez (en la DB queda solo el hash). Las RPCs
  * `api_*` validan owner/admin; ver migración 20261105_public_api_tokens.sql.
  */
 @Component({
-  selector: 'app-api-access',
+  selector: 'lib-api-access',
   imports: [DatePipe, FormsModule, TranslocoPipe, ButtonComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col gap-4 sm:gap-6 px-4 sm:px-6 pb-6 mt-4 max-w-5xl">
+    <div class="flex flex-col gap-4 sm:gap-6">
       <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h1 class="text-2xl sm:text-3xl font-bold text-grey-800 mb-1">{{ 'API y agentes de IA' | transloco }}</h1>
+          <h2 class="text-2xl font-bold text-grey-800 mb-1">{{ 'API y agentes de IA' | transloco }}</h2>
           <p class="text-sm sm:text-base text-grey-400">
             {{ 'Conecta otros programas o asistentes de IA para que gestionen tu tienda con un token de acceso.' | transloco }}
           </p>
@@ -269,7 +269,7 @@ interface ApiLogRow {
     </div>
   `,
 })
-export default class ApiAccessComponent implements OnInit {
+export class ApiAccessComponent implements OnInit {
   private readonly client = SupabaseClientProvider.getInstance();
   private readonly tenantStore = inject(TenantStore);
   private readonly toast = inject(ToastService);
