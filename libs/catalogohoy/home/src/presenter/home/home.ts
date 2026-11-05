@@ -24,7 +24,6 @@ import {
 import { HomeStore } from '../../infrastructure/home.store';
 import { CatalogProgress } from '../components/catalog-progress/catalog-progress';
 import { WhatsappBotBanner } from '../components/whatsapp-bot-banner/whatsapp-bot-banner';
-import { WhatsNew } from '../components/whats-new/whats-new';
 
 type ChartTab = 'ventas' | 'pedidos';
 type Currency = 'bs' | 'usd';
@@ -44,7 +43,6 @@ type Currency = 'bs' | 'usd';
     TranslocoPipe,
     CatalogProgress,
     WhatsappBotBanner,
-    WhatsNew,
   ],
   templateUrl: './home.html',
   styleUrls: ['./home.css'],

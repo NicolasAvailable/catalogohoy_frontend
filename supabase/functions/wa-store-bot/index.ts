@@ -50,6 +50,7 @@ const CREDIT_LOW = 20; // con este saldo o menos, se avisa en cada respuesta
 const HISTORY_MAX = 16;
 const MAX_AGENT_STEPS = 16;
 const PHOTO_ACK_DELAY_MS = 5000;
+const MAX_VISIBLE_PHOTOS = 10; // fotos pendientes que ve el modelo en cada mensaje (numeradas)
 const PHOTO_BURST_POLL_MS = 1500; // revisa si siguen llegando fotos de la misma ráfaga
 const PHOTO_BURST_MAX_MS = 15000;
 const CONTEXT_WINDOW_MS = 10 * 60_000; // fotos sin texto dentro de esta ventana siguen la conversación
@@ -440,8 +441,9 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "create_product",
     description:
-      "Crea un producto. Si hay fotos pendientes del chat y use_pending_photos no es false, se le asignan todas. " +
-      "Para tallas con stock usa sizes [{name, stock}] y no mandes stock.",
+      "Crea un producto. Fotos: photo_numbers elige cuáles de las fotos pendientes van (Foto 1, Foto 2…); sin photo_numbers " +
+      "se le asignan todas, y use_pending_photos=false no le pone ninguna. Para tallas con stock usa sizes [{name, stock}] y no mandes stock. " +
+      "Si las opciones tienen precios distintos usa variants (no sizes).",
     input_schema: {
       type: "object",
       properties: {
@@ -458,6 +460,19 @@ const TOOLS: Anthropic.Tool[] = [
           items: { type: "object", properties: { title: { type: "string" }, price: { type: "number" } } },
         },
         use_pending_photos: { type: "boolean" },
+        photo_numbers: { type: "array", items: { type: "number" }, description: "Números de las fotos pendientes a usar (Foto 1, Foto 2…). Omitir = todas." },
+        variants: {
+          type: "array",
+          description: "Variantes con precio propio (ej. medidas o colores que cuestan distinto): [{name:'36 cm', price:650}, {name:'40 cm', price:750}]. " +
+            "Reemplaza las variantes actuales; [] las quita. photo_numbers da a la variante su(s) foto(s).",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" }, price: { type: "number" }, stock: { type: "number", description: "Omitir = ilimitado" },
+              photo_numbers: { type: "array", items: { type: "number" } },
+            },
+          },
+        },
         is_hidden: { type: "boolean" },
       },
       required: ["name", "price"],
@@ -466,8 +481,9 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "update_product",
     description:
-      "Edita un producto (solo los campos enviados). add_pending_photos agrega las fotos pendientes del chat; " +
-      "replace_photos=true las usa en lugar de las actuales. category_ids reemplaza las categorías.",
+      "Edita un producto (solo los campos enviados). add_pending_photos agrega las fotos pendientes del chat (todas, o solo " +
+      "las de photo_numbers); replace_photos=true las usa en lugar de las actuales. category_ids reemplaza las categorías. " +
+      "variants reemplaza las variantes (cada una con su precio).",
     input_schema: {
       type: "object",
       properties: {
@@ -488,8 +504,31 @@ const TOOLS: Anthropic.Tool[] = [
         },
         add_pending_photos: { type: "boolean" },
         replace_photos: { type: "boolean" },
+        photo_numbers: { type: "array", items: { type: "number" }, description: "Números de las fotos pendientes a usar (Foto 1, Foto 2…). Omitir = todas." },
+        variants: {
+          type: "array",
+          description: "Variantes con precio propio (ej. medidas o colores que cuestan distinto): [{name:'36 cm', price:650}, {name:'40 cm', price:750}]. " +
+            "Reemplaza las variantes actuales; [] las quita. photo_numbers da a la variante su(s) foto(s).",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" }, price: { type: "number" }, stock: { type: "number", description: "Omitir = ilimitado" },
+              photo_numbers: { type: "array", items: { type: "number" } },
+            },
+          },
+        },
       },
       required: ["id"],
+    },
+  },
+  {
+    name: "discard_photos",
+    description:
+      "Descarta fotos pendientes del chat que ya no se van a usar (repetidas, equivocadas o que el dueño ya subió por el panel). " +
+      "photo_numbers = cuáles; omitir = todas.",
+    input_schema: {
+      type: "object",
+      properties: { photo_numbers: { type: "array", items: { type: "number" } } },
     },
   },
   {
@@ -702,7 +741,7 @@ const TOOLS: Anthropic.Tool[] = [
     name: "update_store_settings",
     description:
       "Cambia ajustes generales de la tienda. Manda solo los campos a cambiar. logo_from_photo / banner_from_photo usan la " +
-      "primera foto pendiente del chat. description es texto (se guarda como párrafos). theme_color en hex (#0f402c). " +
+      "primera foto pendiente del chat (o la de logo_photo_number / banner_photo_number). description es texto (se guarda como párrafos). theme_color en hex (#0f402c). " +
       "whatsapp_order_message admite {nombre} {telefono} {productos} {total} {totalBs} {envio} {direccion} {comentarios} {metodoPago} (máx. 1000). " +
       "social_links: solo las redes a cambiar; url vacía la oculta. product_currency / display_currency: código ISO (USD, VES, COP, EUR…).",
     input_schema: {
@@ -712,6 +751,8 @@ const TOOLS: Anthropic.Tool[] = [
         description: { type: "string" },
         logo_from_photo: { type: "boolean" },
         banner_from_photo: { type: "boolean" },
+        logo_photo_number: { type: "number" },
+        banner_photo_number: { type: "number" },
         remove_banner: { type: "boolean" },
         theme_color: { type: "string" },
         is_accepting_orders: { type: "boolean" },
@@ -889,6 +930,7 @@ const TOOLS: Anthropic.Tool[] = [
         due_date: { type: "string", description: "YYYY-MM-DD, solo si está por pagar" },
         notes: { type: "string" },
         attach_pending_photos: { type: "boolean" },
+        photo_numbers: { type: "array", items: { type: "number" }, description: "Números de las fotos pendientes a usar (Foto 1, Foto 2…). Omitir = todas." },
         attachment_urls: { type: "array", items: { type: "string" } },
       },
       required: ["supplier", "amount"],
@@ -918,6 +960,7 @@ const TOOLS: Anthropic.Tool[] = [
         paid_at: { type: "string" },
         notes: { type: "string" },
         attach_pending_photos: { type: "boolean" },
+        photo_numbers: { type: "array", items: { type: "number" }, description: "Números de las fotos pendientes a usar (Foto 1, Foto 2…). Omitir = todas." },
         attachment_urls: { type: "array", items: { type: "string" } },
       },
       required: ["id"],
@@ -934,8 +977,8 @@ interface Ctx {
   link: Link;
   shopUrl: string;
   pendingPhotos: string[];
-  /** Se vuelve true cuando una tool consumió las fotos pendientes. */
-  photosUsed: boolean;
+  /** Fotos pendientes que alguna tool ya usó (salen de pendientes al terminar). */
+  usedPhotos: Set<string>;
   /** Fotos que el bot mandó al chat (send_products), para el registro del panel. */
   sentMedia: Media[];
 }
@@ -1119,6 +1162,50 @@ async function findOrder(tenantId: number, a: Record<string, unknown>) {
   return data;
 }
 
+/**
+ * Fotos pendientes a usar: las de `nums` (1 = Foto 1 del mensaje) o todas si no
+ * se indican. Así cada foto de una ráfaga puede ir a un producto distinto.
+ */
+function pickPhotos(ctx: Ctx, nums?: unknown): string[] {
+  const list = Array.isArray(nums) && nums.length
+    ? [...new Set(nums.map(Number))].map((n) => ctx.pendingPhotos[n - 1]).filter((u): u is string => !!u)
+    : ctx.pendingPhotos;
+  list.forEach((u) => ctx.usedPhotos.add(u));
+  return [...list];
+}
+
+/** Números de foto fuera de rango (para avisarle al modelo en vez de ignorarlos). */
+function badPhotoNumbers(ctx: Ctx, ...groups: unknown[]): number[] {
+  const bad: number[] = [];
+  for (const g of groups) {
+    for (const n of Array.isArray(g) ? g.map(Number) : []) {
+      if (!Number.isInteger(n) || n < 1 || n > ctx.pendingPhotos.length) bad.push(n);
+    }
+  }
+  return bad;
+}
+
+/** variants [{name, price, stock?, photo_numbers?}] → formato de products.variants (conserva ids por nombre). */
+// deno-lint-ignore no-explicit-any
+function buildVariants(ctx: Ctx, input: any[], current: any[] = []): Record<string, unknown>[] {
+  return input.filter((v) => String(v?.name ?? "").trim()).map((v) => {
+    const name = String(v.name).trim();
+    const prev = current.find((x) => String(x?.name ?? "").trim().toLowerCase() === name.toLowerCase());
+    const photos = Array.isArray(v.photo_numbers) && v.photo_numbers.length ? pickPhotos(ctx, v.photo_numbers) : (prev?.photos ?? []);
+    return {
+      id: prev?.id ?? crypto.randomUUID(),
+      sku: prev?.sku ?? null,
+      name,
+      price: Number(v.price) || 0,
+      originalPrice: prev?.originalPrice ?? 0,
+      photos,
+      stock: v.stock === undefined || v.stock === null ? (prev?.stock ?? null) : Number(v.stock),
+      sizes: prev?.sizes ?? [],
+      isHidden: prev?.isHidden ?? false,
+    };
+  });
+}
+
 // deno-lint-ignore no-explicit-any
 function productFields(a: Record<string, any>): Record<string, unknown> {
   const p: Record<string, unknown> = {};
@@ -1248,9 +1335,8 @@ function expenseAttachments(a: Record<string, any>, ctx: Ctx, current: { url: st
       : ext === "xls" ? "application/vnd.ms-excel" : "application/octet-stream";
     out.push({ url, name, type });
   };
-  if (a.attach_pending_photos && ctx.pendingPhotos.length) {
-    ctx.pendingPhotos.forEach(add);
-    ctx.photosUsed = true;
+  if ((a.attach_pending_photos || (Array.isArray(a.photo_numbers) && a.photo_numbers.length)) && ctx.pendingPhotos.length) {
+    pickPhotos(ctx, a.photo_numbers).forEach(add);
   }
   for (const u of Array.isArray(a.attachment_urls) ? a.attachment_urls : []) add(String(u));
   return out.slice(0, 10);
@@ -1468,9 +1554,19 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       if (!String(a.name ?? "").trim()) return { error: "Falta el nombre" };
       const { data: maxRow } = await admin.from("products").select("position").eq("tenant_id", tenantId)
         .order("position", { ascending: false }).limit(1).maybeSingle();
-      const photos = a.use_pending_photos === false ? [] : ctx.pendingPhotos;
+      const bad = badPhotoNumbers(ctx, a.photo_numbers, ...(Array.isArray(a.variants) ? a.variants.map((v: { photo_numbers?: unknown }) => v?.photo_numbers) : []));
+      if (bad.length) return { error: `No existe la foto ${bad.join(", ")}. Hay ${ctx.pendingPhotos.length} foto(s) pendiente(s).` };
+      // Si solo las variantes traen fotos, el producto lleva esas mismas (no todas las pendientes).
+      const variantNums = (Array.isArray(a.variants) ? a.variants : []).flatMap((v: { photo_numbers?: unknown }) =>
+        Array.isArray(v?.photo_numbers) ? v.photo_numbers : []);
+      const photoNums = Array.isArray(a.photo_numbers) && a.photo_numbers.length ? a.photo_numbers : variantNums;
+      const photos = a.use_pending_photos === false ? [] : pickPhotos(ctx, photoNums);
+      const variantFields = Array.isArray(a.variants)
+        ? { variants: buildVariants(ctx, a.variants), is_variant: a.variants.length > 0 }
+        : {};
       const payload = {
         ...productFields(a),
+        ...variantFields,
         price: Number(a.price) || 0,
         photos,
         tenant_id: tenantId,
@@ -1479,19 +1575,25 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       };
       const { data, error } = await admin.from("products").insert(payload).select("id, name, price, stock, photos").single();
       if (error) return { error: error.message };
-      if (photos.length) ctx.photosUsed = true;
       const cats = await ownCategoryIds(tenantId, a.category_ids);
       if (cats.length) await relinkCategories(data.id, cats);
       return { created: true, product: { ...data, photos: data.photos?.length ?? 0 }, ...productLinks(ctx.shopUrl, data.id) };
     }
     case "update_product": {
-      const { data: current } = await admin.from("products").select("id, photos")
+      const { data: current } = await admin.from("products").select("id, photos, variants")
         .eq("tenant_id", tenantId).eq("id", Number(a.id)).maybeSingle();
       if (!current) return { error: "Producto no encontrado en esta tienda" };
+      const bad = badPhotoNumbers(ctx, a.photo_numbers, ...(Array.isArray(a.variants) ? a.variants.map((v: { photo_numbers?: unknown }) => v?.photo_numbers) : []));
+      if (bad.length) return { error: `No existe la foto ${bad.join(", ")}. Hay ${ctx.pendingPhotos.length} foto(s) pendiente(s).` };
       const payload = productFields(a);
-      if ((a.add_pending_photos || a.replace_photos) && ctx.pendingPhotos.length) {
-        payload.photos = a.replace_photos ? ctx.pendingPhotos : [...(current.photos ?? []), ...ctx.pendingPhotos];
-        ctx.photosUsed = true;
+      const wantsPhotos = a.add_pending_photos || a.replace_photos || (Array.isArray(a.photo_numbers) && a.photo_numbers.length);
+      if (wantsPhotos && ctx.pendingPhotos.length) {
+        const picked = pickPhotos(ctx, a.photo_numbers);
+        payload.photos = a.replace_photos ? picked : [...(current.photos ?? []), ...picked.filter((u) => !(current.photos ?? []).includes(u))];
+      }
+      if (Array.isArray(a.variants)) {
+        payload.variants = buildVariants(ctx, a.variants, current.variants ?? []);
+        payload.is_variant = a.variants.length > 0;
       }
       if (Object.keys(payload).length) {
         const { error } = await admin.from("products").update(payload).eq("id", current.id).eq("tenant_id", tenantId);
@@ -1499,6 +1601,12 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       }
       if (Array.isArray(a.category_ids)) await relinkCategories(current.id, await ownCategoryIds(tenantId, a.category_ids));
       return { updated: true, id: current.id, changed: Object.keys(payload), ...productLinks(ctx.shopUrl, current.id) };
+    }
+    case "discard_photos": {
+      const bad = badPhotoNumbers(ctx, a.photo_numbers);
+      if (bad.length) return { error: `No existe la foto ${bad.join(", ")}. Hay ${ctx.pendingPhotos.length} foto(s) pendiente(s).` };
+      const gone = pickPhotos(ctx, a.photo_numbers);
+      return { discarded: gone.length, left: ctx.pendingPhotos.length - ctx.usedPhotos.size };
     }
     case "send_products": {
       const ids = (Array.isArray(a.product_ids) ? a.product_ids : []).map(Number).filter(Boolean).slice(0, 10);
@@ -1808,12 +1916,21 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       // deno-lint-ignore no-explicit-any
       const patch: Record<string, any> = {};
       const changed: string[] = [];
-      if ((a.logo_from_photo || a.banner_from_photo) && !ctx.pendingPhotos.length) {
+      const wantsLogo = a.logo_from_photo || a.logo_photo_number !== undefined;
+      const wantsBanner = a.banner_from_photo || a.banner_photo_number !== undefined;
+      if ((wantsLogo || wantsBanner) && !ctx.pendingPhotos.length) {
         return { error: "No hay foto pendiente: pídele que mande la imagen primero." };
       }
-      if (a.logo_from_photo) { patch.logo = ctx.pendingPhotos[0]; changed.push("logo"); }
-      if (a.banner_from_photo) { patch.banner = ctx.pendingPhotos[a.logo_from_photo && ctx.pendingPhotos[1] ? 1 : 0]; changed.push("banner"); }
-      if (a.logo_from_photo || a.banner_from_photo) ctx.photosUsed = true;
+      const badSetting = badPhotoNumbers(ctx, [a.logo_photo_number, a.banner_photo_number].filter((n) => n !== undefined));
+      if (badSetting.length) return { error: `No existe la foto ${badSetting.join(", ")}. Hay ${ctx.pendingPhotos.length} foto(s) pendiente(s).` };
+      if (wantsLogo) {
+        patch.logo = pickPhotos(ctx, [a.logo_photo_number ?? 1])[0];
+        changed.push("logo");
+      }
+      if (wantsBanner) {
+        patch.banner = pickPhotos(ctx, [a.banner_photo_number ?? (wantsLogo && ctx.pendingPhotos[1] ? 2 : 1)])[0];
+        changed.push("banner");
+      }
       if (a.remove_banner) { patch.banner = null; changed.push("banner"); }
       if (typeof a.description === "string") { patch.description = textToHtml(a.description.slice(0, 3000)); changed.push("descripción"); }
       if (typeof a.theme_color === "string") {
@@ -2171,7 +2288,7 @@ async function runTool(name: string, a: Record<string, any>, ctx: Ctx): Promise<
       }
       if ((patch.status ?? current.status) === "paid") { if (patch.status !== undefined || patch.paid_amount !== undefined) patch.paid_amount = 0; }
       else if (Number(patch.paid_amount ?? current.paid_amount ?? 0) > amount) return { error: "Lo abonado no puede ser mayor que el monto" };
-      if (a.attach_pending_photos || a.attachment_urls) patch.attachments = expenseAttachments(a, ctx, current.attachments ?? []);
+      if (a.attach_pending_photos || a.photo_numbers || a.attachment_urls) patch.attachments = expenseAttachments(a, ctx, current.attachments ?? []);
       if (!Object.keys(patch).length) return { error: "No hay cambios" };
       const { data, error } = await admin.from("tenant_expenses").update(patch)
         .eq("tenant_id", tenantId).eq("id", current.id).select(EXPENSE_COLS).single();
@@ -2207,6 +2324,8 @@ Reglas:
 - Cambios a varios productos a la vez (agregar, quitar o reemplazar un texto o aviso en las descripciones, ocultar/mostrar, marcar agotados, quitar ofertas, agregar o quitar una categoría): usa bulk_edit_products en UNA llamada, nunca update_product uno por uno. Para reemplazar un aviso que ya pusiste, copia el texto exacto que hay hoy (míralo con get_product de uno) en find. Revisa el resultado: si skipped trae productos que no tenían el texto, dilo.
 - Para ver varios productos usa get_product con ids o list_products con include_description, no muchas llamadas sueltas.
 - Si te dan nombre y precio, crea el producto directo, sin pedir confirmación. Si falta el precio, pregúntalo. Si hay fotos pendientes, úsalas en el producto que crees o edites.
+- Las fotos pendientes vienen numeradas (Foto 1, Foto 2…). Si son de productos distintos, asigna cada una a su producto con photo_numbers en create_product / update_product (puedes hacer varias llamadas en el mismo turno). NUNCA le pidas al dueño que reenvíe las fotos una por una: míralas y repártelas tú. Si de verdad no puedes saber de qué producto es una foto, pregunta solo por esa ("¿la Foto 3 es la crema o la azul?"). Las repetidas o que ya no sirven, descártalas con discard_photos.
+- Si un producto viene en opciones con precios distintos (medidas, capacidades, colores que cuestan distinto), usa variants [{name, price}] en un solo producto. Las tallas (sizes) son para opciones con el mismo precio. Nunca digas que una variante no puede tener su propio precio.
 - Siempre que crees o edites un producto, termina la respuesta con sus dos links (vienen en public_url y admin_url): "🔗 Ver en tu catálogo: …" y "⚙️ Editar en el panel: …".
 - Si ves la foto y no te dieron descripción, escribe una descripción corta y vendedora basada en la foto.
 - Para editar, busca primero el producto con list_products. Si hay varios parecidos, pregunta cuál.
@@ -2352,23 +2471,32 @@ async function runAgent(
   shopUrl: string,
   extraBlocks: Anthropic.Beta.BetaContentBlockParam[] = [],
   budget = Infinity,
-): Promise<{ reply: string; actions: string[]; logged: LoggedAction[]; trace: ToolTrace[]; usage: Usage; photosUsed: boolean; sentMedia: Media[]; outOfCredits: boolean }> {
-  const ctx: Ctx = { link, shopUrl, pendingPhotos: session.pending_photos, photosUsed: false, sentMedia: [] };
+): Promise<{ reply: string; actions: string[]; logged: LoggedAction[]; trace: ToolTrace[]; usage: Usage; usedPhotos: string[]; sentMedia: Media[]; outOfCredits: boolean }> {
+  const ctx: Ctx = { link, shopUrl, pendingPhotos: session.pending_photos, usedPhotos: new Set(), sentMedia: [] };
   const usage: Usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, tools: 0 };
   const actions: string[] = [];
   const logged: LoggedAction[] = [];
   const trace: ToolTrace[] = [];
 
   const today = new Date().toLocaleDateString("es-VE", { timeZone: "America/Caracas", dateStyle: "full" });
+  // Cada foto va con su número para que el modelo pueda asignar cada una a su producto.
+  const firstVisible = Math.max(0, ctx.pendingPhotos.length - MAX_VISIBLE_PHOTOS);
+  const photoBlocks: Anthropic.Beta.BetaContentBlockParam[] = ctx.pendingPhotos.slice(firstVisible).flatMap((url, i) => [
+    { type: "text" as const, text: `Foto ${firstVisible + i + 1}:` },
+    { type: "image" as const, source: { type: "url" as const, url } },
+  ]);
   const recent = await recentOrders(link.tenant_id);
   const context =
     `[Tienda: ${shopName}${shopUrl ? ` · ${shopUrl}` : ""} · Hoy: ${today}` +
     (shopUrl ? ` · Planes: ${shopUrl}/admin/plans` : "") +
-    (ctx.pendingPhotos.length ? ` · Fotos pendientes en el chat: ${ctx.pendingPhotos.length}` : "") +
+    (ctx.pendingPhotos.length
+      ? ` · Fotos pendientes en el chat: ${ctx.pendingPhotos.length} (numeradas Foto 1…${ctx.pendingPhotos.length}` +
+        (ctx.pendingPhotos.length > MAX_VISIBLE_PHOTOS ? `; ves de la ${firstVisible + 1} en adelante` : "") + ")"
+      : "") +
     (Number.isFinite(budget) ? ` · Saldo de créditos: ${budget}` : "") +
     (recent ? `\nÓrdenes recientes: ${recent}` : "") + "]";
   const userContent: Anthropic.Beta.BetaContentBlockParam[] = [
-    ...ctx.pendingPhotos.slice(-4).map((url) => ({ type: "image" as const, source: { type: "url" as const, url } })),
+    ...photoBlocks,
     ...extraBlocks,
     { type: "text", text: `${context}\n${userText}` },
   ];
@@ -2460,7 +2588,7 @@ async function runAgent(
 
   // Sin texto final: nunca "Listo" si no se hizo nada.
   if (!reply) reply = actions.length ? `Listo, hice ${actions.length} cambio(s).` : "No alcancé a terminar 😕 ¿Me lo repites?";
-  return { reply, actions, logged, trace, usage, photosUsed: ctx.photosUsed, sentMedia: ctx.sentMedia, outOfCredits };
+  return { reply, actions, logged, trace, usage, usedPhotos: [...ctx.usedPhotos], sentMedia: ctx.sentMedia, outOfCredits };
 }
 
 // ── Mensaje entrante ────────────────────────────────────────────────────────
@@ -2653,7 +2781,7 @@ async function handleInbound(m: any) {
   const session = await loadSession(phone, link.tenant_id);
   try {
     const started = Date.now();
-    const { reply, actions, logged, trace, usage, photosUsed, sentMedia, outOfCredits } =
+    const { reply, actions, logged, trace, usage, usedPhotos, sentMedia, outOfCredits } =
       await runAgent(link, session, text, shop.name, shop.url, extraBlocks, before);
     // Cobro según lo gastado (nunca más que el saldo que tenía).
     const credits = Math.min(creditsFor(usage), before);
@@ -2679,11 +2807,10 @@ async function handleInbound(m: any) {
     const userNote = session.pending_photos.length ? `${text}\n[Envió ${session.pending_photos.length} foto(s)]` : text;
     const assistantNote = actions.length ? `${reply}\n[Acciones: ${actions.join(" | ")}]` : reply;
     // Las fotos que no se usaron siguen pendientes (se re-lee por si llegaron más).
-    let pendingAfter: string[] = [];
-    if (!photosUsed) {
-      const { data: s } = await admin.from("wa_bot_sessions").select("pending_photos").eq("phone", phone).maybeSingle();
-      pendingAfter = (s?.pending_photos ?? []) as string[];
-    }
+    // Solo salen de pendientes las que se usaron: el resto queda para el siguiente producto.
+    const usedSet = new Set(usedPhotos);
+    const { data: s } = await admin.from("wa_bot_sessions").select("pending_photos").eq("phone", phone).maybeSingle();
+    const pendingAfter = ((s?.pending_photos ?? []) as string[]).filter((u) => !usedSet.has(u));
     await saveSession(phone, link.tenant_id, [
       ...session.history,
       { role: "user", content: userNote },
