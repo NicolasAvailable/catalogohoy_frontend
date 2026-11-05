@@ -36,8 +36,7 @@ import {
   SelectSelectedItemDirective,
   StackedDayChartComponent,
   TabHeader,
-  TooltipDirective,
-} from '@ui';
+  TooltipDirective, ModuleEmptyComponent } from '@ui';
 import { PlanStore } from '@catalogohoy/plan';
 import { OrderDetailModal } from '../../components/order-detail-modal/order-detail-modal';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
@@ -98,7 +97,7 @@ type MetricsPreset = 'today' | 'last_7' | 'last_30' | 'last_90' | 'custom';
 @Component({
   selector: 'lib-order-list',
   standalone: true,
-  imports: [
+  imports: [ModuleEmptyComponent,
     CommonModule,
     FormsModule,
     TranslocoPipe,
@@ -621,6 +620,10 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly selectedFilter = signal<OrderStatusKey | 'all'>('all');
   public readonly selectedOrder = signal<OrderBy>('date_desc');
   public readonly selectedDate = signal<Date | null>(null);
+  /** Hay búsqueda, fecha o filtro de estado activo (vacío = "sin resultados"). */
+  public readonly hasActiveFilter = computed(
+    () => !!this.searchQuery() || !!this.selectedDate() || this.selectedFilter() !== 'all'
+  );
   public readonly isProcessing = signal(false);
   // Id de la orden cuyo PDF se está generando (null = ninguna). Deshabilita su
   // botón de descarga y le muestra un spinner mientras dura.
