@@ -90,44 +90,39 @@
       </p>
 
       <ul class="report-create__metrics">
+        @for (m of metricOptions; track m.key) {
+          <li>
+            <div>
+              <strong>{{ m.label | transloco }}</strong>
+              <small>{{ m.hint | transloco }}</small>
+            </div>
+            <ui-toggle
+              [ngModel]="metrics()[m.key]"
+              (ngModelChange)="toggleMetric(m.key)"
+            />
+          </li>
+        }
+      </ul>
+    </ui-card>
+
+    <ui-card>
+      <h2 class="report-create__section-title">{{ 'Plantilla' | transloco }}</h2>
+      <ul class="report-create__metrics">
         <li>
           <div>
-            <strong>{{ 'Órdenes' | transloco }}</strong>
-            <small>{{ 'Total de órdenes y distribución por estado' | transloco }}</small>
+            <strong>{{ 'Guardar como plantilla' | transloco }}</strong>
+            <small>
+              @if (canSaveTemplate()) {
+                {{ 'Después lo generas de nuevo con un clic y datos actualizados (por ejemplo, cada mes). Los reportes anteriores se guardan.' | transloco }}
+              } @else {
+                {{ 'Elige un periodo que no sea personalizado (por ejemplo, Mes pasado) para poder repetirlo.' | transloco }}
+              }
+            </small>
           </div>
           <ui-toggle
-            [ngModel]="metrics().orders"
-            (ngModelChange)="toggleMetric('orders')"
-          />
-        </li>
-        <li>
-          <div>
-            <strong>{{ 'Ventas' | transloco }}</strong>
-            <small>{{ 'Total del periodo y evolución día a día' | transloco }}</small>
-          </div>
-          <ui-toggle
-            [ngModel]="metrics().sales"
-            (ngModelChange)="toggleMetric('sales')"
-          />
-        </li>
-        <li>
-          <div>
-            <strong>{{ 'Productos más vendidos' | transloco }}</strong>
-            <small>{{ 'Top 10 por unidades e ingresos generados' | transloco }}</small>
-          </div>
-          <ui-toggle
-            [ngModel]="metrics().topProducts"
-            (ngModelChange)="toggleMetric('topProducts')"
-          />
-        </li>
-        <li>
-          <div>
-            <strong>{{ 'Mejores clientes' | transloco }}</strong>
-            <small>{{ 'Top 10 por gasto total' | transloco }}</small>
-          </div>
-          <ui-toggle
-            [ngModel]="metrics().topCustomers"
-            (ngModelChange)="toggleMetric('topCustomers')"
+            [ngModel]="saveAsTemplate()"
+            (ngModelChange)="saveAsTemplate.set($event)"
+            [defaultDisabled]="!canSaveTemplate()"
           />
         </li>
       </ul>

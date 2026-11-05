@@ -9,7 +9,14 @@ import {
   shiftMonth,
   totalsByCategory,
   totalsByCurrency,
+  pendingAmount,
 } from './expense.model';
+import {
+  buildExpenseStatusDefs,
+  ExpenseStage,
+  expenseStatusKeyOf,
+  resolveExpenseStatusKey,
+} from './expense-stage';
 
 const base: Expense = {
   id: '1',
@@ -22,7 +29,9 @@ const base: Expense = {
   issueDate: '2026-10-05',
   dueDate: null,
   status: 'paid',
+  stageId: null,
   paidAt: null,
+  paidAmount: 0,
   attachments: [],
   notes: null,
   createdAt: '2026-10-05T00:00:00Z',
@@ -122,5 +131,29 @@ describe('expense.model', () => {
     );
     expect(r.series).toHaveLength(1);
     expect(r.series[0]).toMatchObject({ key: 'pending', name: 'Por pagar' });
+  });
+
+  it('abonos: lo abonado cuenta como pagado y el resto como por pagar', () => {
+    const [t] = totalsByCurrency([{ ...base, status: 'pending', amount: 100, paidAmount: 30 }], 'USD');
+    expect(t).toMatchObject({ total: 100, paid: 30, pending: 70 });
+    expect(pendingAmount({ ...base, status: 'pending', amount: 100, paidAmount: 30 })).toBe(70);
+    expect(pendingAmount({ ...base, status: 'paid', amount: 100, paidAmount: 30 })).toBe(0);
+  });
+
+  it('estados propios: defs, clave y gráfica por estado', () => {
+    const stage: ExpenseStage = {
+      id: 'abc', tenantId: 1, label: 'A crédito', color: '#3b82f6',
+      baseStatus: 'pending', position: 0, hidden: false, systemStatus: null,
+    };
+    const defs = buildExpenseStatusDefs([stage]);
+    expect(defs.map((d) => d.label)).toEqual(['Por pagar', 'A crédito', 'Pagada']);
+    const e = { ...base, status: 'pending' as const, stageId: 'abc' };
+    expect(expenseStatusKeyOf(e, defs)).toBe('stage:abc');
+    // Un stage que no coincide con el status cae al base.
+    expect(expenseStatusKeyOf({ ...e, status: 'paid' }, defs)).toBe('paid');
+    expect(resolveExpenseStatusKey('stage:abc', defs)).toEqual({ status: 'pending', stageId: 'abc' });
+    const r = dailyBreakdown([e], '2026-10', 'USD', 'status', defs);
+    expect(r.series).toHaveLength(1);
+    expect(r.series[0]).toMatchObject({ key: 'stage:abc', name: 'A crédito' });
   });
 });

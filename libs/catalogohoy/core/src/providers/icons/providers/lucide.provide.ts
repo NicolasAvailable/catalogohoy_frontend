@@ -95,6 +95,7 @@ import {
   LogOut,
   LucideAngularModule,
   Mail,
+  Newspaper,
   MapPin,
   Menu,
   Moon,
@@ -364,6 +365,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Trash2,
       LayoutList,
       SquareKanban,
+      Newspaper,
     })
   );
 };
