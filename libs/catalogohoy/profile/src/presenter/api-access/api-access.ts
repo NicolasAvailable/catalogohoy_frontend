@@ -277,7 +277,7 @@ export class ApiAccessComponent implements OnInit {
   public readonly areas = AREAS;
   public readonly apiBase = API_BASE;
   public readonly mcpUrl = `${API_BASE}/mcp`;
-  public readonly docsUrl = `${API_BASE}/docs`;
+  public readonly docsUrl = 'https://help.catalogohoy.com/api';
 
   public readonly loading = signal(true);
   public readonly forbidden = signal(false);

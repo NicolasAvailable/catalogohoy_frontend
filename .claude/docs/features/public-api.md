@@ -18,6 +18,7 @@ catálogos de clientes de CatalogoHoy.
   revoked) y `api_request_log`. RLS on sin policies. RPCs `api_tokens_list`, `api_token_create` (devuelve el
   token en claro una sola vez), `api_token_revoke`, `api_request_log_list`: exigen owner/admin
   (`api_tenant_admin_user`).
+- **Docs para desarrolladores**: https://help.catalogohoy.com/api (`apps/help/src/pages/ApiDocs.tsx`). Mantener al día con scopes/tools.
 - **Panel**: pestaña **API** en Perfil (`/admin/profile?tab=api`, componente `libs/catalogohoy/profile/src/presenter/api-access`). Nicolas no la quiere en el menú lateral.
 
 ## Reglas de seguridad

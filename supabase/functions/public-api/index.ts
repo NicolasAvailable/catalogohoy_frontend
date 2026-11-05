@@ -445,7 +445,7 @@ Deno.serve(async (req: Request) => {
     return json({
       name: "CatalogoHoy API",
       version: API_VERSION,
-      docs: "https://api.catalogohoy.com/functions/v1/public-api/docs",
+      docs: "https://help.catalogohoy.com/api",
       endpoints: ["GET /v1/me", "GET /v1/tools", "POST /v1/tools/{name}", "POST /mcp"],
     });
   }
