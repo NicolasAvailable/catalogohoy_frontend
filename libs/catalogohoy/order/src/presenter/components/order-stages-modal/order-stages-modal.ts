@@ -33,6 +33,7 @@ export function openOrderStagesEditor(
     dialogConfig({
       data: { quickCreate },
       showHeader: false,
+      focusOnShow: false,
       style: { width: '52rem', maxWidth: '95vw' },
       contentStyle: { padding: '0' },
     })
