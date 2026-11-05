@@ -631,15 +631,35 @@ export class Onboarding implements OnInit {
   public async createCategory(): Promise<void> {
     const name = this.newCategoryName().trim();
     if (!name || this.creatingCategory()) return;
+
+    // Si ya existe (p. ej. el usuario la volvió a escribir porque no la vio
+    // seleccionada), la seleccionamos en vez de chocar con el índice único
+    // categories_name_tenant_unique.
+    const existing = this.categories().find(
+      (c) => c.name.trim().toLowerCase() === name.toLowerCase()
+    );
+    if (existing) {
+      this.selectCategory(existing.id);
+      this.newCategoryName.set('');
+      return;
+    }
+
     this.creatingCategory.set(true);
     const result = await this.categoryStore.save({ name, isVisible: true });
     result
-      .mapRight(() => {
+      .mapRight((created) => {
+        if (created?.id) this.selectCategory(created.id);
         this.newCategoryName.set('');
         this.toast.success('Categoría creada');
       })
       .mapLeft((e: Error) => this.toast.error(e as unknown as Exception));
     this.creatingCategory.set(false);
+  }
+
+  private selectCategory(id: string): void {
+    this.productCategoryIds.update((ids) =>
+      ids.includes(id) ? ids : [...ids, id]
+    );
   }
 
   // ── Paso 2: producto ────────────────────────────────────────────────────
