@@ -87,8 +87,8 @@ color-picker, counter, qr, etc. + dominio `uploader` (drop-uploader).
 **Todd (mascota) y vistas vacías:** `ui-todd pose="…"` muestra a Todd (poses: thumbs-up, wave,
 running, celebrate, pointing, excel-pdf, phone, thinking, apps-idea; archivos en
 `apps/catalogohoy/public/images/todd/todd-<pose>.webp`). Para el estado vacío de un módulo usa
-`ui-module-empty` (estilo PostHog: Todd + título + frase + descripción + botones, y en pantallas
-anchas un panel con `previewRows` de datos de ejemplo). Con `[compact]="true"` sirve para
+`ui-module-empty` (todo centrado: Todd + título + frase + descripción + botones; Nicolas no quiere
+panel de ejemplo a la derecha ni ícono junto al título). Con `[compact]="true"` sirve para
 "búsqueda sin resultados" (pose `thinking`). Toda vista vacía nueva debe usarlo.
 
 ## Core (`@catalogohoy/core`)
