@@ -24,6 +24,7 @@ import { menuDigitalRestaurantes2026 } from "./articles/menu-digital-para-restau
 import { catalogoParaPerfumerias2026 } from "./articles/catalogo-digital-para-perfumerias-y-cosmeticos-2026";
 import { comoVenderPorWhatsappVenezuela2026 } from "./articles/como-vender-por-whatsapp-en-venezuela-2026";
 import { comoVenderPorWhatsappColombia2026 } from "./articles/como-vender-por-whatsapp-en-colombia-2026";
+import { comoVenderPorWhatsappMexico2026 } from "./articles/como-vender-por-whatsapp-en-mexico-2026";
 import { novedadesOctubre2026 } from "./articles/novedades-catalogohoy-octubre-2026";
 
 export const CATEGORIES: BlogCategory[] = [
@@ -76,6 +77,7 @@ const REGISTRY: BlogArticle[] = [
   // Novedades del producto (una por mes)
   novedadesOctubre2026,
   // Serie país x intención (2026-11)
+  comoVenderPorWhatsappMexico2026,
   comoVenderPorWhatsappColombia2026,
   comoVenderPorWhatsappVenezuela2026,
   // Guías por rubro (2026-10)
