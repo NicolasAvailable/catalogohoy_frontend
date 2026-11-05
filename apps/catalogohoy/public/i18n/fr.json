@@ -2768,6 +2768,8 @@
   "Mándale tu Excel, PDF o fotos al Asistente de WhatsApp y él crea los productos.": "Envoyez votre Excel, PDF ou photos à l'Assistant WhatsApp et il crée les produits.",
   "Mostrar stock": "Afficher le stock",
   "Tus clientes verán cuántas unidades quedan de cada producto.": "Vos clients verront combien d'unités il reste de chaque produit.",
+  "Ocultar productos agotados": "Masquer les produits épuisés",
+  "Los productos sin stock se ocultan solos del catálogo y vuelven a aparecer cuando les cargues unidades. Tu inventario no se borra.": "Les produits sans stock sont masqués automatiquement du catalogue et réapparaissent quand vous ajoutez des unités. Votre inventaire n'est pas supprimé.",
   "Orden alfabético": "Ordre alphabétique",
   "Tus clientes verán los productos ordenados de la A a la Z, en vez del orden manual.": "Vos clients verront les produits triés de A à Z au lieu de l'ordre manuel.",
   "Quedan {n}": "Plus que {n}",

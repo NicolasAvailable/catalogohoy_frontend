@@ -839,6 +839,27 @@
         </div>
       </ui-card>
 
+      <!-- Card: Ocultar productos agotados (toggle-only) -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon categories-icon">
+              <ui-icon name="eye-off" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ 'Ocultar productos agotados' | transloco }}</h2>
+              <small class="card-subtitle">
+                {{ 'Los productos sin stock se ocultan solos del catálogo y vuelven a aparecer cuando les cargues unidades. Tu inventario no se borra.' | transloco }}
+              </small>
+            </div>
+          </div>
+          <ui-toggle
+            [ngModel]="draftHideSoldOut()"
+            (ngModelChange)="draftHideSoldOut.set($event)"
+          ></ui-toggle>
+        </div>
+      </ui-card>
+
       <!-- Card: Orden alfabético (toggle-only) -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
