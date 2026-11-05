@@ -172,16 +172,12 @@
     <ui-module-empty
       class="flex-1 flex items-center overflow-y-auto"
       pose="pointing"
-      icon="package"
       title="Productos"
       headline="Tu catálogo empieza aquí"
       description="Crea tu primer producto con fotos, precio y variantes. Aparece al instante en tu catálogo online y tus clientes te piden por WhatsApp."
       [cta]="canCreateProduct() ? 'Crear mi primer producto' : ''"
       [secondaryCta]="canCreateProduct() ? 'Importar desde Excel' : ''"
       secondaryIcon="upload"
-      previewLabel="Tus productos, cuando los crees"
-      previewTitle="Productos"
-      [previewRows]="emptyPreview"
       (ctaClick)="onCreateProduct()"
       (secondaryClick)="openImportExport()"
     />

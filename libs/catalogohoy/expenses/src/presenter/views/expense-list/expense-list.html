@@ -191,16 +191,11 @@
       } @else {
         <ui-module-empty
           pose="excel-pdf"
-          icon="receipt"
-          accentColor="amber"
           title="Gastos y facturas"
           headline="Aún no hay gastos en este mes"
           description="Carga tus facturas de proveedores y compras para saber cuánto gastas cada mes y qué tienes por pagar."
           [cta]="canCreate() ? 'Registrar gasto' : ''"
           ctaIcon="plus"
-          previewLabel="Tus gastos, cuando los cargues"
-          previewTitle="Gastos del mes"
-          [previewRows]="emptyPreview"
           (ctaClick)="openAdd()"
         />
       }

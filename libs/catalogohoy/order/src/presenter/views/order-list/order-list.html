@@ -461,14 +461,10 @@
         <ui-module-empty
           class="flex-1"
           pose="phone"
-          icon="notepad-text"
           title="Órdenes"
           headline="Aquí llegan los pedidos de tus clientes"
           description="Cada pedido de tu catálogo o de WhatsApp aparece aquí al instante. Cambia su estado, cobra y avísale a tu cliente en un clic."
           [cta]="canCreateOrder() ? 'Crear orden manual' : ''"
-          previewLabel="Tus pedidos, cuando lleguen"
-          previewTitle="Órdenes"
-          [previewRows]="emptyPreview"
           (ctaClick)="onCreateOrder()"
         />
         }
@@ -769,14 +765,10 @@
         <ui-module-empty
           class="block"
           pose="phone"
-          icon="notepad-text"
           title="Órdenes"
           headline="Aquí llegan los pedidos de tus clientes"
           description="Cada pedido de tu catálogo o de WhatsApp aparece aquí al instante. Cambia su estado, cobra y avísale a tu cliente en un clic."
           [cta]="canCreateOrder() ? 'Crear orden manual' : ''"
-          previewLabel="Tus pedidos, cuando lleguen"
-          previewTitle="Órdenes"
-          [previewRows]="emptyPreview"
           (ctaClick)="onCreateOrder()"
         />
         }

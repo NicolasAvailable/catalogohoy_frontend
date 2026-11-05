@@ -10,7 +10,7 @@ import {
   IconComponent,
   InputTextComponent,
   SkeletonListComponent,
-  TooltipDirective, ModuleEmptyComponent, ModuleEmptyPreviewRow } from '@ui';
+  TooltipDirective, ModuleEmptyComponent } from '@ui';
 import { ToastService } from '@shared/infrastructure';
 import { TenantStore } from '@catalogohoy/tenant';
 import { PaginatorModule } from 'primeng/paginator';
@@ -42,14 +42,6 @@ import { CategoryService } from '../../../infrastructure/category.service';
   },
 })
 export default class CategoryListComponent implements OnInit {
-  /** Datos de ejemplo de la vista vacía (panel derecho). */
-  public readonly emptyPreview: ModuleEmptyPreviewRow[] = [
-    { label: 'Ropa', sub: '24 productos', badge: 'Visible', badgeClass: 'bg-purple-50 text-purple-600' },
-    { label: 'Accesorios', sub: '12 productos', badge: 'Visible', badgeClass: 'bg-purple-50 text-purple-600' },
-    { label: 'Ofertas', sub: '8 productos', badge: 'Visible', badgeClass: 'bg-purple-50 text-purple-600' },
-    { label: 'Nuevos', sub: '5 productos', badge: 'Oculta' },
-  ];
-
   public readonly categoryStore = inject(CategoryStore);
   public readonly categoryFacade = inject(CategoryFacade);
   public readonly categoryService = inject(CategoryService);

@@ -36,7 +36,7 @@ import {
   SelectSelectedItemDirective,
   StackedDayChartComponent,
   TabHeader,
-  TooltipDirective, ModuleEmptyComponent, ModuleEmptyPreviewRow } from '@ui';
+  TooltipDirective, ModuleEmptyComponent } from '@ui';
 import { PlanStore } from '@catalogohoy/plan';
 import { OrderDetailModal } from '../../components/order-detail-modal/order-detail-modal';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
@@ -125,14 +125,6 @@ type MetricsPreset = 'today' | 'last_7' | 'last_30' | 'last_90' | 'custom';
   },
 })
 export class OrderListComponent implements OnInit, OnDestroy {
-  /** Datos de ejemplo de la vista vacía (panel derecho). */
-  public readonly emptyPreview: ModuleEmptyPreviewRow[] = [
-    { label: '#1042 · María González', sub: '2 productos · WhatsApp', value: '$34.00', badge: 'Pendiente', badgeClass: 'bg-amber-50 text-amber-700' },
-    { label: '#1041 · Carlos Pérez', sub: '1 producto · Catálogo', value: '$15.00', badge: 'Pagada', badgeClass: 'bg-emerald-50 text-emerald-700' },
-    { label: '#1040 · Ana Rodríguez', sub: '4 productos · Delivery', value: '$78.50', badge: 'Enviada', badgeClass: 'bg-sky-50 text-sky-700' },
-    { label: '#1039 · Luis Martínez', sub: '3 productos · Retiro', value: '$51.00', badge: 'Entregada', badgeClass: 'bg-grey-25 text-grey-500' },
-  ];
-
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly dialogService = inject(DialogService);
