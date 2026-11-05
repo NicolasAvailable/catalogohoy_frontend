@@ -473,7 +473,7 @@
     </div>
 
     <!-- Desktop Table -->
-    <div class="hidden sm:block overflow-auto sm:flex-1 sm:min-h-0">
+    <div class="hidden sm:flex sm:flex-col overflow-auto sm:flex-1 sm:min-h-0">
       <table class="w-full text-left">
         <thead class="sticky top-0 z-10 bg-white">
           <tr
@@ -750,10 +750,12 @@
               </div>
             </td>
           </tr>
-          } @empty {
-          <tr>
-            <td colspan="9">
-              @if (hasActiveFilter()) {
+          } }
+        </tbody>
+      </table>
+      @if (!orderStore.isLoading() && paginatedOrders().length === 0) {
+      <div class="flex-1 flex items-center justify-center">
+        @if (hasActiveFilter()) {
         <ui-module-empty
           class="block"
           pose="thinking"
@@ -772,11 +774,8 @@
           (ctaClick)="onCreateOrder()"
         />
         }
-            </td>
-          </tr>
-          } }
-        </tbody>
-      </table>
+      </div>
+      }
     </div>
 
     <!-- Pagination footer — count on the left, controls on the right -->
