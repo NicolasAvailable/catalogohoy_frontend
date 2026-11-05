@@ -29,9 +29,10 @@ import {
   ProfileService,
   ProfileStore,
 } from '../../infrastructure';
+import { ApiAccessComponent } from '../api-access/api-access';
 
-export type ProfileTabId = 'general' | 'subscription' | 'notifications' | 'danger';
-const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'notifications', 'danger'];
+export type ProfileTabId = 'general' | 'subscription' | 'notifications' | 'api' | 'danger';
+const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'notifications', 'api', 'danger'];
 
 @Component({
   selector: 'lib-profile',
@@ -49,6 +50,7 @@ const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'notifications', 
     IconComponent,
     ToggleComponent,
     TranslocoPipe,
+    ApiAccessComponent,
   ],
   templateUrl: './profile.html',
   styleUrl: './profile.css',
@@ -98,6 +100,7 @@ export class Profile {
     { id: 'general',       label: 'General',          icon: 'user' },
     { id: 'subscription',  label: 'Suscripción',      icon: 'credit-card' },
     { id: 'notifications', label: 'Notificaciones',   icon: 'mail' },
+    { id: 'api',           label: 'API',              icon: 'key-round' },
     { id: 'danger',        label: 'Zona de peligro',  icon: 'triangle-alert' },
   ];
   public readonly activeTab = signal<ProfileTabId>('general');
