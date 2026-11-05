@@ -63,16 +63,11 @@ interface ApiLogRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex flex-col gap-4 sm:gap-6">
-      <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div>
-          <h2 class="text-2xl font-bold text-grey-800 mb-1">{{ 'API y agentes de IA' | transloco }}</h2>
-          <p class="text-sm sm:text-base text-grey-400">
-            {{ 'Conecta otros programas o asistentes de IA para que gestionen tu tienda con un token de acceso.' | transloco }}
-          </p>
-        </div>
-        @if (!forbidden() && !showForm()) {
-          <ui-button label="Crear token" icon="plus" size="small" [fluid]="false" (click)="openForm()" />
-        }
+      <header>
+        <h2 class="text-2xl font-bold text-grey-800 mb-1">{{ 'API y MCP de IA' | transloco }}</h2>
+        <p class="text-sm sm:text-base text-grey-400">
+          {{ 'Conecta otros programas o asistentes de IA para que gestionen tu tienda con un token de acceso.' | transloco }}
+        </p>
       </header>
 
       @if (forbidden()) {
@@ -80,6 +75,33 @@ interface ApiLogRow {
           {{ 'Solo el dueño o un administrador de la tienda puede gestionar la API.' | transloco }}
         </div>
       } @else {
+        <!-- Cómo conectar -->
+        <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 sm:p-6 flex flex-col gap-3">
+          <h2 class="text-lg font-semibold text-grey-800">{{ 'Cómo conectar' | transloco }}</h2>
+          <div class="flex flex-col gap-1">
+            <span class="text-xs font-semibold uppercase text-grey-400">{{ 'Agentes de IA (MCP)' | transloco }}</span>
+            <div class="flex items-center gap-2">
+              <code class="flex-1 bg-grey-25 border border-grey-100 rounded-lg px-3 py-2 text-sm break-all text-grey-800">{{ mcpUrl }}</code>
+              <button type="button" class="p-2 rounded-lg hover:bg-grey-25 cursor-pointer" [title]="'Copiar' | transloco" (click)="copy(mcpUrl)">
+                <ui-icon name="copy" styleClass="size-4 text-grey-600" />
+              </button>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-xs font-semibold uppercase text-grey-400">{{ 'API REST' | transloco }}</span>
+            <div class="flex items-center gap-2">
+              <code class="flex-1 bg-grey-25 border border-grey-100 rounded-lg px-3 py-2 text-sm break-all text-grey-800">{{ apiBase }}/v1</code>
+              <button type="button" class="p-2 rounded-lg hover:bg-grey-25 cursor-pointer" [title]="'Copiar' | transloco" (click)="copy(apiBase + '/v1')">
+                <ui-icon name="copy" styleClass="size-4 text-grey-600" />
+              </button>
+            </div>
+          </div>
+          <p class="text-sm text-grey-500">
+            {{ 'El token va en el header' | transloco }} <code class="text-grey-700">Authorization: Bearer cht_…</code>.
+            <a [href]="docsUrl" target="_blank" rel="noopener" class="font-semibold text-primary-600 hover:underline">{{ 'Ver documentación' | transloco }}</a>
+          </p>
+        </div>
+
         <!-- Token recién creado -->
         @if (newToken(); as tok) {
           <div class="border border-amber-300 bg-amber-50 rounded-xl p-4 flex flex-col gap-3" data-testid="api-new-token">
@@ -160,36 +182,14 @@ interface ApiLogRow {
           </div>
         }
 
-        <!-- Cómo conectar -->
-        <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 sm:p-6 flex flex-col gap-3">
-          <h2 class="text-lg font-semibold text-grey-800">{{ 'Cómo conectar' | transloco }}</h2>
-          <div class="flex flex-col gap-1">
-            <span class="text-xs font-semibold uppercase text-grey-400">{{ 'Agentes de IA (MCP)' | transloco }}</span>
-            <div class="flex items-center gap-2">
-              <code class="flex-1 bg-grey-25 border border-grey-100 rounded-lg px-3 py-2 text-sm break-all text-grey-800">{{ mcpUrl }}</code>
-              <button type="button" class="p-2 rounded-lg hover:bg-grey-25 cursor-pointer" [title]="'Copiar' | transloco" (click)="copy(mcpUrl)">
-                <ui-icon name="copy" styleClass="size-4 text-grey-600" />
-              </button>
-            </div>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-xs font-semibold uppercase text-grey-400">{{ 'API REST' | transloco }}</span>
-            <div class="flex items-center gap-2">
-              <code class="flex-1 bg-grey-25 border border-grey-100 rounded-lg px-3 py-2 text-sm break-all text-grey-800">{{ apiBase }}/v1</code>
-              <button type="button" class="p-2 rounded-lg hover:bg-grey-25 cursor-pointer" [title]="'Copiar' | transloco" (click)="copy(apiBase + '/v1')">
-                <ui-icon name="copy" styleClass="size-4 text-grey-600" />
-              </button>
-            </div>
-          </div>
-          <p class="text-sm text-grey-500">
-            {{ 'El token va en el header' | transloco }} <code class="text-grey-700">Authorization: Bearer cht_…</code>.
-            <a [href]="docsUrl" target="_blank" rel="noopener" class="font-semibold text-primary-600 hover:underline">{{ 'Ver documentación' | transloco }}</a>
-          </p>
-        </div>
-
         <!-- Tokens -->
         <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 sm:p-6 flex flex-col gap-3">
-          <h2 class="text-lg font-semibold text-grey-800">{{ 'Tokens' | transloco }}</h2>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-lg font-semibold text-grey-800">{{ 'Tokens' | transloco }}</h2>
+            @if (!showForm()) {
+              <ui-button label="Crear token" icon="plus" size="small" [fluid]="false" styleClass="whitespace-nowrap" (click)="openForm()" />
+            }
+          </div>
           @if (loading()) {
             <p class="text-sm text-grey-400">{{ 'Cargando…' | transloco }}</p>
           } @else if (!tokens().length) {
