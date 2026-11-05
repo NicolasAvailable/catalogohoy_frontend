@@ -96,6 +96,7 @@ import {
   LogOut,
   LucideAngularModule,
   Mail,
+  Newspaper,
   MapPin,
   Menu,
   Moon,
@@ -180,6 +181,7 @@ import {
   UserRound,
   Layers,
   Calendar,
+  Receipt,
 } from 'lucide-angular';
 
 export const provideLucideIcons = (): EnvironmentProviders => {
@@ -199,6 +201,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Bot,
       Building,
       Building2,
+    Receipt,
       Check,
       CheckCheck,
       CheckCircle,
@@ -364,6 +367,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Trash2,
       LayoutList,
       SquareKanban,
+      Newspaper,
     })
   );
 };

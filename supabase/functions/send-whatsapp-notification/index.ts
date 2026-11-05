@@ -45,7 +45,11 @@ type Payload = {
     | "activation_no_product"
     | "setup_missing_whatsapp"
     // Win-back: plan vencido → invitación a renovar (blast puntual, interno).
-    | "plan_expired_winback";
+    | "plan_expired_winback"
+    // Lanzamiento app móvil: aviso de disponibilidad en App Store / Play Store.
+    | "app_launch_announcement"
+    // Facturas de proveedores por vencer / vencidas (send-expense-reminders).
+    | "expense_due_reminder";
   // Parámetros posicionales del body del template aprobado ({{1}}, {{2}}, ...).
   variables?: string[];
   // Valor del botón URL dinámico (índice 0), p.ej. el order id para `/o/{{1}}`.
@@ -61,6 +65,9 @@ const CS_TEMPLATES: Record<string, { name: string; lang: string }> = {
   activation_no_product: { name: "activation_no_product", lang: "es" },
   setup_missing_whatsapp: { name: "setup_missing_whatsapp", lang: "es" },
   plan_expired_winback: { name: "plan_expired_winback", lang: "es" },
+  app_launch_announcement: { name: "app_launch_announcement", lang: "es" },
+  // UTILITY: aviso de facturas de proveedores (Gastos y facturas).
+  expense_due_reminder: { name: "expense_due_reminder", lang: "es" },
 };
 
 // Marketing deshabilitado (2026-09-01, pedido del dueño): el número solo envía
@@ -72,6 +79,8 @@ const CS_TEMPLATES: Record<string, { name: string; lang: string }> = {
 // plan_expired_winback (MARKETING) queda FUERA del set a propósito: es la
 // excepción aprobada para el blast de reactivación a clientes vencidos
 // (2026-10-05); lo dispara solo la utilidad interna, ningún cron.
+// app_launch_announcement (MARKETING) también queda FUERA: blast puntual del
+// lanzamiento de la app móvil (2026-10-18), disparado solo por wa-launch-admin.
 const MARKETING_DISABLED = new Set<string>([
   "order_pending_reminder",
   "plan_expiring",

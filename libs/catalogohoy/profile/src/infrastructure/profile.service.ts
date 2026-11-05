@@ -94,6 +94,7 @@ export class ProfileService implements BaseProfileService {
         low_stock_threshold: prefs.lowStockThreshold,
         notify_credit_reminders: prefs.notifyCreditReminders,
         credit_reminder_days: prefs.creditReminderDays,
+        notify_expense_reminders: prefs.notifyExpenseReminders,
         updated_at: new Date().toISOString(),
       })
       .eq('auth_user_id', auth.user.id);

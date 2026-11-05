@@ -34,6 +34,7 @@ import {
   SelectComponent,
   SelectItemDirective,
   SelectSelectedItemDirective,
+  StackedDayChartComponent,
   TabHeader,
   TooltipDirective,
 } from '@ui';
@@ -60,6 +61,7 @@ import {
 } from '../../../domain/order';
 import {
   BASE_STATUS_META,
+  dailyStatusSeries,
   NEW_STAGE_KEY,
   OrderStatusDef,
   OrderStatusKey,
@@ -111,6 +113,7 @@ type MetricsPreset = 'today' | 'last_7' | 'last_30' | 'last_90' | 'custom';
     SelectItemDirective,
     SelectSelectedItemDirective,
     TooltipDirective,
+    StackedDayChartComponent,
     PaginatorModule,
     NgApexchartsModule,
     OrderImportExportHubComponent,
@@ -523,6 +526,32 @@ export class OrderListComponent implements OnInit, OnDestroy {
         active: { filter: { type: 'none' } },
       },
     };
+  });
+
+  /** Gráfica "Órdenes por día y estado" (barras apiladas, incluye estados
+   *  propios). Cantidad de órdenes o monto, según el selector. */
+  protected readonly statusDailyMetric = signal<'count' | 'amount'>('count');
+  protected readonly statusDailyMetricOptions: { value: 'count' | 'amount'; label: string }[] = [
+    { value: 'count', label: 'Órdenes' },
+    { value: 'amount', label: 'Monto' },
+  ];
+  protected readonly statusDaily = computed(() => {
+    const rows = this.orderStore.metricsByDayStatus();
+    const byDay = this.orderStore.metrics()?.byDay ?? [];
+    if (!rows || !byDay.length) return null;
+    const raw = byDay.map((d) => d.date);
+    const days = raw.map((d) => {
+      const dt = new Date(d);
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    });
+    const series = dailyStatusSeries(raw, rows, this.stageStore.defs(), this.statusDailyMetric());
+    return series.length ? { days, series } : null;
+  });
+  protected readonly statusDailyFormat = computed(() => {
+    const symbol = this.metricSymbol();
+    return this.statusDailyMetric() === 'count'
+      ? (v: number) => `${Math.round(v)}`
+      : (v: number) => `${symbol}${v.toLocaleString('es', { maximumFractionDigits: 2 })}`;
   });
 
   /** % que representa un método sobre el total cobrado por todos los métodos. */

@@ -25,6 +25,11 @@ import { PosService } from '../../pos.service';
 interface ReturnLine {
   item: OrderItem;
   label: string;
+  /** Vendidas en la venta original. */
+  soldQty: number;
+  /** Ya devueltas en devoluciones anteriores. */
+  returnedQty: number;
+  /** Lo que aún se puede devolver. */
   maxQty: number;
   qty: number;
 }
@@ -71,6 +76,11 @@ export default class PosDevoluciones implements OnInit {
   readonly restock = signal(true);
   readonly reason = signal('');
   readonly isWorking = signal(false);
+  readonly isLoadingLines = signal(false);
+  /** Todas las líneas de la venta ya se devolvieron. */
+  readonly fullyReturned = computed(
+    () => this.lines().length > 0 && this.lines().every((l) => l.maxQty === 0)
+  );
 
   /** Factor de prorrateo: lo realmente cobrado ÷ suma de líneas de la venta,
    *  para no reembolsar de más cuando hubo descuento/ajuste/envío. */
@@ -124,18 +134,44 @@ export default class PosDevoluciones implements OnInit {
     return extra ? `${it.name} · ${extra}` : it.name;
   }
 
-  selectOrder(order: Order): void {
+  async selectOrder(order: Order): Promise<void> {
+    if (!this.tenantId) return;
     this.selected.set(order);
-    this.lines.set(
-      (order.products ?? []).map((item) => ({
-        item,
-        label: this.itemLabel(item),
-        maxQty: Math.abs(item.quantity ?? 1),
-        qty: Math.abs(item.quantity ?? 1),
-      }))
-    );
+    this.lines.set([]);
     this.restock.set(true);
     this.reason.set('');
+    this.isLoadingLines.set(true);
+    const res = await this.posService.getReturnedQuantities(this.tenantId, order);
+    this.isLoadingLines.set(false);
+    if (this.selected() !== order) return;
+    res.fold(
+      (error) => {
+        this.toast.error(new Exception(error.message));
+        this.clearSelection();
+      },
+      (returned) => {
+        // Si la misma línea aparece repetida en la venta, lo ya devuelto se
+        // descuenta de la primera ocurrencia en adelante.
+        const left = new Map(returned);
+        this.lines.set(
+          (order.products ?? []).map((item) => {
+            const sold = Math.abs(item.quantity ?? 1);
+            const k = PosService.returnLineKey(item);
+            const ret = Math.min(sold, left.get(k) ?? 0);
+            left.set(k, (left.get(k) ?? 0) - ret);
+            const maxQty = sold - ret;
+            return {
+              item,
+              label: this.itemLabel(item),
+              soldQty: sold,
+              returnedQty: ret,
+              maxQty,
+              qty: maxQty,
+            };
+          })
+        );
+      }
+    );
   }
 
   clearSelection(): void {
@@ -173,6 +209,7 @@ export default class PosDevoluciones implements OnInit {
         total: l.item.price * l.qty,
       }));
 
+    // Se marca ANTES de cualquier await: un doble click no procesa dos veces.
     this.isWorking.set(true);
     const res = await this.posService.processReturn(this.tenantId, order, items, {
       restock: this.restock(),

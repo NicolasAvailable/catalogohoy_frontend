@@ -17,7 +17,9 @@ import {
   DATE_RANGE_PRESETS,
   DateRangePreset,
   DEFAULT_METRICS_CONFIG,
+  METRIC_OPTIONS,
   MetricsConfig,
+  resolvePresetRange,
 } from '../../domain';
 import { ReportStore } from '../../infrastructure';
 
@@ -45,10 +47,16 @@ export default class ReportCreateComponent {
   private readonly toast = inject(ToastService);
 
   public readonly presets = DATE_RANGE_PRESETS;
+  public readonly metricOptions = METRIC_OPTIONS;
   public readonly preset = signal<DateRangePreset>('last_30_days');
 
   public readonly title = signal<string>('Reporte del catálogo');
   public readonly metrics = signal<MetricsConfig>({ ...DEFAULT_METRICS_CONFIG });
+
+  /** Also save the setup as a template to re-generate it every period. */
+  public readonly saveAsTemplate = signal(false);
+  /** A custom fixed range can't repeat, so templates need a relative preset. */
+  public readonly canSaveTemplate = computed(() => this.preset() !== 'custom');
 
   // Custom range — ui-datepicker emits Date objects, not strings.
   public readonly customStart = signal<Date | null>(null);
@@ -73,6 +81,7 @@ export default class ReportCreateComponent {
 
   selectPreset(preset: DateRangePreset) {
     this.preset.set(preset);
+    if (preset === 'custom') this.saveAsTemplate.set(false);
   }
 
   cancel() {
@@ -80,24 +89,15 @@ export default class ReportCreateComponent {
   }
 
   private resolveRange(): { start: Date; end: Date } {
-    const now = new Date();
-    const end = new Date(now);
-    end.setHours(23, 59, 59, 999);
-
-    if (this.preset() === 'custom') {
+    const preset = this.preset();
+    if (preset === 'custom') {
       const start = new Date(this.customStart()!);
       start.setHours(0, 0, 0, 0);
       const customEnd = new Date(this.customEnd()!);
       customEnd.setHours(23, 59, 59, 999);
       return { start, end: customEnd };
     }
-
-    const preset = this.presets.find((p) => p.key === this.preset());
-    const days = preset?.days ?? 30;
-    const start = new Date(end);
-    start.setDate(start.getDate() - (days - 1));
-    start.setHours(0, 0, 0, 0);
-    return { start, end };
+    return resolvePresetRange(preset);
   }
 
   async submit() {
@@ -109,6 +109,22 @@ export default class ReportCreateComponent {
       return;
     }
 
+    const preset = this.preset();
+    let templateId: number | null = null;
+    if (this.saveAsTemplate() && preset !== 'custom') {
+      const template = await this.store.createTemplate({
+        tenantId,
+        title: this.title().trim(),
+        periodPreset: preset,
+        metricsConfig: this.metrics(),
+      });
+      if (!template) {
+        this.toast.error('No se pudo guardar la plantilla' as any);
+        return;
+      }
+      templateId = template.id;
+    }
+
     const { start, end } = this.resolveRange();
     const report = await this.store.create({
       tenantId,
@@ -116,6 +132,7 @@ export default class ReportCreateComponent {
       periodStart: start,
       periodEnd: end,
       metricsConfig: this.metrics(),
+      templateId,
     });
 
     if (!report) {

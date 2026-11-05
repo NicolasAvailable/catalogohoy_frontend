@@ -193,6 +193,7 @@ export class Profile {
   // Recordatorios de cobranza de órdenes a crédito (CAT-79) + umbral de días.
   public readonly draftNotifyCreditReminders = signal<boolean>(true);
   public readonly draftCreditReminderDays = signal<number>(7);
+  public readonly draftNotifyExpenseReminders = signal<boolean>(true);
   public readonly isSavingNotifications = signal(false);
 
   @ViewChild('cancelDialog')
@@ -259,11 +260,13 @@ export class Profile {
         lowStockThreshold?: number;
         notifyCreditReminders?: boolean;
         creditReminderDays?: number;
+        notifyExpenseReminders?: boolean;
       };
       this.draftNotifyLowStock.set(ls.notifyLowStock ?? true);
       this.draftLowStockThreshold.set(ls.lowStockThreshold ?? 5);
       this.draftNotifyCreditReminders.set(ls.notifyCreditReminders ?? true);
       this.draftCreditReminderDays.set(ls.creditReminderDays ?? 7);
+      this.draftNotifyExpenseReminders.set(ls.notifyExpenseReminders ?? true);
     });
 
     // Lazy-load billing history the first time the user opens the tab.
@@ -363,6 +366,7 @@ export class Profile {
       lowStockThreshold,
       notifyCreditReminders: this.draftNotifyCreditReminders(),
       creditReminderDays,
+      notifyExpenseReminders: this.draftNotifyExpenseReminders(),
     });
     result.fold(
       (err) => {

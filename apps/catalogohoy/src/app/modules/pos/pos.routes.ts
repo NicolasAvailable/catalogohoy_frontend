@@ -11,6 +11,10 @@ export const posRoutes: Routes = [
     loadComponent: () => import('./views/venta/venta'),
   },
   {
+    path: 'ventas',
+    loadComponent: () => import('./views/ventas/ventas'),
+  },
+  {
     path: 'movimientos',
     loadComponent: () => import('./views/movimientos/movimientos'),
   },

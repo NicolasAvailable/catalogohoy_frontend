@@ -230,3 +230,98 @@
   .reports-table__col--period   { grid-column: 1 / 2; grid-row: 2; font-size: 0.8125rem; color: #6b7280; }
   .reports-table__col--generated{ display: none; }
 }
+
+/* ---------- Templates ---------- */
+.templates {
+  margin-bottom: 1rem;
+}
+.templates__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin-bottom: 0.625rem;
+}
+.templates__header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.templates__header small {
+  color: #6b7280;
+}
+.templates__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.625rem;
+}
+.template-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.875rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  cursor: pointer;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.template-card:hover {
+  border-color: #c7d2fe;
+}
+.template-card--active {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px #6366f1;
+}
+.template-card__top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.template-card__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.template-card__delete {
+  color: #9ca3af;
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+}
+.template-card__delete:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+.template-card__meta {
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+.template-card ui-button {
+  margin-top: 0.25rem;
+}
+.templates__filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.875rem;
+}
+.templates__filter button {
+  font-weight: 600;
+  text-decoration: underline;
+}
+.reports-table__col--title .reports-table__badge {
+  flex-shrink: 0;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}

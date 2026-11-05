@@ -1,0 +1,120 @@
+<div class="sv-wrap">
+  @if (!selected()) {
+    <header class="sv-head">
+      <h1>{{ 'Ventas' | transloco }}</h1>
+      <p class="muted">{{ 'Historial de lo que se vendió en el mostrador y a quién.' | transloco }}</p>
+    </header>
+
+    <div class="searchbar">
+      <ui-icon name="search" styleClass="size-5" />
+      <input
+        type="text"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keyup.enter)="runSearch()"
+        [placeholder]="'Número de venta (#123) o nombre del cliente…' | transloco"
+      />
+      <button class="btn-ghost" (click)="runSearch()">{{ 'Buscar' | transloco }}</button>
+    </div>
+
+    @if (isLoading()) {
+      <div class="loading">
+        <ui-icon name="loader-circle" styleClass="size-6 animate-spin" />
+        {{ 'Buscando…' | transloco }}
+      </div>
+    } @else if (days().length) {
+      @for (d of days(); track d.day) {
+        <section class="day">
+          <div class="day-head">
+            <span>{{ d.date | date: 'EEEE d/M/y' }}</span>
+            <span class="day-total">{{ money(d.total) }}</span>
+          </div>
+          <ul class="sales">
+            @for (o of d.orders; track o.id) {
+              <li class="sale" [class.is-return]="isReturn(o)" (click)="open(o)">
+                <div class="sale-main">
+                  <strong>
+                    #{{ o.orderNumber ?? o.id }}
+                    @if (isReturn(o)) {
+                      <span class="tag">{{ 'Devolución' | transloco }}</span>
+                    }
+                  </strong>
+                  <span>{{ o.name || ('Sin cliente' | transloco) }}</span>
+                  <span class="muted small">{{ itemsSummary(o) }}</span>
+                </div>
+                <div class="sale-meta">
+                  <span class="muted">{{ o.createdAt | date: 'HH:mm' }}</span>
+                  <span class="sale-amt">{{ money(o.totalUsd) }}</span>
+                  <ui-icon name="chevron-right" styleClass="size-5" />
+                </div>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    } @else {
+      <div class="empty">
+        <div class="empty-badge"><ui-icon name="receipt" styleClass="size-8" /></div>
+        <h2>{{ 'No hay ventas' | transloco }}</h2>
+        <p>{{ 'No encontramos ventas del Punto de Venta con ese criterio.' | transloco }}</p>
+      </div>
+    }
+  }
+
+  @if (selected(); as o) {
+    <header class="detail-head">
+      <button class="back" (click)="close()">
+        <ui-icon name="arrow-left" styleClass="size-5" />
+        {{ 'Volver' | transloco }}
+      </button>
+      <div>
+        <h1>
+          {{ (isReturn(o) ? 'Devolución' : 'Venta') | transloco }} #{{ o.orderNumber ?? o.id }}
+        </h1>
+        <p class="muted">{{ o.createdAt | date: 'd/M/y HH:mm' }}</p>
+      </div>
+    </header>
+
+    <section class="panel info">
+      <div class="info-row">
+        <ui-icon name="user" styleClass="size-4" />
+        <span>{{ o.name || ('Sin cliente' | transloco) }}</span>
+      </div>
+      @if (o.phone) {
+        <div class="info-row">
+          <ui-icon name="phone" styleClass="size-4" />
+          <span>{{ o.phone }}</span>
+        </div>
+      }
+      <div class="info-row">
+        <ui-icon name="credit-card" styleClass="size-4" />
+        <span>{{ o.paymentMethod || ('sin especificar' | transloco) }}</span>
+      </div>
+      @if (o.comments) {
+        <div class="info-row">
+          <ui-icon name="sticky-note" styleClass="size-4" />
+          <span>{{ o.comments }}</span>
+        </div>
+      }
+    </section>
+
+    <section class="panel">
+      <h3>{{ 'Productos' | transloco }}</h3>
+      <ul class="items">
+        @for (it of o.products; track $index) {
+          <li class="item">
+            <div class="item-info">
+              <span class="item-name">{{ itemLabel(it) }}</span>
+              <span class="muted">{{ Math.abs(it.quantity ?? 1) }} × {{ money(it.price) }}</span>
+            </div>
+            <span class="item-amt">{{ money(it.total) }}</span>
+          </li>
+        }
+      </ul>
+      <div class="total-row">
+        <span>{{ 'Total' | transloco }}</span>
+        <strong>{{ money(o.totalUsd) }}</strong>
+      </div>
+    </section>
+  }
+</div>

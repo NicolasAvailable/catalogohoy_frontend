@@ -1,9 +1,29 @@
-<div class="flex-1 min-h-0 overflow-x-auto overflow-y-hidden h-[70vh] sm:h-auto">
-  <div class="flex gap-3 p-4 h-full w-max" cdkDropListGroup>
+<!-- Móvil: saltar a una columna -->
+@if (stagesReady() && columns().length) {
+<div class="sm:hidden flex gap-2 overflow-x-auto scrollbar-hide px-3 pt-3">
+  @for (column of columns(); track column.def.key; let i = $index) {
+  <button
+    type="button"
+    (click)="scrollToColumn(i)"
+    class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-white border border-grey-200 text-grey-700 cursor-pointer"
+  >
+    <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="column.def.color"></span>
+    {{ column.def.label | transloco }}
+    <span class="text-grey-400">{{ column.total }}</span>
+  </button>
+  }
+</div>
+}
+<div
+  #boardScroll
+  cdkScrollable
+  class="flex-1 min-h-0 overflow-x-auto overflow-y-hidden h-[70dvh] sm:h-auto snap-x snap-proximity sm:snap-none"
+>
+  <div class="flex gap-3 p-3 sm:p-4 h-full w-max" cdkDropListGroup>
     @if (!stagesReady()) {
     <!-- Esqueleto mientras cargan los estados -->
     @for (c of skeletonColumns; track $index) {
-    <div class="flex flex-col w-72 shrink-0 h-full rounded-xl bg-grey-50 border border-grey-100 animate-pulse">
+    <div class="flex flex-col w-[85vw] max-w-72 sm:w-72 snap-start shrink-0 h-full rounded-xl bg-grey-50 border border-grey-100 animate-pulse">
       <div class="flex items-center gap-2 px-3 pt-3 pb-2">
         <div class="w-2.5 h-2.5 rounded-full bg-grey-200"></div>
         <div class="h-3.5 w-24 rounded bg-grey-200"></div>
@@ -24,7 +44,7 @@
     }
     }
     @for (column of columns(); track column.def.key) {
-    <div class="flex flex-col w-72 shrink-0 h-full rounded-xl bg-grey-50 border border-grey-100">
+    <div data-board-column class="flex flex-col w-[85vw] max-w-72 sm:w-72 snap-start shrink-0 h-full rounded-xl bg-grey-50 border border-grey-100">
       <!-- Encabezado de la columna -->
       <div class="flex items-center gap-2 px-3 pt-3 pb-2 shrink-0">
         <span class="w-2.5 h-2.5 rounded-full shrink-0" [style.background-color]="column.def.color"></span>
@@ -63,6 +83,47 @@
 
           <div class="text-sm font-semibold text-grey-800 truncate">{{ order.name }}</div>
 
+          @if (canEdit()) {
+          <!-- Cambiar el estado sin arrastrar: no abre la orden ni empieza a arrastrar -->
+          <div
+            class="board-status-select self-start -ml-1"
+            (click)="$event.stopPropagation()"
+            (mousedown)="$event.stopPropagation()"
+            (touchstart)="$event.stopPropagation()"
+            (pointerdown)="$event.stopPropagation()"
+          >
+            <ui-select
+              [options]="statusOptions()"
+              [ngModel]="column.def.key"
+              (ngModelChange)="onStatusSelect(order, column, $event)"
+              [disabled]="movingId() !== null"
+              optionLabel="label"
+              optionValue="value"
+              size="small"
+            >
+              <ng-template selectSelectedItem>
+                <span class="inline-flex items-center gap-1.5 text-xs font-medium text-grey-700">
+                  <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="column.def.color"></span>
+                  {{ column.def.label | transloco }}
+                </span>
+              </ng-template>
+              <ng-template selectItem let-item>
+                @if (item.value === NEW_STAGE_KEY) {
+                <span class="inline-flex items-center gap-1.5 py-0.5 text-xs font-semibold text-primary-600">
+                  <ui-icon name="plus" styleClass="size-3.5" />
+                  {{ item.label | transloco }}
+                </span>
+                } @else {
+                <span class="inline-flex items-center gap-1.5 text-xs font-medium text-grey-700">
+                  <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="item.color"></span>
+                  {{ item.label | transloco }}
+                </span>
+                }
+              </ng-template>
+            </ui-select>
+          </div>
+          }
+
           @if (order.products.length) {
           <div class="flex items-center gap-2">
             @if (photos(order).length) {
@@ -83,7 +144,11 @@
 
           <div class="flex items-center justify-between gap-2 pt-2 border-t border-grey-50">
             <span class="text-xs text-grey-400">
-              {{ '{count} productos' | transloco: { count: itemCount(order) } }}
+              @if (itemCount(order) === 1) {
+                {{ '1 producto' | transloco }}
+              } @else {
+                {{ '{count} productos' | transloco: { count: itemCount(order) } }}
+              }
             </span>
             <span class="text-sm font-bold text-grey-800">
               {{ currencySymbol() }}{{ order.totalUsd | number: '1.2-2' }}
@@ -129,7 +194,7 @@
     <button
       type="button"
       (click)="createColumn()"
-      class="flex flex-col items-center justify-center gap-2 w-72 shrink-0 h-full rounded-xl border-2 border-dashed border-primary-300 bg-primary-50/40 text-primary-600 hover:border-primary-400 hover:bg-primary-50 transition-colors cursor-pointer"
+      class="flex flex-col items-center justify-center gap-2 w-[85vw] max-w-72 sm:w-72 snap-start shrink-0 h-full rounded-xl border-2 border-dashed border-primary-300 bg-primary-50/40 text-primary-600 hover:border-primary-400 hover:bg-primary-50 transition-colors cursor-pointer"
     >
       <span class="w-10 h-10 rounded-full bg-white border border-primary-200 flex items-center justify-center">
         <ui-icon name="plus" styleClass="size-5" />

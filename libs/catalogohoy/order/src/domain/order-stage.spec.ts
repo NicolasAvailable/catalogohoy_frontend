@@ -1,6 +1,7 @@
 import {
   behaviorOf,
   buildStatusDefs,
+  dailyStatusSeries,
   OrderStage,
   resolveStatusKey,
   statusFromBehavior,
@@ -82,5 +83,25 @@ describe('order stages', () => {
     expect(statusFromBehavior(toggleBehavior(pending, 'deductsStock', true))).toBe('credit');
     expect(statusFromBehavior(toggleBehavior(pending, 'countsAsSale', false))).toBe('cancelled');
     expect(statusFromBehavior(toggleBehavior(behaviorOf('completed'), 'deductsStock', false))).toBe('pending');
+  });
+
+  it('dailyStatusSeries agrupa por día y estado propio', () => {
+    const defs = buildStatusDefs(rows);
+    const days = ['2026-11-01T04:00:00+00:00', '2026-11-02T04:00:00+00:00'];
+    const series = dailyStatusSeries(
+      days,
+      [
+        { date: days[0], status: 'pending', stageId: null, count: 2, amount: 20 },
+        { date: days[0], status: 'pending', stageId: 'despacho', count: 1, amount: 5 },
+        { date: days[1], status: 'completed', stageId: null, count: 3, amount: 30 },
+        { date: days[1], status: 'cancelled', stageId: null, count: 1, amount: 9 },
+      ],
+      defs,
+      'count'
+    );
+    expect(series.map((s) => s.key)).toEqual(['pending', 'stage:despacho', 'completed', 'cancelled']);
+    expect(series[0].data).toEqual([2, 0]);
+    expect(series[1]).toMatchObject({ name: 'despacho', data: [1, 0] });
+    expect(dailyStatusSeries(days, [], defs, 'amount')).toEqual([]);
   });
 });

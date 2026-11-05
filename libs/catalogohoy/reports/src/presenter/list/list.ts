@@ -20,7 +20,7 @@ import {
   IconComponent,
   SkeletonListComponent,
 } from '@ui';
-import { Report } from '../../domain';
+import { presetLabel, Report, ReportTemplate } from '../../domain';
 import { ReportStore } from '../../infrastructure';
 
 /** Maximum reports a tenant can generate per calendar month, by plan id.
@@ -65,9 +65,41 @@ export default class ReportListComponent implements OnInit {
   );
 
   public readonly selectedReport = signal<Report | null>(null);
+  public readonly selectedTemplate = signal<ReportTemplate | null>(null);
+  /** Template whose history is being shown; null = all reports. */
+  public readonly filterTemplateId = signal<number | null>(null);
+  /** Template currently being generated (spinner on its button). */
+  public readonly generatingTemplateId = signal<number | null>(null);
 
-  @ViewChild(ConfirmDialogComponent)
+  public readonly presetLabel = presetLabel;
+
+  public readonly visibleReports = computed(() => {
+    const id = this.filterTemplateId();
+    const reports = this.store.reports();
+    return id == null ? reports : reports.filter((r) => r.templateId === id);
+  });
+
+  public readonly filterTemplate = computed(
+    () => this.store.templates().find((t) => t.id === this.filterTemplateId()) ?? null
+  );
+
+  /** Per template: how many reports it generated and the latest one. */
+  public readonly templateStats = computed(() => {
+    const stats: Record<number, { count: number; last: Report | null }> = {};
+    for (const r of this.store.reports()) {
+      if (r.templateId == null) continue;
+      const s = (stats[r.templateId] ??= { count: 0, last: null });
+      s.count++;
+      if (!s.last || r.createdAt > s.last.createdAt) s.last = r;
+    }
+    return stats;
+  });
+
+  @ViewChild('deleteReportDialog')
   public confirmDialog!: ConfirmDialogComponent;
+
+  @ViewChild('deleteTemplateDialog')
+  public templateDialog!: ConfirmDialogComponent;
 
   /** Reports this tenant has generated this month — kept in sync server-side
    *  via count_reports_this_month so it includes soft-deleted rows. */
@@ -138,5 +170,61 @@ export default class ReportListComponent implements OnInit {
     const ok = await this.store.remove(report.id);
     if (ok) this.toast.success('Reporte eliminado' as any);
     this.selectedReport.set(null);
+  }
+
+  toggleTemplateFilter(template: ReportTemplate): void {
+    this.filterTemplateId.set(
+      this.filterTemplateId() === template.id ? null : template.id
+    );
+  }
+
+  async generateFromTemplate(event: Event, template: ReportTemplate): Promise<void> {
+    event.stopPropagation();
+    if (!this.canCreate()) {
+      this.toast.error('No tienes permiso para generar reportes' as any);
+      return;
+    }
+    if (this.limitReached()) {
+      this.toast.error(
+        'Alcanzaste el límite de reportes de tu plan este mes. Mejora tu plan para generar más.' as any
+      );
+      return;
+    }
+    if (this.generatingTemplateId() != null) return;
+
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return;
+
+    this.generatingTemplateId.set(template.id);
+    const report = await this.store.generateFromTemplate(template, tenantId);
+    this.generatingTemplateId.set(null);
+
+    if (!report) {
+      this.toast.error('No se pudo generar el reporte' as any);
+      return;
+    }
+    this.toast.success('Reporte generado con datos actualizados' as any);
+    this.router.navigate(['/admin/reports', report.id]);
+  }
+
+  onDeleteTemplate(event: Event, template: ReportTemplate): void {
+    event.stopPropagation();
+    if (!this.canDelete()) {
+      this.toast.error('No tienes permiso para eliminar plantillas' as any);
+      return;
+    }
+    this.selectedTemplate.set(template);
+    this.templateDialog.warning();
+  }
+
+  async onConfirmDeleteTemplate(): Promise<void> {
+    const template = this.selectedTemplate();
+    if (!template) return;
+    const ok = await this.store.removeTemplate(template.id);
+    if (ok) {
+      this.toast.success('Plantilla eliminada' as any);
+      if (this.filterTemplateId() === template.id) this.filterTemplateId.set(null);
+    }
+    this.selectedTemplate.set(null);
   }
 }
