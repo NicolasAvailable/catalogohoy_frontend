@@ -656,7 +656,10 @@ export class Onboarding implements OnInit {
     this.creatingCategory.set(false);
   }
 
-  private selectCategory(id: string): void {
+  // El id llega como viene de la categoría (igual que optionValue="id" del
+  // multiselect), así la opción se marca como seleccionada.
+  private selectCategory(categoryId: string | number): void {
+    const id = categoryId as string;
     this.productCategoryIds.update((ids) =>
       ids.includes(id) ? ids : [...ids, id]
     );
