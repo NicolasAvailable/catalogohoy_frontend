@@ -3,11 +3,14 @@ import {
   DragDropModule,
   transferArrayItem,
 } from '@angular/cdk/drag-drop';
+import { CdkScrollable } from '@angular/cdk/scrolling';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import {
   Component,
   computed,
   effect,
+  ElementRef,
+  viewChild,
   inject,
   input,
   output,
@@ -15,12 +18,25 @@ import {
   untracked,
 } from '@angular/core';
 import { TenantStore } from '@catalogohoy/tenant';
+import { FormsModule } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { DialogService, IconComponent, ImageComponent } from '@ui';
+import {
+  DialogService,
+  IconComponent,
+  ImageComponent,
+  SelectComponent,
+  SelectItemDirective,
+  SelectSelectedItemDirective,
+} from '@ui';
 import { Order } from '../../../domain/order';
-import { OrderStatusDef, resolveStatusKey } from '../../../domain/order-stage';
+import {
+  NEW_STAGE_KEY,
+  OrderStatusDef,
+  OrderStatusKey,
+  resolveStatusKey,
+} from '../../../domain/order-stage';
 import { OrderStageStore } from '../../../infrastructure/order-stage.store';
 import { OrderService } from '../../../infrastructure/order.service';
 import { OrderStore } from '../../../infrastructure/order.store';
@@ -43,13 +59,25 @@ const PAGE_SIZE = 30;
   standalone: true,
   imports: [
     DragDropModule,
+    CdkScrollable,
+    FormsModule,
     DatePipe,
     DecimalPipe,
     TranslocoPipe,
     IconComponent,
     ImageComponent,
+    SelectComponent,
+    SelectItemDirective,
+    SelectSelectedItemDirective,
   ],
   templateUrl: './order-board.html',
+  styles: `
+    :host ::ng-deep .board-status-select .p-select {
+      border: none;
+      background: transparent;
+      box-shadow: none;
+    }
+  `,
   host: { class: 'flex-1 flex flex-col min-h-0' },
 })
 export class OrderBoardComponent {
@@ -74,6 +102,9 @@ export class OrderBoardComponent {
   /** Forma del esqueleto inicial: columnas con distinta cantidad de tarjetas. */
   public readonly skeletonColumns = [[1, 2, 3], [1, 2], [1, 2, 3], [1], [1, 2]];
   public readonly movingId = signal<number | null>(null);
+  /** Opciones del selector de estado de cada tarjeta (+ "Crear estado"). */
+  public readonly statusOptions = this.stageStore.selectOptions;
+  protected readonly NEW_STAGE_KEY = NEW_STAGE_KEY;
   private loadSeq = 0;
 
   constructor() {
@@ -84,6 +115,15 @@ export class OrderBoardComponent {
       if (!this.stagesReady()) return;
       untracked(() => this.loadAll(defs));
     });
+  }
+
+  private readonly boardScroll = viewChild<ElementRef<HTMLElement>>('boardScroll');
+
+  /** Móvil: lleva el tablero a la columna elegida en los chips de arriba. */
+  scrollToColumn(index: number) {
+    const el = this.boardScroll()?.nativeElement;
+    const col = el?.querySelectorAll<HTMLElement>('[data-board-column]')[index];
+    if (el && col) el.scrollTo({ left: col.offsetLeft - 12, behavior: 'smooth' });
   }
 
   /** "Nueva columna": crea un estado; al guardarse el tablero se recarga solo
@@ -177,24 +217,67 @@ export class OrderBoardComponent {
     );
   }
 
-  async drop(event: CdkDragDrop<BoardColumn>) {
+  drop(event: CdkDragDrop<BoardColumn>) {
     if (event.previousContainer === event.container) return;
-    const from = event.previousContainer.data;
-    const to = event.container.data;
-    const order: Order = event.item.data;
-    const target = resolveStatusKey(to.def.key, this.stageStore.defs());
-    if (!target || this.movingId()) return;
-
-    // Movimiento optimista: la tarjeta queda donde la soltó mientras se guarda.
-    const snapshot = this.columns();
-    const fromOrders = [...from.orders];
-    const toOrders = [...to.orders];
-    transferArrayItem(
-      fromOrders,
-      toOrders,
+    this.move(
+      event.item.data,
+      event.previousContainer.data.def.key,
+      event.container.data.def.key,
       event.previousIndex,
       event.currentIndex
     );
+  }
+
+  /** Selector de estado de la tarjeta: cambia el estado sin arrastrar. */
+  onStatusSelect(
+    order: Order,
+    column: BoardColumn,
+    key: OrderStatusKey | typeof NEW_STAGE_KEY
+  ) {
+    if (key === NEW_STAGE_KEY) {
+      // "+ Crear estado": crea uno y deja la orden ahí (el tablero se recarga
+      // solo al aparecer la columna nueva).
+      const ref = openOrderStagesEditor(this.dialogService, true);
+      ref?.onClose.subscribe(async (created?: OrderStatusDef) => {
+        if (!created) return;
+        const target = resolveStatusKey(created.key, this.stageStore.defs());
+        if (!target) return;
+        const result = await this.orderStore.updateOrderStatus(
+          order.id,
+          order.status,
+          target.status,
+          target.stageId
+        );
+        result.fold(
+          (error) => this.toast.error(new Exception(error)),
+          () => this.reload()
+        );
+      });
+      return;
+    }
+    if (key === column.def.key) return;
+    const index = column.orders.findIndex((o) => o.id === order.id);
+    this.move(order, column.def.key, key, index, 0);
+  }
+
+  /** Mueve una orden de columna y guarda su estado nuevo. */
+  private async move(
+    order: Order,
+    fromKey: string,
+    toKey: string,
+    fromIndex: number,
+    toIndex: number
+  ) {
+    const from = this.columns().find((c) => c.def.key === fromKey);
+    const to = this.columns().find((c) => c.def.key === toKey);
+    const target = resolveStatusKey(toKey as OrderStatusKey, this.stageStore.defs());
+    if (!from || !to || !target || fromIndex < 0 || this.movingId()) return;
+
+    // Movimiento optimista: la tarjeta queda en su columna nueva mientras se guarda.
+    const snapshot = this.columns();
+    const fromOrders = [...from.orders];
+    const toOrders = [...to.orders];
+    transferArrayItem(fromOrders, toOrders, fromIndex, toIndex);
     this.patchColumn(from.def.key, (c) => ({
       ...c,
       orders: fromOrders,
