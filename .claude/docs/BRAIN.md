@@ -31,6 +31,7 @@ público. Monetiza con planes (Stripe) + créditos de IA.
 | **`features/account-billing.md`** | plan, payments, profile, tenant, teams, ecommerce-config. |
 | **`features/supporting.md`** | rate (tasas BCV), reports, analytics, home, core, environments. |
 | **`features/ai-credits.md`** | Sistema de créditos de IA + features de IA (generar/quitar fondo/borrador/mejorar texto). |
+| **`features/public-api.md`** | API pública con tokens por tienda + servidor MCP (edge `public-api`, Ajustes → API). |
 | **`features/auth-verification.md`** | Auth (login/signup/Google), verificación de correo, flujo cross-app. |
 | **`database.md`** *(existente)* | Schema completo, RPCs, triggers, queries reales. |
 | **`patterns.md`** *(existente)* | Either monad, Signal Store, componentes standalone, routing, i18n. |
