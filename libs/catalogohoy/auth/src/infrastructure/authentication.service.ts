@@ -425,12 +425,20 @@ export class AuthenticationService implements BaseAuthenticationService {
     try {
       await this.initSocialLogin();
       const { SocialLogin } = await import('@capgo/capacitor-social-login');
+      // En Android el plugin RECHAZA cualquier `scopes` para Google si la
+      // MainActivity no implementa ModifiedMainActivityForSocialLoginPlugin
+      // ("You CANNOT use scopes without modifying the main activity"): por eso
+      // el login con Google en Android nunca funcionó. email/profile/openid ya
+      // vienen por defecto, así que en Android no mandamos scopes.
+      const scopes =
+        provider === 'apple'
+          ? ['email', 'name']
+          : isIosApp()
+            ? ['email', 'profile']
+            : undefined;
       const res = await SocialLogin.login({
         provider,
-        options: {
-          scopes:
-            provider === 'apple' ? ['email', 'name'] : ['email', 'profile'],
-        },
+        options: scopes ? { scopes } : {},
       });
       const result = res.result as {
         idToken?: string | null;
