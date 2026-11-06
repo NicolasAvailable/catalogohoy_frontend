@@ -1,7 +1,6 @@
 {
   "_doc": "Backlog de temas del blog para la rutina diaria de contenido. La rutina toma SIEMPRE el primer tema de 'queue', escribe el artículo siguiendo src/blog/PLAYBOOK.md, lo registra y lo mueve a 'published' con la fecha. Orden = prioridad (intención de lead primero).",
   "queue": [
-    { "slug": "catalogo-digital-para-floristerias-2026", "category": "por-rubro", "keyword": "catalogo digital para floristeria", "angulo": "Pedidos con fecha/hora de entrega (feature estrella), arreglos personalizados, fechas pico (San Valentín, Día de la Madre)." },
     { "slug": "catalogo-digital-para-dulcerias-y-reposteria-2026", "category": "por-rubro", "keyword": "catalogo para reposteria / tortas por encargo", "angulo": "Encargos con fecha de entrega, adicionales (rellenos, toppings), fotos que venden, pagos por adelantado." },
     { "slug": "catalogo-digital-para-licorerias-2026", "category": "por-rubro", "keyword": "catalogo digital para licoreria / delivery de licores", "angulo": "Delivery nocturno, combos como productos, precios por caja (mayoreo), stock en tiempo real." },
     { "slug": "catalogo-digital-para-tiendas-de-mascotas-2026", "category": "por-rubro", "keyword": "catalogo para pet shop / tienda de mascotas", "angulo": "Recompra recurrente (alimento), variantes por peso/tamaño, recordatorios a clientes frecuentes vía CRM." },
@@ -28,6 +27,7 @@
     { "slug": "catalogo-digital-para-perfumerias-y-cosmeticos-2026", "date": "2026-10-09" },
     { "slug": "como-vender-por-whatsapp-en-venezuela-2026", "date": "2026-11-03" },
     { "slug": "como-vender-por-whatsapp-en-colombia-2026", "date": "2026-11-04" },
-    { "slug": "como-vender-por-whatsapp-en-mexico-2026", "date": "2026-11-05" }
+    { "slug": "como-vender-por-whatsapp-en-mexico-2026", "date": "2026-11-05" },
+    { "slug": "catalogo-digital-para-floristerias-2026", "date": "2026-11-06" }
   ]
 }
