@@ -393,19 +393,26 @@ export class AuthenticationService implements BaseAuthenticationService {
   private socialLoginInit: Promise<void> | null = null;
 
   private initSocialLogin(): Promise<void> {
-    this.socialLoginInit ??= import('@capgo/capacitor-social-login').then(
-      ({ SocialLogin }) =>
+    this.socialLoginInit ??= import('@capgo/capacitor-social-login')
+      .then(({ SocialLogin }) =>
         SocialLogin.initialize({
           google: {
             webClientId: GOOGLE_WEB_CLIENT_ID,
             iOSClientId: GOOGLE_IOS_CLIENT_ID,
             mode: 'online',
           },
-          // En iOS el clientId no llega al OS; solo le dice al plugin qué
-          // provider inicializar.
-          apple: { clientId: NATIVE_APP_BUNDLE_ID },
+          // Apple SOLO en iOS: en Android el plugin exige apple.redirectUrl y,
+          // si falta, rechaza TODO el initialize (Google incluido). Por eso el
+          // login con Google en Android nunca funcionó. En iOS el clientId no
+          // llega al OS; solo le dice al plugin qué provider inicializar.
+          ...(isIosApp() ? { apple: { clientId: NATIVE_APP_BUNDLE_ID } } : {}),
         })
-    );
+      )
+      .catch((e) => {
+        // No cachear un init fallido: el próximo intento vuelve a probar.
+        this.socialLoginInit = null;
+        throw e;
+      });
     return this.socialLoginInit;
   }
 
