@@ -21,6 +21,8 @@ async function setupMock(page, { log = false, routes = {} } = {}) {
     const send = (data, status = 200) => route.fulfill({ status, json: single && Array.isArray(data) ? (data[0] ?? null) : data });
     if (log) console.log(method, p + url.search);
 
+    // Los handlers de la feature van primero: pueden pisar los de base (p. ej. tenants).
+    if (routes[p]) return routes[p](route, req, url, db, single);
     if (p.startsWith('/auth/v1/user')) return route.fulfill({ json: USER });
     if (p.startsWith('/auth/v1/token')) return route.fulfill({ json: session });
     if (p === '/rest/v1/users') return send([{ id: 1, name: 'Demo', email: USER.email }]);
@@ -34,7 +36,6 @@ async function setupMock(page, { log = false, routes = {} } = {}) {
       const body = JSON.parse(req.postData() || '{}');
       return route.fulfill({ json: { uploadUrl: 'https://s3mock.local/put', publicUrl: `https://cdn.catalogohoy.com/invoices/1/${body.fileName}`, headers: { 'content-type': body.contentType } } });
     }
-    if (routes[p]) return routes[p](route, req, url, db, single);
     if (p === '/rest/v1/tenant_expenses') return expenses(route, req, url, db, single);
     if (p === '/rest/v1/expense_stages') return stages(route, req, url, db, single);
 
