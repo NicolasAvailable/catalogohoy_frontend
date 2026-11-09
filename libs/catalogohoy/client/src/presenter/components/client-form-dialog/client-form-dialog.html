@@ -57,6 +57,16 @@
         />
       </div>
 
+      <!-- Cédula / RIF -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-grey-700">{{ 'Cédula o RIF' | transloco }}</label>
+        <ui-input-text
+          placeholder="Ej: V-12345678"
+          [ngModel]="document()"
+          (ngModelChange)="document.set($event)"
+        />
+      </div>
+
       <!-- Correo -->
       <div class="flex flex-col gap-1.5">
         <label class="text-sm font-medium text-grey-700">{{ 'Correo electrónico' | transloco }}</label>

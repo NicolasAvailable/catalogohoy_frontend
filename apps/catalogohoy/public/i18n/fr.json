@@ -2971,5 +2971,15 @@
   "Servicios": "Services",
   "Publicidad Instagram": "Publicité Instagram",
   "Marketing · pago único": "Marketing · paiement unique",
-  "Abonado": "Acompte versé"
+  "Abonado": "Acompte versé",
+  "Buscar cliente guardado": "Rechercher un client enregistré",
+  "Nombre, apodo, teléfono o cédula/RIF": "Nom, surnom, téléphone ou pièce d'identité",
+  "No encontramos ese cliente. Llena los datos abajo y se guarda solo al crear la orden.": "Client introuvable. Remplissez les informations ci-dessous : il sera enregistré automatiquement à la création de la commande.",
+  "Cambiar": "Changer",
+  "Cédula o RIF": "Pièce d'identité ou n° fiscal",
+  "Ej: V-12345678": "Ex : V-12345678",
+  "Alias": "Surnom",
+  "Ej: Taller El Gocho": "Ex : Garage Martin",
+  "Ej: Av. Principal, Coro": "Ex : Av. Principale, Coro",
+  "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Avec un téléphone, le client est enregistré automatiquement dans Clients avec ces informations pour le prochain achat."
 }

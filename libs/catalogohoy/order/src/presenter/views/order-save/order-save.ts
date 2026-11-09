@@ -55,6 +55,10 @@ import { OrderStageStore } from '../../../infrastructure/order-stage.store';
 import { behaviorOf, OrderStatusDef, OrderStatusKey } from '../../../domain/order-stage';
 import { openOrderStagesEditor } from '../../components/order-stages-modal/order-stages-modal';
 import { OrderImportDraftService } from '../../../infrastructure/order-import-draft.service';
+import {
+  OrderCustomer,
+  OrderCustomerService,
+} from '../../../infrastructure/order-customer.service';
 
 /** Un adicional del catálogo (pool global), con su foto para mostrarlo como
  *  mini-producto en el selector y los chips del alta manual de órdenes. */
@@ -146,6 +150,11 @@ export default class OrderSave implements OnInit {
   public readonly form = inject(FormBuilder).group({
     name: ['', [Validators.required, whiteSpacesValidator()]],
     phone: [''],
+    // Datos del cliente que se guardan en su ficha (Clientes) para la
+    // próxima compra: cédula/RIF (orders.nit), dirección y apodo.
+    document: [''],
+    address: [''],
+    nickname: [''],
     comments: [''],
     status: ['pending' as OrderStatus],
     // Default: today. Admin can pick any date via the datepicker.
@@ -215,6 +224,93 @@ export default class OrderSave implements OnInit {
   });
 
   private readonly dialogService = inject(DialogService);
+  private readonly customerService = inject(OrderCustomerService);
+
+  // --- Buscador de clientes guardados ---------------------------------------
+  /** Texto del buscador de clientes. */
+  public readonly customerQuery = signal('');
+  public readonly customerResults = signal<OrderCustomer[]>([]);
+  public readonly isSearchingCustomers = signal(false);
+  /** Ya se buscó con el texto actual (para mostrar "sin resultados"). */
+  public readonly customerSearched = signal(false);
+  /** Cliente elegido del buscador (para el chip "Cliente guardado"). */
+  public readonly selectedCustomer = signal<OrderCustomer | null>(null);
+  private customerSearchTimer: ReturnType<typeof setTimeout> | null = null;
+  private customerSearchSeq = 0;
+
+  onCustomerQuery(value: string) {
+    this.customerQuery.set(value);
+    this.customerSearched.set(false);
+    if (this.customerSearchTimer) clearTimeout(this.customerSearchTimer);
+    if (value.trim().length < 2) {
+      this.customerResults.set([]);
+      this.isSearchingCustomers.set(false);
+      return;
+    }
+    this.isSearchingCustomers.set(true);
+    this.customerSearchTimer = setTimeout(() => this.runCustomerSearch(value), 250);
+  }
+
+  private async runCustomerSearch(term: string) {
+    const seq = ++this.customerSearchSeq;
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) {
+      this.isSearchingCustomers.set(false);
+      return;
+    }
+    const result = await this.customerService.search(Number(tenantId), term);
+    // Una búsqueda más nueva ya salió: esta respuesta llegó tarde.
+    if (seq !== this.customerSearchSeq) return;
+    this.isSearchingCustomers.set(false);
+    this.customerSearched.set(true);
+    result.fold(
+      () => this.customerResults.set([]),
+      (list) => this.customerResults.set(list)
+    );
+  }
+
+  /** Rellena los datos de la orden con el cliente elegido. */
+  pickCustomer(c: OrderCustomer) {
+    const f = this.form.controls;
+    f.name.setValue(c.name ?? '');
+    f.phone.setValue(c.phone ?? '');
+    f.document.setValue(c.document ?? '');
+    f.address.setValue(c.address ?? '');
+    f.nickname.setValue(c.nickname ?? '');
+    this.selectedCustomer.set(c);
+    this.customerQuery.set('');
+    this.customerResults.set([]);
+    this.customerSearched.set(false);
+  }
+
+  /** Quita el cliente elegido y deja los campos vacíos para uno nuevo. */
+  clearCustomer() {
+    const f = this.form.controls;
+    for (const c of [f.name, f.phone, f.document, f.address, f.nickname]) c.setValue('');
+    this.selectedCustomer.set(null);
+  }
+
+  /** Completa el apodo desde la ficha del cliente al editar una orden. */
+  private async loadNicknameFor(phone: string) {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId || !phone) return;
+    const result = await this.customerService.findByPhone(Number(tenantId), phone);
+    result.mapRight((c) => {
+      if (c?.nickname && !this.form.controls.nickname.value) {
+        this.form.controls.nickname.setValue(c.nickname);
+      }
+    });
+  }
+
+  /** Guarda el apodo en la ficha del cliente (best-effort, no bloquea). */
+  private async saveCustomerNickname() {
+    const phone = (this.form.controls.phone.value || '').trim();
+    const nickname = (this.form.controls.nickname.value || '').trim();
+    if (!phone || !nickname) return;
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return;
+    await this.customerService.saveNickname(Number(tenantId), phone, nickname);
+  }
 
   /** "+ Crear estado": crea uno y lo deja elegido en esta orden. */
   createStage() {
@@ -555,16 +651,9 @@ export default class OrderSave implements OnInit {
     this.products.set(items);
     if (draft.client.name) this.form.controls.name.setValue(draft.client.name);
     if (draft.client.phone) this.form.controls.phone.setValue(draft.client.phone);
-    // Doc (CI/RIF) y dirección del encabezado → comentarios (para no perderlos).
-    const extra = [
-      draft.client.doc ? `Doc: ${draft.client.doc}` : '',
-      draft.client.address ? `Dirección: ${draft.client.address}` : '',
-    ]
-      .filter(Boolean)
-      .join(' · ');
-    if (extra && !this.form.controls.comments.value) {
-      this.form.controls.comments.setValue(extra);
-    }
+    // Doc (CI/RIF) y dirección del encabezado → sus campos del cliente.
+    if (draft.client.doc) this.form.controls.document.setValue(draft.client.doc);
+    if (draft.client.address) this.form.controls.address.setValue(draft.client.address);
 
     this.toastService.success(
       `Orden cargada: ${items.length} productos (${matched} del catálogo, ${custom} libres). Revisá y guardá.`
@@ -591,6 +680,9 @@ export default class OrderSave implements OnInit {
   private setValuesForm(order: Order) {
     this.form.controls.name.setValue(order.name);
     this.form.controls.phone.setValue(order.phone || '');
+    this.form.controls.document.setValue(order.nit || '');
+    this.form.controls.address.setValue(order.shippingAddress || '');
+    if (order.phone) void this.loadNicknameFor(order.phone);
     this.form.controls.comments.setValue(order.comments || '');
     this.stageId.set(order.stageId ?? null);
     this.loadedStageId = order.stageId ?? null;
@@ -1221,6 +1313,10 @@ export default class OrderSave implements OnInit {
     const orderData = {
       name: this.form.controls.name.value as string,
       phone: this.form.controls.phone.value || undefined,
+      // Cédula/RIF y dirección del cliente: van en la orden y el trigger
+      // los copia a su ficha en Clientes.
+      nit: (this.form.controls.document.value || '').trim() || null,
+      shippingAddress: (this.form.controls.address.value || '').trim() || null,
       comments: this.form.controls.comments.value || undefined,
       status: this.form.controls.status.value as OrderStatus,
       // Solo se toca el estado propio si la orden tenía uno o se eligió uno.
@@ -1247,6 +1343,7 @@ export default class OrderSave implements OnInit {
             this.isSubmitting.set(false);
           },
           () => {
+            void this.saveCustomerNickname();
             this.toastService.success(
               this.isVenta()
                 ? 'Venta registrada exitosamente'
@@ -1266,6 +1363,7 @@ export default class OrderSave implements OnInit {
             this.isSubmitting.set(false);
           },
           () => {
+            void this.saveCustomerNickname();
             this.toastService.success('Orden actualizada exitosamente');
             this.router.navigate(['/admin/orders']);
           }

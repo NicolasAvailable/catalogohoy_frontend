@@ -2971,5 +2971,15 @@
   "Servicios": "Serviços",
   "Publicidad Instagram": "Anúncios no Instagram",
   "Marketing · pago único": "Marketing · pagamento único",
-  "Abonado": "Pago parcial"
+  "Abonado": "Pago parcial",
+  "Buscar cliente guardado": "Buscar cliente salvo",
+  "Nombre, apodo, teléfono o cédula/RIF": "Nome, apelido, telefone ou documento",
+  "No encontramos ese cliente. Llena los datos abajo y se guarda solo al crear la orden.": "Não encontramos esse cliente. Preencha os dados abaixo e ele é salvo automaticamente ao criar o pedido.",
+  "Cambiar": "Alterar",
+  "Cédula o RIF": "Documento ou CNPJ",
+  "Ej: V-12345678": "Ex: V-12345678",
+  "Alias": "Apelido",
+  "Ej: Taller El Gocho": "Ex: Oficina do João",
+  "Ej: Av. Principal, Coro": "Ex: Av. Principal, Coro",
+  "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Com telefone, o cliente é salvo automaticamente em Clientes com esses dados para a próxima compra."
 }

@@ -2971,5 +2971,15 @@
   "Servicios": "Utilities",
   "Publicidad Instagram": "Instagram ads",
   "Marketing · pago único": "Marketing · one-time payment",
-  "Abonado": "Partly paid"
+  "Abonado": "Partly paid",
+  "Buscar cliente guardado": "Search saved customer",
+  "Nombre, apodo, teléfono o cédula/RIF": "Name, alias, phone or ID/tax number",
+  "No encontramos ese cliente. Llena los datos abajo y se guarda solo al crear la orden.": "We couldn't find that customer. Fill in the details below and it's saved automatically when you create the order.",
+  "Cambiar": "Change",
+  "Cédula o RIF": "ID or tax number",
+  "Ej: V-12345678": "E.g.: V-12345678",
+  "Alias": "Alias",
+  "Ej: Taller El Gocho": "E.g.: Joe's Garage",
+  "Ej: Av. Principal, Coro": "E.g.: Main St., Coro",
+  "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "With a phone number, the customer is saved automatically in Customers with these details for the next purchase."
 }

@@ -50,6 +50,7 @@ export class ClientFormDialogComponent {
   public readonly phone = signal('');
   public readonly email = signal('');
   public readonly address = signal('');
+  public readonly document = signal('');
   public readonly referralCode = signal('');
   public readonly notes = signal('');
   public readonly tagIds = signal<number[]>([]);
@@ -65,6 +66,7 @@ export class ClientFormDialogComponent {
       this.phone.set(client.phone);
       this.email.set(client.email ?? '');
       this.address.set(client.address ?? '');
+      this.document.set(client.document ?? '');
       this.referralCode.set(client.referralCode ?? '');
       this.notes.set(client.notes ?? '');
       this.tagIds.set(client.tags.map((t) => t.id));
@@ -75,6 +77,7 @@ export class ClientFormDialogComponent {
       this.phone.set('');
       this.email.set('');
       this.address.set('');
+      this.document.set('');
       this.referralCode.set('');
       this.notes.set('');
       this.tagIds.set([]);
@@ -107,6 +110,7 @@ export class ClientFormDialogComponent {
       email: this.email().trim() || null,
       birthday: null,
       address: this.address().trim() || null,
+      document: this.document().trim() || null,
       referralCode: this.referralCode().trim() || null,
       notes: this.notes().trim() || null,
       tagIds: this.tagIds(),

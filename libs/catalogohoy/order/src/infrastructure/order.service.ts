@@ -578,6 +578,11 @@ export class OrderService {
     if (input.shippingMethod !== undefined) patch['shipping_method'] = input.shippingMethod;
     if (input.creditInstallments !== undefined)
       patch['credit_installments'] = input.creditInstallments ?? null;
+    // Datos del cliente (cédula/RIF y dirección) — el trigger
+    // sync_customer_from_order los copia a la ficha del cliente.
+    if (input.nit !== undefined) patch['nit'] = input.nit || null;
+    if (input.shippingAddress !== undefined)
+      patch['shipping_address'] = input.shippingAddress || null;
 
     const { data, error } = await this.client
       .from('orders')
