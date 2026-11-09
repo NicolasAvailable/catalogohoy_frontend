@@ -16,6 +16,18 @@
 //   (SCA/3DS) o rechaza, la llamada FALLA de forma atómica: no cambia el plan
 //   ni cobra nada. Devolvemos un error claro y el front cae al flujo manual.
 //
+// CAMBIO DE PERÍODO (2026-11-09, bug Carneando tenant 2927): el front manda el
+// `billingPeriod` elegido y el upgrade pasa al precio de ESE período (antes se
+// quedaba con el período de la sub actual: Básico trimestral → Avanzado anual
+// terminaba en Avanzado TRIMESTRAL). Si cambia el intervalo, Stripe reinicia
+// el ciclo hoy: acredita lo no usado del plan viejo y cobra el período nuevo
+// completo. También cuenta como upgrade el MISMO plan a un período más largo
+// (ej. Básico mensual → Básico anual). Los ítems de catálogos adicionales se
+// pasan al precio del período nuevo (Stripe exige el mismo intervalo).
+//
+// PREVIEW: con `preview: true` no cambia nada; devuelve el monto exacto que se
+// cobraría (Stripe invoices.createPreview) para mostrarlo en el checkout.
+//
 // SOLO para UPGRADES (plan pago → plan pago más caro). Downgrades, renovaciones
 // y primeras compras siguen por `create-checkout-session`. Si no hay suscripción
 // activa o no es un upgrade, respondemos 409/400 y el front usa el checkout
@@ -54,6 +66,17 @@ const PRICE_MAP: Record<string, Record<string, string>> = {
     annual:    "price_1UOJFV85rys2QLXdkcOdcw0T", // $209.94 (-50% anual)
   },
 };
+
+// Ítem de catálogos adicionales por período (mismo map que create-checkout-session).
+const CATALOG_ADDON_PRICE_MAP: Record<string, string> = {
+  monthly:   "price_1TpXhq85rys2QLXd4BJAH6kl",
+  quarterly: "price_1TpXi985rys2QLXdcaQRPqrL",
+  annual:    "price_1TpXia85rys2QLXd5OORzQS9",
+};
+const ADDON_PRICE_IDS = new Set(Object.values(CATALOG_ADDON_PRICE_MAP));
+
+// Orden de los períodos (más largo = mayor compromiso).
+const PERIOD_RANK: Record<string, number> = { monthly: 1, quarterly: 2, annual: 3 };
 
 // Price IDs históricos que siguen ANCLADOS a suscripciones vigentes. No se usan
 // para cobrar upgrades (eso sale de PRICE_MAP), pero PRICE_TO_PLAN los necesita
@@ -106,8 +129,8 @@ const LEGACY_PRICES: Record<string, { planId: string; period: string }> = {
 };
 
 // priceId → { planId, period }. Sirve para ubicar el ítem de plan dentro de la
-// suscripción (ignorando ítems de catálogos adicionales) y mantener el MISMO
-// período de facturación en el upgrade. Incluye los precios vigentes
+// suscripción (ignorando ítems de catálogos adicionales) y conocer su período
+// actual (se usa si el front no manda `billingPeriod`). Incluye los precios vigentes
 // (PRICE_MAP) y los históricos anclados a subs viejas (LEGACY_PRICES).
 const PRICE_TO_PLAN: Record<string, { planId: string; period: string }> = {
   ...LEGACY_PRICES,
@@ -151,8 +174,11 @@ Deno.serve(async (req: Request) => {
     const { data: { user }, error: authErr } = await userClient.auth.getUser();
     if (authErr || !user) return json({ success: false, error: "Unauthorized" }, 401);
 
-    const { tenantId, planId } = await req.json();
+    const { tenantId, planId, billingPeriod, preview } = await req.json();
     if (!tenantId || !planId) return json({ success: false, error: "Faltan parámetros requeridos" }, 400);
+    if (billingPeriod != null && !PERIOD_RANK[billingPeriod]) {
+      return json({ success: false, error: "Período de facturación inválido" }, 400);
+    }
 
     const newPlanPrices = PRICE_MAP[planId];
     if (!newPlanPrices) return json({ success: false, error: "Plan inválido" }, 400);
@@ -204,7 +230,7 @@ Deno.serve(async (req: Request) => {
       Number(plansRows?.find((p: { id: string; price: string | number }) => p.id === id)?.price ?? 0);
     const currentPrice = priceOf(currentPlanId);
     const targetPrice  = priceOf(planId);
-    if (!(targetPrice > currentPrice)) {
+    if (targetPrice < currentPrice) {
       return json({ success: false, error: "not_an_upgrade" }, 400);
     }
 
@@ -217,19 +243,73 @@ Deno.serve(async (req: Request) => {
     if (!planItem) {
       return json({ success: false, error: "plan_item_not_found" }, 409);
     }
-    const period = PRICE_TO_PLAN[planItem.price!.id].period;
+    const currentPeriod = PRICE_TO_PLAN[planItem.price!.id].period;
+    // El período lo elige el cliente en el checkout; si no viene (front viejo)
+    // se mantiene el de la sub actual, como antes.
+    const period: string = billingPeriod ?? currentPeriod;
     const newPriceId = newPlanPrices[period];
     if (!newPriceId) return json({ success: false, error: "Período de facturación inválido" }, 400);
 
-    // 5) Upgrade con prorrateo: cambia el precio del ítem de plan y factura +
-    //    cobra la diferencia prorrateada AHORA con la tarjeta guardada.
+    // Upgrade = plan más caro, o el MISMO plan a un período más largo.
+    const samePlan = targetPrice === currentPrice;
+    if (samePlan && !(PERIOD_RANK[period] > PERIOD_RANK[currentPeriod])) {
+      return json({ success: false, error: "not_an_upgrade" }, 400);
+    }
+
+    // Ítems a cambiar: el de plan + (si cambia el período) los de catálogos
+    // adicionales, que deben quedar en el mismo intervalo.
+    const items: Stripe.SubscriptionUpdateParams.Item[] = [{ id: planItem.id, price: newPriceId }];
+    if (period !== currentPeriod) {
+      for (const it of sub.items.data) {
+        if (it.id === planItem.id) continue;
+        if (it.price?.id && ADDON_PRICE_IDS.has(it.price.id)) {
+          items.push({ id: it.id, price: CATALOG_ADDON_PRICE_MAP[period] });
+        }
+      }
+    }
+
+    // 4.b) PREVIEW: monto exacto que se cobraría hoy, sin tocar nada.
+    if (preview) {
+      const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+      const inv = await stripe.invoices.createPreview({
+        customer: customerId,
+        subscription: subId,
+        subscription_details: {
+          items,
+          proration_behavior: "always_invoice",
+        },
+      });
+      let credit = 0;
+      let charges = 0;
+      for (const line of inv.lines.data) {
+        if (line.amount < 0) credit += -line.amount;
+        else charges += line.amount;
+      }
+      return json({
+        success: true,
+        preview: true,
+        currency: inv.currency,
+        // Montos en unidades menores (centavos) de `currency`.
+        amountDue: inv.amount_due,
+        credit,
+        charges,
+        currentPlanId,
+        currentPeriod,
+        newPeriod: period,
+        periodChanged: period !== currentPeriod,
+      }, 200);
+    }
+
+    // 5) Upgrade con prorrateo: cambia el precio del ítem de plan (y addons si
+    //    cambia el período) y factura + cobra la diferencia prorrateada AHORA
+    //    con la tarjeta guardada.
     let updated: Stripe.Subscription;
     try {
       updated = await stripe.subscriptions.update(subId, {
-        items: [{ id: planItem.id, price: newPriceId }],
+        items,
         proration_behavior: "always_invoice",
         payment_behavior: "error_if_incomplete",
-        metadata: { tenant_id: String(tenantId), plan_id: planId },
+        metadata: { tenant_id: String(tenantId), plan_id: planId, billing_period: period },
       });
     } catch (err) {
       const e = err as Stripe.errors.StripeError;

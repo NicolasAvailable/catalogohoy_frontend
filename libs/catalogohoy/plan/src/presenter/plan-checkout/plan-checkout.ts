@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -12,6 +12,7 @@ import {
   BillingPeriod,
   CATALOG_ADDON_PRICE,
   AVANZADO_PLAN_ID,
+  ChangePlanPreview,
   CheckoutRequest,
   convertUsdToLocal,
   CURRENCY_SYMBOLS,
@@ -249,14 +250,76 @@ export class PlanCheckout implements OnInit {
     return daysLeft > 20;
   });
 
-  public readonly isUpgrade = computed(() => {
+  /** Posible upgrade con prorrateo: plan pago con suscripción de Stripe y
+   *  destino igual o más caro (el mismo plan cuenta si pasa a un período más
+   *  largo, ej. mensual → anual). Si de verdad aplica lo decide `change-plan`
+   *  en modo preview, que además devuelve el monto EXACTO de Stripe (con
+   *  cambio de período: período nuevo completo − lo no usado del actual). */
+  private readonly upgradeCandidate = computed(() => {
     const current = this.planStore.currentPlan();
     if (!current || current.isFree) return false;
+    if (!(this.planStore.tenantPlanUsage()?.hasStripeSubscription ?? false)) return false;
     const currentPrice = PLAN_BASE_PRICES[current.id] ?? 0;
     const targetPrice = PLAN_BASE_PRICES[this.planId()] ?? 0;
     return (
-      currentPrice > 0 && targetPrice > currentPrice && this.prorationEligible()
+      currentPrice > 0 &&
+      targetPrice >= currentPrice &&
+      this.prorationEligible() &&
+      this.paymentMethod() === 'card' &&
+      this.catalogAddonQuantity() === 0
     );
+  });
+
+  public readonly upgradePreview        = signal<ChangePlanPreview | null>(null);
+  public readonly isLoadingUpgrade      = signal(false);
+  private upgradePreviewRequest = 0;
+
+  public readonly isUpgrade = computed(
+    () => this.upgradeCandidate() && this.upgradePreview() !== null
+  );
+
+  public readonly upgradeCurrencySymbol = computed(() => {
+    const c = this.upgradePreview()?.currency ?? 'usd';
+    return CURRENCY_SYMBOLS[c as PaymentCurrency] ?? '$';
+  });
+
+  public readonly upgradeCurrencyCode = computed(() =>
+    (this.upgradePreview()?.currency ?? 'usd').toUpperCase()
+  );
+
+  public readonly upgradeIsZeroDecimal = computed(() => {
+    const c = this.upgradePreview()?.currency;
+    return c === 'clp' || c === 'pyg';
+  });
+
+  private readonly loadUpgradePreview = effect(() => {
+    const candidate = this.upgradeCandidate();
+    const planId = this.planId();
+    const billingPeriod = this.billingPeriod();
+    const requestId = ++this.upgradePreviewRequest;
+    untracked(() => {
+      this.upgradePreview.set(null);
+      if (!candidate || !planId) {
+        this.isLoadingUpgrade.set(false);
+        return;
+      }
+      this.isLoadingUpgrade.set(true);
+      void (async () => {
+        const tenantId = await this.tenantStore.getTenantIdAsync();
+        if (!tenantId || requestId !== this.upgradePreviewRequest) return;
+        const result = await this.checkoutService.previewChangePlan({
+          tenantId,
+          planId,
+          billingPeriod,
+        });
+        if (requestId !== this.upgradePreviewRequest) return;
+        // Si no es un upgrade prorrateable (o falla), queda el checkout normal.
+        result
+          .mapRight((preview) => this.upgradePreview.set(preview))
+          .mapLeft(() => this.upgradePreview.set(null));
+        this.isLoadingUpgrade.set(false);
+      })();
+    });
   });
 
   public readonly currentPlanName = computed(
@@ -305,13 +368,9 @@ export class PlanCheckout implements OnInit {
     return PLAN_BASE_PRICES[current.id] ?? 0;
   });
 
-  private readonly monthlyBasePriceUsd = computed(() => {
-    const targetPrice = PLAN_BASE_PRICES[this.planId()] ?? 0;
-    if (this.isUpgrade()) {
-      return Math.round((targetPrice - this.currentPlanPrice()) * 100) / 100;
-    }
-    return targetPrice;
-  });
+  private readonly monthlyBasePriceUsd = computed(
+    () => PLAN_BASE_PRICES[this.planId()] ?? 0
+  );
 
   public readonly baseCost = computed(() => {
     const { months } = BILLING_CONFIG[this.billingPeriod()];
@@ -455,7 +514,10 @@ export class PlanCheckout implements OnInit {
 
   async ngOnInit(): Promise<void> {
     const planId = this.route.snapshot.paramMap.get('planId') ?? '';
-    const period = (this.route.snapshot.queryParamMap.get('period') as BillingPeriod) ?? 'monthly';
+    // Solo mensual y anual en la web: el trimestral sigue en el código (subs
+    // viejas) pero no se ofrece, aunque venga en la URL.
+    const rawPeriod = this.route.snapshot.queryParamMap.get('period');
+    const period: BillingPeriod = rawPeriod === 'annual' ? 'annual' : 'monthly';
 
     // Solo los planes con precio tienen checkout self-service (cubre
     // 'gratis' y 'enterprise', que se contrata vía ventas).

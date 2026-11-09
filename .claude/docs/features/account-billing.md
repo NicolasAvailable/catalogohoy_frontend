@@ -24,6 +24,14 @@
   (`no_active_subscription`, `not_an_upgrade`, `subscription_not_active`, `plan_item_not_found`)
   cae al checkout normal (`startCheckoutSession`). Antes el upgrade creaba una sub nueva a precio
   completo (sobrecobro Aglaia t2092).
+- **Upgrade con cambio de período (2026-11-09, bug Carneando t2927)**: `change-plan` usa el
+  `billingPeriod` que manda el front (antes se quedaba con el de la sub actual: Básico trimestral →
+  Avanzado anual terminaba en Avanzado trimestral). Si cambia el intervalo, Stripe reinicia el ciclo
+  hoy: cobra el período nuevo completo menos lo no usado. También es upgrade el MISMO plan a un
+  período más largo (mensual → anual). Los addons de catálogo se pasan al precio del período nuevo.
+  El checkout llama antes a `change-plan` con `preview: true` (Stripe `invoices.createPreview`, no
+  cambia nada) y muestra el monto exacto en la moneda de la sub; `isUpgrade()` = hay preview OK.
+  La web solo ofrece mensual y anual: `?period=quarterly` cae a mensual (trimestral queda en código).
 - **Presenter**: `plans` (cards con features; `negative:true` = lo que NO incluye, con X),
   `plan-checkout`, `plan-success`, `expiration-banner`, `plan-expired-dialog`, `plan-limit-dialog`,
   `enterprise-contact-dialog` (funnel multi-step de "Contactar ventas").

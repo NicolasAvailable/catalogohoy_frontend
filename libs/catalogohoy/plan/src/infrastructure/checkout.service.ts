@@ -5,6 +5,7 @@ import {
   BaseCheckoutService,
   CancelSubscriptionResult,
   CatalogCheckoutRequest,
+  ChangePlanPreview,
   ChangePlanRequest,
   ChangePlanResult,
   CheckoutRequest,
@@ -58,6 +59,43 @@ export class CheckoutService implements BaseCheckoutService {
       return E.left(new Error(parsed?.error ?? 'No se pudo cambiar el plan'));
     }
     return E.right({ success: true, subscriptionId: parsed.subscriptionId });
+  }
+
+  public async previewChangePlan(
+    request: ChangePlanRequest
+  ): Promise<E.Either<Error, ChangePlanPreview>> {
+    const { data, error } = await this.client.functions.invoke('change-plan', {
+      body: { ...request, preview: true },
+    });
+
+    if (error) {
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        try {
+          const body = await ctx.json();
+          if (body?.error) return E.left(new Error(body.error));
+        } catch {
+          // cae al error genérico
+        }
+      }
+      return E.left(new Error(error.message));
+    }
+
+    const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+    if (!parsed?.success || !parsed?.preview) {
+      return E.left(new Error(parsed?.error ?? 'No se pudo calcular el upgrade'));
+    }
+    const currency = String(parsed.currency ?? 'usd').toLowerCase();
+    // Stripe manda unidades menores salvo en monedas sin decimales.
+    const factor = ['clp', 'pyg', 'jpy', 'krw'].includes(currency) ? 1 : 100;
+    const toMajor = (v: unknown) => Number(v ?? 0) / factor;
+    return E.right({
+      currency,
+      amountDue: toMajor(parsed.amountDue),
+      credit: toMajor(parsed.credit),
+      charges: toMajor(parsed.charges),
+      periodChanged: parsed.periodChanged === true,
+    });
   }
 
   public async cancelSubscription(

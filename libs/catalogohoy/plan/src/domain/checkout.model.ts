@@ -143,6 +143,19 @@ export interface ChangePlanResult {
   subscriptionId?: string;
 }
 
+/** Monto exacto que cobraría el upgrade HOY (edge fn `change-plan` con
+ *  `preview: true`, sale de Stripe). Montos en la moneda de la suscripción
+ *  (puede no ser la del país, ej. MXN), ya convertidos a unidades mayores.
+ *  Si cambia el período, `charges` es el período nuevo completo y `credit` lo
+ *  no usado del plan actual. */
+export interface ChangePlanPreview {
+  currency: string;
+  amountDue: number;
+  credit: number;
+  charges: number;
+  periodChanged: boolean;
+}
+
 export interface UpdateCatalogSlotsRequest {
   tenantId: number;
   additionalQuantity: number;
