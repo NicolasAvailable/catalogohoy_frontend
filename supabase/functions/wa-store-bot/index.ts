@@ -47,6 +47,7 @@ const CREDIT_AVG = 2; // créditos de un mensaje típico (solo para mostrar en e
 const CREDIT_CONFIRM = 10; // por encima de esto el agente pide confirmación antes de hacerlo
 const CREDIT_NOTICE_EVERY = 10; // mensajes entre recordatorios de saldo
 const CREDIT_LOW = 20; // con este saldo o menos, se avisa en cada respuesta
+const NO_CREDITS_NOTICE_GAP_MS = 2 * 60_000; // sin créditos: no repetir el aviso dentro de este lapso
 const HISTORY_MAX = 16;
 const MAX_AGENT_STEPS = 16;
 const PHOTO_ACK_DELAY_MS = 5000;
@@ -3006,14 +3007,26 @@ async function handleInbound(m: any) {
   const before = await creditBalance(wallet);
   const shop = await tenantInfo(link.tenant_id);
   if (before < 1) {
-    await sendText(
-      phone,
-      "Te quedaste sin créditos de IA 😕\n\n" +
-        "Puedes *comprar más créditos* desde tu panel web (botón de créditos arriba) o *mejorar tu plan* desde el panel o la app de CatalogoHoy" +
-        (shop.url ? `: ${shop.url}/admin/plans` : "."),
-    );
+    // Sin créditos: SIEMPRE se responde con un aviso fijo (sin IA y sin cobrar).
+    // Solo se omite si ya se avisó hace muy poco (ráfaga de mensajes/fotos).
     if (!userLogged) await logMsg(link.tenant_id, phone, "user", text, { media: userMedia });
-    await logMsg(link.tenant_id, phone, "system", "Sin créditos de IA: el asistente no respondió este mensaje.");
+    const since = new Date(Date.now() - NO_CREDITS_NOTICE_GAP_MS).toISOString();
+    const { count: recent } = await admin.from("wa_bot_messages").select("id", { count: "exact", head: true })
+      .eq("tenant_id", link.tenant_id).eq("phone", phone).eq("role", "assistant")
+      .contains("debug", { no_credits: true }).gte("created_at", since);
+    if ((recent ?? 0) > 0) {
+      await logMsg(link.tenant_id, phone, "system", "Sin créditos de IA: ya se le avisó hace un momento, no se repitió el aviso.");
+      return;
+    }
+    const plansUrl = shop.url ? `${shop.url}/admin/plans` : "";
+    const note =
+      "Te quedaste sin créditos de IA 😕 Por eso no puedo hacer lo que me pediste.\n\n" +
+      "Para seguir usando el asistente, *compra más créditos* o *mejora tu plan*" +
+      (plansUrl ? ` aquí:\n👉 ${plansUrl}` : " desde tu panel de CatalogoHoy.") +
+      "\n\nApenas recargues, vuelve a escribirme y seguimos 🙌";
+    const wamid = await sendText(phone, note);
+    if (!wamid) console.error("[wa-store-bot] no se pudo enviar el aviso de sin créditos", phone);
+    await logMsg(link.tenant_id, phone, "assistant", note, { debug: { no_credits: true, sent: !!wamid } });
     return;
   }
 
